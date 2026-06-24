@@ -8,6 +8,7 @@ import {
   migrateBackupEnvelope,
 } from '@/infrastructure/backup/backupMigrations';
 import { formatBackupValidationError } from '@/infrastructure/backup/backupSchemas';
+import { ensureExerciseCatalog } from '@/application/strength/exerciseCatalogSeeder';
 
 export const MAX_BACKUP_FILE_SIZE_BYTES = 25 * 1024 * 1024;
 
@@ -254,6 +255,7 @@ export async function replaceDatabaseFromBackup(
     await database.transaction('rw', tableList(database), async () => {
       await clearTables(database);
       await populateTables(database, envelope.data);
+      await ensureExerciseCatalog(database);
     });
   } catch (error) {
     throw new BackupOperationError(
@@ -268,6 +270,7 @@ export async function clearAllUserData(database: AppDatabase = appDatabase): Pro
     await database.transaction('rw', tableList(database), async () => {
       await clearTables(database);
       await database.appSettings.add(createDefaultAppSettings());
+      await ensureExerciseCatalog(database);
     });
   } catch (error) {
     throw new BackupOperationError('Les données locales n’ont pas pu être effacées.', { cause: error });

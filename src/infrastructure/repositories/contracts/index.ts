@@ -8,3 +8,5 @@ export type { StepsRepository } from '@/infrastructure/repositories/contracts/St
 export type { TargetRepository } from '@/infrastructure/repositories/contracts/TargetRepository';
 export type { WeeklyReviewRepository } from '@/infrastructure/repositories/contracts/WeeklyReviewRepository';
 export type { WeightRepository } from '@/infrastructure/repositories/contracts/WeightRepository';
+
+export type * from '@/infrastructure/repositories/contracts/StrengthExerciseRepository';

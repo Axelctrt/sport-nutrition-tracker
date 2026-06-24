@@ -1,4 +1,4 @@
-# SportPilot 0.14.0-alpha.1
+# SportPilot 0.14.0-alpha.2
 
 PWA locale de suivi sportif, nutritionnel, calorique et de progression.
 
@@ -236,3 +236,20 @@ Validation de cette préversion :
 - Vite/PWA : build et service worker générés ;
 - audit MVP : réussi.
 
+
+
+## Version 0.14.0-alpha.2 — catalogue d’exercices
+
+Cette préversion ajoute le premier écran fonctionnel du carnet de musculation :
+
+- catalogue local de 43 exercices courants disponible hors connexion ;
+- recherche sans sensibilité aux accents ;
+- filtres par groupe musculaire, matériel et origine ;
+- création et modification d’exercices personnels ;
+- archivage et réactivation des exercices personnels ;
+- duplication d’un exercice système ou personnel ;
+- protection des exercices système contre les modifications directes ;
+- accès depuis le journal des activités et la navigation ordinateur ;
+- restauration automatique du catalogue après un effacement ou l’import d’une ancienne sauvegarde.
+
+Validation : 63 fichiers de tests, 249 tests, lint, build PWA et audit réussis.

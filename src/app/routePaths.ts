@@ -17,6 +17,9 @@ export const routePaths = {
   newRecipe: '/recipes/new',
   addRecipeToJournal: '/recipes/:recipeId/add',
   activities: '/activities',
+  strengthExercises: '/strength/exercises',
+  newStrengthExercise: '/strength/exercises/new',
+  editStrengthExercise: '/strength/exercises/:exerciseId/edit',
   addActivity: '/activities/add',
   addRunningActivity: '/activities/add/running',
   addSwimmingActivity: '/activities/add/swimming',
@@ -30,6 +33,10 @@ export const routePaths = {
   calculationsInformation: '/information/calculations',
   offline: '/offline',
 } as const;
+
+export function editStrengthExercisePath(exerciseId: string): string {
+  return `/strength/exercises/${exerciseId}/edit`;
+}
 
 export function editActivityPath(activityId: string): string {
   return `/activities/${activityId}/edit`;

@@ -25,6 +25,7 @@ export const primaryNavigation: NavigationItem[] = [
   { label: 'Tableau de bord', path: routePaths.dashboard, icon: Gauge, end: true },
   { label: 'Nutrition', path: routePaths.food, icon: Apple },
   { label: 'Activités', path: routePaths.activities, icon: Dumbbell },
+  { label: 'Exercices', path: routePaths.strengthExercises, icon: Activity },
   { label: 'Poids', path: routePaths.weight, icon: Weight },
   { label: 'Analyses', path: routePaths.analytics, icon: BarChart3 },
   { label: 'Bilan hebdomadaire', path: routePaths.weeklyReview, icon: ClipboardCheck },

@@ -2,6 +2,7 @@ import {
   barcodeScannerPath,
   newFoodProductForMealPath,
   selectFoodPath,
+  editStrengthExercisePath,
 } from '@/app/routePaths';
 
 describe('parcours de sélection alimentaire', () => {
@@ -33,5 +34,12 @@ describe('parcours de sélection alimentaire', () => {
     expect(selectFoodPath('2026-06-24', 'lunch', undefined, 'openFoodFacts')).toBe(
       '/food/select?date=2026-06-24&slot=lunch&source=openFoodFacts',
     );
+  });
+});
+
+
+describe('parcours du catalogue de musculation', () => {
+  it('construit le chemin de modification d’un exercice personnel', () => {
+    expect(editStrengthExercisePath('exercise-1')).toBe('/strength/exercises/exercise-1/edit');
   });
 });

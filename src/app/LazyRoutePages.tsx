@@ -67,6 +67,19 @@ const EditActivityPage = lazy(() =>
   })),
 );
 
+
+const StrengthExercisesPage = lazy(() =>
+  import('@/features/strength-exercises/pages/StrengthExercisesPage').then((module) => ({
+    default: module.StrengthExercisesPage,
+  })),
+);
+
+const StrengthExerciseEditorPage = lazy(() =>
+  import('@/features/strength-exercises/pages/StrengthExerciseEditorPage').then((module) => ({
+    default: module.StrengthExerciseEditorPage,
+  })),
+);
+
 const FoodJournalPage = lazy(() =>
   import('@/features/food-journal/pages/FoodJournalPage').then((module) => ({
     default: module.FoodJournalPage,
@@ -295,6 +308,23 @@ export function LazyEditActivityPage() {
   );
 }
 
+
+
+export function LazyStrengthExercisesPage() {
+  return (
+    <RouteSuspense>
+      <StrengthExercisesPage />
+    </RouteSuspense>
+  );
+}
+
+export function LazyStrengthExerciseEditorPage() {
+  return (
+    <RouteSuspense>
+      <StrengthExerciseEditorPage />
+    </RouteSuspense>
+  );
+}
 
 export function LazyFoodJournalPage() {
   return (

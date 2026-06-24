@@ -1,4 +1,5 @@
 import { createDefaultAppSettings } from '@/domain/defaults/appSettings';
+import { exerciseCatalog } from '@/domain/defaults/exerciseCatalog';
 import { APP_SETTINGS_ID, LOCAL_USER_PROFILE_ID } from '@/domain/defaults/identifiers';
 import type { BackupEnvelope } from '@/domain/models/backup';
 import type { UserProfile } from '@/domain/models/profile';
@@ -90,8 +91,9 @@ describe('backupService', () => {
     expect(parsed.data.userProfile).toHaveLength(1);
     expect(parsed.data.weights).toHaveLength(1);
     expect(parsed.data.appSettings[0]?.id).toBe(APP_SETTINGS_ID);
-    expect(parsed.data.exerciseDefinitions).toEqual([]);
-    expect(summary.totalRecords).toBe(3);
+    expect(parsed.data.exerciseDefinitions).toHaveLength(exerciseCatalog.length);
+    expect(parsed.data.exerciseDefinitions.every((exercise) => exercise.source === 'catalog')).toBe(true);
+    expect(summary.totalRecords).toBe(exerciseCatalog.length + 3);
     expect(summary.hasProfile).toBe(true);
   });
 
@@ -190,7 +192,8 @@ describe('backupService', () => {
 
     expect(await database.userProfile.count()).toBe(0);
     expect(await database.weights.count()).toBe(0);
-    expect(await database.exerciseDefinitions.count()).toBe(0);
+    expect(await database.exerciseDefinitions.count()).toBe(exerciseCatalog.length);
+    expect(await database.exerciseDefinitions.get('exercise-1')).toBeUndefined();
     expect(await database.appSettings.count()).toBe(1);
     expect(await database.appSettings.get(APP_SETTINGS_ID)).toMatchObject({
       id: APP_SETTINGS_ID,
