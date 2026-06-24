@@ -3,6 +3,7 @@ import {
   newFoodProductForMealPath,
   selectFoodPath,
   editStrengthExercisePath,
+  editWorkoutTemplatePath,
 } from '@/app/routePaths';
 
 describe('parcours de sélection alimentaire', () => {
@@ -41,5 +42,12 @@ describe('parcours de sélection alimentaire', () => {
 describe('parcours du catalogue de musculation', () => {
   it('construit le chemin de modification d’un exercice personnel', () => {
     expect(editStrengthExercisePath('exercise-1')).toBe('/strength/exercises/exercise-1/edit');
+  });
+});
+
+
+describe('parcours des séances modèles', () => {
+  it('construit le chemin de modification d’une séance', () => {
+    expect(editWorkoutTemplatePath('template-1')).toBe('/strength/templates/template-1/edit');
   });
 });

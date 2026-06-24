@@ -80,6 +80,19 @@ const StrengthExerciseEditorPage = lazy(() =>
   })),
 );
 
+
+const WorkoutTemplatesPage = lazy(() =>
+  import('@/features/strength-templates/pages/WorkoutTemplatesPage').then((module) => ({
+    default: module.WorkoutTemplatesPage,
+  })),
+);
+
+const WorkoutTemplateEditorPage = lazy(() =>
+  import('@/features/strength-templates/pages/WorkoutTemplateEditorPage').then((module) => ({
+    default: module.WorkoutTemplateEditorPage,
+  })),
+);
+
 const FoodJournalPage = lazy(() =>
   import('@/features/food-journal/pages/FoodJournalPage').then((module) => ({
     default: module.FoodJournalPage,
@@ -324,6 +337,15 @@ export function LazyStrengthExerciseEditorPage() {
       <StrengthExerciseEditorPage />
     </RouteSuspense>
   );
+}
+
+
+export function LazyWorkoutTemplatesPage() {
+  return <RouteSuspense><WorkoutTemplatesPage /></RouteSuspense>;
+}
+
+export function LazyWorkoutTemplateEditorPage() {
+  return <RouteSuspense><WorkoutTemplateEditorPage /></RouteSuspense>;
 }
 
 export function LazyFoodJournalPage() {

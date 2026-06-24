@@ -20,6 +20,9 @@ export const routePaths = {
   strengthExercises: '/strength/exercises',
   newStrengthExercise: '/strength/exercises/new',
   editStrengthExercise: '/strength/exercises/:exerciseId/edit',
+  workoutTemplates: '/strength/templates',
+  newWorkoutTemplate: '/strength/templates/new',
+  editWorkoutTemplate: '/strength/templates/:templateId/edit',
   addActivity: '/activities/add',
   addRunningActivity: '/activities/add/running',
   addSwimmingActivity: '/activities/add/swimming',
@@ -36,6 +39,10 @@ export const routePaths = {
 
 export function editStrengthExercisePath(exerciseId: string): string {
   return `/strength/exercises/${exerciseId}/edit`;
+}
+
+export function editWorkoutTemplatePath(templateId: string): string {
+  return `/strength/templates/${templateId}/edit`;
 }
 
 export function editActivityPath(activityId: string): string {

@@ -253,3 +253,20 @@ Cette préversion ajoute le premier écran fonctionnel du carnet de musculation 
 - restauration automatique du catalogue après un effacement ou l’import d’une ancienne sauvegarde.
 
 Validation : 63 fichiers de tests, 249 tests, lint, build PWA et audit réussis.
+
+## Version 0.14.0-alpha.3 — séances modèles de musculation
+
+Cette préversion ajoute la gestion complète des séances modèles :
+
+- création et modification d’une séance modèle ;
+- ajout d’exercices depuis le catalogue local ;
+- ordre modifiable avec des commandes accessibles ;
+- séries prévues et fourchette de répétitions ;
+- charge cible, incrément, repos et RPE maximal recommandé ;
+- notes générales et notes par exercice ;
+- duplication d’une séance avec une configuration indépendante ;
+- archivage et réactivation sans suppression de l’historique ;
+- conservation des identifiants des exercices de modèle lors des modifications ;
+- accès depuis le journal des activités et la navigation ordinateur.
+
+Validation : 66 fichiers de tests, 259 tests, lint, build PWA et audit réussis.

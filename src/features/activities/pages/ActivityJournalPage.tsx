@@ -1,4 +1,4 @@
-import { CalendarDays, Dumbbell, Flame, LoaderCircle, Pencil, Plus, Trash2 } from 'lucide-react';
+import { CalendarDays, Dumbbell, Flame, Layers3, LoaderCircle, Pencil, Plus, Trash2 } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { editActivityPath, routePaths } from '@/app/routePaths';
 import { useActivityJournal } from '@/features/activities/hooks/useActivityJournal';
@@ -39,6 +39,13 @@ export function ActivityJournalPage() {
           </p>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row">
+          <Link
+            to={routePaths.workoutTemplates}
+            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-5 font-semibold text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+          >
+            <Layers3 aria-hidden="true" className="size-5" />
+            Séances modèles
+          </Link>
           <Link
             to={routePaths.strengthExercises}
             className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-5 font-semibold text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"

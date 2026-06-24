@@ -10,3 +10,5 @@ export type { WeeklyReviewRepository } from '@/infrastructure/repositories/contr
 export type { WeightRepository } from '@/infrastructure/repositories/contracts/WeightRepository';
 
 export type * from '@/infrastructure/repositories/contracts/StrengthExerciseRepository';
+
+export type { WorkoutTemplateRepository, WorkoutTemplateDetails } from '@/infrastructure/repositories/contracts/WorkoutTemplateRepository';
