@@ -6,11 +6,13 @@ import {
   LoaderCircle,
   Plus,
   Search,
+  ScanLine,
   Star,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
+  barcodeScannerPath,
   foodJournalPath,
   newFoodProductForMealPath,
 } from '@/app/routePaths';
@@ -225,6 +227,14 @@ export function MealFoodSelectorPage() {
                 Open Food Facts
               </Button>
             </div>
+
+            <Link
+              to={barcodeScannerPath(date, mealSlot)}
+              className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800 sm:w-auto"
+            >
+              <ScanLine aria-hidden="true" className="size-4" />
+              Scanner un code-barres
+            </Link>
 
             {source !== 'openFoodFacts' ? (
               <div className="mt-4">

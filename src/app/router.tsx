@@ -2,6 +2,7 @@ import { createHashRouter } from 'react-router-dom';
 import {
   LazyAddActivityPage,
   LazyBackupPage,
+  LazyBarcodeScannerPage,
   LazyAdvancedSettingsPage,
   LazyAnalyticsPage,
   LazyActivityJournalPage,
@@ -78,6 +79,10 @@ export const router = createHashRouter([
       {
         path: routePaths.foodSelector,
         element: <LazyMealFoodSelectorPage />,
+      },
+      {
+        path: routePaths.barcodeScanner,
+        element: <LazyBarcodeScannerPage />,
       },
       {
         path: routePaths.editFoodEntry,
