@@ -134,4 +134,21 @@ describe('MealFoodSelectorPage', () => {
     expect(await screen.findByRole('heading', { name: 'Riz complet' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Résultats locaux' })).toBeInTheDocument();
   });
+
+  it('ouvre directement la recherche Open Food Facts après un échec de scan', async () => {
+    render(
+      <MemoryRouter initialEntries={['/food/select?date=2026-06-24&slot=lunch&source=openFoodFacts']}>
+        <Routes>
+          <Route path="/food/select" element={<MealFoodSelectorPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole('button', { name: 'Open Food Facts' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.getByLabelText('Rechercher dans Open Food Facts')).toBeInTheDocument();
+  });
+
 });

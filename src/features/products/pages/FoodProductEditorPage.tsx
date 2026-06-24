@@ -1,5 +1,5 @@
 import { ArrowLeft, LoaderCircle } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { routePaths, selectFoodPath } from '@/app/routePaths';
 import type { FoodProduct, MealSlot } from '@/domain/models/food';
@@ -13,6 +13,7 @@ import {
 import { repositories } from '@/infrastructure/repositories/repositories';
 import { Card } from '@/shared/ui/Card';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
+import { isSupportedBarcode, normalizeOpenFoodFactsBarcode } from '@/infrastructure/open-food-facts/barcode';
 import { isValidLocalDate } from '@/shared/validation/localDate';
 
 const mealSlots: readonly MealSlot[] = ['breakfast', 'lunch', 'dinner', 'snacks'];
@@ -27,6 +28,7 @@ export function FoodProductEditorPage() {
   const navigate = useNavigate();
   const returnDate = searchParams.get('returnDate');
   const returnSlot = searchParams.get('returnSlot');
+  const requestedBarcode = searchParams.get('barcode');
   const mealReturnContext = !productId && returnDate !== null && isValidLocalDate(returnDate) && isMealSlot(returnSlot)
     ? { date: returnDate, slot: returnSlot }
     : undefined;
@@ -34,6 +36,16 @@ export function FoodProductEditorPage() {
     ? selectFoodPath(mealReturnContext.date, mealReturnContext.slot)
     : routePaths.foodProducts;
   const [product, setProduct] = useState<FoodProduct>();
+  const initialValues = useMemo(() => {
+    if (product) return productToFormValues(product);
+    if (requestedBarcode && isSupportedBarcode(requestedBarcode)) {
+      return {
+        ...defaultFoodProductFormValues,
+        barcode: normalizeOpenFoodFactsBarcode(requestedBarcode),
+      };
+    }
+    return defaultFoodProductFormValues;
+  }, [product, requestedBarcode]);
   const [loading, setLoading] = useState(Boolean(productId));
   const [errorMessage, setErrorMessage] = useState<string>();
 
@@ -112,7 +124,7 @@ export function FoodProductEditorPage() {
       {!loading && !errorMessage ? (
         <Card className="mt-8 p-5 sm:p-7">
           <FoodProductForm
-            initialValues={product ? productToFormValues(product) : defaultFoodProductFormValues}
+            initialValues={initialValues}
             submitLabel={product ? 'Enregistrer les modifications' : 'Créer l’aliment'}
             onSubmit={handleSubmit}
           />

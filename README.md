@@ -172,3 +172,20 @@ Un écran de scan est accessible depuis le sélecteur d’aliments. Il utilise Q
 Cette version valide uniquement la capture et le décodage. Le raccordement automatique du code détecté à Open Food Facts et à l’ajout au repas sera effectué dans la prochaine évolution.
 
 Aucune table IndexedDB et aucun format de sauvegarde ne sont modifiés.
+
+## Version 0.13.0-alpha.8 — scanner relié au journal alimentaire
+
+Le scanner code-barres est désormais intégré au parcours alimentaire complet.
+
+- recherche locale prioritaire par code-barres ;
+- lecture des produits locaux hors connexion ;
+- interrogation d'Open Food Facts pour un code inconnu ;
+- enregistrement local du produit distant ;
+- quantité et portions configurables après le scan ;
+- ajout direct au repas d'origine ;
+- création manuelle avec code prérempli ;
+- recherche textuelle de secours ;
+- messages distincts pour produit absent, produit archivé, mode hors connexion et API indisponible ;
+- proxy de développement utilisable derrière un Quick Tunnel Cloudflare.
+
+Le schéma IndexedDB et le format des sauvegardes restent inchangés.

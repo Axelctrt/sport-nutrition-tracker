@@ -22,4 +22,16 @@ describe('parcours de sélection alimentaire', () => {
       '/food/products/new?returnDate=2026-06-24&returnSlot=dinner',
     );
   });
+
+  it('conserve le code-barres pour la création manuelle après un scan inconnu', () => {
+    expect(newFoodProductForMealPath('2026-06-24', 'lunch', '3017624010701')).toBe(
+      '/food/products/new?returnDate=2026-06-24&returnSlot=lunch&barcode=3017624010701',
+    );
+  });
+
+  it('ouvre directement la recherche Open Food Facts depuis un échec de scan', () => {
+    expect(selectFoodPath('2026-06-24', 'lunch', undefined, 'openFoodFacts')).toBe(
+      '/food/select?date=2026-06-24&slot=lunch&source=openFoodFacts',
+    );
+  });
 });
