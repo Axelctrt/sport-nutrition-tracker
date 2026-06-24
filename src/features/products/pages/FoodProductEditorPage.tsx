@@ -1,8 +1,8 @@
 import { ArrowLeft, LoaderCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
-import { routePaths } from '@/app/routePaths';
-import type { FoodProduct } from '@/domain/models/food';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { routePaths, selectFoodPath } from '@/app/routePaths';
+import type { FoodProduct, MealSlot } from '@/domain/models/food';
 import { FoodProductForm } from '@/features/products/components/FoodProductForm';
 import type { FoodProductFormValues } from '@/features/products/schemas/foodProductSchema';
 import {
@@ -13,10 +13,26 @@ import {
 import { repositories } from '@/infrastructure/repositories/repositories';
 import { Card } from '@/shared/ui/Card';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
+import { isValidLocalDate } from '@/shared/validation/localDate';
+
+const mealSlots: readonly MealSlot[] = ['breakfast', 'lunch', 'dinner', 'snacks'];
+
+function isMealSlot(value: string | null): value is MealSlot {
+  return value !== null && mealSlots.includes(value as MealSlot);
+}
 
 export function FoodProductEditorPage() {
   const { productId } = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const returnDate = searchParams.get('returnDate');
+  const returnSlot = searchParams.get('returnSlot');
+  const mealReturnContext = !productId && returnDate !== null && isValidLocalDate(returnDate) && isMealSlot(returnSlot)
+    ? { date: returnDate, slot: returnSlot }
+    : undefined;
+  const returnPath = mealReturnContext
+    ? selectFoodPath(mealReturnContext.date, mealReturnContext.slot)
+    : routePaths.foodProducts;
   const [product, setProduct] = useState<FoodProduct>();
   const [loading, setLoading] = useState(Boolean(productId));
   const [errorMessage, setErrorMessage] = useState<string>();
@@ -56,17 +72,23 @@ export function FoodProductEditorPage() {
           }
         : input.source;
       await repositories.food.updateProduct(productId, { ...input, source });
-    } else {
-      await repositories.food.createProduct(input);
+      await navigate(routePaths.foodProducts);
+      return;
     }
-    await navigate(routePaths.foodProducts);
+
+    const createdProduct = await repositories.food.createProduct(input);
+    await navigate(
+      mealReturnContext
+        ? selectFoodPath(mealReturnContext.date, mealReturnContext.slot, createdProduct.id)
+        : routePaths.foodProducts,
+    );
   };
 
   return (
     <section aria-labelledby="food-product-editor-title">
-      <Link to={routePaths.foodProducts} className="inline-flex items-center gap-2 text-sm font-semibold text-brand-700 hover:underline dark:text-brand-300">
+      <Link to={returnPath} className="inline-flex items-center gap-2 text-sm font-semibold text-brand-700 hover:underline dark:text-brand-300">
         <ArrowLeft aria-hidden="true" className="size-4" />
-        Retour aux aliments
+        {mealReturnContext ? 'Retour au choix de l’aliment' : 'Retour aux aliments'}
       </Link>
       <div className="mt-5">
         <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">Catalogue alimentaire</p>

@@ -1,17 +1,21 @@
-# Correctif mobile — champs de date 0.13.0-alpha.4
+# Patch SportPilot 0.13.0-alpha.5 — Sélecteur alimentaire par repas
 
-Ce patch s'applique sur SportPilot 0.13.0-alpha.3.
+Base attendue : **0.13.0-alpha.4**.
 
-Il corrige le débordement horizontal des contrôles natifs `date`, `time`, `datetime-local`, `month` et `week`, notamment sur Safari iOS.
+Ce patch ajoute le parcours local d’ajout d’un aliment directement depuis le petit-déjeuner, le déjeuner, le dîner ou les collations.
 
-Écrans explicitement ajustés :
+Fonctionnalités :
 
-- Journal alimentaire ;
-- Journal des activités ;
-- Poids ;
-- Analyses.
+- repas et date présélectionnés ;
+- aliments récents ;
+- aliments favoris ;
+- recherche dans tous les aliments locaux ;
+- aperçu nutritionnel ;
+- quantité ou nombre de portions ;
+- ajout direct au journal ;
+- création manuelle avec retour vers le repas d’origine.
 
-Le correctif est purement visuel : aucune migration Dexie et aucune modification des sauvegardes.
+Aucune migration Dexie et aucune migration du format de sauvegarde ne sont nécessaires.
 
 Après copie du contenu à la racine du projet :
 

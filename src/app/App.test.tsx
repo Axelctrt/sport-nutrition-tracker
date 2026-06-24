@@ -20,6 +20,7 @@ vi.mock('virtual:pwa-register/react', () => ({
 
 describe('App', () => {
   beforeEach(async () => {
+    cleanup();
     appDatabase.close();
     await appDatabase.delete();
     window.localStorage.clear();
@@ -30,7 +31,6 @@ describe('App', () => {
     cleanup();
     appDatabase.close();
     await appDatabase.delete();
-    window.localStorage.clear();
   });
 
   it('redirige vers l’onboarding quand aucun profil n’existe', async () => {

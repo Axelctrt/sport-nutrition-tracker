@@ -79,6 +79,12 @@ const FoodEntryEditorPage = lazy(() =>
   })),
 );
 
+const MealFoodSelectorPage = lazy(() =>
+  import('@/features/food-journal/pages/MealFoodSelectorPage').then((module) => ({
+    default: module.MealFoodSelectorPage,
+  })),
+);
+
 
 const OpenFoodFactsSearchPage = lazy(() =>
   import('@/features/open-food-facts/pages/OpenFoodFactsSearchPage').then((module) => ({
@@ -296,6 +302,14 @@ export function LazyFoodEntryEditorPage() {
   return (
     <RouteSuspense>
       <FoodEntryEditorPage />
+    </RouteSuspense>
+  );
+}
+
+export function LazyMealFoodSelectorPage() {
+  return (
+    <RouteSuspense>
+      <MealFoodSelectorPage />
     </RouteSuspense>
   );
 }

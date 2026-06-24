@@ -1,7 +1,7 @@
 import { CalendarCheck, Copy, CopyPlus, LoaderCircle, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { addFoodPath, addRecipeToJournalPath, editFoodEntryPath, routePaths } from '@/app/routePaths';
+import { addRecipeToJournalPath, editFoodEntryPath, routePaths, selectFoodPath } from '@/app/routePaths';
 import { calculateRemainingNutrition } from '@/domain/calculations/nutrition';
 import { CopyMealForm } from '@/features/food-journal/components/CopyMealForm';
 import { SaveFavoriteMealForm } from '@/features/food-journal/components/SaveFavoriteMealForm';
@@ -54,7 +54,7 @@ export function FoodJournalPage() {
           <Link to={routePaths.foodProducts} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-300 px-4 font-semibold hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800">Aliments locaux</Link>
           <Link to={routePaths.recipes} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-300 px-4 font-semibold hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800">Recettes</Link>
           <Link to={routePaths.favoriteMeals} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-300 px-4 font-semibold hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800">Repas favoris</Link>
-          <Link to={addFoodPath(date, 'snacks')} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-brand-700 px-4 font-semibold text-white hover:bg-brand-800"><Plus aria-hidden="true" className="size-4" />Ajouter</Link>
+          <Link to={selectFoodPath(date, 'snacks')} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-brand-700 px-4 font-semibold text-white hover:bg-brand-800"><Plus aria-hidden="true" className="size-4" />Ajouter une collation</Link>
         </div>
       </div>
 
@@ -91,7 +91,7 @@ export function FoodJournalPage() {
               <Card key={meal.slot} className="p-5 sm:p-6">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div><h2 className="text-xl font-semibold text-slate-950 dark:text-white">{mealSlotLabels[meal.slot]}</h2><p className="mt-1 text-sm text-slate-500">{round(meal.totals.caloriesKcal)} kcal · {meal.entries.length} entrée{meal.entries.length > 1 ? 's' : ''}</p></div>
-                  <div className="flex flex-wrap gap-2"><Link to={addFoodPath(date, meal.slot)} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-300 px-3 text-sm font-semibold hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"><Plus aria-hidden="true" className="size-4" />Aliment</Link><Link to={`${routePaths.recipes}?date=${encodeURIComponent(date)}&slot=${encodeURIComponent(meal.slot)}`} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-300 px-3 text-sm font-semibold hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"><Plus aria-hidden="true" className="size-4" />Recette</Link></div>
+                  <div className="flex flex-wrap gap-2"><Link aria-label={`Ajouter un aliment au ${mealSlotLabels[meal.slot].toLocaleLowerCase('fr')}`} to={selectFoodPath(date, meal.slot)} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-300 px-3 text-sm font-semibold hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"><Plus aria-hidden="true" className="size-4" />Ajouter un aliment</Link><Link to={`${routePaths.recipes}?date=${encodeURIComponent(date)}&slot=${encodeURIComponent(meal.slot)}`} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-300 px-3 text-sm font-semibold hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"><Plus aria-hidden="true" className="size-4" />Recette</Link></div>
                 </div>
                 {meal.entries.length === 0 ? <p className="mt-4 text-sm text-slate-500">Aucun aliment enregistré.</p> : (
                   <div className="mt-4 divide-y divide-slate-200 dark:divide-slate-800">

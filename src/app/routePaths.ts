@@ -5,6 +5,7 @@ export const routePaths = {
   settings: '/settings',
   food: '/food',
   addFood: '/food/add',
+  foodSelector: '/food/select',
   foodProducts: '/food/products',
   newFoodProduct: '/food/products/new',
   editFoodEntry: '/food/entries/:entryId/edit',
@@ -44,6 +45,17 @@ export function foodJournalPath(date: string): string {
 
 export function addFoodPath(date: string, slot: string): string {
   return `${routePaths.addFood}?date=${encodeURIComponent(date)}&slot=${encodeURIComponent(slot)}`;
+}
+
+export function selectFoodPath(date: string, slot: string, productId?: string): string {
+  const params = new URLSearchParams({ date, slot });
+  if (productId) params.set('productId', productId);
+  return `${routePaths.foodSelector}?${params.toString()}`;
+}
+
+export function newFoodProductForMealPath(date: string, slot: string): string {
+  const params = new URLSearchParams({ returnDate: date, returnSlot: slot });
+  return `${routePaths.newFoodProduct}?${params.toString()}`;
 }
 
 export function editFoodEntryPath(entryId: string): string {

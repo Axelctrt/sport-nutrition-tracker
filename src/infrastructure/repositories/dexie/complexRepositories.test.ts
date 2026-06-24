@@ -207,3 +207,136 @@ describe('repositories Dexie complexes', () => {
     expect(await repository.listAdjustments()).toHaveLength(1);
   });
 });
+
+it('retourne les aliments récemment utilisés sans doublon et ignore les produits archivés', async () => {
+  const database = new AppDatabase(`sportpilot-recent-food-test-${crypto.randomUUID()}`);
+  await database.open();
+  const repository = new DexieFoodRepository(database);
+
+  try {
+    const banana = await repository.createProduct({
+      name: 'Banane',
+      basisUnit: 'g',
+      nutritionPer100: {
+        caloriesKcal: 89,
+        proteinGrams: 1.1,
+        carbohydratesGrams: 23,
+        fatGrams: 0.3,
+      },
+      source: { type: 'manual' },
+      isNutritionComplete: true,
+      isFavorite: false,
+      isArchived: false,
+    });
+    const yogurt = await repository.createProduct({
+      name: 'Yaourt grec',
+      basisUnit: 'g',
+      nutritionPer100: {
+        caloriesKcal: 120,
+        proteinGrams: 9,
+        carbohydratesGrams: 4,
+        fatGrams: 7,
+      },
+      source: { type: 'manual' },
+      isNutritionComplete: true,
+      isFavorite: true,
+      isArchived: false,
+    });
+    const archived = await repository.createProduct({
+      name: 'Ancien produit',
+      basisUnit: 'g',
+      nutritionPer100: {
+        caloriesKcal: 200,
+        proteinGrams: 2,
+        carbohydratesGrams: 30,
+        fatGrams: 8,
+      },
+      source: { type: 'manual' },
+      isNutritionComplete: true,
+      isFavorite: false,
+      isArchived: true,
+    });
+
+    await database.foodEntries.bulkAdd([
+      {
+        id: 'entry-old-banana',
+        date: '2026-06-22',
+        mealId: 'meal-1',
+        mealSlot: 'breakfast',
+        sourceType: 'product',
+        reference: {
+          sourceType: 'product',
+          productId: banana.id,
+          inputMode: 'amount',
+          inputQuantity: 100,
+          normalizedAmount: 100,
+          normalizedUnit: 'g',
+          nutritionPer100Snapshot: banana.nutritionPer100,
+        },
+        createdAt: '2026-06-22T08:00:00.000Z',
+        updatedAt: '2026-06-22T08:00:00.000Z',
+      },
+      {
+        id: 'entry-yogurt',
+        date: '2026-06-23',
+        mealId: 'meal-2',
+        mealSlot: 'breakfast',
+        sourceType: 'product',
+        reference: {
+          sourceType: 'product',
+          productId: yogurt.id,
+          inputMode: 'amount',
+          inputQuantity: 150,
+          normalizedAmount: 150,
+          normalizedUnit: 'g',
+          nutritionPer100Snapshot: yogurt.nutritionPer100,
+        },
+        createdAt: '2026-06-23T08:00:00.000Z',
+        updatedAt: '2026-06-23T08:00:00.000Z',
+      },
+      {
+        id: 'entry-new-banana',
+        date: '2026-06-24',
+        mealId: 'meal-3',
+        mealSlot: 'snacks',
+        sourceType: 'product',
+        reference: {
+          sourceType: 'product',
+          productId: banana.id,
+          inputMode: 'amount',
+          inputQuantity: 120,
+          normalizedAmount: 120,
+          normalizedUnit: 'g',
+          nutritionPer100Snapshot: banana.nutritionPer100,
+        },
+        createdAt: '2026-06-24T15:00:00.000Z',
+        updatedAt: '2026-06-24T15:00:00.000Z',
+      },
+      {
+        id: 'entry-archived',
+        date: '2026-06-24',
+        mealId: 'meal-4',
+        mealSlot: 'dinner',
+        sourceType: 'product',
+        reference: {
+          sourceType: 'product',
+          productId: archived.id,
+          inputMode: 'amount',
+          inputQuantity: 100,
+          normalizedAmount: 100,
+          normalizedUnit: 'g',
+          nutritionPer100Snapshot: archived.nutritionPer100,
+        },
+        createdAt: '2026-06-24T20:00:00.000Z',
+        updatedAt: '2026-06-24T20:00:00.000Z',
+      },
+    ]);
+
+    const recent = await repository.listRecentProducts(3);
+
+    expect(recent.map((item) => item.id)).toEqual([banana.id, yogurt.id]);
+  } finally {
+    database.close();
+    await database.delete();
+  }
+});
