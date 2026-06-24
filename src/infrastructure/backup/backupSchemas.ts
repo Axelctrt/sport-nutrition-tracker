@@ -1,0 +1,493 @@
+import { z } from 'zod';
+import { APP_SETTINGS_ID, LOCAL_USER_PROFILE_ID } from '@/domain/defaults/identifiers';
+import type { BackupEnvelope } from '@/domain/models/backup';
+import { isValidLocalDate } from '@/shared/validation/localDate';
+
+const finiteNumber = z.number().finite();
+const nonNegativeNumber = finiteNumber.min(0);
+const positiveNumber = finiteNumber.positive();
+const nonNegativeInteger = z.number().int().min(0);
+const positiveInteger = z.number().int().positive();
+
+const localDateSchema = z.string().refine(isValidLocalDate, 'Date locale invalide.');
+const isoDateTimeSchema = z.string().refine(
+  (value) => !Number.isNaN(Date.parse(value)),
+  'Horodatage ISO invalide.',
+);
+const localTimeSchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Heure locale invalide.');
+
+const entityMetadataSchema = z.object({
+  id: z.string().min(1),
+  createdAt: isoDateTimeSchema,
+  updatedAt: isoDateTimeSchema,
+});
+
+const datedEntitySchema = entityMetadataSchema.extend({
+  date: localDateSchema,
+});
+
+const nutritionValuesSchema = z.object({
+  caloriesKcal: nonNegativeNumber,
+  proteinGrams: nonNegativeNumber,
+  carbohydratesGrams: nonNegativeNumber,
+  fatGrams: nonNegativeNumber,
+  fiberGrams: nonNegativeNumber.optional(),
+  saltGrams: nonNegativeNumber.optional(),
+});
+
+const ageInformationSchema = z.discriminatedUnion('mode', [
+  z.object({
+    mode: z.literal('birthDate'),
+    birthDate: localDateSchema,
+  }),
+  z.object({
+    mode: z.literal('age'),
+    ageYears: z.number().int().min(1).max(150),
+    recordedOn: localDateSchema,
+  }),
+]);
+
+const userProfileSchema = entityMetadataSchema.extend({
+  firstName: z.string().max(100).optional(),
+  sexForEnergyEquation: z.enum(['male', 'female']),
+  ageInformation: ageInformationSchema,
+  heightCm: positiveNumber,
+  initialWeightKg: positiveNumber,
+  goal: z.enum(['loss', 'maintenance', 'gain']),
+  targetWeeklyWeightChangePercent: finiteNumber,
+  occupationalActivity: z.enum(['sedentary', 'lightlyActive', 'active', 'veryActive']),
+  dailyStepGoal: nonNegativeInteger,
+  proteinGramsPerKg: nonNegativeNumber,
+  fatGramsPerKg: nonNegativeNumber,
+});
+
+const swimmingMetValuesSchema = z.object({
+  recovery: nonNegativeNumber,
+  technique: nonNegativeNumber,
+  endurance: nonNegativeNumber,
+  tempo: nonNegativeNumber,
+  intervals: nonNegativeNumber,
+  competition: nonNegativeNumber,
+});
+
+const appSettingsSchema = entityMetadataSchema.extend({
+  theme: z.enum(['system', 'light', 'dark']),
+  includedBaseSteps: nonNegativeInteger,
+  walkingKcalPerKgPerKm: nonNegativeNumber,
+  runningKcalPerKgPerKm: nonNegativeNumber,
+  strengthTrainingMet: nonNegativeNumber,
+  calorieFloorBmrMultiplier: nonNegativeNumber,
+  defaultCyclingMet: nonNegativeNumber,
+  defaultWalkingMet: nonNegativeNumber,
+  defaultOtherCardioMet: nonNegativeNumber,
+  swimmingMetValues: swimmingMetValuesSchema,
+  maximumWeeklyAdjustmentKcal: nonNegativeNumber,
+  maximumCumulativeAdjustmentKcal: nonNegativeNumber,
+  requestPersistentStorage: z.boolean(),
+});
+
+const weightEntrySchema = datedEntitySchema.extend({
+  weightKg: positiveNumber,
+  note: z.string().max(5_000).optional(),
+});
+
+const dailyStepsSchema = datedEntitySchema.extend({
+  totalSteps: nonNegativeInteger,
+  source: z.literal('manual'),
+});
+
+const activityCalculationSnapshotSchema = z.object({
+  weightKg: positiveNumber,
+  estimatedCaloriesKcal: nonNegativeNumber,
+  coefficientUsed: nonNegativeNumber.optional(),
+  metUsed: nonNegativeNumber.optional(),
+  calculationVersion: positiveInteger,
+});
+
+const activityBaseShape = {
+  type: z.enum(['running', 'swimming', 'strengthTraining', 'cycling', 'walking', 'otherCardio']),
+  time: localTimeSchema.optional(),
+  durationMinutes: positiveNumber,
+  intensity: z.enum(['low', 'moderate', 'high']),
+  rpe: z.number().int().min(1).max(10),
+  notes: z.string().max(10_000).optional(),
+  manualCaloriesKcal: nonNegativeNumber.optional(),
+  calculation: activityCalculationSnapshotSchema,
+};
+
+const runningActivitySchema = datedEntitySchema.extend({
+  ...activityBaseShape,
+  type: z.literal('running'),
+  sessionType: z.enum(['easy', 'recovery', 'longRun', 'tempo', 'intervals', 'hills', 'competition']),
+  distanceKm: positiveNumber,
+  averageCadenceSpm: positiveNumber,
+});
+
+const swimmingActivitySchema = datedEntitySchema.extend({
+  ...activityBaseShape,
+  type: z.literal('swimming'),
+  sessionType: z.enum(['recovery', 'technique', 'endurance', 'tempo', 'intervals', 'competition']),
+  mainStroke: z.enum(['freestyle', 'breaststroke', 'backstroke', 'butterfly', 'mixed', 'drills']),
+  distanceMeters: positiveNumber,
+});
+
+const strengthActivitySchema = datedEntitySchema.extend({
+  ...activityBaseShape,
+  type: z.literal('strengthTraining'),
+  met: nonNegativeNumber,
+});
+
+const otherActivitySchema = datedEntitySchema.extend({
+  ...activityBaseShape,
+  type: z.enum(['cycling', 'walking', 'otherCardio']),
+  met: nonNegativeNumber,
+  includedInDailySteps: z.boolean(),
+});
+
+const activitySchema = z.discriminatedUnion('type', [
+  runningActivitySchema,
+  swimmingActivitySchema,
+  strengthActivitySchema,
+  otherActivitySchema,
+]);
+
+const foodDataSourceSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('manual') }),
+  z.object({
+    type: z.literal('openFoodFacts'),
+    fetchedAt: isoDateTimeSchema,
+    barcode: z.string().optional(),
+  }),
+]);
+
+const foodProductSchema = entityMetadataSchema.extend({
+  name: z.string().min(1),
+  brand: z.string().optional(),
+  basisUnit: z.enum(['g', 'ml']),
+  nutritionPer100: nutritionValuesSchema,
+  servingSize: positiveNumber.optional(),
+  barcode: z.string().optional(),
+  source: foodDataSourceSchema,
+  isNutritionComplete: z.boolean(),
+  isFavorite: z.boolean(),
+  isArchived: z.boolean(),
+});
+
+const mealSlotSchema = z.enum(['breakfast', 'lunch', 'dinner', 'snacks']);
+
+const mealSchema = datedEntitySchema.extend({
+  slot: mealSlotSchema,
+  title: z.string().optional(),
+});
+
+const productReferenceSchema = z.object({
+  sourceType: z.literal('product'),
+  productId: z.string().min(1),
+  inputMode: z.enum(['amount', 'servings']),
+  inputQuantity: positiveNumber,
+  normalizedAmount: positiveNumber,
+  normalizedUnit: z.enum(['g', 'ml']),
+  nutritionPer100Snapshot: nutritionValuesSchema,
+});
+
+const recipeReferenceSchema = z.object({
+  sourceType: z.literal('recipe'),
+  recipeId: z.string().min(1),
+  servingsConsumed: positiveNumber,
+  nutritionPerServingSnapshot: nutritionValuesSchema,
+});
+
+const foodEntryReferenceSchema = z.discriminatedUnion('sourceType', [
+  productReferenceSchema,
+  recipeReferenceSchema,
+]);
+
+const foodEntrySchema = datedEntitySchema.extend({
+  mealId: z.string().min(1),
+  mealSlot: mealSlotSchema,
+  sourceType: z.enum(['product', 'recipe']),
+  reference: foodEntryReferenceSchema,
+}).superRefine((value, context) => {
+  if (value.sourceType !== value.reference.sourceType) {
+    context.addIssue({
+      code: 'custom',
+      path: ['sourceType'],
+      message: 'Le type de l’entrée ne correspond pas à sa référence.',
+    });
+  }
+});
+
+const favoriteProductItemSchema = productReferenceSchema.extend({
+  id: z.string().min(1),
+});
+
+const favoriteRecipeItemSchema = recipeReferenceSchema.extend({
+  id: z.string().min(1),
+});
+
+const favoriteMealSchema = entityMetadataSchema.extend({
+  name: z.string().min(1),
+  defaultSlot: mealSlotSchema.optional(),
+  items: z.array(z.discriminatedUnion('sourceType', [favoriteProductItemSchema, favoriteRecipeItemSchema])),
+});
+
+const dailyJournalStatusSchema = datedEntitySchema.extend({
+  isComplete: z.boolean(),
+  completedAt: isoDateTimeSchema.optional(),
+});
+
+const recipeSchema = entityMetadataSchema.extend({
+  name: z.string().min(1),
+  numberOfServings: positiveNumber,
+  notes: z.string().optional(),
+});
+
+const recipeIngredientSchema = entityMetadataSchema.extend({
+  recipeId: z.string().min(1),
+  productId: z.string().min(1),
+  quantity: positiveNumber,
+  unit: z.enum(['g', 'ml']),
+  sortOrder: nonNegativeInteger,
+  nutritionPer100Snapshot: nutritionValuesSchema,
+});
+
+const dailyEnergyBreakdownSchema = z.object({
+  bmrKcal: nonNegativeNumber,
+  occupationalBaseKcal: nonNegativeNumber,
+  walkingKcal: nonNegativeNumber,
+  runningKcal: nonNegativeNumber,
+  swimmingKcal: nonNegativeNumber,
+  strengthTrainingKcal: nonNegativeNumber,
+  otherActivitiesKcal: nonNegativeNumber,
+  totalEstimatedExpenditureKcal: nonNegativeNumber,
+});
+
+const dailyMacroTargetsSchema = z.object({
+  proteinGrams: nonNegativeNumber,
+  carbohydratesGrams: nonNegativeNumber,
+  fatGrams: nonNegativeNumber,
+});
+
+const dailyTargetSchema = datedEntitySchema.extend({
+  calculationWeightKg: positiveNumber,
+  energy: dailyEnergyBreakdownSchema,
+  goalAdjustmentKcal: finiteNumber,
+  acceptedCalibrationAdjustmentKcal: finiteNumber,
+  calorieFloorKcal: nonNegativeNumber,
+  targetCaloriesKcal: nonNegativeNumber,
+  macros: dailyMacroTargetsSchema,
+  calculationVersion: positiveInteger,
+});
+
+const weeklyReviewSchema = entityMetadataSchema.extend({
+  weekStart: localDateSchema,
+  weekEnd: localDateSchema,
+  previousWeekStart: localDateSchema,
+  previousWeekEnd: localDateSchema,
+  weighInCount: nonNegativeInteger,
+  previousWeighInCount: nonNegativeInteger,
+  trackedFoodDays: nonNegativeInteger,
+  completedFoodDays: nonNegativeInteger,
+  calorieComparableDays: nonNegativeInteger,
+  averageWeightKg: positiveNumber.optional(),
+  previousAverageWeightKg: positiveNumber.optional(),
+  actualWeightChangeKg: finiteNumber.optional(),
+  targetWeightChangeKg: finiteNumber,
+  averageConsumedCaloriesKcal: nonNegativeNumber.optional(),
+  averageTargetCaloriesKcal: nonNegativeNumber.optional(),
+  calorieDeviationPercent: nonNegativeNumber.optional(),
+  calorieAdherencePercent: nonNegativeNumber.optional(),
+  proteinTargetDays: nonNegativeInteger,
+  stepGoalDays: nonNegativeInteger,
+  recordedStepDays: nonNegativeInteger,
+  isCalibrationEligible: z.boolean(),
+  ineligibilityReasons: z.array(z.string()),
+  rawProposedAdjustmentKcal: finiteNumber,
+  proposedDecision: z.enum(['keep', 'increase', 'decrease']),
+  proposedAdjustmentKcal: finiteNumber,
+  currentCumulativeAdjustmentKcal: finiteNumber,
+  resultingCumulativeAdjustmentKcal: finiteNumber,
+  adherenceScore: nonNegativeNumber,
+  adherenceLevel: z.enum(['excellent', 'good', 'needsStrengthening', 'insufficient']),
+  decisionStatus: z.enum(['pending', 'accepted', 'rejected', 'notEligible']),
+  decidedAt: isoDateTimeSchema.optional(),
+});
+
+const acceptedCalorieAdjustmentSchema = entityMetadataSchema.extend({
+  weeklyReviewId: z.string().min(1),
+  effectiveFrom: localDateSchema,
+  adjustmentKcalPerDay: finiteNumber,
+  resultingCumulativeAdjustmentKcal: finiteNumber,
+  status: z.enum(['active', 'reverted']),
+  revertedAt: isoDateTimeSchema.optional(),
+});
+
+const backupDataSchema = z.object({
+  userProfile: z.array(userProfileSchema).max(1),
+  appSettings: z.array(appSettingsSchema).length(1),
+  weights: z.array(weightEntrySchema),
+  dailySteps: z.array(dailyStepsSchema),
+  activities: z.array(activitySchema),
+  foodProducts: z.array(foodProductSchema),
+  meals: z.array(mealSchema),
+  foodEntries: z.array(foodEntrySchema),
+  favoriteMeals: z.array(favoriteMealSchema),
+  recipes: z.array(recipeSchema),
+  recipeIngredients: z.array(recipeIngredientSchema),
+  dailyTargets: z.array(dailyTargetSchema),
+  dailyJournalStatuses: z.array(dailyJournalStatusSchema),
+  weeklyReviews: z.array(weeklyReviewSchema),
+  acceptedCalorieAdjustments: z.array(acceptedCalorieAdjustmentSchema),
+});
+
+function addDuplicateIssues<T>(
+  values: T[],
+  key: (value: T) => string,
+  path: (string | number)[],
+  label: string,
+  context: z.RefinementCtx,
+): void {
+  const seen = new Set<string>();
+  for (const value of values) {
+    const currentKey = key(value);
+    if (seen.has(currentKey)) {
+      context.addIssue({
+        code: 'custom',
+        path,
+        message: `${label} contient une valeur dupliquée : ${currentKey}.`,
+      });
+      return;
+    }
+    seen.add(currentKey);
+  }
+}
+
+export const backupEnvelopeSchema = z.object({
+  format: z.literal('sportpilot-backup'),
+  schemaVersion: z.number().int().positive(),
+  exportedAt: isoDateTimeSchema,
+  data: backupDataSchema,
+}).superRefine((envelope, context) => {
+  const { data } = envelope;
+
+  if (data.userProfile[0] && data.userProfile[0].id !== LOCAL_USER_PROFILE_ID) {
+    context.addIssue({
+      code: 'custom',
+      path: ['data', 'userProfile', 0, 'id'],
+      message: 'L’identifiant du profil local est invalide.',
+    });
+  }
+
+  if (data.appSettings[0]?.id !== APP_SETTINGS_ID) {
+    context.addIssue({
+      code: 'custom',
+      path: ['data', 'appSettings', 0, 'id'],
+      message: 'L’identifiant des paramètres est invalide.',
+    });
+  }
+
+  const collections: [string, { id: string }[]][] = [
+    ['userProfile', data.userProfile],
+    ['appSettings', data.appSettings],
+    ['weights', data.weights],
+    ['dailySteps', data.dailySteps],
+    ['activities', data.activities],
+    ['foodProducts', data.foodProducts],
+    ['meals', data.meals],
+    ['foodEntries', data.foodEntries],
+    ['favoriteMeals', data.favoriteMeals],
+    ['recipes', data.recipes],
+    ['recipeIngredients', data.recipeIngredients],
+    ['dailyTargets', data.dailyTargets],
+    ['dailyJournalStatuses', data.dailyJournalStatuses],
+    ['weeklyReviews', data.weeklyReviews],
+    ['acceptedCalorieAdjustments', data.acceptedCalorieAdjustments],
+  ];
+
+  for (const [name, values] of collections) {
+    addDuplicateIssues(values, (value) => value.id, ['data', name], `La table ${name}`, context);
+  }
+
+  addDuplicateIssues(data.weights, (value) => value.date, ['data', 'weights'], 'Les pesées', context);
+  addDuplicateIssues(data.dailySteps, (value) => value.date, ['data', 'dailySteps'], 'Les pas', context);
+  addDuplicateIssues(data.dailyTargets, (value) => value.date, ['data', 'dailyTargets'], 'Les objectifs quotidiens', context);
+  addDuplicateIssues(
+    data.dailyJournalStatuses,
+    (value) => value.date,
+    ['data', 'dailyJournalStatuses'],
+    'Les statuts du journal',
+    context,
+  );
+  addDuplicateIssues(data.weeklyReviews, (value) => value.weekStart, ['data', 'weeklyReviews'], 'Les bilans', context);
+  addDuplicateIssues(data.meals, (value) => `${value.date}|${value.slot}`, ['data', 'meals'], 'Les repas', context);
+  addDuplicateIssues(
+    data.recipeIngredients,
+    (value) => `${value.recipeId}|${value.sortOrder}`,
+    ['data', 'recipeIngredients'],
+    'Les positions d’ingrédients',
+    context,
+  );
+
+  const mealById = new Map(data.meals.map((meal) => [meal.id, meal]));
+  data.foodEntries.forEach((entry, index) => {
+    const meal = mealById.get(entry.mealId);
+    if (!meal) {
+      context.addIssue({
+        code: 'custom',
+        path: ['data', 'foodEntries', index, 'mealId'],
+        message: 'Le repas associé à cette entrée est absent.',
+      });
+      return;
+    }
+    if (meal.date !== entry.date || meal.slot !== entry.mealSlot) {
+      context.addIssue({
+        code: 'custom',
+        path: ['data', 'foodEntries', index],
+        message: 'La date ou l’emplacement de l’entrée ne correspond pas au repas.',
+      });
+    }
+  });
+
+  const recipeIds = new Set(data.recipes.map((recipe) => recipe.id));
+  const productIds = new Set(data.foodProducts.map((product) => product.id));
+  data.recipeIngredients.forEach((ingredient, index) => {
+    if (!recipeIds.has(ingredient.recipeId)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['data', 'recipeIngredients', index, 'recipeId'],
+        message: 'La recette associée à cet ingrédient est absente.',
+      });
+    }
+    if (!productIds.has(ingredient.productId)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['data', 'recipeIngredients', index, 'productId'],
+        message: 'L’aliment associé à cet ingrédient est absent.',
+      });
+    }
+  });
+
+  const reviewIds = new Set(data.weeklyReviews.map((review) => review.id));
+  data.acceptedCalorieAdjustments.forEach((adjustment, index) => {
+    if (!reviewIds.has(adjustment.weeklyReviewId)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['data', 'acceptedCalorieAdjustments', index, 'weeklyReviewId'],
+        message: 'Le bilan associé à cet ajustement est absent.',
+      });
+    }
+  });
+});
+
+export function validateBackupEnvelope(input: unknown): BackupEnvelope {
+  return backupEnvelopeSchema.parse(input) as BackupEnvelope;
+}
+
+export function formatBackupValidationError(error: z.ZodError): string {
+  const firstIssues = error.issues.slice(0, 5).map((issue) => {
+    const path = issue.path.length > 0 ? issue.path.join('.') : 'fichier';
+    return `${path} : ${issue.message}`;
+  });
+  const remaining = error.issues.length - firstIssues.length;
+  return `${firstIssues.join('\n')}${remaining > 0 ? `\n… et ${remaining} autre(s) erreur(s).` : ''}`;
+}

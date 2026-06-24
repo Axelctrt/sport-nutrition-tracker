@@ -1,0 +1,12 @@
+CORRECTIF SPORTPILOT 0.8.2
+
+1. Arrêter le serveur avec Ctrl + C.
+2. Copier tout le contenu de ce dossier dans le projet sport-nutrition-tracker.
+3. Accepter le remplacement des fichiers.
+4. Exécuter :
+   npm install
+   npm run check
+   npm run dev
+5. Recharger l'application avec Ctrl + F5.
+
+Le proxy Open Food Facts n'est actif que via npm run dev.
