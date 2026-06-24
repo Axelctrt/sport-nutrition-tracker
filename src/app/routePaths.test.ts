@@ -1,4 +1,5 @@
 import {
+  barcodeScannerPath,
   newFoodProductForMealPath,
   selectFoodPath,
 } from '@/app/routePaths';
@@ -7,6 +8,12 @@ describe('parcours de sélection alimentaire', () => {
   it('conserve la date, le repas et le produit présélectionné', () => {
     expect(selectFoodPath('2026-06-24', 'breakfast', 'product-1')).toBe(
       '/food/select?date=2026-06-24&slot=breakfast&productId=product-1',
+    );
+  });
+
+  it('conserve le contexte du repas pour le scanner', () => {
+    expect(barcodeScannerPath('2026-06-24', 'snacks')).toBe(
+      '/food/barcode-scanner?date=2026-06-24&slot=snacks',
     );
   });
 

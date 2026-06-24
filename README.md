@@ -164,3 +164,11 @@ Le parcours gère :
 - l’annulation automatique des requêtes lors du démontage du composant.
 
 Aucune table IndexedDB ni version de sauvegarde n’est modifiée.
+
+## Version 0.13.0-alpha.7 — validation du scanner caméra
+
+Un écran de scan est accessible depuis le sélecteur d’aliments. Il utilise Quagga2 pour reconnaître EAN-13, EAN-8, UPC-A et UPC-E, privilégie la caméra arrière et arrête systématiquement le flux après détection, annulation, changement de page ou passage en arrière-plan.
+
+Cette version valide uniquement la capture et le décodage. Le raccordement automatique du code détecté à Open Food Facts et à l’ajout au repas sera effectué dans la prochaine évolution.
+
+Aucune table IndexedDB et aucun format de sauvegarde ne sont modifiés.

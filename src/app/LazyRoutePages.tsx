@@ -85,6 +85,12 @@ const MealFoodSelectorPage = lazy(() =>
   })),
 );
 
+const BarcodeScannerPage = lazy(() =>
+  import('@/features/barcode-scanner/pages/BarcodeScannerPage').then((module) => ({
+    default: module.BarcodeScannerPage,
+  })),
+);
+
 
 const OpenFoodFactsSearchPage = lazy(() =>
   import('@/features/open-food-facts/pages/OpenFoodFactsSearchPage').then((module) => ({
@@ -310,6 +316,14 @@ export function LazyMealFoodSelectorPage() {
   return (
     <RouteSuspense>
       <MealFoodSelectorPage />
+    </RouteSuspense>
+  );
+}
+
+export function LazyBarcodeScannerPage() {
+  return (
+    <RouteSuspense>
+      <BarcodeScannerPage />
     </RouteSuspense>
   );
 }

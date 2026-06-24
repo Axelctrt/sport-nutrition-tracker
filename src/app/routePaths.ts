@@ -6,6 +6,7 @@ export const routePaths = {
   food: '/food',
   addFood: '/food/add',
   foodSelector: '/food/select',
+  barcodeScanner: '/food/barcode-scanner',
   foodProducts: '/food/products',
   newFoodProduct: '/food/products/new',
   editFoodEntry: '/food/entries/:entryId/edit',
@@ -75,4 +76,8 @@ export function addRecipeToJournalPath(
   const params = new URLSearchParams({ date, slot });
   if (entryId) params.set('entryId', entryId);
   return `/recipes/${recipeId}/add?${params.toString()}`;
+}
+
+export function barcodeScannerPath(date: string, slot: string): string {
+  return `${routePaths.barcodeScanner}?date=${encodeURIComponent(date)}&slot=${encodeURIComponent(slot)}`;
 }

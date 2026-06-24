@@ -1,33 +1,32 @@
-# Patch SportPilot 0.13.0-alpha.6
+# Patch SportPilot 0.13.0-alpha.7
 
-Ce patch s’applique sur la version `0.13.0-alpha.5`, depuis la branche :
+Branche recommandée : `feature/barcode-scanner-poc`
 
-```text
-feature/meal-food-off-search
-```
+Ce patch ajoute un premier scanner caméra isolé afin de valider la compatibilité réelle des codes-barres alimentaires sur téléphone avant son branchement complet à Open Food Facts.
 
-Il intègre la recherche textuelle Open Food Facts directement dans le sélecteur alimentaire ouvert depuis un repas.
+## Fonctionnalités
 
-## Installation
+- bibliothèque `@ericblade/quagga2` ;
+- formats EAN-13, EAN-8, UPC-A et UPC-E ;
+- caméra arrière privilégiée ;
+- démarrage après action explicite ;
+- confirmation après deux lectures identiques ;
+- arrêt après détection ;
+- arrêt lors du démontage, du changement de page ou du passage en arrière-plan ;
+- erreurs distinctes : permission refusée, caméra absente, caméra occupée, contexte non sécurisé ;
+- saisie manuelle de secours ;
+- route `/food/barcode-scanner` accessible depuis le sélecteur d’aliments ;
+- aucune migration Dexie et aucune modification du format de sauvegarde.
 
-1. arrêter Vite ;
-2. copier le contenu du patch à la racine du projet ;
-3. exécuter :
+## Vérification
 
 ```powershell
 npm install
 npm run check
-npm run dev -- --host
 ```
 
-## Résultats attendus
+Résultat attendu : 56 fichiers de tests et 223 tests réussis.
 
-```text
-Version : 0.13.0-alpha.6
-Fichiers de tests : 54 réussis
-Tests : 213 réussis
-Build PWA : réussi
-Audit MVP : réussi
-```
+## Test caméra
 
-Aucune migration Dexie ou de sauvegarde JSON n’est nécessaire.
+La caméra requiert HTTPS. Pour un test sur téléphone, utilise un déploiement HTTPS ou un tunnel temporaire Cloudflare. L’adresse locale `http://192.168.x.x:5173` permet d’ouvrir l’application mais pas d’utiliser `getUserMedia`.
