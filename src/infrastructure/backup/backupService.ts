@@ -50,6 +50,13 @@ function tableList(database: AppDatabase) {
     database.dailyJournalStatuses,
     database.weeklyReviews,
     database.acceptedCalorieAdjustments,
+    database.exerciseDefinitions,
+    database.workoutTemplates,
+    database.workoutTemplateExercises,
+    database.workoutSessions,
+    database.workoutSessionExercises,
+    database.strengthSets,
+    database.progressionSuggestions,
   ] as const;
 }
 
@@ -70,6 +77,13 @@ async function readBackupData(database: AppDatabase): Promise<BackupData> {
     dailyJournalStatuses,
     weeklyReviews,
     acceptedCalorieAdjustments,
+    exerciseDefinitions,
+    workoutTemplates,
+    workoutTemplateExercises,
+    workoutSessions,
+    workoutSessionExercises,
+    strengthSets,
+    progressionSuggestions,
   ] = await Promise.all(tableList(database).map((table) => table.toArray()));
 
   return {
@@ -88,6 +102,13 @@ async function readBackupData(database: AppDatabase): Promise<BackupData> {
     dailyJournalStatuses,
     weeklyReviews,
     acceptedCalorieAdjustments,
+    exerciseDefinitions,
+    workoutTemplates,
+    workoutTemplateExercises,
+    workoutSessions,
+    workoutSessionExercises,
+    strengthSets,
+    progressionSuggestions,
   } as BackupData;
 }
 
@@ -201,6 +222,27 @@ async function populateTables(database: AppDatabase, data: BackupData): Promise<
   if (data.weeklyReviews.length > 0) await database.weeklyReviews.bulkAdd(data.weeklyReviews);
   if (data.acceptedCalorieAdjustments.length > 0) {
     await database.acceptedCalorieAdjustments.bulkAdd(data.acceptedCalorieAdjustments);
+  }
+  if (data.exerciseDefinitions.length > 0) {
+    await database.exerciseDefinitions.bulkAdd(data.exerciseDefinitions);
+  }
+  if (data.workoutTemplates.length > 0) {
+    await database.workoutTemplates.bulkAdd(data.workoutTemplates);
+  }
+  if (data.workoutTemplateExercises.length > 0) {
+    await database.workoutTemplateExercises.bulkAdd(data.workoutTemplateExercises);
+  }
+  if (data.workoutSessions.length > 0) {
+    await database.workoutSessions.bulkAdd(data.workoutSessions);
+  }
+  if (data.workoutSessionExercises.length > 0) {
+    await database.workoutSessionExercises.bulkAdd(data.workoutSessionExercises);
+  }
+  if (data.strengthSets.length > 0) {
+    await database.strengthSets.bulkAdd(data.strengthSets);
+  }
+  if (data.progressionSuggestions.length > 0) {
+    await database.progressionSuggestions.bulkAdd(data.progressionSuggestions);
   }
 }
 

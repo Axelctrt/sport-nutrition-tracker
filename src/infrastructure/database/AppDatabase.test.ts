@@ -19,7 +19,7 @@ describe('AppDatabase', () => {
     await database.delete();
   });
 
-  it('déclare toutes les tables du schéma version 1', async () => {
+  it('déclare toutes les tables du schéma version 2', async () => {
     await database.open();
 
     const actualTableNames = database.tables.map((table) => table.name).sort();

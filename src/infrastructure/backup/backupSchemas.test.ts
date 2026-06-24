@@ -6,11 +6,16 @@ import { migrateBackupEnvelope } from '@/infrastructure/backup/backupMigrations'
 import { backupEnvelopeSchema } from '@/infrastructure/backup/backupSchemas';
 import { createEntity } from '@/shared/utils/entities';
 import { createProfileInput } from '@/test/factories/profileFactory';
+import {
+  createExerciseDefinitionInput,
+  createWorkoutTemplateExerciseInput,
+  createWorkoutTemplateInput,
+} from '@/test/factories/strengthFactory';
 
 function createValidEnvelope(): BackupEnvelope {
   return {
     format: 'sportpilot-backup',
-    schemaVersion: 1,
+    schemaVersion: 2,
     exportedAt: '2026-06-24T10:00:00.000Z',
     data: {
       userProfile: [createEntity<UserProfile>(createProfileInput(), LOCAL_USER_PROFILE_ID)],
@@ -28,7 +33,34 @@ function createValidEnvelope(): BackupEnvelope {
       dailyJournalStatuses: [],
       weeklyReviews: [],
       acceptedCalorieAdjustments: [],
+      exerciseDefinitions: [],
+      workoutTemplates: [],
+      workoutTemplateExercises: [],
+      workoutSessions: [],
+      workoutSessionExercises: [],
+      strengthSets: [],
+      progressionSuggestions: [],
     },
+  };
+}
+
+function createVersion1Envelope(): unknown {
+  const current = createValidEnvelope();
+  const {
+    exerciseDefinitions: _exerciseDefinitions,
+    workoutTemplates: _workoutTemplates,
+    workoutTemplateExercises: _workoutTemplateExercises,
+    workoutSessions: _workoutSessions,
+    workoutSessionExercises: _workoutSessionExercises,
+    strengthSets: _strengthSets,
+    progressionSuggestions: _progressionSuggestions,
+    ...version1Data
+  } = current.data;
+
+  return {
+    ...current,
+    schemaVersion: 1,
+    data: version1Data,
   };
 }
 
@@ -36,7 +68,7 @@ describe('backupEnvelopeSchema', () => {
   it('valide une sauvegarde complète au format courant', () => {
     expect(backupEnvelopeSchema.parse(createValidEnvelope())).toMatchObject({
       format: 'sportpilot-backup',
-      schemaVersion: 1,
+      schemaVersion: 2,
     });
   });
 
@@ -82,11 +114,39 @@ describe('backupEnvelopeSchema', () => {
     const result = backupEnvelopeSchema.safeParse(envelope);
     expect(result.success).toBe(false);
   });
+
+  it('refuse un exercice de séance modèle orphelin', () => {
+    const envelope = createValidEnvelope();
+    envelope.data.exerciseDefinitions = [
+      createEntity(createExerciseDefinitionInput(), 'exercise-1'),
+    ];
+    envelope.data.workoutTemplates = [createEntity(createWorkoutTemplateInput(), 'template-1')];
+    envelope.data.workoutTemplateExercises = [
+      createEntity(
+        createWorkoutTemplateExerciseInput({ exerciseDefinitionId: 'missing-exercise' }),
+        'template-exercise-1',
+      ),
+    ];
+
+    const result = backupEnvelopeSchema.safeParse(envelope);
+    expect(result.success).toBe(false);
+  });
 });
 
 describe('migrateBackupEnvelope', () => {
-  it('accepte la version 1', () => {
-    expect(migrateBackupEnvelope(createValidEnvelope()).schemaVersion).toBe(1);
+  it('migre une sauvegarde version 1 vers la version 2 sans altérer ses données', () => {
+    const migrated = migrateBackupEnvelope(createVersion1Envelope());
+
+    expect(migrated.schemaVersion).toBe(2);
+    expect(migrated.data.userProfile).toHaveLength(1);
+    expect(migrated.data.exerciseDefinitions).toEqual([]);
+    expect(migrated.data.workoutTemplates).toEqual([]);
+    expect(migrated.data.workoutSessions).toEqual([]);
+    expect(migrated.data.strengthSets).toEqual([]);
+  });
+
+  it('accepte directement la version 2', () => {
+    expect(migrateBackupEnvelope(createValidEnvelope()).schemaVersion).toBe(2);
   });
 
   it('refuse une sauvegarde créée par une version future', () => {

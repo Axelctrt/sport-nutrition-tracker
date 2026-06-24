@@ -1,36 +1,31 @@
-# Version SportPilot 0.13.0
+# SportPilot 0.14.0-alpha.1 — socle de données musculation
 
-Branche recommandée : `release/0.13.0`
+Branche obligatoire : `feature/strength-data-model`
 
-La version stable 0.13.0 finalise le parcours alimentaire et le scanner code-barres :
+Cette étape ajoute uniquement l’infrastructure de données du carnet de musculation :
 
-- recherche prioritaire dans les aliments locaux ;
-- fonctionnement hors connexion pour un produit déjà enregistré ;
-- recherche Open Food Facts par code-barres si nécessaire ;
-- enregistrement local du produit distant ;
-- choix de la quantité ou du nombre de portions ;
-- ajout direct au repas présélectionné ;
-- création manuelle avec code-barres prérempli ;
-- accès direct à la recherche textuelle Open Food Facts ;
-- arrêt et annulation des requêtes en cas de changement de page ;
-- proxy Vite compatible avec les Quick Tunnels Cloudflare.
+- modèles TypeScript des exercices, séances modèles, séances réalisées, séries et suggestions ;
+- sept nouvelles tables Dexie ;
+- migration du schéma IndexedDB version 1 vers la version 2 ;
+- conservation non destructive des anciennes activités de musculation ;
+- sauvegarde JSON version 2 ;
+- migration automatique des sauvegardes version 1 ;
+- tests de migration IndexedDB et d’export/import.
 
-Aucune migration Dexie ni migration de sauvegarde n'est nécessaire.
+Aucun écran de musculation détaillé n’est encore ajouté dans cette étape.
 
 ## Validation
 
-Exécuter séparément :
-
 ```powershell
-npm install --registry=https://registry.npmjs.org/
+npm install
 npm run check
 ```
 
-Résultat attendu après installation complète :
+Résultats attendus :
 
-- 58 fichiers de tests ;
-- 234 tests ;
+- version `0.14.0-alpha.1` ;
+- 59 fichiers de tests ;
+- 238 tests ;
 - lint sans erreur ;
 - build Vite/PWA réussi ;
 - audit MVP réussi.
-

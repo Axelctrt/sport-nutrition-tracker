@@ -1,4 +1,4 @@
-# SportPilot 0.13.0
+# SportPilot 0.14.0-alpha.1
 
 PWA locale de suivi sportif, nutritionnel, calorique et de progression.
 
@@ -57,7 +57,7 @@ La page `#/backup` permet de :
 5. restaurer toutes les tables dans une transaction Dexie ;
 6. effacer toutes les données après confirmation `EFFACER`.
 
-Le format courant est `sportpilot-backup`, schéma version `1`. Les futures migrations de sauvegarde sont centralisées dans :
+Le format courant est `sportpilot-backup`, schéma version `2`. Les sauvegardes des versions 0.12 et 0.13 au schéma version 1 sont migrées automatiquement à l’import. Les futures migrations de sauvegarde sont centralisées dans :
 
 ```text
 src/infrastructure/backup/backupMigrations.ts
@@ -210,6 +210,28 @@ Validation de la version :
 
 - Oxlint : 0 erreur et 0 avertissement ;
 - Vitest : 58 fichiers et 234 tests réussis ;
+- TypeScript strict : compilation réussie ;
+- Vite/PWA : build et service worker générés ;
+- audit MVP : réussi.
+
+## Version 0.14.0-alpha.1 — socle de données musculation
+
+Cette préversion ajoute le modèle de données du futur carnet de musculation sans encore modifier l’interface :
+
+- catalogue d’exercices système ou utilisateur ;
+- séances modèles et exercices ordonnés ;
+- séances réalisées indépendantes de leur modèle d’origine ;
+- séries avec répétitions, charge, type, validation et RPE facultatif ;
+- suggestions de progression et historique des décisions ;
+- sept nouvelles tables Dexie ajoutées par une migration non destructive ;
+- conservation intégrale des anciennes activités de musculation dans `activities` ;
+- format de sauvegarde version 2 incluant toutes les nouvelles tables ;
+- migration automatique des sauvegardes version 1 vers la version 2.
+
+Validation de cette préversion :
+
+- Oxlint : 0 erreur et 0 avertissement ;
+- Vitest : 59 fichiers et 238 tests réussis ;
 - TypeScript strict : compilation réussie ;
 - Vite/PWA : build et service worker générés ;
 - audit MVP : réussi.

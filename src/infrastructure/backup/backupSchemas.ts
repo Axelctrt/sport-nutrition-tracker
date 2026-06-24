@@ -322,6 +322,136 @@ const acceptedCalorieAdjustmentSchema = entityMetadataSchema.extend({
   revertedAt: isoDateTimeSchema.optional(),
 });
 
+const muscleGroupSchema = z.enum([
+  'pectorals',
+  'back',
+  'shoulders',
+  'biceps',
+  'triceps',
+  'quadriceps',
+  'hamstrings',
+  'glutes',
+  'calves',
+  'abdominals',
+  'lowerBack',
+  'fullBody',
+  'other',
+]);
+
+const loadUnitSchema = z.enum(['kg', 'bodyweight', 'assistedKg', 'none']);
+
+const exerciseDefinitionSchema = entityMetadataSchema.extend({
+  name: z.string().trim().min(1).max(200),
+  primaryMuscleGroup: muscleGroupSchema,
+  secondaryMuscleGroups: z.array(muscleGroupSchema),
+  equipment: z.enum([
+    'barbell',
+    'dumbbells',
+    'machine',
+    'cable',
+    'bodyweight',
+    'resistanceBand',
+    'kettlebell',
+    'other',
+  ]),
+  category: z.enum(['strength', 'bodyweight', 'conditioning', 'mobility', 'other']),
+  movementType: z.enum(['compound', 'isolation', 'core', 'carry', 'other']),
+  loadUnit: loadUnitSchema,
+  description: z.string().max(10_000).optional(),
+  source: z.enum(['catalog', 'user']),
+  isArchived: z.boolean(),
+});
+
+const workoutTemplateSchema = entityMetadataSchema.extend({
+  name: z.string().trim().min(1).max(200),
+  description: z.string().max(10_000).optional(),
+  notes: z.string().max(10_000).optional(),
+  isArchived: z.boolean(),
+});
+
+const workoutTemplateExerciseSchema = entityMetadataSchema.extend({
+  templateId: z.string().min(1),
+  exerciseDefinitionId: z.string().min(1),
+  sortOrder: nonNegativeInteger,
+  plannedSets: positiveInteger,
+  minRepetitions: positiveInteger,
+  maxRepetitions: positiveInteger,
+  targetLoadKg: nonNegativeNumber.optional(),
+  loadIncrementKg: nonNegativeNumber,
+  restSeconds: nonNegativeInteger.optional(),
+  maximumRecommendedRpe: finiteNumber.min(1).max(10).optional(),
+  notes: z.string().max(10_000).optional(),
+  isActive: z.boolean(),
+}).refine((value) => value.minRepetitions <= value.maxRepetitions, {
+  message: 'La borne minimale de répétitions doit être inférieure ou égale à la borne maximale.',
+  path: ['minRepetitions'],
+});
+
+const workoutSessionSchema = entityMetadataSchema.extend({
+  date: localDateSchema,
+  status: z.enum(['inProgress', 'completed', 'abandoned']),
+  sourceTemplateId: z.string().min(1).optional(),
+  sourceTemplateNameSnapshot: z.string().max(200).optional(),
+  startedAt: isoDateTimeSchema.optional(),
+  completedAt: isoDateTimeSchema.optional(),
+  durationMinutes: nonNegativeNumber.optional(),
+  notes: z.string().max(10_000).optional(),
+});
+
+const workoutSessionExerciseSchema = entityMetadataSchema.extend({
+  sessionId: z.string().min(1),
+  exerciseDefinitionId: z.string().min(1),
+  exerciseNameSnapshot: z.string().trim().min(1).max(200),
+  sortOrder: nonNegativeInteger,
+  sourceTemplateExerciseId: z.string().min(1).optional(),
+  plannedSets: positiveInteger.optional(),
+  minRepetitions: positiveInteger.optional(),
+  maxRepetitions: positiveInteger.optional(),
+  targetLoadKg: nonNegativeNumber.optional(),
+  loadIncrementKg: nonNegativeNumber.optional(),
+  restSeconds: nonNegativeInteger.optional(),
+  maximumRecommendedRpe: finiteNumber.min(1).max(10).optional(),
+  loadUnitSnapshot: loadUnitSchema,
+  notes: z.string().max(10_000).optional(),
+}).refine(
+  (value) =>
+    value.minRepetitions === undefined ||
+    value.maxRepetitions === undefined ||
+    value.minRepetitions <= value.maxRepetitions,
+  {
+    message: 'La borne minimale de répétitions doit être inférieure ou égale à la borne maximale.',
+    path: ['minRepetitions'],
+  },
+);
+
+const strengthSetSchema = entityMetadataSchema.extend({
+  sessionId: z.string().min(1),
+  sessionExerciseId: z.string().min(1),
+  setNumber: positiveInteger,
+  repetitions: nonNegativeInteger,
+  weightKg: nonNegativeNumber,
+  rpe: finiteNumber.min(1).max(10).optional(),
+  type: z.enum(['warmup', 'working', 'dropSet', 'failure', 'other']),
+  isCompleted: z.boolean(),
+  completedAt: isoDateTimeSchema.optional(),
+  notes: z.string().max(10_000).optional(),
+});
+
+const progressionSuggestionSchema = entityMetadataSchema.extend({
+  sessionId: z.string().min(1),
+  sessionExerciseId: z.string().min(1),
+  exerciseDefinitionId: z.string().min(1),
+  templateId: z.string().min(1).optional(),
+  templateExerciseId: z.string().min(1).optional(),
+  currentLoadKg: nonNegativeNumber,
+  suggestedLoadKg: nonNegativeNumber,
+  incrementKg: positiveNumber,
+  status: z.enum(['pending', 'accepted', 'rejected', 'deferred']),
+  reason: z.literal('repetitionRangeCompleted'),
+  decidedAt: isoDateTimeSchema.optional(),
+  appliedAt: isoDateTimeSchema.optional(),
+});
+
 const backupDataSchema = z.object({
   userProfile: z.array(userProfileSchema).max(1),
   appSettings: z.array(appSettingsSchema).length(1),
@@ -338,6 +468,13 @@ const backupDataSchema = z.object({
   dailyJournalStatuses: z.array(dailyJournalStatusSchema),
   weeklyReviews: z.array(weeklyReviewSchema),
   acceptedCalorieAdjustments: z.array(acceptedCalorieAdjustmentSchema),
+  exerciseDefinitions: z.array(exerciseDefinitionSchema),
+  workoutTemplates: z.array(workoutTemplateSchema),
+  workoutTemplateExercises: z.array(workoutTemplateExerciseSchema),
+  workoutSessions: z.array(workoutSessionSchema),
+  workoutSessionExercises: z.array(workoutSessionExerciseSchema),
+  strengthSets: z.array(strengthSetSchema),
+  progressionSuggestions: z.array(progressionSuggestionSchema),
 });
 
 function addDuplicateIssues<T>(
@@ -402,6 +539,13 @@ export const backupEnvelopeSchema = z.object({
     ['dailyJournalStatuses', data.dailyJournalStatuses],
     ['weeklyReviews', data.weeklyReviews],
     ['acceptedCalorieAdjustments', data.acceptedCalorieAdjustments],
+    ['exerciseDefinitions', data.exerciseDefinitions],
+    ['workoutTemplates', data.workoutTemplates],
+    ['workoutTemplateExercises', data.workoutTemplateExercises],
+    ['workoutSessions', data.workoutSessions],
+    ['workoutSessionExercises', data.workoutSessionExercises],
+    ['strengthSets', data.strengthSets],
+    ['progressionSuggestions', data.progressionSuggestions],
   ];
 
   for (const [name, values] of collections) {
@@ -425,6 +569,28 @@ export const backupEnvelopeSchema = z.object({
     (value) => `${value.recipeId}|${value.sortOrder}`,
     ['data', 'recipeIngredients'],
     'Les positions d’ingrédients',
+    context,
+  );
+
+  addDuplicateIssues(
+    data.workoutTemplateExercises,
+    (value) => `${value.templateId}|${value.sortOrder}`,
+    ['data', 'workoutTemplateExercises'],
+    'Les positions d’exercices des séances modèles',
+    context,
+  );
+  addDuplicateIssues(
+    data.workoutSessionExercises,
+    (value) => `${value.sessionId}|${value.sortOrder}`,
+    ['data', 'workoutSessionExercises'],
+    'Les positions d’exercices des séances réalisées',
+    context,
+  );
+  addDuplicateIssues(
+    data.strengthSets,
+    (value) => `${value.sessionExerciseId}|${value.setNumber}`,
+    ['data', 'strengthSets'],
+    'Les numéros de séries',
     context,
   );
 
@@ -474,6 +640,126 @@ export const backupEnvelopeSchema = z.object({
         code: 'custom',
         path: ['data', 'acceptedCalorieAdjustments', index, 'weeklyReviewId'],
         message: 'Le bilan associé à cet ajustement est absent.',
+      });
+    }
+  });
+
+  const exerciseIds = new Set(data.exerciseDefinitions.map((exercise) => exercise.id));
+  const templateIds = new Set(data.workoutTemplates.map((template) => template.id));
+  const templateExerciseIds = new Set(
+    data.workoutTemplateExercises.map((templateExercise) => templateExercise.id),
+  );
+  const sessionIds = new Set(data.workoutSessions.map((session) => session.id));
+  const sessionExerciseById = new Map(
+    data.workoutSessionExercises.map((sessionExercise) => [sessionExercise.id, sessionExercise]),
+  );
+
+  data.workoutTemplateExercises.forEach((templateExercise, index) => {
+    if (!templateIds.has(templateExercise.templateId)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['data', 'workoutTemplateExercises', index, 'templateId'],
+        message: 'La séance modèle associée à cet exercice est absente.',
+      });
+    }
+    if (!exerciseIds.has(templateExercise.exerciseDefinitionId)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['data', 'workoutTemplateExercises', index, 'exerciseDefinitionId'],
+        message: 'La définition d’exercice associée est absente.',
+      });
+    }
+  });
+
+  data.workoutSessionExercises.forEach((sessionExercise, index) => {
+    if (!sessionIds.has(sessionExercise.sessionId)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['data', 'workoutSessionExercises', index, 'sessionId'],
+        message: 'La séance réalisée associée à cet exercice est absente.',
+      });
+    }
+    if (!exerciseIds.has(sessionExercise.exerciseDefinitionId)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['data', 'workoutSessionExercises', index, 'exerciseDefinitionId'],
+        message: 'La définition d’exercice associée est absente.',
+      });
+    }
+    if (
+      sessionExercise.sourceTemplateExerciseId !== undefined &&
+      !templateExerciseIds.has(sessionExercise.sourceTemplateExerciseId)
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['data', 'workoutSessionExercises', index, 'sourceTemplateExerciseId'],
+        message: 'L’exercice de séance modèle d’origine est absent.',
+      });
+    }
+  });
+
+  data.strengthSets.forEach((strengthSet, index) => {
+    const sessionExercise = sessionExerciseById.get(strengthSet.sessionExerciseId);
+    if (!sessionIds.has(strengthSet.sessionId)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['data', 'strengthSets', index, 'sessionId'],
+        message: 'La séance réalisée associée à cette série est absente.',
+      });
+    }
+    if (!sessionExercise) {
+      context.addIssue({
+        code: 'custom',
+        path: ['data', 'strengthSets', index, 'sessionExerciseId'],
+        message: 'L’exercice réalisé associé à cette série est absent.',
+      });
+    } else if (sessionExercise.sessionId !== strengthSet.sessionId) {
+      context.addIssue({
+        code: 'custom',
+        path: ['data', 'strengthSets', index],
+        message: 'La série et son exercice ne correspondent pas à la même séance.',
+      });
+    }
+  });
+
+  data.progressionSuggestions.forEach((suggestion, index) => {
+    const sessionExercise = sessionExerciseById.get(suggestion.sessionExerciseId);
+    if (!sessionIds.has(suggestion.sessionId)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['data', 'progressionSuggestions', index, 'sessionId'],
+        message: 'La séance réalisée associée à cette suggestion est absente.',
+      });
+    }
+    if (!sessionExercise) {
+      context.addIssue({
+        code: 'custom',
+        path: ['data', 'progressionSuggestions', index, 'sessionExerciseId'],
+        message: 'L’exercice réalisé associé à cette suggestion est absent.',
+      });
+    }
+    if (!exerciseIds.has(suggestion.exerciseDefinitionId)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['data', 'progressionSuggestions', index, 'exerciseDefinitionId'],
+        message: 'La définition d’exercice associée à cette suggestion est absente.',
+      });
+    }
+    if (suggestion.templateId !== undefined && !templateIds.has(suggestion.templateId)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['data', 'progressionSuggestions', index, 'templateId'],
+        message: 'La séance modèle associée à cette suggestion est absente.',
+      });
+    }
+    if (
+      suggestion.templateExerciseId !== undefined &&
+      !templateExerciseIds.has(suggestion.templateExerciseId)
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['data', 'progressionSuggestions', index, 'templateExerciseId'],
+        message: 'L’exercice de séance modèle associé à cette suggestion est absent.',
       });
     }
   });
