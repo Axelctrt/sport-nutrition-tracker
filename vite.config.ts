@@ -25,7 +25,7 @@ function createOpenFoodFactsProxy(
     timeout: 20_000,
     proxyTimeout: 20_000,
     headers: {
-      'User-Agent': 'SportPilot/0.12.0 (local PWA; Open Food Facts integration)',
+      'User-Agent': 'SportPilot/0.13.0-alpha.8 (local PWA; Open Food Facts integration)',
     },
     rewrite,
     configure(proxy) {
@@ -64,7 +64,7 @@ export default defineConfig({
             name: 'Ajouter un aliment',
             short_name: 'Aliment',
             description: 'Ajouter un aliment au journal du jour.',
-            url: './#/food/add',
+            url: './#/food/select',
             icons: [{ src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' }],
           },
           {
@@ -119,6 +119,7 @@ export default defineConfig({
     }),
   ],
   server: {
+    allowedHosts: ['.trycloudflare.com'],
     proxy: {
       '/api/open-food-facts/search': createOpenFoodFactsProxy(
         'https://search.openfoodfacts.org',

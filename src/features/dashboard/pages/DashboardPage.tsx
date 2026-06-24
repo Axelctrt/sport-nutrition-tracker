@@ -73,7 +73,7 @@ export function DashboardPage() {
       <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
-            Étape 7 opérationnelle · {formatLocalDate(date, 'EEEE d MMMM')}
+            Suivi du jour · {formatLocalDate(date, 'EEEE d MMMM')}
           </p>
           <h1 id="dashboard-title" className="mt-1 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl dark:text-white">
             {firstName ? `Bonjour ${firstName}` : 'Tableau de bord'}

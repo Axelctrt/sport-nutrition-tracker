@@ -434,16 +434,16 @@ export function BackupPage() {
       </div>
 
       <Card className="mt-6 p-5 sm:p-6">
-        <h2 className="text-xl font-bold text-slate-950 dark:text-white">État du MVP</h2>
+        <h2 className="text-xl font-bold text-slate-950 dark:text-white">Fonctionnement de l’application</h2>
         <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-          Le MVP couvre le profil, les calculs, le poids, les pas, les activités, la nutrition, Open Food Facts, les recettes, les analyses, le bilan hebdomadaire et la sauvegarde locale.
+          SportPilot regroupe le suivi du profil, du poids, des pas, des activités, de la nutrition, des recettes, des analyses et des sauvegardes locales.
         </p>
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {[
             ['Hors connexion', 'Saisies et consultations locales disponibles'],
             ['Responsive', 'Navigation mobile et bureau'],
             ['Confidentiel', 'Aucun compte ni backend requis'],
-            ['Version', 'SportPilot 0.12.0'],
+            ['Installable', 'PWA disponible sur mobile et ordinateur'],
           ].map(([title, description]) => (
             <div key={title} className={cn('rounded-xl border border-slate-200 p-3 dark:border-slate-700')}>
               <p className="font-semibold text-slate-950 dark:text-white">{title}</p>

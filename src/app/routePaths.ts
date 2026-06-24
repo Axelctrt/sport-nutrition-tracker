@@ -5,6 +5,8 @@ export const routePaths = {
   settings: '/settings',
   food: '/food',
   addFood: '/food/add',
+  foodSelector: '/food/select',
+  barcodeScanner: '/food/barcode-scanner',
   foodProducts: '/food/products',
   newFoodProduct: '/food/products/new',
   editFoodEntry: '/food/entries/:entryId/edit',
@@ -46,6 +48,30 @@ export function addFoodPath(date: string, slot: string): string {
   return `${routePaths.addFood}?date=${encodeURIComponent(date)}&slot=${encodeURIComponent(slot)}`;
 }
 
+export type FoodSelectorSource = 'openFoodFacts';
+
+export function selectFoodPath(
+  date: string,
+  slot: string,
+  productId?: string,
+  source?: FoodSelectorSource,
+): string {
+  const params = new URLSearchParams({ date, slot });
+  if (productId) params.set('productId', productId);
+  if (source) params.set('source', source);
+  return `${routePaths.foodSelector}?${params.toString()}`;
+}
+
+export function newFoodProductForMealPath(
+  date: string,
+  slot: string,
+  barcode?: string,
+): string {
+  const params = new URLSearchParams({ returnDate: date, returnSlot: slot });
+  if (barcode) params.set('barcode', barcode);
+  return `${routePaths.newFoodProduct}?${params.toString()}`;
+}
+
 export function editFoodEntryPath(entryId: string): string {
   return `/food/entries/${entryId}/edit`;
 }
@@ -63,4 +89,8 @@ export function addRecipeToJournalPath(
   const params = new URLSearchParams({ date, slot });
   if (entryId) params.set('entryId', entryId);
   return `/recipes/${recipeId}/add?${params.toString()}`;
+}
+
+export function barcodeScannerPath(date: string, slot: string): string {
+  return `${routePaths.barcodeScanner}?date=${encodeURIComponent(date)}&slot=${encodeURIComponent(slot)}`;
 }

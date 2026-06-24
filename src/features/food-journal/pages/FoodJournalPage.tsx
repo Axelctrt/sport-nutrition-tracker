@@ -1,7 +1,7 @@
 import { CalendarCheck, Copy, CopyPlus, LoaderCircle, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { addFoodPath, addRecipeToJournalPath, editFoodEntryPath, routePaths } from '@/app/routePaths';
+import { addRecipeToJournalPath, editFoodEntryPath, routePaths, selectFoodPath } from '@/app/routePaths';
 import { calculateRemainingNutrition } from '@/domain/calculations/nutrition';
 import { CopyMealForm } from '@/features/food-journal/components/CopyMealForm';
 import { SaveFavoriteMealForm } from '@/features/food-journal/components/SaveFavoriteMealForm';
@@ -46,7 +46,7 @@ export function FoodJournalPage() {
     <section aria-labelledby="food-journal-title">
       <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">Étape 9 opérationnelle</p>
+          <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">Nutrition quotidienne</p>
           <h1 id="food-journal-title" className="mt-1 text-3xl font-bold tracking-tight text-slate-950 dark:text-white">Journal alimentaire</h1>
           <p className="mt-3 max-w-3xl text-slate-600 dark:text-slate-300">Suis les calories et macronutriments réellement renseignés, repas par repas.</p>
         </div>
@@ -54,21 +54,21 @@ export function FoodJournalPage() {
           <Link to={routePaths.foodProducts} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-300 px-4 font-semibold hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800">Aliments locaux</Link>
           <Link to={routePaths.recipes} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-300 px-4 font-semibold hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800">Recettes</Link>
           <Link to={routePaths.favoriteMeals} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-300 px-4 font-semibold hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800">Repas favoris</Link>
-          <Link to={addFoodPath(date, 'snacks')} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-brand-700 px-4 font-semibold text-white hover:bg-brand-800"><Plus aria-hidden="true" className="size-4" />Ajouter</Link>
+          <Link to={selectFoodPath(date, 'snacks')} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-brand-700 px-4 font-semibold text-white hover:bg-brand-800"><Plus aria-hidden="true" className="size-4" />Ajouter une collation</Link>
         </div>
       </div>
 
       <Card className="mt-8 p-5 sm:p-6">
-        <div className="grid gap-4 lg:grid-cols-[1fr_auto_auto] lg:items-end">
-          <div>
+        <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-end">
+          <div className="min-w-0">
             <label htmlFor="food-journal-date" className="text-sm font-semibold">Journée consultée</label>
             <input id="food-journal-date" type="date" value={date} onChange={(event) => setSearchParams({ date: event.target.value })} className={`${inputClassName} mt-2`} />
           </div>
-          <div>
+          <div className="min-w-0">
             <label htmlFor="copy-day-date" className="text-sm font-semibold">Copier toute la journée vers</label>
             <input id="copy-day-date" type="date" value={copyTargetDate} onChange={(event) => setCopyTargetDate(event.target.value)} className={`${inputClassName} mt-2`} />
           </div>
-          <Button variant="secondary" disabled={busyId === 'copy-day' || !snapshot?.entries.length} onClick={() => void copyDayTo(copyTargetDate)}><Copy aria-hidden="true" className="size-4" />Copier la journée</Button>
+          <Button className="w-full lg:w-auto" variant="secondary" disabled={busyId === 'copy-day' || !snapshot?.entries.length} onClick={() => void copyDayTo(copyTargetDate)}><Copy aria-hidden="true" className="size-4" />Copier la journée</Button>
         </div>
       </Card>
 
@@ -91,7 +91,7 @@ export function FoodJournalPage() {
               <Card key={meal.slot} className="p-5 sm:p-6">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div><h2 className="text-xl font-semibold text-slate-950 dark:text-white">{mealSlotLabels[meal.slot]}</h2><p className="mt-1 text-sm text-slate-500">{round(meal.totals.caloriesKcal)} kcal · {meal.entries.length} entrée{meal.entries.length > 1 ? 's' : ''}</p></div>
-                  <div className="flex flex-wrap gap-2"><Link to={addFoodPath(date, meal.slot)} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-300 px-3 text-sm font-semibold hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"><Plus aria-hidden="true" className="size-4" />Aliment</Link><Link to={`${routePaths.recipes}?date=${encodeURIComponent(date)}&slot=${encodeURIComponent(meal.slot)}`} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-300 px-3 text-sm font-semibold hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"><Plus aria-hidden="true" className="size-4" />Recette</Link></div>
+                  <div className="flex flex-wrap gap-2"><Link aria-label={`Ajouter un aliment au ${mealSlotLabels[meal.slot].toLocaleLowerCase('fr')}`} to={selectFoodPath(date, meal.slot)} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-300 px-3 text-sm font-semibold hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"><Plus aria-hidden="true" className="size-4" />Ajouter un aliment</Link><Link to={`${routePaths.recipes}?date=${encodeURIComponent(date)}&slot=${encodeURIComponent(meal.slot)}`} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-300 px-3 text-sm font-semibold hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"><Plus aria-hidden="true" className="size-4" />Recette</Link></div>
                 </div>
                 {meal.entries.length === 0 ? <p className="mt-4 text-sm text-slate-500">Aucun aliment enregistré.</p> : (
                   <div className="mt-4 divide-y divide-slate-200 dark:divide-slate-800">

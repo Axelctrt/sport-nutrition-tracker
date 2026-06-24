@@ -1,4 +1,4 @@
-# SportPilot 0.12.0
+# SportPilot 0.13.0
 
 PWA locale de suivi sportif, nutritionnel, calorique et de progression.
 
@@ -22,7 +22,7 @@ Adresse de développement habituelle : `http://127.0.0.1:5173/`.
 ```powershell
 npm run dev          # serveur Vite
 npm run lint         # Oxlint
-npm run test         # 187 tests Vitest
+npm run test         # tests Vitest
 npm run build        # TypeScript + build PWA
 npm run audit:mvp    # contrôle statique final de la PWA
 npm run check        # lint + tests + build + audit
@@ -30,14 +30,14 @@ npm run preview      # prévisualisation du build
 npm run diagnose:off # diagnostic Open Food Facts
 ```
 
-## Fonctionnalités du MVP
+## Fonctionnalités
 
-- onboarding et profil physique ;
+- onboarding et profil physique, avec modification mobile optimisée ;
 - paramètres énergétiques avancés ;
 - Mifflin–St Jeor, dépenses et macronutriments ;
 - poids, pas et objectifs quotidiens ;
 - course, natation, musculation, vélo, marche et cardio ;
-- journal alimentaire local ;
+- journal alimentaire local avec ajout direct depuis chaque repas ;
 - Open Food Facts avec fonctionnement dégradé ;
 - recettes et repas favoris ;
 - historique et analyses sur douze semaines ;
@@ -106,10 +106,111 @@ npm run preview
 
 ## Contrôles finaux
 
-La version 0.12.0 est validée avec :
+La version 0.13.0 est validée avec :
 
 - Oxlint : 0 avertissement, 0 erreur ;
-- Vitest : 43 fichiers, 187 tests ;
+- Vitest : 58 fichiers, 234 tests ;
 - TypeScript strict : compilation réussie ;
 - Vite/PWA : build réussi, service worker généré ;
 - audit MVP : manifeste, icônes, raccourcis, hors ligne, repères d’accessibilité et absence de secrets évidents.
+
+## Correctif 0.13.0-alpha.2
+
+- Compatibilité des identifiants sur les origines HTTP locales mobiles où `crypto.randomUUID()` est indisponible.
+- Utilisation de `crypto.getRandomValues()` lorsque possible, avec repli local pour les anciens navigateurs.
+- Centralisation des identifiants des repas favoris.
+
+## Nettoyage de l’interface 0.13.0-alpha.3
+
+- suppression des références visibles aux étapes de développement ;
+- remplacement des libellés temporaires par des intitulés métier ;
+- retrait du diagnostic de version Open Food Facts dans l’interface ;
+- mise à jour de la présentation des capacités de l’application ;
+- ajout d’un test empêchant le retour de textes comme `Étape 8`, `MVP`, `prochainement` ou `TODO` dans les composants de production.
+
+
+## Correctif mobile 0.13.0-alpha.4
+
+Les champs natifs de date et d’heure sont maintenant contraints à la largeur de leur conteneur, y compris sur Safari iOS. Le correctif couvre notamment les écrans Journal alimentaire, Journal des activités, Poids et Analyses, sans désactiver les sélecteurs natifs du navigateur.
+
+## Sélecteur alimentaire par repas 0.13.0-alpha.5
+
+Depuis le petit-déjeuner, le déjeuner, le dîner ou les collations, l’utilisateur peut maintenant ouvrir un parcours d’ajout conservant automatiquement la date et le repas d’origine.
+
+Le sélecteur propose :
+
+- les aliments utilisés récemment ;
+- les aliments marqués comme favoris ;
+- tous les aliments locaux ;
+- une recherche locale par nom, marque ou code-barres ;
+- un aperçu nutritionnel avant validation ;
+- la saisie par quantité ou par nombre de portions ;
+- la création manuelle avec retour automatique vers le repas initial.
+
+Le scan caméra sera intégré dans la branche suivante. Cette évolution réutilise les tables IndexedDB existantes et ne modifie pas le format des sauvegardes.
+
+
+## Recherche Open Food Facts intégrée 0.13.0-alpha.6
+
+Le sélecteur alimentaire de chaque repas comprend maintenant un onglet Open Food Facts. L’utilisateur peut effectuer une recherche textuelle, enregistrer le résultat localement, régler la quantité puis l’ajouter au repas d’origine sans changer de page.
+
+Le parcours gère :
+
+- les résultats complets et incomplets ;
+- les produits déjà enregistrés localement ;
+- la conservation prioritaire d’un aliment manuel utilisant le même code-barres ;
+- le fonctionnement hors connexion avec retour vers les sources locales ;
+- les erreurs et indisponibilités du service externe ;
+- l’annulation automatique des requêtes lors du démontage du composant.
+
+Aucune table IndexedDB ni version de sauvegarde n’est modifiée.
+
+## Version 0.13.0-alpha.7 — validation du scanner caméra
+
+Un écran de scan est accessible depuis le sélecteur d’aliments. Il utilise Quagga2 pour reconnaître EAN-13, EAN-8, UPC-A et UPC-E, privilégie la caméra arrière et arrête systématiquement le flux après détection, annulation, changement de page ou passage en arrière-plan.
+
+Cette version valide uniquement la capture et le décodage. Le raccordement automatique du code détecté à Open Food Facts et à l’ajout au repas sera effectué dans la prochaine évolution.
+
+Aucune table IndexedDB et aucun format de sauvegarde ne sont modifiés.
+
+## Version 0.13.0-alpha.8 — scanner relié au journal alimentaire
+
+Le scanner code-barres est désormais intégré au parcours alimentaire complet.
+
+- recherche locale prioritaire par code-barres ;
+- lecture des produits locaux hors connexion ;
+- interrogation d'Open Food Facts pour un code inconnu ;
+- enregistrement local du produit distant ;
+- quantité et portions configurables après le scan ;
+- ajout direct au repas d'origine ;
+- création manuelle avec code prérempli ;
+- recherche textuelle de secours ;
+- messages distincts pour produit absent, produit archivé, mode hors connexion et API indisponible ;
+- proxy de développement utilisable derrière un Quick Tunnel Cloudflare.
+
+Le schéma IndexedDB et le format des sauvegardes restent inchangés.
+
+## Version stable 0.13.0
+
+Cette version finalise les évolutions d'interface et de nutrition prévues pour la série 0.13 :
+
+- modification du profil utilisable sur mobile ;
+- suppression des textes temporaires visibles ;
+- ajout d'aliments directement depuis chaque repas ;
+- aliments récents, favoris et locaux ;
+- recherche Open Food Facts intégrée au repas ;
+- scan EAN-13, EAN-8, UPC-A et UPC-E ;
+- recherche locale prioritaire après scan ;
+- ajout direct du produit au repas sélectionné ;
+- fonctionnement dégradé et solutions de secours hors connexion.
+
+Le schéma IndexedDB et le format des sauvegardes restent inchangés.
+
+Validation de la version :
+
+- Oxlint : 0 erreur et 0 avertissement ;
+- Vitest : 58 fichiers et 234 tests réussis ;
+- TypeScript strict : compilation réussie ;
+- Vite/PWA : build et service worker générés ;
+- audit MVP : réussi.
+

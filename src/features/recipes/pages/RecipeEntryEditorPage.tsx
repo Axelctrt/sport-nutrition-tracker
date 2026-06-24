@@ -81,7 +81,7 @@ export function RecipeEntryEditorPage() {
     <section aria-labelledby="recipe-entry-title">
       <Link to={foodJournalPath(initialValues.date)} className="inline-flex items-center gap-2 text-sm font-semibold text-brand-700 hover:underline dark:text-brand-300"><ArrowLeft aria-hidden="true" className="size-4" />Retour au journal</Link>
       <div className="mt-5">
-        <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">Étape 9 opérationnelle</p>
+        <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">Journal alimentaire</p>
         <h1 id="recipe-entry-title" className="mt-1 text-3xl font-bold tracking-tight text-slate-950 dark:text-white">{entryId ? 'Modifier la recette consommée' : 'Ajouter une recette au journal'}</h1>
         <p className="mt-3 max-w-3xl text-slate-600 dark:text-slate-300">Choisis le repas et le nombre de portions réellement consommées.</p>
       </div>

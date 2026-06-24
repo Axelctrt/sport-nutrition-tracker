@@ -120,7 +120,7 @@ export function WeightPage() {
       ) : null}
 
       <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,420px)_1fr]">
-        <Card className="p-5 sm:p-6">
+        <Card className="min-w-0 p-5 sm:p-6">
           <div className="flex items-center gap-3">
             <span className="grid size-11 place-items-center rounded-xl bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-200">
               <Scale aria-hidden="true" className="size-5" />
@@ -135,11 +135,11 @@ export function WeightPage() {
             </div>
           </div>
 
-          <div className="mt-6">
+          <div className="mt-6 min-w-0">
             <label htmlFor="weight-selected-date" className="text-sm font-semibold text-slate-800 dark:text-slate-100">
               Jour à modifier
             </label>
-            <div className="relative mt-2">
+            <div className="relative mt-2 min-w-0 max-w-full">
               <CalendarDays
                 aria-hidden="true"
                 className="pointer-events-none absolute left-3 top-1/2 size-5 -translate-y-1/2 text-slate-400"

@@ -22,10 +22,10 @@ export function AppLayout() {
         Aller au contenu
       </a>
       <DesktopSidebar />
-      <div className="lg:pl-72">
+      <div className="min-w-0 lg:pl-72">
         <PageHeader />
         <OfflineStatusBanner />
-        <main id="main-content" className="safe-page-bottom mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        <main id="main-content" className="safe-page-bottom mx-auto min-w-0 max-w-7xl overflow-x-clip px-4 py-6 sm:px-6 lg:px-8">
           <Outlet />
         </main>
       </div>

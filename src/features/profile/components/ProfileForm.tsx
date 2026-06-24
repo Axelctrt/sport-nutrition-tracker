@@ -19,8 +19,16 @@ interface ProfileFormProps {
   formId?: string;
 }
 
-const numericRegistrationOptions = {
+const integerRegistrationOptions = {
   valueAsNumber: true,
+} as const;
+
+const decimalRegistrationOptions = {
+  setValueAs: (value: unknown) => {
+    if (typeof value === 'number') return value;
+    if (typeof value !== 'string' || value.trim() === '') return Number.NaN;
+    return Number(value.replace(',', '.'));
+  },
 } as const;
 
 export function ProfileForm({
@@ -56,14 +64,22 @@ export function ProfileForm({
   };
 
   return (
-    <form id={formId} noValidate onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+    <form
+      id={formId}
+      noValidate
+      onSubmit={handleSubmit(async (values) => {
+        if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+        await onSubmit(values);
+      })}
+      className="min-w-0 space-y-8 pb-2"
+    >
       {submitCount > 0 && Object.keys(errors).length > 0 ? (
         <InlineNotice tone="error" title="Certains champs doivent être corrigés">
           Consulte les messages affichés sous les champs concernés avant d’enregistrer.
         </InlineNotice>
       ) : null}
 
-      <fieldset className="space-y-5">
+      <fieldset className="min-w-0 space-y-5">
         <legend className="text-lg font-semibold text-slate-950 dark:text-white">
           Informations personnelles
         </legend>
@@ -153,7 +169,8 @@ export function ProfileForm({
               className={inputClassName}
               aria-invalid={Boolean(errors.ageYears)}
               aria-describedby={errors.ageYears ? 'ageYears-error' : undefined}
-              {...register('ageYears', numericRegistrationOptions)}
+              enterKeyHint="next"
+              {...register('ageYears', integerRegistrationOptions)}
             />
           </FormField>
         )}
@@ -167,15 +184,17 @@ export function ProfileForm({
           >
             <input
               id="heightCm"
-              type="number"
+              type="text"
               inputMode="decimal"
+              enterKeyHint="next"
+              pattern="[0-9]*[.,]?[0-9]*"
               min="100"
               max="250"
               step="0.1"
               className={inputClassName}
               aria-invalid={Boolean(errors.heightCm)}
               aria-describedby={errors.heightCm ? 'heightCm-error' : undefined}
-              {...register('heightCm', numericRegistrationOptions)}
+              {...register('heightCm', decimalRegistrationOptions)}
             />
           </FormField>
 
@@ -188,21 +207,23 @@ export function ProfileForm({
           >
             <input
               id="initialWeightKg"
-              type="number"
+              type="text"
               inputMode="decimal"
+              enterKeyHint="next"
+              pattern="[0-9]*[.,]?[0-9]*"
               min="30"
               max="350"
               step="0.1"
               className={inputClassName}
               aria-invalid={Boolean(errors.initialWeightKg)}
               aria-describedby={errors.initialWeightKg ? 'initialWeightKg-error' : 'initialWeightKg-description'}
-              {...register('initialWeightKg', numericRegistrationOptions)}
+              {...register('initialWeightKg', decimalRegistrationOptions)}
             />
           </FormField>
         </div>
       </fieldset>
 
-      <fieldset className="space-y-5 border-t border-slate-200 pt-8 dark:border-slate-800">
+      <fieldset className="min-w-0 space-y-5 border-t border-slate-200 pt-8 dark:border-slate-800">
         <legend className="text-lg font-semibold text-slate-950 dark:text-white">
           Objectif et activité quotidienne
         </legend>
@@ -231,8 +252,10 @@ export function ProfileForm({
           <div className="relative">
             <input
               id="targetWeeklyWeightChangePercent"
-              type="number"
+              type="text"
               inputMode="decimal"
+              enterKeyHint="next"
+              pattern="-?[0-9]*[.,]?[0-9]*"
               min="-2"
               max="2"
               step="0.05"
@@ -244,7 +267,7 @@ export function ProfileForm({
                   ? 'targetWeeklyWeightChangePercent-error'
                   : 'targetWeeklyWeightChangePercent-description'
               }
-              {...register('targetWeeklyWeightChangePercent', numericRegistrationOptions)}
+              {...register('targetWeeklyWeightChangePercent', decimalRegistrationOptions)}
             />
             <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-slate-500">%</span>
           </div>
@@ -287,18 +310,19 @@ export function ProfileForm({
             className={inputClassName}
             aria-invalid={Boolean(errors.dailyStepGoal)}
             aria-describedby={errors.dailyStepGoal ? 'dailyStepGoal-error' : undefined}
-            {...register('dailyStepGoal', numericRegistrationOptions)}
+            enterKeyHint="next"
+            {...register('dailyStepGoal', integerRegistrationOptions)}
           />
         </FormField>
       </fieldset>
 
-      <fieldset className="space-y-5 border-t border-slate-200 pt-8 dark:border-slate-800">
+      <fieldset className="min-w-0 space-y-5 border-t border-slate-200 pt-8 dark:border-slate-800">
         <legend className="text-lg font-semibold text-slate-950 dark:text-white">
           Cibles de macronutriments
         </legend>
 
         <InlineNotice title="Des coefficients ajustables">
-          Les valeurs par défaut sont de 1,8 g/kg de protéines et 0,9 g/kg de lipides. Les glucides seront calculés avec les calories restantes à l’étape 4.
+          Les valeurs par défaut sont de 1,8 g/kg de protéines et 0,9 g/kg de lipides. Les glucides sont calculés avec les calories restantes.
         </InlineNotice>
 
         <div className="grid gap-5 sm:grid-cols-2">
@@ -310,15 +334,17 @@ export function ProfileForm({
           >
             <input
               id="proteinGramsPerKg"
-              type="number"
+              type="text"
               inputMode="decimal"
+              enterKeyHint="next"
+              pattern="[0-9]*[.,]?[0-9]*"
               min="0.5"
               max="4"
               step="0.1"
               className={inputClassName}
               aria-invalid={Boolean(errors.proteinGramsPerKg)}
               aria-describedby={errors.proteinGramsPerKg ? 'proteinGramsPerKg-error' : undefined}
-              {...register('proteinGramsPerKg', numericRegistrationOptions)}
+              {...register('proteinGramsPerKg', decimalRegistrationOptions)}
             />
           </FormField>
 
@@ -330,22 +356,24 @@ export function ProfileForm({
           >
             <input
               id="fatGramsPerKg"
-              type="number"
+              type="text"
               inputMode="decimal"
+              enterKeyHint="done"
+              pattern="[0-9]*[.,]?[0-9]*"
               min="0.3"
               max="2"
               step="0.1"
               className={inputClassName}
               aria-invalid={Boolean(errors.fatGramsPerKg)}
               aria-describedby={errors.fatGramsPerKg ? 'fatGramsPerKg-error' : undefined}
-              {...register('fatGramsPerKg', numericRegistrationOptions)}
+              {...register('fatGramsPerKg', decimalRegistrationOptions)}
             />
           </FormField>
         </div>
       </fieldset>
 
-      <div className="flex justify-end border-t border-slate-200 pt-6 dark:border-slate-800">
-        <Button type="submit" size="lg" disabled={isSubmitting}>
+      <div className="sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-10 -mx-4 flex justify-end border-t border-slate-200 bg-white/95 px-4 py-4 backdrop-blur sm:static sm:mx-0 sm:bg-transparent sm:p-0 sm:pt-6 dark:border-slate-800 dark:bg-slate-900/95 sm:dark:bg-transparent">
+        <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={isSubmitting}>
           <Save aria-hidden="true" className="size-5" />
           {isSubmitting ? 'Enregistrement…' : submitLabel}
         </Button>

@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 import { App } from '@/app/App';
@@ -20,14 +20,17 @@ vi.mock('virtual:pwa-register/react', () => ({
 
 describe('App', () => {
   beforeEach(async () => {
+    cleanup();
     appDatabase.close();
     await appDatabase.delete();
     window.localStorage.clear();
     await router.navigate('/');
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    cleanup();
     appDatabase.close();
+    await appDatabase.delete();
   });
 
   it('redirige vers l’onboarding quand aucun profil n’existe', async () => {
