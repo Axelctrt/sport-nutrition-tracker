@@ -1,8 +1,8 @@
-﻿# Version SportPilot 0.13.0
+# Version SportPilot 0.13.0
 
-Branche recommandée : `feature/barcode-scanner`
+Branche recommandée : `release/0.13.0`
 
-Ce patch transforme le prototype caméra en parcours alimentaire complet :
+La version stable 0.13.0 finalise le parcours alimentaire et le scanner code-barres :
 
 - recherche prioritaire dans les aliments locaux ;
 - fonctionnement hors connexion pour un produit déjà enregistré ;

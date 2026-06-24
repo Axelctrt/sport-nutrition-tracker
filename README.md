@@ -1,4 +1,4 @@
-﻿# SportPilot 0.13.0
+# SportPilot 0.13.0
 
 PWA locale de suivi sportif, nutritionnel, calorique et de progression.
 
@@ -22,7 +22,7 @@ Adresse de développement habituelle : `http://127.0.0.1:5173/`.
 ```powershell
 npm run dev          # serveur Vite
 npm run lint         # Oxlint
-npm run test         # 210 tests Vitest
+npm run test         # tests Vitest
 npm run build        # TypeScript + build PWA
 npm run audit:mvp    # contrôle statique final de la PWA
 npm run check        # lint + tests + build + audit
@@ -106,7 +106,7 @@ npm run preview
 
 ## Contrôles finaux
 
-La version 0.13.0-alpha.5 est validée avec :
+La version 0.13.0 est validée avec :
 
 - Oxlint : 0 avertissement, 0 erreur ;
 - Vitest : 58 fichiers, 234 tests ;
@@ -189,27 +189,28 @@ Le scanner code-barres est désormais intégré au parcours alimentaire complet.
 - proxy de développement utilisable derrière un Quick Tunnel Cloudflare.
 
 Le schéma IndexedDB et le format des sauvegardes restent inchangés.
+
 ## Version stable 0.13.0
 
-Cette version finalise les Ã©volutions d'interface et de nutrition prÃ©vues pour la sÃ©rie 0.13 :
+Cette version finalise les évolutions d'interface et de nutrition prévues pour la série 0.13 :
 
 - modification du profil utilisable sur mobile ;
 - suppression des textes temporaires visibles ;
 - ajout d'aliments directement depuis chaque repas ;
-- aliments rÃ©cents, favoris et locaux ;
-- recherche Open Food Facts intÃ©grÃ©e au repas ;
+- aliments récents, favoris et locaux ;
+- recherche Open Food Facts intégrée au repas ;
 - scan EAN-13, EAN-8, UPC-A et UPC-E ;
-- recherche locale prioritaire aprÃ¨s scan ;
-- ajout direct du produit au repas sÃ©lectionnÃ© ;
-- fonctionnement dÃ©gradÃ© et solutions de secours hors connexion.
+- recherche locale prioritaire après scan ;
+- ajout direct du produit au repas sélectionné ;
+- fonctionnement dégradé et solutions de secours hors connexion.
 
-Le schÃ©ma IndexedDB et le format des sauvegardes restent inchangÃ©s.
+Le schéma IndexedDB et le format des sauvegardes restent inchangés.
 
 Validation de la version :
 
 - Oxlint : 0 erreur et 0 avertissement ;
-- Vitest : 58 fichiers et 234 tests rÃ©ussis ;
-- TypeScript strict : compilation rÃ©ussie ;
-- Vite/PWA : build et service worker gÃ©nÃ©rÃ©s ;
-- audit MVP : rÃ©ussi.
+- Vitest : 58 fichiers et 234 tests réussis ;
+- TypeScript strict : compilation réussie ;
+- Vite/PWA : build et service worker générés ;
+- audit MVP : réussi.
 
