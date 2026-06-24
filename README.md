@@ -22,7 +22,7 @@ Adresse de développement habituelle : `http://127.0.0.1:5173/`.
 ```powershell
 npm run dev          # serveur Vite
 npm run lint         # Oxlint
-npm run test         # 197 tests Vitest
+npm run test         # 210 tests Vitest
 npm run build        # TypeScript + build PWA
 npm run audit:mvp    # contrôle statique final de la PWA
 npm run check        # lint + tests + build + audit
@@ -37,7 +37,7 @@ npm run diagnose:off # diagnostic Open Food Facts
 - Mifflin–St Jeor, dépenses et macronutriments ;
 - poids, pas et objectifs quotidiens ;
 - course, natation, musculation, vélo, marche et cardio ;
-- journal alimentaire local ;
+- journal alimentaire local avec ajout direct depuis chaque repas ;
 - Open Food Facts avec fonctionnement dégradé ;
 - recettes et repas favoris ;
 - historique et analyses sur douze semaines ;
@@ -106,10 +106,10 @@ npm run preview
 
 ## Contrôles finaux
 
-La version 0.13.0-alpha.4 est validée avec :
+La version 0.13.0-alpha.5 est validée avec :
 
 - Oxlint : 0 avertissement, 0 erreur ;
-- Vitest : 48 fichiers, 197 tests ;
+- Vitest : 53 fichiers, 210 tests ;
 - TypeScript strict : compilation réussie ;
 - Vite/PWA : build réussi, service worker généré ;
 - audit MVP : manifeste, icônes, raccourcis, hors ligne, repères d’accessibilité et absence de secrets évidents.
@@ -132,3 +132,19 @@ La version 0.13.0-alpha.4 est validée avec :
 ## Correctif mobile 0.13.0-alpha.4
 
 Les champs natifs de date et d’heure sont maintenant contraints à la largeur de leur conteneur, y compris sur Safari iOS. Le correctif couvre notamment les écrans Journal alimentaire, Journal des activités, Poids et Analyses, sans désactiver les sélecteurs natifs du navigateur.
+
+## Sélecteur alimentaire par repas 0.13.0-alpha.5
+
+Depuis le petit-déjeuner, le déjeuner, le dîner ou les collations, l’utilisateur peut maintenant ouvrir un parcours d’ajout conservant automatiquement la date et le repas d’origine.
+
+Le sélecteur propose :
+
+- les aliments utilisés récemment ;
+- les aliments marqués comme favoris ;
+- tous les aliments locaux ;
+- une recherche locale par nom, marque ou code-barres ;
+- un aperçu nutritionnel avant validation ;
+- la saisie par quantité ou par nombre de portions ;
+- la création manuelle avec retour automatique vers le repas initial.
+
+Les recherches Open Food Facts et le scan caméra seront intégrés dans les branches suivantes. Cette évolution réutilise les tables IndexedDB existantes et ne modifie pas le format des sauvegardes.

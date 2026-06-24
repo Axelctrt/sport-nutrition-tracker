@@ -9,6 +9,7 @@ import {
   LazyEditActivityPage,
   LazyFoodEntryEditorPage,
   LazyFoodJournalPage,
+  LazyMealFoodSelectorPage,
   LazyFoodProductEditorPage,
   LazyFoodProductsPage,
   LazyHistoryPage,
@@ -73,6 +74,10 @@ export const router = createHashRouter([
       {
         path: routePaths.addFood,
         element: <LazyFoodEntryEditorPage />,
+      },
+      {
+        path: routePaths.foodSelector,
+        element: <LazyMealFoodSelectorPage />,
       },
       {
         path: routePaths.editFoodEntry,

@@ -16,6 +16,7 @@ import type {
 export interface FoodRepository {
   getProductById(id: EntityId): Promise<FoodProduct | undefined>;
   listProducts(includeArchived?: boolean): Promise<FoodProduct[]>;
+  listRecentProducts(limit?: number): Promise<FoodProduct[]>;
   findProductByBarcode(barcode: string): Promise<FoodProduct | undefined>;
   searchProducts(query: string, limit?: number): Promise<FoodProduct[]>;
   createProduct(data: NewEntity<FoodProduct>): Promise<FoodProduct>;

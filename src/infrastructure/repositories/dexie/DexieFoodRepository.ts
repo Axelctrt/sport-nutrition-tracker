@@ -48,6 +48,36 @@ export class DexieFoodRepository implements FoodRepository {
     );
   }
 
+  listRecentProducts(limit = 8): Promise<FoodProduct[]> {
+    return runRepositoryOperation(
+      'read',
+      'Impossible de charger les aliments récents.',
+      async () => {
+        const entries = await this.database.foodEntries
+          .orderBy('updatedAt')
+          .reverse()
+          .toArray();
+        const productIds: EntityId[] = [];
+        const seenProductIds = new Set<EntityId>();
+
+        for (const entry of entries) {
+          if (entry.reference.sourceType !== 'product') continue;
+          if (seenProductIds.has(entry.reference.productId)) continue;
+
+          seenProductIds.add(entry.reference.productId);
+          productIds.push(entry.reference.productId);
+        }
+
+        const products = await this.database.foodProducts.bulkGet(productIds);
+        return products
+          .filter(
+            (product): product is FoodProduct => product !== undefined && !product.isArchived,
+          )
+          .slice(0, limit);
+      },
+    );
+  }
+
   findProductByBarcode(barcode: string): Promise<FoodProduct | undefined> {
     return runRepositoryOperation(
       'read',
