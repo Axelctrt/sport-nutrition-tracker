@@ -89,3 +89,29 @@ a {
     padding-bottom: 2rem;
   }
 }
+
+#root {
+  min-height: 100vh;
+  overflow-x: clip;
+}
+
+@supports not (overflow: clip) {
+  #root {
+    overflow-x: hidden;
+  }
+}
+
+input,
+select,
+textarea {
+  max-width: 100%;
+  font-size: 1rem;
+}
+
+@media (min-width: 40rem) {
+  input,
+  select,
+  textarea {
+    font-size: inherit;
+  }
+}

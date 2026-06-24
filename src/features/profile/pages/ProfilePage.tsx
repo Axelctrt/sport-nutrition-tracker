@@ -39,12 +39,12 @@ export function ProfilePage() {
   };
 
   return (
-    <section aria-labelledby="profile-title">
+    <section aria-labelledby="profile-title" className="mx-auto min-w-0 max-w-4xl overflow-x-clip">
       <div>
         <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
           Profil local
         </p>
-        <h1 id="profile-title" className="mt-1 text-3xl font-bold tracking-tight text-slate-950 dark:text-white">
+        <h1 id="profile-title" className="mt-1 text-2xl font-bold sm:text-3xl tracking-tight text-slate-950 dark:text-white">
           Profil
         </h1>
         <p className="mt-3 max-w-3xl text-slate-600 dark:text-slate-300">
@@ -63,7 +63,7 @@ export function ProfilePage() {
         </InlineNotice>
       ) : null}
 
-      <Card className="mt-6 p-5 sm:p-8">
+      <Card className="mt-6 min-w-0 overflow-visible p-4 sm:p-8">
         <ProfileForm
           key={profile.updatedAt}
           initialValues={profileToFormValues(profile)}

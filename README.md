@@ -1,4 +1,4 @@
-# SportPilot 0.12.0
+# SportPilot 0.13.0-alpha.1
 
 PWA locale de suivi sportif, nutritionnel, calorique et de progression.
 
@@ -22,7 +22,7 @@ Adresse de développement habituelle : `http://127.0.0.1:5173/`.
 ```powershell
 npm run dev          # serveur Vite
 npm run lint         # Oxlint
-npm run test         # 187 tests Vitest
+npm run test         # 193 tests Vitest
 npm run build        # TypeScript + build PWA
 npm run audit:mvp    # contrôle statique final de la PWA
 npm run check        # lint + tests + build + audit
@@ -30,9 +30,9 @@ npm run preview      # prévisualisation du build
 npm run diagnose:off # diagnostic Open Food Facts
 ```
 
-## Fonctionnalités du MVP
+## Fonctionnalités
 
-- onboarding et profil physique ;
+- onboarding et profil physique, avec modification mobile optimisée ;
 - paramètres énergétiques avancés ;
 - Mifflin–St Jeor, dépenses et macronutriments ;
 - poids, pas et objectifs quotidiens ;
@@ -106,10 +106,10 @@ npm run preview
 
 ## Contrôles finaux
 
-La version 0.12.0 est validée avec :
+La version 0.13.0-alpha.1 est validée avec :
 
 - Oxlint : 0 avertissement, 0 erreur ;
-- Vitest : 43 fichiers, 187 tests ;
+- Vitest : 46 fichiers, 193 tests ;
 - TypeScript strict : compilation réussie ;
 - Vite/PWA : build réussi, service worker généré ;
 - audit MVP : manifeste, icônes, raccourcis, hors ligne, repères d’accessibilité et absence de secrets évidents.
