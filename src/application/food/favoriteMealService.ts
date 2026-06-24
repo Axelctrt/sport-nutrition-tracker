@@ -13,6 +13,7 @@ import type {
 } from '@/domain/models/food';
 import type { FoodRepository } from '@/infrastructure/repositories/contracts/FoodRepository';
 import { repositories } from '@/infrastructure/repositories/repositories';
+import { createEntityId } from '@/shared/utils/entities';
 
 export interface FavoriteMealServiceDependencies {
   food: FoodRepository;
@@ -30,7 +31,7 @@ const defaultDependencies: FavoriteMealServiceDependencies = {
 function itemFromEntry(entry: FoodEntry): FavoriteMealItem {
   if (entry.reference.sourceType === 'product') {
     return {
-      id: crypto.randomUUID(),
+      id: createEntityId(),
       sourceType: 'product',
       productId: entry.reference.productId,
       inputMode: entry.reference.inputMode,
@@ -41,7 +42,7 @@ function itemFromEntry(entry: FoodEntry): FavoriteMealItem {
     };
   }
   return {
-    id: crypto.randomUUID(),
+    id: createEntityId(),
     sourceType: 'recipe',
     recipeId: entry.reference.recipeId,
     servingsConsumed: entry.reference.servingsConsumed,
