@@ -69,7 +69,7 @@ export function FoodProductEditorPage() {
         Retour aux aliments
       </Link>
       <div className="mt-5">
-        <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">Étape 8 opérationnelle</p>
+        <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">Catalogue alimentaire</p>
         <h1 id="food-product-editor-title" className="mt-1 text-3xl font-bold tracking-tight text-slate-950 dark:text-white">
           {productId ? 'Modifier un aliment' : 'Créer un aliment manuel'}
         </h1>

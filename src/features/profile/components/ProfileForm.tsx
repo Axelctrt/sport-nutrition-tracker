@@ -322,7 +322,7 @@ export function ProfileForm({
         </legend>
 
         <InlineNotice title="Des coefficients ajustables">
-          Les valeurs par défaut sont de 1,8 g/kg de protéines et 0,9 g/kg de lipides. Les glucides seront calculés avec les calories restantes à l’étape 4.
+          Les valeurs par défaut sont de 1,8 g/kg de protéines et 0,9 g/kg de lipides. Les glucides sont calculés avec les calories restantes.
         </InlineNotice>
 
         <div className="grid gap-5 sm:grid-cols-2">

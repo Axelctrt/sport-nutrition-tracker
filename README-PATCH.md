@@ -1,16 +1,22 @@
-# Correctif mobile 0.13.0-alpha.2
+# Correctif mobile — champs de date 0.13.0-alpha.4
 
-Ce patch corrige l'échec de création de l'objectif quotidien lorsque l'application est ouverte depuis un téléphone via une adresse HTTP du réseau local.
+Ce patch s'applique sur SportPilot 0.13.0-alpha.3.
 
-## Cause
+Il corrige le débordement horizontal des contrôles natifs `date`, `time`, `datetime-local`, `month` et `week`, notamment sur Safari iOS.
 
-`crypto.randomUUID()` n'est pas disponible dans certains contextes HTTP non sécurisés, notamment une adresse locale de type `http://192.168.x.x:5173` ouverte depuis un téléphone.
+Écrans explicitement ajustés :
 
-## Correction
+- Journal alimentaire ;
+- Journal des activités ;
+- Poids ;
+- Analyses.
 
-- utilisation de `crypto.randomUUID()` lorsqu'il est disponible ;
-- repli vers `crypto.getRandomValues()` ;
-- dernier repli local pour les anciens environnements ;
-- centralisation des identifiants des repas favoris ;
-- aucun changement Dexie ;
-- aucune suppression de données.
+Le correctif est purement visuel : aucune migration Dexie et aucune modification des sauvegardes.
+
+Après copie du contenu à la racine du projet :
+
+```powershell
+npm install
+npm run check
+npm run dev -- --host
+```

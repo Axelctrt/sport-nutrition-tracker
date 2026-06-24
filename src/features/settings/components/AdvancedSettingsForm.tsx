@@ -295,7 +295,7 @@ export function AdvancedSettingsForm({
         </legend>
 
         <InlineNotice title="Aucun ajustement automatique">
-          Ces limites encadreront uniquement les propositions de l’étape 11. Une modification devra toujours être acceptée explicitement.
+          Ces limites encadrent uniquement les propositions du bilan hebdomadaire. Une modification doit toujours être acceptée explicitement.
         </InlineNotice>
 
         <div className="grid gap-5 sm:grid-cols-2">

@@ -104,8 +104,42 @@ a {
 input,
 select,
 textarea {
+  box-sizing: border-box;
+  min-width: 0;
   max-width: 100%;
   font-size: 1rem;
+}
+
+/* Les contrôles natifs de date/heure conservent parfois une largeur intrinsèque
+   trop grande sur Safari iOS. Les tailles logiques permettent de les réduire
+   sans désactiver le sélecteur natif. */
+input[type='date'],
+input[type='time'],
+input[type='datetime-local'],
+input[type='month'],
+input[type='week'] {
+  display: block;
+  inline-size: 100%;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+
+input[type='date']::-webkit-date-and-time-value,
+input[type='time']::-webkit-date-and-time-value,
+input[type='datetime-local']::-webkit-date-and-time-value,
+input[type='month']::-webkit-date-and-time-value,
+input[type='week']::-webkit-date-and-time-value {
+  min-width: 0;
+  text-align: left;
+}
+
+input[type='date']::-webkit-datetime-edit,
+input[type='time']::-webkit-datetime-edit,
+input[type='datetime-local']::-webkit-datetime-edit,
+input[type='month']::-webkit-datetime-edit,
+input[type='week']::-webkit-datetime-edit {
+  min-width: 0;
+  overflow: hidden;
 }
 
 @media (min-width: 40rem) {

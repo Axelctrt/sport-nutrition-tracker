@@ -75,7 +75,7 @@ export function FavoriteMealsPage() {
     <section aria-labelledby="favorite-meals-title">
       <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">Étape 9 opérationnelle</p>
+          <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">Organisation des repas</p>
           <h1 id="favorite-meals-title" className="mt-1 text-3xl font-bold tracking-tight text-slate-950 dark:text-white">Repas favoris</h1>
           <p className="mt-3 max-w-3xl text-slate-600 dark:text-slate-300">Réutilise en une seule opération les aliments et recettes d’un repas déjà enregistré.</p>
         </div>

@@ -1,4 +1,4 @@
-# SportPilot 0.13.0-alpha.1
+# SportPilot 0.13.0-alpha.4
 
 PWA locale de suivi sportif, nutritionnel, calorique et de progression.
 
@@ -22,7 +22,7 @@ Adresse de développement habituelle : `http://127.0.0.1:5173/`.
 ```powershell
 npm run dev          # serveur Vite
 npm run lint         # Oxlint
-npm run test         # 193 tests Vitest
+npm run test         # 197 tests Vitest
 npm run build        # TypeScript + build PWA
 npm run audit:mvp    # contrôle statique final de la PWA
 npm run check        # lint + tests + build + audit
@@ -106,10 +106,29 @@ npm run preview
 
 ## Contrôles finaux
 
-La version 0.13.0-alpha.1 est validée avec :
+La version 0.13.0-alpha.4 est validée avec :
 
 - Oxlint : 0 avertissement, 0 erreur ;
-- Vitest : 46 fichiers, 193 tests ;
+- Vitest : 48 fichiers, 197 tests ;
 - TypeScript strict : compilation réussie ;
 - Vite/PWA : build réussi, service worker généré ;
 - audit MVP : manifeste, icônes, raccourcis, hors ligne, repères d’accessibilité et absence de secrets évidents.
+
+## Correctif 0.13.0-alpha.2
+
+- Compatibilité des identifiants sur les origines HTTP locales mobiles où `crypto.randomUUID()` est indisponible.
+- Utilisation de `crypto.getRandomValues()` lorsque possible, avec repli local pour les anciens navigateurs.
+- Centralisation des identifiants des repas favoris.
+
+## Nettoyage de l’interface 0.13.0-alpha.3
+
+- suppression des références visibles aux étapes de développement ;
+- remplacement des libellés temporaires par des intitulés métier ;
+- retrait du diagnostic de version Open Food Facts dans l’interface ;
+- mise à jour de la présentation des capacités de l’application ;
+- ajout d’un test empêchant le retour de textes comme `Étape 8`, `MVP`, `prochainement` ou `TODO` dans les composants de production.
+
+
+## Correctif mobile 0.13.0-alpha.4
+
+Les champs natifs de date et d’heure sont maintenant contraints à la largeur de leur conteneur, y compris sur Safari iOS. Le correctif couvre notamment les écrans Journal alimentaire, Journal des activités, Poids et Analyses, sans désactiver les sélecteurs natifs du navigateur.

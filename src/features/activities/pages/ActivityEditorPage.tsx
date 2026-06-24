@@ -179,7 +179,7 @@ function ActivityEditor({
       </Link>
 
       <div className="mt-4">
-        <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">Étape 6 · Journal sportif</p>
+        <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">Journal sportif</p>
         <h1 id="activity-editor-title" className="mt-1 text-3xl font-bold tracking-tight text-slate-950 dark:text-white">{resolvedTitle}</h1>
         <p className="mt-3 max-w-3xl text-slate-600 dark:text-slate-300">{description}</p>
       </div>
@@ -243,7 +243,7 @@ export function StrengthActivityPage() {
       initialType="strengthTraining"
       allowedTypes={['strengthTraining']}
       title="Ajouter une séance de musculation"
-      description="Pour le MVP, la séance est suivie par sa durée, son intensité, son RPE et une valeur MET ajustable."
+      description="La séance est suivie par sa durée, son intensité, son RPE et une valeur MET ajustable."
     />
   );
 }
