@@ -51,10 +51,13 @@ export function MealFoodSelectorPage() {
   const requestedDate = searchParams.get('date');
   const requestedSlot = searchParams.get('slot');
   const requestedProductId = searchParams.get('productId');
+  const requestedSource = searchParams.get('source');
   const date = requestedDate && isValidLocalDate(requestedDate) ? requestedDate : toLocalDate();
   const mealSlot = isMealSlot(requestedSlot) ? requestedSlot : 'snacks';
   const { data, status, errorMessage, refresh } = useMealFoodSelector();
-  const [source, setSource] = useState<ProductSource>('recent');
+  const [source, setSource] = useState<ProductSource>(
+    requestedSource === 'openFoodFacts' ? 'openFoodFacts' : 'recent',
+  );
   const [query, setQuery] = useState('');
   const [selectedProductId, setSelectedProductId] = useState<string | undefined>(
     requestedProductId ?? undefined,
@@ -66,10 +69,12 @@ export function MealFoodSelectorPage() {
   useEffect(() => {
     if (!data) return;
 
+    if (requestedSource === 'openFoodFacts') return;
+
     if (data.recentProducts.length === 0) {
       setSource(data.favoriteProducts.length > 0 ? 'favorites' : 'all');
     }
-  }, [data]);
+  }, [data, requestedSource]);
 
   useEffect(() => {
     if (!data || !requestedProductId) return;

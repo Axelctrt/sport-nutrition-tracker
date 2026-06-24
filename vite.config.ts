@@ -25,7 +25,7 @@ function createOpenFoodFactsProxy(
     timeout: 20_000,
     proxyTimeout: 20_000,
     headers: {
-      'User-Agent': 'SportPilot/0.13.0-alpha.7 (local PWA; Open Food Facts integration)',
+      'User-Agent': 'SportPilot/0.13.0-alpha.8 (local PWA; Open Food Facts integration)',
     },
     rewrite,
     configure(proxy) {
@@ -119,6 +119,7 @@ export default defineConfig({
     }),
   ],
   server: {
+    allowedHosts: ['.trycloudflare.com'],
     proxy: {
       '/api/open-food-facts/search': createOpenFoodFactsProxy(
         'https://search.openfoodfacts.org',

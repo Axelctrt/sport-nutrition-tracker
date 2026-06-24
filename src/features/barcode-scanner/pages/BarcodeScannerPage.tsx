@@ -1,11 +1,33 @@
-import { ArrowLeft, Camera, CameraOff, RefreshCw, ScanLine } from 'lucide-react';
-import { useMemo, useRef, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
-import { selectFoodPath } from '@/app/routePaths';
-import type { MealSlot } from '@/domain/models/food';
+import {
+  ArrowLeft,
+  Camera,
+  CameraOff,
+  LoaderCircle,
+  RefreshCw,
+  ScanLine,
+  Search,
+  SquarePen,
+} from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import {
+  foodJournalPath,
+  newFoodProductForMealPath,
+  routePaths,
+  selectFoodPath,
+} from '@/app/routePaths';
+import {
+  lookupFoodProductByBarcode,
+  type BarcodeProductLookupResult,
+} from '@/application/open-food-facts/barcodeProductLookupService';
+import { saveProductEntry } from '@/application/food/foodJournalService';
+import type { FoodProduct, MealSlot } from '@/domain/models/food';
 import { useBarcodeScanner } from '@/features/barcode-scanner/hooks/useBarcodeScanner';
 import { validateFoodBarcode } from '@/features/barcode-scanner/utils/scannerBarcode';
+import { MealFoodSelectionForm } from '@/features/food-journal/components/MealFoodSelectionForm';
+import type { FoodEntryFormValues } from '@/features/food-journal/schemas/foodEntrySchema';
 import { mealSlotLabels } from '@/features/food-journal/utils/foodLabels';
+import { OpenFoodFactsError } from '@/infrastructure/open-food-facts/OpenFoodFactsError';
 import type { BarcodeScannerPort } from '@/infrastructure/barcode-scanner/BarcodeScanner';
 import { inputClassName } from '@/shared/forms/formStyles';
 import { Button } from '@/shared/ui/Button';
@@ -16,17 +38,40 @@ import { isValidLocalDate } from '@/shared/validation/localDate';
 
 const mealSlots: readonly MealSlot[] = ['breakfast', 'lunch', 'dinner', 'snacks'];
 
+type LookupProduct = (
+  barcode: string,
+  signal?: AbortSignal,
+) => Promise<BarcodeProductLookupResult>;
+
+type SaveEntry = (values: FoodEntryFormValues) => Promise<unknown>;
+
 function isMealSlot(value: string | null): value is MealSlot {
   return value !== null && mealSlots.includes(value as MealSlot);
 }
 
-interface BarcodeScannerPageProps {
-  scanner?: BarcodeScannerPort;
+function lookupErrorMessage(error: unknown): string {
+  if (error instanceof OpenFoodFactsError) return error.message;
+  return error instanceof Error
+    ? error.message
+    : 'Impossible de rechercher ce produit.';
 }
 
-export function BarcodeScannerPage({ scanner }: BarcodeScannerPageProps = {}) {
+interface BarcodeScannerPageProps {
+  scanner?: BarcodeScannerPort;
+  lookupProduct?: LookupProduct;
+  saveEntry?: SaveEntry;
+}
+
+export function BarcodeScannerPage({
+  scanner,
+  lookupProduct = lookupFoodProductByBarcode,
+  saveEntry = saveProductEntry,
+}: BarcodeScannerPageProps = {}) {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const targetRef = useRef<HTMLDivElement>(null);
+  const lookupAbortRef = useRef<AbortController | undefined>(undefined);
+  const lastAutomaticCodeRef = useRef<string | undefined>(undefined);
   const requestedDate = searchParams.get('date');
   const requestedSlot = searchParams.get('slot');
   const date = requestedDate && isValidLocalDate(requestedDate) ? requestedDate : toLocalDate();
@@ -43,6 +88,12 @@ export function BarcodeScannerPage({ scanner }: BarcodeScannerPageProps = {}) {
   const [manualValue, setManualValue] = useState('');
   const [manualError, setManualError] = useState<string>();
   const [manualResult, setManualResult] = useState<ReturnType<typeof validateFoodBarcode>>();
+  const [lookupStatus, setLookupStatus] = useState<'idle' | 'loading' | 'ready' | 'missing' | 'error'>('idle');
+  const [lookupResult, setLookupResult] = useState<BarcodeProductLookupResult>();
+  const [lookupMessage, setLookupMessage] = useState<string>();
+  const [lookupError, setLookupError] = useState<string>();
+  const [resolvedProduct, setResolvedProduct] = useState<FoodProduct>();
+  const [submitError, setSubmitError] = useState<string>();
 
   const activeResult = useMemo(() => {
     if (manualResult) return manualResult;
@@ -58,19 +109,133 @@ export function BarcodeScannerPage({ scanner }: BarcodeScannerPageProps = {}) {
     ? false
     : window.isSecureContext || ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
 
-  const validateManualEntry = () => {
+  const clearLookup = useCallback(() => {
+    lookupAbortRef.current?.abort();
+    setLookupStatus('idle');
+    setLookupResult(undefined);
+    setLookupMessage(undefined);
+    setLookupError(undefined);
+    setResolvedProduct(undefined);
+    setSubmitError(undefined);
+  }, []);
+
+  const resolveCode = useCallback(async (barcode: string) => {
+    lookupAbortRef.current?.abort();
+    const controller = new AbortController();
+    lookupAbortRef.current = controller;
+    setLookupStatus('loading');
+    setLookupResult(undefined);
+    setLookupMessage(undefined);
+    setLookupError(undefined);
+    setResolvedProduct(undefined);
+    setSubmitError(undefined);
+
+    try {
+      const lookup = await lookupProduct(barcode, controller.signal);
+      if (controller.signal.aborted) return;
+      setLookupResult(lookup);
+
+      if (lookup.status === 'local') {
+        setResolvedProduct(lookup.product);
+        setLookupMessage('Produit trouvé dans les aliments locaux. Il reste disponible hors connexion.');
+        setLookupStatus('ready');
+        return;
+      }
+
+      if (lookup.status === 'remote') {
+        setResolvedProduct(lookup.product);
+        setLookupMessage(
+          lookup.saveStatus === 'created'
+            ? 'Produit trouvé dans Open Food Facts et enregistré localement.'
+            : lookup.saveStatus === 'updated'
+              ? 'Produit local actualisé avec les données Open Food Facts.'
+              : 'La version manuelle déjà enregistrée a été conservée.',
+        );
+        setLookupStatus('ready');
+        return;
+      }
+
+      if (lookup.status === 'archived') {
+        setLookupMessage('Ce code correspond à un aliment archivé. Il n’est pas réactivé automatiquement.');
+        setLookupStatus('missing');
+        return;
+      }
+
+      if (lookup.status === 'offline-missing') {
+        setLookupMessage(
+          'Ce produit n’est pas encore enregistré localement. Une connexion Internet est nécessaire pour le rechercher dans Open Food Facts.',
+        );
+        setLookupStatus('missing');
+        return;
+      }
+
+      setLookupMessage('Aucun produit correspondant n’a été trouvé dans Open Food Facts.');
+      setLookupStatus('missing');
+    } catch (error) {
+      if (controller.signal.aborted) return;
+      setLookupError(lookupErrorMessage(error));
+      setLookupStatus('error');
+    }
+  }, [lookupProduct]);
+
+  useEffect(() => {
+    if (!result || lastAutomaticCodeRef.current === result.code) return;
+    lastAutomaticCodeRef.current = result.code;
+    void resolveCode(result.code);
+  }, [resolveCode, result]);
+
+  useEffect(() => () => lookupAbortRef.current?.abort(), []);
+
+  const validateManualEntry = async () => {
     const valid = validateFoodBarcode(manualValue);
     if (!valid) {
       setManualResult(undefined);
       setManualError('Saisis un code EAN-13, EAN-8, UPC-A ou UPC-E uniquement composé de chiffres.');
+      clearLookup();
       return;
     }
     setManualError(undefined);
     setManualResult(valid);
+    lastAutomaticCodeRef.current = valid.code;
+    await stop();
+    await resolveCode(valid.code);
   };
 
+  const handleStart = async () => {
+    setManualResult(undefined);
+    setManualError(undefined);
+    lastAutomaticCodeRef.current = undefined;
+    clearLookup();
+    await start(targetRef.current);
+  };
+
+  const handleReset = () => {
+    setManualResult(undefined);
+    setManualValue('');
+    setManualError(undefined);
+    lastAutomaticCodeRef.current = undefined;
+    clearLookup();
+    reset();
+  };
+
+  const handleSubmit = async (values: FoodEntryFormValues) => {
+    setSubmitError(undefined);
+    try {
+      await saveEntry(values);
+      await navigate(foodJournalPath(values.date));
+    } catch (error) {
+      setSubmitError(
+        error instanceof Error
+          ? error.message
+          : 'Impossible d’ajouter cet aliment au repas.',
+      );
+    }
+  };
+
+  const fallbackBarcode = lookupResult?.barcode ?? activeResult?.code;
+
   return (
-    <section aria-labelledby="barcode-scanner-title">
+    <section className="min-w-0 overflow-x-clip" aria-labelledby="barcode-scanner-title">
       <Link
         to={selectFoodPath(date, mealSlot)}
         className="inline-flex items-center gap-2 text-sm font-semibold text-brand-700 hover:underline dark:text-brand-300"
@@ -87,7 +252,7 @@ export function BarcodeScannerPage({ scanner }: BarcodeScannerPageProps = {}) {
           Scanner un code-barres
         </h1>
         <p className="mt-3 max-w-3xl text-slate-600 dark:text-slate-300">
-          Repas cible : <strong>{mealSlotLabels[mealSlot]}</strong>. Place le code-barres horizontalement dans la zone centrale et garde le téléphone stable.
+          Repas cible : <strong>{mealSlotLabels[mealSlot]}</strong>. Le produit sera d’abord recherché localement, puis dans Open Food Facts si nécessaire.
         </p>
       </div>
 
@@ -97,7 +262,7 @@ export function BarcodeScannerPage({ scanner }: BarcodeScannerPageProps = {}) {
 
       {!secureCameraAvailable ? (
         <InlineNotice className="mt-4" tone="error" title="Caméra indisponible sur cette adresse">
-          Ouvre la version HTTPS déployée de SportPilot pour tester la caméra. La saisie manuelle ci-dessous reste disponible.
+          Ouvre la version HTTPS de SportPilot. La saisie manuelle ci-dessous reste disponible.
         </InlineNotice>
       ) : null}
 
@@ -132,7 +297,7 @@ export function BarcodeScannerPage({ scanner }: BarcodeScannerPageProps = {}) {
             <Button
               className="w-full sm:w-auto"
               disabled={!secureCameraAvailable}
-              onClick={() => void start(targetRef.current)}
+              onClick={() => void handleStart()}
             >
               <Camera aria-hidden="true" className="size-4" />
               {status === 'detected' ? 'Scanner un autre code' : 'Démarrer la caméra'}
@@ -143,15 +308,8 @@ export function BarcodeScannerPage({ scanner }: BarcodeScannerPageProps = {}) {
               Arrêter la caméra
             </Button>
           )}
-          {(status === 'error' || status === 'detected') ? (
-            <Button
-              className="w-full sm:w-auto"
-              variant="secondary"
-              onClick={() => {
-                setManualResult(undefined);
-                reset();
-              }}
-            >
+          {(status === 'error' || status === 'detected' || lookupStatus !== 'idle') ? (
+            <Button className="w-full sm:w-auto" variant="secondary" onClick={handleReset}>
               <RefreshCw aria-hidden="true" className="size-4" />
               Réinitialiser
             </Button>
@@ -190,8 +348,89 @@ export function BarcodeScannerPage({ scanner }: BarcodeScannerPageProps = {}) {
         </InlineNotice>
       ) : null}
 
+      {lookupStatus === 'loading' ? (
+        <Card className="mt-4 p-6 text-center" role="status">
+          <LoaderCircle aria-hidden="true" className="mx-auto size-8 animate-spin text-brand-700" />
+          <p className="mt-3 font-semibold text-slate-950 dark:text-white">Recherche du produit…</p>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Aliments locaux, puis Open Food Facts.</p>
+        </Card>
+      ) : null}
+
+      {lookupError ? (
+        <InlineNotice className="mt-4" tone="error" title="Service externe indisponible">
+          <p>{lookupError}</p>
+          {activeResult ? (
+            <Button className="mt-3" variant="secondary" onClick={() => void resolveCode(activeResult.code)}>
+              <RefreshCw aria-hidden="true" className="size-4" />
+              Réessayer
+            </Button>
+          ) : null}
+        </InlineNotice>
+      ) : null}
+
+      {lookupMessage ? (
+        <InlineNotice
+          className="mt-4"
+          tone={lookupStatus === 'ready' ? 'success' : 'info'}
+          title={lookupStatus === 'ready' ? 'Produit prêt' : 'Produit non disponible'}
+        >
+          {lookupMessage}
+        </InlineNotice>
+      ) : null}
+
+      {(lookupStatus === 'missing' || lookupStatus === 'error') && fallbackBarcode ? (
+        <Card className="mt-4 min-w-0 p-5 sm:p-6">
+          <h2 className="text-lg font-semibold text-slate-950 dark:text-white">Solutions de secours</h2>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <Link
+              to={newFoodProductForMealPath(date, mealSlot, fallbackBarcode)}
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-brand-700 px-4 text-sm font-semibold text-white hover:bg-brand-800"
+            >
+              <SquarePen aria-hidden="true" className="size-4" />
+              Créer l’aliment manuellement
+            </Link>
+            <Link
+              to={selectFoodPath(date, mealSlot, undefined, 'openFoodFacts')}
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-300 px-4 text-sm font-semibold text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-800"
+            >
+              <Search aria-hidden="true" className="size-4" />
+              Rechercher par texte
+            </Link>
+          </div>
+          {lookupResult?.status === 'archived' ? (
+            <Link
+              to={routePaths.foodProducts}
+              className="mt-3 inline-flex text-sm font-semibold text-brand-700 hover:underline dark:text-brand-300"
+            >
+              Consulter les aliments archivés
+            </Link>
+          ) : null}
+        </Card>
+      ) : null}
+
+      {resolvedProduct ? (
+        <Card className="mt-6 min-w-0 p-5 sm:p-7">
+          {submitError ? (
+            <InlineNotice className="mb-5" tone="error" title="Ajout impossible">
+              {submitError}
+            </InlineNotice>
+          ) : null}
+          {!resolvedProduct.isNutritionComplete ? (
+            <InlineNotice className="mb-5" title="Valeurs nutritionnelles à vérifier">
+              Certaines valeurs manquent dans Open Food Facts et ont été enregistrées à zéro. Tu peux les corriger dans la fiche locale.
+            </InlineNotice>
+          ) : null}
+          <MealFoodSelectionForm
+            product={resolvedProduct}
+            date={date}
+            mealSlot={mealSlot}
+            onSubmit={handleSubmit}
+          />
+        </Card>
+      ) : null}
+
       <Card className="mt-6 min-w-0 p-5 sm:p-6">
-        <h2 className="text-xl font-semibold text-slate-950 dark:text-white">Saisie manuelle</h2>
+        <h2 className="text-xl font-semibold text-slate-950 dark:text-white">Saisie manuelle du code</h2>
         <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
           Utilise cette solution si la caméra est refusée, indisponible ou ne reconnaît pas le code.
         </p>
@@ -205,6 +444,8 @@ export function BarcodeScannerPage({ scanner }: BarcodeScannerPageProps = {}) {
             setManualValue(event.target.value);
             setManualError(undefined);
             setManualResult(undefined);
+            lastAutomaticCodeRef.current = undefined;
+            clearLookup();
           }}
           className={`${inputClassName} mt-2 font-mono`}
           inputMode="numeric"
@@ -212,8 +453,9 @@ export function BarcodeScannerPage({ scanner }: BarcodeScannerPageProps = {}) {
           placeholder="3017624010701"
         />
         {manualError ? <p className="mt-2 text-sm font-medium text-red-700 dark:text-red-300">{manualError}</p> : null}
-        <Button className="mt-4 w-full sm:w-auto" variant="secondary" onClick={validateManualEntry}>
-          Vérifier le code
+        <Button className="mt-4 w-full sm:w-auto" variant="secondary" onClick={() => void validateManualEntry()}>
+          <Search aria-hidden="true" className="size-4" />
+          Rechercher ce produit
         </Button>
       </Card>
     </section>

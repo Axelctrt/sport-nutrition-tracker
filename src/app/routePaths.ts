@@ -48,14 +48,27 @@ export function addFoodPath(date: string, slot: string): string {
   return `${routePaths.addFood}?date=${encodeURIComponent(date)}&slot=${encodeURIComponent(slot)}`;
 }
 
-export function selectFoodPath(date: string, slot: string, productId?: string): string {
+export type FoodSelectorSource = 'openFoodFacts';
+
+export function selectFoodPath(
+  date: string,
+  slot: string,
+  productId?: string,
+  source?: FoodSelectorSource,
+): string {
   const params = new URLSearchParams({ date, slot });
   if (productId) params.set('productId', productId);
+  if (source) params.set('source', source);
   return `${routePaths.foodSelector}?${params.toString()}`;
 }
 
-export function newFoodProductForMealPath(date: string, slot: string): string {
+export function newFoodProductForMealPath(
+  date: string,
+  slot: string,
+  barcode?: string,
+): string {
   const params = new URLSearchParams({ returnDate: date, returnSlot: slot });
+  if (barcode) params.set('barcode', barcode);
   return `${routePaths.newFoodProduct}?${params.toString()}`;
 }
 

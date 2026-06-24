@@ -49,8 +49,13 @@ interface OpenFoodFactsClientOptions {
 
 function isLocalApplicationOrigin(): boolean {
   const locationValue = globalThis.location;
-  return locationValue !== undefined
-    && LOCAL_DEVELOPMENT_HOSTS.has(locationValue.hostname);
+  return import.meta.env.DEV || (
+    locationValue !== undefined
+    && (
+      LOCAL_DEVELOPMENT_HOSTS.has(locationValue.hostname)
+      || locationValue.hostname.endsWith('.trycloudflare.com')
+    )
+  );
 }
 
 function defaultSearchApiUrl(): string {
@@ -94,7 +99,7 @@ function mergeAbortSignals(signal: AbortSignal | undefined, timeoutMs: number): 
 function buildCommonParameters(): URLSearchParams {
   return new URLSearchParams({
     app_name: 'SportPilot',
-    app_version: '0.13.0-alpha.6',
+    app_version: '0.13.0-alpha.8',
     app_platform: 'Web',
     lc: 'fr',
     fields: PRODUCT_FIELDS,

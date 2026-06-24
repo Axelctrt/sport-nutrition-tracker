@@ -1,32 +1,35 @@
-# Patch SportPilot 0.13.0-alpha.7
+# Patch SportPilot 0.13.0-alpha.8
 
-Branche recommandée : `feature/barcode-scanner-poc`
+Branche recommandée : `feature/barcode-scanner`
 
-Ce patch ajoute un premier scanner caméra isolé afin de valider la compatibilité réelle des codes-barres alimentaires sur téléphone avant son branchement complet à Open Food Facts.
+Ce patch transforme le prototype caméra en parcours alimentaire complet :
 
-## Fonctionnalités
+- recherche prioritaire dans les aliments locaux ;
+- fonctionnement hors connexion pour un produit déjà enregistré ;
+- recherche Open Food Facts par code-barres si nécessaire ;
+- enregistrement local du produit distant ;
+- choix de la quantité ou du nombre de portions ;
+- ajout direct au repas présélectionné ;
+- création manuelle avec code-barres prérempli ;
+- accès direct à la recherche textuelle Open Food Facts ;
+- arrêt et annulation des requêtes en cas de changement de page ;
+- proxy Vite compatible avec les Quick Tunnels Cloudflare.
 
-- bibliothèque `@ericblade/quagga2` ;
-- formats EAN-13, EAN-8, UPC-A et UPC-E ;
-- caméra arrière privilégiée ;
-- démarrage après action explicite ;
-- confirmation après deux lectures identiques ;
-- arrêt après détection ;
-- arrêt lors du démontage, du changement de page ou du passage en arrière-plan ;
-- erreurs distinctes : permission refusée, caméra absente, caméra occupée, contexte non sécurisé ;
-- saisie manuelle de secours ;
-- route `/food/barcode-scanner` accessible depuis le sélecteur d’aliments ;
-- aucune migration Dexie et aucune modification du format de sauvegarde.
+Aucune migration Dexie ni migration de sauvegarde n'est nécessaire.
 
-## Vérification
+## Validation
+
+Exécuter séparément :
 
 ```powershell
-npm install
+npm install --registry=https://registry.npmjs.org/
 npm run check
 ```
 
-Résultat attendu : 56 fichiers de tests et 223 tests réussis.
+Résultat attendu après installation complète :
 
-## Test caméra
-
-La caméra requiert HTTPS. Pour un test sur téléphone, utilise un déploiement HTTPS ou un tunnel temporaire Cloudflare. L’adresse locale `http://192.168.x.x:5173` permet d’ouvrir l’application mais pas d’utiliser `getUserMedia`.
+- 58 fichiers de tests ;
+- 234 tests ;
+- lint sans erreur ;
+- build Vite/PWA réussi ;
+- audit MVP réussi.
