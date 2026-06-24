@@ -1,26 +1,33 @@
-# Patch SportPilot 0.13.0-alpha.5 — Sélecteur alimentaire par repas
+# Patch SportPilot 0.13.0-alpha.6
 
-Base attendue : **0.13.0-alpha.4**.
+Ce patch s’applique sur la version `0.13.0-alpha.5`, depuis la branche :
 
-Ce patch ajoute le parcours local d’ajout d’un aliment directement depuis le petit-déjeuner, le déjeuner, le dîner ou les collations.
+```text
+feature/meal-food-off-search
+```
 
-Fonctionnalités :
+Il intègre la recherche textuelle Open Food Facts directement dans le sélecteur alimentaire ouvert depuis un repas.
 
-- repas et date présélectionnés ;
-- aliments récents ;
-- aliments favoris ;
-- recherche dans tous les aliments locaux ;
-- aperçu nutritionnel ;
-- quantité ou nombre de portions ;
-- ajout direct au journal ;
-- création manuelle avec retour vers le repas d’origine.
+## Installation
 
-Aucune migration Dexie et aucune migration du format de sauvegarde ne sont nécessaires.
-
-Après copie du contenu à la racine du projet :
+1. arrêter Vite ;
+2. copier le contenu du patch à la racine du projet ;
+3. exécuter :
 
 ```powershell
 npm install
 npm run check
 npm run dev -- --host
 ```
+
+## Résultats attendus
+
+```text
+Version : 0.13.0-alpha.6
+Fichiers de tests : 54 réussis
+Tests : 213 réussis
+Build PWA : réussi
+Audit MVP : réussi
+```
+
+Aucune migration Dexie ou de sauvegarde JSON n’est nécessaire.

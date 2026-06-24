@@ -1,5 +1,6 @@
 import {
   ArrowLeft,
+  Globe2,
   History,
   LibraryBig,
   LoaderCircle,
@@ -18,6 +19,7 @@ import { saveProductEntry } from '@/application/food/foodJournalService';
 import type { FoodProduct, MealSlot } from '@/domain/models/food';
 import { FoodProductPickerCard } from '@/features/food-journal/components/FoodProductPickerCard';
 import { MealFoodSelectionForm } from '@/features/food-journal/components/MealFoodSelectionForm';
+import { MealOpenFoodFactsSearchPanel } from '@/features/food-journal/components/MealOpenFoodFactsSearchPanel';
 import type { FoodEntryFormValues } from '@/features/food-journal/schemas/foodEntrySchema';
 import { useMealFoodSelector } from '@/features/food-journal/hooks/useMealFoodSelector';
 import { mealSlotLabels } from '@/features/food-journal/utils/foodLabels';
@@ -29,13 +31,13 @@ import { formatLocalDate, toLocalDate } from '@/shared/utils/dates';
 import { isValidLocalDate } from '@/shared/validation/localDate';
 
 const mealSlots: readonly MealSlot[] = ['breakfast', 'lunch', 'dinner', 'snacks'];
-type ProductSource = 'recent' | 'favorites' | 'all';
+type ProductSource = 'recent' | 'favorites' | 'all' | 'openFoodFacts';
 
 function isMealSlot(value: string | null): value is MealSlot {
   return value !== null && mealSlots.includes(value as MealSlot);
 }
 
-const sourceLabels: Record<ProductSource, string> = {
+const sourceLabels: Record<Exclude<ProductSource, 'openFoodFacts'>, string> = {
   recent: 'Récents',
   favorites: 'Favoris',
   all: 'Tous les aliments',
@@ -55,6 +57,7 @@ export function MealFoodSelectorPage() {
   const [selectedProductId, setSelectedProductId] = useState<string | undefined>(
     requestedProductId ?? undefined,
   );
+  const [remoteSelectedProduct, setRemoteSelectedProduct] = useState<FoodProduct>();
   const [submitError, setSubmitError] = useState<string>();
   const selectionFormRef = useRef<HTMLDivElement>(null);
 
@@ -74,7 +77,7 @@ export function MealFoodSelectorPage() {
   }, [data, requestedProductId]);
 
   const sourceProducts = useMemo(() => {
-    if (!data) return [];
+    if (!data || source === 'openFoodFacts') return [];
     if (source === 'recent') return data.recentProducts;
     if (source === 'favorites') return data.favoriteProducts;
     return data.allProducts;
@@ -87,7 +90,7 @@ export function MealFoodSelectorPage() {
 
   const selectedProduct = data?.allProducts.find(
     (product) => product.id === selectedProductId,
-  );
+  ) ?? (remoteSelectedProduct?.id === selectedProductId ? remoteSelectedProduct : undefined);
 
   useEffect(() => {
     if (!selectedProductId) return;
@@ -95,6 +98,13 @@ export function MealFoodSelectorPage() {
   }, [selectedProductId]);
 
   const handleSelect = (product: FoodProduct) => {
+    setRemoteSelectedProduct(undefined);
+    setSelectedProductId(product.id);
+    setSubmitError(undefined);
+  };
+
+  const handleRemoteProductReady = async (product: FoodProduct) => {
+    setRemoteSelectedProduct(product);
     setSelectedProductId(product.id);
     setSubmitError(undefined);
   };
@@ -135,7 +145,7 @@ export function MealFoodSelectorPage() {
             Ajouter un aliment
           </h1>
           <p className="mt-3 max-w-3xl text-slate-600 dark:text-slate-300">
-            Choisis un aliment enregistré, indique la quantité et ajoute-le directement au repas sélectionné.
+            Choisis un aliment local ou recherche-le dans Open Food Facts, puis indique la quantité sans quitter le repas.
           </p>
         </div>
         <Link
@@ -166,26 +176,10 @@ export function MealFoodSelectorPage() {
       {status === 'ready' && data ? (
         <>
           <Card className="mt-6 min-w-0 p-4 sm:p-5">
-            <label htmlFor="meal-food-search" className="text-sm font-semibold text-slate-800 dark:text-slate-100">
-              Rechercher dans les aliments locaux
-            </label>
-            <div className="relative mt-2 min-w-0">
-              <Search
-                aria-hidden="true"
-                className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400"
-              />
-              <input
-                id="meal-food-search"
-                type="search"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                className={`${inputClassName} pl-10`}
-                autoComplete="off"
-                placeholder="Nom, marque ou code-barres"
-              />
-            </div>
-
-            <div className="mt-4 grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-3" aria-label="Sources d’aliments">
+            <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+              Source de l’aliment
+            </p>
+            <div className="mt-3 grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4" aria-label="Sources d’aliments">
               <Button
                 variant={source === 'recent' && query.length === 0 ? 'primary' : 'secondary'}
                 aria-pressed={source === 'recent' && query.length === 0}
@@ -219,53 +213,99 @@ export function MealFoodSelectorPage() {
                 <LibraryBig aria-hidden="true" className="size-4" />
                 Tous ({data.allProducts.length})
               </Button>
+              <Button
+                variant={source === 'openFoodFacts' ? 'primary' : 'secondary'}
+                aria-pressed={source === 'openFoodFacts'}
+                onClick={() => {
+                  setQuery('');
+                  setSource('openFoodFacts');
+                }}
+              >
+                <Globe2 aria-hidden="true" className="size-4" />
+                Open Food Facts
+              </Button>
             </div>
+
+            {source !== 'openFoodFacts' ? (
+              <div className="mt-4">
+                <label htmlFor="meal-food-search" className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                  Rechercher dans les aliments locaux
+                </label>
+                <div className="relative mt-2 min-w-0">
+                  <Search
+                    aria-hidden="true"
+                    className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400"
+                  />
+                  <input
+                    id="meal-food-search"
+                    type="search"
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    className={`${inputClassName} pl-10`}
+                    autoComplete="off"
+                    placeholder="Nom, marque ou code-barres"
+                  />
+                </div>
+              </div>
+            ) : null}
           </Card>
 
-          <div className="mt-6 flex min-w-0 items-baseline justify-between gap-3">
-            <div className="min-w-0">
-              <h2 className="break-words text-xl font-semibold text-slate-950 dark:text-white">
-                {query.trim().length > 0 ? 'Résultats locaux' : sourceLabels[source]}
-              </h2>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                {visibleProducts.length} aliment{visibleProducts.length > 1 ? 's' : ''} disponible{visibleProducts.length > 1 ? 's' : ''}
-              </p>
-            </div>
-          </div>
-
-          {visibleProducts.length > 0 ? (
-            <div className="mt-4 grid min-w-0 gap-4 lg:grid-cols-2">
-              {visibleProducts.map((product) => (
-                <FoodProductPickerCard
-                  key={product.id}
-                  product={product}
-                  selected={product.id === selectedProductId}
-                  onSelect={handleSelect}
-                />
-              ))}
+          {source === 'openFoodFacts' ? (
+            <div className="mt-6">
+              <MealOpenFoodFactsSearchPanel
+                localProducts={data.allProducts}
+                selectedProductId={selectedProductId}
+                onProductReady={handleRemoteProductReady}
+              />
             </div>
           ) : (
-            <Card className="mt-4 p-6 text-center">
-              <h3 className="font-semibold text-slate-950 dark:text-white">
-                {query.trim().length > 0
-                  ? 'Aucun aliment local ne correspond'
-                  : source === 'recent'
-                    ? 'Aucun aliment récent'
-                    : source === 'favorites'
-                      ? 'Aucun aliment favori'
-                      : 'Aucun aliment enregistré'}
-              </h3>
-              <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                Recherche un autre nom ou crée un aliment manuel pour l’ajouter à ce repas.
-              </p>
-              <Link
-                to={newFoodProductForMealPath(date, mealSlot)}
-                className="mt-4 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-brand-700 px-4 text-sm font-semibold text-white hover:bg-brand-800"
-              >
-                <Plus aria-hidden="true" className="size-4" />
-                Créer un aliment
-              </Link>
-            </Card>
+            <>
+              <div className="mt-6 flex min-w-0 items-baseline justify-between gap-3">
+                <div className="min-w-0">
+                  <h2 className="break-words text-xl font-semibold text-slate-950 dark:text-white">
+                    {query.trim().length > 0 ? 'Résultats locaux' : sourceLabels[source]}
+                  </h2>
+                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                    {visibleProducts.length} aliment{visibleProducts.length > 1 ? 's' : ''} disponible{visibleProducts.length > 1 ? 's' : ''}
+                  </p>
+                </div>
+              </div>
+
+              {visibleProducts.length > 0 ? (
+                <div className="mt-4 grid min-w-0 gap-4 lg:grid-cols-2">
+                  {visibleProducts.map((product) => (
+                    <FoodProductPickerCard
+                      key={product.id}
+                      product={product}
+                      selected={product.id === selectedProductId}
+                      onSelect={handleSelect}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <Card className="mt-4 p-6 text-center">
+                  <h3 className="font-semibold text-slate-950 dark:text-white">
+                    {query.trim().length > 0
+                      ? 'Aucun aliment local ne correspond'
+                      : source === 'recent'
+                        ? 'Aucun aliment récent'
+                        : source === 'favorites'
+                          ? 'Aucun aliment favori'
+                          : 'Aucun aliment enregistré'}
+                  </h3>
+                  <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                    Recherche un autre nom, utilise Open Food Facts ou crée un aliment manuel.
+                  </p>
+                  <Link
+                    to={newFoodProductForMealPath(date, mealSlot)}
+                    className="mt-4 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-brand-700 px-4 text-sm font-semibold text-white hover:bg-brand-800"
+                  >
+                    <Plus aria-hidden="true" className="size-4" />
+                    Créer un aliment
+                  </Link>
+                </Card>
+              )}
+            </>
           )}
 
           {selectedProduct ? (
@@ -274,6 +314,11 @@ export function MealFoodSelectorPage() {
                 {submitError ? (
                   <InlineNotice className="mb-5" tone="error" title="Ajout impossible">
                     {submitError}
+                  </InlineNotice>
+                ) : null}
+                {!selectedProduct.isNutritionComplete ? (
+                  <InlineNotice className="mb-5" tone="info" title="Valeurs nutritionnelles à vérifier">
+                    Certaines valeurs sont absentes de la source et ont été enregistrées à zéro. Tu peux ajouter le produit, puis corriger sa fiche locale si nécessaire.
                   </InlineNotice>
                 ) : null}
                 <MealFoodSelectionForm
