@@ -101,7 +101,7 @@ Le `.gitignore` exclut notamment :
 ## 4. Version de production
 
 - [x] Build de production généré
-- [ ] Lancer `npm run preview`
+- [x] Lancer `npm run preview`
 - [ ] Vérifier toutes les routes
 - [ ] Vérifier l’absence d’erreurs rouges dans la console
 - [ ] Vérifier les requêtes réseau
@@ -354,11 +354,15 @@ Pour 200 g, résultat attendu :
 
 ## 14. Dépendances
 
-- [ ] `npm audit` exécuté et analysé
-- [ ] Aucune vulnérabilité critique non traitée
-- [ ] Vulnérabilités élevées analysées
-- [ ] `npm outdated` exécuté et analysé
-- [ ] Aucun `npm audit fix --force` lancé sans analyse
+- [x] `npm audit` exécuté et analysé
+- [x] Aucune vulnérabilité critique non traitée
+- [x] Vulnérabilités élevées analysées
+- [x] `npm outdated` exécuté et analysé
+- [x] Aucun `npm audit fix --force` lancé sans analyse
+- [x] @types/node 24 conservé pour rester aligné avec Node.js 24 LTS
+- [x] Recharts mis à jour de 3.8.1 vers 3.9.0
+- [x] Tests automatisés réussis après la mise à jour de Recharts
+- [x] Graphiques vérifiés manuellement après la mise à jour
 
 Commandes :
 
