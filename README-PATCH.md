@@ -1,4 +1,4 @@
-# Patch SportPilot 0.13.0-alpha.8
+﻿# Version SportPilot 0.13.0
 
 Branche recommandée : `feature/barcode-scanner`
 
@@ -33,3 +33,4 @@ Résultat attendu après installation complète :
 - lint sans erreur ;
 - build Vite/PWA réussi ;
 - audit MVP réussi.
+

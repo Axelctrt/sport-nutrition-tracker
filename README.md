@@ -1,4 +1,4 @@
-# SportPilot 0.13.0-alpha.4
+﻿# SportPilot 0.13.0
 
 PWA locale de suivi sportif, nutritionnel, calorique et de progression.
 
@@ -109,7 +109,7 @@ npm run preview
 La version 0.13.0-alpha.5 est validée avec :
 
 - Oxlint : 0 avertissement, 0 erreur ;
-- Vitest : 54 fichiers, 213 tests ;
+- Vitest : 58 fichiers, 234 tests ;
 - TypeScript strict : compilation réussie ;
 - Vite/PWA : build réussi, service worker généré ;
 - audit MVP : manifeste, icônes, raccourcis, hors ligne, repères d’accessibilité et absence de secrets évidents.
@@ -189,3 +189,27 @@ Le scanner code-barres est désormais intégré au parcours alimentaire complet.
 - proxy de développement utilisable derrière un Quick Tunnel Cloudflare.
 
 Le schéma IndexedDB et le format des sauvegardes restent inchangés.
+## Version stable 0.13.0
+
+Cette version finalise les Ã©volutions d'interface et de nutrition prÃ©vues pour la sÃ©rie 0.13 :
+
+- modification du profil utilisable sur mobile ;
+- suppression des textes temporaires visibles ;
+- ajout d'aliments directement depuis chaque repas ;
+- aliments rÃ©cents, favoris et locaux ;
+- recherche Open Food Facts intÃ©grÃ©e au repas ;
+- scan EAN-13, EAN-8, UPC-A et UPC-E ;
+- recherche locale prioritaire aprÃ¨s scan ;
+- ajout direct du produit au repas sÃ©lectionnÃ© ;
+- fonctionnement dÃ©gradÃ© et solutions de secours hors connexion.
+
+Le schÃ©ma IndexedDB et le format des sauvegardes restent inchangÃ©s.
+
+Validation de la version :
+
+- Oxlint : 0 erreur et 0 avertissement ;
+- Vitest : 58 fichiers et 234 tests rÃ©ussis ;
+- TypeScript strict : compilation rÃ©ussie ;
+- Vite/PWA : build et service worker gÃ©nÃ©rÃ©s ;
+- audit MVP : rÃ©ussi.
+
