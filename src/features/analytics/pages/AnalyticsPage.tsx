@@ -143,8 +143,8 @@ export function AnalyticsPage() {
             Les moyennes sont pondérées lorsqu’une distance est disponible. Les semaines sans donnée restent visibles afin de préserver une lecture chronologique fiable.
           </p>
         </div>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-          <div>
+        <div className="flex w-full min-w-0 flex-col gap-3 sm:w-auto sm:flex-row sm:items-end">
+          <div className="min-w-0">
             <label htmlFor="analytics-reference-date" className="text-sm font-semibold text-slate-800 dark:text-slate-100">
               Semaine de référence
             </label>
@@ -158,7 +158,7 @@ export function AnalyticsPage() {
           </div>
           <Link
             to={routePaths.history}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+            className="inline-flex min-h-11 w-full sm:w-auto items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
           >
             <History aria-hidden="true" className="size-4" />
             Historique détaillé

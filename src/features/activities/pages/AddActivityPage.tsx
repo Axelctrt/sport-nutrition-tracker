@@ -37,7 +37,7 @@ const choices = [
 export function AddActivityPage() {
   return (
     <section aria-labelledby="add-activity-title">
-      <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">Étape 6 · Journal sportif</p>
+      <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">Journal sportif</p>
       <h1 id="add-activity-title" className="mt-1 text-3xl font-bold tracking-tight text-slate-950 dark:text-white">Ajouter une activité</h1>
       <p className="mt-3 max-w-3xl text-slate-600 dark:text-slate-300">
         Choisis le type de séance. Chaque formulaire utilise les règles de calcul adaptées et conserve un snapshot du poids et des coefficients utilisés.

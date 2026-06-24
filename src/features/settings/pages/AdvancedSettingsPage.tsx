@@ -156,7 +156,7 @@ export function AdvancedSettingsPage() {
           Paramètres avancés
         </h1>
         <p className="mt-3 max-w-3xl text-slate-600 dark:text-slate-300">
-          Ces coefficients encadreront les calculs de l’étape 4. Les valeurs par défaut correspondent au cahier des charges.
+          Ces coefficients permettent d’adapter les estimations énergétiques et nutritionnelles. Les valeurs par défaut peuvent être personnalisées.
         </p>
       </div>
 

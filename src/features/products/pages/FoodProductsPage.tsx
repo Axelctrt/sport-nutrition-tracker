@@ -22,7 +22,7 @@ export function FoodProductsPage() {
     <section aria-labelledby="food-products-title">
       <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">Étape 8 opérationnelle</p>
+          <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">Catalogue alimentaire</p>
           <h1 id="food-products-title" className="mt-1 text-3xl font-bold tracking-tight text-slate-950 dark:text-white">Aliments enregistrés</h1>
           <p className="mt-3 max-w-3xl text-slate-600 dark:text-slate-300">Catalogue local disponible hors connexion. Les produits archivés restent dans l’historique mais ne peuvent plus être ajoutés.</p>
         </div>

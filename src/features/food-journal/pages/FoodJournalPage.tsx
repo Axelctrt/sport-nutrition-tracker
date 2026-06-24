@@ -46,7 +46,7 @@ export function FoodJournalPage() {
     <section aria-labelledby="food-journal-title">
       <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">Étape 9 opérationnelle</p>
+          <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">Nutrition quotidienne</p>
           <h1 id="food-journal-title" className="mt-1 text-3xl font-bold tracking-tight text-slate-950 dark:text-white">Journal alimentaire</h1>
           <p className="mt-3 max-w-3xl text-slate-600 dark:text-slate-300">Suis les calories et macronutriments réellement renseignés, repas par repas.</p>
         </div>
@@ -59,16 +59,16 @@ export function FoodJournalPage() {
       </div>
 
       <Card className="mt-8 p-5 sm:p-6">
-        <div className="grid gap-4 lg:grid-cols-[1fr_auto_auto] lg:items-end">
-          <div>
+        <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-end">
+          <div className="min-w-0">
             <label htmlFor="food-journal-date" className="text-sm font-semibold">Journée consultée</label>
             <input id="food-journal-date" type="date" value={date} onChange={(event) => setSearchParams({ date: event.target.value })} className={`${inputClassName} mt-2`} />
           </div>
-          <div>
+          <div className="min-w-0">
             <label htmlFor="copy-day-date" className="text-sm font-semibold">Copier toute la journée vers</label>
             <input id="copy-day-date" type="date" value={copyTargetDate} onChange={(event) => setCopyTargetDate(event.target.value)} className={`${inputClassName} mt-2`} />
           </div>
-          <Button variant="secondary" disabled={busyId === 'copy-day' || !snapshot?.entries.length} onClick={() => void copyDayTo(copyTargetDate)}><Copy aria-hidden="true" className="size-4" />Copier la journée</Button>
+          <Button className="w-full lg:w-auto" variant="secondary" disabled={busyId === 'copy-day' || !snapshot?.entries.length} onClick={() => void copyDayTo(copyTargetDate)}><Copy aria-hidden="true" className="size-4" />Copier la journée</Button>
         </div>
       </Card>
 

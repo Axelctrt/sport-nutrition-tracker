@@ -32,7 +32,7 @@ export function ActivityJournalPage() {
     <section aria-labelledby="activity-journal-title">
       <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">Étape 6 opérationnelle</p>
+          <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">Suivi sportif</p>
           <h1 id="activity-journal-title" className="mt-1 text-3xl font-bold tracking-tight text-slate-950 dark:text-white">Journal des activités</h1>
           <p className="mt-3 max-w-3xl text-slate-600 dark:text-slate-300">
             Consulte, corrige ou supprime les séances enregistrées. Chaque modification recalcule automatiquement les objectifs de la journée.
@@ -48,8 +48,8 @@ export function ActivityJournalPage() {
       </div>
 
       <Card className="mt-8 p-5 sm:p-6">
-        <div className="grid gap-5 md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-end">
-          <div>
+        <div className="grid min-w-0 gap-5 md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-end">
+          <div className="min-w-0">
             <label htmlFor="activity-journal-date" className="text-sm font-semibold text-slate-800 dark:text-slate-100">Journée consultée</label>
             <input
               id="activity-journal-date"

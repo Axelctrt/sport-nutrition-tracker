@@ -70,7 +70,7 @@ export function FoodEntryEditorPage() {
     <section aria-labelledby="food-entry-editor-title">
       <Link to={foodJournalPath(entry?.date ?? defaultDate)} className="inline-flex items-center gap-2 text-sm font-semibold text-brand-700 hover:underline dark:text-brand-300"><ArrowLeft aria-hidden="true" className="size-4" />Retour au journal</Link>
       <div className="mt-5">
-        <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">Étape 7 opérationnelle</p>
+        <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">Journal alimentaire</p>
         <h1 id="food-entry-editor-title" className="mt-1 text-3xl font-bold tracking-tight text-slate-950 dark:text-white">{entryId ? 'Modifier un aliment consommé' : 'Ajouter un aliment'}</h1>
         <p className="mt-3 max-w-3xl text-slate-600 dark:text-slate-300">Les valeurs consommées sont calculées à partir de la quantité et d’un snapshot des données nutritionnelles.</p>
       </div>

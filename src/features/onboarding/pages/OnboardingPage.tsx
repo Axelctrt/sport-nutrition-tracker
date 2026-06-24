@@ -64,7 +64,7 @@ export function OnboardingPage() {
         <Card className="p-5 sm:p-8">
           <div className="mb-8">
             <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
-              Étape 3
+              Profil local
             </p>
             <h2 className="mt-1 text-2xl font-bold tracking-tight text-slate-950 dark:text-white">
               Créer le profil local
