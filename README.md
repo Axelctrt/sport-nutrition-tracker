@@ -109,7 +109,7 @@ npm run preview
 La version 0.13.0-alpha.5 est validée avec :
 
 - Oxlint : 0 avertissement, 0 erreur ;
-- Vitest : 53 fichiers, 210 tests ;
+- Vitest : 54 fichiers, 213 tests ;
 - TypeScript strict : compilation réussie ;
 - Vite/PWA : build réussi, service worker généré ;
 - audit MVP : manifeste, icônes, raccourcis, hors ligne, repères d’accessibilité et absence de secrets évidents.
@@ -147,4 +147,20 @@ Le sélecteur propose :
 - la saisie par quantité ou par nombre de portions ;
 - la création manuelle avec retour automatique vers le repas initial.
 
-Les recherches Open Food Facts et le scan caméra seront intégrés dans les branches suivantes. Cette évolution réutilise les tables IndexedDB existantes et ne modifie pas le format des sauvegardes.
+Le scan caméra sera intégré dans la branche suivante. Cette évolution réutilise les tables IndexedDB existantes et ne modifie pas le format des sauvegardes.
+
+
+## Recherche Open Food Facts intégrée 0.13.0-alpha.6
+
+Le sélecteur alimentaire de chaque repas comprend maintenant un onglet Open Food Facts. L’utilisateur peut effectuer une recherche textuelle, enregistrer le résultat localement, régler la quantité puis l’ajouter au repas d’origine sans changer de page.
+
+Le parcours gère :
+
+- les résultats complets et incomplets ;
+- les produits déjà enregistrés localement ;
+- la conservation prioritaire d’un aliment manuel utilisant le même code-barres ;
+- le fonctionnement hors connexion avec retour vers les sources locales ;
+- les erreurs et indisponibilités du service externe ;
+- l’annulation automatique des requêtes lors du démontage du composant.
+
+Aucune table IndexedDB ni version de sauvegarde n’est modifiée.
