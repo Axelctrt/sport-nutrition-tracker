@@ -1,5 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Save } from 'lucide-react';
+import { useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { SUGGESTED_WEEKLY_CHANGE_PERCENT } from '@/domain/defaults/userProfile';
 import type { WeightGoal } from '@/domain/models/profile';
@@ -11,6 +12,8 @@ import { inputClassName } from '@/shared/forms/formStyles';
 import { Button } from '@/shared/ui/Button';
 import { FormField } from '@/shared/ui/FormField';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
+import { CollapsibleSection } from '@/shared/ui/CollapsibleSection';
+import { focusFirstInvalidField } from '@/shared/hooks/focusFirstInvalidField';
 
 interface ProfileFormProps {
   initialValues: ProfileFormValues;
@@ -37,6 +40,7 @@ export function ProfileForm({
   onSubmit,
   formId = 'profile-form',
 }: ProfileFormProps) {
+  const formRef = useRef<HTMLFormElement>(null);
   const {
     register,
     handleSubmit,
@@ -65,13 +69,21 @@ export function ProfileForm({
 
   return (
     <form
+      ref={formRef}
       id={formId}
       noValidate
-      onSubmit={handleSubmit(async (values) => {
-        if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
-        await onSubmit(values);
-      })}
-      className="min-w-0 space-y-8 pb-2"
+      onSubmit={handleSubmit(
+        async (values) => {
+          if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+          await onSubmit(values);
+        },
+        () => {
+          window.requestAnimationFrame(() => {
+            if (formRef.current) focusFirstInvalidField(formRef.current);
+          });
+        },
+      )}
+      className="min-w-0 space-y-4 pb-2"
     >
       {submitCount > 0 && Object.keys(errors).length > 0 ? (
         <InlineNotice tone="error" title="Certains champs doivent être corrigés">
@@ -79,10 +91,14 @@ export function ProfileForm({
         </InlineNotice>
       ) : null}
 
-      <fieldset className="min-w-0 space-y-5">
-        <legend className="text-lg font-semibold text-slate-950 dark:text-white">
-          Informations personnelles
-        </legend>
+      <CollapsibleSection
+        title="Informations personnelles"
+        description="Identité, âge, taille et poids de référence."
+        summary="Essentiel"
+        defaultOpen
+      >
+        <fieldset className="min-w-0 space-y-5">
+          <legend className="sr-only">Informations personnelles</legend>
 
         <FormField
           id="firstName"
@@ -221,12 +237,17 @@ export function ProfileForm({
             />
           </FormField>
         </div>
-      </fieldset>
+        </fieldset>
+      </CollapsibleSection>
 
-      <fieldset className="min-w-0 space-y-5 border-t border-slate-200 pt-8 dark:border-slate-800">
-        <legend className="text-lg font-semibold text-slate-950 dark:text-white">
-          Objectif et activité quotidienne
-        </legend>
+      <CollapsibleSection
+        title="Objectif et activité quotidienne"
+        description="Objectif de poids, activité professionnelle et pas quotidiens."
+        summary="Suivi"
+        defaultOpen
+      >
+        <fieldset className="min-w-0 space-y-5">
+          <legend className="sr-only">Objectif et activité quotidienne</legend>
 
         <FormField id="goal" label="Objectif" error={errors.goal?.message} required>
           <select
@@ -314,12 +335,16 @@ export function ProfileForm({
             {...register('dailyStepGoal', integerRegistrationOptions)}
           />
         </FormField>
-      </fieldset>
+        </fieldset>
+      </CollapsibleSection>
 
-      <fieldset className="min-w-0 space-y-5 border-t border-slate-200 pt-8 dark:border-slate-800">
-        <legend className="text-lg font-semibold text-slate-950 dark:text-white">
-          Cibles de macronutriments
-        </legend>
+      <CollapsibleSection
+        title="Cibles de macronutriments"
+        description="Coefficients de protéines et de lipides utilisés dans les calculs."
+        summary="Avancé"
+      >
+        <fieldset className="min-w-0 space-y-5">
+          <legend className="sr-only">Cibles de macronutriments</legend>
 
         <InlineNotice title="Des coefficients ajustables">
           Les valeurs par défaut sont de 1,8 g/kg de protéines et 0,9 g/kg de lipides. Les glucides sont calculés avec les calories restantes.
@@ -370,9 +395,10 @@ export function ProfileForm({
             />
           </FormField>
         </div>
-      </fieldset>
+        </fieldset>
+      </CollapsibleSection>
 
-      <div className="sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-10 -mx-4 flex justify-end border-t border-slate-200 bg-white/95 px-4 py-4 backdrop-blur sm:static sm:mx-0 sm:bg-transparent sm:p-0 sm:pt-6 dark:border-slate-800 dark:bg-slate-900/95 sm:dark:bg-transparent">
+      <div className="flex justify-end border-t border-slate-200 pt-5 dark:border-slate-800">
         <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={isSubmitting}>
           <Save aria-hidden="true" className="size-5" />
           {isSubmitting ? 'Enregistrement…' : submitLabel}

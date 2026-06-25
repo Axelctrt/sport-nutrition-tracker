@@ -2,9 +2,9 @@ import { routePaths } from '@/app/routePaths';
 import { CURRENT_BACKUP_SCHEMA_VERSION } from '@/infrastructure/backup/backupMigrations';
 import { databaseSchemaVersion, databaseTableNames } from '@/infrastructure/database/schema';
 
-describe('préparation de la version 0.15.0-alpha.9', () => {
+describe('préparation de la version 0.15.0-alpha.10', () => {
   it('expose la préversion UX dans le build', () => {
-    expect(__APP_VERSION__).toBe('0.15.0-alpha.9');
+    expect(__APP_VERSION__).toBe('0.15.0-alpha.10');
     expect(__APP_VERSION__).toMatch(/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/);
   });
 
@@ -12,20 +12,18 @@ describe('préparation de la version 0.15.0-alpha.9', () => {
     expect(databaseSchemaVersion).toBe(2);
     expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(2);
     expect(databaseTableNames).toEqual(expect.arrayContaining([
-      'exerciseDefinitions',
-      'workoutTemplates',
-      'workoutTemplateExercises',
+      'userProfile',
+      'appSettings',
+      'weights',
+      'foodEntries',
       'workoutSessions',
-      'workoutSessionExercises',
-      'strengthSets',
-      'progressionSuggestions',
     ]));
   });
 
-  it('expose tous les parcours du carnet de musculation', () => {
-    expect(routePaths.strengthExercises).toBe('/strength/exercises');
-    expect(routePaths.workoutTemplates).toBe('/strength/templates');
-    expect(routePaths.workoutSessions).toBe('/strength/sessions');
-    expect(routePaths.strengthExerciseHistory).toContain('/history');
+  it('conserve les parcours de configuration et de gestion des données', () => {
+    expect(routePaths.onboarding).toBe('/onboarding');
+    expect(routePaths.profile).toBe('/profile');
+    expect(routePaths.settings).toBe('/settings');
+    expect(routePaths.backup).toBe('/backup');
   });
 });

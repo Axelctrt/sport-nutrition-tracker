@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { useProfile } from '@/app/providers/profile/useProfile';
 import { ProfileForm } from '@/features/profile/components/ProfileForm';
+import { ProfileOverview } from '@/features/profile/components/ProfileOverview';
 import type { ProfileFormValues } from '@/features/profile/schemas/profileSchema';
 import {
   profileFormValuesToEntity,
   profileToFormValues,
 } from '@/features/profile/utils/profileForm';
-import { Card } from '@/shared/ui/Card';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 
 export function ProfilePage() {
@@ -52,6 +52,8 @@ export function ProfilePage() {
         </p>
       </div>
 
+      <ProfileOverview profile={profile} />
+
       {feedback ? (
         <InlineNotice
           tone={feedback.tone}
@@ -63,14 +65,14 @@ export function ProfilePage() {
         </InlineNotice>
       ) : null}
 
-      <Card className="mt-6 min-w-0 overflow-visible p-4 sm:p-8">
+      <div className="mt-6 min-w-0">
         <ProfileForm
           key={profile.updatedAt}
           initialValues={profileToFormValues(profile)}
           submitLabel="Enregistrer le profil"
           onSubmit={handleSubmit}
         />
-      </Card>
+      </div>
     </section>
   );
 }

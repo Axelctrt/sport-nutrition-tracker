@@ -1,22 +1,22 @@
-# SportPilot 0.15.0-alpha.9 — carnet de musculation mobile
+# SportPilot 0.15.0-alpha.10 — profil, paramètres et sauvegarde mobile
 
-Branche obligatoire : `feature/mobile-strength-library-ux`
+Branche obligatoire : `feature/mobile-profile-settings-backup-ux`
 
-Cette étape optimise les écrans de musculation utilisés en dehors d’une séance active, sans modifier les calculs ni les données :
+Cette étape optimise les écrans de configuration et de gestion des données sans modifier les calculs ni les formats existants :
 
-- catalogue d’exercices avec résumé compact, recherche prioritaire, filtres avancés repliés et cartes mobiles ;
-- correction du champ de recherche : saisie continue, focus conservé et filtrage local sans rechargement à chaque caractère ;
-- historique de progression accessible directement depuis chaque exercice ;
-- actions modifier, dupliquer, archiver et réactiver regroupées dans un menu secondaire ;
-- archivage protégé par le dialogue accessible partagé et mise à jour silencieuse de la liste ;
-- séances modèles avec recherche locale, résumé, démarrage prioritaire et actions secondaires repliées ;
-- historique des entraînements avec résumé, filtres rapides et cartes compactes ;
-- progression par exercice regroupée dans une synthèse unique avec graphiques et records ouverts à la demande ;
-- records par charge convertis en cartes, sans tableau horizontal ;
-- détail des séries replié dans chaque séance historique ;
-- formulaires d’exercice et de séance modèle raccourcis avec options facultatives et réglages avancés repliés ;
-- focalisation automatique du premier champ invalide et skeletons partagés ;
-- aucune migration Dexie et aucune modification du format de sauvegarde.
+- résumé compact du profil avec objectif, poids de référence, pas et coefficients de macronutriments ;
+- formulaire de profil réparti en sections progressives et bouton d’enregistrement fixe dans le flux de page ;
+- résumé des paramètres avec thème, stockage, seuil de pas et limite de calibration ;
+- coefficients techniques, MET de natation et calibration placés dans des sections repliables ;
+- confirmation avant le rétablissement des paramètres par défaut ;
+- champs numériques adaptés aux claviers mobiles et ouverture automatique de la section contenant une erreur ;
+- skeleton partagé pendant le chargement des paramètres ;
+- page de sauvegarde recentrée sur les actions exporter et restaurer ;
+- aperçu compact du contenu d’une sauvegarde avant son import ;
+- confirmation accessible avant le remplacement complet des données ;
+- suppression définitive protégée par un dialogue exigeant la saisie `EFFACER` ;
+- informations de confidentialité, stockage et fonctionnement PWA repliées ;
+- aucune migration Dexie et aucune modification du format de sauvegarde JSON.
 
 ## Validation
 
@@ -25,4 +25,4 @@ npm install
 npm run check
 ```
 
-Tester prioritairement sur iPhone 15 en portrait, puis en paysage, en modes clair et sombre.
+Tester en priorité sur iPhone 15 en portrait puis en paysage, en modes clair et sombre.

@@ -1,8 +1,25 @@
-# SportPilot 0.15.0-alpha.9
+# SportPilot 0.15.0-alpha.10
 
 PWA locale de suivi sportif, nutritionnel, calorique et de progression.
 
 ## Version 0.15 — Expérience mobile-first
+
+### 0.15.0-alpha.10 — profil, paramètres et sauvegarde mobile
+
+Cette préversion simplifie la configuration personnelle et la gestion des données locales sur téléphone :
+
+- résumés compacts pour comprendre immédiatement le profil, les réglages actifs et le stockage local ;
+- formulaire de profil organisé en sections progressives, avec objectifs et macronutriments regroupés ;
+- bouton d’enregistrement stable sous le formulaire, sans déplacement pendant le défilement ;
+- paramètres avancés répartis entre affichage, calculs, natation et calibration hebdomadaire ;
+- clavier mobile adapté aux coefficients et focalisation du premier champ invalide ;
+- confirmation accessible avant le rétablissement des valeurs par défaut ;
+- spinner local des paramètres remplacé par le skeleton partagé ;
+- page de sauvegarde recentrée sur exporter, restaurer et effacer ;
+- prévisualisation compacte d’un fichier avant restauration, puis confirmation de remplacement ;
+- suppression définitive dans un dialogue accessible exigeant la saisie `EFFACER` ;
+- confidentialité, fonctionnement PWA et zone dangereuse déplacés dans des sections repliables ;
+- aucune migration Dexie et aucune modification du format de sauvegarde.
 
 ### 0.15.0-alpha.9 — carnet de musculation mobile
 

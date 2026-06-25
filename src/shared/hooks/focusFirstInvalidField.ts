@@ -4,6 +4,12 @@ export function focusFirstInvalidField(container: ParentNode): HTMLElement | nul
   const field = container.querySelector<HTMLElement>(INVALID_FIELD_SELECTOR);
   if (!field) return null;
 
+  let parent = field.parentElement;
+  while (parent) {
+    if (parent instanceof HTMLDetailsElement) parent.open = true;
+    parent = parent.parentElement;
+  }
+
   field.focus({ preventScroll: true });
   field.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
   return field;
