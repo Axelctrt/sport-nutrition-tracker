@@ -73,7 +73,7 @@ export function WorkoutSessionsPage() {
 
       {status === 'ready' && history.length > 0 ? (
         <div className="mt-5 grid gap-4 lg:grid-cols-2">
-          {history.map(({ session, exerciseCount }) => (
+          {history.map(({ session, exerciseCount, pendingProgressionCount }) => (
             <Card key={session.id} className="p-5">
               <div className="flex items-start justify-between gap-4">
                 <div>
@@ -88,8 +88,15 @@ export function WorkoutSessionsPage() {
               <div className="mt-4 flex flex-wrap gap-2 text-sm text-slate-600 dark:text-slate-300">
                 {session.durationMinutes !== undefined ? <span className="rounded-lg bg-slate-100 px-2.5 py-1.5 dark:bg-slate-800">{session.durationMinutes} min</span> : null}
                 {session.sourceTemplateNameSnapshot ? <span className="rounded-lg bg-slate-100 px-2.5 py-1.5 dark:bg-slate-800">Modèle : {session.sourceTemplateNameSnapshot}</span> : null}
+                {pendingProgressionCount > 0 ? (
+                  <span className="rounded-lg bg-emerald-100 px-2.5 py-1.5 font-semibold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
+                    {pendingProgressionCount} progression{pendingProgressionCount > 1 ? 's' : ''} à décider
+                  </span>
+                ) : null}
               </div>
-              <Link to={workoutSessionPath(session.id)} className="mt-4 inline-flex min-h-10 items-center rounded-xl border border-slate-300 px-3 text-sm font-semibold hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800">Consulter</Link>
+              <Link to={workoutSessionPath(session.id)} className="mt-4 inline-flex min-h-10 items-center rounded-xl border border-slate-300 px-3 text-sm font-semibold hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800">
+                {pendingProgressionCount > 0 ? 'Voir les suggestions' : 'Consulter'}
+              </Link>
             </Card>
           ))}
         </div>

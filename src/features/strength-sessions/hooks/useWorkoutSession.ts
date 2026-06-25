@@ -1,5 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { ExerciseDefinition, StrengthSet, WorkoutSession, WorkoutSessionExercise } from '@/domain/models/strength';
+import type {
+  ExerciseDefinition,
+  ProgressionSuggestion,
+  StrengthSet,
+  WorkoutSession,
+  WorkoutSessionExercise,
+} from '@/domain/models/strength';
+import {
+  decideProgressionSuggestion,
+  generateProgressionSuggestions,
+  listProgressionSuggestionsForSession,
+  type ProgressionDecision,
+} from '@/application/strength/strengthProgressionService';
 import {
   copyPreviousExerciseSets,
   getPreviousExercisePerformance,
@@ -32,6 +44,7 @@ export function useWorkoutSession(sessionId: string) {
   const [exercises, setExercises] = useState<WorkoutSessionExercise[]>([]);
   const [definitions, setDefinitions] = useState<ExerciseDefinition[]>([]);
   const [strengthSets, setStrengthSets] = useState<StrengthSet[]>([]);
+  const [progressionSuggestions, setProgressionSuggestions] = useState<ProgressionSuggestion[]>([]);
   const [previousPerformances, setPreviousPerformances] = useState<Record<string, ExerciseHistoryEntry | undefined>>({});
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [errorMessage, setErrorMessage] = useState<string>();
@@ -41,10 +54,11 @@ export function useWorkoutSession(sessionId: string) {
     setStatus('loading');
     setErrorMessage(undefined);
     try {
-      const [view, catalog, sets] = await Promise.all([
+      const [view, catalog, sets, suggestions] = await Promise.all([
         getWorkoutSessionView(repositories.workoutSessions, sessionId),
         listExerciseDefinitions(repositories.strengthExercises),
         listStrengthSetsForSession(repositories.strengthSets, sessionId),
+        listProgressionSuggestionsForSession(repositories.progressionSuggestions, sessionId),
       ]);
       const performanceEntries = await Promise.all(view.exercises.map(async (exercise) => ([
         exercise.id,
@@ -59,6 +73,7 @@ export function useWorkoutSession(sessionId: string) {
       setExercises(view.exercises);
       setDefinitions(catalog);
       setStrengthSets(sets);
+      setProgressionSuggestions(suggestions);
       setPreviousPerformances(Object.fromEntries(performanceEntries));
       setStatus('ready');
     } catch (error) {
@@ -113,7 +128,16 @@ export function useWorkoutSession(sessionId: string) {
 
   const complete = useCallback(() => runAction(
     'complete',
-    () => completeWorkoutSession(repositories.workoutSessions, sessionId),
+    async () => {
+      const completed = await completeWorkoutSession(repositories.workoutSessions, sessionId);
+      await generateProgressionSuggestions(
+        repositories.workoutSessions,
+        repositories.strengthSets,
+        repositories.progressionSuggestions,
+        sessionId,
+      );
+      return completed;
+    },
   ), [runAction, sessionId]);
 
   const abandon = useCallback(() => runAction(
@@ -198,6 +222,22 @@ export function useWorkoutSession(sessionId: string) {
     ),
   ), [runAction, sessionId]);
 
+
+  const decideProgression = useCallback((
+    suggestionId: string,
+    decision: ProgressionDecision,
+    acceptedLoadKg?: number,
+  ) => runAction(
+    `progression:${suggestionId}`,
+    () => decideProgressionSuggestion(
+      repositories.progressionSuggestions,
+      repositories.workoutTemplates,
+      suggestionId,
+      decision,
+      acceptedLoadKg,
+    ),
+  ), [runAction]);
+
   const availableExercises = useMemo(
     () => availableExercisesForSession(definitions, exercises),
     [definitions, exercises],
@@ -207,6 +247,7 @@ export function useWorkoutSession(sessionId: string) {
     session,
     exercises,
     strengthSets,
+    progressionSuggestions,
     previousPerformances,
     availableExercises,
     status,
@@ -225,5 +266,6 @@ export function useWorkoutSession(sessionId: string) {
     duplicateSet,
     removeSet,
     reusePreviousSets,
+    decideProgression,
   };
 }

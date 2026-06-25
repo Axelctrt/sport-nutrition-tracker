@@ -5,6 +5,10 @@ import { WorkoutSessionsPage } from '@/features/strength-sessions/pages/WorkoutS
 import { appDatabase } from '@/infrastructure/database/database';
 import { initializeDatabase } from '@/infrastructure/database/databaseLifecycle';
 import { createEntity } from '@/shared/utils/entities';
+import {
+  createProgressionSuggestionInput,
+  createWorkoutSessionInput,
+} from '@/test/factories/strengthFactory';
 
 describe('WorkoutSessionsPage', () => {
   beforeEach(async () => {
@@ -59,4 +63,33 @@ describe('WorkoutSessionsPage', () => {
       '/strength/sessions/session-current',
     );
   });
+
+  it('signale les suggestions de progression encore à décider', async () => {
+    await appDatabase.workoutSessions.add(createEntity(
+      createWorkoutSessionInput({ status: 'completed' }),
+      'session-completed',
+    ));
+    await appDatabase.progressionSuggestions.add(createEntity(
+      createProgressionSuggestionInput({
+        sessionId: 'session-completed',
+        status: 'pending',
+      }),
+      'suggestion-pending',
+    ));
+
+    render(
+      <MemoryRouter initialEntries={['/strength/sessions']}>
+        <Routes>
+          <Route path="/strength/sessions" element={<WorkoutSessionsPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('1 progression à décider')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Voir les suggestions' })).toHaveAttribute(
+      'href',
+      '/strength/sessions/session-completed',
+    );
+  });
+
 });

@@ -4,6 +4,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { getWorkoutSessionTitle } from '@/application/strength/workoutSessionService';
 import { routePaths } from '@/app/routePaths';
 import { StrengthSetEditor } from '@/features/strength-sessions/components/StrengthSetEditor';
+import { ProgressionSuggestionsPanel } from '@/features/strength-progression/components/ProgressionSuggestionsPanel';
 import { PreviousExercisePerformance } from '@/features/strength-history/components/PreviousExercisePerformance';
 import { useWorkoutSession } from '@/features/strength-sessions/hooks/useWorkoutSession';
 import { workoutSessionStatusLabel } from '@/features/strength-sessions/utils/sessionLabels';
@@ -21,6 +22,7 @@ export function WorkoutSessionPage() {
     session,
     exercises,
     strengthSets,
+    progressionSuggestions,
     previousPerformances,
     availableExercises,
     status,
@@ -39,6 +41,7 @@ export function WorkoutSessionPage() {
     duplicateSet,
     removeSet,
     reusePreviousSets,
+    decideProgression,
   } = useWorkoutSession(sessionId);
   const [selectedExerciseId, setSelectedExerciseId] = useState('');
   const [notes, setNotes] = useState('');
@@ -169,6 +172,15 @@ export function WorkoutSessionPage() {
           </Card>
         ))}
       </div>
+
+      {session.status === 'completed' ? (
+        <ProgressionSuggestionsPanel
+          suggestions={progressionSuggestions}
+          exercises={exercises}
+          action={action}
+          onDecision={decideProgression}
+        />
+      ) : null}
 
       <Card className="mt-8 p-5 sm:p-6">
         <label htmlFor="workout-session-notes" className="text-lg font-semibold text-slate-950 dark:text-white">Notes générales</label>

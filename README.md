@@ -346,3 +346,24 @@ Cette préversion enrichit l’historique de chaque exercice avec des analyses c
 Aucune nouvelle migration Dexie n’est nécessaire : les statistiques sont recalculées à partir des séances et séries existantes.
 
 Validation : 74 fichiers de tests, 290 tests, lint, build PWA et audit réussis.
+
+
+## Version 0.14.0-alpha.8 — suggestions de progression
+
+Cette préversion ajoute l’assistance à la progression des charges dans les séances modèles :
+
+- génération automatique d’une suggestion après une séance terminée ;
+- vérification de toutes les séries de travail prévues ;
+- exigence de la borne haute de répétitions sur chaque série ;
+- prise en compte du RPE maximal recommandé lorsqu’il est configuré ;
+- calcul de la charge proposée avec l’incrément du modèle ;
+- acceptation de la proposition ou saisie d’une charge personnalisée ;
+- refus ou report de la décision ;
+- mise à jour de la charge cible du modèle uniquement après acceptation explicite ;
+- conservation de la séance réalisée et de ses valeurs historiques ;
+- suivi des suggestions en attente depuis l’historique des entraînements ;
+- conservation complète de l’historique des décisions.
+
+Aucune charge n’est modifiée automatiquement. Aucune nouvelle migration Dexie n’est nécessaire : la table `progressionSuggestions` existe depuis `0.14.0-alpha.1`.
+
+Validation : 75 fichiers de tests, 298 tests, lint, build PWA et audit réussis.

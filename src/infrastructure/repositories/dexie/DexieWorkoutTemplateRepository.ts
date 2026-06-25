@@ -31,6 +31,14 @@ export class DexieWorkoutTemplateRepository implements WorkoutTemplateRepository
     });
   }
 
+  getExerciseById(id: EntityId): Promise<WorkoutTemplateExercise | undefined> {
+    return runRepositoryOperation(
+      'read',
+      'Impossible de lire cet exercice de séance modèle.',
+      () => this.database.workoutTemplateExercises.get(id),
+    );
+  }
+
   createWithExercises(
     templateInput: NewEntity<WorkoutTemplate>,
     exerciseInputs: Array<Omit<NewEntity<WorkoutTemplateExercise>, 'templateId'>>,
@@ -91,5 +99,25 @@ export class DexieWorkoutTemplateRepository implements WorkoutTemplateRepository
       await this.database.workoutTemplates.put(updated);
       return updated;
     });
+  }
+
+
+  updateExercise(
+    id: EntityId,
+    changes: EntityChanges<WorkoutTemplateExercise>,
+  ): Promise<WorkoutTemplateExercise> {
+    return runRepositoryOperation(
+      'update',
+      'Impossible de mettre à jour la charge cible de cet exercice.',
+      async () => {
+        const current = await this.database.workoutTemplateExercises.get(id);
+        if (!current) {
+          throw new RepositoryError('Exercice de séance modèle introuvable.', 'update');
+        }
+        const updated = updateEntity(current, changes);
+        await this.database.workoutTemplateExercises.put(updated);
+        return updated;
+      },
+    );
   }
 }

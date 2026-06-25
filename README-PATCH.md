@@ -1,18 +1,20 @@
-# SportPilot 0.14.0-alpha.7 — statistiques de musculation
+# SportPilot 0.14.0-alpha.8 — suggestions de progression
 
-Branche obligatoire : `feature/strength-analytics`
+Branche obligatoire : `feature/strength-progression`
 
-Cette étape ajoute les analyses de progression par exercice :
+Cette étape ajoute la progression assistée des charges de musculation :
 
-- records personnels de charge, répétitions et volume ;
-- charge moyenne par série de travail ;
-- estimation du 1RM avec la formule d’Epley ;
-- comparaison avec la séance précédente ;
-- graphiques de charge, volume et répétitions ;
-- records de répétitions pour chaque charge ;
-- exclusion des séries d’échauffement des statistiques principales.
+- détection automatique des objectifs atteints à la fin d’une séance modèle ;
+- vérification des séries de travail prévues, de la borne haute de répétitions et du RPE maximal ;
+- proposition d’une nouvelle charge à partir de l’incrément configuré ;
+- possibilité d’accepter la charge proposée ou d’en saisir une autre ;
+- possibilité de refuser ou de reporter la décision ;
+- mise à jour de la charge cible du modèle uniquement après acceptation ;
+- conservation de l’historique des suggestions et décisions ;
+- signalement des décisions en attente dans l’historique des séances ;
+- absence de modification automatique des charges.
 
-Aucune migration Dexie supplémentaire n’est nécessaire.
+Aucune migration Dexie supplémentaire n’est nécessaire : la table `progressionSuggestions` existe depuis `0.14.0-alpha.1`.
 
 ## Validation
 
@@ -23,9 +25,9 @@ npm run check
 
 Résultats attendus :
 
-- version `0.14.0-alpha.7` ;
-- 74 fichiers de tests ;
-- 290 tests ;
+- version `0.14.0-alpha.8` ;
+- 75 fichiers de tests ;
+- 298 tests ;
 - lint sans erreur ni avertissement ;
 - build Vite/PWA réussi ;
 - audit MVP réussi.

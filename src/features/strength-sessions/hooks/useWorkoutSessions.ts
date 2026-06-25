@@ -6,8 +6,12 @@ import {
 } from '@/application/strength/workoutSessionService';
 import { repositories } from '@/infrastructure/repositories/repositories';
 
+export interface WorkoutSessionSummaryWithProgression extends WorkoutSessionSummary {
+  pendingProgressionCount: number;
+}
+
 export function useWorkoutSessions() {
-  const [sessions, setSessions] = useState<WorkoutSessionSummary[]>([]);
+  const [sessions, setSessions] = useState<WorkoutSessionSummaryWithProgression[]>([]);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [errorMessage, setErrorMessage] = useState<string>();
   const [isStarting, setIsStarting] = useState(false);
@@ -16,7 +20,17 @@ export function useWorkoutSessions() {
     setStatus('loading');
     setErrorMessage(undefined);
     try {
-      setSessions(await listWorkoutSessions(repositories.workoutSessions));
+      const summaries = await listWorkoutSessions(repositories.workoutSessions);
+      const withProgression = await Promise.all(summaries.map(async (summary) => {
+        const suggestions = await repositories.progressionSuggestions.listBySession(summary.session.id);
+        return {
+          ...summary,
+          pendingProgressionCount: suggestions.filter(
+            (suggestion) => suggestion.status === 'pending' || suggestion.status === 'deferred',
+          ).length,
+        };
+      }));
+      setSessions(withProgression);
       setStatus('ready');
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Impossible de charger les séances.');

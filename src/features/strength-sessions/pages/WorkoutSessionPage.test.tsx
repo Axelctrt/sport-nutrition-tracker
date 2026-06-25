@@ -7,9 +7,12 @@ import { initializeDatabase } from '@/infrastructure/database/databaseLifecycle'
 import { createEntity } from '@/shared/utils/entities';
 import {
   createExerciseDefinitionInput,
+  createProgressionSuggestionInput,
   createStrengthSetInput,
   createWorkoutSessionExerciseInput,
   createWorkoutSessionInput,
+  createWorkoutTemplateExerciseInput,
+  createWorkoutTemplateInput,
 } from '@/test/factories/strengthFactory';
 
 describe('WorkoutSessionPage', () => {
@@ -171,6 +174,60 @@ describe('WorkoutSessionPage', () => {
         expect.objectContaining({ weightKg: 60, repetitions: 10, isCompleted: false }),
       ]));
     });
+  });
+
+  it('affiche une suggestion et applique la charge choisie au modèle', async () => {
+    await appDatabase.workoutSessions.update('session-current', {
+      status: 'completed',
+      completedAt: '2026-06-25T18:00:00.000Z',
+      sourceTemplateId: 'template-1',
+      sourceTemplateNameSnapshot: 'Push A',
+    });
+    await appDatabase.workoutTemplates.add(createEntity(
+      createWorkoutTemplateInput({ name: 'Push A' }),
+      'template-1',
+    ));
+    await appDatabase.workoutTemplateExercises.add(createEntity(
+      createWorkoutTemplateExerciseInput({
+        templateId: 'template-1',
+        exerciseDefinitionId: 'exercise-bench',
+        targetLoadKg: 60,
+      }),
+      'template-exercise-1',
+    ));
+    await appDatabase.progressionSuggestions.add(createEntity(
+      createProgressionSuggestionInput({
+        sessionId: 'session-current',
+        sessionExerciseId: 'session-exercise-bench',
+        exerciseDefinitionId: 'exercise-bench',
+        templateId: 'template-1',
+        templateExerciseId: 'template-exercise-1',
+        currentLoadKg: 60,
+        suggestedLoadKg: 62.5,
+      }),
+      'suggestion-1',
+    ));
+
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter initialEntries={['/strength/sessions/session-current']}>
+        <Routes>
+          <Route path="/strength/sessions/:sessionId" element={<WorkoutSessionPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole('heading', { name: 'Suggestions de progression' })).toBeInTheDocument();
+    const loadInput = screen.getByLabelText('Charge cible retenue');
+    await user.clear(loadInput);
+    await user.type(loadInput, '63');
+    await user.click(screen.getByRole('button', { name: 'Accepter cette charge' }));
+
+    await waitFor(async () => {
+      expect((await appDatabase.progressionSuggestions.get('suggestion-1'))?.status).toBe('accepted');
+      expect((await appDatabase.workoutTemplateExercises.get('template-exercise-1'))?.targetLoadKg).toBe(63);
+    });
+    expect(await screen.findByText(/Charge cible mise à jour à 63 kg/)).toBeInTheDocument();
   });
 
 });
