@@ -1,6 +1,6 @@
 import { LoaderCircle, Pencil, Plus, Trash2, Utensils } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import {
   deleteRecipe,
   listRecipeSummaries,
@@ -18,6 +18,7 @@ const mealSlots: MealSlot[] = ['breakfast', 'lunch', 'dinner', 'snacks'];
 
 export function RecipesPage() {
   const [searchParams] = useSearchParams();
+  const location = useLocation();
   const requestedDate = searchParams.get('date') ?? '';
   const requestedSlot = searchParams.get('slot') as MealSlot | null;
   const targetDate = isValidLocalDate(requestedDate) ? requestedDate : toLocalDate();
@@ -91,7 +92,7 @@ export function RecipesPage() {
               <p className="mt-4 text-sm text-slate-600 dark:text-slate-300">Par portion · P {summary.nutritionPerServing.proteinGrams.toFixed(1)} g · G {summary.nutritionPerServing.carbohydratesGrams.toFixed(1)} g · L {summary.nutritionPerServing.fatGrams.toFixed(1)} g</p>
               {summary.recipe.notes ? <p className="mt-3 text-sm text-slate-500">{summary.recipe.notes}</p> : null}
               <div className="mt-5 flex flex-wrap gap-2">
-                <Link to={addRecipeToJournalPath(summary.recipe.id, targetDate, targetSlot)} className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-brand-700 px-3 text-sm font-semibold text-white hover:bg-brand-800"><Plus aria-hidden="true" className="size-4" />Ajouter au journal</Link>
+                <Link to={addRecipeToJournalPath(summary.recipe.id, targetDate, targetSlot)} state={location.state} className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-brand-700 px-3 text-sm font-semibold text-white hover:bg-brand-800"><Plus aria-hidden="true" className="size-4" />Ajouter au journal</Link>
                 <Link to={editRecipePath(summary.recipe.id)} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-300 px-3 text-sm font-semibold dark:border-slate-700"><Pencil aria-hidden="true" className="size-4" />Modifier</Link>
                 <Button size="sm" variant="danger" disabled={busyId === summary.recipe.id} onClick={() => void remove(summary)}><Trash2 aria-hidden="true" className="size-4" />Supprimer</Button>
               </div>

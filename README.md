@@ -1,8 +1,22 @@
-# SportPilot 0.15.0-alpha.2
+# SportPilot 0.15.0-alpha.3
 
 PWA locale de suivi sportif, nutritionnel, calorique et de progression.
 
 ## Version 0.15 — Expérience mobile-first
+
+### 0.15.0-alpha.3 — journal alimentaire mobile
+
+Cette préversion simplifie le suivi alimentaire quotidien sur téléphone :
+
+- résumé journalier compact regroupant calories, reste disponible et macronutriments ;
+- quatre cartes de repas autonomes avec action `Ajouter` immédiatement accessible ;
+- lignes d’aliments plus compactes et modification rapide de la quantité dans le journal ;
+- duplication, suppression et accès au détail placés dans des actions secondaires ;
+- options de repas et de journée repliées pour réduire la longueur de la page ;
+- rafraîchissement silencieux après chaque action, sans démontage du journal ;
+- retour au bon repas après ajout classique, scan d’un code-barres ou ajout d’une recette ;
+- restauration du défilement et mise en évidence temporaire de l’entrée ajoutée ou modifiée ;
+- confirmations alimentaires uniques par toast et suppression via un dialogue accessible.
 
 ### 0.15.0-alpha.2 — séance de musculation mobile
 
@@ -15,7 +29,7 @@ Cette préversion optimise la séance pour une utilisation réelle pendant l’e
 - séries compactes en trois colonnes tactiles pour la charge, les répétitions et le RPE ;
 - type et notes de série déplacés dans une section secondaire ;
 - ajout et duplication faisant apparaître uniquement le nouvel élément lorsque nécessaire ;
-- notifications uniques après les actions rapides ;
+- statut de sauvegarde discret pendant les actions, sans toast de succès encombrant pendant la séance ;
 - dialogues accessibles pour terminer, abandonner, retirer un exercice ou supprimer une série ;
 - état vide et notes générales harmonisés avec les fondations UX.
 

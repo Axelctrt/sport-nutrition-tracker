@@ -1,6 +1,6 @@
-SPORTPILOT 0.15.0-alpha.2
+SPORTPILOT 0.15.0-alpha.3
 
-1. Vérifier la branche feature/mobile-workout-ux.
+1. Vérifier la branche feature/mobile-food-journal-ux.
 2. Arrêter le serveur de développement avec Ctrl + C.
 3. Copier le contenu du patch à la racine du projet sport-nutrition-tracker.
 4. Accepter le remplacement des fichiers.
@@ -8,8 +8,9 @@ SPORTPILOT 0.15.0-alpha.2
    npm install
    npm run check
    npm run dev
-6. Tester la barre de séance, les cartes repliables, les séries et les confirmations.
-7. Tester sur iPhone en portrait puis en paysage.
-8. Recharger l’application avec Ctrl + F5 si une ancienne version reste en cache.
+6. Tester le résumé compact, les quatre repas et la modification rapide d’une quantité.
+7. Tester le retour au bon repas après ajout, scan et recette.
+8. Tester sur iPhone en portrait puis en paysage.
+9. Recharger l’application avec Ctrl + F5 si une ancienne version reste en cache.
 
 Aucune migration Dexie ni modification des sauvegardes n’est réalisée.

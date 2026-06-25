@@ -1,6 +1,6 @@
 import { ArrowLeft, LoaderCircle } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { routePaths, selectFoodPath } from '@/app/routePaths';
 import type { FoodProduct, MealSlot } from '@/domain/models/food';
 import { FoodProductForm } from '@/features/products/components/FoodProductForm';
@@ -26,6 +26,7 @@ export function FoodProductEditorPage() {
   const { productId } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const returnDate = searchParams.get('returnDate');
   const returnSlot = searchParams.get('returnSlot');
   const requestedBarcode = searchParams.get('barcode');
@@ -93,12 +94,13 @@ export function FoodProductEditorPage() {
       mealReturnContext
         ? selectFoodPath(mealReturnContext.date, mealReturnContext.slot, createdProduct.id)
         : routePaths.foodProducts,
+      { state: location.state },
     );
   };
 
   return (
     <section aria-labelledby="food-product-editor-title">
-      <Link to={returnPath} className="inline-flex items-center gap-2 text-sm font-semibold text-brand-700 hover:underline dark:text-brand-300">
+      <Link to={returnPath} state={location.state} className="inline-flex items-center gap-2 text-sm font-semibold text-brand-700 hover:underline dark:text-brand-300">
         <ArrowLeft aria-hidden="true" className="size-4" />
         {mealReturnContext ? 'Retour au choix de l’aliment' : 'Retour aux aliments'}
       </Link>

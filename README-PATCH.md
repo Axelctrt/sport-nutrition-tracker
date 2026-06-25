@@ -1,18 +1,20 @@
-# SportPilot 0.15.0-alpha.2 — séance de musculation mobile
+# SportPilot 0.15.0-alpha.3 — journal alimentaire mobile
 
-Branche obligatoire : `feature/mobile-workout-ux`
+Branche obligatoire : `feature/mobile-food-journal-ux`
 
-Cette étape optimise la page de séance sans modifier les données ni les règles métier :
+Cette étape optimise le journal alimentaire pour un usage mobile sans modifier les données ni les règles nutritionnelles :
 
-- barre d’action mobile avec durée, sauvegarde, abandon et fin de séance ;
+- résumé nutritionnel journalier compact ;
+- quatre repas autonomes avec calories et macronutriments regroupés ;
+- bouton `Ajouter` immédiatement visible dans chaque repas ;
+- modification rapide d’une quantité sans quitter le journal ;
+- duplication et suppression reléguées dans les actions secondaires ;
+- options rares du repas et de la journée repliées ;
 - rafraîchissements silencieux conservant le contenu et la position ;
-- cartes d’exercices repliables et avancement visible ;
-- performance précédente compacte ;
-- saisie mobile des séries sur trois colonnes ;
-- type et notes dans une section secondaire ;
-- toasts après les actions rapides ;
-- dialogues accessibles à la place de `window.confirm` ;
-- ajout et duplication révélant seulement le nouvel élément ;
+- retour automatique au bon repas après ajout, scan ou recette ;
+- restauration du défilement et mise en évidence temporaire de l’entrée ajoutée ;
+- confirmation unique par toast pour les actions alimentaires ;
+- dialogue accessible à la place de la confirmation native pour la suppression ;
 - aucune migration Dexie et aucune modification du format de sauvegarde.
 
 ## Validation
@@ -22,4 +24,4 @@ npm install
 npm run check
 ```
 
-Tester prioritairement sur iPhone en portrait avec une séance réelle.
+Tester prioritairement sur iPhone en portrait avec une journée contenant plusieurs aliments.

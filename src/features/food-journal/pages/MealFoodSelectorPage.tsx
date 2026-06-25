@@ -10,7 +10,7 @@ import {
   Star,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   barcodeScannerPath,
   foodJournalPath,
@@ -24,6 +24,10 @@ import { MealFoodSelectionForm } from '@/features/food-journal/components/MealFo
 import { MealOpenFoodFactsSearchPanel } from '@/features/food-journal/components/MealOpenFoodFactsSearchPanel';
 import type { FoodEntryFormValues } from '@/features/food-journal/schemas/foodEntrySchema';
 import { useMealFoodSelector } from '@/features/food-journal/hooks/useMealFoodSelector';
+import {
+  createFoodJournalFeedbackState,
+  type FoodJournalNavigationState,
+} from '@/features/food-journal/navigation/foodJournalNavigation';
 import { mealSlotLabels } from '@/features/food-journal/utils/foodLabels';
 import { inputClassName } from '@/shared/forms/formStyles';
 import { Button } from '@/shared/ui/Button';
@@ -48,6 +52,8 @@ const sourceLabels: Record<Exclude<ProductSource, 'openFoodFacts'>, string> = {
 export function MealFoodSelectorPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const navigationState = location.state as FoodJournalNavigationState | null;
   const requestedDate = searchParams.get('date');
   const requestedSlot = searchParams.get('slot');
   const requestedProductId = searchParams.get('productId');
@@ -119,8 +125,15 @@ export function MealFoodSelectorPage() {
   const handleSubmit = async (values: FoodEntryFormValues) => {
     setSubmitError(undefined);
     try {
-      await saveProductEntry(values);
-      await navigate(foodJournalPath(values.date));
+      const entry = await saveProductEntry(values);
+      const returnContext = navigationState?.foodJournalReturn;
+      await navigate(returnContext?.path ?? foodJournalPath(values.date), {
+        state: createFoodJournalFeedbackState(returnContext, {
+          title: `Aliment ajouté au ${mealSlotLabels[values.mealSlot].toLocaleLowerCase('fr')}`,
+          mealSlot: values.mealSlot,
+          entryId: entry.id,
+        }),
+      });
     } catch (error) {
       setSubmitError(
         error instanceof Error
@@ -133,7 +146,11 @@ export function MealFoodSelectorPage() {
   return (
     <section className="min-w-0 overflow-x-clip" aria-labelledby="meal-food-selector-title">
       <Link
-        to={foodJournalPath(date)}
+        to={navigationState?.foodJournalReturn?.path ?? foodJournalPath(date)}
+        state={navigationState?.foodJournalReturn ? {
+          scroll: 'restore',
+          restoreScrollKey: navigationState.foodJournalReturn.scrollKey,
+        } : undefined}
         className="inline-flex items-center gap-2 text-sm font-semibold text-brand-700 hover:underline dark:text-brand-300"
       >
         <ArrowLeft aria-hidden="true" className="size-4" />
@@ -157,6 +174,7 @@ export function MealFoodSelectorPage() {
         </div>
         <Link
           to={newFoodProductForMealPath(date, mealSlot)}
+          state={location.state}
           className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-slate-300 px-4 text-sm font-semibold hover:bg-slate-50 sm:w-auto dark:border-slate-700 dark:hover:bg-slate-800"
         >
           <Plus aria-hidden="true" className="size-4" />
@@ -235,6 +253,7 @@ export function MealFoodSelectorPage() {
 
             <Link
               to={barcodeScannerPath(date, mealSlot)}
+              state={location.state}
               className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800 sm:w-auto"
             >
               <ScanLine aria-hidden="true" className="size-4" />
@@ -313,6 +332,7 @@ export function MealFoodSelectorPage() {
                   </p>
                   <Link
                     to={newFoodProductForMealPath(date, mealSlot)}
+                    state={location.state}
                     className="mt-4 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-brand-700 px-4 text-sm font-semibold text-white hover:bg-brand-800"
                   >
                     <Plus aria-hidden="true" className="size-4" />

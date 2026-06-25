@@ -65,4 +65,30 @@ describe('NavigationScrollManager', () => {
     await screen.findByRole('heading', { name: 'Liste' });
     await waitFor(() => expect(scrollToMock).toHaveBeenLastCalledWith({ top: 420, behavior: 'instant' }));
   });
+
+  it('restaure une position explicitement demandée après un formulaire', async () => {
+    const router = createMemoryRouter([
+      {
+        element: <TestLayout />,
+        children: [
+          { path: '/list', element: <h1>Liste</h1> },
+          { path: '/detail', element: <h1>Détail</h1> },
+        ],
+      },
+    ], { initialEntries: ['/list'] });
+
+    render(<RouterProvider router={router} />);
+    await screen.findByRole('heading', { name: 'Liste' });
+    const listKey = router.state.location.key;
+    scrollY = 640;
+    await act(() => router.navigate('/detail'));
+    await screen.findByRole('heading', { name: 'Détail' });
+
+    scrollToMock.mockClear();
+    await act(() => router.navigate('/list', {
+      state: { scroll: 'restore', restoreScrollKey: listKey },
+    }));
+
+    await waitFor(() => expect(scrollToMock).toHaveBeenLastCalledWith({ top: 640, behavior: 'instant' }));
+  });
 });

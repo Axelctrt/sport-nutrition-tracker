@@ -9,7 +9,7 @@ import {
   SquarePen,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   foodJournalPath,
   newFoodProductForMealPath,
@@ -26,6 +26,10 @@ import { useBarcodeScanner } from '@/features/barcode-scanner/hooks/useBarcodeSc
 import { validateFoodBarcode } from '@/features/barcode-scanner/utils/scannerBarcode';
 import { MealFoodSelectionForm } from '@/features/food-journal/components/MealFoodSelectionForm';
 import type { FoodEntryFormValues } from '@/features/food-journal/schemas/foodEntrySchema';
+import {
+  createFoodJournalFeedbackState,
+  type FoodJournalNavigationState,
+} from '@/features/food-journal/navigation/foodJournalNavigation';
 import { mealSlotLabels } from '@/features/food-journal/utils/foodLabels';
 import { OpenFoodFactsError } from '@/infrastructure/open-food-facts/OpenFoodFactsError';
 import type { BarcodeScannerPort } from '@/infrastructure/barcode-scanner/BarcodeScanner';
@@ -69,6 +73,8 @@ export function BarcodeScannerPage({
 }: BarcodeScannerPageProps = {}) {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const navigationState = location.state as FoodJournalNavigationState | null;
   const targetRef = useRef<HTMLDivElement>(null);
   const lookupAbortRef = useRef<AbortController | undefined>(undefined);
   const lastAutomaticCodeRef = useRef<string | undefined>(undefined);
@@ -221,8 +227,19 @@ export function BarcodeScannerPage({
   const handleSubmit = async (values: FoodEntryFormValues) => {
     setSubmitError(undefined);
     try {
-      await saveEntry(values);
-      await navigate(foodJournalPath(values.date));
+      const savedEntry = await saveEntry(values);
+      const entryId = savedEntry && typeof savedEntry === 'object' && 'id' in savedEntry
+        && typeof savedEntry.id === 'string'
+        ? savedEntry.id
+        : undefined;
+      const returnContext = navigationState?.foodJournalReturn;
+      await navigate(returnContext?.path ?? foodJournalPath(values.date), {
+        state: createFoodJournalFeedbackState(returnContext, {
+          title: `Aliment ajouté au ${mealSlotLabels[values.mealSlot].toLocaleLowerCase('fr')}`,
+          mealSlot: values.mealSlot,
+          ...(entryId ? { entryId } : {}),
+        }),
+      });
     } catch (error) {
       setSubmitError(
         error instanceof Error
@@ -238,6 +255,7 @@ export function BarcodeScannerPage({
     <section className="min-w-0 overflow-x-clip" aria-labelledby="barcode-scanner-title">
       <Link
         to={selectFoodPath(date, mealSlot)}
+        state={location.state}
         className="inline-flex items-center gap-2 text-sm font-semibold text-brand-700 hover:underline dark:text-brand-300"
       >
         <ArrowLeft aria-hidden="true" className="size-4" />
@@ -384,6 +402,7 @@ export function BarcodeScannerPage({
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <Link
               to={newFoodProductForMealPath(date, mealSlot, fallbackBarcode)}
+              state={location.state}
               className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-brand-700 px-4 text-sm font-semibold text-white hover:bg-brand-800"
             >
               <SquarePen aria-hidden="true" className="size-4" />
@@ -391,6 +410,7 @@ export function BarcodeScannerPage({
             </Link>
             <Link
               to={selectFoodPath(date, mealSlot, undefined, 'openFoodFacts')}
+              state={location.state}
               className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-300 px-4 text-sm font-semibold text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-800"
             >
               <Search aria-hidden="true" className="size-4" />

@@ -2,10 +2,11 @@ import { useEffect, useRef } from 'react';
 import { useLocation, useNavigationType } from 'react-router-dom';
 import { getScrollPosition, saveScrollPosition } from '@/app/layouts/scrollPositionStore';
 
-type ScrollInstruction = 'top' | 'preserve';
+type ScrollInstruction = 'top' | 'preserve' | 'restore';
 
 interface ScrollLocationState {
   scroll?: ScrollInstruction;
+  restoreScrollKey?: string;
 }
 
 
@@ -40,9 +41,11 @@ export function NavigationScrollManager() {
       return;
     }
 
-    const target = navigationType === 'POP'
-      ? getScrollPosition(location.key) ?? 0
-      : 0;
+    const target = state?.scroll === 'restore' && state.restoreScrollKey
+      ? getScrollPosition(state.restoreScrollKey) ?? 0
+      : navigationType === 'POP'
+        ? getScrollPosition(location.key) ?? 0
+        : 0;
 
     runAfterPaint(() => {
       window.scrollTo({ top: target, behavior: 'instant' });
