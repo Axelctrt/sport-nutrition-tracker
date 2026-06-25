@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -226,7 +226,9 @@ describe('WorkoutSessionPage', () => {
 
     expect(await screen.findByRole('heading', { name: 'Suggestions de progression' })).toBeInTheDocument();
     const loadInput = screen.getByLabelText('Charge cible retenue');
-    fireEvent.change(loadInput, { target: { value: '63' } });
+    await user.clear(loadInput);
+    await user.type(loadInput, '63');
+    expect(loadInput).toHaveValue(63);
     await user.click(screen.getByRole('button', { name: 'Accepter cette charge' }));
 
     await waitFor(async () => {

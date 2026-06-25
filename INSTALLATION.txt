@@ -1,6 +1,6 @@
-SPORTPILOT 0.15.0-alpha.10
+SPORTPILOT 0.15.0-alpha.11
 
-1. Vérifier la branche feature/mobile-profile-settings-backup-ux.
+1. Vérifier la branche feature/mobile-food-search-scanner-ux.
 2. Arrêter le serveur de développement avec Ctrl + C.
 3. Copier le contenu du patch à la racine du projet sport-nutrition-tracker.
 4. Accepter le remplacement des fichiers.
@@ -8,16 +8,17 @@ SPORTPILOT 0.15.0-alpha.10
    npm install
    npm run check
    npm run dev
-6. Ouvrir Profil et vérifier le résumé, les trois sections et l’enregistrement sans bouton flottant.
-7. Provoquer une erreur dans une section fermée et vérifier que cette section s’ouvre automatiquement.
-8. Sur téléphone, appuyer sur l’icône d’engrenage de l’en-tête pour ouvrir Paramètres avancés.
-9. Vérifier le résumé, le skeleton initial et les sections repliables, puis tester le changement de thème et le rétablissement des valeurs par défaut avec confirmation.
-10. Ouvrir Sauvegarde et vérifier les actions Exporter et Restaurer.
-11. Sélectionner une sauvegarde et vérifier le résumé avant d’ouvrir la confirmation de remplacement.
-12. Ouvrir Confidentialité et stockage puis Fonctionnement de l’application.
-13. Ouvrir Effacer toutes les données sans confirmer réellement, puis vérifier que le bouton reste désactivé avant la saisie EFFACER.
-14. Tester en portrait et paysage, en modes clair et sombre, puis hors connexion.
-15. Recharger l’application avec Ctrl + F5 si une ancienne version reste en cache.
+6. Ouvrir Journal alimentaire, choisir un repas puis Ajouter.
+7. Vérifier la grille Récents, Favoris, Tous et Open Food Facts, ainsi que le bouton Scanner un code-barres.
+8. Choisir un aliment local et vérifier que la quantité s’ouvre dans une feuille mobile sans déplacement de page.
+9. Fermer cette feuille avec la croix, Échap puis un appui sur l’arrière-plan, et vérifier le retour du focus.
+10. Tester la recherche Open Food Facts par nom puis par code-barres.
+11. Vérifier le résumé des résultats et les cartes compactes avec calories, protéines, glucides et lipides.
+12. Scanner un produit, régler la quantité puis l’ajouter au repas présélectionné.
+13. Fermer la feuille après un scan et vérifier que le produit prêt reste disponible avec le bouton Régler la quantité.
+14. Ouvrir les sections Caméra et confidentialité puis Saisir le code manuellement.
+15. Tester en portrait et paysage, en modes clair et sombre, puis hors connexion pour les aliments locaux.
+16. Recharger l’application avec Ctrl + F5 si une ancienne version reste en cache.
 
 Schéma Dexie : version 2.
 Sauvegarde JSON : version 2.

@@ -1,8 +1,25 @@
-# SportPilot 0.15.0-alpha.10
+# SportPilot 0.15.0-alpha.11
 
 PWA locale de suivi sportif, nutritionnel, calorique et de progression.
 
 ## Version 0.15 — Expérience mobile-first
+
+### 0.15.0-alpha.11 — recherche et ajout alimentaire mobile
+
+Cette préversion simplifie le choix et l’ajout d’un aliment depuis le journal :
+
+- sélecteur local, recherche Open Food Facts et scanner harmonisés autour du même parcours mobile ;
+- feuille accessible pour régler la quantité sans faire descendre la page ni perdre le contexte ;
+- focus automatique sur la quantité et restitution du focus après fermeture ;
+- sources locales affichées dans une grille plus dense, sans défilement horizontal ;
+- chargement initial du sélecteur remplacé par le skeleton partagé ;
+- recherche Open Food Facts limitée à un seul mode visible à la fois : nom ou marque, ou code-barres ;
+- résumé compact des résultats locaux, affichés et disponibles dans la base externe ;
+- cartes de produits raccourcies avec calories et macronutriments lisibles immédiatement ;
+- scanner recentré sur la caméra, avec confidentialité et saisie manuelle dans des sections repliables ;
+- produit scanné conservé dans une carte compacte avec réouverture directe du réglage de quantité ;
+- états de chargement et états vides harmonisés avec les composants partagés ;
+- aucune migration Dexie et aucune modification du format de sauvegarde.
 
 ### 0.15.0-alpha.10 — profil, paramètres et sauvegarde mobile
 

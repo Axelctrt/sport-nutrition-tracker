@@ -1,10 +1,10 @@
-import { routePaths } from '@/app/routePaths';
+import { barcodeScannerPath, routePaths, selectFoodPath } from '@/app/routePaths';
 import { CURRENT_BACKUP_SCHEMA_VERSION } from '@/infrastructure/backup/backupMigrations';
 import { databaseSchemaVersion, databaseTableNames } from '@/infrastructure/database/schema';
 
-describe('préparation de la version 0.15.0-alpha.10', () => {
+describe('préparation de la version 0.15.0-alpha.11', () => {
   it('expose la préversion UX dans le build', () => {
-    expect(__APP_VERSION__).toBe('0.15.0-alpha.10');
+    expect(__APP_VERSION__).toBe('0.15.0-alpha.11');
     expect(__APP_VERSION__).toMatch(/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/);
   });
 
@@ -20,10 +20,10 @@ describe('préparation de la version 0.15.0-alpha.10', () => {
     ]));
   });
 
-  it('conserve les parcours de configuration et de gestion des données', () => {
-    expect(routePaths.onboarding).toBe('/onboarding');
-    expect(routePaths.profile).toBe('/profile');
-    expect(routePaths.settings).toBe('/settings');
-    expect(routePaths.backup).toBe('/backup');
+  it('conserve les parcours de recherche et d’ajout alimentaire', () => {
+    expect(routePaths.foodProducts).toBe('/food/products');
+    expect(routePaths.barcodeScanner).toBe('/food/barcode-scanner');
+    expect(selectFoodPath('2026-06-26', 'lunch')).toBe('/food/select?date=2026-06-26&slot=lunch');
+    expect(barcodeScannerPath('2026-06-26', 'lunch')).toBe('/food/barcode-scanner?date=2026-06-26&slot=lunch');
   });
 });

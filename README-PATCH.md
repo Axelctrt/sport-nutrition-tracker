@@ -1,22 +1,20 @@
-# SportPilot 0.15.0-alpha.10 — profil, paramètres et sauvegarde mobile
+# SportPilot 0.15.0-alpha.11 — recherche et ajout alimentaire mobile
 
-Branche obligatoire : `feature/mobile-profile-settings-backup-ux`
+Branche obligatoire : `feature/mobile-food-search-scanner-ux`
 
-Cette étape optimise les écrans de configuration et de gestion des données sans modifier les calculs ni les formats existants :
+Cette étape optimise la recherche et l’ajout d’aliments sur téléphone sans modifier les calculs ni les formats existants :
 
-- accès direct aux paramètres depuis l’icône d’engrenage de l’en-tête mobile ;
-- résumé compact du profil avec objectif, poids de référence, pas et coefficients de macronutriments ;
-- formulaire de profil réparti en sections progressives et bouton d’enregistrement fixe dans le flux de page ;
-- résumé des paramètres avec thème, stockage, seuil de pas et limite de calibration ;
-- coefficients techniques, MET de natation et calibration placés dans des sections repliables ;
-- confirmation avant le rétablissement des paramètres par défaut ;
-- champs numériques adaptés aux claviers mobiles et ouverture automatique de la section contenant une erreur ;
-- skeleton partagé pendant le chargement des paramètres ;
-- page de sauvegarde recentrée sur les actions exporter et restaurer ;
-- aperçu compact du contenu d’une sauvegarde avant son import ;
-- confirmation accessible avant le remplacement complet des données ;
-- suppression définitive protégée par un dialogue exigeant la saisie `EFFACER` ;
-- informations de confidentialité, stockage et fonctionnement PWA repliées ;
+- sélection locale, Open Food Facts et scanner réunis autour du même parcours d’ajout ;
+- quantité ouverte dans une feuille mobile accessible au lieu d’un formulaire ajouté en bas de page ;
+- focus automatique sur la quantité, fermeture avec Échap ou appui sur l’arrière-plan, puis restitution du focus ;
+- sources d’aliments affichées dans une grille mobile plus compacte ;
+- skeleton partagé pendant le chargement initial du sélecteur ;
+- recherche Open Food Facts organisée en deux modes exclusifs : nom ou marque, puis code-barres ;
+- résumé compact des résultats locaux, affichés et disponibles dans la base externe ;
+- cartes Open Food Facts raccourcies avec calories et macronutriments immédiatement lisibles ;
+- scanner recentré sur la caméra, avec informations de confidentialité et saisie manuelle repliables ;
+- produit détecté conservé dans une carte compacte avec réouverture directe du réglage de quantité ;
+- états vides et recherches en cours harmonisés avec les composants partagés ;
 - aucune migration Dexie et aucune modification du format de sauvegarde JSON.
 
 ## Validation
