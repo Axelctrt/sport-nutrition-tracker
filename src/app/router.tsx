@@ -24,6 +24,13 @@ import {
   LazyProfilePage,
   LazyRunningActivityPage,
   LazyStrengthActivityPage,
+  LazyStrengthExercisesPage,
+  LazyStrengthExerciseEditorPage,
+  LazyStrengthExerciseHistoryPage,
+  LazyWorkoutSessionsPage,
+  LazyWorkoutSessionPage,
+  LazyWorkoutTemplatesPage,
+  LazyWorkoutTemplateEditorPage,
   LazySwimmingActivityPage,
   LazyWeightPage,
   LazyWeeklyReviewPage,
@@ -127,6 +134,43 @@ export const router = createHashRouter([
       {
         path: routePaths.activities,
         element: <LazyActivityJournalPage />,
+      },
+      {
+        path: routePaths.strengthExercises,
+        element: <LazyStrengthExercisesPage />,
+      },
+
+      {
+        path: routePaths.workoutSessions,
+        element: <LazyWorkoutSessionsPage />,
+      },
+      {
+        path: routePaths.workoutSession,
+        element: <LazyWorkoutSessionPage />,
+      },
+      {
+        path: routePaths.workoutTemplates,
+        element: <LazyWorkoutTemplatesPage />,
+      },
+      {
+        path: routePaths.newWorkoutTemplate,
+        element: <LazyWorkoutTemplateEditorPage />,
+      },
+      {
+        path: routePaths.editWorkoutTemplate,
+        element: <LazyWorkoutTemplateEditorPage />,
+      },
+      {
+        path: routePaths.newStrengthExercise,
+        element: <LazyStrengthExerciseEditorPage />,
+      },
+      {
+        path: routePaths.editStrengthExercise,
+        element: <LazyStrengthExerciseEditorPage />,
+      },
+      {
+        path: routePaths.strengthExerciseHistory,
+        element: <LazyStrengthExerciseHistoryPage />,
       },
       {
         path: routePaths.addActivity,

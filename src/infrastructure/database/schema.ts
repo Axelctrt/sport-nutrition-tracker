@@ -14,13 +14,20 @@ export const databaseTableNames = [
   'dailyJournalStatuses',
   'weeklyReviews',
   'acceptedCalorieAdjustments',
+  'exerciseDefinitions',
+  'workoutTemplates',
+  'workoutTemplateExercises',
+  'workoutSessions',
+  'workoutSessionExercises',
+  'strengthSets',
+  'progressionSuggestions',
 ] as const;
 
 export type DatabaseTableName = (typeof databaseTableNames)[number];
 
-export const databaseSchemaVersion = 1;
+export const databaseSchemaVersion = 2;
 
-export const schemaVersion1: Record<DatabaseTableName, string> = {
+export const schemaVersion1 = {
   userProfile: 'id, updatedAt',
   appSettings: 'id, updatedAt',
   weights: 'id, &date, updatedAt',
@@ -36,4 +43,20 @@ export const schemaVersion1: Record<DatabaseTableName, string> = {
   dailyJournalStatuses: 'id, &date, isComplete, updatedAt',
   weeklyReviews: 'id, &weekStart, updatedAt',
   acceptedCalorieAdjustments: 'id, effectiveFrom, status, updatedAt',
+} as const;
+
+export const schemaVersion2: Record<DatabaseTableName, string> = {
+  ...schemaVersion1,
+  exerciseDefinitions:
+    'id, name, source, primaryMuscleGroup, equipment, isArchived, updatedAt',
+  workoutTemplates: 'id, name, isArchived, updatedAt',
+  workoutTemplateExercises:
+    'id, templateId, exerciseDefinitionId, [templateId+sortOrder], isActive, updatedAt',
+  workoutSessions: 'id, date, status, sourceTemplateId, [date+status], updatedAt',
+  workoutSessionExercises:
+    'id, sessionId, exerciseDefinitionId, [sessionId+sortOrder], updatedAt',
+  strengthSets:
+    'id, sessionId, sessionExerciseId, [sessionExerciseId+setNumber], type, isCompleted, updatedAt',
+  progressionSuggestions:
+    'id, sessionId, sessionExerciseId, exerciseDefinitionId, templateExerciseId, status, updatedAt',
 };

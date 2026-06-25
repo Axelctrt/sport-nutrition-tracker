@@ -1,4 +1,5 @@
 import dns from 'node:dns';
+import { readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath, URL } from 'node:url';
@@ -9,6 +10,22 @@ import type { ProxyOptions } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
 dns.setDefaultResultOrder('ipv4first');
+
+interface PackageMetadata {
+  version: string;
+}
+
+function readPackageMetadata(): PackageMetadata {
+  const packageUrl = new URL('./package.json', import.meta.url);
+  const parsed = JSON.parse(readFileSync(packageUrl, 'utf8')) as Partial<PackageMetadata>;
+  if (typeof parsed.version !== 'string' || parsed.version.trim() === '') {
+    throw new Error('La version de l’application est absente de package.json.');
+  }
+  return { version: parsed.version };
+}
+
+const { version: appVersion } = readPackageMetadata();
+
 
 const viteCacheDir = process.platform === 'win32'
   ? join(process.env.LOCALAPPDATA ?? tmpdir(), 'SportPilot', 'vite-cache')
@@ -25,7 +42,7 @@ function createOpenFoodFactsProxy(
     timeout: 20_000,
     proxyTimeout: 20_000,
     headers: {
-      'User-Agent': 'SportPilot/0.13.0-alpha.8 (local PWA; Open Food Facts integration)',
+      'User-Agent': `SportPilot/${appVersion} (local PWA; Open Food Facts integration)`,
     },
     rewrite,
     configure(proxy) {
@@ -39,6 +56,9 @@ function createOpenFoodFactsProxy(
 
 export default defineConfig({
   cacheDir: viteCacheDir,
+  define: {
+    __APP_VERSION__: JSON.stringify(appVersion),
+  },
   plugins: [
     react(),
     tailwindcss(),
@@ -50,7 +70,7 @@ export default defineConfig({
         id: './',
         name: 'SportPilot — Suivi sport et nutrition',
         short_name: 'SportPilot',
-        description: 'Application locale de suivi sportif, nutritionnel et calorique.',
+        description: 'Application locale de suivi sportif, nutritionnel, calorique et de musculation.',
         lang: 'fr',
         start_url: './',
         scope: './',
@@ -72,6 +92,14 @@ export default defineConfig({
             short_name: 'Activité',
             description: 'Enregistrer une activité sportive.',
             url: './#/activities/add',
+            icons: [{ src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' }],
+          },
+
+          {
+            name: 'Carnet de musculation',
+            short_name: 'Musculation',
+            description: 'Démarrer, reprendre ou consulter une séance de musculation.',
+            url: './#/strength/sessions',
             icons: [{ src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' }],
           },
           {

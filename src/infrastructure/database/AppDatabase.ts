@@ -11,11 +11,21 @@ import type {
 import type { UserProfile } from '@/domain/models/profile';
 import type { Recipe, RecipeIngredient } from '@/domain/models/recipe';
 import type { AppSettings } from '@/domain/models/settings';
+import type {
+  ExerciseDefinition,
+  ProgressionSuggestion,
+  StrengthSet,
+  WorkoutSession,
+  WorkoutSessionExercise,
+  WorkoutTemplate,
+  WorkoutTemplateExercise,
+} from '@/domain/models/strength';
 import type { DailySteps } from '@/domain/models/steps';
 import type { DailyTarget } from '@/domain/models/targets';
 import type { AcceptedCalorieAdjustment, WeeklyReview } from '@/domain/models/weeklyReview';
 import type { WeightEntry } from '@/domain/models/weight';
 import { registerVersion1 } from '@/infrastructure/database/migrations/version1';
+import { registerVersion2 } from '@/infrastructure/database/migrations/version2';
 
 export const DEFAULT_DATABASE_NAME = 'sportpilot-local-database';
 
@@ -35,9 +45,17 @@ export class AppDatabase extends Dexie {
   declare dailyJournalStatuses: Table<DailyJournalStatus, EntityId>;
   declare weeklyReviews: Table<WeeklyReview, EntityId>;
   declare acceptedCalorieAdjustments: Table<AcceptedCalorieAdjustment, EntityId>;
+  declare exerciseDefinitions: Table<ExerciseDefinition, EntityId>;
+  declare workoutTemplates: Table<WorkoutTemplate, EntityId>;
+  declare workoutTemplateExercises: Table<WorkoutTemplateExercise, EntityId>;
+  declare workoutSessions: Table<WorkoutSession, EntityId>;
+  declare workoutSessionExercises: Table<WorkoutSessionExercise, EntityId>;
+  declare strengthSets: Table<StrengthSet, EntityId>;
+  declare progressionSuggestions: Table<ProgressionSuggestion, EntityId>;
 
   constructor(databaseName: string = DEFAULT_DATABASE_NAME) {
     super(databaseName);
     registerVersion1(this);
+    registerVersion2(this);
   }
 }

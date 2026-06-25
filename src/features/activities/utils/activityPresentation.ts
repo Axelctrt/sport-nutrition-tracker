@@ -20,7 +20,6 @@ export interface ActivityPresentation {
 export function presentActivity(activity: Activity): ActivityPresentation {
   const commonMetrics = [
     `${activity.durationMinutes.toLocaleString('fr-FR')} min`,
-    `RPE ${activity.rpe}/10`,
   ];
 
   if (activity.type === 'running') {

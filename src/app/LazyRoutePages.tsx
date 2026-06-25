@@ -67,6 +67,52 @@ const EditActivityPage = lazy(() =>
   })),
 );
 
+
+const StrengthExercisesPage = lazy(() =>
+  import('@/features/strength-exercises/pages/StrengthExercisesPage').then((module) => ({
+    default: module.StrengthExercisesPage,
+  })),
+);
+
+const StrengthExerciseEditorPage = lazy(() =>
+  import('@/features/strength-exercises/pages/StrengthExerciseEditorPage').then((module) => ({
+    default: module.StrengthExerciseEditorPage,
+  })),
+);
+
+
+const StrengthExerciseHistoryPage = lazy(() =>
+  import('@/features/strength-history/pages/StrengthExerciseHistoryPage').then((module) => ({
+    default: module.StrengthExerciseHistoryPage,
+  })),
+);
+
+
+
+const WorkoutSessionsPage = lazy(() =>
+  import('@/features/strength-sessions/pages/WorkoutSessionsPage').then((module) => ({
+    default: module.WorkoutSessionsPage,
+  })),
+);
+
+const WorkoutSessionPage = lazy(() =>
+  import('@/features/strength-sessions/pages/WorkoutSessionPage').then((module) => ({
+    default: module.WorkoutSessionPage,
+  })),
+);
+
+const WorkoutTemplatesPage = lazy(() =>
+  import('@/features/strength-templates/pages/WorkoutTemplatesPage').then((module) => ({
+    default: module.WorkoutTemplatesPage,
+  })),
+);
+
+const WorkoutTemplateEditorPage = lazy(() =>
+  import('@/features/strength-templates/pages/WorkoutTemplateEditorPage').then((module) => ({
+    default: module.WorkoutTemplateEditorPage,
+  })),
+);
+
 const FoodJournalPage = lazy(() =>
   import('@/features/food-journal/pages/FoodJournalPage').then((module) => ({
     default: module.FoodJournalPage,
@@ -295,6 +341,50 @@ export function LazyEditActivityPage() {
   );
 }
 
+
+
+export function LazyStrengthExercisesPage() {
+  return (
+    <RouteSuspense>
+      <StrengthExercisesPage />
+    </RouteSuspense>
+  );
+}
+
+export function LazyStrengthExerciseEditorPage() {
+  return (
+    <RouteSuspense>
+      <StrengthExerciseEditorPage />
+    </RouteSuspense>
+  );
+}
+
+
+export function LazyStrengthExerciseHistoryPage() {
+  return (
+    <RouteSuspense>
+      <StrengthExerciseHistoryPage />
+    </RouteSuspense>
+  );
+}
+
+
+
+export function LazyWorkoutSessionsPage() {
+  return <RouteSuspense><WorkoutSessionsPage /></RouteSuspense>;
+}
+
+export function LazyWorkoutSessionPage() {
+  return <RouteSuspense><WorkoutSessionPage /></RouteSuspense>;
+}
+
+export function LazyWorkoutTemplatesPage() {
+  return <RouteSuspense><WorkoutTemplatesPage /></RouteSuspense>;
+}
+
+export function LazyWorkoutTemplateEditorPage() {
+  return <RouteSuspense><WorkoutTemplateEditorPage /></RouteSuspense>;
+}
 
 export function LazyFoodJournalPage() {
   return (

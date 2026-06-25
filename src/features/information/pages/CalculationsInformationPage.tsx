@@ -1,6 +1,7 @@
 import {
   Activity,
   Calculator,
+  Dumbbell,
   Footprints,
   Info,
   Salad,
@@ -43,6 +44,16 @@ const formulas = [
       'Course : durée totale divisée par la distance, affichée en min/km.',
       'Natation : durée totale divisée par le nombre de blocs de 100 m.',
       'Les calculs conservent leur précision interne avant l’affichage.',
+    ],
+  },
+
+  {
+    title: 'Musculation et progression',
+    icon: Dumbbell,
+    lines: [
+      'Volume d’une série = charge × répétitions ; les séries d’échauffement sont exclues des statistiques principales.',
+      '1RM estimé selon Epley : charge × (1 + répétitions / 30), uniquement entre 1 et 12 répétitions.',
+      'Une hausse de charge est seulement proposée si toutes les séries prévues atteignent la borne haute sans dépasser le RPE maximal configuré.',
     ],
   },
   {

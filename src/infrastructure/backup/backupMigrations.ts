@@ -1,7 +1,7 @@
 import type { BackupEnvelope } from '@/domain/models/backup';
 import { validateBackupEnvelope } from '@/infrastructure/backup/backupSchemas';
 
-export const CURRENT_BACKUP_SCHEMA_VERSION = 1;
+export const CURRENT_BACKUP_SCHEMA_VERSION = 2;
 
 export class BackupMigrationError extends Error {
   constructor(message: string, options?: ErrorOptions) {
@@ -13,6 +13,7 @@ export class BackupMigrationError extends Error {
 interface BackupHeader {
   format?: unknown;
   schemaVersion?: unknown;
+  data?: unknown;
 }
 
 function readHeader(input: unknown): BackupHeader {
@@ -20,6 +21,28 @@ function readHeader(input: unknown): BackupHeader {
     throw new BackupMigrationError('Le fichier ne contient pas un objet de sauvegarde valide.');
   }
   return input as BackupHeader;
+}
+
+function migrateVersion1ToVersion2(input: BackupHeader): unknown {
+  const data =
+    typeof input.data === 'object' && input.data !== null && !Array.isArray(input.data)
+      ? input.data
+      : {};
+
+  return {
+    ...input,
+    schemaVersion: 2,
+    data: {
+      ...data,
+      exerciseDefinitions: [],
+      workoutTemplates: [],
+      workoutTemplateExercises: [],
+      workoutSessions: [],
+      workoutSessionExercises: [],
+      strengthSets: [],
+      progressionSuggestions: [],
+    },
+  };
 }
 
 export function migrateBackupEnvelope(input: unknown): BackupEnvelope {
@@ -44,6 +67,6 @@ export function migrateBackupEnvelope(input: unknown): BackupEnvelope {
     throw new BackupMigrationError(`La version de sauvegarde ${version} n’est pas prise en charge.`);
   }
 
-  // La version 1 est le format initial. Les futures migrations seront chaînées ici.
-  return validateBackupEnvelope(input);
+  const migrated = version === 1 ? migrateVersion1ToVersion2(header) : input;
+  return validateBackupEnvelope(migrated);
 }

@@ -110,9 +110,6 @@ export function aggregateRunningWeeks(
         : {}),
       sessionCount: sessions.length,
       longestDistanceKm: round(Math.max(0, ...sessions.map((session) => session.distanceKm)), 2),
-      ...(average(sessions.map((session) => session.rpe)) === undefined
-        ? {}
-        : { averageRpe: round(average(sessions.map((session) => session.rpe)) ?? 0, 1) }),
     };
   });
 }
@@ -135,9 +132,6 @@ export function aggregateSwimmingWeeks(
         : {}),
       sessionCount: sessions.length,
       longestDistanceMeters: round(Math.max(0, ...sessions.map((session) => session.distanceMeters)), 0),
-      ...(average(sessions.map((session) => session.rpe)) === undefined
-        ? {}
-        : { averageRpe: round(average(sessions.map((session) => session.rpe)) ?? 0, 1) }),
     };
   });
 }

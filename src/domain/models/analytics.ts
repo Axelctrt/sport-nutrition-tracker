@@ -13,7 +13,6 @@ export interface RunningWeekSummary extends CalendarWeek {
   weightedPaceSecondsPerKm?: number;
   sessionCount: number;
   longestDistanceKm: number;
-  averageRpe?: number;
 }
 
 export interface SwimmingWeekSummary extends CalendarWeek {
@@ -22,7 +21,6 @@ export interface SwimmingWeekSummary extends CalendarWeek {
   weightedPaceSecondsPer100m?: number;
   sessionCount: number;
   longestDistanceMeters: number;
-  averageRpe?: number;
 }
 
 export interface NutritionWeekSummary extends CalendarWeek {

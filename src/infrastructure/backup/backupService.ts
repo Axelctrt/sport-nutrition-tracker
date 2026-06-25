@@ -8,6 +8,7 @@ import {
   migrateBackupEnvelope,
 } from '@/infrastructure/backup/backupMigrations';
 import { formatBackupValidationError } from '@/infrastructure/backup/backupSchemas';
+import { ensureExerciseCatalog } from '@/application/strength/exerciseCatalogSeeder';
 
 export const MAX_BACKUP_FILE_SIZE_BYTES = 25 * 1024 * 1024;
 
@@ -50,6 +51,13 @@ function tableList(database: AppDatabase) {
     database.dailyJournalStatuses,
     database.weeklyReviews,
     database.acceptedCalorieAdjustments,
+    database.exerciseDefinitions,
+    database.workoutTemplates,
+    database.workoutTemplateExercises,
+    database.workoutSessions,
+    database.workoutSessionExercises,
+    database.strengthSets,
+    database.progressionSuggestions,
   ] as const;
 }
 
@@ -70,6 +78,13 @@ async function readBackupData(database: AppDatabase): Promise<BackupData> {
     dailyJournalStatuses,
     weeklyReviews,
     acceptedCalorieAdjustments,
+    exerciseDefinitions,
+    workoutTemplates,
+    workoutTemplateExercises,
+    workoutSessions,
+    workoutSessionExercises,
+    strengthSets,
+    progressionSuggestions,
   ] = await Promise.all(tableList(database).map((table) => table.toArray()));
 
   return {
@@ -88,6 +103,13 @@ async function readBackupData(database: AppDatabase): Promise<BackupData> {
     dailyJournalStatuses,
     weeklyReviews,
     acceptedCalorieAdjustments,
+    exerciseDefinitions,
+    workoutTemplates,
+    workoutTemplateExercises,
+    workoutSessions,
+    workoutSessionExercises,
+    strengthSets,
+    progressionSuggestions,
   } as BackupData;
 }
 
@@ -202,6 +224,27 @@ async function populateTables(database: AppDatabase, data: BackupData): Promise<
   if (data.acceptedCalorieAdjustments.length > 0) {
     await database.acceptedCalorieAdjustments.bulkAdd(data.acceptedCalorieAdjustments);
   }
+  if (data.exerciseDefinitions.length > 0) {
+    await database.exerciseDefinitions.bulkAdd(data.exerciseDefinitions);
+  }
+  if (data.workoutTemplates.length > 0) {
+    await database.workoutTemplates.bulkAdd(data.workoutTemplates);
+  }
+  if (data.workoutTemplateExercises.length > 0) {
+    await database.workoutTemplateExercises.bulkAdd(data.workoutTemplateExercises);
+  }
+  if (data.workoutSessions.length > 0) {
+    await database.workoutSessions.bulkAdd(data.workoutSessions);
+  }
+  if (data.workoutSessionExercises.length > 0) {
+    await database.workoutSessionExercises.bulkAdd(data.workoutSessionExercises);
+  }
+  if (data.strengthSets.length > 0) {
+    await database.strengthSets.bulkAdd(data.strengthSets);
+  }
+  if (data.progressionSuggestions.length > 0) {
+    await database.progressionSuggestions.bulkAdd(data.progressionSuggestions);
+  }
 }
 
 export async function replaceDatabaseFromBackup(
@@ -212,6 +255,7 @@ export async function replaceDatabaseFromBackup(
     await database.transaction('rw', tableList(database), async () => {
       await clearTables(database);
       await populateTables(database, envelope.data);
+      await ensureExerciseCatalog(database);
     });
   } catch (error) {
     throw new BackupOperationError(
@@ -226,6 +270,7 @@ export async function clearAllUserData(database: AppDatabase = appDatabase): Pro
     await database.transaction('rw', tableList(database), async () => {
       await clearTables(database);
       await database.appSettings.add(createDefaultAppSettings());
+      await ensureExerciseCatalog(database);
     });
   } catch (error) {
     throw new BackupOperationError('Les données locales n’ont pas pu être effacées.', { cause: error });
