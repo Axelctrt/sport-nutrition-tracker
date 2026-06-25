@@ -65,7 +65,9 @@ describe('WorkoutSessionPage', () => {
       expect((await appDatabase.workoutSessions.get('session-current'))?.notes).toBe('Séance solide');
     });
 
-    await user.click(await screen.findByRole('button', { name: 'Terminer' }));
+    const finishButton = await screen.findByRole('button', { name: 'Terminer' });
+    await waitFor(() => expect(finishButton).toBeEnabled());
+    await user.click(finishButton);
     expect(await screen.findByRole('heading', { name: 'Retour au carnet' })).toBeInTheDocument();
     expect((await appDatabase.workoutSessions.get('session-current'))?.status).toBe('completed');
   });

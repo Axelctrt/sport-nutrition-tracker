@@ -1,4 +1,4 @@
-# SportPilot 0.14.0-alpha.6
+# SportPilot 0.14.0-alpha.7
 
 PWA locale de suivi sportif, nutritionnel, calorique et de progression.
 
@@ -327,3 +327,22 @@ Cette préversion ajoute la continuité entre les séances de musculation :
 Aucune nouvelle migration Dexie n’est nécessaire : l’historique est recalculé à partir des séances et séries déjà stockées.
 
 Validation : 73 fichiers de tests, 285 tests, lint, build PWA et audit réussis.
+
+
+## Version 0.14.0-alpha.7 — statistiques et records de musculation
+
+Cette préversion enrichit l’historique de chaque exercice avec des analyses calculées localement :
+
+- graphiques d’évolution de la charge maximale, de la charge moyenne et du 1RM estimé ;
+- graphique du volume et des répétitions par séance ;
+- meilleure charge, meilleur volume sur une série et meilleur volume sur une séance ;
+- nombre total de séries de travail et de répétitions ;
+- charge moyenne par série de travail ;
+- estimation du 1RM avec la formule d’Epley sur les séries de 1 à 12 répétitions ;
+- comparaison de la dernière séance avec la précédente ;
+- records de répétitions pour chaque charge utilisée ;
+- exclusion systématique des séries d’échauffement des statistiques principales.
+
+Aucune nouvelle migration Dexie n’est nécessaire : les statistiques sont recalculées à partir des séances et séries existantes.
+
+Validation : 74 fichiers de tests, 290 tests, lint, build PWA et audit réussis.
