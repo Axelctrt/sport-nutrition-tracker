@@ -8,7 +8,7 @@ Cette étape réorganise le tableau de bord pour une consultation rapide sur té
 - séance de musculation en cours visible immédiatement avec bouton de reprise prioritaire ;
 - zone de six actions rapides adaptée à une utilisation à une main ;
 - accès direct à l’ajout alimentaire, au scanner, aux pas, au poids, aux activités et à la musculation ;
-- saisies du poids et des pas conservées sur le tableau de bord avec confirmations locales ;
+- saisies du poids et des pas ouvertes directement depuis les actions rapides dans une feuille mobile, sans navigation ni doublon plus bas ;
 - activités et informations de calcul déplacées dans des sections repliables ;
 - chargement initial assuré par le skeleton partagé ;
 - restauration centralisée du défilement conservée ;

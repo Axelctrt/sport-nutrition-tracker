@@ -9,7 +9,7 @@ SPORTPILOT 0.15.0-alpha.4
    npm run check
    npm run dev
 6. Tester le résumé quotidien, les six actions rapides et la reprise d’une séance en cours.
-7. Tester la saisie des pas et du poids sans remontée en haut de page.
+7. Tester l’ouverture des saisies des pas et du poids depuis les actions rapides, sans changement de page ni section dupliquée.
 8. Tester les sections repliables des activités et des détails de calcul.
 9. Tester sur iPhone en portrait et paysage, en modes clair et sombre.
 10. Recharger l’application avec Ctrl + F5 si une ancienne version reste en cache.

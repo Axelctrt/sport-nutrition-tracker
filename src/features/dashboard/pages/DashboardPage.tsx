@@ -6,7 +6,6 @@ import { presentActivity } from '@/features/activities/utils/activityPresentatio
 import { DashboardActiveWorkout } from '@/features/dashboard/components/DashboardActiveWorkout';
 import { DashboardQuickActions } from '@/features/dashboard/components/DashboardQuickActions';
 import { DashboardTodaySummary } from '@/features/dashboard/components/DashboardTodaySummary';
-import { DailyInputsPanel } from '@/features/dashboard/components/DailyInputsPanel';
 import { useDailyDashboard } from '@/features/dashboard/hooks/useDailyDashboard';
 import { Button } from '@/shared/ui/Button';
 import { CollapsibleSection } from '@/shared/ui/CollapsibleSection';
@@ -88,10 +87,16 @@ export function DashboardPage() {
             isRefreshing={status === 'loading'}
           />
 
-          <DashboardQuickActions date={date} {...(activeWorkout ? { activeWorkout } : {})} />
-
-          <DailyInputsPanel
-            snapshot={snapshot}
+          <DashboardQuickActions
+            date={date}
+            totalSteps={snapshot.calculation.steps.totalSteps}
+            {...(snapshot.stepsEntry ? { stepsEntry: snapshot.stepsEntry } : {})}
+            weightKg={snapshot.weight.weightKg}
+            {...(snapshot.weight.source === 'weightEntry'
+              && snapshot.weight.weightEntry.date === date
+              ? { weightEntry: snapshot.weight.weightEntry }
+              : {})}
+            {...(activeWorkout ? { activeWorkout } : {})}
             onSaveWeight={saveWeight}
             onSaveSteps={saveSteps}
           />
