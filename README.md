@@ -1,4 +1,4 @@
-# SportPilot 0.14.0-alpha.2
+# SportPilot 0.14.0-alpha.4
 
 PWA locale de suivi sportif, nutritionnel, calorique et de progression.
 
@@ -270,3 +270,20 @@ Cette préversion ajoute la gestion complète des séances modèles :
 - accès depuis le journal des activités et la navigation ordinateur.
 
 Validation : 66 fichiers de tests, 259 tests, lint, build PWA et audit réussis.
+
+## Version 0.14.0-alpha.4 — séances réalisées
+
+Cette préversion ajoute le cycle de vie des entraînements de musculation :
+
+- démarrage d’une séance libre ou depuis un modèle ;
+- création d’instantanés indépendants du modèle et du catalogue ;
+- reprise automatique d’une séance en cours après fermeture de l’application ;
+- prévention de plusieurs séances simultanées ;
+- ajout, retrait et réorganisation des exercices pendant la séance ;
+- notes générales persistantes ;
+- clôture avec calcul de la durée ;
+- abandon avec conservation dans l’historique ;
+- consultation des séances terminées ou abandonnées ;
+- accès depuis le journal des activités, les modèles et la navigation ordinateur.
+
+Validation : 69 fichiers de tests, 268 tests, lint, build PWA et audit réussis.

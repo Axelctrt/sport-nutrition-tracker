@@ -6,6 +6,7 @@ import {
   setWorkoutTemplateArchived,
   type WorkoutTemplateSummary,
 } from '@/application/strength/workoutTemplateService';
+import { startWorkoutSessionFromTemplate } from '@/application/strength/workoutSessionService';
 import { repositories } from '@/infrastructure/repositories/repositories';
 
 export function useWorkoutTemplates(includeArchived: boolean) {
@@ -13,6 +14,7 @@ export function useWorkoutTemplates(includeArchived: boolean) {
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [errorMessage, setErrorMessage] = useState<string>();
   const [actionId, setActionId] = useState<EntityId>();
+  const [actionErrorMessage, setActionErrorMessage] = useState<string>();
 
   const refresh = useCallback(async () => {
     setStatus('loading');
@@ -51,5 +53,25 @@ export function useWorkoutTemplates(includeArchived: boolean) {
     }
   }, [refresh]);
 
-  return { templates, status, errorMessage, actionId, refresh, setArchived, duplicate };
+
+  const start = useCallback(async (id: EntityId) => {
+    setActionId(id);
+    setActionErrorMessage(undefined);
+    try {
+      const created = await startWorkoutSessionFromTemplate(
+        repositories.workoutSessions,
+        repositories.workoutTemplates,
+        repositories.strengthExercises,
+        id,
+      );
+      return created.session;
+    } catch (error) {
+      setActionErrorMessage(error instanceof Error ? error.message : 'Impossible de démarrer cette séance.');
+      return undefined;
+    } finally {
+      setActionId(undefined);
+    }
+  }, []);
+
+  return { templates, status, errorMessage, actionErrorMessage, actionId, refresh, setArchived, duplicate, start }; 
 }

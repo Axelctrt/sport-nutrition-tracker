@@ -1,4 +1,4 @@
-import { CalendarDays, Dumbbell, Flame, Layers3, LoaderCircle, Pencil, Plus, Trash2 } from 'lucide-react';
+import { CalendarDays, Dumbbell, Flame, Layers3, LoaderCircle, Pencil, PlayCircle, Plus, Trash2 } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { editActivityPath, routePaths } from '@/app/routePaths';
 import { useActivityJournal } from '@/features/activities/hooks/useActivityJournal';
@@ -38,7 +38,14 @@ export function ActivityJournalPage() {
             Consulte, corrige ou supprime les séances enregistrées. Chaque modification recalcule automatiquement les objectifs de la journée.
           </p>
         </div>
-        <div className="flex flex-col gap-2 sm:flex-row">
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+          <Link
+            to={routePaths.workoutSessions}
+            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-brand-700 px-5 font-semibold text-white shadow-sm hover:bg-brand-800"
+          >
+            <PlayCircle aria-hidden="true" className="size-5" />
+            Carnet de musculation
+          </Link>
           <Link
             to={routePaths.workoutTemplates}
             className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-5 font-semibold text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"

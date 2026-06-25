@@ -12,3 +12,5 @@ export type { WeightRepository } from '@/infrastructure/repositories/contracts/W
 export type * from '@/infrastructure/repositories/contracts/StrengthExerciseRepository';
 
 export type { WorkoutTemplateRepository, WorkoutTemplateDetails } from '@/infrastructure/repositories/contracts/WorkoutTemplateRepository';
+
+export type { WorkoutSessionRepository, WorkoutSessionDetails } from '@/infrastructure/repositories/contracts/WorkoutSessionRepository';

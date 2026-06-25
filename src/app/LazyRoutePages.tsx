@@ -81,6 +81,19 @@ const StrengthExerciseEditorPage = lazy(() =>
 );
 
 
+
+const WorkoutSessionsPage = lazy(() =>
+  import('@/features/strength-sessions/pages/WorkoutSessionsPage').then((module) => ({
+    default: module.WorkoutSessionsPage,
+  })),
+);
+
+const WorkoutSessionPage = lazy(() =>
+  import('@/features/strength-sessions/pages/WorkoutSessionPage').then((module) => ({
+    default: module.WorkoutSessionPage,
+  })),
+);
+
 const WorkoutTemplatesPage = lazy(() =>
   import('@/features/strength-templates/pages/WorkoutTemplatesPage').then((module) => ({
     default: module.WorkoutTemplatesPage,
@@ -339,6 +352,15 @@ export function LazyStrengthExerciseEditorPage() {
   );
 }
 
+
+
+export function LazyWorkoutSessionsPage() {
+  return <RouteSuspense><WorkoutSessionsPage /></RouteSuspense>;
+}
+
+export function LazyWorkoutSessionPage() {
+  return <RouteSuspense><WorkoutSessionPage /></RouteSuspense>;
+}
 
 export function LazyWorkoutTemplatesPage() {
   return <RouteSuspense><WorkoutTemplatesPage /></RouteSuspense>;

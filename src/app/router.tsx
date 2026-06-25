@@ -26,6 +26,8 @@ import {
   LazyStrengthActivityPage,
   LazyStrengthExercisesPage,
   LazyStrengthExerciseEditorPage,
+  LazyWorkoutSessionsPage,
+  LazyWorkoutSessionPage,
   LazyWorkoutTemplatesPage,
   LazyWorkoutTemplateEditorPage,
   LazySwimmingActivityPage,
@@ -135,6 +137,15 @@ export const router = createHashRouter([
       {
         path: routePaths.strengthExercises,
         element: <LazyStrengthExercisesPage />,
+      },
+
+      {
+        path: routePaths.workoutSessions,
+        element: <LazyWorkoutSessionsPage />,
+      },
+      {
+        path: routePaths.workoutSession,
+        element: <LazyWorkoutSessionPage />,
       },
       {
         path: routePaths.workoutTemplates,
