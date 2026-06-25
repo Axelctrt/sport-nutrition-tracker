@@ -11,7 +11,6 @@ import { WorkoutSessionActionBar } from '@/features/strength-sessions/components
 import { useWorkoutSession } from '@/features/strength-sessions/hooks/useWorkoutSession';
 import { workoutSessionStatusLabel } from '@/features/strength-sessions/utils/sessionLabels';
 import { inputClassName } from '@/shared/forms/formStyles';
-import { useToast } from '@/shared/toast/useToast';
 import { Button } from '@/shared/ui/Button';
 import { CollapsibleSection } from '@/shared/ui/CollapsibleSection';
 import { ConfirmationDialog } from '@/shared/ui/ConfirmationDialog';
@@ -80,7 +79,6 @@ function confirmationContent(request: ConfirmationRequest | undefined) {
 export function WorkoutSessionPage() {
   const { sessionId = '' } = useParams();
   const navigate = useNavigate();
-  const toast = useToast();
   const {
     session,
     exercises,
@@ -131,20 +129,17 @@ export function WorkoutSessionPage() {
     const created = await addExercise(selectedExerciseId);
     if (!created) return;
     setSelectedExerciseId('');
-    toast.success('Exercice ajouté', created.exerciseNameSnapshot);
     revealElement(`workout-exercise-${created.id}`);
   };
 
   const handleAddSet = async (sessionExerciseId: string) => {
     const created = await addSet(sessionExerciseId);
     if (!created) return;
-    toast.success('Série ajoutée');
     revealElement(`strength-set-${created.id}`);
   };
 
   const handleSaveSet = async (sessionExerciseId: string, setId: string, values: StrengthSetChanges) => {
-    const saved = await saveSet(sessionExerciseId, setId, values);
-    if (saved) toast.success('Série enregistrée');
+    await saveSet(sessionExerciseId, setId, values);
   };
 
   const handleCompleteSet = async (
@@ -153,28 +148,24 @@ export function WorkoutSessionPage() {
     values: StrengthSetChanges,
     isCompleted: boolean,
   ) => {
-    const saved = await completeSet(sessionExerciseId, setId, values, isCompleted);
-    if (saved) toast.success(isCompleted ? 'Série validée' : 'Série rouverte');
+    await completeSet(sessionExerciseId, setId, values, isCompleted);
   };
 
   const handleDuplicateSet = async (sessionExerciseId: string, setId: string) => {
     const created = await duplicateSet(sessionExerciseId, setId);
     if (!created) return;
-    toast.success('Série dupliquée');
     revealElement(`strength-set-${created.id}`);
   };
 
   const handleReusePreviousSets = async (sessionExerciseId: string) => {
     const copied = await reusePreviousSets(sessionExerciseId);
     if (!copied) return;
-    toast.success('Séries précédentes reprises');
     const lastSet = copied.at(-1);
     if (lastSet) revealElement(`strength-set-${lastSet.id}`);
   };
 
   const handleSaveNotes = async () => {
-    const saved = await saveNotes(notes);
-    if (saved) toast.success('Notes enregistrées');
+    await saveNotes(notes);
   };
 
   const resolveConfirmation = async () => {
@@ -184,21 +175,17 @@ export function WorkoutSessionPage() {
       if (confirmation.type === 'finish') {
         const completed = await complete();
         if (completed) {
-          toast.success('Séance terminée', 'Elle est maintenant disponible dans ton historique.');
           await navigate(routePaths.workoutSessions);
         }
       } else if (confirmation.type === 'abandon') {
         const abandoned = await abandon();
         if (abandoned) {
-          toast.info('Séance abandonnée', 'Elle reste disponible dans ton historique.');
           await navigate(routePaths.workoutSessions);
         }
       } else if (confirmation.type === 'removeExercise') {
-        const removed = await removeExercise(confirmation.exercise.id);
-        if (removed) toast.success('Exercice retiré');
+        await removeExercise(confirmation.exercise.id);
       } else {
-        const removed = await removeSet(confirmation.sessionExerciseId, confirmation.setId);
-        if (removed) toast.success('Série supprimée');
+        await removeSet(confirmation.sessionExerciseId, confirmation.setId);
       }
     } finally {
       setIsConfirming(false);

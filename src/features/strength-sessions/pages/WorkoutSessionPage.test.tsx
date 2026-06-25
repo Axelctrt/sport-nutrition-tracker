@@ -65,11 +65,13 @@ describe('WorkoutSessionPage', () => {
     renderSessionPage(<Route path="/strength/sessions" element={<h1>Retour au carnet</h1>} />);
 
     await screen.findByRole('heading', { name: 'Séance libre' });
+    const abandonButton = screen.getByRole('button', { name: 'Abandonner la séance' });
+    expect(abandonButton.querySelector('.lucide-x')).toBeInTheDocument();
     await user.click(screen.getByText('Ajouter un exercice'));
     await user.selectOptions(screen.getByLabelText('Exercice à ajouter'), 'exercise-row');
     await user.click(screen.getByRole('button', { name: 'Ajouter' }));
     expect(await screen.findByRole('heading', { name: 'Rowing barre' })).toBeInTheDocument();
-    expect(screen.getByText('Exercice ajouté')).toBeInTheDocument();
+    expect(screen.queryByText('Exercice ajouté')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Chargement de la page')).not.toBeInTheDocument();
 
     await user.click(screen.getByText('Notes générales', { selector: 'span' }));
@@ -78,9 +80,11 @@ describe('WorkoutSessionPage', () => {
     await waitFor(async () => {
       expect((await appDatabase.workoutSessions.get('session-current'))?.notes).toBe('Séance solide');
     });
-    expect(await screen.findByText('Notes enregistrées')).toBeInTheDocument();
+    expect(screen.queryByText('Notes enregistrées')).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Terminer' }));
+    const finishButton = screen.getByRole('button', { name: 'Terminer' });
+    await waitFor(() => expect(finishButton).toBeEnabled());
+    await user.click(finishButton);
     const dialog = await screen.findByRole('alertdialog');
     await user.click(within(dialog).getByRole('button', { name: 'Terminer la séance' }));
     expect(await screen.findByRole('heading', { name: 'Retour au carnet' })).toBeInTheDocument();
@@ -109,7 +113,7 @@ describe('WorkoutSessionPage', () => {
       expect(sets).toHaveLength(1);
       expect(sets[0]).toMatchObject({ repetitions: 12, weightKg: 60, rpe: 8, isCompleted: true });
     });
-    expect(screen.getByText('Série validée')).toBeInTheDocument();
+    expect(screen.queryByText('Série validée')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Chargement de la page')).not.toBeInTheDocument();
 
     await user.click(await screen.findByRole('button', { name: 'Dupliquer' }));
@@ -182,7 +186,7 @@ describe('WorkoutSessionPage', () => {
         expect.objectContaining({ weightKg: 60, repetitions: 10, isCompleted: false }),
       ]));
     });
-    expect(await screen.findByText('Séries précédentes reprises')).toBeInTheDocument();
+    expect(screen.queryByText('Séries précédentes reprises')).not.toBeInTheDocument();
   });
 
   it('affiche une suggestion et applique la charge choisie au modèle', async () => {

@@ -1,4 +1,4 @@
-import { CheckCircle2, CircleStop, Clock3 } from 'lucide-react';
+import { CheckCircle2, Clock3, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { WorkoutSession } from '@/domain/models/strength';
 import { Button } from '@/shared/ui/Button';
@@ -53,7 +53,7 @@ export function WorkoutSessionActionBar({
           disabled={isPending}
           onClick={onAbandon}
         >
-          <CircleStop aria-hidden="true" className="size-5" />
+          <X aria-hidden="true" className="size-5" />
         </Button>
         <Button className="shrink-0" disabled={isPending} onClick={onFinish}>
           <CheckCircle2 aria-hidden="true" className="size-4" />
