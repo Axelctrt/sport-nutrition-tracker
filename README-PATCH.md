@@ -1,18 +1,18 @@
-# SportPilot 0.15.0-alpha.6 — poids et historique mobile
+# SportPilot 0.15.0-alpha.7 — analyses et bilan hebdomadaire mobile
 
-Branche obligatoire : `feature/mobile-weight-history-ux`
+Branche obligatoire : `feature/mobile-analytics-review-ux`
 
-Cette étape optimise la saisie du poids, l’évolution des pesées et l’historique général pour une utilisation mobile, sans modifier les données ni les règles métier :
+Cette étape optimise les analyses sur douze semaines et le bilan hebdomadaire pour une utilisation mobile, sans modifier les calculs ni les données :
 
-- résumé compact avec dernière pesée, moyenne sur sept jours, variation récente et écart à la trajectoire ;
-- formulaire de pesée plus court avec note facultative repliée et bouton fixe sous le formulaire ;
-- cartes de pesée mobiles remplaçant le tableau horizontal ;
-- modification directe depuis une carte et suppression via le dialogue accessible partagé ;
-- sauvegarde et suppression silencieuses sans démontage de la page ;
-- graphique filtrable sur 30 jours, 90 jours ou l’ensemble de l’historique ;
-- historique quotidien compact avec poids, pas, activité, alimentation et état du journal ;
-- périodes rapides de 7, 28 et 90 jours, complétées par une période personnalisée repliable ;
-- liens directs vers le journal alimentaire, les activités et la pesée de chaque date ;
+- vue d’ensemble compacte regroupant course, natation, adhérence calorique et poids récent ;
+- graphiques rangés dans des sections ouvertes à la demande ;
+- détails hebdomadaires convertis en cartes et suppression des tableaux horizontaux ;
+- raccourcis directs entre analyses, bilan hebdomadaire et historique ;
+- proposition calorique affichée avant les informations secondaires ;
+- résumé hebdomadaire compact avec poids, évolution, adhérence et score ;
+- détail de l’adhérence, ajustements acceptés et anciens bilans placés dans des sections repliables ;
+- historique des décisions présenté sous forme de cartes mobiles ;
+- acceptation ou refus sans rechargement complet ni disparition du bilan ;
 - chargement assuré par les skeletons partagés ;
 - aucune migration Dexie et aucune modification du format de sauvegarde.
 

@@ -1,8 +1,24 @@
-# SportPilot 0.15.0-alpha.6
+# SportPilot 0.15.0-alpha.7
 
 PWA locale de suivi sportif, nutritionnel, calorique et de progression.
 
 ## Version 0.15 — Expérience mobile-first
+
+### 0.15.0-alpha.7 — analyses et bilan hebdomadaire mobile
+
+Cette préversion rend les analyses et la calibration hebdomadaire plus lisibles sur téléphone :
+
+- synthèse unique sur douze semaines regroupant course, natation, adhérence calorique et poids récent ;
+- graphiques montés uniquement à l’ouverture de leur section pour éviter une page initiale trop longue ;
+- course, natation, nutrition, activité générale, poids et répartition sportive organisés en sections progressives ;
+- détails hebdomadaires présentés sous forme de cartes, sans tableaux horizontaux ;
+- accès direct au bilan hebdomadaire et à l’historique depuis les analyses ;
+- décision calorique placée en priorité dans le bilan, avec actions adaptées au téléphone ;
+- résumé hebdomadaire compact et détails d’adhérence repliables ;
+- historiques des bilans et ajustements acceptés convertis en cartes mobiles ;
+- acceptation ou refus d’une proposition sans démontage complet de la page ;
+- chargement harmonisé avec les skeletons partagés ;
+- aucune migration Dexie et aucune modification du format de sauvegarde.
 
 ### 0.15.0-alpha.6 — poids et historique mobile
 

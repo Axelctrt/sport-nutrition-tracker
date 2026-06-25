@@ -14,22 +14,26 @@ export function useWeeklyReview(referenceDate: LocalDate, profile: UserProfile |
   const [actionStatus, setActionStatus] = useState<'idle' | 'accepting' | 'rejecting'>('idle');
   const [errorMessage, setErrorMessage] = useState<string>();
 
-  const refresh = useCallback(async () => {
+  const load = useCallback(async (silent = false) => {
     if (!profile) return;
-    setStatus('loading');
+    if (!silent) setStatus('loading');
     setErrorMessage(undefined);
     try {
       setData(await loadWeeklyReview(referenceDate, profile));
       setStatus('ready');
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Impossible de charger le bilan hebdomadaire.');
-      setStatus('error');
+      if (!silent) setStatus('error');
     }
   }, [profile, referenceDate]);
 
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    void load();
+  }, [load]);
+
+  const refresh = useCallback(async () => {
+    await load();
+  }, [load]);
 
   const accept = useCallback(async () => {
     if (!data) return;
@@ -37,13 +41,13 @@ export function useWeeklyReview(referenceDate: LocalDate, profile: UserProfile |
     setErrorMessage(undefined);
     try {
       await acceptWeeklyReview(data.review.weekStart);
-      await refresh();
+      await load(true);
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Impossible d’accepter la proposition.');
     } finally {
       setActionStatus('idle');
     }
-  }, [data, refresh]);
+  }, [data, load]);
 
   const reject = useCallback(async () => {
     if (!data) return;
@@ -51,13 +55,13 @@ export function useWeeklyReview(referenceDate: LocalDate, profile: UserProfile |
     setErrorMessage(undefined);
     try {
       await rejectWeeklyReview(data.review.weekStart);
-      await refresh();
+      await load(true);
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Impossible de refuser la proposition.');
     } finally {
       setActionStatus('idle');
     }
-  }, [data, refresh]);
+  }, [data, load]);
 
   return { data, status, actionStatus, errorMessage, refresh, accept, reject };
 }
