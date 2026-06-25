@@ -31,4 +31,12 @@ describe('PageHeader', () => {
       'bg-brand-100',
     );
   });
+
+  it('affiche le titre de la page courante dans l’en-tête mobile', () => {
+    renderHeader('/strength/sessions/session-1');
+
+    expect(screen.getByText('Séance de musculation')).toBeInTheDocument();
+    expect(document.title).toBe('Séance de musculation · SportPilot');
+  });
+
 });

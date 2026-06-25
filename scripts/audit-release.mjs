@@ -12,16 +12,14 @@ const packageJson = JSON.parse(read('package.json'));
 const packageLock = JSON.parse(read('package-lock.json'));
 const version = packageJson.version;
 
-if (typeof version !== 'string' || !/^\d+\.\d+\.\d+$/.test(version)) {
-  fail(`la version ${String(version)} n’est pas une version stable.`);
+if (typeof version !== 'string' || !/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(version)) {
+  fail(`la version ${String(version)} n’est pas une version sémantique valide.`);
 }
 if (packageLock.version !== version || packageLock.packages?.['']?.version !== version) {
   fail('package.json et package-lock.json n’utilisent pas la même version.');
 }
-const normalizedReadme = read('README.md')
-  .replace(/^\uFEFF/, '')
-  .replace(/\r\n/g, '\n');
-if (!normalizedReadme.startsWith(`# SportPilot ${version}\n`)) {
+const readmeTitle = read('README.md').split(/\r?\n/, 1)[0];
+if (readmeTitle !== `# SportPilot ${version}`) {
   fail('le titre du README ne correspond pas à la version du package.');
 }
 if (!read('README-PATCH.md').startsWith(`# SportPilot ${version}`)) {
@@ -75,4 +73,4 @@ if (!/CURRENT_BACKUP_SCHEMA_VERSION = 2/.test(read('src/infrastructure/backup/ba
   fail('la version de sauvegarde attendue est absente.');
 }
 
-console.log(`Audit release réussi : SportPilot ${version}, versions, documentation, schémas et métadonnées cohérents.`);
+console.log(`Audit version réussi : SportPilot ${version}, documentation, schémas et métadonnées cohérents.`);

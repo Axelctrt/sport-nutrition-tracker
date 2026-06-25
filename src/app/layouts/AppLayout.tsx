@@ -1,20 +1,15 @@
-import { Outlet, useLocation } from 'react-router-dom';
-import { useEffect } from 'react';
+import { Outlet } from 'react-router-dom';
 import { DesktopSidebar } from '@/app/layouts/DesktopSidebar';
 import { MobileBottomNavigation } from '@/app/layouts/MobileBottomNavigation';
+import { NavigationScrollManager } from '@/app/layouts/NavigationScrollManager';
 import { PageHeader } from '@/app/layouts/PageHeader';
 import { OfflineStatusBanner } from '@/pwa/OfflineStatusBanner';
 import { PwaUpdatePrompt } from '@/pwa/PwaUpdatePrompt';
 
 export function AppLayout() {
-  const location = useLocation();
-
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'instant' });
-  }, [location.pathname]);
-
   return (
     <div className="min-h-screen text-slate-900 dark:text-slate-100">
+      <NavigationScrollManager />
       <a
         href="#main-content"
         className="fixed left-3 top-3 z-[100] -translate-y-20 rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition-transform focus:translate-y-0"

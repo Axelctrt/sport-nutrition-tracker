@@ -1,6 +1,20 @@
-# SportPilot 0.14.0
+# SportPilot 0.15.0-alpha.1
 
 PWA locale de suivi sportif, nutritionnel, calorique et de progression.
+
+## Version 0.15 — Fondations UX
+
+Cette préversion introduit le socle mobile-first de la refonte UX :
+
+- écran de démarrage avec le logo SportPilot ;
+- skeletons adaptés aux routes et limitant les décalages visuels ;
+- système global de notifications temporaires accessible ;
+- restauration centralisée de la position de défilement ;
+- titres de pages dynamiques dans l’en-tête ;
+- dialogue de confirmation accessible ;
+- états vides, sections repliables et statut de sauvegarde partagés ;
+- focalisation du premier champ invalide ;
+- respect renforcé de `prefers-reduced-motion`.
 
 ## Prérequis
 

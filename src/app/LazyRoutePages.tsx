@@ -1,4 +1,5 @@
 import { lazy, Suspense, type PropsWithChildren } from 'react';
+import { PageSkeleton, type PageSkeletonVariant } from '@/shared/ui/PageSkeleton';
 
 const DashboardPage = lazy(() =>
   import('@/features/dashboard/pages/DashboardPage').then((module) => ({
@@ -212,17 +213,12 @@ const BackupPage = lazy(() =>
   })),
 );
 
-function RouteSuspense({ children }: PropsWithChildren) {
+export function RouteSuspense({
+  children,
+  variant = 'list',
+}: PropsWithChildren<{ variant?: PageSkeletonVariant }>) {
   return (
-    <Suspense
-      fallback={
-        <div className="py-12 text-center" role="status">
-          <p className="font-semibold text-slate-700 dark:text-slate-200">
-            Chargement de la page…
-          </p>
-        </div>
-      }
-    >
+    <Suspense fallback={<PageSkeleton variant={variant} />}>
       {children}
     </Suspense>
   );
@@ -230,7 +226,7 @@ function RouteSuspense({ children }: PropsWithChildren) {
 
 export function LazyDashboardPage() {
   return (
-    <RouteSuspense>
+    <RouteSuspense variant="dashboard">
       <DashboardPage />
     </RouteSuspense>
   );
@@ -238,7 +234,7 @@ export function LazyDashboardPage() {
 
 export function LazyOnboardingPage() {
   return (
-    <RouteSuspense>
+    <RouteSuspense variant="form">
       <OnboardingPage />
     </RouteSuspense>
   );
@@ -246,7 +242,7 @@ export function LazyOnboardingPage() {
 
 export function LazyProfilePage() {
   return (
-    <RouteSuspense>
+    <RouteSuspense variant="form">
       <ProfilePage />
     </RouteSuspense>
   );
@@ -254,7 +250,7 @@ export function LazyProfilePage() {
 
 export function LazyAdvancedSettingsPage() {
   return (
-    <RouteSuspense>
+    <RouteSuspense variant="form">
       <AdvancedSettingsPage />
     </RouteSuspense>
   );
@@ -263,7 +259,7 @@ export function LazyAdvancedSettingsPage() {
 
 export function LazyAnalyticsPage() {
   return (
-    <RouteSuspense>
+    <RouteSuspense variant="dashboard">
       <AnalyticsPage />
     </RouteSuspense>
   );
@@ -271,7 +267,7 @@ export function LazyAnalyticsPage() {
 
 export function LazyHistoryPage() {
   return (
-    <RouteSuspense>
+    <RouteSuspense variant="list">
       <HistoryPage />
     </RouteSuspense>
   );
@@ -279,7 +275,7 @@ export function LazyHistoryPage() {
 
 export function LazyWeightPage() {
   return (
-    <RouteSuspense>
+    <RouteSuspense variant="dashboard">
       <WeightPage />
     </RouteSuspense>
   );
@@ -287,7 +283,7 @@ export function LazyWeightPage() {
 
 export function LazyActivityJournalPage() {
   return (
-    <RouteSuspense>
+    <RouteSuspense variant="list">
       <ActivityJournalPage />
     </RouteSuspense>
   );
@@ -295,7 +291,7 @@ export function LazyActivityJournalPage() {
 
 export function LazyAddActivityPage() {
   return (
-    <RouteSuspense>
+    <RouteSuspense variant="form">
       <AddActivityPage />
     </RouteSuspense>
   );
@@ -303,7 +299,7 @@ export function LazyAddActivityPage() {
 
 export function LazyRunningActivityPage() {
   return (
-    <RouteSuspense>
+    <RouteSuspense variant="form">
       <RunningActivityPage />
     </RouteSuspense>
   );
@@ -311,7 +307,7 @@ export function LazyRunningActivityPage() {
 
 export function LazySwimmingActivityPage() {
   return (
-    <RouteSuspense>
+    <RouteSuspense variant="form">
       <SwimmingActivityPage />
     </RouteSuspense>
   );
@@ -319,7 +315,7 @@ export function LazySwimmingActivityPage() {
 
 export function LazyStrengthActivityPage() {
   return (
-    <RouteSuspense>
+    <RouteSuspense variant="form">
       <StrengthActivityPage />
     </RouteSuspense>
   );
@@ -327,7 +323,7 @@ export function LazyStrengthActivityPage() {
 
 export function LazyOtherActivityPage() {
   return (
-    <RouteSuspense>
+    <RouteSuspense variant="form">
       <OtherActivityPage />
     </RouteSuspense>
   );
@@ -335,7 +331,7 @@ export function LazyOtherActivityPage() {
 
 export function LazyEditActivityPage() {
   return (
-    <RouteSuspense>
+    <RouteSuspense variant="form">
       <EditActivityPage />
     </RouteSuspense>
   );
@@ -345,7 +341,7 @@ export function LazyEditActivityPage() {
 
 export function LazyStrengthExercisesPage() {
   return (
-    <RouteSuspense>
+    <RouteSuspense variant="list">
       <StrengthExercisesPage />
     </RouteSuspense>
   );
@@ -353,7 +349,7 @@ export function LazyStrengthExercisesPage() {
 
 export function LazyStrengthExerciseEditorPage() {
   return (
-    <RouteSuspense>
+    <RouteSuspense variant="form">
       <StrengthExerciseEditorPage />
     </RouteSuspense>
   );
@@ -362,7 +358,7 @@ export function LazyStrengthExerciseEditorPage() {
 
 export function LazyStrengthExerciseHistoryPage() {
   return (
-    <RouteSuspense>
+    <RouteSuspense variant="detail">
       <StrengthExerciseHistoryPage />
     </RouteSuspense>
   );
@@ -371,24 +367,24 @@ export function LazyStrengthExerciseHistoryPage() {
 
 
 export function LazyWorkoutSessionsPage() {
-  return <RouteSuspense><WorkoutSessionsPage /></RouteSuspense>;
+  return <RouteSuspense variant="list"><WorkoutSessionsPage /></RouteSuspense>;
 }
 
 export function LazyWorkoutSessionPage() {
-  return <RouteSuspense><WorkoutSessionPage /></RouteSuspense>;
+  return <RouteSuspense variant="workout"><WorkoutSessionPage /></RouteSuspense>;
 }
 
 export function LazyWorkoutTemplatesPage() {
-  return <RouteSuspense><WorkoutTemplatesPage /></RouteSuspense>;
+  return <RouteSuspense variant="list"><WorkoutTemplatesPage /></RouteSuspense>;
 }
 
 export function LazyWorkoutTemplateEditorPage() {
-  return <RouteSuspense><WorkoutTemplateEditorPage /></RouteSuspense>;
+  return <RouteSuspense variant="form"><WorkoutTemplateEditorPage /></RouteSuspense>;
 }
 
 export function LazyFoodJournalPage() {
   return (
-    <RouteSuspense>
+    <RouteSuspense variant="dashboard">
       <FoodJournalPage />
     </RouteSuspense>
   );
@@ -396,7 +392,7 @@ export function LazyFoodJournalPage() {
 
 export function LazyFoodEntryEditorPage() {
   return (
-    <RouteSuspense>
+    <RouteSuspense variant="form">
       <FoodEntryEditorPage />
     </RouteSuspense>
   );
@@ -404,7 +400,7 @@ export function LazyFoodEntryEditorPage() {
 
 export function LazyMealFoodSelectorPage() {
   return (
-    <RouteSuspense>
+    <RouteSuspense variant="list">
       <MealFoodSelectorPage />
     </RouteSuspense>
   );
@@ -412,7 +408,7 @@ export function LazyMealFoodSelectorPage() {
 
 export function LazyBarcodeScannerPage() {
   return (
-    <RouteSuspense>
+    <RouteSuspense variant="detail">
       <BarcodeScannerPage />
     </RouteSuspense>
   );
@@ -421,7 +417,7 @@ export function LazyBarcodeScannerPage() {
 
 export function LazyOpenFoodFactsSearchPage() {
   return (
-    <RouteSuspense>
+    <RouteSuspense variant="list">
       <OpenFoodFactsSearchPage />
     </RouteSuspense>
   );
@@ -429,7 +425,7 @@ export function LazyOpenFoodFactsSearchPage() {
 
 export function LazyFoodProductsPage() {
   return (
-    <RouteSuspense>
+    <RouteSuspense variant="list">
       <FoodProductsPage />
     </RouteSuspense>
   );
@@ -437,7 +433,7 @@ export function LazyFoodProductsPage() {
 
 export function LazyFoodProductEditorPage() {
   return (
-    <RouteSuspense>
+    <RouteSuspense variant="form">
       <FoodProductEditorPage />
     </RouteSuspense>
   );
@@ -445,26 +441,26 @@ export function LazyFoodProductEditorPage() {
 
 
 export function LazyRecipesPage() {
-  return <RouteSuspense><RecipesPage /></RouteSuspense>;
+  return <RouteSuspense variant="list"><RecipesPage /></RouteSuspense>;
 }
 
 export function LazyRecipeEditorPage() {
-  return <RouteSuspense><RecipeEditorPage /></RouteSuspense>;
+  return <RouteSuspense variant="form"><RecipeEditorPage /></RouteSuspense>;
 }
 
 export function LazyRecipeEntryEditorPage() {
-  return <RouteSuspense><RecipeEntryEditorPage /></RouteSuspense>;
+  return <RouteSuspense variant="form"><RecipeEntryEditorPage /></RouteSuspense>;
 }
 
 export function LazyFavoriteMealsPage() {
-  return <RouteSuspense><FavoriteMealsPage /></RouteSuspense>;
+  return <RouteSuspense variant="list"><FavoriteMealsPage /></RouteSuspense>;
 }
 
 
 export function LazyWeeklyReviewPage() {
-  return <RouteSuspense><WeeklyReviewPage /></RouteSuspense>;
+  return <RouteSuspense variant="dashboard"><WeeklyReviewPage /></RouteSuspense>;
 }
 
 export function LazyBackupPage() {
-  return <RouteSuspense><BackupPage /></RouteSuspense>;
+  return <RouteSuspense variant="form"><BackupPage /></RouteSuspense>;
 }

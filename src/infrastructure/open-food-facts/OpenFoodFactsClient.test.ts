@@ -234,7 +234,7 @@ describe('OpenFoodFactsClient', () => {
     const requestedUrl = String(fetcher.mock.calls[0]?.[0]);
     expect(requestedUrl).toContain('/api/v3.6/product/3017624010701.json?');
     expect(requestedUrl).toContain('app_name=SportPilot');
-    expect(requestedUrl).toContain('app_version=0.14.0');
+    expect(requestedUrl).toContain(`app_version=${__APP_VERSION__}`);
   });
 
   it('retourne undefined pour un produit absent', async () => {
