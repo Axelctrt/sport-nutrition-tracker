@@ -1,4 +1,4 @@
-# SportPilot 0.14.0-alpha.4
+# SportPilot 0.14.0-alpha.5
 
 PWA locale de suivi sportif, nutritionnel, calorique et de progression.
 
@@ -287,3 +287,23 @@ Cette préversion ajoute le cycle de vie des entraînements de musculation :
 - accès depuis le journal des activités, les modèles et la navigation ordinateur.
 
 Validation : 69 fichiers de tests, 268 tests, lint, build PWA et audit réussis.
+
+
+## Version 0.14.0-alpha.5 — saisie des séries
+
+Cette préversion ajoute la saisie détaillée des séries directement dans les séances de musculation :
+
+- ajout d’une série avec reprise automatique de la charge cible et des répétitions prévues ;
+- saisie de la charge, des répétitions, du RPE et du type de série ;
+- notes facultatives au niveau de chaque série ;
+- validation et réouverture d’une série ;
+- duplication rapide d’une série existante ;
+- suppression avec renumérotation automatique ;
+- état d’avancement par exercice par rapport aux séries prévues ;
+- protection des séances terminées contre les modifications ;
+- persistance locale et reprise après fermeture de l’application ;
+- interface responsive optimisée pour la saisie mobile.
+
+Aucune nouvelle migration Dexie n’est nécessaire : la table `strengthSets` existe depuis `0.14.0-alpha.1`.
+
+Validation : 71 fichiers de tests, 277 tests, lint, build PWA et audit réussis.

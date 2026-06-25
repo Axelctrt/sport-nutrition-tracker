@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { getWorkoutSessionTitle } from '@/application/strength/workoutSessionService';
 import { routePaths } from '@/app/routePaths';
+import { StrengthSetEditor } from '@/features/strength-sessions/components/StrengthSetEditor';
 import { useWorkoutSession } from '@/features/strength-sessions/hooks/useWorkoutSession';
 import { workoutSessionStatusLabel } from '@/features/strength-sessions/utils/sessionLabels';
 import { loadUnitLabel } from '@/features/strength-exercises/utils/exerciseLabels';
@@ -18,6 +19,7 @@ export function WorkoutSessionPage() {
   const {
     session,
     exercises,
+    strengthSets,
     availableExercises,
     status,
     errorMessage,
@@ -29,6 +31,11 @@ export function WorkoutSessionPage() {
     saveNotes,
     complete,
     abandon,
+    addSet,
+    saveSet,
+    completeSet,
+    duplicateSet,
+    removeSet,
   } = useWorkoutSession(sessionId);
   const [selectedExerciseId, setSelectedExerciseId] = useState('');
   const [notes, setNotes] = useState('');
@@ -45,6 +52,13 @@ export function WorkoutSessionPage() {
 
   const confirmRemove = async (exerciseId: string, name: string) => {
     if (window.confirm(`Retirer « ${name} » de cette séance ?`)) await removeExercise(exerciseId);
+  };
+
+
+  const confirmDeleteSet = async (sessionExerciseId: string, setId: string) => {
+    if (window.confirm('Supprimer cette série ? Les séries suivantes seront renumérotées.')) {
+      await removeSet(sessionExerciseId, setId);
+    }
   };
 
   const finishSession = async () => {
@@ -130,6 +144,17 @@ export function WorkoutSessionPage() {
                 </div>
               ) : null}
             </div>
+            <StrengthSetEditor
+              exercise={exercise}
+              sets={strengthSets.filter((set) => set.sessionExerciseId === exercise.id)}
+              editable={editable}
+              action={action}
+              onAdd={addSet}
+              onSave={saveSet}
+              onCompletion={completeSet}
+              onDuplicate={duplicateSet}
+              onDelete={confirmDeleteSet}
+            />
           </Card>
         ))}
       </div>
@@ -140,7 +165,7 @@ export function WorkoutSessionPage() {
         {editable ? <Button className="mt-3" variant="secondary" disabled={action === 'notes'} onClick={() => void saveNotes(notes)}><Save aria-hidden="true" className="size-4" />{action === 'notes' ? 'Enregistrement…' : 'Enregistrer les notes'}</Button> : null}
       </Card>
 
-      {editable ? <InlineNotice className="mt-6" title="Saisie des séries">La structure de la séance est enregistrée localement et restera disponible après fermeture de l’application.</InlineNotice> : null}
+      {editable ? <InlineNotice className="mt-6" title="Saisie enregistrée localement">Les exercices, les séries et leur état de validation restent disponibles après fermeture de l’application.</InlineNotice> : null}
     </section>
   );
 }

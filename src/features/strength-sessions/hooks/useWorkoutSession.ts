@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { ExerciseDefinition, WorkoutSession, WorkoutSessionExercise } from '@/domain/models/strength';
+import type { ExerciseDefinition, StrengthSet, WorkoutSession, WorkoutSessionExercise } from '@/domain/models/strength';
 import {
   abandonWorkoutSession,
   addExerciseToWorkoutSession,
@@ -11,12 +11,22 @@ import {
   updateWorkoutSessionNotes,
 } from '@/application/strength/workoutSessionService';
 import { listExerciseDefinitions } from '@/application/strength/exerciseDefinitionService';
+import {
+  addStrengthSet,
+  deleteStrengthSet,
+  duplicateStrengthSet,
+  listStrengthSetsForSession,
+  setStrengthSetCompletion,
+  updateStrengthSet,
+  type StrengthSetChanges,
+} from '@/application/strength/strengthSetService';
 import { repositories } from '@/infrastructure/repositories/repositories';
 
 export function useWorkoutSession(sessionId: string) {
   const [session, setSession] = useState<WorkoutSession>();
   const [exercises, setExercises] = useState<WorkoutSessionExercise[]>([]);
   const [definitions, setDefinitions] = useState<ExerciseDefinition[]>([]);
+  const [strengthSets, setStrengthSets] = useState<StrengthSet[]>([]);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [errorMessage, setErrorMessage] = useState<string>();
   const [action, setAction] = useState<string>();
@@ -25,13 +35,15 @@ export function useWorkoutSession(sessionId: string) {
     setStatus('loading');
     setErrorMessage(undefined);
     try {
-      const [view, catalog] = await Promise.all([
+      const [view, catalog, sets] = await Promise.all([
         getWorkoutSessionView(repositories.workoutSessions, sessionId),
         listExerciseDefinitions(repositories.strengthExercises),
+        listStrengthSetsForSession(repositories.strengthSets, sessionId),
       ]);
       setSession(view.session);
       setExercises(view.exercises);
       setDefinitions(catalog);
+      setStrengthSets(sets);
       setStatus('ready');
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Impossible de charger cette séance.');
@@ -93,6 +105,73 @@ export function useWorkoutSession(sessionId: string) {
     () => abandonWorkoutSession(repositories.workoutSessions, sessionId),
   ), [runAction, sessionId]);
 
+
+  const addSet = useCallback((sessionExerciseId: string) => runAction(
+    `addSet:${sessionExerciseId}`,
+    () => addStrengthSet(
+      repositories.workoutSessions,
+      repositories.strengthSets,
+      sessionId,
+      sessionExerciseId,
+    ),
+  ), [runAction, sessionId]);
+
+  const saveSet = useCallback((
+    sessionExerciseId: string,
+    setId: string,
+    values: StrengthSetChanges,
+  ) => runAction(
+    `saveSet:${setId}`,
+    () => updateStrengthSet(
+      repositories.workoutSessions,
+      repositories.strengthSets,
+      sessionId,
+      sessionExerciseId,
+      setId,
+      values,
+    ),
+  ), [runAction, sessionId]);
+
+  const completeSet = useCallback((
+    sessionExerciseId: string,
+    setId: string,
+    values: StrengthSetChanges,
+    isCompleted: boolean,
+  ) => runAction(
+    `completeSet:${setId}`,
+    () => setStrengthSetCompletion(
+      repositories.workoutSessions,
+      repositories.strengthSets,
+      sessionId,
+      sessionExerciseId,
+      setId,
+      values,
+      isCompleted,
+    ),
+  ), [runAction, sessionId]);
+
+  const duplicateSet = useCallback((sessionExerciseId: string, setId: string) => runAction(
+    `duplicateSet:${setId}`,
+    () => duplicateStrengthSet(
+      repositories.workoutSessions,
+      repositories.strengthSets,
+      sessionId,
+      sessionExerciseId,
+      setId,
+    ),
+  ), [runAction, sessionId]);
+
+  const removeSet = useCallback((sessionExerciseId: string, setId: string) => runAction(
+    `deleteSet:${setId}`,
+    () => deleteStrengthSet(
+      repositories.workoutSessions,
+      repositories.strengthSets,
+      sessionId,
+      sessionExerciseId,
+      setId,
+    ),
+  ), [runAction, sessionId]);
+
   const availableExercises = useMemo(
     () => availableExercisesForSession(definitions, exercises),
     [definitions, exercises],
@@ -101,6 +180,7 @@ export function useWorkoutSession(sessionId: string) {
   return {
     session,
     exercises,
+    strengthSets,
     availableExercises,
     status,
     errorMessage,
@@ -112,5 +192,10 @@ export function useWorkoutSession(sessionId: string) {
     saveNotes,
     complete,
     abandon,
+    addSet,
+    saveSet,
+    completeSet,
+    duplicateSet,
+    removeSet,
   };
 }
