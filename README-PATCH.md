@@ -1,18 +1,20 @@
-# SportPilot 0.15.0-alpha.8 — bibliothèque alimentaire mobile
+# SportPilot 0.15.0-alpha.9 — carnet de musculation mobile
 
-Branche obligatoire : `feature/mobile-food-library-ux`
+Branche obligatoire : `feature/mobile-strength-library-ux`
 
-Cette étape optimise les aliments locaux, les recettes et les repas favoris pour une utilisation mobile, sans modifier les calculs ni les données :
+Cette étape optimise les écrans de musculation utilisés en dehors d’une séance active, sans modifier les calculs ni les données :
 
-- résumés compacts pour les trois bibliothèques alimentaires ;
-- recherche locale instantanée et filtres rapides pour les aliments ;
-- cartes mobiles avec action principale visible et menu d’actions secondaires ;
-- archivage et suppressions protégés par le dialogue accessible partagé ;
-- mutations silencieuses sans démontage de page ni remontée en haut ;
-- restauration du défilement et mise en évidence après création ou modification ;
-- formulaires d’aliments et de recettes raccourcis avec détails facultatifs repliés ;
-- ajout d’un repas favori au journal depuis sa carte, avec choix de la date et du repas dans une feuille mobile ;
-- skeletons et états vides partagés ;
+- catalogue d’exercices avec résumé compact, recherche prioritaire, filtres avancés repliés et cartes mobiles ;
+- historique de progression accessible directement depuis chaque exercice ;
+- actions modifier, dupliquer, archiver et réactiver regroupées dans un menu secondaire ;
+- archivage protégé par le dialogue accessible partagé et mise à jour silencieuse de la liste ;
+- séances modèles avec recherche locale, résumé, démarrage prioritaire et actions secondaires repliées ;
+- historique des entraînements avec résumé, filtres rapides et cartes compactes ;
+- progression par exercice regroupée dans une synthèse unique avec graphiques et records ouverts à la demande ;
+- records par charge convertis en cartes, sans tableau horizontal ;
+- détail des séries replié dans chaque séance historique ;
+- formulaires d’exercice et de séance modèle raccourcis avec options facultatives et réglages avancés repliés ;
+- focalisation automatique du premier champ invalide et skeletons partagés ;
 - aucune migration Dexie et aucune modification du format de sauvegarde.
 
 ## Validation

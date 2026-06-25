@@ -1,8 +1,25 @@
-# SportPilot 0.15.0-alpha.8
+# SportPilot 0.15.0-alpha.9
 
 PWA locale de suivi sportif, nutritionnel, calorique et de progression.
 
 ## Version 0.15 — Expérience mobile-first
+
+### 0.15.0-alpha.9 — carnet de musculation mobile
+
+Cette préversion harmonise les écrans de musculation utilisés en dehors d’une séance active :
+
+- catalogue d’exercices avec résumé unique, recherche prioritaire, filtres tactiles et options avancées repliées ;
+- cartes d’exercices compactes avec historique prioritaire et actions secondaires regroupées ;
+- archivage ou réactivation protégés par un dialogue accessible, sans rechargement complet ;
+- séances modèles avec résumé, recherche locale, démarrage visible et actions secondaires repliées ;
+- historique des entraînements regroupé en cartes compactes avec filtres Toutes, Terminées et Abandonnées ;
+- séance en cours toujours prioritaire avec accès direct à la reprise ;
+- progression par exercice structurée autour d’une synthèse unique, avec records et graphiques ouverts à la demande ;
+- records de répétitions par charge convertis en cartes mobiles, sans tableau horizontal ;
+- séries de chaque séance historique repliées par défaut ;
+- formulaires d’exercice et de séance modèle raccourcis avec informations facultatives et réglages avancés repliés ;
+- focalisation du premier champ invalide et chargements harmonisés avec les skeletons partagés ;
+- aucune migration Dexie et aucune modification du format de sauvegarde.
 
 ### 0.15.0-alpha.8 — bibliothèque alimentaire mobile
 

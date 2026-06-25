@@ -1,4 +1,4 @@
-import { ArrowLeft, LoaderCircle } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { routePaths } from '@/app/routePaths';
@@ -19,6 +19,7 @@ import {
 import { repositories } from '@/infrastructure/repositories/repositories';
 import { Card } from '@/shared/ui/Card';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
+import { PageSkeleton } from '@/shared/ui/PageSkeleton';
 
 export function WorkoutTemplateEditorPage() {
   const { templateId } = useParams();
@@ -62,7 +63,7 @@ export function WorkoutTemplateEditorPage() {
         <p className="mt-3 max-w-3xl text-slate-600 dark:text-slate-300">Les futures séances réalisées seront indépendantes de ce modèle afin de préserver l’historique.</p>
       </div>
 
-      {loading ? <Card className="mt-8 p-8 text-center" role="status"><LoaderCircle aria-hidden="true" className="mx-auto size-8 animate-spin text-brand-700" /><p className="mt-3 font-semibold">Chargement…</p></Card> : null}
+      {loading ? <PageSkeleton className="mt-6" variant="form" /> : null}
       {errorMessage ? <InlineNotice className="mt-8" tone="error" title="Séance indisponible">{errorMessage}</InlineNotice> : null}
       {!loading && !errorMessage ? <Card className="mt-8 p-5 sm:p-7"><WorkoutTemplateForm initialValues={initialValues} exerciseDefinitions={exerciseDefinitions} submitLabel={templateId ? 'Enregistrer les modifications' : 'Créer la séance'} onSubmit={handleSubmit} /></Card> : null}
     </section>
