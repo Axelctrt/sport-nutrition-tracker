@@ -1,19 +1,18 @@
-# SportPilot 0.15.0-alpha.7 — analyses et bilan hebdomadaire mobile
+# SportPilot 0.15.0-alpha.8 — bibliothèque alimentaire mobile
 
-Branche obligatoire : `feature/mobile-analytics-review-ux`
+Branche obligatoire : `feature/mobile-food-library-ux`
 
-Cette étape optimise les analyses sur douze semaines et le bilan hebdomadaire pour une utilisation mobile, sans modifier les calculs ni les données :
+Cette étape optimise les aliments locaux, les recettes et les repas favoris pour une utilisation mobile, sans modifier les calculs ni les données :
 
-- vue d’ensemble compacte regroupant course, natation, adhérence calorique et poids récent ;
-- graphiques rangés dans des sections ouvertes à la demande ;
-- détails hebdomadaires convertis en cartes et suppression des tableaux horizontaux ;
-- raccourcis directs entre analyses, bilan hebdomadaire et historique ;
-- proposition calorique affichée avant les informations secondaires ;
-- résumé hebdomadaire compact avec poids, évolution, adhérence et score ;
-- détail de l’adhérence, ajustements acceptés et anciens bilans placés dans des sections repliables ;
-- historique des décisions présenté sous forme de cartes mobiles ;
-- acceptation ou refus sans rechargement complet ni disparition du bilan ;
-- chargement assuré par les skeletons partagés ;
+- résumés compacts pour les trois bibliothèques alimentaires ;
+- recherche locale instantanée et filtres rapides pour les aliments ;
+- cartes mobiles avec action principale visible et menu d’actions secondaires ;
+- archivage et suppressions protégés par le dialogue accessible partagé ;
+- mutations silencieuses sans démontage de page ni remontée en haut ;
+- restauration du défilement et mise en évidence après création ou modification ;
+- formulaires d’aliments et de recettes raccourcis avec détails facultatifs repliés ;
+- ajout d’un repas favori au journal depuis sa carte, avec choix de la date et du repas dans une feuille mobile ;
+- skeletons et états vides partagés ;
 - aucune migration Dexie et aucune modification du format de sauvegarde.
 
 ## Validation

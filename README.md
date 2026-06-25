@@ -1,8 +1,24 @@
-# SportPilot 0.15.0-alpha.7
+# SportPilot 0.15.0-alpha.8
 
 PWA locale de suivi sportif, nutritionnel, calorique et de progression.
 
 ## Version 0.15 — Expérience mobile-first
+
+### 0.15.0-alpha.8 — bibliothèque alimentaire mobile
+
+Cette préversion harmonise les aliments locaux, les recettes et les repas favoris pour une utilisation mobile :
+
+- résumés compacts pour comprendre immédiatement le contenu de chaque bibliothèque ;
+- recherche locale instantanée dans les aliments, les recettes et les repas favoris ;
+- filtres rapides pour les aliments favoris ou dont les informations nutritionnelles restent à vérifier ;
+- cartes mobiles avec action principale visible et actions secondaires repliées ;
+- archivage d’un aliment et suppression d’une recette ou d’un favori protégés par le dialogue partagé ;
+- mutations silencieuses sans rechargement complet ni remontée en haut ;
+- restauration du défilement et mise en évidence après création ou modification ;
+- formulaires d’aliments et de recettes raccourcis, avec informations facultatives repliées ;
+- ajout d’un repas favori au journal depuis sa propre carte, dans une feuille mobile accessible ;
+- skeletons et états vides partagés, avec meilleure isolation des tests React ;
+- aucune migration Dexie et aucune modification du format de sauvegarde.
 
 ### 0.15.0-alpha.7 — analyses et bilan hebdomadaire mobile
 

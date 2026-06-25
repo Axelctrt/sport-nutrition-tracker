@@ -1,6 +1,6 @@
-SPORTPILOT 0.15.0-alpha.7
+SPORTPILOT 0.15.0-alpha.8
 
-1. Vérifier la branche feature/mobile-analytics-review-ux.
+1. Vérifier la branche feature/mobile-food-library-ux.
 2. Arrêter le serveur de développement avec Ctrl + C.
 3. Copier le contenu du patch à la racine du projet sport-nutrition-tracker.
 4. Accepter le remplacement des fichiers.
@@ -8,14 +8,15 @@ SPORTPILOT 0.15.0-alpha.7
    npm install
    npm run check
    npm run dev
-6. Ouvrir Analyses et vérifier la synthèse unique sur douze semaines.
-7. Ouvrir successivement les sections Course, Natation, Nutrition, Activité générale, Poids et Répartition sportive.
-8. Vérifier que les graphiques ne sont affichés qu’après ouverture et qu’aucun tableau horizontal n’est présent.
-9. Tester les détails hebdomadaires sous forme de cartes.
-10. Ouvrir le bilan hebdomadaire depuis Analyses et vérifier que la proposition calorique est prioritaire.
-11. Tester l’acceptation ou le refus d’une proposition sans grand rechargement ni remontée en haut.
-12. Vérifier les sections Détail de l’adhérence, Ajustements acceptés et Historique des bilans.
-13. Tester sur iPhone en portrait et paysage, en modes clair et sombre, puis hors connexion.
-14. Recharger l’application avec Ctrl + F5 si une ancienne version reste en cache.
+6. Ouvrir Aliments locaux et vérifier le résumé, la recherche et les filtres Tous, Favoris et À vérifier.
+7. Créer ou modifier un aliment, puis vérifier le retour à la bonne position et la mise en évidence de la carte.
+8. Tester l'archivage avec le dialogue de confirmation, sans rechargement complet.
+9. Ouvrir Recettes et vérifier la recherche, les cartes compactes et l'ajout direct au journal.
+10. Créer ou modifier une recette et vérifier les ingrédients sous forme de cartes mobiles.
+11. Tester la suppression d'une recette avec le dialogue partagé.
+12. Ouvrir Repas favoris, rechercher un favori puis l'ajouter au journal depuis sa carte.
+13. Vérifier la feuille de choix de date et de repas, la touche Échap et le retour du focus.
+14. Tester les trois bibliothèques en portrait et paysage, en modes clair et sombre, puis hors connexion.
+15. Recharger l'application avec Ctrl + F5 si une ancienne version reste en cache.
 
-Aucune migration Dexie ni modification des sauvegardes n’est réalisée.
+Aucune migration Dexie ni modification des sauvegardes n'est réalisée.

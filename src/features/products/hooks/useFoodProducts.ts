@@ -1,10 +1,23 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { EntityId } from '@/domain/models/common';
 import type { FoodProduct } from '@/domain/models/food';
 import { repositories } from '@/infrastructure/repositories/repositories';
 
+function normalizeSearch(value: string): string {
+  return value.trim().toLocaleLowerCase('fr');
+}
+
+function sortProducts(products: readonly FoodProduct[]): FoodProduct[] {
+  return [...products].sort((left, right) => {
+    if (left.isFavorite !== right.isFavorite) {
+      return left.isFavorite ? -1 : 1;
+    }
+    return left.name.localeCompare(right.name, 'fr');
+  });
+}
+
 export function useFoodProducts(query: string) {
-  const [products, setProducts] = useState<FoodProduct[]>([]);
+  const [allProducts, setAllProducts] = useState<FoodProduct[]>([]);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [errorMessage, setErrorMessage] = useState<string>();
   const [archivingId, setArchivingId] = useState<EntityId>();
@@ -13,37 +26,51 @@ export function useFoodProducts(query: string) {
     setStatus('loading');
     setErrorMessage(undefined);
     try {
-      const nextProducts = query.trim().length > 0
-        ? await repositories.food.searchProducts(query, 100)
-        : await repositories.food.listProducts();
-      setProducts(
-        [...nextProducts].sort((left, right) => {
-          if (left.isFavorite !== right.isFavorite) {
-            return left.isFavorite ? -1 : 1;
-          }
-          return left.name.localeCompare(right.name, 'fr');
-        }),
-      );
+      setAllProducts(sortProducts(await repositories.food.listProducts()));
       setStatus('ready');
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Impossible de charger les aliments.');
       setStatus('error');
     }
-  }, [query]);
+  }, []);
 
   useEffect(() => {
     void refresh();
   }, [refresh]);
 
-  const archive = useCallback(async (id: EntityId) => {
+  const products = useMemo(() => {
+    const normalizedQuery = normalizeSearch(query);
+    if (!normalizedQuery) return allProducts;
+
+    return allProducts.filter((product) => [
+      product.name,
+      product.brand,
+      product.barcode,
+    ].some((value) => value?.toLocaleLowerCase('fr').includes(normalizedQuery)));
+  }, [allProducts, query]);
+
+  const archive = useCallback(async (id: EntityId): Promise<boolean> => {
     setArchivingId(id);
+    setErrorMessage(undefined);
     try {
       await repositories.food.archiveProduct(id);
-      await refresh();
+      setAllProducts((current) => current.filter((product) => product.id !== id));
+      return true;
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Impossible d’archiver cet aliment.');
+      return false;
     } finally {
       setArchivingId(undefined);
     }
-  }, [refresh]);
+  }, []);
 
-  return { products, status, errorMessage, archivingId, refresh, archive };
+  return {
+    products,
+    allProducts,
+    status,
+    errorMessage,
+    archivingId,
+    refresh,
+    archive,
+  };
 }
