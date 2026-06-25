@@ -18,7 +18,10 @@ if (typeof version !== 'string' || !/^\d+\.\d+\.\d+$/.test(version)) {
 if (packageLock.version !== version || packageLock.packages?.['']?.version !== version) {
   fail('package.json et package-lock.json n’utilisent pas la même version.');
 }
-if (!read('README.md').startsWith(`# SportPilot ${version}\n`)) {
+const normalizedReadme = read('README.md')
+  .replace(/^\uFEFF/, '')
+  .replace(/\r\n/g, '\n');
+if (!normalizedReadme.startsWith(`# SportPilot ${version}\n`)) {
   fail('le titre du README ne correspond pas à la version du package.');
 }
 if (!read('README-PATCH.md').startsWith(`# SportPilot ${version}`)) {
