@@ -20,7 +20,7 @@ const choices = [
   },
   {
     title: 'Musculation',
-    description: 'Durée, intensité, RPE et estimation énergétique par MET.',
+    description: 'Durée, intensité et estimation énergétique par MET.',
     path: routePaths.addStrengthActivity,
     icon: Dumbbell,
     tone: 'bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-200',

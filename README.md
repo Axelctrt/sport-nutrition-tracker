@@ -367,3 +367,20 @@ Cette préversion ajoute l’assistance à la progression des charges dans les s
 Aucune charge n’est modifiée automatiquement. Aucune nouvelle migration Dexie n’est nécessaire : la table `progressionSuggestions` existe depuis `0.14.0-alpha.1`.
 
 Validation : 75 fichiers de tests, 298 tests, lint, build PWA et audit réussis.
+
+
+## Version 0.14.0-alpha.9 — retrait du RPE général des activités
+
+Cette préversion réserve désormais le RPE aux séries détaillées de musculation :
+
+- retrait du RPE des formulaires de course, natation, vélo, marche et autre cardio ;
+- retrait du RPE du formulaire historique de musculation simplifiée ;
+- retrait du RPE des cartes d’activité, du tableau de bord et des analyses course/natation ;
+- nouvelles activités créées sans valeur RPE générale ;
+- conservation non destructive des anciens RPE déjà enregistrés ;
+- modification d’une ancienne activité sans suppression de sa valeur historique ;
+- sauvegardes anciennes avec RPE et sauvegardes récentes sans RPE toutes deux acceptées.
+
+Le RPE reste disponible uniquement pour chaque série du carnet de musculation. Aucune migration Dexie ni évolution du format de sauvegarde n’est nécessaire.
+
+Validation : 76 fichiers de tests, 301 tests, lint, build PWA et audit réussis.

@@ -46,7 +46,6 @@ function running(overrides: Partial<RunningActivity> = {}): RunningActivity {
     date: '2026-06-02',
     durationMinutes: 50,
     intensity: 'moderate',
-    rpe: 6,
     sessionType: 'easy',
     distanceKm: 10,
     averageCadenceSpm: 170,
@@ -63,7 +62,6 @@ function swimming(overrides: Partial<SwimmingActivity> = {}): SwimmingActivity {
     date: '2026-06-03',
     durationMinutes: 40,
     intensity: 'moderate',
-    rpe: 5,
     sessionType: 'endurance',
     mainStroke: 'freestyle',
     distanceMeters: 2000,
@@ -134,7 +132,7 @@ describe('agrégations analytiques', () => {
     const weeks = createTwelveWeekWindow('2026-06-07');
     const summary = aggregateRunningWeeks([
       running(),
-      running({ id: 'run-2', durationMinutes: 30, distanceKm: 5, rpe: 8 }),
+      running({ id: 'run-2', durationMinutes: 30, distanceKm: 5 }),
     ], weeks).at(-1);
 
     expect(summary).toMatchObject({
@@ -142,16 +140,16 @@ describe('agrégations analytiques', () => {
       durationMinutes: 80,
       sessionCount: 2,
       longestDistanceKm: 10,
-      averageRpe: 7,
       weightedPaceSecondsPerKm: 320,
     });
+    expect(summary).not.toHaveProperty('averageRpe');
   });
 
   it('pondère l’allure de natation par la distance totale', () => {
     const weeks = createTwelveWeekWindow('2026-06-07');
     const summary = aggregateSwimmingWeeks([
       swimming(),
-      swimming({ id: 'swim-2', durationMinutes: 20, distanceMeters: 500, rpe: 7 }),
+      swimming({ id: 'swim-2', durationMinutes: 20, distanceMeters: 500 }),
     ], weeks).at(-1);
 
     expect(summary).toMatchObject({
@@ -159,9 +157,9 @@ describe('agrégations analytiques', () => {
       durationMinutes: 60,
       sessionCount: 2,
       longestDistanceMeters: 2000,
-      averageRpe: 6,
       weightedPaceSecondsPer100m: 144,
     });
+    expect(summary).not.toHaveProperty('averageRpe');
   });
 
   it('calcule l’adhérence calorique et protéique sur les jours suivis', () => {

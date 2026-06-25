@@ -1,11 +1,13 @@
 import { createDefaultAppSettings } from '@/domain/defaults/appSettings';
 import { LOCAL_USER_PROFILE_ID } from '@/domain/defaults/identifiers';
 import type { BackupEnvelope } from '@/domain/models/backup';
+import type { Activity } from '@/domain/models/activity';
 import type { UserProfile } from '@/domain/models/profile';
 import { migrateBackupEnvelope } from '@/infrastructure/backup/backupMigrations';
 import { backupEnvelopeSchema } from '@/infrastructure/backup/backupSchemas';
 import { createEntity } from '@/shared/utils/entities';
 import { createProfileInput } from '@/test/factories/profileFactory';
+import { createRunningActivityInput } from '@/test/factories/activityFactory';
 import {
   createExerciseDefinitionInput,
   createWorkoutTemplateExerciseInput,
@@ -70,6 +72,18 @@ describe('backupEnvelopeSchema', () => {
       format: 'sportpilot-backup',
       schemaVersion: 2,
     });
+  });
+
+  it('accepte les activités récentes sans RPE et les anciennes activités qui en contiennent encore un', () => {
+    const envelope = createValidEnvelope();
+    envelope.data.activities = [
+      createEntity(createRunningActivityInput(), 'activity-modern'),
+      createEntity({ ...createRunningActivityInput(), rpe: 8 }, 'activity-legacy'),
+    ] as Activity[];
+
+    const parsed = backupEnvelopeSchema.parse(envelope);
+    expect(parsed.data.activities[0]).not.toHaveProperty('rpe');
+    expect(parsed.data.activities[1]).toMatchObject({ rpe: 8 });
   });
 
   it('refuse deux pesées pour la même date', () => {

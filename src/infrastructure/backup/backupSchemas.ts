@@ -109,7 +109,7 @@ const activityBaseShape = {
   time: localTimeSchema.optional(),
   durationMinutes: positiveNumber,
   intensity: z.enum(['low', 'moderate', 'high']),
-  rpe: z.number().int().min(1).max(10),
+  rpe: z.number().int().min(1).max(10).optional(),
   notes: z.string().max(10_000).optional(),
   manualCaloriesKcal: nonNegativeNumber.optional(),
   calculation: activityCalculationSnapshotSchema,

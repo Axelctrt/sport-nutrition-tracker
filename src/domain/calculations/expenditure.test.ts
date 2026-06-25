@@ -13,7 +13,6 @@ function createWalkingActivity(includedInDailySteps: boolean): OtherActivity {
     date: '2026-06-23',
     durationMinutes: 60,
     intensity: 'moderate',
-    rpe: 4,
     met: 3.5,
     includedInDailySteps,
     calculation: {

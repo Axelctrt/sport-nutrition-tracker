@@ -240,7 +240,7 @@ export function AnalyticsPage() {
               <div className="mt-4 overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead className="text-slate-500 dark:text-slate-400">
-                    <tr><th className="py-2">Semaine</th><th>Allure</th><th>Sortie longue</th><th>RPE</th></tr>
+                    <tr><th className="py-2">Semaine</th><th>Allure</th><th>Sortie longue</th></tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                     {data.running.map((week) => (
@@ -248,7 +248,6 @@ export function AnalyticsPage() {
                         <td className="py-2 font-medium">{week.label}</td>
                         <td>{formatOptionalPace(week.weightedPaceSecondsPerKm)}/km</td>
                         <td>{week.longestDistanceKm.toLocaleString('fr-FR')} km</td>
-                        <td>{week.averageRpe ?? '—'}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -278,7 +277,7 @@ export function AnalyticsPage() {
               <div className="mt-4 overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead className="text-slate-500 dark:text-slate-400">
-                    <tr><th className="py-2">Semaine</th><th>Allure</th><th>Plus longue</th><th>RPE</th></tr>
+                    <tr><th className="py-2">Semaine</th><th>Allure</th><th>Plus longue</th></tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                     {data.swimming.map((week) => (
@@ -286,7 +285,6 @@ export function AnalyticsPage() {
                         <td className="py-2 font-medium">{week.label}</td>
                         <td>{formatOptionalPace(week.weightedPaceSecondsPer100m)}/100 m</td>
                         <td>{week.longestDistanceMeters.toLocaleString('fr-FR')} m</td>
-                        <td>{week.averageRpe ?? '—'}</td>
                       </tr>
                     ))}
                   </tbody>

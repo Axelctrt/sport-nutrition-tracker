@@ -25,11 +25,6 @@ export const activityFormSchema = z
       .min(1, 'La durée doit être au moins de 1 minute.')
       .max(1_440, 'La durée ne peut pas dépasser 24 heures.'),
     intensity: z.enum(['low', 'moderate', 'high']),
-    rpe: z
-      .number({ message: 'Saisis un RPE valide.' })
-      .int('Le RPE doit être un nombre entier.')
-      .min(1, 'Le RPE minimum est 1.')
-      .max(10, 'Le RPE maximum est 10.'),
     notes: z.string().trim().max(1_000, 'Les notes ne peuvent pas dépasser 1 000 caractères.'),
     manualCaloriesKcal: optionalNumber(
       z
