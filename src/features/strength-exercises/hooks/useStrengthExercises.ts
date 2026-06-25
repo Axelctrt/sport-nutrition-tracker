@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { EntityId } from '@/domain/models/common';
 import type { ExerciseDefinition } from '@/domain/models/strength';
 import {
   duplicateExerciseDefinition,
+  filterExerciseDefinitions,
   listExerciseDefinitions,
   setCustomExerciseArchived,
   type ExerciseFilters,
@@ -10,7 +11,7 @@ import {
 import { repositories } from '@/infrastructure/repositories/repositories';
 
 export function useStrengthExercises(filters: ExerciseFilters) {
-  const [exercises, setExercises] = useState<ExerciseDefinition[]>([]);
+  const [allExercises, setAllExercises] = useState<ExerciseDefinition[]>([]);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [errorMessage, setErrorMessage] = useState<string>();
   const [actionErrorMessage, setActionErrorMessage] = useState<string>();
@@ -20,13 +21,16 @@ export function useStrengthExercises(filters: ExerciseFilters) {
     if (showLoading) setStatus('loading');
     setErrorMessage(undefined);
     try {
-      setExercises(await listExerciseDefinitions(repositories.strengthExercises, filters));
+      setAllExercises(await listExerciseDefinitions(
+        repositories.strengthExercises,
+        { includeArchived: true },
+      ));
       setStatus('ready');
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Impossible de charger les exercices.');
       setStatus('error');
     }
-  }, [filters]);
+  }, []);
 
   useEffect(() => {
     void refresh();
@@ -37,12 +41,7 @@ export function useStrengthExercises(filters: ExerciseFilters) {
     setActionErrorMessage(undefined);
     try {
       const updated = await setCustomExerciseArchived(repositories.strengthExercises, id, isArchived);
-      setExercises((current) => {
-        if (updated.isArchived && !filters.includeArchived) {
-          return current.filter((exercise) => exercise.id !== id);
-        }
-        return current.map((exercise) => exercise.id === id ? updated : exercise);
-      });
+      setAllExercises((current) => current.map((exercise) => exercise.id === id ? updated : exercise));
       return true;
     } catch (error) {
       setActionErrorMessage(error instanceof Error ? error.message : 'Impossible de modifier cet exercice.');
@@ -50,7 +49,13 @@ export function useStrengthExercises(filters: ExerciseFilters) {
     } finally {
       setActionId(undefined);
     }
-  }, [filters.includeArchived]);
+  }, []);
+
+
+  const exercises = useMemo(
+    () => filterExerciseDefinitions(allExercises, filters),
+    [allExercises, filters],
+  );
 
   const duplicate = useCallback(async (id: EntityId) => {
     setActionId(id);

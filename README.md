@@ -9,6 +9,7 @@ PWA locale de suivi sportif, nutritionnel, calorique et de progression.
 Cette préversion harmonise les écrans de musculation utilisés en dehors d’une séance active :
 
 - catalogue d’exercices avec résumé unique, recherche prioritaire, filtres tactiles et options avancées repliées ;
+- recherche et filtres appliqués localement après un chargement unique, sans perte de focus pendant la saisie ;
 - cartes d’exercices compactes avec historique prioritaire et actions secondaires regroupées ;
 - archivage ou réactivation protégés par un dialogue accessible, sans rechargement complet ;
 - séances modèles avec résumé, recherche locale, démarrage visible et actions secondaires repliées ;

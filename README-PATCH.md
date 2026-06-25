@@ -5,6 +5,7 @@ Branche obligatoire : `feature/mobile-strength-library-ux`
 Cette étape optimise les écrans de musculation utilisés en dehors d’une séance active, sans modifier les calculs ni les données :
 
 - catalogue d’exercices avec résumé compact, recherche prioritaire, filtres avancés repliés et cartes mobiles ;
+- correction du champ de recherche : saisie continue, focus conservé et filtrage local sans rechargement à chaque caractère ;
 - historique de progression accessible directement depuis chaque exercice ;
 - actions modifier, dupliquer, archiver et réactiver regroupées dans un menu secondaire ;
 - archivage protégé par le dialogue accessible partagé et mise à jour silencieuse de la liste ;
