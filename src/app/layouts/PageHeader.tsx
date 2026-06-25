@@ -1,4 +1,4 @@
-import { UserRound } from 'lucide-react';
+import { Settings, UserRound } from 'lucide-react';
 import { useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { getRouteTitle } from '@/app/routeMetadata';
@@ -28,6 +28,21 @@ export function PageHeader() {
         </div>
         <div className="flex shrink-0 items-center gap-1 sm:gap-2">
           <InstallPwaButton />
+          <NavLink
+            to={routePaths.settings}
+            aria-label="Ouvrir les paramètres"
+            title="Paramètres"
+            className={({ isActive }) =>
+              cn(
+                'inline-flex size-10 items-center justify-center rounded-xl transition-colors lg:hidden',
+                isActive
+                  ? 'bg-brand-100 text-brand-900 dark:bg-brand-900/50 dark:text-brand-100'
+                  : 'text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800',
+              )
+            }
+          >
+            <Settings aria-hidden="true" className="size-5" />
+          </NavLink>
           <NavLink
             to={routePaths.profile}
             aria-label="Modifier le profil"

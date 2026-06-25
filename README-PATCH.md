@@ -4,6 +4,7 @@ Branche obligatoire : `feature/mobile-profile-settings-backup-ux`
 
 Cette étape optimise les écrans de configuration et de gestion des données sans modifier les calculs ni les formats existants :
 
+- accès direct aux paramètres depuis l’icône d’engrenage de l’en-tête mobile ;
 - résumé compact du profil avec objectif, poids de référence, pas et coefficients de macronutriments ;
 - formulaire de profil réparti en sections progressives et bouton d’enregistrement fixe dans le flux de page ;
 - résumé des paramètres avec thème, stockage, seuil de pas et limite de calibration ;

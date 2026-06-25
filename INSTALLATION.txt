@@ -10,8 +10,8 @@ SPORTPILOT 0.15.0-alpha.10
    npm run dev
 6. Ouvrir Profil et vérifier le résumé, les trois sections et l’enregistrement sans bouton flottant.
 7. Provoquer une erreur dans une section fermée et vérifier que cette section s’ouvre automatiquement.
-8. Ouvrir Paramètres avancés et vérifier le résumé, le skeleton initial et les sections repliables.
-9. Tester le changement de thème puis le rétablissement des valeurs par défaut avec confirmation.
+8. Sur téléphone, appuyer sur l’icône d’engrenage de l’en-tête pour ouvrir Paramètres avancés.
+9. Vérifier le résumé, le skeleton initial et les sections repliables, puis tester le changement de thème et le rétablissement des valeurs par défaut avec confirmation.
 10. Ouvrir Sauvegarde et vérifier les actions Exporter et Restaurer.
 11. Sélectionner une sauvegarde et vérifier le résumé avant d’ouvrir la confirmation de remplacement.
 12. Ouvrir Confidentialité et stockage puis Fonctionnement de l’application.

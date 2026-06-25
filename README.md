@@ -8,6 +8,7 @@ PWA locale de suivi sportif, nutritionnel, calorique et de progression.
 
 Cette préversion simplifie la configuration personnelle et la gestion des données locales sur téléphone :
 
+- accès direct aux paramètres depuis l’icône d’engrenage de l’en-tête mobile ;
 - résumés compacts pour comprendre immédiatement le profil, les réglages actifs et le stockage local ;
 - formulaire de profil organisé en sections progressives, avec objectifs et macronutriments regroupés ;
 - bouton d’enregistrement stable sous le formulaire, sans déplacement pendant le défilement ;
