@@ -1,8 +1,21 @@
-# SportPilot 0.15.0-alpha.3
+# SportPilot 0.15.0-alpha.4
 
 PWA locale de suivi sportif, nutritionnel, calorique et de progression.
 
 ## Version 0.15 — Expérience mobile-first
+
+### 0.15.0-alpha.4 — tableau de bord mobile
+
+Cette préversion réorganise le tableau de bord autour de la journée en cours :
+
+- résumé principal unique regroupant calories consommées, reste ou dépassement, macronutriments, pas et poids du jour ;
+- séance de musculation en cours affichée immédiatement avec reprise directe ;
+- six actions rapides tactiles pour l’alimentation, le scanner, les pas, le poids, les activités et la musculation ;
+- saisies du poids et des pas plus compactes avec confirmation locale, sans toast superposé ;
+- activités et détails de calcul déplacés dans des sections secondaires repliables ;
+- explications énergétiques réduites à une phrase et un lien vers la page dédiée ;
+- skeleton partagé utilisé pendant le chargement initial et rafraîchissement silencieux des données ;
+- aucune migration Dexie et aucune modification du format de sauvegarde.
 
 ### 0.15.0-alpha.3 — journal alimentaire mobile
 

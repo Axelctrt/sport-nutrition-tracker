@@ -15,20 +15,33 @@ function SkeletonBlock({ className }: { className: string }) {
 function DashboardSkeleton() {
   return (
     <>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {Array.from({ length: 4 }, (_, index) => (
-          <Card key={index} className="p-4">
-            <SkeletonBlock className="h-4 w-24" />
-            <SkeletonBlock className="mt-4 h-8 w-32" />
-            <SkeletonBlock className="mt-4 h-2.5 w-full rounded-full" />
-          </Card>
-        ))}
-      </div>
-      <Card className="mt-6 p-5">
-        <SkeletonBlock className="h-5 w-40" />
-        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+      <Card className="p-4 sm:p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0 flex-1">
+            <SkeletonBlock className="h-4 w-32" />
+            <SkeletonBlock className="mt-3 h-9 w-36" />
+          </div>
+          <SkeletonBlock className="h-14 w-24 shrink-0" />
+        </div>
+        <SkeletonBlock className="mt-5 h-2.5 w-full rounded-full" />
+        <div className="mt-5 grid grid-cols-3 gap-2 border-t border-slate-200 pt-4 dark:border-slate-800">
+          {Array.from({ length: 3 }, (_, index) => (
+            <div key={index}>
+              <SkeletonBlock className="mx-auto h-3 w-16 max-w-full" />
+              <SkeletonBlock className="mx-auto mt-2 h-5 w-20 max-w-full" />
+            </div>
+          ))}
+        </div>
+        <div className="mt-4 grid grid-cols-2 gap-3 border-t border-slate-200 pt-4 dark:border-slate-800">
+          <SkeletonBlock className="h-12 w-full" />
+          <SkeletonBlock className="h-12 w-full" />
+        </div>
+      </Card>
+      <Card className="mt-4 p-4 sm:p-5">
+        <SkeletonBlock className="h-5 w-32" />
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
           {Array.from({ length: 6 }, (_, index) => (
-            <SkeletonBlock key={index} className="h-14 w-full" />
+            <SkeletonBlock key={index} className="h-16 w-full" />
           ))}
         </div>
       </Card>

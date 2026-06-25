@@ -16,8 +16,10 @@ function TestLayout() {
 
 let scrollY = 0;
 let scrollToMock = vi.fn();
+let originalRequestAnimationFrame: typeof window.requestAnimationFrame;
 
 beforeEach(() => {
+  originalRequestAnimationFrame = window.requestAnimationFrame;
   clearStoredScrollPositions();
   scrollY = 0;
   Object.defineProperty(window, 'scrollY', { configurable: true, get: () => scrollY });
@@ -31,13 +33,16 @@ beforeEach(() => {
     writable: true,
     value: scrollToMock,
   });
-  window.requestAnimationFrame = (callback: FrameRequestCallback) => {
-    callback(0);
-    return 1;
-  };
+  window.requestAnimationFrame = (callback: FrameRequestCallback) => window.setTimeout(
+    () => callback(0),
+    0,
+  );
 });
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  window.requestAnimationFrame = originalRequestAnimationFrame;
+});
 
 describe('NavigationScrollManager', () => {
   it('revient en haut sur une nouvelle page et restaure la position avec Retour', async () => {
