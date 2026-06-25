@@ -1,4 +1,4 @@
-# SportPilot 0.14.0-alpha.7
+# SportPilot 0.14.0
 
 PWA locale de suivi sportif, nutritionnel, calorique et de progression.
 
@@ -36,7 +36,9 @@ npm run diagnose:off # diagnostic Open Food Facts
 - paramètres énergétiques avancés ;
 - Mifflin–St Jeor, dépenses et macronutriments ;
 - poids, pas et objectifs quotidiens ;
-- course, natation, musculation, vélo, marche et cardio ;
+- course, natation, vélo, marche et cardio ;
+- carnet de musculation détaillé avec catalogue, modèles, séances, séries et reprise en cours ;
+- historique par exercice, graphiques, records, estimation du 1RM et suggestions de progression ;
 - journal alimentaire local avec ajout direct depuis chaque repas ;
 - Open Food Facts avec fonctionnement dégradé ;
 - recettes et repas favoris ;
@@ -104,9 +106,9 @@ npm run build
 npm run preview
 ```
 
-## Contrôles finaux
+## Historique de validation 0.13.0
 
-La version 0.13.0 est validée avec :
+La version 0.13.0 a été validée avec :
 
 - Oxlint : 0 avertissement, 0 erreur ;
 - Vitest : 58 fichiers, 234 tests ;
@@ -384,3 +386,31 @@ Cette préversion réserve désormais le RPE aux séries détaillées de muscula
 Le RPE reste disponible uniquement pour chaque série du carnet de musculation. Aucune migration Dexie ni évolution du format de sauvegarde n’est nécessaire.
 
 Validation : 76 fichiers de tests, 301 tests, lint, build PWA et audit réussis.
+
+## Version stable 0.14.0
+
+Cette version finalise le carnet de musculation local et hors connexion :
+
+- catalogue intégré de 43 exercices et exercices personnalisés ;
+- création, duplication, archivage et réorganisation des séances modèles ;
+- démarrage d’une séance libre ou depuis un modèle ;
+- reprise d’une séance en cours après fermeture de l’application ;
+- séries détaillées avec charge, répétitions, type, notes et RPE ;
+- historique de la dernière performance et reprise rapide des séries précédentes ;
+- statistiques par exercice, records, volumes et estimation du 1RM selon Epley ;
+- suggestions d’augmentation de charge soumises à une décision explicite ;
+- retrait du RPE général des activités cardio sans suppression des anciennes données ;
+- migration Dexie non destructive vers le schéma 2 ;
+- sauvegarde JSON version 2 compatible avec les sauvegardes 0.12 et 0.13 ;
+- fonctionnement hors connexion des fonctionnalités de musculation.
+
+Les anciennes activités de musculation simplifiées restent conservées dans leur historique. Aucune charge cible n’est modifiée automatiquement.
+
+Validation finale :
+
+- Oxlint : 0 erreur et 0 avertissement ;
+- Vitest : 78 fichiers et 305 tests réussis ;
+- TypeScript strict : compilation réussie ;
+- Vite/PWA : build réussi et 106 ressources précachées ;
+- audit MVP et audit de release : réussis.
+

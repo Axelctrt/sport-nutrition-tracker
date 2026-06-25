@@ -1,18 +1,22 @@
-# SportPilot 0.14.0-alpha.9 — retrait du RPE général des activités
+# SportPilot 0.14.0 — release du carnet de musculation
 
-Branche obligatoire : `feature/activity-rpe-cleanup`
+Branche obligatoire : `release/0.14.0`
 
-Cette étape aligne le journal sportif avec le nouveau carnet de musculation :
+Cette release consolide la série 0.14 :
 
-- suppression du champ RPE des formulaires de course, natation, vélo, marche, cardio et ancienne musculation simplifiée ;
-- suppression du RPE des cartes du journal, du tableau de bord et des analyses cardio ;
-- maintien du RPE uniquement au niveau des séries de musculation ;
-- nouvelles activités enregistrées sans RPE général ;
-- conservation des valeurs RPE présentes dans les anciennes activités ;
-- import et export toujours compatibles avec les sauvegardes historiques contenant un RPE ;
-- modification d’une ancienne activité sans effacement de sa valeur historique en base.
-
-Aucune migration Dexie ni nouvelle version du format de sauvegarde n’est nécessaire. Le champ historique devient facultatif et n’est plus exposé dans l’interface.
+- version stable `0.14.0` ;
+- catalogue local d’exercices et exercices personnalisés ;
+- séances modèles et séances réalisées ;
+- séries avec charge, répétitions, type, notes et RPE ;
+- historique, statistiques, records et estimation du 1RM ;
+- suggestions de progression avec décision manuelle ;
+- retrait non destructif du RPE général des activités ;
+- migration Dexie vers le schéma 2 ;
+- sauvegardes JSON version 2 compatibles avec les versions antérieures ;
+- version de l’application centralisée depuis `package.json` ;
+- audit automatique des métadonnées, schémas et fichiers de release ;
+- documentation des calculs de musculation ;
+- raccourci PWA vers le carnet de musculation.
 
 ## Validation
 
@@ -21,9 +25,4 @@ npm install
 npm run check
 ```
 
-- version `0.14.0-alpha.9` ;
-- 76 fichiers de tests ;
-- 301 tests ;
-- lint sans erreur ni avertissement ;
-- build Vite/PWA réussi avec 106 ressources précachées ;
-- audit MVP réussi.
+Résultats validés : 78 fichiers de tests, 305 tests, lint sans erreur ni avertissement, build PWA avec 106 ressources précachées, audit MVP et audit de release réussis.

@@ -1,7 +1,7 @@
 {
   "name": "sport-nutrition-tracker",
   "private": true,
-  "version": "0.14.0-alpha.9",
+  "version": "0.14.0",
   "type": "module",
   "engines": {
     "node": "^20.19.0 || >=22.13.0"
@@ -13,9 +13,10 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "preview": "vite preview",
-    "check": "npm run lint && npm run test && npm run build && npm run audit:mvp",
+    "check": "npm run lint && npm run test && npm run build && npm run audit:mvp && npm run audit:release",
     "diagnose:off": "node scripts/diagnose-open-food-facts.mjs",
-    "audit:mvp": "node scripts/audit-mvp.mjs"
+    "audit:mvp": "node scripts/audit-mvp.mjs",
+    "audit:release": "node scripts/audit-release.mjs"
   },
   "dependencies": {
     "@ericblade/quagga2": "^1.12.1",
