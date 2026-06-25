@@ -15,10 +15,10 @@ import type { WeightRepository } from '@/infrastructure/repositories/contracts/W
 import { repositories } from '@/infrastructure/repositories/repositories';
 
 export type ActivityDraft =
-  | Omit<NewEntity<RunningActivity>, 'calculation'>
-  | Omit<NewEntity<SwimmingActivity>, 'calculation'>
-  | Omit<NewEntity<StrengthTrainingActivity>, 'calculation'>
-  | Omit<NewEntity<OtherActivity>, 'calculation'>;
+  | Omit<NewEntity<RunningActivity>, 'calculation' | 'rpe'>
+  | Omit<NewEntity<SwimmingActivity>, 'calculation' | 'rpe'>
+  | Omit<NewEntity<StrengthTrainingActivity>, 'calculation' | 'rpe'>
+  | Omit<NewEntity<OtherActivity>, 'calculation' | 'rpe'>;
 
 export interface ActivityServiceDependencies {
   settings: Pick<SettingsRepository, 'get'>;
@@ -98,6 +98,7 @@ export async function updateActivityFromDraft(
   const input = toActivityInput(draft, profile, weightEntry?.weightKg, settings);
   const saved = await dependencies.activities.save({
     ...input,
+    ...(existing.rpe === undefined ? {} : { rpe: existing.rpe }),
     id: existing.id,
     createdAt: existing.createdAt,
     updatedAt: existing.updatedAt,

@@ -10,7 +10,6 @@ export function createRunningActivityInput(
     time: '18:00',
     durationMinutes: 50,
     intensity: 'moderate',
-    rpe: 6,
     sessionType: 'easy',
     distanceKm: 8,
     averageCadenceSpm: 170,

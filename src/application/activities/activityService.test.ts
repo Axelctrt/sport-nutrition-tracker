@@ -21,7 +21,6 @@ function runningDraft(overrides: Partial<ActivityDraft> = {}): ActivityDraft {
     date: '2026-06-23',
     durationMinutes: 60,
     intensity: 'moderate',
-    rpe: 6,
     sessionType: 'easy',
     distanceKm: 10,
     averageCadenceSpm: 170,
@@ -74,6 +73,7 @@ describe('activityService', () => {
     expect(activity.calculation.weightKg).toBe(62);
     expect(activity.calculation.estimatedCaloriesKcal).toBe(620);
     expect(create).toHaveBeenCalledOnce();
+    expect(create.mock.calls[0]?.[0]).not.toHaveProperty('rpe');
     expect(recalculate).toHaveBeenCalledWith('2026-06-23', expect.any(Object));
   });
 
@@ -100,6 +100,24 @@ describe('activityService', () => {
     expect(recalculate).toHaveBeenCalledTimes(2);
     expect(recalculate).toHaveBeenCalledWith('2026-06-23', expect.any(Object));
     expect(recalculate).toHaveBeenCalledWith('2026-06-24', expect.any(Object));
+  });
+
+  it('conserve le RPE historique lorsqu’une ancienne activité est modifiée', async () => {
+    const existing = createEntity({
+      ...runningDraft(),
+      rpe: 7,
+      calculation: {
+        weightKg: 60,
+        estimatedCaloriesKcal: 600,
+        coefficientUsed: 1,
+        calculationVersion: 1,
+      },
+    }) as Activity;
+    const { dependencies, save } = createDependencies(existing);
+
+    await updateActivityFromDraft(existing.id, runningDraft({ durationMinutes: 65 }), profile(), dependencies);
+
+    expect(save.mock.calls[0]?.[0]).toMatchObject({ rpe: 7, durationMinutes: 65 });
   });
 
   it('supprime puis recalcule la journée concernée', async () => {

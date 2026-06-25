@@ -243,7 +243,7 @@ export function StrengthActivityPage() {
       initialType="strengthTraining"
       allowedTypes={['strengthTraining']}
       title="Ajouter une séance de musculation"
-      description="La séance est suivie par sa durée, son intensité, son RPE et une valeur MET ajustable."
+      description="La séance est suivie par sa durée, son intensité et une valeur MET ajustable."
     />
   );
 }

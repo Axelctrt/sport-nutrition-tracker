@@ -231,9 +231,10 @@ describe('OpenFoodFactsClient', () => {
     const result = await client.getProductByBarcode('3017624010701');
 
     expect(result?.name).toBe('Produit code-barres');
-    expect(String(fetcher.mock.calls[0]?.[0])).toContain(
-      '/api/v3.6/product/3017624010701.json?',
-    );
+    const requestedUrl = String(fetcher.mock.calls[0]?.[0]);
+    expect(requestedUrl).toContain('/api/v3.6/product/3017624010701.json?');
+    expect(requestedUrl).toContain('app_name=SportPilot');
+    expect(requestedUrl).toContain('app_version=0.14.0');
   });
 
   it('retourne undefined pour un produit absent', async () => {

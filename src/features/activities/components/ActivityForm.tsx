@@ -206,27 +206,6 @@ export function ActivityForm({
               ))}
             </select>
           </FormField>
-
-          <FormField
-            id="activity-rpe"
-            label="RPE sur 10"
-            description="1 = très facile, 10 = effort maximal."
-            error={errors.rpe?.message}
-            required
-          >
-            <input
-              id="activity-rpe"
-              type="number"
-              min="1"
-              max="10"
-              step="1"
-              inputMode="numeric"
-              className={inputClassName}
-              aria-invalid={Boolean(errors.rpe)}
-              aria-describedby={errors.rpe ? 'activity-rpe-error' : 'activity-rpe-description'}
-              {...register('rpe', numberRegistration)}
-            />
-          </FormField>
         </div>
       </Card>
 

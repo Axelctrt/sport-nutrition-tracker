@@ -11,6 +11,15 @@ import type { UserProfile } from '@/domain/models/profile';
 import type { Recipe, RecipeIngredient } from '@/domain/models/recipe';
 import type { AppSettings } from '@/domain/models/settings';
 import type { DailySteps } from '@/domain/models/steps';
+import type {
+  ExerciseDefinition,
+  ProgressionSuggestion,
+  StrengthSet,
+  WorkoutSession,
+  WorkoutSessionExercise,
+  WorkoutTemplate,
+  WorkoutTemplateExercise,
+} from '@/domain/models/strength';
 import type { DailyTarget } from '@/domain/models/targets';
 import type { AcceptedCalorieAdjustment, WeeklyReview } from '@/domain/models/weeklyReview';
 import type { WeightEntry } from '@/domain/models/weight';
@@ -31,6 +40,13 @@ export interface BackupData {
   dailyJournalStatuses: DailyJournalStatus[];
   weeklyReviews: WeeklyReview[];
   acceptedCalorieAdjustments: AcceptedCalorieAdjustment[];
+  exerciseDefinitions: ExerciseDefinition[];
+  workoutTemplates: WorkoutTemplate[];
+  workoutTemplateExercises: WorkoutTemplateExercise[];
+  workoutSessions: WorkoutSession[];
+  workoutSessionExercises: WorkoutSessionExercise[];
+  strengthSets: StrengthSet[];
+  progressionSuggestions: ProgressionSuggestion[];
 }
 
 export interface BackupEnvelope {

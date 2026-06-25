@@ -7,7 +7,6 @@ const baseValues = {
   time: '18:30',
   durationMinutes: 45,
   intensity: 'moderate' as const,
-  rpe: 6,
   notes: '',
   manualCaloriesKcal: undefined,
   runningSessionType: 'easy' as const,
@@ -68,7 +67,8 @@ describe('activityFormSchema', () => {
     expect(result.success).toBe(true);
   });
 
-  it('refuse un RPE hors de la plage 1 à 10', () => {
-    expect(activityFormSchema.safeParse({ ...baseValues, rpe: 11 }).success).toBe(false);
+  it('ignore un ancien RPE transmis par une sauvegarde ou un état historique', () => {
+    const result = activityFormSchema.parse({ ...baseValues, rpe: 11 });
+    expect(result).not.toHaveProperty('rpe');
   });
 });

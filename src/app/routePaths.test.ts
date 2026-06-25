@@ -2,6 +2,10 @@ import {
   barcodeScannerPath,
   newFoodProductForMealPath,
   selectFoodPath,
+  editStrengthExercisePath,
+  editWorkoutTemplatePath,
+  workoutSessionPath,
+  strengthExerciseHistoryPath,
 } from '@/app/routePaths';
 
 describe('parcours de sélection alimentaire', () => {
@@ -33,5 +37,33 @@ describe('parcours de sélection alimentaire', () => {
     expect(selectFoodPath('2026-06-24', 'lunch', undefined, 'openFoodFacts')).toBe(
       '/food/select?date=2026-06-24&slot=lunch&source=openFoodFacts',
     );
+  });
+});
+
+
+describe('parcours du catalogue de musculation', () => {
+  it('construit le chemin de modification d’un exercice personnel', () => {
+    expect(editStrengthExercisePath('exercise-1')).toBe('/strength/exercises/exercise-1/edit');
+  });
+});
+
+
+describe('parcours des séances modèles', () => {
+  it('construit le chemin de modification d’une séance', () => {
+    expect(editWorkoutTemplatePath('template-1')).toBe('/strength/templates/template-1/edit');
+  });
+});
+
+
+describe('parcours des séances réalisées', () => {
+  it('construit le chemin d’une séance en cours ou historique', () => {
+    expect(workoutSessionPath('session-1')).toBe('/strength/sessions/session-1');
+  });
+});
+
+
+describe('parcours de l’historique de musculation', () => {
+  it('construit le chemin de l’historique d’un exercice', () => {
+    expect(strengthExerciseHistoryPath('exercise-1')).toBe('/strength/exercises/exercise-1/history');
   });
 });

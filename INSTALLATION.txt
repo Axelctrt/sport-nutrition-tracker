@@ -1,12 +1,14 @@
-CORRECTIF SPORTPILOT 0.8.2
+SPORTPILOT 0.14.0
 
-1. Arrêter le serveur avec Ctrl + C.
-2. Copier tout le contenu de ce dossier dans le projet sport-nutrition-tracker.
-3. Accepter le remplacement des fichiers.
-4. Exécuter :
+1. Vérifier la branche release/0.14.0.
+2. Arrêter le serveur de développement avec Ctrl + C.
+3. Copier le contenu du patch à la racine du projet sport-nutrition-tracker.
+4. Accepter le remplacement des fichiers.
+5. Exécuter :
    npm install
    npm run check
    npm run dev
-5. Recharger l'application avec Ctrl + F5.
+6. Tester le carnet de musculation, les sauvegardes et la persistance IndexedDB.
+7. Recharger l’application avec Ctrl + F5 si une ancienne version reste en cache.
 
-Le proxy Open Food Facts n'est actif que via npm run dev.
+Le proxy Open Food Facts est actif avec npm run dev. Le build de production contacte directement Open Food Facts.

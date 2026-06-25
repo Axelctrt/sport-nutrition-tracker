@@ -23,7 +23,8 @@ export interface ActivityBase extends DatedEntity {
   time?: LocalTime;
   durationMinutes: number;
   intensity: ActivityIntensity;
-  rpe: number;
+  /** Ancienne valeur conservée uniquement pour compatibilité des données historiques. */
+  rpe?: number;
   notes?: string;
   manualCaloriesKcal?: number;
   calculation: ActivityCalculationSnapshot;

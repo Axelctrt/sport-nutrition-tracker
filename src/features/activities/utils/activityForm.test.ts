@@ -19,6 +19,7 @@ describe('activityForm utils', () => {
 
     expect('notes' in draft).toBe(false);
     expect('time' in draft).toBe(false);
+    expect('rpe' in draft).toBe(false);
   });
 
   it('reconstruit les valeurs du formulaire depuis une activité', () => {
@@ -28,7 +29,9 @@ describe('activityForm utils', () => {
       averageCadenceSpm: 176,
     }));
 
-    expect(activityToFormValues(activity)).toMatchObject({
+    const values = activityToFormValues(activity);
+    expect(values).not.toHaveProperty('rpe');
+    expect(values).toMatchObject({
       activityType: 'running',
       runningSessionType: 'tempo',
       distanceKm: 10,

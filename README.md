@@ -1,4 +1,4 @@
-# SportPilot 0.13.0
+# SportPilot 0.14.0
 
 PWA locale de suivi sportif, nutritionnel, calorique et de progression.
 
@@ -36,7 +36,9 @@ npm run diagnose:off # diagnostic Open Food Facts
 - paramètres énergétiques avancés ;
 - Mifflin–St Jeor, dépenses et macronutriments ;
 - poids, pas et objectifs quotidiens ;
-- course, natation, musculation, vélo, marche et cardio ;
+- course, natation, vélo, marche et cardio ;
+- carnet de musculation détaillé avec catalogue, modèles, séances, séries et reprise en cours ;
+- historique par exercice, graphiques, records, estimation du 1RM et suggestions de progression ;
 - journal alimentaire local avec ajout direct depuis chaque repas ;
 - Open Food Facts avec fonctionnement dégradé ;
 - recettes et repas favoris ;
@@ -57,7 +59,7 @@ La page `#/backup` permet de :
 5. restaurer toutes les tables dans une transaction Dexie ;
 6. effacer toutes les données après confirmation `EFFACER`.
 
-Le format courant est `sportpilot-backup`, schéma version `1`. Les futures migrations de sauvegarde sont centralisées dans :
+Le format courant est `sportpilot-backup`, schéma version `2`. Les sauvegardes des versions 0.12 et 0.13 au schéma version 1 sont migrées automatiquement à l’import. Les futures migrations de sauvegarde sont centralisées dans :
 
 ```text
 src/infrastructure/backup/backupMigrations.ts
@@ -104,9 +106,9 @@ npm run build
 npm run preview
 ```
 
-## Contrôles finaux
+## Historique de validation 0.13.0
 
-La version 0.13.0 est validée avec :
+La version 0.13.0 a été validée avec :
 
 - Oxlint : 0 avertissement, 0 erreur ;
 - Vitest : 58 fichiers, 234 tests ;
@@ -213,4 +215,202 @@ Validation de la version :
 - TypeScript strict : compilation réussie ;
 - Vite/PWA : build et service worker générés ;
 - audit MVP : réussi.
+
+## Version 0.14.0-alpha.1 — socle de données musculation
+
+Cette préversion ajoute le modèle de données du futur carnet de musculation sans encore modifier l’interface :
+
+- catalogue d’exercices système ou utilisateur ;
+- séances modèles et exercices ordonnés ;
+- séances réalisées indépendantes de leur modèle d’origine ;
+- séries avec répétitions, charge, type, validation et RPE facultatif ;
+- suggestions de progression et historique des décisions ;
+- sept nouvelles tables Dexie ajoutées par une migration non destructive ;
+- conservation intégrale des anciennes activités de musculation dans `activities` ;
+- format de sauvegarde version 2 incluant toutes les nouvelles tables ;
+- migration automatique des sauvegardes version 1 vers la version 2.
+
+Validation de cette préversion :
+
+- Oxlint : 0 erreur et 0 avertissement ;
+- Vitest : 59 fichiers et 238 tests réussis ;
+- TypeScript strict : compilation réussie ;
+- Vite/PWA : build et service worker générés ;
+- audit MVP : réussi.
+
+
+
+## Version 0.14.0-alpha.2 — catalogue d’exercices
+
+Cette préversion ajoute le premier écran fonctionnel du carnet de musculation :
+
+- catalogue local de 43 exercices courants disponible hors connexion ;
+- recherche sans sensibilité aux accents ;
+- filtres par groupe musculaire, matériel et origine ;
+- création et modification d’exercices personnels ;
+- archivage et réactivation des exercices personnels ;
+- duplication d’un exercice système ou personnel ;
+- protection des exercices système contre les modifications directes ;
+- accès depuis le journal des activités et la navigation ordinateur ;
+- restauration automatique du catalogue après un effacement ou l’import d’une ancienne sauvegarde.
+
+Validation : 63 fichiers de tests, 249 tests, lint, build PWA et audit réussis.
+
+## Version 0.14.0-alpha.3 — séances modèles de musculation
+
+Cette préversion ajoute la gestion complète des séances modèles :
+
+- création et modification d’une séance modèle ;
+- ajout d’exercices depuis le catalogue local ;
+- ordre modifiable avec des commandes accessibles ;
+- séries prévues et fourchette de répétitions ;
+- charge cible, incrément, repos et RPE maximal recommandé ;
+- notes générales et notes par exercice ;
+- duplication d’une séance avec une configuration indépendante ;
+- archivage et réactivation sans suppression de l’historique ;
+- conservation des identifiants des exercices de modèle lors des modifications ;
+- accès depuis le journal des activités et la navigation ordinateur.
+
+Validation : 66 fichiers de tests, 259 tests, lint, build PWA et audit réussis.
+
+## Version 0.14.0-alpha.4 — séances réalisées
+
+Cette préversion ajoute le cycle de vie des entraînements de musculation :
+
+- démarrage d’une séance libre ou depuis un modèle ;
+- création d’instantanés indépendants du modèle et du catalogue ;
+- reprise automatique d’une séance en cours après fermeture de l’application ;
+- prévention de plusieurs séances simultanées ;
+- ajout, retrait et réorganisation des exercices pendant la séance ;
+- notes générales persistantes ;
+- clôture avec calcul de la durée ;
+- abandon avec conservation dans l’historique ;
+- consultation des séances terminées ou abandonnées ;
+- accès depuis le journal des activités, les modèles et la navigation ordinateur.
+
+Validation : 69 fichiers de tests, 268 tests, lint, build PWA et audit réussis.
+
+
+## Version 0.14.0-alpha.5 — saisie des séries
+
+Cette préversion ajoute la saisie détaillée des séries directement dans les séances de musculation :
+
+- ajout d’une série avec reprise automatique de la charge cible et des répétitions prévues ;
+- saisie de la charge, des répétitions, du RPE et du type de série ;
+- notes facultatives au niveau de chaque série ;
+- validation et réouverture d’une série ;
+- duplication rapide d’une série existante ;
+- suppression avec renumérotation automatique ;
+- état d’avancement par exercice par rapport aux séries prévues ;
+- protection des séances terminées contre les modifications ;
+- persistance locale et reprise après fermeture de l’application ;
+- interface responsive optimisée pour la saisie mobile.
+
+Aucune nouvelle migration Dexie n’est nécessaire : la table `strengthSets` existe depuis `0.14.0-alpha.1`.
+
+Validation : 71 fichiers de tests, 277 tests, lint, build PWA et audit réussis.
+
+
+## Version 0.14.0-alpha.6 — historique par exercice
+
+Cette préversion ajoute la continuité entre les séances de musculation :
+
+- affichage de la dernière séance terminée pour chaque exercice d’une séance en cours ;
+- détail des charges, répétitions et RPE précédents ;
+- reprise automatique des séries de la séance précédente avant toute nouvelle saisie ;
+- protection contre l’écrasement de séries déjà enregistrées ;
+- page d’historique accessible depuis le catalogue et les séances ;
+- récapitulatif du nombre de séances, de la meilleure charge et du volume cumulé ;
+- historique détaillé des séries terminées ;
+- exclusion des séries d’échauffement du volume principal ;
+- accès direct à la séance d’origine ;
+- fonctionnement intégral hors connexion avec IndexedDB.
+
+Aucune nouvelle migration Dexie n’est nécessaire : l’historique est recalculé à partir des séances et séries déjà stockées.
+
+Validation : 73 fichiers de tests, 285 tests, lint, build PWA et audit réussis.
+
+
+## Version 0.14.0-alpha.7 — statistiques et records de musculation
+
+Cette préversion enrichit l’historique de chaque exercice avec des analyses calculées localement :
+
+- graphiques d’évolution de la charge maximale, de la charge moyenne et du 1RM estimé ;
+- graphique du volume et des répétitions par séance ;
+- meilleure charge, meilleur volume sur une série et meilleur volume sur une séance ;
+- nombre total de séries de travail et de répétitions ;
+- charge moyenne par série de travail ;
+- estimation du 1RM avec la formule d’Epley sur les séries de 1 à 12 répétitions ;
+- comparaison de la dernière séance avec la précédente ;
+- records de répétitions pour chaque charge utilisée ;
+- exclusion systématique des séries d’échauffement des statistiques principales.
+
+Aucune nouvelle migration Dexie n’est nécessaire : les statistiques sont recalculées à partir des séances et séries existantes.
+
+Validation : 74 fichiers de tests, 290 tests, lint, build PWA et audit réussis.
+
+
+## Version 0.14.0-alpha.8 — suggestions de progression
+
+Cette préversion ajoute l’assistance à la progression des charges dans les séances modèles :
+
+- génération automatique d’une suggestion après une séance terminée ;
+- vérification de toutes les séries de travail prévues ;
+- exigence de la borne haute de répétitions sur chaque série ;
+- prise en compte du RPE maximal recommandé lorsqu’il est configuré ;
+- calcul de la charge proposée avec l’incrément du modèle ;
+- acceptation de la proposition ou saisie d’une charge personnalisée ;
+- refus ou report de la décision ;
+- mise à jour de la charge cible du modèle uniquement après acceptation explicite ;
+- conservation de la séance réalisée et de ses valeurs historiques ;
+- suivi des suggestions en attente depuis l’historique des entraînements ;
+- conservation complète de l’historique des décisions.
+
+Aucune charge n’est modifiée automatiquement. Aucune nouvelle migration Dexie n’est nécessaire : la table `progressionSuggestions` existe depuis `0.14.0-alpha.1`.
+
+Validation : 75 fichiers de tests, 298 tests, lint, build PWA et audit réussis.
+
+
+## Version 0.14.0-alpha.9 — retrait du RPE général des activités
+
+Cette préversion réserve désormais le RPE aux séries détaillées de musculation :
+
+- retrait du RPE des formulaires de course, natation, vélo, marche et autre cardio ;
+- retrait du RPE du formulaire historique de musculation simplifiée ;
+- retrait du RPE des cartes d’activité, du tableau de bord et des analyses course/natation ;
+- nouvelles activités créées sans valeur RPE générale ;
+- conservation non destructive des anciens RPE déjà enregistrés ;
+- modification d’une ancienne activité sans suppression de sa valeur historique ;
+- sauvegardes anciennes avec RPE et sauvegardes récentes sans RPE toutes deux acceptées.
+
+Le RPE reste disponible uniquement pour chaque série du carnet de musculation. Aucune migration Dexie ni évolution du format de sauvegarde n’est nécessaire.
+
+Validation : 76 fichiers de tests, 301 tests, lint, build PWA et audit réussis.
+
+## Version stable 0.14.0
+
+Cette version finalise le carnet de musculation local et hors connexion :
+
+- catalogue intégré de 43 exercices et exercices personnalisés ;
+- création, duplication, archivage et réorganisation des séances modèles ;
+- démarrage d’une séance libre ou depuis un modèle ;
+- reprise d’une séance en cours après fermeture de l’application ;
+- séries détaillées avec charge, répétitions, type, notes et RPE ;
+- historique de la dernière performance et reprise rapide des séries précédentes ;
+- statistiques par exercice, records, volumes et estimation du 1RM selon Epley ;
+- suggestions d’augmentation de charge soumises à une décision explicite ;
+- retrait du RPE général des activités cardio sans suppression des anciennes données ;
+- migration Dexie non destructive vers le schéma 2 ;
+- sauvegarde JSON version 2 compatible avec les sauvegardes 0.12 et 0.13 ;
+- fonctionnement hors connexion des fonctionnalités de musculation.
+
+Les anciennes activités de musculation simplifiées restent conservées dans leur historique. Aucune charge cible n’est modifiée automatiquement.
+
+Validation finale :
+
+- Oxlint : 0 erreur et 0 avertissement ;
+- Vitest : 78 fichiers et 305 tests réussis ;
+- TypeScript strict : compilation réussie ;
+- Vite/PWA : build réussi et 106 ressources précachées ;
+- audit MVP et audit de release : réussis.
 

@@ -4,6 +4,7 @@ import { createDefaultAppSettings } from '@/domain/defaults/appSettings';
 import { RepositoryError } from '@/domain/errors/RepositoryError';
 import type { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import { appDatabase } from '@/infrastructure/database/database';
+import { ensureExerciseCatalog } from '@/application/strength/exerciseCatalogSeeder';
 
 export interface DatabaseInitializationResult {
   settings: AppSettings;
@@ -17,6 +18,8 @@ export async function initializeDatabase(
     if (!database.isOpen()) {
       await database.open();
     }
+
+    await ensureExerciseCatalog(database);
 
     const existingSettings = await database.appSettings.get(APP_SETTINGS_ID);
 

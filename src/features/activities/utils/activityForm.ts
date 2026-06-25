@@ -23,7 +23,6 @@ function commonDraft(values: ActivityFormValues) {
     date: values.date,
     durationMinutes: values.durationMinutes,
     intensity: values.intensity,
-    rpe: values.rpe,
     ...(values.time ? { time: values.time } : {}),
     ...(notes !== undefined ? { notes } : {}),
     ...(values.manualCaloriesKcal !== undefined
@@ -100,7 +99,6 @@ export function defaultActivityFormValues(
     time: '',
     durationMinutes: 45,
     intensity: 'moderate',
-    rpe: 5,
     notes: '',
     manualCaloriesKcal: undefined,
     runningSessionType: 'easy',
@@ -121,7 +119,6 @@ export function activityToFormValues(activity: Activity): ActivityFormValues {
     time: activity.time ?? '',
     durationMinutes: activity.durationMinutes,
     intensity: activity.intensity,
-    rpe: activity.rpe,
     notes: activity.notes ?? '',
     manualCaloriesKcal: activity.manualCaloriesKcal,
     runningSessionType: 'easy' as const,
