@@ -1,6 +1,7 @@
 import { Settings, UserRound } from 'lucide-react';
 import { useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
+import { MobileAppMenu } from '@/app/layouts/MobileAppMenu';
 import { getRouteTitle } from '@/app/routeMetadata';
 import { routePaths } from '@/app/routePaths';
 import { InstallPwaButton } from '@/shared/ui/InstallPwaButton';
@@ -27,7 +28,8 @@ export function PageHeader() {
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-1 sm:gap-2">
-          <InstallPwaButton />
+          <InstallPwaButton className="hidden lg:inline-flex" />
+          <MobileAppMenu />
           <NavLink
             to={routePaths.settings}
             aria-label="Ouvrir les paramètres"

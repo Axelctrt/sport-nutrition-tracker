@@ -1,10 +1,11 @@
+import { mobileMoreNavigation } from '@/app/navigation';
 import { barcodeScannerPath, routePaths, selectFoodPath } from '@/app/routePaths';
 import { CURRENT_BACKUP_SCHEMA_VERSION } from '@/infrastructure/backup/backupMigrations';
 import { databaseSchemaVersion, databaseTableNames } from '@/infrastructure/database/schema';
 
-describe('préparation de la version 0.15.0-alpha.11', () => {
+describe('préparation de la version 0.15.0-alpha.12', () => {
   it('expose la préversion UX dans le build', () => {
-    expect(__APP_VERSION__).toBe('0.15.0-alpha.11');
+    expect(__APP_VERSION__).toBe('0.15.0-alpha.12');
     expect(__APP_VERSION__).toMatch(/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/);
   });
 
@@ -17,6 +18,21 @@ describe('préparation de la version 0.15.0-alpha.11', () => {
       'weights',
       'foodEntries',
       'workoutSessions',
+    ]));
+  });
+
+  it('rend les écrans secondaires accessibles depuis le menu mobile', () => {
+    const mobilePaths = mobileMoreNavigation.flatMap((section) =>
+      section.items.map((item) => item.path),
+    );
+
+    expect(mobilePaths).toEqual(expect.arrayContaining([
+      routePaths.workoutSessions,
+      routePaths.strengthExercises,
+      routePaths.history,
+      routePaths.weeklyReview,
+      routePaths.backup,
+      routePaths.calculationsInformation,
     ]));
   });
 

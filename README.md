@@ -1,8 +1,24 @@
-# SportPilot 0.15.0-alpha.11
+# SportPilot 0.15.0-alpha.12
 
 PWA locale de suivi sportif, nutritionnel, calorique et de progression.
 
 ## Version 0.15 — Expérience mobile-first
+
+### 0.15.0-alpha.12 — navigation mobile et expérience PWA
+
+Cette préversion finalise l’accès aux écrans secondaires et les états transversaux de l’application sur téléphone :
+
+- menu mobile complet accessible depuis l’en-tête sans modifier la navigation basse ;
+- accès direct aux entraînements, exercices, modèles, historique, bilan, profil, paramètres, sauvegarde et calculs ;
+- état actif du menu lorsqu’un écran secondaire est ouvert ;
+- feuille mobile accessible avec fermeture par croix, arrière-plan ou touche Échap, verrouillage du scroll et restitution déterministe du focus au bouton Menu ;
+- instructions d’installation spécifiques à l’iPhone avec le parcours Safari Partager puis Ajouter à l’écran d’accueil ;
+- installation native proposée sur les navigateurs compatibles et état explicite lorsque la PWA est déjà installée ;
+- bannière hors connexion plus précise et confirmation temporaire lorsque le réseau revient ;
+- message de mise à jour PWA adapté aux safe areas et actions plus lisibles sur téléphone ;
+- page des calculs convertie en sections progressives avec résumé compact et liens vers le profil et les paramètres ;
+- pages hors connexion et introuvable enrichies avec actions de reprise claires ;
+- aucune migration Dexie et aucune modification du format de sauvegarde.
 
 ### 0.15.0-alpha.11 — recherche et ajout alimentaire mobile
 

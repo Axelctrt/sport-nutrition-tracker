@@ -1,6 +1,6 @@
-SPORTPILOT 0.15.0-alpha.11
+SPORTPILOT 0.15.0-alpha.12
 
-1. Vérifier la branche feature/mobile-food-search-scanner-ux.
+1. Vérifier la branche feature/mobile-navigation-pwa-ux.
 2. Arrêter le serveur de développement avec Ctrl + C.
 3. Copier le contenu du patch à la racine du projet sport-nutrition-tracker.
 4. Accepter le remplacement des fichiers.
@@ -8,17 +8,18 @@ SPORTPILOT 0.15.0-alpha.11
    npm install
    npm run check
    npm run dev
-6. Ouvrir Journal alimentaire, choisir un repas puis Ajouter.
-7. Vérifier la grille Récents, Favoris, Tous et Open Food Facts, ainsi que le bouton Scanner un code-barres.
-8. Choisir un aliment local et vérifier que la quantité s’ouvre dans une feuille mobile sans déplacement de page.
-9. Fermer cette feuille avec la croix, Échap puis un appui sur l’arrière-plan, et vérifier le retour du focus.
-10. Tester la recherche Open Food Facts par nom puis par code-barres.
-11. Vérifier le résumé des résultats et les cartes compactes avec calories, protéines, glucides et lipides.
-12. Scanner un produit, régler la quantité puis l’ajouter au repas présélectionné.
-13. Fermer la feuille après un scan et vérifier que le produit prêt reste disponible avec le bouton Régler la quantité.
-14. Ouvrir les sections Caméra et confidentialité puis Saisir le code manuellement.
-15. Tester en portrait et paysage, en modes clair et sombre, puis hors connexion pour les aliments locaux.
-16. Recharger l’application avec Ctrl + F5 si une ancienne version reste en cache.
+6. Sur téléphone, vérifier la nouvelle icône Menu dans l’en-tête.
+7. Ouvrir le menu et contrôler les groupes Musculation, Suivi et décisions, puis Compte et application.
+8. Tester les liens Entraînements, Exercices, Séances modèles, Historique, Bilan hebdomadaire, Sauvegarde et Calculs.
+9. Vérifier la fermeture du menu avec la croix, Échap et un appui sur l’arrière-plan.
+10. Vérifier que le focus revient au bouton Menu après fermeture.
+11. Sur iPhone dans Safari, contrôler les instructions Partager puis Ajouter à l’écran d’accueil.
+12. Dans la PWA installée, vérifier que le menu indique que SportPilot est déjà installé.
+13. Couper le réseau et vérifier la bannière hors connexion, puis le message Connexion rétablie au retour du réseau.
+14. Ouvrir Informations sur les calculs et tester les sections repliables.
+15. Tester les pages hors connexion et page introuvable.
+16. Tester en portrait et paysage, en modes clair et sombre, avec la navigation basse visible.
+17. Recharger l’application avec Ctrl + F5 si une ancienne version reste en cache.
 
 Schéma Dexie : version 2.
 Sauvegarde JSON : version 2.
