@@ -1,4 +1,4 @@
-# SportPilot 0.14.0-alpha.5
+# SportPilot 0.14.0-alpha.6
 
 PWA locale de suivi sportif, nutritionnel, calorique et de progression.
 
@@ -307,3 +307,23 @@ Cette préversion ajoute la saisie détaillée des séries directement dans les 
 Aucune nouvelle migration Dexie n’est nécessaire : la table `strengthSets` existe depuis `0.14.0-alpha.1`.
 
 Validation : 71 fichiers de tests, 277 tests, lint, build PWA et audit réussis.
+
+
+## Version 0.14.0-alpha.6 — historique par exercice
+
+Cette préversion ajoute la continuité entre les séances de musculation :
+
+- affichage de la dernière séance terminée pour chaque exercice d’une séance en cours ;
+- détail des charges, répétitions et RPE précédents ;
+- reprise automatique des séries de la séance précédente avant toute nouvelle saisie ;
+- protection contre l’écrasement de séries déjà enregistrées ;
+- page d’historique accessible depuis le catalogue et les séances ;
+- récapitulatif du nombre de séances, de la meilleure charge et du volume cumulé ;
+- historique détaillé des séries terminées ;
+- exclusion des séries d’échauffement du volume principal ;
+- accès direct à la séance d’origine ;
+- fonctionnement intégral hors connexion avec IndexedDB.
+
+Aucune nouvelle migration Dexie n’est nécessaire : l’historique est recalculé à partir des séances et séries déjà stockées.
+
+Validation : 73 fichiers de tests, 285 tests, lint, build PWA et audit réussis.

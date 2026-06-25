@@ -1,18 +1,17 @@
-# SportPilot 0.14.0-alpha.5 — saisie des séries
+# SportPilot 0.14.0-alpha.6 — historique par exercice
 
-Branche obligatoire : `feature/strength-sets`
+Branche obligatoire : `feature/strength-history`
 
-Cette étape ajoute la saisie détaillée des séries dans les séances en cours :
+Cette étape ajoute la continuité entre les séances de musculation :
 
-- ajout d’une série préremplie depuis l’objectif de l’exercice ou la série précédente ;
-- répétitions, charge, RPE, type et notes ;
-- validation et réouverture ;
-- enregistrement sans validation ;
-- duplication rapide ;
-- suppression et renumérotation ;
-- progression visuelle par rapport aux séries prévues ;
-- lecture seule dans les séances terminées ;
-- persistance complète dans IndexedDB.
+- dernière performance affichée dans chaque exercice ;
+- reprise rapide des séries précédentes ;
+- protection contre l’écrasement de séries déjà saisies ;
+- historique complet par exercice ;
+- meilleure charge et volume cumulé ;
+- exclusion des échauffements du volume principal ;
+- accès aux séances d’origine ;
+- fonctionnement hors connexion.
 
 Aucune migration Dexie supplémentaire n’est nécessaire.
 
@@ -25,9 +24,9 @@ npm run check
 
 Résultats attendus :
 
-- version `0.14.0-alpha.5` ;
-- 71 fichiers de tests ;
-- 277 tests ;
+- version `0.14.0-alpha.6` ;
+- 73 fichiers de tests ;
+- 285 tests ;
 - lint sans erreur ni avertissement ;
 - build Vite/PWA réussi ;
 - audit MVP réussi.

@@ -46,6 +46,14 @@ export class DexieStrengthSetRepository implements StrengthSetRepository {
     });
   }
 
+  createMany(inputs: Array<NewEntity<StrengthSet>>): Promise<StrengthSet[]> {
+    return runRepositoryOperation('create', 'Impossible de reprendre les séries précédentes.', async () => {
+      const sets = inputs.map((input) => createEntity<StrengthSet>(input));
+      if (sets.length > 0) await this.database.strengthSets.bulkAdd(sets);
+      return sortSets(sets);
+    });
+  }
+
   update(id: EntityId, changes: StrengthSetUpdate): Promise<StrengthSet> {
     return runRepositoryOperation('update', 'Impossible de modifier cette série.', async () => {
       const current = await this.database.strengthSets.get(id);

@@ -81,6 +81,13 @@ const StrengthExerciseEditorPage = lazy(() =>
 );
 
 
+const StrengthExerciseHistoryPage = lazy(() =>
+  import('@/features/strength-history/pages/StrengthExerciseHistoryPage').then((module) => ({
+    default: module.StrengthExerciseHistoryPage,
+  })),
+);
+
+
 
 const WorkoutSessionsPage = lazy(() =>
   import('@/features/strength-sessions/pages/WorkoutSessionsPage').then((module) => ({
@@ -348,6 +355,15 @@ export function LazyStrengthExerciseEditorPage() {
   return (
     <RouteSuspense>
       <StrengthExerciseEditorPage />
+    </RouteSuspense>
+  );
+}
+
+
+export function LazyStrengthExerciseHistoryPage() {
+  return (
+    <RouteSuspense>
+      <StrengthExerciseHistoryPage />
     </RouteSuspense>
   );
 }

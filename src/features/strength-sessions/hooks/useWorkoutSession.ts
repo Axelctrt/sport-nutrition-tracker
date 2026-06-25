@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ExerciseDefinition, StrengthSet, WorkoutSession, WorkoutSessionExercise } from '@/domain/models/strength';
 import {
+  copyPreviousExerciseSets,
+  getPreviousExercisePerformance,
+  type ExerciseHistoryEntry,
+} from '@/application/strength/strengthHistoryService';
+import {
   abandonWorkoutSession,
   addExerciseToWorkoutSession,
   availableExercisesForSession,
@@ -27,6 +32,7 @@ export function useWorkoutSession(sessionId: string) {
   const [exercises, setExercises] = useState<WorkoutSessionExercise[]>([]);
   const [definitions, setDefinitions] = useState<ExerciseDefinition[]>([]);
   const [strengthSets, setStrengthSets] = useState<StrengthSet[]>([]);
+  const [previousPerformances, setPreviousPerformances] = useState<Record<string, ExerciseHistoryEntry | undefined>>({});
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [errorMessage, setErrorMessage] = useState<string>();
   const [action, setAction] = useState<string>();
@@ -40,10 +46,20 @@ export function useWorkoutSession(sessionId: string) {
         listExerciseDefinitions(repositories.strengthExercises),
         listStrengthSetsForSession(repositories.strengthSets, sessionId),
       ]);
+      const performanceEntries = await Promise.all(view.exercises.map(async (exercise) => ([
+        exercise.id,
+        await getPreviousExercisePerformance(
+          repositories.workoutSessions,
+          repositories.strengthSets,
+          sessionId,
+          exercise.exerciseDefinitionId,
+        ),
+      ] as const)));
       setSession(view.session);
       setExercises(view.exercises);
       setDefinitions(catalog);
       setStrengthSets(sets);
+      setPreviousPerformances(Object.fromEntries(performanceEntries));
       setStatus('ready');
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Impossible de charger cette séance.');
@@ -172,6 +188,16 @@ export function useWorkoutSession(sessionId: string) {
     ),
   ), [runAction, sessionId]);
 
+  const reusePreviousSets = useCallback((sessionExerciseId: string) => runAction(
+    `reusePreviousSets:${sessionExerciseId}`,
+    () => copyPreviousExerciseSets(
+      repositories.workoutSessions,
+      repositories.strengthSets,
+      sessionId,
+      sessionExerciseId,
+    ),
+  ), [runAction, sessionId]);
+
   const availableExercises = useMemo(
     () => availableExercisesForSession(definitions, exercises),
     [definitions, exercises],
@@ -181,6 +207,7 @@ export function useWorkoutSession(sessionId: string) {
     session,
     exercises,
     strengthSets,
+    previousPerformances,
     availableExercises,
     status,
     errorMessage,
@@ -197,5 +224,6 @@ export function useWorkoutSession(sessionId: string) {
     completeSet,
     duplicateSet,
     removeSet,
+    reusePreviousSets,
   };
 }

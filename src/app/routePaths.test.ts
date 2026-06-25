@@ -5,6 +5,7 @@ import {
   editStrengthExercisePath,
   editWorkoutTemplatePath,
   workoutSessionPath,
+  strengthExerciseHistoryPath,
 } from '@/app/routePaths';
 
 describe('parcours de sélection alimentaire', () => {
@@ -57,5 +58,12 @@ describe('parcours des séances modèles', () => {
 describe('parcours des séances réalisées', () => {
   it('construit le chemin d’une séance en cours ou historique', () => {
     expect(workoutSessionPath('session-1')).toBe('/strength/sessions/session-1');
+  });
+});
+
+
+describe('parcours de l’historique de musculation', () => {
+  it('construit le chemin de l’historique d’un exercice', () => {
+    expect(strengthExerciseHistoryPath('exercise-1')).toBe('/strength/exercises/exercise-1/history');
   });
 });

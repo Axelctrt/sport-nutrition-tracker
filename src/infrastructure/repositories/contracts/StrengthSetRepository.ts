@@ -16,6 +16,7 @@ export interface StrengthSetRepository {
   listBySession(sessionId: EntityId): Promise<StrengthSet[]>;
   listBySessionExercise(sessionExerciseId: EntityId): Promise<StrengthSet[]>;
   create(set: NewEntity<StrengthSet>): Promise<StrengthSet>;
+  createMany(sets: Array<NewEntity<StrengthSet>>): Promise<StrengthSet[]>;
   update(id: EntityId, changes: StrengthSetUpdate): Promise<StrengthSet>;
   deleteAndRenumber(sessionExerciseId: EntityId, id: EntityId): Promise<StrengthSet[]>;
 }

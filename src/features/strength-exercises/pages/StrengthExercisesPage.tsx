@@ -1,7 +1,7 @@
-import { Archive, Copy, Dumbbell, LoaderCircle, Pencil, Plus, RotateCcw, Search } from 'lucide-react';
+import { Archive, Copy, Dumbbell, History, LoaderCircle, Pencil, Plus, RotateCcw, Search } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { editStrengthExercisePath, routePaths } from '@/app/routePaths';
+import { editStrengthExercisePath, routePaths, strengthExerciseHistoryPath } from '@/app/routePaths';
 import type { ExerciseEquipment, ExerciseSource, MuscleGroup } from '@/domain/models/strength';
 import { useStrengthExercises } from '@/features/strength-exercises/hooks/useStrengthExercises';
 import {
@@ -123,6 +123,7 @@ export function StrengthExercisesPage() {
               {exercise.secondaryMuscleGroups.length > 0 ? <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">Secondaires : {exercise.secondaryMuscleGroups.map(muscleGroupLabel).join(', ')}</p> : null}
               {exercise.description ? <p className="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-300">{exercise.description}</p> : null}
               <div className="mt-5 flex flex-wrap gap-2">
+                <Link to={strengthExerciseHistoryPath(exercise.id)} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-300 px-3 text-sm font-semibold hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"><History aria-hidden="true" className="size-4" />Historique</Link>
                 {exercise.source === 'user' ? (
                   <>
                     <Link to={editStrengthExercisePath(exercise.id)} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-300 px-3 text-sm font-semibold hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"><Pencil aria-hidden="true" className="size-4" />Modifier</Link>

@@ -7,6 +7,9 @@ import { initializeDatabase } from '@/infrastructure/database/databaseLifecycle'
 import { createEntity } from '@/shared/utils/entities';
 import {
   createExerciseDefinitionInput,
+  createStrengthSetInput,
+  createWorkoutSessionExerciseInput,
+  createWorkoutSessionInput,
 } from '@/test/factories/strengthFactory';
 
 describe('WorkoutSessionPage', () => {
@@ -101,7 +104,7 @@ describe('WorkoutSessionPage', () => {
       });
     });
 
-    await user.click(screen.getByRole('button', { name: 'Dupliquer' }));
+    await user.click(await screen.findByRole('button', { name: 'Dupliquer' }));
     await waitFor(async () => {
       expect(await appDatabase.strengthSets.count()).toBe(2);
     });
@@ -114,6 +117,57 @@ describe('WorkoutSessionPage', () => {
       const remaining = await appDatabase.strengthSets.toArray();
       expect(remaining).toHaveLength(1);
       expect(remaining[0]?.setNumber).toBe(1);
+    });
+  });
+
+  it('affiche et reprend les séries de la séance précédente', async () => {
+    await appDatabase.workoutSessions.add(createEntity(createWorkoutSessionInput({
+      date: '2026-06-20',
+      startedAt: '2026-06-20T17:00:00.000Z',
+      completedAt: '2026-06-20T18:00:00.000Z',
+    }), 'session-previous'));
+    await appDatabase.workoutSessionExercises.add(createEntity(createWorkoutSessionExerciseInput({
+      sessionId: 'session-previous',
+      exerciseDefinitionId: 'exercise-bench',
+      exerciseNameSnapshot: 'Développé couché',
+    }), 'session-exercise-previous'));
+    await appDatabase.strengthSets.bulkAdd([
+      createEntity(createStrengthSetInput({
+        sessionId: 'session-previous',
+        sessionExerciseId: 'session-exercise-previous',
+        setNumber: 1,
+        repetitions: 12,
+        weightKg: 60,
+        rpe: 8,
+      }), 'previous-set-1'),
+      createEntity(createStrengthSetInput({
+        sessionId: 'session-previous',
+        sessionExerciseId: 'session-exercise-previous',
+        setNumber: 2,
+        repetitions: 10,
+        weightKg: 60,
+        rpe: 8.5,
+      }), 'previous-set-2'),
+    ]);
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter initialEntries={['/strength/sessions/session-current']}>
+        <Routes>
+          <Route path="/strength/sessions/:sessionId" element={<WorkoutSessionPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText(/Dernière séance/)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Reprendre ces séries' }));
+
+    await waitFor(async () => {
+      const copied = await appDatabase.strengthSets.where('sessionId').equals('session-current').toArray();
+      expect(copied).toHaveLength(2);
+      expect(copied).toEqual(expect.arrayContaining([
+        expect.objectContaining({ weightKg: 60, repetitions: 12, isCompleted: false }),
+        expect.objectContaining({ weightKg: 60, repetitions: 10, isCompleted: false }),
+      ]));
     });
   });
 

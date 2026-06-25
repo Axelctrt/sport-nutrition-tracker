@@ -4,6 +4,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { getWorkoutSessionTitle } from '@/application/strength/workoutSessionService';
 import { routePaths } from '@/app/routePaths';
 import { StrengthSetEditor } from '@/features/strength-sessions/components/StrengthSetEditor';
+import { PreviousExercisePerformance } from '@/features/strength-history/components/PreviousExercisePerformance';
 import { useWorkoutSession } from '@/features/strength-sessions/hooks/useWorkoutSession';
 import { workoutSessionStatusLabel } from '@/features/strength-sessions/utils/sessionLabels';
 import { loadUnitLabel } from '@/features/strength-exercises/utils/exerciseLabels';
@@ -20,6 +21,7 @@ export function WorkoutSessionPage() {
     session,
     exercises,
     strengthSets,
+    previousPerformances,
     availableExercises,
     status,
     errorMessage,
@@ -36,6 +38,7 @@ export function WorkoutSessionPage() {
     completeSet,
     duplicateSet,
     removeSet,
+    reusePreviousSets,
   } = useWorkoutSession(sessionId);
   const [selectedExerciseId, setSelectedExerciseId] = useState('');
   const [notes, setNotes] = useState('');
@@ -144,6 +147,14 @@ export function WorkoutSessionPage() {
                 </div>
               ) : null}
             </div>
+            <PreviousExercisePerformance
+              exerciseDefinitionId={exercise.exerciseDefinitionId}
+              performance={previousPerformances[exercise.id]}
+              editable={editable}
+              hasCurrentSets={strengthSets.some((set) => set.sessionExerciseId === exercise.id)}
+              isCopying={action === `reusePreviousSets:${exercise.id}`}
+              onCopy={() => reusePreviousSets(exercise.id)}
+            />
             <StrengthSetEditor
               exercise={exercise}
               sets={strengthSets.filter((set) => set.sessionExerciseId === exercise.id)}

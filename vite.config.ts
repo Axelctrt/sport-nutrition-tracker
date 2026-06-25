@@ -25,7 +25,7 @@ function createOpenFoodFactsProxy(
     timeout: 20_000,
     proxyTimeout: 20_000,
     headers: {
-      'User-Agent': 'SportPilot/0.14.0-alpha.5 (local PWA; Open Food Facts integration)',
+      'User-Agent': 'SportPilot/0.14.0-alpha.6 (local PWA; Open Food Facts integration)',
     },
     rewrite,
     configure(proxy) {
