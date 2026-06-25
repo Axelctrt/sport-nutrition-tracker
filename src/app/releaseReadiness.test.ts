@@ -2,9 +2,9 @@ import { routePaths } from '@/app/routePaths';
 import { CURRENT_BACKUP_SCHEMA_VERSION } from '@/infrastructure/backup/backupMigrations';
 import { databaseSchemaVersion, databaseTableNames } from '@/infrastructure/database/schema';
 
-describe('préparation de la version 0.15.0-alpha.1', () => {
+describe('préparation de la version 0.15.0-alpha.2', () => {
   it('expose la préversion UX dans le build', () => {
-    expect(__APP_VERSION__).toBe('0.15.0-alpha.1');
+    expect(__APP_VERSION__).toBe('0.15.0-alpha.2');
     expect(__APP_VERSION__).toMatch(/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/);
   });
 

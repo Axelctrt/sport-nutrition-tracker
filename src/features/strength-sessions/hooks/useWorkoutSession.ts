@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type {
   ExerciseDefinition,
   ProgressionSuggestion,
@@ -38,8 +38,16 @@ import {
   type StrengthSetChanges,
 } from '@/application/strength/strengthSetService';
 import { repositories } from '@/infrastructure/repositories/repositories';
+import { useToast } from '@/shared/toast/useToast';
+import type { SaveStatusValue } from '@/shared/ui/SaveStatus';
+
+interface RefreshOptions {
+  showLoading?: boolean;
+}
 
 export function useWorkoutSession(sessionId: string) {
+  const toast = useToast();
+  const savedTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const [session, setSession] = useState<WorkoutSession>();
   const [exercises, setExercises] = useState<WorkoutSessionExercise[]>([]);
   const [definitions, setDefinitions] = useState<ExerciseDefinition[]>([]);
@@ -49,9 +57,20 @@ export function useWorkoutSession(sessionId: string) {
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [errorMessage, setErrorMessage] = useState<string>();
   const [action, setAction] = useState<string>();
+  const [saveStatus, setSaveStatus] = useState<SaveStatusValue>('idle');
 
-  const refresh = useCallback(async () => {
-    setStatus('loading');
+  const markSaved = useCallback(() => {
+    if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+    setSaveStatus('saved');
+    savedTimerRef.current = setTimeout(() => setSaveStatus('idle'), 2_500);
+  }, []);
+
+  useEffect(() => () => {
+    if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+  }, []);
+
+  const refresh = useCallback(async ({ showLoading = true }: RefreshOptions = {}): Promise<boolean> => {
+    if (showLoading) setStatus('loading');
     setErrorMessage(undefined);
     try {
       const [view, catalog, sets, suggestions] = await Promise.all([
@@ -76,9 +95,12 @@ export function useWorkoutSession(sessionId: string) {
       setProgressionSuggestions(suggestions);
       setPreviousPerformances(Object.fromEntries(performanceEntries));
       setStatus('ready');
+      return true;
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Impossible de charger cette séance.');
-      setStatus('error');
+      const message = error instanceof Error ? error.message : 'Impossible de charger cette séance.';
+      setErrorMessage(message);
+      if (showLoading) setStatus('error');
+      return false;
     }
   }, [sessionId]);
 
@@ -88,18 +110,26 @@ export function useWorkoutSession(sessionId: string) {
 
   const runAction = useCallback(async <T,>(name: string, operation: () => Promise<T>): Promise<T | undefined> => {
     setAction(name);
-    setErrorMessage(undefined);
+    setSaveStatus('saving');
     try {
       const result = await operation();
-      await refresh();
+      const refreshed = await refresh({ showLoading: false });
+      if (!refreshed) {
+        setSaveStatus('error');
+        toast.error('Données enregistrées, affichage non actualisé', 'Recharge la séance pour afficher les dernières modifications.');
+        return result;
+      }
+      markSaved();
       return result;
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'L’action demandée a échoué.');
+      const message = error instanceof Error ? error.message : 'L’action demandée a échoué.';
+      setSaveStatus('error');
+      toast.error('Action impossible', message);
       return undefined;
     } finally {
       setAction(undefined);
     }
-  }, [refresh]);
+  }, [markSaved, refresh, toast]);
 
   const addExercise = useCallback((exerciseDefinitionId: string) => runAction(
     'addExercise',
@@ -144,7 +174,6 @@ export function useWorkoutSession(sessionId: string) {
     'abandon',
     () => abandonWorkoutSession(repositories.workoutSessions, sessionId),
   ), [runAction, sessionId]);
-
 
   const addSet = useCallback((sessionExerciseId: string) => runAction(
     `addSet:${sessionExerciseId}`,
@@ -222,7 +251,6 @@ export function useWorkoutSession(sessionId: string) {
     ),
   ), [runAction, sessionId]);
 
-
   const decideProgression = useCallback((
     suggestionId: string,
     decision: ProgressionDecision,
@@ -253,6 +281,7 @@ export function useWorkoutSession(sessionId: string) {
     status,
     errorMessage,
     action,
+    saveStatus,
     refresh,
     addExercise,
     removeExercise,

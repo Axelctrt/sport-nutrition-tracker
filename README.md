@@ -1,10 +1,25 @@
-# SportPilot 0.15.0-alpha.1
+# SportPilot 0.15.0-alpha.2
 
 PWA locale de suivi sportif, nutritionnel, calorique et de progression.
 
-## Version 0.15 — Fondations UX
+## Version 0.15 — Expérience mobile-first
 
-Cette préversion introduit le socle mobile-first de la refonte UX :
+### 0.15.0-alpha.2 — séance de musculation mobile
+
+Cette préversion optimise la séance pour une utilisation réelle pendant l’entraînement :
+
+- barre d’action fixe sur téléphone avec durée, état de sauvegarde et bouton `Terminer` ;
+- adaptation automatique de la barre sur ordinateur sans dupliquer les actions ;
+- rafraîchissement silencieux après chaque mutation, sans démontage de la page ni retour en haut ;
+- cartes d’exercices repliables avec objectif, avancement et performance précédente regroupés ;
+- séries compactes en trois colonnes tactiles pour la charge, les répétitions et le RPE ;
+- type et notes de série déplacés dans une section secondaire ;
+- ajout et duplication faisant apparaître uniquement le nouvel élément lorsque nécessaire ;
+- notifications uniques après les actions rapides ;
+- dialogues accessibles pour terminer, abandonner, retirer un exercice ou supprimer une série ;
+- état vide et notes générales harmonisés avec les fondations UX.
+
+### 0.15.0-alpha.1 — fondations UX
 
 - écran de démarrage avec le logo SportPilot ;
 - skeletons adaptés aux routes et limitant les décalages visuels ;

@@ -22,7 +22,7 @@ const icons = {
 export function ToastViewport({ toasts, onDismiss }: ToastViewportProps) {
   return (
     <div
-      className="pointer-events-none fixed inset-x-3 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-[70] flex flex-col items-center gap-2 lg:inset-x-auto lg:bottom-6 lg:right-6 lg:w-[24rem]"
+      className="toast-viewport-offset pointer-events-none fixed inset-x-3 z-[70] flex flex-col items-center gap-2 lg:inset-x-auto lg:right-6 lg:w-[24rem]"
       aria-label="Notifications"
       aria-live="polite"
       aria-relevant="additions text"

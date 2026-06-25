@@ -84,9 +84,17 @@ a {
   padding-bottom: calc(6rem + env(safe-area-inset-bottom));
 }
 
+.toast-viewport-offset {
+  bottom: calc(5.5rem + env(safe-area-inset-bottom) + var(--mobile-sticky-action-offset, 0rem));
+}
+
 @media (min-width: 64rem) {
   .safe-page-bottom {
     padding-bottom: 2rem;
+  }
+
+  .toast-viewport-offset {
+    bottom: 1.5rem;
   }
 }
 
