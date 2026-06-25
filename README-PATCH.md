@@ -1,18 +1,19 @@
-# SportPilot 0.15.0-alpha.4 — tableau de bord mobile
+# SportPilot 0.15.0-alpha.6 — poids et historique mobile
 
-Branche obligatoire : `feature/mobile-dashboard-ux`
+Branche obligatoire : `feature/mobile-weight-history-ux`
 
-Cette étape réorganise le tableau de bord pour une consultation rapide sur téléphone, sans modifier les données ni les règles métier :
+Cette étape optimise la saisie du poids, l’évolution des pesées et l’historique général pour une utilisation mobile, sans modifier les données ni les règles métier :
 
-- résumé quotidien compact avec calories consommées, reste ou dépassement, protéines, glucides, lipides, pas et poids du jour ;
-- séance de musculation en cours visible immédiatement avec bouton de reprise prioritaire ;
-- zone de six actions rapides adaptée à une utilisation à une main ;
-- accès direct à l’ajout alimentaire, au scanner, aux pas, au poids, aux activités et à la musculation ;
-- saisies du poids et des pas ouvertes directement depuis les actions rapides dans une feuille mobile, sans navigation ni doublon plus bas ;
-- activités et informations de calcul déplacées dans des sections repliables ;
-- chargement initial assuré par le skeleton partagé ;
-- restauration centralisée du défilement conservée ;
-- correction du mock `requestAnimationFrame` du test de navigation afin d’éliminer les exceptions asynchrones ;
+- résumé compact avec dernière pesée, moyenne sur sept jours, variation récente et écart à la trajectoire ;
+- formulaire de pesée plus court avec note facultative repliée et bouton fixe sous le formulaire ;
+- cartes de pesée mobiles remplaçant le tableau horizontal ;
+- modification directe depuis une carte et suppression via le dialogue accessible partagé ;
+- sauvegarde et suppression silencieuses sans démontage de la page ;
+- graphique filtrable sur 30 jours, 90 jours ou l’ensemble de l’historique ;
+- historique quotidien compact avec poids, pas, activité, alimentation et état du journal ;
+- périodes rapides de 7, 28 et 90 jours, complétées par une période personnalisée repliable ;
+- liens directs vers le journal alimentaire, les activités et la pesée de chaque date ;
+- chargement assuré par les skeletons partagés ;
 - aucune migration Dexie et aucune modification du format de sauvegarde.
 
 ## Validation

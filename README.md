@@ -1,8 +1,39 @@
-# SportPilot 0.15.0-alpha.4
+# SportPilot 0.15.0-alpha.6
 
 PWA locale de suivi sportif, nutritionnel, calorique et de progression.
 
 ## Version 0.15 — Expérience mobile-first
+
+### 0.15.0-alpha.6 — poids et historique mobile
+
+Cette préversion simplifie le suivi du poids et la consultation de l’historique sur téléphone :
+
+- résumé du poids regroupant dernière mesure, moyenne mobile, variation et écart à la trajectoire ;
+- saisie mobile compacte avec note facultative repliée et bouton d’enregistrement fixe sous le formulaire ;
+- historique des pesées présenté sous forme de cartes, sans tableau horizontal ;
+- périodes rapides de 30 jours, 90 jours ou historique complet pour le graphique ;
+- modification directe d’une pesée depuis sa carte et suppression protégée par le dialogue partagé ;
+- sauvegarde et suppression silencieuses sans rechargement complet ni remontée en haut ;
+- historique général regroupé en cartes quotidiennes compactes avec résumé de période ;
+- filtres rapides de 7, 28 et 90 jours, avec dates personnalisées disponibles en option ;
+- accès direct au journal alimentaire, aux activités et à la pesée de chaque journée ;
+- aucune migration Dexie et aucune modification du format de sauvegarde.
+
+### 0.15.0-alpha.5 — suivi des activités mobile
+
+Cette préversion simplifie la saisie et la consultation des activités sur téléphone :
+
+- journal quotidien compact avec nombre de séances, durée totale et calories retenues regroupés ;
+- cartes de course, natation, vélo, marche et cardio allégées, avec métriques essentielles immédiatement lisibles ;
+- modification, duplication et suppression regroupées dans un menu secondaire ;
+- suppression protégée par le dialogue accessible partagé ;
+- duplication et suppression silencieuses, sans grand chargement ni remontée en haut ;
+- restauration du défilement et mise en évidence temporaire après ajout, modification ou duplication ;
+- choix du type d’activité plus compact et formulaires adaptés aux claviers mobiles ;
+- bouton d’enregistrement stable sous la note facultative, sans déplacement pendant le scroll ;
+- notes et correction calorique déplacées dans une section facultative repliable ;
+- liens de musculation et explications énergétiques déplacés dans des sections secondaires ;
+- aucune migration Dexie et aucune modification du format de sauvegarde.
 
 ### 0.15.0-alpha.4 — tableau de bord mobile
 

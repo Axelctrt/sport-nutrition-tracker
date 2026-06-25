@@ -6,6 +6,7 @@ import {
   editWorkoutTemplatePath,
   workoutSessionPath,
   strengthExerciseHistoryPath,
+  weightPath,
 } from '@/app/routePaths';
 
 describe('parcours de sélection alimentaire', () => {
@@ -65,5 +66,12 @@ describe('parcours des séances réalisées', () => {
 describe('parcours de l’historique de musculation', () => {
   it('construit le chemin de l’historique d’un exercice', () => {
     expect(strengthExerciseHistoryPath('exercise-1')).toBe('/strength/exercises/exercise-1/history');
+  });
+});
+
+
+describe('parcours du suivi du poids', () => {
+  it('ouvre la pesée de la date demandée', () => {
+    expect(weightPath('2026-06-25')).toBe('/weight?date=2026-06-25');
   });
 });

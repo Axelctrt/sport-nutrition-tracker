@@ -70,6 +70,10 @@ export function foodJournalPath(date: string): string {
   return `${routePaths.food}?date=${encodeURIComponent(date)}`;
 }
 
+export function weightPath(date: string): string {
+  return `${routePaths.weight}?date=${encodeURIComponent(date)}`;
+}
+
 export function addFoodPath(date: string, slot: string): string {
   return `${routePaths.addFood}?date=${encodeURIComponent(date)}&slot=${encodeURIComponent(slot)}`;
 }
