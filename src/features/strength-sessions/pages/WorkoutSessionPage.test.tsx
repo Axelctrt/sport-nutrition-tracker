@@ -4,8 +4,8 @@ import type { ReactNode } from 'react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { WorkoutSessionPage } from '@/features/strength-sessions/pages/WorkoutSessionPage';
 import { appDatabase } from '@/infrastructure/database/database';
-import { initializeDatabase } from '@/infrastructure/database/databaseLifecycle';
 import { ToastProvider } from '@/shared/toast/ToastProvider';
+import { deleteAppDatabaseAfterTest, resetAppDatabaseForTest } from '@/test/appDatabaseTestUtils';
 import { createEntity } from '@/shared/utils/entities';
 import {
   createExerciseDefinitionInput,
@@ -33,9 +33,7 @@ function renderSessionPage(extraRoutes?: ReactNode) {
 describe('WorkoutSessionPage', () => {
   beforeEach(async () => {
     cleanup();
-    appDatabase.close();
-    await appDatabase.delete();
-    await initializeDatabase();
+    await resetAppDatabaseForTest();
     await appDatabase.exerciseDefinitions.bulkPut([
       createEntity(createExerciseDefinitionInput({ name: 'Développé couché' }), 'exercise-bench'),
       createEntity(createExerciseDefinitionInput({ name: 'Rowing barre', primaryMuscleGroup: 'back' }), 'exercise-row'),
@@ -56,8 +54,7 @@ describe('WorkoutSessionPage', () => {
 
   afterEach(async () => {
     cleanup();
-    appDatabase.close();
-    await appDatabase.delete();
+    await deleteAppDatabaseAfterTest();
   });
 
   it('ajoute un exercice, enregistre les notes et termine la séance', async () => {
@@ -225,11 +222,13 @@ describe('WorkoutSessionPage', () => {
     renderSessionPage();
 
     expect(await screen.findByRole('heading', { name: 'Suggestions de progression' })).toBeInTheDocument();
-    const loadInput = screen.getByLabelText('Charge cible retenue');
+    const loadInput = await screen.findByLabelText('Charge cible retenue');
     await user.clear(loadInput);
     await user.type(loadInput, '63');
     expect(loadInput).toHaveValue(63);
-    await user.click(screen.getByRole('button', { name: 'Accepter cette charge' }));
+    const acceptButton = screen.getByRole('button', { name: 'Accepter cette charge' });
+    await waitFor(() => expect(acceptButton).toBeEnabled());
+    await user.click(acceptButton);
 
     await waitFor(async () => {
       expect((await appDatabase.progressionSuggestions.get('suggestion-1'))?.status).toBe('accepted');

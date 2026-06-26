@@ -4,24 +4,13 @@ import { MemoryRouter } from 'react-router-dom';
 import { vi } from 'vitest';
 import { createStrengthExercise } from '@/test/factories/strengthUxFactory';
 
-const mocks = vi.hoisted(() => ({
-  listAll: vi.fn(),
-}));
-
-vi.mock('@/infrastructure/repositories/repositories', () => ({
-  repositories: {
-    strengthExercises: {
-      listAll: mocks.listAll,
-    },
-  },
-}));
-
 import { StrengthExercisesPage } from '@/features/strength-exercises/pages/StrengthExercisesPage';
+import { repositories } from '@/infrastructure/repositories/repositories';
 
 describe('StrengthExercisesPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.listAll.mockResolvedValue([
+    vi.spyOn(repositories.strengthExercises, 'listAll').mockResolvedValue([
       createStrengthExercise({ id: 'squat', name: 'Squat arrière' }),
       createStrengthExercise({ id: 'bench', name: 'Développé couché' }),
     ]);
@@ -42,6 +31,6 @@ describe('StrengthExercisesPage', () => {
     expect(search).toHaveFocus();
     await waitFor(() => expect(screen.getByText('Squat arrière')).toBeInTheDocument());
     expect(screen.queryByText('Développé couché')).not.toBeInTheDocument();
-    expect(mocks.listAll).toHaveBeenCalledTimes(1);
+    expect(repositories.strengthExercises.listAll).toHaveBeenCalledTimes(1);
   });
 });

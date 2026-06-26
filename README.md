@@ -251,15 +251,39 @@ Adresse de développement habituelle : `http://127.0.0.1:5173/`.
 ```powershell
 npm run dev          # serveur Vite
 npm run lint         # Oxlint
-npm run test         # tests Vitest
+npm run test         # suite Vitest déterministe
+npm run test:stability # suite Vitest brassée avec une seed fixe
 npm run build        # TypeScript + build PWA
 npm run audit:mvp    # contrôle statique de la PWA
 npm run audit:release # cohérence version, documentation et schémas
 npm run audit:rc     # audit du build d’une Release Candidate
 npm run audit:stable # budgets du build et intégrité de la version stable
 npm run check        # lint + tests + build + tous les audits
+npm run ci           # contrôle CI principal : lint, tests, build et audits
 npm run preview      # prévisualisation du build
 npm run diagnose:off # diagnostic Open Food Facts
+```
+
+## Intégration continue
+
+Le workflow `.github/workflows/ci.yml` s’exécute lors des pushes vers `develop` ou `main`, ainsi que pour les pull requests ciblant l’une de ces branches.
+
+Il lance deux jobs indépendants :
+
+- `quality` : installation reproductible avec `npm ci`, lint, suite Vitest, build PWA et audits ;
+- `test-order-stability` : suite Vitest complète dans un ordre brassé avec une seed fixe.
+
+Pour exécuter localement le contrôle principal :
+
+```powershell
+npm ci
+npm run ci
+```
+
+Le contrôle complémentaire d’indépendance à l’ordre se lance avec :
+
+```powershell
+npm run test:stability
 ```
 
 ## Fonctionnalités
