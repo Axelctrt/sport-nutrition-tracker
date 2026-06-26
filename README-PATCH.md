@@ -1,22 +1,21 @@
-# SportPilot 0.15.0-alpha.12 — navigation mobile et expérience PWA
+# SportPilot 0.15.0-alpha.13 — finitions de saisie et panneaux mobiles
 
-Branche obligatoire : `feature/mobile-navigation-pwa-ux`
+Branche obligatoire : `feature/mobile-form-interaction-polish`
 
-Cette étape finalise la navigation et les états transversaux sur téléphone sans modifier les données ni les calculs :
+Cette étape de finition corrige trois comportements transversaux avant la Release Candidate :
 
-- nouveau menu mobile complet dans l’en-tête ;
-- accès direct à la musculation, à l’historique, au bilan, à la sauvegarde et aux informations de calcul ;
-- profil et paramètres également disponibles dans ce menu, en complément de leurs raccourcis mobiles ;
-- état actif du menu lorsqu’un écran secondaire est ouvert ;
-- feuille accessible avec focus initial, verrouillage du scroll, boucle de tabulation, Échap et restitution déterministe du focus au bouton Menu ;
-- instructions d’installation adaptées à Safari sur iPhone ;
-- bouton d’installation native dans le menu sur les navigateurs compatibles ;
-- indication claire lorsque SportPilot fonctionne déjà comme application installée ;
-- bannière hors connexion plus explicite et confirmation du retour du réseau ;
-- invite de mise à jour PWA adaptée à la navigation basse et aux safe areas ;
-- page Informations sur les calculs organisée en sections repliables ;
-- pages hors connexion et introuvable avec actions de reprise plus claires ;
-- aucune migration Dexie et aucune modification du format de sauvegarde JSON.
+- tous les champs natifs de date, heure, mois ou semaine respectent strictement la largeur de leur conteneur sur Safari iOS ;
+- leur hauteur est alignée sur les autres champs partagés ;
+- un champ numérique contenant uniquement `0` se vide automatiquement lorsqu’il reçoit le focus ;
+- si aucune nouvelle valeur n’est saisie, `0` est restauré au moment de quitter le champ ;
+- ce comportement couvre les séries, charges, répétitions, poids, pas et les autres champs numériques similaires ;
+- l’ouverture d’une section repliable recentre doucement le contenu développé dans la fenêtre ;
+- les animations sont désactivées lorsque `prefers-reduced-motion` est actif ;
+- le test de retour après ajout d’une activité vérifie directement l’appel de navigation, sa destination et l’état complet transmis au journal ;
+- la page d’édition transmet explicitement cet état à `navigate`, même lorsqu’une branche locale provenait d’une ancienne base ;
+- le helper de navigation possède désormais ses propres tests de régression ;
+- le schéma Dexie reste en version 2 ;
+- le format de sauvegarde JSON reste en version 2.
 
 ## Validation
 
@@ -25,4 +24,4 @@ npm install
 npm run check
 ```
 
-Tester en priorité le menu complet, l’installation depuis Safari, le retour du réseau et la mise à jour PWA sur iPhone 15 en portrait puis en paysage.
+Tester en priorité les champs de date en portrait et paysage, les séries préremplies à zéro, la saisie du poids et l’ouverture de plusieurs sections repliables sur iPhone 15. Le test d’activité ne dépend plus de la façon dont `MemoryRouter` expose temporairement `location.state` selon l’environnement.

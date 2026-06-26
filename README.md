@@ -1,8 +1,23 @@
-# SportPilot 0.15.0-alpha.12
+# SportPilot 0.15.0-alpha.13
 
 PWA locale de suivi sportif, nutritionnel, calorique et de progression.
 
 ## Version 0.15 — Expérience mobile-first
+
+### 0.15.0-alpha.13 — finitions de saisie et panneaux mobiles
+
+Cette préversion corrige trois irritants transversaux avant la Release Candidate :
+
+- champs de date et d’heure contraints à la même largeur et à la même hauteur que les autres champs sur Safari iOS ;
+- correction spécifique de la largeur intrinsèque des contrôles natifs dans les grilles mobiles ;
+- effacement automatique d’une valeur numérique égale à `0` lorsque le champ reçoit le focus ;
+- restauration automatique de `0` si le champ est quitté sans nouvelle saisie ;
+- comportement appliqué aux séries, charges, répétitions, poids, pas et autres champs numériques similaires ;
+- recentrage doux du contenu lorsqu’une section, une carte ou un menu repliable est développé ;
+- respect de `prefers-reduced-motion` pour éviter les animations imposées ;
+- stabilisation d’un test d’activité dépendant de la date courante ;
+- stabilisation de la vérification du retour au journal par contrôle direct de la destination et de l’état complet transmis à React Router ;
+- aucune migration Dexie et aucune modification du format de sauvegarde.
 
 ### 0.15.0-alpha.12 — navigation mobile et expérience PWA
 
@@ -602,3 +617,8 @@ Validation finale :
 - Vite/PWA : build réussi et 106 ressources précachées ;
 - audit MVP et audit de release : réussis.
 
+
+
+### Correctif de cohérence du retour après ajout d’une activité
+
+La navigation de retour transmet explicitement au journal le message de confirmation, l’identifiant de l’activité enregistrée et la clé de restauration du défilement. Un test dédié couvre désormais le helper de navigation afin d’éviter qu’une branche locale plus ancienne ne revienne à un simple `navigate(destination)` sans état.

@@ -17,6 +17,8 @@ describe('champs natifs responsives', () => {
     expect(styles).toContain("input[type='time']");
     expect(styles).toContain('min-inline-size: 0');
     expect(styles).toContain('max-inline-size: 100%');
+    expect(styles).toContain('block-size: 2.75rem');
+    expect(styles).toContain('width: -webkit-fill-available');
     expect(styles).toContain('::-webkit-date-and-time-value');
   });
 });

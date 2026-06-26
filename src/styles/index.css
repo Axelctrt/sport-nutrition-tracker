@@ -127,9 +127,28 @@ input[type='datetime-local'],
 input[type='month'],
 input[type='week'] {
   display: block;
+  box-sizing: border-box;
+  width: 100%;
   inline-size: 100%;
+  min-width: 0;
   min-inline-size: 0;
+  max-width: 100%;
   max-inline-size: 100%;
+  min-height: 2.75rem;
+  block-size: 2.75rem;
+  flex: 1 1 0%;
+  overflow: hidden;
+}
+
+@supports (-webkit-touch-callout: none) {
+  input[type='date'],
+  input[type='time'],
+  input[type='datetime-local'],
+  input[type='month'],
+  input[type='week'] {
+    width: -webkit-fill-available;
+    inline-size: -webkit-fill-available;
+  }
 }
 
 input[type='date']::-webkit-date-and-time-value,
@@ -137,7 +156,9 @@ input[type='time']::-webkit-date-and-time-value,
 input[type='datetime-local']::-webkit-date-and-time-value,
 input[type='month']::-webkit-date-and-time-value,
 input[type='week']::-webkit-date-and-time-value {
+  width: 100%;
   min-width: 0;
+  max-width: 100%;
   text-align: left;
 }
 
@@ -146,8 +167,12 @@ input[type='time']::-webkit-datetime-edit,
 input[type='datetime-local']::-webkit-datetime-edit,
 input[type='month']::-webkit-datetime-edit,
 input[type='week']::-webkit-datetime-edit {
+  display: block;
+  width: 100%;
   min-width: 0;
+  max-width: 100%;
   overflow: hidden;
+  padding: 0;
 }
 
 @media (min-width: 40rem) {

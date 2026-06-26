@@ -5,8 +5,13 @@ import { NavigationScrollManager } from '@/app/layouts/NavigationScrollManager';
 import { PageHeader } from '@/app/layouts/PageHeader';
 import { OfflineStatusBanner } from '@/pwa/OfflineStatusBanner';
 import { PwaUpdatePrompt } from '@/pwa/PwaUpdatePrompt';
+import { useCenterExpandedContent } from '@/shared/hooks/useCenterExpandedContent';
+import { useNumericZeroInputBehavior } from '@/shared/hooks/useNumericZeroInputBehavior';
 
 export function AppLayout() {
+  useNumericZeroInputBehavior();
+  useCenterExpandedContent();
+
   return (
     <div className="min-h-screen text-slate-900 dark:text-slate-100">
       <NavigationScrollManager />

@@ -1,6 +1,6 @@
-import { ArrowLeft, LoaderCircle } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   createActivityFromDraft,
   updateActivityFromDraft,
@@ -10,6 +10,11 @@ import { routePaths } from '@/app/routePaths';
 import type { Activity, ActivityType } from '@/domain/models/activity';
 import type { AppSettings } from '@/domain/models/settings';
 import { ActivityForm } from '@/features/activities/components/ActivityForm';
+import {
+  createActivityJournalFeedbackState,
+  createActivityJournalRestoreState,
+  type ActivityJournalNavigationState,
+} from '@/features/activities/navigation/activityJournalNavigation';
 import type { ActivityFormValues } from '@/features/activities/schemas/activityFormSchema';
 import {
   activityToFormValues,
@@ -18,8 +23,8 @@ import {
 } from '@/features/activities/utils/activityForm';
 import { activityTypeLabels } from '@/features/activities/utils/activityLabels';
 import { repositories } from '@/infrastructure/repositories/repositories';
-import { Card } from '@/shared/ui/Card';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
+import { PageSkeleton } from '@/shared/ui/PageSkeleton';
 import { isValidLocalDate } from '@/shared/validation/localDate';
 
 interface AddActivityEditorPageProps {
@@ -43,7 +48,10 @@ function ActivityEditor({
   activityId,
 }: AddActivityEditorPageProps & { activityId?: string }) {
   const { profile } = useProfile();
+  const location = useLocation();
   const navigate = useNavigate();
+  const navigationState = location.state as ActivityJournalNavigationState | null;
+  const returnContext = navigationState?.activityJournalReturn;
   const [state, setState] = useState<EditorState>();
   const [selectedDate, setSelectedDate] = useState('');
   const [calculationWeightKg, setCalculationWeightKg] = useState(profile?.initialWeightKg ?? 0);
@@ -146,12 +154,25 @@ function ActivityEditor({
     setErrorMessage(undefined);
     try {
       const draft = toActivityDraft(values);
-      if (state?.existingActivity) {
-        await updateActivityFromDraft(state.existingActivity.id, draft, profile);
-      } else {
-        await createActivityFromDraft(draft, profile);
-      }
-      navigate(`${routePaths.activities}?date=${encodeURIComponent(values.date)}`);
+      const saved = state?.existingActivity
+        ? await updateActivityFromDraft(state.existingActivity.id, draft, profile)
+        : await createActivityFromDraft(draft, profile);
+      const canReturnToOrigin = returnContext?.date === values.date;
+      const destination = canReturnToOrigin
+        ? returnContext.path
+        : `${routePaths.activities}?date=${encodeURIComponent(values.date)}`;
+      const feedbackTitle = state?.existingActivity ? 'Activité modifiée' : 'Activité ajoutée';
+
+      const destinationState = createActivityJournalFeedbackState(
+        returnContext,
+        {
+          title: feedbackTitle,
+          activityId: saved.id,
+        },
+        values.date,
+      );
+
+      navigate(destination, { state: destinationState });
     } catch (error) {
       setErrorMessage(
         error instanceof Error
@@ -168,37 +189,40 @@ function ActivityEditor({
     return `Modifier : ${activityTypeLabels[state.existingActivity.type]}`;
   }, [state?.existingActivity, title]);
 
+  const backPath = returnContext?.path
+    ?? (state?.initialValues.date
+      ? `${routePaths.activities}?date=${encodeURIComponent(state.initialValues.date)}`
+      : routePaths.activities);
+
   return (
     <section aria-labelledby="activity-editor-title">
       <Link
-        to={routePaths.activities}
+        to={backPath}
+        state={createActivityJournalRestoreState(returnContext)}
         className="inline-flex min-h-11 items-center gap-2 rounded-xl px-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
       >
         <ArrowLeft aria-hidden="true" className="size-4" />
-        Retour au journal
+        Retour aux activités
       </Link>
 
       <div className="mt-4">
         <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">Journal sportif</p>
-        <h1 id="activity-editor-title" className="mt-1 text-3xl font-bold tracking-tight text-slate-950 dark:text-white">{resolvedTitle}</h1>
-        <p className="mt-3 max-w-3xl text-slate-600 dark:text-slate-300">{description}</p>
+        <h1 id="activity-editor-title" className="mt-1 text-3xl font-bold tracking-tight text-slate-950 dark:text-white">
+          {resolvedTitle}
+        </h1>
+        <p className="mt-2 hidden max-w-2xl text-slate-600 dark:text-slate-300 sm:block">{description}</p>
       </div>
 
-      {loading ? (
-        <Card className="mt-8 p-8 text-center" role="status">
-          <LoaderCircle aria-hidden="true" className="mx-auto size-8 animate-spin text-brand-700" />
-          <p className="mt-3 font-semibold text-slate-900 dark:text-white">Chargement du formulaire…</p>
-        </Card>
-      ) : null}
+      {loading ? <PageSkeleton className="mt-6" variant="form" /> : null}
 
       {errorMessage ? (
-        <InlineNotice className="mt-6" tone="error" title="Enregistrement impossible" role="alert">
+        <InlineNotice className="mt-5" tone="error" title="Enregistrement impossible" role="alert">
           {errorMessage}
         </InlineNotice>
       ) : null}
 
       {!loading && state && profile ? (
-        <div className="mt-8">
+        <div className="mt-6">
           <ActivityForm
             initialValues={state.initialValues}
             allowedTypes={state.existingActivity ? [state.existingActivity.type] : allowedTypes}
@@ -221,7 +245,7 @@ export function RunningActivityPage() {
       initialType="running"
       allowedTypes={['running']}
       title="Ajouter une course"
-      description="Renseigne la distance, la durée et la cadence. L’allure, les pas de course et la dépense énergétique sont calculés automatiquement."
+      description="Renseigne la distance, la durée et la cadence. L’allure, les pas de course et la dépense sont calculés automatiquement."
     />
   );
 }
@@ -231,8 +255,8 @@ export function SwimmingActivityPage() {
     <ActivityEditor
       initialType="swimming"
       allowedTypes={['swimming']}
-      title="Ajouter une séance de natation"
-      description="La dépense est estimée avec le MET du type de séance et l’allure est calculée en min/100 m."
+      title="Ajouter une natation"
+      description="Renseigne la distance, la nage principale et le type de séance pour calculer l’allure et la dépense."
     />
   );
 }
@@ -242,8 +266,8 @@ export function StrengthActivityPage() {
     <ActivityEditor
       initialType="strengthTraining"
       allowedTypes={['strengthTraining']}
-      title="Ajouter une séance de musculation"
-      description="La séance est suivie par sa durée, son intensité et une valeur MET ajustable."
+      title="Ajouter une musculation simple"
+      description="Utilise ce formulaire pour une séance globale. Le carnet détaillé reste disponible pour suivre les exercices et les séries."
     />
   );
 }
@@ -254,7 +278,7 @@ export function OtherActivityPage() {
       initialType="cycling"
       allowedTypes={['cycling', 'walking', 'otherCardio']}
       title="Ajouter une autre activité"
-      description="Choisis entre vélo, marche et autre cardio. La valeur MET proposée peut être adaptée à l’intensité réelle."
+      description="Choisis entre vélo, marche et autre cardio, puis adapte la valeur MET à l’intensité réelle."
     />
   );
 }
@@ -276,7 +300,7 @@ export function EditActivityPage() {
       initialType="running"
       allowedTypes={['running']}
       title="Modifier une activité"
-      description="Corrige les informations enregistrées. Le snapshot calorique et les objectifs des journées concernées seront recalculés."
+      description="Corrige les informations enregistrées. Les objectifs des journées concernées seront recalculés."
     />
   );
 }
