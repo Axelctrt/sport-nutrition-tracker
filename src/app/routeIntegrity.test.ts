@@ -13,7 +13,7 @@ function samplePath(pattern: string): string {
   return pattern.replace(/:[^/]+/g, 'sample-id');
 }
 
-describe('intégrité des routes de la Release Candidate', () => {
+describe('intégrité des routes de la version stable', () => {
   const registeredPatterns = appShellRoutes
     .map((route) => route.path)
     .filter((path): path is string => typeof path === 'string');

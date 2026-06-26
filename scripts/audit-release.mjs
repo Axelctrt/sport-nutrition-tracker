@@ -31,7 +31,9 @@ if (!read('INSTALLATION.txt').includes(`SPORTPILOT ${version}`)) {
 
 const productionRoots = ['src', 'vite.config.ts', 'index.html', 'INSTALLATION.txt', 'README-PATCH.md'];
 const allowedExtensions = new Set(['.ts', '.tsx', '.html', '.txt', '.md']);
-const staleVersionPattern = /0\.15\.0-alpha\.\d+|0\.14\.0-alpha|0\.13\.0-alpha/g;
+const staleVersionPattern = version.includes('-')
+  ? /0\.15\.0-alpha\.\d+|0\.14\.0-alpha|0\.13\.0-alpha/g
+  : /0\.15\.0-(?:alpha\.\d+|rc\.\d+)|0\.14\.0-alpha|0\.13\.0-alpha/g;
 const correctionFilePattern = /^README-CORRECTION-/;
 
 function collectFiles(path) {
@@ -51,6 +53,23 @@ for (const path of files) {
     fail(`une ancienne préversion est encore présente dans ${relative(root, join(root, path))}.`);
   }
   staleVersionPattern.lastIndex = 0;
+}
+
+
+if (!version.includes('-')) {
+  const stableFiles = [
+    'README-PATCH.md',
+    'INSTALLATION.txt',
+    'RELEASE-CHECKLIST.md',
+    'ROLLBACK.md',
+    `RELEASE-NOTES-${version}.md`,
+  ];
+  for (const path of stableFiles) {
+    const content = read(path);
+    if (!content.includes(version)) {
+      fail(`${path} ne référence pas la version stable ${version}.`);
+    }
+  }
 }
 
 const rootFiles = readdirSync(root);

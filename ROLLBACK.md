@@ -1,30 +1,30 @@
-# Retour arrière — SportPilot 0.15.0-rc.1
+# Retour arrière — SportPilot 0.15.0
 
-## Avant déploiement
+## Avant publication
 
 1. Exporter une sauvegarde JSON depuis la page Sauvegarde.
-2. Conserver l’archive complète de la dernière version validée.
-3. Noter le commit et le tag déployés.
+2. Conserver les archives complètes `0.15.0` et `0.15.0-rc.1`.
+3. Noter le commit stable et le tag `v0.15.0`.
 
 ## Retour arrière du code
 
 ```powershell
-git switch release/0.15.0-rc.1
-git log --oneline -5
+git switch develop
+git log --oneline --decorate -10
 ```
 
-Revenir au commit validé précédent uniquement après avoir confirmé que la sauvegarde utilisateur est disponible. Déployer ensuite l’archive complète correspondante.
+En cas de défaut bloquant, redéployer le commit validé de `release/0.15.0-rc.1` ou son archive complète. Ne réécrire ni ne supprimer le tag `v0.15.0` après sa publication : documenter le retrait et préparer une version corrective `0.15.1`.
 
 ## PWA
 
-Après retour arrière :
+Après redéploiement de la RC1 ou d’une version corrective :
 
 1. fermer complètement la PWA ;
 2. rouvrir l’application en ligne ;
 3. accepter la mise à jour proposée ;
-4. si nécessaire, supprimer puis réinstaller l’icône depuis Safari ;
-5. vérifier la version dans Paramètres.
+4. vérifier la version dans Paramètres ;
+5. si le service worker reste bloqué, supprimer puis réinstaller l’icône depuis Safari.
 
 ## Données
 
-Le schéma Dexie et la sauvegarde restent en version 2. Aucun retour de code entre l’alpha.13, la RC1 et la stable 0.15.0 ne nécessite de migration. En cas d’anomalie de données, utiliser uniquement une sauvegarde JSON validée depuis la page Sauvegarde.
+Le schéma Dexie et la sauvegarde restent en version 2. Le passage entre l’alpha.13, la RC1 et la stable 0.15.0 ne nécessite aucune migration. Une restauration JSON ne doit être utilisée qu’avec une sauvegarde préalablement validée depuis la page Sauvegarde.

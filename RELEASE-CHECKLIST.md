@@ -1,13 +1,15 @@
-# Checklist de validation — SportPilot 0.15.0-rc.1
+# Checklist de publication — SportPilot 0.15.0
 
 ## Préparation
 
+- [ ] La branche courante est `release/0.15.0`.
 - [ ] `npm install` termine sans vulnérabilité connue.
 - [ ] `npm run check` termine sans erreur.
-- [ ] La version affichée dans Paramètres est `0.15.0-rc.1`.
-- [ ] Une sauvegarde JSON récente a été exportée et conservée hors de l’application.
+- [ ] La version affichée dans Paramètres est `0.15.0`.
+- [ ] Une sauvegarde JSON récente est conservée hors de l’application.
+- [ ] Les notes `RELEASE-NOTES-0.15.0.md` ont été relues.
 
-## Parcours critiques
+## Non-régression fonctionnelle
 
 - [ ] Création puis modification du profil.
 - [ ] Saisie rapide des pas et du poids depuis le tableau de bord.
@@ -20,7 +22,7 @@
 - [ ] Consultation des analyses, de l’historique et du bilan hebdomadaire.
 - [ ] Export puis restauration d’une sauvegarde JSON.
 
-## Mobile et accessibilité
+## Mobile, accessibilité et PWA
 
 - [ ] Portrait et paysage sur iPhone 15.
 - [ ] Largeur équivalente à 320 px sans débordement horizontal.
@@ -30,17 +32,21 @@
 - [ ] Champs date contenus dans leur grille.
 - [ ] Champs numériques initialisés à zéro directement remplaçables.
 - [ ] Sections repliables recentrées à l’ouverture.
-
-## PWA et réseau
-
-- [ ] Installation depuis Safari via Ajouter à l’écran d’accueil.
-- [ ] Ouverture depuis l’icône installée.
+- [ ] Installation depuis Safari et ouverture depuis l’écran d’accueil.
 - [ ] Données locales accessibles hors connexion.
-- [ ] Bannière de retour du réseau affichée puis masquée.
-- [ ] Mise à jour PWA détectée et appliquée sans perte de données.
+- [ ] Mise à jour de `0.15.0-rc.1` vers `0.15.0` appliquée sans perte de données.
+
+## Publication Git
+
+- [ ] Le commit stable est poussé sur `origin/release/0.15.0`.
+- [ ] La branche est fusionnée dans `develop` sans conflit.
+- [ ] `npm run check` réussit sur `develop` après fusion.
+- [ ] Le tag annoté `v0.15.0` pointe sur le commit stable validé.
+- [ ] Le tag `v0.15.0` est poussé sur le dépôt distant.
 
 ## Décision
 
 - [ ] Aucun défaut bloquant.
 - [ ] Aucun défaut entraînant une perte de données.
-- [ ] Les éventuelles anomalies restantes sont documentées avant le passage à `0.15.0`.
+- [ ] Les éventuelles anomalies non bloquantes sont documentées.
+- [ ] La publication stable est autorisée.

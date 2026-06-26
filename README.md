@@ -1,12 +1,23 @@
-# SportPilot 0.15.0-rc.1
+# SportPilot 0.15.0
 
 PWA locale de suivi sportif, nutritionnel, calorique et de progression.
 
 ## Version 0.15 — Expérience mobile-first
 
+### 0.15.0 — version stable
+
+La version 0.15.0 consolide l’ensemble du parcours mobile-first validé pendant les préversions et la Release Candidate :
+
+- tableau de bord, nutrition, activités, poids, analyses, musculation, profil, paramètres et sauvegarde optimisés pour l’iPhone ;
+- navigation mobile complète, installation PWA, fonctionnement hors connexion et mise à jour contrôlée ;
+- champs de date uniformisés, saisies numériques à zéro directement remplaçables et sections repliables recentrées ;
+- routes, sauvegardes, erreurs globales, thème et budgets du build couverts par des garde-fous automatisés ;
+- version stable visible dans Paramètres ;
+- schéma Dexie 2 et sauvegarde JSON 2 conservés sans migration.
+
 ### 0.15.0-rc.1 — stabilisation finale et Release Candidate
 
-Cette Release Candidate gèle les fonctionnalités de la version 0.15 et renforce la livraison avant publication stable :
+Cette Release Candidate a gelé les fonctionnalités de la version 0.15 et renforcé la livraison avant publication stable :
 
 - routes du shell centralisées, sans doublon, et comparées automatiquement aux navigations mobile et ordinateur ;
 - titres de page obligatoires pour chaque route réellement enregistrée ;
@@ -15,7 +26,7 @@ Cette Release Candidate gèle les fonctionnalités de la version 0.15 et renforc
 - thème tolérant aux refus de lecture ou d’écriture de `localStorage` ;
 - écran global d’erreur permettant de revenir à l’accueil sans toucher aux données ;
 - version installée affichée dans Paramètres pour faciliter la vérification des mises à jour PWA ;
-- budgets JavaScript et CSS, raccourcis PWA, fichiers hashés et absence de source maps contrôlés par `audit:rc` ;
+- budgets JavaScript et CSS, raccourcis PWA, fichiers hashés et absence de source maps contrôlés par l’audit de production ;
 - checklist de validation et procédure de retour arrière fournies ;
 - aucune migration Dexie et aucune modification du format de sauvegarde.
 
@@ -244,7 +255,8 @@ npm run test         # tests Vitest
 npm run build        # TypeScript + build PWA
 npm run audit:mvp    # contrôle statique de la PWA
 npm run audit:release # cohérence version, documentation et schémas
-npm run audit:rc     # budgets du build et intégrité de la Release Candidate
+npm run audit:rc     # audit du build d’une Release Candidate
+npm run audit:stable # budgets du build et intégrité de la version stable
 npm run check        # lint + tests + build + tous les audits
 npm run preview      # prévisualisation du build
 npm run diagnose:off # diagnostic Open Food Facts

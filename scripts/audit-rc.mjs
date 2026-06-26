@@ -22,8 +22,13 @@ function collectFiles(directory) {
 }
 
 const packageJson = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
-if (!/^\d+\.\d+\.\d+-rc\.\d+$/.test(packageJson.version)) {
-  fail(`la version ${String(packageJson.version)} n’est pas une Release Candidate.`);
+const stableMode = process.argv.includes('--stable');
+const expectedVersionPattern = stableMode
+  ? /^\d+\.\d+\.\d+$/
+  : /^\d+\.\d+\.\d+-rc\.\d+$/;
+const auditLabel = stableMode ? 'stable' : 'Release Candidate';
+if (!expectedVersionPattern.test(packageJson.version)) {
+  fail(`la version ${String(packageJson.version)} n’est pas une version ${auditLabel} valide.`);
 }
 
 const files = collectFiles(dist);
@@ -86,12 +91,12 @@ if (manifest.id !== './' || manifest.start_url !== './' || manifest.scope !== '.
 }
 
 if (failures.length > 0) {
-  console.error('\nAudit Release Candidate échoué :');
+  console.error('\nAudit de production échoué :');
   failures.forEach((failure) => console.error(`- ${failure}`));
   process.exitCode = 1;
 } else {
   console.log(
-    `Audit Release Candidate réussi : ${javascriptFiles.length} chunks JS, `
+    `Audit de production ${auditLabel} réussi : ${javascriptFiles.length} chunks JS, `
     + `${Math.round(totalJavaScriptBytes / 1024)} Kio de JS, `
     + `${Math.round(totalCssBytes / 1024)} Kio de CSS, `
     + `plus gros chunk ${Math.round(largestJavaScript.bytes / 1024)} Kio.`,

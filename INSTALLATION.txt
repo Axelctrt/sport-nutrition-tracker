@@ -1,19 +1,19 @@
-SPORTPILOT 0.15.0-rc.1
+SPORTPILOT 0.15.0
 
-1. Vérifier la branche release/0.15.0-rc.1.
+1. Vérifier la branche release/0.15.0.
 2. Arrêter le serveur de développement avec Ctrl + C.
-3. Copier le contenu du patch à la racine du projet sport-nutrition-tracker.
+3. Copier le contenu du patch stable à la racine du projet sport-nutrition-tracker.
 4. Accepter le remplacement des fichiers.
 5. Exécuter :
    npm install
    npm run check
    npm run dev
-6. Vérifier dans Paramètres que la version affichée est 0.15.0-rc.1.
+6. Vérifier dans Paramètres que la version affichée est 0.15.0.
 7. Exécuter la liste complète de RELEASE-CHECKLIST.md sur iPhone.
-8. Exporter une sauvegarde JSON avant tout essai de restauration ou de suppression.
-9. Tester l’installation PWA, le mode hors connexion et le retour du réseau.
-10. Tester un retour à l’accueil depuis l’écran global d’erreur si un incident est simulé en développement.
-11. Recharger avec Ctrl + F5 ou relancer la PWA si une ancienne version reste en cache.
+8. Exporter une sauvegarde JSON avant le déploiement ou tout essai de restauration.
+9. Tester l’installation PWA, le mode hors connexion, le retour du réseau et la mise à jour depuis la RC1.
+10. Recharger avec Ctrl + F5 ou relancer la PWA si une ancienne version reste en cache.
+11. Après validation, fusionner release/0.15.0 dans develop et créer le tag v0.15.0.
 
 Schéma Dexie : version 2.
 Sauvegarde JSON : version 2.
