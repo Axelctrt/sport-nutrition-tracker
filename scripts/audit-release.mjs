@@ -12,16 +12,14 @@ const packageJson = JSON.parse(read('package.json'));
 const packageLock = JSON.parse(read('package-lock.json'));
 const version = packageJson.version;
 
-if (typeof version !== 'string' || !/^\d+\.\d+\.\d+$/.test(version)) {
-  fail(`la version ${String(version)} n’est pas une version stable.`);
+if (typeof version !== 'string' || !/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(version)) {
+  fail(`la version ${String(version)} n’est pas une version sémantique valide.`);
 }
 if (packageLock.version !== version || packageLock.packages?.['']?.version !== version) {
   fail('package.json et package-lock.json n’utilisent pas la même version.');
 }
-const normalizedReadme = read('README.md')
-  .replace(/^\uFEFF/, '')
-  .replace(/\r\n/g, '\n');
-if (!normalizedReadme.startsWith(`# SportPilot ${version}\n`)) {
+const readmeTitle = read('README.md').split(/\r?\n/, 1)[0];
+if (readmeTitle !== `# SportPilot ${version}`) {
   fail('le titre du README ne correspond pas à la version du package.');
 }
 if (!read('README-PATCH.md').startsWith(`# SportPilot ${version}`)) {
@@ -33,7 +31,9 @@ if (!read('INSTALLATION.txt').includes(`SPORTPILOT ${version}`)) {
 
 const productionRoots = ['src', 'vite.config.ts', 'index.html', 'INSTALLATION.txt', 'README-PATCH.md'];
 const allowedExtensions = new Set(['.ts', '.tsx', '.html', '.txt', '.md']);
-const staleVersionPattern = /0\.14\.0-alpha|0\.13\.0-alpha/g;
+const staleVersionPattern = version.includes('-')
+  ? /0\.15\.0-alpha\.\d+|0\.14\.0-alpha|0\.13\.0-alpha/g
+  : /0\.15\.0-(?:alpha\.\d+|rc\.\d+)|0\.14\.0-alpha|0\.13\.0-alpha/g;
 const correctionFilePattern = /^README-CORRECTION-/;
 
 function collectFiles(path) {
@@ -53,6 +53,23 @@ for (const path of files) {
     fail(`une ancienne préversion est encore présente dans ${relative(root, join(root, path))}.`);
   }
   staleVersionPattern.lastIndex = 0;
+}
+
+
+if (!version.includes('-')) {
+  const stableFiles = [
+    'README-PATCH.md',
+    'INSTALLATION.txt',
+    'RELEASE-CHECKLIST.md',
+    'ROLLBACK.md',
+    `RELEASE-NOTES-${version}.md`,
+  ];
+  for (const path of stableFiles) {
+    const content = read(path);
+    if (!content.includes(version)) {
+      fail(`${path} ne référence pas la version stable ${version}.`);
+    }
+  }
 }
 
 const rootFiles = readdirSync(root);
@@ -75,4 +92,4 @@ if (!/CURRENT_BACKUP_SCHEMA_VERSION = 2/.test(read('src/infrastructure/backup/ba
   fail('la version de sauvegarde attendue est absente.');
 }
 
-console.log(`Audit release réussi : SportPilot ${version}, versions, documentation, schémas et métadonnées cohérents.`);
+console.log(`Audit version réussi : SportPilot ${version}, documentation, schémas et métadonnées cohérents.`);

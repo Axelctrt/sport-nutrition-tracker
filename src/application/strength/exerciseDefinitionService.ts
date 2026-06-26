@@ -24,12 +24,11 @@ function normalizeSearchValue(value: string): string {
     .trim();
 }
 
-export async function listExerciseDefinitions(
-  repository: StrengthExerciseRepository,
+export function filterExerciseDefinitions(
+  exercises: readonly ExerciseDefinition[],
   filters: ExerciseFilters = {},
-): Promise<ExerciseDefinition[]> {
+): ExerciseDefinition[] {
   const query = normalizeSearchValue(filters.query ?? '');
-  const exercises = await repository.listAll();
 
   return exercises
     .filter((exercise) => filters.includeArchived || !exercise.isArchived)
@@ -48,6 +47,13 @@ export async function listExerciseDefinitions(
       if (left.source !== right.source) return left.source === 'user' ? -1 : 1;
       return left.name.localeCompare(right.name, 'fr');
     });
+}
+
+export async function listExerciseDefinitions(
+  repository: StrengthExerciseRepository,
+  filters: ExerciseFilters = {},
+): Promise<ExerciseDefinition[]> {
+  return filterExerciseDefinitions(await repository.listAll(), filters);
 }
 
 export function createCustomExercise(

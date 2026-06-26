@@ -84,9 +84,17 @@ a {
   padding-bottom: calc(6rem + env(safe-area-inset-bottom));
 }
 
+.toast-viewport-offset {
+  bottom: calc(5.5rem + env(safe-area-inset-bottom) + var(--mobile-sticky-action-offset, 0rem));
+}
+
 @media (min-width: 64rem) {
   .safe-page-bottom {
     padding-bottom: 2rem;
+  }
+
+  .toast-viewport-offset {
+    bottom: 1.5rem;
   }
 }
 
@@ -119,9 +127,28 @@ input[type='datetime-local'],
 input[type='month'],
 input[type='week'] {
   display: block;
+  box-sizing: border-box;
+  width: 100%;
   inline-size: 100%;
+  min-width: 0;
   min-inline-size: 0;
+  max-width: 100%;
   max-inline-size: 100%;
+  min-height: 2.75rem;
+  block-size: 2.75rem;
+  flex: 1 1 0%;
+  overflow: hidden;
+}
+
+@supports (-webkit-touch-callout: none) {
+  input[type='date'],
+  input[type='time'],
+  input[type='datetime-local'],
+  input[type='month'],
+  input[type='week'] {
+    width: -webkit-fill-available;
+    inline-size: -webkit-fill-available;
+  }
 }
 
 input[type='date']::-webkit-date-and-time-value,
@@ -129,7 +156,9 @@ input[type='time']::-webkit-date-and-time-value,
 input[type='datetime-local']::-webkit-date-and-time-value,
 input[type='month']::-webkit-date-and-time-value,
 input[type='week']::-webkit-date-and-time-value {
+  width: 100%;
   min-width: 0;
+  max-width: 100%;
   text-align: left;
 }
 
@@ -138,8 +167,12 @@ input[type='time']::-webkit-datetime-edit,
 input[type='datetime-local']::-webkit-datetime-edit,
 input[type='month']::-webkit-datetime-edit,
 input[type='week']::-webkit-datetime-edit {
+  display: block;
+  width: 100%;
   min-width: 0;
+  max-width: 100%;
   overflow: hidden;
+  padding: 0;
 }
 
 @media (min-width: 40rem) {
@@ -163,4 +196,30 @@ input[type='week']::-webkit-datetime-edit {
 .barcode-scanner-viewport canvas.drawingBuffer {
   pointer-events: none;
   z-index: 2;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.75rem) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+[aria-invalid='true'] {
+  scroll-margin-block: 6rem;
 }

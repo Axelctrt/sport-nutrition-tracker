@@ -13,11 +13,11 @@ export function useWorkoutTemplates(includeArchived: boolean) {
   const [templates, setTemplates] = useState<WorkoutTemplateSummary[]>([]);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [errorMessage, setErrorMessage] = useState<string>();
-  const [actionId, setActionId] = useState<EntityId>();
   const [actionErrorMessage, setActionErrorMessage] = useState<string>();
+  const [actionId, setActionId] = useState<EntityId>();
 
-  const refresh = useCallback(async () => {
-    setStatus('loading');
+  const refresh = useCallback(async (showLoading = true) => {
+    if (showLoading) setStatus('loading');
     setErrorMessage(undefined);
     try {
       setTemplates(await listWorkoutTemplates(repositories.workoutTemplates, includeArchived));
@@ -34,25 +34,39 @@ export function useWorkoutTemplates(includeArchived: boolean) {
 
   const setArchived = useCallback(async (id: EntityId, archived: boolean) => {
     setActionId(id);
+    setActionErrorMessage(undefined);
     try {
-      await setWorkoutTemplateArchived(repositories.workoutTemplates, id, archived);
-      await refresh();
+      const updated = await setWorkoutTemplateArchived(repositories.workoutTemplates, id, archived);
+      setTemplates((current) => {
+        if (updated.isArchived && !includeArchived) {
+          return current.filter(({ template }) => template.id !== id);
+        }
+        return current.map((summary) => summary.template.id === id
+          ? { ...summary, template: updated }
+          : summary);
+      });
+      return true;
+    } catch (error) {
+      setActionErrorMessage(error instanceof Error ? error.message : 'Impossible de modifier cette séance modèle.');
+      return false;
     } finally {
       setActionId(undefined);
     }
-  }, [refresh]);
+  }, [includeArchived]);
 
   const duplicate = useCallback(async (id: EntityId) => {
     setActionId(id);
+    setActionErrorMessage(undefined);
     try {
       const created = await duplicateWorkoutTemplate(repositories.workoutTemplates, id);
-      await refresh();
       return created.template;
+    } catch (error) {
+      setActionErrorMessage(error instanceof Error ? error.message : 'Impossible de dupliquer cette séance modèle.');
+      return undefined;
     } finally {
       setActionId(undefined);
     }
-  }, [refresh]);
-
+  }, []);
 
   const start = useCallback(async (id: EntityId) => {
     setActionId(id);
@@ -73,5 +87,15 @@ export function useWorkoutTemplates(includeArchived: boolean) {
     }
   }, []);
 
-  return { templates, status, errorMessage, actionErrorMessage, actionId, refresh, setArchived, duplicate, start }; 
+  return {
+    templates,
+    status,
+    errorMessage,
+    actionErrorMessage,
+    actionId,
+    refresh,
+    setArchived,
+    duplicate,
+    start,
+  };
 }

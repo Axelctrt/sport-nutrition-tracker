@@ -1,48 +1,28 @@
-import { ArrowLeft, BarChart3, Dumbbell, Hash, History, LoaderCircle, Repeat2 } from 'lucide-react';
+import { ArrowLeft, BarChart3, Dumbbell } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import { buildStrengthExerciseAnalytics } from '@/application/strength/strengthAnalyticsService';
-import { routePaths, workoutSessionPath } from '@/app/routePaths';
-import type { StrengthSet } from '@/domain/models/strength';
+import { routePaths } from '@/app/routePaths';
 import { StrengthExerciseAnalyticsPanel } from '@/features/strength-analytics/components/StrengthExerciseAnalyticsPanel';
+import { StrengthHistorySessionCard } from '@/features/strength-history/components/StrengthHistorySessionCard';
+import { StrengthHistorySummary } from '@/features/strength-history/components/StrengthHistorySummary';
 import { useStrengthExerciseHistory } from '@/features/strength-history/hooks/useStrengthExerciseHistory';
-import { strengthSetTypeLabels } from '@/features/strength-sessions/utils/strengthSetLabels';
-import { Card } from '@/shared/ui/Card';
+import { Button } from '@/shared/ui/Button';
+import { CollapsibleSection } from '@/shared/ui/CollapsibleSection';
+import { EmptyState } from '@/shared/ui/EmptyState';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
-import { formatLocalDate } from '@/shared/utils/dates';
-
-function setSummary(set: StrengthSet): string {
-  const rpe = set.rpe === undefined ? '' : ` · RPE ${set.rpe}`;
-  return `${set.weightKg} kg × ${set.repetitions}${rpe}`;
-}
-
-function formatNumber(value: number): string {
-  return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 }).format(value);
-}
+import { PageSkeleton } from '@/shared/ui/PageSkeleton';
 
 export function StrengthExerciseHistoryPage() {
   const { exerciseId = '' } = useParams();
   const { exercise, history, status, errorMessage, refresh } = useStrengthExerciseHistory(exerciseId);
 
-  if (status === 'loading') {
-    return (
-      <Card className="p-8 text-center" role="status">
-        <LoaderCircle aria-hidden="true" className="mx-auto size-8 animate-spin text-brand-700" />
-        <p className="mt-3 font-semibold">Chargement de l’historique…</p>
-      </Card>
-    );
-  }
+  if (status === 'loading') return <PageSkeleton variant="detail" />;
 
   if (!exercise) {
     return (
       <InlineNotice tone="error" title="Historique indisponible">
         <p>{errorMessage ?? 'Cet exercice n’existe pas.'}</p>
-        <button
-          className="mt-3 font-semibold text-brand-700 hover:underline dark:text-brand-300"
-          type="button"
-          onClick={() => void refresh()}
-        >
-          Réessayer
-        </button>
+        <Button className="mt-3" variant="secondary" onClick={() => void refresh()}>Réessayer</Button>
       </InlineNotice>
     );
   }
@@ -51,113 +31,33 @@ export function StrengthExerciseHistoryPage() {
 
   return (
     <section aria-labelledby="strength-history-title">
-      <Link
-        to={routePaths.strengthExercises}
-        className="inline-flex items-center gap-2 text-sm font-semibold text-brand-700 hover:underline dark:text-brand-300"
-      >
+      <Link to={routePaths.strengthExercises} className="inline-flex items-center gap-2 text-sm font-semibold text-brand-700 hover:underline dark:text-brand-300">
         <ArrowLeft aria-hidden="true" className="size-4" />
         Retour au catalogue
       </Link>
 
-      <div className="mt-5">
-        <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
-          Historique et statistiques
-        </p>
-        <h1 id="strength-history-title" className="mt-1 text-3xl font-bold tracking-tight text-slate-950 dark:text-white">
-          {exercise.name}
-        </h1>
-        <p className="mt-3 max-w-3xl text-slate-600 dark:text-slate-300">
-          Retrouve les séries validées, les records et les tendances de progression. Les séries d’échauffement restent visibles, mais sont exclues des statistiques principales.
-        </p>
+      <div className="mt-4">
+        <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">Historique et statistiques</p>
+        <h1 id="strength-history-title" className="mt-1 text-3xl font-bold tracking-tight text-slate-950 dark:text-white">{exercise.name}</h1>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">Consulte les records, les tendances et le détail des séries validées sans surcharger l’écran.</p>
       </div>
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Card className="p-5">
-          <History aria-hidden="true" className="size-6 text-brand-700 dark:text-brand-300" />
-          <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">Séances enregistrées</p>
-          <p className="mt-1 text-2xl font-bold text-slate-950 dark:text-white">{history.length}</p>
-        </Card>
-        <Card className="p-5">
-          <Dumbbell aria-hidden="true" className="size-6 text-brand-700 dark:text-brand-300" />
-          <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">Séries de travail</p>
-          <p className="mt-1 text-2xl font-bold text-slate-950 dark:text-white">{analytics.summary.workingSetCount}</p>
-        </Card>
-        <Card className="p-5">
-          <Hash aria-hidden="true" className="size-6 text-brand-700 dark:text-brand-300" />
-          <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">Répétitions totales</p>
-          <p className="mt-1 text-2xl font-bold text-slate-950 dark:text-white">{analytics.summary.totalRepetitions}</p>
-        </Card>
-        <Card className="p-5">
-          <BarChart3 aria-hidden="true" className="size-6 text-brand-700 dark:text-brand-300" />
-          <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">Volume cumulé</p>
-          <p className="mt-1 text-2xl font-bold text-slate-950 dark:text-white">{formatNumber(analytics.summary.totalVolumeKg)} kg</p>
-        </Card>
-      </div>
+      <StrengthHistorySummary sessionCount={history.length} analytics={analytics} />
 
       {history.length === 0 ? (
-        <Card className="mt-8 p-8 text-center">
-          <Dumbbell aria-hidden="true" className="mx-auto size-10 text-slate-400" />
-          <h2 className="mt-4 text-xl font-semibold text-slate-950 dark:text-white">Aucune performance enregistrée</h2>
-          <p className="mt-2 text-slate-600 dark:text-slate-300">
-            Termine une séance avec au moins une série validée pour faire apparaître cet historique.
-          </p>
-        </Card>
+        <EmptyState className="mt-5" icon={Dumbbell} title="Aucune performance enregistrée" description="Termine une séance avec au moins une série validée pour faire apparaître cet historique." />
       ) : (
         <>
-          <StrengthExerciseAnalyticsPanel analytics={analytics} />
+          <CollapsibleSection className="mt-4" title="Records et tendances" description="Charges, volume, 1RM estimé et records par charge." summary={<BarChart3 aria-hidden="true" className="size-4" />}>
+            <StrengthExerciseAnalyticsPanel analytics={analytics} embedded />
+          </CollapsibleSection>
 
-          <div className="mt-8">
-            <h2 className="text-2xl font-bold tracking-tight text-slate-950 dark:text-white">Détail des séances</h2>
-            <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-              Toutes les séries validées, y compris les échauffements, sont conservées ci-dessous.
-            </p>
+          <div className="mt-7">
+            <h2 className="text-xl font-bold text-slate-950 dark:text-white">Détail des séances</h2>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Ouvre une carte uniquement lorsque tu veux revoir toutes les séries.</p>
           </div>
-
-          <div className="mt-5 space-y-4">
-            {history.map((entry) => (
-              <Card key={entry.session.id} className="p-5 sm:p-6">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
-                    <p className="text-sm font-semibold text-brand-700 dark:text-brand-300">
-                      {formatLocalDate(entry.session.date)}
-                    </p>
-                    <h3 className="mt-1 text-xl font-semibold text-slate-950 dark:text-white">
-                      {entry.session.sourceTemplateNameSnapshot ?? 'Séance libre'}
-                    </h3>
-                    <div className="mt-3 flex flex-wrap gap-2 text-sm text-slate-600 dark:text-slate-300">
-                      <span className="rounded-lg bg-slate-100 px-2.5 py-1.5 dark:bg-slate-800">
-                        {entry.sets.length} série{entry.sets.length > 1 ? 's' : ''}
-                      </span>
-                      <span className="rounded-lg bg-slate-100 px-2.5 py-1.5 dark:bg-slate-800">
-                        Volume : {formatNumber(entry.totalVolumeKg)} kg
-                      </span>
-                    </div>
-                  </div>
-                  <Link
-                    to={workoutSessionPath(entry.session.id)}
-                    className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-slate-300 px-3 text-sm font-semibold hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
-                  >
-                    <Repeat2 aria-hidden="true" className="size-4" />
-                    Voir la séance
-                  </Link>
-                </div>
-
-                <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                  {entry.sets.map((set) => (
-                    <div key={set.id} className="rounded-xl border border-slate-200 p-3 dark:border-slate-800">
-                      <div className="flex items-center justify-between gap-3">
-                        <p className="font-semibold text-slate-950 dark:text-white">Série {set.setNumber}</p>
-                        <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                          {strengthSetTypeLabels[set.type]}
-                        </span>
-                      </div>
-                      <p className="mt-2 text-sm text-slate-700 dark:text-slate-200">{setSummary(set)}</p>
-                      {set.notes ? <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{set.notes}</p> : null}
-                    </div>
-                  ))}
-                </div>
-              </Card>
-            ))}
+          <div className="mt-4 space-y-3">
+            {history.map((entry) => <StrengthHistorySessionCard key={entry.session.id} entry={entry} />)}
           </div>
         </>
       )}

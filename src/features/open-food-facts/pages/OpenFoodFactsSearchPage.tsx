@@ -1,4 +1,4 @@
-import { ArrowLeft, LoaderCircle, RefreshCw, WifiOff } from 'lucide-react';
+import { ArrowLeft, LoaderCircle, PackageSearch, RefreshCw } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { editFoodProductPath, routePaths } from '@/app/routePaths';
@@ -6,9 +6,11 @@ import type { OpenFoodFactsProductCandidate } from '@/infrastructure/open-food-f
 import { normalizeOpenFoodFactsBarcode } from '@/infrastructure/open-food-facts/barcode';
 import { RemoteOpenFoodFactsProductCard, LocalFoodProductCard } from '@/features/open-food-facts/components/OpenFoodFactsProductCard';
 import { OpenFoodFactsSearchForms } from '@/features/open-food-facts/components/OpenFoodFactsSearchForms';
+import { OpenFoodFactsSearchSummary } from '@/features/open-food-facts/components/OpenFoodFactsSearchSummary';
 import { useOpenFoodFactsSearch } from '@/features/open-food-facts/hooks/useOpenFoodFactsSearch';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
+import { EmptyState } from '@/shared/ui/EmptyState';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 
 export function OpenFoodFactsSearchPage() {
@@ -97,7 +99,7 @@ export function OpenFoodFactsSearchPage() {
         Open Food Facts est une base collaborative. Les valeurs peuvent être incomplètes ou incorrectes. Les recherches nécessitent Internet, mais les aliments déjà enregistrés restent disponibles hors connexion.
       </InlineNotice>
 
-      <Card className="mt-6 p-5 sm:p-7">
+      <Card className="mt-6 p-4 sm:p-5">
         <OpenFoodFactsSearchForms
           loading={status === 'loading'}
           onTextSearch={async (query) => {
@@ -112,13 +114,12 @@ export function OpenFoodFactsSearchPage() {
       </Card>
 
       {status === 'loading' ? (
-        <Card className="mt-6 p-8 text-center" role="status">
-          <LoaderCircle aria-hidden="true" className="mx-auto size-8 animate-spin text-brand-700" />
-          <p className="mt-3 font-semibold text-slate-950 dark:text-white">Recherche en cours…</p>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Une seule requête est envoyée à Open Food Facts.
-          </p>
-        </Card>
+        <InlineNotice className="mt-4" title="Recherche en cours" role="status">
+          <span className="flex items-center gap-2">
+            <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
+            Consultation des aliments locaux puis d’Open Food Facts.
+          </span>
+        </InlineNotice>
       ) : null}
 
       {errorMessage ? (
@@ -139,31 +140,42 @@ export function OpenFoodFactsSearchPage() {
         </InlineNotice>
       ) : null}
 
+      {status !== 'idle' && status !== 'loading' && hasResults ? (
+        <div className="mt-6">
+          <OpenFoodFactsSearchSummary
+            localCount={localProducts.length}
+            remoteCount={remoteProducts.length}
+            totalCount={totalCount}
+          />
+        </div>
+      ) : null}
+
       {status !== 'idle' && status !== 'loading' && !hasResults ? (
-        <Card className="mt-6 p-8 text-center">
-          <WifiOff aria-hidden="true" className="mx-auto size-8 text-slate-400" />
-          <h2 className="mt-3 text-xl font-semibold text-slate-950 dark:text-white">Aucun produit exploitable</h2>
-          <p className="mt-2 text-slate-600 dark:text-slate-300">
-            Modifie la recherche ou crée directement un aliment manuel.
-          </p>
-          <Link
-            to={routePaths.newFoodProduct}
-            className="mt-5 inline-flex min-h-11 items-center justify-center rounded-xl bg-brand-700 px-4 text-sm font-semibold text-white hover:bg-brand-800"
-          >
-            Créer un aliment manuel
-          </Link>
-        </Card>
+        <EmptyState
+          className="mt-6"
+          icon={PackageSearch}
+          title="Aucun produit exploitable"
+          description="Modifie la recherche ou crée directement un aliment manuel."
+          primaryAction={(
+            <Link
+              to={routePaths.newFoodProduct}
+              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-brand-700 px-4 text-sm font-semibold text-white hover:bg-brand-800"
+            >
+              Créer un aliment manuel
+            </Link>
+          )}
+        />
       ) : null}
 
       {localProducts.length > 0 ? (
-        <section className="mt-8" aria-labelledby="local-results-title">
+        <section className="mt-6" aria-labelledby="local-results-title">
           <h2 id="local-results-title" className="text-xl font-semibold text-slate-950 dark:text-white">
             Déjà disponibles sur cet appareil
           </h2>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             Ces aliments fonctionnent même sans connexion Internet.
           </p>
-          <div className="mt-4 grid gap-4 lg:grid-cols-2">
+          <div className="mt-3 grid gap-3 lg:grid-cols-2">
             {localProducts.map((product) => (
               <LocalFoodProductCard key={product.id} product={product} />
             ))}
@@ -172,7 +184,7 @@ export function OpenFoodFactsSearchPage() {
       ) : null}
 
       {remoteProducts.length > 0 ? (
-        <section className="mt-8" aria-labelledby="remote-results-title">
+        <section className="mt-6" aria-labelledby="remote-results-title">
           <div className="flex flex-wrap items-baseline justify-between gap-3">
             <h2 id="remote-results-title" className="text-xl font-semibold text-slate-950 dark:text-white">
               Résultats Open Food Facts
@@ -183,7 +195,7 @@ export function OpenFoodFactsSearchPage() {
               </p>
             ) : null}
           </div>
-          <div className="mt-4 grid gap-4 lg:grid-cols-2">
+          <div className="mt-3 grid gap-3 lg:grid-cols-2">
             {remoteProducts.map((product) => (
               <RemoteOpenFoodFactsProductCard
                 key={product.barcode}

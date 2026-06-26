@@ -15,6 +15,7 @@ export const routePaths = {
   favoriteMeals: '/food/favorites',
   recipes: '/recipes',
   newRecipe: '/recipes/new',
+  editRecipe: '/recipes/:recipeId/edit',
   addRecipeToJournal: '/recipes/:recipeId/add',
   activities: '/activities',
   strengthExercises: '/strength/exercises',
@@ -31,6 +32,7 @@ export const routePaths = {
   addSwimmingActivity: '/activities/add/swimming',
   addStrengthActivity: '/activities/add/strength',
   addOtherActivity: '/activities/add/other',
+  editActivity: '/activities/:activityId/edit',
   weight: '/weight',
   history: '/history',
   analytics: '/analytics',
@@ -41,33 +43,37 @@ export const routePaths = {
 } as const;
 
 export function editStrengthExercisePath(exerciseId: string): string {
-  return `/strength/exercises/${exerciseId}/edit`;
+  return routePaths.editStrengthExercise.replace(':exerciseId', encodeURIComponent(exerciseId));
 }
 
 export function strengthExerciseHistoryPath(exerciseId: string): string {
-  return `/strength/exercises/${exerciseId}/history`;
+  return routePaths.strengthExerciseHistory.replace(':exerciseId', encodeURIComponent(exerciseId));
 }
 
 
 export function workoutSessionPath(sessionId: string): string {
-  return `/strength/sessions/${sessionId}`;
+  return routePaths.workoutSession.replace(':sessionId', encodeURIComponent(sessionId));
 }
 
 export function editWorkoutTemplatePath(templateId: string): string {
-  return `/strength/templates/${templateId}/edit`;
+  return routePaths.editWorkoutTemplate.replace(':templateId', encodeURIComponent(templateId));
 }
 
 export function editActivityPath(activityId: string): string {
-  return `/activities/${activityId}/edit`;
+  return routePaths.editActivity.replace(':activityId', encodeURIComponent(activityId));
 }
 
 export function editRecipePath(recipeId: string): string {
-  return `/recipes/${recipeId}/edit`;
+  return routePaths.editRecipe.replace(':recipeId', encodeURIComponent(recipeId));
 }
 
 
 export function foodJournalPath(date: string): string {
   return `${routePaths.food}?date=${encodeURIComponent(date)}`;
+}
+
+export function weightPath(date: string): string {
+  return `${routePaths.weight}?date=${encodeURIComponent(date)}`;
 }
 
 export function addFoodPath(date: string, slot: string): string {
@@ -99,11 +105,11 @@ export function newFoodProductForMealPath(
 }
 
 export function editFoodEntryPath(entryId: string): string {
-  return `/food/entries/${entryId}/edit`;
+  return routePaths.editFoodEntry.replace(':entryId', encodeURIComponent(entryId));
 }
 
 export function editFoodProductPath(productId: string): string {
-  return `/food/products/${productId}/edit`;
+  return routePaths.editFoodProduct.replace(':productId', encodeURIComponent(productId));
 }
 
 export function addRecipeToJournalPath(
@@ -114,7 +120,8 @@ export function addRecipeToJournalPath(
 ): string {
   const params = new URLSearchParams({ date, slot });
   if (entryId) params.set('entryId', entryId);
-  return `/recipes/${recipeId}/add?${params.toString()}`;
+  const path = routePaths.addRecipeToJournal.replace(':recipeId', encodeURIComponent(recipeId));
+  return `${path}?${params.toString()}`;
 }
 
 export function barcodeScannerPath(date: string, slot: string): string {

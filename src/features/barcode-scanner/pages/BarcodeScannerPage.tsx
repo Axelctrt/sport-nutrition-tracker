@@ -9,7 +9,7 @@ import {
   SquarePen,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   foodJournalPath,
   newFoodProductForMealPath,
@@ -24,14 +24,19 @@ import { saveProductEntry } from '@/application/food/foodJournalService';
 import type { FoodProduct, MealSlot } from '@/domain/models/food';
 import { useBarcodeScanner } from '@/features/barcode-scanner/hooks/useBarcodeScanner';
 import { validateFoodBarcode } from '@/features/barcode-scanner/utils/scannerBarcode';
-import { MealFoodSelectionForm } from '@/features/food-journal/components/MealFoodSelectionForm';
+import { FoodEntryQuickDialog } from '@/features/food-journal/components/FoodEntryQuickDialog';
 import type { FoodEntryFormValues } from '@/features/food-journal/schemas/foodEntrySchema';
+import {
+  createFoodJournalFeedbackState,
+  type FoodJournalNavigationState,
+} from '@/features/food-journal/navigation/foodJournalNavigation';
 import { mealSlotLabels } from '@/features/food-journal/utils/foodLabels';
 import { OpenFoodFactsError } from '@/infrastructure/open-food-facts/OpenFoodFactsError';
 import type { BarcodeScannerPort } from '@/infrastructure/barcode-scanner/BarcodeScanner';
 import { inputClassName } from '@/shared/forms/formStyles';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
+import { CollapsibleSection } from '@/shared/ui/CollapsibleSection';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 import { toLocalDate } from '@/shared/utils/dates';
 import { isValidLocalDate } from '@/shared/validation/localDate';
@@ -69,6 +74,8 @@ export function BarcodeScannerPage({
 }: BarcodeScannerPageProps = {}) {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const navigationState = location.state as FoodJournalNavigationState | null;
   const targetRef = useRef<HTMLDivElement>(null);
   const lookupAbortRef = useRef<AbortController | undefined>(undefined);
   const lastAutomaticCodeRef = useRef<string | undefined>(undefined);
@@ -94,6 +101,7 @@ export function BarcodeScannerPage({
   const [lookupError, setLookupError] = useState<string>();
   const [resolvedProduct, setResolvedProduct] = useState<FoodProduct>();
   const [submitError, setSubmitError] = useState<string>();
+  const [entryDialogOpen, setEntryDialogOpen] = useState(false);
 
   const activeResult = useMemo(() => {
     if (manualResult) return manualResult;
@@ -117,6 +125,7 @@ export function BarcodeScannerPage({
     setLookupError(undefined);
     setResolvedProduct(undefined);
     setSubmitError(undefined);
+    setEntryDialogOpen(false);
   }, []);
 
   const resolveCode = useCallback(async (barcode: string) => {
@@ -137,6 +146,7 @@ export function BarcodeScannerPage({
 
       if (lookup.status === 'local') {
         setResolvedProduct(lookup.product);
+        setEntryDialogOpen(true);
         setLookupMessage('Produit trouvé dans les aliments locaux. Il reste disponible hors connexion.');
         setLookupStatus('ready');
         return;
@@ -144,6 +154,7 @@ export function BarcodeScannerPage({
 
       if (lookup.status === 'remote') {
         setResolvedProduct(lookup.product);
+        setEntryDialogOpen(true);
         setLookupMessage(
           lookup.saveStatus === 'created'
             ? 'Produit trouvé dans Open Food Facts et enregistré localement.'
@@ -221,8 +232,19 @@ export function BarcodeScannerPage({
   const handleSubmit = async (values: FoodEntryFormValues) => {
     setSubmitError(undefined);
     try {
-      await saveEntry(values);
-      await navigate(foodJournalPath(values.date));
+      const savedEntry = await saveEntry(values);
+      const entryId = savedEntry && typeof savedEntry === 'object' && 'id' in savedEntry
+        && typeof savedEntry.id === 'string'
+        ? savedEntry.id
+        : undefined;
+      const returnContext = navigationState?.foodJournalReturn;
+      await navigate(returnContext?.path ?? foodJournalPath(values.date), {
+        state: createFoodJournalFeedbackState(returnContext, {
+          title: `Aliment ajouté au ${mealSlotLabels[values.mealSlot].toLocaleLowerCase('fr')}`,
+          mealSlot: values.mealSlot,
+          ...(entryId ? { entryId } : {}),
+        }),
+      });
     } catch (error) {
       setSubmitError(
         error instanceof Error
@@ -238,6 +260,7 @@ export function BarcodeScannerPage({
     <section className="min-w-0 overflow-x-clip" aria-labelledby="barcode-scanner-title">
       <Link
         to={selectFoodPath(date, mealSlot)}
+        state={location.state}
         className="inline-flex items-center gap-2 text-sm font-semibold text-brand-700 hover:underline dark:text-brand-300"
       >
         <ArrowLeft aria-hidden="true" className="size-4" />
@@ -256,9 +279,16 @@ export function BarcodeScannerPage({
         </p>
       </div>
 
-      <InlineNotice className="mt-6" title="Connexion sécurisée obligatoire">
-        La caméra fonctionne uniquement en HTTPS ou sur localhost. Une adresse locale comme <code>http://192.168.x.x</code> ne permet pas l’accès à la caméra sur téléphone.
-      </InlineNotice>
+      <CollapsibleSection
+        className="mt-6"
+        title="Caméra et confidentialité"
+        description="La caméra démarre uniquement après ton action et nécessite une adresse HTTPS."
+        defaultOpen={!secureCameraAvailable}
+      >
+        <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">
+          La caméra fonctionne uniquement en HTTPS ou sur localhost. Une adresse locale comme <code>http://192.168.x.x</code> ne permet pas l’accès à la caméra sur téléphone. Les images restent dans le navigateur et ne sont pas envoyées à SportPilot.
+        </p>
+      </CollapsibleSection>
 
       {!secureCameraAvailable ? (
         <InlineNotice className="mt-4" tone="error" title="Caméra indisponible sur cette adresse">
@@ -270,7 +300,7 @@ export function BarcodeScannerPage({
         <div
           ref={targetRef}
           data-testid="barcode-scanner-target"
-          className="barcode-scanner-viewport relative aspect-[4/3] min-h-64 w-full overflow-hidden rounded-2xl bg-slate-950"
+          className="barcode-scanner-viewport relative aspect-[4/3] min-h-52 max-h-[56dvh] w-full overflow-hidden rounded-2xl bg-slate-950"
           aria-label="Aperçu de la caméra"
         >
           {!scanning ? (
@@ -384,6 +414,7 @@ export function BarcodeScannerPage({
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <Link
               to={newFoodProductForMealPath(date, mealSlot, fallbackBarcode)}
+              state={location.state}
               className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-brand-700 px-4 text-sm font-semibold text-white hover:bg-brand-800"
             >
               <SquarePen aria-hidden="true" className="size-4" />
@@ -391,6 +422,7 @@ export function BarcodeScannerPage({
             </Link>
             <Link
               to={selectFoodPath(date, mealSlot, undefined, 'openFoodFacts')}
+              state={location.state}
               className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-300 px-4 text-sm font-semibold text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-800"
             >
               <Search aria-hidden="true" className="size-4" />
@@ -409,32 +441,33 @@ export function BarcodeScannerPage({
       ) : null}
 
       {resolvedProduct ? (
-        <Card className="mt-6 min-w-0 p-5 sm:p-7">
-          {submitError ? (
-            <InlineNotice className="mb-5" tone="error" title="Ajout impossible">
-              {submitError}
-            </InlineNotice>
-          ) : null}
-          {!resolvedProduct.isNutritionComplete ? (
-            <InlineNotice className="mb-5" title="Valeurs nutritionnelles à vérifier">
-              Certaines valeurs manquent dans Open Food Facts et ont été enregistrées à zéro. Tu peux les corriger dans la fiche locale.
-            </InlineNotice>
-          ) : null}
-          <MealFoodSelectionForm
-            product={resolvedProduct}
-            date={date}
-            mealSlot={mealSlot}
-            onSubmit={handleSubmit}
-          />
+        <Card className="mt-5 min-w-0 p-4 sm:p-5">
+          <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
+                Produit prêt
+              </p>
+              <p className="mt-1 break-words text-lg font-semibold text-slate-950 dark:text-white">
+                {resolvedProduct.name}
+              </p>
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                {Math.round(resolvedProduct.nutritionPer100.caloriesKcal)} kcal pour 100 {resolvedProduct.basisUnit}
+              </p>
+            </div>
+            <Button className="w-full sm:w-auto" onClick={() => setEntryDialogOpen(true)}>
+              Régler la quantité
+            </Button>
+          </div>
         </Card>
       ) : null}
 
-      <Card className="mt-6 min-w-0 p-5 sm:p-6">
-        <h2 className="text-xl font-semibold text-slate-950 dark:text-white">Saisie manuelle du code</h2>
-        <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-          Utilise cette solution si la caméra est refusée, indisponible ou ne reconnaît pas le code.
-        </p>
-        <label htmlFor="manual-barcode" className="mt-4 block text-sm font-semibold text-slate-800 dark:text-slate-100">
+      <CollapsibleSection
+        className="mt-6"
+        title="Saisir le code manuellement"
+        description="Solution de secours si la caméra est refusée ou ne reconnaît pas le produit."
+        defaultOpen={!secureCameraAvailable || status === 'error'}
+      >
+        <label htmlFor="manual-barcode" className="block text-sm font-semibold text-slate-800 dark:text-slate-100">
           Code-barres
         </label>
         <input
@@ -449,6 +482,7 @@ export function BarcodeScannerPage({
           }}
           className={`${inputClassName} mt-2 font-mono`}
           inputMode="numeric"
+          enterKeyHint="search"
           autoComplete="off"
           placeholder="3017624010701"
         />
@@ -457,7 +491,19 @@ export function BarcodeScannerPage({
           <Search aria-hidden="true" className="size-4" />
           Rechercher ce produit
         </Button>
-      </Card>
+      </CollapsibleSection>
+
+      <FoodEntryQuickDialog
+        product={entryDialogOpen ? resolvedProduct : undefined}
+        date={date}
+        mealSlot={mealSlot}
+        errorMessage={submitError}
+        onClose={() => {
+          setEntryDialogOpen(false);
+          setSubmitError(undefined);
+        }}
+        onSubmit={handleSubmit}
+      />
     </section>
   );
 }

@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { RotateCcw, Save } from 'lucide-react';
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import {
   settingsFormSchema,
@@ -10,6 +10,9 @@ import { checkboxClassName, inputClassName } from '@/shared/forms/formStyles';
 import { Button } from '@/shared/ui/Button';
 import { FormField } from '@/shared/ui/FormField';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
+import { CollapsibleSection } from '@/shared/ui/CollapsibleSection';
+import { ConfirmationDialog } from '@/shared/ui/ConfirmationDialog';
+import { focusFirstInvalidField } from '@/shared/hooks/focusFirstInvalidField';
 
 interface AdvancedSettingsFormProps {
   initialValues: SettingsFormValues;
@@ -26,6 +29,9 @@ export function AdvancedSettingsForm({
   onSubmit,
   onResetToDefaults,
 }: AdvancedSettingsFormProps) {
+  const formRef = useRef<HTMLFormElement>(null);
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
   const {
     register,
     handleSubmit,
@@ -42,26 +48,44 @@ export function AdvancedSettingsForm({
   }, [initialValues, reset]);
 
   const handleReset = async () => {
+    setIsResetting(true);
     try {
       const defaultValues = await onResetToDefaults();
       reset(defaultValues);
+      setResetDialogOpen(false);
     } catch {
       // Le parent affiche déjà le message d’erreur approprié.
+    } finally {
+      setIsResetting(false);
     }
   };
 
   return (
-    <form noValidate onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+    <>
+      <form
+        ref={formRef}
+        noValidate
+        onSubmit={handleSubmit(onSubmit, () => {
+          window.requestAnimationFrame(() => {
+            if (formRef.current) focusFirstInvalidField(formRef.current);
+          });
+        })}
+        className="space-y-4"
+      >
       {submitCount > 0 && Object.keys(errors).length > 0 ? (
         <InlineNotice tone="error" title="Certains paramètres sont invalides">
           Corrige les champs signalés avant d’enregistrer.
         </InlineNotice>
       ) : null}
 
-      <fieldset className="space-y-5">
-        <legend className="text-lg font-semibold text-slate-950 dark:text-white">
-          Affichage et stockage
-        </legend>
+      <CollapsibleSection
+        title="Affichage et stockage"
+        description="Thème de l’application et protection du stockage local."
+        summary="Essentiel"
+        defaultOpen
+      >
+        <fieldset className="space-y-5">
+          <legend className="sr-only">Affichage et stockage</legend>
 
         <FormField id="theme" label="Thème de l’application" error={errors.theme?.message} required>
           <select id="theme" className={inputClassName} {...register('theme')}>
@@ -86,12 +110,16 @@ export function AdvancedSettingsForm({
             </span>
           </span>
         </label>
-      </fieldset>
+        </fieldset>
+      </CollapsibleSection>
 
-      <fieldset className="space-y-5 border-t border-slate-200 pt-8 dark:border-slate-800">
-        <legend className="text-lg font-semibold text-slate-950 dark:text-white">
-          Dépense quotidienne et activités
-        </legend>
+      <CollapsibleSection
+        title="Dépense quotidienne et activités"
+        description="Seuils de pas, coefficients et valeurs MET par défaut."
+        summary="Calculs"
+      >
+        <fieldset className="space-y-5">
+          <legend className="sr-only">Dépense quotidienne et activités</legend>
 
         <div className="grid gap-5 md:grid-cols-2">
           <FormField
@@ -104,6 +132,7 @@ export function AdvancedSettingsForm({
             <input
               id="includedBaseSteps"
               type="number"
+              inputMode="numeric"
               min="0"
               max="30000"
               step="100"
@@ -124,6 +153,7 @@ export function AdvancedSettingsForm({
             <input
               id="calorieFloorBmrMultiplier"
               type="number"
+              inputMode="decimal"
               min="1"
               max="2"
               step="0.05"
@@ -144,6 +174,7 @@ export function AdvancedSettingsForm({
             <input
               id="walkingKcalPerKgPerKm"
               type="number"
+              inputMode="decimal"
               min="0.1"
               max="2"
               step="0.05"
@@ -164,6 +195,7 @@ export function AdvancedSettingsForm({
             <input
               id="runningKcalPerKgPerKm"
               type="number"
+              inputMode="decimal"
               min="0.5"
               max="2"
               step="0.05"
@@ -183,6 +215,7 @@ export function AdvancedSettingsForm({
             <input
               id="strengthTrainingMet"
               type="number"
+              inputMode="decimal"
               min="1"
               max="20"
               step="0.1"
@@ -202,6 +235,7 @@ export function AdvancedSettingsForm({
             <input
               id="defaultCyclingMet"
               type="number"
+              inputMode="decimal"
               min="1"
               max="20"
               step="0.1"
@@ -221,6 +255,7 @@ export function AdvancedSettingsForm({
             <input
               id="defaultWalkingMet"
               type="number"
+              inputMode="decimal"
               min="1"
               max="20"
               step="0.1"
@@ -240,6 +275,7 @@ export function AdvancedSettingsForm({
             <input
               id="defaultOtherCardioMet"
               type="number"
+              inputMode="decimal"
               min="1"
               max="20"
               step="0.1"
@@ -250,12 +286,16 @@ export function AdvancedSettingsForm({
             />
           </FormField>
         </div>
-      </fieldset>
+        </fieldset>
+      </CollapsibleSection>
 
-      <fieldset className="space-y-5 border-t border-slate-200 pt-8 dark:border-slate-800">
-        <legend className="text-lg font-semibold text-slate-950 dark:text-white">
-          Valeurs MET de natation
-        </legend>
+      <CollapsibleSection
+        title="Valeurs MET de natation"
+        description="Intensités utilisées selon le type de séance."
+        summary="6 valeurs"
+      >
+        <fieldset className="space-y-5">
+          <legend className="sr-only">Valeurs MET de natation</legend>
 
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {([
@@ -276,6 +316,7 @@ export function AdvancedSettingsForm({
               <input
                 id={`swimmingMetValues.${key}`}
                 type="number"
+                inputMode="decimal"
                 min="1"
                 max="20"
                 step="0.1"
@@ -287,12 +328,16 @@ export function AdvancedSettingsForm({
             </FormField>
           ))}
         </div>
-      </fieldset>
+        </fieldset>
+      </CollapsibleSection>
 
-      <fieldset className="space-y-5 border-t border-slate-200 pt-8 dark:border-slate-800">
-        <legend className="text-lg font-semibold text-slate-950 dark:text-white">
-          Calibration hebdomadaire
-        </legend>
+      <CollapsibleSection
+        title="Calibration hebdomadaire"
+        description="Limites appliquées aux propositions du bilan hebdomadaire."
+        summary="Sécurité"
+      >
+        <fieldset className="space-y-5">
+          <legend className="sr-only">Calibration hebdomadaire</legend>
 
         <InlineNotice title="Aucun ajustement automatique">
           Ces limites encadrent uniquement les propositions du bilan hebdomadaire. Une modification doit toujours être acceptée explicitement.
@@ -309,6 +354,7 @@ export function AdvancedSettingsForm({
             <input
               id="maximumWeeklyAdjustmentKcal"
               type="number"
+              inputMode="numeric"
               min="10"
               max="500"
               step="10"
@@ -329,6 +375,7 @@ export function AdvancedSettingsForm({
             <input
               id="maximumCumulativeAdjustmentKcal"
               type="number"
+              inputMode="numeric"
               min="100"
               max="2000"
               step="50"
@@ -339,24 +386,37 @@ export function AdvancedSettingsForm({
             />
           </FormField>
         </div>
-      </fieldset>
+        </fieldset>
+      </CollapsibleSection>
 
       <div className="flex flex-col-reverse gap-3 border-t border-slate-200 pt-6 sm:flex-row sm:justify-between dark:border-slate-800">
         <Button
           type="button"
           variant="secondary"
           size="lg"
-          disabled={isSubmitting}
-          onClick={() => void handleReset()}
+          className="w-full sm:w-auto"
+          disabled={isSubmitting || isResetting}
+          onClick={() => setResetDialogOpen(true)}
         >
           <RotateCcw aria-hidden="true" className="size-5" />
           Rétablir les valeurs par défaut
         </Button>
-        <Button type="submit" size="lg" disabled={isSubmitting}>
+        <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={isSubmitting || isResetting}>
           <Save aria-hidden="true" className="size-5" />
           {isSubmitting ? 'Enregistrement…' : 'Enregistrer les paramètres'}
         </Button>
       </div>
-    </form>
+      </form>
+
+      <ConfirmationDialog
+        open={resetDialogOpen}
+        title="Rétablir les paramètres par défaut ?"
+        description="Les coefficients personnalisés seront remplacés par les valeurs recommandées de SportPilot. Les données de suivi ne seront pas supprimées."
+        confirmLabel="Rétablir"
+        isPending={isResetting}
+        onConfirm={() => void handleReset()}
+        onCancel={() => setResetDialogOpen(false)}
+      />
+    </>
   );
 }

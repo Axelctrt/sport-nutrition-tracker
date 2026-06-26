@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowDown, ArrowUp, Plus, Save, Trash2 } from 'lucide-react';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useFieldArray, useForm } from 'react-hook-form';
 import type { ExerciseDefinition } from '@/domain/models/strength';
 import {
@@ -13,6 +13,8 @@ import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { FormField } from '@/shared/ui/FormField';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
+import { CollapsibleSection } from '@/shared/ui/CollapsibleSection';
+import { focusFirstInvalidField } from '@/shared/hooks/focusFirstInvalidField';
 
 interface WorkoutTemplateFormProps {
   initialValues: WorkoutTemplateFormValues;
@@ -31,6 +33,7 @@ export function WorkoutTemplateForm({
   submitLabel,
   onSubmit,
 }: WorkoutTemplateFormProps) {
+  const formRef = useRef<HTMLFormElement>(null);
   const {
     control,
     register,
@@ -48,6 +51,12 @@ export function WorkoutTemplateForm({
     reset(initialValues);
   }, [initialValues, reset]);
 
+  useEffect(() => {
+    if (submitCount > 0 && Object.keys(errors).length > 0 && formRef.current) {
+      focusFirstInvalidField(formRef.current);
+    }
+  }, [errors, submitCount]);
+
   const addExercise = () => {
     const firstAvailable = exerciseDefinitions.find((exercise) => !exercise.isArchived);
     append({
@@ -57,7 +66,7 @@ export function WorkoutTemplateForm({
   };
 
   return (
-    <form noValidate onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+    <form ref={formRef} noValidate onSubmit={handleSubmit(onSubmit)} className="space-y-8">
       {submitCount > 0 && Object.keys(errors).length > 0 ? (
         <InlineNotice tone="error" title="Séance à corriger">
           Vérifie les champs signalés avant d’enregistrer.
@@ -66,16 +75,22 @@ export function WorkoutTemplateForm({
 
       <div className="grid gap-5 lg:grid-cols-2">
         <FormField id="workout-template-name" label="Nom de la séance" error={errors.name?.message} required>
-          <input id="workout-template-name" type="text" className={inputClassName} autoComplete="off" {...register('name')} />
+          <input id="workout-template-name" type="text" aria-invalid={Boolean(errors.name)} enterKeyHint="next" className={inputClassName} autoComplete="off" {...register('name')} />
         </FormField>
         <FormField id="workout-template-description" label="Description" error={errors.description?.message}>
-          <input id="workout-template-description" type="text" className={inputClassName} {...register('description')} />
+          <input id="workout-template-description" type="text" aria-invalid={Boolean(errors.description)} className={inputClassName} {...register('description')} />
         </FormField>
       </div>
 
-      <FormField id="workout-template-notes" label="Notes générales" error={errors.notes?.message}>
-        <textarea id="workout-template-notes" rows={3} className={inputClassName} {...register('notes')} />
-      </FormField>
+      <CollapsibleSection
+        title="Informations facultatives"
+        description="Description détaillée et notes générales de la séance."
+        defaultOpen={Boolean(initialValues.notes || errors.notes)}
+      >
+        <FormField id="workout-template-notes" label="Notes générales" error={errors.notes?.message}>
+          <textarea id="workout-template-notes" rows={3} aria-invalid={Boolean(errors.notes)} className={inputClassName} {...register('notes')} />
+        </FormField>
+      </CollapsibleSection>
 
       <section aria-labelledby="workout-template-exercises-title">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -121,7 +136,7 @@ export function WorkoutTemplateForm({
 
                 <div className="mt-5 grid gap-5 lg:grid-cols-2">
                   <FormField id={`workout-template-exercise-${index}`} label="Exercice" error={exerciseErrors?.exerciseDefinitionId?.message} required>
-                    <select id={`workout-template-exercise-${index}`} className={inputClassName} {...register(`exercises.${index}.exerciseDefinitionId`)}>
+                    <select id={`workout-template-exercise-${index}`} aria-invalid={Boolean(exerciseErrors?.exerciseDefinitionId)} className={inputClassName} {...register(`exercises.${index}.exerciseDefinitionId`)}>
                       <option value="">Choisir un exercice</option>
                       {exerciseDefinitions.map((exercise) => (
                         <option key={exercise.id} value={exercise.id}>{exercise.name}{exercise.isArchived ? ' — archivé' : ''}</option>
@@ -129,42 +144,45 @@ export function WorkoutTemplateForm({
                     </select>
                   </FormField>
                   <FormField id={`workout-template-sets-${index}`} label="Séries prévues" error={exerciseErrors?.plannedSets?.message} required>
-                    <input id={`workout-template-sets-${index}`} type="number" min="1" max="20" inputMode="numeric" className={inputClassName} {...register(`exercises.${index}.plannedSets`, { valueAsNumber: true })} />
+                    <input id={`workout-template-sets-${index}`} aria-invalid={Boolean(exerciseErrors?.plannedSets)} type="number" min="1" max="20" inputMode="numeric" className={inputClassName} {...register(`exercises.${index}.plannedSets`, { valueAsNumber: true })} />
                   </FormField>
                 </div>
 
                 <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
                   <FormField id={`workout-template-min-reps-${index}`} label="Répétitions min." error={exerciseErrors?.minRepetitions?.message} required>
-                    <input id={`workout-template-min-reps-${index}`} type="number" min="1" max="100" inputMode="numeric" className={inputClassName} {...register(`exercises.${index}.minRepetitions`, { valueAsNumber: true })} />
+                    <input id={`workout-template-min-reps-${index}`} aria-invalid={Boolean(exerciseErrors?.minRepetitions)} type="number" min="1" max="100" inputMode="numeric" className={inputClassName} {...register(`exercises.${index}.minRepetitions`, { valueAsNumber: true })} />
                   </FormField>
                   <FormField id={`workout-template-max-reps-${index}`} label="Répétitions max." error={exerciseErrors?.maxRepetitions?.message} required>
-                    <input id={`workout-template-max-reps-${index}`} type="number" min="1" max="100" inputMode="numeric" className={inputClassName} {...register(`exercises.${index}.maxRepetitions`, { valueAsNumber: true })} />
+                    <input id={`workout-template-max-reps-${index}`} aria-invalid={Boolean(exerciseErrors?.maxRepetitions)} type="number" min="1" max="100" inputMode="numeric" className={inputClassName} {...register(`exercises.${index}.maxRepetitions`, { valueAsNumber: true })} />
                   </FormField>
                   <FormField id={`workout-template-target-load-${index}`} label="Charge cible (kg)" error={exerciseErrors?.targetLoadKg?.message}>
-                    <input id={`workout-template-target-load-${index}`} type="number" min="0" step="0.25" inputMode="decimal" className={inputClassName} {...register(`exercises.${index}.targetLoadKg`, optionalNumberRegistration)} />
+                    <input id={`workout-template-target-load-${index}`} aria-invalid={Boolean(exerciseErrors?.targetLoadKg)} type="number" min="0" step="0.25" inputMode="decimal" className={inputClassName} {...register(`exercises.${index}.targetLoadKg`, optionalNumberRegistration)} />
                   </FormField>
                   <FormField id={`workout-template-increment-${index}`} label="Incrément (kg)" error={exerciseErrors?.loadIncrementKg?.message} required>
-                    <input id={`workout-template-increment-${index}`} type="number" min="0.25" step="0.25" inputMode="decimal" className={inputClassName} {...register(`exercises.${index}.loadIncrementKg`, { valueAsNumber: true })} />
+                    <input id={`workout-template-increment-${index}`} aria-invalid={Boolean(exerciseErrors?.loadIncrementKg)} type="number" min="0.25" step="0.25" inputMode="decimal" className={inputClassName} {...register(`exercises.${index}.loadIncrementKg`, { valueAsNumber: true })} />
                   </FormField>
                 </div>
 
-                <div className="mt-5 grid gap-5 sm:grid-cols-2">
-                  <FormField id={`workout-template-rest-${index}`} label="Repos (secondes)" error={exerciseErrors?.restSeconds?.message}>
-                    <input id={`workout-template-rest-${index}`} type="number" min="0" max="1800" inputMode="numeric" className={inputClassName} {...register(`exercises.${index}.restSeconds`, optionalNumberRegistration)} />
-                  </FormField>
-                  <FormField id={`workout-template-rpe-${index}`} label="RPE maximal recommandé" error={exerciseErrors?.maximumRecommendedRpe?.message}>
-                    <input id={`workout-template-rpe-${index}`} type="number" min="1" max="10" step="0.5" inputMode="decimal" className={inputClassName} {...register(`exercises.${index}.maximumRecommendedRpe`, optionalNumberRegistration)} />
-                  </FormField>
-                </div>
+                <details className="mt-5 rounded-xl border border-slate-200 px-3 py-2 dark:border-slate-800" open={Boolean(exerciseErrors?.restSeconds || exerciseErrors?.maximumRecommendedRpe || exerciseErrors?.notes) || undefined}>
+                  <summary className="cursor-pointer text-sm font-semibold text-slate-700 dark:text-slate-200">Réglages avancés</summary>
+                  <div className="mt-4 grid gap-5 sm:grid-cols-2">
+                    <FormField id={`workout-template-rest-${index}`} label="Repos (secondes)" error={exerciseErrors?.restSeconds?.message}>
+                      <input id={`workout-template-rest-${index}`} aria-invalid={Boolean(exerciseErrors?.restSeconds)} type="number" min="0" max="1800" inputMode="numeric" className={inputClassName} {...register(`exercises.${index}.restSeconds`, optionalNumberRegistration)} />
+                    </FormField>
+                    <FormField id={`workout-template-rpe-${index}`} label="RPE maximal recommandé" error={exerciseErrors?.maximumRecommendedRpe?.message}>
+                      <input id={`workout-template-rpe-${index}`} aria-invalid={Boolean(exerciseErrors?.maximumRecommendedRpe)} type="number" min="1" max="10" step="0.5" inputMode="decimal" className={inputClassName} {...register(`exercises.${index}.maximumRecommendedRpe`, optionalNumberRegistration)} />
+                    </FormField>
+                  </div>
 
-                <FormField id={`workout-template-exercise-notes-${index}`} label="Notes de l’exercice" error={exerciseErrors?.notes?.message}>
-                  <textarea id={`workout-template-exercise-notes-${index}`} rows={2} className={inputClassName} {...register(`exercises.${index}.notes`)} />
-                </FormField>
+                  <FormField id={`workout-template-exercise-notes-${index}`} label="Notes de l’exercice" error={exerciseErrors?.notes?.message}>
+                    <textarea id={`workout-template-exercise-notes-${index}`} aria-invalid={Boolean(exerciseErrors?.notes)} rows={2} className={inputClassName} {...register(`exercises.${index}.notes`)} />
+                  </FormField>
 
-                <label className="mt-4 flex min-h-11 items-center gap-3 rounded-xl border border-slate-300 px-4 dark:border-slate-700">
-                  <input type="checkbox" className={checkboxClassName} {...register(`exercises.${index}.isActive`)} />
-                  <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">Exercice actif dans cette séance</span>
-                </label>
+                  <label className="mt-4 flex min-h-11 items-center gap-3 rounded-xl border border-slate-300 px-4 dark:border-slate-700">
+                    <input type="checkbox" className={checkboxClassName} {...register(`exercises.${index}.isActive`)} />
+                    <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">Exercice actif dans cette séance</span>
+                  </label>
+                </details>
               </Card>
             );
           })}
