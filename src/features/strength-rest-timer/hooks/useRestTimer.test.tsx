@@ -27,6 +27,22 @@ describe('useRestTimer', () => {
     vi.useRealTimers();
   });
 
+  it('prépare le son pendant une interaction utilisateur lorsque le réglage est actif', () => {
+    const prepareSound = vi.fn(() => true);
+    const dependencies = {
+      storage: new MemoryStorage(),
+      now: () => Date.now(),
+      vibrate: vi.fn(() => true),
+      prepareSound,
+      playSound: vi.fn(() => true),
+    };
+    const { result } = renderHook(() => useRestTimer('session-1', preferences, dependencies));
+
+    act(() => result.current.prepareFeedback());
+
+    expect(prepareSound).toHaveBeenCalledTimes(1);
+  });
+
   it('gère démarrage, pause, reprise, ajustements et arrêt', () => {
     const storage = new MemoryStorage();
     const dependencies = {

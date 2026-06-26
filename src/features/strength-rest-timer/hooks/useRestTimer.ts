@@ -12,7 +12,11 @@ import {
   type RestTimerState,
   type StartRestTimerInput,
 } from '@/domain/strength/restTimer';
-import { playRestTimerSound, vibrateForRestTimer } from '@/infrastructure/feedback/restTimerFeedback';
+import {
+  playRestTimerSound,
+  prepareRestTimerSound,
+  vibrateForRestTimer,
+} from '@/infrastructure/feedback/restTimerFeedback';
 
 export interface RestTimerPreferences {
   autoStart: boolean;
@@ -30,6 +34,7 @@ interface RestTimerDependencies {
   now: () => number;
   storage: Storage | undefined;
   vibrate: () => boolean;
+  prepareSound: () => boolean;
   playSound: () => boolean;
 }
 
@@ -40,6 +45,7 @@ function defaultDependencies(): RestTimerDependencies {
     now: () => Date.now(),
     storage: typeof window === 'undefined' ? undefined : window.sessionStorage,
     vibrate: vibrateForRestTimer,
+    prepareSound: prepareRestTimerSound,
     playSound: playRestTimerSound,
   };
 }
@@ -123,6 +129,11 @@ export function useRestTimer(
     setState((current) => markRestTimerFeedbackDelivered(current));
   }, [dependencies, preferences.soundEnabled, preferences.vibrationEnabled, state]);
 
+
+  const prepareFeedback = useCallback(() => {
+    if (preferences.soundEnabled) dependencies.prepareSound();
+  }, [dependencies, preferences.soundEnabled]);
+
   const start = useCallback((input: StartRestTimerInput) => {
     const current = dependencies.now();
     setNow(current);
@@ -162,6 +173,7 @@ export function useRestTimer(
     remainingSeconds: getRestTimerRemainingSeconds(state, now),
     announcement,
     isVisible: state.status !== 'idle',
+    prepareFeedback,
     start,
     pause,
     resume,

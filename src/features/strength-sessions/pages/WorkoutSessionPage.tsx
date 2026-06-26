@@ -180,10 +180,17 @@ export function WorkoutSessionPage() {
     values: StrengthSetChanges,
     isCompleted: boolean,
   ) => {
-    const updated = await completeSet(sessionExerciseId, setId, values, isCompleted);
-    if (!updated || !isCompleted || values.type !== 'working' || !restTimerPreferences.autoStart) return;
     const exercise = exercises.find((candidate) => candidate.id === sessionExerciseId);
-    if (!exercise?.restSeconds) return;
+    const shouldStartRest = Boolean(
+      isCompleted
+      && values.type === 'working'
+      && restTimerPreferences.autoStart
+      && exercise?.restSeconds,
+    );
+    if (shouldStartRest) restTimer.prepareFeedback();
+
+    const updated = await completeSet(sessionExerciseId, setId, values, isCompleted);
+    if (!updated || !shouldStartRest || !exercise?.restSeconds) return;
     restTimer.start({
       sessionId,
       sessionExerciseId,
@@ -194,6 +201,7 @@ export function WorkoutSessionPage() {
 
   const handleStartRest = (exercise: WorkoutSessionExercise) => {
     if (!exercise.restSeconds) return;
+    restTimer.prepareFeedback();
     restTimer.start({
       sessionId,
       sessionExerciseId: exercise.id,
