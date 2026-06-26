@@ -675,3 +675,38 @@ Validation finale :
 ### Correctif de cohérence du retour après ajout d’une activité
 
 La navigation de retour transmet explicitement au journal le message de confirmation, l’identifiant de l’activité enregistrée et la clé de restauration du défilement. Un test dédié couvre désormais le helper de navigation afin d’éviter qu’une branche locale plus ancienne ne revienne à un simple `navigate(destination)` sans état.
+
+## Tests de parcours Playwright
+
+Les tests de bout en bout vérifient les principaux parcours utilisateur dans le bundle de production :
+
+- création et persistance du profil local ;
+- saisie des pas et du poids ;
+- ajout d’une course ;
+- création et ajout d’un aliment local ;
+- création d’une séance modèle, démarrage, série et fin de séance ;
+- export et restauration JSON ;
+- rechargement direct d’une route Hash Router ;
+- navigation mobile et absence de débordement horizontal critique.
+
+Installation initiale des navigateurs :
+
+```bash
+npx playwright install chromium webkit
+```
+
+Exécution complète :
+
+```bash
+npm run test:e2e
+```
+
+Exécution ciblée :
+
+```bash
+npm run test:e2e:chromium
+npm run test:e2e:webkit
+npm run test:e2e:ui
+```
+
+Les tests utilisent Chromium sur ordinateur et WebKit avec l’émulation iPhone 15. Aucun retry n’est activé. Les traces, captures et rapports sont conservés uniquement en cas d’échec dans GitHub Actions.
