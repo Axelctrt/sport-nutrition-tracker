@@ -1,5 +1,5 @@
 import { Dumbbell, LockKeyhole } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { useProfile } from '@/app/providers/profile/useProfile';
 import { routePaths } from '@/app/routePaths';
@@ -56,6 +56,12 @@ export function OnboardingPage() {
                 <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
                   Le profil reste dans IndexedDB sur cet appareil. Aucun compte et aucun serveur ne sont utilisés.
                 </p>
+                <Link
+                  to={routePaths.privacy}
+                  className="mt-3 inline-flex min-h-10 items-center text-sm font-semibold text-brand-700 hover:underline dark:text-brand-300"
+                >
+                  Lire la politique de confidentialité
+                </Link>
               </div>
             </div>
           </div>

@@ -13,7 +13,8 @@ SPORTPILOT 0.15.0
 8. Exporter une sauvegarde JSON avant le déploiement ou tout essai de restauration.
 9. Tester l’installation PWA, le mode hors connexion, le retour du réseau et la mise à jour depuis la RC1.
 10. Recharger avec Ctrl + F5 ou relancer la PWA si une ancienne version reste en cache.
-11. Après validation, fusionner release/0.15.0 dans develop et créer le tag v0.15.0.
+11. Après le déploiement Cloudflare, vérifier les en-têtes avec : curl.exe -I https://sport-nutrition-tracker.axel-cottrant.workers.dev
+12. Après validation, fusionner release/0.15.0 dans develop et créer le tag v0.15.0.
 
 Schéma Dexie : version 2.
 Sauvegarde JSON : version 2.

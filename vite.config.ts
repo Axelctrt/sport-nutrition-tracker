@@ -26,6 +26,25 @@ function readPackageMetadata(): PackageMetadata {
 
 const { version: appVersion } = readPackageMetadata();
 
+function readCloudflareSecurityHeaders(): Record<string, string> {
+  const headersFile = readFileSync(new URL('./public/_headers', import.meta.url), 'utf8');
+  const headers: Record<string, string> = {};
+
+  for (const rawLine of headersFile.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (line === '' || line.startsWith('#') || line.startsWith('/')) continue;
+
+    const separatorIndex = line.indexOf(':');
+    if (separatorIndex <= 0) continue;
+
+    headers[line.slice(0, separatorIndex).trim()] = line.slice(separatorIndex + 1).trim();
+  }
+
+  return headers;
+}
+
+const previewSecurityHeaders = readCloudflareSecurityHeaders();
+
 
 const viteCacheDir = process.platform === 'win32'
   ? join(process.env.LOCALAPPDATA ?? tmpdir(), 'SportPilot', 'vite-cache')
@@ -146,6 +165,9 @@ export default defineConfig({
       },
     }),
   ],
+  preview: {
+    headers: previewSecurityHeaders,
+  },
   server: {
     allowedHosts: ['.trycloudflare.com'],
     proxy: {

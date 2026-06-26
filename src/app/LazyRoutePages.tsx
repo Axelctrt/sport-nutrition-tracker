@@ -213,6 +213,12 @@ const BackupPage = lazy(() =>
   })),
 );
 
+const PrivacyPage = lazy(() =>
+  import('@/features/information/pages/PrivacyPage').then((module) => ({
+    default: module.PrivacyPage,
+  })),
+);
+
 export function RouteSuspense({
   children,
   variant = 'list',
@@ -463,4 +469,8 @@ export function LazyWeeklyReviewPage() {
 
 export function LazyBackupPage() {
   return <RouteSuspense variant="form"><BackupPage /></RouteSuspense>;
+}
+
+export function LazyPrivacyPage() {
+  return <RouteSuspense variant="detail"><PrivacyPage /></RouteSuspense>;
 }

@@ -256,6 +256,7 @@ npm run test:stability # suite Vitest brassée avec une seed fixe
 npm run build        # TypeScript + build PWA
 npm run audit:mvp    # contrôle statique de la PWA
 npm run audit:release # cohérence version, documentation et schémas
+npm run audit:security # en-têtes Cloudflare, CSP et page Confidentialité
 npm run audit:rc     # audit du build d’une Release Candidate
 npm run audit:stable # budgets du build et intégrité de la version stable
 npm run check        # lint + tests + build + tous les audits
@@ -268,10 +269,11 @@ npm run diagnose:off # diagnostic Open Food Facts
 
 Le workflow `.github/workflows/ci.yml` s’exécute lors des pushes vers `develop` ou `main`, ainsi que pour les pull requests ciblant l’une de ces branches.
 
-Il lance deux jobs indépendants :
+Il lance trois jobs indépendants :
 
 - `quality` : installation reproductible avec `npm ci`, lint, suite Vitest, build PWA et audits ;
-- `test-order-stability` : suite Vitest complète dans un ordre brassé avec une seed fixe.
+- `test-order-stability` : suite Vitest complète dans un ordre brassé avec une seed fixe ;
+- `e2e` : parcours Playwright sur Chromium et WebKit iPhone.
 
 Pour exécuter localement le contrôle principal :
 
@@ -323,11 +325,26 @@ src/infrastructure/backup/backupMigrations.ts
 
 Un import invalide n’altère jamais la base. Si l’écriture échoue, la transaction est annulée et les données précédentes sont conservées.
 
-## Confidentialité
+## Confidentialité et sécurité du déploiement
 
-Les données personnelles restent dans IndexedDB sur l’appareil. L’application n’utilise ni compte utilisateur ni backend. Seules les recherches lancées explicitement vers Open Food Facts nécessitent une connexion externe.
+La page publique `#/privacy` détaille :
 
-Le fichier de sauvegarde est créé localement par le navigateur et n’est envoyé à aucun serveur.
+- le stockage dans IndexedDB ;
+- l’absence de compte, de backend, de publicité et de mesure d’audience ;
+- les données transmises uniquement lors d’une recherche Open Food Facts ;
+- le traitement local des images du scanner ;
+- les sauvegardes, diagnostics et moyens de suppression ;
+- les limites des estimations sportives et nutritionnelles.
+
+Le fichier `public/_headers` est copié dans `dist/_headers` pendant le build. Cloudflare Workers Static Assets ou Cloudflare Pages applique alors notamment :
+
+- une Content-Security-Policy limitée à l’application et aux deux domaines Open Food Facts ;
+- `X-Content-Type-Options: nosniff` ;
+- `Referrer-Policy: no-referrer` ;
+- `frame-ancestors 'none'` et `X-Frame-Options: DENY` ;
+- une Permissions-Policy autorisant seulement la caméra de la même origine et désactivant les permissions inutilisées.
+
+La prévisualisation Vite de production relit le même fichier afin que les tests Playwright exécutent SportPilot avec ces en-têtes.
 
 ## Architecture
 

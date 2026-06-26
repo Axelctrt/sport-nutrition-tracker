@@ -19,6 +19,7 @@ import {
   LazyOpenFoodFactsSearchPage,
   LazyOtherActivityPage,
   LazyProfilePage,
+  LazyPrivacyPage,
   LazyRecipeEditorPage,
   LazyRecipeEntryEditorPage,
   LazyRecipesPage,
@@ -93,6 +94,10 @@ export const router = createHashRouter([
         <LazyOnboardingPage />
       </OnboardingRoute>
     ),
+  },
+  {
+    path: routePaths.privacy,
+    element: <LazyPrivacyPage />,
   },
   {
     path: routePaths.offline,

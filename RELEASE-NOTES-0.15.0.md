@@ -41,3 +41,7 @@ La livraison stable doit réussir `npm run check`, comprenant le lint, les tests
 ## Évolutions de fiabilité après la stabilisation
 
 La branche de développement ajoute un suivi local de la dernière sauvegarde, un rappel configurable, des exports CSV, un diagnostic technique non sensible et une prévisualisation d’import plus détaillée. Ces évolutions restent compatibles avec le schéma Dexie v2 et les sauvegardes JSON v2 existantes.
+
+## Sécurité et confidentialité après la stabilisation
+
+La branche de développement ajoute une page Confidentialité publique et des en-têtes de sécurité Cloudflare. La CSP autorise les ressources locales, les workers nécessaires à la PWA et au scanner, ainsi que les deux domaines Open Food Facts utilisés par l’application. Les scripts inline et `unsafe-eval` restent interdits.

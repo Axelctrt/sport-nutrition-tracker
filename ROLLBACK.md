@@ -28,3 +28,7 @@ Après redéploiement de la RC1 ou d’une version corrective :
 ## Données
 
 Le schéma Dexie et la sauvegarde restent en version 2. Le passage entre l’alpha.13, la RC1 et la stable 0.15.0 ne nécessite aucune migration. Une restauration JSON ne doit être utilisée qu’avec une sauvegarde préalablement validée depuis la page Sauvegarde.
+
+## En-têtes de sécurité
+
+Si une incompatibilité de production apparaît, restaurer d’abord la version précédente de `public/_headers`, reconstruire puis redéployer. Ne désactiver la CSP qu’en dernier recours et uniquement le temps d’identifier la directive bloquante. Le schéma Dexie et les sauvegardes ne sont pas concernés par ce retour arrière.

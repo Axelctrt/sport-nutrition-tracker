@@ -59,3 +59,14 @@
 - [ ] Le diagnostic ne contient ni nom, ni poids, ni repas, ni détail de séance.
 - [ ] Une sauvegarde JSON v2 antérieure reste prévisualisable et importable.
 - [ ] La prévisualisation indique la compatibilité et les migrations nécessaires.
+
+## Sécurité et confidentialité
+
+- [ ] La page `#/privacy` est accessible avant la création du profil.
+- [ ] Le lien Confidentialité est visible depuis l’onboarding, les paramètres et le scanner.
+- [ ] `dist/_headers` est présent après `npm run build`.
+- [ ] `npm run audit:security` réussit.
+- [ ] La réponse de production contient CSP, `nosniff`, `no-referrer` et la Permissions-Policy.
+- [ ] Le scanner fonctionne toujours sur l’adresse HTTPS publiée.
+- [ ] Les recherches Open Food Facts fonctionnent toujours.
+- [ ] La PWA s’installe et se met à jour avec la CSP active.
