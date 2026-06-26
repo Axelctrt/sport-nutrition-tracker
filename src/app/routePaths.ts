@@ -23,6 +23,7 @@ export const routePaths = {
   editStrengthExercise: '/strength/exercises/:exerciseId/edit',
   strengthExerciseHistory: '/strength/exercises/:exerciseId/history',
   workoutSessions: '/strength/sessions',
+  weeklyPlanning: '/strength/planning',
   workoutSession: '/strength/sessions/:sessionId',
   workoutTemplates: '/strength/templates',
   newWorkoutTemplate: '/strength/templates/new',

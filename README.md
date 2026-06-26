@@ -2,6 +2,22 @@
 
 PWA locale de suivi sportif, nutritionnel, calorique et de progression.
 
+## Phase 7 — planification hebdomadaire des entraînements
+
+Le carnet de musculation dispose maintenant d’une vue hebdomadaire du lundi au dimanche :
+
+- planification d’une séance à partir d’un modèle et d’une date ;
+- contenu du modèle figé au moment de la planification ;
+- report avec conservation de la date prévue initiale ;
+- statut explicite pour les séances prévues, en cours, terminées, abandonnées ou non réalisées ;
+- démarrage direct depuis le planning ;
+- lien conservé entre la séance prévue et la séance effectivement réalisée ;
+- affichage des dates prévue et réelle lorsqu’elles diffèrent ;
+- métadonnées incluses dans les sauvegardes JSON v2 et l’export CSV des séances ;
+- fonctionnement local et hors connexion sans nouvelle table Dexie.
+
+La route dédiée est `#/strength/planning`. Le schéma IndexedDB et le format de sauvegarde restent en version 2.
+
 ## Phase 5 — minuteur de repos de musculation
 
 La séance active dispose maintenant d’un minuteur de repos mobile-first :
@@ -716,10 +732,11 @@ Les tests de bout en bout vérifient les principaux parcours utilisateur dans le
 - saisie des pas et du poids ;
 - ajout d’une course ;
 - création et ajout d’un aliment local ;
-- création d’une séance modèle, démarrage, série et fin de séance ;
+- création d’une séance modèle, planification hebdomadaire, démarrage, série et fin de séance ;
 - export et restauration JSON ;
 - rechargement direct d’une route Hash Router ;
-- navigation mobile et absence de débordement horizontal critique.
+- navigation mobile et absence de débordement horizontal critique ;
+- planification d’une séance modèle puis démarrage de la même entrée sur Chromium et WebKit iPhone.
 
 Installation initiale des navigateurs :
 

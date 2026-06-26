@@ -90,6 +90,13 @@ const StrengthExerciseHistoryPage = lazy(() =>
 
 
 
+
+const WeeklyPlanningPage = lazy(() =>
+  import('@/features/strength-planning/pages/WeeklyPlanningPage').then((module) => ({
+    default: module.WeeklyPlanningPage,
+  })),
+);
+
 const WorkoutSessionsPage = lazy(() =>
   import('@/features/strength-sessions/pages/WorkoutSessionsPage').then((module) => ({
     default: module.WorkoutSessionsPage,
@@ -371,6 +378,10 @@ export function LazyStrengthExerciseHistoryPage() {
 }
 
 
+
+export function LazyWeeklyPlanningPage() {
+  return <RouteSuspense variant="list"><WeeklyPlanningPage /></RouteSuspense>;
+}
 
 export function LazyWorkoutSessionsPage() {
   return <RouteSuspense variant="list"><WorkoutSessionsPage /></RouteSuspense>;

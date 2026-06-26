@@ -1,4 +1,4 @@
-import { CalendarCheck, CircleStop, Clock3, TrendingUp } from 'lucide-react';
+import { CalendarCheck, CalendarDays, CircleStop, Clock3, TrendingUp } from 'lucide-react';
 import type { WorkoutSessionSummaryWithProgression } from '@/features/strength-sessions/hooks/useWorkoutSessions';
 import { Card } from '@/shared/ui/Card';
 
@@ -22,7 +22,8 @@ function Metric({ icon: Icon, label, value }: MetricProps) {
 
 export function WorkoutSessionsSummary({ sessions }: { sessions: WorkoutSessionSummaryWithProgression[] }) {
   const completed = sessions.filter(({ session }) => session.status === 'completed');
-  const abandoned = sessions.filter(({ session }) => session.status === 'abandoned').length;
+  const planned = sessions.filter(({ session }) => session.status === 'planned').length;
+  const stopped = sessions.filter(({ session }) => session.status === 'abandoned' || session.status === 'skipped').length;
   const totalMinutes = completed.reduce((total, { session }) => total + (session.durationMinutes ?? 0), 0);
   const pending = sessions.reduce((total, session) => total + session.pendingProgressionCount, 0);
 
@@ -30,18 +31,19 @@ export function WorkoutSessionsSummary({ sessions }: { sessions: WorkoutSessionS
     <Card className="mt-5 p-4 sm:p-5" aria-label="Résumé des entraînements">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="font-semibold text-slate-950 dark:text-white">Historique de musculation</p>
+          <p className="font-semibold text-slate-950 dark:text-white">Suivi de musculation</p>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Vue synthétique des séances enregistrées sur cet appareil.</p>
         </div>
         <span className="rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-800 dark:bg-brand-950/60 dark:text-brand-200">
           {sessions.length} séance{sessions.length > 1 ? 's' : ''}
         </span>
       </div>
-      <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
+        <Metric icon={CalendarDays} label="Prévues" value={planned} />
         <Metric icon={CalendarCheck} label="Terminées" value={completed.length} />
         <Metric icon={Clock3} label="Minutes" value={totalMinutes} />
         <Metric icon={TrendingUp} label="Progressions" value={pending} />
-        <Metric icon={CircleStop} label="Abandonnées" value={abandoned} />
+        <Metric icon={CircleStop} label="Arrêtées" value={stopped} />
       </div>
     </Card>
   );

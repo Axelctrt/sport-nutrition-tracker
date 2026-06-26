@@ -92,3 +92,19 @@
 - [ ] Les exercices en durée et en distance utilisent les champs et graphiques adaptés.
 - [ ] Une ancienne sauvegarde sans méthode de suivi explicite reste importable.
 - [ ] Les formulaires restent utilisables en portrait sur iPhone sans débordement horizontal.
+
+
+## Planification hebdomadaire
+
+- [ ] La page `#/strength/planning` affiche sept jours du lundi au dimanche.
+- [ ] Une séance modèle peut être planifiée à la date choisie.
+- [ ] Le même modèle ne peut pas être planifié deux fois à la même date.
+- [ ] Le report déplace la séance et conserve sa date initiale.
+- [ ] Une séance peut être marquée comme non réalisée après confirmation.
+- [ ] Démarrer une séance prévue ouvre la séance active avec le même identifiant.
+- [ ] Une séance commencée un autre jour affiche séparément la date prévue et la date réelle.
+- [ ] Une autre séance active bloque correctement le démarrage depuis le planning.
+- [ ] Le planning reste utilisable hors connexion.
+- [ ] La vue ne déborde pas horizontalement en portrait sur iPhone 15.
+- [ ] L’export CSV contient les dates réelle, prévue et prévue initiale.
+- [ ] Une sauvegarde JSON v2 contenant des séances planifiées est restaurable.

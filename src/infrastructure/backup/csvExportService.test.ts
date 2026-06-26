@@ -3,6 +3,7 @@ import { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import { createDefaultAppSettings } from '@/domain/defaults/appSettings';
 import { createEntity } from '@/shared/utils/entities';
 import type { WeightEntry } from '@/domain/models/weight';
+import type { WorkoutSession } from '@/domain/models/strength';
 
 const databaseName = 'sportpilot-csv-export-test';
 let database: AppDatabase;
@@ -39,6 +40,14 @@ describe('createCsvExports', () => {
       note: 'Après entraînement',
     });
     await database.weights.add(weight);
+    await database.workoutSessions.add(createEntity<WorkoutSession>({
+      date: '2026-06-30',
+      status: 'planned',
+      plannedDate: '2026-06-30',
+      originalPlannedDate: '2026-06-29',
+      plannedAt: '2026-06-26T12:00:00.000Z',
+      sourceTemplateNameSnapshot: 'Push A',
+    }, 'planned-session'));
 
     const exports = await createCsvExports(database, '2026-06-26T12:00:00.000Z');
 
@@ -54,5 +63,8 @@ describe('createCsvExports', () => {
     ]);
     expect(exports[0]?.content).toContain('69.4');
     expect(exports[0]?.content).toContain('Après entraînement');
+    expect(exports[3]?.content).toContain('date_prevue_initiale');
+    expect(exports[3]?.content).toContain('2026-06-29');
+    expect(exports[3]?.content).toContain('planned');
   });
 });

@@ -84,11 +84,15 @@ export interface WorkoutTemplateExercise extends EntityMetadata {
   isActive: boolean;
 }
 
-export type WorkoutSessionStatus = 'inProgress' | 'completed' | 'abandoned';
+export type WorkoutSessionStatus = 'planned' | 'inProgress' | 'completed' | 'abandoned' | 'skipped';
 
 export interface WorkoutSession extends EntityMetadata {
   date: LocalDate;
   status: WorkoutSessionStatus;
+  plannedDate?: LocalDate;
+  originalPlannedDate?: LocalDate;
+  plannedAt?: string;
+  skippedAt?: string;
   sourceTemplateId?: string;
   sourceTemplateNameSnapshot?: string;
   startedAt?: string;

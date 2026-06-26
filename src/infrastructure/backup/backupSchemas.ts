@@ -407,7 +407,11 @@ const workoutTemplateExerciseSchema = entityMetadataSchema.extend({
 
 const workoutSessionSchema = entityMetadataSchema.extend({
   date: localDateSchema,
-  status: z.enum(['inProgress', 'completed', 'abandoned']),
+  status: z.enum(['planned', 'inProgress', 'completed', 'abandoned', 'skipped']),
+  plannedDate: localDateSchema.optional(),
+  originalPlannedDate: localDateSchema.optional(),
+  plannedAt: isoDateTimeSchema.optional(),
+  skippedAt: isoDateTimeSchema.optional(),
   sourceTemplateId: z.string().min(1).optional(),
   sourceTemplateNameSnapshot: z.string().max(200).optional(),
   startedAt: isoDateTimeSchema.optional(),

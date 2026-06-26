@@ -16,9 +16,10 @@ describe('WorkoutSessionsSummary', () => {
       />,
     );
 
+    expect(screen.getByLabelText('Prévues : 0')).toBeInTheDocument();
     expect(screen.getByLabelText('Terminées : 1')).toBeInTheDocument();
     expect(screen.getByLabelText('Minutes : 65')).toBeInTheDocument();
     expect(screen.getByLabelText('Progressions : 1')).toBeInTheDocument();
-    expect(screen.getByLabelText('Abandonnées : 1')).toBeInTheDocument();
+    expect(screen.getByLabelText('Arrêtées : 1')).toBeInTheDocument();
   });
 });

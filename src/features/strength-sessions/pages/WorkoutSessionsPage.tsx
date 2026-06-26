@@ -1,4 +1,4 @@
-import { Dumbbell, Layers3, Play, Plus } from 'lucide-react';
+import { CalendarDays, Dumbbell, Layers3, Play, Plus } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getWorkoutSessionTitle } from '@/application/strength/workoutSessionService';
@@ -21,7 +21,7 @@ export function WorkoutSessionsPage() {
   const { sessions, status, errorMessage, isStarting, refresh, startEmpty } = useWorkoutSessions();
   const current = sessions.find(({ session }) => session.status === 'inProgress');
   const history = useMemo(() => sessions.filter(({ session }) => {
-    if (session.status === 'inProgress') return false;
+    if (session.status !== 'completed' && session.status !== 'abandoned') return false;
     return filter === 'all' || session.status === filter;
   }), [filter, sessions]);
 
@@ -39,6 +39,9 @@ export function WorkoutSessionsPage() {
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">Reprends la séance active ou consulte rapidement les entraînements déjà réalisés.</p>
         </div>
         <div className="grid grid-cols-2 gap-2 sm:flex">
+          <Link to={routePaths.weeklyPlanning} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800">
+            <CalendarDays aria-hidden="true" className="size-4" />Planning
+          </Link>
           <Link to={routePaths.workoutTemplates} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800">
             <Layers3 aria-hidden="true" className="size-4" />Modèles
           </Link>
