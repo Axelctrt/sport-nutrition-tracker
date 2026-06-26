@@ -66,12 +66,22 @@ describe('repositories Dexie', () => {
     const repository = new DexieSettingsRepository(database);
     const legacy = createDefaultAppSettings() as unknown as Record<string, unknown>;
     delete legacy.backupReminderIntervalDays;
+    delete legacy.restTimerAutoStart;
+    delete legacy.restTimerSoundEnabled;
+    delete legacy.restTimerVibrationEnabled;
     await database.appSettings.put(legacy as never);
 
     const settings = await repository.get();
 
     expect(settings.backupReminderIntervalDays).toBe(0);
-    expect((await database.appSettings.toArray())[0]?.backupReminderIntervalDays).toBe(0);
+    expect(settings.restTimerAutoStart).toBe(true);
+    expect(settings.restTimerSoundEnabled).toBe(false);
+    expect(settings.restTimerVibrationEnabled).toBe(true);
+    const stored = (await database.appSettings.toArray())[0];
+    expect(stored?.backupReminderIntervalDays).toBe(0);
+    expect(stored?.restTimerAutoStart).toBe(true);
+    expect(stored?.restTimerSoundEnabled).toBe(false);
+    expect(stored?.restTimerVibrationEnabled).toBe(true);
   });
 
   it('enregistre et retrouve les activités d’une journée', async () => {

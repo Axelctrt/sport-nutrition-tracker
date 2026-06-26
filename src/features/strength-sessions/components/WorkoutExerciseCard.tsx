@@ -1,8 +1,9 @@
-import { ArrowDown, ArrowUp, CheckCircle2, ChevronDown, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, CheckCircle2, ChevronDown, TimerReset, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import type { ExerciseHistoryEntry } from '@/application/strength/strengthHistoryService';
 import type { StrengthSetChanges } from '@/application/strength/strengthSetService';
 import type { StrengthSet, WorkoutSessionExercise } from '@/domain/models/strength';
+import { formatRestDuration } from '@/domain/strength/restTimer';
 import { PreviousExercisePerformance } from '@/features/strength-history/components/PreviousExercisePerformance';
 import { StrengthSetEditor } from '@/features/strength-sessions/components/StrengthSetEditor';
 import { loadUnitLabel } from '@/features/strength-exercises/utils/exerciseLabels';
@@ -31,6 +32,7 @@ interface WorkoutExerciseCardProps {
   ) => Promise<unknown>;
   onDuplicateSet: (sessionExerciseId: string, setId: string) => Promise<unknown>;
   onDeleteSet: (sessionExerciseId: string, setId: string) => void;
+  onStartRest: (exercise: WorkoutSessionExercise) => void;
 }
 
 function exerciseCompletion(exercise: WorkoutSessionExercise, sets: StrengthSet[]) {
@@ -58,6 +60,7 @@ export function WorkoutExerciseCard({
   onCompleteSet,
   onDuplicateSet,
   onDeleteSet,
+  onStartRest,
 }: WorkoutExerciseCardProps) {
   const completion = exerciseCompletion(exercise, sets);
   const [expanded, setExpanded] = useState(() => editable || !completion.complete);
@@ -99,6 +102,7 @@ export function WorkoutExerciseCard({
               ) : null}
               {exercise.targetLoadKg !== undefined ? <span>Objectif {exercise.targetLoadKg} kg</span> : null}
               <span>{loadUnitLabel(exercise.loadUnitSnapshot)}</span>
+              {exercise.restSeconds ? <span>Repos {formatRestDuration(exercise.restSeconds)}</span> : null}
             </div>
           </div>
           <button
@@ -155,6 +159,17 @@ export function WorkoutExerciseCard({
                 Retirer
               </Button>
             </div>
+          ) : null}
+
+          {editable && exercise.restSeconds ? (
+            <Button
+              className="mt-4 w-full"
+              variant="secondary"
+              onClick={() => onStartRest(exercise)}
+            >
+              <TimerReset aria-hidden="true" className="size-4" />
+              Démarrer le repos · {formatRestDuration(exercise.restSeconds)}
+            </Button>
           ) : null}
 
           <PreviousExercisePerformance

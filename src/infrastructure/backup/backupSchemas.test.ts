@@ -78,11 +78,17 @@ describe('backupEnvelopeSchema', () => {
     const envelope = createValidEnvelope();
     const legacySettings = { ...envelope.data.appSettings[0] } as Record<string, unknown>;
     delete legacySettings.backupReminderIntervalDays;
+    delete legacySettings.restTimerAutoStart;
+    delete legacySettings.restTimerSoundEnabled;
+    delete legacySettings.restTimerVibrationEnabled;
     envelope.data.appSettings = [legacySettings as unknown as BackupEnvelope['data']['appSettings'][number]];
 
     const parsed = backupEnvelopeSchema.parse(envelope);
 
     expect(parsed.data.appSettings[0]?.backupReminderIntervalDays).toBe(0);
+    expect(parsed.data.appSettings[0]?.restTimerAutoStart).toBe(true);
+    expect(parsed.data.appSettings[0]?.restTimerSoundEnabled).toBe(false);
+    expect(parsed.data.appSettings[0]?.restTimerVibrationEnabled).toBe(true);
   });
 
   it('accepte les activités récentes sans RPE et les anciennes activités qui en contiennent encore un', () => {

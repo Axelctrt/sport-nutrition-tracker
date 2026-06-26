@@ -21,6 +21,13 @@ test('crée un modèle, démarre une séance, valide une série et termine', asy
   await page.getByLabel('RPE').fill('8');
   await page.getByRole('button', { name: 'Valider la série' }).click();
   await expect(page.getByRole('button', { name: 'Rouvrir la série' })).toBeVisible();
+  const restTimer = page.getByRole('region', { name: 'Minuteur de repos' });
+  await expect(restTimer).toBeVisible();
+  await expect(restTimer.getByRole('timer')).toContainText(/01:5[0-9]|02:00/);
+  await restTimer.getByRole('button', { name: 'Pause' }).click();
+  await expect(restTimer.getByRole('button', { name: 'Reprendre' })).toBeVisible();
+  await restTimer.getByRole('button', { name: 'Arrêter le minuteur' }).click();
+  await expect(restTimer).not.toBeVisible();
 
   await page.getByRole('button', { name: 'Terminer' }).click();
   const dialog = page.getByRole('alertdialog', { name: 'Terminer la séance ?' });

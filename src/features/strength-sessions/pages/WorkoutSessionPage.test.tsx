@@ -33,6 +33,7 @@ function renderSessionPage(extraRoutes?: ReactNode) {
 describe('WorkoutSessionPage', () => {
   beforeEach(async () => {
     cleanup();
+    window.sessionStorage.clear();
     await resetAppDatabaseForTest();
     await appDatabase.exerciseDefinitions.bulkPut([
       createEntity(createExerciseDefinitionInput({ name: 'Développé couché' }), 'exercise-bench'),
@@ -49,11 +50,13 @@ describe('WorkoutSessionPage', () => {
       exerciseNameSnapshot: 'Développé couché',
       sortOrder: 0,
       loadUnitSnapshot: 'kg',
+      restSeconds: 120,
     }, 'session-exercise-bench'));
   });
 
   afterEach(async () => {
     cleanup();
+    window.sessionStorage.clear();
     await deleteAppDatabaseAfterTest();
   });
 
@@ -79,6 +82,9 @@ describe('WorkoutSessionPage', () => {
     });
     expect(screen.queryByText('Notes enregistrées')).not.toBeInTheDocument();
 
+    await user.click(screen.getByRole('button', { name: /Démarrer le repos/ }));
+    expect(await screen.findByRole('region', { name: 'Minuteur de repos' })).toBeInTheDocument();
+
     const finishButton = screen.getByRole('button', { name: 'Terminer' });
     await waitFor(() => expect(finishButton).toBeEnabled());
     await user.click(finishButton);
@@ -86,6 +92,7 @@ describe('WorkoutSessionPage', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Terminer la séance' }));
     expect(await screen.findByRole('heading', { name: 'Retour au carnet' })).toBeInTheDocument();
     expect((await appDatabase.workoutSessions.get('session-current'))?.status).toBe('completed');
+    expect(window.sessionStorage.getItem('sportpilot:rest-timer:session-current')).toBeNull();
   });
 
   it('ajoute, valide, duplique et supprime des séries sans démonter la page', async () => {
@@ -112,6 +119,12 @@ describe('WorkoutSessionPage', () => {
     });
     expect(screen.queryByText('Série validée')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Chargement de la page')).not.toBeInTheDocument();
+    expect(await screen.findByRole('region', { name: 'Minuteur de repos' })).toBeInTheDocument();
+    expect(screen.getByRole('timer')).toHaveTextContent(/01:5[89]|02:00/);
+    await user.click(screen.getByRole('button', { name: 'Pause' }));
+    expect(screen.getByRole('button', { name: 'Reprendre' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Ajouter 15 secondes' }));
+    await user.click(screen.getByRole('button', { name: 'Reprendre' }));
 
     await user.click(await screen.findByRole('button', { name: 'Dupliquer' }));
     await waitFor(async () => expect(await appDatabase.strengthSets.count()).toBe(2));
@@ -126,6 +139,22 @@ describe('WorkoutSessionPage', () => {
       expect(remaining).toHaveLength(1);
       expect(remaining[0]?.setNumber).toBe(1);
     });
+  });
+
+  it('respecte la désactivation du lancement automatique tout en gardant le démarrage manuel', async () => {
+    await appDatabase.appSettings.update('app-settings', { restTimerAutoStart: false });
+    const user = userEvent.setup();
+    renderSessionPage();
+
+    await screen.findByRole('heading', { name: 'Séance libre' });
+    await user.click(screen.getByRole('button', { name: 'Ajouter une série' }));
+    await user.click(await screen.findByRole('button', { name: 'Valider la série' }));
+    await waitFor(() => expect(screen.queryByRole('region', { name: 'Minuteur de repos' })).not.toBeInTheDocument());
+
+    await user.click(screen.getByRole('button', { name: /Démarrer le repos/ }));
+    expect(await screen.findByRole('region', { name: 'Minuteur de repos' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Arrêter le minuteur' }));
+    expect(screen.queryByRole('region', { name: 'Minuteur de repos' })).not.toBeInTheDocument();
   });
 
   it('permet de réduire et développer une carte d’exercice', async () => {

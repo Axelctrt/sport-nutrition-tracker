@@ -114,6 +114,37 @@ export function AdvancedSettingsForm({
       </CollapsibleSection>
 
       <CollapsibleSection
+        title="Minuteur de repos"
+        description="Comportement du minuteur pendant les séances de musculation."
+        summary="Musculation"
+      >
+        <fieldset className="space-y-3">
+          <legend className="sr-only">Réglages du minuteur de repos</legend>
+          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 p-4 dark:border-slate-800">
+            <input type="checkbox" className={`${checkboxClassName} mt-0.5`} {...register('restTimerAutoStart')} />
+            <span>
+              <span className="block font-semibold text-slate-950 dark:text-white">Démarrer automatiquement après une série de travail</span>
+              <span className="mt-1 block text-sm leading-6 text-slate-600 dark:text-slate-300">Le temps configuré dans l’exercice est utilisé après validation de la série.</span>
+            </span>
+          </label>
+          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 p-4 dark:border-slate-800">
+            <input type="checkbox" className={`${checkboxClassName} mt-0.5`} {...register('restTimerVibrationEnabled')} />
+            <span>
+              <span className="block font-semibold text-slate-950 dark:text-white">Vibration en fin de repos</span>
+              <span className="mt-1 block text-sm leading-6 text-slate-600 dark:text-slate-300">Utilisée uniquement si le navigateur et l’appareil la prennent en charge. Safari sur iPhone ne fournit pas cette fonction aux applications web.</span>
+            </span>
+          </label>
+          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 p-4 dark:border-slate-800">
+            <input type="checkbox" className={`${checkboxClassName} mt-0.5`} {...register('restTimerSoundEnabled')} />
+            <span>
+              <span className="block font-semibold text-slate-950 dark:text-white">Son discret en fin de repos</span>
+              <span className="mt-1 block text-sm leading-6 text-slate-600 dark:text-slate-300">Le son est autorisé lors de la validation d’une série ou du démarrage manuel. Le signal visuel reste disponible s’il est bloqué.</span>
+            </span>
+          </label>
+        </fieldset>
+      </CollapsibleSection>
+
+      <CollapsibleSection
         title="Dépense quotidienne et activités"
         description="Seuils de pas, coefficients et valeurs MET par défaut."
         summary="Calculs"

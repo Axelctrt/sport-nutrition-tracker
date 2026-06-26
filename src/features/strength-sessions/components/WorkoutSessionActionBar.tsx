@@ -11,6 +11,7 @@ interface WorkoutSessionActionBarProps {
   isPending: boolean;
   onFinish: () => void;
   onAbandon: () => void;
+  hasRestTimer?: boolean;
 }
 
 function elapsedMinutes(session: WorkoutSession, now: number): number {
@@ -25,6 +26,7 @@ export function WorkoutSessionActionBar({
   isPending,
   onFinish,
   onAbandon,
+  hasRestTimer = false,
 }: WorkoutSessionActionBarProps) {
   const [now, setNow] = useState(() => Date.now());
 
@@ -36,7 +38,7 @@ export function WorkoutSessionActionBar({
   const duration = useMemo(() => elapsedMinutes(session, now), [now, session]);
 
   return (
-    <StickyActionBar>
+    <StickyActionBar toastOffset={hasRestTimer ? '14.5rem' : '5.5rem'}>
       <div className="flex items-center gap-2">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5 text-sm font-semibold text-slate-950 dark:text-white">

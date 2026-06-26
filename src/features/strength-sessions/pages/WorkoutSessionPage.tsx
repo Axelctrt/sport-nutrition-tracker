@@ -5,9 +5,12 @@ import { getWorkoutSessionTitle } from '@/application/strength/workoutSessionSer
 import { routePaths } from '@/app/routePaths';
 import type { StrengthSetChanges } from '@/application/strength/strengthSetService';
 import type { StrengthSet, WorkoutSessionExercise } from '@/domain/models/strength';
+import { createDefaultAppSettings } from '@/domain/defaults/appSettings';
 import { ProgressionSuggestionsPanel } from '@/features/strength-progression/components/ProgressionSuggestionsPanel';
 import { WorkoutExerciseCard } from '@/features/strength-sessions/components/WorkoutExerciseCard';
 import { WorkoutSessionActionBar } from '@/features/strength-sessions/components/WorkoutSessionActionBar';
+import { RestTimerBar } from '@/features/strength-rest-timer/components/RestTimerBar';
+import { defaultRestTimerPreferences, useRestTimer } from '@/features/strength-rest-timer/hooks/useRestTimer';
 import { useWorkoutSession } from '@/features/strength-sessions/hooks/useWorkoutSession';
 import { workoutSessionStatusLabel } from '@/features/strength-sessions/utils/sessionLabels';
 import { inputClassName } from '@/shared/forms/formStyles';
@@ -19,6 +22,7 @@ import { InlineNotice } from '@/shared/ui/InlineNotice';
 import { PageSkeleton } from '@/shared/ui/PageSkeleton';
 import { SaveStatus } from '@/shared/ui/SaveStatus';
 import { formatLocalDate } from '@/shared/utils/dates';
+import { repositories } from '@/infrastructure/repositories/repositories';
 
 interface RemoveExerciseConfirmation {
   type: 'removeExercise';
@@ -109,6 +113,34 @@ export function WorkoutSessionPage() {
   const [notes, setNotes] = useState('');
   const [confirmation, setConfirmation] = useState<ConfirmationRequest>();
   const [isConfirming, setIsConfirming] = useState(false);
+  const [restTimerPreferences, setRestTimerPreferences] = useState(defaultRestTimerPreferences);
+  const [restTimerPreferencesReady, setRestTimerPreferencesReady] = useState(false);
+  const restTimer = useRestTimer(sessionId, restTimerPreferences);
+
+  useEffect(() => {
+    let mounted = true;
+    void repositories.settings.get().then((settings) => {
+      if (!mounted) return;
+      setRestTimerPreferences({
+        autoStart: settings.restTimerAutoStart,
+        soundEnabled: settings.restTimerSoundEnabled,
+        vibrationEnabled: settings.restTimerVibrationEnabled,
+      });
+      setRestTimerPreferencesReady(true);
+    }).catch(() => {
+      const defaults = createDefaultAppSettings();
+      if (!mounted) return;
+      setRestTimerPreferences({
+        autoStart: defaults.restTimerAutoStart,
+        soundEnabled: defaults.restTimerSoundEnabled,
+        vibrationEnabled: defaults.restTimerVibrationEnabled,
+      });
+      setRestTimerPreferencesReady(true);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     setNotes(session?.notes ?? '');
@@ -148,7 +180,34 @@ export function WorkoutSessionPage() {
     values: StrengthSetChanges,
     isCompleted: boolean,
   ) => {
-    await completeSet(sessionExerciseId, setId, values, isCompleted);
+    const exercise = exercises.find((candidate) => candidate.id === sessionExerciseId);
+    const shouldStartRest = Boolean(
+      isCompleted
+      && values.type === 'working'
+      && restTimerPreferences.autoStart
+      && exercise?.restSeconds,
+    );
+    if (shouldStartRest) restTimer.prepareFeedback();
+
+    const updated = await completeSet(sessionExerciseId, setId, values, isCompleted);
+    if (!updated || !shouldStartRest || !exercise?.restSeconds) return;
+    restTimer.start({
+      sessionId,
+      sessionExerciseId,
+      exerciseName: exercise.exerciseNameSnapshot,
+      durationSeconds: exercise.restSeconds,
+    });
+  };
+
+  const handleStartRest = (exercise: WorkoutSessionExercise) => {
+    if (!exercise.restSeconds) return;
+    restTimer.prepareFeedback();
+    restTimer.start({
+      sessionId,
+      sessionExerciseId: exercise.id,
+      exerciseName: exercise.exerciseNameSnapshot,
+      durationSeconds: exercise.restSeconds,
+    });
   };
 
   const handleDuplicateSet = async (sessionExerciseId: string, setId: string) => {
@@ -175,11 +234,13 @@ export function WorkoutSessionPage() {
       if (confirmation.type === 'finish') {
         const completed = await complete();
         if (completed) {
+          restTimer.stop();
           await navigate(routePaths.workoutSessions);
         }
       } else if (confirmation.type === 'abandon') {
         const abandoned = await abandon();
         if (abandoned) {
+          restTimer.stop();
           await navigate(routePaths.workoutSessions);
         }
       } else if (confirmation.type === 'removeExercise') {
@@ -193,7 +254,7 @@ export function WorkoutSessionPage() {
     }
   };
 
-  if (status === 'loading') {
+  if (status === 'loading' || !restTimerPreferencesReady) {
     return <PageSkeleton variant="workout" />;
   }
 
@@ -215,7 +276,10 @@ export function WorkoutSessionPage() {
   const dialogContent = confirmationContent(confirmation);
 
   return (
-    <section className={editable ? 'pb-24 lg:pb-0' : undefined} aria-labelledby="workout-session-title">
+    <section
+      className={editable ? (restTimer.isVisible ? 'pb-72 lg:pb-0' : 'pb-24 lg:pb-0') : undefined}
+      aria-labelledby="workout-session-title"
+    >
       <Link
         to={routePaths.workoutSessions}
         className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-brand-700 hover:underline dark:text-brand-300"
@@ -242,6 +306,18 @@ export function WorkoutSessionPage() {
         </div>
       </div>
 
+      {editable && restTimer.state.status !== 'idle' ? (
+        <RestTimerBar
+          state={restTimer.state}
+          remainingSeconds={restTimer.remainingSeconds}
+          announcement={restTimer.announcement}
+          onPause={restTimer.pause}
+          onResume={restTimer.resume}
+          onAdjust={restTimer.adjust}
+          onStop={restTimer.stop}
+        />
+      ) : null}
+
       {editable ? (
         <WorkoutSessionActionBar
           session={session}
@@ -249,6 +325,7 @@ export function WorkoutSessionPage() {
           isPending={Boolean(action) || isConfirming}
           onFinish={() => setConfirmation({ type: 'finish' })}
           onAbandon={() => setConfirmation({ type: 'abandon' })}
+          hasRestTimer={restTimer.isVisible}
         />
       ) : null}
 
@@ -313,6 +390,7 @@ export function WorkoutSessionPage() {
             onCompleteSet={handleCompleteSet}
             onDuplicateSet={handleDuplicateSet}
             onDeleteSet={(sessionExerciseId, setId) => setConfirmation({ type: 'deleteSet', sessionExerciseId, setId })}
+            onStartRest={handleStartRest}
           />
         ))}
       </div>

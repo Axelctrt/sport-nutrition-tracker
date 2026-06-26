@@ -2,6 +2,21 @@
 
 PWA locale de suivi sportif, nutritionnel, calorique et de progression.
 
+## Phase 5 — minuteur de repos de musculation
+
+La séance active dispose maintenant d’un minuteur de repos mobile-first :
+
+- démarrage automatique après une série de travail lorsque l’exercice possède un temps de repos ;
+- démarrage manuel possible depuis la carte de l’exercice ;
+- pause, reprise, arrêt, retrait de 15 secondes et ajouts de 15 ou 30 secondes ;
+- calcul fondé sur un timestamp de fin pour rester exact après un passage en arrière-plan ;
+- conservation temporaire dans `sessionStorage` pendant la séance et après un rechargement ;
+- vibration et son configurables, avec indication visuelle et annonce accessible systématiques ;
+- arrêt du minuteur lors de la fin ou de l’abandon de la séance ;
+- anciens réglages et anciennes sauvegardes complétés automatiquement sans migration Dexie.
+
+Le schéma IndexedDB reste en version 2 et le format de sauvegarde reste en version 2.
+
 ## Version 0.15 — Expérience mobile-first
 
 ### 0.15.0 — version stable
