@@ -1,7 +1,7 @@
-import type { ButtonHTMLAttributes } from 'react';
+import { forwardRef, type ButtonHTMLAttributes } from 'react';
 import { cn } from '@/shared/utils/cn';
 
-type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
+type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'dangerGhost';
 type ButtonSize = 'sm' | 'md' | 'lg';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -18,6 +18,8 @@ const variantClasses: Record<ButtonVariant, string> = {
     'text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800',
   danger:
     'bg-red-700 text-white shadow-sm hover:bg-red-800 disabled:bg-red-700/50',
+  dangerGhost:
+    'border border-red-200 bg-transparent text-red-700 hover:bg-red-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/40',
 };
 
 const sizeClasses: Record<ButtonSize, string> = {
@@ -26,15 +28,19 @@ const sizeClasses: Record<ButtonSize, string> = {
   lg: 'min-h-12 px-5 text-base',
 };
 
-export function Button({
-  className,
-  type = 'button',
-  variant = 'primary',
-  size = 'md',
-  ...props
-}: ButtonProps) {
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
+  {
+    className,
+    type = 'button',
+    variant = 'primary',
+    size = 'md',
+    ...props
+  },
+  ref,
+) {
   return (
     <button
+      ref={ref}
       type={type}
       className={cn(
         'inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition-colors',
@@ -46,4 +52,4 @@ export function Button({
       {...props}
     />
   );
-}
+});

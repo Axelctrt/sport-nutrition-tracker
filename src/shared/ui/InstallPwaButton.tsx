@@ -1,13 +1,22 @@
 import { Download } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Button } from '@/shared/ui/Button';
+import { cn } from '@/shared/utils/cn';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
 }
 
-export function InstallPwaButton() {
+interface InstallPwaButtonProps {
+  className?: string;
+  label?: string;
+}
+
+export function InstallPwaButton({
+  className,
+  label = 'Installer',
+}: InstallPwaButtonProps) {
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
 
   useEffect(() => {
@@ -15,9 +24,14 @@ export function InstallPwaButton() {
       event.preventDefault();
       setInstallPrompt(event as BeforeInstallPromptEvent);
     };
+    const handleInstalled = () => setInstallPrompt(null);
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('appinstalled', handleInstalled);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleInstalled);
+    };
   }, []);
 
   if (!installPrompt) {
@@ -31,9 +45,14 @@ export function InstallPwaButton() {
   };
 
   return (
-    <Button variant="secondary" size="sm" onClick={install}>
+    <Button
+      variant="secondary"
+      size="sm"
+      className={cn(className)}
+      onClick={() => void install()}
+    >
       <Download aria-hidden="true" className="size-4" />
-      <span className="hidden sm:inline">Installer</span>
+      <span>{label}</span>
     </Button>
   );
 }

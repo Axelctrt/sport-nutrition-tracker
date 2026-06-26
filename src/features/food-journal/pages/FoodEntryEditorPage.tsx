@@ -1,11 +1,16 @@
 import { ArrowLeft, LoaderCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { foodJournalPath, routePaths } from '@/app/routePaths';
 import { saveProductEntry } from '@/application/food/foodJournalService';
 import type { FoodEntry, FoodProduct, MealSlot } from '@/domain/models/food';
 import { FoodEntryForm } from '@/features/food-journal/components/FoodEntryForm';
 import type { FoodEntryFormValues } from '@/features/food-journal/schemas/foodEntrySchema';
+import {
+  createFoodJournalFeedbackState,
+  type FoodJournalNavigationState,
+} from '@/features/food-journal/navigation/foodJournalNavigation';
+import { mealSlotLabels } from '@/features/food-journal/utils/foodLabels';
 import { repositories } from '@/infrastructure/repositories/repositories';
 import { Card } from '@/shared/ui/Card';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
@@ -18,6 +23,8 @@ export function FoodEntryEditorPage() {
   const { entryId } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const navigationState = location.state as FoodJournalNavigationState | null;
   const [products, setProducts] = useState<FoodProduct[]>([]);
   const [entry, setEntry] = useState<FoodEntry>();
   const [loading, setLoading] = useState(true);
@@ -62,13 +69,27 @@ export function FoodEntryEditorPage() {
       };
 
   const handleSubmit = async (values: FoodEntryFormValues) => {
-    await saveProductEntry({ ...(entryId ? { entryId } : {}), ...values });
-    await navigate(foodJournalPath(values.date));
+    const savedEntry = await saveProductEntry({ ...(entryId ? { entryId } : {}), ...values });
+    const returnContext = navigationState?.foodJournalReturn;
+    await navigate(returnContext?.path ?? foodJournalPath(values.date), {
+      state: createFoodJournalFeedbackState(returnContext, {
+        title: entryId
+          ? 'Quantité mise à jour'
+          : `Aliment ajouté au ${mealSlotLabels[values.mealSlot].toLocaleLowerCase('fr')}`,
+        mealSlot: values.mealSlot,
+        entryId: savedEntry.id,
+      }),
+    });
   };
 
   return (
     <section aria-labelledby="food-entry-editor-title">
-      <Link to={foodJournalPath(entry?.date ?? defaultDate)} className="inline-flex items-center gap-2 text-sm font-semibold text-brand-700 hover:underline dark:text-brand-300"><ArrowLeft aria-hidden="true" className="size-4" />Retour au journal</Link>
+      <Link
+        to={navigationState?.foodJournalReturn?.path ?? foodJournalPath(entry?.date ?? defaultDate)}
+        state={navigationState?.foodJournalReturn ? {
+          scroll: 'restore',
+          restoreScrollKey: navigationState.foodJournalReturn.scrollKey,
+        } : undefined} className="inline-flex items-center gap-2 text-sm font-semibold text-brand-700 hover:underline dark:text-brand-300"><ArrowLeft aria-hidden="true" className="size-4" />Retour au journal</Link>
       <div className="mt-5">
         <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">Journal alimentaire</p>
         <h1 id="food-entry-editor-title" className="mt-1 text-3xl font-bold tracking-tight text-slate-950 dark:text-white">{entryId ? 'Modifier un aliment consommé' : 'Ajouter un aliment'}</h1>

@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { EntityId } from '@/domain/models/common';
 import type { ExerciseDefinition } from '@/domain/models/strength';
 import {
   duplicateExerciseDefinition,
+  filterExerciseDefinitions,
   listExerciseDefinitions,
   setCustomExerciseArchived,
   type ExerciseFilters,
@@ -10,22 +11,26 @@ import {
 import { repositories } from '@/infrastructure/repositories/repositories';
 
 export function useStrengthExercises(filters: ExerciseFilters) {
-  const [exercises, setExercises] = useState<ExerciseDefinition[]>([]);
+  const [allExercises, setAllExercises] = useState<ExerciseDefinition[]>([]);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [errorMessage, setErrorMessage] = useState<string>();
+  const [actionErrorMessage, setActionErrorMessage] = useState<string>();
   const [actionId, setActionId] = useState<EntityId>();
 
-  const refresh = useCallback(async () => {
-    setStatus('loading');
+  const refresh = useCallback(async (showLoading = true) => {
+    if (showLoading) setStatus('loading');
     setErrorMessage(undefined);
     try {
-      setExercises(await listExerciseDefinitions(repositories.strengthExercises, filters));
+      setAllExercises(await listExerciseDefinitions(
+        repositories.strengthExercises,
+        { includeArchived: true },
+      ));
       setStatus('ready');
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Impossible de charger les exercices.');
       setStatus('error');
     }
-  }, [filters]);
+  }, []);
 
   useEffect(() => {
     void refresh();
@@ -33,24 +38,46 @@ export function useStrengthExercises(filters: ExerciseFilters) {
 
   const setArchived = useCallback(async (id: EntityId, isArchived: boolean) => {
     setActionId(id);
+    setActionErrorMessage(undefined);
     try {
-      await setCustomExerciseArchived(repositories.strengthExercises, id, isArchived);
-      await refresh();
+      const updated = await setCustomExerciseArchived(repositories.strengthExercises, id, isArchived);
+      setAllExercises((current) => current.map((exercise) => exercise.id === id ? updated : exercise));
+      return true;
+    } catch (error) {
+      setActionErrorMessage(error instanceof Error ? error.message : 'Impossible de modifier cet exercice.');
+      return false;
     } finally {
       setActionId(undefined);
     }
-  }, [refresh]);
+  }, []);
+
+
+  const exercises = useMemo(
+    () => filterExerciseDefinitions(allExercises, filters),
+    [allExercises, filters],
+  );
 
   const duplicate = useCallback(async (id: EntityId) => {
     setActionId(id);
+    setActionErrorMessage(undefined);
     try {
-      const created = await duplicateExerciseDefinition(repositories.strengthExercises, id);
-      await refresh();
-      return created;
+      return await duplicateExerciseDefinition(repositories.strengthExercises, id);
+    } catch (error) {
+      setActionErrorMessage(error instanceof Error ? error.message : 'Impossible de dupliquer cet exercice.');
+      return undefined;
     } finally {
       setActionId(undefined);
     }
-  }, [refresh]);
+  }, []);
 
-  return { exercises, status, errorMessage, actionId, refresh, setArchived, duplicate };
+  return {
+    exercises,
+    status,
+    errorMessage,
+    actionErrorMessage,
+    actionId,
+    refresh,
+    setArchived,
+    duplicate,
+  };
 }

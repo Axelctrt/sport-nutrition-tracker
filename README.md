@@ -1,6 +1,235 @@
-# SportPilot 0.14.0
+# SportPilot 0.15.0
 
 PWA locale de suivi sportif, nutritionnel, calorique et de progression.
+
+## Version 0.15 — Expérience mobile-first
+
+### 0.15.0 — version stable
+
+La version 0.15.0 consolide l’ensemble du parcours mobile-first validé pendant les préversions et la Release Candidate :
+
+- tableau de bord, nutrition, activités, poids, analyses, musculation, profil, paramètres et sauvegarde optimisés pour l’iPhone ;
+- navigation mobile complète, installation PWA, fonctionnement hors connexion et mise à jour contrôlée ;
+- champs de date uniformisés, saisies numériques à zéro directement remplaçables et sections repliables recentrées ;
+- routes, sauvegardes, erreurs globales, thème et budgets du build couverts par des garde-fous automatisés ;
+- version stable visible dans Paramètres ;
+- schéma Dexie 2 et sauvegarde JSON 2 conservés sans migration.
+
+### 0.15.0-rc.1 — stabilisation finale et Release Candidate
+
+Cette Release Candidate a gelé les fonctionnalités de la version 0.15 et renforcé la livraison avant publication stable :
+
+- routes du shell centralisées, sans doublon, et comparées automatiquement aux navigations mobile et ordinateur ;
+- titres de page obligatoires pour chaque route réellement enregistrée ;
+- chemins dynamiques construits depuis les constantes centrales avec encodage des identifiants ;
+- couverture du format de sauvegarde comparée à toutes les tables Dexie ;
+- thème tolérant aux refus de lecture ou d’écriture de `localStorage` ;
+- écran global d’erreur permettant de revenir à l’accueil sans toucher aux données ;
+- version installée affichée dans Paramètres pour faciliter la vérification des mises à jour PWA ;
+- budgets JavaScript et CSS, raccourcis PWA, fichiers hashés et absence de source maps contrôlés par l’audit de production ;
+- checklist de validation et procédure de retour arrière fournies ;
+- aucune migration Dexie et aucune modification du format de sauvegarde.
+
+### 0.15.0-alpha.13 — finitions de saisie et panneaux mobiles
+
+Cette préversion corrige trois irritants transversaux avant la Release Candidate :
+
+- champs de date et d’heure contraints à la même largeur et à la même hauteur que les autres champs sur Safari iOS ;
+- correction spécifique de la largeur intrinsèque des contrôles natifs dans les grilles mobiles ;
+- effacement automatique d’une valeur numérique égale à `0` lorsque le champ reçoit le focus ;
+- restauration automatique de `0` si le champ est quitté sans nouvelle saisie ;
+- comportement appliqué aux séries, charges, répétitions, poids, pas et autres champs numériques similaires ;
+- recentrage doux du contenu lorsqu’une section, une carte ou un menu repliable est développé ;
+- respect de `prefers-reduced-motion` pour éviter les animations imposées ;
+- stabilisation d’un test d’activité dépendant de la date courante ;
+- stabilisation de la vérification du retour au journal par contrôle direct de la destination et de l’état complet transmis à React Router ;
+- aucune migration Dexie et aucune modification du format de sauvegarde.
+
+### 0.15.0-alpha.12 — navigation mobile et expérience PWA
+
+Cette préversion finalise l’accès aux écrans secondaires et les états transversaux de l’application sur téléphone :
+
+- menu mobile complet accessible depuis l’en-tête sans modifier la navigation basse ;
+- accès direct aux entraînements, exercices, modèles, historique, bilan, profil, paramètres, sauvegarde et calculs ;
+- état actif du menu lorsqu’un écran secondaire est ouvert ;
+- feuille mobile accessible avec fermeture par croix, arrière-plan ou touche Échap, verrouillage du scroll et restitution déterministe du focus au bouton Menu ;
+- instructions d’installation spécifiques à l’iPhone avec le parcours Safari Partager puis Ajouter à l’écran d’accueil ;
+- installation native proposée sur les navigateurs compatibles et état explicite lorsque la PWA est déjà installée ;
+- bannière hors connexion plus précise et confirmation temporaire lorsque le réseau revient ;
+- message de mise à jour PWA adapté aux safe areas et actions plus lisibles sur téléphone ;
+- page des calculs convertie en sections progressives avec résumé compact et liens vers le profil et les paramètres ;
+- pages hors connexion et introuvable enrichies avec actions de reprise claires ;
+- aucune migration Dexie et aucune modification du format de sauvegarde.
+
+### 0.15.0-alpha.11 — recherche et ajout alimentaire mobile
+
+Cette préversion simplifie le choix et l’ajout d’un aliment depuis le journal :
+
+- sélecteur local, recherche Open Food Facts et scanner harmonisés autour du même parcours mobile ;
+- feuille accessible pour régler la quantité sans faire descendre la page ni perdre le contexte ;
+- focus automatique sur la quantité et restitution du focus après fermeture ;
+- sources locales affichées dans une grille plus dense, sans défilement horizontal ;
+- chargement initial du sélecteur remplacé par le skeleton partagé ;
+- recherche Open Food Facts limitée à un seul mode visible à la fois : nom ou marque, ou code-barres ;
+- résumé compact des résultats locaux, affichés et disponibles dans la base externe ;
+- cartes de produits raccourcies avec calories et macronutriments lisibles immédiatement ;
+- scanner recentré sur la caméra, avec confidentialité et saisie manuelle dans des sections repliables ;
+- produit scanné conservé dans une carte compacte avec réouverture directe du réglage de quantité ;
+- états de chargement et états vides harmonisés avec les composants partagés ;
+- aucune migration Dexie et aucune modification du format de sauvegarde.
+
+### 0.15.0-alpha.10 — profil, paramètres et sauvegarde mobile
+
+Cette préversion simplifie la configuration personnelle et la gestion des données locales sur téléphone :
+
+- accès direct aux paramètres depuis l’icône d’engrenage de l’en-tête mobile ;
+- résumés compacts pour comprendre immédiatement le profil, les réglages actifs et le stockage local ;
+- formulaire de profil organisé en sections progressives, avec objectifs et macronutriments regroupés ;
+- bouton d’enregistrement stable sous le formulaire, sans déplacement pendant le défilement ;
+- paramètres avancés répartis entre affichage, calculs, natation et calibration hebdomadaire ;
+- clavier mobile adapté aux coefficients et focalisation du premier champ invalide ;
+- confirmation accessible avant le rétablissement des valeurs par défaut ;
+- spinner local des paramètres remplacé par le skeleton partagé ;
+- page de sauvegarde recentrée sur exporter, restaurer et effacer ;
+- prévisualisation compacte d’un fichier avant restauration, puis confirmation de remplacement ;
+- suppression définitive dans un dialogue accessible exigeant la saisie `EFFACER` ;
+- confidentialité, fonctionnement PWA et zone dangereuse déplacés dans des sections repliables ;
+- aucune migration Dexie et aucune modification du format de sauvegarde.
+
+### 0.15.0-alpha.9 — carnet de musculation mobile
+
+Cette préversion harmonise les écrans de musculation utilisés en dehors d’une séance active :
+
+- catalogue d’exercices avec résumé unique, recherche prioritaire, filtres tactiles et options avancées repliées ;
+- recherche et filtres appliqués localement après un chargement unique, sans perte de focus pendant la saisie ;
+- cartes d’exercices compactes avec historique prioritaire et actions secondaires regroupées ;
+- archivage ou réactivation protégés par un dialogue accessible, sans rechargement complet ;
+- séances modèles avec résumé, recherche locale, démarrage visible et actions secondaires repliées ;
+- historique des entraînements regroupé en cartes compactes avec filtres Toutes, Terminées et Abandonnées ;
+- séance en cours toujours prioritaire avec accès direct à la reprise ;
+- progression par exercice structurée autour d’une synthèse unique, avec records et graphiques ouverts à la demande ;
+- records de répétitions par charge convertis en cartes mobiles, sans tableau horizontal ;
+- séries de chaque séance historique repliées par défaut ;
+- formulaires d’exercice et de séance modèle raccourcis avec informations facultatives et réglages avancés repliés ;
+- focalisation du premier champ invalide et chargements harmonisés avec les skeletons partagés ;
+- aucune migration Dexie et aucune modification du format de sauvegarde.
+
+### 0.15.0-alpha.8 — bibliothèque alimentaire mobile
+
+Cette préversion harmonise les aliments locaux, les recettes et les repas favoris pour une utilisation mobile :
+
+- résumés compacts pour comprendre immédiatement le contenu de chaque bibliothèque ;
+- recherche locale instantanée dans les aliments, les recettes et les repas favoris ;
+- filtres rapides pour les aliments favoris ou dont les informations nutritionnelles restent à vérifier ;
+- cartes mobiles avec action principale visible et actions secondaires repliées ;
+- archivage d’un aliment et suppression d’une recette ou d’un favori protégés par le dialogue partagé ;
+- mutations silencieuses sans rechargement complet ni remontée en haut ;
+- restauration du défilement et mise en évidence après création ou modification ;
+- formulaires d’aliments et de recettes raccourcis, avec informations facultatives repliées ;
+- ajout d’un repas favori au journal depuis sa propre carte, dans une feuille mobile accessible ;
+- skeletons et états vides partagés, avec meilleure isolation des tests React ;
+- aucune migration Dexie et aucune modification du format de sauvegarde.
+
+### 0.15.0-alpha.7 — analyses et bilan hebdomadaire mobile
+
+Cette préversion rend les analyses et la calibration hebdomadaire plus lisibles sur téléphone :
+
+- synthèse unique sur douze semaines regroupant course, natation, adhérence calorique et poids récent ;
+- graphiques montés uniquement à l’ouverture de leur section pour éviter une page initiale trop longue ;
+- course, natation, nutrition, activité générale, poids et répartition sportive organisés en sections progressives ;
+- détails hebdomadaires présentés sous forme de cartes, sans tableaux horizontaux ;
+- accès direct au bilan hebdomadaire et à l’historique depuis les analyses ;
+- décision calorique placée en priorité dans le bilan, avec actions adaptées au téléphone ;
+- résumé hebdomadaire compact et détails d’adhérence repliables ;
+- historiques des bilans et ajustements acceptés convertis en cartes mobiles ;
+- acceptation ou refus d’une proposition sans démontage complet de la page ;
+- chargement harmonisé avec les skeletons partagés ;
+- aucune migration Dexie et aucune modification du format de sauvegarde.
+
+### 0.15.0-alpha.6 — poids et historique mobile
+
+Cette préversion simplifie le suivi du poids et la consultation de l’historique sur téléphone :
+
+- résumé du poids regroupant dernière mesure, moyenne mobile, variation et écart à la trajectoire ;
+- saisie mobile compacte avec note facultative repliée et bouton d’enregistrement fixe sous le formulaire ;
+- historique des pesées présenté sous forme de cartes, sans tableau horizontal ;
+- périodes rapides de 30 jours, 90 jours ou historique complet pour le graphique ;
+- modification directe d’une pesée depuis sa carte et suppression protégée par le dialogue partagé ;
+- sauvegarde et suppression silencieuses sans rechargement complet ni remontée en haut ;
+- historique général regroupé en cartes quotidiennes compactes avec résumé de période ;
+- filtres rapides de 7, 28 et 90 jours, avec dates personnalisées disponibles en option ;
+- accès direct au journal alimentaire, aux activités et à la pesée de chaque journée ;
+- aucune migration Dexie et aucune modification du format de sauvegarde.
+
+### 0.15.0-alpha.5 — suivi des activités mobile
+
+Cette préversion simplifie la saisie et la consultation des activités sur téléphone :
+
+- journal quotidien compact avec nombre de séances, durée totale et calories retenues regroupés ;
+- cartes de course, natation, vélo, marche et cardio allégées, avec métriques essentielles immédiatement lisibles ;
+- modification, duplication et suppression regroupées dans un menu secondaire ;
+- suppression protégée par le dialogue accessible partagé ;
+- duplication et suppression silencieuses, sans grand chargement ni remontée en haut ;
+- restauration du défilement et mise en évidence temporaire après ajout, modification ou duplication ;
+- choix du type d’activité plus compact et formulaires adaptés aux claviers mobiles ;
+- bouton d’enregistrement stable sous la note facultative, sans déplacement pendant le scroll ;
+- notes et correction calorique déplacées dans une section facultative repliable ;
+- liens de musculation et explications énergétiques déplacés dans des sections secondaires ;
+- aucune migration Dexie et aucune modification du format de sauvegarde.
+
+### 0.15.0-alpha.4 — tableau de bord mobile
+
+Cette préversion réorganise le tableau de bord autour de la journée en cours :
+
+- résumé principal unique regroupant calories consommées, reste ou dépassement, macronutriments, pas et poids du jour ;
+- séance de musculation en cours affichée immédiatement avec reprise directe ;
+- six actions rapides tactiles pour l’alimentation, le scanner, les pas, le poids, les activités et la musculation ;
+- saisies du poids et des pas ouvertes dans une feuille mobile depuis les actions rapides, avec confirmation locale et sans section dupliquée ;
+- activités et détails de calcul déplacés dans des sections secondaires repliables ;
+- explications énergétiques réduites à une phrase et un lien vers la page dédiée ;
+- skeleton partagé utilisé pendant le chargement initial et rafraîchissement silencieux des données ;
+- aucune migration Dexie et aucune modification du format de sauvegarde.
+
+### 0.15.0-alpha.3 — journal alimentaire mobile
+
+Cette préversion simplifie le suivi alimentaire quotidien sur téléphone :
+
+- résumé journalier compact regroupant calories, reste disponible et macronutriments ;
+- quatre cartes de repas autonomes avec action `Ajouter` immédiatement accessible ;
+- lignes d’aliments plus compactes et modification rapide de la quantité dans le journal ;
+- duplication, suppression et accès au détail placés dans des actions secondaires ;
+- options de repas et de journée repliées pour réduire la longueur de la page ;
+- rafraîchissement silencieux après chaque action, sans démontage du journal ;
+- retour au bon repas après ajout classique, scan d’un code-barres ou ajout d’une recette ;
+- restauration du défilement et mise en évidence temporaire de l’entrée ajoutée ou modifiée ;
+- confirmations alimentaires uniques par toast et suppression via un dialogue accessible.
+
+### 0.15.0-alpha.2 — séance de musculation mobile
+
+Cette préversion optimise la séance pour une utilisation réelle pendant l’entraînement :
+
+- barre d’action fixe sur téléphone avec durée, état de sauvegarde et bouton `Terminer` ;
+- adaptation automatique de la barre sur ordinateur sans dupliquer les actions ;
+- rafraîchissement silencieux après chaque mutation, sans démontage de la page ni retour en haut ;
+- cartes d’exercices repliables avec objectif, avancement et performance précédente regroupés ;
+- séries compactes en trois colonnes tactiles pour la charge, les répétitions et le RPE ;
+- type et notes de série déplacés dans une section secondaire ;
+- ajout et duplication faisant apparaître uniquement le nouvel élément lorsque nécessaire ;
+- statut de sauvegarde discret pendant les actions, sans toast de succès encombrant pendant la séance ;
+- dialogues accessibles pour terminer, abandonner, retirer un exercice ou supprimer une série ;
+- état vide et notes générales harmonisés avec les fondations UX.
+
+### 0.15.0-alpha.1 — fondations UX
+
+- écran de démarrage avec le logo SportPilot ;
+- skeletons adaptés aux routes et limitant les décalages visuels ;
+- système global de notifications temporaires accessible ;
+- restauration centralisée de la position de défilement ;
+- titres de pages dynamiques dans l’en-tête ;
+- dialogue de confirmation accessible ;
+- états vides, sections repliables et statut de sauvegarde partagés ;
+- focalisation du premier champ invalide ;
+- respect renforcé de `prefers-reduced-motion`.
 
 ## Prérequis
 
@@ -24,8 +253,11 @@ npm run dev          # serveur Vite
 npm run lint         # Oxlint
 npm run test         # tests Vitest
 npm run build        # TypeScript + build PWA
-npm run audit:mvp    # contrôle statique final de la PWA
-npm run check        # lint + tests + build + audit
+npm run audit:mvp    # contrôle statique de la PWA
+npm run audit:release # cohérence version, documentation et schémas
+npm run audit:rc     # audit du build d’une Release Candidate
+npm run audit:stable # budgets du build et intégrité de la version stable
+npm run check        # lint + tests + build + tous les audits
 npm run preview      # prévisualisation du build
 npm run diagnose:off # diagnostic Open Food Facts
 ```
@@ -414,3 +646,8 @@ Validation finale :
 - Vite/PWA : build réussi et 106 ressources précachées ;
 - audit MVP et audit de release : réussis.
 
+
+
+### Correctif de cohérence du retour après ajout d’une activité
+
+La navigation de retour transmet explicitement au journal le message de confirmation, l’identifiant de l’activité enregistrée et la clé de restauration du défilement. Un test dédié couvre désormais le helper de navigation afin d’éviter qu’une branche locale plus ancienne ne revienne à un simple `navigate(destination)` sans état.

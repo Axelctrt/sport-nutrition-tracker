@@ -20,6 +20,7 @@ interface MealFoodSelectionFormProps {
   date: string;
   mealSlot: MealSlot;
   onSubmit: (values: FoodEntryFormValues) => Promise<void>;
+  showProductHeader?: boolean | undefined;
 }
 
 function createDefaultValues(
@@ -41,6 +42,7 @@ export function MealFoodSelectionForm({
   date,
   mealSlot,
   onSubmit,
+  showProductHeader = true,
 }: MealFoodSelectionFormProps) {
   const {
     register,
@@ -86,19 +88,21 @@ export function MealFoodSelectionForm({
         </InlineNotice>
       ) : null}
 
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
-          Aliment sélectionné
-        </p>
-        <h2 className="mt-1 break-words text-xl font-semibold text-slate-950 dark:text-white">
-          {product.name}
-        </h2>
-        {product.brand ? (
-          <p className="mt-1 break-words text-sm text-slate-500 dark:text-slate-400">
-            {product.brand}
+      {showProductHeader ? (
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
+            Aliment sélectionné
           </p>
-        ) : null}
-      </div>
+          <h2 className="mt-1 break-words text-xl font-semibold text-slate-950 dark:text-white">
+            {product.name}
+          </h2>
+          {product.brand ? (
+            <p className="mt-1 break-words text-sm text-slate-500 dark:text-slate-400">
+              {product.brand}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="grid min-w-0 gap-4 sm:grid-cols-2">
         <FormField id="meal-selector-date" label="Date" error={errors.date?.message} required>

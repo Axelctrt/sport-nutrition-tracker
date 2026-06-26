@@ -1,10 +1,11 @@
-import { routePaths } from '@/app/routePaths';
+import { mobileMoreNavigation } from '@/app/navigation';
+import { barcodeScannerPath, routePaths, selectFoodPath } from '@/app/routePaths';
 import { CURRENT_BACKUP_SCHEMA_VERSION } from '@/infrastructure/backup/backupMigrations';
 import { databaseSchemaVersion, databaseTableNames } from '@/infrastructure/database/schema';
 
-describe('préparation de la release 0.14.0', () => {
-  it('expose une version stable dans le build', () => {
-    expect(__APP_VERSION__).toBe('0.14.0');
+describe('préparation de la version stable 0.15.0', () => {
+  it('expose la version stable dans le build', () => {
+    expect(__APP_VERSION__).toBe('0.15.0');
     expect(__APP_VERSION__).toMatch(/^\d+\.\d+\.\d+$/);
   });
 
@@ -12,20 +13,33 @@ describe('préparation de la release 0.14.0', () => {
     expect(databaseSchemaVersion).toBe(2);
     expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(2);
     expect(databaseTableNames).toEqual(expect.arrayContaining([
-      'exerciseDefinitions',
-      'workoutTemplates',
-      'workoutTemplateExercises',
+      'userProfile',
+      'appSettings',
+      'weights',
+      'foodEntries',
       'workoutSessions',
-      'workoutSessionExercises',
-      'strengthSets',
-      'progressionSuggestions',
     ]));
   });
 
-  it('expose tous les parcours du carnet de musculation', () => {
-    expect(routePaths.strengthExercises).toBe('/strength/exercises');
-    expect(routePaths.workoutTemplates).toBe('/strength/templates');
-    expect(routePaths.workoutSessions).toBe('/strength/sessions');
-    expect(routePaths.strengthExerciseHistory).toContain('/history');
+  it('rend les écrans secondaires accessibles depuis le menu mobile', () => {
+    const mobilePaths = mobileMoreNavigation.flatMap((section) =>
+      section.items.map((item) => item.path),
+    );
+
+    expect(mobilePaths).toEqual(expect.arrayContaining([
+      routePaths.workoutSessions,
+      routePaths.strengthExercises,
+      routePaths.history,
+      routePaths.weeklyReview,
+      routePaths.backup,
+      routePaths.calculationsInformation,
+    ]));
+  });
+
+  it('conserve les parcours de recherche et d’ajout alimentaire', () => {
+    expect(routePaths.foodProducts).toBe('/food/products');
+    expect(routePaths.barcodeScanner).toBe('/food/barcode-scanner');
+    expect(selectFoodPath('2026-06-26', 'lunch')).toBe('/food/select?date=2026-06-26&slot=lunch');
+    expect(barcodeScannerPath('2026-06-26', 'lunch')).toBe('/food/barcode-scanner?date=2026-06-26&slot=lunch');
   });
 });

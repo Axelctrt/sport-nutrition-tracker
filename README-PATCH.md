@@ -1,22 +1,20 @@
-# SportPilot 0.14.0 — release du carnet de musculation
+# SportPilot 0.15.0 — version stable
 
-Branche obligatoire : `release/0.14.0`
+Branche obligatoire : `release/0.15.0`
 
-Cette release consolide la série 0.14 :
+Cette livraison promeut la Release Candidate validée en version stable. Elle ne modifie aucune fonctionnalité métier ni aucune donnée utilisateur.
 
-- version stable `0.14.0` ;
-- catalogue local d’exercices et exercices personnalisés ;
-- séances modèles et séances réalisées ;
-- séries avec charge, répétitions, type, notes et RPE ;
-- historique, statistiques, records et estimation du 1RM ;
-- suggestions de progression avec décision manuelle ;
-- retrait non destructif du RPE général des activités ;
-- migration Dexie vers le schéma 2 ;
-- sauvegardes JSON version 2 compatibles avec les versions antérieures ;
-- version de l’application centralisée depuis `package.json` ;
-- audit automatique des métadonnées, schémas et fichiers de release ;
-- documentation des calculs de musculation ;
-- raccourci PWA vers le carnet de musculation.
+## Promotion intégrée
+
+- version applicative promue vers `0.15.0` sans suffixe de préversion ;
+- version stable affichée dans Paramètres et injectée dans le build Vite ;
+- audit de production adapté à une version sémantique stable sans suffixe ;
+- `npm run check` exécute désormais l’audit stable ;
+- tests de préparation et d’affichage de version mis à jour ;
+- notes de publication, checklist finale et procédure de retour arrière actualisées ;
+- aucune modification du schéma Dexie 2 ;
+- aucune modification du format de sauvegarde JSON 2 ;
+- aucune migration de données.
 
 ## Validation
 
@@ -25,4 +23,4 @@ npm install
 npm run check
 ```
 
-Résultats validés : 78 fichiers de tests, 305 tests, lint sans erreur ni avertissement, build PWA avec 106 ressources précachées, audit MVP et audit de release réussis.
+La validation manuelle finale se trouve dans `RELEASE-CHECKLIST.md`. Les points clés de la version sont détaillés dans `RELEASE-NOTES-0.15.0.md` et la procédure de retour arrière dans `ROLLBACK.md`.

@@ -1,4 +1,4 @@
-import { ArrowLeft, LoaderCircle } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { routePaths } from '@/app/routePaths';
@@ -17,6 +17,7 @@ import {
 import { repositories } from '@/infrastructure/repositories/repositories';
 import { Card } from '@/shared/ui/Card';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
+import { PageSkeleton } from '@/shared/ui/PageSkeleton';
 
 export function StrengthExerciseEditorPage() {
   const { exerciseId } = useParams();
@@ -67,7 +68,7 @@ export function StrengthExerciseEditorPage() {
         <p className="mt-3 max-w-3xl text-slate-600 dark:text-slate-300">L’exercice sera stocké uniquement sur cet appareil et restera disponible hors connexion.</p>
       </div>
 
-      {loading ? <Card className="mt-8 p-8 text-center" role="status"><LoaderCircle aria-hidden="true" className="mx-auto size-8 animate-spin text-brand-700" /><p className="mt-3 font-semibold">Chargement de l’exercice…</p></Card> : null}
+      {loading ? <PageSkeleton className="mt-6" variant="form" /> : null}
       {errorMessage ? <InlineNotice className="mt-8" tone="error" title="Exercice indisponible">{errorMessage}</InlineNotice> : null}
       {!loading && !errorMessage ? <Card className="mt-8 p-5 sm:p-7"><StrengthExerciseForm initialValues={initialValues} submitLabel={exercise ? 'Enregistrer les modifications' : 'Créer l’exercice'} onSubmit={handleSubmit} /></Card> : null}
     </section>

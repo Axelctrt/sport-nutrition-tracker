@@ -33,12 +33,14 @@ describe('App', () => {
     await appDatabase.delete();
   });
 
-  it('redirige vers l’onboarding quand aucun profil n’existe', async () => {
+  it('affiche le splash initial puis redirige vers l’onboarding quand aucun profil n’existe', async () => {
     render(<App />);
 
+    expect(screen.getByTestId('app-splash-screen')).toBeInTheDocument();
     expect(
       await screen.findByRole('heading', { name: 'Créer le profil local' }, { timeout: 5_000 }),
     ).toBeInTheDocument();
+    expect(screen.queryByTestId('app-splash-screen')).not.toBeInTheDocument();
   }, 15_000);
 
   it('crée un profil avec les valeurs initiales puis ouvre le tableau de bord', async () => {

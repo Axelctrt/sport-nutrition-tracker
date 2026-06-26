@@ -1,4 +1,4 @@
-import { LoaderCircle, RefreshCw, Search, WifiOff } from 'lucide-react';
+import { LoaderCircle, PackageSearch, RefreshCw, Search } from 'lucide-react';
 import { type FormEvent, useMemo, useState } from 'react';
 import type { FoodProduct } from '@/domain/models/food';
 import type { OpenFoodFactsProductCandidate } from '@/infrastructure/open-food-facts/OpenFoodFactsMapper';
@@ -8,6 +8,7 @@ import { useMealOpenFoodFactsSearch } from '@/features/food-journal/hooks/useMea
 import { inputClassName } from '@/shared/forms/formStyles';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
+import { EmptyState } from '@/shared/ui/EmptyState';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 
 interface MealOpenFoodFactsSearchPanelProps {
@@ -126,10 +127,12 @@ export function MealOpenFoodFactsSearchPanel({
       </Card>
 
       {status === 'loading' ? (
-        <Card className="mt-4 p-8 text-center" role="status">
-          <LoaderCircle aria-hidden="true" className="mx-auto size-8 animate-spin text-brand-700" />
-          <p className="mt-3 font-semibold text-slate-950 dark:text-white">Recherche en cours…</p>
-        </Card>
+        <InlineNotice className="mt-4" title="Recherche en cours" role="status">
+          <span className="flex items-center gap-2">
+            <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
+            Consultation d’Open Food Facts.
+          </span>
+        </InlineNotice>
       ) : null}
 
       {errorMessage ? (
@@ -151,13 +154,12 @@ export function MealOpenFoodFactsSearchPanel({
       ) : null}
 
       {status === 'ready' && products.length === 0 && !informationMessage ? (
-        <Card className="mt-4 p-6 text-center">
-          <WifiOff aria-hidden="true" className="mx-auto size-8 text-slate-400" />
-          <h3 className="mt-3 font-semibold text-slate-950 dark:text-white">Aucun résultat exploitable</h3>
-          <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-            Modifie la recherche ou utilise la création manuelle.
-          </p>
-        </Card>
+        <EmptyState
+          className="mt-4"
+          icon={PackageSearch}
+          title="Aucun résultat exploitable"
+          description="Modifie la recherche ou utilise la création manuelle."
+        />
       ) : null}
 
       {products.length > 0 ? (
@@ -172,7 +174,7 @@ export function MealOpenFoodFactsSearchPanel({
               </p>
             ) : null}
           </div>
-          <div className="mt-4 grid min-w-0 gap-4 lg:grid-cols-2">
+          <div className="mt-3 grid min-w-0 gap-3 lg:grid-cols-2">
             {products.map((product) => {
               const normalizedBarcode = normalizeOpenFoodFactsBarcode(product.barcode);
               const localProduct = savedProductsByBarcode.get(normalizedBarcode)

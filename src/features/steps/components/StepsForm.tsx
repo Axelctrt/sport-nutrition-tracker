@@ -16,6 +16,7 @@ interface StepsFormProps {
   onSubmit: (values: StepsFormValues) => Promise<void>;
   submitLabel?: string;
   formId?: string;
+  showDescription?: boolean;
 }
 
 export function StepsForm({
@@ -23,6 +24,7 @@ export function StepsForm({
   onSubmit,
   submitLabel = 'Enregistrer les pas',
   formId = 'steps-form',
+  showDescription = true,
 }: StepsFormProps) {
   const {
     register,
@@ -50,7 +52,9 @@ export function StepsForm({
       <FormField
         id={`${formId}-totalSteps`}
         label="Pas totaux de la journée"
-        description="Inclut les pas réalisés pendant les séances de course. Ils seront retirés automatiquement du calcul de marche."
+        description={showDescription
+          ? 'Inclut les pas réalisés pendant les séances de course. Ils seront retirés automatiquement du calcul de marche.'
+          : undefined}
         error={errors.totalSteps?.message}
         required
       >

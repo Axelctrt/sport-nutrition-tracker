@@ -8,6 +8,7 @@ import {
   DatabaseBackup,
   Dumbbell,
   Gauge,
+  History,
   Info,
   Settings,
   UserRound,
@@ -21,6 +22,12 @@ export interface NavigationItem {
   path: string;
   icon: LucideIcon;
   end?: boolean;
+  description?: string;
+}
+
+export interface NavigationSection {
+  title: string;
+  items: NavigationItem[];
 }
 
 export const primaryNavigation: NavigationItem[] = [
@@ -48,4 +55,76 @@ export const mobileNavigation: NavigationItem[] = [
   { label: 'Sport', path: routePaths.activities, icon: Activity },
   { label: 'Poids', path: routePaths.weight, icon: Weight },
   { label: 'Analyses', path: routePaths.analytics, icon: BarChart3 },
+];
+
+export const mobileMoreNavigation: NavigationSection[] = [
+  {
+    title: 'Musculation',
+    items: [
+      {
+        label: 'Mes entraînements',
+        path: routePaths.workoutSessions,
+        icon: PlayCircle,
+        description: 'Reprendre une séance ou consulter l’historique.',
+      },
+      {
+        label: 'Exercices',
+        path: routePaths.strengthExercises,
+        icon: Activity,
+        description: 'Catalogue, exercices personnels et progression.',
+      },
+      {
+        label: 'Séances modèles',
+        path: routePaths.workoutTemplates,
+        icon: Layers3,
+        description: 'Préparer et démarrer des entraînements récurrents.',
+      },
+    ],
+  },
+  {
+    title: 'Suivi et décisions',
+    items: [
+      {
+        label: 'Historique',
+        path: routePaths.history,
+        icon: History,
+        description: 'Relire les journées et ouvrir leurs données.',
+      },
+      {
+        label: 'Bilan hebdomadaire',
+        path: routePaths.weeklyReview,
+        icon: ClipboardCheck,
+        description: 'Examiner les données et décider des ajustements.',
+      },
+    ],
+  },
+  {
+    title: 'Compte et application',
+    items: [
+      {
+        label: 'Profil',
+        path: routePaths.profile,
+        icon: UserRound,
+        description: 'Objectifs, mensurations et macronutriments.',
+      },
+      {
+        label: 'Paramètres',
+        path: routePaths.settings,
+        icon: Settings,
+        description: 'Thème, calculs avancés et stockage local.',
+      },
+      {
+        label: 'Sauvegarde',
+        path: routePaths.backup,
+        icon: DatabaseBackup,
+        description: 'Exporter, restaurer ou effacer les données.',
+      },
+      {
+        label: 'Informations sur les calculs',
+        path: routePaths.calculationsInformation,
+        icon: Info,
+        description: 'Comprendre les formules et leurs limites.',
+      },
+    ],
+  },
 ];

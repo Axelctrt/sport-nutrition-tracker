@@ -61,12 +61,12 @@ export function OnboardingPage() {
           </div>
         </Card>
 
-        <Card className="p-5 sm:p-8">
-          <div className="mb-8">
+        <section aria-labelledby="onboarding-profile-title" className="min-w-0">
+          <div className="mb-6">
             <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
               Profil local
             </p>
-            <h2 className="mt-1 text-2xl font-bold tracking-tight text-slate-950 dark:text-white">
+            <h2 id="onboarding-profile-title" className="mt-1 text-2xl font-bold tracking-tight text-slate-950 dark:text-white">
               Créer le profil local
             </h2>
             <p className="mt-2 text-slate-600 dark:text-slate-300">
@@ -85,7 +85,7 @@ export function OnboardingPage() {
             submitLabel="Créer mon profil"
             onSubmit={handleSubmit}
           />
-        </Card>
+        </section>
       </div>
     </main>
   );

@@ -16,6 +16,22 @@ function renderHeader(initialEntry = '/') {
 afterEach(cleanup);
 
 describe('PageHeader', () => {
+
+  it('propose un accès direct aux paramètres dans l’en-tête mobile', () => {
+    renderHeader();
+
+    const settingsLink = screen.getByRole('link', { name: 'Ouvrir les paramètres' });
+    expect(settingsLink).toHaveAttribute('href', '/settings');
+    expect(settingsLink).toHaveClass('lg:hidden');
+  });
+
+  it('indique la page paramètres comme active', () => {
+    renderHeader('/settings');
+
+    expect(screen.getByRole('link', { name: 'Ouvrir les paramètres' })).toHaveClass(
+      'bg-brand-100',
+    );
+  });
   it('propose un accès direct au profil dans l’en-tête mobile', () => {
     renderHeader();
 
@@ -31,4 +47,12 @@ describe('PageHeader', () => {
       'bg-brand-100',
     );
   });
+
+  it('affiche le titre de la page courante dans l’en-tête mobile', () => {
+    renderHeader('/strength/sessions/session-1');
+
+    expect(screen.getByText('Séance de musculation')).toBeInTheDocument();
+    expect(document.title).toBe('Séance de musculation · SportPilot');
+  });
+
 });

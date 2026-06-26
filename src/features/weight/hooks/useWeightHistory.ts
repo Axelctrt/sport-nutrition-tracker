@@ -6,19 +6,23 @@ import { repositories } from '@/infrastructure/repositories/repositories';
 
 export type WeightHistoryStatus = 'loading' | 'ready' | 'error';
 
+function sortEntries(entries: readonly WeightEntry[]): WeightEntry[] {
+  return [...entries].sort((left, right) => left.date.localeCompare(right.date));
+}
+
 export function useWeightHistory() {
   const { profile } = useProfile();
   const [status, setStatus] = useState<WeightHistoryStatus>('loading');
   const [entries, setEntries] = useState<WeightEntry[]>([]);
   const [errorMessage, setErrorMessage] = useState<string>();
 
-  const refresh = useCallback(async () => {
-    setStatus('loading');
+  const refresh = useCallback(async (silent = false) => {
+    if (!silent) setStatus('loading');
     setErrorMessage(undefined);
 
     try {
       const storedEntries = await repositories.weight.listAll();
-      setEntries(storedEntries);
+      setEntries(sortEntries(storedEntries));
       setStatus('ready');
     } catch (error) {
       setErrorMessage(
@@ -26,7 +30,7 @@ export function useWeightHistory() {
           ? error.message
           : 'L’historique du poids ne peut pas être chargé.',
       );
-      setStatus('error');
+      if (!silent) setStatus('error');
     }
   }, []);
 
@@ -35,14 +39,22 @@ export function useWeightHistory() {
   }, [refresh]);
 
   const save = useCallback(async (data: NewEntity<WeightEntry>) => {
-    await repositories.weight.upsert(data);
-    await refresh();
-  }, [refresh]);
+    const saved = await repositories.weight.upsert(data);
+    setEntries((current) => sortEntries([
+      ...current.filter((entry) => entry.date !== saved.date),
+      saved,
+    ]));
+    setStatus('ready');
+    setErrorMessage(undefined);
+    return saved;
+  }, []);
 
   const remove = useCallback(async (date: LocalDate) => {
     await repositories.weight.deleteByDate(date);
-    await refresh();
-  }, [refresh]);
+    setEntries((current) => current.filter((entry) => entry.date !== date));
+    setStatus('ready');
+    setErrorMessage(undefined);
+  }, []);
 
   const getApplicableWeight = useCallback((date: LocalDate) => {
     const latestEntry = entries

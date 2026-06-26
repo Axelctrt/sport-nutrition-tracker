@@ -1,8 +1,8 @@
-import { HardDrive, LoaderCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTheme } from '@/app/providers/useTheme';
 import type { AppSettings } from '@/domain/models/settings';
 import { AdvancedSettingsForm } from '@/features/settings/components/AdvancedSettingsForm';
+import { SettingsOverview } from '@/features/settings/components/SettingsOverview';
 import type { SettingsFormValues } from '@/features/settings/schemas/settingsSchema';
 import {
   settingsFormValuesToChanges,
@@ -14,7 +14,7 @@ import {
   type PersistentStorageStatus,
 } from '@/infrastructure/storage/persistentStorage';
 import { repositories } from '@/infrastructure/repositories/repositories';
-import { Card } from '@/shared/ui/Card';
+import { PageSkeleton } from '@/shared/ui/PageSkeleton';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 
 const storageLabels: Record<PersistentStorageStatus, { title: string; description: string }> = {
@@ -136,18 +136,13 @@ export function AdvancedSettingsPage() {
   }
 
   if (!settings) {
-    return (
-      <Card className="p-8 text-center" role="status">
-        <LoaderCircle aria-hidden="true" className="mx-auto size-8 animate-spin text-brand-700 dark:text-brand-300" />
-        <p className="mt-4 font-semibold text-slate-950 dark:text-white">Chargement des paramètres…</p>
-      </Card>
-    );
+    return <PageSkeleton variant="form" />;
   }
 
   const storagePresentation = storageLabels[storageStatus];
 
   return (
-    <section aria-labelledby="settings-title">
+    <section aria-labelledby="settings-title" className="min-w-0 overflow-x-clip">
       <div>
         <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
           Réglages du moteur
@@ -160,17 +155,11 @@ export function AdvancedSettingsPage() {
         </p>
       </div>
 
-      <Card className="mt-6 p-5">
-        <div className="flex items-start gap-3">
-          <HardDrive aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-brand-700 dark:text-brand-300" />
-          <div>
-            <h2 className="font-semibold text-slate-950 dark:text-white">{storagePresentation.title}</h2>
-            <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
-              {storagePresentation.description}
-            </p>
-          </div>
-        </div>
-      </Card>
+      <SettingsOverview settings={settings} storageStatus={storageStatus} />
+
+      <InlineNotice className="mt-4" title={storagePresentation.title}>
+        {storagePresentation.description}
+      </InlineNotice>
 
       {feedback ? (
         <InlineNotice
@@ -183,13 +172,13 @@ export function AdvancedSettingsPage() {
         </InlineNotice>
       ) : null}
 
-      <Card className="mt-6 p-5 sm:p-8">
+      <div className="mt-6">
         <AdvancedSettingsForm
           initialValues={settingsToFormValues(settings)}
           onSubmit={handleSubmit}
           onResetToDefaults={handleResetToDefaults}
         />
-      </Card>
+      </div>
     </section>
   );
 }

@@ -3,14 +3,13 @@ import {
   Globe2,
   History,
   LibraryBig,
-  LoaderCircle,
   Plus,
   Search,
   ScanLine,
   Star,
 } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   barcodeScannerPath,
   foodJournalPath,
@@ -20,15 +19,21 @@ import { filterMealFoodProducts } from '@/application/food/mealFoodSelectorServi
 import { saveProductEntry } from '@/application/food/foodJournalService';
 import type { FoodProduct, MealSlot } from '@/domain/models/food';
 import { FoodProductPickerCard } from '@/features/food-journal/components/FoodProductPickerCard';
-import { MealFoodSelectionForm } from '@/features/food-journal/components/MealFoodSelectionForm';
+import { FoodEntryQuickDialog } from '@/features/food-journal/components/FoodEntryQuickDialog';
 import { MealOpenFoodFactsSearchPanel } from '@/features/food-journal/components/MealOpenFoodFactsSearchPanel';
 import type { FoodEntryFormValues } from '@/features/food-journal/schemas/foodEntrySchema';
 import { useMealFoodSelector } from '@/features/food-journal/hooks/useMealFoodSelector';
+import {
+  createFoodJournalFeedbackState,
+  type FoodJournalNavigationState,
+} from '@/features/food-journal/navigation/foodJournalNavigation';
 import { mealSlotLabels } from '@/features/food-journal/utils/foodLabels';
 import { inputClassName } from '@/shared/forms/formStyles';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
+import { EmptyState } from '@/shared/ui/EmptyState';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
+import { PageSkeleton } from '@/shared/ui/PageSkeleton';
 import { formatLocalDate, toLocalDate } from '@/shared/utils/dates';
 import { isValidLocalDate } from '@/shared/validation/localDate';
 
@@ -48,6 +53,8 @@ const sourceLabels: Record<Exclude<ProductSource, 'openFoodFacts'>, string> = {
 export function MealFoodSelectorPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const navigationState = location.state as FoodJournalNavigationState | null;
   const requestedDate = searchParams.get('date');
   const requestedSlot = searchParams.get('slot');
   const requestedProductId = searchParams.get('productId');
@@ -64,7 +71,6 @@ export function MealFoodSelectorPage() {
   );
   const [remoteSelectedProduct, setRemoteSelectedProduct] = useState<FoodProduct>();
   const [submitError, setSubmitError] = useState<string>();
-  const selectionFormRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!data) return;
@@ -99,11 +105,6 @@ export function MealFoodSelectorPage() {
     (product) => product.id === selectedProductId,
   ) ?? (remoteSelectedProduct?.id === selectedProductId ? remoteSelectedProduct : undefined);
 
-  useEffect(() => {
-    if (!selectedProductId) return;
-    selectionFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, [selectedProductId]);
-
   const handleSelect = (product: FoodProduct) => {
     setRemoteSelectedProduct(undefined);
     setSelectedProductId(product.id);
@@ -119,8 +120,15 @@ export function MealFoodSelectorPage() {
   const handleSubmit = async (values: FoodEntryFormValues) => {
     setSubmitError(undefined);
     try {
-      await saveProductEntry(values);
-      await navigate(foodJournalPath(values.date));
+      const entry = await saveProductEntry(values);
+      const returnContext = navigationState?.foodJournalReturn;
+      await navigate(returnContext?.path ?? foodJournalPath(values.date), {
+        state: createFoodJournalFeedbackState(returnContext, {
+          title: `Aliment ajouté au ${mealSlotLabels[values.mealSlot].toLocaleLowerCase('fr')}`,
+          mealSlot: values.mealSlot,
+          entryId: entry.id,
+        }),
+      });
     } catch (error) {
       setSubmitError(
         error instanceof Error
@@ -133,7 +141,11 @@ export function MealFoodSelectorPage() {
   return (
     <section className="min-w-0 overflow-x-clip" aria-labelledby="meal-food-selector-title">
       <Link
-        to={foodJournalPath(date)}
+        to={navigationState?.foodJournalReturn?.path ?? foodJournalPath(date)}
+        state={navigationState?.foodJournalReturn ? {
+          scroll: 'restore',
+          restoreScrollKey: navigationState.foodJournalReturn.scrollKey,
+        } : undefined}
         className="inline-flex items-center gap-2 text-sm font-semibold text-brand-700 hover:underline dark:text-brand-300"
       >
         <ArrowLeft aria-hidden="true" className="size-4" />
@@ -157,6 +169,7 @@ export function MealFoodSelectorPage() {
         </div>
         <Link
           to={newFoodProductForMealPath(date, mealSlot)}
+          state={location.state}
           className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-slate-300 px-4 text-sm font-semibold hover:bg-slate-50 sm:w-auto dark:border-slate-700 dark:hover:bg-slate-800"
         >
           <Plus aria-hidden="true" className="size-4" />
@@ -173,12 +186,7 @@ export function MealFoodSelectorPage() {
         </InlineNotice>
       ) : null}
 
-      {status === 'loading' ? (
-        <Card className="mt-6 p-8 text-center" role="status">
-          <LoaderCircle aria-hidden="true" className="mx-auto size-8 animate-spin text-brand-700" />
-          <p className="mt-3 font-semibold">Chargement des aliments…</p>
-        </Card>
-      ) : null}
+      {status === 'loading' ? <PageSkeleton className="mt-6" variant="list" /> : null}
 
       {status === 'ready' && data ? (
         <>
@@ -186,7 +194,7 @@ export function MealFoodSelectorPage() {
             <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
               Source de l’aliment
             </p>
-            <div className="mt-3 grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4" aria-label="Sources d’aliments">
+            <div className="mt-3 grid min-w-0 grid-cols-2 gap-2 xl:grid-cols-4" aria-label="Sources d’aliments">
               <Button
                 variant={source === 'recent' && query.length === 0 ? 'primary' : 'secondary'}
                 aria-pressed={source === 'recent' && query.length === 0}
@@ -235,6 +243,7 @@ export function MealFoodSelectorPage() {
 
             <Link
               to={barcodeScannerPath(date, mealSlot)}
+              state={location.state}
               className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800 sm:w-auto"
             >
               <ScanLine aria-hidden="true" className="size-4" />
@@ -287,7 +296,7 @@ export function MealFoodSelectorPage() {
               </div>
 
               {visibleProducts.length > 0 ? (
-                <div className="mt-4 grid min-w-0 gap-4 lg:grid-cols-2">
+                <div className="mt-4 grid min-w-0 gap-3 lg:grid-cols-2">
                   {visibleProducts.map((product) => (
                     <FoodProductPickerCard
                       key={product.id}
@@ -298,57 +307,44 @@ export function MealFoodSelectorPage() {
                   ))}
                 </div>
               ) : (
-                <Card className="mt-4 p-6 text-center">
-                  <h3 className="font-semibold text-slate-950 dark:text-white">
-                    {query.trim().length > 0
-                      ? 'Aucun aliment local ne correspond'
-                      : source === 'recent'
-                        ? 'Aucun aliment récent'
-                        : source === 'favorites'
-                          ? 'Aucun aliment favori'
-                          : 'Aucun aliment enregistré'}
-                  </h3>
-                  <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                    Recherche un autre nom, utilise Open Food Facts ou crée un aliment manuel.
-                  </p>
-                  <Link
-                    to={newFoodProductForMealPath(date, mealSlot)}
-                    className="mt-4 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-brand-700 px-4 text-sm font-semibold text-white hover:bg-brand-800"
-                  >
-                    <Plus aria-hidden="true" className="size-4" />
-                    Créer un aliment
-                  </Link>
-                </Card>
+                <EmptyState
+                  className="mt-4"
+                  icon={Search}
+                  title={query.trim().length > 0
+                    ? 'Aucun aliment local ne correspond'
+                    : source === 'recent'
+                      ? 'Aucun aliment récent'
+                      : source === 'favorites'
+                        ? 'Aucun aliment favori'
+                        : 'Aucun aliment enregistré'}
+                  description="Recherche un autre nom, utilise Open Food Facts ou crée un aliment manuel."
+                  primaryAction={(
+                    <Link
+                      to={newFoodProductForMealPath(date, mealSlot)}
+                      state={location.state}
+                      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-brand-700 px-4 text-sm font-semibold text-white hover:bg-brand-800"
+                    >
+                      <Plus aria-hidden="true" className="size-4" />
+                      Créer un aliment
+                    </Link>
+                  )}
+                />
               )}
             </>
           )}
 
-          {selectedProduct ? (
-            <div ref={selectionFormRef} className="scroll-mt-4">
-              <Card className="mt-6 min-w-0 p-5 sm:p-7">
-                {submitError ? (
-                  <InlineNotice className="mb-5" tone="error" title="Ajout impossible">
-                    {submitError}
-                  </InlineNotice>
-                ) : null}
-                {!selectedProduct.isNutritionComplete ? (
-                  <InlineNotice className="mb-5" tone="info" title="Valeurs nutritionnelles à vérifier">
-                    Certaines valeurs sont absentes de la source et ont été enregistrées à zéro. Tu peux ajouter le produit, puis corriger sa fiche locale si nécessaire.
-                  </InlineNotice>
-                ) : null}
-                <MealFoodSelectionForm
-                  product={selectedProduct}
-                  date={date}
-                  mealSlot={mealSlot}
-                  onSubmit={handleSubmit}
-                />
-              </Card>
-            </div>
-          ) : (
-            <InlineNotice className="mt-6" title="Choisis un aliment">
-              Sélectionne un résultat pour afficher ses valeurs, régler la quantité et confirmer le repas cible.
-            </InlineNotice>
-          )}
+          <FoodEntryQuickDialog
+            product={selectedProduct}
+            date={date}
+            mealSlot={mealSlot}
+            errorMessage={submitError}
+            onClose={() => {
+              setSelectedProductId(undefined);
+              setRemoteSelectedProduct(undefined);
+              setSubmitError(undefined);
+            }}
+            onSubmit={handleSubmit}
+          />
         </>
       ) : null}
     </section>

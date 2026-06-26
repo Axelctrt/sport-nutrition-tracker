@@ -1,9 +1,11 @@
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { ReactNode } from 'react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { WorkoutSessionPage } from '@/features/strength-sessions/pages/WorkoutSessionPage';
 import { appDatabase } from '@/infrastructure/database/database';
 import { initializeDatabase } from '@/infrastructure/database/databaseLifecycle';
+import { ToastProvider } from '@/shared/toast/ToastProvider';
 import { createEntity } from '@/shared/utils/entities';
 import {
   createExerciseDefinitionInput,
@@ -14,6 +16,19 @@ import {
   createWorkoutTemplateExerciseInput,
   createWorkoutTemplateInput,
 } from '@/test/factories/strengthFactory';
+
+function renderSessionPage(extraRoutes?: ReactNode) {
+  return render(
+    <ToastProvider>
+      <MemoryRouter initialEntries={['/strength/sessions/session-current']}>
+        <Routes>
+          <Route path="/strength/sessions/:sessionId" element={<WorkoutSessionPage />} />
+          {extraRoutes}
+        </Routes>
+      </MemoryRouter>
+    </ToastProvider>,
+  );
+}
 
 describe('WorkoutSessionPage', () => {
   beforeEach(async () => {
@@ -47,46 +62,41 @@ describe('WorkoutSessionPage', () => {
 
   it('ajoute un exercice, enregistre les notes et termine la séance', async () => {
     const user = userEvent.setup();
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
-    render(
-      <MemoryRouter initialEntries={['/strength/sessions/session-current']}>
-        <Routes>
-          <Route path="/strength/sessions/:sessionId" element={<WorkoutSessionPage />} />
-          <Route path="/strength/sessions" element={<h1>Retour au carnet</h1>} />
-        </Routes>
-      </MemoryRouter>,
-    );
+    renderSessionPage(<Route path="/strength/sessions" element={<h1>Retour au carnet</h1>} />);
 
     await screen.findByRole('heading', { name: 'Séance libre' });
+    const abandonButton = screen.getByRole('button', { name: 'Abandonner la séance' });
+    expect(abandonButton.querySelector('.lucide-x')).toBeInTheDocument();
+    await user.click(screen.getByText('Ajouter un exercice'));
     await user.selectOptions(screen.getByLabelText('Exercice à ajouter'), 'exercise-row');
     await user.click(screen.getByRole('button', { name: 'Ajouter' }));
     expect(await screen.findByRole('heading', { name: 'Rowing barre' })).toBeInTheDocument();
+    expect(screen.queryByText('Exercice ajouté')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Chargement de la page')).not.toBeInTheDocument();
 
+    await user.click(screen.getByText('Notes générales', { selector: 'span' }));
     await user.type(screen.getByLabelText('Notes générales'), 'Séance solide');
     await user.click(screen.getByRole('button', { name: 'Enregistrer les notes' }));
     await waitFor(async () => {
       expect((await appDatabase.workoutSessions.get('session-current'))?.notes).toBe('Séance solide');
     });
+    expect(screen.queryByText('Notes enregistrées')).not.toBeInTheDocument();
 
-    const finishButton = await screen.findByRole('button', { name: 'Terminer' });
+    const finishButton = screen.getByRole('button', { name: 'Terminer' });
     await waitFor(() => expect(finishButton).toBeEnabled());
     await user.click(finishButton);
+    const dialog = await screen.findByRole('alertdialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Terminer la séance' }));
     expect(await screen.findByRole('heading', { name: 'Retour au carnet' })).toBeInTheDocument();
     expect((await appDatabase.workoutSessions.get('session-current'))?.status).toBe('completed');
   });
 
-  it('ajoute, valide, duplique et supprime des séries', async () => {
+  it('ajoute, valide, duplique et supprime des séries sans démonter la page', async () => {
     const user = userEvent.setup();
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
-    render(
-      <MemoryRouter initialEntries={['/strength/sessions/session-current']}>
-        <Routes>
-          <Route path="/strength/sessions/:sessionId" element={<WorkoutSessionPage />} />
-        </Routes>
-      </MemoryRouter>,
-    );
+    renderSessionPage();
 
     await screen.findByRole('heading', { name: 'Séance libre' });
+    expect(screen.getByRole('region', { name: 'Actions de la page' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Ajouter une série' }));
 
     const weightInput = await screen.findByLabelText('Charge en kg');
@@ -101,28 +111,36 @@ describe('WorkoutSessionPage', () => {
     await waitFor(async () => {
       const sets = await appDatabase.strengthSets.toArray();
       expect(sets).toHaveLength(1);
-      expect(sets[0]).toMatchObject({
-        repetitions: 12,
-        weightKg: 60,
-        rpe: 8,
-        isCompleted: true,
-      });
+      expect(sets[0]).toMatchObject({ repetitions: 12, weightKg: 60, rpe: 8, isCompleted: true });
     });
+    expect(screen.queryByText('Série validée')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Chargement de la page')).not.toBeInTheDocument();
 
     await user.click(await screen.findByRole('button', { name: 'Dupliquer' }));
-    await waitFor(async () => {
-      expect(await appDatabase.strengthSets.count()).toBe(2);
-    });
-    await screen.findByText('Série 2');
-    expect(screen.getAllByText(/Série [12]/)).toHaveLength(2);
+    await waitFor(async () => expect(await appDatabase.strengthSets.count()).toBe(2));
+    expect(await screen.findByText('Série 2')).toBeInTheDocument();
 
-    const deleteButtons = screen.getAllByRole('button', { name: 'Supprimer' });
+    const deleteButtons = screen.getAllByRole('button', { name: 'Supprimer la série' });
     await user.click(deleteButtons[0]!);
+    const dialog = await screen.findByRole('alertdialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Supprimer la série' }));
     await waitFor(async () => {
       const remaining = await appDatabase.strengthSets.toArray();
       expect(remaining).toHaveLength(1);
       expect(remaining[0]?.setNumber).toBe(1);
     });
+  });
+
+  it('permet de réduire et développer une carte d’exercice', async () => {
+    const user = userEvent.setup();
+    renderSessionPage();
+
+    await screen.findByRole('heading', { name: 'Développé couché' });
+    expect(screen.getByRole('button', { name: 'Ajouter une série' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Réduire Développé couché' }));
+    expect(screen.queryByRole('button', { name: 'Ajouter une série' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Développer Développé couché' }));
+    expect(screen.getByRole('button', { name: 'Ajouter une série' })).toBeInTheDocument();
   });
 
   it('affiche et reprend les séries de la séance précédente', async () => {
@@ -155,13 +173,7 @@ describe('WorkoutSessionPage', () => {
       }), 'previous-set-2'),
     ]);
     const user = userEvent.setup();
-    render(
-      <MemoryRouter initialEntries={['/strength/sessions/session-current']}>
-        <Routes>
-          <Route path="/strength/sessions/:sessionId" element={<WorkoutSessionPage />} />
-        </Routes>
-      </MemoryRouter>,
-    );
+    renderSessionPage();
 
     expect(await screen.findByText(/Dernière séance/)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Reprendre ces séries' }));
@@ -174,6 +186,7 @@ describe('WorkoutSessionPage', () => {
         expect.objectContaining({ weightKg: 60, repetitions: 10, isCompleted: false }),
       ]));
     });
+    expect(screen.queryByText('Séries précédentes reprises')).not.toBeInTheDocument();
   });
 
   it('affiche une suggestion et applique la charge choisie au modèle', async () => {
@@ -209,18 +222,13 @@ describe('WorkoutSessionPage', () => {
     ));
 
     const user = userEvent.setup();
-    render(
-      <MemoryRouter initialEntries={['/strength/sessions/session-current']}>
-        <Routes>
-          <Route path="/strength/sessions/:sessionId" element={<WorkoutSessionPage />} />
-        </Routes>
-      </MemoryRouter>,
-    );
+    renderSessionPage();
 
     expect(await screen.findByRole('heading', { name: 'Suggestions de progression' })).toBeInTheDocument();
     const loadInput = screen.getByLabelText('Charge cible retenue');
     await user.clear(loadInput);
     await user.type(loadInput, '63');
+    expect(loadInput).toHaveValue(63);
     await user.click(screen.getByRole('button', { name: 'Accepter cette charge' }));
 
     await waitFor(async () => {
@@ -229,5 +237,4 @@ describe('WorkoutSessionPage', () => {
     });
     expect(await screen.findByText(/Charge cible mise à jour à 63 kg/)).toBeInTheDocument();
   });
-
 });
