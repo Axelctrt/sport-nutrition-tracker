@@ -3,9 +3,9 @@ import { barcodeScannerPath, routePaths, selectFoodPath } from '@/app/routePaths
 import { CURRENT_BACKUP_SCHEMA_VERSION } from '@/infrastructure/backup/backupMigrations';
 import { databaseSchemaVersion, databaseTableNames } from '@/infrastructure/database/schema';
 
-describe('préparation de la version 0.15.0-alpha.13', () => {
-  it('expose la préversion UX dans le build', () => {
-    expect(__APP_VERSION__).toBe('0.15.0-alpha.13');
+describe('préparation de la version 0.15.0-rc.1', () => {
+  it('expose la Release Candidate dans le build', () => {
+    expect(__APP_VERSION__).toBe('0.15.0-rc.1');
     expect(__APP_VERSION__).toMatch(/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/);
   });
 

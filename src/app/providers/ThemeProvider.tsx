@@ -16,15 +16,29 @@ function isThemePreference(value: string | null): value is ThemePreference {
   return value === 'system' || value === 'light' || value === 'dark';
 }
 
+function readStoredTheme(): ThemePreference {
+  try {
+    const storedTheme = window.localStorage.getItem(STORAGE_KEY);
+    return isThemePreference(storedTheme) ? storedTheme : 'system';
+  } catch {
+    return 'system';
+  }
+}
+
+function persistTheme(theme: ThemePreference): void {
+  try {
+    window.localStorage.setItem(STORAGE_KEY, theme);
+  } catch {
+    // Le thème reste appliqué pour la session lorsque le stockage navigateur est bloqué.
+  }
+}
+
 function getSystemTheme(): 'light' | 'dark' {
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
 export function ThemeProvider({ children }: PropsWithChildren) {
-  const [theme, setThemeState] = useState<ThemePreference>(() => {
-    const storedTheme = window.localStorage.getItem(STORAGE_KEY);
-    return isThemePreference(storedTheme) ? storedTheme : 'system';
-  });
+  const [theme, setThemeState] = useState<ThemePreference>(readStoredTheme);
   const [systemTheme, setSystemTheme] = useState<'light' | 'dark'>(getSystemTheme);
 
   const resolvedTheme = theme === 'system' ? systemTheme : theme;
@@ -45,7 +59,7 @@ export function ThemeProvider({ children }: PropsWithChildren) {
 
   const setTheme = useCallback((nextTheme: ThemePreference) => {
     setThemeState(nextTheme);
-    window.localStorage.setItem(STORAGE_KEY, nextTheme);
+    persistTheme(nextTheme);
   }, []);
 
   const value = useMemo(

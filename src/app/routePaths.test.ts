@@ -2,6 +2,8 @@ import {
   barcodeScannerPath,
   newFoodProductForMealPath,
   selectFoodPath,
+  editActivityPath,
+  editRecipePath,
   editStrengthExercisePath,
   editWorkoutTemplatePath,
   workoutSessionPath,
@@ -73,5 +75,12 @@ describe('parcours de l’historique de musculation', () => {
 describe('parcours du suivi du poids', () => {
   it('ouvre la pesée de la date demandée', () => {
     expect(weightPath('2026-06-25')).toBe('/weight?date=2026-06-25');
+  });
+});
+
+describe('parcours des éditeurs dynamiques', () => {
+  it('encode les identifiants dans les chemins de recette et d’activité', () => {
+    expect(editRecipePath('recette spéciale')).toBe('/recipes/recette%20sp%C3%A9ciale/edit');
+    expect(editActivityPath('activité/1')).toBe('/activities/activit%C3%A9%2F1/edit');
   });
 });

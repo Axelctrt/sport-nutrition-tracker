@@ -1,6 +1,6 @@
-SPORTPILOT 0.15.0-alpha.13
+SPORTPILOT 0.15.0-rc.1
 
-1. Vérifier la branche feature/mobile-form-interaction-polish.
+1. Vérifier la branche release/0.15.0-rc.1.
 2. Arrêter le serveur de développement avec Ctrl + C.
 3. Copier le contenu du patch à la racine du projet sport-nutrition-tracker.
 4. Accepter le remplacement des fichiers.
@@ -8,16 +8,12 @@ SPORTPILOT 0.15.0-alpha.13
    npm install
    npm run check
    npm run dev
-6. Vérifier tous les champs de date en portrait et en paysage : aucun ne doit dépasser à droite.
-7. Vérifier que les champs date et heure ont la même hauteur que les autres champs.
-8. Ouvrir une série contenant 0 kg ou 0 répétition : le zéro doit disparaître au focus.
-9. Saisir une nouvelle valeur sans avoir à supprimer le zéro manuellement.
-10. Quitter un champ vidé sans saisir de valeur : le zéro doit être restauré.
-11. Tester le même comportement sur le poids, les pas et les autres champs numériques à zéro.
-12. Ouvrir plusieurs sections repliables : chaque contenu développé doit être recentré automatiquement.
-13. Tester les sections repliables en haut et en bas d’une page longue.
-14. Tester en modes clair et sombre, portrait et paysage.
-15. Recharger l’application avec Ctrl + F5 si une ancienne version reste en cache.
+6. Vérifier dans Paramètres que la version affichée est 0.15.0-rc.1.
+7. Exécuter la liste complète de RELEASE-CHECKLIST.md sur iPhone.
+8. Exporter une sauvegarde JSON avant tout essai de restauration ou de suppression.
+9. Tester l’installation PWA, le mode hors connexion et le retour du réseau.
+10. Tester un retour à l’accueil depuis l’écran global d’erreur si un incident est simulé en développement.
+11. Recharger avec Ctrl + F5 ou relancer la PWA si une ancienne version reste en cache.
 
 Schéma Dexie : version 2.
 Sauvegarde JSON : version 2.

@@ -8,6 +8,7 @@ describe('SettingsOverview', () => {
     render(<SettingsOverview settings={{ ...settings, theme: 'dark' }} storageStatus="persisted" />);
 
     expect(screen.getByLabelText('Résumé des paramètres')).toBeInTheDocument();
+    expect(screen.getByText('0.15.0-rc.1')).toBeInTheDocument();
     expect(screen.getByText('Sombre')).toBeInTheDocument();
     expect(screen.getByText('Persistant')).toBeInTheDocument();
     expect(screen.getByText(/3[\s ]000/)).toBeInTheDocument();

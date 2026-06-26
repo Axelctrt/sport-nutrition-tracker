@@ -5,6 +5,7 @@ import type { BackupEnvelope } from '@/domain/models/backup';
 import type { UserProfile } from '@/domain/models/profile';
 import { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import { initializeDatabase } from '@/infrastructure/database/databaseLifecycle';
+import { databaseTableNames } from '@/infrastructure/database/schema';
 import {
   clearAllUserData,
   createBackupEnvelope,
@@ -73,6 +74,12 @@ describe('backupService', () => {
   afterEach(async () => {
     database.close();
     await database.delete();
+  });
+
+  it('couvre exactement toutes les tables Dexie dans le format de sauvegarde', async () => {
+    const envelope = await createBackupEnvelope(database, '2026-06-24T10:00:00.000Z');
+
+    expect(Object.keys(envelope.data).sort()).toEqual([...databaseTableNames].sort());
   });
 
   it('exporte toutes les tables et produit un JSON réimportable', async () => {

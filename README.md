@@ -1,8 +1,23 @@
-# SportPilot 0.15.0-alpha.13
+# SportPilot 0.15.0-rc.1
 
 PWA locale de suivi sportif, nutritionnel, calorique et de progression.
 
 ## Version 0.15 — Expérience mobile-first
+
+### 0.15.0-rc.1 — stabilisation finale et Release Candidate
+
+Cette Release Candidate gèle les fonctionnalités de la version 0.15 et renforce la livraison avant publication stable :
+
+- routes du shell centralisées, sans doublon, et comparées automatiquement aux navigations mobile et ordinateur ;
+- titres de page obligatoires pour chaque route réellement enregistrée ;
+- chemins dynamiques construits depuis les constantes centrales avec encodage des identifiants ;
+- couverture du format de sauvegarde comparée à toutes les tables Dexie ;
+- thème tolérant aux refus de lecture ou d’écriture de `localStorage` ;
+- écran global d’erreur permettant de revenir à l’accueil sans toucher aux données ;
+- version installée affichée dans Paramètres pour faciliter la vérification des mises à jour PWA ;
+- budgets JavaScript et CSS, raccourcis PWA, fichiers hashés et absence de source maps contrôlés par `audit:rc` ;
+- checklist de validation et procédure de retour arrière fournies ;
+- aucune migration Dexie et aucune modification du format de sauvegarde.
 
 ### 0.15.0-alpha.13 — finitions de saisie et panneaux mobiles
 
@@ -227,8 +242,10 @@ npm run dev          # serveur Vite
 npm run lint         # Oxlint
 npm run test         # tests Vitest
 npm run build        # TypeScript + build PWA
-npm run audit:mvp    # contrôle statique final de la PWA
-npm run check        # lint + tests + build + audit
+npm run audit:mvp    # contrôle statique de la PWA
+npm run audit:release # cohérence version, documentation et schémas
+npm run audit:rc     # budgets du build et intégrité de la Release Candidate
+npm run check        # lint + tests + build + tous les audits
 npm run preview      # prévisualisation du build
 npm run diagnose:off # diagnostic Open Food Facts
 ```

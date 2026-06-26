@@ -31,7 +31,7 @@ if (!read('INSTALLATION.txt').includes(`SPORTPILOT ${version}`)) {
 
 const productionRoots = ['src', 'vite.config.ts', 'index.html', 'INSTALLATION.txt', 'README-PATCH.md'];
 const allowedExtensions = new Set(['.ts', '.tsx', '.html', '.txt', '.md']);
-const staleVersionPattern = /0\.14\.0-alpha|0\.13\.0-alpha/g;
+const staleVersionPattern = /0\.15\.0-alpha\.\d+|0\.14\.0-alpha|0\.13\.0-alpha/g;
 const correctionFilePattern = /^README-CORRECTION-/;
 
 function collectFiles(path) {
