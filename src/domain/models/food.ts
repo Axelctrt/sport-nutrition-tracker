@@ -12,6 +12,19 @@ export interface NutritionValues {
 export type FoodBasisUnit = 'g' | 'ml';
 export type FoodDataSourceType = 'manual' | 'openFoodFacts';
 
+export type FoodProductLocalOverrideField =
+  | 'name'
+  | 'brand'
+  | 'basisUnit'
+  | 'caloriesKcal'
+  | 'proteinGrams'
+  | 'carbohydratesGrams'
+  | 'fatGrams'
+  | 'fiberGrams'
+  | 'saltGrams'
+  | 'servingSize'
+  | 'servingLabel';
+
 export type FoodDataSource =
   | {
       type: 'manual';
@@ -28,9 +41,11 @@ export interface FoodProduct extends EntityMetadata {
   basisUnit: FoodBasisUnit;
   nutritionPer100: NutritionValues;
   servingSize?: number;
+  servingLabel?: string;
   barcode?: string;
   source: FoodDataSource;
   isNutritionComplete: boolean;
+  localOverrides?: FoodProductLocalOverrideField[];
   isFavorite: boolean;
   isArchived: boolean;
 }

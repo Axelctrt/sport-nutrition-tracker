@@ -14,6 +14,7 @@ export const defaultFoodProductFormValues: FoodProductFormValues = {
   fiberGrams: undefined,
   saltGrams: undefined,
   servingSize: undefined,
+  servingLabel: '',
   barcode: '',
   isFavorite: false,
 };
@@ -30,6 +31,7 @@ export function productToFormValues(product: FoodProduct): FoodProductFormValues
     fiberGrams: product.nutritionPer100.fiberGrams,
     saltGrams: product.nutritionPer100.saltGrams,
     servingSize: product.servingSize,
+    servingLabel: product.servingLabel ?? '',
     barcode: product.barcode ?? '',
     isFavorite: product.isFavorite,
   };
@@ -40,6 +42,7 @@ export function formValuesToProductInput(
 ): NewEntity<FoodProduct> {
   const brand = values.brand.trim();
   const barcode = values.barcode.trim();
+  const servingLabel = values.servingLabel.trim();
   const normalizedBarcode = barcode.length > 0
     ? normalizeOpenFoodFactsBarcode(barcode)
     : undefined;
@@ -57,6 +60,7 @@ export function formValuesToProductInput(
       ...(values.saltGrams === undefined ? {} : { saltGrams: values.saltGrams }),
     },
     ...(values.servingSize === undefined ? {} : { servingSize: values.servingSize }),
+    ...(servingLabel.length === 0 ? {} : { servingLabel }),
     ...(normalizedBarcode === undefined ? {} : { barcode: normalizedBarcode }),
     source: { type: 'manual' },
     isNutritionComplete: true,

@@ -142,7 +142,7 @@ export function MealFoodSelectionForm({
           id="meal-selector-quantity"
           label={inputMode === 'servings' ? 'Nombre de portions' : `Quantité en ${product.basisUnit}`}
           description={inputMode === 'servings' && product.servingSize
-            ? `1 portion = ${product.servingSize} ${product.basisUnit}`
+            ? `1 portion${product.servingLabel ? ` (${product.servingLabel})` : ''} = ${product.servingSize} ${product.basisUnit}`
             : undefined}
           error={errors.inputQuantity?.message}
           required
@@ -170,6 +170,13 @@ export function MealFoodSelectionForm({
             {preview.nutrition.carbohydratesGrams.toFixed(1)} g · L{' '}
             {preview.nutrition.fatGrams.toFixed(1)} g
           </p>
+          {preview.nutrition.fiberGrams !== undefined || preview.nutrition.saltGrams !== undefined ? (
+            <p className="mt-1 text-xs text-emerald-800 dark:text-emerald-300">
+              {preview.nutrition.fiberGrams !== undefined ? `Fibres ${preview.nutrition.fiberGrams.toFixed(1)} g` : ''}
+              {preview.nutrition.fiberGrams !== undefined && preview.nutrition.saltGrams !== undefined ? ' · ' : ''}
+              {preview.nutrition.saltGrams !== undefined ? `Sel ${preview.nutrition.saltGrams.toFixed(2)} g` : ''}
+            </p>
+          ) : null}
         </Card>
       ) : null}
 

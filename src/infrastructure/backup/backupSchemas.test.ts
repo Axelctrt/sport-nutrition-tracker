@@ -283,4 +283,42 @@ describe('migrateBackupEnvelope', () => {
       /n’est pas une sauvegarde SportPilot/,
     );
   });
+  it('conserve les portions et corrections locales des produits alimentaires', () => {
+    const envelope = createValidEnvelope();
+    envelope.data.foodProducts = [createEntity({
+      name: 'Yaourt local',
+      brand: 'Exemple',
+      basisUnit: 'g',
+      nutritionPer100: {
+        caloriesKcal: 68,
+        proteinGrams: 5,
+        carbohydratesGrams: 7,
+        fatGrams: 2,
+        fiberGrams: 1.5,
+        saltGrams: 0.12,
+      },
+      servingSize: 125,
+      servingLabel: '1 pot',
+      barcode: '3017624010701',
+      source: {
+        type: 'openFoodFacts',
+        fetchedAt: '2026-06-27T08:00:00.000Z',
+        barcode: '3017624010701',
+      },
+      isNutritionComplete: true,
+      localOverrides: ['name', 'saltGrams'],
+      isFavorite: false,
+      isArchived: false,
+    }, 'food-product-reliable')];
+
+    const parsed = backupEnvelopeSchema.parse(envelope);
+
+    expect(parsed.data.foodProducts[0]).toMatchObject({
+      servingSize: 125,
+      servingLabel: '1 pot',
+      localOverrides: ['name', 'saltGrams'],
+      nutritionPer100: { fiberGrams: 1.5, saltGrams: 0.12 },
+    });
+  });
+
 });

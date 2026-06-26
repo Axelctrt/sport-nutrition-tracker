@@ -125,3 +125,16 @@
 - [ ] Une ancienne séance sans groupe reste utilisable.
 - [ ] L’export JSON et le CSV conservent les métadonnées de groupe.
 - [ ] L’interface ne déborde pas horizontalement sur iPhone 15.
+
+## Fiabilité des produits alimentaires
+
+- [ ] Un produit Open Food Facts peut être actualisé depuis sa fiche.
+- [ ] Les corrections locales sont conservées lors de l’actualisation standard.
+- [ ] Le remplacement des corrections demande une confirmation.
+- [ ] Un code-barres déjà utilisé bloque la création et ouvre l’aliment existant.
+- [ ] Un doublon de nom et marque peut être confirmé volontairement.
+- [ ] Le libellé et la quantité d’une portion sont conservés après rechargement.
+- [ ] Fibres et sel apparaissent dans la bibliothèque et dans l’aperçu du journal.
+- [ ] Le comportement hors connexion affiche un message sans masquer le formulaire.
+- [ ] Une ancienne sauvegarde JSON v2 sans les nouveaux champs reste importable.
+- [ ] La page reste utilisable sans débordement horizontal sur iPhone 15.

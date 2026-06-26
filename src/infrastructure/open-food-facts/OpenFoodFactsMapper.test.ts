@@ -90,6 +90,7 @@ describe('mapOpenFoodFactsProduct', () => {
     expect(result).toMatchObject({
       basisUnit: 'ml',
       servingSize: 250,
+      servingLabel: '250 ml',
       isNutritionComplete: true,
     });
   });

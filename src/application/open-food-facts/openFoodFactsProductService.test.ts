@@ -83,3 +83,77 @@ describe('saveOpenFoodFactsProduct', () => {
     expect(result.product.name).toBe('Produit manuel');
   });
 });
+
+describe('refreshOpenFoodFactsProduct', () => {
+  beforeEach(async () => {
+    appDatabase.close();
+    await appDatabase.delete();
+    await initializeDatabase();
+  });
+
+  afterEach(() => appDatabase.close());
+
+  it('actualise les données distantes tout en conservant les corrections locales', async () => {
+    const created = await saveOpenFoodFactsProduct(candidate, repositories.food);
+    const locallyCorrected = await repositories.food.updateProduct(created.product.id, {
+      name: 'Nom corrigé localement',
+      nutritionPer100: {
+        ...created.product.nutritionPer100,
+        saltGrams: 0.15,
+      },
+      localOverrides: ['name', 'saltGrams'],
+    });
+
+    const { refreshOpenFoodFactsProduct } = await import(
+      '@/application/open-food-facts/openFoodFactsProductService'
+    );
+    const result = await refreshOpenFoodFactsProduct(
+      locallyCorrected,
+      repositories.food,
+      async () => ({
+        ...candidate,
+        name: 'Nom distant actualisé',
+        nutritionPer100: {
+          ...candidate.nutritionPer100,
+          caloriesKcal: 130,
+          saltGrams: 0.4,
+        },
+        fetchedAt: '2026-06-27T08:00:00.000Z',
+      }),
+    );
+
+    expect(result.product.name).toBe('Nom corrigé localement');
+    expect(result.product.nutritionPer100.caloriesKcal).toBe(130);
+    expect(result.product.nutritionPer100.saltGrams).toBe(0.15);
+    expect(result.product.localOverrides).toEqual(['name', 'saltGrams']);
+    expect(result.product.source).toMatchObject({
+      type: 'openFoodFacts',
+      fetchedAt: '2026-06-27T08:00:00.000Z',
+    });
+  });
+
+  it('peut remplacer explicitement les corrections locales', async () => {
+    const created = await saveOpenFoodFactsProduct(candidate, repositories.food);
+    const locallyCorrected = await repositories.food.updateProduct(created.product.id, {
+      name: 'Nom corrigé localement',
+      localOverrides: ['name'],
+    });
+
+    const { refreshOpenFoodFactsProduct } = await import(
+      '@/application/open-food-facts/openFoodFactsProductService'
+    );
+    const result = await refreshOpenFoodFactsProduct(
+      locallyCorrected,
+      repositories.food,
+      async () => ({
+        ...candidate,
+        name: 'Nom distant actualisé',
+        fetchedAt: '2026-06-27T08:00:00.000Z',
+      }),
+      { preserveLocalOverrides: false },
+    );
+
+    expect(result.product.name).toBe('Nom distant actualisé');
+    expect(result.product.localOverrides).toEqual([]);
+  });
+});

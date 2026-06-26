@@ -31,6 +31,29 @@ describe('FoodProductCard', () => {
     expect(screen.getByRole('link', { name: 'Modifier' }).closest('details')).not.toHaveAttribute('open');
   });
 
+  it('conserve deux décimales pour une petite quantité de sel', () => {
+    render(
+      <MemoryRouter>
+        <FoodProductCard
+          product={createFoodProduct({
+            nutritionPer100: {
+              ...product.nutritionPer100,
+              fiberGrams: 1.5,
+              saltGrams: 0.12,
+            },
+          })}
+          navigationState={{
+            foodLibraryReturn: { path: '/food/products', scrollKey: 'key', section: 'products' },
+          }}
+          onArchive={vi.fn().mockResolvedValue(true)}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText('Fibres 1,5 g')).toBeInTheDocument();
+    expect(screen.getByText('Sel 0,12 g')).toBeInTheDocument();
+  });
+
   it('demande une confirmation avant archivage', async () => {
     const user = userEvent.setup();
     const onArchive = renderCard();

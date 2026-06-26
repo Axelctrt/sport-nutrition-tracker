@@ -105,7 +105,7 @@ export function FoodEntryForm({ initialValues, products, onSubmit, submitLabel }
         <FormField
           id="food-entry-quantity"
           label={inputMode === 'servings' ? 'Nombre de portions' : `Quantité en ${selectedProduct?.basisUnit ?? 'g/ml'}`}
-          description={inputMode === 'servings' && selectedProduct?.servingSize ? `1 portion = ${selectedProduct.servingSize} ${selectedProduct.basisUnit}` : undefined}
+          description={inputMode === 'servings' && selectedProduct?.servingSize ? `1 portion${selectedProduct.servingLabel ? ` (${selectedProduct.servingLabel})` : ''} = ${selectedProduct.servingSize} ${selectedProduct.basisUnit}` : undefined}
           error={errors.inputQuantity?.message}
           required
         >
@@ -119,6 +119,13 @@ export function FoodEntryForm({ initialValues, products, onSubmit, submitLabel }
           <p className="mt-2 text-sm text-emerald-900 dark:text-emerald-200">
             {Math.round(preview.nutrition.caloriesKcal)} kcal · P {preview.nutrition.proteinGrams.toFixed(1)} g · G {preview.nutrition.carbohydratesGrams.toFixed(1)} g · L {preview.nutrition.fatGrams.toFixed(1)} g
           </p>
+          {preview.nutrition.fiberGrams !== undefined || preview.nutrition.saltGrams !== undefined ? (
+            <p className="mt-1 text-xs text-emerald-800 dark:text-emerald-300">
+              {preview.nutrition.fiberGrams !== undefined ? `Fibres ${preview.nutrition.fiberGrams.toFixed(1)} g` : ''}
+              {preview.nutrition.fiberGrams !== undefined && preview.nutrition.saltGrams !== undefined ? ' · ' : ''}
+              {preview.nutrition.saltGrams !== undefined ? `Sel ${preview.nutrition.saltGrams.toFixed(2)} g` : ''}
+            </p>
+          ) : null}
         </Card>
       ) : null}
 

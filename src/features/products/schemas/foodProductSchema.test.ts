@@ -11,6 +11,7 @@ const validValues = {
   fiberGrams: 10,
   saltGrams: 0.02,
   servingSize: 50,
+  servingLabel: '1 bol',
   barcode: '',
   isFavorite: true,
 };
@@ -36,6 +37,7 @@ describe('foodProductFormSchema', () => {
       fiberGrams: undefined,
       saltGrams: undefined,
       servingSize: undefined,
+      servingLabel: '',
     });
     expect(result.success).toBe(true);
   });

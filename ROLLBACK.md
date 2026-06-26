@@ -53,3 +53,9 @@ Avant un retour arrière, terminer ou abandonner toute séance en cours et expor
 Cette phase n’ajoute aucune table et ne modifie aucun index Dexie. Les champs `exerciseGroupId`, `exerciseGroupType`, `exerciseGroupName`, `exerciseGroupRounds`, `exerciseGroupRestBetweenExercisesSeconds` et `exerciseGroupRestBetweenRoundsSeconds` sont facultatifs.
 
 Un retour au commit précédent ne nécessite donc aucune migration structurelle. Une version antérieure ignorera les métadonnées de groupe et affichera les exercices comme des exercices indépendants ; leurs séries, charges, répétitions et statistiques resteront intactes. Avant un retour arrière, exporter une sauvegarde JSON récente.
+
+## Retour arrière de la fiabilité alimentaire
+
+Cette phase n’ajoute aucune table et ne modifie aucun index Dexie. Les champs `servingLabel` et `localOverrides` sont facultatifs. Une version antérieure les ignorera simplement tout en conservant le produit, sa portion numérique, ses macronutriments, ses fibres et son sel.
+
+Avant un retour arrière, exporter une sauvegarde JSON récente. Les corrections locales stockées dans `localOverrides` ne seront plus protégées par une ancienne interface lors d’un nouvel import Open Food Facts, mais les valeurs actuellement enregistrées resteront présentes dans IndexedDB.

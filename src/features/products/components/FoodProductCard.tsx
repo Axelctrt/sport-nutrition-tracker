@@ -17,8 +17,8 @@ interface FoodProductCardProps {
   onArchive: (productId: string) => Promise<boolean>;
 }
 
-function formatNumber(value: number): string {
-  return value.toLocaleString('fr-FR', { maximumFractionDigits: 1 });
+function formatNumber(value: number, maximumFractionDigits = 1): string {
+  return value.toLocaleString('fr-FR', { maximumFractionDigits });
 }
 
 export function FoodProductCard({
@@ -104,11 +104,31 @@ export function FoodProductCard({
               <span className="rounded-lg bg-rose-50 px-2 py-1 font-medium text-rose-900 dark:bg-rose-950/40 dark:text-rose-100">
                 L {formatNumber(product.nutritionPer100.fatGrams)} g
               </span>
+              {product.nutritionPer100.fiberGrams !== undefined ? (
+                <span className="rounded-lg bg-emerald-50 px-2 py-1 font-medium text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100">
+                  Fibres {formatNumber(product.nutritionPer100.fiberGrams)} g
+                </span>
+              ) : null}
+              {product.nutritionPer100.saltGrams !== undefined ? (
+                <span className="rounded-lg bg-violet-50 px-2 py-1 font-medium text-violet-900 dark:bg-violet-950/40 dark:text-violet-100">
+                  Sel {formatNumber(product.nutritionPer100.saltGrams, 2)} g
+                </span>
+              ) : null}
             </div>
 
             <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
-              {product.servingSize ? <span>Portion : {formatNumber(product.servingSize)} {product.basisUnit}</span> : null}
+              {product.servingSize ? (
+                <span>
+                  Portion : {product.servingLabel ? `${product.servingLabel} · ` : ''}
+                  {formatNumber(product.servingSize)} {product.basisUnit}
+                </span>
+              ) : null}
               <span>{product.source.type === 'openFoodFacts' ? 'Source externe enregistrée localement' : 'Saisie manuelle'}</span>
+              {product.localOverrides?.length ? (
+                <span className="font-semibold text-brand-700 dark:text-brand-300">
+                  {product.localOverrides.length} correction(s) locale(s)
+                </span>
+              ) : null}
               {!product.isNutritionComplete ? (
                 <span className="font-semibold text-amber-700 dark:text-amber-300">Valeurs à vérifier</span>
               ) : null}

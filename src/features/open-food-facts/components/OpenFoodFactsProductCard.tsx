@@ -66,8 +66,15 @@ export function RemoteOpenFoodFactsProductCard({
         fat={product.nutritionPer100.fatGrams}
       />
       <p className="mt-2 text-center text-xs text-slate-500 dark:text-slate-400">
-        Valeurs pour 100 {product.basisUnit}{product.servingSize ? ` · Portion ${product.servingSize} ${product.basisUnit}` : ''}
+        Valeurs pour 100 {product.basisUnit}{product.servingSize ? ` · Portion${product.servingLabel ? ` (${product.servingLabel})` : ''} ${product.servingSize} ${product.basisUnit}` : ''}
       </p>
+      {product.nutritionPer100.fiberGrams !== undefined || product.nutritionPer100.saltGrams !== undefined ? (
+        <p className="mt-1 text-center text-xs text-slate-500 dark:text-slate-400">
+          {product.nutritionPer100.fiberGrams !== undefined ? `Fibres ${product.nutritionPer100.fiberGrams} g` : ''}
+          {product.nutritionPer100.fiberGrams !== undefined && product.nutritionPer100.saltGrams !== undefined ? ' · ' : ''}
+          {product.nutritionPer100.saltGrams !== undefined ? `Sel ${product.nutritionPer100.saltGrams} g` : ''}
+        </p>
+      ) : null}
 
       {product.isNutritionComplete ? (
         <div className="mt-4 flex items-start gap-2 text-sm text-emerald-700 dark:text-emerald-300">
