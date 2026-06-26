@@ -1,4 +1,4 @@
-import { Dumbbell, Layers3, Plus, Search } from 'lucide-react';
+import { CalendarDays, Dumbbell, Layers3, Plus, Search } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { editWorkoutTemplatePath, routePaths, workoutSessionPath } from '@/app/routePaths';
@@ -44,6 +44,9 @@ export function WorkoutTemplatesPage() {
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">Prépare tes entraînements réutilisables et démarre la bonne séance en quelques secondes.</p>
         </div>
         <div className="grid grid-cols-2 gap-2 sm:flex">
+          <Link to={routePaths.weeklyPlanning} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800">
+            <CalendarDays aria-hidden="true" className="size-4" />Planning
+          </Link>
           <Link to={routePaths.workoutSessions} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800">
             <Dumbbell aria-hidden="true" className="size-4" />Entraînements
           </Link>

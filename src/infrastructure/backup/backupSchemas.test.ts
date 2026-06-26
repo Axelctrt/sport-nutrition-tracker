@@ -12,6 +12,7 @@ import {
   createExerciseDefinitionInput,
   createWorkoutTemplateExerciseInput,
   createWorkoutTemplateInput,
+  createWorkoutSessionInput,
 } from '@/test/factories/strengthFactory';
 
 function createValidEnvelope(): BackupEnvelope {
@@ -180,6 +181,31 @@ describe('backupEnvelopeSchema', () => {
       loadUnit: 'bodyweight',
     });
     expect(parsed.data.exerciseDefinitions[0]?.trackingMode).toBeUndefined();
+  });
+
+  it('accepte une séance planifiée et ses métadonnées de report', () => {
+    const envelope = createValidEnvelope();
+    const plannedSession = createEntity(createWorkoutSessionInput({
+      status: 'planned',
+      date: '2026-07-01',
+      plannedDate: '2026-07-01',
+      originalPlannedDate: '2026-06-29',
+      plannedAt: '2026-06-26T18:00:00.000Z',
+    }), 'planned-session') as unknown as Record<string, unknown>;
+    delete plannedSession.startedAt;
+    delete plannedSession.completedAt;
+    delete plannedSession.durationMinutes;
+    envelope.data.workoutSessions = [
+      plannedSession as unknown as BackupEnvelope['data']['workoutSessions'][number],
+    ];
+
+    const parsed = backupEnvelopeSchema.parse(envelope);
+
+    expect(parsed.data.workoutSessions[0]).toMatchObject({
+      status: 'planned',
+      plannedDate: '2026-07-01',
+      originalPlannedDate: '2026-06-29',
+    });
   });
 
 });

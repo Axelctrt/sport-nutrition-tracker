@@ -28,6 +28,7 @@ describe('préparation de la version stable 0.15.0', () => {
 
     expect(mobilePaths).toEqual(expect.arrayContaining([
       routePaths.workoutSessions,
+      routePaths.weeklyPlanning,
       routePaths.strengthExercises,
       routePaths.history,
       routePaths.weeklyReview,

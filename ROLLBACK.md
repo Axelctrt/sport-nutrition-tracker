@@ -40,3 +40,10 @@ La phase n’ajoute aucune table et ne modifie aucun index Dexie. Un retour au c
 ## Retour arrière des statistiques par type d’exercice
 
 Cette phase n’ajoute aucune table et ne modifie aucun index Dexie. Les nouveaux champs sont facultatifs et les versions antérieures les ignorent. Un retour au commit précédent ne nécessite donc aucune migration. Les anciennes séries conservent leurs charges et répétitions ; les champs de durée et de distance nouvellement saisis resteraient présents dans IndexedDB et dans une sauvegarde JSON v2, mais ne seraient simplement pas exploités par l’ancienne interface.
+
+
+## Retour arrière de la planification hebdomadaire
+
+Cette phase n’ajoute aucune table et ne modifie aucun index Dexie. Les métadonnées `plannedDate`, `originalPlannedDate`, `plannedAt` et `skippedAt` sont facultatives. Un retour au commit précédent ne nécessite donc aucune migration structurelle.
+
+Avant un retour arrière, terminer ou abandonner toute séance en cours et exporter une sauvegarde JSON. Une version antérieure ne connaît pas les statuts `planned` et `skipped` : les séances encore prévues ou non réalisées doivent donc être considérées comme non exploitables par l’ancienne interface. Les séances déjà démarrées ou terminées restent compatibles grâce à leur statut historique et à leurs exercices instantanés.

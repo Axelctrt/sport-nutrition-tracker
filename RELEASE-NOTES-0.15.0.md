@@ -66,3 +66,18 @@ La branche de développement ajoute une page Confidentialité publique et des en
 - formulaires de séries et séances modèles adaptés au type de mesure ;
 - suppression des volumes nuls sans signification pour le poids du corps ;
 - anciennes données et sauvegardes JSON v2 conservées sans migration.
+
+
+## Phase 7 — planification hebdomadaire
+
+- nouvelle route `#/strength/planning` ;
+- vue du lundi au dimanche avec navigation entre les semaines ;
+- planification d’une séance à partir d’un modèle ;
+- instantané du modèle et de ses exercices créé au moment de la planification ;
+- report avec conservation de la date initiale ;
+- statut `Non réalisée` pour les séances prévues qui ne sont pas effectuées ;
+- démarrage direct depuis le planning ;
+- même identifiant conservé entre la séance prévue et la séance réelle ;
+- date prévue conservée lorsqu’une séance démarre un autre jour ;
+- sauvegarde JSON v2 et export CSV enrichis sans migration Dexie ;
+- nouveau parcours Playwright Chromium/WebKit.

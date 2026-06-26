@@ -3,6 +3,7 @@ import {
   Apple,
   BarChart3,
   ClipboardCheck,
+  CalendarDays,
   Layers3,
   PlayCircle,
   DatabaseBackup,
@@ -36,6 +37,7 @@ export const primaryNavigation: NavigationItem[] = [
   { label: 'Activités', path: routePaths.activities, icon: Dumbbell },
   { label: 'Exercices', path: routePaths.strengthExercises, icon: Activity },
   { label: 'Entraînements', path: routePaths.workoutSessions, icon: PlayCircle },
+  { label: 'Planning', path: routePaths.weeklyPlanning, icon: CalendarDays },
   { label: 'Séances modèles', path: routePaths.workoutTemplates, icon: Layers3 },
   { label: 'Poids', path: routePaths.weight, icon: Weight },
   { label: 'Analyses', path: routePaths.analytics, icon: BarChart3 },
@@ -66,6 +68,12 @@ export const mobileMoreNavigation: NavigationSection[] = [
         path: routePaths.workoutSessions,
         icon: PlayCircle,
         description: 'Reprendre une séance ou consulter l’historique.',
+      },
+      {
+        label: 'Planning hebdomadaire',
+        path: routePaths.weeklyPlanning,
+        icon: CalendarDays,
+        description: 'Prévoir, reporter et démarrer les séances de la semaine.',
       },
       {
         label: 'Exercices',

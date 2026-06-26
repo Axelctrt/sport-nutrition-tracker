@@ -120,6 +120,8 @@ function createActivitiesCsv(data: BackupData, exportedAt: string): CsvExportFil
 function createWorkoutSessionsCsv(data: BackupData, exportedAt: string): CsvExportFile {
   const rows = data.workoutSessions.map((session) => [
     session.date,
+    session.plannedDate,
+    session.originalPlannedDate,
     session.sourceTemplateNameSnapshot,
     session.status,
     session.startedAt,
@@ -132,7 +134,7 @@ function createWorkoutSessionsCsv(data: BackupData, exportedAt: string): CsvExpo
     label: 'Séances de musculation',
     fileName: fileName('seances-musculation', exportedAt),
     content: createCsvContent(
-      ['date', 'modele', 'statut', 'debut', 'fin', 'duree_minutes', 'notes'],
+      ['date_reelle', 'date_prevue', 'date_prevue_initiale', 'modele', 'statut', 'debut', 'fin', 'duree_minutes', 'notes'],
       rows,
     ),
     rowCount: rows.length,

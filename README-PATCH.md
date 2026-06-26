@@ -1,24 +1,33 @@
-# SportPilot 0.15.0 — statistiques adaptées au type d’exercice
+# SportPilot 0.15.0 — planification hebdomadaire des entraînements
 
-Branche recommandée : `feature/bodyweight-statistics`
+Branche recommandée : `feature/weekly-planning`
 
-Ce patch ajoute une méthode de suivi explicite par exercice :
+Cette phase ajoute un planning de musculation local et hors connexion :
 
-- charge externe et répétitions ;
-- poids du corps, avec lest facultatif ;
-- exercice assisté ;
-- répétitions seules ;
-- durée ;
-- distance.
+- planification d’une séance modèle à une date précise ;
+- vue semaine du lundi au dimanche ;
+- navigation vers la semaine précédente, courante ou suivante ;
+- report d’une séance avec conservation de la date initiale ;
+- marquage d’une séance comme non réalisée ;
+- démarrage direct depuis le planning ;
+- transformation de la même entrée planifiée en séance réellement effectuée ;
+- affichage séparé de la date prévue et de la date réelle lorsque celles-ci diffèrent ;
+- export CSV et sauvegarde JSON des métadonnées de planification ;
+- parcours Playwright sur Chromium et WebKit iPhone.
 
-Les statistiques, formulaires de séries, séances modèles et historiques s’adaptent désormais à cette méthode. Une traction au poids du corps n’affiche plus un volume nul, une assistance plus faible est considérée comme une progression, et les charges effectives utilisent le dernier poids connu à la date de la séance.
+Architecture retenue :
+
+- aucune nouvelle table Dexie ;
+- une séance planifiée utilise `WorkoutSession` avec le statut `planned` ;
+- au démarrage, cette même séance passe à `inProgress` et conserve `plannedDate` ;
+- les séances non réalisées utilisent le statut `skipped` ;
+- le modèle et ses exercices sont figés au moment de la planification.
 
 Compatibilité conservée :
 
 - schéma Dexie v2 ;
 - sauvegarde JSON v2 ;
-- anciens exercices sans méthode explicite ;
-- anciennes séances et anciennes sauvegardes ;
+- anciennes séances sans métadonnées de planification ;
 - PWA et fonctionnement hors connexion ;
 - aucune dépendance supplémentaire.
 

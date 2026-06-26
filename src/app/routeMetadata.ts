@@ -28,6 +28,7 @@ const routeMetadata: RouteMetadata[] = [
   { pattern: routePaths.newWorkoutTemplate, title: 'Créer une séance modèle' },
   { pattern: routePaths.editWorkoutTemplate, title: 'Modifier une séance modèle' },
   { pattern: routePaths.workoutTemplates, title: 'Séances modèles' },
+  { pattern: routePaths.weeklyPlanning, title: 'Planning de musculation' },
   { pattern: routePaths.workoutSessions, title: 'Carnet de musculation' },
   { pattern: routePaths.strengthExerciseHistory, title: 'Historique de l’exercice' },
   { pattern: routePaths.newStrengthExercise, title: 'Créer un exercice' },
