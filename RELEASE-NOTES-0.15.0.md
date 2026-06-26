@@ -81,3 +81,17 @@ La branche de développement ajoute une page Confidentialité publique et des en
 - date prévue conservée lorsqu’une séance démarre un autre jour ;
 - sauvegarde JSON v2 et export CSV enrichis sans migration Dexie ;
 - nouveau parcours Playwright Chromium/WebKit.
+
+## Phase 8 — supersets, tri-sets et circuits
+
+- regroupement des exercices dans les séances modèles ;
+- types superset, tri-set et circuit ;
+- nom, nombre de tours et temps de repos configurables ;
+- création, ajout, retrait, réorganisation, duplication et dissolution des groupes ;
+- repères ordonnés `A1`, `A2`, `B1` dans la séance active ;
+- indication de l’exercice suivant et passage temporaire ;
+- minuteur utilisant le repos entre exercices ou entre tours ;
+- séries et statistiques conservées séparément par exercice ;
+- métadonnées de groupe incluses dans la sauvegarde JSON v2 et le CSV ;
+- anciennes séances sans groupe compatibles sans migration Dexie ;
+- nouveau parcours Playwright Chromium/WebKit.

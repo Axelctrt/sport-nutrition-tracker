@@ -38,6 +38,8 @@ export type MovementType = 'compound' | 'isolation' | 'core' | 'carry' | 'other'
 
 export type LoadUnit = 'kg' | 'bodyweight' | 'assistedKg' | 'none';
 
+export type ExerciseGroupType = 'superset' | 'triSet' | 'circuit';
+
 export type StrengthTrackingMode =
   | 'loadRepetitions'
   | 'bodyweightRepetitions'
@@ -82,6 +84,12 @@ export interface WorkoutTemplateExercise extends EntityMetadata {
   maximumRecommendedRpe?: number;
   notes?: string;
   isActive: boolean;
+  exerciseGroupId?: string;
+  exerciseGroupType?: ExerciseGroupType;
+  exerciseGroupName?: string;
+  exerciseGroupRounds?: number;
+  exerciseGroupRestBetweenExercisesSeconds?: number;
+  exerciseGroupRestBetweenRoundsSeconds?: number;
 }
 
 export type WorkoutSessionStatus = 'planned' | 'inProgress' | 'completed' | 'abandoned' | 'skipped';
@@ -119,6 +127,12 @@ export interface WorkoutSessionExercise extends EntityMetadata {
   targetDurationSeconds?: number;
   targetDistanceMeters?: number;
   notes?: string;
+  exerciseGroupId?: string;
+  exerciseGroupType?: ExerciseGroupType;
+  exerciseGroupName?: string;
+  exerciseGroupRounds?: number;
+  exerciseGroupRestBetweenExercisesSeconds?: number;
+  exerciseGroupRestBetweenRoundsSeconds?: number;
 }
 
 export type StrengthSetType = 'warmup' | 'working' | 'dropSet' | 'failure' | 'other';

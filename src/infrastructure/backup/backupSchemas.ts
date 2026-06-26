@@ -355,6 +355,8 @@ const strengthTrackingModeSchema = z.enum([
   'distance',
 ]);
 
+const exerciseGroupTypeSchema = z.enum(['superset', 'triSet', 'circuit']);
+
 const exerciseDefinitionSchema = entityMetadataSchema.extend({
   name: z.string().trim().min(1).max(200),
   primaryMuscleGroup: muscleGroupSchema,
@@ -400,6 +402,12 @@ const workoutTemplateExerciseSchema = entityMetadataSchema.extend({
   maximumRecommendedRpe: finiteNumber.min(1).max(10).optional(),
   notes: z.string().max(10_000).optional(),
   isActive: z.boolean(),
+  exerciseGroupId: z.string().min(1).optional(),
+  exerciseGroupType: exerciseGroupTypeSchema.optional(),
+  exerciseGroupName: z.string().max(200).optional(),
+  exerciseGroupRounds: positiveInteger.optional(),
+  exerciseGroupRestBetweenExercisesSeconds: nonNegativeInteger.optional(),
+  exerciseGroupRestBetweenRoundsSeconds: nonNegativeInteger.optional(),
 }).refine((value) => value.minRepetitions <= value.maxRepetitions, {
   message: 'La borne minimale de répétitions doit être inférieure ou égale à la borne maximale.',
   path: ['minRepetitions'],
@@ -438,6 +446,12 @@ const workoutSessionExerciseSchema = entityMetadataSchema.extend({
   loadUnitSnapshot: loadUnitSchema,
   trackingModeSnapshot: strengthTrackingModeSchema.optional(),
   notes: z.string().max(10_000).optional(),
+  exerciseGroupId: z.string().min(1).optional(),
+  exerciseGroupType: exerciseGroupTypeSchema.optional(),
+  exerciseGroupName: z.string().max(200).optional(),
+  exerciseGroupRounds: positiveInteger.optional(),
+  exerciseGroupRestBetweenExercisesSeconds: nonNegativeInteger.optional(),
+  exerciseGroupRestBetweenRoundsSeconds: nonNegativeInteger.optional(),
 }).refine(
   (value) =>
     value.minRepetitions === undefined ||

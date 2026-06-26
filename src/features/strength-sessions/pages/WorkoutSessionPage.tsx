@@ -6,6 +6,7 @@ import { routePaths } from '@/app/routePaths';
 import type { StrengthSetChanges } from '@/application/strength/strengthSetService';
 import type { StrengthSet, WorkoutSessionExercise } from '@/domain/models/strength';
 import { createDefaultAppSettings } from '@/domain/defaults/appSettings';
+import { buildExerciseGroups, exerciseGroupPosition, groupRestAfterExercise } from '@/domain/strength/exerciseGroups';
 import { ProgressionSuggestionsPanel } from '@/features/strength-progression/components/ProgressionSuggestionsPanel';
 import { WorkoutExerciseCard } from '@/features/strength-sessions/components/WorkoutExerciseCard';
 import { WorkoutSessionActionBar } from '@/features/strength-sessions/components/WorkoutSessionActionBar';
@@ -112,6 +113,7 @@ export function WorkoutSessionPage() {
   const [selectedExerciseId, setSelectedExerciseId] = useState('');
   const [notes, setNotes] = useState('');
   const [confirmation, setConfirmation] = useState<ConfirmationRequest>();
+  const [temporarilySkippedExerciseIds, setTemporarilySkippedExerciseIds] = useState<Set<string>>(() => new Set());
   const [isConfirming, setIsConfirming] = useState(false);
   const [restTimerPreferences, setRestTimerPreferences] = useState(defaultRestTimerPreferences);
   const [restTimerPreferencesReady, setRestTimerPreferencesReady] = useState(false);
@@ -145,6 +147,27 @@ export function WorkoutSessionPage() {
   useEffect(() => {
     setNotes(session?.notes ?? '');
   }, [session?.notes]);
+
+  const exerciseGroups = useMemo(() => buildExerciseGroups(exercises), [exercises]);
+
+  const restPlanFor = (exercise: WorkoutSessionExercise) => {
+    const groupRest = groupRestAfterExercise(exercise, exerciseGroups);
+    if (groupRest) {
+      const nextExercise = groupRest.nextExercise as WorkoutSessionExercise | undefined;
+      return {
+        durationSeconds: groupRest.durationSeconds,
+        nextExercise,
+        label: groupRest.betweenRounds
+          ? 'Repos avant le tour suivant'
+          : `Transition vers ${nextExercise?.exerciseNameSnapshot ?? 'l’exercice suivant'}`,
+      };
+    }
+    return {
+      durationSeconds: exercise.restSeconds ?? 0,
+      nextExercise: undefined,
+      label: 'Démarrer le repos',
+    };
+  };
 
   const setsByExercise = useMemo(() => {
     const result = new Map<string, StrengthSet[]>();
@@ -181,33 +204,53 @@ export function WorkoutSessionPage() {
     isCompleted: boolean,
   ) => {
     const exercise = exercises.find((candidate) => candidate.id === sessionExerciseId);
+    const restPlan = exercise ? restPlanFor(exercise) : undefined;
     const shouldStartRest = Boolean(
       isCompleted
       && values.type === 'working'
       && restTimerPreferences.autoStart
-      && exercise?.restSeconds,
+      && restPlan
+      && restPlan.durationSeconds > 0,
     );
     if (shouldStartRest) restTimer.prepareFeedback();
 
     const updated = await completeSet(sessionExerciseId, setId, values, isCompleted);
-    if (!updated || !shouldStartRest || !exercise?.restSeconds) return;
+    if (!updated || !isCompleted || values.type !== 'working' || !exercise || !restPlan) return;
+    if (restPlan.nextExercise) revealElement(`workout-exercise-${restPlan.nextExercise.id}`);
+    if (!shouldStartRest) return;
     restTimer.start({
       sessionId,
       sessionExerciseId,
-      exerciseName: exercise.exerciseNameSnapshot,
-      durationSeconds: exercise.restSeconds,
+      exerciseName: restPlan.label,
+      durationSeconds: restPlan.durationSeconds,
     });
   };
 
   const handleStartRest = (exercise: WorkoutSessionExercise) => {
-    if (!exercise.restSeconds) return;
+    const restPlan = restPlanFor(exercise);
+    if (restPlan.durationSeconds <= 0) {
+      if (restPlan.nextExercise) revealElement(`workout-exercise-${restPlan.nextExercise.id}`);
+      return;
+    }
     restTimer.prepareFeedback();
     restTimer.start({
       sessionId,
       sessionExerciseId: exercise.id,
-      exerciseName: exercise.exerciseNameSnapshot,
-      durationSeconds: exercise.restSeconds,
+      exerciseName: restPlan.label,
+      durationSeconds: restPlan.durationSeconds,
     });
+    if (restPlan.nextExercise) revealElement(`workout-exercise-${restPlan.nextExercise.id}`);
+  };
+
+  const handleSkipExercise = (exercise: WorkoutSessionExercise) => {
+    setTemporarilySkippedExerciseIds((current) => {
+      const next = new Set(current);
+      if (next.has(exercise.id)) next.delete(exercise.id);
+      else next.add(exercise.id);
+      return next;
+    });
+    const restPlan = restPlanFor(exercise);
+    if (restPlan.nextExercise) revealElement(`workout-exercise-${restPlan.nextExercise.id}`);
   };
 
   const handleDuplicateSet = async (sessionExerciseId: string, setId: string) => {
@@ -372,27 +415,42 @@ export function WorkoutSessionPage() {
             title="Aucun exercice"
             description="Choisis un exercice dans le bloc ci-dessus pour commencer ta séance."
           />
-        ) : exercises.map((exercise, index) => (
-          <WorkoutExerciseCard
-            key={exercise.id}
-            exercise={exercise}
-            index={index}
-            exerciseCount={exercises.length}
-            sets={setsByExercise.get(exercise.id) ?? []}
-            performance={previousPerformances[exercise.id]}
-            editable={editable}
-            action={action}
-            onMove={moveExercise}
-            onRemove={(candidate) => setConfirmation({ type: 'removeExercise', exercise: candidate })}
-            onReusePreviousSets={handleReusePreviousSets}
-            onAddSet={handleAddSet}
-            onSaveSet={handleSaveSet}
-            onCompleteSet={handleCompleteSet}
-            onDuplicateSet={handleDuplicateSet}
-            onDeleteSet={(sessionExerciseId, setId) => setConfirmation({ type: 'deleteSet', sessionExerciseId, setId })}
-            onStartRest={handleStartRest}
-          />
-        ))}
+        ) : exercises.map((exercise, index) => {
+          const groupPosition = exerciseGroupPosition(exercise, exerciseGroups);
+          const restPlan = restPlanFor(exercise);
+          const nextGroupExercise = groupPosition
+            ? groupPosition.group.exercises[(groupPosition.position + 1) % groupPosition.group.exercises.length]
+            : undefined;
+          return (
+            <WorkoutExerciseCard
+              key={exercise.id}
+              exercise={exercise}
+              index={index}
+              exerciseCount={exercises.length}
+              sets={setsByExercise.get(exercise.id) ?? []}
+              performance={previousPerformances[exercise.id]}
+              editable={editable}
+              action={action}
+              onMove={moveExercise}
+              onRemove={(candidate) => setConfirmation({ type: 'removeExercise', exercise: candidate })}
+              onReusePreviousSets={handleReusePreviousSets}
+              onAddSet={handleAddSet}
+              onSaveSet={handleSaveSet}
+              onCompleteSet={handleCompleteSet}
+              onDuplicateSet={handleDuplicateSet}
+              onDeleteSet={(sessionExerciseId, setId) => setConfirmation({ type: 'deleteSet', sessionExerciseId, setId })}
+              onStartRest={handleStartRest}
+              groupLabel={groupPosition?.group.label}
+              groupPositionLabel={groupPosition ? `${groupPosition.group.letter}${groupPosition.position + 1}` : undefined}
+              groupRounds={groupPosition?.group.rounds}
+              nextExerciseName={(nextGroupExercise as WorkoutSessionExercise | undefined)?.exerciseNameSnapshot}
+              restDurationSeconds={restPlan.durationSeconds}
+              restButtonLabel={restPlan.label}
+              temporarilySkipped={temporarilySkippedExerciseIds.has(exercise.id)}
+              onSkip={groupPosition ? handleSkipExercise : undefined}
+            />
+          );
+        })}
       </div>
 
       {session.status === 'completed' ? (

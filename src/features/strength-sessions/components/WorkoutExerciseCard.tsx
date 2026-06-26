@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, CheckCircle2, ChevronDown, TimerReset, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, CheckCircle2, ChevronDown, Layers3, SkipForward, TimerReset, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import type { ExerciseHistoryEntry } from '@/application/strength/strengthHistoryService';
 import type { StrengthSetChanges } from '@/application/strength/strengthSetService';
@@ -33,6 +33,14 @@ interface WorkoutExerciseCardProps {
   onDuplicateSet: (sessionExerciseId: string, setId: string) => Promise<unknown>;
   onDeleteSet: (sessionExerciseId: string, setId: string) => void;
   onStartRest: (exercise: WorkoutSessionExercise) => void;
+  groupLabel?: string | undefined;
+  groupPositionLabel?: string | undefined;
+  groupRounds?: number | undefined;
+  nextExerciseName?: string | undefined;
+  restDurationSeconds?: number | undefined;
+  restButtonLabel?: string | undefined;
+  temporarilySkipped?: boolean | undefined;
+  onSkip?: ((exercise: WorkoutSessionExercise) => void) | undefined;
 }
 
 function exerciseCompletion(exercise: WorkoutSessionExercise, sets: StrengthSet[]) {
@@ -61,6 +69,14 @@ export function WorkoutExerciseCard({
   onDuplicateSet,
   onDeleteSet,
   onStartRest,
+  groupLabel,
+  groupPositionLabel,
+  groupRounds,
+  nextExerciseName,
+  restDurationSeconds,
+  restButtonLabel,
+  temporarilySkipped = false,
+  onSkip,
 }: WorkoutExerciseCardProps) {
   const completion = exerciseCompletion(exercise, sets);
   const [expanded, setExpanded] = useState(() => editable || !completion.complete);
@@ -71,6 +87,8 @@ export function WorkoutExerciseCard({
       id={`workout-exercise-${exercise.id}`}
       className={cn(
         'scroll-mt-24 overflow-hidden',
+        temporarilySkipped && 'opacity-70',
+        groupLabel && 'border-brand-200 dark:border-brand-900',
         completion.complete && 'border-emerald-200 dark:border-emerald-900',
       )}
     >
@@ -79,7 +97,7 @@ export function WorkoutExerciseCard({
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                Exercice {index + 1}
+                {groupPositionLabel ?? `Exercice ${index + 1}`}
               </p>
               <span
                 className={cn(
@@ -120,6 +138,18 @@ export function WorkoutExerciseCard({
           </button>
         </div>
 
+        {groupLabel ? (
+          <div className="mt-3 rounded-xl border border-brand-100 bg-brand-50/70 px-3 py-2 text-sm dark:border-brand-900 dark:bg-brand-950/30">
+            <div className="flex flex-wrap items-center gap-2 font-semibold text-brand-800 dark:text-brand-200">
+              <Layers3 aria-hidden="true" className="size-4" />
+              <span>{groupLabel}</span>
+              {groupRounds ? <span>· {groupRounds} tour{groupRounds > 1 ? 's' : ''}</span> : null}
+              {temporarilySkipped ? <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-800 dark:bg-amber-950 dark:text-amber-200">Passé temporairement</span> : null}
+            </div>
+            {nextExerciseName ? <p className="mt-1 text-slate-600 dark:text-slate-300">Ensuite : {nextExerciseName}</p> : null}
+          </div>
+        ) : null}
+
         {exercise.notes ? (
           <p className="mt-3 rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-600 dark:bg-slate-950/50 dark:text-slate-300">
             {exercise.notes}
@@ -149,6 +179,17 @@ export function WorkoutExerciseCard({
               >
                 <ArrowDown aria-hidden="true" className="size-4" />
               </Button>
+              {groupLabel && onSkip ? (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={Boolean(action)}
+                  onClick={() => onSkip(exercise)}
+                >
+                  <SkipForward aria-hidden="true" className="size-4" />
+                  {temporarilySkipped ? 'Réintégrer' : 'Passer pour l’instant'}
+                </Button>
+              ) : null}
               <Button
                 variant="dangerGhost"
                 size="sm"
@@ -161,14 +202,14 @@ export function WorkoutExerciseCard({
             </div>
           ) : null}
 
-          {editable && exercise.restSeconds ? (
+          {editable && restDurationSeconds ? (
             <Button
               className="mt-4 w-full"
               variant="secondary"
               onClick={() => onStartRest(exercise)}
             >
               <TimerReset aria-hidden="true" className="size-4" />
-              Démarrer le repos · {formatRestDuration(exercise.restSeconds)}
+              {restButtonLabel ?? 'Démarrer le repos'} · {formatRestDuration(restDurationSeconds)}
             </Button>
           ) : null}
 

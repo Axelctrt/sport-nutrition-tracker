@@ -47,3 +47,9 @@ Cette phase n’ajoute aucune table et ne modifie aucun index Dexie. Les nouveau
 Cette phase n’ajoute aucune table et ne modifie aucun index Dexie. Les métadonnées `plannedDate`, `originalPlannedDate`, `plannedAt` et `skippedAt` sont facultatives. Un retour au commit précédent ne nécessite donc aucune migration structurelle.
 
 Avant un retour arrière, terminer ou abandonner toute séance en cours et exporter une sauvegarde JSON. Une version antérieure ne connaît pas les statuts `planned` et `skipped` : les séances encore prévues ou non réalisées doivent donc être considérées comme non exploitables par l’ancienne interface. Les séances déjà démarrées ou terminées restent compatibles grâce à leur statut historique et à leurs exercices instantanés.
+
+## Retour arrière des supersets et circuits
+
+Cette phase n’ajoute aucune table et ne modifie aucun index Dexie. Les champs `exerciseGroupId`, `exerciseGroupType`, `exerciseGroupName`, `exerciseGroupRounds`, `exerciseGroupRestBetweenExercisesSeconds` et `exerciseGroupRestBetweenRoundsSeconds` sont facultatifs.
+
+Un retour au commit précédent ne nécessite donc aucune migration structurelle. Une version antérieure ignorera les métadonnées de groupe et affichera les exercices comme des exercices indépendants ; leurs séries, charges, répétitions et statistiques resteront intactes. Avant un retour arrière, exporter une sauvegarde JSON récente.

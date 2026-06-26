@@ -108,3 +108,20 @@
 - [ ] La vue ne déborde pas horizontalement en portrait sur iPhone 15.
 - [ ] L’export CSV contient les dates réelle, prévue et prévue initiale.
 - [ ] Une sauvegarde JSON v2 contenant des séances planifiées est restaurable.
+
+## Supersets, tri-sets et circuits
+
+- [ ] Un superset contient exactement deux exercices.
+- [ ] Un tri-set contient exactement trois exercices.
+- [ ] Un circuit accepte deux exercices ou plus.
+- [ ] Un exercice peut rejoindre ou quitter un groupe.
+- [ ] Les exercices peuvent être réordonnés sans perdre leur groupe.
+- [ ] Un groupe peut être dupliqué puis dissous.
+- [ ] Le nom, les tours et les deux temps de repos sont conservés après rechargement.
+- [ ] Une séance lancée depuis un modèle affiche les repères `A1`, `A2`, etc.
+- [ ] Les séries restent indépendantes pour chaque exercice.
+- [ ] Le minuteur applique le repos de transition puis le repos entre tours.
+- [ ] Un exercice peut être passé temporairement puis réintégré.
+- [ ] Une ancienne séance sans groupe reste utilisable.
+- [ ] L’export JSON et le CSV conservent les métadonnées de groupe.
+- [ ] L’interface ne déborde pas horizontalement sur iPhone 15.

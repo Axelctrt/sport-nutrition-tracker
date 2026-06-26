@@ -774,3 +774,11 @@ Les exercices de musculation peuvent maintenant utiliser l’une des méthodes d
 Les champs de saisie, les objectifs de séance modèle, l’historique, les records, les graphiques et les comparaisons sont adaptés à la méthode choisie. Pour le poids du corps et l’assistance, la charge effective est calculée avec le dernier poids enregistré à la date de la séance, ou avec le poids initial du profil en l’absence de pesée antérieure. Le lest additionnel reste affiché séparément afin de ne pas confondre charge ajoutée et charge totale.
 
 Les anciens exercices conservent automatiquement une méthode cohérente à partir de leur ancienne unité de charge. Aucune migration Dexie ni évolution du format de sauvegarde n’est nécessaire.
+
+## Supersets, tri-sets et circuits
+
+Les exercices d’une séance modèle peuvent être regroupés en superset, tri-set ou circuit. Chaque groupe peut définir un nom, un nombre de tours, un repos entre les exercices et un repos entre les tours.
+
+Pendant une séance active, SportPilot affiche des repères comme `A1` et `A2`, indique l’exercice suivant et lance le minuteur avec la durée correspondant à la transition. Un exercice peut être passé temporairement sans supprimer ses séries. Les séries, records et statistiques restent toujours attachés à leur exercice d’origine.
+
+Les groupes sont stockés directement dans les exercices du modèle puis copiés dans la séance. Cette organisation ne crée aucune nouvelle table et reste compatible avec les anciennes séances et sauvegardes dépourvues de groupe.
