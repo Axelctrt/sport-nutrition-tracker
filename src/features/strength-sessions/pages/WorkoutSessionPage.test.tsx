@@ -265,4 +265,56 @@ describe('WorkoutSessionPage', () => {
     });
     expect(await screen.findByText(/Charge cible mise à jour à 63 kg/)).toBeInTheDocument();
   });
+
+  it('guide un superset, permet de passer un exercice et utilise le repos de transition', async () => {
+    await appDatabase.workoutSessionExercises.update('session-exercise-bench', {
+      exerciseGroupId: 'group-a',
+      exerciseGroupType: 'superset',
+      exerciseGroupName: 'Poussée / tirage',
+      exerciseGroupRounds: 3,
+      exerciseGroupRestBetweenExercisesSeconds: 15,
+      exerciseGroupRestBetweenRoundsSeconds: 90,
+    });
+    await appDatabase.workoutSessionExercises.add(createEntity(createWorkoutSessionExerciseInput({
+      sessionId: 'session-current',
+      exerciseDefinitionId: 'exercise-row',
+      exerciseNameSnapshot: 'Rowing barre',
+      sortOrder: 1,
+      exerciseGroupId: 'group-a',
+      exerciseGroupType: 'superset',
+      exerciseGroupName: 'Poussée / tirage',
+      exerciseGroupRounds: 3,
+      exerciseGroupRestBetweenExercisesSeconds: 15,
+      exerciseGroupRestBetweenRoundsSeconds: 90,
+    }), 'session-exercise-row'));
+    const user = userEvent.setup();
+    renderSessionPage();
+
+    expect(await screen.findByText('A1')).toBeInTheDocument();
+    expect(screen.getByText('A2')).toBeInTheDocument();
+    expect(screen.getAllByText('Poussée / tirage')).toHaveLength(2);
+    expect(screen.getByText('Ensuite : Rowing barre')).toBeInTheDocument();
+
+    const getBenchCard = () => screen.getByRole('heading', { name: 'Développé couché' })
+      .closest('[id^="workout-exercise-"]') as HTMLElement | null;
+    expect(getBenchCard()).not.toBeNull();
+    await user.click(within(getBenchCard()!).getByRole('button', { name: 'Ajouter une série' }));
+    await waitFor(async () => expect(await appDatabase.strengthSets.count()).toBe(1));
+    const repetitionsInput = await screen.findByLabelText('Répétitions');
+    await user.clear(repetitionsInput);
+    await user.type(repetitionsInput, '10');
+    const validateButton = await screen.findByRole('button', { name: 'Valider la série' });
+    await waitFor(() => expect(validateButton).toBeEnabled());
+    await user.click(validateButton);
+    await waitFor(async () => {
+      expect((await appDatabase.strengthSets.toArray())[0]?.isCompleted).toBe(true);
+    });
+    expect(await screen.findByRole('region', { name: 'Minuteur de repos' })).toBeInTheDocument();
+    expect(screen.getByText('Transition vers Rowing barre')).toBeInTheDocument();
+    expect(screen.getByRole('timer')).toHaveTextContent(/00:1[34]|00:15/);
+
+    await user.click(within(getBenchCard()!).getByRole('button', { name: 'Passer pour l’instant' }));
+    expect(within(getBenchCard()!).getByText('Passé temporairement')).toBeInTheDocument();
+  });
+
 });

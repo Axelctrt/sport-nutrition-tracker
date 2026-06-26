@@ -104,6 +104,14 @@ export async function createWorkoutTemplateSessionSnapshot(
       loadUnitSnapshot: definition.loadUnit,
       trackingModeSnapshot: definition.trackingMode ?? defaultTrackingModeForLoadUnit(definition.loadUnit),
       ...(configuration.notes ? { notes: configuration.notes } : {}),
+      ...(configuration.exerciseGroupId ? {
+        exerciseGroupId: configuration.exerciseGroupId,
+        exerciseGroupType: configuration.exerciseGroupType ?? 'superset',
+        ...(configuration.exerciseGroupName ? { exerciseGroupName: configuration.exerciseGroupName } : {}),
+        exerciseGroupRounds: configuration.exerciseGroupRounds ?? 3,
+        exerciseGroupRestBetweenExercisesSeconds: configuration.exerciseGroupRestBetweenExercisesSeconds ?? 0,
+        exerciseGroupRestBetweenRoundsSeconds: configuration.exerciseGroupRestBetweenRoundsSeconds ?? 120,
+      } : {}),
     } satisfies Omit<WorkoutSessionExercise, 'id' | 'sessionId' | 'createdAt' | 'updatedAt'>;
   });
 

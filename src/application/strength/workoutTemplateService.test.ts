@@ -119,4 +119,33 @@ describe('workoutTemplateService', () => {
       exercises: [templateExercise('exercise-bench', { minRepetitions: 12, maxRepetitions: 8 })],
     })).rejects.toThrow(/fourchette/);
   });
+  it('conserve les groupes et autorise la duplication d’un groupe indépendant', async () => {
+    const group = (id: string, name: string) => ({
+      exerciseGroupId: id,
+      exerciseGroupType: 'superset' as const,
+      exerciseGroupName: name,
+      exerciseGroupRounds: 4,
+      exerciseGroupRestBetweenExercisesSeconds: 15,
+      exerciseGroupRestBetweenRoundsSeconds: 90,
+    });
+    const created = await createWorkoutTemplate(templateRepository, {
+      name: 'Supersets',
+      exercises: [
+        templateExercise('exercise-bench', group('group-a', 'Poussée / tirage')),
+        templateExercise('exercise-press', group('group-a', 'Poussée / tirage')),
+        templateExercise('exercise-bench', group('group-b', 'Poussée / tirage — copie')),
+        templateExercise('exercise-lateral', group('group-b', 'Poussée / tirage — copie')),
+      ],
+    });
+
+    expect(created.exercises).toHaveLength(4);
+    expect(created.exercises.filter((exercise) => exercise.exerciseGroupId === 'group-a')).toHaveLength(2);
+    expect(created.exercises[0]).toMatchObject({
+      exerciseGroupType: 'superset',
+      exerciseGroupRounds: 4,
+      exerciseGroupRestBetweenExercisesSeconds: 15,
+      exerciseGroupRestBetweenRoundsSeconds: 90,
+    });
+  });
+
 });

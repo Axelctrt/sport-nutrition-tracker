@@ -208,6 +208,51 @@ describe('backupEnvelopeSchema', () => {
     });
   });
 
+  it('conserve les métadonnées des supersets et circuits dans une sauvegarde', () => {
+    const envelope = createValidEnvelope();
+    envelope.data.exerciseDefinitions = [
+      createEntity(createExerciseDefinitionInput(), 'exercise-1'),
+      createEntity(createExerciseDefinitionInput({ name: 'Rowing barre', primaryMuscleGroup: 'back' }), 'exercise-2'),
+    ];
+    envelope.data.workoutTemplates = [createEntity(createWorkoutTemplateInput(), 'template-1')];
+    envelope.data.workoutTemplateExercises = [
+      createEntity(createWorkoutTemplateExerciseInput({
+        templateId: 'template-1',
+        exerciseDefinitionId: 'exercise-1',
+        sortOrder: 0,
+        exerciseGroupId: 'group-a',
+        exerciseGroupType: 'superset',
+        exerciseGroupName: 'Poussée / tirage',
+        exerciseGroupRounds: 4,
+        exerciseGroupRestBetweenExercisesSeconds: 15,
+        exerciseGroupRestBetweenRoundsSeconds: 90,
+      }), 'template-exercise-1'),
+      createEntity(createWorkoutTemplateExerciseInput({
+        templateId: 'template-1',
+        exerciseDefinitionId: 'exercise-2',
+        sortOrder: 1,
+        exerciseGroupId: 'group-a',
+        exerciseGroupType: 'superset',
+        exerciseGroupName: 'Poussée / tirage',
+        exerciseGroupRounds: 4,
+        exerciseGroupRestBetweenExercisesSeconds: 15,
+        exerciseGroupRestBetweenRoundsSeconds: 90,
+      }), 'template-exercise-2'),
+    ];
+
+    const parsed = backupEnvelopeSchema.parse(envelope);
+
+    expect(parsed.data.workoutTemplateExercises).toHaveLength(2);
+    expect(parsed.data.workoutTemplateExercises[0]).toMatchObject({
+      exerciseGroupId: 'group-a',
+      exerciseGroupType: 'superset',
+      exerciseGroupName: 'Poussée / tirage',
+      exerciseGroupRounds: 4,
+      exerciseGroupRestBetweenExercisesSeconds: 15,
+      exerciseGroupRestBetweenRoundsSeconds: 90,
+    });
+  });
+
 });
 
 describe('migrateBackupEnvelope', () => {

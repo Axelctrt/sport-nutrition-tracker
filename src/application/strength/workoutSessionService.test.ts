@@ -43,11 +43,23 @@ describe('workoutSessionService', () => {
         templateId: 'template-push',
         exerciseDefinitionId: 'exercise-bench',
         sortOrder: 0,
+        exerciseGroupId: 'group-a',
+        exerciseGroupType: 'superset',
+        exerciseGroupName: 'Push / épaules',
+        exerciseGroupRounds: 3,
+        exerciseGroupRestBetweenExercisesSeconds: 10,
+        exerciseGroupRestBetweenRoundsSeconds: 90,
       }), 'template-exercise-bench'),
       createEntity(createWorkoutTemplateExerciseInput({
         templateId: 'template-push',
         exerciseDefinitionId: 'exercise-lateral',
         sortOrder: 1,
+        exerciseGroupId: 'group-a',
+        exerciseGroupType: 'superset',
+        exerciseGroupName: 'Push / épaules',
+        exerciseGroupRounds: 3,
+        exerciseGroupRestBetweenExercisesSeconds: 10,
+        exerciseGroupRestBetweenRoundsSeconds: 90,
         plannedSets: 3,
         minRepetitions: 12,
         maxRepetitions: 15,
@@ -79,6 +91,14 @@ describe('workoutSessionService', () => {
       'Développé couché',
       'Élévations latérales',
     ]);
+    expect(started.exercises[0]).toMatchObject({
+      exerciseGroupId: 'group-a',
+      exerciseGroupType: 'superset',
+      exerciseGroupName: 'Push / épaules',
+      exerciseGroupRounds: 3,
+      exerciseGroupRestBetweenExercisesSeconds: 10,
+      exerciseGroupRestBetweenRoundsSeconds: 90,
+    });
 
     await database.exerciseDefinitions.update('exercise-bench', { name: 'Nom modifié' });
     expect((await sessionRepository.listExercises(started.session.id))[0]?.exerciseNameSnapshot).toBe('Développé couché');
