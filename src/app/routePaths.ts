@@ -39,6 +39,7 @@ export const routePaths = {
   weeklyReview: '/weekly-review',
   backup: '/backup',
   calculationsInformation: '/information/calculations',
+  privacy: '/privacy',
   offline: '/offline',
 } as const;
 

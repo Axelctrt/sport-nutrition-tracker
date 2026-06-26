@@ -46,6 +46,7 @@ const routeMetadata: RouteMetadata[] = [
   { pattern: routePaths.weeklyReview, title: 'Bilan hebdomadaire' },
   { pattern: routePaths.backup, title: 'Sauvegarde' },
   { pattern: routePaths.calculationsInformation, title: 'Calculs et estimations' },
+  { pattern: routePaths.privacy, title: 'Confidentialité' },
 ];
 
 export function getRouteTitle(pathname: string): string {

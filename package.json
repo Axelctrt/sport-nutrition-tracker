@@ -14,8 +14,8 @@
     "test:stability": "vitest run --sequence.shuffle --sequence.seed=20260626",
     "test:watch": "vitest",
     "preview": "vite preview",
-    "check": "npm run lint && npm run test && npm run build && npm run audit:mvp && npm run audit:release && npm run audit:stable",
-    "ci": "npm run lint && npm run test && npm run build && npm run audit:mvp && npm run audit:release && npm run audit:stable",
+    "check": "npm run lint && npm run test && npm run build && npm run audit:mvp && npm run audit:release && npm run audit:security && npm run audit:stable",
+    "ci": "npm run lint && npm run test && npm run build && npm run audit:mvp && npm run audit:release && npm run audit:security && npm run audit:stable",
     "diagnose:off": "node scripts/diagnose-open-food-facts.mjs",
     "audit:mvp": "node scripts/audit-mvp.mjs",
     "audit:release": "node scripts/audit-release.mjs",
@@ -24,7 +24,8 @@
     "test:e2e": "playwright test",
     "test:e2e:chromium": "playwright test --project=chromium-desktop",
     "test:e2e:webkit": "playwright test --project=webkit-iphone-15",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "audit:security": "node scripts/audit-security.mjs"
   },
   "dependencies": {
     "@ericblade/quagga2": "^1.12.1",

@@ -1,22 +1,22 @@
-# SportPilot 0.15.0 — fiabilité des sauvegardes
+# SportPilot 0.15.0 — sécurité et confidentialité
 
-Branche recommandée : `feature/backup-reliability`
+Branche recommandée : `security/cloudflare-headers-and-privacy`
 
 Ce patch ajoute :
 
-- le suivi de la dernière sauvegarde JSON réussie ;
-- un rappel local configurable à 7, 14 ou 30 jours ;
-- sept exports CSV séparés ;
-- un diagnostic technique sans données personnelles détaillées ;
-- une prévisualisation enrichie avant restauration ;
-- la normalisation automatique des anciens réglages et anciennes sauvegardes.
+- une page publique `#/privacy` accessible avant la création du profil ;
+- des explications précises sur IndexedDB, Open Food Facts, la caméra, les sauvegardes et la suppression ;
+- un fichier Cloudflare `public/_headers` avec CSP, permissions et protection anti-intégration ;
+- un audit automatique des en-têtes après le build ;
+- un parcours Playwright vérifiant les en-têtes réels de la prévisualisation de production.
 
 Compatibilité conservée :
 
 - schéma Dexie v2 ;
 - sauvegarde JSON v2 ;
-- fonctionnement hors connexion ;
-- anciennes sauvegardes SportPilot 0.15.0.
+- PWA et scanner caméra ;
+- appels Open Food Facts ;
+- fonctionnement hors connexion.
 
 Contrôles :
 
