@@ -28,6 +28,9 @@ export function createDefaultAppSettings(): AppSettings {
       maximumCumulativeAdjustmentKcal: 600,
       requestPersistentStorage: true,
       backupReminderIntervalDays: 0,
+      restTimerAutoStart: true,
+      restTimerSoundEnabled: false,
+      restTimerVibrationEnabled: true,
     },
     APP_SETTINGS_ID,
   );
@@ -37,5 +40,8 @@ export function normalizeAppSettings(settings: AppSettings): AppSettings {
   return {
     ...settings,
     backupReminderIntervalDays: settings.backupReminderIntervalDays ?? 0,
+    restTimerAutoStart: settings.restTimerAutoStart ?? true,
+    restTimerSoundEnabled: settings.restTimerSoundEnabled ?? false,
+    restTimerVibrationEnabled: settings.restTimerVibrationEnabled ?? true,
   };
 }

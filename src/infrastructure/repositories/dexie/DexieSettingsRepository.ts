@@ -23,7 +23,12 @@ export class DexieSettingsRepository implements SettingsRepository {
 
         if (settings) {
           const normalized = normalizeAppSettings(settings);
-          if (normalized.backupReminderIntervalDays !== settings.backupReminderIntervalDays) {
+          if (
+            normalized.backupReminderIntervalDays !== settings.backupReminderIntervalDays
+            || normalized.restTimerAutoStart !== settings.restTimerAutoStart
+            || normalized.restTimerSoundEnabled !== settings.restTimerSoundEnabled
+            || normalized.restTimerVibrationEnabled !== settings.restTimerVibrationEnabled
+          ) {
             await this.database.appSettings.put(normalized);
           }
           return normalized;

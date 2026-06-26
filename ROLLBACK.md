@@ -32,3 +32,7 @@ Le schéma Dexie et la sauvegarde restent en version 2. Le passage entre l’alp
 ## En-têtes de sécurité
 
 Si une incompatibilité de production apparaît, restaurer d’abord la version précédente de `public/_headers`, reconstruire puis redéployer. Ne désactiver la CSP qu’en dernier recours et uniquement le temps d’identifier la directive bloquante. Le schéma Dexie et les sauvegardes ne sont pas concernés par ce retour arrière.
+## Retour arrière de la phase minuteur
+
+La phase n’ajoute aucune table et ne modifie aucun index Dexie. Un retour au commit précédent ne nécessite donc aucune migration de données. Les trois préférences supplémentaires présentes dans `appSettings` seront simplement ignorées par une version antérieure. L’état actif du minuteur est temporaire et peut être supprimé en vidant la clé `sportpilot:rest-timer:*` de `sessionStorage`.
+

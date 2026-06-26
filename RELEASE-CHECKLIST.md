@@ -70,3 +70,13 @@
 - [ ] Le scanner fonctionne toujours sur l’adresse HTTPS publiée.
 - [ ] Les recherches Open Food Facts fonctionnent toujours.
 - [ ] La PWA s’installe et se met à jour avec la CSP active.
+## Minuteur de repos
+
+- [ ] Valider une série de travail lance le repos configuré.
+- [ ] Une série d’échauffement ne lance pas automatiquement le minuteur.
+- [ ] Pause, reprise, arrêt, -15 s, +15 s et +30 s fonctionnent.
+- [ ] Le retour après mise en arrière-plan affiche le temps exact.
+- [ ] Le signal visuel reste présent si son et vibration sont indisponibles.
+- [ ] Le minuteur s’arrête à la fin et à l’abandon de la séance.
+- [ ] Aucun champ de série n’est masqué en portrait sur iPhone.
+

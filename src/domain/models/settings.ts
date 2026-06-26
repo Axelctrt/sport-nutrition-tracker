@@ -19,6 +19,9 @@ export interface AppSettings extends EntityMetadata {
   maximumCumulativeAdjustmentKcal: number;
   requestPersistentStorage: boolean;
   backupReminderIntervalDays: BackupReminderIntervalDays;
+  restTimerAutoStart: boolean;
+  restTimerSoundEnabled: boolean;
+  restTimerVibrationEnabled: boolean;
   lastBackupExportedAt?: IsoDateTime;
   lastBackupAppVersion?: string;
   lastBackupSchemaVersion?: number;

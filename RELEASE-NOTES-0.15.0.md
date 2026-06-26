@@ -45,3 +45,13 @@ La branche de développement ajoute un suivi local de la dernière sauvegarde, u
 ## Sécurité et confidentialité après la stabilisation
 
 La branche de développement ajoute une page Confidentialité publique et des en-têtes de sécurité Cloudflare. La CSP autorise les ressources locales, les workers nécessaires à la PWA et au scanner, ainsi que les deux domaines Open Food Facts utilisés par l’application. Les scripts inline et `unsafe-eval` restent interdits.
+## Phase 5 — minuteur de repos
+
+- minuteur lancé automatiquement après validation d’une série de travail ;
+- commandes pause, reprise, arrêt, -15 s, +15 s et +30 s ;
+- reprise exacte après arrière-plan grâce au timestamp de fin ;
+- démarrage manuel par exercice ;
+- vibration et son configurables avec fallback visuel ;
+- état opérationnel limité à `sessionStorage` ;
+- aucune migration Dexie et sauvegarde JSON v2 conservée.
+

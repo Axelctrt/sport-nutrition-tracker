@@ -17,6 +17,9 @@ export function settingsToFormValues(settings: AppSettings): SettingsFormValues 
     maximumWeeklyAdjustmentKcal: settings.maximumWeeklyAdjustmentKcal,
     maximumCumulativeAdjustmentKcal: settings.maximumCumulativeAdjustmentKcal,
     requestPersistentStorage: settings.requestPersistentStorage,
+    restTimerAutoStart: settings.restTimerAutoStart,
+    restTimerSoundEnabled: settings.restTimerSoundEnabled,
+    restTimerVibrationEnabled: settings.restTimerVibrationEnabled,
   };
 }
 
