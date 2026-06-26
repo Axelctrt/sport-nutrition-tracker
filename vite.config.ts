@@ -172,10 +172,18 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
+    alias: {
+      'virtual:pwa-register/react': fileURLToPath(
+        new URL('./src/test/mocks/pwaRegisterReact.ts', import.meta.url),
+      ),
+    },
     css: true,
     restoreMocks: true,
     clearMocks: true,
     maxWorkers: 1,
     isolate: false,
+    sequence: {
+      hooks: 'stack',
+    },
   },
 });

@@ -12,9 +12,6 @@ import { createRunningActivityInput } from '@/test/factories/activityFactory';
 const mocks = vi.hoisted(() => ({
   createActivityFromDraft: vi.fn(),
   updateActivityFromDraft: vi.fn(),
-  settingsGet: vi.fn(),
-  weightGetLatestOnOrBefore: vi.fn(),
-  activityGetById: vi.fn(),
   navigate: vi.fn(),
 }));
 
@@ -35,20 +32,17 @@ vi.mock('@/app/providers/profile/useProfile', () => ({
   }),
 }));
 
-vi.mock('@/application/activities/activityService', () => ({
-  createActivityFromDraft: mocks.createActivityFromDraft,
-  updateActivityFromDraft: mocks.updateActivityFromDraft,
-}));
-
-vi.mock('@/infrastructure/repositories/repositories', () => ({
-  repositories: {
-    settings: { get: mocks.settingsGet },
-    weight: { getLatestOnOrBefore: mocks.weightGetLatestOnOrBefore },
-    activities: { getById: mocks.activityGetById },
-  },
-}));
+vi.mock('@/application/activities/activityService', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/application/activities/activityService')>();
+  return {
+    ...actual,
+    createActivityFromDraft: mocks.createActivityFromDraft,
+    updateActivityFromDraft: mocks.updateActivityFromDraft,
+  };
+});
 
 import { RunningActivityPage } from '@/features/activities/pages/ActivityEditorPage';
+import { repositories } from '@/infrastructure/repositories/repositories';
 
 const savedActivity = createEntity<RunningActivity>(createRunningActivityInput({
   date: '2026-06-25',
@@ -72,8 +66,9 @@ afterEach(cleanup);
 describe('ActivityEditorPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.settingsGet.mockResolvedValue(createDefaultAppSettings());
-    mocks.weightGetLatestOnOrBefore.mockResolvedValue(undefined);
+    vi.spyOn(repositories.settings, 'get').mockResolvedValue(createDefaultAppSettings());
+    vi.spyOn(repositories.weight, 'getLatestOnOrBefore').mockResolvedValue(undefined);
+    vi.spyOn(repositories.activities, 'getById').mockResolvedValue(undefined);
     mocks.createActivityFromDraft.mockResolvedValue(savedActivity);
   });
 
