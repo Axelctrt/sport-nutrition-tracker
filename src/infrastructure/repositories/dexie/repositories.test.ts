@@ -1,8 +1,10 @@
 import { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import { DexieActivityRepository } from '@/infrastructure/repositories/dexie/DexieActivityRepository';
 import { DexieProfileRepository } from '@/infrastructure/repositories/dexie/DexieProfileRepository';
+import { DexieSettingsRepository } from '@/infrastructure/repositories/dexie/DexieSettingsRepository';
 import { DexieStepsRepository } from '@/infrastructure/repositories/dexie/DexieStepsRepository';
 import { DexieWeightRepository } from '@/infrastructure/repositories/dexie/DexieWeightRepository';
+import { createDefaultAppSettings } from '@/domain/defaults/appSettings';
 import { createRunningActivityInput } from '@/test/factories/activityFactory';
 import { createProfileInput } from '@/test/factories/profileFactory';
 
@@ -58,6 +60,18 @@ describe('repositories Dexie', () => {
 
     expect(updated.totalSteps).toBe(10_500);
     expect(await database.dailySteps.count()).toBe(1);
+  });
+
+  it('complète les réglages de sauvegarde absents d’une ancienne base', async () => {
+    const repository = new DexieSettingsRepository(database);
+    const legacy = createDefaultAppSettings() as unknown as Record<string, unknown>;
+    delete legacy.backupReminderIntervalDays;
+    await database.appSettings.put(legacy as never);
+
+    const settings = await repository.get();
+
+    expect(settings.backupReminderIntervalDays).toBe(0);
+    expect((await database.appSettings.toArray())[0]?.backupReminderIntervalDays).toBe(0);
   });
 
   it('enregistre et retrouve les activités d’une journée', async () => {

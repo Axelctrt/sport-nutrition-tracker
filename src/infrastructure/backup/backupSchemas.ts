@@ -84,6 +84,10 @@ const appSettingsSchema = entityMetadataSchema.extend({
   maximumWeeklyAdjustmentKcal: nonNegativeNumber,
   maximumCumulativeAdjustmentKcal: nonNegativeNumber,
   requestPersistentStorage: z.boolean(),
+  backupReminderIntervalDays: z.union([z.literal(0), z.literal(7), z.literal(14), z.literal(30)]).default(0),
+  lastBackupExportedAt: isoDateTimeSchema.optional(),
+  lastBackupAppVersion: z.string().min(1).max(100).optional(),
+  lastBackupSchemaVersion: positiveInteger.optional(),
 });
 
 const weightEntrySchema = datedEntitySchema.extend({
@@ -503,6 +507,7 @@ export const backupEnvelopeSchema = z.object({
   format: z.literal('sportpilot-backup'),
   schemaVersion: z.number().int().positive(),
   exportedAt: isoDateTimeSchema,
+  appVersion: z.string().min(1).max(100).optional(),
   data: backupDataSchema,
 }).superRefine((envelope, context) => {
   const { data } = envelope;

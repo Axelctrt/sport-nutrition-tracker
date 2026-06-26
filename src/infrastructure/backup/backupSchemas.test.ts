@@ -74,6 +74,17 @@ describe('backupEnvelopeSchema', () => {
     });
   });
 
+  it('complète les nouveaux réglages absents d’une sauvegarde 0.15.0', () => {
+    const envelope = createValidEnvelope();
+    const legacySettings = { ...envelope.data.appSettings[0] } as Record<string, unknown>;
+    delete legacySettings.backupReminderIntervalDays;
+    envelope.data.appSettings = [legacySettings as unknown as BackupEnvelope['data']['appSettings'][number]];
+
+    const parsed = backupEnvelopeSchema.parse(envelope);
+
+    expect(parsed.data.appSettings[0]?.backupReminderIntervalDays).toBe(0);
+  });
+
   it('accepte les activités récentes sans RPE et les anciennes activités qui en contiennent encore un', () => {
     const envelope = createValidEnvelope();
     envelope.data.activities = [

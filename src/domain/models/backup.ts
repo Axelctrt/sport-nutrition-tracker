@@ -53,5 +53,6 @@ export interface BackupEnvelope {
   format: 'sportpilot-backup';
   schemaVersion: number;
   exportedAt: IsoDateTime;
+  appVersion?: string;
   data: BackupData;
 }

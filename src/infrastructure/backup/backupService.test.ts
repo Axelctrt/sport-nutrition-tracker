@@ -95,6 +95,7 @@ describe('backupService', () => {
     const summary = summarizeBackup(parsed);
 
     expect(parsed.schemaVersion).toBe(2);
+    expect(parsed.appVersion).toBe(__APP_VERSION__);
     expect(parsed.data.userProfile).toHaveLength(1);
     expect(parsed.data.weights).toHaveLength(1);
     expect(parsed.data.appSettings[0]?.id).toBe(APP_SETTINGS_ID);
@@ -102,6 +103,8 @@ describe('backupService', () => {
     expect(parsed.data.exerciseDefinitions.every((exercise) => exercise.source === 'catalog')).toBe(true);
     expect(summary.totalRecords).toBe(exerciseCatalog.length + 3);
     expect(summary.hasProfile).toBe(true);
+    expect(summary.appVersion).toBe(__APP_VERSION__);
+    expect(summary.requiresMigration).toBe(false);
   });
 
   it('exporte puis restaure toutes les nouvelles données de musculation', async () => {

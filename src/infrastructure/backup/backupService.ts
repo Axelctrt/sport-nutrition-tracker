@@ -1,14 +1,14 @@
 import { z } from 'zod';
-import { createDefaultAppSettings } from '@/domain/defaults/appSettings';
+import { ensureExerciseCatalog } from '@/application/strength/exerciseCatalogSeeder';
+import { createDefaultAppSettings, normalizeAppSettings } from '@/domain/defaults/appSettings';
 import type { BackupData, BackupEnvelope } from '@/domain/models/backup';
 import type { AppDatabase } from '@/infrastructure/database/AppDatabase';
-import { appDatabase } from '@/infrastructure/database/database';
 import {
   CURRENT_BACKUP_SCHEMA_VERSION,
   migrateBackupEnvelope,
 } from '@/infrastructure/backup/backupMigrations';
 import { formatBackupValidationError } from '@/infrastructure/backup/backupSchemas';
-import { ensureExerciseCatalog } from '@/application/strength/exerciseCatalogSeeder';
+import { appDatabase } from '@/infrastructure/database/database';
 
 export const MAX_BACKUP_FILE_SIZE_BYTES = 25 * 1024 * 1024;
 
@@ -21,6 +21,7 @@ export class BackupOperationError extends Error {
 
 export interface BackupSummary {
   hasProfile: boolean;
+  profileCount: number;
   totalRecords: number;
   weights: number;
   dailySteps: number;
@@ -30,11 +31,23 @@ export interface BackupSummary {
   recipes: number;
   favoriteMeals: number;
   weeklyReviews: number;
+  workoutSessions: number;
+  strengthSets: number;
   exportedAt: string;
   schemaVersion: number;
+  sourceSchemaVersion: number;
+  appVersion?: string;
+  requiresMigration: boolean;
+  compatibility: 'compatible';
 }
 
-function tableList(database: AppDatabase) {
+export interface ParsedBackup {
+  envelope: BackupEnvelope;
+  sourceSchemaVersion: number;
+  requiresMigration: boolean;
+}
+
+export function tableList(database: AppDatabase) {
   return [
     database.userProfile,
     database.appSettings,
@@ -61,7 +74,7 @@ function tableList(database: AppDatabase) {
   ] as const;
 }
 
-async function readBackupData(database: AppDatabase): Promise<BackupData> {
+export async function readBackupData(database: AppDatabase): Promise<BackupData> {
   const [
     userProfile,
     appSettings,
@@ -89,7 +102,7 @@ async function readBackupData(database: AppDatabase): Promise<BackupData> {
 
   return {
     userProfile,
-    appSettings,
+    appSettings: ((appSettings ?? []) as BackupData['appSettings']).map(normalizeAppSettings),
     weights,
     dailySteps,
     activities,
@@ -123,6 +136,7 @@ export async function createBackupEnvelope(
       format: 'sportpilot-backup',
       schemaVersion: CURRENT_BACKUP_SCHEMA_VERSION,
       exportedAt,
+      appVersion: __APP_VERSION__,
       data,
     };
   } catch (error) {
@@ -151,18 +165,25 @@ export function createBackupFileName(exportedAt: string): string {
   ].join('');
 }
 
-export function parseBackupText(text: string): BackupEnvelope {
+function parseRawBackupText(text: string): unknown {
   if (!text.trim()) {
     throw new BackupOperationError('Le fichier de sauvegarde est vide.');
   }
 
-  let raw: unknown;
   try {
-    raw = JSON.parse(text) as unknown;
+    return JSON.parse(text) as unknown;
   } catch (error) {
     throw new BackupOperationError('Le fichier ne contient pas un JSON valide.', { cause: error });
   }
+}
 
+function readSourceSchemaVersion(raw: unknown): number {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return 0;
+  const version = (raw as { schemaVersion?: unknown }).schemaVersion;
+  return Number.isInteger(version) ? Number(version) : 0;
+}
+
+function migrateParsedBackup(raw: unknown): BackupEnvelope {
   try {
     return migrateBackupEnvelope(raw);
   } catch (error) {
@@ -179,11 +200,34 @@ export function parseBackupText(text: string): BackupEnvelope {
   }
 }
 
-export function summarizeBackup(envelope: BackupEnvelope): BackupSummary {
+export function parseBackupTextWithMetadata(text: string): ParsedBackup {
+  const raw = parseRawBackupText(text);
+  const sourceSchemaVersion = readSourceSchemaVersion(raw);
+  const envelope = migrateParsedBackup(raw);
+
+  return {
+    envelope,
+    sourceSchemaVersion,
+    requiresMigration: sourceSchemaVersion < CURRENT_BACKUP_SCHEMA_VERSION,
+  };
+}
+
+export function parseBackupText(text: string): BackupEnvelope {
+  return parseBackupTextWithMetadata(text).envelope;
+}
+
+export function summarizeBackup(
+  envelope: BackupEnvelope,
+  metadata: Pick<ParsedBackup, 'sourceSchemaVersion' | 'requiresMigration'> = {
+    sourceSchemaVersion: envelope.schemaVersion,
+    requiresMigration: false,
+  },
+): BackupSummary {
   const { data } = envelope;
   const totalRecords = Object.values(data).reduce((total, records) => total + records.length, 0);
   return {
     hasProfile: data.userProfile.length === 1,
+    profileCount: data.userProfile.length,
     totalRecords,
     weights: data.weights.length,
     dailySteps: data.dailySteps.length,
@@ -193,8 +237,14 @@ export function summarizeBackup(envelope: BackupEnvelope): BackupSummary {
     recipes: data.recipes.length,
     favoriteMeals: data.favoriteMeals.length,
     weeklyReviews: data.weeklyReviews.length,
+    workoutSessions: data.workoutSessions.length,
+    strengthSets: data.strengthSets.length,
     exportedAt: envelope.exportedAt,
     schemaVersion: envelope.schemaVersion,
+    sourceSchemaVersion: metadata.sourceSchemaVersion,
+    ...(envelope.appVersion === undefined ? {} : { appVersion: envelope.appVersion }),
+    requiresMigration: metadata.requiresMigration,
+    compatibility: 'compatible',
   };
 }
 
@@ -206,7 +256,7 @@ async function clearTables(database: AppDatabase): Promise<void> {
 
 async function populateTables(database: AppDatabase, data: BackupData): Promise<void> {
   if (data.userProfile.length > 0) await database.userProfile.bulkAdd(data.userProfile);
-  await database.appSettings.bulkAdd(data.appSettings);
+  await database.appSettings.bulkAdd(data.appSettings.map(normalizeAppSettings));
   if (data.weights.length > 0) await database.weights.bulkAdd(data.weights);
   if (data.dailySteps.length > 0) await database.dailySteps.bulkAdd(data.dailySteps);
   if (data.activities.length > 0) await database.activities.bulkAdd(data.activities);
