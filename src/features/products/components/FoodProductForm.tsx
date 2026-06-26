@@ -58,13 +58,15 @@ export function FoodProductForm({
 
   const basisUnit = watch('basisUnit');
   const optionalSectionHasValues = Boolean(
-    initialValues.fiberGrams
+    initialValues.servingLabel
+    || initialValues.fiberGrams
     || initialValues.saltGrams
     || initialValues.barcode
     || initialValues.isFavorite,
   );
   const optionalSectionHasErrors = Boolean(
-    errors.fiberGrams
+    errors.servingLabel
+    || errors.fiberGrams
     || errors.saltGrams
     || errors.barcode,
   );
@@ -127,6 +129,23 @@ export function FoodProductForm({
               className={inputClassName}
               aria-invalid={Boolean(errors.servingSize)}
               {...register('servingSize', optionalNumberOptions)}
+            />
+          </FormField>
+
+          <FormField
+            id={`${formId}-servingLabel`}
+            label="Nom de la portion"
+            description="Facultatif, par exemple : 1 pot, 1 tranche ou 1 dose."
+            error={errors.servingLabel?.message}
+          >
+            <input
+              id={`${formId}-servingLabel`}
+              type="text"
+              autoComplete="off"
+              enterKeyHint="next"
+              className={inputClassName}
+              aria-invalid={Boolean(errors.servingLabel)}
+              {...register('servingLabel')}
             />
           </FormField>
         </div>

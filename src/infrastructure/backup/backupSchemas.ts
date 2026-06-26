@@ -167,15 +167,31 @@ const foodDataSourceSchema = z.discriminatedUnion('type', [
   }),
 ]);
 
+const foodProductLocalOverrideFieldSchema = z.enum([
+  'name',
+  'brand',
+  'basisUnit',
+  'caloriesKcal',
+  'proteinGrams',
+  'carbohydratesGrams',
+  'fatGrams',
+  'fiberGrams',
+  'saltGrams',
+  'servingSize',
+  'servingLabel',
+]);
+
 const foodProductSchema = entityMetadataSchema.extend({
   name: z.string().min(1),
   brand: z.string().optional(),
   basisUnit: z.enum(['g', 'ml']),
   nutritionPer100: nutritionValuesSchema,
   servingSize: positiveNumber.optional(),
+  servingLabel: z.string().max(120).optional(),
   barcode: z.string().optional(),
   source: foodDataSourceSchema,
   isNutritionComplete: z.boolean(),
+  localOverrides: z.array(foodProductLocalOverrideFieldSchema).optional(),
   isFavorite: z.boolean(),
   isArchived: z.boolean(),
 });

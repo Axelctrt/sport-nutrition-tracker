@@ -95,3 +95,15 @@ La branche de développement ajoute une page Confidentialité publique et des en
 - métadonnées de groupe incluses dans la sauvegarde JSON v2 et le CSV ;
 - anciennes séances sans groupe compatibles sans migration Dexie ;
 - nouveau parcours Playwright Chromium/WebKit.
+
+## Phase 9 retenue — fiabilité des produits alimentaires
+
+- actualisation à la demande des produits Open Food Facts enregistrés ;
+- protection des corrections locales par champ lors d’une actualisation ;
+- remplacement explicite des corrections après confirmation ;
+- détection des doublons par code-barres et par nom/marque normalisés ;
+- ajout d’un libellé de portion en complément de la quantité ;
+- fibres et sel visibles dans la bibliothèque et les aperçus du journal ;
+- libellé de portion récupéré depuis Open Food Facts quand il est disponible ;
+- nouveaux champs facultatifs acceptés par les sauvegardes JSON v2 ;
+- aucune migration Dexie ni dépendance supplémentaire.

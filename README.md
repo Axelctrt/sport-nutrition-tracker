@@ -782,3 +782,13 @@ Les exercices d’une séance modèle peuvent être regroupés en superset, tri-
 Pendant une séance active, SportPilot affiche des repères comme `A1` et `A2`, indique l’exercice suivant et lance le minuteur avec la durée correspondant à la transition. Un exercice peut être passé temporairement sans supprimer ses séries. Les séries, records et statistiques restent toujours attachés à leur exercice d’origine.
 
 Les groupes sont stockés directement dans les exercices du modèle puis copiés dans la séance. Cette organisation ne crée aucune nouvelle table et reste compatible avec les anciennes séances et sauvegardes dépourvues de groupe.
+
+## Fiabilité des produits alimentaires
+
+Les produits Open Food Facts enregistrés localement peuvent être actualisés depuis leur fiche. SportPilot protège les champs modifiés sur l’appareil et actualise uniquement les autres valeurs. L’utilisateur peut aussi remplacer explicitement toutes ses corrections locales après confirmation.
+
+La création et la modification détectent les doublons par code-barres ainsi que les correspondances exactes de nom et de marque après normalisation. Un code-barres déjà utilisé renvoie vers l’aliment existant, tandis qu’un doublon de nom peut être confirmé volontairement.
+
+Les produits peuvent désormais définir un libellé de portion, par exemple `1 pot`, `1 tranche` ou `1 dose`, en complément de la quantité en grammes ou millilitres. Les fibres et le sel sont affichés dans les cartes de la bibliothèque, les résultats Open Food Facts et les aperçus du journal.
+
+Les nouveaux champs sont facultatifs. Aucune table ni migration Dexie supplémentaire n’est nécessaire et les sauvegardes JSON v2 antérieures restent compatibles.

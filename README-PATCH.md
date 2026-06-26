@@ -1,39 +1,27 @@
-# SportPilot 0.15.0 — supersets, tri-sets et circuits
+# SportPilot 0.15.0 — fiabilité des produits alimentaires
 
-Branche recommandée : `feature/exercise-groups`
+Branche recommandée : `feature/food-product-refresh`
 
-Cette phase ajoute l’organisation des exercices en groupes dans les séances modèles et les séances actives :
+Cette phase améliore la qualité et la maintenance de la bibliothèque alimentaire locale :
 
-- supersets de 2 exercices ;
-- tri-sets de 3 exercices ;
-- circuits de 2 exercices ou plus ;
-- nom facultatif du groupe ;
-- nombre de tours ;
-- repos entre exercices et entre tours ;
-- duplication, dissolution et réorganisation ;
-- repères `A1`, `A2`, `B1` pendant la séance ;
-- indication de l’exercice suivant ;
-- passage temporaire d’un exercice ;
-- minuteur adapté à la transition ou au nouveau tour ;
-- séries et statistiques toujours indépendantes par exercice ;
-- sauvegarde JSON v2 et export CSV enrichis ;
-- parcours Playwright Chromium et WebKit iPhone.
+- actualisation manuelle des produits Open Food Facts enregistrés ;
+- conservation automatique des corrections locales champ par champ ;
+- remplacement explicite des corrections après confirmation ;
+- détection des doublons par code-barres ou par nom et marque normalisés ;
+- possibilité de confirmer un doublon de nom, mais blocage d’un code-barres déjà utilisé ;
+- libellé de portion, par exemple `1 pot`, `1 tranche` ou `1 dose` ;
+- fibres et sel visibles dans la bibliothèque et les aperçus du journal ;
+- import Open Food Facts enrichi avec le libellé de portion ;
+- sauvegarde JSON v2 compatible avec les nouveaux champs facultatifs ;
+- scénario Playwright Chromium et WebKit iPhone pour les portions et doublons.
 
 Architecture retenue :
 
 - aucune nouvelle table Dexie ;
-- les métadonnées du groupe sont portées par les exercices du modèle ;
-- elles sont figées avec chaque exercice lors du démarrage de la séance ;
-- les anciennes séances sans groupe restent inchangées ;
-- aucun résultat statistique n’est fusionné entre les membres.
-
-Compatibilité conservée :
-
-- SportPilot `0.15.0` ;
-- schéma Dexie v2 ;
-- sauvegarde JSON v2 ;
-- PWA et fonctionnement hors connexion ;
-- aucune dépendance supplémentaire.
+- aucun nouvel index ;
+- les corrections locales sont stockées dans `FoodProduct.localOverrides` ;
+- la date de dernière récupération reste portée par `source.fetchedAt` ;
+- les anciennes données et sauvegardes restent valides sans migration.
 
 Contrôles :
 
