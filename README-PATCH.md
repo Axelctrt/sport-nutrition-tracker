@@ -1,11 +1,28 @@
-# Correctif Playwright E2E
+# SportPilot 0.15.0 — fiabilité des sauvegardes
 
-Ce patch corrige les sélecteurs Playwright et réduit l'exécution à un worker pour stabiliser Chromium et WebKit sous Windows.
+Branche recommandée : `feature/backup-reliability`
 
-Fichiers concernés :
-- playwright.config.ts
-- e2e/activity.spec.ts
-- e2e/daily-tracking.spec.ts
-- e2e/food-and-backup.spec.ts
-- e2e/onboarding-and-navigation.spec.ts
-- e2e/strength.spec.ts
+Ce patch ajoute :
+
+- le suivi de la dernière sauvegarde JSON réussie ;
+- un rappel local configurable à 7, 14 ou 30 jours ;
+- sept exports CSV séparés ;
+- un diagnostic technique sans données personnelles détaillées ;
+- une prévisualisation enrichie avant restauration ;
+- la normalisation automatique des anciens réglages et anciennes sauvegardes.
+
+Compatibilité conservée :
+
+- schéma Dexie v2 ;
+- sauvegarde JSON v2 ;
+- fonctionnement hors connexion ;
+- anciennes sauvegardes SportPilot 0.15.0.
+
+Contrôles :
+
+```text
+npm ci
+npm run ci
+npm run test:stability
+npm run test:e2e
+```

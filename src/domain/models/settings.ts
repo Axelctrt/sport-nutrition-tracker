@@ -1,7 +1,8 @@
-import type { EntityMetadata } from '@/domain/models/common';
+import type { EntityMetadata, IsoDateTime } from '@/domain/models/common';
 import type { SwimmingSessionType } from '@/domain/models/activity';
 
 export type ThemePreference = 'system' | 'light' | 'dark';
+export type BackupReminderIntervalDays = 0 | 7 | 14 | 30;
 
 export interface AppSettings extends EntityMetadata {
   theme: ThemePreference;
@@ -17,4 +18,8 @@ export interface AppSettings extends EntityMetadata {
   maximumWeeklyAdjustmentKcal: number;
   maximumCumulativeAdjustmentKcal: number;
   requestPersistentStorage: boolean;
+  backupReminderIntervalDays: BackupReminderIntervalDays;
+  lastBackupExportedAt?: IsoDateTime;
+  lastBackupAppVersion?: string;
+  lastBackupSchemaVersion?: number;
 }

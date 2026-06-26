@@ -50,3 +50,12 @@
 - [ ] Aucun défaut entraînant une perte de données.
 - [ ] Les éventuelles anomalies non bloquantes sont documentées.
 - [ ] La publication stable est autorisée.
+
+## Fiabilité des données locales
+
+- [ ] Un export JSON met à jour la date de dernière sauvegarde.
+- [ ] Le rappel peut être désactivé ou réglé sur 7, 14 ou 30 jours.
+- [ ] Les sept fichiers CSV s’ouvrent correctement en UTF-8.
+- [ ] Le diagnostic ne contient ni nom, ni poids, ni repas, ni détail de séance.
+- [ ] Une sauvegarde JSON v2 antérieure reste prévisualisable et importable.
+- [ ] La prévisualisation indique la compatibilité et les migrations nécessaires.

@@ -1,15 +1,16 @@
-import { Database, HardDrive, LockKeyhole, ShieldCheck } from 'lucide-react';
+import { CalendarClock, Database, HardDrive, ShieldCheck } from 'lucide-react';
 import { Card } from '@/shared/ui/Card';
 
 interface BackupOverviewProps {
   storageUsageLabel?: string;
+  lastBackupLabel?: string;
 }
 
-export function BackupOverview({ storageUsageLabel }: BackupOverviewProps) {
+export function BackupOverview({ storageUsageLabel, lastBackupLabel }: BackupOverviewProps) {
   const metrics = [
     { label: 'Stockage', value: 'Local', icon: Database },
     { label: 'Sauvegarde', value: 'JSON v2', icon: ShieldCheck },
-    { label: 'Compte', value: 'Aucun', icon: LockKeyhole },
+    { label: 'Dernière copie', value: lastBackupLabel ?? 'Chargement…', icon: CalendarClock },
     { label: 'Espace utilisé', value: storageUsageLabel ?? 'Non disponible', icon: HardDrive },
   ] as const;
 

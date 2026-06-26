@@ -1,8 +1,10 @@
 import type { BackupEnvelope } from '@/domain/models/backup';
+import type { BackupReminderIntervalDays, AppSettings } from '@/domain/models/settings';
+import { repositories } from '@/infrastructure/repositories/repositories';
 import {
   createBackupEnvelope,
   createBackupFileName,
-  parseBackupText,
+  parseBackupTextWithMetadata,
   replaceDatabaseFromBackup,
   serializeBackupEnvelope,
   summarizeBackup,
@@ -21,6 +23,10 @@ export interface PreparedBackupImport {
   summary: BackupSummary;
 }
 
+export async function loadBackupSettings(): Promise<AppSettings> {
+  return repositories.settings.get();
+}
+
 export async function prepareBackupExport(): Promise<PreparedBackupExport> {
   const envelope = await createBackupEnvelope();
   return {
@@ -31,11 +37,27 @@ export async function prepareBackupExport(): Promise<PreparedBackupExport> {
   };
 }
 
+export async function recordSuccessfulBackupExport(
+  prepared: PreparedBackupExport,
+): Promise<AppSettings> {
+  return repositories.settings.update({
+    lastBackupExportedAt: prepared.envelope.exportedAt,
+    lastBackupAppVersion: prepared.envelope.appVersion ?? __APP_VERSION__,
+    lastBackupSchemaVersion: prepared.envelope.schemaVersion,
+  });
+}
+
+export async function updateBackupReminderInterval(
+  intervalDays: BackupReminderIntervalDays,
+): Promise<AppSettings> {
+  return repositories.settings.update({ backupReminderIntervalDays: intervalDays });
+}
+
 export function prepareBackupImport(text: string): PreparedBackupImport {
-  const envelope = parseBackupText(text);
+  const parsed = parseBackupTextWithMetadata(text);
   return {
-    envelope,
-    summary: summarizeBackup(envelope),
+    envelope: parsed.envelope,
+    summary: summarizeBackup(parsed.envelope, parsed),
   };
 }
 

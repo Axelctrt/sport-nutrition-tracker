@@ -37,3 +37,7 @@ SportPilot 0.15.0 est la première version stable du cycle mobile-first 0.15. El
 ## Validation de référence
 
 La livraison stable doit réussir `npm run check`, comprenant le lint, les tests, le build PWA, l’audit MVP, l’audit de version et l’audit stable. La validation manuelle finale est décrite dans `RELEASE-CHECKLIST.md`.
+
+## Évolutions de fiabilité après la stabilisation
+
+La branche de développement ajoute un suivi local de la dernière sauvegarde, un rappel configurable, des exports CSV, un diagnostic technique non sensible et une prévisualisation d’import plus détaillée. Ces évolutions restent compatibles avec le schéma Dexie v2 et les sauvegardes JSON v2 existantes.

@@ -27,7 +27,15 @@ export function createDefaultAppSettings(): AppSettings {
       maximumWeeklyAdjustmentKcal: 100,
       maximumCumulativeAdjustmentKcal: 600,
       requestPersistentStorage: true,
+      backupReminderIntervalDays: 0,
     },
     APP_SETTINGS_ID,
   );
+}
+
+export function normalizeAppSettings(settings: AppSettings): AppSettings {
+  return {
+    ...settings,
+    backupReminderIntervalDays: settings.backupReminderIntervalDays ?? 0,
+  };
 }

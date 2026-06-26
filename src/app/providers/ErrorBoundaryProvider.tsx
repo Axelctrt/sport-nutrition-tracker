@@ -1,6 +1,7 @@
 import { Component, type ErrorInfo, type PropsWithChildren, type ReactNode } from 'react';
 import { Home, RefreshCw } from 'lucide-react';
 import { routePaths } from '@/app/routePaths';
+import { recordTechnicalError } from '@/infrastructure/diagnostics/technicalErrorLog';
 import { Button } from '@/shared/ui/Button';
 
 interface ErrorBoundaryState {
@@ -20,6 +21,7 @@ export class ErrorBoundaryProvider extends Component<
   }
 
   public override componentDidCatch(error: Error, info: ErrorInfo): void {
+    recordTechnicalError(error);
     console.error('Erreur React non interceptée', error, info);
   }
 
