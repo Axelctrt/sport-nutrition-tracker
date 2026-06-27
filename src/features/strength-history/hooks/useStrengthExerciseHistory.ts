@@ -15,7 +15,12 @@ export function useStrengthExerciseHistory(exerciseId: string) {
     try {
       const [definition, entries] = await Promise.all([
         repositories.strengthExercises.getById(exerciseId),
-        listExerciseHistory(repositories.workoutSessions, repositories.strengthSets, exerciseId),
+        listExerciseHistory(
+          repositories.workoutSessions,
+          repositories.strengthSets,
+          exerciseId,
+          { weightRepository: repositories.weight, profileRepository: repositories.profile },
+        ),
       ]);
       if (!definition) throw new Error('Exercice introuvable.');
       setExercise(definition);

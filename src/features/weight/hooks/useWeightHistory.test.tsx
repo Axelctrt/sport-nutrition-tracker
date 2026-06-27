@@ -2,27 +2,12 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { vi } from 'vitest';
 import type { WeightEntry } from '@/domain/models/weight';
 
-const mocks = vi.hoisted(() => ({
-  listAll: vi.fn(),
-  upsert: vi.fn(),
-  deleteByDate: vi.fn(),
-}));
-
 vi.mock('@/app/providers/profile/useProfile', () => ({
   useProfile: () => ({ profile: { initialWeightKg: 60 } }),
 }));
 
-vi.mock('@/infrastructure/repositories/repositories', () => ({
-  repositories: {
-    weight: {
-      listAll: mocks.listAll,
-      upsert: mocks.upsert,
-      deleteByDate: mocks.deleteByDate,
-    },
-  },
-}));
-
 import { useWeightHistory } from '@/features/weight/hooks/useWeightHistory';
+import { repositories } from '@/infrastructure/repositories/repositories';
 
 const original: WeightEntry = {
   id: 'weight-original',
@@ -41,9 +26,9 @@ const saved: WeightEntry = {
 describe('useWeightHistory', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.listAll.mockResolvedValue([original]);
-    mocks.upsert.mockResolvedValue(saved);
-    mocks.deleteByDate.mockResolvedValue(undefined);
+    vi.spyOn(repositories.weight, 'listAll').mockResolvedValue([original]);
+    vi.spyOn(repositories.weight, 'upsert').mockResolvedValue(saved);
+    vi.spyOn(repositories.weight, 'deleteByDate').mockResolvedValue(undefined);
   });
 
   it('enregistre et supprime sans repasser en chargement', async () => {
@@ -57,7 +42,7 @@ describe('useWeightHistory', () => {
 
     expect(result.current.status).toBe('ready');
     expect(result.current.entries).toEqual([original, saved]);
-    expect(mocks.listAll).toHaveBeenCalledTimes(1);
+    expect(repositories.weight.listAll).toHaveBeenCalledTimes(1);
 
     await act(async () => {
       await result.current.remove(original.date);
@@ -65,6 +50,6 @@ describe('useWeightHistory', () => {
 
     expect(result.current.status).toBe('ready');
     expect(result.current.entries).toEqual([saved]);
-    expect(mocks.listAll).toHaveBeenCalledTimes(1);
+    expect(repositories.weight.listAll).toHaveBeenCalledTimes(1);
   });
 });

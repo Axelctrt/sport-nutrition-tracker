@@ -7,6 +7,13 @@ const DashboardPage = lazy(() =>
   })),
 );
 
+
+const DashboardCustomizationPage = lazy(() =>
+  import('@/features/dashboard-customization/pages/DashboardCustomizationPage').then((module) => ({
+    default: module.DashboardCustomizationPage,
+  })),
+);
+
 const OnboardingPage = lazy(() =>
   import('@/features/onboarding/pages/OnboardingPage').then((module) => ({
     default: module.OnboardingPage,
@@ -29,6 +36,13 @@ const AdvancedSettingsPage = lazy(() =>
 const ActivityJournalPage = lazy(() =>
   import('@/features/activities/pages/ActivityJournalPage').then((module) => ({
     default: module.ActivityJournalPage,
+  })),
+);
+
+
+const EnduranceTemplatesPage = lazy(() =>
+  import('@/features/endurance-templates/pages/EnduranceTemplatesPage').then((module) => ({
+    default: module.EnduranceTemplatesPage,
   })),
 );
 
@@ -89,6 +103,13 @@ const StrengthExerciseHistoryPage = lazy(() =>
 );
 
 
+
+
+const WeeklyPlanningPage = lazy(() =>
+  import('@/features/strength-planning/pages/WeeklyPlanningPage').then((module) => ({
+    default: module.WeeklyPlanningPage,
+  })),
+);
 
 const WorkoutSessionsPage = lazy(() =>
   import('@/features/strength-sessions/pages/WorkoutSessionsPage').then((module) => ({
@@ -213,6 +234,12 @@ const BackupPage = lazy(() =>
   })),
 );
 
+const PrivacyPage = lazy(() =>
+  import('@/features/information/pages/PrivacyPage').then((module) => ({
+    default: module.PrivacyPage,
+  })),
+);
+
 export function RouteSuspense({
   children,
   variant = 'list',
@@ -228,6 +255,14 @@ export function LazyDashboardPage() {
   return (
     <RouteSuspense variant="dashboard">
       <DashboardPage />
+    </RouteSuspense>
+  );
+}
+
+export function LazyDashboardCustomizationPage() {
+  return (
+    <RouteSuspense variant="form">
+      <DashboardCustomizationPage />
     </RouteSuspense>
   );
 }
@@ -285,6 +320,15 @@ export function LazyActivityJournalPage() {
   return (
     <RouteSuspense variant="list">
       <ActivityJournalPage />
+    </RouteSuspense>
+  );
+}
+
+
+export function LazyEnduranceTemplatesPage() {
+  return (
+    <RouteSuspense variant="list">
+      <EnduranceTemplatesPage />
     </RouteSuspense>
   );
 }
@@ -365,6 +409,10 @@ export function LazyStrengthExerciseHistoryPage() {
 }
 
 
+
+export function LazyWeeklyPlanningPage() {
+  return <RouteSuspense variant="list"><WeeklyPlanningPage /></RouteSuspense>;
+}
 
 export function LazyWorkoutSessionsPage() {
   return <RouteSuspense variant="list"><WorkoutSessionsPage /></RouteSuspense>;
@@ -463,4 +511,8 @@ export function LazyWeeklyReviewPage() {
 
 export function LazyBackupPage() {
   return <RouteSuspense variant="form"><BackupPage /></RouteSuspense>;
+}
+
+export function LazyPrivacyPage() {
+  return <RouteSuspense variant="detail"><PrivacyPage /></RouteSuspense>;
 }

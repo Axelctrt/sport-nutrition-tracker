@@ -3,9 +3,9 @@ import { barcodeScannerPath, routePaths, selectFoodPath } from '@/app/routePaths
 import { CURRENT_BACKUP_SCHEMA_VERSION } from '@/infrastructure/backup/backupMigrations';
 import { databaseSchemaVersion, databaseTableNames } from '@/infrastructure/database/schema';
 
-describe('préparation de la version stable 0.15.0', () => {
+describe('préparation de la version stable 0.16.0', () => {
   it('expose la version stable dans le build', () => {
-    expect(__APP_VERSION__).toBe('0.15.0');
+    expect(__APP_VERSION__).toBe('0.16.0');
     expect(__APP_VERSION__).toMatch(/^\d+\.\d+\.\d+$/);
   });
 
@@ -28,6 +28,7 @@ describe('préparation de la version stable 0.15.0', () => {
 
     expect(mobilePaths).toEqual(expect.arrayContaining([
       routePaths.workoutSessions,
+      routePaths.weeklyPlanning,
       routePaths.strengthExercises,
       routePaths.history,
       routePaths.weeklyReview,

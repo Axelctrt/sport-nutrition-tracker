@@ -23,7 +23,14 @@ export const strengthExerciseFormSchema = z.object({
   equipment: z.enum(['barbell', 'dumbbells', 'machine', 'cable', 'bodyweight', 'resistanceBand', 'kettlebell', 'other']),
   category: z.enum(['strength', 'bodyweight', 'conditioning', 'mobility', 'other']),
   movementType: z.enum(['compound', 'isolation', 'core', 'carry', 'other']),
-  loadUnit: z.enum(['kg', 'bodyweight', 'assistedKg', 'none']),
+  trackingMode: z.enum([
+    'loadRepetitions',
+    'bodyweightRepetitions',
+    'assistedRepetitions',
+    'repetitions',
+    'duration',
+    'distance',
+  ]),
   description: z.string().trim().max(1_000, 'La description ne peut pas dépasser 1 000 caractères.'),
 }).superRefine((values, context) => {
   if (values.secondaryMuscleGroups.includes(values.primaryMuscleGroup)) {

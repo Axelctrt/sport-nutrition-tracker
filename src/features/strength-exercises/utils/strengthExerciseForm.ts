@@ -1,5 +1,9 @@
 import type { NewEntity } from '@/domain/models/common';
 import type { ExerciseDefinition } from '@/domain/models/strength';
+import {
+  defaultTrackingModeForLoadUnit,
+  loadUnitForTrackingMode,
+} from '@/domain/strength/strengthTracking';
 import type { StrengthExerciseFormValues } from '@/features/strength-exercises/schemas/strengthExerciseSchema';
 
 export const defaultStrengthExerciseFormValues: StrengthExerciseFormValues = {
@@ -9,7 +13,7 @@ export const defaultStrengthExerciseFormValues: StrengthExerciseFormValues = {
   equipment: 'barbell',
   category: 'strength',
   movementType: 'compound',
-  loadUnit: 'kg',
+  trackingMode: 'loadRepetitions',
   description: '',
 };
 
@@ -21,7 +25,7 @@ export function exerciseToFormValues(exercise: ExerciseDefinition): StrengthExer
     equipment: exercise.equipment,
     category: exercise.category,
     movementType: exercise.movementType,
-    loadUnit: exercise.loadUnit,
+    trackingMode: exercise.trackingMode ?? defaultTrackingModeForLoadUnit(exercise.loadUnit),
     description: exercise.description ?? '',
   };
 }
@@ -39,7 +43,8 @@ export function formValuesToExerciseInput(
     equipment: values.equipment,
     category: values.category,
     movementType: values.movementType,
-    loadUnit: values.loadUnit,
+    loadUnit: loadUnitForTrackingMode(values.trackingMode),
+    trackingMode: values.trackingMode,
     ...(description.length > 0 ? { description } : {}),
   };
 }

@@ -5,6 +5,7 @@ import { assertNonNegativeNumber, assertPositiveNumber } from '@/domain/calculat
 import type {
   Activity,
   ActivityCalculationSnapshot,
+  CyclingActivity,
   OtherActivity,
   RunningActivity,
   StrengthTrainingActivity,
@@ -15,6 +16,7 @@ import type { AppSettings } from '@/domain/models/settings';
 export type ActivityForEstimate =
   | Pick<RunningActivity, 'type' | 'distanceKm'>
   | Pick<SwimmingActivity, 'type' | 'durationMinutes' | 'sessionType'>
+  | Pick<CyclingActivity, 'type' | 'durationMinutes' | 'met'>
   | Pick<StrengthTrainingActivity, 'type' | 'durationMinutes' | 'met'>
   | Pick<OtherActivity, 'type' | 'durationMinutes' | 'met'>;
 

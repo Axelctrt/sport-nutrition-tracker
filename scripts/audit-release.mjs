@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { extname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -12,6 +12,42 @@ const packageJson = JSON.parse(read('package.json'));
 const packageLock = JSON.parse(read('package-lock.json'));
 const version = packageJson.version;
 
+const releaseNotesPath = `RELEASE-NOTES-${version}.md`;
+const versionedDocumentation = [
+  'README-PATCH.md',
+  'INSTALLATION.txt',
+  'RELEASE-CHECKLIST.md',
+  'ROLLBACK.md',
+  'KNOWN-LIMITATIONS.md',
+  releaseNotesPath,
+];
+for (const path of versionedDocumentation) {
+  if (!existsSync(join(root, path))) {
+    fail(`le document versionné ${path} est absent.`);
+  }
+  if (!read(path).includes(version)) {
+    fail(`${path} ne référence pas la version ${version}.`);
+  }
+}
+
+const scripts = packageJson.scripts ?? {};
+if (scripts['audit:production'] !== 'node scripts/audit-rc.mjs --auto') {
+  fail('le script audit:production ne sélectionne pas automatiquement le mode RC ou stable.');
+}
+if (scripts['audit:repository'] !== 'node scripts/audit-repository.mjs') {
+  fail('le script audit:repository est absent ou incohérent.');
+}
+if (!String(scripts.ci ?? '').includes('audit:production') || !String(scripts.ci ?? '').includes('audit:repository')) {
+  fail('le pipeline ci n’exécute pas tous les audits de production et du dépôt.');
+}
+
+const ciWorkflow = read('.github/workflows/ci.yml');
+for (const command of ['npm run ci', 'npm run test:stability', 'npm run test:e2e']) {
+  if (!ciWorkflow.includes(command)) {
+    fail(`le workflow CI n’exécute pas ${command}.`);
+  }
+}
+
 if (typeof version !== 'string' || !/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(version)) {
   fail(`la version ${String(version)} n’est pas une version sémantique valide.`);
 }
@@ -23,17 +59,19 @@ if (readmeTitle !== `# SportPilot ${version}`) {
   fail('le titre du README ne correspond pas à la version du package.');
 }
 if (!read('README-PATCH.md').startsWith(`# SportPilot ${version}`)) {
-  fail('README-PATCH.md ne correspond pas à la version stable.');
+  fail('README-PATCH.md ne correspond pas à la version du package.');
 }
 if (!read('INSTALLATION.txt').includes(`SPORTPILOT ${version}`)) {
-  fail('INSTALLATION.txt ne correspond pas à la version stable.');
+  fail('INSTALLATION.txt ne correspond pas à la version du package.');
 }
 
 const productionRoots = ['src', 'vite.config.ts', 'index.html', 'INSTALLATION.txt', 'README-PATCH.md'];
 const allowedExtensions = new Set(['.ts', '.tsx', '.html', '.txt', '.md']);
+const baseVersion = version.split('-', 1)[0];
+const escapedBaseVersion = baseVersion.replaceAll('.', '\\.');
 const staleVersionPattern = version.includes('-')
   ? /0\.15\.0-alpha\.\d+|0\.14\.0-alpha|0\.13\.0-alpha/g
-  : /0\.15\.0-(?:alpha\.\d+|rc\.\d+)|0\.14\.0-alpha|0\.13\.0-alpha/g;
+  : new RegExp(`${escapedBaseVersion}-(?:alpha\\.\\d+|rc\\.\\d+)|0\\.14\\.0-alpha|0\\.13\\.0-alpha`, 'g');
 const correctionFilePattern = /^README-CORRECTION-/;
 
 function collectFiles(path) {
@@ -56,21 +94,6 @@ for (const path of files) {
 }
 
 
-if (!version.includes('-')) {
-  const stableFiles = [
-    'README-PATCH.md',
-    'INSTALLATION.txt',
-    'RELEASE-CHECKLIST.md',
-    'ROLLBACK.md',
-    `RELEASE-NOTES-${version}.md`,
-  ];
-  for (const path of stableFiles) {
-    const content = read(path);
-    if (!content.includes(version)) {
-      fail(`${path} ne référence pas la version stable ${version}.`);
-    }
-  }
-}
 
 const rootFiles = readdirSync(root);
 if (rootFiles.some((name) => correctionFilePattern.test(name))) {

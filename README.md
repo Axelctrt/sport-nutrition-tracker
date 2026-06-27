@@ -1,8 +1,72 @@
-# SportPilot 0.15.0
+# SportPilot 0.16.0
 
 PWA locale de suivi sportif, nutritionnel, calorique et de progression.
 
-## Version 0.15 — Expérience mobile-first
+## Phase 10 — suivi des sports d’endurance
+
+Le journal et les analyses prennent maintenant en charge un suivi plus précis de la course, de la natation et du vélo :
+
+- dénivelé, terrain et intervalles facultatifs pour la course ;
+- longueur de bassin, longueurs calculées et séries facultatives pour la natation ;
+- distance, dénivelé, vitesse moyenne, type de vélo et environnement pour le vélo ;
+- volumes hebdomadaires et records reconstruits depuis les activités ;
+- records de séances sur distances usuelles lorsque la distance complète correspond réellement ;
+- modèles d’endurance locaux accessibles depuis `#/activities/templates` ;
+- export CSV et sauvegarde JSON v2 enrichis ;
+- anciennes activités compatibles sans migration Dexie.
+
+Les allures, vitesses, records, longueurs et statistiques hebdomadaires restent des données recalculables. SportPilot ne prétend pas produire de métrique physiologique lorsque les données nécessaires ne sont pas disponibles.
+
+## Phase 7 — planification hebdomadaire des entraînements
+
+Le carnet de musculation dispose maintenant d’une vue hebdomadaire du lundi au dimanche :
+
+- planification d’une séance à partir d’un modèle et d’une date ;
+- contenu du modèle figé au moment de la planification ;
+- report avec conservation de la date prévue initiale ;
+- statut explicite pour les séances prévues, en cours, terminées, abandonnées ou non réalisées ;
+- démarrage direct depuis le planning ;
+- lien conservé entre la séance prévue et la séance effectivement réalisée ;
+- affichage des dates prévue et réelle lorsqu’elles diffèrent ;
+- métadonnées incluses dans les sauvegardes JSON v2 et l’export CSV des séances ;
+- fonctionnement local et hors connexion sans nouvelle table Dexie.
+
+La route dédiée est `#/strength/planning`. Le schéma IndexedDB et le format de sauvegarde restent en version 2.
+
+## Phase 5 — minuteur de repos de musculation
+
+La séance active dispose maintenant d’un minuteur de repos mobile-first :
+
+- démarrage automatique après une série de travail lorsque l’exercice possède un temps de repos ;
+- démarrage manuel possible depuis la carte de l’exercice ;
+- pause, reprise, arrêt, retrait de 15 secondes et ajouts de 15 ou 30 secondes ;
+- calcul fondé sur un timestamp de fin pour rester exact après un passage en arrière-plan ;
+- conservation temporaire dans `sessionStorage` pendant la séance et après un rechargement ;
+- vibration et son configurables, avec indication visuelle et annonce accessible systématiques ;
+- arrêt du minuteur lors de la fin ou de l’abandon de la séance ;
+- anciens réglages et anciennes sauvegardes complétés automatiquement sans migration Dexie.
+
+Le schéma IndexedDB reste en version 2 et le format de sauvegarde reste en version 2.
+
+## Version 0.16 — améliorations prioritaires
+
+### 0.16.0 — version stable
+
+La version 0.16.0 regroupe les évolutions validées depuis 0.15.0 : minuteur de repos, statistiques adaptées au type d’exercice, planification hebdomadaire, supersets et circuits, fiabilité des produits alimentaires, suivi d’endurance et tableau de bord personnalisable.
+
+Elle conserve :
+
+- le schéma Dexie en version 2 ;
+- le format de sauvegarde JSON en version 2 ;
+- le fonctionnement local et hors connexion ;
+- la compatibilité des données issues de 0.15.0 ;
+- l’absence de compte, de backend et d’intégration sportive externe.
+
+La validation stable repose sur `npm run release:verify`, puis `npm run test:e2e`, la checklist iPhone 15 et la vérification d’une mise à jour depuis 0.15.0 sans perte de données.
+
+### 0.16.0-rc.1 — Release Candidate validée
+
+Cette Release Candidate a gelé les fonctionnalités de la version 0.16 et validé la cohérence des versions, la propreté du dépôt, les budgets du bundle, la documentation de publication et la procédure de retour arrière.
 
 ### 0.15.0 — version stable
 
@@ -251,15 +315,41 @@ Adresse de développement habituelle : `http://127.0.0.1:5173/`.
 ```powershell
 npm run dev          # serveur Vite
 npm run lint         # Oxlint
-npm run test         # tests Vitest
+npm run test         # suite Vitest déterministe
+npm run test:stability # suite Vitest brassée avec une seed fixe
 npm run build        # TypeScript + build PWA
 npm run audit:mvp    # contrôle statique de la PWA
 npm run audit:release # cohérence version, documentation et schémas
+npm run audit:security # en-têtes Cloudflare, CSP et page Confidentialité
 npm run audit:rc     # audit du build d’une Release Candidate
 npm run audit:stable # budgets du build et intégrité de la version stable
 npm run check        # lint + tests + build + tous les audits
+npm run ci           # contrôle CI principal : lint, tests, build et audits
 npm run preview      # prévisualisation du build
 npm run diagnose:off # diagnostic Open Food Facts
+```
+
+## Intégration continue
+
+Le workflow `.github/workflows/ci.yml` s’exécute lors des pushes vers `develop` ou `main`, ainsi que pour les pull requests ciblant l’une de ces branches.
+
+Il lance trois jobs indépendants :
+
+- `quality` : installation reproductible avec `npm ci`, lint, suite Vitest, build PWA et audits ;
+- `test-order-stability` : suite Vitest complète dans un ordre brassé avec une seed fixe ;
+- `e2e` : parcours Playwright sur Chromium et WebKit iPhone.
+
+Pour exécuter localement le contrôle principal :
+
+```powershell
+npm ci
+npm run ci
+```
+
+Le contrôle complémentaire d’indépendance à l’ordre se lance avec :
+
+```powershell
+npm run test:stability
 ```
 
 ## Fonctionnalités
@@ -299,11 +389,26 @@ src/infrastructure/backup/backupMigrations.ts
 
 Un import invalide n’altère jamais la base. Si l’écriture échoue, la transaction est annulée et les données précédentes sont conservées.
 
-## Confidentialité
+## Confidentialité et sécurité du déploiement
 
-Les données personnelles restent dans IndexedDB sur l’appareil. L’application n’utilise ni compte utilisateur ni backend. Seules les recherches lancées explicitement vers Open Food Facts nécessitent une connexion externe.
+La page publique `#/privacy` détaille :
 
-Le fichier de sauvegarde est créé localement par le navigateur et n’est envoyé à aucun serveur.
+- le stockage dans IndexedDB ;
+- l’absence de compte, de backend, de publicité et de mesure d’audience ;
+- les données transmises uniquement lors d’une recherche Open Food Facts ;
+- le traitement local des images du scanner ;
+- les sauvegardes, diagnostics et moyens de suppression ;
+- les limites des estimations sportives et nutritionnelles.
+
+Le fichier `public/_headers` est copié dans `dist/_headers` pendant le build. Cloudflare Workers Static Assets ou Cloudflare Pages applique alors notamment :
+
+- une Content-Security-Policy limitée à l’application et aux deux domaines Open Food Facts ;
+- `X-Content-Type-Options: nosniff` ;
+- `Referrer-Policy: no-referrer` ;
+- `frame-ancestors 'none'` et `X-Frame-Options: DENY` ;
+- une Permissions-Policy autorisant seulement la caméra de la même origine et désactivant les permissions inutilisées.
+
+La prévisualisation Vite de production relit le même fichier afin que les tests Playwright exécutent SportPilot avec ces en-têtes.
 
 ## Architecture
 
@@ -651,3 +756,78 @@ Validation finale :
 ### Correctif de cohérence du retour après ajout d’une activité
 
 La navigation de retour transmet explicitement au journal le message de confirmation, l’identifiant de l’activité enregistrée et la clé de restauration du défilement. Un test dédié couvre désormais le helper de navigation afin d’éviter qu’une branche locale plus ancienne ne revienne à un simple `navigate(destination)` sans état.
+
+## Tests de parcours Playwright
+
+Les tests de bout en bout vérifient les principaux parcours utilisateur dans le bundle de production :
+
+- création et persistance du profil local ;
+- saisie des pas et du poids ;
+- ajout d’une course ;
+- création et ajout d’un aliment local ;
+- création d’une séance modèle, planification hebdomadaire, démarrage, série et fin de séance ;
+- export et restauration JSON ;
+- rechargement direct d’une route Hash Router ;
+- navigation mobile et absence de débordement horizontal critique ;
+- planification d’une séance modèle puis démarrage de la même entrée sur Chromium et WebKit iPhone.
+
+Installation initiale des navigateurs :
+
+```bash
+npx playwright install chromium webkit
+```
+
+Exécution complète :
+
+```bash
+npm run test:e2e
+```
+
+Exécution ciblée :
+
+```bash
+npm run test:e2e:chromium
+npm run test:e2e:webkit
+npm run test:e2e:ui
+```
+
+Les tests utilisent Chromium sur ordinateur et WebKit avec l’émulation iPhone 15. Aucun retry n’est activé. Les traces, captures et rapports sont conservés uniquement en cas d’échec dans GitHub Actions.
+
+## Statistiques adaptées au type d’exercice
+
+Les exercices de musculation peuvent maintenant utiliser l’une des méthodes de suivi suivantes :
+
+- charge externe et répétitions ;
+- poids du corps, avec lest facultatif ;
+- assistance en kilogrammes ;
+- répétitions seules ;
+- durée en secondes ;
+- distance en mètres.
+
+Les champs de saisie, les objectifs de séance modèle, l’historique, les records, les graphiques et les comparaisons sont adaptés à la méthode choisie. Pour le poids du corps et l’assistance, la charge effective est calculée avec le dernier poids enregistré à la date de la séance, ou avec le poids initial du profil en l’absence de pesée antérieure. Le lest additionnel reste affiché séparément afin de ne pas confondre charge ajoutée et charge totale.
+
+Les anciens exercices conservent automatiquement une méthode cohérente à partir de leur ancienne unité de charge. Aucune migration Dexie ni évolution du format de sauvegarde n’est nécessaire.
+
+## Supersets, tri-sets et circuits
+
+Les exercices d’une séance modèle peuvent être regroupés en superset, tri-set ou circuit. Chaque groupe peut définir un nom, un nombre de tours, un repos entre les exercices et un repos entre les tours.
+
+Pendant une séance active, SportPilot affiche des repères comme `A1` et `A2`, indique l’exercice suivant et lance le minuteur avec la durée correspondant à la transition. Un exercice peut être passé temporairement sans supprimer ses séries. Les séries, records et statistiques restent toujours attachés à leur exercice d’origine.
+
+Les groupes sont stockés directement dans les exercices du modèle puis copiés dans la séance. Cette organisation ne crée aucune nouvelle table et reste compatible avec les anciennes séances et sauvegardes dépourvues de groupe.
+
+## Fiabilité des produits alimentaires
+
+Les produits Open Food Facts enregistrés localement peuvent être actualisés depuis leur fiche. SportPilot protège les champs modifiés sur l’appareil et actualise uniquement les autres valeurs. L’utilisateur peut aussi remplacer explicitement toutes ses corrections locales après confirmation.
+
+La création et la modification détectent les doublons par code-barres ainsi que les correspondances exactes de nom et de marque après normalisation. Un code-barres déjà utilisé renvoie vers l’aliment existant, tandis qu’un doublon de nom peut être confirmé volontairement.
+
+Les produits peuvent désormais définir un libellé de portion, par exemple `1 pot`, `1 tranche` ou `1 dose`, en complément de la quantité en grammes ou millilitres. Les fibres et le sel sont affichés dans les cartes de la bibliothèque, les résultats Open Food Facts et les aperçus du journal.
+
+Les nouveaux champs sont facultatifs. Aucune table ni migration Dexie supplémentaire n’est nécessaire et les sauvegardes JSON v2 antérieures restent compatibles.
+
+## Tableau de bord personnalisable
+
+Le tableau de bord peut être adapté depuis `Paramètres → Personnaliser le tableau de bord` ou directement depuis l’accueil. Quatre préréglages sont proposés et chaque bloc peut être affiché, masqué ou déplacé. La configuration reste locale, hors connexion, et fait partie de la sauvegarde JSON v2.
+
+Les blocs masqués ne suppriment aucune donnée : le journal alimentaire, les activités, les séances et les détails de calcul restent disponibles dans leurs pages respectives. Les anciennes bases sans configuration reçoivent automatiquement l’affichage Équilibré.

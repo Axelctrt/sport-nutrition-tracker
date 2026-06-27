@@ -1,30 +1,43 @@
-# Retour arrière — SportPilot 0.15.0
+# Retour arrière — SportPilot 0.16.0
 
-## Avant publication
+## Objectif
 
-1. Exporter une sauvegarde JSON depuis la page Sauvegarde.
-2. Conserver les archives complètes `0.15.0` et `0.15.0-rc.1`.
-3. Noter le commit stable et le tag `v0.15.0`.
+Cette procédure permet de revenir à la version stable 0.15.0 si SportPilot 0.16.0 présente un défaut bloquant, sans modifier manuellement IndexedDB.
 
-## Retour arrière du code
+## Préparation obligatoire
 
-```powershell
-git switch develop
-git log --oneline --decorate -10
-```
+1. Exporter une sauvegarde JSON avant le déploiement de 0.16.0.
+2. Conserver les archives complètes de 0.15.0 et 0.16.0.
+3. Noter les commits et tags `v0.15.0` et `v0.16.0`.
+4. Vérifier que la sauvegarde est prévisualisable comme compatible.
 
-En cas de défaut bloquant, redéployer le commit validé de `release/0.15.0-rc.1` ou son archive complète. Ne réécrire ni ne supprimer le tag `v0.15.0` après sa publication : documenter le retrait et préparer une version corrective `0.15.1`.
+## Retour du code
 
-## PWA
+En cas de défaut bloquant :
 
-Après redéploiement de la RC1 ou d’une version corrective :
-
-1. fermer complètement la PWA ;
-2. rouvrir l’application en ligne ;
-3. accepter la mise à jour proposée ;
-4. vérifier la version dans Paramètres ;
-5. si le service worker reste bloqué, supprimer puis réinstaller l’icône depuis Safari.
+1. arrêter le serveur ou retirer temporairement le déploiement 0.16.0 ;
+2. redéployer l’archive complète ou le tag stable `v0.15.0` ;
+3. vider uniquement le cache applicatif si l’ancienne interface reste affichée ;
+4. ne pas supprimer les données Safari ni IndexedDB ;
+5. rouvrir SportPilot et vérifier le profil, les journaux, les séances et les sauvegardes.
 
 ## Données
 
-Le schéma Dexie et la sauvegarde restent en version 2. Le passage entre l’alpha.13, la RC1 et la stable 0.15.0 ne nécessite aucune migration. Une restauration JSON ne doit être utilisée qu’avec une sauvegarde préalablement validée depuis la page Sauvegarde.
+Le schéma Dexie reste en version 2 et le format de sauvegarde reste en version 2. Aucun retour de migration n’est nécessaire entre 0.15.0 et 0.16.0.
+
+Une restauration JSON ne doit être lancée qu’après prévisualisation. Elle n’est pas nécessaire pour un simple retour du code si les données locales sont toujours présentes.
+
+## PWA
+
+Si la PWA continue d’afficher 0.16.0 après redéploiement de 0.15.0 :
+
+1. fermer complètement la PWA ;
+2. rouvrir Safari sur l’URL de production ;
+3. recharger la page ;
+4. relancer la PWA depuis l’écran d’accueil.
+
+Ne supprimer la PWA ou les données du site qu’en dernier recours et uniquement après avoir vérifié la sauvegarde JSON.
+
+## Git
+
+Ne réécrire ni ne supprimer un tag déjà publié. Documenter le retrait de 0.16.0, corriger sur une branche dédiée et publier une version corrective `0.16.1` si nécessaire.

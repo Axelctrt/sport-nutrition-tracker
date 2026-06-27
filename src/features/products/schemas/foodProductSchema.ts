@@ -36,6 +36,10 @@ export const foodProductFormSchema = z.object({
     .max(100, 'Les lipides ne peuvent pas dépasser 100 g pour 100 unités.'),
   fiberGrams: optionalNutritionNumber,
   saltGrams: optionalNutritionNumber,
+  servingLabel: z
+    .string()
+    .trim()
+    .max(120, 'Le libellé de portion ne peut pas dépasser 120 caractères.'),
   servingSize: z
     .number({ message: 'Saisis une taille de portion valide.' })
     .min(0.1, 'La taille de portion doit être supérieure à zéro.')

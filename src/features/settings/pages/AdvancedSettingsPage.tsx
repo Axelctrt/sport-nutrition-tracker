@@ -1,5 +1,8 @@
+import { ArrowRight, LayoutDashboard, ShieldCheck } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useTheme } from '@/app/providers/useTheme';
+import { routePaths } from '@/app/routePaths';
 import type { AppSettings } from '@/domain/models/settings';
 import { AdvancedSettingsForm } from '@/features/settings/components/AdvancedSettingsForm';
 import { SettingsOverview } from '@/features/settings/components/SettingsOverview';
@@ -15,6 +18,7 @@ import {
 } from '@/infrastructure/storage/persistentStorage';
 import { repositories } from '@/infrastructure/repositories/repositories';
 import { PageSkeleton } from '@/shared/ui/PageSkeleton';
+import { Card } from '@/shared/ui/Card';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 
 const storageLabels: Record<PersistentStorageStatus, { title: string; description: string }> = {
@@ -160,6 +164,52 @@ export function AdvancedSettingsPage() {
       <InlineNotice className="mt-4" title={storagePresentation.title}>
         {storagePresentation.description}
       </InlineNotice>
+
+      <Card className="mt-4 p-4 sm:p-5">
+        <div className="flex items-start gap-3">
+          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-200">
+            <LayoutDashboard aria-hidden="true" className="size-5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <h2 className="font-semibold text-slate-950 dark:text-white">
+              Tableau de bord personnalisé
+            </h2>
+            <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
+              Choisis les blocs visibles, leur ordre et un préréglage adapté à tes priorités.
+            </p>
+            <Link
+              to={routePaths.dashboardCustomization}
+              className="mt-3 inline-flex min-h-10 items-center gap-1 text-sm font-semibold text-brand-700 hover:underline dark:text-brand-300"
+            >
+              Personnaliser le tableau de bord
+              <ArrowRight aria-hidden="true" className="size-4" />
+            </Link>
+          </div>
+        </div>
+      </Card>
+
+      <Card className="mt-4 p-4 sm:p-5">
+        <div className="flex items-start gap-3">
+          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand-100 text-brand-800 dark:bg-brand-900 dark:text-brand-100">
+            <ShieldCheck aria-hidden="true" className="size-5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <h2 className="font-semibold text-slate-950 dark:text-white">
+              Confidentialité et données locales
+            </h2>
+            <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
+              Consulte le détail du stockage local, des appels Open Food Facts, de la caméra, des sauvegardes et de la suppression des données.
+            </p>
+            <Link
+              to={routePaths.privacy}
+              className="mt-3 inline-flex min-h-10 items-center gap-1 text-sm font-semibold text-brand-700 hover:underline dark:text-brand-300"
+            >
+              Ouvrir la page Confidentialité
+              <ArrowRight aria-hidden="true" className="size-4" />
+            </Link>
+          </div>
+        </div>
+      </Card>
 
       {feedback ? (
         <InlineNotice

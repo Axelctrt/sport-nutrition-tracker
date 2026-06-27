@@ -1,6 +1,7 @@
 import { Check, ChevronDown, CopyPlus, Plus, RotateCcw, Save, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import type { StrengthSet, WorkoutSessionExercise } from '@/domain/models/strength';
+import type { StrengthSet, StrengthTrackingMode, WorkoutSessionExercise } from '@/domain/models/strength';
+import { resolveTrackingMode } from '@/domain/strength/strengthTracking';
 import {
   strengthSetFormSchema,
   type StrengthSetFormValues,
@@ -40,10 +41,24 @@ function numberInputValue(value: number | undefined): string {
   return value === undefined ? '' : String(value);
 }
 
-function loadInputLabel(exercise: WorkoutSessionExercise): string {
-  if (exercise.loadUnitSnapshot === 'assistedKg') return 'Assistance en kg';
-  if (exercise.loadUnitSnapshot === 'bodyweight') return 'Charge ajoutée en kg';
+function loadInputLabel(mode: StrengthTrackingMode): string {
+  if (mode === 'assistedRepetitions') return 'Assistance en kg';
+  if (mode === 'bodyweightRepetitions') return 'Charge ajoutée en kg';
   return 'Charge en kg';
+}
+
+function loadFieldLabel(mode: StrengthTrackingMode): string {
+  if (mode === 'assistedRepetitions') return 'Assistance';
+  if (mode === 'bodyweightRepetitions') return 'Lest ajouté';
+  return 'Charge';
+}
+
+function measurementHint(mode: StrengthTrackingMode): string | undefined {
+  if (mode === 'bodyweightRepetitions') return '0 kg correspond au poids du corps seul.';
+  if (mode === 'assistedRepetitions') return 'Une assistance plus faible représente une performance supérieure.';
+  if (mode === 'duration') return 'Saisis la durée totale de la série en secondes.';
+  if (mode === 'distance') return 'Saisis la distance parcourue pendant la série.';
+  return undefined;
 }
 
 function StrengthSetRow({
@@ -56,8 +71,11 @@ function StrengthSetRow({
   onDuplicate,
   onDelete,
 }: StrengthSetRowProps) {
+  const trackingMode = resolveTrackingMode(exercise);
   const [repetitions, setRepetitions] = useState(numberInputValue(set.repetitions));
   const [weightKg, setWeightKg] = useState(numberInputValue(set.weightKg));
+  const [durationSeconds, setDurationSeconds] = useState(numberInputValue(set.durationSeconds));
+  const [distanceMeters, setDistanceMeters] = useState(numberInputValue(set.distanceMeters));
   const [rpe, setRpe] = useState(numberInputValue(set.rpe));
   const [type, setType] = useState(set.type);
   const [notes, setNotes] = useState(set.notes ?? '');
@@ -66,6 +84,8 @@ function StrengthSetRow({
   useEffect(() => {
     setRepetitions(numberInputValue(set.repetitions));
     setWeightKg(numberInputValue(set.weightKg));
+    setDurationSeconds(numberInputValue(set.durationSeconds));
+    setDistanceMeters(numberInputValue(set.distanceMeters));
     setRpe(numberInputValue(set.rpe));
     setType(set.type);
     setNotes(set.notes ?? '');
@@ -73,18 +93,56 @@ function StrengthSetRow({
 
   const isDirty = repetitions !== numberInputValue(set.repetitions)
     || weightKg !== numberInputValue(set.weightKg)
+    || durationSeconds !== numberInputValue(set.durationSeconds)
+    || distanceMeters !== numberInputValue(set.distanceMeters)
     || rpe !== numberInputValue(set.rpe)
     || type !== set.type
     || notes !== (set.notes ?? '');
 
   const values = (): StrengthSetFormValues | undefined => {
-    const result = strengthSetFormSchema.safeParse({ repetitions, weightKg, rpe, type, notes });
+    const result = strengthSetFormSchema.safeParse({
+      repetitions,
+      weightKg,
+      durationSeconds,
+      distanceMeters,
+      rpe,
+      type,
+      notes,
+    });
     if (!result.success) {
       setValidationError(result.error.issues[0]?.message ?? 'Vérifie les valeurs de la série.');
       return undefined;
     }
+
+    if (trackingMode === 'duration' && (result.data.durationSeconds ?? 0) <= 0) {
+      setValidationError('La durée doit être supérieure à zéro.');
+      return undefined;
+    }
+    if (trackingMode === 'distance' && (result.data.distanceMeters ?? 0) <= 0) {
+      setValidationError('La distance doit être supérieure à zéro.');
+      return undefined;
+    }
+    if (
+      trackingMode !== 'duration'
+      && trackingMode !== 'distance'
+      && result.data.repetitions <= 0
+    ) {
+      setValidationError('Le nombre de répétitions doit être supérieur à zéro.');
+      return undefined;
+    }
+
     setValidationError(undefined);
-    return result.data;
+    return {
+      ...result.data,
+      repetitions: trackingMode === 'duration' || trackingMode === 'distance'
+        ? 0
+        : result.data.repetitions,
+      weightKg: trackingMode === 'repetitions' || trackingMode === 'duration' || trackingMode === 'distance'
+        ? 0
+        : result.data.weightKg,
+      durationSeconds: trackingMode === 'duration' ? result.data.durationSeconds : undefined,
+      distanceMeters: trackingMode === 'distance' ? result.data.distanceMeters : undefined,
+    };
   };
 
   const save = async () => {
@@ -99,6 +157,12 @@ function StrengthSetRow({
 
   const isBusy = action?.includes(set.id) ?? false;
   const baseId = `strength-set-${set.id}`;
+  const usesLoad = trackingMode === 'loadRepetitions'
+    || trackingMode === 'bodyweightRepetitions'
+    || trackingMode === 'assistedRepetitions';
+  const usesRepetitions = trackingMode !== 'duration' && trackingMode !== 'distance';
+  const mainColumnCount = usesLoad && usesRepetitions ? 'grid-cols-3' : 'grid-cols-2';
+  const hint = measurementHint(trackingMode);
 
   return (
     <article
@@ -132,45 +196,93 @@ function StrengthSetRow({
         </span>
       </div>
 
-      <div className="mt-3 grid min-w-0 grid-cols-3 gap-2">
-        <div>
-          <label htmlFor={`${baseId}-weight`} className="block truncate text-xs font-medium text-slate-600 dark:text-slate-300">
-            {exercise.loadUnitSnapshot === 'assistedKg' ? 'Assistance' : 'Charge'}
-          </label>
-          <div className="relative mt-1">
+      <div className={`mt-3 grid min-w-0 ${mainColumnCount} gap-2`}>
+        {usesLoad ? (
+          <div>
+            <label htmlFor={`${baseId}-weight`} className="block truncate text-xs font-medium text-slate-600 dark:text-slate-300">
+              {loadFieldLabel(trackingMode)}
+            </label>
+            <div className="relative mt-1">
+              <input
+                id={`${baseId}-weight`}
+                aria-label={loadInputLabel(trackingMode)}
+                type="number"
+                inputMode="decimal"
+                enterKeyHint="next"
+                min="0"
+                step="0.5"
+                value={weightKg}
+                onChange={(event) => setWeightKg(event.target.value)}
+                disabled={!editable}
+                className={`${inputClassName} pr-8 text-center font-semibold`}
+              />
+              <span className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-xs text-slate-400">kg</span>
+            </div>
+          </div>
+        ) : null}
+
+        {usesRepetitions ? (
+          <div>
+            <label htmlFor={`${baseId}-repetitions`} className="block truncate text-xs font-medium text-slate-600 dark:text-slate-300">
+              Répétitions
+            </label>
             <input
-              id={`${baseId}-weight`}
-              aria-label={loadInputLabel(exercise)}
+              id={`${baseId}-repetitions`}
               type="number"
-              inputMode="decimal"
+              inputMode="numeric"
               enterKeyHint="next"
               min="0"
-              step="0.5"
-              value={weightKg}
-              onChange={(event) => setWeightKg(event.target.value)}
-              disabled={!editable || exercise.loadUnitSnapshot === 'none'}
-              className={`${inputClassName} pr-8 text-center font-semibold`}
+              step="1"
+              value={repetitions}
+              onChange={(event) => setRepetitions(event.target.value)}
+              disabled={!editable}
+              className={`${inputClassName} mt-1 text-center font-semibold`}
             />
-            <span className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-xs text-slate-400">kg</span>
           </div>
-        </div>
-        <div>
-          <label htmlFor={`${baseId}-repetitions`} className="block truncate text-xs font-medium text-slate-600 dark:text-slate-300">
-            Répétitions
-          </label>
-          <input
-            id={`${baseId}-repetitions`}
-            type="number"
-            inputMode="numeric"
-            enterKeyHint="next"
-            min="0"
-            step="1"
-            value={repetitions}
-            onChange={(event) => setRepetitions(event.target.value)}
-            disabled={!editable}
-            className={`${inputClassName} mt-1 text-center font-semibold`}
-          />
-        </div>
+        ) : null}
+
+        {trackingMode === 'duration' ? (
+          <div>
+            <label htmlFor={`${baseId}-duration`} className="block truncate text-xs font-medium text-slate-600 dark:text-slate-300">Durée</label>
+            <div className="relative mt-1">
+              <input
+                id={`${baseId}-duration`}
+                aria-label="Durée en secondes"
+                type="number"
+                inputMode="numeric"
+                min="1"
+                step="1"
+                value={durationSeconds}
+                onChange={(event) => setDurationSeconds(event.target.value)}
+                disabled={!editable}
+                className={`${inputClassName} pr-8 text-center font-semibold`}
+              />
+              <span className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-xs text-slate-400">s</span>
+            </div>
+          </div>
+        ) : null}
+
+        {trackingMode === 'distance' ? (
+          <div>
+            <label htmlFor={`${baseId}-distance`} className="block truncate text-xs font-medium text-slate-600 dark:text-slate-300">Distance</label>
+            <div className="relative mt-1">
+              <input
+                id={`${baseId}-distance`}
+                aria-label="Distance en mètres"
+                type="number"
+                inputMode="decimal"
+                min="0.1"
+                step="0.1"
+                value={distanceMeters}
+                onChange={(event) => setDistanceMeters(event.target.value)}
+                disabled={!editable}
+                className={`${inputClassName} pr-8 text-center font-semibold`}
+              />
+              <span className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-xs text-slate-400">m</span>
+            </div>
+          </div>
+        ) : null}
+
         <div>
           <label htmlFor={`${baseId}-rpe`} className="block truncate text-xs font-medium text-slate-600 dark:text-slate-300">
             RPE
@@ -191,6 +303,8 @@ function StrengthSetRow({
           />
         </div>
       </div>
+
+      {hint ? <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{hint}</p> : null}
 
       <details className="group mt-3 rounded-xl border border-slate-200 bg-white/70 dark:border-slate-800 dark:bg-slate-900/50">
         <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 px-3 text-sm font-medium text-slate-700 dark:text-slate-200 [&::-webkit-details-marker]:hidden">

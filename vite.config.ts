@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { fileURLToPath, URL } from 'node:url';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
-import { defineConfig } from 'vitest/config';
+import { configDefaults, defineConfig } from 'vitest/config';
 import type { ProxyOptions } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
@@ -25,6 +25,25 @@ function readPackageMetadata(): PackageMetadata {
 }
 
 const { version: appVersion } = readPackageMetadata();
+
+function readCloudflareSecurityHeaders(): Record<string, string> {
+  const headersFile = readFileSync(new URL('./public/_headers', import.meta.url), 'utf8');
+  const headers: Record<string, string> = {};
+
+  for (const rawLine of headersFile.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (line === '' || line.startsWith('#') || line.startsWith('/')) continue;
+
+    const separatorIndex = line.indexOf(':');
+    if (separatorIndex <= 0) continue;
+
+    headers[line.slice(0, separatorIndex).trim()] = line.slice(separatorIndex + 1).trim();
+  }
+
+  return headers;
+}
+
+const previewSecurityHeaders = readCloudflareSecurityHeaders();
 
 
 const viteCacheDir = process.platform === 'win32'
@@ -146,6 +165,9 @@ export default defineConfig({
       },
     }),
   ],
+  preview: {
+    headers: previewSecurityHeaders,
+  },
   server: {
     allowedHosts: ['.trycloudflare.com'],
     proxy: {
@@ -170,12 +192,21 @@ export default defineConfig({
   },
   test: {
     environment: 'jsdom',
+    exclude: [...configDefaults.exclude, 'e2e/**'],
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
+    alias: {
+      'virtual:pwa-register/react': fileURLToPath(
+        new URL('./src/test/mocks/pwaRegisterReact.ts', import.meta.url),
+      ),
+    },
     css: true,
     restoreMocks: true,
     clearMocks: true,
     maxWorkers: 1,
     isolate: false,
+    sequence: {
+      hooks: 'stack',
+    },
   },
 });

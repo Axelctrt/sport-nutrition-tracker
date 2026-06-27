@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { DEFAULT_ENDURANCE_TEMPLATES } from '@/domain/defaults/appSettings';
+import { createDefaultDashboardPreferences } from '@/domain/dashboard/dashboardPreferences';
 import { APP_SETTINGS_ID, LOCAL_USER_PROFILE_ID } from '@/domain/defaults/identifiers';
 import type { BackupEnvelope } from '@/domain/models/backup';
 import { isValidLocalDate } from '@/shared/validation/localDate';
@@ -70,6 +72,44 @@ const swimmingMetValuesSchema = z.object({
   competition: nonNegativeNumber,
 });
 
+
+const enduranceTemplateSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1).max(200),
+  activityType: z.enum(['running', 'swimming', 'cycling']),
+  durationMinutes: positiveNumber,
+  intensity: z.enum(['low', 'moderate', 'high']),
+  notes: z.string().max(2_000).optional(),
+  runningSessionType: z.enum(['easy', 'recovery', 'longRun', 'tempo', 'intervals', 'hills', 'competition']).optional(),
+  distanceKm: positiveNumber.optional(),
+  averageCadenceSpm: positiveNumber.optional(),
+  elevationGainMeters: nonNegativeNumber.optional(),
+  terrainType: z.enum(['road', 'track', 'trail', 'treadmill', 'mixed']).optional(),
+  swimmingSessionType: z.enum(['recovery', 'technique', 'endurance', 'tempo', 'intervals', 'competition']).optional(),
+  mainStroke: z.enum(['freestyle', 'breaststroke', 'backstroke', 'butterfly', 'mixed', 'drills']).optional(),
+  distanceMeters: positiveNumber.optional(),
+  poolLengthMeters: z.union([z.literal(25), z.literal(50)]).optional(),
+  cyclingMet: positiveNumber.optional(),
+  bikeType: z.enum(['road', 'gravel', 'mountain', 'city', 'indoor', 'other']).optional(),
+  cyclingEnvironment: z.enum(['outdoor', 'indoor']).optional(),
+  intervalDetails: z.string().max(2_000).optional(),
+});
+
+
+const dashboardWidgetIdSchema = z.enum([
+  'activeWorkout',
+  'todaySummary',
+  'quickActions',
+  'activities',
+  'calculationDetails',
+]);
+
+const dashboardPreferencesSchema = z.object({
+  preset: z.enum(['balanced', 'nutrition', 'training', 'minimal', 'custom']),
+  order: z.array(dashboardWidgetIdSchema),
+  hidden: z.array(dashboardWidgetIdSchema),
+});
+
 const appSettingsSchema = entityMetadataSchema.extend({
   theme: z.enum(['system', 'light', 'dark']),
   includedBaseSteps: nonNegativeInteger,
@@ -84,6 +124,18 @@ const appSettingsSchema = entityMetadataSchema.extend({
   maximumWeeklyAdjustmentKcal: nonNegativeNumber,
   maximumCumulativeAdjustmentKcal: nonNegativeNumber,
   requestPersistentStorage: z.boolean(),
+  backupReminderIntervalDays: z.union([z.literal(0), z.literal(7), z.literal(14), z.literal(30)]).default(0),
+  restTimerAutoStart: z.boolean().default(true),
+  restTimerSoundEnabled: z.boolean().default(false),
+  restTimerVibrationEnabled: z.boolean().default(true),
+  enduranceTemplates: z.array(enduranceTemplateSchema).default(
+    DEFAULT_ENDURANCE_TEMPLATES.map((template) => ({ ...template })),
+  ),
+  enduranceTemplatesVersion: positiveInteger.default(1),
+  dashboardPreferences: dashboardPreferencesSchema.default(createDefaultDashboardPreferences()),
+  lastBackupExportedAt: isoDateTimeSchema.optional(),
+  lastBackupAppVersion: z.string().min(1).max(100).optional(),
+  lastBackupSchemaVersion: positiveInteger.optional(),
 });
 
 const weightEntrySchema = datedEntitySchema.extend({
@@ -121,6 +173,9 @@ const runningActivitySchema = datedEntitySchema.extend({
   sessionType: z.enum(['easy', 'recovery', 'longRun', 'tempo', 'intervals', 'hills', 'competition']),
   distanceKm: positiveNumber,
   averageCadenceSpm: positiveNumber,
+  elevationGainMeters: nonNegativeNumber.optional(),
+  terrainType: z.enum(['road', 'track', 'trail', 'treadmill', 'mixed']).optional(),
+  intervalDetails: z.string().max(2_000).optional(),
 });
 
 const swimmingActivitySchema = datedEntitySchema.extend({
@@ -129,6 +184,8 @@ const swimmingActivitySchema = datedEntitySchema.extend({
   sessionType: z.enum(['recovery', 'technique', 'endurance', 'tempo', 'intervals', 'competition']),
   mainStroke: z.enum(['freestyle', 'breaststroke', 'backstroke', 'butterfly', 'mixed', 'drills']),
   distanceMeters: positiveNumber,
+  poolLengthMeters: z.union([z.literal(25), z.literal(50)]).optional(),
+  intervalDetails: z.string().max(2_000).optional(),
 });
 
 const strengthActivitySchema = datedEntitySchema.extend({
@@ -137,9 +194,21 @@ const strengthActivitySchema = datedEntitySchema.extend({
   met: nonNegativeNumber,
 });
 
+const cyclingActivitySchema = datedEntitySchema.extend({
+  ...activityBaseShape,
+  type: z.literal('cycling'),
+  met: nonNegativeNumber,
+  includedInDailySteps: z.literal(false),
+  distanceKm: positiveNumber.optional(),
+  elevationGainMeters: nonNegativeNumber.optional(),
+  bikeType: z.enum(['road', 'gravel', 'mountain', 'city', 'indoor', 'other']).optional(),
+  environment: z.enum(['outdoor', 'indoor']).optional(),
+  intervalDetails: z.string().max(2_000).optional(),
+});
+
 const otherActivitySchema = datedEntitySchema.extend({
   ...activityBaseShape,
-  type: z.enum(['cycling', 'walking', 'otherCardio']),
+  type: z.enum(['walking', 'otherCardio']),
   met: nonNegativeNumber,
   includedInDailySteps: z.boolean(),
 });
@@ -147,6 +216,7 @@ const otherActivitySchema = datedEntitySchema.extend({
 const activitySchema = z.discriminatedUnion('type', [
   runningActivitySchema,
   swimmingActivitySchema,
+  cyclingActivitySchema,
   strengthActivitySchema,
   otherActivitySchema,
 ]);
@@ -160,15 +230,31 @@ const foodDataSourceSchema = z.discriminatedUnion('type', [
   }),
 ]);
 
+const foodProductLocalOverrideFieldSchema = z.enum([
+  'name',
+  'brand',
+  'basisUnit',
+  'caloriesKcal',
+  'proteinGrams',
+  'carbohydratesGrams',
+  'fatGrams',
+  'fiberGrams',
+  'saltGrams',
+  'servingSize',
+  'servingLabel',
+]);
+
 const foodProductSchema = entityMetadataSchema.extend({
   name: z.string().min(1),
   brand: z.string().optional(),
   basisUnit: z.enum(['g', 'ml']),
   nutritionPer100: nutritionValuesSchema,
   servingSize: positiveNumber.optional(),
+  servingLabel: z.string().max(120).optional(),
   barcode: z.string().optional(),
   source: foodDataSourceSchema,
   isNutritionComplete: z.boolean(),
+  localOverrides: z.array(foodProductLocalOverrideFieldSchema).optional(),
   isFavorite: z.boolean(),
   isArchived: z.boolean(),
 });
@@ -339,6 +425,16 @@ const muscleGroupSchema = z.enum([
 ]);
 
 const loadUnitSchema = z.enum(['kg', 'bodyweight', 'assistedKg', 'none']);
+const strengthTrackingModeSchema = z.enum([
+  'loadRepetitions',
+  'bodyweightRepetitions',
+  'assistedRepetitions',
+  'repetitions',
+  'duration',
+  'distance',
+]);
+
+const exerciseGroupTypeSchema = z.enum(['superset', 'triSet', 'circuit']);
 
 const exerciseDefinitionSchema = entityMetadataSchema.extend({
   name: z.string().trim().min(1).max(200),
@@ -357,6 +453,7 @@ const exerciseDefinitionSchema = entityMetadataSchema.extend({
   category: z.enum(['strength', 'bodyweight', 'conditioning', 'mobility', 'other']),
   movementType: z.enum(['compound', 'isolation', 'core', 'carry', 'other']),
   loadUnit: loadUnitSchema,
+  trackingMode: strengthTrackingModeSchema.optional(),
   description: z.string().max(10_000).optional(),
   source: z.enum(['catalog', 'user']),
   isArchived: z.boolean(),
@@ -377,11 +474,19 @@ const workoutTemplateExerciseSchema = entityMetadataSchema.extend({
   minRepetitions: positiveInteger,
   maxRepetitions: positiveInteger,
   targetLoadKg: nonNegativeNumber.optional(),
+  targetDurationSeconds: nonNegativeNumber.optional(),
+  targetDistanceMeters: nonNegativeNumber.optional(),
   loadIncrementKg: nonNegativeNumber,
   restSeconds: nonNegativeInteger.optional(),
   maximumRecommendedRpe: finiteNumber.min(1).max(10).optional(),
   notes: z.string().max(10_000).optional(),
   isActive: z.boolean(),
+  exerciseGroupId: z.string().min(1).optional(),
+  exerciseGroupType: exerciseGroupTypeSchema.optional(),
+  exerciseGroupName: z.string().max(200).optional(),
+  exerciseGroupRounds: positiveInteger.optional(),
+  exerciseGroupRestBetweenExercisesSeconds: nonNegativeInteger.optional(),
+  exerciseGroupRestBetweenRoundsSeconds: nonNegativeInteger.optional(),
 }).refine((value) => value.minRepetitions <= value.maxRepetitions, {
   message: 'La borne minimale de répétitions doit être inférieure ou égale à la borne maximale.',
   path: ['minRepetitions'],
@@ -389,7 +494,11 @@ const workoutTemplateExerciseSchema = entityMetadataSchema.extend({
 
 const workoutSessionSchema = entityMetadataSchema.extend({
   date: localDateSchema,
-  status: z.enum(['inProgress', 'completed', 'abandoned']),
+  status: z.enum(['planned', 'inProgress', 'completed', 'abandoned', 'skipped']),
+  plannedDate: localDateSchema.optional(),
+  originalPlannedDate: localDateSchema.optional(),
+  plannedAt: isoDateTimeSchema.optional(),
+  skippedAt: isoDateTimeSchema.optional(),
   sourceTemplateId: z.string().min(1).optional(),
   sourceTemplateNameSnapshot: z.string().max(200).optional(),
   startedAt: isoDateTimeSchema.optional(),
@@ -408,11 +517,20 @@ const workoutSessionExerciseSchema = entityMetadataSchema.extend({
   minRepetitions: positiveInteger.optional(),
   maxRepetitions: positiveInteger.optional(),
   targetLoadKg: nonNegativeNumber.optional(),
+  targetDurationSeconds: nonNegativeNumber.optional(),
+  targetDistanceMeters: nonNegativeNumber.optional(),
   loadIncrementKg: nonNegativeNumber.optional(),
   restSeconds: nonNegativeInteger.optional(),
   maximumRecommendedRpe: finiteNumber.min(1).max(10).optional(),
   loadUnitSnapshot: loadUnitSchema,
+  trackingModeSnapshot: strengthTrackingModeSchema.optional(),
   notes: z.string().max(10_000).optional(),
+  exerciseGroupId: z.string().min(1).optional(),
+  exerciseGroupType: exerciseGroupTypeSchema.optional(),
+  exerciseGroupName: z.string().max(200).optional(),
+  exerciseGroupRounds: positiveInteger.optional(),
+  exerciseGroupRestBetweenExercisesSeconds: nonNegativeInteger.optional(),
+  exerciseGroupRestBetweenRoundsSeconds: nonNegativeInteger.optional(),
 }).refine(
   (value) =>
     value.minRepetitions === undefined ||
@@ -430,6 +548,8 @@ const strengthSetSchema = entityMetadataSchema.extend({
   setNumber: positiveInteger,
   repetitions: nonNegativeInteger,
   weightKg: nonNegativeNumber,
+  durationSeconds: nonNegativeNumber.optional(),
+  distanceMeters: nonNegativeNumber.optional(),
   rpe: finiteNumber.min(1).max(10).optional(),
   type: z.enum(['warmup', 'working', 'dropSet', 'failure', 'other']),
   isCompleted: z.boolean(),
@@ -503,6 +623,7 @@ export const backupEnvelopeSchema = z.object({
   format: z.literal('sportpilot-backup'),
   schemaVersion: z.number().int().positive(),
   exportedAt: isoDateTimeSchema,
+  appVersion: z.string().min(1).max(100).optional(),
   data: backupDataSchema,
 }).superRefine((envelope, context) => {
   const { data } = envelope;

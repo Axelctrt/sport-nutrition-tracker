@@ -1,6 +1,5 @@
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
 import { App } from '@/app/App';
 import { router } from '@/app/router';
 import { initializeDatabase } from '@/infrastructure/database/databaseLifecycle';
@@ -9,14 +8,6 @@ import { repositories } from '@/infrastructure/repositories/repositories';
 import { createProfileInput } from '@/test/factories/profileFactory';
 import '@/features/onboarding/pages/OnboardingPage';
 import '@/features/dashboard/pages/DashboardPage';
-
-vi.mock('virtual:pwa-register/react', () => ({
-  useRegisterSW: () => ({
-    offlineReady: [false, vi.fn()],
-    needRefresh: [false, vi.fn()],
-    updateServiceWorker: vi.fn(),
-  }),
-}));
 
 describe('App', () => {
   beforeEach(async () => {

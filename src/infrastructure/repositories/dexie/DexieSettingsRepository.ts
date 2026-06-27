@@ -1,4 +1,4 @@
-import { createDefaultAppSettings } from '@/domain/defaults/appSettings';
+import { createDefaultAppSettings, normalizeAppSettings } from '@/domain/defaults/appSettings';
 import { APP_SETTINGS_ID } from '@/domain/defaults/identifiers';
 import type { EntityChanges } from '@/domain/models/common';
 import type { AppSettings } from '@/domain/models/settings';
@@ -22,7 +22,19 @@ export class DexieSettingsRepository implements SettingsRepository {
         const settings = await this.database.appSettings.get(APP_SETTINGS_ID);
 
         if (settings) {
-          return settings;
+          const normalized = normalizeAppSettings(settings);
+          if (
+            normalized.backupReminderIntervalDays !== settings.backupReminderIntervalDays
+            || normalized.restTimerAutoStart !== settings.restTimerAutoStart
+            || normalized.restTimerSoundEnabled !== settings.restTimerSoundEnabled
+            || normalized.restTimerVibrationEnabled !== settings.restTimerVibrationEnabled
+            || normalized.enduranceTemplates !== settings.enduranceTemplates
+            || normalized.enduranceTemplatesVersion !== settings.enduranceTemplatesVersion
+            || JSON.stringify(normalized.dashboardPreferences) !== JSON.stringify(settings.dashboardPreferences)
+          ) {
+            await this.database.appSettings.put(normalized);
+          }
+          return normalized;
         }
 
         const defaults = createDefaultAppSettings();

@@ -288,6 +288,12 @@ export function BarcodeScannerPage({
         <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">
           La caméra fonctionne uniquement en HTTPS ou sur localhost. Une adresse locale comme <code>http://192.168.x.x</code> ne permet pas l’accès à la caméra sur téléphone. Les images restent dans le navigateur et ne sont pas envoyées à SportPilot.
         </p>
+        <Link
+          to={routePaths.privacy}
+          className="mt-3 inline-flex min-h-10 items-center text-sm font-semibold text-brand-700 hover:underline dark:text-brand-300"
+        >
+          Consulter la politique de confidentialité
+        </Link>
       </CollapsibleSection>
 
       {!secureCameraAvailable ? (

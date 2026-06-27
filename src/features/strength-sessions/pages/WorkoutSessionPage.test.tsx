@@ -4,8 +4,8 @@ import type { ReactNode } from 'react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { WorkoutSessionPage } from '@/features/strength-sessions/pages/WorkoutSessionPage';
 import { appDatabase } from '@/infrastructure/database/database';
-import { initializeDatabase } from '@/infrastructure/database/databaseLifecycle';
 import { ToastProvider } from '@/shared/toast/ToastProvider';
+import { deleteAppDatabaseAfterTest, resetAppDatabaseForTest } from '@/test/appDatabaseTestUtils';
 import { createEntity } from '@/shared/utils/entities';
 import {
   createExerciseDefinitionInput,
@@ -33,9 +33,8 @@ function renderSessionPage(extraRoutes?: ReactNode) {
 describe('WorkoutSessionPage', () => {
   beforeEach(async () => {
     cleanup();
-    appDatabase.close();
-    await appDatabase.delete();
-    await initializeDatabase();
+    window.sessionStorage.clear();
+    await resetAppDatabaseForTest();
     await appDatabase.exerciseDefinitions.bulkPut([
       createEntity(createExerciseDefinitionInput({ name: 'Développé couché' }), 'exercise-bench'),
       createEntity(createExerciseDefinitionInput({ name: 'Rowing barre', primaryMuscleGroup: 'back' }), 'exercise-row'),
@@ -51,13 +50,14 @@ describe('WorkoutSessionPage', () => {
       exerciseNameSnapshot: 'Développé couché',
       sortOrder: 0,
       loadUnitSnapshot: 'kg',
+      restSeconds: 120,
     }, 'session-exercise-bench'));
   });
 
   afterEach(async () => {
     cleanup();
-    appDatabase.close();
-    await appDatabase.delete();
+    window.sessionStorage.clear();
+    await deleteAppDatabaseAfterTest();
   });
 
   it('ajoute un exercice, enregistre les notes et termine la séance', async () => {
@@ -82,6 +82,9 @@ describe('WorkoutSessionPage', () => {
     });
     expect(screen.queryByText('Notes enregistrées')).not.toBeInTheDocument();
 
+    await user.click(screen.getByRole('button', { name: /Démarrer le repos/ }));
+    expect(await screen.findByRole('region', { name: 'Minuteur de repos' })).toBeInTheDocument();
+
     const finishButton = screen.getByRole('button', { name: 'Terminer' });
     await waitFor(() => expect(finishButton).toBeEnabled());
     await user.click(finishButton);
@@ -89,7 +92,8 @@ describe('WorkoutSessionPage', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Terminer la séance' }));
     expect(await screen.findByRole('heading', { name: 'Retour au carnet' })).toBeInTheDocument();
     expect((await appDatabase.workoutSessions.get('session-current'))?.status).toBe('completed');
-  });
+    expect(window.sessionStorage.getItem('sportpilot:rest-timer:session-current')).toBeNull();
+  }, 15_000);
 
   it('ajoute, valide, duplique et supprime des séries sans démonter la page', async () => {
     const user = userEvent.setup();
@@ -115,6 +119,12 @@ describe('WorkoutSessionPage', () => {
     });
     expect(screen.queryByText('Série validée')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Chargement de la page')).not.toBeInTheDocument();
+    expect(await screen.findByRole('region', { name: 'Minuteur de repos' })).toBeInTheDocument();
+    expect(screen.getByRole('timer')).toHaveTextContent(/01:5[89]|02:00/);
+    await user.click(screen.getByRole('button', { name: 'Pause' }));
+    expect(screen.getByRole('button', { name: 'Reprendre' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Ajouter 15 secondes' }));
+    await user.click(screen.getByRole('button', { name: 'Reprendre' }));
 
     await user.click(await screen.findByRole('button', { name: 'Dupliquer' }));
     await waitFor(async () => expect(await appDatabase.strengthSets.count()).toBe(2));
@@ -129,6 +139,22 @@ describe('WorkoutSessionPage', () => {
       expect(remaining).toHaveLength(1);
       expect(remaining[0]?.setNumber).toBe(1);
     });
+  });
+
+  it('respecte la désactivation du lancement automatique tout en gardant le démarrage manuel', async () => {
+    await appDatabase.appSettings.update('app-settings', { restTimerAutoStart: false });
+    const user = userEvent.setup();
+    renderSessionPage();
+
+    await screen.findByRole('heading', { name: 'Séance libre' });
+    await user.click(screen.getByRole('button', { name: 'Ajouter une série' }));
+    await user.click(await screen.findByRole('button', { name: 'Valider la série' }));
+    await waitFor(() => expect(screen.queryByRole('region', { name: 'Minuteur de repos' })).not.toBeInTheDocument());
+
+    await user.click(screen.getByRole('button', { name: /Démarrer le repos/ }));
+    expect(await screen.findByRole('region', { name: 'Minuteur de repos' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Arrêter le minuteur' }));
+    expect(screen.queryByRole('region', { name: 'Minuteur de repos' })).not.toBeInTheDocument();
   });
 
   it('permet de réduire et développer une carte d’exercice', async () => {
@@ -225,11 +251,13 @@ describe('WorkoutSessionPage', () => {
     renderSessionPage();
 
     expect(await screen.findByRole('heading', { name: 'Suggestions de progression' })).toBeInTheDocument();
-    const loadInput = screen.getByLabelText('Charge cible retenue');
+    const loadInput = await screen.findByLabelText('Charge cible retenue');
     await user.clear(loadInput);
     await user.type(loadInput, '63');
     expect(loadInput).toHaveValue(63);
-    await user.click(screen.getByRole('button', { name: 'Accepter cette charge' }));
+    const acceptButton = screen.getByRole('button', { name: 'Accepter cette charge' });
+    await waitFor(() => expect(acceptButton).toBeEnabled());
+    await user.click(acceptButton);
 
     await waitFor(async () => {
       expect((await appDatabase.progressionSuggestions.get('suggestion-1'))?.status).toBe('accepted');
@@ -237,4 +265,56 @@ describe('WorkoutSessionPage', () => {
     });
     expect(await screen.findByText(/Charge cible mise à jour à 63 kg/)).toBeInTheDocument();
   });
+
+  it('guide un superset, permet de passer un exercice et utilise le repos de transition', async () => {
+    await appDatabase.workoutSessionExercises.update('session-exercise-bench', {
+      exerciseGroupId: 'group-a',
+      exerciseGroupType: 'superset',
+      exerciseGroupName: 'Poussée / tirage',
+      exerciseGroupRounds: 3,
+      exerciseGroupRestBetweenExercisesSeconds: 15,
+      exerciseGroupRestBetweenRoundsSeconds: 90,
+    });
+    await appDatabase.workoutSessionExercises.add(createEntity(createWorkoutSessionExerciseInput({
+      sessionId: 'session-current',
+      exerciseDefinitionId: 'exercise-row',
+      exerciseNameSnapshot: 'Rowing barre',
+      sortOrder: 1,
+      exerciseGroupId: 'group-a',
+      exerciseGroupType: 'superset',
+      exerciseGroupName: 'Poussée / tirage',
+      exerciseGroupRounds: 3,
+      exerciseGroupRestBetweenExercisesSeconds: 15,
+      exerciseGroupRestBetweenRoundsSeconds: 90,
+    }), 'session-exercise-row'));
+    const user = userEvent.setup();
+    renderSessionPage();
+
+    expect(await screen.findByText('A1')).toBeInTheDocument();
+    expect(screen.getByText('A2')).toBeInTheDocument();
+    expect(screen.getAllByText('Poussée / tirage')).toHaveLength(2);
+    expect(screen.getByText('Ensuite : Rowing barre')).toBeInTheDocument();
+
+    const getBenchCard = () => screen.getByRole('heading', { name: 'Développé couché' })
+      .closest('[id^="workout-exercise-"]') as HTMLElement | null;
+    expect(getBenchCard()).not.toBeNull();
+    await user.click(within(getBenchCard()!).getByRole('button', { name: 'Ajouter une série' }));
+    await waitFor(async () => expect(await appDatabase.strengthSets.count()).toBe(1));
+    const repetitionsInput = await screen.findByLabelText('Répétitions');
+    await user.clear(repetitionsInput);
+    await user.type(repetitionsInput, '10');
+    const validateButton = await screen.findByRole('button', { name: 'Valider la série' });
+    await waitFor(() => expect(validateButton).toBeEnabled());
+    await user.click(validateButton);
+    await waitFor(async () => {
+      expect((await appDatabase.strengthSets.toArray())[0]?.isCompleted).toBe(true);
+    });
+    expect(await screen.findByRole('region', { name: 'Minuteur de repos' })).toBeInTheDocument();
+    expect(screen.getByText('Transition vers Rowing barre')).toBeInTheDocument();
+    expect(screen.getByRole('timer')).toHaveTextContent(/00:1[34]|00:15/);
+
+    await user.click(within(getBenchCard()!).getByRole('button', { name: 'Passer pour l’instant' }));
+    expect(within(getBenchCard()!).getByText('Passé temporairement')).toBeInTheDocument();
+  });
+
 });

@@ -5,6 +5,7 @@ import type {
   LoadUnit,
   MovementType,
   MuscleGroup,
+  StrengthTrackingMode,
 } from '@/domain/models/strength';
 
 export const muscleGroupOptions: readonly { value: MuscleGroup; label: string }[] = [
@@ -50,6 +51,16 @@ export const movementTypeOptions: readonly { value: MovementType; label: string 
   { value: 'other', label: 'Autre' },
 ];
 
+
+export const strengthTrackingModeOptions: readonly { value: StrengthTrackingMode; label: string; description: string }[] = [
+  { value: 'loadRepetitions', label: 'Charge externe + répétitions', description: 'Barre, haltères, machine ou poulie.' },
+  { value: 'bodyweightRepetitions', label: 'Poids du corps + répétitions', description: 'Avec un lest additionnel facultatif.' },
+  { value: 'assistedRepetitions', label: 'Poids du corps assisté', description: 'Une assistance plus faible représente une progression.' },
+  { value: 'repetitions', label: 'Répétitions seules', description: 'Élastique, mobilité ou exercice sans charge pertinente.' },
+  { value: 'duration', label: 'Durée', description: 'Gainage ou maintien mesuré en secondes.' },
+  { value: 'distance', label: 'Distance', description: 'Déplacement mesuré en mètres.' },
+];
+
 export const loadUnitOptions: readonly { value: LoadUnit; label: string }[] = [
   { value: 'kg', label: 'Kilogrammes' },
   { value: 'bodyweight', label: 'Poids du corps' },
@@ -70,3 +81,5 @@ export const exerciseCategoryLabel = (value: ExerciseCategory) => labelFor(exerc
 export const movementTypeLabel = (value: MovementType) => labelFor(movementTypeOptions, value);
 export const loadUnitLabel = (value: LoadUnit) => labelFor(loadUnitOptions, value);
 export const exerciseSourceLabel = (value: ExerciseSource) => value === 'catalog' ? 'Catalogue système' : 'Exercice personnel';
+
+export const strengthTrackingModeLabel = (value: StrengthTrackingMode) => labelFor(strengthTrackingModeOptions, value);

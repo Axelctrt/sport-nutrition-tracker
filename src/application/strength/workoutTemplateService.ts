@@ -40,12 +40,17 @@ function validateTemplateInput(input: WorkoutTemplateInput): void {
   if (name.length < 2) throw new RepositoryError('Le nom de la séance doit contenir au moins 2 caractères.', 'create');
   if (input.exercises.length === 0) throw new RepositoryError('Ajoute au moins un exercice à la séance.', 'create');
 
-  const exerciseIds = new Set<string>();
+  const groupMembers = new Map<string, WorkoutTemplateExerciseInput[]>();
+  const exerciseOccurrences = new Map<string, Array<string | undefined>>();
   for (const exercise of input.exercises) {
-    if (exerciseIds.has(exercise.exerciseDefinitionId)) {
-      throw new RepositoryError('Un même exercice ne peut apparaître qu’une fois dans la séance.', 'create');
+    const occurrences = exerciseOccurrences.get(exercise.exerciseDefinitionId) ?? [];
+    occurrences.push(exercise.exerciseGroupId);
+    exerciseOccurrences.set(exercise.exerciseDefinitionId, occurrences);
+    if (exercise.exerciseGroupId) {
+      const members = groupMembers.get(exercise.exerciseGroupId) ?? [];
+      members.push(exercise);
+      groupMembers.set(exercise.exerciseGroupId, members);
     }
-    exerciseIds.add(exercise.exerciseDefinitionId);
     if (exercise.plannedSets < 1 || exercise.plannedSets > 20) {
       throw new RepositoryError('Le nombre de séries doit être compris entre 1 et 20.', 'create');
     }
@@ -54,6 +59,27 @@ function validateTemplateInput(input: WorkoutTemplateInput): void {
     }
     if (exercise.loadIncrementKg <= 0) {
       throw new RepositoryError('L’incrément de charge doit être supérieur à zéro.', 'create');
+    }
+  }
+
+  for (const occurrences of exerciseOccurrences.values()) {
+    if (occurrences.length < 2) continue;
+    const validGroupCopies = occurrences.every(Boolean) && new Set(occurrences).size === occurrences.length;
+    if (!validGroupCopies) {
+      throw new RepositoryError('Un même exercice ne peut apparaître qu’une fois dans une même organisation.', 'create');
+    }
+  }
+
+  for (const members of groupMembers.values()) {
+    const type = members[0]?.exerciseGroupType ?? 'superset';
+    const expected = type === 'superset' ? 2 : type === 'triSet' ? 3 : undefined;
+    if ((expected !== undefined && members.length !== expected) || (expected === undefined && members.length < 2)) {
+      throw new RepositoryError(
+        type === 'circuit'
+          ? 'Un circuit doit contenir au moins 2 exercices.'
+          : `Un ${type === 'superset' ? 'superset' : 'tri-set'} doit contenir exactement ${expected} exercices.`,
+        'create',
+      );
     }
   }
 }

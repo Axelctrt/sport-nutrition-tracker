@@ -13,4 +13,38 @@ describe('StrengthHistorySummary', () => {
     expect(screen.getByLabelText('Répétitions : 8')).toBeInTheDocument();
     expect(screen.getByLabelText('Volume : 640 kg')).toBeInTheDocument();
   });
+
+  it('n’affiche pas de volume nul pour un exercice au poids du corps', () => {
+    const base = createExerciseHistoryEntry();
+    const workingSet = {
+      ...base.workingSets[0]!,
+      weightKg: 0,
+      repetitions: 12,
+    };
+    const history = [{
+      ...base,
+      sessionExercise: {
+        ...base.sessionExercise,
+        loadUnitSnapshot: 'bodyweight' as const,
+        trackingModeSnapshot: 'bodyweightRepetitions' as const,
+      },
+      sets: [workingSet],
+      workingSets: [workingSet],
+      bodyWeightKg: 70,
+      totalVolumeKg: 840,
+      totalAdditionalVolumeKg: 0,
+    }];
+
+    render(
+      <StrengthHistorySummary
+        sessionCount={history.length}
+        analytics={buildStrengthExerciseAnalytics(history)}
+      />,
+    );
+
+    expect(screen.getByLabelText('Répétitions : 12')).toBeInTheDocument();
+    expect(screen.getByLabelText('Meilleure série : 12 rép.')).toBeInTheDocument();
+    expect(screen.queryByLabelText(/^Volume :/)).not.toBeInTheDocument();
+  });
+
 });

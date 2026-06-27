@@ -2,6 +2,7 @@ import { calculateAndPersistDailyTarget } from '@/application/daily/dailyTargetC
 import { estimateActivityCalories } from '@/domain/calculations/activityCalories';
 import type {
   Activity,
+  CyclingActivity,
   OtherActivity,
   RunningActivity,
   StrengthTrainingActivity,
@@ -17,6 +18,7 @@ import { repositories } from '@/infrastructure/repositories/repositories';
 export type ActivityDraft =
   | Omit<NewEntity<RunningActivity>, 'calculation' | 'rpe'>
   | Omit<NewEntity<SwimmingActivity>, 'calculation' | 'rpe'>
+  | Omit<NewEntity<CyclingActivity>, 'calculation' | 'rpe'>
   | Omit<NewEntity<StrengthTrainingActivity>, 'calculation' | 'rpe'>
   | Omit<NewEntity<OtherActivity>, 'calculation' | 'rpe'>;
 

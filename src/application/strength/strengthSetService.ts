@@ -1,12 +1,15 @@
 import { RepositoryError } from '@/domain/errors/RepositoryError';
 import type { EntityId } from '@/domain/models/common';
 import type { StrengthSet, StrengthSetType, WorkoutSession, WorkoutSessionExercise } from '@/domain/models/strength';
+import { resolveTrackingMode } from '@/domain/strength/strengthTracking';
 import type { StrengthSetRepository } from '@/infrastructure/repositories/contracts/StrengthSetRepository';
 import type { WorkoutSessionRepository } from '@/infrastructure/repositories/contracts/WorkoutSessionRepository';
 
 export interface StrengthSetChanges {
   repetitions: number;
   weightKg: number;
+  durationSeconds?: number | undefined;
+  distanceMeters?: number | undefined;
   rpe?: number | undefined;
   type: StrengthSetType;
   notes?: string | undefined;
@@ -45,12 +48,20 @@ export async function addStrengthSet(
   const current = await setRepository.listBySessionExercise(sessionExerciseId);
   const previous = current.at(-1);
 
+  const trackingMode = resolveTrackingMode(exercise);
+
   return setRepository.create({
     sessionId,
     sessionExerciseId,
     setNumber: current.length + 1,
     repetitions: previous?.repetitions ?? exercise.minRepetitions ?? 0,
     weightKg: previous?.weightKg ?? exercise.targetLoadKg ?? 0,
+    ...(trackingMode === 'duration'
+      ? { durationSeconds: previous?.durationSeconds ?? exercise.targetDurationSeconds ?? 0 }
+      : {}),
+    ...(trackingMode === 'distance'
+      ? { distanceMeters: previous?.distanceMeters ?? exercise.targetDistanceMeters ?? 0 }
+      : {}),
     ...(previous?.rpe === undefined ? {} : { rpe: previous.rpe }),
     type: previous?.type ?? 'working',
     isCompleted: false,
@@ -74,6 +85,8 @@ export async function updateStrengthSet(
   return setRepository.update(setId, {
     repetitions: changes.repetitions,
     weightKg: changes.weightKg,
+    durationSeconds: changes.durationSeconds,
+    distanceMeters: changes.distanceMeters,
     type: changes.type,
     ...(changes.rpe === undefined ? { rpe: undefined } : { rpe: changes.rpe }),
     notes: changes.notes?.trim() || undefined,
@@ -123,6 +136,8 @@ export async function duplicateStrengthSet(
     setNumber: current.length + 1,
     repetitions: source.repetitions,
     weightKg: source.weightKg,
+    ...(source.durationSeconds === undefined ? {} : { durationSeconds: source.durationSeconds }),
+    ...(source.distanceMeters === undefined ? {} : { distanceMeters: source.distanceMeters }),
     ...(source.rpe === undefined ? {} : { rpe: source.rpe }),
     type: source.type,
     isCompleted: false,

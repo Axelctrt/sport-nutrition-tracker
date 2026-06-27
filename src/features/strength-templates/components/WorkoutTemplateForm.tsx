@@ -1,8 +1,10 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowDown, ArrowUp, Plus, Save, Trash2 } from 'lucide-react';
-import { useEffect, useRef } from 'react';
-import { useFieldArray, useForm } from 'react-hook-form';
-import type { ExerciseDefinition } from '@/domain/models/strength';
+import { ArrowDown, ArrowUp, Copy, Layers3, Plus, Save, Trash2, Unlink } from 'lucide-react';
+import { useEffect, useMemo, useRef } from 'react';
+import { useFieldArray, useForm, useWatch } from 'react-hook-form';
+import type { ExerciseDefinition, ExerciseGroupType, StrengthTrackingMode } from '@/domain/models/strength';
+import { exerciseGroupTypeLabel } from '@/domain/strength/exerciseGroups';
+import { defaultTrackingModeForLoadUnit } from '@/domain/strength/strengthTracking';
 import {
   workoutTemplateFormSchema,
   type WorkoutTemplateFormValues,
@@ -39,6 +41,8 @@ export function WorkoutTemplateForm({
     register,
     handleSubmit,
     reset,
+    getValues,
+    setValue,
     formState: { errors, isSubmitting, submitCount },
   } = useForm<WorkoutTemplateFormValues>({
     resolver: zodResolver(workoutTemplateFormSchema),
@@ -46,6 +50,25 @@ export function WorkoutTemplateForm({
     mode: 'onBlur',
   });
   const { fields, append, remove, move } = useFieldArray({ control, name: 'exercises' });
+  const watchedExercises = useWatch({ control, name: 'exercises' });
+  const groups = useMemo(() => {
+    const result: Array<{ id: string; type: ExerciseGroupType; name: string; memberIndexes: number[] }> = [];
+    for (const [index, exercise] of (watchedExercises ?? []).entries()) {
+      if (!exercise?.exerciseGroupId) continue;
+      let group = result.find((candidate) => candidate.id === exercise.exerciseGroupId);
+      if (!group) {
+        group = {
+          id: exercise.exerciseGroupId,
+          type: exercise.exerciseGroupType ?? 'superset',
+          name: exercise.exerciseGroupName?.trim() || '',
+          memberIndexes: [],
+        };
+        result.push(group);
+      }
+      group.memberIndexes.push(index);
+    }
+    return result;
+  }, [watchedExercises]);
 
   useEffect(() => {
     reset(initialValues);
@@ -56,6 +79,99 @@ export function WorkoutTemplateForm({
       focusFirstInvalidField(formRef.current);
     }
   }, [errors, submitCount]);
+
+
+  const trackingModeAt = (index: number): StrengthTrackingMode => {
+    const exerciseId = watchedExercises?.[index]?.exerciseDefinitionId;
+    const definition = exerciseDefinitions.find((exercise) => exercise.id === exerciseId);
+    return definition?.trackingMode ?? defaultTrackingModeForLoadUnit(definition?.loadUnit ?? 'kg');
+  };
+
+  const targetLoadLabel = (mode: StrengthTrackingMode): string => {
+    if (mode === 'bodyweightRepetitions') return 'Lest cible (kg)';
+    if (mode === 'assistedRepetitions') return 'Assistance cible (kg)';
+    return 'Charge cible (kg)';
+  };
+
+  const incrementLabel = (mode: StrengthTrackingMode): string => {
+    if (mode === 'bodyweightRepetitions') return 'Incrément de lest (kg)';
+    if (mode === 'assistedRepetitions') return 'Palier d’assistance (kg)';
+    return 'Incrément (kg)';
+  };
+
+  const updateGroup = (
+    groupId: string,
+    field: 'exerciseGroupType' | 'exerciseGroupName' | 'exerciseGroupRounds' | 'exerciseGroupRestBetweenExercisesSeconds' | 'exerciseGroupRestBetweenRoundsSeconds',
+    value: string | number,
+  ) => {
+    getValues('exercises').forEach((exercise, index) => {
+      if (exercise.exerciseGroupId !== groupId) return;
+      setValue(`exercises.${index}.${field}`, value as never, { shouldDirty: true, shouldValidate: true });
+    });
+  };
+
+  const clearGroupAt = (index: number) => {
+    const fieldsToClear = [
+      'exerciseGroupId',
+      'exerciseGroupType',
+      'exerciseGroupName',
+      'exerciseGroupRounds',
+      'exerciseGroupRestBetweenExercisesSeconds',
+      'exerciseGroupRestBetweenRoundsSeconds',
+    ] as const;
+    for (const field of fieldsToClear) {
+      setValue(`exercises.${index}.${field}`, undefined, { shouldDirty: true, shouldValidate: true });
+    }
+  };
+
+  const assignGroup = (index: number, groupId: string) => {
+    if (!groupId) {
+      clearGroupAt(index);
+      return;
+    }
+    const sourceIndex = getValues('exercises').findIndex((exercise) => exercise.exerciseGroupId === groupId);
+    const source = sourceIndex >= 0 ? getValues(`exercises.${sourceIndex}`) : undefined;
+    setValue(`exercises.${index}.exerciseGroupId`, groupId, { shouldDirty: true, shouldValidate: true });
+    setValue(`exercises.${index}.exerciseGroupType`, source?.exerciseGroupType ?? 'superset', { shouldDirty: true });
+    setValue(`exercises.${index}.exerciseGroupName`, source?.exerciseGroupName ?? '', { shouldDirty: true });
+    setValue(`exercises.${index}.exerciseGroupRounds`, source?.exerciseGroupRounds ?? 3, { shouldDirty: true });
+    setValue(`exercises.${index}.exerciseGroupRestBetweenExercisesSeconds`, source?.exerciseGroupRestBetweenExercisesSeconds ?? 0, { shouldDirty: true });
+    setValue(`exercises.${index}.exerciseGroupRestBetweenRoundsSeconds`, source?.exerciseGroupRestBetweenRoundsSeconds ?? 120, { shouldDirty: true });
+  };
+
+  const createGroup = (index: number) => {
+    const exercises = getValues('exercises');
+    const partnerIndex = exercises.findIndex((exercise, candidateIndex) => candidateIndex !== index && !exercise.exerciseGroupId);
+    if (partnerIndex < 0) return;
+    const groupId = `group-${Date.now()}-${index}`;
+    for (const memberIndex of [index, partnerIndex]) {
+      setValue(`exercises.${memberIndex}.exerciseGroupId`, groupId, { shouldDirty: true, shouldValidate: true });
+      setValue(`exercises.${memberIndex}.exerciseGroupType`, 'superset', { shouldDirty: true });
+      setValue(`exercises.${memberIndex}.exerciseGroupName`, '', { shouldDirty: true });
+      setValue(`exercises.${memberIndex}.exerciseGroupRounds`, 3, { shouldDirty: true });
+      setValue(`exercises.${memberIndex}.exerciseGroupRestBetweenExercisesSeconds`, 0, { shouldDirty: true });
+      setValue(`exercises.${memberIndex}.exerciseGroupRestBetweenRoundsSeconds`, 120, { shouldDirty: true });
+    }
+  };
+
+  const dissolveGroup = (groupId: string) => {
+    getValues('exercises').forEach((exercise, index) => {
+      if (exercise.exerciseGroupId === groupId) clearGroupAt(index);
+    });
+  };
+
+  const duplicateGroup = (groupId: string) => {
+    const members = getValues('exercises').filter((exercise) => exercise.exerciseGroupId === groupId);
+    if (members.length === 0) return;
+    const duplicateId = `group-${Date.now()}-copy`;
+    for (const member of members) {
+      append({
+        ...member,
+        exerciseGroupId: duplicateId,
+        exerciseGroupName: member.exerciseGroupName ? `${member.exerciseGroupName} — copie` : '',
+      });
+    }
+  };
 
   const addExercise = () => {
     const firstAvailable = exerciseDefinitions.find((exercise) => !exercise.isArchived);
@@ -104,6 +220,10 @@ export function WorkoutTemplateForm({
           </Button>
         </div>
 
+        <InlineNotice className="mt-4" tone="info" title="Supersets, tri-sets et circuits">
+          Groupe les exercices, règle les tours et les temps de transition. Les séries et statistiques restent propres à chaque exercice.
+        </InlineNotice>
+
         {errors.exercises?.root?.message ? <p role="alert" className="mt-3 text-sm font-medium text-red-700 dark:text-red-300">{errors.exercises.root.message}</p> : null}
         {typeof errors.exercises?.message === 'string' ? <p role="alert" className="mt-3 text-sm font-medium text-red-700 dark:text-red-300">{errors.exercises.message}</p> : null}
 
@@ -117,10 +237,19 @@ export function WorkoutTemplateForm({
         <div className="mt-4 space-y-4">
           {fields.map((field, index) => {
             const exerciseErrors = errors.exercises?.[index];
+            const trackingMode = trackingModeAt(index);
+            const usesRepetitions = trackingMode !== 'duration' && trackingMode !== 'distance';
+            const usesLoad = trackingMode === 'loadRepetitions'
+              || trackingMode === 'bodyweightRepetitions'
+              || trackingMode === 'assistedRepetitions';
+            const currentGroup = groups.find((group) => group.id === watchedExercises?.[index]?.exerciseGroupId);
+            const groupPosition = currentGroup?.memberIndexes.indexOf(index) ?? -1;
+            const isGroupLeader = currentGroup?.memberIndexes[0] === index;
+            const hasStandalonePartner = (watchedExercises ?? []).some((exercise, candidateIndex) => candidateIndex !== index && !exercise?.exerciseGroupId);
             return (
               <Card key={field.id} className="p-5 sm:p-6">
                 <div className="flex items-start justify-between gap-4">
-                  <h3 className="font-semibold text-slate-950 dark:text-white">Exercice {index + 1}</h3>
+                  <div><h3 className="font-semibold text-slate-950 dark:text-white">{currentGroup ? `${currentGroup.name || exerciseGroupTypeLabel(currentGroup.type)} · ${currentGroup.memberIndexes.length > 1 ? `${String.fromCharCode(65 + groups.indexOf(currentGroup))}${groupPosition + 1}` : 'groupe incomplet'}` : `Exercice ${index + 1}`}</h3>{currentGroup ? <p className="mt-1 text-xs font-medium text-brand-700 dark:text-brand-300">{currentGroup.memberIndexes.length} exercice{currentGroup.memberIndexes.length > 1 ? 's' : ''} dans le groupe</p> : null}</div>
                   <div className="flex gap-1">
                     <Button type="button" size="sm" variant="ghost" aria-label={`Monter l’exercice ${index + 1}`} disabled={index === 0} onClick={() => move(index, index - 1)}>
                       <ArrowUp aria-hidden="true" className="size-4" />
@@ -149,18 +278,107 @@ export function WorkoutTemplateForm({
                 </div>
 
                 <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-                  <FormField id={`workout-template-min-reps-${index}`} label="Répétitions min." error={exerciseErrors?.minRepetitions?.message} required>
-                    <input id={`workout-template-min-reps-${index}`} aria-invalid={Boolean(exerciseErrors?.minRepetitions)} type="number" min="1" max="100" inputMode="numeric" className={inputClassName} {...register(`exercises.${index}.minRepetitions`, { valueAsNumber: true })} />
-                  </FormField>
-                  <FormField id={`workout-template-max-reps-${index}`} label="Répétitions max." error={exerciseErrors?.maxRepetitions?.message} required>
-                    <input id={`workout-template-max-reps-${index}`} aria-invalid={Boolean(exerciseErrors?.maxRepetitions)} type="number" min="1" max="100" inputMode="numeric" className={inputClassName} {...register(`exercises.${index}.maxRepetitions`, { valueAsNumber: true })} />
-                  </FormField>
-                  <FormField id={`workout-template-target-load-${index}`} label="Charge cible (kg)" error={exerciseErrors?.targetLoadKg?.message}>
-                    <input id={`workout-template-target-load-${index}`} aria-invalid={Boolean(exerciseErrors?.targetLoadKg)} type="number" min="0" step="0.25" inputMode="decimal" className={inputClassName} {...register(`exercises.${index}.targetLoadKg`, optionalNumberRegistration)} />
-                  </FormField>
-                  <FormField id={`workout-template-increment-${index}`} label="Incrément (kg)" error={exerciseErrors?.loadIncrementKg?.message} required>
-                    <input id={`workout-template-increment-${index}`} aria-invalid={Boolean(exerciseErrors?.loadIncrementKg)} type="number" min="0.25" step="0.25" inputMode="decimal" className={inputClassName} {...register(`exercises.${index}.loadIncrementKg`, { valueAsNumber: true })} />
-                  </FormField>
+                  {usesRepetitions ? (
+                    <>
+                      <FormField id={`workout-template-min-reps-${index}`} label="Répétitions min." error={exerciseErrors?.minRepetitions?.message} required>
+                        <input id={`workout-template-min-reps-${index}`} aria-invalid={Boolean(exerciseErrors?.minRepetitions)} type="number" min="1" max="100" inputMode="numeric" className={inputClassName} {...register(`exercises.${index}.minRepetitions`, { valueAsNumber: true })} />
+                      </FormField>
+                      <FormField id={`workout-template-max-reps-${index}`} label="Répétitions max." error={exerciseErrors?.maxRepetitions?.message} required>
+                        <input id={`workout-template-max-reps-${index}`} aria-invalid={Boolean(exerciseErrors?.maxRepetitions)} type="number" min="1" max="100" inputMode="numeric" className={inputClassName} {...register(`exercises.${index}.maxRepetitions`, { valueAsNumber: true })} />
+                      </FormField>
+                    </>
+                  ) : null}
+                  {usesLoad ? (
+                    <>
+                      <FormField id={`workout-template-target-load-${index}`} label={targetLoadLabel(trackingMode)} error={exerciseErrors?.targetLoadKg?.message}>
+                        <input id={`workout-template-target-load-${index}`} aria-invalid={Boolean(exerciseErrors?.targetLoadKg)} type="number" min="0" step="0.25" inputMode="decimal" className={inputClassName} {...register(`exercises.${index}.targetLoadKg`, optionalNumberRegistration)} />
+                      </FormField>
+                      <FormField id={`workout-template-increment-${index}`} label={incrementLabel(trackingMode)} error={exerciseErrors?.loadIncrementKg?.message} required>
+                        <input id={`workout-template-increment-${index}`} aria-invalid={Boolean(exerciseErrors?.loadIncrementKg)} type="number" min="0.25" step="0.25" inputMode="decimal" className={inputClassName} {...register(`exercises.${index}.loadIncrementKg`, { valueAsNumber: true })} />
+                      </FormField>
+                    </>
+                  ) : null}
+                  {trackingMode === 'duration' ? (
+                    <FormField id={`workout-template-target-duration-${index}`} label="Durée cible (secondes)" error={exerciseErrors?.targetDurationSeconds?.message}>
+                      <input id={`workout-template-target-duration-${index}`} aria-invalid={Boolean(exerciseErrors?.targetDurationSeconds)} type="number" min="1" step="1" inputMode="numeric" className={inputClassName} {...register(`exercises.${index}.targetDurationSeconds`, optionalNumberRegistration)} />
+                    </FormField>
+                  ) : null}
+                  {trackingMode === 'distance' ? (
+                    <FormField id={`workout-template-target-distance-${index}`} label="Distance cible (mètres)" error={exerciseErrors?.targetDistanceMeters?.message}>
+                      <input id={`workout-template-target-distance-${index}`} aria-invalid={Boolean(exerciseErrors?.targetDistanceMeters)} type="number" min="0.1" step="0.1" inputMode="decimal" className={inputClassName} {...register(`exercises.${index}.targetDistanceMeters`, optionalNumberRegistration)} />
+                    </FormField>
+                  ) : null}
+                </div>
+
+                <div className="mt-5 rounded-2xl border border-brand-100 bg-brand-50/60 p-4 dark:border-brand-900 dark:bg-brand-950/20">
+                  <div className="flex items-center gap-2">
+                    <Layers3 aria-hidden="true" className="size-4 text-brand-700 dark:text-brand-300" />
+                    <h4 className="font-semibold text-slate-950 dark:text-white">Organisation en groupe</h4>
+                  </div>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
+                    <div>
+                      <label htmlFor={`workout-template-group-${index}`} className="text-sm font-semibold text-slate-700 dark:text-slate-200">Groupe de l’exercice</label>
+                      <select
+                        id={`workout-template-group-${index}`}
+                        className={`${inputClassName} mt-1`}
+                        value={watchedExercises?.[index]?.exerciseGroupId ?? ''}
+                        onChange={(event) => assignGroup(index, event.target.value)}
+                      >
+                        <option value="">Exercice indépendant</option>
+                        {groups.map((group, groupIndex) => (
+                          <option key={group.id} value={group.id}>{group.name || `${exerciseGroupTypeLabel(group.type)} ${String.fromCharCode(65 + groupIndex)}`}</option>
+                        ))}
+                      </select>
+                      {exerciseErrors?.exerciseGroupId?.message ? <p role="alert" className="mt-1 text-sm font-medium text-red-700 dark:text-red-300">{exerciseErrors.exerciseGroupId.message}</p> : null}
+                    </div>
+                    {!currentGroup ? (
+                      <Button type="button" variant="secondary" className="self-end" disabled={!hasStandalonePartner} onClick={() => createGroup(index)}>
+                        <Layers3 aria-hidden="true" className="size-4" />
+                        Créer un superset
+                      </Button>
+                    ) : (
+                      <Button type="button" variant="secondary" className="self-end" onClick={() => clearGroupAt(index)}>
+                        <Unlink aria-hidden="true" className="size-4" />
+                        Retirer du groupe
+                      </Button>
+                    )}
+                  </div>
+
+                  {currentGroup && isGroupLeader ? (
+                    <div className="mt-4 border-t border-brand-100 pt-4 dark:border-brand-900">
+                      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        <FormField id={`workout-template-group-type-${index}`} label="Type de groupe">
+                          <select id={`workout-template-group-type-${index}`} className={inputClassName} value={watchedExercises?.[index]?.exerciseGroupType ?? 'superset'} onChange={(event) => updateGroup(currentGroup.id, 'exerciseGroupType', event.target.value)}>
+                            <option value="superset">Superset · 2 exercices</option>
+                            <option value="triSet">Tri-set · 3 exercices</option>
+                            <option value="circuit">Circuit · 2 exercices ou plus</option>
+                          </select>
+                        </FormField>
+                        <FormField id={`workout-template-group-name-${index}`} label="Nom facultatif">
+                          <input id={`workout-template-group-name-${index}`} className={inputClassName} value={watchedExercises?.[index]?.exerciseGroupName ?? ''} onChange={(event) => updateGroup(currentGroup.id, 'exerciseGroupName', event.target.value)} placeholder="Ex. Dos / pectoraux" />
+                        </FormField>
+                        <FormField id={`workout-template-group-rounds-${index}`} label="Nombre de tours">
+                          <input id={`workout-template-group-rounds-${index}`} type="number" min="1" max="20" inputMode="numeric" className={inputClassName} value={watchedExercises?.[index]?.exerciseGroupRounds ?? 3} onChange={(event) => updateGroup(currentGroup.id, 'exerciseGroupRounds', Number(event.target.value))} />
+                        </FormField>
+                        <FormField id={`workout-template-group-between-${index}`} label="Repos entre exercices (s)">
+                          <input id={`workout-template-group-between-${index}`} type="number" min="0" max="1800" inputMode="numeric" className={inputClassName} value={watchedExercises?.[index]?.exerciseGroupRestBetweenExercisesSeconds ?? 0} onChange={(event) => updateGroup(currentGroup.id, 'exerciseGroupRestBetweenExercisesSeconds', Number(event.target.value))} />
+                        </FormField>
+                        <FormField id={`workout-template-group-round-rest-${index}`} label="Repos entre tours (s)">
+                          <input id={`workout-template-group-round-rest-${index}`} type="number" min="0" max="1800" inputMode="numeric" className={inputClassName} value={watchedExercises?.[index]?.exerciseGroupRestBetweenRoundsSeconds ?? 120} onChange={(event) => updateGroup(currentGroup.id, 'exerciseGroupRestBetweenRoundsSeconds', Number(event.target.value))} />
+                        </FormField>
+                      </div>
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        <Button type="button" size="sm" variant="secondary" onClick={() => duplicateGroup(currentGroup.id)}>
+                          <Copy aria-hidden="true" className="size-4" />
+                          Dupliquer le groupe
+                        </Button>
+                        <Button type="button" size="sm" variant="dangerGhost" onClick={() => dissolveGroup(currentGroup.id)}>
+                          <Unlink aria-hidden="true" className="size-4" />
+                          Dissoudre le groupe
+                        </Button>
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
 
                 <details className="mt-5 rounded-xl border border-slate-200 px-3 py-2 dark:border-slate-800" open={Boolean(exerciseErrors?.restSeconds || exerciseErrors?.maximumRecommendedRpe || exerciseErrors?.notes) || undefined}>

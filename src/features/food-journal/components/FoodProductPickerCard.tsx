@@ -49,7 +49,7 @@ export function FoodProductPickerCard({
       </p>
       {product.servingSize ? (
         <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-          1 portion = {product.servingSize} {product.basisUnit}
+          1 portion{product.servingLabel ? ` (${product.servingLabel})` : ''} = {product.servingSize} {product.basisUnit}
         </p>
       ) : null}
 

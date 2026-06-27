@@ -2,14 +2,10 @@ import { ChevronDown, CopyPlus, History } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { ExerciseHistoryEntry } from '@/application/strength/strengthHistoryService';
 import { strengthExerciseHistoryPath } from '@/app/routePaths';
-import type { StrengthSet } from '@/domain/models/strength';
+import { resolveTrackingMode } from '@/domain/strength/strengthTracking';
+import { setPerformanceSummary } from '@/features/strength-history/utils/strengthPerformanceFormatting';
 import { Button } from '@/shared/ui/Button';
 import { formatLocalDate } from '@/shared/utils/dates';
-
-function setSummary(set: StrengthSet): string {
-  const rpe = set.rpe === undefined ? '' : ` — RPE ${set.rpe}`;
-  return `${set.weightKg} kg × ${set.repetitions}${rpe}`;
-}
 
 interface PreviousExercisePerformanceProps {
   exerciseDefinitionId: string;
@@ -43,6 +39,8 @@ export function PreviousExercisePerformance({
     );
   }
 
+  const trackingMode = resolveTrackingMode(performance.sessionExercise);
+
   return (
     <details
       className="group mt-4 rounded-xl border border-brand-200 bg-brand-50/70 dark:border-brand-900 dark:bg-brand-950/20"
@@ -69,7 +67,7 @@ export function PreviousExercisePerformance({
         <div className="flex flex-wrap gap-2">
           {performance.sets.map((set) => (
             <span key={set.id} className="rounded-lg bg-white px-2.5 py-1.5 text-sm text-slate-700 shadow-sm dark:bg-slate-900 dark:text-slate-200">
-              S{set.setNumber} : {setSummary(set)}
+              S{set.setNumber} : {setPerformanceSummary(set, trackingMode, performance.bodyWeightKg)}
             </span>
           ))}
         </div>

@@ -56,7 +56,7 @@ export function MealOpenFoodFactsProductCard({
         ))}
       </div>
       <p className="mt-2 text-center text-xs text-slate-500 dark:text-slate-400">
-        Pour 100 {product.basisUnit}{product.servingSize ? ` · Portion ${product.servingSize} ${product.basisUnit}` : ''}
+        Pour 100 {product.basisUnit}{product.servingSize ? ` · Portion${product.servingLabel ? ` (${product.servingLabel})` : ''} ${product.servingSize} ${product.basisUnit}` : ''}
       </p>
 
       {localProduct ? (

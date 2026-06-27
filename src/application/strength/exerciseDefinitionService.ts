@@ -104,6 +104,7 @@ export async function duplicateExerciseDefinition(
     category: source.category,
     movementType: source.movementType,
     loadUnit: source.loadUnit,
+    ...(source.trackingMode ? { trackingMode: source.trackingMode } : {}),
     ...(source.description ? { description: source.description } : {}),
     source: 'user',
     isArchived: false,

@@ -48,6 +48,9 @@ export const settingsFormSchema = z
       .min(100, 'La limite doit être au moins de 100 kcal.')
       .max(2_000, 'La limite ne peut pas dépasser 2 000 kcal.'),
     requestPersistentStorage: z.boolean(),
+    restTimerAutoStart: z.boolean(),
+    restTimerSoundEnabled: z.boolean(),
+    restTimerVibrationEnabled: z.boolean(),
   })
   .superRefine((values, context) => {
     if (values.maximumCumulativeAdjustmentKcal < values.maximumWeeklyAdjustmentKcal) {

@@ -100,7 +100,11 @@ export function createExerciseHistoryEntry(
     sessionExercise,
     sets: [workingSet, warmupSet],
     workingSets: [workingSet],
+    hasEffectiveLoadData: true,
     totalVolumeKg: 640,
+    totalAdditionalVolumeKg: 0,
+    totalDurationSeconds: 0,
+    totalDistanceMeters: 0,
     ...overrides,
   };
 }

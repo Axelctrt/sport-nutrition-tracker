@@ -4,6 +4,8 @@ import type { StrengthSet, StrengthSetType } from '@/domain/models/strength';
 export interface StrengthSetUpdate {
   repetitions?: number;
   weightKg?: number;
+  durationSeconds?: number | undefined;
+  distanceMeters?: number | undefined;
   rpe?: number | undefined;
   type?: StrengthSetType;
   isCompleted?: boolean;

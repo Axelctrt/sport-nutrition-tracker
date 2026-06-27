@@ -1,7 +1,7 @@
 {
   "name": "sport-nutrition-tracker",
   "private": true,
-  "version": "0.15.0",
+  "version": "0.16.0",
   "type": "module",
   "engines": {
     "node": "^20.19.0 || >=22.13.0"
@@ -11,14 +11,24 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint .",
     "test": "vitest run",
+    "test:stability": "vitest run --sequence.shuffle --sequence.seed=20260626",
     "test:watch": "vitest",
     "preview": "vite preview",
-    "check": "npm run lint && npm run test && npm run build && npm run audit:mvp && npm run audit:release && npm run audit:stable",
+    "check": "npm run lint && npm run test && npm run build && npm run audit:mvp && npm run audit:release && npm run audit:security && npm run audit:production && npm run audit:repository",
+    "ci": "npm run lint && npm run test && npm run build && npm run audit:mvp && npm run audit:release && npm run audit:security && npm run audit:production && npm run audit:repository",
     "diagnose:off": "node scripts/diagnose-open-food-facts.mjs",
     "audit:mvp": "node scripts/audit-mvp.mjs",
     "audit:release": "node scripts/audit-release.mjs",
     "audit:rc": "node scripts/audit-rc.mjs",
-    "audit:stable": "node scripts/audit-rc.mjs --stable"
+    "audit:stable": "node scripts/audit-rc.mjs --stable",
+    "test:e2e": "playwright test",
+    "test:e2e:chromium": "playwright test --project=chromium-desktop",
+    "test:e2e:webkit": "playwright test --project=webkit-iphone-15",
+    "test:e2e:ui": "playwright test --ui",
+    "audit:security": "node scripts/audit-security.mjs",
+    "audit:production": "node scripts/audit-rc.mjs --auto",
+    "audit:repository": "node scripts/audit-repository.mjs",
+    "release:verify": "npm run ci && npm run test:stability"
   },
   "dependencies": {
     "@ericblade/quagga2": "^1.12.1",
@@ -34,6 +44,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@tailwindcss/vite": "^4.3.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",

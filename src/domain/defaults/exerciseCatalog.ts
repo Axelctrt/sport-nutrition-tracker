@@ -11,6 +11,7 @@ function catalogExercise(
   category: ExerciseDefinition['category'],
   movementType: ExerciseDefinition['movementType'],
   loadUnit: ExerciseDefinition['loadUnit'],
+  trackingMode?: ExerciseDefinition['trackingMode'],
   description?: string,
 ): CatalogExerciseSeed {
   return {
@@ -22,6 +23,7 @@ function catalogExercise(
     category,
     movementType,
     loadUnit,
+    ...(trackingMode ? { trackingMode } : {}),
     ...(description ? { description } : {}),
     source: 'catalog',
     isArchived: false,
@@ -66,7 +68,7 @@ export const exerciseCatalog: readonly CatalogExerciseSeed[] = [
   catalogExercise('deadlift', 'Soulevé de terre', 'fullBody', ['back', 'glutes', 'hamstrings', 'lowerBack'], 'barbell', 'strength', 'compound', 'kg'),
   catalogExercise('kettlebell-swing', 'Kettlebell swing', 'fullBody', ['glutes', 'hamstrings', 'lowerBack'], 'kettlebell', 'conditioning', 'compound', 'kg'),
   catalogExercise('goblet-squat', 'Goblet squat', 'quadriceps', ['glutes', 'abdominals'], 'kettlebell', 'strength', 'compound', 'kg'),
-  catalogExercise('plank', 'Planche', 'abdominals', ['lowerBack'], 'bodyweight', 'bodyweight', 'core', 'none'),
+  catalogExercise('plank', 'Planche', 'abdominals', ['lowerBack'], 'bodyweight', 'bodyweight', 'core', 'none', 'duration'),
   catalogExercise('cable-crunch', 'Crunch à la poulie', 'abdominals', [], 'cable', 'strength', 'core', 'kg'),
   catalogExercise('hanging-leg-raise', 'Relevé de jambes suspendu', 'abdominals', [], 'bodyweight', 'bodyweight', 'core', 'bodyweight'),
   catalogExercise('back-extension', 'Extensions lombaires', 'lowerBack', ['glutes', 'hamstrings'], 'bodyweight', 'bodyweight', 'compound', 'bodyweight'),

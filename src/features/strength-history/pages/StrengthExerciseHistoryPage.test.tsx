@@ -103,8 +103,7 @@ describe('StrengthExerciseHistoryPage', () => {
     expect(screen.getByText('Push A')).toBeInTheDocument();
     expect(screen.getByText('Push B')).toBeInTheDocument();
     expect(screen.getByText('Comparaison avec la séance précédente')).toBeInTheDocument();
-    expect(screen.getByText('Évolution des charges')).toBeInTheDocument();
-    expect(screen.getByText('Évolution du volume')).toBeInTheDocument();
+    expect(screen.getByText('Évolution par séance')).toBeInTheDocument();
     expect(screen.getByText('Records de répétitions par charge')).toBeInTheDocument();
     expect(screen.getAllByText('Échauffement')).toHaveLength(1);
     expect(screen.getAllByText('Travail')).toHaveLength(3);

@@ -1,4 +1,5 @@
 import {
+  routePaths,
   barcodeScannerPath,
   newFoodProductForMealPath,
   selectFoodPath,
@@ -58,6 +59,24 @@ describe('parcours des séances modèles', () => {
 });
 
 
+describe('parcours de la planification hebdomadaire', () => {
+  it('utilise une route stable dédiée au planning', () => {
+    expect(routePaths.weeklyPlanning).toBe('/strength/planning');
+  });
+});
+
+describe('personnalisation du tableau de bord', () => {
+  it('utilise une route stable dédiée à l’affichage', () => {
+    expect(routePaths.dashboardCustomization).toBe('/settings/dashboard');
+  });
+});
+
+describe('parcours des modèles d’endurance', () => {
+  it('utilise une route stable dédiée aux modèles', () => {
+    expect(routePaths.enduranceTemplates).toBe('/activities/templates');
+  });
+});
+
 describe('parcours des séances réalisées', () => {
   it('construit le chemin d’une séance en cours ou historique', () => {
     expect(workoutSessionPath('session-1')).toBe('/strength/sessions/session-1');
@@ -82,5 +101,11 @@ describe('parcours des éditeurs dynamiques', () => {
   it('encode les identifiants dans les chemins de recette et d’activité', () => {
     expect(editRecipePath('recette spéciale')).toBe('/recipes/recette%20sp%C3%A9ciale/edit');
     expect(editActivityPath('activité/1')).toBe('/activities/activit%C3%A9%2F1/edit');
+  });
+});
+
+describe('page de confidentialité', () => {
+  it('utilise une route publique stable', () => {
+    expect(routePaths.privacy).toBe('/privacy');
   });
 });

@@ -6,6 +6,7 @@ import { ProfileContext } from '@/app/providers/profile/ProfileContext';
 import { createDefaultAppSettings } from '@/domain/defaults/appSettings';
 import { ThemeContext } from '@/app/providers/theme';
 import { BackupPage } from '@/features/backup/pages/BackupPage';
+import { deleteAppDatabaseAfterTest, resetAppDatabaseForTest } from '@/test/appDatabaseTestUtils';
 
 beforeAll(() => {
   Object.defineProperty(navigator, 'storage', { configurable: true, value: undefined });
@@ -33,13 +34,31 @@ function renderPage() {
 }
 
 describe('BackupPage', () => {
-  it('priorise les actions principales et replie les informations secondaires', () => {
+  beforeEach(async () => {
+    await resetAppDatabaseForTest();
+  });
+
+  afterEach(async () => {
+    await deleteAppDatabaseAfterTest();
+  });
+  it('priorise les actions principales et replie les informations secondaires', async () => {
     renderPage();
+    await screen.findByText('Aucune sauvegarde enregistrée');
 
     expect(screen.getByRole('button', { name: 'Télécharger la sauvegarde JSON' })).toBeInTheDocument();
     expect(screen.getByLabelText('Fichier JSON SportPilot')).toBeInTheDocument();
     expect(screen.getByText('Confidentialité et stockage').closest('details')).not.toHaveAttribute('open');
     expect(screen.getByText('Fonctionnement de l’application').closest('details')).not.toHaveAttribute('open');
+  });
+
+  it('affiche le suivi, les exports CSV et le diagnostic non sensible', async () => {
+    renderPage();
+    await screen.findByText('Aucune sauvegarde enregistrée');
+
+    expect(screen.getByRole('heading', { name: 'Suivi des sauvegardes' })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Rappel de sauvegarde' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Préparer les fichiers CSV' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Télécharger le diagnostic' })).toBeInTheDocument();
   });
 
   it('ouvre une confirmation dédiée avant la suppression', async () => {

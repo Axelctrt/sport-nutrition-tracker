@@ -1,10 +1,10 @@
-import { BarChart3, Dumbbell, Hash, History } from 'lucide-react';
+import { BarChart3, Clock3, Dumbbell, Hash, History, Route } from 'lucide-react';
 import type { StrengthExerciseAnalytics } from '@/application/strength/strengthAnalyticsService';
+import {
+  formatStrengthDuration,
+  formatStrengthNumber,
+} from '@/features/strength-history/utils/strengthPerformanceFormatting';
 import { Card } from '@/shared/ui/Card';
-
-function formatNumber(value: number): string {
-  return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 }).format(value);
-}
 
 interface StrengthHistorySummaryProps {
   sessionCount: number;
@@ -12,12 +12,37 @@ interface StrengthHistorySummaryProps {
 }
 
 export function StrengthHistorySummary({ sessionCount, analytics }: StrengthHistorySummaryProps) {
-  const metrics = [
+  const common = [
     { icon: History, label: 'Séances', value: sessionCount.toString() },
     { icon: Dumbbell, label: 'Séries travail', value: analytics.summary.workingSetCount.toString() },
-    { icon: Hash, label: 'Répétitions', value: analytics.summary.totalRepetitions.toString() },
-    { icon: BarChart3, label: 'Volume', value: `${formatNumber(analytics.summary.totalVolumeKg)} kg` },
   ];
+  const specific = (() => {
+    switch (analytics.trackingMode) {
+      case 'loadRepetitions':
+        return [
+          { icon: Hash, label: 'Répétitions', value: analytics.summary.totalRepetitions.toString() },
+          { icon: BarChart3, label: 'Volume', value: `${formatStrengthNumber(analytics.summary.totalVolumeKg)} kg` },
+        ];
+      case 'bodyweightRepetitions':
+      case 'assistedRepetitions':
+      case 'repetitions':
+        return [
+          { icon: Hash, label: 'Répétitions', value: analytics.summary.totalRepetitions.toString() },
+          { icon: BarChart3, label: 'Meilleure série', value: `${analytics.summary.bestRepetitions} rép.` },
+        ];
+      case 'duration':
+        return [
+          { icon: Clock3, label: 'Durée totale', value: formatStrengthDuration(analytics.summary.totalDurationSeconds) },
+          { icon: BarChart3, label: 'Meilleure série', value: formatStrengthDuration(analytics.summary.bestDurationSeconds) },
+        ];
+      case 'distance':
+        return [
+          { icon: Route, label: 'Distance totale', value: `${formatStrengthNumber(analytics.summary.totalDistanceMeters)} m` },
+          { icon: BarChart3, label: 'Meilleure série', value: `${formatStrengthNumber(analytics.summary.bestDistanceMeters)} m` },
+        ];
+    }
+  })();
+  const metrics = [...common, ...specific];
 
   return (
     <Card className="mt-5 p-4 sm:p-5" aria-label="Résumé de l’historique de l’exercice">

@@ -86,6 +86,7 @@ export function useWorkoutSession(sessionId: string) {
           repositories.strengthSets,
           sessionId,
           exercise.exerciseDefinitionId,
+          { weightRepository: repositories.weight, profileRepository: repositories.profile },
         ),
       ] as const)));
       setSession(view.session);

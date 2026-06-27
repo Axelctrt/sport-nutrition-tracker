@@ -1,8 +1,10 @@
 import { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import { DexieActivityRepository } from '@/infrastructure/repositories/dexie/DexieActivityRepository';
 import { DexieProfileRepository } from '@/infrastructure/repositories/dexie/DexieProfileRepository';
+import { DexieSettingsRepository } from '@/infrastructure/repositories/dexie/DexieSettingsRepository';
 import { DexieStepsRepository } from '@/infrastructure/repositories/dexie/DexieStepsRepository';
 import { DexieWeightRepository } from '@/infrastructure/repositories/dexie/DexieWeightRepository';
+import { createDefaultAppSettings } from '@/domain/defaults/appSettings';
 import { createRunningActivityInput } from '@/test/factories/activityFactory';
 import { createProfileInput } from '@/test/factories/profileFactory';
 
@@ -58,6 +60,28 @@ describe('repositories Dexie', () => {
 
     expect(updated.totalSteps).toBe(10_500);
     expect(await database.dailySteps.count()).toBe(1);
+  });
+
+  it('complète les réglages de sauvegarde absents d’une ancienne base', async () => {
+    const repository = new DexieSettingsRepository(database);
+    const legacy = createDefaultAppSettings() as unknown as Record<string, unknown>;
+    delete legacy.backupReminderIntervalDays;
+    delete legacy.restTimerAutoStart;
+    delete legacy.restTimerSoundEnabled;
+    delete legacy.restTimerVibrationEnabled;
+    await database.appSettings.put(legacy as never);
+
+    const settings = await repository.get();
+
+    expect(settings.backupReminderIntervalDays).toBe(0);
+    expect(settings.restTimerAutoStart).toBe(true);
+    expect(settings.restTimerSoundEnabled).toBe(false);
+    expect(settings.restTimerVibrationEnabled).toBe(true);
+    const stored = (await database.appSettings.toArray())[0];
+    expect(stored?.backupReminderIntervalDays).toBe(0);
+    expect(stored?.restTimerAutoStart).toBe(true);
+    expect(stored?.restTimerSoundEnabled).toBe(false);
+    expect(stored?.restTimerVibrationEnabled).toBe(true);
   });
 
   it('enregistre et retrouve les activités d’une journée', async () => {

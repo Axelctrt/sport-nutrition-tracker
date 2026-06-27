@@ -4,6 +4,7 @@ import {
   getPreviousExercisePerformance,
   listExerciseHistory,
 } from '@/application/strength/strengthHistoryService';
+import { LOCAL_USER_PROFILE_ID } from '@/domain/defaults/identifiers';
 import { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import { DexieStrengthSetRepository } from '@/infrastructure/repositories/dexie/DexieStrengthSetRepository';
 import { DexieWorkoutSessionRepository } from '@/infrastructure/repositories/dexie/DexieWorkoutSessionRepository';
@@ -13,6 +14,7 @@ import {
   createWorkoutSessionExerciseInput,
   createWorkoutSessionInput,
 } from '@/test/factories/strengthFactory';
+import { createProfileInput } from '@/test/factories/profileFactory';
 
 describe('strengthHistoryService', () => {
   let database: AppDatabase;
@@ -178,4 +180,52 @@ describe('strengthHistoryService', () => {
       'exercise-current',
     )).rejects.toThrow(/Supprime les séries/);
   });
+
+  it('utilise le dernier poids connu à la date de séance pour une performance au poids du corps', async () => {
+    await database.workoutSessions.add(createEntity(createWorkoutSessionInput({
+      date: '2026-06-10',
+      completedAt: '2026-06-10T18:00:00.000Z',
+    }), 'session-bodyweight'));
+    await database.workoutSessionExercises.add(createEntity(createWorkoutSessionExerciseInput({
+      sessionId: 'session-bodyweight',
+      exerciseDefinitionId: 'exercise-pullup',
+      exerciseNameSnapshot: 'Tractions',
+      loadUnitSnapshot: 'bodyweight',
+      trackingModeSnapshot: 'bodyweightRepetitions',
+    }), 'exercise-bodyweight'));
+    await database.strengthSets.add(createEntity(createStrengthSetInput({
+      sessionId: 'session-bodyweight',
+      sessionExerciseId: 'exercise-bodyweight',
+      weightKg: 10,
+      repetitions: 10,
+    }), 'set-bodyweight'));
+
+    const history = await listExerciseHistory(
+      sessionRepository,
+      setRepository,
+      'exercise-pullup',
+      {
+        weightRepository: {
+          listAll: async () => [
+            createEntity({ date: '2026-06-01', weightKg: 70 }, 'weight-before'),
+            createEntity({ date: '2026-06-15', weightKg: 72 }, 'weight-after'),
+          ],
+        },
+        profileRepository: {
+          get: async () => createEntity(
+            createProfileInput({ initialWeightKg: 68 }),
+            LOCAL_USER_PROFILE_ID,
+          ),
+        },
+      },
+    );
+
+    expect(history[0]).toMatchObject({
+      bodyWeightKg: 70,
+      hasEffectiveLoadData: true,
+      totalVolumeKg: 800,
+      totalAdditionalVolumeKg: 100,
+    });
+  });
+
 });

@@ -59,7 +59,7 @@ async function seedLunchEntry() {
 }
 
 beforeEach(async () => {
-  Object.defineProperty(Element.prototype, 'scrollIntoView', {
+  Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
     configurable: true,
     value: vi.fn(),
   });
@@ -137,7 +137,7 @@ describe('FoodJournalPage — expérience mobile', () => {
   it('affiche une confirmation unique et cible le repas après un retour d’ajout', async () => {
     const { entry } = await seedLunchEntry();
     const scrollIntoView = vi.fn();
-    Object.defineProperty(Element.prototype, 'scrollIntoView', {
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
       configurable: true,
       value: scrollIntoView,
     });

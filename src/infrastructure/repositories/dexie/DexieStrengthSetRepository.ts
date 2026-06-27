@@ -62,6 +62,8 @@ export class DexieStrengthSetRepository implements StrengthSetRepository {
       if ('rpe' in changes && changes.rpe === undefined) delete updated.rpe;
       if ('notes' in changes && changes.notes === undefined) delete updated.notes;
       if ('completedAt' in changes && changes.completedAt === undefined) delete updated.completedAt;
+      if ('durationSeconds' in changes && changes.durationSeconds === undefined) delete updated.durationSeconds;
+      if ('distanceMeters' in changes && changes.distanceMeters === undefined) delete updated.distanceMeters;
       await this.database.strengthSets.put(updated);
       return updated;
     });

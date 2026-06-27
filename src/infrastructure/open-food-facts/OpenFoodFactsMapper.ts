@@ -15,6 +15,7 @@ export interface OpenFoodFactsProductCandidate {
   basisUnit: FoodBasisUnit;
   nutritionPer100: NutritionValues;
   servingSize?: number;
+  servingLabel?: string;
   isNutritionComplete: boolean;
   missingNutritionFields: RequiredNutritionField[];
   fetchedAt: IsoDateTime;
@@ -158,6 +159,7 @@ export function mapOpenFoodFactsProduct(
   };
 
   const servingSize = parseServingSize(product, basisUnit);
+  const servingLabel = cleanText(product.serving_size);
 
   return {
     barcode,
@@ -166,6 +168,7 @@ export function mapOpenFoodFactsProduct(
     basisUnit,
     nutritionPer100,
     ...(servingSize === undefined ? {} : { servingSize }),
+    ...(servingLabel === undefined ? {} : { servingLabel }),
     isNutritionComplete: missingNutritionFields.length === 0,
     missingNutritionFields,
     fetchedAt,

@@ -4,9 +4,11 @@ import type {
   ExerciseDefinition,
   WorkoutSession,
   WorkoutSessionExercise,
+  WorkoutTemplate,
 } from '@/domain/models/strength';
 import type { StrengthExerciseRepository } from '@/infrastructure/repositories/contracts/StrengthExerciseRepository';
 import type { WorkoutSessionRepository } from '@/infrastructure/repositories/contracts/WorkoutSessionRepository';
+import { defaultTrackingModeForLoadUnit } from '@/domain/strength/strengthTracking';
 import type { WorkoutTemplateRepository } from '@/infrastructure/repositories/contracts/WorkoutTemplateRepository';
 import { toLocalDate } from '@/shared/utils/dates';
 
@@ -54,17 +56,19 @@ export async function startEmptyWorkoutSession(
   return repository.createWithExercises(sessionBase(now), []);
 }
 
-export async function startWorkoutSessionFromTemplate(
-  sessionRepository: WorkoutSessionRepository,
+export interface WorkoutTemplateSessionSnapshot {
+  template: WorkoutTemplate;
+  exercises: Array<Omit<WorkoutSessionExercise, 'id' | 'sessionId' | 'createdAt' | 'updatedAt'>>;
+}
+
+export async function createWorkoutTemplateSessionSnapshot(
   templateRepository: WorkoutTemplateRepository,
   exerciseRepository: StrengthExerciseRepository,
   templateId: EntityId,
-  now = new Date(),
-): Promise<WorkoutSessionView> {
-  await ensureNoSessionInProgress(sessionRepository);
+): Promise<WorkoutTemplateSessionSnapshot> {
   const template = await templateRepository.getById(templateId);
   if (!template) throw new RepositoryError('Séance modèle introuvable.', 'create');
-  if (template.isArchived) throw new RepositoryError('Une séance archivée ne peut pas être démarrée.', 'create');
+  if (template.isArchived) throw new RepositoryError('Une séance archivée ne peut pas être utilisée.', 'create');
 
   const configurations = (await templateRepository.listExercises(templateId))
     .filter((exercise) => exercise.isActive)
@@ -86,15 +90,47 @@ export async function startWorkoutSessionFromTemplate(
       minRepetitions: configuration.minRepetitions,
       maxRepetitions: configuration.maxRepetitions,
       ...(configuration.targetLoadKg === undefined ? {} : { targetLoadKg: configuration.targetLoadKg }),
+      ...(configuration.targetDurationSeconds === undefined
+        ? {}
+        : { targetDurationSeconds: configuration.targetDurationSeconds }),
+      ...(configuration.targetDistanceMeters === undefined
+        ? {}
+        : { targetDistanceMeters: configuration.targetDistanceMeters }),
       loadIncrementKg: configuration.loadIncrementKg,
       ...(configuration.restSeconds === undefined ? {} : { restSeconds: configuration.restSeconds }),
       ...(configuration.maximumRecommendedRpe === undefined
         ? {}
         : { maximumRecommendedRpe: configuration.maximumRecommendedRpe }),
       loadUnitSnapshot: definition.loadUnit,
+      trackingModeSnapshot: definition.trackingMode ?? defaultTrackingModeForLoadUnit(definition.loadUnit),
       ...(configuration.notes ? { notes: configuration.notes } : {}),
+      ...(configuration.exerciseGroupId ? {
+        exerciseGroupId: configuration.exerciseGroupId,
+        exerciseGroupType: configuration.exerciseGroupType ?? 'superset',
+        ...(configuration.exerciseGroupName ? { exerciseGroupName: configuration.exerciseGroupName } : {}),
+        exerciseGroupRounds: configuration.exerciseGroupRounds ?? 3,
+        exerciseGroupRestBetweenExercisesSeconds: configuration.exerciseGroupRestBetweenExercisesSeconds ?? 0,
+        exerciseGroupRestBetweenRoundsSeconds: configuration.exerciseGroupRestBetweenRoundsSeconds ?? 120,
+      } : {}),
     } satisfies Omit<WorkoutSessionExercise, 'id' | 'sessionId' | 'createdAt' | 'updatedAt'>;
   });
+
+  return { template, exercises };
+}
+
+export async function startWorkoutSessionFromTemplate(
+  sessionRepository: WorkoutSessionRepository,
+  templateRepository: WorkoutTemplateRepository,
+  exerciseRepository: StrengthExerciseRepository,
+  templateId: EntityId,
+  now = new Date(),
+): Promise<WorkoutSessionView> {
+  await ensureNoSessionInProgress(sessionRepository);
+  const { template, exercises } = await createWorkoutTemplateSessionSnapshot(
+    templateRepository,
+    exerciseRepository,
+    templateId,
+  );
 
   return sessionRepository.createWithExercises({
     ...sessionBase(now),
@@ -163,6 +199,7 @@ export async function addExerciseToWorkoutSession(
     exerciseNameSnapshot: definition.name,
     sortOrder: current.length,
     loadUnitSnapshot: definition.loadUnit,
+    trackingModeSnapshot: definition.trackingMode ?? defaultTrackingModeForLoadUnit(definition.loadUnit),
   });
 }
 

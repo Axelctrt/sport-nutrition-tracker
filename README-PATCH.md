@@ -1,26 +1,32 @@
-# SportPilot 0.15.0 — version stable
+# SportPilot 0.16.0 — promotion stable
 
-Branche obligatoire : `release/0.15.0`
+Branche recommandée : `release/0.16.0`
 
-Cette livraison promeut la Release Candidate validée en version stable. Elle ne modifie aucune fonctionnalité métier ni aucune donnée utilisateur.
+Cette phase ne rajoute aucune fonctionnalité métier. Elle promeut la Release Candidate validée vers la version stable :
 
-## Promotion intégrée
+- version applicative portée à `0.16.0` ;
+- audit de production exécuté automatiquement en mode stable ;
+- notes de publication, checklist, installation et retour arrière alignés ;
+- procédure de fusion dans `main`, création du tag `v0.16.0` et réalignement de `develop` ;
+- conservation du schéma Dexie v2 et de la sauvegarde JSON v2 ;
+- aucune migration et aucune dépendance supplémentaire.
 
-- version applicative promue vers `0.15.0` sans suffixe de préversion ;
-- version stable affichée dans Paramètres et injectée dans le build Vite ;
-- audit de production adapté à une version sémantique stable sans suffixe ;
-- `npm run check` exécute désormais l’audit stable ;
-- tests de préparation et d’affichage de version mis à jour ;
-- notes de publication, checklist finale et procédure de retour arrière actualisées ;
-- aucune modification du schéma Dexie 2 ;
-- aucune modification du format de sauvegarde JSON 2 ;
-- aucune migration de données.
+Contrôles déterministes :
 
-## Validation
-
-```powershell
-npm install
-npm run check
+```text
+npm run release:verify
 ```
 
-La validation manuelle finale se trouve dans `RELEASE-CHECKLIST.md`. Les points clés de la version sont détaillés dans `RELEASE-NOTES-0.15.0.md` et la procédure de retour arrière dans `ROLLBACK.md`.
+Contrôles navigateurs :
+
+```text
+npm run test:e2e
+```
+
+Validation de référence :
+
+- 163 fichiers Vitest ;
+- 495 tests Vitest ;
+- suite brassée avec le seed `20260626` ;
+- 26 exécutions Playwright découvertes dans 11 fichiers ;
+- build PWA et audits de production stable validés.

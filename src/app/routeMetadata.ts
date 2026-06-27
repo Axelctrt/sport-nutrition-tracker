@@ -9,6 +9,7 @@ interface RouteMetadata {
 const routeMetadata: RouteMetadata[] = [
   { pattern: routePaths.dashboard, title: "Aujourd’hui" },
   { pattern: routePaths.profile, title: 'Profil' },
+  { pattern: routePaths.dashboardCustomization, title: 'Personnaliser le tableau de bord' },
   { pattern: routePaths.settings, title: 'Paramètres' },
   { pattern: routePaths.barcodeScanner, title: 'Scanner un code-barres' },
   { pattern: routePaths.foodSelector, title: 'Ajouter un aliment' },
@@ -28,11 +29,13 @@ const routeMetadata: RouteMetadata[] = [
   { pattern: routePaths.newWorkoutTemplate, title: 'Créer une séance modèle' },
   { pattern: routePaths.editWorkoutTemplate, title: 'Modifier une séance modèle' },
   { pattern: routePaths.workoutTemplates, title: 'Séances modèles' },
+  { pattern: routePaths.weeklyPlanning, title: 'Planning de musculation' },
   { pattern: routePaths.workoutSessions, title: 'Carnet de musculation' },
   { pattern: routePaths.strengthExerciseHistory, title: 'Historique de l’exercice' },
   { pattern: routePaths.newStrengthExercise, title: 'Créer un exercice' },
   { pattern: routePaths.editStrengthExercise, title: 'Modifier un exercice' },
   { pattern: routePaths.strengthExercises, title: 'Exercices' },
+  { pattern: routePaths.enduranceTemplates, title: 'Modèles d’endurance' },
   { pattern: routePaths.addRunningActivity, title: 'Ajouter une course' },
   { pattern: routePaths.addSwimmingActivity, title: 'Ajouter une natation' },
   { pattern: routePaths.addStrengthActivity, title: 'Ajouter une activité de musculation' },
@@ -46,6 +49,7 @@ const routeMetadata: RouteMetadata[] = [
   { pattern: routePaths.weeklyReview, title: 'Bilan hebdomadaire' },
   { pattern: routePaths.backup, title: 'Sauvegarde' },
   { pattern: routePaths.calculationsInformation, title: 'Calculs et estimations' },
+  { pattern: routePaths.privacy, title: 'Confidentialité' },
 ];
 
 export function getRouteTitle(pathname: string): string {

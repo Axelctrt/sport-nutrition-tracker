@@ -9,7 +9,7 @@ import {
 import {
   equipmentOptions,
   exerciseCategoryOptions,
-  loadUnitOptions,
+  strengthTrackingModeOptions,
   movementTypeOptions,
   muscleGroupOptions,
 } from '@/features/strength-exercises/utils/exerciseLabels';
@@ -126,9 +126,22 @@ export function StrengthExerciseForm({
         </FormField>
       </div>
 
-      <FormField id="strength-exercise-load-unit" label="Unité de charge" error={errors.loadUnit?.message} required>
-        <select id="strength-exercise-load-unit" aria-invalid={Boolean(errors.loadUnit)} className={inputClassName} {...register('loadUnit')}>
-          {loadUnitOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+      <FormField
+        id="strength-exercise-tracking-mode"
+        label="Méthode de suivi"
+        description="Détermine les champs saisis pendant la séance et les statistiques affichées."
+        error={errors.trackingMode?.message}
+        required
+      >
+        <select
+          id="strength-exercise-tracking-mode"
+          aria-invalid={Boolean(errors.trackingMode)}
+          className={inputClassName}
+          {...register('trackingMode')}
+        >
+          {strengthTrackingModeOptions.map((option) => (
+            <option key={option.value} value={option.value}>{option.label}</option>
+          ))}
         </select>
       </FormField>
 

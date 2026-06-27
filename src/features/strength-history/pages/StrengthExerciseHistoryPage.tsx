@@ -2,6 +2,7 @@ import { ArrowLeft, BarChart3, Dumbbell } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import { buildStrengthExerciseAnalytics } from '@/application/strength/strengthAnalyticsService';
 import { routePaths } from '@/app/routePaths';
+import { defaultTrackingModeForLoadUnit } from '@/domain/strength/strengthTracking';
 import { StrengthExerciseAnalyticsPanel } from '@/features/strength-analytics/components/StrengthExerciseAnalyticsPanel';
 import { StrengthHistorySessionCard } from '@/features/strength-history/components/StrengthHistorySessionCard';
 import { StrengthHistorySummary } from '@/features/strength-history/components/StrengthHistorySummary';
@@ -27,7 +28,10 @@ export function StrengthExerciseHistoryPage() {
     );
   }
 
-  const analytics = buildStrengthExerciseAnalytics(history);
+  const analytics = buildStrengthExerciseAnalytics(
+    history,
+    exercise.trackingMode ?? defaultTrackingModeForLoadUnit(exercise.loadUnit),
+  );
 
   return (
     <section aria-labelledby="strength-history-title">
@@ -48,7 +52,7 @@ export function StrengthExerciseHistoryPage() {
         <EmptyState className="mt-5" icon={Dumbbell} title="Aucune performance enregistrée" description="Termine une séance avec au moins une série validée pour faire apparaître cet historique." />
       ) : (
         <>
-          <CollapsibleSection className="mt-4" title="Records et tendances" description="Charges, volume, 1RM estimé et records par charge." summary={<BarChart3 aria-hidden="true" className="size-4" />}>
+          <CollapsibleSection className="mt-4" title="Records et tendances" description="Indicateurs adaptés à la méthode de suivi de l’exercice." summary={<BarChart3 aria-hidden="true" className="size-4" />}>
             <StrengthExerciseAnalyticsPanel analytics={analytics} embedded />
           </CollapsibleSection>
 
