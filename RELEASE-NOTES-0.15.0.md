@@ -119,3 +119,15 @@ La branche de développement ajoute une page Confidentialité publique et des en
 - nouvelles données incluses dans l’export CSV et la sauvegarde JSON v2 ;
 - modèles stockés dans les réglages existants ;
 - aucune migration Dexie, aucune dépendance supplémentaire et aucune intégration externe.
+
+## Phase 11 — tableau de bord personnalisable
+
+- nouvelle page `#/settings/dashboard` ;
+- préréglages Équilibré, Nutrition, Entraînement et Essentiel ;
+- affichage ou masquage des cinq blocs principaux ;
+- ordre modifiable avec commandes accessibles sur mobile et au clavier ;
+- application immédiate au prochain affichage du tableau de bord ;
+- persistance dans les réglages locaux et sauvegarde JSON v2 ;
+- réparation automatique des anciens réglages incomplets ou invalides ;
+- aucun changement du schéma Dexie et aucune dépendance supplémentaire ;
+- nouveau parcours Playwright Chromium/WebKit.

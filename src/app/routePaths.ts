@@ -3,6 +3,7 @@ export const routePaths = {
   onboarding: '/onboarding',
   profile: '/profile',
   settings: '/settings',
+  dashboardCustomization: '/settings/dashboard',
   food: '/food',
   addFood: '/food/add',
   foodSelector: '/food/select',

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { DEFAULT_ENDURANCE_TEMPLATES } from '@/domain/defaults/appSettings';
+import { createDefaultDashboardPreferences } from '@/domain/dashboard/dashboardPreferences';
 import { APP_SETTINGS_ID, LOCAL_USER_PROFILE_ID } from '@/domain/defaults/identifiers';
 import type { BackupEnvelope } from '@/domain/models/backup';
 import { isValidLocalDate } from '@/shared/validation/localDate';
@@ -94,6 +95,21 @@ const enduranceTemplateSchema = z.object({
   intervalDetails: z.string().max(2_000).optional(),
 });
 
+
+const dashboardWidgetIdSchema = z.enum([
+  'activeWorkout',
+  'todaySummary',
+  'quickActions',
+  'activities',
+  'calculationDetails',
+]);
+
+const dashboardPreferencesSchema = z.object({
+  preset: z.enum(['balanced', 'nutrition', 'training', 'minimal', 'custom']),
+  order: z.array(dashboardWidgetIdSchema),
+  hidden: z.array(dashboardWidgetIdSchema),
+});
+
 const appSettingsSchema = entityMetadataSchema.extend({
   theme: z.enum(['system', 'light', 'dark']),
   includedBaseSteps: nonNegativeInteger,
@@ -116,6 +132,7 @@ const appSettingsSchema = entityMetadataSchema.extend({
     DEFAULT_ENDURANCE_TEMPLATES.map((template) => ({ ...template })),
   ),
   enduranceTemplatesVersion: positiveInteger.default(1),
+  dashboardPreferences: dashboardPreferencesSchema.default(createDefaultDashboardPreferences()),
   lastBackupExportedAt: isoDateTimeSchema.optional(),
   lastBackupAppVersion: z.string().min(1).max(100).optional(),
   lastBackupSchemaVersion: positiveInteger.optional(),

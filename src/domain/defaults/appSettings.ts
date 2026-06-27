@@ -1,4 +1,8 @@
 import { APP_SETTINGS_ID } from '@/domain/defaults/identifiers';
+import {
+  createDefaultDashboardPreferences,
+  normalizeDashboardPreferences,
+} from '@/domain/dashboard/dashboardPreferences';
 import type { EnduranceTemplate } from '@/domain/models/activity';
 import type { AppSettings } from '@/domain/models/settings';
 import { createEntity } from '@/shared/utils/entities';
@@ -83,6 +87,7 @@ export function createDefaultAppSettings(): AppSettings {
       restTimerVibrationEnabled: true,
       enduranceTemplates: DEFAULT_ENDURANCE_TEMPLATES.map((template) => ({ ...template })),
       enduranceTemplatesVersion: 1,
+      dashboardPreferences: createDefaultDashboardPreferences(),
     },
     APP_SETTINGS_ID,
   );
@@ -97,5 +102,6 @@ export function normalizeAppSettings(settings: AppSettings): AppSettings {
     restTimerVibrationEnabled: settings.restTimerVibrationEnabled ?? true,
     enduranceTemplates: settings.enduranceTemplates ?? DEFAULT_ENDURANCE_TEMPLATES.map((template) => ({ ...template })),
     enduranceTemplatesVersion: settings.enduranceTemplatesVersion ?? 1,
+    dashboardPreferences: normalizeDashboardPreferences(settings.dashboardPreferences),
   };
 }

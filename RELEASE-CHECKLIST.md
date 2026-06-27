@@ -155,3 +155,19 @@
 - [ ] Une sauvegarde JSON v2 ancienne et une sauvegarde contenant les nouveaux champs sont importables.
 - [ ] La saisie, les modèles et les analyses restent utilisables hors connexion.
 - [ ] Les pages ne débordent pas horizontalement sur iPhone 15 en portrait et paysage.
+
+## Tableau de bord personnalisable
+
+- [ ] La page `#/settings/dashboard` est accessible depuis l’accueil, les Paramètres et le menu mobile.
+- [ ] Le préréglage Équilibré affiche tous les blocs dans l’ordre par défaut.
+- [ ] Le préréglage Nutrition place le résumé nutritionnel en premier.
+- [ ] Le préréglage Entraînement place la séance en cours et les actions en premier.
+- [ ] Le préréglage Essentiel masque les activités et les détails du calcul.
+- [ ] Chaque bloc peut être affiché ou masqué indépendamment.
+- [ ] Les boutons Monter et Descendre changent réellement l’ordre.
+- [ ] Les données d’un bloc masqué restent disponibles dans les écrans dédiés.
+- [ ] Le choix reste identique après rechargement et redémarrage de la PWA.
+- [ ] Une ancienne base sans préférences reçoit l’affichage Équilibré.
+- [ ] Une sauvegarde JSON v2 conserve les préférences personnalisées.
+- [ ] L’interface ne déborde pas horizontalement sur iPhone 15 en portrait et paysage.
+- [ ] Les contrôles restent utilisables au clavier et avec VoiceOver.

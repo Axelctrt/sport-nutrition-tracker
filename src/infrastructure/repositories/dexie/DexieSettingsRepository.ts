@@ -30,6 +30,7 @@ export class DexieSettingsRepository implements SettingsRepository {
             || normalized.restTimerVibrationEnabled !== settings.restTimerVibrationEnabled
             || normalized.enduranceTemplates !== settings.enduranceTemplates
             || normalized.enduranceTemplatesVersion !== settings.enduranceTemplatesVersion
+            || JSON.stringify(normalized.dashboardPreferences) !== JSON.stringify(settings.dashboardPreferences)
           ) {
             await this.database.appSettings.put(normalized);
           }

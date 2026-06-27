@@ -7,6 +7,13 @@ const DashboardPage = lazy(() =>
   })),
 );
 
+
+const DashboardCustomizationPage = lazy(() =>
+  import('@/features/dashboard-customization/pages/DashboardCustomizationPage').then((module) => ({
+    default: module.DashboardCustomizationPage,
+  })),
+);
+
 const OnboardingPage = lazy(() =>
   import('@/features/onboarding/pages/OnboardingPage').then((module) => ({
     default: module.OnboardingPage,
@@ -248,6 +255,14 @@ export function LazyDashboardPage() {
   return (
     <RouteSuspense variant="dashboard">
       <DashboardPage />
+    </RouteSuspense>
+  );
+}
+
+export function LazyDashboardCustomizationPage() {
+  return (
+    <RouteSuspense variant="form">
+      <DashboardCustomizationPage />
     </RouteSuspense>
   );
 }

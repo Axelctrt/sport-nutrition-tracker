@@ -65,6 +65,12 @@ describe('parcours de la planification hebdomadaire', () => {
   });
 });
 
+describe('personnalisation du tableau de bord', () => {
+  it('utilise une route stable dédiée à l’affichage', () => {
+    expect(routePaths.dashboardCustomization).toBe('/settings/dashboard');
+  });
+});
+
 describe('parcours des modèles d’endurance', () => {
   it('utilise une route stable dédiée aux modèles', () => {
     expect(routePaths.enduranceTemplates).toBe('/activities/templates');
