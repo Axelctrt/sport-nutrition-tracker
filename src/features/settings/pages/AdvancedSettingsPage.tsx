@@ -7,6 +7,7 @@ import { routePaths } from "@/app/routePaths";
 import type { AppSettings } from "@/domain/models/settings";
 import { AdvancedSettingsForm } from "@/features/settings/components/AdvancedSettingsForm";
 import { AchievementsPanel } from "@/features/settings/components/AchievementsPanel";
+import { ConsistencyStreakPanel } from "@/features/settings/components/ConsistencyStreakPanel";
 import { DataManagementCenter } from "@/features/settings/components/DataManagementCenter";
 import { RewardThemesPanel } from "@/features/settings/components/RewardThemesPanel";
 import { SettingsOverview } from "@/features/settings/components/SettingsOverview";
@@ -74,6 +75,7 @@ export function AdvancedSettingsPage() {
       const updated = await repositories.settings.update(
         settingsFormValuesToChanges(values),
       );
+
       setSettings(updated);
       setTheme(updated.theme);
 
@@ -103,6 +105,7 @@ export function AdvancedSettingsPage() {
 
     try {
       const defaults = await repositories.settings.reset();
+
       setSettings(defaults);
       setTheme(defaults.theme);
       setStorageStatus(
@@ -121,6 +124,7 @@ export function AdvancedSettingsPage() {
         error instanceof Error
           ? error.message
           : "Les paramètres n’ont pas pu être réinitialisés.";
+
       setFeedback({ tone: "error", message });
       throw error;
     }
@@ -164,6 +168,8 @@ export function AdvancedSettingsPage() {
       <RewardThemesPanel className="mt-4" />
 
       <AchievementsPanel className="mt-4" />
+
+      <ConsistencyStreakPanel className="mt-4" />
 
       <DataManagementCenter
         className="mt-4"
