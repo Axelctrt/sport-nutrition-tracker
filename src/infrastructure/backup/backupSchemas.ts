@@ -8,6 +8,8 @@ import { APP_SETTINGS_ID, LOCAL_USER_PROFILE_ID } from '@/domain/defaults/identi
 import type { BackupEnvelope } from '@/domain/models/backup';
 import { isValidLocalDate } from '@/shared/validation/localDate';
 
+import { achievementCatalog } from '@/domain/rewards/achievements';
+import { visualThemeCatalog } from '@/domain/rewards/visualThemes';
 const finiteNumber = z.number().finite();
 const nonNegativeNumber = finiteNumber.min(0);
 const positiveNumber = finiteNumber.positive();
@@ -569,6 +571,57 @@ const progressionSuggestionSchema = entityMetadataSchema.extend({
   appliedAt: isoDateTimeSchema.optional(),
 });
 
+const achievementIdSchema = z.string().refine(
+  (value) =>
+    achievementCatalog.some(
+      (achievement) => achievement.id === value,
+    ),
+  'Identifiant de badge inconnu.',
+);
+
+const visualThemeIdSchema = z.string().refine(
+  (value) =>
+    visualThemeCatalog.some((theme) => theme.id === value),
+  'Identifiant de thÃ¨me inconnu.',
+);
+
+const achievementStateSchema = z.object({
+  earnedAchievements: z.array(
+    z.object({
+      id: achievementIdSchema,
+      earnedAt: isoDateTimeSchema,
+    }),
+  ),
+});
+
+const visualThemeStateSchema = z
+  .object({
+    activeThemeId: visualThemeIdSchema,
+    unlockedThemeIds: z.array(visualThemeIdSchema),
+  })
+  .refine(
+    (state) =>
+      state.unlockedThemeIds.includes(state.activeThemeId),
+    {
+      message: 'Le thÃ¨me actif doit Ãªtre dÃ©bloquÃ©.',
+      path: ['activeThemeId'],
+    },
+  );
+
+const weeklyMissionHistoryStateSchema = z.object({
+  completedWeeks: z.array(
+    z.object({
+      weekStart: localDateSchema,
+      completedAt: isoDateTimeSchema,
+    }),
+  ),
+});
+
+const rewardBackupStateSchema = z.object({
+  achievements: achievementStateSchema,
+  visualThemes: visualThemeStateSchema,
+  weeklyMissions: weeklyMissionHistoryStateSchema,
+});
 const backupDataSchema = z.object({
   userProfile: z.array(userProfileSchema).max(1),
   appSettings: z.array(appSettingsSchema).length(1),
@@ -620,7 +673,8 @@ export const backupEnvelopeSchema = z.object({
   format: z.literal('sportpilot-backup'),
   schemaVersion: z.number().int().positive(),
   exportedAt: isoDateTimeSchema,
-  appVersion: z.string().min(1).max(100).optional(),
+  appVersion: z.string().min(1).max(100).optional(),
+  rewardState: rewardBackupStateSchema.optional(),
   data: backupDataSchema,
 }).superRefine((envelope, context) => {
   const { data } = envelope;

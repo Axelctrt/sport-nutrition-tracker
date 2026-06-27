@@ -10,6 +10,10 @@ import {
 import { formatBackupValidationError } from '@/infrastructure/backup/backupSchemas';
 import { appDatabase } from '@/infrastructure/database/database';
 
+import {
+  readRewardBackupState,
+  restoreRewardBackupState,
+} from '@/infrastructure/backup/rewardBackupState';
 export const MAX_BACKUP_FILE_SIZE_BYTES = 25 * 1024 * 1024;
 
 export class BackupOperationError extends Error {
@@ -136,7 +140,8 @@ export async function createBackupEnvelope(
       format: 'sportpilot-backup',
       schemaVersion: CURRENT_BACKUP_SCHEMA_VERSION,
       exportedAt,
-      appVersion: __APP_VERSION__,
+      appVersion: __APP_VERSION__,
+      rewardState: readRewardBackupState(),
       data,
     };
   } catch (error) {
@@ -306,6 +311,10 @@ export async function replaceDatabaseFromBackup(
       await clearTables(database);
       await populateTables(database, envelope.data);
       await ensureExerciseCatalog(database);
+
+      if (envelope.rewardState) {
+        restoreRewardBackupState(envelope.rewardState);
+      }
     });
   } catch (error) {
     throw new BackupOperationError(

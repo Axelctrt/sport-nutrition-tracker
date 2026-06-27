@@ -24,6 +24,9 @@ import type { DailyTarget } from '@/domain/models/targets';
 import type { AcceptedCalorieAdjustment, WeeklyReview } from '@/domain/models/weeklyReview';
 import type { WeightEntry } from '@/domain/models/weight';
 
+import type { AchievementState } from '@/domain/rewards/achievements';
+import type { VisualThemeState } from '@/domain/rewards/visualThemes';
+import type { WeeklyMissionHistoryState } from '@/domain/rewards/weeklyMissionHistory';
 export interface BackupData {
   userProfile: UserProfile[];
   appSettings: AppSettings[];
@@ -49,10 +52,16 @@ export interface BackupData {
   progressionSuggestions: ProgressionSuggestion[];
 }
 
+export interface RewardBackupState {
+  achievements: AchievementState;
+  visualThemes: VisualThemeState;
+  weeklyMissions: WeeklyMissionHistoryState;
+}
 export interface BackupEnvelope {
   format: 'sportpilot-backup';
   schemaVersion: number;
   exportedAt: IsoDateTime;
   appVersion?: string;
+  rewardState?: RewardBackupState;
   data: BackupData;
 }

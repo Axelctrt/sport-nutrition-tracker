@@ -1,7 +1,7 @@
 import type { BackupEnvelope } from '@/domain/models/backup';
 import { validateBackupEnvelope } from '@/infrastructure/backup/backupSchemas';
 
-export const CURRENT_BACKUP_SCHEMA_VERSION = 2;
+export const CURRENT_BACKUP_SCHEMA_VERSION = 3;
 
 export class BackupMigrationError extends Error {
   constructor(message: string, options?: ErrorOptions) {
@@ -45,6 +45,12 @@ function migrateVersion1ToVersion2(input: BackupHeader): unknown {
   };
 }
 
+function migrateVersion2ToVersion3(input: BackupHeader): unknown {
+  return {
+    ...input,
+    schemaVersion: 3,
+  };
+}
 export function migrateBackupEnvelope(input: unknown): BackupEnvelope {
   const header = readHeader(input);
 
@@ -67,6 +73,17 @@ export function migrateBackupEnvelope(input: unknown): BackupEnvelope {
     throw new BackupMigrationError(`La version de sauvegarde ${version} n’est pas prise en charge.`);
   }
 
-  const migrated = version === 1 ? migrateVersion1ToVersion2(header) : input;
+  let migrated: unknown = input;
+
+  if (version === 1) {
+    migrated = migrateVersion1ToVersion2(header);
+  }
+
+  if (version <= 2) {
+    migrated = migrateVersion2ToVersion3(
+      readHeader(migrated),
+    );
+  }
+
   return validateBackupEnvelope(migrated);
 }

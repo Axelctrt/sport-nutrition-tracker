@@ -310,10 +310,10 @@ describe('backupEnvelopeSchema', () => {
 });
 
 describe('migrateBackupEnvelope', () => {
-  it('migre une sauvegarde version 1 vers la version 2 sans altérer ses données', () => {
+  it('migre une sauvegarde version 1 vers la version 3 sans altérer ses données', () => {
     const migrated = migrateBackupEnvelope(createVersion1Envelope());
 
-    expect(migrated.schemaVersion).toBe(2);
+    expect(migrated.schemaVersion).toBe(3);
     expect(migrated.data.userProfile).toHaveLength(1);
     expect(migrated.data.exerciseDefinitions).toEqual([]);
     expect(migrated.data.workoutTemplates).toEqual([]);
@@ -321,8 +321,8 @@ describe('migrateBackupEnvelope', () => {
     expect(migrated.data.strengthSets).toEqual([]);
   });
 
-  it('accepte directement la version 2', () => {
-    expect(migrateBackupEnvelope(createValidEnvelope()).schemaVersion).toBe(2);
+  it('migre directement la version 2 vers la version 3', () => {
+    expect(migrateBackupEnvelope(createValidEnvelope()).schemaVersion).toBe(3);
   });
 
   it('refuse une sauvegarde créée par une version future', () => {
