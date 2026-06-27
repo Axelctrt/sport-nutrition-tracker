@@ -85,10 +85,9 @@ export function buildAchievementSnapshot(
   };
 }
 
-export async function loadAchievementSnapshot(
+export async function loadAchievementMetrics(
   database: AppDatabase = appDatabase,
-  earnedAt: string = new Date().toISOString(),
-): Promise<AchievementSnapshot> {
+): Promise<AchievementMetrics> {
   const [activities, workoutSessions, weights] = await Promise.all([
     database.activities.toArray(),
     database.workoutSessions.toArray(),
@@ -112,13 +111,29 @@ export async function loadAchievementSnapshot(
 
   if (completedStrengthSessions.length > 0) disciplines.add("strength");
 
-  const metrics: AchievementMetrics = {
+  return {
     totalLoggedSessions: activities.length + completedStrengthSessions.length,
     enduranceActivities: enduranceActivities.length,
     completedStrengthSessions: completedStrengthSessions.length,
     activeDays: activeDates.size,
     disciplineCount: disciplines.size,
   };
+}
+
+export async function loadAchievementPreview(
+  database: AppDatabase = appDatabase,
+): Promise<AchievementSnapshot> {
+  const metrics = await loadAchievementMetrics(database);
+  const currentState = readAchievementState();
+
+  return buildAchievementSnapshot(metrics, currentState.earnedAchievements);
+}
+
+export async function loadAchievementSnapshot(
+  database: AppDatabase = appDatabase,
+  earnedAt: string = new Date().toISOString(),
+): Promise<AchievementSnapshot> {
+  const metrics = await loadAchievementMetrics(database);
   const currentState = readAchievementState();
   const provisionalSnapshot = buildAchievementSnapshot(
     metrics,
