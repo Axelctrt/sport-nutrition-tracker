@@ -1,16 +1,17 @@
-import Dexie, { type Table } from 'dexie';
-import type { Activity } from '@/domain/models/activity';
-import type { EntityId } from '@/domain/models/common';
+import Dexie, { type Table } from "dexie";
+
+import type { Activity } from "@/domain/models/activity";
+import type { EntityId } from "@/domain/models/common";
 import type {
   DailyJournalStatus,
   FavoriteMeal,
   FoodEntry,
   FoodProduct,
   Meal,
-} from '@/domain/models/food';
-import type { UserProfile } from '@/domain/models/profile';
-import type { Recipe, RecipeIngredient } from '@/domain/models/recipe';
-import type { AppSettings } from '@/domain/models/settings';
+} from "@/domain/models/food";
+import type { UserProfile } from "@/domain/models/profile";
+import type { Recipe, RecipeIngredient } from "@/domain/models/recipe";
+import type { AppSettings } from "@/domain/models/settings";
 import type {
   ExerciseDefinition,
   ProgressionSuggestion,
@@ -19,15 +20,21 @@ import type {
   WorkoutSessionExercise,
   WorkoutTemplate,
   WorkoutTemplateExercise,
-} from '@/domain/models/strength';
-import type { DailySteps } from '@/domain/models/steps';
-import type { DailyTarget } from '@/domain/models/targets';
-import type { AcceptedCalorieAdjustment, WeeklyReview } from '@/domain/models/weeklyReview';
-import type { WeightEntry } from '@/domain/models/weight';
-import { registerVersion1 } from '@/infrastructure/database/migrations/version1';
-import { registerVersion2 } from '@/infrastructure/database/migrations/version2';
+} from "@/domain/models/strength";
+import type { DailySteps } from "@/domain/models/steps";
+import type { DailyTarget } from "@/domain/models/targets";
+import type {
+  AcceptedCalorieAdjustment,
+  WeeklyReview,
+} from "@/domain/models/weeklyReview";
+import type { WeightEntry } from "@/domain/models/weight";
+import type { DatabaseIntegrityReport } from "@/infrastructure/database/databaseIntegrityModels";
+import type { MigrationJournalEntry } from "@/infrastructure/database/migrationJournal";
+import { registerVersion1 } from "@/infrastructure/database/migrations/version1";
+import { registerVersion2 } from "@/infrastructure/database/migrations/version2";
+import { registerVersion3 } from "@/infrastructure/database/migrations/version3";
 
-export const DEFAULT_DATABASE_NAME = 'sportpilot-local-database';
+export const DEFAULT_DATABASE_NAME = "sportpilot-local-database";
 
 export class AppDatabase extends Dexie {
   declare userProfile: Table<UserProfile, EntityId>;
@@ -44,7 +51,11 @@ export class AppDatabase extends Dexie {
   declare dailyTargets: Table<DailyTarget, EntityId>;
   declare dailyJournalStatuses: Table<DailyJournalStatus, EntityId>;
   declare weeklyReviews: Table<WeeklyReview, EntityId>;
-  declare acceptedCalorieAdjustments: Table<AcceptedCalorieAdjustment, EntityId>;
+  declare acceptedCalorieAdjustments: Table<
+    AcceptedCalorieAdjustment,
+    EntityId
+  >;
+
   declare exerciseDefinitions: Table<ExerciseDefinition, EntityId>;
   declare workoutTemplates: Table<WorkoutTemplate, EntityId>;
   declare workoutTemplateExercises: Table<WorkoutTemplateExercise, EntityId>;
@@ -52,10 +63,13 @@ export class AppDatabase extends Dexie {
   declare workoutSessionExercises: Table<WorkoutSessionExercise, EntityId>;
   declare strengthSets: Table<StrengthSet, EntityId>;
   declare progressionSuggestions: Table<ProgressionSuggestion, EntityId>;
+  declare migrationJournal: Table<MigrationJournalEntry, string>;
+  declare databaseDiagnostics: Table<DatabaseIntegrityReport, string>;
 
   constructor(databaseName: string = DEFAULT_DATABASE_NAME) {
     super(databaseName);
     registerVersion1(this);
     registerVersion2(this);
+    registerVersion3(this);
   }
 }

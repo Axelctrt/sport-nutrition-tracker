@@ -1,10 +1,11 @@
-import type { AppSettings } from '@/domain/models/settings';
-import { APP_SETTINGS_ID } from '@/domain/defaults/identifiers';
-import { createDefaultAppSettings } from '@/domain/defaults/appSettings';
-import { RepositoryError } from '@/domain/errors/RepositoryError';
-import type { AppDatabase } from '@/infrastructure/database/AppDatabase';
-import { appDatabase } from '@/infrastructure/database/database';
-import { ensureExerciseCatalog } from '@/application/strength/exerciseCatalogSeeder';
+import { ensureExerciseCatalog } from "@/application/strength/exerciseCatalogSeeder";
+import { createDefaultAppSettings } from "@/domain/defaults/appSettings";
+import { APP_SETTINGS_ID } from "@/domain/defaults/identifiers";
+import { RepositoryError } from "@/domain/errors/RepositoryError";
+import type { AppSettings } from "@/domain/models/settings";
+import type { AppDatabase } from "@/infrastructure/database/AppDatabase";
+import { appDatabase } from "@/infrastructure/database/database";
+import { ensureCurrentMigrationJournalEntry } from "@/infrastructure/database/migrationJournal";
 
 export interface DatabaseInitializationResult {
   settings: AppSettings;
@@ -19,6 +20,7 @@ export async function initializeDatabase(
       await database.open();
     }
 
+    await ensureCurrentMigrationJournalEntry(database);
     await ensureExerciseCatalog(database);
 
     const existingSettings = await database.appSettings.get(APP_SETTINGS_ID);
@@ -40,7 +42,7 @@ export async function initializeDatabase(
   } catch (error) {
     throw new RepositoryError(
       "Impossible d'initialiser la base de données locale.",
-      'initialize',
+      "initialize",
       { cause: error },
     );
   }

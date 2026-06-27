@@ -10,8 +10,8 @@ describe('identité persistante de la PWA', () => {
   });
 
   it('conserve le nom public de la base IndexedDB', () => {
-    expect(databaseSource).toContain(
-      "export const DEFAULT_DATABASE_NAME = 'sportpilot-local-database';",
+    expect(databaseSource).toMatch(
+      /export const DEFAULT_DATABASE_NAME = ["']sportpilot-local-database["'];/,
     );
   });
 });

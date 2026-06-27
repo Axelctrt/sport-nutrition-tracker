@@ -25,7 +25,20 @@ export const databaseTableNames = [
   'progressionSuggestions',
 ] as const;
 
-export type DatabaseTableName = (typeof databaseTableNames)[number];
+export const databaseInternalTableNames = [
+  'migrationJournal',
+  'databaseDiagnostics',
+] as const;
+
+export const allDatabaseTableNames = [
+  ...databaseTableNames,
+  ...databaseInternalTableNames,
+] as const;
+
+export type DatabaseUserTableName = (typeof databaseTableNames)[number];
+export type DatabaseInternalTableName =
+  (typeof databaseInternalTableNames)[number];
+export type DatabaseTableName = (typeof allDatabaseTableNames)[number];
 
 export const databaseSchemaVersion = CURRENT_DATABASE_VERSION;
 
@@ -37,7 +50,8 @@ export const schemaVersion1 = {
   activities: 'id, date, type, [date+type], updatedAt',
   foodProducts: 'id, name, barcode, isFavorite, isArchived, updatedAt',
   meals: 'id, &[date+slot], date, slot, updatedAt',
-  foodEntries: 'id, date, mealId, mealSlot, sourceType, [date+mealSlot], updatedAt',
+  foodEntries:
+    'id, date, mealId, mealSlot, sourceType, [date+mealSlot], updatedAt',
   favoriteMeals: 'id, name, updatedAt',
   recipes: 'id, name, updatedAt',
   recipeIngredients: 'id, recipeId, productId, [recipeId+sortOrder], updatedAt',
@@ -54,11 +68,18 @@ export const schemaVersion2: Record<string, string> = {
   workoutTemplates: 'id, name, isArchived, updatedAt',
   workoutTemplateExercises:
     'id, templateId, exerciseDefinitionId, [templateId+sortOrder], isActive, updatedAt',
-  workoutSessions: 'id, date, status, sourceTemplateId, [date+status], updatedAt',
+  workoutSessions:
+    'id, date, status, sourceTemplateId, [date+status], updatedAt',
   workoutSessionExercises:
     'id, sessionId, exerciseDefinitionId, [sessionId+sortOrder], updatedAt',
   strengthSets:
     'id, sessionId, sessionExerciseId, [sessionExerciseId+setNumber], type, isCompleted, updatedAt',
   progressionSuggestions:
     'id, sessionId, sessionExerciseId, exerciseDefinitionId, templateExerciseId, status, updatedAt',
+};
+
+export const schemaVersion3: Record<string, string> = {
+  ...schemaVersion2,
+  migrationJournal: 'id, &version, status, source, appliedAt',
+  databaseDiagnostics: 'id, checkedAt, status, schemaVersion',
 };
