@@ -4,10 +4,18 @@ export const DASHBOARD_WIDGET_IDS = [
   'quickActions',
   'activities',
   'calculationDetails',
+  'rewardsOverview',
+  'weeklyMissions',
 ] as const;
 
 export type DashboardWidgetId = (typeof DASHBOARD_WIDGET_IDS)[number];
-export type DashboardPreset = 'balanced' | 'nutrition' | 'training' | 'minimal' | 'custom';
+
+export type DashboardPreset =
+  | 'balanced'
+  | 'nutrition'
+  | 'training'
+  | 'minimal'
+  | 'custom';
 
 export interface DashboardPreferences {
   preset: DashboardPreset;
@@ -15,23 +23,41 @@ export interface DashboardPreferences {
   hidden: DashboardWidgetId[];
 }
 
-export const DASHBOARD_WIDGET_LABELS: Record<DashboardWidgetId, string> = {
+export const DASHBOARD_WIDGET_LABELS: Record<
+  DashboardWidgetId,
+  string
+> = {
   activeWorkout: 'Séance en cours',
   todaySummary: 'Résumé de la journée',
   quickActions: 'Actions rapides',
   activities: 'Activités du jour',
   calculationDetails: 'Objectifs et détails du calcul',
+  rewardsOverview: 'Accomplissements',
+  weeklyMissions: 'Missions hebdomadaires',
 };
 
-export const DASHBOARD_WIDGET_DESCRIPTIONS: Record<DashboardWidgetId, string> = {
-  activeWorkout: 'Reprendre immédiatement une séance de musculation en cours.',
+export const DASHBOARD_WIDGET_DESCRIPTIONS: Record<
+  DashboardWidgetId,
+  string
+> = {
+  activeWorkout:
+    'Reprendre immédiatement une séance de musculation en cours.',
   todaySummary: 'Calories, macronutriments, pas et poids du jour.',
-  quickActions: 'Ajouter un aliment, une activité, des pas, un poids ou une séance.',
+  quickActions:
+    'Ajouter un aliment, une activité, des pas, un poids ou une séance.',
   activities: 'Relire les activités enregistrées aujourd’hui.',
-  calculationDetails: 'Consulter la cible énergétique et les paramètres utilisés.',
+  calculationDetails:
+    'Consulter la cible énergétique et les paramètres utilisés.',
+  rewardsOverview:
+    'Suivre les badges gagnés et le prochain accomplissement.',
+  weeklyMissions:
+    'Consulter les objectifs de la semaine, la série et le record.',
 };
 
-const PRESET_PREFERENCES: Record<Exclude<DashboardPreset, 'custom'>, DashboardPreferences> = {
+const PRESET_PREFERENCES: Record<
+  Exclude<DashboardPreset, 'custom'>,
+  DashboardPreferences
+> = {
   balanced: {
     preset: 'balanced',
     order: [...DASHBOARD_WIDGET_IDS],
@@ -39,23 +65,57 @@ const PRESET_PREFERENCES: Record<Exclude<DashboardPreset, 'custom'>, DashboardPr
   },
   nutrition: {
     preset: 'nutrition',
-    order: ['todaySummary', 'quickActions', 'activities', 'activeWorkout', 'calculationDetails'],
+    order: [
+      'todaySummary',
+      'quickActions',
+      'activities',
+      'rewardsOverview',
+      'weeklyMissions',
+      'activeWorkout',
+      'calculationDetails',
+    ],
     hidden: [],
   },
   training: {
     preset: 'training',
-    order: ['activeWorkout', 'quickActions', 'activities', 'todaySummary', 'calculationDetails'],
+    order: [
+      'activeWorkout',
+      'quickActions',
+      'activities',
+      'weeklyMissions',
+      'rewardsOverview',
+      'todaySummary',
+      'calculationDetails',
+    ],
     hidden: [],
   },
   minimal: {
     preset: 'minimal',
-    order: ['todaySummary', 'quickActions', 'activeWorkout', 'activities', 'calculationDetails'],
-    hidden: ['activities', 'calculationDetails'],
+    order: [
+      'todaySummary',
+      'quickActions',
+      'activeWorkout',
+      'activities',
+      'calculationDetails',
+      'rewardsOverview',
+      'weeklyMissions',
+    ],
+    hidden: [
+      'activities',
+      'calculationDetails',
+      'rewardsOverview',
+      'weeklyMissions',
+    ],
   },
 };
 
-function isDashboardWidgetId(value: unknown): value is DashboardWidgetId {
-  return typeof value === 'string' && DASHBOARD_WIDGET_IDS.includes(value as DashboardWidgetId);
+function isDashboardWidgetId(
+  value: unknown,
+): value is DashboardWidgetId {
+  return (
+    typeof value === 'string' &&
+    DASHBOARD_WIDGET_IDS.includes(value as DashboardWidgetId)
+  );
 }
 
 export function createDefaultDashboardPreferences(): DashboardPreferences {
@@ -70,6 +130,7 @@ export function createDashboardPreferencesFromPreset(
   preset: Exclude<DashboardPreset, 'custom'>,
 ): DashboardPreferences {
   const preferences = PRESET_PREFERENCES[preset];
+
   return {
     preset: preferences.preset,
     order: [...preferences.order],
@@ -84,7 +145,9 @@ export function normalizeDashboardPreferences(
   const order = Array.isArray(preferences?.order)
     ? preferences.order.filter(isDashboardWidgetId)
     : [];
+
   const uniqueOrder = [...new Set(order)];
+
   for (const widgetId of DASHBOARD_WIDGET_IDS) {
     if (!uniqueOrder.includes(widgetId)) uniqueOrder.push(widgetId);
   }
@@ -94,13 +157,14 @@ export function normalizeDashboardPreferences(
     : [];
 
   const preset = preferences?.preset;
-  const normalizedPreset: DashboardPreset = preset === 'balanced'
-    || preset === 'nutrition'
-    || preset === 'training'
-    || preset === 'minimal'
-    || preset === 'custom'
-    ? preset
-    : fallback.preset;
+  const normalizedPreset: DashboardPreset =
+    preset === 'balanced' ||
+    preset === 'nutrition' ||
+    preset === 'training' ||
+    preset === 'minimal' ||
+    preset === 'custom'
+      ? preset
+      : fallback.preset;
 
   if (hidden.length === DASHBOARD_WIDGET_IDS.length) {
     hidden.splice(hidden.indexOf('todaySummary'), 1);
@@ -143,14 +207,21 @@ export function moveDashboardWidget(
 ): DashboardPreferences {
   const index = preferences.order.indexOf(widgetId);
   const targetIndex = direction === 'up' ? index - 1 : index + 1;
-  if (index < 0 || targetIndex < 0 || targetIndex >= preferences.order.length) {
+
+  if (
+    index < 0 ||
+    targetIndex < 0 ||
+    targetIndex >= preferences.order.length
+  ) {
     return preferences;
   }
 
   const nextOrder = [...preferences.order];
   const currentWidget = nextOrder[index];
   const targetWidget = nextOrder[targetIndex];
+
   if (!currentWidget || !targetWidget) return preferences;
+
   nextOrder[index] = targetWidget;
   nextOrder[targetIndex] = currentWidget;
 

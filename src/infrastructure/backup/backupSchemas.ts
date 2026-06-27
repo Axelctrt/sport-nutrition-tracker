@@ -1,6 +1,9 @@
 import { z } from 'zod';
 import { DEFAULT_ENDURANCE_TEMPLATES } from '@/domain/defaults/appSettings';
-import { createDefaultDashboardPreferences } from '@/domain/dashboard/dashboardPreferences';
+import {
+  createDefaultDashboardPreferences,
+  DASHBOARD_WIDGET_IDS,
+} from "@/domain/dashboard/dashboardPreferences";
 import { APP_SETTINGS_ID, LOCAL_USER_PROFILE_ID } from '@/domain/defaults/identifiers';
 import type { BackupEnvelope } from '@/domain/models/backup';
 import { isValidLocalDate } from '@/shared/validation/localDate';
@@ -96,13 +99,7 @@ const enduranceTemplateSchema = z.object({
 });
 
 
-const dashboardWidgetIdSchema = z.enum([
-  'activeWorkout',
-  'todaySummary',
-  'quickActions',
-  'activities',
-  'calculationDetails',
-]);
+const dashboardWidgetIdSchema = z.enum(DASHBOARD_WIDGET_IDS);
 
 const dashboardPreferencesSchema = z.object({
   preset: z.enum(['balanced', 'nutrition', 'training', 'minimal', 'custom']),
