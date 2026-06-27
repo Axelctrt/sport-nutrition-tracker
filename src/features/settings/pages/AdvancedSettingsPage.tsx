@@ -1,47 +1,56 @@
-import { ArrowRight, LayoutDashboard, ShieldCheck } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { useTheme } from '@/app/providers/useTheme';
-import { routePaths } from '@/app/routePaths';
-import type { AppSettings } from '@/domain/models/settings';
-import { AdvancedSettingsForm } from '@/features/settings/components/AdvancedSettingsForm';
-import { SettingsOverview } from '@/features/settings/components/SettingsOverview';
-import type { SettingsFormValues } from '@/features/settings/schemas/settingsSchema';
+import { ArrowRight, LayoutDashboard, ShieldCheck } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+
+import { useTheme } from "@/app/providers/useTheme";
+import { routePaths } from "@/app/routePaths";
+import type { AppSettings } from "@/domain/models/settings";
+import { AdvancedSettingsForm } from "@/features/settings/components/AdvancedSettingsForm";
+import { DatabaseIntegrityPanel } from "@/features/settings/components/DatabaseIntegrityPanel";
+import { SettingsOverview } from "@/features/settings/components/SettingsOverview";
+import type { SettingsFormValues } from "@/features/settings/schemas/settingsSchema";
 import {
   settingsFormValuesToChanges,
   settingsToFormValues,
-} from '@/features/settings/utils/settingsForm';
+} from "@/features/settings/utils/settingsForm";
+import { repositories } from "@/infrastructure/repositories/repositories";
 import {
   getPersistentStorageStatus,
   requestPersistentStorage,
   type PersistentStorageStatus,
-} from '@/infrastructure/storage/persistentStorage';
-import { repositories } from '@/infrastructure/repositories/repositories';
-import { PageSkeleton } from '@/shared/ui/PageSkeleton';
-import { Card } from '@/shared/ui/Card';
-import { InlineNotice } from '@/shared/ui/InlineNotice';
+} from "@/infrastructure/storage/persistentStorage";
+import { Card } from "@/shared/ui/Card";
+import { InlineNotice } from "@/shared/ui/InlineNotice";
+import { PageSkeleton } from "@/shared/ui/PageSkeleton";
 
-const storageLabels: Record<PersistentStorageStatus, { title: string; description: string }> = {
+const storageLabels: Record<
+  PersistentStorageStatus,
+  { title: string; description: string }
+> = {
   persisted: {
-    title: 'Stockage persistant actif',
-    description: 'Le navigateur indique qu’il ne supprimera pas automatiquement les données locales.',
+    title: "Stockage persistant actif",
+    description:
+      "Le navigateur indique qu’il ne supprimera pas automatiquement les données locales.",
   },
   notPersisted: {
-    title: 'Stockage persistant non accordé',
-    description: 'Les données restent utilisables, mais un export JSON régulier sera recommandé.',
+    title: "Stockage persistant non accordé",
+    description:
+      "Les données restent utilisables, mais un export JSON régulier sera recommandé.",
   },
   unsupported: {
-    title: 'Statut de persistance indisponible',
-    description: 'Ce navigateur ne permet pas de vérifier ou demander cette protection.',
+    title: "Statut de persistance indisponible",
+    description:
+      "Ce navigateur ne permet pas de vérifier ou demander cette protection.",
   },
 };
 
 export function AdvancedSettingsPage() {
   const { setTheme } = useTheme();
   const [settings, setSettings] = useState<AppSettings | undefined>();
-  const [storageStatus, setStorageStatus] = useState<PersistentStorageStatus>('unsupported');
+  const [storageStatus, setStorageStatus] =
+    useState<PersistentStorageStatus>("unsupported");
   const [feedback, setFeedback] = useState<
-    { tone: 'success' | 'error'; message: string } | undefined
+    { tone: "success" | "error"; message: string } | undefined
   >();
   const [loadError, setLoadError] = useState<string | undefined>();
 
@@ -64,7 +73,7 @@ export function AdvancedSettingsPage() {
           setLoadError(
             error instanceof Error
               ? error.message
-              : 'Les paramètres n’ont pas pu être chargés.',
+              : "Les paramètres n’ont pas pu être chargés.",
           );
         }
       }
@@ -81,7 +90,9 @@ export function AdvancedSettingsPage() {
     setFeedback(undefined);
 
     try {
-      const updated = await repositories.settings.update(settingsFormValuesToChanges(values));
+      const updated = await repositories.settings.update(
+        settingsFormValuesToChanges(values),
+      );
       setSettings(updated);
       setTheme(updated.theme);
 
@@ -92,15 +103,16 @@ export function AdvancedSettingsPage() {
       }
 
       setFeedback({
-        tone: 'success',
-        message: 'Les paramètres avancés ont été enregistrés localement.',
+        tone: "success",
+        message: "Les paramètres avancés ont été enregistrés localement.",
       });
     } catch (error) {
       setFeedback({
-        tone: 'error',
-        message: error instanceof Error
-          ? error.message
-          : 'Les paramètres n’ont pas pu être enregistrés.',
+        tone: "error",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Les paramètres n’ont pas pu être enregistrés.",
       });
     }
   };
@@ -118,15 +130,17 @@ export function AdvancedSettingsPage() {
           : await getPersistentStorageStatus(),
       );
       setFeedback({
-        tone: 'success',
-        message: 'Les valeurs par défaut ont été restaurées.',
+        tone: "success",
+        message: "Les valeurs par défaut ont été restaurées.",
       });
+
       return settingsToFormValues(defaults);
     } catch (error) {
-      const message = error instanceof Error
-        ? error.message
-        : 'Les paramètres n’ont pas pu être réinitialisés.';
-      setFeedback({ tone: 'error', message });
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Les paramètres n’ont pas pu être réinitialisés.";
+      setFeedback({ tone: "error", message });
       throw error;
     }
   };
@@ -146,16 +160,23 @@ export function AdvancedSettingsPage() {
   const storagePresentation = storageLabels[storageStatus];
 
   return (
-    <section aria-labelledby="settings-title" className="min-w-0 overflow-x-clip">
+    <section
+      aria-labelledby="settings-title"
+      className="min-w-0 overflow-x-clip"
+    >
       <div>
         <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
           Réglages du moteur
         </p>
-        <h1 id="settings-title" className="mt-1 text-3xl font-bold tracking-tight text-slate-950 dark:text-white">
+        <h1
+          id="settings-title"
+          className="mt-1 text-3xl font-bold tracking-tight text-slate-950 dark:text-white"
+        >
           Paramètres avancés
         </h1>
         <p className="mt-3 max-w-3xl text-slate-600 dark:text-slate-300">
-          Ces coefficients permettent d’adapter les estimations énergétiques et nutritionnelles. Les valeurs par défaut peuvent être personnalisées.
+          Ces coefficients permettent d’adapter les estimations énergétiques et
+          nutritionnelles. Les valeurs par défaut peuvent être personnalisées.
         </p>
       </div>
 
@@ -164,6 +185,8 @@ export function AdvancedSettingsPage() {
       <InlineNotice className="mt-4" title={storagePresentation.title}>
         {storagePresentation.description}
       </InlineNotice>
+
+      <DatabaseIntegrityPanel className="mt-4" />
 
       <Card className="mt-4 p-4 sm:p-5">
         <div className="flex items-start gap-3">
@@ -175,7 +198,8 @@ export function AdvancedSettingsPage() {
               Tableau de bord personnalisé
             </h2>
             <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
-              Choisis les blocs visibles, leur ordre et un préréglage adapté à tes priorités.
+              Choisis les blocs visibles, leur ordre et un préréglage adapté à
+              tes priorités.
             </p>
             <Link
               to={routePaths.dashboardCustomization}
@@ -198,7 +222,8 @@ export function AdvancedSettingsPage() {
               Confidentialité et données locales
             </h2>
             <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
-              Consulte le détail du stockage local, des appels Open Food Facts, de la caméra, des sauvegardes et de la suppression des données.
+              Consulte le détail du stockage local, des appels Open Food Facts,
+              de la caméra, des sauvegardes et de la suppression des données.
             </p>
             <Link
               to={routePaths.privacy}
@@ -214,9 +239,13 @@ export function AdvancedSettingsPage() {
       {feedback ? (
         <InlineNotice
           tone={feedback.tone}
-          title={feedback.tone === 'success' ? 'Paramètres mis à jour' : 'Enregistrement impossible'}
+          title={
+            feedback.tone === "success"
+              ? "Paramètres mis à jour"
+              : "Enregistrement impossible"
+          }
           className="mt-6"
-          role={feedback.tone === 'error' ? 'alert' : 'status'}
+          role={feedback.tone === "error" ? "alert" : "status"}
         >
           {feedback.message}
         </InlineNotice>
