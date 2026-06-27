@@ -65,3 +65,11 @@ Avant un retour arrière, exporter une sauvegarde JSON récente. Les corrections
 Cette phase n’ajoute aucune table et ne modifie aucun index Dexie. Les champs `elevationGainMeters`, `terrainType`, `intervalDetails`, `poolLengthMeters`, `distanceKm`, `bikeType` et `environment` sont facultatifs. Les modèles sont stockés dans les champs facultatifs `enduranceTemplates` et `enduranceTemplatesVersion` des réglages existants.
 
 Un retour au commit précédent ne nécessite donc aucune migration structurelle. Une version antérieure continuera de lire les activités historiques avec leurs champs déjà connus, mais ignorera les informations d’endurance supplémentaires et les modèles. Les records et volumes n’étant pas stockés, aucune donnée dérivée ne doit être supprimée. Exporter une sauvegarde JSON récente avant tout retour arrière.
+
+## Retour arrière du tableau de bord personnalisable
+
+Cette phase n’ajoute aucune table et ne modifie aucun index Dexie. Le champ facultatif `dashboardPreferences` est stocké dans l’enregistrement existant des paramètres.
+
+Un retour au commit précédent ne nécessite aucune migration structurelle. Une version antérieure ignorera simplement l’ordre, les blocs masqués et le préréglage enregistré, puis affichera son tableau de bord standard. Les données nutritionnelles, sportives, de poids et d’activité ne sont jamais supprimées par la personnalisation.
+
+Avant un retour arrière, exporter une sauvegarde JSON récente. Après redéploiement, fermer puis rouvrir la PWA pour charger les anciens composants d’accueil.

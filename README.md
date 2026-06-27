@@ -807,3 +807,9 @@ La création et la modification détectent les doublons par code-barres ainsi qu
 Les produits peuvent désormais définir un libellé de portion, par exemple `1 pot`, `1 tranche` ou `1 dose`, en complément de la quantité en grammes ou millilitres. Les fibres et le sel sont affichés dans les cartes de la bibliothèque, les résultats Open Food Facts et les aperçus du journal.
 
 Les nouveaux champs sont facultatifs. Aucune table ni migration Dexie supplémentaire n’est nécessaire et les sauvegardes JSON v2 antérieures restent compatibles.
+
+## Tableau de bord personnalisable
+
+Le tableau de bord peut être adapté depuis `Paramètres → Personnaliser le tableau de bord` ou directement depuis l’accueil. Quatre préréglages sont proposés et chaque bloc peut être affiché, masqué ou déplacé. La configuration reste locale, hors connexion, et fait partie de la sauvegarde JSON v2.
+
+Les blocs masqués ne suppriment aucune donnée : le journal alimentaire, les activités, les séances et les détails de calcul restent disponibles dans leurs pages respectives. Les anciennes bases sans configuration reçoivent automatiquement l’affichage Équilibré.

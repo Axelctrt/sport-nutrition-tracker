@@ -12,6 +12,7 @@ import {
   History,
   Info,
   Settings,
+  SlidersHorizontal,
   UserRound,
   Weight,
   type LucideIcon,
@@ -114,6 +115,12 @@ export const mobileMoreNavigation: NavigationSection[] = [
         path: routePaths.profile,
         icon: UserRound,
         description: 'Objectifs, mensurations et macronutriments.',
+      },
+      {
+        label: 'Personnaliser l’accueil',
+        path: routePaths.dashboardCustomization,
+        icon: SlidersHorizontal,
+        description: 'Choisir les blocs visibles et leur ordre.',
       },
       {
         label: 'Paramètres',

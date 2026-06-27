@@ -84,6 +84,7 @@ describe('backupEnvelopeSchema', () => {
     delete legacySettings.restTimerVibrationEnabled;
     delete legacySettings.enduranceTemplates;
     delete legacySettings.enduranceTemplatesVersion;
+    delete legacySettings.dashboardPreferences;
     envelope.data.appSettings = [legacySettings as unknown as BackupEnvelope['data']['appSettings'][number]];
 
     const parsed = backupEnvelopeSchema.parse(envelope);
@@ -94,6 +95,10 @@ describe('backupEnvelopeSchema', () => {
     expect(parsed.data.appSettings[0]?.restTimerVibrationEnabled).toBe(true);
     expect(parsed.data.appSettings[0]?.enduranceTemplatesVersion).toBe(1);
     expect(parsed.data.appSettings[0]?.enduranceTemplates).toHaveLength(4);
+    expect(parsed.data.appSettings[0]?.dashboardPreferences).toMatchObject({
+      preset: 'balanced',
+      hidden: [],
+    });
   });
 
   it('accepte les activités récentes sans RPE et les anciennes activités qui en contiennent encore un', () => {

@@ -1,29 +1,30 @@
-# SportPilot 0.15.0 — suivi des sports d’endurance
+# SportPilot 0.15.0 — tableau de bord personnalisable
 
-Branche recommandée : `feature/endurance-tracking`
+Branche recommandée : `feature/custom-dashboard`
 
-Cette phase développe la course, la natation et le vélo sans dépendre d’un compte, d’un backend, de Garmin ou de Strava :
+Cette phase permet d’adapter l’écran d’accueil aux priorités de l’utilisateur sans supprimer ni dupliquer les données :
 
-- course enrichie avec dénivelé positif, terrain et description facultative des segments ou intervalles ;
-- natation enrichie avec longueur de bassin, nombre de longueurs calculé et séries facultatives ;
-- vélo spécialisé avec distance, dénivelé, vitesse moyenne calculée, type de vélo et pratique intérieure ou extérieure ;
-- page Analyses étendue aux volumes hebdomadaires, sorties les plus longues, meilleures allures ou vitesses et records de dénivelé ;
-- records sur distances usuelles calculés uniquement lorsqu’une séance complète correspond réellement à la distance ;
-- modèles simples de course, natation et vélo, modifiables et duplicables ;
-- préremplissage d’une activité depuis un modèle sans modifier la date ni créer automatiquement un programme ;
-- export CSV enrichi avec les nouvelles données ;
-- sauvegarde JSON v2 compatible avec les nouveaux champs facultatifs ;
-- scénario Playwright Chromium et WebKit proche d’un iPhone 15.
+- nouvelle route `#/settings/dashboard` ;
+- accès direct depuis le tableau de bord, les Paramètres et le menu mobile ;
+- quatre préréglages : Équilibré, Nutrition, Entraînement et Essentiel ;
+- visibilité configurable pour cinq blocs ;
+- ordre modifiable avec des boutons accessibles au clavier et sur mobile ;
+- persistance locale dans `AppSettings.dashboardPreferences` ;
+- normalisation automatique des anciennes bases et des préférences incomplètes ;
+- conservation d’au moins un bloc visible ;
+- intégration aux sauvegardes JSON v2 ;
+- aucun changement du schéma Dexie et aucune dépendance supplémentaire ;
+- scénario Playwright Chromium et WebKit/iPhone 15.
 
-Architecture retenue :
+Blocs configurables :
 
-- aucune nouvelle table Dexie et aucun nouvel index ;
-- les nouveaux champs d’activité sont facultatifs ;
-- les modèles sont stockés dans `AppSettings.enduranceTemplates` avec une version locale ;
-- les records, allures, vitesses, longueurs et volumes hebdomadaires sont recalculés depuis les activités et ne sont pas stockés ;
-- une ancienne base ou sauvegarde sans modèles reçoit les quatre modèles par défaut ;
-- aucune dépendance npm supplémentaire ;
-- le calculateur de disques abandonné n’est pas inclus.
+1. séance de musculation en cours ;
+2. résumé de la journée ;
+3. actions rapides ;
+4. activités du jour ;
+5. objectifs et détails du calcul.
+
+Les blocs masqués ne suppriment aucune donnée. Ils restent accessibles dans leurs écrans dédiés et peuvent être réactivés à tout moment.
 
 Contrôles :
 

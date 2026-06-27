@@ -9,6 +9,7 @@ interface RouteMetadata {
 const routeMetadata: RouteMetadata[] = [
   { pattern: routePaths.dashboard, title: "Aujourd’hui" },
   { pattern: routePaths.profile, title: 'Profil' },
+  { pattern: routePaths.dashboardCustomization, title: 'Personnaliser le tableau de bord' },
   { pattern: routePaths.settings, title: 'Paramètres' },
   { pattern: routePaths.barcodeScanner, title: 'Scanner un code-barres' },
   { pattern: routePaths.foodSelector, title: 'Ajouter un aliment' },
