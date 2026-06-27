@@ -6,6 +6,7 @@ import { useTheme } from "@/app/providers/useTheme";
 import { routePaths } from "@/app/routePaths";
 import type { AppSettings } from "@/domain/models/settings";
 import { AdvancedSettingsForm } from "@/features/settings/components/AdvancedSettingsForm";
+import { AchievementsPanel } from "@/features/settings/components/AchievementsPanel";
 import { DataManagementCenter } from "@/features/settings/components/DataManagementCenter";
 import { RewardThemesPanel } from "@/features/settings/components/RewardThemesPanel";
 import { SettingsOverview } from "@/features/settings/components/SettingsOverview";
@@ -161,6 +162,8 @@ export function AdvancedSettingsPage() {
       <SettingsOverview settings={settings} storageStatus={storageStatus} />
 
       <RewardThemesPanel className="mt-4" />
+
+      <AchievementsPanel className="mt-4" />
 
       <DataManagementCenter
         className="mt-4"
