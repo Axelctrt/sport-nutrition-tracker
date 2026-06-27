@@ -30,6 +30,7 @@ export interface AchievementProgress {
 export interface AchievementSnapshot {
   metrics: AchievementMetrics;
   achievements: AchievementProgress[];
+  newlyEarnedAchievements: AchievementProgress[];
   earnedCount: number;
   totalCount: number;
 }
@@ -69,10 +70,16 @@ export function buildAchievementSnapshot(
       };
     },
   );
+  const newlyEarnedAchievements = achievements.filter(
+    (progress) =>
+      progress.current >= progress.target &&
+      !earnedById.has(progress.achievement.id),
+  );
 
   return {
     metrics,
     achievements,
+    newlyEarnedAchievements,
     earnedCount: achievements.filter((progress) => progress.earned).length,
     totalCount: achievements.length,
   };
@@ -118,16 +125,18 @@ export async function loadAchievementSnapshot(
     currentState.earnedAchievements,
     earnedAt,
   );
-  const newlyEarnedIds = provisionalSnapshot.achievements
-    .filter(
-      (progress) =>
-        progress.earned &&
-        !currentState.earnedAchievements.some(
-          (earned) => earned.id === progress.achievement.id,
-        ),
-    )
-    .map((progress) => progress.achievement.id as AchievementId);
+  const newlyEarnedIds = provisionalSnapshot.newlyEarnedAchievements.map(
+    (progress) => progress.achievement.id as AchievementId,
+  );
   const nextState = unlockAchievements(newlyEarnedIds, earnedAt);
+  const persistedSnapshot = buildAchievementSnapshot(
+    metrics,
+    nextState.earnedAchievements,
+    earnedAt,
+  );
 
-  return buildAchievementSnapshot(metrics, nextState.earnedAchievements, earnedAt);
+  return {
+    ...persistedSnapshot,
+    newlyEarnedAchievements: provisionalSnapshot.newlyEarnedAchievements,
+  };
 }
