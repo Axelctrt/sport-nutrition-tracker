@@ -2,6 +2,9 @@ import { render, screen } from "@testing-library/react";
 import { vi } from "vitest";
 
 import type { WeeklyMissionSnapshot } from "@/application/rewards/weeklyMissionService";
+import {
+  WEEKLY_MISSION_HISTORY_STORAGE_KEY,
+} from "@/domain/rewards/weeklyMissionHistory";
 import { DashboardWeeklyMissions } from "@/features/dashboard/components/DashboardWeeklyMissions";
 
 const snapshot: WeeklyMissionSnapshot = {
@@ -65,7 +68,13 @@ const snapshot: WeeklyMissionSnapshot = {
 };
 
 describe("DashboardWeeklyMissions", () => {
-  it("affiche les cinq missions et la progression hebdomadaire", async () => {
+  beforeEach(() => {
+    window.localStorage.removeItem(
+      WEEKLY_MISSION_HISTORY_STORAGE_KEY,
+    );
+  });
+
+  it("affiche les missions, la progression et l’historique", async () => {
     const unsubscribe = vi.fn();
     const observeSnapshot = vi.fn((onSnapshot) => {
       onSnapshot(snapshot);
@@ -85,6 +94,11 @@ describe("DashboardWeeklyMissions", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByLabelText("Missions terminées : 2 sur 5"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByLabelText(
+        "Historique des missions hebdomadaires",
+      ),
     ).toBeInTheDocument();
     expect(screen.getByText("40%")).toBeInTheDocument();
     expect(screen.getByText("Bouger 3 jours")).toBeInTheDocument();
