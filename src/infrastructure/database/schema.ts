@@ -1,3 +1,5 @@
+import { CURRENT_DATABASE_VERSION } from '@/infrastructure/database/migrations/versions';
+
 export const databaseTableNames = [
   'userProfile',
   'appSettings',
@@ -25,7 +27,7 @@ export const databaseTableNames = [
 
 export type DatabaseTableName = (typeof databaseTableNames)[number];
 
-export const databaseSchemaVersion = 2;
+export const databaseSchemaVersion = CURRENT_DATABASE_VERSION;
 
 export const schemaVersion1 = {
   userProfile: 'id, updatedAt',
@@ -45,7 +47,7 @@ export const schemaVersion1 = {
   acceptedCalorieAdjustments: 'id, effectiveFrom, status, updatedAt',
 } as const;
 
-export const schemaVersion2: Record<DatabaseTableName, string> = {
+export const schemaVersion2: Record<string, string> = {
   ...schemaVersion1,
   exerciseDefinitions:
     'id, name, source, primaryMuscleGroup, equipment, isArchived, updatedAt',

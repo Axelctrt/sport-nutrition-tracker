@@ -1,6 +1,8 @@
 import type Dexie from 'dexie';
-import { databaseSchemaVersion, schemaVersion1 } from '@/infrastructure/database/schema';
+
+import { schemaVersion1 } from '@/infrastructure/database/schema';
+import { DATABASE_VERSION_1 } from '@/infrastructure/database/migrations/versions';
 
 export function registerVersion1(database: Dexie): void {
-  database.version(databaseSchemaVersion).stores(schemaVersion1);
+  database.version(DATABASE_VERSION_1).stores(schemaVersion1);
 }
