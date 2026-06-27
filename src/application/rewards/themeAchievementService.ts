@@ -1,5 +1,3 @@
-import type { AppDatabase } from "@/infrastructure/database/AppDatabase";
-import { appDatabase } from "@/infrastructure/database/database";
 import {
   readVisualThemeState,
   unlockVisualThemes,
@@ -7,6 +5,8 @@ import {
   type VisualThemeDefinition,
   type VisualThemeId,
 } from "@/domain/rewards/visualThemes";
+import type { AppDatabase } from "@/infrastructure/database/AppDatabase";
+import { appDatabase } from "@/infrastructure/database/database";
 
 export interface ThemeAchievementMetrics {
   enduranceActivities: number;
@@ -25,6 +25,7 @@ export interface ThemeAchievementProgress {
 export interface ThemeAchievementSnapshot {
   metrics: ThemeAchievementMetrics;
   themes: ThemeAchievementProgress[];
+  newlyUnlockedThemes: ThemeAchievementProgress[];
 }
 
 const requirements: Record<
@@ -79,8 +80,14 @@ export function buildThemeAchievementSnapshot(
       requirementLabel: requirement.label,
     };
   });
+  const newlyUnlockedThemes = themes.filter(
+    (progress) =>
+      progress.theme.id !== "classic" &&
+      progress.current >= progress.target &&
+      !previouslyUnlockedThemeIds.includes(progress.theme.id),
+  );
 
-  return { metrics, themes };
+  return { metrics, themes, newlyUnlockedThemes };
 }
 
 export async function loadThemeAchievementSnapshot(
