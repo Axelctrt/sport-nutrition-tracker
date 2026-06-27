@@ -7,6 +7,7 @@ import { routePaths } from "@/app/routePaths";
 import type { AppSettings } from "@/domain/models/settings";
 import { AdvancedSettingsForm } from "@/features/settings/components/AdvancedSettingsForm";
 import { DatabaseIntegrityPanel } from "@/features/settings/components/DatabaseIntegrityPanel";
+import { SelectiveDataResetPanel } from "@/features/settings/components/SelectiveDataResetPanel";
 import { SettingsOverview } from "@/features/settings/components/SettingsOverview";
 import type { SettingsFormValues } from "@/features/settings/schemas/settingsSchema";
 import {
@@ -187,6 +188,8 @@ export function AdvancedSettingsPage() {
       </InlineNotice>
 
       <DatabaseIntegrityPanel className="mt-4" />
+
+      <SelectiveDataResetPanel className="mt-4" />
 
       <Card className="mt-4 p-4 sm:p-5">
         <div className="flex items-start gap-3">
