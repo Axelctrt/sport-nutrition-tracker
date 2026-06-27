@@ -1,0 +1,93 @@
+:root {
+  --sport-reward-accent-500: #0ea5e9;
+  --sport-reward-accent-600: #0284c7;
+  --sport-reward-accent-700: #0369a1;
+  --sport-reward-accent-800: #075985;
+  --sport-reward-soft: rgba(14, 165, 233, 0.12);
+}
+
+html[data-sport-theme="endurance"] {
+  --sport-reward-accent-500: #14b8a6;
+  --sport-reward-accent-600: #0d9488;
+  --sport-reward-accent-700: #0f766e;
+  --sport-reward-accent-800: #115e59;
+  --sport-reward-soft: rgba(20, 184, 166, 0.14);
+}
+
+html[data-sport-theme="power"] {
+  --sport-reward-accent-500: #f59e0b;
+  --sport-reward-accent-600: #ea580c;
+  --sport-reward-accent-700: #c2410c;
+  --sport-reward-accent-800: #9a3412;
+  --sport-reward-soft: rgba(245, 158, 11, 0.14);
+}
+
+html[data-sport-theme="balance"] {
+  --sport-reward-accent-500: #a855f7;
+  --sport-reward-accent-600: #9333ea;
+  --sport-reward-accent-700: #7e22ce;
+  --sport-reward-accent-800: #6b21a8;
+  --sport-reward-soft: rgba(168, 85, 247, 0.14);
+}
+
+html[data-sport-theme]:not([data-sport-theme="classic"]) body {
+  background-image:
+    radial-gradient(
+      circle at 10% 0%,
+      var(--sport-reward-soft),
+      transparent 34rem
+    ),
+    radial-gradient(
+      circle at 100% 20%,
+      var(--sport-reward-soft),
+      transparent 30rem
+    );
+  background-attachment: fixed;
+}
+
+html[data-sport-theme] [class~="bg-brand-700"] {
+  background-color: var(--sport-reward-accent-700) !important;
+}
+
+html[data-sport-theme] [class~="hover:bg-brand-800"]:hover {
+  background-color: var(--sport-reward-accent-800) !important;
+}
+
+html[data-sport-theme] [class~="text-brand-700"] {
+  color: var(--sport-reward-accent-700) !important;
+}
+
+html[data-sport-theme] [class~="border-brand-700"] {
+  border-color: var(--sport-reward-accent-700) !important;
+}
+
+html.dark[data-sport-theme] [class~="dark:bg-brand-600"] {
+  background-color: var(--sport-reward-accent-600) !important;
+}
+
+html.dark[data-sport-theme] [class~="dark:bg-brand-500"] {
+  background-color: var(--sport-reward-accent-500) !important;
+}
+
+html.dark[data-sport-theme] [class~="dark:hover:bg-brand-500"]:hover {
+  background-color: var(--sport-reward-accent-500) !important;
+}
+
+html.dark[data-sport-theme] [class~="dark:text-brand-300"] {
+  color: color-mix(
+    in srgb,
+    var(--sport-reward-accent-500) 58%,
+    white
+  ) !important;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html[data-sport-theme] body,
+  html[data-sport-theme] [class~="bg-brand-700"],
+  html[data-sport-theme] [class~="text-brand-700"] {
+    transition:
+      background-color 180ms ease,
+      color 180ms ease,
+      background-image 180ms ease;
+  }
+}
