@@ -6,6 +6,7 @@ import { MobileBottomNavigation } from "@/app/layouts/MobileBottomNavigation";
 import { PageHeader } from "@/app/layouts/PageHeader";
 import { routePaths } from "@/app/routePaths";
 import { DashboardRewardsOverview } from "@/features/dashboard/components/DashboardRewardsOverview";
+import { DashboardWeeklyMissions } from "@/features/dashboard/components/DashboardWeeklyMissions";
 import { OfflineStatusBanner } from "@/pwa/OfflineStatusBanner";
 
 export function AppLayout() {
@@ -33,7 +34,10 @@ export function AppLayout() {
         >
           <Outlet />
           {location.pathname === routePaths.dashboard ? (
-            <DashboardRewardsOverview className="mt-6" />
+            <div className="mt-6 grid gap-6 xl:grid-cols-2">
+              <DashboardRewardsOverview />
+              <DashboardWeeklyMissions />
+            </div>
           ) : null}
         </main>
       </div>
