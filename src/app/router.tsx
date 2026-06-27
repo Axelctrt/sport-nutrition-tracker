@@ -32,6 +32,7 @@ import {
   LazyStrengthExercisesPage,
   LazySwimmingActivityPage,
   LazyWeeklyPlanningPage,
+  LazyRewardsCenterPage,
   LazyWeeklyReviewPage,
   LazyWeightPage,
   LazyWorkoutSessionPage,
@@ -88,6 +89,7 @@ export const appShellRoutes: RouteObject[] = [
   { path: routePaths.history, element: <LazyHistoryPage /> },
   { path: routePaths.analytics, element: <LazyAnalyticsPage /> },
   { path: routePaths.weeklyReview, element: <LazyWeeklyReviewPage /> },
+  { path: routePaths.rewards, element: <LazyRewardsCenterPage /> },
   { path: routePaths.backup, element: <LazyBackupPage /> },
   { path: routePaths.calculationsInformation, element: <CalculationsInformationPage /> },
 ];

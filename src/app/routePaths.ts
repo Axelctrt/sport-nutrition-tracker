@@ -40,6 +40,7 @@ export const routePaths = {
   history: '/history',
   analytics: '/analytics',
   weeklyReview: '/weekly-review',
+  rewards: '/rewards',
   backup: '/backup',
   calculationsInformation: '/information/calculations',
   privacy: '/privacy',
