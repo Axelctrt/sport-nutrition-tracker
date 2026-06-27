@@ -7,10 +7,14 @@ import {
 } from '@/domain/dashboard/dashboardPreferences';
 
 describe('préférences du tableau de bord', () => {
-  it('répare un ordre incomplet et supprime les valeurs invalides', () => {
+  it('répare un ordre incomplet et ajoute les nouveaux widgets', () => {
     const normalized = normalizeDashboardPreferences({
       preset: 'custom',
-      order: ['quickActions', 'quickActions', 'todaySummary'] as never,
+      order: [
+        'quickActions',
+        'quickActions',
+        'todaySummary',
+      ] as never,
       hidden: ['activities', 'unknown'] as never,
     });
 
@@ -20,6 +24,8 @@ describe('préférences du tableau de bord', () => {
       'activeWorkout',
       'activities',
       'calculationDetails',
+      'rewardsOverview',
+      'weeklyMissions',
     ]);
     expect(normalized.hidden).toEqual(['activities']);
   });
@@ -28,18 +34,41 @@ describe('préférences du tableau de bord', () => {
     const training = createDashboardPreferencesFromPreset('training');
     training.order.reverse();
 
-    expect(createDashboardPreferencesFromPreset('training').order[0]).toBe('activeWorkout');
-    expect(createDefaultDashboardPreferences().preset).toBe('balanced');
+    expect(
+      createDashboardPreferencesFromPreset('training').order[0],
+    ).toBe('activeWorkout');
+    expect(createDefaultDashboardPreferences().preset).toBe(
+      'balanced',
+    );
   });
 
   it('déplace et masque les blocs en passant en mode personnalisé', () => {
     const initial = createDefaultDashboardPreferences();
-    const moved = moveDashboardWidget(initial, 'quickActions', 'up');
-    const hidden = toggleDashboardWidget(moved, 'activities');
+    const moved = moveDashboardWidget(
+      initial,
+      'weeklyMissions',
+      'up',
+    );
+    const hidden = toggleDashboardWidget(
+      moved,
+      'rewardsOverview',
+    );
 
-    expect(moved.order.slice(0, 2)).toEqual(['activeWorkout', 'quickActions']);
-    expect(hidden.hidden).toContain('activities');
+    expect(moved.order.at(-2)).toBe('weeklyMissions');
+    expect(hidden.hidden).toContain('rewardsOverview');
     expect(hidden.preset).toBe('custom');
+  });
+
+  it('masque les récompenses dans le préréglage essentiel', () => {
+    const minimal =
+      createDashboardPreferencesFromPreset('minimal');
+
+    expect(minimal.hidden).toEqual(
+      expect.arrayContaining([
+        'rewardsOverview',
+        'weeklyMissions',
+      ]),
+    );
   });
 
   it('conserve au moins le résumé quotidien visible', () => {
@@ -51,6 +80,8 @@ describe('préférences du tableau de bord', () => {
         'quickActions',
         'activities',
         'calculationDetails',
+        'rewardsOverview',
+        'weeklyMissions',
       ],
     });
 
