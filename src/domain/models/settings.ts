@@ -1,5 +1,5 @@
 import type { EntityMetadata, IsoDateTime } from '@/domain/models/common';
-import type { SwimmingSessionType } from '@/domain/models/activity';
+import type { EnduranceTemplate, SwimmingSessionType } from '@/domain/models/activity';
 
 export type ThemePreference = 'system' | 'light' | 'dark';
 export type BackupReminderIntervalDays = 0 | 7 | 14 | 30;
@@ -22,6 +22,8 @@ export interface AppSettings extends EntityMetadata {
   restTimerAutoStart: boolean;
   restTimerSoundEnabled: boolean;
   restTimerVibrationEnabled: boolean;
+  enduranceTemplates?: EnduranceTemplate[];
+  enduranceTemplatesVersion?: number;
   lastBackupExportedAt?: IsoDateTime;
   lastBackupAppVersion?: string;
   lastBackupSchemaVersion?: number;

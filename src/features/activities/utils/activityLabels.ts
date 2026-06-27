@@ -1,8 +1,11 @@
 import type {
   ActivityIntensity,
   ActivityType,
+  CyclingBikeType,
+  CyclingEnvironment,
   MainStroke,
   RunningSessionType,
+  RunningTerrainType,
   SwimmingSessionType,
 } from '@/domain/models/activity';
 
@@ -47,4 +50,26 @@ export const strokeLabels: Record<MainStroke, string> = {
   butterfly: 'Papillon',
   mixed: 'Mixte',
   drills: 'Éducatifs',
+};
+
+export const terrainLabels: Record<RunningTerrainType, string> = {
+  road: 'Route',
+  track: 'Piste',
+  trail: 'Trail / sentier',
+  treadmill: 'Tapis',
+  mixed: 'Mixte',
+};
+
+export const bikeTypeLabels: Record<CyclingBikeType, string> = {
+  road: 'Route',
+  gravel: 'Gravel',
+  mountain: 'VTT',
+  city: 'Ville / trekking',
+  indoor: 'Vélo d’intérieur',
+  other: 'Autre',
+};
+
+export const cyclingEnvironmentLabels: Record<CyclingEnvironment, string> = {
+  outdoor: 'Extérieur',
+  indoor: 'Intérieur',
 };

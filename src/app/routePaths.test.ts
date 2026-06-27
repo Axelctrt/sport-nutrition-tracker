@@ -65,6 +65,12 @@ describe('parcours de la planification hebdomadaire', () => {
   });
 });
 
+describe('parcours des modèles d’endurance', () => {
+  it('utilise une route stable dédiée aux modèles', () => {
+    expect(routePaths.enduranceTemplates).toBe('/activities/templates');
+  });
+});
+
 describe('parcours des séances réalisées', () => {
   it('construit le chemin d’une séance en cours ou historique', () => {
     expect(workoutSessionPath('session-1')).toBe('/strength/sessions/session-1');

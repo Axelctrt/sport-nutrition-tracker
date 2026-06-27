@@ -1,6 +1,7 @@
 import {
   Activity,
   Apple,
+  Bike,
   CalendarRange,
   ClipboardCheck,
   Footprints,
@@ -43,6 +44,7 @@ import { formatLocalDate, toLocalDate } from '@/shared/utils/dates';
 const COLORS = {
   running: '#ea580c',
   swimming: '#0891b2',
+  cycling: '#16a34a',
   nutrition: '#059669',
   nutritionTarget: '#64748b',
   weight: '#7c3aed',
@@ -97,6 +99,8 @@ export function AnalyticsPage() {
     const runningDistance = sum(data.running.map((week) => week.distanceKm));
     const swimmingDistance = sum(data.swimming.map((week) => week.distanceMeters));
     const runningSessions = sum(data.running.map((week) => week.sessionCount));
+    const cyclingDistance = sum(data.cycling.map((week) => week.distanceKm));
+    const cyclingSessions = sum(data.cycling.map((week) => week.sessionCount));
     const swimmingSessions = sum(data.swimming.map((week) => week.sessionCount));
     const nutritionWeeks = data.nutrition.filter((week) => (
       week.calorieAdherencePercent !== undefined && week.trackedDayCount > 0
@@ -111,7 +115,9 @@ export function AnalyticsPage() {
     return {
       runningDistance,
       swimmingDistance,
+      cyclingDistance,
       runningSessions,
+      cyclingSessions,
       swimmingSessions,
       calorieAdherence,
       latestWeight,
@@ -128,6 +134,13 @@ export function AnalyticsPage() {
     week: week.label,
     distanceKm: week.distanceMeters / 1000,
     minutes: week.durationMinutes,
+  })) ?? [];
+
+  const cyclingChartData = data?.cycling.map((week) => ({
+    week: week.label,
+    kilometres: week.distanceKm,
+    minutes: week.durationMinutes,
+    denivele: week.elevationGainMeters,
   })) ?? [];
 
   const nutritionChartData = data?.nutrition.map((week) => ({
@@ -250,6 +263,23 @@ export function AnalyticsPage() {
                 <EmptyAnalyticsState>Aucune course enregistrée sur cette période.</EmptyAnalyticsState>
               ) : (
                 <>
+                  <div className="mb-4 grid gap-2 sm:grid-cols-3">
+                    <Card className="p-3"><p className="text-xs text-slate-500">Plus longue</p><p className="mt-1 font-bold">{data.enduranceRecords.running.longest ? `${data.enduranceRecords.running.longest.value.toLocaleString('fr-FR')} km` : '—'}</p><p className="mt-1 text-xs text-slate-500">{data.enduranceRecords.running.longest ? formatLocalDate(data.enduranceRecords.running.longest.activity.date) : 'Aucune donnée'}</p></Card>
+                    <Card className="p-3"><p className="text-xs text-slate-500">Meilleure allure</p><p className="mt-1 font-bold">{data.enduranceRecords.running.fastestPace ? `${formatPace(data.enduranceRecords.running.fastestPace.value)} min/km` : '—'}</p><p className="mt-1 text-xs text-slate-500">Record calculé sur une séance complète</p></Card>
+                    <Card className="p-3"><p className="text-xs text-slate-500">Plus grand D+</p><p className="mt-1 font-bold">{data.enduranceRecords.running.highestElevation ? `${data.enduranceRecords.running.highestElevation.value.toLocaleString('fr-FR')} m` : '—'}</p><p className="mt-1 text-xs text-slate-500">Uniquement les séances renseignées</p></Card>
+                  </div>
+                  {data.enduranceRecords.running.commonDistances.length > 0 ? (
+                    <div className="mb-4 rounded-xl border border-orange-200 bg-orange-50 p-3 dark:border-orange-900 dark:bg-orange-950/30">
+                      <p className="text-sm font-semibold text-orange-950 dark:text-orange-100">Records sur distances usuelles</p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {data.enduranceRecords.running.commonDistances.map((record) => (
+                          <span key={record.distance} className="rounded-lg bg-white px-2 py-1 text-xs font-semibold text-slate-800 dark:bg-slate-900 dark:text-slate-100">
+                            {record.distance.toLocaleString('fr-FR')} km · {formatDuration(record.durationSeconds / 60)}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
                   <div className="h-64 sm:h-80" aria-label="Graphique de course sur douze semaines">
                     <ResponsiveContainer width="100%" height="100%">
                       <ComposedChart data={runningChartData} margin={{ top: 10, right: 4, left: -20, bottom: 0 }}>
@@ -293,6 +323,22 @@ export function AnalyticsPage() {
                 <EmptyAnalyticsState>Aucune séance de natation enregistrée sur cette période.</EmptyAnalyticsState>
               ) : (
                 <>
+                  <div className="mb-4 grid gap-2 sm:grid-cols-2">
+                    <Card className="p-3"><p className="text-xs text-slate-500">Plus longue</p><p className="mt-1 font-bold">{data.enduranceRecords.swimming.longest ? `${data.enduranceRecords.swimming.longest.value.toLocaleString('fr-FR')} m` : '—'}</p><p className="mt-1 text-xs text-slate-500">{data.enduranceRecords.swimming.longest ? formatLocalDate(data.enduranceRecords.swimming.longest.activity.date) : 'Aucune donnée'}</p></Card>
+                    <Card className="p-3"><p className="text-xs text-slate-500">Meilleure allure</p><p className="mt-1 font-bold">{data.enduranceRecords.swimming.fastestPace ? `${formatPace(data.enduranceRecords.swimming.fastestPace.value)} min/100 m` : '—'}</p><p className="mt-1 text-xs text-slate-500">Record calculé sur une séance complète</p></Card>
+                  </div>
+                  {data.enduranceRecords.swimming.commonDistances.length > 0 ? (
+                    <div className="mb-4 rounded-xl border border-cyan-200 bg-cyan-50 p-3 dark:border-cyan-900 dark:bg-cyan-950/30">
+                      <p className="text-sm font-semibold text-cyan-950 dark:text-cyan-100">Records sur distances usuelles</p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {data.enduranceRecords.swimming.commonDistances.map((record) => (
+                          <span key={record.distance} className="rounded-lg bg-white px-2 py-1 text-xs font-semibold text-slate-800 dark:bg-slate-900 dark:text-slate-100">
+                            {record.distance.toLocaleString('fr-FR')} m · {formatDuration(record.durationSeconds / 60)}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
                   <div className="h-64 sm:h-80" aria-label="Graphique de natation sur douze semaines">
                     <ResponsiveContainer width="100%" height="100%">
                       <ComposedChart data={swimmingChartData} margin={{ top: 10, right: 4, left: -20, bottom: 0 }}>
@@ -317,6 +363,54 @@ export function AnalyticsPage() {
                           { label: 'Durée', value: formatDuration(week.durationMinutes) },
                           { label: 'Allure', value: `${formatOptionalPace(week.weightedPaceSecondsPer100m)}/100 m` },
                           { label: 'Plus longue', value: `${week.longestDistanceMeters.toLocaleString('fr-FR')} m` },
+                        ],
+                      }))}
+                    />
+                  </WeeklyDetails>
+                </>
+              )}
+            </AnalyticsSection>
+
+            <AnalyticsSection
+              title="Vélo"
+              description="Distance, durée, vitesse, dénivelé et sortie la plus longue"
+              summary={`${summary.cyclingDistance.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} km`}
+              icon={Bike}
+              toneClassName="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
+            >
+              {summary.cyclingSessions === 0 ? (
+                <EmptyAnalyticsState>Aucune sortie vélo enregistrée sur cette période.</EmptyAnalyticsState>
+              ) : (
+                <>
+                  <div className="mb-4 grid gap-2 sm:grid-cols-3">
+                    <Card className="p-3"><p className="text-xs text-slate-500">Plus longue</p><p className="mt-1 font-bold">{data.enduranceRecords.cycling.longest ? `${data.enduranceRecords.cycling.longest.value.toLocaleString('fr-FR')} km` : '—'}</p><p className="mt-1 text-xs text-slate-500">Séance complète</p></Card>
+                    <Card className="p-3"><p className="text-xs text-slate-500">Meilleure vitesse</p><p className="mt-1 font-bold">{data.enduranceRecords.cycling.fastestSpeed ? `${data.enduranceRecords.cycling.fastestSpeed.value.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} km/h` : '—'}</p><p className="mt-1 text-xs text-slate-500">Séance complète</p></Card>
+                    <Card className="p-3"><p className="text-xs text-slate-500">Plus grand D+</p><p className="mt-1 font-bold">{data.enduranceRecords.cycling.highestElevation ? `${data.enduranceRecords.cycling.highestElevation.value.toLocaleString('fr-FR')} m` : '—'}</p><p className="mt-1 text-xs text-slate-500">Uniquement les sorties renseignées</p></Card>
+                  </div>
+                  <div className="h-64 sm:h-80" aria-label="Graphique de vélo sur douze semaines">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <ComposedChart data={cyclingChartData} margin={{ top: 10, right: 4, left: -20, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="week" fontSize={11} interval="preserveStartEnd" />
+                        <YAxis yAxisId="distance" fontSize={11} />
+                        <YAxis yAxisId="duration" orientation="right" fontSize={11} />
+                        <Tooltip />
+                        <Legend wrapperStyle={{ fontSize: 12 }} />
+                        <Bar yAxisId="distance" dataKey="kilometres" name="Kilomètres" fill={COLORS.cycling} radius={[5, 5, 0, 0]} />
+                        <Line yAxisId="duration" dataKey="minutes" name="Minutes" stroke={COLORS.target} strokeWidth={2} dot={false} />
+                      </ComposedChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <WeeklyDetails count={data.cycling.length}>
+                    <AnalyticsWeekList
+                      items={data.cycling.map((week) => ({
+                        id: week.weekStart,
+                        label: week.label,
+                        metrics: [
+                          { label: 'Distance', value: `${week.distanceKm.toLocaleString('fr-FR')} km` },
+                          { label: 'Durée', value: formatDuration(week.durationMinutes) },
+                          { label: 'Vitesse', value: week.weightedSpeedKmh === undefined ? '—' : `${week.weightedSpeedKmh.toLocaleString('fr-FR')} km/h` },
+                          { label: 'Dénivelé', value: `${week.elevationGainMeters.toLocaleString('fr-FR')} m` },
                         ],
                       }))}
                     />

@@ -8,11 +8,12 @@ import {
   subWeeks,
 } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import type { Activity, ActivityType, RunningActivity, SwimmingActivity } from '@/domain/models/activity';
+import type { Activity, ActivityType, CyclingActivity, RunningActivity, SwimmingActivity } from '@/domain/models/activity';
 import type {
   ActivityTimeBreakdown,
   ActivityWeekSummary,
   CalendarWeek,
+  CyclingWeekSummary,
   HistoryDaySummary,
   NutritionWeekSummary,
   RunningWeekSummary,
@@ -29,6 +30,7 @@ import type { DailyTarget } from '@/domain/models/targets';
 import type { WeightEntry } from '@/domain/models/weight';
 import { calculateDailyNutrition } from '@/domain/calculations/nutrition';
 import { getEffectiveActivityCalories } from '@/domain/calculations/activityCalories';
+import { calculateEnduranceRecords } from '@/domain/calculations/endurance';
 import { toLocalDate } from '@/shared/utils/dates';
 
 const WEEK_OPTIONS = { weekStartsOn: 1 as const };
@@ -92,6 +94,10 @@ function isSwimming(activity: Activity): activity is SwimmingActivity {
   return activity.type === 'swimming';
 }
 
+function isCycling(activity: Activity): activity is CyclingActivity {
+  return activity.type === 'cycling';
+}
+
 export function aggregateRunningWeeks(
   activities: readonly Activity[],
   weeks: readonly CalendarWeek[],
@@ -132,6 +138,37 @@ export function aggregateSwimmingWeeks(
         : {}),
       sessionCount: sessions.length,
       longestDistanceMeters: round(Math.max(0, ...sessions.map((session) => session.distanceMeters)), 0),
+    };
+  });
+}
+
+
+export function aggregateCyclingWeeks(
+  activities: readonly Activity[],
+  weeks: readonly CalendarWeek[],
+): CyclingWeekSummary[] {
+  return weeks.map((week) => {
+    const sessions = activitiesForWeek(activities, week, isCycling);
+    const distanceKm = sessions.reduce((total, session) => total + (session.distanceKm ?? 0), 0);
+    const durationMinutes = sessions.reduce((total, session) => total + session.durationMinutes, 0);
+    const elevationGainMeters = sessions.reduce(
+      (total, session) => total + (session.elevationGainMeters ?? 0),
+      0,
+    );
+
+    return {
+      ...week,
+      distanceKm: round(distanceKm, 2),
+      durationMinutes: round(durationMinutes, 1),
+      ...(distanceKm > 0 && durationMinutes > 0
+        ? { weightedSpeedKmh: round(distanceKm / (durationMinutes / 60), 1) }
+        : {}),
+      elevationGainMeters: round(elevationGainMeters, 0),
+      sessionCount: sessions.length,
+      longestDistanceKm: round(
+        Math.max(0, ...sessions.map((session) => session.distanceKm ?? 0)),
+        2,
+      ),
     };
   });
 }
@@ -297,6 +334,8 @@ export function buildTwelveWeekAnalytics(
     to,
     running: aggregateRunningWeeks(activities, weeks),
     swimming: aggregateSwimmingWeeks(activities, weeks),
+    cycling: aggregateCyclingWeeks(activities, weeks),
+    enduranceRecords: calculateEnduranceRecords(activities),
     nutrition: aggregateNutritionWeeks(source.foodEntries, source.dailyTargets, source.journalStatuses, weeks),
     activity: aggregateActivityWeeks(activities, source.steps, weeks),
     weight: {

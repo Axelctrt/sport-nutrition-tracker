@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   aggregateActivityWeeks,
+  aggregateCyclingWeeks,
   aggregateNutritionWeeks,
   aggregateRunningWeeks,
   aggregateSwimmingWeeks,
@@ -10,7 +11,7 @@ import {
   calculateWeightMovingAverage,
   createTwelveWeekWindow,
 } from '@/domain/aggregations/analytics';
-import type { Activity, RunningActivity, SwimmingActivity } from '@/domain/models/activity';
+import type { Activity, CyclingActivity, RunningActivity, SwimmingActivity } from '@/domain/models/activity';
 import type { DailyJournalStatus, FoodEntry } from '@/domain/models/food';
 import type { UserProfile } from '@/domain/models/profile';
 import type { DailySteps } from '@/domain/models/steps';
@@ -69,6 +70,31 @@ function swimming(overrides: Partial<SwimmingActivity> = {}): SwimmingActivity {
     ...overrides,
   };
 }
+
+function cycling(overrides: Partial<CyclingActivity> = {}): CyclingActivity {
+  return {
+    ...metadata,
+    id: 'cycling',
+    type: 'cycling',
+    date: '2026-06-04',
+    durationMinutes: 90,
+    intensity: 'moderate',
+    met: 6.8,
+    includedInDailySteps: false,
+    distanceKm: 36,
+    elevationGainMeters: 420,
+    bikeType: 'road',
+    environment: 'outdoor',
+    calculation: {
+      weightKg: 80,
+      estimatedCaloriesKcal: 700,
+      metUsed: 6.8,
+      calculationVersion: 1,
+    },
+    ...overrides,
+  };
+}
+
 
 function target(date: string, calories = 2000, protein = 140): DailyTarget {
   return {
@@ -160,6 +186,23 @@ describe('agrégations analytiques', () => {
       weightedPaceSecondsPer100m: 144,
     });
     expect(summary).not.toHaveProperty('averageRpe');
+  });
+
+  it('agrège la distance, la vitesse et le dénivelé à vélo', () => {
+    const weeks = createTwelveWeekWindow('2026-06-07');
+    const summary = aggregateCyclingWeeks([
+      cycling(),
+      cycling({ id: 'cycling-2', durationMinutes: 30, distanceKm: 12, elevationGainMeters: 80 }),
+    ], weeks).at(-1);
+
+    expect(summary).toMatchObject({
+      distanceKm: 48,
+      durationMinutes: 120,
+      weightedSpeedKmh: 24,
+      elevationGainMeters: 500,
+      sessionCount: 2,
+      longestDistanceKm: 36,
+    });
   });
 
   it('calcule l’adhérence calorique et protéique sur les jours suivis', () => {

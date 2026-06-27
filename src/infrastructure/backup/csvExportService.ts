@@ -1,4 +1,5 @@
 import { calculateDailyNutrition, calculateFoodEntryNutrition } from '@/domain/calculations/nutrition';
+import { calculateAverageSpeedKmh, calculatePoolLengths } from '@/domain/calculations/endurance';
 import type { Activity } from '@/domain/models/activity';
 import type { BackupData } from '@/domain/models/backup';
 import type { FoodEntry } from '@/domain/models/food';
@@ -38,15 +39,77 @@ function fileName(prefix: string, exportedAt: string): string {
 function activitySpecificValues(activity: Activity): CsvCell[] {
   switch (activity.type) {
     case 'running':
-      return [activity.distanceKm, undefined, activity.sessionType, activity.averageCadenceSpm, undefined, undefined];
+      return [
+        activity.distanceKm,
+        undefined,
+        activity.sessionType,
+        activity.averageCadenceSpm,
+        undefined,
+        undefined,
+        activity.elevationGainMeters,
+        activity.terrainType,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        activity.intervalDetails,
+      ];
     case 'swimming':
-      return [undefined, activity.distanceMeters, activity.sessionType, undefined, activity.mainStroke, undefined];
-    case 'strengthTraining':
-      return [undefined, undefined, undefined, undefined, undefined, activity.met];
+      return [
+        undefined,
+        activity.distanceMeters,
+        activity.sessionType,
+        undefined,
+        activity.mainStroke,
+        undefined,
+        undefined,
+        undefined,
+        activity.poolLengthMeters,
+        undefined,
+        undefined,
+        undefined,
+        calculatePoolLengths(activity.distanceMeters, activity.poolLengthMeters),
+        activity.intervalDetails,
+      ];
     case 'cycling':
+      return [
+        activity.distanceKm,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        activity.met,
+        activity.elevationGainMeters,
+        undefined,
+        undefined,
+        activity.bikeType,
+        activity.environment,
+        activity.distanceKm === undefined
+          ? undefined
+          : calculateAverageSpeedKmh(activity.durationMinutes, activity.distanceKm),
+        undefined,
+        activity.intervalDetails,
+      ];
+    case 'strengthTraining':
     case 'walking':
     case 'otherCardio':
-      return [undefined, undefined, undefined, undefined, undefined, activity.met];
+      return [
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        activity.met,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+      ];
   }
 }
 
@@ -109,6 +172,14 @@ function createActivitiesCsv(data: BackupData, exportedAt: string): CsvExportFil
         'cadence_pas_min',
         'nage_principale',
         'met',
+        'denivele_positif_m',
+        'terrain',
+        'longueur_bassin_m',
+        'type_velo',
+        'environnement',
+        'vitesse_moyenne_kmh',
+        'nombre_longueurs',
+        'intervalles_blocs',
         'notes',
       ],
       rows,
