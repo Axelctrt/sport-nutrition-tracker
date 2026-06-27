@@ -1,4 +1,4 @@
-import { ArrowRight, LayoutDashboard, ShieldCheck } from "lucide-react";
+import { ArrowRight, LayoutDashboard } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -6,8 +6,7 @@ import { useTheme } from "@/app/providers/useTheme";
 import { routePaths } from "@/app/routePaths";
 import type { AppSettings } from "@/domain/models/settings";
 import { AdvancedSettingsForm } from "@/features/settings/components/AdvancedSettingsForm";
-import { DatabaseIntegrityPanel } from "@/features/settings/components/DatabaseIntegrityPanel";
-import { SelectiveDataResetPanel } from "@/features/settings/components/SelectiveDataResetPanel";
+import { DataManagementCenter } from "@/features/settings/components/DataManagementCenter";
 import { SettingsOverview } from "@/features/settings/components/SettingsOverview";
 import type { SettingsFormValues } from "@/features/settings/schemas/settingsSchema";
 import {
@@ -23,27 +22,6 @@ import {
 import { Card } from "@/shared/ui/Card";
 import { InlineNotice } from "@/shared/ui/InlineNotice";
 import { PageSkeleton } from "@/shared/ui/PageSkeleton";
-
-const storageLabels: Record<
-  PersistentStorageStatus,
-  { title: string; description: string }
-> = {
-  persisted: {
-    title: "Stockage persistant actif",
-    description:
-      "Le navigateur indique qu’il ne supprimera pas automatiquement les données locales.",
-  },
-  notPersisted: {
-    title: "Stockage persistant non accordé",
-    description:
-      "Les données restent utilisables, mais un export JSON régulier sera recommandé.",
-  },
-  unsupported: {
-    title: "Statut de persistance indisponible",
-    description:
-      "Ce navigateur ne permet pas de vérifier ou demander cette protection.",
-  },
-};
 
 export function AdvancedSettingsPage() {
   const { setTheme } = useTheme();
@@ -158,8 +136,6 @@ export function AdvancedSettingsPage() {
     return <PageSkeleton variant="form" />;
   }
 
-  const storagePresentation = storageLabels[storageStatus];
-
   return (
     <section
       aria-labelledby="settings-title"
@@ -183,13 +159,11 @@ export function AdvancedSettingsPage() {
 
       <SettingsOverview settings={settings} storageStatus={storageStatus} />
 
-      <InlineNotice className="mt-4" title={storagePresentation.title}>
-        {storagePresentation.description}
-      </InlineNotice>
-
-      <DatabaseIntegrityPanel className="mt-4" />
-
-      <SelectiveDataResetPanel className="mt-4" />
+      <DataManagementCenter
+        className="mt-4"
+        storageStatus={storageStatus}
+        lastBackupExportedAt={settings.lastBackupExportedAt}
+      />
 
       <Card className="mt-4 p-4 sm:p-5">
         <div className="flex items-start gap-3">
@@ -209,30 +183,6 @@ export function AdvancedSettingsPage() {
               className="mt-3 inline-flex min-h-10 items-center gap-1 text-sm font-semibold text-brand-700 hover:underline dark:text-brand-300"
             >
               Personnaliser le tableau de bord
-              <ArrowRight aria-hidden="true" className="size-4" />
-            </Link>
-          </div>
-        </div>
-      </Card>
-
-      <Card className="mt-4 p-4 sm:p-5">
-        <div className="flex items-start gap-3">
-          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand-100 text-brand-800 dark:bg-brand-900 dark:text-brand-100">
-            <ShieldCheck aria-hidden="true" className="size-5" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <h2 className="font-semibold text-slate-950 dark:text-white">
-              Confidentialité et données locales
-            </h2>
-            <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
-              Consulte le détail du stockage local, des appels Open Food Facts,
-              de la caméra, des sauvegardes et de la suppression des données.
-            </p>
-            <Link
-              to={routePaths.privacy}
-              className="mt-3 inline-flex min-h-10 items-center gap-1 text-sm font-semibold text-brand-700 hover:underline dark:text-brand-300"
-            >
-              Ouvrir la page Confidentialité
               <ArrowRight aria-hidden="true" className="size-4" />
             </Link>
           </div>
