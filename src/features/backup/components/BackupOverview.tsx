@@ -9,7 +9,7 @@ interface BackupOverviewProps {
 export function BackupOverview({ storageUsageLabel, lastBackupLabel }: BackupOverviewProps) {
   const metrics = [
     { label: 'Stockage', value: 'Local', icon: Database },
-    { label: 'Sauvegarde', value: 'JSON v2', icon: ShieldCheck },
+    { label: 'Sauvegarde', value: 'JSON v3', icon: ShieldCheck },
     { label: 'Dernière copie', value: lastBackupLabel ?? 'Chargement…', icon: CalendarClock },
     { label: 'Espace utilisé', value: storageUsageLabel ?? 'Non disponible', icon: HardDrive },
   ] as const;

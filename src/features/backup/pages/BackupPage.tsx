@@ -7,6 +7,8 @@ import {
   FileSpreadsheet,
   HardDrive,
   LoaderCircle,
+  Share2,
+
   ShieldCheck,
   Trash2,
   Wrench,
@@ -30,6 +32,7 @@ import { useTheme } from '@/app/providers/useTheme';
 import { routePaths } from '@/app/routePaths';
 import { BackupDeleteDialog } from '@/features/backup/components/BackupDeleteDialog';
 import { BackupOverview } from '@/features/backup/components/BackupOverview';
+import { shareBackupFile } from '@/features/backup/shareBackupFile';
 import {
   clearAllUserData,
   MAX_BACKUP_FILE_SIZE_BYTES,
@@ -139,6 +142,7 @@ export function BackupPage() {
   const [pendingImport, setPendingImport] = useState<PreparedBackupImport>();
   const [selectedFileName, setSelectedFileName] = useState<string>();
   const [isExporting, setIsExporting] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
@@ -203,6 +207,62 @@ export function BackupPage() {
   };
 
 
+  const handleShare = async () => {
+    setFeedback(undefined);
+    setIsSharing(true);
+
+    try {
+      const prepared = await prepareBackupExport();
+      const result = await shareBackupFile(
+        prepared.content,
+        prepared.fileName,
+      );
+
+      if (result === 'cancelled') {
+        setFeedback({
+          tone: 'info',
+          title: 'Partage annulé',
+          message:
+            'Aucun fichier n’a été envoyé et la date de sauvegarde reste inchangée.',
+        });
+        return;
+      }
+
+      if (result === 'unsupported') {
+        downloadFile(
+          prepared.content,
+          prepared.fileName,
+          'application/json',
+        );
+      }
+
+      const updatedSettings =
+        await recordSuccessfulBackupExport(prepared);
+      setSettings(updatedSettings);
+      setFeedback({
+        tone: 'success',
+        title:
+          result === 'shared'
+            ? 'Sauvegarde prête à être partagée'
+            : 'Sauvegarde téléchargée',
+        message:
+          result === 'shared'
+            ? `${prepared.summary.totalRecords} enregistrement(s) ont été placés dans la feuille de partage de l’appareil.`
+            : `Le partage natif n’est pas disponible ici. ${prepared.fileName} a été téléchargé à la place.`,
+      });
+    } catch (error) {
+      setFeedback({
+        tone: 'error',
+        title: 'Partage impossible',
+        message:
+          error instanceof Error
+            ? error.message
+            : 'La sauvegarde n’a pas pu être partagée.',
+      });
+    } finally {
+      setIsSharing(false);
+    }
+  };
   const handleReminderChange = async (event: ChangeEvent<HTMLSelectElement>) => {
     const intervalDays = Number(event.target.value) as BackupReminderIntervalDays;
     setIsUpdatingReminder(true);
@@ -449,10 +509,36 @@ export function BackupPage() {
               </p>
             </div>
           </div>
-          <Button className="mt-5 w-full" onClick={handleExport} disabled={isExporting}>
-            {isExporting ? <LoaderCircle aria-hidden="true" className="size-4 animate-spin" /> : <DatabaseBackup aria-hidden="true" className="size-4" />}
-            {isExporting ? 'Création…' : 'Télécharger la sauvegarde JSON'}
+                <div className="mt-5 grid gap-2 sm:grid-cols-2">
+          <Button
+            variant="secondary"
+            onClick={handleExport}
+            disabled={isExporting || isSharing}
+          >
+            {isExporting ? (
+              <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
+            ) : (
+              <DatabaseBackup aria-hidden="true" className="size-4" />
+            )}
+            {isExporting ? 'Création…' : 'Télécharger le JSON'}
           </Button>
+          <Button
+            onClick={() => void handleShare()}
+            disabled={isExporting || isSharing}
+          >
+            {isSharing ? (
+              <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
+            ) : (
+              <Share2 aria-hidden="true" className="size-4" />
+            )}
+            {isSharing ? 'Préparation…' : 'Partager la sauvegarde'}
+          </Button>
+        </div>
+        <p className="mt-3 text-xs leading-5 text-slate-500 dark:text-slate-400">
+          Sur un appareil compatible, ouvre Fichiers, iCloud Drive,
+          AirDrop ou une autre application. Sinon, le fichier est
+          téléchargé automatiquement.
+        </p>
         </Card>
 
         <Card className="p-5 sm:p-6">

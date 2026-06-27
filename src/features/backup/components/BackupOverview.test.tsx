@@ -7,7 +7,7 @@ describe('BackupOverview', () => {
 
     expect(screen.getByLabelText('Résumé des données locales')).toBeInTheDocument();
     expect(screen.getByText('Local')).toBeInTheDocument();
-    expect(screen.getByText('JSON v2')).toBeInTheDocument();
+    expect(screen.getByText('JSON v3')).toBeInTheDocument();
     expect(screen.getByText('Il y a 6 jours')).toBeInTheDocument();
     expect(screen.getByText('2,4 Mo / 1 Go')).toBeInTheDocument();
   });
