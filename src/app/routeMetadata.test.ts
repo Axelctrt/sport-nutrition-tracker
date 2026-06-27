@@ -5,6 +5,7 @@ describe('getRouteTitle', () => {
     expect(getRouteTitle('/')).toBe('Aujourd’hui');
     expect(getRouteTitle('/food')).toBe('Alimentation');
     expect(getRouteTitle('/strength/planning')).toBe('Planning de musculation');
+    expect(getRouteTitle('/activities/templates')).toBe('Modèles d’endurance');
     expect(getRouteTitle('/strength/sessions/session-1')).toBe('Séance de musculation');
     expect(getRouteTitle('/strength/exercises/exercise-1/history')).toBe('Historique de l’exercice');
     expect(getRouteTitle('/privacy')).toBe('Confidentialité');

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { DEFAULT_ENDURANCE_TEMPLATES } from '@/domain/defaults/appSettings';
 import { APP_SETTINGS_ID, LOCAL_USER_PROFILE_ID } from '@/domain/defaults/identifiers';
 import type { BackupEnvelope } from '@/domain/models/backup';
 import { isValidLocalDate } from '@/shared/validation/localDate';
@@ -70,6 +71,29 @@ const swimmingMetValuesSchema = z.object({
   competition: nonNegativeNumber,
 });
 
+
+const enduranceTemplateSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1).max(200),
+  activityType: z.enum(['running', 'swimming', 'cycling']),
+  durationMinutes: positiveNumber,
+  intensity: z.enum(['low', 'moderate', 'high']),
+  notes: z.string().max(2_000).optional(),
+  runningSessionType: z.enum(['easy', 'recovery', 'longRun', 'tempo', 'intervals', 'hills', 'competition']).optional(),
+  distanceKm: positiveNumber.optional(),
+  averageCadenceSpm: positiveNumber.optional(),
+  elevationGainMeters: nonNegativeNumber.optional(),
+  terrainType: z.enum(['road', 'track', 'trail', 'treadmill', 'mixed']).optional(),
+  swimmingSessionType: z.enum(['recovery', 'technique', 'endurance', 'tempo', 'intervals', 'competition']).optional(),
+  mainStroke: z.enum(['freestyle', 'breaststroke', 'backstroke', 'butterfly', 'mixed', 'drills']).optional(),
+  distanceMeters: positiveNumber.optional(),
+  poolLengthMeters: z.union([z.literal(25), z.literal(50)]).optional(),
+  cyclingMet: positiveNumber.optional(),
+  bikeType: z.enum(['road', 'gravel', 'mountain', 'city', 'indoor', 'other']).optional(),
+  cyclingEnvironment: z.enum(['outdoor', 'indoor']).optional(),
+  intervalDetails: z.string().max(2_000).optional(),
+});
+
 const appSettingsSchema = entityMetadataSchema.extend({
   theme: z.enum(['system', 'light', 'dark']),
   includedBaseSteps: nonNegativeInteger,
@@ -88,6 +112,10 @@ const appSettingsSchema = entityMetadataSchema.extend({
   restTimerAutoStart: z.boolean().default(true),
   restTimerSoundEnabled: z.boolean().default(false),
   restTimerVibrationEnabled: z.boolean().default(true),
+  enduranceTemplates: z.array(enduranceTemplateSchema).default(
+    DEFAULT_ENDURANCE_TEMPLATES.map((template) => ({ ...template })),
+  ),
+  enduranceTemplatesVersion: positiveInteger.default(1),
   lastBackupExportedAt: isoDateTimeSchema.optional(),
   lastBackupAppVersion: z.string().min(1).max(100).optional(),
   lastBackupSchemaVersion: positiveInteger.optional(),
@@ -128,6 +156,9 @@ const runningActivitySchema = datedEntitySchema.extend({
   sessionType: z.enum(['easy', 'recovery', 'longRun', 'tempo', 'intervals', 'hills', 'competition']),
   distanceKm: positiveNumber,
   averageCadenceSpm: positiveNumber,
+  elevationGainMeters: nonNegativeNumber.optional(),
+  terrainType: z.enum(['road', 'track', 'trail', 'treadmill', 'mixed']).optional(),
+  intervalDetails: z.string().max(2_000).optional(),
 });
 
 const swimmingActivitySchema = datedEntitySchema.extend({
@@ -136,6 +167,8 @@ const swimmingActivitySchema = datedEntitySchema.extend({
   sessionType: z.enum(['recovery', 'technique', 'endurance', 'tempo', 'intervals', 'competition']),
   mainStroke: z.enum(['freestyle', 'breaststroke', 'backstroke', 'butterfly', 'mixed', 'drills']),
   distanceMeters: positiveNumber,
+  poolLengthMeters: z.union([z.literal(25), z.literal(50)]).optional(),
+  intervalDetails: z.string().max(2_000).optional(),
 });
 
 const strengthActivitySchema = datedEntitySchema.extend({
@@ -144,9 +177,21 @@ const strengthActivitySchema = datedEntitySchema.extend({
   met: nonNegativeNumber,
 });
 
+const cyclingActivitySchema = datedEntitySchema.extend({
+  ...activityBaseShape,
+  type: z.literal('cycling'),
+  met: nonNegativeNumber,
+  includedInDailySteps: z.literal(false),
+  distanceKm: positiveNumber.optional(),
+  elevationGainMeters: nonNegativeNumber.optional(),
+  bikeType: z.enum(['road', 'gravel', 'mountain', 'city', 'indoor', 'other']).optional(),
+  environment: z.enum(['outdoor', 'indoor']).optional(),
+  intervalDetails: z.string().max(2_000).optional(),
+});
+
 const otherActivitySchema = datedEntitySchema.extend({
   ...activityBaseShape,
-  type: z.enum(['cycling', 'walking', 'otherCardio']),
+  type: z.enum(['walking', 'otherCardio']),
   met: nonNegativeNumber,
   includedInDailySteps: z.boolean(),
 });
@@ -154,6 +199,7 @@ const otherActivitySchema = datedEntitySchema.extend({
 const activitySchema = z.discriminatedUnion('type', [
   runningActivitySchema,
   swimmingActivitySchema,
+  cyclingActivitySchema,
   strengthActivitySchema,
   otherActivitySchema,
 ]);

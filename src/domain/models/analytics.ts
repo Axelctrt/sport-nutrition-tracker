@@ -1,4 +1,5 @@
 import type { ActivityType } from '@/domain/models/activity';
+import type { EnduranceRecords } from '@/domain/calculations/endurance';
 import type { LocalDate } from '@/domain/models/common';
 
 export interface CalendarWeek {
@@ -21,6 +22,15 @@ export interface SwimmingWeekSummary extends CalendarWeek {
   weightedPaceSecondsPer100m?: number;
   sessionCount: number;
   longestDistanceMeters: number;
+}
+
+export interface CyclingWeekSummary extends CalendarWeek {
+  distanceKm: number;
+  durationMinutes: number;
+  weightedSpeedKmh?: number;
+  elevationGainMeters: number;
+  sessionCount: number;
+  longestDistanceKm: number;
 }
 
 export interface NutritionWeekSummary extends CalendarWeek {
@@ -67,6 +77,8 @@ export interface TwelveWeekAnalytics {
   to: LocalDate;
   running: RunningWeekSummary[];
   swimming: SwimmingWeekSummary[];
+  cycling: CyclingWeekSummary[];
+  enduranceRecords: EnduranceRecords;
   nutrition: NutritionWeekSummary[];
   activity: ActivityWeekSummary[];
   weight: {

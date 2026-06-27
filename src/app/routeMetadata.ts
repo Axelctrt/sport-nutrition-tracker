@@ -34,6 +34,7 @@ const routeMetadata: RouteMetadata[] = [
   { pattern: routePaths.newStrengthExercise, title: 'Créer un exercice' },
   { pattern: routePaths.editStrengthExercise, title: 'Modifier un exercice' },
   { pattern: routePaths.strengthExercises, title: 'Exercices' },
+  { pattern: routePaths.enduranceTemplates, title: 'Modèles d’endurance' },
   { pattern: routePaths.addRunningActivity, title: 'Ajouter une course' },
   { pattern: routePaths.addSwimmingActivity, title: 'Ajouter une natation' },
   { pattern: routePaths.addStrengthActivity, title: 'Ajouter une activité de musculation' },

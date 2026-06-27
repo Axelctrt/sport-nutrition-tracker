@@ -138,3 +138,20 @@
 - [ ] Le comportement hors connexion affiche un message sans masquer le formulaire.
 - [ ] Une ancienne sauvegarde JSON v2 sans les nouveaux champs reste importable.
 - [ ] La page reste utilisable sans débordement horizontal sur iPhone 15.
+
+## Suivi des sports d’endurance
+
+- [ ] Une ancienne course sans terrain ni dénivelé reste modifiable et visible.
+- [ ] Une course peut enregistrer terrain, dénivelé et intervalles facultatifs.
+- [ ] Une natation avec bassin de 25 m ou 50 m affiche le nombre de longueurs calculé.
+- [ ] Une sortie vélo affiche distance, vitesse moyenne, dénivelé, type de vélo et environnement.
+- [ ] Les volumes hebdomadaires de course, natation et vélo sont corrects.
+- [ ] Les sorties les plus longues et les meilleures allures ou vitesses sont recalculées depuis l’historique.
+- [ ] Un record sur distance usuelle n’est affiché que pour une séance complète correspondant à cette distance.
+- [ ] Les quatre modèles d’endurance par défaut sont disponibles après une mise à jour depuis une ancienne base.
+- [ ] Créer, modifier, dupliquer et supprimer un modèle ne modifie pas les activités déjà enregistrées.
+- [ ] Utiliser un modèle préremplit le sport et ses données sans forcer la date de l’activité.
+- [ ] L’export CSV contient terrain, dénivelé, bassin, longueurs, type de vélo, environnement, vitesse et intervalles.
+- [ ] Une sauvegarde JSON v2 ancienne et une sauvegarde contenant les nouveaux champs sont importables.
+- [ ] La saisie, les modèles et les analyses restent utilisables hors connexion.
+- [ ] Les pages ne débordent pas horizontalement sur iPhone 15 en portrait et paysage.

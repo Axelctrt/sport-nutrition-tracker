@@ -107,3 +107,15 @@ La branche de développement ajoute une page Confidentialité publique et des en
 - libellé de portion récupéré depuis Open Food Facts quand il est disponible ;
 - nouveaux champs facultatifs acceptés par les sauvegardes JSON v2 ;
 - aucune migration Dexie ni dépendance supplémentaire.
+
+## Phase 10 — suivi des sports d’endurance
+
+- course enrichie avec terrain, dénivelé positif et segments ou intervalles facultatifs ;
+- natation enrichie avec bassin de 25 ou 50 m, longueurs calculées et séries facultatives ;
+- vélo spécialisé avec distance, dénivelé, vitesse moyenne, type de vélo et environnement ;
+- volumes hebdomadaires et records recalculés pour les trois sports ;
+- records de séances sur distances usuelles sans extrapolation de segments absents ;
+- modèles locaux de course, natation et vélo avec préremplissage ;
+- nouvelles données incluses dans l’export CSV et la sauvegarde JSON v2 ;
+- modèles stockés dans les réglages existants ;
+- aucune migration Dexie, aucune dépendance supplémentaire et aucune intégration externe.

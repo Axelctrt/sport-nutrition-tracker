@@ -2,6 +2,21 @@
 
 PWA locale de suivi sportif, nutritionnel, calorique et de progression.
 
+## Phase 10 — suivi des sports d’endurance
+
+Le journal et les analyses prennent maintenant en charge un suivi plus précis de la course, de la natation et du vélo :
+
+- dénivelé, terrain et intervalles facultatifs pour la course ;
+- longueur de bassin, longueurs calculées et séries facultatives pour la natation ;
+- distance, dénivelé, vitesse moyenne, type de vélo et environnement pour le vélo ;
+- volumes hebdomadaires et records reconstruits depuis les activités ;
+- records de séances sur distances usuelles lorsque la distance complète correspond réellement ;
+- modèles d’endurance locaux accessibles depuis `#/activities/templates` ;
+- export CSV et sauvegarde JSON v2 enrichis ;
+- anciennes activités compatibles sans migration Dexie.
+
+Les allures, vitesses, records, longueurs et statistiques hebdomadaires restent des données recalculables. SportPilot ne prétend pas produire de métrique physiologique lorsque les données nécessaires ne sont pas disponibles.
+
 ## Phase 7 — planification hebdomadaire des entraînements
 
 Le carnet de musculation dispose maintenant d’une vue hebdomadaire du lundi au dimanche :

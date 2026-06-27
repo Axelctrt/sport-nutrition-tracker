@@ -59,3 +59,9 @@ Un retour au commit précédent ne nécessite donc aucune migration structurelle
 Cette phase n’ajoute aucune table et ne modifie aucun index Dexie. Les champs `servingLabel` et `localOverrides` sont facultatifs. Une version antérieure les ignorera simplement tout en conservant le produit, sa portion numérique, ses macronutriments, ses fibres et son sel.
 
 Avant un retour arrière, exporter une sauvegarde JSON récente. Les corrections locales stockées dans `localOverrides` ne seront plus protégées par une ancienne interface lors d’un nouvel import Open Food Facts, mais les valeurs actuellement enregistrées resteront présentes dans IndexedDB.
+
+## Retour arrière du suivi d’endurance
+
+Cette phase n’ajoute aucune table et ne modifie aucun index Dexie. Les champs `elevationGainMeters`, `terrainType`, `intervalDetails`, `poolLengthMeters`, `distanceKm`, `bikeType` et `environment` sont facultatifs. Les modèles sont stockés dans les champs facultatifs `enduranceTemplates` et `enduranceTemplatesVersion` des réglages existants.
+
+Un retour au commit précédent ne nécessite donc aucune migration structurelle. Une version antérieure continuera de lire les activités historiques avec leurs champs déjà connus, mais ignorera les informations d’endurance supplémentaires et les modèles. Les records et volumes n’étant pas stockés, aucune donnée dérivée ne doit être supprimée. Exporter une sauvegarde JSON récente avant tout retour arrière.

@@ -1,7 +1,7 @@
 import { createDefaultAppSettings } from '@/domain/defaults/appSettings';
 import { LOCAL_USER_PROFILE_ID } from '@/domain/defaults/identifiers';
 import type { BackupEnvelope } from '@/domain/models/backup';
-import type { Activity } from '@/domain/models/activity';
+import type { Activity, CyclingActivity, RunningActivity, SwimmingActivity } from '@/domain/models/activity';
 import type { UserProfile } from '@/domain/models/profile';
 import { migrateBackupEnvelope } from '@/infrastructure/backup/backupMigrations';
 import { backupEnvelopeSchema } from '@/infrastructure/backup/backupSchemas';
@@ -82,6 +82,8 @@ describe('backupEnvelopeSchema', () => {
     delete legacySettings.restTimerAutoStart;
     delete legacySettings.restTimerSoundEnabled;
     delete legacySettings.restTimerVibrationEnabled;
+    delete legacySettings.enduranceTemplates;
+    delete legacySettings.enduranceTemplatesVersion;
     envelope.data.appSettings = [legacySettings as unknown as BackupEnvelope['data']['appSettings'][number]];
 
     const parsed = backupEnvelopeSchema.parse(envelope);
@@ -90,6 +92,8 @@ describe('backupEnvelopeSchema', () => {
     expect(parsed.data.appSettings[0]?.restTimerAutoStart).toBe(true);
     expect(parsed.data.appSettings[0]?.restTimerSoundEnabled).toBe(false);
     expect(parsed.data.appSettings[0]?.restTimerVibrationEnabled).toBe(true);
+    expect(parsed.data.appSettings[0]?.enduranceTemplatesVersion).toBe(1);
+    expect(parsed.data.appSettings[0]?.enduranceTemplates).toHaveLength(4);
   });
 
   it('accepte les activités récentes sans RPE et les anciennes activités qui en contiennent encore un', () => {
@@ -102,6 +106,51 @@ describe('backupEnvelopeSchema', () => {
     const parsed = backupEnvelopeSchema.parse(envelope);
     expect(parsed.data.activities[0]).not.toHaveProperty('rpe');
     expect(parsed.data.activities[1]).toMatchObject({ rpe: 8 });
+  });
+
+  it('conserve les données d’endurance facultatives et accepte les anciennes activités', () => {
+    const envelope = createValidEnvelope();
+    envelope.data.activities = [
+      createEntity<RunningActivity>({
+        ...createRunningActivityInput(),
+        elevationGainMeters: 320,
+        terrainType: 'trail',
+        intervalDetails: '3 × 8 min',
+      }, 'running-enriched'),
+      createEntity<SwimmingActivity>({
+        type: 'swimming',
+        date: '2026-06-25',
+        durationMinutes: 45,
+        intensity: 'moderate',
+        sessionType: 'endurance',
+        mainStroke: 'freestyle',
+        distanceMeters: 1_500,
+        poolLengthMeters: 25,
+        calculation: { weightKg: 70, estimatedCaloriesKcal: 350, calculationVersion: 1 },
+      }, 'swimming-enriched'),
+      createEntity<CyclingActivity>({
+        type: 'cycling',
+        date: '2026-06-26',
+        durationMinutes: 90,
+        intensity: 'moderate',
+        met: 6.8,
+        includedInDailySteps: false,
+        distanceKm: 36,
+        elevationGainMeters: 420,
+        bikeType: 'road',
+        environment: 'outdoor',
+        calculation: { weightKg: 70, estimatedCaloriesKcal: 700, metUsed: 6.8, calculationVersion: 1 },
+      }, 'cycling-enriched'),
+      createEntity<RunningActivity>(createRunningActivityInput(), 'running-legacy-compatible'),
+    ] as Activity[];
+
+    const parsed = backupEnvelopeSchema.parse(envelope);
+
+    expect(parsed.data.activities).toHaveLength(4);
+    expect(parsed.data.activities[0]).toMatchObject({ terrainType: 'trail', elevationGainMeters: 320 });
+    expect(parsed.data.activities[1]).toMatchObject({ poolLengthMeters: 25 });
+    expect(parsed.data.activities[2]).toMatchObject({ type: 'cycling', bikeType: 'road', distanceKm: 36 });
+    expect(parsed.data.activities[3]).not.toHaveProperty('terrainType');
   });
 
   it('refuse deux pesées pour la même date', () => {

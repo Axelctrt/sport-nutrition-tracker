@@ -32,6 +32,13 @@ const ActivityJournalPage = lazy(() =>
   })),
 );
 
+
+const EnduranceTemplatesPage = lazy(() =>
+  import('@/features/endurance-templates/pages/EnduranceTemplatesPage').then((module) => ({
+    default: module.EnduranceTemplatesPage,
+  })),
+);
+
 const AddActivityPage = lazy(() =>
   import('@/features/activities/pages/AddActivityPage').then((module) => ({
     default: module.AddActivityPage,
@@ -298,6 +305,15 @@ export function LazyActivityJournalPage() {
   return (
     <RouteSuspense variant="list">
       <ActivityJournalPage />
+    </RouteSuspense>
+  );
+}
+
+
+export function LazyEnduranceTemplatesPage() {
+  return (
+    <RouteSuspense variant="list">
+      <EnduranceTemplatesPage />
     </RouteSuspense>
   );
 }

@@ -29,6 +29,7 @@ export const routePaths = {
   newWorkoutTemplate: '/strength/templates/new',
   editWorkoutTemplate: '/strength/templates/:templateId/edit',
   addActivity: '/activities/add',
+  enduranceTemplates: '/activities/templates',
   addRunningActivity: '/activities/add/running',
   addSwimmingActivity: '/activities/add/swimming',
   addStrengthActivity: '/activities/add/strength',

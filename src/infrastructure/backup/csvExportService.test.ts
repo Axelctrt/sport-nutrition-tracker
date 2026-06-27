@@ -2,6 +2,7 @@ import { createCsvContent, createCsvExports } from '@/infrastructure/backup/csvE
 import { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import { createDefaultAppSettings } from '@/domain/defaults/appSettings';
 import { createEntity } from '@/shared/utils/entities';
+import type { CyclingActivity, SwimmingActivity } from '@/domain/models/activity';
 import type { WeightEntry } from '@/domain/models/weight';
 import type { WorkoutSession } from '@/domain/models/strength';
 
@@ -40,6 +41,38 @@ describe('createCsvExports', () => {
       note: 'Après entraînement',
     });
     await database.weights.add(weight);
+    await database.activities.bulkAdd([
+      createEntity<SwimmingActivity>({
+        type: 'swimming',
+        date: '2026-06-26',
+        durationMinutes: 40,
+        intensity: 'moderate',
+        sessionType: 'endurance',
+        mainStroke: 'freestyle',
+        distanceMeters: 1_500,
+        poolLengthMeters: 25,
+        intervalDetails: '3 × 500 m',
+        calculation: { weightKg: 69.4, estimatedCaloriesKcal: 350, calculationVersion: 1 },
+      }, 'swimming-1'),
+      createEntity<CyclingActivity>({
+        type: 'cycling',
+        date: '2026-06-26',
+        durationMinutes: 90,
+        intensity: 'moderate',
+        met: 6.8,
+        includedInDailySteps: false,
+        distanceKm: 36,
+        elevationGainMeters: 420,
+        bikeType: 'road',
+        environment: 'outdoor',
+        calculation: {
+          weightKg: 69.4,
+          estimatedCaloriesKcal: 700,
+          metUsed: 6.8,
+          calculationVersion: 1,
+        },
+      }, 'cycling-1'),
+    ]);
     await database.workoutSessions.add(createEntity<WorkoutSession>({
       date: '2026-06-30',
       status: 'planned',
@@ -65,6 +98,13 @@ describe('createCsvExports', () => {
     expect(exports[0]?.content).toContain('Après entraînement');
     expect(exports[3]?.content).toContain('date_prevue_initiale');
     expect(exports[3]?.content).toContain('2026-06-29');
+    expect(exports[2]?.content).toContain('longueur_bassin_m');
+    expect(exports[2]?.content).toContain('nombre_longueurs');
+    expect(exports[2]?.content).toContain('3 × 500 m');
+    expect(exports[2]?.content).toContain('road');
+    expect(exports[2]?.content).toContain('outdoor');
+    expect(exports[2]?.content).toContain('24');
+    expect(exports[2]?.content).toContain('60');
     expect(exports[3]?.content).toContain('planned');
   });
 });

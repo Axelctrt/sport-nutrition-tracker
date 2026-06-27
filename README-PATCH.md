@@ -1,27 +1,29 @@
-# SportPilot 0.15.0 — fiabilité des produits alimentaires
+# SportPilot 0.15.0 — suivi des sports d’endurance
 
-Branche recommandée : `feature/food-product-refresh`
+Branche recommandée : `feature/endurance-tracking`
 
-Cette phase améliore la qualité et la maintenance de la bibliothèque alimentaire locale :
+Cette phase développe la course, la natation et le vélo sans dépendre d’un compte, d’un backend, de Garmin ou de Strava :
 
-- actualisation manuelle des produits Open Food Facts enregistrés ;
-- conservation automatique des corrections locales champ par champ ;
-- remplacement explicite des corrections après confirmation ;
-- détection des doublons par code-barres ou par nom et marque normalisés ;
-- possibilité de confirmer un doublon de nom, mais blocage d’un code-barres déjà utilisé ;
-- libellé de portion, par exemple `1 pot`, `1 tranche` ou `1 dose` ;
-- fibres et sel visibles dans la bibliothèque et les aperçus du journal ;
-- import Open Food Facts enrichi avec le libellé de portion ;
+- course enrichie avec dénivelé positif, terrain et description facultative des segments ou intervalles ;
+- natation enrichie avec longueur de bassin, nombre de longueurs calculé et séries facultatives ;
+- vélo spécialisé avec distance, dénivelé, vitesse moyenne calculée, type de vélo et pratique intérieure ou extérieure ;
+- page Analyses étendue aux volumes hebdomadaires, sorties les plus longues, meilleures allures ou vitesses et records de dénivelé ;
+- records sur distances usuelles calculés uniquement lorsqu’une séance complète correspond réellement à la distance ;
+- modèles simples de course, natation et vélo, modifiables et duplicables ;
+- préremplissage d’une activité depuis un modèle sans modifier la date ni créer automatiquement un programme ;
+- export CSV enrichi avec les nouvelles données ;
 - sauvegarde JSON v2 compatible avec les nouveaux champs facultatifs ;
-- scénario Playwright Chromium et WebKit iPhone pour les portions et doublons.
+- scénario Playwright Chromium et WebKit proche d’un iPhone 15.
 
 Architecture retenue :
 
-- aucune nouvelle table Dexie ;
-- aucun nouvel index ;
-- les corrections locales sont stockées dans `FoodProduct.localOverrides` ;
-- la date de dernière récupération reste portée par `source.fetchedAt` ;
-- les anciennes données et sauvegardes restent valides sans migration.
+- aucune nouvelle table Dexie et aucun nouvel index ;
+- les nouveaux champs d’activité sont facultatifs ;
+- les modèles sont stockés dans `AppSettings.enduranceTemplates` avec une version locale ;
+- les records, allures, vitesses, longueurs et volumes hebdomadaires sont recalculés depuis les activités et ne sont pas stockés ;
+- une ancienne base ou sauvegarde sans modèles reçoit les quatre modèles par défaut ;
+- aucune dépendance npm supplémentaire ;
+- le calculateur de disques abandonné n’est pas inclus.
 
 Contrôles :
 

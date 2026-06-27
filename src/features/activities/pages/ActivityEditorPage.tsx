@@ -1,6 +1,6 @@
 import { ArrowLeft } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   createActivityFromDraft,
   updateActivityFromDraft,
@@ -19,6 +19,7 @@ import type { ActivityFormValues } from '@/features/activities/schemas/activityF
 import {
   activityToFormValues,
   defaultActivityFormValues,
+  enduranceTemplateToFormValues,
   toActivityDraft,
 } from '@/features/activities/utils/activityForm';
 import { activityTypeLabels } from '@/features/activities/utils/activityLabels';
@@ -50,6 +51,8 @@ function ActivityEditor({
   const { profile } = useProfile();
   const location = useLocation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const templateId = activityId ? undefined : searchParams.get('templateId') ?? undefined;
   const navigationState = location.state as ActivityJournalNavigationState | null;
   const returnContext = navigationState?.activityJournalReturn;
   const [state, setState] = useState<EditorState>();
@@ -75,9 +78,17 @@ function ActivityEditor({
           throw new Error('Cette activité est introuvable ou a déjà été supprimée.');
         }
 
+        const template = templateId
+          ? (settings.enduranceTemplates ?? []).find((candidate) => candidate.id === templateId)
+          : undefined;
+        if (template && !allowedTypes.includes(template.activityType)) {
+          throw new Error('Ce modèle ne correspond pas au type d’activité ouvert.');
+        }
         const initialValues = existingActivity
           ? activityToFormValues(existingActivity)
-          : defaultActivityFormValues(initialType, settings);
+          : template
+            ? enduranceTemplateToFormValues(template, settings)
+            : defaultActivityFormValues(initialType, settings);
 
         if (active) {
           setState({
@@ -106,7 +117,7 @@ function ActivityEditor({
     return () => {
       active = false;
     };
-  }, [activityId, initialType]);
+  }, [activityId, allowedTypes, initialType, templateId]);
 
   useEffect(() => {
     if (!profile || !isValidLocalDate(selectedDate)) {

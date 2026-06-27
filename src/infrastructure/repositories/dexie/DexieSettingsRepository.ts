@@ -28,6 +28,8 @@ export class DexieSettingsRepository implements SettingsRepository {
             || normalized.restTimerAutoStart !== settings.restTimerAutoStart
             || normalized.restTimerSoundEnabled !== settings.restTimerSoundEnabled
             || normalized.restTimerVibrationEnabled !== settings.restTimerVibrationEnabled
+            || normalized.enduranceTemplates !== settings.enduranceTemplates
+            || normalized.enduranceTemplatesVersion !== settings.enduranceTemplatesVersion
           ) {
             await this.database.appSettings.put(normalized);
           }
