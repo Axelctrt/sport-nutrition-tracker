@@ -22,7 +22,14 @@ function collectFiles(directory) {
 }
 
 const packageJson = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
-const stableMode = process.argv.includes('--stable');
+const stableFlag = process.argv.includes('--stable');
+const autoFlag = process.argv.includes('--auto');
+const rcFlag = process.argv.includes('--rc');
+if ([stableFlag, autoFlag, rcFlag].filter(Boolean).length > 1) {
+  fail('les options --stable, --rc et --auto sont mutuellement exclusives.');
+}
+const inferredStableMode = /^\d+\.\d+\.\d+$/.test(String(packageJson.version));
+const stableMode = autoFlag ? inferredStableMode : stableFlag;
 const expectedVersionPattern = stableMode
   ? /^\d+\.\d+\.\d+$/
   : /^\d+\.\d+\.\d+-rc\.\d+$/;
