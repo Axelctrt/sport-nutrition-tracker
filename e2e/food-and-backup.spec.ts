@@ -28,7 +28,7 @@ test('exporte puis restaure une sauvegarde JSON', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Sauvegarde et restauration' })).toBeVisible();
 
   const downloadPromise = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Télécharger la sauvegarde JSON' }).click();
+  await page.getByRole('button', { name: 'Télécharger le JSON' }).click();
   const download = await downloadPromise;
   const backupPath = await download.path();
   expect(backupPath).toBeTruthy();

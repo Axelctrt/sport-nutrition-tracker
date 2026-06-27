@@ -45,7 +45,12 @@ describe('BackupPage', () => {
     renderPage();
     await screen.findByText('Aucune sauvegarde enregistrée');
 
-    expect(screen.getByRole('button', { name: 'Télécharger la sauvegarde JSON' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Télécharger le JSON' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Partager la sauvegarde' }),
+    ).toBeInTheDocument();
     expect(screen.getByLabelText('Fichier JSON SportPilot')).toBeInTheDocument();
     expect(screen.getByText('Confidentialité et stockage').closest('details')).not.toHaveAttribute('open');
     expect(screen.getByText('Fonctionnement de l’application').closest('details')).not.toHaveAttribute('open');
