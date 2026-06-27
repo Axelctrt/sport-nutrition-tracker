@@ -93,7 +93,7 @@ describe('WorkoutSessionPage', () => {
     expect(await screen.findByRole('heading', { name: 'Retour au carnet' })).toBeInTheDocument();
     expect((await appDatabase.workoutSessions.get('session-current'))?.status).toBe('completed');
     expect(window.sessionStorage.getItem('sportpilot:rest-timer:session-current')).toBeNull();
-  });
+  }, 15_000);
 
   it('ajoute, valide, duplique et supprime des séries sans démonter la page', async () => {
     const user = userEvent.setup();

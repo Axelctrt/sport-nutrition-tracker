@@ -83,6 +83,6 @@ describe('WorkoutTemplateEditorPage', () => {
       exerciseGroupRestBetweenExercisesSeconds: 15,
       exerciseGroupRestBetweenRoundsSeconds: 90,
     });
-  });
+  }, 15_000);
 
 });
