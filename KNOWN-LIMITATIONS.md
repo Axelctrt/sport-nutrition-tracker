@@ -1,6 +1,6 @@
-# Limitations connues — SportPilot 0.16.0-rc.1
+# Limitations connues — SportPilot 0.16.0
 
-Ces limitations ne sont pas considérées comme bloquantes pour la Release Candidate, mais doivent être connues avant publication.
+Ces limitations sont connues et ne sont pas considérées comme bloquantes pour la version stable.
 
 ## Données locales
 
@@ -8,7 +8,7 @@ SportPilot stocke les données dans le navigateur avec IndexedDB. La suppression
 
 ## Synchronisation
 
-La version 0.16.0-rc.1 ne propose ni compte utilisateur, ni synchronisation cloud, ni synchronisation automatique entre plusieurs appareils.
+La version 0.16.0 ne propose ni compte utilisateur, ni synchronisation cloud, ni synchronisation automatique entre plusieurs appareils.
 
 ## Services externes
 
@@ -26,6 +26,6 @@ Les activités ne sont pas importées depuis Garmin, Strava ou Apple Santé. Les
 
 Le minuteur de repos fonctionne dans la session de la PWA. Le son et la vibration dépendent des autorisations et des restrictions d’iOS ; un signal visuel est toujours conservé.
 
-## Release Candidate
+## Retour arrière
 
-Cette version est destinée à une validation approfondie avant la version stable 0.16.0. En cas de défaut bloquant, revenir à la version stable 0.15.0 avec la procédure de `ROLLBACK.md`.
+En cas de défaut bloquant après publication, appliquer la procédure de `ROLLBACK.md`. Le schéma Dexie et le format de sauvegarde restant en version 2, aucun retour de migration n’est nécessaire.

@@ -3,10 +3,10 @@ import { barcodeScannerPath, routePaths, selectFoodPath } from '@/app/routePaths
 import { CURRENT_BACKUP_SCHEMA_VERSION } from '@/infrastructure/backup/backupMigrations';
 import { databaseSchemaVersion, databaseTableNames } from '@/infrastructure/database/schema';
 
-describe('préparation de la Release Candidate 0.16.0-rc.1', () => {
-  it('expose la version candidate dans le build', () => {
-    expect(__APP_VERSION__).toBe('0.16.0-rc.1');
-    expect(__APP_VERSION__).toMatch(/^\d+\.\d+\.\d+-rc\.\d+$/);
+describe('préparation de la version stable 0.16.0', () => {
+  it('expose la version stable dans le build', () => {
+    expect(__APP_VERSION__).toBe('0.16.0');
+    expect(__APP_VERSION__).toMatch(/^\d+\.\d+\.\d+$/);
   });
 
   it('conserve les versions de schéma attendues', () => {

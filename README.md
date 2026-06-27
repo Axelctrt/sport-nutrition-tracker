@@ -1,4 +1,4 @@
-# SportPilot 0.16.0-rc.1
+# SportPilot 0.16.0
 
 PWA locale de suivi sportif, nutritionnel, calorique et de progression.
 
@@ -48,11 +48,11 @@ La séance active dispose maintenant d’un minuteur de repos mobile-first :
 
 Le schéma IndexedDB reste en version 2 et le format de sauvegarde reste en version 2.
 
-## Version 0.15 — Expérience mobile-first
+## Version 0.16 — améliorations prioritaires
 
-### 0.16.0-rc.1 — Release Candidate des améliorations prioritaires
+### 0.16.0 — version stable
 
-Cette Release Candidate regroupe les évolutions fonctionnelles développées après la version stable 0.15.0 : fiabilisation des sauvegardes et des parcours E2E, sécurité et confidentialité, minuteur de repos, statistiques adaptées au type d’exercice, planification hebdomadaire, supersets et circuits, fiabilité des produits alimentaires, suivi d’endurance et tableau de bord personnalisable.
+La version 0.16.0 regroupe les évolutions validées depuis 0.15.0 : minuteur de repos, statistiques adaptées au type d’exercice, planification hebdomadaire, supersets et circuits, fiabilité des produits alimentaires, suivi d’endurance et tableau de bord personnalisable.
 
 Elle conserve :
 
@@ -62,7 +62,11 @@ Elle conserve :
 - la compatibilité des données issues de 0.15.0 ;
 - l’absence de compte, de backend et d’intégration sportive externe.
 
-La validation de la RC repose sur `npm run release:verify`, puis `npm run test:e2e`, la checklist iPhone 15 et la vérification d’une mise à jour depuis 0.15.0 sans perte de données.
+La validation stable repose sur `npm run release:verify`, puis `npm run test:e2e`, la checklist iPhone 15 et la vérification d’une mise à jour depuis 0.15.0 sans perte de données.
+
+### 0.16.0-rc.1 — Release Candidate validée
+
+Cette Release Candidate a gelé les fonctionnalités de la version 0.16 et validé la cohérence des versions, la propreté du dépôt, les budgets du bundle, la documentation de publication et la procédure de retour arrière.
 
 ### 0.15.0 — version stable
 

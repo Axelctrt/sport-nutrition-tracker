@@ -1,13 +1,13 @@
-# Checklist de validation RC — SportPilot 0.16.0-rc.1
+# Checklist de validation stable — SportPilot 0.16.0
 
 ## Préparation
 
-- [ ] La branche courante est `release/0.16.0-rc.1`.
+- [ ] La branche courante est `release/0.16.0`.
 - [ ] `npm ci` termine sans erreur.
 - [ ] `npm run release:verify` termine sans erreur.
-- [ ] La version affichée dans Paramètres est `0.16.0-rc.1`.
+- [ ] La version affichée dans Paramètres est `0.16.0`.
 - [ ] Une sauvegarde JSON récente est conservée hors de l’application.
-- [ ] Les notes `RELEASE-NOTES-0.16.0-rc.1.md` et `KNOWN-LIMITATIONS.md` ont été relues.
+- [ ] Les notes `RELEASE-NOTES-0.16.0.md` et `KNOWN-LIMITATIONS.md` ont été relues.
 - [ ] `npm run audit:repository` confirme qu’aucun dossier de patch, rapport Playwright ou secret n’est suivi par Git.
 - [ ] Une sauvegarde JSON issue de 0.15.0 a été prévisualisée avant toute restauration.
 
@@ -36,22 +36,25 @@
 - [ ] Sections repliables recentrées à l’ouverture.
 - [ ] Installation depuis Safari et ouverture depuis l’écran d’accueil.
 - [ ] Données locales accessibles hors connexion.
-- [ ] Mise à jour de `0.15.0` vers `0.16.0-rc.1` appliquée sans perte de données.
+- [ ] Mise à jour de `0.15.0` vers `0.16.0` appliquée sans perte de données.
 
-## Publication Git
+## Publication Git stable
 
-- [ ] Le commit RC est poussé sur `origin/release/0.16.0-rc.1`.
-- [ ] La branche RC est synchronisée avec `develop` sans conflit.
-- [ ] `npm run release:verify` réussit sur la branche RC.
-- [ ] Le tag annoté `v0.16.0-rc.1` pointe sur le commit RC validé.
-- [ ] Le tag `v0.16.0-rc.1` est poussé sur le dépôt distant.
+- [ ] Le commit stable est poussé sur `origin/release/0.16.0`.
+- [ ] La branche stable contient exactement la RC validée plus la promotion de version.
+- [ ] `npm run release:verify` réussit sur la branche stable.
+- [ ] `release/0.16.0` est fusionnée dans `main` avec un commit de fusion explicite.
+- [ ] `main` est poussé sur le dépôt distant avant la création du tag.
+- [ ] Le tag annoté `v0.16.0` pointe sur le commit fusionné dans `main`.
+- [ ] Le tag `v0.16.0` est poussé sur le dépôt distant.
+- [ ] `develop` est réaligné sur `main` après publication.
 
 ## Décision
 
 - [ ] Aucun défaut bloquant.
 - [ ] Aucun défaut entraînant une perte de données.
 - [ ] Les éventuelles anomalies non bloquantes sont documentées.
-- [ ] Le déploiement de la Release Candidate est autorisé.
+- [ ] Le déploiement de la version stable est autorisé.
 
 ## Fiabilité des données locales
 
