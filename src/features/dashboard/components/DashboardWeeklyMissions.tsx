@@ -3,9 +3,12 @@ import {
   Bike,
   CheckCircle2,
   Dumbbell,
+  Flame,
+  Medal,
   Salad,
   Scale,
   Target,
+  Trophy,
   type LucideIcon,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -17,6 +20,12 @@ import {
   type WeeklyMissionListener,
   type WeeklyMissionSnapshot,
 } from "@/application/rewards/weeklyMissionService";
+import {
+  readWeeklyMissionHistorySnapshot,
+  WEEKLY_MISSION_HISTORY_CHANGED_EVENT,
+  WEEKLY_MISSION_HISTORY_STORAGE_KEY,
+  type WeeklyMissionHistorySnapshot,
+} from "@/domain/rewards/weeklyMissionHistory";
 import { Card } from "@/shared/ui/Card";
 import { InlineNotice } from "@/shared/ui/InlineNotice";
 
@@ -54,6 +63,30 @@ function formatWeekDate(value: string): string {
   );
 }
 
+function HistoryMetric({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-xl border border-emerald-200/80 bg-white/70 px-3 py-2 dark:border-emerald-900 dark:bg-slate-900/60">
+      <div className="flex items-center gap-1.5 text-emerald-800 dark:text-emerald-200">
+        <Icon aria-hidden="true" className="size-3.5" />
+        <span className="text-[11px] font-semibold uppercase tracking-wide">
+          {label}
+        </span>
+      </div>
+      <p className="mt-1 text-lg font-bold text-slate-950 dark:text-white">
+        {value}
+      </p>
+    </div>
+  );
+}
+
 export function DashboardWeeklyMissions({
   className,
   observeSnapshot = observeWeeklyMissions,
@@ -61,6 +94,10 @@ export function DashboardWeeklyMissions({
   const [snapshot, setSnapshot] =
     useState<WeeklyMissionSnapshot>();
   const [loadError, setLoadError] = useState<string>();
+  const [history, setHistory] =
+    useState<WeeklyMissionHistorySnapshot>(() =>
+      readWeeklyMissionHistorySnapshot(),
+    );
 
   useEffect(
     () =>
@@ -79,6 +116,34 @@ export function DashboardWeeklyMissions({
       ),
     [observeSnapshot],
   );
+
+  useEffect(() => {
+    const refreshHistory = () => {
+      setHistory(readWeeklyMissionHistorySnapshot());
+    };
+    const handleStorage = (event: StorageEvent) => {
+      if (
+        event.key === null ||
+        event.key === WEEKLY_MISSION_HISTORY_STORAGE_KEY
+      ) {
+        refreshHistory();
+      }
+    };
+
+    window.addEventListener(
+      WEEKLY_MISSION_HISTORY_CHANGED_EVENT,
+      refreshHistory,
+    );
+    window.addEventListener("storage", handleStorage);
+
+    return () => {
+      window.removeEventListener(
+        WEEKLY_MISSION_HISTORY_CHANGED_EVENT,
+        refreshHistory,
+      );
+      window.removeEventListener("storage", handleStorage);
+    };
+  }, []);
 
   return (
     <section
@@ -114,6 +179,27 @@ export function DashboardWeeklyMissions({
                 {snapshot.completedCount}/{snapshot.totalCount}
               </span>
             ) : null}
+          </div>
+
+          <div
+            aria-label="Historique des missions hebdomadaires"
+            className="mt-4 grid grid-cols-3 gap-2"
+          >
+            <HistoryMetric
+              icon={Medal}
+              label="Réussies"
+              value={String(history.completedWeekCount)}
+            />
+            <HistoryMetric
+              icon={Flame}
+              label="Série"
+              value={`${history.currentWeeklyStreak} sem.`}
+            />
+            <HistoryMetric
+              icon={Trophy}
+              label="Record"
+              value={`${history.bestWeeklyStreak} sem.`}
+            />
           </div>
 
           {loadError ? (
