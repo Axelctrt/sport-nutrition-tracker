@@ -1,17 +1,18 @@
-import { Outlet, useLocation } from 'react-router-dom';
+import { useEffect } from "react";
+import { Outlet, useLocation } from "react-router-dom";
 
-import { useEffect } from 'react';
-
-import { DesktopSidebar } from '@/app/layouts/DesktopSidebar';
-import { MobileBottomNavigation } from '@/app/layouts/MobileBottomNavigation';
-import { PageHeader } from '@/app/layouts/PageHeader';
-import { OfflineStatusBanner } from '@/pwa/OfflineStatusBanner';
+import { DesktopSidebar } from "@/app/layouts/DesktopSidebar";
+import { MobileBottomNavigation } from "@/app/layouts/MobileBottomNavigation";
+import { PageHeader } from "@/app/layouts/PageHeader";
+import { routePaths } from "@/app/routePaths";
+import { DashboardRewardsOverview } from "@/features/dashboard/components/DashboardRewardsOverview";
+import { OfflineStatusBanner } from "@/pwa/OfflineStatusBanner";
 
 export function AppLayout() {
   const location = useLocation();
 
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'instant' });
+    window.scrollTo({ top: 0, behavior: "instant" });
   }, [location.pathname]);
 
   return (
@@ -31,6 +32,9 @@ export function AppLayout() {
           className="safe-page-bottom mx-auto min-w-0 max-w-7xl overflow-x-clip px-4 py-6 sm:px-6 lg:px-8"
         >
           <Outlet />
+          {location.pathname === routePaths.dashboard ? (
+            <DashboardRewardsOverview className="mt-6" />
+          ) : null}
         </main>
       </div>
       <MobileBottomNavigation />
