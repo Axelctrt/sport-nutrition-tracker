@@ -1,75 +1,43 @@
-# Retour arrière — SportPilot 0.15.0
+# Retour arrière — SportPilot 0.16.0-rc.1
 
-## Avant publication
+## Objectif
 
-1. Exporter une sauvegarde JSON depuis la page Sauvegarde.
-2. Conserver les archives complètes `0.15.0` et `0.15.0-rc.1`.
-3. Noter le commit stable et le tag `v0.15.0`.
+Cette procédure permet de revenir à la version stable 0.15.0 si la Release Candidate présente un défaut bloquant, sans modifier manuellement IndexedDB.
 
-## Retour arrière du code
+## Préparation obligatoire
 
-```powershell
-git switch develop
-git log --oneline --decorate -10
-```
+1. Exporter une sauvegarde JSON depuis 0.15.0 avant l’installation de la RC.
+2. Conserver l’archive complète de 0.15.0 et l’archive complète de 0.16.0-rc.1.
+3. Noter le commit et le tag `v0.16.0-rc.1`.
+4. Vérifier que la sauvegarde est prévisualisable comme compatible.
 
-En cas de défaut bloquant, redéployer le commit validé de `release/0.15.0-rc.1` ou son archive complète. Ne réécrire ni ne supprimer le tag `v0.15.0` après sa publication : documenter le retrait et préparer une version corrective `0.15.1`.
+## Retour du code
 
-## PWA
+En cas de défaut bloquant :
 
-Après redéploiement de la RC1 ou d’une version corrective :
-
-1. fermer complètement la PWA ;
-2. rouvrir l’application en ligne ;
-3. accepter la mise à jour proposée ;
-4. vérifier la version dans Paramètres ;
-5. si le service worker reste bloqué, supprimer puis réinstaller l’icône depuis Safari.
+1. arrêter le serveur ou retirer temporairement le déploiement RC ;
+2. redéployer l’archive complète ou le tag stable `v0.15.0` ;
+3. vider uniquement le cache applicatif si l’ancienne interface reste affichée ;
+4. ne pas supprimer les données Safari ni IndexedDB ;
+5. rouvrir SportPilot et vérifier le profil, les journaux, les séances et les sauvegardes.
 
 ## Données
 
-Le schéma Dexie et la sauvegarde restent en version 2. Le passage entre l’alpha.13, la RC1 et la stable 0.15.0 ne nécessite aucune migration. Une restauration JSON ne doit être utilisée qu’avec une sauvegarde préalablement validée depuis la page Sauvegarde.
+Le schéma Dexie reste en version 2 et le format de sauvegarde reste en version 2. Aucun retour de migration n’est nécessaire entre 0.15.0 et 0.16.0-rc.1.
 
-## En-têtes de sécurité
+Une restauration JSON ne doit être lancée qu’après prévisualisation. Elle n’est pas nécessaire pour un simple retour du code si les données locales sont toujours présentes.
 
-Si une incompatibilité de production apparaît, restaurer d’abord la version précédente de `public/_headers`, reconstruire puis redéployer. Ne désactiver la CSP qu’en dernier recours et uniquement le temps d’identifier la directive bloquante. Le schéma Dexie et les sauvegardes ne sont pas concernés par ce retour arrière.
-## Retour arrière de la phase minuteur
+## PWA
 
-La phase n’ajoute aucune table et ne modifie aucun index Dexie. Un retour au commit précédent ne nécessite donc aucune migration de données. Les trois préférences supplémentaires présentes dans `appSettings` seront simplement ignorées par une version antérieure. L’état actif du minuteur est temporaire et peut être supprimé en vidant la clé `sportpilot:rest-timer:*` de `sessionStorage`.
+Si la PWA continue d’afficher la RC après redéploiement de 0.15.0 :
 
+1. fermer complètement la PWA ;
+2. rouvrir Safari sur l’URL de production ;
+3. recharger la page ;
+4. relancer la PWA depuis l’écran d’accueil.
 
-## Retour arrière des statistiques par type d’exercice
+Ne supprimer la PWA ou les données du site qu’en dernier recours et uniquement après avoir vérifié la sauvegarde JSON.
 
-Cette phase n’ajoute aucune table et ne modifie aucun index Dexie. Les nouveaux champs sont facultatifs et les versions antérieures les ignorent. Un retour au commit précédent ne nécessite donc aucune migration. Les anciennes séries conservent leurs charges et répétitions ; les champs de durée et de distance nouvellement saisis resteraient présents dans IndexedDB et dans une sauvegarde JSON v2, mais ne seraient simplement pas exploités par l’ancienne interface.
+## Git
 
-
-## Retour arrière de la planification hebdomadaire
-
-Cette phase n’ajoute aucune table et ne modifie aucun index Dexie. Les métadonnées `plannedDate`, `originalPlannedDate`, `plannedAt` et `skippedAt` sont facultatives. Un retour au commit précédent ne nécessite donc aucune migration structurelle.
-
-Avant un retour arrière, terminer ou abandonner toute séance en cours et exporter une sauvegarde JSON. Une version antérieure ne connaît pas les statuts `planned` et `skipped` : les séances encore prévues ou non réalisées doivent donc être considérées comme non exploitables par l’ancienne interface. Les séances déjà démarrées ou terminées restent compatibles grâce à leur statut historique et à leurs exercices instantanés.
-
-## Retour arrière des supersets et circuits
-
-Cette phase n’ajoute aucune table et ne modifie aucun index Dexie. Les champs `exerciseGroupId`, `exerciseGroupType`, `exerciseGroupName`, `exerciseGroupRounds`, `exerciseGroupRestBetweenExercisesSeconds` et `exerciseGroupRestBetweenRoundsSeconds` sont facultatifs.
-
-Un retour au commit précédent ne nécessite donc aucune migration structurelle. Une version antérieure ignorera les métadonnées de groupe et affichera les exercices comme des exercices indépendants ; leurs séries, charges, répétitions et statistiques resteront intactes. Avant un retour arrière, exporter une sauvegarde JSON récente.
-
-## Retour arrière de la fiabilité alimentaire
-
-Cette phase n’ajoute aucune table et ne modifie aucun index Dexie. Les champs `servingLabel` et `localOverrides` sont facultatifs. Une version antérieure les ignorera simplement tout en conservant le produit, sa portion numérique, ses macronutriments, ses fibres et son sel.
-
-Avant un retour arrière, exporter une sauvegarde JSON récente. Les corrections locales stockées dans `localOverrides` ne seront plus protégées par une ancienne interface lors d’un nouvel import Open Food Facts, mais les valeurs actuellement enregistrées resteront présentes dans IndexedDB.
-
-## Retour arrière du suivi d’endurance
-
-Cette phase n’ajoute aucune table et ne modifie aucun index Dexie. Les champs `elevationGainMeters`, `terrainType`, `intervalDetails`, `poolLengthMeters`, `distanceKm`, `bikeType` et `environment` sont facultatifs. Les modèles sont stockés dans les champs facultatifs `enduranceTemplates` et `enduranceTemplatesVersion` des réglages existants.
-
-Un retour au commit précédent ne nécessite donc aucune migration structurelle. Une version antérieure continuera de lire les activités historiques avec leurs champs déjà connus, mais ignorera les informations d’endurance supplémentaires et les modèles. Les records et volumes n’étant pas stockés, aucune donnée dérivée ne doit être supprimée. Exporter une sauvegarde JSON récente avant tout retour arrière.
-
-## Retour arrière du tableau de bord personnalisable
-
-Cette phase n’ajoute aucune table et ne modifie aucun index Dexie. Le champ facultatif `dashboardPreferences` est stocké dans l’enregistrement existant des paramètres.
-
-Un retour au commit précédent ne nécessite aucune migration structurelle. Une version antérieure ignorera simplement l’ordre, les blocs masqués et le préréglage enregistré, puis affichera son tableau de bord standard. Les données nutritionnelles, sportives, de poids et d’activité ne sont jamais supprimées par la personnalisation.
-
-Avant un retour arrière, exporter une sauvegarde JSON récente. Après redéploiement, fermer puis rouvrir la PWA pour charger les anciens composants d’accueil.
+Ne réécrire ni ne supprimer un tag déjà publié. Documenter le retrait de la RC, corriger sur une nouvelle branche et publier `0.16.0-rc.2` si nécessaire.

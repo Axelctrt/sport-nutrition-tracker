@@ -1,7 +1,7 @@
 {
   "name": "sport-nutrition-tracker",
   "private": true,
-  "version": "0.15.0",
+  "version": "0.16.0-rc.1",
   "type": "module",
   "engines": {
     "node": "^20.19.0 || >=22.13.0"
@@ -14,8 +14,8 @@
     "test:stability": "vitest run --sequence.shuffle --sequence.seed=20260626",
     "test:watch": "vitest",
     "preview": "vite preview",
-    "check": "npm run lint && npm run test && npm run build && npm run audit:mvp && npm run audit:release && npm run audit:security && npm run audit:stable",
-    "ci": "npm run lint && npm run test && npm run build && npm run audit:mvp && npm run audit:release && npm run audit:security && npm run audit:stable",
+    "check": "npm run lint && npm run test && npm run build && npm run audit:mvp && npm run audit:release && npm run audit:security && npm run audit:production && npm run audit:repository",
+    "ci": "npm run lint && npm run test && npm run build && npm run audit:mvp && npm run audit:release && npm run audit:security && npm run audit:production && npm run audit:repository",
     "diagnose:off": "node scripts/diagnose-open-food-facts.mjs",
     "audit:mvp": "node scripts/audit-mvp.mjs",
     "audit:release": "node scripts/audit-release.mjs",
@@ -25,7 +25,10 @@
     "test:e2e:chromium": "playwright test --project=chromium-desktop",
     "test:e2e:webkit": "playwright test --project=webkit-iphone-15",
     "test:e2e:ui": "playwright test --ui",
-    "audit:security": "node scripts/audit-security.mjs"
+    "audit:security": "node scripts/audit-security.mjs",
+    "audit:production": "node scripts/audit-rc.mjs --auto",
+    "audit:repository": "node scripts/audit-repository.mjs",
+    "release:verify": "npm run ci && npm run test:stability"
   },
   "dependencies": {
     "@ericblade/quagga2": "^1.12.1",
