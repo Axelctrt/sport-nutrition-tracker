@@ -52,7 +52,7 @@ describe("DashboardRewardsOverview", () => {
     ).toHaveAttribute("aria-valuenow", "4");
     expect(
       screen.getByRole("link", { name: /Voir tous les badges et thèmes/ }),
-    ).toHaveAttribute("href", "/settings");
+    ).toHaveAttribute("href", "/rewards");
   });
 
   it("se met à jour lorsque les données sportives changent", async () => {

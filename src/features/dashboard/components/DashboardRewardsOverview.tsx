@@ -192,7 +192,7 @@ export function DashboardRewardsOverview({
           ) : null}
 
           <Link
-            to={routePaths.settings}
+            to={routePaths.rewards}
             className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-xl text-sm font-semibold text-brand-800 hover:text-brand-950 dark:text-brand-300 dark:hover:text-brand-100"
           >
             Voir tous les badges et thèmes

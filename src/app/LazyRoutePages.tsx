@@ -228,6 +228,11 @@ const WeeklyReviewPage = lazy(() =>
   })),
 );
 
+const RewardsCenterPage = lazy(() =>
+  import('@/features/rewards/pages/RewardsCenterPage').then((module) => ({
+    default: module.RewardsCenterPage,
+  })),
+);
 const BackupPage = lazy(() =>
   import('@/features/backup/pages/BackupPage').then((module) => ({
     default: module.BackupPage,
@@ -509,6 +514,13 @@ export function LazyWeeklyReviewPage() {
   return <RouteSuspense variant="dashboard"><WeeklyReviewPage /></RouteSuspense>;
 }
 
+export function LazyRewardsCenterPage() {
+  return (
+    <RouteSuspense variant="list">
+      <RewardsCenterPage />
+    </RouteSuspense>
+  );
+}
 export function LazyBackupPage() {
   return <RouteSuspense variant="form"><BackupPage /></RouteSuspense>;
 }

@@ -104,6 +104,11 @@ describe('parcours des éditeurs dynamiques', () => {
   });
 });
 
+describe('centre de récompenses', () => {
+  it('utilise une route stable dédiée', () => {
+    expect(routePaths.rewards).toBe('/rewards');
+  });
+});
 describe('page de confidentialité', () => {
   it('utilise une route publique stable', () => {
     expect(routePaths.privacy).toBe('/privacy');

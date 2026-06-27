@@ -13,6 +13,7 @@ import {
   Info,
   Settings,
   SlidersHorizontal,
+  Trophy,
   UserRound,
   Weight,
   type LucideIcon,
@@ -48,6 +49,7 @@ export const primaryNavigation: NavigationItem[] = [
 export const secondaryNavigation: NavigationItem[] = [
   { label: 'Profil', path: routePaths.profile, icon: UserRound },
   { label: 'Paramètres', path: routePaths.settings, icon: Settings },
+  { label: 'Récompenses', path: routePaths.rewards, icon: Trophy },
   { label: 'Sauvegarde', path: routePaths.backup, icon: DatabaseBackup },
   { label: 'Calculs', path: routePaths.calculationsInformation, icon: Info },
 ];
@@ -104,6 +106,13 @@ export const mobileMoreNavigation: NavigationSection[] = [
         path: routePaths.weeklyReview,
         icon: ClipboardCheck,
         description: 'Examiner les données et décider des ajustements.',
+      },
+      {
+        label: 'Récompenses',
+        path: routePaths.rewards,
+        icon: Trophy,
+        description:
+          'Badges, missions, séries et thèmes débloqués.',
       },
     ],
   },
