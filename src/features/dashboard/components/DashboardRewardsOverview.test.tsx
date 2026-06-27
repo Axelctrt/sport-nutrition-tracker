@@ -6,10 +6,8 @@ import {
   buildAchievementSnapshot,
   type AchievementSnapshot,
 } from "@/application/rewards/achievementService";
-import {
-  DashboardRewardsOverview,
-  type AchievementSnapshotListener,
-} from "@/features/dashboard/components/DashboardRewardsOverview";
+import { DashboardRewardsOverview } from "@/features/dashboard/components/DashboardRewardsOverview";
+import type { AchievementSnapshotListener } from "@/features/dashboard/components/DashboardRewardsOverviewObserver";
 
 function createSnapshot(): AchievementSnapshot {
   return buildAchievementSnapshot(

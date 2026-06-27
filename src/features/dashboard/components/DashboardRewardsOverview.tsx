@@ -1,40 +1,18 @@
 import { Award, ChevronRight, Medal, Target, Trophy } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { liveQuery } from "dexie";
-
-import {
-  loadAchievementPreview,
-  type AchievementSnapshot,
-} from "@/application/rewards/achievementService";
+import type { AchievementSnapshot } from "@/application/rewards/achievementService";
 import { routePaths } from "@/app/routePaths";
+import {
+  observeAchievementPreview,
+  type AchievementSnapshotObserver,
+} from "@/features/dashboard/components/DashboardRewardsOverviewObserver";
 import { Card } from "@/shared/ui/Card";
 import { InlineNotice } from "@/shared/ui/InlineNotice";
-
-export type AchievementSnapshotListener = (
-  snapshot: AchievementSnapshot,
-) => void;
-
-export type AchievementSnapshotObserver = (
-  onSnapshot: AchievementSnapshotListener,
-  onError: (error: unknown) => void,
-) => () => void;
 
 interface DashboardRewardsOverviewProps {
   className?: string;
   observeSnapshot?: AchievementSnapshotObserver;
-}
-
-export function observeAchievementPreview(
-  onSnapshot: AchievementSnapshotListener,
-  onError: (error: unknown) => void,
-): () => void {
-  const subscription = liveQuery(() => loadAchievementPreview()).subscribe({
-    next: onSnapshot,
-    error: onError,
-  });
-
-  return () => subscription.unsubscribe();
 }
 
 function formatEarnedAt(value: string): string {
