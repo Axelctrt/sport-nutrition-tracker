@@ -9,6 +9,10 @@ import type {
   Recipe,
   RecipeIngredient,
 } from '@/domain/models/recipe';
+import type {
+  StrengthSet,
+  WorkoutSessionExercise,
+} from '@/domain/models/strength';
 import type { WeightEntry } from '@/domain/models/weight';
 
 export const TRASH_RETENTION_DAYS = 30;
@@ -36,13 +40,20 @@ export interface RecipeTrashPayload {
   ingredients: RecipeIngredient[];
 }
 
+export interface WorkoutSessionExerciseTrashPayload {
+  exercise: WorkoutSessionExercise;
+  sets: StrengthSet[];
+}
+
 export type TrashEntityType =
   | 'activity'
   | 'weight'
   | 'foodEntry'
   | 'meal'
   | 'favoriteMeal'
-  | 'recipe';
+  | 'recipe'
+  | 'strengthSet'
+  | 'workoutSessionExercise';
 
 export type TrashItem =
   | TrashItemBase<'activity', Activity>
@@ -50,4 +61,9 @@ export type TrashItem =
   | TrashItemBase<'foodEntry', FoodEntry>
   | TrashItemBase<'meal', MealTrashPayload>
   | TrashItemBase<'favoriteMeal', FavoriteMeal>
-  | TrashItemBase<'recipe', RecipeTrashPayload>;
+  | TrashItemBase<'recipe', RecipeTrashPayload>
+  | TrashItemBase<'strengthSet', StrengthSet>
+  | TrashItemBase<
+      'workoutSessionExercise',
+      WorkoutSessionExerciseTrashPayload
+    >;

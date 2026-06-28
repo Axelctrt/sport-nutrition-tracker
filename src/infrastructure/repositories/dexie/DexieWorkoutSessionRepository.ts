@@ -7,6 +7,7 @@ import type {
   WorkoutSessionRepository,
 } from '@/infrastructure/repositories/contracts/WorkoutSessionRepository';
 import { runRepositoryOperation } from '@/infrastructure/repositories/dexie/repositoryOperation';
+import { moveWorkoutSessionExerciseToTrash } from '@/infrastructure/repositories/dexie/trashService';
 import { createEntity, updateEntity } from '@/shared/utils/entities';
 
 export class DexieWorkoutSessionRepository implements WorkoutSessionRepository {
@@ -92,21 +93,20 @@ export class DexieWorkoutSessionRepository implements WorkoutSessionRepository {
     });
   }
 
-  removeExercise(sessionId: EntityId, sessionExerciseId: EntityId): Promise<void> {
-    return runRepositoryOperation('delete', 'Impossible de retirer cet exercice.', () => this.database.transaction(
-      'rw',
-      this.database.workoutSessionExercises,
-      this.database.strengthSets,
+  removeExercise(
+    sessionId: EntityId,
+    sessionExerciseId: EntityId,
+  ): Promise<void> {
+    return runRepositoryOperation(
+      'delete',
+      'Impossible de retirer cet exercice.',
       async () => {
-        const exercise = await this.database.workoutSessionExercises.get(sessionExerciseId);
-        if (!exercise || exercise.sessionId !== sessionId) {
-          throw new RepositoryError('Exercice de séance introuvable.', 'delete');
-        }
-        const setIds = (await this.database.strengthSets.where('sessionExerciseId').equals(sessionExerciseId).toArray())
-          .map((set) => set.id);
-        if (setIds.length > 0) await this.database.strengthSets.bulkDelete(setIds);
-        await this.database.workoutSessionExercises.delete(sessionExerciseId);
+        await moveWorkoutSessionExerciseToTrash(
+          this.database,
+          sessionId,
+          sessionExerciseId,
+        );
       },
-    ));
+    );
   }
 }

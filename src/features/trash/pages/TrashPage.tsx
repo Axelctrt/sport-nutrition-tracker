@@ -43,6 +43,10 @@ function typeLabel(item: TrashItem): string {
       return 'Repas favori';
     case 'recipe':
       return 'Recette';
+    case 'strengthSet':
+      return 'Série de musculation';
+    case 'workoutSessionExercise':
+      return 'Exercice de séance';
   }
 }
 
@@ -295,9 +299,9 @@ export function TrashPage() {
       </div>
 
       <p className="mt-4 text-sm leading-6 text-slate-500 dark:text-slate-400">
-        La corbeille protège maintenant les activités, les pesées, le journal
-        alimentaire, les repas favoris et les recettes. La musculation sera
-        raccordée dans un lot dédié.
+        La corbeille protège les activités, les pesées, la nutrition, les
+        recettes, ainsi que les séries et exercices retirés d’une séance
+        de musculation.
       </p>
     </section>
   );
