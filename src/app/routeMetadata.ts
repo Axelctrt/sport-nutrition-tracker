@@ -48,7 +48,8 @@ const routeMetadata: RouteMetadata[] = [
   { pattern: routePaths.analytics, title: 'Progression' },
   { pattern: routePaths.weeklyReview, title: 'Bilan hebdomadaire' },
   { pattern: routePaths.rewards, title: 'Centre de récompenses' },
-  { pattern: routePaths.backup, title: 'Sauvegarde' },
+  { pattern: routePaths.backup, title: 'Sauvegarde' },
+  { pattern: routePaths.trash, title: 'Corbeille' },
   { pattern: routePaths.calculationsInformation, title: 'Calculs et estimations' },
   { pattern: routePaths.privacy, title: 'Confidentialité' },
 ];

@@ -233,6 +233,11 @@ const RewardsCenterPage = lazy(() =>
     default: module.RewardsCenterPage,
   })),
 );
+const TrashPage = lazy(() =>
+  import('@/features/trash/pages/TrashPage').then((module) => ({
+    default: module.TrashPage,
+  })),
+);
 const BackupPage = lazy(() =>
   import('@/features/backup/pages/BackupPage').then((module) => ({
     default: module.BackupPage,
@@ -518,6 +523,13 @@ export function LazyRewardsCenterPage() {
   return (
     <RouteSuspense variant="list">
       <RewardsCenterPage />
+    </RouteSuspense>
+  );
+}
+export function LazyTrashPage() {
+  return (
+    <RouteSuspense variant="list">
+      <TrashPage />
     </RouteSuspense>
   );
 }

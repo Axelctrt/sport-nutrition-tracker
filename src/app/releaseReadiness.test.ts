@@ -17,7 +17,7 @@ describe('préparation de la version stable 0.16.0', () => {
   });
 
   it('conserve les versions de schéma attendues', () => {
-    expect(databaseSchemaVersion).toBe(3);
+    expect(databaseSchemaVersion).toBe(4);
     expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(3);
     expect(databaseTableNames).toEqual(
       expect.arrayContaining([
@@ -43,6 +43,7 @@ describe('préparation de la version stable 0.16.0', () => {
         routePaths.history,
         routePaths.weeklyReview,
         routePaths.backup,
+        routePaths.trash,
         routePaths.calculationsInformation,
       ]),
     );

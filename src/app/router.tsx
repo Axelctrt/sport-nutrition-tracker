@@ -4,6 +4,7 @@ import {
   LazyAdvancedSettingsPage,
   LazyActivityJournalPage,
   LazyAnalyticsPage,
+  LazyTrashPage,
   LazyBackupPage,
   LazyBarcodeScannerPage,
   LazyDashboardPage,
@@ -90,7 +91,8 @@ export const appShellRoutes: RouteObject[] = [
   { path: routePaths.analytics, element: <LazyAnalyticsPage /> },
   { path: routePaths.weeklyReview, element: <LazyWeeklyReviewPage /> },
   { path: routePaths.rewards, element: <LazyRewardsCenterPage /> },
-  { path: routePaths.backup, element: <LazyBackupPage /> },
+  { path: routePaths.backup, element: <LazyBackupPage /> },
+  { path: routePaths.trash, element: <LazyTrashPage /> },
   { path: routePaths.calculationsInformation, element: <CalculationsInformationPage /> },
 ];
 

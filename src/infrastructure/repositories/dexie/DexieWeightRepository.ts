@@ -3,6 +3,7 @@ import type { WeightEntry } from '@/domain/models/weight';
 import type { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import type { WeightRepository } from '@/infrastructure/repositories/contracts/WeightRepository';
 import { runRepositoryOperation } from '@/infrastructure/repositories/dexie/repositoryOperation';
+import { moveWeightToTrash } from '@/infrastructure/repositories/dexie/trashService';
 import { createEntity, updateEntity } from '@/shared/utils/entities';
 
 export class DexieWeightRepository implements WeightRepository {
@@ -62,7 +63,7 @@ export class DexieWeightRepository implements WeightRepository {
       'delete',
       'Impossible de supprimer la pesée.',
       async () => {
-        await this.database.weights.where('date').equals(date).delete();
+        await moveWeightToTrash(this.database, date);
       },
     );
   }

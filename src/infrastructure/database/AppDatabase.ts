@@ -27,12 +27,14 @@ import type {
   AcceptedCalorieAdjustment,
   WeeklyReview,
 } from "@/domain/models/weeklyReview";
-import type { WeightEntry } from "@/domain/models/weight";
+import type { WeightEntry } from "@/domain/models/weight";
+import type { TrashItem } from '@/domain/models/trash';
 import type { DatabaseIntegrityReport } from "@/infrastructure/database/databaseIntegrityModels";
 import type { MigrationJournalEntry } from "@/infrastructure/database/migrationJournal";
 import { registerVersion1 } from "@/infrastructure/database/migrations/version1";
 import { registerVersion2 } from "@/infrastructure/database/migrations/version2";
-import { registerVersion3 } from "@/infrastructure/database/migrations/version3";
+import { registerVersion3 } from "@/infrastructure/database/migrations/version3";
+import { registerVersion4 } from '@/infrastructure/database/migrations/version4';
 
 export const DEFAULT_DATABASE_NAME = "sportpilot-local-database";
 
@@ -64,12 +66,14 @@ export class AppDatabase extends Dexie {
   declare strengthSets: Table<StrengthSet, EntityId>;
   declare progressionSuggestions: Table<ProgressionSuggestion, EntityId>;
   declare migrationJournal: Table<MigrationJournalEntry, string>;
-  declare databaseDiagnostics: Table<DatabaseIntegrityReport, string>;
+  declare databaseDiagnostics: Table<DatabaseIntegrityReport, string>;
+  declare trashItems: Table<TrashItem, string>;
 
   constructor(databaseName: string = DEFAULT_DATABASE_NAME) {
     super(databaseName);
     registerVersion1(this);
     registerVersion2(this);
-    registerVersion3(this);
+    registerVersion3(this);
+    registerVersion4(this);
   }
 }
