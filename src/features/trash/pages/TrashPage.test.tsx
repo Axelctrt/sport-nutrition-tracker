@@ -1,8 +1,17 @@
 import { render, screen, waitFor } from '@testing-library/react';
-import type { TrashItem } from '@/domain/models/trash';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import {
+  deleteTrashItemsPermanently,
+  emptyTrash,
+  restoreTrashItems,
+} from '@/application/trash/trashBulkService';
+import {
+  downloadTrashArchive,
+  importTrashArchive,
+} from '@/application/trash/trashArchiveService';
+import type { TrashItem } from '@/domain/models/trash';
 import { TrashPage } from '@/features/trash/pages/TrashPage';
 import {
   deleteTrashItemPermanently,
@@ -25,107 +34,239 @@ vi.mock(
   }),
 );
 
-const activityTrashItem = {
+vi.mock('@/application/trash/trashBulkService', () => ({
+  deleteTrashItemsPermanently: vi.fn(),
+  emptyTrash: vi.fn(),
+  restoreTrashItems: vi.fn(),
+}));
+
+vi.mock('@/application/trash/trashArchiveService', () => ({
+  MAX_TRASH_ARCHIVE_FILE_SIZE_BYTES: 10 * 1024 * 1024,
+  downloadTrashArchive: vi.fn(),
+  importTrashArchive: vi.fn(),
+}));
+
+const firstItem = {
   id: 'activity:activity-1',
-  entityType: 'activity' as const,
+  entityType: 'activity',
   entityId: 'activity-1',
   label: 'Activité running du 2026-06-28',
   deletedAt: '2026-06-28T10:00:00.000Z',
   purgeAt: '2026-07-28T10:00:00.000Z',
   payload: {
     id: 'activity-1',
-    type: 'running' as const,
-    date: '2026-06-28',
-    durationMinutes: 45,
-    intensity: 'moderate',
-    sessionType: 'easy',
-    distanceKm: 8,
-    averageCadenceSpm: 170,
-    calculation: {
-      weightKg: 60,
-      estimatedCaloriesKcal: 480,
-      calculationVersion: 1,
-    },
-    createdAt: '2026-06-28T08:00:00.000Z',
-    updatedAt: '2026-06-28T08:00:00.000Z',
   },
-} satisfies TrashItem;
+} as unknown as TrashItem;
+
+const secondItem = {
+  ...firstItem,
+  id: 'activity:activity-2',
+  entityId: 'activity-2',
+  label: 'Activité vélo du 2026-06-27',
+  payload: {
+    id: 'activity-2',
+  },
+} as unknown as TrashItem;
 
 describe('TrashPage', () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     vi.mocked(purgeExpiredTrashItems).mockResolvedValue(0);
     vi.mocked(listTrashItems).mockResolvedValue([
-      activityTrashItem,
+      firstItem,
+      secondItem,
     ]);
-    vi.mocked(restoreTrashItem).mockResolvedValue(
-      activityTrashItem,
-    );
-    vi.mocked(deleteTrashItemPermanently).mockResolvedValue(
-      undefined,
-    );
+    vi.mocked(restoreTrashItem).mockResolvedValue(firstItem);
+    vi.mocked(
+      deleteTrashItemPermanently,
+    ).mockResolvedValue(undefined);
+    vi.mocked(restoreTrashItems).mockResolvedValue({
+      restoredIds: [],
+      failures: [],
+    });
+    vi.mocked(
+      deleteTrashItemsPermanently,
+    ).mockResolvedValue(2);
+    vi.mocked(emptyTrash).mockResolvedValue(2);
+    vi.mocked(downloadTrashArchive).mockReturnValue({
+      envelope: {
+        format: 'sportpilot-trash-archive',
+        schemaVersion: 1,
+        exportedAt: '2026-06-28T12:00:00.000Z',
+        reason: 'manual',
+        items: [firstItem, secondItem],
+      },
+      content: '{}',
+      fileName: 'corbeille.json',
+      itemCount: 2,
+    });
+    vi.mocked(importTrashArchive).mockResolvedValue(2);
   });
 
-  it('affiche les éléments restaurables et leur durée de conservation', async () => {
-    render(<TrashPage />);
-
-    expect(
-      await screen.findByText('Activité running du 2026-06-28'),
-    ).toBeInTheDocument();
-    expect(screen.getByText(/30 jours/i)).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: 'Restaurer' }),
-    ).toBeInTheDocument();
-  });
-
-  it('restaure un élément puis recharge la liste', async () => {
+  it('recherche et sélectionne plusieurs éléments', async () => {
     const user = userEvent.setup();
-    vi.mocked(listTrashItems)
-      .mockResolvedValueOnce([activityTrashItem])
-      .mockResolvedValueOnce([]);
-
     render(<TrashPage />);
+
+    expect(
+      await screen.findByText(firstItem.label),
+    ).toBeInTheDocument();
+
+    await user.type(
+      screen.getByRole('searchbox', {
+        name: 'Rechercher dans la corbeille',
+      }),
+      'vélo',
+    );
+
+    expect(screen.getByText(secondItem.label)).toBeInTheDocument();
+    expect(screen.queryByText(firstItem.label)).not.toBeInTheDocument();
 
     await user.click(
-      await screen.findByRole('button', { name: 'Restaurer' }),
+      screen.getByRole('button', {
+        name: 'Sélectionner les résultats',
+      }),
     );
 
-    await waitFor(() => {
-      expect(restoreTrashItem).toHaveBeenCalledWith(
-        expect.anything(),
-        activityTrashItem.id,
-      );
-    });
-    expect(
-      await screen.findByText('La corbeille est vide'),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/1 sélectionné/)).toBeInTheDocument();
   });
 
-  it('exige une seconde action avant la suppression définitive', async () => {
+  it('restaure toute la sélection', async () => {
     const user = userEvent.setup();
-    vi.mocked(listTrashItems)
-      .mockResolvedValueOnce([activityTrashItem])
-      .mockResolvedValueOnce([]);
+    vi.mocked(restoreTrashItems).mockResolvedValue({
+      restoredIds: [firstItem.id, secondItem.id],
+      failures: [],
+    });
 
     render(<TrashPage />);
 
     await user.click(
       await screen.findByRole('button', {
-        name: 'Supprimer définitivement',
+        name: 'Sélectionner les résultats',
       }),
     );
-
-    expect(deleteTrashItemPermanently).not.toHaveBeenCalled();
-
     await user.click(
       screen.getByRole('button', {
-        name: 'Confirmer la suppression',
+        name: 'Restaurer la sélection',
       }),
     );
 
     await waitFor(() => {
+      expect(restoreTrashItems).toHaveBeenCalledWith(
+        expect.anything(),
+        [firstItem.id, secondItem.id],
+      );
+    });
+  });
+
+  it('archive avant une suppression définitive individuelle', async () => {
+    const user = userEvent.setup();
+    render(<TrashPage />);
+
+    const deleteButtons = await screen.findAllByRole('button', {
+      name: 'Supprimer définitivement',
+    });
+
+    await user.click(deleteButtons[0]!);
+    await user.click(
+      screen.getByRole('button', {
+        name: 'Archiver et confirmer',
+      }),
+    );
+
+    await waitFor(() => {
+      expect(downloadTrashArchive).toHaveBeenCalledWith(
+        [firstItem],
+        'before-delete',
+      );
       expect(deleteTrashItemPermanently).toHaveBeenCalledWith(
         expect.anything(),
-        activityTrashItem.id,
+        firstItem.id,
+      );
+    });
+  });
+
+  it('archive puis supprime la sélection après confirmation', async () => {
+    const user = userEvent.setup();
+    render(<TrashPage />);
+
+    await user.click(
+      await screen.findByRole('button', {
+        name: 'Sélectionner les résultats',
+      }),
+    );
+    await user.click(
+      screen.getByRole('button', {
+        name: 'Supprimer la sélection',
+      }),
+    );
+
+    expect(
+      screen.getByText('Confirmer la suppression définitive'),
+    ).toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole('button', {
+        name: 'Archiver et supprimer',
+      }),
+    );
+
+    await waitFor(() => {
+      expect(downloadTrashArchive).toHaveBeenCalledWith(
+        [firstItem, secondItem],
+        'before-delete',
+      );
+      expect(
+        deleteTrashItemsPermanently,
+      ).toHaveBeenCalledWith(expect.anything(), [
+        firstItem.id,
+        secondItem.id,
+      ]);
+    });
+  });
+
+  it('archive puis vide toute la corbeille', async () => {
+    const user = userEvent.setup();
+    render(<TrashPage />);
+
+    await user.click(
+      await screen.findByRole('button', {
+        name: 'Vider la corbeille',
+      }),
+    );
+    await user.click(
+      screen.getByRole('button', {
+        name: 'Archiver et supprimer',
+      }),
+    );
+
+    await waitFor(() => {
+      expect(downloadTrashArchive).toHaveBeenCalledWith(
+        [firstItem, secondItem],
+        'before-empty',
+      );
+      expect(emptyTrash).toHaveBeenCalledWith(
+        expect.anything(),
+      );
+    });
+  });
+
+  it('importe une archive dans la corbeille', async () => {
+    const user = userEvent.setup();
+    render(<TrashPage />);
+
+    const input = await screen.findByLabelText(
+      'Importer une archive',
+    );
+    const file = new File(['{}'], 'corbeille.json', {
+      type: 'application/json',
+    });
+
+    await user.upload(input, file);
+
+    await waitFor(() => {
+      expect(importTrashArchive).toHaveBeenCalledWith(
+        expect.anything(),
+        '{}',
       );
     });
   });
