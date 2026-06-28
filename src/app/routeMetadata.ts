@@ -8,6 +8,7 @@ interface RouteMetadata {
 
 const routeMetadata: RouteMetadata[] = [
   { pattern: routePaths.dashboard, title: "Aujourd’hui" },
+  { pattern: routePaths.search, title: 'Recherche globale' },
   { pattern: routePaths.profile, title: 'Profil' },
   { pattern: routePaths.dashboardCustomization, title: 'Personnaliser le tableau de bord' },
   { pattern: routePaths.settings, title: 'Paramètres' },

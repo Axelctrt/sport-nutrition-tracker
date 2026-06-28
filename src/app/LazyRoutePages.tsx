@@ -8,6 +8,14 @@ const DashboardPage = lazy(() =>
 );
 
 
+const GlobalSearchPage = lazy(() =>
+  import('@/features/global-search/pages/GlobalSearchPage').then(
+    (module) => ({
+      default: module.GlobalSearchPage,
+    }),
+  ),
+);
+
 const DashboardCustomizationPage = lazy(() =>
   import('@/features/dashboard-customization/pages/DashboardCustomizationPage').then((module) => ({
     default: module.DashboardCustomizationPage,
@@ -265,6 +273,14 @@ export function LazyDashboardPage() {
   return (
     <RouteSuspense variant="dashboard">
       <DashboardPage />
+    </RouteSuspense>
+  );
+}
+
+export function LazyGlobalSearchPage() {
+  return (
+    <RouteSuspense variant="list">
+      <GlobalSearchPage />
     </RouteSuspense>
   );
 }

@@ -1,5 +1,6 @@
 export const routePaths = {
   dashboard: '/',
+  search: '/search',
   onboarding: '/onboarding',
   profile: '/profile',
   settings: '/settings',

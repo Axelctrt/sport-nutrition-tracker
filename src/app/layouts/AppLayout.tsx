@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 
 import { BackupReminderCoordinator } from '@/app/backup/BackupReminderCoordinator';
+import { GlobalSearchShortcut } from '@/app/search/GlobalSearchShortcut';
 import { DesktopSidebar } from '@/app/layouts/DesktopSidebar';
 import { MobileBottomNavigation } from '@/app/layouts/MobileBottomNavigation';
 import { PageHeader } from '@/app/layouts/PageHeader';
@@ -28,6 +29,7 @@ export function AppLayout() {
       <div className="min-w-0 lg:pl-72">
         <PageHeader />
         <OfflineStatusBanner />
+      <GlobalSearchShortcut />
       <BackupReminderCoordinator />
 
         <main
