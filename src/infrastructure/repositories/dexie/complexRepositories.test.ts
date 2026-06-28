@@ -66,6 +66,7 @@ describe('repositories Dexie complexes', () => {
 
     expect(await database.meals.count()).toBe(0);
     expect(await database.foodEntries.count()).toBe(0);
+    expect(await database.trashItems.count()).toBe(1);
   });
 
   it('remplace atomiquement les ingrédients d’une recette', async () => {

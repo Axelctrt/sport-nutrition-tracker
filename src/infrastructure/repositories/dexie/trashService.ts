@@ -1,4 +1,5 @@
 import type { EntityId, LocalDate } from '@/domain/models/common';
+import type { MealSlot } from '@/domain/models/food';
 import {
   TRASH_RETENTION_DAYS,
   type TrashEntityType,
@@ -7,6 +8,13 @@ import {
 import type { AppDatabase } from '@/infrastructure/database/AppDatabase';
 
 const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1_000;
+
+const mealSlotLabels: Record<MealSlot, string> = {
+  breakfast: 'Petit-déjeuner',
+  lunch: 'Déjeuner',
+  dinner: 'Dîner',
+  snacks: 'Collation',
+};
 
 function createTrashId(
   entityType: TrashEntityType,
@@ -100,6 +108,171 @@ export async function moveWeightToTrash(
   );
 }
 
+export async function moveFoodEntryToTrash(
+  database: AppDatabase,
+  entryId: EntityId,
+  now: Date = new Date(),
+): Promise<TrashItem | undefined> {
+  return database.transaction(
+    'rw',
+    database.foodEntries,
+    database.trashItems,
+    async () => {
+      await purgeExpiredInsideTransaction(database, now);
+
+      const entry = await database.foodEntries.get(entryId);
+      if (!entry) return undefined;
+
+      const trashItem: TrashItem = {
+        id: createTrashId('foodEntry', entry.id),
+        entityType: 'foodEntry',
+        entityId: entry.id,
+        label: `${mealSlotLabels[entry.mealSlot]} du ${entry.date}`,
+        deletedAt: now.toISOString(),
+        purgeAt: createPurgeDate(now),
+        payload: entry,
+      };
+
+      await database.trashItems.put(trashItem);
+      await database.foodEntries.delete(entry.id);
+
+      return trashItem;
+    },
+  );
+}
+
+export async function moveMealToTrash(
+  database: AppDatabase,
+  mealId: EntityId,
+  now: Date = new Date(),
+): Promise<TrashItem | undefined> {
+  return database.transaction(
+    'rw',
+    database.meals,
+    database.foodEntries,
+    database.trashItems,
+    async () => {
+      await purgeExpiredInsideTransaction(database, now);
+
+      const meal = await database.meals.get(mealId);
+      if (!meal) return undefined;
+
+      const entries = await database.foodEntries
+        .where('mealId')
+        .equals(meal.id)
+        .toArray();
+
+      const trashItem: TrashItem = {
+        id: createTrashId('meal', meal.id),
+        entityType: 'meal',
+        entityId: meal.id,
+        label:
+          meal.title?.trim() ||
+          `${mealSlotLabels[meal.slot]} du ${meal.date}`,
+        deletedAt: now.toISOString(),
+        purgeAt: createPurgeDate(now),
+        payload: {
+          meal,
+          entries,
+        },
+      };
+
+      await database.trashItems.put(trashItem);
+
+      if (entries.length > 0) {
+        await database.foodEntries.bulkDelete(
+          entries.map((entry) => entry.id),
+        );
+      }
+
+      await database.meals.delete(meal.id);
+      return trashItem;
+    },
+  );
+}
+
+export async function moveFavoriteMealToTrash(
+  database: AppDatabase,
+  favoriteMealId: EntityId,
+  now: Date = new Date(),
+): Promise<TrashItem | undefined> {
+  return database.transaction(
+    'rw',
+    database.favoriteMeals,
+    database.trashItems,
+    async () => {
+      await purgeExpiredInsideTransaction(database, now);
+
+      const favoriteMeal =
+        await database.favoriteMeals.get(favoriteMealId);
+      if (!favoriteMeal) return undefined;
+
+      const trashItem: TrashItem = {
+        id: createTrashId('favoriteMeal', favoriteMeal.id),
+        entityType: 'favoriteMeal',
+        entityId: favoriteMeal.id,
+        label: `Repas favori « ${favoriteMeal.name} »`,
+        deletedAt: now.toISOString(),
+        purgeAt: createPurgeDate(now),
+        payload: favoriteMeal,
+      };
+
+      await database.trashItems.put(trashItem);
+      await database.favoriteMeals.delete(favoriteMeal.id);
+
+      return trashItem;
+    },
+  );
+}
+
+export async function moveRecipeToTrash(
+  database: AppDatabase,
+  recipeId: EntityId,
+  now: Date = new Date(),
+): Promise<TrashItem | undefined> {
+  return database.transaction(
+    'rw',
+    database.recipes,
+    database.recipeIngredients,
+    database.trashItems,
+    async () => {
+      await purgeExpiredInsideTransaction(database, now);
+
+      const recipe = await database.recipes.get(recipeId);
+      if (!recipe) return undefined;
+
+      const ingredients = await database.recipeIngredients
+        .where('recipeId')
+        .equals(recipe.id)
+        .toArray();
+
+      const trashItem: TrashItem = {
+        id: createTrashId('recipe', recipe.id),
+        entityType: 'recipe',
+        entityId: recipe.id,
+        label: `Recette « ${recipe.name} »`,
+        deletedAt: now.toISOString(),
+        purgeAt: createPurgeDate(now),
+        payload: {
+          recipe,
+          ingredients,
+        },
+      };
+
+      await database.trashItems.put(trashItem);
+
+      if (ingredients.length > 0) {
+        await database.recipeIngredients.bulkDelete(
+          ingredients.map((ingredient) => ingredient.id),
+        );
+      }
+
+      await database.recipes.delete(recipe.id);
+      return trashItem;
+    },
+  );
+}
+
 export async function listTrashItems(
   database: AppDatabase,
 ): Promise<TrashItem[]> {
@@ -109,15 +282,35 @@ export async function listTrashItems(
     .toArray();
 }
 
+async function assertNoIdsExist(
+  ids: EntityId[],
+  getExisting: (idsToRead: EntityId[]) => Promise<Array<unknown>>,
+  message: string,
+): Promise<void> {
+  if (ids.length === 0) return;
+
+  const existing = await getExisting(ids);
+  if (existing.some((item) => item !== undefined)) {
+    throw new Error(message);
+  }
+}
+
 export async function restoreTrashItem(
   database: AppDatabase,
   trashItemId: string,
 ): Promise<TrashItem> {
   return database.transaction(
     'rw',
-    database.trashItems,
-    database.activities,
-    database.weights,
+    [
+      database.trashItems,
+      database.activities,
+      database.weights,
+      database.meals,
+      database.foodEntries,
+      database.favoriteMeals,
+      database.recipes,
+      database.recipeIngredients,
+    ],
     async () => {
       const trashItem = await database.trashItems.get(trashItemId);
       if (!trashItem) {
@@ -126,30 +319,133 @@ export async function restoreTrashItem(
         );
       }
 
-      if (trashItem.entityType === 'activity') {
-        const existingActivity = await database.activities.get(
-          trashItem.entityId,
-        );
-        if (existingActivity) {
-          throw new Error(
-            'Une activité avec le même identifiant existe déjà.',
+      switch (trashItem.entityType) {
+        case 'activity': {
+          const existingActivity = await database.activities.get(
+            trashItem.entityId,
           );
+          if (existingActivity) {
+            throw new Error(
+              'Une activité avec le même identifiant existe déjà.',
+            );
+          }
+
+          await database.activities.add(trashItem.payload);
+          break;
         }
 
-        await database.activities.add(trashItem.payload);
-      } else {
-        const existingWeight = await database.weights
-          .where('date')
-          .equals(trashItem.payload.date)
-          .first();
+        case 'weight': {
+          const existingWeight = await database.weights
+            .where('date')
+            .equals(trashItem.payload.date)
+            .first();
 
-        if (existingWeight) {
-          throw new Error(
-            'Une pesée existe déjà pour cette date. Supprime-la ou modifie-la avant de restaurer celle-ci.',
-          );
+          if (existingWeight) {
+            throw new Error(
+              'Une pesée existe déjà pour cette date. Supprime-la ou modifie-la avant de restaurer celle-ci.',
+            );
+          }
+
+          await database.weights.add(trashItem.payload);
+          break;
         }
 
-        await database.weights.add(trashItem.payload);
+        case 'foodEntry': {
+          const existingEntry = await database.foodEntries.get(
+            trashItem.entityId,
+          );
+          if (existingEntry) {
+            throw new Error(
+              'Une entrée alimentaire avec le même identifiant existe déjà.',
+            );
+          }
+
+          const meal = await database.meals.get(
+            trashItem.payload.mealId,
+          );
+          if (!meal) {
+            throw new Error(
+              'Le repas associé n’existe plus. Restaure d’abord ce repas s’il se trouve dans la corbeille.',
+            );
+          }
+
+          await database.foodEntries.add(trashItem.payload);
+          break;
+        }
+
+        case 'meal': {
+          const existingMealById = await database.meals.get(
+            trashItem.entityId,
+          );
+          const existingMealBySlot = await database.meals
+            .where('[date+slot]')
+            .equals([
+              trashItem.payload.meal.date,
+              trashItem.payload.meal.slot,
+            ])
+            .first();
+
+          if (existingMealById || existingMealBySlot) {
+            throw new Error(
+              'Un repas existe déjà pour cette date et ce créneau.',
+            );
+          }
+
+          await assertNoIdsExist(
+            trashItem.payload.entries.map((entry) => entry.id),
+            (ids) => database.foodEntries.bulkGet(ids),
+            'Une entrée alimentaire du repas existe déjà.',
+          );
+
+          await database.meals.add(trashItem.payload.meal);
+          if (trashItem.payload.entries.length > 0) {
+            await database.foodEntries.bulkAdd(
+              trashItem.payload.entries,
+            );
+          }
+          break;
+        }
+
+        case 'favoriteMeal': {
+          const existingFavorite = await database.favoriteMeals.get(
+            trashItem.entityId,
+          );
+          if (existingFavorite) {
+            throw new Error(
+              'Un repas favori avec le même identifiant existe déjà.',
+            );
+          }
+
+          await database.favoriteMeals.add(trashItem.payload);
+          break;
+        }
+
+        case 'recipe': {
+          const existingRecipe = await database.recipes.get(
+            trashItem.entityId,
+          );
+          if (existingRecipe) {
+            throw new Error(
+              'Une recette avec le même identifiant existe déjà.',
+            );
+          }
+
+          await assertNoIdsExist(
+            trashItem.payload.ingredients.map(
+              (ingredient) => ingredient.id,
+            ),
+            (ids) => database.recipeIngredients.bulkGet(ids),
+            'Un ingrédient de la recette existe déjà.',
+          );
+
+          await database.recipes.add(trashItem.payload.recipe);
+          if (trashItem.payload.ingredients.length > 0) {
+            await database.recipeIngredients.bulkAdd(
+              trashItem.payload.ingredients,
+            );
+          }
+          break;
+        }
       }
 
       await database.trashItems.delete(trashItem.id);
