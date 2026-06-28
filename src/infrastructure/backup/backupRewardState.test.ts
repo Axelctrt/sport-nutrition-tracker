@@ -53,7 +53,7 @@ describe('sauvegarde des récompenses', () => {
     await database.delete();
   });
 
-  it('exporte puis restaure les badges, thèmes et missions', async () => {
+  it('exporte puis restaure les badges, thèmes, missions et objectifs', async () => {
     unlockAchievements(
       ['first-session'],
       '2026-06-27T18:00:00.000Z',
@@ -73,6 +73,10 @@ describe('sauvegarde des récompenses', () => {
 
     expect(envelope.schemaVersion).toBe(3);
     expect(envelope.rewardState).toEqual({
+      goals: {
+        version: 1,
+        goals: [],
+      },
       achievements: {
         earnedAchievements: [
           {

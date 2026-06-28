@@ -33,7 +33,9 @@ describe('rewardBackupState', () => {
     document.documentElement.removeAttribute('data-sport-theme');
   });
 
-  it('lit les trois états de récompense', () => {
+  it('lit les états de récompense et les objectifs', () => {
+    window.localStorage.removeItem('sportpilot:goals:v1');
+
     unlockAchievements(
       ['first-session'],
       '2026-06-27T18:00:00.000Z',
@@ -47,6 +49,10 @@ describe('rewardBackupState', () => {
     );
 
     expect(readRewardBackupState()).toEqual({
+      goals: {
+        version: 1,
+        goals: [],
+      },
       achievements: {
         earnedAchievements: [
           {
