@@ -40,6 +40,7 @@ export const routePaths = {
   weight: '/weight',
   history: '/history',
   analytics: '/analytics',
+  reports: '/reports',
   weeklyReview: '/weekly-review',
   rewards: '/rewards',
   backup: '/backup',
