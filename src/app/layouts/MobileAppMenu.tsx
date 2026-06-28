@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { NavLink, useLocation } from 'react-router-dom';
 import { mobileMoreNavigation } from '@/app/navigation';
+import { routePaths } from '@/app/routePaths';
 import { usePwaEnvironment } from '@/pwa/usePwaEnvironment';
 import { InstallPwaButton } from '@/shared/ui/InstallPwaButton';
 import { cn } from '@/shared/utils/cn';
@@ -27,9 +28,17 @@ export function MobileAppMenu() {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLElement>(null);
-  const isMenuRouteActive = mobileMoreNavigation.some((section) =>
-    section.items.some((item) => pathIsActive(location.pathname, item.path)),
-  );
+  const isDedicatedHeaderRoute =
+    location.pathname === routePaths.profile ||
+    location.pathname === routePaths.settings;
+
+  const isMenuRouteActive =
+    !isDedicatedHeaderRoute &&
+    mobileMoreNavigation.some((section) =>
+      section.items.some((item) =>
+        pathIsActive(location.pathname, item.path),
+      ),
+    );
 
   const closeMenu = () => {
     triggerRef.current?.focus();

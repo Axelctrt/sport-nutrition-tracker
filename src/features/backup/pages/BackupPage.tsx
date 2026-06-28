@@ -425,8 +425,14 @@ export function BackupPage() {
       />
 
 
-      <Card className="mt-4 p-5 sm:p-6" aria-labelledby="backup-reminder-title">
-        <div className="flex items-start gap-3">
+      <CollapsibleSection
+        sectionId="backup-reminders"
+        storageKey="sportpilot:backup:reminders"
+        title="Suivi et rappels"
+        description="Dernière sauvegarde, fréquence des rappels et état de protection."
+        className="scroll-mt-24"
+      >
+              <div className="flex items-start gap-3">
           <Bell aria-hidden="true" className="mt-0.5 size-6 shrink-0 text-brand-700 dark:text-brand-300" />
           <div className="min-w-0 flex-1">
             <h2 id="backup-reminder-title" className="text-lg font-bold text-slate-950 dark:text-white">
@@ -464,9 +470,17 @@ export function BackupPage() {
             <option value="30">Tous les 30 jours</option>
           </select>
         </label>
-      </Card>
+            </CollapsibleSection>
 
-      <StoragePersistenceCard />
+      <CollapsibleSection
+        sectionId="backup-storage"
+        storageKey="sportpilot:backup:storage"
+        title="Stockage local et persistance"
+        description="Vérifier l’espace utilisé et la protection du stockage navigateur."
+        className="scroll-mt-24"
+      >
+              <StoragePersistenceCard />
+            </CollapsibleSection>
 
       {feedback ? (
         <InlineNotice
@@ -481,8 +495,14 @@ export function BackupPage() {
       ) : null}
 
       <div className="mt-6 grid gap-4 lg:grid-cols-2">
-        <Card className="p-5 sm:p-6">
-          <div className="flex items-start gap-3">
+        <CollapsibleSection
+          sectionId="backup-export"
+          storageKey="sportpilot:backup:export"
+          title="Sauvegarde complète"
+          description="Télécharger ou partager une copie JSON complète des données."
+          className="scroll-mt-24"
+        >
+                  <div className="flex items-start gap-3">
             <Download aria-hidden="true" className="mt-0.5 size-6 shrink-0 text-brand-700 dark:text-brand-300" />
             <div className="min-w-0">
               <h2 className="text-lg font-bold text-slate-950 dark:text-white">Exporter les données</h2>
@@ -521,10 +541,16 @@ export function BackupPage() {
           AirDrop ou une autre application. Sinon, le fichier est
           téléchargé automatiquement.
         </p>
-        </Card>
+                </CollapsibleSection>
 
-        <Card className="p-5 sm:p-6">
-          <div className="flex items-start gap-3">
+        <CollapsibleSection
+          sectionId="backup-import"
+          storageKey="sportpilot:backup:import"
+          title="Restauration complète"
+          description="Contrôler puis remplacer toutes les données de cet appareil."
+          className="scroll-mt-24"
+        >
+                  <div className="flex items-start gap-3">
             <Upload aria-hidden="true" className="mt-0.5 size-6 shrink-0 text-brand-700 dark:text-brand-300" />
             <div className="min-w-0">
               <h2 className="text-lg font-bold text-slate-950 dark:text-white">Restaurer une sauvegarde</h2>
@@ -546,16 +572,38 @@ export function BackupPage() {
           <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
             Taille maximale : {formatFileSize(MAX_BACKUP_FILE_SIZE_BYTES)}.
           </p>
-        </Card>
+                </CollapsibleSection>
       </div>
 
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
-                <AdvancedCsvExportPanel />
-                <SelectiveBackupRestorePanel />
+                <CollapsibleSection
+                  sectionId="backup-csv"
+                  storageKey="sportpilot:backup:csv"
+                  title="Exports CSV avancés"
+                  description="Choisir une période et les jeux de données à exporter."
+                  className="scroll-mt-24"
+                >
+                                  <AdvancedCsvExportPanel />
+                                </CollapsibleSection>
+                <CollapsibleSection
+                  sectionId="backup-selective-restore"
+                  storageKey="sportpilot:backup:selective-restore"
+                  title="Restauration sélective"
+                  description="Comparer une sauvegarde et restaurer seulement certains domaines."
+                  className="scroll-mt-24"
+                >
+                                  <SelectiveBackupRestorePanel />
+                                </CollapsibleSection>
 
-        <Card className="p-5 sm:p-6">
-          <div className="flex items-start gap-3">
+        <CollapsibleSection
+          sectionId="backup-diagnostic"
+          storageKey="sportpilot:backup:diagnostic"
+          title="Diagnostic technique"
+          description="Exporter uniquement l’état technique et les compteurs locaux."
+          className="scroll-mt-24"
+        >
+                  <div className="flex items-start gap-3">
             <Wrench aria-hidden="true" className="mt-0.5 size-6 shrink-0 text-brand-700 dark:text-brand-300" />
             <div className="min-w-0">
               <h2 className="text-lg font-bold text-slate-950 dark:text-white">Diagnostic technique</h2>
@@ -568,7 +616,7 @@ export function BackupPage() {
             {isExportingDiagnostic ? <LoaderCircle aria-hidden="true" className="size-4 animate-spin" /> : <FileJson aria-hidden="true" className="size-4" />}
             {isExportingDiagnostic ? 'Création…' : 'Télécharger le diagnostic'}
           </Button>
-        </Card>
+                </CollapsibleSection>
       </div>
 
       {pendingImport ? (

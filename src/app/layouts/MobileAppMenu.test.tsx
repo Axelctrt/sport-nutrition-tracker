@@ -52,4 +52,17 @@ describe('MobileAppMenu', () => {
       'bg-brand-100',
     );
   });
+
+  it.each(['/profile', '/settings'])(
+    'ne marque pas le menu complet sur les routes dédiées %s',
+    (initialEntry) => {
+      renderMenu(initialEntry);
+
+      expect(
+        screen.getByRole('button', {
+          name: 'Ouvrir le menu de l’application',
+        }),
+      ).not.toHaveClass('bg-brand-100');
+    },
+  );
 });

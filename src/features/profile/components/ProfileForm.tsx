@@ -92,6 +92,8 @@ export function ProfileForm({
       ) : null}
 
       <CollapsibleSection
+        sectionId="profile-personal"
+        storageKey="sportpilot:profile:personal"
         title="Informations personnelles"
         description="Identité, âge, taille et poids de référence."
         summary="Essentiel"
@@ -241,6 +243,8 @@ export function ProfileForm({
       </CollapsibleSection>
 
       <CollapsibleSection
+        sectionId="profile-goal"
+        storageKey="sportpilot:profile:goal"
         title="Objectif et activité quotidienne"
         description="Objectif de poids, activité professionnelle et pas quotidiens."
         summary="Suivi"
@@ -339,6 +343,8 @@ export function ProfileForm({
       </CollapsibleSection>
 
       <CollapsibleSection
+        sectionId="profile-macros"
+        storageKey="sportpilot:profile:macros"
         title="Cibles de macronutriments"
         description="Coefficients de protéines et de lipides utilisés dans les calculs."
         summary="Avancé"
