@@ -1,4 +1,5 @@
 import { RepositoryError } from '@/domain/errors/RepositoryError';
+import { publishTrashUndoAvailable } from '@/shared/trash/trashUndoEvents';
 import type { EntityId, LocalDate } from '@/domain/models/common';
 import type { MealSlot } from '@/domain/models/food';
 import {
@@ -46,7 +47,7 @@ export async function moveActivityToTrash(
   activityId: EntityId,
   now: Date = new Date(),
 ): Promise<TrashItem | undefined> {
-  return database.transaction(
+  const trashItem = await database.transaction(
     'rw',
     database.activities,
     database.trashItems,
@@ -72,6 +73,15 @@ export async function moveActivityToTrash(
       return trashItem;
     },
   );
+
+  if (trashItem) {
+    publishTrashUndoAvailable({
+      trashItemId: trashItem.id,
+      label: trashItem.label,
+    });
+  }
+
+  return trashItem;
 }
 
 export async function moveWeightToTrash(
@@ -79,7 +89,7 @@ export async function moveWeightToTrash(
   date: LocalDate,
   now: Date = new Date(),
 ): Promise<TrashItem | undefined> {
-  return database.transaction(
+  const trashItem = await database.transaction(
     'rw',
     database.weights,
     database.trashItems,
@@ -108,6 +118,15 @@ export async function moveWeightToTrash(
       return trashItem;
     },
   );
+
+  if (trashItem) {
+    publishTrashUndoAvailable({
+      trashItemId: trashItem.id,
+      label: trashItem.label,
+    });
+  }
+
+  return trashItem;
 }
 
 export async function moveFoodEntryToTrash(
@@ -115,7 +134,7 @@ export async function moveFoodEntryToTrash(
   entryId: EntityId,
   now: Date = new Date(),
 ): Promise<TrashItem | undefined> {
-  return database.transaction(
+  const trashItem = await database.transaction(
     'rw',
     database.foodEntries,
     database.trashItems,
@@ -141,6 +160,15 @@ export async function moveFoodEntryToTrash(
       return trashItem;
     },
   );
+
+  if (trashItem) {
+    publishTrashUndoAvailable({
+      trashItemId: trashItem.id,
+      label: trashItem.label,
+    });
+  }
+
+  return trashItem;
 }
 
 export async function moveMealToTrash(
@@ -148,7 +176,7 @@ export async function moveMealToTrash(
   mealId: EntityId,
   now: Date = new Date(),
 ): Promise<TrashItem | undefined> {
-  return database.transaction(
+  const trashItem = await database.transaction(
     'rw',
     database.meals,
     database.foodEntries,
@@ -191,6 +219,15 @@ export async function moveMealToTrash(
       return trashItem;
     },
   );
+
+  if (trashItem) {
+    publishTrashUndoAvailable({
+      trashItemId: trashItem.id,
+      label: trashItem.label,
+    });
+  }
+
+  return trashItem;
 }
 
 export async function moveFavoriteMealToTrash(
@@ -198,7 +235,7 @@ export async function moveFavoriteMealToTrash(
   favoriteMealId: EntityId,
   now: Date = new Date(),
 ): Promise<TrashItem | undefined> {
-  return database.transaction(
+  const trashItem = await database.transaction(
     'rw',
     database.favoriteMeals,
     database.trashItems,
@@ -225,6 +262,15 @@ export async function moveFavoriteMealToTrash(
       return trashItem;
     },
   );
+
+  if (trashItem) {
+    publishTrashUndoAvailable({
+      trashItemId: trashItem.id,
+      label: trashItem.label,
+    });
+  }
+
+  return trashItem;
 }
 
 export async function moveRecipeToTrash(
@@ -232,7 +278,7 @@ export async function moveRecipeToTrash(
   recipeId: EntityId,
   now: Date = new Date(),
 ): Promise<TrashItem | undefined> {
-  return database.transaction(
+  const trashItem = await database.transaction(
     'rw',
     database.recipes,
     database.recipeIngredients,
@@ -273,6 +319,15 @@ export async function moveRecipeToTrash(
       return trashItem;
     },
   );
+
+  if (trashItem) {
+    publishTrashUndoAvailable({
+      trashItemId: trashItem.id,
+      label: trashItem.label,
+    });
+  }
+
+  return trashItem;
 }
 
 export async function moveStrengthSetToTrash(
@@ -281,7 +336,7 @@ export async function moveStrengthSetToTrash(
   setId: EntityId,
   now: Date = new Date(),
 ): Promise<TrashItem> {
-  return database.transaction(
+  const trashItem = await database.transaction(
     'rw',
     [database.strengthSets, database.trashItems],
     async () => {
@@ -329,6 +384,15 @@ export async function moveStrengthSetToTrash(
       return trashItem;
     },
   );
+
+  if (trashItem) {
+    publishTrashUndoAvailable({
+      trashItemId: trashItem.id,
+      label: trashItem.label,
+    });
+  }
+
+  return trashItem;
 }
 
 export async function moveWorkoutSessionExerciseToTrash(
@@ -337,7 +401,7 @@ export async function moveWorkoutSessionExerciseToTrash(
   sessionExerciseId: EntityId,
   now: Date = new Date(),
 ): Promise<TrashItem> {
-  return database.transaction(
+  const trashItem = await database.transaction(
     'rw',
     [
       database.workoutSessionExercises,
@@ -395,6 +459,15 @@ export async function moveWorkoutSessionExerciseToTrash(
       return trashItem;
     },
   );
+
+  if (trashItem) {
+    publishTrashUndoAvailable({
+      trashItemId: trashItem.id,
+      label: trashItem.label,
+    });
+  }
+
+  return trashItem;
 }
 export async function listTrashItems(
   database: AppDatabase,

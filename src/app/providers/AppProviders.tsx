@@ -1,5 +1,6 @@
 import type { PropsWithChildren } from 'react';
 import { AppReadinessBoundary } from '@/app/providers/AppReadinessBoundary';
+import { TrashUndoCoordinator } from '@/app/trash/TrashUndoCoordinator';
 import { DatabaseProvider } from '@/app/providers/database/DatabaseProvider';
 import { ErrorBoundaryProvider } from '@/app/providers/ErrorBoundaryProvider';
 import { ProfileProvider } from '@/app/providers/profile/ProfileProvider';
@@ -13,8 +14,10 @@ export function AppProviders({ children }: PropsWithChildren) {
         <ToastProvider>
           <DatabaseProvider>
             <ProfileProvider>
+            <TrashUndoCoordinator>
               <AppReadinessBoundary>{children}</AppReadinessBoundary>
-            </ProfileProvider>
+              </TrashUndoCoordinator>
+          </ProfileProvider>
           </DatabaseProvider>
         </ToastProvider>
       </ThemeProvider>

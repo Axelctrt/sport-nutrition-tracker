@@ -5,6 +5,7 @@ import { cn } from '@/shared/utils/cn';
 interface ToastViewportProps {
   toasts: ToastItem[];
   onDismiss: (id: string) => void;
+  onAction: (toast: ToastItem) => void;
 }
 
 const toneClasses = {
@@ -19,7 +20,7 @@ const icons = {
   info: Info,
 } as const;
 
-export function ToastViewport({ toasts, onDismiss }: ToastViewportProps) {
+export function ToastViewport({ toasts, onDismiss, onAction }: ToastViewportProps) {
   return (
     <div
       className="toast-viewport-offset pointer-events-none fixed inset-x-3 z-[70] flex flex-col items-center gap-2 lg:inset-x-auto lg:right-6 lg:w-[24rem]"
@@ -45,6 +46,16 @@ export function ToastViewport({ toasts, onDismiss }: ToastViewportProps) {
                 <p className="font-semibold">{toast.title}</p>
                 {toast.description ? (
                   <p className="mt-1 text-sm leading-5 opacity-90">{toast.description}</p>
+                ) : null}
+                {toast.action ? (
+                  <button
+                    type="button"
+                    className="mt-3 inline-flex min-h-10 items-center rounded-xl border border-current px-3 py-2 text-sm font-semibold transition-opacity hover:opacity-80"
+                    onClick={() => onAction(toast)}
+                    aria-label={toast.action.ariaLabel ?? toast.action.label}
+                  >
+                    {toast.action.label}
+                  </button>
                 ) : null}
               </div>
               <button

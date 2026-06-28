@@ -2,9 +2,16 @@ import { createContext } from 'react';
 
 export type ToastTone = 'success' | 'error' | 'info';
 
+export interface ToastAction {
+  label: string;
+  ariaLabel?: string;
+  onClick: () => void | Promise<void>;
+}
+
 export interface ToastInput {
   title: string;
   description?: string;
+  action?: ToastAction;
   tone?: ToastTone;
   durationMs?: number | null;
   dedupeKey?: string;
@@ -13,6 +20,7 @@ export interface ToastInput {
 export interface ToastItem extends Required<Pick<ToastInput, 'title' | 'tone'>> {
   id: string;
   description?: string;
+  action?: ToastAction;
   durationMs: number | null;
   dedupeKey: string;
 }
