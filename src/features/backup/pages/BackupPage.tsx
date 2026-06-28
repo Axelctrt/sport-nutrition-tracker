@@ -4,7 +4,6 @@ import {
   Download,
   FileCheck2,
   FileJson,
-  FileSpreadsheet,
   HardDrive,
   LoaderCircle,
   Share2,
@@ -33,6 +32,7 @@ import { useTheme } from '@/app/providers/useTheme';
 import { routePaths } from '@/app/routePaths';
 import { BackupDeleteDialog } from '@/features/backup/components/BackupDeleteDialog';
 import { BackupOverview } from '@/features/backup/components/BackupOverview';
+import { AdvancedCsvExportPanel } from '@/features/backup/components/AdvancedCsvExportPanel';
 import { StoragePersistenceCard } from '@/features/backup/components/StoragePersistenceCard';
 import { shareBackupFile } from '@/features/backup/shareBackupFile';
 import {
@@ -40,7 +40,6 @@ import {
   MAX_BACKUP_FILE_SIZE_BYTES,
   type BackupSummary,
 } from '@/infrastructure/backup/backupService';
-import { createCsvExports, type CsvExportFile } from '@/infrastructure/backup/csvExportService';
 import {
   createDiagnosticFileName,
   createTechnicalDiagnostic,
@@ -151,8 +150,6 @@ export function BackupPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [storageEstimate, setStorageEstimate] = useState<StorageEstimate>();
   const [settings, setSettings] = useState<AppSettings>();
-  const [csvExports, setCsvExports] = useState<CsvExportFile[]>();
-  const [isPreparingCsv, setIsPreparingCsv] = useState(false);
   const [isExportingDiagnostic, setIsExportingDiagnostic] = useState(false);
   const [isUpdatingReminder, setIsUpdatingReminder] = useState(false);
 
@@ -287,28 +284,6 @@ export function BackupPage() {
       });
     } finally {
       setIsUpdatingReminder(false);
-    }
-  };
-
-  const handlePrepareCsv = async () => {
-    setIsPreparingCsv(true);
-    setFeedback(undefined);
-    try {
-      const exports = await createCsvExports();
-      setCsvExports(exports);
-      setFeedback({
-        tone: 'success',
-        title: 'Exports CSV prêts',
-        message: `${exports.length} fichier(s) peuvent maintenant être téléchargés séparément.`,
-      });
-    } catch (error) {
-      setFeedback({
-        tone: 'error',
-        title: 'Export CSV impossible',
-        message: error instanceof Error ? error.message : 'Les fichiers CSV n’ont pas pu être préparés.',
-      });
-    } finally {
-      setIsPreparingCsv(false);
     }
   };
 
@@ -575,36 +550,7 @@ export function BackupPage() {
 
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        <Card className="p-5 sm:p-6">
-          <div className="flex items-start gap-3">
-            <FileSpreadsheet aria-hidden="true" className="mt-0.5 size-6 shrink-0 text-brand-700 dark:text-brand-300" />
-            <div className="min-w-0">
-              <h2 className="text-lg font-bold text-slate-950 dark:text-white">Exports CSV</h2>
-              <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                Prépare des fichiers lisibles dans Excel ou un outil d’analyse. Le JSON reste nécessaire pour restaurer SportPilot.
-              </p>
-            </div>
-          </div>
-          <Button className="mt-5 w-full" variant="secondary" onClick={() => void handlePrepareCsv()} disabled={isPreparingCsv}>
-            {isPreparingCsv ? <LoaderCircle aria-hidden="true" className="size-4 animate-spin" /> : <FileSpreadsheet aria-hidden="true" className="size-4" />}
-            {isPreparingCsv ? 'Préparation…' : 'Préparer les fichiers CSV'}
-          </Button>
-          {csvExports ? (
-            <div className="mt-4 grid gap-2">
-              {csvExports.map((item) => (
-                <Button
-                  key={item.key}
-                  variant="ghost"
-                  className="w-full justify-between border border-slate-200 dark:border-slate-800"
-                  onClick={() => downloadFile(item.content, item.fileName, 'text/csv')}
-                >
-                  <span>{item.label}</span>
-                  <span className="text-xs font-normal text-slate-500 dark:text-slate-400">{item.rowCount} ligne(s)</span>
-                </Button>
-              ))}
-            </div>
-          ) : null}
-        </Card>
+                <AdvancedCsvExportPanel />
 
         <Card className="p-5 sm:p-6">
           <div className="flex items-start gap-3">
@@ -747,3 +693,5 @@ export function BackupPage() {
     </section>
   );
 }
+
+
