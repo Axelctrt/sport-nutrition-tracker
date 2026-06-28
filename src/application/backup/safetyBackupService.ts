@@ -7,7 +7,8 @@ export type SafetyBackupReason =
   | 'before-import'
   | 'before-full-reset'
   | 'before-selective-reset'
-  | 'before-consistency-repair';
+  | 'before-consistency-repair'
+  | 'before-selective-restore';
 
 export interface SafetyBackupResult extends PreparedBackupExport {
   safetyFileName: string;
@@ -32,6 +33,7 @@ const reasonFileLabels: Record<SafetyBackupReason, string> = {
   'before-full-reset': 'avant-effacement-complet',
   'before-selective-reset': 'avant-reinitialisation',
   'before-consistency-repair': 'avant-reparation-coherence',
+  'before-selective-restore': 'avant-restauration-selective',
 };
 
 function normalizeTimestamp(value: string): string {

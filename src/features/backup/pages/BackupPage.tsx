@@ -33,6 +33,7 @@ import { routePaths } from '@/app/routePaths';
 import { BackupDeleteDialog } from '@/features/backup/components/BackupDeleteDialog';
 import { BackupOverview } from '@/features/backup/components/BackupOverview';
 import { AdvancedCsvExportPanel } from '@/features/backup/components/AdvancedCsvExportPanel';
+import { SelectiveBackupRestorePanel } from '@/features/backup/components/SelectiveBackupRestorePanel';
 import { StoragePersistenceCard } from '@/features/backup/components/StoragePersistenceCard';
 import { shareBackupFile } from '@/features/backup/shareBackupFile';
 import {
@@ -551,6 +552,7 @@ export function BackupPage() {
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
                 <AdvancedCsvExportPanel />
+                <SelectiveBackupRestorePanel />
 
         <Card className="p-5 sm:p-6">
           <div className="flex items-start gap-3">
