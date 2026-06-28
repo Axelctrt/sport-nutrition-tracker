@@ -44,7 +44,7 @@ export const routePaths = {
   goals: '/goals',
   weeklyReview: '/weekly-review',
   rewards: '/rewards',
-  backup: '/backup',
+  backup: '/backup',
   trash: '/backup/trash',
   calculationsInformation: '/information/calculations',
   privacy: '/privacy',
@@ -135,4 +135,16 @@ export function addRecipeToJournalPath(
 
 export function barcodeScannerPath(date: string, slot: string): string {
   return `${routePaths.barcodeScanner}?date=${encodeURIComponent(date)}&slot=${encodeURIComponent(slot)}`;
+}
+
+export function weeklyPlanningSessionPath(
+  date: string,
+  sessionId: string,
+): string {
+  const params = new URLSearchParams({
+    date,
+    session: sessionId,
+  });
+
+  return `${routePaths.weeklyPlanning}?${params.toString()}`;
 }

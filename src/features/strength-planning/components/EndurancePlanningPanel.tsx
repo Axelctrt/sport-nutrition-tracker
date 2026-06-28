@@ -494,17 +494,12 @@ export function EndurancePlanningPanel({
 
         <div className="mt-4 grid gap-3 lg:grid-cols-2">
           {(week?.days ?? []).map((day) => (
-            <section
+            <CollapsibleSection
               key={day.date}
-              aria-labelledby={`endurance-day-${day.date}`}
-              className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-950/40"
+              title={formatDate(day.date)}
+              description={`${day.sessions.length} activité${day.sessions.length > 1 ? 's' : ''}`}
+              className="bg-slate-50/70 shadow-none dark:bg-slate-950/40"
             >
-              <h3
-                id={`endurance-day-${day.date}`}
-                className="font-bold capitalize text-slate-950 dark:text-white"
-              >
-                {formatDate(day.date)}
-              </h3>
 
               {day.sessions.length === 0 ? (
                 <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
@@ -709,7 +704,7 @@ export function EndurancePlanningPanel({
                   })}
                 </div>
               )}
-            </section>
+            </CollapsibleSection>
           ))}
         </div>
       </CollapsibleSection>

@@ -16,6 +16,7 @@ import { DashboardCalculationDetails } from '@/features/dashboard/components/Das
 import { DashboardQuickActions } from '@/features/dashboard/components/DashboardQuickActions';
 import { DashboardRewardsOverview } from '@/features/dashboard/components/DashboardRewardsOverview';
 import { DashboardTodaySummary } from '@/features/dashboard/components/DashboardTodaySummary';
+import { DashboardTrainingAgenda } from '@/features/dashboard/components/DashboardTrainingAgenda';
 import { DashboardWeeklyMissions } from '@/features/dashboard/components/DashboardWeeklyMissions';
 import { DashboardWidgetStack } from '@/features/dashboard/components/DashboardWidgetStack';
 import { useDailyDashboard } from '@/features/dashboard/hooks/useDailyDashboard';
@@ -62,7 +63,16 @@ export function DashboardPage() {
       );
     }
 
-    if (widgetId === 'weeklyMissions') {
+    if (widgetId === 'trainingAgenda') {
+    return (
+      <DashboardTrainingAgenda
+        key={widgetId}
+        className="mt-6"
+      />
+    );
+  }
+
+  if (widgetId === 'weeklyMissions') {
       return (
         <DashboardWeeklyMissions
           key={widgetId}
