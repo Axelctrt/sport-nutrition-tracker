@@ -6,6 +6,7 @@ import { formatWeekRange } from '@/application/strength/weeklyPlanningService';
 import { routePaths, workoutSessionPath } from '@/app/routePaths';
 import { WeeklyPlanningSessionCard } from '@/features/strength-planning/components/WeeklyPlanningSessionCard';
 import { EndurancePlanningPanel } from '@/features/strength-planning/components/EndurancePlanningPanel';
+import { RepeatTrainingWeekPanel } from '@/features/strength-planning/components/RepeatTrainingWeekPanel';
 import { useWeeklyPlanning } from '@/features/strength-planning/hooks/useWeeklyPlanning';
 import { inputClassName } from '@/shared/forms/formStyles';
 import { Button } from '@/shared/ui/Button';
@@ -75,6 +76,11 @@ export function WeeklyPlanningPage() {
           </Link>
         </div>
       </div>
+
+      <RepeatTrainingWeekPanel
+        weekStart={weekStart}
+        onOpenWeek={goToDate}
+      />
 
       <EndurancePlanningPanel weekStart={weekStart} />
 
