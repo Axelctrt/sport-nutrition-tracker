@@ -13,6 +13,11 @@ vi.mock("@/features/settings/components/SelectiveDataResetPanel", () => ({
   SelectiveDataResetPanel: () => <div>Réinitialisation sélective intégrée</div>,
 }));
 
+vi.mock("@/features/settings/components/DataConsistencyPanel", () => ({
+  DataConsistencyPanel: () => (
+    <p>Contrôle de cohérence intégré</p>
+  ),
+}));
 describe("DataManagementCenter", () => {
   it("regroupe le stockage, la sauvegarde et les outils de maintenance", () => {
     render(
