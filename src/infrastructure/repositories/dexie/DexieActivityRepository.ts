@@ -3,6 +3,7 @@ import type { EntityId, LocalDate, NewEntity } from '@/domain/models/common';
 import type { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import type { ActivityRepository } from '@/infrastructure/repositories/contracts/ActivityRepository';
 import { runRepositoryOperation } from '@/infrastructure/repositories/dexie/repositoryOperation';
+import { moveActivityToTrash } from '@/infrastructure/repositories/dexie/trashService';
 import { createEntity, currentIsoDateTime } from '@/shared/utils/entities';
 
 export class DexieActivityRepository implements ActivityRepository {
@@ -69,7 +70,9 @@ export class DexieActivityRepository implements ActivityRepository {
     return runRepositoryOperation(
       'delete',
       'Impossible de supprimer cette activité.',
-      () => this.database.activities.delete(id),
+      async () => {
+        await moveActivityToTrash(this.database, id);
+      },
     );
   }
 }

@@ -27,7 +27,8 @@ export const databaseTableNames = [
 
 export const databaseInternalTableNames = [
   'migrationJournal',
-  'databaseDiagnostics',
+  'databaseDiagnostics',
+  'trashItems',
 ] as const;
 
 export const allDatabaseTableNames = [
@@ -82,4 +83,10 @@ export const schemaVersion3: Record<string, string> = {
   ...schemaVersion2,
   migrationJournal: 'id, &version, status, source, appliedAt',
   databaseDiagnostics: 'id, checkedAt, status, schemaVersion',
+};
+
+export const schemaVersion4: Record<string, string> = {
+  ...schemaVersion3,
+  trashItems:
+    'id, entityType, entityId, deletedAt, purgeAt, [entityType+entityId]',
 };

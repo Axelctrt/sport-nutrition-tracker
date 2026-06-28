@@ -13,6 +13,7 @@ import {
   Info,
   Settings,
   SlidersHorizontal,
+  Trash2,
   Trophy,
   UserRound,
   Weight,
@@ -50,7 +51,8 @@ export const secondaryNavigation: NavigationItem[] = [
   { label: 'Profil', path: routePaths.profile, icon: UserRound },
   { label: 'Paramètres', path: routePaths.settings, icon: Settings },
   { label: 'Récompenses', path: routePaths.rewards, icon: Trophy },
-  { label: 'Sauvegarde', path: routePaths.backup, icon: DatabaseBackup },
+  { label: 'Sauvegarde', path: routePaths.backup, icon: DatabaseBackup },
+  { label: 'Corbeille', path: routePaths.trash, icon: Trash2 },
   { label: 'Calculs', path: routePaths.calculationsInformation, icon: Info },
 ];
 
@@ -142,6 +144,14 @@ export const mobileMoreNavigation: NavigationSection[] = [
         path: routePaths.backup,
         icon: DatabaseBackup,
         description: 'Exporter, restaurer ou effacer les données.',
+      },
+
+      {
+        label: 'Corbeille',
+        path: routePaths.trash,
+        icon: Trash2,
+        description:
+          'Restaurer les activités et pesées supprimées récemment.',
       },
       {
         label: 'Informations sur les calculs',

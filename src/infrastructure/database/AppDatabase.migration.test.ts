@@ -3,12 +3,12 @@ import Dexie from "dexie";
 import { AppDatabase } from "@/infrastructure/database/AppDatabase";
 import {
   DATABASE_VERSION_1,
-  DATABASE_VERSION_3,
+  DATABASE_VERSION_4,
 } from "@/infrastructure/database/migrations/versions";
 import {
   allDatabaseTableNames,
   schemaVersion1,
-  schemaVersion3,
+  schemaVersion4,
 } from "@/infrastructure/database/schema";
 
 type PersistedRecord = Record<string, unknown> & { id: string };
@@ -300,7 +300,7 @@ async function expectFixture(
 }
 
 describe("chaîne de migrations Dexie", () => {
-  it("conserve le contenu complet du schéma v1 pendant la montée vers la v3", async () => {
+  it("conserve le contenu complet du schéma v1 pendant la montée vers la v4", async () => {
     const databaseName = createDatabaseName();
     const oldDatabase = new Dexie(databaseName);
     let upgradedDatabase: AppDatabase | undefined;
@@ -314,13 +314,13 @@ describe("chaîne de migrations Dexie", () => {
       upgradedDatabase = new AppDatabase(databaseName);
       await upgradedDatabase.open();
 
-      expect(upgradedDatabase.verno).toBe(DATABASE_VERSION_3);
+      expect(upgradedDatabase.verno).toBe(DATABASE_VERSION_4);
       await expectFixture(upgradedDatabase, version1Fixture);
 
-      for (const tableName of Object.keys(schemaVersion3).filter(
+      for (const tableName of Object.keys(schemaVersion4).filter(
         (name) => !(name in schemaVersion1),
       )) {
-        const expectedCount = tableName === "migrationJournal" ? 1 : 0;
+        const expectedCount = tableName === "migrationJournal" ? 2 : 0;
         expect(await upgradedDatabase.table(tableName).count()).toBe(
           expectedCount,
         );
@@ -332,7 +332,7 @@ describe("chaîne de migrations Dexie", () => {
     }
   });
 
-  it("conserve toutes les tables et relations après fermeture puis réouverture de la v3", async () => {
+  it("conserve toutes les tables et relations après fermeture puis réouverture de la v4", async () => {
     const databaseName = createDatabaseName();
     const initialDatabase = new AppDatabase(databaseName);
     let reopenedDatabase: AppDatabase | undefined;
@@ -356,7 +356,7 @@ describe("chaîne de migrations Dexie", () => {
     }
   });
 
-  it("préserve le schéma v3 lors de l’ajout simulé d’une future version 4", async () => {
+  it("préserve le schéma v4 lors de l’ajout simulé d’une future version 5", async () => {
     const databaseName = createDatabaseName();
     const currentDatabase = new AppDatabase(databaseName);
     let futureDatabase: Dexie | undefined;
@@ -367,13 +367,13 @@ describe("chaîne de migrations Dexie", () => {
       currentDatabase.close();
 
       futureDatabase = new AppDatabase(databaseName);
-      futureDatabase.version(4).stores({
-        ...schemaVersion3,
+      futureDatabase.version(5).stores({
+        ...schemaVersion4,
         migrationProbe: "id",
       });
       await futureDatabase.open();
 
-      expect(futureDatabase.verno).toBe(4);
+      expect(futureDatabase.verno).toBe(5);
       await expectFixture(futureDatabase, version2Fixture);
       expect(await futureDatabase.table("migrationProbe").count()).toBe(0);
     } finally {

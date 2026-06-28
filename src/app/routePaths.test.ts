@@ -109,6 +109,11 @@ describe('centre de récompenses', () => {
     expect(routePaths.rewards).toBe('/rewards');
   });
 });
+describe('corbeille locale', () => {
+  it('utilise une route stable dédiée', () => {
+    expect(routePaths.trash).toBe('/backup/trash');
+  });
+});
 describe('page de confidentialité', () => {
   it('utilise une route publique stable', () => {
     expect(routePaths.privacy).toBe('/privacy');

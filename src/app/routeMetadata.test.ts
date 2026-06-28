@@ -10,6 +10,7 @@ describe('getRouteTitle', () => {
     expect(getRouteTitle('/strength/sessions/session-1')).toBe('Séance de musculation');
     expect(getRouteTitle('/strength/exercises/exercise-1/history')).toBe('Historique de l’exercice');
     expect(getRouteTitle('/rewards')).toBe('Centre de récompenses');
+    expect(getRouteTitle('/backup/trash')).toBe('Corbeille');
     expect(getRouteTitle('/privacy')).toBe('Confidentialité');
   });
 
