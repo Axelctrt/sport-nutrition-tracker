@@ -5,6 +5,7 @@ import {
   type PropsWithChildren,
 } from 'react';
 
+import type { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import { appDatabase } from '@/infrastructure/database/database';
 import { restoreTrashItem } from '@/infrastructure/repositories/dexie/trashService';
 import { useToast } from '@/shared/toast/useToast';
@@ -16,9 +17,16 @@ function errorMessage(error: unknown): string {
     : 'Une erreur inconnue empêche la restauration.';
 }
 
+interface TrashUndoCoordinatorProps extends PropsWithChildren {
+  database?: AppDatabase;
+  restoreItem?: typeof restoreTrashItem;
+}
+
 export function TrashUndoCoordinator({
   children,
-}: PropsWithChildren) {
+  database = appDatabase,
+  restoreItem = restoreTrashItem,
+}: TrashUndoCoordinatorProps) {
   const toast = useToast();
   const [revision, setRevision] = useState(0);
 
@@ -36,8 +44,8 @@ export function TrashUndoCoordinator({
             ariaLabel: `Annuler la suppression : ${event.label}`,
             onClick: async () => {
               try {
-                await restoreTrashItem(
-                  appDatabase,
+                await restoreItem(
+                  database,
                   event.trashItemId,
                 );
 
@@ -53,7 +61,7 @@ export function TrashUndoCoordinator({
           },
         });
       }),
-    [toast],
+    [database, restoreItem, toast],
   );
 
   return <Fragment key={revision}>{children}</Fragment>;

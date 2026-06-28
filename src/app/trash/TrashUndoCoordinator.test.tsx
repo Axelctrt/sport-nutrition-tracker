@@ -8,24 +8,14 @@ import {
 import { useEffect } from 'react';
 import { vi } from 'vitest';
 
-const { restoreTrashItemMock } = vi.hoisted(() => ({
-  restoreTrashItemMock: vi.fn(),
-}));
-
-vi.mock('@/infrastructure/database/database', () => ({
-  appDatabase: { name: 'mock-database' },
-}));
-
-vi.mock(
-  '@/infrastructure/repositories/dexie/trashService',
-  () => ({
-    restoreTrashItem: restoreTrashItemMock,
-  }),
-);
 
 import { TrashUndoCoordinator } from '@/app/trash/TrashUndoCoordinator';
+import type { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import { ToastProvider } from '@/shared/toast/ToastProvider';
 import { publishTrashUndoAvailable } from '@/shared/trash/trashUndoEvents';
+
+const database = {} as AppDatabase;
+const restoreTrashItemMock = vi.fn();
 
 function MountProbe({
   onMount,
@@ -52,7 +42,10 @@ describe('TrashUndoCoordinator', () => {
 
     render(
       <ToastProvider>
-        <TrashUndoCoordinator>
+        <TrashUndoCoordinator
+          database={database}
+          restoreItem={restoreTrashItemMock}
+        >
           <MountProbe onMount={onMount} />
         </TrashUndoCoordinator>
       </ToastProvider>,
@@ -73,7 +66,7 @@ describe('TrashUndoCoordinator', () => {
 
     await waitFor(() => {
       expect(restoreTrashItemMock).toHaveBeenCalledWith(
-        expect.anything(),
+        database,
         'activity:activity-1',
       );
     });
@@ -94,7 +87,10 @@ describe('TrashUndoCoordinator', () => {
 
     render(
       <ToastProvider>
-        <TrashUndoCoordinator>
+        <TrashUndoCoordinator
+          database={database}
+          restoreItem={restoreTrashItemMock}
+        >
           <MountProbe onMount={onMount} />
         </TrashUndoCoordinator>
       </ToastProvider>,
