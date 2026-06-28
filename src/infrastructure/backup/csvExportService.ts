@@ -15,6 +15,65 @@ export interface CsvExportFile {
   rowCount: number;
 }
 
+export type CsvExportKey =
+  | 'weights'
+  | 'steps'
+  | 'activities'
+  | 'workoutSessions'
+  | 'strengthSets'
+  | 'foodEntries'
+  | 'dailyNutrition';
+
+export interface CsvExportDefinition {
+  key: CsvExportKey;
+  label: string;
+  description: string;
+}
+
+export interface CsvExportOptions {
+  keys?: readonly CsvExportKey[];
+  from?: string;
+  to?: string;
+}
+
+export const CSV_EXPORT_DEFINITIONS: readonly CsvExportDefinition[] = [
+  {
+    key: 'weights',
+    label: 'Poids',
+    description: 'Pesées et notes associées.',
+  },
+  {
+    key: 'steps',
+    label: 'Pas',
+    description: 'Nombre de pas quotidien et source.',
+  },
+  {
+    key: 'activities',
+    label: 'Activités',
+    description: 'Course, natation, vélo, marche et cardio.',
+  },
+  {
+    key: 'workoutSessions',
+    label: 'Séances de musculation',
+    description: 'Planification, statut, durée et notes.',
+  },
+  {
+    key: 'strengthSets',
+    label: 'Séries de musculation',
+    description: 'Exercices, charges, répétitions, RPE et groupes.',
+  },
+  {
+    key: 'foodEntries',
+    label: 'Aliments consommés',
+    description: 'Entrées alimentaires et macronutriments.',
+  },
+  {
+    key: 'dailyNutrition',
+    label: 'Apports quotidiens',
+    description: 'Totaux nutritionnels et objectifs par jour.',
+  },
+];
+
 type CsvCell = string | number | boolean | undefined;
 
 function escapeCsvCell(value: CsvCell): string {
@@ -326,12 +385,90 @@ function createDailyNutritionCsv(data: BackupData, exportedAt: string): CsvExpor
   };
 }
 
+function isWithinCsvPeriod(
+  date: string,
+  options: CsvExportOptions,
+): boolean {
+  if (options.from && date < options.from) return false;
+  if (options.to && date > options.to) return false;
+  return true;
+}
+
+function validateCsvExportOptions(
+  options: CsvExportOptions,
+): void {
+  if (options.from && options.to && options.from > options.to) {
+    throw new Error(
+      'La date de début de l’export CSV doit précéder la date de fin.',
+    );
+  }
+}
+
+function filterBackupDataForCsv(
+  data: BackupData,
+  options: CsvExportOptions,
+): BackupData {
+  const workoutSessions = data.workoutSessions.filter((session) =>
+    isWithinCsvPeriod(session.date, options),
+  );
+  const workoutSessionIds = new Set(
+    workoutSessions.map((session) => session.id),
+  );
+
+  return {
+    ...data,
+    weights: data.weights.filter((entry) =>
+      isWithinCsvPeriod(entry.date, options),
+    ),
+    dailySteps: data.dailySteps.filter((entry) =>
+      isWithinCsvPeriod(entry.date, options),
+    ),
+    activities: data.activities.filter((activity) =>
+      isWithinCsvPeriod(activity.date, options),
+    ),
+    foodEntries: data.foodEntries.filter((entry) =>
+      isWithinCsvPeriod(entry.date, options),
+    ),
+    dailyTargets: data.dailyTargets.filter((target) =>
+      isWithinCsvPeriod(target.date, options),
+    ),
+    workoutSessions,
+    workoutSessionExercises:
+      data.workoutSessionExercises.filter((exercise) =>
+        workoutSessionIds.has(exercise.sessionId),
+      ),
+    strengthSets: data.strengthSets.filter((set) =>
+      workoutSessionIds.has(set.sessionId),
+    ),
+  };
+}
+
+function addCsvPeriodToFileName(
+  sourceFileName: string,
+  options: CsvExportOptions,
+): string {
+  if (!options.from && !options.to) return sourceFileName;
+
+  const from = options.from ?? 'debut';
+  const to = options.to ?? 'fin';
+
+  return sourceFileName.replace(
+    /\.csv$/,
+    `-${from}-${to}.csv`,
+  );
+}
+
 export async function createCsvExports(
   database: AppDatabase = appDatabase,
   exportedAt: string = new Date().toISOString(),
+  options: CsvExportOptions = {},
 ): Promise<CsvExportFile[]> {
-  const data = await readBackupData(database);
-  return [
+  validateCsvExportOptions(options);
+
+  const sourceData = await readBackupData(database);
+  const data = filterBackupDataForCsv(sourceData, options);
+
+  const exports = [
     createWeightsCsv(data, exportedAt),
     createStepsCsv(data, exportedAt),
     createActivitiesCsv(data, exportedAt),
@@ -340,4 +477,23 @@ export async function createCsvExports(
     createFoodEntriesCsv(data, exportedAt),
     createDailyNutritionCsv(data, exportedAt),
   ];
+
+  const selectedKeys = new Set<CsvExportKey>(
+    options.keys ??
+      CSV_EXPORT_DEFINITIONS.map(
+        (definition) => definition.key,
+      ),
+  );
+
+  return exports
+    .filter((item) =>
+      selectedKeys.has(item.key as CsvExportKey),
+    )
+    .map((item) => ({
+      ...item,
+      fileName: addCsvPeriodToFileName(
+        item.fileName,
+        options,
+      ),
+    }));
 }
