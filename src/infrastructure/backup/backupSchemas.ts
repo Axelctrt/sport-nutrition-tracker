@@ -617,10 +617,56 @@ const weeklyMissionHistoryStateSchema = z.object({
   ),
 });
 
+const goalMetricSchema = z.enum([
+  'weightTarget',
+  'totalSteps',
+  'activityMinutes',
+  'runningDistanceKm',
+  'swimmingDistanceKm',
+  'cyclingDistanceKm',
+  'strengthSessions',
+  'weighIns',
+]);
+
+const goalStatusSchema = z.enum([
+  'active',
+  'paused',
+  'completed',
+  'archived',
+]);
+
+const goalMilestoneSchema = z.union([
+  z.literal(25),
+  z.literal(50),
+  z.literal(75),
+  z.literal(100),
+]);
+
+const goalStateSchema = z.object({
+  version: z.literal(1),
+  goals: z.array(
+    z.object({
+      id: z.string().min(1),
+      title: z.string().min(1).max(120),
+      metric: goalMetricSchema,
+      targetValue: positiveNumber,
+      startDate: localDateSchema,
+      deadline: localDateSchema.optional(),
+      baselineValue: positiveNumber.optional(),
+      status: goalStatusSchema,
+      reachedMilestones: z.array(goalMilestoneSchema),
+      createdAt: isoDateTimeSchema,
+      updatedAt: isoDateTimeSchema,
+      completedAt: isoDateTimeSchema.optional(),
+    }),
+  ),
+});
+
 const rewardBackupStateSchema = z.object({
   achievements: achievementStateSchema,
   visualThemes: visualThemeStateSchema,
   weeklyMissions: weeklyMissionHistoryStateSchema,
+  goals: goalStateSchema.optional(),
 });
 const backupDataSchema = z.object({
   userProfile: z.array(userProfileSchema).max(1),

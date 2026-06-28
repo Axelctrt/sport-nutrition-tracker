@@ -17,6 +17,7 @@ import {
   SlidersHorizontal,
   Trash2,
   Trophy,
+  Target,
   UserRound,
   Weight,
   type LucideIcon,
@@ -52,6 +53,11 @@ export const primaryNavigation: NavigationItem[] = [
   { label: 'Poids', path: routePaths.weight, icon: Weight },
   { label: 'Analyses', path: routePaths.analytics, icon: BarChart3 },
   { label: 'Rapports', path: routePaths.reports, icon: FileText },
+  {
+    label: 'Objectifs',
+    path: routePaths.goals,
+    icon: Target,
+  },
   { label: 'Bilan hebdomadaire', path: routePaths.weeklyReview, icon: ClipboardCheck },
 ];
 
@@ -118,6 +124,13 @@ export const mobileMoreNavigation: NavigationSection[] = [
         icon: FileText,
         description:
           'Synthétiser et partager une période de suivi.',
+      },
+      {
+        label: 'Objectifs et jalons',
+        path: routePaths.goals,
+        icon: Target,
+        description:
+          'Créer des objectifs mesurables et suivre automatiquement leur progression.',
       },
       {
         label: 'Historique',

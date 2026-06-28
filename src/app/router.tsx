@@ -24,6 +24,7 @@ import {
   LazyOtherActivityPage,
   LazyProfilePage,
   LazyProgressReportsPage,
+  LazyGoalsPage,
   LazyPrivacyPage,
   LazyRecipeEditorPage,
   LazyRecipeEntryEditorPage,
@@ -101,6 +102,10 @@ export const appShellRoutes: RouteObject[] = [
   { path: routePaths.backup, element: <LazyBackupPage /> },
   { path: routePaths.trash, element: <LazyTrashPage /> },
   { path: routePaths.calculationsInformation, element: <CalculationsInformationPage /> },
+  {
+    path: routePaths.goals,
+    element: <LazyGoalsPage />,
+  },
 ];
 
 export const router = createHashRouter([
