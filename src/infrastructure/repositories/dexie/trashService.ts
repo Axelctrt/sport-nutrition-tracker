@@ -1,3 +1,4 @@
+import { RepositoryError } from '@/domain/errors/RepositoryError';
 import type { EntityId, LocalDate } from '@/domain/models/common';
 import type { MealSlot } from '@/domain/models/food';
 import {
@@ -6,6 +7,7 @@ import {
   type TrashItem,
 } from '@/domain/models/trash';
 import type { AppDatabase } from '@/infrastructure/database/AppDatabase';
+import { updateEntity } from '@/shared/utils/entities';
 
 const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1_000;
 
@@ -273,6 +275,127 @@ export async function moveRecipeToTrash(
   );
 }
 
+export async function moveStrengthSetToTrash(
+  database: AppDatabase,
+  sessionExerciseId: EntityId,
+  setId: EntityId,
+  now: Date = new Date(),
+): Promise<TrashItem> {
+  return database.transaction(
+    'rw',
+    [database.strengthSets, database.trashItems],
+    async () => {
+      await purgeExpiredInsideTransaction(database, now);
+
+      const current = await database.strengthSets.get(setId);
+      if (
+        !current ||
+        current.sessionExerciseId !== sessionExerciseId
+      ) {
+        throw new RepositoryError(
+          'Série introuvable.',
+          'delete',
+        );
+      }
+
+      const trashItem: TrashItem = {
+        id: createTrashId('strengthSet', current.id),
+        entityType: 'strengthSet',
+        entityId: current.id,
+        label: `Série ${current.setNumber} de musculation`,
+        deletedAt: now.toISOString(),
+        purgeAt: createPurgeDate(now),
+        payload: current,
+      };
+
+      await database.trashItems.put(trashItem);
+      await database.strengthSets.delete(current.id);
+
+      const remaining = (
+        await database.strengthSets
+          .where('sessionExerciseId')
+          .equals(sessionExerciseId)
+          .toArray()
+      ).sort((left, right) => left.setNumber - right.setNumber);
+
+      const renumbered = remaining.map((set, index) =>
+        updateEntity(set, { setNumber: index + 1 }),
+      );
+
+      if (renumbered.length > 0) {
+        await database.strengthSets.bulkPut(renumbered);
+      }
+
+      return trashItem;
+    },
+  );
+}
+
+export async function moveWorkoutSessionExerciseToTrash(
+  database: AppDatabase,
+  sessionId: EntityId,
+  sessionExerciseId: EntityId,
+  now: Date = new Date(),
+): Promise<TrashItem> {
+  return database.transaction(
+    'rw',
+    [
+      database.workoutSessionExercises,
+      database.strengthSets,
+      database.trashItems,
+    ],
+    async () => {
+      await purgeExpiredInsideTransaction(database, now);
+
+      const exercise =
+        await database.workoutSessionExercises.get(
+          sessionExerciseId,
+        );
+
+      if (!exercise || exercise.sessionId !== sessionId) {
+        throw new RepositoryError(
+          'Exercice de séance introuvable.',
+          'delete',
+        );
+      }
+
+      const sets = await database.strengthSets
+        .where('sessionExerciseId')
+        .equals(sessionExerciseId)
+        .toArray();
+
+      const trashItem: TrashItem = {
+        id: createTrashId(
+          'workoutSessionExercise',
+          exercise.id,
+        ),
+        entityType: 'workoutSessionExercise',
+        entityId: exercise.id,
+        label: `Exercice « ${exercise.exerciseNameSnapshot} »`,
+        deletedAt: now.toISOString(),
+        purgeAt: createPurgeDate(now),
+        payload: {
+          exercise,
+          sets,
+        },
+      };
+
+      await database.trashItems.put(trashItem);
+
+      if (sets.length > 0) {
+        await database.strengthSets.bulkDelete(
+          sets.map((set) => set.id),
+        );
+      }
+
+      await database.workoutSessionExercises.delete(
+        sessionExerciseId,
+      );
+
+      return trashItem;
+    },
+  );
+}
 export async function listTrashItems(
   database: AppDatabase,
 ): Promise<TrashItem[]> {
@@ -310,6 +433,9 @@ export async function restoreTrashItem(
       database.favoriteMeals,
       database.recipes,
       database.recipeIngredients,
+      database.workoutSessions,
+      database.workoutSessionExercises,
+      database.strengthSets,
     ],
     async () => {
       const trashItem = await database.trashItems.get(trashItemId);
@@ -401,6 +527,132 @@ export async function restoreTrashItem(
           if (trashItem.payload.entries.length > 0) {
             await database.foodEntries.bulkAdd(
               trashItem.payload.entries,
+            );
+          }
+          break;
+        }
+
+        case 'strengthSet': {
+          const parentExercise =
+            await database.workoutSessionExercises.get(
+              trashItem.payload.sessionExerciseId,
+            );
+
+          if (!parentExercise) {
+            throw new Error(
+              'L’exercice associé n’existe plus. Restaure d’abord cet exercice s’il se trouve dans la corbeille.',
+            );
+          }
+
+          const existingSet = await database.strengthSets.get(
+            trashItem.entityId,
+          );
+          if (existingSet) {
+            throw new Error(
+              'Une série avec le même identifiant existe déjà.',
+            );
+          }
+
+          const siblingSets = (
+            await database.strengthSets
+              .where('sessionExerciseId')
+              .equals(trashItem.payload.sessionExerciseId)
+              .toArray()
+          ).sort(
+            (left, right) => left.setNumber - right.setNumber,
+          );
+
+          const hasNumberCollision = siblingSets.some(
+            (set) =>
+              set.setNumber === trashItem.payload.setNumber,
+          );
+
+          if (hasNumberCollision) {
+            const shifted = siblingSets
+              .filter(
+                (set) =>
+                  set.setNumber >= trashItem.payload.setNumber,
+              )
+              .map((set) =>
+                updateEntity(set, {
+                  setNumber: set.setNumber + 1,
+                }),
+              );
+
+            if (shifted.length > 0) {
+              await database.strengthSets.bulkPut(shifted);
+            }
+          }
+
+          await database.strengthSets.add(trashItem.payload);
+          break;
+        }
+
+        case 'workoutSessionExercise': {
+          const session = await database.workoutSessions.get(
+            trashItem.payload.exercise.sessionId,
+          );
+          if (!session) {
+            throw new Error(
+              'La séance associée n’existe plus.',
+            );
+          }
+
+          const existingExercise =
+            await database.workoutSessionExercises.get(
+              trashItem.entityId,
+            );
+          if (existingExercise) {
+            throw new Error(
+              'Un exercice de séance avec le même identifiant existe déjà.',
+            );
+          }
+
+          await assertNoIdsExist(
+            trashItem.payload.sets.map((set) => set.id),
+            (ids) => database.strengthSets.bulkGet(ids),
+            'Une série de cet exercice existe déjà.',
+          );
+
+          const siblingExercises =
+            await database.workoutSessionExercises
+              .where('sessionId')
+              .equals(trashItem.payload.exercise.sessionId)
+              .toArray();
+
+          const hasOrderCollision = siblingExercises.some(
+            (exercise) =>
+              exercise.sortOrder ===
+              trashItem.payload.exercise.sortOrder,
+          );
+
+          if (hasOrderCollision) {
+            const shifted = siblingExercises
+              .filter(
+                (exercise) =>
+                  exercise.sortOrder >=
+                  trashItem.payload.exercise.sortOrder,
+              )
+              .map((exercise) =>
+                updateEntity(exercise, {
+                  sortOrder: exercise.sortOrder + 1,
+                }),
+              );
+
+            if (shifted.length > 0) {
+              await database.workoutSessionExercises.bulkPut(
+                shifted,
+              );
+            }
+          }
+
+          await database.workoutSessionExercises.add(
+            trashItem.payload.exercise,
+          );
+
+          if (trashItem.payload.sets.length > 0) {
+            await database.strengthSets.bulkAdd(
+              trashItem.payload.sets,
             );
           }
           break;
