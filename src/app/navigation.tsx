@@ -8,6 +8,7 @@ import {
   PlayCircle,
   DatabaseBackup,
   Dumbbell,
+  FileText,
   Gauge,
   History,
   Info,
@@ -50,6 +51,7 @@ export const primaryNavigation: NavigationItem[] = [
   { label: 'Séances modèles', path: routePaths.workoutTemplates, icon: Layers3 },
   { label: 'Poids', path: routePaths.weight, icon: Weight },
   { label: 'Analyses', path: routePaths.analytics, icon: BarChart3 },
+  { label: 'Rapports', path: routePaths.reports, icon: FileText },
   { label: 'Bilan hebdomadaire', path: routePaths.weeklyReview, icon: ClipboardCheck },
 ];
 
@@ -109,6 +111,13 @@ export const mobileMoreNavigation: NavigationSection[] = [
         icon: Search,
         description:
           'Retrouver séances, aliments, recettes, activités et pesées.',
+      },
+      {
+        label: 'Rapport de progression',
+        path: routePaths.reports,
+        icon: FileText,
+        description:
+          'Synthétiser et partager une période de suivi.',
       },
       {
         label: 'Historique',

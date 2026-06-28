@@ -218,6 +218,14 @@ const AnalyticsPage = lazy(() =>
   })),
 );
 
+const ProgressReportsPage = lazy(() =>
+  import('@/features/progress-reports/pages/ProgressReportsPage').then(
+    (module) => ({
+      default: module.ProgressReportsPage,
+    }),
+  ),
+);
+
 const HistoryPage = lazy(() =>
   import('@/features/history/pages/HistoryPage').then((module) => ({
     default: module.HistoryPage,
@@ -322,6 +330,14 @@ export function LazyAnalyticsPage() {
   return (
     <RouteSuspense variant="dashboard">
       <AnalyticsPage />
+    </RouteSuspense>
+  );
+}
+
+export function LazyProgressReportsPage() {
+  return (
+    <RouteSuspense variant="dashboard">
+      <ProgressReportsPage />
     </RouteSuspense>
   );
 }
