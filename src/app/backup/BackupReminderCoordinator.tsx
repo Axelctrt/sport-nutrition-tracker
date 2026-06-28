@@ -66,7 +66,7 @@ function parseStoredSnooze(
   }
 }
 
-export function isBackupReminderSnoozed(
+function isBackupReminderSnoozed(
   status: BackupReminderStatus,
   now: Date,
   storage: BackupReminderStorage | undefined,
@@ -92,7 +92,7 @@ export function isBackupReminderSnoozed(
   }
 }
 
-export function snoozeBackupReminder(
+function snoozeBackupReminder(
   status: BackupReminderStatus,
   now: Date,
   storage: BackupReminderStorage | undefined,
