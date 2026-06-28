@@ -16,6 +16,11 @@ import type {
 import type { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import type { FoodRepository } from '@/infrastructure/repositories/contracts/FoodRepository';
 import { runRepositoryOperation } from '@/infrastructure/repositories/dexie/repositoryOperation';
+import {
+  moveFavoriteMealToTrash,
+  moveFoodEntryToTrash,
+  moveMealToTrash,
+} from '@/infrastructure/repositories/dexie/trashService';
 import { createEntity, updateEntity } from '@/shared/utils/entities';
 import { normalizeOpenFoodFactsBarcode } from '@/infrastructure/open-food-facts/barcode';
 
@@ -207,18 +212,11 @@ export class DexieFoodRepository implements FoodRepository {
     return runRepositoryOperation(
       'delete',
       'Impossible de supprimer ce repas.',
-      () => this.database.transaction(
-        'rw',
-        this.database.meals,
-        this.database.foodEntries,
-        async () => {
-          await this.database.foodEntries.where('mealId').equals(id).delete();
-          await this.database.meals.delete(id);
-        },
-      ),
+      async () => {
+        await moveMealToTrash(this.database, id);
+      },
     );
   }
-
   getEntryById(id: EntityId): Promise<FoodEntry | undefined> {
     return runRepositoryOperation(
       'read',
@@ -285,10 +283,11 @@ export class DexieFoodRepository implements FoodRepository {
     return runRepositoryOperation(
       'delete',
       'Impossible de supprimer cette entrée alimentaire.',
-      () => this.database.foodEntries.delete(id),
+      async () => {
+        await moveFoodEntryToTrash(this.database, id);
+      },
     );
   }
-
   getJournalStatus(date: LocalDate): Promise<DailyJournalStatus | undefined> {
     return runRepositoryOperation(
       'read',
@@ -357,7 +356,9 @@ export class DexieFoodRepository implements FoodRepository {
     return runRepositoryOperation(
       'delete',
       'Impossible de supprimer ce repas favori.',
-      () => this.database.favoriteMeals.delete(id),
+      async () => {
+        await moveFavoriteMealToTrash(this.database, id);
+      },
     );
   }
 }

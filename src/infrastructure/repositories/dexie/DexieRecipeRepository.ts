@@ -4,6 +4,7 @@ import type { Recipe, RecipeIngredient } from '@/domain/models/recipe';
 import type { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import type { RecipeRepository, SavedRecipe } from '@/infrastructure/repositories/contracts/RecipeRepository';
 import { runRepositoryOperation } from '@/infrastructure/repositories/dexie/repositoryOperation';
+import { moveRecipeToTrash } from '@/infrastructure/repositories/dexie/trashService';
 import { createEntity, updateEntity } from '@/shared/utils/entities';
 
 export class DexieRecipeRepository implements RecipeRepository {
@@ -132,15 +133,9 @@ export class DexieRecipeRepository implements RecipeRepository {
     return runRepositoryOperation(
       'delete',
       'Impossible de supprimer cette recette.',
-      () => this.database.transaction(
-        'rw',
-        this.database.recipes,
-        this.database.recipeIngredients,
-        async () => {
-          await this.database.recipeIngredients.where('recipeId').equals(id).delete();
-          await this.database.recipes.delete(id);
-        },
-      ),
+      async () => {
+        await moveRecipeToTrash(this.database, id);
+      },
     );
   }
 }

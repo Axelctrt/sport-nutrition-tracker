@@ -30,7 +30,20 @@ function formatDate(value: string): string {
 }
 
 function typeLabel(item: TrashItem): string {
-  return item.entityType === 'activity' ? 'Activité' : 'Pesée';
+  switch (item.entityType) {
+    case 'activity':
+      return 'Activité';
+    case 'weight':
+      return 'Pesée';
+    case 'foodEntry':
+      return 'Entrée alimentaire';
+    case 'meal':
+      return 'Repas';
+    case 'favoriteMeal':
+      return 'Repas favori';
+    case 'recipe':
+      return 'Recette';
+  }
 }
 
 export function TrashPage() {
@@ -134,9 +147,9 @@ export function TrashPage() {
               Corbeille
             </h1>
             <p className="mt-3 max-w-3xl leading-7 text-slate-600 dark:text-slate-300">
-              Les activités et les pesées supprimées restent restaurables
-              pendant 30 jours. Elles ne participent plus aux calculs tant
-              qu’elles se trouvent ici.
+              Les données supprimées restent restaurables pendant 30 jours.
+              Elles ne participent plus aux calculs tant qu’elles se trouvent
+              ici.
             </p>
           </div>
         </div>
@@ -177,7 +190,7 @@ export function TrashPage() {
               La corbeille est vide
             </h2>
             <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-              Les prochaines activités ou pesées supprimées apparaîtront ici.
+              Les prochaines données supprimées apparaîtront ici.
             </p>
           </div>
         ) : (
@@ -282,9 +295,9 @@ export function TrashPage() {
       </div>
 
       <p className="mt-4 text-sm leading-6 text-slate-500 dark:text-slate-400">
-        Ce premier lot protège les activités et les pesées. Les suppressions
-        de nutrition, de musculation, de recettes et de planification seront
-        raccordées à la même corbeille dans le lot suivant.
+        La corbeille protège maintenant les activités, les pesées, le journal
+        alimentaire, les repas favoris et les recettes. La musculation sera
+        raccordée dans un lot dédié.
       </p>
     </section>
   );
