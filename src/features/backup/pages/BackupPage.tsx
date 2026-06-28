@@ -465,7 +465,7 @@ export function BackupPage() {
 
         {reminderStatus?.due ? (
           <InlineNotice className="mt-4" tone="info" title="Une sauvegarde est recommandée">
-            Le délai de {reminderStatus.intervalDays} jours est atteint. Le rappel reste limité à cette page.
+            Le délai de {reminderStatus.intervalDays} jours est atteint. Un rappel discret peut aussi apparaître dans les autres écrans.
           </InlineNotice>
         ) : null}
 
