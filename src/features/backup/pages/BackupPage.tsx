@@ -32,6 +32,7 @@ import { useTheme } from '@/app/providers/useTheme';
 import { routePaths } from '@/app/routePaths';
 import { BackupDeleteDialog } from '@/features/backup/components/BackupDeleteDialog';
 import { BackupOverview } from '@/features/backup/components/BackupOverview';
+import { StoragePersistenceCard } from '@/features/backup/components/StoragePersistenceCard';
 import { shareBackupFile } from '@/features/backup/shareBackupFile';
 import {
   clearAllUserData,
@@ -485,6 +486,8 @@ export function BackupPage() {
           </select>
         </label>
       </Card>
+
+      <StoragePersistenceCard />
 
       {feedback ? (
         <InlineNotice

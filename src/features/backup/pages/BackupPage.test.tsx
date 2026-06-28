@@ -33,6 +33,11 @@ function renderPage() {
   );
 }
 
+vi.mock('@/features/backup/components/StoragePersistenceCard', () => ({
+  StoragePersistenceCard: () => (
+    <section aria-label="Protection du stockage local" />
+  ),
+}));
 describe('BackupPage', () => {
   beforeEach(async () => {
     await resetAppDatabaseForTest();
