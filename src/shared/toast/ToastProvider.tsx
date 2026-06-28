@@ -59,13 +59,18 @@ export function ToastProvider({ children }: PropsWithChildren) {
     const duplicate = toastsRef.current.find((toast) => toast.dedupeKey === dedupeKey);
 
     if (duplicate) {
-      const { description: _previousDescription, ...duplicateWithoutDescription } = duplicate;
+      const {
+      description: _previousDescription,
+      action: _previousAction,
+      ...duplicateWithoutOptionalContent
+    } = duplicate;
       const refreshed: ToastItem = {
-        ...duplicateWithoutDescription,
+        ...duplicateWithoutOptionalContent,
         title: input.title,
         tone,
         durationMs,
         ...(input.description === undefined ? {} : { description: input.description }),
+      ...(input.action === undefined ? {} : { action: input.action }),
       };
       commit(toastsRef.current.map((toast) => toast.id === duplicate.id ? refreshed : toast));
       scheduleDismiss(duplicate.id, durationMs);
@@ -79,6 +84,7 @@ export function ToastProvider({ children }: PropsWithChildren) {
       durationMs,
       dedupeKey,
       ...(input.description === undefined ? {} : { description: input.description }),
+      ...(input.action === undefined ? {} : { action: input.action }),
     };
     const next = [...toastsRef.current, item].slice(-MAX_VISIBLE_TOASTS);
     const nextIds = new Set(next.map((toast) => toast.id));
@@ -93,6 +99,18 @@ export function ToastProvider({ children }: PropsWithChildren) {
     scheduleDismiss(item.id, durationMs);
     return item.id;
   }, [commit, scheduleDismiss]);
+
+  const runToastAction = useCallback((toast: ToastItem) => {
+    if (!toast.action) return;
+
+    dismissToast(toast.id);
+
+    try {
+      void Promise.resolve(toast.action.onClick()).catch(() => undefined);
+    } catch {
+      // L’action métier publie son propre message d’erreur.
+    }
+  }, [dismissToast]);
 
   useEffect(() => () => {
     for (const timer of timersRef.current.values()) clearTimeout(timer);
@@ -122,7 +140,11 @@ export function ToastProvider({ children }: PropsWithChildren) {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <ToastViewport toasts={toasts} onDismiss={dismissToast} />
+      <ToastViewport
+        toasts={toasts}
+        onDismiss={dismissToast}
+        onAction={runToastAction}
+      />
     </ToastContext.Provider>
   );
 }
