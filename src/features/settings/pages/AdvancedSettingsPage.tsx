@@ -1,50 +1,136 @@
-import { ArrowRight, LayoutDashboard } from "lucide-react";
-import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import {
+  ArrowRight,
+  Calculator,
+  DatabaseBackup,
+  Footprints,
+  Gauge,
+  HardDrive,
+  Palette,
+  Sparkles,
+  UserRound,
+} from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 
-import { useTheme } from "@/app/providers/useTheme";
-import { routePaths } from "@/app/routePaths";
-import type { AppSettings } from "@/domain/models/settings";
-import { AdvancedSettingsForm } from "@/features/settings/components/AdvancedSettingsForm";
-import { AchievementsPanel } from "@/features/settings/components/AchievementsPanel";
-import { ConsistencyStreakPanel } from "@/features/settings/components/ConsistencyStreakPanel";
-import { DataManagementCenter } from "@/features/settings/components/DataManagementCenter";
-import { RewardThemesPanel } from "@/features/settings/components/RewardThemesPanel";
-import { SettingsOverview } from "@/features/settings/components/SettingsOverview";
-import type { SettingsFormValues } from "@/features/settings/schemas/settingsSchema";
+import { routePaths } from '@/app/routePaths';
+import { useTheme } from '@/app/providers/useTheme';
+import type { AppSettings } from '@/domain/models/settings';
+import { AchievementsPanel } from '@/features/settings/components/AchievementsPanel';
+import { AdvancedSettingsForm } from '@/features/settings/components/AdvancedSettingsForm';
+import { ConsistencyStreakPanel } from '@/features/settings/components/ConsistencyStreakPanel';
+import { DataManagementCenter } from '@/features/settings/components/DataManagementCenter';
+import { RewardThemesPanel } from '@/features/settings/components/RewardThemesPanel';
+import { SettingsOverview } from '@/features/settings/components/SettingsOverview';
+import {
+  SettingsSectionDirectory,
+  type SettingsDirectoryItem,
+} from '@/features/settings/components/SettingsSectionDirectory';
+import type { SettingsFormValues } from '@/features/settings/schemas/settingsSchema';
 import {
   settingsFormValuesToChanges,
   settingsToFormValues,
-} from "@/features/settings/utils/settingsForm";
-import { repositories } from "@/infrastructure/repositories/repositories";
+} from '@/features/settings/utils/settingsForm';
+import { repositories } from '@/infrastructure/repositories/repositories';
 import {
   getPersistentStorageStatus,
   requestPersistentStorage,
   type PersistentStorageStatus,
-} from "@/infrastructure/storage/persistentStorage";
-import { Card } from "@/shared/ui/Card";
-import { InlineNotice } from "@/shared/ui/InlineNotice";
-import { PageSkeleton } from "@/shared/ui/PageSkeleton";
+} from '@/infrastructure/storage/persistentStorage';
+import { Card } from '@/shared/ui/Card';
+import { CollapsibleSection } from '@/shared/ui/CollapsibleSection';
+import { InlineNotice } from '@/shared/ui/InlineNotice';
+import { PageSkeleton } from '@/shared/ui/PageSkeleton';
+
+const settingsSections: readonly SettingsDirectoryItem[] = [
+  {
+    id: 'settings-profile',
+    label: 'Profil et objectifs',
+    description: 'Mensurations, objectif de poids, activité et macros.',
+    keywords: ['poids', 'objectif', 'proteines', 'lipides'],
+    icon: UserRound,
+  },
+  {
+    id: 'settings-dashboard',
+    label: 'Tableau de bord',
+    description: 'Blocs visibles, ordre et préréglages.',
+    keywords: ['accueil', 'widgets', 'blocs'],
+    icon: Gauge,
+  },
+  {
+    id: 'settings-display-storage',
+    label: 'Affichage et stockage',
+    description: 'Thème clair ou sombre et persistance locale.',
+    keywords: ['theme', 'clair', 'sombre', 'stockage'],
+    icon: Palette,
+  },
+  {
+    id: 'settings-rest-timer',
+    label: 'Minuteur de repos',
+    description: 'Démarrage, vibration et signal sonore.',
+    keywords: ['repos', 'vibration', 'son', 'musculation'],
+    icon: Footprints,
+  },
+  {
+    id: 'settings-energy',
+    label: 'Dépense et activités',
+    description: 'Pas inclus, coefficients et valeurs MET.',
+    keywords: ['calories', 'met', 'natation', 'depense'],
+    icon: Calculator,
+  },
+  {
+    id: 'settings-calibration',
+    label: 'Calibration hebdomadaire',
+    description: 'Limites des ajustements proposés.',
+    keywords: ['bilan', 'ajustement', 'calories'],
+    icon: Calculator,
+  },
+  {
+    id: 'settings-themes',
+    label: 'Thèmes récompenses',
+    description: 'Palettes débloquées grâce aux accomplissements.',
+    keywords: ['apparence', 'palette', 'recompense'],
+    icon: Palette,
+  },
+  {
+    id: 'settings-motivation',
+    label: 'Motivation et régularité',
+    description: 'Badges, séries et accomplissements.',
+    keywords: ['badges', 'serie', 'missions'],
+    icon: Sparkles,
+  },
+  {
+    id: 'settings-data',
+    label: 'Sauvegardes et données',
+    description: 'Persistance, diagnostic, restauration et suppression.',
+    keywords: ['json', 'csv', 'backup', 'restauration', 'confidentialite'],
+    icon: DatabaseBackup,
+  },
+] as const;
 
 export function AdvancedSettingsPage() {
   const { setTheme } = useTheme();
-  const [settings, setSettings] = useState<AppSettings | undefined>();
+  const [settings, setSettings] = useState<AppSettings>();
   const [storageStatus, setStorageStatus] =
-    useState<PersistentStorageStatus>("unsupported");
+    useState<PersistentStorageStatus>('unsupported');
   const [feedback, setFeedback] = useState<
-    { tone: "success" | "error"; message: string } | undefined
+    | {
+        tone: 'success' | 'error';
+        message: string;
+      }
+    | undefined
   >();
-  const [loadError, setLoadError] = useState<string | undefined>();
+  const [loadError, setLoadError] = useState<string>();
 
   useEffect(() => {
     let isMounted = true;
 
     const load = async () => {
       try {
-        const [storedSettings, currentStorageStatus] = await Promise.all([
-          repositories.settings.get(),
-          getPersistentStorageStatus(),
-        ]);
+        const [storedSettings, currentStorageStatus] =
+          await Promise.all([
+            repositories.settings.get(),
+            getPersistentStorageStatus(),
+          ]);
 
         if (isMounted) {
           setSettings(storedSettings);
@@ -55,7 +141,7 @@ export function AdvancedSettingsPage() {
           setLoadError(
             error instanceof Error
               ? error.message
-              : "Les paramètres n’ont pas pu être chargés.",
+              : 'Les paramètres n’ont pas pu être chargés.',
           );
         }
       }
@@ -68,71 +154,78 @@ export function AdvancedSettingsPage() {
     };
   }, []);
 
-  const handleSubmit = async (values: SettingsFormValues) => {
+  const handleSubmit = async (
+    values: SettingsFormValues,
+  ) => {
     setFeedback(undefined);
 
     try {
       const updated = await repositories.settings.update(
         settingsFormValuesToChanges(values),
       );
-
       setSettings(updated);
       setTheme(updated.theme);
 
       if (updated.requestPersistentStorage) {
         setStorageStatus(await requestPersistentStorage());
       } else {
-        setStorageStatus(await getPersistentStorageStatus());
+        setStorageStatus(
+          await getPersistentStorageStatus(),
+        );
       }
 
       setFeedback({
-        tone: "success",
-        message: "Les paramètres avancés ont été enregistrés localement.",
+        tone: 'success',
+        message:
+          'Les paramètres avancés ont été enregistrés localement.',
       });
     } catch (error) {
       setFeedback({
-        tone: "error",
+        tone: 'error',
         message:
           error instanceof Error
             ? error.message
-            : "Les paramètres n’ont pas pu être enregistrés.",
+            : 'Les paramètres n’ont pas pu être enregistrés.',
       });
     }
   };
 
-  const handleResetToDefaults = async (): Promise<SettingsFormValues> => {
-    setFeedback(undefined);
+  const handleResetToDefaults =
+    async (): Promise<SettingsFormValues> => {
+      setFeedback(undefined);
 
-    try {
-      const defaults = await repositories.settings.reset();
-
-      setSettings(defaults);
-      setTheme(defaults.theme);
-      setStorageStatus(
-        defaults.requestPersistentStorage
-          ? await requestPersistentStorage()
-          : await getPersistentStorageStatus(),
-      );
-      setFeedback({
-        tone: "success",
-        message: "Les valeurs par défaut ont été restaurées.",
-      });
-
-      return settingsToFormValues(defaults);
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Les paramètres n’ont pas pu être réinitialisés.";
-
-      setFeedback({ tone: "error", message });
-      throw error;
-    }
-  };
+      try {
+        const defaults =
+          await repositories.settings.reset();
+        setSettings(defaults);
+        setTheme(defaults.theme);
+        setStorageStatus(
+          defaults.requestPersistentStorage
+            ? await requestPersistentStorage()
+            : await getPersistentStorageStatus(),
+        );
+        setFeedback({
+          tone: 'success',
+          message:
+            'Les valeurs par défaut ont été restaurées.',
+        });
+        return settingsToFormValues(defaults);
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : 'Les paramètres n’ont pas pu être réinitialisés.';
+        setFeedback({
+          tone: 'error',
+          message,
+        });
+        throw error;
+      }
+    };
 
   if (loadError) {
     return (
-      <InlineNotice tone="error" title="Chargement impossible" role="alert">
+      <InlineNotice tone="error" title="Chargement impossible">
         {loadError}
       </InlineNotice>
     );
@@ -144,84 +237,160 @@ export function AdvancedSettingsPage() {
 
   return (
     <section
-      aria-labelledby="settings-title"
-      className="min-w-0 overflow-x-clip"
+      aria-labelledby="advanced-settings-title"
+      className="min-w-0"
     >
-      <div>
+      <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6 dark:border-slate-800 dark:bg-slate-900">
         <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
-          Réglages du moteur
+          Espace de configuration
         </p>
         <h1
-          id="settings-title"
+          id="advanced-settings-title"
           className="mt-1 text-3xl font-bold tracking-tight text-slate-950 dark:text-white"
         >
-          Paramètres avancés
+          Paramètres
         </h1>
-        <p className="mt-3 max-w-3xl text-slate-600 dark:text-slate-300">
-          Ces coefficients permettent d’adapter les estimations énergétiques et
-          nutritionnelles. Les valeurs par défaut peuvent être personnalisées.
+        <p className="mt-3 max-w-3xl leading-7 text-slate-600 dark:text-slate-300">
+          Toutes les rubriques restent repliées pour garder une
+          vue compacte. Leur état est mémorisé sur cet appareil.
         </p>
       </div>
 
-      <SettingsOverview settings={settings} storageStatus={storageStatus} />
-
-      <RewardThemesPanel className="mt-4" />
-
-      <AchievementsPanel className="mt-4" />
-
-      <ConsistencyStreakPanel className="mt-4" />
-
-      <DataManagementCenter
-        className="mt-4"
-        storageStatus={storageStatus}
-        lastBackupExportedAt={settings.lastBackupExportedAt}
-      />
-
-      <Card className="mt-4 p-4 sm:p-5">
-        <div className="flex items-start gap-3">
-          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-200">
-            <LayoutDashboard aria-hidden="true" className="size-5" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <h2 className="font-semibold text-slate-950 dark:text-white">
-              Tableau de bord personnalisé
-            </h2>
-            <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
-              Choisis les blocs visibles, leur ordre et un préréglage adapté à
-              tes priorités.
-            </p>
-            <Link
-              to={routePaths.dashboardCustomization}
-              className="mt-3 inline-flex min-h-10 items-center gap-1 text-sm font-semibold text-brand-700 hover:underline dark:text-brand-300"
-            >
-              Personnaliser le tableau de bord
-              <ArrowRight aria-hidden="true" className="size-4" />
-            </Link>
-          </div>
-        </div>
-      </Card>
+      <div className="mt-4">
+        <SettingsOverview
+          settings={settings}
+          storageStatus={storageStatus}
+        />
+      </div>
 
       {feedback ? (
         <InlineNotice
+          className="mt-4"
           tone={feedback.tone}
           title={
-            feedback.tone === "success"
-              ? "Paramètres mis à jour"
-              : "Enregistrement impossible"
+            feedback.tone === 'success'
+              ? 'Paramètres enregistrés'
+              : 'Enregistrement impossible'
           }
-          className="mt-6"
-          role={feedback.tone === "error" ? "alert" : "status"}
         >
           {feedback.message}
         </InlineNotice>
       ) : null}
 
-      <div className="mt-6">
+      <div className="mt-4">
+        <SettingsSectionDirectory
+          sections={settingsSections}
+        />
+      </div>
+
+      <div className="mt-4 space-y-3">
+        <CollapsibleSection
+          sectionId="settings-profile"
+          storageKey="sportpilot:settings:profile"
+          title="Profil et objectifs"
+          description="Modifier les mensurations, l’objectif de poids, l’activité quotidienne et les cibles de macronutriments."
+          icon={UserRound}
+          className="scroll-mt-24"
+        >
+          <Card className="p-4 sm:p-5">
+            <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">
+              Les données du profil disposent de leurs propres
+              sous-sections repliables.
+            </p>
+            <Link
+              to={routePaths.profile}
+              className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-xl bg-brand-600 px-4 py-2 font-semibold text-white"
+            >
+              Ouvrir le profil et les objectifs
+              <ArrowRight
+                aria-hidden="true"
+                className="size-4"
+              />
+            </Link>
+          </Card>
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          sectionId="settings-dashboard"
+          storageKey="sportpilot:settings:dashboard"
+          title="Tableau de bord personnalisé"
+          description="Choisir les blocs visibles, leur ordre et un préréglage."
+          icon={Gauge}
+          className="scroll-mt-24"
+        >
+          <Card className="p-4 sm:p-5">
+            <Link
+              to={routePaths.dashboardCustomization}
+              className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-brand-600 px-4 py-2 font-semibold text-white"
+            >
+              Personnaliser le tableau de bord
+              <ArrowRight
+                aria-hidden="true"
+                className="size-4"
+              />
+            </Link>
+          </Card>
+        </CollapsibleSection>
+
         <AdvancedSettingsForm
           initialValues={settingsToFormValues(settings)}
           onSubmit={handleSubmit}
           onResetToDefaults={handleResetToDefaults}
         />
+
+        <CollapsibleSection
+          sectionId="settings-themes"
+          storageKey="sportpilot:settings:themes"
+          title="Thèmes visuels à débloquer"
+          description="Consulter les palettes disponibles et activer un thème acquis."
+          icon={Palette}
+          className="scroll-mt-24"
+        >
+          <RewardThemesPanel />
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          sectionId="settings-motivation"
+          storageKey="sportpilot:settings:motivation"
+          title="Motivation et régularité"
+          description="Suivre les accomplissements, badges et séries d’utilisation."
+          icon={Sparkles}
+          className="scroll-mt-24"
+        >
+          <div className="space-y-4">
+            <AchievementsPanel />
+            <ConsistencyStreakPanel />
+          </div>
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          sectionId="settings-data"
+          storageKey="sportpilot:settings:data"
+          title="Sauvegardes, stockage et données"
+          description="Vérifier la persistance, diagnostiquer la base et accéder aux restaurations."
+          icon={HardDrive}
+          className="scroll-mt-24"
+        >
+          <div className="space-y-4">
+            <DataManagementCenter
+              storageStatus={storageStatus}
+              lastBackupExportedAt={
+                settings.lastBackupExportedAt
+              }
+            />
+
+            <Link
+              to={routePaths.backup}
+              className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-brand-600 px-4 py-2 font-semibold text-white"
+            >
+              Ouvrir les sauvegardes et restaurations
+              <ArrowRight
+                aria-hidden="true"
+                className="size-4"
+              />
+            </Link>
+          </div>
+        </CollapsibleSection>
       </div>
     </section>
   );

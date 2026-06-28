@@ -30,7 +30,11 @@ describe('RewardsCenterPage', () => {
       screen.getByRole('heading', { name: 'Centre de récompenses' }),
     ).toBeInTheDocument();
     expect(screen.getByText('Missions de la semaine')).toBeInTheDocument();
-    expect(screen.getByText('Séries de régularité')).toBeInTheDocument();
+    expect(
+      screen.getByText('Séries de régularité', {
+        selector: 'section',
+      }),
+    ).toBeInTheDocument();
     expect(screen.getByText('Accomplissements')).toBeInTheDocument();
     expect(screen.getByText('Thèmes récompenses')).toBeInTheDocument();
   });
