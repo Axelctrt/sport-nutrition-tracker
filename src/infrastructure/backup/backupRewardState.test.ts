@@ -1,3 +1,4 @@
+import { GOAL_STATE_STORAGE_KEY } from '@/domain/goals/goalState';
 import {
   ACHIEVEMENT_STORAGE_KEY,
   readAchievementState,
@@ -30,6 +31,7 @@ function createTestDatabase(): AppDatabase {
 }
 
 const rewardStorageKeys = [
+  GOAL_STATE_STORAGE_KEY,
   ACHIEVEMENT_STORAGE_KEY,
   VISUAL_THEME_STORAGE_KEY,
   WEEKLY_MISSION_HISTORY_STORAGE_KEY,
