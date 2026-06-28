@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { WeeklyPlanningPage } from '@/features/strength-planning/pages/WeeklyPlanningPage';
 import { appDatabase } from '@/infrastructure/database/database';
 import { initializeDatabase } from '@/infrastructure/database/databaseLifecycle';
+import { ToastProvider } from '@/shared/toast/ToastProvider';
 import { createEntity } from '@/shared/utils/entities';
 import { toLocalDate } from '@/shared/utils/dates';
 import {
@@ -44,12 +45,14 @@ describe('WeeklyPlanningPage', () => {
   it('planifie une séance puis démarre la même entrée depuis la semaine courante', async () => {
     const user = userEvent.setup();
     render(
-      <MemoryRouter initialEntries={['/strength/planning']}>
+      <ToastProvider>
+        <MemoryRouter initialEntries={['/strength/planning']}>
         <Routes>
           <Route path="/strength/planning" element={<WeeklyPlanningPage />} />
           <Route path="/strength/sessions/:sessionId" element={<h1>Séance planifiée ouverte</h1>} />
         </Routes>
-      </MemoryRouter>,
+      </MemoryRouter>
+      </ToastProvider>,
     );
 
     const dateInput = await screen.findByLabelText('Date prévue');

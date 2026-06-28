@@ -1,3 +1,4 @@
+import { ENDURANCE_PLANNING_STORAGE_KEY } from '@/domain/planning/endurancePlanningState';
 import { GOAL_STATE_STORAGE_KEY } from '@/domain/goals/goalState';
 import {
   ACHIEVEMENT_STORAGE_KEY,
@@ -31,6 +32,7 @@ function createTestDatabase(): AppDatabase {
 }
 
 const rewardStorageKeys = [
+  ENDURANCE_PLANNING_STORAGE_KEY,
   GOAL_STATE_STORAGE_KEY,
   ACHIEVEMENT_STORAGE_KEY,
   VISUAL_THEME_STORAGE_KEY,
@@ -75,6 +77,10 @@ describe('sauvegarde des récompenses', () => {
 
     expect(envelope.schemaVersion).toBe(3);
     expect(envelope.rewardState).toEqual({
+      endurancePlanning: {
+        version: 1,
+        sessions: [],
+      },
       goals: {
         version: 1,
         goals: [],

@@ -5,6 +5,7 @@ import type { LocalDate } from '@/domain/models/common';
 import { formatWeekRange } from '@/application/strength/weeklyPlanningService';
 import { routePaths, workoutSessionPath } from '@/app/routePaths';
 import { WeeklyPlanningSessionCard } from '@/features/strength-planning/components/WeeklyPlanningSessionCard';
+import { EndurancePlanningPanel } from '@/features/strength-planning/components/EndurancePlanningPanel';
 import { useWeeklyPlanning } from '@/features/strength-planning/hooks/useWeeklyPlanning';
 import { inputClassName } from '@/shared/forms/formStyles';
 import { Button } from '@/shared/ui/Button';
@@ -59,10 +60,10 @@ export function WeeklyPlanningPage() {
     <section aria-labelledby="weekly-planning-title">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">Carnet de musculation</p>
+          <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">Planning sportif</p>
           <h1 id="weekly-planning-title" className="mt-1 text-3xl font-bold tracking-tight text-slate-950 dark:text-white">Planning hebdomadaire</h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
-            Prévois tes séances, reporte-les si nécessaire et conserve le lien avec ce qui a réellement été effectué.
+            Planifie la musculation et les activités d’endurance, puis compare automatiquement le prévu avec ce qui a réellement été effectué.
           </p>
         </div>
         <div className="grid grid-cols-2 gap-2 sm:flex">
@@ -75,13 +76,15 @@ export function WeeklyPlanningPage() {
         </div>
       </div>
 
-      <Card className="mt-6 p-4 sm:p-5" aria-label="Planifier une séance">
+      <EndurancePlanningPanel weekStart={weekStart} />
+
+<Card className="mt-6 p-4 sm:p-5" aria-label="Planifier une séance de musculation">
         <div className="flex items-start gap-3">
           <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand-100 text-brand-800 dark:bg-brand-950 dark:text-brand-200">
             <Plus aria-hidden="true" className="size-5" />
           </span>
           <div>
-            <h2 className="font-semibold text-slate-950 dark:text-white">Ajouter une séance prévue</h2>
+            <h2 className="font-semibold text-slate-950 dark:text-white">Ajouter une séance de musculation</h2>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Le contenu du modèle est figé au moment de la planification.</p>
           </div>
         </div>
