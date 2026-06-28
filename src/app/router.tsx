@@ -8,6 +8,7 @@ import {
   LazyBackupPage,
   LazyBarcodeScannerPage,
   LazyDashboardPage,
+  LazyGlobalSearchPage,
   LazyDashboardCustomizationPage,
   LazyEditActivityPage,
   LazyEnduranceTemplatesPage,
@@ -51,6 +52,10 @@ import { OfflinePage } from '@/pwa/OfflinePage';
 
 export const appShellRoutes: RouteObject[] = [
   { path: routePaths.dashboard, element: <LazyDashboardPage /> },
+  {
+    path: routePaths.search,
+    element: <LazyGlobalSearchPage />,
+  },
   { path: routePaths.profile, element: <LazyProfilePage /> },
   { path: routePaths.settings, element: <LazyAdvancedSettingsPage /> },
   { path: routePaths.dashboardCustomization, element: <LazyDashboardCustomizationPage /> },

@@ -11,6 +11,7 @@ import {
   Gauge,
   History,
   Info,
+  Search,
   Settings,
   SlidersHorizontal,
   Trash2,
@@ -36,6 +37,11 @@ export interface NavigationSection {
 
 export const primaryNavigation: NavigationItem[] = [
   { label: 'Tableau de bord', path: routePaths.dashboard, icon: Gauge, end: true },
+  {
+    label: 'Recherche',
+    path: routePaths.search,
+    icon: Search,
+  },
   { label: 'Nutrition', path: routePaths.food, icon: Apple },
   { label: 'Activités', path: routePaths.activities, icon: Dumbbell },
   { label: 'Exercices', path: routePaths.strengthExercises, icon: Activity },
@@ -97,6 +103,13 @@ export const mobileMoreNavigation: NavigationSection[] = [
   {
     title: 'Suivi et décisions',
     items: [
+      {
+        label: 'Recherche globale',
+        path: routePaths.search,
+        icon: Search,
+        description:
+          'Retrouver séances, aliments, recettes, activités et pesées.',
+      },
       {
         label: 'Historique',
         path: routePaths.history,
