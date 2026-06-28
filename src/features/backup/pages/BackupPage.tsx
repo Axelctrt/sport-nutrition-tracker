@@ -25,6 +25,7 @@ import {
   updateBackupReminderInterval,
   type PreparedBackupImport,
 } from '@/application/backup/backupApplicationService';
+import { createAndDownloadSafetyBackup } from '@/application/backup/safetyBackupService';
 import { getBackupReminderStatus } from '@/domain/backup/backupReminder';
 import type { AppSettings, BackupReminderIntervalDays } from '@/domain/models/settings';
 import { useProfile } from '@/app/providers/profile/useProfile';
@@ -376,6 +377,7 @@ export function BackupPage() {
     setIsImporting(true);
     setFeedback(undefined);
     try {
+      await createAndDownloadSafetyBackup('before-import');
       await applyPreparedBackupImport(pendingImport);
       const importedSettings = pendingImport.envelope.data.appSettings[0];
       if (importedSettings) setTheme(importedSettings.theme);
@@ -404,6 +406,7 @@ export function BackupPage() {
     setIsDeleting(true);
     setFeedback(undefined);
     try {
+      await createAndDownloadSafetyBackup('before-full-reset');
       await clearAllUserData();
       setTheme('system');
       await refreshProfile();
@@ -715,7 +718,7 @@ export function BackupPage() {
           className="border-red-200 dark:border-red-900"
         >
           <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">
-            Exporte d’abord une sauvegarde si tu souhaites pouvoir restaurer tes informations plus tard.
+            Une sauvegarde JSON de sécurité sera téléchargée automatiquement avant l’effacement.
           </p>
           <Button className="mt-4 w-full sm:w-auto" variant="danger" onClick={() => setDeleteDialogOpen(true)}>
             <Trash2 aria-hidden="true" className="size-4" />
@@ -727,7 +730,7 @@ export function BackupPage() {
       <ConfirmationDialog
         open={importDialogOpen}
         title="Remplacer toutes les données ?"
-        description="La restauration remplacera le profil, l’historique et les réglages actuellement présents. La transaction sera annulée automatiquement en cas d’échec technique."
+        description="Une sauvegarde JSON de sécurité sera d’abord téléchargée. La restauration remplacera ensuite le profil, l’historique et les réglages actuellement présents. La transaction sera annulée automatiquement en cas d’échec technique."
         confirmLabel="Importer et remplacer"
         tone="danger"
         isPending={isImporting}

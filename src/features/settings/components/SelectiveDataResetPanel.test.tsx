@@ -1,5 +1,13 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
+const { createSafetyBackupMock } = vi.hoisted(() => ({
+  createSafetyBackupMock: vi.fn(),
+}));
+
+vi.mock("@/application/backup/safetyBackupService", () => ({
+  createAndDownloadSafetyBackup: createSafetyBackupMock,
+}));
+
 import { SelectiveDataResetPanel } from "@/features/settings/components/SelectiveDataResetPanel";
 import type {
   SelectiveDataResetPreview,
@@ -38,6 +46,10 @@ const activityResult: SelectiveDataResetResult = {
 };
 
 describe("SelectiveDataResetPanel", () => {
+  beforeEach(() => {
+    createSafetyBackupMock.mockReset();
+    createSafetyBackupMock.mockResolvedValue(undefined);
+  });
   it("prévisualise puis confirme une suppression ciblée", async () => {
     const loadPreview = vi.fn().mockResolvedValue(activityPreview);
     const resetData = vi.fn().mockResolvedValue(activityResult);
@@ -72,6 +84,9 @@ describe("SelectiveDataResetPanel", () => {
       await screen.findByText("Données sélectionnées effacées"),
     ).toBeInTheDocument();
     expect(screen.getByText(/3 éléments ont été supprimés/)).toBeInTheDocument();
+    expect(createSafetyBackupMock).toHaveBeenCalledWith(
+      "before-selective-reset",
+    );
     expect(resetData).toHaveBeenCalledWith(["activityHistory"]);
   });
 

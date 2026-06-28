@@ -1,4 +1,5 @@
 import { Trash2 } from "lucide-react";
+import { createAndDownloadSafetyBackup } from "@/application/backup/safetyBackupService";
 import { useMemo, useState } from "react";
 
 import {
@@ -93,6 +94,7 @@ export function SelectiveDataResetPanel({
     }
 
     details.push("Le profil et les paramètres seront conservés.");
+    details.push("Une sauvegarde JSON de sécurité sera téléchargée automatiquement avant la suppression.");
     return details.join(" ");
   }, [preview]);
 
@@ -145,6 +147,9 @@ export function SelectiveDataResetPanel({
     setIsResetting(true);
     setError(null);
     try {
+      await createAndDownloadSafetyBackup(
+        'before-selective-reset',
+      );
       const resetResult = await resetData(preview.requestedCategories);
       setResult(resetResult);
       setSelectedCategories([]);
