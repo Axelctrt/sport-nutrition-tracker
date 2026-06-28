@@ -1,3 +1,4 @@
+import { ENDURANCE_PLANNING_STORAGE_KEY } from '@/domain/planning/endurancePlanningState';
 import {
   ACHIEVEMENT_STORAGE_KEY,
   readAchievementState,
@@ -27,6 +28,7 @@ const rewardStorageKeys = [
 
 describe('rewardBackupState', () => {
   beforeEach(() => {
+    window.localStorage.removeItem(ENDURANCE_PLANNING_STORAGE_KEY);
     for (const key of rewardStorageKeys) {
       window.localStorage.removeItem(key);
     }
@@ -49,6 +51,10 @@ describe('rewardBackupState', () => {
     );
 
     expect(readRewardBackupState()).toEqual({
+      endurancePlanning: {
+        version: 1,
+        sessions: [],
+      },
       goals: {
         version: 1,
         goals: [],

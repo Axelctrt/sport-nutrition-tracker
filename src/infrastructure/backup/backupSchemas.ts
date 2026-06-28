@@ -662,11 +662,41 @@ const goalStateSchema = z.object({
   ),
 });
 
+const plannedEnduranceActivityTypeSchema = z.enum([
+  'running',
+  'swimming',
+  'cycling',
+  'walking',
+  'otherCardio',
+]);
+
+const endurancePlanningStateSchema = z.object({
+  version: z.literal(1),
+  sessions: z.array(
+    z.object({
+      id: z.string().min(1),
+      title: z.string().min(1).max(120),
+      activityType: plannedEnduranceActivityTypeSchema,
+      date: localDateSchema,
+      intensity: z.enum(['low', 'moderate', 'high']),
+      targetDurationMinutes: positiveNumber.optional(),
+      targetDistanceKm: positiveNumber.optional(),
+      targetDistanceMeters: positiveNumber.optional(),
+      notes: z.string().max(240).optional(),
+      status: z.enum(['planned', 'skipped']),
+      createdAt: isoDateTimeSchema,
+      updatedAt: isoDateTimeSchema,
+      skippedAt: isoDateTimeSchema.optional(),
+    }),
+  ),
+});
+
 const rewardBackupStateSchema = z.object({
   achievements: achievementStateSchema,
   visualThemes: visualThemeStateSchema,
   weeklyMissions: weeklyMissionHistoryStateSchema,
   goals: goalStateSchema.optional(),
+  endurancePlanning: endurancePlanningStateSchema.optional(),
 });
 const backupDataSchema = z.object({
   userProfile: z.array(userProfileSchema).max(1),

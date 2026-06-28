@@ -5,6 +5,11 @@ import {
   readGoalState,
 } from '@/domain/goals/goalState';
 import {
+  ENDURANCE_PLANNING_CHANGED_EVENT,
+  ENDURANCE_PLANNING_STORAGE_KEY,
+  readEndurancePlanningState,
+} from '@/domain/planning/endurancePlanningState';
+import {
   ACHIEVEMENT_STORAGE_KEY,
   readAchievementState,
 } from '@/domain/rewards/achievements';
@@ -25,6 +30,7 @@ export function readRewardBackupState(): RewardBackupState {
     visualThemes: readVisualThemeState(),
     weeklyMissions: readWeeklyMissionHistoryState(),
     goals: readGoalState(),
+    endurancePlanning: readEndurancePlanningState(),
   };
 }
 
@@ -44,7 +50,12 @@ function dispatchRestoredStateEvents(): void {
   window.dispatchEvent(
     new Event(WEEKLY_MISSION_HISTORY_CHANGED_EVENT),
   );
-  window.dispatchEvent(new Event(GOAL_STATE_CHANGED_EVENT));
+  window.dispatchEvent(
+    new Event(GOAL_STATE_CHANGED_EVENT),
+  );
+  window.dispatchEvent(
+    new Event(ENDURANCE_PLANNING_CHANGED_EVENT),
+  );
 }
 
 export function restoreRewardBackupState(
@@ -71,6 +82,13 @@ export function restoreRewardBackupState(
     serializedEntries.push([
       GOAL_STATE_STORAGE_KEY,
       JSON.stringify(state.goals),
+    ]);
+  }
+
+  if (state.endurancePlanning) {
+    serializedEntries.push([
+      ENDURANCE_PLANNING_STORAGE_KEY,
+      JSON.stringify(state.endurancePlanning),
     ]);
   }
 

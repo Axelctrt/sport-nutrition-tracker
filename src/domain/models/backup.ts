@@ -1,5 +1,6 @@
 import type { Activity } from '@/domain/models/activity';
 import type { GoalState } from '@/domain/goals/goalState';
+import type { EndurancePlanningState } from '@/domain/planning/endurancePlanningState';
 import type { IsoDateTime } from '@/domain/models/common';
 import type {
   DailyJournalStatus,
@@ -58,6 +59,7 @@ export interface RewardBackupState {
   visualThemes: VisualThemeState;
   weeklyMissions: WeeklyMissionHistoryState;
   goals?: GoalState;
+  endurancePlanning?: EndurancePlanningState;
 }
 export interface BackupEnvelope {
   format: 'sportpilot-backup';

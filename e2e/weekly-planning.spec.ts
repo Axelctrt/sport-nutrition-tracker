@@ -15,8 +15,8 @@ test('planifie une séance modèle puis démarre la même séance', async ({ pag
   await expect(page.getByRole('heading', { name: 'Planning hebdomadaire' })).toBeVisible();
   const today = await getBrowserLocalDate(page);
   await page.getByLabel('Séance modèle').selectOption({ label: 'Planning E2E' });
-  await page.getByLabel('Date prévue').fill(today);
-  await page.getByRole('button', { name: 'Planifier' }).click();
+  await page.locator('#planning-date').fill(today);
+  await page.getByRole('button', { name: 'Planifier', exact: true }).click();
 
   await expect(page.getByRole('heading', { name: 'Planning E2E' })).toBeVisible();
   await expect(page.getByText('Prévue', { exact: true })).toBeVisible();
