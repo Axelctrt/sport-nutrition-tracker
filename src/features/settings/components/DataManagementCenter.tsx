@@ -8,6 +8,7 @@ import { Link } from "react-router-dom";
 
 import { routePaths } from "@/app/routePaths";
 import { DatabaseIntegrityPanel } from "@/features/settings/components/DatabaseIntegrityPanel";
+import { DataConsistencyPanel } from "@/features/settings/components/DataConsistencyPanel";
 import { SelectiveDataResetPanel } from "@/features/settings/components/SelectiveDataResetPanel";
 import { CURRENT_BACKUP_SCHEMA_VERSION } from "@/infrastructure/backup/backupMigrations";
 import { databaseSchemaVersion } from "@/infrastructure/database/schema";
@@ -124,6 +125,7 @@ export function DataManagementCenter({
       </Card>
 
       <DatabaseIntegrityPanel className="mt-4" />
+      <DataConsistencyPanel />
       <SelectiveDataResetPanel className="mt-4" />
     </section>
   );
