@@ -75,7 +75,7 @@ describe('sauvegarde des récompenses', () => {
       '2026-06-27T20:00:00.000Z',
     );
 
-    expect(envelope.schemaVersion).toBe(3);
+    expect(envelope.schemaVersion).toBe(4);
     expect(envelope.rewardState).toEqual({
       endurancePlanning: {
         version: 1,
@@ -139,7 +139,7 @@ describe('sauvegarde des récompenses', () => {
       serializeBackupEnvelope(versionTwoEnvelope),
     );
 
-    expect(parsed.schemaVersion).toBe(3);
+    expect(parsed.schemaVersion).toBe(4);
     expect(parsed.rewardState).toBeUndefined();
 
     await replaceDatabaseFromBackup(parsed, database);

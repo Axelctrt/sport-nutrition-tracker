@@ -1,7 +1,7 @@
 import type { BackupEnvelope } from '@/domain/models/backup';
 import { validateBackupEnvelope } from '@/infrastructure/backup/backupSchemas';
 
-export const CURRENT_BACKUP_SCHEMA_VERSION = 3;
+export const CURRENT_BACKUP_SCHEMA_VERSION = 4;
 
 export class BackupMigrationError extends Error {
   constructor(message: string, options?: ErrorOptions) {
@@ -46,10 +46,10 @@ function migrateVersion1ToVersion2(input: BackupHeader): unknown {
 }
 
 function migrateVersion2ToVersion3(input: BackupHeader): unknown {
-  return {
-    ...input,
-    schemaVersion: 3,
-  };
+  return { ...input, schemaVersion: 3 };
+}
+function migrateVersion3ToVersion4(input: BackupHeader): unknown {
+  return { ...input, schemaVersion: 4 };
 }
 export function migrateBackupEnvelope(input: unknown): BackupEnvelope {
   const header = readHeader(input);
@@ -80,10 +80,10 @@ export function migrateBackupEnvelope(input: unknown): BackupEnvelope {
   }
 
   if (version <= 2) {
-    migrated = migrateVersion2ToVersion3(
-      readHeader(migrated),
-    );
+    migrated = migrateVersion2ToVersion3(readHeader(migrated));
   }
-
+  if (version <= 3) {
+    migrated = migrateVersion3ToVersion4(readHeader(migrated));
+  }
   return validateBackupEnvelope(migrated);
 }

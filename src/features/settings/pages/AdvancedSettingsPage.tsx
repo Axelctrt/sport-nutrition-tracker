@@ -1,5 +1,6 @@
 import {
   ArrowRight,
+  Bell,
   Calculator,
   DatabaseBackup,
   Footprints,
@@ -55,6 +56,13 @@ const settingsSections: readonly SettingsDirectoryItem[] = [
     description: 'Blocs visibles, ordre et préréglages.',
     keywords: ['accueil', 'widgets', 'blocs'],
     icon: Gauge,
+  },
+  {
+    id: 'settings-reminders',
+    label: 'Rappels et routines',
+    description: 'Pesée, activité, nutrition et préparation de la semaine.',
+    keywords: ['rappel', 'routine', 'pesee', 'nutrition', 'planning'],
+    icon: Bell,
   },
   {
     id: 'settings-display-storage',
@@ -324,6 +332,31 @@ export function AdvancedSettingsPage() {
               className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-brand-600 px-4 py-2 font-semibold text-white"
             >
               Personnaliser le tableau de bord
+              <ArrowRight
+                aria-hidden="true"
+                className="size-4"
+              />
+            </Link>
+          </Card>
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          sectionId="settings-reminders"
+          storageKey="sportpilot:settings:reminders"
+          title="Rappels et routines"
+          description="Configurer les rappels de pesée, d’activité, de nutrition et de préparation de la semaine."
+          icon={Bell}
+          className="scroll-mt-24"
+        >
+          <Card className="p-4 sm:p-5">
+            <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">
+              Active les routines utiles, choisis leurs jours et heures, puis définis les heures calmes.
+            </p>
+            <Link
+              to={routePaths.reminders}
+              className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-xl bg-brand-600 px-4 py-2 font-semibold text-white"
+            >
+              Configurer les rappels et routines
               <ArrowRight
                 aria-hidden="true"
                 className="size-4"

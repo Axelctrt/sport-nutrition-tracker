@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { normalizeRoutineReminderPreferences } from '@/domain/reminders/routineReminder';
 import { DEFAULT_ENDURANCE_TEMPLATES } from '@/domain/defaults/appSettings';
 import {
   createDefaultDashboardPreferences,
@@ -131,7 +132,12 @@ const appSettingsSchema = entityMetadataSchema.extend({
     DEFAULT_ENDURANCE_TEMPLATES.map((template) => ({ ...template })),
   ),
   enduranceTemplatesVersion: positiveInteger.default(1),
-  dashboardPreferences: dashboardPreferencesSchema.default(createDefaultDashboardPreferences()),
+  dashboardPreferences: dashboardPreferencesSchema.default(
+    createDefaultDashboardPreferences(),
+  ),
+  routineReminderPreferences: z.unknown().optional().transform((value) =>
+    normalizeRoutineReminderPreferences(value),
+  ),
   lastBackupExportedAt: isoDateTimeSchema.optional(),
   lastBackupAppVersion: z.string().min(1).max(100).optional(),
   lastBackupSchemaVersion: positiveInteger.optional(),
