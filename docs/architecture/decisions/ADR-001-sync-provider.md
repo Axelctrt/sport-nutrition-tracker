@@ -2,7 +2,7 @@
 
 - **Statut :** accepté pour prototype, non validé pour la production
 - **Date :** 29 juin 2026
-- **Mise à jour d’implémentation :** phase B locale terminée au commit `33eb416`
+- **Mise à jour d’implémentation :** phase B fusionnée ; C0 prépare `dexie-cloud-addon` 4.4.13 sur une base séparée
 - **Décideur :** projet SportPilot
 - **Portée :** prototype isolé sur les pesées uniquement
 - **Décision :** utiliser Dexie Cloud comme candidat principal
@@ -116,6 +116,8 @@ Cette option nécessite une expertise durable sur :
 Utiliser **Dexie Cloud pour un prototype limité à la table de pesées**.
 
 Contraintes de la décision :
+
+Le lot C0 verrouille en complément : une base IndexedDB distincte, un suffixe par URL distante, l’OTP uniquement, aucune synchronisation via service worker et une activation locale désactivée par défaut.
 
 1. aucune donnée réelle pendant le prototype ;
 2. mode local toujours disponible ;

@@ -1,0 +1,57 @@
+import { readSyncPrototypeConfig } from '@/infrastructure/sync-prototype/syncPrototypeConfig';
+
+describe('configuration du prototype Dexie Cloud', () => {
+  it('reste désactivé par défaut sans exiger d’URL distante', () => {
+    expect(readSyncPrototypeConfig({})).toEqual({ enabled: false });
+    expect(
+      readSyncPrototypeConfig({ VITE_ENABLE_SYNC_PROTOTYPE: 'false' }),
+    ).toEqual({ enabled: false });
+  });
+
+  it('accepte uniquement une URL racine HTTPS hébergée par Dexie Cloud', () => {
+    expect(
+      readSyncPrototypeConfig({
+        VITE_ENABLE_SYNC_PROTOTYPE: ' TRUE ',
+        VITE_DEXIE_CLOUD_DATABASE_URL:
+          'https://sportpilot-prototype.dexie.cloud/',
+      }),
+    ).toEqual({
+      enabled: true,
+      databaseUrl: 'https://sportpilot-prototype.dexie.cloud',
+    });
+  });
+
+  it.each([
+    {},
+    { VITE_DEXIE_CLOUD_DATABASE_URL: 'http://test.dexie.cloud' },
+    { VITE_DEXIE_CLOUD_DATABASE_URL: 'https://dexie.cloud' },
+    { VITE_DEXIE_CLOUD_DATABASE_URL: 'https://example.com' },
+    {
+      VITE_DEXIE_CLOUD_DATABASE_URL:
+        'https://user:secret@test.dexie.cloud',
+    },
+    {
+      VITE_DEXIE_CLOUD_DATABASE_URL:
+        'https://test.dexie.cloud/path',
+    },
+    {
+      VITE_DEXIE_CLOUD_DATABASE_URL:
+        'https://test.dexie.cloud?secret=value',
+    },
+  ])('refuse une configuration distante non sûre : %o', (environment) => {
+    expect(() =>
+      readSyncPrototypeConfig({
+        VITE_ENABLE_SYNC_PROTOTYPE: 'true',
+        ...environment,
+      }),
+    ).toThrow();
+  });
+
+  it('refuse une valeur d’activation ambiguë', () => {
+    expect(() =>
+      readSyncPrototypeConfig({
+        VITE_ENABLE_SYNC_PROTOTYPE: 'yes',
+      }),
+    ).toThrow('doit valoir true ou false');
+  });
+});
