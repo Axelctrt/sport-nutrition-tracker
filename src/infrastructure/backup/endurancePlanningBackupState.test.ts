@@ -36,7 +36,7 @@ describe('sauvegarde du planning d’endurance', () => {
     ).toHaveLength(1);
   });
 
-  it('restaure le planning sans casser les anciennes sauvegardes', () => {
+  it('restaure le planning sans casser les anciennes sauvegardes', async () => {
     const baseState = readRewardBackupState();
 
     writeEndurancePlanningState({
@@ -58,7 +58,7 @@ describe('sauvegarde du planning d’endurance', () => {
     const legacyState = { ...baseState };
     delete legacyState.endurancePlanning;
 
-    restoreRewardBackupState(legacyState);
+    await restoreRewardBackupState(legacyState);
 
     expect(
       JSON.parse(
@@ -68,7 +68,7 @@ describe('sauvegarde du planning d’endurance', () => {
       ).sessions,
     ).toHaveLength(1);
 
-    restoreRewardBackupState({
+    await restoreRewardBackupState({
       ...baseState,
       endurancePlanning:
         emptyEndurancePlanningState(),

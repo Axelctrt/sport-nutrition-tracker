@@ -1,5 +1,13 @@
-import { ENDURANCE_PLANNING_STORAGE_KEY } from '@/domain/planning/endurancePlanningState';
-import { GOAL_STATE_STORAGE_KEY } from '@/domain/goals/goalState';
+import {
+  ENDURANCE_PLANNING_STORAGE_KEY,
+  flushEndurancePlanningPersistence,
+  writeEndurancePlanningState,
+} from '@/domain/planning/endurancePlanningState';
+import {
+  GOAL_STATE_STORAGE_KEY,
+  flushGoalStatePersistence,
+  writeGoalState,
+} from '@/domain/goals/goalState';
 import {
   ACHIEVEMENT_STORAGE_KEY,
   readAchievementState,
@@ -69,6 +77,41 @@ describe('sauvegarde des récompenses', () => {
       '2026-06-27T19:00:00.000Z',
       new Date(2026, 5, 27),
     );
+    writeGoalState({
+      version: 1,
+      goals: [
+        {
+          id: 'goal-backup',
+          title: 'Marcher',
+          metric: 'totalSteps',
+          targetValue: 20_000,
+          startDate: '2026-06-01',
+          status: 'active',
+          reachedMilestones: [],
+          createdAt: '2026-06-01T08:00:00.000Z',
+          updatedAt: '2026-06-01T08:00:00.000Z',
+        },
+      ],
+    });
+    writeEndurancePlanningState({
+      version: 1,
+      sessions: [
+        {
+          id: 'planning-backup',
+          title: 'Footing',
+          activityType: 'running',
+          date: '2026-07-01',
+          intensity: 'low',
+          status: 'planned',
+          createdAt: '2026-06-27T08:00:00.000Z',
+          updatedAt: '2026-06-27T08:00:00.000Z',
+        },
+      ],
+    });
+    await Promise.all([
+      flushGoalStatePersistence(),
+      flushEndurancePlanningPersistence(),
+    ]);
 
     const envelope = await createBackupEnvelope(
       database,
@@ -79,11 +122,15 @@ describe('sauvegarde des récompenses', () => {
     expect(envelope.rewardState).toEqual({
       endurancePlanning: {
         version: 1,
-        sessions: [],
+        sessions: [
+          expect.objectContaining({ id: 'planning-backup' }),
+        ],
       },
       goals: {
         version: 1,
-        goals: [],
+        goals: [
+          expect.objectContaining({ id: 'goal-backup' }),
+        ],
       },
       achievements: {
         earnedAchievements: [
@@ -120,6 +167,12 @@ describe('sauvegarde des récompenses', () => {
     expect(
       readWeeklyMissionHistoryState().completedWeeks,
     ).toHaveLength(1);
+    expect(await database.goals.get('goal-backup')).toBeDefined();
+    expect(
+      await database.endurancePlanningSessions.get(
+        'planning-backup',
+      ),
+    ).toBeDefined();
   });
 
   it('migre une sauvegarde v2 sans effacer les récompenses locales', async () => {

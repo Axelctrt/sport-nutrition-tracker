@@ -9,6 +9,7 @@ import {
 } from '@/infrastructure/backup/backupMigrations';
 import { formatBackupValidationError } from '@/infrastructure/backup/backupSchemas';
 import { appDatabase } from '@/infrastructure/database/database';
+import { reloadUserStateRuntime } from '@/infrastructure/user-state/userStateRuntime';
 
 import {
   readRewardBackupState,
@@ -78,6 +79,14 @@ export function tableList(database: AppDatabase) {
   ] as const;
 }
 
+export function allUserDataTableList(database: AppDatabase) {
+  return [
+    ...tableList(database),
+    database.goals,
+    database.endurancePlanningSessions,
+  ] as const;
+}
+
 export async function readBackupData(database: AppDatabase): Promise<BackupData> {
   const [
     userProfile,
@@ -140,7 +149,8 @@ export async function createBackupEnvelope(
       format: 'sportpilot-backup',
       schemaVersion: CURRENT_BACKUP_SCHEMA_VERSION,
       exportedAt,
-      appVersion: __APP_VERSION__,
+      appVersion: __APP_VERSION__,
+
       rewardState: readRewardBackupState(),
       data,
     };
@@ -307,13 +317,16 @@ export async function replaceDatabaseFromBackup(
   database: AppDatabase = appDatabase,
 ): Promise<void> {
   try {
-    await database.transaction('rw', tableList(database), async () => {
+    await database.transaction('rw', allUserDataTableList(database), async () => {
       await clearTables(database);
       await populateTables(database, envelope.data);
       await ensureExerciseCatalog(database);
 
       if (envelope.rewardState) {
-        restoreRewardBackupState(envelope.rewardState);
+        await restoreRewardBackupState(
+          envelope.rewardState,
+          database,
+        );
       }
     });
   } catch (error) {
@@ -326,11 +339,18 @@ export async function replaceDatabaseFromBackup(
 
 export async function clearAllUserData(database: AppDatabase = appDatabase): Promise<void> {
   try {
-    await database.transaction('rw', tableList(database), async () => {
-      await clearTables(database);
-      await database.appSettings.add(createDefaultAppSettings());
-      await ensureExerciseCatalog(database);
-    });
+    await database.transaction(
+      'rw',
+      allUserDataTableList(database),
+      async () => {
+        await clearTables(database);
+        await database.goals.clear();
+        await database.endurancePlanningSessions.clear();
+        await database.appSettings.add(createDefaultAppSettings());
+        await ensureExerciseCatalog(database);
+      },
+    );
+    await reloadUserStateRuntime(database);
   } catch (error) {
     throw new BackupOperationError('Les données locales n’ont pas pu être effacées.', { cause: error });
   }

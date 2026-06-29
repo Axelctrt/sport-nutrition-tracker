@@ -6,6 +6,7 @@ import type { AppSettings } from "@/domain/models/settings";
 import type { AppDatabase } from "@/infrastructure/database/AppDatabase";
 import { appDatabase } from "@/infrastructure/database/database";
 import { ensureCurrentMigrationJournalEntry } from "@/infrastructure/database/migrationJournal";
+import { initializeUserStateRuntime } from '@/infrastructure/user-state/userStateRuntime';
 
 export interface DatabaseInitializationResult {
   settings: AppSettings;
@@ -22,6 +23,7 @@ export async function initializeDatabase(
 
     await ensureCurrentMigrationJournalEntry(database);
     await ensureExerciseCatalog(database);
+    await initializeUserStateRuntime(database);
 
     const existingSettings = await database.appSettings.get(APP_SETTINGS_ID);
 

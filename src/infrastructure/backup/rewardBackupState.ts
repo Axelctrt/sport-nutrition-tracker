@@ -1,13 +1,13 @@
 import type { RewardBackupState } from '@/domain/models/backup';
 import {
   GOAL_STATE_CHANGED_EVENT,
-  GOAL_STATE_STORAGE_KEY,
   readGoalState,
+  writeGoalState,
 } from '@/domain/goals/goalState';
 import {
   ENDURANCE_PLANNING_CHANGED_EVENT,
-  ENDURANCE_PLANNING_STORAGE_KEY,
   readEndurancePlanningState,
+  writeEndurancePlanningState,
 } from '@/domain/planning/endurancePlanningState';
 import {
   ACHIEVEMENT_STORAGE_KEY,
@@ -23,6 +23,11 @@ import {
   WEEKLY_MISSION_HISTORY_CHANGED_EVENT,
   WEEKLY_MISSION_HISTORY_STORAGE_KEY,
 } from '@/domain/rewards/weeklyMissionHistory';
+import type { AppDatabase } from '@/infrastructure/database/AppDatabase';
+import {
+  replaceEndurancePlanningUserState,
+  replaceGoalUserState,
+} from '@/infrastructure/user-state/userStateRuntime';
 
 export function readRewardBackupState(): RewardBackupState {
   return {
@@ -50,17 +55,40 @@ function dispatchRestoredStateEvents(): void {
   window.dispatchEvent(
     new Event(WEEKLY_MISSION_HISTORY_CHANGED_EVENT),
   );
-  window.dispatchEvent(
-    new Event(GOAL_STATE_CHANGED_EVENT),
-  );
+  window.dispatchEvent(new Event(GOAL_STATE_CHANGED_EVENT));
   window.dispatchEvent(
     new Event(ENDURANCE_PLANNING_CHANGED_EVENT),
   );
 }
 
-export function restoreRewardBackupState(
+async function restoreGoalState(
+  state: NonNullable<RewardBackupState['goals']>,
+  database?: AppDatabase,
+): Promise<void> {
+  if (database) {
+    await replaceGoalUserState(state, database);
+    return;
+  }
+
+  writeGoalState(state);
+}
+
+async function restoreEndurancePlanning(
+  state: NonNullable<RewardBackupState['endurancePlanning']>,
+  database?: AppDatabase,
+): Promise<void> {
+  if (database) {
+    await replaceEndurancePlanningUserState(state, database);
+    return;
+  }
+
+  writeEndurancePlanningState(state);
+}
+
+export async function restoreRewardBackupState(
   state: RewardBackupState,
-): void {
+  database?: AppDatabase,
+): Promise<void> {
   if (typeof window === 'undefined') return;
 
   const serializedEntries: [string, string][] = [
@@ -78,32 +106,29 @@ export function restoreRewardBackupState(
     ],
   ];
 
-  if (state.goals) {
-    serializedEntries.push([
-      GOAL_STATE_STORAGE_KEY,
-      JSON.stringify(state.goals),
-    ]);
-  }
-
-  if (state.endurancePlanning) {
-    serializedEntries.push([
-      ENDURANCE_PLANNING_STORAGE_KEY,
-      JSON.stringify(state.endurancePlanning),
-    ]);
-  }
-
   const previousValues = new Map<string, string | null>();
+  const previousGoals = readGoalState();
+  const previousEndurancePlanning =
+    readEndurancePlanningState();
 
   try {
     for (const [key] of serializedEntries) {
-      previousValues.set(
-        key,
-        window.localStorage.getItem(key),
-      );
+      previousValues.set(key, window.localStorage.getItem(key));
     }
 
     for (const [key, value] of serializedEntries) {
       window.localStorage.setItem(key, value);
+    }
+
+    if (state.goals) {
+      await restoreGoalState(state.goals, database);
+    }
+
+    if (state.endurancePlanning) {
+      await restoreEndurancePlanning(
+        state.endurancePlanning,
+        database,
+      );
     }
 
     dispatchRestoredStateEvents();
@@ -115,6 +140,20 @@ export function restoreRewardBackupState(
         // Le premier état reste prioritaire si le navigateur
         // refuse également le rollback.
       }
+    }
+
+    try {
+      if (state.goals) {
+        await restoreGoalState(previousGoals, database);
+      }
+      if (state.endurancePlanning) {
+        await restoreEndurancePlanning(
+          previousEndurancePlanning,
+          database,
+        );
+      }
+    } catch {
+      // La sauvegarde JSON reste le point de retour fiable.
     }
 
     dispatchRestoredStateEvents();

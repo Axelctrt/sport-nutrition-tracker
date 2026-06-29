@@ -23,11 +23,14 @@ export const databaseTableNames = [
   'workoutSessionExercises',
   'strengthSets',
   'progressionSuggestions',
+  'goals',
+  'endurancePlanningSessions',
 ] as const;
 
 export const databaseInternalTableNames = [
   'migrationJournal',
-  'databaseDiagnostics',
+  'databaseDiagnostics',
+
   'trashItems',
 ] as const;
 
@@ -89,4 +92,11 @@ export const schemaVersion4: Record<string, string> = {
   ...schemaVersion3,
   trashItems:
     'id, entityType, entityId, deletedAt, purgeAt, [entityType+entityId]',
+};
+
+export const schemaVersion5: Record<string, string> = {
+  ...schemaVersion4,
+  goals: 'id, metric, status, startDate, deadline, updatedAt',
+  endurancePlanningSessions:
+    'id, date, activityType, status, updatedAt',
 };

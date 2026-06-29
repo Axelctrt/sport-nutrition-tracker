@@ -190,7 +190,7 @@ function isGoalMilestone(
   );
 }
 
-function parseGoal(value: unknown): Goal | undefined {
+export function parseGoal(value: unknown): Goal | undefined {
   if (!value || typeof value !== 'object') return undefined;
 
   const candidate = value as Record<string, unknown>;
@@ -240,9 +240,56 @@ function parseGoal(value: unknown): Goal | undefined {
   return goal;
 }
 
-export function readGoalState(): GoalState {
+export type GoalStatePersistence = (
+  state: GoalState,
+) => Promise<void>;
+
+interface GoalStateRuntime {
+  state: GoalState;
+  persist: GoalStatePersistence;
+}
+
+let goalStateRuntime: GoalStateRuntime | undefined;
+let goalPersistenceQueue: Promise<void> = Promise.resolve();
+let latestGoalFallback: string | undefined;
+
+function cloneGoalState(state: GoalState): GoalState {
+  return {
+    version: 1,
+    goals: state.goals.map((goal) => ({
+      ...goal,
+      reachedMilestones: [...goal.reachedMilestones],
+    })),
+  };
+}
+
+export function parseGoalState(
+  value: unknown,
+): GoalState | undefined {
+  if (!value || typeof value !== 'object') {
+    return undefined;
+  }
+
+  const candidate = value as {
+    version?: unknown;
+    goals?: unknown;
+  };
+
+  if (candidate.version !== 1 || !Array.isArray(candidate.goals)) {
+    return undefined;
+  }
+
+  return {
+    version: 1,
+    goals: candidate.goals
+      .map(parseGoal)
+      .filter((goal): goal is Goal => goal !== undefined),
+  };
+}
+
+export function readLegacyGoalState(): GoalState | undefined {
   if (typeof window === 'undefined') {
-    return emptyGoalState();
+    return undefined;
   }
 
   try {
@@ -250,39 +297,102 @@ export function readGoalState(): GoalState {
       GOAL_STATE_STORAGE_KEY,
     );
 
-    if (!raw) return emptyGoalState();
-
-    const parsed = JSON.parse(raw) as {
-      version?: unknown;
-      goals?: unknown;
-    };
-
-    if (
-      parsed.version !== 1 ||
-      !Array.isArray(parsed.goals)
-    ) {
-      return emptyGoalState();
-    }
-
-    return {
-      version: 1,
-      goals: parsed.goals
-        .map(parseGoal)
-        .filter((goal): goal is Goal => goal !== undefined),
-    };
+    return raw === null
+      ? undefined
+      : parseGoalState(JSON.parse(raw));
   } catch {
-    return emptyGoalState();
+    return undefined;
   }
 }
 
-export function writeGoalState(state: GoalState): void {
+function writeGoalFallback(serialized: string): void {
   if (typeof window === 'undefined') return;
 
-  window.localStorage.setItem(
-    GOAL_STATE_STORAGE_KEY,
-    JSON.stringify(state),
-  );
-  window.dispatchEvent(
-    new Event(GOAL_STATE_CHANGED_EVENT),
-  );
+  try {
+    window.localStorage.setItem(
+      GOAL_STATE_STORAGE_KEY,
+      serialized,
+    );
+  } catch {
+    // Dexie reste prioritaire lorsque le stockage de secours est indisponible.
+  }
+}
+
+function removeGoalFallback(serialized: string): void {
+  if (typeof window === 'undefined') return;
+
+  try {
+    if (
+      latestGoalFallback === serialized &&
+      window.localStorage.getItem(GOAL_STATE_STORAGE_KEY) === serialized
+    ) {
+      window.localStorage.removeItem(GOAL_STATE_STORAGE_KEY);
+    }
+  } catch {
+    // La clé de secours sera réévaluée au prochain démarrage.
+  }
+}
+
+function dispatchGoalStateChanged(): void {
+  if (typeof window === 'undefined') return;
+
+  window.dispatchEvent(new Event(GOAL_STATE_CHANGED_EVENT));
+}
+
+export function hydrateGoalStateRuntime(
+  state: GoalState,
+  persist: GoalStatePersistence,
+): void {
+  goalStateRuntime = {
+    state: cloneGoalState(state),
+    persist,
+  };
+  goalPersistenceQueue = Promise.resolve();
+  latestGoalFallback = undefined;
+}
+
+export function resetGoalStateRuntimeForTests(): void {
+  goalStateRuntime = undefined;
+  goalPersistenceQueue = Promise.resolve();
+  latestGoalFallback = undefined;
+}
+
+export async function flushGoalStatePersistence(): Promise<void> {
+  await goalPersistenceQueue;
+}
+
+export function readGoalState(): GoalState {
+  if (goalStateRuntime) {
+    return cloneGoalState(goalStateRuntime.state);
+  }
+
+  return readLegacyGoalState() ?? emptyGoalState();
+}
+
+export function writeGoalState(state: GoalState): void {
+  const snapshot = cloneGoalState(state);
+  const serialized = JSON.stringify(snapshot);
+
+  if (!goalStateRuntime) {
+    writeGoalFallback(serialized);
+    dispatchGoalStateChanged();
+    return;
+  }
+
+  const persist = goalStateRuntime.persist;
+  goalStateRuntime.state = snapshot;
+  latestGoalFallback = serialized;
+  writeGoalFallback(serialized);
+  dispatchGoalStateChanged();
+
+  goalPersistenceQueue = goalPersistenceQueue
+    .catch(() => undefined)
+    .then(() => persist(snapshot))
+    .then(() => removeGoalFallback(serialized))
+    .catch((error: unknown) => {
+      console.error(
+        'La persistance Dexie des objectifs a échoué.',
+        error,
+      );
+    });
 }

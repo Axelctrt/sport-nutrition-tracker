@@ -2,6 +2,8 @@ import 'fake-indexeddb/auto';
 import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
 import { afterEach, vi } from 'vitest';
+import { resetGoalStateRuntimeForTests } from '@/domain/goals/goalState';
+import { resetEndurancePlanningRuntimeForTests } from '@/domain/planning/endurancePlanningState';
 
 Object.defineProperty(window, 'matchMedia', {
   configurable: true,
@@ -59,6 +61,8 @@ function restoreProperty({ target, property, descriptor }: PropertyBaseline) {
 }
 
 afterEach(() => {
+  resetGoalStateRuntimeForTests();
+  resetEndurancePlanningRuntimeForTests();
   cleanup();
   vi.clearAllTimers();
   vi.useRealTimers();

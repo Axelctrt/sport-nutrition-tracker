@@ -387,7 +387,7 @@ export async function applySelectiveBackupRestore(
           'Cette sauvegarde ne contient pas de progression de récompenses.',
         );
       }
-      restoreRewardBackupState(rewardState);
+      await restoreRewardBackupState(rewardState, database);
     }
 
     const hasDatabaseSelection = [...selected].some(
@@ -422,7 +422,10 @@ export async function applySelectiveBackupRestore(
   } catch (error) {
     if (previousRewards) {
       try {
-        restoreRewardBackupState(previousRewards);
+        await restoreRewardBackupState(
+          previousRewards,
+          database,
+        );
       } catch {
         // La sauvegarde JSON téléchargée reste le point de retour fiable.
       }

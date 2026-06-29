@@ -34,7 +34,7 @@ describe('sauvegarde des objectifs', () => {
     expect(readRewardBackupState().goals?.goals).toHaveLength(1);
   });
 
-  it('restaure les objectifs présents et préserve les anciens backups', () => {
+  it('restaure les objectifs présents et préserve les anciens backups', async () => {
     const currentState = {
       version: 1 as const,
       goals: [
@@ -55,7 +55,7 @@ describe('sauvegarde des objectifs', () => {
     writeGoalState(currentState);
     const baseState = readRewardBackupState();
 
-    restoreRewardBackupState({
+    await restoreRewardBackupState({
       achievements: baseState.achievements,
       visualThemes: baseState.visualThemes,
       weeklyMissions: baseState.weeklyMissions,
@@ -69,7 +69,7 @@ describe('sauvegarde des objectifs', () => {
       ),
     ).toEqual(currentState);
 
-    restoreRewardBackupState({
+    await restoreRewardBackupState({
       ...baseState,
       goals: emptyGoalState(),
     });
