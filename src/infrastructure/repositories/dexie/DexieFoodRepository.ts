@@ -13,6 +13,10 @@ import type {
   Meal,
   MealSlot,
 } from '@/domain/models/food';
+import {
+  dailyJournalStatusIdForDate,
+  mealIdForDateAndSlot,
+} from '@/domain/sync/deterministicEntityIds';
 import type { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import type { FoodRepository } from '@/infrastructure/repositories/contracts/FoodRepository';
 import { runRepositoryOperation } from '@/infrastructure/repositories/dexie/repositoryOperation';
@@ -193,7 +197,7 @@ export class DexieFoodRepository implements FoodRepository {
         const mealData: NewEntity<Meal> = title === undefined
           ? { date, slot }
           : { date, slot, title };
-        const meal = createEntity<Meal>(mealData);
+        const meal = createEntity<Meal>(mealData, mealIdForDateAndSlot(date, slot));
         await this.database.meals.add(meal);
         return meal;
       },
@@ -317,7 +321,10 @@ export class DexieFoodRepository implements FoodRepository {
           .first();
         const status = current
           ? updateEntity(current, data)
-          : createEntity<DailyJournalStatus>(data);
+          : createEntity<DailyJournalStatus>(
+              data,
+              dailyJournalStatusIdForDate(data.date),
+            );
         await this.database.dailyJournalStatuses.put(status);
         return status;
       },

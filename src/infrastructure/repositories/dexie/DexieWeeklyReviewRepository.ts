@@ -1,5 +1,6 @@
 import type { EntityId, LocalDate, NewEntity } from '@/domain/models/common';
 import type { AcceptedCalorieAdjustment, WeeklyReview } from '@/domain/models/weeklyReview';
+import { weeklyReviewIdForWeekStart } from '@/domain/sync/deterministicEntityIds';
 import type { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import type {
   WeeklyReviewDecisionResult,
@@ -30,7 +31,10 @@ export class DexieWeeklyReviewRepository implements WeeklyReviewRepository {
   upsert(data: NewEntity<WeeklyReview>): Promise<WeeklyReview> {
     return runRepositoryOperation('update', 'Impossible d’enregistrer ce bilan hebdomadaire.', async () => {
       const current = await this.database.weeklyReviews.where('weekStart').equals(data.weekStart).first();
-      const review = current ? updateEntity(current, data) : createEntity<WeeklyReview>(data);
+      const review = current ? updateEntity(current, data) : createEntity<WeeklyReview>(
+        data,
+        weeklyReviewIdForWeekStart(data.weekStart),
+      );
       await this.database.weeklyReviews.put(review);
       return review;
     });

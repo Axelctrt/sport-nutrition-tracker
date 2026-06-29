@@ -1,6 +1,10 @@
 import type { LocalDate, NewEntity } from '@/domain/models/common';
 import type { DailyJournalStatus } from '@/domain/models/food';
 import type { DailyTarget } from '@/domain/models/targets';
+import {
+  dailyJournalStatusIdForDate,
+  dailyTargetIdForDate,
+} from '@/domain/sync/deterministicEntityIds';
 import type { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import type { TargetRepository } from '@/infrastructure/repositories/contracts/TargetRepository';
 import { runRepositoryOperation } from '@/infrastructure/repositories/dexie/repositoryOperation';
@@ -35,7 +39,7 @@ export class DexieTargetRepository implements TargetRepository {
       'Impossible d’enregistrer l’objectif quotidien.',
       async () => {
         const current = await this.database.dailyTargets.where('date').equals(data.date).first();
-        const target = current ? updateEntity(current, data) : createEntity<DailyTarget>(data);
+        const target = current ? updateEntity(current, data) : createEntity<DailyTarget>(data, dailyTargetIdForDate(data.date));
         await this.database.dailyTargets.put(target);
         return target;
       },
@@ -61,7 +65,10 @@ export class DexieTargetRepository implements TargetRepository {
           .first();
         const status = current
           ? updateEntity(current, data)
-          : createEntity<DailyJournalStatus>(data);
+          : createEntity<DailyJournalStatus>(
+              data,
+              dailyJournalStatusIdForDate(data.date),
+            );
         await this.database.dailyJournalStatuses.put(status);
         return status;
       },

@@ -1,5 +1,6 @@
 import type { LocalDate, NewEntity } from '@/domain/models/common';
 import type { DailySteps } from '@/domain/models/steps';
+import { dailyStepsIdForDate } from '@/domain/sync/deterministicEntityIds';
 import type { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import type { StepsRepository } from '@/infrastructure/repositories/contracts/StepsRepository';
 import { runRepositoryOperation } from '@/infrastructure/repositories/dexie/repositoryOperation';
@@ -34,7 +35,7 @@ export class DexieStepsRepository implements StepsRepository {
       'Impossible d’enregistrer les pas.',
       async () => {
         const current = await this.database.dailySteps.where('date').equals(data.date).first();
-        const entry = current ? updateEntity(current, data) : createEntity<DailySteps>(data);
+        const entry = current ? updateEntity(current, data) : createEntity<DailySteps>(data, dailyStepsIdForDate(data.date));
         await this.database.dailySteps.put(entry);
         return entry;
       },

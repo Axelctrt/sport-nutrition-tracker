@@ -5,6 +5,10 @@ import { DexieSettingsRepository } from '@/infrastructure/repositories/dexie/Dex
 import { DexieStepsRepository } from '@/infrastructure/repositories/dexie/DexieStepsRepository';
 import { DexieWeightRepository } from '@/infrastructure/repositories/dexie/DexieWeightRepository';
 import { createDefaultAppSettings } from '@/domain/defaults/appSettings';
+import {
+  dailyStepsIdForDate,
+  weightEntryIdForDate,
+} from '@/domain/sync/deterministicEntityIds';
 import { createRunningActivityInput } from '@/test/factories/activityFactory';
 import { createProfileInput } from '@/test/factories/profileFactory';
 
@@ -43,6 +47,7 @@ describe('repositories Dexie', () => {
     const first = await repository.upsert({ date: '2026-06-23', weightKg: 60 });
     const second = await repository.upsert({ date: '2026-06-23', weightKg: 59.8 });
 
+    expect(first.id).toBe(weightEntryIdForDate('2026-06-23'));
     expect(second.id).toBe(first.id);
     expect(second.weightKg).toBe(59.8);
     expect(await database.weights.count()).toBe(1);
@@ -51,13 +56,19 @@ describe('repositories Dexie', () => {
   it('conserve une seule saisie de pas par date', async () => {
     const repository = new DexieStepsRepository(database);
 
-    await repository.upsert({ date: '2026-06-23', totalSteps: 8_000, source: 'manual' });
+    const created = await repository.upsert({
+      date: '2026-06-23',
+      totalSteps: 8_000,
+      source: 'manual',
+    });
     const updated = await repository.upsert({
       date: '2026-06-23',
       totalSteps: 10_500,
       source: 'manual',
     });
 
+    expect(created.id).toBe(dailyStepsIdForDate('2026-06-23'));
+    expect(updated.id).toBe(created.id);
     expect(updated.totalSteps).toBe(10_500);
     expect(await database.dailySteps.count()).toBe(1);
   });
