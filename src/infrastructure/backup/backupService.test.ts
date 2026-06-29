@@ -6,13 +6,13 @@ import type { UserProfile } from '@/domain/models/profile';
 import { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import { initializeDatabase } from '@/infrastructure/database/databaseLifecycle';
 import {
+  allUserDataTableList,
   clearAllUserData,
   createBackupEnvelope,
   parseBackupText,
   replaceDatabaseFromBackup,
   serializeBackupEnvelope,
   summarizeBackup,
-  tableList,
 } from '@/infrastructure/backup/backupService';
 import { createEntity } from '@/shared/utils/entities';
 import { createProfileInput } from '@/test/factories/profileFactory';
@@ -80,7 +80,9 @@ describe('backupService', () => {
     const envelope = await createBackupEnvelope(database, '2026-06-24T10:00:00.000Z');
 
     expect(Object.keys(envelope.data).sort()).toEqual(
-      tableList(database).map(({ name }) => name).sort(),
+      allUserDataTableList(database)
+        .map(({ name }) => name)
+        .sort(),
     );
   });
 
@@ -96,7 +98,7 @@ describe('backupService', () => {
     const parsed = parseBackupText(serializeBackupEnvelope(envelope));
     const summary = summarizeBackup(parsed);
 
-    expect(parsed.schemaVersion).toBe(4);
+    expect(parsed.schemaVersion).toBe(5);
     expect(parsed.appVersion).toBe(__APP_VERSION__);
     expect(parsed.data.userProfile).toHaveLength(1);
     expect(parsed.data.weights).toHaveLength(1);

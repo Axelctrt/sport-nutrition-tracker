@@ -1,25 +1,35 @@
 import {
+  flushGoalStatePersistence,
+  GOAL_STATE_CHANGED_EVENT,
   hydrateGoalStateRuntime,
   type GoalState,
 } from '@/domain/goals/goalState';
 import {
+  ENDURANCE_PLANNING_CHANGED_EVENT,
+  flushEndurancePlanningPersistence,
   hydrateEndurancePlanningRuntime,
   type EndurancePlanningState,
 } from '@/domain/planning/endurancePlanningState';
 import {
+  flushRoutineReminderCompletionPersistence,
   hydrateRoutineReminderCompletionRuntime,
   type RoutineReminderCompletionState,
 } from '@/domain/reminders/routineReminderCompletionState';
 import {
+  flushAchievementStatePersistence,
   hydrateAchievementStateRuntime,
   type AchievementState,
 } from '@/domain/rewards/achievements';
 import {
+  applyStoredVisualTheme,
+  flushVisualThemeStatePersistence,
   hydrateVisualThemeStateRuntime,
   type VisualThemeState,
 } from '@/domain/rewards/visualThemes';
 import {
+  flushWeeklyMissionHistoryPersistence,
   hydrateWeeklyMissionHistoryRuntime,
+  WEEKLY_MISSION_HISTORY_CHANGED_EVENT,
   type WeeklyMissionHistoryState,
 } from '@/domain/rewards/weeklyMissionHistory';
 import type { AppDatabase } from '@/infrastructure/database/AppDatabase';
@@ -111,6 +121,30 @@ async function readRuntimeSnapshot(
   };
 }
 
+export async function flushUserStatePersistence(): Promise<void> {
+  await Promise.all([
+    flushGoalStatePersistence(),
+    flushEndurancePlanningPersistence(),
+    flushAchievementStatePersistence(),
+    flushVisualThemeStatePersistence(),
+    flushWeeklyMissionHistoryPersistence(),
+    flushRoutineReminderCompletionPersistence(),
+  ]);
+}
+
+function notifyReloadedUserState(): void {
+  if (typeof window === 'undefined') return;
+
+  applyStoredVisualTheme();
+  window.dispatchEvent(new Event(GOAL_STATE_CHANGED_EVENT));
+  window.dispatchEvent(
+    new Event(ENDURANCE_PLANNING_CHANGED_EVENT),
+  );
+  window.dispatchEvent(
+    new Event(WEEKLY_MISSION_HISTORY_CHANGED_EVENT),
+  );
+}
+
 export async function initializeUserStateRuntime(
   database: AppDatabase = appDatabase,
 ): Promise<void> {
@@ -122,6 +156,7 @@ export async function reloadUserStateRuntime(
   database: AppDatabase = appDatabase,
 ): Promise<void> {
   configureRuntime(database, await readRuntimeSnapshot(database));
+  notifyReloadedUserState();
 }
 
 async function replaceAndReload(

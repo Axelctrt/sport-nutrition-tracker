@@ -1,32 +1,36 @@
 import {
   ENDURANCE_PLANNING_STORAGE_KEY,
-  flushEndurancePlanningPersistence,
   writeEndurancePlanningState,
 } from '@/domain/planning/endurancePlanningState';
 import {
   GOAL_STATE_STORAGE_KEY,
-  flushGoalStatePersistence,
   writeGoalState,
 } from '@/domain/goals/goalState';
 import {
+  flushRoutineReminderCompletionPersistence,
+  readRoutineReminderCompletionState,
+  recordRoutineReminderCompletion,
+} from '@/domain/reminders/routineReminderCompletionState';
+import {
   ACHIEVEMENT_STORAGE_KEY,
-  flushAchievementStatePersistence,
   readAchievementState,
   unlockAchievements,
 } from '@/domain/rewards/achievements';
 import {
   activateVisualTheme,
-  flushVisualThemeStatePersistence,
   readVisualThemeState,
   unlockVisualThemes,
   VISUAL_THEME_STORAGE_KEY,
 } from '@/domain/rewards/visualThemes';
 import {
-  flushWeeklyMissionHistoryPersistence,
   readWeeklyMissionHistoryState,
   recordCompletedWeeklyMission,
   WEEKLY_MISSION_HISTORY_STORAGE_KEY,
 } from '@/domain/rewards/weeklyMissionHistory';
+import {
+  BACKUP_USER_STATE_TABLE_NAMES,
+  type BackupData,
+} from '@/domain/models/backup';
 import { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import { initializeDatabase } from '@/infrastructure/database/databaseLifecycle';
 import {
@@ -50,7 +54,7 @@ const rewardStorageKeys = [
   WEEKLY_MISSION_HISTORY_STORAGE_KEY,
 ] as const;
 
-describe('sauvegarde des récompenses', () => {
+describe('sauvegarde des états utilisateur', () => {
   let database: AppDatabase;
 
   beforeEach(async () => {
@@ -68,7 +72,7 @@ describe('sauvegarde des récompenses', () => {
     await database.delete();
   });
 
-  it('exporte puis restaure les badges, thèmes, missions et objectifs', async () => {
+  it('exporte puis restaure toutes les tables utilisateur Dexie', async () => {
     unlockAchievements(
       ['first-session'],
       '2026-06-27T18:00:00.000Z',
@@ -79,6 +83,11 @@ describe('sauvegarde des récompenses', () => {
       '2026-06-22',
       '2026-06-27T19:00:00.000Z',
       new Date(2026, 5, 27),
+    );
+    recordRoutineReminderCompletion(
+      '2026-06-27',
+      'weighIn',
+      '2026-06-27T19:30:00.000Z',
     );
     writeGoalState({
       version: 1,
@@ -111,71 +120,61 @@ describe('sauvegarde des récompenses', () => {
         },
       ],
     });
-    await Promise.all([
-      flushGoalStatePersistence(),
-      flushEndurancePlanningPersistence(),
-      flushAchievementStatePersistence(),
-      flushVisualThemeStatePersistence(),
-      flushWeeklyMissionHistoryPersistence(),
-    ]);
+    await flushRoutineReminderCompletionPersistence();
 
     const envelope = await createBackupEnvelope(
       database,
       '2026-06-27T20:00:00.000Z',
     );
 
-    expect(envelope.schemaVersion).toBe(4);
-    expect(envelope.rewardState).toEqual({
-      endurancePlanning: {
-        version: 1,
-        sessions: [
-          expect.objectContaining({ id: 'planning-backup' }),
-        ],
+    expect(envelope.schemaVersion).toBe(5);
+    expect(envelope.rewardState).toBeUndefined();
+    expect(envelope.includedUserStateTables).toEqual(
+      BACKUP_USER_STATE_TABLE_NAMES,
+    );
+    expect(envelope.data.goals).toEqual([
+      expect.objectContaining({ id: 'goal-backup' }),
+    ]);
+    expect(envelope.data.endurancePlanningSessions).toEqual([
+      expect.objectContaining({ id: 'planning-backup' }),
+    ]);
+    expect(envelope.data.earnedAchievements).toEqual([
+      {
+        id: 'first-session',
+        earnedAt: '2026-06-27T18:00:00.000Z',
+        updatedAt: '2026-06-27T18:00:00.000Z',
       },
-      goals: {
-        version: 1,
-        goals: [
-          expect.objectContaining({ id: 'goal-backup' }),
-        ],
-      },
-      achievements: {
-        earnedAchievements: [
-          {
-            id: 'first-session',
-            earnedAt: '2026-06-27T18:00:00.000Z',
-          },
-        ],
-      },
-      visualThemes: {
-        activeThemeId: 'endurance',
-        unlockedThemeIds: ['classic', 'endurance'],
-      },
-      weeklyMissions: {
-        completedWeeks: [
-          {
-            weekStart: '2026-06-22',
-            completedAt: '2026-06-27T19:00:00.000Z',
-          },
-        ],
-      },
-    });
-
-    for (const key of rewardStorageKeys) {
-      window.localStorage.removeItem(key);
-    }
+    ]);
+    expect(envelope.data.unlockedVisualThemes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'classic' }),
+        expect.objectContaining({ id: 'endurance' }),
+      ]),
+    );
+    expect(envelope.data.visualThemePreferences).toEqual([
+      expect.objectContaining({ activeThemeId: 'endurance' }),
+    ]);
+    expect(envelope.data.weeklyMissionCompletions).toEqual([
+      expect.objectContaining({
+        id: 'weekly-mission:2026-06-22',
+      }),
+    ]);
+    expect(envelope.data.routineReminderCompletions).toEqual([
+      expect.objectContaining({
+        id: 'routine-reminder:2026-06-27:weighIn',
+      }),
+    ]);
 
     await replaceDatabaseFromBackup(envelope, database);
 
-    expect(readAchievementState().earnedAchievements).toHaveLength(
-      1,
-    );
+    expect(readAchievementState().earnedAchievements).toHaveLength(1);
     expect(readVisualThemeState().activeThemeId).toBe('endurance');
     expect(
       readWeeklyMissionHistoryState().completedWeeks,
     ).toHaveLength(1);
-    expect(await database.earnedAchievements.count()).toBe(1);
-    expect(await database.unlockedVisualThemes.count()).toBe(2);
-    expect(await database.weeklyMissionCompletions.count()).toBe(1);
+    expect(
+      readRoutineReminderCompletionState().completions,
+    ).toHaveLength(1);
     expect(await database.goals.get('goal-backup')).toBeDefined();
     expect(
       await database.endurancePlanningSessions.get(
@@ -184,7 +183,7 @@ describe('sauvegarde des récompenses', () => {
     ).toBeDefined();
   });
 
-  it('migre une sauvegarde v2 sans effacer les récompenses locales', async () => {
+  it('migre une sauvegarde v2 sans effacer les états absents', async () => {
     unlockVisualThemes(['power']);
     activateVisualTheme('power');
 
@@ -195,14 +194,18 @@ describe('sauvegarde des récompenses', () => {
     const versionTwoEnvelope = structuredClone(envelope);
 
     versionTwoEnvelope.schemaVersion = 2;
+    delete versionTwoEnvelope.includedUserStateTables;
     delete versionTwoEnvelope.rewardState;
+    for (const tableName of BACKUP_USER_STATE_TABLE_NAMES) {
+      delete versionTwoEnvelope.data[tableName as keyof BackupData];
+    }
 
     const parsed = parseBackupText(
       serializeBackupEnvelope(versionTwoEnvelope),
     );
 
-    expect(parsed.schemaVersion).toBe(4);
-    expect(parsed.rewardState).toBeUndefined();
+    expect(parsed.schemaVersion).toBe(5);
+    expect(parsed.includedUserStateTables).toEqual([]);
 
     await replaceDatabaseFromBackup(parsed, database);
 

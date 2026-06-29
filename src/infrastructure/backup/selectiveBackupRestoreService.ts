@@ -1,23 +1,23 @@
 import { ensureExerciseCatalog } from '@/application/strength/exerciseCatalogSeeder';
 import { normalizeAppSettings } from '@/domain/defaults/appSettings';
-import type {
-  BackupData,
-  BackupEnvelope,
+import {
+  BACKUP_USER_STATE_TABLE_NAMES,
+  type BackupData,
+  type BackupEnvelope,
+  type BackupUserStateTableName,
 } from '@/domain/models/backup';
 import type { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import {
+  allUserDataTableList,
   BackupOperationError,
   parseBackupTextWithMetadata,
   readBackupData,
+  replaceIncludedUserStateTables,
   summarizeBackup,
-  tableList,
   type BackupSummary,
 } from '@/infrastructure/backup/backupService';
-import {
-  readRewardBackupState,
-  restoreRewardBackupState,
-} from '@/infrastructure/backup/rewardBackupState';
 import { appDatabase } from '@/infrastructure/database/database';
+import { reloadUserStateRuntime } from '@/infrastructure/user-state/userStateRuntime';
 
 export type SelectiveRestoreCategory =
   | 'profileSettings'
@@ -85,9 +85,9 @@ export const SELECTIVE_RESTORE_CATEGORY_DEFINITIONS: readonly SelectiveRestoreCa
     },
     {
       key: 'rewards',
-      label: 'Récompenses et thèmes',
+      label: 'Objectifs et progression',
       description:
-        'Badges, thèmes débloqués et historique des missions hebdomadaires.',
+        'Objectifs, planning, badges, thèmes, missions et rappels terminés.',
     },
   ];
 
@@ -128,6 +128,17 @@ function countCategoryRecords(
   }
 }
 
+function countUserStateRecords(
+  data: BackupData,
+  tableNames: readonly BackupUserStateTableName[],
+): number {
+  return tableNames.reduce(
+    (total, tableName) =>
+      total + (data[tableName]?.length ?? 0),
+    0,
+  );
+}
+
 export function createSelectiveRestorePreview(
   currentData: BackupData,
   envelope: BackupEnvelope,
@@ -139,12 +150,20 @@ export function createSelectiveRestorePreview(
     categories: SELECTIVE_RESTORE_CATEGORY_DEFINITIONS.map(
       (definition) => {
         if (definition.key === 'rewards') {
+          const incomingTables =
+            envelope.includedUserStateTables ?? [];
+
           return {
             ...definition,
-            currentRecords: 1,
-            incomingRecords:
-              envelope.rewardState === undefined ? 0 : 1,
-            available: envelope.rewardState !== undefined,
+            currentRecords: countUserStateRecords(
+              currentData,
+              BACKUP_USER_STATE_TABLE_NAMES,
+            ),
+            incomingRecords: countUserStateRecords(
+              envelope.data,
+              incomingTables,
+            ),
+            available: incomingTables.length > 0,
           };
         }
 
@@ -337,7 +356,10 @@ function restoredRecordCount(
 
   for (const category of categories) {
     if (category === 'rewards') {
-      total += envelope.rewardState === undefined ? 0 : 1;
+      total += countUserStateRecords(
+        envelope.data,
+        envelope.includedUserStateTables ?? [],
+      );
     } else {
       total += countCategoryRecords(
         envelope.data,
@@ -375,62 +397,42 @@ export async function applySelectiveBackupRestore(
     );
   }
 
-  const previousRewards = selected.has('rewards')
-    ? readRewardBackupState()
-    : undefined;
-
   try {
-    if (selected.has('rewards')) {
-      const rewardState = prepared.envelope.rewardState;
-      if (!rewardState) {
-        throw new BackupOperationError(
-          'Cette sauvegarde ne contient pas de progression de récompenses.',
-        );
-      }
-      await restoreRewardBackupState(rewardState, database);
-    }
+    await database.transaction(
+      'rw',
+      allUserDataTableList(database),
+      async () => {
+        const { data } = prepared.envelope;
 
-    const hasDatabaseSelection = [...selected].some(
-      (category) => category !== 'rewards',
+        if (selected.has('profileSettings')) {
+          await replaceProfileSettings(database, data);
+        }
+        if (selected.has('bodyTracking')) {
+          await replaceBodyTracking(database, data);
+        }
+        if (selected.has('activities')) {
+          await replaceActivities(database, data);
+        }
+        if (selected.has('nutrition')) {
+          await replaceNutrition(database, data);
+        }
+        if (selected.has('strength')) {
+          await replaceStrength(database, data);
+        }
+        if (selected.has('rewards')) {
+          await replaceIncludedUserStateTables(
+            database,
+            data,
+            prepared.envelope.includedUserStateTables ?? [],
+          );
+        }
+      },
     );
 
-    if (hasDatabaseSelection) {
-      await database.transaction(
-        'rw',
-        tableList(database),
-        async () => {
-          const { data } = prepared.envelope;
-
-          if (selected.has('profileSettings')) {
-            await replaceProfileSettings(database, data);
-          }
-          if (selected.has('bodyTracking')) {
-            await replaceBodyTracking(database, data);
-          }
-          if (selected.has('activities')) {
-            await replaceActivities(database, data);
-          }
-          if (selected.has('nutrition')) {
-            await replaceNutrition(database, data);
-          }
-          if (selected.has('strength')) {
-            await replaceStrength(database, data);
-          }
-        },
-      );
+    if (selected.has('rewards')) {
+      await reloadUserStateRuntime(database);
     }
   } catch (error) {
-    if (previousRewards) {
-      try {
-        await restoreRewardBackupState(
-          previousRewards,
-          database,
-        );
-      } catch {
-        // La sauvegarde JSON téléchargée reste le point de retour fiable.
-      }
-    }
-
     if (error instanceof BackupOperationError) {
       throw error;
     }

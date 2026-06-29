@@ -1,16 +1,14 @@
-import { createDefaultAppSettings } from '@/domain/defaults/appSettings';
-import type {
-  BackupData,
-  BackupEnvelope,
-} from '@/domain/models/backup';
-import { AppDatabase } from '@/infrastructure/database/AppDatabase';
-import { initializeDatabase } from '@/infrastructure/database/databaseLifecycle';
+import { createDefaultAppSettings } from "@/domain/defaults/appSettings";
+import type { BackupData, BackupEnvelope } from "@/domain/models/backup";
+import { AppDatabase } from "@/infrastructure/database/AppDatabase";
+import { initializeDatabase } from "@/infrastructure/database/databaseLifecycle";
+import { readBackupData } from "@/infrastructure/backup/backupService";
 import {
   applySelectiveBackupRestore,
   createSelectiveRestorePreview,
   type PreparedSelectiveBackupRestore,
-} from '@/infrastructure/backup/selectiveBackupRestoreService';
-import { createEntity } from '@/shared/utils/entities';
+} from "@/infrastructure/backup/selectiveBackupRestoreService";
+import { createEntity } from "@/shared/utils/entities";
 
 function emptyData(): BackupData {
   return {
@@ -39,14 +37,12 @@ function emptyData(): BackupData {
   };
 }
 
-function createEnvelope(
-  data: BackupData,
-): BackupEnvelope {
+function createEnvelope(data: BackupData): BackupEnvelope {
   return {
-    format: 'sportpilot-backup',
+    format: "sportpilot-backup",
     schemaVersion: 3,
-    exportedAt: '2026-06-28T16:00:00.000Z',
-    appVersion: '0.16.0',
+    exportedAt: "2026-06-28T16:00:00.000Z",
+    appVersion: "0.16.0",
     data,
   };
 }
@@ -54,32 +50,20 @@ function createEnvelope(
 function createPrepared(
   envelope: BackupEnvelope,
 ): PreparedSelectiveBackupRestore {
-  return createSelectiveRestorePreview(
-    emptyData(),
-    envelope,
-  );
+  return createSelectiveRestorePreview(emptyData(), envelope);
 }
 
-describe('selectiveBackupRestoreService', () => {
-  it('compare les compteurs locaux et entrants par domaine', () => {
+describe("selectiveBackupRestoreService", () => {
+  it("compare les compteurs locaux et entrants par domaine", () => {
     const current = emptyData();
     current.weights = [
-      createEntity(
-        { date: '2026-06-01', weightKg: 80 },
-        'weight-current',
-      ),
+      createEntity({ date: "2026-06-01", weightKg: 80 }, "weight-current"),
     ];
 
     const incoming = emptyData();
     incoming.weights = [
-      createEntity(
-        { date: '2026-06-20', weightKg: 79 },
-        'weight-1',
-      ),
-      createEntity(
-        { date: '2026-06-28', weightKg: 78.5 },
-        'weight-2',
-      ),
+      createEntity({ date: "2026-06-20", weightKg: 79 }, "weight-1"),
+      createEntity({ date: "2026-06-28", weightKg: 78.5 }, "weight-2"),
     ];
 
     const preview = createSelectiveRestorePreview(
@@ -88,9 +72,7 @@ describe('selectiveBackupRestoreService', () => {
     );
 
     expect(
-      preview.categories.find(
-        ({ key }) => key === 'bodyTracking',
-      ),
+      preview.categories.find(({ key }) => key === "bodyTracking"),
     ).toEqual(
       expect.objectContaining({
         currentRecords: 1,
@@ -99,11 +81,7 @@ describe('selectiveBackupRestoreService', () => {
       }),
     );
 
-    expect(
-      preview.categories.find(
-        ({ key }) => key === 'rewards',
-      ),
-    ).toEqual(
+    expect(preview.categories.find(({ key }) => key === "rewards")).toEqual(
       expect.objectContaining({
         incomingRecords: 0,
         available: false,
@@ -111,7 +89,7 @@ describe('selectiveBackupRestoreService', () => {
     );
   });
 
-  it('remplace uniquement le domaine sélectionné', async () => {
+  it("remplace uniquement le domaine sélectionné", async () => {
     const database = new AppDatabase(
       `sportpilot-selective-restore-${crypto.randomUUID()}`,
     );
@@ -119,74 +97,162 @@ describe('selectiveBackupRestoreService', () => {
 
     try {
       await database.weights.add(
-        createEntity(
-          { date: '2026-06-01', weightKg: 80 },
-          'weight-old',
-        ),
+        createEntity({ date: "2026-06-01", weightKg: 80 }, "weight-old"),
       );
       await database.dailySteps.add(
         createEntity(
           {
-            date: '2026-06-01',
+            date: "2026-06-01",
             totalSteps: 4_000,
-            source: 'manual' as const,
+            source: "manual" as const,
           },
-          'steps-old',
+          "steps-old",
         ),
       );
 
       const incoming = emptyData();
       incoming.weights = [
-        createEntity(
-          { date: '2026-06-28', weightKg: 78.5 },
-          'weight-new',
-        ),
+        createEntity({ date: "2026-06-28", weightKg: 78.5 }, "weight-new"),
       ];
 
       const envelope = createEnvelope(incoming);
       const prepared = createPrepared(envelope);
 
-      await applySelectiveBackupRestore(
-        prepared,
-        ['bodyTracking'],
-        database,
-      );
+      await applySelectiveBackupRestore(prepared, ["bodyTracking"], database);
 
       expect(await database.weights.toArray()).toEqual([
         expect.objectContaining({
-          id: 'weight-new',
+          id: "weight-new",
           weightKg: 78.5,
         }),
       ]);
       expect(await database.dailySteps.count()).toBe(0);
       expect(await database.appSettings.count()).toBe(1);
-      expect(
-        await database.exerciseDefinitions.count(),
-      ).toBeGreaterThan(0);
+      expect(await database.exerciseDefinitions.count()).toBeGreaterThan(0);
     } finally {
       database.close();
       await database.delete();
     }
   });
 
-  it('refuse une sélection vide ou indisponible', async () => {
-    const prepared = createPrepared(
-      createEnvelope(emptyData()),
+  it("restaure les états utilisateur sans toucher aux données métier", async () => {
+    const database = new AppDatabase(
+      `sportpilot-selective-user-state-${crypto.randomUUID()}`,
     );
+    await initializeDatabase(database);
 
-    await expect(
-      applySelectiveBackupRestore(prepared, []),
-    ).rejects.toThrow(
-      'Sélectionne au moins un domaine',
-    );
+    try {
+      await database.weights.add(
+        createEntity({ date: "2026-06-01", weightKg: 80 }, "weight-preserved"),
+      );
+      await database.earnedAchievements.add({
+        id: "first-session",
+        earnedAt: "2026-06-01T08:00:00.000Z",
+        updatedAt: "2026-06-01T08:00:00.000Z",
+      });
 
-    await expect(
-      applySelectiveBackupRestore(
+      const incoming = emptyData();
+      incoming.goals = [];
+      incoming.endurancePlanningSessions = [];
+      incoming.earnedAchievements = [
+        {
+          id: "ten-sessions",
+          earnedAt: "2026-06-28T08:00:00.000Z",
+          updatedAt: "2026-06-28T08:00:00.000Z",
+        },
+      ];
+      incoming.unlockedVisualThemes = [
+        {
+          id: "classic",
+          unlockedAt: "2026-06-01T08:00:00.000Z",
+          updatedAt: "2026-06-01T08:00:00.000Z",
+        },
+        {
+          id: "endurance",
+          unlockedAt: "2026-06-28T08:00:00.000Z",
+          updatedAt: "2026-06-28T08:00:00.000Z",
+        },
+      ];
+      incoming.visualThemePreferences = [
+        {
+          id: "visual-theme-preference",
+          activeThemeId: "endurance",
+          updatedAt: "2026-06-28T08:00:00.000Z",
+        },
+      ];
+      incoming.weeklyMissionCompletions = [
+        {
+          id: "weekly-mission:2026-06-22",
+          weekStart: "2026-06-22",
+          completedAt: "2026-06-28T09:00:00.000Z",
+          updatedAt: "2026-06-28T09:00:00.000Z",
+        },
+      ];
+      incoming.routineReminderCompletions = [
+        {
+          id: "routine-reminder:2026-06-28:weighIn",
+          date: "2026-06-28",
+          type: "weighIn",
+          completedAt: "2026-06-28T09:30:00.000Z",
+          updatedAt: "2026-06-28T09:30:00.000Z",
+        },
+      ];
+
+      const envelope: BackupEnvelope = {
+        format: "sportpilot-backup",
+        schemaVersion: 5,
+        exportedAt: "2026-06-28T10:00:00.000Z",
+        appVersion: "0.16.0",
+        includedUserStateTables: [
+          "goals",
+          "endurancePlanningSessions",
+          "earnedAchievements",
+          "unlockedVisualThemes",
+          "visualThemePreferences",
+          "weeklyMissionCompletions",
+          "routineReminderCompletions",
+        ],
+        data: incoming,
+      };
+      const prepared = createSelectiveRestorePreview(
+        await readBackupData(database),
+        envelope,
+      );
+
+      const result = await applySelectiveBackupRestore(
         prepared,
-        ['rewards'],
-      ),
-    ).rejects.toThrow(
-      'La sauvegarde ne contient pas',
+        ["rewards"],
+        database,
+      );
+
+      expect(result.restoredRecordCount).toBe(6);
+      expect(await database.weights.get("weight-preserved")).toBeDefined();
+      expect(await database.earnedAchievements.toArray()).toEqual([
+        expect.objectContaining({ id: "ten-sessions" }),
+      ]);
+      expect(await database.routineReminderCompletions.toArray()).toEqual([
+        expect.objectContaining({
+          id: "routine-reminder:2026-06-28:weighIn",
+        }),
+      ]);
+      expect(await database.visualThemePreferences.toArray()).toEqual([
+        expect.objectContaining({ activeThemeId: "endurance" }),
+      ]);
+    } finally {
+      database.close();
+      await database.delete();
+    }
+  });
+
+  it("refuse une sélection vide ou indisponible", async () => {
+    const prepared = createPrepared(createEnvelope(emptyData()));
+
+    await expect(applySelectiveBackupRestore(prepared, [])).rejects.toThrow(
+      "Sélectionne au moins un domaine",
     );
+
+    await expect(
+      applySelectiveBackupRestore(prepared, ["rewards"]),
+    ).rejects.toThrow("La sauvegarde ne contient pas");
   });
 });
