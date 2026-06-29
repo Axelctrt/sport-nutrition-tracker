@@ -30,6 +30,7 @@ export const databaseTableNames = [
   'visualThemePreferences',
   'weeklyMissionCompletions',
   'routineReminderCompletions',
+  'deletionRecords',
 ] as const;
 
 export const databaseInternalTableNames = [
@@ -123,4 +124,11 @@ export const schemaVersion7 = {
   appSettings: null,
   userSettings: 'id, updatedAt',
   deviceSettings: 'id, &deviceId, updatedAt',
+} as const;
+
+
+export const schemaVersion8 = {
+  ...schemaVersion7,
+  deletionRecords:
+    'id, entityType, entityId, status, deletedAt, restoredAt, updatedAt, [entityType+entityId]',
 } as const;

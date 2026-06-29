@@ -16,7 +16,7 @@ import { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import { initializeDatabase } from '@/infrastructure/database/databaseLifecycle';
 import {
   DATABASE_VERSION_4,
-  DATABASE_VERSION_7,
+  DATABASE_VERSION_8,
 } from '@/infrastructure/database/migrations/versions';
 import { schemaVersion4 } from '@/infrastructure/database/schema';
 
@@ -53,10 +53,10 @@ const planning: EndurancePlanningState = {
   ],
 };
 
-describe('migration v4 vers v7 des états utilisateur', () => {
+describe('migration v4 vers v8 des états utilisateur', () => {
   it('ajoute les tables et déplace les snapshots localStorage au démarrage', async () => {
     const databaseName =
-      `sportpilot-v7-user-state-${crypto.randomUUID()}`;
+      `sportpilot-v8-user-state-${crypto.randomUUID()}`;
     const oldDatabase = new Dexie(databaseName);
     let upgradedDatabase: AppDatabase | undefined;
 
@@ -124,7 +124,7 @@ describe('migration v4 vers v7 des états utilisateur', () => {
       upgradedDatabase = new AppDatabase(databaseName);
       await initializeDatabase(upgradedDatabase);
 
-      expect(upgradedDatabase.verno).toBe(DATABASE_VERSION_7);
+      expect(upgradedDatabase.verno).toBe(DATABASE_VERSION_8);
       expect(await upgradedDatabase.goals.toArray()).toEqual(
         goals.goals,
       );

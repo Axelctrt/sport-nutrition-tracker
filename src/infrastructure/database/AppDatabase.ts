@@ -1,6 +1,7 @@
 import Dexie, { type Table } from "dexie";
 
 import type { Activity } from "@/domain/models/activity";
+import type { DeletionRecord } from '@/domain/models/deletion';
 import type { Goal } from '@/domain/goals/goalState';
 import type { PlannedEnduranceSession } from '@/domain/planning/endurancePlanningState';
 import type { EntityId } from "@/domain/models/common";
@@ -49,6 +50,7 @@ import { registerVersion4 } from '@/infrastructure/database/migrations/version4'
 import { registerVersion5 } from '@/infrastructure/database/migrations/version5';
 import { registerVersion6 } from '@/infrastructure/database/migrations/version6';
 import { registerVersion7 } from '@/infrastructure/database/migrations/version7';
+import { registerVersion8 } from '@/infrastructure/database/migrations/version8';
 
 export const DEFAULT_DATABASE_NAME = "sportpilot-local-database";
 
@@ -96,6 +98,7 @@ export class AppDatabase extends Dexie {
     RoutineReminderCompletionRecord,
     EntityId
   >;
+  declare deletionRecords: Table<DeletionRecord, EntityId>;
   declare migrationJournal: Table<MigrationJournalEntry, string>;
   declare databaseDiagnostics: Table<DatabaseIntegrityReport, string>;
 
@@ -111,5 +114,6 @@ export class AppDatabase extends Dexie {
     registerVersion5(this);
     registerVersion6(this);
     registerVersion7(this);
+    registerVersion8(this);
   }
 }

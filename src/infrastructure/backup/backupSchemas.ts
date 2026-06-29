@@ -1,4 +1,8 @@
 import { z } from 'zod';
+import {
+  DELETION_ENTITY_TYPES,
+  deletionRecordId,
+} from '@/domain/models/deletion';
 import { normalizeRoutineReminderPreferences } from '@/domain/reminders/routineReminder';
 import { DEFAULT_ENDURANCE_TEMPLATES } from '@/domain/defaults/appSettings';
 import {
@@ -768,6 +772,16 @@ const routineReminderCompletionRecordSchema = z.object({
   updatedAt: isoDateTimeSchema,
 });
 
+const deletionEntityTypeSchema = z.enum(DELETION_ENTITY_TYPES);
+
+const deletionRecordSchema = entityMetadataSchema.extend({
+  entityType: deletionEntityTypeSchema,
+  entityId: z.string().min(1),
+  status: z.enum(['deleted', 'restored']),
+  deletedAt: isoDateTimeSchema,
+  restoredAt: isoDateTimeSchema.optional(),
+});
+
 const backupUserStateTableNameSchema = z.enum(
   BACKUP_USER_STATE_TABLE_NAMES,
 );
@@ -814,6 +828,7 @@ const backupDataSchema = z.object({
   routineReminderCompletions: z
     .array(routineReminderCompletionRecordSchema)
     .optional(),
+  deletionRecords: z.array(deletionRecordSchema).optional(),
 });
 
 function addDuplicateIssues<T>(
@@ -991,6 +1006,7 @@ export const backupEnvelopeSchema = z.object({
       'routineReminderCompletions',
       data.routineReminderCompletions ?? [],
     ],
+    ['deletionRecords', data.deletionRecords ?? []],
   ];
 
   for (const [name, values] of collections) {
@@ -1068,6 +1084,37 @@ export const backupEnvelopeSchema = z.object({
       }
     },
   );
+
+  (data.deletionRecords ?? []).forEach((record, index) => {
+    if (
+      record.id !==
+      deletionRecordId(record.entityType, record.entityId)
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['data', 'deletionRecords', index, 'id'],
+        message: 'L’identifiant du marqueur de suppression est invalide.',
+      });
+    }
+
+    if (record.status === 'restored' && !record.restoredAt) {
+      context.addIssue({
+        code: 'custom',
+        path: ['data', 'deletionRecords', index, 'restoredAt'],
+        message:
+          'Un marqueur restauré doit contenir sa date de restauration.',
+      });
+    }
+
+    if (record.status === 'deleted' && record.restoredAt) {
+      context.addIssue({
+        code: 'custom',
+        path: ['data', 'deletionRecords', index, 'restoredAt'],
+        message:
+          'Un marqueur supprimé ne doit pas contenir de date de restauration.',
+      });
+    }
+  });
 
   const unlockedThemeIds = new Set(
     (data.unlockedVisualThemes ?? []).map(({ id }) => id),

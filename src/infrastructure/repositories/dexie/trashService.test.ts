@@ -62,11 +62,33 @@ describe('trashService', () => {
     expect(trashed?.entityType).toBe('activity');
     expect(await database.activities.count()).toBe(0);
     expect(await database.trashItems.count()).toBe(1);
+    expect(
+      await database.deletionRecords.get(
+        'deletion:activity:activity-1',
+      ),
+    ).toMatchObject({
+      status: 'deleted',
+      deletedAt: '2026-06-28T10:00:00.000Z',
+    });
 
-    await restoreTrashItem(database, trashed!.id);
+    await restoreTrashItem(
+      database,
+      trashed!.id,
+      new Date('2026-06-28T10:05:00.000Z'),
+    );
 
     expect(await database.activities.get(activity.id)).toEqual(activity);
     expect(await database.trashItems.count()).toBe(0);
+    expect(
+      await database.deletionRecords.get(
+        'deletion:activity:activity-1',
+      ),
+    ).toMatchObject({
+      status: 'restored',
+      deletedAt: '2026-06-28T10:00:00.000Z',
+      restoredAt: '2026-06-28T10:05:00.000Z',
+      updatedAt: '2026-06-28T10:05:00.000Z',
+    });
   });
 
   it('déplace une pesée et refuse une restauration qui écraserait la même date', async () => {
@@ -183,11 +205,24 @@ describe('trashService', () => {
     expect(await database.meals.count()).toBe(0);
     expect(await database.foodEntries.count()).toBe(0);
     expect(trashed?.entityType).toBe('meal');
+    expect(
+      (await database.deletionRecords.toArray()).map(({ id }) => id),
+    ).toEqual(
+      expect.arrayContaining([
+        `deletion:meal:${meal.id}`,
+        `deletion:foodEntry:${entry.id}`,
+      ]),
+    );
 
     await restoreTrashItem(database, trashed!.id);
 
     expect(await database.meals.get(meal.id)).toEqual(meal);
     expect(await database.foodEntries.get(entry.id)).toEqual(entry);
+    expect(
+      (await database.deletionRecords.toArray()).every(
+        ({ status }) => status === 'restored',
+      ),
+    ).toBe(true);
   });
 
   it('déplace puis restaure un repas favori', async () => {
@@ -272,6 +307,13 @@ describe('trashService', () => {
 
     expect(await database.activities.get(activity.id)).toBeUndefined();
     expect(await database.trashItems.count()).toBe(0);
+    expect(
+      await database.deletionRecords.get(
+        `deletion:activity:${activity.id}`,
+      ),
+    ).toMatchObject({
+      status: 'deleted',
+    });
   });
 
   it('purge uniquement les éléments arrivés à expiration', async () => {

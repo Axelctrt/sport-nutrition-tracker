@@ -1,7 +1,7 @@
 import { ensureExerciseCatalog } from '@/application/strength/exerciseCatalogSeeder';
 import { normalizeUserSettings } from '@/domain/defaults/appSettings';
+import type { DeletionEntityType } from '@/domain/models/deletion';
 import {
-  BACKUP_USER_STATE_TABLE_NAMES,
   type BackupData,
   type BackupEnvelope,
   type BackupUserStateTableName,
@@ -54,6 +54,57 @@ export interface SelectiveBackupRestoreResult {
   restoredRecordCount: number;
 }
 
+const REWARD_USER_STATE_TABLE_NAMES = [
+  'goals',
+  'endurancePlanningSessions',
+  'earnedAchievements',
+  'unlockedVisualThemes',
+  'visualThemePreferences',
+  'weeklyMissionCompletions',
+  'routineReminderCompletions',
+] as const satisfies readonly BackupUserStateTableName[];
+
+const DELETION_ENTITY_TYPES_BY_CATEGORY: Partial<
+  Record<SelectiveRestoreCategory, readonly DeletionEntityType[]>
+> = {
+  bodyTracking: ['weight'],
+  activities: ['activity'],
+  nutrition: [
+    'foodEntry',
+    'meal',
+    'favoriteMeal',
+    'recipe',
+    'recipeIngredient',
+  ],
+  strength: ['strengthSet', 'workoutSessionExercise'],
+};
+
+function deletionEntityTypesForCategories(
+  categories: ReadonlySet<SelectiveRestoreCategory>,
+): DeletionEntityType[] {
+  const types = new Set<DeletionEntityType>();
+
+  for (const category of categories) {
+    for (const entityType of
+      DELETION_ENTITY_TYPES_BY_CATEGORY[category] ?? []) {
+      types.add(entityType);
+    }
+  }
+
+  return [...types];
+}
+
+function countDeletionRecords(
+  data: BackupData,
+  entityTypes: readonly DeletionEntityType[],
+): number {
+  const allowed = new Set(entityTypes);
+
+  return (data.deletionRecords ?? []).filter(({ entityType }) =>
+    allowed.has(entityType),
+  ).length;
+}
+
 export const SELECTIVE_RESTORE_CATEGORY_DEFINITIONS: readonly SelectiveRestoreCategoryDefinition[] =
   [
     {
@@ -102,9 +153,22 @@ function countCategoryRecords(
     case 'profileSettings':
       return data.userProfile.length + (data.userSettings?.length ?? 0);
     case 'bodyTracking':
-      return data.weights.length + data.dailySteps.length;
+      return (
+        data.weights.length +
+        data.dailySteps.length +
+        countDeletionRecords(
+          data,
+          DELETION_ENTITY_TYPES_BY_CATEGORY.bodyTracking ?? [],
+        )
+      );
     case 'activities':
-      return data.activities.length;
+      return (
+        data.activities.length +
+        countDeletionRecords(
+          data,
+          DELETION_ENTITY_TYPES_BY_CATEGORY.activities ?? [],
+        )
+      );
     case 'nutrition':
       return (
         data.foodProducts.length +
@@ -116,7 +180,11 @@ function countCategoryRecords(
         data.dailyTargets.length +
         data.dailyJournalStatuses.length +
         data.weeklyReviews.length +
-        data.acceptedCalorieAdjustments.length
+        data.acceptedCalorieAdjustments.length +
+        countDeletionRecords(
+          data,
+          DELETION_ENTITY_TYPES_BY_CATEGORY.nutrition ?? [],
+        )
       );
     case 'strength':
       return (
@@ -126,7 +194,11 @@ function countCategoryRecords(
         data.workoutSessions.length +
         data.workoutSessionExercises.length +
         data.strengthSets.length +
-        data.progressionSuggestions.length
+        data.progressionSuggestions.length +
+        countDeletionRecords(
+          data,
+          DELETION_ENTITY_TYPES_BY_CATEGORY.strength ?? [],
+        )
       );
   }
 }
@@ -160,13 +232,17 @@ export function createSelectiveRestorePreview(
             ...definition,
             currentRecords: countUserStateRecords(
               currentData,
-              BACKUP_USER_STATE_TABLE_NAMES,
+              REWARD_USER_STATE_TABLE_NAMES,
             ),
             incomingRecords: countUserStateRecords(
               envelope.data,
-              incomingTables,
+              incomingTables.filter(
+                (tableName) => tableName !== 'deletionRecords',
+              ),
             ),
-            available: incomingTables.length > 0,
+            available: incomingTables.some(
+              (tableName) => tableName !== 'deletionRecords',
+            ),
           };
         }
 
@@ -351,24 +427,60 @@ async function replaceStrength(
   await ensureExerciseCatalog(database);
 }
 
+async function replaceDeletionRecordsForCategories(
+  database: AppDatabase,
+  data: BackupData,
+  categories: ReadonlySet<SelectiveRestoreCategory>,
+  includedTables: ReadonlySet<BackupUserStateTableName>,
+): Promise<void> {
+  if (!includedTables.has('deletionRecords')) return;
+
+  const entityTypes = deletionEntityTypesForCategories(categories);
+  if (entityTypes.length === 0) return;
+
+  await database.deletionRecords
+    .where('entityType')
+    .anyOf(entityTypes)
+    .delete();
+
+  const incoming = (data.deletionRecords ?? []).filter(
+    ({ entityType }) => entityTypes.includes(entityType),
+  );
+
+  if (incoming.length > 0) {
+    await database.deletionRecords.bulkAdd(incoming);
+  }
+}
+
 function restoredRecordCount(
   envelope: BackupEnvelope,
   categories: ReadonlySet<SelectiveRestoreCategory>,
 ): number {
   let total = 0;
 
+  const includedTables = new Set(
+    envelope.includedUserStateTables ?? [],
+  );
+
   for (const category of categories) {
     if (category === 'rewards') {
       total += countUserStateRecords(
         envelope.data,
-        envelope.includedUserStateTables ?? [],
+        REWARD_USER_STATE_TABLE_NAMES.filter((tableName) =>
+          includedTables.has(tableName),
+        ),
       );
-    } else {
-      total += countCategoryRecords(
-        envelope.data,
-        category,
-      );
+      continue;
     }
+
+    total += countCategoryRecords(envelope.data, category);
+  }
+
+  if (!includedTables.has('deletionRecords')) {
+    total -= countDeletionRecords(
+      envelope.data,
+      deletionEntityTypesForCategories(categories),
+    );
   }
 
   return total;
@@ -407,6 +519,9 @@ export async function applySelectiveBackupRestore(
       allUserDataTableList(database),
       async () => {
         const { data } = prepared.envelope;
+        const includedTables = new Set(
+          prepared.envelope.includedUserStateTables ?? [],
+        );
 
         if (selected.has('profileSettings')) {
           await replaceProfileSettings(database, data);
@@ -427,9 +542,18 @@ export async function applySelectiveBackupRestore(
           await replaceIncludedUserStateTables(
             database,
             data,
-            prepared.envelope.includedUserStateTables ?? [],
+            REWARD_USER_STATE_TABLE_NAMES.filter((tableName) =>
+              includedTables.has(tableName),
+            ),
           );
         }
+
+        await replaceDeletionRecordsForCategories(
+          database,
+          data,
+          selected,
+          includedTables,
+        );
       },
     );
 

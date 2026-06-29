@@ -1,4 +1,5 @@
 import type { Activity } from '@/domain/models/activity';
+import type { DeletionRecord } from '@/domain/models/deletion';
 import type { Goal, GoalState } from '@/domain/goals/goalState';
 import type {
   EndurancePlanningState,
@@ -50,6 +51,7 @@ export const BACKUP_USER_STATE_TABLE_NAMES = [
   'visualThemePreferences',
   'weeklyMissionCompletions',
   'routineReminderCompletions',
+  'deletionRecords',
 ] as const;
 
 export type BackupUserStateTableName =
@@ -86,6 +88,7 @@ export interface BackupData {
   visualThemePreferences?: VisualThemePreferenceRecord[];
   weeklyMissionCompletions?: CompletedWeeklyMissionRecord[];
   routineReminderCompletions?: RoutineReminderCompletionRecord[];
+  deletionRecords?: DeletionRecord[];
 }
 
 export interface RewardBackupState {

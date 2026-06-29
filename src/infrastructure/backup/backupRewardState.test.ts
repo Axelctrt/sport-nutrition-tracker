@@ -128,7 +128,7 @@ describe('sauvegarde des états utilisateur', () => {
       '2026-06-27T20:00:00.000Z',
     );
 
-    expect(envelope.schemaVersion).toBe(6);
+    expect(envelope.schemaVersion).toBe(7);
     expect(envelope.rewardState).toBeUndefined();
     expect(envelope.includedUserStateTables).toEqual(
       BACKUP_USER_STATE_TABLE_NAMES,
@@ -207,7 +207,7 @@ describe('sauvegarde des états utilisateur', () => {
       serializeBackupEnvelope(versionTwoEnvelope),
     );
 
-    expect(parsed.schemaVersion).toBe(6);
+    expect(parsed.schemaVersion).toBe(7);
     expect(parsed.includedUserStateTables).toEqual([]);
 
     await replaceDatabaseFromBackup(parsed, database);

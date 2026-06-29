@@ -376,13 +376,39 @@ describe("backupEnvelopeSchema", () => {
       exerciseGroupRestBetweenRoundsSeconds: 90,
     });
   });
+
+  it("valide les marqueurs de suppression déterministes", () => {
+    const envelope = migrateBackupEnvelope(createValidEnvelope());
+    envelope.includedUserStateTables = [
+      ...(envelope.includedUserStateTables ?? []),
+      "deletionRecords",
+    ];
+    envelope.data.deletionRecords = [
+      {
+        id: "deletion:recipe:recipe-deleted",
+        entityType: "recipe",
+        entityId: "recipe-deleted",
+        status: "deleted",
+        deletedAt: "2026-06-29T10:00:00.000Z",
+        createdAt: "2026-06-29T10:00:00.000Z",
+        updatedAt: "2026-06-29T10:00:00.000Z",
+      },
+    ];
+
+    expect(backupEnvelopeSchema.parse(envelope).data.deletionRecords).toEqual(
+      envelope.data.deletionRecords,
+    );
+
+    envelope.data.deletionRecords[0]!.id = "invalid";
+    expect(backupEnvelopeSchema.safeParse(envelope).success).toBe(false);
+  });
 });
 
 describe("migrateBackupEnvelope", () => {
-  it("migre une sauvegarde version 1 vers la version 6 sans altérer ses données", () => {
+  it("migre une sauvegarde version 1 vers la version 7 sans altérer ses données", () => {
     const migrated = migrateBackupEnvelope(createVersion1Envelope());
 
-    expect(migrated.schemaVersion).toBe(6);
+    expect(migrated.schemaVersion).toBe(7);
     expect(migrated.data.userProfile).toHaveLength(1);
     expect(migrated.data.exerciseDefinitions).toEqual([]);
     expect(migrated.data.userSettings?.[0]?.id).toBe('user-settings');
@@ -392,8 +418,8 @@ describe("migrateBackupEnvelope", () => {
     expect(migrated.data.strengthSets).toEqual([]);
   });
 
-  it("migre directement la version 2 vers la version 6", () => {
-    expect(migrateBackupEnvelope(createValidEnvelope()).schemaVersion).toBe(6);
+  it("migre directement la version 2 vers la version 7", () => {
+    expect(migrateBackupEnvelope(createValidEnvelope()).schemaVersion).toBe(7);
   });
 
   it("convertit le rewardState v4 en tables utilisateur couvertes explicitement", () => {
@@ -426,7 +452,7 @@ describe("migrateBackupEnvelope", () => {
 
     const migrated = migrateBackupEnvelope(legacy);
 
-    expect(migrated.schemaVersion).toBe(6);
+    expect(migrated.schemaVersion).toBe(7);
     expect(migrated.rewardState).toBeUndefined();
     expect(migrated.includedUserStateTables).toEqual([
       "earnedAchievements",
@@ -453,6 +479,7 @@ describe("migrateBackupEnvelope", () => {
       }),
     ]);
     expect(migrated.data.routineReminderCompletions).toEqual([]);
+    expect(migrated.data.deletionRecords).toEqual([]);
   });
 
   it("refuse une sauvegarde créée par une version future", () => {

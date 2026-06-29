@@ -244,6 +244,99 @@ describe("selectiveBackupRestoreService", () => {
     }
   });
 
+  it("remplace uniquement les marqueurs de suppression du domaine restauré", async () => {
+    const database = new AppDatabase(
+      `sportpilot-selective-deletions-${crypto.randomUUID()}`,
+    );
+    await initializeDatabase(database);
+
+    try {
+      await database.deletionRecords.bulkAdd([
+        {
+          id: "deletion:activity:activity-old",
+          entityType: "activity",
+          entityId: "activity-old",
+          status: "deleted",
+          deletedAt: "2026-06-01T08:00:00.000Z",
+          createdAt: "2026-06-01T08:00:00.000Z",
+          updatedAt: "2026-06-01T08:00:00.000Z",
+        },
+        {
+          id: "deletion:recipe:recipe-preserved",
+          entityType: "recipe",
+          entityId: "recipe-preserved",
+          status: "deleted",
+          deletedAt: "2026-06-01T09:00:00.000Z",
+          createdAt: "2026-06-01T09:00:00.000Z",
+          updatedAt: "2026-06-01T09:00:00.000Z",
+        },
+      ]);
+
+      const incoming = emptyData();
+      incoming.deletionRecords = [
+        {
+          id: "deletion:activity:activity-new",
+          entityType: "activity",
+          entityId: "activity-new",
+          status: "deleted",
+          deletedAt: "2026-06-28T08:00:00.000Z",
+          createdAt: "2026-06-28T08:00:00.000Z",
+          updatedAt: "2026-06-28T08:00:00.000Z",
+        },
+        {
+          id: "deletion:recipe:recipe-incoming",
+          entityType: "recipe",
+          entityId: "recipe-incoming",
+          status: "deleted",
+          deletedAt: "2026-06-28T09:00:00.000Z",
+          createdAt: "2026-06-28T09:00:00.000Z",
+          updatedAt: "2026-06-28T09:00:00.000Z",
+        },
+      ];
+
+      const envelope: BackupEnvelope = {
+        format: "sportpilot-backup",
+        schemaVersion: 7,
+        exportedAt: "2026-06-28T10:00:00.000Z",
+        appVersion: "0.16.0",
+        includedUserStateTables: ["deletionRecords"],
+        data: incoming,
+      };
+      const prepared = createSelectiveRestorePreview(
+        await readBackupData(database),
+        envelope,
+      );
+
+      await applySelectiveBackupRestore(
+        prepared,
+        ["activities"],
+        database,
+      );
+
+      expect(
+        (await database.deletionRecords.toArray()).map(({ id }) => id),
+      ).toEqual(
+        expect.arrayContaining([
+          "deletion:activity:activity-new",
+          "deletion:recipe:recipe-preserved",
+        ]),
+      );
+      expect(
+        await database.deletionRecords.get(
+          "deletion:activity:activity-old",
+        ),
+      ).toBeUndefined();
+      expect(
+        await database.deletionRecords.get(
+          "deletion:recipe:recipe-incoming",
+        ),
+      ).toBeUndefined();
+    } finally {
+      database.close();
+      await database.delete();
+    }
+  });
+
   it("refuse une sélection vide ou indisponible", async () => {
     const prepared = createPrepared(createEnvelope(emptyData()));
 

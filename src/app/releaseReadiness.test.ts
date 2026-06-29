@@ -17,8 +17,8 @@ describe('préparation de la version stable 0.16.0', () => {
   });
 
   it('conserve les versions de schéma attendues', () => {
-    expect(databaseSchemaVersion).toBe(7);
-    expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(6);
+    expect(databaseSchemaVersion).toBe(8);
+    expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(7);
     expect(databaseTableNames).toEqual(
       expect.arrayContaining([
         'userProfile',
@@ -26,6 +26,7 @@ describe('préparation de la version stable 0.16.0', () => {
         'weights',
         'foodEntries',
         'workoutSessions',
+        'deletionRecords',
       ]),
     );
   });

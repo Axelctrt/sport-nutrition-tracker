@@ -95,6 +95,7 @@ export function userStateTableList(database: AppDatabase) {
     database.visualThemePreferences,
     database.weeklyMissionCompletions,
     database.routineReminderCompletions,
+    database.deletionRecords,
   ] as const;
 }
 
@@ -138,6 +139,7 @@ export async function readBackupData(
     visualThemePreferences,
     weeklyMissionCompletions,
     routineReminderCompletions,
+    deletionRecords,
   ] = await Promise.all([
     database.userProfile.toArray(),
     database.userSettings.toArray(),
@@ -168,6 +170,7 @@ export async function readBackupData(
     database.visualThemePreferences.toArray(),
     database.weeklyMissionCompletions.toArray(),
     database.routineReminderCompletions.toArray(),
+    database.deletionRecords.toArray(),
   ]);
 
   return {
@@ -200,6 +203,7 @@ export async function readBackupData(
     visualThemePreferences,
     weeklyMissionCompletions,
     routineReminderCompletions,
+    deletionRecords,
   };
 }
 
@@ -494,6 +498,9 @@ async function clearIncludedUserStateTables(
       case 'routineReminderCompletions':
         await database.routineReminderCompletions.clear();
         break;
+      case 'deletionRecords':
+        await database.deletionRecords.clear();
+        break;
     }
   }
 }
@@ -552,6 +559,14 @@ async function populateIncludedUserStateTables(
   ) {
     await database.routineReminderCompletions.bulkAdd(
       data.routineReminderCompletions ?? [],
+    );
+  }
+  if (
+    included.has('deletionRecords') &&
+    (data.deletionRecords?.length ?? 0) > 0
+  ) {
+    await database.deletionRecords.bulkAdd(
+      data.deletionRecords ?? [],
     );
   }
 }
