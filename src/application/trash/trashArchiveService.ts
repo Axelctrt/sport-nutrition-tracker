@@ -1,6 +1,7 @@
 import type { TrashItem } from '@/domain/models/trash';
 import { TRASH_RETENTION_DAYS } from '@/domain/models/trash';
 import type { AppDatabase } from '@/infrastructure/database/AppDatabase';
+import { persistDeletionRecordsForTrashItem } from '@/infrastructure/repositories/dexie/trashService';
 
 const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1_000;
 
@@ -220,9 +221,18 @@ export async function importTrashArchive(
 
   await database.transaction(
     'rw',
-    database.trashItems,
+    [database.trashItems, database.deletionRecords],
     async () => {
       await database.trashItems.bulkPut(renewedItems);
+
+      for (const item of renewedItems) {
+        await persistDeletionRecordsForTrashItem(
+          database,
+          item,
+          'deleted',
+          item.deletedAt,
+        );
+      }
     },
   );
 

@@ -1,20 +1,23 @@
 # ADR-001 — Choix du fournisseur de synchronisation
 
-- **Statut :** accepté pour prototype
+- **Statut :** accepté pour prototype, non validé pour la production
 - **Date :** 29 juin 2026
+- **Mise à jour d’implémentation :** phase B locale terminée au commit `33eb416`
 - **Décideur :** projet SportPilot
-- **Portée :** prototype uniquement
+- **Portée :** prototype isolé sur les pesées uniquement
 - **Décision :** utiliser Dexie Cloud comme candidat principal
 
 ## 1. Contexte
 
-SportPilot est une PWA React qui fonctionne actuellement sans compte et sans backend.
+Au moment de la décision initiale, SportPilot était une PWA React sans compte ni backend.
 
-Ses données sont conservées dans :
+Ses données étaient conservées dans :
 
 - Dexie / IndexedDB ;
-- quelques états `localStorage` ;
+- quelques états utilisateur dans `localStorage` ;
 - un backup JSON v4.
+
+La section suivante consigne l’état obtenu après la préparation locale.
 
 Le besoin est d’ajouter une synchronisation entre plusieurs appareils tout en maintenant :
 
@@ -31,6 +34,20 @@ Le projet ne recherche pas encore :
 - API publique ;
 - logique serveur complexe ;
 - analytique centralisée.
+
+## 1.1 État après la préparation locale
+
+La phase B a préparé SportPilot sans installer de composant cloud :
+
+- Dexie v8 ;
+- backup JSON v7 ;
+- 30 tables utilisateur et 4 tables internes locales ;
+- états utilisateur migrés vers Dexie ;
+- `userSettings` séparé de `deviceSettings` ;
+- `deletionRecords` synchronisable, `trashItems` local ;
+- anciens backups toujours importables.
+
+Cette mise à jour ne change pas la décision fournisseur. Elle autorise uniquement l’ouverture d’un prototype expérimental sur `weights`. Les conditions commerciales, techniques et d’hébergement devront être revérifiées au démarrage de la phase C.
 
 ## 2. Forces en présence
 
@@ -208,16 +225,21 @@ Avant production :
 
 ### 7.4 Schéma existant
 
-Les contraintes suivantes peuvent nécessiter une phase de préparation significative :
+La phase B a traité :
 
-- états `localStorage` ;
-- tables à unicité par date ;
-- `AppSettings` mixte ;
-- catalogue externe ;
-- catalogue d’exercices fourni ;
-- corbeille ;
-- séance en cours ;
-- tableaux imbriqués.
+- les états utilisateur hérités de `localStorage` ;
+- les IDs déterministes des principales unicités ;
+- la séparation `userSettings` / `deviceSettings` ;
+- les suppressions durables via `deletionRecords` ;
+- la compatibilité des backups.
+
+Restent à traiter avant une généralisation :
+
+- séparation du catalogue externe dans `foodProducts` ;
+- séparation du catalogue d’exercices fourni ;
+- verrou des séances en cours ;
+- distinction des suggestions recalculables ;
+- validation des conflits réels d’index avec l’addon.
 
 ## 8. Alternative Supabase
 
@@ -277,13 +299,14 @@ En cas d’abandon, réévaluer Supabase avec un moteur de sync dédié ou un ba
 
 ## 12. Étapes suivantes
 
-1. valider les quatre documents d’architecture ;
-2. fusionner cette branche documentaire ;
-3. créer `feature/sync-data-readiness` ;
-4. ne modifier que les structures locales et le backup ;
-5. réauditer ;
-6. créer `experiment/dexie-cloud-weight-sync` ;
-7. utiliser uniquement des données fictives.
+1. clôturer et fusionner `feature/sync-data-readiness` après les contrôles B1.4c ;
+2. revérifier les conditions, la tarification et l’hébergement du fournisseur ;
+3. documenter le rollback et l’exclusion des secrets ;
+4. créer `experiment/dexie-cloud-weight-sync` depuis `develop` propre ;
+5. utiliser une base expérimentale distincte et un schéma limité à `weights` et aux marqueurs nécessaires ;
+6. utiliser uniquement des données et comptes fictifs ;
+7. valider téléphone, ordinateur, hors ligne, conflits et déconnexion ;
+8. supprimer complètement le prototype s’il échoue à un critère de l’ADR.
 
 ## 13. Références officielles
 

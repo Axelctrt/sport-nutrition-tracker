@@ -2,7 +2,7 @@ import { CURRENT_DATABASE_VERSION } from '@/infrastructure/database/migrations/v
 
 export const databaseTableNames = [
   'userProfile',
-  'appSettings',
+  'userSettings',
   'weights',
   'dailySteps',
   'activities',
@@ -23,11 +23,21 @@ export const databaseTableNames = [
   'workoutSessionExercises',
   'strengthSets',
   'progressionSuggestions',
+  'goals',
+  'endurancePlanningSessions',
+  'earnedAchievements',
+  'unlockedVisualThemes',
+  'visualThemePreferences',
+  'weeklyMissionCompletions',
+  'routineReminderCompletions',
+  'deletionRecords',
 ] as const;
 
 export const databaseInternalTableNames = [
+  'deviceSettings',
   'migrationJournal',
-  'databaseDiagnostics',
+  'databaseDiagnostics',
+
   'trashItems',
 ] as const;
 
@@ -90,3 +100,35 @@ export const schemaVersion4: Record<string, string> = {
   trashItems:
     'id, entityType, entityId, deletedAt, purgeAt, [entityType+entityId]',
 };
+
+export const schemaVersion5: Record<string, string> = {
+  ...schemaVersion4,
+  goals: 'id, metric, status, startDate, deadline, updatedAt',
+  endurancePlanningSessions:
+    'id, date, activityType, status, updatedAt',
+};
+
+
+export const schemaVersion6: Record<string, string> = {
+  ...schemaVersion5,
+  earnedAchievements: 'id, earnedAt, updatedAt',
+  unlockedVisualThemes: 'id, unlockedAt, updatedAt',
+  visualThemePreferences: 'id, activeThemeId, updatedAt',
+  weeklyMissionCompletions: 'id, &weekStart, completedAt, updatedAt',
+  routineReminderCompletions:
+    'id, &[date+type], date, type, completedAt, updatedAt',
+};
+
+export const schemaVersion7 = {
+  ...schemaVersion6,
+  appSettings: null,
+  userSettings: 'id, updatedAt',
+  deviceSettings: 'id, &deviceId, updatedAt',
+} as const;
+
+
+export const schemaVersion8 = {
+  ...schemaVersion7,
+  deletionRecords:
+    'id, entityType, entityId, status, deletedAt, restoredAt, updatedAt, [entityType+entityId]',
+} as const;

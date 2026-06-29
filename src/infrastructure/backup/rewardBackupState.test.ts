@@ -82,8 +82,8 @@ describe('rewardBackupState', () => {
     });
   });
 
-  it('restaure les récompenses et applique le thème actif', () => {
-    restoreRewardBackupState({
+  it('restaure les récompenses et applique le thème actif', async () => {
+    await restoreRewardBackupState({
       achievements: {
         earnedAchievements: [
           {

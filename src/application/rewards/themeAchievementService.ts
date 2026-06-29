@@ -93,6 +93,18 @@ export function buildThemeAchievementSnapshot(
 export async function loadThemeAchievementSnapshot(
   database: AppDatabase = appDatabase,
 ): Promise<ThemeAchievementSnapshot> {
+  const snapshot = await loadThemeAchievementPreview(database);
+  const unlockedThemeIds = snapshot.themes
+    .filter((progress) => progress.unlocked)
+    .map((progress) => progress.theme.id);
+
+  unlockVisualThemes(unlockedThemeIds);
+  return snapshot;
+}
+
+export async function loadThemeAchievementPreview(
+  database: AppDatabase = appDatabase,
+): Promise<ThemeAchievementSnapshot> {
   const [activities, workoutSessions, weights] = await Promise.all([
     database.activities.toArray(),
     database.workoutSessions.toArray(),
@@ -121,10 +133,5 @@ export async function loadThemeAchievementSnapshot(
     metrics,
     storedState.unlockedThemeIds,
   );
-  const unlockedThemeIds = snapshot.themes
-    .filter((progress) => progress.unlocked)
-    .map((progress) => progress.theme.id);
-
-  unlockVisualThemes(unlockedThemeIds);
   return snapshot;
 }

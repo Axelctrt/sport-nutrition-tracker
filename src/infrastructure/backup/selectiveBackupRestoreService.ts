@@ -1,23 +1,26 @@
 import { ensureExerciseCatalog } from '@/application/strength/exerciseCatalogSeeder';
-import { normalizeAppSettings } from '@/domain/defaults/appSettings';
-import type {
-  BackupData,
-  BackupEnvelope,
+import { normalizeUserSettings } from '@/domain/defaults/appSettings';
+import type { DeletionEntityType } from '@/domain/models/deletion';
+import {
+  type BackupData,
+  type BackupEnvelope,
+  type BackupUserStateTableName,
 } from '@/domain/models/backup';
 import type { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import {
+  allUserDataTableList,
   BackupOperationError,
   parseBackupTextWithMetadata,
   readBackupData,
+  replaceIncludedUserStateTables,
   summarizeBackup,
-  tableList,
   type BackupSummary,
 } from '@/infrastructure/backup/backupService';
-import {
-  readRewardBackupState,
-  restoreRewardBackupState,
-} from '@/infrastructure/backup/rewardBackupState';
 import { appDatabase } from '@/infrastructure/database/database';
+import {
+  flushUserStatePersistence,
+  reloadUserStateRuntime,
+} from '@/infrastructure/user-state/userStateRuntime';
 
 export type SelectiveRestoreCategory =
   | 'profileSettings'
@@ -49,6 +52,57 @@ export interface PreparedSelectiveBackupRestore {
 export interface SelectiveBackupRestoreResult {
   selectedCategories: SelectiveRestoreCategory[];
   restoredRecordCount: number;
+}
+
+const REWARD_USER_STATE_TABLE_NAMES = [
+  'goals',
+  'endurancePlanningSessions',
+  'earnedAchievements',
+  'unlockedVisualThemes',
+  'visualThemePreferences',
+  'weeklyMissionCompletions',
+  'routineReminderCompletions',
+] as const satisfies readonly BackupUserStateTableName[];
+
+const DELETION_ENTITY_TYPES_BY_CATEGORY: Partial<
+  Record<SelectiveRestoreCategory, readonly DeletionEntityType[]>
+> = {
+  bodyTracking: ['weight'],
+  activities: ['activity'],
+  nutrition: [
+    'foodEntry',
+    'meal',
+    'favoriteMeal',
+    'recipe',
+    'recipeIngredient',
+  ],
+  strength: ['strengthSet', 'workoutSessionExercise'],
+};
+
+function deletionEntityTypesForCategories(
+  categories: ReadonlySet<SelectiveRestoreCategory>,
+): DeletionEntityType[] {
+  const types = new Set<DeletionEntityType>();
+
+  for (const category of categories) {
+    for (const entityType of
+      DELETION_ENTITY_TYPES_BY_CATEGORY[category] ?? []) {
+      types.add(entityType);
+    }
+  }
+
+  return [...types];
+}
+
+function countDeletionRecords(
+  data: BackupData,
+  entityTypes: readonly DeletionEntityType[],
+): number {
+  const allowed = new Set(entityTypes);
+
+  return (data.deletionRecords ?? []).filter(({ entityType }) =>
+    allowed.has(entityType),
+  ).length;
 }
 
 export const SELECTIVE_RESTORE_CATEGORY_DEFINITIONS: readonly SelectiveRestoreCategoryDefinition[] =
@@ -85,9 +139,9 @@ export const SELECTIVE_RESTORE_CATEGORY_DEFINITIONS: readonly SelectiveRestoreCa
     },
     {
       key: 'rewards',
-      label: 'Récompenses et thèmes',
+      label: 'Objectifs et progression',
       description:
-        'Badges, thèmes débloqués et historique des missions hebdomadaires.',
+        'Objectifs, planning, badges, thèmes, missions et rappels terminés.',
     },
   ];
 
@@ -97,11 +151,24 @@ function countCategoryRecords(
 ): number {
   switch (category) {
     case 'profileSettings':
-      return data.userProfile.length + data.appSettings.length;
+      return data.userProfile.length + (data.userSettings?.length ?? 0);
     case 'bodyTracking':
-      return data.weights.length + data.dailySteps.length;
+      return (
+        data.weights.length +
+        data.dailySteps.length +
+        countDeletionRecords(
+          data,
+          DELETION_ENTITY_TYPES_BY_CATEGORY.bodyTracking ?? [],
+        )
+      );
     case 'activities':
-      return data.activities.length;
+      return (
+        data.activities.length +
+        countDeletionRecords(
+          data,
+          DELETION_ENTITY_TYPES_BY_CATEGORY.activities ?? [],
+        )
+      );
     case 'nutrition':
       return (
         data.foodProducts.length +
@@ -113,7 +180,11 @@ function countCategoryRecords(
         data.dailyTargets.length +
         data.dailyJournalStatuses.length +
         data.weeklyReviews.length +
-        data.acceptedCalorieAdjustments.length
+        data.acceptedCalorieAdjustments.length +
+        countDeletionRecords(
+          data,
+          DELETION_ENTITY_TYPES_BY_CATEGORY.nutrition ?? [],
+        )
       );
     case 'strength':
       return (
@@ -123,9 +194,24 @@ function countCategoryRecords(
         data.workoutSessions.length +
         data.workoutSessionExercises.length +
         data.strengthSets.length +
-        data.progressionSuggestions.length
+        data.progressionSuggestions.length +
+        countDeletionRecords(
+          data,
+          DELETION_ENTITY_TYPES_BY_CATEGORY.strength ?? [],
+        )
       );
   }
+}
+
+function countUserStateRecords(
+  data: BackupData,
+  tableNames: readonly BackupUserStateTableName[],
+): number {
+  return tableNames.reduce(
+    (total, tableName) =>
+      total + (data[tableName]?.length ?? 0),
+    0,
+  );
 }
 
 export function createSelectiveRestorePreview(
@@ -139,12 +225,24 @@ export function createSelectiveRestorePreview(
     categories: SELECTIVE_RESTORE_CATEGORY_DEFINITIONS.map(
       (definition) => {
         if (definition.key === 'rewards') {
+          const incomingTables =
+            envelope.includedUserStateTables ?? [];
+
           return {
             ...definition,
-            currentRecords: 1,
-            incomingRecords:
-              envelope.rewardState === undefined ? 0 : 1,
-            available: envelope.rewardState !== undefined,
+            currentRecords: countUserStateRecords(
+              currentData,
+              REWARD_USER_STATE_TABLE_NAMES,
+            ),
+            incomingRecords: countUserStateRecords(
+              envelope.data,
+              incomingTables.filter(
+                (tableName) => tableName !== 'deletionRecords',
+              ),
+            ),
+            available: incomingTables.some(
+              (tableName) => tableName !== 'deletionRecords',
+            ),
           };
         }
 
@@ -185,14 +283,14 @@ async function replaceProfileSettings(
   data: BackupData,
 ): Promise<void> {
   await database.userProfile.clear();
-  await database.appSettings.clear();
+  await database.userSettings.clear();
 
   if (data.userProfile.length > 0) {
     await database.userProfile.bulkAdd(data.userProfile);
   }
 
-  await database.appSettings.bulkAdd(
-    data.appSettings.map(normalizeAppSettings),
+  await database.userSettings.bulkAdd(
+    (data.userSettings ?? []).map(normalizeUserSettings),
   );
 }
 
@@ -329,21 +427,60 @@ async function replaceStrength(
   await ensureExerciseCatalog(database);
 }
 
+async function replaceDeletionRecordsForCategories(
+  database: AppDatabase,
+  data: BackupData,
+  categories: ReadonlySet<SelectiveRestoreCategory>,
+  includedTables: ReadonlySet<BackupUserStateTableName>,
+): Promise<void> {
+  if (!includedTables.has('deletionRecords')) return;
+
+  const entityTypes = deletionEntityTypesForCategories(categories);
+  if (entityTypes.length === 0) return;
+
+  await database.deletionRecords
+    .where('entityType')
+    .anyOf(entityTypes)
+    .delete();
+
+  const incoming = (data.deletionRecords ?? []).filter(
+    ({ entityType }) => entityTypes.includes(entityType),
+  );
+
+  if (incoming.length > 0) {
+    await database.deletionRecords.bulkAdd(incoming);
+  }
+}
+
 function restoredRecordCount(
   envelope: BackupEnvelope,
   categories: ReadonlySet<SelectiveRestoreCategory>,
 ): number {
   let total = 0;
 
+  const includedTables = new Set(
+    envelope.includedUserStateTables ?? [],
+  );
+
   for (const category of categories) {
     if (category === 'rewards') {
-      total += envelope.rewardState === undefined ? 0 : 1;
-    } else {
-      total += countCategoryRecords(
+      total += countUserStateRecords(
         envelope.data,
-        category,
+        REWARD_USER_STATE_TABLE_NAMES.filter((tableName) =>
+          includedTables.has(tableName),
+        ),
       );
+      continue;
     }
+
+    total += countCategoryRecords(envelope.data, category);
+  }
+
+  if (!includedTables.has('deletionRecords')) {
+    total -= countDeletionRecords(
+      envelope.data,
+      deletionEntityTypesForCategories(categories),
+    );
   }
 
   return total;
@@ -375,59 +512,55 @@ export async function applySelectiveBackupRestore(
     );
   }
 
-  const previousRewards = selected.has('rewards')
-    ? readRewardBackupState()
-    : undefined;
-
   try {
-    if (selected.has('rewards')) {
-      const rewardState = prepared.envelope.rewardState;
-      if (!rewardState) {
-        throw new BackupOperationError(
-          'Cette sauvegarde ne contient pas de progression de récompenses.',
+    await flushUserStatePersistence();
+    await database.transaction(
+      'rw',
+      allUserDataTableList(database),
+      async () => {
+        const { data } = prepared.envelope;
+        const includedTables = new Set(
+          prepared.envelope.includedUserStateTables ?? [],
         );
-      }
-      restoreRewardBackupState(rewardState);
-    }
 
-    const hasDatabaseSelection = [...selected].some(
-      (category) => category !== 'rewards',
+        if (selected.has('profileSettings')) {
+          await replaceProfileSettings(database, data);
+        }
+        if (selected.has('bodyTracking')) {
+          await replaceBodyTracking(database, data);
+        }
+        if (selected.has('activities')) {
+          await replaceActivities(database, data);
+        }
+        if (selected.has('nutrition')) {
+          await replaceNutrition(database, data);
+        }
+        if (selected.has('strength')) {
+          await replaceStrength(database, data);
+        }
+        if (selected.has('rewards')) {
+          await replaceIncludedUserStateTables(
+            database,
+            data,
+            REWARD_USER_STATE_TABLE_NAMES.filter((tableName) =>
+              includedTables.has(tableName),
+            ),
+          );
+        }
+
+        await replaceDeletionRecordsForCategories(
+          database,
+          data,
+          selected,
+          includedTables,
+        );
+      },
     );
 
-    if (hasDatabaseSelection) {
-      await database.transaction(
-        'rw',
-        tableList(database),
-        async () => {
-          const { data } = prepared.envelope;
-
-          if (selected.has('profileSettings')) {
-            await replaceProfileSettings(database, data);
-          }
-          if (selected.has('bodyTracking')) {
-            await replaceBodyTracking(database, data);
-          }
-          if (selected.has('activities')) {
-            await replaceActivities(database, data);
-          }
-          if (selected.has('nutrition')) {
-            await replaceNutrition(database, data);
-          }
-          if (selected.has('strength')) {
-            await replaceStrength(database, data);
-          }
-        },
-      );
+    if (selected.has('rewards')) {
+      await reloadUserStateRuntime(database);
     }
   } catch (error) {
-    if (previousRewards) {
-      try {
-        restoreRewardBackupState(previousRewards);
-      } catch {
-        // La sauvegarde JSON téléchargée reste le point de retour fiable.
-      }
-    }
-
     if (error instanceof BackupOperationError) {
       throw error;
     }

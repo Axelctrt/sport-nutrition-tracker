@@ -7,7 +7,8 @@ import type {
   ProgressionSuggestionUpdate,
 } from '@/infrastructure/repositories/contracts/ProgressionSuggestionRepository';
 import { runRepositoryOperation } from '@/infrastructure/repositories/dexie/repositoryOperation';
-import { createEntity, updateEntity } from '@/shared/utils/entities';
+import { updateStoredEntity } from '@/infrastructure/repositories/dexie/updateStoredEntity';
+import { createEntity } from '@/shared/utils/entities';
 
 export class DexieProgressionSuggestionRepository implements ProgressionSuggestionRepository {
   private readonly database: AppDatabase;
@@ -61,11 +62,11 @@ export class DexieProgressionSuggestionRepository implements ProgressionSuggesti
         if (!current) {
           throw new RepositoryError('Suggestion de progression introuvable.', 'update');
         }
-        const updated = updateEntity(current, changes as never);
-        if ('decidedAt' in changes && changes.decidedAt === undefined) delete updated.decidedAt;
-        if ('appliedAt' in changes && changes.appliedAt === undefined) delete updated.appliedAt;
-        await this.database.progressionSuggestions.put(updated);
-        return updated;
+        return updateStoredEntity(
+          this.database.progressionSuggestions,
+          current,
+          changes as never,
+        );
       },
     );
   }

@@ -1,28 +1,36 @@
-import type { RewardBackupState } from '@/domain/models/backup';
 import {
   GOAL_STATE_CHANGED_EVENT,
-  GOAL_STATE_STORAGE_KEY,
   readGoalState,
+  writeGoalState,
 } from '@/domain/goals/goalState';
+import type { RewardBackupState } from '@/domain/models/backup';
 import {
   ENDURANCE_PLANNING_CHANGED_EVENT,
-  ENDURANCE_PLANNING_STORAGE_KEY,
   readEndurancePlanningState,
+  writeEndurancePlanningState,
 } from '@/domain/planning/endurancePlanningState';
 import {
-  ACHIEVEMENT_STORAGE_KEY,
   readAchievementState,
+  writeAchievementState,
 } from '@/domain/rewards/achievements';
 import {
   applyStoredVisualTheme,
   readVisualThemeState,
-  VISUAL_THEME_STORAGE_KEY,
+  writeVisualThemeState,
 } from '@/domain/rewards/visualThemes';
 import {
-  readWeeklyMissionHistoryState,
   WEEKLY_MISSION_HISTORY_CHANGED_EVENT,
-  WEEKLY_MISSION_HISTORY_STORAGE_KEY,
+  readWeeklyMissionHistoryState,
+  writeWeeklyMissionHistoryState,
 } from '@/domain/rewards/weeklyMissionHistory';
+import type { AppDatabase } from '@/infrastructure/database/AppDatabase';
+import {
+  replaceAchievementUserState,
+  replaceEndurancePlanningUserState,
+  replaceGoalUserState,
+  replaceVisualThemeUserState,
+  replaceWeeklyMissionUserState,
+} from '@/infrastructure/user-state/userStateRuntime';
 
 export function readRewardBackupState(): RewardBackupState {
   return {
@@ -34,87 +42,64 @@ export function readRewardBackupState(): RewardBackupState {
   };
 }
 
-function restoreStoredValue(
-  key: string,
-  value: string | null,
-): void {
-  if (value === null) {
-    window.localStorage.removeItem(key);
-  } else {
-    window.localStorage.setItem(key, value);
-  }
-}
-
 function dispatchRestoredStateEvents(): void {
+  if (typeof window === 'undefined') return;
+
   applyStoredVisualTheme();
   window.dispatchEvent(
     new Event(WEEKLY_MISSION_HISTORY_CHANGED_EVENT),
   );
-  window.dispatchEvent(
-    new Event(GOAL_STATE_CHANGED_EVENT),
-  );
+  window.dispatchEvent(new Event(GOAL_STATE_CHANGED_EVENT));
   window.dispatchEvent(
     new Event(ENDURANCE_PLANNING_CHANGED_EVENT),
   );
 }
 
-export function restoreRewardBackupState(
+async function restoreState(
   state: RewardBackupState,
-): void {
-  if (typeof window === 'undefined') return;
+  database?: AppDatabase,
+): Promise<void> {
+  if (database) {
+    await replaceAchievementUserState(state.achievements, database);
+    await replaceVisualThemeUserState(state.visualThemes, database);
+    await replaceWeeklyMissionUserState(state.weeklyMissions, database);
 
-  const serializedEntries: [string, string][] = [
-    [
-      ACHIEVEMENT_STORAGE_KEY,
-      JSON.stringify(state.achievements),
-    ],
-    [
-      VISUAL_THEME_STORAGE_KEY,
-      JSON.stringify(state.visualThemes),
-    ],
-    [
-      WEEKLY_MISSION_HISTORY_STORAGE_KEY,
-      JSON.stringify(state.weeklyMissions),
-    ],
-  ];
-
-  if (state.goals) {
-    serializedEntries.push([
-      GOAL_STATE_STORAGE_KEY,
-      JSON.stringify(state.goals),
-    ]);
-  }
-
-  if (state.endurancePlanning) {
-    serializedEntries.push([
-      ENDURANCE_PLANNING_STORAGE_KEY,
-      JSON.stringify(state.endurancePlanning),
-    ]);
-  }
-
-  const previousValues = new Map<string, string | null>();
-
-  try {
-    for (const [key] of serializedEntries) {
-      previousValues.set(
-        key,
-        window.localStorage.getItem(key),
+    if (state.goals) {
+      await replaceGoalUserState(state.goals, database);
+    }
+    if (state.endurancePlanning) {
+      await replaceEndurancePlanningUserState(
+        state.endurancePlanning,
+        database,
       );
     }
+    return;
+  }
 
-    for (const [key, value] of serializedEntries) {
-      window.localStorage.setItem(key, value);
-    }
+  writeAchievementState(state.achievements);
+  writeVisualThemeState(state.visualThemes);
+  writeWeeklyMissionHistoryState(state.weeklyMissions);
 
+  if (state.goals) writeGoalState(state.goals);
+  if (state.endurancePlanning) {
+    writeEndurancePlanningState(state.endurancePlanning);
+  }
+}
+
+export async function restoreRewardBackupState(
+  state: RewardBackupState,
+  database?: AppDatabase,
+): Promise<void> {
+  const previous: RewardBackupState = readRewardBackupState();
+
+  try {
+    await restoreState(state, database);
     dispatchRestoredStateEvents();
   } catch (error) {
-    for (const [key, value] of previousValues) {
-      try {
-        restoreStoredValue(key, value);
-      } catch {
-        // Le premier état reste prioritaire si le navigateur
-        // refuse également le rollback.
-      }
+    try {
+      await restoreState(previous, database);
+    } catch {
+      // La sauvegarde JSON reste le point de retour fiable.
     }
 
     dispatchRestoredStateEvents();

@@ -28,7 +28,6 @@ import { createAndDownloadSafetyBackup } from '@/application/backup/safetyBackup
 import { getBackupReminderStatus } from '@/domain/backup/backupReminder';
 import type { AppSettings, BackupReminderIntervalDays } from '@/domain/models/settings';
 import { useProfile } from '@/app/providers/profile/useProfile';
-import { useTheme } from '@/app/providers/useTheme';
 import { routePaths } from '@/app/routePaths';
 import { BackupDeleteDialog } from '@/features/backup/components/BackupDeleteDialog';
 import { BackupOverview } from '@/features/backup/components/BackupOverview';
@@ -138,7 +137,6 @@ function ImportSummary({ summary }: { summary: BackupSummary }) {
 export function BackupPage() {
   const navigate = useNavigate();
   const { refreshProfile } = useProfile();
-  const { setTheme } = useTheme();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [feedback, setFeedback] = useState<Feedback>();
   const [pendingImport, setPendingImport] = useState<PreparedBackupImport>();
@@ -355,8 +353,6 @@ export function BackupPage() {
     try {
       await createAndDownloadSafetyBackup('before-import');
       await applyPreparedBackupImport(pendingImport);
-      const importedSettings = pendingImport.envelope.data.appSettings[0];
-      if (importedSettings) setTheme(importedSettings.theme);
       await refreshProfile();
       setFeedback({
         tone: 'success',
@@ -384,7 +380,6 @@ export function BackupPage() {
     try {
       await createAndDownloadSafetyBackup('before-full-reset');
       await clearAllUserData();
-      setTheme('system');
       await refreshProfile();
       setDeleteDialogOpen(false);
       navigate(routePaths.onboarding, { replace: true });

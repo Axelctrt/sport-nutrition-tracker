@@ -142,7 +142,7 @@ describe('WorkoutSessionPage', () => {
   });
 
   it('respecte la désactivation du lancement automatique tout en gardant le démarrage manuel', async () => {
-    await appDatabase.appSettings.update('app-settings', { restTimerAutoStart: false });
+    await appDatabase.deviceSettings.update('device-settings', { restTimerAutoStart: false });
     const user = userEvent.setup();
     renderSessionPage();
 

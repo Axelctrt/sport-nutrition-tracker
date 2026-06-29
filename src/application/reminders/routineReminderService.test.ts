@@ -30,6 +30,7 @@ function createDependencies(): RoutineReminderDependencies & {
   };
   settings.routineReminderPreferences = preferences;
   const storage = createMemoryStorage();
+  const completed = new Set<string>();
 
   return {
     settings: {
@@ -53,6 +54,10 @@ function createDependencies(): RoutineReminderDependencies & {
     },
     readEndurancePlanningState: () => ({ version: 1, sessions: [] }),
     storage,
+    completions: {
+      isCompleted: (date, type) => completed.has(`${date}:${type}`),
+      complete: (date, type) => completed.add(`${date}:${type}`),
+    },
     now: () => new Date(2026, 5, 29, 9, 0),
   };
 }

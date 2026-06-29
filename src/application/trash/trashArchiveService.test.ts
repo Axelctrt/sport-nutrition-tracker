@@ -62,16 +62,21 @@ describe('trashArchiveService', () => {
     ).toThrow(TrashArchiveError);
   });
 
-  it('réimporte les éléments et renouvelle leur conservation', async () => {
+  it('réimporte les éléments, renouvelle leur conservation et recrée leur marqueur', async () => {
     const bulkPut = vi.fn().mockResolvedValue(undefined);
+    const deletionBulkPut = vi.fn().mockResolvedValue(undefined);
     const database = {
       trashItems: {
         bulkPut,
       },
+      deletionRecords: {
+        bulkGet: vi.fn().mockResolvedValue([undefined]),
+        bulkPut: deletionBulkPut,
+      },
       transaction: vi.fn(
         async (
           _mode: string,
-          _table: unknown,
+          _tables: unknown,
           action: () => Promise<void>,
         ) => action(),
       ),
@@ -94,6 +99,13 @@ describe('trashArchiveService', () => {
       expect.objectContaining({
         id: activityTrashItem.id,
         purgeAt: '2026-07-31T00:00:00.000Z',
+      }),
+    ]);
+    expect(deletionBulkPut).toHaveBeenCalledWith([
+      expect.objectContaining({
+        id: 'deletion:activity:activity-1',
+        status: 'deleted',
+        deletedAt: activityTrashItem.deletedAt,
       }),
     ]);
   });

@@ -1,10 +1,10 @@
 const DATE_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 export const WEEKLY_MISSION_HISTORY_STORAGE_KEY =
-  "sport-pilot.weekly-mission-history";
+  'sport-pilot.weekly-mission-history';
 
 export const WEEKLY_MISSION_HISTORY_CHANGED_EVENT =
-  "sport-pilot:weekly-mission-history-changed";
+  'sport-pilot:weekly-mission-history-changed';
 
 export interface CompletedWeeklyMission {
   weekStart: string;
@@ -28,14 +28,27 @@ export interface RecordCompletedWeeklyMissionResult {
   newlyRecorded?: CompletedWeeklyMission;
 }
 
-function createDefaultState(): WeeklyMissionHistoryState {
+export type WeeklyMissionHistoryPersistence = (
+  state: WeeklyMissionHistoryState,
+) => Promise<void>;
+
+interface WeeklyMissionHistoryRuntime {
+  state: WeeklyMissionHistoryState;
+  persist: WeeklyMissionHistoryPersistence;
+}
+
+let weeklyMissionHistoryRuntime: WeeklyMissionHistoryRuntime | undefined;
+let weeklyMissionPersistenceQueue: Promise<void> = Promise.resolve();
+let latestWeeklyMissionFallback: string | undefined;
+
+export function emptyWeeklyMissionHistoryState(): WeeklyMissionHistoryState {
   return { completedWeeks: [] };
 }
 
 function parseDateKey(value: string): Date | undefined {
   if (!DATE_KEY_PATTERN.test(value)) return undefined;
 
-  const [yearText, monthText, dayText] = value.split("-");
+  const [yearText, monthText, dayText] = value.split('-');
   if (!yearText || !monthText || !dayText) return undefined;
 
   const year = Number(yearText);
@@ -56,8 +69,8 @@ function parseDateKey(value: string): Date | undefined {
 
 function toDateKey(value: Date): string {
   const year = value.getFullYear();
-  const month = String(value.getMonth() + 1).padStart(2, "0");
-  const day = String(value.getDate()).padStart(2, "0");
+  const month = String(value.getMonth() + 1).padStart(2, '0');
+  const day = String(value.getDate()).padStart(2, '0');
 
   return `${year}-${month}-${day}`;
 }
@@ -101,72 +114,175 @@ function differenceInCalendarDays(left: Date, right: Date): number {
 function isCompletedWeeklyMission(
   value: unknown,
 ): value is CompletedWeeklyMission {
-  if (typeof value !== "object" || value === null) return false;
+  if (typeof value !== 'object' || value === null) return false;
 
   const candidate = value as Partial<CompletedWeeklyMission>;
 
   return (
-    typeof candidate.weekStart === "string" &&
+    typeof candidate.weekStart === 'string' &&
     parseDateKey(candidate.weekStart) !== undefined &&
-    typeof candidate.completedAt === "string" &&
+    typeof candidate.completedAt === 'string' &&
     candidate.completedAt.length > 0
   );
 }
 
-export function readWeeklyMissionHistoryState(): WeeklyMissionHistoryState {
-  if (typeof window === "undefined") return createDefaultState();
+export function parseWeeklyMissionHistoryState(
+  value: unknown,
+): WeeklyMissionHistoryState | undefined {
+  if (!value || typeof value !== 'object') return undefined;
+
+  const parsed = value as Partial<WeeklyMissionHistoryState>;
+  if (!Array.isArray(parsed.completedWeeks)) return undefined;
+
+  const completedByWeekStart = new Map<string, CompletedWeeklyMission>();
+
+  for (const candidate of parsed.completedWeeks) {
+    if (!isCompletedWeeklyMission(candidate)) continue;
+
+    const existing = completedByWeekStart.get(candidate.weekStart);
+    if (
+      !existing ||
+      candidate.completedAt.localeCompare(existing.completedAt) < 0
+    ) {
+      completedByWeekStart.set(candidate.weekStart, {
+        weekStart: candidate.weekStart,
+        completedAt: candidate.completedAt,
+      });
+    }
+  }
+
+  return {
+    completedWeeks: [...completedByWeekStart.values()].sort((left, right) =>
+      left.weekStart.localeCompare(right.weekStart),
+    ),
+  };
+}
+
+function cloneState(
+  state: WeeklyMissionHistoryState,
+): WeeklyMissionHistoryState {
+  return {
+    completedWeeks: state.completedWeeks.map((entry) => ({ ...entry })),
+  };
+}
+
+export function readLegacyWeeklyMissionHistoryState(): WeeklyMissionHistoryState | undefined {
+  if (typeof window === 'undefined') return undefined;
 
   try {
     const rawValue = window.localStorage.getItem(
       WEEKLY_MISSION_HISTORY_STORAGE_KEY,
     );
-    if (!rawValue) return createDefaultState();
 
-    const parsed = JSON.parse(rawValue) as Partial<WeeklyMissionHistoryState>;
-    if (!Array.isArray(parsed.completedWeeks)) return createDefaultState();
-
-    const completedByWeekStart = new Map<string, CompletedWeeklyMission>();
-
-    for (const candidate of parsed.completedWeeks) {
-      if (
-        isCompletedWeeklyMission(candidate) &&
-        !completedByWeekStart.has(candidate.weekStart)
-      ) {
-        completedByWeekStart.set(candidate.weekStart, candidate);
-      }
-    }
-
-    return {
-      completedWeeks: [...completedByWeekStart.values()].sort((left, right) =>
-        left.weekStart.localeCompare(right.weekStart),
-      ),
-    };
+    return rawValue === null
+      ? undefined
+      : parseWeeklyMissionHistoryState(JSON.parse(rawValue));
   } catch {
-    return createDefaultState();
+    return undefined;
   }
 }
 
-function persistWeeklyMissionHistoryState(
-  state: WeeklyMissionHistoryState,
-): void {
-  if (typeof window === "undefined") return;
+function writeFallback(serialized: string): void {
+  if (typeof window === 'undefined') return;
 
   try {
     window.localStorage.setItem(
       WEEKLY_MISSION_HISTORY_STORAGE_KEY,
-      JSON.stringify(state),
+      serialized,
     );
   } catch {
-    // L'historique reste calculable pendant la session si le stockage est refusé.
+    // Dexie reste prioritaire lorsque le fallback est indisponible.
+  }
+}
+
+function removeFallback(serialized: string): void {
+  if (typeof window === 'undefined') return;
+
+  try {
+    if (
+      latestWeeklyMissionFallback === serialized &&
+      window.localStorage.getItem(
+        WEEKLY_MISSION_HISTORY_STORAGE_KEY,
+      ) === serialized
+    ) {
+      window.localStorage.removeItem(
+        WEEKLY_MISSION_HISTORY_STORAGE_KEY,
+      );
+    }
+  } catch {
+    // La clé sera réévaluée au prochain démarrage.
   }
 }
 
 function dispatchHistoryChanged(): void {
-  if (typeof window === "undefined") return;
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new Event(WEEKLY_MISSION_HISTORY_CHANGED_EVENT));
+}
 
-  window.dispatchEvent(
-    new Event(WEEKLY_MISSION_HISTORY_CHANGED_EVENT),
+export function hydrateWeeklyMissionHistoryRuntime(
+  state: WeeklyMissionHistoryState,
+  persist: WeeklyMissionHistoryPersistence,
+): void {
+  weeklyMissionHistoryRuntime = {
+    state: cloneState(state),
+    persist,
+  };
+  weeklyMissionPersistenceQueue = Promise.resolve();
+  latestWeeklyMissionFallback = undefined;
+}
+
+export function resetWeeklyMissionHistoryRuntimeForTests(): void {
+  weeklyMissionHistoryRuntime = undefined;
+  weeklyMissionPersistenceQueue = Promise.resolve();
+  latestWeeklyMissionFallback = undefined;
+}
+
+export async function flushWeeklyMissionHistoryPersistence(): Promise<void> {
+  await weeklyMissionPersistenceQueue;
+}
+
+export function readWeeklyMissionHistoryState(): WeeklyMissionHistoryState {
+  if (weeklyMissionHistoryRuntime) {
+    return cloneState(weeklyMissionHistoryRuntime.state);
+  }
+
+  return (
+    readLegacyWeeklyMissionHistoryState() ??
+    emptyWeeklyMissionHistoryState()
   );
+}
+
+export function writeWeeklyMissionHistoryState(
+  state: WeeklyMissionHistoryState,
+): void {
+  const snapshot = cloneState(
+    parseWeeklyMissionHistoryState(state) ??
+      emptyWeeklyMissionHistoryState(),
+  );
+  const serialized = JSON.stringify(snapshot);
+
+  if (!weeklyMissionHistoryRuntime) {
+    writeFallback(serialized);
+    dispatchHistoryChanged();
+    return;
+  }
+
+  const persist = weeklyMissionHistoryRuntime.persist;
+  weeklyMissionHistoryRuntime.state = snapshot;
+  latestWeeklyMissionFallback = serialized;
+  writeFallback(serialized);
+  dispatchHistoryChanged();
+
+  weeklyMissionPersistenceQueue = weeklyMissionPersistenceQueue
+    .catch(() => undefined)
+    .then(() => persist(snapshot))
+    .then(() => removeFallback(serialized))
+    .catch((error: unknown) => {
+      console.error(
+        'La persistance Dexie des missions hebdomadaires a échoué.',
+        error,
+      );
+    });
 }
 
 export function buildWeeklyMissionHistorySnapshot(
@@ -191,17 +307,11 @@ export function buildWeeklyMissionHistorySnapshot(
 
     runningStreak =
       previousWeekStart &&
-      differenceInCalendarDays(
-        currentWeekStart,
-        previousWeekStart,
-      ) === 7
+      differenceInCalendarDays(currentWeekStart, previousWeekStart) === 7
         ? runningStreak + 1
         : 1;
 
-    bestWeeklyStreak = Math.max(
-      bestWeeklyStreak,
-      runningStreak,
-    );
+    bestWeeklyStreak = Math.max(bestWeeklyStreak, runningStreak);
     previousWeekStart = currentWeekStart;
   }
 
@@ -256,16 +366,11 @@ export function recordCompletedWeeklyMission(
 
   if (
     parseDateKey(weekStart) === undefined ||
-    state.completedWeeks.some(
-      (entry) => entry.weekStart === weekStart,
-    )
+    state.completedWeeks.some((entry) => entry.weekStart === weekStart)
   ) {
     return {
       state,
-      snapshot: buildWeeklyMissionHistorySnapshot(
-        state,
-        referenceDate,
-      ),
+      snapshot: buildWeeklyMissionHistorySnapshot(state, referenceDate),
     };
   }
 
@@ -275,20 +380,15 @@ export function recordCompletedWeeklyMission(
   };
   const nextState: WeeklyMissionHistoryState = {
     completedWeeks: [...state.completedWeeks, newlyRecorded].sort(
-      (left, right) =>
-        left.weekStart.localeCompare(right.weekStart),
+      (left, right) => left.weekStart.localeCompare(right.weekStart),
     ),
   };
 
-  persistWeeklyMissionHistoryState(nextState);
-  dispatchHistoryChanged();
+  writeWeeklyMissionHistoryState(nextState);
 
   return {
     state: nextState,
-    snapshot: buildWeeklyMissionHistorySnapshot(
-      nextState,
-      referenceDate,
-    ),
+    snapshot: buildWeeklyMissionHistorySnapshot(nextState, referenceDate),
     newlyRecorded,
   };
 }

@@ -40,8 +40,13 @@ describe("selectiveDataResetService", () => {
       id: "profile",
       updatedAt: "2026-06-27T10:00:00.000Z",
     });
-    await addRecord(database, "appSettings", {
-      id: "settings",
+    await addRecord(database, "userSettings", {
+      id: "user-settings",
+      updatedAt: "2026-06-27T10:00:00.000Z",
+    });
+    await addRecord(database, "deviceSettings", {
+      id: "device-settings",
+      deviceId: "device-test",
       updatedAt: "2026-06-27T10:00:00.000Z",
     });
     await addRecord(database, "weights", {
@@ -95,7 +100,8 @@ describe("selectiveDataResetService", () => {
     expect(await database.acceptedCalorieAdjustments.count()).toBe(0);
     expect(await database.weights.count()).toBe(1);
     expect(await database.userProfile.count()).toBe(1);
-    expect(await database.appSettings.count()).toBe(1);
+    expect(await database.userSettings.count()).toBe(1);
+    expect(await database.deviceSettings.count()).toBe(1);
     expect(await database.migrationJournal.count()).toBe(1);
     expect(await database.databaseDiagnostics.count()).toBe(1);
   });

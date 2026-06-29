@@ -1,11 +1,19 @@
 import { ensureExerciseCatalog } from "@/application/strength/exerciseCatalogSeeder";
-import { createDefaultAppSettings } from "@/domain/defaults/appSettings";
-import { APP_SETTINGS_ID } from "@/domain/defaults/identifiers";
+import {
+  composeAppSettings,
+  createDefaultDeviceSettings,
+  createDefaultUserSettings,
+} from "@/domain/defaults/appSettings";
+import {
+  DEVICE_SETTINGS_ID,
+  USER_SETTINGS_ID,
+} from "@/domain/defaults/identifiers";
 import { RepositoryError } from "@/domain/errors/RepositoryError";
 import type { AppSettings } from "@/domain/models/settings";
 import type { AppDatabase } from "@/infrastructure/database/AppDatabase";
 import { appDatabase } from "@/infrastructure/database/database";
 import { ensureCurrentMigrationJournalEntry } from "@/infrastructure/database/migrationJournal";
+import { initializeUserStateRuntime } from '@/infrastructure/user-state/userStateRuntime';
 
 export interface DatabaseInitializationResult {
   settings: AppSettings;
@@ -22,22 +30,24 @@ export async function initializeDatabase(
 
     await ensureCurrentMigrationJournalEntry(database);
     await ensureExerciseCatalog(database);
+    await initializeUserStateRuntime(database);
 
-    const existingSettings = await database.appSettings.get(APP_SETTINGS_ID);
+    const [storedUser, storedDevice] = await Promise.all([
+      database.userSettings.get(USER_SETTINGS_ID),
+      database.deviceSettings.get(DEVICE_SETTINGS_ID),
+    ]);
+    const createdDefaultSettings = !storedUser || !storedDevice;
+    const user = storedUser ?? createDefaultUserSettings();
+    const device = storedDevice ?? createDefaultDeviceSettings();
 
-    if (existingSettings) {
-      return {
-        settings: existingSettings,
-        createdDefaultSettings: false,
-      };
-    }
-
-    const settings = createDefaultAppSettings();
-    await database.appSettings.add(settings);
+    await Promise.all([
+      database.userSettings.put(user),
+      database.deviceSettings.put(device),
+    ]);
 
     return {
-      settings,
-      createdDefaultSettings: true,
+      settings: composeAppSettings(user, device),
+      createdDefaultSettings,
     };
   } catch (error) {
     throw new RepositoryError(

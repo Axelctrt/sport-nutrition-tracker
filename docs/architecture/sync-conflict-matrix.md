@@ -2,19 +2,22 @@
 
 - **Projet :** SportPilot
 - **Fournisseur candidat :** Dexie Cloud
-- **Date :** 29 juin 2026
-- **Portée :** règles métier à appliquer avant généralisation
+- **Base locale préparée :** Dexie v8 / backup JSON v7
+- **Date de mise à jour :** 29 juin 2026
+- **Portée :** prototype des pesées, puis généralisation progressive
 
 ## 1. Principes
 
-1. Une création ne doit jamais écraser une autre création portant un ID différent.
-2. Une mise à jour partielle doit utiliser `update()` lorsque possible.
-3. Un remplacement complet par `put()` est réservé à une intention explicite.
-4. Les données critiques ne sont pas résolues uniquement par `updatedAt`.
-5. Les suppressions récupérables utilisent `deletedAt`.
-6. Les tableaux fréquemment modifiés sont normalisés en lignes enfants.
-7. Les contraintes d’unicité métier utilisent des IDs déterministes ou une fusion.
-8. Toute résolution automatique doit être testée hors ligne sur deux appareils.
+1. Une création ne doit jamais écraser une création portant un autre ID.
+2. Une mise à jour partielle utilise `update()` lorsque l’intention porte sur certains champs.
+3. Un remplacement complet par `put()` reste une intention explicite.
+4. Les données critiques ne sont pas résolues uniquement par l’horodatage métier.
+5. Une suppression durable est portée par un `deletionRecord` au statut `deleted`.
+6. Une restauration crée une révision plus récente au statut `restored`.
+7. Les snapshots complets de `trashItems` restent locaux.
+8. Les tableaux fréquemment modifiés sont normalisés en lignes enfants.
+9. Les contraintes métier utilisent des IDs déterministes ou une fusion dédiée.
+10. Toute résolution automatique est testée hors ligne sur deux appareils.
 
 ## 2. Niveaux de traitement
 
@@ -29,175 +32,187 @@
 
 | Scénario | Exemple | Décision | Niveau |
 |---|---|---|---|
-| Créations avec IDs différents | Deux activités ajoutées hors ligne | Conserver les deux | Automatique |
-| Mise à jour de champs différents | Titre modifié sur A, notes sur B | Fusion propriété par propriété | Automatique |
-| Mise à jour du même champ | Même note modifiée sur A et B | Dernière opération confirmée par le moteur | Automatique avec trace pour données critiques |
-| `put()` concurrent | Objet entier remplacé sur A et B | Dernière opération remplace l’objet | À éviter par conception |
-| Suppression puis modification | A supprime, B modifie hors ligne | Suppression gagnante, sauf restauration explicite | Automatique avec trace |
-| Modification puis restauration | A modifie, B restaure de la corbeille | Restauration crée une nouvelle révision | Interaction si contenu divergent |
-| Suppression parent / ajout enfant | Recette supprimée, ingrédient ajouté | Parent supprimé ; enfant supprimé ou orphelin rejeté | Automatique |
-| Deux créations sur une clé métier unique | Deux pesées le même jour | Fusion sur clé déterministe | Automatique avec règle domaine |
-| Import JSON pendant sync | Import massif sur un appareil | Interdit dans le prototype | Blocage |
-| Changement de compte | Base locale déjà liée à un autre compte | Sauvegarde puis base séparée/effacée | Blocage tant que non confirmé |
-| Horloge locale erronée | Appareil décalé de plusieurs heures | Ne pas utiliser seul `updatedAt` métier | Automatique via moteur |
+| Créations avec IDs différents | Deux activités hors ligne | Conserver les deux | Automatique |
+| Champs différents du même objet | Titre sur A, notes sur B | Fusion propriété par propriété | Automatique |
+| Même champ modifié | Même note sur A et B | Dernière opération causale | Automatique avec trace si critique |
+| Remplacements complets concurrents | Deux `put()` | Dernière opération remplace l’objet | À éviter par conception |
+| Suppression puis modification | A supprime, B modifie | `deleted` gagne | Automatique avec trace |
+| Suppression puis restauration | B restaure explicitement | Révision `restored` plus récente | Automatique si le snapshot existe |
+| Restauration et contenu divergent | A modifie, B restaure un ancien snapshot | Aperçu et choix | Interaction utilisateur |
+| Suppression parent / ajout enfant | Recette supprimée, ingrédient ajouté | Parent supprimé ; enfant rejeté ou supprimé | Automatique |
+| Deux créations sur une unicité | Deux pesées le même jour | Convergence sur l’ID déterministe | Automatique avec règle domaine |
+| Import JSON pendant la sync | Import massif | Interdit dans le prototype | Blocage |
+| Changement de compte | Base liée à un autre compte | Backup puis base séparée ou effacée | Blocage jusqu’à confirmation |
+| Horloge locale incorrecte | Appareil décalé | Ne pas utiliser seulement `updatedAt` | Moteur de sync |
 
-## 4. Règles par domaine
+## 4. Suppressions
 
-### 4.1 Profil utilisateur
+### 4.1 Modèle préparé
+
+```text
+delete:
+  deletion:<entityType>:<entityId>
+  status = deleted
+  deletedAt = date de la suppression
+  updatedAt = révision de la suppression
+
+restore:
+  même identifiant
+  status = restored
+  restoredAt = date de restauration
+  updatedAt = révision plus récente
+```
+
+`deletionRecords` est synchronisable et exporté par le backup JSON v7.
+
+`trashItems` reste local et contient le snapshot nécessaire à une restauration pendant sa durée de rétention.
+
+### 4.2 Règles
+
+| Scénario | Règle |
+|---|---|
+| Ancien appareil renvoie un objet marqué `deleted` | Rejeter ou supprimer l’objet actif |
+| Marqueur `restored` plus récent | Autoriser la réintroduction restaurée |
+| Snapshot expiré mais marqueur `deleted` présent | Suppression toujours effective ; restauration locale impossible |
+| Purge de la corbeille | Supprimer seulement `trashItems`, conserver le marqueur |
+| Parent supprimé | Marquer aussi les enfants couverts |
+| Backup ancien sans marqueur | Initialiser `deletionRecords` à vide |
+
+### 4.3 Cascades couvertes
+
+- repas → entrées alimentaires ;
+- recette → ingrédients ;
+- exercice de séance → séries.
+
+## 5. Règles par domaine
+
+### 5.1 Profil
 
 | Conflit | Règle |
 |---|---|
 | Champs distincts | Fusion partielle |
-| Même champ | Dernière opération |
+| Même champ | Dernière opération causale |
 | Profil local et cloud différents au premier login | Aperçu et choix explicite |
-| Suppression du profil | Équivalent à suppression de compte, jamais automatique |
+| Suppression | Équivalent à suppression de compte, jamais automatique |
 
-Le profil possède un ID constant.
+### 5.2 Paramètres
 
-### 4.2 Réglages
-
-Les réglages sont séparés avant synchronisation.
-
-#### Réglages utilisateur
+#### `userSettings`
 
 - fusion champ par champ ;
-- dernière opération sur un même champ ;
-- paramètres numériques validés après fusion ;
-- valeurs hors bornes rejetées.
+- validation des valeurs après fusion ;
+- même champ : dernière opération causale.
 
-#### Réglages appareil
+#### `deviceSettings`
 
 - aucun conflit distant ;
-- restent dans la base locale ou `localStorage`.
+- jamais exporté ni synchronisé ;
+- `deviceId`, thème clair/sombre, minuteur et métadonnées de backup restent locaux.
 
-### 4.3 Pesées
+### 5.3 Pesées — domaine du prototype
 
-Clé logique :
+Clé logique et ID :
 
 ```text
 weight:<YYYY-MM-DD>
 ```
 
-| Scénario | Règle |
+| Scénario | Règle du prototype |
 |---|---|
-| Deux pesées différentes le même jour | Dernière saisie par défaut ; conserver l’ancienne dans une trace locale pendant le prototype |
-| Modification de note et poids séparément | Fusion partielle |
-| Suppression sur A, modification sur B | Suppression gagnante |
-| Import d’un backup contenant la date | Simulation et choix avant remplacement |
+| A et B créent une pesée différente le même jour | Une seule entité converge ; dernière saisie causale par défaut |
+| A modifie la note, B le poids | Fusion partielle |
+| A supprime, B modifie hors ligne | `deletionRecord.deleted` gagne |
+| A restaure après la suppression | `restored` gagne si sa révision est plus récente |
+| Import JSON | Interdit tant que la sync est active |
 
-Le prototype Dexie Cloud doit utiliser ce domaine car il est simple mais expose les collisions de date.
+Le prototype doit observer et documenter le comportement réel du moteur lors d’une collision d’index unique.
 
-### 4.4 Pas journaliers
+### 5.4 Pas journaliers
 
-Clé logique :
+Clé : `steps:<YYYY-MM-DD>`.
 
-```text
-steps:<YYYY-MM-DD>
-```
+- saisie manuelle : dernière opération ;
+- ne pas prendre automatiquement le maximum ;
+- une future source automatique doit être séparée par provenance.
 
-Règle initiale :
+### 5.5 Activités
 
-- une saisie manuelle remplace la valeur précédente ;
-- ne pas prendre automatiquement le maximum sans connaître la provenance ;
-- si une future source automatique est ajoutée, séparer les contributions par source.
+- IDs distincts : conserver ;
+- champs distincts : fusion partielle ;
+- même distance ou durée : dernière opération avec trace ;
+- suppression contre modification : suppression gagnante ;
+- doublon probable : signaler, ne pas dédupliquer silencieusement.
 
-### 4.5 Activités
-
-| Scénario | Règle |
-|---|---|
-| Deux activités distinctes | Conserver les deux |
-| Même activité, champs distincts | Fusion partielle |
-| Même distance/durée modifiée | Dernière opération avec trace |
-| Suppression / modification | Suppression gagnante |
-| Doublon probable après import | Signaler, ne pas dédupliquer silencieusement |
-
-Une détection de doublon peut suggérer une action sans fusion automatique.
-
-### 4.6 Nutrition
+### 5.6 Nutrition
 
 #### Repas
 
-Clé logique :
+Clé : `meal:<date>:<slot>`.
 
-```text
-meal:<YYYY-MM-DD>:<slot>
-```
+Deux créations pour le même créneau convergent vers le même parent. Les entrées portant des IDs distincts sont conservées.
 
-Deux créations sur le même créneau fusionnent leurs entrées si les IDs d’entrées sont distincts.
-
-#### Entrées alimentaires
+#### Entrées
 
 - IDs distincts : conserver ;
 - même ID : mise à jour partielle ;
-- suppression du repas : supprimer ou détacher les entrées dans la même intention transactionnelle ;
-- produit manquant : conserver un snapshot nutritionnel suffisant pour l’historique.
+- suppression du repas : suppression des entrées dans la même intention ;
+- conserver un snapshot nutritionnel suffisant si la référence produit disparaît.
 
 #### Produits
+
+Avant généralisation :
 
 - cache Open Food Facts local ;
 - produit personnalisé synchronisé ;
 - favori synchronisé ;
-- correction personnelle prioritaire sur le cache externe ;
-- mise à jour externe ne doit pas écraser une correction personnelle.
+- correction personnelle prioritaire sur la donnée externe.
 
-### 4.7 Recettes et favoris
-
-Les ingrédients sont des lignes enfants.
+### 5.7 Recettes et favoris
 
 | Conflit | Règle |
 |---|---|
 | Deux ingrédients ajoutés | Conserver les deux |
-| Même ingrédient modifié | Mise à jour partielle |
+| Même ingrédient modifié | Fusion partielle |
 | Même `sortOrder` | Trier par `sortOrder`, puis ID |
-| Recette supprimée / ingrédient ajouté | Suppression parent gagnante |
+| Recette supprimée / ingrédient ajouté | Suppression du parent gagnante |
 | Recette renommée / ingrédient ajouté | Fusion |
 
-### 4.8 Objectifs journaliers et statut de journal
+### 5.8 Objectifs journaliers et journal
 
-IDs déterministes par date.
-
-- modification de champs distincts : fusion ;
+- ID déterministe par date ;
+- champs distincts : fusion ;
 - même champ : dernière opération ;
-- statut « terminé » puis modification des entrées : le statut reste une action utilisateur, mais l’interface peut signaler que le journal a changé après validation.
+- journal validé puis modifié : conserver l’action, signaler que le contenu a changé.
 
-### 4.9 Bilans hebdomadaires
+### 5.9 Bilans hebdomadaires
 
-Clé logique :
+Clé : `weekly-review:<weekStart>`.
 
-```text
-weekly-review:<weekStart>
-```
-
-- un seul bilan par semaine ;
-- génération automatique sur deux appareils : conserver une version canonique ;
+- génération automatique concurrente : conserver une version canonique ;
 - décision utilisateur acceptée : ne pas l’écraser par un recalcul silencieux ;
-- nouvelle génération : créer une révision ou demander confirmation.
+- nouvelle génération : révision explicite ou confirmation.
 
-### 4.10 Ajustements caloriques
+### 5.10 Ajustements caloriques
 
-Les ajustements acceptés sont un historique métier.
+- conserver l’historique ;
+- chevauchement de périodes : interaction utilisateur ;
+- ne pas recalculer silencieusement une décision acceptée.
 
-- deux ajustements sur une période qui se chevauche : interaction utilisateur ;
-- un ajustement annulé et un autre créé : conserver l’historique ;
-- ne pas recalculer silencieusement une décision déjà acceptée.
+### 5.11 Catalogue d’exercices
 
-### 4.11 Catalogue d’exercices
+- catalogue fourni : local/versionné ou realm public en lecture seule ;
+- exercice personnalisé : privé et synchronisé ;
+- modification personnelle d’un exercice fourni : créer une personnalisation.
 
-- catalogue fourni : immuable pour l’utilisateur ou versionné par l’application ;
-- exercice personnalisé : synchronisé ;
-- exercice fourni renommé localement : créer une personnalisation, ne pas modifier la référence globale ;
-- même exercice personnalisé modifié : fusion partielle.
+### 5.12 Modèles de musculation
 
-### 4.12 Modèles de musculation
+- parents et enfants séparés ;
+- nouveaux enfants avec IDs différents : conserver ;
+- même position : `sortOrder`, puis ID ;
+- suppression du modèle : marquer/supprimer les enfants ;
+- séance déjà créée : ne pas la réécrire depuis le modèle.
 
-Parents et enfants séparés.
-
-- exercices ajoutés avec IDs différents : conserver ;
-- même position : ordre par `sortOrder`, puis ID ;
-- suppression d’un modèle : supprimer les lignes enfants ;
-- séance déjà créée depuis un modèle : ne pas réécrire rétroactivement la séance.
-
-### 4.13 Séance en cours
+### 5.13 Séance en cours
 
 État cible :
 
@@ -209,158 +224,53 @@ leaseUpdatedAt
 
 | Scénario | Règle |
 |---|---|
-| A démarre, B ouvre | B en lecture seule avec avertissement |
+| A démarre, B ouvre | B en lecture seule |
 | Bail expiré | B peut reprendre après confirmation |
-| Deux appareils hors ligne démarrent | Conflit au sync, choix utilisateur obligatoire |
-| Séries distinctes ajoutées | Conserver si IDs distincts |
+| Deux démarrages hors ligne | Choix utilisateur obligatoire |
+| Séries distinctes | Conserver si IDs distincts |
 | Même série modifiée | Dernière opération avec trace |
-| A termine, B continue | Séance terminée verrouillée ; B doit créer une correction explicite |
+| A termine, B continue | Séance terminée verrouillée ; correction explicite |
 
 Aucune fusion automatique de minuteur.
 
-### 4.14 Suggestions de progression
+### 5.14 Suggestions de progression
 
-Séparer :
+- proposition calculée : recalculable ;
+- décision utilisateur : synchronisée ;
+- date d’acceptation et application effective : synchronisées.
 
-- proposition calculée ;
-- décision utilisateur ;
-- date d’acceptation ;
-- application effective.
+### 5.15 Badges, thèmes et missions
 
-Les propositions sont recalculables. Les décisions sont synchronisées.
+- badge ou thème débloqué : union monotone ;
+- `earnedAt` ou `unlockedAt` : plus ancienne date valide ;
+- thème de récompense actif : dernière opération ;
+- thème clair/sombre/système : local ;
+- mission terminée : une ligne par semaine, jamais retirée automatiquement.
 
-### 4.15 Badges
+### 5.16 Objectifs personnels
 
-Modèle cible : une ligne par badge.
+- nouveaux IDs : conserver ;
+- même objectif, champs distincts : fusion partielle ;
+- même cible : dernière opération avec trace ;
+- jalons : union ou recalcul ;
+- suppression contre progression : suppression gagnante.
 
-Clé :
+### 5.17 Planning d’endurance
 
-```text
-achievement:<achievementId>
-```
+- séances distinctes le même jour : conserver ;
+- même séance déplacée : dernière opération ;
+- séance ignorée puis activité réelle : pas de réactivation automatique ;
+- séance supprimée : l’activité réelle reste conservée.
 
-Conflit :
+### 5.18 Rappels
 
-- badge débloqué sur deux appareils : conserver une ligne ;
-- `earnedAt` : conserver la date valide la plus ancienne ;
-- un badge débloqué n’est jamais retiré automatiquement.
-
-### 4.16 Thèmes de récompense
-
-- thèmes débloqués : union ;
-- thème actif : dernière opération ;
-- clair/sombre/système : local à l’appareil ;
-- un thème actif non débloqué après fusion est remplacé par le thème classique.
-
-### 4.17 Missions hebdomadaires
-
-Clé :
-
-```text
-weekly-mission:<weekStart>
-```
-
-- complétion sur deux appareils : fusion ;
-- `completedAt` : date valide la plus ancienne ;
-- une complétion enregistrée n’est pas retirée automatiquement.
-
-### 4.18 Objectifs personnels
-
-Chaque objectif devient une ligne, pas un tableau unique.
-
-| Élément | Règle |
-|---|---|
-| Nouveaux objectifs | Conserver tous les IDs distincts |
-| Même objectif, champs distincts | Fusion partielle |
-| Même cible modifiée | Dernière opération avec trace |
-| Jalons atteints | Union ou recalcul depuis les données |
-| Objectif terminé / réouvert | Dernière action explicite |
-| Suppression / progression | Suppression gagnante |
-
-`reachedMilestones` devrait idéalement être recalculé plutôt que fusionné comme tableau.
-
-### 4.19 Planning d’endurance
-
-Chaque séance planifiée devient une ligne.
-
-- deux séances distinctes le même jour : conserver ;
-- même séance déplacée sur deux appareils : dernière opération ;
-- `skipped` puis activité correspondante enregistrée : l’activité ne réactive pas automatiquement la séance ;
-- séance supprimée / activité réelle : l’activité reste conservée ;
-- statut « terminé » reste dérivé du rapprochement avec les activités si ce modèle est maintenu.
-
-### 4.20 Rappels
-
-#### Préférences
-
-Synchronisées via les réglages utilisateur.
-
-#### Complétion
-
-Clé :
-
-```text
-routine-reminder:<date>:<type>
-```
-
-- terminé sur un appareil : terminé pour le compte ;
-- deux complétions : conserver la première date valide.
-
-#### Affichage et report
-
-Locaux :
-
-- `lastShownAt` ;
-- `snoozedUntil`.
-
-Conséquence acceptée : un report sur téléphone ne reporte pas nécessairement le rappel sur ordinateur.
-
-### 4.21 Corbeille
-
-La corbeille actuelle ne doit pas être synchronisée brute.
-
-Règle cible :
-
-- suppression = `deletedAt` ;
-- restauration = suppression de `deletedAt` avec nouvelle révision ;
-- purge = action explicite ou expiration ;
-- suppression parent/enfants cohérente ;
-- purge sur un appareil se propage.
-
-Une restauration après purge physique est impossible et doit être clairement indiquée.
-
-## 5. Opérations Dexie à privilégier
-
-### Mise à jour partielle
-
-```ts
-await table.update(id, {
-  notes,
-  updatedAt,
-});
-```
-
-### Modification en masse intentionnelle
-
-```ts
-await table
-  .where({ parentId })
-  .modify({ deletedAt });
-```
-
-La requête exprime l’intention sur une collection.
-
-### À éviter
-
-```ts
-await table.put(fullObject);
-```
-
-lorsque seule une propriété a changé.
+- préférences : `userSettings`, synchronisées ;
+- complétions : une ligne déterministe par date et type ;
+- `lastShownAt` et `snoozedUntil` : locaux.
 
 ## 6. Registre de conflits
 
-Le prototype doit enregistrer localement les conflits métier critiques sans données complètes :
+Les conflits métier critiques peuvent être journalisés localement sans contenu complet :
 
 ```text
 id
@@ -372,27 +282,21 @@ resolution
 deviceId
 ```
 
-Ne pas journaliser :
+Ne pas journaliser le poids, les aliments, les notes ou le contenu des séances.
 
-- poids ;
-- aliments ;
-- notes ;
-- contenu des séances.
-
-Pour la production, décider si ce registre reste local ou devient un audit serveur.
-
-## 7. Tests obligatoires par règle
+## 7. Tests obligatoires
 
 Pour chaque domaine généralisé :
 
-1. appareil A et B synchronisés ;
-2. les deux passent hors ligne ;
-3. conflit créé volontairement ;
-4. A se reconnecte ;
-5. B se reconnecte ;
-6. résultat vérifié sur A, B et après rechargement ;
-7. export JSON effectué ;
-8. restauration locale testée.
+1. synchroniser A et B ;
+2. passer les deux hors ligne ;
+3. créer le conflit ;
+4. reconnecter A ;
+5. reconnecter B ;
+6. vérifier A, B et après rechargement ;
+7. exporter un backup JSON ;
+8. vérifier une restauration locale ;
+9. répéter avec suppression et restauration lorsque le domaine est couvert.
 
 ## 8. Critères de refus
 
@@ -400,8 +304,9 @@ Une table ne passe pas en synchronisation si :
 
 - l’ID n’est pas universel ou déterministe ;
 - la suppression n’est pas définie ;
-- un `put()` global peut écraser des enfants ;
-- une contrainte unique peut échouer à la reconnexion ;
-- la relation parent/enfant n’a pas de règle ;
-- le backup ne sait pas exporter la nouvelle forme ;
-- aucun test de conflit n’existe.
+- un remplacement complet peut écraser une modification concurrente ;
+- une contrainte unique peut bloquer la reconnexion ;
+- une relation parent/enfant n’a pas de règle ;
+- le backup ne sait pas exporter et restaurer sa forme ;
+- aucun test de conflit n’existe ;
+- la table mélange encore données utilisateur et cache externe sans distinction.

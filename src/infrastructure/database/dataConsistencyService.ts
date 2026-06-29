@@ -15,7 +15,7 @@ export type DataConsistencyIssueSeverity =
 
 export type DataConsistencyTableName =
   | 'userProfile'
-  | 'appSettings'
+  | 'userSettings'
   | 'foodEntries'
   | 'favoriteMeals'
   | 'recipeIngredients'
@@ -167,14 +167,14 @@ export function inspectDataConsistencyFromData(
     );
   }
 
-  if (data.appSettings.length > 1) {
+  if ((data.userSettings?.length ?? 0) > 1) {
     issues.push(
       createIssue(
         'multiple-settings',
         'warning',
-        'appSettings',
+        'userSettings',
         'settings-count',
-        `${data.appSettings.length} jeux de paramètres sont présents.`,
+        `${data.userSettings?.length ?? 0} jeux de paramètres utilisateur sont présents.`,
         false,
       ),
     );

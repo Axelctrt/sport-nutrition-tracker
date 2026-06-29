@@ -1,12 +1,12 @@
 import { createDefaultAppSettings } from '@/domain/defaults/appSettings';
 import { exerciseCatalog } from '@/domain/defaults/exerciseCatalog';
-import { APP_SETTINGS_ID, LOCAL_USER_PROFILE_ID } from '@/domain/defaults/identifiers';
+import { DEVICE_SETTINGS_ID, LOCAL_USER_PROFILE_ID, USER_SETTINGS_ID } from '@/domain/defaults/identifiers';
 import type { BackupEnvelope } from '@/domain/models/backup';
 import type { UserProfile } from '@/domain/models/profile';
 import { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import { initializeDatabase } from '@/infrastructure/database/databaseLifecycle';
-import { databaseTableNames } from '@/infrastructure/database/schema';
 import {
+  allUserDataTableList,
   clearAllUserData,
   createBackupEnvelope,
   parseBackupText,
@@ -79,7 +79,11 @@ describe('backupService', () => {
   it('couvre exactement toutes les tables Dexie dans le format de sauvegarde', async () => {
     const envelope = await createBackupEnvelope(database, '2026-06-24T10:00:00.000Z');
 
-    expect(Object.keys(envelope.data).sort()).toEqual([...databaseTableNames].sort());
+    expect(Object.keys(envelope.data).sort()).toEqual(
+      allUserDataTableList(database)
+        .map(({ name }) => name)
+        .sort(),
+    );
   });
 
   it('exporte toutes les tables et produit un JSON réimportable', async () => {
@@ -89,19 +93,35 @@ describe('backupService', () => {
     await database.weights.add(
       createEntity({ date: '2026-06-23', weightKg: 60 }, 'weight-1'),
     );
+    await database.deletionRecords.add({
+      id: 'deletion:activity:activity-deleted',
+      entityType: 'activity',
+      entityId: 'activity-deleted',
+      status: 'deleted',
+      deletedAt: '2026-06-23T09:00:00.000Z',
+      createdAt: '2026-06-23T09:00:00.000Z',
+      updatedAt: '2026-06-23T09:00:00.000Z',
+    });
 
     const envelope = await createBackupEnvelope(database, '2026-06-24T10:00:00.000Z');
     const parsed = parseBackupText(serializeBackupEnvelope(envelope));
     const summary = summarizeBackup(parsed);
 
-    expect(parsed.schemaVersion).toBe(4);
+    expect(parsed.schemaVersion).toBe(7);
     expect(parsed.appVersion).toBe(__APP_VERSION__);
     expect(parsed.data.userProfile).toHaveLength(1);
     expect(parsed.data.weights).toHaveLength(1);
-    expect(parsed.data.appSettings[0]?.id).toBe(APP_SETTINGS_ID);
+    expect(parsed.data.userSettings?.[0]?.id).toBe(USER_SETTINGS_ID);
+    expect(parsed.data.appSettings).toBeUndefined();
     expect(parsed.data.exerciseDefinitions).toHaveLength(exerciseCatalog.length);
     expect(parsed.data.exerciseDefinitions.every((exercise) => exercise.source === 'catalog')).toBe(true);
-    expect(summary.totalRecords).toBe(exerciseCatalog.length + 3);
+    expect(parsed.data.deletionRecords).toEqual([
+      expect.objectContaining({
+        id: 'deletion:activity:activity-deleted',
+        status: 'deleted',
+      }),
+    ]);
+    expect(summary.totalRecords).toBe(exerciseCatalog.length + 4);
     expect(summary.hasProfile).toBe(true);
     expect(summary.appVersion).toBe(__APP_VERSION__);
     expect(summary.requiresMigration).toBe(false);
@@ -152,10 +172,15 @@ describe('backupService', () => {
     expect(await database.progressionSuggestions.get('suggestion-1')).toEqual(suggestion);
   });
 
-  it('remplace intégralement les données avec une sauvegarde valide', async () => {
+  it('remplace intégralement les données avec une sauvegarde valide sans écraser les préférences appareil', async () => {
     await database.weights.add(
       createEntity({ date: '2026-06-20', weightKg: 62 }, 'old-weight'),
     );
+    await database.deviceSettings.update(DEVICE_SETTINGS_ID, {
+      deviceId: 'device-local',
+      theme: 'dark',
+      restTimerSoundEnabled: true,
+    });
     const envelope = createEnvelope({
       weights: [createEntity({ date: '2026-06-23', weightKg: 60 }, 'new-weight')],
     });
@@ -166,6 +191,11 @@ describe('backupService', () => {
       expect.objectContaining({ id: 'new-weight', weightKg: 60 }),
     ]);
     expect(await database.userProfile.get(LOCAL_USER_PROFILE_ID)).toBeDefined();
+    expect(await database.deviceSettings.get(DEVICE_SETTINGS_ID)).toMatchObject({
+      deviceId: 'device-local',
+      theme: 'dark',
+      restTimerSoundEnabled: true,
+    });
   });
 
   it('annule toute la transaction lorsque l’écriture échoue', async () => {
@@ -197,6 +227,48 @@ describe('backupService', () => {
     await database.exerciseDefinitions.add(
       createEntity(createExerciseDefinitionInput(), 'exercise-1'),
     );
+    await database.earnedAchievements.add({
+      id: 'first-session',
+      earnedAt: '2026-06-29T08:00:00.000Z',
+      updatedAt: '2026-06-29T08:00:00.000Z',
+    });
+    await database.unlockedVisualThemes.add({
+      id: 'power',
+      unlockedAt: '2026-06-29T08:00:00.000Z',
+      updatedAt: '2026-06-29T08:00:00.000Z',
+    });
+    await database.visualThemePreferences.add({
+      id: 'visual-theme-preference',
+      activeThemeId: 'power',
+      updatedAt: '2026-06-29T08:00:00.000Z',
+    });
+    await database.weeklyMissionCompletions.add({
+      id: 'weekly-mission:2026-06-22',
+      weekStart: '2026-06-22',
+      completedAt: '2026-06-29T08:00:00.000Z',
+      updatedAt: '2026-06-29T08:00:00.000Z',
+    });
+    await database.routineReminderCompletions.add({
+      id: 'routine-reminder:2026-06-29:weighIn',
+      date: '2026-06-29',
+      type: 'weighIn',
+      completedAt: '2026-06-29T08:00:00.000Z',
+      updatedAt: '2026-06-29T08:00:00.000Z',
+    });
+    await database.deletionRecords.add({
+      id: 'deletion:weight:weight-deleted',
+      entityType: 'weight',
+      entityId: 'weight-deleted',
+      status: 'deleted',
+      deletedAt: '2026-06-29T08:00:00.000Z',
+      createdAt: '2026-06-29T08:00:00.000Z',
+      updatedAt: '2026-06-29T08:00:00.000Z',
+    });
+    await database.deviceSettings.update(DEVICE_SETTINGS_ID, {
+      deviceId: 'device-preserved',
+      theme: 'dark',
+      backupReminderIntervalDays: 14,
+    });
 
     await clearAllUserData(database);
 
@@ -204,10 +276,19 @@ describe('backupService', () => {
     expect(await database.weights.count()).toBe(0);
     expect(await database.exerciseDefinitions.count()).toBe(exerciseCatalog.length);
     expect(await database.exerciseDefinitions.get('exercise-1')).toBeUndefined();
-    expect(await database.appSettings.count()).toBe(1);
-    expect(await database.appSettings.get(APP_SETTINGS_ID)).toMatchObject({
-      id: APP_SETTINGS_ID,
-      theme: 'system',
+    expect(await database.earnedAchievements.count()).toBe(0);
+    expect(await database.unlockedVisualThemes.count()).toBe(0);
+    expect(await database.visualThemePreferences.count()).toBe(0);
+    expect(await database.weeklyMissionCompletions.count()).toBe(0);
+    expect(await database.routineReminderCompletions.count()).toBe(0);
+    expect(await database.deletionRecords.count()).toBe(0);
+    expect(await database.userSettings.count()).toBe(1);
+    expect(await database.userSettings.get(USER_SETTINGS_ID)).toMatchObject({ id: USER_SETTINGS_ID });
+    expect(await database.deviceSettings.get(DEVICE_SETTINGS_ID)).toMatchObject({
+      id: DEVICE_SETTINGS_ID,
+      deviceId: 'device-preserved',
+      theme: 'dark',
+      backupReminderIntervalDays: 14,
     });
   });
 

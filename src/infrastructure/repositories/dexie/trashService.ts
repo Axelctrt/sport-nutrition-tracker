@@ -1,4 +1,11 @@
 import { RepositoryError } from '@/domain/errors/RepositoryError';
+import {
+  createDeletedDeletionRecord,
+  createRestoredDeletionRecord,
+  deletionRecordId,
+  deletionTargetsForTrashItem,
+  type DeletionRecordStatus,
+} from '@/domain/models/deletion';
 import { publishTrashUndoAvailable } from '@/shared/trash/trashUndoEvents';
 import type { EntityId, LocalDate } from '@/domain/models/common';
 import type { MealSlot } from '@/domain/models/food';
@@ -32,6 +39,37 @@ function createPurgeDate(now: Date): string {
   ).toISOString();
 }
 
+export async function persistDeletionRecordsForTrashItem(
+  database: AppDatabase,
+  trashItem: TrashItem,
+  status: DeletionRecordStatus,
+  occurredAt: string,
+): Promise<void> {
+  const targets = deletionTargetsForTrashItem(trashItem);
+  const ids = targets.map((target) =>
+    deletionRecordId(target.entityType, target.entityId),
+  );
+  const existing = await database.deletionRecords.bulkGet(ids);
+  const records = targets.map((target, index) =>
+    status === 'deleted'
+      ? createDeletedDeletionRecord(
+          target,
+          trashItem.deletedAt,
+          existing[index],
+        )
+      : createRestoredDeletionRecord(
+          target,
+          occurredAt,
+          trashItem.deletedAt,
+          existing[index],
+        ),
+  );
+
+  if (records.length > 0) {
+    await database.deletionRecords.bulkPut(records);
+  }
+}
+
 async function purgeExpiredInsideTransaction(
   database: AppDatabase,
   now: Date,
@@ -51,6 +89,7 @@ export async function moveActivityToTrash(
     'rw',
     database.activities,
     database.trashItems,
+    database.deletionRecords,
     async () => {
       await purgeExpiredInsideTransaction(database, now);
 
@@ -68,6 +107,12 @@ export async function moveActivityToTrash(
       };
 
       await database.trashItems.put(trashItem);
+      await persistDeletionRecordsForTrashItem(
+        database,
+        trashItem,
+        'deleted',
+        trashItem.deletedAt,
+      );
       await database.activities.delete(activity.id);
 
       return trashItem;
@@ -93,6 +138,7 @@ export async function moveWeightToTrash(
     'rw',
     database.weights,
     database.trashItems,
+    database.deletionRecords,
     async () => {
       await purgeExpiredInsideTransaction(database, now);
 
@@ -113,6 +159,12 @@ export async function moveWeightToTrash(
       };
 
       await database.trashItems.put(trashItem);
+      await persistDeletionRecordsForTrashItem(
+        database,
+        trashItem,
+        'deleted',
+        trashItem.deletedAt,
+      );
       await database.weights.delete(weight.id);
 
       return trashItem;
@@ -138,6 +190,7 @@ export async function moveFoodEntryToTrash(
     'rw',
     database.foodEntries,
     database.trashItems,
+    database.deletionRecords,
     async () => {
       await purgeExpiredInsideTransaction(database, now);
 
@@ -155,6 +208,12 @@ export async function moveFoodEntryToTrash(
       };
 
       await database.trashItems.put(trashItem);
+      await persistDeletionRecordsForTrashItem(
+        database,
+        trashItem,
+        'deleted',
+        trashItem.deletedAt,
+      );
       await database.foodEntries.delete(entry.id);
 
       return trashItem;
@@ -181,6 +240,7 @@ export async function moveMealToTrash(
     database.meals,
     database.foodEntries,
     database.trashItems,
+    database.deletionRecords,
     async () => {
       await purgeExpiredInsideTransaction(database, now);
 
@@ -208,6 +268,12 @@ export async function moveMealToTrash(
       };
 
       await database.trashItems.put(trashItem);
+      await persistDeletionRecordsForTrashItem(
+        database,
+        trashItem,
+        'deleted',
+        trashItem.deletedAt,
+      );
 
       if (entries.length > 0) {
         await database.foodEntries.bulkDelete(
@@ -239,6 +305,7 @@ export async function moveFavoriteMealToTrash(
     'rw',
     database.favoriteMeals,
     database.trashItems,
+    database.deletionRecords,
     async () => {
       await purgeExpiredInsideTransaction(database, now);
 
@@ -257,6 +324,12 @@ export async function moveFavoriteMealToTrash(
       };
 
       await database.trashItems.put(trashItem);
+      await persistDeletionRecordsForTrashItem(
+        database,
+        trashItem,
+        'deleted',
+        trashItem.deletedAt,
+      );
       await database.favoriteMeals.delete(favoriteMeal.id);
 
       return trashItem;
@@ -283,6 +356,7 @@ export async function moveRecipeToTrash(
     database.recipes,
     database.recipeIngredients,
     database.trashItems,
+    database.deletionRecords,
     async () => {
       await purgeExpiredInsideTransaction(database, now);
 
@@ -308,6 +382,12 @@ export async function moveRecipeToTrash(
       };
 
       await database.trashItems.put(trashItem);
+      await persistDeletionRecordsForTrashItem(
+        database,
+        trashItem,
+        'deleted',
+        trashItem.deletedAt,
+      );
 
       if (ingredients.length > 0) {
         await database.recipeIngredients.bulkDelete(
@@ -338,7 +418,11 @@ export async function moveStrengthSetToTrash(
 ): Promise<TrashItem> {
   const trashItem = await database.transaction(
     'rw',
-    [database.strengthSets, database.trashItems],
+    [
+      database.strengthSets,
+      database.trashItems,
+      database.deletionRecords,
+    ],
     async () => {
       await purgeExpiredInsideTransaction(database, now);
 
@@ -364,6 +448,12 @@ export async function moveStrengthSetToTrash(
       };
 
       await database.trashItems.put(trashItem);
+      await persistDeletionRecordsForTrashItem(
+        database,
+        trashItem,
+        'deleted',
+        trashItem.deletedAt,
+      );
       await database.strengthSets.delete(current.id);
 
       const remaining = (
@@ -407,6 +497,7 @@ export async function moveWorkoutSessionExerciseToTrash(
       database.workoutSessionExercises,
       database.strengthSets,
       database.trashItems,
+      database.deletionRecords,
     ],
     async () => {
       await purgeExpiredInsideTransaction(database, now);
@@ -445,6 +536,12 @@ export async function moveWorkoutSessionExerciseToTrash(
       };
 
       await database.trashItems.put(trashItem);
+      await persistDeletionRecordsForTrashItem(
+        database,
+        trashItem,
+        'deleted',
+        trashItem.deletedAt,
+      );
 
       if (sets.length > 0) {
         await database.strengthSets.bulkDelete(
@@ -494,6 +591,7 @@ async function assertNoIdsExist(
 export async function restoreTrashItem(
   database: AppDatabase,
   trashItemId: string,
+  now: Date = new Date(),
 ): Promise<TrashItem> {
   return database.transaction(
     'rw',
@@ -509,6 +607,7 @@ export async function restoreTrashItem(
       database.workoutSessions,
       database.workoutSessionExercises,
       database.strengthSets,
+      database.deletionRecords,
     ],
     async () => {
       const trashItem = await database.trashItems.get(trashItemId);
@@ -773,6 +872,12 @@ export async function restoreTrashItem(
         }
       }
 
+      await persistDeletionRecordsForTrashItem(
+        database,
+        trashItem,
+        'restored',
+        now.toISOString(),
+      );
       await database.trashItems.delete(trashItem.id);
       return trashItem;
     },

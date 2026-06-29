@@ -89,7 +89,7 @@ function optionalPositiveNumber(
     : undefined;
 }
 
-function parseSession(
+export function parseSession(
   value: unknown,
 ): PlannedEnduranceSession | undefined {
   if (!value || typeof value !== 'object') {
@@ -153,10 +153,64 @@ function parseSession(
   };
 }
 
-export function readEndurancePlanningState():
-  EndurancePlanningState {
+export type EndurancePlanningPersistence = (
+  state: EndurancePlanningState,
+) => Promise<void>;
+
+interface EndurancePlanningRuntime {
+  state: EndurancePlanningState;
+  persist: EndurancePlanningPersistence;
+}
+
+let endurancePlanningRuntime:
+  EndurancePlanningRuntime | undefined;
+let endurancePersistenceQueue: Promise<void> =
+  Promise.resolve();
+let latestEnduranceFallback: string | undefined;
+
+function cloneEndurancePlanningState(
+  state: EndurancePlanningState,
+): EndurancePlanningState {
+  return {
+    version: 1,
+    sessions: state.sessions.map((session) => ({ ...session })),
+  };
+}
+
+export function parseEndurancePlanningState(
+  value: unknown,
+): EndurancePlanningState | undefined {
+  if (!value || typeof value !== 'object') {
+    return undefined;
+  }
+
+  const candidate = value as {
+    version?: unknown;
+    sessions?: unknown;
+  };
+
+  if (
+    candidate.version !== 1 ||
+    !Array.isArray(candidate.sessions)
+  ) {
+    return undefined;
+  }
+
+  return {
+    version: 1,
+    sessions: candidate.sessions
+      .map(parseSession)
+      .filter(
+        (session): session is PlannedEnduranceSession =>
+          session !== undefined,
+      ),
+  };
+}
+
+export function readLegacyEndurancePlanningState():
+  EndurancePlanningState | undefined {
   if (typeof window === 'undefined') {
-    return emptyEndurancePlanningState();
+    return undefined;
   }
 
   try {
@@ -164,48 +218,117 @@ export function readEndurancePlanningState():
       ENDURANCE_PLANNING_STORAGE_KEY,
     );
 
-    if (!raw) {
-      return emptyEndurancePlanningState();
-    }
-
-    const parsed = JSON.parse(raw) as {
-      version?: unknown;
-      sessions?: unknown;
-    };
-
-    if (
-      parsed.version !== 1 ||
-      !Array.isArray(parsed.sessions)
-    ) {
-      return emptyEndurancePlanningState();
-    }
-
-    return {
-      version: 1,
-      sessions: parsed.sessions
-        .map(parseSession)
-        .filter(
-          (
-            session,
-          ): session is PlannedEnduranceSession =>
-            session !== undefined,
-        ),
-    };
+    return raw === null
+      ? undefined
+      : parseEndurancePlanningState(JSON.parse(raw));
   } catch {
-    return emptyEndurancePlanningState();
+    return undefined;
   }
+}
+
+function writeEnduranceFallback(serialized: string): void {
+  if (typeof window === 'undefined') return;
+
+  try {
+    window.localStorage.setItem(
+      ENDURANCE_PLANNING_STORAGE_KEY,
+      serialized,
+    );
+  } catch {
+    // Dexie reste prioritaire lorsque le stockage de secours est indisponible.
+  }
+}
+
+function removeEnduranceFallback(serialized: string): void {
+  if (typeof window === 'undefined') return;
+
+  try {
+    if (
+      latestEnduranceFallback === serialized &&
+      window.localStorage.getItem(
+        ENDURANCE_PLANNING_STORAGE_KEY,
+      ) === serialized
+    ) {
+      window.localStorage.removeItem(
+        ENDURANCE_PLANNING_STORAGE_KEY,
+      );
+    }
+  } catch {
+    // La clé de secours sera réévaluée au prochain démarrage.
+  }
+}
+
+function dispatchEndurancePlanningChanged(): void {
+  if (typeof window === 'undefined') return;
+
+  window.dispatchEvent(
+    new Event(ENDURANCE_PLANNING_CHANGED_EVENT),
+  );
+}
+
+export function hydrateEndurancePlanningRuntime(
+  state: EndurancePlanningState,
+  persist: EndurancePlanningPersistence,
+): void {
+  endurancePlanningRuntime = {
+    state: cloneEndurancePlanningState(state),
+    persist,
+  };
+  endurancePersistenceQueue = Promise.resolve();
+  latestEnduranceFallback = undefined;
+}
+
+export function resetEndurancePlanningRuntimeForTests(): void {
+  endurancePlanningRuntime = undefined;
+  endurancePersistenceQueue = Promise.resolve();
+  latestEnduranceFallback = undefined;
+}
+
+export async function flushEndurancePlanningPersistence():
+  Promise<void> {
+  await endurancePersistenceQueue;
+}
+
+export function readEndurancePlanningState():
+  EndurancePlanningState {
+  if (endurancePlanningRuntime) {
+    return cloneEndurancePlanningState(
+      endurancePlanningRuntime.state,
+    );
+  }
+
+  return (
+    readLegacyEndurancePlanningState() ??
+    emptyEndurancePlanningState()
+  );
 }
 
 export function writeEndurancePlanningState(
   state: EndurancePlanningState,
 ): void {
-  if (typeof window === 'undefined') return;
+  const snapshot = cloneEndurancePlanningState(state);
+  const serialized = JSON.stringify(snapshot);
 
-  window.localStorage.setItem(
-    ENDURANCE_PLANNING_STORAGE_KEY,
-    JSON.stringify(state),
-  );
-  window.dispatchEvent(
-    new Event(ENDURANCE_PLANNING_CHANGED_EVENT),
-  );
+  if (!endurancePlanningRuntime) {
+    writeEnduranceFallback(serialized);
+    dispatchEndurancePlanningChanged();
+    return;
+  }
+
+  const persist = endurancePlanningRuntime.persist;
+  endurancePlanningRuntime.state = snapshot;
+  latestEnduranceFallback = serialized;
+  writeEnduranceFallback(serialized);
+  dispatchEndurancePlanningChanged();
+
+  endurancePersistenceQueue = endurancePersistenceQueue
+    .catch(() => undefined)
+    .then(() => persist(snapshot))
+    .then(() => removeEnduranceFallback(serialized))
+    .catch((error: unknown) => {
+      console.error(
+        'La persistance Dexie du planning d’endurance a échoué.',
+        error,
+      );
+    });
 }

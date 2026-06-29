@@ -1,10 +1,12 @@
 import type { LocalDate, NewEntity } from '@/domain/models/common';
 import type { WeightEntry } from '@/domain/models/weight';
+import { weightEntryIdForDate } from '@/domain/sync/deterministicEntityIds';
 import type { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import type { WeightRepository } from '@/infrastructure/repositories/contracts/WeightRepository';
 import { runRepositoryOperation } from '@/infrastructure/repositories/dexie/repositoryOperation';
+import { updateStoredEntity } from '@/infrastructure/repositories/dexie/updateStoredEntity';
 import { moveWeightToTrash } from '@/infrastructure/repositories/dexie/trashService';
-import { createEntity, updateEntity } from '@/shared/utils/entities';
+import { createEntity } from '@/shared/utils/entities';
 
 export class DexieWeightRepository implements WeightRepository {
   private readonly database: AppDatabase;
@@ -51,8 +53,12 @@ export class DexieWeightRepository implements WeightRepository {
       'Impossible d’enregistrer la pesée.',
       async () => {
         const current = await this.database.weights.where('date').equals(data.date).first();
-        const entry = current ? updateEntity(current, data) : createEntity<WeightEntry>(data);
-        await this.database.weights.put(entry);
+        if (current) {
+          return updateStoredEntity(this.database.weights, current, data);
+        }
+
+        const entry = createEntity<WeightEntry>(data, weightEntryIdForDate(data.date));
+        await this.database.weights.add(entry);
         return entry;
       },
     );

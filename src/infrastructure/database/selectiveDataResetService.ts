@@ -19,7 +19,7 @@ export const selectiveDataResetCategoryNames = [
 export type SelectiveDataResetCategory =
   (typeof selectiveDataResetCategoryNames)[number];
 
-type PreservedDatabaseTableName = "userProfile" | "appSettings";
+type PreservedDatabaseTableName = "userProfile" | "userSettings";
 type ResettableDatabaseTableName = Exclude<
   DatabaseUserTableName,
   PreservedDatabaseTableName
@@ -188,7 +188,7 @@ export function createSelectiveDataResetPlan(
   const tableNames = databaseTableNames.filter(
     (tableName): tableName is ResettableDatabaseTableName =>
       tableName !== "userProfile" &&
-      tableName !== "appSettings" &&
+      tableName !== "userSettings" &&
       selectedTableNames.has(tableName),
   );
 

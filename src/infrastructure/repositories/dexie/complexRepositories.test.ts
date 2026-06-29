@@ -1,5 +1,11 @@
 import type { NewEntity } from '@/domain/models/common';
 import type { WeeklyReview } from '@/domain/models/weeklyReview';
+import {
+  dailyJournalStatusIdForDate,
+  dailyTargetIdForDate,
+  mealIdForDateAndSlot,
+  weeklyReviewIdForWeekStart,
+} from '@/domain/sync/deterministicEntityIds';
 import { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import { DexieFoodRepository } from '@/infrastructure/repositories/dexie/DexieFoodRepository';
 import { DexieRecipeRepository } from '@/infrastructure/repositories/dexie/DexieRecipeRepository';
@@ -41,6 +47,10 @@ describe('repositories Dexie complexes', () => {
     });
     const firstMeal = await repository.getOrCreateMeal('2026-06-23', 'lunch');
     const secondMeal = await repository.getOrCreateMeal('2026-06-23', 'lunch');
+    const journalStatus = await repository.upsertJournalStatus({
+      date: '2026-06-23',
+      isComplete: false,
+    });
 
     await repository.createEntry({
       date: '2026-06-23',
@@ -58,7 +68,11 @@ describe('repositories Dexie complexes', () => {
       },
     });
 
+    expect(firstMeal.id).toBe(mealIdForDateAndSlot('2026-06-23', 'lunch'));
     expect(secondMeal.id).toBe(firstMeal.id);
+    expect(journalStatus.id).toBe(
+      dailyJournalStatusIdForDate('2026-06-23'),
+    );
     expect(await database.meals.count()).toBe(1);
     expect(await database.foodEntries.count()).toBe(1);
 
@@ -147,10 +161,21 @@ describe('repositories Dexie complexes', () => {
       ...targetInput,
       targetCaloriesKcal: 2_100,
     });
-    await repository.upsertJournalStatus({ date: '2026-06-23', isComplete: false });
-    await repository.upsertJournalStatus({ date: '2026-06-23', isComplete: true });
+    const firstStatus = await repository.upsertJournalStatus({
+      date: '2026-06-23',
+      isComplete: false,
+    });
+    const secondStatus = await repository.upsertJournalStatus({
+      date: '2026-06-23',
+      isComplete: true,
+    });
 
+    expect(firstTarget.id).toBe(dailyTargetIdForDate('2026-06-23'));
     expect(secondTarget.id).toBe(firstTarget.id);
+    expect(firstStatus.id).toBe(
+      dailyJournalStatusIdForDate('2026-06-23'),
+    );
+    expect(secondStatus.id).toBe(firstStatus.id);
     expect(secondTarget.targetCaloriesKcal).toBe(2_100);
     expect(await database.dailyTargets.count()).toBe(1);
     expect(await database.dailyJournalStatuses.count()).toBe(1);
@@ -201,6 +226,9 @@ describe('repositories Dexie complexes', () => {
       status: 'active',
     });
 
+    expect(firstReview.id).toBe(
+      weeklyReviewIdForWeekStart('2026-06-22'),
+    );
     expect(secondReview.id).toBe(firstReview.id);
     expect(decision.review.decisionStatus).toBe('accepted');
     expect(decision.adjustment?.adjustmentKcalPerDay).toBe(50);

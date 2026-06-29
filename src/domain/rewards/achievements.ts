@@ -122,30 +122,32 @@ function isAchievementId(value: unknown): value is AchievementId {
   return achievementCatalog.some((achievement) => achievement.id === value);
 }
 
-function createDefaultState(): AchievementState {
+export function emptyAchievementState(): AchievementState {
   return { earnedAchievements: [] };
 }
 
-export function readAchievementState(): AchievementState {
-  if (typeof window === "undefined") return createDefaultState();
+export function parseAchievementState(
+  value: unknown,
+): AchievementState | undefined {
+  if (!value || typeof value !== "object") return undefined;
 
-  try {
-    const rawValue = window.localStorage.getItem(ACHIEVEMENT_STORAGE_KEY);
-    if (!rawValue) return createDefaultState();
+  const parsed = value as Partial<AchievementState>;
+  if (!Array.isArray(parsed.earnedAchievements)) return undefined;
 
-    const parsed = JSON.parse(rawValue) as Partial<AchievementState>;
-    if (!Array.isArray(parsed.earnedAchievements)) return createDefaultState();
+  const earnedById = new Map<AchievementId, EarnedAchievement>();
 
-    const earnedById = new Map<AchievementId, EarnedAchievement>();
-
-    for (const candidate of parsed.earnedAchievements) {
+  for (const candidate of parsed.earnedAchievements) {
+    if (
+      typeof candidate === "object" &&
+      candidate !== null &&
+      isAchievementId(candidate.id) &&
+      typeof candidate.earnedAt === "string" &&
+      candidate.earnedAt.length > 0
+    ) {
+      const existing = earnedById.get(candidate.id);
       if (
-        typeof candidate === "object" &&
-        candidate !== null &&
-        isAchievementId(candidate.id) &&
-        typeof candidate.earnedAt === "string" &&
-        candidate.earnedAt.length > 0 &&
-        !earnedById.has(candidate.id)
+        !existing ||
+        candidate.earnedAt.localeCompare(existing.earnedAt) < 0
       ) {
         earnedById.set(candidate.id, {
           id: candidate.id,
@@ -153,24 +155,134 @@ export function readAchievementState(): AchievementState {
         });
       }
     }
+  }
 
-    return { earnedAchievements: [...earnedById.values()] };
+  return {
+    earnedAchievements: [...earnedById.values()].sort((left, right) =>
+      left.earnedAt.localeCompare(right.earnedAt) ||
+      left.id.localeCompare(right.id),
+    ),
+  };
+}
+
+export type AchievementStatePersistence = (
+  state: AchievementState,
+) => Promise<void>;
+
+interface AchievementStateRuntime {
+  state: AchievementState;
+  persist: AchievementStatePersistence;
+}
+
+let achievementStateRuntime: AchievementStateRuntime | undefined;
+let achievementPersistenceQueue: Promise<void> = Promise.resolve();
+let latestAchievementFallback: string | undefined;
+
+function cloneAchievementState(
+  state: AchievementState,
+): AchievementState {
+  return {
+    earnedAchievements: state.earnedAchievements.map((achievement) => ({
+      ...achievement,
+    })),
+  };
+}
+
+export function readLegacyAchievementState(): AchievementState | undefined {
+  if (typeof window === "undefined") return undefined;
+
+  try {
+    const rawValue = window.localStorage.getItem(ACHIEVEMENT_STORAGE_KEY);
+
+    return rawValue === null
+      ? undefined
+      : parseAchievementState(JSON.parse(rawValue));
   } catch {
-    return createDefaultState();
+    return undefined;
   }
 }
 
-function persistAchievementState(state: AchievementState): void {
+function writeAchievementFallback(serialized: string): void {
   if (typeof window === "undefined") return;
 
   try {
-    window.localStorage.setItem(
-      ACHIEVEMENT_STORAGE_KEY,
-      JSON.stringify(state),
-    );
+    window.localStorage.setItem(ACHIEVEMENT_STORAGE_KEY, serialized);
   } catch {
-    // Les badges restent calculables pendant la session si le stockage est refusé.
+    // Dexie reste prioritaire lorsque le fallback est indisponible.
   }
+}
+
+function removeAchievementFallback(serialized: string): void {
+  if (typeof window === "undefined") return;
+
+  try {
+    if (
+      latestAchievementFallback === serialized &&
+      window.localStorage.getItem(ACHIEVEMENT_STORAGE_KEY) === serialized
+    ) {
+      window.localStorage.removeItem(ACHIEVEMENT_STORAGE_KEY);
+    }
+  } catch {
+    // La clé sera réévaluée au prochain démarrage.
+  }
+}
+
+export function hydrateAchievementStateRuntime(
+  state: AchievementState,
+  persist: AchievementStatePersistence,
+): void {
+  achievementStateRuntime = {
+    state: cloneAchievementState(state),
+    persist,
+  };
+  achievementPersistenceQueue = Promise.resolve();
+  latestAchievementFallback = undefined;
+}
+
+export function resetAchievementStateRuntimeForTests(): void {
+  achievementStateRuntime = undefined;
+  achievementPersistenceQueue = Promise.resolve();
+  latestAchievementFallback = undefined;
+}
+
+export async function flushAchievementStatePersistence(): Promise<void> {
+  await achievementPersistenceQueue;
+}
+
+export function readAchievementState(): AchievementState {
+  if (achievementStateRuntime) {
+    return cloneAchievementState(achievementStateRuntime.state);
+  }
+
+  return readLegacyAchievementState() ?? emptyAchievementState();
+}
+
+export function writeAchievementState(state: AchievementState): void {
+  const snapshot = cloneAchievementState(
+    parseAchievementState(state) ?? emptyAchievementState(),
+  );
+  const serialized = JSON.stringify(snapshot);
+
+  if (!achievementStateRuntime) {
+    writeAchievementFallback(serialized);
+    return;
+  }
+
+  const persist = achievementStateRuntime.persist;
+  achievementStateRuntime.state = snapshot;
+  latestAchievementFallback = serialized;
+  writeAchievementFallback(serialized);
+
+  achievementPersistenceQueue = achievementPersistenceQueue
+    .catch(() => undefined)
+    .then(() => persist(snapshot))
+    .then(() => removeAchievementFallback(serialized))
+    .catch((error: unknown) => {
+      console.error(
+        "La persistance Dexie des badges a échoué.",
+        error,
+      );
+    });
 }
 
 export function unlockAchievements(
@@ -191,7 +303,12 @@ export function unlockAchievements(
     }
   }
 
-  const nextState = { earnedAchievements: [...earnedById.values()] };
-  persistAchievementState(nextState);
+  const nextState = {
+    earnedAchievements: [...earnedById.values()].sort((left, right) =>
+      left.earnedAt.localeCompare(right.earnedAt) ||
+      left.id.localeCompare(right.id),
+    ),
+  };
+  writeAchievementState(nextState);
   return nextState;
 }
