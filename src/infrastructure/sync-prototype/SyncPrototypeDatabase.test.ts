@@ -25,7 +25,8 @@ describe('base isolée du prototype Dexie Cloud', () => {
     expect(database.cloud.options).toEqual(
       expect.objectContaining({
         databaseUrl: 'https://sportpilot-prototype.dexie.cloud',
-        requireAuth: true,
+        requireAuth: false,
+        customLoginGui: true,
         tryUseServiceWorker: false,
         nameSuffix: true,
         socialAuth: false,

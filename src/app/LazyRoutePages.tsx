@@ -46,6 +46,13 @@ const RoutineRemindersPage = lazy(() =>
 );
 
 
+const SyncPrototypePage = lazy(() =>
+  import('@/features/sync-prototype/pages/SyncPrototypePage').then((module) => ({
+    default: module.SyncPrototypePage,
+  })),
+);
+
+
 const ActivityJournalPage = lazy(() =>
   import('@/features/activities/pages/ActivityJournalPage').then((module) => ({
     default: module.ActivityJournalPage,
@@ -339,6 +346,15 @@ export function LazyRoutineRemindersPage() {
   return (
     <RouteSuspense variant="form">
       <RoutineRemindersPage />
+    </RouteSuspense>
+  );
+}
+
+
+export function LazySyncPrototypePage() {
+  return (
+    <RouteSuspense variant="form">
+      <SyncPrototypePage />
     </RouteSuspense>
   );
 }

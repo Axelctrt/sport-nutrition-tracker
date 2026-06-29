@@ -30,7 +30,8 @@ export class SyncPrototypeDatabase extends Dexie {
 
     this.cloud.configure({
       databaseUrl,
-      requireAuth: true,
+      requireAuth: false,
+      customLoginGui: true,
       tryUseServiceWorker: false,
       nameSuffix: true,
       socialAuth: false,
