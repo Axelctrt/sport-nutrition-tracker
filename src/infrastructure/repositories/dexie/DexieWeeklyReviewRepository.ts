@@ -7,7 +7,8 @@ import type {
   WeeklyReviewRepository,
 } from '@/infrastructure/repositories/contracts/WeeklyReviewRepository';
 import { runRepositoryOperation } from '@/infrastructure/repositories/dexie/repositoryOperation';
-import { createEntity, currentIsoDateTime, updateEntity } from '@/shared/utils/entities';
+import { updateStoredEntity } from '@/infrastructure/repositories/dexie/updateStoredEntity';
+import { createEntity, currentIsoDateTime } from '@/shared/utils/entities';
 
 export class DexieWeeklyReviewRepository implements WeeklyReviewRepository {
   private readonly database: AppDatabase;
@@ -31,11 +32,15 @@ export class DexieWeeklyReviewRepository implements WeeklyReviewRepository {
   upsert(data: NewEntity<WeeklyReview>): Promise<WeeklyReview> {
     return runRepositoryOperation('update', 'Impossible d’enregistrer ce bilan hebdomadaire.', async () => {
       const current = await this.database.weeklyReviews.where('weekStart').equals(data.weekStart).first();
-      const review = current ? updateEntity(current, data) : createEntity<WeeklyReview>(
+      if (current) {
+        return updateStoredEntity(this.database.weeklyReviews, current, data);
+      }
+
+      const review = createEntity<WeeklyReview>(
         data,
         weeklyReviewIdForWeekStart(data.weekStart),
       );
-      await this.database.weeklyReviews.put(review);
+      await this.database.weeklyReviews.add(review);
       return review;
     });
   }
@@ -59,8 +64,12 @@ export class DexieWeeklyReviewRepository implements WeeklyReviewRepository {
             return { review: current, ...(existing ? { adjustment: existing } : {}) };
           }
           const decidedAt = currentIsoDateTime();
-          const review = updateEntity(current, { decisionStatus: 'accepted', decidedAt }, decidedAt);
-          await this.database.weeklyReviews.put(review);
+          const review = await updateStoredEntity(
+            this.database.weeklyReviews,
+            current,
+            { decisionStatus: 'accepted', decidedAt },
+            decidedAt,
+          );
           if (!adjustmentData) return { review };
           const adjustment = createEntity<AcceptedCalorieAdjustment>(adjustmentData, undefined, decidedAt);
           await this.database.acceptedCalorieAdjustments.add(adjustment);
@@ -75,9 +84,12 @@ export class DexieWeeklyReviewRepository implements WeeklyReviewRepository {
       const current = await this.database.weeklyReviews.where('weekStart').equals(weekStart).first();
       if (!current) throw new Error('Bilan hebdomadaire introuvable.');
       const decidedAt = currentIsoDateTime();
-      const review = updateEntity(current, { decisionStatus: 'rejected', decidedAt }, decidedAt);
-      await this.database.weeklyReviews.put(review);
-      return review;
+      return updateStoredEntity(
+        this.database.weeklyReviews,
+        current,
+        { decisionStatus: 'rejected', decidedAt },
+        decidedAt,
+      );
     });
   }
 

@@ -4,8 +4,9 @@ import type { StrengthSet } from '@/domain/models/strength';
 import type { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import type { StrengthSetRepository, StrengthSetUpdate } from '@/infrastructure/repositories/contracts/StrengthSetRepository';
 import { runRepositoryOperation } from '@/infrastructure/repositories/dexie/repositoryOperation';
+import { updateStoredEntity } from '@/infrastructure/repositories/dexie/updateStoredEntity';
 import { moveStrengthSetToTrash } from '@/infrastructure/repositories/dexie/trashService';
-import { createEntity, updateEntity } from '@/shared/utils/entities';
+import { createEntity } from '@/shared/utils/entities';
 
 function sortSets(sets: StrengthSet[]): StrengthSet[] {
   return sets.sort((left, right) => left.setNumber - right.setNumber);
@@ -59,14 +60,11 @@ export class DexieStrengthSetRepository implements StrengthSetRepository {
     return runRepositoryOperation('update', 'Impossible de modifier cette série.', async () => {
       const current = await this.database.strengthSets.get(id);
       if (!current) throw new RepositoryError('Série introuvable.', 'update');
-      const updated = updateEntity(current, changes as never);
-      if ('rpe' in changes && changes.rpe === undefined) delete updated.rpe;
-      if ('notes' in changes && changes.notes === undefined) delete updated.notes;
-      if ('completedAt' in changes && changes.completedAt === undefined) delete updated.completedAt;
-      if ('durationSeconds' in changes && changes.durationSeconds === undefined) delete updated.durationSeconds;
-      if ('distanceMeters' in changes && changes.distanceMeters === undefined) delete updated.distanceMeters;
-      await this.database.strengthSets.put(updated);
-      return updated;
+      return updateStoredEntity(
+        this.database.strengthSets,
+        current,
+        changes as never,
+      );
     });
   }
 

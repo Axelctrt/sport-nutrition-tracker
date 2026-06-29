@@ -8,7 +8,8 @@ import {
 import type { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import type { TargetRepository } from '@/infrastructure/repositories/contracts/TargetRepository';
 import { runRepositoryOperation } from '@/infrastructure/repositories/dexie/repositoryOperation';
-import { createEntity, updateEntity } from '@/shared/utils/entities';
+import { updateStoredEntity } from '@/infrastructure/repositories/dexie/updateStoredEntity';
+import { createEntity } from '@/shared/utils/entities';
 
 export class DexieTargetRepository implements TargetRepository {
   private readonly database: AppDatabase;
@@ -39,8 +40,15 @@ export class DexieTargetRepository implements TargetRepository {
       'Impossible d’enregistrer l’objectif quotidien.',
       async () => {
         const current = await this.database.dailyTargets.where('date').equals(data.date).first();
-        const target = current ? updateEntity(current, data) : createEntity<DailyTarget>(data, dailyTargetIdForDate(data.date));
-        await this.database.dailyTargets.put(target);
+        if (current) {
+          return updateStoredEntity(this.database.dailyTargets, current, data);
+        }
+
+        const target = createEntity<DailyTarget>(
+          data,
+          dailyTargetIdForDate(data.date),
+        );
+        await this.database.dailyTargets.add(target);
         return target;
       },
     );
@@ -63,13 +71,19 @@ export class DexieTargetRepository implements TargetRepository {
           .where('date')
           .equals(data.date)
           .first();
-        const status = current
-          ? updateEntity(current, data)
-          : createEntity<DailyJournalStatus>(
-              data,
-              dailyJournalStatusIdForDate(data.date),
-            );
-        await this.database.dailyJournalStatuses.put(status);
+        if (current) {
+          return updateStoredEntity(
+            this.database.dailyJournalStatuses,
+            current,
+            data,
+          );
+        }
+
+        const status = createEntity<DailyJournalStatus>(
+          data,
+          dailyJournalStatusIdForDate(data.date),
+        );
+        await this.database.dailyJournalStatuses.add(status);
         return status;
       },
     );

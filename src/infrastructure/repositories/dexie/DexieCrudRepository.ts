@@ -8,7 +8,8 @@ import type {
 } from '@/domain/models/common';
 import type { CrudRepository } from '@/infrastructure/repositories/contracts/CrudRepository';
 import { runRepositoryOperation } from '@/infrastructure/repositories/dexie/repositoryOperation';
-import { createEntity, updateEntity } from '@/shared/utils/entities';
+import { updateStoredEntity } from '@/infrastructure/repositories/dexie/updateStoredEntity';
+import { createEntity } from '@/shared/utils/entities';
 
 export class DexieCrudRepository<T extends EntityMetadata> implements CrudRepository<T> {
   protected readonly table: Table<T, EntityId>;
@@ -58,9 +59,7 @@ export class DexieCrudRepository<T extends EntityMetadata> implements CrudReposi
           throw new RepositoryError(`${this.entityLabel} introuvable.`, 'update');
         }
 
-        const updated = updateEntity(current, changes);
-        await this.table.put(updated);
-        return updated;
+        return updateStoredEntity(this.table, current, changes);
       },
     );
   }

@@ -5,7 +5,7 @@ import type { AppSettings } from '@/domain/models/settings';
 import type { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import type { SettingsRepository } from '@/infrastructure/repositories/contracts/SettingsRepository';
 import { runRepositoryOperation } from '@/infrastructure/repositories/dexie/repositoryOperation';
-import { updateEntity } from '@/shared/utils/entities';
+import { updateStoredEntity } from '@/infrastructure/repositories/dexie/updateStoredEntity';
 
 export class DexieSettingsRepository implements SettingsRepository {
   private readonly database: AppDatabase;
@@ -51,9 +51,11 @@ export class DexieSettingsRepository implements SettingsRepository {
       'Impossible de modifier les paramètres locaux.',
       async () => {
         const current = await this.get();
-        const updated = updateEntity(current, changes);
-        await this.database.appSettings.put(updated);
-        return updated;
+        return updateStoredEntity(
+          this.database.appSettings,
+          current,
+          changes,
+        );
       },
     );
   }

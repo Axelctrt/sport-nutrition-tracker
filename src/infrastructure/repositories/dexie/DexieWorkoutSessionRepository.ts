@@ -7,6 +7,7 @@ import type {
   WorkoutSessionRepository,
 } from '@/infrastructure/repositories/contracts/WorkoutSessionRepository';
 import { runRepositoryOperation } from '@/infrastructure/repositories/dexie/repositoryOperation';
+import { updateStoredEntity } from '@/infrastructure/repositories/dexie/updateStoredEntity';
 import { moveWorkoutSessionExerciseToTrash } from '@/infrastructure/repositories/dexie/trashService';
 import { createEntity, updateEntity } from '@/shared/utils/entities';
 
@@ -64,9 +65,11 @@ export class DexieWorkoutSessionRepository implements WorkoutSessionRepository {
     return runRepositoryOperation('update', 'Impossible de modifier cette séance.', async () => {
       const current = await this.database.workoutSessions.get(id);
       if (!current) throw new RepositoryError('Séance introuvable.', 'update');
-      const updated = updateEntity(current, changes);
-      await this.database.workoutSessions.put(updated);
-      return updated;
+      return updateStoredEntity(
+        this.database.workoutSessions,
+        current,
+        changes,
+      );
     });
   }
 

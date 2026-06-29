@@ -20,12 +20,13 @@ import {
 import type { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import type { FoodRepository } from '@/infrastructure/repositories/contracts/FoodRepository';
 import { runRepositoryOperation } from '@/infrastructure/repositories/dexie/repositoryOperation';
+import { updateStoredEntity } from '@/infrastructure/repositories/dexie/updateStoredEntity';
 import {
   moveFavoriteMealToTrash,
   moveFoodEntryToTrash,
   moveMealToTrash,
 } from '@/infrastructure/repositories/dexie/trashService';
-import { createEntity, updateEntity } from '@/shared/utils/entities';
+import { createEntity } from '@/shared/utils/entities';
 import { normalizeOpenFoodFactsBarcode } from '@/infrastructure/open-food-facts/barcode';
 
 export class DexieFoodRepository implements FoodRepository {
@@ -155,9 +156,11 @@ export class DexieFoodRepository implements FoodRepository {
           throw new RepositoryError('Aliment introuvable.', 'update');
         }
 
-        const updated = updateEntity(current, changes);
-        await this.database.foodProducts.put(updated);
-        return updated;
+        return updateStoredEntity(
+          this.database.foodProducts,
+          current,
+          changes,
+        );
       },
     );
   }
@@ -186,9 +189,11 @@ export class DexieFoodRepository implements FoodRepository {
 
         if (current) {
           if (title !== undefined && title !== current.title) {
-            const updated = updateEntity(current, { title });
-            await this.database.meals.put(updated);
-            return updated;
+            return updateStoredEntity(
+              this.database.meals,
+              current,
+              { title },
+            );
           }
 
           return current;
@@ -252,9 +257,11 @@ export class DexieFoodRepository implements FoodRepository {
           throw new RepositoryError('Entrée alimentaire introuvable.', 'update');
         }
 
-        const updated = updateEntity(current, changes);
-        await this.database.foodEntries.put(updated);
-        return updated;
+        return updateStoredEntity(
+          this.database.foodEntries,
+          current,
+          changes,
+        );
       },
     );
   }
@@ -319,13 +326,19 @@ export class DexieFoodRepository implements FoodRepository {
           .where('date')
           .equals(data.date)
           .first();
-        const status = current
-          ? updateEntity(current, data)
-          : createEntity<DailyJournalStatus>(
-              data,
-              dailyJournalStatusIdForDate(data.date),
-            );
-        await this.database.dailyJournalStatuses.put(status);
+        if (current) {
+          return updateStoredEntity(
+            this.database.dailyJournalStatuses,
+            current,
+            data,
+          );
+        }
+
+        const status = createEntity<DailyJournalStatus>(
+          data,
+          dailyJournalStatusIdForDate(data.date),
+        );
+        await this.database.dailyJournalStatuses.add(status);
         return status;
       },
     );
