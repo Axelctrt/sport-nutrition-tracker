@@ -13,5 +13,6 @@ export const DATABASE_VERSION_3 = 3 as const;
 export const DATABASE_VERSION_4 = 4 as const;
 export const DATABASE_VERSION_5 = 5 as const;
 export const DATABASE_VERSION_6 = 6 as const;
+export const DATABASE_VERSION_7 = 7 as const;
 
-export const CURRENT_DATABASE_VERSION = DATABASE_VERSION_6;
+export const CURRENT_DATABASE_VERSION = DATABASE_VERSION_7;

@@ -84,7 +84,7 @@ describe("backupEnvelopeSchema", () => {
 
   it("complète les nouveaux réglages absents d’une sauvegarde 0.15.0", () => {
     const envelope = createValidEnvelope();
-    const legacySettings = { ...envelope.data.appSettings[0] } as Record<
+    const legacySettings = { ...envelope.data.appSettings![0] } as Record<
       string,
       unknown
     >;
@@ -97,24 +97,24 @@ describe("backupEnvelopeSchema", () => {
     delete legacySettings.dashboardPreferences;
     delete legacySettings.routineReminderPreferences;
     envelope.data.appSettings = [
-      legacySettings as unknown as BackupEnvelope["data"]["appSettings"][number],
+      legacySettings as unknown as NonNullable<BackupEnvelope["data"]["appSettings"]>[number],
     ];
 
     const parsed = backupEnvelopeSchema.parse(envelope);
 
-    expect(parsed.data.appSettings[0]?.backupReminderIntervalDays).toBe(0);
-    expect(parsed.data.appSettings[0]?.restTimerAutoStart).toBe(true);
-    expect(parsed.data.appSettings[0]?.restTimerSoundEnabled).toBe(false);
-    expect(parsed.data.appSettings[0]?.restTimerVibrationEnabled).toBe(true);
-    expect(parsed.data.appSettings[0]?.enduranceTemplatesVersion).toBe(1);
-    expect(parsed.data.appSettings[0]?.enduranceTemplates).toHaveLength(4);
-    expect(parsed.data.appSettings[0]?.dashboardPreferences).toMatchObject({
+    expect(parsed.data.appSettings![0]?.backupReminderIntervalDays).toBe(0);
+    expect(parsed.data.appSettings![0]?.restTimerAutoStart).toBe(true);
+    expect(parsed.data.appSettings![0]?.restTimerSoundEnabled).toBe(false);
+    expect(parsed.data.appSettings![0]?.restTimerVibrationEnabled).toBe(true);
+    expect(parsed.data.appSettings![0]?.enduranceTemplatesVersion).toBe(1);
+    expect(parsed.data.appSettings![0]?.enduranceTemplates).toHaveLength(4);
+    expect(parsed.data.appSettings![0]?.dashboardPreferences).toMatchObject({
       preset: "balanced",
       hidden: [],
     });
     expect(
       Object.values(
-        parsed.data.appSettings[0]?.routineReminderPreferences?.rules ?? {},
+        parsed.data.appSettings![0]?.routineReminderPreferences?.rules ?? {},
       ).every((rule) => !rule.enabled),
     ).toBe(true);
   });
@@ -379,19 +379,21 @@ describe("backupEnvelopeSchema", () => {
 });
 
 describe("migrateBackupEnvelope", () => {
-  it("migre une sauvegarde version 1 vers la version 5 sans altérer ses données", () => {
+  it("migre une sauvegarde version 1 vers la version 6 sans altérer ses données", () => {
     const migrated = migrateBackupEnvelope(createVersion1Envelope());
 
-    expect(migrated.schemaVersion).toBe(5);
+    expect(migrated.schemaVersion).toBe(6);
     expect(migrated.data.userProfile).toHaveLength(1);
     expect(migrated.data.exerciseDefinitions).toEqual([]);
+    expect(migrated.data.userSettings?.[0]?.id).toBe('user-settings');
+    expect(migrated.data.appSettings).toBeUndefined();
     expect(migrated.data.workoutTemplates).toEqual([]);
     expect(migrated.data.workoutSessions).toEqual([]);
     expect(migrated.data.strengthSets).toEqual([]);
   });
 
-  it("migre directement la version 2 vers la version 5", () => {
-    expect(migrateBackupEnvelope(createValidEnvelope()).schemaVersion).toBe(5);
+  it("migre directement la version 2 vers la version 6", () => {
+    expect(migrateBackupEnvelope(createValidEnvelope()).schemaVersion).toBe(6);
   });
 
   it("convertit le rewardState v4 en tables utilisateur couvertes explicitement", () => {
@@ -424,7 +426,7 @@ describe("migrateBackupEnvelope", () => {
 
     const migrated = migrateBackupEnvelope(legacy);
 
-    expect(migrated.schemaVersion).toBe(5);
+    expect(migrated.schemaVersion).toBe(6);
     expect(migrated.rewardState).toBeUndefined();
     expect(migrated.includedUserStateTables).toEqual([
       "earnedAchievements",

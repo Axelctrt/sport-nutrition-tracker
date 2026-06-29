@@ -40,7 +40,7 @@ describe('EnduranceTemplatesPage', () => {
 
     expect(await screen.findByRole('heading', { name: 'Vélo souple' })).toBeInTheDocument();
     await waitFor(async () => {
-      const settings = await appDatabase.appSettings.toCollection().first();
+      const settings = await appDatabase.userSettings.toCollection().first();
       expect(settings?.enduranceTemplates).toEqual(
         expect.arrayContaining([expect.objectContaining({ name: 'Vélo souple', activityType: 'cycling', distanceKm: 32 })]),
       );

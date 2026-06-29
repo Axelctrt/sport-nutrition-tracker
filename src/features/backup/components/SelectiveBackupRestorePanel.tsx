@@ -14,7 +14,6 @@ import {
 
 import { createAndDownloadSafetyBackup } from '@/application/backup/safetyBackupService';
 import { useProfile } from '@/app/providers/profile/useProfile';
-import { useTheme } from '@/app/providers/useTheme';
 import {
   MAX_BACKUP_FILE_SIZE_BYTES,
 } from '@/infrastructure/backup/backupService';
@@ -75,7 +74,6 @@ export function SelectiveBackupRestorePanel({
     ),
 }: SelectiveBackupRestorePanelProps) {
   const { refreshProfile } = useProfile();
-  const { setTheme } = useTheme();
   const inputRef = useRef<HTMLInputElement>(null);
   const [prepared, setPrepared] =
     useState<PreparedSelectiveBackupRestore>();
@@ -196,11 +194,6 @@ export function SelectiveBackupRestorePanel({
       );
 
       if (selected.includes('profileSettings')) {
-        const settings =
-          prepared.envelope.data.appSettings[0];
-        if (settings) {
-          setTheme(settings.theme);
-        }
         await refreshProfile();
       }
 

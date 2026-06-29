@@ -1,5 +1,5 @@
 import { ensureExerciseCatalog } from '@/application/strength/exerciseCatalogSeeder';
-import { normalizeAppSettings } from '@/domain/defaults/appSettings';
+import { normalizeUserSettings } from '@/domain/defaults/appSettings';
 import {
   BACKUP_USER_STATE_TABLE_NAMES,
   type BackupData,
@@ -17,7 +17,10 @@ import {
   type BackupSummary,
 } from '@/infrastructure/backup/backupService';
 import { appDatabase } from '@/infrastructure/database/database';
-import { reloadUserStateRuntime } from '@/infrastructure/user-state/userStateRuntime';
+import {
+  flushUserStatePersistence,
+  reloadUserStateRuntime,
+} from '@/infrastructure/user-state/userStateRuntime';
 
 export type SelectiveRestoreCategory =
   | 'profileSettings'
@@ -97,7 +100,7 @@ function countCategoryRecords(
 ): number {
   switch (category) {
     case 'profileSettings':
-      return data.userProfile.length + data.appSettings.length;
+      return data.userProfile.length + (data.userSettings?.length ?? 0);
     case 'bodyTracking':
       return data.weights.length + data.dailySteps.length;
     case 'activities':
@@ -204,14 +207,14 @@ async function replaceProfileSettings(
   data: BackupData,
 ): Promise<void> {
   await database.userProfile.clear();
-  await database.appSettings.clear();
+  await database.userSettings.clear();
 
   if (data.userProfile.length > 0) {
     await database.userProfile.bulkAdd(data.userProfile);
   }
 
-  await database.appSettings.bulkAdd(
-    data.appSettings.map(normalizeAppSettings),
+  await database.userSettings.bulkAdd(
+    (data.userSettings ?? []).map(normalizeUserSettings),
   );
 }
 
@@ -398,6 +401,7 @@ export async function applySelectiveBackupRestore(
   }
 
   try {
+    await flushUserStatePersistence();
     await database.transaction(
       'rw',
       allUserDataTableList(database),

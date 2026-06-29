@@ -31,6 +31,7 @@ import {
   BACKUP_USER_STATE_TABLE_NAMES,
   type BackupData,
 } from '@/domain/models/backup';
+import { createDefaultAppSettings } from '@/domain/defaults/appSettings';
 import { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import { initializeDatabase } from '@/infrastructure/database/databaseLifecycle';
 import {
@@ -127,7 +128,7 @@ describe('sauvegarde des états utilisateur', () => {
       '2026-06-27T20:00:00.000Z',
     );
 
-    expect(envelope.schemaVersion).toBe(5);
+    expect(envelope.schemaVersion).toBe(6);
     expect(envelope.rewardState).toBeUndefined();
     expect(envelope.includedUserStateTables).toEqual(
       BACKUP_USER_STATE_TABLE_NAMES,
@@ -194,6 +195,8 @@ describe('sauvegarde des états utilisateur', () => {
     const versionTwoEnvelope = structuredClone(envelope);
 
     versionTwoEnvelope.schemaVersion = 2;
+    versionTwoEnvelope.data.appSettings = [createDefaultAppSettings()];
+    delete versionTwoEnvelope.data.userSettings;
     delete versionTwoEnvelope.includedUserStateTables;
     delete versionTwoEnvelope.rewardState;
     for (const tableName of BACKUP_USER_STATE_TABLE_NAMES) {
@@ -204,7 +207,7 @@ describe('sauvegarde des états utilisateur', () => {
       serializeBackupEnvelope(versionTwoEnvelope),
     );
 
-    expect(parsed.schemaVersion).toBe(5);
+    expect(parsed.schemaVersion).toBe(6);
     expect(parsed.includedUserStateTables).toEqual([]);
 
     await replaceDatabaseFromBackup(parsed, database);

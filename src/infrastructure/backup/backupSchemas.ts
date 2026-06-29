@@ -5,7 +5,7 @@ import {
   createDefaultDashboardPreferences,
   DASHBOARD_WIDGET_IDS,
 } from "@/domain/dashboard/dashboardPreferences";
-import { APP_SETTINGS_ID, LOCAL_USER_PROFILE_ID } from '@/domain/defaults/identifiers';
+import { APP_SETTINGS_ID, LOCAL_USER_PROFILE_ID, USER_SETTINGS_ID } from '@/domain/defaults/identifiers';
 import {
   BACKUP_USER_STATE_TABLE_NAMES,
   type BackupEnvelope,
@@ -149,6 +149,21 @@ const appSettingsSchema = entityMetadataSchema.extend({
   lastBackupExportedAt: isoDateTimeSchema.optional(),
   lastBackupAppVersion: z.string().min(1).max(100).optional(),
   lastBackupSchemaVersion: positiveInteger.optional(),
+});
+
+
+const userSettingsSchema = appSettingsSchema.omit({
+  theme: true,
+  requestPersistentStorage: true,
+  backupReminderIntervalDays: true,
+  restTimerAutoStart: true,
+  restTimerSoundEnabled: true,
+  restTimerVibrationEnabled: true,
+  lastBackupExportedAt: true,
+  lastBackupAppVersion: true,
+  lastBackupSchemaVersion: true,
+}).extend({
+  id: z.literal(USER_SETTINGS_ID),
 });
 
 const weightEntrySchema = datedEntitySchema.extend({
@@ -759,7 +774,8 @@ const backupUserStateTableNameSchema = z.enum(
 
 const backupDataSchema = z.object({
   userProfile: z.array(userProfileSchema).max(1),
-  appSettings: z.array(appSettingsSchema).length(1),
+  appSettings: z.array(appSettingsSchema).max(1).optional(),
+  userSettings: z.array(userSettingsSchema).max(1).optional(),
   weights: z.array(weightEntrySchema),
   dailySteps: z.array(dailyStepsSchema),
   activities: z.array(activitySchema),
@@ -901,17 +917,41 @@ export const backupEnvelopeSchema = z.object({
     });
   }
 
-  if (data.appSettings[0]?.id !== APP_SETTINGS_ID) {
+  if (envelope.schemaVersion >= 6) {
+    if (data.userSettings?.length !== 1) {
+      context.addIssue({
+        code: 'custom',
+        path: ['data', 'userSettings'],
+        message: 'Les paramètres utilisateur sont requis en sauvegarde v6.',
+      });
+    }
+    if (data.appSettings !== undefined) {
+      context.addIssue({
+        code: 'custom',
+        path: ['data', 'appSettings'],
+        message: 'Les paramètres appareil ne doivent pas être exportés en sauvegarde v6.',
+      });
+    }
+  } else if (data.appSettings?.length !== 1) {
+    context.addIssue({
+      code: 'custom',
+      path: ['data', 'appSettings'],
+      message: 'Les paramètres historiques sont requis avant la version 6.',
+    });
+  }
+
+  if (data.appSettings?.[0]?.id !== undefined && data.appSettings[0].id !== APP_SETTINGS_ID) {
     context.addIssue({
       code: 'custom',
       path: ['data', 'appSettings', 0, 'id'],
-      message: 'L’identifiant des paramètres est invalide.',
+      message: 'L’identifiant des paramètres historiques est invalide.',
     });
   }
 
   const collections: [string, { id: string }[]][] = [
     ['userProfile', data.userProfile],
-    ['appSettings', data.appSettings],
+    ['appSettings', data.appSettings ?? []],
+    ['userSettings', data.userSettings ?? []],
     ['weights', data.weights],
     ['dailySteps', data.dailySteps],
     ['activities', data.activities],

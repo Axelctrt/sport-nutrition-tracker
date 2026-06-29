@@ -3,13 +3,15 @@ import {
   type BackupEnvelope,
   type BackupUserStateTableName,
 } from '@/domain/models/backup';
+import { createDefaultUserSettings } from '@/domain/defaults/appSettings';
+import { USER_SETTINGS_ID } from '@/domain/defaults/identifiers';
 import {
   VISUAL_THEME_PREFERENCE_ID,
   weeklyMissionCompletionId,
 } from '@/infrastructure/user-state/userStateModels';
 import { validateBackupEnvelope } from '@/infrastructure/backup/backupSchemas';
 
-export const CURRENT_BACKUP_SCHEMA_VERSION = 5;
+export const CURRENT_BACKUP_SCHEMA_VERSION = 6;
 
 export class BackupMigrationError extends Error {
   constructor(message: string, options?: ErrorOptions) {
@@ -192,6 +194,44 @@ function migrateVersion4ToVersion5(input: BackupHeader): unknown {
   };
 }
 
+
+function migrateVersion5ToVersion6(input: BackupHeader): unknown {
+  const data = asRecord(input.data) ?? {};
+  const legacySettings = asRecord(asArray(data.appSettings)[0]) ?? {};
+  const defaults = createDefaultUserSettings();
+  const exportedAt = validTimestampOrEpoch(input.exportedAt);
+  const userSettings = {
+    ...defaults,
+    id: USER_SETTINGS_ID,
+    createdAt: validTimestampOrEpoch(legacySettings.createdAt ?? exportedAt),
+    updatedAt: validTimestampOrEpoch(legacySettings.updatedAt ?? exportedAt),
+    includedBaseSteps: legacySettings.includedBaseSteps ?? defaults.includedBaseSteps,
+    walkingKcalPerKgPerKm: legacySettings.walkingKcalPerKgPerKm ?? defaults.walkingKcalPerKgPerKm,
+    runningKcalPerKgPerKm: legacySettings.runningKcalPerKgPerKm ?? defaults.runningKcalPerKgPerKm,
+    strengthTrainingMet: legacySettings.strengthTrainingMet ?? defaults.strengthTrainingMet,
+    calorieFloorBmrMultiplier: legacySettings.calorieFloorBmrMultiplier ?? defaults.calorieFloorBmrMultiplier,
+    defaultCyclingMet: legacySettings.defaultCyclingMet ?? defaults.defaultCyclingMet,
+    defaultWalkingMet: legacySettings.defaultWalkingMet ?? defaults.defaultWalkingMet,
+    defaultOtherCardioMet: legacySettings.defaultOtherCardioMet ?? defaults.defaultOtherCardioMet,
+    swimmingMetValues: legacySettings.swimmingMetValues ?? defaults.swimmingMetValues,
+    maximumWeeklyAdjustmentKcal: legacySettings.maximumWeeklyAdjustmentKcal ?? defaults.maximumWeeklyAdjustmentKcal,
+    maximumCumulativeAdjustmentKcal: legacySettings.maximumCumulativeAdjustmentKcal ?? defaults.maximumCumulativeAdjustmentKcal,
+    enduranceTemplates: legacySettings.enduranceTemplates ?? defaults.enduranceTemplates,
+    enduranceTemplatesVersion: legacySettings.enduranceTemplatesVersion ?? defaults.enduranceTemplatesVersion,
+    dashboardPreferences: legacySettings.dashboardPreferences ?? defaults.dashboardPreferences,
+    routineReminderPreferences: legacySettings.routineReminderPreferences ?? defaults.routineReminderPreferences,
+  };
+  const { appSettings: _legacyAppSettings, ...dataWithoutLegacySettings } = data;
+  return {
+    ...input,
+    schemaVersion: 6,
+    data: {
+      ...dataWithoutLegacySettings,
+      userSettings: [userSettings],
+    },
+  };
+}
+
 export function migrateBackupEnvelope(input: unknown): BackupEnvelope {
   const header = readHeader(input);
 
@@ -233,6 +273,9 @@ export function migrateBackupEnvelope(input: unknown): BackupEnvelope {
   }
   if (version <= 4) {
     migrated = migrateVersion4ToVersion5(readHeader(migrated));
+  }
+  if (version <= 5) {
+    migrated = migrateVersion5ToVersion6(readHeader(migrated));
   }
 
   const validated = validateBackupEnvelope(migrated);

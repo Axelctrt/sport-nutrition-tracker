@@ -1,8 +1,8 @@
 import { z } from 'zod';
 import { ensureExerciseCatalog } from '@/application/strength/exerciseCatalogSeeder';
 import {
-  createDefaultAppSettings,
-  normalizeAppSettings,
+  createDefaultUserSettings,
+  normalizeUserSettings,
 } from '@/domain/defaults/appSettings';
 import {
   BACKUP_USER_STATE_TABLE_NAMES,
@@ -62,7 +62,7 @@ export interface ParsedBackup {
 export function tableList(database: AppDatabase) {
   return [
     database.userProfile,
-    database.appSettings,
+    database.userSettings,
     database.weights,
     database.dailySteps,
     database.activities,
@@ -110,7 +110,7 @@ export async function readBackupData(
 ): Promise<BackupData> {
   const [
     userProfile,
-    appSettings,
+    userSettings,
     weights,
     dailySteps,
     activities,
@@ -140,7 +140,7 @@ export async function readBackupData(
     routineReminderCompletions,
   ] = await Promise.all([
     database.userProfile.toArray(),
-    database.appSettings.toArray(),
+    database.userSettings.toArray(),
     database.weights.toArray(),
     database.dailySteps.toArray(),
     database.activities.toArray(),
@@ -172,7 +172,7 @@ export async function readBackupData(
 
   return {
     userProfile,
-    appSettings: appSettings.map(normalizeAppSettings),
+    userSettings: userSettings.map(normalizeUserSettings),
     weights,
     dailySteps,
     activities,
@@ -376,8 +376,8 @@ async function populateTables(
   if (data.userProfile.length > 0) {
     await database.userProfile.bulkAdd(data.userProfile);
   }
-  await database.appSettings.bulkAdd(
-    data.appSettings.map(normalizeAppSettings),
+  await database.userSettings.bulkAdd(
+    (data.userSettings ?? []).map(normalizeUserSettings),
   );
   if (data.weights.length > 0) {
     await database.weights.bulkAdd(data.weights);
@@ -577,6 +577,7 @@ export async function replaceDatabaseFromBackup(
   const included = includedUserStateTables(envelope);
 
   try {
+    await flushUserStatePersistence();
     await database.transaction(
       'rw',
       allUserDataTableList(database),
@@ -615,7 +616,7 @@ export async function clearAllUserData(
         for (const table of userStateTableList(database)) {
           await table.clear();
         }
-        await database.appSettings.add(createDefaultAppSettings());
+        await database.userSettings.add(createDefaultUserSettings());
         await ensureExerciseCatalog(database);
       },
     );

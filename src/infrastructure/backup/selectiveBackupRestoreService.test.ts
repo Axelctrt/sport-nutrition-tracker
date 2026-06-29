@@ -127,7 +127,7 @@ describe("selectiveBackupRestoreService", () => {
         }),
       ]);
       expect(await database.dailySteps.count()).toBe(0);
-      expect(await database.appSettings.count()).toBe(1);
+      expect(await database.userSettings.count()).toBe(1);
       expect(await database.exerciseDefinitions.count()).toBeGreaterThan(0);
     } finally {
       database.close();

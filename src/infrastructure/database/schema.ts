@@ -2,7 +2,7 @@ import { CURRENT_DATABASE_VERSION } from '@/infrastructure/database/migrations/v
 
 export const databaseTableNames = [
   'userProfile',
-  'appSettings',
+  'userSettings',
   'weights',
   'dailySteps',
   'activities',
@@ -33,6 +33,7 @@ export const databaseTableNames = [
 ] as const;
 
 export const databaseInternalTableNames = [
+  'deviceSettings',
   'migrationJournal',
   'databaseDiagnostics',
 
@@ -116,3 +117,10 @@ export const schemaVersion6: Record<string, string> = {
   routineReminderCompletions:
     'id, &[date+type], date, type, completedAt, updatedAt',
 };
+
+export const schemaVersion7 = {
+  ...schemaVersion6,
+  appSettings: null,
+  userSettings: 'id, updatedAt',
+  deviceSettings: 'id, &deviceId, updatedAt',
+} as const;

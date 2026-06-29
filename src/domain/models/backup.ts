@@ -14,7 +14,7 @@ import type {
 } from '@/domain/models/food';
 import type { UserProfile } from '@/domain/models/profile';
 import type { Recipe, RecipeIngredient } from '@/domain/models/recipe';
-import type { AppSettings } from '@/domain/models/settings';
+import type { AppSettings, UserSettings } from '@/domain/models/settings';
 import type { DailySteps } from '@/domain/models/steps';
 import type {
   ExerciseDefinition,
@@ -57,7 +57,8 @@ export type BackupUserStateTableName =
 
 export interface BackupData {
   userProfile: UserProfile[];
-  appSettings: AppSettings[];
+  appSettings?: AppSettings[];
+  userSettings?: UserSettings[];
   weights: WeightEntry[];
   dailySteps: DailySteps[];
   activities: Activity[];

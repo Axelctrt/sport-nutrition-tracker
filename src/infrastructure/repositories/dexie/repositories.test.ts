@@ -4,7 +4,8 @@ import { DexieProfileRepository } from '@/infrastructure/repositories/dexie/Dexi
 import { DexieSettingsRepository } from '@/infrastructure/repositories/dexie/DexieSettingsRepository';
 import { DexieStepsRepository } from '@/infrastructure/repositories/dexie/DexieStepsRepository';
 import { DexieWeightRepository } from '@/infrastructure/repositories/dexie/DexieWeightRepository';
-import { createDefaultAppSettings } from '@/domain/defaults/appSettings';
+import { createDefaultDeviceSettings, createDefaultUserSettings } from '@/domain/defaults/appSettings';
+import { DEVICE_SETTINGS_ID, USER_SETTINGS_ID } from '@/domain/defaults/identifiers';
 import {
   dailyStepsIdForDate,
   weightEntryIdForDate,
@@ -73,14 +74,15 @@ describe('repositories Dexie', () => {
     expect(await database.dailySteps.count()).toBe(1);
   });
 
-  it('complète les réglages de sauvegarde absents d’une ancienne base', async () => {
+  it('complète les réglages appareil absents d’une ancienne base', async () => {
     const repository = new DexieSettingsRepository(database);
-    const legacy = createDefaultAppSettings() as unknown as Record<string, unknown>;
-    delete legacy.backupReminderIntervalDays;
-    delete legacy.restTimerAutoStart;
-    delete legacy.restTimerSoundEnabled;
-    delete legacy.restTimerVibrationEnabled;
-    await database.appSettings.put(legacy as never);
+    const legacyDevice = createDefaultDeviceSettings() as unknown as Record<string, unknown>;
+    delete legacyDevice.backupReminderIntervalDays;
+    delete legacyDevice.restTimerAutoStart;
+    delete legacyDevice.restTimerSoundEnabled;
+    delete legacyDevice.restTimerVibrationEnabled;
+    await database.userSettings.put(createDefaultUserSettings());
+    await database.deviceSettings.put(legacyDevice as never);
 
     const settings = await repository.get();
 
@@ -88,11 +90,39 @@ describe('repositories Dexie', () => {
     expect(settings.restTimerAutoStart).toBe(true);
     expect(settings.restTimerSoundEnabled).toBe(false);
     expect(settings.restTimerVibrationEnabled).toBe(true);
-    const stored = (await database.appSettings.toArray())[0];
+    const stored = await database.deviceSettings.toCollection().first();
     expect(stored?.backupReminderIntervalDays).toBe(0);
     expect(stored?.restTimerAutoStart).toBe(true);
     expect(stored?.restTimerSoundEnabled).toBe(false);
     expect(stored?.restTimerVibrationEnabled).toBe(true);
+  });
+
+
+  it('écrit séparément les paramètres utilisateur et appareil', async () => {
+    const repository = new DexieSettingsRepository(database);
+    await database.userSettings.put(createDefaultUserSettings());
+    await database.deviceSettings.put(createDefaultDeviceSettings('device-local'));
+
+    const settings = await repository.update({
+      includedBaseSteps: 4_500,
+      theme: 'dark',
+    });
+
+    expect(settings.includedBaseSteps).toBe(4_500);
+    expect(settings.theme).toBe('dark');
+    expect(await database.userSettings.get(USER_SETTINGS_ID)).toMatchObject({
+      includedBaseSteps: 4_500,
+    });
+    expect(await database.deviceSettings.get(DEVICE_SETTINGS_ID)).toMatchObject({
+      deviceId: 'device-local',
+      theme: 'dark',
+    });
+    expect(
+      (await database.userSettings.get(USER_SETTINGS_ID)) as unknown as Record<string, unknown>,
+    ).not.toHaveProperty('theme');
+    expect(
+      (await database.deviceSettings.get(DEVICE_SETTINGS_ID)) as unknown as Record<string, unknown>,
+    ).not.toHaveProperty('includedBaseSteps');
   });
 
   it('enregistre et retrouve les activités d’une journée', async () => {

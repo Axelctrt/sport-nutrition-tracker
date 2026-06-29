@@ -13,7 +13,7 @@ import type {
 } from "@/domain/models/food";
 import type { UserProfile } from "@/domain/models/profile";
 import type { Recipe, RecipeIngredient } from "@/domain/models/recipe";
-import type { AppSettings } from "@/domain/models/settings";
+import type { DeviceSettings, UserSettings } from "@/domain/models/settings";
 import type {
   ExerciseDefinition,
   ProgressionSuggestion,
@@ -48,12 +48,14 @@ import { registerVersion3 } from "@/infrastructure/database/migrations/version3"
 import { registerVersion4 } from '@/infrastructure/database/migrations/version4';
 import { registerVersion5 } from '@/infrastructure/database/migrations/version5';
 import { registerVersion6 } from '@/infrastructure/database/migrations/version6';
+import { registerVersion7 } from '@/infrastructure/database/migrations/version7';
 
 export const DEFAULT_DATABASE_NAME = "sportpilot-local-database";
 
 export class AppDatabase extends Dexie {
   declare userProfile: Table<UserProfile, EntityId>;
-  declare appSettings: Table<AppSettings, EntityId>;
+  declare userSettings: Table<UserSettings, EntityId>;
+  declare deviceSettings: Table<DeviceSettings, EntityId>;
   declare weights: Table<WeightEntry, EntityId>;
   declare dailySteps: Table<DailySteps, EntityId>;
   declare activities: Table<Activity, EntityId>;
@@ -108,5 +110,6 @@ export class AppDatabase extends Dexie {
     registerVersion4(this);
     registerVersion5(this);
     registerVersion6(this);
+    registerVersion7(this);
   }
 }
