@@ -1,326 +1,284 @@
 # Inventaire des données pour la synchronisation
 
 - **Projet :** SportPilot
-- **Base :** `develop` au commit `09fadf5`
-- **Date :** 29 juin 2026
-- **Objet :** classifier chaque stockage avant le prototype multiappareil
+- **Base vérifiée :** `feature/sync-data-readiness` au commit `33eb416`
+- **Date de mise à jour :** 29 juin 2026
+- **Schéma local :** Dexie v8
+- **Sauvegarde :** JSON v7
+- **Objet :** frontière synchronisable/local après la phase B
 
 ## 1. Légende
 
 | Classe | Signification |
 |---|---|
 | Synchroniser | Donnée métier utilisateur à répliquer |
-| Local | Donnée propre à l’appareil ou recalculable |
-| Scinder | L’objet mélange plusieurs responsabilités |
-| Migrer | État utilisateur hors Dexie à déplacer avant synchronisation |
-| À décider | Sémantique insuffisante pour une décision définitive |
+| Local | Donnée propre à l’appareil, technique ou recalculable |
+| Synchroniser avec règle | Donnée utilisateur nécessitant une règle métier avant généralisation |
+| À séparer avant généralisation | Table contenant encore plusieurs provenances ou responsabilités |
 
-## 2. Tables Dexie utilisateur
+## 2. Tables utilisateur Dexie
 
-Le schéma courant déclare 22 tables utilisateur.
+Le schéma v8 déclare **30 tables utilisateur**. Elles sont exportées par le backup JSON v7.
 
-| Table | Contenu | Backup v4 | Cible | Politique initiale | Préparation nécessaire |
-|---|---|---:|---|---|---|
-| `userProfile` | Profil utilisateur | Oui | Synchroniser | Singleton, mise à jour champ par champ | ID singleton stable ; séparer tout champ propre à l’appareil |
-| `appSettings` | Réglages globaux et locaux | Oui | Scinder | Voir section dédiée | Créer réglages utilisateur et réglages appareil |
-| `weights` | Pesées datées | Oui | Synchroniser | Une pesée logique par date | ID déterministe ou fusion sur `date` |
-| `dailySteps` | Pas journaliers | Oui | Synchroniser | Une valeur logique par date | ID déterministe ; règle max/remplacement à valider |
-| `activities` | Activités d’endurance et autres | Oui | Synchroniser | Entités indépendantes | IDs universels ; suppression récupérable |
-| `foodProducts` | Produits utilisés dans le journal | Oui | Scinder | Données utilisateur oui, cache externe non | Distinguer produit personnel, favori et cache Open Food Facts |
-| `meals` | Repas par date et créneau | Oui | Synchroniser | Un repas par `[date+slot]` | ID déterministe ou upsert atomique |
-| `foodEntries` | Lignes alimentaires | Oui | Synchroniser | Entités indépendantes | Conserver les références produit/repas |
-| `favoriteMeals` | Repas favoris | Oui | Synchroniser | Mise à jour partielle | Enfants éventuels en lignes séparées |
-| `recipes` | Recettes | Oui | Synchroniser | Mise à jour partielle | Suppression cohérente avec ingrédients |
-| `recipeIngredients` | Ingrédients de recettes | Oui | Synchroniser | Entités enfants | Conflit d’ordre résolu par `sortOrder`, puis ID |
-| `dailyTargets` | Objectifs nutritionnels journaliers | Oui | Synchroniser | Une valeur logique par date | ID déterministe |
-| `dailyJournalStatuses` | Statut de complétion du journal | Oui | Synchroniser | Une valeur par date | ID déterministe |
-| `weeklyReviews` | Bilans hebdomadaires | Oui | Synchroniser | Une valeur par `weekStart` | ID déterministe ; décisions utilisateur prioritaires |
-| `acceptedCalorieAdjustments` | Ajustements caloriques acceptés | Oui | Synchroniser | Historique métier | Vérifier unicité et période d’effet |
-| `exerciseDefinitions` | Catalogue d’exercices | Oui | Scinder | Exercices personnels oui ; catalogue fourni local/public | Marquer explicitement la provenance |
-| `workoutTemplates` | Modèles de musculation | Oui | Synchroniser | Entités parents | Mise à jour partielle |
-| `workoutTemplateExercises` | Exercices des modèles | Oui | Synchroniser | Entités enfants | Ordre stable et suppression en cascade |
-| `workoutSessions` | Séances de musculation | Oui | Synchroniser | Règle spéciale pour `inProgress` | Verrou d’appareil et stratégie de reprise |
-| `workoutSessionExercises` | Exercices d’une séance | Oui | Synchroniser | Entités enfants | Éviter remplacement complet |
-| `strengthSets` | Séries de musculation | Oui | Synchroniser | Ajouts indépendants | IDs universels ; même série = champ par champ |
-| `progressionSuggestions` | Suggestions de progression | Oui | À décider | Synchroniser les décisions, recalculer les propositions | Distinguer donnée dérivée et action utilisateur |
+| Table | Contenu | Cible | Préparation après phase B |
+|---|---|---|---|
+| `userProfile` | Profil | Synchroniser | ID singleton stable ; mises à jour partielles |
+| `userSettings` | Préférences du compte | Synchroniser | Séparé de l’appareil en v7 |
+| `weights` | Pesées datées | Synchroniser | ID déterministe par date ; domaine du prototype C |
+| `dailySteps` | Pas journaliers | Synchroniser avec règle | ID déterministe ; provenance future à distinguer |
+| `activities` | Activités | Synchroniser | IDs universels ; suppression marquée |
+| `foodProducts` | Produits durables et références alimentaires | À séparer avant généralisation | Distinguer données utilisateur et cache externe |
+| `meals` | Repas par date et créneau | Synchroniser | ID déterministe date/créneau |
+| `foodEntries` | Lignes alimentaires | Synchroniser | IDs universels ; enfants de repas |
+| `favoriteMeals` | Repas favoris | Synchroniser | Mise à jour partielle |
+| `recipes` | Recettes | Synchroniser | Parent avec suppression en cascade |
+| `recipeIngredients` | Ingrédients | Synchroniser | Enfants ; ordre stable |
+| `dailyTargets` | Objectifs nutritionnels journaliers | Synchroniser | ID déterministe par date |
+| `dailyJournalStatuses` | Statut du journal | Synchroniser | ID déterministe par date |
+| `weeklyReviews` | Bilans hebdomadaires | Synchroniser avec règle | ID déterministe ; décision utilisateur prioritaire |
+| `acceptedCalorieAdjustments` | Ajustements acceptés | Synchroniser avec règle | Historique métier ; chevauchements à contrôler |
+| `exerciseDefinitions` | Catalogue et exercices personnalisés | À séparer avant généralisation | Distinguer catalogue fourni et ajouts utilisateur |
+| `workoutTemplates` | Modèles de musculation | Synchroniser | Parent ; mises à jour partielles |
+| `workoutTemplateExercises` | Exercices des modèles | Synchroniser | Enfants ; ordre stable |
+| `workoutSessions` | Séances | Synchroniser avec règle | Verrou obligatoire pour `inProgress` |
+| `workoutSessionExercises` | Exercices d’une séance | Synchroniser | Enfants ; suppression marquée |
+| `strengthSets` | Séries | Synchroniser | IDs universels ; enfants de séance |
+| `progressionSuggestions` | Suggestions et décisions | À séparer avant généralisation | Recalculer la proposition, synchroniser la décision |
+| `goals` | Objectifs personnels | Synchroniser | Migré depuis `localStorage` en v5 |
+| `endurancePlanningSessions` | Planning d’endurance | Synchroniser | Migré depuis `localStorage` en v5 |
+| `earnedAchievements` | Badges acquis | Synchroniser | Migré en v6 ; acquisition monotone |
+| `unlockedVisualThemes` | Thèmes débloqués | Synchroniser | Migré en v6 ; acquisition monotone |
+| `visualThemePreferences` | Thème de récompense actif | Synchroniser | Le mode clair/sombre reste local |
+| `weeklyMissionCompletions` | Missions terminées | Synchroniser | Migré en v6 ; clé par semaine |
+| `routineReminderCompletions` | Rappels terminés | Synchroniser | Migré en v6 ; affichage/report restent locaux |
+| `deletionRecords` | Intentions de suppression/restauration | Synchroniser | Ajouté en v8 ; exporté dans le backup v7 |
 
-## 3. Tables internes
+## 3. Tables internes locales
 
-| Table | Contenu | Backup v4 | Cible | Justification |
-|---|---|---:|---|---|
-| `migrationJournal` | Historique de migration locale | Non | Local | Dépend de la base et du navigateur |
-| `databaseDiagnostics` | Rapports d’intégrité | Non | Local | Diagnostic technique et recalculable |
-| `trashItems` | Snapshots de corbeille | Non | Scinder / redessiner | Format local incompatible avec une suppression synchronisée durable |
+| Table | Contenu | Backup v7 | Synchronisation | Justification |
+|---|---|---:|---:|---|
+| `deviceSettings` | Préférences et identité de l’installation | Non | Non | Spécifique à l’appareil |
+| `migrationJournal` | Historique des migrations locales | Non | Non | Dépend de la base locale |
+| `databaseDiagnostics` | Rapports d’intégrité | Non | Non | Technique et recalculable |
+| `trashItems` | Snapshots complets de récupération | Non | Non | Peut contenir des données sensibles ; rétention locale de 30 jours |
 
-`trashItems` ne doit pas être ajouté tel quel à la synchronisation. La cible recommandée est un modèle `deletedAt` avec restauration, puis purge.
+La suppression durable est portée par `deletionRecords`, pas par la réplication des snapshots `trashItems`.
 
-## 4. Détail d’`AppSettings`
+## 4. Paramètres
 
-La table contient actuellement des réglages utilisateur et des états d’appareil.
+### 4.1 `userSettings` — synchronisable
 
-### 4.1 À synchroniser
+- `includedBaseSteps` ;
+- `walkingKcalPerKgPerKm` ;
+- `runningKcalPerKgPerKm` ;
+- `strengthTrainingMet` ;
+- `calorieFloorBmrMultiplier` ;
+- `defaultCyclingMet` ;
+- `defaultWalkingMet` ;
+- `defaultOtherCardioMet` ;
+- `swimmingMetValues` ;
+- `maximumWeeklyAdjustmentKcal` ;
+- `maximumCumulativeAdjustmentKcal` ;
+- `enduranceTemplates` ;
+- `enduranceTemplatesVersion` ;
+- `dashboardPreferences` ;
+- `routineReminderPreferences`.
 
-Sous réserve de validation UX :
+### 4.2 `deviceSettings` — local
 
-- paramètres de calcul nutritionnel et sportif ;
-- plafonds d’ajustement ;
-- modèles d’endurance ;
-- personnalisation du tableau de bord ;
-- planning des rappels et heures silencieuses ;
-- intervalle souhaité de rappel de sauvegarde, si considéré comme une préférence utilisateur.
-
-### 4.2 À conserver localement
-
+- `deviceId` ;
+- `theme` clair/sombre/système ;
 - `requestPersistentStorage` ;
+- `backupReminderIntervalDays` ;
+- `restTimerAutoStart` ;
+- `restTimerSoundEnabled` ;
+- `restTimerVibrationEnabled` ;
 - `lastBackupExportedAt` ;
 - `lastBackupAppVersion` ;
-- `lastBackupSchemaVersion` ;
-- capacité vibration/son ;
-- dernier état du minuteur ;
-- tout état de permission navigateur.
+- `lastBackupSchemaVersion`.
 
-### 4.3 À trancher par UX
+Le thème visuel de récompense actif reste dans `visualThemePreferences` et suit le compte.
 
-- `theme` clair/sombre/système : recommandé local par appareil ;
-- démarrage automatique du minuteur : peut être utilisateur ou appareil ;
-- son et vibration du minuteur : recommandé local ;
-- thème visuel de récompense actif : recommandé synchronisé ;
-- état ouvert/fermé des sections : local.
+## 5. Stockages navigateur
 
-### 4.4 Modèle cible
+### 5.1 Anciennes clés utilisateur
 
-```text
-userSettings
-  id
-  updatedAt
-  paramètres de calcul
-  dashboardPreferences
-  enduranceTemplates
-  routineReminderPreferences
+Les clés suivantes ne sont plus la source persistante normale :
 
-deviceSettings
-  id local
-  deviceId
-  themePreference
-  persistentStorage
-  timerSound
-  timerVibration
-  backupMetadata
-```
+| Clé historique | Source actuelle | Rôle résiduel |
+|---|---|---|
+| `sport-pilot.achievements` | `earnedAchievements` | migration héritée / secours après échec Dexie |
+| `sport-pilot.reward-themes` | `unlockedVisualThemes` et `visualThemePreferences` | migration héritée / secours |
+| `sport-pilot.weekly-mission-history` | `weeklyMissionCompletions` | migration héritée / secours |
+| `sportpilot:goals:v1` | `goals` | migration héritée / secours |
+| `sportpilot:endurance-planning:v1` | `endurancePlanningSessions` | migration héritée / secours |
+| clé historique des complétions de rappels | `routineReminderCompletions` | migration héritée / secours |
 
-`deviceSettings` n’est pas exporté dans le backup utilisateur, sauf choix explicite ultérieur.
+Au démarrage, `initializeUserStateRuntime()` migre l’ancien contenu puis hydrate les caches mémoire depuis Dexie.
 
-## 5. États `localStorage` utilisateur vérifiés
+### 5.2 Clés locales légitimes
 
-### 5.1 État exporté par le backup v4
+Restent locales :
 
-| Clé | Contenu | Backup v4 | Cible |
-|---|---|---:|---|
-| `sport-pilot.achievements` | Badges débloqués | Oui | Migrer vers Dexie et synchroniser |
-| `sport-pilot.reward-themes` | Thèmes débloqués et thème actif | Oui | Migrer vers Dexie et synchroniser |
-| `sport-pilot.weekly-mission-history` | Semaines de mission terminées | Oui | Migrer vers Dexie et synchroniser |
-| `sportpilot:goals:v1` | Objectifs personnels | Oui | Migrer vers Dexie et synchroniser |
-| `sportpilot:endurance-planning:v1` | Séances d’endurance planifiées | Oui | Migrer vers Dexie et synchroniser |
+- `sport-pilot.theme` : cache de démarrage du thème clair/sombre/système ;
+- report du rappel global de sauvegarde ;
+- dernier affichage et report des routines ;
+- état ouvert/fermé des sections ;
+- recherches récentes ;
+- dernier diagnostic technique ;
+- garde de rechargement PWA en `sessionStorage`.
 
-Ces états sont lus et restaurés par `rewardBackupState.ts`.
+Ces valeurs ne sont ni exportées ni synchronisées.
 
-### 5.2 Registre des rappels
+## 6. Suppressions et restauration
 
-| Clé | Contenu | Backup v4 | Cible |
-|---|---|---:|---|
-| `sportpilot:routine-reminders:v1` | Terminé, dernier affichage, report par jour/type | Non | Scinder |
+Entités couvertes par la corbeille :
 
-Modèle cible recommandé :
+- `activity` ;
+- `weight` ;
+- `foodEntry` ;
+- `meal` ;
+- `favoriteMeal` ;
+- `recipe` ;
+- `strengthSet` ;
+- `workoutSessionExercise`.
+
+Pour chaque cible :
 
 ```text
-routineReminderCompletion
-  id = date + type
-  date
-  type
-  completedAt
-  updatedAt
+id = deletion:<entityType>:<entityId>
+status = deleted | restored
 ```
 
-Synchronisé.
+Les suppressions en cascade produisent également des marqueurs pour :
 
-```text
-deviceReminderLedger
-  deviceId
-  date
-  type
-  lastShownAt
-  snoozedUntil
-```
+- les entrées d’un repas ;
+- les ingrédients d’une recette ;
+- les séries d’un exercice de séance.
 
-Local.
+La purge ou l’expiration de `trashItems` ne supprime pas le marqueur.
 
-Ainsi, « terminé » peut s’appliquer au compte, tandis que l’affichage et le report restent propres à l’appareil.
-
-### 5.3 État d’interface
-
-`CollapsibleSection` peut enregistrer des clés libres via sa propriété `storageKey`.
-
-Exemples vérifiés dans la phase d’analyses :
-
-- `sportpilot:analytics:planning-adherence` ;
-- `sportpilot:analytics:personal-records`.
-
-Classification : **local uniquement**.
-
-Ces valeurs ne doivent ni être sauvegardées ni synchronisées.
-
-## 6. Recherche obligatoire avant la phase B
-
-L’inventaire des clés de stockage doit être régénéré depuis la branche au moment de coder.
-
-Commande PowerShell :
-
-```powershell
-Get-ChildItem .\src -Recurse -File |
-  Select-String -Pattern 'localStorage|sessionStorage|storageKey' |
-  Select-Object Path, LineNumber, Line
-```
-
-Puis rechercher les constantes :
-
-```powershell
-Get-ChildItem .\src -Recurse -File |
-  Select-String -Pattern 'STORAGE_KEY|storageKey=' |
-  Select-Object Path, LineNumber, Line
-```
-
-Aucune clé découverte ne doit être migrée automatiquement sans classification.
-
-## 7. Données externes et caches
+## 7. Données externes et recalculables
 
 ### 7.1 Open Food Facts
 
 Ne pas synchroniser comme données utilisateur :
 
-- réponses de recherche ;
+- résultats de recherche ;
 - caches temporaires ;
 - diagnostics réseau ;
-- données récupérables depuis l’API.
+- contenu récupérable depuis l’API.
 
-Synchroniser uniquement lorsque l’utilisateur a créé une donnée durable :
+Avant la généralisation de `foodProducts`, distinguer explicitement :
 
 - produit personnalisé ;
 - correction personnelle ;
 - favori ;
-- référence utilisée par une entrée alimentaire, si nécessaire pour l’intégrité hors ligne.
-
-Le modèle actuel `foodProducts` devra distinguer ces cas.
+- snapshot nécessaire à l’historique ;
+- cache externe.
 
 ### 7.2 Catalogue d’exercices
 
-Le catalogue fourni par SportPilot doit rester :
+- catalogue fourni : local, versionné par l’application ou realm public en lecture seule ;
+- exercice personnalisé : privé et synchronisé.
 
-- livré avec l’application ;
-- migré par le seeder ;
-- ou placé dans un realm public en lecture seule si le prototype le justifie.
+La provenance doit être explicite avant la phase D.
 
-Les exercices ajoutés ou personnalisés par l’utilisateur sont synchronisés.
+### 7.3 Données dérivées
 
-## 8. Données dérivées
-
-Ne pas synchroniser un résultat recalculable lorsque sa source est déjà synchronisée, sauf besoin métier clair.
-
-Candidats à recalculer :
+À recalculer lorsque les sources sont synchronisées :
 
 - analyses sur 12 semaines ;
-- records personnels ;
+- records ;
 - adhérence au planning ;
 - tendances ;
-- recommandations purement calculées ;
-- diagnostics ;
-- agrégats de tableau de bord.
+- recommandations calculées ;
+- agrégats du tableau de bord ;
+- diagnostics.
 
-Candidats à synchroniser :
+À synchroniser :
 
-- acceptation d’une recommandation ;
-- statut d’un objectif ;
+- décision d’accepter une recommandation ;
+- état d’un objectif ;
 - bilan validé ;
-- décision utilisateur ;
 - historique nécessaire à une récompense.
 
-## 9. Métadonnées minimales
+## 8. Unicités métier
 
-Chaque entité synchronisée doit posséder ou obtenir :
+| Domaine | Clé logique | État après phase B |
+|---|---|---|
+| Profil | singleton | ID constant |
+| Paramètres utilisateur | singleton | ID constant |
+| Pesée | date | ID déterministe |
+| Pas | date | ID déterministe |
+| Repas | date + créneau | ID déterministe |
+| Objectif journalier | date | ID déterministe |
+| Statut journal | date | ID déterministe |
+| Bilan hebdomadaire | début de semaine | ID déterministe |
+| Mission | début de semaine | ID déterministe |
+| Badge | identifiant du badge | ID déterministe |
+| Thème débloqué | identifiant du thème | ID déterministe |
+| Rappel terminé | date + type | ID déterministe |
+| Suppression | type + ID d’entité | ID déterministe |
 
-```text
-id
-createdAt
-updatedAt
-deletedAt éventuel
-```
+Une contrainte d’index unique reste à tester dans le moteur cloud : deux créations hors ligne distinctes pour la même clé logique doivent converger sans blocage.
 
-Selon le domaine :
+## 9. Sauvegarde JSON v7
 
-```text
-owner éventuel
-realmId éventuel
-createdByDeviceId éventuel
-updatedByDeviceId éventuel
-```
+La v7 :
 
-Les timestamps métier ne doivent pas être l’unique mécanisme de résolution des conflits. Le moteur de synchronisation garde sa propre causalité.
+- exporte les 30 tables utilisateur ;
+- exporte `deletionRecords` ;
+- exclut les quatre tables internes ;
+- n’exporte aucun token ni état de session ;
+- fonctionne sans dépendance cloud ;
+- restaure en mode local ;
+- migre automatiquement les formats v1 à v6.
 
-## 10. Unicités métier à traiter avant sync
+Lors d’un import ancien :
 
-| Domaine | Unicité actuelle | Risque multiappareil | Cible |
-|---|---|---|---|
-| Pesée | `date` unique | Deux IDs créés hors ligne pour la même date | ID déterministe par date |
-| Pas | `date` unique | Collision à la reconnexion | ID déterministe par date |
-| Repas | `[date+slot]` unique | Double création hors ligne | ID déterministe date+slot |
-| Objectif journalier | `date` unique | Collision | ID déterministe |
-| Statut journal | `date` unique | Collision | ID déterministe |
-| Bilan hebdomadaire | `weekStart` unique | Double bilan | ID déterministe par semaine |
-| Profil | Un seul enregistrement | Deux singletons | ID constant |
-| Réglages utilisateur | Un seul enregistrement | Deux singletons | ID constant |
-| Mission hebdomadaire | `weekStart` | Doublon | Clé par semaine |
-| Badge | `achievementId` | Doublon | Clé par badge |
+- `rewardState` v4 est converti en tables Dexie ;
+- `appSettings` v5 est converti en `userSettings` ;
+- `deviceSettings` de l’appareil courant n’est jamais écrasé ;
+- les backups antérieurs à v7 reçoivent une liste vide de `deletionRecords`.
 
-## 11. Backup v5 proposé
+## 10. Bilan de la phase B
 
-Le passage à une v5 devient nécessaire si les états `localStorage` sont convertis en tables.
+### Terminé pour le prototype des pesées
 
-Le backup v5 devra :
+- [x] inventaire des stockages régénéré ;
+- [x] tables utilisateur et internes séparées ;
+- [x] paramètres utilisateur/appareil séparés ;
+- [x] états utilisateur persistés dans Dexie ;
+- [x] complétions et états locaux des rappels séparés ;
+- [x] IDs déterministes préparés ;
+- [x] stratégie de suppression durable implémentée ;
+- [x] backup JSON v7 validé ;
+- [x] migrations Dexie v1 à v8 testées ;
+- [x] migrations backup v1 à v7 testées ;
+- [x] aucune dépendance cloud requise en mode local.
 
-- exporter toutes les tables utilisateur synchronisables ;
-- exclure `deviceSettings` ;
-- exclure tokens et état du moteur cloud ;
-- inclure les données de corbeille si la restauration multiappareil est validée ;
-- migrer automatiquement les backups v1 à v4 ;
-- restaurer en mode local sans compte ;
-- fonctionner sans dépendance à Dexie Cloud.
+### À traiter avant la généralisation
 
-## 12. Checklist de fin de phase B
+- [ ] séparation fine de `foodProducts` ;
+- [ ] séparation catalogue d’exercices / exercices personnalisés ;
+- [ ] verrou multiappareil des séances en cours ;
+- [ ] séparation propositions calculées / décisions de progression ;
+- [ ] import JSON contrôlé avec synchronisation active.
 
-- [ ] inventaire des stockages régénéré ;
-- [ ] chaque table classifiée ;
-- [ ] chaque champ d’`AppSettings` classifié ;
-- [ ] catalogue externe séparé des données utilisateur ;
-- [ ] catalogue d’exercices fourni séparé des ajouts utilisateur ;
-- [ ] états utilisateur sortis de `localStorage` ;
-- [ ] registre des rappels scindé ;
-- [ ] IDs et unicités vérifiés ;
-- [ ] suppression définie ;
-- [ ] backup v5 validé ;
-- [ ] migrations testées ;
-- [ ] aucune dépendance cloud requise pour le mode local.
+Ces points ne bloquent pas le prototype limité à `weights`.
 
-## 13. Sources de code
+## 11. Sources de code
 
-- `src/infrastructure/database/AppDatabase.ts`
 - `src/infrastructure/database/schema.ts`
+- `src/infrastructure/database/AppDatabase.ts`
+- `src/infrastructure/database/migrations/version5.ts`
+- `src/infrastructure/database/migrations/version6.ts`
+- `src/infrastructure/database/migrations/version7.ts`
+- `src/infrastructure/database/migrations/version8.ts`
 - `src/infrastructure/backup/backupService.ts`
-- `src/infrastructure/backup/rewardBackupState.ts`
-- `src/domain/models/backup.ts`
-- `src/domain/models/settings.ts`
-- `src/domain/goals/goalState.ts`
-- `src/domain/planning/endurancePlanningState.ts`
-- `src/domain/rewards/achievements.ts`
-- `src/domain/rewards/visualThemes.ts`
-- `src/domain/rewards/weeklyMissionHistory.ts`
-- `src/application/reminders/routineReminderService.ts`
-- `src/shared/ui/CollapsibleSection.tsx`
+- `src/infrastructure/backup/backupMigrations.ts`
+- `src/infrastructure/user-state/userStateRuntime.ts`
+- `src/infrastructure/user-state/legacyUserStateMigration.ts`
+- `src/infrastructure/repositories/dexie/trashService.ts`
+- `src/domain/models/deletion.ts`
