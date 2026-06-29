@@ -25,6 +25,11 @@ export const databaseTableNames = [
   'progressionSuggestions',
   'goals',
   'endurancePlanningSessions',
+  'earnedAchievements',
+  'unlockedVisualThemes',
+  'visualThemePreferences',
+  'weeklyMissionCompletions',
+  'routineReminderCompletions',
 ] as const;
 
 export const databaseInternalTableNames = [
@@ -99,4 +104,15 @@ export const schemaVersion5: Record<string, string> = {
   goals: 'id, metric, status, startDate, deadline, updatedAt',
   endurancePlanningSessions:
     'id, date, activityType, status, updatedAt',
+};
+
+
+export const schemaVersion6: Record<string, string> = {
+  ...schemaVersion5,
+  earnedAchievements: 'id, earnedAt, updatedAt',
+  unlockedVisualThemes: 'id, unlockedAt, updatedAt',
+  visualThemePreferences: 'id, activeThemeId, updatedAt',
+  weeklyMissionCompletions: 'id, &weekStart, completedAt, updatedAt',
+  routineReminderCompletions:
+    'id, &[date+type], date, type, completedAt, updatedAt',
 };

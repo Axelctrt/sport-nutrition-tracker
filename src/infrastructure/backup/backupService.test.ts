@@ -199,6 +199,34 @@ describe('backupService', () => {
     await database.exerciseDefinitions.add(
       createEntity(createExerciseDefinitionInput(), 'exercise-1'),
     );
+    await database.earnedAchievements.add({
+      id: 'first-session',
+      earnedAt: '2026-06-29T08:00:00.000Z',
+      updatedAt: '2026-06-29T08:00:00.000Z',
+    });
+    await database.unlockedVisualThemes.add({
+      id: 'power',
+      unlockedAt: '2026-06-29T08:00:00.000Z',
+      updatedAt: '2026-06-29T08:00:00.000Z',
+    });
+    await database.visualThemePreferences.add({
+      id: 'visual-theme-preference',
+      activeThemeId: 'power',
+      updatedAt: '2026-06-29T08:00:00.000Z',
+    });
+    await database.weeklyMissionCompletions.add({
+      id: 'weekly-mission:2026-06-22',
+      weekStart: '2026-06-22',
+      completedAt: '2026-06-29T08:00:00.000Z',
+      updatedAt: '2026-06-29T08:00:00.000Z',
+    });
+    await database.routineReminderCompletions.add({
+      id: 'routine-reminder:2026-06-29:weighIn',
+      date: '2026-06-29',
+      type: 'weighIn',
+      completedAt: '2026-06-29T08:00:00.000Z',
+      updatedAt: '2026-06-29T08:00:00.000Z',
+    });
 
     await clearAllUserData(database);
 
@@ -206,6 +234,11 @@ describe('backupService', () => {
     expect(await database.weights.count()).toBe(0);
     expect(await database.exerciseDefinitions.count()).toBe(exerciseCatalog.length);
     expect(await database.exerciseDefinitions.get('exercise-1')).toBeUndefined();
+    expect(await database.earnedAchievements.count()).toBe(0);
+    expect(await database.unlockedVisualThemes.count()).toBe(0);
+    expect(await database.visualThemePreferences.count()).toBe(0);
+    expect(await database.weeklyMissionCompletions.count()).toBe(0);
+    expect(await database.routineReminderCompletions.count()).toBe(0);
     expect(await database.appSettings.count()).toBe(1);
     expect(await database.appSettings.get(APP_SETTINGS_ID)).toMatchObject({
       id: APP_SETTINGS_ID,

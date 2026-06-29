@@ -30,6 +30,13 @@ import type {
   WeeklyReview,
 } from "@/domain/models/weeklyReview";
 import type { WeightEntry } from "@/domain/models/weight";
+import type {
+  CompletedWeeklyMissionRecord,
+  EarnedAchievementRecord,
+  RoutineReminderCompletionRecord,
+  UnlockedVisualThemeRecord,
+  VisualThemePreferenceRecord,
+} from '@/infrastructure/user-state/userStateModels';
 
 import type { TrashItem } from '@/domain/models/trash';
 import type { DatabaseIntegrityReport } from "@/infrastructure/database/databaseIntegrityModels";
@@ -40,6 +47,7 @@ import { registerVersion3 } from "@/infrastructure/database/migrations/version3"
 
 import { registerVersion4 } from '@/infrastructure/database/migrations/version4';
 import { registerVersion5 } from '@/infrastructure/database/migrations/version5';
+import { registerVersion6 } from '@/infrastructure/database/migrations/version6';
 
 export const DEFAULT_DATABASE_NAME = "sportpilot-local-database";
 
@@ -75,6 +83,17 @@ export class AppDatabase extends Dexie {
     PlannedEnduranceSession,
     EntityId
   >;
+  declare earnedAchievements: Table<EarnedAchievementRecord, EntityId>;
+  declare unlockedVisualThemes: Table<UnlockedVisualThemeRecord, EntityId>;
+  declare visualThemePreferences: Table<VisualThemePreferenceRecord, EntityId>;
+  declare weeklyMissionCompletions: Table<
+    CompletedWeeklyMissionRecord,
+    EntityId
+  >;
+  declare routineReminderCompletions: Table<
+    RoutineReminderCompletionRecord,
+    EntityId
+  >;
   declare migrationJournal: Table<MigrationJournalEntry, string>;
   declare databaseDiagnostics: Table<DatabaseIntegrityReport, string>;
 
@@ -88,5 +107,6 @@ export class AppDatabase extends Dexie {
 
     registerVersion4(this);
     registerVersion5(this);
+    registerVersion6(this);
   }
 }

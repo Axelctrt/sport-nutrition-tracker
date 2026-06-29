@@ -10,16 +10,19 @@ import {
 } from '@/domain/goals/goalState';
 import {
   ACHIEVEMENT_STORAGE_KEY,
+  flushAchievementStatePersistence,
   readAchievementState,
   unlockAchievements,
 } from '@/domain/rewards/achievements';
 import {
   activateVisualTheme,
+  flushVisualThemeStatePersistence,
   readVisualThemeState,
   unlockVisualThemes,
   VISUAL_THEME_STORAGE_KEY,
 } from '@/domain/rewards/visualThemes';
 import {
+  flushWeeklyMissionHistoryPersistence,
   readWeeklyMissionHistoryState,
   recordCompletedWeeklyMission,
   WEEKLY_MISSION_HISTORY_STORAGE_KEY,
@@ -111,6 +114,9 @@ describe('sauvegarde des récompenses', () => {
     await Promise.all([
       flushGoalStatePersistence(),
       flushEndurancePlanningPersistence(),
+      flushAchievementStatePersistence(),
+      flushVisualThemeStatePersistence(),
+      flushWeeklyMissionHistoryPersistence(),
     ]);
 
     const envelope = await createBackupEnvelope(
@@ -167,6 +173,9 @@ describe('sauvegarde des récompenses', () => {
     expect(
       readWeeklyMissionHistoryState().completedWeeks,
     ).toHaveLength(1);
+    expect(await database.earnedAchievements.count()).toBe(1);
+    expect(await database.unlockedVisualThemes.count()).toBe(2);
+    expect(await database.weeklyMissionCompletions.count()).toBe(1);
     expect(await database.goals.get('goal-backup')).toBeDefined();
     expect(
       await database.endurancePlanningSessions.get(

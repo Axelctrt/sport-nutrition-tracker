@@ -1,6 +1,11 @@
 import { foodJournalPath, routePaths, weightPath } from '@/app/routePaths';
 import type { Activity, ActivityType } from '@/domain/models/activity';
 import type { LocalDate } from '@/domain/models/common';
+import {
+  isRoutineReminderCompleted,
+  recordRoutineReminderCompletion,
+  ROUTINE_REMINDER_DEVICE_STORAGE_KEY,
+} from '@/domain/reminders/routineReminderCompletionState';
 import type { WorkoutSession } from '@/domain/models/strength';
 import {
   isRoutineReminderQuietTime,
@@ -22,7 +27,8 @@ import type { WeightRepository } from '@/infrastructure/repositories/contracts/W
 import type { WorkoutSessionRepository } from '@/infrastructure/repositories/contracts/WorkoutSessionRepository';
 import { repositories } from '@/infrastructure/repositories/repositories';
 
-export const ROUTINE_REMINDER_STORAGE_KEY = 'sportpilot:routine-reminders:v1';
+export const ROUTINE_REMINDER_STORAGE_KEY =
+  ROUTINE_REMINDER_DEVICE_STORAGE_KEY;
 export const ROUTINE_REMINDER_CHANGED_EVENT = 'sportpilot:routine-reminders-changed';
 
 export interface RoutineReminderCandidate {
@@ -34,7 +40,6 @@ export interface RoutineReminderCandidate {
 }
 
 interface RoutineReminderDayState {
-  completedAt?: Partial<Record<RoutineReminderType, string>>;
   lastShownAt?: Partial<Record<RoutineReminderType, string>>;
   snoozedUntil?: Partial<Record<RoutineReminderType, string>>;
 }
@@ -49,6 +54,20 @@ interface StorageLike {
   setItem(key: string, value: string): void;
 }
 
+export interface RoutineReminderCompletionGateway {
+  isCompleted(date: LocalDate, type: RoutineReminderType): boolean;
+  complete(
+    date: LocalDate,
+    type: RoutineReminderType,
+    completedAt: string,
+  ): void;
+}
+
+const defaultCompletionGateway: RoutineReminderCompletionGateway = {
+  isCompleted: isRoutineReminderCompleted,
+  complete: recordRoutineReminderCompletion,
+};
+
 export interface RoutineReminderDependencies {
   settings: Pick<SettingsRepository, 'get' | 'update'>;
   weight: Pick<WeightRepository, 'getByDate'>;
@@ -57,6 +76,7 @@ export interface RoutineReminderDependencies {
   workoutSessions: Pick<WorkoutSessionRepository, 'listAll'>;
   readEndurancePlanningState: () => EndurancePlanningState;
   storage?: StorageLike;
+  completions?: RoutineReminderCompletionGateway;
   now?: () => Date;
 }
 
@@ -91,6 +111,23 @@ function emptyLedger(): RoutineReminderLedger {
   return { version: 1, days: {} };
 }
 
+function readReminderField(
+  value: unknown,
+): Partial<Record<RoutineReminderType, string>> | undefined {
+  if (!value || typeof value !== 'object') return undefined;
+
+  const result: Partial<Record<RoutineReminderType, string>> = {};
+
+  for (const type of ROUTINE_REMINDER_TYPES) {
+    const candidate = (value as Record<string, unknown>)[type];
+    if (typeof candidate === 'string' && candidate.length > 0) {
+      result[type] = candidate;
+    }
+  }
+
+  return Object.keys(result).length > 0 ? result : undefined;
+}
+
 function readLedger(storage: StorageLike | undefined): RoutineReminderLedger {
   if (!storage) return emptyLedger();
 
@@ -104,10 +141,26 @@ function readLedger(storage: StorageLike | undefined): RoutineReminderLedger {
       return emptyLedger();
     }
 
-    return {
-      version: 1,
-      days: parsed.days as Record<LocalDate, RoutineReminderDayState>,
-    };
+    const days: Record<LocalDate, RoutineReminderDayState> = {};
+
+    for (const [date, rawDay] of Object.entries(parsed.days)) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !rawDay || typeof rawDay !== 'object') {
+        continue;
+      }
+
+      const day = rawDay as Record<string, unknown>;
+      const lastShownAt = readReminderField(day.lastShownAt);
+      const snoozedUntil = readReminderField(day.snoozedUntil);
+
+      if (lastShownAt || snoozedUntil) {
+        days[date as LocalDate] = {
+          ...(lastShownAt ? { lastShownAt } : {}),
+          ...(snoozedUntil ? { snoozedUntil } : {}),
+        };
+      }
+    }
+
+    return { version: 1, days };
   } catch {
     return emptyLedger();
   }
@@ -253,8 +306,9 @@ function canShowType(
   type: RoutineReminderType,
   day: RoutineReminderDayState,
   now: Date,
+  isCompleted: boolean,
 ): boolean {
-  if (day.completedAt?.[type]) return false;
+  if (isCompleted) return false;
 
   const snoozedUntil = day.snoozedUntil?.[type];
   if (snoozedUntil) {
@@ -279,11 +333,20 @@ export async function evaluateRoutineReminder(
   const storage = getStorage(dependencies);
   const ledger = readLedger(storage);
   const day = ensureDay(ledger, date);
+  const completions = dependencies.completions ?? defaultCompletionGateway;
   const shownTypes = new Set(Object.keys(day.lastShownAt ?? {}));
 
   for (const type of ROUTINE_REMINDER_TYPES) {
     const rule = preferences.rules[type];
-    if (!isRoutineReminderRuleDue(rule, now) || !canShowType(type, day, now)) {
+    if (
+      !isRoutineReminderRuleDue(rule, now) ||
+      !canShowType(
+        type,
+        day,
+        now,
+        completions.isCompleted(date, type),
+      )
+    ) {
       continue;
     }
     if (!shownTypes.has(type) && shownTypes.size >= preferences.maxPerDay) {
@@ -309,7 +372,6 @@ export async function evaluateRoutineReminder(
 }
 
 function updateDayState(
-  _type: RoutineReminderType,
   dependencies: RoutineReminderDependencies,
   update: (day: RoutineReminderDayState, now: Date) => void,
 ): void {
@@ -327,7 +389,7 @@ export function snoozeRoutineReminder(
   minutes: number,
   dependencies: RoutineReminderDependencies = defaultDependencies,
 ): void {
-  updateDayState(type, dependencies, (day, now) => {
+  updateDayState(dependencies, (day, now) => {
     const until = new Date(now.getTime() + minutes * 60_000).toISOString();
     day.snoozedUntil = { ...day.snoozedUntil, [type]: until };
   });
@@ -337,8 +399,12 @@ export function completeRoutineReminder(
   type: RoutineReminderType,
   dependencies: RoutineReminderDependencies = defaultDependencies,
 ): void {
-  updateDayState(type, dependencies, (day, now) => {
-    day.completedAt = { ...day.completedAt, [type]: now.toISOString() };
+  const now = dependencies.now?.() ?? new Date();
+  const date = toLocalDate(now);
+  const completions = dependencies.completions ?? defaultCompletionGateway;
+  completions.complete(date, type, now.toISOString());
+
+  updateDayState(dependencies, (day) => {
     if (day.snoozedUntil?.[type]) {
       day.snoozedUntil = { ...day.snoozedUntil };
       delete day.snoozedUntil[type];

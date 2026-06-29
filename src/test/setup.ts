@@ -4,6 +4,10 @@ import { cleanup } from '@testing-library/react';
 import { afterEach, vi } from 'vitest';
 import { resetGoalStateRuntimeForTests } from '@/domain/goals/goalState';
 import { resetEndurancePlanningRuntimeForTests } from '@/domain/planning/endurancePlanningState';
+import { resetRoutineReminderCompletionRuntimeForTests } from '@/domain/reminders/routineReminderCompletionState';
+import { resetAchievementStateRuntimeForTests } from '@/domain/rewards/achievements';
+import { resetVisualThemeStateRuntimeForTests } from '@/domain/rewards/visualThemes';
+import { resetWeeklyMissionHistoryRuntimeForTests } from '@/domain/rewards/weeklyMissionHistory';
 
 Object.defineProperty(window, 'matchMedia', {
   configurable: true,
@@ -63,6 +67,10 @@ function restoreProperty({ target, property, descriptor }: PropertyBaseline) {
 afterEach(() => {
   resetGoalStateRuntimeForTests();
   resetEndurancePlanningRuntimeForTests();
+  resetAchievementStateRuntimeForTests();
+  resetVisualThemeStateRuntimeForTests();
+  resetWeeklyMissionHistoryRuntimeForTests();
+  resetRoutineReminderCompletionRuntimeForTests();
   cleanup();
   vi.clearAllTimers();
   vi.useRealTimers();

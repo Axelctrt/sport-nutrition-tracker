@@ -84,6 +84,11 @@ export function allUserDataTableList(database: AppDatabase) {
     ...tableList(database),
     database.goals,
     database.endurancePlanningSessions,
+    database.earnedAchievements,
+    database.unlockedVisualThemes,
+    database.visualThemePreferences,
+    database.weeklyMissionCompletions,
+    database.routineReminderCompletions,
   ] as const;
 }
 
@@ -346,6 +351,11 @@ export async function clearAllUserData(database: AppDatabase = appDatabase): Pro
         await clearTables(database);
         await database.goals.clear();
         await database.endurancePlanningSessions.clear();
+        await database.earnedAchievements.clear();
+        await database.unlockedVisualThemes.clear();
+        await database.visualThemePreferences.clear();
+        await database.weeklyMissionCompletions.clear();
+        await database.routineReminderCompletions.clear();
         await database.appSettings.add(createDefaultAppSettings());
         await ensureExerciseCatalog(database);
       },

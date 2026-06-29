@@ -5,6 +5,7 @@ import { registerVersion2 } from "@/infrastructure/database/migrations/version2"
 import { registerVersion3 } from "@/infrastructure/database/migrations/version3";
 import { registerVersion4 } from "@/infrastructure/database/migrations/version4";
 import { registerVersion5 } from '@/infrastructure/database/migrations/version5';
+import { registerVersion6 } from '@/infrastructure/database/migrations/version6';
 
 function createVersionRecorder(
   registeredVersions: number[],
@@ -26,7 +27,7 @@ function createVersionRecorder(
 }
 
 describe("déclaration des versions Dexie", () => {
-  it("enregistre les versions historiques 1 à 5", () => {
+  it("enregistre les versions historiques 1 à 6", () => {
     const registeredVersions: number[] = [];
     const recorder = createVersionRecorder(registeredVersions);
 
@@ -35,7 +36,8 @@ describe("déclaration des versions Dexie", () => {
     registerVersion3(recorder);
     registerVersion4(recorder);
     registerVersion5(recorder);
+    registerVersion6(recorder);
 
-    expect(registeredVersions).toEqual([1, 2, 3, 4, 5]);
+    expect(registeredVersions).toEqual([1, 2, 3, 4, 5, 6]);
   });
 });
