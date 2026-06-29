@@ -122,11 +122,16 @@ export async function loadAchievementMetrics(
 
 export async function loadAchievementPreview(
   database: AppDatabase = appDatabase,
+  earnedAt: string = new Date().toISOString(),
 ): Promise<AchievementSnapshot> {
   const metrics = await loadAchievementMetrics(database);
   const currentState = readAchievementState();
 
-  return buildAchievementSnapshot(metrics, currentState.earnedAchievements);
+  return buildAchievementSnapshot(
+    metrics,
+    currentState.earnedAchievements,
+    earnedAt,
+  );
 }
 
 export async function loadAchievementSnapshot(
