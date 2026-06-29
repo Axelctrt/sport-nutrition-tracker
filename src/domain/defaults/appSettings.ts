@@ -1,4 +1,5 @@
 import { APP_SETTINGS_ID } from '@/domain/defaults/identifiers';
+import { createDefaultRoutineReminderPreferences, normalizeRoutineReminderPreferences } from '@/domain/reminders/routineReminder';
 import {
   createDefaultDashboardPreferences,
   normalizeDashboardPreferences,
@@ -88,6 +89,7 @@ export function createDefaultAppSettings(): AppSettings {
       enduranceTemplates: DEFAULT_ENDURANCE_TEMPLATES.map((template) => ({ ...template })),
       enduranceTemplatesVersion: 1,
       dashboardPreferences: createDefaultDashboardPreferences(),
+      routineReminderPreferences: createDefaultRoutineReminderPreferences(),
     },
     APP_SETTINGS_ID,
   );
@@ -103,5 +105,6 @@ export function normalizeAppSettings(settings: AppSettings): AppSettings {
     enduranceTemplates: settings.enduranceTemplates ?? DEFAULT_ENDURANCE_TEMPLATES.map((template) => ({ ...template })),
     enduranceTemplatesVersion: settings.enduranceTemplatesVersion ?? 1,
     dashboardPreferences: normalizeDashboardPreferences(settings.dashboardPreferences),
+    routineReminderPreferences: normalizeRoutineReminderPreferences(settings.routineReminderPreferences),
   };
 }

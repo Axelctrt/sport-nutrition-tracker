@@ -4,6 +4,7 @@ export const routePaths = {
   onboarding: '/onboarding',
   profile: '/profile',
   settings: '/settings',
+  reminders: '/settings/reminders',
   dashboardCustomization: '/settings/dashboard',
   food: '/food',
   addFood: '/food/add',

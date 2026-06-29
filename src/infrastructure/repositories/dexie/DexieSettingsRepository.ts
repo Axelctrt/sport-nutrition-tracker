@@ -31,6 +31,7 @@ export class DexieSettingsRepository implements SettingsRepository {
             || normalized.enduranceTemplates !== settings.enduranceTemplates
             || normalized.enduranceTemplatesVersion !== settings.enduranceTemplatesVersion
             || JSON.stringify(normalized.dashboardPreferences) !== JSON.stringify(settings.dashboardPreferences)
+              || JSON.stringify(normalized.routineReminderPreferences) !== JSON.stringify(settings.routineReminderPreferences)
           ) {
             await this.database.appSettings.put(normalized);
           }

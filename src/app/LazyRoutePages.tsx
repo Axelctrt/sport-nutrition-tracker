@@ -39,6 +39,11 @@ const AdvancedSettingsPage = lazy(() =>
     default: module.AdvancedSettingsPage,
   })),
 );
+const RoutineRemindersPage = lazy(() =>
+  import('@/features/reminders/pages/RoutineRemindersPage').then((module) => ({
+    default: module.RoutineRemindersPage,
+  })),
+);
 
 
 const ActivityJournalPage = lazy(() =>
@@ -327,6 +332,13 @@ export function LazyAdvancedSettingsPage() {
   return (
     <RouteSuspense variant="form">
       <AdvancedSettingsPage />
+    </RouteSuspense>
+  );
+}
+export function LazyRoutineRemindersPage() {
+  return (
+    <RouteSuspense variant="form">
+      <RoutineRemindersPage />
     </RouteSuspense>
   );
 }

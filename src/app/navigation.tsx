@@ -2,6 +2,7 @@ import {
   Activity,
   Apple,
   BarChart3,
+  Bell,
   ClipboardCheck,
   CalendarDays,
   Layers3,
@@ -64,6 +65,7 @@ export const primaryNavigation: NavigationItem[] = [
 export const secondaryNavigation: NavigationItem[] = [
   { label: 'Profil', path: routePaths.profile, icon: UserRound },
   { label: 'Paramètres', path: routePaths.settings, icon: Settings },
+  { label: 'Rappels', path: routePaths.reminders, icon: Bell },
   { label: 'Récompenses', path: routePaths.rewards, icon: Trophy },
   { label: 'Sauvegarde', path: routePaths.backup, icon: DatabaseBackup },
   { label: 'Corbeille', path: routePaths.trash, icon: Trash2 },
@@ -173,6 +175,12 @@ export const mobileMoreNavigation: NavigationSection[] = [
         path: routePaths.settings,
         icon: Settings,
         description: 'Thème, calculs avancés et stockage local.',
+      },
+      {
+        label: 'Rappels et routines',
+        path: routePaths.reminders,
+        icon: Bell,
+        description: 'Configurer les rappels internes de suivi.',
       },
       {
         label: 'Sauvegarde',

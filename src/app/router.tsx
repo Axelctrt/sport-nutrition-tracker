@@ -2,6 +2,7 @@ import { createHashRouter, type RouteObject } from 'react-router-dom';
 import {
   LazyAddActivityPage,
   LazyAdvancedSettingsPage,
+  LazyRoutineRemindersPage,
   LazyActivityJournalPage,
   LazyAnalyticsPage,
   LazyTrashPage,
@@ -60,6 +61,7 @@ export const appShellRoutes: RouteObject[] = [
   },
   { path: routePaths.profile, element: <LazyProfilePage /> },
   { path: routePaths.settings, element: <LazyAdvancedSettingsPage /> },
+  { path: routePaths.reminders, element: <LazyRoutineRemindersPage /> },
   { path: routePaths.dashboardCustomization, element: <LazyDashboardCustomizationPage /> },
   { path: routePaths.food, element: <LazyFoodJournalPage /> },
   { path: routePaths.addFood, element: <LazyFoodEntryEditorPage /> },

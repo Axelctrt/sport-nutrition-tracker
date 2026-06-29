@@ -12,6 +12,7 @@ const routeMetadata: RouteMetadata[] = [
   { pattern: routePaths.profile, title: 'Profil' },
   { pattern: routePaths.dashboardCustomization, title: 'Personnaliser le tableau de bord' },
   { pattern: routePaths.settings, title: 'Paramètres' },
+  { pattern: routePaths.reminders, title: 'Rappels et routines' },
   { pattern: routePaths.barcodeScanner, title: 'Scanner un code-barres' },
   { pattern: routePaths.foodSelector, title: 'Ajouter un aliment' },
   { pattern: routePaths.addFood, title: 'Ajouter un aliment' },

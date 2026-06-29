@@ -85,6 +85,7 @@ describe('backupEnvelopeSchema', () => {
     delete legacySettings.enduranceTemplates;
     delete legacySettings.enduranceTemplatesVersion;
     delete legacySettings.dashboardPreferences;
+    delete legacySettings.routineReminderPreferences;
     envelope.data.appSettings = [legacySettings as unknown as BackupEnvelope['data']['appSettings'][number]];
 
     const parsed = backupEnvelopeSchema.parse(envelope);
@@ -99,6 +100,10 @@ describe('backupEnvelopeSchema', () => {
       preset: 'balanced',
       hidden: [],
     });
+    expect(
+      Object.values(parsed.data.appSettings[0]?.routineReminderPreferences?.rules ?? {})
+        .every((rule) => !rule.enabled),
+    ).toBe(true);
   });
 
   it('accepte les activités récentes sans RPE et les anciennes activités qui en contiennent encore un', () => {
@@ -310,10 +315,10 @@ describe('backupEnvelopeSchema', () => {
 });
 
 describe('migrateBackupEnvelope', () => {
-  it('migre une sauvegarde version 1 vers la version 3 sans altérer ses données', () => {
+  it('migre une sauvegarde version 1 vers la version 4 sans altérer ses données', () => {
     const migrated = migrateBackupEnvelope(createVersion1Envelope());
 
-    expect(migrated.schemaVersion).toBe(3);
+    expect(migrated.schemaVersion).toBe(4);
     expect(migrated.data.userProfile).toHaveLength(1);
     expect(migrated.data.exerciseDefinitions).toEqual([]);
     expect(migrated.data.workoutTemplates).toEqual([]);
@@ -321,8 +326,8 @@ describe('migrateBackupEnvelope', () => {
     expect(migrated.data.strengthSets).toEqual([]);
   });
 
-  it('migre directement la version 2 vers la version 3', () => {
-    expect(migrateBackupEnvelope(createValidEnvelope()).schemaVersion).toBe(3);
+  it('migre directement la version 2 vers la version 4', () => {
+    expect(migrateBackupEnvelope(createValidEnvelope()).schemaVersion).toBe(4);
   });
 
   it('refuse une sauvegarde créée par une version future', () => {
