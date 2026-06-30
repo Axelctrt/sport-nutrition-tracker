@@ -1,5 +1,7 @@
 # Checklist de validation stable — SportPilot 0.17.0
 
+> Version de référence : **0.17.1**.
+
 ## Préparation
 
 - [ ] La branche courante est `release/0.17.0`.
