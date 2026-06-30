@@ -10,6 +10,10 @@ import { createProfileInput } from '@/test/factories/profileFactory';
 import '@/features/onboarding/pages/OnboardingPage';
 import '@/features/dashboard/pages/DashboardPage';
 
+vi.mock('@/app/sync/WeightSyncCoordinator', () => ({
+  WeightSyncCoordinator: () => null,
+}));
+
 describe('App', () => {
   beforeEach(async () => {
     cleanup();

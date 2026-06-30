@@ -41,10 +41,12 @@ describe('settingsSectionNavigation', () => {
     target.scrollIntoView = vi.fn();
     document.body.append(target);
 
+    window.history.replaceState({}, '', '/#/settings');
+
     openSettingsSection('settings-themes');
 
     expect(target.open).toBe(true);
-    expect(window.location.hash).toBe('#settings-themes');
+    expect(window.location.hash).toBe('#/settings');
     expect(target.scrollIntoView).toHaveBeenCalledWith({
       behavior: 'smooth',
       block: 'center',

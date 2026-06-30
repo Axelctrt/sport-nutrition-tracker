@@ -71,13 +71,15 @@ describe('SettingsSectionDirectory', () => {
       />,
     );
 
+    window.history.replaceState({}, '', '/#/settings');
+
     await user.click(
       screen.getByRole('button', {
         name: /Thèmes visuels/,
       }),
     );
 
-    expect(window.location.hash).toBe('#theme');
+    expect(window.location.hash).toBe('#/settings');
     expect(target.open).toBe(true);
 
     await waitFor(() => {

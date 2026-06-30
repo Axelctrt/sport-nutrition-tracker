@@ -19,6 +19,7 @@ import type { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import type { SettingsRepository } from '@/infrastructure/repositories/contracts/SettingsRepository';
 import { runRepositoryOperation } from '@/infrastructure/repositories/dexie/repositoryOperation';
 import { updateStoredEntity } from '@/infrastructure/repositories/dexie/updateStoredEntity';
+import { notifyAutomaticWeightSyncPreferenceChanged } from '@/infrastructure/sync-prototype/weightSyncEvents';
 
 const deviceSettingKeys = new Set<keyof AppSettings>([
   'theme',
@@ -27,6 +28,7 @@ const deviceSettingKeys = new Set<keyof AppSettings>([
   'restTimerAutoStart',
   'restTimerSoundEnabled',
   'restTimerVibrationEnabled',
+  'automaticWeightSyncEnabled',
   'lastBackupExportedAt',
   'lastBackupAppVersion',
   'lastBackupSchemaVersion',
@@ -108,7 +110,11 @@ export class DexieSettingsRepository implements SettingsRepository {
               ),
         ]);
 
-        return composeAppSettings(updatedUser, updatedDevice);
+        const composed = composeAppSettings(updatedUser, updatedDevice);
+        notifyAutomaticWeightSyncPreferenceChanged(
+          composed.automaticWeightSyncEnabled,
+        );
+        return composed;
       },
     );
   }
@@ -134,7 +140,11 @@ export class DexieSettingsRepository implements SettingsRepository {
             await this.database.deviceSettings.put(device);
           },
         );
-        return composeAppSettings(user, device);
+        const composed = composeAppSettings(user, device);
+        notifyAutomaticWeightSyncPreferenceChanged(
+          composed.automaticWeightSyncEnabled,
+        );
+        return composed;
       },
     );
   }

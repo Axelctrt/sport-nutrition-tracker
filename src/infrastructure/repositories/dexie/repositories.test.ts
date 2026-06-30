@@ -99,6 +99,7 @@ describe('repositories Dexie', () => {
     delete legacyDevice.restTimerAutoStart;
     delete legacyDevice.restTimerSoundEnabled;
     delete legacyDevice.restTimerVibrationEnabled;
+    delete legacyDevice.automaticWeightSyncEnabled;
     await database.userSettings.put(createDefaultUserSettings());
     await database.deviceSettings.put(legacyDevice as never);
 
@@ -108,11 +109,13 @@ describe('repositories Dexie', () => {
     expect(settings.restTimerAutoStart).toBe(true);
     expect(settings.restTimerSoundEnabled).toBe(false);
     expect(settings.restTimerVibrationEnabled).toBe(true);
+    expect(settings.automaticWeightSyncEnabled).toBe(false);
     const stored = await database.deviceSettings.toCollection().first();
     expect(stored?.backupReminderIntervalDays).toBe(0);
     expect(stored?.restTimerAutoStart).toBe(true);
     expect(stored?.restTimerSoundEnabled).toBe(false);
     expect(stored?.restTimerVibrationEnabled).toBe(true);
+    expect(stored?.automaticWeightSyncEnabled).toBe(false);
   });
 
 
@@ -124,6 +127,7 @@ describe('repositories Dexie', () => {
     const settings = await repository.update({
       includedBaseSteps: 4_500,
       theme: 'dark',
+      automaticWeightSyncEnabled: true,
     });
 
     expect(settings.includedBaseSteps).toBe(4_500);
@@ -134,6 +138,7 @@ describe('repositories Dexie', () => {
     expect(await database.deviceSettings.get(DEVICE_SETTINGS_ID)).toMatchObject({
       deviceId: 'device-local',
       theme: 'dark',
+      automaticWeightSyncEnabled: true,
     });
     expect(
       (await database.userSettings.get(USER_SETTINGS_ID)) as unknown as Record<string, unknown>,

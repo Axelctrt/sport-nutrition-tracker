@@ -113,6 +113,7 @@ export function createDefaultDeviceSettings(
       restTimerAutoStart: true,
       restTimerSoundEnabled: false,
       restTimerVibrationEnabled: true,
+      automaticWeightSyncEnabled: false,
     },
     DEVICE_SETTINGS_ID,
   );
@@ -149,6 +150,8 @@ export function normalizeDeviceSettings(
     restTimerSoundEnabled: settings.restTimerSoundEnabled ?? false,
     restTimerVibrationEnabled:
       settings.restTimerVibrationEnabled ?? true,
+    automaticWeightSyncEnabled:
+      settings.automaticWeightSyncEnabled ?? false,
   };
 }
 
@@ -174,6 +177,8 @@ export function composeAppSettings(
     restTimerAutoStart: normalizedDevice.restTimerAutoStart,
     restTimerSoundEnabled: normalizedDevice.restTimerSoundEnabled,
     restTimerVibrationEnabled: normalizedDevice.restTimerVibrationEnabled,
+    automaticWeightSyncEnabled:
+      normalizedDevice.automaticWeightSyncEnabled,
     ...(normalizedDevice.lastBackupExportedAt === undefined
       ? {}
       : { lastBackupExportedAt: normalizedDevice.lastBackupExportedAt }),
@@ -197,6 +202,7 @@ export function splitAppSettings(settings: AppSettings): {
     restTimerAutoStart,
     restTimerSoundEnabled,
     restTimerVibrationEnabled,
+    automaticWeightSyncEnabled,
     lastBackupExportedAt,
     lastBackupAppVersion,
     lastBackupSchemaVersion,
@@ -219,6 +225,7 @@ export function splitAppSettings(settings: AppSettings): {
       restTimerAutoStart,
       restTimerSoundEnabled,
       restTimerVibrationEnabled,
+      automaticWeightSyncEnabled,
       ...(lastBackupExportedAt === undefined
         ? {}
         : { lastBackupExportedAt }),

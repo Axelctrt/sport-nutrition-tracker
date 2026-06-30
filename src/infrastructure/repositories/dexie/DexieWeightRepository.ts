@@ -9,6 +9,7 @@ import type { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import type { WeightRepository } from '@/infrastructure/repositories/contracts/WeightRepository';
 import { runRepositoryOperation } from '@/infrastructure/repositories/dexie/repositoryOperation';
 import { updateStoredEntity } from '@/infrastructure/repositories/dexie/updateStoredEntity';
+import { notifyRealWeightDataChanged } from '@/infrastructure/sync-prototype/weightSyncEvents';
 import { moveWeightToTrash } from '@/infrastructure/repositories/dexie/trashService';
 import { createEntity } from '@/shared/utils/entities';
 
@@ -51,8 +52,8 @@ export class DexieWeightRepository implements WeightRepository {
     );
   }
 
-  upsert(data: NewEntity<WeightEntry>): Promise<WeightEntry> {
-    return runRepositoryOperation(
+  async upsert(data: NewEntity<WeightEntry>): Promise<WeightEntry> {
+    const saved = await runRepositoryOperation(
       'update',
       'Impossible d’enregistrer la pesée.',
       async () => this.database.transaction(
@@ -92,15 +93,18 @@ export class DexieWeightRepository implements WeightRepository {
         },
       ),
     );
+    notifyRealWeightDataChanged('upsert');
+    return saved;
   }
 
-  deleteByDate(date: LocalDate): Promise<void> {
-    return runRepositoryOperation(
+  async deleteByDate(date: LocalDate): Promise<void> {
+    await runRepositoryOperation(
       'delete',
       'Impossible de supprimer la pesée.',
       async () => {
         await moveWeightToTrash(this.database, date);
       },
     );
+    notifyRealWeightDataChanged('delete');
   }
 }
