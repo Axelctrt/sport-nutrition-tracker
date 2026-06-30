@@ -108,11 +108,34 @@ const openFoodFactsClient = read('src/infrastructure/open-food-facts/OpenFoodFac
 if (!openFoodFactsClient.includes('app_version: __APP_VERSION__')) {
   fail('Open Food Facts n’utilise pas la version injectée du build.');
 }
-if (!/databaseSchemaVersion = 2/.test(read('src/infrastructure/database/schema.ts'))) {
-  fail('la version Dexie attendue est absente.');
+const databaseVersions = read(
+  'src/infrastructure/database/migrations/versions.ts',
+);
+const databaseSchema = read('src/infrastructure/database/schema.ts');
+const backupMigrations = read(
+  'src/infrastructure/backup/backupMigrations.ts',
+);
+
+if (
+  !/DATABASE_VERSION_8\s*=\s*8\s+as\s+const\b/.test(
+    databaseVersions,
+  ) ||
+  !/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_8\b/.test(
+    databaseVersions,
+  ) ||
+  !/databaseSchemaVersion\s*=\s*CURRENT_DATABASE_VERSION\b/.test(
+    databaseSchema,
+  )
+) {
+  fail('le schéma Dexie v8 attendu est absent ou mal relié.');
 }
-if (!/CURRENT_BACKUP_SCHEMA_VERSION = 2/.test(read('src/infrastructure/backup/backupMigrations.ts'))) {
-  fail('la version de sauvegarde attendue est absente.');
+
+if (
+  !/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*7\b/.test(
+    backupMigrations,
+  )
+) {
+  fail('le format de sauvegarde JSON v7 attendu est absent.');
 }
 
 console.log(`Audit version réussi : SportPilot ${version}, documentation, schémas et métadonnées cohérents.`);

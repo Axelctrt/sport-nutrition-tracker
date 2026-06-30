@@ -43,3 +43,6 @@ sportpilot_*/
 sportpilot-*.zip
 phase*_patch/
 .tmp-*/
+
+# Configuration publique Vite de production.
+!.env.production

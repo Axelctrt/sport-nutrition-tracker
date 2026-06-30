@@ -1,17 +1,25 @@
-# SportPilot 0.16.0 — promotion stable
+# SportPilot 0.17.0 — promotion stable
 
-Branche recommandée : `release/0.16.0`
+Branche recommandée : `release/0.17.0`
 
-Cette phase ne rajoute aucune fonctionnalité métier. Elle promeut la Release Candidate validée vers la version stable :
+Cette phase ne rajoute aucune fonctionnalité métier. Elle prépare la promotion
+du contenu validé de `develop` vers la version stable `0.17.0`.
 
-- version applicative portée à `0.16.0` ;
-- audit de production exécuté automatiquement en mode stable ;
-- notes de publication, checklist, installation et retour arrière alignés ;
-- procédure de fusion dans `main`, création du tag `v0.16.0` et réalignement de `develop` ;
-- conservation du schéma Dexie v2 et de la sauvegarde JSON v2 ;
-- aucune migration et aucune dépendance supplémentaire.
+Elle comprend :
 
-Contrôles déterministes :
+- version applicative portée à `0.17.0` ;
+- schéma Dexie principal en version 8 ;
+- format de sauvegarde JSON en version 7 ;
+- synchronisation Dexie Cloud sécurisée et volontaire des pesées ;
+- activation distincte sur chaque appareil et liée au compte autorisé ;
+- blocage automatique après un changement de compte ;
+- outils de laboratoire masqués dans le build public ;
+- configuration Vite de production pour l’origine Cloudflare officielle ;
+- notes de publication, checklist, installation, limitations et retour arrière
+  alignés ;
+- procédure de fusion dans `main` et création du tag `v0.17.0`.
+
+Contrôle déterministe complet :
 
 ```text
 npm run release:verify
@@ -25,8 +33,14 @@ npm run test:e2e
 
 Validation de référence :
 
-- 163 fichiers Vitest ;
-- 495 tests Vitest ;
-- suite brassée avec le seed `20260626` ;
-- 26 exécutions Playwright découvertes dans 11 fichiers ;
-- build PWA et audits de production stable validés.
+- 264 fichiers Vitest ;
+- 809 tests Vitest ;
+- suite de stabilité validée ;
+- build PWA et audits de production validés ;
+- validation manuelle sur ordinateur ;
+- validation manuelle sur iPhone 15 sous iOS 26 ;
+- changement compte A vers compte B sans transfert automatique des pesées ;
+- synchronisation bidirectionnelle et reprise hors connexion validées.
+
+Aucune clé privée Dexie Cloud, aucun fichier `.env.local`, `dexie-cloud.json`
+ou `dexie-cloud.key` ne doit être ajouté au dépôt.
