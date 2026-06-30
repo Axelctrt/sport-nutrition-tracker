@@ -1,5 +1,7 @@
 import Dexie, { type Table } from "dexie";
 
+import { DEFAULT_DATABASE_NAME } from '@/infrastructure/database/databaseNames';
+
 import type { Activity } from "@/domain/models/activity";
 import type { DeletionRecord } from '@/domain/models/deletion';
 import type { Goal } from '@/domain/goals/goalState';
@@ -52,7 +54,7 @@ import { registerVersion6 } from '@/infrastructure/database/migrations/version6'
 import { registerVersion7 } from '@/infrastructure/database/migrations/version7';
 import { registerVersion8 } from '@/infrastructure/database/migrations/version8';
 
-export const DEFAULT_DATABASE_NAME = "sportpilot-local-database";
+export { DEFAULT_DATABASE_NAME } from '@/infrastructure/database/databaseNames';
 
 export class AppDatabase extends Dexie {
   declare userProfile: Table<UserProfile, EntityId>;

@@ -33,6 +33,7 @@ import {
   settingsFormValuesToChanges,
   settingsToFormValues,
 } from '@/features/settings/utils/settingsForm';
+import { activeDataSpace } from '@/infrastructure/database/database';
 import { repositories } from '@/infrastructure/repositories/repositories';
 import {
   getPersistentStorageStatus,
@@ -277,6 +278,7 @@ export function AdvancedSettingsPage() {
         <SettingsOverview
           settings={settings}
           storageStatus={storageStatus}
+          activeDataSpace={activeDataSpace}
         />
       </div>
 
