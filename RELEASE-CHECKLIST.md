@@ -181,7 +181,8 @@
 
 ### Configuration publique de production
 
-- [ ] `.env.production` est suivi par Git.
+- [ ] Aucun fichier `.env.production` n’est suivi par Git.
+- [ ] Les variables Vite publiques sont configurées dans l’environnement de build Cloudflare.
 - [ ] `VITE_ENABLE_SYNC_PROTOTYPE=true`.
 - [ ] `VITE_DEXIE_CLOUD_DATABASE_URL` cible la base Dexie Cloud officielle.
 - [ ] `VITE_ENABLE_REAL_WEIGHT_SYNC=true`.

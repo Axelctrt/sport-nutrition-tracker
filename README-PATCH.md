@@ -14,7 +14,7 @@ Elle comprend :
 - activation distincte sur chaque appareil et liée au compte autorisé ;
 - blocage automatique après un changement de compte ;
 - outils de laboratoire masqués dans le build public ;
-- configuration Vite de production pour l’origine Cloudflare officielle ;
+- configuration des variables Vite publiques dans l’environnement de build Cloudflare ;
 - notes de publication, checklist, installation, limitations et retour arrière
   alignés ;
 - procédure de fusion dans `main` et création du tag `v0.17.0`.

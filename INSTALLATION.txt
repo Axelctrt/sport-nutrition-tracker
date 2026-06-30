@@ -63,3 +63,14 @@ Sauvegarde JSON : version 7.
 
 Les migrations sont automatiques. Ne jamais supprimer IndexedDB ou les données
 Safari pour forcer une mise à jour.
+
+CONFIGURATION DU BUILD CLOUDFLARE
+
+Aucun fichier .env.production ne doit être suivi ou livré.
+
+Configurer dans l’environnement de build Cloudflare :
+
+VITE_ENABLE_SYNC_PROTOTYPE=true
+VITE_DEXIE_CLOUD_DATABASE_URL=https://zhnyk8met.dexie.cloud
+VITE_ENABLE_REAL_WEIGHT_SYNC=true
+VITE_ENABLE_SYNC_DIAGNOSTICS=false

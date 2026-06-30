@@ -77,7 +77,7 @@ recommandée avant l’installation de la mise à jour officielle.
 
 ## Configuration de production
 
-La version officielle charge les variables Vite publiques suivantes :
+L’environnement de build Cloudflare fournit les variables Vite publiques suivantes :
 
 ```text
 VITE_ENABLE_SYNC_PROTOTYPE=true
