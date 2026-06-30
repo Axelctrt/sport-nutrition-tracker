@@ -1,43 +1,69 @@
-# Retour arrière — SportPilot 0.16.0
+# Retour arrière — SportPilot 0.17.0
 
 ## Objectif
 
-Cette procédure permet de revenir à la version stable 0.15.0 si SportPilot 0.16.0 présente un défaut bloquant, sans modifier manuellement IndexedDB.
+Cette procédure décrit la conduite à tenir si SportPilot 0.17.0 présente un
+défaut bloquant après publication.
+
+SportPilot 0.17.0 utilise le schéma Dexie v8 et le format de sauvegarde JSON v7.
+La version 0.16.0 ne doit donc pas être redéployée sans validation explicite de
+sa compatibilité avec une base locale déjà migrée.
+
+Le **fix-forward** vers une version corrective `0.17.1` est la stratégie
+préférée.
 
 ## Préparation obligatoire
 
-1. Exporter une sauvegarde JSON avant le déploiement de 0.16.0.
-2. Conserver les archives complètes de 0.15.0 et 0.16.0.
-3. Noter les commits et tags `v0.15.0` et `v0.16.0`.
+1. Exporter une sauvegarde JSON v7 avant le déploiement de 0.17.0.
+2. Conserver cette sauvegarde hors de l’application.
+3. Noter les commits et tags `v0.16.0` et `v0.17.0`.
 4. Vérifier que la sauvegarde est prévisualisable comme compatible.
+5. Ne supprimer ni IndexedDB, ni les données Safari, ni la PWA.
+
+## Mesure immédiate en cas de défaut de synchronisation
+
+Si le défaut concerne uniquement Dexie Cloud :
+
+1. ne pas supprimer les données locales ;
+2. désactiver la synchronisation sur l’appareil concerné ;
+3. ne pas autoriser un autre compte dans le même profil de navigateur ;
+4. conserver les pesées locales et la sauvegarde JSON ;
+5. préparer une correction sur une branche dédiée ;
+6. publier une version corrective `0.17.1`.
 
 ## Retour du code
 
-En cas de défaut bloquant :
+Un retour complet vers `v0.16.0` n’est autorisé qu’après un test confirmant que
+cette version peut ouvrir sans risque une base déjà migrée au schéma v8.
 
-1. arrêter le serveur ou retirer temporairement le déploiement 0.16.0 ;
-2. redéployer l’archive complète ou le tag stable `v0.15.0` ;
-3. vider uniquement le cache applicatif si l’ancienne interface reste affichée ;
-4. ne pas supprimer les données Safari ni IndexedDB ;
-5. rouvrir SportPilot et vérifier le profil, les journaux, les séances et les sauvegardes.
+À défaut de cette confirmation :
+
+1. maintenir temporairement le déploiement 0.17.0 ;
+2. désactiver la fonctionnalité défectueuse dans une correction 0.17.1 ;
+3. déployer la correction sans supprimer les données locales.
+
+## PWA et cache
+
+Si une correction est déployée mais que l’ancienne interface reste affichée :
+
+1. fermer complètement la PWA ;
+2. ouvrir Safari sur l’URL officielle ;
+3. recharger la page ;
+4. relancer la PWA depuis l’écran d’accueil ;
+5. ne supprimer les données du site qu’en dernier recours et seulement après
+   vérification de la sauvegarde JSON.
 
 ## Données
 
-Le schéma Dexie reste en version 2 et le format de sauvegarde reste en version 2. Aucun retour de migration n’est nécessaire entre 0.15.0 et 0.16.0.
-
-Une restauration JSON ne doit être lancée qu’après prévisualisation. Elle n’est pas nécessaire pour un simple retour du code si les données locales sont toujours présentes.
-
-## PWA
-
-Si la PWA continue d’afficher 0.16.0 après redéploiement de 0.15.0 :
-
-1. fermer complètement la PWA ;
-2. rouvrir Safari sur l’URL de production ;
-3. recharger la page ;
-4. relancer la PWA depuis l’écran d’accueil.
-
-Ne supprimer la PWA ou les données du site qu’en dernier recours et uniquement après avoir vérifié la sauvegarde JSON.
+- schéma Dexie principal : v8 ;
+- sauvegarde JSON : v7 ;
+- migrations automatiques ;
+- aucune rétro-migration manuelle ne doit être tentée ;
+- une restauration JSON ne doit être lancée qu’après prévisualisation.
 
 ## Git
 
-Ne réécrire ni ne supprimer un tag déjà publié. Documenter le retrait de 0.16.0, corriger sur une branche dédiée et publier une version corrective `0.16.1` si nécessaire.
+Ne jamais réécrire ou supprimer un tag déjà publié.
+
+Documenter le défaut, conserver `v0.17.0`, corriger sur une branche dédiée et
+publier un nouveau tag `v0.17.1`.
