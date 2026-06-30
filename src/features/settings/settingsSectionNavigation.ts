@@ -63,16 +63,6 @@ function scrollToSettingsSection(
 export function openSettingsSection(sectionId: string): void {
   if (typeof window === 'undefined') return;
 
-  const hash = `#${encodeURIComponent(sectionId)}`;
-
-  if (window.location.hash !== hash) {
-    window.history.replaceState(
-      window.history.state,
-      '',
-      hash,
-    );
-  }
-
   const element = document.getElementById(sectionId);
 
   if (
@@ -82,9 +72,9 @@ export function openSettingsSection(sectionId: string): void {
     element.open = true;
   }
 
-  window.dispatchEvent(new Event('hashchange'));
-
-  // Déplacement immédiat dès le clic.
+  // Le routeur utilise déjà window.location.hash. Une ancre de section
+  // remplacerait donc #/settings et provoquerait une page introuvable
+  // au rechargement. La navigation interne reste volontairement locale.
   scrollToSettingsSection(sectionId);
 
   // Second positionnement après l’ouverture et le recalcul

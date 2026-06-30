@@ -5,7 +5,7 @@
 - **Base de clôture de la préparation locale :** `feature/sync-data-readiness` au commit `33eb416`
 - **Version applicative :** `0.16.0`
 - **État local :** Dexie v8, sauvegarde JSON v7
-- **Statut :** phase B terminée ; phase C autorisée uniquement comme prototype isolé sur les pesées
+- **Statut :** phase B terminée ; C0 prépare un prototype isolé sur les pesées, encore sans base distante
 
 ## 1. Objectif
 
@@ -373,14 +373,16 @@ La phase C ne doit pas modifier silencieusement la base de production ni génér
 
 ### À valider au démarrage de la phase C
 
-- [ ] conditions, tarification et région du fournisseur revérifiées ;
+- [x] conditions techniques et offre de prototype revérifiées le 29 juin 2026 ;
 - [ ] projet Dexie Cloud expérimental créé ;
-- [ ] secrets et fichiers locaux exclus de Git ;
-- [ ] stratégie de base locale par compte confirmée ;
-- [ ] procédure de rollback documentée avant le premier essai ;
-- [ ] données strictement fictives confirmées.
+- [x] secrets et fichiers locaux exclus de Git ;
+- [x] seconde base IndexedDB isolée et suffixée par environnement distant ;
+- [x] procédure de rollback documentée avant le premier essai ;
+- [x] données strictement fictives imposées par le périmètre ;
+- [ ] origines locale et Cloudflare Tunnel autorisées après création distante.
 
 Le bilan détaillé de la préparation locale est disponible dans [sync-phase-b-readiness.md](./sync-phase-b-readiness.md).
+La préparation C0 et son rollback sont décrits dans [dexie-cloud-prototype-c0.md](./dexie-cloud-prototype-c0.md) et [dexie-cloud-prototype-rollback.md](./dexie-cloud-prototype-rollback.md).
 
 ## 13. Références de code
 

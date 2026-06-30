@@ -2,6 +2,7 @@ import {
   ArrowRight,
   Bell,
   Calculator,
+  Cloud,
   DatabaseBackup,
   Footprints,
   Gauge,
@@ -22,6 +23,7 @@ import { ConsistencyStreakPanel } from '@/features/settings/components/Consisten
 import { DataManagementCenter } from '@/features/settings/components/DataManagementCenter';
 import { RewardThemesPanel } from '@/features/settings/components/RewardThemesPanel';
 import { SettingsOverview } from '@/features/settings/components/SettingsOverview';
+import { WeightSyncSettingsPanel } from '@/features/settings/components/WeightSyncSettingsPanel';
 import {
   SettingsSectionDirectory,
   type SettingsDirectoryItem,
@@ -105,6 +107,13 @@ const settingsSections: readonly SettingsDirectoryItem[] = [
     description: 'Badges, séries et accomplissements.',
     keywords: ['badges', 'serie', 'missions'],
     icon: Sparkles,
+  },
+  {
+    id: 'settings-sync',
+    label: 'Synchronisation des pesées',
+    description: 'Activation, état et relance des échanges entre appareils.',
+    keywords: ['cloud', 'synchronisation', 'poids', 'appareils'],
+    icon: Cloud,
   },
   {
     id: 'settings-data',
@@ -370,6 +379,17 @@ export function AdvancedSettingsPage() {
           onSubmit={handleSubmit}
           onResetToDefaults={handleResetToDefaults}
         />
+
+        <CollapsibleSection
+          sectionId="settings-sync"
+          storageKey="sportpilot:settings:sync"
+          title="Synchronisation des pesées"
+          description="Activer et surveiller les échanges de pesées entre tes appareils."
+          icon={Cloud}
+          className="scroll-mt-24"
+        >
+          <WeightSyncSettingsPanel />
+        </CollapsibleSection>
 
         <CollapsibleSection
           sectionId="settings-themes"

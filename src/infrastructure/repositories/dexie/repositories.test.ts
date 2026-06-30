@@ -54,6 +54,24 @@ describe('repositories Dexie', () => {
     expect(await database.weights.count()).toBe(1);
   });
 
+
+  it('marque comme restaurée une pesée recréée après suppression', async () => {
+    const repository = new DexieWeightRepository(database);
+    const date = '2026-06-24';
+
+    const created = await repository.upsert({ date, weightKg: 60 });
+    await repository.deleteByDate(date);
+    const recreated = await repository.upsert({ date, weightKg: 59.7 });
+
+    expect(recreated.id).toBe(created.id);
+    expect(
+      await database.deletionRecords.get(`deletion:weight:${created.id}`),
+    ).toMatchObject({
+      status: 'restored',
+      entityId: created.id,
+    });
+  });
+
   it('conserve une seule saisie de pas par date', async () => {
     const repository = new DexieStepsRepository(database);
 
@@ -81,6 +99,7 @@ describe('repositories Dexie', () => {
     delete legacyDevice.restTimerAutoStart;
     delete legacyDevice.restTimerSoundEnabled;
     delete legacyDevice.restTimerVibrationEnabled;
+    delete legacyDevice.automaticWeightSyncEnabled;
     await database.userSettings.put(createDefaultUserSettings());
     await database.deviceSettings.put(legacyDevice as never);
 
@@ -90,11 +109,13 @@ describe('repositories Dexie', () => {
     expect(settings.restTimerAutoStart).toBe(true);
     expect(settings.restTimerSoundEnabled).toBe(false);
     expect(settings.restTimerVibrationEnabled).toBe(true);
+    expect(settings.automaticWeightSyncEnabled).toBe(false);
     const stored = await database.deviceSettings.toCollection().first();
     expect(stored?.backupReminderIntervalDays).toBe(0);
     expect(stored?.restTimerAutoStart).toBe(true);
     expect(stored?.restTimerSoundEnabled).toBe(false);
     expect(stored?.restTimerVibrationEnabled).toBe(true);
+    expect(stored?.automaticWeightSyncEnabled).toBe(false);
   });
 
 
@@ -106,6 +127,8 @@ describe('repositories Dexie', () => {
     const settings = await repository.update({
       includedBaseSteps: 4_500,
       theme: 'dark',
+      automaticWeightSyncEnabled: true,
+      automaticWeightSyncAccountFingerprint: 'acct-TEST0001',
     });
 
     expect(settings.includedBaseSteps).toBe(4_500);
@@ -116,6 +139,8 @@ describe('repositories Dexie', () => {
     expect(await database.deviceSettings.get(DEVICE_SETTINGS_ID)).toMatchObject({
       deviceId: 'device-local',
       theme: 'dark',
+      automaticWeightSyncEnabled: true,
+      automaticWeightSyncAccountFingerprint: 'acct-TEST0001',
     });
     expect(
       (await database.userSettings.get(USER_SETTINGS_ID)) as unknown as Record<string, unknown>,

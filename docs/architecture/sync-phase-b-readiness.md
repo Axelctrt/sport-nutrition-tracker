@@ -105,3 +105,17 @@ Le prototype des pesées est autorisé lorsque :
 ### No-Go généralisation
 
 La synchronisation générale reste interdite tant que les points de la section 6 ne sont pas traités domaine par domaine.
+
+## 8. Suivi C0
+
+La phase expérimentale a été ouverte depuis le merge `f783f91` sur `experiment/dexie-cloud-weight-sync`.
+
+C0 prépare uniquement :
+
+- la dépendance Dexie Cloud verrouillée ;
+- une base IndexedDB distincte limitée à `weights` et `deletionRecords` ;
+- une activation par variables locales, désactivée par défaut ;
+- la protection des fichiers CLI et de la CSP ;
+- une procédure de rollback avant création distante.
+
+Voir [dexie-cloud-prototype-c0.md](./dexie-cloud-prototype-c0.md).

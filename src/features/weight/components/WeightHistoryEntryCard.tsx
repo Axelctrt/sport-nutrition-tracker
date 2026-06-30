@@ -1,4 +1,5 @@
 import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { useState } from 'react';
 import type { WeightEntry } from '@/domain/models/weight';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
@@ -32,12 +33,14 @@ export function WeightHistoryEntryCard({
   onDelete,
 }: WeightHistoryEntryCardProps) {
   const delta = formatDelta(entry.weightKg, previousWeightKg);
+  const [actionsOpen, setActionsOpen] = useState(false);
 
   return (
     <Card
       id={`weight-entry-${entry.id}`}
       className={cn(
-        'scroll-mt-28 p-4 transition-colors motion-reduce:transition-none',
+        'relative scroll-mt-28 p-4 transition-colors motion-reduce:transition-none',
+        actionsOpen && 'z-30',
         selected && 'border-blue-300 dark:border-blue-800',
         highlighted && 'bg-blue-50/80 dark:bg-blue-950/30',
       )}
@@ -63,7 +66,10 @@ export function WeightHistoryEntryCard({
           </span>
         </button>
 
-        <details className="relative shrink-0">
+        <details
+          className="relative shrink-0"
+          onToggle={(event) => setActionsOpen(event.currentTarget.open)}
+        >
           <summary
             role="button"
             aria-label={`Actions pour la pesée du ${formatLocalDate(entry.date)}`}
@@ -71,13 +77,14 @@ export function WeightHistoryEntryCard({
           >
             <MoreHorizontal aria-hidden="true" className="size-5" />
           </summary>
-          <div className="absolute right-0 z-20 mt-1 w-48 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl dark:border-slate-700 dark:bg-slate-900">
+          <div className="absolute right-0 z-40 mt-1 w-48 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl dark:border-slate-700 dark:bg-slate-900">
             <Button
               className="w-full justify-start"
               size="sm"
               variant="ghost"
               disabled={deleting}
               onClick={(event) => {
+                setActionsOpen(false);
                 event.currentTarget.closest('details')?.removeAttribute('open');
                 onEdit(entry);
               }}
@@ -91,6 +98,7 @@ export function WeightHistoryEntryCard({
               variant="dangerGhost"
               disabled={deleting}
               onClick={(event) => {
+                setActionsOpen(false);
                 event.currentTarget.closest('details')?.removeAttribute('open');
                 onDelete(entry);
               }}

@@ -10,6 +10,10 @@ dev-dist/
 .env.*
 !.env.example
 
+# Dexie Cloud CLI environment and credentials
+dexie-cloud.json
+dexie-cloud.key
+
 # Test and coverage output
 coverage/
 

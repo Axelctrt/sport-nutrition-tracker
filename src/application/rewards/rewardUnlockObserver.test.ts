@@ -13,10 +13,12 @@ import {
 import {
   flushAchievementStatePersistence,
   readAchievementState,
+  writeAchievementState,
 } from "@/domain/rewards/achievements";
 import {
   flushVisualThemeStatePersistence,
   readVisualThemeState,
+  writeVisualThemeState,
 } from "@/domain/rewards/visualThemes";
 import { AppDatabase } from "@/infrastructure/database/AppDatabase";
 import { initializeUserStateRuntime } from "@/infrastructure/user-state/userStateRuntime";
@@ -77,6 +79,15 @@ describe("rewardUnlockObserver", () => {
     );
     await database.open();
     await initializeUserStateRuntime(database);
+    writeAchievementState({ earnedAchievements: [] });
+    writeVisualThemeState({
+      activeThemeId: "classic",
+      unlockedThemeIds: ["classic"],
+    });
+    await Promise.all([
+      flushAchievementStatePersistence(),
+      flushVisualThemeStatePersistence(),
+    ]);
     await database.activities.add({
       id: "activity-1",
       type: "running",

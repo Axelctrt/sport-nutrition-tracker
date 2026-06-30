@@ -12,6 +12,7 @@ import { useWeightHistory } from '@/features/weight/hooks/useWeightHistory';
 import type { WeightEntryFormValues } from '@/features/weight/schemas/weightEntrySchema';
 import { weightFormValuesToEntity } from '@/features/weight/utils';
 import { inputClassName } from '@/shared/forms/formStyles';
+import { useToast } from '@/shared/toast/useToast';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { ConfirmationDialog } from '@/shared/ui/ConfirmationDialog';
@@ -26,6 +27,7 @@ function isLocalDate(value: string | null): value is string {
 
 export function WeightPage() {
   const { profile } = useProfile();
+  const toast = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedDate = searchParams.get('date');
   const {
@@ -111,6 +113,7 @@ export function WeightPage() {
 
   const handleSubmit = async (values: WeightEntryFormValues) => {
     setFeedback(undefined);
+    const isUpdate = entries.some((entry) => entry.date === values.date);
 
     try {
       const saved = await save(weightFormValuesToEntity(values));
@@ -118,8 +121,16 @@ export function WeightPage() {
       highlightEntry(saved.id);
       setFeedback({
         tone: 'success',
-        message: `La pesée du ${formatLocalDate(values.date)} a été enregistrée sans recharger la page.`,
+        message: isUpdate
+          ? `La pesée du ${formatLocalDate(values.date)} a été mise à jour sans recharger la page.`
+          : `La pesée du ${formatLocalDate(values.date)} a été enregistrée sans recharger la page.`,
       });
+      if (isUpdate) {
+        toast.success(
+          'Pesée mise à jour',
+          `${saved.weightKg.toLocaleString('fr-FR')} kg le ${formatLocalDate(saved.date)}.`,
+        );
+      }
     } catch (error) {
       setFeedback({
         tone: 'error',

@@ -57,6 +57,10 @@ const forbiddenRootPatterns = [
 ];
 const forbiddenExtensions = new Set(['.zip', '.7z', '.rar', '.log']);
 const allowedEnvironmentFiles = new Set(['.env.example']);
+const forbiddenDexieCloudFiles = new Set([
+  'dexie-cloud.json',
+  'dexie-cloud.key',
+]);
 
 for (const path of repositoryFiles) {
   const rootName = path.split('/')[0] ?? '';
@@ -73,6 +77,9 @@ for (const path of repositoryFiles) {
     fail(`l’archive ou le journal ${path} ne doit pas faire partie de la livraison.`);
   }
   const fileName = basename(path);
+  if (forbiddenDexieCloudFiles.has(fileName)) {
+    fail(`le fichier Dexie Cloud local ${path} ne doit pas être suivi par Git.`);
+  }
   if (fileName.startsWith('.env') && !allowedEnvironmentFiles.has(fileName)) {
     fail(`le fichier d’environnement ${path} ne doit pas faire partie de la livraison.`);
   }

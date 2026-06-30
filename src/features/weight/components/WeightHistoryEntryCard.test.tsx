@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, vi } from 'vitest';
 import type { WeightEntry } from '@/domain/models/weight';
@@ -32,6 +32,29 @@ describe('WeightHistoryEntryCard', () => {
     expect(screen.getByText('+0,5 kg depuis la précédente')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /jeudi 25 juin 2026/i }));
     expect(onEdit).toHaveBeenCalledWith(entry);
+  });
+
+
+  it('place toute la carte au-dessus des pesées suivantes lorsque le menu est ouvert', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <WeightHistoryEntryCard
+        entry={entry}
+        previousWeightKg={undefined}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    );
+
+    const card = document.getElementById(`weight-entry-${entry.id}`);
+    expect(card).not.toHaveClass('z-30');
+
+    await user.click(screen.getByRole('button', { name: /Actions pour la pesée/i }));
+    await waitFor(() => expect(card).toHaveClass('z-30'));
+
+    await user.click(screen.getByRole('button', { name: 'Modifier' }));
+    await waitFor(() => expect(card).not.toHaveClass('z-30'));
   });
 
   it('regroupe la suppression dans les actions secondaires', async () => {

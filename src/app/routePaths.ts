@@ -6,6 +6,7 @@ export const routePaths = {
   settings: '/settings',
   reminders: '/settings/reminders',
   dashboardCustomization: '/settings/dashboard',
+  syncPrototype: '/settings/sync-prototype',
   food: '/food',
   addFood: '/food/add',
   foodSelector: '/food/select',

@@ -49,6 +49,7 @@ import { OnboardingGuard } from '@/app/guards/OnboardingGuard';
 import { OnboardingRoute } from '@/app/guards/OnboardingRoute';
 import { AppLayout } from '@/app/layouts/AppLayout';
 import { routePaths } from '@/app/routePaths';
+import { getSyncPrototypeRoutes } from '@/app/syncPrototypeRoutes';
 import { NotFoundPage } from '@/features/foundation/pages/NotFoundPage';
 import { CalculationsInformationPage } from '@/features/information/pages/CalculationsInformationPage';
 import { OfflinePage } from '@/pwa/OfflinePage';
@@ -63,6 +64,7 @@ export const appShellRoutes: RouteObject[] = [
   { path: routePaths.settings, element: <LazyAdvancedSettingsPage /> },
   { path: routePaths.reminders, element: <LazyRoutineRemindersPage /> },
   { path: routePaths.dashboardCustomization, element: <LazyDashboardCustomizationPage /> },
+  ...getSyncPrototypeRoutes(),
   { path: routePaths.food, element: <LazyFoodJournalPage /> },
   { path: routePaths.addFood, element: <LazyFoodEntryEditorPage /> },
   { path: routePaths.foodSelector, element: <LazyMealFoodSelectorPage /> },
@@ -101,7 +103,7 @@ export const appShellRoutes: RouteObject[] = [
   { path: routePaths.reports, element: <LazyProgressReportsPage /> },
   { path: routePaths.weeklyReview, element: <LazyWeeklyReviewPage /> },
   { path: routePaths.rewards, element: <LazyRewardsCenterPage /> },
-  { path: routePaths.backup, element: <LazyBackupPage /> },
+  { path: routePaths.backup, element: <LazyBackupPage /> },
   { path: routePaths.trash, element: <LazyTrashPage /> },
   { path: routePaths.calculationsInformation, element: <CalculationsInformationPage /> },
   {

@@ -114,6 +114,12 @@ describe('corbeille locale', () => {
     expect(routePaths.trash).toBe('/backup/trash');
   });
 });
+describe('prototype de synchronisation', () => {
+  it('utilise une route technique stable hors navigation normale', () => {
+    expect(routePaths.syncPrototype).toBe('/settings/sync-prototype');
+  });
+});
+
 describe('page de confidentialité', () => {
   it('utilise une route publique stable', () => {
     expect(routePaths.privacy).toBe('/privacy');
