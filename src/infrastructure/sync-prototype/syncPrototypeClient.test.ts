@@ -3,6 +3,7 @@ import type {
   SyncState,
   UserLogin,
 } from 'dexie-cloud-addon';
+import type { SyncPrototypeDatabase } from '@/infrastructure/sync-prototype/SyncPrototypeDatabase';
 import {
   createSyncPrototypeClient,
   type SyncPrototypeSnapshot,
@@ -46,6 +47,57 @@ function createFakeDatabase() {
   const userInteraction = new FakeObservable<
     DXCUserInteraction | undefined
   >(undefined);
+  const syncComplete = new FakeObservable<void>(undefined);
+  const weightRows = new Map<string, any>();
+  const deletionRows = new Map<string, any>();
+  const weights = {
+    toArray: vi.fn(async () => [...weightRows.values()]),
+    get: vi.fn(async (id: string) => weightRows.get(id)),
+    add: vi.fn(async (value: any) => {
+      weightRows.set(value.id, { ...value, owner: currentUser.value.userId });
+      return value.id;
+    }),
+    put: vi.fn(async (value: any) => {
+      weightRows.set(value.id, { ...value, owner: currentUser.value.userId });
+      return value.id;
+    }),
+    update: vi.fn(async (id: string, changes: Record<string, unknown>) => {
+      const current = weightRows.get(id);
+      if (!current) return 0;
+      weightRows.set(id, { ...current, ...changes });
+      return 1;
+    }),
+    delete: vi.fn(async (id: string) => {
+      weightRows.delete(id);
+    }),
+  };
+  const deletionRecords = {
+    toArray: vi.fn(async () => [...deletionRows.values()]),
+    get: vi.fn(async (id: string) => deletionRows.get(id)),
+    add: vi.fn(async (value: any) => {
+      deletionRows.set(value.id, {
+        ...value,
+        owner: currentUser.value.userId,
+      });
+      return value.id;
+    }),
+    put: vi.fn(async (value: any) => {
+      deletionRows.set(value.id, {
+        ...value,
+        owner: currentUser.value.userId,
+      });
+      return value.id;
+    }),
+    update: vi.fn(async (id: string, changes: Record<string, unknown>) => {
+      const current = deletionRows.get(id);
+      if (!current) return 0;
+      deletionRows.set(id, { ...current, ...changes });
+      return 1;
+    }),
+    delete: vi.fn(async (id: string) => {
+      deletionRows.delete(id);
+    }),
+  };
   const open = vi.fn(async () => undefined);
   const login = vi.fn(async () => undefined);
   const logout = vi.fn(async () => undefined);
@@ -54,10 +106,24 @@ function createFakeDatabase() {
   return {
     database: {
       open,
+      weights,
+      deletionRecords,
+      transaction: vi.fn(
+        async <T>(
+          _mode: string,
+          _firstTable: unknown,
+          _secondTable: unknown,
+          scope: () => Promise<T>,
+        ): Promise<T> => scope(),
+      ),
       cloud: {
+        currentUserId: currentUser.value.userId ?? 'unauthorized',
         currentUser,
         syncState,
         userInteraction,
+        events: {
+          syncComplete,
+        },
         login,
         logout,
         sync,
@@ -70,7 +136,18 @@ function createFakeDatabase() {
     login,
     logout,
     sync,
+    syncComplete,
+    weights,
+    deletionRecords,
+    weightRows,
+    deletionRows,
   };
+}
+
+function createClient(database: unknown) {
+  return createSyncPrototypeClient(
+    database as SyncPrototypeDatabase,
+  );
 }
 
 function createOtpInteraction() {
@@ -101,7 +178,7 @@ function createOtpInteraction() {
 describe('client sécurisé du prototype Dexie Cloud', () => {
   it('n’expose jamais les jetons ou clés du compte', () => {
     const { database } = createFakeDatabase();
-    const client = createSyncPrototypeClient(database);
+    const client = createClient(database);
 
     const snapshot = client.getSnapshot();
     expect(snapshot.account).toEqual({
@@ -117,7 +194,7 @@ describe('client sécurisé du prototype Dexie Cloud', () => {
 
   it('actualise un instantané stable lors des événements du cloud', () => {
     const { database, currentUser, syncState } = createFakeDatabase();
-    const client = createSyncPrototypeClient(database);
+    const client = createClient(database);
     const snapshots: SyncPrototypeSnapshot[] = [];
     const unsubscribe = client.subscribe(() => {
       snapshots.push(client.getSnapshot());
@@ -165,6 +242,11 @@ describe('client sécurisé du prototype Dexie Cloud', () => {
         progress: 100,
         license: 'ok',
       },
+      weights: {
+        weights: [],
+        deletedCount: 0,
+        isLoading: true,
+      },
     });
 
     unsubscribe();
@@ -173,7 +255,7 @@ describe('client sécurisé du prototype Dexie Cloud', () => {
   it('transmet l’email à Dexie Cloud et expose uniquement l’interaction filtrée', async () => {
     const { database, open, login, userInteraction } =
       createFakeDatabase();
-    const client = createSyncPrototypeClient(database);
+    const client = createClient(database);
     const interaction = createOtpInteraction();
 
     userInteraction.next(interaction);
@@ -205,7 +287,7 @@ describe('client sécurisé du prototype Dexie Cloud', () => {
 
   it('relaie la validation et l’annulation de l’interaction active', () => {
     const { database, userInteraction } = createFakeDatabase();
-    const client = createSyncPrototypeClient(database);
+    const client = createClient(database);
     const interaction = createOtpInteraction();
 
     userInteraction.next(interaction);
@@ -218,7 +300,7 @@ describe('client sécurisé du prototype Dexie Cloud', () => {
 
   it('ouvre une seule fois la base avant les commandes cloud', async () => {
     const { database, open, logout, sync } = createFakeDatabase();
-    const client = createSyncPrototypeClient(database);
+    const client = createClient(database);
 
     await client.initialize();
     await client.initialize();
@@ -240,10 +322,111 @@ describe('client sécurisé du prototype Dexie Cloud', () => {
       email: 'test@example.com',
       userId: 'test@example.com',
     });
-    const client = createSyncPrototypeClient(database);
+    const client = createClient(database);
 
     await client.login('test@example.com');
 
     expect(login).not.toHaveBeenCalled();
+  });
+
+
+  it('crée, met à jour et supprime une pesée fictive avec son marqueur', async () => {
+    const { database, currentUser, weightRows, deletionRows } =
+      createFakeDatabase();
+    currentUser.next({
+      claims: {},
+      lastLogin: new Date('2026-06-30T08:00:00.000Z'),
+      isLoggedIn: true,
+      isLoading: false,
+      email: 'test@example.com',
+      userId: 'test@example.com',
+    });
+    database.cloud.currentUserId = 'test@example.com';
+    const client = createClient(database);
+
+    await client.initialize();
+    await client.saveWeight({
+      date: '2026-06-30',
+      weightKg: 75.4,
+      note: 'Ordinateur',
+    });
+
+    expect(client.getSnapshot().weights.weights).toEqual([
+      expect.objectContaining({
+        id: 'weight:2026-06-30',
+        date: '2026-06-30',
+        weightKg: 75.4,
+        note: 'Ordinateur',
+      }),
+    ]);
+
+    await client.saveWeight({
+      date: '2026-06-30',
+      weightKg: 75.1,
+    });
+    expect(weightRows.get('weight:2026-06-30')).toEqual(
+      expect.objectContaining({
+        weightKg: 75.1,
+        note: '',
+      }),
+    );
+
+    await client.deleteWeight('weight:2026-06-30');
+
+    expect(weightRows.has('weight:2026-06-30')).toBe(false);
+    expect(
+      deletionRows.get('deletion:weight:weight:2026-06-30'),
+    ).toEqual(
+      expect.objectContaining({
+        entityType: 'weight',
+        entityId: 'weight:2026-06-30',
+        status: 'deleted',
+      }),
+    );
+    expect(client.getSnapshot().weights).toEqual({
+      weights: [],
+      deletedCount: 1,
+      isLoading: false,
+    });
+  });
+
+  it('réactive explicitement une date supprimée sans résurrection silencieuse', async () => {
+    const { database, currentUser, deletionRows } = createFakeDatabase();
+    currentUser.next({
+      claims: {},
+      lastLogin: new Date('2026-06-30T08:00:00.000Z'),
+      isLoggedIn: true,
+      isLoading: false,
+      email: 'test@example.com',
+      userId: 'test@example.com',
+    });
+    database.cloud.currentUserId = 'test@example.com';
+    deletionRows.set('deletion:weight:weight:2026-06-30', {
+      id: 'deletion:weight:weight:2026-06-30',
+      entityType: 'weight',
+      entityId: 'weight:2026-06-30',
+      status: 'deleted',
+      deletedAt: '2026-06-30T07:00:00.000Z',
+      createdAt: '2026-06-30T07:00:00.000Z',
+      updatedAt: '2026-06-30T07:00:00.000Z',
+      owner: 'test@example.com',
+    });
+    const client = createClient(database);
+
+    await client.initialize();
+    await client.saveWeight({
+      date: '2026-06-30',
+      weightKg: 74.8,
+    });
+
+    expect(
+      deletionRows.get('deletion:weight:weight:2026-06-30'),
+    ).toEqual(
+      expect.objectContaining({
+        status: 'restored',
+        restoredAt: expect.any(String),
+      }),
+    );
+    expect(client.getSnapshot().weights.weights).toHaveLength(1);
   });
 });

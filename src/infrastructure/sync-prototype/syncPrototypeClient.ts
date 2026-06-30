@@ -4,11 +4,20 @@ import type {
   SyncState,
   UserLogin,
 } from 'dexie-cloud-addon';
+import type { EntityId, LocalDate } from '@/domain/models/common';
+import {
+  createDeletedDeletionRecord,
+  createRestoredDeletionRecord,
+  deletionRecordId,
+} from '@/domain/models/deletion';
+import type { WeightEntry } from '@/domain/models/weight';
+import { weightEntryIdForDate } from '@/domain/sync/deterministicEntityIds';
 import {
   createSyncPrototypeDatabase,
   type SyncPrototypeDatabase,
 } from '@/infrastructure/sync-prototype/SyncPrototypeDatabase';
 import { readSyncPrototypeConfig } from '@/infrastructure/sync-prototype/syncPrototypeConfig';
+import { isValidLocalDate } from '@/shared/validation/localDate';
 
 export interface SyncPrototypeAccountSnapshot {
   readonly isLoggedIn: boolean;
@@ -59,9 +68,23 @@ export interface SyncPrototypeInteractionSnapshot {
   readonly cancelLabel: string | null;
 }
 
+export interface SyncPrototypeWeightSnapshot {
+  readonly weights: readonly WeightEntry[];
+  readonly deletedCount: number;
+  readonly isLoading: boolean;
+  readonly errorMessage?: string;
+}
+
+export interface SyncPrototypeWeightDraft {
+  readonly date: LocalDate;
+  readonly weightKg: number;
+  readonly note?: string;
+}
+
 export interface SyncPrototypeSnapshot {
   readonly account: SyncPrototypeAccountSnapshot;
   readonly sync: SyncPrototypeSyncSnapshot;
+  readonly weights: SyncPrototypeWeightSnapshot;
   readonly interaction?: SyncPrototypeInteractionSnapshot;
 }
 
@@ -74,30 +97,14 @@ export interface SyncPrototypeClient {
   cancelInteraction(): void;
   logout(): Promise<void>;
   syncNow(): Promise<void>;
+  saveWeight(draft: SyncPrototypeWeightDraft): Promise<WeightEntry>;
+  deleteWeight(weightId: EntityId): Promise<void>;
 }
 
-interface SubscriptionLike {
-  unsubscribe(): void;
-}
-
-interface ObservableValue<T> {
-  readonly value: T;
-  subscribe(listener: (value: T) => void): SubscriptionLike;
-}
-
-interface SyncPrototypeCloudLike {
-  readonly currentUser: ObservableValue<UserLogin>;
-  readonly syncState: ObservableValue<SyncState>;
-  readonly userInteraction: ObservableValue<DXCUserInteraction | undefined>;
-  login(hints: { grant_type: 'otp'; email: string }): Promise<void>;
-  logout(): Promise<void>;
-  sync(): Promise<void>;
-}
-
-interface SyncPrototypeDatabaseLike {
-  readonly cloud: SyncPrototypeCloudLike;
-  open(): Promise<unknown>;
-}
+type CloudOwned<T> = T & {
+  readonly owner?: string;
+  readonly realmId?: string;
+};
 
 function sanitizeAccount(user: UserLogin): SyncPrototypeAccountSnapshot {
   return {
@@ -151,19 +158,65 @@ function sanitizeInteraction(
   };
 }
 
+function emptyWeightSnapshot(
+  isLoading = false,
+): SyncPrototypeWeightSnapshot {
+  return {
+    weights: [],
+    deletedCount: 0,
+    isLoading,
+  };
+}
+
+function belongsToCurrentUser(
+  entity: CloudOwned<object>,
+  currentUserId: string,
+): boolean {
+  return !entity.owner || entity.owner === currentUserId;
+}
+
+function validateWeightDraft(
+  draft: SyncPrototypeWeightDraft,
+): SyncPrototypeWeightDraft {
+  if (!isValidLocalDate(draft.date)) {
+    throw new Error('La date de pesée est invalide.');
+  }
+
+  if (
+    !Number.isFinite(draft.weightKg) ||
+    draft.weightKg < 30 ||
+    draft.weightKg > 350
+  ) {
+    throw new Error('Le poids doit être compris entre 30 et 350 kg.');
+  }
+
+  const note = draft.note?.trim();
+  if (note && note.length > 500) {
+    throw new Error('La note ne doit pas dépasser 500 caractères.');
+  }
+
+  return {
+    date: draft.date,
+    weightKg: Math.round(draft.weightKg * 10) / 10,
+    ...(note ? { note } : {}),
+  };
+}
+
 class DefaultSyncPrototypeClient implements SyncPrototypeClient {
   private snapshot: SyncPrototypeSnapshot;
   private readonly listeners = new Set<() => void>();
-  private readonly database: SyncPrototypeDatabaseLike;
+  private readonly database: SyncPrototypeDatabase;
   private initializationPromise: Promise<void> | undefined;
   private currentInteraction: DXCUserInteraction | undefined;
+  private weightRefreshSequence = 0;
 
-  constructor(database: SyncPrototypeDatabaseLike) {
+  constructor(database: SyncPrototypeDatabase) {
     this.database = database;
     this.currentInteraction = database.cloud.userInteraction.value;
     this.snapshot = {
       account: sanitizeAccount(database.cloud.currentUser.value),
       sync: sanitizeSyncState(database.cloud.syncState.value),
+      weights: emptyWeightSnapshot(true),
       ...(this.currentInteraction
         ? { interaction: sanitizeInteraction(this.currentInteraction)! }
         : {}),
@@ -173,8 +226,15 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
       this.snapshot = {
         ...this.snapshot,
         account: sanitizeAccount(user),
+        ...(!user.isLoggedIn
+          ? { weights: emptyWeightSnapshot(false) }
+          : {}),
       };
       this.notify();
+
+      if (user.isLoggedIn && this.initializationPromise) {
+        void this.initializationPromise.then(() => this.refreshWeights());
+      }
     });
 
     database.cloud.syncState.subscribe((syncState) => {
@@ -194,6 +254,10 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
         : snapshot;
       this.notify();
     });
+
+    database.cloud.events?.syncComplete.subscribe(() => {
+      void this.refreshWeights();
+    });
   }
 
   getSnapshot = (): SyncPrototypeSnapshot => this.snapshot;
@@ -209,7 +273,9 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
     if (!this.initializationPromise) {
       this.initializationPromise = this.database
         .open()
-        .then(() => undefined)
+        .then(async () => {
+          await this.refreshWeights();
+        })
         .catch((error: unknown) => {
           this.initializationPromise = undefined;
           throw error;
@@ -233,6 +299,7 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
       grant_type: 'otp',
       email: normalizedEmail,
     });
+    await this.refreshWeights();
   }
 
   submitInteraction(params: Readonly<Record<string, string>>): void {
@@ -250,11 +317,202 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
   async logout(): Promise<void> {
     await this.initialize();
     await this.database.cloud.logout();
+    this.snapshot = {
+      ...this.snapshot,
+      weights: emptyWeightSnapshot(false),
+    };
+    this.notify();
   }
 
   async syncNow(): Promise<void> {
     await this.initialize();
     await this.database.cloud.sync();
+    await this.refreshWeights();
+  }
+
+  async saveWeight(
+    rawDraft: SyncPrototypeWeightDraft,
+  ): Promise<WeightEntry> {
+    await this.initialize();
+    this.assertLoggedIn();
+
+    const draft = validateWeightDraft(rawDraft);
+    const id = weightEntryIdForDate(draft.date);
+    const occurredAt = new Date().toISOString();
+    const target = { entityType: 'weight' as const, entityId: id };
+
+    const saved = await this.database.transaction(
+      'rw',
+      this.database.weights,
+      this.database.deletionRecords,
+      async () => {
+        const current = await this.database.weights.get(id);
+        const markerId = deletionRecordId('weight', id);
+        const currentMarker =
+          await this.database.deletionRecords.get(markerId);
+
+        let entry: WeightEntry;
+        if (current) {
+          const normalizedNote = draft.note ?? '';
+          entry = {
+            ...current,
+            weightKg: draft.weightKg,
+            note: normalizedNote,
+            updatedAt: occurredAt,
+          };
+          await this.database.weights.update(id, {
+            weightKg: entry.weightKg,
+            note: normalizedNote,
+            updatedAt: occurredAt,
+          });
+        } else {
+          entry = {
+            id,
+            date: draft.date,
+            weightKg: draft.weightKg,
+            ...(draft.note ? { note: draft.note } : {}),
+            createdAt: occurredAt,
+            updatedAt: occurredAt,
+          };
+          await this.database.weights.add(entry);
+        }
+
+        if (currentMarker?.status === 'deleted') {
+          await this.database.deletionRecords.put(
+            createRestoredDeletionRecord(
+              target,
+              occurredAt,
+              currentMarker.deletedAt,
+              currentMarker,
+            ),
+          );
+        }
+
+        return entry;
+      },
+    );
+
+    await this.refreshWeights();
+    return saved;
+  }
+
+  async deleteWeight(weightId: EntityId): Promise<void> {
+    await this.initialize();
+    this.assertLoggedIn();
+
+    const occurredAt = new Date().toISOString();
+
+    await this.database.transaction(
+      'rw',
+      this.database.weights,
+      this.database.deletionRecords,
+      async () => {
+        const current = await this.database.weights.get(weightId);
+        if (!current) return;
+
+        const target = {
+          entityType: 'weight' as const,
+          entityId: current.id,
+        };
+        const markerId = deletionRecordId('weight', current.id);
+        const currentMarker =
+          await this.database.deletionRecords.get(markerId);
+
+        await this.database.deletionRecords.put(
+          createDeletedDeletionRecord(
+            target,
+            occurredAt,
+            currentMarker,
+          ),
+        );
+        await this.database.weights.delete(current.id);
+      },
+    );
+
+    await this.refreshWeights();
+  }
+
+  private assertLoggedIn(): void {
+    if (!this.database.cloud.currentUser.value.isLoggedIn) {
+      throw new Error(
+        'Connecte le compte de test avant de modifier les pesées fictives.',
+      );
+    }
+  }
+
+  private async refreshWeights(): Promise<void> {
+    const sequence = ++this.weightRefreshSequence;
+
+    if (!this.database.cloud.currentUser.value.isLoggedIn) {
+      this.snapshot = {
+        ...this.snapshot,
+        weights: emptyWeightSnapshot(false),
+      };
+      this.notify();
+      return;
+    }
+
+    const {
+      errorMessage: _previousWeightError,
+      ...weightSnapshotWithoutError
+    } = this.snapshot.weights;
+    this.snapshot = {
+      ...this.snapshot,
+      weights: {
+        ...weightSnapshotWithoutError,
+        isLoading: true,
+      },
+    };
+    this.notify();
+
+    try {
+      const [allWeights, allMarkers] = await Promise.all([
+        this.database.weights.toArray(),
+        this.database.deletionRecords.toArray(),
+      ]);
+      if (sequence !== this.weightRefreshSequence) return;
+
+      const currentUserId = this.database.cloud.currentUserId;
+      const weights = allWeights.filter((entry) =>
+        belongsToCurrentUser(entry, currentUserId),
+      );
+      const markers = allMarkers.filter(
+        (marker) =>
+          marker.entityType === 'weight' &&
+          belongsToCurrentUser(marker, currentUserId),
+      );
+      const deletedIds = new Set(
+        markers
+          .filter((marker) => marker.status === 'deleted')
+          .map((marker) => marker.entityId),
+      );
+
+      this.snapshot = {
+        ...this.snapshot,
+        weights: {
+          weights: weights
+            .filter((entry) => !deletedIds.has(entry.id))
+            .sort((left, right) => right.date.localeCompare(left.date)),
+          deletedCount: deletedIds.size,
+          isLoading: false,
+        },
+      };
+      this.notify();
+    } catch (error) {
+      if (sequence !== this.weightRefreshSequence) return;
+      this.snapshot = {
+        ...this.snapshot,
+        weights: {
+          ...this.snapshot.weights,
+          isLoading: false,
+          errorMessage:
+            error instanceof Error
+              ? error.message
+              : 'Les pesées fictives n’ont pas pu être chargées.',
+        },
+      };
+      this.notify();
+    }
   }
 
   private notify(): void {
@@ -263,7 +521,7 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
 }
 
 export function createSyncPrototypeClient(
-  database: SyncPrototypeDatabaseLike,
+  database: SyncPrototypeDatabase,
 ): SyncPrototypeClient {
   return new DefaultSyncPrototypeClient(database);
 }

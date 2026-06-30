@@ -4,8 +4,13 @@ import {
   KeyRound,
   LogOut,
   Mail,
+  Pencil,
+  Plus,
   RefreshCw,
+  Scale,
   ShieldCheck,
+  Trash2,
+  X,
 } from 'lucide-react';
 import {
   type FormEvent,
@@ -19,8 +24,11 @@ import {
   type SyncPrototypeClient,
   type SyncPrototypeInteractionSnapshot,
   type SyncPrototypeSyncSnapshot,
+  type SyncPrototypeWeightDraft,
 } from '@/infrastructure/sync-prototype/syncPrototypeClient';
+import type { WeightEntry } from '@/domain/models/weight';
 import { SYNC_PROTOTYPE_DATABASE_NAME } from '@/infrastructure/sync-prototype/SyncPrototypeDatabase';
+import { formatLocalDate, toLocalDate } from '@/shared/utils/dates';
 import { useToast } from '@/shared/toast/useToast';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
@@ -31,7 +39,28 @@ interface SyncPrototypePageProps {
   client?: SyncPrototypeClient;
 }
 
-type ActionStatus = 'idle' | 'email' | 'otp' | 'logout' | 'sync';
+type ActionStatus =
+  | 'idle'
+  | 'email'
+  | 'otp'
+  | 'logout'
+  | 'sync'
+  | 'weight-save'
+  | 'weight-delete';
+
+interface WeightDraftState {
+  date: string;
+  weightKg: string;
+  note: string;
+}
+
+function createEmptyWeightDraft(): WeightDraftState {
+  return {
+    date: toLocalDate(),
+    weightKg: '',
+    note: '',
+  };
+}
 
 const inputClasses =
   'min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-slate-950 shadow-sm outline-none transition focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20 disabled:cursor-not-allowed disabled:opacity-70 dark:border-slate-700 dark:bg-slate-950 dark:text-white';
@@ -115,6 +144,11 @@ function SyncPrototypeRuntime({
   const [isInitializing, setIsInitializing] = useState(true);
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
+  const [weightDraft, setWeightDraft] = useState<WeightDraftState>(
+    createEmptyWeightDraft,
+  );
+  const [editingWeightId, setEditingWeightId] = useState<string>();
+  const [pendingDeletionId, setPendingDeletionId] = useState<string>();
   const [feedback, setFeedback] = useState<
     | {
         tone: 'success' | 'error';
@@ -125,6 +159,7 @@ function SyncPrototypeRuntime({
   >();
   const cancelledLoginRef = useRef(false);
   const lastOtpNoticeRef = useRef<string | undefined>(undefined);
+  const wasLoggedInRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -175,6 +210,19 @@ function SyncPrototypeRuntime({
   }, [email, interaction, toast]);
 
   const isLoggedIn = snapshot.account.isLoggedIn;
+
+  useEffect(() => {
+    if (wasLoggedInRef.current && !isLoggedIn) {
+      setEmail('');
+      setOtp('');
+      setWeightDraft(createEmptyWeightDraft());
+      setEditingWeightId(undefined);
+      setPendingDeletionId(undefined);
+      lastOtpNoticeRef.current = undefined;
+    }
+    wasLoggedInRef.current = isLoggedIn;
+  }, [isLoggedIn]);
+
   const isCloudActionBusy =
     actionStatus === 'logout' || actionStatus === 'sync';
   const fieldError = interactionError(interaction);
@@ -293,6 +341,91 @@ function SyncPrototypeRuntime({
         message: errorMessage(
           error,
           'La session de test n’a pas pu être fermée.',
+        ),
+      });
+    } finally {
+      setActionStatus('idle');
+    }
+  };
+
+
+  const resetWeightEditor = () => {
+    setWeightDraft(createEmptyWeightDraft());
+    setEditingWeightId(undefined);
+  };
+
+  const handleWeightEdit = (entry: WeightEntry) => {
+    setWeightDraft({
+      date: entry.date,
+      weightKg: entry.weightKg.toFixed(1),
+      note: entry.note ?? '',
+    });
+    setEditingWeightId(entry.id);
+    setPendingDeletionId(undefined);
+    setFeedback(undefined);
+  };
+
+  const handleWeightSubmit = async (
+    event: FormEvent<HTMLFormElement>,
+  ) => {
+    event.preventDefault();
+    setFeedback(undefined);
+    setActionStatus('weight-save');
+
+    const draft: SyncPrototypeWeightDraft = {
+      date: weightDraft.date,
+      weightKg: Number(weightDraft.weightKg.replace(',', '.')),
+      ...(weightDraft.note.trim()
+        ? { note: weightDraft.note.trim() }
+        : {}),
+    };
+
+    try {
+      await client.saveWeight(draft);
+      setFeedback({
+        tone: 'success',
+        title: editingWeightId
+          ? 'Pesée fictive mise à jour'
+          : 'Pesée fictive ajoutée',
+        message:
+          'La modification a été enregistrée dans la base expérimentale et sera synchronisée par Dexie Cloud.',
+      });
+      resetWeightEditor();
+    } catch (error) {
+      setFeedback({
+        tone: 'error',
+        title: 'Enregistrement impossible',
+        message: errorMessage(
+          error,
+          'La pesée fictive n’a pas pu être enregistrée.',
+        ),
+      });
+    } finally {
+      setActionStatus('idle');
+    }
+  };
+
+  const handleWeightDelete = async (weightId: string) => {
+    setFeedback(undefined);
+    setActionStatus('weight-delete');
+
+    try {
+      await client.deleteWeight(weightId);
+      setFeedback({
+        tone: 'success',
+        title: 'Pesée fictive supprimée',
+        message:
+          'Un marqueur de suppression synchronisable a été conservé pour empêcher sa réapparition.',
+      });
+      if (editingWeightId === weightId) resetWeightEditor();
+      setPendingDeletionId(undefined);
+    } catch (error) {
+      setFeedback({
+        tone: 'error',
+        title: 'Suppression impossible',
+        message: errorMessage(
+          error,
+          'La pesée fictive n’a pas pu être supprimée.',
         ),
       });
     } finally {
@@ -626,6 +759,268 @@ function SyncPrototypeRuntime({
           </Button>
         </Card>
       </div>
+
+      <Card className="p-5 sm:p-6">
+        <div className="flex items-start gap-3">
+          <span className="rounded-xl bg-brand-50 p-2 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300">
+            <Scale aria-hidden="true" className="size-5" />
+          </span>
+          <div className="min-w-0">
+            <h2 className="text-lg font-semibold text-slate-950 dark:text-white">
+              Pesées fictives synchronisées
+            </h2>
+            <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
+              Ces données servent uniquement au prototype et ne rejoignent
+              jamais l’historique réel de SportPilot.
+            </p>
+          </div>
+        </div>
+
+        {!isLoggedIn ? (
+          <InlineNotice
+            className="mt-5"
+            tone="info"
+            title="Connexion requise"
+          >
+            Connecte le compte de test pour créer et synchroniser des
+            pesées fictives.
+          </InlineNotice>
+        ) : (
+          <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
+            <form
+              className="space-y-4 rounded-2xl border border-slate-200 p-4 dark:border-slate-800"
+              onSubmit={handleWeightSubmit}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="font-semibold text-slate-950 dark:text-white">
+                  {editingWeightId
+                    ? 'Modifier la pesée fictive'
+                    : 'Ajouter une pesée fictive'}
+                </h3>
+                {editingWeightId ? (
+                  <Button
+                    aria-label="Annuler la modification"
+                    onClick={resetWeightEditor}
+                    size="sm"
+                    variant="ghost"
+                  >
+                    <X aria-hidden="true" className="size-4" />
+                    Annuler
+                  </Button>
+                ) : null}
+              </div>
+
+              <FormField
+                id="sync-prototype-weight-date"
+                label="Date"
+                required
+              >
+                <input
+                  className={inputClasses}
+                  disabled={Boolean(editingWeightId)}
+                  id="sync-prototype-weight-date"
+                  onChange={(event) =>
+                    setWeightDraft((current) => ({
+                      ...current,
+                      date: event.target.value,
+                    }))
+                  }
+                  type="date"
+                  value={weightDraft.date}
+                />
+              </FormField>
+
+              <FormField
+                description="Valeur fictive comprise entre 30 et 350 kg."
+                id="sync-prototype-weight-value"
+                label="Poids en kilogrammes"
+                required
+              >
+                <input
+                  className={inputClasses}
+                  id="sync-prototype-weight-value"
+                  inputMode="decimal"
+                  max="350"
+                  min="30"
+                  onChange={(event) =>
+                    setWeightDraft((current) => ({
+                      ...current,
+                      weightKg: event.target.value,
+                    }))
+                  }
+                  placeholder="75,0"
+                  step="0.1"
+                  type="number"
+                  value={weightDraft.weightKg}
+                />
+              </FormField>
+
+              <FormField
+                description="Facultatif, 500 caractères maximum."
+                id="sync-prototype-weight-note"
+                label="Note de test"
+              >
+                <textarea
+                  className={inputClasses}
+                  id="sync-prototype-weight-note"
+                  maxLength={500}
+                  onChange={(event) =>
+                    setWeightDraft((current) => ({
+                      ...current,
+                      note: event.target.value,
+                    }))
+                  }
+                  rows={3}
+                  value={weightDraft.note}
+                />
+              </FormField>
+
+              <Button
+                className="w-full sm:w-auto"
+                disabled={
+                  actionStatus === 'weight-save' ||
+                  !weightDraft.date ||
+                  !weightDraft.weightKg
+                }
+                type="submit"
+              >
+                {editingWeightId ? (
+                  <Pencil aria-hidden="true" className="size-4" />
+                ) : (
+                  <Plus aria-hidden="true" className="size-4" />
+                )}
+                {actionStatus === 'weight-save'
+                  ? 'Enregistrement…'
+                  : editingWeightId
+                    ? 'Enregistrer la modification'
+                    : 'Ajouter la pesée fictive'}
+              </Button>
+            </form>
+
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="font-semibold text-slate-950 dark:text-white">
+                  Données visibles sur ce compte
+                </h3>
+                <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                  {snapshot.weights.deletedCount} marqueur
+                  {snapshot.weights.deletedCount > 1 ? 's' : ''} de
+                  suppression
+                </span>
+              </div>
+
+              {snapshot.weights.errorMessage ? (
+                <InlineNotice
+                  className="mt-3"
+                  tone="error"
+                  title="Chargement impossible"
+                >
+                  {snapshot.weights.errorMessage}
+                </InlineNotice>
+              ) : snapshot.weights.isLoading ? (
+                <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">
+                  Chargement des pesées fictives…
+                </p>
+              ) : snapshot.weights.weights.length === 0 ? (
+                <div className="mt-4 rounded-2xl border border-dashed border-slate-300 p-5 text-center dark:border-slate-700">
+                  <p className="font-semibold text-slate-900 dark:text-white">
+                    Aucune pesée fictive
+                  </p>
+                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                    Ajoute une première valeur pour tester la
+                    synchronisation entre les appareils.
+                  </p>
+                </div>
+              ) : (
+                <ul className="mt-4 space-y-3">
+                  {snapshot.weights.weights.map((entry) => (
+                    <li
+                      className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800"
+                      key={entry.id}
+                    >
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="min-w-0">
+                          <p className="text-lg font-bold text-slate-950 dark:text-white">
+                            {entry.weightKg.toFixed(1)} kg
+                          </p>
+                          <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                            {formatLocalDate(entry.date)}
+                          </p>
+                          {entry.note ? (
+                            <p className="mt-2 break-words text-sm text-slate-500 dark:text-slate-400">
+                              {entry.note}
+                            </p>
+                          ) : null}
+                        </div>
+
+                        {pendingDeletionId === entry.id ? (
+                          <div className="flex flex-col gap-2 sm:items-end">
+                            <p className="text-sm font-medium text-red-700 dark:text-red-300">
+                              Confirmer la suppression ?
+                            </p>
+                            <div className="flex gap-2">
+                              <Button
+                                disabled={
+                                  actionStatus === 'weight-delete'
+                                }
+                                onClick={() =>
+                                  void handleWeightDelete(entry.id)
+                                }
+                                size="sm"
+                                variant="danger"
+                              >
+                                Supprimer
+                              </Button>
+                              <Button
+                                onClick={() =>
+                                  setPendingDeletionId(undefined)
+                                }
+                                size="sm"
+                                variant="secondary"
+                              >
+                                Annuler
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex gap-2 sm:justify-end">
+                            <Button
+                              aria-label={`Modifier la pesée du ${entry.date}`}
+                              onClick={() => handleWeightEdit(entry)}
+                              size="sm"
+                              variant="secondary"
+                            >
+                              <Pencil
+                                aria-hidden="true"
+                                className="size-4"
+                              />
+                              Modifier
+                            </Button>
+                            <Button
+                              aria-label={`Supprimer la pesée du ${entry.date}`}
+                              onClick={() =>
+                                setPendingDeletionId(entry.id)
+                              }
+                              size="sm"
+                              variant="dangerGhost"
+                            >
+                              <Trash2
+                                aria-hidden="true"
+                                className="size-4"
+                              />
+                              Supprimer
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        )}
+      </Card>
 
       <Card className="p-5 sm:p-6">
         <div className="flex items-start gap-3">
