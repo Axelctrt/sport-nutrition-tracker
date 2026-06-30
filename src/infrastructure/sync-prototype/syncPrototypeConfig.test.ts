@@ -18,6 +18,7 @@ describe('configuration du prototype Dexie Cloud', () => {
     ).toEqual({
       enabled: true,
       databaseUrl: 'https://sportpilot-prototype.dexie.cloud',
+      realWeightSyncEnabled: false,
     });
   });
 
@@ -47,11 +48,36 @@ describe('configuration du prototype Dexie Cloud', () => {
     ).toThrow();
   });
 
+
+  it('active séparément la synchronisation des vraies pesées', () => {
+    expect(
+      readSyncPrototypeConfig({
+        VITE_ENABLE_SYNC_PROTOTYPE: 'true',
+        VITE_DEXIE_CLOUD_DATABASE_URL:
+          'https://sportpilot-prototype.dexie.cloud',
+        VITE_ENABLE_REAL_WEIGHT_SYNC: 'true',
+      }),
+    ).toMatchObject({
+      enabled: true,
+      realWeightSyncEnabled: true,
+    });
+  });
+
   it('refuse une valeur d’activation ambiguë', () => {
     expect(() =>
       readSyncPrototypeConfig({
         VITE_ENABLE_SYNC_PROTOTYPE: 'yes',
       }),
     ).toThrow('doit valoir true ou false');
+  });
+
+  it('refuse une valeur ambiguë pour C4', () => {
+    expect(() =>
+      readSyncPrototypeConfig({
+        VITE_ENABLE_SYNC_PROTOTYPE: 'true',
+        VITE_DEXIE_CLOUD_DATABASE_URL: 'https://test.dexie.cloud',
+        VITE_ENABLE_REAL_WEIGHT_SYNC: 'yes',
+      }),
+    ).toThrow('VITE_ENABLE_REAL_WEIGHT_SYNC');
   });
 });

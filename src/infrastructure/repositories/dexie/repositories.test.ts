@@ -54,6 +54,24 @@ describe('repositories Dexie', () => {
     expect(await database.weights.count()).toBe(1);
   });
 
+
+  it('marque comme restaurée une pesée recréée après suppression', async () => {
+    const repository = new DexieWeightRepository(database);
+    const date = '2026-06-24';
+
+    const created = await repository.upsert({ date, weightKg: 60 });
+    await repository.deleteByDate(date);
+    const recreated = await repository.upsert({ date, weightKg: 59.7 });
+
+    expect(recreated.id).toBe(created.id);
+    expect(
+      await database.deletionRecords.get(`deletion:weight:${created.id}`),
+    ).toMatchObject({
+      status: 'restored',
+      entityId: created.id,
+    });
+  });
+
   it('conserve une seule saisie de pas par date', async () => {
     const repository = new DexieStepsRepository(database);
 

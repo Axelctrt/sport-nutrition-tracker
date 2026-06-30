@@ -40,6 +40,7 @@ import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { FormField } from '@/shared/ui/FormField';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
+import { ConfirmationDialog } from '@/shared/ui/ConfirmationDialog';
 
 interface SyncPrototypePageProps {
   client?: SyncPrototypeClient;
@@ -52,7 +53,9 @@ type ActionStatus =
   | 'logout'
   | 'sync'
   | 'weight-save'
-  | 'weight-delete';
+  | 'weight-delete'
+  | 'real-weight-analyze'
+  | 'real-weight-sync';
 
 interface WeightDraftState {
   date: string;
@@ -166,6 +169,10 @@ function SyncPrototypeRuntime({
   const [pendingDeletionId, setPendingDeletionId] = useState<string>();
   const [isWeightSectionOpen, setIsWeightSectionOpen] = useState(false);
   const [isDiagnosticsOpen, setIsDiagnosticsOpen] = useState(false);
+  const [isRealWeightSectionOpen, setIsRealWeightSectionOpen] =
+    useState(false);
+  const [isRealWeightConfirmationOpen, setIsRealWeightConfirmationOpen] =
+    useState(false);
   const [feedback, setFeedback] = useState<
     | {
         tone: 'success' | 'error';
@@ -239,6 +246,8 @@ function SyncPrototypeRuntime({
       setPendingDeletionId(undefined);
       setIsWeightSectionOpen(false);
       setIsDiagnosticsOpen(false);
+      setIsRealWeightSectionOpen(false);
+      setIsRealWeightConfirmationOpen(false);
       lastOtpNoticeRef.current = undefined;
     }
     wasLoggedInRef.current = isLoggedIn;
@@ -257,6 +266,10 @@ function SyncPrototypeRuntime({
   const isCloudActionBusy =
     actionStatus === 'logout' || actionStatus === 'sync';
   const fieldError = interactionError(interaction);
+  const realWeightSnapshot = snapshot.realWeights ?? {
+    enabled: false,
+    status: 'disabled' as const,
+  };
 
   const handleEmailSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -412,6 +425,56 @@ function SyncPrototypeRuntime({
   };
 
 
+  const handleAnalyzeRealWeights = async () => {
+    setFeedback(undefined);
+    setActionStatus('real-weight-analyze');
+
+    try {
+      const preview = await client.analyzeRealWeights();
+      toast.info(
+        'Analyse C4 terminée',
+        `${preview.differingEntityCount} élément${preview.differingEntityCount > 1 ? 's' : ''} à faire converger.`,
+      );
+    } catch (error) {
+      setFeedback({
+        tone: 'error',
+        title: 'Analyse C4 impossible',
+        message: errorMessage(
+          error,
+          'Les vraies pesées n’ont pas pu être comparées.',
+        ),
+      });
+    } finally {
+      setActionStatus('idle');
+    }
+  };
+
+  const handleSyncRealWeights = async () => {
+    setIsRealWeightConfirmationOpen(false);
+    setFeedback(undefined);
+    setActionStatus('real-weight-sync');
+
+    try {
+      const result = await client.syncRealWeights();
+      toast.success(
+        'Pesées réelles synchronisées',
+        `${result.uploadedWeights + result.downloadedWeights} écriture${result.uploadedWeights + result.downloadedWeights > 1 ? 's' : ''} de pesée appliquée${result.uploadedWeights + result.downloadedWeights > 1 ? 's' : ''}.`,
+      );
+    } catch (error) {
+      setFeedback({
+        tone: 'error',
+        title: 'Synchronisation C4 impossible',
+        message: errorMessage(
+          error,
+          'Les vraies pesées n’ont pas pu être synchronisées.',
+        ),
+      });
+    } finally {
+      setActionStatus('idle');
+    }
+  };
+
+
   const resetWeightEditor = () => {
     setWeightDraft(createEmptyWeightDraft());
     setEditingWeightId(undefined);
@@ -513,9 +576,10 @@ function SyncPrototypeRuntime({
           Prototype de synchronisation
         </h1>
         <p className="mt-3 max-w-3xl leading-7 text-slate-600 dark:text-slate-300">
-          Cet écran utilise une seconde base IndexedDB et uniquement des
-          données fictives. Il ne lit ni ne transfère les données réelles
-          de SportPilot.
+          Cet écran utilise une seconde base IndexedDB. Les données fictives
+          restent isolées ; la synchronisation C4 des vraies pesées n’est
+          disponible qu’avec un second feature flag et une confirmation
+          explicite.
         </p>
       </header>
 
@@ -936,6 +1000,108 @@ function SyncPrototypeRuntime({
 
       <Card className="overflow-hidden p-0">
         <button
+          aria-controls="sync-real-weights-content"
+          aria-expanded={isRealWeightSectionOpen}
+          className="flex min-h-20 w-full items-center gap-3 p-5 text-left transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-600 sm:p-6 dark:hover:bg-slate-800/60"
+          onClick={() =>
+            setIsRealWeightSectionOpen((current) => !current)
+          }
+          type="button"
+        >
+          <span className="rounded-xl bg-amber-50 p-2 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
+            <ShieldCheck aria-hidden="true" className="size-5" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-lg font-semibold text-slate-950 dark:text-white">
+              C4 — vraies pesées SportPilot
+            </span>
+            <span className="mt-1 block text-sm leading-6 text-slate-600 dark:text-slate-300">
+              Import bidirectionnel manuel, limité aux pesées et désactivable immédiatement.
+            </span>
+          </span>
+          <span className="shrink-0 text-xs font-semibold text-slate-500 dark:text-slate-400">
+            {realWeightSnapshot.enabled ? 'Activé' : 'Désactivé'}
+          </span>
+          <ChevronDown
+            aria-hidden="true"
+            className={`size-5 shrink-0 text-slate-500 transition-transform motion-reduce:transition-none ${
+              isRealWeightSectionOpen ? 'rotate-180' : ''
+            }`}
+          />
+        </button>
+
+        {isRealWeightSectionOpen ? (
+          <div
+            className="space-y-4 border-t border-slate-200 p-5 sm:p-6 dark:border-slate-800"
+            id="sync-real-weights-content"
+          >
+            {!realWeightSnapshot.enabled ? (
+              <InlineNotice tone="info" title="Feature flag C4 désactivé">
+                Ajoute <code>VITE_ENABLE_REAL_WEIGHT_SYNC=true</code> dans
+                <code> .env.local</code>, puis redémarre Vite. Aucun accès aux
+                vraies pesées n’a lieu tant que ce flag reste à false.
+              </InlineNotice>
+            ) : !isLoggedIn ? (
+              <InlineNotice tone="info" title="Connexion requise">
+                Connecte le même compte Dexie Cloud sur les appareils à synchroniser.
+              </InlineNotice>
+            ) : (
+              <>
+                <InlineNotice tone="info" title="Données réelles">
+                  Cette action lit et écrit uniquement les tables locales
+                  <code> weights</code> et <code>deletionRecords</code>. Les
+                  séances, la nutrition, le profil et les paramètres restent hors périmètre.
+                </InlineNotice>
+
+                {realWeightSnapshot.errorMessage ? (
+                  <InlineNotice tone="error" title="Erreur C4">
+                    {realWeightSnapshot.errorMessage}
+                  </InlineNotice>
+                ) : null}
+
+                {realWeightSnapshot.preview ? (
+                  <dl className="grid gap-3 text-sm sm:grid-cols-2 xl:grid-cols-5">
+                    <div><dt className="text-slate-500 dark:text-slate-400">Pesées locales</dt><dd className="mt-1 font-semibold">{realWeightSnapshot.preview.localWeightCount}</dd></div>
+                    <div><dt className="text-slate-500 dark:text-slate-400">Pesées cloud</dt><dd className="mt-1 font-semibold">{realWeightSnapshot.preview.cloudWeightCount}</dd></div>
+                    <div><dt className="text-slate-500 dark:text-slate-400">Suppressions locales</dt><dd className="mt-1 font-semibold">{realWeightSnapshot.preview.localDeletionCount}</dd></div>
+                    <div><dt className="text-slate-500 dark:text-slate-400">Suppressions cloud</dt><dd className="mt-1 font-semibold">{realWeightSnapshot.preview.cloudDeletionCount}</dd></div>
+                    <div><dt className="text-slate-500 dark:text-slate-400">Éléments différents</dt><dd className="mt-1 font-semibold">{realWeightSnapshot.preview.differingEntityCount}</dd></div>
+                  </dl>
+                ) : null}
+
+                {realWeightSnapshot.lastResult ? (
+                  <InlineNotice tone="success" title="Dernière convergence terminée">
+                    {realWeightSnapshot.lastResult.uploadedWeights} pesée(s) envoyée(s),{' '}
+                    {realWeightSnapshot.lastResult.downloadedWeights} reçue(s),{' '}
+                    {realWeightSnapshot.lastResult.removedLocalWeights + realWeightSnapshot.lastResult.removedCloudWeights} suppression(s) appliquée(s).
+                  </InlineNotice>
+                ) : null}
+
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Button
+                    disabled={actionStatus === 'real-weight-analyze' || actionStatus === 'real-weight-sync'}
+                    onClick={() => void handleAnalyzeRealWeights()}
+                    variant="secondary"
+                  >
+                    <RefreshCw aria-hidden="true" className={actionStatus === 'real-weight-analyze' ? 'size-4 animate-spin' : 'size-4'} />
+                    {actionStatus === 'real-weight-analyze' ? 'Analyse…' : 'Analyser sans modifier'}
+                  </Button>
+                  <Button
+                    disabled={actionStatus === 'real-weight-analyze' || actionStatus === 'real-weight-sync'}
+                    onClick={() => setIsRealWeightConfirmationOpen(true)}
+                  >
+                    <Cloud aria-hidden="true" className="size-4" />
+                    Synchroniser les vraies pesées
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        ) : null}
+      </Card>
+
+      <Card className="overflow-hidden p-0">
+        <button
           aria-controls="sync-prototype-weights-content"
           aria-expanded={isWeightSectionOpen}
           className="flex min-h-20 w-full items-center gap-3 p-5 text-left transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-600 sm:p-6 dark:hover:bg-slate-800/60"
@@ -1231,12 +1397,23 @@ function SyncPrototypeRuntime({
             <ul className="mt-2 space-y-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
               <li>Base IndexedDB distincte de la base réelle.</li>
               <li>Aucune donnée SportPilot importée automatiquement.</li>
+              <li>Les vraies pesées exigent un flag distinct et une confirmation.</li>
               <li>Route masquée lorsque le feature flag est désactivé.</li>
               <li>Jetons et clés Dexie Cloud non exposés à l’interface.</li>
             </ul>
           </div>
         </div>
       </Card>
+
+      <ConfirmationDialog
+        open={isRealWeightConfirmationOpen}
+        title="Synchroniser les vraies pesées ?"
+        description="Les pesées locales et cloud vont converger selon leur date de dernière modification. Les suppressions plus récentes restent prioritaires. Cette opération est idempotente et limitée aux pesées."
+        confirmLabel="Synchroniser"
+        isPending={actionStatus === 'real-weight-sync'}
+        onCancel={() => setIsRealWeightConfirmationOpen(false)}
+        onConfirm={() => void handleSyncRealWeights()}
+      />
     </section>
   );
 }

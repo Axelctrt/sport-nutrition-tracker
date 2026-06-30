@@ -1,5 +1,9 @@
 import type { LocalDate, NewEntity } from '@/domain/models/common';
 import type { WeightEntry } from '@/domain/models/weight';
+import {
+  createRestoredDeletionRecord,
+  deletionRecordId,
+} from '@/domain/models/deletion';
 import { weightEntryIdForDate } from '@/domain/sync/deterministicEntityIds';
 import type { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import type { WeightRepository } from '@/infrastructure/repositories/contracts/WeightRepository';
@@ -51,16 +55,42 @@ export class DexieWeightRepository implements WeightRepository {
     return runRepositoryOperation(
       'update',
       'Impossible d’enregistrer la pesée.',
-      async () => {
-        const current = await this.database.weights.where('date').equals(data.date).first();
-        if (current) {
-          return updateStoredEntity(this.database.weights, current, data);
-        }
+      async () => this.database.transaction(
+        'rw',
+        this.database.weights,
+        this.database.deletionRecords,
+        async () => {
+          const current = await this.database.weights
+            .where('date')
+            .equals(data.date)
+            .first();
+          const entry = current
+            ? await updateStoredEntity(this.database.weights, current, data)
+            : createEntity<WeightEntry>(
+                data,
+                weightEntryIdForDate(data.date),
+              );
 
-        const entry = createEntity<WeightEntry>(data, weightEntryIdForDate(data.date));
-        await this.database.weights.add(entry);
-        return entry;
-      },
+          if (!current) {
+            await this.database.weights.add(entry);
+          }
+
+          const markerId = deletionRecordId('weight', entry.id);
+          const marker = await this.database.deletionRecords.get(markerId);
+          if (marker?.status === 'deleted') {
+            await this.database.deletionRecords.put(
+              createRestoredDeletionRecord(
+                { entityType: 'weight', entityId: entry.id },
+                entry.updatedAt,
+                marker.deletedAt,
+                marker,
+              ),
+            );
+          }
+
+          return entry;
+        },
+      ),
     );
   }
 

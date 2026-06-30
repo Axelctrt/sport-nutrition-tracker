@@ -5,6 +5,8 @@ import type {
   UserLogin,
 } from 'dexie-cloud-addon';
 import type { EntityId, LocalDate } from '@/domain/models/common';
+import type { AppDatabase } from '@/infrastructure/database/AppDatabase';
+import { appDatabase } from '@/infrastructure/database/database';
 import {
   createDeletedDeletionRecord,
   createRestoredDeletionRecord,
@@ -23,6 +25,12 @@ import {
 } from '@/infrastructure/sync-prototype/syncPrototypeDiagnostics';
 import { readSyncPrototypeConfig } from '@/infrastructure/sync-prototype/syncPrototypeConfig';
 import { isValidLocalDate } from '@/shared/validation/localDate';
+import {
+  previewRealWeightSync,
+  synchronizeRealWeights,
+  type RealWeightSyncPreview,
+  type RealWeightSyncResult,
+} from '@/infrastructure/sync-prototype/realWeightSyncService';
 
 export interface SyncPrototypeAccountSnapshot {
   readonly isLoggedIn: boolean;
@@ -86,10 +94,19 @@ export interface SyncPrototypeWeightDraft {
   readonly note?: string;
 }
 
+export interface SyncPrototypeRealWeightSnapshot {
+  readonly enabled: boolean;
+  readonly status: 'disabled' | 'idle' | 'analyzing' | 'ready' | 'syncing' | 'error';
+  readonly preview?: RealWeightSyncPreview;
+  readonly lastResult?: RealWeightSyncResult;
+  readonly errorMessage?: string;
+}
+
 export interface SyncPrototypeSnapshot {
   readonly account: SyncPrototypeAccountSnapshot;
   readonly sync: SyncPrototypeSyncSnapshot;
   readonly weights: SyncPrototypeWeightSnapshot;
+  readonly realWeights?: SyncPrototypeRealWeightSnapshot;
   readonly diagnostics: SyncPrototypeDiagnosticsSnapshot;
   readonly interaction?: SyncPrototypeInteractionSnapshot;
 }
@@ -103,6 +120,8 @@ export interface SyncPrototypeClient {
   cancelInteraction(): void;
   logout(): Promise<void>;
   syncNow(): Promise<void>;
+  analyzeRealWeights(): Promise<RealWeightSyncPreview>;
+  syncRealWeights(): Promise<RealWeightSyncResult>;
   saveWeight(draft: SyncPrototypeWeightDraft): Promise<WeightEntry>;
   deleteWeight(weightId: EntityId): Promise<void>;
 }
@@ -208,6 +227,11 @@ function validateWeightDraft(
   };
 }
 
+export interface SyncPrototypeClientOptions {
+  readonly realWeightSyncEnabled?: boolean;
+  readonly localDatabase?: AppDatabase;
+}
+
 class DefaultSyncPrototypeClient implements SyncPrototypeClient {
   private snapshot: SyncPrototypeSnapshot;
   private readonly listeners = new Set<() => void>();
@@ -215,15 +239,25 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
   private initializationPromise: Promise<void> | undefined;
   private currentInteraction: DXCUserInteraction | undefined;
   private weightRefreshSequence = 0;
+  private readonly realWeightSyncEnabled: boolean;
+  private readonly localDatabase: AppDatabase;
 
-  constructor(database: SyncPrototypeDatabase) {
+  constructor(
+    database: SyncPrototypeDatabase,
+    options: SyncPrototypeClientOptions = {},
+  ) {
     this.database = database;
+    this.realWeightSyncEnabled = options.realWeightSyncEnabled === true;
+    this.localDatabase = options.localDatabase ?? appDatabase;
     this.currentInteraction = database.cloud.userInteraction.value;
     const account = sanitizeAccount(database.cloud.currentUser.value);
     this.snapshot = {
       account,
       sync: sanitizeSyncState(database.cloud.syncState.value),
       weights: emptyWeightSnapshot(true),
+      ...(this.realWeightSyncEnabled
+        ? { realWeights: { enabled: true, status: 'idle' as const } }
+        : {}),
       diagnostics: createEmptySyncPrototypeDiagnostics(
         account.userId ?? account.email,
       ),
@@ -352,6 +386,9 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
     this.snapshot = {
       ...this.snapshot,
       weights: emptyWeightSnapshot(false),
+      ...(this.realWeightSyncEnabled
+        ? { realWeights: { enabled: true, status: 'idle' as const } }
+        : {}),
       diagnostics: createEmptySyncPrototypeDiagnostics(),
     };
     this.notify();
@@ -361,6 +398,94 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
     await this.initialize();
     await this.database.cloud.sync();
     await this.refreshWeights();
+  }
+
+  async analyzeRealWeights(): Promise<RealWeightSyncPreview> {
+    await this.initialize();
+    this.assertRealWeightSyncAvailable();
+    this.snapshot = {
+      ...this.snapshot,
+      realWeights: {
+        enabled: true,
+        status: 'analyzing',
+      },
+    };
+    this.notify();
+
+    try {
+      await this.database.cloud.sync();
+      const preview = await previewRealWeightSync(
+        this.localDatabase,
+        this.database,
+        this.database.cloud.currentUserId,
+      );
+      this.snapshot = {
+        ...this.snapshot,
+        realWeights: { enabled: true, status: 'ready', preview },
+      };
+      this.notify();
+      return preview;
+    } catch (error) {
+      const errorMessage = error instanceof Error
+        ? error.message
+        : 'L’analyse des vraies pesées a échoué.';
+      this.snapshot = {
+        ...this.snapshot,
+        realWeights: { enabled: true, status: 'error', errorMessage },
+      };
+      this.notify();
+      throw error;
+    }
+  }
+
+  async syncRealWeights(): Promise<RealWeightSyncResult> {
+    await this.initialize();
+    this.assertRealWeightSyncAvailable();
+    this.snapshot = {
+      ...this.snapshot,
+      realWeights: {
+        ...(this.snapshot.realWeights ?? {}),
+        enabled: true,
+        status: 'syncing',
+      },
+    };
+    this.notify();
+
+    try {
+      await this.database.cloud.sync();
+      const result = await synchronizeRealWeights(
+        this.localDatabase,
+        this.database,
+        this.database.cloud.currentUserId,
+      );
+      await this.database.cloud.sync();
+      const preview = await previewRealWeightSync(
+        this.localDatabase,
+        this.database,
+        this.database.cloud.currentUserId,
+      );
+      this.snapshot = {
+        ...this.snapshot,
+        realWeights: {
+          enabled: true,
+          status: 'ready',
+          preview,
+          lastResult: result,
+        },
+      };
+      this.notify();
+      return result;
+    } catch (error) {
+      const errorMessage = error instanceof Error
+        ? error.message
+        : 'La synchronisation des vraies pesées a échoué.';
+      this.snapshot = {
+        ...this.snapshot,
+        realWeights: { enabled: true, status: 'error', errorMessage },
+      };
+      this.notify();
+      throw error;
+    }
   }
 
   async saveWeight(
@@ -473,6 +598,15 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
     await this.refreshWeights();
   }
 
+  private assertRealWeightSyncAvailable(): void {
+    if (!this.realWeightSyncEnabled) {
+      throw new Error(
+        'La synchronisation des vraies pesées est désactivée par configuration.',
+      );
+    }
+    this.assertLoggedIn();
+  }
+
   private assertLoggedIn(): void {
     if (!this.database.cloud.currentUser.value.isLoggedIn) {
       throw new Error(
@@ -582,8 +716,9 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
 
 export function createSyncPrototypeClient(
   database: SyncPrototypeDatabase,
+  options: SyncPrototypeClientOptions = {},
 ): SyncPrototypeClient {
-  return new DefaultSyncPrototypeClient(database);
+  return new DefaultSyncPrototypeClient(database, options);
 }
 
 let singletonDatabase: SyncPrototypeDatabase | undefined;
@@ -593,7 +728,13 @@ export function getSyncPrototypeClient(): SyncPrototypeClient {
   if (singletonClient) return singletonClient;
 
   const config = readSyncPrototypeConfig();
+  if (!config.enabled) {
+    throw new Error('Le prototype de synchronisation est désactivé.');
+  }
   singletonDatabase = createSyncPrototypeDatabase(config);
-  singletonClient = createSyncPrototypeClient(singletonDatabase);
+  singletonClient = createSyncPrototypeClient(singletonDatabase, {
+    realWeightSyncEnabled: config.realWeightSyncEnabled,
+    localDatabase: appDatabase,
+  });
   return singletonClient;
 }

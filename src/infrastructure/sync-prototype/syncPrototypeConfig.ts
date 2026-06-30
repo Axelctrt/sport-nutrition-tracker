@@ -1,6 +1,7 @@
 export interface SyncPrototypeEnvironment {
   readonly VITE_ENABLE_SYNC_PROTOTYPE?: string;
   readonly VITE_DEXIE_CLOUD_DATABASE_URL?: string;
+  readonly VITE_ENABLE_REAL_WEIGHT_SYNC?: string;
 }
 
 export interface DisabledSyncPrototypeConfig {
@@ -10,20 +11,24 @@ export interface DisabledSyncPrototypeConfig {
 export interface EnabledSyncPrototypeConfig {
   enabled: true;
   databaseUrl: string;
+  realWeightSyncEnabled: boolean;
 }
 
 export type SyncPrototypeConfig =
   | DisabledSyncPrototypeConfig
   | EnabledSyncPrototypeConfig;
 
-function readEnabledFlag(value: string | undefined): boolean {
+function readEnabledFlag(
+  value: string | undefined,
+  variableName = 'VITE_ENABLE_SYNC_PROTOTYPE',
+): boolean {
   const normalized = value?.trim().toLowerCase();
 
   if (!normalized || normalized === 'false') return false;
   if (normalized === 'true') return true;
 
   throw new Error(
-    'VITE_ENABLE_SYNC_PROTOTYPE doit valoir true ou false.',
+    `${variableName} doit valoir true ou false.`,
   );
 }
 
@@ -77,6 +82,10 @@ export function readSyncPrototypeConfig(
     enabled: true,
     databaseUrl: normalizeDexieCloudDatabaseUrl(
       environment.VITE_DEXIE_CLOUD_DATABASE_URL,
+    ),
+    realWeightSyncEnabled: readEnabledFlag(
+      environment.VITE_ENABLE_REAL_WEIGHT_SYNC,
+      'VITE_ENABLE_REAL_WEIGHT_SYNC',
     ),
   };
 }

@@ -28,14 +28,14 @@ afterEach(cleanup);
 function createFakeDiagnostics(accountFingerprint?: string) {
   return {
     databaseName: 'sportpilot-sync-prototype',
-    databaseVersion: 1,
+    databaseVersion: 2,
     visibleWeightCount: 0,
     deletedWeightCount: 0,
     ...(accountFingerprint ? { accountFingerprint } : {}),
   };
 }
 
-function createFakeClient() {
+function createFakeClient(realWeightSyncEnabled = false) {
   let snapshot: SyncPrototypeSnapshot = {
     account: {
       isLoggedIn: false,
@@ -51,6 +51,9 @@ function createFakeClient() {
       isLoading: false,
     },
     diagnostics: createFakeDiagnostics(),
+    ...(realWeightSyncEnabled
+      ? { realWeights: { enabled: true, status: 'idle' as const } }
+      : {}),
   };
   const listeners = new Set<() => void>();
   let resolveLogin: (() => void) | undefined;
@@ -139,10 +142,55 @@ function createFakeClient() {
         isLoading: false,
       },
       diagnostics: createFakeDiagnostics(),
+      ...(realWeightSyncEnabled
+        ? { realWeights: { enabled: true, status: 'idle' as const } }
+        : {}),
     };
     emit();
   });
   const syncNow = vi.fn(async () => undefined);
+  const analyzeRealWeights = vi.fn(async () => {
+    const preview = {
+      localWeightCount: 2,
+      cloudWeightCount: 1,
+      localDeletionCount: 1,
+      cloudDeletionCount: 0,
+      differingEntityCount: 2,
+    };
+    snapshot = {
+      ...snapshot,
+      realWeights: { enabled: true, status: 'ready', preview },
+    };
+    emit();
+    return preview;
+  });
+  const syncRealWeights = vi.fn(async () => {
+    const result = {
+      localWeightCount: 2,
+      cloudWeightCount: 1,
+      localDeletionCount: 1,
+      cloudDeletionCount: 0,
+      differingEntityCount: 2,
+      uploadedWeights: 1,
+      downloadedWeights: 1,
+      removedLocalWeights: 0,
+      removedCloudWeights: 0,
+      uploadedDeletionRecords: 1,
+      downloadedDeletionRecords: 0,
+      completedAt: '2026-06-30T08:00:00.000Z',
+    };
+    snapshot = {
+      ...snapshot,
+      realWeights: {
+        enabled: true,
+        status: 'ready',
+        preview: { ...result, differingEntityCount: 0 },
+        lastResult: result,
+      },
+    };
+    emit();
+    return result;
+  });
   const saveWeight = vi.fn(
     async (draft: {
       date: string;
@@ -215,6 +263,8 @@ function createFakeClient() {
     cancelInteraction,
     logout,
     syncNow,
+    analyzeRealWeights,
+    syncRealWeights,
     saveWeight,
     deleteWeight,
   };
@@ -226,6 +276,8 @@ function createFakeClient() {
     submitInteraction,
     logout,
     syncNow,
+    analyzeRealWeights,
+    syncRealWeights,
     saveWeight,
     deleteWeight,
   };
@@ -416,6 +468,56 @@ describe('écran du prototype Dexie Cloud', () => {
     expect(report).not.toContain('sportpilot-local-database');
     expect(
       await screen.findByText('Diagnostic copié'),
+    ).toBeInTheDocument();
+  });
+
+  it('analyse puis confirme la synchronisation des vraies pesées', async () => {
+    const user = userEvent.setup();
+    const { client, analyzeRealWeights, syncRealWeights } =
+      createFakeClient(true);
+
+    renderPage(client);
+
+    await user.type(
+      await screen.findByRole('textbox', { name: /adresse email/i }),
+      'test@example.com',
+    );
+    await user.click(
+      screen.getByRole('button', { name: 'Recevoir mon code' }),
+    );
+    await user.type(
+      await screen.findByRole('textbox', { name: /code de connexion/i }),
+      '123456',
+    );
+    await user.click(
+      screen.getByRole('button', { name: 'Valider le code' }),
+    );
+
+    const toggle = screen.getByRole('button', {
+      name: /C4 — vraies pesées SportPilot/i,
+    });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await user.click(toggle);
+
+    await user.click(
+      screen.getByRole('button', { name: 'Analyser sans modifier' }),
+    );
+    expect(analyzeRealWeights).toHaveBeenCalledTimes(1);
+    expect((await screen.findAllByText('2', { selector: 'dd' })).length).toBeGreaterThan(0);
+
+    await user.click(
+      screen.getByRole('button', { name: 'Synchroniser les vraies pesées' }),
+    );
+    expect(
+      screen.getByRole('alertdialog', { name: 'Synchroniser les vraies pesées ?' }),
+    ).toBeInTheDocument();
+    await user.click(
+      screen.getByRole('button', { name: 'Synchroniser' }),
+    );
+
+    expect(syncRealWeights).toHaveBeenCalledTimes(1);
+    expect(
+      await screen.findByText('Dernière convergence terminée'),
     ).toBeInTheDocument();
   });
 

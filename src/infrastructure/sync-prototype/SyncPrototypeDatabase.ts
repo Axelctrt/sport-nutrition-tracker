@@ -9,22 +9,38 @@ import type {
 } from '@/infrastructure/sync-prototype/syncPrototypeConfig';
 
 export const SYNC_PROTOTYPE_DATABASE_NAME = 'sportpilot-sync-prototype';
-export const SYNC_PROTOTYPE_DATABASE_VERSION = 1;
+export const SYNC_PROTOTYPE_DATABASE_VERSION = 2;
 export const SYNC_PROTOTYPE_TABLE_NAMES = [
   'weights',
   'deletionRecords',
+  'realWeights',
+  'realWeightDeletionRecords',
 ] as const;
 
 export class SyncPrototypeDatabase extends Dexie {
   declare weights: Table<WeightEntry, EntityId>;
   declare deletionRecords: Table<DeletionRecord, EntityId>;
+  declare realWeights: Table<WeightEntry, EntityId>;
+  declare realWeightDeletionRecords: Table<DeletionRecord, EntityId>;
 
-  constructor({ databaseUrl }: EnabledSyncPrototypeConfig) {
-    super(SYNC_PROTOTYPE_DATABASE_NAME, { addons: [dexieCloud] });
+  constructor(
+    { databaseUrl }: EnabledSyncPrototypeConfig,
+    databaseName: string = SYNC_PROTOTYPE_DATABASE_NAME,
+  ) {
+    super(databaseName, { addons: [dexieCloud] });
+
+    this.version(1).stores({
+      weights: 'id, &date, updatedAt',
+      deletionRecords:
+        'id, entityType, entityId, status, deletedAt, restoredAt, updatedAt, [entityType+entityId]',
+    });
 
     this.version(SYNC_PROTOTYPE_DATABASE_VERSION).stores({
       weights: 'id, &date, updatedAt',
       deletionRecords:
+        'id, entityType, entityId, status, deletedAt, restoredAt, updatedAt, [entityType+entityId]',
+      realWeights: 'id, date, updatedAt',
+      realWeightDeletionRecords:
         'id, entityType, entityId, status, deletedAt, restoredAt, updatedAt, [entityType+entityId]',
     });
 

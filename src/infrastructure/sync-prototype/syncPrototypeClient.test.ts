@@ -4,6 +4,7 @@ import type {
   UserLogin,
 } from 'dexie-cloud-addon';
 import type { SyncPrototypeDatabase } from '@/infrastructure/sync-prototype/SyncPrototypeDatabase';
+import { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import {
   createSyncPrototypeClient,
   type SyncPrototypeSnapshot,
@@ -51,6 +52,8 @@ function createFakeDatabase() {
   const syncComplete = new FakeObservable<void>(undefined);
   const weightRows = new Map<string, any>();
   const deletionRows = new Map<string, any>();
+  const realWeightRows = new Map<string, any>();
+  const realDeletionRows = new Map<string, any>();
   const weights = {
     toArray: vi.fn(async () => [...weightRows.values()]),
     get: vi.fn(async (id: string) => weightRows.get(id)),
@@ -99,6 +102,19 @@ function createFakeDatabase() {
       deletionRows.delete(id);
     }),
   };
+  const createCloudTable = (rows: Map<string, any>) => ({
+    toArray: vi.fn(async () => [...rows.values()]),
+    get: vi.fn(async (id: string) => rows.get(id)),
+    put: vi.fn(async (value: any) => {
+      rows.set(value.id, { ...value, owner: currentUser.value.userId });
+      return value.id;
+    }),
+    delete: vi.fn(async (id: string) => {
+      rows.delete(id);
+    }),
+  });
+  const realWeights = createCloudTable(realWeightRows);
+  const realWeightDeletionRecords = createCloudTable(realDeletionRows);
   const open = vi.fn(async () => undefined);
   const login = vi.fn(async () => undefined);
   const logout = vi.fn(async () => undefined);
@@ -109,6 +125,8 @@ function createFakeDatabase() {
       open,
       weights,
       deletionRecords,
+      realWeights,
+      realWeightDeletionRecords,
       transaction: vi.fn(
         async <T>(
           _mode: string,
@@ -142,12 +160,20 @@ function createFakeDatabase() {
     deletionRecords,
     weightRows,
     deletionRows,
+    realWeights,
+    realWeightDeletionRecords,
+    realWeightRows,
+    realDeletionRows,
   };
 }
 
-function createClient(database: unknown) {
+function createClient(
+  database: unknown,
+  options: Parameters<typeof createSyncPrototypeClient>[1] = {},
+) {
   return createSyncPrototypeClient(
     database as SyncPrototypeDatabase,
+    options,
   );
 }
 
@@ -250,7 +276,7 @@ describe('client sécurisé du prototype Dexie Cloud', () => {
       },
       diagnostics: {
         databaseName: 'sportpilot-sync-prototype',
-        databaseVersion: 1,
+        databaseVersion: 2,
         visibleWeightCount: 0,
         deletedWeightCount: 0,
         accountFingerprint:
@@ -595,4 +621,75 @@ describe('client sécurisé du prototype Dexie Cloud', () => {
     );
     vi.useRealTimers();
   });
+
+  it('refuse toute synchronisation réelle lorsque le flag C4 est désactivé', async () => {
+    const { database, currentUser } = createFakeDatabase();
+    currentUser.next({
+      claims: {},
+      lastLogin: new Date('2026-06-30T08:00:00.000Z'),
+      isLoggedIn: true,
+      isLoading: false,
+      email: 'test@example.com',
+      userId: 'test@example.com',
+    });
+    database.cloud.currentUserId = 'test@example.com';
+    const client = createClient(database);
+
+    await expect(client.analyzeRealWeights()).rejects.toThrow(
+      'désactivée par configuration',
+    );
+  });
+
+  it('analyse puis synchronise les vraies pesées avec des identifiants cloud privés', async () => {
+    const localDatabase = new AppDatabase(
+      `sportpilot-c4-client-${crypto.randomUUID()}`,
+    );
+    await localDatabase.open();
+
+    try {
+      await localDatabase.weights.add({
+        id: 'weight:2026-07-05',
+        date: '2026-07-05',
+        weightKg: 68.2,
+        createdAt: '2026-07-05T08:00:00.000Z',
+        updatedAt: '2026-07-05T08:00:00.000Z',
+      });
+      const { database, currentUser, realWeightRows } = createFakeDatabase();
+      currentUser.next({
+        claims: {},
+        lastLogin: new Date('2026-07-05T09:00:00.000Z'),
+        isLoggedIn: true,
+        isLoading: false,
+        email: 'test@example.com',
+        userId: 'test@example.com',
+      });
+      database.cloud.currentUserId = 'test@example.com';
+      const client = createClient(database, {
+        realWeightSyncEnabled: true,
+        localDatabase,
+      });
+
+      await expect(client.analyzeRealWeights()).resolves.toMatchObject({
+        localWeightCount: 1,
+        cloudWeightCount: 0,
+        differingEntityCount: 1,
+      });
+      await expect(client.syncRealWeights()).resolves.toMatchObject({
+        uploadedWeights: 1,
+      });
+      expect(realWeightRows.get('#weight:2026-07-05')).toMatchObject({
+        weightKg: 68.2,
+        owner: 'test@example.com',
+      });
+      expect(client.getSnapshot().realWeights).toMatchObject({
+        enabled: true,
+        status: 'ready',
+        preview: { differingEntityCount: 0 },
+      });
+    } finally {
+      localDatabase.close();
+      await localDatabase.delete();
+    }
+  });
+
 });
