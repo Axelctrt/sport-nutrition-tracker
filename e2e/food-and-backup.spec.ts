@@ -25,19 +25,85 @@ test('crée un aliment local puis l’ajoute au journal', async ({ page }) => {
 test('exporte puis restaure une sauvegarde JSON', async ({ page }) => {
   await createLocalProfile(page);
   await page.goto('/#/backup');
-  await expect(page.getByRole('heading', { name: 'Sauvegarde et restauration' })).toBeVisible();
+
+  await expect(
+    page.getByRole('heading', {
+      name: 'Sauvegarde et restauration',
+    }),
+  ).toBeVisible();
+
+  const downloadButton = page
+    .locator('button')
+    .filter({ hasText: 'Télécharger le JSON' })
+    .first();
+
+  await expect(downloadButton).toHaveCount(1);
+
+  await downloadButton.evaluate((element) => {
+    const details = element.closest('details');
+
+    if (
+      details instanceof HTMLDetailsElement &&
+      !details.open
+    ) {
+      details.querySelector('summary')?.click();
+    }
+  });
+
+  await expect(downloadButton).toBeVisible();
 
   const downloadPromise = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Télécharger la sauvegarde JSON' }).click();
+  await downloadButton.click();
+
   const download = await downloadPromise;
   const backupPath = await download.path();
+
   expect(backupPath).toBeTruthy();
 
-  await page.getByLabel('Fichier JSON SportPilot').setInputFiles(backupPath!);
-  await expect(page.getByText('Sauvegarde validée')).toBeVisible();
-  await page.getByRole('button', { name: 'Restaurer cette sauvegarde' }).click();
-  const dialog = page.getByRole('alertdialog', { name: 'Remplacer toutes les données ?' });
+  const backupInput = page
+    .locator('input[type="file"]')
+    .first();
+
+  await expect(backupInput).toHaveCount(1);
+  await backupInput.setInputFiles(backupPath!);
+
+  await expect(
+    page.getByText('Sauvegarde validée'),
+  ).toBeVisible();
+
+  const restoreButton = page.getByRole('button', {
+    name: 'Restaurer cette sauvegarde',
+  });
+
+  await restoreButton.evaluate((element) => {
+    const details = element.closest('details');
+
+    if (
+      details instanceof HTMLDetailsElement &&
+      !details.open
+    ) {
+      details.querySelector('summary')?.click();
+    }
+  });
+
+  await expect(restoreButton).toBeVisible();
+  await restoreButton.click();
+
+  const dialog = page.getByRole('alertdialog', {
+    name: 'Remplacer toutes les données ?',
+  });
+
   await expect(dialog).toBeVisible();
-  await dialog.getByRole('button', { name: 'Importer et remplacer' }).click();
-  await expect(page.getByRole('heading', { name: /Bonjour E2E|Tableau de bord/ })).toBeVisible();
+
+  await dialog
+    .getByRole('button', {
+      name: 'Importer et remplacer',
+    })
+    .click();
+
+  await expect(
+    page.getByRole('heading', {
+      name: /Bonjour E2E|Tableau de bord/,
+    }),
+  ).toBeVisible();
 });

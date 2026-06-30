@@ -4,7 +4,12 @@ import { DexieProfileRepository } from '@/infrastructure/repositories/dexie/Dexi
 import { DexieSettingsRepository } from '@/infrastructure/repositories/dexie/DexieSettingsRepository';
 import { DexieStepsRepository } from '@/infrastructure/repositories/dexie/DexieStepsRepository';
 import { DexieWeightRepository } from '@/infrastructure/repositories/dexie/DexieWeightRepository';
-import { createDefaultAppSettings } from '@/domain/defaults/appSettings';
+import { createDefaultDeviceSettings, createDefaultUserSettings } from '@/domain/defaults/appSettings';
+import { DEVICE_SETTINGS_ID, USER_SETTINGS_ID } from '@/domain/defaults/identifiers';
+import {
+  dailyStepsIdForDate,
+  weightEntryIdForDate,
+} from '@/domain/sync/deterministicEntityIds';
 import { createRunningActivityInput } from '@/test/factories/activityFactory';
 import { createProfileInput } from '@/test/factories/profileFactory';
 
@@ -43,33 +48,60 @@ describe('repositories Dexie', () => {
     const first = await repository.upsert({ date: '2026-06-23', weightKg: 60 });
     const second = await repository.upsert({ date: '2026-06-23', weightKg: 59.8 });
 
+    expect(first.id).toBe(weightEntryIdForDate('2026-06-23'));
     expect(second.id).toBe(first.id);
     expect(second.weightKg).toBe(59.8);
     expect(await database.weights.count()).toBe(1);
   });
 
+
+  it('marque comme restaurée une pesée recréée après suppression', async () => {
+    const repository = new DexieWeightRepository(database);
+    const date = '2026-06-24';
+
+    const created = await repository.upsert({ date, weightKg: 60 });
+    await repository.deleteByDate(date);
+    const recreated = await repository.upsert({ date, weightKg: 59.7 });
+
+    expect(recreated.id).toBe(created.id);
+    expect(
+      await database.deletionRecords.get(`deletion:weight:${created.id}`),
+    ).toMatchObject({
+      status: 'restored',
+      entityId: created.id,
+    });
+  });
+
   it('conserve une seule saisie de pas par date', async () => {
     const repository = new DexieStepsRepository(database);
 
-    await repository.upsert({ date: '2026-06-23', totalSteps: 8_000, source: 'manual' });
+    const created = await repository.upsert({
+      date: '2026-06-23',
+      totalSteps: 8_000,
+      source: 'manual',
+    });
     const updated = await repository.upsert({
       date: '2026-06-23',
       totalSteps: 10_500,
       source: 'manual',
     });
 
+    expect(created.id).toBe(dailyStepsIdForDate('2026-06-23'));
+    expect(updated.id).toBe(created.id);
     expect(updated.totalSteps).toBe(10_500);
     expect(await database.dailySteps.count()).toBe(1);
   });
 
-  it('complète les réglages de sauvegarde absents d’une ancienne base', async () => {
+  it('complète les réglages appareil absents d’une ancienne base', async () => {
     const repository = new DexieSettingsRepository(database);
-    const legacy = createDefaultAppSettings() as unknown as Record<string, unknown>;
-    delete legacy.backupReminderIntervalDays;
-    delete legacy.restTimerAutoStart;
-    delete legacy.restTimerSoundEnabled;
-    delete legacy.restTimerVibrationEnabled;
-    await database.appSettings.put(legacy as never);
+    const legacyDevice = createDefaultDeviceSettings() as unknown as Record<string, unknown>;
+    delete legacyDevice.backupReminderIntervalDays;
+    delete legacyDevice.restTimerAutoStart;
+    delete legacyDevice.restTimerSoundEnabled;
+    delete legacyDevice.restTimerVibrationEnabled;
+    delete legacyDevice.automaticWeightSyncEnabled;
+    await database.userSettings.put(createDefaultUserSettings());
+    await database.deviceSettings.put(legacyDevice as never);
 
     const settings = await repository.get();
 
@@ -77,11 +109,45 @@ describe('repositories Dexie', () => {
     expect(settings.restTimerAutoStart).toBe(true);
     expect(settings.restTimerSoundEnabled).toBe(false);
     expect(settings.restTimerVibrationEnabled).toBe(true);
-    const stored = (await database.appSettings.toArray())[0];
+    expect(settings.automaticWeightSyncEnabled).toBe(false);
+    const stored = await database.deviceSettings.toCollection().first();
     expect(stored?.backupReminderIntervalDays).toBe(0);
     expect(stored?.restTimerAutoStart).toBe(true);
     expect(stored?.restTimerSoundEnabled).toBe(false);
     expect(stored?.restTimerVibrationEnabled).toBe(true);
+    expect(stored?.automaticWeightSyncEnabled).toBe(false);
+  });
+
+
+  it('écrit séparément les paramètres utilisateur et appareil', async () => {
+    const repository = new DexieSettingsRepository(database);
+    await database.userSettings.put(createDefaultUserSettings());
+    await database.deviceSettings.put(createDefaultDeviceSettings('device-local'));
+
+    const settings = await repository.update({
+      includedBaseSteps: 4_500,
+      theme: 'dark',
+      automaticWeightSyncEnabled: true,
+      automaticWeightSyncAccountFingerprint: 'acct-TEST0001',
+    });
+
+    expect(settings.includedBaseSteps).toBe(4_500);
+    expect(settings.theme).toBe('dark');
+    expect(await database.userSettings.get(USER_SETTINGS_ID)).toMatchObject({
+      includedBaseSteps: 4_500,
+    });
+    expect(await database.deviceSettings.get(DEVICE_SETTINGS_ID)).toMatchObject({
+      deviceId: 'device-local',
+      theme: 'dark',
+      automaticWeightSyncEnabled: true,
+      automaticWeightSyncAccountFingerprint: 'acct-TEST0001',
+    });
+    expect(
+      (await database.userSettings.get(USER_SETTINGS_ID)) as unknown as Record<string, unknown>,
+    ).not.toHaveProperty('theme');
+    expect(
+      (await database.deviceSettings.get(DEVICE_SETTINGS_ID)) as unknown as Record<string, unknown>,
+    ).not.toHaveProperty('includedBaseSteps');
   });
 
   it('enregistre et retrouve les activités d’une journée', async () => {

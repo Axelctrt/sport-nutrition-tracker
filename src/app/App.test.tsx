@@ -1,13 +1,18 @@
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from '@/app/App';
 import { router } from '@/app/router';
 import { initializeDatabase } from '@/infrastructure/database/databaseLifecycle';
 import { appDatabase } from '@/infrastructure/database/database';
 import { repositories } from '@/infrastructure/repositories/repositories';
+import { flushUserStatePersistence } from '@/infrastructure/user-state/userStateRuntime';
 import { createProfileInput } from '@/test/factories/profileFactory';
 import '@/features/onboarding/pages/OnboardingPage';
 import '@/features/dashboard/pages/DashboardPage';
+
+vi.mock('@/app/sync/WeightSyncCoordinator', () => ({
+  WeightSyncCoordinator: () => null,
+}));
 
 describe('App', () => {
   beforeEach(async () => {
@@ -48,6 +53,9 @@ describe('App', () => {
     expect(
       await screen.findByRole('link', { name: 'Tableau de bord' }, { timeout: 12_000 }),
     ).toHaveAttribute('aria-current', 'page');
+    await act(async () => {
+      await flushUserStatePersistence();
+    });
     expect(await repositories.profile.get()).toMatchObject({
       heightCm: 175,
       initialWeightKg: 70,

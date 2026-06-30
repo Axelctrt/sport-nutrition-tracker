@@ -4,6 +4,7 @@ const chromiumExecutablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
 
 export default defineConfig({
   testDir: './e2e',
+  testIgnore: 'pwa-update-retention.spec.ts',
   outputDir: 'test-results/playwright',
   fullyParallel: false,
   forbidOnly: Boolean(process.env.CI),

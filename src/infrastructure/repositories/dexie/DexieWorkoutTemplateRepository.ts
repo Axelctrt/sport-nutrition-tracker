@@ -7,6 +7,7 @@ import type {
   WorkoutTemplateRepository,
 } from '@/infrastructure/repositories/contracts/WorkoutTemplateRepository';
 import { runRepositoryOperation } from '@/infrastructure/repositories/dexie/repositoryOperation';
+import { updateStoredEntity } from '@/infrastructure/repositories/dexie/updateStoredEntity';
 import { createEntity, updateEntity } from '@/shared/utils/entities';
 
 export class DexieWorkoutTemplateRepository implements WorkoutTemplateRepository {
@@ -72,7 +73,6 @@ export class DexieWorkoutTemplateRepository implements WorkoutTemplateRepository
       async () => {
         const current = await this.database.workoutTemplates.get(id);
         if (!current) throw new RepositoryError('Séance modèle introuvable.', 'update');
-        const template = updateEntity(current, changes);
         const existingExercises = await this.database.workoutTemplateExercises.where('templateId').equals(id).toArray();
         const existingByDefinition = new Map(existingExercises.map((exercise) => [exercise.exerciseDefinitionId, exercise]));
         const exercises = exerciseInputs.map((exercise) => {
@@ -83,10 +83,14 @@ export class DexieWorkoutTemplateRepository implements WorkoutTemplateRepository
         });
         const retainedIds = new Set(exercises.map((exercise) => exercise.id));
         const removedIds = existingExercises.filter((exercise) => !retainedIds.has(exercise.id)).map((exercise) => exercise.id);
-        await this.database.workoutTemplates.put(template);
+        const storedTemplate = await updateStoredEntity(
+          this.database.workoutTemplates,
+          current,
+          changes,
+        );
         if (exercises.length > 0) await this.database.workoutTemplateExercises.bulkPut(exercises);
         if (removedIds.length > 0) await this.database.workoutTemplateExercises.bulkDelete(removedIds);
-        return { template, exercises };
+        return { template: storedTemplate, exercises };
       },
     ));
   }
@@ -95,9 +99,11 @@ export class DexieWorkoutTemplateRepository implements WorkoutTemplateRepository
     return runRepositoryOperation('update', 'Impossible de modifier cette séance modèle.', async () => {
       const current = await this.database.workoutTemplates.get(id);
       if (!current) throw new RepositoryError('Séance modèle introuvable.', 'update');
-      const updated = updateEntity(current, changes);
-      await this.database.workoutTemplates.put(updated);
-      return updated;
+      return updateStoredEntity(
+        this.database.workoutTemplates,
+        current,
+        changes,
+      );
     });
   }
 
@@ -114,9 +120,11 @@ export class DexieWorkoutTemplateRepository implements WorkoutTemplateRepository
         if (!current) {
           throw new RepositoryError('Exercice de séance modèle introuvable.', 'update');
         }
-        const updated = updateEntity(current, changes);
-        await this.database.workoutTemplateExercises.put(updated);
-        return updated;
+        return updateStoredEntity(
+          this.database.workoutTemplateExercises,
+          current,
+          changes,
+        );
       },
     );
   }

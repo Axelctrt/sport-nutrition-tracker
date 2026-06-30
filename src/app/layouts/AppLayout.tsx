@@ -1,36 +1,46 @@
-import { Outlet } from 'react-router-dom';
+import { useEffect } from 'react';
+import { Outlet, useLocation } from 'react-router-dom';
+
+import { BackupReminderCoordinator } from '@/app/backup/BackupReminderCoordinator';
+import { GlobalSearchShortcut } from '@/app/search/GlobalSearchShortcut';
 import { DesktopSidebar } from '@/app/layouts/DesktopSidebar';
 import { MobileBottomNavigation } from '@/app/layouts/MobileBottomNavigation';
-import { NavigationScrollManager } from '@/app/layouts/NavigationScrollManager';
 import { PageHeader } from '@/app/layouts/PageHeader';
 import { OfflineStatusBanner } from '@/pwa/OfflineStatusBanner';
-import { PwaUpdatePrompt } from '@/pwa/PwaUpdatePrompt';
-import { useCenterExpandedContent } from '@/shared/hooks/useCenterExpandedContent';
-import { useNumericZeroInputBehavior } from '@/shared/hooks/useNumericZeroInputBehavior';
 
 export function AppLayout() {
-  useNumericZeroInputBehavior();
-  useCenterExpandedContent();
+  const location = useLocation();
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [location.pathname]);
 
   return (
     <div className="min-h-screen text-slate-900 dark:text-slate-100">
-      <NavigationScrollManager />
       <a
         href="#main-content"
         className="fixed left-3 top-3 z-[100] -translate-y-20 rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition-transform focus:translate-y-0"
       >
         Aller au contenu
       </a>
+
       <DesktopSidebar />
+
       <div className="min-w-0 lg:pl-72">
         <PageHeader />
         <OfflineStatusBanner />
-        <main id="main-content" className="safe-page-bottom mx-auto min-w-0 max-w-7xl overflow-x-clip px-4 py-6 sm:px-6 lg:px-8">
+      <GlobalSearchShortcut />
+      <BackupReminderCoordinator />
+
+        <main
+          id="main-content"
+          className="safe-page-bottom mx-auto min-w-0 max-w-7xl overflow-x-clip px-4 py-6 sm:px-6 lg:px-8"
+        >
           <Outlet />
         </main>
       </div>
+
       <MobileBottomNavigation />
-      <PwaUpdatePrompt />
     </div>
   );
 }

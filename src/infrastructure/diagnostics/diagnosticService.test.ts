@@ -1,5 +1,5 @@
 import { AppDatabase } from '@/infrastructure/database/AppDatabase';
-import { createDefaultAppSettings } from '@/domain/defaults/appSettings';
+import { createDefaultDeviceSettings, createDefaultUserSettings } from '@/domain/defaults/appSettings';
 import { createEntity } from '@/shared/utils/entities';
 import type { WeightEntry } from '@/domain/models/weight';
 import { createTechnicalDiagnostic, serializeTechnicalDiagnostic } from '@/infrastructure/diagnostics/diagnosticService';
@@ -10,7 +10,8 @@ let database: AppDatabase;
 beforeEach(async () => {
   database = new AppDatabase(databaseName);
   await database.open();
-  await database.appSettings.put(createDefaultAppSettings());
+  await database.userSettings.put(createDefaultUserSettings());
+  await database.deviceSettings.put(createDefaultDeviceSettings());
   await database.weights.add(createEntity<WeightEntry>({
     date: '2026-06-26',
     weightKg: 69.4,

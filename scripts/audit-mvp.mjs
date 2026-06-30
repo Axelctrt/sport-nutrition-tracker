@@ -74,8 +74,16 @@ for (const relativePath of sourceFiles) {
 
 try {
   const layout = await readFile(join(root, 'src/app/layouts/AppLayout.tsx'), 'utf8');
-  if (!layout.includes('href="#main-content"')) failures.push('Accessibilité : lien d’évitement absent.');
-  if (!layout.includes('<main id="main-content"')) failures.push('Accessibilité : repère principal absent.');
+  if (!/href\s*=\s*["']#main-content["']/.test(layout)) {
+    failures.push('Accessibilité : lien d’évitement absent.');
+  }
+
+  const hasMainLandmark = /<main\b[^>]*\bid\s*=\s*["']main-content["'][^>]*>/s.test(
+    layout,
+  );
+  if (!hasMainLandmark) {
+    failures.push('Accessibilité : repère principal absent.');
+  }
 } catch {
   // Déjà couvert.
 }

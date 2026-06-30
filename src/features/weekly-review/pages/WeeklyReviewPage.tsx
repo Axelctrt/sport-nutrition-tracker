@@ -19,7 +19,10 @@ import type {
 import { getDefaultWeeklyReviewReferenceDate } from '@/domain/reviews/weeklyReview';
 import { CalibrationAdjustmentCard } from '@/features/weekly-review/components/CalibrationAdjustmentCard';
 import { WeeklyReviewHistoryCard } from '@/features/weekly-review/components/WeeklyReviewHistoryCard';
+import { WeeklyReviewGuidance } from '@/features/weekly-review/components/WeeklyReviewGuidance';
 import { WeeklyReviewSummary } from '@/features/weekly-review/components/WeeklyReviewSummary';
+import { WeeklyTrainingSummary } from '@/features/weekly-review/components/WeeklyTrainingSummary';
+
 import { useWeeklyReview } from '@/features/weekly-review/hooks/useWeeklyReview';
 import { inputClassName } from '@/shared/forms/formStyles';
 import { Button } from '@/shared/ui/Button';
@@ -214,13 +217,25 @@ export function WeeklyReviewPage() {
             ) : null}
           </Card>
 
-          <div className="mt-4">
+                    <div className="mt-4">
             <WeeklyReviewSummary review={data.review} />
           </div>
 
+          {data.insights ? (
+            <>
+              <div className="mt-4">
+                <WeeklyTrainingSummary insights={data.insights} />
+              </div>
+              <div className="mt-4">
+                <WeeklyReviewGuidance insights={data.insights} />
+              </div>
+            </>
+          ) : null}
+
           <div className="mt-4 space-y-3">
+
             <CollapsibleSection
-              title="Détail de l’adhérence"
+              title="Détail du score de suivi"
               description={adherenceLabels[data.review.adherenceLevel]}
               summary={`${data.review.adherenceScore}/100`}
               defaultOpen={!data.review.isCalibrationEligible}

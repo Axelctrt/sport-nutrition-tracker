@@ -8,6 +8,14 @@ const DashboardPage = lazy(() =>
 );
 
 
+const GlobalSearchPage = lazy(() =>
+  import('@/features/global-search/pages/GlobalSearchPage').then(
+    (module) => ({
+      default: module.GlobalSearchPage,
+    }),
+  ),
+);
+
 const DashboardCustomizationPage = lazy(() =>
   import('@/features/dashboard-customization/pages/DashboardCustomizationPage').then((module) => ({
     default: module.DashboardCustomizationPage,
@@ -29,6 +37,18 @@ const ProfilePage = lazy(() =>
 const AdvancedSettingsPage = lazy(() =>
   import('@/features/settings/pages/AdvancedSettingsPage').then((module) => ({
     default: module.AdvancedSettingsPage,
+  })),
+);
+const RoutineRemindersPage = lazy(() =>
+  import('@/features/reminders/pages/RoutineRemindersPage').then((module) => ({
+    default: module.RoutineRemindersPage,
+  })),
+);
+
+
+const SyncPrototypePage = lazy(() =>
+  import('@/features/sync-prototype/pages/SyncPrototypePage').then((module) => ({
+    default: module.SyncPrototypePage,
   })),
 );
 
@@ -210,6 +230,20 @@ const AnalyticsPage = lazy(() =>
   })),
 );
 
+const ProgressReportsPage = lazy(() =>
+  import('@/features/progress-reports/pages/ProgressReportsPage').then(
+    (module) => ({
+      default: module.ProgressReportsPage,
+    }),
+  ),
+);
+
+const GoalsPage = lazy(() =>
+  import('@/features/goals/pages/GoalsPage').then((module) => ({
+    default: module.GoalsPage,
+  })),
+);
+
 const HistoryPage = lazy(() =>
   import('@/features/history/pages/HistoryPage').then((module) => ({
     default: module.HistoryPage,
@@ -228,6 +262,16 @@ const WeeklyReviewPage = lazy(() =>
   })),
 );
 
+const RewardsCenterPage = lazy(() =>
+  import('@/features/rewards/pages/RewardsCenterPage').then((module) => ({
+    default: module.RewardsCenterPage,
+  })),
+);
+const TrashPage = lazy(() =>
+  import('@/features/trash/pages/TrashPage').then((module) => ({
+    default: module.TrashPage,
+  })),
+);
 const BackupPage = lazy(() =>
   import('@/features/backup/pages/BackupPage').then((module) => ({
     default: module.BackupPage,
@@ -255,6 +299,14 @@ export function LazyDashboardPage() {
   return (
     <RouteSuspense variant="dashboard">
       <DashboardPage />
+    </RouteSuspense>
+  );
+}
+
+export function LazyGlobalSearchPage() {
+  return (
+    <RouteSuspense variant="list">
+      <GlobalSearchPage />
     </RouteSuspense>
   );
 }
@@ -290,12 +342,44 @@ export function LazyAdvancedSettingsPage() {
     </RouteSuspense>
   );
 }
+export function LazyRoutineRemindersPage() {
+  return (
+    <RouteSuspense variant="form">
+      <RoutineRemindersPage />
+    </RouteSuspense>
+  );
+}
+
+
+export function LazySyncPrototypePage() {
+  return (
+    <RouteSuspense variant="form">
+      <SyncPrototypePage />
+    </RouteSuspense>
+  );
+}
 
 
 export function LazyAnalyticsPage() {
   return (
     <RouteSuspense variant="dashboard">
       <AnalyticsPage />
+    </RouteSuspense>
+  );
+}
+
+export function LazyProgressReportsPage() {
+  return (
+    <RouteSuspense variant="dashboard">
+      <ProgressReportsPage />
+    </RouteSuspense>
+  );
+}
+
+export function LazyGoalsPage() {
+  return (
+    <RouteSuspense variant="list">
+      <GoalsPage />
     </RouteSuspense>
   );
 }
@@ -509,6 +593,20 @@ export function LazyWeeklyReviewPage() {
   return <RouteSuspense variant="dashboard"><WeeklyReviewPage /></RouteSuspense>;
 }
 
+export function LazyRewardsCenterPage() {
+  return (
+    <RouteSuspense variant="list">
+      <RewardsCenterPage />
+    </RouteSuspense>
+  );
+}
+export function LazyTrashPage() {
+  return (
+    <RouteSuspense variant="list">
+      <TrashPage />
+    </RouteSuspense>
+  );
+}
 export function LazyBackupPage() {
   return <RouteSuspense variant="form"><BackupPage /></RouteSuspense>;
 }

@@ -14,8 +14,8 @@ function navigationClassName(isActive: boolean): string {
 
 export function DesktopSidebar() {
   return (
-    <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 border-r border-slate-200 bg-white/95 p-4 backdrop-blur lg:flex lg:flex-col dark:border-slate-800 dark:bg-slate-950/95">
-      <div className="flex items-center gap-3 px-2 py-3">
+    <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 overflow-hidden border-r border-slate-200 bg-white/95 p-4 backdrop-blur lg:flex lg:flex-col dark:border-slate-800 dark:bg-slate-950/95">
+      <div className="flex shrink-0 items-center gap-3 px-2 py-3">
         <span className="grid size-11 place-items-center rounded-2xl bg-brand-700 text-white shadow-sm">
           <Dumbbell aria-hidden="true" className="size-6" />
         </span>
@@ -25,38 +25,45 @@ export function DesktopSidebar() {
         </div>
       </div>
 
-      <nav aria-label="Navigation principale" className="mt-5 space-y-1">
-        {primaryNavigation.map((item) => {
-          const Icon = item.icon;
-          return (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              end={item.end ?? false}
-              className={({ isActive }) => navigationClassName(isActive)}
-            >
-              <Icon aria-hidden="true" className="size-5" />
-              {item.label}
-            </NavLink>
-          );
-        })}
-      </nav>
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
+        <div className="flex min-h-full flex-col">
+          <nav aria-label="Navigation principale" className="mt-5 space-y-1">
+            {primaryNavigation.map((item) => {
+              const Icon = item.icon;
+              return (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  end={item.end ?? false}
+                  className={({ isActive }) => navigationClassName(isActive)}
+                >
+                  <Icon aria-hidden="true" className="size-5" />
+                  {item.label}
+                </NavLink>
+              );
+            })}
+          </nav>
 
-      <nav aria-label="Navigation secondaire" className="mt-auto space-y-1 border-t border-slate-200 pt-4 dark:border-slate-800">
-        {secondaryNavigation.map((item) => {
-          const Icon = item.icon;
-          return (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              className={({ isActive }) => navigationClassName(isActive)}
-            >
-              <Icon aria-hidden="true" className="size-5" />
-              {item.label}
-            </NavLink>
-          );
-        })}
-      </nav>
+          <nav
+            aria-label="Navigation secondaire"
+            className="mt-auto space-y-1 border-t border-slate-200 pt-4 dark:border-slate-800"
+          >
+            {secondaryNavigation.map((item) => {
+              const Icon = item.icon;
+              return (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  className={({ isActive }) => navigationClassName(isActive)}
+                >
+                  <Icon aria-hidden="true" className="size-5" />
+                  {item.label}
+                </NavLink>
+              );
+            })}
+          </nav>
+        </div>
+      </div>
     </aside>
   );
 }

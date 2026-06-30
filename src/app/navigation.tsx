@@ -2,17 +2,23 @@ import {
   Activity,
   Apple,
   BarChart3,
+  Bell,
   ClipboardCheck,
   CalendarDays,
   Layers3,
   PlayCircle,
   DatabaseBackup,
   Dumbbell,
+  FileText,
   Gauge,
   History,
   Info,
+  Search,
   Settings,
   SlidersHorizontal,
+  Trash2,
+  Trophy,
+  Target,
   UserRound,
   Weight,
   type LucideIcon,
@@ -34,6 +40,11 @@ export interface NavigationSection {
 
 export const primaryNavigation: NavigationItem[] = [
   { label: 'Tableau de bord', path: routePaths.dashboard, icon: Gauge, end: true },
+  {
+    label: 'Recherche',
+    path: routePaths.search,
+    icon: Search,
+  },
   { label: 'Nutrition', path: routePaths.food, icon: Apple },
   { label: 'Activités', path: routePaths.activities, icon: Dumbbell },
   { label: 'Exercices', path: routePaths.strengthExercises, icon: Activity },
@@ -42,13 +53,22 @@ export const primaryNavigation: NavigationItem[] = [
   { label: 'Séances modèles', path: routePaths.workoutTemplates, icon: Layers3 },
   { label: 'Poids', path: routePaths.weight, icon: Weight },
   { label: 'Analyses', path: routePaths.analytics, icon: BarChart3 },
+  { label: 'Rapports', path: routePaths.reports, icon: FileText },
+  {
+    label: 'Objectifs',
+    path: routePaths.goals,
+    icon: Target,
+  },
   { label: 'Bilan hebdomadaire', path: routePaths.weeklyReview, icon: ClipboardCheck },
 ];
 
 export const secondaryNavigation: NavigationItem[] = [
   { label: 'Profil', path: routePaths.profile, icon: UserRound },
   { label: 'Paramètres', path: routePaths.settings, icon: Settings },
-  { label: 'Sauvegarde', path: routePaths.backup, icon: DatabaseBackup },
+  { label: 'Rappels', path: routePaths.reminders, icon: Bell },
+  { label: 'Récompenses', path: routePaths.rewards, icon: Trophy },
+  { label: 'Sauvegarde', path: routePaths.backup, icon: DatabaseBackup },
+  { label: 'Corbeille', path: routePaths.trash, icon: Trash2 },
   { label: 'Calculs', path: routePaths.calculationsInformation, icon: Info },
 ];
 
@@ -94,6 +114,27 @@ export const mobileMoreNavigation: NavigationSection[] = [
     title: 'Suivi et décisions',
     items: [
       {
+        label: 'Recherche globale',
+        path: routePaths.search,
+        icon: Search,
+        description:
+          'Retrouver séances, aliments, recettes, activités et pesées.',
+      },
+      {
+        label: 'Rapport de progression',
+        path: routePaths.reports,
+        icon: FileText,
+        description:
+          'Synthétiser et partager une période de suivi.',
+      },
+      {
+        label: 'Objectifs et jalons',
+        path: routePaths.goals,
+        icon: Target,
+        description:
+          'Créer des objectifs mesurables et suivre automatiquement leur progression.',
+      },
+      {
         label: 'Historique',
         path: routePaths.history,
         icon: History,
@@ -104,6 +145,13 @@ export const mobileMoreNavigation: NavigationSection[] = [
         path: routePaths.weeklyReview,
         icon: ClipboardCheck,
         description: 'Examiner les données et décider des ajustements.',
+      },
+      {
+        label: 'Récompenses',
+        path: routePaths.rewards,
+        icon: Trophy,
+        description:
+          'Badges, missions, séries et thèmes débloqués.',
       },
     ],
   },
@@ -129,10 +177,24 @@ export const mobileMoreNavigation: NavigationSection[] = [
         description: 'Thème, calculs avancés et stockage local.',
       },
       {
+        label: 'Rappels et routines',
+        path: routePaths.reminders,
+        icon: Bell,
+        description: 'Configurer les rappels internes de suivi.',
+      },
+      {
         label: 'Sauvegarde',
         path: routePaths.backup,
         icon: DatabaseBackup,
         description: 'Exporter, restaurer ou effacer les données.',
+      },
+
+      {
+        label: 'Corbeille',
+        path: routePaths.trash,
+        icon: Trash2,
+        description:
+          'Restaurer les activités et pesées supprimées récemment.',
       },
       {
         label: 'Informations sur les calculs',

@@ -1,13 +1,13 @@
-# Checklist de validation stable — SportPilot 0.16.0
+# Checklist de validation stable — SportPilot 0.17.0
 
 ## Préparation
 
-- [ ] La branche courante est `release/0.16.0`.
+- [ ] La branche courante est `release/0.17.0`.
 - [ ] `npm ci` termine sans erreur.
 - [ ] `npm run release:verify` termine sans erreur.
-- [ ] La version affichée dans Paramètres est `0.16.0`.
+- [ ] La version affichée dans Paramètres est `0.17.0`.
 - [ ] Une sauvegarde JSON récente est conservée hors de l’application.
-- [ ] Les notes `RELEASE-NOTES-0.16.0.md` et `KNOWN-LIMITATIONS.md` ont été relues.
+- [ ] Les notes `RELEASE-NOTES-0.17.0.md` et `KNOWN-LIMITATIONS.md` ont été relues.
 - [ ] `npm run audit:repository` confirme qu’aucun dossier de patch, rapport Playwright ou secret n’est suivi par Git.
 - [ ] Une sauvegarde JSON issue de 0.15.0 a été prévisualisée avant toute restauration.
 
@@ -36,17 +36,17 @@
 - [ ] Sections repliables recentrées à l’ouverture.
 - [ ] Installation depuis Safari et ouverture depuis l’écran d’accueil.
 - [ ] Données locales accessibles hors connexion.
-- [ ] Mise à jour de `0.15.0` vers `0.16.0` appliquée sans perte de données.
+- [ ] Mise à jour de `0.16.0` vers `0.17.0` appliquée sans perte de données.
 
 ## Publication Git stable
 
-- [ ] Le commit stable est poussé sur `origin/release/0.16.0`.
-- [ ] La branche stable contient exactement la RC validée plus la promotion de version.
+- [ ] Le commit stable est poussé sur `origin/release/0.17.0`.
+- [ ] La branche stable contient exactement develop validé plus la préparation de version 0.17.0.
 - [ ] `npm run release:verify` réussit sur la branche stable.
-- [ ] `release/0.16.0` est fusionnée dans `main` avec un commit de fusion explicite.
+- [ ] `release/0.17.0` est fusionnée dans `main` avec un commit de fusion explicite.
 - [ ] `main` est poussé sur le dépôt distant avant la création du tag.
-- [ ] Le tag annoté `v0.16.0` pointe sur le commit fusionné dans `main`.
-- [ ] Le tag `v0.16.0` est poussé sur le dépôt distant.
+- [ ] Le tag annoté `v0.17.0` pointe sur le commit fusionné dans `main`.
+- [ ] Le tag `v0.17.0` est poussé sur le dépôt distant.
 - [ ] `develop` est réaligné sur `main` après publication.
 
 ## Décision
@@ -176,3 +176,40 @@
 - [ ] Une sauvegarde JSON v2 conserve les préférences personnalisées.
 - [ ] L’interface ne déborde pas horizontalement sur iPhone 15 en portrait et paysage.
 - [ ] Les contrôles restent utilisables au clavier et avec VoiceOver.
+
+## Contrôles spécifiques à SportPilot 0.17.0
+
+### Configuration publique de production
+
+- [ ] Aucun fichier `.env.production` n’est suivi par Git.
+- [ ] Les variables Vite publiques sont configurées dans l’environnement de build Cloudflare.
+- [ ] `VITE_ENABLE_SYNC_PROTOTYPE=true`.
+- [ ] `VITE_DEXIE_CLOUD_DATABASE_URL` cible la base Dexie Cloud officielle.
+- [ ] `VITE_ENABLE_REAL_WEIGHT_SYNC=true`.
+- [ ] `VITE_ENABLE_SYNC_DIAGNOSTICS=false`.
+- [ ] `.env.local`, `dexie-cloud.json` et `dexie-cloud.key` restent ignorés.
+
+### Origines Dexie Cloud
+
+- [ ] `http://localhost:5173` est autorisé pour les validations locales.
+- [ ] `https://sport-nutrition-tracker.axel-cottrant.workers.dev` est autorisé.
+- [ ] Aucune origine temporaire `trycloudflare.com` ne reste dans la whitelist.
+
+### Validation du build de production
+
+- [ ] `npm run release:verify` réussit sans erreur non gérée.
+- [ ] Le build de production affiche la version `0.17.0`.
+- [ ] La rubrique « Synchronisation des pesées » est visible.
+- [ ] « Gérer le compte de synchronisation » ouvre la page de compte.
+- [ ] Les outils de laboratoire et les diagnostics internes sont absents.
+- [ ] Le compte doit être explicitement autorisé sur chaque appareil.
+- [ ] Le changement compte A → compte B bloque tout envoi automatique.
+
+### Validation après déploiement Cloudflare
+
+- [ ] Le push de `main` déclenche le déploiement Cloudflare.
+- [ ] L’URL officielle répond sans erreur.
+- [ ] La mise à jour PWA est proposée sur l’iPhone.
+- [ ] Le profil, les pesées et les autres données locales sont conservés.
+- [ ] Une pesée de test se synchronise dans les deux sens.
+- [ ] Une suppression se propage et ne réapparaît pas après rechargement.

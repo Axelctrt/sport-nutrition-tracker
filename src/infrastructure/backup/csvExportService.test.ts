@@ -1,6 +1,6 @@
 import { createCsvContent, createCsvExports } from '@/infrastructure/backup/csvExportService';
 import { AppDatabase } from '@/infrastructure/database/AppDatabase';
-import { createDefaultAppSettings } from '@/domain/defaults/appSettings';
+import { createDefaultDeviceSettings, createDefaultUserSettings } from '@/domain/defaults/appSettings';
 import { createEntity } from '@/shared/utils/entities';
 import type { CyclingActivity, SwimmingActivity } from '@/domain/models/activity';
 import type { WeightEntry } from '@/domain/models/weight';
@@ -12,7 +12,8 @@ let database: AppDatabase;
 beforeEach(async () => {
   database = new AppDatabase(databaseName);
   await database.open();
-  await database.appSettings.put(createDefaultAppSettings());
+  await database.userSettings.put(createDefaultUserSettings());
+  await database.deviceSettings.put(createDefaultDeviceSettings());
 });
 
 afterEach(async () => {

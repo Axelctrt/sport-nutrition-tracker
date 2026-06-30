@@ -1,5 +1,8 @@
 import type { LocalDate } from '@/domain/models/common';
+import type { Activity } from '@/domain/models/activity';
 import type { UserProfile } from '@/domain/models/profile';
+import type { WorkoutSession } from '@/domain/models/strength';
+
 import type { AcceptedCalorieAdjustment, WeeklyReview } from '@/domain/models/weeklyReview';
 import {
   calculateWeeklyReview,
@@ -7,12 +10,20 @@ import {
   resolveWeeklyReviewPeriod,
 } from '@/domain/reviews/weeklyReview';
 import { resolveAcceptedCalibrationAdjustment } from '@/application/daily/dailyTargetCoordinator';
+import { buildEndurancePlanningWeek } from '@/application/planning/endurancePlanningService';
+import { buildWeeklyReviewInsights, type WeeklyReviewInsights } from '@/domain/reviews/weeklyReviewInsights';
+import { emptyEndurancePlanningState, readEndurancePlanningState, type EndurancePlanningState } from '@/domain/planning/endurancePlanningState';
+
+import type { ActivityRepository } from '@/infrastructure/repositories/contracts/ActivityRepository';
 import type { FoodRepository } from '@/infrastructure/repositories/contracts/FoodRepository';
+
 import type { SettingsRepository } from '@/infrastructure/repositories/contracts/SettingsRepository';
 import type { StepsRepository } from '@/infrastructure/repositories/contracts/StepsRepository';
 import type { TargetRepository } from '@/infrastructure/repositories/contracts/TargetRepository';
 import type { WeeklyReviewRepository } from '@/infrastructure/repositories/contracts/WeeklyReviewRepository';
 import type { WeightRepository } from '@/infrastructure/repositories/contracts/WeightRepository';
+import type { WorkoutSessionRepository } from '@/infrastructure/repositories/contracts/WorkoutSessionRepository';
+
 import { repositories } from '@/infrastructure/repositories/repositories';
 
 export interface WeeklyReviewServiceDependencies {
@@ -20,7 +31,11 @@ export interface WeeklyReviewServiceDependencies {
   weight: Pick<WeightRepository, 'listBetween'>;
   food: Pick<FoodRepository, 'listEntriesBetween' | 'listJournalStatusesBetween'>;
   steps: Pick<StepsRepository, 'listBetween'>;
-  targets: Pick<TargetRepository, 'listTargetsBetween'>;
+    targets: Pick<TargetRepository, 'listTargetsBetween'>;
+  activities?: Pick<ActivityRepository, 'listBetween'>;
+  workoutSessions?: Pick<WorkoutSessionRepository, 'listAll'>;
+  readEndurancePlanningState?: () => EndurancePlanningState;
+
   weeklyReviews: Pick<
     WeeklyReviewRepository,
     'getByWeekStart' | 'upsert' | 'listAll' | 'listAdjustments' | 'accept' | 'reject'
@@ -32,14 +47,20 @@ const defaultDependencies: WeeklyReviewServiceDependencies = {
   weight: repositories.weight,
   food: repositories.food,
   steps: repositories.steps,
-  targets: repositories.targets,
+    targets: repositories.targets,
+  activities: repositories.activities,
+  workoutSessions: repositories.workoutSessions,
+  readEndurancePlanningState,
+
   weeklyReviews: repositories.weeklyReviews,
 };
 
 export interface WeeklyReviewSnapshot {
   review: WeeklyReview;
   reviews: WeeklyReview[];
-  adjustments: AcceptedCalorieAdjustment[];
+    adjustments: AcceptedCalorieAdjustment[];
+  insights?: WeeklyReviewInsights;
+
 }
 
 export async function loadWeeklyReview(
@@ -48,7 +69,21 @@ export async function loadWeeklyReview(
   dependencies: WeeklyReviewServiceDependencies = defaultDependencies,
 ): Promise<WeeklyReviewSnapshot> {
   const period = resolveWeeklyReviewPeriod(referenceDate);
-  const [existing, settings, currentWeights, previousWeights, foodEntries, dailyTargets, statuses, steps, adjustments] = await Promise.all([
+    const [
+    existing,
+    settings,
+    currentWeights,
+    previousWeights,
+    foodEntries,
+    dailyTargets,
+    statuses,
+    steps,
+    adjustments,
+    activities,
+    workoutSessions,
+    endurancePlanningState,
+  ] = await Promise.all([
+
     dependencies.weeklyReviews.getByWeekStart(period.weekStart),
     dependencies.settings.get(),
     dependencies.weight.listBetween(period.weekStart, period.weekEnd),
@@ -57,13 +92,32 @@ export async function loadWeeklyReview(
     dependencies.targets.listTargetsBetween(period.weekStart, period.weekEnd),
     dependencies.food.listJournalStatusesBetween(period.weekStart, period.weekEnd),
     dependencies.steps.listBetween(period.weekStart, period.weekEnd),
-    dependencies.weeklyReviews.listAdjustments(),
+        dependencies.weeklyReviews.listAdjustments(),
+    dependencies.activities?.listBetween(period.weekStart, period.weekEnd)
+      ?? Promise.resolve([] as Activity[]),
+    dependencies.workoutSessions?.listAll()
+      ?? Promise.resolve([] as WorkoutSession[]),
+    Promise.resolve(
+      dependencies.readEndurancePlanningState?.()
+        ?? emptyEndurancePlanningState(),
+    ),
   ]);
-
+  const endurancePlanning = buildEndurancePlanningWeek(
+    endurancePlanningState,
+    activities,
+    period.weekStart,
+  );
+  const insightsFor = (review: WeeklyReview) => buildWeeklyReviewInsights({
+    review,
+    activities,
+    workoutSessions,
+    endurancePlanning,
+  });
   if (existing?.decisionStatus === 'accepted' || existing?.decisionStatus === 'rejected') {
     const reviews = await dependencies.weeklyReviews.listAll();
-    return { review: existing, reviews, adjustments };
+    return { review: existing, reviews, adjustments, insights: insightsFor(existing) };
   }
+
 
   const effectiveFrom = getAdjustmentEffectiveDate({ weekEnd: period.weekEnd });
   const currentCumulativeAdjustmentKcal = resolveAcceptedCalibrationAdjustment(
@@ -84,7 +138,8 @@ export async function loadWeeklyReview(
   });
   const review = await dependencies.weeklyReviews.upsert(calculated);
   const reviews = await dependencies.weeklyReviews.listAll();
-  return { review, reviews, adjustments };
+    return { review, reviews, adjustments, insights: insightsFor(review) };
+
 }
 
 export async function acceptWeeklyReview(

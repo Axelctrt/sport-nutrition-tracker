@@ -15,6 +15,7 @@ import { formatLocalDate } from '@/shared/utils/dates';
 interface Props {
   summary: WorkoutSessionSummary;
   busy: boolean;
+  highlighted?: boolean;
   onStart: (sessionId: string) => void;
   onReschedule: (sessionId: string, date: LocalDate) => Promise<boolean>;
   onSkip: (sessionId: string) => Promise<boolean>;
@@ -31,6 +32,7 @@ const statusClasses = {
 export function WeeklyPlanningSessionCard({
   summary,
   busy,
+  highlighted = false,
   onStart,
   onReschedule,
   onSkip,
@@ -47,7 +49,15 @@ export function WeeklyPlanningSessionCard({
   };
 
   return (
-    <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+    <article
+    id={`planning-session-${session.id}`}
+    tabIndex={highlighted ? -1 : undefined}
+    className={`rounded-2xl border border-slate-200 bg-white p-4 shadow-sm outline-none transition-shadow dark:border-slate-800 dark:bg-slate-900 ${
+      highlighted
+        ? 'ring-2 ring-brand-500 ring-offset-2 ring-offset-slate-50 dark:ring-brand-300 dark:ring-offset-slate-950'
+        : ''
+    }`}
+  >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="break-words font-semibold text-slate-950 dark:text-white">{getWorkoutSessionTitle(session)}</h3>

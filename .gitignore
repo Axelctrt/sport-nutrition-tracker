@@ -10,6 +10,10 @@ dev-dist/
 .env.*
 !.env.example
 
+# Dexie Cloud CLI environment and credentials
+dexie-cloud.json
+dexie-cloud.key
+
 # Test and coverage output
 coverage/
 
@@ -39,3 +43,7 @@ sportpilot_*/
 sportpilot-*.zip
 phase*_patch/
 .tmp-*/
+
+# Configuration publique Vite de production.
+.env.production
+.env.production.local

@@ -1,24 +1,76 @@
-SPORTPILOT 0.16.0
+SPORTPILOT 0.17.0
 
-1. Vérifier la branche release/0.16.0.
+PRÉPARATION
+
+1. Vérifier que la branche courante est release/0.17.0.
 2. Arrêter le serveur de développement avec Ctrl + C.
-3. Exporter une sauvegarde JSON depuis la version actuellement installée.
-4. Copier le contenu du patch stable à la racine du projet sport-nutrition-tracker.
-5. Accepter le remplacement des fichiers.
-6. Exécuter :
+3. Exporter une sauvegarde JSON récente depuis la version actuellement
+   installée.
+4. Conserver cette sauvegarde hors de l’application.
+5. Vérifier que .env.local, dexie-cloud.json et dexie-cloud.key restent ignorés
+   par Git.
+6. Vérifier la whitelist Dexie Cloud :
+
+   npx dexie-cloud whitelist
+
+7. Les origines minimales attendues sont :
+
+   http://localhost:5173
+   https://sport-nutrition-tracker.axel-cottrant.workers.dev
+
+8. Supprimer toute origine temporaire trycloudflare.com encore présente.
+
+VALIDATION LOCALE
+
+9. Installer les dépendances et lancer les contrôles :
+
    npm ci
    npm run release:verify
    npm run test:e2e
-   npm run dev
-7. Vérifier dans Paramètres que la version affichée est 0.16.0.
-8. Exécuter RELEASE-CHECKLIST.md sur ordinateur et iPhone 15.
-9. Tester la mise à jour depuis 0.15.0, le mode hors connexion et le retour du réseau.
-10. Restaurer uniquement une sauvegarde prévisualisée comme compatible.
-11. Recharger avec Ctrl + F5 ou relancer la PWA si une ancienne version reste en cache.
-12. Après le déploiement Cloudflare, vérifier les en-têtes avec : curl.exe -I https://sport-nutrition-tracker.axel-cottrant.workers.dev
-13. Après validation, fusionner release/0.16.0 dans main, puis créer et pousser le tag annoté v0.16.0.
-14. Réaligner develop sur main après la publication stable.
 
-Schéma Dexie : version 2.
-Sauvegarde JSON : version 2.
-Aucune migration de données n’est réalisée.
+10. Vérifier dans Paramètres que la version affichée est 0.17.0.
+11. Vérifier que « Synchronisation des pesées » est visible.
+12. Vérifier que « Gérer le compte de synchronisation » ouvre la page du
+    compte.
+13. Vérifier que les outils de laboratoire et diagnostics internes sont
+    absents.
+
+DÉPLOIEMENT
+
+14. Fusionner release/0.17.0 dans develop, puis develop dans main avec des
+    commits de fusion explicites.
+15. Créer et pousser le tag annoté v0.17.0.
+16. Le push de main déclenche le déploiement Cloudflare.
+17. Vérifier les en-têtes :
+
+   curl.exe -I https://sport-nutrition-tracker.axel-cottrant.workers.dev
+
+VALIDATION APRÈS DÉPLOIEMENT
+
+18. Vérifier la version 0.17.0 sur ordinateur et iPhone.
+19. Vérifier que le profil, les journaux, les séances et les pesées locales sont
+    conservés.
+20. Réautoriser explicitement le compte de synchronisation si l’application le
+    demande.
+21. Créer, modifier puis supprimer une pesée de test entre deux appareils.
+22. Vérifier le mode hors connexion puis la reprise du réseau.
+23. Réaligner develop sur main après la publication si nécessaire.
+
+VERSIONS DE DONNÉES
+
+Schéma Dexie principal : version 8.
+Sauvegarde JSON : version 7.
+
+Les migrations sont automatiques. Ne jamais supprimer IndexedDB ou les données
+Safari pour forcer une mise à jour.
+
+CONFIGURATION DU BUILD CLOUDFLARE
+
+Aucun fichier .env.production ne doit être suivi ou livré.
+
+Configurer dans l’environnement de build Cloudflare :
+
+VITE_ENABLE_SYNC_PROTOTYPE=true
+VITE_DEXIE_CLOUD_DATABASE_URL=https://zhnyk8met.dexie.cloud
+VITE_ENABLE_REAL_WEIGHT_SYNC=true
+VITE_ENABLE_SYNC_DIAGNOSTICS=false

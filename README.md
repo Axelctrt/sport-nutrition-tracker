@@ -1,6 +1,27 @@
-# SportPilot 0.16.0
+# SportPilot 0.17.0
 
 PWA locale de suivi sportif, nutritionnel, calorique et de progression.
+
+## Version 0.17 — fiabilité des données et synchronisation sécurisée
+
+### 0.17.0 — version stable
+
+SportPilot 0.17.0 renforce la conservation et la maîtrise des données, ajoute
+les sauvegardes et restaurations sélectives, développe les récompenses et
+introduit la synchronisation Dexie Cloud sécurisée des pesées.
+
+Cette version utilise :
+
+- le schéma Dexie principal v8 ;
+- le format de sauvegarde JSON v7 ;
+- une activation de synchronisation explicite sur chaque appareil ;
+- une autorisation liée au compte connecté ;
+- un blocage automatique après tout changement de compte ;
+- une configuration publique de production sans clé privée.
+
+La nutrition, les activités, la musculation, les objectifs et les récompenses
+restent locaux dans cette version.
+
 
 ## Phase 10 — suivi des sports d’endurance
 

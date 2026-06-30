@@ -79,6 +79,8 @@ export function AdvancedSettingsForm({
       ) : null}
 
       <CollapsibleSection
+        sectionId="settings-display-storage"
+        storageKey="sportpilot:settings:display-storage"
         title="Affichage et stockage"
         description="Thème de l’application et protection du stockage local."
         summary="Essentiel"
@@ -114,6 +116,8 @@ export function AdvancedSettingsForm({
       </CollapsibleSection>
 
       <CollapsibleSection
+        sectionId="settings-rest-timer"
+        storageKey="sportpilot:settings:rest-timer"
         title="Minuteur de repos"
         description="Comportement du minuteur pendant les séances de musculation."
         summary="Musculation"
@@ -145,6 +149,8 @@ export function AdvancedSettingsForm({
       </CollapsibleSection>
 
       <CollapsibleSection
+        sectionId="settings-energy"
+        storageKey="sportpilot:settings:energy"
         title="Dépense quotidienne et activités"
         description="Seuils de pas, coefficients et valeurs MET par défaut."
         summary="Calculs"
@@ -363,6 +369,8 @@ export function AdvancedSettingsForm({
       </CollapsibleSection>
 
       <CollapsibleSection
+        sectionId="settings-calibration"
+        storageKey="sportpilot:settings:calibration"
         title="Calibration hebdomadaire"
         description="Limites appliquées aux propositions du bilan hebdomadaire."
         summary="Sécurité"

@@ -1,10 +1,28 @@
 import { z } from 'zod';
+import {
+  DELETION_ENTITY_TYPES,
+  deletionRecordId,
+} from '@/domain/models/deletion';
+import { normalizeRoutineReminderPreferences } from '@/domain/reminders/routineReminder';
 import { DEFAULT_ENDURANCE_TEMPLATES } from '@/domain/defaults/appSettings';
-import { createDefaultDashboardPreferences } from '@/domain/dashboard/dashboardPreferences';
-import { APP_SETTINGS_ID, LOCAL_USER_PROFILE_ID } from '@/domain/defaults/identifiers';
-import type { BackupEnvelope } from '@/domain/models/backup';
+import {
+  createDefaultDashboardPreferences,
+  DASHBOARD_WIDGET_IDS,
+} from "@/domain/dashboard/dashboardPreferences";
+import { APP_SETTINGS_ID, LOCAL_USER_PROFILE_ID, USER_SETTINGS_ID } from '@/domain/defaults/identifiers';
+import {
+  BACKUP_USER_STATE_TABLE_NAMES,
+  type BackupEnvelope,
+} from '@/domain/models/backup';
+import {
+  VISUAL_THEME_PREFERENCE_ID,
+  routineReminderCompletionId,
+  weeklyMissionCompletionId,
+} from '@/infrastructure/user-state/userStateModels';
 import { isValidLocalDate } from '@/shared/validation/localDate';
 
+import { achievementCatalog } from '@/domain/rewards/achievements';
+import { visualThemeCatalog } from '@/domain/rewards/visualThemes';
 const finiteNumber = z.number().finite();
 const nonNegativeNumber = finiteNumber.min(0);
 const positiveNumber = finiteNumber.positive();
@@ -96,13 +114,7 @@ const enduranceTemplateSchema = z.object({
 });
 
 
-const dashboardWidgetIdSchema = z.enum([
-  'activeWorkout',
-  'todaySummary',
-  'quickActions',
-  'activities',
-  'calculationDetails',
-]);
+const dashboardWidgetIdSchema = z.enum(DASHBOARD_WIDGET_IDS);
 
 const dashboardPreferencesSchema = z.object({
   preset: z.enum(['balanced', 'nutrition', 'training', 'minimal', 'custom']),
@@ -132,10 +144,30 @@ const appSettingsSchema = entityMetadataSchema.extend({
     DEFAULT_ENDURANCE_TEMPLATES.map((template) => ({ ...template })),
   ),
   enduranceTemplatesVersion: positiveInteger.default(1),
-  dashboardPreferences: dashboardPreferencesSchema.default(createDefaultDashboardPreferences()),
+  dashboardPreferences: dashboardPreferencesSchema.default(
+    createDefaultDashboardPreferences(),
+  ),
+  routineReminderPreferences: z.unknown().optional().transform((value) =>
+    normalizeRoutineReminderPreferences(value),
+  ),
   lastBackupExportedAt: isoDateTimeSchema.optional(),
   lastBackupAppVersion: z.string().min(1).max(100).optional(),
   lastBackupSchemaVersion: positiveInteger.optional(),
+});
+
+
+const userSettingsSchema = appSettingsSchema.omit({
+  theme: true,
+  requestPersistentStorage: true,
+  backupReminderIntervalDays: true,
+  restTimerAutoStart: true,
+  restTimerSoundEnabled: true,
+  restTimerVibrationEnabled: true,
+  lastBackupExportedAt: true,
+  lastBackupAppVersion: true,
+  lastBackupSchemaVersion: true,
+}).extend({
+  id: z.literal(USER_SETTINGS_ID),
 });
 
 const weightEntrySchema = datedEntitySchema.extend({
@@ -572,9 +604,192 @@ const progressionSuggestionSchema = entityMetadataSchema.extend({
   appliedAt: isoDateTimeSchema.optional(),
 });
 
+const achievementIdSchema = z.string().refine(
+  (value) =>
+    achievementCatalog.some(
+      (achievement) => achievement.id === value,
+    ),
+  'Identifiant de badge inconnu.',
+);
+
+const visualThemeIdSchema = z.string().refine(
+  (value) =>
+    visualThemeCatalog.some((theme) => theme.id === value),
+  'Identifiant de thème inconnu.',
+);
+
+const achievementStateSchema = z.object({
+  earnedAchievements: z.array(
+    z.object({
+      id: achievementIdSchema,
+      earnedAt: isoDateTimeSchema,
+    }),
+  ),
+});
+
+const visualThemeStateSchema = z
+  .object({
+    activeThemeId: visualThemeIdSchema,
+    unlockedThemeIds: z.array(visualThemeIdSchema),
+  })
+  .refine(
+    (state) =>
+      state.unlockedThemeIds.includes(state.activeThemeId),
+    {
+      message: 'Le thème actif doit être débloqué.',
+      path: ['activeThemeId'],
+    },
+  );
+
+const weeklyMissionHistoryStateSchema = z.object({
+  completedWeeks: z.array(
+    z.object({
+      weekStart: localDateSchema,
+      completedAt: isoDateTimeSchema,
+    }),
+  ),
+});
+
+const goalMetricSchema = z.enum([
+  'weightTarget',
+  'totalSteps',
+  'activityMinutes',
+  'runningDistanceKm',
+  'swimmingDistanceKm',
+  'cyclingDistanceKm',
+  'strengthSessions',
+  'weighIns',
+]);
+
+const goalStatusSchema = z.enum([
+  'active',
+  'paused',
+  'completed',
+  'archived',
+]);
+
+const goalMilestoneSchema = z.union([
+  z.literal(25),
+  z.literal(50),
+  z.literal(75),
+  z.literal(100),
+]);
+
+const goalSchema = z.object({
+  id: z.string().min(1),
+  title: z.string().min(1).max(120),
+  metric: goalMetricSchema,
+  targetValue: positiveNumber,
+  startDate: localDateSchema,
+  deadline: localDateSchema.optional(),
+  baselineValue: positiveNumber.optional(),
+  status: goalStatusSchema,
+  reachedMilestones: z.array(goalMilestoneSchema),
+  createdAt: isoDateTimeSchema,
+  updatedAt: isoDateTimeSchema,
+  completedAt: isoDateTimeSchema.optional(),
+});
+
+const goalStateSchema = z.object({
+  version: z.literal(1),
+  goals: z.array(goalSchema),
+});
+
+const plannedEnduranceActivityTypeSchema = z.enum([
+  'running',
+  'swimming',
+  'cycling',
+  'walking',
+  'otherCardio',
+]);
+
+const plannedEnduranceSessionSchema = z.object({
+  id: z.string().min(1),
+  title: z.string().min(1).max(120),
+  activityType: plannedEnduranceActivityTypeSchema,
+  date: localDateSchema,
+  intensity: z.enum(['low', 'moderate', 'high']),
+  targetDurationMinutes: positiveNumber.optional(),
+  targetDistanceKm: positiveNumber.optional(),
+  targetDistanceMeters: positiveNumber.optional(),
+  notes: z.string().max(240).optional(),
+  status: z.enum(['planned', 'skipped']),
+  createdAt: isoDateTimeSchema,
+  updatedAt: isoDateTimeSchema,
+  skippedAt: isoDateTimeSchema.optional(),
+});
+
+const endurancePlanningStateSchema = z.object({
+  version: z.literal(1),
+  sessions: z.array(plannedEnduranceSessionSchema),
+});
+
+const rewardBackupStateSchema = z.object({
+  achievements: achievementStateSchema,
+  visualThemes: visualThemeStateSchema,
+  weeklyMissions: weeklyMissionHistoryStateSchema,
+  goals: goalStateSchema.optional(),
+  endurancePlanning: endurancePlanningStateSchema.optional(),
+});
+
+const earnedAchievementRecordSchema = z.object({
+  id: achievementIdSchema,
+  earnedAt: isoDateTimeSchema,
+  updatedAt: isoDateTimeSchema,
+});
+
+const unlockedVisualThemeRecordSchema = z.object({
+  id: visualThemeIdSchema,
+  unlockedAt: isoDateTimeSchema,
+  updatedAt: isoDateTimeSchema,
+});
+
+const visualThemePreferenceRecordSchema = z.object({
+  id: z.literal(VISUAL_THEME_PREFERENCE_ID),
+  activeThemeId: visualThemeIdSchema,
+  updatedAt: isoDateTimeSchema,
+});
+
+const completedWeeklyMissionRecordSchema = z.object({
+  id: z.string().min(1),
+  weekStart: localDateSchema,
+  completedAt: isoDateTimeSchema,
+  updatedAt: isoDateTimeSchema,
+});
+
+const routineReminderTypeSchema = z.enum([
+  'training',
+  'nutrition',
+  'weighIn',
+  'weeklyPlanning',
+]);
+
+const routineReminderCompletionRecordSchema = z.object({
+  id: z.string().min(1),
+  date: localDateSchema,
+  type: routineReminderTypeSchema,
+  completedAt: isoDateTimeSchema,
+  updatedAt: isoDateTimeSchema,
+});
+
+const deletionEntityTypeSchema = z.enum(DELETION_ENTITY_TYPES);
+
+const deletionRecordSchema = entityMetadataSchema.extend({
+  entityType: deletionEntityTypeSchema,
+  entityId: z.string().min(1),
+  status: z.enum(['deleted', 'restored']),
+  deletedAt: isoDateTimeSchema,
+  restoredAt: isoDateTimeSchema.optional(),
+});
+
+const backupUserStateTableNameSchema = z.enum(
+  BACKUP_USER_STATE_TABLE_NAMES,
+);
+
 const backupDataSchema = z.object({
   userProfile: z.array(userProfileSchema).max(1),
-  appSettings: z.array(appSettingsSchema).length(1),
+  appSettings: z.array(appSettingsSchema).max(1).optional(),
+  userSettings: z.array(userSettingsSchema).max(1).optional(),
   weights: z.array(weightEntrySchema),
   dailySteps: z.array(dailyStepsSchema),
   activities: z.array(activitySchema),
@@ -595,6 +810,25 @@ const backupDataSchema = z.object({
   workoutSessionExercises: z.array(workoutSessionExerciseSchema),
   strengthSets: z.array(strengthSetSchema),
   progressionSuggestions: z.array(progressionSuggestionSchema),
+  goals: z.array(goalSchema).optional(),
+  endurancePlanningSessions: z
+    .array(plannedEnduranceSessionSchema)
+    .optional(),
+  earnedAchievements: z.array(earnedAchievementRecordSchema).optional(),
+  unlockedVisualThemes: z
+    .array(unlockedVisualThemeRecordSchema)
+    .optional(),
+  visualThemePreferences: z
+    .array(visualThemePreferenceRecordSchema)
+    .max(1)
+    .optional(),
+  weeklyMissionCompletions: z
+    .array(completedWeeklyMissionRecordSchema)
+    .optional(),
+  routineReminderCompletions: z
+    .array(routineReminderCompletionRecordSchema)
+    .optional(),
+  deletionRecords: z.array(deletionRecordSchema).optional(),
 });
 
 function addDuplicateIssues<T>(
@@ -624,9 +858,71 @@ export const backupEnvelopeSchema = z.object({
   schemaVersion: z.number().int().positive(),
   exportedAt: isoDateTimeSchema,
   appVersion: z.string().min(1).max(100).optional(),
+  includedUserStateTables: z
+    .array(backupUserStateTableNameSchema)
+    .optional(),
+  rewardState: rewardBackupStateSchema.optional(),
   data: backupDataSchema,
 }).superRefine((envelope, context) => {
   const { data } = envelope;
+  const includedUserStateTables = new Set(
+    envelope.includedUserStateTables ?? [],
+  );
+
+  if (envelope.schemaVersion >= 5) {
+    if (envelope.rewardState !== undefined) {
+      context.addIssue({
+        code: 'custom',
+        path: ['rewardState'],
+        message:
+          'Le bloc rewardState historique ne doit plus être présent en sauvegarde v5.',
+      });
+    }
+
+    if (envelope.includedUserStateTables === undefined) {
+      context.addIssue({
+        code: 'custom',
+        path: ['includedUserStateTables'],
+        message:
+          'La liste des tables d’état utilisateur est requise en sauvegarde v5.',
+      });
+    }
+
+    for (const tableName of BACKUP_USER_STATE_TABLE_NAMES) {
+      if (data[tableName] === undefined) {
+        context.addIssue({
+          code: 'custom',
+          path: ['data', tableName],
+          message:
+            `La table ${tableName} est requise en sauvegarde v5.`,
+        });
+      }
+    }
+  }
+
+  addDuplicateIssues(
+    envelope.includedUserStateTables ?? [],
+    (value) => value,
+    ['includedUserStateTables'],
+    'La liste des tables d’état utilisateur',
+    context,
+  );
+
+  for (const tableName of BACKUP_USER_STATE_TABLE_NAMES) {
+    const records = data[tableName] ?? [];
+
+    if (
+      records.length > 0 &&
+      !includedUserStateTables.has(tableName)
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['data', tableName],
+        message:
+          `La table ${tableName} contient des données mais n’est pas déclarée comme incluse.`,
+      });
+    }
+  }
 
   if (data.userProfile[0] && data.userProfile[0].id !== LOCAL_USER_PROFILE_ID) {
     context.addIssue({
@@ -636,17 +932,41 @@ export const backupEnvelopeSchema = z.object({
     });
   }
 
-  if (data.appSettings[0]?.id !== APP_SETTINGS_ID) {
+  if (envelope.schemaVersion >= 6) {
+    if (data.userSettings?.length !== 1) {
+      context.addIssue({
+        code: 'custom',
+        path: ['data', 'userSettings'],
+        message: 'Les paramètres utilisateur sont requis en sauvegarde v6.',
+      });
+    }
+    if (data.appSettings !== undefined) {
+      context.addIssue({
+        code: 'custom',
+        path: ['data', 'appSettings'],
+        message: 'Les paramètres appareil ne doivent pas être exportés en sauvegarde v6.',
+      });
+    }
+  } else if (data.appSettings?.length !== 1) {
+    context.addIssue({
+      code: 'custom',
+      path: ['data', 'appSettings'],
+      message: 'Les paramètres historiques sont requis avant la version 6.',
+    });
+  }
+
+  if (data.appSettings?.[0]?.id !== undefined && data.appSettings[0].id !== APP_SETTINGS_ID) {
     context.addIssue({
       code: 'custom',
       path: ['data', 'appSettings', 0, 'id'],
-      message: 'L’identifiant des paramètres est invalide.',
+      message: 'L’identifiant des paramètres historiques est invalide.',
     });
   }
 
   const collections: [string, { id: string }[]][] = [
     ['userProfile', data.userProfile],
-    ['appSettings', data.appSettings],
+    ['appSettings', data.appSettings ?? []],
+    ['userSettings', data.userSettings ?? []],
     ['weights', data.weights],
     ['dailySteps', data.dailySteps],
     ['activities', data.activities],
@@ -667,6 +987,26 @@ export const backupEnvelopeSchema = z.object({
     ['workoutSessionExercises', data.workoutSessionExercises],
     ['strengthSets', data.strengthSets],
     ['progressionSuggestions', data.progressionSuggestions],
+    ['goals', data.goals ?? []],
+    [
+      'endurancePlanningSessions',
+      data.endurancePlanningSessions ?? [],
+    ],
+    ['earnedAchievements', data.earnedAchievements ?? []],
+    ['unlockedVisualThemes', data.unlockedVisualThemes ?? []],
+    [
+      'visualThemePreferences',
+      data.visualThemePreferences ?? [],
+    ],
+    [
+      'weeklyMissionCompletions',
+      data.weeklyMissionCompletions ?? [],
+    ],
+    [
+      'routineReminderCompletions',
+      data.routineReminderCompletions ?? [],
+    ],
+    ['deletionRecords', data.deletionRecords ?? []],
   ];
 
   for (const [name, values] of collections) {
@@ -685,6 +1025,117 @@ export const backupEnvelopeSchema = z.object({
   );
   addDuplicateIssues(data.weeklyReviews, (value) => value.weekStart, ['data', 'weeklyReviews'], 'Les bilans', context);
   addDuplicateIssues(data.meals, (value) => `${value.date}|${value.slot}`, ['data', 'meals'], 'Les repas', context);
+  addDuplicateIssues(
+    data.weeklyMissionCompletions ?? [],
+    (value) => value.weekStart,
+    ['data', 'weeklyMissionCompletions'],
+    'Les missions hebdomadaires',
+    context,
+  );
+  addDuplicateIssues(
+    data.routineReminderCompletions ?? [],
+    (value) => `${value.date}|${value.type}`,
+    ['data', 'routineReminderCompletions'],
+    'Les complétions de rappels',
+    context,
+  );
+
+  (data.weeklyMissionCompletions ?? []).forEach(
+    (completion, index) => {
+      if (
+        completion.id !==
+        weeklyMissionCompletionId(completion.weekStart)
+      ) {
+        context.addIssue({
+          code: 'custom',
+          path: [
+            'data',
+            'weeklyMissionCompletions',
+            index,
+            'id',
+          ],
+          message:
+            'L’identifiant de mission hebdomadaire est invalide.',
+        });
+      }
+    },
+  );
+
+  (data.routineReminderCompletions ?? []).forEach(
+    (completion, index) => {
+      if (
+        completion.id !==
+        routineReminderCompletionId(
+          completion.date,
+          completion.type,
+        )
+      ) {
+        context.addIssue({
+          code: 'custom',
+          path: [
+            'data',
+            'routineReminderCompletions',
+            index,
+            'id',
+          ],
+          message:
+            'L’identifiant de complétion de rappel est invalide.',
+        });
+      }
+    },
+  );
+
+  (data.deletionRecords ?? []).forEach((record, index) => {
+    if (
+      record.id !==
+      deletionRecordId(record.entityType, record.entityId)
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['data', 'deletionRecords', index, 'id'],
+        message: 'L’identifiant du marqueur de suppression est invalide.',
+      });
+    }
+
+    if (record.status === 'restored' && !record.restoredAt) {
+      context.addIssue({
+        code: 'custom',
+        path: ['data', 'deletionRecords', index, 'restoredAt'],
+        message:
+          'Un marqueur restauré doit contenir sa date de restauration.',
+      });
+    }
+
+    if (record.status === 'deleted' && record.restoredAt) {
+      context.addIssue({
+        code: 'custom',
+        path: ['data', 'deletionRecords', index, 'restoredAt'],
+        message:
+          'Un marqueur supprimé ne doit pas contenir de date de restauration.',
+      });
+    }
+  });
+
+  const unlockedThemeIds = new Set(
+    (data.unlockedVisualThemes ?? []).map(({ id }) => id),
+  );
+  (data.visualThemePreferences ?? []).forEach(
+    (preference, index) => {
+      if (!unlockedThemeIds.has(preference.activeThemeId)) {
+        context.addIssue({
+          code: 'custom',
+          path: [
+            'data',
+            'visualThemePreferences',
+            index,
+            'activeThemeId',
+          ],
+          message:
+            'Le thème actif doit être présent parmi les thèmes débloqués.',
+        });
+      }
+    },
+  );
   addDuplicateIssues(
     data.recipeIngredients,
     (value) => `${value.recipeId}|${value.sortOrder}`,

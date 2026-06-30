@@ -36,7 +36,7 @@ const requiredCspDirectives = [
   "object-src 'none'",
   "frame-ancestors 'none'",
   "script-src 'self'",
-  "connect-src 'self' https://search.openfoodfacts.org https://world.openfoodfacts.org",
+  "connect-src 'self' https://search.openfoodfacts.org https://world.openfoodfacts.org https://*.dexie.cloud wss://*.dexie.cloud",
   "worker-src 'self' blob:",
   "manifest-src 'self'",
 ];

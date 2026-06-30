@@ -34,6 +34,7 @@ import { activityTypeLabels } from '@/features/activities/utils/activityLabels';
 import { AnalyticsOverview } from '@/features/analytics/components/AnalyticsOverview';
 import { AnalyticsSection } from '@/features/analytics/components/AnalyticsSection';
 import { AnalyticsWeekList } from '@/features/analytics/components/AnalyticsWeekList';
+import { ProgressInsightsPanel } from '@/features/analytics/components/ProgressInsightsPanel';
 import { useTwelveWeekAnalytics } from '@/features/analytics/hooks/useTwelveWeekAnalytics';
 import { inputClassName } from '@/shared/forms/formStyles';
 import { Card } from '@/shared/ui/Card';
@@ -249,6 +250,9 @@ export function AnalyticsPage() {
             <CalendarRange aria-hidden="true" className="size-4 shrink-0" />
             Du {formatLocalDate(data.from)} au {formatLocalDate(data.to)}. Les semaines sans donnée restent visibles.
           </p>
+
+          <ProgressInsightsPanel referenceDate={referenceDate} />
+
 
           <div className="mt-4 space-y-3">
             <AnalyticsSection

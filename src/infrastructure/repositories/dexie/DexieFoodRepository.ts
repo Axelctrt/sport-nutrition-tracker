@@ -13,10 +13,20 @@ import type {
   Meal,
   MealSlot,
 } from '@/domain/models/food';
+import {
+  dailyJournalStatusIdForDate,
+  mealIdForDateAndSlot,
+} from '@/domain/sync/deterministicEntityIds';
 import type { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import type { FoodRepository } from '@/infrastructure/repositories/contracts/FoodRepository';
 import { runRepositoryOperation } from '@/infrastructure/repositories/dexie/repositoryOperation';
-import { createEntity, updateEntity } from '@/shared/utils/entities';
+import { updateStoredEntity } from '@/infrastructure/repositories/dexie/updateStoredEntity';
+import {
+  moveFavoriteMealToTrash,
+  moveFoodEntryToTrash,
+  moveMealToTrash,
+} from '@/infrastructure/repositories/dexie/trashService';
+import { createEntity } from '@/shared/utils/entities';
 import { normalizeOpenFoodFactsBarcode } from '@/infrastructure/open-food-facts/barcode';
 
 export class DexieFoodRepository implements FoodRepository {
@@ -146,9 +156,11 @@ export class DexieFoodRepository implements FoodRepository {
           throw new RepositoryError('Aliment introuvable.', 'update');
         }
 
-        const updated = updateEntity(current, changes);
-        await this.database.foodProducts.put(updated);
-        return updated;
+        return updateStoredEntity(
+          this.database.foodProducts,
+          current,
+          changes,
+        );
       },
     );
   }
@@ -177,9 +189,11 @@ export class DexieFoodRepository implements FoodRepository {
 
         if (current) {
           if (title !== undefined && title !== current.title) {
-            const updated = updateEntity(current, { title });
-            await this.database.meals.put(updated);
-            return updated;
+            return updateStoredEntity(
+              this.database.meals,
+              current,
+              { title },
+            );
           }
 
           return current;
@@ -188,7 +202,7 @@ export class DexieFoodRepository implements FoodRepository {
         const mealData: NewEntity<Meal> = title === undefined
           ? { date, slot }
           : { date, slot, title };
-        const meal = createEntity<Meal>(mealData);
+        const meal = createEntity<Meal>(mealData, mealIdForDateAndSlot(date, slot));
         await this.database.meals.add(meal);
         return meal;
       },
@@ -207,18 +221,11 @@ export class DexieFoodRepository implements FoodRepository {
     return runRepositoryOperation(
       'delete',
       'Impossible de supprimer ce repas.',
-      () => this.database.transaction(
-        'rw',
-        this.database.meals,
-        this.database.foodEntries,
-        async () => {
-          await this.database.foodEntries.where('mealId').equals(id).delete();
-          await this.database.meals.delete(id);
-        },
-      ),
+      async () => {
+        await moveMealToTrash(this.database, id);
+      },
     );
   }
-
   getEntryById(id: EntityId): Promise<FoodEntry | undefined> {
     return runRepositoryOperation(
       'read',
@@ -250,9 +257,11 @@ export class DexieFoodRepository implements FoodRepository {
           throw new RepositoryError('Entrée alimentaire introuvable.', 'update');
         }
 
-        const updated = updateEntity(current, changes);
-        await this.database.foodEntries.put(updated);
-        return updated;
+        return updateStoredEntity(
+          this.database.foodEntries,
+          current,
+          changes,
+        );
       },
     );
   }
@@ -285,10 +294,11 @@ export class DexieFoodRepository implements FoodRepository {
     return runRepositoryOperation(
       'delete',
       'Impossible de supprimer cette entrée alimentaire.',
-      () => this.database.foodEntries.delete(id),
+      async () => {
+        await moveFoodEntryToTrash(this.database, id);
+      },
     );
   }
-
   getJournalStatus(date: LocalDate): Promise<DailyJournalStatus | undefined> {
     return runRepositoryOperation(
       'read',
@@ -316,10 +326,19 @@ export class DexieFoodRepository implements FoodRepository {
           .where('date')
           .equals(data.date)
           .first();
-        const status = current
-          ? updateEntity(current, data)
-          : createEntity<DailyJournalStatus>(data);
-        await this.database.dailyJournalStatuses.put(status);
+        if (current) {
+          return updateStoredEntity(
+            this.database.dailyJournalStatuses,
+            current,
+            data,
+          );
+        }
+
+        const status = createEntity<DailyJournalStatus>(
+          data,
+          dailyJournalStatusIdForDate(data.date),
+        );
+        await this.database.dailyJournalStatuses.add(status);
         return status;
       },
     );
@@ -357,7 +376,9 @@ export class DexieFoodRepository implements FoodRepository {
     return runRepositoryOperation(
       'delete',
       'Impossible de supprimer ce repas favori.',
-      () => this.database.favoriteMeals.delete(id),
+      async () => {
+        await moveFavoriteMealToTrash(this.database, id);
+      },
     );
   }
 }

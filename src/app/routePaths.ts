@@ -1,9 +1,12 @@
 export const routePaths = {
   dashboard: '/',
+  search: '/search',
   onboarding: '/onboarding',
   profile: '/profile',
   settings: '/settings',
+  reminders: '/settings/reminders',
   dashboardCustomization: '/settings/dashboard',
+  syncPrototype: '/settings/sync-prototype',
   food: '/food',
   addFood: '/food/add',
   foodSelector: '/food/select',
@@ -39,8 +42,12 @@ export const routePaths = {
   weight: '/weight',
   history: '/history',
   analytics: '/analytics',
+  reports: '/reports',
+  goals: '/goals',
   weeklyReview: '/weekly-review',
+  rewards: '/rewards',
   backup: '/backup',
+  trash: '/backup/trash',
   calculationsInformation: '/information/calculations',
   privacy: '/privacy',
   offline: '/offline',
@@ -130,4 +137,16 @@ export function addRecipeToJournalPath(
 
 export function barcodeScannerPath(date: string, slot: string): string {
   return `${routePaths.barcodeScanner}?date=${encodeURIComponent(date)}&slot=${encodeURIComponent(slot)}`;
+}
+
+export function weeklyPlanningSessionPath(
+  date: string,
+  sessionId: string,
+): string {
+  const params = new URLSearchParams({
+    date,
+    session: sessionId,
+  });
+
+  return `${routePaths.weeklyPlanning}?${params.toString()}`;
 }

@@ -4,9 +4,10 @@ import {
   Download,
   FileCheck2,
   FileJson,
-  FileSpreadsheet,
   HardDrive,
   LoaderCircle,
+  Share2,
+
   ShieldCheck,
   Trash2,
   Wrench,
@@ -23,19 +24,22 @@ import {
   updateBackupReminderInterval,
   type PreparedBackupImport,
 } from '@/application/backup/backupApplicationService';
+import { createAndDownloadSafetyBackup } from '@/application/backup/safetyBackupService';
 import { getBackupReminderStatus } from '@/domain/backup/backupReminder';
 import type { AppSettings, BackupReminderIntervalDays } from '@/domain/models/settings';
 import { useProfile } from '@/app/providers/profile/useProfile';
-import { useTheme } from '@/app/providers/useTheme';
 import { routePaths } from '@/app/routePaths';
 import { BackupDeleteDialog } from '@/features/backup/components/BackupDeleteDialog';
 import { BackupOverview } from '@/features/backup/components/BackupOverview';
+import { AdvancedCsvExportPanel } from '@/features/backup/components/AdvancedCsvExportPanel';
+import { SelectiveBackupRestorePanel } from '@/features/backup/components/SelectiveBackupRestorePanel';
+import { StoragePersistenceCard } from '@/features/backup/components/StoragePersistenceCard';
+import { shareBackupFile } from '@/features/backup/shareBackupFile';
 import {
   clearAllUserData,
   MAX_BACKUP_FILE_SIZE_BYTES,
   type BackupSummary,
 } from '@/infrastructure/backup/backupService';
-import { createCsvExports, type CsvExportFile } from '@/infrastructure/backup/csvExportService';
 import {
   createDiagnosticFileName,
   createTechnicalDiagnostic,
@@ -133,20 +137,18 @@ function ImportSummary({ summary }: { summary: BackupSummary }) {
 export function BackupPage() {
   const navigate = useNavigate();
   const { refreshProfile } = useProfile();
-  const { setTheme } = useTheme();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [feedback, setFeedback] = useState<Feedback>();
   const [pendingImport, setPendingImport] = useState<PreparedBackupImport>();
   const [selectedFileName, setSelectedFileName] = useState<string>();
   const [isExporting, setIsExporting] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [storageEstimate, setStorageEstimate] = useState<StorageEstimate>();
   const [settings, setSettings] = useState<AppSettings>();
-  const [csvExports, setCsvExports] = useState<CsvExportFile[]>();
-  const [isPreparingCsv, setIsPreparingCsv] = useState(false);
   const [isExportingDiagnostic, setIsExportingDiagnostic] = useState(false);
   const [isUpdatingReminder, setIsUpdatingReminder] = useState(false);
 
@@ -203,6 +205,62 @@ export function BackupPage() {
   };
 
 
+  const handleShare = async () => {
+    setFeedback(undefined);
+    setIsSharing(true);
+
+    try {
+      const prepared = await prepareBackupExport();
+      const result = await shareBackupFile(
+        prepared.content,
+        prepared.fileName,
+      );
+
+      if (result === 'cancelled') {
+        setFeedback({
+          tone: 'info',
+          title: 'Partage annulé',
+          message:
+            'Aucun fichier n’a été envoyé et la date de sauvegarde reste inchangée.',
+        });
+        return;
+      }
+
+      if (result === 'unsupported') {
+        downloadFile(
+          prepared.content,
+          prepared.fileName,
+          'application/json',
+        );
+      }
+
+      const updatedSettings =
+        await recordSuccessfulBackupExport(prepared);
+      setSettings(updatedSettings);
+      setFeedback({
+        tone: 'success',
+        title:
+          result === 'shared'
+            ? 'Sauvegarde prête à être partagée'
+            : 'Sauvegarde téléchargée',
+        message:
+          result === 'shared'
+            ? `${prepared.summary.totalRecords} enregistrement(s) ont été placés dans la feuille de partage de l’appareil.`
+            : `Le partage natif n’est pas disponible ici. ${prepared.fileName} a été téléchargé à la place.`,
+      });
+    } catch (error) {
+      setFeedback({
+        tone: 'error',
+        title: 'Partage impossible',
+        message:
+          error instanceof Error
+            ? error.message
+            : 'La sauvegarde n’a pas pu être partagée.',
+      });
+    } finally {
+      setIsSharing(false);
+    }
+  };
   const handleReminderChange = async (event: ChangeEvent<HTMLSelectElement>) => {
     const intervalDays = Number(event.target.value) as BackupReminderIntervalDays;
     setIsUpdatingReminder(true);
@@ -225,28 +283,6 @@ export function BackupPage() {
       });
     } finally {
       setIsUpdatingReminder(false);
-    }
-  };
-
-  const handlePrepareCsv = async () => {
-    setIsPreparingCsv(true);
-    setFeedback(undefined);
-    try {
-      const exports = await createCsvExports();
-      setCsvExports(exports);
-      setFeedback({
-        tone: 'success',
-        title: 'Exports CSV prêts',
-        message: `${exports.length} fichier(s) peuvent maintenant être téléchargés séparément.`,
-      });
-    } catch (error) {
-      setFeedback({
-        tone: 'error',
-        title: 'Export CSV impossible',
-        message: error instanceof Error ? error.message : 'Les fichiers CSV n’ont pas pu être préparés.',
-      });
-    } finally {
-      setIsPreparingCsv(false);
     }
   };
 
@@ -315,9 +351,8 @@ export function BackupPage() {
     setIsImporting(true);
     setFeedback(undefined);
     try {
+      await createAndDownloadSafetyBackup('before-import');
       await applyPreparedBackupImport(pendingImport);
-      const importedSettings = pendingImport.envelope.data.appSettings[0];
-      if (importedSettings) setTheme(importedSettings.theme);
       await refreshProfile();
       setFeedback({
         tone: 'success',
@@ -343,8 +378,8 @@ export function BackupPage() {
     setIsDeleting(true);
     setFeedback(undefined);
     try {
+      await createAndDownloadSafetyBackup('before-full-reset');
       await clearAllUserData();
-      setTheme('system');
       await refreshProfile();
       setDeleteDialogOpen(false);
       navigate(routePaths.onboarding, { replace: true });
@@ -385,8 +420,14 @@ export function BackupPage() {
       />
 
 
-      <Card className="mt-4 p-5 sm:p-6" aria-labelledby="backup-reminder-title">
-        <div className="flex items-start gap-3">
+      <CollapsibleSection
+        sectionId="backup-reminders"
+        storageKey="sportpilot:backup:reminders"
+        title="Suivi et rappels"
+        description="Dernière sauvegarde, fréquence des rappels et état de protection."
+        className="scroll-mt-24"
+      >
+              <div className="flex items-start gap-3">
           <Bell aria-hidden="true" className="mt-0.5 size-6 shrink-0 text-brand-700 dark:text-brand-300" />
           <div className="min-w-0 flex-1">
             <h2 id="backup-reminder-title" className="text-lg font-bold text-slate-950 dark:text-white">
@@ -405,7 +446,7 @@ export function BackupPage() {
 
         {reminderStatus?.due ? (
           <InlineNotice className="mt-4" tone="info" title="Une sauvegarde est recommandée">
-            Le délai de {reminderStatus.intervalDays} jours est atteint. Le rappel reste limité à cette page.
+            Le délai de {reminderStatus.intervalDays} jours est atteint. Un rappel discret peut aussi apparaître dans les autres écrans.
           </InlineNotice>
         ) : null}
 
@@ -424,7 +465,17 @@ export function BackupPage() {
             <option value="30">Tous les 30 jours</option>
           </select>
         </label>
-      </Card>
+            </CollapsibleSection>
+
+      <CollapsibleSection
+        sectionId="backup-storage"
+        storageKey="sportpilot:backup:storage"
+        title="Stockage local et persistance"
+        description="Vérifier l’espace utilisé et la protection du stockage navigateur."
+        className="scroll-mt-24"
+      >
+              <StoragePersistenceCard />
+            </CollapsibleSection>
 
       {feedback ? (
         <InlineNotice
@@ -439,8 +490,14 @@ export function BackupPage() {
       ) : null}
 
       <div className="mt-6 grid gap-4 lg:grid-cols-2">
-        <Card className="p-5 sm:p-6">
-          <div className="flex items-start gap-3">
+        <CollapsibleSection
+          sectionId="backup-export"
+          storageKey="sportpilot:backup:export"
+          title="Sauvegarde complète"
+          description="Télécharger ou partager une copie JSON complète des données."
+          className="scroll-mt-24"
+        >
+                  <div className="flex items-start gap-3">
             <Download aria-hidden="true" className="mt-0.5 size-6 shrink-0 text-brand-700 dark:text-brand-300" />
             <div className="min-w-0">
               <h2 className="text-lg font-bold text-slate-950 dark:text-white">Exporter les données</h2>
@@ -449,14 +506,46 @@ export function BackupPage() {
               </p>
             </div>
           </div>
-          <Button className="mt-5 w-full" onClick={handleExport} disabled={isExporting}>
-            {isExporting ? <LoaderCircle aria-hidden="true" className="size-4 animate-spin" /> : <DatabaseBackup aria-hidden="true" className="size-4" />}
-            {isExporting ? 'Création…' : 'Télécharger la sauvegarde JSON'}
+                <div className="mt-5 grid gap-2 sm:grid-cols-2">
+          <Button
+            variant="secondary"
+            onClick={handleExport}
+            disabled={isExporting || isSharing}
+          >
+            {isExporting ? (
+              <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
+            ) : (
+              <DatabaseBackup aria-hidden="true" className="size-4" />
+            )}
+            {isExporting ? 'Création…' : 'Télécharger le JSON'}
           </Button>
-        </Card>
+          <Button
+            onClick={() => void handleShare()}
+            disabled={isExporting || isSharing}
+          >
+            {isSharing ? (
+              <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
+            ) : (
+              <Share2 aria-hidden="true" className="size-4" />
+            )}
+            {isSharing ? 'Préparation…' : 'Partager la sauvegarde'}
+          </Button>
+        </div>
+        <p className="mt-3 text-xs leading-5 text-slate-500 dark:text-slate-400">
+          Sur un appareil compatible, ouvre Fichiers, iCloud Drive,
+          AirDrop ou une autre application. Sinon, le fichier est
+          téléchargé automatiquement.
+        </p>
+                </CollapsibleSection>
 
-        <Card className="p-5 sm:p-6">
-          <div className="flex items-start gap-3">
+        <CollapsibleSection
+          sectionId="backup-import"
+          storageKey="sportpilot:backup:import"
+          title="Restauration complète"
+          description="Contrôler puis remplacer toutes les données de cet appareil."
+          className="scroll-mt-24"
+        >
+                  <div className="flex items-start gap-3">
             <Upload aria-hidden="true" className="mt-0.5 size-6 shrink-0 text-brand-700 dark:text-brand-300" />
             <div className="min-w-0">
               <h2 className="text-lg font-bold text-slate-950 dark:text-white">Restaurer une sauvegarde</h2>
@@ -478,44 +567,38 @@ export function BackupPage() {
           <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
             Taille maximale : {formatFileSize(MAX_BACKUP_FILE_SIZE_BYTES)}.
           </p>
-        </Card>
+                </CollapsibleSection>
       </div>
 
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        <Card className="p-5 sm:p-6">
-          <div className="flex items-start gap-3">
-            <FileSpreadsheet aria-hidden="true" className="mt-0.5 size-6 shrink-0 text-brand-700 dark:text-brand-300" />
-            <div className="min-w-0">
-              <h2 className="text-lg font-bold text-slate-950 dark:text-white">Exports CSV</h2>
-              <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                Prépare des fichiers lisibles dans Excel ou un outil d’analyse. Le JSON reste nécessaire pour restaurer SportPilot.
-              </p>
-            </div>
-          </div>
-          <Button className="mt-5 w-full" variant="secondary" onClick={() => void handlePrepareCsv()} disabled={isPreparingCsv}>
-            {isPreparingCsv ? <LoaderCircle aria-hidden="true" className="size-4 animate-spin" /> : <FileSpreadsheet aria-hidden="true" className="size-4" />}
-            {isPreparingCsv ? 'Préparation…' : 'Préparer les fichiers CSV'}
-          </Button>
-          {csvExports ? (
-            <div className="mt-4 grid gap-2">
-              {csvExports.map((item) => (
-                <Button
-                  key={item.key}
-                  variant="ghost"
-                  className="w-full justify-between border border-slate-200 dark:border-slate-800"
-                  onClick={() => downloadFile(item.content, item.fileName, 'text/csv')}
+                <CollapsibleSection
+                  sectionId="backup-csv"
+                  storageKey="sportpilot:backup:csv"
+                  title="Exports CSV avancés"
+                  description="Choisir une période et les jeux de données à exporter."
+                  className="scroll-mt-24"
                 >
-                  <span>{item.label}</span>
-                  <span className="text-xs font-normal text-slate-500 dark:text-slate-400">{item.rowCount} ligne(s)</span>
-                </Button>
-              ))}
-            </div>
-          ) : null}
-        </Card>
+                                  <AdvancedCsvExportPanel />
+                                </CollapsibleSection>
+                <CollapsibleSection
+                  sectionId="backup-selective-restore"
+                  storageKey="sportpilot:backup:selective-restore"
+                  title="Restauration sélective"
+                  description="Comparer une sauvegarde et restaurer seulement certains domaines."
+                  className="scroll-mt-24"
+                >
+                                  <SelectiveBackupRestorePanel />
+                                </CollapsibleSection>
 
-        <Card className="p-5 sm:p-6">
-          <div className="flex items-start gap-3">
+        <CollapsibleSection
+          sectionId="backup-diagnostic"
+          storageKey="sportpilot:backup:diagnostic"
+          title="Diagnostic technique"
+          description="Exporter uniquement l’état technique et les compteurs locaux."
+          className="scroll-mt-24"
+        >
+                  <div className="flex items-start gap-3">
             <Wrench aria-hidden="true" className="mt-0.5 size-6 shrink-0 text-brand-700 dark:text-brand-300" />
             <div className="min-w-0">
               <h2 className="text-lg font-bold text-slate-950 dark:text-white">Diagnostic technique</h2>
@@ -528,7 +611,7 @@ export function BackupPage() {
             {isExportingDiagnostic ? <LoaderCircle aria-hidden="true" className="size-4 animate-spin" /> : <FileJson aria-hidden="true" className="size-4" />}
             {isExportingDiagnostic ? 'Création…' : 'Télécharger le diagnostic'}
           </Button>
-        </Card>
+                </CollapsibleSection>
       </div>
 
       {pendingImport ? (
@@ -626,7 +709,7 @@ export function BackupPage() {
           className="border-red-200 dark:border-red-900"
         >
           <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">
-            Exporte d’abord une sauvegarde si tu souhaites pouvoir restaurer tes informations plus tard.
+            Une sauvegarde JSON de sécurité sera téléchargée automatiquement avant l’effacement.
           </p>
           <Button className="mt-4 w-full sm:w-auto" variant="danger" onClick={() => setDeleteDialogOpen(true)}>
             <Trash2 aria-hidden="true" className="size-4" />
@@ -638,7 +721,7 @@ export function BackupPage() {
       <ConfirmationDialog
         open={importDialogOpen}
         title="Remplacer toutes les données ?"
-        description="La restauration remplacera le profil, l’historique et les réglages actuellement présents. La transaction sera annulée automatiquement en cas d’échec technique."
+        description="Une sauvegarde JSON de sécurité sera d’abord téléchargée. La restauration remplacera ensuite le profil, l’historique et les réglages actuellement présents. La transaction sera annulée automatiquement en cas d’échec technique."
         confirmLabel="Importer et remplacer"
         tone="danger"
         isPending={isImporting}
@@ -655,3 +738,5 @@ export function BackupPage() {
     </section>
   );
 }
+
+

@@ -33,7 +33,8 @@ export function WeeklyReviewSummary({ review }: WeeklyReviewSummaryProps) {
       icon: Apple,
     },
     {
-      label: 'Score',
+            label: 'Score de suivi',
+
       value: `${review.adherenceScore}/100`,
       detail: `${review.stepGoalDays}/7 objectifs de pas`,
       icon: review.adherenceScore >= 75 ? ShieldCheck : Footprints,

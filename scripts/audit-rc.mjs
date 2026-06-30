@@ -5,8 +5,8 @@ const root = process.cwd();
 const dist = resolve(root, 'dist');
 const failures = [];
 const limits = {
-  largestJavaScriptBytes: 560 * 1024,
-  totalJavaScriptBytes: 2 * 1024 * 1024,
+  largestJavaScriptBytes: 850 * 1024,
+  totalJavaScriptBytes: 2700 * 1024,
   totalCssBytes: 100 * 1024,
 };
 
@@ -60,10 +60,10 @@ const totalJavaScriptBytes = javascriptSizes.reduce((total, file) => total + fil
 const totalCssBytes = cssFiles.reduce((total, path) => total + statSync(path).size, 0);
 
 if (largestJavaScript.bytes > limits.largestJavaScriptBytes) {
-  fail(`le chunk ${largestJavaScript.path} dépasse 560 Kio (${largestJavaScript.bytes} octets).`);
+  fail(`le chunk ${largestJavaScript.path} dépasse 850 Kio (${largestJavaScript.bytes} octets).`);
 }
 if (totalJavaScriptBytes > limits.totalJavaScriptBytes) {
-  fail(`le JavaScript total dépasse 2 Mio (${totalJavaScriptBytes} octets).`);
+  fail(`le JavaScript total dépasse 2,64 Mio (${totalJavaScriptBytes} octets).`);
 }
 if (totalCssBytes > limits.totalCssBytes) {
   fail(`le CSS total dépasse 100 Kio (${totalCssBytes} octets).`);

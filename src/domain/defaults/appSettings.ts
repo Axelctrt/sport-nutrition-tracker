@@ -1,13 +1,25 @@
-import { APP_SETTINGS_ID } from '@/domain/defaults/identifiers';
+import {
+  APP_SETTINGS_ID,
+  DEVICE_SETTINGS_ID,
+  USER_SETTINGS_ID,
+} from '@/domain/defaults/identifiers';
+import {
+  createDefaultRoutineReminderPreferences,
+  normalizeRoutineReminderPreferences,
+} from '@/domain/reminders/routineReminder';
 import {
   createDefaultDashboardPreferences,
   normalizeDashboardPreferences,
 } from '@/domain/dashboard/dashboardPreferences';
 import type { EnduranceTemplate } from '@/domain/models/activity';
-import type { AppSettings } from '@/domain/models/settings';
+import type {
+  AppSettings,
+  DeviceSettings,
+  UserSettings,
+} from '@/domain/models/settings';
 import { createEntity } from '@/shared/utils/entities';
 
-export const DEFAULT_SWIMMING_MET_VALUES: AppSettings['swimmingMetValues'] = {
+export const DEFAULT_SWIMMING_MET_VALUES: UserSettings['swimmingMetValues'] = {
   recovery: 4.8,
   technique: 5.8,
   endurance: 6,
@@ -15,7 +27,6 @@ export const DEFAULT_SWIMMING_MET_VALUES: AppSettings['swimmingMetValues'] = {
   intervals: 9.8,
   competition: 10,
 };
-
 
 export const DEFAULT_ENDURANCE_TEMPLATES: EnduranceTemplate[] = [
   {
@@ -65,10 +76,9 @@ export const DEFAULT_ENDURANCE_TEMPLATES: EnduranceTemplate[] = [
   },
 ];
 
-export function createDefaultAppSettings(): AppSettings {
+export function createDefaultUserSettings(): UserSettings {
   return createEntity(
     {
-      theme: 'system',
       includedBaseSteps: 3_000,
       walkingKcalPerKgPerKm: 0.5,
       runningKcalPerKgPerKm: 1,
@@ -80,28 +90,184 @@ export function createDefaultAppSettings(): AppSettings {
       swimmingMetValues: { ...DEFAULT_SWIMMING_MET_VALUES },
       maximumWeeklyAdjustmentKcal: 100,
       maximumCumulativeAdjustmentKcal: 600,
+      enduranceTemplates: DEFAULT_ENDURANCE_TEMPLATES.map((template) => ({
+        ...template,
+      })),
+      enduranceTemplatesVersion: 1,
+      dashboardPreferences: createDefaultDashboardPreferences(),
+      routineReminderPreferences: createDefaultRoutineReminderPreferences(),
+    },
+    USER_SETTINGS_ID,
+  );
+}
+
+export function createDefaultDeviceSettings(
+  deviceId: string = crypto.randomUUID(),
+): DeviceSettings {
+  return createEntity(
+    {
+      deviceId,
+      theme: 'system',
       requestPersistentStorage: true,
       backupReminderIntervalDays: 0,
       restTimerAutoStart: true,
       restTimerSoundEnabled: false,
       restTimerVibrationEnabled: true,
-      enduranceTemplates: DEFAULT_ENDURANCE_TEMPLATES.map((template) => ({ ...template })),
-      enduranceTemplatesVersion: 1,
-      dashboardPreferences: createDefaultDashboardPreferences(),
+      automaticWeightSyncEnabled: false,
     },
-    APP_SETTINGS_ID,
+    DEVICE_SETTINGS_ID,
+  );
+}
+
+export function normalizeUserSettings(
+  settings: UserSettings,
+): UserSettings {
+  return {
+    ...settings,
+    enduranceTemplates:
+      settings.enduranceTemplates ??
+      DEFAULT_ENDURANCE_TEMPLATES.map((template) => ({ ...template })),
+    enduranceTemplatesVersion: settings.enduranceTemplatesVersion ?? 1,
+    dashboardPreferences: normalizeDashboardPreferences(
+      settings.dashboardPreferences,
+    ),
+    routineReminderPreferences: normalizeRoutineReminderPreferences(
+      settings.routineReminderPreferences,
+    ),
+  };
+}
+
+export function normalizeDeviceSettings(
+  settings: DeviceSettings,
+): DeviceSettings {
+  const {
+    automaticWeightSyncAccountFingerprint,
+    ...deviceSettings
+  } = settings;
+
+  return {
+    ...deviceSettings,
+    deviceId: settings.deviceId || crypto.randomUUID(),
+    theme: settings.theme ?? 'system',
+    requestPersistentStorage: settings.requestPersistentStorage ?? true,
+    backupReminderIntervalDays: settings.backupReminderIntervalDays ?? 0,
+    restTimerAutoStart: settings.restTimerAutoStart ?? true,
+    restTimerSoundEnabled: settings.restTimerSoundEnabled ?? false,
+    restTimerVibrationEnabled:
+      settings.restTimerVibrationEnabled ?? true,
+    automaticWeightSyncEnabled:
+      settings.automaticWeightSyncEnabled ?? false,
+    ...(automaticWeightSyncAccountFingerprint?.trim()
+      ? {
+          automaticWeightSyncAccountFingerprint:
+            automaticWeightSyncAccountFingerprint.trim(),
+        }
+      : {}),
+  };
+}
+
+export function composeAppSettings(
+  user: UserSettings,
+  device: DeviceSettings,
+): AppSettings {
+  const normalizedUser = normalizeUserSettings(user);
+  const normalizedDevice = normalizeDeviceSettings(device);
+
+  return {
+    ...normalizedUser,
+    id: APP_SETTINGS_ID,
+    createdAt: normalizedUser.createdAt,
+    updatedAt:
+      normalizedUser.updatedAt > normalizedDevice.updatedAt
+        ? normalizedUser.updatedAt
+        : normalizedDevice.updatedAt,
+    theme: normalizedDevice.theme,
+    requestPersistentStorage: normalizedDevice.requestPersistentStorage,
+    backupReminderIntervalDays:
+      normalizedDevice.backupReminderIntervalDays,
+    restTimerAutoStart: normalizedDevice.restTimerAutoStart,
+    restTimerSoundEnabled: normalizedDevice.restTimerSoundEnabled,
+    restTimerVibrationEnabled: normalizedDevice.restTimerVibrationEnabled,
+    automaticWeightSyncEnabled:
+      normalizedDevice.automaticWeightSyncEnabled,
+    ...(normalizedDevice.automaticWeightSyncAccountFingerprint
+      ? {
+          automaticWeightSyncAccountFingerprint:
+            normalizedDevice.automaticWeightSyncAccountFingerprint,
+        }
+      : {}),
+    ...(normalizedDevice.lastBackupExportedAt === undefined
+      ? {}
+      : { lastBackupExportedAt: normalizedDevice.lastBackupExportedAt }),
+    ...(normalizedDevice.lastBackupAppVersion === undefined
+      ? {}
+      : { lastBackupAppVersion: normalizedDevice.lastBackupAppVersion }),
+    ...(normalizedDevice.lastBackupSchemaVersion === undefined
+      ? {}
+      : { lastBackupSchemaVersion: normalizedDevice.lastBackupSchemaVersion }),
+  };
+}
+
+export function splitAppSettings(settings: AppSettings): {
+  user: UserSettings;
+  device: DeviceSettings;
+} {
+  const {
+    theme,
+    requestPersistentStorage,
+    backupReminderIntervalDays,
+    restTimerAutoStart,
+    restTimerSoundEnabled,
+    restTimerVibrationEnabled,
+    automaticWeightSyncEnabled,
+    automaticWeightSyncAccountFingerprint,
+    lastBackupExportedAt,
+    lastBackupAppVersion,
+    lastBackupSchemaVersion,
+    ...userValues
+  } = settings;
+
+  return {
+    user: normalizeUserSettings({
+      ...userValues,
+      id: USER_SETTINGS_ID,
+    }),
+    device: normalizeDeviceSettings({
+      id: DEVICE_SETTINGS_ID,
+      deviceId: crypto.randomUUID(),
+      createdAt: settings.createdAt,
+      updatedAt: settings.updatedAt,
+      theme,
+      requestPersistentStorage,
+      backupReminderIntervalDays,
+      restTimerAutoStart,
+      restTimerSoundEnabled,
+      restTimerVibrationEnabled,
+      automaticWeightSyncEnabled,
+      ...(automaticWeightSyncAccountFingerprint === undefined
+        ? {}
+        : { automaticWeightSyncAccountFingerprint }),
+      ...(lastBackupExportedAt === undefined
+        ? {}
+        : { lastBackupExportedAt }),
+      ...(lastBackupAppVersion === undefined
+        ? {}
+        : { lastBackupAppVersion }),
+      ...(lastBackupSchemaVersion === undefined
+        ? {}
+        : { lastBackupSchemaVersion }),
+    }),
+  };
+}
+
+export function createDefaultAppSettings(): AppSettings {
+  return composeAppSettings(
+    createDefaultUserSettings(),
+    createDefaultDeviceSettings(),
   );
 }
 
 export function normalizeAppSettings(settings: AppSettings): AppSettings {
-  return {
-    ...settings,
-    backupReminderIntervalDays: settings.backupReminderIntervalDays ?? 0,
-    restTimerAutoStart: settings.restTimerAutoStart ?? true,
-    restTimerSoundEnabled: settings.restTimerSoundEnabled ?? false,
-    restTimerVibrationEnabled: settings.restTimerVibrationEnabled ?? true,
-    enduranceTemplates: settings.enduranceTemplates ?? DEFAULT_ENDURANCE_TEMPLATES.map((template) => ({ ...template })),
-    enduranceTemplatesVersion: settings.enduranceTemplatesVersion ?? 1,
-    dashboardPreferences: normalizeDashboardPreferences(settings.dashboardPreferences),
-  };
+  const split = splitAppSettings(settings);
+  return composeAppSettings(split.user, split.device);
 }

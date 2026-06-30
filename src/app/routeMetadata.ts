@@ -8,9 +8,12 @@ interface RouteMetadata {
 
 const routeMetadata: RouteMetadata[] = [
   { pattern: routePaths.dashboard, title: "Aujourd’hui" },
+  { pattern: routePaths.search, title: 'Recherche globale' },
   { pattern: routePaths.profile, title: 'Profil' },
   { pattern: routePaths.dashboardCustomization, title: 'Personnaliser le tableau de bord' },
+  { pattern: routePaths.syncPrototype, title: 'Compte de synchronisation' },
   { pattern: routePaths.settings, title: 'Paramètres' },
+  { pattern: routePaths.reminders, title: 'Rappels et routines' },
   { pattern: routePaths.barcodeScanner, title: 'Scanner un code-barres' },
   { pattern: routePaths.foodSelector, title: 'Ajouter un aliment' },
   { pattern: routePaths.addFood, title: 'Ajouter un aliment' },
@@ -46,8 +49,12 @@ const routeMetadata: RouteMetadata[] = [
   { pattern: routePaths.weight, title: 'Poids' },
   { pattern: routePaths.history, title: 'Historique' },
   { pattern: routePaths.analytics, title: 'Progression' },
+  { pattern: routePaths.reports, title: 'Rapport de progression' },
+  { pattern: routePaths.goals, title: 'Objectifs et jalons' },
   { pattern: routePaths.weeklyReview, title: 'Bilan hebdomadaire' },
+  { pattern: routePaths.rewards, title: 'Centre de récompenses' },
   { pattern: routePaths.backup, title: 'Sauvegarde' },
+  { pattern: routePaths.trash, title: 'Corbeille' },
   { pattern: routePaths.calculationsInformation, title: 'Calculs et estimations' },
   { pattern: routePaths.privacy, title: 'Confidentialité' },
 ];
