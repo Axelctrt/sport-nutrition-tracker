@@ -45,4 +45,5 @@ phase*_patch/
 .tmp-*/
 
 # Configuration publique Vite de production.
-!.env.production
+.env.production
+.env.production.local
