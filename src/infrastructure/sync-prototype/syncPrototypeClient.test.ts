@@ -8,6 +8,7 @@ import {
   createSyncPrototypeClient,
   type SyncPrototypeSnapshot,
 } from '@/infrastructure/sync-prototype/syncPrototypeClient';
+import { createSyncPrototypeAccountFingerprint } from '@/infrastructure/sync-prototype/syncPrototypeDiagnostics';
 
 class FakeObservable<T> {
   private listeners = new Set<(value: T) => void>();
@@ -247,6 +248,14 @@ describe('client sécurisé du prototype Dexie Cloud', () => {
         deletedCount: 0,
         isLoading: true,
       },
+      diagnostics: {
+        databaseName: 'sportpilot-sync-prototype',
+        databaseVersion: 1,
+        visibleWeightCount: 0,
+        deletedWeightCount: 0,
+        accountFingerprint:
+          createSyncPrototypeAccountFingerprint('test@example.com'),
+      },
     });
 
     unsubscribe();
@@ -428,5 +437,162 @@ describe('client sécurisé du prototype Dexie Cloud', () => {
       }),
     );
     expect(client.getSnapshot().weights.weights).toHaveLength(1);
+  });
+
+  it('envoie uniquement les propriétés réellement modifiées pour limiter les conflits', async () => {
+    const { database, currentUser, weights } = createFakeDatabase();
+    currentUser.next({
+      claims: {},
+      lastLogin: new Date('2026-06-30T08:00:00.000Z'),
+      isLoggedIn: true,
+      isLoading: false,
+      email: 'test@example.com',
+      userId: 'test@example.com',
+    });
+    database.cloud.currentUserId = 'test@example.com';
+    const client = createClient(database);
+
+    await client.initialize();
+    await client.saveWeight({
+      date: '2026-06-30',
+      weightKg: 75,
+      note: 'Note initiale',
+    });
+
+    weights.update.mockClear();
+    await client.saveWeight({
+      date: '2026-06-30',
+      weightKg: 74.8,
+      note: 'Note initiale',
+    });
+
+    expect(weights.update).toHaveBeenCalledWith(
+      'weight:2026-06-30',
+      expect.objectContaining({
+        weightKg: 74.8,
+        updatedAt: expect.any(String),
+      }),
+    );
+    expect(weights.update.mock.calls[0]?.[1]).not.toHaveProperty('note');
+
+    weights.update.mockClear();
+    await client.saveWeight({
+      date: '2026-06-30',
+      weightKg: 74.8,
+      note: 'Note téléphone',
+    });
+
+    expect(weights.update).toHaveBeenCalledWith(
+      'weight:2026-06-30',
+      expect.objectContaining({
+        note: 'Note téléphone',
+        updatedAt: expect.any(String),
+      }),
+    );
+    expect(weights.update.mock.calls[0]?.[1]).not.toHaveProperty(
+      'weightKg',
+    );
+  });
+
+  it('isole les lignes d’un autre compte et masque une résurrection obsolète', async () => {
+    const {
+      database,
+      currentUser,
+      weightRows,
+      deletionRows,
+    } = createFakeDatabase();
+    currentUser.next({
+      claims: {},
+      lastLogin: new Date('2026-06-30T08:00:00.000Z'),
+      isLoggedIn: true,
+      isLoading: false,
+      email: 'account-a@example.com',
+      userId: 'account-a@example.com',
+    });
+    database.cloud.currentUserId = 'account-a@example.com';
+    weightRows.set('weight:2026-06-28', {
+      id: 'weight:2026-06-28',
+      date: '2026-06-28',
+      weightKg: 75,
+      createdAt: '2026-06-28T08:00:00.000Z',
+      updatedAt: '2026-06-28T08:00:00.000Z',
+      owner: 'account-a@example.com',
+    });
+    weightRows.set('weight:2026-06-29', {
+      id: 'weight:2026-06-29',
+      date: '2026-06-29',
+      weightKg: 74.9,
+      createdAt: '2026-06-29T08:00:00.000Z',
+      updatedAt: '2026-06-29T08:00:00.000Z',
+      owner: 'account-b@example.com',
+    });
+    weightRows.set('weight:2026-06-30', {
+      id: 'weight:2026-06-30',
+      date: '2026-06-30',
+      weightKg: 74.8,
+      createdAt: '2026-06-30T08:00:00.000Z',
+      updatedAt: '2026-06-30T08:00:00.000Z',
+      owner: 'account-a@example.com',
+    });
+    deletionRows.set('deletion:weight:weight:2026-06-30', {
+      id: 'deletion:weight:weight:2026-06-30',
+      entityType: 'weight',
+      entityId: 'weight:2026-06-30',
+      status: 'deleted',
+      deletedAt: '2026-06-30T08:05:00.000Z',
+      createdAt: '2026-06-30T08:05:00.000Z',
+      updatedAt: '2026-06-30T08:05:00.000Z',
+      owner: 'account-a@example.com',
+    });
+    const client = createClient(database);
+
+    await client.initialize();
+
+    expect(client.getSnapshot().weights).toEqual({
+      weights: [
+        expect.objectContaining({ id: 'weight:2026-06-28' }),
+      ],
+      deletedCount: 1,
+      isLoading: false,
+    });
+    expect(client.getSnapshot().diagnostics).toEqual(
+      expect.objectContaining({
+        accountFingerprint:
+          createSyncPrototypeAccountFingerprint(
+            'account-a@example.com',
+          ),
+        visibleWeightCount: 1,
+        deletedWeightCount: 1,
+        latestWeightUpdatedAt: '2026-06-28T08:00:00.000Z',
+        lastRefreshAt: expect.any(String),
+      }),
+    );
+  });
+
+  it('horodate la fin de synchronisation sans exposer de donnée sensible', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-06-30T09:30:00.000Z'));
+    const { database, currentUser, syncComplete } = createFakeDatabase();
+    currentUser.next({
+      claims: {},
+      lastLogin: new Date('2026-06-30T08:00:00.000Z'),
+      isLoggedIn: true,
+      isLoading: false,
+      email: 'test@example.com',
+      userId: 'test@example.com',
+    });
+    database.cloud.currentUserId = 'test@example.com';
+    const client = createClient(database);
+
+    await client.initialize();
+    syncComplete.next();
+
+    expect(client.getSnapshot().diagnostics.lastSyncCompletedAt).toBe(
+      '2026-06-30T09:30:00.000Z',
+    );
+    expect(JSON.stringify(client.getSnapshot().diagnostics)).not.toContain(
+      'test@example.com',
+    );
+    vi.useRealTimers();
   });
 });

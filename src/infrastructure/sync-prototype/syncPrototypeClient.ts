@@ -16,6 +16,11 @@ import {
   createSyncPrototypeDatabase,
   type SyncPrototypeDatabase,
 } from '@/infrastructure/sync-prototype/SyncPrototypeDatabase';
+import {
+  createEmptySyncPrototypeDiagnostics,
+  createSyncPrototypeAccountFingerprint,
+  type SyncPrototypeDiagnosticsSnapshot,
+} from '@/infrastructure/sync-prototype/syncPrototypeDiagnostics';
 import { readSyncPrototypeConfig } from '@/infrastructure/sync-prototype/syncPrototypeConfig';
 import { isValidLocalDate } from '@/shared/validation/localDate';
 
@@ -85,6 +90,7 @@ export interface SyncPrototypeSnapshot {
   readonly account: SyncPrototypeAccountSnapshot;
   readonly sync: SyncPrototypeSyncSnapshot;
   readonly weights: SyncPrototypeWeightSnapshot;
+  readonly diagnostics: SyncPrototypeDiagnosticsSnapshot;
   readonly interaction?: SyncPrototypeInteractionSnapshot;
 }
 
@@ -213,22 +219,40 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
   constructor(database: SyncPrototypeDatabase) {
     this.database = database;
     this.currentInteraction = database.cloud.userInteraction.value;
+    const account = sanitizeAccount(database.cloud.currentUser.value);
     this.snapshot = {
-      account: sanitizeAccount(database.cloud.currentUser.value),
+      account,
       sync: sanitizeSyncState(database.cloud.syncState.value),
       weights: emptyWeightSnapshot(true),
+      diagnostics: createEmptySyncPrototypeDiagnostics(
+        account.userId ?? account.email,
+      ),
       ...(this.currentInteraction
         ? { interaction: sanitizeInteraction(this.currentInteraction)! }
         : {}),
     };
 
     database.cloud.currentUser.subscribe((user) => {
+      const account = sanitizeAccount(user);
+      const accountId = account.userId ?? account.email;
+      const accountFingerprint =
+        createSyncPrototypeAccountFingerprint(accountId);
+      const accountChanged =
+        accountFingerprint !==
+        this.snapshot.diagnostics.accountFingerprint;
       this.snapshot = {
         ...this.snapshot,
-        account: sanitizeAccount(user),
+        account,
         ...(!user.isLoggedIn
-          ? { weights: emptyWeightSnapshot(false) }
-          : {}),
+          ? {
+              weights: emptyWeightSnapshot(false),
+              diagnostics: createEmptySyncPrototypeDiagnostics(),
+            }
+          : {
+              diagnostics: accountChanged
+                ? createEmptySyncPrototypeDiagnostics(accountId)
+                : this.snapshot.diagnostics,
+            }),
       };
       this.notify();
 
@@ -256,6 +280,14 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
     });
 
     database.cloud.events?.syncComplete.subscribe(() => {
+      this.snapshot = {
+        ...this.snapshot,
+        diagnostics: {
+          ...this.snapshot.diagnostics,
+          lastSyncCompletedAt: new Date().toISOString(),
+        },
+      };
+      this.notify();
       void this.refreshWeights();
     });
   }
@@ -320,6 +352,7 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
     this.snapshot = {
       ...this.snapshot,
       weights: emptyWeightSnapshot(false),
+      diagnostics: createEmptySyncPrototypeDiagnostics(),
     };
     this.notify();
   }
@@ -354,17 +387,25 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
         let entry: WeightEntry;
         if (current) {
           const normalizedNote = draft.note ?? '';
+          const currentNote = current.note ?? '';
+          const changes: Partial<WeightEntry> = {
+            updatedAt: occurredAt,
+          };
+
+          if (current.weightKg !== draft.weightKg) {
+            changes.weightKg = draft.weightKg;
+          }
+          if (currentNote !== normalizedNote) {
+            changes.note = normalizedNote;
+          }
+
           entry = {
             ...current,
             weightKg: draft.weightKg,
             note: normalizedNote,
             updatedAt: occurredAt,
           };
-          await this.database.weights.update(id, {
-            weightKg: entry.weightKg,
-            note: normalizedNote,
-            updatedAt: occurredAt,
-          });
+          await this.database.weights.update(id, changes);
         } else {
           entry = {
             id,
@@ -447,6 +488,7 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
       this.snapshot = {
         ...this.snapshot,
         weights: emptyWeightSnapshot(false),
+        diagnostics: createEmptySyncPrototypeDiagnostics(),
       };
       this.notify();
       return;
@@ -486,15 +528,33 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
           .filter((marker) => marker.status === 'deleted')
           .map((marker) => marker.entityId),
       );
+      const visibleWeights = weights
+        .filter((entry) => !deletedIds.has(entry.id))
+        .sort((left, right) => right.date.localeCompare(left.date));
+      const latestWeightUpdatedAt = visibleWeights
+        .map((entry) => entry.updatedAt)
+        .sort((left, right) => right.localeCompare(left))[0];
+      const {
+        latestWeightUpdatedAt: _previousLatestWeightUpdatedAt,
+        ...diagnosticsWithoutLatestWeight
+      } = this.snapshot.diagnostics;
+      const accountFingerprint =
+        createSyncPrototypeAccountFingerprint(currentUserId);
 
       this.snapshot = {
         ...this.snapshot,
         weights: {
-          weights: weights
-            .filter((entry) => !deletedIds.has(entry.id))
-            .sort((left, right) => right.date.localeCompare(left.date)),
+          weights: visibleWeights,
           deletedCount: deletedIds.size,
           isLoading: false,
+        },
+        diagnostics: {
+          ...diagnosticsWithoutLatestWeight,
+          ...(accountFingerprint ? { accountFingerprint } : {}),
+          visibleWeightCount: visibleWeights.length,
+          deletedWeightCount: deletedIds.size,
+          lastRefreshAt: new Date().toISOString(),
+          ...(latestWeightUpdatedAt ? { latestWeightUpdatedAt } : {}),
         },
       };
       this.notify();

@@ -1,7 +1,9 @@
 import {
   ChevronDown,
+  ClipboardCopy,
   Cloud,
   CloudOff,
+  Fingerprint,
   KeyRound,
   LogOut,
   Mail,
@@ -27,6 +29,9 @@ import {
   type SyncPrototypeSyncSnapshot,
   type SyncPrototypeWeightDraft,
 } from '@/infrastructure/sync-prototype/syncPrototypeClient';
+import {
+  createSyncPrototypeDiagnosticReport,
+} from '@/infrastructure/sync-prototype/syncPrototypeDiagnostics';
 import type { WeightEntry } from '@/domain/models/weight';
 import { SYNC_PROTOTYPE_DATABASE_NAME } from '@/infrastructure/sync-prototype/SyncPrototypeDatabase';
 import { formatLocalDate, toLocalDate } from '@/shared/utils/dates';
@@ -129,6 +134,15 @@ function interactionMessage(
   );
 }
 
+function formatDiagnosticDate(value: string | undefined): string {
+  if (!value) return 'Jamais';
+
+  return new Intl.DateTimeFormat('fr-FR', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(new Date(value));
+}
+
 function SyncPrototypeRuntime({
   client,
 }: {
@@ -151,6 +165,7 @@ function SyncPrototypeRuntime({
   const [editingWeightId, setEditingWeightId] = useState<string>();
   const [pendingDeletionId, setPendingDeletionId] = useState<string>();
   const [isWeightSectionOpen, setIsWeightSectionOpen] = useState(false);
+  const [isDiagnosticsOpen, setIsDiagnosticsOpen] = useState(false);
   const [feedback, setFeedback] = useState<
     | {
         tone: 'success' | 'error';
@@ -223,6 +238,7 @@ function SyncPrototypeRuntime({
       setEditingWeightId(undefined);
       setPendingDeletionId(undefined);
       setIsWeightSectionOpen(false);
+      setIsDiagnosticsOpen(false);
       lastOtpNoticeRef.current = undefined;
     }
     wasLoggedInRef.current = isLoggedIn;
@@ -332,6 +348,40 @@ function SyncPrototypeRuntime({
       });
     } finally {
       setActionStatus('idle');
+    }
+  };
+
+  const handleCopyDiagnostics = async () => {
+    setFeedback(undefined);
+
+    if (!navigator.clipboard?.writeText) {
+      setFeedback({
+        tone: 'error',
+        title: 'Copie indisponible',
+        message:
+          'Le navigateur ne permet pas de copier le diagnostic automatiquement.',
+      });
+      return;
+    }
+
+    try {
+      const report = createSyncPrototypeDiagnosticReport(snapshot);
+      await navigator.clipboard.writeText(
+        JSON.stringify(report, null, 2),
+      );
+      toast.success(
+        'Diagnostic copié',
+        'Le rapport C3 ne contient ni email, ni jeton, ni donnée SportPilot réelle.',
+      );
+    } catch (error) {
+      setFeedback({
+        tone: 'error',
+        title: 'Copie impossible',
+        message: errorMessage(
+          error,
+          'Le diagnostic C3 n’a pas pu être copié.',
+        ),
+      });
     }
   };
 
@@ -773,6 +823,116 @@ function SyncPrototypeRuntime({
           </Button>
         </Card>
       </div>
+
+      <Card className="overflow-hidden p-0">
+        <button
+          aria-controls="sync-prototype-diagnostics-content"
+          aria-expanded={isDiagnosticsOpen}
+          className="flex min-h-20 w-full items-center gap-3 p-5 text-left transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-600 sm:p-6 dark:hover:bg-slate-800/60"
+          onClick={() => setIsDiagnosticsOpen((current) => !current)}
+          type="button"
+        >
+          <span className="rounded-xl bg-emerald-50 p-2 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+            <Fingerprint aria-hidden="true" className="size-5" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-lg font-semibold text-slate-950 dark:text-white">
+              Diagnostic C3
+            </span>
+            <span className="mt-1 block text-sm leading-6 text-slate-600 dark:text-slate-300">
+              Rapport non sensible pour comparer les appareils et les comptes.
+            </span>
+          </span>
+          <ChevronDown
+            aria-hidden="true"
+            className={`size-5 shrink-0 text-slate-500 transition-transform motion-reduce:transition-none ${
+              isDiagnosticsOpen ? 'rotate-180' : ''
+            }`}
+          />
+        </button>
+
+        {isDiagnosticsOpen ? (
+          <div
+            className="space-y-5 border-t border-slate-200 p-5 sm:p-6 dark:border-slate-800"
+            id="sync-prototype-diagnostics-content"
+          >
+            <InlineNotice tone="info" title="Politique de conflit testée">
+              Des propriétés différentes se fusionnent. Pour une même
+              propriété, la dernière opération reçue gagne. Un marqueur de
+              suppression masque toujours une ancienne pesée réintroduite par
+              un appareil hors ligne.
+            </InlineNotice>
+
+            <dl className="grid gap-4 text-sm sm:grid-cols-2 xl:grid-cols-3">
+              <div>
+                <dt className="font-medium text-slate-500 dark:text-slate-400">
+                  Empreinte du compte
+                </dt>
+                <dd className="mt-1 break-all font-mono text-xs font-semibold text-slate-950 dark:text-white">
+                  {snapshot.diagnostics.accountFingerprint ?? 'Non connecté'}
+                </dd>
+              </div>
+              <div>
+                <dt className="font-medium text-slate-500 dark:text-slate-400">
+                  Base expérimentale
+                </dt>
+                <dd className="mt-1 break-all font-mono text-xs font-semibold text-slate-950 dark:text-white">
+                  {snapshot.diagnostics.databaseName} v
+                  {snapshot.diagnostics.databaseVersion}
+                </dd>
+              </div>
+              <div>
+                <dt className="font-medium text-slate-500 dark:text-slate-400">
+                  Données visibles
+                </dt>
+                <dd className="mt-1 font-semibold text-slate-950 dark:text-white">
+                  {snapshot.diagnostics.visibleWeightCount} pesée
+                  {snapshot.diagnostics.visibleWeightCount > 1 ? 's' : ''} —{' '}
+                  {snapshot.diagnostics.deletedWeightCount} suppression
+                  {snapshot.diagnostics.deletedWeightCount > 1 ? 's' : ''}
+                </dd>
+              </div>
+              <div>
+                <dt className="font-medium text-slate-500 dark:text-slate-400">
+                  Dernière synchronisation terminée
+                </dt>
+                <dd className="mt-1 font-semibold text-slate-950 dark:text-white">
+                  {formatDiagnosticDate(
+                    snapshot.diagnostics.lastSyncCompletedAt,
+                  )}
+                </dd>
+              </div>
+              <div>
+                <dt className="font-medium text-slate-500 dark:text-slate-400">
+                  Dernier rafraîchissement local
+                </dt>
+                <dd className="mt-1 font-semibold text-slate-950 dark:text-white">
+                  {formatDiagnosticDate(snapshot.diagnostics.lastRefreshAt)}
+                </dd>
+              </div>
+              <div>
+                <dt className="font-medium text-slate-500 dark:text-slate-400">
+                  Dernière pesée modifiée
+                </dt>
+                <dd className="mt-1 font-semibold text-slate-950 dark:text-white">
+                  {formatDiagnosticDate(
+                    snapshot.diagnostics.latestWeightUpdatedAt,
+                  )}
+                </dd>
+              </div>
+            </dl>
+
+            <Button
+              className="w-full sm:w-auto"
+              onClick={() => void handleCopyDiagnostics()}
+              variant="secondary"
+            >
+              <ClipboardCopy aria-hidden="true" className="size-4" />
+              Copier le diagnostic
+            </Button>
+          </div>
+        ) : null}
+      </Card>
 
       <Card className="overflow-hidden p-0">
         <button

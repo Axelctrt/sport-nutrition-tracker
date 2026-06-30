@@ -8,16 +8,32 @@ import type {
 import { ToastProvider } from '@/shared/toast/ToastProvider';
 
 const scrollIntoViewMock = vi.fn();
+const writeTextMock = vi.fn(async (_text: string) => undefined);
 
 beforeEach(() => {
   scrollIntoViewMock.mockClear();
+  writeTextMock.mockClear();
   Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
     configurable: true,
     value: scrollIntoViewMock,
   });
+  Object.defineProperty(navigator, 'clipboard', {
+    configurable: true,
+    value: { writeText: writeTextMock },
+  });
 });
 
 afterEach(cleanup);
+
+function createFakeDiagnostics(accountFingerprint?: string) {
+  return {
+    databaseName: 'sportpilot-sync-prototype',
+    databaseVersion: 1,
+    visibleWeightCount: 0,
+    deletedWeightCount: 0,
+    ...(accountFingerprint ? { accountFingerprint } : {}),
+  };
+}
 
 function createFakeClient() {
   let snapshot: SyncPrototypeSnapshot = {
@@ -34,6 +50,7 @@ function createFakeClient() {
       deletedCount: 0,
       isLoading: false,
     },
+    diagnostics: createFakeDiagnostics(),
   };
   const listeners = new Set<() => void>();
   let resolveLogin: (() => void) | undefined;
@@ -89,6 +106,10 @@ function createFakeClient() {
             deletedCount: 0,
             isLoading: false,
           },
+          diagnostics: {
+            ...createFakeDiagnostics('acct-TEST0001'),
+            lastRefreshAt: '2026-06-30T08:00:00.000Z',
+          },
         };
         emit();
         resolveLogin?.();
@@ -117,6 +138,7 @@ function createFakeClient() {
         deletedCount: 0,
         isLoading: false,
       },
+      diagnostics: createFakeDiagnostics(),
     };
     emit();
   });
@@ -147,6 +169,12 @@ function createFakeClient() {
             ),
           ],
         },
+        diagnostics: {
+          ...snapshot.diagnostics,
+          visibleWeightCount: 1,
+          latestWeightUpdatedAt: now,
+          lastRefreshAt: now,
+        },
       };
       emit();
       return entry;
@@ -161,6 +189,13 @@ function createFakeClient() {
         ),
         deletedCount: snapshot.weights.deletedCount + 1,
         isLoading: false,
+      },
+      diagnostics: {
+        ...snapshot.diagnostics,
+        visibleWeightCount: 0,
+        deletedWeightCount:
+          snapshot.diagnostics.deletedWeightCount + 1,
+        lastRefreshAt: '2026-06-30T08:05:00.000Z',
       },
     };
     emit();
@@ -331,6 +366,57 @@ describe('écran du prototype Dexie Cloud', () => {
     expect(
       await screen.findByRole('textbox', { name: /adresse email/i }),
     ).toHaveValue('');
+  });
+
+  it('copie un diagnostic C3 sans email ni donnée réelle', async () => {
+    const user = userEvent.setup();
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: writeTextMock },
+    });
+    const { client } = createFakeClient();
+
+    renderPage(client);
+
+    await user.type(
+      await screen.findByRole('textbox', { name: /adresse email/i }),
+      'test@example.com',
+    );
+    await user.click(
+      screen.getByRole('button', { name: 'Recevoir mon code' }),
+    );
+    await user.type(
+      await screen.findByRole('textbox', {
+        name: /code de connexion/i,
+      }),
+      '123456',
+    );
+    await user.click(
+      screen.getByRole('button', { name: 'Valider le code' }),
+    );
+
+    const diagnosticsToggle = screen.getByRole('button', {
+      name: /Diagnostic C3/i,
+    });
+    expect(diagnosticsToggle).toHaveAttribute('aria-expanded', 'false');
+
+    await user.click(diagnosticsToggle);
+
+    expect(diagnosticsToggle).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByText('acct-TEST0001')).toBeInTheDocument();
+    await user.click(
+      screen.getByRole('button', { name: 'Copier le diagnostic' }),
+    );
+
+    await waitFor(() => expect(writeTextMock).toHaveBeenCalledTimes(1));
+    const report = String(writeTextMock.mock.calls[0]?.[0]);
+    expect(report).toContain('sportpilot-sync-prototype');
+    expect(report).toContain('acct-TEST0001');
+    expect(report).not.toContain('test@example.com');
+    expect(report).not.toContain('sportpilot-local-database');
+    expect(
+      await screen.findByText('Diagnostic copié'),
+    ).toBeInTheDocument();
   });
 
   it('ajoute, modifie puis supprime une pesée fictive', async () => {
