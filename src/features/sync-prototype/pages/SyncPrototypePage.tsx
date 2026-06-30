@@ -1,4 +1,5 @@
 import {
+  ChevronDown,
   Cloud,
   CloudOff,
   KeyRound,
@@ -149,6 +150,7 @@ function SyncPrototypeRuntime({
   );
   const [editingWeightId, setEditingWeightId] = useState<string>();
   const [pendingDeletionId, setPendingDeletionId] = useState<string>();
+  const [isWeightSectionOpen, setIsWeightSectionOpen] = useState(false);
   const [feedback, setFeedback] = useState<
     | {
         tone: 'success' | 'error';
@@ -160,6 +162,8 @@ function SyncPrototypeRuntime({
   const cancelledLoginRef = useRef(false);
   const lastOtpNoticeRef = useRef<string | undefined>(undefined);
   const wasLoggedInRef = useRef(false);
+  const weightEditorRef = useRef<HTMLFormElement>(null);
+  const weightInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -218,10 +222,21 @@ function SyncPrototypeRuntime({
       setWeightDraft(createEmptyWeightDraft());
       setEditingWeightId(undefined);
       setPendingDeletionId(undefined);
+      setIsWeightSectionOpen(false);
       lastOtpNoticeRef.current = undefined;
     }
     wasLoggedInRef.current = isLoggedIn;
   }, [isLoggedIn]);
+
+  useEffect(() => {
+    if (!editingWeightId || !isWeightSectionOpen) return;
+
+    weightEditorRef.current?.scrollIntoView?.({
+      behavior: 'smooth',
+      block: 'start',
+    });
+    weightInputRef.current?.focus({ preventScroll: true });
+  }, [editingWeightId, isWeightSectionOpen]);
 
   const isCloudActionBusy =
     actionStatus === 'logout' || actionStatus === 'sync';
@@ -302,12 +317,10 @@ function SyncPrototypeRuntime({
 
     try {
       await client.syncNow();
-      setFeedback({
-        tone: 'success',
-        title: 'Synchronisation demandée',
-        message:
-          'Dexie Cloud a terminé la demande de synchronisation du prototype.',
-      });
+      toast.success(
+        'Synchronisation effectuée',
+        'Les données fictives du prototype sont à jour.',
+      );
     } catch (error) {
       setFeedback({
         tone: 'error',
@@ -362,6 +375,7 @@ function SyncPrototypeRuntime({
     });
     setEditingWeightId(entry.id);
     setPendingDeletionId(undefined);
+    setIsWeightSectionOpen(true);
     setFeedback(undefined);
   };
 
@@ -760,37 +774,57 @@ function SyncPrototypeRuntime({
         </Card>
       </div>
 
-      <Card className="p-5 sm:p-6">
-        <div className="flex items-start gap-3">
+      <Card className="overflow-hidden p-0">
+        <button
+          aria-controls="sync-prototype-weights-content"
+          aria-expanded={isWeightSectionOpen}
+          className="flex min-h-20 w-full items-center gap-3 p-5 text-left transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-600 sm:p-6 dark:hover:bg-slate-800/60"
+          onClick={() => setIsWeightSectionOpen((current) => !current)}
+          type="button"
+        >
           <span className="rounded-xl bg-brand-50 p-2 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300">
             <Scale aria-hidden="true" className="size-5" />
           </span>
-          <div className="min-w-0">
-            <h2 className="text-lg font-semibold text-slate-950 dark:text-white">
+          <span className="min-w-0 flex-1">
+            <span className="block text-lg font-semibold text-slate-950 dark:text-white">
               Pesées fictives synchronisées
-            </h2>
-            <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
+            </span>
+            <span className="mt-1 block text-sm leading-6 text-slate-600 dark:text-slate-300">
               Ces données servent uniquement au prototype et ne rejoignent
               jamais l’historique réel de SportPilot.
-            </p>
-          </div>
-        </div>
+            </span>
+          </span>
+          {isLoggedIn ? (
+            <span className="shrink-0 text-xs font-semibold text-slate-500 dark:text-slate-400">
+              {snapshot.weights.weights.length} pesée
+              {snapshot.weights.weights.length > 1 ? 's' : ''}
+            </span>
+          ) : null}
+          <ChevronDown
+            aria-hidden="true"
+            className={`size-5 shrink-0 text-slate-500 transition-transform motion-reduce:transition-none ${
+              isWeightSectionOpen ? 'rotate-180' : ''
+            }`}
+          />
+        </button>
 
-        {!isLoggedIn ? (
-          <InlineNotice
-            className="mt-5"
-            tone="info"
-            title="Connexion requise"
+        {isWeightSectionOpen ? (
+          <div
+            className="border-t border-slate-200 p-5 sm:p-6 dark:border-slate-800"
+            id="sync-prototype-weights-content"
           >
-            Connecte le compte de test pour créer et synchroniser des
-            pesées fictives.
-          </InlineNotice>
-        ) : (
-          <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
-            <form
-              className="space-y-4 rounded-2xl border border-slate-200 p-4 dark:border-slate-800"
-              onSubmit={handleWeightSubmit}
-            >
+            {!isLoggedIn ? (
+              <InlineNotice tone="info" title="Connexion requise">
+                Connecte le compte de test pour créer et synchroniser des
+                pesées fictives.
+              </InlineNotice>
+            ) : (
+              <div className="grid gap-5 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
+                <form
+                  className="scroll-mt-24 space-y-4 rounded-2xl border border-slate-200 p-4 dark:border-slate-800"
+                  onSubmit={handleWeightSubmit}
+                  ref={weightEditorRef}
+                >
               <div className="flex items-center justify-between gap-3">
                 <h3 className="font-semibold text-slate-950 dark:text-white">
                   {editingWeightId
@@ -840,6 +874,7 @@ function SyncPrototypeRuntime({
                   className={inputClasses}
                   id="sync-prototype-weight-value"
                   inputMode="decimal"
+                  ref={weightInputRef}
                   max="350"
                   min="30"
                   onChange={(event) =>
@@ -1018,8 +1053,10 @@ function SyncPrototypeRuntime({
                 </ul>
               )}
             </div>
+              </div>
+            )}
           </div>
-        )}
+        ) : null}
       </Card>
 
       <Card className="p-5 sm:p-6">

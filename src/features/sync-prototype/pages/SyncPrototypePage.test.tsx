@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SyncPrototypePage } from '@/features/sync-prototype/pages/SyncPrototypePage';
 import type {
@@ -6,6 +6,16 @@ import type {
   SyncPrototypeSnapshot,
 } from '@/infrastructure/sync-prototype/syncPrototypeClient';
 import { ToastProvider } from '@/shared/toast/ToastProvider';
+
+const scrollIntoViewMock = vi.fn();
+
+beforeEach(() => {
+  scrollIntoViewMock.mockClear();
+  Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+    configurable: true,
+    value: scrollIntoViewMock,
+  });
+});
 
 afterEach(cleanup);
 
@@ -269,6 +279,12 @@ describe('écran du prototype Dexie Cloud', () => {
       }),
     );
     expect(syncNow).toHaveBeenCalledTimes(1);
+    expect(
+      await screen.findByText('Synchronisation effectuée'),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText('Synchronisation demandée'),
+    ).not.toBeInTheDocument();
 
     await user.click(
       screen.getByRole('button', {
@@ -340,6 +356,15 @@ describe('écran du prototype Dexie Cloud', () => {
       screen.getByRole('button', { name: 'Valider le code' }),
     );
 
+    const weightSectionToggle = screen.getByRole('button', {
+      name: /Pesées fictives synchronisées/i,
+    });
+    expect(weightSectionToggle).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByLabelText(/^Date/)).not.toBeInTheDocument();
+
+    await user.click(weightSectionToggle);
+
+    expect(weightSectionToggle).toHaveAttribute('aria-expanded', 'true');
     const dateInput = await screen.findByLabelText(/^Date/);
     const weightInput = screen.getByLabelText(/^Poids en kilogrammes/);
     const noteInput = screen.getByLabelText(/^Note de test/);
@@ -366,6 +391,17 @@ describe('écran du prototype Dexie Cloud', () => {
         name: 'Modifier la pesée du 2026-06-30',
       }),
     );
+
+    await waitFor(() => {
+      expect(scrollIntoViewMock).toHaveBeenCalledWith({
+        behavior: 'smooth',
+        block: 'start',
+      });
+      expect(
+        screen.getByLabelText(/^Poids en kilogrammes/),
+      ).toHaveFocus();
+    });
+
     await user.clear(screen.getByLabelText(/^Poids en kilogrammes/));
     await user.type(screen.getByLabelText(/^Poids en kilogrammes/), '75.1');
     await user.click(
