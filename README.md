@@ -1,4 +1,10 @@
-# SportPilot 0.17.0
+# SportPilot 0.17.1
+
+<!-- hotfix-sync-production-0.17.1 -->
+## Correctif 0.17.1 — synchronisation disponible en production
+
+Le build public embarque désormais uniquement la configuration cliente nécessaire à Dexie Cloud. La clé privée reste locale et n’est jamais intégrée au dépôt ni au navigateur. Les variables définies par la plateforme de déploiement conservent la priorité sur cette configuration publique de secours.
+
 
 PWA locale de suivi sportif, nutritionnel, calorique et de progression.
 

@@ -1,3 +1,5 @@
+import { syncPublicDeploymentConfig } from '@/infrastructure/sync-prototype/syncPublicDeploymentConfig';
+
 export interface SyncPrototypeEnvironment {
   readonly VITE_ENABLE_SYNC_PROTOTYPE?: string;
   readonly VITE_DEXIE_CLOUD_DATABASE_URL?: string;
@@ -84,8 +86,17 @@ function normalizeDexieCloudDatabaseUrl(value: string | undefined): string {
   return parsed.origin;
 }
 
+function readRuntimeSyncPrototypeEnvironment(): SyncPrototypeEnvironment {
+  if (!import.meta.env.PROD) return import.meta.env;
+
+  return {
+    ...syncPublicDeploymentConfig,
+    ...import.meta.env,
+  };
+}
+
 export function readSyncPrototypeConfig(
-  environment: SyncPrototypeEnvironment = import.meta.env,
+  environment: SyncPrototypeEnvironment = readRuntimeSyncPrototypeEnvironment(),
 ): SyncPrototypeConfig {
   if (!readEnabledFlag(environment.VITE_ENABLE_SYNC_PROTOTYPE)) {
     return { enabled: false };
@@ -108,7 +119,7 @@ export function readSyncPrototypeConfig(
 }
 
 export function readSyncPrototypeConfigSafely(
-  environment: SyncPrototypeEnvironment = import.meta.env,
+  environment: SyncPrototypeEnvironment = readRuntimeSyncPrototypeEnvironment(),
 ): SafeSyncPrototypeConfigResult {
   try {
     return { config: readSyncPrototypeConfig(environment) };
