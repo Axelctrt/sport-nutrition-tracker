@@ -2,6 +2,7 @@ export interface SyncPrototypeEnvironment {
   readonly VITE_ENABLE_SYNC_PROTOTYPE?: string;
   readonly VITE_DEXIE_CLOUD_DATABASE_URL?: string;
   readonly VITE_ENABLE_REAL_WEIGHT_SYNC?: string;
+  readonly VITE_ENABLE_SYNC_DIAGNOSTICS?: string;
 }
 
 export interface DisabledSyncPrototypeConfig {
@@ -12,11 +13,23 @@ export interface EnabledSyncPrototypeConfig {
   enabled: true;
   databaseUrl: string;
   realWeightSyncEnabled: boolean;
+  diagnosticsEnabled: boolean;
 }
 
 export type SyncPrototypeConfig =
   | DisabledSyncPrototypeConfig
   | EnabledSyncPrototypeConfig;
+
+export interface SafeSyncPrototypeConfigResult {
+  readonly config: SyncPrototypeConfig;
+  readonly errorMessage?: string;
+}
+
+function messageFromConfigurationError(error: unknown): string {
+  return error instanceof Error
+    ? error.message
+    : 'La configuration Dexie Cloud est invalide.';
+}
 
 function readEnabledFlag(
   value: string | undefined,
@@ -87,5 +100,22 @@ export function readSyncPrototypeConfig(
       environment.VITE_ENABLE_REAL_WEIGHT_SYNC,
       'VITE_ENABLE_REAL_WEIGHT_SYNC',
     ),
+    diagnosticsEnabled: readEnabledFlag(
+      environment.VITE_ENABLE_SYNC_DIAGNOSTICS,
+      'VITE_ENABLE_SYNC_DIAGNOSTICS',
+    ),
   };
+}
+
+export function readSyncPrototypeConfigSafely(
+  environment: SyncPrototypeEnvironment = import.meta.env,
+): SafeSyncPrototypeConfigResult {
+  try {
+    return { config: readSyncPrototypeConfig(environment) };
+  } catch (error) {
+    return {
+      config: { enabled: false },
+      errorMessage: messageFromConfigurationError(error),
+    };
+  }
 }

@@ -29,6 +29,7 @@ const deviceSettingKeys = new Set<keyof AppSettings>([
   'restTimerSoundEnabled',
   'restTimerVibrationEnabled',
   'automaticWeightSyncEnabled',
+  'automaticWeightSyncAccountFingerprint',
   'lastBackupExportedAt',
   'lastBackupAppVersion',
   'lastBackupSchemaVersion',

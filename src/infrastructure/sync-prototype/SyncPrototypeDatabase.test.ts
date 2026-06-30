@@ -23,6 +23,7 @@ describe('base isolée du prototype Dexie Cloud', () => {
       enabled: true,
       databaseUrl: 'https://sportpilot-prototype.dexie.cloud',
       realWeightSyncEnabled: true,
+      diagnosticsEnabled: true,
     });
 
     expect(database.cloud.options).toEqual(

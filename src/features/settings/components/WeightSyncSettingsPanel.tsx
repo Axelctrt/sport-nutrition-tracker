@@ -14,6 +14,7 @@ const statusLabels: Record<WeightSyncIntegrationStatus, string> = {
   unavailable: 'Indisponible dans cette version',
   disabled: 'Désactivée sur cet appareil',
   disconnected: 'Compte non connecté',
+  'account-mismatch': 'Compte à confirmer',
   idle: 'Prête',
   syncing: 'Synchronisation en cours',
   'in-sync': 'À jour',
@@ -101,10 +102,35 @@ export function WeightSyncSettingsPanel() {
 
   if (!snapshot.available) {
     return (
-      <InlineNotice tone="info" title="Synchronisation non déployée">
-        Cette version ne contient pas la configuration Dexie Cloud nécessaire.
-        Les pesées restent intégralement locales.
-      </InlineNotice>
+      <div className="space-y-3">
+        <InlineNotice
+          tone={snapshot.errorMessage ? 'error' : 'info'}
+          title={
+            snapshot.errorMessage
+              ? 'Configuration de synchronisation invalide'
+              : 'Synchronisation non déployée'
+          }
+        >
+          {snapshot.errorMessage ? (
+            <>
+              {snapshot.errorMessage} Les pesées restent intégralement locales
+              tant que la configuration n’est pas corrigée.
+            </>
+          ) : (
+            <>
+              Cette version ne contient pas la configuration Dexie Cloud
+              nécessaire. Les pesées restent intégralement locales.
+            </>
+          )}
+        </InlineNotice>
+
+        <Link
+          to={routePaths.syncPrototype}
+          className="inline-flex min-h-11 items-center justify-center rounded-xl px-4 text-sm font-semibold text-brand-700 hover:bg-brand-50 dark:text-brand-300 dark:hover:bg-brand-950/30"
+        >
+          Gérer le compte de synchronisation
+        </Link>
+      </div>
     );
   }
 
@@ -152,8 +178,12 @@ export function WeightSyncSettingsPanel() {
         {snapshot.errorMessage ? (
           <InlineNotice
             className="mt-4"
-            tone="error"
-            title="Synchronisation en erreur"
+            tone={snapshot.status === 'account-mismatch' ? 'info' : 'error'}
+            title={
+              snapshot.status === 'account-mismatch'
+                ? 'Autorisation du compte requise'
+                : 'Synchronisation en erreur'
+            }
           >
             {snapshot.errorMessage}
           </InlineNotice>
@@ -165,8 +195,8 @@ export function WeightSyncSettingsPanel() {
             tone="info"
             title="Connexion requise"
           >
-            Connecte d’abord ton compte depuis l’écran de connexion et de
-            diagnostic.
+            Connecte d’abord ton compte depuis l’écran de gestion du compte de
+            synchronisation.
           </InlineNotice>
         ) : null}
 
@@ -222,7 +252,7 @@ export function WeightSyncSettingsPanel() {
             to={routePaths.syncPrototype}
             className="inline-flex min-h-11 items-center justify-center rounded-xl px-4 text-sm font-semibold text-brand-700 hover:bg-brand-50 dark:text-brand-300 dark:hover:bg-brand-950/30"
           >
-            Connexion et diagnostic avancé
+            Gérer le compte de synchronisation
           </Link>
         </div>
       </div>

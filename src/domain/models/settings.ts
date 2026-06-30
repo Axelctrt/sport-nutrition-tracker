@@ -33,6 +33,7 @@ export interface DeviceSettings extends EntityMetadata {
   restTimerSoundEnabled: boolean;
   restTimerVibrationEnabled: boolean;
   automaticWeightSyncEnabled: boolean;
+  automaticWeightSyncAccountFingerprint?: string;
   lastBackupExportedAt?: IsoDateTime;
   lastBackupAppVersion?: string;
   lastBackupSchemaVersion?: number;
@@ -47,6 +48,7 @@ export interface AppSettings extends UserSettings {
   restTimerSoundEnabled: boolean;
   restTimerVibrationEnabled: boolean;
   automaticWeightSyncEnabled: boolean;
+  automaticWeightSyncAccountFingerprint?: string;
   lastBackupExportedAt?: IsoDateTime;
   lastBackupAppVersion?: string;
   lastBackupSchemaVersion?: number;

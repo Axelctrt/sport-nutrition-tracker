@@ -21,7 +21,7 @@ Une synchronisation bornée est planifiée :
 3. après ajout, modification ou suppression locale d’une pesée.
 
 Les déclenchements sont temporisés, espacés d’au moins 15 secondes et protégés
-par un verrou non réentrant. Un dépassement de 20 secondes produit une erreur
+par un verrou non réentrant. Un dépassement de 60 secondes produit une erreur
 lisible, sans lancer une seconde opération tant que la première n’est pas
 réellement terminée.
 
@@ -87,7 +87,7 @@ est considérée comme réussie et aucun faux toast rouge n'est affiché.
 
 Une synchronisation manuelle attend également la fin d'une phase Dexie Cloud
 `initial`, `pushing` ou `pulling` déjà en cours avant de lancer l'échange des
-pesées réelles. Après 20 secondes, une erreur explicite invite à réessayer sans
+pesées réelles. Après 60 secondes, une erreur explicite invite à réessayer sans
 créer d'opération concurrente.
 
 ## Correctif C5.3 — activation locale indépendante de l'état cloud
@@ -177,3 +177,39 @@ après chaque synchronisation réussie :
 Cette règle cible uniquement les transitions post-succès et ne retarde donc
 pas inutilement les erreurs persistantes survenant hors d’une synchronisation
 réussie.
+
+
+## Durcissement C6 — consentement, compte lié et séparation du laboratoire
+
+La revue finale C0 à C5 a ajouté trois garanties avant intégration dans
+`develop` :
+
+- le coordinateur lit d'abord la préférence locale et n'ouvre pas Dexie Cloud
+  tant que la synchronisation est désactivée ;
+- une activation est liée à l'empreinte non réversible du compte explicitement
+  autorisé sur l'appareil ;
+- un changement de compte désactive immédiatement les échanges automatiques et
+  exige une nouvelle activation explicite avant toute synchronisation ;
+- les appareils déjà activés avant C6 sont désactivés une seule fois et doivent
+  confirmer à nouveau le compte autorisé ;
+- l'écran utilisateur ne présente plus les pesées fictives, C4 manuel ni les
+  diagnostics détaillés ; ces outils nécessitent le flag distinct
+  `VITE_ENABLE_SYNC_DIAGNOSTICS=true`.
+
+Configuration d'un déploiement utilisateur :
+
+```env
+VITE_ENABLE_SYNC_PROTOTYPE=true
+VITE_DEXIE_CLOUD_DATABASE_URL=https://<base>.dexie.cloud
+VITE_ENABLE_REAL_WEIGHT_SYNC=true
+VITE_ENABLE_SYNC_DIAGNOSTICS=false
+```
+
+Configuration réservée au laboratoire :
+
+```env
+VITE_ENABLE_SYNC_DIAGNOSTICS=true
+```
+
+Le flag de diagnostic ne doit jamais être activé dans une version destinée aux
+utilisateurs finaux.

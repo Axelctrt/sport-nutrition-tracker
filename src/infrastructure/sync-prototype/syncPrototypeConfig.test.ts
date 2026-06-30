@@ -1,6 +1,21 @@
-import { readSyncPrototypeConfig } from '@/infrastructure/sync-prototype/syncPrototypeConfig';
+import {
+  readSyncPrototypeConfig,
+  readSyncPrototypeConfigSafely,
+} from '@/infrastructure/sync-prototype/syncPrototypeConfig';
 
 describe('configuration du prototype Dexie Cloud', () => {
+  it('dégrade une configuration invalide sans faire tomber l’application', () => {
+    expect(
+      readSyncPrototypeConfigSafely({
+        VITE_ENABLE_SYNC_PROTOTYPE: 'true',
+      }),
+    ).toEqual({
+      config: { enabled: false },
+      errorMessage:
+        'VITE_DEXIE_CLOUD_DATABASE_URL est obligatoire lorsque le prototype est activé.',
+    });
+  });
+
   it('reste désactivé par défaut sans exiger d’URL distante', () => {
     expect(readSyncPrototypeConfig({})).toEqual({ enabled: false });
     expect(
@@ -19,6 +34,7 @@ describe('configuration du prototype Dexie Cloud', () => {
       enabled: true,
       databaseUrl: 'https://sportpilot-prototype.dexie.cloud',
       realWeightSyncEnabled: false,
+      diagnosticsEnabled: false,
     });
   });
 
@@ -61,6 +77,29 @@ describe('configuration du prototype Dexie Cloud', () => {
       enabled: true,
       realWeightSyncEnabled: true,
     });
+  });
+
+  it('active les outils de diagnostic avec un flag séparé', () => {
+    expect(
+      readSyncPrototypeConfig({
+        VITE_ENABLE_SYNC_PROTOTYPE: 'true',
+        VITE_DEXIE_CLOUD_DATABASE_URL: 'https://test.dexie.cloud',
+        VITE_ENABLE_SYNC_DIAGNOSTICS: 'true',
+      }),
+    ).toMatchObject({
+      enabled: true,
+      diagnosticsEnabled: true,
+    });
+  });
+
+  it('refuse une valeur ambiguë pour les outils de diagnostic', () => {
+    expect(() =>
+      readSyncPrototypeConfig({
+        VITE_ENABLE_SYNC_PROTOTYPE: 'true',
+        VITE_DEXIE_CLOUD_DATABASE_URL: 'https://test.dexie.cloud',
+        VITE_ENABLE_SYNC_DIAGNOSTICS: 'yes',
+      }),
+    ).toThrow('VITE_ENABLE_SYNC_DIAGNOSTICS');
   });
 
   it('refuse une valeur d’activation ambiguë', () => {

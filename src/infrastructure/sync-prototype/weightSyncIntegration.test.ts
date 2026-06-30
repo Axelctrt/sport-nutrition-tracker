@@ -8,6 +8,7 @@ import type {
 import {
   WeightSyncIntegrationController,
 } from '@/infrastructure/sync-prototype/weightSyncIntegration';
+import { createSyncPrototypeAccountFingerprint } from '@/infrastructure/sync-prototype/syncPrototypeDiagnostics';
 import { REAL_WEIGHT_DATA_CHANGED_EVENT } from '@/infrastructure/sync-prototype/weightSyncEvents';
 
 function createClientSnapshot(
@@ -100,10 +101,18 @@ function createFakeClient(initialSnapshot = createClientSnapshot()) {
   };
 }
 
-function createSettingsRepository(enabled: boolean) {
+function createSettingsRepository(
+  enabled: boolean,
+  accountFingerprint = enabled
+    ? createSyncPrototypeAccountFingerprint('test@example.com')
+    : undefined,
+) {
   let settings: AppSettings = {
     ...createDefaultAppSettings(),
     automaticWeightSyncEnabled: enabled,
+    ...(accountFingerprint
+      ? { automaticWeightSyncAccountFingerprint: accountFingerprint }
+      : {}),
   };
 
   const repository: SettingsRepository = {
@@ -149,6 +158,80 @@ describe('intégration contrôlée de la synchronisation des pesées', () => {
     );
   });
 
+  it('expose une erreur de configuration sans interrompre l’application', async () => {
+    const { repository } = createSettingsRepository(false);
+    const controller = new WeightSyncIntegrationController({
+      settingsRepository: repository,
+      isOnline: () => true,
+      configurationError: 'URL Dexie Cloud invalide.',
+    });
+
+    await controller.initialize();
+
+    expect(controller.getSnapshot()).toMatchObject({
+      available: false,
+      enabled: false,
+      status: 'error',
+      errorMessage: 'URL Dexie Cloud invalide.',
+    });
+    await expect(controller.setEnabled(true)).rejects.toThrow(
+      'URL Dexie Cloud invalide.',
+    );
+  });
+
+  it('ne démarre pas Dexie Cloud tant que la synchronisation reste désactivée', async () => {
+    const { client, initialize } = createFakeClient();
+    const { repository } = createSettingsRepository(false);
+    const controller = new WeightSyncIntegrationController({
+      client,
+      settingsRepository: repository,
+      isOnline: () => true,
+    });
+
+    await controller.initialize();
+
+    expect(initialize).not.toHaveBeenCalled();
+    expect(controller.getSnapshot()).toMatchObject({
+      enabled: false,
+      status: 'disabled',
+    });
+    controller.dispose();
+  });
+
+  it('demande une nouvelle autorisation aux appareils activés avant la liaison au compte', async () => {
+    const { client, initialize } = createFakeClient();
+    const { repository, getSettings } = createSettingsRepository(true, '');
+    const controller = new WeightSyncIntegrationController({
+      client,
+      settingsRepository: repository,
+      isOnline: () => true,
+      debounceMs: 10,
+      minimumIntervalMs: 0,
+    });
+
+    await controller.initialize();
+
+    expect(initialize).toHaveBeenCalledTimes(1);
+    expect(getSettings().automaticWeightSyncEnabled).toBe(false);
+    expect(
+      getSettings().automaticWeightSyncAccountFingerprint,
+    ).toBeUndefined();
+    expect(controller.getSnapshot()).toMatchObject({
+      enabled: false,
+      accountConnected: true,
+      status: 'account-mismatch',
+    });
+
+    await controller.setEnabled(true);
+
+    expect(getSettings()).toMatchObject({
+      automaticWeightSyncEnabled: true,
+      automaticWeightSyncAccountFingerprint:
+        createSyncPrototypeAccountFingerprint('test@example.com'),
+    });
+    controller.dispose();
+  });
+
   it('enregistre l’activation sans dépendre de la préparation réseau', async () => {
     let resolveInitialization: (() => void) | undefined;
     const { client, initialize, syncRealWeights } = createFakeClient();
@@ -176,12 +259,17 @@ describe('intégration contrôlée de la synchronisation des pesées', () => {
       enabled: true,
       accountConnected: true,
     });
+    expect(initialize).not.toHaveBeenCalled();
+    expect(syncRealWeights).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(10);
     expect(initialize).toHaveBeenCalledTimes(1);
     expect(syncRealWeights).not.toHaveBeenCalled();
 
     resolveInitialization?.();
+    await vi.advanceTimersByTimeAsync(0);
     await Promise.resolve();
-    await vi.advanceTimersByTimeAsync(10);
+    await Promise.resolve();
     expect(syncRealWeights).toHaveBeenCalledTimes(1);
     controller.dispose();
   });
@@ -401,6 +489,64 @@ describe('intégration contrôlée de la synchronisation des pesées', () => {
     await Promise.resolve();
     await vi.advanceTimersByTimeAsync(10);
     expect(syncRealWeights).toHaveBeenCalledTimes(2);
+    controller.dispose();
+  });
+
+  it('désactive automatiquement la synchronisation lors d’un changement de compte', async () => {
+    const { client, syncRealWeights, updateSnapshot } = createFakeClient();
+    const accountAFingerprint =
+      createSyncPrototypeAccountFingerprint('test@example.com');
+    const accountBFingerprint =
+      createSyncPrototypeAccountFingerprint('second@example.com');
+    const { repository, getSettings } = createSettingsRepository(
+      true,
+      accountAFingerprint,
+    );
+    const controller = new WeightSyncIntegrationController({
+      client,
+      settingsRepository: repository,
+      eventTarget: window,
+      isOnline: () => true,
+      debounceMs: 10,
+      minimumIntervalMs: 0,
+      timeoutMs: 1_000,
+    });
+
+    await controller.initialize();
+    updateSnapshot(
+      createClientSnapshot({
+        account: {
+          isLoggedIn: true,
+          isLoading: false,
+          email: 'second@example.com',
+          userId: 'second@example.com',
+        },
+      }),
+    );
+    await Promise.resolve();
+
+    expect(controller.getSnapshot()).toMatchObject({
+      enabled: false,
+      accountConnected: true,
+      status: 'account-mismatch',
+    });
+    expect(getSettings().automaticWeightSyncEnabled).toBe(false);
+    expect(
+      getSettings().automaticWeightSyncAccountFingerprint,
+    ).toBeUndefined();
+
+    window.dispatchEvent(new CustomEvent(REAL_WEIGHT_DATA_CHANGED_EVENT));
+    await vi.advanceTimersByTimeAsync(100);
+    expect(syncRealWeights).not.toHaveBeenCalled();
+
+    await controller.setEnabled(true);
+    expect(getSettings()).toMatchObject({
+      automaticWeightSyncEnabled: true,
+      automaticWeightSyncAccountFingerprint: accountBFingerprint,
+    });
+
+    await vi.advanceTimersByTimeAsync(10);
+    expect(syncRealWeights).toHaveBeenCalledTimes(1);
     controller.dispose();
   });
 

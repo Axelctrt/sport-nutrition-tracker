@@ -128,6 +128,7 @@ describe('repositories Dexie', () => {
       includedBaseSteps: 4_500,
       theme: 'dark',
       automaticWeightSyncEnabled: true,
+      automaticWeightSyncAccountFingerprint: 'acct-TEST0001',
     });
 
     expect(settings.includedBaseSteps).toBe(4_500);
@@ -139,6 +140,7 @@ describe('repositories Dexie', () => {
       deviceId: 'device-local',
       theme: 'dark',
       automaticWeightSyncEnabled: true,
+      automaticWeightSyncAccountFingerprint: 'acct-TEST0001',
     });
     expect(
       (await database.userSettings.get(USER_SETTINGS_ID)) as unknown as Record<string, unknown>,

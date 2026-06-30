@@ -34,6 +34,7 @@ import {
 } from '@/infrastructure/sync-prototype/syncPrototypeDiagnostics';
 import type { WeightEntry } from '@/domain/models/weight';
 import { SYNC_PROTOTYPE_DATABASE_NAME } from '@/infrastructure/sync-prototype/SyncPrototypeDatabase';
+import { readSyncPrototypeConfigSafely } from '@/infrastructure/sync-prototype/syncPrototypeConfig';
 import { formatLocalDate, toLocalDate } from '@/shared/utils/dates';
 import { useToast } from '@/shared/toast/useToast';
 import { Button } from '@/shared/ui/Button';
@@ -44,6 +45,7 @@ import { ConfirmationDialog } from '@/shared/ui/ConfirmationDialog';
 
 interface SyncPrototypePageProps {
   client?: SyncPrototypeClient;
+  diagnosticsEnabled?: boolean;
 }
 
 type ActionStatus =
@@ -122,7 +124,7 @@ function interactionError(
     case 'INVALID_OTP':
       return 'Le code saisi est incorrect ou a expiré.';
     case 'LICENSE_LIMIT_REACHED':
-      return 'La limite de comptes autorisés pour ce prototype est atteinte.';
+      return 'La limite de comptes autorisés pour ce service est atteinte.';
     default:
       return alert.message || 'Dexie Cloud a refusé cette opération.';
   }
@@ -148,8 +150,10 @@ function formatDiagnosticDate(value: string | undefined): string {
 
 function SyncPrototypeRuntime({
   client,
+  diagnosticsEnabled,
 }: {
   client: SyncPrototypeClient;
+  diagnosticsEnabled: boolean;
 }) {
   const snapshot = useSyncExternalStore(
     client.subscribe,
@@ -298,8 +302,9 @@ function SyncPrototypeRuntime({
         setFeedback({
           tone: 'success',
           title: 'Connexion confirmée',
-          message:
-            'Le compte de test est connecté. La base réelle de SportPilot reste séparée.',
+          message: diagnosticsEnabled
+            ? 'Le compte de test est connecté. La base réelle de SportPilot reste séparée.'
+            : 'Le compte de synchronisation est connecté.',
         });
       })
       .catch((error: unknown) => {
@@ -567,27 +572,29 @@ function SyncPrototypeRuntime({
     >
       <header className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6 dark:border-slate-800 dark:bg-slate-900">
         <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
-          Laboratoire isolé
+          {diagnosticsEnabled ? 'Laboratoire isolé' : 'Compte sécurisé'}
         </p>
         <h1
           id="sync-prototype-title"
           className="mt-1 text-3xl font-bold tracking-tight text-slate-950 dark:text-white"
         >
-          Prototype de synchronisation
+          {diagnosticsEnabled
+            ? 'Prototype de synchronisation'
+            : 'Compte de synchronisation'}
         </h1>
         <p className="mt-3 max-w-3xl leading-7 text-slate-600 dark:text-slate-300">
-          Cet écran utilise une seconde base IndexedDB. Les données fictives
-          restent isolées ; la synchronisation C4 des vraies pesées n’est
-          disponible qu’avec un second feature flag et une confirmation
-          explicite.
+          {diagnosticsEnabled
+            ? 'Cet écran utilise une seconde base IndexedDB isolée pour les outils de laboratoire et la synchronisation des pesées.'
+            : 'Connecte le compte utilisé pour synchroniser uniquement tes pesées entre tes appareils.'}
         </p>
       </header>
 
-      <InlineNotice tone="info" title="Environnement expérimental">
-        Le prototype est activé uniquement par la configuration locale de
-        cet appareil. Il n’est pas accessible depuis la navigation
-        normale.
-      </InlineNotice>
+      {diagnosticsEnabled ? (
+        <InlineNotice tone="info" title="Environnement expérimental">
+          Les outils de laboratoire sont activés explicitement par la
+          configuration de cet appareil.
+        </InlineNotice>
+      ) : null}
 
       {feedback ? (
         <InlineNotice tone={feedback.tone} title={feedback.title}>
@@ -645,7 +652,7 @@ function SyncPrototypeRuntime({
             </span>
             <div className="min-w-0">
               <h2 className="text-lg font-semibold text-slate-950 dark:text-white">
-                Compte de test
+                {diagnosticsEnabled ? 'Compte de test' : 'Compte de synchronisation'}
               </h2>
               <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
                 Authentification sans mot de passe par email et code à
@@ -701,7 +708,9 @@ function SyncPrototypeRuntime({
                 <LogOut aria-hidden="true" className="size-4" />
                 {actionStatus === 'logout'
                   ? 'Déconnexion…'
-                  : 'Déconnecter le prototype'}
+                  : diagnosticsEnabled
+                    ? 'Déconnecter le prototype'
+                    : 'Se déconnecter'}
               </Button>
             </div>
           ) : interaction?.type === 'otp' ? (
@@ -815,7 +824,9 @@ function SyncPrototypeRuntime({
                 État de synchronisation
               </h2>
               <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                État technique de la base expérimentale uniquement.
+                {diagnosticsEnabled
+                  ? 'État technique de la base expérimentale uniquement.'
+                  : 'État de la connexion au service de synchronisation.'}
               </p>
             </div>
           </div>
@@ -847,48 +858,54 @@ function SyncPrototypeRuntime({
                 </dd>
               </div>
             ) : null}
-            <div>
-              <dt className="font-medium text-slate-500 dark:text-slate-400">
-                Base locale
-              </dt>
-              <dd className="mt-1 break-all font-mono text-xs text-slate-950 dark:text-white">
-                {SYNC_PROTOTYPE_DATABASE_NAME}
-              </dd>
-            </div>
+            {diagnosticsEnabled ? (
+              <div>
+                <dt className="font-medium text-slate-500 dark:text-slate-400">
+                  Base locale
+                </dt>
+                <dd className="mt-1 break-all font-mono text-xs text-slate-950 dark:text-white">
+                  {SYNC_PROTOTYPE_DATABASE_NAME}
+                </dd>
+              </div>
+            ) : null}
           </dl>
 
           {snapshot.sync.errorMessage ? (
             <InlineNotice
               className="mt-4"
               tone="error"
-              title="Erreur Dexie Cloud"
+              title={diagnosticsEnabled ? 'Erreur Dexie Cloud' : 'Erreur du service'}
             >
               {snapshot.sync.errorMessage}
             </InlineNotice>
           ) : null}
 
-          <Button
-            className="mt-5 w-full sm:w-auto"
-            disabled={!isLoggedIn || isCloudActionBusy || isInitializing}
-            onClick={() => void handleSync()}
-            variant="secondary"
-          >
-            <RefreshCw
-              aria-hidden="true"
-              className={
-                actionStatus === 'sync'
-                  ? 'size-4 animate-spin motion-reduce:animate-none'
-                  : 'size-4'
-              }
-            />
-            {actionStatus === 'sync'
-              ? 'Synchronisation…'
-              : 'Synchroniser maintenant'}
-          </Button>
+          {diagnosticsEnabled ? (
+            <Button
+              className="mt-5 w-full sm:w-auto"
+              disabled={!isLoggedIn || isCloudActionBusy || isInitializing}
+              onClick={() => void handleSync()}
+              variant="secondary"
+            >
+              <RefreshCw
+                aria-hidden="true"
+                className={
+                  actionStatus === 'sync'
+                    ? 'size-4 animate-spin motion-reduce:animate-none'
+                    : 'size-4'
+                }
+              />
+              {actionStatus === 'sync'
+                ? 'Synchronisation…'
+                : 'Synchroniser maintenant'}
+            </Button>
+          ) : null}
         </Card>
       </div>
 
-      <Card className="overflow-hidden p-0">
+      {diagnosticsEnabled ? (
+        <>
+          <Card className="overflow-hidden p-0">
         <button
           aria-controls="sync-prototype-diagnostics-content"
           aria-expanded={isDiagnosticsOpen}
@@ -1398,7 +1415,7 @@ function SyncPrototypeRuntime({
               <li>Base IndexedDB distincte de la base réelle.</li>
               <li>Aucune donnée SportPilot importée automatiquement.</li>
               <li>Les vraies pesées exigent un flag distinct et une confirmation.</li>
-              <li>Route masquée lorsque le feature flag est désactivé.</li>
+              <li>Route de gestion toujours accessible, avec erreur locale si la configuration est indisponible.</li>
               <li>Jetons et clés Dexie Cloud non exposés à l’interface.</li>
             </ul>
           </div>
@@ -1414,17 +1431,36 @@ function SyncPrototypeRuntime({
         onCancel={() => setIsRealWeightConfirmationOpen(false)}
         onConfirm={() => void handleSyncRealWeights()}
       />
+        </>
+      ) : null}
     </section>
   );
 }
 
 export function SyncPrototypePage({
   client,
+  diagnosticsEnabled: diagnosticsEnabledOverride,
 }: SyncPrototypePageProps) {
+  const safeConfig = client ? undefined : readSyncPrototypeConfigSafely();
+  const config = safeConfig?.config;
+  const diagnosticsEnabled =
+    diagnosticsEnabledOverride ??
+    (client ? true : config?.enabled ? config.diagnosticsEnabled : false);
   const [runtime] = useState<
     | { client: SyncPrototypeClient; error?: never }
     | { client?: never; error: string }
   >(() => {
+    if (!client && safeConfig?.errorMessage) {
+      return { error: safeConfig.errorMessage };
+    }
+
+    if (!client && !config?.enabled) {
+      return {
+        error:
+          'La synchronisation n’est pas activée dans la configuration de cette version.',
+      };
+    }
+
     try {
       return {
         client: client ?? getSyncPrototypeClient(),
@@ -1433,7 +1469,9 @@ export function SyncPrototypePage({
       return {
         error: errorMessage(
           error,
-          'Le prototype de synchronisation ne peut pas être initialisé.',
+          diagnosticsEnabled
+            ? 'Le prototype de synchronisation ne peut pas être initialisé.'
+            : 'Le compte de synchronisation ne peut pas être initialisé.',
         ),
       };
     }
@@ -1441,11 +1479,19 @@ export function SyncPrototypePage({
 
   if ('error' in runtime) {
     return (
-      <InlineNotice tone="error" title="Prototype indisponible">
+      <InlineNotice
+        tone="error"
+        title={diagnosticsEnabled ? 'Prototype indisponible' : 'Compte indisponible'}
+      >
         {runtime.error}
       </InlineNotice>
     );
   }
 
-  return <SyncPrototypeRuntime client={runtime.client} />;
+  return (
+    <SyncPrototypeRuntime
+      client={runtime.client}
+      diagnosticsEnabled={diagnosticsEnabled}
+    />
+  );
 }

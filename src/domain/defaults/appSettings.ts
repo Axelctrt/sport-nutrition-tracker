@@ -140,8 +140,13 @@ export function normalizeUserSettings(
 export function normalizeDeviceSettings(
   settings: DeviceSettings,
 ): DeviceSettings {
+  const {
+    automaticWeightSyncAccountFingerprint,
+    ...deviceSettings
+  } = settings;
+
   return {
-    ...settings,
+    ...deviceSettings,
     deviceId: settings.deviceId || crypto.randomUUID(),
     theme: settings.theme ?? 'system',
     requestPersistentStorage: settings.requestPersistentStorage ?? true,
@@ -152,6 +157,12 @@ export function normalizeDeviceSettings(
       settings.restTimerVibrationEnabled ?? true,
     automaticWeightSyncEnabled:
       settings.automaticWeightSyncEnabled ?? false,
+    ...(automaticWeightSyncAccountFingerprint?.trim()
+      ? {
+          automaticWeightSyncAccountFingerprint:
+            automaticWeightSyncAccountFingerprint.trim(),
+        }
+      : {}),
   };
 }
 
@@ -179,6 +190,12 @@ export function composeAppSettings(
     restTimerVibrationEnabled: normalizedDevice.restTimerVibrationEnabled,
     automaticWeightSyncEnabled:
       normalizedDevice.automaticWeightSyncEnabled,
+    ...(normalizedDevice.automaticWeightSyncAccountFingerprint
+      ? {
+          automaticWeightSyncAccountFingerprint:
+            normalizedDevice.automaticWeightSyncAccountFingerprint,
+        }
+      : {}),
     ...(normalizedDevice.lastBackupExportedAt === undefined
       ? {}
       : { lastBackupExportedAt: normalizedDevice.lastBackupExportedAt }),
@@ -203,6 +220,7 @@ export function splitAppSettings(settings: AppSettings): {
     restTimerSoundEnabled,
     restTimerVibrationEnabled,
     automaticWeightSyncEnabled,
+    automaticWeightSyncAccountFingerprint,
     lastBackupExportedAt,
     lastBackupAppVersion,
     lastBackupSchemaVersion,
@@ -226,6 +244,9 @@ export function splitAppSettings(settings: AppSettings): {
       restTimerSoundEnabled,
       restTimerVibrationEnabled,
       automaticWeightSyncEnabled,
+      ...(automaticWeightSyncAccountFingerprint === undefined
+        ? {}
+        : { automaticWeightSyncAccountFingerprint }),
       ...(lastBackupExportedAt === undefined
         ? {}
         : { lastBackupExportedAt }),

@@ -11,7 +11,7 @@ const routeMetadata: RouteMetadata[] = [
   { pattern: routePaths.search, title: 'Recherche globale' },
   { pattern: routePaths.profile, title: 'Profil' },
   { pattern: routePaths.dashboardCustomization, title: 'Personnaliser le tableau de bord' },
-  { pattern: routePaths.syncPrototype, title: 'Prototype de synchronisation' },
+  { pattern: routePaths.syncPrototype, title: 'Compte de synchronisation' },
   { pattern: routePaths.settings, title: 'Paramètres' },
   { pattern: routePaths.reminders, title: 'Rappels et routines' },
   { pattern: routePaths.barcodeScanner, title: 'Scanner un code-barres' },

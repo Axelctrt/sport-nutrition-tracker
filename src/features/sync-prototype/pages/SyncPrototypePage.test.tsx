@@ -7,10 +7,34 @@ import type {
 } from '@/infrastructure/sync-prototype/syncPrototypeClient';
 import { ToastProvider } from '@/shared/toast/ToastProvider';
 
+const syncPrototypeConfigMock = vi.hoisted(() => ({
+  readSyncPrototypeConfigSafely: vi.fn(),
+}));
+
+vi.mock(
+  '@/infrastructure/sync-prototype/syncPrototypeConfig',
+  async (importOriginal) => {
+    const actual = await importOriginal<
+      typeof import('@/infrastructure/sync-prototype/syncPrototypeConfig')
+    >();
+
+    return {
+      ...actual,
+      readSyncPrototypeConfigSafely:
+        syncPrototypeConfigMock.readSyncPrototypeConfigSafely,
+    };
+  },
+);
+
 const scrollIntoViewMock = vi.fn();
 const writeTextMock = vi.fn(async (_text: string) => undefined);
 
 beforeEach(() => {
+  syncPrototypeConfigMock.readSyncPrototypeConfigSafely.mockReset();
+  syncPrototypeConfigMock.readSyncPrototypeConfigSafely.mockReturnValue({
+    errorMessage:
+      'La synchronisation n’est pas activée dans la configuration de cette version.',
+  });
   scrollIntoViewMock.mockClear();
   writeTextMock.mockClear();
   Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
@@ -292,6 +316,46 @@ function renderPage(client: SyncPrototypeClient) {
 }
 
 describe('écran du prototype Dexie Cloud', () => {
+  it('affiche une erreur locale plutôt que de tomber si la configuration est indisponible', () => {
+    render(
+      <ToastProvider>
+        <SyncPrototypePage />
+      </ToastProvider>,
+    );
+
+    expect(screen.getByText('Compte indisponible')).toBeInTheDocument();
+  });
+
+  it('masque les outils de laboratoire dans l’écran de compte utilisateur', async () => {
+    const { client } = createFakeClient(true);
+
+    render(
+      <ToastProvider>
+        <SyncPrototypePage client={client} diagnosticsEnabled={false} />
+      </ToastProvider>,
+    );
+
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: 'Compte de synchronisation',
+      }),
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByRole('button', { name: 'Recevoir mon code' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText('Prototype de synchronisation'),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText('Diagnostic C3')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('Pesées fictives synchronisées'),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('Synchroniser les vraies pesées'),
+    ).not.toBeInTheDocument();
+  });
+
   it('intègre l’email et le code OTP directement dans la page', async () => {
     const user = userEvent.setup();
     const { client, initialize, login, submitInteraction } =

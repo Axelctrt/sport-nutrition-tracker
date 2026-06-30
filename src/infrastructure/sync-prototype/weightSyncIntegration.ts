@@ -5,7 +5,8 @@ import {
   type SyncPrototypeClient,
   type SyncPrototypeSnapshot,
 } from '@/infrastructure/sync-prototype/syncPrototypeClient';
-import { readSyncPrototypeConfig } from '@/infrastructure/sync-prototype/syncPrototypeConfig';
+import { readSyncPrototypeConfigSafely } from '@/infrastructure/sync-prototype/syncPrototypeConfig';
+import { createSyncPrototypeAccountFingerprint } from '@/infrastructure/sync-prototype/syncPrototypeDiagnostics';
 import {
   AUTOMATIC_WEIGHT_SYNC_PREFERENCE_CHANGED_EVENT,
   REAL_WEIGHT_DATA_CHANGED_EVENT,
@@ -15,6 +16,7 @@ export type WeightSyncIntegrationStatus =
   | 'unavailable'
   | 'disabled'
   | 'disconnected'
+  | 'account-mismatch'
   | 'idle'
   | 'syncing'
   | 'in-sync'
@@ -52,6 +54,7 @@ export interface WeightSyncIntegrationOptions {
   readonly timeoutMs?: number;
   readonly clientErrorGraceMs?: number;
   readonly postSuccessErrorGraceMs?: number;
+  readonly configurationError?: string;
 }
 
 const DEFAULT_DEBOUNCE_MS = 750;
@@ -74,6 +77,15 @@ function isConnectivityError(message: string | undefined): boolean {
   );
 }
 
+function accountFingerprintFromSnapshot(
+  snapshot: SyncPrototypeSnapshot,
+): string | undefined {
+  if (!snapshot.account.isLoggedIn) return undefined;
+  return createSyncPrototypeAccountFingerprint(
+    snapshot.account.userId ?? snapshot.account.email,
+  );
+}
+
 export class WeightSyncIntegrationController {
   private snapshot: WeightSyncIntegrationSnapshot;
   private readonly listeners = new Set<() => void>();
@@ -89,7 +101,9 @@ export class WeightSyncIntegrationController {
   private readonly timeoutMs: number;
   private readonly clientErrorGraceMs: number;
   private readonly postSuccessErrorGraceMs: number;
+  private readonly configurationError: string | undefined;
   private initializationPromise: Promise<void> | undefined;
+  private clientInitializationPromise: Promise<void> | undefined;
   private unsubscribeClient: (() => void) | undefined;
   private scheduledTimer: ReturnType<typeof globalThis.setTimeout> | undefined;
   private clientErrorTimer: ReturnType<typeof globalThis.setTimeout> | undefined;
@@ -99,6 +113,11 @@ export class WeightSyncIntegrationController {
   private pendingAfterCurrent = false;
   private preferenceWriteInProgress = false;
   private suppressClientErrorsUntil = 0;
+  private boundAccountFingerprint: string | undefined;
+  private lastConnectedAccountFingerprint: string | undefined;
+  private accountMismatchWriteInProgress = false;
+  private subscriptionsInstalled = false;
+  private authorizationRequiredMessage: string | undefined;
 
   private readonly handleOnline = () => {
     this.updateConnectivity(true);
@@ -144,6 +163,7 @@ export class WeightSyncIntegrationController {
       options.clientErrorGraceMs ?? DEFAULT_CLIENT_ERROR_GRACE_MS;
     this.postSuccessErrorGraceMs =
       options.postSuccessErrorGraceMs ?? DEFAULT_POST_SUCCESS_ERROR_GRACE_MS;
+    this.configurationError = options.configurationError;
 
     const online = this.isOnline();
     this.snapshot = {
@@ -151,7 +171,14 @@ export class WeightSyncIntegrationController {
       enabled: false,
       accountConnected: false,
       online,
-      status: this.client ? 'disabled' : 'unavailable',
+      status: this.client
+        ? 'disabled'
+        : this.configurationError
+          ? 'error'
+          : 'unavailable',
+      ...(this.configurationError
+        ? { errorMessage: this.configurationError }
+        : {}),
     };
   }
 
@@ -178,10 +205,34 @@ export class WeightSyncIntegrationController {
   }
 
   async setEnabled(enabled: boolean): Promise<void> {
+    await this.initialize();
+
     if (!this.client && enabled) {
       throw new Error(
-        'La synchronisation des pesées n’est pas disponible dans cette version.',
+        this.configurationError ??
+          'La synchronisation des pesées n’est pas disponible dans cette version.',
       );
+    }
+
+    let accountFingerprint: string | undefined;
+    if (enabled) {
+      const currentSnapshot = this.client!.getSnapshot();
+      accountFingerprint =
+        accountFingerprintFromSnapshot(currentSnapshot) ??
+        this.lastConnectedAccountFingerprint;
+
+      if (!accountFingerprint) {
+        await this.ensureClientInitialized();
+        accountFingerprint =
+          accountFingerprintFromSnapshot(this.client!.getSnapshot()) ??
+          this.lastConnectedAccountFingerprint;
+      }
+
+      if (!accountFingerprint) {
+        throw new Error(
+          'Connecte ton compte de synchronisation avant d’activer les échanges.',
+        );
+      }
     }
 
     this.preferenceWriteInProgress = true;
@@ -191,17 +242,22 @@ export class WeightSyncIntegrationController {
       try {
         await this.settingsRepository.update({
           automaticWeightSyncEnabled: enabled,
+          automaticWeightSyncAccountFingerprint: enabled
+            ? accountFingerprint
+            : undefined,
         });
       } catch (error) {
         updateError = error;
       }
 
-      // L'activation est un réglage strictement local. Dexie Cloud peut
-      // changer d'état entre le rendu et le clic (restauration de session,
-      // connexion WebSocket, synchronisation initiale) sans invalider cette
-      // préférence. On vérifie donc uniquement la valeur réellement stockée.
       const persisted = await this.settingsRepository.get();
-      if (persisted.automaticWeightSyncEnabled !== enabled) {
+      const persistedCorrectly =
+        persisted.automaticWeightSyncEnabled === enabled &&
+        (!enabled ||
+          persisted.automaticWeightSyncAccountFingerprint ===
+            accountFingerprint);
+
+      if (!persistedCorrectly) {
         if (updateError) throw updateError;
         throw new Error('Le réglage de synchronisation n’a pas été enregistré.');
       }
@@ -209,21 +265,9 @@ export class WeightSyncIntegrationController {
       this.preferenceWriteInProgress = false;
     }
 
+    this.boundAccountFingerprint = enabled ? accountFingerprint : undefined;
+    this.authorizationRequiredMessage = undefined;
     this.applyEnabledState(enabled);
-
-    if (enabled) {
-      void this.initialize()
-        .then(() => {
-          if (!this.client) return;
-          this.updateFromClient(this.client.getSnapshot());
-        })
-        .catch((error) => {
-          this.updateSnapshot({
-            status: 'error',
-            errorMessage: messageFromError(error),
-          });
-        });
-    }
   }
 
   async syncNow(): Promise<void> {
@@ -240,12 +284,28 @@ export class WeightSyncIntegrationController {
       throw new Error('Aucune connexion réseau n’est disponible.');
     }
 
+    await this.ensureClientInitialized();
     await this.waitForClientReady();
 
-    if (!this.client.getSnapshot().account.isLoggedIn) {
-      this.updateFromClient(this.client.getSnapshot());
+    const currentClientSnapshot = this.client.getSnapshot();
+    if (!currentClientSnapshot.account.isLoggedIn) {
+      this.updateFromClient(currentClientSnapshot);
       throw new Error('Connecte ton compte de synchronisation.');
     }
+
+    const currentAccountFingerprint =
+      accountFingerprintFromSnapshot(currentClientSnapshot);
+    if (
+      !currentAccountFingerprint ||
+      !this.boundAccountFingerprint ||
+      currentAccountFingerprint !== this.boundAccountFingerprint
+    ) {
+      this.handleAccountMismatch();
+      throw new Error(
+        'Le compte connecté ne correspond pas au compte autorisé sur cet appareil.',
+      );
+    }
+
     if (this.activeOperation) {
       if (this.activeCaller) return this.activeCaller;
       throw new Error('Une synchronisation est déjà en cours.');
@@ -395,14 +455,47 @@ export class WeightSyncIntegrationController {
       this.updateSnapshot({
         available: false,
         enabled: false,
-        status: 'unavailable',
+        status: this.configurationError ? 'error' : 'unavailable',
+        errorMessage: this.configurationError,
       });
       return;
     }
 
-    await this.client.initialize();
     const settings = await this.settingsRepository.get();
+    this.installSubscriptions();
+    this.boundAccountFingerprint =
+      settings.automaticWeightSyncAccountFingerprint;
 
+    if (
+      settings.automaticWeightSyncEnabled &&
+      !this.boundAccountFingerprint
+    ) {
+      this.authorizationRequiredMessage =
+        'Réactive la synchronisation pour confirmer le compte autorisé sur cet appareil.';
+      await this.persistAutomaticDisable();
+      await this.ensureClientInitialized();
+      this.updateFromClient(this.client.getSnapshot());
+      return;
+    }
+
+    this.applyEnabledState(settings.automaticWeightSyncEnabled);
+
+    if (!settings.automaticWeightSyncEnabled) return;
+
+    await this.ensureClientInitialized();
+    this.updateFromClient(this.client.getSnapshot());
+  }
+
+  private installSubscriptions(): void {
+    if (!this.client || this.subscriptionsInstalled) return;
+
+    this.subscriptionsInstalled = true;
+    const initialAccountFingerprint = accountFingerprintFromSnapshot(
+      this.client.getSnapshot(),
+    );
+    if (initialAccountFingerprint) {
+      this.lastConnectedAccountFingerprint = initialAccountFingerprint;
+    }
     this.unsubscribeClient = this.client.subscribe(() => {
       this.updateFromClient(this.client!.getSnapshot());
     });
@@ -416,9 +509,55 @@ export class WeightSyncIntegrationController {
       AUTOMATIC_WEIGHT_SYNC_PREFERENCE_CHANGED_EVENT,
       this.handlePreferenceChange,
     );
+  }
 
-    this.updateFromClient(this.client.getSnapshot());
-    this.applyEnabledState(settings.automaticWeightSyncEnabled);
+  private ensureClientInitialized(): Promise<void> {
+    if (!this.client) return Promise.resolve();
+    if (this.clientInitializationPromise) {
+      return this.clientInitializationPromise;
+    }
+
+    this.clientInitializationPromise = this.client.initialize().catch((error) => {
+      this.clientInitializationPromise = undefined;
+      throw error;
+    });
+    return this.clientInitializationPromise;
+  }
+
+  private async persistAutomaticDisable(): Promise<void> {
+    if (this.accountMismatchWriteInProgress) return;
+
+    this.accountMismatchWriteInProgress = true;
+    this.preferenceWriteInProgress = true;
+    try {
+      await this.settingsRepository.update({
+        automaticWeightSyncEnabled: false,
+        automaticWeightSyncAccountFingerprint: undefined,
+      });
+      this.boundAccountFingerprint = undefined;
+    } finally {
+      this.preferenceWriteInProgress = false;
+      this.accountMismatchWriteInProgress = false;
+    }
+  }
+
+  private handleAccountMismatch(): void {
+    this.cancelScheduled();
+    this.pendingAfterCurrent = false;
+    this.authorizationRequiredMessage =
+      'Un autre compte de synchronisation est connecté. Réactive la fonction pour autoriser explicitement ce compte sur cet appareil.';
+    this.updateSnapshot({
+      enabled: false,
+      accountConnected: true,
+      status: 'account-mismatch',
+      errorMessage: this.authorizationRequiredMessage,
+    });
+    void this.persistAutomaticDisable().catch((error) => {
+      this.updateSnapshot({
+        status: 'error',
+        errorMessage: messageFromError(error),
+      });
+    });
   }
 
   private applyEnabledState(enabled: boolean): void {
@@ -432,8 +571,10 @@ export class WeightSyncIntegrationController {
       this.pendingAfterCurrent = false;
       this.updateSnapshot({
         enabled: false,
-        status: 'disabled',
-        errorMessage: undefined,
+        status: this.authorizationRequiredMessage
+          ? 'account-mismatch'
+          : 'disabled',
+        errorMessage: this.authorizationRequiredMessage,
       });
       return;
     }
@@ -445,6 +586,10 @@ export class WeightSyncIntegrationController {
   private updateFromClient(clientSnapshot: SyncPrototypeSnapshot): void {
     const previousStatus = this.snapshot.status;
     const accountConnected = clientSnapshot.account.isLoggedIn;
+    const accountFingerprint = accountFingerprintFromSnapshot(clientSnapshot);
+    if (accountFingerprint) {
+      this.lastConnectedAccountFingerprint = accountFingerprint;
+    }
     const online = this.isOnline();
     const cloudOffline =
       clientSnapshot.sync.status === 'offline' ||
@@ -458,9 +603,21 @@ export class WeightSyncIntegrationController {
       this.updateSnapshot({
         accountConnected,
         online,
-        status: 'disabled',
-        errorMessage: undefined,
+        status: this.authorizationRequiredMessage
+          ? 'account-mismatch'
+          : 'disabled',
+        errorMessage: this.authorizationRequiredMessage,
       });
+      return;
+    }
+
+    if (
+      accountConnected &&
+      (!accountFingerprint ||
+        !this.boundAccountFingerprint ||
+        accountFingerprint !== this.boundAccountFingerprint)
+    ) {
+      this.handleAccountMismatch();
       return;
     }
     if (!online || cloudOffline) {
@@ -591,11 +748,17 @@ export class WeightSyncIntegrationController {
       readonly bypassMinimumInterval?: boolean;
     } = {},
   ): void {
+    const currentAccountFingerprint = this.client
+      ? accountFingerprintFromSnapshot(this.client.getSnapshot())
+      : undefined;
+
     if (
       !this.client ||
       !this.snapshot.enabled ||
       !this.snapshot.accountConnected ||
-      !this.isOnline()
+      !this.isOnline() ||
+      !currentAccountFingerprint ||
+      currentAccountFingerprint !== this.boundAccountFingerprint
     ) {
       return;
     }
@@ -677,10 +840,11 @@ let singleton: WeightSyncIntegrationController | undefined;
 export function getWeightSyncIntegration(): WeightSyncIntegrationController {
   if (singleton) return singleton;
 
-  const config = readSyncPrototypeConfig();
+  const { config, errorMessage } = readSyncPrototypeConfigSafely();
   const available = config.enabled && config.realWeightSyncEnabled;
   singleton = new WeightSyncIntegrationController({
     ...(available ? { client: getSyncPrototypeClient() } : {}),
+    ...(errorMessage ? { configurationError: errorMessage } : {}),
     settingsRepository: repositories.settings,
     ...(typeof window === 'undefined' ? {} : { eventTarget: window }),
   });

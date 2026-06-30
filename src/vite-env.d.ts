@@ -8,6 +8,7 @@ interface ImportMetaEnv {
   readonly VITE_ENABLE_SYNC_PROTOTYPE?: 'true' | 'false';
   readonly VITE_DEXIE_CLOUD_DATABASE_URL?: string;
   readonly VITE_ENABLE_REAL_WEIGHT_SYNC?: 'true' | 'false';
+  readonly VITE_ENABLE_SYNC_DIAGNOSTICS?: 'true' | 'false';
 }
 
 interface ImportMeta {
