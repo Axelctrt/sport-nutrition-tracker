@@ -54,7 +54,7 @@ function createSnapshot(): SyncPrototypeSnapshot {
     },
     diagnostics: {
       databaseName: 'sportpilot-sync-prototype-test',
-      databaseVersion: 2,
+      databaseVersion: 5,
       visibleWeightCount: 0,
       deletedWeightCount: 0,
       accountFingerprint: 'acct-a1b2c3d4',

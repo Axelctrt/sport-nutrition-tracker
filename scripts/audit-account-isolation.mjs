@@ -26,8 +26,8 @@ for (const path of requiredFiles) {
 }
 
 const packageJson = JSON.parse(read('package.json'));
-if (packageJson.version !== '0.18.0') {
-  fail(`la version attendue est 0.18.0, reçue ${String(packageJson.version)}.`);
+if (packageJson.version !== '0.19.0') {
+  fail(`la version attendue est 0.19.0, reçue ${String(packageJson.version)}.`);
 }
 
 const scripts = packageJson.scripts ?? {};

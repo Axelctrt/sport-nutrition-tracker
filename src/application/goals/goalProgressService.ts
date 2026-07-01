@@ -9,10 +9,16 @@ import {
   type GoalMilestone,
   type GoalState,
   type GoalStatus,
+  flushGoalStatePersistence,
 } from '@/domain/goals/goalState';
 import { readBackupData } from '@/infrastructure/backup/backupService';
 import type { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import { appDatabase } from '@/infrastructure/database/database';
+import {
+  createDeletedDeletionRecord,
+  deletionRecordId,
+} from '@/domain/models/deletion';
+import { reloadUserStateRuntime } from '@/infrastructure/user-state/userStateRuntime';
 
 export interface GoalInput {
   title: string;
@@ -444,10 +450,36 @@ export function updateGoalStatus(
   );
 }
 
-export function deleteGoal(goalId: string): void {
-  const state = readGoalState();
+export async function deleteGoal(
+  goalId: string,
+  database: AppDatabase = appDatabase,
+): Promise<void> {
+  await flushGoalStatePersistence();
 
-  persistGoals(
-    state.goals.filter(({ id }) => id !== goalId),
+  const existing = await database.goals.get(goalId);
+  if (!existing) return;
+
+  const deletedAt = new Date().toISOString();
+  const markerId = deletionRecordId('goal', goalId);
+
+  await database.transaction(
+    'rw',
+    database.goals,
+    database.deletionRecords,
+    async () => {
+      const currentMarker =
+        await database.deletionRecords.get(markerId);
+
+      await database.deletionRecords.put(
+        createDeletedDeletionRecord(
+          { entityType: 'goal', entityId: goalId },
+          deletedAt,
+          currentMarker,
+        ),
+      );
+      await database.goals.delete(goalId);
+    },
   );
+
+  await reloadUserStateRuntime(database);
 }

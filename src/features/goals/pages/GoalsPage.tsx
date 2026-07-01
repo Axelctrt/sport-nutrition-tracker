@@ -48,6 +48,7 @@ export function GoalsPage({
   const [deleteCandidate, setDeleteCandidate] =
     useState<Goal>();
   const [error, setError] = useState<string>();
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const load = useCallback(async () => {
     setError(undefined);
@@ -316,14 +317,30 @@ export function GoalsPage({
         }
         confirmLabel="Supprimer l’objectif"
         tone="danger"
+        isPending={isDeleting}
         onConfirm={() => {
-          if (deleteCandidate) {
-            deleteGoal(deleteCandidate.id);
-            setDeleteCandidate(undefined);
-            void load();
-          }
+          if (!deleteCandidate) return;
+
+          const goalId = deleteCandidate.id;
+          setIsDeleting(true);
+          setError(undefined);
+          void deleteGoal(goalId)
+            .then(() => {
+              setDeleteCandidate(undefined);
+              return load();
+            })
+            .catch((caughtError: unknown) => {
+              setError(
+                caughtError instanceof Error
+                  ? caughtError.message
+                  : 'L’objectif n’a pas pu être supprimé.',
+              );
+            })
+            .finally(() => setIsDeleting(false));
         }}
-        onCancel={() => setDeleteCandidate(undefined)}
+        onCancel={() => {
+          if (!isDeleting) setDeleteCandidate(undefined);
+        }}
       />
     </section>
   );

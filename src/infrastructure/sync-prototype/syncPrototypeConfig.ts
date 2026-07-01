@@ -4,6 +4,9 @@ export interface SyncPrototypeEnvironment {
   readonly VITE_ENABLE_SYNC_PROTOTYPE?: string;
   readonly VITE_DEXIE_CLOUD_DATABASE_URL?: string;
   readonly VITE_ENABLE_REAL_WEIGHT_SYNC?: string;
+  readonly VITE_ENABLE_REAL_ACTIVITY_SYNC?: string;
+  readonly VITE_ENABLE_REAL_GOAL_SYNC?: string;
+  readonly VITE_ENABLE_REAL_STRENGTH_SYNC?: string;
   readonly VITE_ENABLE_SYNC_DIAGNOSTICS?: string;
 }
 
@@ -15,6 +18,9 @@ export interface EnabledSyncPrototypeConfig {
   enabled: true;
   databaseUrl: string;
   realWeightSyncEnabled: boolean;
+  realActivitySyncEnabled: boolean;
+  realGoalSyncEnabled: boolean;
+  realStrengthSyncEnabled: boolean;
   diagnosticsEnabled: boolean;
 }
 
@@ -110,6 +116,18 @@ export function readSyncPrototypeConfig(
     realWeightSyncEnabled: readEnabledFlag(
       environment.VITE_ENABLE_REAL_WEIGHT_SYNC,
       'VITE_ENABLE_REAL_WEIGHT_SYNC',
+    ),
+    realActivitySyncEnabled: readEnabledFlag(
+      environment.VITE_ENABLE_REAL_ACTIVITY_SYNC,
+      'VITE_ENABLE_REAL_ACTIVITY_SYNC',
+    ),
+    realGoalSyncEnabled: readEnabledFlag(
+      environment.VITE_ENABLE_REAL_GOAL_SYNC,
+      'VITE_ENABLE_REAL_GOAL_SYNC',
+    ),
+    realStrengthSyncEnabled: readEnabledFlag(
+      environment.VITE_ENABLE_REAL_STRENGTH_SYNC,
+      'VITE_ENABLE_REAL_STRENGTH_SYNC',
     ),
     diagnosticsEnabled: readEnabledFlag(
       environment.VITE_ENABLE_SYNC_DIAGNOSTICS,

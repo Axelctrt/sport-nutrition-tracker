@@ -24,6 +24,9 @@ import { ConsistencyStreakPanel } from '@/features/settings/components/Consisten
 import { DataManagementCenter } from '@/features/settings/components/DataManagementCenter';
 import { RewardThemesPanel } from '@/features/settings/components/RewardThemesPanel';
 import { SettingsOverview } from '@/features/settings/components/SettingsOverview';
+import { ActivitySyncSettingsPanel } from '@/features/settings/components/ActivitySyncSettingsPanel';
+import { GoalSyncSettingsPanel } from '@/features/settings/components/GoalSyncSettingsPanel';
+import { StrengthSyncSettingsPanel } from '@/features/settings/components/StrengthSyncSettingsPanel';
 import { WeightSyncSettingsPanel } from '@/features/settings/components/WeightSyncSettingsPanel';
 import {
   SettingsSectionDirectory,
@@ -119,9 +122,9 @@ const settingsSections: readonly SettingsDirectoryItem[] = [
   },
   {
     id: 'settings-sync',
-    label: 'Synchronisation des pesées',
-    description: 'Activation, état et relance des échanges entre appareils.',
-    keywords: ['cloud', 'synchronisation', 'poids', 'appareils'],
+    label: 'Synchronisation des données',
+    description: 'Pesées, activités, objectifs et musculation entre appareils.',
+    keywords: ['cloud', 'synchronisation', 'poids', 'activites', 'objectifs', 'musculation', 'appareils'],
     icon: Cloud,
   },
   {
@@ -415,12 +418,17 @@ export function AdvancedSettingsPage() {
         <CollapsibleSection
           sectionId="settings-sync"
           storageKey="sportpilot:settings:sync"
-          title="Synchronisation des pesées"
-          description="Activer et surveiller les échanges de pesées entre tes appareils."
+          title="Synchronisation des données"
+          description="Surveiller les échanges de pesées, d’activités et d’objectifs entre tes appareils."
           icon={Cloud}
           className="scroll-mt-24"
         >
-          <WeightSyncSettingsPanel />
+          <div className="space-y-5">
+            <WeightSyncSettingsPanel />
+            <ActivitySyncSettingsPanel />
+            <GoalSyncSettingsPanel />
+            <StrengthSyncSettingsPanel />
+          </div>
         </CollapsibleSection>
 
         <CollapsibleSection
