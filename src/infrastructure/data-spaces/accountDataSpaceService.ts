@@ -8,7 +8,7 @@ import {
   type DataSpaceStorage,
 } from '@/infrastructure/data-spaces/dataSpaceRegistry';
 import { AppDatabase } from '@/infrastructure/database/AppDatabase';
-import { appDatabase } from '@/infrastructure/database/database';
+import { appDatabase, activeDataSpace } from '@/infrastructure/database/database';
 import { accountDatabaseNameForFingerprint } from '@/infrastructure/database/databaseNames';
 
 const TECHNICAL_TABLES = new Set([
@@ -27,6 +27,7 @@ export interface AccountDataSpacePreparationResult {
 export interface AccountDataSpaceServiceOptions {
   readonly storage?: DataSpaceStorage;
   readonly sourceDatabase?: AppDatabase;
+  readonly sourceSpace?: DataSpaceDescriptor;
   readonly now?: Date | string;
 }
 
@@ -109,11 +110,9 @@ export async function createEmptyAccountDataSpace(
   const existing = findAccountDataSpace(normalized, options.storage);
 
   if (existing) {
-    return {
-      space: activateDataSpace(existing.id, options.storage, options.now),
-      copiedRecords: 0,
-      copiedTables: 0,
-    };
+    throw new Error(
+      'Un espace local existe déjà pour ce compte. Ouvre cet espace au lieu d’en créer un nouveau.',
+    );
   }
 
   const { database, existed } = await openTargetDatabase(normalized);
@@ -149,7 +148,21 @@ export async function attachCurrentDataToAccountSpace(
     );
   }
 
+  const sourceSpace = options.sourceSpace ?? activeDataSpace;
+  if (sourceSpace.kind !== 'guest') {
+    throw new Error(
+      'Seules les données de l’espace invité peuvent être rattachées à un nouveau compte.',
+    );
+  }
+
   const sourceDatabase = options.sourceDatabase ?? appDatabase;
+  const targetDatabaseName = accountDatabaseNameForFingerprint(normalized);
+  if (sourceDatabase.name === targetDatabaseName) {
+    throw new Error(
+      'La source et la cible du rattachement doivent être deux espaces distincts.',
+    );
+  }
+
   await sourceDatabase.open();
 
   const snapshots: Array<{

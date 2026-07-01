@@ -1,4 +1,13 @@
-# SportPilot 0.17.1
+# SportPilot 0.18.0
+
+## Version 0.18 — comptes et espaces de données isolés
+
+SportPilot sépare désormais physiquement les données locales de l’espace invité et de chaque compte connecté. La barrière de compte s’exécute avant les providers métier : aucun profil, repas, activité, séance, objectif ou réglage d’un autre espace ne peut être chargé pendant un changement de compte.
+
+La connexion reste facultative. Lors de la première connexion, l’utilisateur choisit explicitement de rattacher une copie de ses données invitées ou de commencer avec un espace vide. La page **Compte et appareils** distingue la déconnexion, la désassociation locale et la suppression des seules données locales du compte.
+
+Cette version conserve le schéma Dexie principal v8 et le format de sauvegarde JSON v7. La synchronisation cloud reste limitée aux pesées ; l’extension aux autres catégories est prévue à partir de la version 0.19.0.
+
 
 <!-- hotfix-sync-production-0.17.1 -->
 ## Correctif 0.17.1 — synchronisation disponible en production

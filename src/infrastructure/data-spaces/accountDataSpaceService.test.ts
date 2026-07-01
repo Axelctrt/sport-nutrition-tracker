@@ -169,4 +169,56 @@ describe('accountDataSpaceService', () => {
     reopened.close();
     source.close();
   });
+
+  it('refuse de rattacher les données d’un compte vers un autre compte', async () => {
+    const sourceName = 'sportpilot-test-account-a4-source';
+    const targetName = accountDatabaseNameForFingerprint('acct-40404040');
+    databasesToDelete.add(sourceName);
+    databasesToDelete.add(targetName);
+    await deleteDatabase(sourceName);
+    await deleteDatabase(targetName);
+
+    const source = new AppDatabase(sourceName);
+    await source.open();
+
+    await expect(
+      attachCurrentDataToAccountSpace('acct-40404040', {
+        storage: new MemoryStorage(),
+        sourceDatabase: source,
+        sourceSpace: {
+          id: 'account:acct-50505050',
+          kind: 'account',
+          databaseName: sourceName,
+          label: 'Espace de compte',
+          accountFingerprint: 'acct-50505050',
+          linkedToCurrentDevice: true,
+          createdAt: '2026-07-01T09:00:00.000Z',
+          lastActivatedAt: '2026-07-01T09:00:00.000Z',
+        },
+      }),
+    ).rejects.toThrow('Seules les données de l’espace invité');
+
+    expect(await Dexie.exists(targetName)).toBe(false);
+    source.close();
+  });
+
+  it('refuse de recréer comme vide un espace de compte déjà enregistré', async () => {
+    const fingerprint = 'acct-60606060';
+    const targetName = accountDatabaseNameForFingerprint(fingerprint);
+    databasesToDelete.add(targetName);
+    await deleteDatabase(targetName);
+    const storage = new MemoryStorage();
+
+    await createEmptyAccountDataSpace(fingerprint, {
+      storage,
+      now: '2026-07-01T09:00:00.000Z',
+    });
+
+    await expect(
+      createEmptyAccountDataSpace(fingerprint, {
+        storage,
+        now: '2026-07-01T09:05:00.000Z',
+      }),
+    ).rejects.toThrow('existe déjà pour ce compte');
+  });
 });

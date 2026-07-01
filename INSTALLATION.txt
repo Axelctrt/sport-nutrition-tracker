@@ -1,76 +1,61 @@
-SPORTPILOT 0.17.1
+SPORTPILOT 0.18.0
 
 PRÉPARATION
 
-1. Vérifier que la branche courante est release/0.17.0.
+1. Vérifier que la branche feature/account-data-spaces-0.18.0 est propre.
 2. Arrêter le serveur de développement avec Ctrl + C.
-3. Exporter une sauvegarde JSON récente depuis la version actuellement
-   installée.
-4. Conserver cette sauvegarde hors de l’application.
-5. Vérifier que .env.local, dexie-cloud.json et dexie-cloud.key restent ignorés
-   par Git.
-6. Vérifier la whitelist Dexie Cloud :
+3. Exporter une sauvegarde JSON v7 récente et la conserver hors de l’application.
+4. Ne supprimer ni IndexedDB, ni les données Safari, ni la PWA.
+5. Vérifier que .env.local, dexie-cloud.json et dexie-cloud.key restent ignorés par Git.
+6. Vérifier les origines Dexie Cloud :
 
    npx dexie-cloud whitelist
 
-7. Les origines minimales attendues sont :
+7. Utiliser une origine autorisée, notamment :
 
    http://localhost:5173
+   http://127.0.0.1:5173
    https://sport-nutrition-tracker.axel-cottrant.workers.dev
-
-8. Supprimer toute origine temporaire trycloudflare.com encore présente.
 
 VALIDATION LOCALE
 
-9. Installer les dépendances et lancer les contrôles :
+8. Installer les dépendances :
 
    npm ci
+
+9. Lancer les contrôles :
+
    npm run release:verify
    npm run test:e2e
 
-10. Vérifier dans Paramètres que la version affichée est 0.17.0.
-11. Vérifier que « Synchronisation des pesées » est visible.
-12. Vérifier que « Gérer le compte de synchronisation » ouvre la page du
-    compte.
-13. Vérifier que les outils de laboratoire et diagnostics internes sont
-    absents.
+10. Vérifier que Paramètres affiche la version 0.18.0.
+11. Vérifier que les données historiques restent dans « Espace local invité ».
+12. Vérifier qu’un compte connecté ne charge jamais les données d’un autre compte.
+13. Vérifier la page « Compte et appareils ».
+14. Vérifier le fonctionnement hors connexion de l’espace actif.
 
-DÉPLOIEMENT
+PUBLICATION
 
-14. Fusionner release/0.17.0 dans develop, puis develop dans main avec des
-    commits de fusion explicites.
-15. Créer et pousser le tag annoté v0.17.0.
-16. Le push de main déclenche le déploiement Cloudflare.
-17. Vérifier les en-têtes :
-
-   curl.exe -I https://sport-nutrition-tracker.axel-cottrant.workers.dev
+15. Committer la préparation 0.18.0 sur feature/account-data-spaces-0.18.0.
+16. Fusionner cette branche dans develop avec un commit de fusion explicite.
+17. Après validation de develop, fusionner develop dans main.
+18. Créer le tag annoté v0.18.0 sur le commit publié dans main.
+19. Pousser main, develop et le tag v0.18.0.
+20. Le push de main déclenche le déploiement Cloudflare.
 
 VALIDATION APRÈS DÉPLOIEMENT
 
-18. Vérifier la version 0.17.0 sur ordinateur et iPhone.
-19. Vérifier que le profil, les journaux, les séances et les pesées locales sont
-    conservés.
-20. Réautoriser explicitement le compte de synchronisation si l’application le
-    demande.
-21. Créer, modifier puis supprimer une pesée de test entre deux appareils.
-22. Vérifier le mode hors connexion puis la reprise du réseau.
-23. Réaligner develop sur main après la publication si nécessaire.
+21. Vérifier la version 0.18.0 sur ordinateur et iPhone 15.
+22. Vérifier la conservation des espaces invité et compte.
+23. Tester un changement compte A / compte B sans fuite de données.
+24. Tester la déconnexion, la désassociation et la réassociation.
+25. Créer puis synchroniser une pesée entre deux appareils du même compte.
+26. Vérifier le mode hors connexion puis la reprise du réseau.
 
 VERSIONS DE DONNÉES
 
 Schéma Dexie principal : version 8.
 Sauvegarde JSON : version 7.
+Registre local des espaces : version 1.
 
-Les migrations sont automatiques. Ne jamais supprimer IndexedDB ou les données
-Safari pour forcer une mise à jour.
-
-CONFIGURATION DU BUILD CLOUDFLARE
-
-Aucun fichier .env.production ne doit être suivi ou livré.
-
-Configurer dans l’environnement de build Cloudflare :
-
-VITE_ENABLE_SYNC_PROTOTYPE=true
-VITE_DEXIE_CLOUD_DATABASE_URL=https://zhnyk8met.dexie.cloud
-VITE_ENABLE_REAL_WEIGHT_SYNC=true
-VITE_ENABLE_SYNC_DIAGNOSTICS=false
+Aucune migration de table n’est requise pour 0.18.0. Les espaces de comptes sont créés dans des bases IndexedDB distinctes. La base sportpilot-local-database demeure l’espace invité historique.
