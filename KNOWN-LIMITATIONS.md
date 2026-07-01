@@ -37,3 +37,9 @@ Open Food Facts et Dexie Cloud dépendent du réseau et de leur disponibilité. 
 ## Versions de données
 
 SportPilot 0.20.1 utilise la base cloud v8 et le runtime `sportpilot-sync-runtime-0.20.0-v8`. La base métier reste en Dexie v8, la sauvegarde en JSON v7 et le registre local des espaces en v1.
+
+## 0.21.0 D1
+
+- L’import d’un espace invité dans un compte existant sera traité en D2.
+- La restauration guidée depuis le cloud après une nouvelle installation sera traitée en D3.
+- La liste des appareils distants dépend encore de métadonnées non exposées par le service cloud actuel.

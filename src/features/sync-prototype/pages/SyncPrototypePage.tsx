@@ -411,9 +411,10 @@ function SyncPrototypeRuntime({
       await client.logout();
       setFeedback({
         tone: 'success',
-        title: 'Prototype déconnecté',
-        message:
-          'La session Dexie Cloud de test a été fermée sur cet appareil.',
+        title: diagnosticsEnabled ? 'Prototype déconnecté' : 'Compte déconnecté',
+        message: diagnosticsEnabled
+          ? 'La session Dexie Cloud de test a été fermée sur cet appareil.'
+          : 'La synchronisation est arrêtée. Les données locales restent conservées sur cet appareil.',
       });
     } catch (error) {
       setFeedback({
@@ -585,7 +586,7 @@ function SyncPrototypeRuntime({
         <p className="mt-3 max-w-3xl leading-7 text-slate-600 dark:text-slate-300">
           {diagnosticsEnabled
             ? 'Cet écran utilise une seconde base IndexedDB isolée pour les outils de laboratoire et la synchronisation des pesées.'
-            : 'Connecte le compte utilisé pour synchroniser uniquement tes pesées entre tes appareils.'}
+            : 'Connecte le compte utilisé pour synchroniser tes données sportives et nutritionnelles entre tes appareils.'}
         </p>
       </header>
 

@@ -74,3 +74,11 @@
 - [ ] `main`, `develop` et `v0.20.1` sont poussés.
 - [ ] Le déploiement Cloudflare est terminé.
 - [ ] La recette finale est validée sur ordinateur et iPhone 15 sous iOS 26.
+
+## Phase 0.21.0 D1
+
+- [ ] Les sept boutons de gestion du compte ouvrent `/settings/account-devices`.
+- [ ] Le compte connecté, l’état cloud et l’espace actif sont visibles en production.
+- [ ] La déconnexion conserve les données locales et cloud.
+- [ ] Le changement de compte revient par l’écran de connexion sans mélange entre espaces.
+- [ ] `npm run audit:account-management` réussit.

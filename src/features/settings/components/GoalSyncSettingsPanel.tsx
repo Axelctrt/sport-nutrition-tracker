@@ -195,7 +195,7 @@ export function GoalSyncSettingsPanel({
             'Les objectifs restent locaux tant que le lot de synchronisation sportive n’est pas activé dans ce déploiement.'}
         </InlineNotice>
         <Link
-          to={routePaths.syncPrototype}
+          to={routePaths.accountDevices}
           className="inline-flex min-h-11 items-center justify-center rounded-xl px-4 text-sm font-semibold text-brand-700 hover:bg-brand-50 dark:text-brand-300 dark:hover:bg-brand-950/30"
         >
           Gérer le compte de synchronisation
@@ -315,7 +315,7 @@ export function GoalSyncSettingsPanel({
             Synchroniser les objectifs
           </Button>
           <Link
-            to={routePaths.syncPrototype}
+            to={routePaths.accountDevices}
             className="inline-flex min-h-11 items-center justify-center rounded-xl px-4 text-sm font-semibold text-brand-700 hover:bg-brand-50 dark:text-brand-300 dark:hover:bg-brand-950/30"
           >
             Gérer le compte

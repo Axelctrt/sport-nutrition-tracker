@@ -44,3 +44,10 @@ npm run release:verify
 9. confirmer le retour à `0 différence` après chaque synchronisation ;
 10. tester un changement de compte sans fuite de données ;
 11. vérifier la non-régression des pesées, activités, objectifs et données de musculation.
+
+## Phase 0.21.0 D1 — Gestion du compte de synchronisation
+
+- Les accès « Gérer le compte de synchronisation » ouvrent désormais l’écran Compte et appareils.
+- La configuration publique validée de production ne peut plus être désactivée par une ancienne variable de déploiement.
+- L’écran distingue le compte connecté, l’état du cloud, l’espace local actif et les actions de déconnexion/désassociation/suppression locale.
+- La déconnexion et le changement de compte ne suppriment aucune donnée locale ou cloud.

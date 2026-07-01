@@ -109,18 +109,17 @@ export function AccountDevicesPage({
   detachDevice = detachCurrentDeviceFromAccount,
   deleteLocalData = deleteLocalAccountData,
 }: AccountDevicesPageProps = {}) {
+  const safeConfig = useMemo(() => readSyncPrototypeConfigSafely(), []);
   const runtimeClient = useMemo<SyncPrototypeClient | null>(() => {
     if (clientOverride !== undefined) return clientOverride;
-
-    const { config } = readSyncPrototypeConfigSafely();
-    if (!config.enabled) return null;
+    if (!safeConfig.config.enabled) return null;
 
     try {
       return getSyncPrototypeClient();
     } catch {
       return null;
     }
-  }, [clientOverride]);
+  }, [clientOverride, safeConfig.config.enabled]);
 
   const [snapshot, setSnapshot] = useState<SyncPrototypeSnapshot | undefined>(
     () => runtimeClient?.getSnapshot(),
@@ -211,8 +210,9 @@ export function AccountDevicesPage({
             Compte et appareils
           </h1>
         </div>
-        <InlineNotice tone="info" title="Synchronisation indisponible">
-          Cette version ne peut pas ouvrir le compte cloud. Les données locales restent accessibles et exportables.
+        <InlineNotice tone="error" title="Compte cloud indisponible">
+          {safeConfig.errorMessage
+            ?? 'Le service de compte ne peut pas être initialisé. Les données locales restent accessibles et exportables.'}
         </InlineNotice>
         <Link
           to={routePaths.backup}
@@ -226,6 +226,9 @@ export function AccountDevicesPage({
   }
 
   const loggedIn = snapshot.account.isLoggedIn;
+  const cloudDatabaseLabel = safeConfig.config.enabled
+    ? new URL(safeConfig.config.databaseUrl).hostname
+    : 'Non configuré';
   const accountSpaceActive = currentSpace.kind === 'account';
   const actionPending = pendingAction !== undefined;
   const managementOptions = storage
@@ -245,6 +248,12 @@ export function AccountDevicesPage({
           Vérifie le compte actif, l’état des échanges et les données conservées sur cet appareil. Chaque action ci-dessous possède un effet distinct.
         </p>
       </div>
+
+      {!loggedIn ? (
+        <InlineNotice tone="info" title="Aucun compte connecté">
+          Les données de l’espace local actif restent sur cet appareil. Connecte un compte pour reprendre la synchronisation ou utiliser un autre compte.
+        </InlineNotice>
+      ) : null}
 
       {feedback ? (
         <InlineNotice tone={feedback.tone} title={feedback.title}>
@@ -283,7 +292,15 @@ export function AccountDevicesPage({
                 {pendingChangesLabel(snapshot)}
               </dd>
             </div>
-            <div className="col-span-2 rounded-xl border border-slate-200 p-3 dark:border-slate-800">
+            <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-800">
+              <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                Service cloud
+              </dt>
+              <dd className="mt-1 break-all font-bold text-slate-950 dark:text-white">
+                {cloudDatabaseLabel}
+              </dd>
+            </div>
+            <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-800">
               <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                 Dernier échange réussi
               </dt>
@@ -299,7 +316,7 @@ export function AccountDevicesPage({
               className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-brand-700 px-4 py-2 text-sm font-semibold text-white"
             >
               <RefreshCw aria-hidden="true" className="size-4" />
-              Gérer la synchronisation
+              Connexion et changement de compte
             </Link>
             <Link
               to={routePaths.backup}

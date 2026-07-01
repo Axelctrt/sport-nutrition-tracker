@@ -104,11 +104,15 @@ describe('AccountDevicesPage', () => {
     ).toBeInTheDocument();
     expect(screen.getByText('test@example.com')).toBeInTheDocument();
     expect(screen.getByText('À jour')).toBeInTheDocument();
+    expect(screen.getByText('Service cloud')).toBeInTheDocument();
     expect(screen.getByText('Chrome sur Windows')).toBeInTheDocument();
     expect(screen.getByText('…23456789')).toBeInTheDocument();
     expect(
       screen.getByRole('link', { name: 'Exporter les données' }),
     ).toHaveAttribute('href', '/backup');
+    expect(
+      screen.getByRole('link', { name: 'Connexion et changement de compte' }),
+    ).toHaveAttribute('href', '/settings/sync-prototype');
   });
 
   it('déconnecte sans supprimer les données locales', async () => {

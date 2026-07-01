@@ -1,9 +1,29 @@
 import {
+  mergeSyncPrototypeProductionEnvironment,
   readSyncPrototypeConfig,
   readSyncPrototypeConfigSafely,
 } from '@/infrastructure/sync-prototype/syncPrototypeConfig';
 
 describe('configuration du prototype Dexie Cloud', () => {
+
+  it('fait primer la configuration publique validée sur des variables de production obsolètes', () => {
+    const environment = mergeSyncPrototypeProductionEnvironment({
+      VITE_ENABLE_SYNC_PROTOTYPE: 'false',
+      VITE_DEXIE_CLOUD_DATABASE_URL: '',
+      VITE_ENABLE_REAL_WEIGHT_SYNC: 'false',
+      VITE_ENABLE_REAL_NUTRITION_JOURNAL_SYNC: 'false',
+      VITE_ENABLE_SYNC_DIAGNOSTICS: 'true',
+    });
+
+    expect(readSyncPrototypeConfig(environment)).toMatchObject({
+      enabled: true,
+      databaseUrl: 'https://zhnyk8met.dexie.cloud',
+      realWeightSyncEnabled: true,
+      realNutritionJournalSyncEnabled: true,
+      diagnosticsEnabled: false,
+    });
+  });
+
   it('dégrade une configuration invalide sans faire tomber l’application', () => {
     expect(
       readSyncPrototypeConfigSafely({

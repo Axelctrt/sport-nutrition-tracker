@@ -127,7 +127,7 @@ describe('ActivitySyncSettingsPanel', () => {
     ).toBeInTheDocument();
     expect(screen.getByRole('link', {
       name: 'Gérer le compte de synchronisation',
-    })).toHaveAttribute('href', '/settings/sync-prototype');
+    })).toHaveAttribute('href', '/settings/account-devices');
   });
 
   it('analyse puis synchronise les activités après confirmation', async () => {
