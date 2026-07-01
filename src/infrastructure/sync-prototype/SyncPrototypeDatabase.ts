@@ -1,5 +1,6 @@
 import Dexie, { type Table } from 'dexie';
 import dexieCloud from 'dexie-cloud-addon';
+import type { Activity } from '@/domain/models/activity';
 import type { DeletionRecord } from '@/domain/models/deletion';
 import type { EntityId } from '@/domain/models/common';
 import type { WeightEntry } from '@/domain/models/weight';
@@ -9,12 +10,14 @@ import type {
 } from '@/infrastructure/sync-prototype/syncPrototypeConfig';
 
 export const SYNC_PROTOTYPE_DATABASE_NAME = 'sportpilot-sync-prototype';
-export const SYNC_PROTOTYPE_DATABASE_VERSION = 2;
+export const SYNC_PROTOTYPE_DATABASE_VERSION = 3;
 export const SYNC_PROTOTYPE_TABLE_NAMES = [
   'weights',
   'deletionRecords',
   'realWeights',
   'realWeightDeletionRecords',
+  'realActivities',
+  'realActivityDeletionRecords',
 ] as const;
 
 export class SyncPrototypeDatabase extends Dexie {
@@ -22,6 +25,8 @@ export class SyncPrototypeDatabase extends Dexie {
   declare deletionRecords: Table<DeletionRecord, EntityId>;
   declare realWeights: Table<WeightEntry, EntityId>;
   declare realWeightDeletionRecords: Table<DeletionRecord, EntityId>;
+  declare realActivities: Table<Activity, EntityId>;
+  declare realActivityDeletionRecords: Table<DeletionRecord, EntityId>;
 
   constructor(
     { databaseUrl }: EnabledSyncPrototypeConfig,
@@ -35,12 +40,24 @@ export class SyncPrototypeDatabase extends Dexie {
         'id, entityType, entityId, status, deletedAt, restoredAt, updatedAt, [entityType+entityId]',
     });
 
+    this.version(2).stores({
+      weights: 'id, &date, updatedAt',
+      deletionRecords:
+        'id, entityType, entityId, status, deletedAt, restoredAt, updatedAt, [entityType+entityId]',
+      realWeights: 'id, date, updatedAt',
+      realWeightDeletionRecords:
+        'id, entityType, entityId, status, deletedAt, restoredAt, updatedAt, [entityType+entityId]',
+    });
+
     this.version(SYNC_PROTOTYPE_DATABASE_VERSION).stores({
       weights: 'id, &date, updatedAt',
       deletionRecords:
         'id, entityType, entityId, status, deletedAt, restoredAt, updatedAt, [entityType+entityId]',
       realWeights: 'id, date, updatedAt',
       realWeightDeletionRecords:
+        'id, entityType, entityId, status, deletedAt, restoredAt, updatedAt, [entityType+entityId]',
+      realActivities: 'id, date, type, [date+type], updatedAt',
+      realActivityDeletionRecords:
         'id, entityType, entityId, status, deletedAt, restoredAt, updatedAt, [entityType+entityId]',
     });
 

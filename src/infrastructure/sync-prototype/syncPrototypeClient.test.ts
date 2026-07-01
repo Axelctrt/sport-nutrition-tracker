@@ -276,7 +276,7 @@ describe('client sécurisé du prototype Dexie Cloud', () => {
       },
       diagnostics: {
         databaseName: 'sportpilot-sync-prototype',
-        databaseVersion: 2,
+        databaseVersion: 3,
         visibleWeightCount: 0,
         deletedWeightCount: 0,
         accountFingerprint:

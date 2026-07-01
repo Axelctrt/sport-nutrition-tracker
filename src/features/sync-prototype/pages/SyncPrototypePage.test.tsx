@@ -52,7 +52,7 @@ afterEach(cleanup);
 function createFakeDiagnostics(accountFingerprint?: string) {
   return {
     databaseName: 'sportpilot-sync-prototype',
-    databaseVersion: 2,
+    databaseVersion: 3,
     visibleWeightCount: 0,
     deletedWeightCount: 0,
     ...(accountFingerprint ? { accountFingerprint } : {}),

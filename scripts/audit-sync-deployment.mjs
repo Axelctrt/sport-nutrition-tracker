@@ -22,6 +22,7 @@ if (existsSync(deploymentConfigPath)) {
   for (const expected of [
     "VITE_ENABLE_SYNC_PROTOTYPE: 'true'",
     "VITE_ENABLE_REAL_WEIGHT_SYNC: 'true'",
+    "VITE_ENABLE_REAL_ACTIVITY_SYNC: 'true'",
     "VITE_ENABLE_SYNC_DIAGNOSTICS: 'false'",
   ]) {
     if (!source.includes(expected)) fail(`la valeur attendue ${expected} est absente.`);

@@ -9,12 +9,14 @@ import {
 describe('base isolée du prototype Dexie Cloud', () => {
   it('reste distincte de la base SportPilot réelle', () => {
     expect(SYNC_PROTOTYPE_DATABASE_NAME).not.toBe(DEFAULT_DATABASE_NAME);
-    expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(2);
+    expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(3);
     expect(SYNC_PROTOTYPE_TABLE_NAMES).toEqual([
       'weights',
       'deletionRecords',
       'realWeights',
       'realWeightDeletionRecords',
+      'realActivities',
+      'realActivityDeletionRecords',
     ]);
   });
 
@@ -23,6 +25,7 @@ describe('base isolée du prototype Dexie Cloud', () => {
       enabled: true,
       databaseUrl: 'https://sportpilot-prototype.dexie.cloud',
       realWeightSyncEnabled: true,
+      realActivitySyncEnabled: true,
       diagnosticsEnabled: true,
     });
 
@@ -40,6 +43,8 @@ describe('base isolée du prototype Dexie Cloud', () => {
     expect(database.table('deletionRecords').schema.primKey.keyPath).toBe('id');
     expect(database.table('realWeights').schema.primKey.keyPath).toBe('id');
     expect(database.table('realWeightDeletionRecords').schema.primKey.keyPath).toBe('id');
+    expect(database.table('realActivities').schema.primKey.keyPath).toBe('id');
+    expect(database.table('realActivityDeletionRecords').schema.primKey.keyPath).toBe('id');
 
     database.close();
   });

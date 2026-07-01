@@ -31,6 +31,12 @@ import {
   type RealWeightSyncPreview,
   type RealWeightSyncResult,
 } from '@/infrastructure/sync-prototype/realWeightSyncService';
+import {
+  previewRealActivitySync,
+  synchronizeRealActivities,
+  type RealActivitySyncPreview,
+  type RealActivitySyncResult,
+} from '@/infrastructure/sync-prototype/realActivitySyncService';
 
 export interface SyncPrototypeAccountSnapshot {
   readonly isLoggedIn: boolean;
@@ -102,11 +108,26 @@ export interface SyncPrototypeRealWeightSnapshot {
   readonly errorMessage?: string;
 }
 
+export interface SyncPrototypeRealActivitySnapshot {
+  readonly enabled: boolean;
+  readonly status:
+    | 'disabled'
+    | 'idle'
+    | 'analyzing'
+    | 'ready'
+    | 'syncing'
+    | 'error';
+  readonly preview?: RealActivitySyncPreview;
+  readonly lastResult?: RealActivitySyncResult;
+  readonly errorMessage?: string;
+}
+
 export interface SyncPrototypeSnapshot {
   readonly account: SyncPrototypeAccountSnapshot;
   readonly sync: SyncPrototypeSyncSnapshot;
   readonly weights: SyncPrototypeWeightSnapshot;
   readonly realWeights?: SyncPrototypeRealWeightSnapshot;
+  readonly realActivities?: SyncPrototypeRealActivitySnapshot;
   readonly diagnostics: SyncPrototypeDiagnosticsSnapshot;
   readonly interaction?: SyncPrototypeInteractionSnapshot;
 }
@@ -122,6 +143,8 @@ export interface SyncPrototypeClient {
   syncNow(): Promise<void>;
   analyzeRealWeights(): Promise<RealWeightSyncPreview>;
   syncRealWeights(): Promise<RealWeightSyncResult>;
+  analyzeRealActivities?(): Promise<RealActivitySyncPreview>;
+  syncRealActivities?(): Promise<RealActivitySyncResult>;
   saveWeight(draft: SyncPrototypeWeightDraft): Promise<WeightEntry>;
   deleteWeight(weightId: EntityId): Promise<void>;
 }
@@ -229,6 +252,7 @@ function validateWeightDraft(
 
 export interface SyncPrototypeClientOptions {
   readonly realWeightSyncEnabled?: boolean;
+  readonly realActivitySyncEnabled?: boolean;
   readonly localDatabase?: AppDatabase;
 }
 
@@ -240,6 +264,7 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
   private currentInteraction: DXCUserInteraction | undefined;
   private weightRefreshSequence = 0;
   private readonly realWeightSyncEnabled: boolean;
+  private readonly realActivitySyncEnabled: boolean;
   private readonly localDatabase: AppDatabase;
 
   constructor(
@@ -248,6 +273,8 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
   ) {
     this.database = database;
     this.realWeightSyncEnabled = options.realWeightSyncEnabled === true;
+    this.realActivitySyncEnabled =
+      options.realActivitySyncEnabled === true;
     this.localDatabase = options.localDatabase ?? appDatabase;
     this.currentInteraction = database.cloud.userInteraction.value;
     const account = sanitizeAccount(database.cloud.currentUser.value);
@@ -257,6 +284,9 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
       weights: emptyWeightSnapshot(true),
       ...(this.realWeightSyncEnabled
         ? { realWeights: { enabled: true, status: 'idle' as const } }
+        : {}),
+      ...(this.realActivitySyncEnabled
+        ? { realActivities: { enabled: true, status: 'idle' as const } }
         : {}),
       diagnostics: createEmptySyncPrototypeDiagnostics(
         account.userId ?? account.email,
@@ -389,6 +419,9 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
       ...(this.realWeightSyncEnabled
         ? { realWeights: { enabled: true, status: 'idle' as const } }
         : {}),
+      ...(this.realActivitySyncEnabled
+        ? { realActivities: { enabled: true, status: 'idle' as const } }
+        : {}),
       diagnostics: createEmptySyncPrototypeDiagnostics(),
     };
     this.notify();
@@ -482,6 +515,96 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
       this.snapshot = {
         ...this.snapshot,
         realWeights: { enabled: true, status: 'error', errorMessage },
+      };
+      this.notify();
+      throw error;
+    }
+  }
+
+  async analyzeRealActivities(): Promise<RealActivitySyncPreview> {
+    await this.initialize();
+    this.assertRealActivitySyncAvailable();
+    this.snapshot = {
+      ...this.snapshot,
+      realActivities: {
+        enabled: true,
+        status: 'analyzing',
+      },
+    };
+    this.notify();
+
+    try {
+      await this.database.cloud.sync();
+      const preview = await previewRealActivitySync(
+        this.localDatabase,
+        this.database,
+        this.database.cloud.currentUserId,
+      );
+      this.snapshot = {
+        ...this.snapshot,
+        realActivities: { enabled: true, status: 'ready', preview },
+      };
+      this.notify();
+      return preview;
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'L’analyse des activités a échoué.';
+      this.snapshot = {
+        ...this.snapshot,
+        realActivities: { enabled: true, status: 'error', errorMessage },
+      };
+      this.notify();
+      throw error;
+    }
+  }
+
+  async syncRealActivities(): Promise<RealActivitySyncResult> {
+    await this.initialize();
+    this.assertRealActivitySyncAvailable();
+    this.snapshot = {
+      ...this.snapshot,
+      realActivities: {
+        ...(this.snapshot.realActivities ?? {}),
+        enabled: true,
+        status: 'syncing',
+      },
+    };
+    this.notify();
+
+    try {
+      await this.database.cloud.sync();
+      const result = await synchronizeRealActivities(
+        this.localDatabase,
+        this.database,
+        this.database.cloud.currentUserId,
+      );
+      await this.database.cloud.sync();
+      const preview = await previewRealActivitySync(
+        this.localDatabase,
+        this.database,
+        this.database.cloud.currentUserId,
+      );
+      this.snapshot = {
+        ...this.snapshot,
+        realActivities: {
+          enabled: true,
+          status: 'ready',
+          preview,
+          lastResult: result,
+        },
+      };
+      this.notify();
+      return result;
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'La synchronisation des activités a échoué.';
+      this.snapshot = {
+        ...this.snapshot,
+        realActivities: { enabled: true, status: 'error', errorMessage },
       };
       this.notify();
       throw error;
@@ -596,6 +719,15 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
     );
 
     await this.refreshWeights();
+  }
+
+  private assertRealActivitySyncAvailable(): void {
+    if (!this.realActivitySyncEnabled) {
+      throw new Error(
+        'La synchronisation des activités est désactivée par configuration.',
+      );
+    }
+    this.assertLoggedIn();
   }
 
   private assertRealWeightSyncAvailable(): void {
@@ -734,6 +866,7 @@ export function getSyncPrototypeClient(): SyncPrototypeClient {
   singletonDatabase = createSyncPrototypeDatabase(config);
   singletonClient = createSyncPrototypeClient(singletonDatabase, {
     realWeightSyncEnabled: config.realWeightSyncEnabled,
+    realActivitySyncEnabled: config.realActivitySyncEnabled,
     localDatabase: appDatabase,
   });
   return singletonClient;
