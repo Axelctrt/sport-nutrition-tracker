@@ -7,13 +7,15 @@ import {
 } from '@/domain/models/deletion';
 import type { WeightEntry } from '@/domain/models/weight';
 import type { SyncPrototypeDatabase } from '@/infrastructure/sync-prototype/SyncPrototypeDatabase';
-
-type CloudOwned<T> = T & {
-  readonly owner?: string;
-  readonly realmId?: string;
-  readonly $ts?: unknown;
-  readonly _hasBlobRefs?: 1;
-};
+import {
+  belongsToCurrentUser,
+  chooseLatest,
+  cloudPrivateId,
+  localIdFromCloud,
+  sameEntity,
+  stripCloudFields,
+  type CloudOwned,
+} from '@/infrastructure/sync-prototype/cloudSyncValue';
 
 type CloudWeightEntry = Omit<WeightEntry, 'id'> & { readonly id: string };
 type CloudDeletionRecord = Omit<DeletionRecord, 'id'> & { readonly id: string };
@@ -41,32 +43,6 @@ interface WeightState {
   marker?: DeletionRecord;
 }
 
-function belongsToCurrentUser(
-  entity: CloudOwned<object>,
-  currentUserId: string,
-): boolean {
-  return !entity.owner || entity.owner === currentUserId;
-}
-
-function stripCloudFields<T extends object>(entity: CloudOwned<T>): T {
-  const {
-    owner: _owner,
-    realmId: _realmId,
-    $ts: _cloudTimestamp,
-    _hasBlobRefs: _hasBlobReferences,
-    ...value
-  } = entity;
-  return value as T;
-}
-
-function cloudPrivateId(localId: string): string {
-  return localId.startsWith('#') ? localId : `#${localId}`;
-}
-
-function localIdFromCloud(cloudId: string): string | undefined {
-  return cloudId.startsWith('#') ? cloudId.slice(1) : undefined;
-}
-
 function toCloudWeight(entry: WeightEntry): CloudWeightEntry {
   return { ...entry, id: cloudPrivateId(entry.id) };
 }
@@ -89,29 +65,6 @@ function fromCloudMarker(
   const localId = localIdFromCloud(marker.id);
   if (!localId) return undefined;
   return { ...stripCloudFields(marker), id: localId };
-}
-
-function stableValue(value: unknown): string {
-  if (value === undefined) return 'undefined';
-  if (value === null || typeof value !== 'object') {
-    return JSON.stringify(value);
-  }
-  return JSON.stringify(value, Object.keys(value).sort());
-}
-
-function chooseLatest<T extends { updatedAt: string }>(
-  local: T | undefined,
-  cloud: T | undefined,
-): T | undefined {
-  if (!local) return cloud;
-  if (!cloud) return local;
-  if (local.updatedAt > cloud.updatedAt) return local;
-  if (cloud.updatedAt > local.updatedAt) return cloud;
-  return stableValue(local) >= stableValue(cloud) ? local : cloud;
-}
-
-function sameEntity(left: unknown, right: unknown): boolean {
-  return stableValue(left) === stableValue(right);
 }
 
 function resolveState(

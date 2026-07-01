@@ -19,6 +19,9 @@ const service = read(
 const client = read(
   'src/infrastructure/sync-prototype/syncPrototypeClient.ts',
 );
+const cloudValues = read(
+  'src/infrastructure/sync-prototype/cloudSyncValue.ts',
+);
 const settingsPage = read(
   'src/features/settings/pages/AdvancedSettingsPage.tsx',
 );
@@ -35,6 +38,15 @@ for (const tableName of [
 ]) {
   if (!cloudDatabase.includes(tableName)) {
     fail(`la table cloud ${tableName} n’est pas déclarée.`);
+  }
+}
+
+if (!service.includes("from '@/infrastructure/sync-prototype/cloudSyncValue'")) {
+  fail('le service d’activités n’utilise pas les règles communes de convergence.');
+}
+for (const expected of ['owner', 'realmId', '$ts', '_hasBlobRefs']) {
+  if (!cloudValues.includes(expected)) {
+    fail(`l’utilitaire commun ne neutralise pas ${expected}.`);
   }
 }
 

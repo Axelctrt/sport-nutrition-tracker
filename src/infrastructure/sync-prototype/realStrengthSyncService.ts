@@ -14,13 +14,15 @@ import type {
 } from '@/domain/models/strength';
 import type { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import type { SyncPrototypeDatabase } from '@/infrastructure/sync-prototype/SyncPrototypeDatabase';
-
-type CloudOwned<T> = T & {
-  readonly owner?: string;
-  readonly realmId?: string;
-  readonly $ts?: unknown;
-  readonly _hasBlobRefs?: 1;
-};
+import {
+  belongsToCurrentUser,
+  chooseLatest,
+  cloudPrivateId,
+  localIdFromCloud,
+  sameEntity,
+  stripCloudFields,
+  type CloudOwned,
+} from '@/infrastructure/sync-prototype/cloudSyncValue';
 
 export interface StrengthExerciseAggregate {
   readonly id: string;
@@ -82,62 +84,6 @@ const STRENGTH_DELETION_TYPES = new Set([
   'strengthSet',
   'workoutSessionExercise',
 ]);
-
-function belongsToCurrentUser(
-  entity: CloudOwned<object>,
-  currentUserId: string,
-): boolean {
-  return !entity.owner || entity.owner === currentUserId;
-}
-
-function stripCloudFields<T extends object>(entity: CloudOwned<T>): T {
-  const {
-    owner: _owner,
-    realmId: _realmId,
-    $ts: _cloudTimestamp,
-    _hasBlobRefs: _hasBlobReferences,
-    ...value
-  } = entity;
-  return value as T;
-}
-
-function cloudPrivateId(localId: string): string {
-  return localId.startsWith('#') ? localId : `#${localId}`;
-}
-
-function localIdFromCloud(cloudId: string): string | undefined {
-  return cloudId.startsWith('#') ? cloudId.slice(1) : undefined;
-}
-
-function stableValue(value: unknown): string {
-  const normalize = (candidate: unknown): unknown => {
-    if (Array.isArray(candidate)) return candidate.map(normalize);
-    if (!candidate || typeof candidate !== 'object') return candidate;
-
-    return Object.fromEntries(
-      Object.entries(candidate)
-        .sort(([left], [right]) => left.localeCompare(right))
-        .map(([key, nested]) => [key, normalize(nested)]),
-    );
-  };
-
-  return JSON.stringify(normalize(value));
-}
-
-function sameEntity(left: unknown, right: unknown): boolean {
-  return stableValue(left) === stableValue(right);
-}
-
-function chooseLatest<T extends { updatedAt: string }>(
-  local: T | undefined,
-  cloud: T | undefined,
-): T | undefined {
-  if (!local) return cloud;
-  if (!cloud) return local;
-  if (local.updatedAt > cloud.updatedAt) return local;
-  if (cloud.updatedAt > local.updatedAt) return cloud;
-  return stableValue(local) >= stableValue(cloud) ? local : cloud;
-}
 
 function latestTimestamp(values: readonly EntityMetadata[]): string {
   return values

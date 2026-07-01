@@ -1,33 +1,35 @@
-# Limitations connues — SportPilot 0.18.0
+# Limitations connues — SportPilot 0.19.0
 
 Ces limitations sont connues et non bloquantes pour la version stable.
 
-## Synchronisation cloud
+## Synchronisation manuelle
 
-La version 0.18.0 synchronise uniquement les pesées avec Dexie Cloud. Les activités, la musculation, les objectifs, la nutrition, les récompenses, les thèmes et les rappels restent locaux dans leur espace de données respectif.
+Les activités, objectifs et données de musculation sont synchronisés manuellement depuis les paramètres. Les pesées conservent leur actualisation historique au démarrage. Il n’existe pas encore de bouton unique synchronisant tous les domaines.
 
-L’isolation locale par compte ne constitue donc pas encore une sauvegarde cloud complète de l’application.
+## Données restant locales
 
-## Restauration après nouvelle installation
+La nutrition, les produits, recettes, repas favoris, récompenses, thèmes, missions et rappels restent locaux à l’espace de données actif. L’isolation par compte demeure assurée, mais ces domaines ne constituent pas encore une sauvegarde cloud.
 
-La restauration complète d’un espace depuis le cloud n’est pas encore disponible. Sur un appareil neuf, seules les pesées synchronisées peuvent être récupérées. Le parcours complet de restauration est prévu dans la phase de cycle de vie du compte.
+## Nouvelle installation
+
+Une nouvelle installation peut récupérer les domaines synchronisés après connexion et lancement des synchronisations correspondantes. Une restauration cloud entièrement automatisée de l’espace et de tous les domaines locaux n’est pas encore disponible.
 
 ## Appareils distants
 
-La page **Compte et appareils** décrit l’appareil actuel. La liste cloud des autres appareils et leur révocation distante ne sont pas encore exposées par SportPilot.
+La page **Compte et appareils** décrit l’appareil actuel. La liste cloud des autres appareils et leur révocation distante ne sont pas encore exposées.
 
-## Rattachement des données invitées
+## Conflits simultanés
 
-Le rattachement copie les données invitées vers le compte et conserve l’espace invité d’origine. Il n’existe pas encore d’outil de fusion entre deux espaces de comptes. Toute copie compte-vers-compte est volontairement refusée.
+La résolution utilise `updatedAt`, puis une comparaison déterministe en cas d’égalité. SportPilot ne propose pas encore d’interface demandant à l’utilisateur de choisir entre deux modifications simultanées.
 
-## Stockage local
+## Runtime local cloud
 
-La suppression des données du navigateur, de Safari ou de la PWA peut effacer les espaces locaux. Une sauvegarde JSON régulière reste indispensable.
+Une évolution du schéma cloud crée un nouveau runtime IndexedDB local et peut demander une nouvelle authentification OTP. Les anciennes bases locales ne sont pas supprimées automatiquement afin d’éviter toute destruction implicite.
 
 ## Services externes
 
-Open Food Facts et Dexie Cloud dépendent du réseau et de la disponibilité de leurs services. L’application et les données de l’espace actif restent utilisables hors connexion, à l’exception des fonctions nécessitant explicitement le cloud.
+Open Food Facts et Dexie Cloud dépendent du réseau et de leur disponibilité. L’espace actif reste utilisable hors connexion, mais les synchronisations nécessitent le cloud.
 
 ## Versions de données
 
-SportPilot 0.18.0 utilise Dexie v8, le format de sauvegarde JSON v7 et le registre local des espaces v1.
+SportPilot 0.19.0 utilise la base cloud v5, Dexie métier v8, le format de sauvegarde JSON v7 et le registre local des espaces v1.

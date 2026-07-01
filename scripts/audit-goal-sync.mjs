@@ -19,6 +19,9 @@ const service = read(
 const client = read(
   'src/infrastructure/sync-prototype/syncPrototypeClient.ts',
 );
+const cloudValues = read(
+  'src/infrastructure/sync-prototype/cloudSyncValue.ts',
+);
 const goalService = read(
   'src/application/goals/goalProgressService.ts',
 );
@@ -48,6 +51,15 @@ for (const tableName of ['realGoals', 'realGoalDeletionRecords']) {
   }
 }
 
+if (!service.includes("from '@/infrastructure/sync-prototype/cloudSyncValue'")) {
+  fail('le service d’objectifs n’utilise pas les règles communes de convergence.');
+}
+for (const expected of ['owner', 'realmId', '$ts', '_hasBlobRefs']) {
+  if (!cloudValues.includes(expected)) {
+    fail(`l’utilitaire commun ne neutralise pas ${expected}.`);
+  }
+}
+
 for (const expected of [
   'previewRealGoalSync',
   'synchronizeRealGoals',
@@ -55,7 +67,6 @@ for (const expected of [
   "entityType: 'goal'",
   'cloudPrivateId',
   'belongsToCurrentUser',
-  '$ts',
 ]) {
   if (!service.includes(expected)) {
     fail(`le service d’objectifs ne contient pas le garde-fou ${expected}.`);
