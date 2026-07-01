@@ -1,14 +1,14 @@
-# Checklist de validation stable — SportPilot 0.20.0
+# Checklist de validation stable — SportPilot 0.20.1
 
 ## Préparation
 
-- [ ] La branche `feature/nutrition-sync-0.20.0` est propre et à jour.
+- [ ] La branche `fix/nutrition-daily-target-uniqueness` est propre et à jour.
 - [ ] Une sauvegarde JSON v7 récente est conservée hors de l’application.
 - [ ] `npm ci` termine sans erreur.
 - [ ] `npm run release:verify` termine sans erreur.
 - [ ] `npm run test:e2e` termine sans erreur.
 - [ ] `npm run audit:nutrition-sync-release` réussit.
-- [ ] Paramètres affiche `0.20.0`.
+- [ ] Paramètres affiche `0.20.1`.
 - [ ] Aucun secret ni fichier de patch temporaire n’est suivi par Git.
 
 ## Compte et runtime cloud
@@ -70,7 +70,7 @@
 
 - [ ] La branche fonctionnelle est fusionnée dans `develop`.
 - [ ] `develop` validé est fusionné dans `main`.
-- [ ] Le tag annoté `v0.20.0` pointe sur le commit publié dans `main`.
-- [ ] `main`, `develop` et `v0.20.0` sont poussés.
+- [ ] Le tag annoté `v0.20.1` pointe sur le commit publié dans `main`.
+- [ ] `main`, `develop` et `v0.20.1` sont poussés.
 - [ ] Le déploiement Cloudflare est terminé.
 - [ ] La recette finale est validée sur ordinateur et iPhone 15 sous iOS 26.

@@ -1,6 +1,6 @@
-# SportPilot 0.20.0 — synchronisation nutritionnelle multiappareil
+# SportPilot 0.20.1 — synchronisation nutritionnelle multiappareil
 
-Branche de travail : `feature/nutrition-sync-0.20.0`
+Branche de travail : `fix/nutrition-daily-target-uniqueness`
 
 ## Objet
 

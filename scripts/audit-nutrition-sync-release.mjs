@@ -15,12 +15,12 @@ const read = (path) => {
 };
 
 const packageJson = JSON.parse(read('package.json'));
-if (packageJson.version !== '0.20.0') {
-  fail(`la version attendue est 0.20.0, reçue ${String(packageJson.version)}.`);
+if (!/^0\.20\.\d+$/.test(packageJson.version)) {
+  fail(`la version attendue appartient à la série 0.20.x, reçue ${String(packageJson.version)}.`);
 }
 
 for (const path of [
-  'RELEASE-NOTES-0.20.0.md',
+  `RELEASE-NOTES-${packageJson.version}.md`,
   'docs/architecture/nutrition-sync-0.20.0-c1.md',
   'docs/architecture/nutrition-sync-0.20.0-c2.md',
   'docs/architecture/nutrition-sync-0.20.0-c3.md',
@@ -216,11 +216,11 @@ if (!dataSpaces.includes("'sportpilot:data-spaces:v1'")) {
 }
 
 if (failures.length > 0) {
-  console.error('\nAudit final de synchronisation nutritionnelle 0.20.0 échoué :');
+  console.error('\nAudit final de synchronisation nutritionnelle 0.20.x échoué :');
   failures.forEach((failure) => console.error(`- ${failure}`));
   process.exitCode = 1;
 } else {
   console.log(
-    'Audit final 0.20.0 réussi : journal atomique, bibliothèque cohérente, bilans et ajustements synchronisés, recalcul C1, isolation des comptes et runtime cloud v8 validés.',
+    'Audit final 0.20.x réussi : journal atomique, bibliothèque cohérente, bilans et ajustements synchronisés, recalcul C1, isolation des comptes et runtime cloud v8 validés.',
   );
 }

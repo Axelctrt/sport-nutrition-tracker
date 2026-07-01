@@ -5,9 +5,9 @@ import {
 } from '@/infrastructure/sync-prototype/SyncPrototypeDatabase';
 import { syncPublicDeploymentConfig } from '@/infrastructure/sync-prototype/syncPublicDeploymentConfig';
 
-describe('préparation de la synchronisation nutritionnelle 0.20.0', () => {
+describe('préparation de la synchronisation nutritionnelle 0.20.1', () => {
   it('publie la version finale sans modifier les versions métier', () => {
-    expect(__APP_VERSION__).toBe('0.20.0');
+    expect(__APP_VERSION__).toBe('0.20.1');
     expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(8);
     expect(SYNC_PROTOTYPE_DATABASE_NAME).toBe(
       'sportpilot-sync-runtime-0.20.0-v8',
