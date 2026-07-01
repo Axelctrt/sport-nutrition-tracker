@@ -10,6 +10,7 @@ export interface DataSpaceDescriptor {
   readonly databaseName: string;
   readonly label: string;
   readonly accountFingerprint?: string;
+  readonly linkedToCurrentDevice?: boolean;
   readonly createdAt: string;
   readonly lastActivatedAt: string;
 }

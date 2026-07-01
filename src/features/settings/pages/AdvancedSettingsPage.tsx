@@ -7,6 +7,7 @@ import {
   Footprints,
   Gauge,
   HardDrive,
+  MonitorSmartphone,
   Palette,
   Sparkles,
   UserRound,
@@ -108,6 +109,13 @@ const settingsSections: readonly SettingsDirectoryItem[] = [
     description: 'Badges, séries et accomplissements.',
     keywords: ['badges', 'serie', 'missions'],
     icon: Sparkles,
+  },
+  {
+    id: 'settings-account-devices',
+    label: 'Compte et appareils',
+    description: 'Compte actif, appareil actuel et données locales associées.',
+    keywords: ['compte', 'appareil', 'deconnexion', 'desassociation'],
+    icon: MonitorSmartphone,
   },
   {
     id: 'settings-sync',
@@ -381,6 +389,28 @@ export function AdvancedSettingsPage() {
           onSubmit={handleSubmit}
           onResetToDefaults={handleResetToDefaults}
         />
+
+        <CollapsibleSection
+          sectionId="settings-account-devices"
+          storageKey="sportpilot:settings:account-devices"
+          title="Compte et appareils"
+          description="Consulter le compte actif, l’appareil actuel et gérer les données locales associées."
+          icon={MonitorSmartphone}
+          className="scroll-mt-24"
+        >
+          <Card className="p-4 sm:p-5">
+            <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">
+              Les actions de déconnexion, de désassociation et de suppression locale sont séparées pour éviter toute suppression ambiguë.
+            </p>
+            <Link
+              to={routePaths.accountDevices}
+              className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-xl bg-brand-600 px-4 py-2 font-semibold text-white"
+            >
+              Ouvrir Compte et appareils
+              <ArrowRight aria-hidden="true" className="size-4" />
+            </Link>
+          </Card>
+        </CollapsibleSection>
 
         <CollapsibleSection
           sectionId="settings-sync"
