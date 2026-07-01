@@ -14,7 +14,7 @@
 ## Compte et runtime cloud
 
 - [ ] Le compte connecté ouvre le bon espace local.
-- [ ] Le runtime utilisé est `sportpilot-sync-runtime-0.20.0-v6`.
+- [ ] Le runtime utilisé est `sportpilot-sync-runtime-0.20.0-v7`.
 - [ ] Une reconnexion OTP éventuelle ne supprime aucune donnée métier.
 - [ ] La synchronisation des pesées se termine sans délai d’expiration.
 - [ ] Un changement de compte ne montre aucune donnée de l’espace précédent.
@@ -67,3 +67,17 @@
 - [ ] Une journée distante incohérente est refusée sans écriture partielle.
 - [ ] Les produits et recettes restent hors périmètre jusqu’à C2.
 - [ ] Le runtime `sportpilot-sync-runtime-0.20.0-v6` peut demander une reconnexion OTP unique.
+
+
+## Prévalidation 0.20.0 C2 — bibliothèque nutritionnelle
+
+- [ ] Le panneau **Synchronisation de la bibliothèque nutritionnelle** est disponible.
+- [ ] Un produit manuel est transféré entre deux navigateurs.
+- [ ] Un produit Open Food Facts utilisé est transféré, contrairement à un cache inutilisé.
+- [ ] Une recette est récupérée avec tous ses ingrédients et produits.
+- [ ] Un repas favori conserve toutes ses références.
+- [ ] Deux produits Open Food Facts portant le même code-barres convergent vers une seule fiche.
+- [ ] Les références du journal C1 sont remappées sans perte nutritionnelle.
+- [ ] La suppression d’une recette ou d’un favori ne ressuscite pas.
+- [ ] Deux synchronisations successives reviennent à `0 différence`.
+- [ ] Le runtime `sportpilot-sync-runtime-0.20.0-v7` peut demander une reconnexion OTP unique.

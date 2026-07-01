@@ -38,6 +38,7 @@ describe('configuration du prototype Dexie Cloud', () => {
       realGoalSyncEnabled: false,
       realStrengthSyncEnabled: false,
       realNutritionJournalSyncEnabled: false,
+      realNutritionLibrarySyncEnabled: false,
       diagnosticsEnabled: false,
     });
   });
@@ -140,6 +141,21 @@ describe('configuration du prototype Dexie Cloud', () => {
     ).toMatchObject({
       enabled: true,
       realNutritionJournalSyncEnabled: true,
+      realNutritionLibrarySyncEnabled: false,
+    });
+  });
+
+  it('active séparément la synchronisation de la bibliothèque nutritionnelle', () => {
+    expect(
+      readSyncPrototypeConfig({
+        VITE_ENABLE_SYNC_PROTOTYPE: 'true',
+        VITE_DEXIE_CLOUD_DATABASE_URL:
+          'https://sportpilot-prototype.dexie.cloud',
+        VITE_ENABLE_REAL_NUTRITION_LIBRARY_SYNC: 'true',
+      }),
+    ).toMatchObject({
+      enabled: true,
+      realNutritionLibrarySyncEnabled: true,
     });
   });
 

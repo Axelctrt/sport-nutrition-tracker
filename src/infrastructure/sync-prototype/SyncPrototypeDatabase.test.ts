@@ -13,7 +13,7 @@ describe('base isolée du prototype Dexie Cloud', () => {
     expect(SYNC_PROTOTYPE_DATABASE_NAME).not.toBe(
       LEGACY_SYNC_PROTOTYPE_DATABASE_NAME,
     );
-    expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(6);
+    expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(7);
     expect(SYNC_PROTOTYPE_DATABASE_NAME).toBe(
       `sportpilot-sync-runtime-0.20.0-v${SYNC_PROTOTYPE_DATABASE_VERSION}`,
     );
@@ -35,6 +35,10 @@ describe('base isolée du prototype Dexie Cloud', () => {
       'realStrengthDeletionRecords',
       'realNutritionJournalDays',
       'realNutritionJournalDeletionRecords',
+      'realNutritionProducts',
+      'realNutritionRecipes',
+      'realFavoriteMeals',
+      'realNutritionLibraryDeletionRecords',
     ]);
   });
 
@@ -47,6 +51,7 @@ describe('base isolée du prototype Dexie Cloud', () => {
       realGoalSyncEnabled: true,
       realStrengthSyncEnabled: true,
       realNutritionJournalSyncEnabled: true,
+      realNutritionLibrarySyncEnabled: true,
       diagnosticsEnabled: true,
     });
 
@@ -75,6 +80,10 @@ describe('base isolée du prototype Dexie Cloud', () => {
     expect(database.table('realStrengthDeletionRecords').schema.primKey.keyPath).toBe('id');
     expect(database.table('realNutritionJournalDays').schema.primKey.keyPath).toBe('id');
     expect(database.table('realNutritionJournalDeletionRecords').schema.primKey.keyPath).toBe('id');
+    expect(database.table('realNutritionProducts').schema.primKey.keyPath).toBe('id');
+    expect(database.table('realNutritionRecipes').schema.primKey.keyPath).toBe('id');
+    expect(database.table('realFavoriteMeals').schema.primKey.keyPath).toBe('id');
+    expect(database.table('realNutritionLibraryDeletionRecords').schema.primKey.keyPath).toBe('id');
 
     database.close();
   });

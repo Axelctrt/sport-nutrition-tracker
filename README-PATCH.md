@@ -45,3 +45,8 @@ npm run release:verify
 ## 0.20.0 C1
 
 Le journal nutritionnel est synchronisé par journée atomique via le runtime cloud v6. Les produits, recettes et favoris restent réservés à C2.
+
+
+## 0.20.0 C2
+
+La bibliothèque nutritionnelle synchronise les produits utiles, les recettes complètes et les repas favoris via le runtime cloud v7. Les produits Open Food Facts inutilisés restent locaux et reconstructibles.

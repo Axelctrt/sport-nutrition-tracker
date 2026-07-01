@@ -55,6 +55,12 @@ import {
   type RealNutritionJournalSyncPreview,
   type RealNutritionJournalSyncResult,
 } from '@/infrastructure/sync-prototype/realNutritionJournalSyncService';
+import {
+  previewRealNutritionLibrarySync,
+  synchronizeRealNutritionLibrary,
+  type RealNutritionLibrarySyncPreview,
+  type RealNutritionLibrarySyncResult,
+} from '@/infrastructure/sync-prototype/realNutritionLibrarySyncService';
 import { reloadUserStateRuntime } from '@/infrastructure/user-state/userStateRuntime';
 
 const DEFAULT_INITIALIZATION_TIMEOUT_MS = 15_000;
@@ -189,6 +195,21 @@ export interface SyncPrototypeRealNutritionJournalSnapshot {
   readonly errorMessage?: string;
 }
 
+
+export interface SyncPrototypeRealNutritionLibrarySnapshot {
+  readonly enabled: boolean;
+  readonly status:
+    | 'disabled'
+    | 'idle'
+    | 'analyzing'
+    | 'ready'
+    | 'syncing'
+    | 'error';
+  readonly preview?: RealNutritionLibrarySyncPreview;
+  readonly lastResult?: RealNutritionLibrarySyncResult;
+  readonly errorMessage?: string;
+}
+
 export interface SyncPrototypeSnapshot {
   readonly account: SyncPrototypeAccountSnapshot;
   readonly sync: SyncPrototypeSyncSnapshot;
@@ -198,6 +219,7 @@ export interface SyncPrototypeSnapshot {
   readonly realGoals?: SyncPrototypeRealGoalSnapshot;
   readonly realStrength?: SyncPrototypeRealStrengthSnapshot;
   readonly realNutritionJournal?: SyncPrototypeRealNutritionJournalSnapshot;
+  readonly realNutritionLibrary?: SyncPrototypeRealNutritionLibrarySnapshot;
   readonly diagnostics: SyncPrototypeDiagnosticsSnapshot;
   readonly interaction?: SyncPrototypeInteractionSnapshot;
 }
@@ -221,6 +243,8 @@ export interface SyncPrototypeClient {
   syncRealStrength?(): Promise<RealStrengthSyncResult>;
   analyzeRealNutritionJournal?(): Promise<RealNutritionJournalSyncPreview>;
   syncRealNutritionJournal?(): Promise<RealNutritionJournalSyncResult>;
+  analyzeRealNutritionLibrary?(): Promise<RealNutritionLibrarySyncPreview>;
+  syncRealNutritionLibrary?(): Promise<RealNutritionLibrarySyncResult>;
   saveWeight(draft: SyncPrototypeWeightDraft): Promise<WeightEntry>;
   deleteWeight(weightId: EntityId): Promise<void>;
 }
@@ -332,6 +356,7 @@ export interface SyncPrototypeClientOptions {
   readonly realGoalSyncEnabled?: boolean;
   readonly realStrengthSyncEnabled?: boolean;
   readonly realNutritionJournalSyncEnabled?: boolean;
+  readonly realNutritionLibrarySyncEnabled?: boolean;
   readonly localDatabase?: AppDatabase;
   readonly initializationTimeoutMs?: number;
   readonly setTimer?: typeof globalThis.setTimeout;
@@ -350,6 +375,7 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
   private readonly realGoalSyncEnabled: boolean;
   private readonly realStrengthSyncEnabled: boolean;
   private readonly realNutritionJournalSyncEnabled: boolean;
+  private readonly realNutritionLibrarySyncEnabled: boolean;
   private readonly localDatabase: AppDatabase;
   private readonly initializationTimeoutMs: number;
   private readonly setTimer: typeof globalThis.setTimeout;
@@ -368,6 +394,8 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
     this.realStrengthSyncEnabled = options.realStrengthSyncEnabled === true;
     this.realNutritionJournalSyncEnabled =
       options.realNutritionJournalSyncEnabled === true;
+    this.realNutritionLibrarySyncEnabled =
+      options.realNutritionLibrarySyncEnabled === true;
     this.localDatabase = options.localDatabase ?? appDatabase;
     this.initializationTimeoutMs =
       options.initializationTimeoutMs ?? DEFAULT_INITIALIZATION_TIMEOUT_MS;
@@ -400,6 +428,9 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
         : {}),
       ...(this.realNutritionJournalSyncEnabled
         ? { realNutritionJournal: { enabled: true, status: 'idle' as const } }
+        : {}),
+      ...(this.realNutritionLibrarySyncEnabled
+        ? { realNutritionLibrary: { enabled: true, status: 'idle' as const } }
         : {}),
       diagnostics: createEmptySyncPrototypeDiagnostics(
         account.userId ?? account.email,
@@ -574,6 +605,9 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
         : {}),
       ...(this.realNutritionJournalSyncEnabled
         ? { realNutritionJournal: { enabled: true, status: 'idle' as const } }
+        : {}),
+      ...(this.realNutritionLibrarySyncEnabled
+        ? { realNutritionLibrary: { enabled: true, status: 'idle' as const } }
         : {}),
       diagnostics: createEmptySyncPrototypeDiagnostics(),
     };
@@ -1026,6 +1060,92 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
     }
   }
 
+
+  async analyzeRealNutritionLibrary(): Promise<RealNutritionLibrarySyncPreview> {
+    await this.initialize();
+    this.assertRealNutritionLibrarySyncAvailable();
+    this.snapshot = {
+      ...this.snapshot,
+      realNutritionLibrary: { enabled: true, status: 'analyzing' },
+    };
+    this.notify();
+
+    try {
+      await this.database.cloud.sync();
+      const preview = await previewRealNutritionLibrarySync(
+        this.localDatabase,
+        this.database,
+        this.database.cloud.currentUserId,
+      );
+      this.snapshot = {
+        ...this.snapshot,
+        realNutritionLibrary: { enabled: true, status: 'ready', preview },
+      };
+      this.notify();
+      return preview;
+    } catch (error) {
+      const errorMessage = error instanceof Error
+        ? error.message
+        : 'L’analyse de la bibliothèque nutritionnelle a échoué.';
+      this.snapshot = {
+        ...this.snapshot,
+        realNutritionLibrary: { enabled: true, status: 'error', errorMessage },
+      };
+      this.notify();
+      throw error;
+    }
+  }
+
+  async syncRealNutritionLibrary(): Promise<RealNutritionLibrarySyncResult> {
+    await this.initialize();
+    this.assertRealNutritionLibrarySyncAvailable();
+    this.snapshot = {
+      ...this.snapshot,
+      realNutritionLibrary: {
+        ...(this.snapshot.realNutritionLibrary ?? {}),
+        enabled: true,
+        status: 'syncing',
+      },
+    };
+    this.notify();
+
+    try {
+      await this.database.cloud.sync();
+      const result = await synchronizeRealNutritionLibrary(
+        this.localDatabase,
+        this.database,
+        this.database.cloud.currentUserId,
+      );
+      await this.database.cloud.sync();
+      const preview = await previewRealNutritionLibrarySync(
+        this.localDatabase,
+        this.database,
+        this.database.cloud.currentUserId,
+      );
+      this.snapshot = {
+        ...this.snapshot,
+        realNutritionLibrary: {
+          enabled: true,
+          status: 'ready',
+          preview,
+          lastResult: result,
+        },
+      };
+      this.notify();
+      return result;
+    } catch (error) {
+      const errorMessage = error instanceof Error
+        ? error.message
+        : 'La synchronisation de la bibliothèque nutritionnelle a échoué.';
+      this.snapshot = {
+        ...this.snapshot,
+        realNutritionLibrary: { enabled: true, status: 'error', errorMessage },
+      };
+      this.notify();
+      throw error;
+    }
+  }
+
   async saveWeight(
     rawDraft: SyncPrototypeWeightDraft,
   ): Promise<WeightEntry> {
@@ -1134,6 +1254,16 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
     );
 
     await this.refreshWeights();
+  }
+
+
+  private assertRealNutritionLibrarySyncAvailable(): void {
+    if (!this.realNutritionLibrarySyncEnabled) {
+      throw new Error(
+        'La synchronisation de la bibliothèque nutritionnelle est désactivée par configuration.',
+      );
+    }
+    this.assertLoggedIn();
   }
 
   private assertRealNutritionJournalSyncAvailable(): void {
@@ -1313,6 +1443,8 @@ export function getSyncPrototypeClient(): SyncPrototypeClient {
     realStrengthSyncEnabled: config.realStrengthSyncEnabled,
     realNutritionJournalSyncEnabled:
       config.realNutritionJournalSyncEnabled,
+    realNutritionLibrarySyncEnabled:
+      config.realNutritionLibrarySyncEnabled,
     localDatabase: appDatabase,
   });
   return singletonClient;

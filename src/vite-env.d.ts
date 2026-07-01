@@ -12,6 +12,7 @@ interface ImportMetaEnv {
   readonly VITE_ENABLE_REAL_GOAL_SYNC?: 'true' | 'false';
   readonly VITE_ENABLE_REAL_STRENGTH_SYNC?: 'true' | 'false';
   readonly VITE_ENABLE_REAL_NUTRITION_JOURNAL_SYNC?: 'true' | 'false';
+  readonly VITE_ENABLE_REAL_NUTRITION_LIBRARY_SYNC?: 'true' | 'false';
   readonly VITE_ENABLE_SYNC_DIAGNOSTICS?: 'true' | 'false';
 }
 

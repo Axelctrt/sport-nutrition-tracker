@@ -28,6 +28,7 @@ import { ActivitySyncSettingsPanel } from '@/features/settings/components/Activi
 import { GoalSyncSettingsPanel } from '@/features/settings/components/GoalSyncSettingsPanel';
 import { StrengthSyncSettingsPanel } from '@/features/settings/components/StrengthSyncSettingsPanel';
 import { NutritionJournalSyncSettingsPanel } from '@/features/settings/components/NutritionJournalSyncSettingsPanel';
+import { NutritionLibrarySyncSettingsPanel } from '@/features/settings/components/NutritionLibrarySyncSettingsPanel';
 import { WeightSyncSettingsPanel } from '@/features/settings/components/WeightSyncSettingsPanel';
 import {
   SettingsSectionDirectory,
@@ -430,6 +431,7 @@ export function AdvancedSettingsPage() {
             <GoalSyncSettingsPanel />
             <StrengthSyncSettingsPanel />
             <NutritionJournalSyncSettingsPanel />
+            <NutritionLibrarySyncSettingsPanel />
           </div>
         </CollapsibleSection>
 

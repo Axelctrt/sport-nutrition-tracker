@@ -1,10 +1,10 @@
 # SportPilot 0.19.0
 
-## Développement 0.20.0 C1 — journal nutritionnel synchronisé
+## Développement 0.20.0 C2 — bibliothèque nutritionnelle synchronisée
 
-Le lot C1 ajoute la synchronisation manuelle des repas, entrées alimentaires, objectifs quotidiens et statuts du journal. Chaque journée est reconstruite puis appliquée transactionnellement afin qu’aucune entrée ne soit conservée sans repas parent. Les suppressions et restaurations de repas et d’entrées convergent entre appareils.
+Le lot C2 complète le journal C1 avec la synchronisation des aliments utiles, des recettes atomiques et des repas favoris. Les produits manuels sont toujours transférés ; les caches Open Food Facts ne le sont que lorsqu’ils sont utilisés, favoris ou personnalisés. Les doublons Open Food Facts partageant le même code-barres convergent vers une seule fiche et leurs références sont remappées.
 
-Le runtime cloud passe en v6 sous le nom `sportpilot-sync-runtime-0.20.0-v6`. La base métier reste en Dexie v8 et la sauvegarde en JSON v7. Les produits, recettes et repas favoris seront ajoutés dans C2.
+Le runtime cloud passe en v7 sous le nom `sportpilot-sync-runtime-0.20.0-v7`. La base métier reste en Dexie v8 et la sauvegarde en JSON v7. Les bilans hebdomadaires et ajustements caloriques restent réservés à C3.
 
 ## Version 0.19 — synchronisation sportive multiappareil
 
@@ -12,7 +12,7 @@ SportPilot synchronise désormais les pesées, activités, objectifs et données
 
 Les séances modèles et les séances réalisées sont transférées comme des agrégats complets : exercices et séries sont appliqués dans une transaction unique afin d’éviter toute séance partielle ou série orpheline. Les quatre domaines utilisent désormais les mêmes règles de comparaison, d’exclusion des métadonnées Dexie Cloud et de résolution déterministe des conflits.
 
-Le socle sportif publié utilisait la base cloud v5. Le développement C1 utilise désormais la base cloud v6 et le runtime `sportpilot-sync-runtime-0.20.0-v6`. La base métier reste en Dexie v8, la sauvegarde en JSON v7 et les espaces locaux restent physiquement isolés par compte. Le journal nutritionnel C1 est synchronisé ; produits, recettes, repas favoris, récompenses, thèmes et rappels restent locaux à leur espace.
+Le socle sportif publié utilisait la base cloud v5. Le développement C2 utilise désormais la base cloud v7 et le runtime `sportpilot-sync-runtime-0.20.0-v7`. La base métier reste en Dexie v8, la sauvegarde en JSON v7 et les espaces locaux restent physiquement isolés par compte. Le journal, les produits utiles, les recettes et les repas favoris sont synchronisés ; bilans hebdomadaires, récompenses, thèmes et rappels restent locaux à leur espace.
 
 
 <!-- hotfix-sync-production-0.17.1 -->

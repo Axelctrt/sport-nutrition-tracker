@@ -36,7 +36,7 @@ const mainVersions = read(
 );
 
 for (const expected of [
-  'SYNC_PROTOTYPE_DATABASE_VERSION = 6',
+  'SYNC_PROTOTYPE_DATABASE_VERSION = 7',
   'sportpilot-sync-runtime-0.20.0-v${SYNC_PROTOTYPE_DATABASE_VERSION}',
 ]) {
   if (!cloudDatabase.includes(expected)) {
