@@ -126,8 +126,8 @@ const settingsSections: readonly SettingsDirectoryItem[] = [
   {
     id: 'settings-sync',
     label: 'Synchronisation des données',
-    description: 'Pesées, activités, objectifs et musculation entre appareils.',
-    keywords: ['cloud', 'synchronisation', 'poids', 'activites', 'objectifs', 'musculation', 'appareils'],
+    description: 'Données sportives et nutritionnelles entre appareils.',
+    keywords: ['cloud', 'synchronisation', 'poids', 'activites', 'objectifs', 'musculation', 'nutrition', 'recettes', 'bilans', 'appareils'],
     icon: Cloud,
   },
   {

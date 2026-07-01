@@ -1,19 +1,16 @@
-# SportPilot 0.19.0
+# SportPilot 0.20.0
 
-## Développement 0.20.0 C3 — suivi nutritionnel synchronisé
+## Synchronisation sportive et nutritionnelle multiappareil
 
-Le lot C3 synchronise les bilans hebdomadaires et les ajustements caloriques acceptés comme des agrégats atomiques. Un ajustement sans bilan parent ou rattaché à une décision non acceptée est refusé. Lorsqu’un ajustement distant modifie le cumul de calibration, les objectifs quotidiens déjà enregistrés sont recalculés puis propagés via le journal C1.
+SportPilot synchronise les pesées, activités, objectifs, données de musculation, journées nutritionnelles, produits utiles, recettes, repas favoris, bilans hebdomadaires et ajustements caloriques du compte connecté.
 
-Le runtime cloud passe en v8 sous le nom `sportpilot-sync-runtime-0.20.0-v8`. La base métier reste en Dexie v8 et la sauvegarde en JSON v7.
+Les journées, recettes, modèles de musculation, séances et bilans sont traités comme des agrégats cohérents. Les créations, modifications, suppressions et restaurations convergent sans doublons, avec filtrage strict par propriétaire cloud et résolution déterministe des conflits.
 
-## Version 0.19 — synchronisation sportive multiappareil
+Lorsqu’un ajustement calorique accepté arrive depuis un autre appareil, les objectifs quotidiens obsolètes sont recalculés puis propagés par la synchronisation du journal. Les produits Open Food Facts portant le même code-barres sont dédupliqués avec remappage des références existantes.
 
-SportPilot synchronise désormais les pesées, activités, objectifs et données de musculation du compte connecté. Les créations, modifications, suppressions et restaurations convergent entre appareils sans doublons, avec filtrage strict par propriétaire cloud.
+La version 0.20.0 utilise la base cloud v8 et le runtime `sportpilot-sync-runtime-0.20.0-v8`. La base métier reste en Dexie v8, la sauvegarde en JSON v7 et les espaces locaux restent physiquement isolés par compte.
 
-Les séances modèles et les séances réalisées sont transférées comme des agrégats complets : exercices et séries sont appliqués dans une transaction unique afin d’éviter toute séance partielle ou série orpheline. Les quatre domaines utilisent désormais les mêmes règles de comparaison, d’exclusion des métadonnées Dexie Cloud et de résolution déterministe des conflits.
-
-Le socle sportif publié utilisait la base cloud v5. Le développement C3 utilise désormais la base cloud v8 et le runtime `sportpilot-sync-runtime-0.20.0-v8`. La base métier reste en Dexie v8, la sauvegarde en JSON v7 et les espaces locaux restent physiquement isolés par compte. Le journal, les produits utiles, les recettes et les repas favoris sont synchronisés ; bilans hebdomadaires, récompenses, thèmes et rappels restent locaux à leur espace.
-
+Les récompenses, thèmes, missions et rappels restent locaux. Les données créées dans l’espace invité restent conservées dans cet espace et réapparaissent après déconnexion du compte ; leur import dans un espace de compte existant sera traité dans une évolution ultérieure.
 
 <!-- hotfix-sync-production-0.17.1 -->
 ## Correctif 0.17.1 — synchronisation disponible en production

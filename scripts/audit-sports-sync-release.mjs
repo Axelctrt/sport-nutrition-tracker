@@ -15,8 +15,8 @@ const read = (path) => {
 };
 
 const packageJson = JSON.parse(read('package.json'));
-if (packageJson.version !== '0.19.0') {
-  fail(`la version attendue est 0.19.0, reçue ${String(packageJson.version)}.`);
+if (packageJson.version !== '0.20.0') {
+  fail(`la version attendue est 0.20.0, reçue ${String(packageJson.version)}.`);
 }
 
 for (const path of [
@@ -141,11 +141,11 @@ if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*7/.test(backupMigrations)) {
 }
 
 if (failures.length > 0) {
-  console.error('\nAudit final de synchronisation sportive 0.19.0 échoué :');
+  console.error('\nAudit du socle de synchronisation sportive échoué :');
   failures.forEach((failure) => console.error(`- ${failure}`));
   process.exitCode = 1;
 } else {
   console.log(
-    'Audit final 0.19.0 réussi : quatre domaines synchronisés, convergence commune, suppressions durables, agrégats de musculation atomiques et runtime cloud v8 validés.',
+    'Audit du socle sportif réussi : quatre domaines synchronisés, convergence commune, suppressions durables, agrégats de musculation atomiques et runtime cloud v8 validés.',
   );
 }

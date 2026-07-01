@@ -79,8 +79,8 @@ if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*7/.test(backup)) {
 }
 
 const packageJson = JSON.parse(read('package.json'));
-if (packageJson.version !== '0.19.0') {
-  fail('C3 ne doit pas publier prématurément la version 0.20.0.');
+if (packageJson.version !== '0.20.0') {
+  fail('la release finale doit publier la version 0.20.0.');
 }
 const scripts = packageJson.scripts ?? {};
 if (scripts['audit:nutrition-tracking-sync'] !== 'node scripts/audit-nutrition-tracking-sync.mjs') {
