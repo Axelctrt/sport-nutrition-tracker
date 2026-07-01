@@ -1,69 +1,27 @@
-# Retour arrière — SportPilot 0.17.0
+# Retour arrière — SportPilot 0.18.0
 
-## Objectif
+## Stratégie
 
-Cette procédure décrit la conduite à tenir si SportPilot 0.17.0 présente un
-défaut bloquant après publication.
+Le fix-forward est la stratégie privilégiée. Ne supprime jamais IndexedDB, les données Safari ou la PWA pour corriger un défaut de changement de compte.
 
-SportPilot 0.17.0 utilise le schéma Dexie v8 et le format de sauvegarde JSON v7.
-La version 0.16.0 ne doit donc pas être redéployée sans validation explicite de
-sa compatibilité avec une base locale déjà migrée.
+SportPilot 0.18.0 conserve le schéma Dexie v8 et le format JSON v7, mais introduit plusieurs bases locales distinctes et un registre d’espaces v1. Un retour vers 0.17.1 ne sait pas gérer ces espaces de comptes et rouvrirait uniquement la base invitée historique.
 
-Le **fix-forward** vers une version corrective `0.17.1` est la stratégie
-préférée.
+## Mesures immédiates
 
-## Préparation obligatoire
+1. exporter une sauvegarde JSON de l’espace actif si celui-ci reste accessible ;
+2. noter le compte et l’espace concernés ;
+3. ne pas connecter un autre compte tant que le défaut n’est pas qualifié ;
+4. ne pas effacer le stockage du navigateur ;
+5. préparer une correction sur une branche dédiée à partir de v0.18.0.
 
-1. Exporter une sauvegarde JSON v7 avant le déploiement de 0.17.0.
-2. Conserver cette sauvegarde hors de l’application.
-3. Noter les commits et tags `v0.16.0` et `v0.17.0`.
-4. Vérifier que la sauvegarde est prévisualisable comme compatible.
-5. Ne supprimer ni IndexedDB, ni les données Safari, ni la PWA.
+## Désactivation du cloud
 
-## Mesure immédiate en cas de défaut de synchronisation
-
-Si le défaut concerne uniquement Dexie Cloud :
-
-1. ne pas supprimer les données locales ;
-2. désactiver la synchronisation sur l’appareil concerné ;
-3. ne pas autoriser un autre compte dans le même profil de navigateur ;
-4. conserver les pesées locales et la sauvegarde JSON ;
-5. préparer une correction sur une branche dédiée ;
-6. publier une version corrective `0.17.1`.
+Si le défaut concerne uniquement Dexie Cloud, conserver les espaces locaux, interrompre les opérations de compte et publier une correction. La désactivation du cloud ne doit pas entraîner la suppression d’un espace local.
 
 ## Retour du code
 
-Un retour complet vers `v0.16.0` n’est autorisé qu’après un test confirmant que
-cette version peut ouvrir sans risque une base déjà migrée au schéma v8.
-
-À défaut de cette confirmation :
-
-1. maintenir temporairement le déploiement 0.17.0 ;
-2. désactiver la fonctionnalité défectueuse dans une correction 0.17.1 ;
-3. déployer la correction sans supprimer les données locales.
-
-## PWA et cache
-
-Si une correction est déployée mais que l’ancienne interface reste affichée :
-
-1. fermer complètement la PWA ;
-2. ouvrir Safari sur l’URL officielle ;
-3. recharger la page ;
-4. relancer la PWA depuis l’écran d’accueil ;
-5. ne supprimer les données du site qu’en dernier recours et seulement après
-   vérification de la sauvegarde JSON.
-
-## Données
-
-- schéma Dexie principal : v8 ;
-- sauvegarde JSON : v7 ;
-- migrations automatiques ;
-- aucune rétro-migration manuelle ne doit être tentée ;
-- une restauration JSON ne doit être lancée qu’après prévisualisation.
+Un redéploiement temporaire de 0.17.1 peut rendre les espaces de comptes invisibles sans les supprimer, car 0.17.1 n’ouvre que sportpilot-local-database. Il ne doit être effectué qu’après validation et avec une sauvegarde récente.
 
 ## Git
 
-Ne jamais réécrire ou supprimer un tag déjà publié.
-
-Documenter le défaut, conserver `v0.17.0`, corriger sur une branche dédiée et
-publier un nouveau tag `v0.17.1`.
+Ne jamais réécrire le tag v0.18.0. Conserver le tag publié et livrer un correctif 0.18.1 avec un nouveau tag annoté.

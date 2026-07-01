@@ -1,4 +1,5 @@
 import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
+import type { ReactNode } from 'react';
 import userEvent from '@testing-library/user-event';
 import { App } from '@/app/App';
 import { router } from '@/app/router';
@@ -9,6 +10,10 @@ import { flushUserStatePersistence } from '@/infrastructure/user-state/userState
 import { createProfileInput } from '@/test/factories/profileFactory';
 import '@/features/onboarding/pages/OnboardingPage';
 import '@/features/dashboard/pages/DashboardPage';
+
+vi.mock('@/app/data-spaces/DataSpaceAccountGate', () => ({
+  DataSpaceAccountGate: ({ children }: { children: ReactNode }) => children,
+}));
 
 vi.mock('@/app/sync/WeightSyncCoordinator', () => ({
   WeightSyncCoordinator: () => null,

@@ -120,6 +120,12 @@ describe('prototype de synchronisation', () => {
   });
 });
 
+describe('compte et appareils', () => {
+  it('utilise une route stable dédiée à la gestion locale du compte', () => {
+    expect(routePaths.accountDevices).toBe('/settings/account-devices');
+  });
+});
+
 describe('page de confidentialité', () => {
   it('utilise une route publique stable', () => {
     expect(routePaths.privacy).toBe('/privacy');

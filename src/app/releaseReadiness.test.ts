@@ -10,9 +10,9 @@ import {
   databaseTableNames,
 } from '@/infrastructure/database/schema';
 
-describe('préparation de la version stable 0.17.1', () => {
+describe('préparation de la version stable 0.18.0', () => {
   it('expose la version stable dans le build', () => {
-    expect(__APP_VERSION__).toBe('0.17.1');
+    expect(__APP_VERSION__).toBe('0.18.0');
     expect(__APP_VERSION__).toMatch(/^\d+\.\d+\.\d+$/);
   });
 
