@@ -2,6 +2,8 @@ import {
   DATA_SPACE_REGISTRY_STORAGE_KEY,
   activateAccountDataSpace,
   activateGuestDataSpace,
+  detachAccountDataSpaceFromCurrentDevice,
+  removeAccountDataSpace,
   getActiveDataSpace,
   readDataSpaceRegistry,
   registerAccountDataSpace,
@@ -82,5 +84,46 @@ describe('dataSpaceRegistry', () => {
       kind: 'guest',
       lastActivatedAt: LATER,
     });
+  });
+
+
+  it('désassocie un espace sans supprimer son descripteur ni sa base', () => {
+    const storage = new MemoryStorage();
+    const accountSpace = activateAccountDataSpace('acct-A1B2C3D4', storage, NOW);
+
+    detachAccountDataSpaceFromCurrentDevice(
+      'acct-A1B2C3D4',
+      storage,
+      LATER,
+    );
+
+    expect(getActiveDataSpace(storage, LATER).kind).toBe('guest');
+    expect(
+      readDataSpaceRegistry(storage, LATER).spaces.find(
+        (space) => space.id === accountSpace.id,
+      ),
+    ).toMatchObject({
+      databaseName: accountSpace.databaseName,
+      linkedToCurrentDevice: false,
+    });
+
+    const reopened = activateAccountDataSpace(
+      'acct-A1B2C3D4',
+      storage,
+      LATER,
+    );
+    expect(reopened.linkedToCurrentDevice).toBe(true);
+  });
+
+  it('retire uniquement le descripteur du compte demandé', () => {
+    const storage = new MemoryStorage();
+    activateAccountDataSpace('acct-A1B2C3D4', storage, NOW);
+
+    removeAccountDataSpace('acct-A1B2C3D4', storage, LATER);
+
+    const registry = readDataSpaceRegistry(storage, LATER);
+    expect(registry.activeSpaceId).toBe('guest');
+    expect(registry.spaces).toHaveLength(1);
+    expect(registry.spaces[0]?.kind).toBe('guest');
   });
 });

@@ -7,6 +7,7 @@ export const routePaths = {
   reminders: '/settings/reminders',
   dashboardCustomization: '/settings/dashboard',
   syncPrototype: '/settings/sync-prototype',
+  accountDevices: '/settings/account-devices',
   food: '/food',
   addFood: '/food/add',
   foodSelector: '/food/select',

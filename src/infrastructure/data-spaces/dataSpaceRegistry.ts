@@ -88,13 +88,16 @@ function isValidSpace(value: unknown): value is DataSpaceDescriptor {
     return (
       candidate.id === GUEST_DATA_SPACE_ID &&
       candidate.databaseName === DEFAULT_DATABASE_NAME &&
-      candidate.accountFingerprint === undefined
+      candidate.accountFingerprint === undefined &&
+      candidate.linkedToCurrentDevice === undefined
     );
   }
 
   if (
     typeof candidate.accountFingerprint !== 'string' ||
-    candidate.accountFingerprint.length === 0
+    candidate.accountFingerprint.length === 0 ||
+    (candidate.linkedToCurrentDevice !== undefined &&
+      typeof candidate.linkedToCurrentDevice !== 'boolean')
   ) {
     return false;
   }
@@ -108,6 +111,16 @@ function isValidSpace(value: unknown): value is DataSpaceDescriptor {
   } catch {
     return false;
   }
+}
+
+function normalizeAccountSpace(
+  space: DataSpaceDescriptor,
+): DataSpaceDescriptor {
+  if (space.kind !== 'account') return space;
+  return {
+    ...space,
+    linkedToCurrentDevice: space.linkedToCurrentDevice !== false,
+  };
 }
 
 function normalizeRegistry(
@@ -127,7 +140,9 @@ function normalizeRegistry(
     return createDefaultDataSpaceRegistry(now);
   }
 
-  const spaces = candidate.spaces.filter(isValidSpace);
+  const spaces = candidate.spaces
+    .filter(isValidSpace)
+    .map(normalizeAccountSpace);
   const guest = spaces.find((space) => space.id === GUEST_DATA_SPACE_ID);
   const active = spaces.find(
     (space) => space.id === candidate.activeSpaceId,
@@ -208,6 +223,7 @@ export function registerAccountDataSpace(
     databaseName,
     label: 'Espace de compte',
     accountFingerprint: normalizedFingerprint,
+    linkedToCurrentDevice: true,
     createdAt: timestamp,
     lastActivatedAt: timestamp,
   };
@@ -238,6 +254,9 @@ export function activateDataSpace(
 
   const updated: DataSpaceDescriptor = {
     ...selected,
+    ...(selected.kind === 'account'
+      ? { linkedToCurrentDevice: true }
+      : {}),
     lastActivatedAt: timestamp,
   };
 
@@ -273,4 +292,79 @@ export function activateAccountDataSpace(
     now,
   );
   return activateDataSpace(accountSpace.id, storage, now);
+}
+
+export function detachAccountDataSpaceFromCurrentDevice(
+  accountFingerprint: string,
+  storage: DataSpaceStorage | undefined = resolveStorage(),
+  now?: Date | string,
+): DataSpaceDescriptor {
+  const timestamp = isoNow(now);
+  const registry = readDataSpaceRegistry(storage, timestamp);
+  const normalizedFingerprint = accountFingerprint.trim().toLowerCase();
+  const targetId = accountDataSpaceId(normalizedFingerprint);
+  const target = registry.spaces.find((space) => space.id === targetId);
+  const guest = registry.spaces.find((space) => space.id === GUEST_DATA_SPACE_ID);
+
+  if (!target || target.kind !== 'account' || !guest) {
+    throw new Error('Aucun espace local de ce compte n’existe sur cet appareil.');
+  }
+
+  const detached: DataSpaceDescriptor = {
+    ...target,
+    linkedToCurrentDevice: false,
+  };
+  const activeGuest: DataSpaceDescriptor = {
+    ...guest,
+    lastActivatedAt: timestamp,
+  };
+
+  writeDataSpaceRegistry(
+    {
+      ...registry,
+      activeSpaceId: GUEST_DATA_SPACE_ID,
+      spaces: registry.spaces.map((space) => {
+        if (space.id === detached.id) return detached;
+        if (space.id === GUEST_DATA_SPACE_ID) return activeGuest;
+        return space;
+      }),
+    },
+    storage,
+  );
+
+  return detached;
+}
+
+export function removeAccountDataSpace(
+  accountFingerprint: string,
+  storage: DataSpaceStorage | undefined = resolveStorage(),
+  now?: Date | string,
+): void {
+  const timestamp = isoNow(now);
+  const registry = readDataSpaceRegistry(storage, timestamp);
+  const normalizedFingerprint = accountFingerprint.trim().toLowerCase();
+  const targetId = accountDataSpaceId(normalizedFingerprint);
+  const guest = registry.spaces.find((space) => space.id === GUEST_DATA_SPACE_ID);
+
+  if (!guest) {
+    throw new Error('L’espace invité local est indisponible.');
+  }
+
+  const activeGuest: DataSpaceDescriptor = {
+    ...guest,
+    lastActivatedAt: timestamp,
+  };
+
+  writeDataSpaceRegistry(
+    {
+      ...registry,
+      activeSpaceId: GUEST_DATA_SPACE_ID,
+      spaces: registry.spaces
+        .filter((space) => space.id !== targetId)
+        .map((space) =>
+          space.id === GUEST_DATA_SPACE_ID ? activeGuest : space,
+        ),
+    },
+    storage,
+  );
 }

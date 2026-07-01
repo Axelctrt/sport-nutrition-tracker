@@ -5,6 +5,7 @@ import type { DataSpaceDescriptor } from '@/domain/data-spaces/dataSpace';
 import { DataSpaceAccountGate } from '@/app/data-spaces/DataSpaceAccountGate';
 import {
   createDefaultDataSpaceRegistry,
+  detachAccountDataSpaceFromCurrentDevice,
   registerAccountDataSpace,
   type DataSpaceStorage,
 } from '@/infrastructure/data-spaces/dataSpaceRegistry';
@@ -244,6 +245,44 @@ describe('DataSpaceAccountGate', () => {
 
     expect(activateExistingSpace).toHaveBeenCalledTimes(1);
     expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+
+  it('propose une réassociation explicite après désassociation locale', async () => {
+    const storage = new MemoryStorage();
+    registerAccountDataSpace(NEW_ACCOUNT_FINGERPRINT, storage);
+    detachAccountDataSpaceFromCurrentDevice(
+      NEW_ACCOUNT_FINGERPRINT,
+      storage,
+    );
+    const activateExistingSpace = vi.fn(() => accountSpace);
+
+    render(
+      <DataSpaceAccountGate
+        client={createClient(
+          createSnapshot({
+            isLoggedIn: true,
+            userId: NEW_ACCOUNT_ID,
+          }),
+        )}
+        currentSpace={guestSpace}
+        storage={storage}
+        reload={vi.fn()}
+        activateExistingSpace={activateExistingSpace}
+      >
+        <p>Données privées</p>
+      </DataSpaceAccountGate>,
+    );
+
+    expect(
+      await screen.findByText('Espace local conservé après désassociation'),
+    ).toBeInTheDocument();
+    await userEvent.click(
+      screen.getByRole('button', {
+        name: 'Réassocier et ouvrir cet espace',
+      }),
+    );
+    expect(activateExistingSpace).toHaveBeenCalledTimes(1);
   });
 
 

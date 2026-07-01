@@ -48,6 +48,7 @@ type GateState =
       readonly status: 'choice';
       readonly accountFingerprint: string;
       readonly hasExistingSpace: boolean;
+      readonly existingSpaceLinkedToDevice: boolean;
       readonly canAttachCurrentData: boolean;
     }
   | { readonly status: 'working'; readonly message: string }
@@ -156,12 +157,17 @@ export function DataSpaceAccountGate({
         return;
       }
 
+      const existingSpace = findAccountDataSpace(
+        accountFingerprint,
+        storage,
+      );
+
       setState({
         status: 'choice',
         accountFingerprint,
-        hasExistingSpace: Boolean(
-          findAccountDataSpace(accountFingerprint, storage),
-        ),
+        hasExistingSpace: Boolean(existingSpace),
+        existingSpaceLinkedToDevice:
+          existingSpace?.linkedToCurrentDevice !== false,
         canAttachCurrentData: currentSpace.kind === 'guest',
       });
     };
@@ -273,15 +279,21 @@ export function DataSpaceAccountGate({
               <Cloud aria-hidden="true" className="mt-0.5 size-5 text-brand-700 dark:text-brand-300" />
               <div>
                 <h2 className="font-semibold text-slate-950 dark:text-white">
-                  Espace déjà connu sur cet appareil
+                  {state.existingSpaceLinkedToDevice
+                    ? 'Espace déjà connu sur cet appareil'
+                    : 'Espace local conservé après désassociation'}
                 </h2>
                 <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                  Ouvre l’espace local précédemment associé à ce compte. Les autres espaces restent fermés et inchangés.
+                  {state.existingSpaceLinkedToDevice
+                    ? 'Ouvre l’espace local précédemment associé à ce compte. Les autres espaces restent fermés et inchangés.'
+                    : 'Les données locales du compte sont toujours présentes. Réassocie explicitement cet appareil pour les ouvrir.'}
                 </p>
               </div>
             </div>
             <Button className="mt-4 w-full" onClick={() => void openExisting()}>
-              Ouvrir l’espace de ce compte
+              {state.existingSpaceLinkedToDevice
+                ? 'Ouvrir l’espace de ce compte'
+                : 'Réassocier et ouvrir cet espace'}
             </Button>
           </section>
         ) : (
