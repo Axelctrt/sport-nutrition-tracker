@@ -1,5 +1,6 @@
 import { RouterProvider } from "react-router-dom";
 
+import { DataSpaceAccountGate } from '@/app/data-spaces/DataSpaceAccountGate';
 import { AppProviders } from "@/app/providers/AppProviders";
 import { RoutineReminderNotifier } from "@/app/reminders/RoutineReminderNotifier";
 import { RewardUnlockNotifier } from "@/app/rewards/RewardUnlockNotifier";
@@ -10,13 +11,15 @@ import { PwaUpdatePrompt } from "@/pwa/PwaUpdatePrompt";
 
 export function App() {
   return (
-    <AppProviders>
-      <RouterProvider router={router} />
-      <RoutineReminderNotifier />
-      <RewardUnlockNotifier />
-      <WeeklyMissionCompletionNotifier />
-      <WeightSyncCoordinator />
-      <PwaUpdatePrompt />
-    </AppProviders>
+    <DataSpaceAccountGate>
+      <AppProviders>
+        <RouterProvider router={router} />
+        <RoutineReminderNotifier />
+        <RewardUnlockNotifier />
+        <WeeklyMissionCompletionNotifier />
+        <WeightSyncCoordinator />
+        <PwaUpdatePrompt />
+      </AppProviders>
+    </DataSpaceAccountGate>
   );
 }

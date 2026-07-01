@@ -52,6 +52,12 @@ const SyncPrototypePage = lazy(() =>
   })),
 );
 
+const AccountDevicesPage = lazy(() =>
+  import('@/features/account-devices/pages/AccountDevicesPage').then((module) => ({
+    default: module.AccountDevicesPage,
+  })),
+);
+
 
 const ActivityJournalPage = lazy(() =>
   import('@/features/activities/pages/ActivityJournalPage').then((module) => ({
@@ -355,6 +361,14 @@ export function LazySyncPrototypePage() {
   return (
     <RouteSuspense variant="form">
       <SyncPrototypePage />
+    </RouteSuspense>
+  );
+}
+
+export function LazyAccountDevicesPage() {
+  return (
+    <RouteSuspense variant="detail">
+      <AccountDevicesPage />
     </RouteSuspense>
   );
 }

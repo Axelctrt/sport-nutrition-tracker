@@ -8,6 +8,7 @@ describe('getRouteTitle', () => {
     expect(getRouteTitle('/activities/templates')).toBe('Modèles d’endurance');
     expect(getRouteTitle('/settings/dashboard')).toBe('Personnaliser le tableau de bord');
     expect(getRouteTitle('/settings/sync-prototype')).toBe('Compte de synchronisation');
+    expect(getRouteTitle('/settings/account-devices')).toBe('Compte et appareils');
     expect(getRouteTitle('/strength/sessions/session-1')).toBe('Séance de musculation');
     expect(getRouteTitle('/strength/exercises/exercise-1/history')).toBe('Historique de l’exercice');
     expect(getRouteTitle('/rewards')).toBe('Centre de récompenses');
