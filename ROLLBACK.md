@@ -1,10 +1,10 @@
-# Retour arrière — SportPilot 0.20.0
+# Retour arrière — SportPilot 0.20.1
 
 ## Stratégie
 
 Le fix-forward est privilégié. Ne supprime jamais IndexedDB, les données Safari, la PWA ou une base Dexie Cloud locale pour corriger une erreur de synchronisation.
 
-SportPilot 0.20.0 conserve la base métier Dexie v8 et le format JSON v7. La base de synchronisation cloud est en v8 et utilise le runtime local `sportpilot-sync-runtime-0.20.0-v8`.
+SportPilot 0.20.1 conserve la base métier Dexie v8 et le format JSON v7. La base de synchronisation cloud est en v8 et utilise le runtime local `sportpilot-sync-runtime-0.20.0-v8`.
 
 ## Mesures immédiates
 
@@ -13,7 +13,7 @@ SportPilot 0.20.0 conserve la base métier Dexie v8 et le format JSON v7. La bas
 3. noter le compte, l’appareil, le domaine et les identifiants concernés ;
 4. ne pas connecter un autre compte tant que l’incident n’est pas qualifié ;
 5. ne pas effacer le stockage du navigateur ;
-6. préparer une correction depuis le tag `v0.20.0`.
+6. préparer une correction depuis le tag `v0.20.1`.
 
 ## Défaut de runtime cloud
 
@@ -29,4 +29,4 @@ Un redéploiement temporaire de 0.19.0 ne sait pas synchroniser les données nut
 
 ## Git
 
-Ne jamais réécrire le tag `v0.20.0`. Conserver le tag publié et livrer un correctif `0.20.1` avec un nouveau tag annoté.
+Ne jamais réécrire le tag `v0.20.1`. Conserver le tag publié et livrer un correctif ultérieur avec un nouveau tag annoté.

@@ -1,4 +1,4 @@
-# SportPilot 0.20.0
+# SportPilot 0.20.1
 
 ## Synchronisation sportive et nutritionnelle multiappareil
 
@@ -8,7 +8,7 @@ Les journées, recettes, modèles de musculation, séances et bilans sont trait�
 
 Lorsqu’un ajustement calorique accepté arrive depuis un autre appareil, les objectifs quotidiens obsolètes sont recalculés puis propagés par la synchronisation du journal. Les produits Open Food Facts portant le même code-barres sont dédupliqués avec remappage des références existantes.
 
-La version 0.20.0 utilise la base cloud v8 et le runtime `sportpilot-sync-runtime-0.20.0-v8`. La base métier reste en Dexie v8, la sauvegarde en JSON v7 et les espaces locaux restent physiquement isolés par compte.
+La version 0.20.1 utilise la base cloud v8 et le runtime `sportpilot-sync-runtime-0.20.0-v8`. La base métier reste en Dexie v8, la sauvegarde en JSON v7 et les espaces locaux restent physiquement isolés par compte.
 
 Les récompenses, thèmes, missions et rappels restent locaux. Les données créées dans l’espace invité restent conservées dans cet espace et réapparaissent après déconnexion du compte ; leur import dans un espace de compte existant sera traité dans une évolution ultérieure.
 

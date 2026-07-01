@@ -79,8 +79,8 @@ if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*7/.test(backup)) {
 }
 
 const packageJson = JSON.parse(read('package.json'));
-if (packageJson.version !== '0.20.0') {
-  fail('la release finale doit publier la version 0.20.0.');
+if (!/^0\.20\.\d+$/.test(packageJson.version)) {
+  fail(`la release finale doit publier une version corrective 0.20.x, reçue ${String(packageJson.version)}.`);
 }
 const scripts = packageJson.scripts ?? {};
 if (scripts['audit:nutrition-tracking-sync'] !== 'node scripts/audit-nutrition-tracking-sync.mjs') {

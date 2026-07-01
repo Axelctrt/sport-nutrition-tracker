@@ -15,8 +15,8 @@ const read = (path) => {
 };
 
 const packageJson = JSON.parse(read('package.json'));
-if (packageJson.version !== '0.20.0') {
-  fail(`la version attendue est 0.20.0, reçue ${String(packageJson.version)}.`);
+if (!/^0\.20\.\d+$/.test(packageJson.version)) {
+  fail(`la version attendue appartient à la série 0.20.x, reçue ${String(packageJson.version)}.`);
 }
 
 for (const path of [
