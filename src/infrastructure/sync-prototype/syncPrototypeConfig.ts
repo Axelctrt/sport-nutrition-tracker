@@ -9,6 +9,7 @@ export interface SyncPrototypeEnvironment {
   readonly VITE_ENABLE_REAL_STRENGTH_SYNC?: string;
   readonly VITE_ENABLE_REAL_NUTRITION_JOURNAL_SYNC?: string;
   readonly VITE_ENABLE_REAL_NUTRITION_LIBRARY_SYNC?: string;
+  readonly VITE_ENABLE_REAL_NUTRITION_TRACKING_SYNC?: string;
   readonly VITE_ENABLE_SYNC_DIAGNOSTICS?: string;
 }
 
@@ -25,6 +26,7 @@ export interface EnabledSyncPrototypeConfig {
   realStrengthSyncEnabled: boolean;
   realNutritionJournalSyncEnabled: boolean;
   realNutritionLibrarySyncEnabled: boolean;
+  realNutritionTrackingSyncEnabled: boolean;
   diagnosticsEnabled: boolean;
 }
 
@@ -140,6 +142,10 @@ export function readSyncPrototypeConfig(
     realNutritionLibrarySyncEnabled: readEnabledFlag(
       environment.VITE_ENABLE_REAL_NUTRITION_LIBRARY_SYNC,
       'VITE_ENABLE_REAL_NUTRITION_LIBRARY_SYNC',
+    ),
+    realNutritionTrackingSyncEnabled: readEnabledFlag(
+      environment.VITE_ENABLE_REAL_NUTRITION_TRACKING_SYNC,
+      'VITE_ENABLE_REAL_NUTRITION_TRACKING_SYNC',
     ),
     diagnosticsEnabled: readEnabledFlag(
       environment.VITE_ENABLE_SYNC_DIAGNOSTICS,

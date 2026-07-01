@@ -13,5 +13,6 @@ export const syncPublicDeploymentConfig = Object.freeze({
   VITE_ENABLE_REAL_STRENGTH_SYNC: 'true',
   VITE_ENABLE_REAL_NUTRITION_JOURNAL_SYNC: 'true',
   VITE_ENABLE_REAL_NUTRITION_LIBRARY_SYNC: 'true',
+  VITE_ENABLE_REAL_NUTRITION_TRACKING_SYNC: 'true',
   VITE_ENABLE_SYNC_DIAGNOSTICS: 'false',
 } as const);

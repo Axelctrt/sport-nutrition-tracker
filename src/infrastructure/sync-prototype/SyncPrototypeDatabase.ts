@@ -13,6 +13,9 @@ import type {
 } from '@/infrastructure/sync-prototype/realNutritionLibrarySyncService';
 import type { FavoriteMeal, FoodProduct } from '@/domain/models/food';
 import type {
+  NutritionTrackingAggregate,
+} from '@/infrastructure/sync-prototype/realNutritionTrackingSyncService';
+import type {
   StrengthExerciseAggregate,
   WorkoutSessionAggregate,
   WorkoutTemplateAggregate,
@@ -23,7 +26,7 @@ import type {
 } from '@/infrastructure/sync-prototype/syncPrototypeConfig';
 
 export const LEGACY_SYNC_PROTOTYPE_DATABASE_NAME = 'sportpilot-sync-prototype';
-export const SYNC_PROTOTYPE_DATABASE_VERSION = 7;
+export const SYNC_PROTOTYPE_DATABASE_VERSION = 8;
 export const SYNC_PROTOTYPE_DATABASE_NAME =
   `sportpilot-sync-runtime-0.20.0-v${SYNC_PROTOTYPE_DATABASE_VERSION}`;
 export const SYNC_PROTOTYPE_TABLE_NAMES = [
@@ -45,6 +48,7 @@ export const SYNC_PROTOTYPE_TABLE_NAMES = [
   'realNutritionRecipes',
   'realFavoriteMeals',
   'realNutritionLibraryDeletionRecords',
+  'realNutritionTracking',
 ] as const;
 
 export class SyncPrototypeDatabase extends Dexie {
@@ -66,6 +70,7 @@ export class SyncPrototypeDatabase extends Dexie {
   declare realNutritionRecipes: Table<NutritionRecipeAggregate, EntityId>;
   declare realFavoriteMeals: Table<FavoriteMeal, EntityId>;
   declare realNutritionLibraryDeletionRecords: Table<DeletionRecord, EntityId>;
+  declare realNutritionTracking: Table<NutritionTrackingAggregate, EntityId>;
 
   constructor(
     { databaseUrl }: EnabledSyncPrototypeConfig,
@@ -141,6 +146,7 @@ export class SyncPrototypeDatabase extends Dexie {
       realFavoriteMeals: 'id, updatedAt',
       realNutritionLibraryDeletionRecords:
         'id, entityType, entityId, status, deletedAt, restoredAt, updatedAt, [entityType+entityId]',
+      realNutritionTracking: 'id, updatedAt',
     });
 
     this.cloud.configure({

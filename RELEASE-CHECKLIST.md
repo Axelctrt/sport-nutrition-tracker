@@ -14,7 +14,7 @@
 ## Compte et runtime cloud
 
 - [ ] Le compte connecté ouvre le bon espace local.
-- [ ] Le runtime utilisé est `sportpilot-sync-runtime-0.20.0-v7`.
+- [ ] Le runtime utilisé est `sportpilot-sync-runtime-0.20.0-v8`.
 - [ ] Une reconnexion OTP éventuelle ne supprime aucune donnée métier.
 - [ ] La synchronisation des pesées se termine sans délai d’expiration.
 - [ ] Un changement de compte ne montre aucune donnée de l’espace précédent.
@@ -80,4 +80,16 @@
 - [ ] Les références du journal C1 sont remappées sans perte nutritionnelle.
 - [ ] La suppression d’une recette ou d’un favori ne ressuscite pas.
 - [ ] Deux synchronisations successives reviennent à `0 différence`.
-- [ ] Le runtime `sportpilot-sync-runtime-0.20.0-v7` peut demander une reconnexion OTP unique.
+- [ ] Le runtime `sportpilot-sync-runtime-0.20.0-v8` peut demander une reconnexion OTP unique.
+
+
+## Prévalidation 0.20.0 C3 — suivi nutritionnel
+
+- [ ] Le panneau **Synchronisation du suivi nutritionnel** est disponible.
+- [ ] Un bilan hebdomadaire accepté et son ajustement sont transférés ensemble.
+- [ ] Un ajustement orphelin ou attaché à une décision non acceptée est refusé.
+- [ ] Une décision plus récente remplace l’ancienne sans doublon.
+- [ ] Les objectifs quotidiens utilisant un ancien cumul sont recalculés.
+- [ ] Les objectifs corrigés sont propagés via le journal C1.
+- [ ] Deux synchronisations successives reviennent à `0 différence`.
+- [ ] Le runtime `sportpilot-sync-runtime-0.20.0-v8` peut demander une reconnexion OTP unique.

@@ -33,7 +33,7 @@ for (const path of [
 
 const cloudDatabase = read('src/infrastructure/sync-prototype/SyncPrototypeDatabase.ts');
 for (const expected of [
-  'SYNC_PROTOTYPE_DATABASE_VERSION = 7',
+  'SYNC_PROTOTYPE_DATABASE_VERSION = 8',
   'sportpilot-sync-runtime-0.20.0-v${SYNC_PROTOTYPE_DATABASE_VERSION}',
   'disableEagerSync: true',
   'realWeights',
@@ -146,6 +146,6 @@ if (failures.length > 0) {
   process.exitCode = 1;
 } else {
   console.log(
-    'Audit final 0.19.0 réussi : quatre domaines synchronisés, convergence commune, suppressions durables, agrégats de musculation atomiques et runtime cloud v7 validés.',
+    'Audit final 0.19.0 réussi : quatre domaines synchronisés, convergence commune, suppressions durables, agrégats de musculation atomiques et runtime cloud v8 validés.',
   );
 }

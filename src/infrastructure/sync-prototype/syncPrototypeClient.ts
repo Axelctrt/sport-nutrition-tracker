@@ -61,6 +61,12 @@ import {
   type RealNutritionLibrarySyncPreview,
   type RealNutritionLibrarySyncResult,
 } from '@/infrastructure/sync-prototype/realNutritionLibrarySyncService';
+import {
+  previewRealNutritionTrackingSync,
+  synchronizeRealNutritionTracking,
+  type RealNutritionTrackingSyncPreview,
+  type RealNutritionTrackingSyncResult,
+} from '@/infrastructure/sync-prototype/realNutritionTrackingSyncService';
 import { reloadUserStateRuntime } from '@/infrastructure/user-state/userStateRuntime';
 
 const DEFAULT_INITIALIZATION_TIMEOUT_MS = 15_000;
@@ -210,6 +216,20 @@ export interface SyncPrototypeRealNutritionLibrarySnapshot {
   readonly errorMessage?: string;
 }
 
+export interface SyncPrototypeRealNutritionTrackingSnapshot {
+  readonly enabled: boolean;
+  readonly status:
+    | 'disabled'
+    | 'idle'
+    | 'analyzing'
+    | 'ready'
+    | 'syncing'
+    | 'error';
+  readonly preview?: RealNutritionTrackingSyncPreview;
+  readonly lastResult?: RealNutritionTrackingSyncResult;
+  readonly errorMessage?: string;
+}
+
 export interface SyncPrototypeSnapshot {
   readonly account: SyncPrototypeAccountSnapshot;
   readonly sync: SyncPrototypeSyncSnapshot;
@@ -220,6 +240,7 @@ export interface SyncPrototypeSnapshot {
   readonly realStrength?: SyncPrototypeRealStrengthSnapshot;
   readonly realNutritionJournal?: SyncPrototypeRealNutritionJournalSnapshot;
   readonly realNutritionLibrary?: SyncPrototypeRealNutritionLibrarySnapshot;
+  readonly realNutritionTracking?: SyncPrototypeRealNutritionTrackingSnapshot;
   readonly diagnostics: SyncPrototypeDiagnosticsSnapshot;
   readonly interaction?: SyncPrototypeInteractionSnapshot;
 }
@@ -245,6 +266,8 @@ export interface SyncPrototypeClient {
   syncRealNutritionJournal?(): Promise<RealNutritionJournalSyncResult>;
   analyzeRealNutritionLibrary?(): Promise<RealNutritionLibrarySyncPreview>;
   syncRealNutritionLibrary?(): Promise<RealNutritionLibrarySyncResult>;
+  analyzeRealNutritionTracking?(): Promise<RealNutritionTrackingSyncPreview>;
+  syncRealNutritionTracking?(): Promise<RealNutritionTrackingSyncResult>;
   saveWeight(draft: SyncPrototypeWeightDraft): Promise<WeightEntry>;
   deleteWeight(weightId: EntityId): Promise<void>;
 }
@@ -357,6 +380,7 @@ export interface SyncPrototypeClientOptions {
   readonly realStrengthSyncEnabled?: boolean;
   readonly realNutritionJournalSyncEnabled?: boolean;
   readonly realNutritionLibrarySyncEnabled?: boolean;
+  readonly realNutritionTrackingSyncEnabled?: boolean;
   readonly localDatabase?: AppDatabase;
   readonly initializationTimeoutMs?: number;
   readonly setTimer?: typeof globalThis.setTimeout;
@@ -376,6 +400,7 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
   private readonly realStrengthSyncEnabled: boolean;
   private readonly realNutritionJournalSyncEnabled: boolean;
   private readonly realNutritionLibrarySyncEnabled: boolean;
+  private readonly realNutritionTrackingSyncEnabled: boolean;
   private readonly localDatabase: AppDatabase;
   private readonly initializationTimeoutMs: number;
   private readonly setTimer: typeof globalThis.setTimeout;
@@ -396,6 +421,8 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
       options.realNutritionJournalSyncEnabled === true;
     this.realNutritionLibrarySyncEnabled =
       options.realNutritionLibrarySyncEnabled === true;
+    this.realNutritionTrackingSyncEnabled =
+      options.realNutritionTrackingSyncEnabled === true;
     this.localDatabase = options.localDatabase ?? appDatabase;
     this.initializationTimeoutMs =
       options.initializationTimeoutMs ?? DEFAULT_INITIALIZATION_TIMEOUT_MS;
@@ -431,6 +458,9 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
         : {}),
       ...(this.realNutritionLibrarySyncEnabled
         ? { realNutritionLibrary: { enabled: true, status: 'idle' as const } }
+        : {}),
+      ...(this.realNutritionTrackingSyncEnabled
+        ? { realNutritionTracking: { enabled: true, status: 'idle' as const } }
         : {}),
       diagnostics: createEmptySyncPrototypeDiagnostics(
         account.userId ?? account.email,
@@ -608,6 +638,9 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
         : {}),
       ...(this.realNutritionLibrarySyncEnabled
         ? { realNutritionLibrary: { enabled: true, status: 'idle' as const } }
+        : {}),
+      ...(this.realNutritionTrackingSyncEnabled
+        ? { realNutritionTracking: { enabled: true, status: 'idle' as const } }
         : {}),
       diagnostics: createEmptySyncPrototypeDiagnostics(),
     };
@@ -1146,6 +1179,98 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
     }
   }
 
+  async analyzeRealNutritionTracking(): Promise<RealNutritionTrackingSyncPreview> {
+    await this.initialize();
+    this.assertRealNutritionTrackingSyncAvailable();
+    this.snapshot = {
+      ...this.snapshot,
+      realNutritionTracking: { enabled: true, status: 'analyzing' },
+    };
+    this.notify();
+
+    try {
+      await this.database.cloud.sync();
+      const preview = await previewRealNutritionTrackingSync(
+        this.localDatabase,
+        this.database,
+        this.database.cloud.currentUserId,
+      );
+      this.snapshot = {
+        ...this.snapshot,
+        realNutritionTracking: { enabled: true, status: 'ready', preview },
+      };
+      this.notify();
+      return preview;
+    } catch (error) {
+      const errorMessage = error instanceof Error
+        ? error.message
+        : 'L’analyse du suivi nutritionnel a échoué.';
+      this.snapshot = {
+        ...this.snapshot,
+        realNutritionTracking: { enabled: true, status: 'error', errorMessage },
+      };
+      this.notify();
+      throw error;
+    }
+  }
+
+  async syncRealNutritionTracking(): Promise<RealNutritionTrackingSyncResult> {
+    await this.initialize();
+    this.assertRealNutritionTrackingSyncAvailable();
+    this.snapshot = {
+      ...this.snapshot,
+      realNutritionTracking: {
+        ...(this.snapshot.realNutritionTracking ?? {}),
+        enabled: true,
+        status: 'syncing',
+      },
+    };
+    this.notify();
+
+    try {
+      await this.database.cloud.sync();
+      const result = await synchronizeRealNutritionTracking(
+        this.localDatabase,
+        this.database,
+        this.database.cloud.currentUserId,
+      );
+      if (this.realNutritionJournalSyncEnabled) {
+        await synchronizeRealNutritionJournal(
+          this.localDatabase,
+          this.database,
+          this.database.cloud.currentUserId,
+        );
+      }
+      await this.database.cloud.sync();
+      const preview = await previewRealNutritionTrackingSync(
+        this.localDatabase,
+        this.database,
+        this.database.cloud.currentUserId,
+      );
+      this.snapshot = {
+        ...this.snapshot,
+        realNutritionTracking: {
+          enabled: true,
+          status: 'ready',
+          preview,
+          lastResult: result,
+        },
+      };
+      this.notify();
+      return result;
+    } catch (error) {
+      const errorMessage = error instanceof Error
+        ? error.message
+        : 'La synchronisation du suivi nutritionnel a échoué.';
+      this.snapshot = {
+        ...this.snapshot,
+        realNutritionTracking: { enabled: true, status: 'error', errorMessage },
+      };
+      this.notify();
+      throw error;
+    }
+  }
+
   async saveWeight(
     rawDraft: SyncPrototypeWeightDraft,
   ): Promise<WeightEntry> {
@@ -1256,6 +1381,15 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
     await this.refreshWeights();
   }
 
+
+  private assertRealNutritionTrackingSyncAvailable(): void {
+    if (!this.realNutritionTrackingSyncEnabled) {
+      throw new Error(
+        'La synchronisation du suivi nutritionnel est désactivée par configuration.',
+      );
+    }
+    this.assertLoggedIn();
+  }
 
   private assertRealNutritionLibrarySyncAvailable(): void {
     if (!this.realNutritionLibrarySyncEnabled) {
@@ -1445,6 +1579,8 @@ export function getSyncPrototypeClient(): SyncPrototypeClient {
       config.realNutritionJournalSyncEnabled,
     realNutritionLibrarySyncEnabled:
       config.realNutritionLibrarySyncEnabled,
+    realNutritionTrackingSyncEnabled:
+      config.realNutritionTrackingSyncEnabled,
     localDatabase: appDatabase,
   });
   return singletonClient;

@@ -50,3 +50,8 @@ Le journal nutritionnel est synchronisé par journée atomique via le runtime cl
 ## 0.20.0 C2
 
 La bibliothèque nutritionnelle synchronise les produits utiles, les recettes complètes et les repas favoris via le runtime cloud v7. Les produits Open Food Facts inutilisés restent locaux et reconstructibles.
+
+
+## 0.20.0 C3
+
+Le suivi nutritionnel synchronise les bilans hebdomadaires et ajustements caloriques acceptés via le runtime cloud v8. Les objectifs quotidiens devenus obsolètes sont recalculés puis propagés par C1.
