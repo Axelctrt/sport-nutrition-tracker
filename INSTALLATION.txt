@@ -1,8 +1,8 @@
-SPORTPILOT 0.20.0
+SPORTPILOT 0.20.1
 
 PRÉPARATION
 
-1. Vérifier que la branche feature/nutrition-sync-0.20.0 est propre.
+1. Vérifier que la branche fix/nutrition-daily-target-uniqueness est propre.
 2. Arrêter le serveur de développement avec Ctrl + C.
 3. Fermer tous les onglets localhost:5173 et 127.0.0.1:5173.
 4. Exporter une sauvegarde JSON v7 récente et la conserver hors de l’application.
@@ -16,7 +16,7 @@ VALIDATION LOCALE
 9. Lancer npm run release:verify.
 10. Lancer npm run test:e2e.
 11. Lancer npm run audit:nutrition-sync-release.
-12. Vérifier que Paramètres affiche la version 0.20.0.
+12. Vérifier que Paramètres affiche la version 0.20.1.
 13. Vérifier que le compte connecté ouvre son espace isolé.
 14. Vérifier les synchronisations des pesées, activités, objectifs et données de musculation.
 15. Vérifier le journal nutritionnel, la bibliothèque et le suivi hebdomadaire.
@@ -28,16 +28,16 @@ VALIDATION LOCALE
 
 PUBLICATION
 
-21. Committer la préparation 0.20.0 sur feature/nutrition-sync-0.20.0.
+21. Committer la préparation 0.20.1 sur fix/nutrition-daily-target-uniqueness.
 22. Fusionner cette branche dans develop avec un commit de fusion explicite.
 23. Après validation de develop, fusionner develop dans main.
-24. Créer le tag annoté v0.20.0 sur le commit publié dans main.
-25. Pousser main, develop et le tag v0.20.0.
+24. Créer le tag annoté v0.20.1 sur le commit publié dans main.
+25. Pousser main, develop et le tag v0.20.1.
 26. Le push de main déclenche le déploiement Cloudflare.
 
 VALIDATION APRÈS DÉPLOIEMENT
 
-27. Vérifier la version 0.20.0 sur ordinateur et iPhone 15 sous iOS 26.
+27. Vérifier la version 0.20.1 sur ordinateur et iPhone 15 sous iOS 26.
 28. Vérifier la connexion au compte et l’ouverture de l’espace existant.
 29. Synchroniser chaque domaine sur ordinateur puis sur iPhone.
 30. Vérifier l’absence de doublons, de repas ou ingrédients orphelins et d’ajustement isolé.
@@ -53,4 +53,4 @@ Schéma Dexie principal : version 8.
 Sauvegarde JSON : version 7.
 Registre local des espaces : version 1.
 
-Aucune migration de la base métier principale n’est requise pour 0.20.0.
+Aucune migration de la base métier principale n’est requise pour 0.20.1.

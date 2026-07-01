@@ -106,7 +106,7 @@ function target(updatedAt = '2026-07-01T09:10:00.000Z'): DailyTarget {
 
 function status(updatedAt = '2026-07-01T09:15:00.000Z'): DailyJournalStatus {
   return {
-    id: 'daily-journal-status:2026-07-01',
+    id: 'journal-status:2026-07-01',
     date: '2026-07-01',
     isComplete: true,
     completedAt: updatedAt,
@@ -330,6 +330,55 @@ describe('synchronisation C1 du journal nutritionnel', () => {
       ),
     ).rejects.toThrow('repas parent cohérent');
     expect(await local.foodEntries.count()).toBe(0);
+  });
+
+  it('fusionne les identifiants historiques par date avant toute écriture Dexie', async () => {
+    await local.dailyTargets.add({
+      ...target('2026-07-01T09:10:00.000Z'),
+      id: 'legacy-target-2026-07-01',
+    });
+    await local.dailyJournalStatuses.add({
+      ...status('2026-07-01T09:15:00.000Z'),
+      id: 'daily-journal-status:2026-07-01',
+    });
+    await cloud.realNutritionJournalDays.add({
+      ...day({
+        id: '#nutrition-journal:2026-07-01',
+        target: {
+          ...target('2026-07-01T10:10:00.000Z'),
+          targetCaloriesKcal: 2050,
+        },
+        status: {
+          ...status('2026-07-01T10:15:00.000Z'),
+          id: 'journal-status:2026-07-01',
+        },
+        updatedAt: '2026-07-01T10:15:00.000Z',
+      }),
+      owner: 'user-1',
+    });
+
+    await synchronizeRealNutritionJournal(
+      local,
+      cloud as unknown as SyncPrototypeDatabase,
+      'user-1',
+    );
+
+    expect(await local.dailyTargets.toArray()).toEqual([
+      expect.objectContaining({
+        id: 'daily-target:2026-07-01',
+        date: '2026-07-01',
+        targetCaloriesKcal: 2050,
+      }),
+    ]);
+    expect(await local.dailyJournalStatuses.toArray()).toEqual([
+      expect.objectContaining({
+        id: 'journal-status:2026-07-01',
+        date: '2026-07-01',
+      }),
+    ]);
+    expect(
+      (await cloud.realNutritionJournalDays.get('#nutrition-journal:2026-07-01'))?.target,
+    ).toMatchObject({ id: 'daily-target:2026-07-01' });
   });
 
   it('analyse les écarts sans écrire dans le cloud', async () => {

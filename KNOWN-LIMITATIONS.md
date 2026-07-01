@@ -1,4 +1,4 @@
-# Limitations connues — SportPilot 0.20.0
+# Limitations connues — SportPilot 0.20.1
 
 Ces limitations sont connues et non bloquantes pour la version stable.
 
@@ -36,4 +36,4 @@ Open Food Facts et Dexie Cloud dépendent du réseau et de leur disponibilité. 
 
 ## Versions de données
 
-SportPilot 0.20.0 utilise la base cloud v8 et le runtime `sportpilot-sync-runtime-0.20.0-v8`. La base métier reste en Dexie v8, la sauvegarde en JSON v7 et le registre local des espaces en v1.
+SportPilot 0.20.1 utilise la base cloud v8 et le runtime `sportpilot-sync-runtime-0.20.0-v8`. La base métier reste en Dexie v8, la sauvegarde en JSON v7 et le registre local des espaces en v1.

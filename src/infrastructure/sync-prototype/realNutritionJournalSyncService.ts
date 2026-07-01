@@ -11,6 +11,10 @@ import {
   deletionRecordId,
 } from '@/domain/models/deletion';
 import type { EntityMetadata, LocalDate } from '@/domain/models/common';
+import {
+  dailyJournalStatusIdForDate,
+  dailyTargetIdForDate,
+} from '@/domain/sync/deterministicEntityIds';
 import type { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import type { SyncPrototypeDatabase } from '@/infrastructure/sync-prototype/SyncPrototypeDatabase';
 import {
@@ -210,6 +214,26 @@ function mapById<T extends { id: string }>(values: readonly T[]): Map<string, T>
   return new Map(values.map((value) => [value.id, value]));
 }
 
+function canonicalizeByDate<T extends EntityMetadata & { date: LocalDate }>(
+  values: readonly T[],
+  canonicalIdForDate: (date: LocalDate) => string,
+): T[] {
+  const byDate = new Map<LocalDate, T>();
+
+  for (const value of values) {
+    const selected = chooseLatest(byDate.get(value.date), value);
+    if (!selected) continue;
+    byDate.set(value.date, {
+      ...selected,
+      id: canonicalIdForDate(value.date),
+    });
+  }
+
+  return [...byDate.values()].sort((left, right) =>
+    left.date.localeCompare(right.date),
+  );
+}
+
 function createEntityState<T extends EntityMetadata>(
   entity: T | undefined,
   marker: DeletionRecord | undefined,
@@ -326,10 +350,14 @@ function resolveFinalState(state: JournalState) {
   const cloudMealById = mapById(cloud.meals);
   const localEntryById = mapById(local.entries);
   const cloudEntryById = mapById(cloud.entries);
-  const localTargetById = mapById(local.targets);
-  const cloudTargetById = mapById(cloud.targets);
-  const localStatusById = mapById(local.statuses);
-  const cloudStatusById = mapById(cloud.statuses);
+  const canonicalTargets = canonicalizeByDate(
+    [...local.targets, ...cloud.targets],
+    dailyTargetIdForDate,
+  );
+  const canonicalStatuses = canonicalizeByDate(
+    [...local.statuses, ...cloud.statuses],
+    dailyJournalStatusIdForDate,
+  );
   const localMarkerById = mapById(state.localMarkers);
   const cloudMarkerById = mapById(state.cloudMarkers);
 
@@ -387,16 +415,12 @@ function resolveFinalState(state: JournalState) {
     if (resolved.marker) finalMarkers.set(markerId, resolved.marker);
   }
 
-  const targetIds = new Set([...localTargetById.keys(), ...cloudTargetById.keys()]);
-  for (const id of targetIds) {
-    const value = chooseLatest(localTargetById.get(id), cloudTargetById.get(id));
-    if (value) finalTargets.set(id, value);
+  for (const value of canonicalTargets) {
+    finalTargets.set(value.id, value);
   }
 
-  const statusIds = new Set([...localStatusById.keys(), ...cloudStatusById.keys()]);
-  for (const id of statusIds) {
-    const value = chooseLatest(localStatusById.get(id), cloudStatusById.get(id));
-    if (value) finalStatuses.set(id, value);
+  for (const value of canonicalStatuses) {
+    finalStatuses.set(value.id, value);
   }
 
   for (const [entryId, entry] of [...finalEntries]) {
