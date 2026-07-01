@@ -1,6 +1,7 @@
 import { DEFAULT_DATABASE_NAME } from '@/infrastructure/database/AppDatabase';
 import {
   createSyncPrototypeDatabase,
+  LEGACY_SYNC_PROTOTYPE_DATABASE_NAME,
   SYNC_PROTOTYPE_DATABASE_NAME,
   SYNC_PROTOTYPE_DATABASE_VERSION,
   SYNC_PROTOTYPE_TABLE_NAMES,
@@ -9,7 +10,13 @@ import {
 describe('base isolée du prototype Dexie Cloud', () => {
   it('reste distincte de la base SportPilot réelle', () => {
     expect(SYNC_PROTOTYPE_DATABASE_NAME).not.toBe(DEFAULT_DATABASE_NAME);
-    expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(3);
+    expect(SYNC_PROTOTYPE_DATABASE_NAME).not.toBe(
+      LEGACY_SYNC_PROTOTYPE_DATABASE_NAME,
+    );
+    expect(SYNC_PROTOTYPE_DATABASE_NAME).toBe(
+      'sportpilot-sync-runtime-0.19.0',
+    );
+    expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(4);
     expect(SYNC_PROTOTYPE_TABLE_NAMES).toEqual([
       'weights',
       'deletionRecords',
@@ -17,6 +24,8 @@ describe('base isolée du prototype Dexie Cloud', () => {
       'realWeightDeletionRecords',
       'realActivities',
       'realActivityDeletionRecords',
+      'realGoals',
+      'realGoalDeletionRecords',
     ]);
   });
 
@@ -26,6 +35,7 @@ describe('base isolée du prototype Dexie Cloud', () => {
       databaseUrl: 'https://sportpilot-prototype.dexie.cloud',
       realWeightSyncEnabled: true,
       realActivitySyncEnabled: true,
+      realGoalSyncEnabled: true,
       diagnosticsEnabled: true,
     });
 
@@ -37,6 +47,7 @@ describe('base isolée du prototype Dexie Cloud', () => {
         tryUseServiceWorker: false,
         nameSuffix: true,
         socialAuth: false,
+        disableEagerSync: true,
       }),
     );
     expect(database.table('weights').schema.primKey.keyPath).toBe('id');
@@ -45,6 +56,8 @@ describe('base isolée du prototype Dexie Cloud', () => {
     expect(database.table('realWeightDeletionRecords').schema.primKey.keyPath).toBe('id');
     expect(database.table('realActivities').schema.primKey.keyPath).toBe('id');
     expect(database.table('realActivityDeletionRecords').schema.primKey.keyPath).toBe('id');
+    expect(database.table('realGoals').schema.primKey.keyPath).toBe('id');
+    expect(database.table('realGoalDeletionRecords').schema.primKey.keyPath).toBe('id');
 
     database.close();
   });

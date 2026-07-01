@@ -9,5 +9,6 @@ export const syncPublicDeploymentConfig = Object.freeze({
   VITE_DEXIE_CLOUD_DATABASE_URL: 'https://zhnyk8met.dexie.cloud',
   VITE_ENABLE_REAL_WEIGHT_SYNC: 'true',
   VITE_ENABLE_REAL_ACTIVITY_SYNC: 'true',
+  VITE_ENABLE_REAL_GOAL_SYNC: 'true',
   VITE_ENABLE_SYNC_DIAGNOSTICS: 'false',
 } as const);

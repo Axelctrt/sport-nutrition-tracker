@@ -37,6 +37,19 @@ import {
   type RealActivitySyncPreview,
   type RealActivitySyncResult,
 } from '@/infrastructure/sync-prototype/realActivitySyncService';
+import {
+  previewRealGoalSync,
+  synchronizeRealGoals,
+  type RealGoalSyncPreview,
+  type RealGoalSyncResult,
+} from '@/infrastructure/sync-prototype/realGoalSyncService';
+import { reloadUserStateRuntime } from '@/infrastructure/user-state/userStateRuntime';
+
+const DEFAULT_INITIALIZATION_TIMEOUT_MS = 15_000;
+const BLOCKED_DATABASE_MESSAGE =
+  'La mise à niveau locale de Dexie Cloud est bloquée par un autre onglet SportPilot. Ferme tous les autres onglets localhost, puis recharge cette page.';
+const INITIALIZATION_TIMEOUT_MESSAGE =
+  'Dexie Cloud n’a pas pu ouvrir sa base locale. Ferme les autres onglets SportPilot, puis recharge cette page.';
 
 export interface SyncPrototypeAccountSnapshot {
   readonly isLoggedIn: boolean;
@@ -122,12 +135,27 @@ export interface SyncPrototypeRealActivitySnapshot {
   readonly errorMessage?: string;
 }
 
+export interface SyncPrototypeRealGoalSnapshot {
+  readonly enabled: boolean;
+  readonly status:
+    | 'disabled'
+    | 'idle'
+    | 'analyzing'
+    | 'ready'
+    | 'syncing'
+    | 'error';
+  readonly preview?: RealGoalSyncPreview;
+  readonly lastResult?: RealGoalSyncResult;
+  readonly errorMessage?: string;
+}
+
 export interface SyncPrototypeSnapshot {
   readonly account: SyncPrototypeAccountSnapshot;
   readonly sync: SyncPrototypeSyncSnapshot;
   readonly weights: SyncPrototypeWeightSnapshot;
   readonly realWeights?: SyncPrototypeRealWeightSnapshot;
   readonly realActivities?: SyncPrototypeRealActivitySnapshot;
+  readonly realGoals?: SyncPrototypeRealGoalSnapshot;
   readonly diagnostics: SyncPrototypeDiagnosticsSnapshot;
   readonly interaction?: SyncPrototypeInteractionSnapshot;
 }
@@ -145,6 +173,8 @@ export interface SyncPrototypeClient {
   syncRealWeights(): Promise<RealWeightSyncResult>;
   analyzeRealActivities?(): Promise<RealActivitySyncPreview>;
   syncRealActivities?(): Promise<RealActivitySyncResult>;
+  analyzeRealGoals?(): Promise<RealGoalSyncPreview>;
+  syncRealGoals?(): Promise<RealGoalSyncResult>;
   saveWeight(draft: SyncPrototypeWeightDraft): Promise<WeightEntry>;
   deleteWeight(weightId: EntityId): Promise<void>;
 }
@@ -253,7 +283,11 @@ function validateWeightDraft(
 export interface SyncPrototypeClientOptions {
   readonly realWeightSyncEnabled?: boolean;
   readonly realActivitySyncEnabled?: boolean;
+  readonly realGoalSyncEnabled?: boolean;
   readonly localDatabase?: AppDatabase;
+  readonly initializationTimeoutMs?: number;
+  readonly setTimer?: typeof globalThis.setTimeout;
+  readonly clearTimer?: typeof globalThis.clearTimeout;
 }
 
 class DefaultSyncPrototypeClient implements SyncPrototypeClient {
@@ -265,7 +299,12 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
   private weightRefreshSequence = 0;
   private readonly realWeightSyncEnabled: boolean;
   private readonly realActivitySyncEnabled: boolean;
+  private readonly realGoalSyncEnabled: boolean;
   private readonly localDatabase: AppDatabase;
+  private readonly initializationTimeoutMs: number;
+  private readonly setTimer: typeof globalThis.setTimeout;
+  private readonly clearTimer: typeof globalThis.clearTimeout;
+  private blockedInitializationReject: ((error: Error) => void) | undefined;
 
   constructor(
     database: SyncPrototypeDatabase,
@@ -275,7 +314,19 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
     this.realWeightSyncEnabled = options.realWeightSyncEnabled === true;
     this.realActivitySyncEnabled =
       options.realActivitySyncEnabled === true;
+    this.realGoalSyncEnabled = options.realGoalSyncEnabled === true;
     this.localDatabase = options.localDatabase ?? appDatabase;
+    this.initializationTimeoutMs =
+      options.initializationTimeoutMs ?? DEFAULT_INITIALIZATION_TIMEOUT_MS;
+    const setTimer = options.setTimer ?? globalThis.setTimeout;
+    const clearTimer = options.clearTimer ?? globalThis.clearTimeout;
+    this.setTimer = setTimer.bind(globalThis);
+    this.clearTimer = clearTimer.bind(globalThis);
+    this.database.on('blocked', () => {
+      this.blockedInitializationReject?.(
+        new Error(BLOCKED_DATABASE_MESSAGE),
+      );
+    });
     this.currentInteraction = database.cloud.userInteraction.value;
     const account = sanitizeAccount(database.cloud.currentUser.value);
     this.snapshot = {
@@ -287,6 +338,9 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
         : {}),
       ...(this.realActivitySyncEnabled
         ? { realActivities: { enabled: true, status: 'idle' as const } }
+        : {}),
+      ...(this.realGoalSyncEnabled
+        ? { realGoals: { enabled: true, status: 'idle' as const } }
         : {}),
       diagnostics: createEmptySyncPrototypeDiagnostics(
         account.userId ?? account.email,
@@ -367,8 +421,7 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
 
   initialize(): Promise<void> {
     if (!this.initializationPromise) {
-      this.initializationPromise = this.database
-        .open()
+      this.initializationPromise = this.openDatabaseWithGuard()
         .then(async () => {
           await this.refreshWeights();
         })
@@ -379,6 +432,38 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
     }
 
     return this.initializationPromise;
+  }
+
+  private openDatabaseWithGuard(): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      let settled = false;
+      let timeoutHandle: ReturnType<typeof globalThis.setTimeout> | undefined;
+
+      const finish = (error?: unknown) => {
+        if (settled) return;
+        settled = true;
+        this.blockedInitializationReject = undefined;
+        if (timeoutHandle) this.clearTimer(timeoutHandle);
+
+        if (error) {
+          this.database.close();
+          reject(error);
+          return;
+        }
+
+        resolve();
+      };
+
+      this.blockedInitializationReject = (error) => finish(error);
+      timeoutHandle = this.setTimer(() => {
+        finish(new Error(INITIALIZATION_TIMEOUT_MESSAGE));
+      }, this.initializationTimeoutMs);
+
+      void this.database.open().then(
+        () => finish(),
+        (error: unknown) => finish(error),
+      );
+    });
   }
 
   async login(email: string): Promise<void> {
@@ -421,6 +506,9 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
         : {}),
       ...(this.realActivitySyncEnabled
         ? { realActivities: { enabled: true, status: 'idle' as const } }
+        : {}),
+      ...(this.realGoalSyncEnabled
+        ? { realGoals: { enabled: true, status: 'idle' as const } }
         : {}),
       diagnostics: createEmptySyncPrototypeDiagnostics(),
     };
@@ -611,6 +699,94 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
     }
   }
 
+  async analyzeRealGoals(): Promise<RealGoalSyncPreview> {
+    await this.initialize();
+    this.assertRealGoalSyncAvailable();
+    this.snapshot = {
+      ...this.snapshot,
+      realGoals: { enabled: true, status: 'analyzing' },
+    };
+    this.notify();
+
+    try {
+      await this.database.cloud.sync();
+      const preview = await previewRealGoalSync(
+        this.localDatabase,
+        this.database,
+        this.database.cloud.currentUserId,
+      );
+      this.snapshot = {
+        ...this.snapshot,
+        realGoals: { enabled: true, status: 'ready', preview },
+      };
+      this.notify();
+      return preview;
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'L’analyse des objectifs a échoué.';
+      this.snapshot = {
+        ...this.snapshot,
+        realGoals: { enabled: true, status: 'error', errorMessage },
+      };
+      this.notify();
+      throw error;
+    }
+  }
+
+  async syncRealGoals(): Promise<RealGoalSyncResult> {
+    await this.initialize();
+    this.assertRealGoalSyncAvailable();
+    this.snapshot = {
+      ...this.snapshot,
+      realGoals: {
+        ...(this.snapshot.realGoals ?? {}),
+        enabled: true,
+        status: 'syncing',
+      },
+    };
+    this.notify();
+
+    try {
+      await this.database.cloud.sync();
+      const result = await synchronizeRealGoals(
+        this.localDatabase,
+        this.database,
+        this.database.cloud.currentUserId,
+      );
+      await reloadUserStateRuntime(this.localDatabase);
+      await this.database.cloud.sync();
+      const preview = await previewRealGoalSync(
+        this.localDatabase,
+        this.database,
+        this.database.cloud.currentUserId,
+      );
+      this.snapshot = {
+        ...this.snapshot,
+        realGoals: {
+          enabled: true,
+          status: 'ready',
+          preview,
+          lastResult: result,
+        },
+      };
+      this.notify();
+      return result;
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'La synchronisation des objectifs a échoué.';
+      this.snapshot = {
+        ...this.snapshot,
+        realGoals: { enabled: true, status: 'error', errorMessage },
+      };
+      this.notify();
+      throw error;
+    }
+  }
+
   async saveWeight(
     rawDraft: SyncPrototypeWeightDraft,
   ): Promise<WeightEntry> {
@@ -719,6 +895,15 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
     );
 
     await this.refreshWeights();
+  }
+
+  private assertRealGoalSyncAvailable(): void {
+    if (!this.realGoalSyncEnabled) {
+      throw new Error(
+        'La synchronisation des objectifs est désactivée par configuration.',
+      );
+    }
+    this.assertLoggedIn();
   }
 
   private assertRealActivitySyncAvailable(): void {
@@ -867,7 +1052,20 @@ export function getSyncPrototypeClient(): SyncPrototypeClient {
   singletonClient = createSyncPrototypeClient(singletonDatabase, {
     realWeightSyncEnabled: config.realWeightSyncEnabled,
     realActivitySyncEnabled: config.realActivitySyncEnabled,
+    realGoalSyncEnabled: config.realGoalSyncEnabled,
     localDatabase: appDatabase,
   });
   return singletonClient;
+}
+
+export function closeSyncPrototypeRuntime(): void {
+  singletonDatabase?.close();
+  singletonDatabase = undefined;
+  singletonClient = undefined;
+}
+
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    closeSyncPrototypeRuntime();
+  });
 }

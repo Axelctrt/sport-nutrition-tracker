@@ -25,6 +25,7 @@ import { DataManagementCenter } from '@/features/settings/components/DataManagem
 import { RewardThemesPanel } from '@/features/settings/components/RewardThemesPanel';
 import { SettingsOverview } from '@/features/settings/components/SettingsOverview';
 import { ActivitySyncSettingsPanel } from '@/features/settings/components/ActivitySyncSettingsPanel';
+import { GoalSyncSettingsPanel } from '@/features/settings/components/GoalSyncSettingsPanel';
 import { WeightSyncSettingsPanel } from '@/features/settings/components/WeightSyncSettingsPanel';
 import {
   SettingsSectionDirectory,
@@ -417,13 +418,14 @@ export function AdvancedSettingsPage() {
           sectionId="settings-sync"
           storageKey="sportpilot:settings:sync"
           title="Synchronisation des données"
-          description="Surveiller les échanges de pesées et synchroniser les activités sportives entre tes appareils."
+          description="Surveiller les échanges de pesées, d’activités et d’objectifs entre tes appareils."
           icon={Cloud}
           className="scroll-mt-24"
         >
           <div className="space-y-5">
             <WeightSyncSettingsPanel />
             <ActivitySyncSettingsPanel />
+            <GoalSyncSettingsPanel />
           </div>
         </CollapsibleSection>
 

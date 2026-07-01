@@ -36,7 +36,7 @@ function createClientSnapshot(
     },
     diagnostics: {
       databaseName: 'sportpilot-sync-prototype',
-      databaseVersion: 3,
+      databaseVersion: 4,
       visibleWeightCount: 0,
       deletedWeightCount: 0,
     },

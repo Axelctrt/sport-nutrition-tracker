@@ -1,6 +1,7 @@
 import Dexie, { type Table } from 'dexie';
 import dexieCloud from 'dexie-cloud-addon';
 import type { Activity } from '@/domain/models/activity';
+import type { Goal } from '@/domain/goals/goalState';
 import type { DeletionRecord } from '@/domain/models/deletion';
 import type { EntityId } from '@/domain/models/common';
 import type { WeightEntry } from '@/domain/models/weight';
@@ -9,8 +10,10 @@ import type {
   SyncPrototypeConfig,
 } from '@/infrastructure/sync-prototype/syncPrototypeConfig';
 
-export const SYNC_PROTOTYPE_DATABASE_NAME = 'sportpilot-sync-prototype';
-export const SYNC_PROTOTYPE_DATABASE_VERSION = 3;
+export const LEGACY_SYNC_PROTOTYPE_DATABASE_NAME = 'sportpilot-sync-prototype';
+export const SYNC_PROTOTYPE_DATABASE_NAME =
+  'sportpilot-sync-runtime-0.19.0';
+export const SYNC_PROTOTYPE_DATABASE_VERSION = 4;
 export const SYNC_PROTOTYPE_TABLE_NAMES = [
   'weights',
   'deletionRecords',
@@ -18,6 +21,8 @@ export const SYNC_PROTOTYPE_TABLE_NAMES = [
   'realWeightDeletionRecords',
   'realActivities',
   'realActivityDeletionRecords',
+  'realGoals',
+  'realGoalDeletionRecords',
 ] as const;
 
 export class SyncPrototypeDatabase extends Dexie {
@@ -27,6 +32,8 @@ export class SyncPrototypeDatabase extends Dexie {
   declare realWeightDeletionRecords: Table<DeletionRecord, EntityId>;
   declare realActivities: Table<Activity, EntityId>;
   declare realActivityDeletionRecords: Table<DeletionRecord, EntityId>;
+  declare realGoals: Table<Goal, EntityId>;
+  declare realGoalDeletionRecords: Table<DeletionRecord, EntityId>;
 
   constructor(
     { databaseUrl }: EnabledSyncPrototypeConfig,
@@ -49,7 +56,7 @@ export class SyncPrototypeDatabase extends Dexie {
         'id, entityType, entityId, status, deletedAt, restoredAt, updatedAt, [entityType+entityId]',
     });
 
-    this.version(SYNC_PROTOTYPE_DATABASE_VERSION).stores({
+    this.version(3).stores({
       weights: 'id, &date, updatedAt',
       deletionRecords:
         'id, entityType, entityId, status, deletedAt, restoredAt, updatedAt, [entityType+entityId]',
@@ -61,6 +68,21 @@ export class SyncPrototypeDatabase extends Dexie {
         'id, entityType, entityId, status, deletedAt, restoredAt, updatedAt, [entityType+entityId]',
     });
 
+    this.version(SYNC_PROTOTYPE_DATABASE_VERSION).stores({
+      weights: 'id, &date, updatedAt',
+      deletionRecords:
+        'id, entityType, entityId, status, deletedAt, restoredAt, updatedAt, [entityType+entityId]',
+      realWeights: 'id, date, updatedAt',
+      realWeightDeletionRecords:
+        'id, entityType, entityId, status, deletedAt, restoredAt, updatedAt, [entityType+entityId]',
+      realActivities: 'id, date, type, [date+type], updatedAt',
+      realActivityDeletionRecords:
+        'id, entityType, entityId, status, deletedAt, restoredAt, updatedAt, [entityType+entityId]',
+      realGoals: 'id, metric, status, startDate, deadline, updatedAt',
+      realGoalDeletionRecords:
+        'id, entityType, entityId, status, deletedAt, restoredAt, updatedAt, [entityType+entityId]',
+    });
+
     this.cloud.configure({
       databaseUrl,
       requireAuth: false,
@@ -68,6 +90,7 @@ export class SyncPrototypeDatabase extends Dexie {
       tryUseServiceWorker: false,
       nameSuffix: true,
       socialAuth: false,
+      disableEagerSync: true,
     });
   }
 }

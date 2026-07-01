@@ -5,6 +5,7 @@ export interface SyncPrototypeEnvironment {
   readonly VITE_DEXIE_CLOUD_DATABASE_URL?: string;
   readonly VITE_ENABLE_REAL_WEIGHT_SYNC?: string;
   readonly VITE_ENABLE_REAL_ACTIVITY_SYNC?: string;
+  readonly VITE_ENABLE_REAL_GOAL_SYNC?: string;
   readonly VITE_ENABLE_SYNC_DIAGNOSTICS?: string;
 }
 
@@ -17,6 +18,7 @@ export interface EnabledSyncPrototypeConfig {
   databaseUrl: string;
   realWeightSyncEnabled: boolean;
   realActivitySyncEnabled: boolean;
+  realGoalSyncEnabled: boolean;
   diagnosticsEnabled: boolean;
 }
 
@@ -116,6 +118,10 @@ export function readSyncPrototypeConfig(
     realActivitySyncEnabled: readEnabledFlag(
       environment.VITE_ENABLE_REAL_ACTIVITY_SYNC,
       'VITE_ENABLE_REAL_ACTIVITY_SYNC',
+    ),
+    realGoalSyncEnabled: readEnabledFlag(
+      environment.VITE_ENABLE_REAL_GOAL_SYNC,
+      'VITE_ENABLE_REAL_GOAL_SYNC',
     ),
     diagnosticsEnabled: readEnabledFlag(
       environment.VITE_ENABLE_SYNC_DIAGNOSTICS,
