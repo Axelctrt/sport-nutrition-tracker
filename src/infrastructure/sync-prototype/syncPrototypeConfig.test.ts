@@ -37,6 +37,9 @@ describe('configuration du prototype Dexie Cloud', () => {
       realActivitySyncEnabled: false,
       realGoalSyncEnabled: false,
       realStrengthSyncEnabled: false,
+      realNutritionJournalSyncEnabled: false,
+      realNutritionLibrarySyncEnabled: false,
+      realNutritionTrackingSyncEnabled: false,
       diagnosticsEnabled: false,
     });
   });
@@ -128,6 +131,51 @@ describe('configuration du prototype Dexie Cloud', () => {
     });
   });
 
+  it('active séparément la synchronisation du journal nutritionnel', () => {
+    expect(
+      readSyncPrototypeConfig({
+        VITE_ENABLE_SYNC_PROTOTYPE: 'true',
+        VITE_DEXIE_CLOUD_DATABASE_URL:
+          'https://sportpilot-prototype.dexie.cloud',
+        VITE_ENABLE_REAL_NUTRITION_JOURNAL_SYNC: 'true',
+      }),
+    ).toMatchObject({
+      enabled: true,
+      realNutritionJournalSyncEnabled: true,
+      realNutritionLibrarySyncEnabled: false,
+      realNutritionTrackingSyncEnabled: false,
+    });
+  });
+
+  it('active séparément la synchronisation de la bibliothèque nutritionnelle', () => {
+    expect(
+      readSyncPrototypeConfig({
+        VITE_ENABLE_SYNC_PROTOTYPE: 'true',
+        VITE_DEXIE_CLOUD_DATABASE_URL:
+          'https://sportpilot-prototype.dexie.cloud',
+        VITE_ENABLE_REAL_NUTRITION_LIBRARY_SYNC: 'true',
+      }),
+    ).toMatchObject({
+      enabled: true,
+      realNutritionLibrarySyncEnabled: true,
+    });
+  });
+
+
+  it('active séparément la synchronisation du suivi nutritionnel', () => {
+    expect(
+      readSyncPrototypeConfig({
+        VITE_ENABLE_SYNC_PROTOTYPE: 'true',
+        VITE_DEXIE_CLOUD_DATABASE_URL:
+          'https://sportpilot-prototype.dexie.cloud',
+        VITE_ENABLE_REAL_NUTRITION_TRACKING_SYNC: 'true',
+      }),
+    ).toMatchObject({
+      enabled: true,
+      realNutritionTrackingSyncEnabled: true,
+    });
+  });
+
   it('active les outils de diagnostic avec un flag séparé', () => {
     expect(
       readSyncPrototypeConfig({
@@ -162,6 +210,27 @@ describe('configuration du prototype Dexie Cloud', () => {
 
 
 
+
+
+  it('refuse une valeur ambiguë pour C3', () => {
+    expect(() =>
+      readSyncPrototypeConfig({
+        VITE_ENABLE_SYNC_PROTOTYPE: 'true',
+        VITE_DEXIE_CLOUD_DATABASE_URL: 'https://test.dexie.cloud',
+        VITE_ENABLE_REAL_NUTRITION_TRACKING_SYNC: 'yes',
+      }),
+    ).toThrow('VITE_ENABLE_REAL_NUTRITION_TRACKING_SYNC');
+  });
+
+  it('refuse une valeur ambiguë pour C1', () => {
+    expect(() =>
+      readSyncPrototypeConfig({
+        VITE_ENABLE_SYNC_PROTOTYPE: 'true',
+        VITE_DEXIE_CLOUD_DATABASE_URL: 'https://test.dexie.cloud',
+        VITE_ENABLE_REAL_NUTRITION_JOURNAL_SYNC: 'yes',
+      }),
+    ).toThrow('VITE_ENABLE_REAL_NUTRITION_JOURNAL_SYNC');
+  });
 
   it('refuse une valeur ambiguë pour B3', () => {
     expect(() =>

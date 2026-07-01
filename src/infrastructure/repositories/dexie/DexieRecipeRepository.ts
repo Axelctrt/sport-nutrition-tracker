@@ -1,6 +1,7 @@
 import { RepositoryError } from '@/domain/errors/RepositoryError';
 import type { EntityChanges, EntityId, NewEntity } from '@/domain/models/common';
 import type { Recipe, RecipeIngredient } from '@/domain/models/recipe';
+import { createDeletedDeletionRecord, deletionRecordId } from '@/domain/models/deletion';
 import type { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import type { RecipeRepository, SavedRecipe } from '@/infrastructure/repositories/contracts/RecipeRepository';
 import { runRepositoryOperation } from '@/infrastructure/repositories/dexie/repositoryOperation';
@@ -81,7 +82,10 @@ export class DexieRecipeRepository implements RecipeRepository {
       () => this.database.transaction(
         'rw',
         this.database.recipeIngredients,
+        this.database.deletionRecords,
         async () => {
+          const occurredAt = new Date().toISOString();
+          const previousIngredients = await this.database.recipeIngredients.where('recipeId').equals(recipeId).toArray();
           await this.database.recipeIngredients.where('recipeId').equals(recipeId).delete();
           const entities = ingredients.map((ingredient) =>
             createEntity<RecipeIngredient>({ ...ingredient, recipeId }),
@@ -89,6 +93,17 @@ export class DexieRecipeRepository implements RecipeRepository {
 
           if (entities.length > 0) {
             await this.database.recipeIngredients.bulkAdd(entities);
+          }
+
+          for (const ingredient of previousIngredients) {
+            const markerId = deletionRecordId('recipeIngredient', ingredient.id);
+            await this.database.deletionRecords.put(
+              createDeletedDeletionRecord(
+                { entityType: 'recipeIngredient', entityId: ingredient.id },
+                occurredAt,
+                await this.database.deletionRecords.get(markerId),
+              ),
+            );
           }
 
           return entities;
@@ -109,7 +124,12 @@ export class DexieRecipeRepository implements RecipeRepository {
         'rw',
         this.database.recipes,
         this.database.recipeIngredients,
+        this.database.deletionRecords,
         async () => {
+          const occurredAt = new Date().toISOString();
+          const previousIngredients = recipeId
+            ? await this.database.recipeIngredients.where('recipeId').equals(recipeId).toArray()
+            : [];
           const recipe = recipeId
             ? await (async () => {
                 const current = await this.database.recipes.get(recipeId);
@@ -128,6 +148,16 @@ export class DexieRecipeRepository implements RecipeRepository {
             createEntity<RecipeIngredient>({ ...ingredient, recipeId: recipe.id }),
           );
           if (entities.length > 0) await this.database.recipeIngredients.bulkAdd(entities);
+          for (const ingredient of previousIngredients) {
+            const markerId = deletionRecordId('recipeIngredient', ingredient.id);
+            await this.database.deletionRecords.put(
+              createDeletedDeletionRecord(
+                { entityType: 'recipeIngredient', entityId: ingredient.id },
+                occurredAt,
+                await this.database.deletionRecords.get(markerId),
+              ),
+            );
+          }
           return { recipe, ingredients: entities };
         },
       ),

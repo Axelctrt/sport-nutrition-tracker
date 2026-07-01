@@ -25,6 +25,9 @@ if (existsSync(deploymentConfigPath)) {
     "VITE_ENABLE_REAL_ACTIVITY_SYNC: 'true'",
     "VITE_ENABLE_REAL_GOAL_SYNC: 'true'",
     "VITE_ENABLE_REAL_STRENGTH_SYNC: 'true'",
+    "VITE_ENABLE_REAL_NUTRITION_JOURNAL_SYNC: 'true'",
+    "VITE_ENABLE_REAL_NUTRITION_LIBRARY_SYNC: 'true'",
+    "VITE_ENABLE_REAL_NUTRITION_TRACKING_SYNC: 'true'",
     "VITE_ENABLE_SYNC_DIAGNOSTICS: 'false'",
   ]) {
     if (!source.includes(expected)) fail(`la valeur attendue ${expected} est absente.`);

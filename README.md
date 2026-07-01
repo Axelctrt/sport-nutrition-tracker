@@ -1,13 +1,16 @@
-# SportPilot 0.19.0
+# SportPilot 0.20.0
 
-## Version 0.19 — synchronisation sportive multiappareil
+## Synchronisation sportive et nutritionnelle multiappareil
 
-SportPilot synchronise désormais les pesées, activités, objectifs et données de musculation du compte connecté. Les créations, modifications, suppressions et restaurations convergent entre appareils sans doublons, avec filtrage strict par propriétaire cloud.
+SportPilot synchronise les pesées, activités, objectifs, données de musculation, journées nutritionnelles, produits utiles, recettes, repas favoris, bilans hebdomadaires et ajustements caloriques du compte connecté.
 
-Les séances modèles et les séances réalisées sont transférées comme des agrégats complets : exercices et séries sont appliqués dans une transaction unique afin d’éviter toute séance partielle ou série orpheline. Les quatre domaines utilisent désormais les mêmes règles de comparaison, d’exclusion des métadonnées Dexie Cloud et de résolution déterministe des conflits.
+Les journées, recettes, modèles de musculation, séances et bilans sont traités comme des agrégats cohérents. Les créations, modifications, suppressions et restaurations convergent sans doublons, avec filtrage strict par propriétaire cloud et résolution déterministe des conflits.
 
-Cette version utilise la base cloud v5 et un runtime local versionné `sportpilot-sync-runtime-0.19.0-v5`. La base métier reste en Dexie v8, la sauvegarde en JSON v7 et les espaces locaux restent physiquement isolés par compte. La nutrition, les récompenses, thèmes et rappels restent locaux à leur espace.
+Lorsqu’un ajustement calorique accepté arrive depuis un autre appareil, les objectifs quotidiens obsolètes sont recalculés puis propagés par la synchronisation du journal. Les produits Open Food Facts portant le même code-barres sont dédupliqués avec remappage des références existantes.
 
+La version 0.20.0 utilise la base cloud v8 et le runtime `sportpilot-sync-runtime-0.20.0-v8`. La base métier reste en Dexie v8, la sauvegarde en JSON v7 et les espaces locaux restent physiquement isolés par compte.
+
+Les récompenses, thèmes, missions et rappels restent locaux. Les données créées dans l’espace invité restent conservées dans cet espace et réapparaissent après déconnexion du compte ; leur import dans un espace de compte existant sera traité dans une évolution ultérieure.
 
 <!-- hotfix-sync-production-0.17.1 -->
 ## Correctif 0.17.1 — synchronisation disponible en production

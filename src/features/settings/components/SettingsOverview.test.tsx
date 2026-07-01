@@ -18,7 +18,7 @@ describe('SettingsOverview', () => {
     );
 
     expect(screen.getByLabelText('Résumé des paramètres')).toBeInTheDocument();
-    expect(screen.getByText('0.19.0')).toBeInTheDocument();
+    expect(screen.getByText('0.20.0')).toBeInTheDocument();
     expect(screen.getByText('Sombre')).toBeInTheDocument();
     expect(screen.getByText('Persistant')).toBeInTheDocument();
     expect(screen.getByText('Espace local invité')).toBeInTheDocument();

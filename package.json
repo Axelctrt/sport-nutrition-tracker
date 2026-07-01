@@ -1,7 +1,7 @@
 {
   "name": "sport-nutrition-tracker",
   "private": true,
-  "version": "0.19.0",
+  "version": "0.20.0",
   "type": "module",
   "engines": {
     "node": "^20.19.0 || >=22.13.0"
@@ -14,8 +14,8 @@
     "test:stability": "vitest run --sequence.shuffle --sequence.seed=20260626",
     "test:watch": "vitest",
     "preview": "vite preview",
-    "check": "npm run lint && npm run test && npm run build && npm run audit:sync-deployment && npm run audit:sports-sync && npm run audit:goal-sync && npm run audit:strength-sync && npm run audit:sports-sync-release && npm run audit:account-isolation && npm run audit:mvp && npm run audit:release && npm run audit:security && npm run audit:production && npm run audit:repository",
-    "ci": "npm run lint && npm run test && npm run build && npm run audit:sync-deployment && npm run audit:sports-sync && npm run audit:goal-sync && npm run audit:strength-sync && npm run audit:sports-sync-release && npm run audit:account-isolation && npm run audit:mvp && npm run audit:release && npm run audit:security && npm run audit:production && npm run audit:repository",
+    "check": "npm run lint && npm run test && npm run build && npm run audit:sync-deployment && npm run audit:sports-sync && npm run audit:goal-sync && npm run audit:strength-sync && npm run audit:sports-sync-release && npm run audit:nutrition-journal-sync && npm run audit:nutrition-library-sync && npm run audit:nutrition-tracking-sync && npm run audit:nutrition-sync-release && npm run audit:account-isolation && npm run audit:mvp && npm run audit:release && npm run audit:security && npm run audit:production && npm run audit:repository",
+    "ci": "npm run lint && npm run test && npm run build && npm run audit:sync-deployment && npm run audit:sports-sync && npm run audit:goal-sync && npm run audit:strength-sync && npm run audit:sports-sync-release && npm run audit:nutrition-journal-sync && npm run audit:nutrition-library-sync && npm run audit:nutrition-tracking-sync && npm run audit:nutrition-sync-release && npm run audit:account-isolation && npm run audit:mvp && npm run audit:release && npm run audit:security && npm run audit:production && npm run audit:repository",
     "diagnose:off": "node scripts/diagnose-open-food-facts.mjs",
     "audit:mvp": "node scripts/audit-mvp.mjs",
     "audit:release": "node scripts/audit-release.mjs",
@@ -34,7 +34,11 @@
     "audit:sports-sync": "node scripts/audit-sports-sync.mjs",
     "audit:goal-sync": "node scripts/audit-goal-sync.mjs",
     "audit:strength-sync": "node scripts/audit-strength-sync.mjs",
-    "audit:sports-sync-release": "node scripts/audit-sports-sync-release.mjs"
+    "audit:sports-sync-release": "node scripts/audit-sports-sync-release.mjs",
+    "audit:nutrition-journal-sync": "node scripts/audit-nutrition-journal-sync.mjs",
+    "audit:nutrition-library-sync": "node scripts/audit-nutrition-library-sync.mjs",
+    "audit:nutrition-tracking-sync": "node scripts/audit-nutrition-tracking-sync.mjs",
+    "audit:nutrition-sync-release": "node scripts/audit-nutrition-sync-release.mjs"
   },
   "dependencies": {
     "@ericblade/quagga2": "^1.12.1",

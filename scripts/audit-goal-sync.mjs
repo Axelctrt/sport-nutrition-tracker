@@ -37,7 +37,7 @@ const mainVersions = read(
 
 
 for (const expected of [
-  "sportpilot-sync-runtime-0.19.0-v",
+  "sportpilot-sync-runtime-0.20.0-v",
   "disableEagerSync: true",
 ]) {
   if (!cloudDatabase.includes(expected)) {

@@ -1,18 +1,22 @@
-# Limitations connues — SportPilot 0.19.0
+# Limitations connues — SportPilot 0.20.0
 
 Ces limitations sont connues et non bloquantes pour la version stable.
 
-## Synchronisation manuelle
+## Synchronisation par domaine
 
-Les activités, objectifs et données de musculation sont synchronisés manuellement depuis les paramètres. Les pesées conservent leur actualisation historique au démarrage. Il n’existe pas encore de bouton unique synchronisant tous les domaines.
+Les activités, objectifs, musculation et domaines nutritionnels sont synchronisés depuis leurs panneaux respectifs. Les pesées conservent leur actualisation historique au démarrage. Il n’existe pas encore de bouton unique synchronisant tous les domaines dans un ordre automatisé.
+
+## Espace invité
+
+Les données créées dans l’espace invité restent conservées dans cet espace après connexion à un compte. Elles réapparaissent après déconnexion, mais une importation sécurisée dans un espace de compte déjà existant n’est pas encore disponible.
 
 ## Données restant locales
 
-La nutrition, les produits, recettes, repas favoris, récompenses, thèmes, missions et rappels restent locaux à l’espace de données actif. L’isolation par compte demeure assurée, mais ces domaines ne constituent pas encore une sauvegarde cloud.
+Les récompenses, thèmes, missions et rappels restent locaux à l’espace actif. Ils ne constituent pas encore une sauvegarde cloud.
 
 ## Nouvelle installation
 
-Une nouvelle installation peut récupérer les domaines synchronisés après connexion et lancement des synchronisations correspondantes. Une restauration cloud entièrement automatisée de l’espace et de tous les domaines locaux n’est pas encore disponible.
+Une nouvelle installation peut récupérer les domaines synchronisés après connexion et lancement des synchronisations correspondantes. Une restauration cloud entièrement automatisée de l’espace, de ses réglages et de tous les domaines locaux n’est pas encore disponible.
 
 ## Appareils distants
 
@@ -32,4 +36,4 @@ Open Food Facts et Dexie Cloud dépendent du réseau et de leur disponibilité. 
 
 ## Versions de données
 
-SportPilot 0.19.0 utilise la base cloud v5, Dexie métier v8, le format de sauvegarde JSON v7 et le registre local des espaces v1.
+SportPilot 0.20.0 utilise la base cloud v8 et le runtime `sportpilot-sync-runtime-0.20.0-v8`. La base métier reste en Dexie v8, la sauvegarde en JSON v7 et le registre local des espaces en v1.
