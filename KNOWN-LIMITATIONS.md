@@ -1,4 +1,6 @@
-# Limitations connues — SportPilot 0.19.0
+# Limitations connues — développement SportPilot 0.20.0 C1
+
+Version stable publiée : **0.19.0**.
 
 Ces limitations sont connues et non bloquantes pour la version stable.
 
@@ -8,7 +10,7 @@ Les activités, objectifs et données de musculation sont synchronisés manuelle
 
 ## Données restant locales
 
-La nutrition, les produits, recettes, repas favoris, récompenses, thèmes, missions et rappels restent locaux à l’espace de données actif. L’isolation par compte demeure assurée, mais ces domaines ne constituent pas encore une sauvegarde cloud.
+Les produits, recettes, repas favoris, récompenses, thèmes, missions et rappels restent locaux à l’espace de données actif. Les repas, entrées, objectifs quotidiens et statuts du journal sont synchronisés depuis C1. L’isolation par compte demeure assurée, mais ces domaines ne constituent pas encore une sauvegarde cloud.
 
 ## Nouvelle installation
 
@@ -32,4 +34,4 @@ Open Food Facts et Dexie Cloud dépendent du réseau et de leur disponibilité. 
 
 ## Versions de données
 
-SportPilot 0.19.0 utilise la base cloud v5, Dexie métier v8, le format de sauvegarde JSON v7 et le registre local des espaces v1.
+Le développement C1 utilise la base cloud v6 et le runtime `sportpilot-sync-runtime-0.20.0-v6`. Dexie métier reste en v8, la sauvegarde en JSON v7 et le registre local des espaces en v1.

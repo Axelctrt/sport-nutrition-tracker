@@ -6,6 +6,9 @@ import type { DeletionRecord } from '@/domain/models/deletion';
 import type { EntityId } from '@/domain/models/common';
 import type { WeightEntry } from '@/domain/models/weight';
 import type {
+  NutritionJournalDayAggregate,
+} from '@/infrastructure/sync-prototype/realNutritionJournalSyncService';
+import type {
   StrengthExerciseAggregate,
   WorkoutSessionAggregate,
   WorkoutTemplateAggregate,
@@ -16,9 +19,9 @@ import type {
 } from '@/infrastructure/sync-prototype/syncPrototypeConfig';
 
 export const LEGACY_SYNC_PROTOTYPE_DATABASE_NAME = 'sportpilot-sync-prototype';
-export const SYNC_PROTOTYPE_DATABASE_VERSION = 5;
+export const SYNC_PROTOTYPE_DATABASE_VERSION = 6;
 export const SYNC_PROTOTYPE_DATABASE_NAME =
-  `sportpilot-sync-runtime-0.19.0-v${SYNC_PROTOTYPE_DATABASE_VERSION}`;
+  `sportpilot-sync-runtime-0.20.0-v${SYNC_PROTOTYPE_DATABASE_VERSION}`;
 export const SYNC_PROTOTYPE_TABLE_NAMES = [
   'weights',
   'deletionRecords',
@@ -32,6 +35,8 @@ export const SYNC_PROTOTYPE_TABLE_NAMES = [
   'realWorkoutTemplates',
   'realWorkoutSessions',
   'realStrengthDeletionRecords',
+  'realNutritionJournalDays',
+  'realNutritionJournalDeletionRecords',
 ] as const;
 
 export class SyncPrototypeDatabase extends Dexie {
@@ -47,6 +52,8 @@ export class SyncPrototypeDatabase extends Dexie {
   declare realWorkoutTemplates: Table<WorkoutTemplateAggregate, EntityId>;
   declare realWorkoutSessions: Table<WorkoutSessionAggregate, EntityId>;
   declare realStrengthDeletionRecords: Table<DeletionRecord, EntityId>;
+  declare realNutritionJournalDays: Table<NutritionJournalDayAggregate, EntityId>;
+  declare realNutritionJournalDeletionRecords: Table<DeletionRecord, EntityId>;
 
   constructor(
     { databaseUrl }: EnabledSyncPrototypeConfig,
@@ -113,6 +120,9 @@ export class SyncPrototypeDatabase extends Dexie {
       realWorkoutTemplates: 'id, updatedAt',
       realWorkoutSessions: 'id, updatedAt',
       realStrengthDeletionRecords:
+        'id, entityType, entityId, status, deletedAt, restoredAt, updatedAt, [entityType+entityId]',
+      realNutritionJournalDays: 'id, date, updatedAt',
+      realNutritionJournalDeletionRecords:
         'id, entityType, entityId, status, deletedAt, restoredAt, updatedAt, [entityType+entityId]',
     });
 

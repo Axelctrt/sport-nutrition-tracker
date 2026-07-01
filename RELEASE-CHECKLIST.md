@@ -14,7 +14,7 @@
 ## Compte et runtime cloud
 
 - [ ] Le compte connecté ouvre le bon espace local.
-- [ ] Le runtime utilisé est `sportpilot-sync-runtime-0.19.0-v5`.
+- [ ] Le runtime utilisé est `sportpilot-sync-runtime-0.20.0-v6`.
 - [ ] Une reconnexion OTP éventuelle ne supprime aucune donnée métier.
 - [ ] La synchronisation des pesées se termine sans délai d’expiration.
 - [ ] Un changement de compte ne montre aucune donnée de l’espace précédent.
@@ -55,3 +55,15 @@
 - [ ] `main`, `develop` et `v0.19.0` sont poussés.
 - [ ] Le déploiement Cloudflare est terminé.
 - [ ] La recette finale est validée sur ordinateur et iPhone 15 sous iOS 26.
+
+
+## Prévalidation 0.20.0 C1 — journal nutritionnel
+
+- [ ] Le panneau **Synchronisation du journal nutritionnel** est disponible.
+- [ ] Une journée contenant repas, entrée, objectif et statut converge vers `0 différence`.
+- [ ] Deux synchronisations successives ne créent aucun doublon.
+- [ ] Une suppression d’entrée est propagée sans supprimer le repas.
+- [ ] Une suppression de repas supprime aussi ses entrées sur l’autre appareil.
+- [ ] Une journée distante incohérente est refusée sans écriture partielle.
+- [ ] Les produits et recettes restent hors périmètre jusqu’à C2.
+- [ ] Le runtime `sportpilot-sync-runtime-0.20.0-v6` peut demander une reconnexion OTP unique.

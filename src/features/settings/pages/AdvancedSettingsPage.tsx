@@ -27,6 +27,7 @@ import { SettingsOverview } from '@/features/settings/components/SettingsOvervie
 import { ActivitySyncSettingsPanel } from '@/features/settings/components/ActivitySyncSettingsPanel';
 import { GoalSyncSettingsPanel } from '@/features/settings/components/GoalSyncSettingsPanel';
 import { StrengthSyncSettingsPanel } from '@/features/settings/components/StrengthSyncSettingsPanel';
+import { NutritionJournalSyncSettingsPanel } from '@/features/settings/components/NutritionJournalSyncSettingsPanel';
 import { WeightSyncSettingsPanel } from '@/features/settings/components/WeightSyncSettingsPanel';
 import {
   SettingsSectionDirectory,
@@ -419,7 +420,7 @@ export function AdvancedSettingsPage() {
           sectionId="settings-sync"
           storageKey="sportpilot:settings:sync"
           title="Synchronisation des données"
-          description="Surveiller les échanges de pesées, d’activités et d’objectifs entre tes appareils."
+          description="Surveiller les échanges sportifs et nutritionnels entre tes appareils."
           icon={Cloud}
           className="scroll-mt-24"
         >
@@ -428,6 +429,7 @@ export function AdvancedSettingsPage() {
             <ActivitySyncSettingsPanel />
             <GoalSyncSettingsPanel />
             <StrengthSyncSettingsPanel />
+            <NutritionJournalSyncSettingsPanel />
           </div>
         </CollapsibleSection>
 

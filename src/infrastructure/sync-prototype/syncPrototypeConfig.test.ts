@@ -37,6 +37,7 @@ describe('configuration du prototype Dexie Cloud', () => {
       realActivitySyncEnabled: false,
       realGoalSyncEnabled: false,
       realStrengthSyncEnabled: false,
+      realNutritionJournalSyncEnabled: false,
       diagnosticsEnabled: false,
     });
   });
@@ -128,6 +129,20 @@ describe('configuration du prototype Dexie Cloud', () => {
     });
   });
 
+  it('active séparément la synchronisation du journal nutritionnel', () => {
+    expect(
+      readSyncPrototypeConfig({
+        VITE_ENABLE_SYNC_PROTOTYPE: 'true',
+        VITE_DEXIE_CLOUD_DATABASE_URL:
+          'https://sportpilot-prototype.dexie.cloud',
+        VITE_ENABLE_REAL_NUTRITION_JOURNAL_SYNC: 'true',
+      }),
+    ).toMatchObject({
+      enabled: true,
+      realNutritionJournalSyncEnabled: true,
+    });
+  });
+
   it('active les outils de diagnostic avec un flag séparé', () => {
     expect(
       readSyncPrototypeConfig({
@@ -162,6 +177,16 @@ describe('configuration du prototype Dexie Cloud', () => {
 
 
 
+
+  it('refuse une valeur ambiguë pour C1', () => {
+    expect(() =>
+      readSyncPrototypeConfig({
+        VITE_ENABLE_SYNC_PROTOTYPE: 'true',
+        VITE_DEXIE_CLOUD_DATABASE_URL: 'https://test.dexie.cloud',
+        VITE_ENABLE_REAL_NUTRITION_JOURNAL_SYNC: 'yes',
+      }),
+    ).toThrow('VITE_ENABLE_REAL_NUTRITION_JOURNAL_SYNC');
+  });
 
   it('refuse une valeur ambiguë pour B3', () => {
     expect(() =>

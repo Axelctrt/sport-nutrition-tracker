@@ -1,12 +1,18 @@
 # SportPilot 0.19.0
 
+## Développement 0.20.0 C1 — journal nutritionnel synchronisé
+
+Le lot C1 ajoute la synchronisation manuelle des repas, entrées alimentaires, objectifs quotidiens et statuts du journal. Chaque journée est reconstruite puis appliquée transactionnellement afin qu’aucune entrée ne soit conservée sans repas parent. Les suppressions et restaurations de repas et d’entrées convergent entre appareils.
+
+Le runtime cloud passe en v6 sous le nom `sportpilot-sync-runtime-0.20.0-v6`. La base métier reste en Dexie v8 et la sauvegarde en JSON v7. Les produits, recettes et repas favoris seront ajoutés dans C2.
+
 ## Version 0.19 — synchronisation sportive multiappareil
 
 SportPilot synchronise désormais les pesées, activités, objectifs et données de musculation du compte connecté. Les créations, modifications, suppressions et restaurations convergent entre appareils sans doublons, avec filtrage strict par propriétaire cloud.
 
 Les séances modèles et les séances réalisées sont transférées comme des agrégats complets : exercices et séries sont appliqués dans une transaction unique afin d’éviter toute séance partielle ou série orpheline. Les quatre domaines utilisent désormais les mêmes règles de comparaison, d’exclusion des métadonnées Dexie Cloud et de résolution déterministe des conflits.
 
-Cette version utilise la base cloud v5 et un runtime local versionné `sportpilot-sync-runtime-0.19.0-v5`. La base métier reste en Dexie v8, la sauvegarde en JSON v7 et les espaces locaux restent physiquement isolés par compte. La nutrition, les récompenses, thèmes et rappels restent locaux à leur espace.
+Le socle sportif publié utilisait la base cloud v5. Le développement C1 utilise désormais la base cloud v6 et le runtime `sportpilot-sync-runtime-0.20.0-v6`. La base métier reste en Dexie v8, la sauvegarde en JSON v7 et les espaces locaux restent physiquement isolés par compte. Le journal nutritionnel C1 est synchronisé ; produits, recettes, repas favoris, récompenses, thèmes et rappels restent locaux à leur espace.
 
 
 <!-- hotfix-sync-production-0.17.1 -->

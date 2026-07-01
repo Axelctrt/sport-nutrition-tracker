@@ -33,8 +33,8 @@ for (const path of [
 
 const cloudDatabase = read('src/infrastructure/sync-prototype/SyncPrototypeDatabase.ts');
 for (const expected of [
-  'SYNC_PROTOTYPE_DATABASE_VERSION = 5',
-  'sportpilot-sync-runtime-0.19.0-v${SYNC_PROTOTYPE_DATABASE_VERSION}',
+  'SYNC_PROTOTYPE_DATABASE_VERSION = 6',
+  'sportpilot-sync-runtime-0.20.0-v${SYNC_PROTOTYPE_DATABASE_VERSION}',
   'disableEagerSync: true',
   'realWeights',
   'realWeightDeletionRecords',
@@ -46,6 +46,8 @@ for (const expected of [
   'realWorkoutTemplates',
   'realWorkoutSessions',
   'realStrengthDeletionRecords',
+  'realNutritionJournalDays',
+  'realNutritionJournalDeletionRecords',
 ]) {
   if (!cloudDatabase.includes(expected)) {
     fail(`la base cloud ne contient pas ${expected}.`);
@@ -112,6 +114,7 @@ for (const variable of [
   'VITE_ENABLE_REAL_ACTIVITY_SYNC',
   'VITE_ENABLE_REAL_GOAL_SYNC',
   'VITE_ENABLE_REAL_STRENGTH_SYNC',
+  'VITE_ENABLE_REAL_NUTRITION_JOURNAL_SYNC',
 ]) {
   if (!deployment.includes(`${variable}: 'true'`)) {
     fail(`la configuration publique n’active pas ${variable}.`);
@@ -143,6 +146,6 @@ if (failures.length > 0) {
   process.exitCode = 1;
 } else {
   console.log(
-    'Audit final 0.19.0 réussi : quatre domaines synchronisés, convergence commune, suppressions durables, agrégats de musculation atomiques et runtime cloud v5 validés.',
+    'Audit final 0.19.0 réussi : quatre domaines synchronisés, convergence commune, suppressions durables, agrégats de musculation atomiques et runtime cloud v6 validés.',
   );
 }

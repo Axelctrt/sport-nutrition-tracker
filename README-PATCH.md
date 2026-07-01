@@ -40,3 +40,8 @@ npm run release:verify
 7. vérifier le retour à `0 différence` après chaque synchronisation ;
 8. tester un changement de compte sans fuite de données ;
 9. confirmer que nutrition, récompenses, thèmes et rappels restent locaux.
+
+
+## 0.20.0 C1
+
+Le journal nutritionnel est synchronisé par journée atomique via le runtime cloud v6. Les produits, recettes et favoris restent réservés à C2.
