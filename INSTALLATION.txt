@@ -1,8 +1,8 @@
-SPORTPILOT 0.19.0
+SPORTPILOT 0.20.0
 
 PRÉPARATION
 
-1. Vérifier que la branche feature/sports-sync-0.19.0 est propre.
+1. Vérifier que la branche feature/nutrition-sync-0.20.0 est propre.
 2. Arrêter le serveur de développement avec Ctrl + C.
 3. Fermer tous les onglets localhost:5173 et 127.0.0.1:5173.
 4. Exporter une sauvegarde JSON v7 récente et la conserver hors de l’application.
@@ -15,38 +15,42 @@ VALIDATION LOCALE
 8. Installer les dépendances avec npm ci.
 9. Lancer npm run release:verify.
 10. Lancer npm run test:e2e.
-11. Vérifier que Paramètres affiche la version 0.19.0.
-12. Vérifier que le compte connecté ouvre son espace isolé.
-13. Vérifier les synchronisations des pesées, activités, objectifs et données de musculation.
-14. Après chaque synchronisation, relancer l’analyse et confirmer 0 différence.
-15. Vérifier une séance complète sur deux navigateurs : séance, exercices et séries.
-16. Vérifier les suppressions d’une série et d’un exercice de séance.
-17. Vérifier le fonctionnement hors connexion de l’espace actif.
+11. Lancer npm run audit:nutrition-sync-release.
+12. Vérifier que Paramètres affiche la version 0.20.0.
+13. Vérifier que le compte connecté ouvre son espace isolé.
+14. Vérifier les synchronisations des pesées, activités, objectifs et données de musculation.
+15. Vérifier le journal nutritionnel, la bibliothèque et le suivi hebdomadaire.
+16. Après chaque synchronisation, relancer l’analyse et confirmer 0 différence.
+17. Vérifier une journée complète et une recette complète sur deux navigateurs.
+18. Vérifier un bilan accepté, son ajustement et le recalcul d’un objectif quotidien.
+19. Vérifier les suppressions sans résurrection ni donnée orpheline.
+20. Vérifier le fonctionnement hors connexion de l’espace actif.
 
 PUBLICATION
 
-18. Committer la préparation 0.19.0 sur feature/sports-sync-0.19.0.
-19. Fusionner cette branche dans develop avec un commit de fusion explicite.
-20. Après validation de develop, fusionner develop dans main.
-21. Créer le tag annoté v0.19.0 sur le commit publié dans main.
-22. Pousser main, develop et le tag v0.19.0.
-23. Le push de main déclenche le déploiement Cloudflare.
+21. Committer la préparation 0.20.0 sur feature/nutrition-sync-0.20.0.
+22. Fusionner cette branche dans develop avec un commit de fusion explicite.
+23. Après validation de develop, fusionner develop dans main.
+24. Créer le tag annoté v0.20.0 sur le commit publié dans main.
+25. Pousser main, develop et le tag v0.20.0.
+26. Le push de main déclenche le déploiement Cloudflare.
 
 VALIDATION APRÈS DÉPLOIEMENT
 
-24. Vérifier la version 0.19.0 sur ordinateur et iPhone 15 sous iOS 26.
-25. Vérifier la connexion au compte et l’ouverture de l’espace existant.
-26. Synchroniser chaque domaine sur ordinateur puis sur iPhone.
-27. Vérifier l’absence de doublons, de séance partielle et de série orpheline.
-28. Tester le mode hors connexion puis la reprise du réseau.
-29. Tester un changement compte A / compte B sans fuite de données.
+27. Vérifier la version 0.20.0 sur ordinateur et iPhone 15 sous iOS 26.
+28. Vérifier la connexion au compte et l’ouverture de l’espace existant.
+29. Synchroniser chaque domaine sur ordinateur puis sur iPhone.
+30. Vérifier l’absence de doublons, de repas ou ingrédients orphelins et d’ajustement isolé.
+31. Tester le mode hors connexion puis la reprise du réseau.
+32. Tester un changement compte A / compte B sans fuite de données.
+33. Vérifier que les données invitées réapparaissent après déconnexion.
 
 VERSIONS DE DONNÉES
 
-Base Dexie Cloud : version 5.
-Runtime local cloud : sportpilot-sync-runtime-0.19.0-v5.
+Base Dexie Cloud : version 8.
+Runtime local cloud : sportpilot-sync-runtime-0.20.0-v8.
 Schéma Dexie principal : version 8.
 Sauvegarde JSON : version 7.
 Registre local des espaces : version 1.
 
-Aucune migration de la base métier principale n’est requise pour 0.19.0.
+Aucune migration de la base métier principale n’est requise pour 0.20.0.

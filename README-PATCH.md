@@ -1,21 +1,23 @@
-# SportPilot 0.19.0 — synchronisation sportive multiappareil
+# SportPilot 0.20.0 — synchronisation nutritionnelle multiappareil
 
-Branche de travail : `feature/sports-sync-0.19.0`
+Branche de travail : `feature/nutrition-sync-0.20.0`
 
 ## Objet
 
-Cette version étend la synchronisation Dexie Cloud aux activités, objectifs et données de musculation, en complément des pesées. Les espaces locaux restent physiquement isolés par compte et l’application demeure utilisable sans compte.
+Cette version complète la synchronisation sportive de 0.19.0 avec le journal nutritionnel, la bibliothèque alimentaire et le suivi hebdomadaire. Les données restent physiquement isolées par compte et l’application demeure utilisable sans connexion.
 
 ## Garanties
 
-- synchronisation des pesées, activités, objectifs et musculation du compte actif ;
+- synchronisation des repas, entrées alimentaires, objectifs quotidiens et statuts du journal ;
+- produits utiles, recettes complètes et repas favoris transférés entre appareils ;
+- déduplication déterministe des produits Open Food Facts par code-barres ;
+- bilans hebdomadaires et ajustements caloriques acceptés synchronisés atomiquement ;
+- objectifs quotidiens obsolètes recalculés puis propagés par le journal C1 ;
 - filtrage strict par propriétaire cloud ;
 - créations, modifications, suppressions et restaurations prises en charge ;
-- absence de doublons après plusieurs synchronisations ;
-- modèles et séances de musculation transférés comme agrégats complets ;
-- aucune série orpheline ni séance partielle ;
+- absence de repas, ingrédients ou ajustements orphelins ;
 - règles communes de comparaison et de résolution des conflits ;
-- runtime Dexie Cloud versionné avec le schéma v5 ;
+- runtime Dexie Cloud `sportpilot-sync-runtime-0.20.0-v8` ;
 - schéma métier Dexie v8 inchangé ;
 - sauvegarde JSON v7 inchangée.
 
@@ -25,18 +27,20 @@ Cette version étend la synchronisation Dexie Cloud aux activités, objectifs et
 npm run lint
 npm run test
 npm run build
-npm run audit:sports-sync-release
+npm run audit:nutrition-sync-release
 npm run release:verify
 ```
 
 ## Validation manuelle
 
-1. synchroniser une pesée entre deux navigateurs ;
-2. créer, modifier et supprimer une activité ;
-3. créer, modifier et supprimer un objectif ;
-4. synchroniser un exercice personnalisé, un modèle et une séance complète ;
-5. supprimer une série puis un exercice de séance ;
-6. confirmer l’absence de doublons et de données orphelines ;
-7. vérifier le retour à `0 différence` après chaque synchronisation ;
-8. tester un changement de compte sans fuite de données ;
-9. confirmer que nutrition, récompenses, thèmes et rappels restent locaux.
+1. synchroniser une journée complète entre deux navigateurs ;
+2. modifier puis supprimer une entrée alimentaire ;
+3. récupérer un produit manuel et un produit Open Food Facts utilisé ;
+4. récupérer une recette avec tous ses ingrédients ;
+5. vérifier la déduplication d’un même code-barres ;
+6. synchroniser un repas favori ;
+7. transférer un bilan hebdomadaire et son ajustement accepté ;
+8. vérifier le recalcul et la propagation d’un objectif quotidien ;
+9. confirmer le retour à `0 différence` après chaque synchronisation ;
+10. tester un changement de compte sans fuite de données ;
+11. vérifier la non-régression des pesées, activités, objectifs et données de musculation.
