@@ -2,6 +2,19 @@ import { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import Dexie, { type Table } from 'dexie';
 import type { DeletionRecord } from '@/domain/models/deletion';
 import type { WeightEntry } from '@/domain/models/weight';
+
+type CloudWeightEntry = WeightEntry & {
+  owner?: string;
+  realmId?: string;
+  $ts?: number;
+  _hasBlobRefs?: 1;
+};
+type CloudDeletionRecord = DeletionRecord & {
+  owner?: string;
+  realmId?: string;
+  $ts?: number;
+  _hasBlobRefs?: 1;
+};
 import type { SyncPrototypeDatabase } from '@/infrastructure/sync-prototype/SyncPrototypeDatabase';
 import {
   previewRealWeightSync,
@@ -10,8 +23,8 @@ import {
 import { createDeletedDeletionRecord } from '@/domain/models/deletion';
 
 class TestCloudDatabase extends Dexie {
-  declare realWeights: Table<WeightEntry, string>;
-  declare realWeightDeletionRecords: Table<DeletionRecord, string>;
+  declare realWeights: Table<CloudWeightEntry, string>;
+  declare realWeightDeletionRecords: Table<CloudDeletionRecord, string>;
 
   constructor() {
     super(`sportpilot-c4-cloud-${crypto.randomUUID()}`);
@@ -69,6 +82,40 @@ describe('synchronisation C4 des vraies pesées', () => {
       weightKg: 70,
     });
     expect(await cloud.realWeights.get('weight:2026-06-30')).toBeUndefined();
+  });
+
+  it('ignore les métadonnées techniques Dexie Cloud dans la comparaison', async () => {
+    const weight: WeightEntry = {
+      id: 'weight:cloud-metadata',
+      date: '2026-07-01',
+      weightKg: 69.8,
+      createdAt: '2026-07-01T08:00:00.000Z',
+      updatedAt: '2026-07-01T09:00:00.000Z',
+    };
+    await local.weights.add(weight);
+    await cloud.realWeights.add({
+      ...weight,
+      id: `#${weight.id}`,
+      owner: 'user-1',
+      realmId: 'user-1',
+      $ts: 1_751_360_400_000,
+      _hasBlobRefs: 1,
+    });
+
+    const preview = await previewRealWeightSync(
+      local,
+      cloud as unknown as SyncPrototypeDatabase,
+      'user-1',
+    );
+    const result = await synchronizeRealWeights(
+      local,
+      cloud as unknown as SyncPrototypeDatabase,
+      'user-1',
+    );
+
+    expect(preview.differingEntityCount).toBe(0);
+    expect(result.uploadedWeights).toBe(0);
+    expect(result.downloadedWeights).toBe(0);
   });
 
   it('restaure une pesée distante plus récente dans la base réelle', async () => {

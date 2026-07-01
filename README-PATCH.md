@@ -1,41 +1,42 @@
-# SportPilot 0.18.0 — isolation complète des données par compte
+# SportPilot 0.19.0 — synchronisation sportive multiappareil
 
-Branche de travail : `feature/account-data-spaces-0.18.0`
+Branche de travail : `feature/sports-sync-0.19.0`
 
 ## Objet
 
-Cette version introduit un espace IndexedDB physiquement distinct pour l’utilisateur invité et pour chaque compte connecté. La barrière de compte est montée avant les providers métier afin qu’aucune donnée de l’espace précédent ne soit chargée pendant une connexion, une déconnexion ou un changement de compte.
+Cette version étend la synchronisation Dexie Cloud aux activités, objectifs et données de musculation, en complément des pesées. Les espaces locaux restent physiquement isolés par compte et l’application demeure utilisable sans compte.
 
 ## Garanties
 
-- utilisation complète de l’application sans compte ;
-- conservation de la base historique comme espace invité ;
-- aucune association automatique des données invitées ;
-- choix explicite entre rattachement non destructif et espace vide ;
-- refus technique de toute copie compte-vers-compte ;
-- noms de bases dérivés d’empreintes opaques, sans email ni jeton ;
-- déconnexion, désassociation locale et suppression locale séparées ;
-- aucune migration du schéma Dexie v8 ;
-- aucune modification du format de sauvegarde JSON v7 ;
-- synchronisation cloud toujours limitée aux pesées.
+- synchronisation des pesées, activités, objectifs et musculation du compte actif ;
+- filtrage strict par propriétaire cloud ;
+- créations, modifications, suppressions et restaurations prises en charge ;
+- absence de doublons après plusieurs synchronisations ;
+- modèles et séances de musculation transférés comme agrégats complets ;
+- aucune série orpheline ni séance partielle ;
+- règles communes de comparaison et de résolution des conflits ;
+- runtime Dexie Cloud versionné avec le schéma v5 ;
+- schéma métier Dexie v8 inchangé ;
+- sauvegarde JSON v7 inchangée.
 
 ## Contrôles
 
 ```powershell
 npm run lint
-npx vitest run src/infrastructure/data-spaces/accountDataIsolation.integration.test.ts
-npm run audit:account-isolation
-npm run check
+npm run test
+npm run build
+npm run audit:sports-sync-release
+npm run release:verify
 ```
 
 ## Validation manuelle
 
-1. vérifier la conservation de l’espace invité après mise à jour ;
-2. rattacher explicitement les données invitées à un premier compte ;
-3. se déconnecter et confirmer le retour à l’espace invité ;
-4. reconnecter le premier compte et ouvrir son espace existant ;
-5. connecter un second compte avec un espace vide ;
-6. confirmer qu’aucune donnée du premier compte n’apparaît ;
-7. valider la page **Compte et appareils** ;
-8. tester la désassociation puis la réassociation ;
-9. tester la suppression locale uniquement avec un compte de test.
+1. synchroniser une pesée entre deux navigateurs ;
+2. créer, modifier et supprimer une activité ;
+3. créer, modifier et supprimer un objectif ;
+4. synchroniser un exercice personnalisé, un modèle et une séance complète ;
+5. supprimer une série puis un exercice de séance ;
+6. confirmer l’absence de doublons et de données orphelines ;
+7. vérifier le retour à `0 différence` après chaque synchronisation ;
+8. tester un changement de compte sans fuite de données ;
+9. confirmer que nutrition, récompenses, thèmes et rappels restent locaux.

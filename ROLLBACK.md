@@ -1,27 +1,32 @@
-# Retour arrière — SportPilot 0.18.0
+# Retour arrière — SportPilot 0.19.0
 
 ## Stratégie
 
-Le fix-forward est la stratégie privilégiée. Ne supprime jamais IndexedDB, les données Safari ou la PWA pour corriger un défaut de changement de compte.
+Le fix-forward est privilégié. Ne supprime jamais IndexedDB, les données Safari, la PWA ou une base Dexie Cloud locale pour corriger une erreur de synchronisation.
 
-SportPilot 0.18.0 conserve le schéma Dexie v8 et le format JSON v7, mais introduit plusieurs bases locales distinctes et un registre d’espaces v1. Un retour vers 0.17.1 ne sait pas gérer ces espaces de comptes et rouvrirait uniquement la base invitée historique.
+SportPilot 0.19.0 conserve la base métier Dexie v8 et le format JSON v7. La base de synchronisation cloud est en v5 et utilise le runtime local `sportpilot-sync-runtime-0.19.0-v5`.
 
 ## Mesures immédiates
 
-1. exporter une sauvegarde JSON de l’espace actif si celui-ci reste accessible ;
-2. noter le compte et l’espace concernés ;
-3. ne pas connecter un autre compte tant que le défaut n’est pas qualifié ;
-4. ne pas effacer le stockage du navigateur ;
-5. préparer une correction sur une branche dédiée à partir de v0.18.0.
+1. arrêter les synchronisations manuelles ;
+2. exporter une sauvegarde JSON de l’espace actif ;
+3. noter le compte, l’appareil, le domaine et les identifiants concernés ;
+4. ne pas connecter un autre compte tant que l’incident n’est pas qualifié ;
+5. ne pas effacer le stockage du navigateur ;
+6. préparer une correction depuis le tag v0.19.0.
 
-## Désactivation du cloud
+## Défaut de runtime cloud
 
-Si le défaut concerne uniquement Dexie Cloud, conserver les espaces locaux, interrompre les opérations de compte et publier une correction. La désactivation du cloud ne doit pas entraîner la suppression d’un espace local.
+Fermer tous les onglets de l’origine concernée puis redémarrer l’application. Une évolution corrective du schéma doit utiliser un nouveau numéro de version, ce qui génère automatiquement un nouveau nom de runtime local. Ne réutilise jamais un runtime d’un schéma antérieur avec une version supérieure.
+
+## Désactivation ciblée
+
+Un domaine peut être désactivé par sa variable `VITE_ENABLE_REAL_*_SYNC` sans supprimer ses données locales ou cloud. Les autres domaines peuvent rester disponibles si le défaut est isolé.
 
 ## Retour du code
 
-Un redéploiement temporaire de 0.17.1 peut rendre les espaces de comptes invisibles sans les supprimer, car 0.17.1 n’ouvre que sportpilot-local-database. Il ne doit être effectué qu’après validation et avec une sauvegarde récente.
+Un redéploiement temporaire de 0.18.0 ne sait pas synchroniser les activités, objectifs et données de musculation, mais il ne doit pas supprimer les données locales. Des modifications cloud plus récentes pourront rester invisibles jusqu’au rétablissement de 0.19.x.
 
 ## Git
 
-Ne jamais réécrire le tag v0.18.0. Conserver le tag publié et livrer un correctif 0.18.1 avec un nouveau tag annoté.
+Ne jamais réécrire le tag v0.19.0. Conserver le tag publié et livrer un correctif 0.19.1 avec un nouveau tag annoté.

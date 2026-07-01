@@ -116,13 +116,21 @@ function createFakeDatabase() {
   const realWeights = createCloudTable(realWeightRows);
   const realWeightDeletionRecords = createCloudTable(realDeletionRows);
   const open = vi.fn(async () => undefined);
+  const close = vi.fn();
   const login = vi.fn(async () => undefined);
   const logout = vi.fn(async () => undefined);
   const sync = vi.fn(async () => undefined);
+  let blockedListener: (() => void) | undefined;
+  const on = vi.fn((eventName: string, listener: () => void) => {
+    if (eventName === 'blocked') blockedListener = listener;
+  });
+  const triggerBlocked = () => blockedListener?.();
 
   return {
     database: {
       open,
+      close,
+      on,
       weights,
       deletionRecords,
       realWeights,
@@ -152,6 +160,9 @@ function createFakeDatabase() {
     syncState,
     userInteraction,
     open,
+    close,
+    on,
+    triggerBlocked,
     login,
     logout,
     sync,
@@ -219,6 +230,53 @@ describe('client sécurisé du prototype Dexie Cloud', () => {
     );
   });
 
+  it('interrompt immédiatement une ouverture bloquée par un autre onglet', async () => {
+    const fixture = createFakeDatabase();
+    fixture.open.mockImplementation(
+      () => new Promise<never>(() => undefined),
+    );
+    const client = createClient(fixture.database, {
+      initializationTimeoutMs: 60_000,
+    });
+
+    const initialization = client.initialize();
+    const rejection = expect(initialization).rejects.toThrow(
+      'bloquée par un autre onglet SportPilot',
+    );
+    fixture.triggerBlocked();
+
+    await rejection;
+    expect(fixture.close).toHaveBeenCalledTimes(1);
+  });
+
+  it('interrompt une ouverture qui ne répond pas et autorise une nouvelle tentative', async () => {
+    vi.useFakeTimers();
+    try {
+      const fixture = createFakeDatabase();
+      fixture.open
+        .mockImplementationOnce(
+          () => new Promise<never>(() => undefined),
+        )
+        .mockResolvedValueOnce(undefined);
+      const client = createClient(fixture.database, {
+        initializationTimeoutMs: 1_000,
+      });
+
+      const firstInitialization = client.initialize();
+      const firstRejection = expect(firstInitialization).rejects.toThrow(
+        'n’a pas pu ouvrir sa base locale',
+      );
+      await vi.advanceTimersByTimeAsync(1_000);
+      await firstRejection;
+      expect(fixture.close).toHaveBeenCalledTimes(1);
+
+      await expect(client.initialize()).resolves.toBeUndefined();
+      expect(fixture.open).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('actualise un instantané stable lors des événements du cloud', () => {
     const { database, currentUser, syncState } = createFakeDatabase();
     const client = createClient(database);
@@ -275,8 +333,8 @@ describe('client sécurisé du prototype Dexie Cloud', () => {
         isLoading: true,
       },
       diagnostics: {
-        databaseName: 'sportpilot-sync-prototype',
-        databaseVersion: 2,
+        databaseName: 'sportpilot-sync-runtime-0.19.0-v5',
+        databaseVersion: 5,
         visibleWeightCount: 0,
         deletedWeightCount: 0,
         accountFingerprint:

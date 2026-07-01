@@ -1,12 +1,12 @@
-# SportPilot 0.18.0
+# SportPilot 0.19.0
 
-## Version 0.18 — comptes et espaces de données isolés
+## Version 0.19 — synchronisation sportive multiappareil
 
-SportPilot sépare désormais physiquement les données locales de l’espace invité et de chaque compte connecté. La barrière de compte s’exécute avant les providers métier : aucun profil, repas, activité, séance, objectif ou réglage d’un autre espace ne peut être chargé pendant un changement de compte.
+SportPilot synchronise désormais les pesées, activités, objectifs et données de musculation du compte connecté. Les créations, modifications, suppressions et restaurations convergent entre appareils sans doublons, avec filtrage strict par propriétaire cloud.
 
-La connexion reste facultative. Lors de la première connexion, l’utilisateur choisit explicitement de rattacher une copie de ses données invitées ou de commencer avec un espace vide. La page **Compte et appareils** distingue la déconnexion, la désassociation locale et la suppression des seules données locales du compte.
+Les séances modèles et les séances réalisées sont transférées comme des agrégats complets : exercices et séries sont appliqués dans une transaction unique afin d’éviter toute séance partielle ou série orpheline. Les quatre domaines utilisent désormais les mêmes règles de comparaison, d’exclusion des métadonnées Dexie Cloud et de résolution déterministe des conflits.
 
-Cette version conserve le schéma Dexie principal v8 et le format de sauvegarde JSON v7. La synchronisation cloud reste limitée aux pesées ; l’extension aux autres catégories est prévue à partir de la version 0.19.0.
+Cette version utilise la base cloud v5 et un runtime local versionné `sportpilot-sync-runtime-0.19.0-v5`. La base métier reste en Dexie v8, la sauvegarde en JSON v7 et les espaces locaux restent physiquement isolés par compte. La nutrition, les récompenses, thèmes et rappels restent locaux à leur espace.
 
 
 <!-- hotfix-sync-production-0.17.1 -->

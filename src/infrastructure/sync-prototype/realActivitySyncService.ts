@@ -1,11 +1,11 @@
 import type { Table } from 'dexie';
-import type { AppDatabase } from '@/infrastructure/database/AppDatabase';
+import type { Activity } from '@/domain/models/activity';
 import type { DeletionRecord } from '@/domain/models/deletion';
 import {
   createRestoredDeletionRecord,
   deletionRecordId,
 } from '@/domain/models/deletion';
-import type { WeightEntry } from '@/domain/models/weight';
+import type { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import type { SyncPrototypeDatabase } from '@/infrastructure/sync-prototype/SyncPrototypeDatabase';
 import {
   belongsToCurrentUser,
@@ -17,42 +17,44 @@ import {
   type CloudOwned,
 } from '@/infrastructure/sync-prototype/cloudSyncValue';
 
-type CloudWeightEntry = Omit<WeightEntry, 'id'> & { readonly id: string };
-type CloudDeletionRecord = Omit<DeletionRecord, 'id'> & { readonly id: string };
+type CloudActivity = Omit<Activity, 'id'> & { readonly id: string };
+type CloudDeletionRecord = Omit<DeletionRecord, 'id'> & {
+  readonly id: string;
+};
 
-export interface RealWeightSyncPreview {
-  readonly localWeightCount: number;
-  readonly cloudWeightCount: number;
+export interface RealActivitySyncPreview {
+  readonly localActivityCount: number;
+  readonly cloudActivityCount: number;
   readonly localDeletionCount: number;
   readonly cloudDeletionCount: number;
   readonly differingEntityCount: number;
 }
 
-export interface RealWeightSyncResult extends RealWeightSyncPreview {
-  readonly uploadedWeights: number;
-  readonly downloadedWeights: number;
-  readonly removedLocalWeights: number;
-  readonly removedCloudWeights: number;
+export interface RealActivitySyncResult extends RealActivitySyncPreview {
+  readonly uploadedActivities: number;
+  readonly downloadedActivities: number;
+  readonly removedLocalActivities: number;
+  readonly removedCloudActivities: number;
   readonly uploadedDeletionRecords: number;
   readonly downloadedDeletionRecords: number;
   readonly completedAt: string;
 }
 
-interface WeightState {
-  weight?: WeightEntry;
+interface ActivityState {
+  activity?: Activity;
   marker?: DeletionRecord;
 }
 
-function toCloudWeight(entry: WeightEntry): CloudWeightEntry {
-  return { ...entry, id: cloudPrivateId(entry.id) };
+function toCloudActivity(activity: Activity): CloudActivity {
+  return { ...activity, id: cloudPrivateId(activity.id) };
 }
 
-function fromCloudWeight(
-  entry: CloudOwned<CloudWeightEntry>,
-): WeightEntry | undefined {
-  const localId = localIdFromCloud(entry.id);
+function fromCloudActivity(
+  activity: CloudOwned<CloudActivity>,
+): Activity | undefined {
+  const localId = localIdFromCloud(activity.id);
   if (!localId) return undefined;
-  return { ...stripCloudFields(entry), id: localId };
+  return { ...stripCloudFields(activity), id: localId } as Activity;
 }
 
 function toCloudMarker(marker: DeletionRecord): CloudDeletionRecord {
@@ -68,20 +70,20 @@ function fromCloudMarker(
 }
 
 function resolveState(
-  local: WeightState,
-  cloud: WeightState,
-): WeightState {
-  const weight = chooseLatest(local.weight, cloud.weight);
+  local: ActivityState,
+  cloud: ActivityState,
+): ActivityState {
+  const activity = chooseLatest(local.activity, cloud.activity);
   let marker = chooseLatest(local.marker, cloud.marker);
 
   if (
-    weight &&
+    activity &&
     marker?.status === 'deleted' &&
-    weight.updatedAt > marker.updatedAt
+    activity.updatedAt > marker.updatedAt
   ) {
     marker = createRestoredDeletionRecord(
-      { entityType: 'weight', entityId: weight.id },
-      weight.updatedAt,
+      { entityType: 'activity', entityId: activity.id },
+      activity.updatedAt,
       marker.deletedAt,
       marker,
     );
@@ -89,10 +91,10 @@ function resolveState(
 
   const deletionWins =
     marker?.status === 'deleted' &&
-    (!weight || marker.updatedAt >= weight.updatedAt);
+    (!activity || marker.updatedAt >= activity.updatedAt);
 
   return {
-    ...(deletionWins ? {} : weight ? { weight } : {}),
+    ...(deletionWins ? {} : activity ? { activity } : {}),
     ...(marker ? { marker } : {}),
   };
 }
@@ -102,31 +104,40 @@ async function readState(
   cloudDatabase: SyncPrototypeDatabase,
   currentUserId: string,
 ) {
-  const [localWeights, localMarkers, cloudWeightRows, cloudMarkerRows] =
-    await Promise.all([
-      localDatabase.weights.toArray(),
-      localDatabase.deletionRecords
-        .where('entityType')
-        .equals('weight')
-        .toArray(),
-      cloudDatabase.realWeights.toArray(),
-      cloudDatabase.realWeightDeletionRecords.toArray(),
-    ]);
+  const [
+    localActivities,
+    localMarkers,
+    cloudActivityRows,
+    cloudMarkerRows,
+  ] = await Promise.all([
+    localDatabase.activities.toArray(),
+    localDatabase.deletionRecords
+      .where('entityType')
+      .equals('activity')
+      .toArray(),
+    cloudDatabase.realActivities.toArray(),
+    cloudDatabase.realActivityDeletionRecords.toArray(),
+  ]);
 
-  const cloudWeights = cloudWeightRows
-    .filter((entry) => belongsToCurrentUser(entry, currentUserId))
-    .map(fromCloudWeight)
-    .filter((entry): entry is WeightEntry => entry !== undefined);
+  const cloudActivities = cloudActivityRows
+    .filter((activity) => belongsToCurrentUser(activity, currentUserId))
+    .map(fromCloudActivity)
+    .filter((activity): activity is Activity => activity !== undefined);
   const cloudMarkers = cloudMarkerRows
     .filter(
       (marker) =>
-        marker.entityType === 'weight' &&
+        marker.entityType === 'activity' &&
         belongsToCurrentUser(marker, currentUserId),
     )
     .map(fromCloudMarker)
     .filter((marker): marker is DeletionRecord => marker !== undefined);
 
-  return { localWeights, localMarkers, cloudWeights, cloudMarkers };
+  return {
+    localActivities,
+    localMarkers,
+    cloudActivities,
+    cloudMarkers,
+  };
 }
 
 function mapById<T extends { id: string }>(values: readonly T[]) {
@@ -134,27 +145,27 @@ function mapById<T extends { id: string }>(values: readonly T[]) {
 }
 
 function buildPreview(
-  localWeights: readonly WeightEntry[],
+  localActivities: readonly Activity[],
   localMarkers: readonly DeletionRecord[],
-  cloudWeights: readonly WeightEntry[],
+  cloudActivities: readonly Activity[],
   cloudMarkers: readonly DeletionRecord[],
-): RealWeightSyncPreview {
-  const localWeightById = mapById(localWeights);
-  const cloudWeightById = mapById(cloudWeights);
+): RealActivitySyncPreview {
+  const localActivityById = mapById(localActivities);
+  const cloudActivityById = mapById(cloudActivities);
   const localMarkerById = mapById(localMarkers);
   const cloudMarkerById = mapById(cloudMarkers);
   const ids = new Set([
-    ...localWeightById.keys(),
-    ...cloudWeightById.keys(),
+    ...localActivityById.keys(),
+    ...cloudActivityById.keys(),
     ...localMarkers.map((marker) => marker.entityId),
     ...cloudMarkers.map((marker) => marker.entityId),
   ]);
 
   let differingEntityCount = 0;
   for (const id of ids) {
-    const markerId = deletionRecordId('weight', id);
+    const markerId = deletionRecordId('activity', id);
     if (
-      !sameEntity(localWeightById.get(id), cloudWeightById.get(id)) ||
+      !sameEntity(localActivityById.get(id), cloudActivityById.get(id)) ||
       !sameEntity(localMarkerById.get(markerId), cloudMarkerById.get(markerId))
     ) {
       differingEntityCount += 1;
@@ -162,8 +173,8 @@ function buildPreview(
   }
 
   return {
-    localWeightCount: localWeights.length,
-    cloudWeightCount: cloudWeights.length,
+    localActivityCount: localActivities.length,
+    cloudActivityCount: cloudActivities.length,
     localDeletionCount: localMarkers.filter(
       (marker) => marker.status === 'deleted',
     ).length,
@@ -185,89 +196,97 @@ async function upsertCloud<T extends { id: string }>(
   return true;
 }
 
-export async function previewRealWeightSync(
+export async function previewRealActivitySync(
   localDatabase: AppDatabase,
   cloudDatabase: SyncPrototypeDatabase,
   currentUserId: string,
-): Promise<RealWeightSyncPreview> {
-  const state = await readState(localDatabase, cloudDatabase, currentUserId);
+): Promise<RealActivitySyncPreview> {
+  const state = await readState(
+    localDatabase,
+    cloudDatabase,
+    currentUserId,
+  );
   return buildPreview(
-    state.localWeights,
+    state.localActivities,
     state.localMarkers,
-    state.cloudWeights,
+    state.cloudActivities,
     state.cloudMarkers,
   );
 }
 
-export async function synchronizeRealWeights(
+export async function synchronizeRealActivities(
   localDatabase: AppDatabase,
   cloudDatabase: SyncPrototypeDatabase,
   currentUserId: string,
-): Promise<RealWeightSyncResult> {
-  const state = await readState(localDatabase, cloudDatabase, currentUserId);
+): Promise<RealActivitySyncResult> {
+  const state = await readState(
+    localDatabase,
+    cloudDatabase,
+    currentUserId,
+  );
   const preview = buildPreview(
-    state.localWeights,
+    state.localActivities,
     state.localMarkers,
-    state.cloudWeights,
+    state.cloudActivities,
     state.cloudMarkers,
   );
-  const localWeightById = mapById(state.localWeights);
-  const cloudWeightById = mapById(state.cloudWeights);
+  const localActivityById = mapById(state.localActivities);
+  const cloudActivityById = mapById(state.cloudActivities);
   const localMarkerById = mapById(state.localMarkers);
   const cloudMarkerById = mapById(state.cloudMarkers);
   const ids = new Set([
-    ...localWeightById.keys(),
-    ...cloudWeightById.keys(),
+    ...localActivityById.keys(),
+    ...cloudActivityById.keys(),
     ...state.localMarkers.map((marker) => marker.entityId),
     ...state.cloudMarkers.map((marker) => marker.entityId),
   ]);
 
-  let uploadedWeights = 0;
-  let downloadedWeights = 0;
-  let removedLocalWeights = 0;
-  let removedCloudWeights = 0;
+  let uploadedActivities = 0;
+  let downloadedActivities = 0;
+  let removedLocalActivities = 0;
+  let removedCloudActivities = 0;
   let uploadedDeletionRecords = 0;
   let downloadedDeletionRecords = 0;
 
   for (const id of ids) {
-    const markerId = deletionRecordId('weight', id);
-    const localWeight = localWeightById.get(id);
+    const markerId = deletionRecordId('activity', id);
+    const localActivity = localActivityById.get(id);
     const localMarker = localMarkerById.get(markerId);
-    const cloudWeight = cloudWeightById.get(id);
+    const cloudActivity = cloudActivityById.get(id);
     const cloudMarker = cloudMarkerById.get(markerId);
-    const localState: WeightState = {
-      ...(localWeight ? { weight: localWeight } : {}),
+    const localState: ActivityState = {
+      ...(localActivity ? { activity: localActivity } : {}),
       ...(localMarker ? { marker: localMarker } : {}),
     };
-    const cloudState: WeightState = {
-      ...(cloudWeight ? { weight: cloudWeight } : {}),
+    const cloudState: ActivityState = {
+      ...(cloudActivity ? { activity: cloudActivity } : {}),
       ...(cloudMarker ? { marker: cloudMarker } : {}),
     };
     const resolved = resolveState(localState, cloudState);
 
-    if (resolved.weight) {
-      if (!sameEntity(localState.weight, resolved.weight)) {
-        await localDatabase.weights.put(resolved.weight);
-        downloadedWeights += 1;
+    if (resolved.activity) {
+      if (!sameEntity(localState.activity, resolved.activity)) {
+        await localDatabase.activities.put(resolved.activity);
+        downloadedActivities += 1;
       }
       if (
         await upsertCloud(
-          cloudDatabase.realWeights as Table<WeightEntry, string>,
-          cloudState.weight,
-          resolved.weight,
-          (value) => toCloudWeight(value) as WeightEntry,
+          cloudDatabase.realActivities as Table<Activity, string>,
+          cloudState.activity,
+          resolved.activity,
+          (value) => toCloudActivity(value) as Activity,
         )
       ) {
-        uploadedWeights += 1;
+        uploadedActivities += 1;
       }
     } else {
-      if (localState.weight) {
-        await localDatabase.weights.delete(id);
-        removedLocalWeights += 1;
+      if (localState.activity) {
+        await localDatabase.activities.delete(id);
+        removedLocalActivities += 1;
       }
-      if (cloudState.weight) {
-        await cloudDatabase.realWeights.delete(cloudPrivateId(id));
-        removedCloudWeights += 1;
+      if (cloudState.activity) {
+        await cloudDatabase.realActivities.delete(cloudPrivateId(id));
+        removedCloudActivities += 1;
       }
     }
 
@@ -278,7 +297,10 @@ export async function synchronizeRealWeights(
       }
       if (
         await upsertCloud(
-          cloudDatabase.realWeightDeletionRecords as Table<DeletionRecord, string>,
+          cloudDatabase.realActivityDeletionRecords as Table<
+            DeletionRecord,
+            string
+          >,
           cloudState.marker,
           resolved.marker,
           (value) => toCloudMarker(value) as DeletionRecord,
@@ -291,10 +313,10 @@ export async function synchronizeRealWeights(
 
   return {
     ...preview,
-    uploadedWeights,
-    downloadedWeights,
-    removedLocalWeights,
-    removedCloudWeights,
+    uploadedActivities,
+    downloadedActivities,
+    removedLocalActivities,
+    removedCloudActivities,
     uploadedDeletionRecords,
     downloadedDeletionRecords,
     completedAt: new Date().toISOString(),
