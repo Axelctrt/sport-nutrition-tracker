@@ -333,8 +333,8 @@ describe('client sécurisé du prototype Dexie Cloud', () => {
         isLoading: true,
       },
       diagnostics: {
-        databaseName: 'sportpilot-sync-runtime-0.19.0',
-        databaseVersion: 4,
+        databaseName: 'sportpilot-sync-runtime-0.19.0-v5',
+        databaseVersion: 5,
         visibleWeightCount: 0,
         deletedWeightCount: 0,
         accountFingerprint:

@@ -26,6 +26,7 @@ import { RewardThemesPanel } from '@/features/settings/components/RewardThemesPa
 import { SettingsOverview } from '@/features/settings/components/SettingsOverview';
 import { ActivitySyncSettingsPanel } from '@/features/settings/components/ActivitySyncSettingsPanel';
 import { GoalSyncSettingsPanel } from '@/features/settings/components/GoalSyncSettingsPanel';
+import { StrengthSyncSettingsPanel } from '@/features/settings/components/StrengthSyncSettingsPanel';
 import { WeightSyncSettingsPanel } from '@/features/settings/components/WeightSyncSettingsPanel';
 import {
   SettingsSectionDirectory,
@@ -122,8 +123,8 @@ const settingsSections: readonly SettingsDirectoryItem[] = [
   {
     id: 'settings-sync',
     label: 'Synchronisation des données',
-    description: 'Pesées et activités sportives entre appareils.',
-    keywords: ['cloud', 'synchronisation', 'poids', 'activites', 'appareils'],
+    description: 'Pesées, activités, objectifs et musculation entre appareils.',
+    keywords: ['cloud', 'synchronisation', 'poids', 'activites', 'objectifs', 'musculation', 'appareils'],
     icon: Cloud,
   },
   {
@@ -426,6 +427,7 @@ export function AdvancedSettingsPage() {
             <WeightSyncSettingsPanel />
             <ActivitySyncSettingsPanel />
             <GoalSyncSettingsPanel />
+            <StrengthSyncSettingsPanel />
           </div>
         </CollapsibleSection>
 

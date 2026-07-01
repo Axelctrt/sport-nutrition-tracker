@@ -50,7 +50,7 @@ Le panneau `Synchronisation des objectifs` est ajouté dans Paramètres > Synchr
 ## Correctif de runtime local
 
 Le runtime Dexie Cloud B2 utilise une nouvelle base IndexedDB locale
-` sportpilot-sync-runtime-0.19.0 ` (suffixée par l’identifiant de la base cloud).
+`sportpilot-sync-runtime-0.19.0-v<schema>` (suffixée ensuite par l’identifiant de la base cloud).
 L’ancienne base `sportpilot-sync-prototype` est conservée sans être relue : elle peut
 contenir une file de mutations B2 bloquée après une montée de schéma interrompue.
 Les données métier restent dans la base principale Dexie v8 et les copies cloud

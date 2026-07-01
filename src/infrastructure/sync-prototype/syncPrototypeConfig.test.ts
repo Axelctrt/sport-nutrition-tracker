@@ -36,6 +36,7 @@ describe('configuration du prototype Dexie Cloud', () => {
       realWeightSyncEnabled: false,
       realActivitySyncEnabled: false,
       realGoalSyncEnabled: false,
+      realStrengthSyncEnabled: false,
       diagnosticsEnabled: false,
     });
   });
@@ -112,6 +113,21 @@ describe('configuration du prototype Dexie Cloud', () => {
     });
   });
 
+
+  it('active séparément la synchronisation de la musculation', () => {
+    expect(
+      readSyncPrototypeConfig({
+        VITE_ENABLE_SYNC_PROTOTYPE: 'true',
+        VITE_DEXIE_CLOUD_DATABASE_URL:
+          'https://sportpilot-prototype.dexie.cloud',
+        VITE_ENABLE_REAL_STRENGTH_SYNC: 'true',
+      }),
+    ).toMatchObject({
+      enabled: true,
+      realStrengthSyncEnabled: true,
+    });
+  });
+
   it('active les outils de diagnostic avec un flag séparé', () => {
     expect(
       readSyncPrototypeConfig({
@@ -145,6 +161,17 @@ describe('configuration du prototype Dexie Cloud', () => {
 
 
 
+
+
+  it('refuse une valeur ambiguë pour B3', () => {
+    expect(() =>
+      readSyncPrototypeConfig({
+        VITE_ENABLE_SYNC_PROTOTYPE: 'true',
+        VITE_DEXIE_CLOUD_DATABASE_URL: 'https://test.dexie.cloud',
+        VITE_ENABLE_REAL_STRENGTH_SYNC: 'yes',
+      }),
+    ).toThrow('VITE_ENABLE_REAL_STRENGTH_SYNC');
+  });
 
   it('refuse une valeur ambiguë pour B2', () => {
     expect(() =>

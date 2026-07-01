@@ -43,6 +43,12 @@ import {
   type RealGoalSyncPreview,
   type RealGoalSyncResult,
 } from '@/infrastructure/sync-prototype/realGoalSyncService';
+import {
+  previewRealStrengthSync,
+  synchronizeRealStrength,
+  type RealStrengthSyncPreview,
+  type RealStrengthSyncResult,
+} from '@/infrastructure/sync-prototype/realStrengthSyncService';
 import { reloadUserStateRuntime } from '@/infrastructure/user-state/userStateRuntime';
 
 const DEFAULT_INITIALIZATION_TIMEOUT_MS = 15_000;
@@ -149,6 +155,20 @@ export interface SyncPrototypeRealGoalSnapshot {
   readonly errorMessage?: string;
 }
 
+export interface SyncPrototypeRealStrengthSnapshot {
+  readonly enabled: boolean;
+  readonly status:
+    | 'disabled'
+    | 'idle'
+    | 'analyzing'
+    | 'ready'
+    | 'syncing'
+    | 'error';
+  readonly preview?: RealStrengthSyncPreview;
+  readonly lastResult?: RealStrengthSyncResult;
+  readonly errorMessage?: string;
+}
+
 export interface SyncPrototypeSnapshot {
   readonly account: SyncPrototypeAccountSnapshot;
   readonly sync: SyncPrototypeSyncSnapshot;
@@ -156,6 +176,7 @@ export interface SyncPrototypeSnapshot {
   readonly realWeights?: SyncPrototypeRealWeightSnapshot;
   readonly realActivities?: SyncPrototypeRealActivitySnapshot;
   readonly realGoals?: SyncPrototypeRealGoalSnapshot;
+  readonly realStrength?: SyncPrototypeRealStrengthSnapshot;
   readonly diagnostics: SyncPrototypeDiagnosticsSnapshot;
   readonly interaction?: SyncPrototypeInteractionSnapshot;
 }
@@ -175,6 +196,8 @@ export interface SyncPrototypeClient {
   syncRealActivities?(): Promise<RealActivitySyncResult>;
   analyzeRealGoals?(): Promise<RealGoalSyncPreview>;
   syncRealGoals?(): Promise<RealGoalSyncResult>;
+  analyzeRealStrength?(): Promise<RealStrengthSyncPreview>;
+  syncRealStrength?(): Promise<RealStrengthSyncResult>;
   saveWeight(draft: SyncPrototypeWeightDraft): Promise<WeightEntry>;
   deleteWeight(weightId: EntityId): Promise<void>;
 }
@@ -284,6 +307,7 @@ export interface SyncPrototypeClientOptions {
   readonly realWeightSyncEnabled?: boolean;
   readonly realActivitySyncEnabled?: boolean;
   readonly realGoalSyncEnabled?: boolean;
+  readonly realStrengthSyncEnabled?: boolean;
   readonly localDatabase?: AppDatabase;
   readonly initializationTimeoutMs?: number;
   readonly setTimer?: typeof globalThis.setTimeout;
@@ -300,6 +324,7 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
   private readonly realWeightSyncEnabled: boolean;
   private readonly realActivitySyncEnabled: boolean;
   private readonly realGoalSyncEnabled: boolean;
+  private readonly realStrengthSyncEnabled: boolean;
   private readonly localDatabase: AppDatabase;
   private readonly initializationTimeoutMs: number;
   private readonly setTimer: typeof globalThis.setTimeout;
@@ -315,6 +340,7 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
     this.realActivitySyncEnabled =
       options.realActivitySyncEnabled === true;
     this.realGoalSyncEnabled = options.realGoalSyncEnabled === true;
+    this.realStrengthSyncEnabled = options.realStrengthSyncEnabled === true;
     this.localDatabase = options.localDatabase ?? appDatabase;
     this.initializationTimeoutMs =
       options.initializationTimeoutMs ?? DEFAULT_INITIALIZATION_TIMEOUT_MS;
@@ -341,6 +367,9 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
         : {}),
       ...(this.realGoalSyncEnabled
         ? { realGoals: { enabled: true, status: 'idle' as const } }
+        : {}),
+      ...(this.realStrengthSyncEnabled
+        ? { realStrength: { enabled: true, status: 'idle' as const } }
         : {}),
       diagnostics: createEmptySyncPrototypeDiagnostics(
         account.userId ?? account.email,
@@ -509,6 +538,9 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
         : {}),
       ...(this.realGoalSyncEnabled
         ? { realGoals: { enabled: true, status: 'idle' as const } }
+        : {}),
+      ...(this.realStrengthSyncEnabled
+        ? { realStrength: { enabled: true, status: 'idle' as const } }
         : {}),
       diagnostics: createEmptySyncPrototypeDiagnostics(),
     };
@@ -787,6 +819,93 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
     }
   }
 
+  async analyzeRealStrength(): Promise<RealStrengthSyncPreview> {
+    await this.initialize();
+    this.assertRealStrengthSyncAvailable();
+    this.snapshot = {
+      ...this.snapshot,
+      realStrength: { enabled: true, status: 'analyzing' },
+    };
+    this.notify();
+
+    try {
+      await this.database.cloud.sync();
+      const preview = await previewRealStrengthSync(
+        this.localDatabase,
+        this.database,
+        this.database.cloud.currentUserId,
+      );
+      this.snapshot = {
+        ...this.snapshot,
+        realStrength: { enabled: true, status: 'ready', preview },
+      };
+      this.notify();
+      return preview;
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'L’analyse de la musculation a échoué.';
+      this.snapshot = {
+        ...this.snapshot,
+        realStrength: { enabled: true, status: 'error', errorMessage },
+      };
+      this.notify();
+      throw error;
+    }
+  }
+
+  async syncRealStrength(): Promise<RealStrengthSyncResult> {
+    await this.initialize();
+    this.assertRealStrengthSyncAvailable();
+    this.snapshot = {
+      ...this.snapshot,
+      realStrength: {
+        ...(this.snapshot.realStrength ?? {}),
+        enabled: true,
+        status: 'syncing',
+      },
+    };
+    this.notify();
+
+    try {
+      await this.database.cloud.sync();
+      const result = await synchronizeRealStrength(
+        this.localDatabase,
+        this.database,
+        this.database.cloud.currentUserId,
+      );
+      await this.database.cloud.sync();
+      const preview = await previewRealStrengthSync(
+        this.localDatabase,
+        this.database,
+        this.database.cloud.currentUserId,
+      );
+      this.snapshot = {
+        ...this.snapshot,
+        realStrength: {
+          enabled: true,
+          status: 'ready',
+          preview,
+          lastResult: result,
+        },
+      };
+      this.notify();
+      return result;
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'La synchronisation de la musculation a échoué.';
+      this.snapshot = {
+        ...this.snapshot,
+        realStrength: { enabled: true, status: 'error', errorMessage },
+      };
+      this.notify();
+      throw error;
+    }
+  }
+
   async saveWeight(
     rawDraft: SyncPrototypeWeightDraft,
   ): Promise<WeightEntry> {
@@ -895,6 +1014,15 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
     );
 
     await this.refreshWeights();
+  }
+
+  private assertRealStrengthSyncAvailable(): void {
+    if (!this.realStrengthSyncEnabled) {
+      throw new Error(
+        'La synchronisation de la musculation est désactivée par configuration.',
+      );
+    }
+    this.assertLoggedIn();
   }
 
   private assertRealGoalSyncAvailable(): void {
@@ -1053,6 +1181,7 @@ export function getSyncPrototypeClient(): SyncPrototypeClient {
     realWeightSyncEnabled: config.realWeightSyncEnabled,
     realActivitySyncEnabled: config.realActivitySyncEnabled,
     realGoalSyncEnabled: config.realGoalSyncEnabled,
+    realStrengthSyncEnabled: config.realStrengthSyncEnabled,
     localDatabase: appDatabase,
   });
   return singletonClient;

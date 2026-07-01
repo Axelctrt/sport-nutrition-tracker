@@ -13,10 +13,13 @@ describe('base isolée du prototype Dexie Cloud', () => {
     expect(SYNC_PROTOTYPE_DATABASE_NAME).not.toBe(
       LEGACY_SYNC_PROTOTYPE_DATABASE_NAME,
     );
+    expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(5);
     expect(SYNC_PROTOTYPE_DATABASE_NAME).toBe(
+      `sportpilot-sync-runtime-0.19.0-v${SYNC_PROTOTYPE_DATABASE_VERSION}`,
+    );
+    expect(SYNC_PROTOTYPE_DATABASE_NAME).not.toBe(
       'sportpilot-sync-runtime-0.19.0',
     );
-    expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(4);
     expect(SYNC_PROTOTYPE_TABLE_NAMES).toEqual([
       'weights',
       'deletionRecords',
@@ -26,6 +29,10 @@ describe('base isolée du prototype Dexie Cloud', () => {
       'realActivityDeletionRecords',
       'realGoals',
       'realGoalDeletionRecords',
+      'realStrengthExercises',
+      'realWorkoutTemplates',
+      'realWorkoutSessions',
+      'realStrengthDeletionRecords',
     ]);
   });
 
@@ -36,6 +43,7 @@ describe('base isolée du prototype Dexie Cloud', () => {
       realWeightSyncEnabled: true,
       realActivitySyncEnabled: true,
       realGoalSyncEnabled: true,
+      realStrengthSyncEnabled: true,
       diagnosticsEnabled: true,
     });
 
@@ -58,6 +66,10 @@ describe('base isolée du prototype Dexie Cloud', () => {
     expect(database.table('realActivityDeletionRecords').schema.primKey.keyPath).toBe('id');
     expect(database.table('realGoals').schema.primKey.keyPath).toBe('id');
     expect(database.table('realGoalDeletionRecords').schema.primKey.keyPath).toBe('id');
+    expect(database.table('realStrengthExercises').schema.primKey.keyPath).toBe('id');
+    expect(database.table('realWorkoutTemplates').schema.primKey.keyPath).toBe('id');
+    expect(database.table('realWorkoutSessions').schema.primKey.keyPath).toBe('id');
+    expect(database.table('realStrengthDeletionRecords').schema.primKey.keyPath).toBe('id');
 
     database.close();
   });

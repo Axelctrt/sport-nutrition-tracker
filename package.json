@@ -14,8 +14,8 @@
     "test:stability": "vitest run --sequence.shuffle --sequence.seed=20260626",
     "test:watch": "vitest",
     "preview": "vite preview",
-    "check": "npm run lint && npm run test && npm run build && npm run audit:sync-deployment && npm run audit:sports-sync && npm run audit:goal-sync && npm run audit:account-isolation && npm run audit:mvp && npm run audit:release && npm run audit:security && npm run audit:production && npm run audit:repository",
-    "ci": "npm run lint && npm run test && npm run build && npm run audit:sync-deployment && npm run audit:sports-sync && npm run audit:goal-sync && npm run audit:account-isolation && npm run audit:mvp && npm run audit:release && npm run audit:security && npm run audit:production && npm run audit:repository",
+    "check": "npm run lint && npm run test && npm run build && npm run audit:sync-deployment && npm run audit:sports-sync && npm run audit:goal-sync && npm run audit:strength-sync && npm run audit:account-isolation && npm run audit:mvp && npm run audit:release && npm run audit:security && npm run audit:production && npm run audit:repository",
+    "ci": "npm run lint && npm run test && npm run build && npm run audit:sync-deployment && npm run audit:sports-sync && npm run audit:goal-sync && npm run audit:strength-sync && npm run audit:account-isolation && npm run audit:mvp && npm run audit:release && npm run audit:security && npm run audit:production && npm run audit:repository",
     "diagnose:off": "node scripts/diagnose-open-food-facts.mjs",
     "audit:mvp": "node scripts/audit-mvp.mjs",
     "audit:release": "node scripts/audit-release.mjs",
@@ -32,7 +32,8 @@
     "audit:sync-deployment": "node scripts/audit-sync-deployment.mjs",
     "audit:account-isolation": "node scripts/audit-account-isolation.mjs",
     "audit:sports-sync": "node scripts/audit-sports-sync.mjs",
-    "audit:goal-sync": "node scripts/audit-goal-sync.mjs"
+    "audit:goal-sync": "node scripts/audit-goal-sync.mjs",
+    "audit:strength-sync": "node scripts/audit-strength-sync.mjs"
   },
   "dependencies": {
     "@ericblade/quagga2": "^1.12.1",
