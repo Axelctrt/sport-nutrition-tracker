@@ -15,8 +15,8 @@ const read = (path) => {
 };
 
 const packageJson = JSON.parse(read('package.json'));
-if (!/^0\.(?:20|21)\.\d+$/.test(packageJson.version)) {
-  fail(`la version attendue appartient aux séries stables 0.20.x ou 0.21.x, reçue ${String(packageJson.version)}.`);
+if (!/^0\.(?:20|21|22)\.\d+$/.test(packageJson.version)) {
+  fail(`la version attendue appartient aux séries stables 0.20.x, 0.21.x ou 0.22.x, reçue ${String(packageJson.version)}.`);
 }
 
 for (const path of [

@@ -1,64 +1,35 @@
-# SportPilot 0.21.1 — développement 0.22.0 E3
+# SportPilot 0.22.0 — continuité complète du compte
 
-Branche de travail : `feature/full-account-continuity-0.22.0`
+Branche de publication : `feature/full-account-continuity-0.22.0`
 
-## Objet
+## Livraison
 
-Le lot E3 ajoute un centre de synchronisation unifié au-dessus des panneaux existants. La version affichée reste `0.21.1` jusqu’à la publication finale 0.22.0 en E4.
+La version 0.22.0 publie les lots E1 à E4 :
 
-## Pilotage global
+- profil et réglages partageables ;
+- récompenses, thèmes visuels SportPilot, missions et routines ;
+- centre de synchronisation unifié pour neuf rubriques ;
+- restauration complète après nouvelle installation ;
+- audits finaux, documentation et passage de version.
 
-Le centre permet de :
+## Versions
 
-- lancer une analyse sans modification sur toutes les rubriques actives ;
-- confirmer puis synchroniser toutes les rubriques ;
-- suivre l’état et le nombre de différences par domaine ;
-- conserver la dernière analyse et la dernière synchronisation sur l’appareil ;
-- ouvrir la rubrique Synchronisation des données sur son en-tête, puis revenir à cet en-tête à la fermeture d’un détail ;
-- garantir qu’un seul lien de navigation est visuellement sélectionné, y compris pour Rappels et Corbeille ;
-- poursuivre les autres domaines lorsqu’une rubrique échoue ;
-- relancer uniquement les rubriques en échec ;
-- accéder au détail et aux actions unitaires de chaque domaine.
-
-## Rubriques
-
-- profil et réglages ;
-- récompenses et routines ;
-- pesées ;
-- activités ;
-- objectifs ;
-- musculation ;
-- journal nutritionnel ;
-- bibliothèque nutritionnelle ;
-- suivi nutritionnel.
-
-## Garanties
-
-- aucune synchronisation globale n’est lancée sans action explicite ;
-- la synchronisation globale exige une confirmation ;
-- une erreur ne bloque pas les rubriques suivantes ;
-- le mode hors connexion désactive les opérations cloud sans bloquer les données locales ;
-- les métadonnées du centre sont isolées par empreinte de compte et ne contiennent aucune donnée métier ;
-- les services existants restent l’unique source de vérité pour les règles de fusion et l’isolation des comptes.
-
-## Compatibilité
-
-- application affichée : `0.21.1` pendant le développement ;
-- base Dexie Cloud : v10 ;
-- runtime local cloud : `sportpilot-sync-runtime-0.20.0-v10` ;
-- schéma métier Dexie : v8 ;
+- application : `0.22.0` ;
+- runtime Dexie Cloud : v10 ;
+- runtime local : `sportpilot-sync-runtime-0.20.0-v10` ;
+- base métier Dexie : v8 ;
 - sauvegarde JSON : v7 ;
-- registre local des espaces : v1.
+- registre des espaces : v1.
 
-E3 ne crée aucune table et ne nécessite aucune migration ni nouvelle authentification OTP par rapport à E2.
+E4 ne contient aucune migration. Une authentification OTP peut être demandée uniquement si l’appareil n’a pas encore ouvert le runtime v10 introduit pendant E2.
 
-## Contrôles
+## Vérification
 
 ```powershell
 npm ci
-npm run check
-npm run test:stability
-npm run audit:unified-sync-center
+npm run release:verify
+npm run test:e2e
+npm run audit:full-account-continuity-release
 ```
 
-La publication et le changement de version applicative restent réservés au lot E4.
+La publication doit ensuite être validée sur ordinateur et iPhone 15 sous iOS 26 avant la fusion manuelle dans `main` et la création du tag `v0.22.0`.

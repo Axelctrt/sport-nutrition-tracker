@@ -1,125 +1,77 @@
-# Checklist de validation de développement — SportPilot 0.22.0 E2
+# Checklist de publication — SportPilot 0.22.0
 
 ## Préparation
 
-- [ ] La branche `feature/full-account-continuity-0.22.0` est propre après application du lot E2.
+- [ ] La branche `feature/full-account-continuity-0.22.0` est propre et synchronisée.
 - [ ] Une sauvegarde JSON v7 récente est conservée hors de l’application.
-- [ ] Les analyses cloud du compte principal affichent `0 différence` avant les scénarios de conflit.
-- [ ] `npm ci` termine sans erreur sur une installation propre.
-- [ ] `npm run check` termine sans erreur.
-- [ ] `npm run test:stability` termine sans erreur.
-- [ ] `npm run audit:rewards-routines-sync` réussit.
-- [ ] Paramètres affiche encore `0.21.1` jusqu’au lot E4.
-- [ ] Aucun secret, ZIP, journal ou fichier de patch temporaire n’est suivi par Git.
+- [ ] Le centre affiche 9/9 rubriques à jour avant les scénarios de conflit.
+- [ ] Aucun ZIP, journal, secret ou fichier de patch n’est suivi par Git.
+- [ ] Paramètres affiche `0.22.0`.
 
-## Versions et compatibilité
+## Contrôles automatiques
 
-- [ ] Le runtime Dexie Cloud de la branche E2 est en v10.
+- [ ] `npm ci` réussit sur une installation propre.
+- [ ] `npm run release:verify` réussit.
+- [ ] `npm run test:e2e` réussit.
+- [ ] `npm run audit:full-account-continuity-release` réussit.
+- [ ] `git diff --check` ne retourne aucune erreur.
+
+## Versions et configuration
+
+- [ ] Le runtime Dexie Cloud est en v10.
 - [ ] Le runtime local est `sportpilot-sync-runtime-0.20.0-v10`.
-- [ ] La table `realAccountPreferences` d’E1 reste disponible.
-- [ ] La table `realRewardsRoutines` d’E2 est disponible.
-- [ ] Le schéma métier reste en Dexie v8.
+- [ ] La base métier reste en Dexie v8.
 - [ ] La sauvegarde reste en JSON v7.
 - [ ] Le registre des espaces reste en v1.
-- [ ] Aucune migration de la base métier ou de la sauvegarde n’est requise.
-- [ ] La possible nouvelle authentification OTP liée au runtime v10 est testée.
+- [ ] Les neuf domaines sont activés dans le build public.
+- [ ] Les diagnostics de laboratoire restent désactivés.
+- [ ] Aucune migration de données n’est requise.
 
-## E1 — profil et réglages partageables
+## Centre de synchronisation
 
-- [ ] Le profil et les réglages partageables convergent à zéro au second passage.
-- [ ] Un appareil vierge télécharge le profil cloud au lieu d’envoyer ses valeurs par défaut.
-- [ ] Le mode clair ou sombre, le stockage, le minuteur et les métadonnées de sauvegarde restent locaux.
-- [ ] Une modification limitée aux rappels ne crée aucune différence E1.
-- [ ] La restauration initiale inclut le profil et les réglages.
-- [ ] Un compte ne lit jamais l’agrégat d’un autre propriétaire.
-- [ ] `npm run audit:account-preferences-sync` réussit.
+- [ ] **Analyser tout** affiche le statut de chaque rubrique sans modifier les données.
+- [ ] **Synchroniser tout** exige une confirmation explicite.
+- [ ] Une erreur n’interrompt pas les rubriques suivantes.
+- [ ] La relance ciblée ne rejoue que les échecs.
+- [ ] Une seconde analyse après synchronisation affiche 9/9 et 0 différence.
+- [ ] Les détails sont chargés un par un et se ferment vers Synchronisation des données.
+- [ ] Le mode hors connexion désactive les actions cloud.
+- [ ] Le retour du réseau permet une nouvelle analyse.
+- [ ] Modifier un objectif ouvre l’éditeur sans page 404 et conserve la route `/goals`.
 
-## E2 — récompenses, thèmes et routines
+## Multiappareils et conflits
 
-- [ ] Les succès obtenus sont présents sur le second appareil.
-- [ ] Les thèmes visuels SportPilot débloqués sont présents sur le second appareil.
-- [ ] Le thème visuel SportPilot actif le plus récent est restauré.
-- [ ] Le mode clair, sombre ou système reste propre à chaque appareil.
-- [ ] Les missions hebdomadaires terminées sont fusionnées sans perte.
-- [ ] Les préférences de rappels les plus récentes sont restaurées.
-- [ ] Les rappels accomplis ne réapparaissent pas sur un autre appareil.
-- [ ] La fusion conserve la date d’obtention la plus ancienne pour les états cumulatifs.
-- [ ] Un appareil moins à jour ne peut retirer aucun succès, thème, mission ou rappel accompli.
-- [ ] Un appareil vierge télécharge le cloud au lieu d’envoyer les valeurs par défaut.
-- [ ] Une seconde analyse sans modification affiche `0 différence`.
-- [ ] Un compte ne lit jamais l’agrégat E2 d’un autre propriétaire.
-- [ ] `npm run audit:rewards-routines-sync` réussit.
+- [ ] Le profil et les réglages partageables convergent sur deux appareils.
+- [ ] Les succès, thèmes visuels, missions et routines convergent sans perte.
+- [ ] Les dates d’obtention les plus anciennes sont conservées.
+- [ ] Les préférences les plus récentes gagnent.
+- [ ] Le mode clair ou sombre reste local.
+- [ ] Le compte A ne lit aucune donnée du compte B.
+- [ ] L’espace invité reste séparé et récupérable.
 
-## D3 — restauration après nouvelle installation
+## Restauration
 
-- [ ] Une installation vierge détecte les données cloud du compte.
-- [ ] Le résumé par domaine apparaît avant toute modification locale.
-- [ ] La restauration exige une confirmation explicite.
-- [ ] Le cloud reste strictement en lecture seule pendant l’opération.
-- [ ] Les profils et réglages E1 sont restaurés.
-- [ ] Les récompenses, thèmes, missions et routines E2 sont restaurés.
-- [ ] Les analyses reviennent à `0 différence` après restauration.
-- [ ] Commencer avec un espace vide ne modifie pas le cloud.
-- [ ] Une vraie donnée locale bloque la restauration globale.
-- [ ] Un aperçu du compte A ne peut pas être utilisé pour le compte B.
-- [ ] `npm run audit:cloud-account-restore` réussit.
-
-## Isolation, hors ligne et non-régression
-
-- [ ] `npm run audit:account-isolation` réussit.
-- [ ] Le compte A ne voit aucune donnée du compte B.
-- [ ] L’espace invité reste séparé et récupérable après déconnexion.
-- [ ] Les synchronisations sportives et nutritionnelles convergent toujours.
-- [ ] Le journal nutritionnel reste à zéro après un passage par l’accueil.
-- [ ] L’export et la restauration JSON v7 fonctionnent.
-- [ ] Les états E1 et E2 restent consultables hors connexion après restauration.
-- [ ] La reprise après retour du réseau fonctionne.
+- [ ] Une installation vierge détecte les données cloud.
+- [ ] La restauration exige une confirmation.
+- [ ] Les neuf rubriques sont restaurées.
+- [ ] Les valeurs par défaut locales n’écrasent pas le cloud.
+- [ ] Une vraie donnée locale bloque le remplacement global.
+- [ ] Les données restaurées restent consultables hors connexion.
 
 ## iPhone 15 — iOS 26
 
-- [ ] La PWA ouvre le runtime v10 et permet la connexion OTP si elle est demandée.
-- [ ] Le profil et les réglages E1 sont récupérés.
-- [ ] Les récompenses, thèmes visuels et routines E2 sont récupérés.
-- [ ] Le mode clair ou sombre local n’est pas écrasé.
-- [ ] Après suppression/réinstallation, le compte détecte et restaure les données cloud.
-- [ ] Le mode hors ligne fonctionne après restauration.
-- [ ] Le changement de compte reste isolé.
+- [ ] La PWA se met à jour vers 0.22.0.
+- [ ] Le centre affiche 9/9 rubriques.
+- [ ] Une synchronisation et une restauration vierge réussissent.
+- [ ] Le mode hors connexion et la reprise réseau réussissent.
+- [ ] Rappels, Corbeille et Paramètres n’ont jamais deux sélections simultanées.
 
-## Fin du lot E2
+## Publication Git
 
-- [ ] Les tests manuels ordinateur et iPhone sont validés.
-- [ ] `git diff --check` ne retourne aucune erreur.
-- [ ] Seuls les fichiers attendus d’E2 sont modifiés.
-- [ ] E2 est commit dans `feature/full-account-continuity-0.22.0`.
-- [ ] La branche n’est pas fusionnée dans `develop` avant la fin des lots E3 et E4.
-- [ ] Aucun tag `v0.22.0` n’est créé avant E4.
-
-## E3 — centre de synchronisation unifié
-
-- [ ] Le centre affiche les neuf rubriques actives du compte.
-- [ ] **Analyser tout** ne modifie aucune donnée et affiche l’état de chaque rubrique.
-- [ ] **Synchroniser tout** exige une confirmation explicite.
-- [ ] Une erreur sur une rubrique ne bloque pas les domaines suivants.
-- [ ] Le message d’erreur reste visible sur la rubrique concernée.
-- [ ] **Relancer uniquement les rubriques en échec** ne rejoue pas les domaines réussis.
-- [ ] La dernière analyse et la dernière synchronisation sont affichées après rechargement.
-- [ ] Les métadonnées du centre sont isolées par empreinte de compte.
-- [ ] Le retour hors ligne désactive les actions cloud sans bloquer l’application.
-- [ ] Le retour du réseau permet une nouvelle analyse sans rechargement obligatoire.
-- [ ] Chaque lien **Détail** rejoint le panneau unitaire correspondant.
-- [ ] Une seconde analyse après synchronisation affiche zéro différence partout.
-- [ ] Le raccourci Synchronisation des données positionne l’en-tête de la rubrique, pas le sous-bloc État par rubrique.
-- [ ] Fermer un détail replace la vue sur Synchronisation des données.
-- [ ] Rappels n’active pas simultanément Paramètres dans la navigation.
-- [ ] Corbeille n’active pas simultanément Sauvegarde dans la navigation.
-- [ ] `npm run audit:unified-sync-center` réussit.
-- [ ] Le runtime cloud reste en v10, la base métier en v8 et la sauvegarde en v7.
-
-## Fin du lot E3
-
-- [ ] Les tests manuels ordinateur et iPhone sont validés.
-- [ ] `npm run check` et `npm run test:stability` réussissent.
-- [ ] `git diff --check` ne retourne aucune erreur.
-- [ ] E3 est commit dans `feature/full-account-continuity-0.22.0`.
-- [ ] La branche n’est pas fusionnée dans `develop` avant E4.
-- [ ] Aucun tag `v0.22.0` n’est créé avant E4.
+- [ ] E4 est committé sur la branche de fonctionnalité.
+- [ ] La branche est fusionnée manuellement dans `main`.
+- [ ] `npm run release:verify` réussit sur `main`.
+- [ ] Le tag annoté `v0.22.0` est créé sur le commit publié.
+- [ ] `main` est fusionnée dans `develop`.
+- [ ] La branche de fonctionnalité est supprimée localement et à distance.
+- [ ] Le déploiement public est vérifié sur ordinateur et iPhone.

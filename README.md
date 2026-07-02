@@ -1,16 +1,16 @@
-# SportPilot 0.21.1
+# SportPilot 0.22.0
 
-## Continuité des données et gestion du compte
+## Continuité complète du compte
 
-SportPilot synchronise les pesées, activités, objectifs, données de musculation, journées nutritionnelles, produits utiles, recettes, repas favoris, bilans hebdomadaires, ajustements caloriques, profil, réglages partageables, récompenses et routines du compte connecté.
+SportPilot synchronise désormais les neuf rubriques du compte connecté : profil et réglages partageables, récompenses et routines, pesées, activités, objectifs, musculation, journal nutritionnel, bibliothèque nutritionnelle et suivi nutritionnel.
 
-La version 0.21.1 conserve et sécurise le cycle complet des données : gestion du compte en production, import explicite de l’espace invité dans un compte et restauration guidée depuis le cloud après une nouvelle installation.
+La version 0.22.0 ajoute un centre unique pour analyser toutes les rubriques, confirmer une synchronisation globale, consulter uniquement le détail nécessaire et relancer les domaines en échec sans rejouer ceux déjà réussis. Les opérations cloud sont désactivées hors connexion, tandis que les données locales restent disponibles.
 
-Les journées, recettes, modèles de musculation, séances, bilans et états de progression restent traités comme des agrégats cohérents. Les créations, modifications, suppressions et restaurations convergent sans doublons, avec filtrage strict par propriétaire cloud et résolution déterministe des conflits.
+La restauration après nouvelle installation couvre les données métier, le profil, les réglages partageables, les thèmes visuels SportPilot, les succès, les missions et les routines. Les valeurs par défaut d’un nouvel appareil ne peuvent pas écraser silencieusement un compte déjà renseigné.
 
-La branche de développement 0.22.0 E3 utilise la base Dexie Cloud v10 et le runtime `sportpilot-sync-runtime-0.20.0-v10`. La base métier reste en Dexie v8, la sauvegarde en JSON v7 et le registre local des espaces en v1. Le nouveau runtime peut demander une authentification OTP lors de sa première ouverture sur un appareil.
+La progression cumulative est fusionnée sans perte. Les dates d’obtention les plus anciennes sont conservées et les préférences mutables les plus récentes gagnent. Le mode clair ou sombre, le stockage, le minuteur de repos, l’activation automatique et les métadonnées de sauvegarde restent propres à chaque appareil.
 
-E1 synchronise le profil, les paramètres de calcul, le tableau de bord et les modèles d’endurance. E2 ajoute les badges, thèmes visuels débloqués et actifs, missions hebdomadaires, préférences de rappels et rappels terminés. E3 ajoute un centre unique capable d’analyser ou de synchroniser toutes les rubriques, de poursuivre après une erreur et de relancer uniquement les échecs. Le mode clair ou sombre, le stockage, le minuteur et les métadonnées de sauvegarde restent propres à chaque appareil. Les données invitées sont conservées après import.
+SportPilot 0.22.0 utilise le runtime Dexie Cloud v10 nommé `sportpilot-sync-runtime-0.20.0-v10`. La base métier reste en Dexie v8, la sauvegarde en JSON v7 et le registre local des espaces en v1. Aucune migration de ces formats n’est requise par la publication E4.
 
 ## Correctif 0.21.1 — stabilité du journal nutritionnel
 

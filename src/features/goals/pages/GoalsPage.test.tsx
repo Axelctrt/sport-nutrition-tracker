@@ -1,8 +1,10 @@
 import {
   render,
   screen,
+  waitFor,
 } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { vi } from 'vitest';
 
 import { GoalsPage } from '@/features/goals/pages/GoalsPage';
 import type { GoalProgressView } from '@/application/goals/goalProgressService';
@@ -66,6 +68,56 @@ describe('GoalsPage', () => {
     expect(
       screen.queryByText('Objectif actif'),
     ).not.toBeInTheDocument();
+  });
+
+
+  it('ouvre l’éditeur sans remplacer la route du HashRouter', async () => {
+    const user = userEvent.setup();
+    const scrollIntoView = vi.fn();
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+      configurable: true,
+      value: scrollIntoView,
+    });
+    Object.defineProperty(window, 'requestAnimationFrame', {
+      configurable: true,
+      value: (callback: FrameRequestCallback) => {
+        callback(0);
+        return 1;
+      },
+    });
+    window.location.hash = '#/goals';
+
+    render(
+      <GoalsPage
+        loadProgress={() =>
+          Promise.resolve([view('active', 'actif')])
+        }
+      />,
+    );
+
+    await user.click(
+      await screen.findByRole('button', {
+        name: 'Modifier',
+      }),
+    );
+
+    expect(window.location.hash).toBe('#/goals');
+    expect(
+      screen.getByText('Modifier un objectif'),
+    ).toBeInTheDocument();
+
+    const editor = document.getElementById('goals-editor');
+    expect(editor).toBeInstanceOf(HTMLDetailsElement);
+    expect(editor).toHaveAttribute('open');
+    await waitFor(() => {
+      expect(scrollIntoView).toHaveBeenCalledWith({
+        behavior: 'smooth',
+        block: 'center',
+        inline: 'nearest',
+      });
+    });
+
+    window.location.hash = '';
   });
 
   it('propose la création quand aucun objectif n’existe', async () => {
