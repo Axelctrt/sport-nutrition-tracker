@@ -1,49 +1,68 @@
-SPORTPILOT 0.20.1
+SPORTPILOT 0.21.0
 
 PRÉPARATION
 
-1. Vérifier que la branche fix/nutrition-daily-target-uniqueness est propre.
-2. Arrêter le serveur de développement avec Ctrl + C.
-3. Fermer tous les onglets localhost:5173 et 127.0.0.1:5173.
-4. Exporter une sauvegarde JSON v7 récente et la conserver hors de l’application.
-5. Ne supprimer ni IndexedDB, ni les données Safari, ni la PWA.
+1. Vérifier que la branche feature/data-continuity-0.21.0 est propre et à jour.
+2. Arrêter Vite avec Ctrl + C et fermer les onglets de test.
+3. Exporter une sauvegarde JSON v7 récente de l’espace invité et du compte principal.
+4. Vérifier que toutes les analyses cloud du compte principal affichent 0 différence.
+5. Ne supprimer aucune base IndexedDB ni donnée cloud pendant la validation locale.
 6. Vérifier que .env.local, dexie-cloud.json et dexie-cloud.key restent ignorés par Git.
-7. Vérifier les origines Dexie Cloud avec npx dexie-cloud whitelist.
+7. Vérifier les origines autorisées Dexie Cloud avec npx dexie-cloud whitelist.
 
-VALIDATION LOCALE
+VALIDATION AUTOMATIQUE
 
 8. Installer les dépendances avec npm ci.
 9. Lancer npm run release:verify.
 10. Lancer npm run test:e2e.
-11. Lancer npm run audit:nutrition-sync-release.
-12. Vérifier que Paramètres affiche la version 0.20.1.
-13. Vérifier que le compte connecté ouvre son espace isolé.
-14. Vérifier les synchronisations des pesées, activités, objectifs et données de musculation.
-15. Vérifier le journal nutritionnel, la bibliothèque et le suivi hebdomadaire.
-16. Après chaque synchronisation, relancer l’analyse et confirmer 0 différence.
-17. Vérifier une journée complète et une recette complète sur deux navigateurs.
-18. Vérifier un bilan accepté, son ajustement et le recalcul d’un objectif quotidien.
-19. Vérifier les suppressions sans résurrection ni donnée orpheline.
-20. Vérifier le fonctionnement hors connexion de l’espace actif.
+11. Lancer npm run audit:data-continuity-release.
+12. Vérifier que Paramètres affiche la version 0.21.0.
+13. Vérifier l’absence d’archive, de journal et de fichier de patch dans git status.
+
+VALIDATION D1 — COMPTE
+
+14. Ouvrir Compte et appareils depuis chaque accès de gestion du compte.
+15. Vérifier le compte connecté, l’état cloud et l’espace local actif.
+16. Se déconnecter puis se reconnecter sans perte locale ou cloud.
+17. Changer de compte et confirmer l’isolation stricte des espaces.
+
+VALIDATION D2 — ESPACE INVITÉ
+
+18. Créer des données identifiables dans l’espace invité.
+19. Se connecter à un compte existant puis analyser les données invitées.
+20. Importer après confirmation et vérifier la conservation des données déjà présentes.
+21. Confirmer l’absence de doublon et le remappage des références nutritionnelles.
+22. Relancer l’analyse sans modification et vérifier 0 ajout, 0 mise à jour et 0 retrait.
+23. Se déconnecter et vérifier que l’espace invité est resté intact.
+
+VALIDATION D3 — RESTAURATION CLOUD
+
+24. Utiliser un nouveau profil navigateur ou une installation locale vierge.
+25. Se connecter à un compte contenant des données cloud synchronisées.
+26. Vérifier le résumé par domaine avant toute restauration.
+27. Restaurer depuis le cloud puis confirmer 0 différence dans chaque domaine.
+28. Vérifier l’accès aux données restaurées hors connexion.
+29. Refaire le test en choisissant Commencer avec un espace vide.
+30. Vérifier que le cloud est inchangé et que la restauration reste disponible plus tard.
+31. Créer une vraie donnée locale puis vérifier que la restauration globale est bloquée.
+32. Tester un second compte et confirmer l’absence de données du premier compte.
+
+VALIDATION IPHONE
+
+33. Depuis l’iPhone 15 sous iOS 26, vérifier une dernière sauvegarde et les analyses à zéro.
+34. Supprimer la PWA et les données du site de test, puis réinstaller SportPilot.
+35. Se connecter, restaurer depuis le cloud et contrôler chaque domaine.
+36. Couper le réseau et vérifier que les données restaurées restent consultables.
+37. Rétablir le réseau et vérifier la reprise normale des analyses cloud.
 
 PUBLICATION
 
-21. Committer la préparation 0.20.1 sur fix/nutrition-daily-target-uniqueness.
-22. Fusionner cette branche dans develop avec un commit de fusion explicite.
-23. Après validation de develop, fusionner develop dans main.
-24. Créer le tag annoté v0.20.1 sur le commit publié dans main.
-25. Pousser main, develop et le tag v0.20.1.
-26. Le push de main déclenche le déploiement Cloudflare.
-
-VALIDATION APRÈS DÉPLOIEMENT
-
-27. Vérifier la version 0.20.1 sur ordinateur et iPhone 15 sous iOS 26.
-28. Vérifier la connexion au compte et l’ouverture de l’espace existant.
-29. Synchroniser chaque domaine sur ordinateur puis sur iPhone.
-30. Vérifier l’absence de doublons, de repas ou ingrédients orphelins et d’ajustement isolé.
-31. Tester le mode hors connexion puis la reprise du réseau.
-32. Tester un changement compte A / compte B sans fuite de données.
-33. Vérifier que les données invitées réapparaissent après déconnexion.
+38. Committer D4 sur feature/data-continuity-0.21.0.
+39. Fusionner manuellement la branche dans develop avec un commit de fusion explicite.
+40. Valider develop puis fusionner develop dans main.
+41. Créer le tag annoté v0.21.0 sur le commit publié dans main.
+42. Pousser develop, main et le tag v0.21.0.
+43. Vérifier le déploiement de production et refaire la recette compte/restauration sur ordinateur et iPhone.
 
 VERSIONS DE DONNÉES
 
@@ -53,28 +72,4 @@ Schéma Dexie principal : version 8.
 Sauvegarde JSON : version 7.
 Registre local des espaces : version 1.
 
-Aucune migration de la base métier principale n’est requise pour 0.20.1.
-
-
-IMPORT DES DONNEES INVITEES (0.21.0 D2)
------------------------------------------
-Après connexion, ouvrir Compte et appareils puis choisir Analyser les données invitées.
-Vérifier les compteurs, confirmer l’import, puis synchroniser les domaines cloud nécessaires.
-L’espace invité n’est jamais supprimé par cette opération.
-
-
-RESTAURATION CLOUD APRES NOUVELLE INSTALLATION (0.21.0 D3)
------------------------------------------------------------
-1. Vérifier qu’un compte de test contient des données cloud synchronisées dans plusieurs domaines.
-2. Exporter une sauvegarde JSON de sécurité avant de supprimer les données du site ou la PWA de test.
-3. Réinstaller la PWA ou utiliser une origine de test sans espace local de compte.
-4. Se connecter au compte et attendre la fin de l’analyse cloud.
-5. Vérifier le résumé par domaine puis choisir Restaurer depuis le cloud.
-6. Confirmer explicitement la restauration et contrôler les pesées, activités, objectifs, musculation et données nutritionnelles.
-7. Vérifier que les analyses de synchronisation reviennent à 0 différence.
-8. Refaire le test sur une installation vide en choisissant Commencer avec un espace vide.
-9. Vérifier que les données cloud existent toujours depuis un autre appareil ou navigateur.
-10. Ouvrir Compte et appareils puis relancer la restauration différée.
-11. Tester un second compte et confirmer l’absence totale de données du premier compte.
-
-La restauration D3 exige le réseau. Une fois les données restaurées, l’espace local redevient utilisable hors connexion. Les réglages, récompenses, thèmes, missions et rappels qui n’existent pas dans le cloud ne sont pas restaurés par D3.
+Aucune migration de données ni nouvelle connexion OTP liée au runtime n’est requise pour 0.21.0.

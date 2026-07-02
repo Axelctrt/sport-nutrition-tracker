@@ -1,16 +1,16 @@
-# SportPilot 0.20.1
+# SportPilot 0.21.0
 
-## Synchronisation sportive et nutritionnelle multiappareil
+## Continuité des données et gestion du compte
 
 SportPilot synchronise les pesées, activités, objectifs, données de musculation, journées nutritionnelles, produits utiles, recettes, repas favoris, bilans hebdomadaires et ajustements caloriques du compte connecté.
 
-Les journées, recettes, modèles de musculation, séances et bilans sont traités comme des agrégats cohérents. Les créations, modifications, suppressions et restaurations convergent sans doublons, avec filtrage strict par propriétaire cloud et résolution déterministe des conflits.
+La version 0.21.0 sécurise désormais le cycle complet des données : gestion du compte en production, import explicite de l’espace invité dans un compte et restauration guidée depuis le cloud après une nouvelle installation.
 
-Lorsqu’un ajustement calorique accepté arrive depuis un autre appareil, les objectifs quotidiens obsolètes sont recalculés puis propagés par la synchronisation du journal. Les produits Open Food Facts portant le même code-barres sont dédupliqués avec remappage des références existantes.
+Les journées, recettes, modèles de musculation, séances et bilans restent traités comme des agrégats cohérents. Les créations, modifications, suppressions et restaurations convergent sans doublons, avec filtrage strict par propriétaire cloud et résolution déterministe des conflits.
 
-La version 0.20.1 utilise la base cloud v8 et le runtime `sportpilot-sync-runtime-0.20.0-v8`. La base métier reste en Dexie v8, la sauvegarde en JSON v7 et les espaces locaux restent physiquement isolés par compte.
+SportPilot 0.21.0 utilise la base Dexie Cloud v8 et le runtime `sportpilot-sync-runtime-0.20.0-v8`. La base métier reste en Dexie v8, la sauvegarde en JSON v7 et le registre local des espaces en v1. Aucune migration de données ni nouvelle authentification OTP liée au runtime n’est requise.
 
-Les récompenses, thèmes, missions et rappels restent locaux. Les données créées dans l’espace invité restent conservées et peuvent être analysées puis fusionnées dans un compte existant sans effacer la source.
+Les récompenses, thèmes, missions et rappels restent locaux. Les données invitées sont conservées après import, et la restauration cloud couvre uniquement les domaines déjà synchronisés.
 
 <!-- hotfix-sync-production-0.17.1 -->
 
@@ -859,9 +859,13 @@ Le tableau de bord peut être adapté depuis `Paramètres → Personnaliser le t
 
 Les blocs masqués ne suppriment aucune donnée : le journal alimentaire, les activités, les séances et les détails de calcul restent disponibles dans leurs pages respectives. Les anciennes bases sans configuration reçoivent automatiquement l’affichage Équilibré.
 
+### Continuité des données 0.21.0 D1
+
+La page **Compte et appareils** centralise le compte connecté, l’état du cloud et l’espace local actif. La déconnexion, le changement de compte, la désassociation et la suppression locale sont des opérations distinctes et aucune ne supprime implicitement les données cloud.
+
 ### Continuité des données 0.21.0 D2
 
-Depuis **Compte et appareils**, SportPilot peut analyser l’espace invité puis fusionner ses données dans le compte actif. La fusion est atomique, déduplique les identifiants fonctionnels et conserve l’élément le plus récent. Une nouvelle analyse est exigée si la source ou la cible change avant validation.
+Depuis **Compte et appareils**, SportPilot peut analyser l’espace invité puis fusionner ses données dans le compte actif. La fusion est atomique, déduplique les identifiants fonctionnels et conserve l’élément le plus récent. Une nouvelle analyse est exigée si la source ou la cible change avant validation. L’espace invité reste intact et une seconde analyse sans modification revient à zéro opération.
 
 ### Continuité des données 0.21.0 D3
 
@@ -870,3 +874,7 @@ Après une nouvelle installation, la connexion à un compte déclenche une analy
 La restauration utilise une base Dexie temporaire, vérifie de nouveau les empreintes de la source cloud et de la cible locale avant validation, puis applique le résultat dans une transaction locale. Les écritures cloud sont explicitement désactivées pendant cette opération. En cas d’échec, l’espace local reste inchangé et la source cloud est conservée.
 
 Les domaines restaurés sont ceux déjà couverts par la synchronisation cloud : pesées, activités, objectifs sportifs, musculation, bibliothèque nutritionnelle, journal nutritionnel et suivi nutritionnel. Les réglages, récompenses, thèmes, missions et rappels restent locaux.
+
+### Publication 0.21.0 D4
+
+La publication stable ajoute un audit transversal des phases D1 à D3, fige les versions de données et documente la recette après réinstallation. Le pipeline `check` valide la continuité des données, l’isolation des comptes, la sécurité, le dépôt et les budgets du build de production.

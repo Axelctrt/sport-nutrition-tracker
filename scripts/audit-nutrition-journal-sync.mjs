@@ -88,8 +88,8 @@ if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*7/.test(backup)) {
 }
 
 const packageJson = JSON.parse(read('package.json'));
-if (!/^0\.20\.\d+$/.test(packageJson.version)) {
-  fail(`la release finale doit publier une version corrective 0.20.x, reçue ${String(packageJson.version)}.`);
+if (!/^0\.(?:20|21)\.\d+$/.test(packageJson.version)) {
+  fail(`la version doit appartenir aux séries stables 0.20.x ou 0.21.x, reçue ${String(packageJson.version)}.`);
 }
 const scripts = packageJson.scripts ?? {};
 if (scripts['audit:nutrition-journal-sync'] !== 'node scripts/audit-nutrition-journal-sync.mjs') {

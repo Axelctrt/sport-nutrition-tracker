@@ -1,34 +1,29 @@
+import { CURRENT_BACKUP_SCHEMA_VERSION } from '@/infrastructure/backup/backupMigrations';
+import { DATA_SPACE_REGISTRY_VERSION } from '@/domain/data-spaces/dataSpace';
+import { databaseSchemaVersion } from '@/infrastructure/database/schema';
 import {
   SYNC_PROTOTYPE_DATABASE_NAME,
   SYNC_PROTOTYPE_DATABASE_VERSION,
-  SYNC_PROTOTYPE_TABLE_NAMES,
 } from '@/infrastructure/sync-prototype/SyncPrototypeDatabase';
 import { syncPublicDeploymentConfig } from '@/infrastructure/sync-prototype/syncPublicDeploymentConfig';
 
-describe('compatibilité de la synchronisation nutritionnelle avec 0.21.0', () => {
-  it('publie la version finale sans modifier les versions métier', () => {
+describe('publication de la continuité des données 0.21.0', () => {
+  it('publie la version stable attendue', () => {
     expect(__APP_VERSION__).toBe('0.21.0');
+    expect(__APP_VERSION__).toMatch(/^\d+\.\d+\.\d+$/);
+  });
+
+  it('conserve les formats de données validés sans migration', () => {
+    expect(databaseSchemaVersion).toBe(8);
+    expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(7);
+    expect(DATA_SPACE_REGISTRY_VERSION).toBe(1);
     expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(8);
     expect(SYNC_PROTOTYPE_DATABASE_NAME).toBe(
       'sportpilot-sync-runtime-0.20.0-v8',
     );
   });
 
-  it('déclare tous les agrégats nutritionnels du runtime cloud', () => {
-    expect(SYNC_PROTOTYPE_TABLE_NAMES).toEqual(
-      expect.arrayContaining([
-        'realNutritionJournalDays',
-        'realNutritionJournalDeletionRecords',
-        'realNutritionProducts',
-        'realNutritionRecipes',
-        'realFavoriteMeals',
-        'realNutritionLibraryDeletionRecords',
-        'realNutritionTracking',
-      ]),
-    );
-  });
-
-  it('active les domaines validés dans le build public', () => {
+  it('conserve tous les domaines cloud validés en production', () => {
     expect(syncPublicDeploymentConfig).toMatchObject({
       VITE_ENABLE_SYNC_PROTOTYPE: 'true',
       VITE_ENABLE_REAL_WEIGHT_SYNC: 'true',

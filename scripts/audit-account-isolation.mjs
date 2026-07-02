@@ -26,8 +26,8 @@ for (const path of requiredFiles) {
 }
 
 const packageJson = JSON.parse(read('package.json'));
-if (!/^0\.20\.\d+$/.test(packageJson.version)) {
-  fail(`la version attendue appartient à la série 0.20.x, reçue ${String(packageJson.version)}.`);
+if (!/^0\.(?:20|21)\.\d+$/.test(packageJson.version)) {
+  fail(`la version attendue appartient aux séries stables 0.20.x ou 0.21.x, reçue ${String(packageJson.version)}.`);
 }
 
 const scripts = packageJson.scripts ?? {};

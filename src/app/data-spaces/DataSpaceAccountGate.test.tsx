@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import type { DataSpaceDescriptor } from "@/domain/data-spaces/dataSpace";
@@ -232,7 +232,14 @@ describe("DataSpaceAccountGate", () => {
       await screen.findByRole("button", { name: "Vérification du cloud…" }),
     ).toBeDisabled();
 
-    resolveAnalysis?.(preparedCloudRestore());
+    await waitFor(() =>
+      expect(client.prepareCloudRestore).toHaveBeenCalledTimes(1),
+    );
+    expect(resolveAnalysis).toBeDefined();
+
+    await act(async () => {
+      resolveAnalysis!(preparedCloudRestore());
+    });
 
     expect(
       await screen.findByText("Des données ont été trouvées pour ce compte"),
