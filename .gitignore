@@ -47,3 +47,8 @@ phase*_patch/
 # Configuration publique Vite de production.
 .env.production
 .env.production.local
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example

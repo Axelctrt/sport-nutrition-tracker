@@ -9,6 +9,8 @@ import { configDefaults, defineConfig } from 'vitest/config';
 import type { ProxyOptions } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
+import { cloudflare } from "@cloudflare/vite-plugin";
+
 dns.setDefaultResultOrder('ipv4first');
 
 interface PackageMetadata {
@@ -78,93 +80,89 @@ export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(appVersion),
   },
-  plugins: [
-    react(),
-    tailwindcss(),
-    VitePWA({
-      registerType: 'prompt',
-      injectRegister: false,
-      includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
-      manifest: {
-        id: './',
-        name: 'SportPilot — Suivi sport et nutrition',
-        short_name: 'SportPilot',
-        description: 'Application locale de suivi sportif, nutritionnel, calorique et de musculation.',
-        lang: 'fr',
-        start_url: './',
-        scope: './',
-        display: 'standalone',
-        orientation: 'any',
-        background_color: '#f8fafc',
-        theme_color: '#0f766e',
-        categories: ['health', 'fitness', 'lifestyle'],
-        shortcuts: [
-          {
-            name: 'Ajouter un aliment',
-            short_name: 'Aliment',
-            description: 'Ajouter un aliment au journal du jour.',
-            url: './#/food/select',
-            icons: [{ src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' }],
-          },
-          {
-            name: 'Ajouter une activité',
-            short_name: 'Activité',
-            description: 'Enregistrer une activité sportive.',
-            url: './#/activities/add',
-            icons: [{ src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' }],
-          },
+  plugins: [react(), tailwindcss(), VitePWA({
+    registerType: 'prompt',
+    injectRegister: false,
+    includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
+    manifest: {
+      id: './',
+      name: 'SportPilot — Suivi sport et nutrition',
+      short_name: 'SportPilot',
+      description: 'Application locale de suivi sportif, nutritionnel, calorique et de musculation.',
+      lang: 'fr',
+      start_url: './',
+      scope: './',
+      display: 'standalone',
+      orientation: 'any',
+      background_color: '#f8fafc',
+      theme_color: '#0f766e',
+      categories: ['health', 'fitness', 'lifestyle'],
+      shortcuts: [
+        {
+          name: 'Ajouter un aliment',
+          short_name: 'Aliment',
+          description: 'Ajouter un aliment au journal du jour.',
+          url: './#/food/select',
+          icons: [{ src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' }],
+        },
+        {
+          name: 'Ajouter une activité',
+          short_name: 'Activité',
+          description: 'Enregistrer une activité sportive.',
+          url: './#/activities/add',
+          icons: [{ src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' }],
+        },
 
-          {
-            name: 'Carnet de musculation',
-            short_name: 'Musculation',
-            description: 'Démarrer, reprendre ou consulter une séance de musculation.',
-            url: './#/strength/sessions',
-            icons: [{ src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' }],
-          },
-          {
-            name: 'Renseigner le poids',
-            short_name: 'Poids',
-            description: 'Ajouter une pesée.',
-            url: './#/weight',
-            icons: [{ src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' }],
-          },
-        ],
-        icons: [
-          {
-            src: 'icons/icon-192.png',
-            sizes: '192x192',
-            type: 'image/png',
-          },
-          {
-            src: 'icons/icon-512.png',
-            sizes: '512x512',
-            type: 'image/png',
-          },
-          {
-            src: 'icons/icon-maskable-192.png',
-            sizes: '192x192',
-            type: 'image/png',
-            purpose: 'maskable',
-          },
-          {
-            src: 'icons/icon-maskable-512.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'maskable',
-          },
-        ],
-      },
-      workbox: {
-        cleanupOutdatedCaches: true,
-        clientsClaim: true,
-        navigateFallback: 'index.html',
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
-      },
-      devOptions: {
-        enabled: false,
-      },
-    }),
-  ],
+        {
+          name: 'Carnet de musculation',
+          short_name: 'Musculation',
+          description: 'Démarrer, reprendre ou consulter une séance de musculation.',
+          url: './#/strength/sessions',
+          icons: [{ src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' }],
+        },
+        {
+          name: 'Renseigner le poids',
+          short_name: 'Poids',
+          description: 'Ajouter une pesée.',
+          url: './#/weight',
+          icons: [{ src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' }],
+        },
+      ],
+      icons: [
+        {
+          src: 'icons/icon-192.png',
+          sizes: '192x192',
+          type: 'image/png',
+        },
+        {
+          src: 'icons/icon-512.png',
+          sizes: '512x512',
+          type: 'image/png',
+        },
+        {
+          src: 'icons/icon-maskable-192.png',
+          sizes: '192x192',
+          type: 'image/png',
+          purpose: 'maskable',
+        },
+        {
+          src: 'icons/icon-maskable-512.png',
+          sizes: '512x512',
+          type: 'image/png',
+          purpose: 'maskable',
+        },
+      ],
+    },
+    workbox: {
+      cleanupOutdatedCaches: true,
+      clientsClaim: true,
+      navigateFallback: 'index.html',
+      globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
+    },
+    devOptions: {
+      enabled: false,
+    },
+  }), cloudflare()],
   preview: {
     headers: previewSecurityHeaders,
   },
