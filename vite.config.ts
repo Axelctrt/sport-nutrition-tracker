@@ -185,6 +185,42 @@ export default defineConfig({
       ),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          const normalizedId = id.replaceAll('\\', '/');
+          if (!normalizedId.includes('/node_modules/')) return undefined;
+
+          if (
+            normalizedId.includes('/node_modules/react/')
+            || normalizedId.includes('/node_modules/react-dom/')
+            || normalizedId.includes('/node_modules/react-router/')
+            || normalizedId.includes('/node_modules/react-router-dom/')
+          ) {
+            return 'react-vendor';
+          }
+
+          if (
+            normalizedId.includes('/node_modules/dexie/')
+            || normalizedId.includes('/node_modules/dexie-cloud-addon/')
+          ) {
+            return 'database-vendor';
+          }
+
+          if (normalizedId.includes('/node_modules/lucide-react/')) {
+            return 'icons-vendor';
+          }
+
+          if (normalizedId.includes('/node_modules/date-fns/')) {
+            return 'date-vendor';
+          }
+
+          return undefined;
+        },
+      },
+    },
+  },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),

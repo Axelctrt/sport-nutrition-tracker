@@ -3,6 +3,10 @@ import Dexie from 'dexie';
 import type { Activity } from '@/domain/models/activity';
 import type { WeightEntry } from '@/domain/models/weight';
 import type { DailyTarget } from '@/domain/models/targets';
+import { createDefaultUserSettings } from '@/domain/defaults/appSettings';
+import { USER_SETTINGS_ID } from '@/domain/defaults/identifiers';
+import type { AccountPreferencesAggregate } from '@/infrastructure/sync-prototype/realAccountPreferencesSyncService';
+import { createSyncedUserSettingsSnapshot } from '@/infrastructure/sync-prototype/realAccountPreferencesSyncService';
 import {
   applyPreparedCloudAccountRestore,
   prepareCloudAccountRestore,
@@ -51,6 +55,7 @@ function emptySource(): CloudAccountRestoreSourceSnapshot {
     favoriteMeals: [],
     nutritionLibraryMarkers: [],
     nutritionTracking: [],
+    accountPreferences: [],
   };
 }
 
@@ -106,6 +111,22 @@ function activity(id = 'activity-cloud'): Activity {
     createdAt: '2026-07-01T09:00:00.000Z',
     updatedAt: '2026-07-01T09:00:00.000Z',
   } as unknown as Activity;
+}
+
+
+function accountPreferences(
+  includedBaseSteps = 4_000,
+): AccountPreferencesAggregate {
+  const settings = createDefaultUserSettings();
+  settings.includedBaseSteps = includedBaseSteps;
+  settings.createdAt = '2026-07-01T08:00:00.000Z';
+  settings.updatedAt = '2026-07-01T08:00:00.000Z';
+  settings.syncableUpdatedAt = settings.updatedAt;
+  return {
+    id: 'account-preferences',
+    settings: createSyncedUserSettingsSnapshot(settings),
+    updatedAt: settings.updatedAt,
+  };
 }
 
 function createRuntime(
@@ -324,6 +345,54 @@ describe('cloudAccountRestoreService', () => {
 
     expect(await target.weights.count()).toBe(1);
     expect(await target.dailyTargets.count()).toBe(0);
+    target.close();
+  });
+
+
+  it('ne considère pas les réglages par défaut comme des données locales bloquantes', async () => {
+    const target = new AppDatabase(TARGET_NAME);
+    await target.open();
+    const defaults = createDefaultUserSettings();
+    await target.userSettings.put(defaults);
+    const source = {
+      ...emptySource(),
+      accountPreferences: [accountPreferences()],
+    };
+    const runtime = createRuntime(() => source);
+
+    const prepared = await prepareCloudAccountRestore(
+      ACCOUNT_FINGERPRINT,
+      runtime,
+      { targetDatabase: target },
+    );
+
+    expect(prepared.preview.cloudRecordCount).toBe(1);
+    expect(prepared.preview.localState).toBe('empty');
+    expect(prepared.preview.canRestore).toBe(true);
+    target.close();
+  });
+
+  it('considère un réglage utilisateur personnalisé comme une donnée locale', async () => {
+    const target = new AppDatabase(TARGET_NAME);
+    await target.open();
+    const customized = createDefaultUserSettings();
+    customized.id = USER_SETTINGS_ID;
+    customized.includedBaseSteps = 4_500;
+    await target.userSettings.put(customized);
+    const source = {
+      ...emptySource(),
+      accountPreferences: [accountPreferences()],
+    };
+    const runtime = createRuntime(() => source);
+
+    const prepared = await prepareCloudAccountRestore(
+      ACCOUNT_FINGERPRINT,
+      runtime,
+      { targetDatabase: target },
+    );
+
+    expect(prepared.preview.localState).toBe('non-empty');
+    expect(prepared.preview.canRestore).toBe(false);
     target.close();
   });
 

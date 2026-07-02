@@ -123,6 +123,7 @@ const dashboardPreferencesSchema = z.object({
 });
 
 const appSettingsSchema = entityMetadataSchema.extend({
+  syncableUpdatedAt: isoDateTimeSchema.optional(),
   theme: z.enum(['system', 'light', 'dark']),
   includedBaseSteps: nonNegativeInteger,
   walkingKcalPerKgPerKm: nonNegativeNumber,

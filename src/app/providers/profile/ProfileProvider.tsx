@@ -13,6 +13,7 @@ import {
 import type { NewEntity } from '@/domain/models/common';
 import type { UserProfile } from '@/domain/models/profile';
 import { repositories } from '@/infrastructure/repositories/repositories';
+import { ACCOUNT_PREFERENCES_CHANGED_EVENT } from '@/infrastructure/sync-prototype/accountPreferencesSyncEvents';
 
 function getErrorMessage(error: unknown): string {
   return error instanceof Error
@@ -39,6 +40,16 @@ export function ProfileProvider({ children }: PropsWithChildren) {
       setStatus('error');
     }
   }, []);
+
+  useEffect(() => {
+    const refreshFromSync = () => {
+      void refreshProfile();
+    };
+    window.addEventListener(ACCOUNT_PREFERENCES_CHANGED_EVENT, refreshFromSync);
+    return () => {
+      window.removeEventListener(ACCOUNT_PREFERENCES_CHANGED_EVENT, refreshFromSync);
+    };
+  }, [refreshProfile]);
 
   useEffect(() => {
     if (database.status === 'initializing') {

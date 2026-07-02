@@ -85,8 +85,8 @@ if (failures.length === 0) {
   }
 
   const runtime = read('src/infrastructure/sync-prototype/SyncPrototypeDatabase.ts');
-  if (!runtime.includes('SYNC_PROTOTYPE_DATABASE_VERSION = 8')) {
-    fail('le runtime cloud v8 attendu est absent.');
+  if (!runtime.includes('SYNC_PROTOTYPE_DATABASE_VERSION = 9')) {
+    fail('le runtime cloud v9 attendu est absent.');
   }
   if (!runtime.includes('sportpilot-sync-runtime-0.20.0-v${SYNC_PROTOTYPE_DATABASE_VERSION}')) {
     fail('le nom du runtime cloud validé a changé sans migration déclarée.');

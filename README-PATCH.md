@@ -1,78 +1,52 @@
-# SportPilot 0.21.1 — stabilité du journal nutritionnel
+# SportPilot 0.21.1 — développement 0.22.0 E1
 
-Branche de travail : `fix/nutrition-journal-sync-loop-0.21.1`
+Branche de travail : `feature/full-account-continuity-0.22.0`
 
 ## Objet
 
-Cette version corrige une divergence artificielle du journal nutritionnel : l’ouverture de l’accueil recalculait l’objectif quotidien puis renouvelait systématiquement son horodatage, même lorsque les calories et macronutriments étaient inchangés. Le journal redevenait alors différent du cloud sans modification utilisateur.
+Le lot E1 synchronise le profil utilisateur et les réglages fonctionnels entre les appareils d’un même compte. La version affichée reste `0.21.1` jusqu’à la publication finale 0.22.0 en E4.
 
-Le correctif rend l’enregistrement de l’objectif quotidien idempotent. Les fonctionnalités de continuité des données livrées en 0.21.0 restent inchangées.
+## Données partageables
 
-## Correctif 0.21.1 — journal nutritionnel
+- profil et objectifs généraux ;
+- paramètres de calcul énergétique et nutritionnel ;
+- coefficients d’activité et limites de calibration ;
+- préférences du tableau de bord ;
+- modèles d’endurance.
 
-- comparaison du contenu métier avant toute mise à jour d’un objectif quotidien existant ;
-- conservation de `updatedAt` lorsque le calcul est strictement identique ;
-- mise à jour normale lorsque les calories, macros, poids de calcul ou dépenses changent réellement ;
-- test de convergence après recalcul identique du tableau de bord ;
-- aucun changement du format cloud, de la base métier ou des sauvegardes.
+## Données locales
 
-## D1 — Gestion du compte
+- thème et stockage persistant ;
+- minuteur de repos, son et vibration ;
+- configuration locale de sauvegarde ;
+- rappels et routines, traités au lot E2 ;
+- récompenses, thèmes débloqués et missions, traités au lot E2.
 
-- accès centralisé depuis **Compte et appareils** ;
-- affichage du compte connecté, de l’état cloud et de l’espace local actif ;
-- déconnexion et changement de compte sans suppression implicite ;
-- désassociation de l’appareil distincte de la suppression locale ;
-- configuration publique de production validée et impossible à désactiver par une ancienne variable de déploiement.
+## Garanties
 
-## D2 — Import des données invitées
-
-- analyse obligatoire avant toute modification ;
-- résumé des ajouts, mises à jour et retraits par domaine ;
-- fusion atomique dans l’espace du compte ;
-- conservation de la donnée la plus récente ;
-- déduplication par identifiant fonctionnel, date, créneau ou code-barres selon le domaine ;
-- remappage des références nutritionnelles ;
-- espace invité conservé intégralement ;
-- import idempotent après une première fusion.
-
-## D3 — Restauration après nouvelle installation
-
-- détection des données cloud sur une installation locale vide ;
-- choix explicite entre restauration et espace vide ;
-- analyse cloud en lecture seule ;
-- préparation dans une base Dexie temporaire ;
-- application locale atomique avec vérification des empreintes source et cible ;
-- restauration différée depuis **Compte et appareils** ;
-- blocage protecteur si l’espace local contient déjà des données métier ;
-- aucune suppression ni remise à zéro du cloud.
+- un espace neuf avec réglages par défaut n’écrase pas le cloud ;
+- une modification limitée aux rappels ne renouvelle pas l’horodatage partageable ;
+- le téléchargement conserve les réglages propres à l’appareil ;
+- la restauration initiale inclut le profil et les réglages ;
+- les comptes restent isolés par propriétaire cloud.
 
 ## Compatibilité
 
-- application : `0.21.1` ;
-- base Dexie Cloud : v8 ;
-- runtime local cloud : `sportpilot-sync-runtime-0.20.0-v8` ;
+- application affichée : `0.21.1` pendant le développement ;
+- base Dexie Cloud : v9 ;
+- runtime local cloud : `sportpilot-sync-runtime-0.20.0-v9` ;
 - schéma métier Dexie : v8 ;
 - sauvegarde JSON : v7 ;
 - registre local des espaces : v1.
 
-Aucune migration de données n’est nécessaire et le runtime cloud n’est pas renommé.
+Le changement de runtime v8 vers v9 peut demander une nouvelle authentification OTP. Aucune migration de la base métier ou de la sauvegarde n’est nécessaire.
 
 ## Contrôles
 
 ```powershell
 npm ci
-npm run release:verify
-npm run test:e2e
-npm run audit:data-continuity-release
+npm run check
+npm run audit:account-preferences-sync
 ```
 
-## Validation manuelle
-
-1. gérer le compte et changer de compte sans mélange de données ;
-2. importer l’espace invité puis confirmer une seconde analyse à zéro ;
-3. restaurer un compte dans un profil navigateur vierge ;
-4. commencer avec un espace vide puis restaurer ultérieurement ;
-5. vérifier le blocage d’une restauration globale dans un espace déjà utilisé ;
-6. confirmer `0 différence` dans chaque domaine synchronisé ;
-7. vérifier l’accès hors ligne après restauration ;
-8. répéter la suppression/réinstallation de la PWA sur iPhone 15 sous iOS 26.
+La publication et le changement de version applicative restent réservés au lot E4.

@@ -14,12 +14,23 @@
 
 ## Versions et compatibilité
 
-- [ ] La base Dexie Cloud reste en v8.
-- [ ] Le runtime reste `sportpilot-sync-runtime-0.20.0-v8`.
+- [ ] La base Dexie Cloud de la branche E1 est en v9.
+- [ ] Le runtime est `sportpilot-sync-runtime-0.20.0-v9`.
 - [ ] Le schéma métier reste en Dexie v8.
 - [ ] La sauvegarde reste en JSON v7.
 - [ ] Le registre des espaces reste en v1.
-- [ ] Aucune migration de données ni nouvelle authentification OTP n’est requise.
+- [ ] Aucune migration de la base métier ou de la sauvegarde n’est requise.
+- [ ] La possible nouvelle authentification OTP liée au runtime v9 est testée.
+
+## E1 — profil et réglages partageables
+
+- [ ] Le profil et les réglages partageables convergent à zéro au second passage.
+- [ ] Un appareil vierge télécharge le profil cloud au lieu d’envoyer ses valeurs par défaut.
+- [ ] Le thème, le stockage, le minuteur et les métadonnées de sauvegarde restent locaux.
+- [ ] Une modification limitée aux rappels ne crée aucune différence E1.
+- [ ] La restauration initiale inclut le profil et les réglages.
+- [ ] Un compte ne lit jamais l’agrégat d’un autre propriétaire.
+- [ ] `npm run audit:account-preferences-sync` réussit.
 
 ## Correctif 0.21.1 — journal nutritionnel
 

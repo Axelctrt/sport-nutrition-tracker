@@ -76,6 +76,12 @@ import {
   type RealNutritionTrackingSyncResult,
 } from '@/infrastructure/sync-prototype/realNutritionTrackingSyncService';
 import { reloadUserStateRuntime } from '@/infrastructure/user-state/userStateRuntime';
+import {
+  previewRealAccountPreferencesSync,
+  synchronizeRealAccountPreferences,
+  type RealAccountPreferencesSyncPreview,
+  type RealAccountPreferencesSyncResult,
+} from '@/infrastructure/sync-prototype/realAccountPreferencesSyncService';
 
 const DEFAULT_INITIALIZATION_TIMEOUT_MS = 15_000;
 const BLOCKED_DATABASE_MESSAGE =
@@ -224,6 +230,20 @@ export interface SyncPrototypeRealNutritionLibrarySnapshot {
   readonly errorMessage?: string;
 }
 
+export interface SyncPrototypeRealAccountPreferencesSnapshot {
+  readonly enabled: boolean;
+  readonly status:
+    | 'disabled'
+    | 'idle'
+    | 'analyzing'
+    | 'ready'
+    | 'syncing'
+    | 'error';
+  readonly preview?: RealAccountPreferencesSyncPreview;
+  readonly lastResult?: RealAccountPreferencesSyncResult;
+  readonly errorMessage?: string;
+}
+
 export interface SyncPrototypeRealNutritionTrackingSnapshot {
   readonly enabled: boolean;
   readonly status:
@@ -249,6 +269,7 @@ export interface SyncPrototypeSnapshot {
   readonly realNutritionJournal?: SyncPrototypeRealNutritionJournalSnapshot;
   readonly realNutritionLibrary?: SyncPrototypeRealNutritionLibrarySnapshot;
   readonly realNutritionTracking?: SyncPrototypeRealNutritionTrackingSnapshot;
+  readonly realAccountPreferences?: SyncPrototypeRealAccountPreferencesSnapshot;
   readonly diagnostics: SyncPrototypeDiagnosticsSnapshot;
   readonly interaction?: SyncPrototypeInteractionSnapshot;
 }
@@ -282,6 +303,8 @@ export interface SyncPrototypeClient {
   syncRealNutritionLibrary?(): Promise<RealNutritionLibrarySyncResult>;
   analyzeRealNutritionTracking?(): Promise<RealNutritionTrackingSyncPreview>;
   syncRealNutritionTracking?(): Promise<RealNutritionTrackingSyncResult>;
+  analyzeRealAccountPreferences?(): Promise<RealAccountPreferencesSyncPreview>;
+  syncRealAccountPreferences?(): Promise<RealAccountPreferencesSyncResult>;
   saveWeight(draft: SyncPrototypeWeightDraft): Promise<WeightEntry>;
   deleteWeight(weightId: EntityId): Promise<void>;
 }
@@ -395,6 +418,7 @@ export interface SyncPrototypeClientOptions {
   readonly realNutritionJournalSyncEnabled?: boolean;
   readonly realNutritionLibrarySyncEnabled?: boolean;
   readonly realNutritionTrackingSyncEnabled?: boolean;
+  readonly realAccountPreferencesSyncEnabled?: boolean;
   readonly localDatabase?: AppDatabase;
   readonly initializationTimeoutMs?: number;
   readonly setTimer?: typeof globalThis.setTimeout;
@@ -415,6 +439,7 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
   private readonly realNutritionJournalSyncEnabled: boolean;
   private readonly realNutritionLibrarySyncEnabled: boolean;
   private readonly realNutritionTrackingSyncEnabled: boolean;
+  private readonly realAccountPreferencesSyncEnabled: boolean;
   private readonly localDatabase: AppDatabase;
   private readonly initializationTimeoutMs: number;
   private readonly setTimer: typeof globalThis.setTimeout;
@@ -437,6 +462,8 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
       options.realNutritionLibrarySyncEnabled === true;
     this.realNutritionTrackingSyncEnabled =
       options.realNutritionTrackingSyncEnabled === true;
+    this.realAccountPreferencesSyncEnabled =
+      options.realAccountPreferencesSyncEnabled === true;
     this.localDatabase = options.localDatabase ?? appDatabase;
     this.initializationTimeoutMs =
       options.initializationTimeoutMs ?? DEFAULT_INITIALIZATION_TIMEOUT_MS;
@@ -475,6 +502,9 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
         : {}),
       ...(this.realNutritionTrackingSyncEnabled
         ? { realNutritionTracking: { enabled: true, status: 'idle' as const } }
+        : {}),
+      ...(this.realAccountPreferencesSyncEnabled
+        ? { realAccountPreferences: { enabled: true, status: 'idle' as const } }
         : {}),
       diagnostics: createEmptySyncPrototypeDiagnostics(
         account.userId ?? account.email,
@@ -655,6 +685,9 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
         : {}),
       ...(this.realNutritionTrackingSyncEnabled
         ? { realNutritionTracking: { enabled: true, status: 'idle' as const } }
+        : {}),
+      ...(this.realAccountPreferencesSyncEnabled
+        ? { realAccountPreferences: { enabled: true, status: 'idle' as const } }
         : {}),
       diagnostics: createEmptySyncPrototypeDiagnostics(),
     };
@@ -1356,6 +1389,91 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
     }
   }
 
+  async analyzeRealAccountPreferences(): Promise<RealAccountPreferencesSyncPreview> {
+    await this.initialize();
+    this.assertRealAccountPreferencesSyncAvailable();
+    this.snapshot = {
+      ...this.snapshot,
+      realAccountPreferences: { enabled: true, status: 'analyzing' },
+    };
+    this.notify();
+
+    try {
+      await this.database.cloud.sync();
+      const preview = await previewRealAccountPreferencesSync(
+        this.localDatabase,
+        this.database,
+        this.database.cloud.currentUserId,
+      );
+      this.snapshot = {
+        ...this.snapshot,
+        realAccountPreferences: { enabled: true, status: 'ready', preview },
+      };
+      this.notify();
+      return preview;
+    } catch (error) {
+      const errorMessage = error instanceof Error
+        ? error.message
+        : 'L’analyse du profil et des réglages a échoué.';
+      this.snapshot = {
+        ...this.snapshot,
+        realAccountPreferences: { enabled: true, status: 'error', errorMessage },
+      };
+      this.notify();
+      throw error;
+    }
+  }
+
+  async syncRealAccountPreferences(): Promise<RealAccountPreferencesSyncResult> {
+    await this.initialize();
+    this.assertRealAccountPreferencesSyncAvailable();
+    this.snapshot = {
+      ...this.snapshot,
+      realAccountPreferences: {
+        ...(this.snapshot.realAccountPreferences ?? {}),
+        enabled: true,
+        status: 'syncing',
+      },
+    };
+    this.notify();
+
+    try {
+      await this.database.cloud.sync();
+      const result = await synchronizeRealAccountPreferences(
+        this.localDatabase,
+        this.database,
+        this.database.cloud.currentUserId,
+      );
+      await this.database.cloud.sync();
+      const preview = await previewRealAccountPreferencesSync(
+        this.localDatabase,
+        this.database,
+        this.database.cloud.currentUserId,
+      );
+      this.snapshot = {
+        ...this.snapshot,
+        realAccountPreferences: {
+          enabled: true,
+          status: 'ready',
+          preview,
+          lastResult: result,
+        },
+      };
+      this.notify();
+      return result;
+    } catch (error) {
+      const errorMessage = error instanceof Error
+        ? error.message
+        : 'La synchronisation du profil et des réglages a échoué.';
+      this.snapshot = {
+        ...this.snapshot,
+        realAccountPreferences: { enabled: true, status: 'error', errorMessage },
+      };
+      this.notify();
+      throw error;
+    }
+  }
+
   async saveWeight(
     rawDraft: SyncPrototypeWeightDraft,
   ): Promise<WeightEntry> {
@@ -1466,6 +1584,15 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
     await this.refreshWeights();
   }
 
+
+  private assertRealAccountPreferencesSyncAvailable(): void {
+    if (!this.realAccountPreferencesSyncEnabled) {
+      throw new Error(
+        'La synchronisation du profil et des réglages est désactivée par configuration.',
+      );
+    }
+    this.assertLoggedIn();
+  }
 
   private assertRealNutritionTrackingSyncAvailable(): void {
     if (!this.realNutritionTrackingSyncEnabled) {
@@ -1666,6 +1793,8 @@ export function getSyncPrototypeClient(): SyncPrototypeClient {
       config.realNutritionLibrarySyncEnabled,
     realNutritionTrackingSyncEnabled:
       config.realNutritionTrackingSyncEnabled,
+    realAccountPreferencesSyncEnabled:
+      config.realAccountPreferencesSyncEnabled,
     localDatabase: appDatabase,
   });
   return singletonClient;

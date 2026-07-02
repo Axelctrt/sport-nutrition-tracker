@@ -10,6 +10,7 @@ import {
   USER_SETTINGS_ID,
 } from '@/domain/defaults/identifiers';
 import type { EntityChanges } from '@/domain/models/common';
+import { currentIsoDateTime } from '@/shared/utils/entities';
 import type {
   AppSettings,
   DeviceSettings,
@@ -94,13 +95,23 @@ export class DexieSettingsRepository implements SettingsRepository {
           }
         }
 
+        const userChangeKeys = Object.keys(userChanges);
+        const hasSyncableUserChanges = userChangeKeys.some(
+          (key) => key !== 'routineReminderPreferences',
+        );
+        const timestamp = currentIsoDateTime();
+        if (hasSyncableUserChanges) {
+          userChanges.syncableUpdatedAt = timestamp;
+        }
+
         const [updatedUser, updatedDevice] = await Promise.all([
-          Object.keys(userChanges).length === 0
+          userChangeKeys.length === 0
             ? user
             : updateStoredEntity(
                 this.database.userSettings,
                 user,
                 userChanges as EntityChanges<UserSettings>,
+                timestamp,
               ),
           Object.keys(deviceChanges).length === 0
             ? device
@@ -108,6 +119,7 @@ export class DexieSettingsRepository implements SettingsRepository {
                 this.database.deviceSettings,
                 device,
                 deviceChanges as EntityChanges<DeviceSettings>,
+                timestamp,
               ),
         ]);
 

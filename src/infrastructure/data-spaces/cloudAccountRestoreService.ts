@@ -3,6 +3,7 @@ import Dexie from 'dexie';
 import type { DataSpaceDescriptor } from '@/domain/data-spaces/dataSpace';
 import type { DeletionRecord } from '@/domain/models/deletion';
 import type { FavoriteMeal, FoodProduct } from '@/domain/models/food';
+import type { UserSettings } from '@/domain/models/settings';
 import type { WeightEntry } from '@/domain/models/weight';
 import type { Activity } from '@/domain/models/activity';
 import type { Goal } from '@/domain/goals/goalState';
@@ -56,6 +57,12 @@ import {
 import {
   synchronizeRealWeights,
 } from '@/infrastructure/sync-prototype/realWeightSyncService';
+import {
+  createSyncedUserSettingsSnapshot,
+  isDefaultSyncedUserSettings,
+  synchronizeRealAccountPreferences,
+  type AccountPreferencesAggregate,
+} from '@/infrastructure/sync-prototype/realAccountPreferencesSyncService';
 
 export type CloudAccountRestoreCategory =
   | 'weights'
@@ -64,7 +71,8 @@ export type CloudAccountRestoreCategory =
   | 'strength'
   | 'nutritionLibrary'
   | 'nutritionJournal'
-  | 'nutritionTracking';
+  | 'nutritionTracking'
+  | 'accountPreferences';
 
 export interface CloudAccountRestoreCategoryPreview {
   readonly key: CloudAccountRestoreCategory;
@@ -119,6 +127,7 @@ export interface CloudAccountRestoreSourceSnapshot {
   readonly favoriteMeals: readonly FavoriteMeal[];
   readonly nutritionLibraryMarkers: readonly DeletionRecord[];
   readonly nutritionTracking: readonly NutritionTrackingAggregate[];
+  readonly accountPreferences: readonly AccountPreferencesAggregate[];
 }
 
 export interface CloudAccountRestoreRuntime {
@@ -136,6 +145,8 @@ export interface CloudAccountRestoreServiceOptions {
 
 type RestoreTableName = Extract<
   DatabaseUserTableName,
+  | 'userProfile'
+  | 'userSettings'
   | 'weights'
   | 'activities'
   | 'goals'
@@ -161,6 +172,8 @@ type RestoreTableName = Extract<
 type RestoreSnapshot = Record<RestoreTableName, unknown[]>;
 
 const RESTORE_TABLE_NAMES: readonly RestoreTableName[] = [
+  'userProfile',
+  'userSettings',
   'weights',
   'activities',
   'goals',
@@ -264,7 +277,16 @@ function meaningfulTargetSnapshot(snapshot: RestoreSnapshot): Record<string, unk
   );
   const syncedMarkers = snapshot.deletionRecords.filter(isSyncedMarker);
 
+  const meaningfulUserSettings = snapshot.userSettings.filter((value) => {
+    if (!value || typeof value !== 'object') return false;
+    return !isDefaultSyncedUserSettings(
+      createSyncedUserSettingsSnapshot(value as UserSettings),
+    );
+  });
+
   return {
+    userProfile: snapshot.userProfile,
+    userSettings: meaningfulUserSettings,
     weights: snapshot.weights,
     activities: snapshot.activities,
     goals: snapshot.goals,
@@ -353,6 +375,14 @@ function buildPreview(
   source: CloudAccountRestoreSourceSnapshot,
   target: Awaited<ReturnType<typeof resolveTargetState>>,
 ): CloudAccountRestorePreview {
+  const accountPreferencesCount = source.accountPreferences.reduce(
+    (total, aggregate) => (
+      total
+      + (aggregate.profile ? 1 : 0)
+      + (isDefaultSyncedUserSettings(aggregate.settings) ? 0 : 1)
+    ),
+    0,
+  );
   const strengthCount =
     source.strengthExercises.length +
     source.workoutTemplates.length +
@@ -372,6 +402,12 @@ function buildPreview(
     0,
   );
   const categories: CloudAccountRestoreCategoryPreview[] = [
+    {
+      key: 'accountPreferences',
+      label: 'Profil et réglages',
+      description: 'Profil, objectifs généraux, calculs, tableau de bord et modèles d’endurance.',
+      recordCount: accountPreferencesCount,
+    },
     {
       key: 'weights',
       label: 'Pesées',
@@ -480,6 +516,7 @@ export async function readCloudAccountRestoreSourceSnapshot(
     favoriteMeals,
     nutritionLibraryMarkers,
     nutritionTracking,
+    accountPreferences,
   ] = await Promise.all([
     database.realWeights.toArray(),
     database.realWeightDeletionRecords.toArray(),
@@ -498,6 +535,7 @@ export async function readCloudAccountRestoreSourceSnapshot(
     database.realFavoriteMeals.toArray(),
     database.realNutritionLibraryDeletionRecords.toArray(),
     database.realNutritionTracking.toArray(),
+    database.realAccountPreferences.toArray(),
   ]);
 
   return {
@@ -524,6 +562,7 @@ export async function readCloudAccountRestoreSourceSnapshot(
       currentUserId,
     ),
     nutritionTracking: normalizeOwnedRows(nutritionTracking, currentUserId),
+    accountPreferences: normalizeOwnedRows(accountPreferences, currentUserId),
   };
 }
 
@@ -533,6 +572,12 @@ export async function restoreCloudAccountDataToDatabase(
   currentUserId: string,
 ): Promise<void> {
   const options = { writeCloud: false } as const;
+  await synchronizeRealAccountPreferences(
+    localDatabase,
+    cloudDatabase,
+    currentUserId,
+    options,
+  );
   await synchronizeRealNutritionLibrary(
     localDatabase,
     cloudDatabase,

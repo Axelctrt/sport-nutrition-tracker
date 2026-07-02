@@ -36,7 +36,7 @@ for (const path of [
 
 const cloudDatabase = read('src/infrastructure/sync-prototype/SyncPrototypeDatabase.ts');
 for (const expected of [
-  'SYNC_PROTOTYPE_DATABASE_VERSION = 8',
+  'SYNC_PROTOTYPE_DATABASE_VERSION = 9',
   'sportpilot-sync-runtime-0.20.0-v${SYNC_PROTOTYPE_DATABASE_VERSION}',
   'disableEagerSync: true',
   'realNutritionJournalDays',
@@ -221,6 +221,6 @@ if (failures.length > 0) {
   process.exitCode = 1;
 } else {
   console.log(
-    'Audit final de synchronisation nutritionnelle réussi : journal atomique, bibliothèque cohérente, bilans et ajustements synchronisés, recalcul C1, isolation des comptes et runtime cloud v8 validés.',
+    'Audit final de synchronisation nutritionnelle réussi : journal atomique, bibliothèque cohérente, bilans et ajustements synchronisés, recalcul C1, isolation des comptes et runtime cloud v9 validés.',
   );
 }

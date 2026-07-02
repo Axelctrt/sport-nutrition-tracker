@@ -77,7 +77,7 @@ export const DEFAULT_ENDURANCE_TEMPLATES: EnduranceTemplate[] = [
 ];
 
 export function createDefaultUserSettings(): UserSettings {
-  return createEntity(
+  const settings = createEntity<UserSettings>(
     {
       includedBaseSteps: 3_000,
       walkingKcalPerKgPerKm: 0.5,
@@ -99,6 +99,11 @@ export function createDefaultUserSettings(): UserSettings {
     },
     USER_SETTINGS_ID,
   );
+
+  return {
+    ...settings,
+    syncableUpdatedAt: settings.updatedAt,
+  };
 }
 
 export function createDefaultDeviceSettings(
@@ -124,6 +129,7 @@ export function normalizeUserSettings(
 ): UserSettings {
   return {
     ...settings,
+    syncableUpdatedAt: settings.syncableUpdatedAt ?? settings.updatedAt,
     enduranceTemplates:
       settings.enduranceTemplates ??
       DEFAULT_ENDURANCE_TEMPLATES.map((template) => ({ ...template })),

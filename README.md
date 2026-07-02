@@ -2,15 +2,15 @@
 
 ## Continuité des données et gestion du compte
 
-SportPilot synchronise les pesées, activités, objectifs, données de musculation, journées nutritionnelles, produits utiles, recettes, repas favoris, bilans hebdomadaires et ajustements caloriques du compte connecté.
+SportPilot synchronise les pesées, activités, objectifs, données de musculation, journées nutritionnelles, produits utiles, recettes, repas favoris, bilans hebdomadaires, ajustements caloriques, profil et réglages partageables du compte connecté.
 
 La version 0.21.1 conserve et sécurise le cycle complet des données : gestion du compte en production, import explicite de l’espace invité dans un compte et restauration guidée depuis le cloud après une nouvelle installation.
 
 Les journées, recettes, modèles de musculation, séances et bilans restent traités comme des agrégats cohérents. Les créations, modifications, suppressions et restaurations convergent sans doublons, avec filtrage strict par propriétaire cloud et résolution déterministe des conflits.
 
-SportPilot 0.21.1 utilise la base Dexie Cloud v8 et le runtime `sportpilot-sync-runtime-0.20.0-v8`. La base métier reste en Dexie v8, la sauvegarde en JSON v7 et le registre local des espaces en v1. Aucune migration de données ni nouvelle authentification OTP liée au runtime n’est requise.
+La branche de développement 0.22.0 E1 utilise la base Dexie Cloud v9 et le runtime `sportpilot-sync-runtime-0.20.0-v9`. La base métier reste en Dexie v8, la sauvegarde en JSON v7 et le registre local des espaces en v1. Le nouveau runtime peut demander une authentification OTP lors de sa première ouverture sur un appareil.
 
-Les récompenses, thèmes, missions et rappels restent locaux. Les données invitées sont conservées après import, et la restauration cloud couvre uniquement les domaines déjà synchronisés.
+Les réglages propres à l’appareil, les récompenses, thèmes, missions et rappels restent locaux. Le profil, les paramètres de calcul, le tableau de bord et les modèles d’endurance sont inclus dans E1. Les données invitées sont conservées après import.
 
 ## Correctif 0.21.1 — stabilité du journal nutritionnel
 

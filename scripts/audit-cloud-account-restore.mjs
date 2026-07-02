@@ -107,6 +107,7 @@ if (failures.length === 0) {
     'realNutritionLibrarySyncService.ts',
     'realNutritionJournalSyncService.ts',
     'realNutritionTrackingSyncService.ts',
+    'realAccountPreferencesSyncService.ts',
   ];
   for (const file of syncServices) {
     const source = read(`src/infrastructure/sync-prototype/${file}`);

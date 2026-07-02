@@ -12,7 +12,7 @@ import {
   Sparkles,
   UserRound,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { routePaths } from '@/app/routePaths';
@@ -31,6 +31,7 @@ import { NutritionJournalSyncSettingsPanel } from '@/features/settings/component
 import { NutritionLibrarySyncSettingsPanel } from '@/features/settings/components/NutritionLibrarySyncSettingsPanel';
 import { NutritionTrackingSyncSettingsPanel } from '@/features/settings/components/NutritionTrackingSyncSettingsPanel';
 import { WeightSyncSettingsPanel } from '@/features/settings/components/WeightSyncSettingsPanel';
+import { AccountPreferencesSyncSettingsPanel } from '@/features/settings/components/AccountPreferencesSyncSettingsPanel';
 import {
   SettingsSectionDirectory,
   type SettingsDirectoryItem,
@@ -42,6 +43,7 @@ import {
 } from '@/features/settings/utils/settingsForm';
 import { activeDataSpace } from '@/infrastructure/database/database';
 import { repositories } from '@/infrastructure/repositories/repositories';
+import { ACCOUNT_PREFERENCES_CHANGED_EVENT } from '@/infrastructure/sync-prototype/accountPreferencesSyncEvents';
 import {
   getPersistentStorageStatus,
   requestPersistentStorage,
@@ -127,7 +129,7 @@ const settingsSections: readonly SettingsDirectoryItem[] = [
     id: 'settings-sync',
     label: 'Synchronisation des données',
     description: 'Données sportives et nutritionnelles entre appareils.',
-    keywords: ['cloud', 'synchronisation', 'poids', 'activites', 'objectifs', 'musculation', 'nutrition', 'recettes', 'bilans', 'appareils'],
+    keywords: ['cloud', 'synchronisation', 'profil', 'reglages', 'tableau de bord', 'poids', 'activites', 'objectifs', 'musculation', 'nutrition', 'recettes', 'bilans', 'appareils'],
     icon: Cloud,
   },
   {
@@ -153,38 +155,37 @@ export function AdvancedSettingsPage() {
   >();
   const [loadError, setLoadError] = useState<string>();
 
-  useEffect(() => {
-    let isMounted = true;
-
-    const load = async () => {
-      try {
-        const [storedSettings, currentStorageStatus] =
-          await Promise.all([
-            repositories.settings.get(),
-            getPersistentStorageStatus(),
-          ]);
-
-        if (isMounted) {
-          setSettings(storedSettings);
-          setStorageStatus(currentStorageStatus);
-        }
-      } catch (error) {
-        if (isMounted) {
-          setLoadError(
-            error instanceof Error
-              ? error.message
-              : 'Les paramètres n’ont pas pu être chargés.',
-          );
-        }
-      }
-    };
-
-    void load();
-
-    return () => {
-      isMounted = false;
-    };
+  const loadSettings = useCallback(async () => {
+    try {
+      const [storedSettings, currentStorageStatus] = await Promise.all([
+        repositories.settings.get(),
+        getPersistentStorageStatus(),
+      ]);
+      setSettings(storedSettings);
+      setStorageStatus(currentStorageStatus);
+      setLoadError(undefined);
+    } catch (error) {
+      setLoadError(
+        error instanceof Error
+          ? error.message
+          : 'Les paramètres n’ont pas pu être chargés.',
+      );
+    }
   }, []);
+
+  useEffect(() => {
+    void loadSettings();
+  }, [loadSettings]);
+
+  useEffect(() => {
+    const refreshFromSync = () => {
+      void loadSettings();
+    };
+    window.addEventListener(ACCOUNT_PREFERENCES_CHANGED_EVENT, refreshFromSync);
+    return () => {
+      window.removeEventListener(ACCOUNT_PREFERENCES_CHANGED_EVENT, refreshFromSync);
+    };
+  }, [loadSettings]);
 
   const handleSubmit = async (
     values: SettingsFormValues,
@@ -427,6 +428,7 @@ export function AdvancedSettingsPage() {
           className="scroll-mt-24"
         >
           <div className="space-y-5">
+            <AccountPreferencesSyncSettingsPanel />
             <WeightSyncSettingsPanel />
             <ActivitySyncSettingsPanel />
             <GoalSyncSettingsPanel />
