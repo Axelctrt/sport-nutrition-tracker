@@ -51,3 +51,12 @@ npm run release:verify
 - La configuration publique validée de production ne peut plus être désactivée par une ancienne variable de déploiement.
 - L’écran distingue le compte connecté, l’état du cloud, l’espace local actif et les actions de déconnexion/désassociation/suppression locale.
 - La déconnexion et le changement de compte ne suppriment aucune donnée locale ou cloud.
+
+## Phase 0.21.0 D2 — Import sécurisé de l’espace invité
+
+- Une analyse préalable compare l’espace invité et l’espace du compte avant toute écriture.
+- La fusion conserve la donnée la plus récente pour chaque identifiant fonctionnel.
+- Les collisions de dates, repas, bilans et produits Open Food Facts sont dédupliquées.
+- Les références vers les repas, produits et bilans sont remappées automatiquement.
+- L’écriture dans l’espace du compte est atomique et l’espace invité reste intact.
+- L’import est proposé à la connexion et reste disponible ensuite dans Compte et appareils.

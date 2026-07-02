@@ -82,3 +82,17 @@
 - [ ] La déconnexion conserve les données locales et cloud.
 - [ ] Le changement de compte revient par l’écran de connexion sans mélange entre espaces.
 - [ ] `npm run audit:account-management` réussit.
+
+## Phase 0.21.0 D2
+
+- [ ] Une analyse est obligatoire avant l’import.
+- [ ] Le nombre d’ajouts, mises à jour et doublons est affiché par domaine.
+- [ ] Un compte existant reçoit les données invitées sans écrasement arbitraire.
+- [ ] La donnée la plus récente gagne en cas de collision fonctionnelle.
+- [ ] Les produits Open Food Facts identiques sont dédupliqués par code-barres.
+- [ ] Les entrées alimentaires restent rattachées au bon repas et au bon produit.
+- [ ] Les ajustements caloriques restent rattachés à leur bilan hebdomadaire.
+- [ ] Une modification après l’analyse force une nouvelle analyse.
+- [ ] L’espace invité reste intégralement disponible après déconnexion.
+- [ ] Une seconde importation ne crée aucun doublon.
+- [ ] `npm run audit:guest-data-import` réussit.

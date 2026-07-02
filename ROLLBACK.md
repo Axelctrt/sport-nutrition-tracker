@@ -30,3 +30,7 @@ Un redéploiement temporaire de 0.19.0 ne sait pas synchroniser les données nut
 ## Git
 
 Ne jamais réécrire le tag `v0.20.1`. Conserver le tag publié et livrer un correctif ultérieur avec un nouveau tag annoté.
+
+## Retour arrière D2
+
+D2 ne modifie aucun schéma. Un retour au commit D1 désactive uniquement l’interface d’import. Les données déjà fusionnées restent dans l’espace du compte et l’espace invité demeure intact.

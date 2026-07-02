@@ -8,7 +8,7 @@ Les activités, objectifs, musculation et domaines nutritionnels sont synchronis
 
 ## Espace invité
 
-Les données créées dans l’espace invité restent conservées dans cet espace après connexion à un compte. Elles réapparaissent après déconnexion, mais une importation sécurisée dans un espace de compte déjà existant n’est pas encore disponible.
+Les données créées dans l’espace invité restent conservées après connexion. Elles peuvent désormais être analysées puis fusionnées dans un compte existant sans effacer la source. Après l’import local, les synchronisations cloud restent déclenchées par domaine jusqu’à la phase D3.
 
 ## Données restant locales
 
@@ -38,8 +38,8 @@ Open Food Facts et Dexie Cloud dépendent du réseau et de leur disponibilité. 
 
 SportPilot 0.20.1 utilise la base cloud v8 et le runtime `sportpilot-sync-runtime-0.20.0-v8`. La base métier reste en Dexie v8, la sauvegarde en JSON v7 et le registre local des espaces en v1.
 
-## 0.21.0 D1
+## 0.21.0 D1–D2
 
-- L’import d’un espace invité dans un compte existant sera traité en D2.
+- La gestion du compte et l’import sécurisé de l’espace invité sont disponibles.
 - La restauration guidée depuis le cloud après une nouvelle installation sera traitée en D3.
 - La liste des appareils distants dépend encore de métadonnées non exposées par le service cloud actuel.

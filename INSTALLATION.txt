@@ -54,3 +54,10 @@ Sauvegarde JSON : version 7.
 Registre local des espaces : version 1.
 
 Aucune migration de la base métier principale n’est requise pour 0.20.1.
+
+
+IMPORT DES DONNEES INVITEES (0.21.0 D2)
+-----------------------------------------
+Après connexion, ouvrir Compte et appareils puis choisir Analyser les données invitées.
+Vérifier les compteurs, confirmer l’import, puis synchroniser les domaines cloud nécessaires.
+L’espace invité n’est jamais supprimé par cette opération.

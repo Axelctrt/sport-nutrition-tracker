@@ -83,7 +83,7 @@ if (/candidate\.email|space\.email|accountEmail/.test(registry)) {
 const gate = read('src/app/data-spaces/DataSpaceAccountGate.tsx');
 for (const marker of [
   "currentSpace.accountFingerprint === accountFingerprint",
-  "status: 'choice'",
+  'status: "choice"',
   'activateGuestDataSpace(storage)',
 ]) {
   if (!gate.includes(marker)) {

@@ -25,6 +25,7 @@ for (const panel of panels) {
 }
 
 const page = read('src/features/account-devices/pages/AccountDevicesPage.tsx');
+const normalizedPage = page.replace(/\s+/g, ' ');
 for (const marker of [
   'Compte de synchronisation',
   'Service cloud',
@@ -33,7 +34,7 @@ for (const marker of [
   'Déconnecter le compte',
   'Les données locales restent conservées',
 ]) {
-  if (!page.includes(marker)) failures.push(`Compte et appareils : élément manquant « ${marker} ».`);
+  if (!normalizedPage.includes(marker)) failures.push(`Compte et appareils : élément manquant « ${marker} ».`);
 }
 
 if (failures.length) {
