@@ -150,6 +150,34 @@ describe('repositories Dexie', () => {
     ).not.toHaveProperty('includedBaseSteps');
   });
 
+  it('ne renouvelle pas l’horodatage partageable pour un changement limité aux rappels', async () => {
+    const repository = new DexieSettingsRepository(database);
+    const initial = createDefaultUserSettings();
+    await database.userSettings.put(initial);
+    await database.deviceSettings.put(createDefaultDeviceSettings('device-local'));
+
+    initial.createdAt = '2026-07-01T08:00:00.000Z';
+    initial.updatedAt = '2026-07-01T08:00:00.000Z';
+    initial.syncableUpdatedAt = '2026-07-01T08:00:00.000Z';
+    initial.routineReminderUpdatedAt = '2026-07-01T08:00:00.000Z';
+    await database.userSettings.put(initial);
+
+    await repository.update({
+      routineReminderPreferences: {
+        ...initial.routineReminderPreferences!,
+        snoozeMinutes: 120,
+      },
+    });
+
+    const stored = await database.userSettings.get(USER_SETTINGS_ID);
+    expect(stored?.updatedAt).not.toBe(initial.updatedAt);
+    expect(stored?.syncableUpdatedAt).toBe(initial.syncableUpdatedAt);
+    expect(stored?.routineReminderUpdatedAt).not.toBe(
+      initial.routineReminderUpdatedAt,
+    );
+    expect(stored?.routineReminderPreferences?.snoozeMinutes).toBe(120);
+  });
+
   it('enregistre et retrouve les activités d’une journée', async () => {
     const repository = new DexieActivityRepository(database);
 

@@ -20,6 +20,8 @@ describe('configuration du prototype Dexie Cloud', () => {
       databaseUrl: 'https://zhnyk8met.dexie.cloud',
       realWeightSyncEnabled: true,
       realNutritionJournalSyncEnabled: true,
+      realAccountPreferencesSyncEnabled: true,
+      realRewardsRoutinesSyncEnabled: true,
       diagnosticsEnabled: false,
     });
   });
@@ -60,6 +62,8 @@ describe('configuration du prototype Dexie Cloud', () => {
       realNutritionJournalSyncEnabled: false,
       realNutritionLibrarySyncEnabled: false,
       realNutritionTrackingSyncEnabled: false,
+      realAccountPreferencesSyncEnabled: false,
+      realRewardsRoutinesSyncEnabled: false,
       diagnosticsEnabled: false,
     });
   });
@@ -280,6 +284,55 @@ describe('configuration du prototype Dexie Cloud', () => {
         VITE_ENABLE_REAL_ACTIVITY_SYNC: 'yes',
       }),
     ).toThrow('VITE_ENABLE_REAL_ACTIVITY_SYNC');
+  });
+
+
+  it('active séparément la synchronisation du profil et des réglages', () => {
+    expect(
+      readSyncPrototypeConfig({
+        VITE_ENABLE_SYNC_PROTOTYPE: 'true',
+        VITE_DEXIE_CLOUD_DATABASE_URL:
+          'https://sportpilot-prototype.dexie.cloud',
+        VITE_ENABLE_REAL_ACCOUNT_PREFERENCES_SYNC: 'true',
+      }),
+    ).toMatchObject({
+      enabled: true,
+      realAccountPreferencesSyncEnabled: true,
+    });
+  });
+
+  it('refuse une valeur ambiguë pour E1', () => {
+    expect(() =>
+      readSyncPrototypeConfig({
+        VITE_ENABLE_SYNC_PROTOTYPE: 'true',
+        VITE_DEXIE_CLOUD_DATABASE_URL: 'https://test.dexie.cloud',
+        VITE_ENABLE_REAL_ACCOUNT_PREFERENCES_SYNC: 'yes',
+      }),
+    ).toThrow('VITE_ENABLE_REAL_ACCOUNT_PREFERENCES_SYNC');
+  });
+
+  it('active séparément la synchronisation des récompenses et rappels', () => {
+    expect(
+      readSyncPrototypeConfig({
+        VITE_ENABLE_SYNC_PROTOTYPE: 'true',
+        VITE_DEXIE_CLOUD_DATABASE_URL:
+          'https://sportpilot-prototype.dexie.cloud',
+        VITE_ENABLE_REAL_REWARDS_ROUTINES_SYNC: 'true',
+      }),
+    ).toMatchObject({
+      enabled: true,
+      realRewardsRoutinesSyncEnabled: true,
+    });
+  });
+
+  it('refuse une valeur ambiguë pour E2', () => {
+    expect(() =>
+      readSyncPrototypeConfig({
+        VITE_ENABLE_SYNC_PROTOTYPE: 'true',
+        VITE_DEXIE_CLOUD_DATABASE_URL: 'https://test.dexie.cloud',
+        VITE_ENABLE_REAL_REWARDS_ROUTINES_SYNC: 'yes',
+      }),
+    ).toThrow('VITE_ENABLE_REAL_REWARDS_ROUTINES_SYNC');
   });
 
   it('refuse une valeur ambiguë pour C4', () => {

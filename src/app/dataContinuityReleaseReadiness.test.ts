@@ -7,9 +7,9 @@ import {
 } from '@/infrastructure/sync-prototype/SyncPrototypeDatabase';
 import { syncPublicDeploymentConfig } from '@/infrastructure/sync-prototype/syncPublicDeploymentConfig';
 
-describe('publication de la continuité des données 0.21.1', () => {
+describe('publication de la continuité complète du compte 0.22.0', () => {
   it('publie la version stable attendue', () => {
-    expect(__APP_VERSION__).toBe('0.21.1');
+    expect(__APP_VERSION__).toBe('0.22.0');
     expect(__APP_VERSION__).toMatch(/^\d+\.\d+\.\d+$/);
   });
 
@@ -17,9 +17,9 @@ describe('publication de la continuité des données 0.21.1', () => {
     expect(databaseSchemaVersion).toBe(8);
     expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(7);
     expect(DATA_SPACE_REGISTRY_VERSION).toBe(1);
-    expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(8);
+    expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(10);
     expect(SYNC_PROTOTYPE_DATABASE_NAME).toBe(
-      'sportpilot-sync-runtime-0.20.0-v8',
+      'sportpilot-sync-runtime-0.20.0-v10',
     );
   });
 
@@ -33,6 +33,7 @@ describe('publication de la continuité des données 0.21.1', () => {
       VITE_ENABLE_REAL_NUTRITION_JOURNAL_SYNC: 'true',
       VITE_ENABLE_REAL_NUTRITION_LIBRARY_SYNC: 'true',
       VITE_ENABLE_REAL_NUTRITION_TRACKING_SYNC: 'true',
+      VITE_ENABLE_REAL_ACCOUNT_PREFERENCES_SYNC: 'true',
       VITE_ENABLE_SYNC_DIAGNOSTICS: 'false',
     });
   });

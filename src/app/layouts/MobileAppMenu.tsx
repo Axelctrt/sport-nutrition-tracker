@@ -168,6 +168,7 @@ export function MobileAppMenu() {
                             <NavLink
                               key={item.path}
                               to={item.path}
+                              end={item.end ?? false}
                               onClick={() => setIsOpen(false)}
                               className={({ isActive }) =>
                                 cn(

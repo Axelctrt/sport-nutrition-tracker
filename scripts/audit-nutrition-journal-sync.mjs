@@ -16,7 +16,7 @@ const read = (path) => {
 
 const database = read('src/infrastructure/sync-prototype/SyncPrototypeDatabase.ts');
 for (const expected of [
-  'SYNC_PROTOTYPE_DATABASE_VERSION = 8',
+  'SYNC_PROTOTYPE_DATABASE_VERSION = 10',
   'sportpilot-sync-runtime-0.20.0-v${SYNC_PROTOTYPE_DATABASE_VERSION}',
   'realNutritionJournalDays',
   'realNutritionJournalDeletionRecords',
@@ -102,8 +102,8 @@ if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*7/.test(backup)) {
 }
 
 const packageJson = JSON.parse(read('package.json'));
-if (!/^0\.(?:20|21)\.\d+$/.test(packageJson.version)) {
-  fail(`la version doit appartenir aux séries stables 0.20.x ou 0.21.x, reçue ${String(packageJson.version)}.`);
+if (!/^0\.(?:20|21|22)\.\d+$/.test(packageJson.version)) {
+  fail(`la version doit appartenir aux séries stables 0.20.x, 0.21.x ou 0.22.x, reçue ${String(packageJson.version)}.`);
 }
 const scripts = packageJson.scripts ?? {};
 if (scripts['audit:nutrition-journal-sync'] !== 'node scripts/audit-nutrition-journal-sync.mjs') {
@@ -121,6 +121,6 @@ if (failures.length > 0) {
   process.exitCode = 1;
 } else {
   console.log(
-    'Audit C1 réussi : journées nutritionnelles atomiques, suppressions repas/entrées, runtime cloud v8 et invariants métier validés.',
+    'Audit C1 réussi : journées nutritionnelles atomiques, suppressions repas/entrées, runtime cloud v10 et invariants métier validés.',
   );
 }

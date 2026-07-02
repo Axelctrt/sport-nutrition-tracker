@@ -32,6 +32,15 @@ describe('PageHeader', () => {
       'bg-brand-100',
     );
   });
+
+  it('ne garde pas Paramètres actif sur la page des rappels', () => {
+    renderHeader('/settings/reminders');
+
+    expect(screen.getByRole('link', { name: 'Ouvrir les paramètres' })).not.toHaveClass(
+      'bg-brand-100',
+    );
+  });
+
   it('propose un accès direct au profil dans l’en-tête mobile', () => {
     renderHeader();
 

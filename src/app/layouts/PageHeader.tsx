@@ -32,6 +32,7 @@ export function PageHeader() {
           <MobileAppMenu />
           <NavLink
             to={routePaths.settings}
+            end
             aria-label="Ouvrir les paramètres"
             title="Paramètres"
             className={({ isActive }) =>
@@ -47,6 +48,7 @@ export function PageHeader() {
           </NavLink>
           <NavLink
             to={routePaths.profile}
+            end
             aria-label="Modifier le profil"
             title="Profil"
             className={({ isActive }) =>

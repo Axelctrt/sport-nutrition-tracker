@@ -6,6 +6,7 @@ import {
   type AchievementSnapshot,
 } from "@/application/rewards/achievementService";
 import { Card } from "@/shared/ui/Card";
+import { REWARDS_ROUTINES_CHANGED_EVENT } from "@/infrastructure/sync-prototype/rewardsRoutinesSyncEvents";
 import { InlineNotice } from "@/shared/ui/InlineNotice";
 
 interface AchievementsPanelProps {
@@ -34,7 +35,10 @@ export function AchievementsPanel({
     const load = async () => {
       try {
         const nextSnapshot = await loadSnapshot();
-        if (isMounted) setSnapshot(nextSnapshot);
+        if (isMounted) {
+          setSnapshot(nextSnapshot);
+          setLoadError(undefined);
+        }
       } catch (error) {
         if (isMounted) {
           setLoadError(
@@ -45,10 +49,13 @@ export function AchievementsPanel({
         }
       }
     };
+    const reload = () => void load();
 
     void load();
+    window.addEventListener(REWARDS_ROUTINES_CHANGED_EVENT, reload);
     return () => {
       isMounted = false;
+      window.removeEventListener(REWARDS_ROUTINES_CHANGED_EVENT, reload);
     };
   }, [loadSnapshot]);
 

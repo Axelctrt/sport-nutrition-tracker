@@ -205,6 +205,7 @@ function migrateVersion5ToVersion6(input: BackupHeader): unknown {
     id: USER_SETTINGS_ID,
     createdAt: validTimestampOrEpoch(legacySettings.createdAt ?? exportedAt),
     updatedAt: validTimestampOrEpoch(legacySettings.updatedAt ?? exportedAt),
+    syncableUpdatedAt: validTimestampOrEpoch(legacySettings.updatedAt ?? exportedAt),
     includedBaseSteps: legacySettings.includedBaseSteps ?? defaults.includedBaseSteps,
     walkingKcalPerKgPerKm: legacySettings.walkingKcalPerKgPerKm ?? defaults.walkingKcalPerKgPerKm,
     runningKcalPerKgPerKm: legacySettings.runningKcalPerKgPerKm ?? defaults.runningKcalPerKgPerKm,

@@ -137,6 +137,29 @@ export function GoalsPage({
     void load();
   };
 
+  const handleEdit = (goal: Goal) => {
+    setEditingGoal(goal);
+
+    const editor = document.getElementById('goals-editor');
+    if (editor instanceof HTMLDetailsElement && !editor.open) {
+      editor.open = true;
+    }
+
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        editor?.scrollIntoView?.({
+          behavior: window.matchMedia?.(
+            '(prefers-reduced-motion: reduce)',
+          ).matches
+            ? 'auto'
+            : 'smooth',
+          block: 'center',
+          inline: 'nearest',
+        });
+      });
+    });
+  };
+
   if (!views && !error) {
     return <PageSkeleton variant="list" />;
   }
@@ -278,10 +301,7 @@ export function GoalsPage({
           <GoalCard
             key={view.goal.id}
             view={view}
-            onEdit={() => {
-              setEditingGoal(view.goal);
-              window.location.hash = 'goals-editor';
-            }}
+            onEdit={() => handleEdit(view.goal)}
             onStatusChange={(status) =>
               handleStatus(view.goal.id, status)
             }

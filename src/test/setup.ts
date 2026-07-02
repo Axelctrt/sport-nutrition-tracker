@@ -71,6 +71,7 @@ afterEach(() => {
   resetVisualThemeStateRuntimeForTests();
   resetWeeklyMissionHistoryRuntimeForTests();
   resetRoutineReminderCompletionRuntimeForTests();
+  window.localStorage.clear();
   cleanup();
   vi.clearAllTimers();
   vi.useRealTimers();

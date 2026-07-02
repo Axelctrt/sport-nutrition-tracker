@@ -64,10 +64,11 @@ export const primaryNavigation: NavigationItem[] = [
 
 export const secondaryNavigation: NavigationItem[] = [
   { label: 'Profil', path: routePaths.profile, icon: UserRound },
-  { label: 'Paramètres', path: routePaths.settings, icon: Settings },
+  { label: 'Paramètres', path: routePaths.settings, icon: Settings, end: true },
   { label: 'Rappels', path: routePaths.reminders, icon: Bell },
   { label: 'Récompenses', path: routePaths.rewards, icon: Trophy },
-  { label: 'Sauvegarde', path: routePaths.backup, icon: DatabaseBackup },
+  { label: 'Sauvegarde', path: routePaths.backup, icon: DatabaseBackup, end: true },
+
   { label: 'Corbeille', path: routePaths.trash, icon: Trash2 },
   { label: 'Calculs', path: routePaths.calculationsInformation, icon: Info },
 ];
@@ -174,6 +175,7 @@ export const mobileMoreNavigation: NavigationSection[] = [
         label: 'Paramètres',
         path: routePaths.settings,
         icon: Settings,
+        end: true,
         description: 'Thème, calculs avancés et stockage local.',
       },
       {
@@ -186,8 +188,10 @@ export const mobileMoreNavigation: NavigationSection[] = [
         label: 'Sauvegarde',
         path: routePaths.backup,
         icon: DatabaseBackup,
+        end: true,
         description: 'Exporter, restaurer ou effacer les données.',
-      },
+      },
+
 
       {
         label: 'Corbeille',

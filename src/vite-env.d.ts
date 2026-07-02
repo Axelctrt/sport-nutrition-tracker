@@ -14,6 +14,8 @@ interface ImportMetaEnv {
   readonly VITE_ENABLE_REAL_NUTRITION_JOURNAL_SYNC?: 'true' | 'false';
   readonly VITE_ENABLE_REAL_NUTRITION_LIBRARY_SYNC?: 'true' | 'false';
   readonly VITE_ENABLE_REAL_NUTRITION_TRACKING_SYNC?: 'true' | 'false';
+  readonly VITE_ENABLE_REAL_ACCOUNT_PREFERENCES_SYNC?: 'true' | 'false';
+  readonly VITE_ENABLE_REAL_REWARDS_ROUTINES_SYNC?: 'true' | 'false';
   readonly VITE_ENABLE_SYNC_DIAGNOSTICS?: 'true' | 'false';
 }
 

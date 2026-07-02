@@ -3,6 +3,12 @@ import Dexie from 'dexie';
 import type { Activity } from '@/domain/models/activity';
 import type { WeightEntry } from '@/domain/models/weight';
 import type { DailyTarget } from '@/domain/models/targets';
+import { createDefaultUserSettings } from '@/domain/defaults/appSettings';
+import { USER_SETTINGS_ID } from '@/domain/defaults/identifiers';
+import type { AccountPreferencesAggregate } from '@/infrastructure/sync-prototype/realAccountPreferencesSyncService';
+import { createSyncedUserSettingsSnapshot } from '@/infrastructure/sync-prototype/realAccountPreferencesSyncService';
+import type { RewardsRoutinesAggregate } from '@/infrastructure/sync-prototype/realRewardsRoutinesSyncService';
+import { VISUAL_THEME_PREFERENCE_ID, routineReminderCompletionId, weeklyMissionCompletionId } from '@/infrastructure/user-state/userStateModels';
 import {
   applyPreparedCloudAccountRestore,
   prepareCloudAccountRestore,
@@ -51,6 +57,8 @@ function emptySource(): CloudAccountRestoreSourceSnapshot {
     favoriteMeals: [],
     nutritionLibraryMarkers: [],
     nutritionTracking: [],
+    accountPreferences: [],
+    rewardsRoutines: [],
   };
 }
 
@@ -106,6 +114,63 @@ function activity(id = 'activity-cloud'): Activity {
     createdAt: '2026-07-01T09:00:00.000Z',
     updatedAt: '2026-07-01T09:00:00.000Z',
   } as unknown as Activity;
+}
+
+
+function accountPreferences(
+  includedBaseSteps = 4_000,
+): AccountPreferencesAggregate {
+  const settings = createDefaultUserSettings();
+  settings.includedBaseSteps = includedBaseSteps;
+  settings.createdAt = '2026-07-01T08:00:00.000Z';
+  settings.updatedAt = '2026-07-01T08:00:00.000Z';
+  settings.syncableUpdatedAt = settings.updatedAt;
+  return {
+    id: 'account-preferences',
+    settings: createSyncedUserSettingsSnapshot(settings),
+    updatedAt: settings.updatedAt,
+  };
+}
+
+function rewardsRoutines(): RewardsRoutinesAggregate {
+  const updatedAt = '2026-07-01T08:00:00.000Z';
+  const settings = createDefaultUserSettings();
+  return {
+    id: 'rewards-routines',
+    earnedAchievements: [
+      { id: 'first-session', earnedAt: updatedAt, updatedAt },
+    ],
+    unlockedVisualThemes: [
+      { id: 'classic', unlockedAt: updatedAt, updatedAt },
+      { id: 'endurance', unlockedAt: updatedAt, updatedAt },
+    ],
+    visualThemePreference: {
+      id: VISUAL_THEME_PREFERENCE_ID,
+      activeThemeId: 'endurance',
+      updatedAt,
+    },
+    weeklyMissionCompletions: [{
+      id: weeklyMissionCompletionId('2026-06-29'),
+      weekStart: '2026-06-29',
+      completedAt: updatedAt,
+      updatedAt,
+    }],
+    routineReminderCompletions: [{
+      id: routineReminderCompletionId('2026-07-01', 'training'),
+      date: '2026-07-01',
+      type: 'training',
+      completedAt: updatedAt,
+      updatedAt,
+    }],
+    routineReminderPreferences: {
+      value: {
+        ...settings.routineReminderPreferences!,
+        snoozeMinutes: 120,
+      },
+      updatedAt,
+    },
+    updatedAt,
+  };
 }
 
 function createRuntime(
@@ -325,6 +390,113 @@ describe('cloudAccountRestoreService', () => {
     expect(await target.weights.count()).toBe(1);
     expect(await target.dailyTargets.count()).toBe(0);
     target.close();
+  });
+
+
+  it('ne considère pas les réglages par défaut comme des données locales bloquantes', async () => {
+    const target = new AppDatabase(TARGET_NAME);
+    await target.open();
+    const defaults = createDefaultUserSettings();
+    await target.userSettings.put(defaults);
+    const source = {
+      ...emptySource(),
+      accountPreferences: [accountPreferences()],
+    };
+    const runtime = createRuntime(() => source);
+
+    const prepared = await prepareCloudAccountRestore(
+      ACCOUNT_FINGERPRINT,
+      runtime,
+      { targetDatabase: target },
+    );
+
+    expect(prepared.preview.cloudRecordCount).toBe(1);
+    expect(prepared.preview.localState).toBe('empty');
+    expect(prepared.preview.canRestore).toBe(true);
+    target.close();
+  });
+
+  it('considère un réglage utilisateur personnalisé comme une donnée locale', async () => {
+    const target = new AppDatabase(TARGET_NAME);
+    await target.open();
+    const customized = createDefaultUserSettings();
+    customized.id = USER_SETTINGS_ID;
+    customized.includedBaseSteps = 4_500;
+    await target.userSettings.put(customized);
+    const source = {
+      ...emptySource(),
+      accountPreferences: [accountPreferences()],
+    };
+    const runtime = createRuntime(() => source);
+
+    const prepared = await prepareCloudAccountRestore(
+      ACCOUNT_FINGERPRINT,
+      runtime,
+      { targetDatabase: target },
+    );
+
+    expect(prepared.preview.localState).toBe('non-empty');
+    expect(prepared.preview.canRestore).toBe(false);
+    target.close();
+  });
+
+  it('restaure aussi les récompenses, thèmes, missions et rappels', async () => {
+    const source = {
+      ...emptySource(),
+      rewardsRoutines: [rewardsRoutines()],
+    };
+    const runtime = createRuntime(() => source, async (database) => {
+      const aggregate = rewardsRoutines();
+      const settings = createDefaultUserSettings();
+      settings.routineReminderPreferences = aggregate.routineReminderPreferences.value;
+      settings.routineReminderUpdatedAt = aggregate.routineReminderPreferences.updatedAt;
+      await database.transaction(
+        'rw',
+        [
+          database.userSettings,
+          database.earnedAchievements,
+          database.unlockedVisualThemes,
+          database.visualThemePreferences,
+          database.weeklyMissionCompletions,
+          database.routineReminderCompletions,
+        ],
+        async () => {
+          await database.userSettings.put(settings);
+          await database.earnedAchievements.bulkPut([...aggregate.earnedAchievements]);
+          await database.unlockedVisualThemes.bulkPut([...aggregate.unlockedVisualThemes]);
+          await database.visualThemePreferences.put(aggregate.visualThemePreference);
+          await database.weeklyMissionCompletions.bulkPut([...aggregate.weeklyMissionCompletions]);
+          await database.routineReminderCompletions.bulkPut([...aggregate.routineReminderCompletions]);
+        },
+      );
+    });
+
+    const prepared = await prepareCloudAccountRestore(
+      ACCOUNT_FINGERPRINT,
+      runtime,
+    );
+
+    expect(prepared.preview.categories).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ key: 'rewardsRoutines', recordCount: 6 }),
+      ]),
+    );
+    await applyPreparedCloudAccountRestore(prepared, runtime, {
+      stageDatabaseName: STAGE_NAME,
+    });
+
+    const restored = new AppDatabase(TARGET_NAME);
+    await restored.open();
+    expect(await restored.earnedAchievements.count()).toBe(1);
+    expect(await restored.unlockedVisualThemes.count()).toBe(2);
+    expect(await restored.visualThemePreferences.get(VISUAL_THEME_PREFERENCE_ID))
+      .toMatchObject({ activeThemeId: 'endurance' });
+    expect(await restored.weeklyMissionCompletions.count()).toBe(1);
+    expect(await restored.routineReminderCompletions.count()).toBe(1);
+    expect(await restored.userSettings.get(USER_SETTINGS_ID)).toMatchObject({
+      routineReminderPreferences: { snoozeMinutes: 120 },
+    });
+    restored.close();
   });
 
   it('annule toute écriture locale si la préparation temporaire échoue', async () => {
