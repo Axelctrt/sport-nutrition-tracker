@@ -75,3 +75,16 @@
 - [ ] `main` est fusionnée dans `develop`.
 - [ ] La branche de fonctionnalité est supprimée localement et à distance.
 - [ ] Le déploiement public est vérifié sur ordinateur et iPhone.
+
+## Roadmap 0.23.0 — F1 avant commit
+
+- [ ] Le centre manuel utilise l’orchestrateur pour les neuf rubriques.
+- [ ] Une analyse ne déclenche aucune écriture.
+- [ ] Les domaines sont exécutés séquentiellement.
+- [ ] Deux instances du même compte ne s’exécutent pas simultanément.
+- [ ] Une erreur n’interrompt pas les domaines suivants.
+- [ ] La relance rejoue uniquement les domaines en échec.
+- [ ] Les demandes différées rapprochées sont regroupées par anti-rebond.
+- [ ] Aucune synchronisation automatique n’est encore activée.
+- [ ] `npm run audit:sync-orchestrator` réussit.
+- [ ] Les versions cloud, métier et sauvegarde restent inchangées.

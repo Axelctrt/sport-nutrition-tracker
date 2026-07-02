@@ -884,3 +884,9 @@ La restauration 0.21.0 couvrait initialement les pesées, activités, objectifs 
 ### Publication 0.21.0 D4
 
 La publication stable ajoute un audit transversal des phases D1 à D3, fige les versions de données et documente la recette après réinstallation. Le pipeline `check` valide la continuité des données, l’isolation des comptes, la sécurité, le dépôt et les budgets du build de production.
+
+## Roadmap 0.23.0 — F1 orchestrateur de synchronisation
+
+La première phase de la roadmap 0.23.0 centralise désormais les opérations manuelles du centre dans un orchestrateur unique. Il maintient une file séquentielle, verrouille les traitements par compte, regroupe les futures demandes différées, poursuit les autres rubriques après un échec et permet une relance ciblée.
+
+F1 n’active aucune synchronisation automatique. Les analyses et écritures restent déclenchées explicitement depuis le centre, avec confirmation avant toute synchronisation. La version affichée et les formats de données restent ceux de la publication 0.22.0.

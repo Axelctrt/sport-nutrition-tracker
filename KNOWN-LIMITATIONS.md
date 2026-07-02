@@ -41,3 +41,7 @@ Open Food Facts et Dexie Cloud dépendent du réseau et de leur disponibilité. 
 ## Versions de données
 
 SportPilot 0.22.0 utilise le runtime Dexie Cloud v10 et le runtime local `sportpilot-sync-runtime-0.20.0-v10`. La base métier reste en Dexie v8, la sauvegarde en JSON v7 et le registre local des espaces en v1.
+
+## Orchestrateur F1
+
+Le socle 0.23.0 F1 est utilisé par le centre manuel, mais aucun déclencheur automatique au démarrage, au retour au premier plan, au retour du réseau ou après une modification locale n’est encore activé. Les services existants indiquent un nombre de différences sans toujours préciser leur origine ; dans ce cas, l’orchestrateur classe la situation comme nécessitant une action utilisateur.

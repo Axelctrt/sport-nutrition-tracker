@@ -33,3 +33,14 @@ npm run audit:full-account-continuity-release
 ```
 
 La publication doit ensuite être validée sur ordinateur et iPhone 15 sous iOS 26 avant la fusion manuelle dans `main` et la création du tag `v0.22.0`.
+
+## Développement 0.23.0 F1
+
+La branche `feature/automatic-sync-resilience-0.23.0` introduit l’orchestrateur commun sans activer les déclencheurs automatiques. Les opérations manuelles du centre passent par une file séquentielle verrouillée par compte.
+
+Vérification ciblée :
+
+```powershell
+npx vitest run src/application/sync/syncOrchestrator.test.ts src/features/settings/components/UnifiedSyncCenterPanel.test.tsx src/app/syncOrchestratorReadiness.test.ts
+npm run audit:sync-orchestrator
+```
