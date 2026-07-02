@@ -22,6 +22,7 @@ import {
   sameEntity,
   stripCloudFields,
   type CloudOwned,
+  type CloudSyncExecutionOptions,
 } from '@/infrastructure/sync-prototype/cloudSyncValue';
 
 export interface StrengthExerciseAggregate {
@@ -537,7 +538,9 @@ export async function synchronizeRealStrength(
   localDatabase: AppDatabase,
   cloudDatabase: SyncPrototypeDatabase,
   currentUserId: string,
+  options: CloudSyncExecutionOptions = {},
 ): Promise<RealStrengthSyncResult> {
+  const writeCloud = options.writeCloud !== false;
   const state = await readState(localDatabase, cloudDatabase, currentUserId);
   const preview = buildPreview(state);
   const localExercises = mapById(state.localExercises);
@@ -573,6 +576,7 @@ export async function synchronizeRealStrength(
       downloadedDeletionRecords += 1;
     }
     if (
+      writeCloud &&
       await putCloud(
         cloudDatabase.realStrengthDeletionRecords as Table<DeletionRecord, string>,
         cloud,
@@ -595,6 +599,7 @@ export async function synchronizeRealStrength(
       }
     }
     if (
+      writeCloud &&
       await putCloud(
         cloudDatabase.realStrengthExercises as Table<StrengthExerciseAggregate, string>,
         cloudExercises.get(id),
@@ -612,6 +617,7 @@ export async function synchronizeRealStrength(
       downloadedTemplates += 1;
     }
     if (
+      writeCloud &&
       await putCloud(
         cloudDatabase.realWorkoutTemplates as Table<WorkoutTemplateAggregate, string>,
         cloudTemplates.get(id),
@@ -633,6 +639,7 @@ export async function synchronizeRealStrength(
       downloadedSessions += 1;
     }
     if (
+      writeCloud &&
       await putCloud(
         cloudDatabase.realWorkoutSessions as Table<WorkoutSessionAggregate, string>,
         cloudSessions.get(id),

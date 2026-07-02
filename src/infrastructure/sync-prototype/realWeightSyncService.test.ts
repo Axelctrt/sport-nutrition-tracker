@@ -137,6 +137,37 @@ describe('synchronisation C4 des vraies pesées', () => {
     });
   });
 
+  it('restaure en lecture seule sans modifier la source cloud', async () => {
+    const remote = {
+      id: '#weight:cloud-read-only',
+      date: '2026-07-02',
+      weightKg: 69.2,
+      note: 'Cloud intact',
+      createdAt: '2026-07-02T07:00:00.000Z',
+      updatedAt: '2026-07-02T09:00:00.000Z',
+      owner: 'user-1',
+    };
+    await cloud.realWeights.add(remote);
+
+    const before = structuredClone(await cloud.realWeights.toArray());
+    const result = await synchronizeRealWeights(
+      local,
+      cloud as unknown as SyncPrototypeDatabase,
+      'user-1',
+      { writeCloud: false },
+    );
+
+    expect(result.downloadedWeights).toBe(1);
+    expect(result.uploadedWeights).toBe(0);
+    expect(result.removedCloudWeights).toBe(0);
+    expect(result.uploadedDeletionRecords).toBe(0);
+    expect(await local.weights.get('weight:cloud-read-only')).toMatchObject({
+      weightKg: 69.2,
+      note: 'Cloud intact',
+    });
+    expect(await cloud.realWeights.toArray()).toEqual(before);
+  });
+
   it('fait gagner la version la plus récente et converge au second passage', async () => {
     await local.weights.add({
       id: 'weight:2026-07-02',

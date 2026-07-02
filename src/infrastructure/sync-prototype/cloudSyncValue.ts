@@ -1,3 +1,7 @@
+export interface CloudSyncExecutionOptions {
+  readonly writeCloud?: boolean;
+}
+
 export type CloudOwned<T extends object> = T & {
   readonly owner?: string;
   readonly realmId?: string;

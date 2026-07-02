@@ -7,6 +7,14 @@ import type {
 import type { EntityId, LocalDate } from '@/domain/models/common';
 import type { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import { appDatabase } from '@/infrastructure/database/database';
+import { accountDatabaseNameForFingerprint } from '@/infrastructure/database/databaseNames';
+import {
+  applyPreparedCloudAccountRestore,
+  createCloudAccountRestoreRuntime,
+  prepareCloudAccountRestore,
+  type CloudAccountRestoreResult,
+  type PreparedCloudAccountRestore,
+} from '@/infrastructure/data-spaces/cloudAccountRestoreService';
 import {
   createDeletedDeletionRecord,
   createRestoredDeletionRecord,
@@ -254,6 +262,12 @@ export interface SyncPrototypeClient {
   cancelInteraction(): void;
   logout(): Promise<void>;
   syncNow(): Promise<void>;
+  prepareCloudRestore?(
+    accountFingerprint: string,
+  ): Promise<PreparedCloudAccountRestore>;
+  applyCloudRestore?(
+    prepared: PreparedCloudAccountRestore,
+  ): Promise<CloudAccountRestoreResult>;
   analyzeRealWeights(): Promise<RealWeightSyncPreview>;
   syncRealWeights(): Promise<RealWeightSyncResult>;
   analyzeRealActivities?(): Promise<RealActivitySyncPreview>;
@@ -651,6 +665,77 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
     await this.initialize();
     await this.database.cloud.sync();
     await this.refreshWeights();
+  }
+
+  private cloudRestoreContext(accountFingerprint: string): {
+    readonly accountFingerprint: string;
+    readonly currentUserId: string;
+    readonly localDatabase?: AppDatabase;
+  } {
+    const normalized = accountFingerprint.trim().toLowerCase();
+    const user = this.database.cloud.currentUser.value;
+    const currentFingerprint = createSyncPrototypeAccountFingerprint(
+      user.userId ?? user.email,
+    )?.toLowerCase();
+
+    if (!user.isLoggedIn || !currentFingerprint) {
+      throw new Error('Connecte le compte avant d’analyser ses données cloud.');
+    }
+    if (currentFingerprint !== normalized) {
+      throw new Error(
+        'Le compte connecté ne correspond pas à l’analyse de restauration demandée.',
+      );
+    }
+
+    const currentUserId = this.database.cloud.currentUserId;
+    if (!currentUserId) {
+      throw new Error('Le compte connecté ne fournit pas d’identifiant cloud exploitable.');
+    }
+
+    const expectedDatabaseName = accountDatabaseNameForFingerprint(normalized);
+    return {
+      accountFingerprint: normalized,
+      currentUserId,
+      ...(this.localDatabase.name === expectedDatabaseName
+        ? { localDatabase: this.localDatabase }
+        : {}),
+    };
+  }
+
+  async prepareCloudRestore(
+    accountFingerprint: string,
+  ): Promise<PreparedCloudAccountRestore> {
+    await this.initialize();
+    const context = this.cloudRestoreContext(accountFingerprint);
+    const runtime = createCloudAccountRestoreRuntime(
+      this.database,
+      context.currentUserId,
+    );
+    return prepareCloudAccountRestore(
+      context.accountFingerprint,
+      runtime,
+      context.localDatabase
+        ? { targetDatabase: context.localDatabase }
+        : {},
+    );
+  }
+
+  async applyCloudRestore(
+    prepared: PreparedCloudAccountRestore,
+  ): Promise<CloudAccountRestoreResult> {
+    await this.initialize();
+    const context = this.cloudRestoreContext(prepared.accountFingerprint);
+    const runtime = createCloudAccountRestoreRuntime(
+      this.database,
+      context.currentUserId,
+    );
+    return applyPreparedCloudAccountRestore(
+      prepared,
+      runtime,
+      context.localDatabase
+        ? { targetDatabase: context.localDatabase }
+        : {},
+    );
   }
 
   async analyzeRealWeights(): Promise<RealWeightSyncPreview> {

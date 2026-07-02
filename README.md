@@ -1,22 +1,22 @@
-# SportPilot 0.20.1
+# SportPilot 0.21.0
 
-## Synchronisation sportive et nutritionnelle multiappareil
+## Continuité des données et gestion du compte
 
 SportPilot synchronise les pesées, activités, objectifs, données de musculation, journées nutritionnelles, produits utiles, recettes, repas favoris, bilans hebdomadaires et ajustements caloriques du compte connecté.
 
-Les journées, recettes, modèles de musculation, séances et bilans sont traités comme des agrégats cohérents. Les créations, modifications, suppressions et restaurations convergent sans doublons, avec filtrage strict par propriétaire cloud et résolution déterministe des conflits.
+La version 0.21.0 sécurise désormais le cycle complet des données : gestion du compte en production, import explicite de l’espace invité dans un compte et restauration guidée depuis le cloud après une nouvelle installation.
 
-Lorsqu’un ajustement calorique accepté arrive depuis un autre appareil, les objectifs quotidiens obsolètes sont recalculés puis propagés par la synchronisation du journal. Les produits Open Food Facts portant le même code-barres sont dédupliqués avec remappage des références existantes.
+Les journées, recettes, modèles de musculation, séances et bilans restent traités comme des agrégats cohérents. Les créations, modifications, suppressions et restaurations convergent sans doublons, avec filtrage strict par propriétaire cloud et résolution déterministe des conflits.
 
-La version 0.20.1 utilise la base cloud v8 et le runtime `sportpilot-sync-runtime-0.20.0-v8`. La base métier reste en Dexie v8, la sauvegarde en JSON v7 et les espaces locaux restent physiquement isolés par compte.
+SportPilot 0.21.0 utilise la base Dexie Cloud v8 et le runtime `sportpilot-sync-runtime-0.20.0-v8`. La base métier reste en Dexie v8, la sauvegarde en JSON v7 et le registre local des espaces en v1. Aucune migration de données ni nouvelle authentification OTP liée au runtime n’est requise.
 
-Les récompenses, thèmes, missions et rappels restent locaux. Les données créées dans l’espace invité restent conservées dans cet espace et réapparaissent après déconnexion du compte ; leur import dans un espace de compte existant sera traité dans une évolution ultérieure.
+Les récompenses, thèmes, missions et rappels restent locaux. Les données invitées sont conservées après import, et la restauration cloud couvre uniquement les domaines déjà synchronisés.
 
 <!-- hotfix-sync-production-0.17.1 -->
+
 ## Correctif 0.17.1 — synchronisation disponible en production
 
 Le build public embarque désormais uniquement la configuration cliente nécessaire à Dexie Cloud. La clé privée reste locale et n’est jamais intégrée au dépôt ni au navigateur. Les variables définies par la plateforme de déploiement conservent la priorité sur cette configuration publique de secours.
-
 
 PWA locale de suivi sportif, nutritionnel, calorique et de progression.
 
@@ -39,7 +39,6 @@ Cette version utilise :
 
 La nutrition, les activités, la musculation, les objectifs et les récompenses
 restent locaux dans cette version.
-
 
 ## Phase 10 — suivi des sports d’endurance
 
@@ -506,7 +505,6 @@ La version 0.13.0 a été validée avec :
 - mise à jour de la présentation des capacités de l’application ;
 - ajout d’un test empêchant le retour de textes comme `Étape 8`, `MVP`, `prochainement` ou `TODO` dans les composants de production.
 
-
 ## Correctif mobile 0.13.0-alpha.4
 
 Les champs natifs de date et d’heure sont maintenant contraints à la largeur de leur conteneur, y compris sur Safari iOS. Le correctif couvre notamment les écrans Journal alimentaire, Journal des activités, Poids et Analyses, sans désactiver les sélecteurs natifs du navigateur.
@@ -526,7 +524,6 @@ Le sélecteur propose :
 - la création manuelle avec retour automatique vers le repas initial.
 
 Le scan caméra sera intégré dans la branche suivante. Cette évolution réutilise les tables IndexedDB existantes et ne modifie pas le format des sauvegardes.
-
 
 ## Recherche Open Food Facts intégrée 0.13.0-alpha.6
 
@@ -614,8 +611,6 @@ Validation de cette préversion :
 - Vite/PWA : build et service worker générés ;
 - audit MVP : réussi.
 
-
-
 ## Version 0.14.0-alpha.2 — catalogue d’exercices
 
 Cette préversion ajoute le premier écran fonctionnel du carnet de musculation :
@@ -666,7 +661,6 @@ Cette préversion ajoute le cycle de vie des entraînements de musculation :
 
 Validation : 69 fichiers de tests, 268 tests, lint, build PWA et audit réussis.
 
-
 ## Version 0.14.0-alpha.5 — saisie des séries
 
 Cette préversion ajoute la saisie détaillée des séries directement dans les séances de musculation :
@@ -685,7 +679,6 @@ Cette préversion ajoute la saisie détaillée des séries directement dans les 
 Aucune nouvelle migration Dexie n’est nécessaire : la table `strengthSets` existe depuis `0.14.0-alpha.1`.
 
 Validation : 71 fichiers de tests, 277 tests, lint, build PWA et audit réussis.
-
 
 ## Version 0.14.0-alpha.6 — historique par exercice
 
@@ -706,7 +699,6 @@ Aucune nouvelle migration Dexie n’est nécessaire : l’historique est recalcu
 
 Validation : 73 fichiers de tests, 285 tests, lint, build PWA et audit réussis.
 
-
 ## Version 0.14.0-alpha.7 — statistiques et records de musculation
 
 Cette préversion enrichit l’historique de chaque exercice avec des analyses calculées localement :
@@ -724,7 +716,6 @@ Cette préversion enrichit l’historique de chaque exercice avec des analyses c
 Aucune nouvelle migration Dexie n’est nécessaire : les statistiques sont recalculées à partir des séances et séries existantes.
 
 Validation : 74 fichiers de tests, 290 tests, lint, build PWA et audit réussis.
-
 
 ## Version 0.14.0-alpha.8 — suggestions de progression
 
@@ -745,7 +736,6 @@ Cette préversion ajoute l’assistance à la progression des charges dans les s
 Aucune charge n’est modifiée automatiquement. Aucune nouvelle migration Dexie n’est nécessaire : la table `progressionSuggestions` existe depuis `0.14.0-alpha.1`.
 
 Validation : 75 fichiers de tests, 298 tests, lint, build PWA et audit réussis.
-
 
 ## Version 0.14.0-alpha.9 — retrait du RPE général des activités
 
@@ -789,8 +779,6 @@ Validation finale :
 - TypeScript strict : compilation réussie ;
 - Vite/PWA : build réussi et 106 ressources précachées ;
 - audit MVP et audit de release : réussis.
-
-
 
 ### Correctif de cohérence du retour après ajout d’une activité
 
@@ -870,3 +858,23 @@ Les nouveaux champs sont facultatifs. Aucune table ni migration Dexie supplémen
 Le tableau de bord peut être adapté depuis `Paramètres → Personnaliser le tableau de bord` ou directement depuis l’accueil. Quatre préréglages sont proposés et chaque bloc peut être affiché, masqué ou déplacé. La configuration reste locale, hors connexion, et fait partie de la sauvegarde JSON v2.
 
 Les blocs masqués ne suppriment aucune donnée : le journal alimentaire, les activités, les séances et les détails de calcul restent disponibles dans leurs pages respectives. Les anciennes bases sans configuration reçoivent automatiquement l’affichage Équilibré.
+
+### Continuité des données 0.21.0 D1
+
+La page **Compte et appareils** centralise le compte connecté, l’état du cloud et l’espace local actif. La déconnexion, le changement de compte, la désassociation et la suppression locale sont des opérations distinctes et aucune ne supprime implicitement les données cloud.
+
+### Continuité des données 0.21.0 D2
+
+Depuis **Compte et appareils**, SportPilot peut analyser l’espace invité puis fusionner ses données dans le compte actif. La fusion est atomique, déduplique les identifiants fonctionnels et conserve l’élément le plus récent. Une nouvelle analyse est exigée si la source ou la cible change avant validation. L’espace invité reste intact et une seconde analyse sans modification revient à zéro opération.
+
+### Continuité des données 0.21.0 D3
+
+Après une nouvelle installation, la connexion à un compte déclenche une analyse en lecture seule des domaines déjà synchronisés. Lorsque des données sont trouvées, SportPilot propose soit de les restaurer dans une base locale vide, soit de commencer avec un espace local vide sans effacer le cloud. La restauration peut également être relancée plus tard depuis **Compte et appareils**.
+
+La restauration utilise une base Dexie temporaire, vérifie de nouveau les empreintes de la source cloud et de la cible locale avant validation, puis applique le résultat dans une transaction locale. Les écritures cloud sont explicitement désactivées pendant cette opération. En cas d’échec, l’espace local reste inchangé et la source cloud est conservée.
+
+Les domaines restaurés sont ceux déjà couverts par la synchronisation cloud : pesées, activités, objectifs sportifs, musculation, bibliothèque nutritionnelle, journal nutritionnel et suivi nutritionnel. Les réglages, récompenses, thèmes, missions et rappels restent locaux.
+
+### Publication 0.21.0 D4
+
+La publication stable ajoute un audit transversal des phases D1 à D3, fige les versions de données et documente la recette après réinstallation. Le pipeline `check` valide la continuité des données, l’isolation des comptes, la sécurité, le dépôt et les budgets du build de production.

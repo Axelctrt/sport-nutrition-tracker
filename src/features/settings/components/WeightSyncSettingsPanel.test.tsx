@@ -49,7 +49,7 @@ describe('WeightSyncSettingsPanel', () => {
       name: 'Gérer le compte de synchronisation',
     });
 
-    expect(link).toHaveAttribute('href', '/settings/sync-prototype');
+    expect(link).toHaveAttribute('href', '/settings/account-devices');
     await waitFor(() => expect(integrationMocks.initialize).toHaveBeenCalled());
   });
 });
