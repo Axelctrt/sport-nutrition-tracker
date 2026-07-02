@@ -80,10 +80,11 @@ describe('GoalsPage', () => {
     });
     Object.defineProperty(window, 'requestAnimationFrame', {
       configurable: true,
-      value: (callback: FrameRequestCallback) => {
-        callback(0);
-        return 1;
-      },
+      value: (callback: FrameRequestCallback) =>
+        window.setTimeout(
+          () => callback(window.performance.now()),
+          0,
+        ),
     });
     window.location.hash = '#/goals';
 
