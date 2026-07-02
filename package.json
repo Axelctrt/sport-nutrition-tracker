@@ -14,8 +14,8 @@
     "test:stability": "vitest run --sequence.shuffle --sequence.seed=20260626",
     "test:watch": "vitest",
     "preview": "vite preview",
-    "check": "npm run lint && npm run test && npm run build && npm run audit:sync-deployment && npm run audit:sports-sync && npm run audit:goal-sync && npm run audit:strength-sync && npm run audit:sports-sync-release && npm run audit:nutrition-journal-sync && npm run audit:nutrition-library-sync && npm run audit:nutrition-tracking-sync && npm run audit:nutrition-sync-release && npm run audit:account-management && npm run audit:guest-data-import && npm run audit:cloud-account-restore && npm run audit:account-preferences-sync && npm run audit:rewards-routines-sync && npm run audit:data-continuity-release && npm run audit:account-isolation && npm run audit:mvp && npm run audit:release && npm run audit:security && npm run audit:production && npm run audit:repository",
-    "ci": "npm run lint && npm run test && npm run build && npm run audit:sync-deployment && npm run audit:sports-sync && npm run audit:goal-sync && npm run audit:strength-sync && npm run audit:sports-sync-release && npm run audit:nutrition-journal-sync && npm run audit:nutrition-library-sync && npm run audit:nutrition-tracking-sync && npm run audit:nutrition-sync-release && npm run audit:account-management && npm run audit:guest-data-import && npm run audit:cloud-account-restore && npm run audit:account-preferences-sync && npm run audit:rewards-routines-sync && npm run audit:data-continuity-release && npm run audit:account-isolation && npm run audit:mvp && npm run audit:release && npm run audit:security && npm run audit:production && npm run audit:repository",
+    "check": "npm run lint && npm run test && npm run build && npm run audit:sync-deployment && npm run audit:sports-sync && npm run audit:goal-sync && npm run audit:strength-sync && npm run audit:sports-sync-release && npm run audit:nutrition-journal-sync && npm run audit:nutrition-library-sync && npm run audit:nutrition-tracking-sync && npm run audit:nutrition-sync-release && npm run audit:account-management && npm run audit:guest-data-import && npm run audit:cloud-account-restore && npm run audit:account-preferences-sync && npm run audit:rewards-routines-sync && npm run audit:unified-sync-center && npm run audit:data-continuity-release && npm run audit:account-isolation && npm run audit:mvp && npm run audit:release && npm run audit:security && npm run audit:production && npm run audit:repository",
+    "ci": "npm run lint && npm run test && npm run build && npm run audit:sync-deployment && npm run audit:sports-sync && npm run audit:goal-sync && npm run audit:strength-sync && npm run audit:sports-sync-release && npm run audit:nutrition-journal-sync && npm run audit:nutrition-library-sync && npm run audit:nutrition-tracking-sync && npm run audit:nutrition-sync-release && npm run audit:account-management && npm run audit:guest-data-import && npm run audit:cloud-account-restore && npm run audit:account-preferences-sync && npm run audit:rewards-routines-sync && npm run audit:unified-sync-center && npm run audit:data-continuity-release && npm run audit:account-isolation && npm run audit:mvp && npm run audit:release && npm run audit:security && npm run audit:production && npm run audit:repository",
     "diagnose:off": "node scripts/diagnose-open-food-facts.mjs",
     "audit:mvp": "node scripts/audit-mvp.mjs",
     "audit:release": "node scripts/audit-release.mjs",
@@ -44,7 +44,8 @@
     "audit:cloud-account-restore": "node scripts/audit-cloud-account-restore.mjs",
     "audit:data-continuity-release": "node scripts/audit-data-continuity-release.mjs",
     "audit:account-preferences-sync": "node scripts/audit-account-preferences-sync.mjs",
-    "audit:rewards-routines-sync": "node scripts/audit-rewards-routines-sync.mjs"
+    "audit:rewards-routines-sync": "node scripts/audit-rewards-routines-sync.mjs",
+    "audit:unified-sync-center": "node scripts/audit-unified-sync-center.mjs"
   },
   "dependencies": {
     "@ericblade/quagga2": "^1.12.1",

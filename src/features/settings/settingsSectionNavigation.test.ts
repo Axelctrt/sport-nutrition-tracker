@@ -55,4 +55,28 @@ describe('settingsSectionNavigation', () => {
 
     target.remove();
   });
+
+  it('ouvre l’accordéon parent mais positionne un élément enfant dédié', () => {
+    const parent = document.createElement('details');
+    parent.id = 'settings-sync';
+    parent.scrollIntoView = vi.fn();
+    const center = document.createElement('div');
+    center.id = 'unified-sync-center';
+    center.scrollIntoView = vi.fn();
+    parent.append(center);
+    document.body.append(parent);
+
+    openSettingsSection('settings-sync', 'unified-sync-center');
+
+    expect(parent.open).toBe(true);
+    expect(parent.scrollIntoView).not.toHaveBeenCalled();
+    expect(center.scrollIntoView).toHaveBeenCalledWith({
+      behavior: 'smooth',
+      block: 'center',
+      inline: 'nearest',
+    });
+
+    parent.remove();
+  });
+
 });

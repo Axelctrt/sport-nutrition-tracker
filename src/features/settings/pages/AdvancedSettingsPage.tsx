@@ -11,6 +11,7 @@ import {
   Palette,
   Sparkles,
   UserRound,
+  X,
 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -34,6 +35,10 @@ import { WeightSyncSettingsPanel } from '@/features/settings/components/WeightSy
 import { AccountPreferencesSyncSettingsPanel } from '@/features/settings/components/AccountPreferencesSyncSettingsPanel';
 import { RewardsRoutinesSyncSettingsPanel } from '@/features/settings/components/RewardsRoutinesSyncSettingsPanel';
 import {
+  UnifiedSyncCenterPanel,
+  type UnifiedSyncDetailId,
+} from '@/features/settings/components/UnifiedSyncCenterPanel';
+import {
   SettingsSectionDirectory,
   type SettingsDirectoryItem,
 } from '@/features/settings/components/SettingsSectionDirectory';
@@ -50,6 +55,7 @@ import {
   requestPersistentStorage,
   type PersistentStorageStatus,
 } from '@/infrastructure/storage/persistentStorage';
+import { openSettingsSection } from '@/features/settings/settingsSectionNavigation';
 import { Card } from '@/shared/ui/Card';
 import { CollapsibleSection } from '@/shared/ui/CollapsibleSection';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
@@ -142,6 +148,82 @@ const settingsSections: readonly SettingsDirectoryItem[] = [
   },
 ] as const;
 
+const syncDetailLabels: Record<UnifiedSyncDetailId, string> = {
+  'sync-detail-account-preferences': 'Profil et réglages',
+  'sync-detail-rewards-routines': 'Récompenses et routines',
+  'sync-detail-weights': 'Pesées',
+  'sync-detail-activities': 'Activités',
+  'sync-detail-goals': 'Objectifs',
+  'sync-detail-strength': 'Musculation',
+  'sync-detail-nutrition-journal': 'Journal nutritionnel',
+  'sync-detail-nutrition-library': 'Bibliothèque nutritionnelle',
+  'sync-detail-nutrition-tracking': 'Suivi nutritionnel',
+};
+
+function SyncDetailPanel({
+  detailId,
+  onClose,
+}: {
+  readonly detailId: UnifiedSyncDetailId;
+  readonly onClose: () => void;
+}) {
+  const content = (() => {
+    switch (detailId) {
+      case 'sync-detail-account-preferences':
+        return <AccountPreferencesSyncSettingsPanel />;
+      case 'sync-detail-rewards-routines':
+        return <RewardsRoutinesSyncSettingsPanel />;
+      case 'sync-detail-weights':
+        return <WeightSyncSettingsPanel />;
+      case 'sync-detail-activities':
+        return <ActivitySyncSettingsPanel />;
+      case 'sync-detail-goals':
+        return <GoalSyncSettingsPanel />;
+      case 'sync-detail-strength':
+        return <StrengthSyncSettingsPanel />;
+      case 'sync-detail-nutrition-journal':
+        return <NutritionJournalSyncSettingsPanel />;
+      case 'sync-detail-nutrition-library':
+        return <NutritionLibrarySyncSettingsPanel />;
+      case 'sync-detail-nutrition-tracking':
+        return <NutritionTrackingSyncSettingsPanel />;
+    }
+  })();
+
+  const label = syncDetailLabels[detailId];
+
+  return (
+    <section
+      id={detailId}
+      aria-labelledby={`${detailId}-title`}
+      className="scroll-mt-24 rounded-2xl border border-brand-200 bg-brand-50/40 p-4 dark:border-brand-900 dark:bg-brand-950/10 sm:p-5"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
+            Détail de synchronisation
+          </p>
+          <h3
+            id={`${detailId}-title`}
+            className="mt-1 text-lg font-semibold text-slate-950 dark:text-white"
+          >
+            {label}
+          </h3>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label={`Fermer le détail ${label}`}
+          className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl text-slate-600 hover:bg-white hover:text-slate-950 dark:text-slate-300 dark:hover:bg-slate-900 dark:hover:text-white"
+        >
+          <X aria-hidden="true" className="size-5" />
+        </button>
+      </div>
+      <div className="mt-4">{content}</div>
+    </section>
+  );
+}
+
 export function AdvancedSettingsPage() {
   const { setTheme } = useTheme();
   const [settings, setSettings] = useState<AppSettings>();
@@ -155,6 +237,8 @@ export function AdvancedSettingsPage() {
     | undefined
   >();
   const [loadError, setLoadError] = useState<string>();
+  const [selectedSyncDetailId, setSelectedSyncDetailId] =
+    useState<UnifiedSyncDetailId>();
 
   const loadSettings = useCallback(async () => {
     try {
@@ -187,6 +271,37 @@ export function AdvancedSettingsPage() {
       window.removeEventListener(ACCOUNT_PREFERENCES_CHANGED_EVENT, refreshFromSync);
     };
   }, [loadSettings]);
+
+  const closeSyncDetail = useCallback(() => {
+    setSelectedSyncDetailId(undefined);
+    window.requestAnimationFrame(() => {
+      openSettingsSection('settings-sync');
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!selectedSyncDetailId) return;
+
+    let secondFrame: number | undefined;
+    const firstFrame = window.requestAnimationFrame(() => {
+      secondFrame = window.requestAnimationFrame(() => {
+        document.getElementById(selectedSyncDetailId)?.scrollIntoView({
+          behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+            ? 'auto'
+            : 'smooth',
+          block: 'start',
+          inline: 'nearest',
+        });
+      });
+    });
+
+    return () => {
+      window.cancelAnimationFrame(firstFrame);
+      if (secondFrame !== undefined) {
+        window.cancelAnimationFrame(secondFrame);
+      }
+    };
+  }, [selectedSyncDetailId]);
 
   const handleSubmit = async (
     values: SettingsFormValues,
@@ -315,6 +430,11 @@ export function AdvancedSettingsPage() {
       <div className="mt-4">
         <SettingsSectionDirectory
           sections={settingsSections}
+          onOpenSection={(sectionId) => {
+            if (sectionId === 'settings-sync') {
+              setSelectedSyncDetailId(undefined);
+            }
+          }}
         />
       </div>
 
@@ -429,15 +549,24 @@ export function AdvancedSettingsPage() {
           className="scroll-mt-24"
         >
           <div className="space-y-5">
-            <AccountPreferencesSyncSettingsPanel />
-            <RewardsRoutinesSyncSettingsPanel />
-            <WeightSyncSettingsPanel />
-            <ActivitySyncSettingsPanel />
-            <GoalSyncSettingsPanel />
-            <StrengthSyncSettingsPanel />
-            <NutritionJournalSyncSettingsPanel />
-            <NutritionLibrarySyncSettingsPanel />
-            <NutritionTrackingSyncSettingsPanel />
+            <div id="unified-sync-center" className="scroll-mt-24">
+              <UnifiedSyncCenterPanel
+                activeDetailId={selectedSyncDetailId}
+                onOpenDetail={(detailId) => {
+                  if (selectedSyncDetailId === detailId) {
+                    closeSyncDetail();
+                    return;
+                  }
+                  setSelectedSyncDetailId(detailId);
+                }}
+              />
+            </div>
+            {selectedSyncDetailId ? (
+              <SyncDetailPanel
+                detailId={selectedSyncDetailId}
+                onClose={closeSyncDetail}
+              />
+            ) : null}
           </div>
         </CollapsibleSection>
 

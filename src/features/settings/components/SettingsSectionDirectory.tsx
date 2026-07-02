@@ -17,11 +17,13 @@ export interface SettingsDirectoryItem
 interface SettingsSectionDirectoryProps {
   sections: readonly SettingsDirectoryItem[];
   title?: string;
+  onOpenSection?: (sectionId: string) => void;
 }
 
 export function SettingsSectionDirectory({
   sections,
   title = 'Trouver un réglage',
+  onOpenSection,
 }: SettingsSectionDirectoryProps) {
   const [query, setQuery] = useState('');
   const filtered = useMemo(
@@ -65,11 +67,14 @@ export function SettingsSectionDirectory({
 
       <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
         {filtered.map(
-          ({ id, label, description, icon: Icon }) => (
+          ({ id, label, description, focusId, icon: Icon }) => (
             <button
               key={id}
               type="button"
-              onClick={() => openSettingsSection(id)}
+              onClick={() => {
+                onOpenSection?.(id);
+                openSettingsSection(id, focusId);
+              }}
               className="flex min-h-20 items-start gap-3 rounded-xl border border-slate-200 p-3 text-left transition hover:border-brand-400 hover:bg-brand-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:border-slate-700 dark:hover:border-brand-700 dark:hover:bg-brand-950/30 motion-reduce:transition-none"
             >
               <Icon

@@ -8,9 +8,9 @@ La version 0.21.1 conserve et sécurise le cycle complet des données : gestion 
 
 Les journées, recettes, modèles de musculation, séances, bilans et états de progression restent traités comme des agrégats cohérents. Les créations, modifications, suppressions et restaurations convergent sans doublons, avec filtrage strict par propriétaire cloud et résolution déterministe des conflits.
 
-La branche de développement 0.22.0 E2 utilise la base Dexie Cloud v10 et le runtime `sportpilot-sync-runtime-0.20.0-v10`. La base métier reste en Dexie v8, la sauvegarde en JSON v7 et le registre local des espaces en v1. Le nouveau runtime peut demander une authentification OTP lors de sa première ouverture sur un appareil.
+La branche de développement 0.22.0 E3 utilise la base Dexie Cloud v10 et le runtime `sportpilot-sync-runtime-0.20.0-v10`. La base métier reste en Dexie v8, la sauvegarde en JSON v7 et le registre local des espaces en v1. Le nouveau runtime peut demander une authentification OTP lors de sa première ouverture sur un appareil.
 
-E1 synchronise le profil, les paramètres de calcul, le tableau de bord et les modèles d’endurance. E2 ajoute les badges, thèmes visuels débloqués et actifs, missions hebdomadaires, préférences de rappels et rappels terminés. Le mode clair ou sombre, le stockage, le minuteur et les métadonnées de sauvegarde restent propres à chaque appareil. Les données invitées sont conservées après import.
+E1 synchronise le profil, les paramètres de calcul, le tableau de bord et les modèles d’endurance. E2 ajoute les badges, thèmes visuels débloqués et actifs, missions hebdomadaires, préférences de rappels et rappels terminés. E3 ajoute un centre unique capable d’analyser ou de synchroniser toutes les rubriques, de poursuivre après une erreur et de relancer uniquement les échecs. Le mode clair ou sombre, le stockage, le minuteur et les métadonnées de sauvegarde restent propres à chaque appareil. Les données invitées sont conservées après import.
 
 ## Correctif 0.21.1 — stabilité du journal nutritionnel
 

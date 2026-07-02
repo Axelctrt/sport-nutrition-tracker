@@ -93,3 +93,33 @@
 - [ ] E2 est commit dans `feature/full-account-continuity-0.22.0`.
 - [ ] La branche n’est pas fusionnée dans `develop` avant la fin des lots E3 et E4.
 - [ ] Aucun tag `v0.22.0` n’est créé avant E4.
+
+## E3 — centre de synchronisation unifié
+
+- [ ] Le centre affiche les neuf rubriques actives du compte.
+- [ ] **Analyser tout** ne modifie aucune donnée et affiche l’état de chaque rubrique.
+- [ ] **Synchroniser tout** exige une confirmation explicite.
+- [ ] Une erreur sur une rubrique ne bloque pas les domaines suivants.
+- [ ] Le message d’erreur reste visible sur la rubrique concernée.
+- [ ] **Relancer uniquement les rubriques en échec** ne rejoue pas les domaines réussis.
+- [ ] La dernière analyse et la dernière synchronisation sont affichées après rechargement.
+- [ ] Les métadonnées du centre sont isolées par empreinte de compte.
+- [ ] Le retour hors ligne désactive les actions cloud sans bloquer l’application.
+- [ ] Le retour du réseau permet une nouvelle analyse sans rechargement obligatoire.
+- [ ] Chaque lien **Détail** rejoint le panneau unitaire correspondant.
+- [ ] Une seconde analyse après synchronisation affiche zéro différence partout.
+- [ ] Le raccourci Synchronisation des données positionne l’en-tête de la rubrique, pas le sous-bloc État par rubrique.
+- [ ] Fermer un détail replace la vue sur Synchronisation des données.
+- [ ] Rappels n’active pas simultanément Paramètres dans la navigation.
+- [ ] Corbeille n’active pas simultanément Sauvegarde dans la navigation.
+- [ ] `npm run audit:unified-sync-center` réussit.
+- [ ] Le runtime cloud reste en v10, la base métier en v8 et la sauvegarde en v7.
+
+## Fin du lot E3
+
+- [ ] Les tests manuels ordinateur et iPhone sont validés.
+- [ ] `npm run check` et `npm run test:stability` réussissent.
+- [ ] `git diff --check` ne retourne aucune erreur.
+- [ ] E3 est commit dans `feature/full-account-continuity-0.22.0`.
+- [ ] La branche n’est pas fusionnée dans `develop` avant E4.
+- [ ] Aucun tag `v0.22.0` n’est créé avant E4.

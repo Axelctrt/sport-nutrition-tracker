@@ -6,9 +6,9 @@ Ces limitations sont connues et non bloquantes pour la version stable.
 
 Le tableau de bord recalcule l’objectif du jour à chaque ouverture. Depuis 0.21.1, un calcul identique ne renouvelle plus son horodatage et ne crée plus de différence artificielle avec le cloud. Une modification réelle du poids, des pas, des activités, du profil ou d’un ajustement calorique continue naturellement à produire une nouvelle version synchronisable.
 
-## Synchronisation par domaine
+## Centre de synchronisation
 
-Les pesées, activités, objectifs, données de musculation et domaines nutritionnels conservent leurs panneaux de synchronisation manuelle. Il n’existe pas encore de bouton unique exécutant automatiquement tous les domaines dans leur ordre de dépendance.
+E3 permet d’analyser et de synchroniser toutes les rubriques depuis un centre unique. Les domaines sont volontairement traités séquentiellement afin d’éviter les accès concurrents au runtime cloud. Les panneaux unitaires restent disponibles pour consulter le détail ou agir sur une seule rubrique.
 
 ## Espace invité
 
@@ -32,7 +32,7 @@ La résolution utilise `updatedAt`, puis une comparaison déterministe en cas d�
 
 ## Runtime local cloud
 
-E2 crée un nouveau runtime IndexedDB local v10 et peut demander une nouvelle authentification OTP lors de sa première ouverture. Les runtimes v8 et v9 ne sont pas supprimés automatiquement afin d’éviter toute destruction implicite.
+E2 crée un runtime IndexedDB local v10 et peut demander une nouvelle authentification OTP lors de sa première ouverture. Les runtimes v8 et v9 ne sont pas supprimés automatiquement afin d’éviter toute destruction implicite.
 
 ## Services externes
 
@@ -40,4 +40,4 @@ Open Food Facts et Dexie Cloud dépendent du réseau et de leur disponibilité. 
 
 ## Versions de données
 
-La branche 0.22.0 E2 utilise la base Dexie Cloud v10 et le runtime `sportpilot-sync-runtime-0.20.0-v10`. La base métier reste en Dexie v8, la sauvegarde en JSON v7 et le registre local des espaces en v1.
+La branche 0.22.0 E3 utilise la base Dexie Cloud v10 et le runtime `sportpilot-sync-runtime-0.20.0-v10`. La base métier reste en Dexie v8, la sauvegarde en JSON v7 et le registre local des espaces en v1.

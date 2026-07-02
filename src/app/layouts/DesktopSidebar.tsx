@@ -54,6 +54,7 @@ export function DesktopSidebar() {
                 <NavLink
                   key={item.path}
                   to={item.path}
+                  end={item.end ?? false}
                   className={({ isActive }) => navigationClassName(isActive)}
                 >
                   <Icon aria-hidden="true" className="size-5" />
