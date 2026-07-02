@@ -25,6 +25,7 @@ import {
   sameEntity,
   stripCloudFields,
   type CloudOwned,
+  type CloudSyncExecutionOptions,
 } from '@/infrastructure/sync-prototype/cloudSyncValue';
 
 const JOURNAL_MARKER_TYPES = ['meal', 'foodEntry'] as const;
@@ -550,7 +551,9 @@ export async function synchronizeRealNutritionJournal(
   localDatabase: AppDatabase,
   cloudDatabase: SyncPrototypeDatabase,
   currentUserId: string,
+  options: CloudSyncExecutionOptions = {},
 ): Promise<RealNutritionJournalSyncResult> {
+  const writeCloud = options.writeCloud !== false;
   const state = await readState(localDatabase, cloudDatabase, currentUserId);
   const preview = buildPreview(state);
   const final = resolveFinalState(state);
@@ -562,25 +565,31 @@ export async function synchronizeRealNutritionJournal(
     countChanged(localFlat.entries, final.entries) +
     countChanged(localFlat.targets, final.targets) +
     countChanged(localFlat.statuses, final.statuses);
-  const uploadedEntities =
-    countChanged(cloudFlat.meals, final.meals) +
-    countChanged(cloudFlat.entries, final.entries) +
-    countChanged(cloudFlat.targets, final.targets) +
-    countChanged(cloudFlat.statuses, final.statuses);
+  const uploadedEntities = writeCloud
+    ? countChanged(cloudFlat.meals, final.meals) +
+      countChanged(cloudFlat.entries, final.entries) +
+      countChanged(cloudFlat.targets, final.targets) +
+      countChanged(cloudFlat.statuses, final.statuses)
+    : 0;
   const removedLocalEntities =
     countRemoved(localFlat.meals, final.meals) +
     countRemoved(localFlat.entries, final.entries) +
     countRemoved(localFlat.targets, final.targets) +
     countRemoved(localFlat.statuses, final.statuses);
-  const removedCloudEntities =
-    countRemoved(cloudFlat.meals, final.meals) +
-    countRemoved(cloudFlat.entries, final.entries) +
-    countRemoved(cloudFlat.targets, final.targets) +
-    countRemoved(cloudFlat.statuses, final.statuses);
+  const removedCloudEntities = writeCloud
+    ? countRemoved(cloudFlat.meals, final.meals) +
+      countRemoved(cloudFlat.entries, final.entries) +
+      countRemoved(cloudFlat.targets, final.targets) +
+      countRemoved(cloudFlat.statuses, final.statuses)
+    : 0;
   const downloadedDays = countChanged(state.localDays, final.days) + countRemoved(state.localDays, final.days);
-  const uploadedDays = countChanged(state.cloudDays, final.days) + countRemoved(state.cloudDays, final.days);
+  const uploadedDays = writeCloud
+    ? countChanged(state.cloudDays, final.days) + countRemoved(state.cloudDays, final.days)
+    : 0;
   const downloadedDeletionRecords = countChanged(state.localMarkers, final.markers);
-  const uploadedDeletionRecords = countChanged(state.cloudMarkers, final.markers);
+  const uploadedDeletionRecords = writeCloud
+    ? countChanged(state.cloudMarkers, final.markers)
+    : 0;
 
   await localDatabase.transaction(
     'rw',
@@ -608,7 +617,7 @@ export async function synchronizeRealNutritionJournal(
     },
   );
 
-  await cloudDatabase.transaction(
+  if (writeCloud) await cloudDatabase.transaction(
     'rw',
     cloudDatabase.realNutritionJournalDays,
     cloudDatabase.realNutritionJournalDeletionRecords,

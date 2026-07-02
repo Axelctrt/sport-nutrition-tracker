@@ -9,6 +9,7 @@ import {
   registerAccountDataSpace,
   type DataSpaceStorage,
 } from "@/infrastructure/data-spaces/dataSpaceRegistry";
+import type { PreparedCloudAccountRestore } from "@/infrastructure/data-spaces/cloudAccountRestoreService";
 import type {
   SyncPrototypeClient,
   SyncPrototypeSnapshot,
@@ -123,6 +124,34 @@ const accountSpace: DataSpaceDescriptor = {
   lastActivatedAt: "2026-07-01T08:00:00.000Z",
 };
 
+
+function preparedCloudRestore(): PreparedCloudAccountRestore {
+  return {
+    accountFingerprint: NEW_ACCOUNT_FINGERPRINT,
+    targetDatabaseName: `sportpilot-local-database--${NEW_ACCOUNT_FINGERPRINT}`,
+    sourceFingerprint: "cloud-source",
+    targetFingerprint: "missing",
+    targetDatabaseExisted: false,
+    analyzedAt: "2026-07-01T08:00:00.000Z",
+    preview: {
+      hasCloudData: true,
+      cloudRecordCount: 2,
+      cloudDeletionMarkerCount: 0,
+      localMeaningfulRecordCount: 0,
+      localState: "missing",
+      canRestore: true,
+      categories: [
+        {
+          key: "weights",
+          label: "Pesées",
+          description: "Historique des pesées synchronisées.",
+          recordCount: 2,
+        },
+      ],
+    },
+  };
+}
+
 describe("DataSpaceAccountGate", () => {
   it("ouvre normalement l’espace invité lorsqu’aucun compte n’est connecté", async () => {
     render(
@@ -166,10 +195,51 @@ describe("DataSpaceAccountGate", () => {
       }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", {
+      await screen.findByRole("button", {
         name: "Commencer avec un espace vide",
       }),
     ).toBeInTheDocument();
+  });
+
+  it("vérifie le cloud avant d’autoriser le choix d’un espace vide", async () => {
+    let resolveAnalysis: ((value: PreparedCloudAccountRestore) => void) | undefined;
+    const client = createClient(
+      createSnapshot({
+        isLoggedIn: true,
+        userId: NEW_ACCOUNT_ID,
+      }),
+    );
+    client.prepareCloudRestore = vi.fn(
+      () => new Promise<PreparedCloudAccountRestore>((resolve) => {
+        resolveAnalysis = resolve;
+      }),
+    );
+    client.applyCloudRestore = vi.fn(async () => {
+      throw new Error("not used");
+    });
+
+    render(
+      <DataSpaceAccountGate
+        client={client}
+        currentSpace={guestSpace}
+        reload={vi.fn()}
+      >
+        <p>Données privées</p>
+      </DataSpaceAccountGate>,
+    );
+
+    expect(
+      await screen.findByRole("button", { name: "Vérification du cloud…" }),
+    ).toBeDisabled();
+
+    resolveAnalysis?.(preparedCloudRestore());
+
+    expect(
+      await screen.findByText("Des données ont été trouvées pour ce compte"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Commencer avec un espace vide" }),
+    ).toBeEnabled();
   });
 
   it("crée explicitement un espace vide puis recharge l’application", async () => {

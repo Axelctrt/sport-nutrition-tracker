@@ -15,6 +15,7 @@ import {
   sameEntity,
   stripCloudFields,
   type CloudOwned,
+  type CloudSyncExecutionOptions,
 } from '@/infrastructure/sync-prototype/cloudSyncValue';
 
 type CloudActivity = Omit<Activity, 'id'> & { readonly id: string };
@@ -218,7 +219,9 @@ export async function synchronizeRealActivities(
   localDatabase: AppDatabase,
   cloudDatabase: SyncPrototypeDatabase,
   currentUserId: string,
+  options: CloudSyncExecutionOptions = {},
 ): Promise<RealActivitySyncResult> {
+  const writeCloud = options.writeCloud !== false;
   const state = await readState(
     localDatabase,
     cloudDatabase,
@@ -270,6 +273,7 @@ export async function synchronizeRealActivities(
         downloadedActivities += 1;
       }
       if (
+        writeCloud &&
         await upsertCloud(
           cloudDatabase.realActivities as Table<Activity, string>,
           cloudState.activity,
@@ -284,7 +288,7 @@ export async function synchronizeRealActivities(
         await localDatabase.activities.delete(id);
         removedLocalActivities += 1;
       }
-      if (cloudState.activity) {
+      if (writeCloud && cloudState.activity) {
         await cloudDatabase.realActivities.delete(cloudPrivateId(id));
         removedCloudActivities += 1;
       }
@@ -296,6 +300,7 @@ export async function synchronizeRealActivities(
         downloadedDeletionRecords += 1;
       }
       if (
+        writeCloud &&
         await upsertCloud(
           cloudDatabase.realActivityDeletionRecords as Table<
             DeletionRecord,

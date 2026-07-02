@@ -21,6 +21,7 @@ import {
   sameEntity,
   stripCloudFields,
   type CloudOwned,
+  type CloudSyncExecutionOptions,
 } from '@/infrastructure/sync-prototype/cloudSyncValue';
 import type { NutritionJournalDayAggregate } from '@/infrastructure/sync-prototype/realNutritionJournalSyncService';
 
@@ -611,7 +612,9 @@ export async function synchronizeRealNutritionLibrary(
   localDatabase: AppDatabase,
   cloudDatabase: SyncPrototypeDatabase,
   currentUserId: string,
+  options: CloudSyncExecutionOptions = {},
 ): Promise<RealNutritionLibrarySyncResult> {
+  const writeCloud = options.writeCloud !== false;
   const state = await readState(localDatabase, cloudDatabase, currentUserId);
   const final = resolveFinalState(state);
   const preview = buildPreview(state, final);
@@ -626,20 +629,28 @@ export async function synchronizeRealNutritionLibrary(
   const localMarkerById = mapById(state.localMarkers);
   const cloudMarkerById = mapById(state.cloudMarkers);
 
-  const uploadedProducts = final.products.filter((value) =>
-    !sameEntity(cloudProductById.get(value.id), value)).length;
+  const uploadedProducts = writeCloud
+    ? final.products.filter((value) =>
+        !sameEntity(cloudProductById.get(value.id), value)).length
+    : 0;
   const downloadedProducts = final.products.filter((value) =>
     !sameEntity(localProductById.get(value.id), value)).length;
-  const uploadedRecipes = final.recipes.filter((value) =>
-    !sameEntity(cloudRecipeById.get(value.id), value)).length;
+  const uploadedRecipes = writeCloud
+    ? final.recipes.filter((value) =>
+        !sameEntity(cloudRecipeById.get(value.id), value)).length
+    : 0;
   const downloadedRecipes = final.recipes.filter((value) =>
     !sameEntity(localRecipeById.get(value.id), value)).length;
-  const uploadedFavoriteMeals = final.favorites.filter((value) =>
-    !sameEntity(cloudFavoriteById.get(value.id), value)).length;
+  const uploadedFavoriteMeals = writeCloud
+    ? final.favorites.filter((value) =>
+        !sameEntity(cloudFavoriteById.get(value.id), value)).length
+    : 0;
   const downloadedFavoriteMeals = final.favorites.filter((value) =>
     !sameEntity(localFavoriteById.get(value.id), value)).length;
-  const uploadedDeletionRecords = final.markers.filter((value) =>
-    !sameEntity(cloudMarkerById.get(value.id), value)).length;
+  const uploadedDeletionRecords = writeCloud
+    ? final.markers.filter((value) =>
+        !sameEntity(cloudMarkerById.get(value.id), value)).length
+    : 0;
   const downloadedDeletionRecords = final.markers.filter((value) =>
     !sameEntity(localMarkerById.get(value.id), value)).length;
 
@@ -661,8 +672,10 @@ export async function synchronizeRealNutritionLibrary(
     .filter((value) => !finalIngredientIds.has(value.id)).length;
   const cloudRemovedFavoriteCount = state.cloudFavorites.filter((value) => !finalFavoriteIds.has(value.id)).length;
   const cloudAliasCount = [...final.productAliases.keys()].filter((id) => cloudProductById.has(id)).length;
-  const removedCloudEntities = cloudRemovedRecipeCount + cloudRemovedIngredientCount
-    + cloudRemovedFavoriteCount + cloudAliasCount;
+  const removedCloudEntities = writeCloud
+    ? cloudRemovedRecipeCount + cloudRemovedIngredientCount
+      + cloudRemovedFavoriteCount + cloudAliasCount
+    : 0;
 
   let remappedProductReferences = 0;
   await localDatabase.transaction(
@@ -705,7 +718,7 @@ export async function synchronizeRealNutritionLibrary(
     },
   );
 
-  await cloudDatabase.transaction(
+  if (writeCloud) await cloudDatabase.transaction(
     'rw',
     cloudDatabase.realNutritionProducts,
     cloudDatabase.realNutritionRecipes,

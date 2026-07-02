@@ -15,6 +15,7 @@ import {
   sameEntity,
   stripCloudFields,
   type CloudOwned,
+  type CloudSyncExecutionOptions,
 } from '@/infrastructure/sync-prototype/cloudSyncValue';
 
 type CloudWeightEntry = Omit<WeightEntry, 'id'> & { readonly id: string };
@@ -203,7 +204,9 @@ export async function synchronizeRealWeights(
   localDatabase: AppDatabase,
   cloudDatabase: SyncPrototypeDatabase,
   currentUserId: string,
+  options: CloudSyncExecutionOptions = {},
 ): Promise<RealWeightSyncResult> {
+  const writeCloud = options.writeCloud !== false;
   const state = await readState(localDatabase, cloudDatabase, currentUserId);
   const preview = buildPreview(
     state.localWeights,
@@ -251,6 +254,7 @@ export async function synchronizeRealWeights(
         downloadedWeights += 1;
       }
       if (
+        writeCloud &&
         await upsertCloud(
           cloudDatabase.realWeights as Table<WeightEntry, string>,
           cloudState.weight,
@@ -265,7 +269,7 @@ export async function synchronizeRealWeights(
         await localDatabase.weights.delete(id);
         removedLocalWeights += 1;
       }
-      if (cloudState.weight) {
+      if (writeCloud && cloudState.weight) {
         await cloudDatabase.realWeights.delete(cloudPrivateId(id));
         removedCloudWeights += 1;
       }
@@ -277,6 +281,7 @@ export async function synchronizeRealWeights(
         downloadedDeletionRecords += 1;
       }
       if (
+        writeCloud &&
         await upsertCloud(
           cloudDatabase.realWeightDeletionRecords as Table<DeletionRecord, string>,
           cloudState.marker,

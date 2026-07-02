@@ -36,6 +36,13 @@ const GuestDataImportPanel = lazy(async () => {
   return { default: module.GuestDataImportPanel };
 });
 
+const CloudAccountRestorePanel = lazy(async () => {
+  const module = await import(
+    "@/features/account-devices/components/CloudAccountRestorePanel"
+  );
+  return { default: module.CloudAccountRestorePanel };
+});
+
 interface DataSpaceAccountGateProps {
   children: ReactNode;
   client?: SyncPrototypeClient | null;
@@ -115,6 +122,10 @@ export function DataSpaceAccountGate({
       : { status: "ready" },
   );
 
+  const [cloudAnalysisStatus, setCloudAnalysisStatus] = useState<
+    "idle" | "loading" | "ready" | "error"
+  >("idle");
+
   useEffect(() => {
     if (!runtimeClient) {
       setState({ status: "ready" });
@@ -124,6 +135,7 @@ export function DataSpaceAccountGate({
     let disposed = false;
     let initialized = false;
     let switchingToGuest = false;
+    let cloudCheckFingerprint: string | undefined;
 
     const reconcile = () => {
       if (disposed || !initialized || switchingToGuest) return;
@@ -138,6 +150,8 @@ export function DataSpaceAccountGate({
       }
 
       if (!snapshot.account.isLoggedIn) {
+        cloudCheckFingerprint = undefined;
+        setCloudAnalysisStatus("idle");
         if (currentSpace.kind === "account") {
           switchingToGuest = true;
           setState({
@@ -172,6 +186,12 @@ export function DataSpaceAccountGate({
       }
 
       const existingSpace = findAccountDataSpace(accountFingerprint, storage);
+      if (existingSpace) {
+        setCloudAnalysisStatus("ready");
+      } else if (cloudCheckFingerprint !== accountFingerprint) {
+        cloudCheckFingerprint = accountFingerprint;
+        setCloudAnalysisStatus("loading");
+      }
 
       setState({
         status: "choice",
@@ -341,7 +361,24 @@ export function DataSpaceAccountGate({
             ) : null}
           </>
         ) : (
-          <div className="mt-6 grid gap-4 sm:grid-cols-2">
+          <div className="mt-6 grid gap-4">
+            <Suspense
+              fallback={
+                <InlineNotice tone="info" title="Recherche des données cloud">
+                  Vérification des données déjà synchronisées pour ce compte.
+                </InlineNotice>
+              }
+            >
+              <CloudAccountRestorePanel
+                accountFingerprint={state.accountFingerprint}
+                client={runtimeClient!}
+                autoAnalyze
+                compact
+                reload={reload}
+                onAnalysisChange={(status) => setCloudAnalysisStatus(status)}
+              />
+            </Suspense>
+
             {state.canAttachCurrentData ? (
               <Suspense
                 fallback={
@@ -385,9 +422,12 @@ export function DataSpaceAccountGate({
               <Button
                 className="mt-4 w-full"
                 variant="secondary"
+                disabled={cloudAnalysisStatus === "loading"}
                 onClick={() => void createEmpty()}
               >
-                Commencer avec un espace vide
+                {cloudAnalysisStatus === "loading"
+                  ? "Vérification du cloud…"
+                  : "Commencer avec un espace vide"}
               </Button>
             </section>
           </div>

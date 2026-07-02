@@ -3,7 +3,7 @@ import fs from 'node:fs';
 const read = (path) => fs.readFileSync(path, 'utf8');
 const failures = [];
 
-const config = read('src/infrastructure/sync-prototype/syncPrototypeConfig.ts');
+const config = read('src/infrastructure/sync-prototype/syncPrototypeConfig.ts').replace(/\r\n/g, '\n');
 if (!config.includes('...environment,\n    ...syncPublicDeploymentConfig')) {
   failures.push('La configuration publique de production ne prime pas sur les variables obsolètes.');
 }

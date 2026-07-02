@@ -12,6 +12,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { routePaths } from "@/app/routePaths";
+import { CloudAccountRestorePanel } from "@/features/account-devices/components/CloudAccountRestorePanel";
 import { GuestDataImportPanel } from "@/features/account-devices/components/GuestDataImportPanel";
 import type { DataSpaceDescriptor } from "@/domain/data-spaces/dataSpace";
 import {
@@ -402,12 +403,21 @@ export function AccountDevicesPage({
       {loggedIn &&
       currentSpace.kind === "account" &&
       currentSpace.accountFingerprint ? (
-        <Card className="p-5">
-          <GuestDataImportPanel
-            accountFingerprint={currentSpace.accountFingerprint}
-            reload={reload}
-          />
-        </Card>
+        <>
+          <Card className="p-5">
+            <CloudAccountRestorePanel
+              accountFingerprint={currentSpace.accountFingerprint}
+              client={runtimeClient}
+              reload={reload}
+            />
+          </Card>
+          <Card className="p-5">
+            <GuestDataImportPanel
+              accountFingerprint={currentSpace.accountFingerprint}
+              reload={reload}
+            />
+          </Card>
+        </>
       ) : null}
 
       <Card className="p-5">

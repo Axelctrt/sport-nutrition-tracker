@@ -60,3 +60,15 @@ npm run release:verify
 - Les références vers les repas, produits et bilans sont remappées automatiquement.
 - L’écriture dans l’espace du compte est atomique et l’espace invité reste intact.
 - L’import est proposé à la connexion et reste disponible ensuite dans Compte et appareils.
+
+
+## Phase 0.21.0 D3 — Restauration guidée après nouvelle installation
+
+- Le cloud est analysé avant la création d’un nouvel espace local de compte.
+- Les données trouvées sont présentées par domaine avant toute restauration.
+- La restauration est effectuée en lecture seule côté cloud dans une base temporaire.
+- L’analyse est invalidée si la source cloud ou la cible locale change avant confirmation.
+- L’application atomique conserve la cible locale en cas d’échec.
+- « Commencer avec un espace vide » ne supprime ni ne remplace aucune donnée cloud.
+- Une restauration différée reste disponible depuis Compte et appareils.
+- Les comptes restent liés à leur empreinte locale et aucune analyse ne peut être réutilisée pour un autre compte.

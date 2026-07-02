@@ -61,3 +61,20 @@ IMPORT DES DONNEES INVITEES (0.21.0 D2)
 Après connexion, ouvrir Compte et appareils puis choisir Analyser les données invitées.
 Vérifier les compteurs, confirmer l’import, puis synchroniser les domaines cloud nécessaires.
 L’espace invité n’est jamais supprimé par cette opération.
+
+
+RESTAURATION CLOUD APRES NOUVELLE INSTALLATION (0.21.0 D3)
+-----------------------------------------------------------
+1. Vérifier qu’un compte de test contient des données cloud synchronisées dans plusieurs domaines.
+2. Exporter une sauvegarde JSON de sécurité avant de supprimer les données du site ou la PWA de test.
+3. Réinstaller la PWA ou utiliser une origine de test sans espace local de compte.
+4. Se connecter au compte et attendre la fin de l’analyse cloud.
+5. Vérifier le résumé par domaine puis choisir Restaurer depuis le cloud.
+6. Confirmer explicitement la restauration et contrôler les pesées, activités, objectifs, musculation et données nutritionnelles.
+7. Vérifier que les analyses de synchronisation reviennent à 0 différence.
+8. Refaire le test sur une installation vide en choisissant Commencer avec un espace vide.
+9. Vérifier que les données cloud existent toujours depuis un autre appareil ou navigateur.
+10. Ouvrir Compte et appareils puis relancer la restauration différée.
+11. Tester un second compte et confirmer l’absence totale de données du premier compte.
+
+La restauration D3 exige le réseau. Une fois les données restaurées, l’espace local redevient utilisable hors connexion. Les réglages, récompenses, thèmes, missions et rappels qui n’existent pas dans le cloud ne sont pas restaurés par D3.

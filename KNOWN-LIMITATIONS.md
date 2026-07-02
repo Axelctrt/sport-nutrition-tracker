@@ -8,7 +8,7 @@ Les activités, objectifs, musculation et domaines nutritionnels sont synchronis
 
 ## Espace invité
 
-Les données créées dans l’espace invité restent conservées après connexion. Elles peuvent désormais être analysées puis fusionnées dans un compte existant sans effacer la source. Après l’import local, les synchronisations cloud restent déclenchées par domaine jusqu’à la phase D3.
+Les données créées dans l’espace invité restent conservées après connexion. Elles peuvent désormais être analysées puis fusionnées dans un compte existant sans effacer la source. Après l’import local, les envois vers le cloud restent déclenchés par domaine. D3 ajoute une restauration initiale groupée depuis le cloud, sans transformer l’import invité en synchronisation automatique.
 
 ## Données restant locales
 
@@ -16,7 +16,7 @@ Les récompenses, thèmes, missions et rappels restent locaux à l’espace acti
 
 ## Nouvelle installation
 
-Une nouvelle installation peut récupérer les domaines synchronisés après connexion et lancement des synchronisations correspondantes. Une restauration cloud entièrement automatisée de l’espace, de ses réglages et de tous les domaines locaux n’est pas encore disponible.
+Une nouvelle installation peut désormais analyser puis restaurer en une opération les domaines déjà synchronisés. Cette restauration ne couvre pas les données qui restent volontairement locales : réglages non synchronisés, récompenses, thèmes, missions et rappels. Elle nécessite une connexion réseau et une confirmation explicite.
 
 ## Appareils distants
 
@@ -38,8 +38,8 @@ Open Food Facts et Dexie Cloud dépendent du réseau et de leur disponibilité. 
 
 SportPilot 0.20.1 utilise la base cloud v8 et le runtime `sportpilot-sync-runtime-0.20.0-v8`. La base métier reste en Dexie v8, la sauvegarde en JSON v7 et le registre local des espaces en v1.
 
-## 0.21.0 D1–D2
+## 0.21.0 D1–D3
 
-- La gestion du compte et l’import sécurisé de l’espace invité sont disponibles.
-- La restauration guidée depuis le cloud après une nouvelle installation sera traitée en D3.
+- La gestion du compte, l’import sécurisé de l’espace invité et la restauration guidée depuis le cloud sont disponibles.
+- La restauration D3 couvre uniquement les domaines actuellement synchronisés et ne remplace pas une sauvegarde JSON complète.
 - La liste des appareils distants dépend encore de métadonnées non exposées par le service cloud actuel.

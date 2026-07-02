@@ -96,3 +96,20 @@
 - [ ] L’espace invité reste intégralement disponible après déconnexion.
 - [ ] Une seconde importation ne crée aucun doublon.
 - [ ] `npm run audit:guest-data-import` réussit.
+
+
+## Phase 0.21.0 D3
+
+- [ ] Sur une installation locale vide, la connexion détecte les données cloud du compte.
+- [ ] Le détail par domaine est affiché avant toute restauration.
+- [ ] « Restaurer depuis le cloud » exige une confirmation explicite.
+- [ ] Les pesées, activités, objectifs, données de musculation et domaines nutritionnels sont restaurés.
+- [ ] La restauration ne crée aucun doublon et respecte les suppressions cloud.
+- [ ] Une modification cloud ou locale après l’analyse invalide l’aperçu.
+- [ ] Une erreur pendant la restauration laisse l’espace local inchangé.
+- [ ] Le cloud reste strictement inchangé pendant la restauration.
+- [ ] « Commencer avec un espace vide » ne supprime aucune donnée cloud.
+- [ ] La restauration peut être relancée ensuite depuis Compte et appareils.
+- [ ] Un compte B ne peut ni analyser ni restaurer un aperçu préparé pour le compte A.
+- [ ] La restauration fonctionne après suppression puis réinstallation de la PWA sur iPhone 15 sous iOS 26.
+- [ ] `npm run audit:cloud-account-restore` réussit.

@@ -862,3 +862,11 @@ Les blocs masqués ne suppriment aucune donnée : le journal alimentaire, les ac
 ### Continuité des données 0.21.0 D2
 
 Depuis **Compte et appareils**, SportPilot peut analyser l’espace invité puis fusionner ses données dans le compte actif. La fusion est atomique, déduplique les identifiants fonctionnels et conserve l’élément le plus récent. Une nouvelle analyse est exigée si la source ou la cible change avant validation.
+
+### Continuité des données 0.21.0 D3
+
+Après une nouvelle installation, la connexion à un compte déclenche une analyse en lecture seule des domaines déjà synchronisés. Lorsque des données sont trouvées, SportPilot propose soit de les restaurer dans une base locale vide, soit de commencer avec un espace local vide sans effacer le cloud. La restauration peut également être relancée plus tard depuis **Compte et appareils**.
+
+La restauration utilise une base Dexie temporaire, vérifie de nouveau les empreintes de la source cloud et de la cible locale avant validation, puis applique le résultat dans une transaction locale. Les écritures cloud sont explicitement désactivées pendant cette opération. En cas d’échec, l’espace local reste inchangé et la source cloud est conservée.
+
+Les domaines restaurés sont ceux déjà couverts par la synchronisation cloud : pesées, activités, objectifs sportifs, musculation, bibliothèque nutritionnelle, journal nutritionnel et suivi nutritionnel. Les réglages, récompenses, thèmes, missions et rappels restent locaux.

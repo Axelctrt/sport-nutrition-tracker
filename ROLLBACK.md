@@ -34,3 +34,10 @@ Ne jamais réécrire le tag `v0.20.1`. Conserver le tag publié et livrer un cor
 ## Retour arrière D2
 
 D2 ne modifie aucun schéma. Un retour au commit D1 désactive uniquement l’interface d’import. Les données déjà fusionnées restent dans l’espace du compte et l’espace invité demeure intact.
+
+
+## Retour arrière D3
+
+D3 ne modifie ni le schéma Dexie métier, ni le schéma cloud, ni le format JSON. Un retour au commit D2 retire uniquement l’analyse et la restauration guidées. Les données déjà restaurées restent dans l’espace local du compte et les données cloud restent intactes.
+
+En cas d’incident pendant une restauration, ne supprime pas le cloud. Ferme l’application, exporte l’espace local s’il est accessible et qualifie l’état de la base du compte. Le moteur D3 prépare les données dans une base temporaire et tente de rétablir l’état local antérieur avant de remonter l’erreur.
