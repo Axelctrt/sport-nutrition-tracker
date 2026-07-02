@@ -96,12 +96,20 @@ export class DexieSettingsRepository implements SettingsRepository {
         }
 
         const userChangeKeys = Object.keys(userChanges);
+        const hasReminderChanges = userChangeKeys.includes(
+          'routineReminderPreferences',
+        );
         const hasSyncableUserChanges = userChangeKeys.some(
-          (key) => key !== 'routineReminderPreferences',
+          (key) =>
+            key !== 'routineReminderPreferences' &&
+            key !== 'routineReminderUpdatedAt',
         );
         const timestamp = currentIsoDateTime();
         if (hasSyncableUserChanges) {
           userChanges.syncableUpdatedAt = timestamp;
+        }
+        if (hasReminderChanges) {
+          userChanges.routineReminderUpdatedAt = timestamp;
         }
 
         const [updatedUser, updatedDevice] = await Promise.all([

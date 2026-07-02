@@ -103,6 +103,7 @@ export function createDefaultUserSettings(): UserSettings {
   return {
     ...settings,
     syncableUpdatedAt: settings.updatedAt,
+    routineReminderUpdatedAt: settings.updatedAt,
   };
 }
 
@@ -130,6 +131,8 @@ export function normalizeUserSettings(
   return {
     ...settings,
     syncableUpdatedAt: settings.syncableUpdatedAt ?? settings.updatedAt,
+    routineReminderUpdatedAt:
+      settings.routineReminderUpdatedAt ?? settings.updatedAt,
     enduranceTemplates:
       settings.enduranceTemplates ??
       DEFAULT_ENDURANCE_TEMPLATES.map((template) => ({ ...template })),

@@ -8,7 +8,7 @@ import {
 import { syncPublicDeploymentConfig } from '@/infrastructure/sync-prototype/syncPublicDeploymentConfig';
 
 
-describe('préparation E1 de la continuité complète du compte', () => {
+describe('préparation E2 de la continuité complète du compte', () => {
   it('ajoute le domaine cloud sans migrer la base métier ni la sauvegarde', () => {
     expect(__APP_VERSION__).toBe('0.21.1');
     expect(databaseSchemaVersion).toBe(8);
@@ -17,13 +17,13 @@ describe('préparation E1 de la continuité complète du compte', () => {
     expect(SYNC_PROTOTYPE_DATABASE_NAME).toBe(
       'sportpilot-sync-runtime-0.20.0-v10',
     );
-    expect(SYNC_PROTOTYPE_TABLE_NAMES).toContain('realAccountPreferences');
+    expect(SYNC_PROTOTYPE_TABLE_NAMES).toContain('realRewardsRoutines');
   });
 
-  it('active E1 dans le déploiement public', () => {
+  it('active E2 dans le déploiement public', () => {
     expect(syncPublicDeploymentConfig).toMatchObject({
       VITE_ENABLE_SYNC_PROTOTYPE: 'true',
-      VITE_ENABLE_REAL_ACCOUNT_PREFERENCES_SYNC: 'true',
+      VITE_ENABLE_REAL_REWARDS_ROUTINES_SYNC: 'true',
       VITE_ENABLE_SYNC_DIAGNOSTICS: 'false',
     });
   });

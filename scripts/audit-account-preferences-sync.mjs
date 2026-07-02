@@ -48,7 +48,7 @@ if (failures.length === 0) {
 
   const database = read('src/infrastructure/sync-prototype/SyncPrototypeDatabase.ts');
   for (const marker of [
-    'SYNC_PROTOTYPE_DATABASE_VERSION = 9',
+    'SYNC_PROTOTYPE_DATABASE_VERSION = 10',
     "'realAccountPreferences'",
     "realAccountPreferences: 'id, updatedAt'",
   ]) {
@@ -88,7 +88,7 @@ if (failures.length === 0) {
   const panel = read(requiredFiles[2]);
   for (const marker of [
     'Synchronisation du profil et des réglages',
-    'Les rappels seront traités séparément dans le lot E2',
+    'Les thèmes de récompense et les rappels disposent désormais de leur synchronisation E2 séparée.',
     '<ConfirmationDialog',
   ]) {
     if (!panel.includes(marker)) fail(`Interface E1 incomplète : ${marker}.`);
@@ -126,5 +126,5 @@ if (failures.length > 0) {
 }
 
 console.log(
-  'Audit E1 réussi : profil, réglages partageables, exclusions appareil/rappels, restauration initiale, isolation et runtime cloud v9 validés.',
+  'Audit E1 réussi : profil, réglages partageables, exclusions appareil/domaine E2, restauration initiale, isolation et runtime cloud v10 validés.',
 );

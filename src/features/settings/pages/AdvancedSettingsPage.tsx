@@ -32,6 +32,7 @@ import { NutritionLibrarySyncSettingsPanel } from '@/features/settings/component
 import { NutritionTrackingSyncSettingsPanel } from '@/features/settings/components/NutritionTrackingSyncSettingsPanel';
 import { WeightSyncSettingsPanel } from '@/features/settings/components/WeightSyncSettingsPanel';
 import { AccountPreferencesSyncSettingsPanel } from '@/features/settings/components/AccountPreferencesSyncSettingsPanel';
+import { RewardsRoutinesSyncSettingsPanel } from '@/features/settings/components/RewardsRoutinesSyncSettingsPanel';
 import {
   SettingsSectionDirectory,
   type SettingsDirectoryItem,
@@ -429,6 +430,7 @@ export function AdvancedSettingsPage() {
         >
           <div className="space-y-5">
             <AccountPreferencesSyncSettingsPanel />
+            <RewardsRoutinesSyncSettingsPanel />
             <WeightSyncSettingsPanel />
             <ActivitySyncSettingsPanel />
             <GoalSyncSettingsPanel />

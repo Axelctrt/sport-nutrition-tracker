@@ -16,7 +16,7 @@ Les données invitées restent volontairement conservées après un import. Elle
 
 ## Données restant locales
 
-Le profil et les réglages fonctionnels sont synchronisés depuis E1. Les préférences propres à l’appareil, récompenses, thèmes, missions et rappels restent locaux. Une sauvegarde JSON complète reste nécessaire pour conserver ces éléments lors d’une réinstallation totale.
+Le profil et les réglages fonctionnels sont synchronisés depuis E1. Les badges, thèmes visuels, missions et rappels sont synchronisés depuis E2. Seuls le mode clair ou sombre, le stockage, le minuteur, l’activation automatique et les métadonnées de sauvegarde restent propres à l’appareil.
 
 ## Restauration initiale
 
@@ -32,7 +32,7 @@ La résolution utilise `updatedAt`, puis une comparaison déterministe en cas d�
 
 ## Runtime local cloud
 
-E1 crée un nouveau runtime IndexedDB local v9 et peut demander une nouvelle authentification OTP lors de sa première ouverture. Les anciennes bases locales ne sont pas supprimées automatiquement afin d’éviter toute destruction implicite.
+E2 crée un nouveau runtime IndexedDB local v10 et peut demander une nouvelle authentification OTP lors de sa première ouverture. Les runtimes v8 et v9 ne sont pas supprimés automatiquement afin d’éviter toute destruction implicite.
 
 ## Services externes
 
@@ -40,4 +40,4 @@ Open Food Facts et Dexie Cloud dépendent du réseau et de leur disponibilité. 
 
 ## Versions de données
 
-La branche 0.22.0 E1 utilise la base Dexie Cloud v9 et le runtime `sportpilot-sync-runtime-0.20.0-v9`. La base métier reste en Dexie v8, la sauvegarde en JSON v7 et le registre local des espaces en v1.
+La branche 0.22.0 E2 utilise la base Dexie Cloud v10 et le runtime `sportpilot-sync-runtime-0.20.0-v10`. La base métier reste en Dexie v8, la sauvegarde en JSON v7 et le registre local des espaces en v1.

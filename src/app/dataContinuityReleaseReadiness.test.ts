@@ -17,9 +17,9 @@ describe('publication de la continuité des données 0.21.1', () => {
     expect(databaseSchemaVersion).toBe(8);
     expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(7);
     expect(DATA_SPACE_REGISTRY_VERSION).toBe(1);
-    expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(9);
+    expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(10);
     expect(SYNC_PROTOTYPE_DATABASE_NAME).toBe(
-      'sportpilot-sync-runtime-0.20.0-v9',
+      'sportpilot-sync-runtime-0.20.0-v10',
     );
   });
 

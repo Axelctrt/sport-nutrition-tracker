@@ -48,13 +48,14 @@ Les sauvegardes JSON v7 acceptent ce champ optionnel. Les anciennes sauvegardes 
 
 | Élément | Version après E1 |
 |---|---:|
-| Runtime Dexie Cloud | 9 |
-| Nom du runtime local cloud | `sportpilot-sync-runtime-0.20.0-v9` |
+| Runtime Dexie Cloud introduit par E1 | 9 |
+| Runtime utilisé sur la branche E2 actuelle | 10 |
+| Nom du runtime local cloud actuel | `sportpilot-sync-runtime-0.20.0-v10` |
 | Base métier Dexie | 8 |
 | Sauvegarde JSON | 7 |
 | Registre des espaces | 1 |
 
-Le changement de runtime cloud de v8 vers v9 ajoute uniquement la table `realAccountPreferences`. Il peut provoquer une nouvelle authentification OTP sur chaque appareil lors du premier lancement de cette branche.
+E1 a introduit le passage du runtime cloud de v8 à v9 afin d’ajouter uniquement la table `realAccountPreferences`. La branche E2 utilise désormais le runtime v10 pour ajouter `realRewardsRoutines`, sans modifier le format de l’agrégat E1. Chacun de ces changements de runtime peut demander une nouvelle authentification OTP lors de sa première ouverture sur un appareil.
 
 ## Contrôles attendus
 

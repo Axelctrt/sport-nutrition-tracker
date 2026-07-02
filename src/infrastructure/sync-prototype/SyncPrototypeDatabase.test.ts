@@ -13,7 +13,7 @@ describe('base isolée du prototype Dexie Cloud', () => {
     expect(SYNC_PROTOTYPE_DATABASE_NAME).not.toBe(
       LEGACY_SYNC_PROTOTYPE_DATABASE_NAME,
     );
-    expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(9);
+    expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(10);
     expect(SYNC_PROTOTYPE_DATABASE_NAME).toBe(
       `sportpilot-sync-runtime-0.20.0-v${SYNC_PROTOTYPE_DATABASE_VERSION}`,
     );
@@ -41,6 +41,7 @@ describe('base isolée du prototype Dexie Cloud', () => {
       'realNutritionLibraryDeletionRecords',
       'realNutritionTracking',
       'realAccountPreferences',
+      'realRewardsRoutines',
     ]);
   });
 
@@ -56,6 +57,7 @@ describe('base isolée du prototype Dexie Cloud', () => {
       realNutritionLibrarySyncEnabled: true,
       realNutritionTrackingSyncEnabled: true,
       realAccountPreferencesSyncEnabled: true,
+      realRewardsRoutinesSyncEnabled: true,
       diagnosticsEnabled: true,
     });
 
@@ -90,6 +92,7 @@ describe('base isolée du prototype Dexie Cloud', () => {
     expect(database.table('realNutritionLibraryDeletionRecords').schema.primKey.keyPath).toBe('id');
     expect(database.table('realNutritionTracking').schema.primKey.keyPath).toBe('id');
     expect(database.table('realAccountPreferences').schema.primKey.keyPath).toBe('id');
+    expect(database.table('realRewardsRoutines').schema.primKey.keyPath).toBe('id');
 
     database.close();
   });

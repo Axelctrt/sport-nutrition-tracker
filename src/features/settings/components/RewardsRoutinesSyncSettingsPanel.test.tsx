@@ -2,7 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 
-import { AccountPreferencesSyncSettingsPanel } from '@/features/settings/components/AccountPreferencesSyncSettingsPanel';
+import { RewardsRoutinesSyncSettingsPanel } from '@/features/settings/components/RewardsRoutinesSyncSettingsPanel';
 import type {
   SyncPrototypeClient,
   SyncPrototypeSnapshot,
@@ -15,43 +15,51 @@ function createClient() {
     account: { isLoggedIn: true, isLoading: false, userId: 'user-1' },
     sync: { status: 'connected', phase: 'in-sync' },
     weights: { weights: [], deletedCount: 0, isLoading: false },
-    realAccountPreferences: { enabled: true, status: 'idle' },
+    realRewardsRoutines: { enabled: true, status: 'idle' },
     diagnostics: createEmptySyncPrototypeDiagnostics('user-1'),
   };
   const notify = () => listeners.forEach((listener) => listener());
   const preview = {
-    localProfilePresent: true,
-    cloudProfilePresent: false,
-    localSettingsPresent: true,
-    cloudSettingsPresent: false,
-    differingEntityCount: 2,
+    localAchievementCount: 2,
+    cloudAchievementCount: 1,
+    localUnlockedThemeCount: 2,
+    cloudUnlockedThemeCount: 1,
+    localWeeklyMissionCount: 1,
+    cloudWeeklyMissionCount: 0,
+    localReminderCompletionCount: 1,
+    cloudReminderCompletionCount: 0,
+    cloudStatePresent: true,
+    differingEntityCount: 4,
   };
-  const analyzeRealAccountPreferences = vi.fn(async () => {
+  const analyzeRealRewardsRoutines = vi.fn(async () => {
     snapshot = {
       ...snapshot,
-      realAccountPreferences: { enabled: true, status: 'ready', preview },
+      realRewardsRoutines: { enabled: true, status: 'ready', preview },
     };
     notify();
     return preview;
   });
-  const syncRealAccountPreferences = vi.fn(async () => {
-    const readyPreview = {
-      ...preview,
-      cloudProfilePresent: true,
-      cloudSettingsPresent: true,
-      differingEntityCount: 0,
-    };
+  const syncRealRewardsRoutines = vi.fn(async () => {
+    const readyPreview = { ...preview, differingEntityCount: 0 };
     const result = {
       ...readyPreview,
-      uploadedProfiles: 1,
-      downloadedProfiles: 0,
-      uploadedSettings: 1,
-      downloadedSettings: 0,
+      uploadedAchievements: 1,
+      downloadedAchievements: 0,
+      uploadedThemes: 1,
+      downloadedThemes: 0,
+      uploadedThemePreference: 0,
+      downloadedThemePreference: 0,
+      uploadedWeeklyMissions: 1,
+      downloadedWeeklyMissions: 0,
+      uploadedReminderCompletions: 1,
+      downloadedReminderCompletions: 0,
+      uploadedReminderPreferences: 0,
+      downloadedReminderPreferences: 0,
       completedAt: '2026-07-02T12:00:00.000Z',
     };
     snapshot = {
       ...snapshot,
-      realAccountPreferences: {
+      realRewardsRoutines: {
         enabled: true,
         status: 'ready',
         preview: readyPreview,
@@ -95,48 +103,48 @@ function createClient() {
       downloadedDeletionRecords: 0,
       completedAt: '2026-07-02T12:00:00.000Z',
     })),
-    analyzeRealAccountPreferences,
-    syncRealAccountPreferences,
+    analyzeRealRewardsRoutines,
+    syncRealRewardsRoutines,
     saveWeight: vi.fn(async () => { throw new Error('Non utilisé'); }),
     deleteWeight: vi.fn(async () => undefined),
   };
 
-  return { client, analyzeRealAccountPreferences, syncRealAccountPreferences };
+  return { client, analyzeRealRewardsRoutines, syncRealRewardsRoutines };
 }
 
-describe('AccountPreferencesSyncSettingsPanel', () => {
-  it('explique les réglages conservés sur l’appareil', () => {
+describe('RewardsRoutinesSyncSettingsPanel', () => {
+  it('explique que le domaine reste local lorsqu’il est désactivé', () => {
     render(
       <MemoryRouter>
-        <AccountPreferencesSyncSettingsPanel client={null} />
+        <RewardsRoutinesSyncSettingsPanel client={null} />
       </MemoryRouter>,
     );
 
-    expect(screen.getByText('Profil et réglages non activés')).toBeInTheDocument();
+    expect(screen.getByText('Récompenses et rappels non activés')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Gérer le compte de synchronisation' }))
       .toHaveAttribute('href', '/settings/account-devices');
   });
 
-  it('analyse puis synchronise après confirmation sans inclure le domaine E2', async () => {
+  it('analyse puis fusionne la progression après confirmation', async () => {
     const user = userEvent.setup();
-    const { client, analyzeRealAccountPreferences, syncRealAccountPreferences } = createClient();
+    const { client, analyzeRealRewardsRoutines, syncRealRewardsRoutines } = createClient();
 
     render(
       <MemoryRouter>
-        <AccountPreferencesSyncSettingsPanel client={client} />
+        <RewardsRoutinesSyncSettingsPanel client={client} />
       </MemoryRouter>,
     );
 
     await waitFor(() => expect(client.initialize).toHaveBeenCalledTimes(1));
-    expect(screen.getByText(/synchronisation E2 séparée/)).toBeInTheDocument();
+    expect(screen.getByText(/Fusion non destructive/)).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Analyser sans modifier' }));
-    await waitFor(() => expect(analyzeRealAccountPreferences).toHaveBeenCalledTimes(1));
-    expect(screen.getByText('2 éléments diffèrent entre cet appareil et le cloud.')).toBeInTheDocument();
+    await waitFor(() => expect(analyzeRealRewardsRoutines).toHaveBeenCalledTimes(1));
+    expect(screen.getByText('4 éléments diffèrent entre cet appareil et le cloud.')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Synchroniser le profil et les réglages' }));
+    await user.click(screen.getByRole('button', { name: 'Synchroniser les récompenses et rappels' }));
     await user.click(screen.getByRole('button', { name: 'Synchroniser' }));
-    await waitFor(() => expect(syncRealAccountPreferences).toHaveBeenCalledTimes(1));
-    expect(screen.getByText('2 éléments mis à jour.')).toBeInTheDocument();
+    await waitFor(() => expect(syncRealRewardsRoutines).toHaveBeenCalledTimes(1));
+    expect(screen.getByText('4 éléments mis à jour.')).toBeInTheDocument();
   });
 });

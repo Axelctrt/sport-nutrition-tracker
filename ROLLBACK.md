@@ -4,7 +4,7 @@
 
 Le fix-forward est privilégié. Ne supprime jamais IndexedDB, les données Safari, la PWA ou une base Dexie Cloud locale pour corriger un incident de compte, d’import ou de restauration.
 
-La branche E1 conserve la base métier Dexie v8, la sauvegarde JSON v7 et le registre des espaces v1, mais utilise le nouveau runtime cloud `sportpilot-sync-runtime-0.20.0-v9`. Le runtime v8 publié avec 0.21.1 reste intact.
+La branche E2 conserve la base métier Dexie v8, la sauvegarde JSON v7 et le registre des espaces v1, mais utilise le runtime cloud `sportpilot-sync-runtime-0.20.0-v10`. Le runtime v9 utilisé par E1 reste intact.
 
 ## Mesures immédiates
 
@@ -35,7 +35,11 @@ En cas d’échec pendant une restauration, fermer l’application, conserver la
 
 ## Défaut de runtime cloud
 
-Fermer tous les onglets de l’origine concernée puis redémarrer l’application. E1 utilise volontairement le runtime v9 pour la table `realAccountPreferences`. Ne jamais renommer v9 en v8 ni réutiliser un runtime d’un schéma antérieur avec une version supérieure.
+Fermer tous les onglets de l’origine concernée puis redémarrer l’application. E2 utilise volontairement le runtime v10 pour les tables `realAccountPreferences` et `realRewardsRoutines`. Ne jamais renommer v10 ni réutiliser un runtime d’un schéma antérieur avec une version supérieure.
+
+## Récompenses et rappels E2
+
+E2 fusionne la progression sans suppression. Un retour au code E1 retire l’interface E2 mais ne supprime ni les tables locales ni le runtime v10. En cas d’état incohérent, conserver les données des deux appareils, exporter une sauvegarde JSON et corriger par fix-forward plutôt que par effacement.
 
 ## Git
 

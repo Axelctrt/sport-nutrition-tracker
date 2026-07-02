@@ -27,7 +27,7 @@ export const ACCOUNT_PREFERENCES_AGGREGATE_ID = 'account-preferences';
 
 export type SyncedUserSettings = Omit<
   UserSettings,
-  'routineReminderPreferences' | 'syncableUpdatedAt'
+  'routineReminderPreferences' | 'routineReminderUpdatedAt' | 'syncableUpdatedAt'
 >;
 
 export interface AccountPreferencesAggregate {
@@ -76,6 +76,7 @@ export function createSyncedUserSettingsSnapshot(
   const normalized = normalizeUserSettings(settings);
   const {
     routineReminderPreferences: _routineReminderPreferences,
+    routineReminderUpdatedAt: _routineReminderUpdatedAt,
     syncableUpdatedAt,
     ...syncable
   } = normalized;
@@ -255,6 +256,9 @@ async function applySettingsToLocal(
     updatedAt: maxTimestamp(current.updatedAt, target.updatedAt),
     syncableUpdatedAt: target.updatedAt,
     routineReminderPreferences: current.routineReminderPreferences!,
+    ...(current.routineReminderUpdatedAt
+      ? { routineReminderUpdatedAt: current.routineReminderUpdatedAt }
+      : {}),
   });
   await localDatabase.userSettings.put(next);
 }

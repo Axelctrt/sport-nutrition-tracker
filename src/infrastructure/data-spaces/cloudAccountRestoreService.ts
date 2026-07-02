@@ -63,6 +63,12 @@ import {
   synchronizeRealAccountPreferences,
   type AccountPreferencesAggregate,
 } from '@/infrastructure/sync-prototype/realAccountPreferencesSyncService';
+import {
+  createRoutineReminderPreferencesSnapshot,
+  isDefaultRoutineReminderPreferencesSnapshot,
+  synchronizeRealRewardsRoutines,
+  type RewardsRoutinesAggregate,
+} from '@/infrastructure/sync-prototype/realRewardsRoutinesSyncService';
 
 export type CloudAccountRestoreCategory =
   | 'weights'
@@ -72,7 +78,8 @@ export type CloudAccountRestoreCategory =
   | 'nutritionLibrary'
   | 'nutritionJournal'
   | 'nutritionTracking'
-  | 'accountPreferences';
+  | 'accountPreferences'
+  | 'rewardsRoutines';
 
 export interface CloudAccountRestoreCategoryPreview {
   readonly key: CloudAccountRestoreCategory;
@@ -128,6 +135,7 @@ export interface CloudAccountRestoreSourceSnapshot {
   readonly nutritionLibraryMarkers: readonly DeletionRecord[];
   readonly nutritionTracking: readonly NutritionTrackingAggregate[];
   readonly accountPreferences: readonly AccountPreferencesAggregate[];
+  readonly rewardsRoutines: readonly RewardsRoutinesAggregate[];
 }
 
 export interface CloudAccountRestoreRuntime {
@@ -147,6 +155,11 @@ type RestoreTableName = Extract<
   DatabaseUserTableName,
   | 'userProfile'
   | 'userSettings'
+  | 'earnedAchievements'
+  | 'unlockedVisualThemes'
+  | 'visualThemePreferences'
+  | 'weeklyMissionCompletions'
+  | 'routineReminderCompletions'
   | 'weights'
   | 'activities'
   | 'goals'
@@ -174,6 +187,11 @@ type RestoreSnapshot = Record<RestoreTableName, unknown[]>;
 const RESTORE_TABLE_NAMES: readonly RestoreTableName[] = [
   'userProfile',
   'userSettings',
+  'earnedAchievements',
+  'unlockedVisualThemes',
+  'visualThemePreferences',
+  'weeklyMissionCompletions',
+  'routineReminderCompletions',
   'weights',
   'activities',
   'goals',
@@ -279,14 +297,31 @@ function meaningfulTargetSnapshot(snapshot: RestoreSnapshot): Record<string, unk
 
   const meaningfulUserSettings = snapshot.userSettings.filter((value) => {
     if (!value || typeof value !== 'object') return false;
-    return !isDefaultSyncedUserSettings(
-      createSyncedUserSettingsSnapshot(value as UserSettings),
+    const settings = value as UserSettings;
+    return (
+      !isDefaultSyncedUserSettings(
+        createSyncedUserSettingsSnapshot(settings),
+      ) ||
+      !isDefaultRoutineReminderPreferencesSnapshot(
+        createRoutineReminderPreferencesSnapshot(settings),
+      )
     );
   });
 
   return {
     userProfile: snapshot.userProfile,
     userSettings: meaningfulUserSettings,
+    earnedAchievements: snapshot.earnedAchievements,
+    unlockedVisualThemes: snapshot.unlockedVisualThemes.filter((value) => (
+      value && typeof value === 'object' &&
+      (value as { id?: unknown }).id !== 'classic'
+    )),
+    visualThemePreferences: snapshot.visualThemePreferences.filter((value) => (
+      value && typeof value === 'object' &&
+      (value as { activeThemeId?: unknown }).activeThemeId !== 'classic'
+    )),
+    weeklyMissionCompletions: snapshot.weeklyMissionCompletions,
+    routineReminderCompletions: snapshot.routineReminderCompletions,
     weights: snapshot.weights,
     activities: snapshot.activities,
     goals: snapshot.goals,
@@ -383,6 +418,20 @@ function buildPreview(
     ),
     0,
   );
+  const rewardsRoutinesCount = source.rewardsRoutines.reduce(
+    (total, aggregate) => (
+      total +
+      aggregate.earnedAchievements.length +
+      aggregate.unlockedVisualThemes.filter((value) => value.id !== 'classic').length +
+      Number(aggregate.visualThemePreference.activeThemeId !== 'classic') +
+      aggregate.weeklyMissionCompletions.length +
+      aggregate.routineReminderCompletions.length +
+      Number(!isDefaultRoutineReminderPreferencesSnapshot(
+        aggregate.routineReminderPreferences,
+      ))
+    ),
+    0,
+  );
   const strengthCount =
     source.strengthExercises.length +
     source.workoutTemplates.length +
@@ -407,6 +456,12 @@ function buildPreview(
       label: 'Profil et réglages',
       description: 'Profil, objectifs généraux, calculs, tableau de bord et modèles d’endurance.',
       recordCount: accountPreferencesCount,
+    },
+    {
+      key: 'rewardsRoutines',
+      label: 'Récompenses et rappels',
+      description: 'Badges, thèmes visuels, missions hebdomadaires et routines.',
+      recordCount: rewardsRoutinesCount,
     },
     {
       key: 'weights',
@@ -517,6 +572,7 @@ export async function readCloudAccountRestoreSourceSnapshot(
     nutritionLibraryMarkers,
     nutritionTracking,
     accountPreferences,
+    rewardsRoutines,
   ] = await Promise.all([
     database.realWeights.toArray(),
     database.realWeightDeletionRecords.toArray(),
@@ -536,6 +592,7 @@ export async function readCloudAccountRestoreSourceSnapshot(
     database.realNutritionLibraryDeletionRecords.toArray(),
     database.realNutritionTracking.toArray(),
     database.realAccountPreferences.toArray(),
+    database.realRewardsRoutines.toArray(),
   ]);
 
   return {
@@ -563,6 +620,7 @@ export async function readCloudAccountRestoreSourceSnapshot(
     ),
     nutritionTracking: normalizeOwnedRows(nutritionTracking, currentUserId),
     accountPreferences: normalizeOwnedRows(accountPreferences, currentUserId),
+    rewardsRoutines: normalizeOwnedRows(rewardsRoutines, currentUserId),
   };
 }
 
@@ -573,6 +631,12 @@ export async function restoreCloudAccountDataToDatabase(
 ): Promise<void> {
   const options = { writeCloud: false } as const;
   await synchronizeRealAccountPreferences(
+    localDatabase,
+    cloudDatabase,
+    currentUserId,
+    options,
+  );
+  await synchronizeRealRewardsRoutines(
     localDatabase,
     cloudDatabase,
     currentUserId,
