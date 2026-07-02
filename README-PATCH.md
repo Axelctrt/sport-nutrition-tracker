@@ -1,10 +1,20 @@
-# SportPilot 0.21.0 — continuité des données et gestion du compte
+# SportPilot 0.21.1 — stabilité du journal nutritionnel
 
-Branche de travail : `feature/data-continuity-0.21.0`
+Branche de travail : `fix/nutrition-journal-sync-loop-0.21.1`
 
 ## Objet
 
-Cette version sécurise le passage entre l’espace invité, les espaces de compte et le cloud. Elle rend la gestion du compte disponible en production, ajoute une fusion explicite des données invitées et permet de restaurer un compte après une nouvelle installation sans écriture implicite dans le cloud.
+Cette version corrige une divergence artificielle du journal nutritionnel : l’ouverture de l’accueil recalculait l’objectif quotidien puis renouvelait systématiquement son horodatage, même lorsque les calories et macronutriments étaient inchangés. Le journal redevenait alors différent du cloud sans modification utilisateur.
+
+Le correctif rend l’enregistrement de l’objectif quotidien idempotent. Les fonctionnalités de continuité des données livrées en 0.21.0 restent inchangées.
+
+## Correctif 0.21.1 — journal nutritionnel
+
+- comparaison du contenu métier avant toute mise à jour d’un objectif quotidien existant ;
+- conservation de `updatedAt` lorsque le calcul est strictement identique ;
+- mise à jour normale lorsque les calories, macros, poids de calcul ou dépenses changent réellement ;
+- test de convergence après recalcul identique du tableau de bord ;
+- aucun changement du format cloud, de la base métier ou des sauvegardes.
 
 ## D1 — Gestion du compte
 
@@ -38,7 +48,7 @@ Cette version sécurise le passage entre l’espace invité, les espaces de comp
 
 ## Compatibilité
 
-- application : `0.21.0` ;
+- application : `0.21.1` ;
 - base Dexie Cloud : v8 ;
 - runtime local cloud : `sportpilot-sync-runtime-0.20.0-v8` ;
 - schéma métier Dexie : v8 ;

@@ -30,6 +30,19 @@ for (const expected of [
 const service = read(
   'src/infrastructure/sync-prototype/realNutritionJournalSyncService.ts',
 );
+const targetRepository = read(
+  'src/infrastructure/repositories/dexie/DexieTargetRepository.ts',
+);
+for (const expected of [
+  'hasSameTargetData',
+  'normalizeComparableValue',
+  'return current;',
+]) {
+  if (!targetRepository.includes(expected)) {
+    fail(`le correctif 0.21.1 du recalcul quotidien ne contient pas ${expected}.`);
+  }
+}
+
 for (const expected of [
   'NutritionJournalDayAggregate',
   'validateDayAggregate',
@@ -54,6 +67,7 @@ for (const expected of [
 
 for (const path of [
   'src/infrastructure/sync-prototype/realNutritionJournalSyncService.test.ts',
+  'src/infrastructure/repositories/dexie/complexRepositories.test.ts',
   'src/features/settings/components/NutritionJournalSyncSettingsPanel.tsx',
   'src/features/settings/components/NutritionJournalSyncSettingsPanel.test.tsx',
   'docs/architecture/nutrition-sync-0.20.0-c1.md',

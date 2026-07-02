@@ -1,15 +1,15 @@
-# Checklist de validation stable — SportPilot 0.21.0
+# Checklist de validation stable — SportPilot 0.21.1
 
 ## Préparation
 
-- [ ] La branche `feature/data-continuity-0.21.0` est propre et à jour.
+- [ ] La branche `fix/nutrition-journal-sync-loop-0.21.1` est propre et à jour.
 - [ ] Une sauvegarde JSON v7 récente est conservée hors de l’application.
 - [ ] Les analyses cloud du compte principal affichent `0 différence`.
 - [ ] `npm ci` termine sans erreur.
 - [ ] `npm run release:verify` termine sans erreur.
 - [ ] `npm run test:e2e` termine sans erreur.
 - [ ] `npm run audit:data-continuity-release` réussit.
-- [ ] Paramètres affiche `0.21.0`.
+- [ ] Paramètres affiche `0.21.1`.
 - [ ] Aucun secret, ZIP, journal ou fichier de patch temporaire n’est suivi par Git.
 
 ## Versions et compatibilité
@@ -20,6 +20,15 @@
 - [ ] La sauvegarde reste en JSON v7.
 - [ ] Le registre des espaces reste en v1.
 - [ ] Aucune migration de données ni nouvelle authentification OTP n’est requise.
+
+## Correctif 0.21.1 — journal nutritionnel
+
+- [ ] Synchroniser le journal nutritionnel puis vérifier `0 différence`.
+- [ ] Ouvrir l’accueil sans modifier aucune donnée.
+- [ ] Revenir dans la synchronisation du journal et vérifier encore `0 différence`.
+- [ ] Modifier réellement une donnée qui influence l’objectif du jour et vérifier qu’un écart légitime apparaît.
+- [ ] Synchroniser cet écart puis vérifier une nouvelle convergence à zéro.
+- [ ] Les autres domaines restent à `0 différence`.
 
 ## D1 — Gestion du compte
 
@@ -70,7 +79,7 @@
 
 ## iPhone 15 — iOS 26
 
-- [ ] La PWA se met à jour vers 0.21.0 sans perte de l’installation existante.
+- [ ] La PWA se met à jour vers 0.21.1 sans perte de l’installation existante.
 - [ ] Après suppression/réinstallation, le compte détecte ses données cloud.
 - [ ] La restauration complète est validée sur l’iPhone.
 - [ ] Le mode hors ligne fonctionne après restauration.
@@ -80,7 +89,7 @@
 
 - [ ] La branche fonctionnelle est fusionnée manuellement dans `develop`.
 - [ ] `develop` validé est fusionné manuellement dans `main`.
-- [ ] Le tag annoté `v0.21.0` pointe sur le commit publié dans `main`.
-- [ ] `develop`, `main` et `v0.21.0` sont poussés.
+- [ ] Le tag annoté `v0.21.1` pointe sur le commit publié dans `main`.
+- [ ] `develop`, `main` et `v0.21.1` sont poussés.
 - [ ] Le déploiement de production est terminé.
 - [ ] La recette finale est validée sur ordinateur et iPhone.

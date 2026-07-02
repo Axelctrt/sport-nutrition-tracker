@@ -1,4 +1,5 @@
 import type { NewEntity } from '@/domain/models/common';
+import type { DailyTarget } from '@/domain/models/targets';
 import type { WeeklyReview } from '@/domain/models/weeklyReview';
 import {
   dailyJournalStatusIdForDate,
@@ -179,6 +180,59 @@ describe('repositories Dexie complexes', () => {
     expect(secondTarget.targetCaloriesKcal).toBe(2_100);
     expect(await database.dailyTargets.count()).toBe(1);
     expect(await database.dailyJournalStatuses.count()).toBe(1);
+  });
+
+  it('ne renouvelle pas updatedAt lorsque le calcul quotidien est inchangé', async () => {
+    const repository = new DexieTargetRepository(database);
+    const current: DailyTarget = {
+      id: dailyTargetIdForDate('2026-07-02'),
+      date: '2026-07-02',
+      calculationWeightKg: 76,
+      energy: {
+        bmrKcal: 1708.75,
+        occupationalBaseKcal: 2050.5,
+        walkingKcal: 0,
+        runningKcal: 0,
+        swimmingKcal: 0,
+        strengthTrainingKcal: 0,
+        otherActivitiesKcal: 0,
+        totalEstimatedExpenditureKcal: 2050.5,
+      },
+      goalAdjustmentKcal: 0,
+      acceptedCalibrationAdjustmentKcal: 0,
+      calorieFloorKcal: 1880,
+      targetCaloriesKcal: 2050,
+      macros: {
+        proteinGrams: 135,
+        carbohydratesGrams: 220,
+        fatGrams: 70,
+      },
+      calculationVersion: 1,
+      createdAt: '2026-07-02T10:26:53.244Z',
+      updatedAt: '2026-07-02T14:34:42.242Z',
+    };
+    await database.dailyTargets.add(current);
+
+    const {
+      id: _id,
+      createdAt: _createdAt,
+      updatedAt: _updatedAt,
+      ...sameCalculation
+    } = current;
+    const unchanged = await repository.upsertTarget(sameCalculation);
+
+    expect(unchanged).toEqual(current);
+    expect((await database.dailyTargets.get(current.id))?.updatedAt).toBe(
+      current.updatedAt,
+    );
+
+    const changed = await repository.upsertTarget({
+      ...sameCalculation,
+      targetCaloriesKcal: 2100,
+    });
+
+    expect(changed.targetCaloriesKcal).toBe(2100);
+    expect(changed.updatedAt).not.toBe(current.updatedAt);
   });
 
   it('conserve un seul bilan par semaine et historise les ajustements', async () => {
