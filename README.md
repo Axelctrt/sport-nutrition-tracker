@@ -1,16 +1,22 @@
-# SportPilot 0.21.0
+# SportPilot 0.21.1
 
 ## Continuité des données et gestion du compte
 
 SportPilot synchronise les pesées, activités, objectifs, données de musculation, journées nutritionnelles, produits utiles, recettes, repas favoris, bilans hebdomadaires et ajustements caloriques du compte connecté.
 
-La version 0.21.0 sécurise désormais le cycle complet des données : gestion du compte en production, import explicite de l’espace invité dans un compte et restauration guidée depuis le cloud après une nouvelle installation.
+La version 0.21.1 conserve et sécurise le cycle complet des données : gestion du compte en production, import explicite de l’espace invité dans un compte et restauration guidée depuis le cloud après une nouvelle installation.
 
 Les journées, recettes, modèles de musculation, séances et bilans restent traités comme des agrégats cohérents. Les créations, modifications, suppressions et restaurations convergent sans doublons, avec filtrage strict par propriétaire cloud et résolution déterministe des conflits.
 
-SportPilot 0.21.0 utilise la base Dexie Cloud v8 et le runtime `sportpilot-sync-runtime-0.20.0-v8`. La base métier reste en Dexie v8, la sauvegarde en JSON v7 et le registre local des espaces en v1. Aucune migration de données ni nouvelle authentification OTP liée au runtime n’est requise.
+SportPilot 0.21.1 utilise la base Dexie Cloud v8 et le runtime `sportpilot-sync-runtime-0.20.0-v8`. La base métier reste en Dexie v8, la sauvegarde en JSON v7 et le registre local des espaces en v1. Aucune migration de données ni nouvelle authentification OTP liée au runtime n’est requise.
 
 Les récompenses, thèmes, missions et rappels restent locaux. Les données invitées sont conservées après import, et la restauration cloud couvre uniquement les domaines déjà synchronisés.
+
+## Correctif 0.21.1 — stabilité du journal nutritionnel
+
+L’ouverture du tableau de bord recalcule toujours l’objectif nutritionnel du jour, mais n’actualise plus son champ `updatedAt` lorsque le résultat métier est strictement identique. Une simple navigation entre l’accueil et les paramètres ne recrée donc plus un écart artificiel dans la synchronisation du journal nutritionnel.
+
+Ce correctif ne change ni les calories, ni les macronutriments, ni les règles de fusion. Il ne nécessite aucune migration Dexie, aucune modification du runtime cloud et aucune nouvelle authentification.
 
 <!-- hotfix-sync-production-0.17.1 -->
 

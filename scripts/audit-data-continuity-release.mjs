@@ -9,7 +9,7 @@ const fail = (message) => failures.push(message);
 
 const packageJson = JSON.parse(read('package.json'));
 const packageLock = JSON.parse(read('package-lock.json'));
-const expectedVersion = '0.21.0';
+const expectedVersion = '0.21.1';
 
 if (packageJson.version !== expectedVersion) {
   fail(`package.json doit publier ${expectedVersion}.`);
@@ -18,7 +18,7 @@ if (
   packageLock.version !== expectedVersion
   || packageLock.packages?.['']?.version !== expectedVersion
 ) {
-  fail('package-lock.json ne correspond pas à la version 0.21.0.');
+  fail('package-lock.json ne correspond pas à la version 0.21.1.');
 }
 
 const requiredFiles = [
@@ -35,7 +35,9 @@ const requiredFiles = [
   'docs/architecture/guest-data-import-0.21.0-d2.md',
   'docs/architecture/cloud-account-restore-0.21.0-d3.md',
   'docs/architecture/data-continuity-release-0.21.0-d4.md',
+  'docs/architecture/nutrition-journal-idempotence-0.21.1.md',
   'RELEASE-NOTES-0.21.0.md',
+  'RELEASE-NOTES-0.21.1.md',
 ];
 for (const path of requiredFiles) {
   if (!existsSync(join(root, path))) fail(`fichier requis absent : ${path}.`);
@@ -126,7 +128,32 @@ if (failures.length === 0) {
     'Aucune migration',
   ]) {
     if (!releaseNotes.includes(marker)) {
-      fail(`les notes de version ne contiennent pas : ${marker}.`);
+      fail(`les notes de version 0.21.0 ne contiennent pas : ${marker}.`);
+    }
+  }
+
+  const hotfixNotes = read('RELEASE-NOTES-0.21.1.md');
+  for (const marker of [
+    'divergence répétitive du journal nutritionnel',
+    'updatedAt',
+    'idempotent',
+    'Aucune migration',
+  ]) {
+    if (!hotfixNotes.includes(marker)) {
+      fail(`les notes de version 0.21.1 ne contiennent pas : ${marker}.`);
+    }
+  }
+
+  const targetRepository = read(
+    'src/infrastructure/repositories/dexie/DexieTargetRepository.ts',
+  );
+  for (const marker of [
+    'hasSameTargetData',
+    'normalizeComparableValue',
+    'return current;',
+  ]) {
+    if (!targetRepository.includes(marker)) {
+      fail(`le correctif d’idempotence 0.21.1 ne contient pas ${marker}.`);
     }
   }
 }
@@ -138,5 +165,5 @@ if (failures.length > 0) {
 }
 
 console.log(
-  'Audit D4 réussi : version 0.21.0, gestion du compte, import invité, restauration cloud, isolation, documentation et versions de données validés.',
+  'Audit D4 réussi : version 0.21.1, continuité des données, idempotence du journal nutritionnel, isolation, documentation et versions de données validées.',
 );

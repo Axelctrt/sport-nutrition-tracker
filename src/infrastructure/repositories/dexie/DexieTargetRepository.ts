@@ -11,6 +11,37 @@ import { runRepositoryOperation } from '@/infrastructure/repositories/dexie/repo
 import { updateStoredEntity } from '@/infrastructure/repositories/dexie/updateStoredEntity';
 import { createEntity } from '@/shared/utils/entities';
 
+function normalizeComparableValue(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(normalizeComparableValue);
+  }
+
+  if (!value || typeof value !== 'object') {
+    return value;
+  }
+
+  return Object.fromEntries(
+    Object.entries(value)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, nested]) => [key, normalizeComparableValue(nested)]),
+  );
+}
+
+function hasSameTargetData(
+  current: DailyTarget,
+  data: NewEntity<DailyTarget>,
+): boolean {
+  const {
+    id: _id,
+    createdAt: _createdAt,
+    updatedAt: _updatedAt,
+    ...currentData
+  } = current;
+
+  return JSON.stringify(normalizeComparableValue(currentData))
+    === JSON.stringify(normalizeComparableValue(data));
+}
+
 export class DexieTargetRepository implements TargetRepository {
   private readonly database: AppDatabase;
 
@@ -41,6 +72,10 @@ export class DexieTargetRepository implements TargetRepository {
       async () => {
         const current = await this.database.dailyTargets.where('date').equals(data.date).first();
         if (current) {
+          if (hasSameTargetData(current, data)) {
+            return current;
+          }
+
           return updateStoredEntity(this.database.dailyTargets, current, data);
         }
 
