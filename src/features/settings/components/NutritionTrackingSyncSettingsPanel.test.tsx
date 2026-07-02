@@ -115,7 +115,7 @@ describe('NutritionTrackingSyncSettingsPanel', () => {
 
     expect(screen.getByText('Suivi nutritionnel non activé')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Gérer le compte de synchronisation' }))
-      .toHaveAttribute('href', '/settings/sync-prototype');
+      .toHaveAttribute('href', '/settings/account-devices');
   });
 
   it('analyse puis synchronise le suivi après confirmation', async () => {

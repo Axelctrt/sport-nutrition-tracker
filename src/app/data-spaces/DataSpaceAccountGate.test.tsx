@@ -1,19 +1,20 @@
-import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { act, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 
-import type { DataSpaceDescriptor } from '@/domain/data-spaces/dataSpace';
-import { DataSpaceAccountGate } from '@/app/data-spaces/DataSpaceAccountGate';
+import type { DataSpaceDescriptor } from "@/domain/data-spaces/dataSpace";
+import { DataSpaceAccountGate } from "@/app/data-spaces/DataSpaceAccountGate";
 import {
   createDefaultDataSpaceRegistry,
   detachAccountDataSpaceFromCurrentDevice,
   registerAccountDataSpace,
   type DataSpaceStorage,
-} from '@/infrastructure/data-spaces/dataSpaceRegistry';
+} from "@/infrastructure/data-spaces/dataSpaceRegistry";
+import type { PreparedCloudAccountRestore } from "@/infrastructure/data-spaces/cloudAccountRestoreService";
 import type {
   SyncPrototypeClient,
   SyncPrototypeSnapshot,
-} from '@/infrastructure/sync-prototype/syncPrototypeClient';
-import { createSyncPrototypeAccountFingerprint } from '@/infrastructure/sync-prototype/syncPrototypeDiagnostics';
+} from "@/infrastructure/sync-prototype/syncPrototypeClient";
+import { createSyncPrototypeAccountFingerprint } from "@/infrastructure/sync-prototype/syncPrototypeDiagnostics";
 
 class MemoryStorage implements DataSpaceStorage {
   private readonly values = new Map<string, string>();
@@ -28,7 +29,7 @@ class MemoryStorage implements DataSpaceStorage {
 }
 
 function createSnapshot(
-  account: Partial<SyncPrototypeSnapshot['account']> = {},
+  account: Partial<SyncPrototypeSnapshot["account"]> = {},
 ): SyncPrototypeSnapshot {
   return {
     account: {
@@ -37,8 +38,8 @@ function createSnapshot(
       ...account,
     },
     sync: {
-      status: 'disconnected',
-      phase: 'initial',
+      status: "disconnected",
+      phase: "initial",
     },
     weights: {
       weights: [],
@@ -46,7 +47,7 @@ function createSnapshot(
       isLoading: false,
     },
     diagnostics: {
-      databaseName: 'test-cloud',
+      databaseName: "test-cloud",
       databaseVersion: 1,
       visibleWeightCount: 0,
       deletedWeightCount: 0,
@@ -92,10 +93,10 @@ function createClient(initialSnapshot: SyncPrototypeSnapshot) {
       removedCloudWeights: 0,
       uploadedDeletionRecords: 0,
       downloadedDeletionRecords: 0,
-      completedAt: '2026-07-01T08:00:00.000Z',
+      completedAt: "2026-07-01T08:00:00.000Z",
     })),
     saveWeight: vi.fn(async () => {
-      throw new Error('not used');
+      throw new Error("not used");
     }),
     deleteWeight: vi.fn(async () => undefined),
   };
@@ -103,31 +104,56 @@ function createClient(initialSnapshot: SyncPrototypeSnapshot) {
   return client;
 }
 
-const guestSpace = createDefaultDataSpaceRegistry(
-  '2026-07-01T08:00:00.000Z',
-).spaces[0]!;
+const guestSpace = createDefaultDataSpaceRegistry("2026-07-01T08:00:00.000Z")
+  .spaces[0]!;
 
-const ACCOUNT_A_ID = 'compte-a@example.com';
-const ACCOUNT_A_FINGERPRINT = createSyncPrototypeAccountFingerprint(
-  ACCOUNT_A_ID,
-)!.toLowerCase();
-const NEW_ACCOUNT_ID = 'nouveau@example.com';
-const NEW_ACCOUNT_FINGERPRINT = createSyncPrototypeAccountFingerprint(
-  NEW_ACCOUNT_ID,
-)!.toLowerCase();
+const ACCOUNT_A_ID = "compte-a@example.com";
+const ACCOUNT_A_FINGERPRINT =
+  createSyncPrototypeAccountFingerprint(ACCOUNT_A_ID)!.toLowerCase();
+const NEW_ACCOUNT_ID = "nouveau@example.com";
+const NEW_ACCOUNT_FINGERPRINT =
+  createSyncPrototypeAccountFingerprint(NEW_ACCOUNT_ID)!.toLowerCase();
 
 const accountSpace: DataSpaceDescriptor = {
   id: `account:${ACCOUNT_A_FINGERPRINT}`,
-  kind: 'account',
+  kind: "account",
   databaseName: `sportpilot-local-database--${ACCOUNT_A_FINGERPRINT}`,
-  label: 'Espace de compte',
+  label: "Espace de compte",
   accountFingerprint: ACCOUNT_A_FINGERPRINT,
-  createdAt: '2026-07-01T08:00:00.000Z',
-  lastActivatedAt: '2026-07-01T08:00:00.000Z',
+  createdAt: "2026-07-01T08:00:00.000Z",
+  lastActivatedAt: "2026-07-01T08:00:00.000Z",
 };
 
-describe('DataSpaceAccountGate', () => {
-  it('ouvre normalement l’espace invité lorsqu’aucun compte n’est connecté', async () => {
+
+function preparedCloudRestore(): PreparedCloudAccountRestore {
+  return {
+    accountFingerprint: NEW_ACCOUNT_FINGERPRINT,
+    targetDatabaseName: `sportpilot-local-database--${NEW_ACCOUNT_FINGERPRINT}`,
+    sourceFingerprint: "cloud-source",
+    targetFingerprint: "missing",
+    targetDatabaseExisted: false,
+    analyzedAt: "2026-07-01T08:00:00.000Z",
+    preview: {
+      hasCloudData: true,
+      cloudRecordCount: 2,
+      cloudDeletionMarkerCount: 0,
+      localMeaningfulRecordCount: 0,
+      localState: "missing",
+      canRestore: true,
+      categories: [
+        {
+          key: "weights",
+          label: "Pesées",
+          description: "Historique des pesées synchronisées.",
+          recordCount: 2,
+        },
+      ],
+    },
+  };
+}
+
+describe("DataSpaceAccountGate", () => {
+  it("ouvre normalement l’espace invité lorsqu’aucun compte n’est connecté", async () => {
     render(
       <DataSpaceAccountGate
         client={createClient(createSnapshot())}
@@ -138,10 +164,10 @@ describe('DataSpaceAccountGate', () => {
       </DataSpaceAccountGate>,
     );
 
-    expect(await screen.findByText('Données privées')).toBeInTheDocument();
+    expect(await screen.findByText("Données privées")).toBeInTheDocument();
   });
 
-  it('masque les données et demande un choix pour un nouveau compte', async () => {
+  it("masque les données et demande un choix pour un nouveau compte", async () => {
     render(
       <DataSpaceAccountGate
         client={createClient(
@@ -158,22 +184,72 @@ describe('DataSpaceAccountGate', () => {
     );
 
     expect(
-      await screen.findByRole('heading', {
-        name: 'Choisir l’espace de ce compte',
+      await screen.findByRole("heading", {
+        name: "Choisir l’espace de ce compte",
       }),
     ).toBeInTheDocument();
-    expect(screen.queryByText('Données privées')).not.toBeInTheDocument();
+    expect(screen.queryByText("Données privées")).not.toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: 'Rattacher mes données' }),
+      await screen.findByRole("button", {
+        name: "Analyser les données invitées",
+      }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('button', {
-        name: 'Commencer avec un espace vide',
+      await screen.findByRole("button", {
+        name: "Commencer avec un espace vide",
       }),
     ).toBeInTheDocument();
   });
 
-  it('crée explicitement un espace vide puis recharge l’application', async () => {
+  it("vérifie le cloud avant d’autoriser le choix d’un espace vide", async () => {
+    let resolveAnalysis: ((value: PreparedCloudAccountRestore) => void) | undefined;
+    const client = createClient(
+      createSnapshot({
+        isLoggedIn: true,
+        userId: NEW_ACCOUNT_ID,
+      }),
+    );
+    client.prepareCloudRestore = vi.fn(
+      () => new Promise<PreparedCloudAccountRestore>((resolve) => {
+        resolveAnalysis = resolve;
+      }),
+    );
+    client.applyCloudRestore = vi.fn(async () => {
+      throw new Error("not used");
+    });
+
+    render(
+      <DataSpaceAccountGate
+        client={client}
+        currentSpace={guestSpace}
+        reload={vi.fn()}
+      >
+        <p>Données privées</p>
+      </DataSpaceAccountGate>,
+    );
+
+    expect(
+      await screen.findByRole("button", { name: "Vérification du cloud…" }),
+    ).toBeDisabled();
+
+    await waitFor(() =>
+      expect(client.prepareCloudRestore).toHaveBeenCalledTimes(1),
+    );
+    expect(resolveAnalysis).toBeDefined();
+
+    await act(async () => {
+      resolveAnalysis!(preparedCloudRestore());
+    });
+
+    expect(
+      await screen.findByText("Des données ont été trouvées pour ce compte"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Commencer avec un espace vide" }),
+    ).toBeEnabled();
+  });
+
+  it("crée explicitement un espace vide puis recharge l’application", async () => {
     const createEmptySpace = vi.fn(async () => ({
       space: accountSpace,
       copiedRecords: 0,
@@ -198,8 +274,8 @@ describe('DataSpaceAccountGate', () => {
     );
 
     await userEvent.click(
-      await screen.findByRole('button', {
-        name: 'Commencer avec un espace vide',
+      await screen.findByRole("button", {
+        name: "Commencer avec un espace vide",
       }),
     );
 
@@ -207,7 +283,7 @@ describe('DataSpaceAccountGate', () => {
     expect(reload).toHaveBeenCalledTimes(1);
   });
 
-  it('ouvre un espace déjà associé sans proposer une nouvelle copie', async () => {
+  it("ouvre un espace déjà associé et permet aussi une fusion analysée", async () => {
     const storage = new MemoryStorage();
     registerAccountDataSpace(NEW_ACCOUNT_FINGERPRINT, storage);
     const activateExistingSpace = vi.fn(() => accountSpace);
@@ -231,15 +307,17 @@ describe('DataSpaceAccountGate', () => {
     );
 
     expect(
-      await screen.findByText('Espace déjà connu sur cet appareil'),
+      await screen.findByText("Espace déjà connu sur cet appareil"),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole('button', { name: 'Rattacher mes données' }),
-    ).not.toBeInTheDocument();
+      await screen.findByRole("button", {
+        name: "Analyser les données invitées",
+      }),
+    ).toBeInTheDocument();
 
     await userEvent.click(
-      screen.getByRole('button', {
-        name: 'Ouvrir l’espace de ce compte',
+      screen.getByRole("button", {
+        name: "Ouvrir l’espace de ce compte",
       }),
     );
 
@@ -247,14 +325,10 @@ describe('DataSpaceAccountGate', () => {
     expect(reload).toHaveBeenCalledTimes(1);
   });
 
-
-  it('propose une réassociation explicite après désassociation locale', async () => {
+  it("propose une réassociation explicite après désassociation locale", async () => {
     const storage = new MemoryStorage();
     registerAccountDataSpace(NEW_ACCOUNT_FINGERPRINT, storage);
-    detachAccountDataSpaceFromCurrentDevice(
-      NEW_ACCOUNT_FINGERPRINT,
-      storage,
-    );
+    detachAccountDataSpaceFromCurrentDevice(NEW_ACCOUNT_FINGERPRINT, storage);
     const activateExistingSpace = vi.fn(() => accountSpace);
 
     render(
@@ -275,18 +349,17 @@ describe('DataSpaceAccountGate', () => {
     );
 
     expect(
-      await screen.findByText('Espace local conservé après désassociation'),
+      await screen.findByText("Espace local conservé après désassociation"),
     ).toBeInTheDocument();
     await userEvent.click(
-      screen.getByRole('button', {
-        name: 'Réassocier et ouvrir cet espace',
+      screen.getByRole("button", {
+        name: "Réassocier et ouvrir cet espace",
       }),
     );
     expect(activateExistingSpace).toHaveBeenCalledTimes(1);
   });
 
-
-  it('ouvre uniquement l’espace correspondant au compte connecté', async () => {
+  it("ouvre uniquement l’espace correspondant au compte connecté", async () => {
     render(
       <DataSpaceAccountGate
         client={createClient(
@@ -302,12 +375,10 @@ describe('DataSpaceAccountGate', () => {
       </DataSpaceAccountGate>,
     );
 
-    expect(
-      await screen.findByText('Données du compte A'),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("Données du compte A")).toBeInTheDocument();
   });
 
-  it('masque immédiatement les données du compte A lorsque le compte B est connecté', async () => {
+  it("masque immédiatement les données du compte A lorsque le compte B est connecté", async () => {
     render(
       <DataSpaceAccountGate
         client={createClient(
@@ -324,19 +395,19 @@ describe('DataSpaceAccountGate', () => {
     );
 
     expect(
-      await screen.findByRole('heading', {
-        name: 'Choisir l’espace de ce compte',
+      await screen.findByRole("heading", {
+        name: "Choisir l’espace de ce compte",
       }),
     ).toBeInTheDocument();
-    expect(screen.queryByText('Données du compte A')).not.toBeInTheDocument();
+    expect(screen.queryByText("Données du compte A")).not.toBeInTheDocument();
     expect(
-      screen.queryByRole('button', { name: 'Rattacher mes données' }),
+      screen.queryByRole("button", { name: "Rattacher mes données" }),
     ).not.toBeInTheDocument();
   });
 
-  it('revient à l’espace invité après une déconnexion', async () => {
+  it("revient à l’espace invité après une déconnexion", async () => {
     const storage = new MemoryStorage();
-    registerAccountDataSpace('acct-A1B2C3D4', storage);
+    registerAccountDataSpace("acct-A1B2C3D4", storage);
     const reload = vi.fn();
 
     render(
@@ -351,6 +422,6 @@ describe('DataSpaceAccountGate', () => {
     );
 
     await waitFor(() => expect(reload).toHaveBeenCalledTimes(1));
-    expect(screen.queryByText('Données privées')).not.toBeInTheDocument();
+    expect(screen.queryByText("Données privées")).not.toBeInTheDocument();
   });
 });

@@ -7,34 +7,36 @@ import {
   RefreshCw,
   ShieldCheck,
   Trash2,
-} from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+} from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 
-import { routePaths } from '@/app/routePaths';
-import type { DataSpaceDescriptor } from '@/domain/data-spaces/dataSpace';
+import { routePaths } from "@/app/routePaths";
+import { CloudAccountRestorePanel } from "@/features/account-devices/components/CloudAccountRestorePanel";
+import { GuestDataImportPanel } from "@/features/account-devices/components/GuestDataImportPanel";
+import type { DataSpaceDescriptor } from "@/domain/data-spaces/dataSpace";
 import {
   deleteLocalAccountData,
   detachCurrentDeviceFromAccount,
   disconnectAccount,
-} from '@/infrastructure/data-spaces/accountDeviceManagementService';
-import type { DataSpaceStorage } from '@/infrastructure/data-spaces/dataSpaceRegistry';
-import { activeDataSpace } from '@/infrastructure/database/database';
+} from "@/infrastructure/data-spaces/accountDeviceManagementService";
+import type { DataSpaceStorage } from "@/infrastructure/data-spaces/dataSpaceRegistry";
+import { activeDataSpace } from "@/infrastructure/database/database";
 import {
   getOrCreateCurrentDevice,
   type CurrentDeviceDescriptor,
-} from '@/infrastructure/devices/currentDeviceRegistry';
+} from "@/infrastructure/devices/currentDeviceRegistry";
 import {
   getSyncPrototypeClient,
   type SyncPrototypeClient,
   type SyncPrototypeSnapshot,
-} from '@/infrastructure/sync-prototype/syncPrototypeClient';
-import { readSyncPrototypeConfigSafely } from '@/infrastructure/sync-prototype/syncPrototypeConfig';
-import { Button } from '@/shared/ui/Button';
-import { Card } from '@/shared/ui/Card';
-import { ConfirmationDialog } from '@/shared/ui/ConfirmationDialog';
-import { InlineNotice } from '@/shared/ui/InlineNotice';
-import { PageSkeleton } from '@/shared/ui/PageSkeleton';
+} from "@/infrastructure/sync-prototype/syncPrototypeClient";
+import { readSyncPrototypeConfigSafely } from "@/infrastructure/sync-prototype/syncPrototypeConfig";
+import { Button } from "@/shared/ui/Button";
+import { Card } from "@/shared/ui/Card";
+import { ConfirmationDialog } from "@/shared/ui/ConfirmationDialog";
+import { InlineNotice } from "@/shared/ui/InlineNotice";
+import { PageSkeleton } from "@/shared/ui/PageSkeleton";
 
 interface AccountDevicesPageProps {
   client?: SyncPrototypeClient | null;
@@ -47,10 +49,10 @@ interface AccountDevicesPageProps {
   deleteLocalData?: typeof deleteLocalAccountData;
 }
 
-type PendingAction = 'disconnect' | 'detach' | 'delete' | undefined;
+type PendingAction = "disconnect" | "detach" | "delete" | undefined;
 
 type Feedback = {
-  readonly tone: 'success' | 'error' | 'info';
+  readonly tone: "success" | "error" | "info";
   readonly title: string;
   readonly message: string;
 };
@@ -60,43 +62,45 @@ function defaultReload(): void {
 }
 
 function formatDateTime(value: string | undefined): string {
-  if (!value) return 'Aucun échange réussi';
+  if (!value) return "Aucun échange réussi";
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'Date inconnue';
-  return new Intl.DateTimeFormat('fr-FR', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
+  if (Number.isNaN(date.getTime())) return "Date inconnue";
+  return new Intl.DateTimeFormat("fr-FR", {
+    dateStyle: "medium",
+    timeStyle: "short",
   }).format(date);
 }
 
 function syncStatusLabel(snapshot: SyncPrototypeSnapshot): string {
-  if (!snapshot.account.isLoggedIn) return 'Déconnecté';
-  if (snapshot.sync.status === 'offline' || snapshot.sync.phase === 'offline') {
-    return 'Hors connexion';
+  if (!snapshot.account.isLoggedIn) return "Déconnecté";
+  if (snapshot.sync.status === "offline" || snapshot.sync.phase === "offline") {
+    return "Hors connexion";
   }
-  if (snapshot.sync.status === 'error' || snapshot.sync.phase === 'error') {
-    return 'Erreur';
+  if (snapshot.sync.status === "error" || snapshot.sync.phase === "error") {
+    return "Erreur";
   }
-  if (snapshot.sync.phase === 'in-sync') return 'À jour';
-  if (snapshot.sync.phase === 'pushing') return 'Envoi en cours';
-  if (snapshot.sync.phase === 'pulling') return 'Réception en cours';
-  return 'Connexion en cours';
+  if (snapshot.sync.phase === "in-sync") return "À jour";
+  if (snapshot.sync.phase === "pushing") return "Envoi en cours";
+  if (snapshot.sync.phase === "pulling") return "Réception en cours";
+  return "Connexion en cours";
 }
 
 function pendingChangesLabel(snapshot: SyncPrototypeSnapshot): string {
-  if (!snapshot.account.isLoggedIn) return 'Synchronisation arrêtée';
-  if (snapshot.sync.phase === 'in-sync') return '0';
-  if (snapshot.sync.phase === 'pushing' || snapshot.sync.phase === 'pulling') {
-    return 'En cours';
+  if (!snapshot.account.isLoggedIn) return "Synchronisation arrêtée";
+  if (snapshot.sync.phase === "in-sync") return "0";
+  if (snapshot.sync.phase === "pushing" || snapshot.sync.phase === "pulling") {
+    return "En cours";
   }
-  return 'À vérifier';
+  return "À vérifier";
 }
 
 function accountLabel(snapshot: SyncPrototypeSnapshot): string {
-  return snapshot.account.email
-    ?? snapshot.account.displayName
-    ?? snapshot.diagnostics.accountFingerprint
-    ?? 'Aucun compte connecté';
+  return (
+    snapshot.account.email ??
+    snapshot.account.displayName ??
+    snapshot.diagnostics.accountFingerprint ??
+    "Aucun compte connecté"
+  );
 }
 
 export function AccountDevicesPage({
@@ -109,18 +113,17 @@ export function AccountDevicesPage({
   detachDevice = detachCurrentDeviceFromAccount,
   deleteLocalData = deleteLocalAccountData,
 }: AccountDevicesPageProps = {}) {
+  const safeConfig = useMemo(() => readSyncPrototypeConfigSafely(), []);
   const runtimeClient = useMemo<SyncPrototypeClient | null>(() => {
     if (clientOverride !== undefined) return clientOverride;
-
-    const { config } = readSyncPrototypeConfigSafely();
-    if (!config.enabled) return null;
+    if (!safeConfig.config.enabled) return null;
 
     try {
       return getSyncPrototypeClient();
     } catch {
       return null;
     }
-  }, [clientOverride]);
+  }, [clientOverride, safeConfig.config.enabled]);
 
   const [snapshot, setSnapshot] = useState<SyncPrototypeSnapshot | undefined>(
     () => runtimeClient?.getSnapshot(),
@@ -131,9 +134,9 @@ export function AccountDevicesPage({
   const [disconnectDialogOpen, setDisconnectDialogOpen] = useState(false);
   const [detachDialogOpen, setDetachDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [deleteConfirmation, setDeleteConfirmation] = useState('');
-  const [currentDevice] = useState<CurrentDeviceDescriptor>(() =>
-    currentDeviceOverride ?? getOrCreateCurrentDevice(),
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
+  const [currentDevice] = useState<CurrentDeviceDescriptor>(
+    () => currentDeviceOverride ?? getOrCreateCurrentDevice(),
   );
 
   useEffect(() => {
@@ -158,12 +161,12 @@ export function AccountDevicesPage({
       .catch((error: unknown) => {
         if (disposed) return;
         setFeedback({
-          tone: 'error',
-          title: 'Compte indisponible',
+          tone: "error",
+          title: "Compte indisponible",
           message:
             error instanceof Error
               ? error.message
-              : 'Le compte de synchronisation n’a pas pu être chargé.',
+              : "Le compte de synchronisation n’a pas pu être chargé.",
         });
         setIsInitializing(false);
       });
@@ -185,12 +188,12 @@ export function AccountDevicesPage({
       reload();
     } catch (error) {
       setFeedback({
-        tone: 'error',
-        title: 'Action interrompue',
+        tone: "error",
+        title: "Action interrompue",
         message:
           error instanceof Error
             ? error.message
-            : 'L’action demandée n’a pas pu être terminée.',
+            : "L’action demandée n’a pas pu être terminée.",
       });
       setPendingAction(undefined);
     }
@@ -211,8 +214,9 @@ export function AccountDevicesPage({
             Compte et appareils
           </h1>
         </div>
-        <InlineNotice tone="info" title="Synchronisation indisponible">
-          Cette version ne peut pas ouvrir le compte cloud. Les données locales restent accessibles et exportables.
+        <InlineNotice tone="error" title="Compte cloud indisponible">
+          {safeConfig.errorMessage ??
+            "Le service de compte ne peut pas être initialisé. Les données locales restent accessibles et exportables."}
         </InlineNotice>
         <Link
           to={routePaths.backup}
@@ -226,7 +230,10 @@ export function AccountDevicesPage({
   }
 
   const loggedIn = snapshot.account.isLoggedIn;
-  const accountSpaceActive = currentSpace.kind === 'account';
+  const cloudDatabaseLabel = safeConfig.config.enabled
+    ? new URL(safeConfig.config.databaseUrl).hostname
+    : "Non configuré";
+  const accountSpaceActive = currentSpace.kind === "account";
   const actionPending = pendingAction !== undefined;
   const managementOptions = storage
     ? { space: currentSpace, storage }
@@ -242,9 +249,18 @@ export function AccountDevicesPage({
           Compte et appareils
         </h1>
         <p className="mt-2 max-w-3xl leading-7 text-slate-600 dark:text-slate-300">
-          Vérifie le compte actif, l’état des échanges et les données conservées sur cet appareil. Chaque action ci-dessous possède un effet distinct.
+          Vérifie le compte actif, l’état des échanges et les données conservées
+          sur cet appareil. Chaque action ci-dessous possède un effet distinct.
         </p>
       </div>
+
+      {!loggedIn ? (
+        <InlineNotice tone="info" title="Aucun compte connecté">
+          Les données de l’espace local actif restent sur cet appareil. Connecte
+          un compte pour reprendre la synchronisation ou utiliser un autre
+          compte.
+        </InlineNotice>
+      ) : null}
 
       {feedback ? (
         <InlineNotice tone={feedback.tone} title={feedback.title}>
@@ -255,7 +271,10 @@ export function AccountDevicesPage({
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="p-5">
           <div className="flex items-start gap-3">
-            <Cloud aria-hidden="true" className="mt-0.5 size-6 text-brand-700 dark:text-brand-300" />
+            <Cloud
+              aria-hidden="true"
+              className="mt-0.5 size-6 text-brand-700 dark:text-brand-300"
+            />
             <div className="min-w-0">
               <h2 className="text-lg font-bold text-slate-950 dark:text-white">
                 Compte de synchronisation
@@ -283,7 +302,15 @@ export function AccountDevicesPage({
                 {pendingChangesLabel(snapshot)}
               </dd>
             </div>
-            <div className="col-span-2 rounded-xl border border-slate-200 p-3 dark:border-slate-800">
+            <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-800">
+              <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                Service cloud
+              </dt>
+              <dd className="mt-1 break-all font-bold text-slate-950 dark:text-white">
+                {cloudDatabaseLabel}
+              </dd>
+            </div>
+            <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-800">
               <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                 Dernier échange réussi
               </dt>
@@ -299,7 +326,7 @@ export function AccountDevicesPage({
               className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-brand-700 px-4 py-2 text-sm font-semibold text-white"
             >
               <RefreshCw aria-hidden="true" className="size-4" />
-              Gérer la synchronisation
+              Connexion et changement de compte
             </Link>
             <Link
               to={routePaths.backup}
@@ -313,7 +340,10 @@ export function AccountDevicesPage({
 
         <Card className="p-5">
           <div className="flex items-start gap-3">
-            <Laptop aria-hidden="true" className="mt-0.5 size-6 text-brand-700 dark:text-brand-300" />
+            <Laptop
+              aria-hidden="true"
+              className="mt-0.5 size-6 text-brand-700 dark:text-brand-300"
+            />
             <div>
               <h2 className="text-lg font-bold text-slate-950 dark:text-white">
                 Appareil actuel
@@ -326,19 +356,25 @@ export function AccountDevicesPage({
 
           <dl className="mt-5 space-y-3 text-sm">
             <div className="flex items-center justify-between gap-4 border-b border-slate-200 pb-3 dark:border-slate-800">
-              <dt className="text-slate-600 dark:text-slate-300">Identifiant local</dt>
+              <dt className="text-slate-600 dark:text-slate-300">
+                Identifiant local
+              </dt>
               <dd className="font-mono font-semibold text-slate-950 dark:text-white">
                 …{currentDevice.id.slice(-8).toUpperCase()}
               </dd>
             </div>
             <div className="flex items-center justify-between gap-4 border-b border-slate-200 pb-3 dark:border-slate-800">
-              <dt className="text-slate-600 dark:text-slate-300">Espace actif</dt>
+              <dt className="text-slate-600 dark:text-slate-300">
+                Espace actif
+              </dt>
               <dd className="text-right font-semibold text-slate-950 dark:text-white">
                 {currentSpace.label}
               </dd>
             </div>
             <div className="flex items-center justify-between gap-4">
-              <dt className="text-slate-600 dark:text-slate-300">Dernière activité locale</dt>
+              <dt className="text-slate-600 dark:text-slate-300">
+                Dernière activité locale
+              </dt>
               <dd className="text-right font-semibold text-slate-950 dark:text-white">
                 {formatDateTime(currentDevice.lastSeenAt)}
               </dd>
@@ -347,17 +383,42 @@ export function AccountDevicesPage({
 
           <div className="mt-5 rounded-xl border border-slate-200 p-4 dark:border-slate-800">
             <div className="flex items-center gap-2">
-              <ShieldCheck aria-hidden="true" className="size-5 text-emerald-700 dark:text-emerald-300" />
+              <ShieldCheck
+                aria-hidden="true"
+                className="size-5 text-emerald-700 dark:text-emerald-300"
+              />
               <h3 className="font-semibold text-slate-950 dark:text-white">
                 Appareils connus
               </h3>
             </div>
             <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-              Cette installation connaît actuellement cet appareil. La liste et la révocation des appareils distants seront activées lorsque le service cloud exposera ces métadonnées.
+              Cette installation connaît actuellement cet appareil. La liste et
+              la révocation des appareils distants seront activées lorsque le
+              service cloud exposera ces métadonnées.
             </p>
           </div>
         </Card>
       </div>
+
+      {loggedIn &&
+      currentSpace.kind === "account" &&
+      currentSpace.accountFingerprint ? (
+        <>
+          <Card className="p-5">
+            <CloudAccountRestorePanel
+              accountFingerprint={currentSpace.accountFingerprint}
+              client={runtimeClient}
+              reload={reload}
+            />
+          </Card>
+          <Card className="p-5">
+            <GuestDataImportPanel
+              accountFingerprint={currentSpace.accountFingerprint}
+              reload={reload}
+            />
+          </Card>
+        </>
+      ) : null}
 
       <Card className="p-5">
         <h2 className="text-lg font-bold text-slate-950 dark:text-white">
@@ -365,12 +426,16 @@ export function AccountDevicesPage({
         </h2>
         <div className="mt-4 grid gap-4 lg:grid-cols-3">
           <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
-            <LogOut aria-hidden="true" className="size-5 text-slate-700 dark:text-slate-200" />
+            <LogOut
+              aria-hidden="true"
+              className="size-5 text-slate-700 dark:text-slate-200"
+            />
             <h3 className="mt-3 font-semibold text-slate-950 dark:text-white">
               Déconnecter le compte
             </h3>
             <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
-              Arrête la synchronisation. L’espace et les données locales du compte restent connus sur cet appareil.
+              Arrête la synchronisation. L’espace et les données locales du
+              compte restent connus sur cet appareil.
             </p>
             <Button
               className="mt-4 w-full"
@@ -383,12 +448,16 @@ export function AccountDevicesPage({
           </div>
 
           <div className="rounded-2xl border border-amber-200 p-4 dark:border-amber-900">
-            <Link2Off aria-hidden="true" className="size-5 text-amber-700 dark:text-amber-300" />
+            <Link2Off
+              aria-hidden="true"
+              className="size-5 text-amber-700 dark:text-amber-300"
+            />
             <h3 className="mt-3 font-semibold text-slate-950 dark:text-white">
               Désassocier cet appareil
             </h3>
             <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
-              Déconnecte le compte et retire son association active. Les données locales restent conservées et pourront être réassociées plus tard.
+              Déconnecte le compte et retire son association active. Les données
+              locales restent conservées et pourront être réassociées plus tard.
             </p>
             <Button
               className="mt-4 w-full"
@@ -401,12 +470,16 @@ export function AccountDevicesPage({
           </div>
 
           <div className="rounded-2xl border border-red-200 p-4 dark:border-red-900">
-            <Trash2 aria-hidden="true" className="size-5 text-red-700 dark:text-red-300" />
+            <Trash2
+              aria-hidden="true"
+              className="size-5 text-red-700 dark:text-red-300"
+            />
             <h3 className="mt-3 font-semibold text-slate-950 dark:text-white">
               Supprimer les données locales
             </h3>
             <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
-              Efface uniquement la base locale de ce compte. Les données cloud et les autres appareils ne sont pas supprimés.
+              Efface uniquement la base locale de ce compte. Les données cloud
+              et les autres appareils ne sont pas supprimés.
             </p>
             <label className="mt-3 block text-sm font-semibold text-slate-700 dark:text-slate-200">
               Saisis SUPPRIMER
@@ -422,7 +495,7 @@ export function AccountDevicesPage({
               className="mt-3 w-full"
               variant="danger"
               disabled={
-                deleteConfirmation !== 'SUPPRIMER' ||
+                deleteConfirmation !== "SUPPRIMER" ||
                 !accountSpaceActive ||
                 actionPending
               }
@@ -439,11 +512,11 @@ export function AccountDevicesPage({
         title="Déconnecter le compte ?"
         description="La synchronisation s’arrête, mais les données locales de ce compte restent présentes sur cet appareil."
         confirmLabel="Déconnecter"
-        isPending={pendingAction === 'disconnect'}
+        isPending={pendingAction === "disconnect"}
         onCancel={() => setDisconnectDialogOpen(false)}
         onConfirm={() => {
           setDisconnectDialogOpen(false);
-          void runAction('disconnect', () => disconnect(runtimeClient));
+          void runAction("disconnect", () => disconnect(runtimeClient));
         }}
       />
 
@@ -452,11 +525,11 @@ export function AccountDevicesPage({
         title="Désassocier cet appareil ?"
         description="Le compte sera déconnecté. Son espace local restera conservé, mais devra être réassocié explicitement lors de la prochaine connexion."
         confirmLabel="Désassocier"
-        isPending={pendingAction === 'detach'}
+        isPending={pendingAction === "detach"}
         onCancel={() => setDetachDialogOpen(false)}
         onConfirm={() => {
           setDetachDialogOpen(false);
-          void runAction('detach', () =>
+          void runAction("detach", () =>
             detachDevice(runtimeClient, managementOptions),
           );
         }}
@@ -468,11 +541,11 @@ export function AccountDevicesPage({
         description="Cette opération efface la base locale de ce compte sur cet appareil uniquement. Elle ne supprime pas les données cloud."
         confirmLabel="Supprimer définitivement en local"
         tone="danger"
-        isPending={pendingAction === 'delete'}
+        isPending={pendingAction === "delete"}
         onCancel={() => setDeleteDialogOpen(false)}
         onConfirm={() => {
           setDeleteDialogOpen(false);
-          void runAction('delete', () =>
+          void runAction("delete", () =>
             deleteLocalData(runtimeClient, managementOptions),
           );
         }}

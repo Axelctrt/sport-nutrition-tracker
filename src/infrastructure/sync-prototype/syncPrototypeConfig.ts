@@ -98,13 +98,19 @@ function normalizeDexieCloudDatabaseUrl(value: string | undefined): string {
   return parsed.origin;
 }
 
+export function mergeSyncPrototypeProductionEnvironment(
+  environment: SyncPrototypeEnvironment,
+): SyncPrototypeEnvironment {
+  return {
+    ...environment,
+    ...syncPublicDeploymentConfig,
+  };
+}
+
 function readRuntimeSyncPrototypeEnvironment(): SyncPrototypeEnvironment {
   if (!import.meta.env.PROD) return import.meta.env;
 
-  return {
-    ...syncPublicDeploymentConfig,
-    ...import.meta.env,
-  };
+  return mergeSyncPrototypeProductionEnvironment(import.meta.env);
 }
 
 export function readSyncPrototypeConfig(

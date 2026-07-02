@@ -17,6 +17,7 @@ import {
   sameEntity,
   stripCloudFields,
   type CloudOwned,
+  type CloudSyncExecutionOptions,
 } from '@/infrastructure/sync-prototype/cloudSyncValue';
 
 export interface NutritionTrackingAggregate {
@@ -301,7 +302,9 @@ export async function synchronizeRealNutritionTracking(
   localDatabase: AppDatabase,
   cloudDatabase: SyncPrototypeDatabase,
   currentUserId: string,
+  options: CloudSyncExecutionOptions = {},
 ): Promise<RealNutritionTrackingSyncResult> {
+  const writeCloud = options.writeCloud !== false;
   const state = await readState(localDatabase, cloudDatabase, currentUserId);
   const final = resolveFinalState(state);
   const preview = buildPreview(state, final);
@@ -309,7 +312,9 @@ export async function synchronizeRealNutritionTracking(
 
   const localById = mapById(state.local);
   const cloudById = mapById(state.cloud);
-  const uploaded = final.filter((value) => !sameEntity(cloudById.get(value.id), value));
+  const uploaded = writeCloud
+    ? final.filter((value) => !sameEntity(cloudById.get(value.id), value))
+    : [];
   const downloaded = final.filter((value) => !sameEntity(localById.get(value.id), value));
 
   await localDatabase.transaction(
@@ -332,7 +337,7 @@ export async function synchronizeRealNutritionTracking(
     },
   );
 
-  if (uploaded.length > 0) {
+  if (writeCloud && uploaded.length > 0) {
     await cloudDatabase.realNutritionTracking.bulkPut(uploaded.map(toCloudAggregate));
   }
 

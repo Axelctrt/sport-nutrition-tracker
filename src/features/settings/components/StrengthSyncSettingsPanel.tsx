@@ -201,7 +201,7 @@ export function StrengthSyncSettingsPanel({
             'Les exercices personnalisés, modèles, séances et séries restent locaux tant que la synchronisation de la musculation n’est pas activée.'}
         </InlineNotice>
         <Link
-          to={routePaths.syncPrototype}
+          to={routePaths.accountDevices}
           className="inline-flex min-h-11 items-center justify-center rounded-xl px-4 text-sm font-semibold text-brand-700 hover:bg-brand-50 dark:text-brand-300 dark:hover:bg-brand-950/30"
         >
           Gérer le compte de synchronisation
@@ -321,7 +321,7 @@ export function StrengthSyncSettingsPanel({
             Synchroniser la musculation
           </Button>
           <Link
-            to={routePaths.syncPrototype}
+            to={routePaths.accountDevices}
             className="inline-flex min-h-11 items-center justify-center rounded-xl px-4 text-sm font-semibold text-brand-700 hover:bg-brand-50 dark:text-brand-300 dark:hover:bg-brand-950/30"
           >
             Gérer le compte

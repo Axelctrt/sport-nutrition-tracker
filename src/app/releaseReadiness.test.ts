@@ -10,9 +10,9 @@ import {
   databaseTableNames,
 } from '@/infrastructure/database/schema';
 
-describe('préparation de la version stable 0.20.1', () => {
+describe('préparation de la version stable 0.21.0', () => {
   it('expose la version stable dans le build', () => {
-    expect(__APP_VERSION__).toBe('0.20.1');
+    expect(__APP_VERSION__).toBe('0.21.0');
     expect(__APP_VERSION__).toMatch(/^\d+\.\d+\.\d+$/);
   });
 
@@ -43,8 +43,8 @@ describe('préparation de la version stable 0.20.1', () => {
         routePaths.strengthExercises,
         routePaths.history,
         routePaths.weeklyReview,
-          routePaths.reminders,
-          routePaths.backup,
+        routePaths.reminders,
+        routePaths.backup,
         routePaths.trash,
         routePaths.calculationsInformation,
       ]),

@@ -63,8 +63,8 @@ if (existsSync(runtimeConfigPath)) {
   if (!source.includes('import.meta.env.PROD')) {
     fail('la configuration publique n’est pas limitée au build de production.');
   }
-  if (!source.includes('...import.meta.env')) {
-    fail('les variables de la plateforme ne conservent pas la priorité.');
+  if (!source.includes('...environment') || !source.includes('...syncPublicDeploymentConfig')) {
+    fail('la configuration publique validée ne conserve pas la priorité en production.');
   }
 }
 
@@ -86,5 +86,5 @@ if (failures.length > 0) {
   failures.forEach((failure) => console.error(`- ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log('Audit de déploiement de la synchronisation réussi : configuration publique valide, surcharge de plateforme prioritaire et aucun secret évident.');
+  console.log('Audit de déploiement de la synchronisation réussi : configuration publique valide et prioritaire, build de production cohérent et aucun secret évident.');
 }

@@ -405,6 +405,27 @@ describe('client sécurisé du prototype Dexie Cloud', () => {
     expect(logout).toHaveBeenCalledTimes(1);
   });
 
+  it('refuse une analyse de restauration préparée pour un autre compte', async () => {
+    const { database, currentUser } = createFakeDatabase();
+    currentUser.next({
+      claims: {},
+      lastLogin: new Date('2026-07-02T08:00:00.000Z'),
+      isLoggedIn: true,
+      isLoading: false,
+      email: 'compte-a@example.com',
+      userId: 'compte-a@example.com',
+    });
+    database.cloud.currentUserId = 'compte-a@example.com';
+    const client = createClient(database);
+    const otherFingerprint = createSyncPrototypeAccountFingerprint(
+      'compte-b@example.com',
+    )!.toLowerCase();
+
+    await expect(client.prepareCloudRestore?.(otherFingerprint)).rejects.toThrow(
+      'Le compte connecté ne correspond pas',
+    );
+  });
+
   it('ne relance pas le flux OTP lorsque la session restaurée est déjà connectée', async () => {
     const { database, currentUser, login } = createFakeDatabase();
     currentUser.next({
