@@ -1,6 +1,10 @@
-# Limitations connues — SportPilot 0.21.0
+# Limitations connues — SportPilot 0.21.1
 
 Ces limitations sont connues et non bloquantes pour la version stable.
+
+## Objectif nutritionnel quotidien
+
+Le tableau de bord recalcule l’objectif du jour à chaque ouverture. Depuis 0.21.1, un calcul identique ne renouvelle plus son horodatage et ne crée plus de différence artificielle avec le cloud. Une modification réelle du poids, des pas, des activités, du profil ou d’un ajustement calorique continue naturellement à produire une nouvelle version synchronisable.
 
 ## Synchronisation par domaine
 
@@ -36,4 +40,4 @@ Open Food Facts et Dexie Cloud dépendent du réseau et de leur disponibilité. 
 
 ## Versions de données
 
-SportPilot 0.21.0 utilise la base Dexie Cloud v8 et le runtime `sportpilot-sync-runtime-0.20.0-v8`. La base métier reste en Dexie v8, la sauvegarde en JSON v7 et le registre local des espaces en v1.
+SportPilot 0.21.1 utilise la base Dexie Cloud v8 et le runtime `sportpilot-sync-runtime-0.20.0-v8`. La base métier reste en Dexie v8, la sauvegarde en JSON v7 et le registre local des espaces en v1.

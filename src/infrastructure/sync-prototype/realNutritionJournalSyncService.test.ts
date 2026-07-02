@@ -6,6 +6,7 @@ import {
   type DeletionRecord,
 } from '@/domain/models/deletion';
 import { AppDatabase } from '@/infrastructure/database/AppDatabase';
+import { DexieTargetRepository } from '@/infrastructure/repositories/dexie/DexieTargetRepository';
 import type { SyncPrototypeDatabase } from '@/infrastructure/sync-prototype/SyncPrototypeDatabase';
 import {
   previewRealNutritionJournalSync,
@@ -379,6 +380,42 @@ describe('synchronisation C1 du journal nutritionnel', () => {
     expect(
       (await cloud.realNutritionJournalDays.get('#nutrition-journal:2026-07-01'))?.target,
     ).toMatchObject({ id: 'daily-target:2026-07-01' });
+  });
+
+  it('reste convergé après un recalcul identique du tableau de bord', async () => {
+    const currentTarget = target();
+    const currentStatus = status();
+    await local.dailyTargets.add(currentTarget);
+    await local.dailyJournalStatuses.add(currentStatus);
+    await cloud.realNutritionJournalDays.add({
+      ...day({
+        id: '#nutrition-journal:2026-07-01',
+        meals: [],
+        entries: [],
+        target: currentTarget,
+        status: currentStatus,
+        updatedAt: currentStatus.updatedAt,
+      }),
+      owner: 'user-1',
+    });
+
+    const repository = new DexieTargetRepository(local);
+    const {
+      id: _id,
+      createdAt: _createdAt,
+      updatedAt: _updatedAt,
+      ...sameCalculation
+    } = currentTarget;
+    const persisted = await repository.upsertTarget(sameCalculation);
+
+    expect(persisted.updatedAt).toBe(currentTarget.updatedAt);
+    await expect(
+      previewRealNutritionJournalSync(
+        local,
+        cloud as unknown as SyncPrototypeDatabase,
+        'user-1',
+      ),
+    ).resolves.toMatchObject({ differingEntityCount: 0 });
   });
 
   it('analyse les écarts sans écrire dans le cloud', async () => {

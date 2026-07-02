@@ -1,10 +1,10 @@
-# Retour arrière — SportPilot 0.21.0
+# Retour arrière — SportPilot 0.21.1
 
 ## Stratégie
 
 Le fix-forward est privilégié. Ne supprime jamais IndexedDB, les données Safari, la PWA ou une base Dexie Cloud locale pour corriger un incident de compte, d’import ou de restauration.
 
-SportPilot 0.21.0 conserve la base métier Dexie v8, la sauvegarde JSON v7, le registre des espaces v1 et le runtime cloud `sportpilot-sync-runtime-0.20.0-v8`.
+SportPilot 0.21.1 conserve la base métier Dexie v8, la sauvegarde JSON v7, le registre des espaces v1 et le runtime cloud `sportpilot-sync-runtime-0.20.0-v8`.
 
 ## Mesures immédiates
 
@@ -13,7 +13,11 @@ SportPilot 0.21.0 conserve la base métier Dexie v8, la sauvegarde JSON v7, le r
 3. noter le compte, l’appareil, l’espace, le domaine et l’action réalisée ;
 4. ne pas changer de compte tant que l’incident n’est pas qualifié ;
 5. ne pas effacer le stockage du navigateur ou de Safari ;
-6. préparer une correction depuis le tag `v0.21.0`.
+6. préparer une correction depuis le tag `v0.21.1`.
+
+## Correctif du journal nutritionnel 0.21.1
+
+Un retour à 0.21.0 réintroduit le renouvellement artificiel de `updatedAt` lors de l’ouverture du tableau de bord. Ce comportement ne détruit pas les données, mais peut provoquer une synchronisation répétitive de la journée courante. Préférer un fix-forward et ne jamais effacer le journal ou le cloud pour supprimer cet écart.
 
 ## Gestion du compte D1
 
@@ -35,4 +39,4 @@ Fermer tous les onglets de l’origine concernée puis redémarrer l’applicati
 
 ## Git
 
-Ne jamais réécrire le tag `v0.21.0`. Conserver le tag publié et livrer tout correctif ultérieur avec une nouvelle version et un nouveau tag annoté.
+Ne jamais réécrire le tag `v0.21.1`. Conserver le tag publié et livrer tout correctif ultérieur avec une nouvelle version et un nouveau tag annoté.

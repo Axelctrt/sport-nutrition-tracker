@@ -1,8 +1,8 @@
-SPORTPILOT 0.21.0
+SPORTPILOT 0.21.1
 
 PRÉPARATION
 
-1. Vérifier que la branche feature/data-continuity-0.21.0 est propre et à jour.
+1. Vérifier que la branche fix/nutrition-journal-sync-loop-0.21.1 est propre et à jour.
 2. Arrêter Vite avec Ctrl + C et fermer les onglets de test.
 3. Exporter une sauvegarde JSON v7 récente de l’espace invité et du compte principal.
 4. Vérifier que toutes les analyses cloud du compte principal affichent 0 différence.
@@ -15,54 +15,46 @@ VALIDATION AUTOMATIQUE
 8. Installer les dépendances avec npm ci.
 9. Lancer npm run release:verify.
 10. Lancer npm run test:e2e.
-11. Lancer npm run audit:data-continuity-release.
-12. Vérifier que Paramètres affiche la version 0.21.0.
-13. Vérifier l’absence d’archive, de journal et de fichier de patch dans git status.
+11. Lancer npm run audit:nutrition-journal-sync.
+12. Lancer npm run audit:data-continuity-release.
+13. Vérifier que Paramètres affiche la version 0.21.1.
+14. Vérifier l’absence d’archive, de journal et de fichier de patch dans git status.
 
-VALIDATION D1 — COMPTE
+VALIDATION CORRECTIF 0.21.1 — JOURNAL NUTRITIONNEL
 
-14. Ouvrir Compte et appareils depuis chaque accès de gestion du compte.
-15. Vérifier le compte connecté, l’état cloud et l’espace local actif.
-16. Se déconnecter puis se reconnecter sans perte locale ou cloud.
-17. Changer de compte et confirmer l’isolation stricte des espaces.
+15. Synchroniser le journal nutritionnel et confirmer 0 différence.
+16. Ouvrir l’accueil sans modifier de donnée.
+17. Revenir dans la synchronisation du journal et confirmer encore 0 différence.
+18. Répéter le passage accueil/synchronisation une seconde fois.
+19. Modifier réellement une donnée quotidienne, recalculer puis vérifier qu’un écart légitime apparaît.
+20. Synchroniser et confirmer le retour à 0 différence.
 
-VALIDATION D2 — ESPACE INVITÉ
+NON-RÉGRESSION CONTINUITÉ DES DONNÉES
 
-18. Créer des données identifiables dans l’espace invité.
-19. Se connecter à un compte existant puis analyser les données invitées.
-20. Importer après confirmation et vérifier la conservation des données déjà présentes.
-21. Confirmer l’absence de doublon et le remappage des références nutritionnelles.
-22. Relancer l’analyse sans modification et vérifier 0 ajout, 0 mise à jour et 0 retrait.
-23. Se déconnecter et vérifier que l’espace invité est resté intact.
-
-VALIDATION D3 — RESTAURATION CLOUD
-
-24. Utiliser un nouveau profil navigateur ou une installation locale vierge.
-25. Se connecter à un compte contenant des données cloud synchronisées.
-26. Vérifier le résumé par domaine avant toute restauration.
-27. Restaurer depuis le cloud puis confirmer 0 différence dans chaque domaine.
-28. Vérifier l’accès aux données restaurées hors connexion.
-29. Refaire le test en choisissant Commencer avec un espace vide.
-30. Vérifier que le cloud est inchangé et que la restauration reste disponible plus tard.
-31. Créer une vraie donnée locale puis vérifier que la restauration globale est bloquée.
-32. Tester un second compte et confirmer l’absence de données du premier compte.
+21. Ouvrir Compte et appareils et vérifier le compte, le cloud et l’espace actif.
+22. Changer de compte et confirmer l’isolation stricte des espaces.
+23. Vérifier qu’une analyse invitée déjà importée reste à zéro.
+24. Dans un profil vierge, détecter les données cloud sans restauration automatique.
+25. Restaurer le compte et confirmer 0 différence dans chaque domaine.
+26. Vérifier que les données restaurées restent accessibles hors connexion.
+27. Vérifier qu’un espace local déjà utilisé bloque la restauration globale.
 
 VALIDATION IPHONE
 
-33. Depuis l’iPhone 15 sous iOS 26, vérifier une dernière sauvegarde et les analyses à zéro.
-34. Supprimer la PWA et les données du site de test, puis réinstaller SportPilot.
-35. Se connecter, restaurer depuis le cloud et contrôler chaque domaine.
-36. Couper le réseau et vérifier que les données restaurées restent consultables.
-37. Rétablir le réseau et vérifier la reprise normale des analyses cloud.
+28. Depuis l’iPhone 15 sous iOS 26, vérifier une sauvegarde récente et les analyses à zéro.
+29. Mettre à jour la PWA vers 0.21.1.
+30. Reproduire le scénario journal → accueil → journal et confirmer 0 différence.
+31. Couper le réseau et vérifier l’accès aux données locales.
+32. Rétablir le réseau et vérifier la reprise normale.
 
 PUBLICATION
 
-38. Committer D4 sur feature/data-continuity-0.21.0.
-39. Fusionner manuellement la branche dans develop avec un commit de fusion explicite.
-40. Valider develop puis fusionner develop dans main.
-41. Créer le tag annoté v0.21.0 sur le commit publié dans main.
-42. Pousser develop, main et le tag v0.21.0.
-43. Vérifier le déploiement de production et refaire la recette compte/restauration sur ordinateur et iPhone.
+33. Committer le correctif sur fix/nutrition-journal-sync-loop-0.21.1.
+34. Fusionner manuellement la branche dans develop avec un commit de fusion explicite.
+35. Valider develop puis fusionner develop dans main.
+36. Créer le tag annoté v0.21.1 sur le commit publié dans main.
+37. Pousser develop, main et le tag v0.21.1.
+38. Vérifier le déploiement de production et refaire la recette du journal sur ordinateur et iPhone.
 
 VERSIONS DE DONNÉES
 
@@ -72,4 +64,4 @@ Schéma Dexie principal : version 8.
 Sauvegarde JSON : version 7.
 Registre local des espaces : version 1.
 
-Aucune migration de données ni nouvelle connexion OTP liée au runtime n’est requise pour 0.21.0.
+Aucune migration de données ni nouvelle connexion OTP liée au runtime n’est requise pour 0.21.1.
