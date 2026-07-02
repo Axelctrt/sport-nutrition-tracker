@@ -15,8 +15,8 @@ const read = (path) => {
 };
 
 const packageJson = JSON.parse(read('package.json'));
-if (!/^0\.(?:20|21)\.\d+$/.test(packageJson.version)) {
-  fail(`la version attendue appartient aux séries stables 0.20.x ou 0.21.x, reçue ${String(packageJson.version)}.`);
+if (!/^0\.(?:20|21|22)\.\d+$/.test(packageJson.version)) {
+  fail(`la version attendue appartient aux séries stables 0.20.x, 0.21.x ou 0.22.x, reçue ${String(packageJson.version)}.`);
 }
 
 for (const path of [
@@ -33,7 +33,7 @@ for (const path of [
 
 const cloudDatabase = read('src/infrastructure/sync-prototype/SyncPrototypeDatabase.ts');
 for (const expected of [
-  'SYNC_PROTOTYPE_DATABASE_VERSION = 8',
+  'SYNC_PROTOTYPE_DATABASE_VERSION = 10',
   'sportpilot-sync-runtime-0.20.0-v${SYNC_PROTOTYPE_DATABASE_VERSION}',
   'disableEagerSync: true',
   'realWeights',
@@ -146,6 +146,6 @@ if (failures.length > 0) {
   process.exitCode = 1;
 } else {
   console.log(
-    'Audit du socle sportif réussi : quatre domaines synchronisés, convergence commune, suppressions durables, agrégats de musculation atomiques et runtime cloud v8 validés.',
+    'Audit du socle sportif réussi : quatre domaines synchronisés, convergence commune, suppressions durables, agrégats de musculation atomiques et runtime cloud v10 validés.',
   );
 }

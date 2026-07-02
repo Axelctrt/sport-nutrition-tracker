@@ -5,12 +5,12 @@ import {
 } from '@/infrastructure/sync-prototype/SyncPrototypeDatabase';
 import { syncPublicDeploymentConfig } from '@/infrastructure/sync-prototype/syncPublicDeploymentConfig';
 
-describe('compatibilité de la synchronisation nutritionnelle avec 0.21.1', () => {
+describe('compatibilité de la synchronisation nutritionnelle avec la publication 0.22.0', () => {
   it('publie la version finale sans modifier les versions métier', () => {
-    expect(__APP_VERSION__).toBe('0.21.1');
-    expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(8);
+    expect(__APP_VERSION__).toBe('0.22.0');
+    expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(10);
     expect(SYNC_PROTOTYPE_DATABASE_NAME).toBe(
-      'sportpilot-sync-runtime-0.20.0-v8',
+      'sportpilot-sync-runtime-0.20.0-v10',
     );
   });
 
@@ -38,6 +38,7 @@ describe('compatibilité de la synchronisation nutritionnelle avec 0.21.1', () =
       VITE_ENABLE_REAL_NUTRITION_JOURNAL_SYNC: 'true',
       VITE_ENABLE_REAL_NUTRITION_LIBRARY_SYNC: 'true',
       VITE_ENABLE_REAL_NUTRITION_TRACKING_SYNC: 'true',
+      VITE_ENABLE_REAL_ACCOUNT_PREFERENCES_SYNC: 'true',
       VITE_ENABLE_SYNC_DIAGNOSTICS: 'false',
     });
   });

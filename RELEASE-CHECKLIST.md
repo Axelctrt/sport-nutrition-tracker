@@ -1,95 +1,77 @@
-# Checklist de validation stable — SportPilot 0.21.1
+# Checklist de publication — SportPilot 0.22.0
 
 ## Préparation
 
-- [ ] La branche `fix/nutrition-journal-sync-loop-0.21.1` est propre et à jour.
+- [ ] La branche `feature/full-account-continuity-0.22.0` est propre et synchronisée.
 - [ ] Une sauvegarde JSON v7 récente est conservée hors de l’application.
-- [ ] Les analyses cloud du compte principal affichent `0 différence`.
-- [ ] `npm ci` termine sans erreur.
-- [ ] `npm run release:verify` termine sans erreur.
-- [ ] `npm run test:e2e` termine sans erreur.
-- [ ] `npm run audit:data-continuity-release` réussit.
-- [ ] Paramètres affiche `0.21.1`.
-- [ ] Aucun secret, ZIP, journal ou fichier de patch temporaire n’est suivi par Git.
+- [ ] Le centre affiche 9/9 rubriques à jour avant les scénarios de conflit.
+- [ ] Aucun ZIP, journal, secret ou fichier de patch n’est suivi par Git.
+- [ ] Paramètres affiche `0.22.0`.
 
-## Versions et compatibilité
+## Contrôles automatiques
 
-- [ ] La base Dexie Cloud reste en v8.
-- [ ] Le runtime reste `sportpilot-sync-runtime-0.20.0-v8`.
-- [ ] Le schéma métier reste en Dexie v8.
+- [ ] `npm ci` réussit sur une installation propre.
+- [ ] `npm run release:verify` réussit.
+- [ ] `npm run test:e2e` réussit.
+- [ ] `npm run audit:full-account-continuity-release` réussit.
+- [ ] `git diff --check` ne retourne aucune erreur.
+
+## Versions et configuration
+
+- [ ] Le runtime Dexie Cloud est en v10.
+- [ ] Le runtime local est `sportpilot-sync-runtime-0.20.0-v10`.
+- [ ] La base métier reste en Dexie v8.
 - [ ] La sauvegarde reste en JSON v7.
 - [ ] Le registre des espaces reste en v1.
-- [ ] Aucune migration de données ni nouvelle authentification OTP n’est requise.
+- [ ] Les neuf domaines sont activés dans le build public.
+- [ ] Les diagnostics de laboratoire restent désactivés.
+- [ ] Aucune migration de données n’est requise.
 
-## Correctif 0.21.1 — journal nutritionnel
+## Centre de synchronisation
 
-- [ ] Synchroniser le journal nutritionnel puis vérifier `0 différence`.
-- [ ] Ouvrir l’accueil sans modifier aucune donnée.
-- [ ] Revenir dans la synchronisation du journal et vérifier encore `0 différence`.
-- [ ] Modifier réellement une donnée qui influence l’objectif du jour et vérifier qu’un écart légitime apparaît.
-- [ ] Synchroniser cet écart puis vérifier une nouvelle convergence à zéro.
-- [ ] Les autres domaines restent à `0 différence`.
+- [ ] **Analyser tout** affiche le statut de chaque rubrique sans modifier les données.
+- [ ] **Synchroniser tout** exige une confirmation explicite.
+- [ ] Une erreur n’interrompt pas les rubriques suivantes.
+- [ ] La relance ciblée ne rejoue que les échecs.
+- [ ] Une seconde analyse après synchronisation affiche 9/9 et 0 différence.
+- [ ] Les détails sont chargés un par un et se ferment vers Synchronisation des données.
+- [ ] Le mode hors connexion désactive les actions cloud.
+- [ ] Le retour du réseau permet une nouvelle analyse.
+- [ ] Modifier un objectif ouvre l’éditeur sans page 404 et conserve la route `/goals`.
 
-## D1 — Gestion du compte
+## Multiappareils et conflits
 
-- [ ] Tous les accès de gestion ouvrent **Compte et appareils**.
-- [ ] Le compte, le cloud et l’espace local actif sont clairement identifiés.
-- [ ] La déconnexion ne supprime aucune donnée.
-- [ ] Le changement de compte ne mélange aucun espace.
-- [ ] La suppression locale reste distincte de la déconnexion et du cloud.
-- [ ] `npm run audit:account-management` réussit.
+- [ ] Le profil et les réglages partageables convergent sur deux appareils.
+- [ ] Les succès, thèmes visuels, missions et routines convergent sans perte.
+- [ ] Les dates d’obtention les plus anciennes sont conservées.
+- [ ] Les préférences les plus récentes gagnent.
+- [ ] Le mode clair ou sombre reste local.
+- [ ] Le compte A ne lit aucune donnée du compte B.
+- [ ] L’espace invité reste séparé et récupérable.
 
-## D2 — Import des données invitées
+## Restauration
 
-- [ ] Une analyse est obligatoire avant l’import.
-- [ ] Les compteurs sont détaillés par domaine.
-- [ ] La donnée la plus récente gagne en cas de collision fonctionnelle.
-- [ ] Les doublons de date, créneau et code-barres sont traités.
-- [ ] Les références nutritionnelles restent cohérentes.
-- [ ] L’import est atomique et l’espace invité reste intact.
-- [ ] Une seconde analyse sans modification affiche zéro opération.
-- [ ] Un changement après analyse invalide l’aperçu.
-- [ ] `npm run audit:guest-data-import` réussit.
-
-## D3 — Restauration après nouvelle installation
-
-- [ ] Une installation vierge détecte les données cloud du compte.
-- [ ] Le résumé par domaine apparaît avant toute modification locale.
-- [ ] La restauration exige une confirmation explicite.
-- [ ] Le cloud reste strictement en lecture seule pendant l’opération.
-- [ ] La préparation temporaire et l’écriture locale atomique sont validées.
-- [ ] Les suppressions cloud sont respectées sans résurrection.
-- [ ] Les analyses reviennent à `0 différence` après restauration.
-- [ ] Commencer avec un espace vide ne modifie pas le cloud.
-- [ ] La restauration différée reste disponible tant que l’espace n’est pas utilisé.
-- [ ] Une vraie donnée locale bloque la restauration globale.
-- [ ] Un aperçu du compte A ne peut pas être utilisé pour le compte B.
-- [ ] `npm run audit:cloud-account-restore` réussit.
-
-## Isolation, hors ligne et non-régression
-
-- [ ] `npm run audit:account-isolation` réussit.
-- [ ] Le compte A ne voit aucune donnée du compte B.
-- [ ] L’espace invité reste séparé et récupérable après déconnexion.
-- [ ] Les synchronisations sportives et nutritionnelles convergent toujours.
-- [ ] L’export et la restauration JSON v7 fonctionnent.
+- [ ] Une installation vierge détecte les données cloud.
+- [ ] La restauration exige une confirmation.
+- [ ] Les neuf rubriques sont restaurées.
+- [ ] Les valeurs par défaut locales n’écrasent pas le cloud.
+- [ ] Une vraie donnée locale bloque le remplacement global.
 - [ ] Les données restaurées restent consultables hors connexion.
-- [ ] La reprise après retour du réseau fonctionne.
-- [ ] Les récompenses, thèmes, missions et rappels locaux restent intacts.
 
 ## iPhone 15 — iOS 26
 
-- [ ] La PWA se met à jour vers 0.21.1 sans perte de l’installation existante.
-- [ ] Après suppression/réinstallation, le compte détecte ses données cloud.
-- [ ] La restauration complète est validée sur l’iPhone.
-- [ ] Le mode hors ligne fonctionne après restauration.
-- [ ] Le changement de compte reste isolé.
+- [ ] La PWA se met à jour vers 0.22.0.
+- [ ] Le centre affiche 9/9 rubriques.
+- [ ] Une synchronisation et une restauration vierge réussissent.
+- [ ] Le mode hors connexion et la reprise réseau réussissent.
+- [ ] Rappels, Corbeille et Paramètres n’ont jamais deux sélections simultanées.
 
-## Publication
+## Publication Git
 
-- [ ] La branche fonctionnelle est fusionnée manuellement dans `develop`.
-- [ ] `develop` validé est fusionné manuellement dans `main`.
-- [ ] Le tag annoté `v0.21.1` pointe sur le commit publié dans `main`.
-- [ ] `develop`, `main` et `v0.21.1` sont poussés.
-- [ ] Le déploiement de production est terminé.
-- [ ] La recette finale est validée sur ordinateur et iPhone.
+- [ ] E4 est committé sur la branche de fonctionnalité.
+- [ ] La branche est fusionnée manuellement dans `main`.
+- [ ] `npm run release:verify` réussit sur `main`.
+- [ ] Le tag annoté `v0.22.0` est créé sur le commit publié.
+- [ ] `main` est fusionnée dans `develop`.
+- [ ] La branche de fonctionnalité est supprimée localement et à distance.
+- [ ] Le déploiement public est vérifié sur ordinateur et iPhone.

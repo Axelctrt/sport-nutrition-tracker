@@ -7,6 +7,10 @@ export type ThemePreference = 'system' | 'light' | 'dark';
 export type BackupReminderIntervalDays = 0 | 7 | 14 | 30;
 
 export interface UserSettings extends EntityMetadata {
+  /** Horodatage des seuls réglages partageables entre appareils. */
+  syncableUpdatedAt?: IsoDateTime;
+  /** Horodatage des préférences de rappels synchronisées séparément. */
+  routineReminderUpdatedAt?: IsoDateTime;
   includedBaseSteps: number;
   walkingKcalPerKgPerKm: number;
   runningKcalPerKgPerKm: number;

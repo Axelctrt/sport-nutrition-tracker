@@ -11,6 +11,7 @@ import {
   type VisualThemeId,
 } from "@/domain/rewards/visualThemes";
 import { Card } from "@/shared/ui/Card";
+import { REWARDS_ROUTINES_CHANGED_EVENT } from "@/infrastructure/sync-prototype/rewardsRoutinesSyncEvents";
 import { InlineNotice } from "@/shared/ui/InlineNotice";
 
 interface RewardThemesPanelProps {
@@ -36,7 +37,11 @@ export function RewardThemesPanel({
     const load = async () => {
       try {
         const nextSnapshot = await loadSnapshot();
-        if (isMounted) setSnapshot(nextSnapshot);
+        if (isMounted) {
+          setSnapshot(nextSnapshot);
+          setActiveThemeId(readVisualThemeState().activeThemeId);
+          setLoadError(undefined);
+        }
       } catch (error) {
         if (isMounted) {
           setLoadError(
@@ -47,10 +52,13 @@ export function RewardThemesPanel({
         }
       }
     };
+    const reload = () => void load();
 
     void load();
+    window.addEventListener(REWARDS_ROUTINES_CHANGED_EVENT, reload);
     return () => {
       isMounted = false;
+      window.removeEventListener(REWARDS_ROUTINES_CHANGED_EVENT, reload);
     };
   }, [loadSnapshot]);
 

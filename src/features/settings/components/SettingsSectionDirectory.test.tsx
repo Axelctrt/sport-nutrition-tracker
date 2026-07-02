@@ -88,4 +88,46 @@ describe('SettingsSectionDirectory', () => {
 
     target.remove();
   });
+
+  it('peut viser le centre unifié et prévenir la page avant le défilement', async () => {
+    const user = userEvent.setup();
+    const onOpenSection = vi.fn();
+    const parent = document.createElement('details');
+    parent.id = 'settings-sync';
+    const center = document.createElement('div');
+    center.id = 'unified-sync-center';
+    center.scrollIntoView = vi.fn();
+    parent.append(center);
+    document.body.append(parent);
+
+    render(
+      <SettingsSectionDirectory
+        sections={[
+          {
+            id: 'settings-sync',
+            focusId: 'unified-sync-center',
+            label: 'Synchronisation des données',
+            description: 'Centre de synchronisation.',
+            icon: Calculator,
+          },
+        ]}
+        onOpenSection={onOpenSection}
+      />,
+    );
+
+    await user.click(
+      screen.getByRole('button', {
+        name: /Synchronisation des données/,
+      }),
+    );
+
+    expect(onOpenSection).toHaveBeenCalledWith('settings-sync');
+    expect(parent.open).toBe(true);
+    await waitFor(() => {
+      expect(center.scrollIntoView).toHaveBeenCalled();
+    });
+
+    parent.remove();
+  });
+
 });

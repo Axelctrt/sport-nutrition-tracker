@@ -54,7 +54,7 @@ function snapshot(): SyncPrototypeSnapshot {
     weights: { weights: [], deletedCount: 0, isLoading: false },
     diagnostics: {
       databaseName: 'test-cloud',
-      databaseVersion: 8,
+      databaseVersion: 9,
       visibleWeightCount: 0,
       deletedWeightCount: 0,
     },

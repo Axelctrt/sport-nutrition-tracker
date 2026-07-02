@@ -9,7 +9,7 @@ const fail = (message) => failures.push(message);
 
 const packageJson = JSON.parse(read('package.json'));
 const packageLock = JSON.parse(read('package-lock.json'));
-const expectedVersion = '0.21.1';
+const expectedVersion = '0.22.0';
 
 if (packageJson.version !== expectedVersion) {
   fail(`package.json doit publier ${expectedVersion}.`);
@@ -18,7 +18,7 @@ if (
   packageLock.version !== expectedVersion
   || packageLock.packages?.['']?.version !== expectedVersion
 ) {
-  fail('package-lock.json ne correspond pas à la version 0.21.1.');
+  fail('package-lock.json ne correspond pas à la version publiée 0.22.0.');
 }
 
 const requiredFiles = [
@@ -85,8 +85,8 @@ if (failures.length === 0) {
   }
 
   const runtime = read('src/infrastructure/sync-prototype/SyncPrototypeDatabase.ts');
-  if (!runtime.includes('SYNC_PROTOTYPE_DATABASE_VERSION = 8')) {
-    fail('le runtime cloud v8 attendu est absent.');
+  if (!runtime.includes('SYNC_PROTOTYPE_DATABASE_VERSION = 10')) {
+    fail('le runtime cloud v10 attendu est absent.');
   }
   if (!runtime.includes('sportpilot-sync-runtime-0.20.0-v${SYNC_PROTOTYPE_DATABASE_VERSION}')) {
     fail('le nom du runtime cloud validé a changé sans migration déclarée.');
@@ -165,5 +165,5 @@ if (failures.length > 0) {
 }
 
 console.log(
-  'Audit D4 réussi : version 0.21.1, continuité des données, idempotence du journal nutritionnel, isolation, documentation et versions de données validées.',
+  'Audit D4 réussi : socle 0.21.x conservé, version publiée 0.22.0, continuité des données, idempotence du journal nutritionnel, isolation et versions de données validées.',
 );

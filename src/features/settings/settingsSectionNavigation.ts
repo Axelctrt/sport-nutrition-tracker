@@ -3,6 +3,7 @@ export interface SettingsSectionTarget {
   label: string;
   description: string;
   keywords?: readonly string[];
+  focusId?: string;
 }
 
 export function normalizeSettingsSearch(
@@ -60,7 +61,10 @@ function scrollToSettingsSection(
   });
 }
 
-export function openSettingsSection(sectionId: string): void {
+export function openSettingsSection(
+  sectionId: string,
+  focusId = sectionId,
+): void {
   if (typeof window === 'undefined') return;
 
   const element = document.getElementById(sectionId);
@@ -75,13 +79,13 @@ export function openSettingsSection(sectionId: string): void {
   // Le routeur utilise déjà window.location.hash. Une ancre de section
   // remplacerait donc #/settings et provoquerait une page introuvable
   // au rechargement. La navigation interne reste volontairement locale.
-  scrollToSettingsSection(sectionId);
+  scrollToSettingsSection(focusId);
 
   // Second positionnement après l’ouverture et le recalcul
   // de la hauteur de l’accordéon.
   window.requestAnimationFrame(() => {
     window.requestAnimationFrame(() => {
-      scrollToSettingsSection(sectionId);
+      scrollToSettingsSection(focusId);
     });
   });
 }

@@ -53,6 +53,35 @@ describe('MobileAppMenu', () => {
     );
   });
 
+
+  it('ne sélectionne que Rappels et routines sur sa route dédiée', async () => {
+    const user = userEvent.setup();
+    renderMenu('/settings/reminders');
+
+    await user.click(screen.getByRole('button', { name: 'Ouvrir le menu de l’application' }));
+
+    expect(screen.getByRole('link', { name: /Rappels et routines/ })).toHaveClass(
+      'bg-brand-50',
+    );
+    expect(screen.getByRole('link', { name: /^Paramètres/ })).not.toHaveClass(
+      'bg-brand-50',
+    );
+  });
+
+  it('ne sélectionne que Corbeille sur sa route dédiée', async () => {
+    const user = userEvent.setup();
+    renderMenu('/backup/trash');
+
+    await user.click(screen.getByRole('button', { name: 'Ouvrir le menu de l’application' }));
+
+    expect(screen.getByRole('link', { name: /Corbeille/ })).toHaveClass(
+      'bg-brand-50',
+    );
+    expect(screen.getByRole('link', { name: /^Sauvegarde/ })).not.toHaveClass(
+      'bg-brand-50',
+    );
+  });
+
   it.each(['/profile', '/settings'])(
     'ne marque pas le menu complet sur les routes dédiées %s',
     (initialEntry) => {

@@ -1,12 +1,12 @@
-SPORTPILOT 0.21.1
+SPORTPILOT 0.22.0
 
 PRÉPARATION
 
-1. Vérifier que la branche fix/nutrition-journal-sync-loop-0.21.1 est propre et à jour.
+1. Vérifier que la branche feature/full-account-continuity-0.22.0 est propre et à jour.
 2. Arrêter Vite avec Ctrl + C et fermer les onglets de test.
 3. Exporter une sauvegarde JSON v7 récente de l’espace invité et du compte principal.
-4. Vérifier que toutes les analyses cloud du compte principal affichent 0 différence.
-5. Ne supprimer aucune base IndexedDB ni donnée cloud pendant la validation locale.
+4. Vérifier que le centre de synchronisation affiche 9/9 rubriques à jour et 0 différence.
+5. Ne supprimer aucune base IndexedDB, donnée Safari ou donnée Dexie Cloud.
 6. Vérifier que .env.local, dexie-cloud.json et dexie-cloud.key restent ignorés par Git.
 7. Vérifier les origines autorisées Dexie Cloud avec npx dexie-cloud whitelist.
 
@@ -15,53 +15,55 @@ VALIDATION AUTOMATIQUE
 8. Installer les dépendances avec npm ci.
 9. Lancer npm run release:verify.
 10. Lancer npm run test:e2e.
-11. Lancer npm run audit:nutrition-journal-sync.
-12. Lancer npm run audit:data-continuity-release.
-13. Vérifier que Paramètres affiche la version 0.21.1.
-14. Vérifier l’absence d’archive, de journal et de fichier de patch dans git status.
+11. Lancer npm run audit:full-account-continuity-release.
+12. Vérifier que Paramètres affiche la version 0.22.0.
+13. Vérifier l’absence d’archive, de journal et de fichier de patch dans git status.
 
-VALIDATION CORRECTIF 0.21.1 — JOURNAL NUTRITIONNEL
+VALIDATION DU CENTRE UNIFIÉ
 
-15. Synchroniser le journal nutritionnel et confirmer 0 différence.
-16. Ouvrir l’accueil sans modifier de donnée.
-17. Revenir dans la synchronisation du journal et confirmer encore 0 différence.
-18. Répéter le passage accueil/synchronisation une seconde fois.
-19. Modifier réellement une donnée quotidienne, recalculer puis vérifier qu’un écart légitime apparaît.
-20. Synchroniser et confirmer le retour à 0 différence.
+14. Ouvrir Paramètres puis Synchronisation des données.
+15. Lancer Analyser tout et confirmer 9/9 rubriques à jour.
+16. Modifier une donnée dans plusieurs domaines, puis confirmer que seules les rubriques concernées divergent.
+17. Lancer Synchroniser tout, confirmer l’opération et vérifier le retour à 0 différence.
+18. Vérifier qu’un détail s’ouvre seul, se ferme et replace la vue sur Synchronisation des données.
+19. Simuler une rubrique en échec et vérifier la relance ciblée sans rejouer les succès.
+20. Couper le réseau, vérifier les actions cloud désactivées, puis rétablir le réseau.
 
-NON-RÉGRESSION CONTINUITÉ DES DONNÉES
+VALIDATION MULTIAPPAREILS ET RESTAURATION
 
-21. Ouvrir Compte et appareils et vérifier le compte, le cloud et l’espace actif.
-22. Changer de compte et confirmer l’isolation stricte des espaces.
-23. Vérifier qu’une analyse invitée déjà importée reste à zéro.
-24. Dans un profil vierge, détecter les données cloud sans restauration automatique.
-25. Restaurer le compte et confirmer 0 différence dans chaque domaine.
-26. Vérifier que les données restaurées restent accessibles hors connexion.
-27. Vérifier qu’un espace local déjà utilisé bloque la restauration globale.
+21. Sur le premier appareil, synchroniser le profil, les réglages, la progression et les routines.
+22. Sur le second appareil, récupérer les mêmes états et confirmer 0 différence.
+23. Vérifier que le mode clair ou sombre reste local à chaque appareil.
+24. Créer des accomplissements différents sur les deux appareils et confirmer leur union sans perte.
+25. Dans un profil navigateur vierge, détecter puis restaurer le compte depuis le cloud.
+26. Vérifier les neuf rubriques après restauration.
+27. Vérifier que de vraies données locales bloquent une restauration globale destructive.
+28. Vérifier l’isolation complète lors d’un changement de compte.
 
 VALIDATION IPHONE
 
-28. Depuis l’iPhone 15 sous iOS 26, vérifier une sauvegarde récente et les analyses à zéro.
-29. Mettre à jour la PWA vers 0.21.1.
-30. Reproduire le scénario journal → accueil → journal et confirmer 0 différence.
-31. Couper le réseau et vérifier l’accès aux données locales.
-32. Rétablir le réseau et vérifier la reprise normale.
+29. Mettre à jour la PWA sur iPhone 15 sous iOS 26.
+30. Vérifier la version 0.22.0 et le centre 9/9.
+31. Tester une synchronisation, une restauration vierge et un retour hors ligne.
+32. Vérifier la reprise réseau sans suppression ni reconnexion injustifiée.
+33. Vérifier la navigation Rappels, Corbeille et Paramètres avec une seule sélection active.
 
 PUBLICATION
 
-33. Committer le correctif sur fix/nutrition-journal-sync-loop-0.21.1.
-34. Fusionner manuellement la branche dans develop avec un commit de fusion explicite.
-35. Valider develop puis fusionner develop dans main.
-36. Créer le tag annoté v0.21.1 sur le commit publié dans main.
-37. Pousser develop, main et le tag v0.21.1.
-38. Vérifier le déploiement de production et refaire la recette du journal sur ordinateur et iPhone.
+34. Committer E4 sur feature/full-account-continuity-0.22.0.
+35. Fusionner manuellement la branche dans main avec un commit de fusion explicite.
+36. Relancer npm run release:verify sur main.
+37. Pousser main puis créer le tag annoté v0.22.0.
+38. Fusionner ensuite main dans develop avec un commit de synchronisation explicite.
+39. Pousser develop et supprimer la branche de fonctionnalité locale et distante.
+40. Vérifier le déploiement de production sur ordinateur et iPhone.
 
 VERSIONS DE DONNÉES
 
-Base Dexie Cloud : version 8.
-Runtime local cloud : sportpilot-sync-runtime-0.20.0-v8.
+Runtime Dexie Cloud : version 10.
+Runtime local cloud : sportpilot-sync-runtime-0.20.0-v10.
 Schéma Dexie principal : version 8.
 Sauvegarde JSON : version 7.
 Registre local des espaces : version 1.
 
-Aucune migration de données ni nouvelle connexion OTP liée au runtime n’est requise pour 0.21.1.
+E4 ne nécessite aucune migration de données. Le runtime v10 peut demander un code OTP seulement lors de sa première utilisation sur un appareil.

@@ -16,7 +16,7 @@ La restauration couvre les domaines déjà pris en charge par les services de sy
 - repas, entrées, objectifs quotidiens et statuts du journal nutritionnel ;
 - bilans hebdomadaires et ajustements caloriques acceptés.
 
-Les réglages non synchronisés, récompenses, thèmes, missions et rappels restent locaux. D3 ne prétend donc pas remplacer une sauvegarde JSON complète.
+Dans la publication 0.21.0 d’origine, les réglages non synchronisés, récompenses, thèmes, missions et rappels restaient locaux. La branche 0.22.0 étend ensuite D3 : E1 restaure le profil et les réglages partageables, puis E2 restaure les récompenses, thèmes visuels SportPilot, missions et routines. Les préférences strictement propres à l’appareil restent locales et une sauvegarde JSON complète conserve donc son utilité.
 
 ## Détection initiale
 
