@@ -28,6 +28,7 @@ import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { ConfirmationDialog } from '@/shared/ui/ConfirmationDialog';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
+import { useActionToast } from '@/shared/toast/useActionToast';
 
 interface SelectiveBackupRestorePanelProps {
   className?: string;
@@ -74,6 +75,7 @@ export function SelectiveBackupRestorePanel({
     ),
 }: SelectiveBackupRestorePanelProps) {
   const { refreshProfile } = useProfile();
+  const actionToast = useActionToast();
   const inputRef = useRef<HTMLInputElement>(null);
   const [prepared, setPrepared] =
     useState<PreparedSelectiveBackupRestore>();
@@ -197,20 +199,26 @@ export function SelectiveBackupRestorePanel({
         await refreshProfile();
       }
 
-      setFeedback({
-        tone: 'success',
+      const message = `${result.restoredRecordCount} enregistrement(s) ont été restaurés dans ${result.selectedCategories.length} domaine(s).`;
+      setFeedback({ tone: 'success', title: 'Restauration sélective terminée', message });
+      actionToast.success({
+        key: 'selective-backup-restore',
         title: 'Restauration sélective terminée',
-        message: `${result.restoredRecordCount} enregistrement(s) ont été restaurés dans ${result.selectedCategories.length} domaine(s).`,
+        description: message,
       });
       clearPrepared();
     } catch (error) {
+      const fallback = 'La restauration sélective a échoué.';
       setFeedback({
         tone: 'error',
         title: 'Restauration impossible',
-        message:
-          error instanceof Error
-            ? error.message
-            : 'La restauration sélective a échoué.',
+        message: error instanceof Error ? error.message : fallback,
+      });
+      actionToast.error({
+        key: 'selective-backup-restore',
+        title: 'Restauration impossible',
+        error,
+        fallback,
       });
       setConfirmationOpen(false);
     } finally {

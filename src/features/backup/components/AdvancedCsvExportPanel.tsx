@@ -28,6 +28,7 @@ import {
 } from '@/features/backup/csvExportDelivery';
 import { CollapsibleSection } from '@/shared/ui/CollapsibleSection';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
+import { useActionToast } from '@/shared/toast/useActionToast';
 import { toLocalDate } from '@/shared/utils/dates';
 
 type CsvPeriodPreset =
@@ -96,6 +97,7 @@ export function AdvancedCsvExportPanel({
   downloadMany = downloadCsvExportFiles,
   shareMany = shareCsvExportFiles,
 }: AdvancedCsvExportPanelProps) {
+  const actionToast = useActionToast();
   const today = toLocalDate(now);
   const defaultFrom = toLocalDate(addLocalDays(now, -29));
   const [preset, setPreset] =
@@ -193,21 +195,13 @@ export function AdvancedCsvExportPanel({
       const files = await prepareExports(currentOptions);
       setPreparedFiles(files);
       setPreparedPeriod(currentOptions);
-      setFeedback({
-        tone: 'success',
-        message:
-          `${files.length} fichier(s) prêt(s) pour ${periodLabel(
-            currentOptions,
-          ).toLowerCase()}.`,
-      });
+      const message = `${files.length} fichier(s) prêt(s) pour ${periodLabel(currentOptions).toLowerCase()}.`;
+      setFeedback({ tone: 'success', message });
+      actionToast.success({ key: 'csv-prepare', title: 'Exports CSV préparés', description: message });
     } catch (error) {
-      setFeedback({
-        tone: 'error',
-        message:
-          error instanceof Error
-            ? error.message
-            : 'Les exports CSV n’ont pas pu être préparés.',
-      });
+      const fallback = 'Les exports CSV n’ont pas pu être préparés.';
+      setFeedback({ tone: 'error', message: error instanceof Error ? error.message : fallback });
+      actionToast.error({ key: 'csv-prepare', title: 'Préparation impossible', error, fallback });
     } finally {
       setIsPreparing(false);
     }
@@ -216,10 +210,9 @@ export function AdvancedCsvExportPanel({
   const handleDownloadAll = () => {
     const count = downloadMany(preparedFiles);
 
-    setFeedback({
-      tone: 'success',
-      message: `${count} téléchargement(s) ont été déclenchés.`,
-    });
+    const message = `${count} téléchargement(s) ont été déclenchés.`;
+    setFeedback({ tone: 'success', message });
+    actionToast.success({ key: 'csv-download', title: 'Téléchargement lancé', description: message });
   };
 
   const handleShare = async () => {
@@ -230,11 +223,9 @@ export function AdvancedCsvExportPanel({
       const result = await shareMany(preparedFiles);
 
       if (result === 'shared') {
-        setFeedback({
-          tone: 'success',
-          message:
-            'Les fichiers ont été transmis à la feuille de partage.',
-        });
+        const message = 'Les fichiers ont été transmis à la feuille de partage.';
+        setFeedback({ tone: 'success', message });
+        actionToast.success({ key: 'csv-share', title: 'Exports prêts à partager', description: message });
       } else if (result === 'cancelled') {
         setFeedback({
           tone: 'info',
@@ -248,13 +239,9 @@ export function AdvancedCsvExportPanel({
         });
       }
     } catch (error) {
-      setFeedback({
-        tone: 'error',
-        message:
-          error instanceof Error
-            ? error.message
-            : 'Le partage des fichiers a échoué.',
-      });
+      const fallback = 'Le partage des fichiers a échoué.';
+      setFeedback({ tone: 'error', message: error instanceof Error ? error.message : fallback });
+      actionToast.error({ key: 'csv-share', title: 'Partage impossible', error, fallback });
     } finally {
       setIsSharing(false);
     }

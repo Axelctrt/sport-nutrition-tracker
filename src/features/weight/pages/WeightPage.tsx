@@ -12,7 +12,7 @@ import { useWeightHistory } from '@/features/weight/hooks/useWeightHistory';
 import type { WeightEntryFormValues } from '@/features/weight/schemas/weightEntrySchema';
 import { weightFormValuesToEntity } from '@/features/weight/utils';
 import { inputClassName } from '@/shared/forms/formStyles';
-import { useToast } from '@/shared/toast/useToast';
+import { useActionToast } from '@/shared/toast/useActionToast';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { ConfirmationDialog } from '@/shared/ui/ConfirmationDialog';
@@ -27,7 +27,7 @@ function isLocalDate(value: string | null): value is string {
 
 export function WeightPage() {
   const { profile } = useProfile();
-  const toast = useToast();
+  const actionToast = useActionToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedDate = searchParams.get('date');
   const {
@@ -125,13 +125,18 @@ export function WeightPage() {
           ? `La pesée du ${formatLocalDate(values.date)} a été mise à jour sans recharger la page.`
           : `La pesée du ${formatLocalDate(values.date)} a été enregistrée sans recharger la page.`,
       });
-      if (isUpdate) {
-        toast.success(
-          'Pesée mise à jour',
-          `${saved.weightKg.toLocaleString('fr-FR')} kg le ${formatLocalDate(saved.date)}.`,
-        );
-      }
+      actionToast.success({
+        key: 'weight-save',
+        title: isUpdate ? 'Pesée mise à jour' : 'Pesée enregistrée',
+        description: `${saved.weightKg.toLocaleString('fr-FR')} kg le ${formatLocalDate(saved.date)}.`,
+      });
     } catch (error) {
+      actionToast.error({
+        key: 'weight-save',
+        title: 'Pesée non enregistrée',
+        error,
+        fallback: 'La pesée n’a pas pu être enregistrée.',
+      });
       setFeedback({
         tone: 'error',
         message: error instanceof Error
@@ -153,8 +158,19 @@ export function WeightPage() {
         tone: 'success',
         message: `La pesée du ${formatLocalDate(pendingDeleteEntry.date)} a été supprimée. Le dernier poids antérieur disponible sera utilisé.`,
       });
+      actionToast.success({
+        key: 'weight-delete',
+        title: 'Pesée supprimée',
+        description: formatLocalDate(pendingDeleteEntry.date),
+      });
       setPendingDeleteEntry(undefined);
     } catch (error) {
+      actionToast.error({
+        key: 'weight-delete',
+        title: 'Suppression impossible',
+        error,
+        fallback: 'La pesée n’a pas pu être supprimée.',
+      });
       setFeedback({
         tone: 'error',
         message: error instanceof Error

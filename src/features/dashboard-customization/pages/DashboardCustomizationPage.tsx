@@ -5,10 +5,12 @@ import { routePaths } from '@/app/routePaths';
 import { normalizeDashboardPreferences, type DashboardPreferences } from '@/domain/dashboard/dashboardPreferences';
 import { DashboardCustomizationForm } from '@/features/dashboard-customization/components/DashboardCustomizationForm';
 import { repositories } from '@/infrastructure/repositories/repositories';
+import { useActionToast } from '@/shared/toast/useActionToast';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 import { PageSkeleton } from '@/shared/ui/PageSkeleton';
 
 export function DashboardCustomizationPage() {
+  const actionToast = useActionToast();
   const [preferences, setPreferences] = useState<DashboardPreferences>();
   const [isSaving, setIsSaving] = useState(false);
   const [feedback, setFeedback] = useState<{ tone: 'success' | 'error'; message: string }>();
@@ -34,10 +36,20 @@ export function DashboardCustomizationPage() {
       const normalized = normalizeDashboardPreferences(updated.dashboardPreferences);
       setPreferences(normalized);
       setFeedback({ tone: 'success', message: 'Le tableau de bord a été personnalisé sur cet appareil.' });
+      actionToast.success({
+        key: 'dashboard-customization',
+        title: 'Tableau de bord personnalisé',
+      });
     } catch (error) {
+      const fallback = 'La personnalisation n’a pas pu être enregistrée.';
       setFeedback({
         tone: 'error',
-        message: error instanceof Error ? error.message : 'La personnalisation n’a pas pu être enregistrée.',
+        message: error instanceof Error ? error.message : fallback,
+      });
+      actionToast.error({
+        key: 'dashboard-customization',
+        error,
+        fallback,
       });
     } finally {
       setIsSaving(false);

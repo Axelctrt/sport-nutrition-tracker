@@ -9,6 +9,7 @@ import { FavoriteMealCard } from '@/features/favorite-meals/components/FavoriteM
 import { FavoriteMealsSummary } from '@/features/favorite-meals/components/FavoriteMealsSummary';
 import { useFavoriteMeals } from '@/features/favorite-meals/hooks/useFavoriteMeals';
 import { inputClassName } from '@/shared/forms/formStyles';
+import { useActionToast } from '@/shared/toast/useActionToast';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { EmptyState } from '@/shared/ui/EmptyState';
@@ -23,6 +24,7 @@ interface SuccessFeedback {
 }
 
 export function FavoriteMealsPage() {
+  const actionToast = useActionToast();
   const {
     favorites,
     status,
@@ -46,11 +48,24 @@ export function FavoriteMealsPage() {
   const handleApply = async (date: string, slot: MealSlot) => {
     if (!selectedFavorite) return;
     const count = await apply(selectedFavorite.favoriteMeal.id, date, slot);
-    if (count === undefined) return;
+    if (count === undefined) {
+      actionToast.error({
+        key: `favorite-meal-apply:${selectedFavorite.favoriteMeal.id}:${date}:${slot}`,
+        error: errorMessage,
+        fallback: 'Le repas favori n’a pas pu être ajouté.',
+      });
+      return;
+    }
+    const description = `${count} entrée${count > 1 ? 's' : ''} ajoutée${count > 1 ? 's' : ''}.`;
     setSuccess({
       title: 'Repas ajouté au journal',
-      message: `${count} entrée${count > 1 ? 's' : ''} ajoutée${count > 1 ? 's' : ''}.`,
+      message: description,
       date,
+    });
+    actionToast.success({
+      key: `favorite-meal-apply:${selectedFavorite.favoriteMeal.id}:${date}:${slot}`,
+      title: 'Repas favori ajouté',
+      description,
     });
     setSelectedFavorite(undefined);
   };
@@ -59,7 +74,17 @@ export function FavoriteMealsPage() {
     const removed = await remove(favoriteId);
     if (removed) {
       setSuccess(undefined);
+      actionToast.success({
+        key: `favorite-meal-delete:${favoriteId}`,
+        title: 'Repas favori supprimé',
+      });
       if (selectedFavorite?.favoriteMeal.id === favoriteId) setSelectedFavorite(undefined);
+    } else {
+      actionToast.error({
+        key: `favorite-meal-delete:${favoriteId}`,
+        error: errorMessage,
+        fallback: 'Le repas favori n’a pas pu être supprimé.',
+      });
     }
     return removed;
   };

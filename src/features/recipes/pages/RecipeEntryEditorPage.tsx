@@ -16,6 +16,7 @@ import { mealSlotLabels } from '@/features/food-journal/utils/foodLabels';
 import { RecipeEntryForm } from '@/features/recipes/components/RecipeEntryForm';
 import type { RecipeEntryFormValues } from '@/features/recipes/schemas/recipeEntrySchema';
 import { repositories } from '@/infrastructure/repositories/repositories';
+import { useActionToast } from '@/shared/toast/useActionToast';
 import { Card } from '@/shared/ui/Card';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 import { toLocalDate } from '@/shared/utils/dates';
@@ -24,6 +25,7 @@ import { isValidLocalDate } from '@/shared/validation/localDate';
 const slots: MealSlot[] = ['breakfast', 'lunch', 'dinner', 'snacks'];
 
 export function RecipeEntryEditorPage() {
+  const actionToast = useActionToast();
   const { recipeId } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -76,21 +78,30 @@ export function RecipeEntryEditorPage() {
 
   const handleSubmit = async (values: RecipeEntryFormValues) => {
     if (!recipeId) return;
-    const savedEntry = await saveRecipeEntry({
-      ...(entryId ? { entryId } : {}),
-      recipeId,
-      ...values,
-    });
-    const returnContext = navigationState?.foodJournalReturn;
-    await navigate(returnContext?.path ?? foodJournalPath(values.date), {
-      state: createFoodJournalFeedbackState(returnContext, {
-        title: entryId
-          ? 'Quantité mise à jour'
-          : `Recette ajoutée au ${mealSlotLabels[values.mealSlot].toLocaleLowerCase('fr')}`,
-        mealSlot: values.mealSlot,
-        entryId: savedEntry.id,
-      }),
-    });
+    try {
+      const savedEntry = await saveRecipeEntry({
+        ...(entryId ? { entryId } : {}),
+        recipeId,
+        ...values,
+      });
+      const returnContext = navigationState?.foodJournalReturn;
+      await navigate(returnContext?.path ?? foodJournalPath(values.date), {
+        state: createFoodJournalFeedbackState(returnContext, {
+          title: entryId
+            ? 'Quantité mise à jour'
+            : `Recette ajoutée au ${mealSlotLabels[values.mealSlot].toLocaleLowerCase('fr')}`,
+          mealSlot: values.mealSlot,
+          entryId: savedEntry.id,
+        }),
+      });
+    } catch (error) {
+      actionToast.error({
+        key: entryId ? `recipe-entry-update:${entryId}` : `recipe-entry-create:${recipeId}`,
+        error,
+        fallback: 'La recette n’a pas pu être ajoutée au journal.',
+      });
+      throw error;
+    }
   };
 
   return (

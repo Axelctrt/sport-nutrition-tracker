@@ -26,6 +26,7 @@ import {
 } from '@/application/goals/goalProgressService';
 import { GoalCard } from '@/features/goals/components/GoalCard';
 import { GoalEditor } from '@/features/goals/components/GoalEditor';
+import { useActionToast } from '@/shared/toast/useActionToast';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { CollapsibleSection } from '@/shared/ui/CollapsibleSection';
@@ -49,6 +50,7 @@ export function GoalsPage({
     useState<Goal>();
   const [error, setError] = useState<string>();
   const [isDeleting, setIsDeleting] = useState(false);
+  const actionToast = useActionToast();
 
   const load = useCallback(async () => {
     setError(undefined);
@@ -128,8 +130,22 @@ export function GoalsPage({
     goalId: string,
     status: GoalStatus,
   ) => {
-    updateGoalStatus(goalId, status);
-    void load();
+    try {
+      updateGoalStatus(goalId, status);
+      actionToast.success({
+        key: `goal-status:${goalId}`,
+        title: 'Statut de l’objectif mis à jour',
+      });
+      void load();
+    } catch (caughtError) {
+      const fallback = 'Le statut de l’objectif n’a pas pu être modifié.';
+      setError(caughtError instanceof Error ? caughtError.message : fallback);
+      actionToast.error({
+        key: `goal-status:${goalId}`,
+        error: caughtError,
+        fallback,
+      });
+    }
   };
 
   const handleSaved = () => {
@@ -346,15 +362,25 @@ export function GoalsPage({
           setError(undefined);
           void deleteGoal(goalId)
             .then(() => {
+              actionToast.success({
+                key: `goal-delete:${goalId}`,
+                title: 'Objectif supprimé',
+              });
               setDeleteCandidate(undefined);
               return load();
             })
             .catch((caughtError: unknown) => {
+              const fallback = 'L’objectif n’a pas pu être supprimé.';
               setError(
                 caughtError instanceof Error
                   ? caughtError.message
-                  : 'L’objectif n’a pas pu être supprimé.',
+                  : fallback,
               );
+              actionToast.error({
+                key: `goal-delete:${goalId}`,
+                error: caughtError,
+                fallback,
+              });
             })
             .finally(() => setIsDeleting(false));
         }}

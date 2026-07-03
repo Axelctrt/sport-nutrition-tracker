@@ -6,12 +6,14 @@ import { WorkoutTemplateCard } from '@/features/strength-templates/components/Wo
 import { WorkoutTemplatesSummary } from '@/features/strength-templates/components/WorkoutTemplatesSummary';
 import { useWorkoutTemplates } from '@/features/strength-templates/hooks/useWorkoutTemplates';
 import { checkboxClassName, inputClassName } from '@/shared/forms/formStyles';
+import { useActionToast } from '@/shared/toast/useActionToast';
 import { Button } from '@/shared/ui/Button';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 import { PageSkeleton } from '@/shared/ui/PageSkeleton';
 
 export function WorkoutTemplatesPage() {
+  const actionToast = useActionToast();
   const navigate = useNavigate();
   const [includeArchived, setIncludeArchived] = useState(false);
   const [query, setQuery] = useState('');
@@ -27,12 +29,53 @@ export function WorkoutTemplatesPage() {
 
   const duplicateAndEdit = async (id: string) => {
     const created = await duplicate(id);
-    if (created) await navigate(editWorkoutTemplatePath(created.id));
+    if (created) {
+      actionToast.success({
+        key: `workout-template-duplicate:${id}`,
+        title: 'Séance modèle dupliquée',
+      });
+      await navigate(editWorkoutTemplatePath(created.id));
+    } else {
+      actionToast.error({
+        key: `workout-template-duplicate:${id}`,
+        error: actionErrorMessage,
+        fallback: 'La séance modèle n’a pas pu être dupliquée.',
+      });
+    }
   };
 
   const startAndOpen = async (id: string) => {
     const session = await start(id);
-    if (session) await navigate(workoutSessionPath(session.id));
+    if (session) {
+      actionToast.success({
+        key: `workout-template-start:${id}`,
+        title: 'Séance démarrée',
+      });
+      await navigate(workoutSessionPath(session.id));
+    } else {
+      actionToast.error({
+        key: `workout-template-start:${id}`,
+        error: actionErrorMessage,
+        fallback: 'La séance n’a pas pu être démarrée.',
+      });
+    }
+  };
+
+  const changeArchived = async (id: string, archived: boolean) => {
+    const success = await setArchived(id, archived);
+    if (success) {
+      actionToast.success({
+        key: `workout-template-archive:${id}`,
+        title: archived ? 'Séance modèle archivée' : 'Séance modèle réactivée',
+      });
+    } else {
+      actionToast.error({
+        key: `workout-template-archive:${id}`,
+        error: actionErrorMessage,
+        fallback: 'La séance modèle n’a pas pu être modifiée.',
+      });
+    }
+    return success;
   };
 
   return (
@@ -97,7 +140,7 @@ export function WorkoutTemplatesPage() {
               busy={actionId === summary.template.id}
               onStart={startAndOpen}
               onDuplicate={duplicateAndEdit}
-              onArchiveChange={setArchived}
+              onArchiveChange={changeArchived}
             />
           ))}
         </div>

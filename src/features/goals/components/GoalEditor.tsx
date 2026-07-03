@@ -17,6 +17,7 @@ import {
   type GoalInput,
 } from '@/application/goals/goalProgressService';
 import { inputClassName } from '@/shared/forms/formStyles';
+import { useActionToast } from '@/shared/toast/useActionToast';
 import { Button } from '@/shared/ui/Button';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 
@@ -66,6 +67,7 @@ export function GoalEditor({
       : '',
   );
   const [error, setError] = useState<string>();
+  const actionToast = useActionToast();
 
   const definition = useMemo(
     () => getGoalMetricDefinition(metric),
@@ -106,6 +108,11 @@ export function GoalEditor({
         goal?.id,
       );
 
+      actionToast.success({
+        key: goal ? `goal-update:${goal.id}` : 'goal-create',
+        title: goal ? 'Objectif modifié' : 'Objectif créé',
+        description: 'La progression sera recalculée depuis les données enregistrées.',
+      });
       onSaved();
 
       if (!goal) {
@@ -117,11 +124,17 @@ export function GoalEditor({
         setBaselineValue('');
       }
     } catch (caughtError) {
+      const fallback = 'L’objectif n’a pas pu être enregistré.';
       setError(
         caughtError instanceof Error
           ? caughtError.message
-          : 'L’objectif n’a pas pu être enregistré.',
+          : fallback,
       );
+      actionToast.error({
+        key: goal ? `goal-update:${goal.id}` : 'goal-create',
+        error: caughtError,
+        fallback,
+      });
     }
   };
 

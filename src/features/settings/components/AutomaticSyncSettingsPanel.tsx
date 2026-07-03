@@ -19,6 +19,7 @@ import {
 } from '@/infrastructure/sync-prototype/syncPrototypeDiagnostics';
 import { Button } from '@/shared/ui/Button';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
+import { useActionToast } from '@/shared/toast/useActionToast';
 
 interface NavigatorWithConnection extends Navigator {
   readonly connection?: {
@@ -58,6 +59,7 @@ function currentConnectionType(): string | undefined {
 export function AutomaticSyncSettingsPanel({
   client: clientOverride,
 }: AutomaticSyncSettingsPanelProps) {
+  const actionToast = useActionToast();
   const client = useMemo(
     () => (clientOverride === undefined ? resolveClient() : clientOverride),
     [clientOverride],
@@ -112,12 +114,19 @@ export function AutomaticSyncSettingsPanel({
     try {
       const updated = await repositories.settings.update(changes);
       setSettings(updated);
+      actionToast.success({
+        key: `automatic-sync-${action}`,
+        title: action === 'toggle' ? 'Synchronisation automatique mise à jour' : 'Mode réseau mis à jour',
+      });
     } catch (error) {
-      setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : 'Le réglage n’a pas pu être enregistré.',
-      );
+      const fallback = 'Le réglage n’a pas pu être enregistré.';
+      setErrorMessage(error instanceof Error ? error.message : fallback);
+      actionToast.error({
+        key: `automatic-sync-${action}`,
+        title: 'Réglage impossible',
+        error,
+        fallback,
+      });
     } finally {
       setBusy(undefined);
     }

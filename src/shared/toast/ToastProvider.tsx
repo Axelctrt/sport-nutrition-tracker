@@ -7,6 +7,7 @@ import {
   type ToastTone,
 } from '@/shared/toast/ToastContext';
 import { ToastViewport } from '@/shared/toast/ToastViewport';
+import { consumePendingToast } from '@/shared/toast/pendingToast';
 import { createEntityId } from '@/shared/utils/entities';
 
 const MAX_VISIBLE_TOASTS = 4;
@@ -99,6 +100,11 @@ export function ToastProvider({ children }: PropsWithChildren) {
     scheduleDismiss(item.id, durationMs);
     return item.id;
   }, [commit, scheduleDismiss]);
+
+  useEffect(() => {
+    const pendingToast = consumePendingToast();
+    if (pendingToast) showToast(pendingToast);
+  }, [showToast]);
 
   const runToastAction = useCallback((toast: ToastItem) => {
     if (!toast.action) return;

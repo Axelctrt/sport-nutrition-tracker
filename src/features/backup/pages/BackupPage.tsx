@@ -28,6 +28,7 @@ import { createAndDownloadSafetyBackup } from '@/application/backup/safetyBackup
 import { getBackupReminderStatus } from '@/domain/backup/backupReminder';
 import type { AppSettings, BackupReminderIntervalDays } from '@/domain/models/settings';
 import { useProfile } from '@/app/providers/profile/useProfile';
+import { useActionToast } from '@/shared/toast/useActionToast';
 import { routePaths } from '@/app/routePaths';
 import { BackupDeleteDialog } from '@/features/backup/components/BackupDeleteDialog';
 import { BackupOverview } from '@/features/backup/components/BackupOverview';
@@ -137,6 +138,7 @@ function ImportSummary({ summary }: { summary: BackupSummary }) {
 export function BackupPage() {
   const navigate = useNavigate();
   const { refreshProfile } = useProfile();
+  const actionToast = useActionToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [feedback, setFeedback] = useState<Feedback>();
   const [pendingImport, setPendingImport] = useState<PreparedBackupImport>();
@@ -188,17 +190,21 @@ export function BackupPage() {
       downloadFile(prepared.content, prepared.fileName, 'application/json');
       const updatedSettings = await recordSuccessfulBackupExport(prepared);
       setSettings(updatedSettings);
+      const message = `${prepared.summary.totalRecords} enregistrement(s) ont été exportés dans ${prepared.fileName}.`;
       setFeedback({
         tone: 'success',
         title: 'Sauvegarde créée',
-        message: `${prepared.summary.totalRecords} enregistrement(s) ont été exportés dans ${prepared.fileName}.`,
+        message,
       });
+      actionToast.success({ key: 'backup-export', title: 'Sauvegarde créée', description: message });
     } catch (error) {
+      const fallback = 'La sauvegarde n’a pas pu être créée.';
       setFeedback({
         tone: 'error',
         title: 'Export impossible',
-        message: error instanceof Error ? error.message : 'La sauvegarde n’a pas pu être créée.',
+        message: error instanceof Error ? error.message : fallback,
       });
+      actionToast.error({ key: 'backup-export', title: 'Export impossible', error, fallback });
     } finally {
       setIsExporting(false);
     }
@@ -237,26 +243,22 @@ export function BackupPage() {
       const updatedSettings =
         await recordSuccessfulBackupExport(prepared);
       setSettings(updatedSettings);
-      setFeedback({
-        tone: 'success',
-        title:
-          result === 'shared'
-            ? 'Sauvegarde prête à être partagée'
-            : 'Sauvegarde téléchargée',
-        message:
-          result === 'shared'
-            ? `${prepared.summary.totalRecords} enregistrement(s) ont été placés dans la feuille de partage de l’appareil.`
-            : `Le partage natif n’est pas disponible ici. ${prepared.fileName} a été téléchargé à la place.`,
-      });
+      const title = result === 'shared'
+        ? 'Sauvegarde prête à être partagée'
+        : 'Sauvegarde téléchargée';
+      const message = result === 'shared'
+        ? `${prepared.summary.totalRecords} enregistrement(s) ont été placés dans la feuille de partage de l’appareil.`
+        : `Le partage natif n’est pas disponible ici. ${prepared.fileName} a été téléchargé à la place.`;
+      setFeedback({ tone: 'success', title, message });
+      actionToast.success({ key: 'backup-share', title, description: message });
     } catch (error) {
+      const fallback = 'La sauvegarde n’a pas pu être partagée.';
       setFeedback({
         tone: 'error',
         title: 'Partage impossible',
-        message:
-          error instanceof Error
-            ? error.message
-            : 'La sauvegarde n’a pas pu être partagée.',
+        message: error instanceof Error ? error.message : fallback,
       });
+      actionToast.error({ key: 'backup-share', title: 'Partage impossible', error, fallback });
     } finally {
       setIsSharing(false);
     }
@@ -268,19 +270,19 @@ export function BackupPage() {
     try {
       const updatedSettings = await updateBackupReminderInterval(intervalDays);
       setSettings(updatedSettings);
-      setFeedback({
-        tone: 'success',
-        title: 'Rappel mis à jour',
-        message: intervalDays === 0
-          ? 'Le rappel de sauvegarde est désactivé.'
-          : `Un rappel discret apparaîtra après ${intervalDays} jours sans sauvegarde.`,
-      });
+      const message = intervalDays === 0
+        ? 'Le rappel de sauvegarde est désactivé.'
+        : `Un rappel discret apparaîtra après ${intervalDays} jours sans sauvegarde.`;
+      setFeedback({ tone: 'success', title: 'Rappel mis à jour', message });
+      actionToast.success({ key: 'backup-reminder', title: 'Rappel mis à jour', description: message });
     } catch (error) {
+      const fallback = 'Le rappel n’a pas pu être modifié.';
       setFeedback({
         tone: 'error',
         title: 'Réglage impossible',
-        message: error instanceof Error ? error.message : 'Le rappel n’a pas pu être modifié.',
+        message: error instanceof Error ? error.message : fallback,
       });
+      actionToast.error({ key: 'backup-reminder', title: 'Réglage impossible', error, fallback });
     } finally {
       setIsUpdatingReminder(false);
     }
@@ -296,17 +298,17 @@ export function BackupPage() {
         createDiagnosticFileName(diagnostic.generatedAt),
         'application/json',
       );
-      setFeedback({
-        tone: 'success',
-        title: 'Diagnostic exporté',
-        message: 'Le fichier contient uniquement des informations techniques et des compteurs.',
-      });
+      const message = 'Le fichier contient uniquement des informations techniques et des compteurs.';
+      setFeedback({ tone: 'success', title: 'Diagnostic exporté', message });
+      actionToast.success({ key: 'diagnostic-export', title: 'Diagnostic exporté', description: message });
     } catch (error) {
+      const fallback = 'Le diagnostic n’a pas pu être généré.';
       setFeedback({
         tone: 'error',
         title: 'Diagnostic impossible',
-        message: error instanceof Error ? error.message : 'Le diagnostic n’a pas pu être généré.',
+        message: error instanceof Error ? error.message : fallback,
       });
+      actionToast.error({ key: 'diagnostic-export', title: 'Diagnostic impossible', error, fallback });
     } finally {
       setIsExportingDiagnostic(false);
     }
@@ -354,20 +356,20 @@ export function BackupPage() {
       await createAndDownloadSafetyBackup('before-import');
       await applyPreparedBackupImport(pendingImport);
       await refreshProfile();
-      setFeedback({
-        tone: 'success',
-        title: 'Restauration terminée',
-        message: `${pendingImport.summary.totalRecords} enregistrement(s) ont été restaurés.`,
-      });
+      const message = `${pendingImport.summary.totalRecords} enregistrement(s) ont été restaurés.`;
+      setFeedback({ tone: 'success', title: 'Restauration terminée', message });
+      actionToast.success({ key: 'backup-import', title: 'Restauration terminée', description: message });
       const hasProfile = pendingImport.summary.hasProfile;
       clearPendingImport();
       navigate(hasProfile ? routePaths.dashboard : routePaths.onboarding, { replace: true });
     } catch (error) {
+      const fallback = 'La restauration a échoué.';
       setFeedback({
         tone: 'error',
         title: 'Restauration impossible',
-        message: error instanceof Error ? error.message : 'La restauration a échoué.',
+        message: error instanceof Error ? error.message : fallback,
       });
+      actionToast.error({ key: 'backup-import', title: 'Restauration impossible', error, fallback });
       setImportDialogOpen(false);
     } finally {
       setIsImporting(false);
@@ -382,13 +384,20 @@ export function BackupPage() {
       await clearAllUserData();
       await refreshProfile();
       setDeleteDialogOpen(false);
+      actionToast.success({
+        key: 'full-data-reset',
+        title: 'Données locales supprimées',
+        description: 'La sauvegarde de sécurité a été créée avant la réinitialisation.',
+      });
       navigate(routePaths.onboarding, { replace: true });
     } catch (error) {
+      const fallback = 'Les données n’ont pas pu être supprimées.';
       setFeedback({
         tone: 'error',
         title: 'Suppression impossible',
-        message: error instanceof Error ? error.message : 'Les données n’ont pas pu être supprimées.',
+        message: error instanceof Error ? error.message : fallback,
       });
+      actionToast.error({ key: 'full-data-reset', title: 'Suppression impossible', error, fallback });
     } finally {
       setIsDeleting(false);
     }

@@ -20,6 +20,7 @@ import {
   type RoutineReminderWeekday,
 } from '@/domain/reminders/routineReminder';
 import { repositories } from '@/infrastructure/repositories/repositories';
+import { useActionToast } from '@/shared/toast/useActionToast';
 
 const WEEKDAYS: Array<{ value: RoutineReminderWeekday; label: string }> = [
   { value: 1, label: 'L' },
@@ -150,6 +151,7 @@ function ReminderRuleCard({
 }
 
 export function RoutineRemindersPage() {
+  const actionToast = useActionToast();
   const [preferences, setPreferences] = useState<RoutineReminderPreferences | null>(null);
   const [status, setStatus] = useState<'loading' | 'ready' | 'saving' | 'saved' | 'error'>('loading');
 
@@ -190,8 +192,17 @@ export function RoutineRemindersPage() {
       setPreferences(normalized);
       setStatus('saved');
       notifyRoutineReminderChanged();
-    } catch {
+      actionToast.success({
+        key: 'routine-reminders-save',
+        title: 'Rappels enregistrés',
+      });
+    } catch (error) {
       setStatus('error');
+      actionToast.error({
+        key: 'routine-reminders-save',
+        error,
+        fallback: 'Les rappels n’ont pas pu être enregistrés.',
+      });
     }
   };
 
