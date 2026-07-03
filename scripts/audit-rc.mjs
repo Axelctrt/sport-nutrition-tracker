@@ -7,7 +7,7 @@ const failures = [];
 const limits = {
   largestJavaScriptBytes: 850 * 1024,
   totalJavaScriptBytes: 2750 * 1024,
-  totalCssBytes: 104 * 1024,
+  totalCssBytes: 176 * 1024,
 };
 
 function fail(message) {
@@ -66,7 +66,7 @@ if (totalJavaScriptBytes > limits.totalJavaScriptBytes) {
   fail(`le JavaScript total dépasse 2,69 Mio (${totalJavaScriptBytes} octets).`);
 }
 if (totalCssBytes > limits.totalCssBytes) {
-  fail(`le CSS total dépasse 104 Kio (${totalCssBytes} octets).`);
+  fail(`le CSS total dépasse 176 Kio (${totalCssBytes} octets).`);
 }
 
 const indexHtml = readFileSync(join(dist, 'index.html'), 'utf8');

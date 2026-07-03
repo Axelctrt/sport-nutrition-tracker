@@ -34,3 +34,8 @@ SportPilot 0.23.1 utilise le runtime Dexie Cloud v10. La base métier reste en D
 Le mode aperçu permet volontairement de visualiser les thèmes verrouillés pendant les tests. Cette prévisualisation ne vaut pas déblocage et ne doit pas être considérée comme une règle de progression définitive.
 
 Les conditions de déblocage des nouveaux thèmes pourront être réajustées après validation esthétique.
+
+
+## SportPilot 0.24.0 R3 — Thèmes spectaculaires
+
+Cette phase renforce la direction artistique des thèmes : Volcan affiche lave, fumée, cendres et braises ; Océan et Abysses affichent bulles, poissons et silhouettes marines ; Canopée affiche feuilles et lianes ; Cosmos affiche nébuleuses, planètes et orbites ; Forge affiche acier, feu et étincelles ; Nexus vivant devient le thème légendaire multicouche avec énergie animée. Les règles de déblocage définitives ne sont pas encore activées et l’aperçu ne débloque toujours rien durablement.

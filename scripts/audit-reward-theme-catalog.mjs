@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const root = process.cwd();
@@ -19,11 +19,12 @@ const visualThemes = read('src/domain/rewards/visualThemes.ts');
 const themeService = read('src/application/rewards/themeAchievementService.ts');
 const panel = read('src/features/settings/components/RewardThemesPanel.tsx');
 const css = read('src/styles/unlockableThemes.css');
+const desktopSidebar = read('src/app/layouts/DesktopSidebar.tsx');
 const productionAudit = read('scripts/audit-rc.mjs');
 const automaticSyncReleaseAudit = read('scripts/audit-automatic-sync-release.mjs');
 
 if (packageJson.version !== '0.23.1') {
-  fail(`la phase 0.24.0 R1 doit rester sur la version applicative 0.23.1 avant finalisation, version trouvée : ${packageJson.version}.`);
+  fail(`la phase 0.24.0 R3d doit rester sur la version applicative 0.23.1 avant finalisation, version trouvée : ${packageJson.version}.`);
 }
 if (!packageJson.scripts?.['audit:reward-theme-catalog']) {
   fail('le script audit:reward-theme-catalog est absent de package.json.');
@@ -97,7 +98,7 @@ for (const requiredId of [
   }
 }
 if (!visualThemes.includes('dynamic: true')) {
-  fail('le thème légendaire dynamique n’est pas identifié comme dynamique.');
+  fail('le thème légendaire Nexus doit rester identifié comme thème ultime du catalogue.');
 }
 if (!visualThemes.includes('previewVisualTheme') || !visualThemes.includes('clearVisualThemePreview')) {
   fail('les fonctions de prévisualisation de thème sont absentes.');
@@ -105,23 +106,92 @@ if (!visualThemes.includes('previewVisualTheme') || !visualThemes.includes('clea
 if (!panel.includes('Prévisualiser') || !panel.includes('Quitter l’aperçu')) {
   fail('le panneau de thèmes ne propose pas la prévisualisation et la sortie d’aperçu.');
 }
+if (!panel.includes('Ultime')) {
+  fail('le badge Nexus ne doit plus laisser entendre une animation obligatoire : libellé Ultime attendu.');
+}
 if (!themeService.includes('previewableCount')) {
   fail('le snapshot des thèmes ne déclare pas le nombre de thèmes prévisualisables.');
 }
 if (!productionAudit.includes('totalJavaScriptBytes: 2750 * 1024')) {
-  fail('le budget JavaScript de production doit être aligné sur 2750 Kio pour cette phase catalogue.');
+  fail('le budget JavaScript de production doit rester aligné sur 2750 Kio pour cette phase 0.24.0.');
 }
-if (!productionAudit.includes('totalCssBytes: 104 * 1024')) {
-  fail('le budget CSS de production doit être aligné sur 104 Kio pour cette phase catalogue.');
+if (!productionAudit.includes('totalCssBytes: 176 * 1024')) {
+  fail('le budget CSS de production doit rester aligné sur 176 Kio pour cette phase 0.24.0.');
 }
 if (!automaticSyncReleaseAudit.includes('budget JavaScript global validé de 2750 Kio')) {
-  fail('l’audit F4 doit être aligné avec le budget JavaScript 2750 Kio.');
+  fail('l’audit F4 doit rester aligné avec le budget JavaScript 2750 Kio.');
+}
+
+for (const marker of [
+  'colorful CSS reward themes',
+  '--sport-reward-atmosphere',
+  '--sport-reward-pattern',
+  'background-image: var(--sport-reward-vignette), var(--sport-reward-foreground), var(--sport-reward-atmosphere), var(--sport-reward-pattern)',
+  'data-sport-preview="volcan"',
+  'data-sport-preview="ocean"',
+  'data-sport-preview="abysses"',
+  'data-sport-preview="cosmos"',
+  'data-sport-preview="nexus-vivant"',
+]) {
+  if (!css.includes(marker)) {
+    fail(`le rendu R3d coloré et statique des thèmes est incomplet : ${marker}.`);
+  }
+}
+for (const forbidden of [
+  '/theme-scenes/',
+  '--sport-reward-image',
+  '--sport-preview-image',
+  '@keyframes',
+  'sport-ocean-drift',
+  'sport-abyssal-current',
+  'sport-ember-rise',
+  'sport-cosmos-orbit',
+  'sport-nexus-awaken',
+]) {
+  if (css.includes(forbidden) || visualThemes.includes(forbidden) || panel.includes(forbidden)) {
+    fail(`la phase R3d ne doit plus dépendre du rendu cinématique image-backed ou animé : ${forbidden}.`);
+  }
+}
+if (/animation\s*:/.test(css)) {
+  fail('la phase R3d ne doit contenir aucune animation CSS de thème.');
+}
+for (const asset of [
+  'public/theme-scenes/ocean-cinematic.webp',
+  'public/theme-scenes/abysses-cinematic.webp',
+  'public/theme-scenes/volcan-cinematic.webp',
+  'public/theme-scenes/canopee-cinematic.webp',
+  'public/theme-scenes/cosmos-cinematic.webp',
+  'public/theme-scenes/nexus-cinematic.webp',
+]) {
+  if (existsSync(join(root, asset))) {
+    fail(`l’asset ${asset} doit être supprimé : retour à des fonds CSS colorés.`);
+  }
+}
+for (const marker of [
+  'plus coloré',
+  'sans asset image ni animation',
+  'lave suggérée',
+  'sci-fi sans animation',
+  'Nexus statique ultime',
+]) {
+  if (!visualThemes.includes(marker)) {
+    fail(`la direction artistique R3d du catalogue ne mentionne pas ${marker}.`);
+  }
+}
+if (!desktopSidebar.includes('className="mt-5 space-y-1 border-t border-slate-200 pt-4 dark:border-slate-800"')) {
+  fail('le menu latéral desktop doit supprimer le grand espace automatique entre Bilan hebdomadaire et Profil.');
+}
+if (desktopSidebar.includes('className="mt-auto space-y-1 border-t border-slate-200 pt-4 dark:border-slate-800"')) {
+  fail('le menu latéral desktop ne doit plus utiliser mt-auto pour la navigation secondaire.');
+}
+if (!panel.includes('sport-theme-preview') || !panel.includes('data-sport-preview')) {
+  fail('les miniatures de thèmes ne disposent pas de scènes CSS dédiées.');
 }
 
 if (failures.length > 0) {
-  console.error('\nAudit récompenses et thèmes 0.24.0 R1 échoué :');
+  console.error('\nAudit récompenses et thèmes 0.24.0 R3d échoué :');
   for (const failure of failures) console.error(`- ${failure}`);
   process.exitCode = 1;
 } else {
-  console.log('Audit récompenses et thèmes 0.24.0 R1 réussi : 50 badges, 15 thèmes, aperçu libre et budgets de production alignés.');
+  console.log('Audit récompenses et thèmes 0.24.0 R3d réussi : 50 badges, 15 thèmes, fonds CSS plus colorés, aucune animation, assets image supprimés et menu latéral corrigé.');
 }

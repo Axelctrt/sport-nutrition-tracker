@@ -90,4 +90,18 @@ describe("RewardThemesPanel", () => {
     await user.click(screen.getByRole("button", { name: "Quitter l’aperçu" }));
     expect(clearPreview).toHaveBeenCalled();
   });
+  it("affiche des miniatures thématiques dédiées aux décors spectaculaires", async () => {
+    const { container } = render(
+      <RewardThemesPanel
+        loadSnapshot={async () => buildThemeAchievementSnapshot(emptyThemeMetrics)}
+      />,
+    );
+
+    await screen.findByText("Volcan");
+
+    expect(container.querySelector('[data-sport-preview="volcan"]')).not.toBeNull();
+    expect(container.querySelector('[data-sport-preview="abysses"]')).not.toBeNull();
+    expect(container.querySelector('[data-sport-preview="nexus-vivant"]')).not.toBeNull();
+  });
+
 });

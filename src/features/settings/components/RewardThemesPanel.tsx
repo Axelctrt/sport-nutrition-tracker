@@ -200,12 +200,14 @@ export function RewardThemesPanel({
                     >
                       <div
                         aria-hidden="true"
-                        className="relative h-16 overflow-hidden rounded-xl"
+                        className="sport-theme-preview relative h-20 overflow-hidden rounded-xl"
+                        data-sport-preview={progress.theme.id}
                         style={{
                           background: `linear-gradient(135deg, ${progress.theme.previewFrom}, ${progress.theme.previewTo})`,
                         }}
                       >
-                        <div className="absolute inset-0 opacity-55 mix-blend-screen [background-image:radial-gradient(circle_at_18%_24%,white_0_0.22rem,transparent_0.24rem),radial-gradient(circle_at_78%_68%,white_0_0.16rem,transparent_0.18rem),linear-gradient(120deg,transparent_0_34%,rgba(255,255,255,0.32)_35%_36%,transparent_37%_100%)]" />
+                        <span className="sport-theme-preview__scene" />
+                        <span className="sport-theme-preview__glow" />
                       </div>
                       <div className="mt-3 flex items-start justify-between gap-3">
                         <div>
@@ -219,7 +221,7 @@ export function RewardThemesPanel({
                             {progress.theme.dynamic ? (
                               <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[0.7rem] font-semibold text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">
                                 <Sparkles aria-hidden="true" className="size-3" />
-                                Dynamique
+                                Ultime
                               </span>
                             ) : null}
                           </div>

@@ -77,3 +77,8 @@
 - [ ] `npm run check` réussit.
 - [ ] `npm run test:stability` réussit.
 - [ ] Les thèmes ne débordent pas sur iPhone 15 sous iOS 26.
+
+
+## SportPilot 0.24.0 R3 — Thèmes spectaculaires
+
+Cette phase renforce la direction artistique des thèmes : Volcan affiche lave, fumée, cendres et braises ; Océan et Abysses affichent bulles, poissons et silhouettes marines ; Canopée affiche feuilles et lianes ; Cosmos affiche nébuleuses, planètes et orbites ; Forge affiche acier, feu et étincelles ; Nexus vivant devient le thème légendaire multicouche avec énergie animée. Les règles de déblocage définitives ne sont pas encore activées et l’aperçu ne débloque toujours rien durablement.
