@@ -27,6 +27,12 @@ La saisie dans les formulaires, les autosauvegardes et les modifications répét
 
 Les confirmations utilisent la région accessible existante, les erreurs restent annoncées comme alertes et l’affichage est limité à quatre notifications. La recette comprend les contrôles sur ordinateur et sur iPhone 15 sous iOS 26.
 
+## Préremplissage des objectifs
+
+L’éditeur d’objectif reprend désormais strictement les données déjà enregistrées quand un objectif existant est modifié : type, nom, cible, dates, échéance et poids de départ historique.
+
+Lors de la création d’un nouvel objectif de poids, SportPilot préremplit le poids de départ avec la dernière pesée disponible. Cette dernière pesée sert uniquement à la création : la modification d’un objectif de poids conserve toujours le poids de départ historique défini lors de l’objectif.
+
 ## Compatibilité
 
 - runtime Dexie Cloud : v10 ;

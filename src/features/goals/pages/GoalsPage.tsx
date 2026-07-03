@@ -26,6 +26,7 @@ import {
 } from '@/application/goals/goalProgressService';
 import { GoalCard } from '@/features/goals/components/GoalCard';
 import { GoalEditor } from '@/features/goals/components/GoalEditor';
+import { repositories } from '@/infrastructure/repositories/repositories';
 import { useActionToast } from '@/shared/toast/useActionToast';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
@@ -38,10 +39,17 @@ type GoalFilter = 'current' | 'completed' | 'archived' | 'all';
 
 interface GoalsPageProps {
   loadProgress?: () => Promise<GoalProgressView[]>;
+  loadLatestWeightBaseline?: () => Promise<number | undefined>;
+}
+
+async function loadLatestWeightBaselineFromRepository(): Promise<number | undefined> {
+  const weights = await repositories.weight.listAll();
+  return weights.sort((left, right) => right.date.localeCompare(left.date))[0]?.weightKg;
 }
 
 export function GoalsPage({
   loadProgress = refreshGoalProgress,
+  loadLatestWeightBaseline = loadLatestWeightBaselineFromRepository,
 }: GoalsPageProps) {
   const [views, setViews] = useState<GoalProgressView[]>();
   const [filter, setFilter] = useState<GoalFilter>('current');
@@ -49,8 +57,21 @@ export function GoalsPage({
   const [deleteCandidate, setDeleteCandidate] =
     useState<Goal>();
   const [error, setError] = useState<string>();
+  const [latestWeightBaseline, setLatestWeightBaseline] =
+    useState<number>();
   const [isDeleting, setIsDeleting] = useState(false);
   const actionToast = useActionToast();
+
+
+  const refreshLatestWeightBaseline = useCallback(async () => {
+    try {
+      setLatestWeightBaseline(
+        await loadLatestWeightBaseline(),
+      );
+    } catch {
+      setLatestWeightBaseline(undefined);
+    }
+  }, [loadLatestWeightBaseline]);
 
   const load = useCallback(async () => {
     setError(undefined);
@@ -68,6 +89,7 @@ export function GoalsPage({
 
   useEffect(() => {
     void load();
+    void refreshLatestWeightBaseline();
 
     const handleChange = () => {
       void load();
@@ -84,7 +106,7 @@ export function GoalsPage({
         handleChange,
       );
     };
-  }, [load]);
+  }, [load, refreshLatestWeightBaseline]);
 
   const filtered = useMemo(() => {
     if (!views) return [];
@@ -151,6 +173,7 @@ export function GoalsPage({
   const handleSaved = () => {
     setEditingGoal(undefined);
     void load();
+    void refreshLatestWeightBaseline();
   };
 
   const handleEdit = (goal: Goal) => {
@@ -278,6 +301,7 @@ export function GoalsPage({
           defaultOpen={(views?.length ?? 0) === 0}
         >
           <GoalEditor
+            initialWeightBaseline={latestWeightBaseline}
             onSaved={handleSaved}
             {...(editingGoal
               ? {

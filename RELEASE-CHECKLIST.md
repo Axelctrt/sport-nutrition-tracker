@@ -27,6 +27,14 @@
 - [ ] Les erreurs restent visibles plus longtemps que les succès.
 - [ ] L’affichage ne dépasse pas quatre notifications simultanées.
 
+## Recette des objectifs
+
+- [ ] Modifier un objectif existant réaffiche son type, son nom, sa cible, sa date de départ et son échéance.
+- [ ] Modifier un objectif de poids réaffiche le poids de départ historique de l’objectif.
+- [ ] Créer un nouvel objectif de poids préremplit le poids de départ avec la dernière pesée disponible.
+- [ ] Modifier un objectif de poids ne remplace pas le poids de départ par la dernière pesée actuelle.
+- [ ] Créer un objectif de poids sans pesée disponible laisse le champ vide et exige une saisie manuelle.
+
 ## Mobile et accessibilité
 
 - [ ] Les toasts ne débordent pas horizontalement sur iPhone 15 sous iOS 26.

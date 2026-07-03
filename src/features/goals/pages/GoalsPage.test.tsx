@@ -137,4 +137,29 @@ describe('GoalsPage', () => {
       screen.getByText('Nouvel objectif'),
     ).toBeInTheDocument();
   });
+
+  it('préremplit la création d’un objectif de poids avec la dernière pesée', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <GoalsPage
+        loadProgress={() => Promise.resolve([])}
+        loadLatestWeightBaseline={() => Promise.resolve(72.4)}
+      />,
+    );
+
+    await screen.findByText('Nouvel objectif');
+
+    await user.selectOptions(
+      screen.getByLabelText(/Type d’objectif/),
+      'weightTarget',
+    );
+
+    await waitFor(() => {
+      expect(
+        screen.getByLabelText('Poids de départ (kg)'),
+      ).toHaveValue(72.4);
+    });
+  });
+
 });

@@ -13,6 +13,14 @@ La version 0.23.1 :
 - maintient un indicateur discret pour les autosauvegardes et écritures fréquentes ;
 - ajoute un audit transversal au pipeline complet.
 
+## Correctif complémentaire Objectifs
+
+La même livraison 0.23.1 corrige aussi l’éditeur d’objectifs :
+
+- les données existantes sont réaffichées fidèlement lors d’une modification ;
+- un nouvel objectif de poids propose la dernière pesée comme poids de départ ;
+- un objectif de poids existant conserve son poids de départ historique et ne le recalcule jamais depuis la dernière pesée actuelle.
+
 ## Versions
 
 - application : `0.23.1` ;
