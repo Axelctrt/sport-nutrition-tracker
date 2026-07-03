@@ -58,7 +58,7 @@ export class DexieWorkoutTemplateRepository implements WorkoutTemplateRepository
         if (exercises.length > 0) await this.database.workoutTemplateExercises.bulkAdd(exercises);
         return { template, exercises };
       },
-    ));
+    ), { syncDomainIds: ['strength'], syncReason: 'strength-write' });
   }
 
   updateWithExercises(
@@ -92,7 +92,7 @@ export class DexieWorkoutTemplateRepository implements WorkoutTemplateRepository
         if (removedIds.length > 0) await this.database.workoutTemplateExercises.bulkDelete(removedIds);
         return { template: storedTemplate, exercises };
       },
-    ));
+    ), { syncDomainIds: ['strength'], syncReason: 'strength-write' });
   }
 
   update(id: EntityId, changes: EntityChanges<WorkoutTemplate>): Promise<WorkoutTemplate> {
@@ -104,7 +104,7 @@ export class DexieWorkoutTemplateRepository implements WorkoutTemplateRepository
         current,
         changes,
       );
-    });
+    }, { syncDomainIds: ['strength'], syncReason: 'strength-write' });
   }
 
 
@@ -126,6 +126,6 @@ export class DexieWorkoutTemplateRepository implements WorkoutTemplateRepository
           changes,
         );
       },
-    );
+      { syncDomainIds: ['strength'], syncReason: 'strength-write' });
   }
 }

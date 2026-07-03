@@ -7,6 +7,6 @@ export class DexieStrengthExerciseRepository
   extends DexieCrudRepository<ExerciseDefinition>
   implements StrengthExerciseRepository {
   constructor(database: AppDatabase) {
-    super(database.exerciseDefinitions, 'cet exercice');
+    super(database.exerciseDefinitions, 'cet exercice', ['strength']);
   }
 }

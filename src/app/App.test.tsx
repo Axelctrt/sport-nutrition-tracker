@@ -19,6 +19,10 @@ vi.mock('@/app/sync/WeightSyncCoordinator', () => ({
   WeightSyncCoordinator: () => null,
 }));
 
+vi.mock('@/app/sync/AutomaticSyncCoordinator', () => ({
+  AutomaticSyncCoordinator: () => null,
+}));
+
 describe('App', () => {
   beforeEach(async () => {
     cleanup();

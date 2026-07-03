@@ -5,6 +5,7 @@ import { AppProviders } from "@/app/providers/AppProviders";
 import { RoutineReminderNotifier } from "@/app/reminders/RoutineReminderNotifier";
 import { RewardUnlockNotifier } from "@/app/rewards/RewardUnlockNotifier";
 import { WeeklyMissionCompletionNotifier } from "@/app/rewards/WeeklyMissionCompletionNotifier";
+import { AutomaticSyncCoordinator } from '@/app/sync/AutomaticSyncCoordinator';
 import { WeightSyncCoordinator } from '@/app/sync/WeightSyncCoordinator';
 import { router } from "@/app/router";
 import { PwaUpdatePrompt } from "@/pwa/PwaUpdatePrompt";
@@ -18,6 +19,7 @@ export function App() {
         <RewardUnlockNotifier />
         <WeeklyMissionCompletionNotifier />
         <WeightSyncCoordinator />
+        <AutomaticSyncCoordinator />
         <PwaUpdatePrompt />
       </AppProviders>
     </DataSpaceAccountGate>

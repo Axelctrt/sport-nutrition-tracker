@@ -58,7 +58,7 @@ export class DexieWorkoutSessionRepository implements WorkoutSessionRepository {
         if (exercises.length > 0) await this.database.workoutSessionExercises.bulkAdd(exercises);
         return { session, exercises };
       },
-    ));
+    ), { syncDomainIds: ['strength'], syncReason: 'strength-write' });
   }
 
   update(id: EntityId, changes: EntityChanges<WorkoutSession>): Promise<WorkoutSession> {
@@ -70,7 +70,7 @@ export class DexieWorkoutSessionRepository implements WorkoutSessionRepository {
         current,
         changes,
       );
-    });
+    }, { syncDomainIds: ['strength'], syncReason: 'strength-write' });
   }
 
   addExercise(
@@ -83,7 +83,7 @@ export class DexieWorkoutSessionRepository implements WorkoutSessionRepository {
       const exercise = createEntity<WorkoutSessionExercise>({ ...exerciseInput, sessionId });
       await this.database.workoutSessionExercises.add(exercise);
       return exercise;
-    });
+    }, { syncDomainIds: ['strength'], syncReason: 'strength-write' });
   }
 
   replaceExercises(sessionId: EntityId, exercises: WorkoutSessionExercise[]): Promise<WorkoutSessionExercise[]> {
@@ -93,7 +93,7 @@ export class DexieWorkoutSessionRepository implements WorkoutSessionRepository {
       const updated = exercises.map((exercise, sortOrder) => updateEntity(exercise, { sortOrder }));
       if (updated.length > 0) await this.database.workoutSessionExercises.bulkPut(updated);
       return updated;
-    });
+    }, { syncDomainIds: ['strength'], syncReason: 'strength-write' });
   }
 
   removeExercise(
@@ -110,6 +110,6 @@ export class DexieWorkoutSessionRepository implements WorkoutSessionRepository {
           sessionExerciseId,
         );
       },
-    );
+      { syncDomainIds: ['strength'], syncReason: 'strength-write' });
   }
 }

@@ -46,7 +46,7 @@ export class DexieActivityRepository implements ActivityRepository {
         await this.database.activities.add(activity);
         return activity;
       },
-    );
+      { syncDomainIds: ['activities'], syncReason: 'activity-write' });
   }
 
   save(activity: Activity): Promise<Activity> {
@@ -63,7 +63,7 @@ export class DexieActivityRepository implements ActivityRepository {
         await this.database.activities.put(saved);
         return saved;
       },
-    );
+      { syncDomainIds: ['activities'], syncReason: 'activity-write' });
   }
 
   delete(id: EntityId): Promise<void> {
@@ -73,6 +73,6 @@ export class DexieActivityRepository implements ActivityRepository {
       async () => {
         await moveActivityToTrash(this.database, id);
       },
-    );
+      { syncDomainIds: ['activities'], syncReason: 'activity-write' });
   }
 }
