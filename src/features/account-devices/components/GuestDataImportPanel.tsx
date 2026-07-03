@@ -9,6 +9,7 @@ import type {
 import { Button } from "@/shared/ui/Button";
 import { ConfirmationDialog } from "@/shared/ui/ConfirmationDialog";
 import { InlineNotice } from "@/shared/ui/InlineNotice";
+import { useActionToast } from "@/shared/toast/useActionToast";
 
 type PrepareGuestDataImport = (
   accountFingerprint: string,
@@ -67,6 +68,7 @@ export function GuestDataImportPanel({
   reload = defaultReload,
   compact = false,
 }: GuestDataImportPanelProps) {
+  const actionToast = useActionToast();
   const [prepared, setPrepared] = useState<PreparedGuestDataImport>();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
@@ -100,20 +102,26 @@ export function GuestDataImportPanel({
     setFeedback(undefined);
     try {
       const result: GuestDataImportResult = await applyImport(prepared);
-      setFeedback({
-        tone: "success",
-        title: "Import terminé",
-        message: `${pluralize(result.importedRecords, "donnée ajoutée", "données ajoutées")}, ${pluralize(result.updatedRecords, "donnée mise à jour", "données mises à jour")}. L’espace invité est resté intact.`,
+      const message = `${pluralize(result.importedRecords, "donnée ajoutée", "données ajoutées")}, ${pluralize(result.updatedRecords, "donnée mise à jour", "données mises à jour")}. L’espace invité est resté intact.`;
+      setFeedback({ tone: "success", title: "Import terminé", message });
+      actionToast.successAfterReload({
+        key: 'guest-data-import',
+        title: 'Import terminé',
+        description: message,
       });
       reload();
     } catch (error) {
+      const fallback = "Les données invitées n’ont pas pu être importées.";
       setFeedback({
         tone: "error",
         title: "Import interrompu",
-        message:
-          error instanceof Error
-            ? error.message
-            : "Les données invitées n’ont pas pu être importées.",
+        message: error instanceof Error ? error.message : fallback,
+      });
+      actionToast.error({
+        key: 'guest-data-import',
+        title: 'Import interrompu',
+        error,
+        fallback,
       });
       setIsImporting(false);
     }

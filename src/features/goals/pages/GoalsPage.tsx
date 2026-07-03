@@ -26,6 +26,8 @@ import {
 } from '@/application/goals/goalProgressService';
 import { GoalCard } from '@/features/goals/components/GoalCard';
 import { GoalEditor } from '@/features/goals/components/GoalEditor';
+import { repositories } from '@/infrastructure/repositories/repositories';
+import { useActionToast } from '@/shared/toast/useActionToast';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { CollapsibleSection } from '@/shared/ui/CollapsibleSection';
@@ -37,10 +39,17 @@ type GoalFilter = 'current' | 'completed' | 'archived' | 'all';
 
 interface GoalsPageProps {
   loadProgress?: () => Promise<GoalProgressView[]>;
+  loadLatestWeightBaseline?: () => Promise<number | undefined>;
+}
+
+async function loadLatestWeightBaselineFromRepository(): Promise<number | undefined> {
+  const weights = await repositories.weight.listAll();
+  return weights.sort((left, right) => right.date.localeCompare(left.date))[0]?.weightKg;
 }
 
 export function GoalsPage({
   loadProgress = refreshGoalProgress,
+  loadLatestWeightBaseline = loadLatestWeightBaselineFromRepository,
 }: GoalsPageProps) {
   const [views, setViews] = useState<GoalProgressView[]>();
   const [filter, setFilter] = useState<GoalFilter>('current');
@@ -48,7 +57,21 @@ export function GoalsPage({
   const [deleteCandidate, setDeleteCandidate] =
     useState<Goal>();
   const [error, setError] = useState<string>();
+  const [latestWeightBaseline, setLatestWeightBaseline] =
+    useState<number>();
   const [isDeleting, setIsDeleting] = useState(false);
+  const actionToast = useActionToast();
+
+
+  const refreshLatestWeightBaseline = useCallback(async () => {
+    try {
+      setLatestWeightBaseline(
+        await loadLatestWeightBaseline(),
+      );
+    } catch {
+      setLatestWeightBaseline(undefined);
+    }
+  }, [loadLatestWeightBaseline]);
 
   const load = useCallback(async () => {
     setError(undefined);
@@ -66,6 +89,7 @@ export function GoalsPage({
 
   useEffect(() => {
     void load();
+    void refreshLatestWeightBaseline();
 
     const handleChange = () => {
       void load();
@@ -82,7 +106,7 @@ export function GoalsPage({
         handleChange,
       );
     };
-  }, [load]);
+  }, [load, refreshLatestWeightBaseline]);
 
   const filtered = useMemo(() => {
     if (!views) return [];
@@ -128,13 +152,28 @@ export function GoalsPage({
     goalId: string,
     status: GoalStatus,
   ) => {
-    updateGoalStatus(goalId, status);
-    void load();
+    try {
+      updateGoalStatus(goalId, status);
+      actionToast.success({
+        key: `goal-status:${goalId}`,
+        title: 'Statut de l’objectif mis à jour',
+      });
+      void load();
+    } catch (caughtError) {
+      const fallback = 'Le statut de l’objectif n’a pas pu être modifié.';
+      setError(caughtError instanceof Error ? caughtError.message : fallback);
+      actionToast.error({
+        key: `goal-status:${goalId}`,
+        error: caughtError,
+        fallback,
+      });
+    }
   };
 
   const handleSaved = () => {
     setEditingGoal(undefined);
     void load();
+    void refreshLatestWeightBaseline();
   };
 
   const handleEdit = (goal: Goal) => {
@@ -262,6 +301,7 @@ export function GoalsPage({
           defaultOpen={(views?.length ?? 0) === 0}
         >
           <GoalEditor
+            initialWeightBaseline={latestWeightBaseline}
             onSaved={handleSaved}
             {...(editingGoal
               ? {
@@ -346,15 +386,25 @@ export function GoalsPage({
           setError(undefined);
           void deleteGoal(goalId)
             .then(() => {
+              actionToast.success({
+                key: `goal-delete:${goalId}`,
+                title: 'Objectif supprimé',
+              });
               setDeleteCandidate(undefined);
               return load();
             })
             .catch((caughtError: unknown) => {
+              const fallback = 'L’objectif n’a pas pu être supprimé.';
               setError(
                 caughtError instanceof Error
                   ? caughtError.message
-                  : 'L’objectif n’a pas pu être supprimé.',
+                  : fallback,
               );
+              actionToast.error({
+                key: `goal-delete:${goalId}`,
+                error: caughtError,
+                fallback,
+              });
             })
             .finally(() => setIsDeleting(false));
         }}

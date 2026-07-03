@@ -6,9 +6,9 @@ import {
 } from '@/infrastructure/sync-prototype/SyncPrototypeDatabase';
 import { syncPublicDeploymentConfig } from '@/infrastructure/sync-prototype/syncPublicDeploymentConfig';
 
-describe('publication 0.23.0 du centre de synchronisation unifié', () => {
+describe('publication 0.23.1 du centre de synchronisation unifié', () => {
   it('conserve les versions de stockage pendant l’unification de l’interface', () => {
-    expect(__APP_VERSION__).toBe('0.23.0');
+    expect(__APP_VERSION__).toBe('0.23.1');
     expect(databaseSchemaVersion).toBe(8);
     expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(7);
     expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(10);

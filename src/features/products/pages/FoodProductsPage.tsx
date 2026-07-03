@@ -10,6 +10,7 @@ import { FoodProductCard } from '@/features/products/components/FoodProductCard'
 import { FoodProductsSummary } from '@/features/products/components/FoodProductsSummary';
 import { useFoodProducts } from '@/features/products/hooks/useFoodProducts';
 import { inputClassName } from '@/shared/forms/formStyles';
+import { useActionToast } from '@/shared/toast/useActionToast';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { EmptyState } from '@/shared/ui/EmptyState';
@@ -26,6 +27,7 @@ const filterLabels: Record<ProductFilter, string> = {
 };
 
 export function FoodProductsPage() {
+  const actionToast = useActionToast();
   const location = useLocation();
   const navigate = useNavigate();
   const locationState = location.state as FoodLibraryNavigationState | null;
@@ -76,9 +78,13 @@ export function FoodProductsPage() {
     if (handledFeedbackRef.current === key) return;
     handledFeedbackRef.current = key;
     setFeedback(returnFeedback.title);
+    actionToast.success({
+      key: `food-product-return:${returnFeedback.itemId ?? returnFeedback.title}`,
+      title: returnFeedback.title,
+    });
     if (returnFeedback.itemId) highlightProduct(returnFeedback.itemId);
     void navigate(currentPath, { replace: true, state: null });
-  }, [currentPath, locationState, navigate]);
+  }, [actionToast, currentPath, locationState, navigate]);
 
   useEffect(() => {
     if (!highlightedProductId || status !== 'ready') return;
@@ -92,7 +98,19 @@ export function FoodProductsPage() {
 
   const handleArchive = async (productId: string) => {
     const archived = await archive(productId);
-    if (archived) setFeedback('Aliment archivé');
+    if (archived) {
+      setFeedback('Aliment archivé');
+      actionToast.success({
+        key: `food-product-archive:${productId}`,
+        title: 'Aliment archivé',
+      });
+    } else {
+      actionToast.error({
+        key: `food-product-archive:${productId}`,
+        error: errorMessage,
+        fallback: 'L’aliment n’a pas pu être archivé.',
+      });
+    }
     return archived;
   };
 

@@ -1,16 +1,22 @@
-# SportPilot 0.23.0
+# SportPilot 0.23.1
 
 ## Synchronisation automatique, résiliente et transparente
 
 SportPilot synchronise les neuf rubriques du compte connecté : profil et réglages partageables, récompenses et routines, pesées, activités, objectifs, musculation, journal nutritionnel, bibliothèque nutritionnelle et suivi nutritionnel.
 
-La version 0.23.0 ajoute un orchestrateur commun, une automatisation explicitement autorisée par compte, des déclencheurs au démarrage, au premier plan, au retour du réseau, après connexion, restauration et modification locale, ainsi qu’un historique clair des opérations manuelles et automatiques.
+La version 0.23.1 conserve l’orchestrateur commun, une automatisation explicitement autorisée par compte, des déclencheurs au démarrage, au premier plan, au retour du réseau, après connexion, restauration et modification locale, ainsi qu’un historique clair des opérations manuelles et automatiques.
 
 Les traitements restent séquentiels et non destructeurs. Une analyse automatique ne remplace aucune donnée, une divergence ambiguë demande une action explicite, les échecs sont relançables par rubrique et les changements de compte invalident les résultats tardifs de l’ancien compte.
 
 L’automatisation fonctionne lorsque SportPilot est ouvert ou revient au premier plan. Elle ne dépend pas d’une tâche PWA en arrière-plan. Le mode Wi-Fi uniquement reste volontairement bloqué lorsqu’un navigateur, notamment iOS, ne permet pas d’identifier le type de connexion.
 
-SportPilot 0.23.0 conserve le runtime Dexie Cloud v10 nommé `sportpilot-sync-runtime-0.20.0-v10`. La base métier reste en Dexie v8, la sauvegarde en JSON v7 et le registre local des espaces en v1. Aucune migration de données n’est requise.
+SportPilot 0.23.1 conserve le runtime Dexie Cloud v10 nommé `sportpilot-sync-runtime-0.20.0-v10`. La base métier reste en Dexie v8, la sauvegarde en JSON v7 et le registre local des espaces en v1. Aucune migration de données n’est requise.
+
+## Correctif 0.23.1 — confirmations d’action
+
+Les créations, modifications, suppressions, restaurations et exports confirmés affichent désormais un toast cohérent. Les actions provoquant un rechargement conservent leur confirmation jusqu’au prochain écran. Les écritures très fréquentes, notamment pendant une séance active, restent signalées par l’indicateur discret d’enregistrement afin d’éviter le bruit visuel.
+
+Aucune migration Dexie, cloud, sauvegarde ou registre n’est introduite.
 
 ## Correctif 0.21.1 — stabilité du journal nutritionnel
 

@@ -40,6 +40,7 @@ import {
   purgeExpiredTrashItems,
   restoreTrashItem,
 } from '@/infrastructure/repositories/dexie/trashService';
+import { useActionToast } from '@/shared/toast/useActionToast';
 
 interface Feedback {
   tone: 'success' | 'error' | 'info';
@@ -98,6 +99,7 @@ function typeLabel(item: TrashItem): string {
 }
 
 export function TrashPage() {
+  const actionToast = useActionToast();
   const archiveInputRef = useRef<HTMLInputElement>(null);
   const [items, setItems] = useState<TrashItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -209,19 +211,14 @@ export function TrashPage() {
 
     try {
       await restoreTrashItem(appDatabase, item.id);
-      setFeedback({
-        tone: 'success',
-        message: `${item.label} a été restauré.`,
-      });
+      const message = `${item.label} a été restauré.`;
+      setFeedback({ tone: 'success', message });
+      actionToast.success({ key: `trash-restore-${item.id}`, title: 'Élément restauré', description: message });
       await loadItems();
     } catch (error) {
-      setFeedback({
-        tone: 'error',
-        message:
-          error instanceof Error
-            ? error.message
-            : 'La restauration a échoué.',
-      });
+      const fallback = 'La restauration a échoué.';
+      setFeedback({ tone: 'error', message: error instanceof Error ? error.message : fallback });
+      actionToast.error({ key: `trash-restore-${item.id}`, title: 'Restauration impossible', error, fallback });
     } finally {
       setPendingId(undefined);
     }
@@ -235,20 +232,14 @@ export function TrashPage() {
       downloadTrashArchive([item], 'before-delete');
       await deleteTrashItemPermanently(appDatabase, item.id);
       setConfirmDeleteId(undefined);
-      setFeedback({
-        tone: 'info',
-        message:
-          `${item.label} a été archivé puis supprimé définitivement.`,
-      });
+      const message = `${item.label} a été archivé puis supprimé définitivement.`;
+      setFeedback({ tone: 'info', message });
+      actionToast.success({ key: `trash-delete-${item.id}`, title: 'Suppression définitive terminée', description: message });
       await loadItems();
     } catch (error) {
-      setFeedback({
-        tone: 'error',
-        message:
-          error instanceof Error
-            ? error.message
-            : 'La suppression définitive a échoué.',
-      });
+      const fallback = 'La suppression définitive a échoué.';
+      setFeedback({ tone: 'error', message: error instanceof Error ? error.message : fallback });
+      actionToast.error({ key: `trash-delete-${item.id}`, title: 'Suppression impossible', error, fallback });
     } finally {
       setPendingId(undefined);
     }
@@ -271,27 +262,20 @@ export function TrashPage() {
       );
 
       if (result.failures.length === 0) {
-        setFeedback({
-          tone: 'success',
-          message: `${result.restoredIds.length} élément(s) ont été restaurés.`,
-        });
+        const message = `${result.restoredIds.length} élément(s) ont été restaurés.`;
+        setFeedback({ tone: 'success', message });
+        actionToast.success({ key: 'trash-bulk-restore', title: 'Éléments restaurés', description: message });
       } else {
-        setFeedback({
-          tone: 'info',
-          message:
-            `${result.restoredIds.length} élément(s) restauré(s), ${result.failures.length} conflit(s) conservé(s) dans la sélection.`,
-        });
+        const message = `${result.restoredIds.length} élément(s) restauré(s), ${result.failures.length} conflit(s) conservé(s) dans la sélection.`;
+        setFeedback({ tone: 'info', message });
+        actionToast.success({ key: 'trash-bulk-restore', title: 'Restauration partielle terminée', description: message });
       }
 
       await loadItems();
     } catch (error) {
-      setFeedback({
-        tone: 'error',
-        message:
-          error instanceof Error
-            ? error.message
-            : 'La restauration groupée a échoué.',
-      });
+      const fallback = 'La restauration groupée a échoué.';
+      setFeedback({ tone: 'error', message: error instanceof Error ? error.message : fallback });
+      actionToast.error({ key: 'trash-bulk-restore', title: 'Restauration impossible', error, fallback });
     } finally {
       setIsBulkPending(false);
     }
@@ -316,20 +300,14 @@ export function TrashPage() {
 
       setSelectedIds([]);
       setBulkConfirmation(undefined);
-      setFeedback({
-        tone: 'info',
-        message:
-          `${deletedCount} élément(s) ont été archivés puis supprimés définitivement.`,
-      });
+      const message = `${deletedCount} élément(s) ont été archivés puis supprimés définitivement.`;
+      setFeedback({ tone: 'info', message });
+      actionToast.success({ key: 'trash-bulk-delete', title: 'Suppression groupée terminée', description: message });
       await loadItems();
     } catch (error) {
-      setFeedback({
-        tone: 'error',
-        message:
-          error instanceof Error
-            ? error.message
-            : 'La suppression groupée a échoué.',
-      });
+      const fallback = 'La suppression groupée a échoué.';
+      setFeedback({ tone: 'error', message: error instanceof Error ? error.message : fallback });
+      actionToast.error({ key: 'trash-bulk-delete', title: 'Suppression impossible', error, fallback });
     } finally {
       setIsBulkPending(false);
     }
@@ -347,20 +325,14 @@ export function TrashPage() {
 
       setSelectedIds([]);
       setBulkConfirmation(undefined);
-      setFeedback({
-        tone: 'info',
-        message:
-          `${deletedCount} élément(s) ont été archivés puis supprimés de la corbeille.`,
-      });
+      const message = `${deletedCount} élément(s) ont été archivés puis supprimés de la corbeille.`;
+      setFeedback({ tone: 'info', message });
+      actionToast.success({ key: 'trash-empty', title: 'Corbeille vidée', description: message });
       await loadItems();
     } catch (error) {
-      setFeedback({
-        tone: 'error',
-        message:
-          error instanceof Error
-            ? error.message
-            : 'Le vidage de la corbeille a échoué.',
-      });
+      const fallback = 'Le vidage de la corbeille a échoué.';
+      setFeedback({ tone: 'error', message: error instanceof Error ? error.message : fallback });
+      actionToast.error({ key: 'trash-empty', title: 'Vidage impossible', error, fallback });
     } finally {
       setIsBulkPending(false);
     }
@@ -371,19 +343,13 @@ export function TrashPage() {
 
     try {
       const prepared = downloadTrashArchive(items, 'manual');
-      setFeedback({
-        tone: 'success',
-        message:
-          `${prepared.itemCount} élément(s) ont été exportés dans ${prepared.fileName}.`,
-      });
+      const message = `${prepared.itemCount} élément(s) ont été exportés dans ${prepared.fileName}.`;
+      setFeedback({ tone: 'success', message });
+      actionToast.success({ key: 'trash-archive-export', title: 'Archive créée', description: message });
     } catch (error) {
-      setFeedback({
-        tone: 'error',
-        message:
-          error instanceof Error
-            ? error.message
-            : 'L’archive n’a pas pu être créée.',
-      });
+      const fallback = 'L’archive n’a pas pu être créée.';
+      setFeedback({ tone: 'error', message: error instanceof Error ? error.message : fallback });
+      actionToast.error({ key: 'trash-archive-export', title: 'Archive impossible', error, fallback });
     }
   };
 
@@ -411,20 +377,14 @@ export function TrashPage() {
         await file.text(),
       );
 
-      setFeedback({
-        tone: 'success',
-        message:
-          `${importedCount} élément(s) ont été replacés dans la corbeille pour 30 jours.`,
-      });
+      const message = `${importedCount} élément(s) ont été replacés dans la corbeille pour 30 jours.`;
+      setFeedback({ tone: 'success', message });
+      actionToast.success({ key: 'trash-archive-import', title: 'Archive importée', description: message });
       await loadItems();
     } catch (error) {
-      setFeedback({
-        tone: 'error',
-        message:
-          error instanceof Error
-            ? error.message
-            : 'L’archive n’a pas pu être importée.',
-      });
+      const fallback = 'L’archive n’a pas pu être importée.';
+      setFeedback({ tone: 'error', message: error instanceof Error ? error.message : fallback });
+      actionToast.error({ key: 'trash-archive-import', title: 'Import impossible', error, fallback });
     } finally {
       if (archiveInputRef.current) {
         archiveInputRef.current.value = '';

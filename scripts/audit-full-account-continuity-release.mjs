@@ -6,7 +6,7 @@ const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const read = (path) => readFileSync(join(root, path), 'utf8');
 const failures = [];
 const fail = (message) => failures.push(message);
-const expectedVersion = '0.23.0';
+const expectedVersion = '0.23.1';
 
 const packageJson = JSON.parse(read('package.json'));
 const packageLock = JSON.parse(read('package-lock.json'));
@@ -17,7 +17,7 @@ if (
   packageLock.version !== expectedVersion
   || packageLock.packages?.['']?.version !== expectedVersion
 ) {
-  fail('package-lock.json ne correspond pas à la version 0.23.0.');
+  fail('package-lock.json ne correspond pas à la version 0.23.1.');
 }
 
 const requiredFiles = [
@@ -138,5 +138,5 @@ if (failures.length > 0) {
 }
 
 console.log(
-  'Audit E4 réussi : socle 0.22.0 conservé sous SportPilot 0.23.0, neuf domaines cloud, restauration complète, centre unifié, isolation et versions de données validés.',
+  'Audit E4 réussi : socle 0.22.0 conservé sous SportPilot 0.23.1, neuf domaines cloud, restauration complète, centre unifié, isolation et versions de données validés.',
 );

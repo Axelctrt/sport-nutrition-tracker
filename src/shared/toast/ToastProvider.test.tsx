@@ -1,6 +1,7 @@
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { vi } from 'vitest';
 import { ToastProvider } from '@/shared/toast/ToastProvider';
+import { queuePendingToast } from '@/shared/toast/pendingToast';
 import { useToast } from '@/shared/toast/useToast';
 
 function ToastHarness() {
@@ -16,7 +17,10 @@ function ToastHarness() {
   );
 }
 
-beforeEach(() => vi.useFakeTimers());
+beforeEach(() => {
+  vi.useFakeTimers();
+  sessionStorage.clear();
+});
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
@@ -48,6 +52,19 @@ describe('ToastProvider', () => {
 
     act(() => vi.advanceTimersByTime(4_500));
     expect(screen.queryByText('Enregistrement impossible')).not.toBeInTheDocument();
+  });
+
+  it('affiche une confirmation conservée avant un rechargement', () => {
+    queuePendingToast({
+      title: 'Compte déconnecté',
+      description: 'Les données locales restent accessibles.',
+      tone: 'success',
+    });
+
+    render(<ToastProvider><div>Application</div></ToastProvider>);
+
+    expect(screen.getByText('Compte déconnecté')).toBeInTheDocument();
+    expect(screen.getByText('Les données locales restent accessibles.')).toBeInTheDocument();
   });
 
   it('permet une notification persistante', () => {

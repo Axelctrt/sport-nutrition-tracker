@@ -1,8 +1,8 @@
-SPORTPILOT 0.23.0
+SPORTPILOT 0.23.1
 
 PRÉPARATION
 
-1. Vérifier que la branche feature/automatic-sync-resilience-0.23.0 est propre et à jour.
+1. Vérifier que la branche feature/global-action-feedback-0.23.1 est propre et à jour.
 2. Arrêter Vite avec Ctrl + C et fermer les onglets de test.
 3. Exporter une sauvegarde JSON v7 récente de l’espace invité et du compte principal.
 4. Vérifier que le centre de synchronisation affiche 9/9 rubriques à jour.
@@ -15,7 +15,7 @@ VALIDATION AUTOMATIQUE
 8. Lancer npm run release:verify.
 9. Lancer npm run test:e2e.
 10. Lancer npm run audit:automatic-sync-release.
-11. Vérifier que Paramètres affiche la version 0.23.0.
+11. Vérifier que Paramètres affiche la version 0.23.1.
 12. Vérifier l’absence d’archive, de journal et de fichier de patch dans git status.
 
 VALIDATION DE LA SYNCHRONISATION AUTOMATIQUE
@@ -44,14 +44,14 @@ VALIDATION MULTIAPPAREILS
 VALIDATION IPHONE
 
 30. Mettre à jour la PWA sur iPhone 15 sous iOS 26.
-31. Vérifier la version 0.23.0 et le centre 9/9.
+31. Vérifier la version 0.23.1 et le centre 9/9.
 32. Tester modification locale, arrière-plan/premier plan et mode avion.
 33. Vérifier la reprise réseau, l’historique et l’absence de débordement horizontal.
 34. Vérifier qu’aucune tâche en arrière-plan n’est nécessaire.
 
 PUBLICATION
 
-35. Committer F4 sur feature/automatic-sync-resilience-0.23.0.
+35. Committer F4 sur feature/global-action-feedback-0.23.1.
 36. Fusionner manuellement la branche dans main avec un commit de fusion explicite.
 37. Relancer npm run release:verify sur main.
 38. Pousser main puis créer le tag annoté v0.23.0.

@@ -6,6 +6,7 @@ import { routePaths, workoutSessionPath } from '@/app/routePaths';
 import { WorkoutSessionHistoryCard } from '@/features/strength-sessions/components/WorkoutSessionHistoryCard';
 import { WorkoutSessionsSummary } from '@/features/strength-sessions/components/WorkoutSessionsSummary';
 import { useWorkoutSessions } from '@/features/strength-sessions/hooks/useWorkoutSessions';
+import { useActionToast } from '@/shared/toast/useActionToast';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { EmptyState } from '@/shared/ui/EmptyState';
@@ -16,6 +17,7 @@ import { formatLocalDate } from '@/shared/utils/dates';
 type SessionFilter = 'all' | 'completed' | 'abandoned';
 
 export function WorkoutSessionsPage() {
+  const actionToast = useActionToast();
   const navigate = useNavigate();
   const [filter, setFilter] = useState<SessionFilter>('all');
   const { sessions, status, errorMessage, isStarting, refresh, startEmpty } = useWorkoutSessions();
@@ -27,7 +29,19 @@ export function WorkoutSessionsPage() {
 
   const startFreeSession = async () => {
     const created = await startEmpty();
-    if (created) await navigate(workoutSessionPath(created.session.id));
+    if (created) {
+      actionToast.success({
+        key: `workout-session-start:${created.session.id}`,
+        title: 'Séance libre démarrée',
+      });
+      await navigate(workoutSessionPath(created.session.id));
+    } else {
+      actionToast.error({
+        key: 'workout-session-start',
+        error: errorMessage,
+        fallback: 'La séance libre n’a pas pu être démarrée.',
+      });
+    }
   };
 
   return (

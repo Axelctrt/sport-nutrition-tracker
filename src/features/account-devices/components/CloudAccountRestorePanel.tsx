@@ -9,6 +9,7 @@ import type { SyncPrototypeClient } from '@/infrastructure/sync-prototype/syncPr
 import { Button } from '@/shared/ui/Button';
 import { ConfirmationDialog } from '@/shared/ui/ConfirmationDialog';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
+import { useActionToast } from '@/shared/toast/useActionToast';
 
 interface CloudAccountRestorePanelProps {
   readonly accountFingerprint: string;
@@ -54,6 +55,7 @@ export function CloudAccountRestorePanel({
   onAnalysisChange,
   onRestored,
 }: CloudAccountRestorePanelProps) {
+  const actionToast = useActionToast();
   const [state, setState] = useState<PanelState>(() =>
     preparedRestore
       ? { status: 'ready', prepared: preparedRestore }
@@ -104,9 +106,13 @@ export function CloudAccountRestorePanel({
 
   const restore = async (prepared: PreparedCloudAccountRestore) => {
     if (!apply) {
-      setState({
-        status: 'error',
-        message: 'La restauration cloud n’est pas disponible dans cette version.',
+      const fallback = 'La restauration cloud n’est pas disponible dans cette version.';
+      setState({ status: 'error', message: fallback });
+      actionToast.error({
+        key: 'cloud-account-restore',
+        title: 'Restauration indisponible',
+        error: undefined,
+        fallback,
       });
       return;
     }
@@ -116,9 +122,21 @@ export function CloudAccountRestorePanel({
       const result = await apply(prepared);
       setState({ status: 'success', result });
       await onRestored?.(result);
+      actionToast.successAfterReload({
+        key: 'cloud-account-restore',
+        title: 'Restauration cloud terminée',
+        description: 'Les données de ce compte sont maintenant disponibles sur cet appareil.',
+      });
       reload();
     } catch (error) {
+      const fallback = 'La restauration cloud n’a pas pu être terminée.';
       setState({ status: 'error', message: errorMessage(error) });
+      actionToast.error({
+        key: 'cloud-account-restore',
+        title: 'Restauration impossible',
+        error,
+        fallback,
+      });
     }
   };
 

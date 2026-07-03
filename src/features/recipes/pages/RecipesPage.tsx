@@ -11,6 +11,7 @@ import { RecipeLibraryCard } from '@/features/recipes/components/RecipeLibraryCa
 import { RecipesSummary } from '@/features/recipes/components/RecipesSummary';
 import { useRecipes } from '@/features/recipes/hooks/useRecipes';
 import { inputClassName } from '@/shared/forms/formStyles';
+import { useActionToast } from '@/shared/toast/useActionToast';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { EmptyState } from '@/shared/ui/EmptyState';
@@ -22,6 +23,7 @@ import { isValidLocalDate } from '@/shared/validation/localDate';
 const mealSlots: MealSlot[] = ['breakfast', 'lunch', 'dinner', 'snacks'];
 
 export function RecipesPage() {
+  const actionToast = useActionToast();
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
@@ -69,6 +71,10 @@ export function RecipesPage() {
     if (handledFeedbackRef.current === key) return;
     handledFeedbackRef.current = key;
     setFeedback(returnFeedback.title);
+    actionToast.success({
+      key: `recipe-return:${returnFeedback.itemId ?? returnFeedback.title}`,
+      title: returnFeedback.title,
+    });
     if (returnFeedback.itemId) highlightRecipe(returnFeedback.itemId);
     const preservedState = location.state && typeof location.state === 'object'
       ? { ...location.state }
@@ -77,7 +83,7 @@ export function RecipesPage() {
     delete (preservedState as Partial<FoodLibraryNavigationState>).scroll;
     delete (preservedState as Partial<FoodLibraryNavigationState>).restoreScrollKey;
     void navigate(currentPath, { replace: true, state: preservedState });
-  }, [currentPath, location.state, locationState, navigate]);
+  }, [actionToast, currentPath, location.state, locationState, navigate]);
 
   useEffect(() => {
     if (!highlightedRecipeId || status !== 'ready') return;
@@ -91,7 +97,19 @@ export function RecipesPage() {
 
   const handleDelete = async (recipeId: string) => {
     const removed = await remove(recipeId);
-    if (removed) setFeedback('Recette supprimée');
+    if (removed) {
+      setFeedback('Recette supprimée');
+      actionToast.success({
+        key: `recipe-delete:${recipeId}`,
+        title: 'Recette supprimée',
+      });
+    } else {
+      actionToast.error({
+        key: `recipe-delete:${recipeId}`,
+        error: errorMessage,
+        fallback: 'La recette n’a pas pu être supprimée.',
+      });
+    }
     return removed;
   };
 

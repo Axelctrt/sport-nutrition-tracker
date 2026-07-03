@@ -6,7 +6,7 @@ const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const read = (path) => readFileSync(join(root, path), 'utf8');
 const failures = [];
 const fail = (message) => failures.push(message);
-const expectedVersion = '0.23.0';
+const expectedVersion = '0.23.1';
 
 const requiredFiles = [
   'src/app/automaticSyncReleaseReadiness.test.ts',
@@ -32,7 +32,7 @@ if (failures.length === 0) {
     packageLock.version !== expectedVersion
     || packageLock.packages?.['']?.version !== expectedVersion
   ) {
-    fail('package-lock.json ne correspond pas à SportPilot 0.23.0.');
+    fail('package-lock.json ne correspond pas à SportPilot 0.23.1.');
   }
 
   const controller = read('src/application/sync/automaticSyncController.ts');
@@ -114,8 +114,8 @@ if (failures.length === 0) {
     fail('le runtime cloud doit rester en v10.');
   }
   const productionAudit = read('scripts/audit-rc.mjs');
-  if (!productionAudit.includes('totalJavaScriptBytes: 2720 * 1024')) {
-    fail('le budget JavaScript global validé de 2720 Kio est absent.');
+  if (!productionAudit.includes('totalJavaScriptBytes: 2730 * 1024')) {
+    fail('le budget JavaScript global validé de 2730 Kio est absent.');
   }
 
   const releaseNotes = read('RELEASE-NOTES-0.23.0.md');
@@ -138,5 +138,5 @@ if (failures.length > 0) {
 }
 
 console.log(
-  'Audit F4 réussi : isolation des comptes, interruption maîtrisée, reprise réseau, anti-boucle, budgets et publication SportPilot 0.23.0 validés.',
+  'Audit F4 réussi : isolation des comptes, interruption maîtrisée, reprise réseau, anti-boucle, budgets et compatibilité sous SportPilot 0.23.1 validée.',
 );

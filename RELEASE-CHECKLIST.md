@@ -1,72 +1,50 @@
-# Checklist de publication — SportPilot 0.23.0
+# Checklist de publication — SportPilot 0.23.1
 
-## Préparation
+## Git et version
 
-- [ ] La branche `feature/automatic-sync-resilience-0.23.0` est propre et synchronisée.
-- [ ] Une sauvegarde JSON v7 récente est conservée hors de l’application.
-- [ ] Le centre affiche 9/9 rubriques à jour avant les scénarios de conflit.
-- [ ] Aucun ZIP, journal, secret ou fichier de patch n’est suivi par Git.
-- [ ] Paramètres affiche `0.23.0`.
+- [ ] La branche `feature/global-action-feedback-0.23.1` est propre et synchronisée.
+- [ ] `package.json` et `package-lock.json` indiquent `0.23.1`.
+- [ ] Paramètres affiche `0.23.1`.
+- [ ] Aucune archive, journal ou charge utile de patch n’est suivie par Git.
 
 ## Contrôles automatiques
 
-- [ ] `npm ci` réussit sur une installation propre.
-- [ ] `npm run release:verify` réussit.
-- [ ] `npm run test:e2e` réussit.
-- [ ] `npm run audit:automatic-sync-release` réussit.
-- [ ] `git diff --check` ne retourne aucune erreur.
+- [ ] `npm run audit:action-feedback` réussit.
+- [ ] `npm run check` réussit.
+- [ ] `npm run test:stability` réussit.
+- [ ] `git diff --check` ne signale aucune erreur.
 
-## Versions et configuration
+## Recette des notifications
 
-- [ ] Le runtime Dexie Cloud reste en v10.
-- [ ] Le runtime local reste `sportpilot-sync-runtime-0.20.0-v10`.
-- [ ] La base métier reste en Dexie v8.
-- [ ] La sauvegarde reste en JSON v7.
-- [ ] Le registre des espaces reste en v1.
-- [ ] Les neuf domaines restent activés dans le build public.
-- [ ] Les diagnostics de laboratoire restent désactivés.
-- [ ] Aucune migration de données n’est requise.
+- [ ] Modifier un objectif affiche une confirmation unique.
+- [ ] Modifier le profil et les paramètres affiche une confirmation.
+- [ ] Ajouter ou modifier un poids, des pas, un aliment ou une recette affiche une confirmation.
+- [ ] Créer, dupliquer, archiver ou réactiver un élément sportif affiche une confirmation.
+- [ ] Une erreur d’écriture affiche le message métier utile.
+- [ ] Deux déclenchements identiques rapprochés ne créent pas deux toasts identiques.
+- [ ] Une déconnexion, un import invité ou une restauration cloud affiche sa confirmation après rechargement.
+- [ ] Les autosauvegardes d’une séance active n’affichent pas un toast à chaque frappe.
+- [ ] Les erreurs restent visibles plus longtemps que les succès.
+- [ ] L’affichage ne dépasse pas quatre notifications simultanées.
 
-## Automatisation et transparence
+## Recette des objectifs
 
-- [ ] L’activation reste liée explicitement au compte courant.
-- [ ] Le démarrage et le premier plan déclenchent une analyse, jamais une écriture aveugle.
-- [ ] Une modification locale propre est regroupée puis synchronisée.
-- [ ] Sans base propre, une modification déclenche uniquement une analyse.
-- [ ] L’historique distingue les actions manuelles et automatiques.
-- [ ] Les tentatives hors ligne sont visibles.
-- [ ] La dernière réussite et le dernier échec sont corrects.
-- [ ] Une divergence demande un examen ou une fusion garantie non destructive.
+- [ ] Modifier un objectif existant réaffiche son type, son nom, sa cible, sa date de départ et son échéance.
+- [ ] Modifier un objectif de poids réaffiche le poids de départ historique de l’objectif.
+- [ ] Créer un nouvel objectif de poids préremplit le poids de départ avec la dernière pesée disponible.
+- [ ] Modifier un objectif de poids ne remplace pas le poids de départ par la dernière pesée actuelle.
+- [ ] Créer un objectif de poids sans pesée disponible laisse le champ vide et exige une saisie manuelle.
 
-## Robustesse multiappareils
+## Mobile et accessibilité
 
-- [ ] Deux opérations du même compte restent séquentielles.
-- [ ] Deux comptes différents ne se bloquent pas mutuellement.
-- [ ] Une perte réseau conserve les domaines déjà réussis.
-- [ ] La relance ciblée ne rejoue que les échecs.
-- [ ] Une fermeture n’entame pas de nouveau domaine.
-- [ ] Une fin tardive de l’ancien compte n’altère pas le nouveau compte.
-- [ ] Les modifications après déconnexion restent dans leur espace local.
-- [ ] Le retour en ligne après plusieurs jours déclenche une analyse.
-- [ ] Une modification immédiate après restauration est conservée.
-- [ ] Les retours répétés au premier plan ne créent pas de rafale réseau.
-- [ ] Les événements d’écriture pendant une synchronisation ne créent pas de boucle.
+- [ ] Les toasts ne débordent pas horizontalement sur iPhone 15 sous iOS 26.
+- [ ] Les boutons restent accessibles au toucher.
+- [ ] Les confirmations sont annoncées sans interrompre excessivement la navigation.
+- [ ] Les erreurs sont annoncées comme alertes.
 
-## iPhone 15 — iOS 26
+## Publication
 
-- [ ] La PWA se met à jour vers 0.23.0.
-- [ ] Une modification locale déclenche l’automatisation.
-- [ ] Le retour au premier plan déclenche au maximum une analyse cohérente.
-- [ ] Le mode avion et la reprise réseau réussissent.
-- [ ] L’historique et les cartes restent lisibles sans débordement horizontal.
-- [ ] Le mode Wi-Fi uniquement explique clairement le blocage lorsque le type est inconnu.
-
-## Publication Git
-
-- [ ] F4 est committé sur la branche de fonctionnalité.
-- [ ] La branche est fusionnée manuellement dans `main`.
-- [ ] `npm run release:verify` réussit sur `main`.
-- [ ] Le tag annoté `v0.23.0` est créé sur le commit publié.
-- [ ] `main` est fusionnée dans `develop`.
-- [ ] La branche de fonctionnalité est supprimée localement et à distance.
-- [ ] Le déploiement public est vérifié sur ordinateur et iPhone.
+- [ ] La PWA se met à jour vers `0.23.1`.
+- [ ] `develop` est fusionnée manuellement dans `main`.
+- [ ] Le tag annoté `v0.23.1` est créé sur le commit publié.
+- [ ] `develop` est resynchronisée avec `main`.

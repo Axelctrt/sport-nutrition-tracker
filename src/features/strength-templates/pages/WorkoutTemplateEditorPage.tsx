@@ -17,11 +17,13 @@ import {
   workoutTemplateViewToFormValues,
 } from '@/features/strength-templates/utils/workoutTemplateForm';
 import { repositories } from '@/infrastructure/repositories/repositories';
+import { useActionToast } from '@/shared/toast/useActionToast';
 import { Card } from '@/shared/ui/Card';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 import { PageSkeleton } from '@/shared/ui/PageSkeleton';
 
 export function WorkoutTemplateEditorPage() {
+  const actionToast = useActionToast();
   const { templateId } = useParams();
   const navigate = useNavigate();
   const [view, setView] = useState<WorkoutTemplateView>();
@@ -48,10 +50,23 @@ export function WorkoutTemplateEditorPage() {
   }, [templateId]);
 
   const handleSubmit = async (values: WorkoutTemplateFormValues) => {
-    const input = workoutTemplateFormValuesToInput(values);
-    if (templateId) await updateWorkoutTemplate(repositories.workoutTemplates, templateId, input);
-    else await createWorkoutTemplate(repositories.workoutTemplates, input);
-    await navigate(routePaths.workoutTemplates);
+    try {
+      const input = workoutTemplateFormValuesToInput(values);
+      if (templateId) await updateWorkoutTemplate(repositories.workoutTemplates, templateId, input);
+      else await createWorkoutTemplate(repositories.workoutTemplates, input);
+      actionToast.success({
+        key: templateId ? `workout-template-update:${templateId}` : 'workout-template-create',
+        title: templateId ? 'Séance modèle modifiée' : 'Séance modèle créée',
+      });
+      await navigate(routePaths.workoutTemplates);
+    } catch (error) {
+      actionToast.error({
+        key: templateId ? `workout-template-update:${templateId}` : 'workout-template-create',
+        error,
+        fallback: 'La séance modèle n’a pas pu être enregistrée.',
+      });
+      throw error;
+    }
   };
 
   return (

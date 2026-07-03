@@ -27,6 +27,7 @@ import {
   type EnduranceTemplateFormValues,
 } from '@/features/endurance-templates/schemas/enduranceTemplateSchema';
 import { inputClassName } from '@/shared/forms/formStyles';
+import { useActionToast } from '@/shared/toast/useActionToast';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { ConfirmationDialog } from '@/shared/ui/ConfirmationDialog';
@@ -142,6 +143,7 @@ function startPath(template: EnduranceTemplate): string {
 }
 
 export function EnduranceTemplatesPage() {
+  const actionToast = useActionToast();
   const [templates, setTemplates] = useState<EnduranceTemplate[]>([]);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [errorMessage, setErrorMessage] = useState<string>();
@@ -179,10 +181,20 @@ export function EnduranceTemplatesPage() {
     setErrorMessage(undefined);
     try {
       await saveEnduranceTemplate(valuesToDraft(values), editingId);
+      actionToast.success({
+        key: editingId ? `endurance-template-update:${editingId}` : 'endurance-template-create',
+        title: editingId ? 'Modèle d’endurance modifié' : 'Modèle d’endurance créé',
+      });
       await load();
       resetEditor();
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Le modèle ne peut pas être enregistré.');
+      const fallback = 'Le modèle ne peut pas être enregistré.';
+      setErrorMessage(error instanceof Error ? error.message : fallback);
+      actionToast.error({
+        key: editingId ? `endurance-template-update:${editingId}` : 'endurance-template-create',
+        error,
+        fallback,
+      });
     }
   };
 
@@ -247,7 +259,14 @@ export function EnduranceTemplatesPage() {
                 <div className="mt-4 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
                   <Link to={startPath(template)} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-brand-700 px-3 text-sm font-semibold text-white hover:bg-brand-800"><Play className="size-4" />Utiliser</Link>
                   <Button size="sm" variant="secondary" onClick={() => { setEditingId(template.id); form.reset(templateToValues(template)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}><Pencil className="size-4" />Modifier</Button>
-                  <Button size="sm" variant="secondary" onClick={() => void duplicateEnduranceTemplate(template.id).then(load).catch((error: unknown) => setErrorMessage(error instanceof Error ? error.message : 'Duplication impossible.'))}><CopyPlus className="size-4" />Dupliquer</Button>
+                  <Button size="sm" variant="secondary" onClick={() => void duplicateEnduranceTemplate(template.id).then(async () => {
+                    actionToast.success({ key: `endurance-template-duplicate:${template.id}`, title: 'Modèle d’endurance dupliqué' });
+                    await load();
+                  }).catch((error: unknown) => {
+                    const fallback = 'Duplication impossible.';
+                    setErrorMessage(error instanceof Error ? error.message : fallback);
+                    actionToast.error({ key: `endurance-template-duplicate:${template.id}`, error, fallback });
+                  })}><CopyPlus className="size-4" />Dupliquer</Button>
                   <Button size="sm" variant="dangerGhost" onClick={() => setDeleteTarget(template)}><Trash2 className="size-4" />Supprimer</Button>
                 </div>
               </Card>
@@ -265,10 +284,23 @@ export function EnduranceTemplatesPage() {
         onCancel={() => setDeleteTarget(undefined)}
         onConfirm={() => {
           if (!deleteTarget) return;
-          void deleteEnduranceTemplate(deleteTarget.id).then(async () => {
+          const templateId = deleteTarget.id;
+          void deleteEnduranceTemplate(templateId).then(async () => {
+            actionToast.success({
+              key: `endurance-template-delete:${templateId}`,
+              title: 'Modèle d’endurance supprimé',
+            });
             setDeleteTarget(undefined);
             await load();
-          }).catch((error: unknown) => setErrorMessage(error instanceof Error ? error.message : 'Suppression impossible.'));
+          }).catch((error: unknown) => {
+            const fallback = 'Suppression impossible.';
+            setErrorMessage(error instanceof Error ? error.message : fallback);
+            actionToast.error({
+              key: `endurance-template-delete:${templateId}`,
+              error,
+              fallback,
+            });
+          });
         }}
       />
     </section>
