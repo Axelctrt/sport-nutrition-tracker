@@ -122,6 +122,7 @@ export class AutomaticSyncController {
   private settings: AppSettings | undefined;
   private orchestrator: SyncOrchestrator | undefined;
   private orchestratorAccountKey: string | undefined;
+  private identityGeneration = 0;
   private unsubscribeClient: (() => void) | undefined;
   private initializationPromise: Promise<void> | undefined;
   private disposed = false;
@@ -368,15 +369,33 @@ export class AutomaticSyncController {
     return this.connectionType() === 'wifi';
   }
 
+  private replaceOrchestratorForAccount(
+    nextFingerprint: string | undefined,
+  ): void {
+    if (nextFingerprint === this.orchestratorAccountKey) return;
+
+    this.identityGeneration += 1;
+    this.orchestrator?.dispose();
+    this.orchestrator = nextFingerprint
+      ? this.createOrchestrator(nextFingerprint, this.client)
+      : undefined;
+    this.orchestratorAccountKey = nextFingerprint;
+  }
+
+  private isCurrentOperation(
+    generation: number,
+    orchestrator: SyncOrchestrator,
+  ): boolean {
+    return (
+      !this.disposed
+      && generation === this.identityGeneration
+      && orchestrator === this.orchestrator
+    );
+  }
+
   private handleAccountIdentity(snapshot: SyncPrototypeSnapshot): void {
     const nextFingerprint = accountFingerprint(snapshot);
-    if (nextFingerprint !== this.orchestratorAccountKey) {
-      this.orchestrator?.dispose();
-      this.orchestrator = nextFingerprint
-        ? this.createOrchestrator(nextFingerprint, this.client)
-        : undefined;
-      this.orchestratorAccountKey = nextFingerprint;
-    }
+    this.replaceOrchestratorForAccount(nextFingerprint);
     this.previousFingerprint = nextFingerprint;
     this.previousLoggedIn = snapshot.account.isLoggedIn;
     this.updatePreferenceSnapshot();
@@ -389,13 +408,7 @@ export class AutomaticSyncController {
       clientSnapshot.account.isLoggedIn &&
       (!this.previousLoggedIn || nextFingerprint !== this.previousFingerprint);
 
-    if (nextFingerprint !== this.orchestratorAccountKey) {
-      this.orchestrator?.dispose();
-      this.orchestrator = nextFingerprint
-        ? this.createOrchestrator(nextFingerprint, this.client)
-        : undefined;
-      this.orchestratorAccountKey = nextFingerprint;
-    }
+    this.replaceOrchestratorForAccount(nextFingerprint);
 
     this.previousLoggedIn = clientSnapshot.account.isLoggedIn;
     this.previousFingerprint = nextFingerprint;
@@ -441,7 +454,9 @@ export class AutomaticSyncController {
 
   private async triggerLifecycle(source: SyncOrchestratorSource): Promise<void> {
     const domainIds = this.eligibleDomainIds();
-    if (!this.orchestrator || domainIds.length === 0) return;
+    const orchestrator = this.orchestrator;
+    if (!orchestrator || domainIds.length === 0) return;
+    const generation = this.identityGeneration;
 
     this.updateSnapshot({
       lastTriggerSource: source,
@@ -450,12 +465,13 @@ export class AutomaticSyncController {
     });
 
     try {
-      const result = await this.orchestrator.schedule({
+      const result = await orchestrator.schedule({
         operation: 'analyze',
         source,
         domainIds,
         delayMs: this.lifecycleDebounceMs,
       });
+      if (!this.isCurrentOperation(generation, orchestrator)) return;
       this.updateSnapshot({
         lastCompletedAt: result.completedAt,
         ...(result.failedDomainIds.length > 0
@@ -465,7 +481,7 @@ export class AutomaticSyncController {
           : { errorMessage: undefined }),
       });
     } catch (error) {
-      if (this.disposed) return;
+      if (!this.isCurrentOperation(generation, orchestrator)) return;
       this.updateSnapshot({
         errorMessage:
           error instanceof Error
@@ -479,11 +495,13 @@ export class AutomaticSyncController {
     requestedDomainIds: readonly SyncOrchestratorDomainId[],
   ): Promise<void> {
     const allowedDomainIds = this.eligibleDomainIds();
-    if (!this.orchestrator || allowedDomainIds.length === 0) return;
+    const orchestrator = this.orchestrator;
+    if (!orchestrator || allowedDomainIds.length === 0) return;
     if (hasActiveDomainOperation(this.client.getSnapshot())) return;
 
     const domainIds = normalizeDomains(requestedDomainIds, allowedDomainIds);
     if (domainIds.length === 0) return;
+    const generation = this.identityGeneration;
 
     const clientSnapshot = this.client.getSnapshot();
     const hasCleanBaseline = domainIds.every(
@@ -500,12 +518,13 @@ export class AutomaticSyncController {
     });
 
     try {
-      const result = await this.orchestrator.schedule({
+      const result = await orchestrator.schedule({
         operation,
         source: 'local-change',
         domainIds,
         delayMs: this.localChangeDebounceMs,
       });
+      if (!this.isCurrentOperation(generation, orchestrator)) return;
       this.updateSnapshot({
         lastCompletedAt: result.completedAt,
         ...(result.failedDomainIds.length > 0
@@ -515,7 +534,7 @@ export class AutomaticSyncController {
           : { errorMessage: undefined }),
       });
     } catch (error) {
-      if (this.disposed) return;
+      if (!this.isCurrentOperation(generation, orchestrator)) return;
       this.updateSnapshot({
         errorMessage:
           error instanceof Error

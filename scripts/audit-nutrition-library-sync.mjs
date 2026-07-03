@@ -84,8 +84,8 @@ if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*7/.test(backup)) {
 }
 
 const packageJson = JSON.parse(read('package.json'));
-if (!/^0\.(?:20|21|22)\.\d+$/.test(packageJson.version)) {
-  fail(`la version doit appartenir aux séries stables 0.20.x, 0.21.x ou 0.22.x, reçue ${String(packageJson.version)}.`);
+if (!/^0\.(?:20|21|22|23)\.\d+$/.test(packageJson.version)) {
+  fail(`la version doit appartenir aux séries stables 0.20.x, 0.21.x, 0.22.x ou 0.23.x, reçue ${String(packageJson.version)}.`);
 }
 const scripts = packageJson.scripts ?? {};
 if (scripts['audit:nutrition-library-sync'] !== 'node scripts/audit-nutrition-library-sync.mjs') {

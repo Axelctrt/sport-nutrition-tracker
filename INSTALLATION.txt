@@ -1,62 +1,63 @@
-SPORTPILOT 0.22.0
+SPORTPILOT 0.23.0
 
 PRÉPARATION
 
-1. Vérifier que la branche feature/full-account-continuity-0.22.0 est propre et à jour.
+1. Vérifier que la branche feature/automatic-sync-resilience-0.23.0 est propre et à jour.
 2. Arrêter Vite avec Ctrl + C et fermer les onglets de test.
 3. Exporter une sauvegarde JSON v7 récente de l’espace invité et du compte principal.
-4. Vérifier que le centre de synchronisation affiche 9/9 rubriques à jour et 0 différence.
+4. Vérifier que le centre de synchronisation affiche 9/9 rubriques à jour.
 5. Ne supprimer aucune base IndexedDB, donnée Safari ou donnée Dexie Cloud.
 6. Vérifier que .env.local, dexie-cloud.json et dexie-cloud.key restent ignorés par Git.
-7. Vérifier les origines autorisées Dexie Cloud avec npx dexie-cloud whitelist.
 
 VALIDATION AUTOMATIQUE
 
-8. Installer les dépendances avec npm ci.
-9. Lancer npm run release:verify.
-10. Lancer npm run test:e2e.
-11. Lancer npm run audit:full-account-continuity-release.
-12. Vérifier que Paramètres affiche la version 0.22.0.
-13. Vérifier l’absence d’archive, de journal et de fichier de patch dans git status.
+7. Installer les dépendances avec npm ci.
+8. Lancer npm run release:verify.
+9. Lancer npm run test:e2e.
+10. Lancer npm run audit:automatic-sync-release.
+11. Vérifier que Paramètres affiche la version 0.23.0.
+12. Vérifier l’absence d’archive, de journal et de fichier de patch dans git status.
 
-VALIDATION DU CENTRE UNIFIÉ
+VALIDATION DE LA SYNCHRONISATION AUTOMATIQUE
 
-14. Ouvrir Paramètres puis Synchronisation des données.
-15. Lancer Analyser tout et confirmer 9/9 rubriques à jour.
-16. Modifier une donnée dans plusieurs domaines, puis confirmer que seules les rubriques concernées divergent.
-17. Lancer Synchroniser tout, confirmer l’opération et vérifier le retour à 0 différence.
-18. Vérifier qu’un détail s’ouvre seul, se ferme et replace la vue sur Synchronisation des données.
-19. Simuler une rubrique en échec et vérifier la relance ciblée sans rejouer les succès.
-20. Couper le réseau, vérifier les actions cloud désactivées, puis rétablir le réseau.
+13. Activer la synchronisation automatique pour le compte courant.
+14. Sélectionner Toute connexion.
+15. Modifier une donnée locale puis confirmer une opération Automatique · modification locale.
+16. Revenir au premier plan et confirmer une analyse sans boucle répétée.
+17. Couper le réseau, modifier une donnée puis vérifier Hors connexion ou Modifications locales en attente.
+18. Rétablir le réseau et vérifier Automatique · reconnexion.
+19. Vérifier que la dernière réussite, le dernier échec et la source sont visibles.
+20. Vérifier qu’une relance ciblée ne rejoue que les domaines en échec.
 
-VALIDATION MULTIAPPAREILS ET RESTAURATION
+VALIDATION MULTIAPPAREILS
 
-21. Sur le premier appareil, synchroniser le profil, les réglages, la progression et les routines.
-22. Sur le second appareil, récupérer les mêmes états et confirmer 0 différence.
-23. Vérifier que le mode clair ou sombre reste local à chaque appareil.
-24. Créer des accomplissements différents sur les deux appareils et confirmer leur union sans perte.
-25. Dans un profil navigateur vierge, détecter puis restaurer le compte depuis le cloud.
-26. Vérifier les neuf rubriques après restauration.
-27. Vérifier que de vraies données locales bloquent une restauration globale destructive.
-28. Vérifier l’isolation complète lors d’un changement de compte.
+21. Synchroniser les deux appareils avec une base identique.
+22. Créer des modifications différentes dans une même rubrique.
+23. Vérifier l’apparition de l’avertissement de divergence.
+24. Examiner les différences et confirmer qu’aucun remplacement silencieux n’a lieu.
+25. Tester une perte réseau pendant une synchronisation et vérifier la reprise ciblée.
+26. Changer de compte pendant une opération puis confirmer l’isolation stricte des historiques et états.
+27. Modifier l’espace invité après déconnexion et confirmer qu’aucune synchronisation automatique ne part vers un compte.
+28. Restaurer un compte puis effectuer immédiatement une modification locale.
+29. Vérifier la convergence et l’absence de doublon ou de boucle d’horodatage.
 
 VALIDATION IPHONE
 
-29. Mettre à jour la PWA sur iPhone 15 sous iOS 26.
-30. Vérifier la version 0.22.0 et le centre 9/9.
-31. Tester une synchronisation, une restauration vierge et un retour hors ligne.
-32. Vérifier la reprise réseau sans suppression ni reconnexion injustifiée.
-33. Vérifier la navigation Rappels, Corbeille et Paramètres avec une seule sélection active.
+30. Mettre à jour la PWA sur iPhone 15 sous iOS 26.
+31. Vérifier la version 0.23.0 et le centre 9/9.
+32. Tester modification locale, arrière-plan/premier plan et mode avion.
+33. Vérifier la reprise réseau, l’historique et l’absence de débordement horizontal.
+34. Vérifier qu’aucune tâche en arrière-plan n’est nécessaire.
 
 PUBLICATION
 
-34. Committer E4 sur feature/full-account-continuity-0.22.0.
-35. Fusionner manuellement la branche dans main avec un commit de fusion explicite.
-36. Relancer npm run release:verify sur main.
-37. Pousser main puis créer le tag annoté v0.22.0.
-38. Fusionner ensuite main dans develop avec un commit de synchronisation explicite.
-39. Pousser develop et supprimer la branche de fonctionnalité locale et distante.
-40. Vérifier le déploiement de production sur ordinateur et iPhone.
+35. Committer F4 sur feature/automatic-sync-resilience-0.23.0.
+36. Fusionner manuellement la branche dans main avec un commit de fusion explicite.
+37. Relancer npm run release:verify sur main.
+38. Pousser main puis créer le tag annoté v0.23.0.
+39. Fusionner ensuite main dans develop avec un commit de synchronisation explicite.
+40. Pousser develop et supprimer la branche de fonctionnalité locale et distante.
+41. Vérifier le déploiement public sur ordinateur et iPhone.
 
 VERSIONS DE DONNÉES
 
@@ -66,4 +67,4 @@ Schéma Dexie principal : version 8.
 Sauvegarde JSON : version 7.
 Registre local des espaces : version 1.
 
-E4 ne nécessite aucune migration de données. Le runtime v10 peut demander un code OTP seulement lors de sa première utilisation sur un appareil.
+SportPilot 0.23.0 ne nécessite aucune migration de données.

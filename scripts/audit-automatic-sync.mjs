@@ -135,8 +135,8 @@ if (failures.length === 0) {
   if (!cloud.includes('SYNC_PROTOTYPE_DATABASE_VERSION = 10')) {
     fail('Le runtime cloud doit rester en v10.');
   }
-  if (JSON.parse(read('package.json')).version !== '0.22.0') {
-    fail('F2 ne doit pas encore publier la version 0.23.0.');
+  if (JSON.parse(read('package.json')).version !== '0.23.0') {
+    fail('La publication F4 doit exposer la version 0.23.0.');
   }
 }
 

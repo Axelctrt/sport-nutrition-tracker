@@ -301,6 +301,10 @@ export function createSyncOrchestrator(
         return emptyRunResult(request.operation, request.source, startedAt);
       }
 
+      if (disposed) {
+        throw new Error('L’orchestrateur de synchronisation est arrêté.');
+      }
+
       if (!isOnline()) {
         for (const domainId of request.domainIds) {
           updateDomain(domainId, {
@@ -329,6 +333,7 @@ export function createSyncOrchestrator(
           source: request.source,
           domainIds: [...request.domainIds],
         };
+        appendSyncOperationHistory(accountKey, result);
         return result;
       }
 
@@ -344,7 +349,28 @@ export function createSyncOrchestrator(
       const failedDomainIds: SyncOrchestratorDomainId[] = [];
       const domainResults: SyncOrchestratorDomainResult[] = [];
 
-      for (const domainId of request.domainIds) {
+      for (const [index, domainId] of request.domainIds.entries()) {
+        if (disposed) {
+          const interruptedAt = now().toISOString();
+          for (const interruptedDomainId of request.domainIds.slice(index)) {
+            const errorMessage = 'L’opération a été interrompue avant la fin.';
+            updateDomain(interruptedDomainId, {
+              status: 'temporary-failure',
+              errorMessage,
+              lastOperation: request.operation,
+              lastSource: request.source,
+              updatedAt: interruptedAt,
+            });
+            failedDomainIds.push(interruptedDomainId);
+            domainResults.push({
+              domainId: interruptedDomainId,
+              status: 'temporary-failure',
+              errorMessage,
+            });
+          }
+          break;
+        }
+
         const adapter = adapters.get(domainId);
         if (!adapter) continue;
 

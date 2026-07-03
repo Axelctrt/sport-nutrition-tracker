@@ -1,3 +1,4 @@
+import { readSyncOperationHistory } from '@/application/sync/syncOperationHistory';
 import {
   createSyncOrchestrator,
   type SyncOrchestratorDomainAdapter,
@@ -209,4 +210,125 @@ describe('syncOrchestrator', () => {
     expect(result.domainResults[0]).toMatchObject({ status: 'offline' });
     expect(orchestrator.getSnapshot().domains.weights.status).toBe('offline');
   });
+
+  it('autorise deux comptes différents à progresser sans verrou global', async () => {
+    const firstGate = deferred<void>();
+    const secondGate = deferred<void>();
+    const order: string[] = [];
+    const first = createSyncOrchestrator({
+      accountKey: 'account-a',
+      domains: [adapter('weights', {
+        analyze: vi.fn(async () => {
+          order.push('a:start');
+          await firstGate.promise;
+          order.push('a:end');
+          return { differingEntityCount: 0 };
+        }),
+      })],
+    });
+    const second = createSyncOrchestrator({
+      accountKey: 'account-b',
+      domains: [adapter('activities', {
+        analyze: vi.fn(async () => {
+          order.push('b:start');
+          await secondGate.promise;
+          order.push('b:end');
+          return { differingEntityCount: 0 };
+        }),
+      })],
+    });
+
+    const firstRun = first.run({ operation: 'analyze' });
+    const secondRun = second.run({ operation: 'analyze' });
+    await vi.waitFor(() => {
+      expect(order).toEqual(expect.arrayContaining(['a:start', 'b:start']));
+    });
+
+    firstGate.resolve();
+    secondGate.resolve();
+    await Promise.all([firstRun, secondRun]);
+    expect(order.indexOf('a:end')).toBeGreaterThan(order.indexOf('a:start'));
+    expect(order.indexOf('b:end')).toBeGreaterThan(order.indexOf('b:start'));
+  });
+
+  it('journalise aussi une tentative bloquée hors connexion', async () => {
+    localStorage.clear();
+    const orchestrator = createSyncOrchestrator({
+      accountKey: 'offline-history',
+      domains: [adapter('weights')],
+      isOnline: () => false,
+    });
+
+    await orchestrator.run({
+      operation: 'sync',
+      source: 'network-restored',
+    });
+
+    expect(readSyncOperationHistory('offline-history')).toEqual([
+      expect.objectContaining({
+        operation: 'sync',
+        source: 'network-restored',
+        outcome: 'failure',
+        failedDomainIds: ['weights'],
+      }),
+    ]);
+  });
+
+  it('conserve les succès acquis lors d’une perte réseau puis relance seulement les échecs', async () => {
+    let online = true;
+    const weightsSync = vi.fn(async () => {
+      online = false;
+    });
+    const activitiesSync = vi.fn(async () => {
+      if (!online) throw new Error('Connexion interrompue pendant l’opération.');
+    });
+    const orchestrator = createSyncOrchestrator({
+      accountKey: 'network-loss',
+      domains: [
+        adapter('weights', { synchronize: weightsSync }),
+        adapter('activities', { synchronize: activitiesSync }),
+      ],
+      isOnline: () => online,
+    });
+
+    const first = await orchestrator.run({ operation: 'sync' });
+    expect(first.completedDomainIds).toEqual(['weights']);
+    expect(first.failedDomainIds).toEqual(['activities']);
+
+    online = true;
+    const retry = await orchestrator.retryFailures();
+    expect(retry?.completedDomainIds).toEqual(['activities']);
+    expect(weightsSync).toHaveBeenCalledTimes(1);
+    expect(activitiesSync).toHaveBeenCalledTimes(2);
+  });
+
+  it('n’entame pas un nouveau domaine après l’arrêt pendant une opération', async () => {
+    const gate = deferred<void>();
+    const weightsSync = vi.fn(async () => gate.promise);
+    const activitiesSync = vi.fn(async () => undefined);
+    const orchestrator = createSyncOrchestrator({
+      accountKey: 'closing-application',
+      domains: [
+        adapter('weights', { synchronize: weightsSync }),
+        adapter('activities', { synchronize: activitiesSync }),
+      ],
+    });
+
+    const run = orchestrator.run({ operation: 'sync' });
+    await vi.waitFor(() => expect(weightsSync).toHaveBeenCalledOnce());
+    orchestrator.dispose();
+    gate.resolve();
+
+    const result = await run;
+    expect(result.completedDomainIds).toEqual(['weights']);
+    expect(result.failedDomainIds).toEqual(['activities']);
+    expect(activitiesSync).not.toHaveBeenCalled();
+    expect(result.domainResults).toContainEqual(
+      expect.objectContaining({
+        domainId: 'activities',
+        status: 'temporary-failure',
+      }),
+    );
+  });
+
 });

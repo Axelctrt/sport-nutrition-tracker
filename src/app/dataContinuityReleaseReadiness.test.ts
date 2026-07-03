@@ -7,9 +7,9 @@ import {
 } from '@/infrastructure/sync-prototype/SyncPrototypeDatabase';
 import { syncPublicDeploymentConfig } from '@/infrastructure/sync-prototype/syncPublicDeploymentConfig';
 
-describe('publication de la continuité complète du compte 0.22.0', () => {
+describe('publication de la continuité complète du compte 0.23.0', () => {
   it('publie la version stable attendue', () => {
-    expect(__APP_VERSION__).toBe('0.22.0');
+    expect(__APP_VERSION__).toBe('0.23.0');
     expect(__APP_VERSION__).toMatch(/^\d+\.\d+\.\d+$/);
   });
 
