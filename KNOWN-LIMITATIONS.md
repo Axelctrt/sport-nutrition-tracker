@@ -42,6 +42,6 @@ Open Food Facts et Dexie Cloud dépendent du réseau et de leur disponibilité. 
 
 SportPilot 0.22.0 utilise le runtime Dexie Cloud v10 et le runtime local `sportpilot-sync-runtime-0.20.0-v10`. La base métier reste en Dexie v8, la sauvegarde en JSON v7 et le registre local des espaces en v1.
 
-## Orchestrateur F1
+## Synchronisation automatique F2
 
-Le socle 0.23.0 F1 est utilisé par le centre manuel, mais aucun déclencheur automatique au démarrage, au retour au premier plan, au retour du réseau ou après une modification locale n’est encore activé. Les services existants indiquent un nombre de différences sans toujours préciser leur origine ; dans ce cas, l’orchestrateur classe la situation comme nécessitant une action utilisateur.
+L’automatisation 0.23.0 F2 fonctionne lorsque SportPilot est ouvert ou revient au premier plan. Elle ne dépend pas d’une tâche PWA en arrière-plan. En mode Wi-Fi uniquement, certains navigateurs — notamment iOS — ne publient pas le type de connexion ; SportPilot bloque alors volontairement l’automatisation et conserve les actions manuelles. Une modification locale n’est écrite automatiquement que si une analyse antérieure du domaine était propre ; sinon, une analyse est réalisée sans choix destructeur.

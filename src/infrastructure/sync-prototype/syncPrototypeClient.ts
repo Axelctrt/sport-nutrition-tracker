@@ -82,6 +82,7 @@ import {
   type RealAccountPreferencesSyncPreview,
   type RealAccountPreferencesSyncResult,
 } from '@/infrastructure/sync-prototype/realAccountPreferencesSyncService';
+import { notifyCloudAccountRestored } from '@/application/sync/automaticSyncEvents';
 import {
   previewRealRewardsRoutinesSync,
   synchronizeRealRewardsRoutines,
@@ -795,13 +796,15 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
       this.database,
       context.currentUserId,
     );
-    return applyPreparedCloudAccountRestore(
+    const result = await applyPreparedCloudAccountRestore(
       prepared,
       runtime,
       context.localDatabase
         ? { targetDatabase: context.localDatabase }
         : {},
     );
+    notifyCloudAccountRestored();
+    return result;
   }
 
   async analyzeRealWeights(): Promise<RealWeightSyncPreview> {

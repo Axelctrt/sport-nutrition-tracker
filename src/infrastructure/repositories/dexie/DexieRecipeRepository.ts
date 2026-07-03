@@ -41,7 +41,7 @@ export class DexieRecipeRepository implements RecipeRepository {
         await this.database.recipes.add(recipe);
         return recipe;
       },
-    );
+      { syncDomainIds: ['nutrition-library'], syncReason: 'recipe-write' });
   }
 
   update(id: EntityId, changes: EntityChanges<Recipe>): Promise<Recipe> {
@@ -61,7 +61,7 @@ export class DexieRecipeRepository implements RecipeRepository {
           changes,
         );
       },
-    );
+      { syncDomainIds: ['nutrition-library'], syncReason: 'recipe-write' });
   }
 
   listIngredients(recipeId: EntityId): Promise<RecipeIngredient[]> {
@@ -109,7 +109,7 @@ export class DexieRecipeRepository implements RecipeRepository {
           return entities;
         },
       ),
-    );
+      { syncDomainIds: ['nutrition-library'], syncReason: 'recipe-write' });
   }
 
   saveWithIngredients(
@@ -171,6 +171,6 @@ export class DexieRecipeRepository implements RecipeRepository {
       async () => {
         await moveRecipeToTrash(this.database, id);
       },
-    );
+      { syncDomainIds: ['nutrition-library'], syncReason: 'recipe-write' });
   }
 }

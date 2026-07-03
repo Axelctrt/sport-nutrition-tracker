@@ -86,7 +86,7 @@ export class DexieTargetRepository implements TargetRepository {
         await this.database.dailyTargets.add(target);
         return target;
       },
-    );
+      { syncDomainIds: ['nutrition-journal'], syncReason: 'daily-target-write' });
   }
 
   getJournalStatus(date: LocalDate): Promise<DailyJournalStatus | undefined> {
@@ -121,6 +121,6 @@ export class DexieTargetRepository implements TargetRepository {
         await this.database.dailyJournalStatuses.add(status);
         return status;
       },
-    );
+      { syncDomainIds: ['nutrition-journal'], syncReason: 'daily-target-write' });
   }
 }

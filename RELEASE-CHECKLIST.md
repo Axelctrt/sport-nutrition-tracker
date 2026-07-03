@@ -88,3 +88,17 @@
 - [ ] Aucune synchronisation automatique n’est encore activée.
 - [ ] `npm run audit:sync-orchestrator` réussit.
 - [ ] Les versions cloud, métier et sauvegarde restent inchangées.
+
+## Roadmap 0.23.0 — F2 avant commit
+
+- [ ] L’automatisation reste liée explicitement au compte autorisé sur l’appareil.
+- [ ] Le démarrage et le retour au premier plan déclenchent une analyse, jamais une écriture aveugle.
+- [ ] Le retour du réseau, la connexion et la restauration déclenchent une analyse.
+- [ ] Une modification locale avec base propre est synchronisée après anti-rebond.
+- [ ] Sans base propre, la modification locale déclenche seulement une analyse.
+- [ ] Le mode Wi-Fi uniquement bloque lorsque le type de connexion est inconnu.
+- [ ] L’ancien automatisme des pesées est désactivé lors de l’activation globale.
+- [ ] Le centre manuel reste utilisable à tout moment.
+- [ ] Aucun traitement PWA en arrière-plan n’est requis.
+- [ ] `npm run audit:automatic-sync` réussit.
+- [ ] Les versions cloud v10, métier v8 et sauvegarde v7 restent inchangées.

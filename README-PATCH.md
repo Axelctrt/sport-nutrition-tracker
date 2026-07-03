@@ -44,3 +44,12 @@ Vérification ciblée :
 npx vitest run src/application/sync/syncOrchestrator.test.ts src/features/settings/components/UnifiedSyncCenterPanel.test.tsx src/app/syncOrchestratorReadiness.test.ts
 npm run audit:sync-orchestrator
 ```
+
+## Développement 0.23.0 F2
+
+F2 active une automatisation maîtrisée lorsque SportPilot est ouvert : analyse au démarrage, au retour au premier plan, au retour du réseau, après connexion et après restauration. Les modifications locales sont regroupées par anti-rebond et ne sont écrites automatiquement que depuis une analyse propre.
+
+```powershell
+npx vitest run src/application/sync/automaticSyncController.test.ts src/features/settings/components/AutomaticSyncSettingsPanel.test.tsx src/app/automaticSyncReadiness.test.ts
+npm run audit:automatic-sync
+```

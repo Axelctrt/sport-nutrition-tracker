@@ -7,6 +7,7 @@ import type {
   NewEntity,
 } from '@/domain/models/common';
 import type { CrudRepository } from '@/infrastructure/repositories/contracts/CrudRepository';
+import type { SyncOrchestratorDomainId } from '@/application/sync/syncOrchestrator';
 import { runRepositoryOperation } from '@/infrastructure/repositories/dexie/repositoryOperation';
 import { updateStoredEntity } from '@/infrastructure/repositories/dexie/updateStoredEntity';
 import { createEntity } from '@/shared/utils/entities';
@@ -14,10 +15,16 @@ import { createEntity } from '@/shared/utils/entities';
 export class DexieCrudRepository<T extends EntityMetadata> implements CrudRepository<T> {
   protected readonly table: Table<T, EntityId>;
   protected readonly entityLabel: string;
+  protected readonly syncDomainIds: readonly SyncOrchestratorDomainId[];
 
-  constructor(table: Table<T, EntityId>, entityLabel: string) {
+  constructor(
+    table: Table<T, EntityId>,
+    entityLabel: string,
+    syncDomainIds: readonly SyncOrchestratorDomainId[] = [],
+  ) {
     this.table = table;
     this.entityLabel = entityLabel;
+    this.syncDomainIds = syncDomainIds;
   }
 
   getById(id: EntityId): Promise<T | undefined> {
@@ -45,6 +52,7 @@ export class DexieCrudRepository<T extends EntityMetadata> implements CrudReposi
         await this.table.add(entity);
         return entity;
       },
+      { syncDomainIds: this.syncDomainIds, syncReason: 'crud-create' },
     );
   }
 
@@ -61,6 +69,7 @@ export class DexieCrudRepository<T extends EntityMetadata> implements CrudReposi
 
         return updateStoredEntity(this.table, current, changes);
       },
+      { syncDomainIds: this.syncDomainIds, syncReason: 'crud-update' },
     );
   }
 
@@ -69,6 +78,7 @@ export class DexieCrudRepository<T extends EntityMetadata> implements CrudReposi
       'delete',
       `Impossible de supprimer ${this.entityLabel}.`,
       () => this.table.delete(id),
+      { syncDomainIds: this.syncDomainIds, syncReason: 'crud-delete' },
     );
   }
 }

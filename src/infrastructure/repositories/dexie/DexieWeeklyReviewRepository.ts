@@ -42,7 +42,7 @@ export class DexieWeeklyReviewRepository implements WeeklyReviewRepository {
       );
       await this.database.weeklyReviews.add(review);
       return review;
-    });
+    }, { syncDomainIds: ['nutrition-tracking'], syncReason: 'weekly-review-write' });
   }
 
   accept(
@@ -76,7 +76,7 @@ export class DexieWeeklyReviewRepository implements WeeklyReviewRepository {
           return { review, adjustment };
         },
       )
-    ));
+    ), { syncDomainIds: ['nutrition-tracking'], syncReason: 'weekly-review-write' });
   }
 
   reject(weekStart: LocalDate): Promise<WeeklyReview> {
@@ -90,7 +90,7 @@ export class DexieWeeklyReviewRepository implements WeeklyReviewRepository {
         { decisionStatus: 'rejected', decidedAt },
         decidedAt,
       );
-    });
+    }, { syncDomainIds: ['nutrition-tracking'], syncReason: 'weekly-review-write' });
   }
 
   createAdjustment(data: NewEntity<AcceptedCalorieAdjustment>): Promise<AcceptedCalorieAdjustment> {
@@ -98,7 +98,7 @@ export class DexieWeeklyReviewRepository implements WeeklyReviewRepository {
       const adjustment = createEntity<AcceptedCalorieAdjustment>(data);
       await this.database.acceptedCalorieAdjustments.add(adjustment);
       return adjustment;
-    });
+    }, { syncDomainIds: ['nutrition-tracking'], syncReason: 'weekly-review-write' });
   }
 
   listAdjustments(): Promise<AcceptedCalorieAdjustment[]> {

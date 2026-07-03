@@ -21,6 +21,10 @@ import type { SettingsRepository } from '@/infrastructure/repositories/contracts
 import { runRepositoryOperation } from '@/infrastructure/repositories/dexie/repositoryOperation';
 import { updateStoredEntity } from '@/infrastructure/repositories/dexie/updateStoredEntity';
 import { notifyAutomaticWeightSyncPreferenceChanged } from '@/infrastructure/sync-prototype/weightSyncEvents';
+import {
+  notifyAutomaticAccountSyncPreferenceChanged,
+} from '@/application/sync/automaticSyncEvents';
+import { notifySyncLocalDataChanged } from '@/application/sync/syncLocalChangeEvents';
 
 const deviceSettingKeys = new Set<keyof AppSettings>([
   'theme',
@@ -31,6 +35,9 @@ const deviceSettingKeys = new Set<keyof AppSettings>([
   'restTimerVibrationEnabled',
   'automaticWeightSyncEnabled',
   'automaticWeightSyncAccountFingerprint',
+  'automaticAccountSyncEnabled',
+  'automaticAccountSyncConnectionMode',
+  'automaticAccountSyncAccountFingerprint',
   'lastBackupExportedAt',
   'lastBackupAppVersion',
   'lastBackupSchemaVersion',
@@ -135,6 +142,20 @@ export class DexieSettingsRepository implements SettingsRepository {
         notifyAutomaticWeightSyncPreferenceChanged(
           composed.automaticWeightSyncEnabled,
         );
+        if (
+          'automaticAccountSyncEnabled' in deviceChanges ||
+          'automaticAccountSyncConnectionMode' in deviceChanges ||
+          'automaticAccountSyncAccountFingerprint' in deviceChanges
+        ) {
+          notifyAutomaticAccountSyncPreferenceChanged();
+        }
+        const changedDomains = [
+          ...(hasSyncableUserChanges ? ['account-preferences' as const] : []),
+          ...(hasReminderChanges ? ['rewards-routines' as const] : []),
+        ];
+        if (changedDomains.length > 0) {
+          notifySyncLocalDataChanged(changedDomains, 'settings-update');
+        }
         return composed;
       },
     );
@@ -164,6 +185,11 @@ export class DexieSettingsRepository implements SettingsRepository {
         const composed = composeAppSettings(user, device);
         notifyAutomaticWeightSyncPreferenceChanged(
           composed.automaticWeightSyncEnabled,
+        );
+        notifyAutomaticAccountSyncPreferenceChanged();
+        notifySyncLocalDataChanged(
+          ['account-preferences', 'rewards-routines'],
+          'settings-reset',
         );
         return composed;
       },

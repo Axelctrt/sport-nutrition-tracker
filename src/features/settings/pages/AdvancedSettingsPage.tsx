@@ -33,6 +33,7 @@ import { NutritionLibrarySyncSettingsPanel } from '@/features/settings/component
 import { NutritionTrackingSyncSettingsPanel } from '@/features/settings/components/NutritionTrackingSyncSettingsPanel';
 import { WeightSyncSettingsPanel } from '@/features/settings/components/WeightSyncSettingsPanel';
 import { AccountPreferencesSyncSettingsPanel } from '@/features/settings/components/AccountPreferencesSyncSettingsPanel';
+import { AutomaticSyncSettingsPanel } from '@/features/settings/components/AutomaticSyncSettingsPanel';
 import { RewardsRoutinesSyncSettingsPanel } from '@/features/settings/components/RewardsRoutinesSyncSettingsPanel';
 import {
   UnifiedSyncCenterPanel,
@@ -549,6 +550,7 @@ export function AdvancedSettingsPage() {
           className="scroll-mt-24"
         >
           <div className="space-y-5">
+            <AutomaticSyncSettingsPanel />
             <div id="unified-sync-center" className="scroll-mt-24">
               <UnifiedSyncCenterPanel
                 activeDetailId={selectedSyncDetailId}
