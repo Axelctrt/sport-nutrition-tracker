@@ -1,3 +1,4 @@
+import { appendSyncOperationHistory } from '@/application/sync/syncOperationHistory';
 export type SyncOrchestratorDomainId =
   | 'account-preferences'
   | 'rewards-routines'
@@ -433,7 +434,7 @@ export function createSyncOrchestrator(
           }
         : undefined;
 
-      return {
+      const result: SyncOrchestratorRunResult = {
         operation: request.operation,
         source: request.source,
         startedAt,
@@ -442,6 +443,8 @@ export function createSyncOrchestrator(
         failedDomainIds,
         domainResults,
       };
+      appendSyncOperationHistory(accountKey, result);
+      return result;
     },
   );
 

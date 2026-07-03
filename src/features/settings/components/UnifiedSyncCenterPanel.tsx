@@ -7,6 +7,8 @@ import {
   RefreshCw,
   Search,
   WifiOff,
+  History,
+  ShieldAlert,
 } from 'lucide-react';
 import {
   useCallback,
@@ -18,6 +20,13 @@ import {
 import { Link } from 'react-router-dom';
 
 import { routePaths } from '@/app/routePaths';
+import {
+  readSyncOperationHistory,
+  summarizeSyncOperationHistory,
+  syncSourceLabel,
+  SYNC_OPERATION_HISTORY_CHANGED_EVENT,
+  type SyncOperationHistoryEntry,
+} from '@/application/sync/syncOperationHistory';
 import {
   createSyncOrchestrator,
   type SyncOrchestratorDomainAdapter,
@@ -576,6 +585,17 @@ function statusClasses(status: DomainStatus): string {
   }
 }
 
+
+function historyOperationLabel(entry: SyncOperationHistoryEntry): string {
+  return entry.operation === 'sync' ? 'Synchronisation' : 'Analyse';
+}
+
+function historyOutcomeLabel(entry: SyncOperationHistoryEntry): string {
+  if (entry.outcome === 'success') return 'Réussie';
+  if (entry.outcome === 'partial-failure') return 'Partiellement réussie';
+  return 'Échec';
+}
+
 export function UnifiedSyncCenterPanel({
   client: clientOverride,
   activeDetailId,
@@ -636,12 +656,26 @@ export function UnifiedSyncCenterPanel({
   >();
   const storageKey = useMemo(() => historyStorageKey(snapshot), [snapshot]);
   const [history, setHistory] = useState<SyncHistory>(() => readHistory(storageKey));
+  const [operationHistory, setOperationHistory] = useState<readonly SyncOperationHistoryEntry[]>(
+    () => readSyncOperationHistory(accountKey),
+  );
+  const operationSummary = useMemo(
+    () => summarizeSyncOperationHistory(operationHistory),
+    [operationHistory],
+  );
 
   useEffect(() => () => orchestrator?.dispose(), [orchestrator]);
 
   useEffect(() => {
     setHistory(readHistory(storageKey));
   }, [storageKey]);
+
+  useEffect(() => {
+    const refresh = () => setOperationHistory(readSyncOperationHistory(accountKey));
+    refresh();
+    window.addEventListener(SYNC_OPERATION_HISTORY_CHANGED_EVENT, refresh);
+    return () => window.removeEventListener(SYNC_OPERATION_HISTORY_CHANGED_EVENT, refresh);
+  }, [accountKey]);
 
   useEffect(() => {
     const updateOnlineState = () => setIsOnline(navigator.onLine !== false);
@@ -939,6 +973,87 @@ export function UnifiedSyncCenterPanel({
             {feedback.message}
           </InlineNotice>
         ) : null}
+      </div>
+
+      {differingDomains.length > 0 ? (
+        <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950/20 sm:p-5">
+          <div className="flex items-start gap-3">
+            <ShieldAlert aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-amber-700 dark:text-amber-300" />
+            <div>
+              <h4 className="font-semibold text-slate-950 dark:text-white">
+                Des différences existent entre cet appareil et le cloud
+              </h4>
+              <p className="mt-1 text-sm leading-6 text-slate-700 dark:text-slate-300">
+                Examine chaque rubrique avant de choisir. SportPilot ne remplace jamais silencieusement une version divergente.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button variant="secondary" onClick={() => {
+                  const first = differingDomains[0];
+                  if (!first) return;
+                  if (onOpenDetail) onOpenDetail(first.detailId);
+                  else scrollToDetail(first.detailId);
+                }}>
+                  Examiner les différences
+                </Button>
+                <Button onClick={() => setConfirmation({ target: 'all' })} disabled={actionDisabled}>
+                  Fusionner lorsque c’est possible
+                </Button>
+              </div>
+              <p className="mt-3 text-xs text-slate-600 dark:text-slate-400">
+                « Conserver cet appareil » et « Utiliser le cloud » ne sont proposés que dans les détails capables de garantir une résolution directionnelle. Le centre global privilégie la fusion non destructive.
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
+        <div className="border-b border-slate-200 px-4 py-3 dark:border-slate-800 sm:px-5">
+          <div className="flex items-center gap-2">
+            <History aria-hidden="true" className="size-5 text-brand-600" />
+            <h4 className="font-semibold text-slate-950 dark:text-white">Historique récent</h4>
+          </div>
+          <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+            Opérations manuelles et automatiques enregistrées localement pour ce compte.
+          </p>
+        </div>
+        {operationHistory.length === 0 ? (
+          <p className="px-4 py-5 text-sm text-slate-600 dark:text-slate-300 sm:px-5">Aucune opération enregistrée.</p>
+        ) : (
+          <ul className="divide-y divide-slate-200 dark:divide-slate-800">
+            {operationHistory.slice(0, 6).map((entry) => (
+              <li key={entry.id} className="flex flex-col gap-1 px-4 py-3 sm:px-5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="font-semibold text-slate-950 dark:text-white">
+                    {historyOperationLabel(entry)} · {historyOutcomeLabel(entry)}
+                  </p>
+                  <time className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                    {formatTimestamp(entry.completedAt)}
+                  </time>
+                </div>
+                <p className="text-sm text-slate-600 dark:text-slate-300">
+                  {syncSourceLabel(entry.source)} · {entry.completedDomainIds.length} rubrique(s) terminée(s)
+                  {entry.failedDomainIds.length > 0 ? ` · ${entry.failedDomainIds.length} en échec` : ''}
+                  {entry.differingEntityCount > 0 ? ` · ${entry.differingEntityCount} différence(s)` : ''}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
+        <div className="grid gap-3 border-t border-slate-200 p-4 dark:border-slate-800 sm:grid-cols-2 sm:px-5">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Dernière réussite</p>
+            <p className="mt-1 text-sm font-semibold text-slate-950 dark:text-white">
+              {operationSummary.lastSuccessfulSync ? formatTimestamp(operationSummary.lastSuccessfulSync.completedAt) : 'Jamais'}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Dernier échec</p>
+            <p className="mt-1 text-sm font-semibold text-slate-950 dark:text-white">
+              {operationSummary.lastFailure ? formatTimestamp(operationSummary.lastFailure.completedAt) : 'Aucun'}
+            </p>
+          </div>
+        </div>
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">

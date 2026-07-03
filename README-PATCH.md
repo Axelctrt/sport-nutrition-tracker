@@ -53,3 +53,7 @@ F2 active une automatisation maîtrisée lorsque SportPilot est ouvert : analyse
 npx vitest run src/application/sync/automaticSyncController.test.ts src/features/settings/components/AutomaticSyncSettingsPanel.test.tsx src/app/automaticSyncReadiness.test.ts
 npm run audit:automatic-sync
 ```
+
+## Phase 0.23.0 F3 — transparence et historique
+
+Le centre unifié conserve un historique local borné par compte, distingue les opérations manuelles et automatiques, affiche la dernière réussite et le dernier échec, et guide l’examen des divergences sans résolution destructive silencieuse.

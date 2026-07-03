@@ -102,3 +102,11 @@
 - [ ] Aucun traitement PWA en arrière-plan n’est requis.
 - [ ] `npm run audit:automatic-sync` réussit.
 - [ ] Les versions cloud v10, métier v8 et sauvegarde v7 restent inchangées.
+
+## 0.23.0 F3 — transparence de synchronisation
+
+- [ ] L’historique récent distingue les opérations manuelles et automatiques.
+- [ ] La dernière réussite et le dernier échec sont visibles par compte.
+- [ ] Une divergence propose d’examiner les détails avant toute fusion.
+- [ ] Aucun choix directionnel local/cloud n’est simulé lorsqu’il n’est pas garanti par le domaine.
+- [ ] Le journal local reste borné et facultatif.
