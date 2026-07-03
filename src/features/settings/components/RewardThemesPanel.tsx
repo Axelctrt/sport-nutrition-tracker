@@ -1,4 +1,12 @@
-import { CheckCircle2, LockKeyhole, Palette, Trophy } from "lucide-react";
+import {
+  CheckCircle2,
+  Eye,
+  LockKeyhole,
+  Palette,
+  Sparkles,
+  Trophy,
+  X,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 
 import {
@@ -7,28 +15,42 @@ import {
 } from "@/application/rewards/themeAchievementService";
 import {
   activateVisualTheme,
+  clearVisualThemePreview,
+  previewVisualTheme,
   readVisualThemeState,
   type VisualThemeId,
 } from "@/domain/rewards/visualThemes";
-import { Card } from "@/shared/ui/Card";
 import { REWARDS_ROUTINES_CHANGED_EVENT } from "@/infrastructure/sync-prototype/rewardsRoutinesSyncEvents";
+import { Card } from "@/shared/ui/Card";
 import { InlineNotice } from "@/shared/ui/InlineNotice";
 
 interface RewardThemesPanelProps {
   className?: string;
   loadSnapshot?: () => Promise<ThemeAchievementSnapshot>;
   activateTheme?: (themeId: VisualThemeId) => boolean;
+  previewTheme?: (themeId: VisualThemeId) => void;
+  clearPreview?: () => VisualThemeId;
 }
+
+const tierLabels: Record<string, string> = {
+  base: "Base",
+  accessible: "Accessible",
+  advanced: "Avancé",
+  legendary: "Légendaire",
+};
 
 export function RewardThemesPanel({
   className,
   loadSnapshot = loadThemeAchievementSnapshot,
   activateTheme = activateVisualTheme,
+  previewTheme = previewVisualTheme,
+  clearPreview = clearVisualThemePreview,
 }: RewardThemesPanelProps) {
   const [snapshot, setSnapshot] = useState<ThemeAchievementSnapshot>();
   const [activeThemeId, setActiveThemeId] = useState<VisualThemeId>(
     () => readVisualThemeState().activeThemeId,
   );
+  const [previewThemeId, setPreviewThemeId] = useState<VisualThemeId>();
   const [loadError, setLoadError] = useState<string>();
 
   useEffect(() => {
@@ -63,7 +85,21 @@ export function RewardThemesPanel({
   }, [loadSnapshot]);
 
   const handleActivate = (themeId: VisualThemeId) => {
-    if (activateTheme(themeId)) setActiveThemeId(themeId);
+    if (activateTheme(themeId)) {
+      setPreviewThemeId(undefined);
+      setActiveThemeId(themeId);
+    }
+  };
+
+  const handlePreview = (themeId: VisualThemeId) => {
+    previewTheme(themeId);
+    setPreviewThemeId(themeId);
+  };
+
+  const handleClearPreview = () => {
+    const restoredThemeId = clearPreview();
+    setPreviewThemeId(undefined);
+    setActiveThemeId(restoredThemeId);
   };
 
   return (
@@ -83,9 +119,9 @@ export function RewardThemesPanel({
                   Thèmes récompenses
                 </h2>
                 <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                  Débloque de nouvelles palettes en utilisant réellement
-                  SportPilot. Un thème acquis reste disponible, même après un
-                  nettoyage des données de test.
+                  Prévisualise tous les thèmes pendant les tests, puis conserve
+                  uniquement les thèmes réellement débloqués comme choix
+                  permanent.
                 </p>
               </div>
               {snapshot ? (
@@ -98,6 +134,33 @@ export function RewardThemesPanel({
                 </span>
               ) : null}
             </div>
+
+            <InlineNotice
+              className="mt-4"
+              tone="info"
+              title="Mode aperçu disponible"
+              role="status"
+            >
+              Les thèmes verrouillés peuvent être testés visuellement sans être
+              ajoutés aux thèmes acquis. Après validation esthétique, les règles
+              de déblocage resteront seules responsables du déverrouillage.
+            </InlineNotice>
+
+            {previewThemeId ? (
+              <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-fuchsia-200 bg-fuchsia-50 p-3 sm:flex-row sm:items-center sm:justify-between dark:border-fuchsia-900 dark:bg-fuchsia-950/30">
+                <p className="text-sm font-semibold text-fuchsia-950 dark:text-fuchsia-100">
+                  Aperçu actif : {snapshot?.themes.find((progress) => progress.theme.id === previewThemeId)?.theme.name ?? previewThemeId}
+                </p>
+                <button
+                  type="button"
+                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-fuchsia-300 bg-white px-3 py-2 text-sm font-semibold text-fuchsia-900 hover:bg-fuchsia-50 dark:border-fuchsia-800 dark:bg-slate-950 dark:text-fuchsia-100 dark:hover:bg-fuchsia-950/40"
+                  onClick={handleClearPreview}
+                >
+                  <X aria-hidden="true" className="size-4" />
+                  Quitter l’aperçu
+                </button>
+              </div>
+            ) : null}
 
             {loadError ? (
               <InlineNotice
@@ -119,7 +182,8 @@ export function RewardThemesPanel({
             {snapshot ? (
               <div className="mt-4 grid gap-3 lg:grid-cols-2">
                 {snapshot.themes.map((progress) => {
-                  const isActive = activeThemeId === progress.theme.id;
+                  const isActive = activeThemeId === progress.theme.id && !previewThemeId;
+                  const isPreviewed = previewThemeId === progress.theme.id;
                   const remaining = Math.max(
                     0,
                     progress.target - progress.current,
@@ -136,18 +200,34 @@ export function RewardThemesPanel({
                     >
                       <div
                         aria-hidden="true"
-                        className="h-14 rounded-xl"
+                        className="relative h-16 overflow-hidden rounded-xl"
                         style={{
                           background: `linear-gradient(135deg, ${progress.theme.previewFrom}, ${progress.theme.previewTo})`,
                         }}
-                      />
+                      >
+                        <div className="absolute inset-0 opacity-55 mix-blend-screen [background-image:radial-gradient(circle_at_18%_24%,white_0_0.22rem,transparent_0.24rem),radial-gradient(circle_at_78%_68%,white_0_0.16rem,transparent_0.18rem),linear-gradient(120deg,transparent_0_34%,rgba(255,255,255,0.32)_35%_36%,transparent_37%_100%)]" />
+                      </div>
                       <div className="mt-3 flex items-start justify-between gap-3">
                         <div>
-                          <h3 className="font-semibold text-slate-950 dark:text-white">
-                            {progress.theme.name}
-                          </h3>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="font-semibold text-slate-950 dark:text-white">
+                              {progress.theme.name}
+                            </h3>
+                            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[0.7rem] font-semibold uppercase tracking-wide text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                              {tierLabels[progress.theme.tier]}
+                            </span>
+                            {progress.theme.dynamic ? (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[0.7rem] font-semibold text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">
+                                <Sparkles aria-hidden="true" className="size-3" />
+                                Dynamique
+                              </span>
+                            ) : null}
+                          </div>
                           <p className="mt-1 text-sm leading-5 text-slate-600 dark:text-slate-300">
                             {progress.theme.description}
+                          </p>
+                          <p className="mt-2 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                            Style : {progress.theme.patternLabel}
                           </p>
                         </div>
                         {progress.unlocked ? (
@@ -179,19 +259,30 @@ export function RewardThemesPanel({
                         </div>
                       </div>
 
-                      <button
-                        type="button"
-                        className="mt-4 inline-flex min-h-10 w-full items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-sm transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
-                        disabled={!progress.unlocked || isActive}
-                        aria-pressed={isActive}
-                        onClick={() => handleActivate(progress.theme.id)}
-                      >
-                        {isActive
-                          ? "Thème actif"
-                          : progress.unlocked
-                            ? "Utiliser ce thème"
-                            : `Encore ${remaining} à accomplir`}
-                      </button>
+                      <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                        <button
+                          type="button"
+                          className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-sm transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+                          onClick={() => handlePreview(progress.theme.id)}
+                          aria-pressed={isPreviewed}
+                        >
+                          <Eye aria-hidden="true" className="size-4" />
+                          {isPreviewed ? "Aperçu actif" : `Prévisualiser ${progress.theme.name}`}
+                        </button>
+                        <button
+                          type="button"
+                          className="inline-flex min-h-10 w-full items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-sm transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+                          disabled={!progress.unlocked || isActive}
+                          aria-pressed={isActive}
+                          onClick={() => handleActivate(progress.theme.id)}
+                        >
+                          {isActive
+                            ? "Thème actif"
+                            : progress.unlocked
+                              ? "Utiliser ce thème"
+                              : `Encore ${remaining} à accomplir`}
+                        </button>
+                      </div>
                     </article>
                   );
                 })}

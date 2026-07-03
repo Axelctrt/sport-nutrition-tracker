@@ -2,6 +2,7 @@ import {
   activateVisualTheme,
   applyStoredVisualTheme,
   readVisualThemeState,
+  previewVisualTheme,
   unlockVisualThemes,
   VISUAL_THEME_STORAGE_KEY,
 } from "@/domain/rewards/visualThemes";
@@ -14,6 +15,13 @@ describe("visualThemes", () => {
 
   it("conserve le thème classique lorsque le thème demandé est verrouillé", () => {
     expect(activateVisualTheme("power")).toBe(false);
+    expect(readVisualThemeState().activeThemeId).toBe("classic");
+  });
+
+  it("prévisualise un thème verrouillé sans le mémoriser", () => {
+    previewVisualTheme("volcan");
+
+    expect(document.documentElement.dataset.sportTheme).toBe("volcan");
     expect(readVisualThemeState().activeThemeId).toBe("classic");
   });
 

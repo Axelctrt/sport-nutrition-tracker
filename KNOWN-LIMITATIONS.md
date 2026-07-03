@@ -27,3 +27,10 @@ Open Food Facts et Dexie Cloud dépendent du réseau et de leur disponibilité.
 ## Versions de données
 
 SportPilot 0.23.1 utilise le runtime Dexie Cloud v10. La base métier reste en Dexie v8, la sauvegarde en JSON v7 et le registre local des espaces en v1.
+
+
+## Récompenses et thèmes 0.24.0 R1
+
+Le mode aperçu permet volontairement de visualiser les thèmes verrouillés pendant les tests. Cette prévisualisation ne vaut pas déblocage et ne doit pas être considérée comme une règle de progression définitive.
+
+Les conditions de déblocage des nouveaux thèmes pourront être réajustées après validation esthétique.

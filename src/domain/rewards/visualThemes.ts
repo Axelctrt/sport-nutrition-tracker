@@ -1,4 +1,23 @@
-export type VisualThemeId = "classic" | "endurance" | "power" | "balance";
+export const visualThemeIds = [
+  "classic",
+  "endurance",
+  "power",
+  "balance",
+  "aurore",
+  "foret",
+  "ocean",
+  "acier",
+  "nuit-polaire",
+  "abysses",
+  "volcan",
+  "canopee",
+  "cosmos",
+  "forge",
+  "nexus-vivant",
+] as const;
+
+export type VisualThemeId = (typeof visualThemeIds)[number];
+export type VisualThemeTier = "base" | "accessible" | "advanced" | "legendary";
 
 export interface VisualThemeDefinition {
   id: VisualThemeId;
@@ -6,6 +25,9 @@ export interface VisualThemeDefinition {
   description: string;
   previewFrom: string;
   previewTo: string;
+  tier: VisualThemeTier;
+  patternLabel: string;
+  dynamic?: boolean;
 }
 
 export interface VisualThemeState {
@@ -23,22 +45,26 @@ export const visualThemeCatalog: readonly VisualThemeDefinition[] = [
     description: "Le thème bleu d’origine, disponible dès l’installation.",
     previewFrom: "#0369a1",
     previewTo: "#38bdf8",
+    tier: "base",
+    patternLabel: "Palette historique",
   },
   {
     id: "endurance",
     name: "Horizon endurance",
-    description:
-      "Une palette turquoise inspirée des sorties longues et de l’eau.",
+    description: "Une palette turquoise inspirée des sorties longues et de l’eau.",
     previewFrom: "#0f766e",
     previewTo: "#22d3ee",
+    tier: "accessible",
+    patternLabel: "Dégradé fluide",
   },
   {
     id: "power",
     name: "Puissance",
-    description:
-      "Une palette chaude pour célébrer la progression en musculation.",
+    description: "Une palette chaude pour célébrer la progression en musculation.",
     previewFrom: "#c2410c",
     previewTo: "#f59e0b",
+    tier: "accessible",
+    patternLabel: "Lumière chaude",
   },
   {
     id: "balance",
@@ -46,6 +72,108 @@ export const visualThemeCatalog: readonly VisualThemeDefinition[] = [
     description: "Une palette violette obtenue grâce à une pratique régulière.",
     previewFrom: "#7e22ce",
     previewTo: "#ec4899",
+    tier: "accessible",
+    patternLabel: "Halo violet",
+  },
+  {
+    id: "aurore",
+    name: "Aurore",
+    description: "Rose, orange et lumière douce pour les premiers jalons.",
+    previewFrom: "#fb7185",
+    previewTo: "#fbbf24",
+    tier: "accessible",
+    patternLabel: "Aube diffuse",
+  },
+  {
+    id: "foret",
+    name: "Forêt",
+    description: "Verts profonds, mousse et impression de sous-bois.",
+    previewFrom: "#166534",
+    previewTo: "#84cc16",
+    tier: "accessible",
+    patternLabel: "Feuillage discret",
+  },
+  {
+    id: "ocean",
+    name: "Océan",
+    description: "Bleu clair, turquoise et vagues légères.",
+    previewFrom: "#0284c7",
+    previewTo: "#2dd4bf",
+    tier: "accessible",
+    patternLabel: "Vagues fines",
+  },
+  {
+    id: "acier",
+    name: "Acier",
+    description: "Gris froid, accents rouges et rendu plus mécanique.",
+    previewFrom: "#475569",
+    previewTo: "#dc2626",
+    tier: "accessible",
+    patternLabel: "Métal brossé",
+  },
+  {
+    id: "nuit-polaire",
+    name: "Nuit polaire",
+    description: "Bleu nuit, cyan et halos froids pour une ambiance calme.",
+    previewFrom: "#0f172a",
+    previewTo: "#06b6d4",
+    tier: "accessible",
+    patternLabel: "Aurores froides",
+  },
+  {
+    id: "abysses",
+    name: "Abysses",
+    description: "Fond aquatique sombre, bulles et reflets profonds.",
+    previewFrom: "#082f49",
+    previewTo: "#0e7490",
+    tier: "advanced",
+    patternLabel: "Bulles et profondeur",
+  },
+  {
+    id: "volcan",
+    name: "Volcan",
+    description: "Roche sombre, fissures de lave et accents incandescents.",
+    previewFrom: "#1c1917",
+    previewTo: "#f97316",
+    tier: "advanced",
+    patternLabel: "Fissures de lave",
+  },
+  {
+    id: "canopee",
+    name: "Canopée",
+    description: "Textures végétales, bois sombre et énergie naturelle.",
+    previewFrom: "#14532d",
+    previewTo: "#a3e635",
+    tier: "advanced",
+    patternLabel: "Feuilles superposées",
+  },
+  {
+    id: "cosmos",
+    name: "Cosmos",
+    description: "Étoiles, nébuleuses et repères orbitaux.",
+    previewFrom: "#312e81",
+    previewTo: "#f0abfc",
+    tier: "advanced",
+    patternLabel: "Constellations",
+  },
+  {
+    id: "forge",
+    name: "Forge",
+    description: "Métal brossé, rivets et étincelles de progression.",
+    previewFrom: "#334155",
+    previewTo: "#f97316",
+    tier: "advanced",
+    patternLabel: "Rivets et étincelles",
+  },
+  {
+    id: "nexus-vivant",
+    name: "Nexus vivant",
+    description: "Thème dynamique qui évolue selon l’activité et les records.",
+    previewFrom: "#0f172a",
+    previewTo: "#22c55e",
+    tier: "legendary",
+    patternLabel: "Particules dynamiques",
+    dynamic: true,
   },
 ] as const;
 
@@ -215,6 +343,14 @@ export function applyStoredVisualTheme(): VisualThemeId {
   const state = readVisualThemeState();
   applyVisualTheme(state.activeThemeId);
   return state.activeThemeId;
+}
+
+export function previewVisualTheme(themeId: VisualThemeId): void {
+  applyVisualTheme(themeId);
+}
+
+export function clearVisualThemePreview(): VisualThemeId {
+  return applyStoredVisualTheme();
 }
 
 export function unlockVisualThemes(

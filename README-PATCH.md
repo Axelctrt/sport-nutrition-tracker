@@ -41,3 +41,20 @@ git diff --check
 ```
 
 La publication doit être validée sur ordinateur et iPhone 15 sous iOS 26 avant la fusion manuelle dans `main` et la création du tag `v0.23.1`.
+
+
+---
+
+# SportPilot 0.24.0 R1 — récompenses et thèmes 2.0
+
+Cette phase de développement prépare la prochaine version majeure sans changer encore la version affichée `0.23.1`.
+
+Elle ajoute :
+
+- un catalogue de cinquante badges ;
+- quinze thèmes visuels au total ;
+- onze nouveaux thèmes, dont cinq accessibles, cinq avancés et un légendaire dynamique ;
+- un mode aperçu permettant de tester tous les thèmes, même verrouillés ;
+- un audit dédié `audit:reward-theme-catalog`.
+
+Les règles définitives de déblocage des thèmes pourront être ajustées après validation esthétique sur ordinateur et iPhone.

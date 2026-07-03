@@ -4,6 +4,7 @@
   --sport-reward-accent-700: #0369a1;
   --sport-reward-accent-800: #075985;
   --sport-reward-soft: rgba(14, 165, 233, 0.12);
+  --sport-reward-pattern: radial-gradient(circle at 10% 0%, var(--sport-reward-soft), transparent 34rem), radial-gradient(circle at 100% 20%, var(--sport-reward-soft), transparent 30rem);
 }
 
 html[data-sport-theme="endurance"] {
@@ -12,6 +13,7 @@ html[data-sport-theme="endurance"] {
   --sport-reward-accent-700: #0f766e;
   --sport-reward-accent-800: #115e59;
   --sport-reward-soft: rgba(20, 184, 166, 0.14);
+  --sport-reward-pattern: radial-gradient(circle at 12% 0%, rgba(45, 212, 191, 0.18), transparent 32rem), linear-gradient(135deg, rgba(15, 118, 110, 0.08), transparent 44rem);
 }
 
 html[data-sport-theme="power"] {
@@ -20,6 +22,7 @@ html[data-sport-theme="power"] {
   --sport-reward-accent-700: #c2410c;
   --sport-reward-accent-800: #9a3412;
   --sport-reward-soft: rgba(245, 158, 11, 0.14);
+  --sport-reward-pattern: radial-gradient(circle at 78% 8%, rgba(249, 115, 22, 0.20), transparent 28rem), linear-gradient(120deg, transparent, rgba(251, 191, 36, 0.09));
 }
 
 html[data-sport-theme="balance"] {
@@ -28,20 +31,110 @@ html[data-sport-theme="balance"] {
   --sport-reward-accent-700: #7e22ce;
   --sport-reward-accent-800: #6b21a8;
   --sport-reward-soft: rgba(168, 85, 247, 0.14);
+  --sport-reward-pattern: radial-gradient(circle at 18% 0%, rgba(236, 72, 153, 0.18), transparent 30rem), radial-gradient(circle at 92% 24%, rgba(147, 51, 234, 0.18), transparent 32rem);
+}
+
+html[data-sport-theme="aurore"] {
+  --sport-reward-accent-500: #fb7185;
+  --sport-reward-accent-600: #f97316;
+  --sport-reward-accent-700: #e11d48;
+  --sport-reward-accent-800: #be123c;
+  --sport-reward-soft: rgba(251, 113, 133, 0.16);
+  --sport-reward-pattern: radial-gradient(circle at 18% 6%, rgba(251, 191, 36, 0.22), transparent 30rem), radial-gradient(circle at 80% 0%, rgba(244, 63, 94, 0.14), transparent 26rem);
+}
+
+html[data-sport-theme="foret"] {
+  --sport-reward-accent-500: #84cc16;
+  --sport-reward-accent-600: #16a34a;
+  --sport-reward-accent-700: #166534;
+  --sport-reward-accent-800: #14532d;
+  --sport-reward-soft: rgba(34, 197, 94, 0.14);
+  --sport-reward-pattern: radial-gradient(circle at 18% 8%, rgba(132, 204, 22, 0.16), transparent 26rem), repeating-linear-gradient(135deg, rgba(22, 101, 52, 0.08) 0 1px, transparent 1px 20px);
+}
+
+html[data-sport-theme="ocean"] {
+  --sport-reward-accent-500: #2dd4bf;
+  --sport-reward-accent-600: #0891b2;
+  --sport-reward-accent-700: #0284c7;
+  --sport-reward-accent-800: #075985;
+  --sport-reward-soft: rgba(45, 212, 191, 0.16);
+  --sport-reward-pattern: radial-gradient(circle at 12% 10%, rgba(125, 211, 252, 0.22), transparent 28rem), repeating-radial-gradient(circle at 100% 0%, rgba(45, 212, 191, 0.10) 0 2px, transparent 3px 18px);
+}
+
+html[data-sport-theme="acier"] {
+  --sport-reward-accent-500: #ef4444;
+  --sport-reward-accent-600: #dc2626;
+  --sport-reward-accent-700: #475569;
+  --sport-reward-accent-800: #334155;
+  --sport-reward-soft: rgba(100, 116, 139, 0.16);
+  --sport-reward-pattern: linear-gradient(115deg, rgba(148, 163, 184, 0.16), transparent 32rem), repeating-linear-gradient(90deg, rgba(71, 85, 105, 0.12) 0 1px, transparent 1px 18px);
+}
+
+html[data-sport-theme="nuit-polaire"] {
+  --sport-reward-accent-500: #22d3ee;
+  --sport-reward-accent-600: #06b6d4;
+  --sport-reward-accent-700: #0891b2;
+  --sport-reward-accent-800: #0e7490;
+  --sport-reward-soft: rgba(34, 211, 238, 0.16);
+  --sport-reward-pattern: radial-gradient(circle at 22% 0%, rgba(34, 211, 238, 0.24), transparent 24rem), linear-gradient(140deg, rgba(15, 23, 42, 0.20), transparent 42rem);
+}
+
+html[data-sport-theme="abysses"] {
+  --sport-reward-accent-500: #22d3ee;
+  --sport-reward-accent-600: #0891b2;
+  --sport-reward-accent-700: #0e7490;
+  --sport-reward-accent-800: #164e63;
+  --sport-reward-soft: rgba(8, 47, 73, 0.22);
+  --sport-reward-pattern: radial-gradient(circle at 78% 18%, rgba(34, 211, 238, 0.16), transparent 24rem), repeating-radial-gradient(circle at 20% 20%, rgba(255,255,255,0.12) 0 1px, transparent 2px 24px);
+}
+
+html[data-sport-theme="volcan"] {
+  --sport-reward-accent-500: #fb923c;
+  --sport-reward-accent-600: #f97316;
+  --sport-reward-accent-700: #ea580c;
+  --sport-reward-accent-800: #9a3412;
+  --sport-reward-soft: rgba(249, 115, 22, 0.20);
+  --sport-reward-pattern: radial-gradient(circle at 82% 4%, rgba(249, 115, 22, 0.25), transparent 26rem), repeating-linear-gradient(128deg, rgba(249, 115, 22, 0.18) 0 2px, transparent 2px 34px);
+}
+
+html[data-sport-theme="canopee"] {
+  --sport-reward-accent-500: #a3e635;
+  --sport-reward-accent-600: #65a30d;
+  --sport-reward-accent-700: #15803d;
+  --sport-reward-accent-800: #14532d;
+  --sport-reward-soft: rgba(132, 204, 22, 0.18);
+  --sport-reward-pattern: radial-gradient(circle at 14% 0%, rgba(163, 230, 53, 0.18), transparent 28rem), repeating-linear-gradient(45deg, rgba(21, 128, 61, 0.10) 0 1px, transparent 1px 22px);
+}
+
+html[data-sport-theme="cosmos"] {
+  --sport-reward-accent-500: #e879f9;
+  --sport-reward-accent-600: #a855f7;
+  --sport-reward-accent-700: #7c3aed;
+  --sport-reward-accent-800: #5b21b6;
+  --sport-reward-soft: rgba(168, 85, 247, 0.18);
+  --sport-reward-pattern: radial-gradient(circle at 16% 18%, rgba(240, 171, 252, 0.20), transparent 24rem), repeating-radial-gradient(circle at 80% 12%, rgba(255,255,255,0.16) 0 1px, transparent 2px 28px);
+}
+
+html[data-sport-theme="forge"] {
+  --sport-reward-accent-500: #fb923c;
+  --sport-reward-accent-600: #f97316;
+  --sport-reward-accent-700: #64748b;
+  --sport-reward-accent-800: #334155;
+  --sport-reward-soft: rgba(251, 146, 60, 0.16);
+  --sport-reward-pattern: radial-gradient(circle at 78% 10%, rgba(251, 146, 60, 0.22), transparent 24rem), repeating-linear-gradient(90deg, rgba(100, 116, 139, 0.16) 0 1px, transparent 1px 16px);
+}
+
+html[data-sport-theme="nexus-vivant"] {
+  --sport-reward-accent-500: #22c55e;
+  --sport-reward-accent-600: #14b8a6;
+  --sport-reward-accent-700: #0f766e;
+  --sport-reward-accent-800: #115e59;
+  --sport-reward-soft: rgba(34, 197, 94, 0.18);
+  --sport-reward-pattern: radial-gradient(circle at 12% 18%, rgba(34, 197, 94, 0.22), transparent 24rem), radial-gradient(circle at 86% 12%, rgba(45, 212, 191, 0.18), transparent 28rem), repeating-radial-gradient(circle at 50% 50%, rgba(255,255,255,0.08) 0 1px, transparent 2px 26px);
 }
 
 html[data-sport-theme]:not([data-sport-theme="classic"]) body {
-  background-image:
-    radial-gradient(
-      circle at 10% 0%,
-      var(--sport-reward-soft),
-      transparent 34rem
-    ),
-    radial-gradient(
-      circle at 100% 20%,
-      var(--sport-reward-soft),
-      transparent 30rem
-    );
+  background-image: var(--sport-reward-pattern);
   background-attachment: fixed;
 }
 
@@ -89,5 +182,25 @@ html.dark[data-sport-theme] [class~="dark:text-brand-300"] {
       background-color 180ms ease,
       color 180ms ease,
       background-image 180ms ease;
+  }
+
+  html[data-sport-theme="nexus-vivant"] body {
+    background-size: 100% 100%, 100% 100%, 64px 64px;
+    animation: sport-nexus-pulse 14s ease-in-out infinite alternate;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-sport-theme="nexus-vivant"] body {
+    animation: none;
+  }
+}
+
+@keyframes sport-nexus-pulse {
+  from {
+    background-position: 0 0, 0 0, 0 0;
+  }
+  to {
+    background-position: 0 0, 0 0, 32px 18px;
   }
 }

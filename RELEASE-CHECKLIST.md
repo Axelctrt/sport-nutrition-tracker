@@ -48,3 +48,32 @@
 - [ ] `develop` est fusionnée manuellement dans `main`.
 - [ ] Le tag annoté `v0.23.1` est créé sur le commit publié.
 - [ ] `develop` est resynchronisée avec `main`.
+
+
+---
+
+# Recette 0.24.0 R1 — récompenses et thèmes
+
+## Catalogue
+
+- [ ] Le centre de récompenses affiche cinquante badges.
+- [ ] Les badges historiques déjà gagnés restent reconnus.
+- [ ] Les compteurs de progression restent cohérents après rechargement.
+- [ ] Les catégories course, musculation, natation, pas, régularité, polyvalence et nutrition sont représentées.
+
+## Thèmes
+
+- [ ] Le catalogue affiche quinze thèmes.
+- [ ] Les onze nouveaux thèmes sont visibles.
+- [ ] Un thème verrouillé peut être prévisualisé.
+- [ ] Un thème verrouillé ne peut pas être appliqué durablement.
+- [ ] Quitter l’aperçu restaure le thème actif.
+- [ ] Un rechargement ne conserve pas un aperçu comme thème débloqué.
+- [ ] Nexus vivant reste lisible et respecte la réduction de mouvement.
+
+## Contrôles
+
+- [ ] `npm run audit:reward-theme-catalog` réussit.
+- [ ] `npm run check` réussit.
+- [ ] `npm run test:stability` réussit.
+- [ ] Les thèmes ne débordent pas sur iPhone 15 sous iOS 26.
