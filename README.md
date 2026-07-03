@@ -1,16 +1,16 @@
-# SportPilot 0.22.0
+# SportPilot 0.23.0
 
-## Continuité complète du compte
+## Synchronisation automatique, résiliente et transparente
 
-SportPilot synchronise désormais les neuf rubriques du compte connecté : profil et réglages partageables, récompenses et routines, pesées, activités, objectifs, musculation, journal nutritionnel, bibliothèque nutritionnelle et suivi nutritionnel.
+SportPilot synchronise les neuf rubriques du compte connecté : profil et réglages partageables, récompenses et routines, pesées, activités, objectifs, musculation, journal nutritionnel, bibliothèque nutritionnelle et suivi nutritionnel.
 
-La version 0.22.0 ajoute un centre unique pour analyser toutes les rubriques, confirmer une synchronisation globale, consulter uniquement le détail nécessaire et relancer les domaines en échec sans rejouer ceux déjà réussis. Les opérations cloud sont désactivées hors connexion, tandis que les données locales restent disponibles.
+La version 0.23.0 ajoute un orchestrateur commun, une automatisation explicitement autorisée par compte, des déclencheurs au démarrage, au premier plan, au retour du réseau, après connexion, restauration et modification locale, ainsi qu’un historique clair des opérations manuelles et automatiques.
 
-La restauration après nouvelle installation couvre les données métier, le profil, les réglages partageables, les thèmes visuels SportPilot, les succès, les missions et les routines. Les valeurs par défaut d’un nouvel appareil ne peuvent pas écraser silencieusement un compte déjà renseigné.
+Les traitements restent séquentiels et non destructeurs. Une analyse automatique ne remplace aucune donnée, une divergence ambiguë demande une action explicite, les échecs sont relançables par rubrique et les changements de compte invalident les résultats tardifs de l’ancien compte.
 
-La progression cumulative est fusionnée sans perte. Les dates d’obtention les plus anciennes sont conservées et les préférences mutables les plus récentes gagnent. Le mode clair ou sombre, le stockage, le minuteur de repos, l’activation automatique et les métadonnées de sauvegarde restent propres à chaque appareil.
+L’automatisation fonctionne lorsque SportPilot est ouvert ou revient au premier plan. Elle ne dépend pas d’une tâche PWA en arrière-plan. Le mode Wi-Fi uniquement reste volontairement bloqué lorsqu’un navigateur, notamment iOS, ne permet pas d’identifier le type de connexion.
 
-SportPilot 0.22.0 utilise le runtime Dexie Cloud v10 nommé `sportpilot-sync-runtime-0.20.0-v10`. La base métier reste en Dexie v8, la sauvegarde en JSON v7 et le registre local des espaces en v1. Aucune migration de ces formats n’est requise par la publication E4.
+SportPilot 0.23.0 conserve le runtime Dexie Cloud v10 nommé `sportpilot-sync-runtime-0.20.0-v10`. La base métier reste en Dexie v8, la sauvegarde en JSON v7 et le registre local des espaces en v1. Aucune migration de données n’est requise.
 
 ## Correctif 0.21.1 — stabilité du journal nutritionnel
 
@@ -884,3 +884,27 @@ La restauration 0.21.0 couvrait initialement les pesées, activités, objectifs 
 ### Publication 0.21.0 D4
 
 La publication stable ajoute un audit transversal des phases D1 à D3, fige les versions de données et documente la recette après réinstallation. Le pipeline `check` valide la continuité des données, l’isolation des comptes, la sécurité, le dépôt et les budgets du build de production.
+
+## Roadmap 0.23.0 — F1 orchestrateur de synchronisation
+
+La première phase de la roadmap 0.23.0 centralise désormais les opérations manuelles du centre dans un orchestrateur unique. Il maintient une file séquentielle, verrouille les traitements par compte, regroupe les futures demandes différées, poursuit les autres rubriques après un échec et permet une relance ciblée.
+
+F1 n’active aucune synchronisation automatique. Les analyses et écritures restent déclenchées explicitement depuis le centre, avec confirmation avant toute synchronisation. La version affichée et les formats de données restent ceux de la publication 0.22.0.
+
+## Roadmap 0.23.0 — F2 synchronisation automatique maîtrisée
+
+F2 active les analyses opportunistes au démarrage, au retour au premier plan, au rétablissement de la connexion, après connexion au compte et après restauration. Les modifications locales sont regroupées par anti-rebond et ne sont synchronisées automatiquement que lorsqu’une analyse antérieure du domaine est propre.
+
+L’autorisation est liée au compte actif sur l’appareil. Le mode manuel reste disponible et l’automatisation ne repose sur aucune tâche PWA en arrière-plan.
+
+## Roadmap 0.23.0 — F3 transparence et historique
+
+F3 conserve un historique local borné et séparé par compte. Le centre distingue les opérations manuelles et automatiques, la dernière réussite, le dernier échec, les rubriques terminées, les rubriques en échec et les divergences nécessitant un examen.
+
+Les fusions globales ne sont proposées que lorsqu’elles sont non destructives. Aucun choix local ou cloud n’est simulé lorsqu’un domaine ne peut pas le garantir.
+
+## Publication 0.23.0 — F4 robustesse multiappareils
+
+F4 consolide la publication avec des scénarios automatisés de perte réseau pendant une opération, fermeture pendant traitement, reprise après plusieurs jours, modification immédiate après restauration, changement de compte, modifications hors session, répétition des retours au premier plan et prévention des boucles d’événements.
+
+Les tentatives hors ligne sont historisées. Lors d’un changement de compte, les opérations planifiées de l’ancien compte sont annulées et leur éventuelle fin tardive ne peut plus modifier l’état du nouveau compte. Si l’orchestrateur est arrêté pendant une opération, il termine uniquement le domaine déjà engagé et n’entame pas les suivants.

@@ -5,6 +5,9 @@ import type { RoutineReminderPreferences } from '@/domain/reminders/routineRemin
 
 export type ThemePreference = 'system' | 'light' | 'dark';
 export type BackupReminderIntervalDays = 0 | 7 | 14 | 30;
+export type AutomaticAccountSyncConnectionMode =
+  | 'any-connection'
+  | 'wifi-only';
 
 export interface UserSettings extends EntityMetadata {
   /** Horodatage des seuls réglages partageables entre appareils. */
@@ -38,6 +41,9 @@ export interface DeviceSettings extends EntityMetadata {
   restTimerVibrationEnabled: boolean;
   automaticWeightSyncEnabled: boolean;
   automaticWeightSyncAccountFingerprint?: string;
+  automaticAccountSyncEnabled?: boolean;
+  automaticAccountSyncConnectionMode?: AutomaticAccountSyncConnectionMode;
+  automaticAccountSyncAccountFingerprint?: string;
   lastBackupExportedAt?: IsoDateTime;
   lastBackupAppVersion?: string;
   lastBackupSchemaVersion?: number;
@@ -53,6 +59,9 @@ export interface AppSettings extends UserSettings {
   restTimerVibrationEnabled: boolean;
   automaticWeightSyncEnabled: boolean;
   automaticWeightSyncAccountFingerprint?: string;
+  automaticAccountSyncEnabled: boolean;
+  automaticAccountSyncConnectionMode: AutomaticAccountSyncConnectionMode;
+  automaticAccountSyncAccountFingerprint?: string;
   lastBackupExportedAt?: IsoDateTime;
   lastBackupAppVersion?: string;
   lastBackupSchemaVersion?: number;

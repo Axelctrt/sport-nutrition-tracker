@@ -7,6 +7,8 @@ import {
   RefreshCw,
   Search,
   WifiOff,
+  History,
+  ShieldAlert,
 } from 'lucide-react';
 import {
   useCallback,
@@ -18,6 +20,19 @@ import {
 import { Link } from 'react-router-dom';
 
 import { routePaths } from '@/app/routePaths';
+import {
+  readSyncOperationHistory,
+  summarizeSyncOperationHistory,
+  syncSourceLabel,
+  SYNC_OPERATION_HISTORY_CHANGED_EVENT,
+  type SyncOperationHistoryEntry,
+} from '@/application/sync/syncOperationHistory';
+import {
+  createSyncOrchestrator,
+  type SyncOrchestratorDomainAdapter,
+  type SyncOrchestratorDomainId,
+  type SyncOrchestratorSnapshot,
+} from '@/application/sync/syncOrchestrator';
 import {
   getSyncPrototypeClient,
   type SyncPrototypeClient,
@@ -50,21 +65,13 @@ interface Props {
   readonly onOpenDetail?: (detailId: UnifiedSyncDetailId) => void;
 }
 
-type UnifiedDomainId =
-  | 'account-preferences'
-  | 'rewards-routines'
-  | 'weights'
-  | 'activities'
-  | 'goals'
-  | 'strength'
-  | 'nutrition-journal'
-  | 'nutrition-library'
-  | 'nutrition-tracking';
+type UnifiedDomainId = SyncOrchestratorDomainId;
 
 type UnifiedOperation = 'analyze' | 'sync';
 
 type DomainStatus =
   | 'not-analyzed'
+  | 'queued'
   | 'analyzing'
   | 'syncing'
   | 'up-to-date'
@@ -94,11 +101,6 @@ interface DomainDescriptor {
   readonly synchronize?: () => Promise<unknown>;
 }
 
-interface BusyState {
-  readonly operation: UnifiedOperation;
-  readonly currentDomainId?: UnifiedDomainId;
-}
-
 interface ConfirmationState {
   readonly target: 'all' | 'failures';
 }
@@ -110,8 +112,27 @@ const EMPTY_SNAPSHOT: SyncPrototypeSnapshot = {
   diagnostics: createEmptySyncPrototypeDiagnostics(),
 };
 
+const EMPTY_ORCHESTRATOR_SNAPSHOT: SyncOrchestratorSnapshot = {
+  accountKey: 'unavailable',
+  isRunning: false,
+  queueLength: 0,
+  domains: {
+    'account-preferences': { status: 'idle' },
+    'rewards-routines': { status: 'idle' },
+    weights: { status: 'idle' },
+    activities: { status: 'idle' },
+    goals: { status: 'idle' },
+    strength: { status: 'idle' },
+    'nutrition-journal': { status: 'idle' },
+    'nutrition-library': { status: 'idle' },
+    'nutrition-tracking': { status: 'idle' },
+  },
+};
+
 const subscribeToNothing = (): (() => void) => () => undefined;
 const getEmptySnapshot = (): SyncPrototypeSnapshot => EMPTY_SNAPSHOT;
+const getEmptyOrchestratorSnapshot = (): SyncOrchestratorSnapshot =>
+  EMPTY_ORCHESTRATOR_SNAPSHOT;
 
 function resolveClient(): {
   readonly client: SyncPrototypeClient | null;
@@ -212,6 +233,89 @@ function snapshotPreview(
     case 'nutrition-tracking':
       return snapshot.realNutritionTracking?.preview;
   }
+}
+
+function createOrchestratorDomains(
+  client: SyncPrototypeClient,
+): readonly SyncOrchestratorDomainAdapter[] {
+  const adapters: SyncOrchestratorDomainAdapter[] = [];
+  const add = (
+    id: UnifiedDomainId,
+    analyze: (() => Promise<{ readonly differingEntityCount: number }>) | undefined,
+    synchronize: (() => Promise<unknown>) | undefined,
+  ) => {
+    if (!analyze || !synchronize) return;
+    adapters.push({
+      id,
+      analyze,
+      synchronize,
+      readPreview: () => snapshotPreview(client.getSnapshot(), id),
+    });
+  };
+
+  add(
+    'account-preferences',
+    client.analyzeRealAccountPreferences
+      ? () => client.analyzeRealAccountPreferences!()
+      : undefined,
+    client.syncRealAccountPreferences
+      ? () => client.syncRealAccountPreferences!()
+      : undefined,
+  );
+  add(
+    'rewards-routines',
+    client.analyzeRealRewardsRoutines
+      ? () => client.analyzeRealRewardsRoutines!()
+      : undefined,
+    client.syncRealRewardsRoutines
+      ? () => client.syncRealRewardsRoutines!()
+      : undefined,
+  );
+  add('weights', () => client.analyzeRealWeights(), () => client.syncRealWeights());
+  add(
+    'activities',
+    client.analyzeRealActivities ? () => client.analyzeRealActivities!() : undefined,
+    client.syncRealActivities ? () => client.syncRealActivities!() : undefined,
+  );
+  add(
+    'goals',
+    client.analyzeRealGoals ? () => client.analyzeRealGoals!() : undefined,
+    client.syncRealGoals ? () => client.syncRealGoals!() : undefined,
+  );
+  add(
+    'strength',
+    client.analyzeRealStrength ? () => client.analyzeRealStrength!() : undefined,
+    client.syncRealStrength ? () => client.syncRealStrength!() : undefined,
+  );
+  add(
+    'nutrition-journal',
+    client.analyzeRealNutritionJournal
+      ? () => client.analyzeRealNutritionJournal!()
+      : undefined,
+    client.syncRealNutritionJournal
+      ? () => client.syncRealNutritionJournal!()
+      : undefined,
+  );
+  add(
+    'nutrition-library',
+    client.analyzeRealNutritionLibrary
+      ? () => client.analyzeRealNutritionLibrary!()
+      : undefined,
+    client.syncRealNutritionLibrary
+      ? () => client.syncRealNutritionLibrary!()
+      : undefined,
+  );
+  add(
+    'nutrition-tracking',
+    client.analyzeRealNutritionTracking
+      ? () => client.analyzeRealNutritionTracking!()
+      : undefined,
+    client.syncRealNutritionTracking
+      ? () => client.syncRealNutritionTracking!()
+      : undefined,
+  );
+
+  return adapters;
 }
 
 function createDomains(
@@ -434,10 +538,12 @@ function createDomains(
 function domainStatus(
   domain: DomainDescriptor,
   failure: DomainFailure | undefined,
+  orchestratorStatus: SyncOrchestratorSnapshot['domains'][UnifiedDomainId]['status'],
 ): DomainStatus {
-  if (failure || domain.snapshotStatus === 'error') return 'error';
-  if (domain.snapshotStatus === 'analyzing') return 'analyzing';
-  if (domain.snapshotStatus === 'syncing') return 'syncing';
+  if (failure || domain.snapshotStatus === 'error' || orchestratorStatus === 'temporary-failure') return 'error';
+  if (orchestratorStatus === 'queued') return 'queued';
+  if (domain.snapshotStatus === 'analyzing' || orchestratorStatus === 'analyzing') return 'analyzing';
+  if (domain.snapshotStatus === 'syncing' || orchestratorStatus === 'syncing') return 'syncing';
   if (domain.differingEntityCount === undefined) return 'not-analyzed';
   return domain.differingEntityCount === 0 ? 'up-to-date' : 'differences';
 }
@@ -446,6 +552,8 @@ function statusLabel(status: DomainStatus, differences = 0): string {
   switch (status) {
     case 'not-analyzed':
       return 'À analyser';
+    case 'queued':
+      return 'En attente';
     case 'analyzing':
       return 'Analyse…';
     case 'syncing':
@@ -467,12 +575,25 @@ function statusClasses(status: DomainStatus): string {
       return 'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-200';
     case 'error':
       return 'bg-red-100 text-red-800 dark:bg-red-950/50 dark:text-red-200';
+    case 'queued':
+      return 'bg-violet-100 text-violet-800 dark:bg-violet-950/50 dark:text-violet-200';
     case 'analyzing':
     case 'syncing':
       return 'bg-brand-100 text-brand-800 dark:bg-brand-950/50 dark:text-brand-200';
     case 'not-analyzed':
       return 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200';
   }
+}
+
+
+function historyOperationLabel(entry: SyncOperationHistoryEntry): string {
+  return entry.operation === 'sync' ? 'Synchronisation' : 'Analyse';
+}
+
+function historyOutcomeLabel(entry: SyncOperationHistoryEntry): string {
+  if (entry.outcome === 'success') return 'Réussie';
+  if (entry.outcome === 'partial-failure') return 'Partiellement réussie';
+  return 'Échec';
 }
 
 export function UnifiedSyncCenterPanel({
@@ -495,9 +616,37 @@ export function UnifiedSyncCenterPanel({
     () => domains.filter((domain) => domain.enabled),
     [domains],
   );
+  const accountKey = useMemo(
+    () => createSyncPrototypeAccountFingerprint(
+      snapshot.account.userId ?? snapshot.account.email,
+    ),
+    [snapshot.account.email, snapshot.account.userId],
+  );
+  const orchestrator = useMemo(
+    () => client && accountKey
+      ? createSyncOrchestrator({
+          accountKey,
+          domains: createOrchestratorDomains(client),
+          isOnline: () => navigator.onLine !== false,
+        })
+      : null,
+    [accountKey, client],
+  );
+  const orchestratorSnapshot = useSyncExternalStore(
+    orchestrator?.subscribe ?? subscribeToNothing,
+    orchestrator?.getSnapshot ?? getEmptyOrchestratorSnapshot,
+    orchestrator?.getSnapshot ?? getEmptyOrchestratorSnapshot,
+  );
+  const busy = orchestratorSnapshot.isRunning && orchestratorSnapshot.currentOperation
+    ? {
+        operation: orchestratorSnapshot.currentOperation,
+        ...(orchestratorSnapshot.currentDomainId
+          ? { currentDomainId: orchestratorSnapshot.currentDomainId }
+          : {}),
+      }
+    : undefined;
   const [isInitializing, setIsInitializing] = useState(Boolean(client));
   const [isOnline, setIsOnline] = useState(() => navigator.onLine !== false);
-  const [busy, setBusy] = useState<BusyState>();
   const [failures, setFailures] = useState<Partial<Record<UnifiedDomainId, DomainFailure>>>({});
   const [lastOperation, setLastOperation] = useState<UnifiedOperation>('analyze');
   const [confirmation, setConfirmation] = useState<ConfirmationState>();
@@ -507,10 +656,26 @@ export function UnifiedSyncCenterPanel({
   >();
   const storageKey = useMemo(() => historyStorageKey(snapshot), [snapshot]);
   const [history, setHistory] = useState<SyncHistory>(() => readHistory(storageKey));
+  const [operationHistory, setOperationHistory] = useState<readonly SyncOperationHistoryEntry[]>(
+    () => readSyncOperationHistory(accountKey),
+  );
+  const operationSummary = useMemo(
+    () => summarizeSyncOperationHistory(operationHistory),
+    [operationHistory],
+  );
+
+  useEffect(() => () => orchestrator?.dispose(), [orchestrator]);
 
   useEffect(() => {
     setHistory(readHistory(storageKey));
   }, [storageKey]);
+
+  useEffect(() => {
+    const refresh = () => setOperationHistory(readSyncOperationHistory(accountKey));
+    refresh();
+    window.addEventListener(SYNC_OPERATION_HISTORY_CHANGED_EVENT, refresh);
+    return () => window.removeEventListener(SYNC_OPERATION_HISTORY_CHANGED_EVENT, refresh);
+  }, [accountKey]);
 
   useEffect(() => {
     const updateOnlineState = () => setIsOnline(navigator.onLine !== false);
@@ -556,7 +721,7 @@ export function UnifiedSyncCenterPanel({
     operation: UnifiedOperation,
     targetIds?: readonly UnifiedDomainId[],
   ) => {
-    if (!client || busy) return;
+    if (!orchestrator || orchestratorSnapshot.isRunning) return;
     if (!isOnline) {
       setFeedback({
         tone: 'error',
@@ -578,35 +743,22 @@ export function UnifiedSyncCenterPanel({
       return next;
     });
 
+    const result = await orchestrator.run({
+      operation,
+      source: 'manual',
+      domainIds: selected.map((domain) => domain.id),
+    });
     const nextFailures: Partial<Record<UnifiedDomainId, DomainFailure>> = {};
-    let completed = 0;
-
-    for (const domain of selected) {
-      setBusy({ operation, currentDomainId: domain.id });
-      try {
-        if (operation === 'analyze') {
-          if (!domain.analyze) throw new Error('Analyse indisponible pour cette rubrique.');
-          await domain.analyze();
-        } else {
-          if (!domain.synchronize) throw new Error('Synchronisation indisponible pour cette rubrique.');
-          await domain.synchronize();
-        }
-        completed += 1;
-      } catch (error) {
-        nextFailures[domain.id] = {
-          operation,
-          message:
-            error instanceof Error
-              ? error.message
-              : `${operation === 'analyze' ? 'L’analyse' : 'La synchronisation'} a échoué.`,
-        };
-      }
+    for (const domainResult of result.domainResults) {
+      if (!domainResult.errorMessage) continue;
+      nextFailures[domainResult.domainId] = {
+        operation,
+        message: domainResult.errorMessage,
+      };
     }
-
-    setBusy(undefined);
     setFailures((current) => ({ ...current, ...nextFailures }));
 
-    const timestamp = new Date().toISOString();
+    const timestamp = result.completedAt;
     if (operation === 'analyze') {
       persistHistory({ ...history, lastAnalysisAt: timestamp });
     } else {
@@ -617,7 +769,8 @@ export function UnifiedSyncCenterPanel({
       });
     }
 
-    const failedCount = Object.keys(nextFailures).length;
+    const completed = result.completedDomainIds.length;
+    const failedCount = result.failedDomainIds.length;
     if (failedCount === 0) {
       setFeedback({
         tone: 'success',
@@ -632,7 +785,7 @@ export function UnifiedSyncCenterPanel({
         message: `${completed} ${completed > 1 ? 'rubriques terminées' : 'rubrique terminée'}, ${failedCount} ${failedCount > 1 ? 'rubriques en échec' : 'rubrique en échec'}. Les autres domaines n’ont pas été bloqués.`,
       });
     }
-  }, [busy, client, enabledDomains, history, isOnline, persistHistory]);
+  }, [enabledDomains, history, isOnline, orchestrator, orchestratorSnapshot.isRunning, persistHistory]);
 
   const retryFailures = () => {
     const failedIds = enabledDomains
@@ -686,10 +839,13 @@ export function UnifiedSyncCenterPanel({
     Boolean(busy) ||
     !accountReady ||
     !isOnline ||
+    !orchestrator ||
     enabledDomains.length === 0;
 
   const globalStatus = busy
     ? busy.operation === 'analyze' ? 'Analyse en cours' : 'Synchronisation en cours'
+    : orchestratorSnapshot.queueLength > 0
+      ? `${orchestratorSnapshot.queueLength} ${orchestratorSnapshot.queueLength > 1 ? 'opérations en attente' : 'opération en attente'}`
     : !isOnline
       ? 'Hors connexion'
       : !accountReady
@@ -715,6 +871,9 @@ export function UnifiedSyncCenterPanel({
             </div>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
               Analyse ou synchronise toutes les rubriques du compte, sans masquer les erreurs ni interrompre les domaines restants.
+            </p>
+            <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">
+              Orchestrateur par compte · exécution séquentielle · file d’attente : {orchestratorSnapshot.queueLength}
             </p>
           </div>
           <span className={cn(
@@ -816,6 +975,87 @@ export function UnifiedSyncCenterPanel({
         ) : null}
       </div>
 
+      {differingDomains.length > 0 ? (
+        <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950/20 sm:p-5">
+          <div className="flex items-start gap-3">
+            <ShieldAlert aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-amber-700 dark:text-amber-300" />
+            <div>
+              <h4 className="font-semibold text-slate-950 dark:text-white">
+                Des différences existent entre cet appareil et le cloud
+              </h4>
+              <p className="mt-1 text-sm leading-6 text-slate-700 dark:text-slate-300">
+                Examine chaque rubrique avant de choisir. SportPilot ne remplace jamais silencieusement une version divergente.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button variant="secondary" onClick={() => {
+                  const first = differingDomains[0];
+                  if (!first) return;
+                  if (onOpenDetail) onOpenDetail(first.detailId);
+                  else scrollToDetail(first.detailId);
+                }}>
+                  Examiner les différences
+                </Button>
+                <Button onClick={() => setConfirmation({ target: 'all' })} disabled={actionDisabled}>
+                  Fusionner lorsque c’est possible
+                </Button>
+              </div>
+              <p className="mt-3 text-xs text-slate-600 dark:text-slate-400">
+                « Conserver cet appareil » et « Utiliser le cloud » ne sont proposés que dans les détails capables de garantir une résolution directionnelle. Le centre global privilégie la fusion non destructive.
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
+        <div className="border-b border-slate-200 px-4 py-3 dark:border-slate-800 sm:px-5">
+          <div className="flex items-center gap-2">
+            <History aria-hidden="true" className="size-5 text-brand-600" />
+            <h4 className="font-semibold text-slate-950 dark:text-white">Historique récent</h4>
+          </div>
+          <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+            Opérations manuelles et automatiques enregistrées localement pour ce compte.
+          </p>
+        </div>
+        {operationHistory.length === 0 ? (
+          <p className="px-4 py-5 text-sm text-slate-600 dark:text-slate-300 sm:px-5">Aucune opération enregistrée.</p>
+        ) : (
+          <ul className="divide-y divide-slate-200 dark:divide-slate-800">
+            {operationHistory.slice(0, 6).map((entry) => (
+              <li key={entry.id} className="flex flex-col gap-1 px-4 py-3 sm:px-5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="font-semibold text-slate-950 dark:text-white">
+                    {historyOperationLabel(entry)} · {historyOutcomeLabel(entry)}
+                  </p>
+                  <time className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                    {formatTimestamp(entry.completedAt)}
+                  </time>
+                </div>
+                <p className="text-sm text-slate-600 dark:text-slate-300">
+                  {syncSourceLabel(entry.source)} · {entry.completedDomainIds.length} rubrique(s) terminée(s)
+                  {entry.failedDomainIds.length > 0 ? ` · ${entry.failedDomainIds.length} en échec` : ''}
+                  {entry.differingEntityCount > 0 ? ` · ${entry.differingEntityCount} différence(s)` : ''}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
+        <div className="grid gap-3 border-t border-slate-200 p-4 dark:border-slate-800 sm:grid-cols-2 sm:px-5">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Dernière réussite</p>
+            <p className="mt-1 text-sm font-semibold text-slate-950 dark:text-white">
+              {operationSummary.lastSuccessfulSync ? formatTimestamp(operationSummary.lastSuccessfulSync.completedAt) : 'Jamais'}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Dernier échec</p>
+            <p className="mt-1 text-sm font-semibold text-slate-950 dark:text-white">
+              {operationSummary.lastFailure ? formatTimestamp(operationSummary.lastFailure.completedAt) : 'Aucun'}
+            </p>
+          </div>
+        </div>
+      </div>
+
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
         <div className="border-b border-slate-200 px-4 py-3 dark:border-slate-800 sm:px-5">
           <h4 className="font-semibold text-slate-950 dark:text-white">État par rubrique</h4>
@@ -827,7 +1067,11 @@ export function UnifiedSyncCenterPanel({
           {domains.map((domain) => {
             if (!domain.enabled) return null;
             const failure = failures[domain.id];
-            const status = domainStatus(domain, failure);
+            const status = domainStatus(
+              domain,
+              failure,
+              orchestratorSnapshot.domains[domain.id].status,
+            );
             const errorMessage = failure?.message ?? domain.snapshotErrorMessage;
             return (
               <li key={domain.id} className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">

@@ -34,7 +34,7 @@ export class DexieProfileRepository implements ProfileRepository {
         await this.database.userProfile.put(profile);
         return profile;
       },
-    );
+      { syncDomainIds: ['account-preferences'], syncReason: 'profile-write' });
   }
 
   clear(): Promise<void> {
@@ -42,6 +42,6 @@ export class DexieProfileRepository implements ProfileRepository {
       'delete',
       'Impossible de supprimer le profil local.',
       () => this.database.userProfile.delete(LOCAL_USER_PROFILE_ID),
-    );
+      { syncDomainIds: ['account-preferences'], syncReason: 'profile-write' });
   }
 }

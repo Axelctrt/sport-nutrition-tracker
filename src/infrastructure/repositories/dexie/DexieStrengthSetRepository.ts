@@ -45,7 +45,7 @@ export class DexieStrengthSetRepository implements StrengthSetRepository {
       const set = createEntity<StrengthSet>(input);
       await this.database.strengthSets.add(set);
       return set;
-    });
+    }, { syncDomainIds: ['strength'], syncReason: 'strength-write' });
   }
 
   createMany(inputs: Array<NewEntity<StrengthSet>>): Promise<StrengthSet[]> {
@@ -53,7 +53,7 @@ export class DexieStrengthSetRepository implements StrengthSetRepository {
       const sets = inputs.map((input) => createEntity<StrengthSet>(input));
       if (sets.length > 0) await this.database.strengthSets.bulkAdd(sets);
       return sortSets(sets);
-    });
+    }, { syncDomainIds: ['strength'], syncReason: 'strength-write' });
   }
 
   update(id: EntityId, changes: StrengthSetUpdate): Promise<StrengthSet> {
@@ -65,7 +65,7 @@ export class DexieStrengthSetRepository implements StrengthSetRepository {
         current,
         changes as never,
       );
-    });
+    }, { syncDomainIds: ['strength'], syncReason: 'strength-write' });
   }
 
   deleteAndRenumber(
@@ -89,6 +89,6 @@ export class DexieStrengthSetRepository implements StrengthSetRepository {
 
         return sortSets(remaining);
       },
-    );
+      { syncDomainIds: ['strength'], syncReason: 'strength-write' });
   }
 }

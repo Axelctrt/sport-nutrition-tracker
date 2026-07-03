@@ -139,7 +139,7 @@ export class DexieFoodRepository implements FoodRepository {
         await this.database.foodProducts.add(product);
         return product;
       },
-    );
+      { syncDomainIds: ['nutrition-library'], syncReason: 'food-product-write' });
   }
 
   updateProduct(
@@ -162,7 +162,7 @@ export class DexieFoodRepository implements FoodRepository {
           changes,
         );
       },
-    );
+      { syncDomainIds: ['nutrition-library'], syncReason: 'food-product-write' });
   }
 
   archiveProduct(id: EntityId): Promise<FoodProduct> {
@@ -206,7 +206,7 @@ export class DexieFoodRepository implements FoodRepository {
         await this.database.meals.add(meal);
         return meal;
       },
-    );
+      { syncDomainIds: ['nutrition-journal'], syncReason: 'nutrition-journal-write' });
   }
 
   listMealsByDate(date: LocalDate): Promise<Meal[]> {
@@ -224,7 +224,7 @@ export class DexieFoodRepository implements FoodRepository {
       async () => {
         await moveMealToTrash(this.database, id);
       },
-    );
+      { syncDomainIds: ['nutrition-journal'], syncReason: 'nutrition-journal-write' });
   }
   getEntryById(id: EntityId): Promise<FoodEntry | undefined> {
     return runRepositoryOperation(
@@ -243,7 +243,7 @@ export class DexieFoodRepository implements FoodRepository {
         await this.database.foodEntries.add(entry);
         return entry;
       },
-    );
+      { syncDomainIds: ['nutrition-journal'], syncReason: 'nutrition-journal-write' });
   }
 
   updateEntry(id: EntityId, changes: EntityChanges<FoodEntry>): Promise<FoodEntry> {
@@ -263,7 +263,7 @@ export class DexieFoodRepository implements FoodRepository {
           changes,
         );
       },
-    );
+      { syncDomainIds: ['nutrition-journal'], syncReason: 'nutrition-journal-write' });
   }
 
   listEntriesByDate(date: LocalDate): Promise<FoodEntry[]> {
@@ -297,7 +297,7 @@ export class DexieFoodRepository implements FoodRepository {
       async () => {
         await moveFoodEntryToTrash(this.database, id);
       },
-    );
+      { syncDomainIds: ['nutrition-journal'], syncReason: 'nutrition-journal-write' });
   }
   getJournalStatus(date: LocalDate): Promise<DailyJournalStatus | undefined> {
     return runRepositoryOperation(
@@ -341,7 +341,7 @@ export class DexieFoodRepository implements FoodRepository {
         await this.database.dailyJournalStatuses.add(status);
         return status;
       },
-    );
+      { syncDomainIds: ['nutrition-journal'], syncReason: 'nutrition-journal-write' });
   }
 
   getFavoriteMealById(id: EntityId): Promise<FavoriteMeal | undefined> {
@@ -361,7 +361,7 @@ export class DexieFoodRepository implements FoodRepository {
         await this.database.favoriteMeals.add(favoriteMeal);
         return favoriteMeal;
       },
-    );
+      { syncDomainIds: ['nutrition-library'], syncReason: 'favorite-meal-write' });
   }
 
   listFavoriteMeals(): Promise<FavoriteMeal[]> {
@@ -379,6 +379,6 @@ export class DexieFoodRepository implements FoodRepository {
       async () => {
         await moveFavoriteMealToTrash(this.database, id);
       },
-    );
+      { syncDomainIds: ['nutrition-library'], syncReason: 'favorite-meal-write' });
   }
 }

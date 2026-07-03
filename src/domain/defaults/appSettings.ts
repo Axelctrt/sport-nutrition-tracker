@@ -120,6 +120,8 @@ export function createDefaultDeviceSettings(
       restTimerSoundEnabled: false,
       restTimerVibrationEnabled: true,
       automaticWeightSyncEnabled: false,
+      automaticAccountSyncEnabled: false,
+      automaticAccountSyncConnectionMode: 'any-connection',
     },
     DEVICE_SETTINGS_ID,
   );
@@ -151,6 +153,7 @@ export function normalizeDeviceSettings(
 ): DeviceSettings {
   const {
     automaticWeightSyncAccountFingerprint,
+    automaticAccountSyncAccountFingerprint,
     ...deviceSettings
   } = settings;
 
@@ -166,10 +169,20 @@ export function normalizeDeviceSettings(
       settings.restTimerVibrationEnabled ?? true,
     automaticWeightSyncEnabled:
       settings.automaticWeightSyncEnabled ?? false,
+    automaticAccountSyncEnabled:
+      settings.automaticAccountSyncEnabled ?? false,
+    automaticAccountSyncConnectionMode:
+      settings.automaticAccountSyncConnectionMode ?? 'any-connection',
     ...(automaticWeightSyncAccountFingerprint?.trim()
       ? {
           automaticWeightSyncAccountFingerprint:
             automaticWeightSyncAccountFingerprint.trim(),
+        }
+      : {}),
+    ...(automaticAccountSyncAccountFingerprint?.trim()
+      ? {
+          automaticAccountSyncAccountFingerprint:
+            automaticAccountSyncAccountFingerprint.trim(),
         }
       : {}),
   };
@@ -199,10 +212,20 @@ export function composeAppSettings(
     restTimerVibrationEnabled: normalizedDevice.restTimerVibrationEnabled,
     automaticWeightSyncEnabled:
       normalizedDevice.automaticWeightSyncEnabled,
+    automaticAccountSyncEnabled:
+      normalizedDevice.automaticAccountSyncEnabled ?? false,
+    automaticAccountSyncConnectionMode:
+      normalizedDevice.automaticAccountSyncConnectionMode ?? 'any-connection',
     ...(normalizedDevice.automaticWeightSyncAccountFingerprint
       ? {
           automaticWeightSyncAccountFingerprint:
             normalizedDevice.automaticWeightSyncAccountFingerprint,
+        }
+      : {}),
+    ...(normalizedDevice.automaticAccountSyncAccountFingerprint
+      ? {
+          automaticAccountSyncAccountFingerprint:
+            normalizedDevice.automaticAccountSyncAccountFingerprint,
         }
       : {}),
     ...(normalizedDevice.lastBackupExportedAt === undefined
@@ -230,6 +253,9 @@ export function splitAppSettings(settings: AppSettings): {
     restTimerVibrationEnabled,
     automaticWeightSyncEnabled,
     automaticWeightSyncAccountFingerprint,
+    automaticAccountSyncEnabled,
+    automaticAccountSyncConnectionMode,
+    automaticAccountSyncAccountFingerprint,
     lastBackupExportedAt,
     lastBackupAppVersion,
     lastBackupSchemaVersion,
@@ -253,9 +279,14 @@ export function splitAppSettings(settings: AppSettings): {
       restTimerSoundEnabled,
       restTimerVibrationEnabled,
       automaticWeightSyncEnabled,
+      automaticAccountSyncEnabled,
+      automaticAccountSyncConnectionMode,
       ...(automaticWeightSyncAccountFingerprint === undefined
         ? {}
         : { automaticWeightSyncAccountFingerprint }),
+      ...(automaticAccountSyncAccountFingerprint === undefined
+        ? {}
+        : { automaticAccountSyncAccountFingerprint }),
       ...(lastBackupExportedAt === undefined
         ? {}
         : { lastBackupExportedAt }),
