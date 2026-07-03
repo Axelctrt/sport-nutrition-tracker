@@ -17,11 +17,13 @@ import {
   type GoalInput,
 } from '@/application/goals/goalProgressService';
 import { inputClassName } from '@/shared/forms/formStyles';
+import { useActionToast } from '@/shared/toast/useActionToast';
 import { Button } from '@/shared/ui/Button';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 
 interface GoalEditorProps {
   goal?: Goal;
+  initialWeightBaseline?: number | undefined;
   onSaved: () => void;
   onCancelEdit?: () => void;
   saveGoalAction?: (
@@ -38,34 +40,39 @@ function localToday(): string {
   return local.toISOString().slice(0, 10);
 }
 
+function formatOptionalNumber(value: number | undefined): string {
+  return value === undefined ? '' : String(value);
+}
+
+function defaultTargetFor(metric: GoalMetric): string {
+  return String(getGoalMetricDefinition(metric).defaultTarget);
+}
+
+function initialBaselineForCreation(
+  metric: GoalMetric,
+  initialWeightBaseline: number | undefined,
+): string {
+  if (metric !== 'weightTarget') return '';
+  return formatOptionalNumber(initialWeightBaseline);
+}
+
 export function GoalEditor({
   goal,
+  initialWeightBaseline,
   onSaved,
   onCancelEdit,
   saveGoalAction = saveGoal,
 }: GoalEditorProps) {
-  const [title, setTitle] = useState(goal?.title ?? '');
-  const [metric, setMetric] = useState<GoalMetric>(
-    goal?.metric ?? 'totalSteps',
-  );
+  const [title, setTitle] = useState('');
+  const [metric, setMetric] = useState<GoalMetric>('totalSteps');
   const [targetValue, setTargetValue] = useState(
-    String(
-      goal?.targetValue ??
-        getGoalMetricDefinition('totalSteps').defaultTarget,
-    ),
+    defaultTargetFor('totalSteps'),
   );
-  const [startDate, setStartDate] = useState(
-    goal?.startDate ?? localToday(),
-  );
-  const [deadline, setDeadline] = useState(
-    goal?.deadline ?? '',
-  );
-  const [baselineValue, setBaselineValue] = useState(
-    goal?.baselineValue !== undefined
-      ? String(goal.baselineValue)
-      : '',
-  );
+  const [startDate, setStartDate] = useState(localToday());
+  const [deadline, setDeadline] = useState('');
+  const [baselineValue, setBaselineValue] = useState('');
   const [error, setError] = useState<string>();
+  const actionToast = useActionToast();
 
   const definition = useMemo(
     () => getGoalMetricDefinition(metric),
@@ -73,13 +80,49 @@ export function GoalEditor({
   );
 
   useEffect(() => {
+    setError(undefined);
+
+    if (goal) {
+      setTitle(goal.title);
+      setMetric(goal.metric);
+      setTargetValue(String(goal.targetValue));
+      setStartDate(goal.startDate);
+      setDeadline(goal.deadline ?? '');
+      setBaselineValue(
+        formatOptionalNumber(goal.baselineValue),
+      );
+      return;
+    }
+
+    setTitle('');
+    setMetric('totalSteps');
+    setTargetValue(defaultTargetFor('totalSteps'));
+    setStartDate(localToday());
+    setDeadline('');
+    setBaselineValue('');
+  }, [goal]);
+
+  useEffect(() => {
     if (goal) return;
 
-    setTargetValue(String(definition.defaultTarget));
-    if (metric !== 'weightTarget') {
-      setBaselineValue('');
-    }
-  }, [definition, goal, metric]);
+    setTargetValue(defaultTargetFor(metric));
+    setBaselineValue((current) =>
+      metric === 'weightTarget' ? current : '',
+    );
+  }, [goal, metric]);
+
+  useEffect(() => {
+    if (goal || metric !== 'weightTarget') return;
+
+    setBaselineValue((current) =>
+      current.trim() !== ''
+        ? current
+        : initialBaselineForCreation(
+            metric,
+            initialWeightBaseline,
+          ),
+    );
+  }, [goal, initialWeightBaseline, metric]);
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
@@ -106,22 +149,38 @@ export function GoalEditor({
         goal?.id,
       );
 
+      actionToast.success({
+        key: goal ? `goal-update:${goal.id}` : 'goal-create',
+        title: goal ? 'Objectif modifié' : 'Objectif créé',
+        description: 'La progression sera recalculée depuis les données enregistrées.',
+      });
       onSaved();
 
       if (!goal) {
         setTitle('');
         setTargetValue(
-          String(definition.defaultTarget),
+          defaultTargetFor(metric),
         );
         setDeadline('');
-        setBaselineValue('');
+        setBaselineValue(
+          initialBaselineForCreation(
+            metric,
+            initialWeightBaseline,
+          ),
+        );
       }
     } catch (caughtError) {
+      const fallback = 'L’objectif n’a pas pu être enregistré.';
       setError(
         caughtError instanceof Error
           ? caughtError.message
-          : 'L’objectif n’a pas pu être enregistré.',
+          : fallback,
       );
+      actionToast.error({
+        key: goal ? `goal-update:${goal.id}` : 'goal-create',
+        error: caughtError,
+        fallback,
+      });
     }
   };
 

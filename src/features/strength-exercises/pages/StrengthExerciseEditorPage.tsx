@@ -15,11 +15,13 @@ import {
   formValuesToExerciseInput,
 } from '@/features/strength-exercises/utils/strengthExerciseForm';
 import { repositories } from '@/infrastructure/repositories/repositories';
+import { useActionToast } from '@/shared/toast/useActionToast';
 import { Card } from '@/shared/ui/Card';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 import { PageSkeleton } from '@/shared/ui/PageSkeleton';
 
 export function StrengthExerciseEditorPage() {
+  const actionToast = useActionToast();
   const { exerciseId } = useParams();
   const navigate = useNavigate();
   const [exercise, setExercise] = useState<ExerciseDefinition>();
@@ -50,10 +52,23 @@ export function StrengthExerciseEditorPage() {
   }, [exerciseId]);
 
   const handleSubmit = async (values: StrengthExerciseFormValues) => {
-    const input = formValuesToExerciseInput(values);
-    if (exerciseId) await updateCustomExercise(repositories.strengthExercises, exerciseId, input);
-    else await createCustomExercise(repositories.strengthExercises, input);
-    await navigate(routePaths.strengthExercises);
+    try {
+      const input = formValuesToExerciseInput(values);
+      if (exerciseId) await updateCustomExercise(repositories.strengthExercises, exerciseId, input);
+      else await createCustomExercise(repositories.strengthExercises, input);
+      actionToast.success({
+        key: exerciseId ? `strength-exercise-update:${exerciseId}` : 'strength-exercise-create',
+        title: exerciseId ? 'Exercice modifié' : 'Exercice créé',
+      });
+      await navigate(routePaths.strengthExercises);
+    } catch (error) {
+      actionToast.error({
+        key: exerciseId ? `strength-exercise-update:${exerciseId}` : 'strength-exercise-create',
+        error,
+        fallback: 'L’exercice n’a pas pu être enregistré.',
+      });
+      throw error;
+    }
   };
 
   return (

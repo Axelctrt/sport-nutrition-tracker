@@ -9,7 +9,7 @@ const fail = (message) => failures.push(message);
 
 const packageJson = JSON.parse(read('package.json'));
 const packageLock = JSON.parse(read('package-lock.json'));
-const expectedVersion = '0.23.0';
+const expectedVersion = '0.23.1';
 
 if (packageJson.version !== expectedVersion) {
   fail(`package.json doit publier ${expectedVersion}.`);
@@ -18,7 +18,7 @@ if (
   packageLock.version !== expectedVersion
   || packageLock.packages?.['']?.version !== expectedVersion
 ) {
-  fail('package-lock.json ne correspond pas à la version publiée 0.23.0.');
+  fail('package-lock.json ne correspond pas à la version publiée 0.23.1.');
 }
 
 const requiredFiles = [
@@ -165,5 +165,5 @@ if (failures.length > 0) {
 }
 
 console.log(
-  'Audit D4 réussi : socle 0.21.x conservé, version publiée 0.23.0, continuité des données, idempotence du journal nutritionnel, isolation et versions de données validées.',
+  'Audit D4 réussi : socle 0.21.x conservé, version publiée 0.23.1, continuité des données, idempotence du journal nutritionnel, isolation et versions de données validées.',
 );

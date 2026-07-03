@@ -37,6 +37,7 @@ import { Card } from "@/shared/ui/Card";
 import { ConfirmationDialog } from "@/shared/ui/ConfirmationDialog";
 import { InlineNotice } from "@/shared/ui/InlineNotice";
 import { PageSkeleton } from "@/shared/ui/PageSkeleton";
+import { useActionToast } from "@/shared/toast/useActionToast";
 
 interface AccountDevicesPageProps {
   client?: SyncPrototypeClient | null;
@@ -113,6 +114,7 @@ export function AccountDevicesPage({
   detachDevice = detachCurrentDeviceFromAccount,
   deleteLocalData = deleteLocalAccountData,
 }: AccountDevicesPageProps = {}) {
+  const actionToast = useActionToast();
   const safeConfig = useMemo(() => readSyncPrototypeConfigSafely(), []);
   const runtimeClient = useMemo<SyncPrototypeClient | null>(() => {
     if (clientOverride !== undefined) return clientOverride;
@@ -185,15 +187,39 @@ export function AccountDevicesPage({
     setFeedback(undefined);
     try {
       await operation();
+      const successMessages = {
+        disconnect: {
+          title: 'Compte déconnecté',
+          description: 'La synchronisation est arrêtée et les données locales restent accessibles.',
+        },
+        detach: {
+          title: 'Appareil désassocié',
+          description: 'L’espace local est conservé sur cet appareil.',
+        },
+        delete: {
+          title: 'Données locales supprimées',
+          description: 'Les données cloud de ce compte restent intactes.',
+        },
+      } as const;
+      const success = successMessages[action];
+      actionToast.successAfterReload({
+        key: `account-device-${action}`,
+        title: success.title,
+        description: success.description,
+      });
       reload();
     } catch (error) {
+      const fallback = "L’action demandée n’a pas pu être terminée.";
       setFeedback({
         tone: "error",
         title: "Action interrompue",
-        message:
-          error instanceof Error
-            ? error.message
-            : "L’action demandée n’a pas pu être terminée.",
+        message: error instanceof Error ? error.message : fallback,
+      });
+      actionToast.error({
+        key: `account-device-${action}`,
+        title: 'Action interrompue',
+        error,
+        fallback,
       });
       setPendingAction(undefined);
     }

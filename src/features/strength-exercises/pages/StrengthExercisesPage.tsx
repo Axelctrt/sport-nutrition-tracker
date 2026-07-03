@@ -8,6 +8,7 @@ import { StrengthExercisesSummary } from '@/features/strength-exercises/componen
 import { useStrengthExercises } from '@/features/strength-exercises/hooks/useStrengthExercises';
 import { equipmentOptions, muscleGroupOptions } from '@/features/strength-exercises/utils/exerciseLabels';
 import { checkboxClassName, inputClassName } from '@/shared/forms/formStyles';
+import { useActionToast } from '@/shared/toast/useActionToast';
 import { Button } from '@/shared/ui/Button';
 import { CollapsibleSection } from '@/shared/ui/CollapsibleSection';
 import { EmptyState } from '@/shared/ui/EmptyState';
@@ -15,6 +16,7 @@ import { InlineNotice } from '@/shared/ui/InlineNotice';
 import { PageSkeleton } from '@/shared/ui/PageSkeleton';
 
 export function StrengthExercisesPage() {
+  const actionToast = useActionToast();
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [muscleGroup, setMuscleGroup] = useState<MuscleGroup | 'all'>('all');
@@ -38,7 +40,36 @@ export function StrengthExercisesPage() {
 
   const duplicateAndEdit = async (id: string) => {
     const created = await duplicate(id);
-    if (created) await navigate(editStrengthExercisePath(created.id));
+    if (created) {
+      actionToast.success({
+        key: `strength-exercise-duplicate:${id}`,
+        title: 'Exercice dupliqué',
+      });
+      await navigate(editStrengthExercisePath(created.id));
+    } else {
+      actionToast.error({
+        key: `strength-exercise-duplicate:${id}`,
+        error: actionErrorMessage,
+        fallback: 'L’exercice n’a pas pu être dupliqué.',
+      });
+    }
+  };
+
+  const changeArchived = async (id: string, archived: boolean) => {
+    const success = await setArchived(id, archived);
+    if (success) {
+      actionToast.success({
+        key: `strength-exercise-archive:${id}`,
+        title: archived ? 'Exercice archivé' : 'Exercice réactivé',
+      });
+    } else {
+      actionToast.error({
+        key: `strength-exercise-archive:${id}`,
+        error: actionErrorMessage,
+        fallback: 'L’exercice n’a pas pu être modifié.',
+      });
+    }
+    return success;
   };
 
   return (
@@ -144,7 +175,7 @@ export function StrengthExercisesPage() {
               key={exercise.id}
               exercise={exercise}
               busy={actionId === exercise.id}
-              onArchiveChange={setArchived}
+              onArchiveChange={changeArchived}
               onDuplicate={duplicateAndEdit}
             />
           ))}

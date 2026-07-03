@@ -7,10 +7,12 @@ import { ProfileForm } from '@/features/profile/components/ProfileForm';
 import type { ProfileFormValues } from '@/features/profile/schemas/profileSchema';
 import { DEFAULT_PROFILE_FORM_VALUES } from '@/features/profile/utils/defaultProfileFormValues';
 import { profileFormValuesToEntity } from '@/features/profile/utils/profileForm';
+import { useActionToast } from '@/shared/toast/useActionToast';
 import { Card } from '@/shared/ui/Card';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 
 export function OnboardingPage() {
+  const actionToast = useActionToast();
   const navigate = useNavigate();
   const { saveProfile } = useProfile();
   const [saveError, setSaveError] = useState<string | undefined>();
@@ -20,13 +22,24 @@ export function OnboardingPage() {
 
     try {
       await saveProfile(profileFormValuesToEntity(values));
+      actionToast.success({
+        key: 'onboarding-profile-create',
+        title: 'Profil créé',
+        description: 'SportPilot est prêt à suivre tes données.',
+      });
       navigate(routePaths.dashboard, { replace: true });
     } catch (error) {
+      const fallback = 'Le profil n’a pas pu être enregistré sur cet appareil.';
       setSaveError(
         error instanceof Error
           ? error.message
-          : 'Le profil n’a pas pu être enregistré sur cet appareil.',
+          : fallback,
       );
+      actionToast.error({
+        key: 'onboarding-profile-create',
+        error,
+        fallback,
+      });
     }
   };
 

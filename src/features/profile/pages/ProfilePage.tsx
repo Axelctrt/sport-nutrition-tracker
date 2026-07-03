@@ -18,6 +18,7 @@ import {
   SettingsSectionDirectory,
   type SettingsDirectoryItem,
 } from '@/features/settings/components/SettingsSectionDirectory';
+import { useActionToast } from '@/shared/toast/useActionToast';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 
 const profileSections: readonly SettingsDirectoryItem[] = [
@@ -46,6 +47,7 @@ const profileSections: readonly SettingsDirectoryItem[] = [
 
 export function ProfilePage() {
   const { profile, saveProfile } = useProfile();
+  const actionToast = useActionToast();
   const [feedback, setFeedback] = useState<
     | {
         tone: 'success' | 'error';
@@ -70,13 +72,23 @@ export function ProfilePage() {
         message:
           'Le profil a été mis à jour dans la base locale.',
       });
+      actionToast.success({
+        key: 'profile-update',
+        title: 'Profil mis à jour',
+      });
     } catch (error) {
+      const fallback = 'Le profil n’a pas pu être mis à jour.';
       setFeedback({
         tone: 'error',
         message:
           error instanceof Error
             ? error.message
-            : 'Le profil n’a pas pu être mis à jour.',
+            : fallback,
+      });
+      actionToast.error({
+        key: 'profile-update',
+        error,
+        fallback,
       });
     }
   };

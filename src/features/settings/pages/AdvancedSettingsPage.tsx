@@ -57,6 +57,7 @@ import {
   type PersistentStorageStatus,
 } from '@/infrastructure/storage/persistentStorage';
 import { openSettingsSection } from '@/features/settings/settingsSectionNavigation';
+import { useActionToast } from '@/shared/toast/useActionToast';
 import { Card } from '@/shared/ui/Card';
 import { CollapsibleSection } from '@/shared/ui/CollapsibleSection';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
@@ -227,6 +228,7 @@ function SyncDetailPanel({
 
 export function AdvancedSettingsPage() {
   const { setTheme } = useTheme();
+  const actionToast = useActionToast();
   const [settings, setSettings] = useState<AppSettings>();
   const [storageStatus, setStorageStatus] =
     useState<PersistentStorageStatus>('unsupported');
@@ -329,13 +331,23 @@ export function AdvancedSettingsPage() {
         message:
           'Les paramètres avancés ont été enregistrés localement.',
       });
+      actionToast.success({
+        key: 'advanced-settings-save',
+        title: 'Paramètres enregistrés',
+      });
     } catch (error) {
+      const fallback = 'Les paramètres n’ont pas pu être enregistrés.';
       setFeedback({
         tone: 'error',
         message:
           error instanceof Error
             ? error.message
-            : 'Les paramètres n’ont pas pu être enregistrés.',
+            : fallback,
+      });
+      actionToast.error({
+        key: 'advanced-settings-save',
+        error,
+        fallback,
       });
     }
   };
@@ -359,6 +371,11 @@ export function AdvancedSettingsPage() {
           message:
             'Les valeurs par défaut ont été restaurées.',
         });
+        actionToast.success({
+          key: 'advanced-settings-reset',
+          title: 'Paramètres réinitialisés',
+          description: 'Les valeurs par défaut ont été restaurées.',
+        });
         return settingsToFormValues(defaults);
       } catch (error) {
         const message =
@@ -368,6 +385,11 @@ export function AdvancedSettingsPage() {
         setFeedback({
           tone: 'error',
           message,
+        });
+        actionToast.error({
+          key: 'advanced-settings-reset',
+          error,
+          fallback: message,
         });
         throw error;
       }

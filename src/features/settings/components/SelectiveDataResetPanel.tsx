@@ -15,6 +15,7 @@ import { Button } from "@/shared/ui/Button";
 import { Card } from "@/shared/ui/Card";
 import { ConfirmationDialog } from "@/shared/ui/ConfirmationDialog";
 import { InlineNotice } from "@/shared/ui/InlineNotice";
+import { useActionToast } from "@/shared/toast/useActionToast";
 
 interface SelectiveDataResetPanelProps {
   className?: string;
@@ -55,6 +56,7 @@ export function SelectiveDataResetPanel({
   loadPreview = getSelectiveDataResetPreview,
   resetData = resetSelectedData,
 }: SelectiveDataResetPanelProps) {
+  const actionToast = useActionToast();
   const [selectedCategories, setSelectedCategories] = useState<
     SelectiveDataResetCategory[]
   >([]);
@@ -154,12 +156,20 @@ export function SelectiveDataResetPanel({
       setResult(resetResult);
       setSelectedCategories([]);
       setPreview(null);
+      actionToast.success({
+        key: 'selective-data-reset',
+        title: 'Données réinitialisées',
+        description: formatDeletionResult(resetResult.deletedRecordCount),
+      });
     } catch (caughtError) {
-      setError(
-        caughtError instanceof Error
-          ? caughtError.message
-          : "La réinitialisation sélective a échoué.",
-      );
+      const fallback = "La réinitialisation sélective a échoué.";
+      setError(caughtError instanceof Error ? caughtError.message : fallback);
+      actionToast.error({
+        key: 'selective-data-reset',
+        title: 'Réinitialisation impossible',
+        error: caughtError,
+        fallback,
+      });
       setPreview(null);
     } finally {
       setIsResetting(false);

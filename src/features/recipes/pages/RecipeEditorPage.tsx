@@ -15,11 +15,13 @@ import {
 import { RecipeForm } from '@/features/recipes/components/RecipeForm';
 import type { RecipeFormValues } from '@/features/recipes/schemas/recipeFormSchema';
 import { repositories } from '@/infrastructure/repositories/repositories';
+import { useActionToast } from '@/shared/toast/useActionToast';
 import { Card } from '@/shared/ui/Card';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 import { PageSkeleton } from '@/shared/ui/PageSkeleton';
 
 export function RecipeEditorPage() {
+  const actionToast = useActionToast();
   const { recipeId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
@@ -65,23 +67,32 @@ export function RecipeEditorPage() {
   }, [recipeId]);
 
   const handleSubmit = async (values: RecipeFormValues) => {
-    const saved = await saveRecipe({
-      ...(recipeId ? { recipeId } : {}),
-      name: values.name,
-      numberOfServings: values.numberOfServings,
-      ingredients: values.ingredients,
-      ...(values.notes === undefined ? {} : { notes: values.notes }),
-    });
-    const feedbackState = createFoodLibraryFeedbackState(libraryReturn, {
-      title: recipeId ? 'Recette mise à jour' : 'Recette créée',
-      itemId: saved.recipe.id,
-    });
-    await navigate(libraryReturn?.path ?? routePaths.recipes, {
-      state: {
-        ...(navigationState ?? {}),
-        ...feedbackState,
-      },
-    });
+    try {
+      const saved = await saveRecipe({
+        ...(recipeId ? { recipeId } : {}),
+        name: values.name,
+        numberOfServings: values.numberOfServings,
+        ingredients: values.ingredients,
+        ...(values.notes === undefined ? {} : { notes: values.notes }),
+      });
+      const feedbackState = createFoodLibraryFeedbackState(libraryReturn, {
+        title: recipeId ? 'Recette mise à jour' : 'Recette créée',
+        itemId: saved.recipe.id,
+      });
+      await navigate(libraryReturn?.path ?? routePaths.recipes, {
+        state: {
+          ...(navigationState ?? {}),
+          ...feedbackState,
+        },
+      });
+    } catch (error) {
+      actionToast.error({
+        key: recipeId ? `recipe-update:${recipeId}` : 'recipe-create',
+        error,
+        fallback: 'La recette n’a pas pu être enregistrée.',
+      });
+      throw error;
+    }
   };
 
   return (
