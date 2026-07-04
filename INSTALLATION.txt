@@ -1,56 +1,60 @@
-SPORTPILOT 0.24.0
+SPORTPILOT 0.25.0
 
 PRÉPARATION
 
-1. Vérifier que la branche feature/rewards-themes-0.24.0 est propre et à jour.
-2. Arrêter Vite avec Ctrl + C et fermer les onglets de test.
-3. Exporter une sauvegarde JSON v7 récente de l’espace invité et du compte principal.
-4. Vérifier que .env.local, dexie-cloud.json et dexie-cloud.key restent ignorés par Git.
-5. Ne supprimer aucune base IndexedDB, donnée Safari ou donnée Dexie Cloud.
+1. Vérifier que la branche feature/photo-nutrition-0.25.0 est propre et à jour.
+2. Arrêter Vite avec Ctrl + C et fermer les tunnels Cloudflare temporaires.
+3. Retirer toute whitelist Cloudflare temporaire de Dexie Cloud.
+4. Vérifier que vite.config.ts ne contient pas de host trycloudflare.com versionné.
+5. Exporter une sauvegarde JSON v7 récente de l’espace invité et du compte principal.
+6. Vérifier que .env.local, dexie-cloud.json et dexie-cloud.key restent ignorés par Git.
+7. Ne supprimer aucune base IndexedDB, donnée Safari ou donnée Dexie Cloud.
 
 VALIDATION AUTOMATIQUE
 
-6. Installer les dépendances avec npm ci.
-7. Lancer npm run audit:reward-theme-catalog.
-8. Lancer npm run release:verify.
-9. Lancer npm run test:e2e si l’environnement Playwright est disponible.
-10. Vérifier que Paramètres affiche la version 0.24.0.
-11. Vérifier l’absence d’archive, de journal et de fichier de patch dans git status.
+8. Installer les dépendances avec npm ci.
+9. Lancer npm run audit:photo-nutrition.
+10. Lancer npm run release:verify.
+11. Lancer npm run test:e2e si l’environnement Playwright est disponible.
+12. Vérifier que Paramètres affiche la version 0.25.0.
+13. Vérifier l’absence d’archive, de journal et de fichier de patch dans git status.
 
-RECETTE RÉCOMPENSES
+RECETTE PHOTO NUTRITION
 
-12. Vérifier que le centre de récompenses affiche 50 badges.
-13. Vérifier que les badges historiques restent reconnus.
-14. Vérifier que la progression du badge Semi-marathonien n’affiche plus d’artefact flottant.
-15. Vérifier que les compteurs restent cohérents après rechargement.
+14. Ouvrir le journal alimentaire.
+15. Vérifier que le bouton Photo est visible sur chaque repas.
+16. Ouvrir la page Estimation photo.
+17. Choisir une photo depuis l’iPhone ou la galerie.
+18. Vérifier l’aperçu, le nom et la taille du fichier.
+19. Supprimer la photo avec la croix puis choisir une nouvelle photo.
+20. Lancer l’analyse et vérifier les messages de prudence.
+21. Corriger l’aliment, la quantité, les calories, protéines, glucides et lipides.
+22. Ajouter au journal et vérifier le bon repas.
+23. Vérifier que l’image n’est pas persistée dans les données utilisateur.
+24. Vérifier les cas d’erreur : analyse sans photo et fichier non image.
 
-RECETTE THÈMES
+RÉGRESSIONS NUTRITION
 
-16. Vérifier que le catalogue affiche 15 thèmes.
-17. Vérifier que l’icône œil ouvre une mini pop-up fixe centrée.
-18. Vérifier que la pop-up garde le même comportement en mode Complet et Minimaliste.
-19. Vérifier qu’aucun bouton Prévisualiser tout n’est présent.
-20. Vérifier qu’un thème verrouillé ne peut pas être appliqué durablement.
-21. Vérifier que SportPilot classique est grisé en Complet et disponible en Minimaliste.
-22. Vérifier que le mode sombre reste cohérent pour les thèmes accessibles, avancés et Nexus.
-23. Vérifier qu’aucun thème n’est animé.
+25. Vérifier l’ajout alimentaire classique.
+26. Vérifier Open Food Facts.
+27. Vérifier le scanner code-barres.
+28. Vérifier les totaux nutritionnels après ajout.
 
 VALIDATION IPHONE
 
-24. Mettre à jour la PWA sur iPhone 15 sous iOS 26.
-25. Vérifier la version 0.24.0.
-26. Vérifier la pop-up œil, le mode complet/minimaliste et l’absence de débordement horizontal.
-27. Vérifier que le menu latéral et les cartes restent utilisables.
+29. Tester via URL HTTPS, par exemple Cloudflare Tunnel temporaire.
+30. Vérifier portrait, paysage, scroll, clavier et boutons tactiles.
+31. Retirer la whitelist Cloudflare Dexie Cloud après recette.
 
 PUBLICATION
 
-28. Committer la finalisation 0.24.0 sur feature/rewards-themes-0.24.0.
-29. Fusionner manuellement la branche dans develop avec un commit de fusion explicite.
-30. Fusionner develop dans main avec un commit de publication.
-31. Pousser main puis créer le tag annoté v0.24.0.
-32. Fusionner ensuite main dans develop avec un commit de synchronisation explicite.
-33. Pousser develop et supprimer la branche de fonctionnalité locale et distante.
-34. Vérifier le déploiement public sur ordinateur et iPhone.
+32. Committer la finalisation 0.25.0 sur feature/photo-nutrition-0.25.0.
+33. Fusionner manuellement la branche dans develop avec un commit de fusion explicite.
+34. Fusionner develop dans main avec un commit de publication.
+35. Pousser main puis créer le tag annoté v0.25.0.
+36. Fusionner ensuite main dans develop avec un commit de synchronisation explicite.
+37. Pousser develop et supprimer la branche de fonctionnalité locale et distante.
+38. Vérifier le déploiement public sur ordinateur et iPhone.
 
 VERSIONS DE DONNÉES
 
@@ -60,4 +64,4 @@ Schéma Dexie principal : version 8.
 Sauvegarde JSON : version 7.
 Registre local des espaces : version 1.
 
-SportPilot 0.24.0 ne nécessite aucune migration de données.
+SportPilot 0.25.0 ne nécessite aucune migration de données.

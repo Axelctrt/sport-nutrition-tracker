@@ -16,6 +16,7 @@ const routeMetadata: RouteMetadata[] = [
   { pattern: routePaths.settings, title: 'Paramètres' },
   { pattern: routePaths.reminders, title: 'Rappels et routines' },
   { pattern: routePaths.barcodeScanner, title: 'Scanner un code-barres' },
+  { pattern: routePaths.photoNutritionEstimate, title: 'Photo' },
   { pattern: routePaths.foodSelector, title: 'Ajouter un aliment' },
   { pattern: routePaths.addFood, title: 'Ajouter un aliment' },
   { pattern: routePaths.editFoodEntry, title: 'Modifier un aliment' },
