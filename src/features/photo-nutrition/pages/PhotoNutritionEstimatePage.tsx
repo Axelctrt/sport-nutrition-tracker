@@ -52,6 +52,8 @@ export function PhotoNutritionEstimatePage({
   const mealSlot = slotOf(params.get('slot'));
   const [analysis, setAnalysis] = useState<PhotoNutritionAnalysisResult>();
   const [error, setError] = useState('');
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File>();
   const [previewUrl, setPreviewUrl] = useState('');
   const photoInputRef = useRef<HTMLInputElement>(null);
@@ -87,28 +89,35 @@ export function PhotoNutritionEstimatePage({
       setError('Choisis une photo du repas.');
       return;
     }
+    setIsAnalyzing(true);
+    setError('');
     try {
       setAnalysis(await analyzePhoto(selectedFile));
-      setError('');
     } catch (caught) {
       setAnalysis(undefined);
       setError(caught instanceof Error ? caught.message : 'Repas non reconnu : corrige manuellement.');
+    } finally {
+      setIsAnalyzing(false);
     }
   }
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!analysis) return;
+    if (!analysis || isSaving) return;
     const estimate = fromForm(new FormData(event.currentTarget), analysis);
     if (!(estimate.amount > 0)) {
       setError('Corrige les champs obligatoires.');
       return;
     }
+    setIsSaving(true);
+    setError('');
     try {
       await saveEstimate({ date, mealSlot, estimate });
       await navigate('/food');
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Ajout impossible.');
+    } finally {
+      setIsSaving(false);
     }
   }
 
@@ -125,13 +134,13 @@ export function PhotoNutritionEstimatePage({
       </div>
 
       <InlineNotice tone="info" title="Estimation à vérifier">
-        Aucune image n’est envoyée dans cette version. La photo sert uniquement à préparer une saisie locale à corriger.
+        En F2, l’analyse reste locale et prudente : aucune image n’est envoyée, stockée ou synchronisée. Les valeurs doivent être corrigées avant validation.
       </InlineNotice>
 
       <Card className="overflow-hidden">
         <div className="border-b border-slate-200 px-4 py-3 dark:border-slate-800 sm:px-5">
           <h2 className="font-semibold text-slate-950 dark:text-white">1. Photo du repas</h2>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Le sélecteur iPhone proposera la caméra ou la galerie.</p>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Le sélecteur iPhone proposera la caméra, la galerie ou les fichiers.</p>
         </div>
         <div className="grid gap-4 p-4 sm:p-5">
           <label className="flex min-h-20 cursor-pointer items-center gap-3 rounded-2xl border border-brand-200 bg-brand-50 p-4 text-brand-950 shadow-sm transition hover:bg-brand-100 dark:border-brand-900 dark:bg-brand-950/40 dark:text-brand-100">
@@ -140,7 +149,7 @@ export function PhotoNutritionEstimatePage({
             </span>
             <span>
               <span className="block font-semibold">Choisir une photo</span>
-              <span className="mt-1 block text-xs leading-5 opacity-80">Sur iPhone, tu pourras prendre une photo ou ouvrir la galerie.</span>
+              <span className="mt-1 block text-xs leading-5 opacity-80">La photo reste locale. Tu peux la supprimer avant l’analyse.</span>
             </span>
             <input
               ref={photoInputRef}
@@ -166,8 +175,9 @@ export function PhotoNutritionEstimatePage({
                     <button
                       type="button"
                       aria-label="Supprimer la photo sélectionnée"
-                      className="grid size-8 shrink-0 place-items-center rounded-full border border-emerald-300 bg-white text-lg leading-none text-emerald-900 shadow-sm transition hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-100 dark:hover:bg-emerald-900"
+                      className="grid size-8 shrink-0 place-items-center rounded-full border border-emerald-300 bg-white text-lg leading-none text-emerald-900 shadow-sm transition hover:bg-emerald-100 disabled:opacity-60 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-100 dark:hover:bg-emerald-900"
                       onClick={clearPhoto}
+                      disabled={isAnalyzing || isSaving}
                     >
                       ×
                     </button>
@@ -183,8 +193,8 @@ export function PhotoNutritionEstimatePage({
             </p>
           )}
 
-          <Button onClick={() => void run()} className="w-full sm:w-auto">
-            Analyser la photo
+          <Button onClick={() => void run()} className="w-full sm:w-auto" disabled={!selectedFile || isAnalyzing || isSaving}>
+            {isAnalyzing ? 'Analyse en cours…' : 'Analyser la photo'}
           </Button>
         </div>
       </Card>
@@ -192,33 +202,44 @@ export function PhotoNutritionEstimatePage({
       {error ? <InlineNotice role="alert" tone="error" title="Action impossible">{error}</InlineNotice> : null}
 
       {analysis ? (
-        <form onSubmit={(event) => void save(event)}>
-          <Card className="overflow-hidden">
-            <div className="border-b border-slate-200 px-4 py-3 dark:border-slate-800 sm:px-5">
-              <h2 className="font-semibold text-slate-950 dark:text-white">2. Corriger l’estimation</h2>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Ces valeurs sont approximatives. Ajuste-les avant validation.</p>
-            </div>
-            <div className="grid gap-4 p-4 sm:grid-cols-2 sm:p-5">
-              <label className="grid gap-1.5 text-sm font-semibold text-slate-700 dark:text-slate-200 sm:col-span-2">
-                Aliment détecté
-                <input name="name" defaultValue={analysis.estimate.name} className="min-h-11 rounded-xl border border-slate-300 bg-white px-3 text-base font-normal text-slate-950 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
-              </label>
-              <label className="grid gap-1.5 text-sm font-semibold text-slate-700 dark:text-slate-200">
-                Quantité approximative en g/ml
-                <input name="amount" type="number" defaultValue={analysis.estimate.amount} className="min-h-11 rounded-xl border border-slate-300 bg-white px-3 text-base font-normal text-slate-950 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
-              </label>
-              {fields.map(([key, label]) => (
-                <label key={key} className="grid gap-1.5 text-sm font-semibold text-slate-700 dark:text-slate-200">
-                  {label}
-                  <input name={key} type="number" defaultValue={analysis.estimate.nutrition[key] ?? ''} className="min-h-11 rounded-xl border border-slate-300 bg-white px-3 text-base font-normal text-slate-950 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
+        <>
+          <InlineNotice tone="info" title="Analyse locale prudente">
+            <p>Mode : {analysis.mode === 'local-fallback' ? 'fallback local sans IA distante' : 'analyse distante avec consentement requis'} · confiance {analysis.confidence}.</p>
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              {analysis.warnings.map((warning) => <li key={warning}>{warning}</li>)}
+            </ul>
+          </InlineNotice>
+
+          <form onSubmit={(event) => void save(event)}>
+            <Card className="overflow-hidden">
+              <div className="border-b border-slate-200 px-4 py-3 dark:border-slate-800 sm:px-5">
+                <h2 className="font-semibold text-slate-950 dark:text-white">2. Corriger l’estimation</h2>
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Ces valeurs sont approximatives. Ajuste-les avant validation.</p>
+              </div>
+              <div className="grid gap-4 p-4 sm:grid-cols-2 sm:p-5">
+                <label className="grid gap-1.5 text-sm font-semibold text-slate-700 dark:text-slate-200 sm:col-span-2">
+                  Aliment détecté
+                  <input name="name" defaultValue={analysis.estimate.name} className="min-h-11 rounded-xl border border-slate-300 bg-white px-3 text-base font-normal text-slate-950 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
                 </label>
-              ))}
-            </div>
-            <div className="border-t border-slate-200 p-4 dark:border-slate-800 sm:px-5">
-              <Button type="submit" size="lg" className="w-full">Ajouter au journal</Button>
-            </div>
-          </Card>
-        </form>
+                <label className="grid gap-1.5 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                  Quantité approximative en g/ml
+                  <input name="amount" type="number" defaultValue={analysis.estimate.amount} className="min-h-11 rounded-xl border border-slate-300 bg-white px-3 text-base font-normal text-slate-950 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
+                </label>
+                {fields.map(([key, label]) => (
+                  <label key={key} className="grid gap-1.5 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                    {label}
+                    <input name={key} type="number" defaultValue={analysis.estimate.nutrition[key] ?? ''} className="min-h-11 rounded-xl border border-slate-300 bg-white px-3 text-base font-normal text-slate-950 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
+                  </label>
+                ))}
+              </div>
+              <div className="border-t border-slate-200 p-4 dark:border-slate-800 sm:px-5">
+                <Button type="submit" size="lg" className="w-full" disabled={isSaving}>
+                  {isSaving ? 'Ajout en cours…' : 'Ajouter au journal'}
+                </Button>
+              </div>
+            </Card>
+          </form>
+        </>
       ) : null}
     </section>
   );

@@ -12,6 +12,13 @@ const analysisResult: PhotoNutritionAnalysisResult = {
     amount: 250,
     nutrition: { caloriesKcal: 450, proteinGrams: 22, carbohydratesGrams: 48, fatGrams: 16 },
   },
+  mode: 'local-fallback',
+  confidence: 'low',
+  privacy: 'local-only',
+  warnings: [
+    'Estimation locale sans reconnaissance IA réelle branchée.',
+    'Photo non conservée dans le journal alimentaire.',
+  ],
 };
 
 const product: FoodProduct = {
@@ -74,6 +81,7 @@ describe('PhotoNutritionEstimatePage', () => {
     expect(screen.getByText('Choisir une photo')).toBeInTheDocument();
     expect(screen.getByLabelText('Choisir une photo')).not.toHaveAttribute('capture');
     expect(screen.getByText('Aucune photo sélectionnée pour le moment.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Analyser la photo' })).toBeDisabled();
 
     await user.upload(screen.getByLabelText('Choisir une photo'), file);
 
@@ -86,6 +94,9 @@ describe('PhotoNutritionEstimatePage', () => {
 
     expect(analyzePhoto).toHaveBeenCalledWith(file);
     expect(await screen.findByRole('heading', { name: '2. Corriger l’estimation' })).toBeInTheDocument();
+    expect(screen.getByText('Analyse locale prudente')).toBeInTheDocument();
+    expect(screen.getByText(/fallback local sans IA distante/i)).toBeInTheDocument();
+    expect(screen.getByText('Photo non conservée dans le journal alimentaire.')).toBeInTheDocument();
     expect(screen.getByDisplayValue('Repas photographié à vérifier')).toBeInTheDocument();
 
     const calories = screen.getByLabelText(/Calories approximatives/i);
@@ -120,6 +131,7 @@ describe('PhotoNutritionEstimatePage', () => {
     await user.click(screen.getByRole('button', { name: 'Supprimer la photo sélectionnée' }));
     expect(screen.queryByText('nouveau-repas.jpg')).not.toBeInTheDocument();
     expect(screen.getByText('Aucune photo sélectionnée pour le moment.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Analyser la photo' })).toBeDisabled();
   });
 
   it('affiche clairement une photo illisible', async () => {

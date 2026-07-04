@@ -81,16 +81,30 @@ class FakeFoodRepository implements FoodRepository {
 }
 
 describe('photoNutritionEstimationService', () => {
-  it('fournit une estimation prudente sans envoyer la photo', async () => {
+  it('fournit une estimation prudente, locale et explicitement faible', async () => {
     const result = await analyzePhotoNutrition(imageFile('repas.jpg'));
 
     expect(result.estimate.name).toBe('Repas à vérifier');
     expect(result.estimate.amount).toBe(250);
     expect(result.estimate.nutrition.caloriesKcal).toBe(450);
+    expect(result.mode).toBe('local-fallback');
+    expect(result.confidence).toBe('low');
+    expect(result.privacy).toBe('local-only');
+    expect(result.warnings).toEqual(expect.arrayContaining([
+      'Estimation locale sans reconnaissance IA réelle branchée.',
+      'Photo non conservée dans le journal alimentaire.',
+    ]));
   });
 
   it('signale une photo illisible avant toute estimation', async () => {
     await expect(analyzePhotoNutrition(imageFile('vide.jpg', 0))).rejects.toThrow('Photo illisible');
+  });
+
+  it('refuse un fichier qui n’est pas une image', async () => {
+    const port: PhotoNutritionAnalysisPort = { analyze: vi.fn(async () => { throw new Error('ne doit pas être appelé'); }) };
+
+    await expect(analyzePhotoNutrition(new File(['texte'], 'notes.txt', { type: 'text/plain' }), port)).rejects.toThrow('Format non supporté');
+    expect(port.analyze).not.toHaveBeenCalled();
   });
 
   it('normalise les valeurs par 100 g pour créer un aliment local corrigeable', () => {
@@ -110,7 +124,15 @@ describe('photoNutritionEstimationService', () => {
     expect(product.nutritionPer100.proteinGrams).toBe(10);
   });
 
-  it('enregistre l’estimation comme aliment manuel puis entrée du journal', async () => {
+  it('refuse une quantité impossible avant de créer un aliment', () => {
+    expect(() => createPhotoEstimatedProductData({
+      name: 'Repas impossible',
+      amount: 0,
+      nutrition: { caloriesKcal: 0, proteinGrams: 0, carbohydratesGrams: 0, fatGrams: 0 },
+    })).toThrow('Quantité approximative invalide');
+  });
+
+  it('enregistre l’estimation comme aliment manuel puis entrée du journal sans conserver la photo', async () => {
     const food = new FakeFoodRepository();
 
     const result = await savePhotoNutritionEstimateToJournal(
@@ -127,10 +149,12 @@ describe('photoNutritionEstimationService', () => {
     );
 
     expect(result.product.name).toBe('Repas test');
+    expect(result.product.brand).toBe('Estimation photo');
     expect(result.entry.date).toBe('2026-07-04');
     expect(result.entry.mealSlot).toBe('lunch');
     if (result.entry.reference.sourceType !== 'product') throw new Error('Entrée produit attendue.');
     expect(result.entry.reference.inputQuantity).toBe(300);
+    expect(JSON.stringify(result)).not.toContain('repas.jpg');
   });
 
   it('convertit une indisponibilité réseau future en message exploitable', async () => {
