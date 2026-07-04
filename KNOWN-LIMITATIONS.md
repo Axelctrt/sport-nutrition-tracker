@@ -1,12 +1,14 @@
-# Limitations connues — SportPilot 0.23.1
+# Limitations connues — SportPilot 0.24.0
 
 Ces limitations sont connues et non bloquantes pour la version stable.
 
-## Notifications d’action
+## Récompenses et thèmes
 
-Les changements très fréquents, notamment la saisie de séries, les autosauvegardes et chaque frappe dans un formulaire, n’affichent pas un toast systématique. Ils utilisent l’indicateur local `Enregistrement… / Enregistré / Erreur` afin d’éviter une succession intrusive de notifications.
+Les thèmes verrouillés restent visibles et consultables via l’icône œil. Cette consultation ne vaut pas déblocage et ne permet pas d’activer durablement le thème.
 
-Une confirmation conservée après rechargement dépend de `sessionStorage`. Si le navigateur le refuse, l’action métier reste terminée mais le toast post-rechargement peut être absent.
+SportPilot classique n’a pas de rendu complet dédié : il est proposé comme thème minimaliste uniquement, car il correspond au style neutre de base.
+
+Nexus vivant est identifié comme thème ultime du catalogue. Dans cette version, il reste statique : aucune animation de thème n’est activée.
 
 ## Synchronisation en premier plan
 
@@ -26,4 +28,4 @@ Open Food Facts et Dexie Cloud dépendent du réseau et de leur disponibilité.
 
 ## Versions de données
 
-SportPilot 0.23.1 utilise le runtime Dexie Cloud v10. La base métier reste en Dexie v8, la sauvegarde en JSON v7 et le registre local des espaces en v1.
+SportPilot 0.24.0 utilise le runtime Dexie Cloud v10. La base métier reste en Dexie v8, la sauvegarde en JSON v7 et le registre local des espaces en v1. Aucune migration n’est requise.

@@ -1,43 +1,39 @@
-# SportPilot 0.23.1 — confirmations d’action globales
+# SportPilot 0.24.0 — récompenses et thèmes 2.0
 
-Branche de publication : `feature/global-action-feedback-0.23.1`
+Branche de publication : `feature/rewards-themes-0.24.0`
 
 ## Livraison
 
-La version 0.23.1 :
+La version 0.24.0 finalise la roadmap récompenses et thèmes :
 
-- centralise les confirmations de succès et les erreurs ;
-- déduplique les notifications répétées ;
-- conserve une confirmation après un rechargement complet ;
-- couvre les principaux écrans de création, modification, suppression, restauration et export ;
-- maintient un indicateur discret pour les autosauvegardes et écritures fréquentes ;
-- ajoute un audit transversal au pipeline complet.
+- catalogue de 50 badges ;
+- catalogue de 15 thèmes ;
+- règles de progression et de déblocage conservées dans le domaine récompenses ;
+- aperçu rapide par icône œil uniquement ;
+- suppression de l’ancien aperçu complet appliqué à l’app ;
+- choix global **Complet / Minimaliste** pour le rendu des thèmes ;
+- SportPilot classique disponible en minimaliste uniquement ;
+- aucun thème animé ;
+- rendu sombre stabilisé pour les thèmes accessibles ;
+- affichage des distances restantes et progressions de badges arrondi proprement.
 
-## Correctif complémentaire Objectifs
+## Versions de données
 
-La même livraison 0.23.1 corrige aussi l’éditeur d’objectifs :
-
-- les données existantes sont réaffichées fidèlement lors d’une modification ;
-- un nouvel objectif de poids propose la dernière pesée comme poids de départ ;
-- un objectif de poids existant conserve son poids de départ historique et ne le recalcule jamais depuis la dernière pesée actuelle.
-
-## Versions
-
-- application : `0.23.1` ;
+- application : `0.24.0` ;
 - runtime Dexie Cloud : v10 ;
 - base métier Dexie : v8 ;
 - sauvegarde JSON : v7 ;
 - registre des espaces : v1.
 
-Aucune migration n’est introduite.
+Aucune migration de données, de sauvegarde ou de registre n’est introduite.
 
 ## Vérification
 
 ```powershell
 npm ci
-npm run audit:action-feedback
+npm run audit:reward-theme-catalog
 npm run release:verify
 git diff --check
 ```
 
-La publication doit être validée sur ordinateur et iPhone 15 sous iOS 26 avant la fusion manuelle dans `main` et la création du tag `v0.23.1`.
+La publication doit être validée sur ordinateur et iPhone 15 sous iOS 26 avant la fusion manuelle dans `main` et la création du tag `v0.24.0`.

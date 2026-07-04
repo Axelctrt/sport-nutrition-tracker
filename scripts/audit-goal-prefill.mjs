@@ -24,11 +24,11 @@ if (failures.length === 0) {
   const packageJson = JSON.parse(read('package.json'));
   const packageLock = JSON.parse(read('package-lock.json'));
 
-  if (packageJson.version !== '0.23.1') {
-    fail('le correctif objectif doit rester publié sous SportPilot 0.23.1 tant que la branche corrective n’est pas fusionnée.');
+  if (!/^\d+\.\d+\.\d+$/.test(String(packageJson.version))) {
+    fail(`package.json doit publier une version stable, version trouvée : ${String(packageJson.version)}.`);
   }
-  if (packageLock.version !== '0.23.1' || packageLock.packages?.['']?.version !== '0.23.1') {
-    fail('package-lock.json ne correspond pas à SportPilot 0.23.1.');
+  if (packageLock.version !== packageJson.version || packageLock.packages?.['']?.version !== packageJson.version) {
+    fail(`package-lock.json ne correspond pas à SportPilot ${packageJson.version}.`);
   }
 
   const goalEditor = read('src/features/goals/components/GoalEditor.tsx');
@@ -71,7 +71,7 @@ if (failures.length === 0) {
   }
 
   const readiness = read('src/app/goalPrefillReadiness.test.ts');
-  if (!readiness.includes("expect(__APP_VERSION__).toBe('0.23.1')")) {
+  if (!readiness.includes(`expect(__APP_VERSION__).toBe('${packageJson.version}')`)) {
     fail('le test de readiness ne verrouille pas la version publiée.');
   }
 

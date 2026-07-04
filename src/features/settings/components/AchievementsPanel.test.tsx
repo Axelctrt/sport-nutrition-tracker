@@ -23,13 +23,13 @@ describe("AchievementsPanel", () => {
       />,
     );
 
-    expect(await screen.findByText("1/8 badges gagnés")).toBeInTheDocument();
+    expect(await screen.findByText("1/50 badges gagnés")).toBeInTheDocument();
     expect(screen.getByText("Premier élan")).toBeInTheDocument();
     expect(
       screen.getByText(/Prochain objectif : Rythme installé/),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("progressbar", { name: "Progression Cap endurance" }),
+      screen.getByRole("progressbar", { name: "Progression Rythme installé" }),
     ).toHaveAttribute("aria-valuenow", "1");
   });
 
@@ -56,7 +56,7 @@ describe("AchievementsPanel", () => {
       />,
     );
 
-    expect(await screen.findByText("1/8 badges gagnés")).toBeInTheDocument();
+    expect(await screen.findByText("1/50 badges gagnés")).toBeInTheDocument();
     expect(screen.getByText(/Gagné le/)).toBeInTheDocument();
     expect(screen.getAllByLabelText("Badge gagné")).toHaveLength(1);
   });

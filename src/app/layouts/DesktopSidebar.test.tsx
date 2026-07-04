@@ -25,9 +25,13 @@ describe('DesktopSidebar', () => {
       'flex-1',
       'overscroll-contain',
     );
-    expect(scrollRegion).toContainElement(
-      screen.getByRole('navigation', { name: 'Navigation secondaire' }),
-    );
+    const secondaryNavigation = screen.getByRole('navigation', {
+      name: 'Navigation secondaire',
+    });
+
+    expect(scrollRegion).toContainElement(secondaryNavigation);
+    expect(secondaryNavigation).toHaveClass('mt-5');
+    expect(secondaryNavigation).not.toHaveClass('mt-auto');
   });
 
   it('ne sélectionne que Rappels sur sa route dédiée', () => {

@@ -13,7 +13,7 @@ describe("achievementService", () => {
     const snapshot = buildAchievementSnapshot(emptyMetrics);
 
     expect(snapshot.earnedCount).toBe(0);
-    expect(snapshot.totalCount).toBe(8);
+    expect(snapshot.totalCount).toBe(50);
   });
 
   it("gagne les badges dont les seuils sont atteints", () => {
@@ -29,7 +29,7 @@ describe("achievementService", () => {
       "2026-06-27T12:00:00.000Z",
     );
 
-    expect(snapshot.earnedCount).toBe(6);
+    expect(snapshot.earnedCount).toBe(7);
     expect(
       snapshot.achievements.find(
         (progress) => progress.achievement.id === "first-session",
@@ -52,5 +52,18 @@ describe("achievementService", () => {
     expect(strengthBadge?.earned).toBe(true);
     expect(strengthBadge?.earnedAt).toBe("2026-06-20T08:00:00.000Z");
     expect(strengthBadge?.current).toBe(0);
+  });
+
+  it("arrondit le restant des badges pour éviter les artefacts flottants", () => {
+    const snapshot = buildAchievementSnapshot({
+      ...emptyMetrics,
+      runningLongestKm: 21,
+    });
+
+    const halfMarathonBadge = snapshot.achievements.find(
+      (progress) => progress.achievement.id === "running-half-marathon",
+    );
+
+    expect(halfMarathonBadge?.remaining).toBe(0.1);
   });
 });
