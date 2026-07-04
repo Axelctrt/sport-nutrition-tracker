@@ -202,7 +202,7 @@ if (!themeService.includes("previewableCount")) {
 }
 if (!productionAudit.includes("totalJavaScriptBytes: 2925 * 1024")) {
   fail(
-    "le budget JavaScript de production doit rester aligné sur le budget 0.25.0 accepté pour l’UX photo.",
+    "le budget JavaScript de production doit rester aligné sur le budget 0.25.1 accepté pour l’UX photo et IA.",
   );
 }
 if (!productionAudit.includes("totalCssBytes: 176 * 1024")) {
@@ -215,7 +215,7 @@ if (
     "budget JavaScript global validé de 2925 Kio",
   )
 ) {
-  fail("l’audit F4 doit rester aligné avec le budget JavaScript 0.25.0.");
+  fail("l’audit F4 doit rester aligné avec le budget JavaScript 0.25.1.");
 }
 
 for (const marker of [

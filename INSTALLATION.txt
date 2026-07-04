@@ -1,67 +1,29 @@
-SPORTPILOT 0.25.0
+SPORTPILOT 0.25.1
 
-PRÉPARATION
+Procédure de validation et publication
 
-1. Vérifier que la branche feature/photo-nutrition-0.25.0 est propre et à jour.
-2. Arrêter Vite avec Ctrl + C et fermer les tunnels Cloudflare temporaires.
-3. Retirer toute whitelist Cloudflare temporaire de Dexie Cloud.
-4. Vérifier que vite.config.ts ne contient pas de host trycloudflare.com versionné.
-5. Exporter une sauvegarde JSON v7 récente de l’espace invité et du compte principal.
-6. Vérifier que .env.local, dexie-cloud.json et dexie-cloud.key restent ignorés par Git.
-7. Ne supprimer aucune base IndexedDB, donnée Safari ou donnée Dexie Cloud.
+1. Vérifier que la branche feature/photo-ai-0.25.1 est propre et à jour.
+2. Vérifier que package.json et package-lock.json indiquent 0.25.1.
+3. Vérifier qu’aucun fichier .env, .env.local ou secret IA réel n’est stagé.
+4. Lancer les tests ciblés IA photo.
+5. Lancer npm run audit:photo-ai.
+6. Lancer npm run audit:photo-nutrition.
+7. Lancer npm run build.
+8. Lancer npm run check.
+9. Lancer npm run test:stability.
+10. Tester sans endpoint IA : le fallback local doit fonctionner.
+11. Tester avec proxy local Gemini : npm run dev:photo-ai-proxy.
+12. Démarrer Vite avec VITE_PHOTO_NUTRITION_AI_ENDPOINT=/api/photo-nutrition/analyze.
+13. Vérifier que l’analyse IA remplit le formulaire avec un résultat cohérent.
+14. Vérifier que la coupure du proxy déclenche le fallback local.
+15. Vérifier que Paramètres affiche la version 0.25.1.
+16. Valider Open Food Facts et le scanner code-barres.
+17. Committer la finalisation 0.25.1 sur feature/photo-ai-0.25.1.
+18. Fusionner manuellement dans develop.
+19. Relancer les contrôles release sur develop.
+20. Fusionner manuellement dans main.
+21. Relancer les contrôles release sur main.
+22. Créer le tag annoté v0.25.1.
+23. Resynchroniser develop avec main.
 
-VALIDATION AUTOMATIQUE
-
-8. Installer les dépendances avec npm ci.
-9. Lancer npm run audit:photo-nutrition.
-10. Lancer npm run release:verify.
-11. Lancer npm run test:e2e si l’environnement Playwright est disponible.
-12. Vérifier que Paramètres affiche la version 0.25.0.
-13. Vérifier l’absence d’archive, de journal et de fichier de patch dans git status.
-
-RECETTE PHOTO NUTRITION
-
-14. Ouvrir le journal alimentaire.
-15. Vérifier que le bouton Photo est visible sur chaque repas.
-16. Ouvrir la page Estimation photo.
-17. Choisir une photo depuis l’iPhone ou la galerie.
-18. Vérifier l’aperçu, le nom et la taille du fichier.
-19. Supprimer la photo avec la croix puis choisir une nouvelle photo.
-20. Lancer l’analyse et vérifier les messages de prudence.
-21. Corriger l’aliment, la quantité, les calories, protéines, glucides et lipides.
-22. Ajouter au journal et vérifier le bon repas.
-23. Vérifier que l’image n’est pas persistée dans les données utilisateur.
-24. Vérifier les cas d’erreur : analyse sans photo et fichier non image.
-
-RÉGRESSIONS NUTRITION
-
-25. Vérifier l’ajout alimentaire classique.
-26. Vérifier Open Food Facts.
-27. Vérifier le scanner code-barres.
-28. Vérifier les totaux nutritionnels après ajout.
-
-VALIDATION IPHONE
-
-29. Tester via URL HTTPS, par exemple Cloudflare Tunnel temporaire.
-30. Vérifier portrait, paysage, scroll, clavier et boutons tactiles.
-31. Retirer la whitelist Cloudflare Dexie Cloud après recette.
-
-PUBLICATION
-
-32. Committer la finalisation 0.25.0 sur feature/photo-nutrition-0.25.0.
-33. Fusionner manuellement la branche dans develop avec un commit de fusion explicite.
-34. Fusionner develop dans main avec un commit de publication.
-35. Pousser main puis créer le tag annoté v0.25.0.
-36. Fusionner ensuite main dans develop avec un commit de synchronisation explicite.
-37. Pousser develop et supprimer la branche de fonctionnalité locale et distante.
-38. Vérifier le déploiement public sur ordinateur et iPhone.
-
-VERSIONS DE DONNÉES
-
-Runtime Dexie Cloud : version 10.
-Runtime local cloud : sportpilot-sync-runtime-0.20.0-v10.
-Schéma Dexie principal : version 8.
-Sauvegarde JSON : version 7.
-Registre local des espaces : version 1.
-
-SportPilot 0.25.0 ne nécessite aucune migration de données.
+SportPilot 0.25.1 ne nécessite aucune migration de données.
