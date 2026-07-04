@@ -1,51 +1,57 @@
-# Checklist de publication — SportPilot 0.24.0
+# Checklist de publication — SportPilot 0.25.0
 
 ## Git et version
 
-- [ ] La branche `feature/rewards-themes-0.24.0` est propre et synchronisée.
-- [ ] `package.json` et `package-lock.json` indiquent `0.24.0`.
-- [ ] Paramètres affiche `0.24.0`.
+- [ ] La branche `feature/photo-nutrition-0.25.0` est propre et synchronisée.
+- [ ] `package.json` et `package-lock.json` indiquent `0.25.0`.
+- [ ] Paramètres affiche `0.25.0`.
+- [ ] `vite.config.ts` ne contient pas de host Cloudflare temporaire.
 - [ ] Aucune archive, journal ou charge utile de patch n’est suivie par Git.
 
 ## Contrôles automatiques
 
-- [ ] `npm run audit:reward-theme-catalog` réussit.
+- [ ] `npm run audit:photo-nutrition` réussit.
 - [ ] `npm run check` réussit.
 - [ ] `npm run test:stability` réussit.
 - [ ] `git diff --check` ne signale aucune erreur.
 
-## Recette récompenses
+## Recette photo nutrition
 
-- [ ] Le centre de récompenses affiche 50 badges.
-- [ ] Les badges historiques déjà gagnés restent reconnus.
-- [ ] Les règles de progression ne créent pas de doublons.
-- [ ] Les progressions de badges n’affichent plus d’artefacts flottants.
-- [ ] Le badge Semi-marathonien affiche un restant arrondi, par exemple `0.1`.
+- [ ] Le bouton `Photo` est visible depuis chaque repas du journal alimentaire.
+- [ ] Le sélecteur natif permet de prendre ou choisir une photo.
+- [ ] L’aperçu, le nom et la taille du fichier sont visibles.
+- [ ] La croix supprime la photo sélectionnée et remet la page dans un état propre.
+- [ ] L’analyse sans photo affiche un message clair et ne crée aucune entrée.
+- [ ] Un fichier non image est refusé.
+- [ ] L’analyse affiche une estimation locale prudente avec confiance faible.
+- [ ] L’utilisateur peut corriger aliment, quantité, calories, protéines, glucides et lipides.
+- [ ] L’entrée est ajoutée au bon repas avec les valeurs corrigées.
+- [ ] L’image n’est pas persistée comme donnée utilisateur.
 
-## Recette thèmes
+## Régressions nutrition
 
-- [ ] Le catalogue affiche 15 thèmes.
-- [ ] L’icône œil ouvre une mini pop-up fixe centrée.
-- [ ] La pop-up est identique en mode Complet et Minimaliste.
-- [ ] Le bouton Prévisualiser tout est absent.
-- [ ] Un thème verrouillé reste non activable durablement.
-- [ ] Le mode Complet applique l’identité visuelle à l’interface.
-- [ ] Le mode Minimaliste limite le thème aux accents, icônes et barres de progression.
-- [ ] SportPilot classique est grisé en mode Complet et disponible en Minimaliste.
-- [ ] Aucun thème n’est animé.
-- [ ] Le mode sombre reste cohérent pour les thèmes accessibles, avancés et Nexus.
+- [ ] L’ajout alimentaire classique fonctionne.
+- [ ] Open Food Facts fonctionne.
+- [ ] Le scanner code-barres fonctionne.
+- [ ] Les totaux nutritionnels restent cohérents.
 
 ## Mobile et accessibilité
 
-- [ ] La pop-up œil est centrée sur iPhone 15 sous iOS 26.
+- [ ] La page photo est utilisable sur iPhone 15 sous iOS 26.
 - [ ] Les boutons restent accessibles au toucher.
+- [ ] Le clavier ne masque pas les actions principales.
 - [ ] Les textes restent lisibles en mode clair et sombre.
-- [ ] Le catalogue ne déborde pas horizontalement.
+- [ ] Le parcours ne déborde pas horizontalement.
+
+## Arbitrage budget JS
+
+- [ ] Le dépassement éventuel du budget JavaScript est accepté comme arbitrage UX pour 0.25.0.
+- [ ] L’optimisation du bundle est reportée à une phase technique dédiée.
 
 ## Publication
 
-- [ ] La PWA se met à jour vers `0.24.0`.
+- [ ] La PWA se met à jour vers `0.25.0`.
 - [ ] `develop` reçoit la branche avec un commit de fusion manuel.
 - [ ] `main` reçoit `develop` avec un commit de publication.
-- [ ] Le tag annoté `v0.24.0` est créé sur le commit publié.
+- [ ] Le tag annoté `v0.25.0` est créé sur le commit publié.
 - [ ] `develop` est resynchronisée avec `main`.

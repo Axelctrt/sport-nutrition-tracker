@@ -114,8 +114,8 @@ if (failures.length === 0) {
     fail('le runtime cloud doit rester en v10.');
   }
   const productionAudit = read('scripts/audit-rc.mjs');
-  if (!productionAudit.includes('totalJavaScriptBytes: 2750 * 1024')) {
-    fail('le budget JavaScript global validé de 2750 Kio est absent.');
+  if (!productionAudit.includes('totalJavaScriptBytes: 2925 * 1024')) {
+    fail('le budget JavaScript global validé de 2925 Kio est absent.');
   }
 
   const releaseNotes = read('RELEASE-NOTES-0.23.0.md');

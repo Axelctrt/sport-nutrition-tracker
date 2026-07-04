@@ -28,9 +28,9 @@ const automaticSyncReleaseAudit = read(
   "scripts/audit-automatic-sync-release.mjs",
 );
 
-if (packageJson.version !== "0.24.0") {
+if (!/^0\.(?:24|25)\.\d+$/.test(packageJson.version)) {
   fail(
-    `la finalisation 0.24.0 doit publier la version applicative 0.24.0, version trouvée : ${packageJson.version}.`,
+    `le catalogue récompenses/thèmes 0.24.x doit rester compatible avec la version applicative publiée, version trouvée : ${packageJson.version}.`,
   );
 }
 if (!packageJson.scripts?.["audit:reward-theme-catalog"]) {
@@ -200,9 +200,9 @@ if (!themeService.includes("previewableCount")) {
     "le snapshot des thèmes ne déclare pas le nombre de thèmes consultables.",
   );
 }
-if (!productionAudit.includes("totalJavaScriptBytes: 2750 * 1024")) {
+if (!productionAudit.includes("totalJavaScriptBytes: 2925 * 1024")) {
   fail(
-    "le budget JavaScript de production doit rester aligné sur 2750 Kio pour cette phase 0.24.0.",
+    "le budget JavaScript de production doit rester aligné sur le budget 0.25.0 accepté pour l’UX photo.",
   );
 }
 if (!productionAudit.includes("totalCssBytes: 176 * 1024")) {
@@ -212,10 +212,10 @@ if (!productionAudit.includes("totalCssBytes: 176 * 1024")) {
 }
 if (
   !automaticSyncReleaseAudit.includes(
-    "budget JavaScript global validé de 2750 Kio",
+    "budget JavaScript global validé de 2925 Kio",
   )
 ) {
-  fail("l’audit F4 doit rester aligné avec le budget JavaScript 2750 Kio.");
+  fail("l’audit F4 doit rester aligné avec le budget JavaScript 0.25.0.");
 }
 
 for (const marker of [

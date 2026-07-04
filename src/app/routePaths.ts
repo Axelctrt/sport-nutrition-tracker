@@ -12,6 +12,7 @@ export const routePaths = {
   addFood: '/food/add',
   foodSelector: '/food/select',
   barcodeScanner: '/food/barcode-scanner',
+  photoNutritionEstimate: '/food/photo-estimate',
   foodProducts: '/food/products',
   newFoodProduct: '/food/products/new',
   editFoodEntry: '/food/entries/:entryId/edit',
@@ -138,6 +139,10 @@ export function addRecipeToJournalPath(
 
 export function barcodeScannerPath(date: string, slot: string): string {
   return `${routePaths.barcodeScanner}?date=${encodeURIComponent(date)}&slot=${encodeURIComponent(slot)}`;
+}
+
+export function photoNutritionEstimatePath(date: string, slot: string): string {
+  return `${routePaths.photoNutritionEstimate}?date=${date}&slot=${slot}`;
 }
 
 export function weeklyPlanningSessionPath(

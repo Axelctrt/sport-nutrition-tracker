@@ -2,7 +2,7 @@ import { CopyPlus, MoreHorizontal, Pencil, Plus, Save, Trash2, Utensils } from '
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { FoodEntryWithProduct, MealJournalSnapshot } from '@/application/food/foodJournalService';
-import { addRecipeToJournalPath, editFoodEntryPath, routePaths, selectFoodPath } from '@/app/routePaths';
+import { addRecipeToJournalPath, editFoodEntryPath, photoNutritionEstimatePath, routePaths, selectFoodPath } from '@/app/routePaths';
 import type { FoodJournalNavigationState } from '@/features/food-journal/navigation/foodJournalNavigation';
 import { CopyMealForm } from '@/features/food-journal/components/CopyMealForm';
 import { SaveFavoriteMealForm } from '@/features/food-journal/components/SaveFavoriteMealForm';
@@ -92,15 +92,24 @@ export function FoodJournalMealCard({
             {round(meal.totals.caloriesKcal)} kcal · P {round(meal.totals.proteinGrams)} g · G {round(meal.totals.carbohydratesGrams)} g · L {round(meal.totals.fatGrams)} g
           </p>
         </div>
-        <Link
-          aria-label={addAriaLabel}
-          to={selectFoodPath(date, meal.slot)}
-          state={navigationState}
-          className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl bg-brand-700 px-3 text-sm font-semibold text-white shadow-sm hover:bg-brand-800 dark:bg-brand-600 dark:hover:bg-brand-500"
-        >
-          <Plus aria-hidden="true" className="size-4" />
-          Ajouter
-        </Link>
+        <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
+          <Link
+            to={photoNutritionEstimatePath(date, meal.slot)}
+            state={navigationState}
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+          >
+            Photo
+          </Link>
+          <Link
+            aria-label={addAriaLabel}
+            to={selectFoodPath(date, meal.slot)}
+            state={navigationState}
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-brand-700 px-3 text-sm font-semibold text-white shadow-sm hover:bg-brand-800 dark:bg-brand-600 dark:hover:bg-brand-500"
+          >
+            <Plus aria-hidden="true" className="size-4" />
+            Ajouter
+          </Link>
+        </div>
       </div>
 
       {meal.entries.length === 0 ? (

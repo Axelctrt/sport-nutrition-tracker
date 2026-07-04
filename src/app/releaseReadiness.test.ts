@@ -1,6 +1,7 @@
 import { mobileMoreNavigation } from '@/app/navigation';
 import {
   barcodeScannerPath,
+  photoNutritionEstimatePath,
   routePaths,
   selectFoodPath,
 } from '@/app/routePaths';
@@ -10,9 +11,9 @@ import {
   databaseTableNames,
 } from '@/infrastructure/database/schema';
 
-describe('préparation de la version stable 0.24.0', () => {
+describe('préparation de la version stable 0.25.0', () => {
   it('expose la version stable dans le build', () => {
-    expect(__APP_VERSION__).toBe('0.24.0');
+    expect(__APP_VERSION__).toBe('0.25.0');
     expect(__APP_VERSION__).toMatch(/^\d+\.\d+\.\d+$/);
   });
 
@@ -59,6 +60,9 @@ describe('préparation de la version stable 0.24.0', () => {
     );
     expect(barcodeScannerPath('2026-06-26', 'lunch')).toBe(
       '/food/barcode-scanner?date=2026-06-26&slot=lunch',
+    );
+    expect(photoNutritionEstimatePath('2026-07-04', 'lunch')).toBe(
+      '/food/photo-estimate?date=2026-07-04&slot=lunch',
     );
   });
 });
