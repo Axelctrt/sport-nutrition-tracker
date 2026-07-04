@@ -185,6 +185,12 @@ const BarcodeScannerPage = lazy(() =>
   })),
 );
 
+const PhotoNutritionEstimatePage = lazy(() =>
+  import('@/features/photo-nutrition/pages/PhotoNutritionEstimatePage').then((module) => ({
+    default: module.PhotoNutritionEstimatePage,
+  })),
+);
+
 
 const OpenFoodFactsSearchPage = lazy(() =>
   import('@/features/open-food-facts/pages/OpenFoodFactsSearchPage').then((module) => ({
@@ -556,6 +562,14 @@ export function LazyBarcodeScannerPage() {
   return (
     <RouteSuspense variant="detail">
       <BarcodeScannerPage />
+    </RouteSuspense>
+  );
+}
+
+export function LazyPhotoNutritionEstimatePage() {
+  return (
+    <RouteSuspense variant="form">
+      <PhotoNutritionEstimatePage />
     </RouteSuspense>
   );
 }

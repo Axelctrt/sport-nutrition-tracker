@@ -223,3 +223,6 @@ input[type='week']::-webkit-datetime-edit {
 [aria-invalid='true'] {
   scroll-margin-block: 6rem;
 }
+
+/* Champ natif masqué derrière les choix caméra/galerie. */
+.photo-native-input{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;padding:0;margin:-1px}
