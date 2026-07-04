@@ -6,7 +6,7 @@ const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const read = (path) => readFileSync(join(root, path), 'utf8');
 const failures = [];
 const fail = (message) => failures.push(message);
-const expectedVersion = '0.23.1';
+const expectedVersion = JSON.parse(read('package.json')).version;
 
 const requiredFiles = [
   'src/app/automaticSyncReleaseReadiness.test.ts',
@@ -32,7 +32,7 @@ if (failures.length === 0) {
     packageLock.version !== expectedVersion
     || packageLock.packages?.['']?.version !== expectedVersion
   ) {
-    fail('package-lock.json ne correspond pas à SportPilot 0.23.1.');
+    fail(`package-lock.json ne correspond pas à SportPilot ${expectedVersion}.`);
   }
 
   const controller = read('src/application/sync/automaticSyncController.ts');
@@ -138,5 +138,5 @@ if (failures.length > 0) {
 }
 
 console.log(
-  'Audit F4 réussi : isolation des comptes, interruption maîtrisée, reprise réseau, anti-boucle, budgets et compatibilité sous SportPilot 0.23.1 validée.',
+  `Audit F4 réussi : isolation des comptes, interruption maîtrisée, reprise réseau, anti-boucle, budgets et compatibilité sous SportPilot ${expectedVersion} validée.`,
 );

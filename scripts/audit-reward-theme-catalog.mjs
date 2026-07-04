@@ -28,9 +28,9 @@ const automaticSyncReleaseAudit = read(
   "scripts/audit-automatic-sync-release.mjs",
 );
 
-if (packageJson.version !== "0.23.1") {
+if (packageJson.version !== "0.24.0") {
   fail(
-    `la phase 0.24.0 R4 doit rester sur la version applicative 0.23.1 avant finalisation, version trouvée : ${packageJson.version}.`,
+    `la finalisation 0.24.0 doit publier la version applicative 0.24.0, version trouvée : ${packageJson.version}.`,
   );
 }
 if (!packageJson.scripts?.["audit:reward-theme-catalog"]) {
@@ -349,11 +349,11 @@ if (
 }
 
 if (failures.length > 0) {
-  console.error("\nAudit récompenses et thèmes 0.24.0 R4 échoué :");
+  console.error("\nAudit récompenses et thèmes 0.24.0 échoué :");
   for (const failure of failures) console.error(`- ${failure}`);
   process.exitCode = 1;
 } else {
   console.log(
-    "Audit récompenses et thèmes 0.24.0 R4.5 réussi : 50 badges, 15 thèmes, pop-up œil unique fixe, bouton Prévisualiser tout supprimé, SportPilot classique réservé au minimaliste, mode sombre corrigé, règles de déblocage conservées et objectifs km arrondis.",
+    "Audit récompenses et thèmes 0.24.0 réussi : 50 badges, 15 thèmes, pop-up œil unique fixe, bouton Prévisualiser tout supprimé, SportPilot classique réservé au minimaliste, mode sombre corrigé, règles de déblocage conservées et progressions arrondies.",
   );
 }

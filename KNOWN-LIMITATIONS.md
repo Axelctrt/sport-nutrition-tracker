@@ -1,12 +1,14 @@
-# Limitations connues — SportPilot 0.23.1
+# Limitations connues — SportPilot 0.24.0
 
 Ces limitations sont connues et non bloquantes pour la version stable.
 
-## Notifications d’action
+## Récompenses et thèmes
 
-Les changements très fréquents, notamment la saisie de séries, les autosauvegardes et chaque frappe dans un formulaire, n’affichent pas un toast systématique. Ils utilisent l’indicateur local `Enregistrement… / Enregistré / Erreur` afin d’éviter une succession intrusive de notifications.
+Les thèmes verrouillés restent visibles et consultables via l’icône œil. Cette consultation ne vaut pas déblocage et ne permet pas d’activer durablement le thème.
 
-Une confirmation conservée après rechargement dépend de `sessionStorage`. Si le navigateur le refuse, l’action métier reste terminée mais le toast post-rechargement peut être absent.
+SportPilot classique n’a pas de rendu complet dédié : il est proposé comme thème minimaliste uniquement, car il correspond au style neutre de base.
+
+Nexus vivant est identifié comme thème ultime du catalogue. Dans cette version, il reste statique : aucune animation de thème n’est activée.
 
 ## Synchronisation en premier plan
 
@@ -26,16 +28,4 @@ Open Food Facts et Dexie Cloud dépendent du réseau et de leur disponibilité.
 
 ## Versions de données
 
-SportPilot 0.23.1 utilise le runtime Dexie Cloud v10. La base métier reste en Dexie v8, la sauvegarde en JSON v7 et le registre local des espaces en v1.
-
-
-## Récompenses et thèmes 0.24.0 R1
-
-Le mode aperçu permet volontairement de visualiser les thèmes verrouillés pendant les tests. Cette prévisualisation ne vaut pas déblocage et ne doit pas être considérée comme une règle de progression définitive.
-
-Les conditions de déblocage des nouveaux thèmes pourront être réajustées après validation esthétique.
-
-
-## SportPilot 0.24.0 R3 — Thèmes spectaculaires
-
-Cette phase renforce la direction artistique des thèmes : Volcan affiche lave, fumée, cendres et braises ; Océan et Abysses affichent bulles, poissons et silhouettes marines ; Canopée affiche feuilles et lianes ; Cosmos affiche nébuleuses, planètes et orbites ; Forge affiche acier, feu et étincelles ; Nexus vivant devient le thème légendaire multicouche avec énergie animée. Les règles de déblocage définitives ne sont pas encore activées et l’aperçu ne débloque toujours rien durablement.
+SportPilot 0.24.0 utilise le runtime Dexie Cloud v10. La base métier reste en Dexie v8, la sauvegarde en JSON v7 et le registre local des espaces en v1. Aucune migration n’est requise.

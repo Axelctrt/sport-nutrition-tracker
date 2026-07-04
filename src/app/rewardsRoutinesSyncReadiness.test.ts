@@ -8,9 +8,9 @@ import {
 import { syncPublicDeploymentConfig } from '@/infrastructure/sync-prototype/syncPublicDeploymentConfig';
 
 
-describe('compatibilité E2 avec la publication 0.23.1', () => {
+describe('compatibilité E2 avec la publication 0.24.0', () => {
   it('ajoute le domaine cloud sans migrer la base métier ni la sauvegarde', () => {
-    expect(__APP_VERSION__).toBe('0.23.1');
+    expect(__APP_VERSION__).toBe('0.24.0');
     expect(databaseSchemaVersion).toBe(8);
     expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(7);
     expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(10);

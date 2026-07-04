@@ -7,9 +7,9 @@ import goalsPageTestSource from '@/features/goals/pages/GoalsPage.test.tsx?raw';
 import { CURRENT_BACKUP_SCHEMA_VERSION } from '@/infrastructure/backup/backupMigrations';
 import { databaseSchemaVersion } from '@/infrastructure/database/schema';
 
-describe('correctif 0.23.1 — préremplissage fiable des objectifs', () => {
+describe('correctif 0.24.0 — préremplissage fiable des objectifs', () => {
   it('conserve les versions de stockage sans migration', () => {
-    expect(__APP_VERSION__).toBe('0.23.1');
+    expect(__APP_VERSION__).toBe('0.24.0');
     expect(databaseSchemaVersion).toBe(8);
     expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(7);
   });

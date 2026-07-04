@@ -8,9 +8,9 @@ import {
 } from '@/infrastructure/sync-prototype/SyncPrototypeDatabase';
 import { syncPublicDeploymentConfig } from '@/infrastructure/sync-prototype/syncPublicDeploymentConfig';
 
-describe('publication SportPilot 0.23.1 — continuité complète du compte', () => {
+describe('publication SportPilot 0.24.0 — continuité complète du compte', () => {
   it('publie la version stable sans migrer les formats métier', () => {
-    expect(__APP_VERSION__).toBe('0.23.1');
+    expect(__APP_VERSION__).toBe('0.24.0');
     expect(databaseSchemaVersion).toBe(8);
     expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(7);
     expect(DATA_SPACE_REGISTRY_VERSION).toBe(1);

@@ -6,7 +6,6 @@ const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const read = (path) => readFileSync(join(root, path), 'utf8');
 const failures = [];
 const fail = (message) => failures.push(message);
-const expectedVersion = '0.23.1';
 
 const requiredFiles = [
   'src/shared/toast/useActionToast.ts',
@@ -27,14 +26,14 @@ if (failures.length === 0) {
   const packageJson = JSON.parse(read('package.json'));
   const packageLock = JSON.parse(read('package-lock.json'));
 
-  if (packageJson.version !== expectedVersion) {
-    fail(`package.json doit publier ${expectedVersion}.`);
+  if (!/^\d+\.\d+\.\d+$/.test(String(packageJson.version))) {
+    fail(`package.json doit publier une version stable, version trouvée : ${String(packageJson.version)}.`);
   }
   if (
-    packageLock.version !== expectedVersion
-    || packageLock.packages?.['']?.version !== expectedVersion
+    packageLock.version !== packageJson.version
+    || packageLock.packages?.['']?.version !== packageJson.version
   ) {
-    fail('package-lock.json ne correspond pas à SportPilot 0.23.1.');
+    fail(`package-lock.json ne correspond pas à SportPilot ${packageJson.version}.`);
   }
 
   const actionToast = read('src/shared/toast/useActionToast.ts');
@@ -148,11 +147,11 @@ if (failures.length === 0) {
 }
 
 if (failures.length > 0) {
-  console.error('Audit 0.23.1 échoué :');
+  console.error('Audit confirmations d’action échoué :');
   for (const failure of failures) console.error(`- ${failure}`);
   process.exit(1);
 }
 
 console.log(
-  'Audit 0.23.1 réussi : confirmations centralisées, erreurs visibles, rechargements couverts, écritures fréquentes non intrusives et versions de données inchangées.',
+  'Audit confirmations d’action réussi : confirmations centralisées, erreurs visibles, rechargements couverts, écritures fréquentes non intrusives et versions de données inchangées.',
 );
