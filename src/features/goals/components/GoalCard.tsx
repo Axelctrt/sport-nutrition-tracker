@@ -30,12 +30,14 @@ const statusLabels: Record<GoalStatus, string> = {
   archived: 'Archivé',
 };
 
-function formatValue(
+export function formatGoalValue(
   value: number,
   unit: string,
 ): string {
+  const maximumFractionDigits = unit === 'km' ? 1 : 2;
+
   return `${new Intl.NumberFormat('fr-FR', {
-    maximumFractionDigits: 2,
+    maximumFractionDigits,
   }).format(value)} ${unit}`;
 }
 
@@ -108,7 +110,7 @@ export function GoalCard({
             Actuel
           </dt>
           <dd className="mt-1 font-semibold text-slate-950 dark:text-white">
-            {formatValue(view.currentValue, definition.unit)}
+            {formatGoalValue(view.currentValue, definition.unit)}
           </dd>
         </div>
         <div>
@@ -116,7 +118,7 @@ export function GoalCard({
             Cible
           </dt>
           <dd className="mt-1 font-semibold text-slate-950 dark:text-white">
-            {formatValue(goal.targetValue, definition.unit)}
+            {formatGoalValue(goal.targetValue, definition.unit)}
           </dd>
         </div>
         <div>
@@ -124,7 +126,7 @@ export function GoalCard({
             Restant
           </dt>
           <dd className="mt-1 font-semibold text-slate-950 dark:text-white">
-            {formatValue(view.remainingValue, definition.unit)}
+            {formatGoalValue(view.remainingValue, definition.unit)}
           </dd>
         </div>
         <div>
@@ -155,7 +157,7 @@ export function GoalCard({
           definition.cumulative ? (
             <span>
               · environ{' '}
-              {formatValue(
+              {formatGoalValue(
                 view.requiredPerDay,
                 definition.unit,
               )}{' '}

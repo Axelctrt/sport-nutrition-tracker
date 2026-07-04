@@ -8,17 +8,20 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 import {
   loadThemeAchievementSnapshot,
   type ThemeAchievementSnapshot,
+  type ThemeAchievementProgress,
 } from "@/application/rewards/themeAchievementService";
 import {
   activateVisualTheme,
-  clearVisualThemePreview,
-  previewVisualTheme,
   readVisualThemeState,
+  readVisualThemeStyleMode,
+  updateVisualThemeStyleMode,
   type VisualThemeId,
+  type VisualThemeStyleMode,
 } from "@/domain/rewards/visualThemes";
 import { REWARDS_ROUTINES_CHANGED_EVENT } from "@/infrastructure/sync-prototype/rewardsRoutinesSyncEvents";
 import { Card } from "@/shared/ui/Card";
@@ -28,8 +31,6 @@ interface RewardThemesPanelProps {
   className?: string;
   loadSnapshot?: () => Promise<ThemeAchievementSnapshot>;
   activateTheme?: (themeId: VisualThemeId) => boolean;
-  previewTheme?: (themeId: VisualThemeId) => void;
-  clearPreview?: () => VisualThemeId;
 }
 
 const tierLabels: Record<string, string> = {
@@ -39,18 +40,81 @@ const tierLabels: Record<string, string> = {
   legendary: "Légendaire",
 };
 
+const CLASSIC_THEME_ID: VisualThemeId = "classic";
+
+function ThemePreviewMockup({
+  progress,
+}: {
+  progress: ThemeAchievementProgress;
+}) {
+  return (
+    <div
+      className="overflow-hidden rounded-3xl border border-white/30 bg-slate-950 shadow-2xl"
+      data-theme-quick-preview={progress.theme.id}
+    >
+      <div
+        aria-hidden="true"
+        className="sport-theme-preview relative min-h-64 overflow-hidden"
+        data-sport-preview={progress.theme.id}
+        style={{
+          background: `linear-gradient(135deg, ${progress.theme.previewFrom}, ${progress.theme.previewTo})`,
+        }}
+      >
+        <span className="sport-theme-preview__scene" />
+        <span className="sport-theme-preview__glow" />
+        <div className="relative z-10 flex min-h-64 flex-col justify-between p-5 text-white">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/70">
+                Aperçu rapide
+              </p>
+              <h3 className="mt-2 text-2xl font-bold drop-shadow">
+                {progress.theme.name}
+              </h3>
+            </div>
+            <span className="rounded-full bg-white/18 px-3 py-1 text-xs font-semibold uppercase tracking-wide backdrop-blur-md">
+              {tierLabels[progress.theme.tier]}
+            </span>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-[1.3fr_0.9fr]">
+            <div className="rounded-2xl border border-white/20 bg-white/18 p-4 shadow-xl backdrop-blur-md">
+              <p className="text-sm font-semibold text-white/90">
+                Bilan hebdomadaire
+              </p>
+              <div className="mt-3 h-2 rounded-full bg-white/25">
+                <div className="h-2 w-2/3 rounded-full bg-white/80" />
+              </div>
+              <p className="mt-3 text-xs leading-5 text-white/78">
+                Exemple de rendu avec cartes lisibles au-dessus du fond.
+              </p>
+            </div>
+            <div className="rounded-2xl border border-white/20 bg-slate-950/28 p-4 shadow-xl backdrop-blur-md">
+              <p className="text-sm font-semibold text-white/90">Progression</p>
+              <p className="mt-2 text-3xl font-bold text-white">72 %</p>
+              <p className="mt-1 text-xs text-white/72">Objectifs actifs</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function RewardThemesPanel({
   className,
   loadSnapshot = loadThemeAchievementSnapshot,
   activateTheme = activateVisualTheme,
-  previewTheme = previewVisualTheme,
-  clearPreview = clearVisualThemePreview,
 }: RewardThemesPanelProps) {
   const [snapshot, setSnapshot] = useState<ThemeAchievementSnapshot>();
   const [activeThemeId, setActiveThemeId] = useState<VisualThemeId>(
     () => readVisualThemeState().activeThemeId,
   );
-  const [previewThemeId, setPreviewThemeId] = useState<VisualThemeId>();
+  const [themeStyleMode, setThemeStyleMode] = useState<VisualThemeStyleMode>(
+    () => readVisualThemeStyleMode(),
+  );
+  const [quickPreviewThemeId, setQuickPreviewThemeId] =
+    useState<VisualThemeId>();
   const [loadError, setLoadError] = useState<string>();
 
   useEffect(() => {
@@ -61,7 +125,9 @@ export function RewardThemesPanel({
         const nextSnapshot = await loadSnapshot();
         if (isMounted) {
           setSnapshot(nextSnapshot);
-          setActiveThemeId(readVisualThemeState().activeThemeId);
+          const themeState = readVisualThemeState();
+          setActiveThemeId(themeState.activeThemeId);
+          setThemeStyleMode(readVisualThemeStyleMode());
           setLoadError(undefined);
         }
       } catch (error) {
@@ -84,26 +150,72 @@ export function RewardThemesPanel({
     };
   }, [loadSnapshot]);
 
+
   const handleActivate = (themeId: VisualThemeId) => {
     if (activateTheme(themeId)) {
-      setPreviewThemeId(undefined);
       setActiveThemeId(themeId);
     }
   };
 
-  const handlePreview = (themeId: VisualThemeId) => {
-    previewTheme(themeId);
-    setPreviewThemeId(themeId);
+  const handleThemeStyleModeChange = (styleMode: VisualThemeStyleMode) => {
+    const nextState = updateVisualThemeStyleMode(styleMode);
+    setThemeStyleMode(styleMode);
+    setActiveThemeId(nextState.activeThemeId);
   };
 
-  const handleClearPreview = () => {
-    const restoredThemeId = clearPreview();
-    setPreviewThemeId(undefined);
-    setActiveThemeId(restoredThemeId);
-  };
+  const quickPreviewProgress = snapshot?.themes.find(
+    (progress) => progress.theme.id === quickPreviewThemeId,
+  );
+  const quickPreviewDialog = quickPreviewProgress ? (
+    <div
+      className="fixed inset-0 z-[120] flex items-center justify-center overflow-hidden bg-slate-950/55 p-3 backdrop-blur-[2px] sm:p-6"
+      data-theme-preview-backdrop="true"
+      onClick={() => setQuickPreviewThemeId(undefined)}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="theme-quick-preview-title"
+        className="max-h-[calc(100dvh-2rem)] w-full max-w-2xl overflow-hidden rounded-3xl bg-white p-4 shadow-2xl dark:bg-slate-950 sm:p-5"
+        data-theme-preview-dialog="true"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-fuchsia-700 dark:text-fuchsia-300">
+              Mini aperçu
+            </p>
+            <h3
+              id="theme-quick-preview-title"
+              className="mt-1 text-lg font-bold text-slate-950 dark:text-white"
+            >
+              {quickPreviewProgress.theme.name}
+            </h3>
+            <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+              Aperçu indicatif du fond et des cartes, sans appliquer le
+              thème à l’application.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="inline-flex size-10 shrink-0 items-center justify-center rounded-full border border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-900"
+            onClick={() => setQuickPreviewThemeId(undefined)}
+            aria-label="Fermer l’aperçu du thème"
+          >
+            <X aria-hidden="true" className="size-5" />
+          </button>
+        </div>
+
+        <div className="mt-4">
+          <ThemePreviewMockup progress={quickPreviewProgress} />
+        </div>
+      </div>
+    </div>
+  ) : null;
 
   return (
-    <section aria-labelledby="reward-themes-title" className={className}>
+    <>
+      <section aria-labelledby="reward-themes-title" className={className}>
       <Card className="p-4 sm:p-5">
         <div className="flex items-start gap-3">
           <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-fuchsia-100 text-fuchsia-800 dark:bg-fuchsia-950 dark:text-fuchsia-200">
@@ -119,9 +231,8 @@ export function RewardThemesPanel({
                   Thèmes récompenses
                 </h2>
                 <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                  Prévisualise tous les thèmes pendant les tests, puis conserve
-                  uniquement les thèmes réellement débloqués comme choix
-                  permanent.
+                  Consulte les thèmes depuis l’icône œil, puis active seulement
+                  ceux qui sont réellement débloqués par tes accomplissements.
                 </p>
               </div>
               {snapshot ? (
@@ -138,29 +249,53 @@ export function RewardThemesPanel({
             <InlineNotice
               className="mt-4"
               tone="info"
-              title="Mode aperçu disponible"
+              title="Deux styles d’application"
               role="status"
             >
-              Les thèmes verrouillés peuvent être testés visuellement sans être
-              ajoutés aux thèmes acquis. Après validation esthétique, les règles
-              de déblocage resteront seules responsables du déverrouillage.
+              Le style complet applique le fond coloré à toute l’interface. Le
+              style minimaliste conserve une interface neutre et limite le thème
+              aux icônes, accents et barres de progression.
             </InlineNotice>
 
-            {previewThemeId ? (
-              <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-fuchsia-200 bg-fuchsia-50 p-3 sm:flex-row sm:items-center sm:justify-between dark:border-fuchsia-900 dark:bg-fuchsia-950/30">
-                <p className="text-sm font-semibold text-fuchsia-950 dark:text-fuchsia-100">
-                  Aperçu actif : {snapshot?.themes.find((progress) => progress.theme.id === previewThemeId)?.theme.name ?? previewThemeId}
-                </p>
-                <button
-                  type="button"
-                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-fuchsia-300 bg-white px-3 py-2 text-sm font-semibold text-fuchsia-900 hover:bg-fuchsia-50 dark:border-fuchsia-800 dark:bg-slate-950 dark:text-fuchsia-100 dark:hover:bg-fuchsia-950/40"
-                  onClick={handleClearPreview}
-                >
-                  <X aria-hidden="true" className="size-4" />
-                  Quitter l’aperçu
-                </button>
+            <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/80 p-3 dark:border-slate-800 dark:bg-slate-900/70">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-slate-950 dark:text-white">
+                    Style du thème
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-slate-600 dark:text-slate-300">
+                    Choisis entre un rendu immersif complet ou une touche
+                    minimaliste sur les éléments d’accent.
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 gap-2 rounded-2xl bg-white p-1 shadow-sm dark:bg-slate-950">
+                  <button
+                    type="button"
+                    className={`rounded-xl px-3 py-2 text-sm font-semibold transition-colors ${
+                      themeStyleMode === "full"
+                        ? "bg-brand-700 text-white shadow-sm"
+                        : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900"
+                    }`}
+                    aria-pressed={themeStyleMode === "full"}
+                    onClick={() => handleThemeStyleModeChange("full")}
+                  >
+                    Complet
+                  </button>
+                  <button
+                    type="button"
+                    className={`rounded-xl px-3 py-2 text-sm font-semibold transition-colors ${
+                      themeStyleMode === "minimal"
+                        ? "bg-brand-700 text-white shadow-sm"
+                        : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900"
+                    }`}
+                    aria-pressed={themeStyleMode === "minimal"}
+                    onClick={() => handleThemeStyleModeChange("minimal")}
+                  >
+                    Minimaliste
+                  </button>
+                </div>
               </div>
-            ) : null}
+            </div>
 
             {loadError ? (
               <InlineNotice
@@ -182,8 +317,7 @@ export function RewardThemesPanel({
             {snapshot ? (
               <div className="mt-4 grid gap-3 lg:grid-cols-2">
                 {snapshot.themes.map((progress) => {
-                  const isActive = activeThemeId === progress.theme.id && !previewThemeId;
-                  const isPreviewed = previewThemeId === progress.theme.id;
+                  const isActive = activeThemeId === progress.theme.id;
                   const remaining = Math.max(
                     0,
                     progress.target - progress.current,
@@ -192,15 +326,23 @@ export function RewardThemesPanel({
                     100,
                     Math.round((progress.current / progress.target) * 100),
                   );
+                  const isClassicFullMode =
+                    progress.theme.id === CLASSIC_THEME_ID &&
+                    themeStyleMode === "full";
 
                   return (
                     <article
                       key={progress.theme.id}
-                      className="rounded-2xl border border-slate-200 p-4 dark:border-slate-700"
+                      className={`rounded-2xl border border-slate-200 p-4 transition-opacity dark:border-slate-700 ${
+                        isClassicFullMode
+                          ? "bg-slate-50/70 opacity-75 dark:bg-slate-900/55"
+                          : ""
+                      }`}
                     >
                       <div
-                        aria-hidden="true"
-                        className="sport-theme-preview relative h-20 overflow-hidden rounded-xl"
+                        className={`sport-theme-preview relative h-20 overflow-hidden rounded-xl ${
+                          isClassicFullMode ? "grayscale" : ""
+                        }`}
                         data-sport-preview={progress.theme.id}
                         style={{
                           background: `linear-gradient(135deg, ${progress.theme.previewFrom}, ${progress.theme.previewTo})`,
@@ -208,6 +350,26 @@ export function RewardThemesPanel({
                       >
                         <span className="sport-theme-preview__scene" />
                         <span className="sport-theme-preview__glow" />
+                        <button
+                          type="button"
+                          className="absolute right-2 top-2 z-10 inline-flex size-9 items-center justify-center rounded-full border border-white/45 bg-slate-950/45 text-white shadow-lg backdrop-blur-md transition-colors hover:bg-slate-950/65 focus:outline-none focus:ring-2 focus:ring-white/80 disabled:cursor-not-allowed disabled:opacity-45"
+                          disabled={isClassicFullMode}
+                          onClick={() =>
+                            setQuickPreviewThemeId(progress.theme.id)
+                          }
+                          aria-label={
+                            isClassicFullMode
+                              ? "SportPilot classique n’a pas d’aperçu complet"
+                              : `Voir un aperçu rapide de ${progress.theme.name}`
+                          }
+                        >
+                          <Eye aria-hidden="true" className="size-4" />
+                        </button>
+                        {isClassicFullMode ? (
+                          <span className="absolute bottom-2 left-2 z-10 rounded-full bg-slate-950/55 px-2.5 py-1 text-[0.65rem] font-semibold uppercase tracking-wide text-white backdrop-blur-md">
+                            Minimaliste uniquement
+                          </span>
+                        ) : null}
                       </div>
                       <div className="mt-3 flex items-start justify-between gap-3">
                         <div>
@@ -220,7 +382,10 @@ export function RewardThemesPanel({
                             </span>
                             {progress.theme.dynamic ? (
                               <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[0.7rem] font-semibold text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">
-                                <Sparkles aria-hidden="true" className="size-3" />
+                                <Sparkles
+                                  aria-hidden="true"
+                                  className="size-3"
+                                />
                                 Ultime
                               </span>
                             ) : null}
@@ -261,28 +426,23 @@ export function RewardThemesPanel({
                         </div>
                       </div>
 
-                      <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                        <button
-                          type="button"
-                          className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-sm transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
-                          onClick={() => handlePreview(progress.theme.id)}
-                          aria-pressed={isPreviewed}
-                        >
-                          <Eye aria-hidden="true" className="size-4" />
-                          {isPreviewed ? "Aperçu actif" : `Prévisualiser ${progress.theme.name}`}
-                        </button>
+                      <div className="mt-4">
                         <button
                           type="button"
                           className="inline-flex min-h-10 w-full items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-sm transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
-                          disabled={!progress.unlocked || isActive}
+                          disabled={
+                            !progress.unlocked || isActive || isClassicFullMode
+                          }
                           aria-pressed={isActive}
                           onClick={() => handleActivate(progress.theme.id)}
                         >
-                          {isActive
-                            ? "Thème actif"
-                            : progress.unlocked
-                              ? "Utiliser ce thème"
-                              : `Encore ${remaining} à accomplir`}
+                          {isClassicFullMode
+                            ? "Minimaliste uniquement"
+                            : isActive
+                              ? "Thème actif"
+                              : progress.unlocked
+                                ? "Utiliser ce thème"
+                                : `Encore ${remaining} à accomplir`}
                         </button>
                       </div>
                     </article>
@@ -293,6 +453,11 @@ export function RewardThemesPanel({
           </div>
         </div>
       </Card>
-    </section>
+
+      </section>
+      {quickPreviewDialog
+        ? createPortal(quickPreviewDialog, document.body)
+        : null}
+    </>
   );
 }

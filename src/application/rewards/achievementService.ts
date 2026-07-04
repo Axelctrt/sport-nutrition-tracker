@@ -39,6 +39,13 @@ function metricValue(
   return metrics[metric] ?? 0;
 }
 
+function roundDisplayValue(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+
+  const rounded = Math.round(value * 10) / 10;
+  return Object.is(rounded, -0) ? 0 : rounded;
+}
+
 export function buildAchievementSnapshot(
   metrics: AchievementMetrics,
   previouslyEarned: readonly EarnedAchievement[] = [],
@@ -64,7 +71,7 @@ export function buildAchievementSnapshot(
         current,
         target: achievement.target,
         percentage,
-        remaining: Math.max(0, achievement.target - current),
+        remaining: roundDisplayValue(Math.max(0, achievement.target - current)),
         earned,
         ...(storedAchievement
           ? { earnedAt: storedAchievement.earnedAt }

@@ -18,6 +18,7 @@ export const visualThemeIds = [
 
 export type VisualThemeId = (typeof visualThemeIds)[number];
 export type VisualThemeTier = "base" | "accessible" | "advanced" | "legendary";
+export type VisualThemeStyleMode = "full" | "minimal";
 
 export interface VisualThemeDefinition {
   id: VisualThemeId;
@@ -36,6 +37,8 @@ export interface VisualThemeState {
 }
 
 export const DEFAULT_VISUAL_THEME_ID: VisualThemeId = "classic";
+export const DEFAULT_VISUAL_THEME_STYLE_MODE: VisualThemeStyleMode = "full";
+export const VISUAL_THEME_STYLE_STORAGE_KEY = "sport-pilot.reward-theme-style";
 export const VISUAL_THEME_STORAGE_KEY = "sport-pilot.reward-themes";
 
 export const visualThemeCatalog: readonly VisualThemeDefinition[] = [
@@ -51,7 +54,8 @@ export const visualThemeCatalog: readonly VisualThemeDefinition[] = [
   {
     id: "endurance",
     name: "Horizon endurance",
-    description: "Une palette turquoise inspirée des sorties longues et de l’eau.",
+    description:
+      "Une palette turquoise inspirée des sorties longues et de l’eau.",
     previewFrom: "#0f766e",
     previewTo: "#22d3ee",
     tier: "accessible",
@@ -60,7 +64,8 @@ export const visualThemeCatalog: readonly VisualThemeDefinition[] = [
   {
     id: "power",
     name: "Puissance",
-    description: "Une palette chaude pour célébrer la progression en musculation.",
+    description:
+      "Une palette chaude pour célébrer la progression en musculation.",
     previewFrom: "#c2410c",
     previewTo: "#f59e0b",
     tier: "accessible",
@@ -96,7 +101,8 @@ export const visualThemeCatalog: readonly VisualThemeDefinition[] = [
   {
     id: "ocean",
     name: "Océan",
-    description: "Fond bleu-turquoise plus coloré, aquatique et lisible, avec bulles stylisées et lumière marine sans asset image ni animation.",
+    description:
+      "Fond bleu-turquoise plus coloré, aquatique et lisible, avec bulles stylisées et lumière marine sans asset image ni animation.",
     previewFrom: "#0284c7",
     previewTo: "#2dd4bf",
     tier: "accessible",
@@ -123,7 +129,8 @@ export const visualThemeCatalog: readonly VisualThemeDefinition[] = [
   {
     id: "abysses",
     name: "Abysses",
-    description: "Ambiance abyssale plus colorée et profonde, sombre mais lisible, avec halos aquatiques et bulles discrètes sans animation.",
+    description:
+      "Ambiance abyssale plus colorée et profonde, sombre mais lisible, avec halos aquatiques et bulles discrètes sans animation.",
     previewFrom: "#082f49",
     previewTo: "#0e7490",
     tier: "advanced",
@@ -132,7 +139,8 @@ export const visualThemeCatalog: readonly VisualThemeDefinition[] = [
   {
     id: "volcan",
     name: "Volcan",
-    description: "Ambiance volcanique plus présente : lave suggérée, fumée sombre et braises stylisées, sans image lourde ni mouvement.",
+    description:
+      "Ambiance volcanique plus présente : lave suggérée, fumée sombre et braises stylisées, sans image lourde ni mouvement.",
     previewFrom: "#1c1917",
     previewTo: "#f97316",
     tier: "advanced",
@@ -141,7 +149,8 @@ export const visualThemeCatalog: readonly VisualThemeDefinition[] = [
   {
     id: "canopee",
     name: "Canopée",
-    description: "Fond canopée plus vivant et coloré, avec feuillage, profondeur verte et lumière filtrée sans asset externe.",
+    description:
+      "Fond canopée plus vivant et coloré, avec feuillage, profondeur verte et lumière filtrée sans asset externe.",
     previewFrom: "#14532d",
     previewTo: "#a3e635",
     tier: "advanced",
@@ -150,7 +159,8 @@ export const visualThemeCatalog: readonly VisualThemeDefinition[] = [
   {
     id: "cosmos",
     name: "Cosmos",
-    description: "Fond cosmique plus visible et coloré, avec halos de nébuleuse, étoiles et profondeur sci-fi sans animation.",
+    description:
+      "Fond cosmique plus visible et coloré, avec halos de nébuleuse, étoiles et profondeur sci-fi sans animation.",
     previewFrom: "#312e81",
     previewTo: "#f0abfc",
     tier: "advanced",
@@ -159,7 +169,8 @@ export const visualThemeCatalog: readonly VisualThemeDefinition[] = [
   {
     id: "forge",
     name: "Forge",
-    description: "Forge industrielle colorée, acier sombre et chaleur maîtrisée, plus présente sans devenir trop flashy.",
+    description:
+      "Forge industrielle colorée, acier sombre et chaleur maîtrisée, plus présente sans devenir trop flashy.",
     previewFrom: "#334155",
     previewTo: "#f97316",
     tier: "advanced",
@@ -168,7 +179,8 @@ export const visualThemeCatalog: readonly VisualThemeDefinition[] = [
   {
     id: "nexus-vivant",
     name: "Nexus vivant",
-    description: "Thème ultime sci-fi/fantasy plus coloré, avec énergie Nexus suggérée par halos et anneaux, sans animation ni asset image.",
+    description:
+      "Thème ultime sci-fi/fantasy plus coloré, avec énergie Nexus suggérée par halos et anneaux, sans animation ni asset image.",
     previewFrom: "#0f172a",
     previewTo: "#22c55e",
     tier: "legendary",
@@ -179,6 +191,10 @@ export const visualThemeCatalog: readonly VisualThemeDefinition[] = [
 
 function isVisualThemeId(value: unknown): value is VisualThemeId {
   return visualThemeCatalog.some((theme) => theme.id === value);
+}
+
+function isVisualThemeStyleMode(value: unknown): value is VisualThemeStyleMode {
+  return value === "full" || value === "minimal";
 }
 
 export function emptyVisualThemeState(): VisualThemeState {
@@ -306,6 +322,29 @@ export function readVisualThemeState(): VisualThemeState {
   return readLegacyVisualThemeState() ?? emptyVisualThemeState();
 }
 
+export function readVisualThemeStyleMode(): VisualThemeStyleMode {
+  if (typeof window === "undefined") return DEFAULT_VISUAL_THEME_STYLE_MODE;
+
+  try {
+    const value = window.localStorage.getItem(VISUAL_THEME_STYLE_STORAGE_KEY);
+    return isVisualThemeStyleMode(value)
+      ? value
+      : DEFAULT_VISUAL_THEME_STYLE_MODE;
+  } catch {
+    return DEFAULT_VISUAL_THEME_STYLE_MODE;
+  }
+}
+
+function writeVisualThemeStyleMode(styleMode: VisualThemeStyleMode): void {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.localStorage.setItem(VISUAL_THEME_STYLE_STORAGE_KEY, styleMode);
+  } catch {
+    // Le thème reste utilisable même si la préférence locale n’est pas persistée.
+  }
+}
+
 export function writeVisualThemeState(state: VisualThemeState): void {
   const snapshot = cloneVisualThemeState(
     parseVisualThemeState(state) ?? emptyVisualThemeState(),
@@ -334,19 +373,26 @@ export function writeVisualThemeState(state: VisualThemeState): void {
     });
 }
 
-export function applyVisualTheme(themeId: VisualThemeId): void {
+export function applyVisualTheme(
+  themeId: VisualThemeId,
+  styleMode: VisualThemeStyleMode = readVisualThemeStyleMode(),
+): void {
   if (typeof document === "undefined") return;
   document.documentElement.dataset.sportTheme = themeId;
+  document.documentElement.dataset.sportThemeStyle = styleMode;
 }
 
 export function applyStoredVisualTheme(): VisualThemeId {
   const state = readVisualThemeState();
-  applyVisualTheme(state.activeThemeId);
+  applyVisualTheme(state.activeThemeId, readVisualThemeStyleMode());
   return state.activeThemeId;
 }
 
-export function previewVisualTheme(themeId: VisualThemeId): void {
-  applyVisualTheme(themeId);
+export function previewVisualTheme(
+  themeId: VisualThemeId,
+  styleMode: VisualThemeStyleMode = readVisualThemeStyleMode(),
+): void {
+  applyVisualTheme(themeId, styleMode);
 }
 
 export function clearVisualThemePreview(): VisualThemeId {
@@ -368,12 +414,21 @@ export function unlockVisualThemes(
   return nextState;
 }
 
+export function updateVisualThemeStyleMode(
+  styleMode: VisualThemeStyleMode,
+): VisualThemeState {
+  writeVisualThemeStyleMode(styleMode);
+  const currentState = readVisualThemeState();
+  applyVisualTheme(currentState.activeThemeId, styleMode);
+  return currentState;
+}
+
 export function activateVisualTheme(themeId: VisualThemeId): boolean {
   const currentState = readVisualThemeState();
   if (!currentState.unlockedThemeIds.includes(themeId)) return false;
 
   const nextState = { ...currentState, activeThemeId: themeId };
   writeVisualThemeState(nextState);
-  applyVisualTheme(themeId);
+  applyVisualTheme(themeId, readVisualThemeStyleMode());
   return true;
 }

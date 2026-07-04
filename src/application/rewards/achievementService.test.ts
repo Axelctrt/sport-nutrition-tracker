@@ -53,4 +53,17 @@ describe("achievementService", () => {
     expect(strengthBadge?.earnedAt).toBe("2026-06-20T08:00:00.000Z");
     expect(strengthBadge?.current).toBe(0);
   });
+
+  it("arrondit le restant des badges pour éviter les artefacts flottants", () => {
+    const snapshot = buildAchievementSnapshot({
+      ...emptyMetrics,
+      runningLongestKm: 21,
+    });
+
+    const halfMarathonBadge = snapshot.achievements.find(
+      (progress) => progress.achievement.id === "running-half-marathon",
+    );
+
+    expect(halfMarathonBadge?.remaining).toBe(0.1);
+  });
 });

@@ -1,8 +1,11 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { buildThemeAchievementSnapshot } from "@/application/rewards/themeAchievementService";
-import { VISUAL_THEME_STORAGE_KEY } from "@/domain/rewards/visualThemes";
+import {
+  VISUAL_THEME_STORAGE_KEY,
+  VISUAL_THEME_STYLE_STORAGE_KEY,
+} from "@/domain/rewards/visualThemes";
 import { RewardThemesPanel } from "@/features/settings/components/RewardThemesPanel";
 
 const emptyThemeMetrics = {
@@ -19,6 +22,9 @@ const emptyThemeMetrics = {
 describe("RewardThemesPanel", () => {
   beforeEach(() => {
     window.localStorage.removeItem(VISUAL_THEME_STORAGE_KEY);
+    window.localStorage.removeItem(VISUAL_THEME_STYLE_STORAGE_KEY);
+    document.documentElement.removeAttribute("data-sport-theme");
+    document.documentElement.removeAttribute("data-sport-theme-style");
   });
 
   it("affiche les thèmes débloqués et la progression restante", async () => {
@@ -35,12 +41,22 @@ describe("RewardThemesPanel", () => {
     );
 
     expect(await screen.findByText("1/15 débloqués")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Complet" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByRole("button", { name: "Minimaliste" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
     expect(screen.getByText("Horizon endurance")).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Encore 3 à accomplir" }),
     ).toBeDisabled();
     expect(
-      screen.getByRole("button", { name: "Prévisualiser Horizon endurance" }),
+      screen.getByRole("button", {
+        name: "Voir un aperçu rapide de Horizon endurance",
+      }),
     ).toBeEnabled();
   });
 
@@ -67,41 +83,142 @@ describe("RewardThemesPanel", () => {
     );
   });
 
-  it("prévisualise un thème verrouillé sans le débloquer", async () => {
+  it("ouvre une mini pop-up d’aperçu sans appliquer le thème à toute l’app", async () => {
     const user = userEvent.setup();
-    const previewTheme = vi.fn();
-    const clearPreview = vi.fn(() => "classic" as const);
 
     render(
       <RewardThemesPanel
-        loadSnapshot={async () => buildThemeAchievementSnapshot(emptyThemeMetrics)}
-        previewTheme={previewTheme}
-        clearPreview={clearPreview}
+        loadSnapshot={async () =>
+          buildThemeAchievementSnapshot(emptyThemeMetrics)
+        }
       />,
     );
 
     await user.click(
-      await screen.findByRole("button", { name: "Prévisualiser Volcan" }),
+      await screen.findByRole("button", {
+        name: "Voir un aperçu rapide de Volcan",
+      }),
     );
 
-    expect(previewTheme).toHaveBeenCalledWith("volcan");
-    expect(screen.getByText("Aperçu actif : Volcan")).toBeInTheDocument();
+    const dialog = screen.getByRole("dialog", { name: "Volcan" });
+    expect(dialog).toBeInTheDocument();
+    expect(dialog).toHaveAttribute("data-theme-preview-dialog", "true");
+    expect(
+      screen.getByText(
+        "Aperçu indicatif du fond et des cartes, sans appliquer le thème à l’application.",
+      ),
+    ).toBeInTheDocument();
+    expect(document.documentElement.dataset.sportTheme).toBeUndefined();
 
-    await user.click(screen.getByRole("button", { name: "Quitter l’aperçu" }));
-    expect(clearPreview).toHaveBeenCalled();
+    await user.click(
+      screen.getByRole("button", { name: "Fermer l’aperçu du thème" }),
+    );
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", { name: "Volcan" }),
+      ).not.toBeInTheDocument(),
+    );
   });
-  it("affiche des miniatures thématiques dédiées aux décors spectaculaires", async () => {
-    const { container } = render(
+
+  it("ne propose plus d’aperçu complet appliqué à toute l’app", async () => {
+    render(
       <RewardThemesPanel
-        loadSnapshot={async () => buildThemeAchievementSnapshot(emptyThemeMetrics)}
+        loadSnapshot={async () =>
+          buildThemeAchievementSnapshot(emptyThemeMetrics)
+        }
       />,
     );
 
     await screen.findByText("Volcan");
 
-    expect(container.querySelector('[data-sport-preview="volcan"]')).not.toBeNull();
-    expect(container.querySelector('[data-sport-preview="abysses"]')).not.toBeNull();
-    expect(container.querySelector('[data-sport-preview="nexus-vivant"]')).not.toBeNull();
+    expect(
+      screen.queryByRole("button", {
+        name: /Prévisualiser tout le thème/,
+      }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Aperçu complet temporaire")).not.toBeInTheDocument();
+    expect(document.documentElement.dataset.sportTheme).toBeUndefined();
   });
 
+  it("permet de choisir un style complet ou minimaliste pour les thèmes", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <RewardThemesPanel
+        loadSnapshot={async () =>
+          buildThemeAchievementSnapshot(emptyThemeMetrics)
+        }
+      />,
+    );
+
+    await screen.findByText("Thèmes récompenses");
+    await user.click(screen.getByRole("button", { name: "Minimaliste" }));
+
+    expect(document.documentElement.dataset.sportThemeStyle).toBe("minimal");
+    expect(screen.getByRole("button", { name: "Minimaliste" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+
+    expect(document.documentElement.dataset.sportThemeStyle).toBe("minimal");
+    expect(
+      screen.queryByRole("button", {
+        name: /Prévisualiser tout le thème/,
+      }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("grise SportPilot classique en style complet mais le conserve en minimaliste", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <RewardThemesPanel
+        loadSnapshot={async () =>
+          buildThemeAchievementSnapshot(emptyThemeMetrics)
+        }
+      />,
+    );
+
+    await screen.findByText("SportPilot classique");
+
+    expect(
+      screen.getByRole("button", {
+        name: "SportPilot classique n’a pas d’aperçu complet",
+      }),
+    ).toBeDisabled();
+    expect(
+      screen.getAllByRole("button", { name: "Minimaliste uniquement" })
+        .length,
+    ).toBeGreaterThan(0);
+
+    await user.click(screen.getByRole("button", { name: "Minimaliste" }));
+
+    expect(
+      screen.getByRole("button", {
+        name: "Voir un aperçu rapide de SportPilot classique",
+      }),
+    ).toBeEnabled();
+  });
+
+  it("affiche des miniatures thématiques dédiées aux décors spectaculaires", async () => {
+    const { container } = render(
+      <RewardThemesPanel
+        loadSnapshot={async () =>
+          buildThemeAchievementSnapshot(emptyThemeMetrics)
+        }
+      />,
+    );
+
+    await screen.findByText("Volcan");
+
+    expect(
+      container.querySelector('[data-sport-preview="volcan"]'),
+    ).not.toBeNull();
+    expect(
+      container.querySelector('[data-sport-preview="abysses"]'),
+    ).not.toBeNull();
+    expect(
+      container.querySelector('[data-sport-preview="nexus-vivant"]'),
+    ).not.toBeNull();
+  });
 });
