@@ -1,10 +1,16 @@
-import { ImagePlus } from 'lucide-react';
+import { ImagePlus, ShieldCheck } from 'lucide-react';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import {
+  createRemotePhotoNutritionAnalysisPort,
+  readPhotoNutritionAiConfig,
+  type PhotoNutritionAiConfig,
+} from '@/application/photo-nutrition/photoNutritionAiClient';
+import {
   analyzePhotoNutrition,
   savePhotoNutritionEstimateToJournal,
+  type PhotoNutritionAnalysisPort,
   type PhotoNutritionAnalysisResult,
   type PhotoNutritionEstimate,
 } from '@/application/photo-nutrition/photoNutritionEstimationService';
@@ -23,6 +29,8 @@ const fields = [
 export interface PhotoNutritionEstimatePageProps {
   analyzePhoto?: typeof analyzePhotoNutrition;
   saveEstimate?: typeof savePhotoNutritionEstimateToJournal;
+  aiConfig?: PhotoNutritionAiConfig;
+  createRemoteAiPort?: (config: { endpointUrl: string; timeoutMs?: number }) => PhotoNutritionAnalysisPort;
 }
 
 const num = (data: FormData, key: string): number => Number(String(data.get(key) ?? 0).replace(',', '.'));
@@ -42,9 +50,42 @@ const fromForm = (data: FormData, analysis: PhotoNutritionAnalysisResult): Photo
   },
 });
 
+const messageOf = (caught: unknown): string =>
+  caught instanceof Error ? caught.message : 'Analyse IA indisponible : fallback local conseillé.';
+
+function withRemoteFallbackWarning(
+  result: PhotoNutritionAnalysisResult,
+  reason: string,
+): PhotoNutritionAnalysisResult {
+  return {
+    ...result,
+    warnings: [
+      ...result.warnings,
+      `IA distante indisponible : ${reason}`,
+      'Fallback local appliqué automatiquement : corrige les valeurs avant validation.',
+    ],
+  };
+}
+
+function analysisFormKey(analysis: PhotoNutritionAnalysisResult): string {
+  const nutrition = analysis.estimate.nutrition;
+  return [
+    analysis.mode,
+    analysis.confidence,
+    analysis.estimate.name,
+    analysis.estimate.amount,
+    nutrition.caloriesKcal,
+    nutrition.proteinGrams,
+    nutrition.carbohydratesGrams,
+    nutrition.fatGrams,
+  ].join('|');
+}
+
 export function PhotoNutritionEstimatePage({
   analyzePhoto = analyzePhotoNutrition,
   saveEstimate = savePhotoNutritionEstimateToJournal,
+  aiConfig = readPhotoNutritionAiConfig(),
+  createRemoteAiPort = createRemotePhotoNutritionAnalysisPort,
 }: PhotoNutritionEstimatePageProps) {
   const [params] = useSearchParams();
   const navigate = useNavigate();
@@ -52,10 +93,12 @@ export function PhotoNutritionEstimatePage({
   const mealSlot = slotOf(params.get('slot'));
   const [analysis, setAnalysis] = useState<PhotoNutritionAnalysisResult>();
   const [error, setError] = useState('');
+  const [remoteFallbackMessage, setRemoteFallbackMessage] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File>();
   const [previewUrl, setPreviewUrl] = useState('');
+  const [useRemoteAi, setUseRemoteAi] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -73,12 +116,14 @@ export function PhotoNutritionEstimatePage({
     setSelectedFile(file);
     setAnalysis(undefined);
     setError('');
+    setRemoteFallbackMessage('');
   }
 
   function clearPhoto() {
     setSelectedFile(undefined);
     setAnalysis(undefined);
     setError('');
+    setRemoteFallbackMessage('');
     if (photoInputRef.current) {
       photoInputRef.current.value = '';
     }
@@ -89,9 +134,28 @@ export function PhotoNutritionEstimatePage({
       setError('Choisis une photo du repas.');
       return;
     }
+    if (useRemoteAi && !aiConfig.enabled) {
+      setError('Analyse IA indisponible : configure d’abord le proxy backend.');
+      return;
+    }
     setIsAnalyzing(true);
     setError('');
+    setRemoteFallbackMessage('');
     try {
+      if (useRemoteAi && aiConfig.enabled) {
+        try {
+          const remotePort = createRemoteAiPort({ endpointUrl: aiConfig.endpointUrl, timeoutMs: aiConfig.timeoutMs });
+          setAnalysis(await analyzePhoto(selectedFile, remotePort));
+          return;
+        } catch (remoteError) {
+          const reason = messageOf(remoteError);
+          const fallback = await analyzePhoto(selectedFile);
+          setRemoteFallbackMessage(`${reason} Fallback local appliqué automatiquement.`);
+          setAnalysis(withRemoteFallbackWarning(fallback, reason));
+          return;
+        }
+      }
+
       setAnalysis(await analyzePhoto(selectedFile));
     } catch (caught) {
       setAnalysis(undefined);
@@ -134,7 +198,7 @@ export function PhotoNutritionEstimatePage({
       </div>
 
       <InlineNotice tone="info" title="Estimation à vérifier">
-        En F2, l’analyse reste locale et prudente : aucune image n’est envoyée, stockée ou synchronisée. Les valeurs doivent être corrigées avant validation.
+        En 0.25.1 F2, l’analyse IA distante passe uniquement par un proxy backend configuré. Sans consentement explicite, aucune image n’est envoyée. Si le proxy échoue, aucune image n’est conservée et le fallback local reste disponible.
       </InlineNotice>
 
       <Card className="overflow-hidden">
@@ -149,7 +213,7 @@ export function PhotoNutritionEstimatePage({
             </span>
             <span>
               <span className="block font-semibold">Choisir une photo</span>
-              <span className="mt-1 block text-xs leading-5 opacity-80">La photo reste locale. Tu peux la supprimer avant l’analyse.</span>
+              <span className="mt-1 block text-xs leading-5 opacity-80">La photo reste locale tant que tu n’autorises pas l’analyse IA.</span>
             </span>
             <input
               ref={photoInputRef}
@@ -193,24 +257,58 @@ export function PhotoNutritionEstimatePage({
             </p>
           )}
 
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950">
+            <div className="flex items-start gap-3">
+              <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                <ShieldCheck aria-hidden="true" className="size-5" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold text-slate-950 dark:text-white">Analyse IA sécurisée</p>
+                <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                  {aiConfig.enabled
+                    ? 'Le proxy IA est configuré. La photo ne sera envoyée qu’après accord explicite.'
+                    : 'Aucun proxy IA configuré : l’analyse restera locale et prudente.'}
+                </p>
+                {aiConfig.enabled ? (
+                  <label className="mt-3 flex items-start gap-2 text-sm font-medium text-slate-700 dark:text-slate-200">
+                    <input
+                      type="checkbox"
+                      className="mt-1 size-4 rounded border-slate-300 text-brand-700 focus:ring-brand-600"
+                      checked={useRemoteAi}
+                      onChange={(event) => setUseRemoteAi(event.currentTarget.checked)}
+                      disabled={isAnalyzing || isSaving}
+                    />
+                    <span>J’autorise l’envoi ponctuel de cette photo au proxy IA pour générer une estimation à corriger.</span>
+                  </label>
+                ) : null}
+              </div>
+            </div>
+          </div>
+
           <Button onClick={() => void run()} className="w-full sm:w-auto" disabled={!selectedFile || isAnalyzing || isSaving}>
-            {isAnalyzing ? 'Analyse en cours…' : 'Analyser la photo'}
+            {isAnalyzing ? 'Analyse en cours…' : useRemoteAi && aiConfig.enabled ? 'Analyser avec l’IA' : 'Analyser en local'}
           </Button>
         </div>
       </Card>
+
+      {remoteFallbackMessage ? (
+        <InlineNotice tone="info" title="IA indisponible, fallback local utilisé">
+          {remoteFallbackMessage}
+        </InlineNotice>
+      ) : null}
 
       {error ? <InlineNotice role="alert" tone="error" title="Action impossible">{error}</InlineNotice> : null}
 
       {analysis ? (
         <>
-          <InlineNotice tone="info" title="Analyse locale prudente">
-            <p>Mode : {analysis.mode === 'local-fallback' ? 'fallback local sans IA distante' : 'analyse distante avec consentement requis'} · confiance {analysis.confidence}.</p>
+          <InlineNotice tone="info" title={analysis.mode === 'remote-ai' ? 'Analyse IA à vérifier' : 'Analyse locale prudente'}>
+            <p>Mode : {analysis.mode === 'local-fallback' ? 'fallback local sans IA distante' : 'analyse distante via proxy avec consentement'} · confiance {analysis.confidence}.</p>
             <ul className="mt-2 list-disc space-y-1 pl-5">
               {analysis.warnings.map((warning) => <li key={warning}>{warning}</li>)}
             </ul>
           </InlineNotice>
 
-          <form onSubmit={(event) => void save(event)}>
+          <form key={analysisFormKey(analysis)} onSubmit={(event) => void save(event)}>
             <Card className="overflow-hidden">
               <div className="border-b border-slate-200 px-4 py-3 dark:border-slate-800 sm:px-5">
                 <h2 className="font-semibold text-slate-950 dark:text-white">2. Corriger l’estimation</h2>
