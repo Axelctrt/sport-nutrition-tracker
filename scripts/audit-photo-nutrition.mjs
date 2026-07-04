@@ -50,7 +50,7 @@ if (failures.length === 0) {
   const pageTest = read('src/features/photo-nutrition/pages/PhotoNutritionEstimatePage.test.tsx');
   for (const marker of [
     'Photo non conservée dans le journal alimentaire.',
-    'Analyser la photo',
+    'Analyser en local',
     'toBeDisabled',
     'Supprimer la photo sélectionnée',
     'fallback local sans IA distante',

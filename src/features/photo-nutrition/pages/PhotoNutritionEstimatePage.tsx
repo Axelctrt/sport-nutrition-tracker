@@ -1,10 +1,16 @@
-import { ImagePlus } from 'lucide-react';
+import { ImagePlus, ShieldCheck } from 'lucide-react';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import {
+  createRemotePhotoNutritionAnalysisPort,
+  readPhotoNutritionAiConfig,
+  type PhotoNutritionAiConfig,
+} from '@/application/photo-nutrition/photoNutritionAiClient';
+import {
   analyzePhotoNutrition,
   savePhotoNutritionEstimateToJournal,
+  type PhotoNutritionAnalysisPort,
   type PhotoNutritionAnalysisResult,
   type PhotoNutritionEstimate,
 } from '@/application/photo-nutrition/photoNutritionEstimationService';
@@ -23,6 +29,8 @@ const fields = [
 export interface PhotoNutritionEstimatePageProps {
   analyzePhoto?: typeof analyzePhotoNutrition;
   saveEstimate?: typeof savePhotoNutritionEstimateToJournal;
+  aiConfig?: PhotoNutritionAiConfig;
+  createRemoteAiPort?: (config: { endpointUrl: string; timeoutMs?: number }) => PhotoNutritionAnalysisPort;
 }
 
 const num = (data: FormData, key: string): number => Number(String(data.get(key) ?? 0).replace(',', '.'));
@@ -45,6 +53,8 @@ const fromForm = (data: FormData, analysis: PhotoNutritionAnalysisResult): Photo
 export function PhotoNutritionEstimatePage({
   analyzePhoto = analyzePhotoNutrition,
   saveEstimate = savePhotoNutritionEstimateToJournal,
+  aiConfig = readPhotoNutritionAiConfig(),
+  createRemoteAiPort = createRemotePhotoNutritionAnalysisPort,
 }: PhotoNutritionEstimatePageProps) {
   const [params] = useSearchParams();
   const navigate = useNavigate();
@@ -56,6 +66,7 @@ export function PhotoNutritionEstimatePage({
   const [isSaving, setIsSaving] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File>();
   const [previewUrl, setPreviewUrl] = useState('');
+  const [useRemoteAi, setUseRemoteAi] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -89,10 +100,17 @@ export function PhotoNutritionEstimatePage({
       setError('Choisis une photo du repas.');
       return;
     }
+    if (useRemoteAi && !aiConfig.enabled) {
+      setError('Analyse IA indisponible : configure d’abord le proxy backend.');
+      return;
+    }
     setIsAnalyzing(true);
     setError('');
     try {
-      setAnalysis(await analyzePhoto(selectedFile));
+      const remotePort = useRemoteAi && aiConfig.enabled
+        ? createRemoteAiPort({ endpointUrl: aiConfig.endpointUrl, timeoutMs: aiConfig.timeoutMs })
+        : undefined;
+      setAnalysis(remotePort ? await analyzePhoto(selectedFile, remotePort) : await analyzePhoto(selectedFile));
     } catch (caught) {
       setAnalysis(undefined);
       setError(caught instanceof Error ? caught.message : 'Repas non reconnu : corrige manuellement.');
@@ -134,7 +152,7 @@ export function PhotoNutritionEstimatePage({
       </div>
 
       <InlineNotice tone="info" title="Estimation à vérifier">
-        En F2, l’analyse reste locale et prudente : aucune image n’est envoyée, stockée ou synchronisée. Les valeurs doivent être corrigées avant validation.
+        En 0.25.1 F1, l’analyse IA réelle passe uniquement par un proxy backend configuré. Sans consentement explicite ou sans endpoint, aucune image n’est envoyée et le fallback local 0.25.0 reste utilisé.
       </InlineNotice>
 
       <Card className="overflow-hidden">
@@ -193,8 +211,36 @@ export function PhotoNutritionEstimatePage({
             </p>
           )}
 
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950">
+            <div className="flex items-start gap-3">
+              <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                <ShieldCheck aria-hidden="true" className="size-5" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold text-slate-950 dark:text-white">Analyse IA sécurisée</p>
+                <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                  {aiConfig.enabled
+                    ? 'Le proxy IA est configuré. La photo ne sera envoyée qu’après accord explicite.'
+                    : 'Aucun proxy IA configuré : l’analyse restera locale et prudente.'}
+                </p>
+                {aiConfig.enabled ? (
+                  <label className="mt-3 flex items-start gap-2 text-sm font-medium text-slate-700 dark:text-slate-200">
+                    <input
+                      type="checkbox"
+                      className="mt-1 size-4 rounded border-slate-300 text-brand-700 focus:ring-brand-600"
+                      checked={useRemoteAi}
+                      onChange={(event) => setUseRemoteAi(event.currentTarget.checked)}
+                      disabled={isAnalyzing || isSaving}
+                    />
+                    <span>J’autorise l’envoi ponctuel de cette photo au proxy IA pour générer une estimation à corriger.</span>
+                  </label>
+                ) : null}
+              </div>
+            </div>
+          </div>
+
           <Button onClick={() => void run()} className="w-full sm:w-auto" disabled={!selectedFile || isAnalyzing || isSaving}>
-            {isAnalyzing ? 'Analyse en cours…' : 'Analyser la photo'}
+            {isAnalyzing ? 'Analyse en cours…' : useRemoteAi && aiConfig.enabled ? 'Analyser avec l’IA' : 'Analyser en local'}
           </Button>
         </div>
       </Card>
@@ -203,8 +249,8 @@ export function PhotoNutritionEstimatePage({
 
       {analysis ? (
         <>
-          <InlineNotice tone="info" title="Analyse locale prudente">
-            <p>Mode : {analysis.mode === 'local-fallback' ? 'fallback local sans IA distante' : 'analyse distante avec consentement requis'} · confiance {analysis.confidence}.</p>
+          <InlineNotice tone="info" title={analysis.mode === 'remote-ai' ? 'Analyse IA à vérifier' : 'Analyse locale prudente'}>
+            <p>Mode : {analysis.mode === 'local-fallback' ? 'fallback local sans IA distante' : 'analyse distante via proxy avec consentement'} · confiance {analysis.confidence}.</p>
             <ul className="mt-2 list-disc space-y-1 pl-5">
               {analysis.warnings.map((warning) => <li key={warning}>{warning}</li>)}
             </ul>

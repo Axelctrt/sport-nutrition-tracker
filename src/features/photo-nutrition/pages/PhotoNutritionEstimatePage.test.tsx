@@ -2,7 +2,8 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
-import type { PhotoNutritionAnalysisResult, SavePhotoNutritionEstimateInput } from '@/application/photo-nutrition/photoNutritionEstimationService';
+import type { PhotoNutritionAiConfig } from '@/application/photo-nutrition/photoNutritionAiClient';
+import type { PhotoNutritionAnalysisPort, PhotoNutritionAnalysisResult, SavePhotoNutritionEstimateInput } from '@/application/photo-nutrition/photoNutritionEstimationService';
 import { PhotoNutritionEstimatePage } from '@/features/photo-nutrition/pages/PhotoNutritionEstimatePage';
 import type { FoodEntry, FoodProduct } from '@/domain/models/food';
 
@@ -57,6 +58,8 @@ const entry: FoodEntry = {
 function renderPage(
   analyzePhoto = vi.fn(async () => analysisResult),
   saveEstimate = vi.fn(async (_input: SavePhotoNutritionEstimateInput) => ({ product, entry })),
+  aiConfig: PhotoNutritionAiConfig = { enabled: false, endpointUrl: '', timeoutMs: 15000 },
+  createRemoteAiPort: (config: { endpointUrl: string; timeoutMs?: number }) => PhotoNutritionAnalysisPort = vi.fn((_config: { endpointUrl: string; timeoutMs?: number }) => ({ analyze: vi.fn() } satisfies PhotoNutritionAnalysisPort)),
 ) {
   return {
     analyzePhoto,
@@ -64,7 +67,7 @@ function renderPage(
     ...render(
       <MemoryRouter initialEntries={['/food/photo-estimate?date=2026-07-04&slot=lunch']}>
         <Routes>
-          <Route path="/food/photo-estimate" element={<PhotoNutritionEstimatePage analyzePhoto={analyzePhoto} saveEstimate={saveEstimate} />} />
+          <Route path="/food/photo-estimate" element={<PhotoNutritionEstimatePage analyzePhoto={analyzePhoto} saveEstimate={saveEstimate} aiConfig={aiConfig} createRemoteAiPort={createRemoteAiPort} />} />
           <Route path="/food" element={<p>Retour au journal réussi</p>} />
         </Routes>
       </MemoryRouter>,
@@ -81,7 +84,9 @@ describe('PhotoNutritionEstimatePage', () => {
     expect(screen.getByText('Choisir une photo')).toBeInTheDocument();
     expect(screen.getByLabelText('Choisir une photo')).not.toHaveAttribute('capture');
     expect(screen.getByText('Aucune photo sélectionnée pour le moment.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Analyser la photo' })).toBeDisabled();
+    expect(screen.getByText('Analyse IA sécurisée')).toBeInTheDocument();
+    expect(screen.getByText('Aucun proxy IA configuré : l’analyse restera locale et prudente.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Analyser en local' })).toBeDisabled();
 
     await user.upload(screen.getByLabelText('Choisir une photo'), file);
 
@@ -90,7 +95,7 @@ describe('PhotoNutritionEstimatePage', () => {
     expect(screen.getByText(/Photo prête/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Supprimer la photo sélectionnée' })).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Analyser la photo' }));
+    await user.click(screen.getByRole('button', { name: 'Analyser en local' }));
 
     expect(analyzePhoto).toHaveBeenCalledWith(file);
     expect(await screen.findByRole('heading', { name: '2. Corriger l’estimation' })).toBeInTheDocument();
@@ -131,7 +136,9 @@ describe('PhotoNutritionEstimatePage', () => {
     await user.click(screen.getByRole('button', { name: 'Supprimer la photo sélectionnée' }));
     expect(screen.queryByText('nouveau-repas.jpg')).not.toBeInTheDocument();
     expect(screen.getByText('Aucune photo sélectionnée pour le moment.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Analyser la photo' })).toBeDisabled();
+    expect(screen.getByText('Analyse IA sécurisée')).toBeInTheDocument();
+    expect(screen.getByText('Aucun proxy IA configuré : l’analyse restera locale et prudente.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Analyser en local' })).toBeDisabled();
   });
 
   it('affiche clairement une photo illisible', async () => {
@@ -139,9 +146,42 @@ describe('PhotoNutritionEstimatePage', () => {
     renderPage(vi.fn(async () => { throw new Error('Photo illisible.'); }));
 
     await user.upload(screen.getByLabelText('Choisir une photo'), new File([new Uint8Array(128)], 'repas.jpg', { type: 'image/jpeg' }));
-    await user.click(screen.getByRole('button', { name: 'Analyser la photo' }));
+    await user.click(screen.getByRole('button', { name: 'Analyser en local' }));
 
     expect(await screen.findByText('Photo illisible.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Ajouter au journal' })).not.toBeInTheDocument();
   });
+
+  it('n’envoie la photo au proxy IA qu’après consentement explicite', async () => {
+    const user = userEvent.setup();
+    const remotePort: PhotoNutritionAnalysisPort = { analyze: vi.fn() };
+    const createRemoteAiPort = vi.fn((_config: { endpointUrl: string; timeoutMs?: number }) => remotePort);
+    const analyzePhoto = vi.fn(async () => ({
+      ...analysisResult,
+      mode: 'remote-ai' as const,
+      confidence: 'medium' as const,
+      privacy: 'external-consent-required' as const,
+      warnings: ['Analyse IA distante via proxy sécurisé : corrige les valeurs avant validation.'],
+    }));
+    const aiConfig: PhotoNutritionAiConfig = {
+      enabled: true,
+      endpointUrl: '/api/photo-nutrition/analyze',
+      timeoutMs: 12000,
+    };
+    renderPage(analyzePhoto, undefined, aiConfig, createRemoteAiPort);
+    const file = new File([new Uint8Array(128)], 'repas.jpg', { type: 'image/jpeg' });
+
+    await user.upload(screen.getByLabelText('Choisir une photo'), file);
+    expect(screen.getByText('Le proxy IA est configuré. La photo ne sera envoyée qu’après accord explicite.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Analyser en local' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('checkbox', { name: /J’autorise l’envoi ponctuel/i }));
+    await user.click(screen.getByRole('button', { name: 'Analyser avec l’IA' }));
+
+    expect(createRemoteAiPort).toHaveBeenCalledWith({ endpointUrl: '/api/photo-nutrition/analyze', timeoutMs: 12000 });
+    expect(analyzePhoto).toHaveBeenCalledWith(file, remotePort);
+    expect(await screen.findByText('Analyse IA à vérifier')).toBeInTheDocument();
+    expect(screen.getByText(/analyse distante via proxy avec consentement/i)).toBeInTheDocument();
+  });
+
 });
