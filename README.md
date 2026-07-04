@@ -1,4 +1,15 @@
-# SportPilot 0.23.1
+# SportPilot 0.24.0
+
+## Récompenses et thèmes 2.0
+
+SportPilot 0.24.0 enrichit le centre de récompenses avec un catalogue de cinquante badges, quinze thèmes visuels et un aperçu rapide par icône œil. Les thèmes restent consultables même lorsqu’ils sont verrouillés, mais seul un thème réellement débloqué peut être appliqué durablement.
+
+Le mode de rendu des thèmes peut être réglé globalement : **Complet** applique l’identité visuelle à toute l’interface, tandis que **Minimaliste** conserve une interface neutre et limite le thème aux accents, icônes et barres de progression. SportPilot classique reste réservé au mode minimaliste.
+
+La version corrige aussi les affichages de progression en kilomètres et de badges afin d’éviter les artefacts de précision flottante, par exemple `0.10000000000000142`.
+
+SportPilot 0.24.0 conserve le runtime Dexie Cloud v10 nommé `sportpilot-sync-runtime-0.20.0-v10`. La base métier reste en Dexie v8, la sauvegarde en JSON v7 et le registre local des espaces en v1. Aucune migration de données n’est requise.
+
 
 ## Synchronisation automatique, résiliente et transparente
 
