@@ -19,16 +19,23 @@ export interface PhotoNutritionAiClientOptions {
 }
 
 interface RemotePhotoNutritionResponse {
-  estimate?: Partial<PhotoNutritionEstimate> & {
-    nutrition?: Partial<NutritionValues>;
-  };
-  confidence?: PhotoNutritionConfidence;
-  warnings?: string[];
+  estimate?: unknown;
+  confidence?: unknown;
+  warnings?: unknown;
 }
+
+type RemoteEstimatePayload = {
+  name?: unknown;
+  amount?: unknown;
+  nutrition?: unknown;
+};
 
 const DEFAULT_TIMEOUT_MS = 15_000;
 const MAX_IMAGE_SIZE_BYTES = 8 * 1024 * 1024;
 const SENSITIVE_QUERY_KEYS = ['key', 'api_key', 'apikey', 'token', 'secret', 'client_secret', 'access_token'];
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
 
 const toNumber = (value: unknown, fallback = 0): number => {
   const parsed = typeof value === 'number' ? value : Number(value);
@@ -88,21 +95,38 @@ function mergeSignals(timeoutMs: number, parentSignal?: AbortSignal): AbortSigna
   return controller.signal;
 }
 
+function readRemoteEstimate(payload: RemotePhotoNutritionResponse): RemoteEstimatePayload {
+  if (!isRecord(payload.estimate)) {
+    throw new Error('Réponse IA invalide : estimation manquante.');
+  }
+  return payload.estimate;
+}
+
+function readRemoteNutrition(estimate: RemoteEstimatePayload): Record<keyof NutritionValues, unknown> {
+  if (!isRecord(estimate.nutrition)) {
+    throw new Error('Réponse IA invalide : valeurs nutritionnelles manquantes.');
+  }
+
+  return estimate.nutrition as Record<keyof NutritionValues, unknown>;
+}
+
 function normalizeEstimate(payload: RemotePhotoNutritionResponse): PhotoNutritionEstimate {
-  const estimate = payload.estimate ?? {};
-  const nutrition = (estimate.nutrition ?? {}) as Partial<NutritionValues>;
-  const amount = toNumber(estimate.amount, 250);
+  const estimate = readRemoteEstimate(payload);
+  const nutrition = readRemoteNutrition(estimate);
+  const amount = toNumber(estimate.amount, Number.NaN);
+  const caloriesKcal = toNumber(nutrition.caloriesKcal, Number.NaN);
 
   if (!(amount > 0)) throw new Error('Réponse IA invalide : quantité manquante.');
+  if (!(caloriesKcal >= 0)) throw new Error('Réponse IA invalide : calories manquantes.');
 
   return {
     name: typeof estimate.name === 'string' && estimate.name.trim() ? estimate.name.trim() : 'Repas IA à vérifier',
     amount,
     nutrition: {
-      caloriesKcal: toNumber(nutrition.caloriesKcal),
-      proteinGrams: toNumber(nutrition.proteinGrams),
-      carbohydratesGrams: toNumber(nutrition.carbohydratesGrams),
-      fatGrams: toNumber(nutrition.fatGrams),
+      caloriesKcal,
+      proteinGrams: Math.max(0, toNumber(nutrition.proteinGrams)),
+      carbohydratesGrams: Math.max(0, toNumber(nutrition.carbohydratesGrams)),
+      fatGrams: Math.max(0, toNumber(nutrition.fatGrams)),
     },
   };
 }

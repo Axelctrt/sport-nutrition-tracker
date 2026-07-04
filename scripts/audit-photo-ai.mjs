@@ -13,6 +13,7 @@ const requiredFiles = [
   'src/features/photo-nutrition/pages/PhotoNutritionEstimatePage.tsx',
   'src/features/photo-nutrition/pages/PhotoNutritionEstimatePage.test.tsx',
   'docs/architecture/photo-nutrition-ai-0.25.1-f1.md',
+  'docs/architecture/photo-nutrition-ai-0.25.1-f2.md',
   '.env.example',
 ];
 
@@ -32,6 +33,8 @@ if (failures.length === 0) {
     'Photo trop volumineuse',
     'fallback local conseillé',
     'SENSITIVE_QUERY_KEYS',
+    'Réponse IA invalide',
+    'valeurs nutritionnelles manquantes',
   ]) {
     if (!client.includes(marker)) fail(`client IA photo incomplet : ${marker}.`);
   }
@@ -55,7 +58,11 @@ if (failures.length === 0) {
     'readPhotoNutritionAiConfig',
     'Analyser avec l’IA',
     'Analyser en local',
-    'aucune image n’est envoyée',
+    'aucune image n’est conservée',
+    'remoteFallbackMessage',
+    'IA indisponible, fallback local utilisé',
+    'Fallback local appliqué automatiquement',
+    'analysisFormKey',
   ]) {
     if (!page.includes(marker)) fail(`interface IA photo incomplète : ${marker}.`);
   }
@@ -67,6 +74,7 @@ if (failures.length === 0) {
     'normalise le contrat IA',
     'bloque les photos trop volumineuses',
     'fallback local conseillé',
+    'Réponse IA invalide',
   ]) {
     if (!clientTest.includes(marker)) fail(`tests client IA photo incomplets : ${marker}.`);
   }
@@ -74,9 +82,12 @@ if (failures.length === 0) {
   const pageTest = read('src/features/photo-nutrition/pages/PhotoNutritionEstimatePage.test.tsx');
   for (const marker of [
     'n’envoie la photo au proxy IA qu’après consentement explicite',
+    'remplit le formulaire avec la réponse IA distante',
+    'bascule automatiquement sur le fallback local si le proxy IA échoue',
     'Analyser avec l’IA',
     'Analyser en local',
     'Analyse IA à vérifier',
+    'IA indisponible, fallback local utilisé',
   ]) {
     if (!pageTest.includes(marker)) fail(`tests interface IA photo incomplets : ${marker}.`);
   }
@@ -90,7 +101,7 @@ if (failures.length === 0) {
     if (!envExample.includes(marker)) fail(`configuration .env.example incomplète : ${marker}.`);
   }
 
-  const doc = read('docs/architecture/photo-nutrition-ai-0.25.1-f1.md');
+  const f1Doc = read('docs/architecture/photo-nutrition-ai-0.25.1-f1.md');
   for (const marker of [
     'backend/proxy sécurisé',
     'consentement explicite',
@@ -98,7 +109,18 @@ if (failures.length === 0) {
     'clé serveur uniquement',
     'Aucune migration Dexie',
   ]) {
-    if (!doc.includes(marker)) fail(`documentation IA photo incomplète : ${marker}.`);
+    if (!f1Doc.includes(marker)) fail(`documentation IA photo F1 incomplète : ${marker}.`);
+  }
+
+  const f2Doc = read('docs/architecture/photo-nutrition-ai-0.25.1-f2.md');
+  for (const marker of [
+    'Branchement IA photo via proxy',
+    'fallback automatique',
+    'réponse IA invalide',
+    'aucune clé IA',
+    'Aucune migration Dexie',
+  ]) {
+    if (!f2Doc.includes(marker)) fail(`documentation IA photo F2 incomplète : ${marker}.`);
   }
 
   const packageJson = JSON.parse(read('package.json'));
@@ -116,4 +138,4 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-console.log('Audit IA photo réussi : contrat proxy, consentement explicite, absence de clé front et fallback local couverts.');
+console.log('Audit IA photo réussi : proxy distant, consentement explicite, réponse IA validée, fallback automatique et absence de clé front couverts.');

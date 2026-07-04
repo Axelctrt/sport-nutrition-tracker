@@ -22,6 +22,18 @@ const analysisResult: PhotoNutritionAnalysisResult = {
   ],
 };
 
+const remoteAnalysisResult: PhotoNutritionAnalysisResult = {
+  estimate: {
+    name: 'Bol de pâtes IA',
+    amount: 320,
+    nutrition: { caloriesKcal: 720, proteinGrams: 42, carbohydratesGrams: 82, fatGrams: 20 },
+  },
+  mode: 'remote-ai',
+  confidence: 'medium',
+  privacy: 'external-consent-required',
+  warnings: ['Analyse IA distante via proxy sécurisé : corrige les valeurs avant validation.'],
+};
+
 const product: FoodProduct = {
   id: 'product-1',
   createdAt: '2026-07-04T12:00:00.000Z',
@@ -55,8 +67,14 @@ const entry: FoodEntry = {
   },
 };
 
+type AnalyzePhotoTestFn = (
+  file: File,
+  port?: PhotoNutritionAnalysisPort,
+  signal?: AbortSignal,
+) => Promise<PhotoNutritionAnalysisResult>;
+
 function renderPage(
-  analyzePhoto = vi.fn(async () => analysisResult),
+  analyzePhoto: AnalyzePhotoTestFn = vi.fn(async (_file: File) => analysisResult),
   saveEstimate = vi.fn(async (_input: SavePhotoNutritionEstimateInput) => ({ product, entry })),
   aiConfig: PhotoNutritionAiConfig = { enabled: false, endpointUrl: '', timeoutMs: 15000 },
   createRemoteAiPort: (config: { endpointUrl: string; timeoutMs?: number }) => PhotoNutritionAnalysisPort = vi.fn((_config: { endpointUrl: string; timeoutMs?: number }) => ({ analyze: vi.fn() } satisfies PhotoNutritionAnalysisPort)),
@@ -152,17 +170,11 @@ describe('PhotoNutritionEstimatePage', () => {
     expect(screen.queryByRole('button', { name: 'Ajouter au journal' })).not.toBeInTheDocument();
   });
 
-  it('n’envoie la photo au proxy IA qu’après consentement explicite', async () => {
+  it('n’envoie la photo au proxy IA qu’après consentement explicite et remplit le formulaire avec la réponse IA distante', async () => {
     const user = userEvent.setup();
     const remotePort: PhotoNutritionAnalysisPort = { analyze: vi.fn() };
     const createRemoteAiPort = vi.fn((_config: { endpointUrl: string; timeoutMs?: number }) => remotePort);
-    const analyzePhoto = vi.fn(async () => ({
-      ...analysisResult,
-      mode: 'remote-ai' as const,
-      confidence: 'medium' as const,
-      privacy: 'external-consent-required' as const,
-      warnings: ['Analyse IA distante via proxy sécurisé : corrige les valeurs avant validation.'],
-    }));
+    const analyzePhoto = vi.fn(async (_file: File, port?: PhotoNutritionAnalysisPort) => (port ? remoteAnalysisResult : analysisResult));
     const aiConfig: PhotoNutritionAiConfig = {
       enabled: true,
       endpointUrl: '/api/photo-nutrition/analyze',
@@ -182,6 +194,36 @@ describe('PhotoNutritionEstimatePage', () => {
     expect(analyzePhoto).toHaveBeenCalledWith(file, remotePort);
     expect(await screen.findByText('Analyse IA à vérifier')).toBeInTheDocument();
     expect(screen.getByText(/analyse distante via proxy avec consentement/i)).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Bol de pâtes IA')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('720')).toBeInTheDocument();
+  });
+
+  it('bascule automatiquement sur le fallback local si le proxy IA échoue', async () => {
+    const user = userEvent.setup();
+    const remotePort: PhotoNutritionAnalysisPort = { analyze: vi.fn() };
+    const createRemoteAiPort = vi.fn((_config: { endpointUrl: string; timeoutMs?: number }) => remotePort);
+    const analyzePhoto = vi.fn(async (_file: File, port?: PhotoNutritionAnalysisPort) => {
+      if (port) throw new Error('Analyse IA indisponible (503) : fallback local conseillé.');
+      return analysisResult;
+    });
+    const aiConfig: PhotoNutritionAiConfig = {
+      enabled: true,
+      endpointUrl: '/api/photo-nutrition/analyze',
+      timeoutMs: 12000,
+    };
+    renderPage(analyzePhoto, undefined, aiConfig, createRemoteAiPort);
+    const file = new File([new Uint8Array(128)], 'repas.jpg', { type: 'image/jpeg' });
+
+    await user.upload(screen.getByLabelText('Choisir une photo'), file);
+    await user.click(screen.getByRole('checkbox', { name: /J’autorise l’envoi ponctuel/i }));
+    await user.click(screen.getByRole('button', { name: 'Analyser avec l’IA' }));
+
+    expect(await screen.findByText('IA indisponible, fallback local utilisé')).toBeInTheDocument();
+    expect(screen.getAllByText(/Fallback local appliqué automatiquement/i)).toHaveLength(2);
+    expect(screen.getByText('Analyse locale prudente')).toBeInTheDocument();
+    expect(screen.getByText(/IA distante indisponible : Analyse IA indisponible/i)).toBeInTheDocument();
+    expect(analyzePhoto).toHaveBeenNthCalledWith(1, file, remotePort);
+    expect(analyzePhoto).toHaveBeenNthCalledWith(2, file);
   });
 
 });

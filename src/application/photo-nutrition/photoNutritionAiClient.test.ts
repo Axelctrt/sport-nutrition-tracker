@@ -67,6 +67,17 @@ describe('photoNutritionAiClient', () => {
     ]));
   });
 
+
+
+  it('refuse une réponse IA distante sans estimation exploitable', async () => {
+    const port = createRemotePhotoNutritionAnalysisPort({
+      endpointUrl: '/api/photo-nutrition/analyze',
+      fetcher: vi.fn(async () => new Response(JSON.stringify({ estimate: { amount: 250 } }), { status: 200 })),
+    });
+
+    await expect(port.analyze(imageFile())).rejects.toThrow('Réponse IA invalide');
+  });
+
   it('convertit une erreur HTTP en message de fallback local exploitable', async () => {
     const port = createRemotePhotoNutritionAnalysisPort({
       endpointUrl: '/api/photo-nutrition/analyze',
