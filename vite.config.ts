@@ -171,6 +171,13 @@ export default defineConfig({
   server: {
     allowedHosts: ['.trycloudflare.com'],
     proxy: {
+      '/api/photo-nutrition/analyze': {
+        target: 'http://127.0.0.1:8787',
+        changeOrigin: true,
+        secure: false,
+        timeout: 35_000,
+        proxyTimeout: 35_000,
+      },
       '/api/open-food-facts/search': createOpenFoodFactsProxy(
         'https://search.openfoodfacts.org',
         (path) => path.replace(/^\/api\/open-food-facts\/search/, '/search'),

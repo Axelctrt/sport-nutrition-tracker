@@ -14,6 +14,11 @@ const requiredFiles = [
   'src/features/photo-nutrition/pages/PhotoNutritionEstimatePage.test.tsx',
   'docs/architecture/photo-nutrition-ai-0.25.1-f1.md',
   'docs/architecture/photo-nutrition-ai-0.25.1-f2.md',
+  'docs/architecture/photo-nutrition-ai-0.25.1-f3.md',
+  'functions/api/photo-nutrition/analyze.js',
+  'functions/_shared/photoNutritionAiProxy.js',
+  'functions/_shared/photoNutritionAiProxy.test.mjs',
+  'scripts/photo-nutrition-gemini-proxy-local.mjs',
   '.env.example',
 ];
 
@@ -96,7 +101,10 @@ if (failures.length === 0) {
   for (const marker of [
     'VITE_PHOTO_NUTRITION_AI_ENDPOINT=',
     'VITE_PHOTO_NUTRITION_AI_TIMEOUT_MS=15000',
-    'Ne jamais placer de clé OpenAI',
+    'Ne jamais placer de clé Gemini',
+    'PHOTO_NUTRITION_AI_API_KEY=',
+    'PHOTO_NUTRITION_AI_MODEL=gemini-2.5-flash-lite',
+    'Free Tier Gemini',
   ]) {
     if (!envExample.includes(marker)) fail(`configuration .env.example incomplète : ${marker}.`);
   }
@@ -123,12 +131,58 @@ if (failures.length === 0) {
     if (!f2Doc.includes(marker)) fail(`documentation IA photo F2 incomplète : ${marker}.`);
   }
 
+
+
+  const proxy = read('functions/_shared/photoNutritionAiProxy.js');
+  for (const marker of [
+    'generativelanguage.googleapis.com',
+    'gemini-2.5-flash-lite',
+    'PHOTO_NUTRITION_AI_API_KEY',
+    'GEMINI_API_KEY',
+    'inlineData',
+    'responseMimeType',
+    'PHOTO_AI_NOT_CONFIGURED',
+    'PHOTO_AI_INVALID_IMAGE',
+    'Photo transmise à Google Gemini',
+  ]) {
+    if (!proxy.includes(marker)) fail(`proxy IA Gemini incomplet : ${marker}.`);
+  }
+
+  const proxyTest = read('functions/_shared/photoNutritionAiProxy.test.mjs');
+  for (const marker of [
+    'photoNutritionAiProxy Gemini',
+    'PHOTO_AI_NOT_CONFIGURED',
+    'PHOTO_AI_INVALID_IMAGE',
+    'appelle Gemini côté serveur',
+    'generativelanguage.googleapis.com',
+  ]) {
+    if (!proxyTest.includes(marker)) fail(`tests proxy IA Gemini incomplets : ${marker}.`);
+  }
+
+  const viteConfig = read('vite.config.ts');
+  if (!viteConfig.includes("'/api/photo-nutrition/analyze'") || !viteConfig.includes('http://127.0.0.1:8787')) {
+    fail('proxy Vite local IA photo absent ou incohérent.');
+  }
+
+  const f3Doc = read('docs/architecture/photo-nutrition-ai-0.25.1-f3.md');
+  for (const marker of [
+    'Gemini Free Tier',
+    'PHOTO_NUTRITION_AI_API_KEY',
+    'consent explicitement',
+    'Aucune migration Dexie',
+  ]) {
+    if (!f3Doc.includes(marker)) fail(`documentation IA photo F3 Gemini incomplète : ${marker}.`);
+  }
+
   const packageJson = JSON.parse(read('package.json'));
   if (packageJson.scripts?.['audit:photo-ai'] !== 'node scripts/audit-photo-ai.mjs') {
     fail('le script audit:photo-ai est absent ou incohérent.');
   }
   if (!String(packageJson.scripts?.check ?? '').includes('audit:photo-ai')) {
     fail('npm run check ne lance pas audit:photo-ai.');
+  }
+  if (packageJson.scripts?.['dev:photo-ai-proxy'] !== 'node scripts/photo-nutrition-gemini-proxy-local.mjs') {
+    fail('le script dev:photo-ai-proxy Gemini est absent ou incohérent.');
   }
 }
 
@@ -138,4 +192,4 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-console.log('Audit IA photo réussi : proxy distant, consentement explicite, réponse IA validée, fallback automatique et absence de clé front couverts.');
+console.log('Audit IA photo réussi : proxy Gemini Free Tier, consentement explicite, réponse IA validée, fallback automatique et absence de clé front couverts.');
