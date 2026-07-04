@@ -1,39 +1,39 @@
-# SportPilot 0.25.0 — estimation photo nutritionnelle
+# SportPilot 0.25.1 — analyse photo nutritionnelle IA Gemini
 
-Branche de publication : `feature/photo-nutrition-0.25.0`
+Branche de publication : `feature/photo-ai-0.25.1`
 
-## Livraison
+La version 0.25.1 transforme le socle photo 0.25.0 en parcours IA réel, sans clé exposée dans la PWA.
 
-La version 0.25.0 finalise la première itération du parcours photo nutrition :
+## Contenu livré
 
-- bouton `Photo` depuis les repas du journal alimentaire ;
-- choix d’une photo via le sélecteur natif mobile ;
-- aperçu de la photo sélectionnée, nom et taille du fichier ;
-- suppression manuelle de la photo avant analyse ;
-- estimation locale prudente avec confiance faible ;
-- correction manuelle de l’aliment, de la quantité, des calories et des macros ;
-- ajout au bon repas du journal alimentaire ;
-- messages d’erreur pour absence de photo ou fichier non image ;
-- notice de confidentialité indiquant qu’aucune image n’est envoyée en 0.25.0 ;
-- documentation de préparation pour une future API IA/backend.
+- contrat front/proxy pour l’analyse nutritionnelle photo ;
+- endpoint configuré par `VITE_PHOTO_NUTRITION_AI_ENDPOINT` ;
+- proxy backend `/api/photo-nutrition/analyze` compatible Cloudflare Pages Functions ;
+- proxy local Node `npm run dev:photo-ai-proxy` ;
+- fournisseur Gemini Free Tier par défaut ;
+- variable serveur `PHOTO_NUTRITION_AI_API_KEY`, alias `GEMINI_API_KEY` ;
+- consentement explicite avant envoi de la photo ;
+- fallback local automatique si Gemini ou le proxy échoue ;
+- audits `audit:photo-ai` et `audit:photo-nutrition` intégrés au contrôle complet.
 
-## Versions de données
+## Versions techniques
 
-- application : `0.25.0` ;
-- runtime Dexie Cloud : v10 ;
-- base métier Dexie : v8 ;
+- application : `0.25.1` ;
+- base Dexie : v8 ;
 - sauvegarde JSON : v7 ;
-- registre des espaces : v1.
+- registre local des espaces : v1 ;
+- runtime Dexie Cloud : v10 ;
+- aucune migration de données.
 
-Aucune migration de données, de sauvegarde ou de registre n’est introduite.
+## Validation attendue
 
-## Vérification
+La publication doit être validée sur ordinateur et iPhone 15 sous iOS 26 avec :
 
-```powershell
-npm ci
-npm run audit:photo-nutrition
-npm run release:verify
-git diff --check
-```
+- analyse locale sans endpoint ;
+- analyse IA Gemini avec clé serveur ;
+- fallback local si le proxy est coupé ;
+- ajout au bon repas ;
+- Open Food Facts et scanner code-barres non régressifs ;
+- absence de secret dans Git.
 
-La publication doit être validée sur ordinateur et iPhone 15 sous iOS 26 avant la fusion manuelle dans `main` et la création du tag `v0.25.0`.
+Tag attendu à la publication : `v0.25.1`.

@@ -1,37 +1,25 @@
-# Limitations connues — SportPilot 0.25.0
+# Limitations connues — SportPilot 0.25.1
 
-Ces limitations sont connues et non bloquantes pour la version stable.
+## Estimation nutritionnelle non médicale
 
-## Estimation photo nutrition
+L’analyse photo IA propose une estimation approximative. Elle ne doit pas être présentée comme un diagnostic nutritionnel, une mesure médicale ou une vérité absolue. La correction manuelle reste obligatoire avant l’ajout au journal.
 
-L’analyse photo 0.25.0 n’est pas une vraie reconnaissance IA. Elle fournit un fallback local volontairement générique, avec confiance faible, afin d’aider l’utilisateur à démarrer une saisie sans prétendre identifier précisément l’aliment ou la portion.
+## Dépendance au Free Tier Gemini
 
-L’utilisateur doit toujours vérifier et corriger l’aliment, la quantité, les calories et les macros avant ajout au journal.
+SportPilot 0.25.1 utilise Gemini Free Tier pour éviter un coût OpenAI immédiat. Ce choix implique des quotas, des limites de débit et une disponibilité dépendante du compte Google utilisé. Si le quota est atteint ou si Gemini répond mal, l’app doit revenir au fallback local.
 
-## Confidentialité
+## Confidentialité Free Tier
 
-La photo sélectionnée reste locale pendant le parcours. SportPilot 0.25.0 ne persiste pas l’image dans Dexie et ne l’envoie pas vers un service externe. Une future intégration IA devra passer par un backend ou proxy avec consentement clair.
+Sur le Free Tier Gemini, les contenus transmis au fournisseur IA peuvent être utilisés par Google pour améliorer ses produits. L’utilisateur doit donc éviter les photos sensibles et donner son consentement explicite avant tout envoi externe.
 
-## Budget JavaScript
+## Secrets serveur uniquement
 
-La version 0.25.0 peut dépasser le budget JavaScript historique. Ce dépassement est accepté pour conserver une interface photo mobile claire et testable. L’optimisation du bundle doit être traitée ultérieurement comme chantier technique global.
+Les clés `PHOTO_NUTRITION_AI_API_KEY` ou `GEMINI_API_KEY` doivent rester côté serveur, dans le terminal du proxy local ou dans les variables d’environnement de l’hébergeur. Elles ne doivent jamais être placées dans React, dans une variable `VITE_*`, dans Git, ni dans un fichier `.env.local` destiné au front.
 
-## Synchronisation en premier plan
+## Bundle JavaScript
 
-L’automatisation fonctionne lorsque SportPilot est ouvert ou revient au premier plan. Elle ne dépend pas d’une tâche PWA en arrière-plan.
+La version 0.25.1 peut conserver le dépassement du budget JavaScript historique accepté en 0.25.0 pour l’UX photo. L’optimisation du bundle doit être traitée plus tard comme chantier technique global.
 
-## Mode Wi-Fi uniquement
+## Données locales
 
-Certains navigateurs, notamment iOS, n’exposent pas le type de connexion. SportPilot bloque alors volontairement l’automatisation en mode Wi-Fi uniquement.
-
-## Historique
-
-L’historique de synchronisation est local à l’appareil, limité aux vingt dernières opérations par compte et non synchronisé entre appareils.
-
-## Services externes
-
-Open Food Facts et Dexie Cloud dépendent du réseau et de leur disponibilité.
-
-## Versions de données
-
-SportPilot 0.25.0 utilise le runtime Dexie Cloud v10. La base métier reste en Dexie v8, la sauvegarde en JSON v7 et le registre local des espaces en v1. Aucune migration n’est requise.
+La base métier reste en Dexie v8, la sauvegarde en JSON v7, le registre local des espaces en v1 et le runtime Dexie Cloud en v10. Aucune migration n’est requise pour 0.25.1.

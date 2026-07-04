@@ -63,7 +63,7 @@ if (largestJavaScript.bytes > limits.largestJavaScriptBytes) {
   fail(`le chunk ${largestJavaScript.path} dépasse 850 Kio (${largestJavaScript.bytes} octets).`);
 }
 if (totalJavaScriptBytes > limits.totalJavaScriptBytes) {
-  fail(`le JavaScript total dépasse le budget 0.25.0 de 2,86 Mio (${totalJavaScriptBytes} octets).`);
+  fail(`le JavaScript total dépasse le budget 0.25.1 de 2,86 Mio (${totalJavaScriptBytes} octets).`);
 }
 if (totalCssBytes > limits.totalCssBytes) {
   fail(`le CSS total dépasse 176 Kio (${totalCssBytes} octets).`);

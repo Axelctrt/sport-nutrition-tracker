@@ -11,9 +11,9 @@ import pendingToastSource from '@/shared/toast/pendingToast.ts?raw';
 import toastProviderSource from '@/shared/toast/ToastProvider.tsx?raw';
 import actionToastSource from '@/shared/toast/useActionToast.ts?raw';
 
-describe('publication SportPilot 0.25.0 — confirmations d’action', () => {
+describe('publication SportPilot 0.25.1 — confirmations d’action', () => {
   it('publie le correctif sans migration de données', () => {
-    expect(__APP_VERSION__).toBe('0.25.0');
+    expect(__APP_VERSION__).toBe('0.25.1');
     expect(databaseSchemaVersion).toBe(8);
     expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(7);
   });

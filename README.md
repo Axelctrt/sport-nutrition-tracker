@@ -1,23 +1,25 @@
-# SportPilot 0.25.0
+# SportPilot 0.25.1
 
-## Estimation nutritionnelle assistée par photo
+SportPilot 0.25.1 ajoute l’analyse nutritionnelle assistée par IA à partir d’une photo, via un proxy backend Gemini Free Tier. L’utilisateur choisit une photo, accepte explicitement son envoi ponctuel au service IA, vérifie l’estimation proposée, corrige les valeurs, puis ajoute l’entrée au bon repas du journal alimentaire.
 
-SportPilot 0.25.0 ajoute un parcours d’ajout alimentaire à partir d’une photo. L’utilisateur peut choisir ou prendre une photo, vérifier l’aperçu, supprimer la photo sélectionnée, lancer une estimation locale prudente, corriger les valeurs, puis ajouter l’entrée au bon repas du journal alimentaire.
+## Parcours photo nutrition
 
-Cette version ne branche pas encore de modèle IA distant. L’estimation photo repose sur un fallback local volontairement générique : elle sert de point de départ, jamais de vérité nutritionnelle. Les libellés rappellent que l’estimation doit être vérifiée et que les valeurs restent modifiables avant l’ajout au journal.
+- sélection ou prise de photo depuis le journal alimentaire ;
+- aperçu de la photo sélectionnée et suppression manuelle possible ;
+- analyse IA distante uniquement si `VITE_PHOTO_NUTRITION_AI_ENDPOINT` est configuré et si l’utilisateur donne son consentement ;
+- proxy backend `/api/photo-nutrition/analyze` utilisant `PHOTO_NUTRITION_AI_API_KEY` côté serveur ;
+- modèle par défaut `gemini-2.5-flash-lite` pour limiter les coûts ;
+- fallback local automatique si le proxy, le quota ou Gemini échoue ;
+- correction manuelle obligatoire avant l’ajout au journal.
 
-## Confidentialité et données
+## Confidentialité et coût IA
 
-La photo sélectionnée reste locale dans la PWA pendant le parcours d’estimation. SportPilot ne conserve pas l’image dans Dexie et ne l’envoie pas à un service externe dans cette version. Le futur branchement IA devra passer par un backend ou proxy explicite, avec consentement clair avant tout envoi d’image.
+Aucune clé Gemini n’est exposée dans le front. Les variables `PHOTO_NUTRITION_AI_API_KEY` ou `GEMINI_API_KEY` doivent rester côté serveur ou dans le terminal du proxy local. Le Free Tier Gemini permet de tester sans budget OpenAI, mais il reste soumis aux quotas Google et les contenus envoyés peuvent être utilisés par Google pour améliorer ses produits. L’app affiche donc une mention de consentement avant tout envoi externe.
 
-## Journal alimentaire et Open Food Facts
+## Synchronisation et données
 
-Le journal nutritionnel existant reste la source centrale. Open Food Facts, le scanner code-barres, les aliments locaux, les recettes et l’ajout manuel restent disponibles. Le parcours photo complète ces outils sans les remplacer.
+SportPilot 0.25.1 conserve le runtime Dexie Cloud v10 nommé `sportpilot-sync-runtime-0.20.0-v10`. La base métier reste en Dexie v8, la sauvegarde en JSON v7 et le registre local des espaces en v1. Aucune migration de données n’est requise.
 
-## Compatibilité
+## Arbitrage bundle
 
-SportPilot 0.25.0 conserve le runtime Dexie Cloud v10 nommé `sportpilot-sync-runtime-0.20.0-v10`. La base métier reste en Dexie v8, la sauvegarde en JSON v7 et le registre local des espaces en v1. Aucune migration de données n’est requise.
-
-## Arbitrage production
-
-La recette mobile a privilégié une interface photo claire et testable. Le budget JavaScript historique peut être dépassé par arbitrage produit : ce dépassement est assumé pour la version 0.25.0 et devra être traité par une optimisation globale ultérieure plutôt que par une dégradation de l’expérience utilisateur.
+Le budget JavaScript reste aligné sur le budget 0.25.x accepté pour conserver une interface photo claire, testable et compatible avec le parcours IA. L’optimisation du bundle devra être traitée ultérieurement comme chantier technique global.
