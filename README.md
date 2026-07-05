@@ -2,6 +2,13 @@
 
 SportPilot 0.27.0 livre la première tranche sociale exploitable : identité publique, demandes d’amis compatibles avec de vrais utilisateurs, permissions de partage par ami, snapshots sociaux filtrés et premier fil d’activité amis. Le périmètre reste volontairement strict : pas de messagerie, pas de likes, pas de commentaires, pas de groupes, pas de classements et aucun export d’activité brute.
 
+
+## Préparation cloud social 0.28.0
+
+La branche 0.28.0 prépare le backend social réel sans ouvrir d’annuaire public. F1 définit le contrat cloud social global. F2 ajoute les identités cloud et les réservations de handles dans le runtime Dexie Cloud v11 via `socialIdentities` et `socialHandleReservations`.
+
+Le handle reste un identifiant public de recherche exacte. Les relations futures resteront basées sur le `userId` stable. Le flag `VITE_ENABLE_REAL_SOCIAL_CLOUD` conserve l’activation réelle sous contrôle.
+
 ## Identité sociale
 
 - identifiant public SportPilot visible et copiable, affiché avec `@` ;

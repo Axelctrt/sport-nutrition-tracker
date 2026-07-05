@@ -13,7 +13,7 @@ describe('base isolée du prototype Dexie Cloud', () => {
     expect(SYNC_PROTOTYPE_DATABASE_NAME).not.toBe(
       LEGACY_SYNC_PROTOTYPE_DATABASE_NAME,
     );
-    expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(10);
+    expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(11);
     expect(SYNC_PROTOTYPE_DATABASE_NAME).toBe(
       `sportpilot-sync-runtime-0.20.0-v${SYNC_PROTOTYPE_DATABASE_VERSION}`,
     );
@@ -42,6 +42,8 @@ describe('base isolée du prototype Dexie Cloud', () => {
       'realNutritionTracking',
       'realAccountPreferences',
       'realRewardsRoutines',
+      'socialIdentities',
+      'socialHandleReservations',
     ]);
   });
 
@@ -94,6 +96,11 @@ describe('base isolée du prototype Dexie Cloud', () => {
     expect(database.table('realNutritionTracking').schema.primKey.keyPath).toBe('id');
     expect(database.table('realAccountPreferences').schema.primKey.keyPath).toBe('id');
     expect(database.table('realRewardsRoutines').schema.primKey.keyPath).toBe('id');
+    expect(database.table('socialIdentities').schema.primKey.keyPath).toBe('id');
+    expect(database.table('socialHandleReservations').schema.primKey.keyPath).toBe('id');
+    const handleReservationIndex = database.table('socialHandleReservations').schema.idxByName.handle;
+    expect(handleReservationIndex).toBeDefined();
+    expect(handleReservationIndex?.unique).toBe(true);
 
     database.close();
   });

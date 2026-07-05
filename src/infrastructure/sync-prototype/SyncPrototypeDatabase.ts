@@ -26,9 +26,13 @@ import type {
   EnabledSyncPrototypeConfig,
   SyncPrototypeConfig,
 } from '@/infrastructure/sync-prototype/syncPrototypeConfig';
+import type {
+  SocialCloudIdentityRecord,
+  SocialHandleReservation,
+} from '@/domain/friends/socialCloudIdentity';
 
 export const LEGACY_SYNC_PROTOTYPE_DATABASE_NAME = 'sportpilot-sync-prototype';
-export const SYNC_PROTOTYPE_DATABASE_VERSION = 10;
+export const SYNC_PROTOTYPE_DATABASE_VERSION = 11;
 export const SYNC_PROTOTYPE_DATABASE_NAME =
   `sportpilot-sync-runtime-0.20.0-v${SYNC_PROTOTYPE_DATABASE_VERSION}`;
 export const SYNC_PROTOTYPE_TABLE_NAMES = [
@@ -53,6 +57,8 @@ export const SYNC_PROTOTYPE_TABLE_NAMES = [
   'realNutritionTracking',
   'realAccountPreferences',
   'realRewardsRoutines',
+  'socialIdentities',
+  'socialHandleReservations',
 ] as const;
 
 export class SyncPrototypeDatabase extends Dexie {
@@ -77,6 +83,8 @@ export class SyncPrototypeDatabase extends Dexie {
   declare realNutritionTracking: Table<NutritionTrackingAggregate, EntityId>;
   declare realAccountPreferences: Table<AccountPreferencesAggregate, EntityId>;
   declare realRewardsRoutines: Table<RewardsRoutinesAggregate, EntityId>;
+  declare socialIdentities: Table<SocialCloudIdentityRecord, EntityId>;
+  declare socialHandleReservations: Table<SocialHandleReservation, EntityId>;
 
   constructor(
     { databaseUrl }: EnabledSyncPrototypeConfig,
@@ -155,6 +163,8 @@ export class SyncPrototypeDatabase extends Dexie {
       realNutritionTracking: 'id, updatedAt',
       realAccountPreferences: 'id, updatedAt',
       realRewardsRoutines: 'id, updatedAt',
+      socialIdentities: 'id, &userId, &handle, updatedAt',
+      socialHandleReservations: 'id, &handle, ownerUserId, updatedAt',
     });
 
     this.cloud.configure({

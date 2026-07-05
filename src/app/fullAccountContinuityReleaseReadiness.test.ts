@@ -14,9 +14,9 @@ describe('publication SportPilot 0.26.0 — continuité complète du compte', ()
     expect(databaseSchemaVersion).toBe(10);
     expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(9);
     expect(DATA_SPACE_REGISTRY_VERSION).toBe(1);
-    expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(10);
+    expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(11);
     expect(SYNC_PROTOTYPE_DATABASE_NAME).toBe(
-      'sportpilot-sync-runtime-0.20.0-v10',
+      'sportpilot-sync-runtime-0.20.0-v11',
     );
   });
 

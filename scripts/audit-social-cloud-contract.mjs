@@ -68,11 +68,12 @@ const envExample = read('.env.example');
 assert(envExample.includes('VITE_ENABLE_REAL_SOCIAL_CLOUD=false'), '.env.example doit documenter le flag social.');
 
 const page = read('src/features/friends/pages/FriendsPrivacyPage.tsx');
-assert(page.includes('Cloud social 0.28.0 F1'), 'la page Amis doit afficher la readiness cloud social F1.');
-assert(page.includes('Aucune écriture distante'), 'la page doit rappeler qu’aucune écriture distante n’est branchée.');
+assert(page.includes('Cloud social 0.28.0 F2'), 'la page Amis doit afficher la readiness cloud social courante.');
+assert(page.includes('aucun annuaire'), 'la page doit rappeler qu’aucun annuaire public n’est ouvert.');
 
 const packageJson = JSON.parse(read('package.json'));
 assert(packageJson.scripts['audit:social-cloud-contract'] === 'node scripts/audit-social-cloud-contract.mjs', 'script npm audit:social-cloud-contract manquant.');
+assert(packageJson.scripts['audit:social-cloud-identity'] === 'node scripts/audit-social-cloud-identity.mjs', 'script npm audit:social-cloud-identity manquant.');
 assert(packageJson.scripts.check.includes('npm run audit:social-cloud-contract'), 'npm run check doit inclure audit:social-cloud-contract.');
 assert(packageJson.scripts.ci.includes('npm run audit:social-cloud-contract'), 'npm run ci doit inclure audit:social-cloud-contract.');
 

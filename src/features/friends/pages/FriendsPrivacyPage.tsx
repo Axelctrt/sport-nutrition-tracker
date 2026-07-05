@@ -348,12 +348,12 @@ export function FriendsPrivacyPage({
         </p>
       </InlineNotice>
 
-      <InlineNotice title="Cloud social 0.28.0 F1">
+      <InlineNotice title="Cloud social 0.28.0 F2">
         <p>
-          Contrat backend social prêt : identités, handles, demandes, amitiés, permissions et snapshots filtrés ont désormais des ports cloud explicites.
+          Identités cloud F2 prêtes : les profils publics et les réservations de handles ont désormais des collections cloud séparées.
         </p>
         <p>
-          Aucune écriture distante n’est branchée en F1 : la recherche réelle, les demandes cloud et la publication de snapshots restent sur fallback indisponible.
+          La réservation réelle reste protégée par le flag social cloud : aucun annuaire, aucune suggestion et aucun partage de snapshots ne sont activés en F2.
         </p>
       </InlineNotice>
 
@@ -462,7 +462,7 @@ export function FriendsPrivacyPage({
             <p>{availability.message}</p>
           </div>
           <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-950 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
-            Utilisateur non connecté au cloud social : seule la sauvegarde locale est active pour l’instant.
+            Utilisateur non connecté au cloud social : la sauvegarde locale reste active et la réservation cloud attend le backend réel.
           </div>
         </div>
       </Card>

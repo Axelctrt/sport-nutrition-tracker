@@ -74,8 +74,8 @@ if (failures.length === 0) {
     fail('La sauvegarde JSON doit rester en v7.');
   }
   const cloud = read('src/infrastructure/sync-prototype/SyncPrototypeDatabase.ts');
-  if (!cloud.includes('SYNC_PROTOTYPE_DATABASE_VERSION = 10')) {
-    fail('Le runtime cloud doit rester en v10.');
+  if (!cloud.includes('SYNC_PROTOTYPE_DATABASE_VERSION = 11')) {
+    fail('Le runtime cloud doit passer en v11 pour les identités sociales.');
   }
 }
 

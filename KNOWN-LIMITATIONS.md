@@ -2,7 +2,7 @@
 
 ## Synchronisation sociale cloud non activée
 
-SportPilot 0.27.0 prépare les contrats et les états nécessaires aux vrais utilisateurs, mais ne branche pas encore de backend social réel. La recherche exacte d’un identifiant peut donc retourner un état de service cloud indisponible tant qu’un adapter cloud n’est pas fourni.
+SportPilot 0.28.0 prépare le backend social réel par étapes. Les identités cloud et réservations de handles sont structurées côté runtime Dexie Cloud, mais le flag public garde le cloud social réel désactivé tant que les demandes d’amis, permissions distribuées et snapshots distants ne sont pas terminés.
 
 ## Pas d’annuaire public
 
