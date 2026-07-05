@@ -1,32 +1,39 @@
-SPORTPILOT 0.26.0
+SPORTPILOT 0.27.0
 
 Procédure de validation et publication
 
-1. Vérifier que la branche feature/friends-privacy-0.26.0 est propre et à jour.
-2. Vérifier que package.json et package-lock.json indiquent 0.26.0.
-3. Vérifier que Paramètres affiche 0.26.0.
+1. Vérifier que la branche feature/activity-sharing-0.27.0 est propre et à jour.
+2. Vérifier que package.json et package-lock.json indiquent 0.27.0.
+3. Vérifier que Paramètres affiche 0.27.0.
 4. Vérifier qu’aucun fichier .env, .env.local, .env.production ou secret réel n’est stagé.
-5. Lancer les tests ciblés amis/confidentialité.
+5. Lancer les tests ciblés sociaux F1 à F5.
 6. Lancer npm run audit:friends-privacy.
-7. Lancer npm run audit:release.
-8. Lancer npm run audit:repository.
-9. Lancer npm run build.
-10. Lancer npm run check.
-11. Lancer npm run test:stability.
-12. Ouvrir la page Amis depuis la navigation.
-13. Envoyer une demande sortante et vérifier sa persistance après rechargement.
-14. Accepter et refuser des demandes entrantes.
-15. Modifier les préférences de confidentialité et vérifier leur persistance.
-16. Sélectionner le mode détaillé et vérifier qu’il reste bloqué par le garde-fou social.
-17. Exporter une sauvegarde JSON v8 et vérifier les tables sociales.
-18. Restaurer une sauvegarde JSON v8 et vérifier amis, demandes et préférences.
-19. Valider que l’analyse photo IA, Open Food Facts et le scanner code-barres restent fonctionnels.
-20. Committer la finalisation 0.26.0 sur feature/friends-privacy-0.26.0.
-21. Fusionner manuellement dans develop.
-22. Relancer les contrôles release sur develop.
-23. Fusionner manuellement dans main.
-24. Relancer les contrôles release sur main.
-25. Créer le tag annoté v0.26.0.
-26. Resynchroniser develop avec main.
+7. Lancer npm run audit:social-identity.
+8. Lancer npm run audit:social-friend-requests.
+9. Lancer npm run audit:social-friend-permissions.
+10. Lancer npm run audit:social-activity-snapshots.
+11. Lancer npm run audit:social-activity-feed.
+12. Lancer npm run audit:social-release.
+13. Lancer npm run audit:release.
+14. Lancer npm run audit:repository.
+15. Lancer npm run build.
+16. Lancer npm run check.
+17. Lancer npm run test:stability.
+18. Ouvrir la page Amis depuis la navigation.
+19. Vérifier l’identifiant SportPilot public, la copie, la modification locale et les états cloud indisponibles.
+20. Vérifier les demandes d’amis : identifiant inexistant, soi-même, déjà ami, déjà envoyée et déjà reçue.
+21. Vérifier les permissions par ami : résumé par défaut et détail uniquement après consentement explicite.
+22. Vérifier que les snapshots sociaux restent filtrés et n’exposent pas l’activité brute.
+23. Vérifier que le fil d’activité amis reste minimal et sans interactions sociales.
+24. Exporter une sauvegarde JSON v9 et vérifier les données sociales.
+25. Restaurer une sauvegarde JSON v9 et vérifier identité, amis, demandes, préférences et permissions.
+26. Valider que l’analyse photo IA, Open Food Facts et le scanner code-barres restent fonctionnels.
+27. Committer la finalisation 0.27.0 sur feature/activity-sharing-0.27.0.
+28. Fusionner manuellement dans develop.
+29. Relancer les contrôles release sur develop.
+30. Fusionner manuellement dans main.
+31. Relancer les contrôles release sur main.
+32. Créer le tag annoté v0.27.0.
+33. Resynchroniser develop avec main.
 
-SportPilot 0.26.0 utilise Dexie v9 et la sauvegarde JSON v8. Aucune synchronisation sociale cloud réelle n’est activée.
+SportPilot 0.27.0 utilise Dexie v10 et la sauvegarde JSON v9. Aucune synchronisation sociale cloud réelle n’est activée.

@@ -19,18 +19,39 @@ import {
   type FriendsPrivacyServiceState,
   type FriendsPrivacySnapshotRepository,
 } from '@/application/friends/friendsPrivacyService';
+import { prepareSocialActivityFeed } from '@/application/friends/socialActivityFeedService';
+import { sendExactFriendRequest } from '@/application/friends/socialFriendRequestService';
 import {
+  checkSocialHandleAvailability,
+  loadSocialIdentity,
+  saveSocialIdentity,
+  unavailableSocialUserLookupGateway,
+  type SocialIdentityRepository,
+  type SocialUserLookupGateway,
+} from '@/application/friends/socialIdentityService';
+import {
+  FRIEND_ACTIVITY_PERMISSION_LABELS,
   FRIEND_ACTIVITY_SHARING_LABELS,
   FRIEND_PROFILE_VISIBILITY_LABELS,
   evaluateFriendActivitySharingGuard,
+  evaluateFriendScopedActivitySharingGuard,
   summarizeFriendsPrivacy,
   type FriendActivitySharingLevel,
   type FriendRequest,
   type FriendsPrivacySnapshot,
   type FriendVisibilityLevel,
 } from '@/domain/friends/friendship';
+import {
+  createDefaultSocialIdentity,
+  formatSocialHandle,
+  validateSocialHandle,
+  type SocialIdentity,
+  type SocialIdentityAvailabilityResult,
+} from '@/domain/friends/socialIdentity';
+import type { SocialActivitySnapshot } from '@/domain/friends/socialActivitySnapshot';
 import { appDatabase } from '@/infrastructure/database/database';
 import { DexieFriendsPrivacyRepository } from '@/infrastructure/repositories/dexie/DexieFriendsPrivacyRepository';
+import { DexieSocialIdentityRepository } from '@/infrastructure/repositories/dexie/DexieSocialIdentityRepository';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
@@ -38,10 +59,18 @@ import { InlineNotice } from '@/shared/ui/InlineNotice';
 interface FriendsPrivacyPageProps {
   readonly initialSnapshot?: FriendsPrivacySnapshot;
   readonly repository?: FriendsPrivacySnapshotRepository;
+  readonly initialIdentity?: SocialIdentity;
+  readonly identityRepository?: SocialIdentityRepository;
+  readonly lookupGateway?: SocialUserLookupGateway;
+  readonly initialActivitySnapshots?: readonly SocialActivitySnapshot[];
 }
 
 const visibilityOptions: readonly FriendVisibilityLevel[] = ['private', 'friends', 'public'];
 const sharingOptions: readonly FriendActivitySharingLevel[] = ['disabled', 'summary-only', 'detailed'];
+const initialAvailability: SocialIdentityAvailabilityResult = {
+  status: 'idle',
+  message: 'Vérification non lancée.',
+};
 
 function formatRequestDate(value: string): string {
   const date = new Date(value);
@@ -63,28 +92,70 @@ function requestStatusLabel(request: FriendRequest): string {
 export function FriendsPrivacyPage({
   initialSnapshot,
   repository,
+  initialIdentity,
+  identityRepository,
+  lookupGateway,
+  initialActivitySnapshots = [],
 }: FriendsPrivacyPageProps = {}) {
   const [defaultRepository] = useState(() =>
     initialSnapshot ? undefined : new DexieFriendsPrivacyRepository(appDatabase),
   );
+  const [defaultIdentityRepository] = useState(() =>
+    repository || initialSnapshot || initialIdentity ? undefined : new DexieSocialIdentityRepository(appDatabase),
+  );
   const activeRepository = repository ?? defaultRepository;
+  const activeIdentityRepository = identityRepository ?? defaultIdentityRepository;
+  const activeLookupGateway = lookupGateway ?? unavailableSocialUserLookupGateway;
+  const initialSnapshotState = useMemo(
+    () => initialSnapshot ?? createEmptyFriendsPrivacySnapshot(),
+    [initialSnapshot],
+  );
+  const initialIdentityState = useMemo(
+    () => initialIdentity ?? createDefaultSocialIdentity(),
+    [initialIdentity],
+  );
   const [snapshot, setSnapshot] = useState<FriendsPrivacyServiceState>(() =>
-    initialSnapshot ?? createEmptyFriendsPrivacySnapshot(),
+    initialSnapshotState,
+  );
+  const [identity, setIdentity] = useState<SocialIdentity>(() =>
+    initialIdentityState,
   );
   const [handle, setHandle] = useState('');
-  const [isLoading, setIsLoading] = useState(() => Boolean(activeRepository && !initialSnapshot));
+  const [identityHandle, setIdentityHandle] = useState(() => formatSocialHandle(identity.handle));
+  const [displayName, setDisplayName] = useState(identity.displayName);
+  const [availability, setAvailability] = useState<SocialIdentityAvailabilityResult>(initialAvailability);
+  const [identityFeedback, setIdentityFeedback] = useState<string>();
+  const [requestFeedback, setRequestFeedback] = useState<string>();
+  const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
+  const [isSendingRequest, setIsSendingRequest] = useState(false);
+  const [isLoading, setIsLoading] = useState(() => Boolean(
+    (activeRepository && !initialSnapshot) || (activeIdentityRepository && !initialIdentity),
+  ));
   const [errorMessage, setErrorMessage] = useState<string>();
 
   useEffect(() => {
-    if (!activeRepository || initialSnapshot) return undefined;
+    const shouldLoadSnapshot = Boolean(activeRepository && !initialSnapshot);
+    const shouldLoadIdentity = Boolean(activeIdentityRepository && !initialIdentity);
+    if (!shouldLoadSnapshot && !shouldLoadIdentity) return undefined;
 
     let active = true;
     setIsLoading(true);
     setErrorMessage(undefined);
 
-    void loadFriendsPrivacySnapshot(activeRepository)
-      .then((loaded) => {
-        if (active) setSnapshot(loaded);
+    void Promise.all([
+      shouldLoadSnapshot && activeRepository
+        ? loadFriendsPrivacySnapshot(activeRepository)
+        : Promise.resolve(initialSnapshotState),
+      shouldLoadIdentity && activeIdentityRepository
+        ? loadSocialIdentity(activeIdentityRepository)
+        : Promise.resolve(initialIdentityState),
+    ])
+      .then(([loadedSnapshot, loadedIdentity]) => {
+        if (!active) return;
+        setSnapshot(loadedSnapshot);
+        setIdentity(loadedIdentity);
+        setIdentityHandle(formatSocialHandle(loadedIdentity.handle));
+        setDisplayName(loadedIdentity.displayName);
       })
       .catch((error) => {
         if (!active) return;
@@ -101,10 +172,25 @@ export function FriendsPrivacyPage({
     return () => {
       active = false;
     };
-  }, [activeRepository, initialSnapshot]);
+  }, [
+    activeRepository,
+    activeIdentityRepository,
+    initialSnapshot,
+    initialIdentity,
+    initialSnapshotState,
+    initialIdentityState,
+  ]);
 
   const summary = useMemo(() => summarizeFriendsPrivacy(snapshot), [snapshot]);
   const sharingGuard = useMemo(() => evaluateFriendActivitySharingGuard(snapshot), [snapshot]);
+  const handleValidation = useMemo(() => validateSocialHandle(identityHandle), [identityHandle]);
+  const socialActivityFeed = useMemo(
+    () => prepareSocialActivityFeed({
+      privacySnapshot: snapshot,
+      snapshots: initialActivitySnapshots,
+    }),
+    [snapshot, initialActivitySnapshots],
+  );
   const incomingRequests = snapshot.requests.filter((request) => request.direction === 'incoming');
   const outgoingRequests = snapshot.requests.filter((request) => request.direction === 'outgoing');
 
@@ -132,12 +218,88 @@ export function FriendsPrivacyPage({
 
   const submitRequest = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const service = createFriendsPrivacyService(snapshot);
-    const next = service.actions.sendRequest(handle);
-    persistSnapshot(next);
-    if (next.lastFeedback?.startsWith('Demande envoyée')) {
-      setHandle('');
+    setRequestFeedback(undefined);
+    setErrorMessage(undefined);
+    setIsSendingRequest(true);
+
+    void sendExactFriendRequest({
+      snapshot,
+      identity,
+      handle,
+      lookupGateway: activeLookupGateway,
+    })
+      .then((result) => {
+        setRequestFeedback(result.message);
+        if (result.status === 'sent') {
+          persistSnapshot({ ...result.snapshot, lastFeedback: result.message });
+          setHandle('');
+        }
+      })
+      .catch((error) => {
+        setRequestFeedback(
+          error instanceof Error
+            ? error.message
+            : 'Service cloud indisponible : demande impossible pour le moment.',
+        );
+      })
+      .finally(() => setIsSendingRequest(false));
+  };
+
+  const submitIdentity = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setErrorMessage(undefined);
+    setIdentityFeedback(undefined);
+
+    void saveSocialIdentity(activeIdentityRepository, identity, {
+      handle: identityHandle,
+      displayName,
+    })
+      .then((result) => {
+        setIdentityFeedback(result.message);
+        if (result.status === 'saved') {
+          setIdentity(result.identity);
+          setIdentityHandle(formatSocialHandle(result.identity.handle));
+          setDisplayName(result.identity.displayName);
+        }
+      })
+      .catch((error) => {
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : 'L’identité sociale n’a pas pu être enregistrée localement.',
+        );
+      });
+  };
+
+  const verifyAvailability = () => {
+    setIsCheckingAvailability(true);
+    setIdentityFeedback(undefined);
+
+    void checkSocialHandleAvailability(activeLookupGateway, identityHandle)
+      .then((result) => {
+        setAvailability(result);
+      })
+      .catch((error) => {
+        setAvailability({
+          status: 'unavailable',
+          message: error instanceof Error
+            ? error.message
+            : 'Compte cloud indisponible : disponibilité réelle impossible pour le moment.',
+        });
+      })
+      .finally(() => setIsCheckingAvailability(false));
+  };
+
+  const copyIdentity = () => {
+    const publicHandle = formatSocialHandle(identity.handle);
+    if (!navigator.clipboard?.writeText) {
+      setIdentityFeedback(`Identifiant à copier : ${publicHandle}`);
+      return;
     }
+
+    void navigator.clipboard.writeText(publicHandle)
+      .then(() => setIdentityFeedback('Identifiant copié.'))
+      .catch(() => setIdentityFeedback(`Identifiant à copier : ${publicHandle}`));
   };
 
   return (
@@ -155,11 +317,11 @@ export function FriendsPrivacyPage({
               Amis et confidentialité
             </h1>
             <p className="mt-3 max-w-3xl leading-7 text-slate-600 dark:text-slate-300">
-              Prépare les invitations, les validations manuelles et les limites de visibilité avant tout partage de performances.
+              Prépare ton identité publique, les invitations exactes et les limites de visibilité avant tout partage de performances.
             </p>
           </div>
           <div className="rounded-2xl border border-brand-200 bg-brand-50 px-4 py-3 text-sm font-semibold text-brand-900 dark:border-brand-900 dark:bg-brand-950/40 dark:text-brand-100">
-            {summary.friendCount} ami{summary.friendCount > 1 ? 's' : ''} · {summary.incomingPendingCount} demande{summary.incomingPendingCount > 1 ? 's' : ''} à valider
+            {summary.friendCount} ami{summary.friendCount > 1 ? 's' : ''} · {summary.incomingPendingCount} demande{summary.incomingPendingCount > 1 ? 's' : ''} à valider · {summary.detailedPermissionCount} détail autorisé
           </div>
         </div>
       </div>
@@ -173,7 +335,16 @@ export function FriendsPrivacyPage({
       <InlineNotice title="Garde-fou social actif">
         <p>{sharingGuard.reason}</p>
         <p>
-          Aucun export social détaillé n’est disponible en 0.26.0. Le partage restera limité à un résumé tant que le consentement par ami n’est pas livré.
+          Snapshots sociaux F4 actifs : les activités sont transformées en résumé filtré par défaut, ou en détail filtré uniquement pour les amis autorisés.
+        </p>
+        <p>
+          Aucun export brut d’activité n’est disponible : les notes, horaires précis, calculs internes et détails libres restent privés.
+        </p>
+      </InlineNotice>
+
+      <InlineNotice title="Fil d’activité amis F5 actif">
+        <p>
+          Le fil lit uniquement des snapshots sociaux filtrés. Il ne lit jamais une activité brute complète et n’active ni likes, ni commentaires, ni discussions privées.
         </p>
       </InlineNotice>
 
@@ -181,7 +352,7 @@ export function FriendsPrivacyPage({
         <InlineNotice title="Chargement local">
           <p className="inline-flex items-center gap-2">
             <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
-            Chargement des amis enregistrés sur cet appareil.
+            Chargement des amis et de l’identité sociale enregistrés sur cet appareil.
           </p>
         </InlineNotice>
       ) : null}
@@ -197,6 +368,95 @@ export function FriendsPrivacyPage({
           <p>{snapshot.lastFeedback}</p>
         </InlineNotice>
       ) : null}
+
+      {identityFeedback ? (
+        <InlineNotice tone="success" title="Identité sociale">
+          <p>{identityFeedback}</p>
+        </InlineNotice>
+      ) : null}
+
+      {requestFeedback ? (
+        <InlineNotice title="Recherche ami">
+          <p>{requestFeedback}</p>
+        </InlineNotice>
+      ) : null}
+
+      <Card className="p-5 sm:p-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
+              Mon identifiant SportPilot
+            </p>
+            <h2 className="mt-1 text-2xl font-bold text-slate-950 dark:text-white">
+              {formatSocialHandle(identity.handle)}
+            </h2>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
+              Le userId interne reste privé et stable. Les futures relations d’amitié seront rattachées au userId, pas au handle public.
+            </p>
+          </div>
+          <Button type="button" variant="secondary" onClick={copyIdentity}>
+            Copier mon identifiant
+          </Button>
+        </div>
+
+        <form className="mt-5 grid gap-4 lg:grid-cols-[1fr_1fr_auto] lg:items-end" onSubmit={submitIdentity}>
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200" htmlFor="social-handle">
+              Identifiant public
+            </label>
+            <input
+              id="social-handle"
+              value={identityHandle}
+              onChange={(event) => {
+                setIdentityHandle(event.target.value);
+                setAvailability(initialAvailability);
+              }}
+              placeholder="ex. @alex.run"
+              className="mt-2 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-950 shadow-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200" htmlFor="social-display-name">
+              Nom affiché
+            </label>
+            <input
+              id="social-display-name"
+              value={displayName}
+              onChange={(event) => setDisplayName(event.target.value)}
+              placeholder="ex. Alex Run"
+              className="mt-2 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-950 shadow-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+            />
+          </div>
+
+          <div className="flex flex-col gap-2 sm:flex-row lg:flex-col">
+            <Button type="button" variant="secondary" onClick={verifyAvailability} disabled={isCheckingAvailability}>
+              {isCheckingAvailability ? 'Vérification…' : 'Vérifier disponibilité'}
+            </Button>
+            <Button type="submit">
+              Enregistrer
+            </Button>
+          </div>
+        </form>
+
+        <div className="mt-4 grid gap-3 lg:grid-cols-3">
+          <div className="rounded-2xl border border-slate-200 p-4 text-sm leading-6 text-slate-700 dark:border-slate-800 dark:text-slate-200">
+            <p className="font-semibold text-slate-950 dark:text-white">
+              {handleValidation.status === 'valid' ? 'Identifiant valide' : 'Identifiant invalide'}
+            </p>
+            <p>{handleValidation.message}</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 p-4 text-sm leading-6 text-slate-700 dark:border-slate-800 dark:text-slate-200">
+            <p className="font-semibold text-slate-950 dark:text-white">
+              Recherche exacte
+            </p>
+            <p>{availability.message}</p>
+          </div>
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-950 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
+            Utilisateur non connecté au cloud social : seule la sauvegarde locale est active pour l’instant.
+          </div>
+        </div>
+      </Card>
 
       <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
         <Card className="p-5 sm:p-6">
@@ -283,24 +543,24 @@ export function FriendsPrivacyPage({
             </h2>
           </div>
           <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-            Les demandes restent locales pour cette phase. La synchronisation entre comptes sera activée plus tard.
+            La demande passe par une recherche exacte d’identifiant SportPilot. Sans backend social branché, le service retourne clairement que la recherche réelle est indisponible.
           </p>
 
           <form className="mt-5 space-y-3" onSubmit={submitRequest}>
             <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200" htmlFor="friend-handle">
-              Identifiant ami
+              Identifiant SportPilot
             </label>
             <div className="flex flex-col gap-2 sm:flex-row">
               <input
                 id="friend-handle"
                 value={handle}
                 onChange={(event) => setHandle(event.target.value)}
-                placeholder="ex. lea.cardio"
+                placeholder="ex. @lea.cardio"
                 className="min-h-11 flex-1 rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-950 shadow-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
               />
-              <Button type="submit">
+              <Button type="submit" disabled={isSendingRequest}>
                 <Send aria-hidden="true" className="size-4" />
-                Envoyer
+                {isSendingRequest ? 'Recherche…' : 'Envoyer'}
               </Button>
             </div>
           </form>
@@ -310,6 +570,90 @@ export function FriendsPrivacyPage({
           </div>
         </Card>
       </div>
+
+      <Card className="p-5 sm:p-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
+              Snapshots filtrés uniquement
+            </p>
+            <h2 className="mt-1 text-xl font-bold text-slate-950 dark:text-white">
+              Fil d’activité amis
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+              {socialActivityFeed.message}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 dark:border-slate-800 dark:text-slate-200">
+            {socialActivityFeed.items.length} activité{socialActivityFeed.items.length > 1 ? 's' : ''} affichée{socialActivityFeed.items.length > 1 ? 's' : ''}
+          </div>
+        </div>
+
+        {socialActivityFeed.items.length === 0 ? (
+          <p className="mt-4 rounded-2xl border border-slate-200 p-4 text-sm leading-6 text-slate-600 dark:border-slate-800 dark:text-slate-300">
+            {socialActivityFeed.message}
+          </p>
+        ) : (
+          <div className="mt-4 space-y-3">
+            {socialActivityFeed.items.map((item) => (
+              <article
+                key={item.id}
+                className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800"
+              >
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="flex size-11 items-center justify-center rounded-full bg-brand-100 text-sm font-bold text-brand-700 dark:bg-brand-950 dark:text-brand-200">
+                      {item.friendInitials}
+                    </div>
+                    <div>
+                      <p className="font-semibold text-slate-950 dark:text-white">{item.friendDisplayName}</p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">@{item.friendHandle}</p>
+                      <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                        {item.scope === 'detailed' ? 'Détail autorisé' : 'Résumé'} · {item.activityLabel}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="rounded-xl bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 dark:bg-slate-950 dark:text-slate-200">
+                    {item.date} · {item.durationMinutes} min · {item.estimatedCaloriesKcal} kcal
+                  </div>
+                </div>
+
+                <div className="mt-3 flex flex-wrap gap-2 text-sm">
+                  <span className="rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                    Intensité {item.intensityLabel}
+                  </span>
+                  {item.metricLabels.map((label) => (
+                    <span
+                      key={label}
+                      className="rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                    >
+                      {label}
+                    </span>
+                  ))}
+                  {item.detailLabels.map((label) => (
+                    <span
+                      key={label}
+                      className="rounded-full bg-brand-100 px-3 py-1 font-semibold text-brand-800 dark:bg-brand-950 dark:text-brand-100"
+                    >
+                      {label}
+                    </span>
+                  ))}
+                </div>
+
+                {item.permissionLimited ? (
+                  <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm leading-6 text-amber-950 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
+                    Détail limité par permission actuelle : affichage résumé uniquement.
+                  </p>
+                ) : null}
+
+                <p className="mt-3 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                  Aucun champ brut d’activité n’est affiché.
+                </p>
+              </article>
+            ))}
+          </div>
+        )}
+      </Card>
 
       <div className="grid gap-4 xl:grid-cols-2">
         <Card className="p-5 sm:p-6">
@@ -324,25 +668,53 @@ export function FriendsPrivacyPage({
               <p className="rounded-2xl border border-slate-200 p-4 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">
                 Aucun ami enregistré sur cet appareil pour le moment.
               </p>
-            ) : snapshot.friends.map((friend) => (
-              <div
-                key={friend.id}
-                className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 p-4 dark:border-slate-800"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="flex size-11 items-center justify-center rounded-full bg-brand-100 text-sm font-bold text-brand-700 dark:bg-brand-950 dark:text-brand-200">
-                    {friend.initials}
+            ) : snapshot.friends.map((friend) => {
+              const friendSharingGuard = evaluateFriendScopedActivitySharingGuard(snapshot, friend);
+
+              return (
+                <div
+                  key={friend.id}
+                  className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800"
+                >
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="flex size-11 items-center justify-center rounded-full bg-brand-100 text-sm font-bold text-brand-700 dark:bg-brand-950 dark:text-brand-200">
+                        {friend.initials}
+                      </div>
+                      <div>
+                        <p className="font-semibold text-slate-950 dark:text-white">{friend.displayName}</p>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">@{friend.handle}</p>
+                        <p className="mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                          Permission : {FRIEND_ACTIVITY_PERMISSION_LABELS[friendSharingGuard.permission.sharingLevel]}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-2 sm:flex-row lg:flex-col">
+                      <Button
+                        size="sm"
+                        variant={friendSharingGuard.permission.sharingLevel === 'summary' ? 'primary' : 'secondary'}
+                        onClick={() => update((actions) => actions.setFriendActivityPermission(friend.id, 'summary'))}
+                        aria-pressed={friendSharingGuard.permission.sharingLevel === 'summary'}
+                      >
+                        Résumé uniquement
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={friendSharingGuard.permission.sharingLevel === 'detailed' ? 'primary' : 'secondary'}
+                        onClick={() => update((actions) => actions.setFriendActivityPermission(friend.id, 'detailed'))}
+                        aria-pressed={friendSharingGuard.permission.sharingLevel === 'detailed'}
+                        disabled={snapshot.privacy.activitySharing !== 'detailed'}
+                      >
+                        Autoriser le détail
+                      </Button>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-semibold text-slate-950 dark:text-white">{friend.displayName}</p>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">@{friend.handle}</p>
-                  </div>
+                  <p className="mt-3 rounded-xl bg-slate-50 px-3 py-2 text-sm leading-6 text-slate-600 dark:bg-slate-950 dark:text-slate-300">
+                    {friendSharingGuard.reason}
+                  </p>
                 </div>
-                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                  Ami
-                </span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </Card>
 

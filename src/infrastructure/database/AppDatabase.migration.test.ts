@@ -3,12 +3,12 @@ import Dexie from "dexie";
 import { AppDatabase } from "@/infrastructure/database/AppDatabase";
 import {
   DATABASE_VERSION_1,
-  DATABASE_VERSION_9,
+  DATABASE_VERSION_10,
 } from "@/infrastructure/database/migrations/versions";
 import {
   allDatabaseTableNames,
   schemaVersion1,
-  schemaVersion9,
+  schemaVersion10,
 } from "@/infrastructure/database/schema";
 
 type PersistedRecord = Record<string, unknown> & { id: string };
@@ -304,7 +304,7 @@ async function expectFixture(
 }
 
 describe("chaîne de migrations Dexie", () => {
-  it("conserve le contenu complet du schéma v1 pendant la montée vers la v9", async () => {
+  it("conserve le contenu complet du schéma v1 pendant la montée vers la v10", async () => {
     const databaseName = createDatabaseName();
     const oldDatabase = new Dexie(databaseName);
     let upgradedDatabase: AppDatabase | undefined;
@@ -318,16 +318,16 @@ describe("chaîne de migrations Dexie", () => {
       upgradedDatabase = new AppDatabase(databaseName);
       await upgradedDatabase.open();
 
-      expect(upgradedDatabase.verno).toBe(DATABASE_VERSION_9);
+      expect(upgradedDatabase.verno).toBe(DATABASE_VERSION_10);
       await expectFixture(upgradedDatabase, version1Fixture);
       expect(await upgradedDatabase.userSettings.count()).toBe(1);
       expect(await upgradedDatabase.deviceSettings.count()).toBe(1);
       expect((await upgradedDatabase.deviceSettings.toCollection().first())?.theme).toBe('dark');
 
-      for (const tableName of Object.keys(schemaVersion9).filter(
+      for (const tableName of Object.keys(schemaVersion10).filter(
         (name) => !(name in schemaVersion1),
       )) {
-        const expectedCount = tableName === "migrationJournal" ? 7 : (tableName === "userSettings" || tableName === "deviceSettings" ? 1 : 0);
+        const expectedCount = tableName === "migrationJournal" ? 8 : (tableName === "userSettings" || tableName === "deviceSettings" ? 1 : 0);
         expect(await upgradedDatabase.table(tableName).count()).toBe(
           expectedCount,
         );
@@ -375,7 +375,7 @@ describe("chaîne de migrations Dexie", () => {
 
       futureDatabase = new AppDatabase(databaseName);
       futureDatabase.version(10).stores({
-        ...schemaVersion9,
+        ...schemaVersion10,
         migrationProbe: "id",
       });
       await futureDatabase.open();

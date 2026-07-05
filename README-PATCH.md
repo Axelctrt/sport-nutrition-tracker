@@ -1,41 +1,54 @@
-# SportPilot 0.26.0 — amis, demandes et confidentialité
+# SportPilot 0.27.0 — activité sociale contrôlée
 
-Branche de publication : `feature/friends-privacy-0.26.0`
+Branche de publication : `feature/activity-sharing-0.27.0`
 
-La version 0.26.0 installe le socle social de SportPilot sans activer de partage d’activité détaillé. Elle prépare les amis, les demandes et les préférences de confidentialité pour la suite 0.27.0.
+La version 0.27.0 ajoute la première capacité sociale exploitable de SportPilot : les utilisateurs disposent d’un identifiant public, peuvent préparer des demandes d’amis compatibles avec de vrais comptes, régler les permissions ami par ami, générer des snapshots d’activité filtrés et consulter un premier fil d’activité amis minimal.
 
 ## Contenu livré
 
-- route `/friends` et page “Amis et confidentialité” ;
-- navigation desktop et mobile vers le nouvel espace amis ;
-- domaine local pour profils amis, demandes et préférences de confidentialité ;
-- service applicatif de gestion des demandes, acceptations, refus et doublons ;
-- repository Dexie dédié aux données sociales locales ;
-- migration Dexie v9 avec tables `friendProfiles`, `friendRequests`, `friendsPrivacySettings` ;
-- export/restauration des données sociales dans la sauvegarde JSON v8 ;
-- garde-fou social bloquant tout export détaillé ;
-- audit `audit:friends-privacy` intégré à `check` et `ci`.
+- identité sociale locale avec `userId` privé, `handle` public et `displayName` ;
+- validation stricte des identifiants SportPilot publics ;
+- contrat de recherche exacte d’utilisateur, sans annuaire ouvert ;
+- demandes d’amis compatibles avec des identifiants utilisateur réels ;
+- gestion des cas `identifiant inexistant`, soi-même, déjà ami, demande déjà envoyée, demande déjà reçue et service cloud indisponible ;
+- permissions de partage par ami avec résumé par défaut et détail uniquement après consentement explicite ;
+- génération de snapshots sociaux filtrés résumé/détail ;
+- premier fil d’activité amis basé uniquement sur les snapshots filtrés ;
+- garde-fou anti-fuite conservé ;
+- audits sociaux F1 à F5 intégrés au pipeline.
 
 ## Versions techniques
 
-- application : `0.26.0` ;
-- base Dexie : v9 ;
-- sauvegarde JSON : v8 ;
+- application : `0.27.0` ;
+- base Dexie : v10 ;
+- sauvegarde JSON : v9 ;
 - registre local des espaces : v1 ;
 - runtime Dexie Cloud : v10 ;
-- synchronisation sociale cloud : non activée.
+- synchronisation sociale cloud réelle : non activée.
+
+## Hors périmètre volontaire
+
+- pas de recherche globale avec suggestions ;
+- pas d’annuaire public ;
+- pas de likes ;
+- pas de commentaires ;
+- pas de messagerie ;
+- pas de groupes ;
+- pas de classements ;
+- pas de partage automatique ;
+- pas d’export d’activité brute.
 
 ## Validation attendue
 
 La publication doit être validée avec :
 
-- tests ciblés amis/confidentialité ;
-- audit `audit:friends-privacy` ;
+- audits sociaux `audit:friends-privacy`, `audit:social-identity`, `audit:social-friend-requests`, `audit:social-friend-permissions`, `audit:social-activity-snapshots`, `audit:social-activity-feed` et `audit:social-release` ;
+- tests ciblés identité, demandes, permissions, snapshots et feed ;
 - audit `audit:release` ;
 - audit `audit:repository` ;
-- export sauvegarde JSON v8 contenant les tables sociales ;
-- restauration conservant amis, demandes et préférences ;
-- vérification que le partage détaillé reste bloqué ;
+- export sauvegarde JSON v9 contenant les données sociales ;
+- restauration conservant identité, amis, demandes, préférences et permissions ;
+- vérification que le feed ne lit que des snapshots filtrés ;
 - build, check complet et test de stabilité.
 
-Tag attendu à la publication : `v0.26.0`.
+Tag attendu à la publication : `v0.27.0`.

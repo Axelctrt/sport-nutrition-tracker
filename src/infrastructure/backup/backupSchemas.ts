@@ -793,7 +793,17 @@ const friendActivitySharingLevelSchema = z.enum([
   'detailed',
 ]);
 
+const socialIdentitySchema = z.object({
+  userId: z.string().min(1),
+  handle: z.string().min(3).max(24),
+  displayName: z.string().min(1).max(80),
+  createdAt: isoDateTimeSchema,
+  updatedAt: isoDateTimeSchema,
+  handleUpdatedAt: isoDateTimeSchema.optional(),
+});
+
 const friendProfileSchema = entityMetadataSchema.extend({
+  userId: z.string().min(1).optional(),
   displayName: z.string().min(1).max(120),
   handle: z.string().min(3).max(32),
   initials: z.string().min(1).max(4),
@@ -801,11 +811,21 @@ const friendProfileSchema = entityMetadataSchema.extend({
 });
 
 const friendRequestSchema = entityMetadataSchema.extend({
+  requesterUserId: z.string().min(1).optional(),
+  recipientUserId: z.string().min(1).optional(),
   displayName: z.string().min(1).max(120),
   handle: z.string().min(3).max(32),
   direction: z.enum(['incoming', 'outgoing']),
-  status: z.enum(['pending', 'accepted', 'declined']),
+  status: z.enum(['pending', 'accepted', 'declined', 'cancelled']),
   requestedAt: isoDateTimeSchema,
+});
+
+const friendActivityPermissionSchema = entityMetadataSchema.extend({
+  friendUserId: z.string().min(1).optional(),
+  friendHandle: z.string().min(3).max(32),
+  sharingLevel: z.enum(['summary', 'detailed']),
+  detailedConsent: z.enum(['notRequested', 'granted']),
+  detailedConsentGrantedAt: isoDateTimeSchema.optional(),
 });
 
 const friendsPrivacySettingsSchema = entityMetadataSchema.extend({
@@ -814,6 +834,7 @@ const friendsPrivacySettingsSchema = entityMetadataSchema.extend({
   activitySharing: friendActivitySharingLevelSchema,
   allowFriendRequests: z.boolean(),
   requireManualApproval: z.boolean(),
+  socialIdentity: socialIdentitySchema.optional(),
 });
 
 const backupUserStateTableNameSchema = z.enum(
@@ -869,6 +890,7 @@ const backupDataSchema = z.object({
     .array(friendsPrivacySettingsSchema)
     .max(1)
     .optional(),
+  friendActivityPermissions: z.array(friendActivityPermissionSchema).optional(),
 });
 
 function addDuplicateIssues<T>(
@@ -1050,6 +1072,7 @@ export const backupEnvelopeSchema = z.object({
     ['friendProfiles', data.friendProfiles ?? []],
     ['friendRequests', data.friendRequests ?? []],
     ['friendsPrivacySettings', data.friendsPrivacySettings ?? []],
+    ['friendActivityPermissions', data.friendActivityPermissions ?? []],
   ];
 
   for (const [name, values] of collections) {
@@ -1087,6 +1110,13 @@ export const backupEnvelopeSchema = z.object({
     (value) => `${value.handle}|${value.direction}|${value.status}`,
     ['data', 'friendRequests'],
     'Les demandes amis',
+    context,
+  );
+  addDuplicateIssues(
+    data.friendActivityPermissions ?? [],
+    (value) => value.id,
+    ['data', 'friendActivityPermissions'],
+    'Les permissions de partage par ami',
     context,
   );
 

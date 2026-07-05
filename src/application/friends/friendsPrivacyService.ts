@@ -2,11 +2,13 @@ import type { EntityId } from '@/domain/models/common';
 import {
   acceptFriendRequest,
   addOutgoingFriendRequest,
+  ensureFriendActivityPermissions,
   createOutgoingFriendRequest,
   declineFriendRequest,
   DEFAULT_FRIENDS_PRIVACY_SETTINGS,
   evaluateFriendActivitySharingGuard,
   summarizeFriendsPrivacy,
+  updateFriendActivityPermission,
   updateFriendsPrivacySettings,
   type FriendActivitySharingLevel,
   type FriendProfileSummary,
@@ -32,6 +34,7 @@ export interface FriendsPrivacyServiceActions {
   readonly setProfileVisibility: (visibility: FriendVisibilityLevel) => FriendsPrivacyServiceState;
   readonly setActivitySharing: (sharing: FriendActivitySharingLevel) => FriendsPrivacyServiceState;
   readonly setRequestsOpen: (open: boolean) => FriendsPrivacyServiceState;
+  readonly setFriendActivityPermission: (friendId: EntityId, sharing: 'summary' | 'detailed') => FriendsPrivacyServiceState;
 }
 
 export interface FriendsPrivacyService {
@@ -75,15 +78,16 @@ export function createEmptyFriendsPrivacySnapshot(): FriendsPrivacySnapshot {
     friends: [],
     requests: [],
     privacy: DEFAULT_FRIENDS_PRIVACY_SETTINGS,
+    activityPermissions: [],
   };
 }
 
 export function createDefaultFriendsPrivacySnapshot(): FriendsPrivacySnapshot {
-  return {
+  return ensureFriendActivityPermissions({
     friends: demoFriends,
     requests: demoRequests,
     privacy: DEFAULT_FRIENDS_PRIVACY_SETTINGS,
-  };
+  });
 }
 
 export async function loadFriendsPrivacySnapshot(
@@ -163,6 +167,12 @@ export function createFriendsPrivacyService(
       setRequestsOpen: (open) => updatePrivacy(
         { allowFriendRequests: open },
         open ? 'Les demandes d’amis sont autorisées.' : 'Les nouvelles demandes d’amis sont bloquées.',
+      ),
+      setFriendActivityPermission: (friendId, sharing) => setState(
+        updateFriendActivityPermission(state, friendId, sharing),
+        sharing === 'detailed'
+          ? 'Consentement détaillé enregistré pour cet ami. Seuls les snapshots sociaux filtrés peuvent utiliser ce niveau.'
+          : 'Permission ramenée au résumé uniquement pour cet ami.',
       ),
     },
   };

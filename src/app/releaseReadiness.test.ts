@@ -11,15 +11,15 @@ import {
   databaseTableNames,
 } from '@/infrastructure/database/schema';
 
-describe('préparation de la version stable 0.26.0', () => {
+describe('préparation de la version stable 0.27.0', () => {
   it('expose la version stable dans le build', () => {
-    expect(__APP_VERSION__).toBe('0.26.0');
+    expect(__APP_VERSION__).toBe('0.27.0');
     expect(__APP_VERSION__).toMatch(/^\d+\.\d+\.\d+$/);
   });
 
   it('conserve les versions de schéma attendues', () => {
-    expect(databaseSchemaVersion).toBe(9);
-    expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(8);
+    expect(databaseSchemaVersion).toBe(10);
+    expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(9);
     expect(databaseTableNames).toEqual(
       expect.arrayContaining([
         'userProfile',
@@ -31,6 +31,7 @@ describe('préparation de la version stable 0.26.0', () => {
         'friendProfiles',
         'friendRequests',
         'friendsPrivacySettings',
+        'friendActivityPermissions',
       ]),
     );
   });

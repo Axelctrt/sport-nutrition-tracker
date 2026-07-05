@@ -15,8 +15,8 @@ const read = (path) => {
 };
 
 const packageJson = JSON.parse(read('package.json'));
-if (!/^0\.(?:20|21|22|23|24|25)\.\d+$/.test(packageJson.version)) {
-  fail(`la version attendue appartient aux séries stables 0.20.x, 0.21.x, 0.22.x, 0.23.x, 0.24.x ou 0.25.x, reçue ${String(packageJson.version)}.`);
+if (!/^0\.(?:20|21|22|23|24|25|26|27)\.\d+$/.test(packageJson.version)) {
+  fail(`la version attendue appartient aux séries stables 0.20.x, 0.21.x, 0.22.x, 0.23.x, 0.24.x, 0.25.x, 0.26.x ou 0.27.x, reçue ${String(packageJson.version)}.`);
 }
 
 for (const path of [
@@ -132,12 +132,12 @@ for (const pipeline of ['check', 'ci']) {
 }
 
 const databaseVersions = read('src/infrastructure/database/migrations/versions.ts');
-if (!/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_9/.test(databaseVersions)) {
+if (!/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_10/.test(databaseVersions)) {
   fail('la base métier principale n’est plus en Dexie v8.');
 }
 const backupMigrations = read('src/infrastructure/backup/backupMigrations.ts');
-if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*8/.test(backupMigrations)) {
-  fail('la sauvegarde n’est plus en JSON v8.');
+if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*9/.test(backupMigrations)) {
+  fail('la sauvegarde n’est plus en JSON v9.');
 }
 
 if (failures.length > 0) {

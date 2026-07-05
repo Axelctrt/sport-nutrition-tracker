@@ -45,6 +45,7 @@ describe('DexieFriendsPrivacyRepository', () => {
         friends: [],
         requests: [],
         privacy: DEFAULT_FRIENDS_PRIVACY_SETTINGS,
+        activityPermissions: [],
       });
     } finally {
       database.close();
@@ -52,7 +53,7 @@ describe('DexieFriendsPrivacyRepository', () => {
     }
   });
 
-  it('persiste les amis, demandes et préférences de confidentialité dans Dexie v9', async () => {
+  it('persiste les amis, demandes, permissions et préférences de confidentialité dans Dexie v10', async () => {
     const database = createDatabase();
     const repository = new DexieFriendsPrivacyRepository(database);
 
@@ -62,6 +63,7 @@ describe('DexieFriendsPrivacyRepository', () => {
 
       expect(await database.friendProfiles.count()).toBe(1);
       expect(await database.friendRequests.count()).toBe(1);
+      expect(await database.friendActivityPermissions.count()).toBe(1);
       expect(await database.friendsPrivacySettings.get(FRIENDS_PRIVACY_SETTINGS_ID)).toMatchObject({
         id: FRIENDS_PRIVACY_SETTINGS_ID,
         profileVisibility: 'private',
@@ -72,6 +74,7 @@ describe('DexieFriendsPrivacyRepository', () => {
         friends: [expect.objectContaining({ handle: 'lea.cardio' })],
         requests: [expect.objectContaining({ handle: 'nora.trail', status: 'pending' })],
         privacy: expect.objectContaining({ profileVisibility: 'private' }),
+        activityPermissions: [expect.objectContaining({ friendHandle: 'lea.cardio', sharingLevel: 'summary' })],
       });
     } finally {
       database.close();
