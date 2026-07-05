@@ -1,17 +1,23 @@
-# Checklist de publication — SportPilot 0.26.0
+# Checklist de publication — SportPilot 0.27.0
 
 ## Préparation Git
 
-- [ ] La branche `feature/friends-privacy-0.26.0` est propre et synchronisée.
-- [ ] `package.json` et `package-lock.json` indiquent `0.26.0`.
-- [ ] Paramètres affiche `0.26.0`.
+- [ ] La branche `feature/activity-sharing-0.27.0` est propre et synchronisée.
+- [ ] `package.json` et `package-lock.json` indiquent `0.27.0`.
+- [ ] Paramètres affiche `0.27.0`.
 - [ ] Aucun fichier temporaire de patch, ZIP ou dossier `patch-files/` n’est stagé.
 - [ ] Aucun fichier `.env`, `.env.local`, `.env.production` ou secret IA n’est stagé.
 
 ## Contrôles automatiques
 
-- [ ] `npm run test -- src/domain/friends/friendship.test.ts src/application/friends/friendsPrivacyService.test.ts src/infrastructure/repositories/dexie/DexieFriendsPrivacyRepository.test.ts src/features/friends/pages/FriendsPrivacyPage.test.tsx src/features/friends/pages/FriendsPrivacyPage.persistence.test.tsx src/infrastructure/backup/friendsPrivacyBackup.test.ts src/app/friendsPrivacyReleaseReadiness.test.ts src/app/syncDataReadiness.test.ts src/app/releaseReadiness.test.ts src/features/settings/components/DataManagementCenter.test.tsx` passe.
+- [ ] Tests ciblés sociaux F1 à F5 passent.
 - [ ] `npm run audit:friends-privacy` passe.
+- [ ] `npm run audit:social-identity` passe.
+- [ ] `npm run audit:social-friend-requests` passe.
+- [ ] `npm run audit:social-friend-permissions` passe.
+- [ ] `npm run audit:social-activity-snapshots` passe.
+- [ ] `npm run audit:social-activity-feed` passe.
+- [ ] `npm run audit:social-release` passe.
 - [ ] `npm run audit:release` passe.
 - [ ] `npm run audit:repository` passe.
 - [ ] `npm run build` passe.
@@ -21,22 +27,27 @@
 ## Recette fonctionnelle
 
 - [ ] La page Amis s’ouvre depuis la navigation.
-- [ ] Une demande sortante peut être créée et reste persistée après rechargement.
-- [ ] Une demande entrante peut être acceptée et transforme correctement le profil en ami.
-- [ ] Une demande entrante peut être refusée sans créer d’ami.
-- [ ] Les doublons de demandes sont bloqués.
-- [ ] Les préférences de confidentialité sont persistées après rechargement.
-- [ ] Le profil privé reste conservé après rechargement.
-- [ ] Le mode “Détaillé après accord” peut être sélectionné comme préférence mais reste bloqué par le garde-fou social.
-- [ ] Aucun export social détaillé n’est disponible en 0.26.0.
-- [ ] Une sauvegarde JSON v8 contient `friendProfiles`, `friendRequests` et `friendsPrivacySettings`.
-- [ ] La restauration conserve les amis, demandes et préférences.
+- [ ] L’identifiant SportPilot public est visible, copiable et modifiable localement.
+- [ ] Les handles invalides et réservés sont refusés.
+- [ ] La recherche exacte retourne un état clair lorsque le service cloud est indisponible.
+- [ ] Une demande vers un identifiant inexistant affiche l’état attendu.
+- [ ] Une demande vers soi-même est bloquée.
+- [ ] Une demande vers un ami existant est bloquée.
+- [ ] Une demande déjà envoyée ou déjà reçue est gérée proprement.
+- [ ] Chaque ami affiche une permission de partage.
+- [ ] Le résumé reste le niveau par défaut.
+- [ ] Le détail n’est activé qu’après consentement explicite.
+- [ ] Les snapshots sociaux filtrés n’exposent aucune activité brute.
+- [ ] Le fil d’activité amis affiche les états vides et les snapshots autorisés.
+- [ ] Le fil ne contient aucun like, commentaire, message, groupe ou classement.
+- [ ] Une sauvegarde JSON v9 contient l’identité, les amis, demandes, préférences et permissions.
+- [ ] La restauration conserve les données sociales locales.
 - [ ] Les parcours photo IA, Open Food Facts et scanner code-barres restent non régressifs.
 
 ## Publication
 
-- [ ] Fusion manuelle dans `develop` avec `merge: intégrer SportPilot 0.26.0`.
+- [ ] Fusion manuelle dans `develop` avec `merge: intégrer SportPilot 0.27.0`.
 - [ ] Contrôles release relancés sur `develop`.
-- [ ] Fusion manuelle dans `main` avec `merge: publier SportPilot 0.26.0`.
-- [ ] Le tag annoté `v0.26.0` est créé sur le commit publié.
+- [ ] Fusion manuelle dans `main` avec `merge: publier SportPilot 0.27.0`.
+- [ ] Le tag annoté `v0.27.0` est créé sur le commit publié.
 - [ ] `develop` est resynchronisée avec `main`.

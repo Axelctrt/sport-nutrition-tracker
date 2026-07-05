@@ -28,9 +28,9 @@ const automaticSyncReleaseAudit = read(
   "scripts/audit-automatic-sync-release.mjs",
 );
 
-if (!/^0\.(?:24|25)\.\d+$/.test(packageJson.version)) {
+if (!/^0\.(?:24|25|26|27)\.\d+$/.test(packageJson.version)) {
   fail(
-    `le catalogue récompenses/thèmes 0.24.x doit rester compatible avec la version applicative publiée, version trouvée : ${packageJson.version}.`,
+    `le catalogue récompenses/thèmes 0.24.x à 0.27.x doit rester compatible avec la version applicative publiée, version trouvée : ${packageJson.version}.`,
   );
 }
 if (!packageJson.scripts?.["audit:reward-theme-catalog"]) {

@@ -9,7 +9,7 @@ import { syncPublicDeploymentConfig } from '@/infrastructure/sync-prototype/sync
 
 describe('publication de la continuité complète du compte 0.26.0', () => {
   it('publie la version stable attendue', () => {
-    expect(__APP_VERSION__).toBe('0.26.0');
+    expect(__APP_VERSION__).toBe('0.27.0');
     expect(__APP_VERSION__).toMatch(/^\d+\.\d+\.\d+$/);
   });
 

@@ -1,29 +1,44 @@
-# SportPilot 0.26.0
+# SportPilot 0.27.0
 
-SportPilot 0.26.0 ajoute le socle amis et confidentialité. La version prépare un réseau privé local : demandes envoyées et reçues, acceptation manuelle, préférences de visibilité, persistance Dexie, sauvegarde JSON et garde-fou explicite contre tout partage détaillé non consenti.
+SportPilot 0.27.0 livre la première tranche sociale exploitable : identité publique, demandes d’amis compatibles avec de vrais utilisateurs, permissions de partage par ami, snapshots sociaux filtrés et premier fil d’activité amis. Le périmètre reste volontairement strict : pas de messagerie, pas de likes, pas de commentaires, pas de groupes, pas de classements et aucun export d’activité brute.
 
-## Amis et confidentialité
+## Identité sociale
 
-- nouvelle route `/friends` accessible depuis la navigation ;
-- page “Amis et confidentialité” dédiée aux invitations et réglages sociaux ;
-- demandes entrantes et sortantes avec acceptation ou refus manuel ;
-- préférences de visibilité du profil et d’autorisation des demandes ;
-- persistance locale des amis, demandes et préférences ;
-- export/restauration via sauvegarde JSON v8 ;
-- aucun partage détaillé d’activité en 0.26.0.
+- identifiant public SportPilot visible et copiable, affiché avec `@` ;
+- `userId` interne stable et privé, distinct du handle public ;
+- validation stricte du handle public ;
+- recherche exacte préparée par contrat branchable ;
+- état explicite lorsque le backend social réel est indisponible.
 
-## Garde-fou social
+## Demandes d’amis
 
-Le mode “Détaillé après accord” peut être choisi comme préférence, mais il reste bloqué par le garde-fou de 0.26.0. L’application limite l’exposition sociale au résumé tant que le consentement explicite par ami n’est pas livré. Les exports sociaux détaillés, consentements par ami et flux d’activité partagé sont réservés à 0.27.0.
+- champ d’ajout par identifiant SportPilot exact ;
+- gestion des états `trouvé`, `identifiant inexistant`, `service indisponible` ;
+- blocage des demandes vers soi-même ;
+- blocage des amis déjà existants ;
+- blocage des demandes déjà envoyées ou déjà reçues ;
+- persistance locale des données sociales.
+
+## Confidentialité et partage
+
+- permissions de partage réglables ami par ami ;
+- résumé par défaut ;
+- détail uniquement après consentement explicite local ;
+- garde-fou social maintenu pour éviter tout partage détaillé non consenti ;
+- génération de snapshots sociaux filtrés sans exposer l’activité privée complète.
+
+## Fil d’activité amis
+
+Le fil d’activité amis de 0.27.0 lit uniquement des snapshots sociaux filtrés. Il distingue résumé et détail autorisé, gère les états vides et dégrade les snapshots détaillés vers le résumé si la permission ami ne permet plus le détail. Le fil ne lit jamais une activité brute complète.
 
 ## Stockage et sauvegarde
 
-La base métier passe en Dexie v9 pour ajouter les tables locales `friendProfiles`, `friendRequests` et `friendsPrivacySettings`. Le format de sauvegarde reste en JSON v8 et inclut ces tables. Le registre local des espaces reste en v1 et le runtime Dexie Cloud reste en v10, sans synchronisation sociale réelle entre comptes.
+La base métier utilise Dexie v10 avec la table `friendActivityPermissions`. La sauvegarde utilise le format JSON v9 et conserve les données sociales locales : identité, amis, demandes, préférences et permissions par ami. Le runtime Dexie Cloud reste disponible pour le socle existant, mais la synchronisation sociale réelle n’est pas activée dans cette version.
 
 ## IA photo nutritionnelle
 
-Le parcours IA Gemini livré en 0.25.1 reste disponible. La clé Gemini reste côté serveur, le consentement photo reste obligatoire avant envoi externe, et le fallback local reste actif si Gemini, le proxy ou les quotas échouent.
+Le parcours IA Gemini livré précédemment reste disponible. La clé Gemini reste côté serveur, le consentement photo reste obligatoire avant envoi externe, et le fallback local reste actif si Gemini, le proxy ou les quotas échouent.
 
 ## Arbitrage bundle
 
-Le budget JavaScript reste aligné sur le budget accepté pour l’UX photo, IA et confidentialité sociale. L’optimisation du bundle reste un chantier technique séparé.
+Le budget JavaScript reste aligné sur le périmètre accepté pour l’UX photo, IA, synchronisation et social. L’optimisation du bundle reste un chantier technique séparé.
