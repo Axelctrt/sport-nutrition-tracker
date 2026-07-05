@@ -1,0 +1,13 @@
+{
+  "patch": "SportPilot 0.28.0 F7 — Nutrition library audit fix",
+  "target": "develop after SportPilot 0.28.0 release merge",
+  "files": [
+    "scripts/audit-nutrition-library-sync.mjs"
+  ],
+  "expected": {
+    "appVersionSeries": "0.28.x",
+    "databaseSchemaVersion": 10,
+    "backupSchemaVersion": 9,
+    "syncPrototypeDatabaseVersion": 14
+  }
+}
