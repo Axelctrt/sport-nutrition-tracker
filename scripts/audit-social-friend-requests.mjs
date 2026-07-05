@@ -67,7 +67,7 @@ for (const phrase of [
   'Recherche ami',
   'recherche exacte',
   'recherche réelle est indisponible',
-  'Aucun export social détaillé n’est disponible en 0.27.0 F3',
+  'Snapshots sociaux F4 actifs',
 ]) {
   if (!page.includes(phrase)) failures.push(`texte/page F2 manquant : ${phrase}`);
 }

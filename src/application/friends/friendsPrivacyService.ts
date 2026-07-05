@@ -171,7 +171,7 @@ export function createFriendsPrivacyService(
       setFriendActivityPermission: (friendId, sharing) => setState(
         updateFriendActivityPermission(state, friendId, sharing),
         sharing === 'detailed'
-          ? 'Consentement détaillé enregistré pour cet ami. Aucun export brut n’est activé.'
+          ? 'Consentement détaillé enregistré pour cet ami. Seuls les snapshots sociaux filtrés peuvent utiliser ce niveau.'
           : 'Permission ramenée au résumé uniquement pour cet ami.',
       ),
     },

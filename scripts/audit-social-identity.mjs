@@ -50,7 +50,7 @@ for (const phrase of [
   'Identifiant invalide',
   'Compte cloud indisponible',
   'Utilisateur non connecté au cloud social',
-  'Aucun export social détaillé n’est disponible en 0.27.0 F3',
+  'Snapshots sociaux F4 actifs',
 ]) {
   if (!page.includes(phrase)) failures.push(`texte F1 manquant dans la page amis : ${phrase}`);
 }

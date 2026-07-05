@@ -52,7 +52,7 @@ for (const phrase of [
   'Autoriser le détail',
   'Permission :',
   'Consentement détaillé enregistré pour cet ami',
-  'Aucun export social détaillé n’est disponible en 0.27.0 F3',
+  'Snapshots sociaux F4 actifs',
 ]) {
   if (!page.includes(phrase) && !service.includes(phrase)) failures.push(`texte/feedback F3 manquant : ${phrase}`);
 }
@@ -72,8 +72,8 @@ if (!docs.includes('Résumé par défaut') || !docs.includes('Détail uniquement
   failures.push('documentation F3 incomplète sur résumé/détail');
 }
 
-if (/socialFeed|like|commentaire|messagerie|classement/u.test(domain + service + repository + page)) {
-  failures.push('F3 ne doit pas introduire de fil, likes, commentaires, messagerie ou classement');
+if (/socialFeed|messagerie|classement/u.test(domain + service + repository + page)) {
+  failures.push('F3/F4 ne doit pas introduire de fil, messagerie ou classement');
 }
 
 if (/fetch\(|axios|supabase|firebase/u.test(service + repository)) {

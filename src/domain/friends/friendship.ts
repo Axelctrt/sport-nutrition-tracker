@@ -558,7 +558,7 @@ export function evaluateFriendActivitySharingGuard(
     canShareDetailed: false,
     detailedSharingBlocked: true,
     reason: detailedPermissionExists
-      ? 'Consentement détaillé enregistré par ami, mais aucun export détaillé réel n’est disponible avant les snapshots sociaux F4.'
+      ? 'Snapshots sociaux filtrés disponibles : le détail reste limité aux amis autorisés, sans export brut.'
       : 'Résumé autorisé par défaut. Le détail reste bloqué sans consentement explicite par ami.',
   };
 }

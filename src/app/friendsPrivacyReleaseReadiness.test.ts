@@ -41,7 +41,7 @@ describe('readiness permissions de partage par ami 0.27.0 F3', () => {
     );
   });
 
-  it('conserve le garde-fou global tant que les snapshots sociaux ne sont pas livrés', () => {
+  it('conserve le garde-fou global même quand les snapshots sociaux filtrés sont livrés', () => {
     const guard = evaluateFriendActivitySharingGuard(detailedSharingSnapshot);
 
     expect(guard.allowedScope).toBe('summary');

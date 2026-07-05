@@ -56,6 +56,6 @@ describe('readiness permissions amis 0.27.0 F3', () => {
     expect(detailedScopedGuard.canShareDetailed).toBe(true);
     expect(canExposeFriendActivityDetailsToFriend(detailedSnapshot, friend)).toBe(true);
     expect(canExposeFriendActivityDetails(detailedSnapshot)).toBe(false);
-    expect(globalGuard.reason).toMatch(/aucun export détaillé réel/u);
+    expect(globalGuard.reason).toMatch(/Snapshots sociaux filtrés disponibles/u);
   });
 });

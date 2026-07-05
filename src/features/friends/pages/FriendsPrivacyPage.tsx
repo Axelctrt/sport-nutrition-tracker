@@ -324,7 +324,16 @@ export function FriendsPrivacyPage({
       <InlineNotice title="Garde-fou social actif">
         <p>{sharingGuard.reason}</p>
         <p>
-          Aucun export social détaillé n’est disponible en 0.27.0 F3. Les permissions par ami sont stockées localement pour préparer les snapshots sociaux filtrés.
+          Snapshots sociaux F4 actifs : les activités sont transformées en résumé filtré par défaut, ou en détail filtré uniquement pour les amis autorisés.
+        </p>
+        <p>
+          Aucun export brut d’activité n’est disponible : les notes, horaires précis, calculs internes et détails libres restent privés.
+        </p>
+      </InlineNotice>
+
+      <InlineNotice title="Snapshots sociaux filtrés prêts">
+        <p>
+          F4 prépare les données sûres que le futur flux social pourra lire. Aucune interaction sociale n’est activée dans cette phase.
         </p>
       </InlineNotice>
 

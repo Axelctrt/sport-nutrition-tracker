@@ -66,7 +66,8 @@ describe('FriendsPrivacyPage', () => {
     expect(screen.getByRole('button', { name: 'Partage désactivé' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByText(/Les données détaillées restent privées/u)).toBeInTheDocument();
     expect(screen.getByText('Garde-fou social actif')).toBeInTheDocument();
-    expect(screen.getByText(/Aucun export social détaillé n’est disponible en 0\.27\.0 F3/u)).toBeInTheDocument();
+    expect(screen.getByText(/Snapshots sociaux F4 actifs/u)).toBeInTheDocument();
+    expect(screen.getByText('Snapshots sociaux filtrés prêts')).toBeInTheDocument();
     expect(screen.getByText(/Permission : Résumé uniquement/u)).toBeInTheDocument();
   });
 
@@ -186,6 +187,6 @@ describe('FriendsPrivacyPage', () => {
     expect(screen.getByText(/Consentement détaillé enregistré pour cet ami/u)).toBeInTheDocument();
     expect(screen.getByText(/Permission : Détail autorisé/u)).toBeInTheDocument();
     expect(screen.getByText(/Détail autorisé localement pour cet ami/u)).toBeInTheDocument();
-    expect(screen.getByText(/Aucun export social détaillé/u)).toBeInTheDocument();
+    expect(screen.getByText(/snapshots sociaux filtrés peuvent utiliser ce niveau/u)).toBeInTheDocument();
   });
 });

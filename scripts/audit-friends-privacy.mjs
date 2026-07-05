@@ -70,7 +70,7 @@ const requiredPagePhrases = [
   'Partage désactivé',
   'recherche réelle est indisponible',
   'Garde-fou social actif',
-  'Aucun export social détaillé n’est disponible en 0.27.0 F3',
+  'Snapshots sociaux F4 actifs',
 ];
 
 for (const phrase of requiredPagePhrases) {
