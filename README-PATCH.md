@@ -1,54 +1,58 @@
-# SportPilot 0.27.0 — activité sociale contrôlée
+# SportPilot 0.28.0 — release social cloud
 
-Branche de publication : `feature/activity-sharing-0.27.0`
+Branche de développement : `feature/social-cloud-0.28.0`
 
-La version 0.27.0 ajoute la première capacité sociale exploitable de SportPilot : les utilisateurs disposent d’un identifiant public, peuvent préparer des demandes d’amis compatibles avec de vrais comptes, régler les permissions ami par ami, générer des snapshots d’activité filtrés et consulter un premier fil d’activité amis minimal.
+SportPilot 0.28.0 finalise le backend social cloud réel préparé par les phases F1 à F6. La release stabilise la version, les audits, la documentation et les garde-fous de confidentialité.
 
 ## Contenu livré
 
-- identité sociale locale avec `userId` privé, `handle` public et `displayName` ;
-- validation stricte des identifiants SportPilot publics ;
-- contrat de recherche exacte d’utilisateur, sans annuaire ouvert ;
-- demandes d’amis compatibles avec des identifiants utilisateur réels ;
-- gestion des cas `identifiant inexistant`, soi-même, déjà ami, demande déjà envoyée, demande déjà reçue et service cloud indisponible ;
-- permissions de partage par ami avec résumé par défaut et détail uniquement après consentement explicite ;
-- génération de snapshots sociaux filtrés résumé/détail ;
-- premier fil d’activité amis basé uniquement sur les snapshots filtrés ;
-- garde-fou anti-fuite conservé ;
-- audits sociaux F1 à F5 intégrés au pipeline.
+- contrat cloud social global ;
+- identités cloud et réservation unique des handles ;
+- recherche exacte par identifiant public complet ;
+- demandes d’amis cloud par `requesterUserId` et `recipientUserId` ;
+- amitiés cloud stables basées sur `userId` ;
+- permissions de partage synchronisées par ami ;
+- publication de snapshots sociaux filtrés ;
+- lecture des snapshots autorisés pour le feed amis ;
+- fallback propre quand `VITE_ENABLE_REAL_SOCIAL_CLOUD=false` ;
+- audits sociaux cloud F1 à F6 intégrés au pipeline.
 
 ## Versions techniques
 
-- application : `0.27.0` ;
-- base Dexie : v10 ;
+- application : `0.28.0` ;
+- AppDatabase locale : Dexie v10 ;
 - sauvegarde JSON : v9 ;
-- registre local des espaces : v1 ;
-- runtime Dexie Cloud : v10 ;
-- synchronisation sociale cloud réelle : non activée.
+- runtime Dexie Cloud prototype : v14 ;
+- collections cloud sociales : `socialIdentities`, `socialHandleReservations`, `socialFriendRequests`, `socialFriendships`, `socialFriendPermissions`, `socialActivitySnapshots`.
+
+## Validation attendue
+
+- `npm run audit:social-cloud-contract` ;
+- `npm run audit:social-cloud-identity` ;
+- `npm run audit:social-cloud-lookup` ;
+- `npm run audit:social-cloud-friend-requests` ;
+- `npm run audit:social-cloud-friendships` ;
+- `npm run audit:social-cloud-activity-snapshots` ;
+- `npm run audit:social-release` ;
+- `npm run audit:release` ;
+- `npm run audit:repository` ;
+- `npm run build` ;
+- `npm run lint` ;
+- `npm run test` ;
+- `npm run check` ;
+- `npm run test:stability`.
 
 ## Hors périmètre volontaire
 
-- pas de recherche globale avec suggestions ;
 - pas d’annuaire public ;
+- pas de suggestions ;
+- pas de recherche approximative ;
 - pas de likes ;
 - pas de commentaires ;
 - pas de messagerie ;
 - pas de groupes ;
 - pas de classements ;
-- pas de partage automatique ;
-- pas d’export d’activité brute.
+- pas d’export d’activité brute ;
+- pas de table `socialRawActivities`.
 
-## Validation attendue
-
-La publication doit être validée avec :
-
-- audits sociaux `audit:friends-privacy`, `audit:social-identity`, `audit:social-friend-requests`, `audit:social-friend-permissions`, `audit:social-activity-snapshots`, `audit:social-activity-feed` et `audit:social-release` ;
-- tests ciblés identité, demandes, permissions, snapshots et feed ;
-- audit `audit:release` ;
-- audit `audit:repository` ;
-- export sauvegarde JSON v9 contenant les données sociales ;
-- restauration conservant identité, amis, demandes, préférences et permissions ;
-- vérification que le feed ne lit que des snapshots filtrés ;
-- build, check complet et test de stabilité.
-
-Tag attendu à la publication : `v0.27.0`.
+Tag attendu à la publication finale : `v0.28.0`.

@@ -1,39 +1,47 @@
-SPORTPILOT 0.27.0
+SPORTPILOT 0.28.0
 
 Procédure de validation et publication
 
-1. Vérifier que la branche feature/activity-sharing-0.27.0 est propre et à jour.
-2. Vérifier que package.json et package-lock.json indiquent 0.27.0.
-3. Vérifier que Paramètres affiche 0.27.0.
+1. Vérifier que la branche feature/social-cloud-0.28.0 est propre et à jour.
+2. Vérifier que package.json et package-lock.json indiquent 0.28.0.
+3. Vérifier que Paramètres affiche 0.28.0.
 4. Vérifier qu’aucun fichier .env, .env.local, .env.production ou secret réel n’est stagé.
-5. Lancer les tests ciblés sociaux F1 à F5.
-6. Lancer npm run audit:friends-privacy.
-7. Lancer npm run audit:social-identity.
-8. Lancer npm run audit:social-friend-requests.
-9. Lancer npm run audit:social-friend-permissions.
-10. Lancer npm run audit:social-activity-snapshots.
-11. Lancer npm run audit:social-activity-feed.
-12. Lancer npm run audit:social-release.
-13. Lancer npm run audit:release.
-14. Lancer npm run audit:repository.
-15. Lancer npm run build.
-16. Lancer npm run check.
-17. Lancer npm run test:stability.
-18. Ouvrir la page Amis depuis la navigation.
-19. Vérifier l’identifiant SportPilot public, la copie, la modification locale et les états cloud indisponibles.
-20. Vérifier les demandes d’amis : identifiant inexistant, soi-même, déjà ami, déjà envoyée et déjà reçue.
-21. Vérifier les permissions par ami : résumé par défaut et détail uniquement après consentement explicite.
-22. Vérifier que les snapshots sociaux restent filtrés et n’exposent pas l’activité brute.
-23. Vérifier que le fil d’activité amis reste minimal et sans interactions sociales.
-24. Exporter une sauvegarde JSON v9 et vérifier les données sociales.
-25. Restaurer une sauvegarde JSON v9 et vérifier identité, amis, demandes, préférences et permissions.
-26. Valider que l’analyse photo IA, Open Food Facts et le scanner code-barres restent fonctionnels.
-27. Committer la finalisation 0.27.0 sur feature/activity-sharing-0.27.0.
-28. Fusionner manuellement dans develop.
-29. Relancer les contrôles release sur develop.
-30. Fusionner manuellement dans main.
-31. Relancer les contrôles release sur main.
-32. Créer le tag annoté v0.27.0.
-33. Resynchroniser develop avec main.
+5. Lancer npm run audit:social-cloud-contract.
+6. Lancer npm run audit:social-cloud-identity.
+7. Lancer npm run audit:social-cloud-lookup.
+8. Lancer npm run audit:social-cloud-friend-requests.
+9. Lancer npm run audit:social-cloud-friendships.
+10. Lancer npm run audit:social-cloud-activity-snapshots.
+11. Lancer npm run audit:friends-privacy.
+12. Lancer npm run audit:social-identity.
+13. Lancer npm run audit:social-friend-requests.
+14. Lancer npm run audit:social-friend-permissions.
+15. Lancer npm run audit:social-activity-snapshots.
+16. Lancer npm run audit:social-activity-feed.
+17. Lancer npm run audit:social-release.
+18. Lancer npm run audit:release.
+19. Lancer npm run audit:repository.
+20. Lancer npm run build.
+21. Lancer npm run lint.
+22. Lancer npm run test.
+23. Lancer npm run check.
+24. Lancer npm run test:stability.
+25. Ouvrir la page Amis depuis la navigation.
+26. Vérifier l’identité sociale cloud, le handle public, la recherche exacte et les états indisponibles.
+27. Vérifier les demandes d’amis cloud : identifiant inexistant, soi-même, doublons et service cloud indisponible.
+28. Vérifier les amitiés cloud et les permissions synchronisées : résumé par défaut, détail après consentement explicite.
+29. Vérifier la publication de snapshots sociaux filtrés et la lecture des snapshots autorisés dans le feed amis.
+30. Vérifier qu’aucune activité brute, aucun export brut et aucune table socialRawActivities ne sont présents.
+31. Vérifier qu’il n’y a ni annuaire public, ni suggestions, ni likes, ni commentaires, ni messagerie, ni groupes, ni classements.
+32. Exporter une sauvegarde JSON v9 et vérifier les données sociales locales.
+33. Restaurer une sauvegarde JSON v9 et vérifier identité, amis, demandes, préférences et permissions.
+34. Valider que l’analyse photo IA, Open Food Facts et le scanner code-barres restent fonctionnels.
+35. Committer la finalisation 0.28.0 sur feature/social-cloud-0.28.0.
+36. Fusionner manuellement dans develop.
+37. Relancer les contrôles release sur develop.
+38. Fusionner manuellement dans main.
+39. Relancer les contrôles release sur main.
+40. Créer le tag annoté v0.28.0.
+41. Resynchroniser develop avec main.
 
-SportPilot 0.27.0 utilise Dexie v10 et la sauvegarde JSON v9. Aucune synchronisation sociale cloud réelle n’est activée.
+SportPilot 0.28.0 utilise AppDatabase Dexie v10, sauvegarde JSON v9 et runtime Dexie Cloud prototype v14.

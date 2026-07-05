@@ -7,6 +7,7 @@ import {
   type FriendsPrivacySnapshot,
 } from '@/domain/friends/friendship';
 import { createDefaultSocialIdentity } from '@/domain/friends/socialIdentity';
+import type { SocialCloudFriendRequestPort } from '@/domain/friends/socialCloudContract';
 import type { SocialActivitySnapshot } from '@/domain/friends/socialActivitySnapshot';
 import { createFoundSocialUserLookupGateway, type SocialUserLookupGateway } from '@/application/friends/socialIdentityService';
 import { FriendsPrivacyPage } from '@/features/friends/pages/FriendsPrivacyPage';
@@ -50,6 +51,7 @@ const identity = createDefaultSocialIdentity('2026-07-05T10:00:00.000Z', 'alex12
 
 function renderPage(override: {
   readonly lookupGateway?: SocialUserLookupGateway;
+  readonly cloudFriendRequestPort?: SocialCloudFriendRequestPort;
   readonly initialSnapshot?: FriendsPrivacySnapshot;
   readonly initialActivitySnapshots?: readonly SocialActivitySnapshot[];
 } = {}) {
@@ -57,6 +59,7 @@ function renderPage(override: {
     initialSnapshot: override.initialSnapshot ?? snapshot,
     initialIdentity: identity,
     ...(override.lookupGateway ? { lookupGateway: override.lookupGateway } : {}),
+    ...(override.cloudFriendRequestPort ? { cloudFriendRequestPort: override.cloudFriendRequestPort } : {}),
     ...(override.initialActivitySnapshots ? { initialActivitySnapshots: override.initialActivitySnapshots } : {}),
   };
 
@@ -78,6 +81,12 @@ describe('FriendsPrivacyPage', () => {
     expect(screen.getByText('Garde-fou social actif')).toBeInTheDocument();
     expect(screen.getByText(/Snapshots sociaux F4 actifs/u)).toBeInTheDocument();
     expect(screen.getByText('Fil d’activité amis F5 actif')).toBeInTheDocument();
+    expect(screen.getByText('Cloud social 0.28.0 F6')).toBeInTheDocument();
+    expect(screen.getByText(/Snapshots sociaux distants F6 prêts.*userId distant/u)).toBeInTheDocument();
+    expect(screen.getByText(/lecture des snapshots autorisés uniquement/u)).toBeInTheDocument();
+    expect(screen.getByText(/aucun annuaire, aucune suggestion/u)).toBeInTheDocument();
+    expect(screen.getByText(/aucun matching partiel/u)).toBeInTheDocument();
+    expect(screen.getByText(/détail uniquement après consentement explicite/u)).toBeInTheDocument();
     expect(screen.getByText('Fil d’activité amis')).toBeInTheDocument();
     expect(screen.getAllByText(/Partage d’activité désactivé : aucun snapshot n’est affiché/u).length).toBeGreaterThan(0);
     expect(screen.getByText(/Permission : Résumé uniquement/u)).toBeInTheDocument();
@@ -155,6 +164,60 @@ describe('FriendsPrivacyPage', () => {
     await user.click(screen.getByRole('button', { name: /Envoyer/u }));
 
     expect(await screen.findByText(/Une demande est déjà envoyée/u)).toBeInTheDocument();
+  });
+
+  it('envoie la demande via le port cloud F4 quand il est fourni', async () => {
+    const user = userEvent.setup();
+    const sentRequests: unknown[] = [];
+    const lookupGateway = createFoundSocialUserLookupGateway([
+      {
+        userId: 'social-user:romain' as EntityId,
+        handle: 'romain.run',
+        displayName: 'Romain Run',
+        createdAt: '2026-07-05T09:00:00.000Z',
+        updatedAt: '2026-07-05T09:00:00.000Z',
+      },
+    ]);
+    const cloudFriendRequestPort: SocialCloudFriendRequestPort = {
+      async sendRequest(request) {
+        sentRequests.push(request);
+        return {
+          status: 'created',
+          value: request,
+          message: 'Demande d’ami cloud envoyée.',
+        };
+      },
+      async listIncomingRequests() {
+        return [];
+      },
+      async listOutgoingRequests() {
+        return [];
+      },
+      async updateRequestStatus() {
+        return {
+          status: 'updated',
+          message: 'Demande cloud updated.',
+        };
+      },
+    };
+
+    renderPage({
+      lookupGateway,
+      cloudFriendRequestPort,
+      initialSnapshot: { ...snapshot, requests: [] },
+    });
+
+    await user.type(screen.getByLabelText('Identifiant SportPilot'), '@romain.run');
+    await user.click(screen.getByRole('button', { name: /Envoyer/u }));
+
+    expect((await screen.findAllByText(/Demande envoyée à @romain\.run/u)).length).toBeGreaterThan(0);
+    expect(sentRequests).toEqual([
+      expect.objectContaining({
+        requesterUserId: identity.userId,
+        recipientUserId: 'social-user:romain',
+        status: 'pending',
+      }),
+    ]);
   });
 
   it('affiche identifiant inexistant lorsque la recherche exacte ne trouve personne', async () => {

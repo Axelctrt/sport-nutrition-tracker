@@ -5,11 +5,13 @@ import {
 } from '@/domain/friends/friendship';
 import {
   formatSocialHandle,
-  validateSocialHandle,
   type PublicUserProfile,
   type SocialIdentity,
 } from '@/domain/friends/socialIdentity';
 import type { SocialUserLookupGateway } from '@/application/friends/socialIdentityService';
+import { lookupExactSocialCloudUser } from '@/application/friends/socialCloudUserLookupService';
+import type { SocialCloudFriendRequestPort } from '@/domain/friends/socialCloudContract';
+import { buildCloudFriendRequest } from '@/domain/friends/socialCloudFriendRequest';
 
 export type ExactFriendRequestStatus =
   | 'sent'
@@ -27,6 +29,7 @@ export interface SendExactFriendRequestInput {
   readonly handle: string;
   readonly lookupGateway: SocialUserLookupGateway;
   readonly now?: string;
+  readonly cloudFriendRequestPort?: SocialCloudFriendRequestPort;
 }
 
 export interface SendExactFriendRequestResult {
@@ -39,22 +42,17 @@ export interface SendExactFriendRequestResult {
 export async function sendExactFriendRequest(
   input: SendExactFriendRequestInput,
 ): Promise<SendExactFriendRequestResult> {
-  const validation = validateSocialHandle(input.handle);
-  if (validation.status === 'invalid') {
-    return {
-      status: 'invalidHandle',
-      snapshot: input.snapshot,
-      message: validation.message,
-    };
-  }
-
-  const lookup = await input.lookupGateway.lookupByHandle(validation.handle);
+  const lookup = await lookupExactSocialCloudUser({
+    handle: input.handle,
+    lookupGateway: input.lookupGateway,
+    currentUserId: input.identity.userId,
+  });
 
   if (lookup.status === 'invalidHandle') {
     return {
       status: 'invalidHandle',
       snapshot: input.snapshot,
-      message: 'Identifiant invalide : vérifie le format avant la recherche.',
+      message: lookup.message,
     };
   }
 
@@ -62,15 +60,15 @@ export async function sendExactFriendRequest(
     return {
       status: 'notFound',
       snapshot: input.snapshot,
-      message: 'Identifiant inexistant.',
+      message: lookup.message,
     };
   }
 
-  if (lookup.status === 'unavailable') {
+  if (lookup.status === 'unavailable' || !lookup.profile) {
     return {
       status: 'unavailable',
       snapshot: input.snapshot,
-      message: 'Service cloud indisponible : recherche réelle impossible pour le moment.',
+      message: lookup.message,
     };
   }
 
@@ -84,11 +82,35 @@ export async function sendExactFriendRequest(
     };
   }
 
+  const now = input.now ?? new Date().toISOString();
+  if (input.cloudFriendRequestPort) {
+    const cloudRequest = buildCloudFriendRequest(input.identity, lookup.profile, now);
+    const cloudResult = await input.cloudFriendRequestPort.sendRequest(cloudRequest);
+
+    if (cloudResult.status === 'alreadyExists') {
+      return {
+        status: 'alreadySent',
+        snapshot: input.snapshot,
+        message: cloudResult.message,
+        profile: lookup.profile,
+      };
+    }
+
+    if (!['created', 'alreadyExists', 'updated'].includes(cloudResult.status)) {
+      return {
+        status: cloudResult.status === 'forbidden' ? 'self' : 'unavailable',
+        snapshot: input.snapshot,
+        message: cloudResult.message,
+        profile: lookup.profile,
+      };
+    }
+  }
+
   const nextSnapshot = addOutgoingFriendRequestForProfile(
     input.snapshot,
     lookup.profile,
     input.identity.userId,
-    input.now,
+    now,
   );
 
   return {

@@ -16,7 +16,7 @@ const read = (path) => {
 
 const database = read('src/infrastructure/sync-prototype/SyncPrototypeDatabase.ts');
 for (const expected of [
-  'SYNC_PROTOTYPE_DATABASE_VERSION = 10',
+  'SYNC_PROTOTYPE_DATABASE_VERSION = 14',
   'sportpilot-sync-runtime-0.20.0-v${SYNC_PROTOTYPE_DATABASE_VERSION}',
   'realNutritionTracking',
   'realNutritionJournalDays',
@@ -79,8 +79,8 @@ if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*9/.test(backup)) {
 }
 
 const packageJson = JSON.parse(read('package.json'));
-if (!/^0\.(?:20|21|22|23|24|25|26|27)\.\d+$/.test(packageJson.version)) {
-  fail(`la version doit appartenir aux séries stables 0.20.x, 0.21.x, 0.22.x, 0.23.x, 0.24.x, 0.25.x, 0.26.x ou 0.27.x, reçue ${String(packageJson.version)}.`);
+if (!/^0\.(?:20|21|22|23|24|25|26|27|28)\.\d+$/.test(packageJson.version)) {
+  fail(`la version doit appartenir aux séries stables 0.20.x, 0.21.x, 0.22.x, 0.23.x, 0.24.x, 0.25.x, 0.26.x, 0.27.x ou 0.28.x, reçue ${String(packageJson.version)}.`);
 }
 const scripts = packageJson.scripts ?? {};
 if (scripts['audit:nutrition-tracking-sync'] !== 'node scripts/audit-nutrition-tracking-sync.mjs') {
@@ -98,6 +98,6 @@ if (failures.length > 0) {
   process.exitCode = 1;
 } else {
   console.log(
-    'Audit C3 réussi : bilans et ajustements atomiques, objectifs quotidiens recalculés, propagation C1 et runtime cloud v10 validés.',
+    'Audit C3 réussi : bilans et ajustements atomiques, objectifs quotidiens recalculés, propagation C1 et runtime cloud v14 validés.',
   );
 }

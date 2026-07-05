@@ -1,0 +1,14 @@
+{
+  "phase": "0.28.0-f7-stable-series-audit-fix",
+  "description": "Aligne globalement les audits/readiness tests qui limitaient les séries stables à 0.27.x afin d'accepter 0.28.x.",
+  "files": [
+    "apply-phase-0.28.0-f7-stable-series-audit-fix.mjs",
+    "README-PATCH-0.28.0-F7-STABLE-SERIES-AUDIT-FIX.md"
+  ],
+  "invariants": {
+    "appVersion": "0.28.0",
+    "appDatabaseDexie": 10,
+    "backupJson": 9,
+    "syncPrototypeRuntime": 14
+  }
+}

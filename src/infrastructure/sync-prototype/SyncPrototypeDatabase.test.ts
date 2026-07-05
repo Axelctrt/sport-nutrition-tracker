@@ -13,7 +13,7 @@ describe('base isolée du prototype Dexie Cloud', () => {
     expect(SYNC_PROTOTYPE_DATABASE_NAME).not.toBe(
       LEGACY_SYNC_PROTOTYPE_DATABASE_NAME,
     );
-    expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(10);
+    expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(14);
     expect(SYNC_PROTOTYPE_DATABASE_NAME).toBe(
       `sportpilot-sync-runtime-0.20.0-v${SYNC_PROTOTYPE_DATABASE_VERSION}`,
     );
@@ -42,6 +42,12 @@ describe('base isolée du prototype Dexie Cloud', () => {
       'realNutritionTracking',
       'realAccountPreferences',
       'realRewardsRoutines',
+      'socialIdentities',
+      'socialHandleReservations',
+      'socialFriendRequests',
+      'socialFriendships',
+      'socialFriendPermissions',
+      'socialActivitySnapshots',
     ]);
   });
 
@@ -58,6 +64,7 @@ describe('base isolée du prototype Dexie Cloud', () => {
       realNutritionTrackingSyncEnabled: true,
       realAccountPreferencesSyncEnabled: true,
       realRewardsRoutinesSyncEnabled: true,
+      realSocialCloudEnabled: false,
       diagnosticsEnabled: true,
     });
 
@@ -93,6 +100,24 @@ describe('base isolée du prototype Dexie Cloud', () => {
     expect(database.table('realNutritionTracking').schema.primKey.keyPath).toBe('id');
     expect(database.table('realAccountPreferences').schema.primKey.keyPath).toBe('id');
     expect(database.table('realRewardsRoutines').schema.primKey.keyPath).toBe('id');
+    expect(database.table('socialIdentities').schema.primKey.keyPath).toBe('id');
+    expect(database.table('socialHandleReservations').schema.primKey.keyPath).toBe('id');
+    expect(database.table('socialFriendRequests').schema.primKey.keyPath).toBe('id');
+    expect(database.table('socialFriendRequests').schema.idxByName.recipientUserId).toBeDefined();
+    expect(database.table('socialFriendRequests').schema.idxByName.requesterUserId).toBeDefined();
+    expect(database.table('socialFriendRequests').schema.idxByName.status).toBeDefined();
+    expect(database.table('socialFriendships').schema.primKey.keyPath).toBe('id');
+    expect(database.table('socialFriendships').schema.idxByName.userAId).toBeDefined();
+    expect(database.table('socialFriendships').schema.idxByName.userBId).toBeDefined();
+    expect(database.table('socialFriendPermissions').schema.primKey.keyPath).toBe('id');
+    expect(database.table('socialFriendPermissions').schema.idxByName.ownerUserId).toBeDefined();
+    expect(database.table('socialFriendPermissions').schema.idxByName.friendUserId).toBeDefined();
+    expect(database.table('socialActivitySnapshots').schema.primKey.keyPath).toBe('id');
+    expect(database.table('socialActivitySnapshots').schema.idxByName.ownerUserId).toBeDefined();
+    expect(database.table('socialActivitySnapshots').schema.idxByName.publishedForUserId).toBeDefined();
+    const handleReservationIndex = database.table('socialHandleReservations').schema.idxByName.handle;
+    expect(handleReservationIndex).toBeDefined();
+    expect(handleReservationIndex?.unique).toBe(true);
 
     database.close();
   });

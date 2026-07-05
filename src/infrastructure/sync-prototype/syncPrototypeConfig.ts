@@ -12,6 +12,7 @@ export interface SyncPrototypeEnvironment {
   readonly VITE_ENABLE_REAL_NUTRITION_TRACKING_SYNC?: string;
   readonly VITE_ENABLE_REAL_ACCOUNT_PREFERENCES_SYNC?: string;
   readonly VITE_ENABLE_REAL_REWARDS_ROUTINES_SYNC?: string;
+  readonly VITE_ENABLE_REAL_SOCIAL_CLOUD?: string;
   readonly VITE_ENABLE_SYNC_DIAGNOSTICS?: string;
 }
 
@@ -31,6 +32,7 @@ export interface EnabledSyncPrototypeConfig {
   realNutritionTrackingSyncEnabled: boolean;
   realAccountPreferencesSyncEnabled: boolean;
   realRewardsRoutinesSyncEnabled: boolean;
+  realSocialCloudEnabled: boolean;
   diagnosticsEnabled: boolean;
 }
 
@@ -164,6 +166,10 @@ export function readSyncPrototypeConfig(
     realRewardsRoutinesSyncEnabled: readEnabledFlag(
       environment.VITE_ENABLE_REAL_REWARDS_ROUTINES_SYNC,
       'VITE_ENABLE_REAL_REWARDS_ROUTINES_SYNC',
+    ),
+    realSocialCloudEnabled: readEnabledFlag(
+      environment.VITE_ENABLE_REAL_SOCIAL_CLOUD,
+      'VITE_ENABLE_REAL_SOCIAL_CLOUD',
     ),
     diagnosticsEnabled: readEnabledFlag(
       environment.VITE_ENABLE_SYNC_DIAGNOSTICS,

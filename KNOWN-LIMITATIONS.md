@@ -1,28 +1,32 @@
-# Limitations connues — SportPilot 0.27.0
+# Limitations connues — SportPilot 0.28.0
 
-## Synchronisation sociale cloud non activée
+## Cloud social réel sous contrôle
 
-SportPilot 0.27.0 prépare les contrats et les états nécessaires aux vrais utilisateurs, mais ne branche pas encore de backend social réel. La recherche exacte d’un identifiant peut donc retourner un état de service cloud indisponible tant qu’un adapter cloud n’est pas fourni.
+SportPilot 0.28.0 prépare le backend social cloud réel avec identités, handles réservés, recherche exacte, demandes d’amis, amitiés, permissions et snapshots sociaux distants filtrés. L’activation reste contrôlée par `VITE_ENABLE_REAL_SOCIAL_CLOUD` et par la configuration Dexie Cloud disponible.
 
 ## Pas d’annuaire public
 
-La recherche utilisateur reste volontairement exacte. Il n’y a pas de suggestions, pas de découverte publique d’utilisateurs, pas d’annuaire ouvert et pas de recherche globale.
+La recherche utilisateur reste strictement exacte. Il n’y a pas de suggestions, pas de découverte publique d’utilisateurs, pas d’annuaire ouvert et pas de recherche globale.
 
-## Partage contrôlé localement
+## Relations basées sur userId
 
-Les permissions par ami sont persistées localement. Le résumé reste le niveau par défaut. Le détail n’est autorisé qu’après consentement explicite local et les snapshots détaillés peuvent être dégradés en résumé si la permission n’est plus suffisante.
+Les handles publics servent à trouver un utilisateur exact. Les demandes, amitiés, permissions et snapshots sociaux cloud restent basés sur `userId`, jamais sur le handle public comme clé relationnelle.
+
+## Partage contrôlé
+
+Les permissions par ami utilisent le résumé par défaut. Le détail n’est autorisé qu’après consentement explicite. Les snapshots détaillés peuvent être dégradés en résumé si la permission n’est plus suffisante.
 
 ## Aucun export d’activité brute
 
-Le fil d’activité amis ne lit que des snapshots sociaux filtrés. Les activités privées complètes, notes libres, champs internes, horaires précis non nécessaires, calculs techniques et données sensibles ne doivent pas être exposés dans le feed.
+Le feed amis ne lit que des snapshots sociaux filtrés. Les activités privées complètes, notes libres, champs internes, horaires précis non nécessaires, calculs techniques et données sensibles ne doivent pas être exposés dans le cloud social.
 
 ## Interactions sociales hors périmètre
 
-La version 0.27.0 ne livre pas les likes, commentaires, messagerie, groupes, classements ou réactions. Ces fonctionnalités nécessiteraient de nouveaux contrats de modération, confidentialité et stockage.
+La version 0.28.0 ne livre pas les likes, commentaires, messagerie, groupes, classements ou réactions. Ces fonctionnalités nécessiteraient de nouveaux contrats de modération, confidentialité et stockage.
 
 ## Restauration et conflits sociaux
 
-La sauvegarde JSON v9 restaure les données sociales locales. Les stratégies de conflit multi-appareil, invitations croisées réellement cloud, consentements distribués et historique social synchronisé restent à traiter dans une version ultérieure.
+La sauvegarde JSON v9 conserve les données sociales locales. Les stratégies fines de conflit multi-appareil, de modération et de révocation rétroactive de snapshots déjà publiés devront être traitées dans une version ultérieure.
 
 ## Estimation nutritionnelle non médicale
 
@@ -38,4 +42,4 @@ Les clés `PHOTO_NUTRITION_AI_API_KEY` ou `GEMINI_API_KEY` doivent rester côté
 
 ## Bundle JavaScript
 
-La version 0.27.0 conserve le budget JavaScript accepté pour l’UX photo, IA, synchronisation et social. L’optimisation du bundle doit être traitée plus tard comme chantier technique global.
+La version 0.28.0 conserve le budget JavaScript accepté pour l’UX photo, IA, synchronisation et social. L’optimisation du bundle doit être traitée plus tard comme chantier technique global.
