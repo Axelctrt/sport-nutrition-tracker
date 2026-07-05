@@ -1,4 +1,5 @@
 import type { EntityId, IsoDateTime } from '@/domain/models/common';
+import type { SocialIdentity } from '@/domain/friends/socialIdentity';
 
 export type FriendRequestStatus = 'pending' | 'accepted' | 'declined';
 export type FriendRequestDirection = 'incoming' | 'outgoing';
@@ -45,6 +46,7 @@ export interface StoredFriendsPrivacySettings extends FriendsPrivacySettings {
   readonly id: EntityId;
   readonly createdAt: IsoDateTime;
   readonly updatedAt: IsoDateTime;
+  readonly socialIdentity?: SocialIdentity;
 }
 
 export interface FriendsPrivacySnapshot {

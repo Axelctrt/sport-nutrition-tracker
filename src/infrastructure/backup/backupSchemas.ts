@@ -793,6 +793,15 @@ const friendActivitySharingLevelSchema = z.enum([
   'detailed',
 ]);
 
+const socialIdentitySchema = z.object({
+  userId: z.string().min(1),
+  handle: z.string().min(3).max(24),
+  displayName: z.string().min(1).max(80),
+  createdAt: isoDateTimeSchema,
+  updatedAt: isoDateTimeSchema,
+  handleUpdatedAt: isoDateTimeSchema.optional(),
+});
+
 const friendProfileSchema = entityMetadataSchema.extend({
   displayName: z.string().min(1).max(120),
   handle: z.string().min(3).max(32),
@@ -814,6 +823,7 @@ const friendsPrivacySettingsSchema = entityMetadataSchema.extend({
   activitySharing: friendActivitySharingLevelSchema,
   allowFriendRequests: z.boolean(),
   requireManualApproval: z.boolean(),
+  socialIdentity: socialIdentitySchema.optional(),
 });
 
 const backupUserStateTableNameSchema = z.enum(
