@@ -1,17 +1,23 @@
 import {
   Check,
   LockKeyhole,
+  LoaderCircle,
   Send,
   ShieldCheck,
   UserPlus,
   UsersRound,
   X,
 } from 'lucide-react';
-import { useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 
 import {
-  createDefaultFriendsPrivacySnapshot,
+  createEmptyFriendsPrivacySnapshot,
   createFriendsPrivacyService,
+  loadFriendsPrivacySnapshot,
+  persistFriendsPrivacySnapshot,
+  type FriendsPrivacyServiceActions,
+  type FriendsPrivacyServiceState,
+  type FriendsPrivacySnapshotRepository,
 } from '@/application/friends/friendsPrivacyService';
 import {
   FRIEND_ACTIVITY_SHARING_LABELS,
@@ -22,12 +28,15 @@ import {
   type FriendsPrivacySnapshot,
   type FriendVisibilityLevel,
 } from '@/domain/friends/friendship';
+import { appDatabase } from '@/infrastructure/database/database';
+import { DexieFriendsPrivacyRepository } from '@/infrastructure/repositories/dexie/DexieFriendsPrivacyRepository';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 
 interface FriendsPrivacyPageProps {
   readonly initialSnapshot?: FriendsPrivacySnapshot;
+  readonly repository?: FriendsPrivacySnapshotRepository;
 }
 
 const visibilityOptions: readonly FriendVisibilityLevel[] = ['private', 'friends', 'public'];
@@ -51,24 +60,79 @@ function requestStatusLabel(request: FriendRequest): string {
 }
 
 export function FriendsPrivacyPage({
-  initialSnapshot = createDefaultFriendsPrivacySnapshot(),
+  initialSnapshot,
+  repository,
 }: FriendsPrivacyPageProps = {}) {
-  const [service] = useState(() => createFriendsPrivacyService(initialSnapshot));
-  const [snapshot, setSnapshot] = useState(() => service.getState());
+  const [defaultRepository] = useState(() =>
+    initialSnapshot ? undefined : new DexieFriendsPrivacyRepository(appDatabase),
+  );
+  const activeRepository = repository ?? defaultRepository;
+  const [snapshot, setSnapshot] = useState<FriendsPrivacyServiceState>(() =>
+    initialSnapshot ?? createEmptyFriendsPrivacySnapshot(),
+  );
   const [handle, setHandle] = useState('');
+  const [isLoading, setIsLoading] = useState(() => Boolean(activeRepository && !initialSnapshot));
+  const [errorMessage, setErrorMessage] = useState<string>();
+
+  useEffect(() => {
+    if (!activeRepository || initialSnapshot) return undefined;
+
+    let active = true;
+    setIsLoading(true);
+    setErrorMessage(undefined);
+
+    void loadFriendsPrivacySnapshot(activeRepository)
+      .then((loaded) => {
+        if (active) setSnapshot(loaded);
+      })
+      .catch((error) => {
+        if (!active) return;
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : 'Les données amis n’ont pas pu être chargées.',
+        );
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [activeRepository, initialSnapshot]);
 
   const summary = useMemo(() => summarizeFriendsPrivacy(snapshot), [snapshot]);
   const incomingRequests = snapshot.requests.filter((request) => request.direction === 'incoming');
   const outgoingRequests = snapshot.requests.filter((request) => request.direction === 'outgoing');
 
-  const update = (next: ReturnType<typeof service.actions.acceptRequest>) => {
+  const persistSnapshot = (next: FriendsPrivacyServiceState) => {
     setSnapshot(next);
+    setErrorMessage(undefined);
+
+    if (!activeRepository) return;
+
+    void persistFriendsPrivacySnapshot(activeRepository, next).catch((error) => {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : 'Les changements amis n’ont pas pu être enregistrés.',
+      );
+    });
+  };
+
+  const update = (
+    action: (actions: FriendsPrivacyServiceActions) => FriendsPrivacyServiceState,
+  ) => {
+    const service = createFriendsPrivacyService(snapshot);
+    persistSnapshot(action(service.actions));
   };
 
   const submitRequest = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const service = createFriendsPrivacyService(snapshot);
     const next = service.actions.sendRequest(handle);
-    update(next);
+    persistSnapshot(next);
     if (next.lastFeedback?.startsWith('Demande envoyée')) {
       setHandle('');
     }
@@ -104,6 +168,21 @@ export function FriendsPrivacyPage({
         </p>
       </InlineNotice>
 
+      {isLoading ? (
+        <InlineNotice title="Chargement local">
+          <p className="inline-flex items-center gap-2">
+            <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
+            Chargement des amis enregistrés sur cet appareil.
+          </p>
+        </InlineNotice>
+      ) : null}
+
+      {errorMessage ? (
+        <InlineNotice tone="error" title="Persistance locale indisponible">
+          <p>{errorMessage}</p>
+        </InlineNotice>
+      ) : null}
+
       {snapshot.lastFeedback ? (
         <InlineNotice tone="success" title="Action prise en compte">
           <p>{snapshot.lastFeedback}</p>
@@ -136,7 +215,7 @@ export function FriendsPrivacyPage({
                   <Button
                     key={option}
                     variant={snapshot.privacy.profileVisibility === option ? 'primary' : 'secondary'}
-                    onClick={() => update(service.actions.setProfileVisibility(option))}
+                    onClick={() => update((actions) => actions.setProfileVisibility(option))}
                     aria-pressed={snapshot.privacy.profileVisibility === option}
                   >
                     {FRIEND_PROFILE_VISIBILITY_LABELS[option]}
@@ -154,7 +233,7 @@ export function FriendsPrivacyPage({
                   <Button
                     key={option}
                     variant={snapshot.privacy.activitySharing === option ? 'primary' : 'secondary'}
-                    onClick={() => update(service.actions.setActivitySharing(option))}
+                    onClick={() => update((actions) => actions.setActivitySharing(option))}
                     aria-pressed={snapshot.privacy.activitySharing === option}
                     disabled={snapshot.privacy.profileVisibility === 'private' && option !== 'disabled'}
                   >
@@ -171,14 +250,16 @@ export function FriendsPrivacyPage({
                     Demandes d’amis
                   </p>
                   <p className="text-sm text-slate-600 dark:text-slate-300">
-                    {summary.requestsOpen ? 'Les invitations peuvent être reçues.' : 'Les nouvelles invitations sont bloquées.'}
+                    {snapshot.privacy.allowFriendRequests
+                      ? 'Les invitations entrantes sont autorisées.'
+                      : 'Les nouvelles invitations sont bloquées.'}
                   </p>
                 </div>
                 <Button
-                  variant={summary.requestsOpen ? 'secondary' : 'primary'}
-                  onClick={() => update(service.actions.setRequestsOpen(!summary.requestsOpen))}
+                  variant={snapshot.privacy.allowFriendRequests ? 'primary' : 'secondary'}
+                  onClick={() => update((actions) => actions.setRequestsOpen(!snapshot.privacy.allowFriendRequests))}
                 >
-                  {summary.requestsOpen ? 'Bloquer' : 'Autoriser'}
+                  {snapshot.privacy.allowFriendRequests ? 'Ouvertes' : 'Bloquées'}
                 </Button>
               </div>
             </div>
@@ -187,18 +268,14 @@ export function FriendsPrivacyPage({
 
         <Card className="p-5 sm:p-6">
           <div className="flex items-center gap-3">
-            <div className="rounded-2xl bg-slate-100 p-3 text-slate-700 dark:bg-slate-800 dark:text-slate-100">
-              <UserPlus aria-hidden="true" className="size-5" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-slate-950 dark:text-white">
-                Envoyer une invitation
-              </h2>
-              <p className="text-sm text-slate-600 dark:text-slate-300">
-                Saisie locale pour valider le parcours avant la synchronisation sociale.
-              </p>
-            </div>
+            <UserPlus aria-hidden="true" className="size-5 text-brand-700 dark:text-brand-300" />
+            <h2 className="text-xl font-bold text-slate-950 dark:text-white">
+              Envoyer une invitation
+            </h2>
           </div>
+          <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+            Les demandes restent locales pour cette phase. La synchronisation entre comptes sera activée plus tard.
+          </p>
 
           <form className="mt-5 space-y-3" onSubmit={submitRequest}>
             <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200" htmlFor="friend-handle">
@@ -234,7 +311,11 @@ export function FriendsPrivacyPage({
             </h2>
           </div>
           <div className="mt-4 space-y-3">
-            {snapshot.friends.map((friend) => (
+            {snapshot.friends.length === 0 ? (
+              <p className="rounded-2xl border border-slate-200 p-4 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">
+                Aucun ami enregistré sur cet appareil pour le moment.
+              </p>
+            ) : snapshot.friends.map((friend) => (
               <div
                 key={friend.id}
                 className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 p-4 dark:border-slate-800"
@@ -265,7 +346,11 @@ export function FriendsPrivacyPage({
           </div>
 
           <div className="mt-4 space-y-3">
-            {[...incomingRequests, ...outgoingRequests].map((request) => (
+            {[...incomingRequests, ...outgoingRequests].length === 0 ? (
+              <p className="rounded-2xl border border-slate-200 p-4 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">
+                Aucune demande locale enregistrée.
+              </p>
+            ) : [...incomingRequests, ...outgoingRequests].map((request) => (
               <div
                 key={request.id}
                 className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800"
@@ -279,11 +364,11 @@ export function FriendsPrivacyPage({
                   </div>
                   {request.direction === 'incoming' && request.status === 'pending' ? (
                     <div className="flex gap-2">
-                      <Button size="sm" onClick={() => update(service.actions.acceptRequest(request.id))}>
+                      <Button size="sm" onClick={() => update((actions) => actions.acceptRequest(request.id))}>
                         <Check aria-hidden="true" className="size-4" />
                         Accepter
                       </Button>
-                      <Button size="sm" variant="secondary" onClick={() => update(service.actions.declineRequest(request.id))}>
+                      <Button size="sm" variant="secondary" onClick={() => update((actions) => actions.declineRequest(request.id))}>
                         <X aria-hidden="true" className="size-4" />
                         Refuser
                       </Button>

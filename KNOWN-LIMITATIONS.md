@@ -22,4 +22,4 @@ La version 0.25.1 peut conserver le dépassement du budget JavaScript historique
 
 ## Données locales
 
-La base métier reste en Dexie v8, la sauvegarde en JSON v7, le registre local des espaces en v1 et le runtime Dexie Cloud en v10. Aucune migration n’est requise pour 0.25.1.
+La branche 0.26.0 ajoute les tables locales d’amis : base métier Dexie v9, sauvegarde JSON v8, registre local des espaces v1 et runtime Dexie Cloud v10. Le partage social reste local et non synchronisé entre comptes.

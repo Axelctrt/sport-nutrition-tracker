@@ -18,7 +18,7 @@ Aucune clé Gemini n’est exposée dans le front. Les variables `PHOTO_NUTRITIO
 
 ## Synchronisation et données
 
-SportPilot 0.25.1 conserve le runtime Dexie Cloud v10 nommé `sportpilot-sync-runtime-0.20.0-v10`. La base métier reste en Dexie v8, la sauvegarde en JSON v7 et le registre local des espaces en v1. Aucune migration de données n’est requise.
+La branche 0.26.0 prépare la persistance locale des amis : la base métier passe en Dexie v9, la sauvegarde en JSON v8 et le runtime Dexie Cloud reste en v10 sans synchronisation sociale réelle.
 
 ## Arbitrage bundle
 

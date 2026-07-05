@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { FRIENDS_PRIVACY_SETTINGS_ID } from '@/domain/friends/friendship';
 import {
   DELETION_ENTITY_TYPES,
   deletionRecordId,
@@ -784,6 +785,37 @@ const deletionRecordSchema = entityMetadataSchema.extend({
   restoredAt: isoDateTimeSchema.optional(),
 });
 
+
+const friendVisibilityLevelSchema = z.enum(['private', 'friends', 'public']);
+const friendActivitySharingLevelSchema = z.enum([
+  'disabled',
+  'summary-only',
+  'detailed',
+]);
+
+const friendProfileSchema = entityMetadataSchema.extend({
+  displayName: z.string().min(1).max(120),
+  handle: z.string().min(3).max(32),
+  initials: z.string().min(1).max(4),
+  connectedSince: isoDateTimeSchema.optional(),
+});
+
+const friendRequestSchema = entityMetadataSchema.extend({
+  displayName: z.string().min(1).max(120),
+  handle: z.string().min(3).max(32),
+  direction: z.enum(['incoming', 'outgoing']),
+  status: z.enum(['pending', 'accepted', 'declined']),
+  requestedAt: isoDateTimeSchema,
+});
+
+const friendsPrivacySettingsSchema = entityMetadataSchema.extend({
+  id: z.literal(FRIENDS_PRIVACY_SETTINGS_ID),
+  profileVisibility: friendVisibilityLevelSchema,
+  activitySharing: friendActivitySharingLevelSchema,
+  allowFriendRequests: z.boolean(),
+  requireManualApproval: z.boolean(),
+});
+
 const backupUserStateTableNameSchema = z.enum(
   BACKUP_USER_STATE_TABLE_NAMES,
 );
@@ -831,6 +863,12 @@ const backupDataSchema = z.object({
     .array(routineReminderCompletionRecordSchema)
     .optional(),
   deletionRecords: z.array(deletionRecordSchema).optional(),
+  friendProfiles: z.array(friendProfileSchema).optional(),
+  friendRequests: z.array(friendRequestSchema).optional(),
+  friendsPrivacySettings: z
+    .array(friendsPrivacySettingsSchema)
+    .max(1)
+    .optional(),
 });
 
 function addDuplicateIssues<T>(
@@ -1009,6 +1047,9 @@ export const backupEnvelopeSchema = z.object({
       data.routineReminderCompletions ?? [],
     ],
     ['deletionRecords', data.deletionRecords ?? []],
+    ['friendProfiles', data.friendProfiles ?? []],
+    ['friendRequests', data.friendRequests ?? []],
+    ['friendsPrivacySettings', data.friendsPrivacySettings ?? []],
   ];
 
   for (const [name, values] of collections) {
@@ -1034,6 +1075,21 @@ export const backupEnvelopeSchema = z.object({
     'Les missions hebdomadaires',
     context,
   );
+  addDuplicateIssues(
+    data.friendProfiles ?? [],
+    (value) => value.handle,
+    ['data', 'friendProfiles'],
+    'Les profils amis',
+    context,
+  );
+  addDuplicateIssues(
+    data.friendRequests ?? [],
+    (value) => `${value.handle}|${value.direction}|${value.status}`,
+    ['data', 'friendRequests'],
+    'Les demandes amis',
+    context,
+  );
+
   addDuplicateIssues(
     data.routineReminderCompletions ?? [],
     (value) => `${value.date}|${value.type}`,

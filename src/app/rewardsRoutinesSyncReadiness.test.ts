@@ -11,8 +11,8 @@ import { syncPublicDeploymentConfig } from '@/infrastructure/sync-prototype/sync
 describe('compatibilité E2 avec la publication 0.25.1', () => {
   it('ajoute le domaine cloud sans migrer la base métier ni la sauvegarde', () => {
     expect(__APP_VERSION__).toBe('0.25.1');
-    expect(databaseSchemaVersion).toBe(8);
-    expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(7);
+    expect(databaseSchemaVersion).toBe(9);
+    expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(8);
     expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(10);
     expect(SYNC_PROTOTYPE_DATABASE_NAME).toBe(
       'sportpilot-sync-runtime-0.20.0-v10',

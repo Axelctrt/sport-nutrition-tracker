@@ -19,6 +19,11 @@ export interface FriendsPrivacyServiceState extends FriendsPrivacySnapshot {
   readonly lastFeedback?: string;
 }
 
+export interface FriendsPrivacySnapshotRepository {
+  readonly readSnapshot: () => Promise<FriendsPrivacySnapshot>;
+  readonly saveSnapshot: (snapshot: FriendsPrivacySnapshot) => Promise<void>;
+}
+
 export interface FriendsPrivacyServiceActions {
   readonly acceptRequest: (requestId: EntityId) => FriendsPrivacyServiceState;
   readonly declineRequest: (requestId: EntityId) => FriendsPrivacyServiceState;
@@ -63,12 +68,33 @@ const demoRequests: readonly FriendRequest[] = [
   },
 ];
 
+export function createEmptyFriendsPrivacySnapshot(): FriendsPrivacySnapshot {
+  return {
+    friends: [],
+    requests: [],
+    privacy: DEFAULT_FRIENDS_PRIVACY_SETTINGS,
+  };
+}
+
 export function createDefaultFriendsPrivacySnapshot(): FriendsPrivacySnapshot {
   return {
     friends: demoFriends,
     requests: demoRequests,
     privacy: DEFAULT_FRIENDS_PRIVACY_SETTINGS,
   };
+}
+
+export async function loadFriendsPrivacySnapshot(
+  repository: FriendsPrivacySnapshotRepository,
+): Promise<FriendsPrivacySnapshot> {
+  return repository.readSnapshot();
+}
+
+export async function persistFriendsPrivacySnapshot(
+  repository: FriendsPrivacySnapshotRepository,
+  snapshot: FriendsPrivacySnapshot,
+): Promise<void> {
+  await repository.saveSnapshot(snapshot);
 }
 
 export function createFriendsPrivacyService(

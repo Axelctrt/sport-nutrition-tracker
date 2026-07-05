@@ -2,6 +2,7 @@ import Dexie from 'dexie';
 
 import { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import {
+  CURRENT_DATABASE_VERSION,
   DATABASE_VERSION_7,
   DATABASE_VERSION_8,
 } from '@/infrastructure/database/migrations/versions';
@@ -66,7 +67,7 @@ describe('migration des marqueurs de suppression', () => {
       upgradedDatabase = new AppDatabase(databaseName);
       await upgradedDatabase.open();
 
-      expect(upgradedDatabase.verno).toBe(DATABASE_VERSION_8);
+      expect(upgradedDatabase.verno).toBe(CURRENT_DATABASE_VERSION);
       expect(await upgradedDatabase.trashItems.count()).toBe(1);
       expect(await upgradedDatabase.meals.count()).toBe(0);
       expect(

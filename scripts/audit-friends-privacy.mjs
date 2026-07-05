@@ -5,9 +5,15 @@ const requiredFiles = [
   'src/domain/friends/friendship.test.ts',
   'src/application/friends/friendsPrivacyService.ts',
   'src/application/friends/friendsPrivacyService.test.ts',
+  'src/infrastructure/repositories/dexie/DexieFriendsPrivacyRepository.ts',
+  'src/infrastructure/repositories/dexie/DexieFriendsPrivacyRepository.test.ts',
   'src/features/friends/pages/FriendsPrivacyPage.tsx',
   'src/features/friends/pages/FriendsPrivacyPage.test.tsx',
+  'src/features/friends/pages/FriendsPrivacyPage.persistence.test.tsx',
+  'src/infrastructure/database/migrations/version9.ts',
+  'src/infrastructure/backup/friendsPrivacyBackup.test.ts',
   'docs/architecture/friends-privacy-0.26.0-f1.md',
+  'docs/architecture/friends-privacy-0.26.0-f2.md',
 ];
 
 const missingFiles = requiredFiles.filter((file) => !existsSync(file));
@@ -39,6 +45,16 @@ const page = existsSync('src/features/friends/pages/FriendsPrivacyPage.tsx')
 const domain = existsSync('src/domain/friends/friendship.ts')
   ? read('src/domain/friends/friendship.ts')
   : '';
+const repository = existsSync('src/infrastructure/repositories/dexie/DexieFriendsPrivacyRepository.ts')
+  ? read('src/infrastructure/repositories/dexie/DexieFriendsPrivacyRepository.ts')
+  : '';
+const schema = read('src/infrastructure/database/schema.ts');
+const versions = read('src/infrastructure/database/migrations/versions.ts');
+const appDatabase = read('src/infrastructure/database/AppDatabase.ts');
+const backupModels = read('src/domain/models/backup.ts');
+const backupService = read('src/infrastructure/backup/backupService.ts');
+const backupMigrations = read('src/infrastructure/backup/backupMigrations.ts');
+const packageJson = read('package.json');
 const visibleSources = `${page}
 ${domain}`;
 
@@ -48,6 +64,7 @@ const requiredPagePhrases = [
   'Les données détaillées restent privées',
   'Envoyer une invitation',
   'Partage désactivé',
+  'Les demandes restent locales pour cette phase',
 ];
 
 for (const phrase of requiredPagePhrases) {
@@ -58,6 +75,10 @@ for (const phrase of requiredPagePhrases) {
 
 for (const symbol of [
   'DEFAULT_FRIENDS_PRIVACY_SETTINGS',
+  'FRIENDS_PRIVACY_SETTINGS_ID',
+  'StoredFriendProfile',
+  'StoredFriendRequest',
+  'StoredFriendsPrivacySettings',
   'acceptFriendRequest',
   'declineFriendRequest',
   'addOutgoingFriendRequest',
@@ -68,7 +89,55 @@ for (const symbol of [
   }
 }
 
-if (/prochainement|\bMVP\b|\bTODO\b/u.test(page)) {
+for (const tableName of [
+  'friendProfiles',
+  'friendRequests',
+  'friendsPrivacySettings',
+]) {
+  if (!schema.includes(tableName)) {
+    failures.push(`table Dexie absente du schéma : ${tableName}`);
+  }
+  if (!appDatabase.includes(`declare ${tableName}`)) {
+    failures.push(`table Dexie absente de AppDatabase : ${tableName}`);
+  }
+  if (!backupModels.includes(tableName) || !backupService.includes(tableName)) {
+    failures.push(`table amis absente de la sauvegarde : ${tableName}`);
+  }
+}
+
+if (!/DATABASE_VERSION_9\s*=\s*9\s+as\s+const/.test(versions)) {
+  failures.push('DATABASE_VERSION_9 absent');
+}
+
+if (!/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_9/.test(versions)) {
+  failures.push('CURRENT_DATABASE_VERSION ne pointe pas vers DATABASE_VERSION_9');
+}
+
+if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*8/.test(backupMigrations)) {
+  failures.push('CURRENT_BACKUP_SCHEMA_VERSION ne pointe pas vers 8');
+}
+
+if (!repository.includes('DexieFriendsPrivacyRepository')) {
+  failures.push('repository Dexie amis manquant');
+}
+
+if (!page.includes('persistFriendsPrivacySnapshot') || !page.includes('loadFriendsPrivacySnapshot')) {
+  failures.push('page amis non branchée à la persistance locale');
+}
+
+if (!packageJson.includes('audit:friends-privacy')) {
+  failures.push('script audit:friends-privacy absent de package.json');
+}
+
+if (!packageJson.includes('npm run audit:friends-privacy')) {
+  failures.push('audit:friends-privacy absent du check/ci');
+}
+
+if (/real.*cloud|dexieCloud|syncPrototypeClient/u.test(repository)) {
+  failures.push('la persistance F2 ne doit pas activer de cloud réel');
+}
+
+if (/prochainement|MVP|TODO/u.test(page)) {
   failures.push('texte de production interdit dans la page amis');
 }
 
@@ -78,4 +147,4 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-console.log('Audit amis/confidentialité réussi : route, domaine, service, page, tests et garde-fous de partage sont présents.');
+console.log('Audit amis/confidentialité réussi : route, Dexie v9, sauvegarde JSON v8, page persistée et garde-fous de partage sont présents.');

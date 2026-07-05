@@ -296,7 +296,7 @@ describe("selectiveBackupRestoreService", () => {
 
       const envelope: BackupEnvelope = {
         format: "sportpilot-backup",
-        schemaVersion: 7,
+        schemaVersion: 8,
         exportedAt: "2026-06-28T10:00:00.000Z",
         appVersion: "0.16.0",
         includedUserStateTables: ["deletionRecords"],

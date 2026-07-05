@@ -1,6 +1,6 @@
 # Retour arrière — SportPilot 0.25.1
 
-Le fix-forward est privilégié. SportPilot 0.25.1 ne modifie aucun schéma de données : base métier Dexie v8, sauvegarde JSON v7, registre des espaces v1 et runtime cloud v10.
+Le fix-forward est privilégié. La branche 0.26.0 introduit la base métier Dexie v9 et la sauvegarde JSON v8 pour les amis/confidentialité, sans activer de synchronisation sociale cloud.
 
 ## En cas de problème IA Gemini
 

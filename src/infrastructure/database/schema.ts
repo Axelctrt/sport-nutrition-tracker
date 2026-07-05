@@ -31,6 +31,9 @@ export const databaseTableNames = [
   'weeklyMissionCompletions',
   'routineReminderCompletions',
   'deletionRecords',
+  'friendProfiles',
+  'friendRequests',
+  'friendsPrivacySettings',
 ] as const;
 
 export const databaseInternalTableNames = [
@@ -131,4 +134,13 @@ export const schemaVersion8 = {
   ...schemaVersion7,
   deletionRecords:
     'id, entityType, entityId, status, deletedAt, restoredAt, updatedAt, [entityType+entityId]',
+} as const;
+
+
+export const schemaVersion9 = {
+  ...schemaVersion8,
+  friendProfiles: 'id, &handle, displayName, updatedAt',
+  friendRequests:
+    'id, &handle, direction, status, requestedAt, [direction+status], updatedAt',
+  friendsPrivacySettings: 'id, updatedAt',
 } as const;

@@ -1,16 +1,18 @@
-import type { EntityId } from '@/domain/models/common';
+import type { EntityId, IsoDateTime } from '@/domain/models/common';
 
 export type FriendRequestStatus = 'pending' | 'accepted' | 'declined';
 export type FriendRequestDirection = 'incoming' | 'outgoing';
 export type FriendVisibilityLevel = 'private' | 'friends' | 'public';
 export type FriendActivitySharingLevel = 'disabled' | 'summary-only' | 'detailed';
 
+export const FRIENDS_PRIVACY_SETTINGS_ID = 'friends-privacy-settings' as EntityId;
+
 export interface FriendProfileSummary {
   readonly id: EntityId;
   readonly displayName: string;
   readonly handle: string;
   readonly initials: string;
-  readonly connectedSince?: string;
+  readonly connectedSince?: IsoDateTime;
 }
 
 export interface FriendRequest {
@@ -19,7 +21,7 @@ export interface FriendRequest {
   readonly handle: string;
   readonly direction: FriendRequestDirection;
   readonly status: FriendRequestStatus;
-  readonly requestedAt: string;
+  readonly requestedAt: IsoDateTime;
 }
 
 export interface FriendsPrivacySettings {
@@ -27,6 +29,22 @@ export interface FriendsPrivacySettings {
   readonly activitySharing: FriendActivitySharingLevel;
   readonly allowFriendRequests: boolean;
   readonly requireManualApproval: boolean;
+}
+
+export interface StoredFriendProfile extends FriendProfileSummary {
+  readonly createdAt: IsoDateTime;
+  readonly updatedAt: IsoDateTime;
+}
+
+export interface StoredFriendRequest extends FriendRequest {
+  readonly createdAt: IsoDateTime;
+  readonly updatedAt: IsoDateTime;
+}
+
+export interface StoredFriendsPrivacySettings extends FriendsPrivacySettings {
+  readonly id: EntityId;
+  readonly createdAt: IsoDateTime;
+  readonly updatedAt: IsoDateTime;
 }
 
 export interface FriendsPrivacySnapshot {
@@ -96,6 +114,7 @@ export function createOutgoingFriendRequest(
 export function acceptFriendRequest(
   snapshot: FriendsPrivacySnapshot,
   requestId: EntityId,
+  now: IsoDateTime = new Date().toISOString(),
 ): FriendsPrivacySnapshot {
   const request = snapshot.requests.find((candidate) => candidate.id === requestId);
   if (!request || request.direction !== 'incoming' || request.status !== 'pending') {
@@ -107,7 +126,7 @@ export function acceptFriendRequest(
     displayName: request.displayName,
     handle: request.handle,
     initials: initialsFromName(request.displayName),
-    connectedSince: new Date().toISOString(),
+    connectedSince: now,
   };
 
   return {

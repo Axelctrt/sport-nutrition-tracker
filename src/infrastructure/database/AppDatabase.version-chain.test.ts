@@ -8,6 +8,7 @@ import { registerVersion5 } from '@/infrastructure/database/migrations/version5'
 import { registerVersion6 } from '@/infrastructure/database/migrations/version6';
 import { registerVersion7 } from '@/infrastructure/database/migrations/version7';
 import { registerVersion8 } from '@/infrastructure/database/migrations/version8';
+import { registerVersion9 } from '@/infrastructure/database/migrations/version9';
 
 function createVersionRecorder(
   registeredVersions: number[],
@@ -29,7 +30,7 @@ function createVersionRecorder(
 }
 
 describe("déclaration des versions Dexie", () => {
-  it("enregistre les versions historiques 1 à 8", () => {
+  it("enregistre les versions historiques 1 à 9", () => {
     const registeredVersions: number[] = [];
     const recorder = createVersionRecorder(registeredVersions);
 
@@ -41,7 +42,8 @@ describe("déclaration des versions Dexie", () => {
     registerVersion6(recorder);
     registerVersion7(recorder);
     registerVersion8(recorder);
+    registerVersion9(recorder);
 
-    expect(registeredVersions).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+    expect(registeredVersions).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
   });
 });

@@ -10,8 +10,8 @@ import { databaseSchemaVersion } from '@/infrastructure/database/schema';
 describe('correctif 0.25.1 — préremplissage fiable des objectifs', () => {
   it('conserve les versions de stockage sans migration', () => {
     expect(__APP_VERSION__).toBe('0.25.1');
-    expect(databaseSchemaVersion).toBe(8);
-    expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(7);
+    expect(databaseSchemaVersion).toBe(9);
+    expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(8);
   });
 
   it('réhydrate l’éditeur depuis l’objectif sélectionné en modification', () => {

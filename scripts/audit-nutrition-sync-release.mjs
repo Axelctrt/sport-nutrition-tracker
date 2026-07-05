@@ -203,12 +203,12 @@ for (const pipeline of ['check', 'ci']) {
 }
 
 const databaseVersions = read('src/infrastructure/database/migrations/versions.ts');
-if (!/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_8/.test(databaseVersions)) {
+if (!/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_9/.test(databaseVersions)) {
   fail('la base métier principale n’est plus en Dexie v8.');
 }
 const backupMigrations = read('src/infrastructure/backup/backupMigrations.ts');
-if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*7/.test(backupMigrations)) {
-  fail('la sauvegarde n’est plus en JSON v7.');
+if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*8/.test(backupMigrations)) {
+  fail('la sauvegarde n’est plus en JSON v8.');
 }
 const dataSpaces = read('src/infrastructure/data-spaces/dataSpaceRegistry.ts');
 if (!dataSpaces.includes("'sportpilot:data-spaces:v1'")) {
