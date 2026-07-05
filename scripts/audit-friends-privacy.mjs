@@ -67,9 +67,9 @@ const requiredPagePhrases = [
   'Les données détaillées restent privées',
   'Envoyer une invitation',
   'Partage désactivé',
-  'Les demandes restent locales pour cette phase',
+  'recherche réelle est indisponible',
   'Garde-fou social actif',
-  'Aucun export social détaillé n’est disponible en 0.27.0 F1',
+  'Aucun export social détaillé n’est disponible en 0.27.0 F2',
 ];
 
 for (const phrase of requiredPagePhrases) {

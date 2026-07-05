@@ -1,7 +1,10 @@
 import type { EntityId } from '@/domain/models/common';
+import { createDefaultSocialIdentity, type PublicUserProfile } from '@/domain/friends/socialIdentity';
 import {
   acceptFriendRequest,
   addOutgoingFriendRequest,
+  createOutgoingFriendRequestForProfile,
+  evaluateFriendRequestEligibility,
   canExposeFriendActivityDetails,
   createOutgoingFriendRequest,
   DEFAULT_FRIENDS_PRIVACY_SETTINGS,
@@ -56,6 +59,47 @@ describe('friendship domain', () => {
     expect(updated.requests).toHaveLength(2);
     expect(updated.requests.at(-1)).toMatchObject({ handle: 'romain.run', direction: 'outgoing' });
     expect(duplicated.requests).toHaveLength(2);
+  });
+
+
+
+  it('prépare une demande réelle basée sur les userId cloud', () => {
+    const identity = createDefaultSocialIdentity('2026-07-05T10:00:00.000Z', 'alex123');
+    const profile: PublicUserProfile = {
+      userId: 'social-user:lina' as EntityId,
+      handle: 'lina.trail',
+      displayName: 'Lina Trail',
+      createdAt: '2026-07-05T09:00:00.000Z',
+      updatedAt: '2026-07-05T09:00:00.000Z',
+    };
+
+    const eligibility = evaluateFriendRequestEligibility(baseSnapshot, identity, profile);
+    const request = createOutgoingFriendRequestForProfile(
+      profile,
+      identity.userId,
+      '2026-07-05T11:00:00.000Z',
+    );
+
+    expect(eligibility.status).toBe('allowed');
+    expect(request).toMatchObject({
+      requesterUserId: identity.userId,
+      recipientUserId: profile.userId,
+      handle: 'lina.trail',
+      direction: 'outgoing',
+    });
+  });
+
+  it('bloque les cas métier avant création d’une demande réelle', () => {
+    const identity = createDefaultSocialIdentity('2026-07-05T10:00:00.000Z', 'alex123');
+    const selfProfile: PublicUserProfile = {
+      userId: identity.userId,
+      handle: identity.handle,
+      displayName: identity.displayName,
+      createdAt: identity.createdAt,
+      updatedAt: identity.updatedAt,
+    };
+
+    expect(evaluateFriendRequestEligibility(baseSnapshot, identity, selfProfile).status).toBe('self');
   });
 
   it('désactive le partage lorsque le profil devient privé', () => {

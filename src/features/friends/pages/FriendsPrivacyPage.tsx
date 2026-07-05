@@ -19,6 +19,7 @@ import {
   type FriendsPrivacyServiceState,
   type FriendsPrivacySnapshotRepository,
 } from '@/application/friends/friendsPrivacyService';
+import { sendExactFriendRequest } from '@/application/friends/socialFriendRequestService';
 import {
   checkSocialHandleAvailability,
   loadSocialIdentity,
@@ -118,7 +119,9 @@ export function FriendsPrivacyPage({
   const [displayName, setDisplayName] = useState(identity.displayName);
   const [availability, setAvailability] = useState<SocialIdentityAvailabilityResult>(initialAvailability);
   const [identityFeedback, setIdentityFeedback] = useState<string>();
+  const [requestFeedback, setRequestFeedback] = useState<string>();
   const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
+  const [isSendingRequest, setIsSendingRequest] = useState(false);
   const [isLoading, setIsLoading] = useState(() => Boolean(
     (activeRepository && !initialSnapshot) || (activeIdentityRepository && !initialIdentity),
   ));
@@ -202,12 +205,31 @@ export function FriendsPrivacyPage({
 
   const submitRequest = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const service = createFriendsPrivacyService(snapshot);
-    const next = service.actions.sendRequest(handle);
-    persistSnapshot(next);
-    if (next.lastFeedback?.startsWith('Demande envoyée')) {
-      setHandle('');
-    }
+    setRequestFeedback(undefined);
+    setErrorMessage(undefined);
+    setIsSendingRequest(true);
+
+    void sendExactFriendRequest({
+      snapshot,
+      identity,
+      handle,
+      lookupGateway: activeLookupGateway,
+    })
+      .then((result) => {
+        setRequestFeedback(result.message);
+        if (result.status === 'sent') {
+          persistSnapshot({ ...result.snapshot, lastFeedback: result.message });
+          setHandle('');
+        }
+      })
+      .catch((error) => {
+        setRequestFeedback(
+          error instanceof Error
+            ? error.message
+            : 'Service cloud indisponible : demande impossible pour le moment.',
+        );
+      })
+      .finally(() => setIsSendingRequest(false));
   };
 
   const submitIdentity = (event: FormEvent<HTMLFormElement>) => {
@@ -300,7 +322,7 @@ export function FriendsPrivacyPage({
       <InlineNotice title="Garde-fou social actif">
         <p>{sharingGuard.reason}</p>
         <p>
-          Aucun export social détaillé n’est disponible en 0.27.0 F1. Le partage restera limité à un résumé tant que le consentement par ami n’est pas livré.
+          Aucun export social détaillé n’est disponible en 0.27.0 F2. Le partage restera limité à un résumé tant que le consentement par ami n’est pas livré.
         </p>
       </InlineNotice>
 
@@ -328,6 +350,12 @@ export function FriendsPrivacyPage({
       {identityFeedback ? (
         <InlineNotice tone="success" title="Identité sociale">
           <p>{identityFeedback}</p>
+        </InlineNotice>
+      ) : null}
+
+      {requestFeedback ? (
+        <InlineNotice title="Recherche ami">
+          <p>{requestFeedback}</p>
         </InlineNotice>
       ) : null}
 
@@ -493,12 +521,12 @@ export function FriendsPrivacyPage({
             </h2>
           </div>
           <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-            Les demandes restent locales pour cette phase. La recherche exacte d’un vrai utilisateur est préparée, mais aucun backend social réel n’est encore branché.
+            La demande passe par une recherche exacte d’identifiant SportPilot. Sans backend social branché, le service retourne clairement que la recherche réelle est indisponible.
           </p>
 
           <form className="mt-5 space-y-3" onSubmit={submitRequest}>
             <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200" htmlFor="friend-handle">
-              Identifiant ami
+              Identifiant SportPilot
             </label>
             <div className="flex flex-col gap-2 sm:flex-row">
               <input
@@ -508,9 +536,9 @@ export function FriendsPrivacyPage({
                 placeholder="ex. @lea.cardio"
                 className="min-h-11 flex-1 rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-950 shadow-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
               />
-              <Button type="submit">
+              <Button type="submit" disabled={isSendingRequest}>
                 <Send aria-hidden="true" className="size-4" />
-                Envoyer
+                {isSendingRequest ? 'Recherche…' : 'Envoyer'}
               </Button>
             </div>
           </form>

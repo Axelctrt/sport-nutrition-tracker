@@ -1,15 +1,22 @@
 import type { EntityId, IsoDateTime } from '@/domain/models/common';
-import type { SocialIdentity } from '@/domain/friends/socialIdentity';
+import type { PublicUserProfile, SocialIdentity } from '@/domain/friends/socialIdentity';
 
-export type FriendRequestStatus = 'pending' | 'accepted' | 'declined';
+export type FriendRequestStatus = 'pending' | 'accepted' | 'declined' | 'cancelled';
 export type FriendRequestDirection = 'incoming' | 'outgoing';
 export type FriendVisibilityLevel = 'private' | 'friends' | 'public';
 export type FriendActivitySharingLevel = 'disabled' | 'summary-only' | 'detailed';
+export type FriendRequestEligibilityStatus =
+  | 'allowed'
+  | 'self'
+  | 'alreadyFriend'
+  | 'alreadySent'
+  | 'alreadyReceived';
 
 export const FRIENDS_PRIVACY_SETTINGS_ID = 'friends-privacy-settings' as EntityId;
 
 export interface FriendProfileSummary {
   readonly id: EntityId;
+  readonly userId?: EntityId;
   readonly displayName: string;
   readonly handle: string;
   readonly initials: string;
@@ -18,6 +25,8 @@ export interface FriendProfileSummary {
 
 export interface FriendRequest {
   readonly id: EntityId;
+  readonly requesterUserId?: EntityId;
+  readonly recipientUserId?: EntityId;
   readonly displayName: string;
   readonly handle: string;
   readonly direction: FriendRequestDirection;
@@ -64,6 +73,11 @@ export interface FriendsPrivacySummary {
   readonly approvalRequired: boolean;
 }
 
+export interface FriendRequestEligibility {
+  readonly status: FriendRequestEligibilityStatus;
+  readonly message: string;
+}
+
 export type FriendActivityShareScope = 'none' | 'summary' | 'detailed';
 
 export interface FriendActivitySharingGuard {
@@ -106,6 +120,13 @@ export function createFriendRequestId(handle: string): EntityId {
   return `friend-request:${normalizeFriendHandle(handle)}` as EntityId;
 }
 
+export function createCloudFriendRequestId(
+  requesterUserId: EntityId,
+  recipientUserId: EntityId,
+): EntityId {
+  return `friend-request:${requesterUserId}->${recipientUserId}` as EntityId;
+}
+
 export function createOutgoingFriendRequest(
   rawHandle: string,
   now: string = new Date().toISOString(),
@@ -123,6 +144,92 @@ export function createOutgoingFriendRequest(
   };
 }
 
+export function createOutgoingFriendRequestForProfile(
+  profile: PublicUserProfile,
+  requesterUserId: EntityId,
+  now: IsoDateTime = new Date().toISOString(),
+): FriendRequest {
+  return {
+    id: createCloudFriendRequestId(requesterUserId, profile.userId as EntityId),
+    requesterUserId,
+    recipientUserId: profile.userId as EntityId,
+    displayName: profile.displayName,
+    handle: normalizeFriendHandle(profile.handle),
+    direction: 'outgoing',
+    status: 'pending',
+    requestedAt: now,
+  };
+}
+
+export function createFriendProfileSummaryFromPublicProfile(
+  profile: PublicUserProfile,
+  connectedSince?: IsoDateTime,
+): FriendProfileSummary {
+  const summary: FriendProfileSummary = {
+    id: profile.userId as EntityId,
+    userId: profile.userId as EntityId,
+    displayName: profile.displayName,
+    handle: normalizeFriendHandle(profile.handle),
+    initials: initialsFromName(profile.displayName || profile.handle),
+  };
+
+  return connectedSince ? { ...summary, connectedSince } : summary;
+}
+
+export function evaluateFriendRequestEligibility(
+  snapshot: FriendsPrivacySnapshot,
+  identity: SocialIdentity,
+  profile: PublicUserProfile,
+): FriendRequestEligibility {
+  const normalizedHandle = normalizeFriendHandle(profile.handle);
+  const profileUserId = profile.userId as EntityId;
+
+  if (profileUserId === identity.userId || normalizedHandle === normalizeFriendHandle(identity.handle)) {
+    return {
+      status: 'self',
+      message: 'Impossible de t’envoyer une demande à toi-même.',
+    };
+  }
+
+  const alreadyFriend = snapshot.friends.some((friend) => (
+    friend.userId === profileUserId || friend.id === profileUserId || friend.handle === normalizedHandle
+  ));
+  if (alreadyFriend) {
+    return {
+      status: 'alreadyFriend',
+      message: 'Ce profil est déjà dans tes amis.',
+    };
+  }
+
+  const pendingRequest = snapshot.requests.find((request) => (
+    request.status === 'pending'
+    && (
+      request.requesterUserId === profileUserId
+      || request.recipientUserId === profileUserId
+      || request.handle === normalizedHandle
+    )
+  ));
+
+  if (pendingRequest?.direction === 'outgoing') {
+    return {
+      status: 'alreadySent',
+      message: 'Une demande est déjà envoyée à cet identifiant.',
+    };
+  }
+
+  if (pendingRequest?.direction === 'incoming') {
+    return {
+      status: 'alreadyReceived',
+      message: 'Cet utilisateur t’a déjà envoyé une demande. Traite la demande reçue avant d’en envoyer une nouvelle.',
+    };
+  }
+
+  return {
+    status: 'allowed',
+    message: 'Demande possible.',
+  };
+}
+
 export function acceptFriendRequest(
   snapshot: FriendsPrivacySnapshot,
   requestId: EntityId,
@@ -133,8 +240,10 @@ export function acceptFriendRequest(
     return snapshot;
   }
 
+  const friendUserId = request.requesterUserId;
   const friend: FriendProfileSummary = {
-    id: `friend:${request.handle}` as EntityId,
+    id: friendUserId ?? (`friend:${request.handle}` as EntityId),
+    ...(friendUserId ? { userId: friendUserId } : {}),
     displayName: request.displayName,
     handle: request.handle,
     initials: initialsFromName(request.displayName),
@@ -143,7 +252,11 @@ export function acceptFriendRequest(
 
   return {
     ...snapshot,
-    friends: snapshot.friends.some((candidate) => candidate.handle === friend.handle)
+    friends: snapshot.friends.some((candidate) => (
+      (friend.userId ? candidate.userId === friend.userId : false)
+      || candidate.id === friend.id
+      || candidate.handle === friend.handle
+    ))
       ? snapshot.friends
       : [...snapshot.friends, friend],
     requests: snapshot.requests.map((candidate) => (
@@ -183,6 +296,35 @@ export function addOutgoingFriendRequest(
   return {
     ...snapshot,
     requests: [...snapshot.requests, request],
+  };
+}
+
+export function addOutgoingFriendRequestForProfile(
+  snapshot: FriendsPrivacySnapshot,
+  profile: PublicUserProfile,
+  requesterUserId: EntityId,
+  now?: IsoDateTime,
+): FriendsPrivacySnapshot {
+  const eligibility = evaluateFriendRequestEligibility(
+    snapshot,
+    {
+      userId: requesterUserId,
+      handle: '',
+      displayName: '',
+      createdAt: now ?? new Date().toISOString(),
+      updatedAt: now ?? new Date().toISOString(),
+    },
+    profile,
+  );
+
+  if (eligibility.status !== 'allowed') return snapshot;
+
+  return {
+    ...snapshot,
+    requests: [
+      ...snapshot.requests,
+      createOutgoingFriendRequestForProfile(profile, requesterUserId, now),
+    ],
   };
 }
 

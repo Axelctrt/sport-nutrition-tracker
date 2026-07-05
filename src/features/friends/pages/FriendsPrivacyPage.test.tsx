@@ -9,7 +9,8 @@ import { FriendsPrivacyPage } from '@/features/friends/pages/FriendsPrivacyPage'
 const snapshot: FriendsPrivacySnapshot = {
   friends: [
     {
-      id: 'friend:lea' as EntityId,
+      id: 'social-user:lea' as EntityId,
+      userId: 'social-user:lea' as EntityId,
       displayName: 'Léa Cardio',
       handle: 'lea.cardio',
       initials: 'LC',
@@ -19,6 +20,8 @@ const snapshot: FriendsPrivacySnapshot = {
   requests: [
     {
       id: 'request:nora' as EntityId,
+      requesterUserId: 'social-user:nora' as EntityId,
+      recipientUserId: 'social-user:alex123' as EntityId,
       displayName: 'Nora Trail',
       handle: 'nora.trail',
       direction: 'incoming',
@@ -27,6 +30,8 @@ const snapshot: FriendsPrivacySnapshot = {
     },
     {
       id: 'request:mathis' as EntityId,
+      requesterUserId: 'social-user:alex123' as EntityId,
+      recipientUserId: 'social-user:mathis' as EntityId,
       displayName: 'Mathis Run',
       handle: 'mathis.run',
       direction: 'outgoing',
@@ -38,8 +43,14 @@ const snapshot: FriendsPrivacySnapshot = {
 
 const identity = createDefaultSocialIdentity('2026-07-05T10:00:00.000Z', 'alex123');
 
-function renderPage(override: { readonly lookupGateway?: SocialUserLookupGateway } = {}) {
-  return render(<FriendsPrivacyPage initialSnapshot={snapshot} initialIdentity={identity} {...override} />);
+function renderPage(override: { readonly lookupGateway?: SocialUserLookupGateway; readonly initialSnapshot?: FriendsPrivacySnapshot } = {}) {
+  const pageProps = {
+    initialSnapshot: override.initialSnapshot ?? snapshot,
+    initialIdentity: identity,
+    ...(override.lookupGateway ? { lookupGateway: override.lookupGateway } : {}),
+  };
+
+  return render(<FriendsPrivacyPage {...pageProps} />);
 }
 
 describe('FriendsPrivacyPage', () => {
@@ -55,7 +66,7 @@ describe('FriendsPrivacyPage', () => {
     expect(screen.getByRole('button', { name: 'Partage désactivé' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByText(/Les données détaillées restent privées/u)).toBeInTheDocument();
     expect(screen.getByText('Garde-fou social actif')).toBeInTheDocument();
-    expect(screen.getByText(/Aucun export social détaillé n’est disponible en 0\.27\.0 F1/u)).toBeInTheDocument();
+    expect(screen.getByText(/Aucun export social détaillé n’est disponible en 0\.27\.0 F2/u)).toBeInTheDocument();
   });
 
   it('enregistre un handle public valide en sauvegarde locale sans cloud réel', async () => {
@@ -104,15 +115,62 @@ describe('FriendsPrivacyPage', () => {
     expect(screen.getByRole('button', { name: 'Partage désactivé' })).toHaveAttribute('aria-pressed', 'true');
   });
 
-  it('envoie une demande sortante et bloque les doublons', async () => {
+  it('envoie une demande réelle vers un identifiant trouvé et bloque les doublons', async () => {
     const user = userEvent.setup();
-    render(<FriendsPrivacyPage initialSnapshot={{ ...snapshot, requests: [] }} initialIdentity={identity} />);
+    const lookupGateway = createFoundSocialUserLookupGateway([
+      {
+        userId: 'social-user:romain' as EntityId,
+        handle: 'romain.run',
+        displayName: 'Romain Run',
+        createdAt: '2026-07-05T09:00:00.000Z',
+        updatedAt: '2026-07-05T09:00:00.000Z',
+      },
+    ]);
+    renderPage({
+      lookupGateway,
+      initialSnapshot: { ...snapshot, requests: [] },
+    });
 
-    await user.type(screen.getByLabelText('Identifiant ami'), '@romain.run');
+    await user.type(screen.getByLabelText('Identifiant SportPilot'), '@romain.run');
     await user.click(screen.getByRole('button', { name: /Envoyer/u }));
 
-    expect(screen.getByText(/Demande envoyée/u)).toBeInTheDocument();
-    expect(screen.getAllByText(/@romain\.run/u)).toHaveLength(2);
+    const sentMessages = await screen.findAllByText(/Demande envoyée à @romain\.run/u);
+    expect(sentMessages).toHaveLength(2);
+
+    await user.type(screen.getByLabelText('Identifiant SportPilot'), '@romain.run');
+    await user.click(screen.getByRole('button', { name: /Envoyer/u }));
+
+    expect(await screen.findByText(/Une demande est déjà envoyée/u)).toBeInTheDocument();
+  });
+
+  it('affiche identifiant inexistant lorsque la recherche exacte ne trouve personne', async () => {
+    const user = userEvent.setup();
+    renderPage({ lookupGateway: createFoundSocialUserLookupGateway([]) });
+
+    await user.type(screen.getByLabelText('Identifiant SportPilot'), '@ghost.run');
+    await user.click(screen.getByRole('button', { name: /Envoyer/u }));
+
+    expect(await screen.findByText('Identifiant inexistant.')).toBeInTheDocument();
+  });
+
+  it('bloque une demande vers soi-même', async () => {
+    const user = userEvent.setup();
+    renderPage({
+      lookupGateway: createFoundSocialUserLookupGateway([
+        {
+          userId: identity.userId,
+          handle: identity.handle,
+          displayName: identity.displayName,
+          createdAt: identity.createdAt,
+          updatedAt: identity.updatedAt,
+        },
+      ]),
+    });
+
+    await user.type(screen.getByLabelText('Identifiant SportPilot'), '@sp-alex123');
+    await user.click(screen.getByRole('button', { name: /Envoyer/u }));
+
+    expect(await screen.findByText(/toi-même/u)).toBeInTheDocument();
   });
 
   it('choisit le niveau détaillé sans autoriser l’export social détaillé', async () => {

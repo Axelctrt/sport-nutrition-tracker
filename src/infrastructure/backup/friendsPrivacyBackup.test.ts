@@ -13,7 +13,8 @@ function createDatabase(): AppDatabase {
 const snapshot: FriendsPrivacySnapshot = {
   friends: [
     {
-      id: 'friend:backup' as EntityId,
+      id: 'social-user:backup-runner' as EntityId,
+      userId: 'social-user:backup-runner' as EntityId,
       displayName: 'Backup Runner',
       handle: 'backup.runner',
       initials: 'BR',
@@ -22,7 +23,9 @@ const snapshot: FriendsPrivacySnapshot = {
   ],
   requests: [
     {
-      id: 'friend-request:backup.trail' as EntityId,
+      id: 'friend-request:social-user:backup123->social-user:backup-trail' as EntityId,
+      requesterUserId: 'social-user:backup123' as EntityId,
+      recipientUserId: 'social-user:backup-trail' as EntityId,
       displayName: '@backup.trail',
       handle: 'backup.trail',
       direction: 'outgoing',
@@ -57,10 +60,10 @@ describe('sauvegarde amis et confidentialité', () => {
 
       expect(envelope.schemaVersion).toBe(8);
       expect(envelope.data.friendProfiles).toEqual([
-        expect.objectContaining({ handle: 'backup.runner' }),
+        expect.objectContaining({ userId: 'social-user:backup-runner', handle: 'backup.runner' }),
       ]);
       expect(envelope.data.friendRequests).toEqual([
-        expect.objectContaining({ handle: 'backup.trail', status: 'pending' }),
+        expect.objectContaining({ recipientUserId: 'social-user:backup-trail', handle: 'backup.trail', status: 'pending' }),
       ]);
       expect(envelope.data.friendsPrivacySettings).toEqual([
         expect.objectContaining({
@@ -77,8 +80,8 @@ describe('sauvegarde amis et confidentialité', () => {
       await replaceDatabaseFromBackup(envelope, target);
 
       await expect(new DexieFriendsPrivacyRepository(target).readSnapshot()).resolves.toMatchObject({
-        friends: [expect.objectContaining({ handle: 'backup.runner' })],
-        requests: [expect.objectContaining({ handle: 'backup.trail' })],
+        friends: [expect.objectContaining({ userId: 'social-user:backup-runner', handle: 'backup.runner' })],
+        requests: [expect.objectContaining({ recipientUserId: 'social-user:backup-trail', handle: 'backup.trail' })],
         privacy: expect.objectContaining({ profileVisibility: 'private' }),
       });
       await expect(new DexieSocialIdentityRepository(target).readIdentity()).resolves.toMatchObject({

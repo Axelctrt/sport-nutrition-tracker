@@ -803,6 +803,7 @@ const socialIdentitySchema = z.object({
 });
 
 const friendProfileSchema = entityMetadataSchema.extend({
+  userId: z.string().min(1).optional(),
   displayName: z.string().min(1).max(120),
   handle: z.string().min(3).max(32),
   initials: z.string().min(1).max(4),
@@ -810,10 +811,12 @@ const friendProfileSchema = entityMetadataSchema.extend({
 });
 
 const friendRequestSchema = entityMetadataSchema.extend({
+  requesterUserId: z.string().min(1).optional(),
+  recipientUserId: z.string().min(1).optional(),
   displayName: z.string().min(1).max(120),
   handle: z.string().min(3).max(32),
   direction: z.enum(['incoming', 'outgoing']),
-  status: z.enum(['pending', 'accepted', 'declined']),
+  status: z.enum(['pending', 'accepted', 'declined', 'cancelled']),
   requestedAt: isoDateTimeSchema,
 });
 
