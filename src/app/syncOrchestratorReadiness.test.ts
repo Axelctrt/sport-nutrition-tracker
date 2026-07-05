@@ -15,9 +15,9 @@ describe('préparation F1 de l’orchestrateur de synchronisation 0.26.0', () =>
     expect(__APP_VERSION__).toBe('0.27.0');
     expect(databaseSchemaVersion).toBe(10);
     expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(9);
-    expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(11);
+    expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(12);
     expect(SYNC_PROTOTYPE_DATABASE_NAME).toBe(
-      'sportpilot-sync-runtime-0.20.0-v11',
+      'sportpilot-sync-runtime-0.20.0-v12',
     );
   });
 

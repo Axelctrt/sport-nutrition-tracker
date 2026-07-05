@@ -2,7 +2,7 @@
 
 Branche de développement : `feature/social-cloud-0.28.0`
 
-La version 0.28.0 prépare le passage du socle social local vers un backend social cloud réel. F1 a défini le contrat cloud social ; F2 ajoute les identités cloud et la réservation unique des handles exacts.
+La version 0.28.0 prépare le passage du socle social local vers un backend social cloud réel. F1 a défini le contrat cloud social ; F2 ajoute les identités cloud et la réservation unique des handles exacts ; F3 branche la recherche exacte ; F4 prépare les demandes d’amis cloud basées sur `userId`.
 
 ## Contenu livré
 
@@ -17,7 +17,9 @@ La version 0.28.0 prépare le passage du socle social local vers un backend soci
 - garde-fou anti-fuite conservé ;
 - audits sociaux F1 à F5 intégrés au pipeline ;
 - contrat cloud social 0.28.0 F1 ;
-- identités cloud 0.28.0 F2 avec `socialIdentities` et `socialHandleReservations`.
+- identités cloud 0.28.0 F2 avec `socialIdentities` et `socialHandleReservations` ;
+- recherche exacte 0.28.0 F3 ;
+- demandes d’amis cloud 0.28.0 F4 avec `socialFriendRequests`.
 
 ## Versions techniques
 
@@ -25,8 +27,8 @@ La version 0.28.0 prépare le passage du socle social local vers un backend soci
 - base Dexie : v10 ;
 - sauvegarde JSON : v9 ;
 - registre local des espaces : v1 ;
-- runtime Dexie Cloud : v11 ;
-- collections cloud sociales F2 : `socialIdentities`, `socialHandleReservations` ;
+- runtime Dexie Cloud : v12 ;
+- collections cloud sociales F2-F4 : `socialIdentities`, `socialHandleReservations`, `socialFriendRequests` ;
 - synchronisation sociale cloud réelle : non activée en configuration publique.
 
 ## Hors périmètre volontaire
@@ -48,7 +50,7 @@ La publication doit être validée avec :
 
 - audits sociaux `audit:friends-privacy`, `audit:social-identity`, `audit:social-friend-requests`, `audit:social-friend-permissions`, `audit:social-activity-snapshots`, `audit:social-activity-feed` et `audit:social-release` ;
 - tests ciblés identité, demandes, permissions, snapshots et feed ;
-- tests ciblés identités cloud et réservation de handle ;
+- tests ciblés identités cloud, recherche exacte et demandes d’amis cloud ;
 - audit `audit:release` ;
 - audit `audit:repository` ;
 - export sauvegarde JSON v9 contenant les données sociales ;
@@ -65,3 +67,12 @@ Tag attendu à la publication finale : `v0.28.0`.
 - Garde le fallback indisponible tant que `VITE_ENABLE_REAL_SOCIAL_CLOUD=false`.
 - Interdit annuaire, suggestions, matching partiel, demande cloud automatique et export brut.
 
+
+## 0.28.0 F4 — Demandes d’amis cloud
+
+- Ajoute le contrat `socialCloudFriendRequest`.
+- Ajoute la table runtime `socialFriendRequests`.
+- Envoie les demandes sur `requesterUserId` et `recipientUserId`, jamais sur le handle.
+- Prépare les statuts `pending`, `accepted`, `declined` et `cancelled`.
+- Garde le fallback indisponible tant que `VITE_ENABLE_REAL_SOCIAL_CLOUD=false`.
+- Interdit annuaire, suggestions, matching partiel, amitié automatique, snapshots distants et export brut.

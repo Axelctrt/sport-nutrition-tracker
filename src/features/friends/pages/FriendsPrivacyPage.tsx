@@ -21,6 +21,7 @@ import {
 } from '@/application/friends/friendsPrivacyService';
 import { prepareSocialActivityFeed } from '@/application/friends/socialActivityFeedService';
 import { sendExactFriendRequest } from '@/application/friends/socialFriendRequestService';
+import type { SocialCloudFriendRequestPort } from '@/domain/friends/socialCloudContract';
 import {
   checkSocialHandleAvailability,
   loadSocialIdentity,
@@ -52,6 +53,7 @@ import { appDatabase } from '@/infrastructure/database/database';
 import { DexieFriendsPrivacyRepository } from '@/infrastructure/repositories/dexie/DexieFriendsPrivacyRepository';
 import { DexieSocialIdentityRepository } from '@/infrastructure/repositories/dexie/DexieSocialIdentityRepository';
 import { createRuntimeSocialCloudUserLookupGateway } from '@/infrastructure/sync-prototype/realSocialCloudUserLookupGateway';
+import { createRuntimeSocialCloudFriendRequestPort } from '@/infrastructure/sync-prototype/realSocialCloudFriendRequestService';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
@@ -62,6 +64,7 @@ interface FriendsPrivacyPageProps {
   readonly initialIdentity?: SocialIdentity;
   readonly identityRepository?: SocialIdentityRepository;
   readonly lookupGateway?: SocialUserLookupGateway;
+  readonly cloudFriendRequestPort?: SocialCloudFriendRequestPort;
   readonly initialActivitySnapshots?: readonly SocialActivitySnapshot[];
 }
 
@@ -95,6 +98,7 @@ export function FriendsPrivacyPage({
   initialIdentity,
   identityRepository,
   lookupGateway,
+  cloudFriendRequestPort,
   initialActivitySnapshots = [],
 }: FriendsPrivacyPageProps = {}) {
   const [defaultRepository] = useState(() =>
@@ -106,7 +110,11 @@ export function FriendsPrivacyPage({
   const activeRepository = repository ?? defaultRepository;
   const activeIdentityRepository = identityRepository ?? defaultIdentityRepository;
   const [defaultLookupGateway] = useState(() => createRuntimeSocialCloudUserLookupGateway());
+  const [defaultCloudFriendRequestPort] = useState(() => (
+    lookupGateway ? undefined : createRuntimeSocialCloudFriendRequestPort()
+  ));
   const activeLookupGateway = lookupGateway ?? defaultLookupGateway;
+  const activeCloudFriendRequestPort = cloudFriendRequestPort ?? defaultCloudFriendRequestPort;
   const initialSnapshotState = useMemo(
     () => initialSnapshot ?? createEmptyFriendsPrivacySnapshot(),
     [initialSnapshot],
@@ -228,6 +236,7 @@ export function FriendsPrivacyPage({
       identity,
       handle,
       lookupGateway: activeLookupGateway,
+      ...(activeCloudFriendRequestPort ? { cloudFriendRequestPort: activeCloudFriendRequestPort } : {}),
     })
       .then((result) => {
         setRequestFeedback(result.message);
@@ -349,12 +358,12 @@ export function FriendsPrivacyPage({
         </p>
       </InlineNotice>
 
-      <InlineNotice title="Cloud social 0.28.0 F3">
+      <InlineNotice title="Cloud social 0.28.0 F4">
         <p>
-          Recherche exacte F3 prête : le handle public peut être résolu via les réservations cloud sans exposer le userId privé.
+          Demandes d’amis cloud F4 prêtes : la recherche exacte F3 résout un handle via les réservations cloud, puis la demande est envoyée vers le userId distant.
         </p>
         <p>
-          La recherche reste exacte uniquement : aucun annuaire, aucune suggestion, aucun matching partiel et aucune demande cloud ne sont activés en F3.
+          La relation reste basée sur userId : aucun annuaire, aucune suggestion, aucun matching partiel, aucune amitié automatique et aucun snapshot distant ne sont activés en F4.
         </p>
       </InlineNotice>
 

@@ -200,6 +200,10 @@ export function assertSocialCloudContractIntegrity(): true {
     throw new Error('Le contrat cloud social doit réserver les handles séparément des profils publics.');
   }
 
+  if (!SOCIAL_CLOUD_REQUIRED_COLLECTIONS.includes('socialFriendRequests')) {
+    throw new Error('Le contrat cloud social doit préparer les demandes d’amis cloud par userId.');
+  }
+
   if (!SOCIAL_CLOUD_REQUIRED_COLLECTIONS.includes('socialActivitySnapshots')) {
     throw new Error('Le contrat cloud social doit publier uniquement des snapshots sociaux filtrés.');
   }

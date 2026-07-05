@@ -5,7 +5,7 @@ SportPilot 0.27.0 livre la première tranche sociale exploitable : identité pub
 
 ## Préparation cloud social 0.28.0
 
-La branche 0.28.0 prépare le backend social réel sans ouvrir d’annuaire public. F1 définit le contrat cloud social global. F2 ajoute les identités cloud et les réservations de handles dans le runtime Dexie Cloud v11 via `socialIdentities` et `socialHandleReservations`.
+La branche 0.28.0 prépare le backend social réel sans ouvrir d’annuaire public. F1 définit le contrat cloud social global. F2 ajoute les identités cloud et les réservations de handles. F3 branche la recherche exacte. F4 ajoute les demandes d’amis cloud dans le runtime Dexie Cloud v12 via `socialIdentities`, `socialHandleReservations` et `socialFriendRequests`.
 
 Le handle reste un identifiant public de recherche exacte. Les relations futures resteront basées sur le `userId` stable. Le flag `VITE_ENABLE_REAL_SOCIAL_CLOUD` conserve l’activation réelle sous contrôle.
 
@@ -53,4 +53,8 @@ Le budget JavaScript reste aligné sur le périmètre accepté pour l’UX photo
 ## SportPilot 0.28.0 F3 — Recherche exacte cloud
 
 La recherche exacte utilisateur cloud est préparée sur les identités sociales F2. Elle retourne uniquement `found`, `notFound`, `invalidHandle` ou `unavailable`. Aucun annuaire public, aucune suggestion, aucun matching partiel et aucune relation sociale automatique ne sont activés.
+
+## SportPilot 0.28.0 F4 — Demandes d’amis cloud
+
+Les demandes d’amis cloud sont préparées via `socialFriendRequests`. La recherche exacte F3 résout le handle, puis la demande est envoyée vers le `userId` distant. Les statuts `pending`, `accepted`, `declined` et `cancelled` sont structurés, sans créer encore d’amitié cloud automatique, sans permissions distribuées et sans snapshots distants.
 

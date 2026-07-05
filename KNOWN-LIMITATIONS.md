@@ -2,7 +2,7 @@
 
 ## Synchronisation sociale cloud non activée
 
-SportPilot 0.28.0 prépare le backend social réel par étapes. Les identités cloud et réservations de handles sont structurées côté runtime Dexie Cloud, mais le flag public garde le cloud social réel désactivé tant que les demandes d’amis, permissions distribuées et snapshots distants ne sont pas terminés.
+SportPilot 0.28.0 prépare le backend social réel par étapes. Les identités cloud, réservations de handles, recherche exacte et demandes d’amis cloud sont structurées côté runtime Dexie Cloud, mais le flag public garde le cloud social réel désactivé tant que les amitiés cloud, permissions distribuées et snapshots distants ne sont pas terminés.
 
 ## Pas d’annuaire public
 
@@ -42,5 +42,9 @@ La version 0.27.0 conserve le budget JavaScript accepté pour l’UX photo, IA, 
 
 ## 0.28.0 F3 — Limites recherche cloud
 
-La recherche cloud reste strictement exacte. Elle ne fournit pas d’annuaire, de suggestions, de recherche approximative, de matching partiel ni de création automatique d’amitié. Les demandes d’amis cloud et le partage distant restent hors périmètre F3.
+La recherche cloud reste strictement exacte. Elle ne fournit pas d’annuaire, de suggestions, de recherche approximative, de matching partiel ni de création automatique d’amitié.
+
+## 0.28.0 F4 — Limites demandes d’amis cloud
+
+Les demandes d’amis cloud sont préparées avec les statuts `pending`, `accepted`, `declined` et `cancelled`, mais elles ne créent pas encore d’amitié cloud automatique. Les permissions distribuées, snapshots distants, feed distant réel et règles de conflit multi-appareil restent hors périmètre F4.
 

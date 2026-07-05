@@ -10,6 +10,8 @@ import {
 } from '@/domain/friends/socialIdentity';
 import type { SocialUserLookupGateway } from '@/application/friends/socialIdentityService';
 import { lookupExactSocialCloudUser } from '@/application/friends/socialCloudUserLookupService';
+import type { SocialCloudFriendRequestPort } from '@/domain/friends/socialCloudContract';
+import { buildCloudFriendRequest } from '@/domain/friends/socialCloudFriendRequest';
 
 export type ExactFriendRequestStatus =
   | 'sent'
@@ -27,6 +29,7 @@ export interface SendExactFriendRequestInput {
   readonly handle: string;
   readonly lookupGateway: SocialUserLookupGateway;
   readonly now?: string;
+  readonly cloudFriendRequestPort?: SocialCloudFriendRequestPort;
 }
 
 export interface SendExactFriendRequestResult {
@@ -79,11 +82,35 @@ export async function sendExactFriendRequest(
     };
   }
 
+  const now = input.now ?? new Date().toISOString();
+  if (input.cloudFriendRequestPort) {
+    const cloudRequest = buildCloudFriendRequest(input.identity, lookup.profile, now);
+    const cloudResult = await input.cloudFriendRequestPort.sendRequest(cloudRequest);
+
+    if (cloudResult.status === 'alreadyExists') {
+      return {
+        status: 'alreadySent',
+        snapshot: input.snapshot,
+        message: cloudResult.message,
+        profile: lookup.profile,
+      };
+    }
+
+    if (!['created', 'alreadyExists', 'updated'].includes(cloudResult.status)) {
+      return {
+        status: cloudResult.status === 'forbidden' ? 'self' : 'unavailable',
+        snapshot: input.snapshot,
+        message: cloudResult.message,
+        profile: lookup.profile,
+      };
+    }
+  }
+
   const nextSnapshot = addOutgoingFriendRequestForProfile(
     input.snapshot,
     lookup.profile,
     input.identity.userId,
-    input.now,
+    now,
   );
 
   return {
