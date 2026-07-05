@@ -21,11 +21,11 @@ import {
 } from '@/application/friends/friendsPrivacyService';
 import { prepareSocialActivityFeed } from '@/application/friends/socialActivityFeedService';
 import { sendExactFriendRequest } from '@/application/friends/socialFriendRequestService';
+import type { SocialCloudFriendRequestPort } from '@/domain/friends/socialCloudContract';
 import {
   checkSocialHandleAvailability,
   loadSocialIdentity,
   saveSocialIdentity,
-  unavailableSocialUserLookupGateway,
   type SocialIdentityRepository,
   type SocialUserLookupGateway,
 } from '@/application/friends/socialIdentityService';
@@ -52,6 +52,8 @@ import type { SocialActivitySnapshot } from '@/domain/friends/socialActivitySnap
 import { appDatabase } from '@/infrastructure/database/database';
 import { DexieFriendsPrivacyRepository } from '@/infrastructure/repositories/dexie/DexieFriendsPrivacyRepository';
 import { DexieSocialIdentityRepository } from '@/infrastructure/repositories/dexie/DexieSocialIdentityRepository';
+import { createRuntimeSocialCloudUserLookupGateway } from '@/infrastructure/sync-prototype/realSocialCloudUserLookupGateway';
+import { createRuntimeSocialCloudFriendRequestPort } from '@/infrastructure/sync-prototype/realSocialCloudFriendRequestService';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
@@ -62,6 +64,7 @@ interface FriendsPrivacyPageProps {
   readonly initialIdentity?: SocialIdentity;
   readonly identityRepository?: SocialIdentityRepository;
   readonly lookupGateway?: SocialUserLookupGateway;
+  readonly cloudFriendRequestPort?: SocialCloudFriendRequestPort;
   readonly initialActivitySnapshots?: readonly SocialActivitySnapshot[];
 }
 
@@ -95,6 +98,7 @@ export function FriendsPrivacyPage({
   initialIdentity,
   identityRepository,
   lookupGateway,
+  cloudFriendRequestPort,
   initialActivitySnapshots = [],
 }: FriendsPrivacyPageProps = {}) {
   const [defaultRepository] = useState(() =>
@@ -105,7 +109,12 @@ export function FriendsPrivacyPage({
   );
   const activeRepository = repository ?? defaultRepository;
   const activeIdentityRepository = identityRepository ?? defaultIdentityRepository;
-  const activeLookupGateway = lookupGateway ?? unavailableSocialUserLookupGateway;
+  const [defaultLookupGateway] = useState(() => createRuntimeSocialCloudUserLookupGateway());
+  const [defaultCloudFriendRequestPort] = useState(() => (
+    lookupGateway ? undefined : createRuntimeSocialCloudFriendRequestPort()
+  ));
+  const activeLookupGateway = lookupGateway ?? defaultLookupGateway;
+  const activeCloudFriendRequestPort = cloudFriendRequestPort ?? defaultCloudFriendRequestPort;
   const initialSnapshotState = useMemo(
     () => initialSnapshot ?? createEmptyFriendsPrivacySnapshot(),
     [initialSnapshot],
@@ -227,6 +236,7 @@ export function FriendsPrivacyPage({
       identity,
       handle,
       lookupGateway: activeLookupGateway,
+      ...(activeCloudFriendRequestPort ? { cloudFriendRequestPort: activeCloudFriendRequestPort } : {}),
     })
       .then((result) => {
         setRequestFeedback(result.message);
@@ -348,6 +358,18 @@ export function FriendsPrivacyPage({
         </p>
       </InlineNotice>
 
+      <InlineNotice title="Cloud social 0.28.0 F6">
+        <p>
+          Snapshots sociaux distants F6 prêts : les réservations cloud de handles restent utilisées pour la recherche exacte, puis la publication cloud de snapshots filtrés peut utiliser les amitiés cloud et les permissions synchronisées, toujours par userId distant.
+        </p>
+        <p>
+          Tant que le backend social réel n’est pas activé, la recherche réelle est indisponible et l’app conserve un fallback sécurisé.
+        </p>
+        <p>
+          lecture des snapshots autorisés uniquement : Résumé par défaut, détail uniquement après consentement explicite, aucune activité brute, aucun annuaire, aucune suggestion, aucun matching partiel et aucun export brut.
+        </p>
+      </InlineNotice>
+
       {isLoading ? (
         <InlineNotice title="Chargement local">
           <p className="inline-flex items-center gap-2">
@@ -453,7 +475,7 @@ export function FriendsPrivacyPage({
             <p>{availability.message}</p>
           </div>
           <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-950 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
-            Utilisateur non connecté au cloud social : seule la sauvegarde locale est active pour l’instant.
+            Utilisateur non connecté au cloud social : la sauvegarde locale reste active et la réservation cloud attend le backend réel.
           </div>
         </div>
       </Card>
@@ -543,7 +565,7 @@ export function FriendsPrivacyPage({
             </h2>
           </div>
           <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-            La demande passe par une recherche exacte d’identifiant SportPilot. Sans backend social branché, le service retourne clairement que la recherche réelle est indisponible.
+            La demande passe par une recherche exacte d’identifiant SportPilot. En F6, la recherche exacte et les demandes cloud restent protégées : aucune amitié n’est créée sans acceptation explicite.
           </p>
 
           <form className="mt-5 space-y-3" onSubmit={submitRequest}>

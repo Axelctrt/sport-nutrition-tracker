@@ -142,3 +142,84 @@ describe('socialFriendRequestService', () => {
     expect(result.status).toBe('alreadyReceived');
   });
 });
+
+it('envoie la demande cloud avant de persister le pending local quand le port F4 est fourni', async () => {
+  const sentRequests: unknown[] = [];
+
+  const result = await sendExactFriendRequest({
+    snapshot: emptySnapshot,
+    identity,
+    handle: '@lina.trail',
+    lookupGateway: createFoundSocialUserLookupGateway([profile]),
+    cloudFriendRequestPort: {
+      async sendRequest(request) {
+        sentRequests.push(request);
+        return {
+          status: 'created',
+          value: request,
+          message: 'Demande d’ami cloud envoyée. Elle devra être acceptée avant toute relation.',
+        };
+      },
+      async listIncomingRequests() {
+        return [];
+      },
+      async listOutgoingRequests() {
+        return [];
+      },
+      async updateRequestStatus() {
+        return {
+          status: 'updated',
+          message: 'Demande cloud updated.',
+        };
+      },
+    },
+    now: '2026-07-05T12:30:00.000Z',
+  });
+
+  expect(result.status).toBe('sent');
+  expect(sentRequests).toEqual([
+    expect.objectContaining({
+      requesterUserId: identity.userId,
+      recipientUserId: profile.userId,
+      status: 'pending',
+      requestedAt: '2026-07-05T12:30:00.000Z',
+    }),
+  ]);
+  expect(result.snapshot.requests[0]).toMatchObject({
+    requesterUserId: identity.userId,
+    recipientUserId: profile.userId,
+    status: 'pending',
+  });
+});
+
+it('ne crée pas de pending local si le cloud F4 refuse la demande', async () => {
+  const result = await sendExactFriendRequest({
+    snapshot: emptySnapshot,
+    identity,
+    handle: '@lina.trail',
+    lookupGateway: createFoundSocialUserLookupGateway([profile]),
+    cloudFriendRequestPort: {
+      async sendRequest() {
+        return {
+          status: 'unavailable',
+          message: 'Backend social cloud indisponible : demande impossible.',
+        };
+      },
+      async listIncomingRequests() {
+        return [];
+      },
+      async listOutgoingRequests() {
+        return [];
+      },
+      async updateRequestStatus() {
+        return {
+          status: 'unavailable',
+          message: 'Backend social cloud indisponible.',
+        };
+      },
+    },
+  });
+
+  expect(result.status).toBe('unavailable');
+  expect(result.snapshot.requests).toHaveLength(0);
+});

@@ -1,44 +1,66 @@
-# SportPilot 0.27.0
+# SportPilot 0.28.0
 
-SportPilot 0.27.0 livre la première tranche sociale exploitable : identité publique, demandes d’amis compatibles avec de vrais utilisateurs, permissions de partage par ami, snapshots sociaux filtrés et premier fil d’activité amis. Le périmètre reste volontairement strict : pas de messagerie, pas de likes, pas de commentaires, pas de groupes, pas de classements et aucun export d’activité brute.
+SportPilot 0.28.0 finalise la préparation du backend social cloud réel. La release conserve le socle social local de 0.27.0 et ajoute une architecture cloud contrôlée : identités cloud, réservation de handles, recherche exacte, demandes d’amis cloud, amitiés cloud, permissions synchronisées et snapshots sociaux distants filtrés.
 
-## Identité sociale
+Le périmètre reste volontairement strict : pas d’annuaire public, pas de suggestions, pas de recherche approximative, pas de messagerie, pas de likes, pas de commentaires, pas de groupes, pas de classements et aucun export d’activité brute.
 
-- identifiant public SportPilot visible et copiable, affiché avec `@` ;
-- `userId` interne stable et privé, distinct du handle public ;
-- validation stricte du handle public ;
-- recherche exacte préparée par contrat branchable ;
-- état explicite lorsque le backend social réel est indisponible.
+## Identité sociale cloud
 
-## Demandes d’amis
+- `userId` privé, stable et utilisé comme clé relationnelle.
+- Handle public visible, copiable et réservé de façon unique côté cloud.
+- `displayName` public associé au profil.
+- Recherche exacte uniquement via handle complet.
+- État explicite quand le cloud social réel est indisponible.
 
-- champ d’ajout par identifiant SportPilot exact ;
-- gestion des états `trouvé`, `identifiant inexistant`, `service indisponible` ;
-- blocage des demandes vers soi-même ;
-- blocage des amis déjà existants ;
-- blocage des demandes déjà envoyées ou déjà reçues ;
-- persistance locale des données sociales.
+## Demandes et amitiés cloud
 
-## Confidentialité et partage
+- Demandes d’amis envoyées vers un `recipientUserId`, jamais vers un handle comme clé relationnelle.
+- Statuts `pending`, `accepted`, `declined` et `cancelled`.
+- Création d’amitié cloud stable uniquement après acceptation explicite.
+- Blocage des demandes vers soi-même et des doublons pending.
+- Lecture des amitiés par `userId`.
 
-- permissions de partage réglables ami par ami ;
-- résumé par défaut ;
-- détail uniquement après consentement explicite local ;
-- garde-fou social maintenu pour éviter tout partage détaillé non consenti ;
-- génération de snapshots sociaux filtrés sans exposer l’activité privée complète.
+## Permissions synchronisées
 
-## Fil d’activité amis
+- Permissions de partage synchronisées par ami.
+- Résumé par défaut.
+- Détail uniquement après consentement explicite.
+- Aucune activation automatique du partage détaillé.
+- Les permissions servent à filtrer les snapshots sociaux, pas à exposer les activités brutes.
 
-Le fil d’activité amis de 0.27.0 lit uniquement des snapshots sociaux filtrés. Il distingue résumé et détail autorisé, gère les états vides et dégrade les snapshots détaillés vers le résumé si la permission ami ne permet plus le détail. Le fil ne lit jamais une activité brute complète.
+## Snapshots sociaux distants filtrés
+
+Le partage d’activité cloud repose uniquement sur des snapshots sociaux filtrés. Les snapshots peuvent être publiés pour un ami autorisé, puis lus dans le feed amis si la relation et la permission le permettent. Les snapshots entrants sont rattachés au `ownerUserId` distant pour l’affichage du feed.
+
+Aucun payload brut d’activité n’est publié. Les notes libres, champs internes, horaires précis non nécessaires, calculs techniques et données privées complètes restent hors cloud social.
 
 ## Stockage et sauvegarde
 
-La base métier utilise Dexie v10 avec la table `friendActivityPermissions`. La sauvegarde utilise le format JSON v9 et conserve les données sociales locales : identité, amis, demandes, préférences et permissions par ami. Le runtime Dexie Cloud reste disponible pour le socle existant, mais la synchronisation sociale réelle n’est pas activée dans cette version.
+- AppDatabase locale : Dexie v10.
+- Sauvegarde JSON : v9.
+- Runtime Dexie Cloud prototype : v14.
+- Collections cloud sociales : `socialIdentities`, `socialHandleReservations`, `socialFriendRequests`, `socialFriendships`, `socialFriendPermissions`, `socialActivitySnapshots`.
+- Aucune collection `socialRawActivities`.
 
 ## IA photo nutritionnelle
 
 Le parcours IA Gemini livré précédemment reste disponible. La clé Gemini reste côté serveur, le consentement photo reste obligatoire avant envoi externe, et le fallback local reste actif si Gemini, le proxy ou les quotas échouent.
 
-## Arbitrage bundle
+## Garde-fous hors périmètre
 
-Le budget JavaScript reste aligné sur le périmètre accepté pour l’UX photo, IA, synchronisation et social. L’optimisation du bundle reste un chantier technique séparé.
+- Pas d’annuaire public.
+- Pas de suggestions utilisateurs.
+- Pas de matching partiel.
+- Pas de likes.
+- Pas de commentaires.
+- Pas de messagerie.
+- Pas de groupes.
+- Pas de classements.
+- Pas de partage automatique.
+- Pas d’export brut d’activité.
+
+## Validation release
+
+La release 0.28.0 doit être validée avec `npm run build`, `npm run lint`, `npm run test`, `npm run check`, `npm run test:stability`, les audits sociaux locaux 0.27.0 et les audits cloud sociaux 0.28.0 F1 à F6.
+
+Tag attendu à publication : `v0.28.0`.

@@ -22,6 +22,7 @@ describe('configuration du prototype Dexie Cloud', () => {
       realNutritionJournalSyncEnabled: true,
       realAccountPreferencesSyncEnabled: true,
       realRewardsRoutinesSyncEnabled: true,
+      realSocialCloudEnabled: false,
       diagnosticsEnabled: false,
     });
   });
@@ -64,6 +65,7 @@ describe('configuration du prototype Dexie Cloud', () => {
       realNutritionTrackingSyncEnabled: false,
       realAccountPreferencesSyncEnabled: false,
       realRewardsRoutinesSyncEnabled: false,
+      realSocialCloudEnabled: false,
       diagnosticsEnabled: false,
     });
   });
@@ -333,6 +335,31 @@ describe('configuration du prototype Dexie Cloud', () => {
         VITE_ENABLE_REAL_REWARDS_ROUTINES_SYNC: 'yes',
       }),
     ).toThrow('VITE_ENABLE_REAL_REWARDS_ROUTINES_SYNC');
+  });
+
+
+  it('prépare séparément le flag de cloud social réel sans l’activer par défaut', () => {
+    expect(
+      readSyncPrototypeConfig({
+        VITE_ENABLE_SYNC_PROTOTYPE: 'true',
+        VITE_DEXIE_CLOUD_DATABASE_URL:
+          'https://sportpilot-prototype.dexie.cloud',
+        VITE_ENABLE_REAL_SOCIAL_CLOUD: 'true',
+      }),
+    ).toMatchObject({
+      enabled: true,
+      realSocialCloudEnabled: true,
+    });
+  });
+
+  it('refuse une valeur ambiguë pour le cloud social réel', () => {
+    expect(() =>
+      readSyncPrototypeConfig({
+        VITE_ENABLE_SYNC_PROTOTYPE: 'true',
+        VITE_DEXIE_CLOUD_DATABASE_URL: 'https://test.dexie.cloud',
+        VITE_ENABLE_REAL_SOCIAL_CLOUD: 'yes',
+      }),
+    ).toThrow('VITE_ENABLE_REAL_SOCIAL_CLOUD');
   });
 
   it('refuse une valeur ambiguë pour C4', () => {

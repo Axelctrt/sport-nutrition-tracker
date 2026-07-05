@@ -4,6 +4,8 @@ const failures = [];
 const requiredFiles = [
   'src/application/friends/socialFriendRequestService.ts',
   'src/application/friends/socialFriendRequestService.test.ts',
+  'src/application/friends/socialCloudUserLookupService.ts',
+  'src/domain/friends/socialCloudUserLookup.ts',
   'src/domain/friends/friendship.ts',
   'src/domain/friends/friendship.test.ts',
   'src/features/friends/pages/FriendsPrivacyPage.tsx',
@@ -23,6 +25,9 @@ function read(path) {
 
 const domain = read('src/domain/friends/friendship.ts');
 const requestService = read('src/application/friends/socialFriendRequestService.ts');
+const requestServiceTest = read('src/application/friends/socialFriendRequestService.test.ts');
+const lookupDomain = read('src/domain/friends/socialCloudUserLookup.ts');
+const lookupService = read('src/application/friends/socialCloudUserLookupService.ts');
 const identityService = read('src/application/friends/socialIdentityService.ts');
 const page = read('src/features/friends/pages/FriendsPrivacyPage.tsx');
 const backupSchemas = read('src/infrastructure/backup/backupSchemas.ts');
@@ -45,8 +50,6 @@ for (const symbol of [
 
 for (const symbol of [
   'sendExactFriendRequest',
-  'Identifiant inexistant',
-  'Service cloud indisponible',
   'alreadyFriend',
   'alreadySent',
   'alreadyReceived',
@@ -54,8 +57,24 @@ for (const symbol of [
   if (!requestService.includes(symbol)) failures.push(`service demandes réelles incomplet : ${symbol}`);
 }
 
-if (!requestService.includes('lookupGateway.lookupByHandle')) {
-  failures.push('la demande F2 doit passer par une recherche exacte lookupByHandle');
+if (!requestService.includes('lookupExactSocialCloudUser')) {
+  failures.push('la demande F2/F3 doit passer par la recherche exacte normalisée lookupExactSocialCloudUser');
+}
+
+if (requestService.includes('lookupGateway.lookupByHandle')) {
+  failures.push('la demande ne doit plus contourner la normalisation exacte F3 avec un appel direct lookupByHandle');
+}
+
+if (!lookupService.includes('lookupGateway.lookupByHandle')) {
+  failures.push('la couche de recherche exacte F3 doit appeler lookupByHandle dans un seul endroit contrôlé');
+}
+
+if (!lookupDomain.includes('Identifiant inexistant') && !requestServiceTest.includes('Identifiant inexistant')) {
+  failures.push('message notFound manquant : Identifiant inexistant');
+}
+
+if (!lookupDomain.includes('Service cloud indisponible') && !page.includes('Service cloud indisponible')) {
+  failures.push('message unavailable manquant : Service cloud indisponible');
 }
 
 if (!identityService.includes('unavailableSocialUserLookupGateway')) {
@@ -67,9 +86,12 @@ for (const phrase of [
   'Recherche ami',
   'recherche exacte',
   'recherche réelle est indisponible',
-  'Snapshots sociaux F4 actifs',
 ]) {
   if (!page.includes(phrase)) failures.push(`texte/page F2 manquant : ${phrase}`);
+}
+
+if (!page.includes('Snapshots sociaux F4 actifs') && !page.includes('Snapshots sociaux distants F6 prêts')) {
+  failures.push('texte/page social manquant : snapshots sociaux filtrés');
 }
 
 if (!page.includes('sendExactFriendRequest')) {
@@ -112,4 +134,4 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-console.log('Audit demandes amis réelles 0.27.0 F2 réussi : recherche exacte, notFound, self, doublons, userId et backend indisponible par défaut sont couverts sans partage d’activité.');
+console.log('Audit demandes amis réelles 0.27.0 F2 réussi : recherche exacte F3, notFound, self, doublons, userId et backend indisponible par défaut sont couverts sans partage d’activité.');

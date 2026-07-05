@@ -26,9 +26,16 @@ import type {
   EnabledSyncPrototypeConfig,
   SyncPrototypeConfig,
 } from '@/infrastructure/sync-prototype/syncPrototypeConfig';
+import type {
+  SocialCloudIdentityRecord,
+  SocialHandleReservation,
+} from '@/domain/friends/socialCloudIdentity';
+import type { CloudFriendRequest, CloudFriendship } from '@/domain/friends/socialIdentity';
+import type { CloudFriendActivityPermissionRecord } from '@/domain/friends/socialCloudFriendship';
+import type { CloudSocialActivitySnapshotRecord } from '@/domain/friends/socialCloudActivitySnapshot';
 
 export const LEGACY_SYNC_PROTOTYPE_DATABASE_NAME = 'sportpilot-sync-prototype';
-export const SYNC_PROTOTYPE_DATABASE_VERSION = 10;
+export const SYNC_PROTOTYPE_DATABASE_VERSION = 14;
 export const SYNC_PROTOTYPE_DATABASE_NAME =
   `sportpilot-sync-runtime-0.20.0-v${SYNC_PROTOTYPE_DATABASE_VERSION}`;
 export const SYNC_PROTOTYPE_TABLE_NAMES = [
@@ -53,6 +60,12 @@ export const SYNC_PROTOTYPE_TABLE_NAMES = [
   'realNutritionTracking',
   'realAccountPreferences',
   'realRewardsRoutines',
+  'socialIdentities',
+  'socialHandleReservations',
+  'socialFriendRequests',
+  'socialFriendships',
+  'socialFriendPermissions',
+  'socialActivitySnapshots',
 ] as const;
 
 export class SyncPrototypeDatabase extends Dexie {
@@ -77,6 +90,12 @@ export class SyncPrototypeDatabase extends Dexie {
   declare realNutritionTracking: Table<NutritionTrackingAggregate, EntityId>;
   declare realAccountPreferences: Table<AccountPreferencesAggregate, EntityId>;
   declare realRewardsRoutines: Table<RewardsRoutinesAggregate, EntityId>;
+  declare socialIdentities: Table<SocialCloudIdentityRecord, EntityId>;
+  declare socialHandleReservations: Table<SocialHandleReservation, EntityId>;
+  declare socialFriendRequests: Table<CloudFriendRequest, EntityId | string>;
+  declare socialFriendships: Table<CloudFriendship, EntityId | string>;
+  declare socialFriendPermissions: Table<CloudFriendActivityPermissionRecord, EntityId | string>;
+  declare socialActivitySnapshots: Table<CloudSocialActivitySnapshotRecord, EntityId | string>;
 
   constructor(
     { databaseUrl }: EnabledSyncPrototypeConfig,
@@ -155,6 +174,12 @@ export class SyncPrototypeDatabase extends Dexie {
       realNutritionTracking: 'id, updatedAt',
       realAccountPreferences: 'id, updatedAt',
       realRewardsRoutines: 'id, updatedAt',
+      socialIdentities: 'id, &userId, &handle, updatedAt',
+      socialHandleReservations: 'id, &handle, ownerUserId, updatedAt',
+      socialFriendRequests: 'id, requesterUserId, recipientUserId, status, requestedAt, updatedAt, [recipientUserId+status], [requesterUserId+status]',
+      socialFriendships: 'id, userAId, userBId, status, updatedAt, [userAId+status], [userBId+status]',
+      socialFriendPermissions: 'id, ownerUserId, friendUserId, sharingLevel, updatedAt, [ownerUserId+friendUserId]',
+      socialActivitySnapshots: 'id, ownerUserId, publishedForUserId, sourceActivityId, activityType, date, scope, updatedAt, [publishedForUserId+date], [ownerUserId+publishedForUserId]',
     });
 
     this.cloud.configure({
