@@ -11,6 +11,7 @@ const requiredFiles = [
   'src/features/friends/pages/FriendsPrivacyPage.test.tsx',
   'src/features/friends/pages/FriendsPrivacyPage.persistence.test.tsx',
   'src/infrastructure/database/migrations/version9.ts',
+  'src/infrastructure/database/migrations/version10.ts',
   'src/infrastructure/backup/friendsPrivacyBackup.test.ts',
   'docs/architecture/friends-privacy-0.26.0-f1.md',
   'docs/architecture/friends-privacy-0.26.0-f2.md',
@@ -69,7 +70,7 @@ const requiredPagePhrases = [
   'Partage désactivé',
   'recherche réelle est indisponible',
   'Garde-fou social actif',
-  'Aucun export social détaillé n’est disponible en 0.27.0 F2',
+  'Aucun export social détaillé n’est disponible en 0.27.0 F3',
 ];
 
 for (const phrase of requiredPagePhrases) {
@@ -101,6 +102,7 @@ for (const tableName of [
   'friendProfiles',
   'friendRequests',
   'friendsPrivacySettings',
+  'friendActivityPermissions',
 ]) {
   if (!schema.includes(tableName)) {
     failures.push(`table Dexie absente du schéma : ${tableName}`);
@@ -117,12 +119,12 @@ if (!/DATABASE_VERSION_9\s*=\s*9\s+as\s+const/.test(versions)) {
   failures.push('DATABASE_VERSION_9 absent');
 }
 
-if (!/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_9/.test(versions)) {
-  failures.push('CURRENT_DATABASE_VERSION ne pointe pas vers DATABASE_VERSION_9');
+if (!/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_10/.test(versions)) {
+  failures.push('CURRENT_DATABASE_VERSION ne pointe pas vers DATABASE_VERSION_10');
 }
 
-if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*8/.test(backupMigrations)) {
-  failures.push('CURRENT_BACKUP_SCHEMA_VERSION ne pointe pas vers 8');
+if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*9/.test(backupMigrations)) {
+  failures.push('CURRENT_BACKUP_SCHEMA_VERSION ne pointe pas vers 9');
 }
 
 if (!repository.includes('DexieFriendsPrivacyRepository')) {
@@ -163,4 +165,4 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-console.log('Audit amis/confidentialité réussi : route, Dexie v9, sauvegarde JSON v8, page persistée, garde-fou social et blocage du détail sont présents.');
+console.log('Audit amis/confidentialité réussi : route, Dexie v10, sauvegarde JSON v9, page persistée, garde-fou social et blocage du détail sont présents.');

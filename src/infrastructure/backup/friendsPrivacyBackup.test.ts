@@ -41,7 +41,7 @@ const snapshot: FriendsPrivacySnapshot = {
 };
 
 describe('sauvegarde amis et confidentialité', () => {
-  it('exporte et restaure les tables amis avec le format JSON v8', async () => {
+  it('exporte et restaure les tables amis avec le format JSON v9', async () => {
     const source = createDatabase();
     const target = createDatabase();
 
@@ -58,12 +58,15 @@ describe('sauvegarde amis et confidentialité', () => {
 
       const envelope = await createBackupEnvelope(source, '2026-07-05T10:30:00.000Z');
 
-      expect(envelope.schemaVersion).toBe(8);
+      expect(envelope.schemaVersion).toBe(9);
       expect(envelope.data.friendProfiles).toEqual([
         expect.objectContaining({ userId: 'social-user:backup-runner', handle: 'backup.runner' }),
       ]);
       expect(envelope.data.friendRequests).toEqual([
         expect.objectContaining({ recipientUserId: 'social-user:backup-trail', handle: 'backup.trail', status: 'pending' }),
+      ]);
+      expect(envelope.data.friendActivityPermissions).toEqual([
+        expect.objectContaining({ friendHandle: 'backup.runner', sharingLevel: 'summary' }),
       ]);
       expect(envelope.data.friendsPrivacySettings).toEqual([
         expect.objectContaining({
@@ -83,6 +86,7 @@ describe('sauvegarde amis et confidentialité', () => {
         friends: [expect.objectContaining({ userId: 'social-user:backup-runner', handle: 'backup.runner' })],
         requests: [expect.objectContaining({ recipientUserId: 'social-user:backup-trail', handle: 'backup.trail' })],
         privacy: expect.objectContaining({ profileVisibility: 'private' }),
+        activityPermissions: [expect.objectContaining({ friendHandle: 'backup.runner', sharingLevel: 'summary' })],
       });
       await expect(new DexieSocialIdentityRepository(target).readIdentity()).resolves.toMatchObject({
         userId: identity.userId,

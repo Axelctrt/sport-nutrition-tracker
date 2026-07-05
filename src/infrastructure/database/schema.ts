@@ -34,6 +34,7 @@ export const databaseTableNames = [
   'friendProfiles',
   'friendRequests',
   'friendsPrivacySettings',
+  'friendActivityPermissions',
 ] as const;
 
 export const databaseInternalTableNames = [
@@ -143,4 +144,10 @@ export const schemaVersion9 = {
   friendRequests:
     'id, &handle, direction, status, requestedAt, [direction+status], updatedAt',
   friendsPrivacySettings: 'id, updatedAt',
+} as const;
+
+export const schemaVersion10 = {
+  ...schemaVersion9,
+  friendActivityPermissions:
+    'id, friendUserId, friendHandle, sharingLevel, updatedAt',
 } as const;

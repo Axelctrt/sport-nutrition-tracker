@@ -18,8 +18,8 @@ describe('préparation de la version stable 0.26.0', () => {
   });
 
   it('conserve les versions de schéma attendues', () => {
-    expect(databaseSchemaVersion).toBe(9);
-    expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(8);
+    expect(databaseSchemaVersion).toBe(10);
+    expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(9);
     expect(databaseTableNames).toEqual(
       expect.arrayContaining([
         'userProfile',
@@ -31,6 +31,7 @@ describe('préparation de la version stable 0.26.0', () => {
         'friendProfiles',
         'friendRequests',
         'friendsPrivacySettings',
+        'friendActivityPermissions',
       ]),
     );
   });

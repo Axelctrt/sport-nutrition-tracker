@@ -12,9 +12,9 @@ import { CURRENT_BACKUP_SCHEMA_VERSION } from '@/infrastructure/backup/backupMig
 import { databaseSchemaVersion } from '@/infrastructure/database/schema';
 
 describe('readiness identité sociale 0.27.0 F1', () => {
-  it('conserve Dexie v9 et sauvegarde JSON v8 sans nouvelle table sociale', () => {
-    expect(databaseSchemaVersion).toBe(9);
-    expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(8);
+  it('conserve Dexie v10 et sauvegarde JSON v9 sans nouvelle table sociale', () => {
+    expect(databaseSchemaVersion).toBe(10);
+    expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(9);
   });
 
   it('valide le handle public exact sans arobase en stockage', () => {

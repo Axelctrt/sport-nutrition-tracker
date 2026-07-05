@@ -1,5 +1,6 @@
 import type { Activity } from '@/domain/models/activity';
 import type {
+  StoredFriendActivityPermission,
   StoredFriendProfile,
   StoredFriendRequest,
   StoredFriendsPrivacySettings,
@@ -97,6 +98,7 @@ export interface BackupData {
   friendProfiles?: StoredFriendProfile[];
   friendRequests?: StoredFriendRequest[];
   friendsPrivacySettings?: StoredFriendsPrivacySettings[];
+  friendActivityPermissions?: StoredFriendActivityPermission[];
 }
 
 export interface RewardBackupState {

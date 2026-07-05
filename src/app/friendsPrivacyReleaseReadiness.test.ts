@@ -27,26 +27,27 @@ const detailedSharingSnapshot: FriendsPrivacySnapshot = {
   },
 };
 
-describe('readiness amis et confidentialité 0.26.0', () => {
-  it('conserve Dexie v9, sauvegarde JSON v8 et les tables sociales locales', () => {
-    expect(databaseSchemaVersion).toBe(9);
-    expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(8);
+describe('readiness permissions de partage par ami 0.27.0 F3', () => {
+  it('passe Dexie en v10, sauvegarde JSON en v9 et expose les permissions par ami', () => {
+    expect(databaseSchemaVersion).toBe(10);
+    expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(9);
     expect(databaseTableNames).toEqual(
       expect.arrayContaining([
         'friendProfiles',
         'friendRequests',
         'friendsPrivacySettings',
+        'friendActivityPermissions',
       ]),
     );
   });
 
-  it('bloque le détail social tant que le consentement par ami n’est pas livré', () => {
+  it('conserve le garde-fou global tant que les snapshots sociaux ne sont pas livrés', () => {
     const guard = evaluateFriendActivitySharingGuard(detailedSharingSnapshot);
 
     expect(guard.allowedScope).toBe('summary');
     expect(guard.canShareSummary).toBe(true);
     expect(guard.canShareDetailed).toBe(false);
     expect(guard.detailedSharingBlocked).toBe(true);
-    expect(guard.reason).toMatch(/bloqué jusqu’au consentement explicite/u);
+    expect(guard.reason).toMatch(/Résumé autorisé par défaut/u);
   });
 });

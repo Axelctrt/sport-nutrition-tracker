@@ -6,12 +6,15 @@ import {
   createOutgoingFriendRequestForProfile,
   evaluateFriendRequestEligibility,
   canExposeFriendActivityDetails,
+  canExposeFriendActivityDetailsToFriend,
   createOutgoingFriendRequest,
   DEFAULT_FRIENDS_PRIVACY_SETTINGS,
   declineFriendRequest,
   normalizeFriendHandle,
   evaluateFriendActivitySharingGuard,
+  evaluateFriendScopedActivitySharingGuard,
   summarizeFriendsPrivacy,
+  updateFriendActivityPermission,
   updateFriendsPrivacySettings,
   type FriendsPrivacySnapshot,
 } from '@/domain/friends/friendship';
@@ -150,4 +153,40 @@ describe('friendship domain', () => {
     });
     expect(canExposeFriendActivityDetails(baseSnapshot)).toBe(false);
   });
+
+  it('crée une permission résumé par défaut et autorise le détail seulement par consentement ami', () => {
+    const friend = {
+      id: 'social-user:nora' as EntityId,
+      userId: 'social-user:nora' as EntityId,
+      displayName: 'Nora Trail',
+      handle: 'nora.trail',
+      initials: 'NT',
+    };
+    const detailedSnapshot = updateFriendActivityPermission({
+      ...baseSnapshot,
+      friends: [friend],
+      privacy: {
+        ...DEFAULT_FRIENDS_PRIVACY_SETTINGS,
+        activitySharing: 'detailed',
+      },
+    }, friend.id, 'detailed', '2026-07-05T12:00:00.000Z');
+
+    const scopedGuard = evaluateFriendScopedActivitySharingGuard(detailedSnapshot, friend);
+
+    expect(scopedGuard).toMatchObject({
+      allowedScope: 'detailed',
+      canShareDetailed: true,
+      detailedSharingBlocked: false,
+    });
+    expect(detailedSnapshot.activityPermissions?.[0]).toMatchObject({
+      friendUserId: friend.userId,
+      friendHandle: 'nora.trail',
+      sharingLevel: 'detailed',
+      detailedConsent: 'granted',
+      detailedConsentGrantedAt: '2026-07-05T12:00:00.000Z',
+    });
+    expect(canExposeFriendActivityDetails(detailedSnapshot)).toBe(false);
+    expect(canExposeFriendActivityDetailsToFriend(detailedSnapshot, friend)).toBe(true);
+  });
+
 });

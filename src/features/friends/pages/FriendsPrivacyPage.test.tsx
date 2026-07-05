@@ -66,7 +66,8 @@ describe('FriendsPrivacyPage', () => {
     expect(screen.getByRole('button', { name: 'Partage désactivé' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByText(/Les données détaillées restent privées/u)).toBeInTheDocument();
     expect(screen.getByText('Garde-fou social actif')).toBeInTheDocument();
-    expect(screen.getByText(/Aucun export social détaillé n’est disponible en 0\.27\.0 F2/u)).toBeInTheDocument();
+    expect(screen.getByText(/Aucun export social détaillé n’est disponible en 0\.27\.0 F3/u)).toBeInTheDocument();
+    expect(screen.getByText(/Permission : Résumé uniquement/u)).toBeInTheDocument();
   });
 
   it('enregistre un handle public valide en sauvegarde locale sans cloud réel', async () => {
@@ -173,14 +174,18 @@ describe('FriendsPrivacyPage', () => {
     expect(await screen.findByText(/toi-même/u)).toBeInTheDocument();
   });
 
-  it('choisit le niveau détaillé sans autoriser l’export social détaillé', async () => {
+  it('règle le détail ami par ami après consentement explicite local', async () => {
     const user = userEvent.setup();
     renderPage();
 
-    await user.click(screen.getByRole('button', { name: 'Détaillé après accord' }));
+    expect(screen.getByRole('button', { name: 'Autoriser le détail' })).toBeDisabled();
 
-    expect(screen.getAllByText(/Partage détaillé préparé/u)).toHaveLength(2);
-    expect(screen.getAllByText(/bloqué jusqu’au consentement explicite/u)).toHaveLength(2);
+    await user.click(screen.getByRole('button', { name: 'Détaillé après accord' }));
+    await user.click(screen.getByRole('button', { name: 'Autoriser le détail' }));
+
+    expect(screen.getByText(/Consentement détaillé enregistré pour cet ami/u)).toBeInTheDocument();
+    expect(screen.getByText(/Permission : Détail autorisé/u)).toBeInTheDocument();
+    expect(screen.getByText(/Détail autorisé localement pour cet ami/u)).toBeInTheDocument();
     expect(screen.getByText(/Aucun export social détaillé/u)).toBeInTheDocument();
   });
 });

@@ -50,7 +50,7 @@ for (const phrase of [
   'Identifiant invalide',
   'Compte cloud indisponible',
   'Utilisateur non connecté au cloud social',
-  'Aucun export social détaillé n’est disponible en 0.27.0 F2',
+  'Aucun export social détaillé n’est disponible en 0.27.0 F3',
 ]) {
   if (!page.includes(phrase)) failures.push(`texte F1 manquant dans la page amis : ${phrase}`);
 }
@@ -95,7 +95,7 @@ if (!friendship.includes('readonly socialIdentity?: SocialIdentity')) {
 }
 
 if (!backupSchemas.includes('socialIdentitySchema') || !backupSchemas.includes('socialIdentity: socialIdentitySchema.optional()')) {
-  failures.push('sauvegarde JSON v8 ne préserve pas l’identité sociale optionnelle');
+  failures.push('sauvegarde JSON v9 ne préserve pas l’identité sociale optionnelle');
 }
 
 if (!packageJson.includes('audit:social-identity')) {

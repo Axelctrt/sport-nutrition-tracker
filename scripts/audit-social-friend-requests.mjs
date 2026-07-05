@@ -67,7 +67,7 @@ for (const phrase of [
   'Recherche ami',
   'recherche exacte',
   'recherche réelle est indisponible',
-  'Aucun export social détaillé n’est disponible en 0.27.0 F2',
+  'Aucun export social détaillé n’est disponible en 0.27.0 F3',
 ]) {
   if (!page.includes(phrase)) failures.push(`texte/page F2 manquant : ${phrase}`);
 }
@@ -81,10 +81,10 @@ if (page.includes('actions.sendRequest(handle)')) {
 }
 
 for (const field of ['userId: z.string().min(1).optional()', 'requesterUserId', 'recipientUserId']) {
-  if (!backupSchemas.includes(field)) failures.push(`sauvegarde JSON v8 ne préserve pas le champ F2 : ${field}`);
+  if (!backupSchemas.includes(field)) failures.push(`sauvegarde JSON v9 ne préserve pas le champ F2 : ${field}`);
 }
 
-if (!/databaseSchemaVersion\s*=\s*CURRENT_DATABASE_VERSION/u.test(schema) || !/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*8/u.test(backupMigrations)) {
+if (!/databaseSchemaVersion\s*=\s*CURRENT_DATABASE_VERSION/u.test(schema) || !/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*9/u.test(backupMigrations)) {
   failures.push('versions Dexie/backup impossibles à vérifier');
 }
 

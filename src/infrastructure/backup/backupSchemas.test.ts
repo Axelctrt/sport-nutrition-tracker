@@ -405,10 +405,10 @@ describe("backupEnvelopeSchema", () => {
 });
 
 describe("migrateBackupEnvelope", () => {
-  it("migre une sauvegarde version 1 vers la version 8 sans altérer ses données", () => {
+  it("migre une sauvegarde version 1 vers la version 9 sans altérer ses données", () => {
     const migrated = migrateBackupEnvelope(createVersion1Envelope());
 
-    expect(migrated.schemaVersion).toBe(8);
+    expect(migrated.schemaVersion).toBe(9);
     expect(migrated.data.userProfile).toHaveLength(1);
     expect(migrated.data.exerciseDefinitions).toEqual([]);
     expect(migrated.data.userSettings?.[0]?.id).toBe('user-settings');
@@ -416,10 +416,11 @@ describe("migrateBackupEnvelope", () => {
     expect(migrated.data.workoutTemplates).toEqual([]);
     expect(migrated.data.workoutSessions).toEqual([]);
     expect(migrated.data.strengthSets).toEqual([]);
+    expect(migrated.data.friendActivityPermissions).toEqual([]);
   });
 
-  it("migre directement la version 2 vers la version 8", () => {
-    expect(migrateBackupEnvelope(createValidEnvelope()).schemaVersion).toBe(8);
+  it("migre directement la version 2 vers la version 9", () => {
+    expect(migrateBackupEnvelope(createValidEnvelope()).schemaVersion).toBe(9);
   });
 
   it("convertit le rewardState v4 en tables utilisateur couvertes explicitement", () => {
@@ -452,7 +453,7 @@ describe("migrateBackupEnvelope", () => {
 
     const migrated = migrateBackupEnvelope(legacy);
 
-    expect(migrated.schemaVersion).toBe(8);
+    expect(migrated.schemaVersion).toBe(9);
     expect(migrated.rewardState).toBeUndefined();
     expect(migrated.includedUserStateTables).toEqual([
       "earnedAchievements",

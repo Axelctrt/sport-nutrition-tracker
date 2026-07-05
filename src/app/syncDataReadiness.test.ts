@@ -9,19 +9,19 @@ import {
 
 describe('préparation locale à la synchronisation multiappareil', () => {
   it('fige les versions validées à la clôture de la phase B', () => {
-    expect(databaseSchemaVersion).toBe(9);
-    expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(8);
+    expect(databaseSchemaVersion).toBe(10);
+    expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(9);
   });
 
-  it('sépare les trente-trois tables utilisateur des quatre tables locales', () => {
-    expect(databaseTableNames).toHaveLength(33);
+  it('sépare les trente-quatre tables utilisateur des quatre tables locales', () => {
+    expect(databaseTableNames).toHaveLength(34);
     expect(databaseInternalTableNames).toEqual([
       'deviceSettings',
       'migrationJournal',
       'databaseDiagnostics',
       'trashItems',
     ]);
-    expect(allDatabaseTableNames).toHaveLength(37);
+    expect(allDatabaseTableNames).toHaveLength(38);
 
     expect(databaseTableNames).toEqual(
       expect.arrayContaining([
@@ -31,6 +31,7 @@ describe('préparation locale à la synchronisation multiappareil', () => {
         'endurancePlanningSessions',
         'routineReminderCompletions',
         'deletionRecords',
+        'friendActivityPermissions',
       ]),
     );
     for (const localTable of [
@@ -44,7 +45,7 @@ describe('préparation locale à la synchronisation multiappareil', () => {
     }
   });
 
-  it('inclut les états utilisateur synchronisables dans le backup v8', () => {
+  it('inclut les états utilisateur synchronisables dans le backup v9', () => {
     expect(BACKUP_USER_STATE_TABLE_NAMES).toEqual([
       'goals',
       'endurancePlanningSessions',

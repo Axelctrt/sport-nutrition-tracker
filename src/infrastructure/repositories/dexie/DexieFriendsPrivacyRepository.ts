@@ -2,9 +2,12 @@ import type { IsoDateTime } from '@/domain/models/common';
 import {
   DEFAULT_FRIENDS_PRIVACY_SETTINGS,
   FRIENDS_PRIVACY_SETTINGS_ID,
+  ensureFriendActivityPermissions,
+  type FriendActivityPermission,
   type FriendProfileSummary,
   type FriendRequest,
   type FriendsPrivacySnapshot,
+  type StoredFriendActivityPermission,
   type StoredFriendProfile,
   type StoredFriendRequest,
   type StoredFriendsPrivacySettings,
@@ -40,6 +43,26 @@ function toStoredFriendRequest(
     ...request,
     requestedAt: sanitizeTimestamp(request.requestedAt, previous?.requestedAt ?? now),
     createdAt: previous?.createdAt ?? request.requestedAt,
+    updatedAt: now,
+  };
+}
+
+function toStoredFriendActivityPermission(
+  permission: FriendActivityPermission,
+  now: IsoDateTime,
+  previous?: StoredFriendActivityPermission,
+): StoredFriendActivityPermission {
+  return {
+    ...permission,
+    ...(permission.detailedConsentGrantedAt
+      ? {
+          detailedConsentGrantedAt: sanitizeTimestamp(
+            permission.detailedConsentGrantedAt,
+            previous?.detailedConsentGrantedAt ?? now,
+          ),
+        }
+      : {}),
+    createdAt: previous?.createdAt ?? now,
     updatedAt: now,
   };
 }
@@ -86,17 +109,19 @@ export class DexieFriendsPrivacyRepository implements FriendsPrivacySnapshotRepo
       'read',
       'Impossible de lire les amis et les préférences de confidentialité.',
       async () => {
-        const [friends, requests, privacy] = await Promise.all([
+        const [friends, requests, privacy, activityPermissions] = await Promise.all([
           this.database.friendProfiles.toArray(),
           this.database.friendRequests.toArray(),
           this.database.friendsPrivacySettings.get(FRIENDS_PRIVACY_SETTINGS_ID),
+          this.database.friendActivityPermissions.toArray(),
         ]);
 
-        return {
+        return ensureFriendActivityPermissions({
           friends: friends.sort((a, b) => a.displayName.localeCompare(b.displayName, 'fr')),
           requests: requests.sort((a, b) => b.requestedAt.localeCompare(a.requestedAt)),
           privacy: toSnapshotPrivacy(privacy),
-        };
+          activityPermissions: activityPermissions.sort((a, b) => a.friendHandle.localeCompare(b.friendHandle, 'fr')),
+        });
       },
     );
   }
@@ -107,32 +132,41 @@ export class DexieFriendsPrivacyRepository implements FriendsPrivacySnapshotRepo
       'Impossible de persister les amis et les préférences de confidentialité.',
       async () => {
         const now = currentIsoDateTime();
-        const [existingFriends, existingRequests, existingPrivacy] = await Promise.all([
+        const normalizedSnapshot = ensureFriendActivityPermissions(snapshot);
+        const [existingFriends, existingRequests, existingPrivacy, existingPermissions] = await Promise.all([
           this.database.friendProfiles.toArray(),
           this.database.friendRequests.toArray(),
           this.database.friendsPrivacySettings.get(FRIENDS_PRIVACY_SETTINGS_ID),
+          this.database.friendActivityPermissions.toArray(),
         ]);
         const friendsById = new Map(existingFriends.map((friend) => [friend.id, friend]));
         const requestsById = new Map(existingRequests.map((request) => [request.id, request]));
+        const permissionsById = new Map(existingPermissions.map((permission) => [permission.id, permission]));
 
-        const storedFriends = snapshot.friends.map((friend) =>
+        const storedFriends = normalizedSnapshot.friends.map((friend) =>
           toStoredFriendProfile(friend, now, friendsById.get(friend.id)),
         );
-        const storedRequests = snapshot.requests.map((request) =>
+        const storedRequests = normalizedSnapshot.requests.map((request) =>
           toStoredFriendRequest(request, now, requestsById.get(request.id)),
         );
-        const storedPrivacy = toStoredPrivacySettings(snapshot, now, existingPrivacy);
+        const storedPermissions = (normalizedSnapshot.activityPermissions ?? []).map((permission) =>
+          toStoredFriendActivityPermission(permission, now, permissionsById.get(permission.id)),
+        );
+        const storedPrivacy = toStoredPrivacySettings(normalizedSnapshot, now, existingPrivacy);
 
         await this.database.transaction(
           'rw',
           this.database.friendProfiles,
           this.database.friendRequests,
+          this.database.friendActivityPermissions,
           this.database.friendsPrivacySettings,
           async () => {
             await this.database.friendProfiles.clear();
             await this.database.friendRequests.clear();
+            await this.database.friendActivityPermissions.clear();
             await this.database.friendProfiles.bulkPut(storedFriends);
             await this.database.friendRequests.bulkPut(storedRequests);
+            await this.database.friendActivityPermissions.bulkPut(storedPermissions);
             await this.database.friendsPrivacySettings.put(storedPrivacy);
           },
         );
