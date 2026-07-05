@@ -43,6 +43,8 @@ describe('FriendsPrivacyPage', () => {
     expect(screen.getByText('Nora Trail')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Partage désactivé' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByText(/Les données détaillées restent privées/u)).toBeInTheDocument();
+    expect(screen.getByText('Garde-fou social actif')).toBeInTheDocument();
+    expect(screen.getByText(/Aucun export social détaillé n’est disponible en 0\.26\.0/u)).toBeInTheDocument();
   });
 
   it('accepte une demande reçue sans activer le partage détaillé', async () => {
@@ -65,5 +67,17 @@ describe('FriendsPrivacyPage', () => {
 
     expect(screen.getByText(/Demande envoyée/u)).toBeInTheDocument();
     expect(screen.getAllByText(/@romain\.run/u)).toHaveLength(2);
+  });
+
+
+  it('choisit le niveau détaillé sans autoriser l’export social détaillé', async () => {
+    const user = userEvent.setup();
+    render(<FriendsPrivacyPage initialSnapshot={snapshot} />);
+
+    await user.click(screen.getByRole('button', { name: 'Détaillé après accord' }));
+
+    expect(screen.getAllByText(/Partage détaillé préparé/u)).toHaveLength(2);
+    expect(screen.getAllByText(/bloqué jusqu’au consentement explicite/u)).toHaveLength(2);
+    expect(screen.getByText(/Aucun export social détaillé/u)).toBeInTheDocument();
   });
 });

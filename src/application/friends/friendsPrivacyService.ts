@@ -5,6 +5,7 @@ import {
   createOutgoingFriendRequest,
   declineFriendRequest,
   DEFAULT_FRIENDS_PRIVACY_SETTINGS,
+  evaluateFriendActivitySharingGuard,
   summarizeFriendsPrivacy,
   updateFriendsPrivacySettings,
   type FriendActivitySharingLevel,
@@ -36,6 +37,7 @@ export interface FriendsPrivacyServiceActions {
 export interface FriendsPrivacyService {
   readonly getState: () => FriendsPrivacyServiceState;
   readonly getSummary: () => ReturnType<typeof summarizeFriendsPrivacy>;
+  readonly getSharingGuard: () => ReturnType<typeof evaluateFriendActivitySharingGuard>;
   readonly actions: FriendsPrivacyServiceActions;
 }
 
@@ -121,6 +123,7 @@ export function createFriendsPrivacyService(
   return {
     getState: () => state,
     getSummary: () => summarizeFriendsPrivacy(state),
+    getSharingGuard: () => evaluateFriendActivitySharingGuard(state),
     actions: {
       acceptRequest: (requestId) => setState(
         acceptFriendRequest(state, requestId),
@@ -153,7 +156,9 @@ export function createFriendsPrivacyService(
         { activitySharing: sharing },
         sharing === 'disabled'
           ? 'Partage d’activité désactivé.'
-          : 'Niveau de partage préparé. Les données détaillées restent soumises à consentement.',
+          : sharing === 'detailed'
+            ? 'Partage détaillé préparé, mais bloqué jusqu’au consentement explicite par ami.'
+            : 'Niveau de partage préparé. Les données détaillées restent soumises à consentement.',
       ),
       setRequestsOpen: (open) => updatePrivacy(
         { allowFriendRequests: open },

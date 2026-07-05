@@ -14,6 +14,8 @@ const requiredFiles = [
   'src/infrastructure/backup/friendsPrivacyBackup.test.ts',
   'docs/architecture/friends-privacy-0.26.0-f1.md',
   'docs/architecture/friends-privacy-0.26.0-f2.md',
+  'docs/architecture/friends-privacy-0.26.0-f3.md',
+  'src/app/friendsPrivacyReleaseReadiness.test.ts',
 ];
 
 const missingFiles = requiredFiles.filter((file) => !existsSync(file));
@@ -65,6 +67,8 @@ const requiredPagePhrases = [
   'Envoyer une invitation',
   'Partage désactivé',
   'Les demandes restent locales pour cette phase',
+  'Garde-fou social actif',
+  'Aucun export social détaillé n’est disponible en 0.26.0',
 ];
 
 for (const phrase of requiredPagePhrases) {
@@ -83,6 +87,9 @@ for (const symbol of [
   'declineFriendRequest',
   'addOutgoingFriendRequest',
   'summarizeFriendsPrivacy',
+  'evaluateFriendActivitySharingGuard',
+  'canExposeFriendActivityDetails',
+  'FriendActivitySharingGuard',
 ]) {
   if (!domain.includes(symbol)) {
     failures.push(`contrat domaine manquant : ${symbol}`);
@@ -125,6 +132,14 @@ if (!page.includes('persistFriendsPrivacySnapshot') || !page.includes('loadFrien
   failures.push('page amis non branchée à la persistance locale');
 }
 
+if (!domain.includes('canShareDetailed: false') || !domain.includes('detailedSharingBlocked: true')) {
+  failures.push('garde-fou de partage détaillé absent ou permissif');
+}
+
+if (!page.includes('sharingGuard.reason')) {
+  failures.push('page amis ne rend pas le garde-fou social');
+}
+
 if (!packageJson.includes('audit:friends-privacy')) {
   failures.push('script audit:friends-privacy absent de package.json');
 }
@@ -147,4 +162,4 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-console.log('Audit amis/confidentialité réussi : route, Dexie v9, sauvegarde JSON v8, page persistée et garde-fous de partage sont présents.');
+console.log('Audit amis/confidentialité réussi : route, Dexie v9, sauvegarde JSON v8, page persistée, garde-fou social et blocage du détail sont présents.');

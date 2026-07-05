@@ -1,6 +1,6 @@
 # Retour arrière — SportPilot 0.25.1
 
-Le fix-forward est privilégié. La branche 0.26.0 introduit la base métier Dexie v9 et la sauvegarde JSON v8 pour les amis/confidentialité, sans activer de synchronisation sociale cloud.
+Le fix-forward est privilégié. La branche 0.26.0 introduit la base métier Dexie v9 et la sauvegarde JSON v8 pour les amis/confidentialité, sans activer de synchronisation sociale cloud. Le garde-fou social F3 bloque tout export détaillé, ce qui limite le rollback à la persistance locale et aux textes de confidentialité.
 
 ## En cas de problème IA Gemini
 

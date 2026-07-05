@@ -22,6 +22,7 @@ import {
 import {
   FRIEND_ACTIVITY_SHARING_LABELS,
   FRIEND_PROFILE_VISIBILITY_LABELS,
+  evaluateFriendActivitySharingGuard,
   summarizeFriendsPrivacy,
   type FriendActivitySharingLevel,
   type FriendRequest,
@@ -103,6 +104,7 @@ export function FriendsPrivacyPage({
   }, [activeRepository, initialSnapshot]);
 
   const summary = useMemo(() => summarizeFriendsPrivacy(snapshot), [snapshot]);
+  const sharingGuard = useMemo(() => evaluateFriendActivitySharingGuard(snapshot), [snapshot]);
   const incomingRequests = snapshot.requests.filter((request) => request.direction === 'incoming');
   const outgoingRequests = snapshot.requests.filter((request) => request.direction === 'outgoing');
 
@@ -165,6 +167,13 @@ export function FriendsPrivacyPage({
       <InlineNotice title="Partage contrôlé par défaut">
         <p>
           Les données détaillées restent privées. Chaque demande doit être acceptée et le partage d’activité reste désactivé tant que tu ne changes pas explicitement ce réglage.
+        </p>
+      </InlineNotice>
+
+      <InlineNotice title="Garde-fou social actif">
+        <p>{sharingGuard.reason}</p>
+        <p>
+          Aucun export social détaillé n’est disponible en 0.26.0. Le partage restera limité à un résumé tant que le consentement par ami n’est pas livré.
         </p>
       </InlineNotice>
 

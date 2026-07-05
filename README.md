@@ -18,7 +18,7 @@ Aucune clé Gemini n’est exposée dans le front. Les variables `PHOTO_NUTRITIO
 
 ## Synchronisation et données
 
-La branche 0.26.0 prépare la persistance locale des amis : la base métier passe en Dexie v9, la sauvegarde en JSON v8 et le runtime Dexie Cloud reste en v10 sans synchronisation sociale réelle.
+La branche 0.26.0 prépare la persistance locale des amis : la base métier passe en Dexie v9, la sauvegarde en JSON v8 et le runtime Dexie Cloud reste en v10 sans synchronisation sociale réelle. Un garde-fou social bloque aussi tout export détaillé tant que le consentement par ami n’est pas livré.
 
 ## Arbitrage bundle
 

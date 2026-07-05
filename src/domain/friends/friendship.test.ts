@@ -2,10 +2,12 @@ import type { EntityId } from '@/domain/models/common';
 import {
   acceptFriendRequest,
   addOutgoingFriendRequest,
+  canExposeFriendActivityDetails,
   createOutgoingFriendRequest,
   DEFAULT_FRIENDS_PRIVACY_SETTINGS,
   declineFriendRequest,
   normalizeFriendHandle,
+  evaluateFriendActivitySharingGuard,
   summarizeFriendsPrivacy,
   updateFriendsPrivacySettings,
   type FriendsPrivacySnapshot,
@@ -77,5 +79,31 @@ describe('friendship domain', () => {
       approvalRequired: true,
       sharingEnabled: false,
     });
+  });
+
+  it('bloque le partage détaillé tant que le consentement par ami n’existe pas', () => {
+    const guard = evaluateFriendActivitySharingGuard({
+      ...baseSnapshot,
+      friends: [
+        {
+          id: 'friend:nora.trail' as EntityId,
+          displayName: 'Nora Trail',
+          handle: 'nora.trail',
+          initials: 'NT',
+        },
+      ],
+      privacy: {
+        ...DEFAULT_FRIENDS_PRIVACY_SETTINGS,
+        activitySharing: 'detailed',
+      },
+    });
+
+    expect(guard).toMatchObject({
+      allowedScope: 'summary',
+      canShareSummary: true,
+      canShareDetailed: false,
+      detailedSharingBlocked: true,
+    });
+    expect(canExposeFriendActivityDetails(baseSnapshot)).toBe(false);
   });
 });

@@ -62,6 +62,16 @@ export interface FriendsPrivacySummary {
   readonly approvalRequired: boolean;
 }
 
+export type FriendActivityShareScope = 'none' | 'summary' | 'detailed';
+
+export interface FriendActivitySharingGuard {
+  readonly allowedScope: FriendActivityShareScope;
+  readonly canShareSummary: boolean;
+  readonly canShareDetailed: boolean;
+  readonly detailedSharingBlocked: boolean;
+  readonly reason: string;
+}
+
 export const DEFAULT_FRIENDS_PRIVACY_SETTINGS: FriendsPrivacySettings = {
   profileVisibility: 'friends',
   activitySharing: 'disabled',
@@ -204,6 +214,62 @@ export function summarizeFriendsPrivacy(snapshot: FriendsPrivacySnapshot): Frien
     requestsOpen: snapshot.privacy.allowFriendRequests,
     approvalRequired: snapshot.privacy.requireManualApproval,
   };
+}
+
+export function evaluateFriendActivitySharingGuard(
+  snapshot: FriendsPrivacySnapshot,
+): FriendActivitySharingGuard {
+  if (snapshot.privacy.profileVisibility === 'private') {
+    return {
+      allowedScope: 'none',
+      canShareSummary: false,
+      canShareDetailed: false,
+      detailedSharingBlocked: true,
+      reason: 'Profil privé : aucun partage d’activité n’est autorisé.',
+    };
+  }
+
+  if (snapshot.privacy.activitySharing === 'disabled') {
+    return {
+      allowedScope: 'none',
+      canShareSummary: false,
+      canShareDetailed: false,
+      detailedSharingBlocked: true,
+      reason: 'Partage désactivé : les activités restent privées.',
+    };
+  }
+
+  if (snapshot.friends.length === 0) {
+    return {
+      allowedScope: 'none',
+      canShareSummary: false,
+      canShareDetailed: false,
+      detailedSharingBlocked: true,
+      reason: 'Aucun ami accepté : rien n’est exposé hors de cet appareil.',
+    };
+  }
+
+  if (snapshot.privacy.activitySharing === 'summary-only') {
+    return {
+      allowedScope: 'summary',
+      canShareSummary: true,
+      canShareDetailed: false,
+      detailedSharingBlocked: true,
+      reason: 'Résumé d’activité autorisé pour les amis acceptés uniquement.',
+    };
+  }
+
+  return {
+    allowedScope: 'summary',
+    canShareSummary: true,
+    canShareDetailed: false,
+    detailedSharingBlocked: true,
+    reason: 'Partage détaillé préparé mais bloqué jusqu’au consentement explicite par ami en 0.27.0.',
+  };
+}
+
+export function canExposeFriendActivityDetails(snapshot: FriendsPrivacySnapshot): boolean {
+  return evaluateFriendActivitySharingGuard(snapshot).canShareDetailed;
 }
 
 function initialsFromName(value: string): string {

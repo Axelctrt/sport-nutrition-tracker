@@ -44,4 +44,16 @@ describe('friendsPrivacyService', () => {
     expect(state.privacy.allowFriendRequests).toBe(false);
     expect(state.friends).toHaveLength(1);
   });
+
+  it('expose le garde-fou qui bloque le détail social en 0.26.0', () => {
+    const service = createFriendsPrivacyService();
+    service.actions.setActivitySharing('detailed');
+
+    expect(service.getSharingGuard()).toMatchObject({
+      canShareSummary: true,
+      canShareDetailed: false,
+      detailedSharingBlocked: true,
+    });
+    expect(service.getState().lastFeedback).toContain('bloqué jusqu’au consentement explicite');
+  });
 });

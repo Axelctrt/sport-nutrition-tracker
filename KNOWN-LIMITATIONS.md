@@ -22,4 +22,4 @@ La version 0.25.1 peut conserver le dépassement du budget JavaScript historique
 
 ## Données locales
 
-La branche 0.26.0 ajoute les tables locales d’amis : base métier Dexie v9, sauvegarde JSON v8, registre local des espaces v1 et runtime Dexie Cloud v10. Le partage social reste local et non synchronisé entre comptes.
+La branche 0.26.0 ajoute les tables locales d’amis : base métier Dexie v9, sauvegarde JSON v8, registre local des espaces v1 et runtime Dexie Cloud v10. Le partage social reste local et non synchronisé entre comptes ; le garde-fou social bloque tout export détaillé jusqu’au consentement par ami.
