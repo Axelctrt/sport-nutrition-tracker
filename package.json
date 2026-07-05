@@ -13,7 +13,7 @@
     "test": "vitest run",
     "test:stability": "vitest run --sequence.shuffle --sequence.seed=20260626",
     "test:watch": "vitest",
-    "preview": "vite preview",
+    "preview": "npm run build && wrangler dev",
     "check": "npm run lint && npm run test && npm run build && npm run audit:sync-deployment && npm run audit:sports-sync && npm run audit:goal-sync && npm run audit:strength-sync && npm run audit:sports-sync-release && npm run audit:nutrition-journal-sync && npm run audit:nutrition-library-sync && npm run audit:nutrition-tracking-sync && npm run audit:nutrition-sync-release && npm run audit:account-management && npm run audit:guest-data-import && npm run audit:cloud-account-restore && npm run audit:account-preferences-sync && npm run audit:rewards-routines-sync && npm run audit:unified-sync-center && npm run audit:sync-orchestrator && npm run audit:automatic-sync && npm run audit:sync-transparency && npm run audit:automatic-sync-release && npm run audit:action-feedback && npm run audit:goal-prefill && npm run audit:reward-theme-catalog && npm run audit:photo-nutrition && npm run audit:photo-ai && npm run audit:friends-privacy && npm run audit:social-identity && npm run audit:social-friend-requests && npm run audit:social-friend-permissions && npm run audit:social-activity-snapshots && npm run audit:social-activity-feed && npm run audit:social-release && npm run audit:social-cloud-contract && npm run audit:social-cloud-identity && npm run audit:social-cloud-lookup && npm run audit:social-cloud-friend-requests && npm run audit:social-cloud-friendships && npm run audit:social-cloud-activity-snapshots && npm run audit:full-account-continuity-release && npm run audit:data-continuity-release && npm run audit:account-isolation && npm run audit:mvp && npm run audit:release && npm run audit:security && npm run audit:production && npm run audit:repository",
     "ci": "npm run lint && npm run test && npm run build && npm run audit:sync-deployment && npm run audit:sports-sync && npm run audit:goal-sync && npm run audit:strength-sync && npm run audit:sports-sync-release && npm run audit:nutrition-journal-sync && npm run audit:nutrition-library-sync && npm run audit:nutrition-tracking-sync && npm run audit:nutrition-sync-release && npm run audit:account-management && npm run audit:guest-data-import && npm run audit:cloud-account-restore && npm run audit:account-preferences-sync && npm run audit:rewards-routines-sync && npm run audit:unified-sync-center && npm run audit:sync-orchestrator && npm run audit:automatic-sync && npm run audit:sync-transparency && npm run audit:automatic-sync-release && npm run audit:action-feedback && npm run audit:goal-prefill && npm run audit:reward-theme-catalog && npm run audit:photo-nutrition && npm run audit:photo-ai && npm run audit:friends-privacy && npm run audit:social-identity && npm run audit:social-friend-requests && npm run audit:social-friend-permissions && npm run audit:social-activity-snapshots && npm run audit:social-activity-feed && npm run audit:social-release && npm run audit:social-cloud-contract && npm run audit:social-cloud-identity && npm run audit:social-cloud-lookup && npm run audit:social-cloud-friend-requests && npm run audit:social-cloud-friendships && npm run audit:social-cloud-activity-snapshots && npm run audit:full-account-continuity-release && npm run audit:data-continuity-release && npm run audit:account-isolation && npm run audit:mvp && npm run audit:release && npm run audit:security && npm run audit:production && npm run audit:repository",
     "diagnose:off": "node scripts/diagnose-open-food-facts.mjs",
@@ -69,7 +69,8 @@
     "audit:social-cloud-lookup": "node scripts/audit-social-cloud-lookup.mjs",
     "audit:social-cloud-friend-requests": "node scripts/audit-social-cloud-friend-requests.mjs",
     "audit:social-cloud-friendships": "node scripts/audit-social-cloud-friendships.mjs",
-    "audit:social-cloud-activity-snapshots": "node scripts/audit-social-cloud-activity-snapshots.mjs"
+    "audit:social-cloud-activity-snapshots": "node scripts/audit-social-cloud-activity-snapshots.mjs",
+    "deploy": "npm run build && wrangler deploy"
   },
   "dependencies": {
     "@ericblade/quagga2": "^1.12.1",
@@ -86,6 +87,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.43.0",
     "@playwright/test": "^1.61.1",
     "@tailwindcss/vite": "^4.3.1",
     "@testing-library/jest-dom": "^6.9.1",
@@ -103,6 +105,7 @@
     "vite": "^8.1.0",
     "vite-plugin-pwa": "^1.3.0",
     "vitest": "^4.1.9",
-    "workbox-window": "^7.4.0"
+    "workbox-window": "^7.4.0",
+    "wrangler": "^4.107.0"
   }
 }
