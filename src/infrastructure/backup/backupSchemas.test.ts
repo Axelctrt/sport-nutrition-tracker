@@ -405,10 +405,10 @@ describe("backupEnvelopeSchema", () => {
 });
 
 describe("migrateBackupEnvelope", () => {
-  it("migre une sauvegarde version 1 vers la version 7 sans altérer ses données", () => {
+  it("migre une sauvegarde version 1 vers la version 8 sans altérer ses données", () => {
     const migrated = migrateBackupEnvelope(createVersion1Envelope());
 
-    expect(migrated.schemaVersion).toBe(7);
+    expect(migrated.schemaVersion).toBe(8);
     expect(migrated.data.userProfile).toHaveLength(1);
     expect(migrated.data.exerciseDefinitions).toEqual([]);
     expect(migrated.data.userSettings?.[0]?.id).toBe('user-settings');
@@ -418,8 +418,8 @@ describe("migrateBackupEnvelope", () => {
     expect(migrated.data.strengthSets).toEqual([]);
   });
 
-  it("migre directement la version 2 vers la version 7", () => {
-    expect(migrateBackupEnvelope(createValidEnvelope()).schemaVersion).toBe(7);
+  it("migre directement la version 2 vers la version 8", () => {
+    expect(migrateBackupEnvelope(createValidEnvelope()).schemaVersion).toBe(8);
   });
 
   it("convertit le rewardState v4 en tables utilisateur couvertes explicitement", () => {
@@ -452,7 +452,7 @@ describe("migrateBackupEnvelope", () => {
 
     const migrated = migrateBackupEnvelope(legacy);
 
-    expect(migrated.schemaVersion).toBe(7);
+    expect(migrated.schemaVersion).toBe(8);
     expect(migrated.rewardState).toBeUndefined();
     expect(migrated.includedUserStateTables).toEqual([
       "earnedAchievements",

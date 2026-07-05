@@ -81,7 +81,7 @@ if (!deployment.includes("VITE_ENABLE_REAL_ACTIVITY_SYNC: 'true'")) {
   fail('le build de production n’active pas explicitement le lot B1.');
 }
 
-if (!/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_8/.test(mainVersions)) {
+if (!/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_9/.test(mainVersions)) {
   fail('le lot B1 ne doit pas modifier la version de la base locale principale.');
 }
 
