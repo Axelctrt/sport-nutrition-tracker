@@ -57,3 +57,11 @@ La publication doit être validée avec :
 - build, check complet et test de stabilité.
 
 Tag attendu à la publication finale : `v0.28.0`.
+
+## 0.28.0 F3 — Recherche exacte utilisateur cloud
+
+- Ajoute le contrat `socialCloudUserLookup`.
+- Branche un gateway de recherche exacte sur les identités cloud F2.
+- Garde le fallback indisponible tant que `VITE_ENABLE_REAL_SOCIAL_CLOUD=false`.
+- Interdit annuaire, suggestions, matching partiel, demande cloud automatique et export brut.
+

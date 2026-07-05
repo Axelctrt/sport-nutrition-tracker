@@ -25,7 +25,6 @@ import {
   checkSocialHandleAvailability,
   loadSocialIdentity,
   saveSocialIdentity,
-  unavailableSocialUserLookupGateway,
   type SocialIdentityRepository,
   type SocialUserLookupGateway,
 } from '@/application/friends/socialIdentityService';
@@ -52,6 +51,7 @@ import type { SocialActivitySnapshot } from '@/domain/friends/socialActivitySnap
 import { appDatabase } from '@/infrastructure/database/database';
 import { DexieFriendsPrivacyRepository } from '@/infrastructure/repositories/dexie/DexieFriendsPrivacyRepository';
 import { DexieSocialIdentityRepository } from '@/infrastructure/repositories/dexie/DexieSocialIdentityRepository';
+import { createRuntimeSocialCloudUserLookupGateway } from '@/infrastructure/sync-prototype/realSocialCloudUserLookupGateway';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
@@ -105,7 +105,8 @@ export function FriendsPrivacyPage({
   );
   const activeRepository = repository ?? defaultRepository;
   const activeIdentityRepository = identityRepository ?? defaultIdentityRepository;
-  const activeLookupGateway = lookupGateway ?? unavailableSocialUserLookupGateway;
+  const [defaultLookupGateway] = useState(() => createRuntimeSocialCloudUserLookupGateway());
+  const activeLookupGateway = lookupGateway ?? defaultLookupGateway;
   const initialSnapshotState = useMemo(
     () => initialSnapshot ?? createEmptyFriendsPrivacySnapshot(),
     [initialSnapshot],
@@ -348,12 +349,12 @@ export function FriendsPrivacyPage({
         </p>
       </InlineNotice>
 
-      <InlineNotice title="Cloud social 0.28.0 F2">
+      <InlineNotice title="Cloud social 0.28.0 F3">
         <p>
-          Identités cloud F2 prêtes : les profils publics et les réservations de handles ont désormais des collections cloud séparées.
+          Recherche exacte F3 prête : le handle public peut être résolu via les réservations cloud sans exposer le userId privé.
         </p>
         <p>
-          La réservation réelle reste protégée par le flag social cloud : aucun annuaire, aucune suggestion et aucun partage de snapshots ne sont activés en F2.
+          La recherche reste exacte uniquement : aucun annuaire, aucune suggestion, aucun matching partiel et aucune demande cloud ne sont activés en F3.
         </p>
       </InlineNotice>
 
@@ -552,7 +553,7 @@ export function FriendsPrivacyPage({
             </h2>
           </div>
           <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-            La demande passe par une recherche exacte d’identifiant SportPilot. Sans backend social branché, le service retourne clairement que la recherche réelle est indisponible.
+            La demande passe par une recherche exacte d’identifiant SportPilot. En F3, le lookup peut être branché sur les identités cloud, mais aucune demande d’ami cloud n’est encore créée automatiquement.
           </p>
 
           <form className="mt-5 space-y-3" onSubmit={submitRequest}>

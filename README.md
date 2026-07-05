@@ -49,3 +49,8 @@ Le parcours IA Gemini livré précédemment reste disponible. La clé Gemini res
 ## Arbitrage bundle
 
 Le budget JavaScript reste aligné sur le périmètre accepté pour l’UX photo, IA, synchronisation et social. L’optimisation du bundle reste un chantier technique séparé.
+
+## SportPilot 0.28.0 F3 — Recherche exacte cloud
+
+La recherche exacte utilisateur cloud est préparée sur les identités sociales F2. Elle retourne uniquement `found`, `notFound`, `invalidHandle` ou `unavailable`. Aucun annuaire public, aucune suggestion, aucun matching partiel et aucune relation sociale automatique ne sont activés.
+

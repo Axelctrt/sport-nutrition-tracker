@@ -39,3 +39,8 @@ Les clés `PHOTO_NUTRITION_AI_API_KEY` ou `GEMINI_API_KEY` doivent rester côté
 ## Bundle JavaScript
 
 La version 0.27.0 conserve le budget JavaScript accepté pour l’UX photo, IA, synchronisation et social. L’optimisation du bundle doit être traitée plus tard comme chantier technique global.
+
+## 0.28.0 F3 — Limites recherche cloud
+
+La recherche cloud reste strictement exacte. Elle ne fournit pas d’annuaire, de suggestions, de recherche approximative, de matching partiel ni de création automatique d’amitié. Les demandes d’amis cloud et le partage distant restent hors périmètre F3.
+
