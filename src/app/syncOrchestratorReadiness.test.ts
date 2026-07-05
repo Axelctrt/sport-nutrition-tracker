@@ -10,9 +10,9 @@ import {
   type SyncOrchestratorDomainAdapter,
 } from '@/application/sync/syncOrchestrator';
 
-describe('préparation F1 de l’orchestrateur de synchronisation 0.25.1', () => {
-  it('conserve les versions de publication 0.25.1 pendant la construction du socle', () => {
-    expect(__APP_VERSION__).toBe('0.25.1');
+describe('préparation F1 de l’orchestrateur de synchronisation 0.26.0', () => {
+  it('conserve les versions de publication 0.26.0 pendant la construction du socle', () => {
+    expect(__APP_VERSION__).toBe('0.26.0');
     expect(databaseSchemaVersion).toBe(9);
     expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(8);
     expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(10);

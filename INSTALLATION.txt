@@ -1,29 +1,32 @@
-SPORTPILOT 0.25.1
+SPORTPILOT 0.26.0
 
 Procédure de validation et publication
 
-1. Vérifier que la branche feature/photo-ai-0.25.1 est propre et à jour.
-2. Vérifier que package.json et package-lock.json indiquent 0.25.1.
-3. Vérifier qu’aucun fichier .env, .env.local ou secret IA réel n’est stagé.
-4. Lancer les tests ciblés IA photo.
-5. Lancer npm run audit:photo-ai.
-6. Lancer npm run audit:photo-nutrition.
-7. Lancer npm run build.
-8. Lancer npm run check.
-9. Lancer npm run test:stability.
-10. Tester sans endpoint IA : le fallback local doit fonctionner.
-11. Tester avec proxy local Gemini : npm run dev:photo-ai-proxy.
-12. Démarrer Vite avec VITE_PHOTO_NUTRITION_AI_ENDPOINT=/api/photo-nutrition/analyze.
-13. Vérifier que l’analyse IA remplit le formulaire avec un résultat cohérent.
-14. Vérifier que la coupure du proxy déclenche le fallback local.
-15. Vérifier que Paramètres affiche la version 0.25.1.
-16. Valider Open Food Facts et le scanner code-barres.
-17. Committer la finalisation 0.25.1 sur feature/photo-ai-0.25.1.
-18. Fusionner manuellement dans develop.
-19. Relancer les contrôles release sur develop.
-20. Fusionner manuellement dans main.
-21. Relancer les contrôles release sur main.
-22. Créer le tag annoté v0.25.1.
-23. Resynchroniser develop avec main.
+1. Vérifier que la branche feature/friends-privacy-0.26.0 est propre et à jour.
+2. Vérifier que package.json et package-lock.json indiquent 0.26.0.
+3. Vérifier que Paramètres affiche 0.26.0.
+4. Vérifier qu’aucun fichier .env, .env.local, .env.production ou secret réel n’est stagé.
+5. Lancer les tests ciblés amis/confidentialité.
+6. Lancer npm run audit:friends-privacy.
+7. Lancer npm run audit:release.
+8. Lancer npm run audit:repository.
+9. Lancer npm run build.
+10. Lancer npm run check.
+11. Lancer npm run test:stability.
+12. Ouvrir la page Amis depuis la navigation.
+13. Envoyer une demande sortante et vérifier sa persistance après rechargement.
+14. Accepter et refuser des demandes entrantes.
+15. Modifier les préférences de confidentialité et vérifier leur persistance.
+16. Sélectionner le mode détaillé et vérifier qu’il reste bloqué par le garde-fou social.
+17. Exporter une sauvegarde JSON v8 et vérifier les tables sociales.
+18. Restaurer une sauvegarde JSON v8 et vérifier amis, demandes et préférences.
+19. Valider que l’analyse photo IA, Open Food Facts et le scanner code-barres restent fonctionnels.
+20. Committer la finalisation 0.26.0 sur feature/friends-privacy-0.26.0.
+21. Fusionner manuellement dans develop.
+22. Relancer les contrôles release sur develop.
+23. Fusionner manuellement dans main.
+24. Relancer les contrôles release sur main.
+25. Créer le tag annoté v0.26.0.
+26. Resynchroniser develop avec main.
 
-SportPilot 0.25.1 ne nécessite aucune migration de données.
+SportPilot 0.26.0 utilise Dexie v9 et la sauvegarde JSON v8. Aucune synchronisation sociale cloud réelle n’est activée.

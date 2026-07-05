@@ -1,25 +1,29 @@
-# SportPilot 0.25.1
+# SportPilot 0.26.0
 
-SportPilot 0.25.1 ajoute l’analyse nutritionnelle assistée par IA à partir d’une photo, via un proxy backend Gemini Free Tier. L’utilisateur choisit une photo, accepte explicitement son envoi ponctuel au service IA, vérifie l’estimation proposée, corrige les valeurs, puis ajoute l’entrée au bon repas du journal alimentaire.
+SportPilot 0.26.0 ajoute le socle amis et confidentialité. La version prépare un réseau privé local : demandes envoyées et reçues, acceptation manuelle, préférences de visibilité, persistance Dexie, sauvegarde JSON et garde-fou explicite contre tout partage détaillé non consenti.
 
-## Parcours photo nutrition
+## Amis et confidentialité
 
-- sélection ou prise de photo depuis le journal alimentaire ;
-- aperçu de la photo sélectionnée et suppression manuelle possible ;
-- analyse IA distante uniquement si `VITE_PHOTO_NUTRITION_AI_ENDPOINT` est configuré et si l’utilisateur donne son consentement ;
-- proxy backend `/api/photo-nutrition/analyze` utilisant `PHOTO_NUTRITION_AI_API_KEY` côté serveur ;
-- modèle par défaut `gemini-2.5-flash-lite` pour limiter les coûts ;
-- fallback local automatique si le proxy, le quota ou Gemini échoue ;
-- correction manuelle obligatoire avant l’ajout au journal.
+- nouvelle route `/friends` accessible depuis la navigation ;
+- page “Amis et confidentialité” dédiée aux invitations et réglages sociaux ;
+- demandes entrantes et sortantes avec acceptation ou refus manuel ;
+- préférences de visibilité du profil et d’autorisation des demandes ;
+- persistance locale des amis, demandes et préférences ;
+- export/restauration via sauvegarde JSON v8 ;
+- aucun partage détaillé d’activité en 0.26.0.
 
-## Confidentialité et coût IA
+## Garde-fou social
 
-Aucune clé Gemini n’est exposée dans le front. Les variables `PHOTO_NUTRITION_AI_API_KEY` ou `GEMINI_API_KEY` doivent rester côté serveur ou dans le terminal du proxy local. Le Free Tier Gemini permet de tester sans budget OpenAI, mais il reste soumis aux quotas Google et les contenus envoyés peuvent être utilisés par Google pour améliorer ses produits. L’app affiche donc une mention de consentement avant tout envoi externe.
+Le mode “Détaillé après accord” peut être choisi comme préférence, mais il reste bloqué par le garde-fou de 0.26.0. L’application limite l’exposition sociale au résumé tant que le consentement explicite par ami n’est pas livré. Les exports sociaux détaillés, consentements par ami et flux d’activité partagé sont réservés à 0.27.0.
 
-## Synchronisation et données
+## Stockage et sauvegarde
 
-La branche 0.26.0 prépare la persistance locale des amis : la base métier passe en Dexie v9, la sauvegarde en JSON v8 et le runtime Dexie Cloud reste en v10 sans synchronisation sociale réelle. Un garde-fou social bloque aussi tout export détaillé tant que le consentement par ami n’est pas livré.
+La base métier passe en Dexie v9 pour ajouter les tables locales `friendProfiles`, `friendRequests` et `friendsPrivacySettings`. Le format de sauvegarde reste en JSON v8 et inclut ces tables. Le registre local des espaces reste en v1 et le runtime Dexie Cloud reste en v10, sans synchronisation sociale réelle entre comptes.
+
+## IA photo nutritionnelle
+
+Le parcours IA Gemini livré en 0.25.1 reste disponible. La clé Gemini reste côté serveur, le consentement photo reste obligatoire avant envoi externe, et le fallback local reste actif si Gemini, le proxy ou les quotas échouent.
 
 ## Arbitrage bundle
 
-Le budget JavaScript reste aligné sur le budget 0.25.x accepté pour conserver une interface photo claire, testable et compatible avec le parcours IA. L’optimisation du bundle devra être traitée ultérieurement comme chantier technique global.
+Le budget JavaScript reste aligné sur le budget accepté pour l’UX photo, IA et confidentialité sociale. L’optimisation du bundle reste un chantier technique séparé.

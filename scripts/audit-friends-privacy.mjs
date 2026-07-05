@@ -15,6 +15,7 @@ const requiredFiles = [
   'docs/architecture/friends-privacy-0.26.0-f1.md',
   'docs/architecture/friends-privacy-0.26.0-f2.md',
   'docs/architecture/friends-privacy-0.26.0-f3.md',
+  'docs/architecture/friends-privacy-0.26.0-f4.md',
   'src/app/friendsPrivacyReleaseReadiness.test.ts',
 ];
 

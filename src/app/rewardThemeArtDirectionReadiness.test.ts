@@ -6,9 +6,9 @@ import desktopSidebarSource from "@/app/layouts/DesktopSidebar.tsx?raw";
 import appLayoutSource from "@/app/layouts/AppLayout.tsx?raw";
 import themeCssSource from "@/styles/unlockableThemes.css?raw";
 
-describe("SportPilot 0.25.1 R4.5 — pop-up unique, complet supprimé et sombre stabilisé", () => {
+describe("SportPilot 0.26.0 R4.5 — pop-up unique, complet supprimé et sombre stabilisé", () => {
   it("reste une phase visuelle sans migration ni passage de version finale", () => {
-    expect(__APP_VERSION__).toBe("0.25.1");
+    expect(__APP_VERSION__).toBe("0.26.0");
     expect(databaseSchemaVersion).toBe(9);
     expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(8);
   });
