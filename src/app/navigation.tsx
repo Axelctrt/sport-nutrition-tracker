@@ -19,6 +19,7 @@ import {
   Trash2,
   Trophy,
   Target,
+  UsersRound,
   UserRound,
   Weight,
   type LucideIcon,
@@ -60,6 +61,7 @@ export const primaryNavigation: NavigationItem[] = [
     icon: Target,
   },
   { label: 'Bilan hebdomadaire', path: routePaths.weeklyReview, icon: ClipboardCheck },
+  { label: 'Amis', path: routePaths.friends, icon: UsersRound },
 ];
 
 export const secondaryNavigation: NavigationItem[] = [
@@ -153,6 +155,13 @@ export const mobileMoreNavigation: NavigationSection[] = [
         icon: Trophy,
         description:
           'Badges, missions, séries et thèmes débloqués.',
+      },
+      {
+        label: 'Amis et confidentialité',
+        path: routePaths.friends,
+        icon: UsersRound,
+        description:
+          'Invitations, validation manuelle et limites de partage.',
       },
     ],
   },

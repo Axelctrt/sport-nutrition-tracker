@@ -138,3 +138,9 @@ describe('page de confidentialité', () => {
     expect(routePaths.privacy).toBe('/privacy');
   });
 });
+
+describe('amis et confidentialité', () => {
+  it('utilise une route stable dédiée au réseau privé', () => {
+    expect(routePaths.friends).toBe('/friends');
+  });
+});
