@@ -85,6 +85,7 @@ export function tableList(database: AppDatabase) {
     database.progressionSuggestions,
     database.friendProfiles,
     database.friendRequests,
+    database.friendActivityPermissions,
     database.friendsPrivacySettings,
   ] as const;
 }
@@ -137,6 +138,7 @@ export async function readBackupData(
     progressionSuggestions,
     friendProfiles,
     friendRequests,
+    friendActivityPermissions,
     friendsPrivacySettings,
     goals,
     endurancePlanningSessions,
@@ -171,6 +173,7 @@ export async function readBackupData(
     database.progressionSuggestions.toArray(),
     database.friendProfiles.toArray(),
     database.friendRequests.toArray(),
+    database.friendActivityPermissions.toArray(),
     database.friendsPrivacySettings.toArray(),
     database.goals.toArray(),
     database.endurancePlanningSessions.toArray(),
@@ -207,6 +210,7 @@ export async function readBackupData(
     progressionSuggestions,
     friendProfiles,
     friendRequests,
+    friendActivityPermissions,
     friendsPrivacySettings,
     goals,
     endurancePlanningSessions,
@@ -478,6 +482,9 @@ async function populateTables(
   }
   if ((data.friendRequests?.length ?? 0) > 0) {
     await database.friendRequests.bulkAdd(data.friendRequests ?? []);
+  }
+  if ((data.friendActivityPermissions?.length ?? 0) > 0) {
+    await database.friendActivityPermissions.bulkAdd(data.friendActivityPermissions ?? []);
   }
   if ((data.friendsPrivacySettings?.length ?? 0) > 0) {
     await database.friendsPrivacySettings.bulkAdd(

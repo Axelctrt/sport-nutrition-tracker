@@ -8,6 +8,7 @@ import type { Goal } from '@/domain/goals/goalState';
 import type { PlannedEnduranceSession } from '@/domain/planning/endurancePlanningState';
 import type { EntityId } from "@/domain/models/common";
 import type {
+  StoredFriendActivityPermission,
   StoredFriendProfile,
   StoredFriendRequest,
   StoredFriendsPrivacySettings,
@@ -59,6 +60,7 @@ import { registerVersion6 } from '@/infrastructure/database/migrations/version6'
 import { registerVersion7 } from '@/infrastructure/database/migrations/version7';
 import { registerVersion8 } from '@/infrastructure/database/migrations/version8';
 import { registerVersion9 } from '@/infrastructure/database/migrations/version9';
+import { registerVersion10 } from '@/infrastructure/database/migrations/version10';
 
 export { DEFAULT_DATABASE_NAME } from '@/infrastructure/database/databaseNames';
 
@@ -109,6 +111,7 @@ export class AppDatabase extends Dexie {
   declare deletionRecords: Table<DeletionRecord, EntityId>;
   declare friendProfiles: Table<StoredFriendProfile, EntityId>;
   declare friendRequests: Table<StoredFriendRequest, EntityId>;
+  declare friendActivityPermissions: Table<StoredFriendActivityPermission, EntityId>;
   declare friendsPrivacySettings: Table<StoredFriendsPrivacySettings, EntityId>;
   declare migrationJournal: Table<MigrationJournalEntry, string>;
   declare databaseDiagnostics: Table<DatabaseIntegrityReport, string>;
@@ -127,5 +130,6 @@ export class AppDatabase extends Dexie {
     registerVersion7(this);
     registerVersion8(this);
     registerVersion9(this);
+    registerVersion10(this);
   }
 }

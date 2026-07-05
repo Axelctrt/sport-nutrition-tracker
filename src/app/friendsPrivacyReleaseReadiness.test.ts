@@ -2,6 +2,8 @@ import {
   evaluateFriendActivitySharingGuard,
   type FriendsPrivacySnapshot,
 } from '@/domain/friends/friendship';
+import { prepareSocialActivityFeed } from '@/application/friends/socialActivityFeedService';
+import type { SocialActivitySnapshot } from '@/domain/friends/socialActivitySnapshot';
 import { CURRENT_BACKUP_SCHEMA_VERSION } from '@/infrastructure/backup/backupMigrations';
 import {
   databaseSchemaVersion,
@@ -27,26 +29,63 @@ const detailedSharingSnapshot: FriendsPrivacySnapshot = {
   },
 };
 
-describe('readiness amis et confidentialité 0.26.0', () => {
-  it('conserve Dexie v9, sauvegarde JSON v8 et les tables sociales locales', () => {
-    expect(databaseSchemaVersion).toBe(9);
-    expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(8);
+const socialSnapshot: SocialActivitySnapshot = {
+  id: 'social-activity-snapshot:release:romain:summary',
+  sourceActivityId: 'activity:release-private',
+  friendId: 'friend:romain.run',
+  friendHandle: 'romain.run',
+  scope: 'summary',
+  activityType: 'running',
+  date: '2026-07-12',
+  durationMinutes: 40,
+  intensity: 'moderate',
+  estimatedCaloriesKcal: 390,
+  createdAt: '2026-07-12T10:00:00.000Z',
+  guardReason: 'Résumé partagé par défaut. Le détail reste verrouillé pour cet ami.',
+  metrics: {
+    distanceKm: 7,
+  },
+};
+
+describe('readiness sociale amis 0.27.0 F5', () => {
+  it('passe Dexie en v10, sauvegarde JSON en v9 et expose les permissions par ami', () => {
+    expect(databaseSchemaVersion).toBe(10);
+    expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(9);
     expect(databaseTableNames).toEqual(
       expect.arrayContaining([
         'friendProfiles',
         'friendRequests',
         'friendsPrivacySettings',
+        'friendActivityPermissions',
       ]),
     );
   });
 
-  it('bloque le détail social tant que le consentement par ami n’est pas livré', () => {
+  it('conserve le garde-fou global même quand les snapshots sociaux filtrés sont livrés', () => {
     const guard = evaluateFriendActivitySharingGuard(detailedSharingSnapshot);
 
     expect(guard.allowedScope).toBe('summary');
     expect(guard.canShareSummary).toBe(true);
     expect(guard.canShareDetailed).toBe(false);
     expect(guard.detailedSharingBlocked).toBe(true);
-    expect(guard.reason).toMatch(/bloqué jusqu’au consentement explicite/u);
+    expect(guard.reason).toMatch(/Résumé autorisé par défaut/u);
+  });
+
+  it('prépare le fil F5 sans exposer l’activité brute', () => {
+    const feed = prepareSocialActivityFeed({
+      privacySnapshot: {
+        ...detailedSharingSnapshot,
+        privacy: {
+          ...detailedSharingSnapshot.privacy,
+          activitySharing: 'summary-only',
+        },
+      },
+      snapshots: [socialSnapshot],
+    });
+
+    expect(feed.source).toBe('filtered-snapshots');
+    expect(feed.rawActivityShared).toBe(false);
+    expect(feed.items).toHaveLength(1);
+    expect(JSON.stringify(feed)).not.toContain('sourceActivityId');
   });
 });

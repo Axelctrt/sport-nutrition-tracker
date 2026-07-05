@@ -1,7 +1,7 @@
 {
   "name": "sport-nutrition-tracker",
   "private": true,
-  "version": "0.26.0",
+  "version": "0.27.0",
   "type": "module",
   "engines": {
     "node": "^20.19.0 || >=22.13.0"
@@ -14,8 +14,8 @@
     "test:stability": "vitest run --sequence.shuffle --sequence.seed=20260626",
     "test:watch": "vitest",
     "preview": "vite preview",
-    "check": "npm run lint && npm run test && npm run build && npm run audit:sync-deployment && npm run audit:sports-sync && npm run audit:goal-sync && npm run audit:strength-sync && npm run audit:sports-sync-release && npm run audit:nutrition-journal-sync && npm run audit:nutrition-library-sync && npm run audit:nutrition-tracking-sync && npm run audit:nutrition-sync-release && npm run audit:account-management && npm run audit:guest-data-import && npm run audit:cloud-account-restore && npm run audit:account-preferences-sync && npm run audit:rewards-routines-sync && npm run audit:unified-sync-center && npm run audit:sync-orchestrator && npm run audit:automatic-sync && npm run audit:sync-transparency && npm run audit:automatic-sync-release && npm run audit:action-feedback && npm run audit:goal-prefill && npm run audit:reward-theme-catalog && npm run audit:photo-nutrition && npm run audit:photo-ai && npm run audit:friends-privacy && npm run audit:full-account-continuity-release && npm run audit:data-continuity-release && npm run audit:account-isolation && npm run audit:mvp && npm run audit:release && npm run audit:security && npm run audit:production && npm run audit:repository",
-    "ci": "npm run lint && npm run test && npm run build && npm run audit:sync-deployment && npm run audit:sports-sync && npm run audit:goal-sync && npm run audit:strength-sync && npm run audit:sports-sync-release && npm run audit:nutrition-journal-sync && npm run audit:nutrition-library-sync && npm run audit:nutrition-tracking-sync && npm run audit:nutrition-sync-release && npm run audit:account-management && npm run audit:guest-data-import && npm run audit:cloud-account-restore && npm run audit:account-preferences-sync && npm run audit:rewards-routines-sync && npm run audit:unified-sync-center && npm run audit:sync-orchestrator && npm run audit:automatic-sync && npm run audit:sync-transparency && npm run audit:automatic-sync-release && npm run audit:action-feedback && npm run audit:goal-prefill && npm run audit:reward-theme-catalog && npm run audit:photo-nutrition && npm run audit:photo-ai && npm run audit:friends-privacy && npm run audit:full-account-continuity-release && npm run audit:data-continuity-release && npm run audit:account-isolation && npm run audit:mvp && npm run audit:release && npm run audit:security && npm run audit:production && npm run audit:repository",
+    "check": "npm run lint && npm run test && npm run build && npm run audit:sync-deployment && npm run audit:sports-sync && npm run audit:goal-sync && npm run audit:strength-sync && npm run audit:sports-sync-release && npm run audit:nutrition-journal-sync && npm run audit:nutrition-library-sync && npm run audit:nutrition-tracking-sync && npm run audit:nutrition-sync-release && npm run audit:account-management && npm run audit:guest-data-import && npm run audit:cloud-account-restore && npm run audit:account-preferences-sync && npm run audit:rewards-routines-sync && npm run audit:unified-sync-center && npm run audit:sync-orchestrator && npm run audit:automatic-sync && npm run audit:sync-transparency && npm run audit:automatic-sync-release && npm run audit:action-feedback && npm run audit:goal-prefill && npm run audit:reward-theme-catalog && npm run audit:photo-nutrition && npm run audit:photo-ai && npm run audit:friends-privacy && npm run audit:social-identity && npm run audit:social-friend-requests && npm run audit:social-friend-permissions && npm run audit:social-activity-snapshots && npm run audit:social-activity-feed && npm run audit:social-release && npm run audit:full-account-continuity-release && npm run audit:data-continuity-release && npm run audit:account-isolation && npm run audit:mvp && npm run audit:release && npm run audit:security && npm run audit:production && npm run audit:repository",
+    "ci": "npm run lint && npm run test && npm run build && npm run audit:sync-deployment && npm run audit:sports-sync && npm run audit:goal-sync && npm run audit:strength-sync && npm run audit:sports-sync-release && npm run audit:nutrition-journal-sync && npm run audit:nutrition-library-sync && npm run audit:nutrition-tracking-sync && npm run audit:nutrition-sync-release && npm run audit:account-management && npm run audit:guest-data-import && npm run audit:cloud-account-restore && npm run audit:account-preferences-sync && npm run audit:rewards-routines-sync && npm run audit:unified-sync-center && npm run audit:sync-orchestrator && npm run audit:automatic-sync && npm run audit:sync-transparency && npm run audit:automatic-sync-release && npm run audit:action-feedback && npm run audit:goal-prefill && npm run audit:reward-theme-catalog && npm run audit:photo-nutrition && npm run audit:photo-ai && npm run audit:friends-privacy && npm run audit:social-identity && npm run audit:social-friend-requests && npm run audit:social-friend-permissions && npm run audit:social-activity-snapshots && npm run audit:social-activity-feed && npm run audit:social-release && npm run audit:full-account-continuity-release && npm run audit:data-continuity-release && npm run audit:account-isolation && npm run audit:mvp && npm run audit:release && npm run audit:security && npm run audit:production && npm run audit:repository",
     "diagnose:off": "node scripts/diagnose-open-food-facts.mjs",
     "audit:mvp": "node scripts/audit-mvp.mjs",
     "audit:release": "node scripts/audit-release.mjs",
@@ -57,7 +57,13 @@
     "audit:photo-nutrition": "node scripts/audit-photo-nutrition.mjs",
     "audit:photo-ai": "node scripts/audit-photo-ai.mjs",
     "dev:photo-ai-proxy": "node scripts/photo-nutrition-gemini-proxy-local.mjs",
-    "audit:friends-privacy": "node scripts/audit-friends-privacy.mjs"
+    "audit:friends-privacy": "node scripts/audit-friends-privacy.mjs",
+    "audit:social-identity": "node scripts/audit-social-identity.mjs",
+    "audit:social-friend-requests": "node scripts/audit-social-friend-requests.mjs",
+    "audit:social-friend-permissions": "node scripts/audit-social-friend-permissions.mjs",
+    "audit:social-activity-snapshots": "node scripts/audit-social-activity-snapshots.mjs",
+    "audit:social-activity-feed": "node scripts/audit-social-activity-feed.mjs",
+    "audit:social-release": "node scripts/audit-social-release.mjs"
   },
   "dependencies": {
     "@ericblade/quagga2": "^1.12.1",

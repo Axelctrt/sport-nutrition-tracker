@@ -104,11 +104,11 @@ if (failures.length === 0) {
   const localVersions = read(
     'src/infrastructure/database/migrations/versions.ts',
   );
-  if (!/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_9\b/.test(localVersions)) {
+  if (!/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_10\b/.test(localVersions)) {
     fail('La base métier doit rester en Dexie v8.');
   }
   const backup = read('src/infrastructure/backup/backupMigrations.ts');
-  if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*8\b/.test(backup)) {
+  if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*9\b/.test(backup)) {
     fail('La sauvegarde JSON doit rester en v7.');
   }
 
