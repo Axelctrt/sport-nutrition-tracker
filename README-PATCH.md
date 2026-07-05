@@ -1,96 +1,58 @@
-# SportPilot 0.28.0 — backend social cloud réel en préparation
+# SportPilot 0.28.0 — release social cloud
 
 Branche de développement : `feature/social-cloud-0.28.0`
 
-La version 0.28.0 prépare le passage du socle social local vers un backend social cloud réel. F1 a défini le contrat cloud social ; F2 ajoute les identités cloud et la réservation unique des handles exacts ; F3 branche la recherche exacte ; F4 prépare les demandes d’amis cloud basées sur `userId`.
+SportPilot 0.28.0 finalise le backend social cloud réel préparé par les phases F1 à F6. La release stabilise la version, les audits, la documentation et les garde-fous de confidentialité.
 
 ## Contenu livré
 
-- identité sociale locale avec `userId` privé, `handle` public et `displayName` ;
-- validation stricte des identifiants SportPilot publics ;
-- contrat de recherche exacte d’utilisateur, sans annuaire ouvert ;
-- demandes d’amis compatibles avec des identifiants utilisateur réels ;
-- gestion des cas `identifiant inexistant`, soi-même, déjà ami, demande déjà envoyée, demande déjà reçue et service cloud indisponible ;
-- permissions de partage par ami avec résumé par défaut et détail uniquement après consentement explicite ;
-- génération de snapshots sociaux filtrés résumé/détail ;
-- premier fil d’activité amis basé uniquement sur les snapshots filtrés ;
-- garde-fou anti-fuite conservé ;
-- audits sociaux F1 à F5 intégrés au pipeline ;
-- contrat cloud social 0.28.0 F1 ;
-- identités cloud 0.28.0 F2 avec `socialIdentities` et `socialHandleReservations` ;
-- recherche exacte 0.28.0 F3 ;
-- demandes d’amis cloud 0.28.0 F4 avec `socialFriendRequests` ;
-- amitiés cloud 0.28.0 F5 avec `socialFriendships` et `socialFriendPermissions`.
+- contrat cloud social global ;
+- identités cloud et réservation unique des handles ;
+- recherche exacte par identifiant public complet ;
+- demandes d’amis cloud par `requesterUserId` et `recipientUserId` ;
+- amitiés cloud stables basées sur `userId` ;
+- permissions de partage synchronisées par ami ;
+- publication de snapshots sociaux filtrés ;
+- lecture des snapshots autorisés pour le feed amis ;
+- fallback propre quand `VITE_ENABLE_REAL_SOCIAL_CLOUD=false` ;
+- audits sociaux cloud F1 à F6 intégrés au pipeline.
 
 ## Versions techniques
 
-- application : `0.27.0` ;
-- base Dexie : v10 ;
+- application : `0.28.0` ;
+- AppDatabase locale : Dexie v10 ;
 - sauvegarde JSON : v9 ;
-- registre local des espaces : v1 ;
-- runtime Dexie Cloud : v13 ;
-- collections cloud sociales F2-F4 : `socialIdentities`, `socialHandleReservations`, `socialFriendRequests` ;
-- synchronisation sociale cloud réelle : non activée en configuration publique.
+- runtime Dexie Cloud prototype : v14 ;
+- collections cloud sociales : `socialIdentities`, `socialHandleReservations`, `socialFriendRequests`, `socialFriendships`, `socialFriendPermissions`, `socialActivitySnapshots`.
+
+## Validation attendue
+
+- `npm run audit:social-cloud-contract` ;
+- `npm run audit:social-cloud-identity` ;
+- `npm run audit:social-cloud-lookup` ;
+- `npm run audit:social-cloud-friend-requests` ;
+- `npm run audit:social-cloud-friendships` ;
+- `npm run audit:social-cloud-activity-snapshots` ;
+- `npm run audit:social-release` ;
+- `npm run audit:release` ;
+- `npm run audit:repository` ;
+- `npm run build` ;
+- `npm run lint` ;
+- `npm run test` ;
+- `npm run check` ;
+- `npm run test:stability`.
 
 ## Hors périmètre volontaire
 
-- pas de recherche globale avec suggestions ;
-- pas de recherche approximative ;
 - pas d’annuaire public ;
+- pas de suggestions ;
+- pas de recherche approximative ;
 - pas de likes ;
 - pas de commentaires ;
 - pas de messagerie ;
 - pas de groupes ;
 - pas de classements ;
-- pas de partage automatique ;
-- pas d’export d’activité brute.
-
-## Validation attendue
-
-La publication doit être validée avec :
-
-- audits sociaux `audit:friends-privacy`, `audit:social-identity`, `audit:social-friend-requests`, `audit:social-friend-permissions`, `audit:social-activity-snapshots`, `audit:social-activity-feed` et `audit:social-release` ;
-- tests ciblés identité, demandes, permissions, snapshots et feed ;
-- tests ciblés identités cloud, recherche exacte et demandes d’amis cloud ;
-- audit `audit:release` ;
-- audit `audit:repository` ;
-- export sauvegarde JSON v9 contenant les données sociales ;
-- restauration conservant identité, amis, demandes, préférences et permissions ;
-- vérification que le feed ne lit que des snapshots filtrés ;
-- build, check complet et test de stabilité.
+- pas d’export d’activité brute ;
+- pas de table `socialRawActivities`.
 
 Tag attendu à la publication finale : `v0.28.0`.
-
-## 0.28.0 F3 — Recherche exacte utilisateur cloud
-
-- Ajoute le contrat `socialCloudUserLookup`.
-- Branche un gateway de recherche exacte sur les identités cloud F2.
-- Garde le fallback indisponible tant que `VITE_ENABLE_REAL_SOCIAL_CLOUD=false`.
-- Interdit annuaire, suggestions, matching partiel, demande cloud automatique et export brut.
-
-
-## 0.28.0 F4 — Demandes d’amis cloud
-
-- Ajoute le contrat `socialCloudFriendRequest`.
-- Ajoute la table runtime `socialFriendRequests`.
-- Envoie les demandes sur `requesterUserId` et `recipientUserId`, jamais sur le handle.
-- Prépare les statuts `pending`, `accepted`, `declined` et `cancelled`.
-- Garde le fallback indisponible tant que `VITE_ENABLE_REAL_SOCIAL_CLOUD=false`.
-- Interdit annuaire, suggestions, matching partiel, amitié automatique, snapshots distants et export brut.
-
-
-### SportPilot 0.28.0 F5 — Amitiés cloud et permissions synchronisées
-
-- Prépare la création d’amitiés cloud stables à partir de demandes acceptées.
-- Les relations restent basées sur `userId`, jamais sur le handle public.
-- Synchronise les permissions par ami avec résumé par défaut et détail uniquement après consentement explicite.
-- Ne publie encore aucun snapshot distant et ne crée aucun feed distant réel.
-
-
-### 0.28.0 F6 — Snapshots sociaux distants filtrés
-
-- Publication cloud de snapshots sociaux filtrés uniquement.
-- Lecture des snapshots autorisés pour le feed amis réel.
-- Runtime Dexie Cloud prototype v14.
-- AppDatabase locale inchangée en v10 et sauvegarde JSON v9.
-- Aucune activité brute, aucun export brut, aucun annuaire public, aucune suggestion.
