@@ -19,6 +19,7 @@ import {
   type FriendsPrivacyServiceState,
   type FriendsPrivacySnapshotRepository,
 } from '@/application/friends/friendsPrivacyService';
+import { prepareSocialActivityFeed } from '@/application/friends/socialActivityFeedService';
 import { sendExactFriendRequest } from '@/application/friends/socialFriendRequestService';
 import {
   checkSocialHandleAvailability,
@@ -47,6 +48,7 @@ import {
   type SocialIdentity,
   type SocialIdentityAvailabilityResult,
 } from '@/domain/friends/socialIdentity';
+import type { SocialActivitySnapshot } from '@/domain/friends/socialActivitySnapshot';
 import { appDatabase } from '@/infrastructure/database/database';
 import { DexieFriendsPrivacyRepository } from '@/infrastructure/repositories/dexie/DexieFriendsPrivacyRepository';
 import { DexieSocialIdentityRepository } from '@/infrastructure/repositories/dexie/DexieSocialIdentityRepository';
@@ -60,6 +62,7 @@ interface FriendsPrivacyPageProps {
   readonly initialIdentity?: SocialIdentity;
   readonly identityRepository?: SocialIdentityRepository;
   readonly lookupGateway?: SocialUserLookupGateway;
+  readonly initialActivitySnapshots?: readonly SocialActivitySnapshot[];
 }
 
 const visibilityOptions: readonly FriendVisibilityLevel[] = ['private', 'friends', 'public'];
@@ -92,6 +95,7 @@ export function FriendsPrivacyPage({
   initialIdentity,
   identityRepository,
   lookupGateway,
+  initialActivitySnapshots = [],
 }: FriendsPrivacyPageProps = {}) {
   const [defaultRepository] = useState(() =>
     initialSnapshot ? undefined : new DexieFriendsPrivacyRepository(appDatabase),
@@ -180,6 +184,13 @@ export function FriendsPrivacyPage({
   const summary = useMemo(() => summarizeFriendsPrivacy(snapshot), [snapshot]);
   const sharingGuard = useMemo(() => evaluateFriendActivitySharingGuard(snapshot), [snapshot]);
   const handleValidation = useMemo(() => validateSocialHandle(identityHandle), [identityHandle]);
+  const socialActivityFeed = useMemo(
+    () => prepareSocialActivityFeed({
+      privacySnapshot: snapshot,
+      snapshots: initialActivitySnapshots,
+    }),
+    [snapshot, initialActivitySnapshots],
+  );
   const incomingRequests = snapshot.requests.filter((request) => request.direction === 'incoming');
   const outgoingRequests = snapshot.requests.filter((request) => request.direction === 'outgoing');
 
@@ -331,9 +342,9 @@ export function FriendsPrivacyPage({
         </p>
       </InlineNotice>
 
-      <InlineNotice title="Snapshots sociaux filtrés prêts">
+      <InlineNotice title="Fil d’activité amis F5 actif">
         <p>
-          F4 prépare les données sûres que le futur flux social pourra lire. Aucune interaction sociale n’est activée dans cette phase.
+          Le fil lit uniquement des snapshots sociaux filtrés. Il ne lit jamais une activité brute complète et n’active ni likes, ni commentaires, ni discussions privées.
         </p>
       </InlineNotice>
 
@@ -559,6 +570,90 @@ export function FriendsPrivacyPage({
           </div>
         </Card>
       </div>
+
+      <Card className="p-5 sm:p-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
+              Snapshots filtrés uniquement
+            </p>
+            <h2 className="mt-1 text-xl font-bold text-slate-950 dark:text-white">
+              Fil d’activité amis
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+              {socialActivityFeed.message}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 dark:border-slate-800 dark:text-slate-200">
+            {socialActivityFeed.items.length} activité{socialActivityFeed.items.length > 1 ? 's' : ''} affichée{socialActivityFeed.items.length > 1 ? 's' : ''}
+          </div>
+        </div>
+
+        {socialActivityFeed.items.length === 0 ? (
+          <p className="mt-4 rounded-2xl border border-slate-200 p-4 text-sm leading-6 text-slate-600 dark:border-slate-800 dark:text-slate-300">
+            {socialActivityFeed.message}
+          </p>
+        ) : (
+          <div className="mt-4 space-y-3">
+            {socialActivityFeed.items.map((item) => (
+              <article
+                key={item.id}
+                className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800"
+              >
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="flex size-11 items-center justify-center rounded-full bg-brand-100 text-sm font-bold text-brand-700 dark:bg-brand-950 dark:text-brand-200">
+                      {item.friendInitials}
+                    </div>
+                    <div>
+                      <p className="font-semibold text-slate-950 dark:text-white">{item.friendDisplayName}</p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">@{item.friendHandle}</p>
+                      <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                        {item.scope === 'detailed' ? 'Détail autorisé' : 'Résumé'} · {item.activityLabel}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="rounded-xl bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 dark:bg-slate-950 dark:text-slate-200">
+                    {item.date} · {item.durationMinutes} min · {item.estimatedCaloriesKcal} kcal
+                  </div>
+                </div>
+
+                <div className="mt-3 flex flex-wrap gap-2 text-sm">
+                  <span className="rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                    Intensité {item.intensityLabel}
+                  </span>
+                  {item.metricLabels.map((label) => (
+                    <span
+                      key={label}
+                      className="rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                    >
+                      {label}
+                    </span>
+                  ))}
+                  {item.detailLabels.map((label) => (
+                    <span
+                      key={label}
+                      className="rounded-full bg-brand-100 px-3 py-1 font-semibold text-brand-800 dark:bg-brand-950 dark:text-brand-100"
+                    >
+                      {label}
+                    </span>
+                  ))}
+                </div>
+
+                {item.permissionLimited ? (
+                  <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm leading-6 text-amber-950 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
+                    Détail limité par permission actuelle : affichage résumé uniquement.
+                  </p>
+                ) : null}
+
+                <p className="mt-3 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                  Aucun champ brut d’activité n’est affiché.
+                </p>
+              </article>
+            ))}
+          </div>
+        )}
+      </Card>
 
       <div className="grid gap-4 xl:grid-cols-2">
         <Card className="p-5 sm:p-6">

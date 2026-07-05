@@ -49,9 +49,9 @@ for (const symbol of [
 
 for (const phrase of [
   'Snapshots sociaux F4 actifs',
-  'Snapshots sociaux filtrés prêts',
+  'Fil d’activité amis F5 actif',
   'Aucun export brut d’activité',
-  'Aucune interaction sociale',
+  'ni likes, ni commentaires, ni discussions privées',
 ]) {
   if (!page.includes(phrase)) failures.push(`texte F4 manquant dans la page amis : ${phrase}`);
 }

@@ -98,8 +98,8 @@ if (!docs.includes('notFound') || !docs.includes('self') || !docs.includes('alre
   failures.push('documentation F2 incomplète sur les états métier');
 }
 
-if (/socialFeed|activitySnapshot|like|commentaire|messagerie|classement/u.test(domain + requestService + page)) {
-  failures.push('F2 ne doit pas introduire de fil, snapshot activité, likes, commentaires, messagerie ou classement');
+if (/like|commentaire|messagerie|classement/u.test(requestService)) {
+  failures.push('F2 ne doit pas introduire d’interactions sociales dans le service de demande');
 }
 
 if (/fetch\(|axios|supabase|firebase/u.test(requestService)) {

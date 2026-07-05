@@ -1,8 +1,13 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { EntityId } from '@/domain/models/common';
-import { DEFAULT_FRIENDS_PRIVACY_SETTINGS, type FriendsPrivacySnapshot } from '@/domain/friends/friendship';
+import {
+  DEFAULT_FRIENDS_PRIVACY_SETTINGS,
+  updateFriendActivityPermission,
+  type FriendsPrivacySnapshot,
+} from '@/domain/friends/friendship';
 import { createDefaultSocialIdentity } from '@/domain/friends/socialIdentity';
+import type { SocialActivitySnapshot } from '@/domain/friends/socialActivitySnapshot';
 import { createFoundSocialUserLookupGateway, type SocialUserLookupGateway } from '@/application/friends/socialIdentityService';
 import { FriendsPrivacyPage } from '@/features/friends/pages/FriendsPrivacyPage';
 
@@ -43,11 +48,16 @@ const snapshot: FriendsPrivacySnapshot = {
 
 const identity = createDefaultSocialIdentity('2026-07-05T10:00:00.000Z', 'alex123');
 
-function renderPage(override: { readonly lookupGateway?: SocialUserLookupGateway; readonly initialSnapshot?: FriendsPrivacySnapshot } = {}) {
+function renderPage(override: {
+  readonly lookupGateway?: SocialUserLookupGateway;
+  readonly initialSnapshot?: FriendsPrivacySnapshot;
+  readonly initialActivitySnapshots?: readonly SocialActivitySnapshot[];
+} = {}) {
   const pageProps = {
     initialSnapshot: override.initialSnapshot ?? snapshot,
     initialIdentity: identity,
     ...(override.lookupGateway ? { lookupGateway: override.lookupGateway } : {}),
+    ...(override.initialActivitySnapshots ? { initialActivitySnapshots: override.initialActivitySnapshots } : {}),
   };
 
   return render(<FriendsPrivacyPage {...pageProps} />);
@@ -67,7 +77,9 @@ describe('FriendsPrivacyPage', () => {
     expect(screen.getByText(/Les données détaillées restent privées/u)).toBeInTheDocument();
     expect(screen.getByText('Garde-fou social actif')).toBeInTheDocument();
     expect(screen.getByText(/Snapshots sociaux F4 actifs/u)).toBeInTheDocument();
-    expect(screen.getByText('Snapshots sociaux filtrés prêts')).toBeInTheDocument();
+    expect(screen.getByText('Fil d’activité amis F5 actif')).toBeInTheDocument();
+    expect(screen.getByText('Fil d’activité amis')).toBeInTheDocument();
+    expect(screen.getAllByText(/Partage d’activité désactivé : aucun snapshot n’est affiché/u).length).toBeGreaterThan(0);
     expect(screen.getByText(/Permission : Résumé uniquement/u)).toBeInTheDocument();
   });
 
@@ -189,4 +201,95 @@ describe('FriendsPrivacyPage', () => {
     expect(screen.getByText(/Détail autorisé localement pour cet ami/u)).toBeInTheDocument();
     expect(screen.getByText(/snapshots sociaux filtrés peuvent utiliser ce niveau/u)).toBeInTheDocument();
   });
+
+  it('affiche un fil amis minimal depuis des snapshots filtrés', () => {
+    const detailedSnapshot = updateFriendActivityPermission({
+      ...snapshot,
+      requests: [],
+      privacy: {
+        ...snapshot.privacy,
+        activitySharing: 'detailed',
+      },
+    }, 'social-user:lea' as EntityId, 'detailed', '2026-07-10T08:00:00.000Z');
+    const activitySnapshots: readonly SocialActivitySnapshot[] = [
+      {
+        id: 'social-activity-snapshot:run-feed:lea:detailed' as EntityId,
+        sourceActivityId: 'activity:private-feed' as EntityId,
+        friendId: 'social-user:lea' as EntityId,
+        friendHandle: 'lea.cardio',
+        scope: 'detailed',
+        activityType: 'running',
+        date: '2026-07-10',
+        durationMinutes: 45,
+        intensity: 'moderate',
+        estimatedCaloriesKcal: 420,
+        createdAt: '2026-07-10T10:00:00.000Z',
+        guardReason: 'Détail autorisé localement pour cet ami après consentement explicite.',
+        metrics: {
+          distanceKm: 7.1,
+          elevationGainMeters: 90,
+          sessionType: 'tempo',
+          terrainType: 'trail',
+        },
+      },
+    ];
+
+    renderPage({
+      initialSnapshot: detailedSnapshot,
+      initialActivitySnapshots: activitySnapshots,
+    });
+
+    expect(screen.getByText('Fil d’activité amis')).toBeInTheDocument();
+    expect(screen.getAllByText('Léa Cardio').length).toBeGreaterThan(1);
+    expect(screen.getByText(/Détail autorisé · Course/u)).toBeInTheDocument();
+    expect(screen.getByText('7.1 km')).toBeInTheDocument();
+    expect(screen.getByText('D+ 90 m')).toBeInTheDocument();
+    expect(screen.getByText('tempo')).toBeInTheDocument();
+    expect(screen.getByText('trail')).toBeInTheDocument();
+    expect(screen.getByText('Aucun champ brut d’activité n’est affiché.')).toBeInTheDocument();
+    expect(screen.queryByText(/activity:private-feed/u)).not.toBeInTheDocument();
+  });
+
+  it('dégrade dans le fil un snapshot détaillé quand la permission est limitée', () => {
+    const summarySnapshot: FriendsPrivacySnapshot = {
+      ...snapshot,
+      requests: [],
+      privacy: {
+        ...snapshot.privacy,
+        activitySharing: 'summary-only',
+      },
+    };
+    const activitySnapshots: readonly SocialActivitySnapshot[] = [
+      {
+        id: 'social-activity-snapshot:run-feed-limited:lea:detailed' as EntityId,
+        sourceActivityId: 'activity:private-limited' as EntityId,
+        friendId: 'social-user:lea' as EntityId,
+        friendHandle: 'lea.cardio',
+        scope: 'detailed',
+        activityType: 'running',
+        date: '2026-07-11',
+        durationMinutes: 38,
+        intensity: 'low',
+        estimatedCaloriesKcal: 330,
+        createdAt: '2026-07-11T10:00:00.000Z',
+        guardReason: 'Détail autorisé localement pour cet ami après consentement explicite.',
+        metrics: {
+          distanceKm: 6.2,
+          sessionType: 'tempo',
+          terrainType: 'trail',
+        },
+      },
+    ];
+
+    renderPage({
+      initialSnapshot: summarySnapshot,
+      initialActivitySnapshots: activitySnapshots,
+    });
+
+    expect(screen.getByText(/Résumé · Course/u)).toBeInTheDocument();
+    expect(screen.getByText(/Détail limité par permission actuelle/u)).toBeInTheDocument();
+    expect(screen.queryByText('tempo')).not.toBeInTheDocument();
+    expect(screen.queryByText('trail')).not.toBeInTheDocument();
+  });
+
 });

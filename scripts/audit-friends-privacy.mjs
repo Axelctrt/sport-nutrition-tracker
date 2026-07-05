@@ -18,6 +18,7 @@ const requiredFiles = [
   'docs/architecture/friends-privacy-0.26.0-f3.md',
   'docs/architecture/friends-privacy-0.26.0-f4.md',
   'src/app/friendsPrivacyReleaseReadiness.test.ts',
+  'src/app/socialActivityFeedReadiness.test.ts',
 ];
 
 const missingFiles = requiredFiles.filter((file) => !existsSync(file));
@@ -71,6 +72,8 @@ const requiredPagePhrases = [
   'recherche réelle est indisponible',
   'Garde-fou social actif',
   'Snapshots sociaux F4 actifs',
+  'Fil d’activité amis F5 actif',
+  'Fil d’activité amis',
 ];
 
 for (const phrase of requiredPagePhrases) {
