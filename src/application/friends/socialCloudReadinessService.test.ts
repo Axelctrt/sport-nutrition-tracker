@@ -27,6 +27,8 @@ describe('socialCloudReadinessService', () => {
     ).resolves.toMatchObject({
       status: 'unavailable',
     });
+    await expect(unavailableSocialCloudBackend.friendships.listFriendships('social-user:me' as EntityId)).resolves.toEqual([]);
+    await expect(unavailableSocialCloudBackend.permissions.listPermissions('social-user:me' as EntityId)).resolves.toEqual([]);
     await expect(unavailableSocialCloudBackend.snapshots.listFeedSnapshots('social-user:me' as EntityId)).resolves.toEqual([]);
   });
 
