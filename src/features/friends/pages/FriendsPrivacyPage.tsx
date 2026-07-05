@@ -348,6 +348,15 @@ export function FriendsPrivacyPage({
         </p>
       </InlineNotice>
 
+      <InlineNotice title="Cloud social 0.28.0 F1">
+        <p>
+          Contrat backend social prêt : identités, handles, demandes, amitiés, permissions et snapshots filtrés ont désormais des ports cloud explicites.
+        </p>
+        <p>
+          Aucune écriture distante n’est branchée en F1 : la recherche réelle, les demandes cloud et la publication de snapshots restent sur fallback indisponible.
+        </p>
+      </InlineNotice>
+
       {isLoading ? (
         <InlineNotice title="Chargement local">
           <p className="inline-flex items-center gap-2">

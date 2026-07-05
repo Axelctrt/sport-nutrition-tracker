@@ -58,6 +58,7 @@ describe('base isolée du prototype Dexie Cloud', () => {
       realNutritionTrackingSyncEnabled: true,
       realAccountPreferencesSyncEnabled: true,
       realRewardsRoutinesSyncEnabled: true,
+      realSocialCloudEnabled: false,
       diagnosticsEnabled: true,
     });
 
