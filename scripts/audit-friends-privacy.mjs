@@ -69,7 +69,7 @@ const requiredPagePhrases = [
   'Partage désactivé',
   'Les demandes restent locales pour cette phase',
   'Garde-fou social actif',
-  'Aucun export social détaillé n’est disponible en 0.26.0',
+  'Aucun export social détaillé n’est disponible en 0.27.0 F1',
 ];
 
 for (const phrase of requiredPagePhrases) {

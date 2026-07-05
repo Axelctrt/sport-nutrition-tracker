@@ -49,12 +49,16 @@ function toStoredPrivacySettings(
   now: IsoDateTime,
   previous?: StoredFriendsPrivacySettings,
 ): StoredFriendsPrivacySettings {
-  return {
+  const settings: StoredFriendsPrivacySettings = {
     id: FRIENDS_PRIVACY_SETTINGS_ID,
     ...snapshot.privacy,
     createdAt: previous?.createdAt ?? now,
     updatedAt: now,
   };
+
+  return previous?.socialIdentity
+    ? { ...settings, socialIdentity: previous.socialIdentity }
+    : settings;
 }
 
 function toSnapshotPrivacy(

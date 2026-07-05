@@ -45,7 +45,7 @@ describe('friendsPrivacyService', () => {
     expect(state.friends).toHaveLength(1);
   });
 
-  it('expose le garde-fou qui bloque le détail social en 0.26.0', () => {
+  it('expose le garde-fou qui bloque le détail social tant que le consentement par ami manque', () => {
     const service = createFriendsPrivacyService();
     service.actions.setActivitySharing('detailed');
 
