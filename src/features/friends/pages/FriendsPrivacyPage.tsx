@@ -358,12 +358,15 @@ export function FriendsPrivacyPage({
         </p>
       </InlineNotice>
 
-      <InlineNotice title="Cloud social 0.28.0 F4">
+      <InlineNotice title="Cloud social 0.28.0 F5">
         <p>
-          Demandes d’amis cloud F4 prêtes : la recherche exacte F3 résout un handle via les réservations cloud, puis la demande est envoyée vers le userId distant.
+          Amitiés cloud F5 prêtes : les réservations cloud de handles restent utilisées pour la recherche exacte, puis une demande acceptée peut devenir une relation stable basée sur userId distant, avec permissions synchronisées.
         </p>
         <p>
-          La relation reste basée sur userId : aucun annuaire, aucune suggestion, aucun matching partiel, aucune amitié automatique et aucun snapshot distant ne sont activés en F4.
+          Tant que le backend social réel n’est pas activé, la recherche réelle est indisponible et l’app conserve un fallback sécurisé.
+        </p>
+        <p>
+          Résumé par défaut, détail uniquement après consentement explicite : aucun annuaire, aucune suggestion, aucun matching partiel, aucun snapshot distant et aucun export brut ne sont activés en F5.
         </p>
       </InlineNotice>
 

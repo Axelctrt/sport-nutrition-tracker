@@ -13,7 +13,7 @@ describe('base isolée du prototype Dexie Cloud', () => {
     expect(SYNC_PROTOTYPE_DATABASE_NAME).not.toBe(
       LEGACY_SYNC_PROTOTYPE_DATABASE_NAME,
     );
-    expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(12);
+    expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(13);
     expect(SYNC_PROTOTYPE_DATABASE_NAME).toBe(
       `sportpilot-sync-runtime-0.20.0-v${SYNC_PROTOTYPE_DATABASE_VERSION}`,
     );
@@ -45,6 +45,8 @@ describe('base isolée du prototype Dexie Cloud', () => {
       'socialIdentities',
       'socialHandleReservations',
       'socialFriendRequests',
+      'socialFriendships',
+      'socialFriendPermissions',
     ]);
   });
 
@@ -103,6 +105,12 @@ describe('base isolée du prototype Dexie Cloud', () => {
     expect(database.table('socialFriendRequests').schema.idxByName.recipientUserId).toBeDefined();
     expect(database.table('socialFriendRequests').schema.idxByName.requesterUserId).toBeDefined();
     expect(database.table('socialFriendRequests').schema.idxByName.status).toBeDefined();
+    expect(database.table('socialFriendships').schema.primKey.keyPath).toBe('id');
+    expect(database.table('socialFriendships').schema.idxByName.userAId).toBeDefined();
+    expect(database.table('socialFriendships').schema.idxByName.userBId).toBeDefined();
+    expect(database.table('socialFriendPermissions').schema.primKey.keyPath).toBe('id');
+    expect(database.table('socialFriendPermissions').schema.idxByName.ownerUserId).toBeDefined();
+    expect(database.table('socialFriendPermissions').schema.idxByName.friendUserId).toBeDefined();
     const handleReservationIndex = database.table('socialHandleReservations').schema.idxByName.handle;
     expect(handleReservationIndex).toBeDefined();
     expect(handleReservationIndex?.unique).toBe(true);

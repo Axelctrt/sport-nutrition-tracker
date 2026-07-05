@@ -5,7 +5,7 @@ SportPilot 0.27.0 livre la première tranche sociale exploitable : identité pub
 
 ## Préparation cloud social 0.28.0
 
-La branche 0.28.0 prépare le backend social réel sans ouvrir d’annuaire public. F1 définit le contrat cloud social global. F2 ajoute les identités cloud et les réservations de handles. F3 branche la recherche exacte. F4 ajoute les demandes d’amis cloud dans le runtime Dexie Cloud v12 via `socialIdentities`, `socialHandleReservations` et `socialFriendRequests`.
+La branche 0.28.0 prépare le backend social réel sans ouvrir d’annuaire public. F1 définit le contrat cloud social global. F2 ajoute les identités cloud et les réservations de handles. F3 branche la recherche exacte. F4 ajoute les demandes d’amis cloud dans le runtime Dexie Cloud v13 via `socialIdentities`, `socialHandleReservations`, `socialFriendRequests`, `socialFriendships` et `socialFriendPermissions`.
 
 Le handle reste un identifiant public de recherche exacte. Les relations futures resteront basées sur le `userId` stable. Le flag `VITE_ENABLE_REAL_SOCIAL_CLOUD` conserve l’activation réelle sous contrôle.
 
@@ -58,3 +58,11 @@ La recherche exacte utilisateur cloud est préparée sur les identités sociales
 
 Les demandes d’amis cloud sont préparées via `socialFriendRequests`. La recherche exacte F3 résout le handle, puis la demande est envoyée vers le `userId` distant. Les statuts `pending`, `accepted`, `declined` et `cancelled` sont structurés, sans créer encore d’amitié cloud automatique, sans permissions distribuées et sans snapshots distants.
 
+
+
+### SportPilot 0.28.0 F5 — Amitiés cloud et permissions synchronisées
+
+- Prépare la création d’amitiés cloud stables à partir de demandes acceptées.
+- Les relations restent basées sur `userId`, jamais sur le handle public.
+- Synchronise les permissions par ami avec résumé par défaut et détail uniquement après consentement explicite.
+- Ne publie encore aucun snapshot distant et ne crée aucun feed distant réel.

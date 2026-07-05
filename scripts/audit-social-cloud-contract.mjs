@@ -68,7 +68,7 @@ const envExample = read('.env.example');
 assert(envExample.includes('VITE_ENABLE_REAL_SOCIAL_CLOUD=false'), '.env.example doit documenter le flag social.');
 
 const page = read('src/features/friends/pages/FriendsPrivacyPage.tsx');
-assert(page.includes('Cloud social 0.28.0 F4'), 'la page Amis doit afficher la readiness cloud social courante.');
+assert(page.includes('Cloud social 0.28.0 F5'), 'la page Amis doit afficher la readiness cloud social courante.');
 assert(page.includes('aucun annuaire'), 'la page doit rappeler qu’aucun annuaire public n’est ouvert.');
 
 const packageJson = JSON.parse(read('package.json'));

@@ -37,7 +37,7 @@ for (const token of [
 
 const runtime = read('src/infrastructure/sync-prototype/SyncPrototypeDatabase.ts');
 for (const token of [
-  'SYNC_PROTOTYPE_DATABASE_VERSION = 12',
+  'SYNC_PROTOTYPE_DATABASE_VERSION = 13',
   "'socialIdentities'",
   "'socialHandleReservations'",
   "socialIdentities: 'id, &userId, &handle, updatedAt'",
@@ -64,7 +64,7 @@ assert(!service.includes('XMLHttpRequest'), 'F2 ne doit pas ajouter d’appel r�
 assert(!service.includes('rawActivity'), 'le service identité cloud ne doit pas manipuler d’activité brute.');
 
 const page = read('src/features/friends/pages/FriendsPrivacyPage.tsx');
-assert(page.includes('Cloud social 0.28.0 F4'), 'la page Amis doit afficher la readiness cloud sociale courante.');
+assert(page.includes('Cloud social 0.28.0 F5'), 'la page Amis doit afficher la readiness cloud sociale courante.');
 assert(page.includes('réservations cloud'), 'la page doit mentionner les réservations cloud de handles.');
 assert(page.includes('aucun annuaire'), 'la page doit rappeler l’absence d’annuaire.');
 

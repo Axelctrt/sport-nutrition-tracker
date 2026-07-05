@@ -48,3 +48,11 @@ La recherche cloud reste strictement exacte. Elle ne fournit pas d’annuaire, d
 
 Les demandes d’amis cloud sont préparées avec les statuts `pending`, `accepted`, `declined` et `cancelled`, mais elles ne créent pas encore d’amitié cloud automatique. Les permissions distribuées, snapshots distants, feed distant réel et règles de conflit multi-appareil restent hors périmètre F4.
 
+
+
+### SportPilot 0.28.0 F5 — Amitiés cloud et permissions synchronisées
+
+- Prépare la création d’amitiés cloud stables à partir de demandes acceptées.
+- Les relations restent basées sur `userId`, jamais sur le handle public.
+- Synchronise les permissions par ami avec résumé par défaut et détail uniquement après consentement explicite.
+- Ne publie encore aucun snapshot distant et ne crée aucun feed distant réel.

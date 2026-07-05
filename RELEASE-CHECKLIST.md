@@ -51,3 +51,11 @@
 - [ ] Fusion manuelle dans `main` avec `merge: publier SportPilot 0.27.0`.
 - [ ] Le tag annoté `v0.27.0` est créé sur le commit publié.
 - [ ] `develop` est resynchronisée avec `main`.
+
+
+### SportPilot 0.28.0 F5 — Amitiés cloud et permissions synchronisées
+
+- Prépare la création d’amitiés cloud stables à partir de demandes acceptées.
+- Les relations restent basées sur `userId`, jamais sur le handle public.
+- Synchronise les permissions par ami avec résumé par défaut et détail uniquement après consentement explicite.
+- Ne publie encore aucun snapshot distant et ne crée aucun feed distant réel.

@@ -204,6 +204,14 @@ export function assertSocialCloudContractIntegrity(): true {
     throw new Error('Le contrat cloud social doit préparer les demandes d’amis cloud par userId.');
   }
 
+  if (!SOCIAL_CLOUD_REQUIRED_COLLECTIONS.includes('socialFriendships')) {
+    throw new Error('Le contrat cloud social doit préparer les amitiés cloud stables par userId.');
+  }
+
+  if (!SOCIAL_CLOUD_REQUIRED_COLLECTIONS.includes('socialFriendPermissions')) {
+    throw new Error('Le contrat cloud social doit synchroniser les permissions par ami sans activité brute.');
+  }
+
   if (!SOCIAL_CLOUD_REQUIRED_COLLECTIONS.includes('socialActivitySnapshots')) {
     throw new Error('Le contrat cloud social doit publier uniquement des snapshots sociaux filtrés.');
   }

@@ -30,10 +30,11 @@ import type {
   SocialCloudIdentityRecord,
   SocialHandleReservation,
 } from '@/domain/friends/socialCloudIdentity';
-import type { CloudFriendRequest } from '@/domain/friends/socialIdentity';
+import type { CloudFriendRequest, CloudFriendship } from '@/domain/friends/socialIdentity';
+import type { CloudFriendActivityPermissionRecord } from '@/domain/friends/socialCloudFriendship';
 
 export const LEGACY_SYNC_PROTOTYPE_DATABASE_NAME = 'sportpilot-sync-prototype';
-export const SYNC_PROTOTYPE_DATABASE_VERSION = 12;
+export const SYNC_PROTOTYPE_DATABASE_VERSION = 13;
 export const SYNC_PROTOTYPE_DATABASE_NAME =
   `sportpilot-sync-runtime-0.20.0-v${SYNC_PROTOTYPE_DATABASE_VERSION}`;
 export const SYNC_PROTOTYPE_TABLE_NAMES = [
@@ -61,6 +62,8 @@ export const SYNC_PROTOTYPE_TABLE_NAMES = [
   'socialIdentities',
   'socialHandleReservations',
   'socialFriendRequests',
+  'socialFriendships',
+  'socialFriendPermissions',
 ] as const;
 
 export class SyncPrototypeDatabase extends Dexie {
@@ -88,6 +91,8 @@ export class SyncPrototypeDatabase extends Dexie {
   declare socialIdentities: Table<SocialCloudIdentityRecord, EntityId>;
   declare socialHandleReservations: Table<SocialHandleReservation, EntityId>;
   declare socialFriendRequests: Table<CloudFriendRequest, EntityId | string>;
+  declare socialFriendships: Table<CloudFriendship, EntityId | string>;
+  declare socialFriendPermissions: Table<CloudFriendActivityPermissionRecord, EntityId | string>;
 
   constructor(
     { databaseUrl }: EnabledSyncPrototypeConfig,
@@ -169,6 +174,8 @@ export class SyncPrototypeDatabase extends Dexie {
       socialIdentities: 'id, &userId, &handle, updatedAt',
       socialHandleReservations: 'id, &handle, ownerUserId, updatedAt',
       socialFriendRequests: 'id, requesterUserId, recipientUserId, status, requestedAt, updatedAt, [recipientUserId+status], [requesterUserId+status]',
+      socialFriendships: 'id, userAId, userBId, status, updatedAt, [userAId+status], [userBId+status]',
+      socialFriendPermissions: 'id, ownerUserId, friendUserId, sharingLevel, updatedAt, [ownerUserId+friendUserId]',
     });
 
     this.cloud.configure({

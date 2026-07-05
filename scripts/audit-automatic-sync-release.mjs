@@ -110,8 +110,8 @@ if (failures.length === 0) {
     fail('la sauvegarde JSON doit rester en v7.');
   }
   const cloud = read('src/infrastructure/sync-prototype/SyncPrototypeDatabase.ts');
-  if (!cloud.includes('SYNC_PROTOTYPE_DATABASE_VERSION = 12')) {
-    fail('le runtime cloud doit passer en v12 pour les identités sociales.');
+  if (!cloud.includes('SYNC_PROTOTYPE_DATABASE_VERSION = 13')) {
+    fail('le runtime cloud doit passer en v13 pour les amitiés et permissions sociales.');
   }
   const productionAudit = read('scripts/audit-rc.mjs');
   if (!productionAudit.includes('totalJavaScriptBytes: 2925 * 1024')) {

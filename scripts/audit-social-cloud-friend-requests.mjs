@@ -73,7 +73,7 @@ assert(!requestService.includes('lookupGateway.lookupByHandle'), 'les demandes n
 
 const runtime = read('src/infrastructure/sync-prototype/SyncPrototypeDatabase.ts');
 for (const token of [
-  'SYNC_PROTOTYPE_DATABASE_VERSION = 12',
+  'SYNC_PROTOTYPE_DATABASE_VERSION = 13',
   "'socialFriendRequests'",
   "socialFriendRequests: 'id, requesterUserId, recipientUserId, status, requestedAt, updatedAt",
   '[recipientUserId+status]',
@@ -85,14 +85,14 @@ assert(!runtime.includes('socialRawActivities'), 'le runtime ne doit pas créer 
 assert(!runtime.includes('globalUserDirectory'), 'le runtime ne doit pas créer d’annuaire global.');
 
 const page = read('src/features/friends/pages/FriendsPrivacyPage.tsx');
-assert(page.includes('Cloud social 0.28.0 F4'), 'la page Amis doit afficher la readiness F4.');
-assert(page.includes('Demandes d’amis cloud F4 prêtes'), 'la page doit mentionner les demandes cloud F4.');
+assert(page.includes('Cloud social 0.28.0 F5'), 'la page Amis doit afficher la readiness F4.');
+assert(page.includes('Amitiés cloud F5 prêtes'), 'la page doit mentionner les demandes cloud F4.');
 assert(page.includes('userId distant'), 'la page doit rappeler que la relation vise un userId distant.');
-assert(page.includes('aucune amitié automatique'), 'la page doit rappeler qu’aucune amitié automatique n’est créée.');
+assert(page.includes('détail uniquement après consentement explicite'), 'la page doit rappeler que le détail exige un consentement explicite en F5.');
 assert(page.includes('aucun snapshot distant'), 'la page doit rappeler l’absence de snapshot distant en F4.');
 
 const lookupAudit = read('scripts/audit-social-cloud-lookup.mjs');
-assert(lookupAudit.includes('Cloud social 0.28.0 F4'), 'l’audit F3 doit accepter la readiness courante F4.');
+assert(lookupAudit.includes('Cloud social 0.28.0 F5'), 'l’audit F3 doit accepter la readiness courante F5.');
 
 const packageJson = JSON.parse(read('package.json'));
 assert(packageJson.scripts['audit:social-cloud-friend-requests'] === 'node scripts/audit-social-cloud-friend-requests.mjs', 'script npm audit:social-cloud-friend-requests manquant.');

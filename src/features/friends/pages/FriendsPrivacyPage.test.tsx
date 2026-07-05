@@ -81,10 +81,11 @@ describe('FriendsPrivacyPage', () => {
     expect(screen.getByText('Garde-fou social actif')).toBeInTheDocument();
     expect(screen.getByText(/Snapshots sociaux F4 actifs/u)).toBeInTheDocument();
     expect(screen.getByText('Fil d’activité amis F5 actif')).toBeInTheDocument();
-    expect(screen.getByText('Cloud social 0.28.0 F4')).toBeInTheDocument();
-    expect(screen.getByText(/Demande.*F4.*userId distant/u)).toBeInTheDocument();
+    expect(screen.getByText('Cloud social 0.28.0 F5')).toBeInTheDocument();
+    expect(screen.getByText(/Amitiés cloud F5 prêtes.*userId distant/u)).toBeInTheDocument();
     expect(screen.getByText(/aucun annuaire, aucune suggestion/u)).toBeInTheDocument();
     expect(screen.getByText(/aucun matching partiel/u)).toBeInTheDocument();
+    expect(screen.getByText(/détail uniquement après consentement explicite/u)).toBeInTheDocument();
     expect(screen.getByText('Fil d’activité amis')).toBeInTheDocument();
     expect(screen.getAllByText(/Partage d’activité désactivé : aucun snapshot n’est affiché/u).length).toBeGreaterThan(0);
     expect(screen.getByText(/Permission : Résumé uniquement/u)).toBeInTheDocument();

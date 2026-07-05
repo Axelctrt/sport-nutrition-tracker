@@ -132,8 +132,8 @@ if (failures.length === 0) {
     fail('La sauvegarde JSON doit rester en v7.');
   }
   const cloud = read('src/infrastructure/sync-prototype/SyncPrototypeDatabase.ts');
-  if (!cloud.includes('SYNC_PROTOTYPE_DATABASE_VERSION = 12')) {
-    fail('Le runtime cloud doit passer en v12 pour les identités sociales.');
+  if (!cloud.includes('SYNC_PROTOTYPE_DATABASE_VERSION = 13')) {
+    fail('Le runtime cloud doit passer en v13 pour les amitiés et permissions sociales.');
   }
   if (!/^\d+\.\d+\.\d+$/.test(String(JSON.parse(read('package.json')).version))) {
     fail('La publication F4 doit exposer une version stable.');
@@ -147,5 +147,5 @@ if (failures.length > 0) {
 }
 
 console.log(
-  'Audit F2 réussi : déclencheurs maîtrisés, autorisation par compte, analyse préalable, anti-rebond local, modes réseau et runtime cloud v12 social prêt.',
+  'Audit F2 réussi : déclencheurs maîtrisés, autorisation par compte, analyse préalable, anti-rebond local, modes réseau et runtime cloud v13 social prêt.',
 );

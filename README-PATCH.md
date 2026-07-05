@@ -19,7 +19,8 @@ La version 0.28.0 prépare le passage du socle social local vers un backend soci
 - contrat cloud social 0.28.0 F1 ;
 - identités cloud 0.28.0 F2 avec `socialIdentities` et `socialHandleReservations` ;
 - recherche exacte 0.28.0 F3 ;
-- demandes d’amis cloud 0.28.0 F4 avec `socialFriendRequests`.
+- demandes d’amis cloud 0.28.0 F4 avec `socialFriendRequests` ;
+- amitiés cloud 0.28.0 F5 avec `socialFriendships` et `socialFriendPermissions`.
 
 ## Versions techniques
 
@@ -27,7 +28,7 @@ La version 0.28.0 prépare le passage du socle social local vers un backend soci
 - base Dexie : v10 ;
 - sauvegarde JSON : v9 ;
 - registre local des espaces : v1 ;
-- runtime Dexie Cloud : v12 ;
+- runtime Dexie Cloud : v13 ;
 - collections cloud sociales F2-F4 : `socialIdentities`, `socialHandleReservations`, `socialFriendRequests` ;
 - synchronisation sociale cloud réelle : non activée en configuration publique.
 
@@ -76,3 +77,11 @@ Tag attendu à la publication finale : `v0.28.0`.
 - Prépare les statuts `pending`, `accepted`, `declined` et `cancelled`.
 - Garde le fallback indisponible tant que `VITE_ENABLE_REAL_SOCIAL_CLOUD=false`.
 - Interdit annuaire, suggestions, matching partiel, amitié automatique, snapshots distants et export brut.
+
+
+### SportPilot 0.28.0 F5 — Amitiés cloud et permissions synchronisées
+
+- Prépare la création d’amitiés cloud stables à partir de demandes acceptées.
+- Les relations restent basées sur `userId`, jamais sur le handle public.
+- Synchronise les permissions par ami avec résumé par défaut et détail uniquement après consentement explicite.
+- Ne publie encore aucun snapshot distant et ne crée aucun feed distant réel.
