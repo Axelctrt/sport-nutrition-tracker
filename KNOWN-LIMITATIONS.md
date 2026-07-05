@@ -1,4 +1,16 @@
-# Limitations connues — SportPilot 0.25.1
+# Limitations connues — SportPilot 0.26.0
+
+## Partage social détaillé volontairement bloqué
+
+SportPilot 0.26.0 prépare les préférences sociales mais ne livre pas encore le partage détaillé d’activité. Le mode “Détaillé après accord” peut être enregistré comme intention utilisateur, mais l’application le limite à un résumé tant que le consentement explicite par ami n’est pas disponible.
+
+## Synchronisation sociale cloud non activée
+
+Les amis, demandes et préférences sont persistés localement dans Dexie v9 et inclus dans la sauvegarde JSON v8. Ils ne sont pas encore synchronisés réellement entre comptes via Dexie Cloud. Le runtime Dexie Cloud reste en v10 pour les autres fondations, mais le social reste local en 0.26.0.
+
+## Restauration et conflits sociaux
+
+La sauvegarde JSON v8 restaure les données sociales locales. Les stratégies de conflit multi-appareil, invitations croisées, consentements par ami et historique partagé sont réservés à 0.27.0 ou à une version ultérieure.
 
 ## Estimation nutritionnelle non médicale
 
@@ -6,11 +18,7 @@ L’analyse photo IA propose une estimation approximative. Elle ne doit pas êtr
 
 ## Dépendance au Free Tier Gemini
 
-SportPilot 0.25.1 utilise Gemini Free Tier pour éviter un coût OpenAI immédiat. Ce choix implique des quotas, des limites de débit et une disponibilité dépendante du compte Google utilisé. Si le quota est atteint ou si Gemini répond mal, l’app doit revenir au fallback local.
-
-## Confidentialité Free Tier
-
-Sur le Free Tier Gemini, les contenus transmis au fournisseur IA peuvent être utilisés par Google pour améliorer ses produits. L’utilisateur doit donc éviter les photos sensibles et donner son consentement explicite avant tout envoi externe.
+Le parcours photo IA Gemini livré en 0.25.1 reste soumis aux quotas Google, aux limites de débit et à la disponibilité du compte utilisé. Si le quota est atteint ou si Gemini répond mal, l’app doit revenir au fallback local.
 
 ## Secrets serveur uniquement
 
@@ -18,8 +26,4 @@ Les clés `PHOTO_NUTRITION_AI_API_KEY` ou `GEMINI_API_KEY` doivent rester côté
 
 ## Bundle JavaScript
 
-La version 0.25.1 peut conserver le dépassement du budget JavaScript historique accepté en 0.25.0 pour l’UX photo. L’optimisation du bundle doit être traitée plus tard comme chantier technique global.
-
-## Données locales
-
-La base métier reste en Dexie v8, la sauvegarde en JSON v7, le registre local des espaces en v1 et le runtime Dexie Cloud en v10. Aucune migration n’est requise pour 0.25.1.
+La version 0.26.0 conserve le budget JavaScript accepté pour l’UX photo, IA et confidentialité sociale. L’optimisation du bundle doit être traitée plus tard comme chantier technique global.

@@ -235,6 +235,12 @@ const FavoriteMealsPage = lazy(() =>
   })),
 );
 
+const FriendsPrivacyPage = lazy(() =>
+  import('@/features/friends/pages/FriendsPrivacyPage').then((module) => ({
+    default: module.FriendsPrivacyPage,
+  })),
+);
+
 
 const AnalyticsPage = lazy(() =>
   import('@/features/analytics/pages/AnalyticsPage').then((module) => ({
@@ -614,6 +620,10 @@ export function LazyRecipeEntryEditorPage() {
 
 export function LazyFavoriteMealsPage() {
   return <RouteSuspense variant="list"><FavoriteMealsPage /></RouteSuspense>;
+}
+
+export function LazyFriendsPrivacyPage() {
+  return <RouteSuspense variant="list"><FriendsPrivacyPage /></RouteSuspense>;
 }
 
 

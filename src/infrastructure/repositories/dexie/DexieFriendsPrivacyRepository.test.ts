@@ -1,0 +1,81 @@
+import { AppDatabase } from '@/infrastructure/database/AppDatabase';
+import { DexieFriendsPrivacyRepository } from '@/infrastructure/repositories/dexie/DexieFriendsPrivacyRepository';
+import { DEFAULT_FRIENDS_PRIVACY_SETTINGS, FRIENDS_PRIVACY_SETTINGS_ID, type FriendsPrivacySnapshot } from '@/domain/friends/friendship';
+import type { EntityId } from '@/domain/models/common';
+
+function createDatabase(): AppDatabase {
+  return new AppDatabase(`sportpilot-friends-privacy-${crypto.randomUUID()}`);
+}
+
+const snapshot: FriendsPrivacySnapshot = {
+  friends: [
+    {
+      id: 'friend:lea' as EntityId,
+      displayName: 'Léa Cardio',
+      handle: 'lea.cardio',
+      initials: 'LC',
+      connectedSince: '2026-07-05T08:00:00.000Z',
+    },
+  ],
+  requests: [
+    {
+      id: 'friend-request:nora.trail' as EntityId,
+      displayName: 'Nora Trail',
+      handle: 'nora.trail',
+      direction: 'incoming',
+      status: 'pending',
+      requestedAt: '2026-07-05T09:00:00.000Z',
+    },
+  ],
+  privacy: {
+    ...DEFAULT_FRIENDS_PRIVACY_SETTINGS,
+    profileVisibility: 'private',
+    activitySharing: 'disabled',
+  },
+};
+
+describe('DexieFriendsPrivacyRepository', () => {
+  it('retourne un snapshot vide sécurisé quand aucune donnée ami n’existe', async () => {
+    const database = createDatabase();
+    const repository = new DexieFriendsPrivacyRepository(database);
+
+    try {
+      await database.open();
+      await expect(repository.readSnapshot()).resolves.toEqual({
+        friends: [],
+        requests: [],
+        privacy: DEFAULT_FRIENDS_PRIVACY_SETTINGS,
+      });
+    } finally {
+      database.close();
+      await database.delete();
+    }
+  });
+
+  it('persiste les amis, demandes et préférences de confidentialité dans Dexie v9', async () => {
+    const database = createDatabase();
+    const repository = new DexieFriendsPrivacyRepository(database);
+
+    try {
+      await database.open();
+      await repository.saveSnapshot(snapshot);
+
+      expect(await database.friendProfiles.count()).toBe(1);
+      expect(await database.friendRequests.count()).toBe(1);
+      expect(await database.friendsPrivacySettings.get(FRIENDS_PRIVACY_SETTINGS_ID)).toMatchObject({
+        id: FRIENDS_PRIVACY_SETTINGS_ID,
+        profileVisibility: 'private',
+        activitySharing: 'disabled',
+      });
+
+      await expect(repository.readSnapshot()).resolves.toMatchObject({
+        friends: [expect.objectContaining({ handle: 'lea.cardio' })],
+        requests: [expect.objectContaining({ handle: 'nora.trail', status: 'pending' })],
+        privacy: expect.objectContaining({ profileVisibility: 'private' }),
+      });
+    } finally {
+      database.close();
+      await database.delete();
+    }
+  });
+});

@@ -1,39 +1,42 @@
-# Checklist de publication — SportPilot 0.25.1
+# Checklist de publication — SportPilot 0.26.0
 
 ## Préparation Git
 
-- [ ] La branche `feature/photo-ai-0.25.1` est propre et synchronisée.
-- [ ] `package.json` et `package-lock.json` indiquent `0.25.1`.
-- [ ] Paramètres affiche `0.25.1`.
-- [ ] Aucun fichier `.env`, `.env.local` ou secret Gemini n’est stagé.
-- [ ] La recherche `AIza[0-9A-Za-z_-]{20,}|sk-[0-9A-Za-z_-]{20,}` ne retourne aucune clé réelle dans le diff.
+- [ ] La branche `feature/friends-privacy-0.26.0` est propre et synchronisée.
+- [ ] `package.json` et `package-lock.json` indiquent `0.26.0`.
+- [ ] Paramètres affiche `0.26.0`.
+- [ ] Aucun fichier temporaire de patch, ZIP ou dossier `patch-files/` n’est stagé.
+- [ ] Aucun fichier `.env`, `.env.local`, `.env.production` ou secret IA n’est stagé.
 
 ## Contrôles automatiques
 
-- [ ] `npm run test -- functions/_shared/photoNutritionAiProxy.test.mjs src/application/photo-nutrition/photoNutritionAiClient.test.ts src/application/photo-nutrition/photoNutritionEstimationService.test.ts src/features/photo-nutrition/pages/PhotoNutritionEstimatePage.test.tsx` passe.
-- [ ] `npm run audit:photo-ai` passe.
-- [ ] `npm run audit:photo-nutrition` passe.
+- [ ] `npm run test -- src/domain/friends/friendship.test.ts src/application/friends/friendsPrivacyService.test.ts src/infrastructure/repositories/dexie/DexieFriendsPrivacyRepository.test.ts src/features/friends/pages/FriendsPrivacyPage.test.tsx src/features/friends/pages/FriendsPrivacyPage.persistence.test.tsx src/infrastructure/backup/friendsPrivacyBackup.test.ts src/app/friendsPrivacyReleaseReadiness.test.ts src/app/syncDataReadiness.test.ts src/app/releaseReadiness.test.ts src/features/settings/components/DataManagementCenter.test.tsx` passe.
+- [ ] `npm run audit:friends-privacy` passe.
+- [ ] `npm run audit:release` passe.
+- [ ] `npm run audit:repository` passe.
 - [ ] `npm run build` passe.
 - [ ] `npm run check` passe.
 - [ ] `npm run test:stability` passe.
 
 ## Recette fonctionnelle
 
-- [ ] Sans endpoint IA, l’analyse locale reste disponible.
-- [ ] Avec `VITE_PHOTO_NUTRITION_AI_ENDPOINT=/api/photo-nutrition/analyze`, le bouton IA est disponible.
-- [ ] La photo n’est envoyée qu’après consentement explicite.
-- [ ] Le proxy Gemini renvoie une estimation différente selon le plat photographié.
-- [ ] Les champs aliment, quantité, kcal, protéines, glucides et lipides sont préremplis.
-- [ ] L’utilisateur peut corriger les valeurs avant ajout.
-- [ ] L’entrée est ajoutée au bon repas.
-- [ ] Si le proxy est coupé ou si le quota Gemini est atteint, le fallback local s’active proprement.
-- [ ] Open Food Facts fonctionne toujours.
-- [ ] Le scanner code-barres fonctionne toujours.
+- [ ] La page Amis s’ouvre depuis la navigation.
+- [ ] Une demande sortante peut être créée et reste persistée après rechargement.
+- [ ] Une demande entrante peut être acceptée et transforme correctement le profil en ami.
+- [ ] Une demande entrante peut être refusée sans créer d’ami.
+- [ ] Les doublons de demandes sont bloqués.
+- [ ] Les préférences de confidentialité sont persistées après rechargement.
+- [ ] Le profil privé reste conservé après rechargement.
+- [ ] Le mode “Détaillé après accord” peut être sélectionné comme préférence mais reste bloqué par le garde-fou social.
+- [ ] Aucun export social détaillé n’est disponible en 0.26.0.
+- [ ] Une sauvegarde JSON v8 contient `friendProfiles`, `friendRequests` et `friendsPrivacySettings`.
+- [ ] La restauration conserve les amis, demandes et préférences.
+- [ ] Les parcours photo IA, Open Food Facts et scanner code-barres restent non régressifs.
 
 ## Publication
 
-- [ ] Fusion manuelle dans `develop` avec `merge: intégrer SportPilot 0.25.1`.
+- [ ] Fusion manuelle dans `develop` avec `merge: intégrer SportPilot 0.26.0`.
 - [ ] Contrôles release relancés sur `develop`.
-- [ ] Fusion manuelle dans `main` avec `merge: publier SportPilot 0.25.1`.
-- [ ] Le tag annoté `v0.25.1` est créé sur le commit publié.
+- [ ] Fusion manuelle dans `main` avec `merge: publier SportPilot 0.26.0`.
+- [ ] Le tag annoté `v0.26.0` est créé sur le commit publié.
 - [ ] `develop` est resynchronisée avec `main`.

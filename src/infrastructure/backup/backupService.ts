@@ -83,6 +83,9 @@ export function tableList(database: AppDatabase) {
     database.workoutSessionExercises,
     database.strengthSets,
     database.progressionSuggestions,
+    database.friendProfiles,
+    database.friendRequests,
+    database.friendsPrivacySettings,
   ] as const;
 }
 
@@ -132,6 +135,9 @@ export async function readBackupData(
     workoutSessionExercises,
     strengthSets,
     progressionSuggestions,
+    friendProfiles,
+    friendRequests,
+    friendsPrivacySettings,
     goals,
     endurancePlanningSessions,
     earnedAchievements,
@@ -163,6 +169,9 @@ export async function readBackupData(
     database.workoutSessionExercises.toArray(),
     database.strengthSets.toArray(),
     database.progressionSuggestions.toArray(),
+    database.friendProfiles.toArray(),
+    database.friendRequests.toArray(),
+    database.friendsPrivacySettings.toArray(),
     database.goals.toArray(),
     database.endurancePlanningSessions.toArray(),
     database.earnedAchievements.toArray(),
@@ -196,6 +205,9 @@ export async function readBackupData(
     workoutSessionExercises,
     strengthSets,
     progressionSuggestions,
+    friendProfiles,
+    friendRequests,
+    friendsPrivacySettings,
     goals,
     endurancePlanningSessions,
     earnedAchievements,
@@ -459,6 +471,17 @@ async function populateTables(
   if (data.progressionSuggestions.length > 0) {
     await database.progressionSuggestions.bulkAdd(
       data.progressionSuggestions,
+    );
+  }
+  if ((data.friendProfiles?.length ?? 0) > 0) {
+    await database.friendProfiles.bulkAdd(data.friendProfiles ?? []);
+  }
+  if ((data.friendRequests?.length ?? 0) > 0) {
+    await database.friendRequests.bulkAdd(data.friendRequests ?? []);
+  }
+  if ((data.friendsPrivacySettings?.length ?? 0) > 0) {
+    await database.friendsPrivacySettings.bulkAdd(
+      data.friendsPrivacySettings ?? [],
     );
   }
 }

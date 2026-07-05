@@ -1,4 +1,9 @@
 import type { Activity } from '@/domain/models/activity';
+import type {
+  StoredFriendProfile,
+  StoredFriendRequest,
+  StoredFriendsPrivacySettings,
+} from '@/domain/friends/friendship';
 import type { DeletionRecord } from '@/domain/models/deletion';
 import type { Goal, GoalState } from '@/domain/goals/goalState';
 import type {
@@ -89,6 +94,9 @@ export interface BackupData {
   weeklyMissionCompletions?: CompletedWeeklyMissionRecord[];
   routineReminderCompletions?: RoutineReminderCompletionRecord[];
   deletionRecords?: DeletionRecord[];
+  friendProfiles?: StoredFriendProfile[];
+  friendRequests?: StoredFriendRequest[];
+  friendsPrivacySettings?: StoredFriendsPrivacySettings[];
 }
 
 export interface RewardBackupState {
