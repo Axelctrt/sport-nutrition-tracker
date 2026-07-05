@@ -17,9 +17,9 @@ describe('publication de la continuité complète du compte 0.26.0', () => {
     expect(databaseSchemaVersion).toBe(10);
     expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(9);
     expect(DATA_SPACE_REGISTRY_VERSION).toBe(1);
-    expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(13);
+    expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(14);
     expect(SYNC_PROTOTYPE_DATABASE_NAME).toBe(
-      'sportpilot-sync-runtime-0.20.0-v13',
+      'sportpilot-sync-runtime-0.20.0-v14',
     );
   });
 

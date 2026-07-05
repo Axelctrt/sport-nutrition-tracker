@@ -61,7 +61,7 @@ assert(!service.includes('rawActivity'), 'F5 ne doit pas manipuler d’activité
 
 const runtime = read('src/infrastructure/sync-prototype/SyncPrototypeDatabase.ts');
 for (const token of [
-  'SYNC_PROTOTYPE_DATABASE_VERSION = 13',
+  'SYNC_PROTOTYPE_DATABASE_VERSION = 14',
   "'socialFriendships'",
   "'socialFriendPermissions'",
   "socialFriendships: 'id, userAId, userBId, status, updatedAt",
@@ -75,15 +75,15 @@ assert(!runtime.includes('globalUserDirectory'), 'le runtime ne doit pas créer 
 
 const page = read('src/features/friends/pages/FriendsPrivacyPage.tsx');
 for (const token of [
-  'Cloud social 0.28.0 F5',
-  'Amitiés cloud F5 prêtes',
+  'Cloud social 0.28.0 F6',
+  'Snapshots sociaux distants F6 prêts',
   'permissions synchronisées',
   'Résumé par défaut',
   'détail uniquement après consentement explicite',
-  'aucun snapshot distant',
+  'lecture des snapshots autorisés',
   'aucun export brut',
 ]) {
-  assert(page.includes(token), `page Amis F5 incomplète : ${token} absent.`);
+  assert(page.includes(token), `page Amis F6 incomplète : ${token} absent.`);
 }
 
 const packageJson = JSON.parse(read('package.json'));

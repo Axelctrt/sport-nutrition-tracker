@@ -69,8 +69,8 @@ assert(!gateway.includes('suggest'), 'le gateway ne doit pas exposer de suggesti
 assert(!gateway.includes('rawActivity'), 'le gateway ne doit pas manipuler d’activité brute.');
 
 const page = read('src/features/friends/pages/FriendsPrivacyPage.tsx');
-assert(page.includes('Cloud social 0.28.0 F5'), 'la page Amis doit afficher la readiness F3.');
-assert(page.includes('Amitiés cloud F5 prêtes'), 'la page doit mentionner la recherche exacte F3.');
+assert(page.includes('Cloud social 0.28.0 F6'), 'la page Amis doit afficher la readiness F6.');
+assert(page.includes('Snapshots sociaux distants F6 prêts'), 'la page doit mentionner la recherche exacte F3.');
 assert(page.includes('aucun matching partiel'), 'la page doit rappeler l’absence de matching partiel.');
 assert(page.includes('détail uniquement après consentement explicite'), 'la page doit rappeler que le détail exige un consentement explicite en F5.');
 

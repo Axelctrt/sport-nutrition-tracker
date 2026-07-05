@@ -56,3 +56,12 @@ Les demandes d’amis cloud sont préparées avec les statuts `pending`, `accept
 - Les relations restent basées sur `userId`, jamais sur le handle public.
 - Synchronise les permissions par ami avec résumé par défaut et détail uniquement après consentement explicite.
 - Ne publie encore aucun snapshot distant et ne crée aucun feed distant réel.
+
+
+### 0.28.0 F6 — Snapshots sociaux distants filtrés
+
+- Publication cloud de snapshots sociaux filtrés uniquement.
+- Lecture des snapshots autorisés pour le feed amis réel.
+- Runtime Dexie Cloud prototype v14.
+- AppDatabase locale inchangée en v10 et sauvegarde JSON v9.
+- Aucune activité brute, aucun export brut, aucun annuaire public, aucune suggestion.

@@ -358,15 +358,15 @@ export function FriendsPrivacyPage({
         </p>
       </InlineNotice>
 
-      <InlineNotice title="Cloud social 0.28.0 F5">
+      <InlineNotice title="Cloud social 0.28.0 F6">
         <p>
-          Amitiés cloud F5 prêtes : les réservations cloud de handles restent utilisées pour la recherche exacte, puis une demande acceptée peut devenir une relation stable basée sur userId distant, avec permissions synchronisées.
+          Snapshots sociaux distants F6 prêts : les réservations cloud de handles restent utilisées pour la recherche exacte, puis la publication cloud de snapshots filtrés peut utiliser les amitiés cloud et les permissions synchronisées, toujours par userId distant.
         </p>
         <p>
           Tant que le backend social réel n’est pas activé, la recherche réelle est indisponible et l’app conserve un fallback sécurisé.
         </p>
         <p>
-          Résumé par défaut, détail uniquement après consentement explicite : aucun annuaire, aucune suggestion, aucun matching partiel, aucun snapshot distant et aucun export brut ne sont activés en F5.
+          lecture des snapshots autorisés uniquement : Résumé par défaut, détail uniquement après consentement explicite, aucune activité brute, aucun annuaire, aucune suggestion, aucun matching partiel et aucun export brut.
         </p>
       </InlineNotice>
 
@@ -565,7 +565,7 @@ export function FriendsPrivacyPage({
             </h2>
           </div>
           <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-            La demande passe par une recherche exacte d’identifiant SportPilot. En F3, le lookup peut être branché sur les identités cloud, mais aucune demande d’ami cloud n’est encore créée automatiquement.
+            La demande passe par une recherche exacte d’identifiant SportPilot. En F6, la recherche exacte et les demandes cloud restent protégées : aucune amitié n’est créée sans acceptation explicite.
           </p>
 
           <form className="mt-5 space-y-3" onSubmit={submitRequest}>
