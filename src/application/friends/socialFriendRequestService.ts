@@ -5,11 +5,11 @@ import {
 } from '@/domain/friends/friendship';
 import {
   formatSocialHandle,
-  validateSocialHandle,
   type PublicUserProfile,
   type SocialIdentity,
 } from '@/domain/friends/socialIdentity';
 import type { SocialUserLookupGateway } from '@/application/friends/socialIdentityService';
+import { lookupExactSocialCloudUser } from '@/application/friends/socialCloudUserLookupService';
 
 export type ExactFriendRequestStatus =
   | 'sent'
@@ -39,22 +39,17 @@ export interface SendExactFriendRequestResult {
 export async function sendExactFriendRequest(
   input: SendExactFriendRequestInput,
 ): Promise<SendExactFriendRequestResult> {
-  const validation = validateSocialHandle(input.handle);
-  if (validation.status === 'invalid') {
-    return {
-      status: 'invalidHandle',
-      snapshot: input.snapshot,
-      message: validation.message,
-    };
-  }
-
-  const lookup = await input.lookupGateway.lookupByHandle(validation.handle);
+  const lookup = await lookupExactSocialCloudUser({
+    handle: input.handle,
+    lookupGateway: input.lookupGateway,
+    currentUserId: input.identity.userId,
+  });
 
   if (lookup.status === 'invalidHandle') {
     return {
       status: 'invalidHandle',
       snapshot: input.snapshot,
-      message: 'Identifiant invalide : vérifie le format avant la recherche.',
+      message: lookup.message,
     };
   }
 
@@ -62,15 +57,15 @@ export async function sendExactFriendRequest(
     return {
       status: 'notFound',
       snapshot: input.snapshot,
-      message: 'Identifiant inexistant.',
+      message: lookup.message,
     };
   }
 
-  if (lookup.status === 'unavailable') {
+  if (lookup.status === 'unavailable' || !lookup.profile) {
     return {
       status: 'unavailable',
       snapshot: input.snapshot,
-      message: 'Service cloud indisponible : recherche réelle impossible pour le moment.',
+      message: lookup.message,
     };
   }
 

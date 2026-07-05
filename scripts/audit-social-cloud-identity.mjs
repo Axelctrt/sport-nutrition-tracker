@@ -64,8 +64,8 @@ assert(!service.includes('XMLHttpRequest'), 'F2 ne doit pas ajouter d’appel r�
 assert(!service.includes('rawActivity'), 'le service identité cloud ne doit pas manipuler d’activité brute.');
 
 const page = read('src/features/friends/pages/FriendsPrivacyPage.tsx');
-assert(page.includes('Cloud social 0.28.0 F2'), 'la page Amis doit afficher la readiness F2.');
-assert(page.includes('réservations de handles'), 'la page doit mentionner les réservations de handles.');
+assert(page.includes('Cloud social 0.28.0 F3'), 'la page Amis doit afficher la readiness cloud sociale courante.');
+assert(page.includes('réservations cloud'), 'la page doit mentionner les réservations cloud de handles.');
 assert(page.includes('aucun annuaire'), 'la page doit rappeler l’absence d’annuaire.');
 
 const packageJson = JSON.parse(read('package.json'));
