@@ -1,7 +1,9 @@
 import type { EntityId, IsoDateTime } from '@/domain/models/common';
 import {
   createCloudFriendRequestId,
+  ensureFriendActivityPermissions,
   normalizeFriendHandle,
+  type FriendProfileSummary,
   type FriendRequest,
   type FriendRequestStatus,
   type FriendsPrivacySnapshot,
@@ -119,18 +121,78 @@ export function cloudFriendRequestToLocalRequest(
   };
 }
 
+
+function initialsFromName(value: string): string {
+  const words = value.replace(/^@/u, '').split(/\s+|[._-]+/u).filter(Boolean);
+  const initials = words.slice(0, 2).map((word) => word.at(0)?.toUpperCase()).join('');
+  return initials || 'SP';
+}
+
+function friendKey(friend: Pick<FriendProfileSummary, 'id' | 'userId' | 'handle'>): string {
+  return friend.userId ?? friend.id ?? normalizeFriendHandle(friend.handle);
+}
+
+function friendSummaryFromAcceptedRequest(request: FriendRequest): FriendProfileSummary | undefined {
+  if (request.status !== 'accepted') return undefined;
+
+  const friendUserId = request.direction === 'incoming'
+    ? request.requesterUserId
+    : request.recipientUserId;
+  const handle = normalizeFriendHandle(request.handle);
+
+  return {
+    id: friendUserId ?? (`friend:${handle}` as EntityId),
+    ...(friendUserId ? { userId: friendUserId } : {}),
+    displayName: request.displayName,
+    handle,
+    initials: initialsFromName(request.displayName || handle),
+    connectedSince: request.requestedAt,
+  };
+}
+
+function mergeRequestPreservingKnownProfile(
+  current: FriendRequest | undefined,
+  incoming: FriendRequest,
+): FriendRequest {
+  if (!current) return incoming;
+
+  return {
+    ...incoming,
+    displayName: current.displayName || incoming.displayName,
+    handle: normalizeFriendHandle(current.handle || incoming.handle),
+  };
+}
+
 export function mergeCloudFriendRequestsIntoSnapshot(
   snapshot: FriendsPrivacySnapshot,
   localRequests: readonly FriendRequest[],
 ): FriendsPrivacySnapshot {
   const byId = new Map<EntityId, FriendRequest>();
   for (const request of snapshot.requests) byId.set(request.id, request);
-  for (const request of localRequests) byId.set(request.id, request);
+  for (const request of localRequests) {
+    byId.set(request.id, mergeRequestPreservingKnownProfile(byId.get(request.id), request));
+  }
 
-  return {
+  const mergedRequests = [...byId.values()].sort((a, b) => b.requestedAt.localeCompare(a.requestedAt));
+  const nextFriends = [...snapshot.friends];
+  const knownFriends = new Set(nextFriends.map(friendKey));
+
+  for (const request of mergedRequests) {
+    const friend = friendSummaryFromAcceptedRequest(request);
+    if (!friend) continue;
+
+    const key = friendKey(friend);
+    if (knownFriends.has(key)) continue;
+
+    knownFriends.add(key);
+    nextFriends.push(friend);
+  }
+
+  return ensureFriendActivityPermissions({
     ...snapshot,
-    requests: [...byId.values()].sort((a, b) => b.requestedAt.localeCompare(a.requestedAt)),
-  };
+    friends: nextFriends,
+    requests: mergedRequests,
+  });
 }
 
 export function assertSocialCloudFriendRequestContractIntegrity(): true {

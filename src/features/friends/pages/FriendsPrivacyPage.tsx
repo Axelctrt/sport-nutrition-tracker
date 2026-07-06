@@ -21,7 +21,12 @@ import {
 } from '@/application/friends/friendsPrivacyService';
 import { prepareSocialActivityFeed } from '@/application/friends/socialActivityFeedService';
 import { sendExactFriendRequest } from '@/application/friends/socialFriendRequestService';
-import type { SocialCloudFriendRequestPort } from '@/domain/friends/socialCloudContract';
+import {
+  cloudFriendRequestToLocalRequest,
+  mergeCloudFriendRequestsIntoSnapshot,
+  normalizeCloudFriendRequestForUser,
+} from '@/domain/friends/socialCloudFriendRequest';
+import type { SocialCloudFriendRequestPort, SocialCloudIdentityPort } from '@/domain/friends/socialCloudContract';
 import {
   checkSocialHandleAvailability,
   loadSocialIdentity,
@@ -33,6 +38,8 @@ import {
   FRIEND_ACTIVITY_PERMISSION_LABELS,
   FRIEND_ACTIVITY_SHARING_LABELS,
   FRIEND_PROFILE_VISIBILITY_LABELS,
+  acceptFriendRequest,
+  declineFriendRequest,
   evaluateFriendActivitySharingGuard,
   evaluateFriendScopedActivitySharingGuard,
   summarizeFriendsPrivacy,
@@ -54,6 +61,7 @@ import { DexieFriendsPrivacyRepository } from '@/infrastructure/repositories/dex
 import { DexieSocialIdentityRepository } from '@/infrastructure/repositories/dexie/DexieSocialIdentityRepository';
 import { createRuntimeSocialCloudUserLookupGateway } from '@/infrastructure/sync-prototype/realSocialCloudUserLookupGateway';
 import { createRuntimeSocialCloudFriendRequestPort } from '@/infrastructure/sync-prototype/realSocialCloudFriendRequestService';
+import { createRuntimeSocialCloudIdentityPort } from '@/infrastructure/sync-prototype/realSocialCloudIdentityService';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
@@ -64,6 +72,7 @@ interface FriendsPrivacyPageProps {
   readonly initialIdentity?: SocialIdentity;
   readonly identityRepository?: SocialIdentityRepository;
   readonly lookupGateway?: SocialUserLookupGateway;
+  readonly cloudIdentityPort?: SocialCloudIdentityPort;
   readonly cloudFriendRequestPort?: SocialCloudFriendRequestPort;
   readonly initialActivitySnapshots?: readonly SocialActivitySnapshot[];
 }
@@ -98,6 +107,7 @@ export function FriendsPrivacyPage({
   initialIdentity,
   identityRepository,
   lookupGateway,
+  cloudIdentityPort,
   cloudFriendRequestPort,
   initialActivitySnapshots = [],
 }: FriendsPrivacyPageProps = {}) {
@@ -110,10 +120,14 @@ export function FriendsPrivacyPage({
   const activeRepository = repository ?? defaultRepository;
   const activeIdentityRepository = identityRepository ?? defaultIdentityRepository;
   const [defaultLookupGateway] = useState(() => createRuntimeSocialCloudUserLookupGateway());
+  const [defaultCloudIdentityPort] = useState(() => (
+    initialIdentity || identityRepository ? undefined : createRuntimeSocialCloudIdentityPort()
+  ));
   const [defaultCloudFriendRequestPort] = useState(() => (
-    lookupGateway ? undefined : createRuntimeSocialCloudFriendRequestPort()
+    initialSnapshot || repository || lookupGateway ? undefined : createRuntimeSocialCloudFriendRequestPort()
   ));
   const activeLookupGateway = lookupGateway ?? defaultLookupGateway;
+  const activeCloudIdentityPort = cloudIdentityPort ?? defaultCloudIdentityPort;
   const activeCloudFriendRequestPort = cloudFriendRequestPort ?? defaultCloudFriendRequestPort;
   const initialSnapshotState = useMemo(
     () => initialSnapshot ?? createEmptyFriendsPrivacySnapshot(),
@@ -159,9 +173,23 @@ export function FriendsPrivacyPage({
         ? loadSocialIdentity(activeIdentityRepository)
         : Promise.resolve(initialIdentityState),
     ])
-      .then(([loadedSnapshot, loadedIdentity]) => {
+      .then(async ([loadedSnapshot, loadedIdentity]) => {
         if (!active) return;
-        setSnapshot(loadedSnapshot);
+
+        let nextSnapshot = loadedSnapshot;
+        if (activeCloudFriendRequestPort) {
+          const [incomingCloudRequests, outgoingCloudRequests] = await Promise.all([
+            activeCloudFriendRequestPort.listIncomingRequests(loadedIdentity.userId),
+            activeCloudFriendRequestPort.listOutgoingRequests(loadedIdentity.userId),
+          ]);
+          const localRequests = [...incomingCloudRequests, ...outgoingCloudRequests].flatMap((request) => {
+            const report = normalizeCloudFriendRequestForUser(request, loadedIdentity.userId);
+            return report ? [cloudFriendRequestToLocalRequest(report)] : [];
+          });
+          nextSnapshot = mergeCloudFriendRequestsIntoSnapshot(loadedSnapshot, localRequests);
+        }
+
+        setSnapshot(nextSnapshot);
         setIdentity(loadedIdentity);
         setIdentityHandle(formatSocialHandle(loadedIdentity.handle));
         setDisplayName(loadedIdentity.displayName);
@@ -188,6 +216,7 @@ export function FriendsPrivacyPage({
     initialIdentity,
     initialSnapshotState,
     initialIdentityState,
+    activeCloudFriendRequestPort,
   ]);
 
   const summary = useMemo(() => summarizeFriendsPrivacy(snapshot), [snapshot]);
@@ -255,6 +284,42 @@ export function FriendsPrivacyPage({
       .finally(() => setIsSendingRequest(false));
   };
 
+  const respondToIncomingRequest = (request: FriendRequest, status: 'accepted' | 'declined') => {
+    setRequestFeedback(undefined);
+    setErrorMessage(undefined);
+    const respondedAt = new Date().toISOString();
+    const localFeedback = status === 'accepted' ? 'Demande acceptée.' : 'Demande refusée.';
+    const applyLocalChange = () => {
+      const nextSnapshot = status === 'accepted'
+        ? acceptFriendRequest(snapshot, request.id, respondedAt)
+        : declineFriendRequest(snapshot, request.id);
+      persistSnapshot({ ...nextSnapshot, lastFeedback: localFeedback });
+    };
+
+    if (!activeCloudFriendRequestPort) {
+      applyLocalChange();
+      return;
+    }
+
+    void activeCloudFriendRequestPort.updateRequestStatus(request.id, status, respondedAt)
+      .then((result) => {
+        if (['updated', 'created', 'alreadyExists'].includes(result.status)) {
+          applyLocalChange();
+          setRequestFeedback(result.message);
+          return;
+        }
+
+        setRequestFeedback(result.message);
+      })
+      .catch((error) => {
+        setRequestFeedback(
+          error instanceof Error
+            ? error.message
+            : 'Service cloud indisponible : réponse à la demande impossible pour le moment.',
+        );
+      });
+  };
+
   const submitIdentity = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setErrorMessage(undefined);
@@ -264,13 +329,28 @@ export function FriendsPrivacyPage({
       handle: identityHandle,
       displayName,
     })
-      .then((result) => {
-        setIdentityFeedback(result.message);
-        if (result.status === 'saved') {
-          setIdentity(result.identity);
-          setIdentityHandle(formatSocialHandle(result.identity.handle));
-          setDisplayName(result.identity.displayName);
+      .then(async (result) => {
+        if (result.status !== 'saved') {
+          setIdentityFeedback(result.message);
+          return;
         }
+
+        setIdentity(result.identity);
+        setIdentityHandle(formatSocialHandle(result.identity.handle));
+        setDisplayName(result.identity.displayName);
+
+        if (!activeCloudIdentityPort) {
+          setIdentityFeedback(result.message);
+          return;
+        }
+
+        const cloudResult = await activeCloudIdentityPort.publishIdentity(result.identity);
+        if (['created', 'updated', 'alreadyExists'].includes(cloudResult.status)) {
+          setIdentityFeedback(`${result.message} ${cloudResult.message}`);
+          return;
+        }
+
+        setIdentityFeedback(`${result.message} Publication cloud non effectuée : ${cloudResult.message}`);
       })
       .catch((error) => {
         setErrorMessage(
@@ -767,11 +847,11 @@ export function FriendsPrivacyPage({
                   </div>
                   {request.direction === 'incoming' && request.status === 'pending' ? (
                     <div className="flex gap-2">
-                      <Button size="sm" onClick={() => update((actions) => actions.acceptRequest(request.id))}>
+                      <Button size="sm" onClick={() => respondToIncomingRequest(request, 'accepted')}>
                         <Check aria-hidden="true" className="size-4" />
                         Accepter
                       </Button>
-                      <Button size="sm" variant="secondary" onClick={() => update((actions) => actions.declineRequest(request.id))}>
+                      <Button size="sm" variant="secondary" onClick={() => respondToIncomingRequest(request, 'declined')}>
                         <X aria-hidden="true" className="size-4" />
                         Refuser
                       </Button>

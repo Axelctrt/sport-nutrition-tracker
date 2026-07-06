@@ -108,8 +108,8 @@ export function mergeSyncPrototypeProductionEnvironment(
   environment: SyncPrototypeEnvironment,
 ): SyncPrototypeEnvironment {
   return {
-    ...environment,
     ...syncPublicDeploymentConfig,
+    ...environment,
   };
 }
 

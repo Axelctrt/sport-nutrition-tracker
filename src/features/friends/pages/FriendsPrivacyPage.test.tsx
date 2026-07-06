@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+﻿import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { EntityId } from '@/domain/models/common';
 import {
@@ -7,7 +7,7 @@ import {
   type FriendsPrivacySnapshot,
 } from '@/domain/friends/friendship';
 import { createDefaultSocialIdentity } from '@/domain/friends/socialIdentity';
-import type { SocialCloudFriendRequestPort } from '@/domain/friends/socialCloudContract';
+import type { SocialCloudFriendRequestPort, SocialCloudIdentityPort } from '@/domain/friends/socialCloudContract';
 import type { SocialActivitySnapshot } from '@/domain/friends/socialActivitySnapshot';
 import { createFoundSocialUserLookupGateway, type SocialUserLookupGateway } from '@/application/friends/socialIdentityService';
 import { FriendsPrivacyPage } from '@/features/friends/pages/FriendsPrivacyPage';
@@ -51,6 +51,7 @@ const identity = createDefaultSocialIdentity('2026-07-05T10:00:00.000Z', 'alex12
 
 function renderPage(override: {
   readonly lookupGateway?: SocialUserLookupGateway;
+  readonly cloudIdentityPort?: SocialCloudIdentityPort;
   readonly cloudFriendRequestPort?: SocialCloudFriendRequestPort;
   readonly initialSnapshot?: FriendsPrivacySnapshot;
   readonly initialActivitySnapshots?: readonly SocialActivitySnapshot[];
@@ -59,6 +60,7 @@ function renderPage(override: {
     initialSnapshot: override.initialSnapshot ?? snapshot,
     initialIdentity: identity,
     ...(override.lookupGateway ? { lookupGateway: override.lookupGateway } : {}),
+    ...(override.cloudIdentityPort ? { cloudIdentityPort: override.cloudIdentityPort } : {}),
     ...(override.cloudFriendRequestPort ? { cloudFriendRequestPort: override.cloudFriendRequestPort } : {}),
     ...(override.initialActivitySnapshots ? { initialActivitySnapshots: override.initialActivitySnapshots } : {}),
   };
@@ -106,6 +108,51 @@ describe('FriendsPrivacyPage', () => {
     expect(screen.getByText('@alex.run')).toBeInTheDocument();
   });
 
+  it('publie le handle dans le cloud social quand un port réel est fourni', async () => {
+    const user = userEvent.setup();
+    const publishedIdentities: unknown[] = [];
+    const cloudIdentityPort: SocialCloudIdentityPort = {
+      async readCurrentIdentity() {
+        return undefined;
+      },
+      async lookupByHandle() {
+        return { status: 'notFound' };
+      },
+      async reserveHandle(identity) {
+        return {
+          status: 'created',
+          value: identity,
+          message: 'Identifiant cloud réservé.',
+        };
+      },
+      async publishIdentity(identity) {
+        publishedIdentities.push(identity);
+        return {
+          status: 'created',
+          value: identity,
+          message: 'Identité sociale cloud créée.',
+        };
+      },
+    };
+
+    renderPage({ cloudIdentityPort });
+
+    await user.clear(screen.getByLabelText('Identifiant public'));
+    await user.type(screen.getByLabelText('Identifiant public'), '@alex.run');
+    await user.clear(screen.getByLabelText('Nom affiché'));
+    await user.type(screen.getByLabelText('Nom affiché'), 'Alex Run');
+    await user.click(screen.getByRole('button', { name: 'Enregistrer' }));
+
+    expect(await screen.findByText(/Identité sociale cloud créée/u)).toBeInTheDocument();
+    expect(publishedIdentities).toEqual([
+      expect.objectContaining({
+        userId: identity.userId,
+        handle: 'alex.run',
+        displayName: 'Alex Run',
+      }),
+    ]);
+  });
+
   it('vérifie la disponibilité via une recherche exacte branchable', async () => {
     const user = userEvent.setup();
     const lookupGateway = createFoundSocialUserLookupGateway([]);
@@ -133,8 +180,8 @@ describe('FriendsPrivacyPage', () => {
 
     await user.click(screen.getByRole('button', { name: /Accepter/u }));
 
-    expect(screen.getByText(/Demande acceptée/u)).toBeInTheDocument();
-    expect(screen.getByText(/2 amis/u)).toBeInTheDocument();
+    expect(await screen.findByText(/Demande acceptée/u)).toBeInTheDocument();
+    expect(await screen.findByText(/2 amis/u)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Partage désactivé' })).toHaveAttribute('aria-pressed', 'true');
   });
 
@@ -356,3 +403,4 @@ describe('FriendsPrivacyPage', () => {
   });
 
 });
+

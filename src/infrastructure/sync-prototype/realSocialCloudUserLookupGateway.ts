@@ -14,24 +14,36 @@ import {
   createRealSocialCloudIdentityPort,
   type SocialCloudIdentityDatabase,
 } from '@/infrastructure/sync-prototype/realSocialCloudIdentityService';
+import {
+  createSocialDirectoryClient,
+  type SocialDirectoryLookupClient,
+} from '@/infrastructure/sync-prototype/socialDirectoryGateway';
 
 export type ExactSocialCloudLookupIdentityPort = Pick<SocialCloudIdentityPort, 'lookupByHandle'>;
 
 export interface ClosableSocialCloudIdentityDatabase extends SocialCloudIdentityDatabase {
   readonly open?: () => Promise<unknown>;
   readonly close?: () => void;
+  readonly cloud?: {
+    readonly sync?: () => Promise<unknown>;
+  };
 }
 
 export interface RuntimeSocialCloudUserLookupGatewayOptions {
   readonly configResult?: SafeSyncPrototypeConfigResult;
   readonly databaseFactory?: (config: EnabledSyncPrototypeConfig) => ClosableSocialCloudIdentityDatabase;
   readonly identityPortFactory?: (database: SocialCloudIdentityDatabase) => ExactSocialCloudLookupIdentityPort;
+  readonly socialDirectoryLookupClient?: SocialDirectoryLookupClient;
 }
 
 function unavailableResult(handle: string): SocialUserLookupResult {
   const validation = validateSocialHandle(handle);
   if (validation.status === 'invalid') return { status: 'invalidHandle' };
   return { status: 'unavailable' };
+}
+
+async function syncRuntimeDatabase(database: ClosableSocialCloudIdentityDatabase): Promise<void> {
+  await database.cloud?.sync?.();
 }
 
 export function createRealSocialCloudUserLookupGateway(
@@ -68,6 +80,10 @@ export function createRuntimeSocialCloudUserLookupGateway(
         return unavailableResult(validation.handle);
       }
 
+      const socialDirectoryLookupClient = options.socialDirectoryLookupClient ?? createSocialDirectoryClient();
+      const directoryResult = await socialDirectoryLookupClient.lookupByHandle(validation.handle);
+      if (directoryResult.status !== 'unavailable') return directoryResult;
+
       const database = options.databaseFactory
         ? options.databaseFactory(config)
         : createSyncPrototypeDatabase(config);
@@ -77,6 +93,7 @@ export function createRuntimeSocialCloudUserLookupGateway(
 
       try {
         await database.open?.();
+        await syncRuntimeDatabase(database);
         return await createRealSocialCloudUserLookupGateway(identityPort).lookupByHandle(validation.handle);
       } catch {
         return { status: 'unavailable' };
