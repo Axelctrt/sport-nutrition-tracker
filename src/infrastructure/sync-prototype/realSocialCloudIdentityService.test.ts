@@ -5,7 +5,11 @@ import type {
   SocialCloudIdentityRecord,
   SocialHandleReservation,
 } from '@/domain/friends/socialCloudIdentity';
-import { createRealSocialCloudIdentityPort } from '@/infrastructure/sync-prototype/realSocialCloudIdentityService';
+import {
+  createRealSocialCloudIdentityPort,
+  createRuntimeSocialCloudIdentityPort,
+  type SocialCloudIdentityDatabase,
+} from '@/infrastructure/sync-prototype/realSocialCloudIdentityService';
 
 class TestSocialCloudIdentityDatabase extends Dexie {
   declare socialIdentities: Table<SocialCloudIdentityRecord, EntityId>;
@@ -123,5 +127,131 @@ describe('realSocialCloudIdentityService', () => {
     await expect(port.publishIdentity(identity)).resolves.toMatchObject({ status: 'invalidHandle' });
     await expect(database.socialHandleReservations.count()).resolves.toBe(0);
     await expect(port.lookupByHandle('@Admin')).resolves.toEqual({ status: 'invalidHandle' });
+  });
+});
+
+describe('runtime realSocialCloudIdentityService', () => {
+  function enabledConfigResult() {
+    return {
+      config: {
+        enabled: true,
+        databaseUrl: 'https://sportpilot-prototype.dexie.cloud',
+        realWeightSyncEnabled: true,
+        realActivitySyncEnabled: true,
+        realGoalSyncEnabled: true,
+        realStrengthSyncEnabled: true,
+        realNutritionJournalSyncEnabled: true,
+        realNutritionLibrarySyncEnabled: true,
+        realNutritionTrackingSyncEnabled: true,
+        realAccountPreferencesSyncEnabled: true,
+        realRewardsRoutinesSyncEnabled: true,
+        realSocialCloudEnabled: true,
+        diagnosticsEnabled: false,
+      },
+    } as const;
+  }
+
+  it('publie une identité via le runtime quand le flag social réel est actif', async () => {
+    const opened: string[] = [];
+    const closed: string[] = [];
+    const synced: string[] = [];
+    const published: Array<{ userId: EntityId; handle: string; displayName: string }> = [];
+
+    const runtimeDatabase = {
+      async open() {
+        opened.push('open');
+      },
+      close() {
+        closed.push('close');
+      },
+      cloud: {
+        async sync() {
+          synced.push('sync');
+        },
+      },
+    } as unknown as SocialCloudIdentityDatabase & {
+      open: () => Promise<unknown>;
+      close: () => void;
+      cloud: {
+        sync: () => Promise<unknown>;
+      };
+    };
+
+    const port = createRuntimeSocialCloudIdentityPort({
+      configResult: enabledConfigResult(),
+      databaseFactory: () => runtimeDatabase,
+      socialDirectoryClient: {
+        async reserveIdentity() {
+          return { status: 'unavailable', message: 'Annuaire social serveur indisponible en test.' };
+        },
+        async lookupByHandle() {
+          return { status: 'unavailable' };
+        },
+      },
+      identityPortFactory: () => ({
+        async readCurrentIdentity() {
+          return undefined;
+        },
+        async lookupByHandle() {
+          return { status: 'notFound' };
+        },
+        async reserveHandle(nextIdentity) {
+          return {
+            status: 'created',
+            value: nextIdentity,
+            message: 'Identifiant cloud réservé pour ce compte SportPilot.',
+          };
+        },
+        async publishIdentity(nextIdentity) {
+          published.push({
+            userId: nextIdentity.userId,
+            handle: nextIdentity.handle.replace(/^@/u, ''),
+            displayName: nextIdentity.displayName ?? 'SportPilot',
+          });
+          return {
+            status: 'created',
+            value: nextIdentity,
+            message: 'Identité sociale cloud créée.',
+          };
+        },
+      }),
+    });
+    const identity = updateSocialIdentity(
+      createDefaultSocialIdentity('2026-07-05T08:00:00.000Z', 'alex123'),
+      { handle: '@alex.run', displayName: 'Alex Run' },
+      '2026-07-06T09:00:00.000Z',
+    );
+
+    await expect(port.publishIdentity(identity)).resolves.toMatchObject({
+      status: 'created',
+      message: 'Identité sociale cloud créée.',
+    });
+
+    expect(opened).toEqual(['open']);
+    expect(synced).toEqual(['sync', 'sync']);
+    expect(closed).toEqual(['close']);
+    expect(published).toEqual([
+      expect.objectContaining({
+        userId: identity.userId,
+        handle: 'alex.run',
+        displayName: 'Alex Run',
+      }),
+    ]);
+  });
+
+  it('garde la publication indisponible quand le flag social réel est désactivé', async () => {
+    const port = createRuntimeSocialCloudIdentityPort({
+      configResult: {
+        config: {
+          ...enabledConfigResult().config,
+          realSocialCloudEnabled: false,
+        },
+      },
+    });
+
+    await expect(port.publishIdentity(createDefaultSocialIdentity())).resolves.toMatchObject({
+      status: 'unavailable',
+      message: /Backend social cloud indisponible/u,
+    });
   });
 });

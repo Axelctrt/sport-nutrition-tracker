@@ -64,3 +64,7 @@ Le parcours IA Gemini livré précédemment reste disponible. La clé Gemini res
 La release 0.28.0 doit être validée avec `npm run build`, `npm run lint`, `npm run test`, `npm run check`, `npm run test:stability`, les audits sociaux locaux 0.27.0 et les audits cloud sociaux 0.28.0 F1 à F6.
 
 Tag attendu à publication : `v0.28.0`.
+
+### Activation contrôlée du cloud social réel
+
+Depuis la préparation 0.28.1 F1, `VITE_ENABLE_REAL_SOCIAL_CLOUD` peut être piloté par environnement de déploiement. La configuration publique garde un défaut prudent à `false`, mais Cloudflare Preview peut définir `true` pour tester identités, demandes d’amis, permissions et snapshots filtrés avec des comptes réels de test.

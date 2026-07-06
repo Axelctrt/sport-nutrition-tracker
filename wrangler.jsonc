@@ -1,0 +1,13 @@
+﻿{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "sportpilot",
+  "compatibility_date": "2026-07-06",
+  "pages_build_output_dir": "dist",
+  "d1_databases": [
+    {
+      "binding": "SOCIAL_DIRECTORY_DB",
+      "database_name": "sportpilot-social-directory",
+      "database_id": "a04dc26f-bb63-42ff-9145-4944ed22ffec"
+    }
+  ]
+}

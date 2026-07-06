@@ -56,3 +56,7 @@ SportPilot 0.28.0 finalise le backend social cloud réel préparé par les phase
 - pas de table `socialRawActivities`.
 
 Tag attendu à la publication finale : `v0.28.0`.
+
+## SportPilot 0.28.1 F1 — Activation contrôlée du cloud social réel
+
+La phase 0.28.1 F1 prépare l’ouverture contrôlée du social cloud réel : le défaut public reste `VITE_ENABLE_REAL_SOCIAL_CLOUD=false`, mais les variables `VITE_*` définies par Cloudflare peuvent désormais surcharger ce défaut en production. Cela permet d’activer le social cloud sur une Preview de test sans repatcher le code.

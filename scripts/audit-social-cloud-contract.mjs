@@ -9,7 +9,7 @@ function read(path) {
 
 function assert(condition, message) {
   if (!condition) {
-    throw new Error(`Audit cloud social 0.28.0 F1 échoué : ${message}`);
+    throw new Error(`Audit cloud social 0.28.1 F1 échoué : ${message}`);
   }
 }
 
@@ -62,7 +62,10 @@ assert(config.includes('VITE_ENABLE_REAL_SOCIAL_CLOUD'), 'flag VITE_ENABLE_REAL_
 assert(config.includes('realSocialCloudEnabled'), 'config realSocialCloudEnabled manquante.');
 
 const publicConfig = read('src/infrastructure/sync-prototype/syncPublicDeploymentConfig.ts');
-assert(publicConfig.includes("VITE_ENABLE_REAL_SOCIAL_CLOUD: 'false'"), 'le cloud social réel doit rester désactivé en configuration publique.');
+assert(publicConfig.includes("VITE_ENABLE_REAL_SOCIAL_CLOUD: 'false'"), 'le cloud social réel doit rester désactivé par défaut en configuration publique.');
+assert(publicConfig.includes('variables VITE_*') || publicConfig.includes('hébergeur'), 'la configuration publique doit documenter la surcharge par environnement.');
+assert(config.includes(`...syncPublicDeploymentConfig,
+    ...environment`), 'les variables hébergeur doivent pouvoir activer le cloud social réel sans repatcher le code.');
 
 const envExample = read('.env.example');
 assert(envExample.includes('VITE_ENABLE_REAL_SOCIAL_CLOUD=false'), '.env.example doit documenter le flag social.');
@@ -90,4 +93,4 @@ for (const token of [
   assert(doc.includes(token), `documentation F1 incomplète : ${token} absent.`);
 }
 
-console.log('Audit cloud social 0.28.0 F1 OK');
+console.log('Audit cloud social 0.28.1 F1 OK');

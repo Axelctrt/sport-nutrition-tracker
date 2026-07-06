@@ -43,3 +43,7 @@ Les clés `PHOTO_NUTRITION_AI_API_KEY` ou `GEMINI_API_KEY` doivent rester côté
 ## Bundle JavaScript
 
 La version 0.28.0 conserve le budget JavaScript accepté pour l’UX photo, IA, synchronisation et social. L’optimisation du bundle doit être traitée plus tard comme chantier technique global.
+
+## Social cloud réel — activation contrôlée 0.28.1 F1
+
+Le cloud social réel reste désactivé par défaut dans la configuration publique. Il peut être activé par environnement avec `VITE_ENABLE_REAL_SOCIAL_CLOUD=true`, idéalement d’abord sur Cloudflare Preview avec des comptes de test. La production doit rester à `false` tant que la recette multi-comptes et les règles d’accès ne sont pas validées.

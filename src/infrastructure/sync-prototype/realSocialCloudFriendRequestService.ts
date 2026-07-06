@@ -9,6 +9,7 @@ import { createCloudFriendRequestId } from '@/domain/friends/friendship';
 import {
   createSyncPrototypeDatabase,
 } from '@/infrastructure/sync-prototype/SyncPrototypeDatabase';
+import { createSocialFriendRequestsClient } from '@/infrastructure/sync-prototype/socialFriendRequestsGateway';
 import {
   readSyncPrototypeConfigSafely,
   type EnabledSyncPrototypeConfig,
@@ -32,6 +33,7 @@ export interface RuntimeSocialCloudFriendRequestPortOptions {
   readonly configResult?: SafeSyncPrototypeConfigResult;
   readonly databaseFactory?: (config: EnabledSyncPrototypeConfig) => ClosableSocialCloudFriendRequestDatabase;
   readonly portFactory?: (database: SocialCloudFriendRequestDatabase) => SocialCloudFriendRequestPort;
+  readonly serverPortFactory?: () => SocialCloudFriendRequestPort;
 }
 
 function defaultNow(): IsoDateTime {
@@ -80,6 +82,10 @@ export const unavailableSocialCloudFriendRequestPort: SocialCloudFriendRequestPo
     };
   },
 };
+
+function createServerFriendRequestPort(options: RuntimeSocialCloudFriendRequestPortOptions): SocialCloudFriendRequestPort {
+  return options.serverPortFactory ? options.serverPortFactory() : createSocialFriendRequestsClient();
+}
 
 export function createRealSocialCloudFriendRequestPort(
   database: SocialCloudFriendRequestDatabase,
@@ -195,6 +201,9 @@ export function createRuntimeSocialCloudFriendRequestPort(
         return unavailableSocialCloudFriendRequestPort.sendRequest(request);
       }
 
+      const serverResult = await createServerFriendRequestPort(options).sendRequest(request);
+      if (serverResult.status !== 'unavailable') return serverResult;
+
       const database = options.databaseFactory
         ? options.databaseFactory(config)
         : createSyncPrototypeDatabase(config);
@@ -220,9 +229,10 @@ export function createRuntimeSocialCloudFriendRequestPort(
       const config = configResult.config;
       if (configResult.errorMessage || !config.enabled || !config.realSocialCloudEnabled) return [];
 
-      const database = options.databaseFactory
-        ? options.databaseFactory(config)
-        : createSyncPrototypeDatabase(config);
+      const serverRequests = await createServerFriendRequestPort(options).listIncomingRequests(userId);
+      if (serverRequests.length > 0 || !options.databaseFactory) return serverRequests;
+
+      const database = options.databaseFactory(config);
       const port = options.portFactory
         ? options.portFactory(database)
         : createRealSocialCloudFriendRequestPort(database);
@@ -242,9 +252,10 @@ export function createRuntimeSocialCloudFriendRequestPort(
       const config = configResult.config;
       if (configResult.errorMessage || !config.enabled || !config.realSocialCloudEnabled) return [];
 
-      const database = options.databaseFactory
-        ? options.databaseFactory(config)
-        : createSyncPrototypeDatabase(config);
+      const serverRequests = await createServerFriendRequestPort(options).listOutgoingRequests(userId);
+      if (serverRequests.length > 0 || !options.databaseFactory) return serverRequests;
+
+      const database = options.databaseFactory(config);
       const port = options.portFactory
         ? options.portFactory(database)
         : createRealSocialCloudFriendRequestPort(database);
@@ -265,6 +276,9 @@ export function createRuntimeSocialCloudFriendRequestPort(
       if (configResult.errorMessage || !config.enabled || !config.realSocialCloudEnabled) {
         return unavailableSocialCloudFriendRequestPort.updateRequestStatus(requestId, status, respondedAt);
       }
+
+      const serverResult = await createServerFriendRequestPort(options).updateRequestStatus(requestId, status, respondedAt);
+      if (serverResult.status !== 'unavailable') return serverResult;
 
       const database = options.databaseFactory
         ? options.databaseFactory(config)

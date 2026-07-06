@@ -143,29 +143,49 @@ export function mergeCloudFriendshipsIntoSnapshot(
 ): FriendsPrivacySnapshot {
   const profileByUserId = new Map<EntityId, PublicUserProfile>();
   for (const profile of profiles) profileByUserId.set(profile.userId as EntityId, profile);
-  const byUserId = new Map<EntityId, FriendProfileSummary>();
 
-  for (const friend of snapshot.friends) {
-    if (friend.userId) byUserId.set(friend.userId, friend);
-  }
+  const nextFriends = [...snapshot.friends];
+  const findExistingFriendIndex = (friend: FriendProfileSummary): number => nextFriends.findIndex((candidate) => (
+    (friend.userId !== undefined && candidate.userId === friend.userId)
+    || candidate.id === friend.id
+    || normalizeFriendHandle(candidate.handle) === normalizeFriendHandle(friend.handle)
+  ));
 
   for (const friendship of friendships) {
     const friendUserId = getCloudFriendshipCounterpartUserId(friendship, currentUserId);
-    if (!friendUserId || byUserId.has(friendUserId)) continue;
+    if (!friendUserId) continue;
 
     const profile = profileByUserId.get(friendUserId);
     if (!profile) continue;
 
-    const friend = cloudFriendshipToFriendProfileSummary(friendship, currentUserId, profile);
-    if (friend) byUserId.set(friendUserId, friend);
+    const cloudFriend = cloudFriendshipToFriendProfileSummary(friendship, currentUserId, profile);
+    if (!cloudFriend) continue;
+
+    const existingIndex = findExistingFriendIndex(cloudFriend);
+    if (existingIndex >= 0) {
+      const existingFriend = nextFriends[existingIndex];
+      if (!existingFriend) {
+        nextFriends.push(cloudFriend);
+        continue;
+      }
+
+      const connectedSince = existingFriend.connectedSince ?? cloudFriend.connectedSince;
+      nextFriends[existingIndex] = {
+        ...existingFriend,
+        ...cloudFriend,
+        id: cloudFriend.userId ?? cloudFriend.id,
+        ...(cloudFriend.userId ? { userId: cloudFriend.userId } : {}),
+        ...(connectedSince ? { connectedSince } : {}),
+      };
+      continue;
+    }
+
+    nextFriends.push(cloudFriend);
   }
 
   return ensureFriendActivityPermissions({
     ...snapshot,
-    friends: [
-      ...snapshot.friends.filter((friend) => !friend.userId),
-      ...byUserId.values(),
-    ],
+    friends: nextFriends,
   });
 }
 
