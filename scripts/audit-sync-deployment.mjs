@@ -63,8 +63,12 @@ if (existsSync(runtimeConfigPath)) {
   if (!source.includes('import.meta.env.PROD')) {
     fail('la configuration publique n’est pas limitée au build de production.');
   }
-  if (!source.includes('...environment') || !source.includes('...syncPublicDeploymentConfig')) {
-    fail('la configuration publique validée ne conserve pas la priorité en production.');
+  if (!source.includes('...syncPublicDeploymentConfig') || !source.includes('...environment')) {
+    fail('la fusion production doit combiner les valeurs publiques et les variables hébergeur.');
+  }
+  if (!source.includes(`...syncPublicDeploymentConfig,
+    ...environment`)) {
+    fail('les variables VITE_* de l’hébergeur doivent garder la priorité sur les valeurs publiques par défaut.');
   }
 }
 
@@ -86,5 +90,5 @@ if (failures.length > 0) {
   failures.forEach((failure) => console.error(`- ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log('Audit de déploiement de la synchronisation réussi : configuration publique valide et prioritaire, build de production cohérent et aucun secret évident.');
+  console.log('Audit de déploiement de la synchronisation réussi : configuration publique valide, surchargée explicitement par environnement, build de production cohérent et aucun secret évident.');
 }

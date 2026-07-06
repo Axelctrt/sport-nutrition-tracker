@@ -4,8 +4,17 @@ const read = (path) => fs.readFileSync(path, 'utf8');
 const failures = [];
 
 const config = read('src/infrastructure/sync-prototype/syncPrototypeConfig.ts').replace(/\r\n/g, '\n');
-if (!config.includes('...environment,\n    ...syncPublicDeploymentConfig')) {
-  failures.push('La configuration publique de production ne prime pas sur les variables obsolètes.');
+if (!config.includes('syncPublicDeploymentConfig')) {
+  failures.push('La configuration publique de production n’est pas reliée au lecteur de configuration.');
+}
+if (!config.includes('import.meta.env.PROD')) {
+  failures.push('La configuration publique de production n’est pas limitée au build de production.');
+}
+if (!config.includes('...syncPublicDeploymentConfig') || !config.includes('...environment')) {
+  failures.push('La fusion de production doit combiner les valeurs publiques et les variables explicites de l’hébergeur.');
+}
+if (!config.includes('...syncPublicDeploymentConfig,\n    ...environment')) {
+  failures.push('Les variables explicites Cloudflare ne priment pas sur les valeurs publiques par défaut.');
 }
 
 const panels = [

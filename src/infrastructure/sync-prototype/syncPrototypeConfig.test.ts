@@ -6,14 +6,8 @@ import {
 
 describe('configuration du prototype Dexie Cloud', () => {
 
-  it('fait primer la configuration publique validée sur des variables de production obsolètes', () => {
-    const environment = mergeSyncPrototypeProductionEnvironment({
-      VITE_ENABLE_SYNC_PROTOTYPE: 'false',
-      VITE_DEXIE_CLOUD_DATABASE_URL: '',
-      VITE_ENABLE_REAL_WEIGHT_SYNC: 'false',
-      VITE_ENABLE_REAL_NUTRITION_JOURNAL_SYNC: 'false',
-      VITE_ENABLE_SYNC_DIAGNOSTICS: 'true',
-    });
+  it('applique les valeurs publiques validées quand l’hébergeur ne les surcharge pas', () => {
+    const environment = mergeSyncPrototypeProductionEnvironment({});
 
     expect(readSyncPrototypeConfig(environment)).toMatchObject({
       enabled: true,
@@ -23,6 +17,21 @@ describe('configuration du prototype Dexie Cloud', () => {
       realAccountPreferencesSyncEnabled: true,
       realRewardsRoutinesSyncEnabled: true,
       realSocialCloudEnabled: false,
+      diagnosticsEnabled: false,
+    });
+  });
+
+  it('laisse les variables Cloudflare explicites piloter la production', () => {
+    const environment = mergeSyncPrototypeProductionEnvironment({
+      VITE_ENABLE_REAL_SOCIAL_CLOUD: 'true',
+      VITE_ENABLE_SYNC_DIAGNOSTICS: 'false',
+    });
+
+    expect(readSyncPrototypeConfig(environment)).toMatchObject({
+      enabled: true,
+      databaseUrl: 'https://zhnyk8met.dexie.cloud',
+      realWeightSyncEnabled: true,
+      realSocialCloudEnabled: true,
       diagnosticsEnabled: false,
     });
   });
@@ -360,6 +369,19 @@ describe('configuration du prototype Dexie Cloud', () => {
         VITE_ENABLE_REAL_SOCIAL_CLOUD: 'yes',
       }),
     ).toThrow('VITE_ENABLE_REAL_SOCIAL_CLOUD');
+  });
+
+
+  it('laisse Cloudflare piloter le cloud social réel en production', () => {
+    expect(
+      mergeSyncPrototypeProductionEnvironment({
+        VITE_ENABLE_REAL_SOCIAL_CLOUD: 'true',
+      }),
+    ).toMatchObject({
+      VITE_ENABLE_SYNC_PROTOTYPE: 'true',
+      VITE_DEXIE_CLOUD_DATABASE_URL: 'https://zhnyk8met.dexie.cloud',
+      VITE_ENABLE_REAL_SOCIAL_CLOUD: 'true',
+    });
   });
 
   it('refuse une valeur ambiguë pour C4', () => {

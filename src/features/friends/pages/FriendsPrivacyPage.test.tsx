@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+﻿import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { EntityId } from '@/domain/models/common';
 import {
@@ -7,10 +7,11 @@ import {
   type FriendsPrivacySnapshot,
 } from '@/domain/friends/friendship';
 import { createDefaultSocialIdentity } from '@/domain/friends/socialIdentity';
-import type { SocialCloudFriendRequestPort } from '@/domain/friends/socialCloudContract';
+import type { SocialCloudFriendRequestPort, SocialCloudIdentityPort } from '@/domain/friends/socialCloudContract';
 import type { SocialActivitySnapshot } from '@/domain/friends/socialActivitySnapshot';
 import { createFoundSocialUserLookupGateway, type SocialUserLookupGateway } from '@/application/friends/socialIdentityService';
 import { FriendsPrivacyPage } from '@/features/friends/pages/FriendsPrivacyPage';
+import type { SocialFriendsGateway } from '@/infrastructure/sync-prototype/socialFriendsGateway';
 
 const snapshot: FriendsPrivacySnapshot = {
   friends: [
@@ -51,7 +52,9 @@ const identity = createDefaultSocialIdentity('2026-07-05T10:00:00.000Z', 'alex12
 
 function renderPage(override: {
   readonly lookupGateway?: SocialUserLookupGateway;
+  readonly cloudIdentityPort?: SocialCloudIdentityPort;
   readonly cloudFriendRequestPort?: SocialCloudFriendRequestPort;
+  readonly socialFriendsGateway?: SocialFriendsGateway;
   readonly initialSnapshot?: FriendsPrivacySnapshot;
   readonly initialActivitySnapshots?: readonly SocialActivitySnapshot[];
 } = {}) {
@@ -59,7 +62,9 @@ function renderPage(override: {
     initialSnapshot: override.initialSnapshot ?? snapshot,
     initialIdentity: identity,
     ...(override.lookupGateway ? { lookupGateway: override.lookupGateway } : {}),
+    ...(override.cloudIdentityPort ? { cloudIdentityPort: override.cloudIdentityPort } : {}),
     ...(override.cloudFriendRequestPort ? { cloudFriendRequestPort: override.cloudFriendRequestPort } : {}),
+    ...(override.socialFriendsGateway ? { socialFriendsGateway: override.socialFriendsGateway } : {}),
     ...(override.initialActivitySnapshots ? { initialActivitySnapshots: override.initialActivitySnapshots } : {}),
   };
 
@@ -106,6 +111,51 @@ describe('FriendsPrivacyPage', () => {
     expect(screen.getByText('@alex.run')).toBeInTheDocument();
   });
 
+  it('publie le handle dans le cloud social quand un port réel est fourni', async () => {
+    const user = userEvent.setup();
+    const publishedIdentities: unknown[] = [];
+    const cloudIdentityPort: SocialCloudIdentityPort = {
+      async readCurrentIdentity() {
+        return undefined;
+      },
+      async lookupByHandle() {
+        return { status: 'notFound' };
+      },
+      async reserveHandle(identity) {
+        return {
+          status: 'created',
+          value: identity,
+          message: 'Identifiant cloud réservé.',
+        };
+      },
+      async publishIdentity(identity) {
+        publishedIdentities.push(identity);
+        return {
+          status: 'created',
+          value: identity,
+          message: 'Identité sociale cloud créée.',
+        };
+      },
+    };
+
+    renderPage({ cloudIdentityPort });
+
+    await user.clear(screen.getByLabelText('Identifiant public'));
+    await user.type(screen.getByLabelText('Identifiant public'), '@alex.run');
+    await user.clear(screen.getByLabelText('Nom affiché'));
+    await user.type(screen.getByLabelText('Nom affiché'), 'Alex Run');
+    await user.click(screen.getByRole('button', { name: 'Enregistrer' }));
+
+    expect(await screen.findByText(/Identité sociale cloud créée/u)).toBeInTheDocument();
+    expect(publishedIdentities).toEqual([
+      expect.objectContaining({
+        userId: identity.userId,
+        handle: 'alex.run',
+        displayName: 'Alex Run',
+      }),
+    ]);
+  });
+
   it('vérifie la disponibilité via une recherche exacte branchable', async () => {
     const user = userEvent.setup();
     const lookupGateway = createFoundSocialUserLookupGateway([]);
@@ -133,8 +183,8 @@ describe('FriendsPrivacyPage', () => {
 
     await user.click(screen.getByRole('button', { name: /Accepter/u }));
 
-    expect(screen.getByText(/Demande acceptée/u)).toBeInTheDocument();
-    expect(screen.getByText(/2 amis/u)).toBeInTheDocument();
+    expect(await screen.findByText(/Demande acceptée/u)).toBeInTheDocument();
+    expect(await screen.findByText(/2 amis/u)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Partage désactivé' })).toHaveAttribute('aria-pressed', 'true');
   });
 
@@ -254,15 +304,95 @@ describe('FriendsPrivacyPage', () => {
     const user = userEvent.setup();
     renderPage();
 
-    expect(screen.getByRole('button', { name: 'Autoriser le détail' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Autoriser le détail' })).not.toBeDisabled();
 
     await user.click(screen.getByRole('button', { name: 'Détaillé après accord' }));
     await user.click(screen.getByRole('button', { name: 'Autoriser le détail' }));
 
     expect(screen.getByText(/Consentement détaillé enregistré pour cet ami/u)).toBeInTheDocument();
     expect(screen.getByText(/Permission : Détail autorisé/u)).toBeInTheDocument();
-    expect(screen.getByText(/Détail autorisé localement pour cet ami/u)).toBeInTheDocument();
+    expect(screen.getAllByText(/Détail autorisé localement pour cet ami/u).length).toBeGreaterThan(0);
     expect(screen.getByText(/snapshots sociaux filtrés peuvent utiliser ce niveau/u)).toBeInTheDocument();
+  });
+
+  it('synchronise la permission serveur pour un ami local enrichi par friendship cloud', async () => {
+    const user = userEvent.setup();
+    const savedPermissions: unknown[] = [];
+    const localOnlySnapshot: FriendsPrivacySnapshot = {
+      ...snapshot,
+      requests: [],
+      friends: [
+        {
+          id: 'friend:lea.cardio' as EntityId,
+          displayName: 'Léa Cardio',
+          handle: 'lea.cardio',
+          initials: 'LC',
+        },
+      ],
+    };
+    const socialFriendsGateway: SocialFriendsGateway = {
+      friendshipPort: {
+        async listFriendships() {
+          return [];
+        },
+        async upsertFriendship() {
+          return { status: 'unavailable', message: 'Non utilisé.' };
+        },
+      },
+      permissionPort: {
+        async listPermissions() {
+          return [];
+        },
+        async savePermission(userId, permission) {
+          savedPermissions.push({ userId, permission });
+          return {
+            status: 'created',
+            value: permission,
+            message: 'Permission ami serveur créée.',
+          };
+        },
+      },
+      async listFriendshipsWithProfiles() {
+        return {
+          friendships: [
+            {
+              id: 'cloud-friendship:social-user:alex123<->social-user:lea' as EntityId,
+              userAId: identity.userId,
+              userBId: 'social-user:lea' as EntityId,
+              status: 'active',
+              createdAt: '2026-07-05T12:00:00.000Z',
+              updatedAt: '2026-07-05T12:00:00.000Z',
+            },
+          ],
+          profiles: [
+            {
+              userId: 'social-user:lea' as EntityId,
+              handle: 'lea.cardio',
+              displayName: 'Léa Cardio',
+              createdAt: '2026-07-05T12:00:00.000Z',
+              updatedAt: '2026-07-05T12:00:00.000Z',
+            },
+          ],
+        };
+      },
+    };
+
+    renderPage({ initialSnapshot: localOnlySnapshot, socialFriendsGateway });
+
+    await user.click(screen.getByRole('button', { name: 'Détaillé après accord' }));
+    await user.click(screen.getByRole('button', { name: 'Autoriser le détail' }));
+
+    expect((await screen.findAllByText(/Permission ami serveur créée/u)).length).toBeGreaterThan(0);
+    expect(savedPermissions).toEqual([
+      {
+        userId: identity.userId,
+        permission: expect.objectContaining({
+          friendUserId: 'social-user:lea',
+          sharingLevel: 'detailed',
+          detailedConsent: 'granted',
+        }),
+      },
+    ]);
   });
 
   it('affiche un fil amis minimal depuis des snapshots filtrés', () => {
@@ -356,3 +486,4 @@ describe('FriendsPrivacyPage', () => {
   });
 
 });
+

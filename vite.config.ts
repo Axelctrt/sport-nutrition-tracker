@@ -235,7 +235,13 @@ export default defineConfig({
   },
   test: {
     environment: 'jsdom',
-    exclude: [...configDefaults.exclude, 'e2e/**'],
+    exclude: [
+      ...configDefaults.exclude,
+      'e2e/**',
+      'patch-backups/**',
+      'sportpilot-f2-audit-source/**',
+      'sportpilot-f2-audit-source.zip',
+    ],
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
     alias: {
