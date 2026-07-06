@@ -31,7 +31,7 @@ for (const expected of [
 const page = readFileSync('src/features/friends/pages/FriendsPrivacyPage.tsx', 'utf8');
 for (const expected of [
   'createSocialFriendsGateway',
-  'initialSnapshot || socialFriendsGateway || cloudFriendshipPort || cloudFriendPermissionPort',
+  "import.meta.env.MODE === 'test' || socialFriendsGateway || cloudFriendshipPort || cloudFriendPermissionPort",
   'ensureFriendActivityPermissions',
   'mergeCloudFriendshipsIntoSnapshot',
   'updateFriendPermission',

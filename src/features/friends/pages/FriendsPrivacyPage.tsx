@@ -147,7 +147,7 @@ export function FriendsPrivacyPage({
     initialSnapshot || repository || lookupGateway ? undefined : createRuntimeSocialCloudFriendRequestPort()
   ));
   const [defaultSocialFriendsGateway] = useState(() => (
-    initialSnapshot || socialFriendsGateway || cloudFriendshipPort || cloudFriendPermissionPort
+    import.meta.env.MODE === 'test' || socialFriendsGateway || cloudFriendshipPort || cloudFriendPermissionPort
       ? undefined
       : createSocialFriendsGateway()
   ));
