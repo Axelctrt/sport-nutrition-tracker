@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 
+import type { EntityId } from '@/domain/models/common';
 import {
   createEmptyFriendsPrivacySnapshot,
   createFriendsPrivacyService,
@@ -26,7 +27,16 @@ import {
   mergeCloudFriendRequestsIntoSnapshot,
   normalizeCloudFriendRequestForUser,
 } from '@/domain/friends/socialCloudFriendRequest';
-import type { SocialCloudFriendRequestPort, SocialCloudIdentityPort } from '@/domain/friends/socialCloudContract';
+import {
+  getCloudFriendshipCounterpartUserId,
+  mergeCloudFriendshipsIntoSnapshot,
+} from '@/domain/friends/socialCloudFriendship';
+import type {
+  SocialCloudFriendPermissionPort,
+  SocialCloudFriendRequestPort,
+  SocialCloudFriendshipPort,
+  SocialCloudIdentityPort,
+} from '@/domain/friends/socialCloudContract';
 import {
   checkSocialHandleAvailability,
   loadSocialIdentity,
@@ -40,10 +50,13 @@ import {
   FRIEND_PROFILE_VISIBILITY_LABELS,
   acceptFriendRequest,
   declineFriendRequest,
+  ensureFriendActivityPermissions,
   evaluateFriendActivitySharingGuard,
   evaluateFriendScopedActivitySharingGuard,
+  selectFriendActivityPermission,
   summarizeFriendsPrivacy,
   type FriendActivitySharingLevel,
+  type FriendProfileSummary,
   type FriendRequest,
   type FriendsPrivacySnapshot,
   type FriendVisibilityLevel,
@@ -61,6 +74,7 @@ import { DexieFriendsPrivacyRepository } from '@/infrastructure/repositories/dex
 import { DexieSocialIdentityRepository } from '@/infrastructure/repositories/dexie/DexieSocialIdentityRepository';
 import { createRuntimeSocialCloudUserLookupGateway } from '@/infrastructure/sync-prototype/realSocialCloudUserLookupGateway';
 import { createRuntimeSocialCloudFriendRequestPort } from '@/infrastructure/sync-prototype/realSocialCloudFriendRequestService';
+import { createSocialFriendsGateway, type SocialFriendsGateway } from '@/infrastructure/sync-prototype/socialFriendsGateway';
 import { createRuntimeSocialCloudIdentityPort } from '@/infrastructure/sync-prototype/realSocialCloudIdentityService';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
@@ -74,6 +88,9 @@ interface FriendsPrivacyPageProps {
   readonly lookupGateway?: SocialUserLookupGateway;
   readonly cloudIdentityPort?: SocialCloudIdentityPort;
   readonly cloudFriendRequestPort?: SocialCloudFriendRequestPort;
+  readonly cloudFriendshipPort?: SocialCloudFriendshipPort;
+  readonly cloudFriendPermissionPort?: SocialCloudFriendPermissionPort;
+  readonly socialFriendsGateway?: SocialFriendsGateway;
   readonly initialActivitySnapshots?: readonly SocialActivitySnapshot[];
 }
 
@@ -109,6 +126,9 @@ export function FriendsPrivacyPage({
   lookupGateway,
   cloudIdentityPort,
   cloudFriendRequestPort,
+  cloudFriendshipPort,
+  cloudFriendPermissionPort,
+  socialFriendsGateway,
   initialActivitySnapshots = [],
 }: FriendsPrivacyPageProps = {}) {
   const [defaultRepository] = useState(() =>
@@ -126,9 +146,17 @@ export function FriendsPrivacyPage({
   const [defaultCloudFriendRequestPort] = useState(() => (
     initialSnapshot || repository || lookupGateway ? undefined : createRuntimeSocialCloudFriendRequestPort()
   ));
+  const [defaultSocialFriendsGateway] = useState(() => (
+    initialSnapshot || socialFriendsGateway || cloudFriendshipPort || cloudFriendPermissionPort
+      ? undefined
+      : createSocialFriendsGateway()
+  ));
   const activeLookupGateway = lookupGateway ?? defaultLookupGateway;
   const activeCloudIdentityPort = cloudIdentityPort ?? defaultCloudIdentityPort;
   const activeCloudFriendRequestPort = cloudFriendRequestPort ?? defaultCloudFriendRequestPort;
+  const activeSocialFriendsGateway = socialFriendsGateway ?? defaultSocialFriendsGateway;
+  const activeCloudFriendshipPort = cloudFriendshipPort ?? activeSocialFriendsGateway?.friendshipPort;
+  const activeCloudFriendPermissionPort = cloudFriendPermissionPort ?? activeSocialFriendsGateway?.permissionPort;
   const initialSnapshotState = useMemo(
     () => initialSnapshot ?? createEmptyFriendsPrivacySnapshot(),
     [initialSnapshot],
@@ -189,6 +217,22 @@ export function FriendsPrivacyPage({
           nextSnapshot = mergeCloudFriendRequestsIntoSnapshot(loadedSnapshot, localRequests);
         }
 
+        if (activeSocialFriendsGateway) {
+          const { friendships, profiles } = await activeSocialFriendsGateway.listFriendshipsWithProfiles(loadedIdentity.userId);
+          nextSnapshot = mergeCloudFriendshipsIntoSnapshot(nextSnapshot, loadedIdentity.userId, friendships, profiles);
+        } else if (activeCloudFriendshipPort) {
+          const friendships = await activeCloudFriendshipPort.listFriendships(loadedIdentity.userId);
+          nextSnapshot = mergeCloudFriendshipsIntoSnapshot(nextSnapshot, loadedIdentity.userId, friendships, []);
+        }
+
+        if (activeCloudFriendPermissionPort) {
+          const permissions = await activeCloudFriendPermissionPort.listPermissions(loadedIdentity.userId);
+          nextSnapshot = ensureFriendActivityPermissions({
+            ...nextSnapshot,
+            activityPermissions: permissions,
+          });
+        }
+
         setSnapshot(nextSnapshot);
         setIdentity(loadedIdentity);
         setIdentityHandle(formatSocialHandle(loadedIdentity.handle));
@@ -217,6 +261,9 @@ export function FriendsPrivacyPage({
     initialSnapshotState,
     initialIdentityState,
     activeCloudFriendRequestPort,
+    activeSocialFriendsGateway,
+    activeCloudFriendshipPort,
+    activeCloudFriendPermissionPort,
   ]);
 
   const summary = useMemo(() => summarizeFriendsPrivacy(snapshot), [snapshot]);
@@ -252,6 +299,112 @@ export function FriendsPrivacyPage({
   ) => {
     const service = createFriendsPrivacyService(snapshot);
     persistSnapshot(action(service.actions));
+  };
+
+  const normalizeHandleForMatch = (value: string): string => value
+    .trim()
+    .replace(/^@/u, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]/gu, '')
+    .slice(0, 32);
+
+  const resolveCloudFriendUserId = async (
+    friend: FriendProfileSummary,
+    permission: ReturnType<typeof selectFriendActivityPermission>,
+  ): Promise<EntityId | undefined> => {
+    const directUserId = permission.friendUserId
+      ?? friend.userId
+      ?? (String(friend.id).startsWith('social-user:') ? friend.id : undefined);
+
+    if (directUserId) return directUserId as EntityId;
+    if (!activeSocialFriendsGateway) return undefined;
+
+    const { friendships, profiles } = await activeSocialFriendsGateway.listFriendshipsWithProfiles(identity.userId);
+    const targetHandle = normalizeHandleForMatch(permission.friendHandle || friend.handle);
+    const profileMatch = profiles.find((profile) => normalizeHandleForMatch(profile.handle) === targetHandle);
+    if (profileMatch) return profileMatch.userId as EntityId;
+
+    const counterpartIds = friendships.flatMap((friendship) => {
+      const counterpartId = getCloudFriendshipCounterpartUserId(friendship, identity.userId);
+      return counterpartId ? [counterpartId] : [];
+    });
+
+    return counterpartIds.length === 1 ? counterpartIds[0] : undefined;
+  };
+
+  const updateFriendPermission = (friend: FriendProfileSummary, sharing: 'summary' | 'detailed') => {
+    setRequestFeedback(undefined);
+    setErrorMessage(undefined);
+
+    const service = createFriendsPrivacyService(snapshot);
+    const next = service.actions.setFriendActivityPermission(friend.id, sharing);
+    const permission = selectFriendActivityPermission(next, friend);
+
+    // Mise à jour optimiste : l’UI doit répondre immédiatement au clic.
+    // La synchronisation D1 confirme ensuite la permission serveur.
+    persistSnapshot(next);
+
+    if (!activeCloudFriendPermissionPort) {
+      setRequestFeedback(sharing === 'detailed'
+        ? 'Détail autorisé localement pour cet ami après consentement explicite.'
+        : 'Partage ami limité au résumé localement.');
+      return;
+    }
+
+    setRequestFeedback('Synchronisation de la permission ami serveur en cours…');
+
+    void resolveCloudFriendUserId(friend, permission)
+      .then((friendUserId) => {
+        if (!friendUserId) {
+          setRequestFeedback('Permission ami serveur impossible : userId ami introuvable dans les amitiés actives.');
+          return undefined;
+        }
+
+        const cloudPermission = {
+          ...permission,
+          id: `cloud-friend-permission:${identity.userId}->${friendUserId}` as EntityId,
+          friendUserId,
+          friendHandle: permission.friendHandle || friend.handle,
+        };
+
+        return activeCloudFriendPermissionPort.savePermission(identity.userId, cloudPermission);
+      })
+      .then((result) => {
+        if (!result) return;
+        if (['created', 'updated', 'alreadyExists'].includes(result.status)) {
+          const confirmedPermission = result.value;
+          if (!confirmedPermission) {
+            setRequestFeedback(result.message);
+            return;
+          }
+          const mergedPermissions = [
+            ...(next.activityPermissions ?? []).filter((candidate) => (
+              candidate.id !== confirmedPermission.id
+              && candidate.friendUserId !== confirmedPermission.friendUserId
+              && candidate.friendHandle !== confirmedPermission.friendHandle
+            )),
+            confirmedPermission,
+          ];
+          persistSnapshot({
+            ...ensureFriendActivityPermissions({
+              ...next,
+              activityPermissions: mergedPermissions,
+            }),
+            lastFeedback: result.message,
+          });
+          setRequestFeedback(result.message);
+          return;
+        }
+
+        setRequestFeedback(result.message);
+      })
+      .catch((error) => {
+        setRequestFeedback(
+          error instanceof Error
+            ? error.message
+            : 'Service cloud indisponible : permission ami impossible à synchroniser.',
+        );
+      });
   };
 
   const submitRequest = (event: FormEvent<HTMLFormElement>) => {
@@ -795,7 +948,7 @@ export function FriendsPrivacyPage({
                       <Button
                         size="sm"
                         variant={friendSharingGuard.permission.sharingLevel === 'summary' ? 'primary' : 'secondary'}
-                        onClick={() => update((actions) => actions.setFriendActivityPermission(friend.id, 'summary'))}
+                        onClick={() => updateFriendPermission(friend, 'summary')}
                         aria-pressed={friendSharingGuard.permission.sharingLevel === 'summary'}
                       >
                         Résumé uniquement
@@ -803,9 +956,8 @@ export function FriendsPrivacyPage({
                       <Button
                         size="sm"
                         variant={friendSharingGuard.permission.sharingLevel === 'detailed' ? 'primary' : 'secondary'}
-                        onClick={() => update((actions) => actions.setFriendActivityPermission(friend.id, 'detailed'))}
+                        onClick={() => updateFriendPermission(friend, 'detailed')}
                         aria-pressed={friendSharingGuard.permission.sharingLevel === 'detailed'}
-                        disabled={snapshot.privacy.activitySharing !== 'detailed'}
                       >
                         Autoriser le détail
                       </Button>
