@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   handleSocialActivityFeedRequest,
   handleSocialActivitySnapshotDetailRequest,
+  handleSocialActivitySnapshotReadinessRequest,
   handleSocialActivitySnapshotSyncRequest,
   socialActivitySnapshotsInternals,
 } from './socialActivitySnapshots.js';
@@ -183,6 +184,11 @@ class FakeStatement {
   }
 
   async all() {
+    if (this.sql.includes('FROM sqlite_master')) {
+      return {
+        results: [...this.database.schemaObjects.entries()].map(([name, type]) => ({ name, type })),
+      };
+    }
     if (this.sql.includes('FROM social_activity_snapshots s')) {
       const recipient = this.bindings[0];
       const limit = this.bindings.at(-1);
@@ -222,6 +228,15 @@ class FakeD1Database {
     this.friendships = new Set();
     this.permissions = new Map();
     this.profiles = new Map();
+    this.schemaObjects = new Map([
+      ['social_directory_handles', 'table'],
+      ['social_friendships', 'table'],
+      ['social_friend_permissions', 'table'],
+      ['social_activity_snapshots', 'table'],
+      ['idx_social_activity_snapshot_source_recipient', 'index'],
+      ['idx_social_activity_snapshot_feed', 'index'],
+      ['idx_social_activity_snapshot_owner', 'index'],
+    ]);
   }
 
   pair(left, right) {
@@ -273,6 +288,71 @@ async function responseJson(response) {
 }
 
 describe('social activity snapshots Pages Functions', () => {
+  it('vérifie l’activation D1 sans créer le schéma automatiquement', async () => {
+    const database = new FakeD1Database();
+    const response = await handleSocialActivitySnapshotReadinessRequest(
+      request('/api/social-activity-snapshots/readiness', {
+        headers: authorizedHeaders('user-owner@example.com'),
+      }),
+      env(database),
+      { fetcher: validAuthFetch },
+    );
+
+    expect(response.status).toBe(200);
+    expect(await responseJson(response)).toMatchObject({
+      status: 'ready',
+      contractVersion: '0.29.0-a3',
+      authVerified: true,
+      databaseBound: true,
+      requiredMigration: '0001_social_activity_snapshots_0_29_0.sql',
+      missingPrerequisites: [],
+      missingActivitySchema: [],
+    });
+  });
+
+  it('distingue une migration manquante d’un prérequis social absent', async () => {
+    const migrationMissing = new FakeD1Database();
+    migrationMissing.schemaObjects.delete('social_activity_snapshots');
+    migrationMissing.schemaObjects.delete('idx_social_activity_snapshot_feed');
+    await expect(socialActivitySnapshotsInternals.inspectSocialActivitySchema(migrationMissing)).resolves.toMatchObject({
+      status: 'migrationRequired',
+      missingPrerequisites: [],
+      missingActivitySchema: expect.arrayContaining([
+        'social_activity_snapshots',
+        'idx_social_activity_snapshot_feed',
+      ]),
+    });
+
+    const prerequisiteMissing = new FakeD1Database();
+    prerequisiteMissing.schemaObjects.delete('social_friendships');
+    await expect(socialActivitySnapshotsInternals.inspectSocialActivitySchema(prerequisiteMissing)).resolves.toMatchObject({
+      status: 'prerequisiteMissing',
+      missingPrerequisites: ['social_friendships'],
+    });
+  });
+  it('refuse toute lecture ou écriture avant la migration versionnée', async () => {
+    const database = new FakeD1Database();
+    database.schemaObjects.delete('social_activity_snapshots');
+    database.schemaObjects.delete('idx_social_activity_snapshot_feed');
+    const snapshot = activeSnapshot();
+    database.addFriendship(snapshot.ownerUserId, snapshot.recipientUserId);
+    database.addPermission(snapshot.ownerUserId, snapshot.recipientUserId, 'summary', 'notRequested');
+
+    const response = await handleSocialActivitySnapshotSyncRequest(
+      request('/api/social-activity-snapshots/sync', {
+        method: 'POST',
+        headers: authorizedHeaders(snapshot.ownerUserId, { 'content-type': 'application/json' }),
+        body: JSON.stringify({ mutationSequence: 1, snapshot }),
+      }),
+      env(database),
+      { fetcher: validAuthFetch },
+    );
+
+    expect(response.status).toBe(503);
+    expect(await responseJson(response)).toMatchObject({ code: 'SOCIAL_ACTIVITY_MIGRATION_REQUIRED' });
+    expect(database.snapshots.size).toBe(0);
+  });
+
   it('refuse une publication sans jeton Dexie Cloud', async () => {
     const response = await handleSocialActivitySnapshotSyncRequest(
       request('/api/social-activity-snapshots/sync', { method: 'POST', body: '{}' }),

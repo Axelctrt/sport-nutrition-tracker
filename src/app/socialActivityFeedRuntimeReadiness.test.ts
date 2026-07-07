@@ -11,9 +11,11 @@ describe('social activity feed runtime readiness 0.29.0 A7', () => {
     });
     expect(gateway.listPage).toBeTypeOf('function');
     expect(gateway.readDetail).toBeTypeOf('function');
+    expect(gateway.readReadiness).toBeTypeOf('function');
 
     expect(gatewaySource).toContain('/api/social-activity-feed');
     expect(gatewaySource).toContain('/api/social-activity-snapshots/detail');
+    expect(gatewaySource).toContain('/api/social-activity-snapshots/readiness');
     expect(gatewaySource).toContain('authorization: `Bearer ${credentials.accessToken}`');
   });
 

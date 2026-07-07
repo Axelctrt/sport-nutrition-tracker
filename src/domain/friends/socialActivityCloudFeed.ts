@@ -16,3 +16,19 @@ export interface SocialActivityCloudFeedPage {
   readonly items: readonly SocialActivityCloudFeedCard[];
   readonly nextCursor?: string;
 }
+
+export type SocialActivityCloudReadinessStatus =
+  | 'ready'
+  | 'migrationRequired'
+  | 'prerequisiteMissing';
+
+export interface SocialActivityCloudReadiness {
+  readonly status: SocialActivityCloudReadinessStatus;
+  readonly contractVersion: string;
+  readonly authVerified: boolean;
+  readonly databaseBound: boolean;
+  readonly requiredMigration: string;
+  readonly missingPrerequisites: readonly string[];
+  readonly missingActivitySchema: readonly string[];
+  readonly checkedAt: string;
+}

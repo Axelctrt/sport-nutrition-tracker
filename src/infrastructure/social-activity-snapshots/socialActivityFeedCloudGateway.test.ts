@@ -116,6 +116,30 @@ describe('socialActivityFeedCloudGateway', () => {
     });
   });
 
+  it('lit l’état d’activation D1 authentifié', async () => {
+    const fetcher = vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
+      expect(String(url)).toBe('/api/social-activity-snapshots/readiness');
+      expect(init?.headers).toMatchObject({ authorization: 'Bearer secret-token' });
+      return new Response(JSON.stringify({
+        status: 'migrationRequired',
+        contractVersion: '0.29.0-a3',
+        authVerified: true,
+        databaseBound: true,
+        requiredMigration: '0001_social_activity_snapshots_0_29_0.sql',
+        missingPrerequisites: [],
+        missingActivitySchema: ['social_activity_snapshots'],
+        checkedAt: '2026-07-07T18:00:00.000Z',
+      }), { status: 200, headers: { 'content-type': 'application/json' } });
+    });
+    const gateway = createSocialActivityFeedCloudGateway({ fetcher });
+
+    await expect(gateway.readReadiness(credentials)).resolves.toMatchObject({
+      status: 'migrationRequired',
+      authVerified: true,
+      missingActivitySchema: ['social_activity_snapshots'],
+    });
+  });
+
   it('charge le détail autorisé sur la route dédiée', async () => {
     const fetcher = vi.fn(async () => new Response(JSON.stringify({
       status: 'found',

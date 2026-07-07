@@ -1,6 +1,7 @@
 import type {
   SocialActivityCloudFeedCard,
   SocialActivityCloudFeedPage,
+  SocialActivityCloudReadiness,
   SocialActivityFeedOwnerProfile,
 } from '@/domain/friends/socialActivityCloudFeed';
 import type {
@@ -30,11 +31,15 @@ export interface SocialActivityFeedCloudGateway {
     credentials: SocialActivitySnapshotCloudCredentials,
     snapshotId: string,
   ) => Promise<ActiveSocialActivitySnapshot>;
+  readonly readReadiness: (
+    credentials: SocialActivitySnapshotCloudCredentials,
+  ) => Promise<SocialActivityCloudReadiness>;
 }
 
 interface SocialActivityFeedCloudGatewayOptions {
   readonly feedEndpoint?: string;
   readonly detailEndpoint?: string;
+  readonly readinessEndpoint?: string;
   readonly fetcher?: typeof fetch;
 }
 
@@ -126,6 +131,53 @@ function parseFeedCard(value: unknown): SocialActivityCloudFeedCard {
   };
 }
 
+function readStringArray(value: unknown): readonly string[] {
+  return Array.isArray(value)
+    ? value.filter((entry): entry is string => typeof entry === 'string' && Boolean(entry.trim()))
+    : [];
+}
+
+function parseReadiness(value: unknown): SocialActivityCloudReadiness {
+  if (!isRecord(value)) {
+    throw new SocialActivityFeedCloudError(
+      'État d’activation sociale invalide.',
+      'social_activity_readiness_invalid_response',
+      true,
+    );
+  }
+  const status = value.status;
+  if (status !== 'ready' && status !== 'migrationRequired' && status !== 'prerequisiteMissing') {
+    throw new SocialActivityFeedCloudError(
+      'État d’activation sociale invalide.',
+      'social_activity_readiness_invalid_response',
+      true,
+    );
+  }
+  if (
+    typeof value.contractVersion !== 'string'
+    || typeof value.requiredMigration !== 'string'
+    || typeof value.checkedAt !== 'string'
+    || value.authVerified !== true
+    || value.databaseBound !== true
+  ) {
+    throw new SocialActivityFeedCloudError(
+      'État d’activation sociale incomplet.',
+      'social_activity_readiness_invalid_response',
+      true,
+    );
+  }
+  return {
+    status,
+    contractVersion: value.contractVersion,
+    authVerified: true,
+    databaseBound: true,
+    requiredMigration: value.requiredMigration,
+    missingPrerequisites: readStringArray(value.missingPrerequisites),
+    missingActivitySchema: readStringArray(value.missingActivitySchema),
+    checkedAt: value.checkedAt,
+  };
+}
+
 function parseDetail(value: unknown): ActiveSocialActivitySnapshot {
   const validation = validateSocialActivitySnapshotV2(value);
   if (!validation.valid || !isRecord(value) || value.state !== 'active') {
@@ -177,6 +229,10 @@ export function createSocialActivityFeedCloudGateway(
     options.detailEndpoint,
     '/api/social-activity-snapshots/detail',
   );
+  const readinessEndpoint = normalizeEndpoint(
+    options.readinessEndpoint,
+    '/api/social-activity-snapshots/readiness',
+  );
   const fetcher = options.fetcher ?? fetch;
 
   return {
@@ -205,6 +261,12 @@ export function createSocialActivityFeedCloudGateway(
         items,
         ...(nextCursor ? { nextCursor } : {}),
       };
+    },
+
+    async readReadiness(credentials) {
+      assertCredentials(credentials);
+      const payload = await executeRequest(fetcher, readinessEndpoint, credentials);
+      return parseReadiness(payload);
     },
 
     async readDetail(credentials, snapshotId) {

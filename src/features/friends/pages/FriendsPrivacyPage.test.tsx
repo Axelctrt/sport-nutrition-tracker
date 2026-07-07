@@ -493,6 +493,16 @@ describe('FriendsPrivacyPage', () => {
         }],
       })),
       readDetail: vi.fn(async () => { throw new Error('Détail non attendu.'); }),
+      readReadiness: vi.fn(async () => ({
+        status: 'ready' as const,
+        contractVersion: '0.29.0-a3',
+        authVerified: true,
+        databaseBound: true,
+        requiredMigration: '0001_social_activity_snapshots_0_29_0.sql',
+        missingPrerequisites: [],
+        missingActivitySchema: [],
+        checkedAt: '2026-07-10T10:00:00.000Z',
+      })),
     };
 
     renderPage({

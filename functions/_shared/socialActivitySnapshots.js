@@ -27,6 +27,18 @@ const MAX_PAYLOAD_BYTES = 196_608;
 const DEFAULT_FEED_LIMIT = 20;
 const MAX_FEED_LIMIT = 50;
 const AUTH_PROBE_KEY = '__sportpilot_social_auth_probe__';
+const SOCIAL_ACTIVITY_REQUIRED_MIGRATION = '0001_social_activity_snapshots_0_29_0.sql';
+const SOCIAL_ACTIVITY_PREREQUISITE_TABLES = Object.freeze([
+  'social_directory_handles',
+  'social_friendships',
+  'social_friend_permissions',
+]);
+const SOCIAL_ACTIVITY_SCHEMA_OBJECTS = Object.freeze([
+  'social_activity_snapshots',
+  'idx_social_activity_snapshot_source_recipient',
+  'idx_social_activity_snapshot_feed',
+  'idx_social_activity_snapshot_owner',
+]);
 
 function isSocialActivitySnapshotsError(error) {
   return Boolean(error && typeof error === 'object' && 'status' in error && 'code' in error);
@@ -303,42 +315,58 @@ async function readJsonBody(request) {
   }
 }
 
-async function ensureSchema(database) {
-  await database.prepare(`
-    CREATE TABLE IF NOT EXISTS social_activity_snapshots (
-      snapshot_id TEXT PRIMARY KEY,
-      owner_user_id TEXT NOT NULL,
-      recipient_user_id TEXT NOT NULL,
-      source_kind TEXT NOT NULL,
-      source_activity_id TEXT NOT NULL,
-      source_revision TEXT NOT NULL,
-      contract_version TEXT NOT NULL,
-      state TEXT NOT NULL,
-      visibility TEXT,
-      family TEXT,
-      activity_type TEXT,
-      occurred_on TEXT,
-      occurred_at TEXT,
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL,
-      deleted_at TEXT,
-      deletion_reason TEXT,
-      mutation_sequence INTEGER NOT NULL,
-      snapshot_json TEXT NOT NULL
-    )
-  `).run();
-  await database.prepare(`
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_social_activity_snapshot_source_recipient
-    ON social_activity_snapshots(owner_user_id, source_kind, source_activity_id, recipient_user_id)
-  `).run();
-  await database.prepare(`
-    CREATE INDEX IF NOT EXISTS idx_social_activity_snapshot_feed
-    ON social_activity_snapshots(recipient_user_id, state, occurred_at, occurred_on, updated_at, snapshot_id)
-  `).run();
-  await database.prepare(`
-    CREATE INDEX IF NOT EXISTS idx_social_activity_snapshot_owner
-    ON social_activity_snapshots(owner_user_id, updated_at)
-  `).run();
+async function inspectSocialActivitySchema(database) {
+  const result = await database.prepare(`
+    SELECT type, name
+    FROM sqlite_master
+    WHERE name LIKE 'social_%'
+       OR name LIKE 'idx_social_activity_snapshot_%'
+  `).all();
+  const rows = Array.isArray(result?.results) ? result.results : [];
+  const availableNames = new Set(
+    rows
+      .map((row) => (typeof row?.name === 'string' ? row.name : ''))
+      .filter(Boolean),
+  );
+  const missingPrerequisites = SOCIAL_ACTIVITY_PREREQUISITE_TABLES.filter(
+    (name) => !availableNames.has(name),
+  );
+  const missingActivitySchema = SOCIAL_ACTIVITY_SCHEMA_OBJECTS.filter(
+    (name) => !availableNames.has(name),
+  );
+  const status = missingPrerequisites.length > 0
+    ? 'prerequisiteMissing'
+    : (missingActivitySchema.length > 0 ? 'migrationRequired' : 'ready');
+
+  return {
+    status,
+    contractVersion: CONTRACT_VERSION,
+    authVerified: true,
+    databaseBound: true,
+    requiredMigration: SOCIAL_ACTIVITY_REQUIRED_MIGRATION,
+    missingPrerequisites,
+    missingActivitySchema,
+    checkedAt: new Date().toISOString(),
+  };
+}
+
+async function assertSocialActivitySchemaReady(database) {
+  const readiness = await inspectSocialActivitySchema(database);
+  if (readiness.status === 'prerequisiteMissing') {
+    throw new SocialActivitySnapshotsError(
+      503,
+      'SOCIAL_ACTIVITY_PREREQUISITE_MISSING',
+      'Socle social serveur incomplet.',
+    );
+  }
+  if (readiness.status === 'migrationRequired') {
+    throw new SocialActivitySnapshotsError(
+      503,
+      'SOCIAL_ACTIVITY_MIGRATION_REQUIRED',
+      `Migration D1 requise : ${SOCIAL_ACTIVITY_REQUIRED_MIGRATION}.`,
+    );
+  }
+  return readiness;
 }
 
 async function hasActiveFriendship(database, ownerUserId, recipientUserId) {
@@ -410,7 +438,7 @@ async function persistSnapshotMutation(database, actorUserId, payload) {
     throw new SocialActivitySnapshotsError(403, 'SOCIAL_ACTIVITY_OWNER_MISMATCH', 'Publication refusée : propriétaire non authentifié.');
   }
 
-  await ensureSchema(database);
+  await assertSocialActivitySchemaReady(database);
   const existing = await readExistingSnapshot(database, snapshot.snapshotId);
   if (existing && existing.owner_user_id !== actorUserId) {
     throw new SocialActivitySnapshotsError(403, 'SOCIAL_ACTIVITY_OWNER_MISMATCH', 'Publication refusée : snapshot appartenant à un autre compte.');
@@ -556,7 +584,7 @@ function toFeedCard(row) {
 }
 
 async function listFeed(database, recipientUserId, url) {
-  await ensureSchema(database);
+  await assertSocialActivitySchemaReady(database);
   const limit = normalizeFeedLimit(url.searchParams.get('limit'));
   const cursor = decodeCursor(url.searchParams.get('cursor'));
   const pageLimit = limit + 1;
@@ -629,7 +657,7 @@ async function listFeed(database, recipientUserId, url) {
 }
 
 async function readSnapshotDetail(database, recipientUserId, snapshotId) {
-  await ensureSchema(database);
+  await assertSocialActivitySchemaReady(database);
   const normalizedSnapshotId = sanitizeIdentifier(snapshotId, 'snapshotId');
   const row = await database.prepare(`
     SELECT s.snapshot_json
@@ -670,6 +698,19 @@ function errorResponse(error) {
     code: 'SOCIAL_ACTIVITY_SERVER_ERROR',
     message: 'Service social indisponible.',
   });
+}
+
+export async function handleSocialActivitySnapshotReadinessRequest(request, env = {}, context = {}) {
+  try {
+    const methodResponse = assertMethod(request, 'GET');
+    if (methodResponse) return methodResponse;
+    await authenticateRequest(request, env, context.fetcher ?? fetch);
+    const database = readDatabase(env);
+    const readiness = await inspectSocialActivitySchema(database);
+    return jsonResponse(200, readiness);
+  } catch (error) {
+    return errorResponse(error);
+  }
 }
 
 export async function handleSocialActivitySnapshotSyncRequest(request, env = {}, context = {}) {
@@ -719,7 +760,8 @@ export const socialActivitySnapshotsInternals = {
   persistSnapshotMutation,
   listFeed,
   readSnapshotDetail,
-  ensureSchema,
+  inspectSocialActivitySchema,
+  assertSocialActivitySchemaReady,
   encodeCursor,
   decodeCursor,
 };

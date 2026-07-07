@@ -59,6 +59,16 @@ function gateway(overrides: Partial<SocialActivityFeedCloudGateway> = {}): Socia
   return {
     listPage: vi.fn(async () => ({ items: [card] })),
     readDetail: vi.fn(async () => detail),
+    readReadiness: vi.fn(async () => ({
+      status: 'ready' as const,
+      contractVersion: '0.29.0-a3',
+      authVerified: true,
+      databaseBound: true,
+      requiredMigration: '0001_social_activity_snapshots_0_29_0.sql',
+      missingPrerequisites: [],
+      missingActivitySchema: [],
+      checkedAt: '2026-07-07T18:00:00.000Z',
+    })),
     ...overrides,
   };
 }

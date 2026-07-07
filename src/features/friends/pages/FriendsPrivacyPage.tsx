@@ -22,6 +22,7 @@ import {
 } from '@/application/friends/friendsPrivacyService';
 import { prepareSocialActivityFeed } from '@/application/friends/socialActivityFeedService';
 import { socialActivityGlobalPolicyFromFriendsPrivacy } from '@/application/friends/socialActivityPublicationService';
+import { SocialActivityCloudReadinessPanel } from '@/features/friends/components/SocialActivityCloudReadinessPanel';
 import { SocialActivityFeedPanel } from '@/features/friends/components/SocialActivityFeedPanel';
 import { SocialActivityGlobalSharingSettings } from '@/features/friends/components/SocialActivitySharingSettings';
 import { sendExactFriendRequest } from '@/application/friends/socialFriendRequestService';
@@ -945,12 +946,20 @@ export function FriendsPrivacyPage({
       </div>
 
       {shouldUseCloudActivityFeed && activeActivityFeedCloudGateway ? (
-        <SocialActivityFeedPanel
-          gateway={activeActivityFeedCloudGateway}
-          getCredentials={activeActivityFeedCloudCredentials}
-          {...(activityFeedOnline ? { isOnline: activityFeedOnline } : {})}
-          subscribeCredentials={activityFeedCloudSubscription ?? subscribeRuntimeSocialActivityFeed}
-        />
+        <>
+          <SocialActivityCloudReadinessPanel
+            gateway={activeActivityFeedCloudGateway}
+            getCredentials={activeActivityFeedCloudCredentials}
+            {...(activityFeedOnline ? { isOnline: activityFeedOnline } : {})}
+            subscribeCredentials={activityFeedCloudSubscription ?? subscribeRuntimeSocialActivityFeed}
+          />
+          <SocialActivityFeedPanel
+            gateway={activeActivityFeedCloudGateway}
+            getCredentials={activeActivityFeedCloudCredentials}
+            {...(activityFeedOnline ? { isOnline: activityFeedOnline } : {})}
+            subscribeCredentials={activityFeedCloudSubscription ?? subscribeRuntimeSocialActivityFeed}
+          />
+        </>
       ) : (
       <Card className="p-5 sm:p-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
