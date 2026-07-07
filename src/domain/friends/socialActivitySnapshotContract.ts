@@ -1,5 +1,5 @@
 import type { ActivityIntensity, ActivityType } from '@/domain/models/activity';
-import type { EntityId, IsoDateTime, LocalDate } from '@/domain/models/common';
+import type { EntityId, IsoDateTime, LocalDate, LocalTime } from '@/domain/models/common';
 import type {
   LoadUnit,
   MuscleGroup,
@@ -12,7 +12,7 @@ import {
   type SocialActivityVisibility,
 } from '@/domain/friends/socialActivitySharingPolicy';
 
-export const SOCIAL_ACTIVITY_SNAPSHOT_CONTRACT_VERSION = '0.29.0-a2' as const;
+export const SOCIAL_ACTIVITY_SNAPSHOT_CONTRACT_VERSION = '0.29.0-a3' as const;
 
 export type SocialActivitySnapshotSourceKind = 'activity' | 'strengthSession';
 export type SocialActivitySnapshotState = 'active' | 'deleted';
@@ -34,6 +34,7 @@ export interface SocialActivityIntervalSnapshot {
   readonly durationSeconds?: number;
   readonly distanceMeters?: number;
   readonly paceMinutesPerKm?: number;
+  readonly paceSecondsPer100Meters?: number;
   readonly speedKph?: number;
 }
 
@@ -42,6 +43,7 @@ export interface SocialActivityLapSnapshot {
   readonly durationSeconds?: number;
   readonly distanceMeters?: number;
   readonly paceMinutesPerKm?: number;
+  readonly paceSecondsPer100Meters?: number;
   readonly speedKph?: number;
 }
 
@@ -50,6 +52,7 @@ export interface SocialActivitySegmentSnapshot {
   readonly durationSeconds?: number;
   readonly distanceMeters?: number;
   readonly paceMinutesPerKm?: number;
+  readonly paceSecondsPer100Meters?: number;
   readonly speedKph?: number;
   readonly elevationGainMeters?: number;
 }
@@ -61,6 +64,7 @@ export interface SocialActivitySnapshotSummary {
   readonly distanceKm?: number;
   readonly distanceMeters?: number;
   readonly paceMinutesPerKm?: number;
+  readonly paceSecondsPer100Meters?: number;
   readonly speedKph?: number;
   readonly elevationGainMeters?: number;
   readonly averageHeartRateBpm?: number;
@@ -141,6 +145,7 @@ export interface ActiveSocialActivitySnapshot extends SocialActivitySnapshotIden
   readonly activityType: ActivityType;
   readonly title?: string;
   readonly occurredOn: LocalDate;
+  readonly occurredTime?: LocalTime;
   readonly occurredAt?: IsoDateTime;
   readonly allowedFields: SocialActivityFieldSelection;
   readonly summary: SocialActivitySnapshotSummary;
@@ -178,6 +183,7 @@ export interface CreateActiveSocialActivitySnapshotInput {
   readonly activityType: ActivityType;
   readonly title?: string;
   readonly occurredOn: LocalDate;
+  readonly occurredTime?: LocalTime;
   readonly occurredAt?: IsoDateTime;
   readonly allowedFields: SocialActivityFieldSelection;
   readonly summary: SocialActivitySnapshotSummary;

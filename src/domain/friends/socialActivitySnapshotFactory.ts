@@ -36,6 +36,7 @@ export function createActiveSocialActivitySnapshotV2(
     activityType: input.activityType,
     ...(input.title === undefined ? {} : { title: input.title }),
     occurredOn: input.occurredOn,
+    ...(input.occurredTime === undefined ? {} : { occurredTime: input.occurredTime }),
     ...(input.occurredAt === undefined ? {} : { occurredAt: input.occurredAt }),
     allowedFields,
     summary: input.summary,

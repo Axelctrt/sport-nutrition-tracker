@@ -38,6 +38,7 @@ const activeTopLevelKeys = new Set([
   'activityType',
   'title',
   'occurredOn',
+  'occurredTime',
   'occurredAt',
   'allowedFields',
   'summary',
@@ -64,6 +65,7 @@ const summaryKeys = new Set([
   'distanceKm',
   'distanceMeters',
   'paceMinutesPerKm',
+  'paceSecondsPer100Meters',
   'speedKph',
   'elevationGainMeters',
   'averageHeartRateBpm',
@@ -105,6 +107,7 @@ const intervalKeys = new Set([
   'durationSeconds',
   'distanceMeters',
   'paceMinutesPerKm',
+  'paceSecondsPer100Meters',
   'speedKph',
 ]);
 const lapKeys = new Set([
@@ -112,6 +115,7 @@ const lapKeys = new Set([
   'durationSeconds',
   'distanceMeters',
   'paceMinutesPerKm',
+  'paceSecondsPer100Meters',
   'speedKph',
 ]);
 const segmentKeys = new Set([
@@ -119,6 +123,7 @@ const segmentKeys = new Set([
   'durationSeconds',
   'distanceMeters',
   'paceMinutesPerKm',
+  'paceSecondsPer100Meters',
   'speedKph',
   'elevationGainMeters',
 ]);
@@ -172,6 +177,7 @@ const summaryFieldByKey: Readonly<Record<keyof SocialActivitySnapshotSummary, So
   distanceKm: 'distance',
   distanceMeters: 'distance',
   paceMinutesPerKm: 'pace',
+  paceSecondsPer100Meters: 'pace',
   speedKph: 'speed',
   elevationGainMeters: 'elevation',
   averageHeartRateBpm: 'heartRate',
@@ -680,6 +686,7 @@ function validateActiveSnapshot(
   validateEnum(value.activityType, activityTypeSet, '$.activityType', 'Type d\'activité inconnu.', issues);
   validateOptionalNonEmptyString(value.title, '$.title', issues);
   validateNonEmptyString(value.occurredOn, '$.occurredOn', issues);
+  validateOptionalNonEmptyString(value.occurredTime, '$.occurredTime', issues);
   validateOptionalNonEmptyString(value.occurredAt, '$.occurredAt', issues);
 
   if (value.title !== undefined && isRecord(value.allowedFields)) {
@@ -688,10 +695,15 @@ function validateActiveSnapshot(
       addIssue(issues, '$.title', 'Le champ title n\'est pas autorisé.');
     }
   }
-  if (value.occurredAt !== undefined && isRecord(value.allowedFields)) {
+  if ((value.occurredTime !== undefined || value.occurredAt !== undefined) && isRecord(value.allowedFields)) {
     const common = value.allowedFields.common;
     if (Array.isArray(common) && !common.includes('time')) {
-      addIssue(issues, '$.occurredAt', 'Le champ time n\'est pas autorisé.');
+      if (value.occurredTime !== undefined) {
+        addIssue(issues, '$.occurredTime', 'Le champ time n\'est pas autorisé.');
+      }
+      if (value.occurredAt !== undefined) {
+        addIssue(issues, '$.occurredAt', 'Le champ time n\'est pas autorisé.');
+      }
     }
   }
 
