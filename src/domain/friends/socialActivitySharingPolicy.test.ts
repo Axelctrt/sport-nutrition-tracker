@@ -192,6 +192,19 @@ describe('social activity sharing policy', () => {
     );
   });
 
+  it('accepte les métadonnées cardio déjà persistées dans le modèle métier', () => {
+    const validation = validateSocialActivityGlobalSharingPolicy({
+      visibility: 'custom',
+      fields: {
+        common: ['activityType', 'date', 'intensity'],
+        cardio: ['sessionType', 'terrain', 'stroke', 'poolLength', 'bikeType', 'environment'],
+        strength: [],
+      },
+    });
+
+    expect(validation).toEqual({ valid: true, issues: [] });
+  });
+
   it('sépare les champs cardio et musculation selon la famille réelle', () => {
     const selection = selectSocialActivityFieldsForFamily(detailedPolicy.fields, 'strength');
 

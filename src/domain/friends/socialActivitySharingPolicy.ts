@@ -13,11 +13,18 @@ export const SOCIAL_ACTIVITY_COMMON_FIELDS = [
   'date',
   'time',
   'duration',
+  'intensity',
   'calories',
 ] as const;
 
 export const SOCIAL_ACTIVITY_CARDIO_FIELDS = [
   'distance',
+  'sessionType',
+  'terrain',
+  'stroke',
+  'poolLength',
+  'bikeType',
+  'environment',
   'pace',
   'speed',
   'paceSeries',
