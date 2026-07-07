@@ -1,3 +1,7 @@
+import {
+  runSocialActivitySnapshotObserverBestEffort,
+  type SocialActivitySnapshotObserver,
+} from '@/application/friends/socialActivitySnapshotObserver';
 import { RepositoryError } from '@/domain/errors/RepositoryError';
 import type { EntityId } from '@/domain/models/common';
 import type {
@@ -11,6 +15,7 @@ import type { WorkoutSessionRepository } from '@/infrastructure/repositories/con
 import { defaultTrackingModeForLoadUnit } from '@/domain/strength/strengthTracking';
 import type { WorkoutTemplateRepository } from '@/infrastructure/repositories/contracts/WorkoutTemplateRepository';
 import { toLocalDate } from '@/shared/utils/dates';
+import { runtimeSocialActivitySnapshotObserver } from '@/infrastructure/social-activity-snapshots/runtimeSocialActivitySnapshotObserver';
 
 export interface WorkoutSessionSummary {
   session: WorkoutSession;
@@ -21,6 +26,19 @@ export interface WorkoutSessionView {
   session: WorkoutSession;
   exercises: WorkoutSessionExercise[];
 }
+
+export interface WorkoutSessionCompletionDependencies {
+  readonly socialActivitySnapshots?: Pick<
+    SocialActivitySnapshotObserver,
+    'onStrengthSessionCompleted'
+  >;
+}
+
+const defaultWorkoutSessionCompletionDependencies: WorkoutSessionCompletionDependencies = {
+  ...(import.meta.env.MODE === 'test'
+    ? {}
+    : { socialActivitySnapshots: runtimeSocialActivitySnapshotObserver }),
+};
 
 function sessionTitle(session: WorkoutSession): string {
   return session.sourceTemplateNameSnapshot ?? 'Séance libre';
@@ -255,6 +273,7 @@ export async function completeWorkoutSession(
   repository: WorkoutSessionRepository,
   sessionId: EntityId,
   now = new Date(),
+  dependencies: WorkoutSessionCompletionDependencies = defaultWorkoutSessionCompletionDependencies,
 ): Promise<WorkoutSession> {
   const session = await repository.getById(sessionId);
   if (!session) throw new RepositoryError('Séance introuvable.', 'update');
@@ -264,11 +283,18 @@ export async function completeWorkoutSession(
     throw new RepositoryError('Ajoute au moins un exercice avant de terminer la séance.', 'update');
   }
   const duration = durationMinutes(session.startedAt, now);
-  return repository.update(sessionId, {
+  const completed = await repository.update(sessionId, {
     status: 'completed',
     completedAt: now.toISOString(),
     ...(duration === undefined ? {} : { durationMinutes: duration }),
   });
+  const socialActivitySnapshots = dependencies.socialActivitySnapshots;
+  await runSocialActivitySnapshotObserverBestEffort(
+    socialActivitySnapshots
+      ? () => socialActivitySnapshots.onStrengthSessionCompleted(completed)
+      : undefined,
+  );
+  return completed;
 }
 
 export async function abandonWorkoutSession(

@@ -1,3 +1,5 @@
+import { vi } from 'vitest';
+
 import {
   abandonWorkoutSession,
   addExerciseToWorkoutSession,
@@ -147,4 +149,31 @@ describe('workoutSessionService', () => {
     expect(abandoned).toMatchObject({ status: 'abandoned', durationMinutes: 12 });
     expect((await getWorkoutSessionView(sessionRepository, started.session.id)).session.status).toBe('abandoned');
   });
+
+  it('notifie le cycle social après la fin de séance sans exposer ses erreurs', async () => {
+    const started = await startEmptyWorkoutSession(
+      sessionRepository,
+      new Date('2026-06-25T17:00:00.000Z'),
+    );
+    await addExerciseToWorkoutSession(
+      sessionRepository,
+      exerciseRepository,
+      started.session.id,
+      'exercise-bench',
+    );
+    const onStrengthSessionCompleted = vi.fn(async () => {
+      throw new Error('social unavailable');
+    });
+
+    const completed = await completeWorkoutSession(
+      sessionRepository,
+      started.session.id,
+      new Date('2026-06-25T18:05:00.000Z'),
+      { socialActivitySnapshots: { onStrengthSessionCompleted } },
+    );
+
+    expect(completed).toMatchObject({ status: 'completed', durationMinutes: 65 });
+    expect(onStrengthSessionCompleted).toHaveBeenCalledWith(completed);
+  });
+
 });

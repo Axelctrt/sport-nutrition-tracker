@@ -12,12 +12,14 @@ import {
 function pendingRecord(input: {
   readonly recipientUserId: string;
   readonly stagedAt: string;
+  readonly ownerUserId?: string;
+  readonly sourceActivityId?: string;
 }) {
   const snapshot = createActiveSocialActivitySnapshotV2({
-    ownerUserId: 'owner',
+    ownerUserId: input.ownerUserId ?? 'owner',
     recipientUserId: input.recipientUserId,
     sourceKind: 'activity',
-    sourceActivityId: `activity-${input.recipientUserId}`,
+    sourceActivityId: input.sourceActivityId ?? `activity-${input.recipientUserId}`,
     sourceRevision: 'revision-1',
     visibility: 'summary',
     family: 'cardio',
@@ -177,4 +179,46 @@ describe('DexieSocialActivitySnapshotOutboxRepository', () => {
       await Dexie.delete(database.name);
     }
   });
+
+  it('liste tous les destinataires d’une même source sans mélanger les propriétaires', async () => {
+    const database = new SocialActivitySnapshotOutboxDatabase(
+      `sportpilot-social-outbox-source-${crypto.randomUUID()}`,
+    );
+    const repository = new DexieSocialActivitySnapshotOutboxRepository(database);
+
+    try {
+      await database.open();
+      await repository.put(pendingRecord({
+        recipientUserId: 'friend-b',
+        sourceActivityId: 'activity-shared',
+        stagedAt: '2026-07-07T10:02:00.000Z',
+      }));
+      await repository.put(pendingRecord({
+        recipientUserId: 'friend-a',
+        sourceActivityId: 'activity-shared',
+        stagedAt: '2026-07-07T10:01:00.000Z',
+      }));
+      await repository.put(pendingRecord({
+        ownerUserId: 'other-owner',
+        recipientUserId: 'friend-c',
+        sourceActivityId: 'activity-shared',
+        stagedAt: '2026-07-07T10:03:00.000Z',
+      }));
+
+      const records = await repository.listBySource({
+        ownerUserId: 'owner',
+        sourceKind: 'activity',
+        sourceActivityId: 'activity-shared',
+      });
+
+      expect(records.map((record) => record.recipientUserId)).toEqual([
+        'friend-a',
+        'friend-b',
+      ]);
+    } finally {
+      database.close();
+      await Dexie.delete(database.name);
+    }
+  });
+
 });

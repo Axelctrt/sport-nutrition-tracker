@@ -44,6 +44,28 @@ implements SocialActivitySnapshotLifecycleRepository {
     );
   }
 
+  listBySource(input: {
+    readonly ownerUserId: EntityId;
+    readonly sourceKind: SocialActivitySnapshotOutboxRecord['sourceKind'];
+    readonly sourceActivityId: EntityId;
+  }): Promise<readonly SocialActivitySnapshotOutboxRecord[]> {
+    return runRepositoryOperation(
+      'read',
+      'Impossible de lire les snapshots sociaux de cette activité.',
+      async () => {
+        const records = await this.database.records
+          .where('[ownerUserId+sourceActivityId]')
+          .equals([input.ownerUserId, input.sourceActivityId])
+          .filter((record) => record.sourceKind === input.sourceKind)
+          .toArray();
+
+        return records.sort((left, right) => (
+          left.recipientUserId.localeCompare(right.recipientUserId)
+        ));
+      },
+    );
+  }
+
   listReadyForDelivery(input: {
     readonly ownerUserId: EntityId;
     readonly now: IsoDateTime;
