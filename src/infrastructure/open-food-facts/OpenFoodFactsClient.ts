@@ -11,8 +11,6 @@ import {
 import { normalizeOpenFoodFactsBarcode } from '@/infrastructure/open-food-facts/barcode';
 
 const PRODUCT_API_ORIGIN = 'https://world.openfoodfacts.org';
-const SEARCH_API_URL = 'https://search.openfoodfacts.org/search';
-const LEGACY_SEARCH_API_URL = 'https://world.openfoodfacts.org/cgi/search.pl';
 const DEV_SEARCH_PROXY_URL = '/api/open-food-facts/search';
 const DEV_LEGACY_SEARCH_PROXY_URL = '/api/open-food-facts/legacy-search';
 const DEV_PRODUCT_PROXY_URL = '/api/open-food-facts/product';
@@ -59,11 +57,11 @@ function isLocalApplicationOrigin(): boolean {
 }
 
 function defaultSearchApiUrl(): string {
-  return isLocalApplicationOrigin() ? DEV_SEARCH_PROXY_URL : SEARCH_API_URL;
+  return DEV_SEARCH_PROXY_URL;
 }
 
 function defaultLegacySearchApiUrl(): string {
-  return isLocalApplicationOrigin() ? DEV_LEGACY_SEARCH_PROXY_URL : LEGACY_SEARCH_API_URL;
+  return DEV_LEGACY_SEARCH_PROXY_URL;
 }
 
 function defaultProductApiUrl(): string {
