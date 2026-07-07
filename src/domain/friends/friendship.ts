@@ -73,6 +73,8 @@ export interface StoredFriendsPrivacySettings extends FriendsPrivacySettings {
   readonly id: EntityId;
   readonly createdAt: IsoDateTime;
   readonly updatedAt: IsoDateTime;
+  readonly profileVisibilityUpdatedAt?: IsoDateTime;
+  readonly socialActivitySharingPolicyUpdatedAt?: IsoDateTime;
   readonly socialIdentity?: SocialIdentity;
 }
 

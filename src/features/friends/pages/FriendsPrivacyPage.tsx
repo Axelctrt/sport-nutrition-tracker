@@ -84,6 +84,8 @@ import {
 } from '@/infrastructure/social-activity-snapshots/socialActivityFeedCloudGateway';
 import { createRuntimeSocialCloudIdentityPort } from '@/infrastructure/sync-prototype/realSocialCloudIdentityService';
 import { reconcileRuntimeSocialActivityPrivacy } from '@/infrastructure/social-activity-snapshots/runtimeSocialActivityPrivacyReconciliation';
+import { notifySyncLocalDataChanged } from '@/application/sync/syncLocalChangeEvents';
+import { SOCIAL_ACTIVITY_PRIVACY_CHANGED_EVENT } from '@/infrastructure/sync-prototype/socialActivityPrivacySyncEvents';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
@@ -308,6 +310,40 @@ export function FriendsPrivacyPage({
     activeCloudFriendPermissionPort,
   ]);
 
+  useEffect(() => {
+    if (!activeRepository || typeof window === 'undefined') return undefined;
+
+    let active = true;
+    const refreshPrivacyFromCloud = () => {
+      void loadFriendsPrivacySnapshot(activeRepository)
+        .then((loadedSnapshot) => {
+          if (!active) return;
+          setSnapshot(loadedSnapshot);
+          setErrorMessage(undefined);
+        })
+        .catch((error) => {
+          if (!active) return;
+          setErrorMessage(
+            error instanceof Error
+              ? error.message
+              : 'Les préférences sociales synchronisées n’ont pas pu être relues.',
+          );
+        });
+    };
+
+    window.addEventListener(
+      SOCIAL_ACTIVITY_PRIVACY_CHANGED_EVENT,
+      refreshPrivacyFromCloud,
+    );
+    return () => {
+      active = false;
+      window.removeEventListener(
+        SOCIAL_ACTIVITY_PRIVACY_CHANGED_EVENT,
+        refreshPrivacyFromCloud,
+      );
+    };
+  }, [activeRepository]);
+
   const summary = useMemo(() => summarizeFriendsPrivacy(snapshot), [snapshot]);
   const socialActivitySharingPolicy = useMemo(
     () => snapshot.privacy.socialActivitySharingPolicy
@@ -372,16 +408,32 @@ export function FriendsPrivacyPage({
     });
   };
 
+  const persistSocialPrivacyForAccountSync = (
+    next: FriendsPrivacyServiceState,
+    reason: string,
+  ): Promise<boolean> => persistSnapshot(next).then((persisted) => {
+    if (persisted) {
+      notifySyncLocalDataChanged(['account-preferences'], reason);
+    }
+    return persisted;
+  });
+
   const updateSocialActivitySharingPolicy = (
     policy: SocialActivityGlobalSharingPolicy,
   ) => {
     const service = createFriendsPrivacyService(snapshot);
-    reconcilePrivacy(persistSnapshot(service.actions.setSocialActivitySharingPolicy(policy)));
+    reconcilePrivacy(persistSocialPrivacyForAccountSync(
+      service.actions.setSocialActivitySharingPolicy(policy),
+      'social-activity-sharing-policy-update',
+    ));
   };
 
   const updateProfileVisibility = (visibility: FriendVisibilityLevel) => {
     const service = createFriendsPrivacyService(snapshot);
-    reconcilePrivacy(persistSnapshot(service.actions.setProfileVisibility(visibility)));
+    reconcilePrivacy(persistSocialPrivacyForAccountSync(
+      service.actions.setProfileVisibility(visibility),
+      'social-profile-visibility-update',
+    ));
   };
 
   const normalizeHandleForMatch = (value: string): string => value

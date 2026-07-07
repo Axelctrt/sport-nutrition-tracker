@@ -842,6 +842,8 @@ const friendsPrivacySettingsSchema = entityMetadataSchema.extend({
   requireManualApproval: z.boolean(),
   socialIdentity: socialIdentitySchema.optional(),
   socialActivitySharingPolicy: socialActivityGlobalSharingPolicySchema.optional(),
+  profileVisibilityUpdatedAt: isoDateTimeSchema.optional(),
+  socialActivitySharingPolicyUpdatedAt: isoDateTimeSchema.optional(),
 });
 
 const backupUserStateTableNameSchema = z.enum(

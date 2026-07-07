@@ -72,6 +72,8 @@ describe('sauvegarde amis et confidentialité', () => {
         expect.objectContaining({
           id: FRIENDS_PRIVACY_SETTINGS_ID,
           profileVisibility: 'private',
+          profileVisibilityUpdatedAt: expect.any(String),
+          socialActivitySharingPolicyUpdatedAt: expect.any(String),
           socialIdentity: expect.objectContaining({
             userId: identity.userId,
             handle: 'backup.runner',

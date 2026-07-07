@@ -187,7 +187,7 @@ export function AccountPreferencesSyncSettingsPanel({ client: clientOverride }: 
               </h3>
             </div>
             <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-              Synchronise le profil, les paramètres de calcul, le tableau de bord et les modèles d’endurance personnalisés.
+              Synchronise le profil, les paramètres partageables, les modèles d’endurance et la confidentialité globale des activités sociales.
             </p>
           </div>
           <span className="inline-flex min-h-9 shrink-0 items-center rounded-full bg-slate-100 px-3 text-sm font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
@@ -254,7 +254,7 @@ export function AccountPreferencesSyncSettingsPanel({ client: clientOverride }: 
       <ConfirmationDialog
         open={confirmationOpen}
         title="Synchroniser le profil et les réglages ?"
-        description="La version la plus récente du profil et des réglages partageables sera conservée. Les préférences propres à cet appareil et les données gérées par E2 ne seront pas modifiées."
+        description="La version la plus récente du profil, des réglages partageables et de la confidentialité sociale globale sera conservée. Les préférences propres à cet appareil et les données gérées par E2 ne seront pas modifiées."
         confirmLabel="Synchroniser"
         isPending={busyAction === 'sync'}
         onCancel={() => setConfirmationOpen(false)}

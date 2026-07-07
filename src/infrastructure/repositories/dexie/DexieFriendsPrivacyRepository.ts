@@ -15,6 +15,7 @@ import {
 import type { FriendsPrivacySnapshotRepository } from '@/application/friends/friendsPrivacyService';
 import type { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import { runRepositoryOperation } from '@/infrastructure/repositories/dexie/repositoryOperation';
+import { sameEntity } from '@/infrastructure/sync-prototype/cloudSyncValue';
 import { currentIsoDateTime } from '@/shared/utils/entities';
 
 function sanitizeTimestamp(value: string | undefined, fallback: IsoDateTime): IsoDateTime {
@@ -72,11 +73,25 @@ function toStoredPrivacySettings(
   now: IsoDateTime,
   previous?: StoredFriendsPrivacySettings,
 ): StoredFriendsPrivacySettings {
+  const profileVisibilityChanged =
+    !previous || previous.profileVisibility !== snapshot.privacy.profileVisibility;
+  const socialActivitySharingPolicyChanged =
+    !previous
+    || !sameEntity(
+      previous.socialActivitySharingPolicy,
+      snapshot.privacy.socialActivitySharingPolicy,
+    );
   const settings: StoredFriendsPrivacySettings = {
     id: FRIENDS_PRIVACY_SETTINGS_ID,
     ...snapshot.privacy,
     createdAt: previous?.createdAt ?? now,
     updatedAt: now,
+    profileVisibilityUpdatedAt: profileVisibilityChanged
+      ? now
+      : previous.profileVisibilityUpdatedAt ?? previous.updatedAt,
+    socialActivitySharingPolicyUpdatedAt: socialActivitySharingPolicyChanged
+      ? now
+      : previous.socialActivitySharingPolicyUpdatedAt ?? previous.updatedAt,
   };
 
   return previous?.socialIdentity
@@ -102,9 +117,14 @@ function toSnapshotPrivacy(
 
 export class DexieFriendsPrivacyRepository implements FriendsPrivacySnapshotRepository {
   private readonly database: AppDatabase;
+  private readonly now: () => IsoDateTime;
 
-  constructor(database: AppDatabase) {
+  constructor(
+    database: AppDatabase,
+    now: () => IsoDateTime = currentIsoDateTime,
+  ) {
     this.database = database;
+    this.now = now;
   }
 
   readSnapshot(): Promise<FriendsPrivacySnapshot> {
@@ -134,7 +154,7 @@ export class DexieFriendsPrivacyRepository implements FriendsPrivacySnapshotRepo
       'update',
       'Impossible de persister les amis et les préférences de confidentialité.',
       async () => {
-        const now = currentIsoDateTime();
+        const now = this.now();
         const normalizedSnapshot = ensureFriendActivityPermissions(snapshot);
         const [existingFriends, existingRequests, existingPrivacy, existingPermissions] = await Promise.all([
           this.database.friendProfiles.toArray(),

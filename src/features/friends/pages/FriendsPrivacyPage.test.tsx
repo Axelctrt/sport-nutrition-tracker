@@ -1,4 +1,4 @@
-﻿import { render, screen } from '@testing-library/react';
+﻿import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { EntityId } from '@/domain/models/common';
 import {
@@ -14,6 +14,11 @@ import type { FriendsPrivacySnapshotRepository } from '@/application/friends/fri
 import { FriendsPrivacyPage } from '@/features/friends/pages/FriendsPrivacyPage';
 import type { SocialFriendsGateway } from '@/infrastructure/sync-prototype/socialFriendsGateway';
 import type { SocialActivityFeedCloudGateway } from '@/infrastructure/social-activity-snapshots/socialActivityFeedCloudGateway';
+import {
+  SYNC_LOCAL_DATA_CHANGED_EVENT,
+  syncLocalDataChangedDetail,
+} from '@/application/sync/syncLocalChangeEvents';
+import { SOCIAL_ACTIVITY_PRIVACY_CHANGED_EVENT } from '@/infrastructure/sync-prototype/socialActivityPrivacySyncEvents';
 
 const snapshot: FriendsPrivacySnapshot = {
   friends: [
@@ -101,6 +106,59 @@ describe('FriendsPrivacyPage', () => {
     expect(screen.getByText('Fil d’activité amis')).toBeInTheDocument();
     expect(screen.getAllByText(/Partage d’activité désactivé : aucun snapshot n’est affiché/u).length).toBeGreaterThan(0);
     expect(screen.getByText(/Permission : Résumé uniquement/u)).toBeInTheDocument();
+  });
+
+
+  it('demande la synchronisation du compte après une modification de la politique globale', async () => {
+    const user = userEvent.setup();
+    const repository: FriendsPrivacySnapshotRepository = {
+      readSnapshot: vi.fn(async () => snapshot),
+      saveSnapshot: vi.fn(async () => undefined),
+    };
+    const details: unknown[] = [];
+    const listener = (event: Event) => {
+      details.push(syncLocalDataChangedDetail(event));
+    };
+    window.addEventListener(SYNC_LOCAL_DATA_CHANGED_EVENT, listener);
+
+    try {
+      renderPage({ repository });
+      await user.click(screen.getByRole('button', { name: 'Résumé' }));
+
+      await waitFor(() => {
+        expect(repository.saveSnapshot).toHaveBeenCalled();
+        expect(details).toContainEqual({
+          domainIds: ['account-preferences'],
+          reason: 'social-activity-sharing-policy-update',
+        });
+      });
+    } finally {
+      window.removeEventListener(SYNC_LOCAL_DATA_CHANGED_EVENT, listener);
+    }
+  });
+
+  it('recharge la politique locale lorsqu’une préférence sociale arrive du cloud', async () => {
+    const repository: FriendsPrivacySnapshotRepository = {
+      readSnapshot: vi.fn(async () => ({
+        ...snapshot,
+        privacy: {
+          ...snapshot.privacy,
+          socialActivitySharingPolicy: {
+            ...snapshot.privacy.socialActivitySharingPolicy!,
+            visibility: 'detailed' as const,
+          },
+        },
+      })),
+      saveSnapshot: vi.fn(async () => undefined),
+    };
+
+    renderPage({ repository });
+    window.dispatchEvent(new Event(SOCIAL_ACTIVITY_PRIVACY_CHANGED_EVENT));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Détaillé' }))
+        .toHaveAttribute('aria-pressed', 'true');
+    });
   });
 
   it('enregistre un handle public valide en sauvegarde locale sans cloud réel', async () => {

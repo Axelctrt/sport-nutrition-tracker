@@ -28,12 +28,16 @@ export class DexieSocialIdentityRepository implements SocialIdentityRepository {
 
     await this.database.friendsPrivacySettings.put({
       id: FRIENDS_PRIVACY_SETTINGS_ID,
-      profileVisibility: existing?.profileVisibility ?? DEFAULT_FRIENDS_PRIVACY_SETTINGS.profileVisibility,
-      activitySharing: existing?.activitySharing ?? DEFAULT_FRIENDS_PRIVACY_SETTINGS.activitySharing,
-      allowFriendRequests: existing?.allowFriendRequests ?? DEFAULT_FRIENDS_PRIVACY_SETTINGS.allowFriendRequests,
-      requireManualApproval: existing?.requireManualApproval ?? DEFAULT_FRIENDS_PRIVACY_SETTINGS.requireManualApproval,
+      ...DEFAULT_FRIENDS_PRIVACY_SETTINGS,
+      ...(existing ?? {}),
       createdAt: existing?.createdAt ?? now,
       updatedAt: now,
+      profileVisibilityUpdatedAt:
+        existing?.profileVisibilityUpdatedAt ?? existing?.updatedAt ?? now,
+      socialActivitySharingPolicyUpdatedAt:
+        existing?.socialActivitySharingPolicyUpdatedAt
+        ?? existing?.updatedAt
+        ?? now,
       socialIdentity: identity,
     });
   }
