@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer';
 const DEFAULT_MODEL = 'gemini-2.5-flash-lite';
 const GEMINI_API_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
 const MAX_IMAGE_SIZE_BYTES = 8 * 1024 * 1024;
