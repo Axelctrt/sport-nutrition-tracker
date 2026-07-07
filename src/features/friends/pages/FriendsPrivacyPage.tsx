@@ -278,10 +278,27 @@ export function FriendsPrivacyPage({
           });
         }
 
+        if (!active) return;
+
+        const cloudSocialSnapshotLoaded = Boolean(
+          activeCloudFriendRequestPort
+          || activeSocialFriendsGateway
+          || activeCloudFriendshipPort
+          || activeCloudFriendPermissionPort,
+        );
+        if (activeRepository && cloudSocialSnapshotLoaded) {
+          await persistFriendsPrivacySnapshot(activeRepository, nextSnapshot);
+        }
+
+        if (!active) return;
         setSnapshot(nextSnapshot);
         setIdentity(loadedIdentity);
         setIdentityHandle(formatSocialHandle(loadedIdentity.handle));
         setDisplayName(loadedIdentity.displayName);
+
+        if (cloudSocialSnapshotLoaded && activePrivacyReconciliation) {
+          void activePrivacyReconciliation().catch(() => undefined);
+        }
       })
       .catch((error) => {
         if (!active) return;
@@ -309,6 +326,7 @@ export function FriendsPrivacyPage({
     activeSocialFriendsGateway,
     activeCloudFriendshipPort,
     activeCloudFriendPermissionPort,
+    activePrivacyReconciliation,
   ]);
 
   useEffect(() => {

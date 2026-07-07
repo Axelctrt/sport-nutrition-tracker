@@ -1,4 +1,4 @@
-﻿import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { EntityId } from '@/domain/models/common';
 import {
@@ -135,6 +135,93 @@ describe('FriendsPrivacyPage', () => {
     } finally {
       window.removeEventListener(SYNC_LOCAL_DATA_CHANGED_EVENT, listener);
     }
+  });
+
+  it('persiste les amitiés cloud avant de réconcilier les snapshots existants', async () => {
+    const localSnapshot: FriendsPrivacySnapshot = {
+      ...snapshot,
+      friends: [],
+      requests: [],
+      activityPermissions: [],
+    };
+    const repository: FriendsPrivacySnapshotRepository = {
+      readSnapshot: vi.fn(async () => localSnapshot),
+      saveSnapshot: vi.fn(async () => undefined),
+    };
+    const identityRepository = {
+      readIdentity: vi.fn(async () => identity),
+      saveIdentity: vi.fn(async () => undefined),
+    };
+    const privacyReconciliation = vi.fn(async () => undefined);
+    const socialFriendsGateway: SocialFriendsGateway = {
+      friendshipPort: {
+        listFriendships: vi.fn(async () => []),
+        upsertFriendship: vi.fn(async () => ({
+          status: 'unavailable' as const,
+          message: 'Non utilisé.',
+        })),
+      },
+      permissionPort: {
+        listPermissions: vi.fn(async () => [{
+          id: 'friend-activity-permission:social-user:lea' as EntityId,
+          friendUserId: 'social-user:lea' as EntityId,
+          friendHandle: 'lea.cardio',
+          sharingLevel: 'summary' as const,
+          detailedConsent: 'notRequested' as const,
+        }]),
+        savePermission: vi.fn(async (_userId, permission) => ({
+          status: 'alreadyExists' as const,
+          value: permission,
+          message: 'Non utilisé.',
+        })),
+      },
+      listFriendshipsWithProfiles: vi.fn(async () => ({
+        friendships: [{
+          id: 'cloud-friendship:social-user:alex123<->social-user:lea' as EntityId,
+          userAId: identity.userId,
+          userBId: 'social-user:lea' as EntityId,
+          status: 'active' as const,
+          createdAt: '2026-07-05T12:00:00.000Z',
+          updatedAt: '2026-07-05T12:00:00.000Z',
+        }],
+        profiles: [{
+          userId: 'social-user:lea' as EntityId,
+          handle: 'lea.cardio',
+          displayName: 'Léa Cardio',
+          createdAt: '2026-07-05T12:00:00.000Z',
+          updatedAt: '2026-07-05T12:00:00.000Z',
+        }],
+      })),
+    };
+
+    render(
+      <FriendsPrivacyPage
+        repository={repository}
+        identityRepository={identityRepository}
+        socialFriendsGateway={socialFriendsGateway}
+        privacyReconciliation={privacyReconciliation}
+      />,
+    );
+
+    expect(await screen.findByText('Léa Cardio')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(repository.saveSnapshot).toHaveBeenCalledOnce();
+      expect(privacyReconciliation).toHaveBeenCalledOnce();
+    });
+
+    const persistedSnapshot = vi.mocked(repository.saveSnapshot).mock.calls[0]?.[0];
+    expect(persistedSnapshot).toMatchObject({
+      friends: [{
+        userId: 'social-user:lea',
+        handle: 'lea.cardio',
+      }],
+      activityPermissions: [{
+        friendUserId: 'social-user:lea',
+        sharingLevel: 'summary',
+      }],
+    });
+    expect(vi.mocked(repository.saveSnapshot).mock.invocationCallOrder[0])
+      .toBeLessThan(privacyReconciliation.mock.invocationCallOrder[0]!);
   });
 
   it('recharge la politique locale lorsqu’une préférence sociale arrive du cloud', async () => {
