@@ -23,6 +23,7 @@ const baseValues = {
   cyclingEnvironment: 'outdoor' as const,
   met: undefined,
   includedInDailySteps: false,
+  socialSharing: { mode: 'inherit' },
 };
 
 describe('activityFormSchema', () => {

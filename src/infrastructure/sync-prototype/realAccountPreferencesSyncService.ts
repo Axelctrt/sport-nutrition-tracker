@@ -1,4 +1,16 @@
 import type { UserProfile } from '@/domain/models/profile';
+import {
+  DEFAULT_FRIENDS_PRIVACY_SETTINGS,
+  FRIENDS_PRIVACY_SETTINGS_ID,
+  type FriendVisibilityLevel,
+  type StoredFriendsPrivacySettings,
+} from '@/domain/friends/friendship';
+import {
+  legacyFriendActivitySharingForPolicy,
+  socialActivityGlobalPolicyFromLegacyPrivacy,
+  validateSocialActivityGlobalSharingPolicy,
+  type SocialActivityGlobalSharingPolicy,
+} from '@/domain/friends/socialActivitySharingPolicy';
 import type { UserSettings } from '@/domain/models/settings';
 import {
   createDefaultUserSettings,
@@ -22,18 +34,37 @@ import {
   type CloudSyncExecutionOptions,
 } from '@/infrastructure/sync-prototype/cloudSyncValue';
 import { notifyAccountPreferencesChanged } from '@/infrastructure/sync-prototype/accountPreferencesSyncEvents';
+import { notifySocialActivityPrivacyChanged } from '@/infrastructure/sync-prototype/socialActivityPrivacySyncEvents';
 
 export const ACCOUNT_PREFERENCES_AGGREGATE_ID = 'account-preferences';
+export const SOCIAL_PROFILE_VISIBILITY_PREFERENCES_ID =
+  'social-profile-visibility';
+export const SOCIAL_ACTIVITY_SHARING_PREFERENCES_ID =
+  'social-activity-sharing';
 
 export type SyncedUserSettings = Omit<
   UserSettings,
   'routineReminderPreferences' | 'routineReminderUpdatedAt' | 'syncableUpdatedAt'
 >;
 
+export interface SyncedSocialProfileVisibility {
+  readonly id: typeof SOCIAL_PROFILE_VISIBILITY_PREFERENCES_ID;
+  readonly visibility: FriendVisibilityLevel;
+  readonly updatedAt: string;
+}
+
+export interface SyncedSocialActivitySharingPreferences {
+  readonly id: typeof SOCIAL_ACTIVITY_SHARING_PREFERENCES_ID;
+  readonly policy: SocialActivityGlobalSharingPolicy;
+  readonly updatedAt: string;
+}
+
 export interface AccountPreferencesAggregate {
   readonly id: string;
   readonly profile?: UserProfile;
   readonly settings: SyncedUserSettings;
+  readonly socialProfileVisibility?: SyncedSocialProfileVisibility;
+  readonly socialActivitySharing?: SyncedSocialActivitySharingPreferences;
   readonly updatedAt: string;
 }
 
@@ -115,9 +146,39 @@ function validateAggregate(aggregate: AccountPreferencesAggregate): void {
   if (aggregate.settings.id !== USER_SETTINGS_ID) {
     throw new Error('Les réglages cloud possèdent un identifiant incohérent.');
   }
+  if (
+    aggregate.socialProfileVisibility
+    && aggregate.socialProfileVisibility.id !== SOCIAL_PROFILE_VISIBILITY_PREFERENCES_ID
+  ) {
+    throw new Error('La visibilité sociale cloud possède un identifiant incohérent.');
+  }
+  if (
+    aggregate.socialProfileVisibility
+    && !['private', 'friends', 'public'].includes(
+      aggregate.socialProfileVisibility.visibility,
+    )
+  ) {
+    throw new Error('La visibilité sociale cloud est invalide.');
+  }
+  if (
+    aggregate.socialActivitySharing
+    && aggregate.socialActivitySharing.id !== SOCIAL_ACTIVITY_SHARING_PREFERENCES_ID
+  ) {
+    throw new Error('La politique de partage cloud possède un identifiant incohérent.');
+  }
+  if (
+    aggregate.socialActivitySharing
+    && !validateSocialActivityGlobalSharingPolicy(
+      aggregate.socialActivitySharing.policy,
+    ).valid
+  ) {
+    throw new Error('La politique de partage cloud est invalide.');
+  }
   const expectedUpdatedAt = maxTimestamp(
     aggregate.profile?.updatedAt,
     aggregate.settings.updatedAt,
+    aggregate.socialProfileVisibility?.updatedAt,
+    aggregate.socialActivitySharing?.updatedAt,
   );
   if (aggregate.updatedAt !== expectedUpdatedAt) {
     throw new Error('Le profil et les réglages cloud possèdent un horodatage incohérent.');
@@ -127,12 +188,21 @@ function validateAggregate(aggregate: AccountPreferencesAggregate): void {
 function buildAggregate(
   profile: UserProfile | undefined,
   settings: SyncedUserSettings,
+  socialProfileVisibility?: SyncedSocialProfileVisibility,
+  socialActivitySharing?: SyncedSocialActivitySharingPreferences,
 ): AccountPreferencesAggregate {
   const aggregate: AccountPreferencesAggregate = {
     id: ACCOUNT_PREFERENCES_AGGREGATE_ID,
     ...(profile ? { profile } : {}),
     settings,
-    updatedAt: maxTimestamp(profile?.updatedAt, settings.updatedAt),
+    ...(socialProfileVisibility ? { socialProfileVisibility } : {}),
+    ...(socialActivitySharing ? { socialActivitySharing } : {}),
+    updatedAt: maxTimestamp(
+      profile?.updatedAt,
+      settings.updatedAt,
+      socialProfileVisibility?.updatedAt,
+      socialActivitySharing?.updatedAt,
+    ),
   };
   validateAggregate(aggregate);
   return aggregate;
@@ -175,7 +245,21 @@ function resolveFinalState(
     ? cloud.settings
     : chooseLatest(local.settings, cloud.settings) ?? local.settings;
 
-  return buildAggregate(profile, settings);
+  const socialProfileVisibility = chooseLatest(
+    local.socialProfileVisibility,
+    cloud.socialProfileVisibility,
+  );
+  const socialActivitySharing = chooseLatest(
+    local.socialActivitySharing,
+    cloud.socialActivitySharing,
+  );
+
+  return buildAggregate(
+    profile,
+    settings,
+    socialProfileVisibility,
+    socialActivitySharing,
+  );
 }
 
 function differingComponentCount(
@@ -183,10 +267,21 @@ function differingComponentCount(
   right: AccountPreferencesAggregate,
 ): number {
   if (!left) {
-    return (right.profile ? 1 : 0) + 1;
+    return (right.profile ? 1 : 0)
+      + 1
+      + Number(Boolean(right.socialProfileVisibility))
+      + Number(Boolean(right.socialActivitySharing));
   }
   return Number(!sameEntity(left.profile, right.profile))
-    + Number(!sameEntity(left.settings, right.settings));
+    + Number(!sameEntity(left.settings, right.settings))
+    + Number(!sameEntity(
+      left.socialProfileVisibility,
+      right.socialProfileVisibility,
+    ))
+    + Number(!sameEntity(
+      left.socialActivitySharing,
+      right.socialActivitySharing,
+    ));
 }
 
 function buildPreview(
@@ -204,14 +299,39 @@ function buildPreview(
   };
 }
 
+function socialProfileVisibilityFromStored(
+  stored: StoredFriendsPrivacySettings | undefined,
+): SyncedSocialProfileVisibility | undefined {
+  if (!stored) return undefined;
+  return {
+    id: SOCIAL_PROFILE_VISIBILITY_PREFERENCES_ID,
+    visibility: stored.profileVisibility,
+    updatedAt: stored.profileVisibilityUpdatedAt ?? stored.updatedAt,
+  };
+}
+
+function socialActivitySharingFromStored(
+  stored: StoredFriendsPrivacySettings | undefined,
+): SyncedSocialActivitySharingPreferences | undefined {
+  if (!stored) return undefined;
+  return {
+    id: SOCIAL_ACTIVITY_SHARING_PREFERENCES_ID,
+    policy: stored.socialActivitySharingPolicy
+      ?? socialActivityGlobalPolicyFromLegacyPrivacy(stored),
+    updatedAt:
+      stored.socialActivitySharingPolicyUpdatedAt ?? stored.updatedAt,
+  };
+}
+
 async function readState(
   localDatabase: AppDatabase,
   cloudDatabase: SyncPrototypeDatabase,
   currentUserId: string,
 ): Promise<AccountPreferencesState> {
-  const [profile, storedSettings, cloudRows] = await Promise.all([
+  const [profile, storedSettings, storedPrivacy, cloudRows] = await Promise.all([
     localDatabase.userProfile.get(LOCAL_USER_PROFILE_ID),
     localDatabase.userSettings.get(USER_SETTINGS_ID),
+    localDatabase.friendsPrivacySettings.get(FRIENDS_PRIVACY_SETTINGS_ID),
     cloudDatabase.realAccountPreferences.toArray(),
   ]);
   const settings = createSyncedUserSettingsSnapshot(
@@ -227,7 +347,12 @@ async function readState(
   }
 
   return {
-    local: buildAggregate(profile, settings),
+    local: buildAggregate(
+      profile,
+      settings,
+      socialProfileVisibilityFromStored(storedPrivacy),
+      socialActivitySharingFromStored(storedPrivacy),
+    ),
     ...(cloudValues[0] ? { cloud: cloudValues[0] } : {}),
   };
 }
@@ -263,6 +388,55 @@ async function applySettingsToLocal(
   await localDatabase.userSettings.put(next);
 }
 
+async function applySocialPrivacyToLocal(
+  localDatabase: AppDatabase,
+  input: {
+    readonly socialProfileVisibility?: SyncedSocialProfileVisibility;
+    readonly socialActivitySharing?: SyncedSocialActivitySharingPreferences;
+  },
+): Promise<void> {
+  const current = await localDatabase.friendsPrivacySettings.get(
+    FRIENDS_PRIVACY_SETTINGS_ID,
+  );
+  const firstTimestamp = maxTimestamp(
+    input.socialProfileVisibility?.updatedAt,
+    input.socialActivitySharing?.updatedAt,
+  );
+  const base: StoredFriendsPrivacySettings = current ?? {
+    id: FRIENDS_PRIVACY_SETTINGS_ID,
+    ...DEFAULT_FRIENDS_PRIVACY_SETTINGS,
+    createdAt: firstTimestamp,
+    updatedAt: firstTimestamp,
+  };
+  const policy = input.socialActivitySharing?.policy
+    ?? base.socialActivitySharingPolicy
+    ?? socialActivityGlobalPolicyFromLegacyPrivacy(base);
+  const next: StoredFriendsPrivacySettings = {
+    ...base,
+    ...(input.socialProfileVisibility
+      ? {
+          profileVisibility: input.socialProfileVisibility.visibility,
+          profileVisibilityUpdatedAt:
+            input.socialProfileVisibility.updatedAt,
+        }
+      : {}),
+    ...(input.socialActivitySharing
+      ? {
+          activitySharing: legacyFriendActivitySharingForPolicy(policy),
+          socialActivitySharingPolicy: policy,
+          socialActivitySharingPolicyUpdatedAt:
+            input.socialActivitySharing.updatedAt,
+        }
+      : {}),
+    updatedAt: maxTimestamp(
+      base.updatedAt,
+      input.socialProfileVisibility?.updatedAt,
+      input.socialActivitySharing?.updatedAt,
+    ),
+  };
+  await localDatabase.friendsPrivacySettings.put(next);
+}
+
 export async function synchronizeRealAccountPreferences(
   localDatabase: AppDatabase,
   cloudDatabase: SyncPrototypeDatabase,
@@ -277,21 +451,54 @@ export async function synchronizeRealAccountPreferences(
   const downloadedProfiles = Number(
     !sameEntity(state.local.profile, final.profile),
   );
+  const downloadedSocialProfileVisibility = Number(
+    !sameEntity(
+      state.local.socialProfileVisibility,
+      final.socialProfileVisibility,
+    ),
+  );
+  const downloadedSocialActivitySharing = Number(
+    !sameEntity(
+      state.local.socialActivitySharing,
+      final.socialActivitySharing,
+    ),
+  );
   const downloadedSettings = Number(
     !sameEntity(state.local.settings, final.settings),
-  );
+  ) + downloadedSocialProfileVisibility + downloadedSocialActivitySharing;
   const uploadedProfiles = writeCloud
     ? Number(!sameEntity(state.cloud?.profile, final.profile))
     : 0;
   const uploadedSettings = writeCloud
     ? Number(!sameEntity(state.cloud?.settings, final.settings))
+      + Number(!sameEntity(
+        state.cloud?.socialProfileVisibility,
+        final.socialProfileVisibility,
+      ))
+      + Number(!sameEntity(
+        state.cloud?.socialActivitySharing,
+        final.socialActivitySharing,
+      ))
     : 0;
 
   if (downloadedProfiles > 0 && final.profile) {
     await localDatabase.userProfile.put(final.profile);
   }
-  if (downloadedSettings > 0) {
+  if (!sameEntity(state.local.settings, final.settings)) {
     await applySettingsToLocal(localDatabase, final.settings);
+  }
+  if (
+    downloadedSocialProfileVisibility > 0
+    || downloadedSocialActivitySharing > 0
+  ) {
+    await applySocialPrivacyToLocal(localDatabase, {
+      ...(downloadedSocialProfileVisibility > 0 && final.socialProfileVisibility
+        ? { socialProfileVisibility: final.socialProfileVisibility }
+        : {}),
+      ...(downloadedSocialActivitySharing > 0 && final.socialActivitySharing
+        ? { socialActivitySharing: final.socialActivitySharing }
+        : {}),
+    });
   }
 
   if (
@@ -303,6 +510,12 @@ export async function synchronizeRealAccountPreferences(
 
   if (downloadedProfiles > 0 || downloadedSettings > 0) {
     notifyAccountPreferencesChanged();
+  }
+  if (
+    downloadedSocialProfileVisibility > 0
+    || downloadedSocialActivitySharing > 0
+  ) {
+    notifySocialActivityPrivacyChanged();
   }
 
   return {

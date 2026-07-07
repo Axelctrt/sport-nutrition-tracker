@@ -1,3 +1,4 @@
+import type { SocialActivityGlobalSharingPolicy } from '@/domain/friends/socialActivitySharingPolicy';
 import type { EntityId } from '@/domain/models/common';
 import {
   acceptFriendRequest,
@@ -34,6 +35,7 @@ export interface FriendsPrivacyServiceActions {
   readonly setProfileVisibility: (visibility: FriendVisibilityLevel) => FriendsPrivacyServiceState;
   readonly setActivitySharing: (sharing: FriendActivitySharingLevel) => FriendsPrivacyServiceState;
   readonly setRequestsOpen: (open: boolean) => FriendsPrivacyServiceState;
+  readonly setSocialActivitySharingPolicy: (policy: SocialActivityGlobalSharingPolicy) => FriendsPrivacyServiceState;
   readonly setFriendActivityPermission: (friendId: EntityId, sharing: 'summary' | 'detailed') => FriendsPrivacyServiceState;
 }
 
@@ -167,6 +169,16 @@ export function createFriendsPrivacyService(
       setRequestsOpen: (open) => updatePrivacy(
         { allowFriendRequests: open },
         open ? 'Les demandes d’amis sont autorisées.' : 'Les nouvelles demandes d’amis sont bloquées.',
+      ),
+      setSocialActivitySharingPolicy: (policy) => updatePrivacy(
+        { socialActivitySharingPolicy: policy },
+        policy.visibility === 'private'
+          ? 'Toutes les activités restent privées.'
+          : policy.visibility === 'summary'
+            ? 'Les activités utilisent un résumé prudent par défaut.'
+            : policy.visibility === 'custom'
+              ? 'Les champs personnalisés sont enregistrés comme réglage global.'
+              : 'Le détail autorisé est activé selon les permissions de chaque ami.',
       ),
       setFriendActivityPermission: (friendId, sharing) => setState(
         updateFriendActivityPermission(state, friendId, sharing),

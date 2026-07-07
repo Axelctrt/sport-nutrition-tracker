@@ -4,10 +4,22 @@ import { createDefaultUserSettings } from '@/domain/defaults/appSettings';
 import { LOCAL_USER_PROFILE_ID, USER_SETTINGS_ID } from '@/domain/defaults/identifiers';
 import type { UserProfile } from '@/domain/models/profile';
 import type { UserSettings } from '@/domain/models/settings';
+import {
+  DEFAULT_FRIENDS_PRIVACY_SETTINGS,
+  FRIENDS_PRIVACY_SETTINGS_ID,
+  type StoredFriendsPrivacySettings,
+} from '@/domain/friends/friendship';
+import {
+  createSocialActivityGlobalSharingPolicy,
+  type SocialActivityGlobalSharingPolicy,
+} from '@/domain/friends/socialActivitySharingPolicy';
 import { AppDatabase } from '@/infrastructure/database/AppDatabase';
+import { SOCIAL_ACTIVITY_PRIVACY_CHANGED_EVENT } from '@/infrastructure/sync-prototype/socialActivityPrivacySyncEvents';
 import type { SyncPrototypeDatabase } from '@/infrastructure/sync-prototype/SyncPrototypeDatabase';
 import {
   ACCOUNT_PREFERENCES_AGGREGATE_ID,
+  SOCIAL_ACTIVITY_SHARING_PREFERENCES_ID,
+  SOCIAL_PROFILE_VISIBILITY_PREFERENCES_ID,
   createSyncedUserSettingsSnapshot,
   previewRealAccountPreferencesSync,
   synchronizeRealAccountPreferences,
@@ -67,16 +79,69 @@ function settings(updatedAt = T1, includedBaseSteps = 3_000): UserSettings {
 function aggregate(
   profileValue: UserProfile | undefined,
   settingsValue: UserSettings,
+  social: {
+    readonly visibility?: {
+      readonly value: 'private' | 'friends' | 'public';
+      readonly updatedAt: string;
+    };
+    readonly policy?: {
+      readonly value: SocialActivityGlobalSharingPolicy;
+      readonly updatedAt: string;
+    };
+  } = {},
 ): AccountPreferencesAggregate {
   const syncedSettings = createSyncedUserSettingsSnapshot(settingsValue);
+  const socialProfileVisibility = social.visibility
+    ? ({
+        id: SOCIAL_PROFILE_VISIBILITY_PREFERENCES_ID,
+        visibility: social.visibility.value,
+        updatedAt: social.visibility.updatedAt,
+      } satisfies NonNullable<AccountPreferencesAggregate['socialProfileVisibility']>)
+    : undefined;
+  const socialActivitySharing = social.policy
+    ? ({
+        id: SOCIAL_ACTIVITY_SHARING_PREFERENCES_ID,
+        policy: social.policy.value,
+        updatedAt: social.policy.updatedAt,
+      } satisfies NonNullable<AccountPreferencesAggregate['socialActivitySharing']>)
+    : undefined;
   return {
     id: ACCOUNT_PREFERENCES_AGGREGATE_ID,
     ...(profileValue ? { profile: profileValue } : {}),
     settings: syncedSettings,
-    updatedAt: [profileValue?.updatedAt, syncedSettings.updatedAt]
+    ...(socialProfileVisibility ? { socialProfileVisibility } : {}),
+    ...(socialActivitySharing ? { socialActivitySharing } : {}),
+    updatedAt: [
+      profileValue?.updatedAt,
+      syncedSettings.updatedAt,
+      socialProfileVisibility?.updatedAt,
+      socialActivitySharing?.updatedAt,
+    ]
       .filter((value): value is string => Boolean(value))
       .sort()
       .at(-1)!,
+  };
+}
+
+function privacySettings(input: {
+  readonly visibility?: 'private' | 'friends' | 'public';
+  readonly visibilityUpdatedAt?: string;
+  readonly policy?: SocialActivityGlobalSharingPolicy;
+  readonly policyUpdatedAt?: string;
+  readonly updatedAt?: string;
+} = {}): StoredFriendsPrivacySettings {
+  const updatedAt = input.updatedAt ?? T1;
+  return {
+    id: FRIENDS_PRIVACY_SETTINGS_ID,
+    ...DEFAULT_FRIENDS_PRIVACY_SETTINGS,
+    profileVisibility: input.visibility ?? 'friends',
+    socialActivitySharingPolicy:
+      input.policy ?? createSocialActivityGlobalSharingPolicy('summary'),
+    profileVisibilityUpdatedAt: input.visibilityUpdatedAt ?? updatedAt,
+    socialActivitySharingPolicyUpdatedAt:
+      input.policyUpdatedAt ?? updatedAt,
+    createdAt: T1,
+    updatedAt,
   };
 }
 
@@ -213,6 +278,105 @@ describe('synchronisation E1 du profil et des réglages', () => {
     );
 
     expect(preview.differingEntityCount).toBe(0);
+  });
+
+
+  it('synchronise la visibilité sociale et la politique globale avec les préférences du compte', async () => {
+    await local.userSettings.put(settings(T1, 3_000));
+    await local.friendsPrivacySettings.put(privacySettings({
+      visibility: 'private',
+      visibilityUpdatedAt: T2,
+      policy: createSocialActivityGlobalSharingPolicy('custom', {
+        common: ['activityType', 'date', 'duration'],
+        cardio: ['distance', 'pace'],
+        strength: ['exercises', 'sets', 'repetitions'],
+      }),
+      policyUpdatedAt: T3,
+      updatedAt: T3,
+    }));
+
+    const result = await synchronizeRealAccountPreferences(
+      local,
+      cloud as unknown as SyncPrototypeDatabase,
+      'user-1',
+    );
+
+    expect(result.uploadedSettings).toBe(3);
+    expect(await cloud.realAccountPreferences.get('#account-preferences'))
+      .toMatchObject({
+        socialProfileVisibility: {
+          visibility: 'private',
+          updatedAt: T2,
+        },
+        socialActivitySharing: {
+          policy: {
+            visibility: 'custom',
+            fields: {
+              common: ['activityType', 'date', 'duration'],
+              cardio: ['distance', 'pace'],
+              strength: ['exercises', 'sets', 'repetitions'],
+            },
+          },
+          updatedAt: T3,
+        },
+      });
+  });
+
+  it('résout séparément la visibilité et la politique selon leurs horodatages', async () => {
+    await local.userSettings.put(settings(T1, 3_000));
+    await local.friendsPrivacySettings.put(privacySettings({
+      visibility: 'private',
+      visibilityUpdatedAt: T3,
+      policy: createSocialActivityGlobalSharingPolicy('summary'),
+      policyUpdatedAt: T1,
+      updatedAt: T3,
+    }));
+    await cloud.realAccountPreferences.put({
+      ...aggregate(undefined, settings(T1, 3_000), {
+        visibility: { value: 'public', updatedAt: T2 },
+        policy: {
+          value: createSocialActivityGlobalSharingPolicy('detailed'),
+          updatedAt: T2,
+        },
+      }),
+      id: '#account-preferences',
+      owner: 'user-1',
+    });
+
+    let privacyChangeCount = 0;
+    const listener = () => {
+      privacyChangeCount += 1;
+    };
+    window.addEventListener(SOCIAL_ACTIVITY_PRIVACY_CHANGED_EVENT, listener);
+    const result = await synchronizeRealAccountPreferences(
+      local,
+      cloud as unknown as SyncPrototypeDatabase,
+      'user-1',
+    );
+    window.removeEventListener(SOCIAL_ACTIVITY_PRIVACY_CHANGED_EVENT, listener);
+
+    expect(result.downloadedSettings).toBe(1);
+    expect(privacyChangeCount).toBe(1);
+    expect(result.uploadedSettings).toBe(1);
+    expect(await local.friendsPrivacySettings.get(FRIENDS_PRIVACY_SETTINGS_ID))
+      .toMatchObject({
+        profileVisibility: 'private',
+        profileVisibilityUpdatedAt: T3,
+        activitySharing: 'detailed',
+        socialActivitySharingPolicy: { visibility: 'detailed' },
+        socialActivitySharingPolicyUpdatedAt: T2,
+      });
+    expect(await cloud.realAccountPreferences.get('#account-preferences'))
+      .toMatchObject({
+        socialProfileVisibility: {
+          visibility: 'private',
+          updatedAt: T3,
+        },
+        socialActivitySharing: {
+          policy: { visibility: 'detailed' },
+          updatedAt: T2,
+        },
+      });
   });
 
   it('isole les préférences appartenant à un autre compte', async () => {

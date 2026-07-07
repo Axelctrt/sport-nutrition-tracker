@@ -189,4 +189,27 @@ describe('friendship domain', () => {
     expect(canExposeFriendActivityDetailsToFriend(detailedSnapshot, friend)).toBe(true);
   });
 
+
+  it('conserve la politique de partage configurée lorsque le profil devient privé', () => {
+    const current = {
+      ...DEFAULT_FRIENDS_PRIVACY_SETTINGS,
+      socialActivitySharingPolicy: {
+        visibility: 'custom' as const,
+        fields: {
+          common: ['activityType', 'date', 'duration'] as const,
+          cardio: ['distance'] as const,
+          strength: ['sessionName', 'exerciseCount'] as const,
+        },
+      },
+      activitySharing: 'detailed' as const,
+    };
+
+    const privateSettings = updateFriendsPrivacySettings(current, { profileVisibility: 'private' });
+    const restored = updateFriendsPrivacySettings(privateSettings, { profileVisibility: 'friends' });
+
+    expect(privateSettings.activitySharing).toBe('disabled');
+    expect(privateSettings.socialActivitySharingPolicy?.visibility).toBe('custom');
+    expect(restored.activitySharing).toBe('detailed');
+  });
+
 });

@@ -34,11 +34,15 @@ function createDependencies(existing?: Activity): {
   save: ReturnType<typeof vi.fn>;
   remove: ReturnType<typeof vi.fn>;
   recalculate: ReturnType<typeof vi.fn>;
+  onActivitySaved: ReturnType<typeof vi.fn>;
+  onActivityDeleted: ReturnType<typeof vi.fn>;
 } {
   const create = vi.fn(async (data) => createEntity(data));
   const save = vi.fn(async (activity) => activity);
   const remove = vi.fn(async () => undefined);
   const recalculate = vi.fn(async () => undefined);
+  const onActivitySaved = vi.fn(async () => undefined);
+  const onActivityDeleted = vi.fn(async () => undefined);
 
   return {
     dependencies: {
@@ -56,11 +60,17 @@ function createDependencies(existing?: Activity): {
         delete: remove,
       },
       recalculateDailyTarget: recalculate,
+      socialActivitySnapshots: {
+        onActivitySaved,
+        onActivityDeleted,
+      },
     },
     create,
     save,
     remove,
     recalculate,
+    onActivitySaved,
+    onActivityDeleted,
   };
 }
 
@@ -146,4 +156,66 @@ describe('activityService', () => {
     expect(remove).not.toHaveBeenCalled();
     expect(recalculate).not.toHaveBeenCalled();
   });
+
+  it('alimente le cycle social après une création sans modifier le résultat sportif', async () => {
+    const { dependencies, onActivitySaved } = createDependencies();
+
+    const activity = await createActivityFromDraft(runningDraft(), profile(), dependencies);
+
+    expect(onActivitySaved).toHaveBeenCalledWith(activity);
+  });
+
+  it('alimente le cycle social après une mise à jour et une suppression', async () => {
+    const existing = createEntity({
+      ...runningDraft(),
+      calculation: {
+        weightKg: 60,
+        estimatedCaloriesKcal: 600,
+        coefficientUsed: 1,
+        calculationVersion: 1,
+      },
+    }) as Activity;
+    const {
+      dependencies,
+      onActivitySaved,
+      onActivityDeleted,
+    } = createDependencies(existing);
+
+    const updated = await updateActivityFromDraft(
+      existing.id,
+      runningDraft({ durationMinutes: 65 }),
+      profile(),
+      dependencies,
+    );
+    await deleteActivityAndRecalculate(existing.id, profile(), dependencies);
+
+    expect(onActivitySaved).toHaveBeenCalledWith(updated);
+    expect(onActivityDeleted).toHaveBeenCalledWith(existing);
+  });
+
+  it('n’interrompt jamais l’enregistrement sportif si le social est indisponible', async () => {
+    const { dependencies, onActivitySaved } = createDependencies();
+    onActivitySaved.mockRejectedValueOnce(new Error('social unavailable'));
+
+    await expect(
+      createActivityFromDraft(runningDraft(), profile(), dependencies),
+    ).resolves.toMatchObject({ type: 'running' });
+  });
+
+
+  it('persiste la surcharge sociale avec l’activité avant de notifier le cycle social', async () => {
+    const { dependencies, create, onActivitySaved } = createDependencies();
+    const socialSharing = { mode: 'private' as const };
+
+    const activity = await createActivityFromDraft(
+      runningDraft({ socialSharing }),
+      profile(),
+      dependencies,
+    );
+
+    expect(create.mock.calls[0]?.[0]).toMatchObject({ socialSharing });
+    expect(activity.socialSharing).toEqual(socialSharing);
+    expect(onActivitySaved).toHaveBeenCalledWith(activity);
+  });
+
 });

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { SocialActivitySharingOverride } from '@/domain/friends/socialActivitySharingPolicy';
 import type {
   ExerciseDefinition,
   ProgressionSuggestion,
@@ -26,6 +27,7 @@ import {
   moveWorkoutSessionExercise,
   removeExerciseFromWorkoutSession,
   updateWorkoutSessionNotes,
+  updateWorkoutSessionSocialSharing,
 } from '@/application/strength/workoutSessionService';
 import { listExerciseDefinitions } from '@/application/strength/exerciseDefinitionService';
 import {
@@ -157,10 +159,15 @@ export function useWorkoutSession(sessionId: string) {
     () => updateWorkoutSessionNotes(repositories.workoutSessions, sessionId, notes),
   ), [runAction, sessionId]);
 
-  const complete = useCallback(() => runAction(
+  const complete = useCallback((socialSharing?: SocialActivitySharingOverride) => runAction(
     'complete',
     async () => {
-      const completed = await completeWorkoutSession(repositories.workoutSessions, sessionId);
+      const completed = await completeWorkoutSession(
+        repositories.workoutSessions,
+        sessionId,
+        new Date(),
+        socialSharing ? { socialSharing } : undefined,
+      );
       await generateProgressionSuggestions(
         repositories.workoutSessions,
         repositories.strengthSets,
@@ -169,6 +176,15 @@ export function useWorkoutSession(sessionId: string) {
       );
       return completed;
     },
+  ), [runAction, sessionId]);
+
+  const saveSocialSharing = useCallback((socialSharing: SocialActivitySharingOverride) => runAction(
+    'socialSharing',
+    () => updateWorkoutSessionSocialSharing(
+      repositories.workoutSessions,
+      sessionId,
+      socialSharing,
+    ),
   ), [runAction, sessionId]);
 
   const abandon = useCallback(() => runAction(
@@ -289,6 +305,7 @@ export function useWorkoutSession(sessionId: string) {
     moveExercise,
     saveNotes,
     complete,
+    saveSocialSharing,
     abandon,
     addSet,
     saveSet,

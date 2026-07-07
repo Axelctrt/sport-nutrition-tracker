@@ -1,4 +1,4 @@
-﻿import { render, screen } from '@testing-library/react';
+﻿import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { EntityId } from '@/domain/models/common';
 import {
@@ -10,8 +10,15 @@ import { createDefaultSocialIdentity } from '@/domain/friends/socialIdentity';
 import type { SocialCloudFriendRequestPort, SocialCloudIdentityPort } from '@/domain/friends/socialCloudContract';
 import type { SocialActivitySnapshot } from '@/domain/friends/socialActivitySnapshot';
 import { createFoundSocialUserLookupGateway, type SocialUserLookupGateway } from '@/application/friends/socialIdentityService';
+import type { FriendsPrivacySnapshotRepository } from '@/application/friends/friendsPrivacyService';
 import { FriendsPrivacyPage } from '@/features/friends/pages/FriendsPrivacyPage';
 import type { SocialFriendsGateway } from '@/infrastructure/sync-prototype/socialFriendsGateway';
+import type { SocialActivityFeedCloudGateway } from '@/infrastructure/social-activity-snapshots/socialActivityFeedCloudGateway';
+import {
+  SYNC_LOCAL_DATA_CHANGED_EVENT,
+  syncLocalDataChangedDetail,
+} from '@/application/sync/syncLocalChangeEvents';
+import { SOCIAL_ACTIVITY_PRIVACY_CHANGED_EVENT } from '@/infrastructure/sync-prototype/socialActivityPrivacySyncEvents';
 
 const snapshot: FriendsPrivacySnapshot = {
   friends: [
@@ -57,6 +64,10 @@ function renderPage(override: {
   readonly socialFriendsGateway?: SocialFriendsGateway;
   readonly initialSnapshot?: FriendsPrivacySnapshot;
   readonly initialActivitySnapshots?: readonly SocialActivitySnapshot[];
+  readonly activityFeedCloudGateway?: SocialActivityFeedCloudGateway;
+  readonly activityFeedCloudCredentials?: () => { readonly userId: string; readonly accessToken: string } | undefined;
+  readonly privacyReconciliation?: () => Promise<unknown>;
+  readonly repository?: FriendsPrivacySnapshotRepository;
 } = {}) {
   const pageProps = {
     initialSnapshot: override.initialSnapshot ?? snapshot,
@@ -66,6 +77,10 @@ function renderPage(override: {
     ...(override.cloudFriendRequestPort ? { cloudFriendRequestPort: override.cloudFriendRequestPort } : {}),
     ...(override.socialFriendsGateway ? { socialFriendsGateway: override.socialFriendsGateway } : {}),
     ...(override.initialActivitySnapshots ? { initialActivitySnapshots: override.initialActivitySnapshots } : {}),
+    ...(override.activityFeedCloudGateway ? { activityFeedCloudGateway: override.activityFeedCloudGateway } : {}),
+    ...(override.activityFeedCloudCredentials ? { activityFeedCloudCredentials: override.activityFeedCloudCredentials } : {}),
+    ...(override.privacyReconciliation ? { privacyReconciliation: override.privacyReconciliation } : {}),
+    ...(override.repository ? { repository: override.repository } : {}),
   };
 
   return render(<FriendsPrivacyPage {...pageProps} />);
@@ -81,20 +96,69 @@ describe('FriendsPrivacyPage', () => {
     expect(screen.getByText(/Le userId interne reste privé/u)).toBeInTheDocument();
     expect(screen.getByText('Léa Cardio')).toBeInTheDocument();
     expect(screen.getByText('Nora Trail')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Partage désactivé' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Privé' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByText(/Les données détaillées restent privées/u)).toBeInTheDocument();
-    expect(screen.getByText('Garde-fou social actif')).toBeInTheDocument();
-    expect(screen.getByText(/Snapshots sociaux F4 actifs/u)).toBeInTheDocument();
-    expect(screen.getByText('Fil d’activité amis F5 actif')).toBeInTheDocument();
-    expect(screen.getByText('Cloud social 0.28.0 F6')).toBeInTheDocument();
-    expect(screen.getByText(/Snapshots sociaux distants F6 prêts.*userId distant/u)).toBeInTheDocument();
-    expect(screen.getByText(/lecture des snapshots autorisés uniquement/u)).toBeInTheDocument();
-    expect(screen.getByText(/aucun annuaire, aucune suggestion/u)).toBeInTheDocument();
-    expect(screen.getByText(/aucun matching partiel/u)).toBeInTheDocument();
-    expect(screen.getByText(/détail uniquement après consentement explicite/u)).toBeInTheDocument();
+    expect(screen.getByText('Fil d’activité sécurisé 0.29')).toBeInTheDocument();
+    expect(screen.getByText(/uniquement des snapshots filtrés/u)).toBeInTheDocument();
+    expect(screen.getByText(/détail est revérifié par le serveur/u)).toBeInTheDocument();
+    expect(screen.getByText(/Likes, commentaires, messagerie, défis/u)).toBeInTheDocument();
+    expect(screen.getByText(/migration D1 et le déploiement/u)).toBeInTheDocument();
     expect(screen.getByText('Fil d’activité amis')).toBeInTheDocument();
     expect(screen.getAllByText(/Partage d’activité désactivé : aucun snapshot n’est affiché/u).length).toBeGreaterThan(0);
     expect(screen.getByText(/Permission : Résumé uniquement/u)).toBeInTheDocument();
+  });
+
+
+  it('demande la synchronisation du compte après une modification de la politique globale', async () => {
+    const user = userEvent.setup();
+    const repository: FriendsPrivacySnapshotRepository = {
+      readSnapshot: vi.fn(async () => snapshot),
+      saveSnapshot: vi.fn(async () => undefined),
+    };
+    const details: unknown[] = [];
+    const listener = (event: Event) => {
+      details.push(syncLocalDataChangedDetail(event));
+    };
+    window.addEventListener(SYNC_LOCAL_DATA_CHANGED_EVENT, listener);
+
+    try {
+      renderPage({ repository });
+      await user.click(screen.getByRole('button', { name: 'Résumé' }));
+
+      await waitFor(() => {
+        expect(repository.saveSnapshot).toHaveBeenCalled();
+        expect(details).toContainEqual({
+          domainIds: ['account-preferences'],
+          reason: 'social-activity-sharing-policy-update',
+        });
+      });
+    } finally {
+      window.removeEventListener(SYNC_LOCAL_DATA_CHANGED_EVENT, listener);
+    }
+  });
+
+  it('recharge la politique locale lorsqu’une préférence sociale arrive du cloud', async () => {
+    const repository: FriendsPrivacySnapshotRepository = {
+      readSnapshot: vi.fn(async () => ({
+        ...snapshot,
+        privacy: {
+          ...snapshot.privacy,
+          socialActivitySharingPolicy: {
+            ...snapshot.privacy.socialActivitySharingPolicy!,
+            visibility: 'detailed' as const,
+          },
+        },
+      })),
+      saveSnapshot: vi.fn(async () => undefined),
+    };
+
+    renderPage({ repository });
+    window.dispatchEvent(new Event(SOCIAL_ACTIVITY_PRIVACY_CHANGED_EVENT));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Détaillé' }))
+        .toHaveAttribute('aria-pressed', 'true');
+    });
   });
 
   it('enregistre un handle public valide en sauvegarde locale sans cloud réel', async () => {
@@ -185,7 +249,7 @@ describe('FriendsPrivacyPage', () => {
 
     expect(await screen.findByText(/Demande acceptée/u)).toBeInTheDocument();
     expect(await screen.findByText(/2 amis/u)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Partage désactivé' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Privé' })).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('envoie une demande réelle vers un identifiant trouvé et bloque les doublons', async () => {
@@ -306,7 +370,7 @@ describe('FriendsPrivacyPage', () => {
 
     expect(screen.getByRole('button', { name: 'Autoriser le détail' })).not.toBeDisabled();
 
-    await user.click(screen.getByRole('button', { name: 'Détaillé après accord' }));
+    await user.click(screen.getByRole('button', { name: 'Détaillé' }));
     await user.click(screen.getByRole('button', { name: 'Autoriser le détail' }));
 
     expect(screen.getByText(/Consentement détaillé enregistré pour cet ami/u)).toBeInTheDocument();
@@ -379,7 +443,7 @@ describe('FriendsPrivacyPage', () => {
 
     renderPage({ initialSnapshot: localOnlySnapshot, socialFriendsGateway });
 
-    await user.click(screen.getByRole('button', { name: 'Détaillé après accord' }));
+    await user.click(screen.getByRole('button', { name: 'Détaillé' }));
     await user.click(screen.getByRole('button', { name: 'Autoriser le détail' }));
 
     expect((await screen.findAllByText(/Permission ami serveur créée/u)).length).toBeGreaterThan(0);
@@ -393,6 +457,62 @@ describe('FriendsPrivacyPage', () => {
         }),
       },
     ]);
+  });
+
+  it('branche le fil cloud réel lorsqu’un gateway authentifié est fourni', async () => {
+    const activityFeedCloudGateway: SocialActivityFeedCloudGateway = {
+      listPage: vi.fn(async () => ({
+        items: [{
+          contractVersion: '0.29.0-a3' as const,
+          snapshotId: 'social-activity-snapshot-v2:lea:activity:run-cloud:alex123' as EntityId,
+          ownerUserId: 'social-user:lea' as EntityId,
+          recipientUserId: identity.userId,
+          sourceKind: 'activity' as const,
+          sourceActivityId: 'run-cloud' as EntityId,
+          sourceRevision: 'revision-cloud',
+          createdAt: '2026-07-10T10:00:00.000Z',
+          updatedAt: '2026-07-10T10:00:00.000Z',
+          state: 'active' as const,
+          visibility: 'summary' as const,
+          family: 'cardio' as const,
+          activityType: 'running' as const,
+          title: 'Course cloud réelle',
+          occurredOn: '2026-07-10',
+          allowedFields: {
+            common: ['activityType', 'title', 'date', 'duration'] as const,
+            cardio: ['distance'] as const,
+            strength: [] as const,
+          },
+          summary: { durationMinutes: 44, distanceKm: 7.4 },
+          detailAvailable: false,
+          ownerProfile: {
+            userId: 'social-user:lea',
+            handle: 'lea.cardio',
+            displayName: 'Léa Cardio',
+          },
+        }],
+      })),
+      readDetail: vi.fn(async () => { throw new Error('Détail non attendu.'); }),
+      readReadiness: vi.fn(async () => ({
+        status: 'ready' as const,
+        contractVersion: '0.29.0-a3',
+        authVerified: true,
+        databaseBound: true,
+        requiredMigration: '0001_social_activity_snapshots_0_29_0.sql',
+        missingPrerequisites: [],
+        missingActivitySchema: [],
+        checkedAt: '2026-07-10T10:00:00.000Z',
+      })),
+    };
+
+    renderPage({
+      activityFeedCloudGateway,
+      activityFeedCloudCredentials: () => ({ userId: identity.userId, accessToken: 'token' }),
+    });
+
+    expect(await screen.findByText('Course cloud réelle')).toBeInTheDocument();
+    expect(screen.getByText('7,4 km')).toBeInTheDocument();
+    expect(activityFeedCloudGateway.listPage).toHaveBeenCalledTimes(1);
   });
 
   it('affiche un fil amis minimal depuis des snapshots filtrés', () => {
@@ -483,6 +603,67 @@ describe('FriendsPrivacyPage', () => {
     expect(screen.getByText(/Détail limité par permission actuelle/u)).toBeInTheDocument();
     expect(screen.queryByText('tempo')).not.toBeInTheDocument();
     expect(screen.queryByText('trail')).not.toBeInTheDocument();
+  });
+
+
+  it('enregistre le niveau global 0.29 et déclenche la remise en cohérence des snapshots', async () => {
+    const user = userEvent.setup();
+    const privacyReconciliation = vi.fn(async () => undefined);
+    renderPage({ privacyReconciliation });
+
+    await user.click(screen.getByRole('button', { name: 'Résumé' }));
+
+    expect(await screen.findByText(/snapshots sociaux remis en cohérence/u)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Résumé' })).toHaveAttribute('aria-pressed', 'true');
+    expect(privacyReconciliation).toHaveBeenCalledOnce();
+  });
+
+
+  it('attend la persistance des réglages avant de réconcilier les snapshots', async () => {
+    const user = userEvent.setup();
+    let resolveSave: (() => void) | undefined;
+    const repository: FriendsPrivacySnapshotRepository = {
+      readSnapshot: async () => snapshot,
+      saveSnapshot: vi.fn(() => new Promise<void>((resolve) => {
+        resolveSave = resolve;
+      })),
+    };
+    const privacyReconciliation = vi.fn(async () => undefined);
+
+    renderPage({ repository, privacyReconciliation });
+    await user.click(screen.getByRole('button', { name: 'Résumé' }));
+
+    expect(repository.saveSnapshot).toHaveBeenCalledOnce();
+    expect(privacyReconciliation).not.toHaveBeenCalled();
+
+    resolveSave?.();
+    expect(await screen.findByText(/snapshots sociaux remis en cohérence/u)).toBeInTheDocument();
+    expect(privacyReconciliation).toHaveBeenCalledOnce();
+  });
+
+  it('neutralise le réglage global lorsque le profil est privé sans effacer sa valeur configurée', () => {
+    renderPage({
+      initialSnapshot: {
+        ...snapshot,
+        privacy: {
+          ...snapshot.privacy,
+          profileVisibility: 'private',
+          activitySharing: 'disabled',
+          socialActivitySharingPolicy: {
+            visibility: 'detailed',
+            fields: {
+              common: ['activityType', 'title', 'date', 'duration'],
+              cardio: ['distance', 'pace'],
+              strength: ['sessionName', 'exercises', 'sets', 'repetitions'],
+            },
+          },
+        },
+      },
+    });
+
+    expect(screen.getByText(/neutralise temporairement ce réglage/u)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Détaillé' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Détaillé' })).toBeDisabled();
   });
 
 });

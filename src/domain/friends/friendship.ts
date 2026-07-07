@@ -1,5 +1,6 @@
 import type { EntityId, IsoDateTime } from '@/domain/models/common';
 import type { PublicUserProfile, SocialIdentity } from '@/domain/friends/socialIdentity';
+import type { SocialActivityGlobalSharingPolicy } from '@/domain/friends/socialActivitySharingPolicy';
 
 export type FriendRequestStatus = 'pending' | 'accepted' | 'declined' | 'cancelled';
 export type FriendRequestDirection = 'incoming' | 'outgoing';
@@ -41,6 +42,7 @@ export interface FriendsPrivacySettings {
   readonly activitySharing: FriendActivitySharingLevel;
   readonly allowFriendRequests: boolean;
   readonly requireManualApproval: boolean;
+  readonly socialActivitySharingPolicy?: SocialActivityGlobalSharingPolicy;
 }
 
 export interface FriendActivityPermission {
@@ -71,6 +73,8 @@ export interface StoredFriendsPrivacySettings extends FriendsPrivacySettings {
   readonly id: EntityId;
   readonly createdAt: IsoDateTime;
   readonly updatedAt: IsoDateTime;
+  readonly profileVisibilityUpdatedAt?: IsoDateTime;
+  readonly socialActivitySharingPolicyUpdatedAt?: IsoDateTime;
   readonly socialIdentity?: SocialIdentity;
 }
 
@@ -118,6 +122,23 @@ export const DEFAULT_FRIENDS_PRIVACY_SETTINGS: FriendsPrivacySettings = {
   activitySharing: 'disabled',
   allowFriendRequests: true,
   requireManualApproval: true,
+  socialActivitySharingPolicy: {
+    visibility: 'private',
+    fields: {
+      common: ['activityType', 'title', 'date', 'duration'],
+      cardio: ['distance', 'pace', 'speed', 'elevation'],
+      strength: [
+        'sessionName',
+        'muscleGroups',
+        'exerciseCount',
+        'exercises',
+        'sets',
+        'repetitions',
+        'loads',
+        'volume',
+      ],
+    },
+  },
 };
 
 export const FRIEND_PROFILE_VISIBILITY_LABELS: Record<FriendVisibilityLevel, string> = {
@@ -464,11 +485,44 @@ export function addOutgoingFriendRequestForProfile(
   };
 }
 
+function legacySharingLevelForSocialPolicy(
+  policy: SocialActivityGlobalSharingPolicy,
+): FriendActivitySharingLevel {
+  if (policy.visibility === 'private') return 'disabled';
+  if (policy.visibility === 'summary') return 'summary-only';
+  return 'detailed';
+}
+
+function policyFromLegacySharing(
+  sharing: FriendActivitySharingLevel,
+  currentPolicy: SocialActivityGlobalSharingPolicy | undefined,
+): SocialActivityGlobalSharingPolicy {
+  const fields = currentPolicy?.fields ?? DEFAULT_FRIENDS_PRIVACY_SETTINGS.socialActivitySharingPolicy!.fields;
+  return {
+    visibility: sharing === 'disabled'
+      ? 'private'
+      : sharing === 'summary-only'
+        ? 'summary'
+        : 'detailed',
+    fields,
+  };
+}
+
 export function updateFriendsPrivacySettings(
   current: FriendsPrivacySettings,
   changes: Partial<FriendsPrivacySettings>,
 ): FriendsPrivacySettings {
   const profileVisibility = changes.profileVisibility ?? current.profileVisibility;
+  const requestedPolicy = changes.socialActivitySharingPolicy
+    ?? (changes.activitySharing
+      ? policyFromLegacySharing(changes.activitySharing, current.socialActivitySharingPolicy)
+      : current.socialActivitySharingPolicy);
+  const socialActivitySharingPolicy = requestedPolicy;
+  const activitySharing = profileVisibility === 'private'
+    ? 'disabled'
+    : socialActivitySharingPolicy
+      ? legacySharingLevelForSocialPolicy(socialActivitySharingPolicy)
+      : changes.activitySharing ?? current.activitySharing;
 
   return {
     ...current,
@@ -476,8 +530,8 @@ export function updateFriendsPrivacySettings(
     profileVisibility,
     requireManualApproval:
       changes.allowFriendRequests === false ? true : changes.requireManualApproval ?? current.requireManualApproval,
-    activitySharing:
-      profileVisibility === 'private' ? 'disabled' : changes.activitySharing ?? current.activitySharing,
+    activitySharing,
+    ...(socialActivitySharingPolicy ? { socialActivitySharingPolicy } : {}),
   };
 }
 
