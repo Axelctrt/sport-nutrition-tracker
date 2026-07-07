@@ -438,7 +438,7 @@ describe('FriendsPrivacyPage', () => {
     });
 
     expect(await screen.findByText('Course cloud réelle')).toBeInTheDocument();
-    expect(screen.getByText('7.4 km')).toBeInTheDocument();
+    expect(screen.getByText('7,4 km')).toBeInTheDocument();
     expect(activityFeedCloudGateway.listPage).toHaveBeenCalledTimes(1);
   });
 

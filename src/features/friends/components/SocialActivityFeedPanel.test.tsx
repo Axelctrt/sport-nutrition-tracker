@@ -74,7 +74,7 @@ describe('SocialActivityFeedPanel', () => {
     expect(await screen.findByText('Léa Fit')).toBeInTheDocument();
     expect(screen.getByText('@lea.fit')).toBeInTheDocument();
     expect(screen.getByText('Push du mardi')).toBeInTheDocument();
-    expect(screen.getByText('62 min')).toBeInTheDocument();
+    expect(screen.getByText('1 h 02')).toBeInTheDocument();
     expect(screen.getByText('1 exercice')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /Voir le détail autorisé/u }));
@@ -85,6 +85,115 @@ describe('SocialActivityFeedPanel', () => {
 
     await user.click(screen.getByRole('button', { name: 'Fermer le détail' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+
+  it('présente correctement les charges, le poids du corps, le RPE et le repos autorisés', async () => {
+    const user = userEvent.setup();
+    const strengthDetail: ActiveSocialActivitySnapshot = {
+      ...detail,
+      allowedFields: {
+        common: ['activityType', 'title', 'date', 'time', 'duration'],
+        cardio: [],
+        strength: ['exercises', 'sets', 'repetitions', 'loads', 'bodyweight', 'rpe', 'restTimes'],
+      },
+      detail: {
+        family: 'strength',
+        sessionName: 'Push du mardi',
+        exercises: [{
+          name: 'Tractions puis développé couché',
+          trackingMode: 'loadRepetitions',
+          sets: [
+            { setNumber: 1, repetitions: 9, loadUnit: 'bodyweight' },
+            {
+              setNumber: 2,
+              repetitions: 10,
+              loadKg: 60,
+              loadUnit: 'kg',
+              type: 'working',
+              rpe: 8,
+              restSeconds: 90,
+            },
+          ],
+        }],
+      },
+    };
+    render(
+      <SocialActivityFeedPanel
+        gateway={gateway({ readDetail: vi.fn(async () => strengthDetail) })}
+        getCredentials={getCredentials}
+        isOnline={() => true}
+      />,
+    );
+
+    const openButton = await screen.findByRole('button', { name: /Voir le détail autorisé/u });
+    await user.click(openButton);
+
+    expect(await screen.findByText('Poids du corps × 9')).toBeInTheDocument();
+    expect(screen.getByText('60 kg × 10')).toBeInTheDocument();
+    expect(screen.getByText('Travail')).toBeInTheDocument();
+    expect(screen.getByText('RPE 8 · 1:30 de repos')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Fermer le détail' })).toHaveFocus();
+
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(openButton).toHaveFocus();
+  });
+
+  it('affiche les libellés cardio et un graphique uniquement lorsque les points autorisés existent', async () => {
+    const user = userEvent.setup();
+    const cardioCard: SocialActivityCloudFeedCard = {
+      ...card,
+      snapshotId: 'social-activity-snapshot-v2:owner-user:activity:run-1:friend-user',
+      sourceKind: 'activity',
+      sourceActivityId: 'run-1',
+      family: 'cardio',
+      activityType: 'running',
+      title: 'Footing vallonné',
+      summary: {
+        durationMinutes: 45,
+        distanceKm: 8.2,
+        paceMinutesPerKm: 5.49,
+        elevationGainMeters: 120,
+      },
+      allowedFields: {
+        common: ['activityType', 'title', 'date', 'duration'],
+        cardio: ['distance', 'pace', 'sessionType', 'terrain', 'paceSeries', 'chart'],
+        strength: [],
+      },
+    };
+    const cardioDetail: ActiveSocialActivitySnapshot = {
+      ...cardioCard,
+      detail: {
+        family: 'cardio',
+        sessionType: 'easy',
+        terrainType: 'trail',
+        chart: {
+          metric: 'pace',
+          points: [
+            { elapsedSeconds: 0, value: 5.5 },
+            { elapsedSeconds: 900, value: 5.25 },
+            { elapsedSeconds: 1800, value: 5.75 },
+          ],
+        },
+      },
+    };
+    render(
+      <SocialActivityFeedPanel
+        gateway={gateway({
+          listPage: vi.fn(async () => ({ items: [cardioCard] })),
+          readDetail: vi.fn(async () => cardioDetail),
+        })}
+        getCredentials={getCredentials}
+        isOnline={() => true}
+      />,
+    );
+
+    await user.click(await screen.findByRole('button', { name: /Voir le détail autorisé/u }));
+
+    expect(await screen.findByText('Footing')).toBeInTheDocument();
+    expect(screen.getByText('Trail / sentier')).toBeInTheDocument();
+    expect(screen.getByLabelText('Évolution de l’allure, 3 points')).toBeInTheDocument();
+    expect(screen.getByText('15:00 : 5\'15"/km')).toBeInTheDocument();
   });
 
   it('pagine sans dupliquer les snapshots déjà affichés', async () => {

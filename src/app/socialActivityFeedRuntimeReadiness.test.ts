@@ -1,5 +1,7 @@
 import gatewaySource from '@/infrastructure/social-activity-snapshots/socialActivityFeedCloudGateway.ts?raw';
 import panelSource from '@/features/friends/components/SocialActivityFeedPanel.tsx?raw';
+import detailDialogSource from '@/features/friends/components/SocialActivityDetailDialog.tsx?raw';
+import feedCardSource from '@/features/friends/components/SocialActivityFeedCard.tsx?raw';
 import { createSocialActivityFeedCloudGateway } from '@/infrastructure/social-activity-snapshots/socialActivityFeedCloudGateway';
 
 describe('social activity feed runtime readiness 0.29.0 A7', () => {
@@ -16,8 +18,9 @@ describe('social activity feed runtime readiness 0.29.0 A7', () => {
   });
 
   it('branche une interface verticale mobile-first sans exposer les identifiants métier', () => {
-    expect(panelSource).toContain('max-h-[92dvh]');
-    expect(panelSource).toContain('Voir le détail autorisé');
+    expect(detailDialogSource).toContain('max-h-[92dvh]');
+    expect(detailDialogSource).toContain('role="dialog"');
+    expect(feedCardSource).toContain('Voir le détail autorisé');
     expect(panelSource).toContain('Afficher plus d’activités');
     expect(panelSource).not.toContain('{card.sourceActivityId}');
     expect(panelSource).not.toContain('{card.recipientUserId}');

@@ -13,6 +13,8 @@ const requiredFiles = [
   'src/infrastructure/social-activity-snapshots/socialActivityFeedCloudGateway.test.ts',
   'src/features/friends/components/SocialActivityFeedPanel.tsx',
   'src/features/friends/components/SocialActivityFeedPanel.test.tsx',
+  'src/features/friends/components/SocialActivityDetailDialog.tsx',
+  'src/features/friends/components/SocialActivityFeedCard.tsx',
   'src/features/friends/pages/FriendsPrivacyPage.tsx',
   'functions/_shared/socialActivitySnapshots.js',
   'functions/_shared/socialActivitySnapshots.test.mjs',
@@ -47,15 +49,18 @@ for (const token of [
 }
 
 const panel = read('src/features/friends/components/SocialActivityFeedPanel.tsx');
+const dialog = read('src/features/friends/components/SocialActivityDetailDialog.tsx');
+const feedCard = read('src/features/friends/components/SocialActivityFeedCard.tsx');
 for (const token of [
   'Afficher plus d’activités',
-  'Voir le détail autorisé',
   'Mode hors ligne',
-  'role="dialog"',
-  'max-h-[92dvh]',
   'subscribeCredentials',
 ]) {
   assert(panel.includes(token), `interface mobile-first incomplète : ${token}`);
+}
+assert(feedCard.includes('Voir le détail autorisé'), 'la carte ne permet pas d’ouvrir le détail autorisé.');
+for (const token of ['role="dialog"', 'max-h-[92dvh]', 'aria-modal="true"']) {
+  assert(dialog.includes(token), `dialogue mobile-first incomplet : ${token}`);
 }
 assert(!panel.includes('sourceActivityId}'), 'un identifiant source ne doit pas être affiché dans l’interface.');
 assert(!panel.includes('recipientUserId}'), 'un identifiant destinataire ne doit pas être affiché dans l’interface.');
