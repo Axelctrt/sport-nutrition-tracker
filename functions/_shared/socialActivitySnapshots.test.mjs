@@ -137,6 +137,8 @@ class FakeStatement {
           mutation_sequence: mutationSequence,
           snapshot_json: snapshotJson,
           sort_time: occurredAt ?? `${occurredOn}T00:00:00.000`,
+          owner_handle: this.database.profiles.get(ownerUserId)?.handle ?? null,
+          owner_display_name: this.database.profiles.get(ownerUserId)?.displayName ?? null,
         });
       }
       return { success: true };
@@ -219,6 +221,7 @@ class FakeD1Database {
     this.snapshots = new Map();
     this.friendships = new Set();
     this.permissions = new Map();
+    this.profiles = new Map();
   }
 
   pair(left, right) {
@@ -227,6 +230,10 @@ class FakeD1Database {
 
   addFriendship(left, right) {
     this.friendships.add(this.pair(left, right));
+  }
+
+  addProfile(userId, handle, displayName) {
+    this.profiles.set(userId, { handle, displayName });
   }
 
   addPermission(owner, friend, sharingLevel = 'detailed', detailedConsent = 'granted') {
@@ -388,6 +395,7 @@ describe('social activity snapshots Pages Functions', () => {
     const snapshot = activeSnapshot({ visibility: 'detailed' });
     database.addFriendship(snapshot.ownerUserId, snapshot.recipientUserId);
     database.addPermission(snapshot.ownerUserId, snapshot.recipientUserId, 'detailed', 'granted');
+    database.addProfile(snapshot.ownerUserId, 'alex.run', 'Alex Run');
     await socialActivitySnapshotsInternals.persistSnapshotMutation(database, snapshot.ownerUserId, {
       mutationSequence: 1,
       snapshot,
@@ -402,7 +410,15 @@ describe('social activity snapshots Pages Functions', () => {
     const feed = await responseJson(feedResponse);
     expect(feed.items).toHaveLength(1);
     expect(feed.items[0]).not.toHaveProperty('detail');
-    expect(feed.items[0]).toMatchObject({ detailAvailable: true, snapshotId: snapshot.snapshotId });
+    expect(feed.items[0]).toMatchObject({
+      detailAvailable: true,
+      snapshotId: snapshot.snapshotId,
+      ownerProfile: {
+        userId: snapshot.ownerUserId,
+        handle: 'alex.run',
+        displayName: 'Alex Run',
+      },
+    });
 
     const detailResponse = await handleSocialActivitySnapshotDetailRequest(
       request(`/api/social-activity-snapshots/detail?snapshotId=${encodeURIComponent(snapshot.snapshotId)}`, {

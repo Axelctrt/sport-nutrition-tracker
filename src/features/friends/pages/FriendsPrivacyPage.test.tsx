@@ -12,6 +12,7 @@ import type { SocialActivitySnapshot } from '@/domain/friends/socialActivitySnap
 import { createFoundSocialUserLookupGateway, type SocialUserLookupGateway } from '@/application/friends/socialIdentityService';
 import { FriendsPrivacyPage } from '@/features/friends/pages/FriendsPrivacyPage';
 import type { SocialFriendsGateway } from '@/infrastructure/sync-prototype/socialFriendsGateway';
+import type { SocialActivityFeedCloudGateway } from '@/infrastructure/social-activity-snapshots/socialActivityFeedCloudGateway';
 
 const snapshot: FriendsPrivacySnapshot = {
   friends: [
@@ -57,6 +58,8 @@ function renderPage(override: {
   readonly socialFriendsGateway?: SocialFriendsGateway;
   readonly initialSnapshot?: FriendsPrivacySnapshot;
   readonly initialActivitySnapshots?: readonly SocialActivitySnapshot[];
+  readonly activityFeedCloudGateway?: SocialActivityFeedCloudGateway;
+  readonly activityFeedCloudCredentials?: () => { readonly userId: string; readonly accessToken: string } | undefined;
 } = {}) {
   const pageProps = {
     initialSnapshot: override.initialSnapshot ?? snapshot,
@@ -66,6 +69,8 @@ function renderPage(override: {
     ...(override.cloudFriendRequestPort ? { cloudFriendRequestPort: override.cloudFriendRequestPort } : {}),
     ...(override.socialFriendsGateway ? { socialFriendsGateway: override.socialFriendsGateway } : {}),
     ...(override.initialActivitySnapshots ? { initialActivitySnapshots: override.initialActivitySnapshots } : {}),
+    ...(override.activityFeedCloudGateway ? { activityFeedCloudGateway: override.activityFeedCloudGateway } : {}),
+    ...(override.activityFeedCloudCredentials ? { activityFeedCloudCredentials: override.activityFeedCloudCredentials } : {}),
   };
 
   return render(<FriendsPrivacyPage {...pageProps} />);
@@ -83,15 +88,11 @@ describe('FriendsPrivacyPage', () => {
     expect(screen.getByText('Nora Trail')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Partage désactivé' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByText(/Les données détaillées restent privées/u)).toBeInTheDocument();
-    expect(screen.getByText('Garde-fou social actif')).toBeInTheDocument();
-    expect(screen.getByText(/Snapshots sociaux F4 actifs/u)).toBeInTheDocument();
-    expect(screen.getByText('Fil d’activité amis F5 actif')).toBeInTheDocument();
-    expect(screen.getByText('Cloud social 0.28.0 F6')).toBeInTheDocument();
-    expect(screen.getByText(/Snapshots sociaux distants F6 prêts.*userId distant/u)).toBeInTheDocument();
-    expect(screen.getByText(/lecture des snapshots autorisés uniquement/u)).toBeInTheDocument();
-    expect(screen.getByText(/aucun annuaire, aucune suggestion/u)).toBeInTheDocument();
-    expect(screen.getByText(/aucun matching partiel/u)).toBeInTheDocument();
-    expect(screen.getByText(/détail uniquement après consentement explicite/u)).toBeInTheDocument();
+    expect(screen.getByText('Fil d’activité sécurisé 0.29')).toBeInTheDocument();
+    expect(screen.getByText(/uniquement des snapshots filtrés/u)).toBeInTheDocument();
+    expect(screen.getByText(/détail est revérifié par le serveur/u)).toBeInTheDocument();
+    expect(screen.getByText(/Likes, commentaires, messagerie, défis/u)).toBeInTheDocument();
+    expect(screen.getByText(/migration D1 et le déploiement/u)).toBeInTheDocument();
     expect(screen.getByText('Fil d’activité amis')).toBeInTheDocument();
     expect(screen.getAllByText(/Partage d’activité désactivé : aucun snapshot n’est affiché/u).length).toBeGreaterThan(0);
     expect(screen.getByText(/Permission : Résumé uniquement/u)).toBeInTheDocument();
@@ -393,6 +394,52 @@ describe('FriendsPrivacyPage', () => {
         }),
       },
     ]);
+  });
+
+  it('branche le fil cloud réel lorsqu’un gateway authentifié est fourni', async () => {
+    const activityFeedCloudGateway: SocialActivityFeedCloudGateway = {
+      listPage: vi.fn(async () => ({
+        items: [{
+          contractVersion: '0.29.0-a3' as const,
+          snapshotId: 'social-activity-snapshot-v2:lea:activity:run-cloud:alex123' as EntityId,
+          ownerUserId: 'social-user:lea' as EntityId,
+          recipientUserId: identity.userId,
+          sourceKind: 'activity' as const,
+          sourceActivityId: 'run-cloud' as EntityId,
+          sourceRevision: 'revision-cloud',
+          createdAt: '2026-07-10T10:00:00.000Z',
+          updatedAt: '2026-07-10T10:00:00.000Z',
+          state: 'active' as const,
+          visibility: 'summary' as const,
+          family: 'cardio' as const,
+          activityType: 'running' as const,
+          title: 'Course cloud réelle',
+          occurredOn: '2026-07-10',
+          allowedFields: {
+            common: ['activityType', 'title', 'date', 'duration'] as const,
+            cardio: ['distance'] as const,
+            strength: [] as const,
+          },
+          summary: { durationMinutes: 44, distanceKm: 7.4 },
+          detailAvailable: false,
+          ownerProfile: {
+            userId: 'social-user:lea',
+            handle: 'lea.cardio',
+            displayName: 'Léa Cardio',
+          },
+        }],
+      })),
+      readDetail: vi.fn(async () => { throw new Error('Détail non attendu.'); }),
+    };
+
+    renderPage({
+      activityFeedCloudGateway,
+      activityFeedCloudCredentials: () => ({ userId: identity.userId, accessToken: 'token' }),
+    });
+
+    expect(await screen.findByText('Course cloud réelle')).toBeInTheDocument();
+    expect(screen.getByText('7.4 km')).toBeInTheDocument();
+    expect(activityFeedCloudGateway.listPage).toHaveBeenCalledTimes(1);
   });
 
   it('affiche un fil amis minimal depuis des snapshots filtrés', () => {

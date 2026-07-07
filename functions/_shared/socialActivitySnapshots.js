@@ -543,6 +543,15 @@ function toFeedCard(row) {
   return {
     ...cardSnapshot,
     detailAvailable: Boolean(snapshot.detail),
+    ownerProfile: {
+      userId: snapshot.ownerUserId,
+      ...(typeof row.owner_handle === 'string' && row.owner_handle.trim()
+        ? { handle: row.owner_handle }
+        : {}),
+      ...(typeof row.owner_display_name === 'string' && row.owner_display_name.trim()
+        ? { displayName: row.owner_display_name }
+        : {}),
+    },
   };
 }
 
@@ -555,7 +564,21 @@ async function listFeed(database, recipientUserId, url) {
 
   const baseSql = `
     SELECT s.snapshot_id, s.updated_at, s.snapshot_json,
-           ${sortExpression} AS sort_time
+           ${sortExpression} AS sort_time,
+           (
+             SELECT h.handle
+             FROM social_directory_handles h
+             WHERE h.owner_user_id = s.owner_user_id
+             ORDER BY h.updated_at DESC
+             LIMIT 1
+           ) AS owner_handle,
+           (
+             SELECT h.owner_display_name
+             FROM social_directory_handles h
+             WHERE h.owner_user_id = s.owner_user_id
+             ORDER BY h.updated_at DESC
+             LIMIT 1
+           ) AS owner_display_name
     FROM social_activity_snapshots s
     WHERE s.recipient_user_id = ?1
       AND s.state = 'active'

@@ -21,6 +21,7 @@ import {
   type FriendsPrivacySnapshotRepository,
 } from '@/application/friends/friendsPrivacyService';
 import { prepareSocialActivityFeed } from '@/application/friends/socialActivityFeedService';
+import { SocialActivityFeedPanel } from '@/features/friends/components/SocialActivityFeedPanel';
 import { sendExactFriendRequest } from '@/application/friends/socialFriendRequestService';
 import {
   cloudFriendRequestToLocalRequest,
@@ -51,7 +52,6 @@ import {
   acceptFriendRequest,
   declineFriendRequest,
   ensureFriendActivityPermissions,
-  evaluateFriendActivitySharingGuard,
   evaluateFriendScopedActivitySharingGuard,
   selectFriendActivityPermission,
   summarizeFriendsPrivacy,
@@ -73,8 +73,14 @@ import { appDatabase } from '@/infrastructure/database/database';
 import { DexieFriendsPrivacyRepository } from '@/infrastructure/repositories/dexie/DexieFriendsPrivacyRepository';
 import { DexieSocialIdentityRepository } from '@/infrastructure/repositories/dexie/DexieSocialIdentityRepository';
 import { createRuntimeSocialCloudUserLookupGateway } from '@/infrastructure/sync-prototype/realSocialCloudUserLookupGateway';
+import { getSyncPrototypeClient } from '@/infrastructure/sync-prototype/syncPrototypeClient';
 import { createRuntimeSocialCloudFriendRequestPort } from '@/infrastructure/sync-prototype/realSocialCloudFriendRequestService';
 import { createSocialFriendsGateway, type SocialFriendsGateway } from '@/infrastructure/sync-prototype/socialFriendsGateway';
+import type { SocialActivitySnapshotCloudCredentials } from '@/infrastructure/social-activity-snapshots/socialActivitySnapshotCloudGateway';
+import {
+  createSocialActivityFeedCloudGateway,
+  type SocialActivityFeedCloudGateway,
+} from '@/infrastructure/social-activity-snapshots/socialActivityFeedCloudGateway';
 import { createRuntimeSocialCloudIdentityPort } from '@/infrastructure/sync-prototype/realSocialCloudIdentityService';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
@@ -92,10 +98,30 @@ interface FriendsPrivacyPageProps {
   readonly cloudFriendPermissionPort?: SocialCloudFriendPermissionPort;
   readonly socialFriendsGateway?: SocialFriendsGateway;
   readonly initialActivitySnapshots?: readonly SocialActivitySnapshot[];
+  readonly activityFeedCloudGateway?: SocialActivityFeedCloudGateway;
+  readonly activityFeedCloudCredentials?: () => SocialActivitySnapshotCloudCredentials | undefined;
+  readonly activityFeedOnline?: () => boolean;
+  readonly activityFeedCloudSubscription?: (listener: () => void) => () => void;
 }
 
 const visibilityOptions: readonly FriendVisibilityLevel[] = ['private', 'friends', 'public'];
 const sharingOptions: readonly FriendActivitySharingLevel[] = ['disabled', 'summary-only', 'detailed'];
+function subscribeRuntimeSocialActivityFeed(listener: () => void): () => void {
+  try {
+    return getSyncPrototypeClient().subscribe(listener);
+  } catch {
+    return () => undefined;
+  }
+}
+
+function readRuntimeSocialActivityFeedCredentials(): SocialActivitySnapshotCloudCredentials | undefined {
+  try {
+    return getSyncPrototypeClient().getCloudCredentials?.();
+  } catch {
+    return undefined;
+  }
+}
+
 const initialAvailability: SocialIdentityAvailabilityResult = {
   status: 'idle',
   message: 'Vérification non lancée.',
@@ -129,7 +155,11 @@ export function FriendsPrivacyPage({
   cloudFriendshipPort,
   cloudFriendPermissionPort,
   socialFriendsGateway,
-  initialActivitySnapshots = [],
+  initialActivitySnapshots,
+  activityFeedCloudGateway,
+  activityFeedCloudCredentials,
+  activityFeedOnline,
+  activityFeedCloudSubscription,
 }: FriendsPrivacyPageProps = {}) {
   const [defaultRepository] = useState(() =>
     initialSnapshot ? undefined : new DexieFriendsPrivacyRepository(appDatabase),
@@ -151,12 +181,17 @@ export function FriendsPrivacyPage({
       ? undefined
       : createSocialFriendsGateway()
   ));
+  const [defaultActivityFeedCloudGateway] = useState(() => (
+    import.meta.env.MODE === 'test' ? undefined : createSocialActivityFeedCloudGateway()
+  ));
   const activeLookupGateway = lookupGateway ?? defaultLookupGateway;
   const activeCloudIdentityPort = cloudIdentityPort ?? defaultCloudIdentityPort;
   const activeCloudFriendRequestPort = cloudFriendRequestPort ?? defaultCloudFriendRequestPort;
   const activeSocialFriendsGateway = socialFriendsGateway ?? defaultSocialFriendsGateway;
   const activeCloudFriendshipPort = cloudFriendshipPort ?? activeSocialFriendsGateway?.friendshipPort;
   const activeCloudFriendPermissionPort = cloudFriendPermissionPort ?? activeSocialFriendsGateway?.permissionPort;
+  const activeActivityFeedCloudGateway = activityFeedCloudGateway ?? defaultActivityFeedCloudGateway;
+  const activeActivityFeedCloudCredentials = activityFeedCloudCredentials ?? readRuntimeSocialActivityFeedCredentials;
   const initialSnapshotState = useMemo(
     () => initialSnapshot ?? createEmptyFriendsPrivacySnapshot(),
     [initialSnapshot],
@@ -267,15 +302,15 @@ export function FriendsPrivacyPage({
   ]);
 
   const summary = useMemo(() => summarizeFriendsPrivacy(snapshot), [snapshot]);
-  const sharingGuard = useMemo(() => evaluateFriendActivitySharingGuard(snapshot), [snapshot]);
   const handleValidation = useMemo(() => validateSocialHandle(identityHandle), [identityHandle]);
   const socialActivityFeed = useMemo(
     () => prepareSocialActivityFeed({
       privacySnapshot: snapshot,
-      snapshots: initialActivitySnapshots,
+      snapshots: initialActivitySnapshots ?? [],
     }),
     [snapshot, initialActivitySnapshots],
   );
+  const shouldUseCloudActivityFeed = Boolean(activeActivityFeedCloudGateway);
   const incomingRequests = snapshot.requests.filter((request) => request.direction === 'incoming');
   const outgoingRequests = snapshot.requests.filter((request) => request.direction === 'outgoing');
 
@@ -575,31 +610,12 @@ export function FriendsPrivacyPage({
         </p>
       </InlineNotice>
 
-      <InlineNotice title="Garde-fou social actif">
-        <p>{sharingGuard.reason}</p>
+      <InlineNotice title="Fil d’activité sécurisé 0.29">
         <p>
-          Snapshots sociaux F4 actifs : les activités sont transformées en résumé filtré par défaut, ou en détail filtré uniquement pour les amis autorisés.
+          Le fil charge uniquement des snapshots filtrés. Les cartes ne contiennent jamais l’activité métier brute et le détail est revérifié par le serveur à chaque ouverture.
         </p>
         <p>
-          Aucun export brut d’activité n’est disponible : les notes, horaires précis, calculs internes et détails libres restent privés.
-        </p>
-      </InlineNotice>
-
-      <InlineNotice title="Fil d’activité amis F5 actif">
-        <p>
-          Le fil lit uniquement des snapshots sociaux filtrés. Il ne lit jamais une activité brute complète et n’active ni likes, ni commentaires, ni discussions privées.
-        </p>
-      </InlineNotice>
-
-      <InlineNotice title="Cloud social 0.28.0 F6">
-        <p>
-          Snapshots sociaux distants F6 prêts : les réservations cloud de handles restent utilisées pour la recherche exacte, puis la publication cloud de snapshots filtrés peut utiliser les amitiés cloud et les permissions synchronisées, toujours par userId distant.
-        </p>
-        <p>
-          Tant que le backend social réel n’est pas activé, la recherche réelle est indisponible et l’app conserve un fallback sécurisé.
-        </p>
-        <p>
-          lecture des snapshots autorisés uniquement : Résumé par défaut, détail uniquement après consentement explicite, aucune activité brute, aucun annuaire, aucune suggestion, aucun matching partiel et aucun export brut.
+          Likes, commentaires, messagerie, défis et partage public restent hors périmètre. L’activation entre vrais comptes nécessite la migration D1 et le déploiement de la version 0.29.0.
         </p>
       </InlineNotice>
 
@@ -826,6 +842,14 @@ export function FriendsPrivacyPage({
         </Card>
       </div>
 
+      {shouldUseCloudActivityFeed && activeActivityFeedCloudGateway ? (
+        <SocialActivityFeedPanel
+          gateway={activeActivityFeedCloudGateway}
+          getCredentials={activeActivityFeedCloudCredentials}
+          {...(activityFeedOnline ? { isOnline: activityFeedOnline } : {})}
+          subscribeCredentials={activityFeedCloudSubscription ?? subscribeRuntimeSocialActivityFeed}
+        />
+      ) : (
       <Card className="p-5 sm:p-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
@@ -909,6 +933,7 @@ export function FriendsPrivacyPage({
           </div>
         )}
       </Card>
+      )}
 
       <div className="grid gap-4 xl:grid-cols-2">
         <Card className="p-5 sm:p-6">
