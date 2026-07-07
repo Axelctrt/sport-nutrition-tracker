@@ -7,6 +7,7 @@ import {
   type SyncPrototypeClient,
 } from '@/infrastructure/sync-prototype/syncPrototypeClient';
 import { readSyncPrototypeConfigSafely } from '@/infrastructure/sync-prototype/syncPrototypeConfig';
+import { attachRuntimeSocialActivitySnapshotCloudDelivery } from '@/infrastructure/social-activity-snapshots/runtimeSocialActivitySnapshotCloudDelivery';
 
 interface NavigatorWithConnection extends Navigator {
   readonly connection?: {
@@ -58,8 +59,18 @@ export function AutomaticSyncCoordinator({
       connectionType: currentConnectionType,
     });
 
+    const detachSocialActivitySnapshotDelivery =
+      attachRuntimeSocialActivitySnapshotCloudDelivery({
+        client,
+        eventTarget: window,
+        isOnline: () => navigator.onLine !== false,
+      });
+
     void controller.initialize().catch(() => undefined);
-    return () => controller.dispose();
+    return () => {
+      detachSocialActivitySnapshotDelivery();
+      controller.dispose();
+    };
   }, [client]);
 
   return null;

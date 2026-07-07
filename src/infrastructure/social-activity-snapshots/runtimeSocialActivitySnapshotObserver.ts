@@ -17,8 +17,8 @@ import { repositories } from '@/infrastructure/repositories/repositories';
 import type { StrengthExerciseRepository } from '@/infrastructure/repositories/contracts/StrengthExerciseRepository';
 import type { StrengthSetRepository } from '@/infrastructure/repositories/contracts/StrengthSetRepository';
 import type { WorkoutSessionRepository } from '@/infrastructure/repositories/contracts/WorkoutSessionRepository';
-import { DexieSocialActivitySnapshotOutboxRepository } from '@/infrastructure/social-activity-snapshots/DexieSocialActivitySnapshotOutboxRepository';
-import { SocialActivitySnapshotOutboxDatabase } from '@/infrastructure/social-activity-snapshots/SocialActivitySnapshotOutboxDatabase';
+import { runtimeSocialActivitySnapshotOutboxRepository } from '@/infrastructure/social-activity-snapshots/runtimeSocialActivitySnapshotOutbox';
+import { notifySocialActivitySnapshotOutboxChanged } from '@/infrastructure/social-activity-snapshots/socialActivitySnapshotOutboxEvents';
 
 export interface RuntimeSocialActivitySnapshotObserverDependencies {
   readonly identityRepository: SocialIdentityRepository;
@@ -27,6 +27,7 @@ export interface RuntimeSocialActivitySnapshotObserverDependencies {
   readonly workoutSessions: Pick<WorkoutSessionRepository, 'listExercises'>;
   readonly strengthSets: Pick<StrengthSetRepository, 'listBySession'>;
   readonly strengthExercises: Pick<StrengthExerciseRepository, 'listAll'>;
+  readonly notifyOutboxChanged?: () => void;
 }
 
 async function loadPublicationContext(
@@ -51,6 +52,7 @@ export function createRuntimeSocialActivitySnapshotObserver(
     async onActivitySaved(activity: Activity): Promise<void> {
       const context = await loadPublicationContext(dependencies);
       await reconcileStoredActivitySocialSnapshots({ context, activity });
+      dependencies.notifyOutboxChanged?.();
     },
 
     async onActivityDeleted(activity: Activity): Promise<void> {
@@ -64,6 +66,7 @@ export function createRuntimeSocialActivitySnapshotObserver(
         sourceActivityId: activity.id,
         sourceRevision: `deleted:${activity.updatedAt}`,
       });
+      dependencies.notifyOutboxChanged?.();
     },
 
     async onStrengthSessionCompleted(session: WorkoutSession): Promise<void> {
@@ -81,17 +84,17 @@ export function createRuntimeSocialActivitySnapshotObserver(
         sets,
         exerciseDefinitions,
       });
+      dependencies.notifyOutboxChanged?.();
     },
   };
 }
 
-const outboxDatabase = new SocialActivitySnapshotOutboxDatabase();
-
 export const runtimeSocialActivitySnapshotObserver = createRuntimeSocialActivitySnapshotObserver({
   identityRepository: new DexieSocialIdentityRepository(appDatabase),
   privacyRepository: new DexieFriendsPrivacyRepository(appDatabase),
-  outboxRepository: new DexieSocialActivitySnapshotOutboxRepository(outboxDatabase),
+  outboxRepository: runtimeSocialActivitySnapshotOutboxRepository,
   workoutSessions: repositories.workoutSessions,
   strengthSets: repositories.strengthSets,
   strengthExercises: repositories.strengthExercises,
+  notifyOutboxChanged: notifySocialActivitySnapshotOutboxChanged,
 });

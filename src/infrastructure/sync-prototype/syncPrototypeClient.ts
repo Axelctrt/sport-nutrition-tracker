@@ -296,8 +296,14 @@ export interface SyncPrototypeSnapshot {
   readonly interaction?: SyncPrototypeInteractionSnapshot;
 }
 
+export interface SyncPrototypeCloudCredentials {
+  readonly userId: string;
+  readonly accessToken: string;
+}
+
 export interface SyncPrototypeClient {
   getSnapshot(): SyncPrototypeSnapshot;
+  getCloudCredentials?(): SyncPrototypeCloudCredentials | undefined;
   subscribe(listener: () => void): () => void;
   initialize(): Promise<void>;
   login(email: string): Promise<void>;
@@ -604,6 +610,24 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
       void this.refreshWeights();
     });
   }
+
+  getCloudCredentials = (): SyncPrototypeCloudCredentials | undefined => {
+    const user = this.database.cloud.currentUser.value;
+    if (
+      user.isLoggedIn !== true
+      || typeof user.userId !== 'string'
+      || !user.userId.trim()
+      || typeof user.accessToken !== 'string'
+      || !user.accessToken.trim()
+    ) {
+      return undefined;
+    }
+
+    return {
+      userId: user.userId,
+      accessToken: user.accessToken,
+    };
+  };
 
   getSnapshot = (): SyncPrototypeSnapshot => this.snapshot;
 

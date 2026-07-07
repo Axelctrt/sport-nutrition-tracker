@@ -130,6 +130,7 @@ function strengthFixture(): {
 describe('runtime social activity snapshot observer', () => {
   it('charge le contexte local puis met à jour et supprime une activité réelle', async () => {
     const outboxRepository = new MemoryOutboxRepository();
+    const notifyOutboxChanged = vi.fn();
     const observer = createRuntimeSocialActivitySnapshotObserver({
       identityRepository: { readIdentity: vi.fn(async () => identity), saveIdentity: vi.fn() },
       privacyRepository: {
@@ -140,6 +141,7 @@ describe('runtime social activity snapshot observer', () => {
       workoutSessions: { listExercises: vi.fn(async () => []) },
       strengthSets: { listBySession: vi.fn(async () => []) },
       strengthExercises: { listAll: vi.fn(async () => []) },
+      notifyOutboxChanged,
     });
     const activity = createEntity(
       createRunningActivityInput({ notes: 'Privé' }),
@@ -158,10 +160,12 @@ describe('runtime social activity snapshot observer', () => {
       state: 'deleted',
       deletionReason: 'sourceDeleted',
     });
+    expect(notifyOutboxChanged).toHaveBeenCalledTimes(2);
   });
 
   it('charge les exercices et séries uniquement après une séance terminée', async () => {
     const outboxRepository = new MemoryOutboxRepository();
+    const notifyOutboxChanged = vi.fn();
     const fixture = strengthFixture();
     const listExercises = vi.fn(async () => fixture.exercises as WorkoutSessionExercise[]);
     const listBySession = vi.fn(async () => fixture.sets as StrengthSet[]);
@@ -176,6 +180,7 @@ describe('runtime social activity snapshot observer', () => {
       workoutSessions: { listExercises },
       strengthSets: { listBySession },
       strengthExercises: { listAll },
+      notifyOutboxChanged,
     });
 
     await observer.onStrengthSessionCompleted(fixture.session);
@@ -188,5 +193,6 @@ describe('runtime social activity snapshot observer', () => {
       sourceKind: 'strengthSession',
       family: 'strength',
     });
+    expect(notifyOutboxChanged).toHaveBeenCalledOnce();
   });
 });
