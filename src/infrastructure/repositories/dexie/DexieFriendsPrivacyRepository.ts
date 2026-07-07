@@ -93,6 +93,9 @@ function toSnapshotPrivacy(
         activitySharing: stored.activitySharing,
         allowFriendRequests: stored.allowFriendRequests,
         requireManualApproval: stored.requireManualApproval,
+        ...(stored.socialActivitySharingPolicy
+          ? { socialActivitySharingPolicy: stored.socialActivitySharingPolicy }
+          : {}),
       }
     : DEFAULT_FRIENDS_PRIVACY_SETTINGS;
 }

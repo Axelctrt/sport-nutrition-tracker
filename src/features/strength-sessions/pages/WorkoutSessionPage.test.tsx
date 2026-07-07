@@ -317,4 +317,20 @@ describe('WorkoutSessionPage', () => {
     expect(within(getBenchCard()!).getByText('Passé temporairement')).toBeInTheDocument();
   });
 
+
+  it('enregistre un réglage de partage spécifique avant de terminer la séance', async () => {
+    const user = userEvent.setup();
+    renderSessionPage();
+
+    await screen.findByRole('heading', { name: 'Séance libre' });
+    await user.click(screen.getByText('Partage avec les amis'));
+    await user.click(screen.getByRole('button', { name: 'Privée' }));
+    await user.click(screen.getByRole('button', { name: 'Enregistrer le partage' }));
+
+    await waitFor(async () => {
+      expect((await appDatabase.workoutSessions.get('session-current'))?.socialSharing)
+        .toEqual({ mode: 'private' });
+    });
+  });
+
 });

@@ -10,6 +10,7 @@ import { createDefaultSocialIdentity } from '@/domain/friends/socialIdentity';
 import type { SocialCloudFriendRequestPort, SocialCloudIdentityPort } from '@/domain/friends/socialCloudContract';
 import type { SocialActivitySnapshot } from '@/domain/friends/socialActivitySnapshot';
 import { createFoundSocialUserLookupGateway, type SocialUserLookupGateway } from '@/application/friends/socialIdentityService';
+import type { FriendsPrivacySnapshotRepository } from '@/application/friends/friendsPrivacyService';
 import { FriendsPrivacyPage } from '@/features/friends/pages/FriendsPrivacyPage';
 import type { SocialFriendsGateway } from '@/infrastructure/sync-prototype/socialFriendsGateway';
 import type { SocialActivityFeedCloudGateway } from '@/infrastructure/social-activity-snapshots/socialActivityFeedCloudGateway';
@@ -60,6 +61,8 @@ function renderPage(override: {
   readonly initialActivitySnapshots?: readonly SocialActivitySnapshot[];
   readonly activityFeedCloudGateway?: SocialActivityFeedCloudGateway;
   readonly activityFeedCloudCredentials?: () => { readonly userId: string; readonly accessToken: string } | undefined;
+  readonly privacyReconciliation?: () => Promise<unknown>;
+  readonly repository?: FriendsPrivacySnapshotRepository;
 } = {}) {
   const pageProps = {
     initialSnapshot: override.initialSnapshot ?? snapshot,
@@ -71,6 +74,8 @@ function renderPage(override: {
     ...(override.initialActivitySnapshots ? { initialActivitySnapshots: override.initialActivitySnapshots } : {}),
     ...(override.activityFeedCloudGateway ? { activityFeedCloudGateway: override.activityFeedCloudGateway } : {}),
     ...(override.activityFeedCloudCredentials ? { activityFeedCloudCredentials: override.activityFeedCloudCredentials } : {}),
+    ...(override.privacyReconciliation ? { privacyReconciliation: override.privacyReconciliation } : {}),
+    ...(override.repository ? { repository: override.repository } : {}),
   };
 
   return render(<FriendsPrivacyPage {...pageProps} />);
@@ -86,7 +91,7 @@ describe('FriendsPrivacyPage', () => {
     expect(screen.getByText(/Le userId interne reste privé/u)).toBeInTheDocument();
     expect(screen.getByText('Léa Cardio')).toBeInTheDocument();
     expect(screen.getByText('Nora Trail')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Partage désactivé' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Privé' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByText(/Les données détaillées restent privées/u)).toBeInTheDocument();
     expect(screen.getByText('Fil d’activité sécurisé 0.29')).toBeInTheDocument();
     expect(screen.getByText(/uniquement des snapshots filtrés/u)).toBeInTheDocument();
@@ -186,7 +191,7 @@ describe('FriendsPrivacyPage', () => {
 
     expect(await screen.findByText(/Demande acceptée/u)).toBeInTheDocument();
     expect(await screen.findByText(/2 amis/u)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Partage désactivé' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Privé' })).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('envoie une demande réelle vers un identifiant trouvé et bloque les doublons', async () => {
@@ -307,7 +312,7 @@ describe('FriendsPrivacyPage', () => {
 
     expect(screen.getByRole('button', { name: 'Autoriser le détail' })).not.toBeDisabled();
 
-    await user.click(screen.getByRole('button', { name: 'Détaillé après accord' }));
+    await user.click(screen.getByRole('button', { name: 'Détaillé' }));
     await user.click(screen.getByRole('button', { name: 'Autoriser le détail' }));
 
     expect(screen.getByText(/Consentement détaillé enregistré pour cet ami/u)).toBeInTheDocument();
@@ -380,7 +385,7 @@ describe('FriendsPrivacyPage', () => {
 
     renderPage({ initialSnapshot: localOnlySnapshot, socialFriendsGateway });
 
-    await user.click(screen.getByRole('button', { name: 'Détaillé après accord' }));
+    await user.click(screen.getByRole('button', { name: 'Détaillé' }));
     await user.click(screen.getByRole('button', { name: 'Autoriser le détail' }));
 
     expect((await screen.findAllByText(/Permission ami serveur créée/u)).length).toBeGreaterThan(0);
@@ -530,6 +535,67 @@ describe('FriendsPrivacyPage', () => {
     expect(screen.getByText(/Détail limité par permission actuelle/u)).toBeInTheDocument();
     expect(screen.queryByText('tempo')).not.toBeInTheDocument();
     expect(screen.queryByText('trail')).not.toBeInTheDocument();
+  });
+
+
+  it('enregistre le niveau global 0.29 et déclenche la remise en cohérence des snapshots', async () => {
+    const user = userEvent.setup();
+    const privacyReconciliation = vi.fn(async () => undefined);
+    renderPage({ privacyReconciliation });
+
+    await user.click(screen.getByRole('button', { name: 'Résumé' }));
+
+    expect(await screen.findByText(/snapshots sociaux remis en cohérence/u)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Résumé' })).toHaveAttribute('aria-pressed', 'true');
+    expect(privacyReconciliation).toHaveBeenCalledOnce();
+  });
+
+
+  it('attend la persistance des réglages avant de réconcilier les snapshots', async () => {
+    const user = userEvent.setup();
+    let resolveSave: (() => void) | undefined;
+    const repository: FriendsPrivacySnapshotRepository = {
+      readSnapshot: async () => snapshot,
+      saveSnapshot: vi.fn(() => new Promise<void>((resolve) => {
+        resolveSave = resolve;
+      })),
+    };
+    const privacyReconciliation = vi.fn(async () => undefined);
+
+    renderPage({ repository, privacyReconciliation });
+    await user.click(screen.getByRole('button', { name: 'Résumé' }));
+
+    expect(repository.saveSnapshot).toHaveBeenCalledOnce();
+    expect(privacyReconciliation).not.toHaveBeenCalled();
+
+    resolveSave?.();
+    expect(await screen.findByText(/snapshots sociaux remis en cohérence/u)).toBeInTheDocument();
+    expect(privacyReconciliation).toHaveBeenCalledOnce();
+  });
+
+  it('neutralise le réglage global lorsque le profil est privé sans effacer sa valeur configurée', () => {
+    renderPage({
+      initialSnapshot: {
+        ...snapshot,
+        privacy: {
+          ...snapshot.privacy,
+          profileVisibility: 'private',
+          activitySharing: 'disabled',
+          socialActivitySharingPolicy: {
+            visibility: 'detailed',
+            fields: {
+              common: ['activityType', 'title', 'date', 'duration'],
+              cardio: ['distance', 'pace'],
+              strength: ['sessionName', 'exercises', 'sets', 'repetitions'],
+            },
+          },
+        },
+      },
+    });
+
+    expect(screen.getByText(/neutralise temporairement ce réglage/u)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Détaillé' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Détaillé' })).toBeDisabled();
   });
 
 });

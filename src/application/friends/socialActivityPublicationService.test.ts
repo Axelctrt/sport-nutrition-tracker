@@ -388,4 +388,40 @@ describe('social activity publication service', () => {
     })).resolves.toMatchObject({ status: 'unsupportedSource' });
     expect(repository.records.size).toBe(0);
   });
+
+  it('applique la surcharge privée portée par une activité sans modifier le réglage global', async () => {
+    const repository = new MemoryPublicationRepository();
+    const activity = runningActivity();
+
+    await reconcileStoredActivitySocialSnapshots({
+      context: {
+        identity,
+        privacySnapshot: privacySnapshot({ sharing: 'detailed' }),
+        repository,
+      },
+      activity,
+      stagedAt: '2026-07-07T11:00:00.000Z',
+    });
+
+    const report = await reconcileStoredActivitySocialSnapshots({
+      context: {
+        identity,
+        privacySnapshot: privacySnapshot({ sharing: 'detailed' }),
+        repository,
+      },
+      activity: {
+        ...activity,
+        socialSharing: { mode: 'private' },
+        updatedAt: '2026-07-07T11:05:00.000Z',
+      },
+      stagedAt: '2026-07-07T11:05:00.000Z',
+    });
+
+    expect(report.tombstoneCount).toBe(1);
+    expect([...repository.records.values()][0]?.snapshot).toMatchObject({
+      state: 'deleted',
+      deletionReason: 'sharingDisabled',
+    });
+  });
+
 });

@@ -85,10 +85,9 @@ export interface SocialActivityGlobalSharingPolicy {
   readonly fields: SocialActivityFieldSelection;
 }
 
-export interface SocialActivitySharingOverride {
-  readonly mode: SocialActivityOverrideMode;
-  readonly fields?: SocialActivityFieldSelection;
-}
+export type SocialActivitySharingOverride =
+  | { readonly mode: Exclude<SocialActivityOverrideMode, 'custom'> }
+  | { readonly mode: 'custom'; readonly fields: SocialActivityFieldSelection };
 
 export interface ResolvedSocialActivitySharingPolicy {
   readonly contractVersion: typeof SOCIAL_ACTIVITY_SHARING_CONTRACT_VERSION;
@@ -147,6 +146,77 @@ export const DEFAULT_SOCIAL_ACTIVITY_GLOBAL_SHARING_POLICY: SocialActivityGlobal
   visibility: 'summary',
   fields: DEFAULT_DETAILED_SOCIAL_ACTIVITY_FIELD_SELECTION,
 };
+
+
+export const PRIVATE_SOCIAL_ACTIVITY_GLOBAL_SHARING_POLICY: SocialActivityGlobalSharingPolicy = {
+  visibility: 'private',
+  fields: DEFAULT_DETAILED_SOCIAL_ACTIVITY_FIELD_SELECTION,
+};
+
+export const SOCIAL_ACTIVITY_VISIBILITY_LABELS: Record<SocialActivityVisibility, string> = {
+  private: 'Privé',
+  summary: 'Résumé',
+  detailed: 'Détaillé',
+  custom: 'Personnalisé',
+};
+
+export const SOCIAL_ACTIVITY_OVERRIDE_MODE_LABELS: Record<SocialActivityOverrideMode, string> = {
+  inherit: 'Utiliser les réglages globaux',
+  private: 'Privée',
+  summary: 'Résumé',
+  detailed: 'Détaillée',
+  custom: 'Personnalisée',
+};
+
+export function cloneSocialActivityFieldSelection(
+  selection: SocialActivityFieldSelection,
+): SocialActivityFieldSelection {
+  return {
+    common: [...selection.common],
+    cardio: [...selection.cardio],
+    strength: [...selection.strength],
+  };
+}
+
+export function createSocialActivityGlobalSharingPolicy(
+  visibility: SocialActivityVisibility,
+  fields: SocialActivityFieldSelection = DEFAULT_DETAILED_SOCIAL_ACTIVITY_FIELD_SELECTION,
+): SocialActivityGlobalSharingPolicy {
+  return {
+    visibility,
+    fields: cloneSocialActivityFieldSelection(fields),
+  };
+}
+
+export function createSocialActivitySharingOverride(
+  mode: SocialActivityOverrideMode,
+  fields: SocialActivityFieldSelection = DEFAULT_DETAILED_SOCIAL_ACTIVITY_FIELD_SELECTION,
+): SocialActivitySharingOverride {
+  return mode === 'custom'
+    ? { mode, fields: cloneSocialActivityFieldSelection(fields) }
+    : { mode };
+}
+
+export function legacyFriendActivitySharingForPolicy(
+  policy: SocialActivityGlobalSharingPolicy,
+): 'disabled' | 'summary-only' | 'detailed' {
+  if (policy.visibility === 'private') return 'disabled';
+  if (policy.visibility === 'summary') return 'summary-only';
+  return 'detailed';
+}
+
+export function socialActivityGlobalPolicyFromLegacyPrivacy(input: {
+  readonly profileVisibility: 'private' | 'friends' | 'public';
+  readonly activitySharing: 'disabled' | 'summary-only' | 'detailed';
+}): SocialActivityGlobalSharingPolicy {
+  if (input.profileVisibility === 'private' || input.activitySharing === 'disabled') {
+    return createSocialActivityGlobalSharingPolicy('private');
+  }
+
+  return createSocialActivityGlobalSharingPolicy(
+    input.activitySharing === 'summary-only' ? 'summary' : 'detailed',
+  );
+}
 
 const commonFieldSet = new Set<string>(SOCIAL_ACTIVITY_COMMON_FIELDS);
 const cardioFieldSet = new Set<string>(SOCIAL_ACTIVITY_CARDIO_FIELDS);

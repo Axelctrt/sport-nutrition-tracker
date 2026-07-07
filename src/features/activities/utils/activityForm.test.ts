@@ -40,6 +40,7 @@ describe('activityForm utils', () => {
       distanceKm: 8,
       averageCadenceSpm: 170,
       terrainType: 'road',
+      socialSharing: { mode: 'inherit' },
     });
   });
 

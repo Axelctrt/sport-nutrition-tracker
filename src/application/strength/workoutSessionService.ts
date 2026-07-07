@@ -3,6 +3,7 @@ import {
   type SocialActivitySnapshotObserver,
 } from '@/application/friends/socialActivitySnapshotObserver';
 import { RepositoryError } from '@/domain/errors/RepositoryError';
+import type { SocialActivitySharingOverride } from '@/domain/friends/socialActivitySharingPolicy';
 import type { EntityId } from '@/domain/models/common';
 import type {
   ExerciseDefinition,
@@ -28,6 +29,7 @@ export interface WorkoutSessionView {
 }
 
 export interface WorkoutSessionCompletionDependencies {
+  readonly socialSharing?: SocialActivitySharingOverride;
   readonly socialActivitySnapshots?: Pick<
     SocialActivitySnapshotObserver,
     'onStrengthSessionCompleted'
@@ -283,18 +285,53 @@ export async function completeWorkoutSession(
     throw new RepositoryError('Ajoute au moins un exercice avant de terminer la séance.', 'update');
   }
   const duration = durationMinutes(session.startedAt, now);
+  const resolvedDependencies = {
+    ...defaultWorkoutSessionCompletionDependencies,
+    ...dependencies,
+  };
   const completed = await repository.update(sessionId, {
     status: 'completed',
     completedAt: now.toISOString(),
     ...(duration === undefined ? {} : { durationMinutes: duration }),
+    ...(resolvedDependencies.socialSharing
+      ? { socialSharing: resolvedDependencies.socialSharing }
+      : {}),
   });
-  const socialActivitySnapshots = dependencies.socialActivitySnapshots;
+  const socialActivitySnapshots = resolvedDependencies.socialActivitySnapshots;
   await runSocialActivitySnapshotObserverBestEffort(
     socialActivitySnapshots
       ? () => socialActivitySnapshots.onStrengthSessionCompleted(completed)
       : undefined,
   );
   return completed;
+}
+
+export async function updateWorkoutSessionSocialSharing(
+  repository: WorkoutSessionRepository,
+  sessionId: EntityId,
+  socialSharing: SocialActivitySharingOverride,
+  dependencies: WorkoutSessionCompletionDependencies = defaultWorkoutSessionCompletionDependencies,
+): Promise<WorkoutSession> {
+  const session = await repository.getById(sessionId);
+  if (!session) throw new RepositoryError('Séance introuvable.', 'update');
+  if (session.status === 'abandoned' || session.status === 'skipped') {
+    throw new RepositoryError('Le partage de cette séance ne peut plus être modifié.', 'update');
+  }
+
+  const updated = await repository.update(sessionId, { socialSharing });
+  if (updated.status === 'completed') {
+    const resolvedDependencies = {
+      ...defaultWorkoutSessionCompletionDependencies,
+      ...dependencies,
+    };
+    const socialActivitySnapshots = resolvedDependencies.socialActivitySnapshots;
+    await runSocialActivitySnapshotObserverBestEffort(
+      socialActivitySnapshots
+        ? () => socialActivitySnapshots.onStrengthSessionCompleted(updated)
+        : undefined,
+    );
+  }
+  return updated;
 }
 
 export async function abandonWorkoutSession(

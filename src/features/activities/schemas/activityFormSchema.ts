@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { isValidLocalDate } from '@/shared/validation/localDate';
+import { socialActivitySharingOverrideSchema } from '@/shared/validation/socialActivitySharingSchema';
 
 const optionalNumber = (schema: z.ZodNumber) => schema.optional();
 
@@ -99,6 +100,7 @@ export const activityFormSchema = z
         .max(25, 'La valeur MET ne peut pas dépasser 25.'),
     ),
     includedInDailySteps: z.boolean(),
+    socialSharing: socialActivitySharingOverrideSchema,
   })
   .superRefine((values, context) => {
     if (values.activityType === 'running') {

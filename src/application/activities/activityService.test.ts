@@ -202,4 +202,20 @@ describe('activityService', () => {
     ).resolves.toMatchObject({ type: 'running' });
   });
 
+
+  it('persiste la surcharge sociale avec l’activité avant de notifier le cycle social', async () => {
+    const { dependencies, create, onActivitySaved } = createDependencies();
+    const socialSharing = { mode: 'private' as const };
+
+    const activity = await createActivityFromDraft(
+      runningDraft({ socialSharing }),
+      profile(),
+      dependencies,
+    );
+
+    expect(create.mock.calls[0]?.[0]).toMatchObject({ socialSharing });
+    expect(activity.socialSharing).toEqual(socialSharing);
+    expect(onActivitySaved).toHaveBeenCalledWith(activity);
+  });
+
 });

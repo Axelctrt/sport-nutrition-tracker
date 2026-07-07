@@ -10,6 +10,7 @@ import {
   startEmptyWorkoutSession,
   startWorkoutSessionFromTemplate,
   updateWorkoutSessionNotes,
+  updateWorkoutSessionSocialSharing,
 } from '@/application/strength/workoutSessionService';
 import { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import { DexieStrengthExerciseRepository } from '@/infrastructure/repositories/dexie/DexieStrengthExerciseRepository';
@@ -174,6 +175,42 @@ describe('workoutSessionService', () => {
 
     expect(completed).toMatchObject({ status: 'completed', durationMinutes: 65 });
     expect(onStrengthSessionCompleted).toHaveBeenCalledWith(completed);
+  });
+
+
+  it('persiste la confidentialité avant la fin de séance et republie une séance déjà terminée', async () => {
+    const started = await startEmptyWorkoutSession(sessionRepository, new Date('2026-06-25T17:00:00.000Z'));
+    await addExerciseToWorkoutSession(sessionRepository, exerciseRepository, started.session.id, 'exercise-bench');
+    const onStrengthSessionCompleted = vi.fn(async () => undefined);
+
+    const prepared = await updateWorkoutSessionSocialSharing(
+      sessionRepository,
+      started.session.id,
+      { mode: 'private' },
+      { socialActivitySnapshots: { onStrengthSessionCompleted } },
+    );
+    expect(prepared.socialSharing).toEqual({ mode: 'private' });
+    expect(onStrengthSessionCompleted).not.toHaveBeenCalled();
+
+    const completed = await completeWorkoutSession(
+      sessionRepository,
+      started.session.id,
+      new Date('2026-06-25T18:00:00.000Z'),
+      {
+        socialSharing: { mode: 'summary' },
+        socialActivitySnapshots: { onStrengthSessionCompleted },
+      },
+    );
+    expect(completed.socialSharing).toEqual({ mode: 'summary' });
+
+    const updated = await updateWorkoutSessionSocialSharing(
+      sessionRepository,
+      started.session.id,
+      { mode: 'detailed' },
+      { socialActivitySnapshots: { onStrengthSessionCompleted } },
+    );
+    expect(updated.socialSharing).toEqual({ mode: 'detailed' });
+    expect(onStrengthSessionCompleted).toHaveBeenLastCalledWith(updated);
   });
 
 });

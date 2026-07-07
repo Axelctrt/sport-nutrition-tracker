@@ -1,3 +1,4 @@
+import type { SocialActivitySharingOverride } from '@/domain/friends/socialActivitySharingPolicy';
 import type { EntityMetadata, LocalDate } from '@/domain/models/common';
 
 export type ExerciseSource = 'catalog' | 'user';
@@ -107,6 +108,7 @@ export interface WorkoutSession extends EntityMetadata {
   completedAt?: string;
   durationMinutes?: number;
   notes?: string;
+  socialSharing?: SocialActivitySharingOverride;
 }
 
 export interface WorkoutSessionExercise extends EntityMetadata {

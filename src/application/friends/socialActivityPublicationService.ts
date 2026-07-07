@@ -9,6 +9,7 @@ import {
 import {
   applyFriendScopeToSocialActivitySharingPolicy,
   DEFAULT_DETAILED_SOCIAL_ACTIVITY_FIELD_SELECTION,
+  socialActivityGlobalPolicyFromLegacyPrivacy,
   resolveSocialActivitySharingPolicy,
   type SocialActivityGlobalSharingPolicy,
   type SocialActivitySharingOverride,
@@ -70,17 +71,16 @@ function nowIsoDateTime(): IsoDateTime {
 export function socialActivityGlobalPolicyFromFriendsPrivacy(
   snapshot: FriendsPrivacySnapshot,
 ): SocialActivityGlobalSharingPolicy {
-  const sharingDisabled = snapshot.privacy.profileVisibility === 'private'
-    || snapshot.privacy.activitySharing === 'disabled';
+  if (snapshot.privacy.profileVisibility === 'private') {
+    return {
+      visibility: 'private',
+      fields: snapshot.privacy.socialActivitySharingPolicy?.fields
+        ?? DEFAULT_DETAILED_SOCIAL_ACTIVITY_FIELD_SELECTION,
+    };
+  }
 
-  return {
-    visibility: sharingDisabled
-      ? 'private'
-      : snapshot.privacy.activitySharing === 'summary-only'
-        ? 'summary'
-        : 'detailed',
-    fields: DEFAULT_DETAILED_SOCIAL_ACTIVITY_FIELD_SELECTION,
-  };
+  return snapshot.privacy.socialActivitySharingPolicy
+    ?? socialActivityGlobalPolicyFromLegacyPrivacy(snapshot.privacy);
 }
 
 function buildRecipientPlans(
@@ -249,7 +249,7 @@ export async function reconcileStoredActivitySocialSnapshots(input: {
     sourceKind: 'activity',
     sourceActivityId: input.activity.id,
     sourceRevision: input.activity.updatedAt,
-    ...(input.override ? { override: input.override } : {}),
+    override: input.override ?? input.activity.socialSharing ?? { mode: 'inherit' },
     stagedAt,
     project: ({ ownerUserId, recipientUserId, policy }) => (
       projectStoredActivityToSocialSnapshotV2({
@@ -281,7 +281,7 @@ export async function reconcileCompletedStrengthSessionSocialSnapshots(input: {
     sourceKind: 'strengthSession',
     sourceActivityId: input.session.id,
     sourceRevision: input.session.updatedAt,
-    ...(input.override ? { override: input.override } : {}),
+    override: input.override ?? input.session.socialSharing ?? { mode: 'inherit' },
     stagedAt,
     project: ({ ownerUserId, recipientUserId, policy }) => (
       projectCompletedStrengthSessionToSocialSnapshotV2({

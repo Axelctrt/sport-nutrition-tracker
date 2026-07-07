@@ -56,4 +56,21 @@ describe('friendsPrivacyService', () => {
     });
     expect(service.getState().lastFeedback).toContain('bloqué jusqu’au consentement explicite');
   });
+
+  it('enregistre la politique globale 0.29 et maintient le niveau historique compatible', () => {
+    const service = createFriendsPrivacyService();
+    const state = service.actions.setSocialActivitySharingPolicy({
+      visibility: 'custom',
+      fields: {
+        common: ['activityType', 'date', 'duration'],
+        cardio: ['distance', 'pace'],
+        strength: ['sessionName', 'exercises', 'sets', 'repetitions'],
+      },
+    });
+
+    expect(state.privacy.socialActivitySharingPolicy).toMatchObject({ visibility: 'custom' });
+    expect(state.privacy.activitySharing).toBe('detailed');
+    expect(state.lastFeedback).toContain('champs personnalisés');
+  });
+
 });
