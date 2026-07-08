@@ -116,6 +116,47 @@ describe('socialActivityFeedCloudGateway', () => {
     });
   });
 
+  it('accepte une carte détaillée sans détail disponible après filtrage granulaire', async () => {
+    const { detail: _detail, ...cardSnapshot } = detailedSnapshot;
+    const cardioCard = {
+      ...cardSnapshot,
+      sourceKind: 'activity' as const,
+      sourceActivityId: 'activity-2' as EntityId,
+      snapshotId: 'social-activity-snapshot-v2:owner-user:activity:activity-2:friend-user' as EntityId,
+      family: 'cardio' as const,
+      activityType: 'running' as const,
+      visibility: 'detailed' as const,
+      occurredTime: undefined,
+      allowedFields: {
+        common: ['activityType', 'title', 'date', 'duration'],
+        cardio: ['distance', 'pace', 'speed', 'elevation'],
+        strength: [],
+      },
+      summary: {
+        durationMinutes: 45,
+        distanceKm: 8,
+        paceMinutesPerKm: 5.625,
+      },
+    };
+    const fetcher = vi.fn(async () => new Response(JSON.stringify({
+      status: 'found',
+      items: [{
+        ...cardioCard,
+        detailAvailable: false,
+        ownerProfile: { userId: 'owner-user' },
+      }],
+    }), { status: 200, headers: { 'content-type': 'application/json' } }));
+    const gateway = createSocialActivityFeedCloudGateway({ fetcher });
+
+    await expect(gateway.listPage(credentials)).resolves.toMatchObject({
+      items: [{
+        snapshotId: cardioCard.snapshotId,
+        visibility: 'detailed',
+        detailAvailable: false,
+      }],
+    });
+  });
+
   it('lit l’état d’activation D1 authentifié', async () => {
     const fetcher = vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
       expect(String(url)).toBe('/api/social-activity-snapshots/readiness');

@@ -760,8 +760,6 @@ function validateActiveSnapshot(
 
   if (value.visibility === 'summary' && value.detail !== undefined) {
     addIssue(issues, '$.detail', 'Un snapshot résumé ne doit pas contenir de détail.');
-  } else if (value.visibility === 'detailed' && value.detail === undefined) {
-    addIssue(issues, '$.detail', 'Un snapshot détaillé doit contenir un détail typé.');
   } else if (value.detail !== undefined) {
     validateDetail(value.detail, family, allowedFields, '$.detail', issues);
   }

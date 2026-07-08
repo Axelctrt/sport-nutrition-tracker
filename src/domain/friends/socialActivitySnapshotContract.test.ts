@@ -176,6 +176,26 @@ describe('social activity snapshot contract 0.29', () => {
     ]));
   });
 
+  it('autorise une visibilité détaillée sans bloc detail lorsque la sélection ne produit que des métriques de résumé', () => {
+    const { occurredAt: _occurredAt, detail: _detail, ...cardioWithoutDetail } = cardioInput;
+    const snapshot = createActiveSocialActivitySnapshotV2({
+      ...cardioWithoutDetail,
+      visibility: 'detailed',
+      allowedFields: {
+        common: ['activityType', 'title', 'date', 'duration'],
+        cardio: ['distance', 'pace', 'speed', 'elevation'],
+        strength: [],
+      },
+      summary: {
+        durationMinutes: 48,
+        distanceKm: 8.4,
+        paceMinutesPerKm: 5.71,
+      },
+    });
+
+    expect(validateSocialActivitySnapshotV2(snapshot)).toEqual({ valid: true, issues: [] });
+  });
+
   it('interdit un détail lorsque la visibilité effective est résumé', () => {
     const validation = validateSocialActivitySnapshotV2({
       ...createActiveSocialActivitySnapshotV2(cardioInput),
