@@ -568,6 +568,34 @@ describe('social activity snapshots Pages Functions', () => {
     expect(await responseJson(detailResponse)).toMatchObject({ snapshot: { detail: { family: 'cardio' } } });
   });
 
+  it('ouvre une fiche dédiée limitée au résumé lorsque la permission courante est résumé', async () => {
+    const database = new FakeD1Database();
+    const snapshot = activeSnapshot({ visibility: 'detailed' });
+    database.addFriendship(snapshot.ownerUserId, snapshot.recipientUserId);
+    database.addPermission(snapshot.ownerUserId, snapshot.recipientUserId, 'detailed', 'granted');
+    await socialActivitySnapshotsInternals.persistSnapshotMutation(database, snapshot.ownerUserId, {
+      mutationSequence: 1,
+      snapshot,
+    });
+    database.addPermission(snapshot.ownerUserId, snapshot.recipientUserId, 'summary', 'notRequested');
+
+    const response = await handleSocialActivitySnapshotDetailRequest(
+      request(`/api/social-activity-snapshots/detail?snapshotId=${encodeURIComponent(snapshot.snapshotId)}`, {
+        headers: authorizedHeaders(snapshot.recipientUserId),
+      }),
+      env(database),
+      { fetcher: validAuthFetch },
+    );
+
+    expect(response.status).toBe(200);
+    const payload = await responseJson(response);
+    expect(payload.snapshot).toMatchObject({
+      snapshotId: snapshot.snapshotId,
+      visibility: 'summary',
+    });
+    expect(payload.snapshot).not.toHaveProperty('detail');
+  });
+
   it('révoque immédiatement la lecture dès que l’amitié disparaît', async () => {
     const database = new FakeD1Database();
     const snapshot = activeSnapshot();

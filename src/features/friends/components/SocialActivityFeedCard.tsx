@@ -61,7 +61,7 @@ function initialsFor(card: SocialActivityCloudFeedCard): string {
 export function SocialActivityFeedCard({ card, onOpenDetail }: SocialActivityFeedCardProps) {
   const Icon = iconByType[card.activityType];
   const metrics = presentSocialActivitySummary(card.summary);
-  const displayedMetrics = card.detailAvailable ? metrics.slice(0, 4) : metrics;
+  const displayedMetrics = metrics.slice(0, 4);
   const hiddenMetricCount = metrics.length - displayedMetrics.length;
   const title = card.title || socialActivityLabel(card.activityType);
 
@@ -113,7 +113,7 @@ export function SocialActivityFeedCard({ card, onOpenDetail }: SocialActivityFee
           <div className="min-w-0 flex-1">
             <h3 className="break-words text-lg font-bold text-slate-950 dark:text-white">{title}</h3>
             <p className="mt-0.5 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-              {socialActivityLabel(card.activityType)} · {card.visibility === 'summary' ? 'Résumé partagé' : 'Détail autorisé'}
+              {socialActivityLabel(card.activityType)} · {card.visibility === 'summary' ? 'Résumé partagé' : 'Partage personnalisé'}
             </p>
           </div>
         </div>
@@ -123,27 +123,22 @@ export function SocialActivityFeedCard({ card, onOpenDetail }: SocialActivityFee
             <SocialActivitySummaryMetrics metrics={displayedMetrics} />
             {hiddenMetricCount > 0 ? (
               <p className="mt-2 text-xs font-semibold text-slate-500 dark:text-slate-400">
-                + {hiddenMetricCount} métrique{hiddenMetricCount > 1 ? 's' : ''} dans le détail autorisé
+                + {hiddenMetricCount} information{hiddenMetricCount > 1 ? 's' : ''} dans la fiche
               </p>
             ) : null}
           </div>
         ) : null}
 
-        {card.detailAvailable ? (
-          <Button
-            className="mt-4 min-h-11 w-full sm:w-auto"
-            size="sm"
-            variant="secondary"
-            onClick={() => onOpenDetail(card)}
-          >
-            Voir le détail autorisé
-            <ChevronRight aria-hidden="true" className="size-4" />
-          </Button>
-        ) : (
-          <p className="mt-3 text-xs font-semibold text-slate-500 dark:text-slate-400">
-            Cette activité est partagée en résumé uniquement.
-          </p>
-        )}
+        <Button
+          aria-label={`Ouvrir l’activité ${title}`}
+          className="mt-4 min-h-11 w-full sm:w-auto"
+          size="sm"
+          variant="secondary"
+          onClick={() => onOpenDetail(card)}
+        >
+          Ouvrir l’activité
+          <ChevronRight aria-hidden="true" className="size-4" />
+        </Button>
       </div>
     </article>
   );

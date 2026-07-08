@@ -194,6 +194,10 @@ async function executeRequest(
   fetcher: typeof fetch,
   url: string,
   credentials: SocialActivitySnapshotCloudCredentials,
+  messages: {
+    readonly network: string;
+    readonly http: string;
+  },
 ): Promise<Record<string, unknown>> {
   let response: Response;
   try {
@@ -205,7 +209,7 @@ async function executeRequest(
     });
   } catch {
     throw new SocialActivityFeedCloudError(
-      'Fil d’activité indisponible hors ligne.',
+      messages.network,
       'social_activity_feed_network_error',
       true,
     );
@@ -213,7 +217,7 @@ async function executeRequest(
   const payload = await readPayload(response);
   if (!response.ok) {
     throw new SocialActivityFeedCloudError(
-      readMessage(payload, 'Le fil d’activité n’a pas pu être chargé.'),
+      readMessage(payload, messages.http),
       readCode(payload, `social_activity_feed_http_${response.status}`),
       isRetryableStatus(response.status),
     );
@@ -245,6 +249,10 @@ export function createSocialActivityFeedCloudGateway(
         fetcher,
         `${feedEndpoint}?${search.toString()}`,
         credentials,
+        {
+          network: 'Fil d’activité indisponible hors ligne.',
+          http: 'Le fil d’activité n’a pas pu être chargé.',
+        },
       );
       if (!Array.isArray(payload.items)) {
         throw new SocialActivityFeedCloudError(
@@ -265,7 +273,15 @@ export function createSocialActivityFeedCloudGateway(
 
     async readReadiness(credentials) {
       assertCredentials(credentials);
-      const payload = await executeRequest(fetcher, readinessEndpoint, credentials);
+      const payload = await executeRequest(
+        fetcher,
+        readinessEndpoint,
+        credentials,
+        {
+          network: 'Vérification sociale indisponible hors ligne.',
+          http: 'L’état du service social n’a pas pu être chargé.',
+        },
+      );
       return parseReadiness(payload);
     },
 
@@ -283,8 +299,20 @@ export function createSocialActivityFeedCloudGateway(
         fetcher,
         `${detailEndpoint}?${search.toString()}`,
         credentials,
+        {
+          network: 'Cette activité ne peut pas être vérifiée hors ligne.',
+          http: 'L’activité partagée n’a pas pu être chargée.',
+        },
       );
-      return parseDetail(payload.snapshot);
+      const snapshot = parseDetail(payload.snapshot);
+      if (snapshot.snapshotId !== snapshotId || snapshot.recipientUserId !== credentials.userId) {
+        throw new SocialActivityFeedCloudError(
+          'Réponse de l’activité partagée incohérente.',
+          'social_activity_detail_identity_mismatch',
+          false,
+        );
+      }
+      return snapshot;
     },
   };
 }

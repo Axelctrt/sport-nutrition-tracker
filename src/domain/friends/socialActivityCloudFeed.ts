@@ -32,3 +32,15 @@ export interface SocialActivityCloudReadiness {
   readonly missingActivitySchema: readonly string[];
   readonly checkedAt: string;
 }
+
+export function socialActivityDetailMatchesFeedCard(
+  card: SocialActivityCloudFeedCard,
+  snapshot: ActiveSocialActivitySnapshot,
+): boolean {
+  return snapshot.snapshotId === card.snapshotId
+    && snapshot.contractVersion === card.contractVersion
+    && snapshot.ownerUserId === card.ownerUserId
+    && snapshot.recipientUserId === card.recipientUserId
+    && snapshot.sourceKind === card.sourceKind
+    && snapshot.sourceActivityId === card.sourceActivityId;
+}
