@@ -68,6 +68,12 @@ function renderPage(override: {
   readonly activityFeedCloudCredentials?: () => { readonly userId: string; readonly accessToken: string } | undefined;
   readonly privacyReconciliation?: () => Promise<unknown>;
   readonly repository?: FriendsPrivacySnapshotRepository;
+  readonly identityReconciliation?: (identity: import('@/domain/friends/socialIdentity').SocialIdentity) => Promise<{
+    readonly status: 'reconciled' | 'alreadyCanonical' | 'notConnected' | 'conflict' | 'unavailable';
+    readonly identity: import('@/domain/friends/socialIdentity').SocialIdentity;
+    readonly migratedUserIds: readonly string[];
+    readonly message: string;
+  }>;
 } = {}) {
   const pageProps = {
     initialSnapshot: override.initialSnapshot ?? snapshot,
@@ -81,6 +87,7 @@ function renderPage(override: {
     ...(override.activityFeedCloudCredentials ? { activityFeedCloudCredentials: override.activityFeedCloudCredentials } : {}),
     ...(override.privacyReconciliation ? { privacyReconciliation: override.privacyReconciliation } : {}),
     ...(override.repository ? { repository: override.repository } : {}),
+    ...(override.identityReconciliation ? { identityReconciliation: override.identityReconciliation } : {}),
   };
 
   return render(<FriendsPrivacyPage {...pageProps} />);
@@ -222,6 +229,73 @@ describe('FriendsPrivacyPage', () => {
     });
     expect(vi.mocked(repository.saveSnapshot).mock.invocationCallOrder[0])
       .toBeLessThan(privacyReconciliation.mock.invocationCallOrder[0]!);
+  });
+
+
+  it('charge les amitiés avec le userId Dexie Cloud réconcilié', async () => {
+    const canonicalIdentity = {
+      ...identity,
+      userId: 'dexie-user-123' as EntityId,
+      handle: 'alex.run',
+      displayName: 'Alex Run',
+    };
+    const socialFriendsGateway: SocialFriendsGateway = {
+      friendshipPort: {
+        listFriendships: vi.fn(async () => []),
+        upsertFriendship: vi.fn(async () => ({
+          status: 'unavailable' as const,
+          message: 'Non utilisé.',
+        })),
+      },
+      permissionPort: {
+        listPermissions: vi.fn(async () => []),
+        savePermission: vi.fn(async (_userId, permission) => ({
+          status: 'alreadyExists' as const,
+          value: permission,
+          message: 'Non utilisé.',
+        })),
+      },
+      listFriendshipsWithProfiles: vi.fn(async () => ({
+        friendships: [],
+        profiles: [],
+      })),
+    };
+
+    const repository: FriendsPrivacySnapshotRepository = {
+      readSnapshot: vi.fn(async () => ({
+        ...snapshot,
+        friends: [],
+        requests: [],
+        activityPermissions: [],
+      })),
+      saveSnapshot: vi.fn(async () => undefined),
+    };
+    const identityRepository = {
+      readIdentity: vi.fn(async () => identity),
+      saveIdentity: vi.fn(async () => undefined),
+    };
+
+    render(
+      <FriendsPrivacyPage
+        repository={repository}
+        identityRepository={identityRepository}
+        socialFriendsGateway={socialFriendsGateway}
+        identityReconciliation={vi.fn(async () => ({
+          status: 'reconciled' as const,
+          identity: canonicalIdentity,
+          migratedUserIds: [identity.userId],
+          message: 'Identité réconciliée.',
+        }))}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(socialFriendsGateway.listFriendshipsWithProfiles)
+        .toHaveBeenCalledWith(canonicalIdentity.userId);
+      expect(socialFriendsGateway.permissionPort.listPermissions)
+        .toHaveBeenCalledWith(canonicalIdentity.userId);
+    });
+    expect(screen.getByText('@alex.run')).toBeInTheDocument();
   });
 
   it('recharge la politique locale lorsqu’une préférence sociale arrive du cloud', async () => {
