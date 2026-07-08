@@ -8,7 +8,7 @@ import {
   UsersRound,
   X,
 } from 'lucide-react';
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 
 import type { EntityId } from '@/domain/models/common';
 import {
@@ -258,6 +258,9 @@ export function FriendsPrivacyPage({
     (activeRepository && !initialSnapshot) || (activeIdentityRepository && !initialIdentity),
   ));
   const [errorMessage, setErrorMessage] = useState<string>();
+  const persistenceQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const persistenceSequenceRef = useRef(0);
+  const permissionMutationVersionsRef = useRef(new Map<string, number>());
 
   useEffect(() => {
     const shouldLoadSnapshot = Boolean(activeRepository && !initialSnapshot);
@@ -293,6 +296,9 @@ export function FriendsPrivacyPage({
         }
 
         let nextSnapshot = loadedSnapshot;
+        let cloudSocialSnapshotSynchronized = false;
+        let cloudSocialBackendUnavailable = false;
+
         if (activeCloudFriendRequestPort) {
           if (supportsProfiledSocialFriendRequestsPort(activeCloudFriendRequestPort)) {
             try {
@@ -311,19 +317,25 @@ export function FriendsPrivacyPage({
                   : [];
               });
               nextSnapshot = synchronizeCloudFriendRequestsIntoSnapshot(nextSnapshot, localRequests);
+              cloudSocialSnapshotSynchronized = true;
             } catch {
-              // Preserve the local request cache while the social backend is unavailable.
+              cloudSocialBackendUnavailable = true;
             }
           } else {
-            const [incomingCloudRequests, outgoingCloudRequests] = await Promise.all([
-              activeCloudFriendRequestPort.listIncomingRequests(effectiveIdentity.userId),
-              activeCloudFriendRequestPort.listOutgoingRequests(effectiveIdentity.userId),
-            ]);
-            const localRequests = [...incomingCloudRequests, ...outgoingCloudRequests].flatMap((request) => {
-              const report = normalizeCloudFriendRequestForUser(request, effectiveIdentity.userId);
-              return report ? [cloudFriendRequestToLocalRequest(report)] : [];
-            });
-            nextSnapshot = mergeCloudFriendRequestsIntoSnapshot(nextSnapshot, localRequests);
+            try {
+              const [incomingCloudRequests, outgoingCloudRequests] = await Promise.all([
+                activeCloudFriendRequestPort.listIncomingRequests(effectiveIdentity.userId),
+                activeCloudFriendRequestPort.listOutgoingRequests(effectiveIdentity.userId),
+              ]);
+              const localRequests = [...incomingCloudRequests, ...outgoingCloudRequests].flatMap((request) => {
+                const report = normalizeCloudFriendRequestForUser(request, effectiveIdentity.userId);
+                return report ? [cloudFriendRequestToLocalRequest(report)] : [];
+              });
+              nextSnapshot = mergeCloudFriendRequestsIntoSnapshot(nextSnapshot, localRequests);
+              cloudSocialSnapshotSynchronized = true;
+            } catch {
+              cloudSocialBackendUnavailable = true;
+            }
           }
         }
 
@@ -336,29 +348,47 @@ export function FriendsPrivacyPage({
               friendshipSync.friendships,
               friendshipSync.profiles,
             );
+            cloudSocialSnapshotSynchronized = true;
+          } else {
+            cloudSocialBackendUnavailable = true;
           }
         } else if (activeCloudFriendshipPort) {
-          const friendships = await activeCloudFriendshipPort.listFriendships(effectiveIdentity.userId);
-          nextSnapshot = mergeCloudFriendshipsIntoSnapshot(nextSnapshot, effectiveIdentity.userId, friendships, []);
+          try {
+            const friendships = await activeCloudFriendshipPort.listFriendships(effectiveIdentity.userId);
+            nextSnapshot = mergeCloudFriendshipsIntoSnapshot(nextSnapshot, effectiveIdentity.userId, friendships, []);
+            cloudSocialSnapshotSynchronized = true;
+          } catch {
+            cloudSocialBackendUnavailable = true;
+          }
         }
 
-        if (activeCloudFriendPermissionPort) {
-          const permissions = await activeCloudFriendPermissionPort.listPermissions(effectiveIdentity.userId);
-          nextSnapshot = ensureFriendActivityPermissions({
-            ...nextSnapshot,
-            activityPermissions: permissions,
-          });
+        if (activeSocialFriendsGateway?.listPermissionsWithStatus) {
+          const permissionSync = await activeSocialFriendsGateway.listPermissionsWithStatus(effectiveIdentity.userId);
+          if (permissionSync.status === 'synchronized') {
+            nextSnapshot = ensureFriendActivityPermissions({
+              ...nextSnapshot,
+              activityPermissions: permissionSync.permissions,
+            });
+            cloudSocialSnapshotSynchronized = true;
+          } else {
+            cloudSocialBackendUnavailable = true;
+          }
+        } else if (activeCloudFriendPermissionPort) {
+          try {
+            const permissions = await activeCloudFriendPermissionPort.listPermissions(effectiveIdentity.userId);
+            nextSnapshot = ensureFriendActivityPermissions({
+              ...nextSnapshot,
+              activityPermissions: permissions,
+            });
+            cloudSocialSnapshotSynchronized = true;
+          } catch {
+            cloudSocialBackendUnavailable = true;
+          }
         }
 
         if (!active) return;
 
-        const cloudSocialSnapshotLoaded = Boolean(
-          activeCloudFriendRequestPort
-          || activeSocialFriendsGateway
-          || activeCloudFriendshipPort
-          || activeCloudFriendPermissionPort,
-        );
-        if (activeRepository && cloudSocialSnapshotLoaded) {
+        if (activeRepository && cloudSocialSnapshotSynchronized) {
           await persistFriendsPrivacySnapshot(activeRepository, nextSnapshot);
         }
 
@@ -367,8 +397,11 @@ export function FriendsPrivacyPage({
         setIdentity(effectiveIdentity);
         setIdentityHandle(formatSocialHandle(effectiveIdentity.handle));
         setDisplayName(effectiveIdentity.displayName);
+        if (cloudSocialBackendUnavailable) {
+          setRequestFeedback('Connexion sociale indisponible : les données locales ont été conservées.');
+        }
 
-        if (cloudSocialSnapshotLoaded && activePrivacyReconciliation) {
+        if (cloudSocialSnapshotSynchronized && activePrivacyReconciliation) {
           void activePrivacyReconciliation().catch(() => undefined);
         }
       })
@@ -450,20 +483,29 @@ export function FriendsPrivacyPage({
   const outgoingRequests = snapshot.requests.filter((request) => request.direction === 'outgoing');
 
   const persistSnapshot = async (next: FriendsPrivacyServiceState): Promise<boolean> => {
+    const persistenceSequence = persistenceSequenceRef.current + 1;
+    persistenceSequenceRef.current = persistenceSequence;
     setSnapshot(next);
     setErrorMessage(undefined);
 
     if (!activeRepository) return true;
 
+    const persistence = persistenceQueueRef.current
+      .catch(() => undefined)
+      .then(() => persistFriendsPrivacySnapshot(activeRepository, next));
+    persistenceQueueRef.current = persistence.then(() => undefined, () => undefined);
+
     try {
-      await persistFriendsPrivacySnapshot(activeRepository, next);
+      await persistence;
       return true;
     } catch (error) {
-      setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : 'Les changements amis n’ont pas pu être enregistrés.',
-      );
+      if (persistenceSequence === persistenceSequenceRef.current) {
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : 'Les changements amis n’ont pas pu être enregistrés.',
+        );
+      }
       return false;
     }
   };
@@ -552,11 +594,21 @@ export function FriendsPrivacyPage({
     localFeedback: string,
   ) => {
     const previousSnapshot = snapshot;
+    const mutationKey = String(friend.userId ?? friend.id);
+    const mutationVersion = (permissionMutationVersionsRef.current.get(mutationKey) ?? 0) + 1;
+    permissionMutationVersionsRef.current.set(mutationKey, mutationVersion);
+    const isCurrentMutation = () => (
+      permissionMutationVersionsRef.current.get(mutationKey) === mutationVersion
+    );
+    const restorePreviousSnapshot = () => {
+      if (!isCurrentMutation()) return;
+      void persistSnapshot(previousSnapshot);
+    };
     const optimisticPersistence = persistSnapshot(next);
 
     if (!activeCloudFriendPermissionPort) {
       reconcilePrivacy(optimisticPersistence);
-      setRequestFeedback(localFeedback);
+      if (isCurrentMutation()) setRequestFeedback(localFeedback);
       return;
     }
 
@@ -564,12 +616,13 @@ export function FriendsPrivacyPage({
 
     void optimisticPersistence
       .then((persisted) => {
-        if (!persisted) return undefined;
+        if (!persisted || !isCurrentMutation()) return undefined;
         return resolveCloudFriendUserId(friend, permission);
       })
       .then((friendUserId) => {
+        if (!isCurrentMutation()) return undefined;
         if (!friendUserId) {
-          void persistSnapshot(previousSnapshot);
+          restorePreviousSnapshot();
           setRequestFeedback('Permission ami serveur impossible : userId ami introuvable dans les amitiés actives.');
           return undefined;
         }
@@ -584,11 +637,11 @@ export function FriendsPrivacyPage({
         return activeCloudFriendPermissionPort.savePermission(identity.userId, cloudPermission);
       })
       .then((result) => {
-        if (!result) return;
+        if (!result || !isCurrentMutation()) return;
         if (['created', 'updated', 'alreadyExists'].includes(result.status)) {
           const confirmedPermission = result.value;
           if (!confirmedPermission) {
-            void persistSnapshot(previousSnapshot);
+            restorePreviousSnapshot();
             setRequestFeedback(result.message);
             return;
           }
@@ -612,11 +665,12 @@ export function FriendsPrivacyPage({
           return;
         }
 
-        void persistSnapshot(previousSnapshot);
+        restorePreviousSnapshot();
         setRequestFeedback(result.message);
       })
       .catch((error) => {
-        void persistSnapshot(previousSnapshot);
+        if (!isCurrentMutation()) return;
+        restorePreviousSnapshot();
         setRequestFeedback(
           error instanceof Error
             ? error.message

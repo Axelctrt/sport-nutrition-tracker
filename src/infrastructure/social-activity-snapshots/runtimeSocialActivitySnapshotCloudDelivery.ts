@@ -9,6 +9,9 @@ export interface RuntimeSocialActivitySnapshotCloudDeliveryOptions {
   readonly eventTarget?: EventTarget;
   readonly isOnline?: () => boolean;
   readonly deliver?: typeof deliverSocialActivitySnapshotOutbox;
+  readonly now?: () => number;
+  readonly setTimer?: (callback: () => void, delayMs: number) => ReturnType<typeof setTimeout>;
+  readonly clearTimer?: (timer: ReturnType<typeof setTimeout>) => void;
 }
 
 export function attachRuntimeSocialActivitySnapshotCloudDelivery(
@@ -17,10 +20,33 @@ export function attachRuntimeSocialActivitySnapshotCloudDelivery(
   const eventTarget = options.eventTarget;
   const isOnline = options.isOnline ?? (() => true);
   const deliver = options.deliver ?? deliverSocialActivitySnapshotOutbox;
+  const now = options.now ?? Date.now;
+  const setTimer = options.setTimer ?? ((callback, delayMs) => setTimeout(callback, delayMs));
+  const clearTimer = options.clearTimer ?? ((timer) => clearTimeout(timer));
   const gateway = createSocialActivitySnapshotCloudGateway();
   let disposed = false;
   let running: Promise<void> | undefined;
   let queued = false;
+  let retryTimer: ReturnType<typeof setTimeout> | undefined;
+
+  const clearRetryTimer = (): void => {
+    if (retryTimer === undefined) return;
+    clearTimer(retryTimer);
+    retryTimer = undefined;
+  };
+
+  const scheduleRetry = (nextRetryAt: string | undefined): void => {
+    clearRetryTimer();
+    if (disposed || !nextRetryAt) return;
+
+    const target = Date.parse(nextRetryAt);
+    if (Number.isNaN(target)) return;
+    const delayMs = Math.max(0, target - now());
+    retryTimer = setTimer(() => {
+      retryTimer = undefined;
+      trigger();
+    }, delayMs);
+  };
 
   const trigger = (): void => {
     if (disposed || !isOnline()) return;
@@ -32,12 +58,15 @@ export function attachRuntimeSocialActivitySnapshotCloudDelivery(
       return;
     }
 
+    clearRetryTimer();
     running = deliver({
       credentials,
       repository: runtimeSocialActivitySnapshotOutboxRepository,
       gateway,
     })
-      .then(() => undefined)
+      .then((report) => {
+        scheduleRetry(report.nextRetryAt);
+      })
       .catch(() => undefined)
       .finally(() => {
         running = undefined;
@@ -60,6 +89,7 @@ export function attachRuntimeSocialActivitySnapshotCloudDelivery(
 
   return () => {
     disposed = true;
+    clearRetryTimer();
     unsubscribeClient();
     eventTarget?.removeEventListener('online', handleLifecycle);
     eventTarget?.removeEventListener('focus', handleLifecycle);

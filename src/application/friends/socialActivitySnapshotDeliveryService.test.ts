@@ -139,4 +139,57 @@ describe('social activity snapshot delivery service', () => {
       ignoredStaleAcknowledgementCount: 1,
     });
   });
+
+  it('expose la prochaine tentative afin que le runtime puisse reprendre sans nouvel événement', async () => {
+    const record = outboxRecord();
+    const repository = {
+      listReadyForDelivery: vi.fn(async () => [record]),
+      getNextRetryAt: vi.fn(async () => '2026-07-07T08:06:00.000Z'),
+      markDelivered: vi.fn(),
+      markFailed: vi.fn(async () => record),
+    };
+    const gateway = {
+      publish: vi.fn(async () => {
+        throw new SocialActivitySnapshotCloudError(
+          'Réseau indisponible.',
+          'social_activity_network_error',
+          true,
+        );
+      }),
+    };
+
+    await expect(deliverSocialActivitySnapshotOutbox({
+      credentials: { userId: 'owner-user', accessToken: 'token' },
+      repository,
+      gateway,
+      now: new Date('2026-07-07T08:05:00.000Z'),
+    })).resolves.toMatchObject({
+      failedCount: 1,
+      nextRetryAt: '2026-07-07T08:06:00.000Z',
+    });
+  });
+
+  it('relit un retry futur déjà persiste après fermeture puis réouverture', async () => {
+    const repository = {
+      listReadyForDelivery: vi.fn(async () => []),
+      getNextRetryAt: vi.fn(async () => '2026-07-07T08:10:00.000Z'),
+      markDelivered: vi.fn(),
+      markFailed: vi.fn(),
+    };
+    const gateway = { publish: vi.fn() };
+
+    await expect(deliverSocialActivitySnapshotOutbox({
+      credentials: { userId: 'owner-user', accessToken: 'token' },
+      repository,
+      gateway,
+      now: new Date('2026-07-07T08:05:00.000Z'),
+    })).resolves.toEqual({
+      selectedCount: 0,
+      deliveredCount: 0,
+      failedCount: 0,
+      ignoredStaleAcknowledgementCount: 0,
+      nextRetryAt: '2026-07-07T08:10:00.000Z',
+    });
+  });
+
 });
