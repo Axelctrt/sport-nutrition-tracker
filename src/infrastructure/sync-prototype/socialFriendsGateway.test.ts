@@ -33,6 +33,7 @@ describe('socialFriendsGateway', () => {
     });
 
     await expect(gateway.listFriendshipsWithProfiles('social-user:alex' as EntityId)).resolves.toMatchObject({
+      status: 'synchronized',
       friendships: [expect.objectContaining({ status: 'active' })],
       profiles: [expect.objectContaining({ userId: 'social-user:lina', handle: 'lina.trail' })],
     });
@@ -89,6 +90,11 @@ describe('socialFriendsGateway', () => {
       fetcher: async () => jsonResponse(503, { status: 'unavailable', message: 'KO' }),
     });
 
+    await expect(gateway.listFriendshipsWithProfiles('social-user:alex' as EntityId)).resolves.toEqual({
+      status: 'unavailable',
+      friendships: [],
+      profiles: [],
+    });
     await expect(gateway.friendshipPort.listFriendships('social-user:alex' as EntityId)).resolves.toEqual([]);
     await expect(gateway.permissionPort.listPermissions('social-user:alex' as EntityId)).resolves.toEqual([]);
   });

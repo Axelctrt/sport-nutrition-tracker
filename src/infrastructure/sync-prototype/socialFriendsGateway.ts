@@ -7,7 +7,10 @@ import type {
 } from '@/domain/friends/socialCloudContract';
 import type { CloudFriendship, PublicUserProfile } from '@/domain/friends/socialIdentity';
 
+export type SocialFriendsGatewayListStatus = 'synchronized' | 'unavailable';
+
 export interface SocialFriendsGatewayListResult {
+  readonly status?: SocialFriendsGatewayListStatus;
   readonly friendships: readonly CloudFriendship[];
   readonly profiles: readonly PublicUserProfile[];
 }
@@ -134,9 +137,15 @@ export function createSocialFriendsGateway(options: SocialFriendsClientOptions =
   const fetcher = options.fetcher ?? fetch;
 
   async function listFriendshipsWithProfiles(userId: EntityId): Promise<SocialFriendsGatewayListResult> {
-    const response = await fetcher(`${endpoint}/friendships?userId=${encodeURIComponent(userId)}`);
+    let response: Response;
+    try {
+      response = await fetcher(`${endpoint}/friendships?userId=${encodeURIComponent(userId)}`);
+    } catch {
+      return { status: 'unavailable', friendships: [], profiles: [] };
+    }
+
     const payload = await readJson(response);
-    if (!response.ok) return { friendships: [], profiles: [] };
+    if (!response.ok) return { status: 'unavailable', friendships: [], profiles: [] };
 
     const rawFriendships = payload && typeof payload === 'object' && 'friendships' in payload && Array.isArray(payload.friendships)
       ? payload.friendships
@@ -146,6 +155,7 @@ export function createSocialFriendsGateway(options: SocialFriendsClientOptions =
       : [];
 
     return {
+      status: 'synchronized',
       friendships: rawFriendships.flatMap((friendship) => {
         const parsed = parseFriendship(friendship);
         return parsed ? [parsed] : [];

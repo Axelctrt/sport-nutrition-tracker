@@ -189,6 +189,43 @@ export function mergeCloudFriendshipsIntoSnapshot(
   });
 }
 
+export function synchronizeCloudFriendshipsIntoSnapshot(
+  snapshot: FriendsPrivacySnapshot,
+  currentUserId: EntityId,
+  friendships: readonly CloudFriendship[],
+  profiles: readonly PublicUserProfile[],
+): FriendsPrivacySnapshot {
+  const merged = mergeCloudFriendshipsIntoSnapshot(
+    snapshot,
+    currentUserId,
+    friendships,
+    profiles,
+  );
+  const activeFriendUserIds = new Set<EntityId>();
+
+  for (const friendship of friendships) {
+    const friendUserId = getCloudFriendshipCounterpartUserId(friendship, currentUserId);
+    if (friendUserId) activeFriendUserIds.add(friendUserId);
+  }
+
+  const synchronizedFriends = merged.friends.filter((friend) => (
+    friend.userId !== undefined && activeFriendUserIds.has(friend.userId)
+  ));
+  const synchronizedHandles = new Set(
+    synchronizedFriends.map((friend) => normalizeFriendHandle(friend.handle)),
+  );
+  const synchronizedPermissions = (snapshot.activityPermissions ?? []).filter((permission) => (
+    (permission.friendUserId !== undefined && activeFriendUserIds.has(permission.friendUserId))
+    || synchronizedHandles.has(normalizeFriendHandle(permission.friendHandle))
+  ));
+
+  return ensureFriendActivityPermissions({
+    ...merged,
+    friends: synchronizedFriends,
+    activityPermissions: synchronizedPermissions,
+  });
+}
+
 export function buildCloudFriendPermissionRecord(
   ownerUserId: EntityId,
   friend: FriendProfileSummary,

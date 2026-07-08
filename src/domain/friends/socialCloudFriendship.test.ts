@@ -9,6 +9,7 @@ import {
   mergeCloudFriendPermissionsIntoSnapshot,
   mergeCloudFriendshipsIntoSnapshot,
   normalizeCloudFriendshipForUser,
+  synchronizeCloudFriendshipsIntoSnapshot,
 } from '@/domain/friends/socialCloudFriendship';
 import { DEFAULT_FRIENDS_PRIVACY_SETTINGS, type FriendsPrivacySnapshot } from '@/domain/friends/friendship';
 import type { CloudFriendRequest, PublicUserProfile } from '@/domain/friends/socialIdentity';
@@ -96,6 +97,30 @@ describe('socialCloudFriendship', () => {
         detailedConsent: 'notRequested',
       }),
     ]);
+  });
+
+  it('replaces stale local friendships after an authoritative empty server response', () => {
+    const staleFriend = {
+      id: 'social-user:stale' as EntityId,
+      userId: 'social-user:stale' as EntityId,
+      displayName: 'Stale Friend',
+      handle: 'stale.friend',
+      initials: 'SF',
+    };
+    const synchronized = synchronizeCloudFriendshipsIntoSnapshot({
+      ...emptySnapshot,
+      friends: [staleFriend],
+      activityPermissions: [{
+        id: 'cloud-friend-permission:social-user:alex->social-user:stale' as EntityId,
+        friendUserId: staleFriend.userId,
+        friendHandle: staleFriend.handle,
+        sharingLevel: 'detailed',
+        detailedConsent: 'granted',
+      }],
+    }, 'social-user:alex' as EntityId, [], []);
+
+    expect(synchronized.friends).toEqual([]);
+    expect(synchronized.activityPermissions).toEqual([]);
   });
 
   it('synchronise une permission détaillée uniquement avec consentement explicite', () => {

@@ -34,6 +34,7 @@ import {
 import {
   getCloudFriendshipCounterpartUserId,
   mergeCloudFriendshipsIntoSnapshot,
+  synchronizeCloudFriendshipsIntoSnapshot,
 } from '@/domain/friends/socialCloudFriendship';
 import type {
   SocialCloudFriendPermissionPort,
@@ -301,8 +302,15 @@ export function FriendsPrivacyPage({
         }
 
         if (activeSocialFriendsGateway) {
-          const { friendships, profiles } = await activeSocialFriendsGateway.listFriendshipsWithProfiles(effectiveIdentity.userId);
-          nextSnapshot = mergeCloudFriendshipsIntoSnapshot(nextSnapshot, effectiveIdentity.userId, friendships, profiles);
+          const friendshipSync = await activeSocialFriendsGateway.listFriendshipsWithProfiles(effectiveIdentity.userId);
+          if (friendshipSync.status !== 'unavailable') {
+            nextSnapshot = synchronizeCloudFriendshipsIntoSnapshot(
+              nextSnapshot,
+              effectiveIdentity.userId,
+              friendshipSync.friendships,
+              friendshipSync.profiles,
+            );
+          }
         } else if (activeCloudFriendshipPort) {
           const friendships = await activeCloudFriendshipPort.listFriendships(effectiveIdentity.userId);
           nextSnapshot = mergeCloudFriendshipsIntoSnapshot(nextSnapshot, effectiveIdentity.userId, friendships, []);
