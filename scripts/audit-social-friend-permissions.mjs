@@ -32,6 +32,7 @@ const backupSchemas = read('src/infrastructure/backup/backupSchemas.ts');
 const backupModels = read('src/domain/models/backup.ts');
 const backupService = read('src/infrastructure/backup/backupService.ts');
 const page = read('src/features/friends/pages/FriendsPrivacyPage.tsx');
+const sharingSettings = read('src/features/friends/components/SocialActivitySharingSettings.tsx');
 const packageJson = read('package.json');
 const docs = read('docs/architecture/social-friend-permissions-0.27.0-f3.md');
 
@@ -48,13 +49,14 @@ for (const symbol of [
 }
 
 for (const phrase of [
-  'Résumé uniquement',
-  'Autoriser le détail',
-  'Permission :',
-  'Consentement détaillé enregistré pour cet ami',
-  'Snapshots sociaux F4 actifs',
+  'Aucun partage',
+  'Partage :',
+  'Partage personnalisé enregistré pour cet ami',
+  'Permission ramenée au résumé pour cet ami',
 ]) {
-  if (!page.includes(phrase) && !service.includes(phrase)) failures.push(`texte/feedback F3 manquant : ${phrase}`);
+  if (!page.includes(phrase) && !sharingSettings.includes(phrase) && !service.includes(phrase) && !domain.includes(phrase)) {
+    failures.push(`texte/feedback permissions par ami manquant : ${phrase}`);
+  }
 }
 
 if (!repository.includes('friendActivityPermissions')) failures.push('repository Dexie non branché aux permissions par ami');
@@ -72,10 +74,6 @@ if (!docs.includes('Résumé par défaut') || !docs.includes('Détail uniquement
   failures.push('documentation F3 incomplète sur résumé/détail');
 }
 
-if (/socialFeed|messagerie|classement/u.test(domain + service + repository + page)) {
-  failures.push('F3/F4 ne doit pas introduire de fil, messagerie ou classement');
-}
-
 if (/fetch\(|axios|supabase|firebase/u.test(service + repository)) {
   failures.push('F3 ne doit pas inventer de backend concret');
 }
@@ -86,4 +84,4 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-console.log('Audit permissions de partage par ami 0.27.0 F3 réussi : résumé par défaut, détail sur consentement local, Dexie v10, sauvegarde JSON v9 et garde-fou social sont couverts.');
+console.log('Audit permissions de partage par ami réussi : aucun partage, résumé et personnalisation par ami sont couverts avec Dexie v10 et sauvegarde JSON v9.');

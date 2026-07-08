@@ -318,19 +318,13 @@ describe('WorkoutSessionPage', () => {
   });
 
 
-  it('enregistre un réglage de partage spécifique avant de terminer la séance', async () => {
-    const user = userEvent.setup();
+  it('ne présente plus de réglage social dans la séance', async () => {
     renderSessionPage();
 
     await screen.findByRole('heading', { name: 'Séance libre' });
-    await user.click(screen.getByText('Partage avec les amis'));
-    await user.click(screen.getByRole('button', { name: 'Privée' }));
-    await user.click(screen.getByRole('button', { name: 'Enregistrer le partage' }));
-
-    await waitFor(async () => {
-      expect((await appDatabase.workoutSessions.get('session-current'))?.socialSharing)
-        .toEqual({ mode: 'private' });
-    });
+    expect(screen.queryByText('Partage avec les amis')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Privée' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Enregistrer le partage' })).not.toBeInTheDocument();
   });
 
 });

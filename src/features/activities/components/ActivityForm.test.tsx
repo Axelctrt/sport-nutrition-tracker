@@ -27,7 +27,7 @@ describe('ActivityForm', () => {
     expect(screen.queryByText(/effort maximal/i)).not.toBeInTheDocument();
   });
 
-  it('enregistre une surcharge privée spécifique à l’activité', async () => {
+  it('ne présente plus de réglage social lors de l’enregistrement', async () => {
     const user = userEvent.setup();
     const settings = createDefaultAppSettings();
     const onSubmit = vi.fn(async (_values: ActivityFormValues) => undefined);
@@ -45,11 +45,14 @@ describe('ActivityForm', () => {
       />,
     );
 
-    await user.click(screen.getByRole('button', { name: 'Privée' }));
+    expect(screen.queryByText('Partage avec les amis')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Privée' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Résumé' })).not.toBeInTheDocument();
+
     await user.click(screen.getByRole('button', { name: 'Enregistrer' }));
 
     expect(onSubmit.mock.calls[0]?.[0]).toEqual(expect.objectContaining({
-      socialSharing: { mode: 'private' },
+      socialSharing: { mode: 'inherit' },
     }));
   });
 

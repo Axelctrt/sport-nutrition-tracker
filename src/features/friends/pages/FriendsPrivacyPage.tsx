@@ -21,13 +21,9 @@ import {
   type FriendsPrivacySnapshotRepository,
 } from '@/application/friends/friendsPrivacyService';
 import { prepareSocialActivityFeed } from '@/application/friends/socialActivityFeedService';
-import { socialActivityGlobalPolicyFromFriendsPrivacy } from '@/application/friends/socialActivityPublicationService';
 import { SocialActivityCloudReadinessPanel } from '@/features/friends/components/SocialActivityCloudReadinessPanel';
 import { SocialActivityFeedPanel } from '@/features/friends/components/SocialActivityFeedPanel';
-import {
-  SocialActivityFriendFieldSelectionSettings,
-  SocialActivityGlobalSharingSettings,
-} from '@/features/friends/components/SocialActivitySharingSettings';
+import { SocialActivityFriendSharingSettings } from '@/features/friends/components/SocialActivitySharingSettings';
 import { sendExactFriendRequest } from '@/application/friends/socialFriendRequestService';
 import {
   cloudFriendRequestToLocalRequest,
@@ -54,7 +50,6 @@ import {
   type SocialUserLookupGateway,
 } from '@/application/friends/socialIdentityService';
 import {
-  FRIEND_ACTIVITY_PERMISSION_LABELS,
   FRIEND_PROFILE_VISIBILITY_LABELS,
   acceptFriendRequest,
   declineFriendRequest,
@@ -62,6 +57,7 @@ import {
   evaluateFriendScopedActivitySharingGuard,
   selectFriendActivityPermission,
   summarizeFriendsPrivacy,
+  type FriendActivityPermissionLevel,
   type FriendProfileSummary,
   type FriendRequest,
   type FriendsPrivacySnapshot,
@@ -78,7 +74,6 @@ import type { SocialActivitySnapshot } from '@/domain/friends/socialActivitySnap
 import {
   DEFAULT_DETAILED_SOCIAL_ACTIVITY_FIELD_SELECTION,
   type SocialActivityFieldSelection,
-  type SocialActivityGlobalSharingPolicy,
 } from '@/domain/friends/socialActivitySharingPolicy';
 import { appDatabase } from '@/infrastructure/database/database';
 import { DexieFriendsPrivacyRepository } from '@/infrastructure/repositories/dexie/DexieFriendsPrivacyRepository';
@@ -442,11 +437,6 @@ export function FriendsPrivacyPage({
   }, [activeRepository]);
 
   const summary = useMemo(() => summarizeFriendsPrivacy(snapshot), [snapshot]);
-  const socialActivitySharingPolicy = useMemo(
-    () => snapshot.privacy.socialActivitySharingPolicy
-      ?? socialActivityGlobalPolicyFromFriendsPrivacy(snapshot),
-    [snapshot],
-  );
   const handleValidation = useMemo(() => validateSocialHandle(identityHandle), [identityHandle]);
   const socialActivityFeed = useMemo(
     () => prepareSocialActivityFeed({
@@ -515,22 +505,13 @@ export function FriendsPrivacyPage({
     return persisted;
   });
 
-  const updateSocialActivitySharingPolicy = (
-    policy: SocialActivityGlobalSharingPolicy,
-  ) => {
-    const service = createFriendsPrivacyService(snapshot);
-    reconcilePrivacy(persistSocialPrivacyForAccountSync(
-      service.actions.setSocialActivitySharingPolicy(policy),
-      'social-activity-sharing-policy-update',
-    ));
-  };
 
   const updateProfileVisibility = (visibility: FriendVisibilityLevel) => {
     const service = createFriendsPrivacyService(snapshot);
-    reconcilePrivacy(persistSocialPrivacyForAccountSync(
+    void persistSocialPrivacyForAccountSync(
       service.actions.setProfileVisibility(visibility),
       'social-profile-visibility-update',
-    ));
+    );
   };
 
   const normalizeHandleForMatch = (value: string): string => value
@@ -644,7 +625,7 @@ export function FriendsPrivacyPage({
       });
   };
 
-  const updateFriendPermission = (friend: FriendProfileSummary, sharing: 'summary' | 'detailed') => {
+  const updateFriendPermission = (friend: FriendProfileSummary, sharing: FriendActivityPermissionLevel) => {
     setRequestFeedback(undefined);
     setErrorMessage(undefined);
 
@@ -656,8 +637,10 @@ export function FriendsPrivacyPage({
       next,
       permission,
       sharing === 'detailed'
-        ? 'Détail autorisé localement pour cet ami après consentement explicite.'
-        : 'Partage ami limité au résumé localement.',
+        ? 'Partage personnalisé enregistré pour cet ami.'
+        : sharing === 'summary'
+          ? 'Partage limité au résumé pour cet ami.'
+          : 'Partage d’activité désactivé pour cet ami.',
     );
   };
 
@@ -895,9 +878,9 @@ Vous ne pourrez plus voir vos activités respectives. Une nouvelle demande sera 
         </div>
       </div>
 
-      <InlineNotice title="Partage contrôlé par défaut">
+      <InlineNotice title="Partage défini par ami">
         <p>
-          Les données détaillées restent privées. Chaque demande doit être acceptée et le partage d’activité reste désactivé tant que tu ne changes pas explicitement ce réglage.
+          Chaque nouvel ami voit un résumé par défaut. Utilise « Gérer » sur sa carte pour choisir Aucun, Résumé ou Personnalisé. Rien n’est à régler lors de l’enregistrement d’une activité.
         </p>
       </InlineNotice>
 
@@ -1031,7 +1014,7 @@ Vous ne pourrez plus voir vos activités respectives. Une nouvelle demande sera 
                 Confidentialité
               </h2>
               <p className="text-sm text-slate-600 dark:text-slate-300">
-                Choisis ce qui peut être visible avant de connecter le partage social.
+                La visibilité du profil et le partage des activités sont réglés séparément.
               </p>
             </div>
           </div>
@@ -1055,26 +1038,9 @@ Vous ne pourrez plus voir vos activités respectives. Une nouvelle demande sera 
               </div>
             </div>
 
-            <div>
-              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-                Partage d’activité par défaut
-              </p>
-              <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                Ce réglage s’applique aux activités qui utilisent le mode global.
-              </p>
-              {snapshot.privacy.profileVisibility === 'private' ? (
-                <p className="mt-2 text-sm font-medium text-amber-700 dark:text-amber-300">
-                  Le profil privé neutralise temporairement ce réglage.
-                </p>
-              ) : null}
-              <div className="mt-3">
-                <SocialActivityGlobalSharingSettings
-                  value={socialActivitySharingPolicy}
-                  onChange={updateSocialActivitySharingPolicy}
-                  disabled={snapshot.privacy.profileVisibility === 'private'}
-                />
-              </div>
-            </div>
+            <p className="rounded-xl bg-slate-50 px-3 py-2 text-sm leading-6 text-slate-600 dark:bg-slate-950 dark:text-slate-300">
+              La visibilité du profil concerne uniquement ton profil social. Le partage des activités se règle séparément pour chaque ami.
+            </p>
 
             <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -1265,52 +1231,26 @@ Vous ne pourrez plus voir vos activités respectives. Une nouvelle demande sera 
                       <div>
                         <p className="font-semibold text-slate-950 dark:text-white">{friend.displayName}</p>
                         <p className="text-sm text-slate-500 dark:text-slate-400">@{friend.handle}</p>
-                        <p className="mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">
-                          Permission : {FRIEND_ACTIVITY_PERMISSION_LABELS[friendSharingGuard.permission.sharingLevel]}
-                        </p>
                       </div>
                     </div>
-                    <div className="flex flex-col gap-2 sm:flex-row lg:flex-col">
-                      <Button
-                        size="sm"
-                        variant={friendSharingGuard.permission.sharingLevel === 'summary' ? 'primary' : 'secondary'}
-                        onClick={() => updateFriendPermission(friend, 'summary')}
-                        aria-pressed={friendSharingGuard.permission.sharingLevel === 'summary'}
-                      >
-                        Résumé uniquement
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant={friendSharingGuard.permission.sharingLevel === 'detailed' ? 'primary' : 'secondary'}
-                        onClick={() => updateFriendPermission(friend, 'detailed')}
-                        aria-pressed={friendSharingGuard.permission.sharingLevel === 'detailed'}
-                      >
-                        Autoriser le détail
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => removeFriend(friend)}
-                      >
-                        <X aria-hidden="true" className="size-4" />
-                        Supprimer cet ami
-                      </Button>
-                    </div>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => removeFriend(friend)}
+                    >
+                      <X aria-hidden="true" className="size-4" />
+                      Supprimer
+                    </Button>
                   </div>
-                  <p className="mt-3 rounded-xl bg-slate-50 px-3 py-2 text-sm leading-6 text-slate-600 dark:bg-slate-950 dark:text-slate-300">
-                    {friendSharingGuard.reason}
-                  </p>
-                  {friendSharingGuard.permission.sharingLevel === 'detailed' ? (
-                    <SocialActivityFriendFieldSelectionSettings
+                  <div className="mt-3">
+                    <SocialActivityFriendSharingSettings
                       friendDisplayName={friend.displayName}
+                      sharingLevel={friendSharingGuard.permission.sharingLevel}
                       value={friendSharingGuard.permission.fieldSelection ?? DEFAULT_DETAILED_SOCIAL_ACTIVITY_FIELD_SELECTION}
-                      onSave={(fieldSelection) => updateFriendFieldSelection(friend, fieldSelection)}
+                      onSharingLevelChange={(sharingLevel) => updateFriendPermission(friend, sharingLevel)}
+                      onSaveFields={(fieldSelection) => updateFriendFieldSelection(friend, fieldSelection)}
                     />
-                  ) : (
-                    <p className="mt-3 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                      Active le détail pour choisir les métriques autorisées pour cet ami.
-                    </p>
-                  )}
+                  </div>
                 </div>
               );
             })}

@@ -40,7 +40,7 @@ interface SocialFriendsClientOptions {
 type FriendMutationStatus = 'created' | 'updated' | 'alreadyExists' | 'forbidden' | 'notFound' | 'unavailable';
 
 const friendshipStatuses = new Set(['active', 'removed']);
-const sharingLevels = new Set(['summary', 'detailed']);
+const sharingLevels = new Set(['none', 'summary', 'detailed']);
 const detailedConsentStatuses = new Set(['notRequested', 'granted']);
 const okMutationStatuses = new Set(['created', 'updated', 'alreadyExists']);
 

@@ -14,7 +14,7 @@ export type FriendRequestStatus = 'pending' | 'accepted' | 'declined' | 'cancell
 export type FriendRequestDirection = 'incoming' | 'outgoing';
 export type FriendVisibilityLevel = 'private' | 'friends' | 'public';
 export type FriendActivitySharingLevel = 'disabled' | 'summary-only' | 'detailed';
-export type FriendActivityPermissionLevel = 'summary' | 'detailed';
+export type FriendActivityPermissionLevel = 'none' | 'summary' | 'detailed';
 export type FriendDetailedConsentStatus = 'notRequested' | 'granted';
 export type FriendRequestEligibilityStatus =
   | 'allowed'
@@ -163,8 +163,9 @@ export const FRIEND_ACTIVITY_SHARING_LABELS: Record<FriendActivitySharingLevel, 
 };
 
 export const FRIEND_ACTIVITY_PERMISSION_LABELS: Record<FriendActivityPermissionLevel, string> = {
-  summary: 'Résumé uniquement',
-  detailed: 'Détail autorisé',
+  none: 'Aucun partage',
+  summary: 'Résumé',
+  detailed: 'Personnalisé',
 };
 
 export function normalizeFriendHandle(value: string): string {
@@ -334,7 +335,7 @@ export function updateFriendActivityPermission(
         id: basePermission.id,
         ...(basePermission.friendUserId ? { friendUserId: basePermission.friendUserId } : {}),
         friendHandle: basePermission.friendHandle,
-        sharingLevel: 'summary',
+        sharingLevel,
         detailedConsent: 'notRequested',
         fieldSelection: basePermission.fieldSelection
           ?? cloneSocialActivityFieldSelection(ALL_SOCIAL_ACTIVITY_FIELD_SELECTION),
@@ -612,7 +613,9 @@ export function updateFriendsPrivacySettings(
 }
 
 export function summarizeFriendsPrivacy(snapshot: FriendsPrivacySnapshot): FriendsPrivacySummary {
-  const permissions = snapshot.activityPermissions ?? [];
+  const permissions = snapshot.friends.map((friend) =>
+    selectFriendActivityPermission(snapshot, friend),
+  );
 
   return {
     friendCount: snapshot.friends.length,
@@ -622,11 +625,11 @@ export function summarizeFriendsPrivacy(snapshot: FriendsPrivacySnapshot): Frien
     outgoingPendingCount: snapshot.requests.filter(
       (request) => request.direction === 'outgoing' && request.status === 'pending',
     ).length,
-    sharingEnabled: snapshot.privacy.activitySharing !== 'disabled',
+    sharingEnabled: permissions.some((permission) => permission.sharingLevel !== 'none'),
     requestsOpen: snapshot.privacy.allowFriendRequests,
     approvalRequired: snapshot.privacy.requireManualApproval,
-    summaryPermissionCount: snapshot.friends.filter((friend) =>
-      selectFriendActivityPermission(snapshot, friend).sharingLevel === 'summary',
+    summaryPermissionCount: permissions.filter((permission) =>
+      permission.sharingLevel === 'summary',
     ).length,
     detailedPermissionCount: permissions.filter((permission) => (
       permission.sharingLevel === 'detailed' && permission.detailedConsent === 'granted'
@@ -636,100 +639,64 @@ export function summarizeFriendsPrivacy(snapshot: FriendsPrivacySnapshot): Frien
 
 export function evaluateFriendActivitySharingGuard(
   snapshot: FriendsPrivacySnapshot,
-  requestedVisibility?: SocialActivityVisibility,
+  _requestedVisibility?: SocialActivityVisibility,
 ): FriendActivitySharingGuard {
-  if (snapshot.privacy.profileVisibility === 'private') {
-    return {
-      allowedScope: 'none',
-      canShareSummary: false,
-      canShareDetailed: false,
-      detailedSharingBlocked: true,
-      reason: 'Profil privé : aucun partage d’activité n’est autorisé.',
-    };
-  }
-
-  const effectiveVisibility = requestedVisibility
-    ?? (snapshot.privacy.activitySharing === 'disabled'
-      ? 'private'
-      : snapshot.privacy.activitySharing === 'summary-only'
-        ? 'summary'
-        : 'detailed');
-
-  if (effectiveVisibility === 'private') {
-    return {
-      allowedScope: 'none',
-      canShareSummary: false,
-      canShareDetailed: false,
-      detailedSharingBlocked: true,
-      reason: 'Partage désactivé : les activités restent privées.',
-    };
-  }
-
   if (snapshot.friends.length === 0) {
     return {
       allowedScope: 'none',
       canShareSummary: false,
       canShareDetailed: false,
       detailedSharingBlocked: true,
-      reason: 'Aucun ami accepté : rien n’est exposé hors de cet appareil.',
+      reason: 'Aucun ami accepté : rien n’est partagé.',
     };
   }
 
-  const detailedPermissionExists = snapshot.friends.some((friend) => {
-    const permission = selectFriendActivityPermission(snapshot, friend);
-    return permission.sharingLevel === 'detailed' && permission.detailedConsent === 'granted';
-  });
-
-  if (effectiveVisibility === 'summary') {
-    return {
-      allowedScope: 'summary',
-      canShareSummary: true,
-      canShareDetailed: false,
-      detailedSharingBlocked: true,
-      reason: 'Résumé d’activité autorisé pour les amis acceptés uniquement.',
-    };
-  }
+  const permissions = snapshot.friends.map((friend) =>
+    selectFriendActivityPermission(snapshot, friend),
+  );
+  const canShareSummary = permissions.some((permission) => permission.sharingLevel !== 'none');
+  const canShareDetailed = permissions.some((permission) => (
+    permission.sharingLevel === 'detailed' && permission.detailedConsent === 'granted'
+  ));
 
   return {
-    allowedScope: 'summary',
-    canShareSummary: true,
-    canShareDetailed: false,
-    detailedSharingBlocked: true,
-    reason: detailedPermissionExists
-      ? 'Snapshots sociaux filtrés disponibles : le détail reste limité aux amis autorisés, sans export brut.'
-      : 'Résumé autorisé par défaut. Le détail reste bloqué sans consentement explicite par ami.',
+    allowedScope: canShareDetailed ? 'detailed' : canShareSummary ? 'summary' : 'none',
+    canShareSummary,
+    canShareDetailed,
+    detailedSharingBlocked: !canShareDetailed,
+    reason: canShareSummary
+      ? 'Le partage est défini séparément pour chaque ami.'
+      : 'Aucun ami n’est autorisé à voir les activités.',
   };
 }
 
 export function evaluateFriendScopedActivitySharingGuard(
   snapshot: FriendsPrivacySnapshot,
   friend: FriendProfileSummary,
-  requestedVisibility?: SocialActivityVisibility,
+  _requestedVisibility?: SocialActivityVisibility,
 ): FriendScopedActivitySharingGuard {
   const permission = selectFriendActivityPermission(snapshot, friend);
-  const globalGuard = evaluateFriendActivitySharingGuard(snapshot, requestedVisibility);
-  if (!globalGuard.canShareSummary) {
+
+  if (permission.sharingLevel === 'none') {
     return {
-      ...globalGuard,
+      allowedScope: 'none',
+      canShareSummary: false,
+      canShareDetailed: false,
+      detailedSharingBlocked: true,
+      reason: 'Aucune activité n’est partagée avec cet ami.',
       friendId: friend.id,
       friendHandle: friend.handle,
       permission,
     };
   }
 
-  if (
-    (requestedVisibility === 'detailed'
-      || requestedVisibility === 'custom'
-      || (requestedVisibility === undefined && snapshot.privacy.activitySharing === 'detailed'))
-    && permission.sharingLevel === 'detailed'
-    && permission.detailedConsent === 'granted'
-  ) {
+  if (permission.sharingLevel === 'detailed' && permission.detailedConsent === 'granted') {
     return {
       allowedScope: 'detailed',
       canShareSummary: true,
       canShareDetailed: true,
       detailedSharingBlocked: false,
-      reason: 'Détail autorisé localement pour cet ami après consentement explicite.',
+      reason: 'Cet ami voit uniquement les informations personnalisées que tu as autorisées.',
       friendId: friend.id,
       friendHandle: friend.handle,
       permission,
@@ -741,7 +708,7 @@ export function evaluateFriendScopedActivitySharingGuard(
     canShareSummary: true,
     canShareDetailed: false,
     detailedSharingBlocked: true,
-    reason: 'Résumé partagé par défaut. Le détail reste verrouillé pour cet ami.',
+    reason: 'Cet ami voit uniquement un résumé de tes activités.',
     friendId: friend.id,
     friendHandle: friend.handle,
     permission,

@@ -15,7 +15,7 @@ class SocialFriendsError extends Error {
 }
 
 const FRIENDSHIP_STATUSES = new Set(['active', 'removed']);
-const SHARING_LEVELS = new Set(['summary', 'detailed']);
+const SHARING_LEVELS = new Set(['none', 'summary', 'detailed']);
 const DETAILED_CONSENT_STATUSES = new Set(['notRequested', 'granted']);
 
 function isSocialFriendsError(error) {
@@ -113,7 +113,7 @@ function sanitizeDetailedConsent(value, sharingLevel) {
   if (sharingLevel === 'detailed' && detailedConsent !== 'granted') {
     throw new SocialFriendsError(400, 'SOCIAL_FRIENDS_INVALID_CONSENT', 'Le détail nécessite un consentement explicite accordé.');
   }
-  return sharingLevel === 'summary' ? 'notRequested' : detailedConsent;
+  return sharingLevel === 'detailed' ? detailedConsent : 'notRequested';
 }
 
 function readDatabase(env = {}) {

@@ -4,17 +4,18 @@ import { join } from 'node:path';
 const root = process.cwd();
 const read = (path) => readFileSync(join(root, path), 'utf8').replace(/^\uFEFF/u, '');
 const assert = (condition, message) => {
-  if (!condition) throw new Error(`Audit social activity sharing settings 0.29.0 A9 échoué : ${message}`);
+  if (!condition) throw new Error(`Audit social activity sharing settings 0.29.0 A20 R3 échoué : ${message}`);
 };
 
 const requiredFiles = [
   'src/features/friends/components/SocialActivitySharingSettings.tsx',
   'src/features/friends/components/SocialActivitySharingSettings.test.tsx',
-  'src/shared/validation/socialActivitySharingSchema.ts',
-  'src/infrastructure/social-activity-snapshots/runtimeSocialActivityPrivacyReconciliation.ts',
-  'src/infrastructure/social-activity-snapshots/runtimeSocialActivityPrivacyReconciliation.test.ts',
+  'src/features/friends/pages/FriendsPrivacyPage.tsx',
+  'src/application/friends/socialActivityPublicationService.ts',
+  'src/domain/friends/friendship.ts',
+  'functions/_shared/socialActivitySnapshots.js',
+  'functions/_shared/socialFriends.js',
   'src/app/socialActivitySharingSettingsReadiness.test.ts',
-  'docs/architecture/social-activity-feed-0.29.0-a9.md',
 ];
 
 for (const file of requiredFiles) {
@@ -25,42 +26,34 @@ const settings = read('src/features/friends/components/SocialActivitySharingSett
 const privacyPage = read('src/features/friends/pages/FriendsPrivacyPage.tsx');
 const activityForm = read('src/features/activities/components/ActivityForm.tsx');
 const workoutPage = read('src/features/strength-sessions/pages/WorkoutSessionPage.tsx');
-const policy = read('src/domain/friends/socialActivitySharingPolicy.ts');
+const friendship = read('src/domain/friends/friendship.ts');
 const publication = read('src/application/friends/socialActivityPublicationService.ts');
-const reconciliation = read('src/infrastructure/social-activity-snapshots/runtimeSocialActivityPrivacyReconciliation.ts');
-const activityModel = read('src/domain/models/activity.ts');
-const strengthModel = read('src/domain/models/strength.ts');
-const backupSchemas = read('src/infrastructure/backup/backupSchemas.ts');
+const snapshotsServer = read('functions/_shared/socialActivitySnapshots.js');
+const friendsServer = read('functions/_shared/socialFriends.js');
 
 for (const token of [
-  'SocialActivityGlobalSharingSettings',
-  'SocialActivityOverrideSettings',
-  'min-h-11',
-  'sm:grid-cols-2',
-  'Les notes personnelles et les champs techniques restent toujours privés.',
+  "{ value: 'none', label: 'Aucun' }",
+  "{ value: 'summary', label: 'Résumé' }",
+  "{ value: 'detailed', label: 'Personnalisé' }",
+  'Partage : {modeLabel}',
+  'Musculation',
+  'Cardio',
+  'Visible uniquement lorsqu’il est renseigné.',
+  'Visibles uniquement lorsqu’elles sont calculées.',
 ]) {
-  assert(settings.includes(token), `éditeur de partage incomplet : ${token}`);
+  assert(settings.includes(token), `éditeur par ami incomplet : ${token}`);
 }
 
-for (const mode of ["'private'", "'summary'", "'detailed'", "'custom'"]) {
-  assert(settings.includes(mode), `mode global manquant : ${mode}`);
-}
-assert(settings.includes("'inherit'"), 'héritage global absent des surcharges par activité.');
+assert(!settings.includes("label: 'Graphique'"), 'le graphique est proposé sans série temporelle exploitable.');
+assert(privacyPage.includes('SocialActivityFriendSharingSettings'), 'la page amis ne branche pas le réglage par ami.');
+assert(!privacyPage.includes('SocialActivityGlobalSharingSettings'), 'un réglage global reste visible.');
+assert(!activityForm.includes('SocialActivityOverrideSettings'), 'le formulaire d’activité contient encore un réglage social.');
+assert(!activityForm.includes('Partage avec les amis'), 'le formulaire d’activité affiche encore le partage social.');
+assert(!workoutPage.includes('SocialActivityOverrideSettings'), 'la séance de musculation contient encore un réglage social.');
+assert(!workoutPage.includes('Enregistrer le partage'), 'la séance de musculation affiche encore une action de partage.');
+assert(friendship.includes("FriendActivityPermissionLevel = 'none' | 'summary' | 'detailed'"), 'le niveau aucun partage manque au domaine.');
+assert(publication.includes("override?.mode === 'private'"), 'la compatibilité avec les anciennes activités privées manque.');
+assert(snapshotsServer.includes("p.sharing_level <> 'none'"), 'la lecture serveur ne filtre pas le niveau aucun partage.');
+assert(friendsServer.includes("new Set(['none', 'summary', 'detailed'])"), 'le serveur de permissions ne valide pas les trois niveaux.');
 
-assert(privacyPage.includes('setSocialActivitySharingPolicy'), 'la page de confidentialité ne persiste pas la politique 0.29.');
-assert(privacyPage.includes('reconcilePrivacy'), 'la page de confidentialité ne réconcilie pas les snapshots existants.');
-assert(privacyPage.includes('reconcilePrivacy(persistSnapshot'), 'la réconciliation démarre avant la persistance des réglages.');
-assert(privacyPage.includes("disabled={snapshot.privacy.profileVisibility === 'private'}"), 'le profil privé ne neutralise pas l’éditeur global.');
-assert(activityForm.includes('SocialActivityOverrideSettings'), 'le formulaire d’activité ne propose pas de surcharge.');
-assert(workoutPage.includes('saveSocialSharing'), 'la séance de musculation ne sauvegarde pas sa surcharge.');
-assert(activityModel.includes('socialSharing?: SocialActivitySharingOverride'), 'le modèle Activity ne persiste pas la surcharge.');
-assert(strengthModel.includes('socialSharing?: SocialActivitySharingOverride'), 'le modèle WorkoutSession ne persiste pas la surcharge.');
-assert(publication.includes('activity.socialSharing'), 'la publication n’applique pas la surcharge de l’activité.');
-assert(publication.includes('session.socialSharing'), 'la publication n’applique pas la surcharge de la séance.');
-assert(reconciliation.includes('reconcileAllSocialActivityPrivacy'), 'le service de réconciliation globale est absent.');
-assert(policy.includes('socialActivityGlobalPolicyFromLegacyPrivacy'), 'la compatibilité du réglage historique est absente.');
-assert(backupSchemas.includes('socialActivitySharingOverrideSchema.optional()'), 'les sauvegardes ne valident pas les surcharges optionnelles.');
-assert(!settings.includes('commentaire privé'), 'un champ privé est présenté comme partageable.');
-assert(!settings.includes('notes personnelles:'), 'les notes personnelles sont proposées dans la sélection.');
-
-console.log('Audit social activity sharing settings 0.29.0 A9 OK');
+console.log('Audit social activity sharing settings 0.29.0 A20 R3 OK');

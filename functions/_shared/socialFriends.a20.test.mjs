@@ -242,6 +242,25 @@ describe('socialFriends A20', () => {
     });
   });
 
+  it('persiste aucun partage et réinitialise le consentement détaillé', async () => {
+    const database = new FakeDatabase();
+    database.addFriendship('user-owner@example.com', 'user-friend@example.com');
+    const payload = permissionPayload({
+      common: ['activityType', 'title', 'date', 'duration'],
+      cardio: ['distance'],
+      strength: ['exercises', 'sets', 'repetitions'],
+    });
+    payload.permission.sharingLevel = 'none';
+    payload.permission.detailedConsent = 'granted';
+
+    const result = await socialFriendsInternals.savePermission(database, payload);
+    expect(result.payload.permission).toMatchObject({
+      sharingLevel: 'none',
+      detailedConsent: 'notRequested',
+    });
+    expect(result.payload.permission).not.toHaveProperty('detailedConsentGrantedAt');
+  });
+
   it('conserve le standard détaillé pour une ancienne ligne sans JSON A20', async () => {
     const database = new FakeDatabase();
     database.permissions.set('user-owner@example.com->user-friend@example.com', {

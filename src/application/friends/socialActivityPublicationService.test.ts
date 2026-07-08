@@ -82,10 +82,12 @@ function privacySnapshot(input: {
   readonly policy?: SocialActivityGlobalSharingPolicy;
   readonly friends?: readonly FriendProfileSummary[];
   readonly detailedFriendIds?: readonly EntityId[];
+  readonly noneFriendIds?: readonly EntityId[];
   readonly fieldSelectionByFriendId?: Readonly<Record<string, SocialActivityFieldSelection>>;
 } = {}): FriendsPrivacySnapshot {
   const friends = input.friends ?? [friend('friend-summary', 'summary.friend')];
   const detailedFriendIds = new Set(input.detailedFriendIds ?? []);
+  const noneFriendIds = new Set(input.noneFriendIds ?? []);
 
   return {
     friends,
@@ -101,10 +103,13 @@ function privacySnapshot(input: {
       id: createFriendActivityPermissionId(candidate),
       ...(candidate.userId ? { friendUserId: candidate.userId } : {}),
       friendHandle: candidate.handle,
-      sharingLevel: detailedFriendIds.has(candidate.userId ?? candidate.id)
-        ? 'detailed'
-        : 'summary',
+      sharingLevel: noneFriendIds.has(candidate.userId ?? candidate.id)
+        ? 'none'
+        : detailedFriendIds.has(candidate.userId ?? candidate.id)
+          ? 'detailed'
+          : 'summary',
       detailedConsent: detailedFriendIds.has(candidate.userId ?? candidate.id)
+        && !noneFriendIds.has(candidate.userId ?? candidate.id)
         ? 'granted'
         : 'notRequested',
       ...(detailedFriendIds.has(candidate.userId ?? candidate.id)
@@ -190,16 +195,16 @@ function completedStrengthFixture(): {
 }
 
 describe('social activity publication service', () => {
-  it('traduit les réglages amis historiques vers le contrat 0.29 sans élargissement', () => {
+  it('ignore les anciens réglages globaux au profit des permissions par ami', () => {
     expect(socialActivityGlobalPolicyFromFriendsPrivacy(
       privacySnapshot({ sharing: 'summary-only' }),
-    ).visibility).toBe('summary');
+    ).visibility).toBe('detailed');
     expect(socialActivityGlobalPolicyFromFriendsPrivacy(
       privacySnapshot({ sharing: 'detailed' }),
     ).visibility).toBe('detailed');
     expect(socialActivityGlobalPolicyFromFriendsPrivacy(
       privacySnapshot({ sharing: 'disabled' }),
-    ).visibility).toBe('private');
+    ).visibility).toBe('detailed');
   });
 
   it('respecte une surcharge activité même si le champ historique reste désactivé', async () => {
@@ -237,7 +242,7 @@ describe('social activity publication service', () => {
     });
   });
 
-  it('conserve le verrou du profil privé malgré une surcharge activité', async () => {
+  it('laisse la permission ami décider même lorsque le profil social est privé', async () => {
     const repository = new MemoryPublicationRepository();
 
     const report = await reconcileStoredActivitySocialSnapshots({
@@ -260,8 +265,12 @@ describe('social activity publication service', () => {
       stagedAt: '2026-07-07T11:00:00.000Z',
     });
 
-    expect(report.activeSnapshotCount).toBe(0);
-    expect(repository.records.size).toBe(0);
+    expect(report.activeSnapshotCount).toBe(1);
+    expect(repository.records.size).toBe(1);
+    expect([...repository.records.values()][0]?.snapshot).toMatchObject({
+      state: 'active',
+      visibility: 'summary',
+    });
   });
 
   it('met en file un résumé par ami réel et ignore un contact local sans userId', async () => {
@@ -384,7 +393,7 @@ describe('social activity publication service', () => {
     });
   });
 
-  it('remplace les snapshots existants par des tombstones si le partage est désactivé', async () => {
+  it('remplace les snapshots existants par des tombstones si l’ami passe sur aucun partage', async () => {
     const repository = new MemoryPublicationRepository();
     const activity = runningActivity();
     await reconcileStoredActivitySocialSnapshots({
@@ -396,7 +405,7 @@ describe('social activity publication service', () => {
     const report = await reconcileStoredActivitySocialSnapshots({
       context: {
         identity,
-        privacySnapshot: privacySnapshot({ sharing: 'disabled' }),
+        privacySnapshot: privacySnapshot({ noneFriendIds: ['friend-summary'] }),
         repository,
       },
       activity: { ...activity, updatedAt: '2026-07-07T11:05:00.000Z' },
