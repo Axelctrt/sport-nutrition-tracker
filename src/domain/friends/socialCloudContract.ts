@@ -99,6 +99,10 @@ export interface SocialCloudFriendRequestPort {
 export interface SocialCloudFriendshipPort {
   readonly listFriendships: (userId: EntityId) => Promise<readonly CloudFriendship[]>;
   readonly upsertFriendship: (friendship: CloudFriendship) => Promise<SocialCloudMutationResult<CloudFriendship>>;
+  readonly removeFriendship?: (
+    userId: EntityId,
+    friendUserId: EntityId,
+  ) => Promise<SocialCloudMutationResult<CloudFriendship>>;
 }
 
 export interface SocialCloudFriendPermissionPort {
