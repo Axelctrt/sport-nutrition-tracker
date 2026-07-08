@@ -97,6 +97,21 @@ function readDatabase(env = {}) {
 
 async function ensureFriendRequestsSchema(database) {
   await database.prepare(`
+    CREATE TABLE IF NOT EXISTS social_directory_handles (
+      handle TEXT PRIMARY KEY,
+      owner_user_id TEXT NOT NULL,
+      owner_display_name TEXT NOT NULL,
+      reserved_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )
+  `).run();
+
+  await database.prepare(`
+    CREATE INDEX IF NOT EXISTS idx_social_directory_handles_owner
+    ON social_directory_handles(owner_user_id)
+  `).run();
+
+  await database.prepare(`
     CREATE TABLE IF NOT EXISTS social_friend_requests (
       id TEXT PRIMARY KEY,
       requester_user_id TEXT NOT NULL,
@@ -160,6 +175,52 @@ function requestFromRow(row) {
   return request;
 }
 
+function profileFromRow(row) {
+  return {
+    userId: row.owner_user_id,
+    handle: row.handle,
+    displayName: row.owner_display_name,
+    createdAt: row.reserved_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function fallbackProfile(userId, timestamp) {
+  return {
+    userId,
+    handle: userId.toLowerCase().replace(/[^a-z0-9._-]/gu, '').slice(0, 32) || 'sportpilot-user',
+    displayName: 'Utilisateur SportPilot',
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  };
+}
+
+async function readProfilesForRequests(database, rows, currentUserId) {
+  const timestamp = nowIso();
+  const profiles = [];
+  const seen = new Set();
+
+  for (const row of rows) {
+    const counterpartUserId = row.requester_user_id === currentUserId
+      ? row.recipient_user_id
+      : row.requester_user_id;
+    if (!counterpartUserId || seen.has(counterpartUserId)) continue;
+    seen.add(counterpartUserId);
+
+    const profileRow = await database.prepare(`
+      SELECT handle, owner_user_id, owner_display_name, reserved_at, updated_at
+      FROM social_directory_handles
+      WHERE owner_user_id = ?1
+      ORDER BY updated_at DESC
+      LIMIT 1
+    `).bind(counterpartUserId).first();
+
+    profiles.push(profileRow ? profileFromRow(profileRow) : fallbackProfile(counterpartUserId, timestamp));
+  }
+
+  return profiles;
+}
+
 async function readRequest(database, requestId) {
   return database.prepare(`
     SELECT id, requester_user_id, recipient_user_id, status, requested_at, responded_at, created_at, updated_at
@@ -219,13 +280,20 @@ async function sendFriendRequest(database, payload) {
     };
   }
 
-  if (existing && ['accepted', 'declined', 'cancelled'].includes(existing.status)) {
+  if (existing && ['declined', 'cancelled'].includes(existing.status)) {
+    await database.prepare(`
+      DELETE FROM social_friend_requests
+      WHERE id = ?1
+    `).bind(id).run();
+  }
+
+  if (existing?.status === 'accepted') {
     return {
       status: 409,
       payload: {
         status: 'conflict',
         code: 'SOCIAL_FRIEND_REQUESTS_TERMINAL_EXISTS',
-        message: 'Une ancienne demande cloud existe déjà pour cette relation userId.',
+        message: 'Cette demande a deja cree une amitie.',
         request: requestFromRow(existing),
       },
     };
@@ -257,12 +325,16 @@ async function listRequests(database, userId, direction) {
   const result = await database.prepare(`
     SELECT id, requester_user_id, recipient_user_id, status, requested_at, responded_at, created_at, updated_at
     FROM social_friend_requests
-    WHERE ${field} = ?1
+    WHERE ${field} = ?1 AND status = 'pending'
     ORDER BY requested_at DESC
     LIMIT 100
   `).bind(userId).all();
 
-  return Array.isArray(result?.results) ? result.results.map(requestFromRow) : [];
+  const rows = Array.isArray(result?.results) ? result.results : [];
+  return {
+    requests: rows.map(requestFromRow),
+    profiles: await readProfilesForRequests(database, rows, userId),
+  };
 }
 
 async function upsertFriendshipForAcceptedRequest(database, request, timestamp) {
@@ -310,15 +382,34 @@ async function updateFriendRequestStatus(database, payload) {
     };
   }
 
-  await database.prepare(`
-    UPDATE social_friend_requests
-    SET status = ?2, responded_at = ?3, updated_at = ?3
-    WHERE id = ?1
-  `).bind(requestId, status, respondedAt).run();
+  if (existing.status !== 'pending') {
+    return {
+      status: 409,
+      payload: {
+        status: 'conflict',
+        code: 'SOCIAL_FRIEND_REQUESTS_NOT_PENDING',
+        message: 'Cette demande nâ€™est plus en attente.',
+        request: requestFromRow(existing),
+      },
+    };
+  }
 
-  const updated = await readRequest(database, requestId);
+  const terminalRequest = {
+    ...existing,
+    status,
+    responded_at: respondedAt,
+    updated_at: respondedAt,
+  };
+
   if (status === 'accepted') {
-    await upsertFriendshipForAcceptedRequest(database, updated, respondedAt);
+    await upsertFriendshipForAcceptedRequest(database, terminalRequest, respondedAt);
+  }
+
+  if (status === 'accepted' || status === 'declined' || status === 'cancelled') {
+    await database.prepare(`
+      DELETE FROM social_friend_requests
+      WHERE id = ?1
+    `).bind(requestId).run();
   }
 
   return {
@@ -326,7 +417,7 @@ async function updateFriendRequestStatus(database, payload) {
     payload: {
       status: 'updated',
       message: `Demande cloud ${status}.`,
-      request: requestFromRow(updated),
+      request: requestFromRow(terminalRequest),
     },
   };
 }
@@ -373,8 +464,8 @@ export async function handleSocialFriendRequestIncomingRequest(request, env = {}
     const database = readDatabase(env);
     const url = new URL(request.url);
     const userId = sanitizeUserId(url.searchParams.get('userId'), 'userId');
-    const requests = await listRequests(database, userId, 'incoming');
-    return jsonResponse(200, { status: 'found', message: 'Demandes entrantes synchronisées.', requests });
+    const result = await listRequests(database, userId, 'incoming');
+    return jsonResponse(200, { status: 'found', message: 'Demandes entrantes synchronisées.', ...result });
   } catch (error) {
     return errorResponse(error);
   }
@@ -387,8 +478,8 @@ export async function handleSocialFriendRequestOutgoingRequest(request, env = {}
     const database = readDatabase(env);
     const url = new URL(request.url);
     const userId = sanitizeUserId(url.searchParams.get('userId'), 'userId');
-    const requests = await listRequests(database, userId, 'outgoing');
-    return jsonResponse(200, { status: 'found', message: 'Demandes sortantes synchronisées.', requests });
+    const result = await listRequests(database, userId, 'outgoing');
+    return jsonResponse(200, { status: 'found', message: 'Demandes sortantes synchronisées.', ...result });
   } catch (error) {
     return errorResponse(error);
   }

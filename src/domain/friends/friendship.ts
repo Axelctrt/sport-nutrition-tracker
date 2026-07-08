@@ -419,9 +419,7 @@ export function acceptFriendRequest(
   return ensureFriendActivityPermissions({
     ...snapshot,
     friends: nextFriends,
-    requests: snapshot.requests.map((candidate) => (
-      candidate.id === requestId ? { ...candidate, status: 'accepted' } : candidate
-    )),
+    requests: snapshot.requests.filter((candidate) => candidate.id !== requestId),
   });
 }
 
@@ -431,10 +429,8 @@ export function declineFriendRequest(
 ): FriendsPrivacySnapshot {
   return {
     ...snapshot,
-    requests: snapshot.requests.map((request) => (
-      request.id === requestId && request.status === 'pending'
-        ? { ...request, status: 'declined' }
-        : request
+    requests: snapshot.requests.filter((request) => (
+      request.id !== requestId || request.status !== 'pending'
     )),
   };
 }
