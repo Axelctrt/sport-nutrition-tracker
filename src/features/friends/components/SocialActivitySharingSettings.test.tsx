@@ -1,97 +1,112 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { useState } from 'react';
 import { vi } from 'vitest';
+
 import {
+  ALL_SOCIAL_ACTIVITY_FIELD_SELECTION,
   DEFAULT_DETAILED_SOCIAL_ACTIVITY_FIELD_SELECTION,
-  DEFAULT_SOCIAL_ACTIVITY_GLOBAL_SHARING_POLICY,
-  type SocialActivityGlobalSharingPolicy,
-  type SocialActivitySharingOverride,
 } from '@/domain/friends/socialActivitySharingPolicy';
-import {
-  SocialActivityFriendFieldSelectionSettings,
-  SocialActivityGlobalSharingSettings,
-  SocialActivityOverrideSettings,
-} from '@/features/friends/components/SocialActivitySharingSettings';
+import { SocialActivityFriendSharingSettings } from '@/features/friends/components/SocialActivitySharingSettings';
 
-function GlobalHarness() {
-  const [value, setValue] = useState<SocialActivityGlobalSharingPolicy>(
-    DEFAULT_SOCIAL_ACTIVITY_GLOBAL_SHARING_POLICY,
-  );
-  return <SocialActivityGlobalSharingSettings value={value} onChange={setValue} />;
-}
-
-function OverrideHarness() {
-  const [value, setValue] = useState<SocialActivitySharingOverride>({ mode: 'inherit' });
-  return <SocialActivityOverrideSettings family="strength" value={value} onChange={setValue} />;
-}
-
-describe('SocialActivitySharingSettings', () => {
-  it('permet de choisir une politique globale personnalisée sans proposer les notes privées', async () => {
+describe('SocialActivityFriendSharingSettings', () => {
+  it('présente un réglage compact centré sur l’ami', async () => {
     const user = userEvent.setup();
-    render(<GlobalHarness />);
-
-    await user.click(screen.getByRole('button', { name: 'Personnalisé' }));
-
-    expect(screen.getByLabelText('Calories')).toBeInTheDocument();
-    expect(screen.getByLabelText('Charges')).toBeInTheDocument();
-    expect(screen.queryByLabelText(/notes/i)).not.toBeInTheDocument();
-    expect(screen.getByText(/restent toujours privés/u)).toBeInTheDocument();
-  });
-
-  it('limite les champs personnalisés à la famille musculation pour une séance', async () => {
-    const user = userEvent.setup();
-    render(<OverrideHarness />);
-
-    await user.click(screen.getByRole('button', { name: 'Personnalisée' }));
-
-    expect(screen.getByLabelText('Charges')).toBeInTheDocument();
-    expect(screen.queryByLabelText('Distance')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Personnalisée' })).toHaveAttribute('aria-pressed', 'true');
-  });
-
-  it('enregistre une sélection propre à un ami sans proposer les notes privées', async () => {
-    const user = userEvent.setup();
-    const onSave = vi.fn();
     render(
-      <SocialActivityFriendFieldSelectionSettings
+      <SocialActivityFriendSharingSettings
         friendDisplayName="Lina"
+        sharingLevel="summary"
         value={DEFAULT_DETAILED_SOCIAL_ACTIVITY_FIELD_SELECTION}
-        onSave={onSave}
+        onSharingLevelChange={vi.fn()}
+        onSaveFields={vi.fn()}
       />,
     );
 
-    await user.click(screen.getByText(/Choisir les informations partagées avec Lina/u));
-    expect(screen.getByLabelText('Charges')).toBeChecked();
+    expect(screen.getByText('Partage : Résumé')).toBeInTheDocument();
+    expect(screen.getByText('Partage : Résumé').closest('details')).not.toHaveAttribute('open');
+
+    await user.click(screen.getByText('Partage : Résumé'));
+
+    expect(screen.getByRole('button', { name: 'Aucun' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Résumé' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Personnalisé' })).toBeInTheDocument();
+  });
+
+  it('permet de désactiver tout partage pour un ami', async () => {
+    const user = userEvent.setup();
+    const onSharingLevelChange = vi.fn();
+    render(
+      <SocialActivityFriendSharingSettings
+        friendDisplayName="Lina"
+        sharingLevel="summary"
+        value={DEFAULT_DETAILED_SOCIAL_ACTIVITY_FIELD_SELECTION}
+        onSharingLevelChange={onSharingLevelChange}
+        onSaveFields={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByText('Partage : Résumé'));
+    await user.click(screen.getByRole('button', { name: 'Aucun' }));
+
+    expect(onSharingLevelChange).toHaveBeenCalledWith('none');
+  });
+
+  it('regroupe les champs personnalisés dans deux rubriques compactes', async () => {
+    const user = userEvent.setup();
+    render(
+      <SocialActivityFriendSharingSettings
+        friendDisplayName="Lina"
+        sharingLevel="detailed"
+        value={DEFAULT_DETAILED_SOCIAL_ACTIVITY_FIELD_SELECTION}
+        onSharingLevelChange={vi.fn()}
+        onSaveFields={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByText('Partage : Personnalisé'));
+
+    expect(screen.getByText('Musculation')).toBeInTheDocument();
+    expect(screen.getByText('Cardio')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Graphique')).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/notes/i)).not.toBeInTheDocument();
 
-    await user.click(screen.getByLabelText('Charges'));
-    await user.click(screen.getByRole('button', { name: 'Enregistrer les champs' }));
+    await user.click(screen.getByText('Musculation'));
+    expect(screen.getByLabelText(/RPE des séries/u)).toBeInTheDocument();
+    expect(screen.getByText(/uniquement lorsqu’il est renseigné/u)).toBeInTheDocument();
 
-    expect(onSave).toHaveBeenCalledTimes(1);
-    expect(onSave.mock.calls[0]?.[0].strength).not.toContain('loads');
+    await user.click(screen.getByText('Cardio'));
+    expect(screen.getByLabelText(/Calories/u)).toBeInTheDocument();
+    expect(screen.getByText(/uniquement lorsqu’elles sont calculées/u)).toBeInTheDocument();
   });
 
-  it('réinitialise les champs d’un ami vers le standard détaillé', async () => {
+  it('enregistre une sélection propre à un ami et retire les anciens champs invisibles', async () => {
     const user = userEvent.setup();
-    const onSave = vi.fn();
+    const onSaveFields = vi.fn();
     render(
-      <SocialActivityFriendFieldSelectionSettings
+      <SocialActivityFriendSharingSettings
         friendDisplayName="Lina"
-        value={{
-          common: ['activityType', 'date', 'duration'],
-          cardio: ['distance'],
-          strength: ['exercises', 'sets', 'repetitions'],
-        }}
-        onSave={onSave}
+        sharingLevel="detailed"
+        value={ALL_SOCIAL_ACTIVITY_FIELD_SELECTION}
+        onSharingLevelChange={vi.fn()}
+        onSaveFields={onSaveFields}
       />,
     );
 
-    await user.click(screen.getByText(/Choisir les informations partagées avec Lina/u));
-    await user.click(screen.getByRole('button', { name: 'Réinitialiser le standard' }));
-    await user.click(screen.getByRole('button', { name: 'Enregistrer les champs' }));
+    await user.click(screen.getByText('Partage : Personnalisé'));
+    await user.click(screen.getByText('Musculation'));
 
-    expect(onSave.mock.calls[0]?.[0]).toEqual(DEFAULT_DETAILED_SOCIAL_ACTIVITY_FIELD_SELECTION);
+    const strengthGroup = screen.getByText('Musculation').closest('details');
+    expect(strengthGroup).not.toBeNull();
+    await user.click(within(strengthGroup!).getByLabelText('Charges'));
+    await user.click(screen.getByRole('button', { name: 'Enregistrer' }));
+
+    expect(onSaveFields).toHaveBeenCalledTimes(1);
+    const selection = onSaveFields.mock.calls[0]?.[0];
+    expect(selection.strength).not.toContain('loads');
+    expect(selection.strength).not.toContain('bodyweight');
+    expect(selection.cardio).not.toContain('chart');
+    expect(selection.cardio).not.toContain('paceSeries');
+    expect(selection.cardio).not.toContain('sessionType');
+    expect(selection.common).not.toContain('intensity');
+    expect(selection.common).toEqual(expect.arrayContaining(['activityType', 'title', 'date', 'duration']));
   });
-
 });

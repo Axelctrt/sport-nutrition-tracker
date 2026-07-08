@@ -138,16 +138,6 @@ export function buildSocialActivityFeed(
   privacySnapshot: FriendsPrivacySnapshot,
   snapshots: readonly SocialActivitySnapshot[],
 ): SocialActivityFeedState {
-  if (privacySnapshot.privacy.profileVisibility === 'private' || privacySnapshot.privacy.activitySharing === 'disabled') {
-    return {
-      status: 'sharingDisabled',
-      message: 'Partage d’activité désactivé : aucun snapshot n’est affiché.',
-      items: [],
-      hiddenSnapshotCount: snapshots.length,
-      rawActivityShared: false,
-    };
-  }
-
   if (privacySnapshot.friends.length === 0) {
     return {
       status: 'noFriends',

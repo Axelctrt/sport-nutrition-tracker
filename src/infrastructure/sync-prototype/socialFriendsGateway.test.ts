@@ -138,6 +138,34 @@ describe('socialFriendsGateway', () => {
     }]);
   });
 
+  it('accepte le niveau aucun partage renvoyé par le serveur', async () => {
+    const gateway = createSocialFriendsGateway({
+      endpoint: '/api/social-friends',
+      fetcher: async () => jsonResponse(200, {
+        status: 'found',
+        permissions: [{
+          id: 'cloud-friend-permission:social-user:alex->social-user:lina',
+          friendUserId: 'social-user:lina',
+          friendHandle: 'lina.trail',
+          sharingLevel: 'none',
+          detailedConsent: 'notRequested',
+          fieldSelection: {
+            common: ['activityType', 'title', 'date', 'duration'],
+            cardio: ['distance'],
+            strength: ['exercises', 'sets', 'repetitions'],
+          },
+        }],
+      }),
+    });
+
+    await expect(gateway.permissionPort.listPermissions(
+      'social-user:alex' as EntityId,
+    )).resolves.toMatchObject([{
+      sharingLevel: 'none',
+      detailedConsent: 'notRequested',
+    }]);
+  });
+
   it('dégrade une sélection serveur invalide vers le résumé prudent', async () => {
     const gateway = createSocialFriendsGateway({
       endpoint: '/api/social-friends',

@@ -154,7 +154,7 @@ class FakeStatement {
       if (!row || row.recipient_user_id !== recipient || row.state !== 'active') return null;
       if (!this.database.friendships.has(this.database.pair(row.owner_user_id, recipient))) return null;
       const permission = this.database.permissions.get(`${row.owner_user_id}->${recipient}`);
-      if (!permission) return null;
+      if (!permission || permission.sharing_level === 'none') return null;
       return {
         snapshot_id: row.snapshot_id,
         snapshot_json: row.snapshot_json,
@@ -197,7 +197,10 @@ class FakeStatement {
       let rows = [...this.database.snapshots.values()]
         .filter((row) => row.recipient_user_id === recipient && row.state === 'active')
         .filter((row) => this.database.friendships.has(this.database.pair(row.owner_user_id, recipient)))
-        .filter((row) => this.database.permissions.has(`${row.owner_user_id}->${recipient}`))
+        .filter((row) => {
+          const permission = this.database.permissions.get(`${row.owner_user_id}->${recipient}`);
+          return permission && permission.sharing_level !== 'none';
+        })
         .map((row) => {
           const permission = this.database.permissions.get(`${row.owner_user_id}->${recipient}`);
           return {
@@ -458,6 +461,14 @@ describe('social activity snapshots Pages Functions', () => {
       { mutationSequence: 1, snapshot },
     ).catch((error) => error);
     expect(result).toMatchObject({ code: 'SOCIAL_ACTIVITY_SCOPE_EXCEEDED' });
+
+    database.addPermission(snapshot.ownerUserId, snapshot.recipientUserId, 'none', 'notRequested');
+    result = await socialActivitySnapshotsInternals.persistSnapshotMutation(
+      database,
+      snapshot.ownerUserId,
+      { mutationSequence: 1, snapshot: activeSnapshot() },
+    ).catch((error) => error);
+    expect(result).toMatchObject({ code: 'SOCIAL_ACTIVITY_SHARING_DISABLED' });
   });
 
   it('gère create, idempotence, stale et conflit de séquence', async () => {
@@ -632,6 +643,33 @@ describe('social activity snapshots Pages Functions', () => {
     )).resolves.toMatchObject({
       visibility: 'summary',
       summary: { durationMinutes: 42, distanceKm: 8 },
+    });
+  });
+
+  it('retire immédiatement le fil et le détail lorsque la permission passe sur aucun partage', async () => {
+    const database = new FakeD1Database();
+    const snapshot = activeSnapshot();
+    database.addFriendship(snapshot.ownerUserId, snapshot.recipientUserId);
+    database.addPermission(snapshot.ownerUserId, snapshot.recipientUserId, 'summary', 'notRequested');
+    await socialActivitySnapshotsInternals.persistSnapshotMutation(database, snapshot.ownerUserId, {
+      mutationSequence: 1,
+      snapshot,
+    });
+
+    database.addPermission(snapshot.ownerUserId, snapshot.recipientUserId, 'none', 'notRequested');
+
+    await expect(socialActivitySnapshotsInternals.listFeed(
+      database,
+      snapshot.recipientUserId,
+      new URL('https://sportpilot.pages.dev/api/social-activity-feed'),
+    )).resolves.toMatchObject({ items: [] });
+    await expect(socialActivitySnapshotsInternals.readSnapshotDetail(
+      database,
+      snapshot.recipientUserId,
+      snapshot.snapshotId,
+    )).rejects.toMatchObject({
+      status: 404,
+      code: 'SOCIAL_ACTIVITY_NOT_FOUND',
     });
   });
 

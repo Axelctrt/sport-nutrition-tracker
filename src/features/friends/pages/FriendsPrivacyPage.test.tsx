@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { EntityId } from '@/domain/models/common';
 import {
@@ -103,20 +103,20 @@ describe('FriendsPrivacyPage', () => {
     expect(screen.getByText(/Le userId interne reste privé/u)).toBeInTheDocument();
     expect(screen.getByText('Léa Cardio')).toBeInTheDocument();
     expect(screen.getByText('Nora Trail')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Privé' })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByText(/Les données détaillées restent privées/u)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Visible par les amis' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByText(/Chaque nouvel ami voit un résumé par défaut/u)).toBeInTheDocument();
     expect(screen.getByText('Fil d’activité sécurisé 0.29')).toBeInTheDocument();
     expect(screen.getByText(/uniquement des snapshots filtrés/u)).toBeInTheDocument();
     expect(screen.getByText(/détail est revérifié par le serveur/u)).toBeInTheDocument();
     expect(screen.getByText(/Likes, commentaires, messagerie, défis/u)).toBeInTheDocument();
     expect(screen.getByText(/migration D1 et le déploiement/u)).toBeInTheDocument();
     expect(screen.getByText('Fil d’activité amis')).toBeInTheDocument();
-    expect(screen.getAllByText(/Partage d’activité désactivé : aucun snapshot n’est affiché/u).length).toBeGreaterThan(0);
-    expect(screen.getByText(/Permission : Résumé uniquement/u)).toBeInTheDocument();
+    expect(screen.getByText('Partage : Résumé')).toBeInTheDocument();
+    expect(screen.getByText(/Ce que Léa Cardio peut voir/u)).toBeInTheDocument();
   });
 
 
-  it('demande la synchronisation du compte après une modification de la politique globale', async () => {
+  it('synchronise la visibilité du profil sans modifier les permissions par ami', async () => {
     const user = userEvent.setup();
     const repository: FriendsPrivacySnapshotRepository = {
       readSnapshot: vi.fn(async () => snapshot),
@@ -130,15 +130,16 @@ describe('FriendsPrivacyPage', () => {
 
     try {
       renderPage({ repository });
-      await user.click(screen.getByRole('button', { name: 'Résumé' }));
+      await user.click(screen.getByRole('button', { name: 'Profil privé' }));
 
       await waitFor(() => {
         expect(repository.saveSnapshot).toHaveBeenCalled();
         expect(details).toContainEqual({
           domainIds: ['account-preferences'],
-          reason: 'social-activity-sharing-policy-update',
+          reason: 'social-profile-visibility-update',
         });
       });
+      expect(screen.getByText('Partage : Résumé')).toBeInTheDocument();
     } finally {
       window.removeEventListener(SYNC_LOCAL_DATA_CHANGED_EVENT, listener);
     }
@@ -298,18 +299,15 @@ describe('FriendsPrivacyPage', () => {
     expect(screen.getByText('@alex.run')).toBeInTheDocument();
   });
 
-  it('recharge la politique locale lorsqu’une préférence sociale arrive du cloud', async () => {
+  it('recharge les permissions par ami lorsqu’une préférence sociale arrive du cloud', async () => {
+    const detailedSnapshot = updateFriendActivityPermission(
+      snapshot,
+      'social-user:lea' as EntityId,
+      'detailed',
+      '2026-07-08T12:00:00.000Z',
+    );
     const repository: FriendsPrivacySnapshotRepository = {
-      readSnapshot: vi.fn(async () => ({
-        ...snapshot,
-        privacy: {
-          ...snapshot.privacy,
-          socialActivitySharingPolicy: {
-            ...snapshot.privacy.socialActivitySharingPolicy!,
-            visibility: 'detailed' as const,
-          },
-        },
-      })),
+      readSnapshot: vi.fn(async () => detailedSnapshot),
       saveSnapshot: vi.fn(async () => undefined),
     };
 
@@ -317,8 +315,7 @@ describe('FriendsPrivacyPage', () => {
     window.dispatchEvent(new Event(SOCIAL_ACTIVITY_PRIVACY_CHANGED_EVENT));
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Détaillé' }))
-        .toHaveAttribute('aria-pressed', 'true');
+      expect(screen.getByText('Partage : Personnalisé')).toBeInTheDocument();
     });
   });
 
@@ -410,7 +407,7 @@ describe('FriendsPrivacyPage', () => {
 
     expect(await screen.findByText(/Demande acceptée/u)).toBeInTheDocument();
     expect(await screen.findByText(/2 amis/u)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Privé' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getAllByText('Partage : Résumé')).toHaveLength(2);
   });
 
   it('envoie une demande réelle vers un identifiant trouvé et bloque les doublons', async () => {
@@ -525,19 +522,16 @@ describe('FriendsPrivacyPage', () => {
     expect(await screen.findByText(/toi-même/u)).toBeInTheDocument();
   });
 
-  it('règle le détail ami par ami après consentement explicite local', async () => {
+  it('règle le partage personnalisé directement depuis la carte de l’ami', async () => {
     const user = userEvent.setup();
     renderPage();
 
-    expect(screen.getByRole('button', { name: 'Autoriser le détail' })).not.toBeDisabled();
+    await user.click(screen.getByText('Gérer'));
+    await user.click(screen.getByRole('button', { name: 'Personnalisé' }));
 
-    await user.click(screen.getByRole('button', { name: 'Détaillé' }));
-    await user.click(screen.getByRole('button', { name: 'Autoriser le détail' }));
-
-    expect(screen.getByText(/Consentement détaillé enregistré pour cet ami/u)).toBeInTheDocument();
-    expect(screen.getByText(/Permission : Détail autorisé/u)).toBeInTheDocument();
-    expect(screen.getAllByText(/Détail autorisé localement pour cet ami/u).length).toBeGreaterThan(0);
-    expect(screen.getByText(/snapshots sociaux filtrés peuvent utiliser ce niveau/u)).toBeInTheDocument();
+    expect((await screen.findAllByText(/Partage personnalisé enregistré pour cet ami/u)).length).toBeGreaterThan(0);
+    expect(screen.getByText('Partage : Personnalisé')).toBeInTheDocument();
+    expect(screen.getByText(/1 détail autorisé/u)).toBeInTheDocument();
   });
 
   it('synchronise la permission serveur pour un ami local enrichi par friendship cloud', async () => {
@@ -604,8 +598,8 @@ describe('FriendsPrivacyPage', () => {
 
     renderPage({ initialSnapshot: localOnlySnapshot, socialFriendsGateway });
 
-    await user.click(screen.getByRole('button', { name: 'Détaillé' }));
-    await user.click(screen.getByRole('button', { name: 'Autoriser le détail' }));
+    await user.click(screen.getByText('Gérer'));
+    await user.click(screen.getByRole('button', { name: 'Personnalisé' }));
 
     expect((await screen.findAllByText(/Permission ami serveur créée/u)).length).toBeGreaterThan(0);
     expect(savedPermissions).toEqual([
@@ -652,7 +646,8 @@ describe('FriendsPrivacyPage', () => {
       />,
     );
 
-    await user.click(screen.getByRole('button', { name: 'Autoriser le détail' }));
+    await user.click(screen.getByText('Gérer'));
+    await user.click(screen.getByRole('button', { name: 'Personnalisé' }));
     await waitFor(() => expect(savePermission).toHaveBeenCalledOnce());
     expect(privacyReconciliation).not.toHaveBeenCalled();
 
@@ -701,9 +696,12 @@ describe('FriendsPrivacyPage', () => {
       />,
     );
 
-    await user.click(screen.getByText(/Choisir les informations partagées avec Léa Cardio/u));
+    await user.click(screen.getByText('Gérer'));
+    await user.click(screen.getByText('Musculation'));
     await user.click(screen.getByLabelText('Charges'));
-    await user.click(screen.getByRole('button', { name: 'Enregistrer les champs' }));
+    const sharingPanel = screen.getByText('Partage : Personnalisé').closest('details');
+    if (!sharingPanel) throw new Error('Panneau de partage attendu.');
+    await user.click(within(sharingPanel).getByRole('button', { name: 'Enregistrer' }));
 
     await waitFor(() => expect(savePermission).toHaveBeenCalledOnce());
     const savedPermission = savePermission.mock.calls[0]?.[1];
@@ -859,20 +857,20 @@ describe('FriendsPrivacyPage', () => {
   });
 
 
-  it('enregistre le niveau global 0.29 et déclenche la remise en cohérence des snapshots', async () => {
+  it('enregistre aucun partage pour un ami et réconcilie ses snapshots', async () => {
     const user = userEvent.setup();
     const privacyReconciliation = vi.fn(async () => undefined);
     renderPage({ privacyReconciliation });
 
-    await user.click(screen.getByRole('button', { name: 'Résumé' }));
+    await user.click(screen.getByText('Gérer'));
+    await user.click(screen.getByRole('button', { name: 'Aucun' }));
 
     expect(await screen.findByText(/snapshots sociaux remis en cohérence/u)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Résumé' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByText('Partage : Aucun')).toBeInTheDocument();
     expect(privacyReconciliation).toHaveBeenCalledOnce();
   });
 
-
-  it('attend la persistance des réglages avant de réconcilier les snapshots', async () => {
+  it('attend la persistance de la permission ami avant de réconcilier les snapshots', async () => {
     const user = userEvent.setup();
     let resolveSave: (() => void) | undefined;
     const repository: FriendsPrivacySnapshotRepository = {
@@ -884,7 +882,8 @@ describe('FriendsPrivacyPage', () => {
     const privacyReconciliation = vi.fn(async () => undefined);
 
     renderPage({ repository, privacyReconciliation });
-    await user.click(screen.getByRole('button', { name: 'Résumé' }));
+    await user.click(screen.getByText('Gérer'));
+    await user.click(screen.getByRole('button', { name: 'Aucun' }));
 
     expect(repository.saveSnapshot).toHaveBeenCalledOnce();
     expect(privacyReconciliation).not.toHaveBeenCalled();
@@ -894,7 +893,7 @@ describe('FriendsPrivacyPage', () => {
     expect(privacyReconciliation).toHaveBeenCalledOnce();
   });
 
-  it('neutralise le réglage global lorsque le profil est privé sans effacer sa valeur configurée', () => {
+  it('conserve le partage par ami lorsque le profil social devient privé', () => {
     renderPage({
       initialSnapshot: {
         ...snapshot,
@@ -902,21 +901,13 @@ describe('FriendsPrivacyPage', () => {
           ...snapshot.privacy,
           profileVisibility: 'private',
           activitySharing: 'disabled',
-          socialActivitySharingPolicy: {
-            visibility: 'detailed',
-            fields: {
-              common: ['activityType', 'title', 'date', 'duration'],
-              cardio: ['distance', 'pace'],
-              strength: ['sessionName', 'exercises', 'sets', 'repetitions'],
-            },
-          },
         },
       },
     });
 
-    expect(screen.getByText(/neutralise temporairement ce réglage/u)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Détaillé' })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('button', { name: 'Détaillé' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Profil privé' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByText('Partage : Résumé')).toBeInTheDocument();
+    expect(screen.getByText(/Le partage des activités se règle séparément pour chaque ami/u)).toBeInTheDocument();
   });
 
 });
@@ -965,7 +956,7 @@ it('supprime un ami après confirmation et succès serveur', async () => {
   try {
     renderPage({ socialFriendsGateway });
 
-    await user.click(screen.getByRole('button', { name: /Supprimer cet ami/u }));
+    await user.click(screen.getByRole('button', { name: 'Supprimer' }));
 
     await waitFor(() => {
       expect(removeFriendship).toHaveBeenCalledWith(identity.userId, 'social-user:lea');

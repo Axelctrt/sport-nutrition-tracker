@@ -6,7 +6,6 @@ import { estimateActivityCalories } from '@/domain/calculations/activityCalories
 import { calculateRunningPaceSecondsPerKm, calculateRunningSteps, formatPace } from '@/domain/calculations/running';
 import { calculateSwimmingPaceSecondsPer100Meters } from '@/domain/calculations/swimming';
 import { calculateAverageSpeedKmh, calculatePoolLengths } from '@/domain/calculations/endurance';
-import { socialActivityFamilyForType } from '@/domain/friends/socialActivitySharingPolicy';
 import type { ActivityType } from '@/domain/models/activity';
 import type { AppSettings } from '@/domain/models/settings';
 import {
@@ -23,11 +22,7 @@ import {
   swimmingSessionLabels,
   terrainLabels,
 } from '@/features/activities/utils/activityLabels';
-import { SocialActivityOverrideSettings } from '@/features/friends/components/SocialActivitySharingSettings';
-import {
-  socialSharingOverrideToFormValue,
-  toActivityDraft,
-} from '@/features/activities/utils/activityForm';
+import { toActivityDraft } from '@/features/activities/utils/activityForm';
 import { checkboxClassName, inputClassName } from '@/shared/forms/formStyles';
 import { focusFirstInvalidField } from '@/shared/hooks/focusFirstInvalidField';
 import { Button } from '@/shared/ui/Button';
@@ -498,23 +493,6 @@ export function ActivityForm({
             </FormField>
           </div>
         </details>
-      </Card>
-
-      <Card className="p-4 sm:p-5">
-        <h2 className="font-semibold text-slate-950 dark:text-white">Partage avec les amis</h2>
-        <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
-          Ce choix s’applique uniquement à cette activité et peut remplacer le réglage global.
-        </p>
-        <div className="mt-4">
-          <SocialActivityOverrideSettings
-            family={socialActivityFamilyForType(activityType)}
-            value={values.socialSharing}
-            onChange={(socialSharing) => setValue('socialSharing', socialSharingOverrideToFormValue(socialSharing), {
-              shouldDirty: true,
-              shouldValidate: true,
-            })}
-          />
-        </div>
       </Card>
 
       <Card className="border-brand-200 bg-brand-50/70 p-4 dark:border-brand-900 dark:bg-brand-950/30 sm:p-5" aria-live="polite">

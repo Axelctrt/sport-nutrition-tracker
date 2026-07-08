@@ -185,12 +185,12 @@ describe('friendship domain', () => {
       detailedConsent: 'granted',
       detailedConsentGrantedAt: '2026-07-05T12:00:00.000Z',
     });
-    expect(canExposeFriendActivityDetails(detailedSnapshot)).toBe(false);
+    expect(canExposeFriendActivityDetails(detailedSnapshot)).toBe(true);
     expect(canExposeFriendActivityDetailsToFriend(detailedSnapshot, friend)).toBe(true);
   });
 
 
-  it('évalue une surcharge d’activité sans laisser le champ historique la bloquer', () => {
+  it('ignore les anciens modes d’activité et applique uniquement la permission de l’ami', () => {
     const friend = {
       id: 'social-user:nora' as EntityId,
       userId: 'social-user:nora' as EntityId,
@@ -214,12 +214,13 @@ describe('friendship domain', () => {
       canShareDetailed: false,
     });
     expect(evaluateFriendScopedActivitySharingGuard(snapshot, friend, 'private')).toMatchObject({
-      allowedScope: 'none',
-      canShareSummary: false,
+      allowedScope: 'summary',
+      canShareSummary: true,
+      canShareDetailed: false,
     });
   });
 
-  it('maintient le verrou absolu du profil privé malgré une visibilité demandée', () => {
+  it('sépare la visibilité du profil des permissions de partage par ami', () => {
     const friend = {
       id: 'social-user:nora' as EntityId,
       userId: 'social-user:nora' as EntityId,
@@ -238,10 +239,37 @@ describe('friendship domain', () => {
     };
 
     expect(evaluateFriendScopedActivitySharingGuard(snapshot, friend, 'detailed')).toMatchObject({
+      allowedScope: 'summary',
+      canShareSummary: true,
+      canShareDetailed: false,
+    });
+  });
+
+
+  it('permet de couper tout partage pour un ami sans modifier les autres réglages', () => {
+    const friend = {
+      id: 'social-user:nora' as EntityId,
+      userId: 'social-user:nora' as EntityId,
+      displayName: 'Nora Trail',
+      handle: 'nora.trail',
+      initials: 'NT',
+    };
+    const disabledSnapshot = updateFriendActivityPermission({
+      ...baseSnapshot,
+      friends: [friend],
+    }, friend.id, 'none', '2026-07-05T12:00:00.000Z');
+
+    expect(disabledSnapshot.activityPermissions?.[0]).toMatchObject({
+      friendUserId: friend.userId,
+      sharingLevel: 'none',
+      detailedConsent: 'notRequested',
+    });
+    expect(evaluateFriendScopedActivitySharingGuard(disabledSnapshot, friend)).toMatchObject({
       allowedScope: 'none',
       canShareSummary: false,
       canShareDetailed: false,
     });
+    expect(summarizeFriendsPrivacy(disabledSnapshot).sharingEnabled).toBe(false);
   });
 
   it('conserve la politique de partage configurée lorsque le profil devient privé', () => {

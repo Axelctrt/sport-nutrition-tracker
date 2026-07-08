@@ -4,12 +4,10 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { getWorkoutSessionTitle } from '@/application/strength/workoutSessionService';
 import { routePaths } from '@/app/routePaths';
 import type { StrengthSetChanges } from '@/application/strength/strengthSetService';
-import { SOCIAL_ACTIVITY_OVERRIDE_MODE_LABELS, type SocialActivitySharingOverride } from '@/domain/friends/socialActivitySharingPolicy';
 import type { StrengthSet, WorkoutSessionExercise } from '@/domain/models/strength';
 import { createDefaultAppSettings } from '@/domain/defaults/appSettings';
 import { buildExerciseGroups, exerciseGroupPosition, groupRestAfterExercise } from '@/domain/strength/exerciseGroups';
 import { ProgressionSuggestionsPanel } from '@/features/strength-progression/components/ProgressionSuggestionsPanel';
-import { SocialActivityOverrideSettings } from '@/features/friends/components/SocialActivitySharingSettings';
 import { WorkoutExerciseCard } from '@/features/strength-sessions/components/WorkoutExerciseCard';
 import { WorkoutSessionActionBar } from '@/features/strength-sessions/components/WorkoutSessionActionBar';
 import { RestTimerBar } from '@/features/strength-rest-timer/components/RestTimerBar';
@@ -103,7 +101,6 @@ export function WorkoutSessionPage() {
     moveExercise,
     saveNotes,
     complete,
-    saveSocialSharing,
     abandon,
     addSet,
     saveSet,
@@ -115,8 +112,6 @@ export function WorkoutSessionPage() {
   } = useWorkoutSession(sessionId);
   const [selectedExerciseId, setSelectedExerciseId] = useState('');
   const [notes, setNotes] = useState('');
-  const [socialSharing, setSocialSharing] = useState<SocialActivitySharingOverride>({ mode: 'inherit' });
-  const [socialSharingDirty, setSocialSharingDirty] = useState(false);
   const [confirmation, setConfirmation] = useState<ConfirmationRequest>();
   const [temporarilySkippedExerciseIds, setTemporarilySkippedExerciseIds] = useState<Set<string>>(() => new Set());
   const [isConfirming, setIsConfirming] = useState(false);
@@ -152,11 +147,6 @@ export function WorkoutSessionPage() {
   useEffect(() => {
     setNotes(session?.notes ?? '');
   }, [session?.notes]);
-
-  useEffect(() => {
-    if (socialSharingDirty) return;
-    setSocialSharing(session?.socialSharing ?? { mode: 'inherit' });
-  }, [session?.socialSharing, socialSharingDirty]);
 
   const exerciseGroups = useMemo(() => buildExerciseGroups(exercises), [exercises]);
 
@@ -280,17 +270,12 @@ export function WorkoutSessionPage() {
     await saveNotes(notes);
   };
 
-  const handleSaveSocialSharing = async () => {
-    const updated = await saveSocialSharing(socialSharing);
-    if (updated) setSocialSharingDirty(false);
-  };
-
   const resolveConfirmation = async () => {
     if (!confirmation) return;
     setIsConfirming(true);
     try {
       if (confirmation.type === 'finish') {
-        const completed = await complete(socialSharing);
+        const completed = await complete();
         if (completed) {
           restTimer.stop();
           await navigate(routePaths.workoutSessions);
@@ -387,34 +372,6 @@ export function WorkoutSessionPage() {
         />
       ) : null}
 
-      {session.status !== 'abandoned' && session.status !== 'skipped' ? (
-        <CollapsibleSection
-          className="mt-6"
-          title="Partage avec les amis"
-          description="Choisis ce qui sera publié pour cette séance terminée."
-          summary={SOCIAL_ACTIVITY_OVERRIDE_MODE_LABELS[socialSharing.mode]}
-        >
-          <SocialActivityOverrideSettings
-            family="strength"
-            value={socialSharing}
-            onChange={(next) => {
-              setSocialSharing(next);
-              setSocialSharingDirty(true);
-            }}
-          />
-          <div className="mt-4 flex justify-end">
-            <Button
-              type="button"
-              onClick={() => void handleSaveSocialSharing()}
-              disabled={!socialSharingDirty || Boolean(action) || isConfirming}
-              className="w-full sm:w-auto"
-            >
-              <Save aria-hidden="true" className="size-4" />
-              {action === 'socialSharing' ? 'Enregistrement…' : 'Enregistrer le partage'}
-            </Button>
-          </div>
-        </CollapsibleSection>
-      ) : null}
 
       {editable ? (
         <CollapsibleSection

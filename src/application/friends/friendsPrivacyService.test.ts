@@ -10,7 +10,8 @@ describe('friendsPrivacyService', () => {
       friendCount: 1,
       incomingPendingCount: 1,
       outgoingPendingCount: 1,
-      sharingEnabled: false,
+      sharingEnabled: true,
+      summaryPermissionCount: 1,
     });
   });
 
@@ -57,7 +58,7 @@ describe('friendsPrivacyService', () => {
     expect(service.getState().lastFeedback).toContain('bloqué jusqu’au consentement explicite');
   });
 
-  it('enregistre la politique globale 0.29 et maintient le niveau historique compatible', () => {
+  it('conserve les anciens réglages en stockage sans modifier la permission effective de l’ami', () => {
     const service = createFriendsPrivacyService();
     const state = service.actions.setSocialActivitySharingPolicy({
       visibility: 'custom',
@@ -69,8 +70,11 @@ describe('friendsPrivacyService', () => {
     });
 
     expect(state.privacy.socialActivitySharingPolicy).toMatchObject({ visibility: 'custom' });
-    expect(state.privacy.activitySharing).toBe('detailed');
-    expect(state.lastFeedback).toContain('champs personnalisés');
+    expect(service.getSharingGuard()).toMatchObject({
+      allowedScope: 'summary',
+      canShareSummary: true,
+      canShareDetailed: false,
+    });
   });
 
 });

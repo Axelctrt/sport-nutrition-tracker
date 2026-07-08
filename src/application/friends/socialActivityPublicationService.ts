@@ -7,9 +7,9 @@ import {
   type SocialActivitySnapshotLifecycleRepository,
 } from '@/application/friends/socialActivitySnapshotLifecycleService';
 import {
+  ALL_SOCIAL_ACTIVITY_FIELD_SELECTION,
   applyFriendScopeToSocialActivitySharingPolicy,
-  DEFAULT_DETAILED_SOCIAL_ACTIVITY_FIELD_SELECTION,
-  socialActivityGlobalPolicyFromLegacyPrivacy,
+  cloneSocialActivityFieldSelection,
   resolveSocialActivitySharingPolicy,
   type SocialActivityGlobalSharingPolicy,
   type SocialActivitySharingOverride,
@@ -69,18 +69,28 @@ function nowIsoDateTime(): IsoDateTime {
 }
 
 export function socialActivityGlobalPolicyFromFriendsPrivacy(
-  snapshot: FriendsPrivacySnapshot,
+  _snapshot: FriendsPrivacySnapshot,
 ): SocialActivityGlobalSharingPolicy {
-  if (snapshot.privacy.profileVisibility === 'private') {
-    return {
-      visibility: 'private',
-      fields: snapshot.privacy.socialActivitySharingPolicy?.fields
-        ?? DEFAULT_DETAILED_SOCIAL_ACTIVITY_FIELD_SELECTION,
-    };
-  }
+  return {
+    visibility: 'detailed',
+    fields: cloneSocialActivityFieldSelection(ALL_SOCIAL_ACTIVITY_FIELD_SELECTION),
+  };
+}
 
-  return snapshot.privacy.socialActivitySharingPolicy
-    ?? socialActivityGlobalPolicyFromLegacyPrivacy(snapshot.privacy);
+function resolveFriendControlledSharingPolicy(
+  override?: SocialActivitySharingOverride,
+) {
+  const activityPrivacyOverride = override?.mode === 'private'
+    ? { mode: 'private' as const }
+    : { mode: 'inherit' as const };
+
+  return resolveSocialActivitySharingPolicy(
+    {
+      visibility: 'detailed',
+      fields: cloneSocialActivityFieldSelection(ALL_SOCIAL_ACTIVITY_FIELD_SELECTION),
+    },
+    activityPrivacyOverride,
+  );
 }
 
 function buildRecipientPlans(
@@ -164,10 +174,7 @@ async function reconcilePublicationPlans(input: {
     input.context.privacySnapshot.friends,
     existing,
   );
-  const globalPolicy = socialActivityGlobalPolicyFromFriendsPrivacy(
-    input.context.privacySnapshot,
-  );
-  const resolvedPolicy = resolveSocialActivitySharingPolicy(globalPolicy, input.override);
+  const resolvedPolicy = resolveFriendControlledSharingPolicy(input.override);
 
   const results = await Promise.all(plans.map(async (plan) => {
     if (!plan.friend) {

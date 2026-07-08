@@ -164,7 +164,7 @@ describe('runtime social activity snapshot observer', () => {
     expect(notifyOutboxChanged).toHaveBeenCalledTimes(2);
   });
 
-  it('met en file une activité surchargée malgré un ancien partage global désactivé', async () => {
+  it('ignore un ancien mode résumé de l’activité et suit uniquement la permission de l’ami', async () => {
     const outboxRepository = new MemoryOutboxRepository();
     const notifyOutboxChanged = vi.fn();
     const observer = createRuntimeSocialActivitySnapshotObserver({
@@ -202,7 +202,7 @@ describe('runtime social activity snapshot observer', () => {
 
     expect([...outboxRepository.records.values()][0]?.snapshot).toMatchObject({
       state: 'active',
-      visibility: 'summary',
+      visibility: 'detailed',
       sourceActivityId: activity.id,
     });
     expect(notifyOutboxChanged).toHaveBeenCalledOnce();

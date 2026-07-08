@@ -423,6 +423,9 @@ async function authorizeActiveSnapshot(database, snapshot) {
   if (!permission) {
     throw new SocialActivitySnapshotsError(403, 'SOCIAL_ACTIVITY_PERMISSION_MISSING', 'Publication refusée : permission ami absente.');
   }
+  if (permission.sharing_level === 'none') {
+    throw new SocialActivitySnapshotsError(403, 'SOCIAL_ACTIVITY_SHARING_DISABLED', 'Publication refusée : cet ami n’est pas autorisé à voir les activités.');
+  }
   const permissionFields = socialActivityPermissionFieldSelectionFromStored(
     permission.field_selection_json,
   );
@@ -834,6 +837,7 @@ async function listFeed(database, recipientUserId, url) {
      AND p.friend_user_id = s.recipient_user_id
     WHERE s.recipient_user_id = ?1
       AND s.state = 'active'
+      AND p.sharing_level <> 'none'
       AND EXISTS (
         SELECT 1 FROM social_friendships f
         WHERE f.status = 'active'
@@ -883,6 +887,7 @@ async function readSnapshotDetail(database, recipientUserId, snapshotId) {
     WHERE s.snapshot_id = ?1
       AND s.recipient_user_id = ?2
       AND s.state = 'active'
+      AND p.sharing_level <> 'none'
       AND EXISTS (
         SELECT 1 FROM social_friendships f
         WHERE f.status = 'active'

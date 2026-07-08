@@ -16,6 +16,7 @@ import {
   updateFriendActivityFieldSelection,
   removeFriendFromSnapshot,
   updateFriendsPrivacySettings,
+  type FriendActivityPermissionLevel,
   type FriendActivitySharingLevel,
   type FriendProfileSummary,
   type FriendRequest,
@@ -41,7 +42,7 @@ export interface FriendsPrivacyServiceActions {
   readonly setActivitySharing: (sharing: FriendActivitySharingLevel) => FriendsPrivacyServiceState;
   readonly setRequestsOpen: (open: boolean) => FriendsPrivacyServiceState;
   readonly setSocialActivitySharingPolicy: (policy: SocialActivityGlobalSharingPolicy) => FriendsPrivacyServiceState;
-  readonly setFriendActivityPermission: (friendId: EntityId, sharing: 'summary' | 'detailed') => FriendsPrivacyServiceState;
+  readonly setFriendActivityPermission: (friendId: EntityId, sharing: FriendActivityPermissionLevel) => FriendsPrivacyServiceState;
   readonly setFriendActivityFieldSelection: (
     friendId: EntityId,
     fieldSelection: SocialActivityFieldSelection,
@@ -165,7 +166,7 @@ export function createFriendsPrivacyService(
       setProfileVisibility: (visibility) => updatePrivacy(
         { profileVisibility: visibility },
         visibility === 'private'
-          ? 'Profil passé en privé. Le partage d’activité est désactivé.'
+          ? 'Profil passé en privé. Les permissions de partage par ami restent inchangées.'
           : 'Visibilité du profil mise à jour.',
       ),
       setActivitySharing: (sharing) => updatePrivacy(
@@ -193,8 +194,10 @@ export function createFriendsPrivacyService(
       setFriendActivityPermission: (friendId, sharing) => setState(
         updateFriendActivityPermission(state, friendId, sharing),
         sharing === 'detailed'
-          ? 'Consentement détaillé enregistré pour cet ami. Seuls les snapshots sociaux filtrés peuvent utiliser ce niveau.'
-          : 'Permission ramenée au résumé uniquement pour cet ami.',
+          ? 'Partage personnalisé enregistré pour cet ami.'
+          : sharing === 'summary'
+            ? 'Permission ramenée au résumé pour cet ami.'
+            : 'Partage d’activité désactivé pour cet ami.',
       ),
       setFriendActivityFieldSelection: (friendId, fieldSelection) => setState(
         updateFriendActivityFieldSelection(state, friendId, fieldSelection),

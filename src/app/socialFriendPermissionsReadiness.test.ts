@@ -39,7 +39,7 @@ describe('readiness permissions amis 0.27.0 F3', () => {
     expect(databaseTableNames).toContain('friendActivityPermissions');
   });
 
-  it('conserve le résumé par défaut et limite le détail au consentement explicite', () => {
+  it('conserve le résumé par défaut et laisse chaque ami contrôler son niveau', () => {
     const defaultScopedGuard = evaluateFriendScopedActivitySharingGuard(snapshot, friend);
     const detailedSnapshot = updateFriendActivityPermission(
       snapshot,
@@ -55,7 +55,15 @@ describe('readiness permissions amis 0.27.0 F3', () => {
     expect(detailedScopedGuard.allowedScope).toBe('detailed');
     expect(detailedScopedGuard.canShareDetailed).toBe(true);
     expect(canExposeFriendActivityDetailsToFriend(detailedSnapshot, friend)).toBe(true);
-    expect(canExposeFriendActivityDetails(detailedSnapshot)).toBe(false);
-    expect(globalGuard.reason).toMatch(/Snapshots sociaux filtrés disponibles/u);
+    expect(canExposeFriendActivityDetails(detailedSnapshot)).toBe(true);
+    expect(globalGuard.reason).toMatch(/défini séparément pour chaque ami/u);
+
+    const disabledSnapshot = updateFriendActivityPermission(
+      detailedSnapshot,
+      friend.id,
+      'none',
+      '2026-07-05T13:00:00.000Z',
+    );
+    expect(evaluateFriendScopedActivitySharingGuard(disabledSnapshot, friend).allowedScope).toBe('none');
   });
 });

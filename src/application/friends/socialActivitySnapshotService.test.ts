@@ -75,13 +75,21 @@ describe('socialActivitySnapshotService', () => {
     expect(result.snapshots.map((snapshot) => snapshot.scope).sort()).toEqual(['detailed', 'summary']);
   });
 
-  it('renvoie des blocages sans snapshot quand le partage est désactivé', () => {
+  it('renvoie des blocages lorsque chaque ami est réglé sur aucun partage', () => {
+    const summaryBlocked = updateFriendActivityPermission(
+      baseSnapshot,
+      friendSummary.id,
+      'none',
+    );
+    const privacySnapshot = updateFriendActivityPermission(
+      summaryBlocked,
+      friendDetailed.id,
+      'none',
+    );
+
     const result = prepareSocialActivitySnapshots({
       activity,
-      privacySnapshot: {
-        ...baseSnapshot,
-        privacy: DEFAULT_FRIENDS_PRIVACY_SETTINGS,
-      },
+      privacySnapshot,
     });
 
     expect(result.rawActivityShared).toBe(false);

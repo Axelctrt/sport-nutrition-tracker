@@ -106,14 +106,18 @@ describe('social activity feed', () => {
     expectNoRawActivityLeak(feed.items[0]);
   });
 
-  it('bloque le fil si le partage global est désactivé', () => {
-    const feed = buildSocialActivityFeed({
-      ...baseSnapshot,
-      privacy: DEFAULT_FRIENDS_PRIVACY_SETTINGS,
-    }, [detailedSnapshot]);
+  it('masque les cartes de l’ami réglé sur aucun partage', () => {
+    const privacySnapshot = updateFriendActivityPermission(
+      baseSnapshot,
+      friend.id,
+      'none',
+      '2026-07-08T09:00:00.000Z',
+    );
+
+    const feed = buildSocialActivityFeed(privacySnapshot, [detailedSnapshot]);
 
     expect(feed).toMatchObject({
-      status: 'sharingDisabled',
+      status: 'empty',
       items: [],
       hiddenSnapshotCount: 1,
       rawActivityShared: false,
