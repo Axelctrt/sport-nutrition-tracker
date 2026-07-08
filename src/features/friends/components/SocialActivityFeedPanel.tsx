@@ -8,7 +8,10 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import type { SocialActivityCloudFeedCard } from '@/domain/friends/socialActivityCloudFeed';
+import {
+  socialActivityDetailMatchesFeedCard,
+  type SocialActivityCloudFeedCard,
+} from '@/domain/friends/socialActivityCloudFeed';
 import {
   SocialActivityDetailDialog,
   type SocialActivityDetailState,
@@ -50,6 +53,7 @@ export function SocialActivityFeedPanel({
   const [message, setMessage] = useState<string>();
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [detailState, setDetailState] = useState<SocialActivityDetailState>();
+  const detailRequestSequenceRef = useRef(0);
 
   const loadPage = useCallback(async (mode: 'replace' | 'append') => {
     const credentials = getCredentials();
@@ -110,36 +114,47 @@ export function SocialActivityFeedPanel({
     return subscribeCredentials(() => void loadPage('replace'));
   }, [loadPage, subscribeCredentials]);
 
+  const closeDetail = useCallback(() => {
+    detailRequestSequenceRef.current += 1;
+    setDetailState(undefined);
+  }, []);
+
   const openDetail = async (card: SocialActivityCloudFeedCard) => {
+    const requestSequence = detailRequestSequenceRef.current + 1;
+    detailRequestSequenceRef.current = requestSequence;
     setDetailState({ card, status: 'loading' });
     const credentials = getCredentials();
     if (!credentials) {
+      if (detailRequestSequenceRef.current !== requestSequence) return;
       setDetailState({
         card,
         status: 'error',
-        message: 'Reconnecte ton compte SportPilot pour ouvrir ce détail.',
+        message: 'Reconnecte ton compte SportPilot pour ouvrir cette activité.',
       });
       return;
     }
     if (!isOnline()) {
+      if (detailRequestSequenceRef.current !== requestSequence) return;
       setDetailState({
         card,
         status: 'error',
-        message: 'Le détail complet nécessite une connexion réseau afin de revérifier les permissions.',
+        message: 'Une connexion est nécessaire pour revérifier les autorisations de cette activité.',
       });
       return;
     }
     try {
       const snapshot = await gateway.readDetail(credentials, card.snapshotId);
-      if (snapshot.snapshotId !== card.snapshotId) {
-        throw new Error('Réponse de détail incohérente.');
+      if (detailRequestSequenceRef.current !== requestSequence) return;
+      if (!socialActivityDetailMatchesFeedCard(card, snapshot)) {
+        throw new Error('La réponse reçue ne correspond pas à l’activité sélectionnée.');
       }
       setDetailState({ card, status: 'ready', snapshot });
     } catch (error) {
+      if (detailRequestSequenceRef.current !== requestSequence) return;
       setDetailState({
         card,
         status: 'error',
-        message: error instanceof Error ? error.message : 'Le détail autorisé n’a pas pu être chargé.',
+        message: error instanceof Error ? error.message : 'L’activité partagée n’a pas pu être chargée.',
       });
     }
   };
@@ -246,7 +261,7 @@ export function SocialActivityFeedPanel({
       {detailState ? (
         <SocialActivityDetailDialog
           detailState={detailState}
-          onClose={() => setDetailState(undefined)}
+          onClose={closeDetail}
         />
       ) : null}
     </>

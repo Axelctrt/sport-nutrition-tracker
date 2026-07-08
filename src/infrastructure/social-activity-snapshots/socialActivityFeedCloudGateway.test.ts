@@ -197,6 +197,33 @@ describe('socialActivityFeedCloudGateway', () => {
     });
   });
 
+  it('charge aussi une fiche limitée au résumé', async () => {
+    const fetcher = vi.fn(async () => new Response(JSON.stringify({
+      status: 'found',
+      snapshot: summarySnapshot,
+    }), { status: 200, headers: { 'content-type': 'application/json' } }));
+    const gateway = createSocialActivityFeedCloudGateway({ fetcher });
+
+    await expect(gateway.readDetail(credentials, summarySnapshot.snapshotId)).resolves.toMatchObject({
+      snapshotId: summarySnapshot.snapshotId,
+      visibility: 'summary',
+      summary: { durationMinutes: 42, distanceKm: 8 },
+    });
+  });
+
+  it('rejette une fiche qui ne correspond pas à l’identifiant demandé', async () => {
+    const fetcher = vi.fn(async () => new Response(JSON.stringify({
+      status: 'found',
+      snapshot: detailedSnapshot,
+    }), { status: 200, headers: { 'content-type': 'application/json' } }));
+    const gateway = createSocialActivityFeedCloudGateway({ fetcher });
+
+    await expect(gateway.readDetail(credentials, 'another-snapshot-id')).rejects.toMatchObject({
+      code: 'social_activity_detail_identity_mismatch',
+      retryable: false,
+    });
+  });
+
   it('classe une panne réseau comme réessayable et rejette une réponse corrompue', async () => {
     const offlineGateway = createSocialActivityFeedCloudGateway({
       fetcher: vi.fn(async () => { throw new TypeError('offline'); }),

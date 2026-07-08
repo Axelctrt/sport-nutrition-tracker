@@ -87,13 +87,13 @@ describe('SocialActivityFeedPanel', () => {
     expect(screen.getByText('1 h 02')).toBeInTheDocument();
     expect(screen.getByText('1 exercice')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: /Voir le détail autorisé/u }));
+    await user.click(screen.getByRole('button', { name: /Ouvrir l’activité/u }));
     expect(await screen.findByRole('dialog', { name: 'Push du mardi' })).toBeInTheDocument();
     expect(screen.getByText('Développé couché')).toBeInTheDocument();
     expect(screen.getByText(/10 répétitions/u)).toBeInTheDocument();
     expect(screen.queryByText(/kg/u)).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Fermer le détail' }));
+    await user.click(screen.getByRole('button', { name: 'Fermer l’activité' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 
@@ -135,14 +135,14 @@ describe('SocialActivityFeedPanel', () => {
       />,
     );
 
-    const openButton = await screen.findByRole('button', { name: /Voir le détail autorisé/u });
+    const openButton = await screen.findByRole('button', { name: /Ouvrir l’activité/u });
     await user.click(openButton);
 
     expect(await screen.findByText('Poids du corps × 9')).toBeInTheDocument();
     expect(screen.getByText('60 kg × 10')).toBeInTheDocument();
     expect(screen.getByText('Travail')).toBeInTheDocument();
     expect(screen.getByText('RPE 8 · 1:30 de repos')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Fermer le détail' })).toHaveFocus();
+    expect(screen.getByRole('button', { name: 'Fermer l’activité' })).toHaveFocus();
 
     await user.keyboard('{Escape}');
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
@@ -198,12 +198,89 @@ describe('SocialActivityFeedPanel', () => {
       />,
     );
 
-    await user.click(await screen.findByRole('button', { name: /Voir le détail autorisé/u }));
+    await user.click(await screen.findByRole('button', { name: /Ouvrir l’activité/u }));
 
     expect(await screen.findByText('Footing')).toBeInTheDocument();
     expect(screen.getByText('Trail / sentier')).toBeInTheDocument();
     expect(screen.getByLabelText('Évolution de l’allure, 3 points')).toBeInTheDocument();
     expect(screen.getByText('15:00 : 5\'15"/km')).toBeInTheDocument();
+  });
+
+  it('ouvre aussi une activité partagée en résumé et explique la portée limitée', async () => {
+    const user = userEvent.setup();
+    const summaryCard: SocialActivityCloudFeedCard = {
+      ...card,
+      visibility: 'summary',
+      detailAvailable: false,
+      allowedFields: {
+        common: ['activityType', 'title', 'date', 'duration'],
+        cardio: [],
+        strength: ['exerciseCount'],
+      },
+    };
+    const summaryDetail: ActiveSocialActivitySnapshot = {
+      ...summaryCard,
+      state: 'active',
+    };
+    render(
+      <SocialActivityFeedPanel
+        gateway={gateway({
+          listPage: vi.fn(async () => ({ items: [summaryCard] })),
+          readDetail: vi.fn(async () => summaryDetail),
+        })}
+        getCredentials={getCredentials}
+        isOnline={() => true}
+      />,
+    );
+
+    await user.click(await screen.findByRole('button', { name: /Ouvrir l’activité/u }));
+
+    expect(await screen.findByRole('dialog', { name: 'Push du mardi' })).toBeInTheDocument();
+    expect(screen.getByText('Résumé uniquement')).toBeInTheDocument();
+    expect(screen.getByText('Ton ami partage uniquement le résumé affiché ci-dessus.')).toBeInTheDocument();
+    expect(screen.queryByText('Développé couché')).not.toBeInTheDocument();
+  });
+
+  it('refuse un détail qui ne correspond pas à la carte sélectionnée', async () => {
+    const user = userEvent.setup();
+    render(
+      <SocialActivityFeedPanel
+        gateway={gateway({
+          readDetail: vi.fn(async () => ({ ...detail, ownerUserId: 'another-owner' })),
+        })}
+        getCredentials={getCredentials}
+        isOnline={() => true}
+      />,
+    );
+
+    await user.click(await screen.findByRole('button', { name: /Ouvrir l’activité/u }));
+
+    expect(await screen.findByText('Activité indisponible')).toBeInTheDocument();
+    expect(screen.getByText('La réponse reçue ne correspond pas à l’activité sélectionnée.')).toBeInTheDocument();
+    expect(screen.queryByText('Développé couché')).not.toBeInTheDocument();
+  });
+
+  it('ne rouvre pas la fiche lorsqu’une réponse tardive arrive après sa fermeture', async () => {
+    const user = userEvent.setup();
+    let resolveDetail: ((value: ActiveSocialActivitySnapshot) => void) | undefined;
+    const pendingDetail = new Promise<ActiveSocialActivitySnapshot>((resolve) => {
+      resolveDetail = resolve;
+    });
+    render(
+      <SocialActivityFeedPanel
+        gateway={gateway({ readDetail: vi.fn(async () => pendingDetail) })}
+        getCredentials={getCredentials}
+        isOnline={() => true}
+      />,
+    );
+
+    await user.click(await screen.findByRole('button', { name: /Ouvrir l’activité/u }));
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Fermer l’activité' }));
+    resolveDetail?.(detail);
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(screen.queryByText('Développé couché')).not.toBeInTheDocument();
   });
 
   it('pagine sans dupliquer les snapshots déjà affichés', async () => {

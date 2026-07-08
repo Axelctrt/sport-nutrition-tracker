@@ -5,7 +5,7 @@ import feedCardSource from '@/features/friends/components/SocialActivityFeedCard
 import strengthDetailSource from '@/features/friends/components/SocialStrengthActivityDetail.tsx?raw';
 import presentationSource from '@/features/friends/components/socialActivityFeedPresentation.ts?raw';
 
-describe('social activity details readiness 0.29.0 A8', () => {
+describe('social activity details readiness 0.29.0 A21', () => {
   it('rend les graphiques réellement fournis sans message de simulation', () => {
     expect(chartSource).toContain('ResponsiveContainer');
     expect(chartSource).toContain('touchAction: \'pan-y\'');
@@ -24,9 +24,13 @@ describe('social activity details readiness 0.29.0 A8', () => {
 
   it('conserve des zones tactiles et une feuille mobile sécurisée', () => {
     expect(feedCardSource).toContain('min-h-11 w-full');
+    expect(feedCardSource).toContain('Ouvrir l’activité');
     expect(dialogSource).toContain('sticky top-0');
     expect(dialogSource).toContain('max-h-[92dvh]');
     expect(dialogSource).toContain('closeButtonRef.current?.focus()');
     expect(dialogSource).toContain('previouslyFocusedElementRef.current?.focus()');
+    expect(dialogSource).toContain('focusableSelector');
+    expect(dialogSource).toContain('safe-area-inset-bottom');
+    expect(dialogSource).toContain('Résumé uniquement');
   });
 });
