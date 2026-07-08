@@ -8,10 +8,13 @@ function jsonResponse(status: number, payload: unknown): Response {
   });
 }
 
+const credentials = { userId: 'social-user:alex', accessToken: 'secret-token' };
+
 describe('socialFriendsGateway', () => {
   it('lit les amitiés serveur avec profils publics associés', async () => {
     const gateway = createSocialFriendsGateway({
       endpoint: '/api/social-friends',
+      getCredentials: () => credentials,
       fetcher: async () => jsonResponse(200, {
         status: 'found',
         friendships: [{
@@ -43,6 +46,7 @@ describe('socialFriendsGateway', () => {
     const calls: Array<{ url: string; init: RequestInit | undefined }> = [];
     const gateway = createSocialFriendsGateway({
       endpoint: '/api/social-friends',
+      getCredentials: () => credentials,
       fetcher: async (url, init) => {
         calls.push({ url: String(url), init });
         return jsonResponse(200, {
@@ -91,6 +95,9 @@ describe('socialFriendsGateway', () => {
     });
 
     expect(calls[0]).toMatchObject({ url: '/api/social-friends/permissions/save' });
+    expect(calls[0]?.init?.headers).toMatchObject({
+      authorization: 'Bearer secret-token',
+    });
     const requestBody = JSON.parse(String(calls[0]?.init?.body));
     expect(requestBody).toMatchObject({
       ownerUserId: 'social-user:alex',
@@ -110,6 +117,7 @@ describe('socialFriendsGateway', () => {
   it('relit et normalise une sélection granulaire par ami', async () => {
     const gateway = createSocialFriendsGateway({
       endpoint: '/api/social-friends',
+      getCredentials: () => credentials,
       fetcher: async () => jsonResponse(200, {
         status: 'found',
         permissions: [{
@@ -141,6 +149,7 @@ describe('socialFriendsGateway', () => {
   it('accepte le niveau aucun partage renvoyé par le serveur', async () => {
     const gateway = createSocialFriendsGateway({
       endpoint: '/api/social-friends',
+      getCredentials: () => credentials,
       fetcher: async () => jsonResponse(200, {
         status: 'found',
         permissions: [{
@@ -169,6 +178,7 @@ describe('socialFriendsGateway', () => {
   it('dégrade une sélection serveur invalide vers le résumé prudent', async () => {
     const gateway = createSocialFriendsGateway({
       endpoint: '/api/social-friends',
+      getCredentials: () => credentials,
       fetcher: async () => jsonResponse(200, {
         status: 'found',
         permissions: [{
@@ -200,6 +210,7 @@ describe('socialFriendsGateway', () => {
   it('dégrade silencieusement la lecture si le serveur est indisponible', async () => {
     const gateway = createSocialFriendsGateway({
       endpoint: '/api/social-friends',
+      getCredentials: () => credentials,
       fetcher: async () => jsonResponse(503, { status: 'unavailable', message: 'KO' }),
     });
 
@@ -217,6 +228,7 @@ it('supprime une amitié active côté serveur', async () => {
   const calls: Array<{ url: string; init: RequestInit | undefined }> = [];
   const gateway = createSocialFriendsGateway({
     endpoint: '/api/social-friends',
+    getCredentials: () => credentials,
     fetcher: async (url, init) => {
       calls.push({ url: String(url), init });
       return jsonResponse(200, {
@@ -254,10 +266,12 @@ describe('résilience A23 du gateway social', () => {
   it('distingue une liste de permissions vide valide d’une indisponibilité serveur', async () => {
     const synchronized = createSocialFriendsGateway({
       endpoint: '/api/social-friends',
+      getCredentials: () => credentials,
       fetcher: async () => jsonResponse(200, { status: 'found', permissions: [] }),
     });
     const unavailable = createSocialFriendsGateway({
       endpoint: '/api/social-friends',
+      getCredentials: () => credentials,
       fetcher: async () => jsonResponse(503, { status: 'unavailable', message: 'D1 indisponible' }),
     });
 
@@ -276,6 +290,7 @@ describe('résilience A23 du gateway social', () => {
   it('refuse de considérer une réponse 200 mal formée comme une purge autoritaire', async () => {
     const gateway = createSocialFriendsGateway({
       endpoint: '/api/social-friends',
+      getCredentials: () => credentials,
       fetcher: async () => jsonResponse(200, { status: 'found' }),
     });
 
@@ -297,6 +312,7 @@ describe('résilience A23 du gateway social', () => {
   it('retourne des mutations indisponibles au lieu de propager une erreur réseau', async () => {
     const gateway = createSocialFriendsGateway({
       endpoint: '/api/social-friends',
+      getCredentials: () => credentials,
       fetcher: async () => {
         throw new TypeError('offline');
       },

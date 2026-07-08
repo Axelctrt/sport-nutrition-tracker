@@ -103,7 +103,7 @@ describe('socialFriends A19', () => {
   ]);
 });
 
-  it('rejects non participant removal', async () => {
+  it('rejects a forged friendship identifier before any removal', async () => {
   const database = new FakeDatabase();
   database.friendships.set('cloud-friendship:social-user:alex<->social-user:lina', {
     id: 'cloud-friendship:social-user:alex<->social-user:lina',
@@ -114,13 +114,16 @@ describe('socialFriends A19', () => {
     updated_at: '2026-07-08T10:00:00.000Z',
   });
 
-  const result = await socialFriendsInternals.removeFriendship(database, {
-    userId: 'social-user:milo',
-    friendUserId: 'social-user:lina',
-    friendshipId: 'cloud-friendship:social-user:alex<->social-user:lina',
-  });
-
-    expect(result.status).toBe(404);
+    await expect(
+      socialFriendsInternals.removeFriendship(database, {
+        userId: 'social-user:milo',
+        friendUserId: 'social-user:lina',
+        friendshipId: 'cloud-friendship:social-user:alex<->social-user:lina',
+      }),
+    ).rejects.toMatchObject({
+      status: 400,
+      code: 'SOCIAL_FRIENDS_FRIENDSHIP_ID_MISMATCH',
+    });
     expect(database.friendships.get('cloud-friendship:social-user:alex<->social-user:lina').status).toBe('active');
 });
 });

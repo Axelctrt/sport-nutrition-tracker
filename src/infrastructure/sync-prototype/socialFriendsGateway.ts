@@ -13,6 +13,11 @@ import type {
   SocialCloudMutationResult,
 } from '@/domain/friends/socialCloudContract';
 import type { CloudFriendship, PublicUserProfile } from '@/domain/friends/socialIdentity';
+import {
+  resolveSocialCloudApiCredentials,
+  socialCloudApiHeaders,
+  type SocialCloudApiCredentialsProvider,
+} from '@/infrastructure/sync-prototype/socialCloudApiCredentials';
 
 export type SocialFriendsGatewayListStatus = 'synchronized' | 'unavailable';
 
@@ -43,6 +48,7 @@ export interface SocialFriendsGateway {
 interface SocialFriendsClientOptions {
   readonly endpoint?: string;
   readonly fetcher?: typeof fetch;
+  readonly getCredentials?: SocialCloudApiCredentialsProvider;
 }
 
 type FriendMutationStatus = 'created' | 'updated' | 'alreadyExists' | 'forbidden' | 'notFound' | 'unavailable';
@@ -170,14 +176,24 @@ function parseMutationStatus(value: unknown): FriendMutationStatus {
 export function createSocialFriendsGateway(options: SocialFriendsClientOptions = {}): SocialFriendsGateway {
   const endpoint = normalizeEndpoint(options.endpoint);
   const fetcher = options.fetcher ?? fetch;
+  const getCredentials = options.getCredentials;
 
   async function listFriendshipsWithProfiles(userId: EntityId): Promise<SocialFriendsGatewayListResult> {
+    const credentials = resolveSocialCloudApiCredentials(getCredentials, userId);
+    if (!credentials) {
+      return {
+        status: 'unavailable',
+        friendships: [],
+        profiles: [],
+        message: 'Connexion SportPilot requise. Le cache local est conservé.',
+      };
+    }
     let response: Response;
     try {
       response = await fetcher(`${endpoint}/friendships?userId=${encodeURIComponent(userId)}`, {
         method: 'GET',
         cache: 'no-store',
-        headers: { accept: 'application/json' },
+        headers: socialCloudApiHeaders(credentials),
       });
     } catch {
       return {
@@ -236,12 +252,20 @@ export function createSocialFriendsGateway(options: SocialFriendsClientOptions =
   async function listPermissionsWithStatus(
     userId: EntityId,
   ): Promise<SocialFriendPermissionsListResult> {
+    const credentials = resolveSocialCloudApiCredentials(getCredentials, userId);
+    if (!credentials) {
+      return {
+        status: 'unavailable',
+        permissions: [],
+        message: 'Connexion SportPilot requise. Le cache local est conservé.',
+      };
+    }
     let response: Response;
     try {
       response = await fetcher(`${endpoint}/permissions?userId=${encodeURIComponent(userId)}`, {
         method: 'GET',
         cache: 'no-store',
-        headers: { accept: 'application/json' },
+        headers: socialCloudApiHeaders(credentials),
       });
     } catch {
       return {
@@ -289,15 +313,19 @@ export function createSocialFriendsGateway(options: SocialFriendsClientOptions =
     userId: EntityId,
     permission: FriendActivityPermission,
   ): Promise<SocialCloudMutationResult<FriendActivityPermission>> {
+    const credentials = resolveSocialCloudApiCredentials(getCredentials, userId);
+    if (!credentials) {
+      return {
+        status: 'unavailable',
+        message: 'Connexion SportPilot requise. Le réglage local précédent est conservé.',
+      };
+    }
     let response: Response;
     try {
       response = await fetcher(`${endpoint}/permissions/save`, {
         method: 'POST',
         cache: 'no-store',
-        headers: {
-          accept: 'application/json',
-          'content-type': 'application/json',
-        },
+        headers: socialCloudApiHeaders(credentials, true),
         body: JSON.stringify({ ownerUserId: userId, permission }),
       });
     } catch {
@@ -325,15 +353,19 @@ export function createSocialFriendsGateway(options: SocialFriendsClientOptions =
     userId: EntityId,
     friendUserId: EntityId,
   ): Promise<SocialCloudMutationResult<CloudFriendship>> {
+    const credentials = resolveSocialCloudApiCredentials(getCredentials, userId);
+    if (!credentials) {
+      return {
+        status: 'unavailable',
+        message: 'Connexion SportPilot requise. La relation locale reste inchangée.',
+      };
+    }
     let response: Response;
     try {
       response = await fetcher(`${endpoint}/remove`, {
         method: 'POST',
         cache: 'no-store',
-        headers: {
-          accept: 'application/json',
-          'content-type': 'application/json',
-        },
+        headers: socialCloudApiHeaders(credentials, true),
         body: JSON.stringify({ userId, friendUserId }),
       });
     } catch {

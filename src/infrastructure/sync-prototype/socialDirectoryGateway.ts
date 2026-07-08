@@ -1,5 +1,10 @@
 import type { EntityId } from '@/domain/models/common';
 import type { SocialCloudMutationResult } from '@/domain/friends/socialCloudContract';
+import {
+  resolveSocialCloudApiCredentials,
+  socialCloudApiHeaders,
+  type SocialCloudApiCredentialsProvider,
+} from '@/infrastructure/sync-prototype/socialCloudApiCredentials';
 import { validateSocialHandle, type SocialIdentity, type SocialUserLookupResult } from '@/domain/friends/socialIdentity';
 
 export interface SocialDirectoryLookupClient {
@@ -13,6 +18,7 @@ export interface SocialDirectoryClient extends SocialDirectoryLookupClient {
 export interface SocialDirectoryClientOptions {
   readonly endpoint?: string;
   readonly fetcher?: typeof fetch;
+  readonly getCredentials?: SocialCloudApiCredentialsProvider;
 }
 
 interface SocialDirectoryProfilePayload {
@@ -86,17 +92,21 @@ async function readPayload(response: Response): Promise<SocialDirectoryResponseP
 export function createSocialDirectoryClient(options: SocialDirectoryClientOptions = {}): SocialDirectoryClient {
   const endpoint = options.endpoint?.trim().replace(/\/+$/u, '') || readConfiguredEndpoint();
   const fetcher = options.fetcher ?? globalThis.fetch?.bind(globalThis);
+  const getCredentials = options.getCredentials;
 
   return {
     async lookupByHandle(handle) {
       const validation = validateSocialHandle(handle);
       if (validation.status === 'invalid') return { status: 'invalidHandle' };
       if (!endpoint || !fetcher) return unavailableLookup();
+      const credentials = resolveSocialCloudApiCredentials(getCredentials);
+      if (!credentials) return unavailableLookup();
 
       try {
         const response = await fetcher(`${endpoint}/lookup?handle=${encodeURIComponent(validation.handle)}`, {
           method: 'GET',
-          headers: { accept: 'application/json' },
+          cache: 'no-store',
+          headers: socialCloudApiHeaders(credentials),
         });
         const payload = await readPayload(response);
 
@@ -117,14 +127,16 @@ export function createSocialDirectoryClient(options: SocialDirectoryClientOption
         return { status: 'invalidHandle', message: validation.message };
       }
       if (!endpoint || !fetcher) return unavailableMutation();
+      const credentials = resolveSocialCloudApiCredentials(getCredentials, identity.userId);
+      if (!credentials) {
+        return unavailableMutation('Connexion SportPilot requise pour réserver cet identifiant.');
+      }
 
       try {
         const response = await fetcher(`${endpoint}/reserve`, {
           method: 'POST',
-          headers: {
-            accept: 'application/json',
-            'content-type': 'application/json',
-          },
+          cache: 'no-store',
+          headers: socialCloudApiHeaders(credentials, true),
           body: JSON.stringify({
             userId: identity.userId,
             handle: validation.handle,

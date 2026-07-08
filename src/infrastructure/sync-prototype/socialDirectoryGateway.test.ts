@@ -14,6 +14,7 @@ describe('socialDirectoryGateway', () => {
     const calls: Array<{ url: string; init: RequestInit | undefined }> = [];
     const client = createSocialDirectoryClient({
       endpoint: '/api/social-directory',
+      getCredentials: () => ({ userId: 'social-user:alex123', accessToken: 'secret-token' }),
       fetcher: async (url, init) => {
         calls.push({ url: String(url), init });
         return jsonResponse(201, {
@@ -38,6 +39,9 @@ describe('socialDirectoryGateway', () => {
       throw new Error('Appel de réservation annuaire serveur manquant.');
     }
     expect(reserveCall).toMatchObject({ url: '/api/social-directory/reserve' });
+    expect(reserveCall.init?.headers).toMatchObject({
+      authorization: 'Bearer secret-token',
+    });
     expect(JSON.parse(String(reserveCall.init?.body))).toMatchObject({
       userId: identity.userId,
       handle: 'alex.run',
@@ -48,6 +52,7 @@ describe('socialDirectoryGateway', () => {
   it('remonte un conflit de handle rÃ©servÃ© par un autre compte', async () => {
     const client = createSocialDirectoryClient({
       endpoint: '/api/social-directory',
+      getCredentials: () => ({ userId: 'social-user:lina456', accessToken: 'secret-token' }),
       fetcher: async () => jsonResponse(409, {
         status: 'conflict',
         message: 'Identifiant dÃ©jÃ  rÃ©servÃ© par un autre compte SportPilot.',
@@ -68,6 +73,7 @@ describe('socialDirectoryGateway', () => {
   it('retrouve un profil public exact depuis lâ€™annuaire serveur', async () => {
     const client = createSocialDirectoryClient({
       endpoint: '/api/social-directory',
+      getCredentials: () => ({ userId: 'viewer@example.com', accessToken: 'secret-token' }),
       fetcher: async () => jsonResponse(200, {
         status: 'found',
         profile: {
@@ -93,6 +99,7 @@ describe('socialDirectoryGateway', () => {
   it('retourne notFound quand lâ€™annuaire serveur ne connaÃ®t pas le handle', async () => {
     const client = createSocialDirectoryClient({
       endpoint: '/api/social-directory',
+      getCredentials: () => ({ userId: 'viewer@example.com', accessToken: 'secret-token' }),
       fetcher: async () => jsonResponse(404, {
         status: 'notFound',
         message: 'Identifiant inexistant.',

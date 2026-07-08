@@ -306,7 +306,13 @@ describe('social identity reconciliation endpoint', () => {
           ownerDisplayName: 'TEST',
         }), { status: 200 });
       }
-      if (target.includes('/my/socialIdentities/')) return new Response(null, { status: 404 });
+      if (target.includes('/my/socialIdentities/')) {
+        return new Response(JSON.stringify({
+          userId: 'social-user:browser',
+          handle: 'test',
+          displayName: 'TEST',
+        }), { status: 200, headers: { 'content-type': 'application/json' } });
+      }
       throw new Error(`Unexpected fetch: ${target}`);
     };
     const request = new Request('https://example.test/api/social-identity/reconcile', {

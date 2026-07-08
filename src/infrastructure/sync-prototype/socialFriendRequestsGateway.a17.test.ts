@@ -9,6 +9,7 @@ describe('socialFriendRequestsGateway A17', () => {
   it('retourne le profil public du correspondant', async () => {
     const client = createSocialFriendRequestsClient({
       endpoint: '/api/social-friend-requests',
+      getCredentials: () => ({ userId: 'lina@example.com', accessToken: 'secret-token' }),
       fetcher: async () => response(200, {
         status: 'found',
         requests: [{
@@ -29,6 +30,7 @@ describe('socialFriendRequestsGateway A17', () => {
   it('distingue une panne serveur d’une liste vide', async () => {
     const client = createSocialFriendRequestsClient({
       endpoint: '/api/social-friend-requests',
+      getCredentials: () => ({ userId: 'lina@example.com', accessToken: 'secret-token' }),
       fetcher: async () => response(503, { status: 'unavailable', message: 'Backend indisponible.' }),
     });
     await expect(client.listIncomingRequestsWithProfiles('lina@example.com' as EntityId)).rejects.toThrow('Backend indisponible');

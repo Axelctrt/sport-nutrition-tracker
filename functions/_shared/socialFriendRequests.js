@@ -1,3 +1,5 @@
+import { socialActivitySnapshotsInternals } from './socialActivitySnapshots.js';
+
 class SocialFriendRequestsError extends Error {
   constructor(status, code, message) {
     super(message);
@@ -7,7 +9,8 @@ class SocialFriendRequestsError extends Error {
   }
 }
 
-const REQUEST_STATUSES = new Set(['pending', 'accepted', 'declined', 'cancelled']);
+const REQUEST_STATUSES = new Set(['accepted', 'declined', 'cancelled']);
+const MAX_JSON_BYTES = 32_768;
 
 function isFriendRequestsError(error) {
   return Boolean(error && typeof error === 'object' && 'status' in error && 'code' in error);
@@ -21,7 +24,9 @@ function jsonResponse(status, payload, extraHeaders = {}) {
       'cache-control': 'no-store',
       'access-control-allow-origin': '*',
       'access-control-allow-methods': 'GET,POST,OPTIONS',
-      'access-control-allow-headers': 'content-type',
+      'access-control-allow-headers': 'authorization,content-type',
+      'x-content-type-options': 'nosniff',
+      'referrer-policy': 'no-referrer',
       ...extraHeaders,
     },
   });
@@ -34,7 +39,9 @@ function optionsResponse() {
       'cache-control': 'no-store',
       'access-control-allow-origin': '*',
       'access-control-allow-methods': 'GET,POST,OPTIONS',
-      'access-control-allow-headers': 'content-type',
+      'access-control-allow-headers': 'authorization,content-type',
+      'x-content-type-options': 'nosniff',
+      'referrer-policy': 'no-referrer',
     },
   });
 }
@@ -188,7 +195,7 @@ function profileFromRow(row) {
 function fallbackProfile(userId, timestamp) {
   return {
     userId,
-    handle: userId.toLowerCase().replace(/[^a-z0-9._-]/gu, '').slice(0, 32) || 'sportpilot-user',
+    handle: 'sportpilot-user',
     displayName: 'Utilisateur SportPilot',
     createdAt: timestamp,
     updatedAt: timestamp,
@@ -240,8 +247,12 @@ async function readActiveFriendship(database, userAId, userBId) {
   `).bind(id).first();
 }
 
-async function sendFriendRequest(database, payload) {
+async function sendFriendRequest(database, payload, actorUserId) {
   const requesterUserId = sanitizeUserId(payload?.requesterUserId, 'requesterUserId');
+  const actor = sanitizeUserId(actorUserId, 'actorUserId');
+  if (requesterUserId !== actor) {
+    throw new SocialFriendRequestsError(403, 'SOCIAL_FRIEND_REQUESTS_ACTOR_MISMATCH', 'Envoi refusé pour ce compte.');
+  }
   const recipientUserId = sanitizeUserId(payload?.recipientUserId, 'recipientUserId');
   if (requesterUserId === recipientUserId) {
     return {
@@ -255,6 +266,22 @@ async function sendFriendRequest(database, payload) {
   }
 
   await ensureFriendRequestsSchema(database);
+  const recipientProfile = await database.prepare(`
+    SELECT owner_user_id
+    FROM social_directory_handles
+    WHERE owner_user_id = ?1
+    LIMIT 1
+  `).bind(recipientUserId).first();
+  if (!recipientProfile) {
+    return {
+      status: 404,
+      payload: {
+        status: 'notFound',
+        code: 'SOCIAL_FRIEND_REQUESTS_RECIPIENT_NOT_FOUND',
+        message: 'Utilisateur social introuvable.',
+      },
+    };
+  }
   const existingFriendship = await readActiveFriendship(database, requesterUserId, recipientUserId);
   if (existingFriendship) {
     return {
@@ -299,9 +326,9 @@ async function sendFriendRequest(database, payload) {
     };
   }
 
-  const requestedAt = typeof payload?.requestedAt === 'string' ? payload.requestedAt : nowIso();
-  const createdAt = typeof payload?.createdAt === 'string' ? payload.createdAt : requestedAt;
-  const updatedAt = nowIso();
+  const requestedAt = nowIso();
+  const createdAt = requestedAt;
+  const updatedAt = requestedAt;
 
   await database.prepare(`
     INSERT INTO social_friend_requests(id, requester_user_id, recipient_user_id, status, requested_at, created_at, updated_at)
@@ -364,10 +391,11 @@ async function upsertFriendshipForAcceptedRequest(database, request, timestamp) 
   `).bind(friendshipId, userAId, userBId, timestamp).run();
 }
 
-async function updateFriendRequestStatus(database, payload) {
+async function updateFriendRequestStatus(database, payload, actorUserId) {
   const requestId = sanitizeRequestId(payload?.requestId);
   const status = sanitizeStatus(payload?.status);
-  const respondedAt = typeof payload?.respondedAt === 'string' ? payload.respondedAt : nowIso();
+  const actor = sanitizeUserId(actorUserId, 'actorUserId');
+  const respondedAt = nowIso();
   await ensureFriendRequestsSchema(database);
 
   const existing = await readRequest(database, requestId);
@@ -388,10 +416,22 @@ async function updateFriendRequestStatus(database, payload) {
       payload: {
         status: 'conflict',
         code: 'SOCIAL_FRIEND_REQUESTS_NOT_PENDING',
-        message: 'Cette demande nâ€™est plus en attente.',
+        message: 'Cette demande n’est plus en attente.',
         request: requestFromRow(existing),
       },
     };
+  }
+
+  const actorMayRespond = (status === 'accepted' || status === 'declined')
+    && actor === existing.recipient_user_id;
+  const actorMayCancel = status === 'cancelled'
+    && actor === existing.requester_user_id;
+  if (!actorMayRespond && !actorMayCancel) {
+    throw new SocialFriendRequestsError(
+      403,
+      'SOCIAL_FRIEND_REQUESTS_ACTION_FORBIDDEN',
+      'Action refusée pour cette demande.',
+    );
   }
 
   const terminalRequest = {
@@ -423,47 +463,80 @@ async function updateFriendRequestStatus(database, payload) {
 }
 
 async function readJsonBody(request) {
+  const contentLength = Number(request.headers.get('content-length') ?? 0);
+  if (Number.isFinite(contentLength) && contentLength > MAX_JSON_BYTES) {
+    throw new SocialFriendRequestsError(413, 'SOCIAL_FRIEND_REQUESTS_PAYLOAD_TOO_LARGE', 'Corps JSON trop volumineux.');
+  }
+  let raw;
   try {
-    return await request.json();
+    raw = await request.text();
+  } catch {
+    throw new SocialFriendRequestsError(400, 'SOCIAL_FRIEND_REQUESTS_INVALID_JSON', 'Corps JSON invalide.');
+  }
+  if (new TextEncoder().encode(raw).byteLength > MAX_JSON_BYTES) {
+    throw new SocialFriendRequestsError(413, 'SOCIAL_FRIEND_REQUESTS_PAYLOAD_TOO_LARGE', 'Corps JSON trop volumineux.');
+  }
+  try {
+    return JSON.parse(raw);
   } catch {
     throw new SocialFriendRequestsError(400, 'SOCIAL_FRIEND_REQUESTS_INVALID_JSON', 'Corps JSON invalide.');
   }
 }
 
+function assertActorMatches(actorUserId, claimedUserId) {
+  const actor = sanitizeUserId(actorUserId, 'actorUserId');
+  const claimed = sanitizeUserId(claimedUserId, 'userId');
+  if (actor !== claimed) {
+    throw new SocialFriendRequestsError(403, 'SOCIAL_FRIEND_REQUESTS_ACTOR_MISMATCH', 'Accès refusé pour ce compte.');
+  }
+  return actor;
+}
+
 function errorResponse(error) {
   if (isFriendRequestsError(error)) {
-    const status = error.status === 400 ? 'invalidRequest' : 'unavailable';
+    const status = error.status === 400
+      ? 'invalidRequest'
+      : error.status === 403
+        ? 'forbidden'
+        : error.status === 404
+          ? 'notFound'
+          : 'unavailable';
     return jsonResponse(error.status, { status, code: error.code, message: error.message });
   }
 
-  const message = error instanceof Error ? error.message : 'Erreur inconnue.';
   return jsonResponse(503, {
     status: 'unavailable',
     code: 'SOCIAL_FRIEND_REQUESTS_ERROR',
-    message: `Demandes sociales serveur indisponibles : ${message}`,
+    message: 'Demandes sociales serveur indisponibles.',
   });
 }
 
-export async function handleSocialFriendRequestSendRequest(request, env = {}) {
+export async function handleSocialFriendRequestSendRequest(request, env = {}, context = {}) {
   try {
     const methodResponse = assertMethod(request, 'POST');
     if (methodResponse) return methodResponse;
+    const actor = await socialActivitySnapshotsInternals.authenticateRequest(
+      request, env, context.fetcher ?? fetch,
+    );
     const database = readDatabase(env);
     const payload = await readJsonBody(request);
-    const result = await sendFriendRequest(database, payload);
+    const result = await sendFriendRequest(database, payload, actor.subject);
     return jsonResponse(result.status, result.payload);
   } catch (error) {
     return errorResponse(error);
   }
 }
 
-export async function handleSocialFriendRequestIncomingRequest(request, env = {}) {
+export async function handleSocialFriendRequestIncomingRequest(request, env = {}, context = {}) {
   try {
     const methodResponse = assertMethod(request, 'GET');
     if (methodResponse) return methodResponse;
+    const actor = await socialActivitySnapshotsInternals.authenticateRequest(
+      request, env, context.fetcher ?? fetch,
+    );
     const database = readDatabase(env);
     const url = new URL(request.url);
-    const userId = sanitizeUserId(url.searchParams.get('userId'), 'userId');
+    const userId = assertActorMatches(actor.subject, url.searchParams.get('userId'));
     const result = await listRequests(database, userId, 'incoming');
     return jsonResponse(200, { status: 'found', message: 'Demandes entrantes synchronisées.', ...result });
   } catch (error) {
@@ -471,13 +544,16 @@ export async function handleSocialFriendRequestIncomingRequest(request, env = {}
   }
 }
 
-export async function handleSocialFriendRequestOutgoingRequest(request, env = {}) {
+export async function handleSocialFriendRequestOutgoingRequest(request, env = {}, context = {}) {
   try {
     const methodResponse = assertMethod(request, 'GET');
     if (methodResponse) return methodResponse;
+    const actor = await socialActivitySnapshotsInternals.authenticateRequest(
+      request, env, context.fetcher ?? fetch,
+    );
     const database = readDatabase(env);
     const url = new URL(request.url);
-    const userId = sanitizeUserId(url.searchParams.get('userId'), 'userId');
+    const userId = assertActorMatches(actor.subject, url.searchParams.get('userId'));
     const result = await listRequests(database, userId, 'outgoing');
     return jsonResponse(200, { status: 'found', message: 'Demandes sortantes synchronisées.', ...result });
   } catch (error) {
@@ -485,13 +561,16 @@ export async function handleSocialFriendRequestOutgoingRequest(request, env = {}
   }
 }
 
-export async function handleSocialFriendRequestUpdateStatusRequest(request, env = {}) {
+export async function handleSocialFriendRequestUpdateStatusRequest(request, env = {}, context = {}) {
   try {
     const methodResponse = assertMethod(request, 'POST');
     if (methodResponse) return methodResponse;
+    const actor = await socialActivitySnapshotsInternals.authenticateRequest(
+      request, env, context.fetcher ?? fetch,
+    );
     const database = readDatabase(env);
     const payload = await readJsonBody(request);
-    const result = await updateFriendRequestStatus(database, payload);
+    const result = await updateFriendRequestStatus(database, payload, actor.subject);
     return jsonResponse(result.status, result.payload);
   } catch (error) {
     return errorResponse(error);
@@ -503,4 +582,5 @@ export const socialFriendRequestsInternals = {
   sendFriendRequest,
   listRequests,
   updateFriendRequestStatus,
+  assertActorMatches,
 };

@@ -108,6 +108,13 @@ describe('social identity reconciliation legacy ownership', () => {
           ownerDisplayName: 'TEST',
         }), { status: 200 });
       }
+      if (String(url).includes('socialIdentities')) {
+        return new Response(JSON.stringify({
+          id: 'social-identity:social-user:browser',
+          userId: 'social-user:browser',
+          handle: 'test',
+        }), { status: 200 });
+      }
       return new Response(null, { status: 404 });
     };
 

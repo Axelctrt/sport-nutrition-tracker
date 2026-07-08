@@ -4,6 +4,7 @@ import {
   serializeSocialActivityPermissionFieldSelection,
   socialActivityPermissionFieldSelectionFromStored,
 } from './socialActivityFieldSelection.js';
+import { socialActivitySnapshotsInternals } from './socialActivitySnapshots.js';
 
 class SocialFriendsError extends Error {
   constructor(status, code, message) {
@@ -17,6 +18,7 @@ class SocialFriendsError extends Error {
 const FRIENDSHIP_STATUSES = new Set(['active', 'removed']);
 const SHARING_LEVELS = new Set(['none', 'summary', 'detailed']);
 const DETAILED_CONSENT_STATUSES = new Set(['notRequested', 'granted']);
+const MAX_JSON_BYTES = 32_768;
 
 function isSocialFriendsError(error) {
   return Boolean(error && typeof error === 'object' && 'status' in error && 'code' in error);
@@ -30,7 +32,9 @@ function jsonResponse(status, payload, extraHeaders = {}) {
       'cache-control': 'no-store',
       'access-control-allow-origin': '*',
       'access-control-allow-methods': 'GET,POST,OPTIONS',
-      'access-control-allow-headers': 'content-type',
+      'access-control-allow-headers': 'authorization,content-type',
+      'x-content-type-options': 'nosniff',
+      'referrer-policy': 'no-referrer',
       ...extraHeaders,
     },
   });
@@ -43,7 +47,9 @@ function optionsResponse() {
       'cache-control': 'no-store',
       'access-control-allow-origin': '*',
       'access-control-allow-methods': 'GET,POST,OPTIONS',
-      'access-control-allow-headers': 'content-type',
+      'access-control-allow-headers': 'authorization,content-type',
+      'x-content-type-options': 'nosniff',
+      'referrer-policy': 'no-referrer',
     },
   });
 }
@@ -225,7 +231,7 @@ function profileFromRow(row) {
 function fallbackProfile(userId, now) {
   return {
     userId,
-    handle: userId.toLowerCase().replace(/[^a-z0-9._-]/gu, '').slice(0, 32) || 'sportpilot-friend',
+    handle: 'sportpilot-friend',
     displayName: 'Ami SportPilot',
     createdAt: now,
     updatedAt: now,
@@ -314,14 +320,18 @@ async function savePermission(database, payload) {
     };
   }
 
-  const id = sanitizePermissionId(permission.id ?? `cloud-friend-permission:${ownerUserId}->${friendUserId}`);
-  const friendHandle = normalizeHandle(permission.friendHandle);
+  const expectedPermissionId = `cloud-friend-permission:${ownerUserId}->${friendUserId}`;
+  const id = sanitizePermissionId(permission.id ?? expectedPermissionId);
+  if (id !== expectedPermissionId) {
+    throw new SocialFriendsError(400, 'SOCIAL_FRIENDS_PERMISSION_ID_MISMATCH', 'Identifiant de permission incohérent.');
+  }
+  const requestedFriendHandle = normalizeHandle(permission.friendHandle);
   const sharingLevel = sanitizeSharingLevel(permission.sharingLevel);
   const detailedConsent = sanitizeDetailedConsent(permission.detailedConsent, sharingLevel);
-  const detailedConsentGrantedAt = sharingLevel === 'detailed'
-    ? (typeof permission.detailedConsentGrantedAt === 'string' ? permission.detailedConsentGrantedAt : nowIso())
-    : undefined;
   const timestamp = nowIso();
+  const detailedConsentGrantedAt = sharingLevel === 'detailed'
+    ? timestamp
+    : undefined;
 
   await ensureSocialFriendsSchema(database);
 
@@ -342,6 +352,18 @@ async function savePermission(database, payload) {
         message: 'Permission refusée : ces deux comptes ne sont pas amis actifs.',
       },
     };
+  }
+
+  const friendProfile = await database.prepare(`
+    SELECT handle
+    FROM social_directory_handles
+    WHERE owner_user_id = ?1
+    ORDER BY updated_at DESC
+    LIMIT 1
+  `).bind(friendUserId).first();
+  const friendHandle = normalizeHandle(friendProfile?.handle ?? requestedFriendHandle);
+  if (!friendHandle) {
+    throw new SocialFriendsError(400, 'SOCIAL_FRIENDS_INVALID_HANDLE', 'Identifiant social de l’ami invalide.');
   }
 
   const existing = await database.prepare(`
@@ -431,7 +453,11 @@ async function savePermission(database, payload) {
 async function removeFriendship(database, payload) {
   const userId = sanitizeUserId(payload?.userId ?? payload?.ownerUserId, 'userId');
   const friendUserId = sanitizeUserId(payload?.friendUserId, 'friendUserId');
-  const friendshipId = sanitizeFriendshipId(payload?.friendshipId ?? createFriendshipId(userId, friendUserId));
+  const expectedFriendshipId = createFriendshipId(userId, friendUserId);
+  const friendshipId = sanitizeFriendshipId(payload?.friendshipId ?? expectedFriendshipId);
+  if (friendshipId !== expectedFriendshipId) {
+    throw new SocialFriendsError(400, 'SOCIAL_FRIENDS_FRIENDSHIP_ID_MISMATCH', 'Identifiant d’amitié incohérent.');
+  }
   const timestamp = nowIso();
 
   await ensureSocialFriendsSchema(database);
@@ -497,59 +523,96 @@ async function removeFriendship(database, payload) {
 }
 
 async function readJsonBody(request) {
+  const contentLength = Number(request.headers.get('content-length') ?? 0);
+  if (Number.isFinite(contentLength) && contentLength > MAX_JSON_BYTES) {
+    throw new SocialFriendsError(413, 'SOCIAL_FRIENDS_PAYLOAD_TOO_LARGE', 'Corps JSON trop volumineux.');
+  }
+  let raw;
   try {
-    return await request.json();
+    raw = await request.text();
+  } catch {
+    throw new SocialFriendsError(400, 'SOCIAL_FRIENDS_INVALID_JSON', 'Corps JSON invalide.');
+  }
+  if (new TextEncoder().encode(raw).byteLength > MAX_JSON_BYTES) {
+    throw new SocialFriendsError(413, 'SOCIAL_FRIENDS_PAYLOAD_TOO_LARGE', 'Corps JSON trop volumineux.');
+  }
+  try {
+    return JSON.parse(raw);
   } catch {
     throw new SocialFriendsError(400, 'SOCIAL_FRIENDS_INVALID_JSON', 'Corps JSON invalide.');
   }
 }
 
+function assertActorMatches(actorUserId, claimedUserId) {
+  const actor = sanitizeUserId(actorUserId, 'actorUserId');
+  const claimed = sanitizeUserId(claimedUserId, 'userId');
+  if (actor !== claimed) {
+    throw new SocialFriendsError(403, 'SOCIAL_FRIENDS_ACTOR_MISMATCH', 'Accès refusé pour ce compte.');
+  }
+  return actor;
+}
+
 function errorResponse(error) {
   if (isSocialFriendsError(error)) {
-    const status = error.status === 400 ? 'invalidRequest' : 'unavailable';
+    const status = error.status === 400
+      ? 'invalidRequest'
+      : error.status === 403
+        ? 'forbidden'
+        : 'unavailable';
     return jsonResponse(error.status, { status, code: error.code, message: error.message });
   }
 
-  const message = error instanceof Error ? error.message : 'Erreur inconnue.';
   return jsonResponse(503, {
     status: 'unavailable',
     code: 'SOCIAL_FRIENDS_ERROR',
-    message: `Permissions sociales serveur indisponibles : ${message}`,
+    message: 'Permissions sociales serveur indisponibles.',
   });
 }
 
-export async function handleSocialFriendsFriendshipsRequest(request, env = {}) {
+export async function handleSocialFriendsFriendshipsRequest(request, env = {}, context = {}) {
   try {
     const methodResponse = assertMethod(request, 'GET');
     if (methodResponse) return methodResponse;
+    const actor = await socialActivitySnapshotsInternals.authenticateRequest(
+      request, env, context.fetcher ?? fetch,
+    );
     const database = readDatabase(env);
     const url = new URL(request.url);
-    const result = await listFriendships(database, url.searchParams.get('userId'));
+    const userId = assertActorMatches(actor.subject, url.searchParams.get('userId'));
+    const result = await listFriendships(database, userId);
     return jsonResponse(200, { status: 'found', message: 'Amitiés serveur synchronisées.', ...result });
   } catch (error) {
     return errorResponse(error);
   }
 }
 
-export async function handleSocialFriendsPermissionsRequest(request, env = {}) {
+export async function handleSocialFriendsPermissionsRequest(request, env = {}, context = {}) {
   try {
     const methodResponse = assertMethod(request, 'GET');
     if (methodResponse) return methodResponse;
+    const actor = await socialActivitySnapshotsInternals.authenticateRequest(
+      request, env, context.fetcher ?? fetch,
+    );
     const database = readDatabase(env);
     const url = new URL(request.url);
-    const permissions = await listPermissions(database, url.searchParams.get('userId'));
+    const userId = assertActorMatches(actor.subject, url.searchParams.get('userId'));
+    const permissions = await listPermissions(database, userId);
     return jsonResponse(200, { status: 'found', message: 'Permissions ami serveur synchronisées.', permissions });
   } catch (error) {
     return errorResponse(error);
   }
 }
 
-export async function handleSocialFriendsPermissionSaveRequest(request, env = {}) {
+export async function handleSocialFriendsPermissionSaveRequest(request, env = {}, context = {}) {
   try {
     const methodResponse = assertMethod(request, 'POST');
     if (methodResponse) return methodResponse;
+    const actor = await socialActivitySnapshotsInternals.authenticateRequest(
+      request, env, context.fetcher ?? fetch,
+    );
     const database = readDatabase(env);
     const payload = await readJsonBody(request);
+    assertActorMatches(actor.subject, payload?.ownerUserId ?? payload?.userId);
     const result = await savePermission(database, payload);
     return jsonResponse(result.status, result.payload);
   } catch (error) {
@@ -557,12 +620,16 @@ export async function handleSocialFriendsPermissionSaveRequest(request, env = {}
   }
 }
 
-export async function handleSocialFriendsRemoveRequest(request, env = {}) {
+export async function handleSocialFriendsRemoveRequest(request, env = {}, context = {}) {
   try {
     const methodResponse = assertMethod(request, 'POST');
     if (methodResponse) return methodResponse;
+    const actor = await socialActivitySnapshotsInternals.authenticateRequest(
+      request, env, context.fetcher ?? fetch,
+    );
     const database = readDatabase(env);
     const payload = await readJsonBody(request);
+    assertActorMatches(actor.subject, payload?.userId ?? payload?.ownerUserId);
     const result = await removeFriendship(database, payload);
     return jsonResponse(result.status, result.payload);
   } catch (error) {
@@ -575,4 +642,5 @@ export const socialFriendsInternals = {
   listPermissions,
   savePermission,
   removeFriendship,
+  assertActorMatches,
 };

@@ -24,6 +24,7 @@ describe('socialFriendRequestsGateway', () => {
     const calls: Array<{ url: string; init: RequestInit | undefined }> = [];
     const client = createSocialFriendRequestsClient({
       endpoint: '/api/social-friend-requests',
+      getCredentials: () => ({ userId: 'social-user:alex', accessToken: 'secret-token' }),
       fetcher: async (url, init) => {
         calls.push({ url: String(url), init });
         return jsonResponse(201, {
@@ -42,6 +43,9 @@ describe('socialFriendRequestsGateway', () => {
     expect(sendCall).toBeDefined();
     if (!sendCall) throw new Error('Appel serveur manquant.');
     expect(sendCall.url).toBe('/api/social-friend-requests/send');
+    expect(sendCall.init?.headers).toMatchObject({
+      authorization: 'Bearer secret-token',
+    });
     expect(JSON.parse(String(sendCall.init?.body))).toMatchObject({
       requesterUserId: 'social-user:alex',
       recipientUserId: 'social-user:lina',
@@ -51,6 +55,7 @@ describe('socialFriendRequestsGateway', () => {
   it('liste les demandes entrantes', async () => {
     const client = createSocialFriendRequestsClient({
       endpoint: '/api/social-friend-requests',
+      getCredentials: () => ({ userId: 'social-user:lina', accessToken: 'secret-token' }),
       fetcher: async () => jsonResponse(200, { status: 'found', requests: [baseRequest] }),
     });
 
@@ -63,6 +68,7 @@ describe('socialFriendRequestsGateway', () => {
     const acceptedRequest = { ...baseRequest, status: 'accepted', respondedAt: '2026-07-06T11:00:00.000Z' };
     const client = createSocialFriendRequestsClient({
       endpoint: '/api/social-friend-requests',
+      getCredentials: () => ({ userId: 'social-user:lina', accessToken: 'secret-token' }),
       fetcher: async () => jsonResponse(200, {
         status: 'updated',
         message: 'Demande cloud accepted.',
