@@ -1,6 +1,9 @@
 import type { EntityId, IsoDateTime } from '@/domain/models/common';
 import type { PublicUserProfile, SocialIdentity } from '@/domain/friends/socialIdentity';
-import type { SocialActivityGlobalSharingPolicy } from '@/domain/friends/socialActivitySharingPolicy';
+import type {
+  SocialActivityGlobalSharingPolicy,
+  SocialActivityVisibility,
+} from '@/domain/friends/socialActivitySharingPolicy';
 
 export type FriendRequestStatus = 'pending' | 'accepted' | 'declined' | 'cancelled';
 export type FriendRequestDirection = 'incoming' | 'outgoing';
@@ -560,6 +563,7 @@ export function summarizeFriendsPrivacy(snapshot: FriendsPrivacySnapshot): Frien
 
 export function evaluateFriendActivitySharingGuard(
   snapshot: FriendsPrivacySnapshot,
+  requestedVisibility?: SocialActivityVisibility,
 ): FriendActivitySharingGuard {
   if (snapshot.privacy.profileVisibility === 'private') {
     return {
@@ -571,7 +575,14 @@ export function evaluateFriendActivitySharingGuard(
     };
   }
 
-  if (snapshot.privacy.activitySharing === 'disabled') {
+  const effectiveVisibility = requestedVisibility
+    ?? (snapshot.privacy.activitySharing === 'disabled'
+      ? 'private'
+      : snapshot.privacy.activitySharing === 'summary-only'
+        ? 'summary'
+        : 'detailed');
+
+  if (effectiveVisibility === 'private') {
     return {
       allowedScope: 'none',
       canShareSummary: false,
@@ -596,7 +607,7 @@ export function evaluateFriendActivitySharingGuard(
     return permission.sharingLevel === 'detailed' && permission.detailedConsent === 'granted';
   });
 
-  if (snapshot.privacy.activitySharing === 'summary-only') {
+  if (effectiveVisibility === 'summary') {
     return {
       allowedScope: 'summary',
       canShareSummary: true,
@@ -620,9 +631,10 @@ export function evaluateFriendActivitySharingGuard(
 export function evaluateFriendScopedActivitySharingGuard(
   snapshot: FriendsPrivacySnapshot,
   friend: FriendProfileSummary,
+  requestedVisibility?: SocialActivityVisibility,
 ): FriendScopedActivitySharingGuard {
   const permission = selectFriendActivityPermission(snapshot, friend);
-  const globalGuard = evaluateFriendActivitySharingGuard(snapshot);
+  const globalGuard = evaluateFriendActivitySharingGuard(snapshot, requestedVisibility);
   if (!globalGuard.canShareSummary) {
     return {
       ...globalGuard,
@@ -633,7 +645,9 @@ export function evaluateFriendScopedActivitySharingGuard(
   }
 
   if (
-    snapshot.privacy.activitySharing === 'detailed'
+    (requestedVisibility === 'detailed'
+      || requestedVisibility === 'custom'
+      || (requestedVisibility === undefined && snapshot.privacy.activitySharing === 'detailed'))
     && permission.sharingLevel === 'detailed'
     && permission.detailedConsent === 'granted'
   ) {

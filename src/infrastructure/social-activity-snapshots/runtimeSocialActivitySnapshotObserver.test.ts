@@ -1,6 +1,7 @@
 import { vi } from 'vitest';
 
 import type { SocialActivitySnapshotPublicationRepository } from '@/application/friends/socialActivityPublicationService';
+import { DEFAULT_DETAILED_SOCIAL_ACTIVITY_FIELD_SELECTION } from '@/domain/friends/socialActivitySharingPolicy';
 import type { SocialActivitySnapshotOutboxRecord } from '@/domain/friends/socialActivitySnapshotOutbox';
 import {
   createFriendActivityPermissionId,
@@ -161,6 +162,50 @@ describe('runtime social activity snapshot observer', () => {
       deletionReason: 'sourceDeleted',
     });
     expect(notifyOutboxChanged).toHaveBeenCalledTimes(2);
+  });
+
+  it('met en file une activité surchargée malgré un ancien partage global désactivé', async () => {
+    const outboxRepository = new MemoryOutboxRepository();
+    const notifyOutboxChanged = vi.fn();
+    const observer = createRuntimeSocialActivitySnapshotObserver({
+      identityRepository: { readIdentity: vi.fn(async () => identity), saveIdentity: vi.fn() },
+      privacyRepository: {
+        readSnapshot: vi.fn(async () => ({
+          ...privacySnapshot,
+          privacy: {
+            ...privacySnapshot.privacy,
+            activitySharing: 'disabled' as const,
+            socialActivitySharingPolicy: {
+              visibility: 'private' as const,
+              fields: DEFAULT_DETAILED_SOCIAL_ACTIVITY_FIELD_SELECTION,
+            },
+          },
+        })),
+        saveSnapshot: vi.fn(),
+      },
+      outboxRepository,
+      workoutSessions: { listExercises: vi.fn(async () => []) },
+      strengthSets: { listBySession: vi.fn(async () => []) },
+      strengthExercises: { listAll: vi.fn(async () => []) },
+      notifyOutboxChanged,
+    });
+    const activity = {
+      ...createEntity(
+        createRunningActivityInput({ notes: 'Privé' }),
+        'activity-override',
+        '2026-07-07T10:00:00.000Z',
+      ),
+      socialSharing: { mode: 'summary' as const },
+    };
+
+    await observer.onActivitySaved(activity);
+
+    expect([...outboxRepository.records.values()][0]?.snapshot).toMatchObject({
+      state: 'active',
+      visibility: 'summary',
+      sourceActivityId: activity.id,
+    });
+    expect(notifyOutboxChanged).toHaveBeenCalledOnce();
   });
 
   it('charge les exercices et séries uniquement après une séance terminée', async () => {

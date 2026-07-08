@@ -190,6 +190,60 @@ describe('friendship domain', () => {
   });
 
 
+  it('évalue une surcharge d’activité sans laisser le champ historique la bloquer', () => {
+    const friend = {
+      id: 'social-user:nora' as EntityId,
+      userId: 'social-user:nora' as EntityId,
+      displayName: 'Nora Trail',
+      handle: 'nora.trail',
+      initials: 'NT',
+    };
+    const snapshot = {
+      ...baseSnapshot,
+      friends: [friend],
+      privacy: {
+        ...DEFAULT_FRIENDS_PRIVACY_SETTINGS,
+        profileVisibility: 'friends' as const,
+        activitySharing: 'disabled' as const,
+      },
+    };
+
+    expect(evaluateFriendScopedActivitySharingGuard(snapshot, friend, 'summary')).toMatchObject({
+      allowedScope: 'summary',
+      canShareSummary: true,
+      canShareDetailed: false,
+    });
+    expect(evaluateFriendScopedActivitySharingGuard(snapshot, friend, 'private')).toMatchObject({
+      allowedScope: 'none',
+      canShareSummary: false,
+    });
+  });
+
+  it('maintient le verrou absolu du profil privé malgré une visibilité demandée', () => {
+    const friend = {
+      id: 'social-user:nora' as EntityId,
+      userId: 'social-user:nora' as EntityId,
+      displayName: 'Nora Trail',
+      handle: 'nora.trail',
+      initials: 'NT',
+    };
+    const snapshot = {
+      ...baseSnapshot,
+      friends: [friend],
+      privacy: {
+        ...DEFAULT_FRIENDS_PRIVACY_SETTINGS,
+        profileVisibility: 'private' as const,
+        activitySharing: 'disabled' as const,
+      },
+    };
+
+    expect(evaluateFriendScopedActivitySharingGuard(snapshot, friend, 'detailed')).toMatchObject({
+      allowedScope: 'none',
+      canShareSummary: false,
+      canShareDetailed: false,
+    });
+  });
+
   it('conserve la politique de partage configurée lorsque le profil devient privé', () => {
     const current = {
       ...DEFAULT_FRIENDS_PRIVACY_SETTINGS,

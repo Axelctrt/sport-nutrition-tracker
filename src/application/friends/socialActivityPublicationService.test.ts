@@ -5,6 +5,10 @@ import {
   socialActivityGlobalPolicyFromFriendsPrivacy,
   type SocialActivitySnapshotPublicationRepository,
 } from '@/application/friends/socialActivityPublicationService';
+import {
+  DEFAULT_DETAILED_SOCIAL_ACTIVITY_FIELD_SELECTION,
+  type SocialActivityGlobalSharingPolicy,
+} from '@/domain/friends/socialActivitySharingPolicy';
 import type { SocialActivitySnapshotOutboxRecord } from '@/domain/friends/socialActivitySnapshotOutbox';
 import {
   createFriendActivityPermissionId,
@@ -73,6 +77,8 @@ function friend(userId: EntityId, handle: string): FriendProfileSummary {
 
 function privacySnapshot(input: {
   readonly sharing?: FriendsPrivacySnapshot['privacy']['activitySharing'];
+  readonly profileVisibility?: FriendsPrivacySnapshot['privacy']['profileVisibility'];
+  readonly policy?: SocialActivityGlobalSharingPolicy;
   readonly friends?: readonly FriendProfileSummary[];
   readonly detailedFriendIds?: readonly EntityId[];
 } = {}): FriendsPrivacySnapshot {
@@ -83,8 +89,9 @@ function privacySnapshot(input: {
     friends,
     requests: [],
     privacy: {
-      profileVisibility: 'friends',
+      profileVisibility: input.profileVisibility ?? 'friends',
       activitySharing: input.sharing ?? 'summary-only',
+      ...(input.policy ? { socialActivitySharingPolicy: input.policy } : {}),
       allowFriendRequests: true,
       requireManualApproval: true,
     },
@@ -189,6 +196,68 @@ describe('social activity publication service', () => {
     expect(socialActivityGlobalPolicyFromFriendsPrivacy(
       privacySnapshot({ sharing: 'disabled' }),
     ).visibility).toBe('private');
+  });
+
+  it('respecte une surcharge activité même si le champ historique reste désactivé', async () => {
+    const repository = new MemoryPublicationRepository();
+    const activity = {
+      ...runningActivity(),
+      socialSharing: { mode: 'summary' as const },
+    };
+
+    const report = await reconcileStoredActivitySocialSnapshots({
+      context: {
+        identity,
+        privacySnapshot: privacySnapshot({
+          sharing: 'disabled',
+          policy: {
+            visibility: 'private',
+            fields: DEFAULT_DETAILED_SOCIAL_ACTIVITY_FIELD_SELECTION,
+          },
+        }),
+        repository,
+      },
+      activity,
+      stagedAt: '2026-07-07T11:00:00.000Z',
+    });
+
+    expect(report).toMatchObject({
+      status: 'reconciled',
+      activeSnapshotCount: 1,
+      tombstoneCount: 0,
+    });
+    expect([...repository.records.values()][0]?.snapshot).toMatchObject({
+      state: 'active',
+      visibility: 'summary',
+      sourceActivityId: activity.id,
+    });
+  });
+
+  it('conserve le verrou du profil privé malgré une surcharge activité', async () => {
+    const repository = new MemoryPublicationRepository();
+
+    const report = await reconcileStoredActivitySocialSnapshots({
+      context: {
+        identity,
+        privacySnapshot: privacySnapshot({
+          sharing: 'disabled',
+          profileVisibility: 'private',
+          policy: {
+            visibility: 'private',
+            fields: DEFAULT_DETAILED_SOCIAL_ACTIVITY_FIELD_SELECTION,
+          },
+        }),
+        repository,
+      },
+      activity: {
+        ...runningActivity(),
+        socialSharing: { mode: 'detailed' },
+      },
+      stagedAt: '2026-07-07T11:00:00.000Z',
+    });
+
+    expect(report.activeSnapshotCount).toBe(0);
+    expect(repository.records.size).toBe(0);
   });
 
   it('met en file un résumé par ami réel et ignore un contact local sans userId', async () => {

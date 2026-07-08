@@ -186,6 +186,7 @@ async function reconcilePublicationPlans(input: {
     const friendScope = evaluateFriendScopedActivitySharingGuard(
       input.context.privacySnapshot,
       plan.friend,
+      resolvedPolicy.visibility,
     ).allowedScope;
     const policy = applyFriendScopeToSocialActivitySharingPolicy(resolvedPolicy, friendScope);
     const nextSnapshot = input.project({
