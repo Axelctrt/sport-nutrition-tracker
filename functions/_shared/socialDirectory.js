@@ -1,3 +1,5 @@
+import { socialActivitySnapshotsInternals } from './socialActivitySnapshots.js';
+
 class SocialDirectoryError extends Error {
   constructor(status, code, message) {
     super(message);
@@ -8,6 +10,8 @@ class SocialDirectoryError extends Error {
 }
 
 const HANDLE_PATTERN = /^[a-z0-9][a-z0-9._-]{2,31}$/u;
+const MAX_JSON_BYTES = 32_768;
+
 const RESERVED_HANDLES = new Set([
   'admin',
   'administrator',
@@ -31,7 +35,9 @@ function jsonResponse(status, payload, extraHeaders = {}) {
       'cache-control': 'no-store',
       'access-control-allow-origin': '*',
       'access-control-allow-methods': 'GET,POST,OPTIONS',
-      'access-control-allow-headers': 'content-type',
+      'access-control-allow-headers': 'authorization,content-type',
+      'x-content-type-options': 'nosniff',
+      'referrer-policy': 'no-referrer',
       ...extraHeaders,
     },
   });
@@ -49,7 +55,9 @@ function assertMethod(request, expected) {
         'cache-control': 'no-store',
         'access-control-allow-origin': '*',
         'access-control-allow-methods': 'GET,POST,OPTIONS',
-        'access-control-allow-headers': 'content-type',
+        'access-control-allow-headers': 'authorization,content-type',
+        'x-content-type-options': 'nosniff',
+        'referrer-policy': 'no-referrer',
       },
     });
   }
@@ -78,7 +86,9 @@ function normalizeHandle(rawHandle) {
 }
 
 function sanitizeDisplayName(value) {
-  const displayName = typeof value === 'string' ? value.trim().replace(/\s+/gu, ' ') : '';
+  const displayName = typeof value === 'string'
+    ? value.normalize('NFKC').replace(/[\p{Cc}\p{Cf}]/gu, '').trim().replace(/\s+/gu, ' ')
+    : '';
   return displayName.length > 0 ? displayName.slice(0, 80) : 'SportPilot';
 }
 
@@ -143,9 +153,13 @@ async function deletePreviousReservations(database, ownerUserId, nextHandle) {
   `).bind(ownerUserId, nextHandle).run();
 }
 
-async function reserveSocialHandle(database, payload) {
+async function reserveSocialHandle(database, payload, actorUserId) {
   const handle = normalizeHandle(payload?.handle);
-  const ownerUserId = sanitizeUserId(payload?.userId);
+  const claimedUserId = sanitizeUserId(payload?.userId);
+  const ownerUserId = sanitizeUserId(actorUserId);
+  if (claimedUserId !== ownerUserId) {
+    throw new SocialDirectoryError(403, 'SOCIAL_DIRECTORY_ACTOR_MISMATCH', 'Réservation refusée pour ce compte.');
+  }
   const ownerDisplayName = sanitizeDisplayName(payload?.displayName);
   const timestamp = nowIso();
 
@@ -225,48 +239,77 @@ async function lookupSocialHandle(database, rawHandle) {
 }
 
 async function readJsonBody(request) {
+  const contentLength = Number(request.headers.get('content-length') ?? 0);
+  if (Number.isFinite(contentLength) && contentLength > MAX_JSON_BYTES) {
+    throw new SocialDirectoryError(413, 'SOCIAL_DIRECTORY_PAYLOAD_TOO_LARGE', 'Corps JSON trop volumineux.');
+  }
+  let raw;
   try {
-    return await request.json();
+    raw = await request.text();
+  } catch {
+    throw new SocialDirectoryError(400, 'SOCIAL_DIRECTORY_INVALID_JSON', 'Corps JSON invalide.');
+  }
+  if (new TextEncoder().encode(raw).byteLength > MAX_JSON_BYTES) {
+    throw new SocialDirectoryError(413, 'SOCIAL_DIRECTORY_PAYLOAD_TOO_LARGE', 'Corps JSON trop volumineux.');
+  }
+  try {
+    return JSON.parse(raw);
   } catch {
     throw new SocialDirectoryError(400, 'SOCIAL_DIRECTORY_INVALID_JSON', 'Corps JSON invalide.');
   }
 }
 
-export async function handleSocialDirectoryReserveRequest(request, env = {}) {
+function directoryErrorResponse(error) {
+  if (isDirectoryError(error)) {
+    const status = error.status === 400
+      ? 'invalidHandle'
+      : error.status === 403
+        ? 'forbidden'
+        : 'unavailable';
+    return jsonResponse(error.status, { status, code: error.code, message: error.message });
+  }
+  return jsonResponse(503, {
+    status: 'unavailable',
+    code: 'SOCIAL_DIRECTORY_ERROR',
+    message: 'Annuaire social serveur indisponible.',
+  });
+}
+
+export async function handleSocialDirectoryReserveRequest(request, env = {}, context = {}) {
   try {
     const methodResponse = assertMethod(request, 'POST');
     if (methodResponse) return methodResponse;
 
+    const actor = await socialActivitySnapshotsInternals.authenticateRequest(
+      request,
+      env,
+      context.fetcher ?? fetch,
+    );
     const database = readDirectoryDatabase(env);
     const payload = await readJsonBody(request);
-    const result = await reserveSocialHandle(database, payload);
+    const result = await reserveSocialHandle(database, payload, actor.subject);
     return jsonResponse(result.status, result.payload);
   } catch (error) {
-    if (isDirectoryError(error)) {
-      return jsonResponse(error.status, { status: error.status === 400 ? 'invalidHandle' : 'unavailable', code: error.code, message: error.message });
-    }
-
-    const message = error instanceof Error ? error.message : 'Erreur inconnue.';
-    return jsonResponse(503, { status: 'unavailable', code: 'SOCIAL_DIRECTORY_ERROR', message: `Annuaire social serveur indisponible : ${message}` });
+    return directoryErrorResponse(error);
   }
 }
 
-export async function handleSocialDirectoryLookupRequest(request, env = {}) {
+export async function handleSocialDirectoryLookupRequest(request, env = {}, context = {}) {
   try {
     const methodResponse = assertMethod(request, 'GET');
     if (methodResponse) return methodResponse;
 
+    await socialActivitySnapshotsInternals.authenticateRequest(
+      request,
+      env,
+      context.fetcher ?? fetch,
+    );
     const database = readDirectoryDatabase(env);
     const url = new URL(request.url);
     const result = await lookupSocialHandle(database, url.searchParams.get('handle'));
     return jsonResponse(result.status, result.payload);
   } catch (error) {
-    if (isDirectoryError(error)) {
-      return jsonResponse(error.status, { status: error.status === 400 ? 'invalidHandle' : 'unavailable', code: error.code, message: error.message });
-    }
-
-    const message = error instanceof Error ? error.message : 'Erreur inconnue.';
-    return jsonResponse(503, { status: 'unavailable', code: 'SOCIAL_DIRECTORY_ERROR', message: `Annuaire social serveur indisponible : ${message}` });
+    return directoryErrorResponse(error);
   }
 }
 

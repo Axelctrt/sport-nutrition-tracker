@@ -79,6 +79,10 @@ class FakeStatement {
   }
 
   async first() {
+    if (this.sql.includes('from social_directory_handles')) {
+      return { handle: 'friend.run' };
+    }
+
     if (this.sql.includes('from social_friendships') && this.sql.includes("status = 'active'")) {
       const [ownerUserId, friendUserId] = this.values;
       return this.database.friendships.has(this.database.pair(ownerUserId, friendUserId))

@@ -16,6 +16,7 @@ const REQUIRED_TABLES = Object.freeze([
   'social_friend_permissions',
   'social_activity_snapshots',
 ]);
+const MAX_JSON_BYTES = 32_768;
 
 function jsonResponse(status, payload) {
   return new Response(JSON.stringify(payload), {
@@ -26,6 +27,8 @@ function jsonResponse(status, payload) {
       'access-control-allow-origin': '*',
       'access-control-allow-methods': 'POST,OPTIONS',
       'access-control-allow-headers': 'authorization,content-type',
+      'x-content-type-options': 'nosniff',
+      'referrer-policy': 'no-referrer',
     },
   });
 }
@@ -38,6 +41,8 @@ function optionsResponse() {
       'access-control-allow-origin': '*',
       'access-control-allow-methods': 'POST,OPTIONS',
       'access-control-allow-headers': 'authorization,content-type',
+      'x-content-type-options': 'nosniff',
+      'referrer-policy': 'no-referrer',
     },
   });
 }
@@ -92,7 +97,7 @@ function normalizeHandle(value) {
 
 function sanitizeDisplayName(value) {
   const displayName = typeof value === 'string'
-    ? value.trim().replace(/\s+/gu, ' ')
+    ? value.normalize('NFKC').replace(/[\p{Cc}\p{Cf}]/gu, '').trim().replace(/\s+/gu, ' ')
     : '';
   return (displayName || 'SportPilot').slice(0, 80);
 }
@@ -265,8 +270,33 @@ async function readPrivateEntity(databaseUrl, token, tableName, entityId, fetche
 }
 
 async function readJsonBody(request) {
+  const contentLength = Number(request.headers.get('content-length') ?? 0);
+  if (Number.isFinite(contentLength) && contentLength > MAX_JSON_BYTES) {
+    throw new SocialIdentityReconciliationError(
+      413,
+      'SOCIAL_IDENTITY_RECONCILIATION_PAYLOAD_TOO_LARGE',
+      'Corps JSON trop volumineux.',
+    );
+  }
+  let raw;
   try {
-    return await request.json();
+    raw = await request.text();
+  } catch {
+    throw new SocialIdentityReconciliationError(
+      400,
+      'SOCIAL_IDENTITY_RECONCILIATION_INVALID_JSON',
+      'Corps JSON invalide.',
+    );
+  }
+  if (new TextEncoder().encode(raw).byteLength > MAX_JSON_BYTES) {
+    throw new SocialIdentityReconciliationError(
+      413,
+      'SOCIAL_IDENTITY_RECONCILIATION_PAYLOAD_TOO_LARGE',
+      'Corps JSON trop volumineux.',
+    );
+  }
+  try {
+    return JSON.parse(raw);
   } catch {
     throw new SocialIdentityReconciliationError(
       400,
@@ -374,7 +404,7 @@ async function discoverLegacyUserIds({
   if (
     previousUserId !== canonicalUserId
     && /^(?:social-user:|sp-)/u.test(previousUserId)
-    && (legacyIds.size > 0 || existingHandle?.owner_user_id === previousUserId)
+    && existingHandle?.owner_user_id === previousUserId
   ) {
     legacyIds.add(previousUserId);
   }
