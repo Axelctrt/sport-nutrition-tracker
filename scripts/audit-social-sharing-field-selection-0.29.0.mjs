@@ -48,7 +48,7 @@ const checks = [
       && snapshots.includes('permissionFields'),
   ],
   [
-    'client publication intersects owner and friend policies',
+    'client publication applies the per-friend selection',
     publication.includes('friendGuard.permission.fieldSelection')
       && publication.includes('applyFriendScopeToSocialActivitySharingPolicy'),
   ],
@@ -58,14 +58,17 @@ const checks = [
       && friendship.includes('fieldSelection'),
   ],
   [
-    'friend editor saves an explicit field selection',
-    sharingSettings.includes('SocialActivityFriendFieldSelectionSettings')
-      && sharingSettings.includes('Enregistrer les champs')
+    'compact friend editor saves an explicit field selection',
+    sharingSettings.includes('SocialActivityFriendSharingSettings')
+      && sharingSettings.includes('onSaveFields')
+      && sharingSettings.includes('Enregistrer')
       && privacyPage.includes('updateFriendFieldSelection'),
   ],
   [
-    'private notes are explicitly excluded from the editor',
-    sharingSettings.includes('Les notes personnelles et les champs techniques restent toujours privés.'),
+    'private notes and raw activity are not configurable',
+    !sharingSettings.includes("'notes'")
+      && !sharingSettings.includes("'privateNotes'")
+      && !sharingSettings.includes("'rawActivity'"),
   ],
   [
     'A20 server and domain tests exist',
