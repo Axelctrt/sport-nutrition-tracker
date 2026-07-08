@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import type { SocialActivityCloudFeedCard } from '@/domain/friends/socialActivityCloudFeed';
@@ -127,9 +127,16 @@ describe('SocialActivityFeedPanel', () => {
         }],
       },
     };
+    const strengthCard: SocialActivityCloudFeedCard = {
+      ...card,
+      allowedFields: strengthDetail.allowedFields,
+    };
     render(
       <SocialActivityFeedPanel
-        gateway={gateway({ readDetail: vi.fn(async () => strengthDetail) })}
+        gateway={gateway({
+          listPage: vi.fn(async () => ({ items: [strengthCard] })),
+          readDetail: vi.fn(async () => strengthDetail),
+        })}
         getCredentials={getCredentials}
         isOnline={() => true}
       />,
@@ -256,7 +263,7 @@ describe('SocialActivityFeedPanel', () => {
     await user.click(await screen.findByRole('button', { name: /Ouvrir l’activité/u }));
 
     expect(await screen.findByText('Activité indisponible')).toBeInTheDocument();
-    expect(screen.getByText('La réponse reçue ne correspond pas à l’activité sélectionnée.')).toBeInTheDocument();
+    expect(screen.getByText('Cette activité a changé. Actualise le fil pour ouvrir sa version la plus récente.')).toBeInTheDocument();
     expect(screen.queryByText('Développé couché')).not.toBeInTheDocument();
   });
 
@@ -324,4 +331,238 @@ describe('SocialActivityFeedPanel', () => {
     expect(await screen.findByText('Mode hors ligne')).toBeInTheDocument();
     expect(feedGateway.listPage).not.toHaveBeenCalled();
   });
+
+  it('conserve le fil pendant une actualisation puis retire une activité devenue indisponible', async () => {
+    const user = userEvent.setup();
+    let resolveRefresh: ((value: { items: readonly SocialActivityCloudFeedCard[] }) => void) | undefined;
+    const refresh = new Promise<{ items: readonly SocialActivityCloudFeedCard[] }>((resolve) => {
+      resolveRefresh = resolve;
+    });
+    const listPage = vi.fn()
+      .mockResolvedValueOnce({ items: [card] })
+      .mockImplementationOnce(async () => refresh);
+
+    render(
+      <SocialActivityFeedPanel
+        gateway={gateway({ listPage })}
+        getCredentials={getCredentials}
+        isOnline={() => true}
+      />,
+    );
+
+    await screen.findByText('Push du mardi');
+    await user.click(screen.getByRole('button', { name: 'Actualiser le fil' }));
+
+    expect(screen.getByText('Push du mardi')).toBeInTheDocument();
+    expect(screen.getByText('Actualisation…')).toBeInTheDocument();
+
+    resolveRefresh?.({ items: [] });
+
+    expect(await screen.findByText('Le fil est vide pour le moment.')).toBeInTheDocument();
+    expect(screen.queryByText('Push du mardi')).not.toBeInTheDocument();
+  });
+
+  it('ferme une fiche ouverte lorsque l’activité disparaît au rafraîchissement', async () => {
+    const user = userEvent.setup();
+    const listPage = vi.fn()
+      .mockResolvedValueOnce({ items: [card] })
+      .mockResolvedValueOnce({ items: [] });
+
+    render(
+      <SocialActivityFeedPanel
+        gateway={gateway({ listPage })}
+        getCredentials={getCredentials}
+        isOnline={() => true}
+      />,
+    );
+
+    await user.click(await screen.findByRole('button', { name: /Ouvrir l’activité/u }));
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Actualiser le fil' }));
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(screen.getByText('Le fil est vide pour le moment.')).toBeInTheDocument();
+  });
+
+  it('ignore une ancienne pagination qui se termine après une actualisation plus récente', async () => {
+    const user = userEvent.setup();
+    const refreshedCard: SocialActivityCloudFeedCard = {
+      ...card,
+      snapshotId: 'social-activity-snapshot-v2:owner-user:activity:swim-1:friend-user',
+      sourceKind: 'activity',
+      sourceActivityId: 'swim-1',
+      sourceRevision: 'revision-swim-1',
+      family: 'cardio',
+      activityType: 'swimming',
+      title: 'Natation technique',
+      occurredOn: '2026-07-08',
+      occurredTime: '07:30',
+      visibility: 'summary',
+      allowedFields: {
+        common: ['activityType', 'title', 'date', 'duration'],
+        cardio: ['distance'],
+        strength: [],
+      },
+      summary: { durationMinutes: 40, distanceMeters: 1_500 },
+      detailAvailable: false,
+    };
+    let resolveAppend: ((value: { items: readonly SocialActivityCloudFeedCard[] }) => void) | undefined;
+    let resolveRefresh: ((value: { items: readonly SocialActivityCloudFeedCard[] }) => void) | undefined;
+    const append = new Promise<{ items: readonly SocialActivityCloudFeedCard[] }>((resolve) => {
+      resolveAppend = resolve;
+    });
+    const refresh = new Promise<{ items: readonly SocialActivityCloudFeedCard[] }>((resolve) => {
+      resolveRefresh = resolve;
+    });
+    const listPage = vi.fn()
+      .mockResolvedValueOnce({ items: [card], nextCursor: 'cursor-2' })
+      .mockImplementationOnce(async () => append)
+      .mockImplementationOnce(async () => refresh);
+
+    render(
+      <SocialActivityFeedPanel
+        gateway={gateway({ listPage })}
+        getCredentials={getCredentials}
+        isOnline={() => true}
+      />,
+    );
+
+    await screen.findByText('Push du mardi');
+    await user.click(screen.getByRole('button', { name: 'Afficher plus d’activités' }));
+    await user.click(screen.getByRole('button', { name: 'Actualiser le fil' }));
+
+    resolveRefresh?.({ items: [refreshedCard] });
+    expect(await screen.findByText('Natation technique')).toBeInTheDocument();
+
+    resolveAppend?.({ items: [card] });
+    await act(async () => Promise.resolve());
+
+    expect(screen.queryByText('Push du mardi')).not.toBeInTheDocument();
+    expect(screen.getByText('Natation technique')).toBeInTheDocument();
+  });
+
+  it('préserve la position visuelle de la première carte visible lors d’un rafraîchissement', async () => {
+    const user = userEvent.setup();
+    const newerCard: SocialActivityCloudFeedCard = {
+      ...card,
+      snapshotId: 'social-activity-snapshot-v2:owner-user:activity:run-new:friend-user',
+      sourceKind: 'activity',
+      sourceActivityId: 'run-new',
+      sourceRevision: 'revision-run-new',
+      family: 'cardio',
+      activityType: 'running',
+      title: 'Course récente',
+      occurredOn: '2026-07-08',
+      occurredTime: '09:00',
+      visibility: 'summary',
+      allowedFields: {
+        common: ['activityType', 'title', 'date', 'duration'],
+        cardio: ['distance'],
+        strength: [],
+      },
+      summary: { durationMinutes: 35, distanceKm: 6 },
+      detailAvailable: false,
+    };
+    const listPage = vi.fn()
+      .mockResolvedValueOnce({ items: [card] })
+      .mockResolvedValueOnce({ items: [newerCard, card] });
+    const rectSpy = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+      .mockImplementation(function mockRect(this: HTMLElement) {
+        const cardCount = document.querySelectorAll('[data-social-feed-card-id]').length;
+        const isOriginalCard = this.dataset.socialFeedCardId === card.snapshotId;
+        const top = isOriginalCard ? (cardCount > 1 ? 220 : 120) : 20;
+        return {
+          x: 0,
+          y: top,
+          top,
+          bottom: top + 100,
+          left: 0,
+          right: 300,
+          width: 300,
+          height: 100,
+          toJSON: () => ({}),
+        } as DOMRect;
+      });
+    const scrollBySpy = vi.spyOn(window, 'scrollBy').mockImplementation(() => undefined);
+
+    try {
+      render(
+        <SocialActivityFeedPanel
+          gateway={gateway({ listPage })}
+          getCredentials={getCredentials}
+          isOnline={() => true}
+        />,
+      );
+
+      await screen.findByText('Push du mardi');
+      await user.click(screen.getByRole('button', { name: 'Actualiser le fil' }));
+
+      expect(await screen.findByText('Course récente')).toBeInTheDocument();
+      expect(scrollBySpy).toHaveBeenCalledWith({ top: 100, behavior: 'auto' });
+    } finally {
+      rectSpy.mockRestore();
+      scrollBySpy.mockRestore();
+    }
+  });
+
+  it('efface immédiatement le fil précédent lors d’un changement de compte', async () => {
+    let credentials = getCredentials();
+    let credentialsListener: (() => void) | undefined;
+    let resolveSecondAccount: ((value: { items: readonly SocialActivityCloudFeedCard[] }) => void) | undefined;
+    const secondAccountPage = new Promise<{ items: readonly SocialActivityCloudFeedCard[] }>((resolve) => {
+      resolveSecondAccount = resolve;
+    });
+    const secondAccountCard: SocialActivityCloudFeedCard = {
+      ...card,
+      snapshotId: 'social-activity-snapshot-v2:other-owner:activity:walk-1:second-user',
+      ownerUserId: 'other-owner',
+      recipientUserId: 'second-user',
+      sourceKind: 'activity',
+      sourceActivityId: 'walk-1',
+      sourceRevision: 'revision-walk-1',
+      family: 'cardio',
+      activityType: 'walking',
+      title: 'Marche du soir',
+      visibility: 'summary',
+      allowedFields: {
+        common: ['activityType', 'title', 'date', 'duration'],
+        cardio: ['distance'],
+        strength: [],
+      },
+      summary: { durationMinutes: 30, distanceKm: 2.4 },
+      detailAvailable: false,
+      ownerProfile: { userId: 'other-owner', displayName: 'Second ami' },
+    };
+    const listPage = vi.fn(async (receivedCredentials: { userId: string }) => (
+      receivedCredentials.userId === 'friend-user'
+        ? { items: [card] }
+        : secondAccountPage
+    ));
+
+    render(
+      <SocialActivityFeedPanel
+        gateway={gateway({ listPage })}
+        getCredentials={() => credentials}
+        isOnline={() => true}
+        subscribeCredentials={(listener) => {
+          credentialsListener = listener;
+          return () => undefined;
+        }}
+      />,
+    );
+
+    await screen.findByText('Push du mardi');
+
+    credentials = { userId: 'second-user', accessToken: 'second-token' };
+    act(() => credentialsListener?.());
+
+    await waitFor(() => expect(screen.queryByText('Push du mardi')).not.toBeInTheDocument());
+    expect(screen.getByText('Chargement du fil…')).toBeInTheDocument();
+
+    resolveSecondAccount?.({ items: [secondAccountCard] });
+    expect(await screen.findByText('Marche du soir')).toBeInTheDocument();
+    expect(screen.queryByText('Push du mardi')).not.toBeInTheDocument();
+  });
+
 });

@@ -137,7 +137,7 @@ class FakeStatement {
           deletion_reason: deletionReason,
           mutation_sequence: mutationSequence,
           snapshot_json: snapshotJson,
-          sort_time: occurredAt ?? `${occurredOn}T00:00:00.000`,
+          sort_time: occurredAt ?? `${occurredOn}T${createdAt.slice(11, 23)}`,
           owner_handle: this.database.profiles.get(ownerUserId)?.handle ?? null,
           owner_display_name: this.database.profiles.get(ownerUserId)?.displayName ?? null,
         });
@@ -212,16 +212,16 @@ class FakeStatement {
         })
         .sort((left, right) => (
           right.sort_time.localeCompare(left.sort_time)
-          || right.updated_at.localeCompare(left.updated_at)
+          || right.created_at.localeCompare(left.created_at)
           || right.snapshot_id.localeCompare(left.snapshot_id)
         ));
 
       if (this.bindings.length === 5) {
-        const [, sortTime, updatedAt, snapshotId] = this.bindings;
+        const [, sortTime, createdAt, snapshotId] = this.bindings;
         rows = rows.filter((row) => (
           row.sort_time < sortTime
-          || (row.sort_time === sortTime && row.updated_at < updatedAt)
-          || (row.sort_time === sortTime && row.updated_at === updatedAt && row.snapshot_id < snapshotId)
+          || (row.sort_time === sortTime && row.created_at < createdAt)
+          || (row.sort_time === sortTime && row.created_at === createdAt && row.snapshot_id < snapshotId)
         ));
       }
       return { results: rows.slice(0, limit) };
@@ -999,6 +999,76 @@ describe('social activity snapshots Pages Functions', () => {
       message: 'Service social indisponible.',
     });
     expect(JSON.stringify(payload)).not.toContain('secret sql detail');
+  });
+
+  it('conserve un ordre chronologique stable lorsqu’une activité du même jour est modifiée', async () => {
+    const database = new FakeD1Database();
+    const owner = 'user-owner@example.com';
+    const recipient = 'user-friend@example.com';
+    database.addFriendship(owner, recipient);
+    database.addPermission(owner, recipient, 'summary', 'notRequested');
+
+    const morning = activeSnapshot({
+      sourceActivityId: 'activity-morning',
+      sourceRevision: 'revision-1',
+      occurredOn: '2026-07-07',
+      createdAt: '2026-07-07T08:00:00.000Z',
+      updatedAt: '2026-07-07T08:00:00.000Z',
+    });
+    const later = activeSnapshot({
+      sourceActivityId: 'activity-later',
+      sourceRevision: 'revision-1',
+      occurredOn: '2026-07-07',
+      createdAt: '2026-07-07T09:00:00.000Z',
+      updatedAt: '2026-07-07T09:00:00.000Z',
+    });
+
+    await socialActivitySnapshotsInternals.persistSnapshotMutation(database, owner, {
+      mutationSequence: 1,
+      snapshot: morning,
+    });
+    await socialActivitySnapshotsInternals.persistSnapshotMutation(database, owner, {
+      mutationSequence: 1,
+      snapshot: later,
+    });
+    await socialActivitySnapshotsInternals.persistSnapshotMutation(database, owner, {
+      mutationSequence: 2,
+      snapshot: {
+        ...morning,
+        sourceRevision: 'revision-2',
+        updatedAt: '2026-07-07T12:00:00.000Z',
+        title: 'Course du matin modifiée',
+      },
+    });
+
+    const feed = await socialActivitySnapshotsInternals.listFeed(
+      database,
+      recipient,
+      new URL('https://sportpilot.pages.dev/api/social-activity-feed?limit=10'),
+    );
+
+    expect(feed.items.map((item) => item.sourceActivityId)).toEqual([
+      'activity-later',
+      'activity-morning',
+    ]);
+    expect(feed.items[1]).toMatchObject({
+      sourceRevision: 'revision-2',
+      title: 'Course du matin modifiée',
+    });
+  });
+
+  it('accepte encore les anciens curseurs contenant updatedAt', () => {
+    const cursor = socialActivitySnapshotsInternals.encodeCursor({
+      sortTime: '2026-07-07T09:00:00.000',
+      updatedAt: '2026-07-07T09:00:00.000Z',
+      snapshotId: 'snapshot-legacy',
+    });
+
+    expect(socialActivitySnapshotsInternals.decodeCursor(cursor)).toEqual({
+      sortTime: '2026-07-07T09:00:00.000',
+      createdAt: '2026-07-07T09:00:00.000Z',
+      snapshotId: 'snapshot-legacy',
+    });
   });
 
   it('pagine le fil avec un curseur déterministe', async () => {

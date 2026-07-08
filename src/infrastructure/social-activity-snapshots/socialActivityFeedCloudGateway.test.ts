@@ -69,6 +69,7 @@ describe('socialActivityFeedCloudGateway', () => {
     const fetcher = vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
       expect(String(url)).toContain('/api/social-activity-feed?limit=10');
       expect(init?.headers).toMatchObject({ authorization: 'Bearer secret-token' });
+      expect(init?.cache).toBe('no-store');
       return new Response(JSON.stringify({
         status: 'found',
         items: [{

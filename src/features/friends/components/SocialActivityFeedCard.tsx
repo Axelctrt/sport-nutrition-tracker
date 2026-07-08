@@ -66,13 +66,17 @@ export function SocialActivityFeedCard({ card, onOpenDetail }: SocialActivityFee
   const title = card.title || socialActivityLabel(card.activityType);
 
   return (
-    <article className="rounded-2xl border border-slate-200 p-4 shadow-sm dark:border-slate-800 sm:p-5">
+    <article
+      className="rounded-2xl border border-slate-200 p-4 shadow-sm dark:border-slate-800 sm:p-5"
+      data-social-feed-card-id={card.snapshotId}
+    >
       <header className="flex items-start gap-3">
         <div className="relative shrink-0">
           <div className="flex size-12 items-center justify-center rounded-full bg-brand-100 text-sm font-bold text-brand-700 dark:bg-brand-950 dark:text-brand-200">
             {initialsFor(card)}
           </div>
           <span
+            aria-label={socialActivityLabel(card.activityType)}
             className={cn(
               'absolute -bottom-1 -right-1 grid size-6 place-items-center rounded-full ring-2 ring-white dark:ring-slate-900',
               toneByType[card.activityType],

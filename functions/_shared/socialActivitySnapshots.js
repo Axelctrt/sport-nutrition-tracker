@@ -579,12 +579,16 @@ function decodeCursor(value) {
     !decoded
     || typeof decoded !== 'object'
     || typeof decoded.sortTime !== 'string'
-    || typeof decoded.updatedAt !== 'string'
+    || (typeof decoded.createdAt !== 'string' && typeof decoded.updatedAt !== 'string')
     || typeof decoded.snapshotId !== 'string'
   ) {
     throw new SocialActivitySnapshotsError(400, 'SOCIAL_ACTIVITY_INVALID_CURSOR', 'Curseur de fil invalide.');
   }
-  return decoded;
+  return {
+    sortTime: decoded.sortTime,
+    createdAt: typeof decoded.createdAt === 'string' ? decoded.createdAt : decoded.updatedAt,
+    snapshotId: decoded.snapshotId,
+  };
 }
 
 function normalizeFeedLimit(raw) {
@@ -811,10 +815,10 @@ async function listFeed(database, recipientUserId, url) {
   const limit = normalizeFeedLimit(url.searchParams.get('limit'));
   const cursor = decodeCursor(url.searchParams.get('cursor'));
   const pageLimit = limit + 1;
-  const sortExpression = "COALESCE(s.occurred_at, s.occurred_on || 'T00:00:00.000')";
+  const sortExpression = "COALESCE(s.occurred_at, s.occurred_on || 'T' || substr(s.created_at, 12, 12))";
 
   const baseSql = `
-    SELECT s.snapshot_id, s.updated_at, s.snapshot_json,
+    SELECT s.snapshot_id, s.created_at, s.updated_at, s.snapshot_json,
            p.sharing_level, p.detailed_consent, p.field_selection_json,
            ${sortExpression} AS sort_time,
            (
@@ -850,14 +854,14 @@ async function listFeed(database, recipientUserId, url) {
     ? database.prepare(`${baseSql}
         AND (
           ${sortExpression} < ?2
-          OR (${sortExpression} = ?2 AND s.updated_at < ?3)
-          OR (${sortExpression} = ?2 AND s.updated_at = ?3 AND s.snapshot_id < ?4)
+          OR (${sortExpression} = ?2 AND s.created_at < ?3)
+          OR (${sortExpression} = ?2 AND s.created_at = ?3 AND s.snapshot_id < ?4)
         )
-        ORDER BY sort_time DESC, s.updated_at DESC, s.snapshot_id DESC
+        ORDER BY sort_time DESC, s.created_at DESC, s.snapshot_id DESC
         LIMIT ?5
-      `).bind(recipientUserId, cursor.sortTime, cursor.updatedAt, cursor.snapshotId, pageLimit)
+      `).bind(recipientUserId, cursor.sortTime, cursor.createdAt, cursor.snapshotId, pageLimit)
     : database.prepare(`${baseSql}
-        ORDER BY sort_time DESC, s.updated_at DESC, s.snapshot_id DESC
+        ORDER BY sort_time DESC, s.created_at DESC, s.snapshot_id DESC
         LIMIT ?2
       `).bind(recipientUserId, pageLimit);
 
@@ -870,7 +874,7 @@ async function listFeed(database, recipientUserId, url) {
   return {
     items: visibleRows.map(toFeedCard),
     ...(hasMore && last
-      ? { nextCursor: encodeCursor({ sortTime: last.sort_time, updatedAt: last.updated_at, snapshotId: last.snapshot_id }) }
+      ? { nextCursor: encodeCursor({ sortTime: last.sort_time, createdAt: last.created_at, snapshotId: last.snapshot_id }) }
       : {}),
   };
 }
