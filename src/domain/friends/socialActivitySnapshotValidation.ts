@@ -2,6 +2,7 @@ import {
   SOCIAL_ACTIVITY_CARDIO_FIELDS,
   SOCIAL_ACTIVITY_COMMON_FIELDS,
   SOCIAL_ACTIVITY_STRENGTH_FIELDS,
+  SUMMARY_SOCIAL_ACTIVITY_FIELD_SELECTION,
   assertNoForbiddenSocialActivitySourceFields,
   selectSocialActivityFieldsForFamily,
   type SocialActivityFieldSelection,
@@ -294,6 +295,34 @@ function hasAllowedField(
   return selection.common.includes(field as never)
     || selection.cardio.includes(field as never)
     || selection.strength.includes(field as never);
+}
+
+function validateSummaryFieldScope(
+  selection: SocialActivityFieldSelection,
+  path: string,
+  issues: SocialActivitySnapshotValidationIssue[],
+): void {
+  const groups: readonly [
+    keyof SocialActivityFieldSelection,
+    readonly string[],
+  ][] = [
+    ['common', selection.common],
+    ['cardio', selection.cardio],
+    ['strength', selection.strength],
+  ];
+
+  groups.forEach(([group, fields]) => {
+    const allowed = new Set<string>(SUMMARY_SOCIAL_ACTIVITY_FIELD_SELECTION[group]);
+    fields.forEach((field, index) => {
+      if (!allowed.has(field)) {
+        addIssue(
+          issues,
+          `${path}.${group}[${index}]`,
+          'Champ trop détaillé pour une visibilité résumé.',
+        );
+      }
+    });
+  });
 }
 
 function validateSummary(
@@ -724,6 +753,9 @@ function validateActiveSnapshot(
   const family = value.family as SocialActivityFamily;
   const allowedFields = validateAllowedFields(value.allowedFields, family, '$.allowedFields', issues);
   if (!allowedFields) return;
+  if (value.visibility === 'summary') {
+    validateSummaryFieldScope(allowedFields, '$.allowedFields', issues);
+  }
   validateSummary(value.summary, allowedFields, '$.summary', issues);
 
   if (value.visibility === 'summary' && value.detail !== undefined) {

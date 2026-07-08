@@ -148,18 +148,19 @@ class FakeStatement {
   }
 
   async first() {
-    if (this.sql.includes('SELECT s.snapshot_json')) {
+    if (this.sql.includes('SELECT s.snapshot_id, s.snapshot_json')) {
       const [snapshotId, recipient] = this.bindings;
       const row = this.database.snapshots.get(snapshotId);
       if (!row || row.recipient_user_id !== recipient || row.state !== 'active') return null;
       if (!this.database.friendships.has(this.database.pair(row.owner_user_id, recipient))) return null;
       const permission = this.database.permissions.get(`${row.owner_user_id}->${recipient}`);
       if (!permission) return null;
-      if (
-        row.visibility !== 'summary'
-        && (permission.sharing_level !== 'detailed' || permission.detailed_consent !== 'granted')
-      ) return null;
-      return { snapshot_json: row.snapshot_json };
+      return {
+        snapshot_id: row.snapshot_id,
+        snapshot_json: row.snapshot_json,
+        sharing_level: permission.sharing_level,
+        detailed_consent: permission.detailed_consent,
+      };
     }
     if (this.sql.includes('FROM social_friendships')) {
       const [owner, recipient] = this.bindings;
@@ -195,12 +196,14 @@ class FakeStatement {
       let rows = [...this.database.snapshots.values()]
         .filter((row) => row.recipient_user_id === recipient && row.state === 'active')
         .filter((row) => this.database.friendships.has(this.database.pair(row.owner_user_id, recipient)))
-        .filter((row) => {
+        .filter((row) => this.database.permissions.has(`${row.owner_user_id}->${recipient}`))
+        .map((row) => {
           const permission = this.database.permissions.get(`${row.owner_user_id}->${recipient}`);
-          return Boolean(permission && (
-            row.visibility === 'summary'
-            || (permission.sharing_level === 'detailed' && permission.detailed_consent === 'granted')
-          ));
+          return {
+            ...row,
+            sharing_level: permission.sharing_level,
+            detailed_consent: permission.detailed_consent,
+          };
         })
         .sort((left, right) => (
           right.sort_time.localeCompare(left.sort_time)
@@ -532,9 +535,23 @@ describe('social activity snapshots Pages Functions', () => {
     expect(response.status).toBe(404);
   });
 
-  it('révoque le détail dès que la permission est abaissée au résumé', async () => {
+  it('réduit immédiatement un snapshot détaillé au résumé lorsque la permission est abaissée', async () => {
     const database = new FakeD1Database();
-    const snapshot = activeSnapshot({ visibility: 'detailed' });
+    const snapshot = activeSnapshot({
+      visibility: 'detailed',
+      allowedFields: {
+        common: ['activityType', 'title', 'date', 'time', 'duration', 'calories'],
+        cardio: ['distance', 'pace', 'elevation', 'terrain'],
+        strength: [],
+      },
+      summary: {
+        durationMinutes: 42,
+        distanceKm: 8,
+        caloriesKcal: 500,
+        paceMinutesPerKm: 5.25,
+        elevationGainMeters: 120,
+      },
+    });
     database.addFriendship(snapshot.ownerUserId, snapshot.recipientUserId);
     database.addPermission(snapshot.ownerUserId, snapshot.recipientUserId, 'detailed', 'granted');
     await socialActivitySnapshotsInternals.persistSnapshotMutation(database, snapshot.ownerUserId, {
@@ -548,13 +565,91 @@ describe('social activity snapshots Pages Functions', () => {
       snapshot.recipientUserId,
       new URL('https://sportpilot.pages.dev/api/social-activity-feed'),
     );
-    expect(feed.items).toHaveLength(0);
+    expect(feed.items).toHaveLength(1);
+    expect(feed.items[0]).toMatchObject({
+      visibility: 'summary',
+      detailAvailable: false,
+      allowedFields: {
+        common: ['activityType', 'title', 'date', 'duration'],
+        cardio: ['distance'],
+        strength: [],
+      },
+      summary: { durationMinutes: 42, distanceKm: 8 },
+    });
+    expect(feed.items[0]).not.toHaveProperty('detail');
+    expect(feed.items[0]).not.toHaveProperty('occurredAt');
+    expect(feed.items[0].summary).not.toHaveProperty('caloriesKcal');
+    expect(feed.items[0].summary).not.toHaveProperty('paceMinutesPerKm');
+    expect(feed.items[0].summary).not.toHaveProperty('elevationGainMeters');
 
     await expect(socialActivitySnapshotsInternals.readSnapshotDetail(
       database,
       snapshot.recipientUserId,
       snapshot.snapshotId,
-    )).rejects.toMatchObject({ code: 'SOCIAL_ACTIVITY_NOT_FOUND' });
+    )).resolves.toMatchObject({
+      visibility: 'summary',
+      summary: { durationMinutes: 42, distanceKm: 8 },
+    });
+  });
+
+  it('retire exercices, séries, répétitions et charges lors d’une réduction musculation au résumé', () => {
+    const detailed = socialActivitySnapshotsInternals.normalizeSnapshot(activeSnapshot({
+      sourceKind: 'strengthSession',
+      sourceActivityId: 'strength-session-1',
+      visibility: 'detailed',
+      family: 'strength',
+      activityType: 'strengthTraining',
+      allowedFields: {
+        common: ['activityType', 'title', 'date', 'time', 'duration'],
+        cardio: [],
+        strength: [
+          'sessionName',
+          'muscleGroups',
+          'exerciseCount',
+          'exercises',
+          'sets',
+          'repetitions',
+          'loads',
+          'volume',
+        ],
+      },
+      summary: {
+        durationMinutes: 60,
+        exerciseCount: 2,
+        muscleGroups: ['pectorals', 'triceps'],
+        volumeKg: 1_120,
+      },
+      detail: {
+        family: 'strength',
+        sessionName: 'Push complet',
+        exercises: [{
+          name: 'Développé couché',
+          sets: [{ setNumber: 1, repetitions: 10, loadKg: 60, loadUnit: 'kg' }],
+        }],
+      },
+    }));
+
+    const redacted = socialActivitySnapshotsInternals.redactSnapshotToSummary(detailed);
+
+    expect(redacted).toMatchObject({
+      visibility: 'summary',
+      allowedFields: {
+        common: ['activityType', 'title', 'date', 'duration'],
+        cardio: [],
+        strength: ['sessionName', 'muscleGroups', 'exerciseCount'],
+      },
+      summary: {
+        durationMinutes: 60,
+        exerciseCount: 2,
+        muscleGroups: ['pectorals', 'triceps'],
+      },
+    });
+    expect(redacted).not.toHaveProperty('detail');
+    expect(redacted.summary).not.toHaveProperty('volumeKg');
+    const serialized = JSON.stringify(redacted);
+    expect(serialized).not.toContain('Développé couché');
+    expect(serialized).not.toContain('repetitions');
+    expect(serialized).not.toContain('loadKg');
   });
 
   it('rejette les champs inconnus et les métriques absentes des permissions du snapshot', () => {

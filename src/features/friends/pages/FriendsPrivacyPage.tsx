@@ -565,11 +565,12 @@ export function FriendsPrivacyPage({
     const next = service.actions.setFriendActivityPermission(friend.id, sharing);
     const permission = selectFriendActivityPermission(next, friend);
 
-    // Mise à jour optimiste : l’UI doit répondre immédiatement au clic.
-    // La synchronisation D1 confirme ensuite la permission serveur.
-    reconcilePrivacy(persistSnapshot(next));
+    // Mise à jour optimiste de l’interface, sans republier de snapshot avant
+    // confirmation D1. Le serveur reste la source d’autorité du niveau effectif.
+    const optimisticPersistence = persistSnapshot(next);
 
     if (!activeCloudFriendPermissionPort) {
+      reconcilePrivacy(optimisticPersistence);
       setRequestFeedback(sharing === 'detailed'
         ? 'Détail autorisé localement pour cet ami après consentement explicite.'
         : 'Partage ami limité au résumé localement.');
@@ -578,9 +579,14 @@ export function FriendsPrivacyPage({
 
     setRequestFeedback('Synchronisation de la permission ami serveur en cours…');
 
-    void resolveCloudFriendUserId(friend, permission)
+    void optimisticPersistence
+      .then((persisted) => {
+        if (!persisted) return undefined;
+        return resolveCloudFriendUserId(friend, permission);
+      })
       .then((friendUserId) => {
         if (!friendUserId) {
+          void persistSnapshot(snapshot);
           setRequestFeedback('Permission ami serveur impossible : userId ami introuvable dans les amitiés actives.');
           return undefined;
         }
@@ -599,6 +605,7 @@ export function FriendsPrivacyPage({
         if (['created', 'updated', 'alreadyExists'].includes(result.status)) {
           const confirmedPermission = result.value;
           if (!confirmedPermission) {
+            void persistSnapshot(snapshot);
             setRequestFeedback(result.message);
             return;
           }
@@ -610,20 +617,23 @@ export function FriendsPrivacyPage({
             )),
             confirmedPermission,
           ];
-          void persistSnapshot({
+          const confirmedSnapshot = {
             ...ensureFriendActivityPermissions({
               ...next,
               activityPermissions: mergedPermissions,
             }),
             lastFeedback: result.message,
-          });
+          };
+          reconcilePrivacy(persistSnapshot(confirmedSnapshot));
           setRequestFeedback(result.message);
           return;
         }
 
+        void persistSnapshot(snapshot);
         setRequestFeedback(result.message);
       })
       .catch((error) => {
+        void persistSnapshot(snapshot);
         setRequestFeedback(
           error instanceof Error
             ? error.message

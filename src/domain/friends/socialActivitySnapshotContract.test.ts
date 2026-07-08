@@ -189,6 +189,28 @@ describe('social activity snapshot contract 0.29', () => {
     });
   });
 
+  it('interdit les champs détaillés dans allowedFields même sans bloc detail', () => {
+    const snapshot = createActiveSocialActivitySnapshotV2(cardioInput);
+    const validation = validateSocialActivitySnapshotV2({
+      ...snapshot,
+      visibility: 'summary',
+      occurredAt: undefined,
+      detail: undefined,
+    });
+
+    expect(validation.valid).toBe(false);
+    expect(validation.issues).toEqual(expect.arrayContaining([
+      {
+        path: '$.allowedFields.common[3]',
+        message: 'Champ trop détaillé pour une visibilité résumé.',
+      },
+      {
+        path: '$.allowedFields.cardio[1]',
+        message: 'Champ trop détaillé pour une visibilité résumé.',
+      },
+    ]));
+  });
+
   it('rejette une famille de détail incompatible', () => {
     const validation = validateSocialActivitySnapshotV2({
       ...createActiveSocialActivitySnapshotV2(cardioInput),

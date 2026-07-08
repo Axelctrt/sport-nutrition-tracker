@@ -7,7 +7,7 @@ import {
   type FriendsPrivacySnapshot,
 } from '@/domain/friends/friendship';
 import { createDefaultSocialIdentity } from '@/domain/friends/socialIdentity';
-import type { SocialCloudFriendRequestPort, SocialCloudIdentityPort } from '@/domain/friends/socialCloudContract';
+import type { SocialCloudFriendPermissionPort, SocialCloudFriendRequestPort, SocialCloudIdentityPort } from '@/domain/friends/socialCloudContract';
 import type { SocialActivitySnapshot } from '@/domain/friends/socialActivitySnapshot';
 import { createFoundSocialUserLookupGateway, type SocialUserLookupGateway } from '@/application/friends/socialIdentityService';
 import type { FriendsPrivacySnapshotRepository } from '@/application/friends/friendsPrivacyService';
@@ -618,6 +618,53 @@ describe('FriendsPrivacyPage', () => {
         }),
       },
     ]);
+  });
+
+  it('réconcilie les snapshots seulement après confirmation serveur de la permission ami', async () => {
+    const user = userEvent.setup();
+    const privacyReconciliation = vi.fn(async () => undefined);
+    let resolveSave: ((value: Awaited<ReturnType<SocialCloudFriendPermissionPort['savePermission']>>) => void) | undefined;
+    const savePermission = vi.fn((_userId, _permission) => new Promise<Awaited<ReturnType<SocialCloudFriendPermissionPort['savePermission']>>>((resolve) => {
+      resolveSave = resolve;
+    }));
+    const cloudFriendPermissionPort: SocialCloudFriendPermissionPort = {
+      listPermissions: vi.fn(async () => []),
+      savePermission,
+    };
+    const detailedSnapshot: FriendsPrivacySnapshot = {
+      ...snapshot,
+      privacy: {
+        ...snapshot.privacy,
+        activitySharing: 'detailed',
+        socialActivitySharingPolicy: {
+          visibility: 'detailed',
+          fields: snapshot.privacy.socialActivitySharingPolicy!.fields,
+        },
+      },
+    };
+
+    render(
+      <FriendsPrivacyPage
+        initialSnapshot={detailedSnapshot}
+        initialIdentity={identity}
+        cloudFriendPermissionPort={cloudFriendPermissionPort}
+        privacyReconciliation={privacyReconciliation}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Autoriser le détail' }));
+    await waitFor(() => expect(savePermission).toHaveBeenCalledOnce());
+    expect(privacyReconciliation).not.toHaveBeenCalled();
+
+    const savedPermission = savePermission.mock.calls[0]?.[1];
+    if (!savedPermission || !resolveSave) throw new Error('Permission serveur attendue.');
+    resolveSave({
+      status: 'updated',
+      value: savedPermission,
+      message: 'Permission ami serveur mise à jour.',
+    });
+
+    await waitFor(() => expect(privacyReconciliation).toHaveBeenCalledOnce());
   });
 
   it('branche le fil cloud réel lorsqu’un gateway authentifié est fourni', async () => {
