@@ -23,6 +23,27 @@ const FORBIDDEN_KEYS = new Set([
   'personalNote',
   'personalNotes',
 ]);
+const SUMMARY_ALLOWED_FIELDS = Object.freeze({
+  common: new Set(['activityType', 'title', 'date', 'duration']),
+  cardio: new Set(['distance']),
+  strength: new Set(['sessionName', 'muscleGroups', 'exerciseCount']),
+});
+const SUMMARY_FIELD_BY_KEY = Object.freeze({
+  durationMinutes: 'duration',
+  intensity: 'intensity',
+  caloriesKcal: 'calories',
+  distanceKm: 'distance',
+  distanceMeters: 'distance',
+  paceMinutesPerKm: 'pace',
+  paceSecondsPer100Meters: 'pace',
+  speedKph: 'speed',
+  elevationGainMeters: 'elevation',
+  averageHeartRateBpm: 'heartRate',
+  averageCadencePerMinute: 'cadence',
+  exerciseCount: 'exerciseCount',
+  muscleGroups: 'muscleGroups',
+  volumeKg: 'volume',
+});
 const MAX_PAYLOAD_BYTES = 196_608;
 const DEFAULT_FEED_LIMIT = 20;
 const MAX_FEED_LIMIT = 50;
@@ -557,16 +578,67 @@ function normalizeFeedLimit(raw) {
   return Math.min(MAX_FEED_LIMIT, value);
 }
 
-function parseSnapshotJson(row) {
+function parseStoredSnapshot(row) {
   try {
-    return JSON.parse(row.snapshot_json);
+    const snapshot = normalizeSnapshot(JSON.parse(row.snapshot_json));
+    if (typeof row.snapshot_id === 'string' && snapshot.snapshotId !== row.snapshot_id) {
+      throw new Error('Snapshot id mismatch.');
+    }
+    return snapshot;
   } catch {
     throw new SocialActivitySnapshotsError(503, 'SOCIAL_ACTIVITY_CORRUPTED_SNAPSHOT', 'Snapshot social serveur illisible.');
   }
 }
 
+function permissionAllowsDetailed(row) {
+  return row.sharing_level === 'detailed' && row.detailed_consent === 'granted';
+}
+
+function fieldIsAllowed(selection, field) {
+  return selection.common.includes(field)
+    || selection.cardio.includes(field)
+    || selection.strength.includes(field);
+}
+
+function redactSnapshotToSummary(snapshot) {
+  const allowedFields = {
+    common: snapshot.allowedFields.common.filter((field) => SUMMARY_ALLOWED_FIELDS.common.has(field)),
+    cardio: snapshot.allowedFields.cardio.filter((field) => SUMMARY_ALLOWED_FIELDS.cardio.has(field)),
+    strength: snapshot.allowedFields.strength.filter((field) => SUMMARY_ALLOWED_FIELDS.strength.has(field)),
+  };
+  const summary = {};
+  Object.entries(snapshot.summary).forEach(([key, value]) => {
+    const field = SUMMARY_FIELD_BY_KEY[key];
+    if (field && fieldIsAllowed(allowedFields, field)) summary[key] = value;
+  });
+  const {
+    visibility: _visibility,
+    allowedFields: _allowedFields,
+    summary: _summary,
+    detail: _detail,
+    occurredTime: _occurredTime,
+    occurredAt: _occurredAt,
+    title,
+    ...identity
+  } = snapshot;
+
+  return normalizeSnapshot({
+    ...identity,
+    visibility: 'summary',
+    ...(title !== undefined && allowedFields.common.includes('title') ? { title } : {}),
+    allowedFields,
+    summary,
+  });
+}
+
+function snapshotForCurrentPermission(row) {
+  const snapshot = parseStoredSnapshot(row);
+  if (snapshot.visibility === 'summary' || permissionAllowsDetailed(row)) return snapshot;
+  return redactSnapshotToSummary(snapshot);
+}
+
 function toFeedCard(row) {
-  const snapshot = parseSnapshotJson(row);
+  const snapshot = snapshotForCurrentPermission(row);
   const { detail: _detail, ...cardSnapshot } = snapshot;
   return {
     ...cardSnapshot,
@@ -592,6 +664,7 @@ async function listFeed(database, recipientUserId, url) {
 
   const baseSql = `
     SELECT s.snapshot_id, s.updated_at, s.snapshot_json,
+           p.sharing_level, p.detailed_consent,
            ${sortExpression} AS sort_time,
            (
              SELECT h.handle
@@ -608,6 +681,9 @@ async function listFeed(database, recipientUserId, url) {
              LIMIT 1
            ) AS owner_display_name
     FROM social_activity_snapshots s
+    INNER JOIN social_friend_permissions p
+      ON p.owner_user_id = s.owner_user_id
+     AND p.friend_user_id = s.recipient_user_id
     WHERE s.recipient_user_id = ?1
       AND s.state = 'active'
       AND EXISTS (
@@ -615,15 +691,6 @@ async function listFeed(database, recipientUserId, url) {
         WHERE f.status = 'active'
           AND ((f.user_a_id = s.owner_user_id AND f.user_b_id = ?1)
             OR (f.user_b_id = s.owner_user_id AND f.user_a_id = ?1))
-      )
-      AND EXISTS (
-        SELECT 1 FROM social_friend_permissions p
-        WHERE p.owner_user_id = s.owner_user_id
-          AND p.friend_user_id = ?1
-          AND (
-            s.visibility = 'summary'
-            OR (p.sharing_level = 'detailed' AND p.detailed_consent = 'granted')
-          )
       )
   `;
 
@@ -660,8 +727,11 @@ async function readSnapshotDetail(database, recipientUserId, snapshotId) {
   await assertSocialActivitySchemaReady(database);
   const normalizedSnapshotId = sanitizeIdentifier(snapshotId, 'snapshotId');
   const row = await database.prepare(`
-    SELECT s.snapshot_json
+    SELECT s.snapshot_id, s.snapshot_json, p.sharing_level, p.detailed_consent
     FROM social_activity_snapshots s
+    INNER JOIN social_friend_permissions p
+      ON p.owner_user_id = s.owner_user_id
+     AND p.friend_user_id = s.recipient_user_id
     WHERE s.snapshot_id = ?1
       AND s.recipient_user_id = ?2
       AND s.state = 'active'
@@ -671,22 +741,13 @@ async function readSnapshotDetail(database, recipientUserId, snapshotId) {
           AND ((f.user_a_id = s.owner_user_id AND f.user_b_id = ?2)
             OR (f.user_b_id = s.owner_user_id AND f.user_a_id = ?2))
       )
-      AND EXISTS (
-        SELECT 1 FROM social_friend_permissions p
-        WHERE p.owner_user_id = s.owner_user_id
-          AND p.friend_user_id = ?2
-          AND (
-            s.visibility = 'summary'
-            OR (p.sharing_level = 'detailed' AND p.detailed_consent = 'granted')
-          )
-      )
     LIMIT 1
   `).bind(normalizedSnapshotId, recipientUserId).first();
 
   if (!row) {
     throw new SocialActivitySnapshotsError(404, 'SOCIAL_ACTIVITY_NOT_FOUND', 'Activité partagée introuvable.');
   }
-  return parseSnapshotJson(row);
+  return snapshotForCurrentPermission(row);
 }
 
 function errorResponse(error) {
@@ -764,4 +825,6 @@ export const socialActivitySnapshotsInternals = {
   assertSocialActivitySchemaReady,
   encodeCursor,
   decodeCursor,
+  redactSnapshotToSummary,
+  snapshotForCurrentPermission,
 };
