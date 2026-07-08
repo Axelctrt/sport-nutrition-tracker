@@ -91,6 +91,28 @@ implements SocialActivitySnapshotLifecycleRepository {
     );
   }
 
+  getNextRetryAt(input: {
+    readonly ownerUserId: EntityId;
+  }): Promise<IsoDateTime | undefined> {
+    return runRepositoryOperation(
+      'read',
+      'Impossible de planifier la prochaine tentative sociale.',
+      async () => {
+        const failedRecords = await this.database.records
+          .where('ownerUserId')
+          .equals(input.ownerUserId)
+          .filter((record) => (
+            record.deliveryStatus === 'failed' && Boolean(record.nextAttemptAt)
+          ))
+          .toArray();
+
+        return failedRecords
+          .flatMap((record) => (record.nextAttemptAt ? [record.nextAttemptAt] : []))
+          .sort((left, right) => left.localeCompare(right))[0];
+      },
+    );
+  }
+
   markDelivered(input: {
     readonly snapshotId: EntityId;
     readonly expectedMutationSequence: number;

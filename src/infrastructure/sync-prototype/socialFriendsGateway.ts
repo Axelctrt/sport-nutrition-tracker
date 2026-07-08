@@ -20,12 +20,20 @@ export interface SocialFriendsGatewayListResult {
   readonly status?: SocialFriendsGatewayListStatus;
   readonly friendships: readonly CloudFriendship[];
   readonly profiles: readonly PublicUserProfile[];
+  readonly message?: string;
+}
+
+export interface SocialFriendPermissionsListResult {
+  readonly status: SocialFriendsGatewayListStatus;
+  readonly permissions: readonly FriendActivityPermission[];
+  readonly message?: string;
 }
 
 export interface SocialFriendsGateway {
   readonly friendshipPort: SocialCloudFriendshipPort;
   readonly permissionPort: SocialCloudFriendPermissionPort;
   readonly listFriendshipsWithProfiles: (userId: EntityId) => Promise<SocialFriendsGatewayListResult>;
+  readonly listPermissionsWithStatus?: (userId: EntityId) => Promise<SocialFriendPermissionsListResult>;
   readonly removeFriendship?: (
     userId: EntityId,
     friendUserId: EntityId,
@@ -166,13 +174,44 @@ export function createSocialFriendsGateway(options: SocialFriendsClientOptions =
   async function listFriendshipsWithProfiles(userId: EntityId): Promise<SocialFriendsGatewayListResult> {
     let response: Response;
     try {
-      response = await fetcher(`${endpoint}/friendships?userId=${encodeURIComponent(userId)}`);
+      response = await fetcher(`${endpoint}/friendships?userId=${encodeURIComponent(userId)}`, {
+        method: 'GET',
+        cache: 'no-store',
+        headers: { accept: 'application/json' },
+      });
     } catch {
-      return { status: 'unavailable', friendships: [], profiles: [] };
+      return {
+        status: 'unavailable',
+        friendships: [],
+        profiles: [],
+        message: 'Amitiés serveur indisponibles. Le cache local est conservé.',
+      };
     }
 
     const payload = await readJson(response);
-    if (!response.ok) return { status: 'unavailable', friendships: [], profiles: [] };
+    if (!response.ok) {
+      return {
+        status: 'unavailable',
+        friendships: [],
+        profiles: [],
+        message: payloadMessage(payload, 'Amitiés serveur indisponibles. Le cache local est conservé.'),
+      };
+    }
+    if (
+      !payload
+      || typeof payload !== 'object'
+      || !('friendships' in payload)
+      || !Array.isArray(payload.friendships)
+      || !('profiles' in payload)
+      || !Array.isArray(payload.profiles)
+    ) {
+      return {
+        status: 'unavailable',
+        friendships: [],
+        profiles: [],
+        message: 'Réponse amitiés serveur invalide. Le cache local est conservé.',
+      };
+    }
 
     const rawFriendships = payload && typeof payload === 'object' && 'friendships' in payload && Array.isArray(payload.friendships)
       ? payload.friendships
@@ -194,30 +233,79 @@ export function createSocialFriendsGateway(options: SocialFriendsClientOptions =
     };
   }
 
-  async function listPermissions(userId: EntityId): Promise<readonly FriendActivityPermission[]> {
-    const response = await fetcher(`${endpoint}/permissions?userId=${encodeURIComponent(userId)}`);
+  async function listPermissionsWithStatus(
+    userId: EntityId,
+  ): Promise<SocialFriendPermissionsListResult> {
+    let response: Response;
+    try {
+      response = await fetcher(`${endpoint}/permissions?userId=${encodeURIComponent(userId)}`, {
+        method: 'GET',
+        cache: 'no-store',
+        headers: { accept: 'application/json' },
+      });
+    } catch {
+      return {
+        status: 'unavailable',
+        permissions: [],
+        message: 'Permissions serveur indisponibles. Le cache local est conservé.',
+      };
+    }
+
     const payload = await readJson(response);
-    if (!response.ok) return [];
+    if (!response.ok) {
+      return {
+        status: 'unavailable',
+        permissions: [],
+        message: payloadMessage(payload, 'Permissions serveur indisponibles. Le cache local est conservé.'),
+      };
+    }
+    if (
+      !payload
+      || typeof payload !== 'object'
+      || !('permissions' in payload)
+      || !Array.isArray(payload.permissions)
+    ) {
+      return {
+        status: 'unavailable',
+        permissions: [],
+        message: 'Réponse permissions serveur invalide. Le cache local est conservé.',
+      };
+    }
 
-    const rawPermissions = payload && typeof payload === 'object' && 'permissions' in payload && Array.isArray(payload.permissions)
-      ? payload.permissions
-      : [];
+    return {
+      status: 'synchronized',
+      permissions: payload.permissions.flatMap((permission) => {
+        const parsed = parsePermission(permission);
+        return parsed ? [parsed] : [];
+      }),
+    };
+  }
 
-    return rawPermissions.flatMap((permission) => {
-      const parsed = parsePermission(permission);
-      return parsed ? [parsed] : [];
-    });
+  async function listPermissions(userId: EntityId): Promise<readonly FriendActivityPermission[]> {
+    return (await listPermissionsWithStatus(userId)).permissions;
   }
 
   async function savePermission(
     userId: EntityId,
     permission: FriendActivityPermission,
   ): Promise<SocialCloudMutationResult<FriendActivityPermission>> {
-    const response = await fetcher(`${endpoint}/permissions/save`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ ownerUserId: userId, permission }),
-    });
+    let response: Response;
+    try {
+      response = await fetcher(`${endpoint}/permissions/save`, {
+        method: 'POST',
+        cache: 'no-store',
+        headers: {
+          accept: 'application/json',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ ownerUserId: userId, permission }),
+      });
+    } catch {
+      return {
+        status: 'unavailable',
+        message: 'Permission ami serveur indisponible. Le réglage local précédent est conservé.',
+      };
+    }
     const payload = await readJson(response);
     const status = payload && typeof payload === 'object' && 'status' in payload
       ? parseMutationStatus(payload.status)
@@ -237,11 +325,23 @@ export function createSocialFriendsGateway(options: SocialFriendsClientOptions =
     userId: EntityId,
     friendUserId: EntityId,
   ): Promise<SocialCloudMutationResult<CloudFriendship>> {
-    const response = await fetcher(`${endpoint}/remove`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ userId, friendUserId }),
-    });
+    let response: Response;
+    try {
+      response = await fetcher(`${endpoint}/remove`, {
+        method: 'POST',
+        cache: 'no-store',
+        headers: {
+          accept: 'application/json',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ userId, friendUserId }),
+      });
+    } catch {
+      return {
+        status: 'unavailable',
+        message: 'Suppression ami serveur indisponible. La relation locale reste inchangée.',
+      };
+    }
     const payload = await readJson(response);
     const status = payload && typeof payload === 'object' && 'status' in payload
       ? parseMutationStatus(payload.status)
@@ -275,6 +375,7 @@ export function createSocialFriendsGateway(options: SocialFriendsClientOptions =
       savePermission,
     },
     listFriendshipsWithProfiles,
+    listPermissionsWithStatus,
     removeFriendship,
   };
 }

@@ -14,6 +14,9 @@ export interface SocialActivitySnapshotDeliveryRepository {
     readonly expectedMutationSequence: number;
     readonly deliveredAt: IsoDateTime;
   }) => Promise<SocialActivitySnapshotOutboxRecord | undefined>;
+  readonly getNextRetryAt?: (input: {
+    readonly ownerUserId: EntityId;
+  }) => Promise<IsoDateTime | undefined>;
   readonly markFailed: (input: {
     readonly snapshotId: EntityId;
     readonly expectedMutationSequence: number;
@@ -28,6 +31,7 @@ export interface SocialActivitySnapshotDeliveryReport {
   readonly deliveredCount: number;
   readonly failedCount: number;
   readonly ignoredStaleAcknowledgementCount: number;
+  readonly nextRetryAt?: IsoDateTime;
 }
 
 const MIN_RETRY_DELAY_MS = 60_000;
@@ -66,6 +70,7 @@ export async function deliverSocialActivitySnapshotOutbox(input: {
   let deliveredCount = 0;
   let failedCount = 0;
   let ignoredStaleAcknowledgementCount = 0;
+  let nextRetryAt: IsoDateTime | undefined;
 
   for (const record of records) {
     try {
@@ -78,15 +83,29 @@ export async function deliverSocialActivitySnapshotOutbox(input: {
       if (delivered) deliveredCount += 1;
       else ignoredStaleAcknowledgementCount += 1;
     } catch (error) {
+      const nextAttemptAt = retryAt(now, record.attemptCount);
       const failed = await input.repository.markFailed({
         snapshotId: record.snapshotId,
         expectedMutationSequence: record.mutationSequence,
         failedAt: nowIso,
-        nextAttemptAt: retryAt(now, record.attemptCount),
+        nextAttemptAt,
         errorCode: deliveryErrorCode(error),
       });
-      if (failed) failedCount += 1;
-      else ignoredStaleAcknowledgementCount += 1;
+      if (failed) {
+        failedCount += 1;
+        if (!nextRetryAt || nextAttemptAt < nextRetryAt) nextRetryAt = nextAttemptAt;
+      } else {
+        ignoredStaleAcknowledgementCount += 1;
+      }
+    }
+  }
+
+  if (input.repository.getNextRetryAt) {
+    const persistedNextRetryAt = await input.repository.getNextRetryAt({
+      ownerUserId: input.credentials.userId as EntityId,
+    });
+    if (persistedNextRetryAt && (!nextRetryAt || persistedNextRetryAt < nextRetryAt)) {
+      nextRetryAt = persistedNextRetryAt;
     }
   }
 
@@ -95,5 +114,6 @@ export async function deliverSocialActivitySnapshotOutbox(input: {
     deliveredCount,
     failedCount,
     ignoredStaleAcknowledgementCount,
+    ...(nextRetryAt ? { nextRetryAt } : {}),
   };
 }

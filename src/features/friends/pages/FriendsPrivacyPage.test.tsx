@@ -967,3 +967,207 @@ it('supprime un ami après confirmation et succès serveur', async () => {
     confirmSpy.mockRestore();
   }
 });
+
+
+describe('résilience sociale A23', () => {
+  it('conserve les permissions locales lorsque D1 est temporairement indisponible', async () => {
+    const detailedSnapshot = updateFriendActivityPermission(
+      snapshot,
+      'social-user:lea' as EntityId,
+      'detailed',
+      '2026-07-08T12:00:00.000Z',
+    );
+    const repository: FriendsPrivacySnapshotRepository = {
+      readSnapshot: vi.fn(async () => detailedSnapshot),
+      saveSnapshot: vi.fn(async () => undefined),
+    };
+    const identityRepository = {
+      readIdentity: vi.fn(async () => identity),
+      saveIdentity: vi.fn(async () => undefined),
+    };
+    const socialFriendsGateway: SocialFriendsGateway = {
+      friendshipPort: {
+        listFriendships: vi.fn(async () => []),
+        upsertFriendship: vi.fn(async () => ({
+          status: 'unavailable' as const,
+          message: 'Non utilisé.',
+        })),
+      },
+      permissionPort: {
+        listPermissions: vi.fn(async () => []),
+        savePermission: vi.fn(async (_userId, permission) => ({
+          status: 'updated' as const,
+          value: permission,
+          message: 'Non utilisé.',
+        })),
+      },
+      listFriendshipsWithProfiles: vi.fn(async () => ({
+        status: 'synchronized' as const,
+        friendships: [{
+          id: 'cloud-friendship:social-user:alex123<->social-user:lea' as EntityId,
+          userAId: identity.userId,
+          userBId: 'social-user:lea' as EntityId,
+          status: 'active' as const,
+          createdAt: '2026-07-05T12:00:00.000Z',
+          updatedAt: '2026-07-05T12:00:00.000Z',
+        }],
+        profiles: [{
+          userId: 'social-user:lea' as EntityId,
+          handle: 'lea.cardio',
+          displayName: 'Léa Cardio',
+          createdAt: '2026-07-05T12:00:00.000Z',
+          updatedAt: '2026-07-05T12:00:00.000Z',
+        }],
+      })),
+      listPermissionsWithStatus: vi.fn(async () => ({
+        status: 'unavailable' as const,
+        permissions: [],
+        message: 'D1 indisponible.',
+      })),
+    };
+
+    render(
+      <FriendsPrivacyPage
+        repository={repository}
+        identityRepository={identityRepository}
+        socialFriendsGateway={socialFriendsGateway}
+      />,
+    );
+
+    expect(await screen.findByText('Partage : Personnalisé')).toBeInTheDocument();
+    expect(screen.getByText(/données locales ont été conservées/u)).toBeInTheDocument();
+    await waitFor(() => expect(repository.saveSnapshot).toHaveBeenCalledOnce());
+    expect(vi.mocked(repository.saveSnapshot).mock.calls[0]?.[0]).toMatchObject({
+      activityPermissions: [expect.objectContaining({
+        friendUserId: 'social-user:lea',
+        sharingLevel: 'detailed',
+      })],
+    });
+    expect(socialFriendsGateway.permissionPort.listPermissions).not.toHaveBeenCalled();
+  });
+
+  it('applique une purge de permissions uniquement après une réponse vide valide', async () => {
+    const detailedSnapshot = updateFriendActivityPermission(
+      snapshot,
+      'social-user:lea' as EntityId,
+      'detailed',
+      '2026-07-08T12:00:00.000Z',
+    );
+    const repository: FriendsPrivacySnapshotRepository = {
+      readSnapshot: vi.fn(async () => detailedSnapshot),
+      saveSnapshot: vi.fn(async () => undefined),
+    };
+    const identityRepository = {
+      readIdentity: vi.fn(async () => identity),
+      saveIdentity: vi.fn(async () => undefined),
+    };
+    const socialFriendsGateway: SocialFriendsGateway = {
+      friendshipPort: {
+        listFriendships: vi.fn(async () => []),
+        upsertFriendship: vi.fn(async () => ({
+          status: 'unavailable' as const,
+          message: 'Non utilisé.',
+        })),
+      },
+      permissionPort: {
+        listPermissions: vi.fn(async () => []),
+        savePermission: vi.fn(async (_userId, permission) => ({
+          status: 'updated' as const,
+          value: permission,
+          message: 'Non utilisé.',
+        })),
+      },
+      listFriendshipsWithProfiles: vi.fn(async () => ({
+        status: 'synchronized' as const,
+        friendships: [{
+          id: 'cloud-friendship:social-user:alex123<->social-user:lea' as EntityId,
+          userAId: identity.userId,
+          userBId: 'social-user:lea' as EntityId,
+          status: 'active' as const,
+          createdAt: '2026-07-05T12:00:00.000Z',
+          updatedAt: '2026-07-05T12:00:00.000Z',
+        }],
+        profiles: [{
+          userId: 'social-user:lea' as EntityId,
+          handle: 'lea.cardio',
+          displayName: 'Léa Cardio',
+          createdAt: '2026-07-05T12:00:00.000Z',
+          updatedAt: '2026-07-05T12:00:00.000Z',
+        }],
+      })),
+      listPermissionsWithStatus: vi.fn(async () => ({
+        status: 'synchronized' as const,
+        permissions: [],
+      })),
+    };
+
+    render(
+      <FriendsPrivacyPage
+        repository={repository}
+        identityRepository={identityRepository}
+        socialFriendsGateway={socialFriendsGateway}
+      />,
+    );
+
+    expect(await screen.findByText('Partage : Résumé')).toBeInTheDocument();
+    await waitFor(() => expect(repository.saveSnapshot).toHaveBeenCalledOnce());
+    expect(vi.mocked(repository.saveSnapshot).mock.calls[0]?.[0]).toMatchObject({
+      activityPermissions: [expect.objectContaining({
+        friendUserId: 'social-user:lea',
+        sharingLevel: 'summary',
+      })],
+    });
+  });
+
+  it('ignore la réponse obsolète d’une permission remplacée immédiatement', async () => {
+    const user = userEvent.setup();
+    let resolveFirst: ((value: Awaited<ReturnType<SocialCloudFriendPermissionPort['savePermission']>>) => void) | undefined;
+    let callCount = 0;
+    const savePermission = vi.fn(async (_userId: EntityId, permission: Parameters<SocialCloudFriendPermissionPort['savePermission']>[1]) => {
+      callCount += 1;
+      if (callCount === 1) {
+        return new Promise<Awaited<ReturnType<SocialCloudFriendPermissionPort['savePermission']>>>((resolve) => {
+          resolveFirst = resolve;
+        });
+      }
+      return {
+        status: 'updated' as const,
+        value: permission,
+        message: 'Résumé confirmé.',
+      };
+    });
+    const socialFriendsGateway: SocialFriendsGateway = {
+      friendshipPort: {
+        listFriendships: vi.fn(async () => []),
+        upsertFriendship: vi.fn(async () => ({
+          status: 'unavailable' as const,
+          message: 'Non utilisé.',
+        })),
+      },
+      permissionPort: {
+        listPermissions: vi.fn(async () => []),
+        savePermission,
+      },
+      listFriendshipsWithProfiles: vi.fn(async () => ({
+        status: 'synchronized' as const,
+        friendships: [],
+        profiles: [],
+      })),
+    };
+
+    renderPage({ socialFriendsGateway });
+    await user.click(screen.getByText('Gérer'));
+    await user.click(screen.getByRole('button', { name: 'Personnalisé' }));
+    await user.click(screen.getByRole('button', { name: 'Résumé' }));
+
+    await waitFor(() => expect(savePermission).toHaveBeenCalledTimes(2));
+    expect(await screen.findByText('Partage : Résumé')).toBeInTheDocument();
+
+    resolveFirst?.({
+      status: 'unavailable',
+      message: 'Ancienne requête hors ligne.',
+    });
+    await waitFor(() => expect(screen.getByText('Partage : Résumé')).toBeInTheDocument());
+    expect(screen.queryByText('Ancienne requête hors ligne.')).not.toBeInTheDocument();
+  });
+});

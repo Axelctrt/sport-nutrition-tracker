@@ -221,4 +221,48 @@ describe('DexieSocialActivitySnapshotOutboxRepository', () => {
     }
   });
 
+
+  it('retrouve la prochaine échéance de retry après réouverture', async () => {
+    const database = new SocialActivitySnapshotOutboxDatabase(
+      `sportpilot-social-outbox-next-retry-${crypto.randomUUID()}`,
+    );
+    const repository = new DexieSocialActivitySnapshotOutboxRepository(database);
+
+    try {
+      await database.open();
+      const first = pendingRecord({
+        recipientUserId: 'friend-a',
+        stagedAt: '2026-07-07T10:01:00.000Z',
+      });
+      const second = pendingRecord({
+        recipientUserId: 'friend-b',
+        stagedAt: '2026-07-07T10:02:00.000Z',
+      });
+      await repository.put(first);
+      await repository.put(second);
+      await repository.markFailed({
+        snapshotId: first.id,
+        expectedMutationSequence: 1,
+        failedAt: '2026-07-07T10:03:00.000Z',
+        nextAttemptAt: '2026-07-07T10:12:00.000Z',
+        errorCode: 'network_error',
+      });
+      await repository.markFailed({
+        snapshotId: second.id,
+        expectedMutationSequence: 1,
+        failedAt: '2026-07-07T10:03:00.000Z',
+        nextAttemptAt: '2026-07-07T10:08:00.000Z',
+        errorCode: 'network_error',
+      });
+
+      await expect(repository.getNextRetryAt({ ownerUserId: 'owner' })).resolves.toBe(
+        '2026-07-07T10:08:00.000Z',
+      );
+      await expect(repository.getNextRetryAt({ ownerUserId: 'other-owner' })).resolves.toBeUndefined();
+    } finally {
+      database.close();
+      await Dexie.delete(database.name);
+    }
+  });
+
 });

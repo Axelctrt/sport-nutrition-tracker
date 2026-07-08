@@ -203,7 +203,7 @@ describe('socialFriendsGateway', () => {
       fetcher: async () => jsonResponse(503, { status: 'unavailable', message: 'KO' }),
     });
 
-    await expect(gateway.listFriendshipsWithProfiles('social-user:alex' as EntityId)).resolves.toEqual({
+    await expect(gateway.listFriendshipsWithProfiles('social-user:alex' as EntityId)).resolves.toMatchObject({
       status: 'unavailable',
       friendships: [],
       profiles: [],
@@ -246,5 +246,76 @@ it('supprime une amitié active côté serveur', async () => {
   expect(JSON.parse(String(calls[0]?.init?.body))).toEqual({
     userId: 'social-user:alex',
     friendUserId: 'social-user:lina',
+  });
+});
+
+
+describe('résilience A23 du gateway social', () => {
+  it('distingue une liste de permissions vide valide d’une indisponibilité serveur', async () => {
+    const synchronized = createSocialFriendsGateway({
+      endpoint: '/api/social-friends',
+      fetcher: async () => jsonResponse(200, { status: 'found', permissions: [] }),
+    });
+    const unavailable = createSocialFriendsGateway({
+      endpoint: '/api/social-friends',
+      fetcher: async () => jsonResponse(503, { status: 'unavailable', message: 'D1 indisponible' }),
+    });
+
+    await expect(synchronized.listPermissionsWithStatus?.(
+      'social-user:alex' as EntityId,
+    )).resolves.toEqual({ status: 'synchronized', permissions: [] });
+    await expect(unavailable.listPermissionsWithStatus?.(
+      'social-user:alex' as EntityId,
+    )).resolves.toMatchObject({
+      status: 'unavailable',
+      permissions: [],
+      message: 'D1 indisponible',
+    });
+  });
+
+  it('refuse de considérer une réponse 200 mal formée comme une purge autoritaire', async () => {
+    const gateway = createSocialFriendsGateway({
+      endpoint: '/api/social-friends',
+      fetcher: async () => jsonResponse(200, { status: 'found' }),
+    });
+
+    await expect(gateway.listPermissionsWithStatus?.(
+      'social-user:alex' as EntityId,
+    )).resolves.toMatchObject({
+      status: 'unavailable',
+      permissions: [],
+    });
+    await expect(gateway.listFriendshipsWithProfiles(
+      'social-user:alex' as EntityId,
+    )).resolves.toMatchObject({
+      status: 'unavailable',
+      friendships: [],
+      profiles: [],
+    });
+  });
+
+  it('retourne des mutations indisponibles au lieu de propager une erreur réseau', async () => {
+    const gateway = createSocialFriendsGateway({
+      endpoint: '/api/social-friends',
+      fetcher: async () => {
+        throw new TypeError('offline');
+      },
+    });
+    const permission = {
+      id: 'cloud-friend-permission:social-user:alex->social-user:lina' as EntityId,
+      friendUserId: 'social-user:lina' as EntityId,
+      friendHandle: 'lina.trail',
+      sharingLevel: 'summary' as const,
+      detailedConsent: 'notRequested' as const,
+    };
+
+    await expect(gateway.permissionPort.savePermission(
+      'social-user:alex' as EntityId,
+      permission,
+    )).resolves.toMatchObject({ status: 'unavailable' });
+    await expect(gateway.removeFriendship?.(
+      'social-user:alex' as EntityId,
+      'social-user:lina' as EntityId,
+    )).resolves.toMatchObject({ status: 'unavailable' });
   });
 });

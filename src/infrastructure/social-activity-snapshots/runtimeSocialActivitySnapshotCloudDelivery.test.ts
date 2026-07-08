@@ -103,4 +103,46 @@ describe('runtime social activity snapshot cloud delivery', () => {
     expect(deliver).toHaveBeenCalledTimes(2);
     detach();
   });
+
+  it('programme automatiquement la prochaine tentative après un échec transitoire', async () => {
+    const target = new EventTarget();
+    let retryCallback: (() => void) | undefined;
+    const timerToken = 123 as unknown as ReturnType<typeof setTimeout>;
+    const setTimer = vi.fn((callback: () => void, delayMs: number) => {
+      retryCallback = callback;
+      expect(delayMs).toBe(60_000);
+      return timerToken;
+    });
+    const clearTimer = vi.fn();
+    const deliver = vi.fn(async () => ({
+      selectedCount: 1,
+      deliveredCount: 0,
+      failedCount: 1,
+      ignoredStaleAcknowledgementCount: 0,
+      nextRetryAt: '2026-07-07T08:06:00.000Z',
+    }));
+    const client = {
+      subscribe: vi.fn(() => vi.fn()),
+      getCloudCredentials: vi.fn(() => ({ userId: 'owner-user', accessToken: 'token' })),
+    };
+
+    const detach = attachRuntimeSocialActivitySnapshotCloudDelivery({
+      client,
+      eventTarget: target,
+      deliver,
+      now: () => Date.parse('2026-07-07T08:05:00.000Z'),
+      setTimer,
+      clearTimer,
+    });
+    await flushPromises();
+
+    expect(setTimer).toHaveBeenCalledOnce();
+    retryCallback?.();
+    await flushPromises();
+    expect(deliver).toHaveBeenCalledTimes(2);
+
+    detach();
+    expect(clearTimer).toHaveBeenCalled();
+  });
+
 });
