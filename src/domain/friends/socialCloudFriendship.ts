@@ -9,6 +9,10 @@ import {
   type FriendsPrivacySnapshot,
 } from '@/domain/friends/friendship';
 import type { CloudFriendRequest, CloudFriendship, PublicUserProfile } from '@/domain/friends/socialIdentity';
+import {
+  ALL_SOCIAL_ACTIVITY_FIELD_SELECTION,
+  cloneSocialActivityFieldSelection,
+} from '@/domain/friends/socialActivitySharingPolicy';
 
 export const SOCIAL_CLOUD_FRIENDSHIP_CONTRACT_VERSION = '0.28.0-f5' as const;
 
@@ -247,6 +251,9 @@ export function buildCloudFriendPermissionRecord(
     sharingLevel: permission.sharingLevel,
     detailedConsent: permission.detailedConsent,
     ...(detailedConsentGrantedAt ? { detailedConsentGrantedAt } : {}),
+    fieldSelection: cloneSocialActivityFieldSelection(
+      permission.fieldSelection ?? ALL_SOCIAL_ACTIVITY_FIELD_SELECTION,
+    ),
     createdAt: now,
     updatedAt: now,
   };
@@ -264,6 +271,9 @@ export function cloudPermissionRecordToLocalPermission(
     sharingLevel: record.sharingLevel,
     detailedConsent: record.detailedConsent,
     ...(record.detailedConsentGrantedAt ? { detailedConsentGrantedAt: record.detailedConsentGrantedAt } : {}),
+    fieldSelection: cloneSocialActivityFieldSelection(
+      record.fieldSelection ?? ALL_SOCIAL_ACTIVITY_FIELD_SELECTION,
+    ),
   };
 }
 

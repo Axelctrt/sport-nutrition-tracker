@@ -68,6 +68,11 @@ class FakeD1Database {
         sharing_level: 'detailed',
         detailed_consent: 'granted',
         detailed_consent_granted_at: '2026-07-08T10:00:00.000Z',
+        field_selection_json: JSON.stringify({
+          common: ['activityType', 'title', 'date', 'duration'],
+          cardio: ['distance'],
+          strength: [],
+        }),
         created_at: '2026-07-08T10:00:00.000Z',
         updated_at: '2026-07-08T10:00:00.000Z',
       }],
@@ -181,7 +186,18 @@ class FakeD1Database {
       return {};
     }
     if (sql.startsWith('insert into social_friend_permissions')) {
-      const [id, ownerUserId, friendUserId, friendHandle, sharingLevel, detailedConsent, consentAt, createdAt, updatedAt] = args;
+      const [
+        id,
+        ownerUserId,
+        friendUserId,
+        friendHandle,
+        sharingLevel,
+        detailedConsent,
+        consentAt,
+        fieldSelectionJson,
+        createdAt,
+        updatedAt,
+      ] = args;
       const existing = [...this.permissions.values()].find((row) => row.owner_user_id === ownerUserId && row.friend_user_id === friendUserId);
       if (existing) this.permissions.delete(existing.id);
       this.permissions.set(id, {
@@ -192,6 +208,7 @@ class FakeD1Database {
         sharing_level: sharingLevel,
         detailed_consent: detailedConsent,
         detailed_consent_granted_at: consentAt,
+        field_selection_json: fieldSelectionJson,
         created_at: createdAt,
         updated_at: updatedAt,
       });

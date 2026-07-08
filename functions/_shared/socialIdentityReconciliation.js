@@ -440,7 +440,7 @@ async function migratePermissions(database, canonicalUserId, legacyIds) {
   for (const legacyId of legacyIds) {
     const result = await database.prepare(`
       SELECT id, owner_user_id, friend_user_id, friend_handle, sharing_level,
-             detailed_consent, detailed_consent_granted_at, created_at, updated_at
+             detailed_consent, detailed_consent_granted_at, field_selection_json, created_at, updated_at
       FROM social_friend_permissions
       WHERE owner_user_id = ?1 OR friend_user_id = ?1
     `).bind(legacyId).all();
@@ -454,8 +454,9 @@ async function migratePermissions(database, canonicalUserId, legacyIds) {
     await database.prepare(`
       INSERT INTO social_friend_permissions(
         id, owner_user_id, friend_user_id, friend_handle, sharing_level,
-        detailed_consent, detailed_consent_granted_at, created_at, updated_at
-      ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+        detailed_consent, detailed_consent_granted_at, field_selection_json,
+        created_at, updated_at
+      ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
       ON CONFLICT(owner_user_id, friend_user_id) DO UPDATE SET
         id = excluded.id,
         friend_handle = CASE
@@ -471,6 +472,10 @@ async function migratePermissions(database, canonicalUserId, legacyIds) {
           WHEN excluded.updated_at >= social_friend_permissions.updated_at
           THEN excluded.detailed_consent_granted_at
           ELSE social_friend_permissions.detailed_consent_granted_at END,
+        field_selection_json = CASE
+          WHEN excluded.updated_at >= social_friend_permissions.updated_at
+          THEN excluded.field_selection_json
+          ELSE social_friend_permissions.field_selection_json END,
         created_at = MIN(social_friend_permissions.created_at, excluded.created_at),
         updated_at = MAX(social_friend_permissions.updated_at, excluded.updated_at)
     `).bind(
@@ -481,6 +486,7 @@ async function migratePermissions(database, canonicalUserId, legacyIds) {
       next.sharing_level,
       next.detailed_consent,
       next.detailed_consent_granted_at ?? null,
+      next.field_selection_json ?? null,
       next.created_at,
       next.updated_at,
     ).run();

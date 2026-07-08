@@ -1,3 +1,5 @@
+import { useEffect, useMemo, useState } from 'react';
+
 import {
   DEFAULT_DETAILED_SOCIAL_ACTIVITY_FIELD_SELECTION,
   SOCIAL_ACTIVITY_CARDIO_FIELDS,
@@ -181,7 +183,7 @@ interface FieldSelectionEditorProps {
   readonly disabled?: boolean;
 }
 
-function FieldSelectionEditor({ family, value, onChange, disabled = false }: FieldSelectionEditorProps) {
+export function SocialActivityFieldSelectionEditor({ family, value, onChange, disabled = false }: FieldSelectionEditorProps) {
   return (
     <div className="space-y-3">
       <FieldGroup
@@ -260,13 +262,81 @@ export function SocialActivityGlobalSharingSettings({
               : 'Tu choisis précisément les champs autorisés.'}
       </p>
       {value.visibility === 'custom' ? (
-        <FieldSelectionEditor
+        <SocialActivityFieldSelectionEditor
           value={value.fields}
           onChange={(fields) => onChange({ ...value, fields })}
           disabled={disabled}
         />
       ) : null}
     </div>
+  );
+}
+
+interface SocialActivityFriendFieldSelectionSettingsProps {
+  readonly friendDisplayName: string;
+  readonly value: SocialActivityFieldSelection;
+  readonly onSave: (value: SocialActivityFieldSelection) => void;
+  readonly disabled?: boolean;
+}
+
+export function SocialActivityFriendFieldSelectionSettings({
+  friendDisplayName,
+  value,
+  onSave,
+  disabled = false,
+}: SocialActivityFriendFieldSelectionSettingsProps) {
+  const sourceSignature = JSON.stringify(value);
+  const [draft, setDraft] = useState(() => cloneSocialActivityFieldSelection(value));
+
+  useEffect(() => {
+    setDraft(cloneSocialActivityFieldSelection(value));
+  }, [sourceSignature, value]);
+
+  const draftSignature = JSON.stringify(draft);
+  const selectedCount = useMemo(() => (
+    draft.common.length + draft.cardio.length + draft.strength.length
+  ), [draft]);
+  const changed = draftSignature !== sourceSignature;
+
+  return (
+    <details className="mt-3 rounded-2xl border border-slate-200 dark:border-slate-800">
+      <summary className="cursor-pointer list-none px-4 py-3 text-sm font-semibold text-slate-800 dark:text-slate-100">
+        Choisir les informations partagées avec {friendDisplayName}
+        <span className="ml-2 text-xs font-medium text-slate-500 dark:text-slate-400">
+          {selectedCount} champ{selectedCount > 1 ? 's' : ''}
+        </span>
+      </summary>
+      <div className="space-y-4 border-t border-slate-200 p-4 dark:border-slate-800">
+        <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">
+          Ces choix s’appliquent uniquement à cet ami. Le serveur retire les champs décochés avant toute lecture du fil.
+        </p>
+        <SocialActivityFieldSelectionEditor
+          value={draft}
+          onChange={setDraft}
+          disabled={disabled}
+        />
+        <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            onClick={() => setDraft(cloneSocialActivityFieldSelection(
+              DEFAULT_DETAILED_SOCIAL_ACTIVITY_FIELD_SELECTION,
+            ))}
+            disabled={disabled}
+            className="min-h-11 rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:text-slate-200"
+          >
+            Réinitialiser le standard
+          </button>
+          <button
+            type="button"
+            onClick={() => onSave(draft)}
+            disabled={disabled || !changed}
+            className="min-h-11 rounded-xl bg-brand-700 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Enregistrer les champs
+          </button>
+        </div>
+      </div>
+    </details>
   );
 }
 
@@ -313,7 +383,7 @@ export function SocialActivityOverrideSettings({
                 : 'Seuls les champs cochés seront inclus dans la projection sociale.'}
       </p>
       {value.mode === 'custom' ? (
-        <FieldSelectionEditor
+        <SocialActivityFieldSelectionEditor
           family={family}
           value={fields}
           onChange={(nextFields) => onChange({ mode: 'custom', fields: nextFields })}

@@ -55,6 +55,11 @@ describe('socialFriendsGateway', () => {
             sharingLevel: 'detailed',
             detailedConsent: 'granted',
             detailedConsentGrantedAt: '2026-07-06T10:00:00.000Z',
+            fieldSelection: {
+              common: ['activityType', 'date', 'duration'],
+              cardio: ['distance', 'pace'],
+              strength: ['exercises', 'sets', 'repetitions'],
+            },
           },
         });
       },
@@ -67,9 +72,22 @@ describe('socialFriendsGateway', () => {
       sharingLevel: 'detailed',
       detailedConsent: 'granted',
       detailedConsentGrantedAt: '2026-07-06T10:00:00.000Z',
+      fieldSelection: {
+        common: ['activityType', 'date', 'duration'],
+        cardio: ['distance', 'pace'],
+        strength: ['exercises', 'sets', 'repetitions'],
+      },
     })).resolves.toMatchObject({
       status: 'updated',
-      value: expect.objectContaining({ sharingLevel: 'detailed', detailedConsent: 'granted' }),
+      value: expect.objectContaining({
+        sharingLevel: 'detailed',
+        detailedConsent: 'granted',
+        fieldSelection: {
+          common: ['activityType', 'date', 'duration'],
+          cardio: ['distance', 'pace'],
+          strength: ['exercises', 'sets', 'repetitions'],
+        },
+      }),
     });
 
     expect(calls[0]).toMatchObject({ url: '/api/social-friends/permissions/save' });
@@ -80,8 +98,75 @@ describe('socialFriendsGateway', () => {
         friendUserId: 'social-user:lina',
         sharingLevel: 'detailed',
         detailedConsent: 'granted',
+        fieldSelection: {
+          common: ['activityType', 'date', 'duration'],
+          cardio: ['distance', 'pace'],
+          strength: ['exercises', 'sets', 'repetitions'],
+        },
       }),
     });
+  });
+
+  it('relit et normalise une sélection granulaire par ami', async () => {
+    const gateway = createSocialFriendsGateway({
+      endpoint: '/api/social-friends',
+      fetcher: async () => jsonResponse(200, {
+        status: 'found',
+        permissions: [{
+          id: 'cloud-friend-permission:social-user:alex->social-user:lina',
+          friendUserId: 'social-user:lina',
+          friendHandle: 'lina.trail',
+          sharingLevel: 'detailed',
+          detailedConsent: 'granted',
+          fieldSelection: {
+            common: ['duration'],
+            cardio: ['distance'],
+            strength: ['repetitions'],
+          },
+        }],
+      }),
+    });
+
+    await expect(gateway.permissionPort.listPermissions(
+      'social-user:alex' as EntityId,
+    )).resolves.toMatchObject([{
+      fieldSelection: {
+        common: ['duration', 'activityType', 'date'],
+        cardio: ['distance'],
+        strength: ['repetitions', 'exercises', 'sets'],
+      },
+    }]);
+  });
+
+  it('dégrade une sélection serveur invalide vers le résumé prudent', async () => {
+    const gateway = createSocialFriendsGateway({
+      endpoint: '/api/social-friends',
+      fetcher: async () => jsonResponse(200, {
+        status: 'found',
+        permissions: [{
+          id: 'cloud-friend-permission:social-user:alex->social-user:lina',
+          friendUserId: 'social-user:lina',
+          friendHandle: 'lina.trail',
+          sharingLevel: 'summary',
+          detailedConsent: 'notRequested',
+          fieldSelection: {
+            common: ['privateNotes'],
+            cardio: [],
+            strength: [],
+          },
+        }],
+      }),
+    });
+
+    await expect(gateway.permissionPort.listPermissions(
+      'social-user:alex' as EntityId,
+    )).resolves.toMatchObject([{
+      fieldSelection: {
+        common: ['activityType', 'title', 'date', 'duration'],
+        cardio: ['distance'],
+        strength: ['sessionName', 'muscleGroups', 'exerciseCount'],
+      },
+    }]);
   });
 
   it('dégrade silencieusement la lecture si le serveur est indisponible', async () => {

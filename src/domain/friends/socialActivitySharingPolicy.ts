@@ -127,6 +127,12 @@ export const SUMMARY_SOCIAL_ACTIVITY_FIELD_SELECTION: SocialActivityFieldSelecti
   strength: ['sessionName', 'muscleGroups', 'exerciseCount'],
 };
 
+export const ALL_SOCIAL_ACTIVITY_FIELD_SELECTION: SocialActivityFieldSelection = {
+  common: [...SOCIAL_ACTIVITY_COMMON_FIELDS],
+  cardio: [...SOCIAL_ACTIVITY_CARDIO_FIELDS],
+  strength: [...SOCIAL_ACTIVITY_STRENGTH_FIELDS],
+};
+
 export const DEFAULT_DETAILED_SOCIAL_ACTIVITY_FIELD_SELECTION: SocialActivityFieldSelection = {
   common: ['activityType', 'title', 'date', 'duration'],
   cardio: ['distance', 'pace', 'speed', 'elevation'],
@@ -237,8 +243,31 @@ function intersectFields<T extends string>(
   return fields.filter((field) => allowed.has(field));
 }
 
+export function intersectSocialActivityFieldSelections(
+  selection: SocialActivityFieldSelection,
+  allowedFields: SocialActivityFieldSelection,
+): SocialActivityFieldSelection {
+  const normalizedSelection = normalizeSocialActivityFieldSelection(selection);
+  const normalizedAllowedFields = normalizeSocialActivityFieldSelection(allowedFields);
+
+  return normalizeSocialActivityFieldSelection({
+    common: intersectFields(normalizedSelection.common, normalizedAllowedFields.common),
+    cardio: intersectFields(normalizedSelection.cardio, normalizedAllowedFields.cardio),
+    strength: intersectFields(normalizedSelection.strength, normalizedAllowedFields.strength),
+  });
+}
+
 function addField<T extends string>(fields: readonly T[], field: T): readonly T[] {
   return fields.includes(field) ? fields : [...fields, field];
+}
+
+function normalizeCommonDependencies(
+  fields: readonly SocialActivityCommonField[],
+): readonly SocialActivityCommonField[] {
+  let normalized = uniqueFields(fields);
+  normalized = addField(normalized, 'activityType');
+  normalized = addField(normalized, 'date');
+  return normalized;
 }
 
 function normalizeCardioDependencies(
@@ -289,7 +318,7 @@ export function normalizeSocialActivityFieldSelection(
   selection: SocialActivityFieldSelection,
 ): SocialActivityFieldSelection {
   return {
-    common: uniqueFields(selection.common),
+    common: normalizeCommonDependencies(selection.common),
     cardio: normalizeCardioDependencies(selection.cardio),
     strength: normalizeStrengthDependencies(selection.strength),
   };
@@ -377,6 +406,7 @@ function limitSelectionToSummary(
 export function applyFriendScopeToSocialActivitySharingPolicy(
   policy: ResolvedSocialActivitySharingPolicy,
   recipientScope: FriendActivityShareScope,
+  recipientFields?: SocialActivityFieldSelection,
 ): RecipientScopedSocialActivitySharingPolicy {
   if (!policy.publishSnapshot || recipientScope === 'none') {
     return {
@@ -389,20 +419,27 @@ export function applyFriendScopeToSocialActivitySharingPolicy(
     };
   }
 
-  if (recipientScope === 'summary' && policy.visibility !== 'summary') {
+  const permissionScopedFields = recipientFields
+    ? intersectSocialActivityFieldSelections(policy.fields, recipientFields)
+    : policy.fields;
+  const fieldSelectionLimited = JSON.stringify(permissionScopedFields) !== JSON.stringify(policy.fields);
+
+  if (recipientScope === 'summary') {
+    const summaryFields = limitSelectionToSummary(permissionScopedFields);
     return {
       ...policy,
       visibility: 'summary',
-      fields: limitSelectionToSummary(policy.fields),
+      fields: summaryFields,
       recipientScope,
-      permissionLimited: true,
+      permissionLimited: policy.visibility !== 'summary' || fieldSelectionLimited,
     };
   }
 
   return {
     ...policy,
+    fields: permissionScopedFields,
     recipientScope,
-    permissionLimited: false,
+    permissionLimited: fieldSelectionLimited,
   };
 }
 

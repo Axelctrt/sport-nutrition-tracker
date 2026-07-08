@@ -470,8 +470,6 @@ export function validateSocialActivitySnapshotPayload(value, options) {
 
   if (value.visibility === 'summary' && value.detail !== undefined) {
     addIssue(issues, '$.detail', 'Un résumé ne doit pas contenir de détail.');
-  } else if (value.visibility === 'detailed' && value.detail === undefined) {
-    addIssue(issues, '$.detail', 'Un snapshot détaillé doit contenir un détail.');
   } else if (value.detail !== undefined) {
     validateDetail(value.detail, value.family, allowedFields, '$.detail', issues);
   }

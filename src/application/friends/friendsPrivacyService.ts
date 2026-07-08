@@ -1,4 +1,7 @@
-import type { SocialActivityGlobalSharingPolicy } from '@/domain/friends/socialActivitySharingPolicy';
+import type {
+  SocialActivityFieldSelection,
+  SocialActivityGlobalSharingPolicy,
+} from '@/domain/friends/socialActivitySharingPolicy';
 import type { EntityId } from '@/domain/models/common';
 import {
   acceptFriendRequest,
@@ -10,6 +13,7 @@ import {
   evaluateFriendActivitySharingGuard,
   summarizeFriendsPrivacy,
   updateFriendActivityPermission,
+  updateFriendActivityFieldSelection,
   removeFriendFromSnapshot,
   updateFriendsPrivacySettings,
   type FriendActivitySharingLevel,
@@ -38,6 +42,10 @@ export interface FriendsPrivacyServiceActions {
   readonly setRequestsOpen: (open: boolean) => FriendsPrivacyServiceState;
   readonly setSocialActivitySharingPolicy: (policy: SocialActivityGlobalSharingPolicy) => FriendsPrivacyServiceState;
   readonly setFriendActivityPermission: (friendId: EntityId, sharing: 'summary' | 'detailed') => FriendsPrivacyServiceState;
+  readonly setFriendActivityFieldSelection: (
+    friendId: EntityId,
+    fieldSelection: SocialActivityFieldSelection,
+  ) => FriendsPrivacyServiceState;
   readonly removeFriend: (friendId: EntityId) => FriendsPrivacyServiceState;
 }
 
@@ -187,6 +195,10 @@ export function createFriendsPrivacyService(
         sharing === 'detailed'
           ? 'Consentement détaillé enregistré pour cet ami. Seuls les snapshots sociaux filtrés peuvent utiliser ce niveau.'
           : 'Permission ramenée au résumé uniquement pour cet ami.',
+      ),
+      setFriendActivityFieldSelection: (friendId, fieldSelection) => setState(
+        updateFriendActivityFieldSelection(state, friendId, fieldSelection),
+        'Champs partagés avec cet ami mis à jour.',
       ),
       removeFriend: (friendId) => setState(
         removeFriendFromSnapshot(state, friendId),
