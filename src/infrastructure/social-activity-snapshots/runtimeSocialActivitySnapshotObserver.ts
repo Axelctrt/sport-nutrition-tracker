@@ -19,6 +19,8 @@ import type { StrengthSetRepository } from '@/infrastructure/repositories/contra
 import type { WorkoutSessionRepository } from '@/infrastructure/repositories/contracts/WorkoutSessionRepository';
 import { runtimeSocialActivitySnapshotOutboxRepository } from '@/infrastructure/social-activity-snapshots/runtimeSocialActivitySnapshotOutbox';
 import { notifySocialActivitySnapshotOutboxChanged } from '@/infrastructure/social-activity-snapshots/socialActivitySnapshotOutboxEvents';
+import { reconcileRuntimeSocialIdentity } from '@/infrastructure/sync-prototype/runtimeSocialIdentityReconciliation';
+import type { SocialIdentity } from '@/domain/friends/socialIdentity';
 
 export interface RuntimeSocialActivitySnapshotObserverDependencies {
   readonly identityRepository: SocialIdentityRepository;
@@ -28,15 +30,19 @@ export interface RuntimeSocialActivitySnapshotObserverDependencies {
   readonly strengthSets: Pick<StrengthSetRepository, 'listBySession'>;
   readonly strengthExercises: Pick<StrengthExerciseRepository, 'listAll'>;
   readonly notifyOutboxChanged?: () => void;
+  readonly reconcileIdentity?: (identity: SocialIdentity) => Promise<SocialIdentity>;
 }
 
 async function loadPublicationContext(
   dependencies: RuntimeSocialActivitySnapshotObserverDependencies,
 ): Promise<SocialActivityPublicationContext> {
-  const [identity, privacySnapshot] = await Promise.all([
+  const [storedIdentity, privacySnapshot] = await Promise.all([
     dependencies.identityRepository.readIdentity(),
     dependencies.privacyRepository.readSnapshot(),
   ]);
+  const identity = dependencies.reconcileIdentity
+    ? await dependencies.reconcileIdentity(storedIdentity)
+    : storedIdentity;
 
   return {
     identity,
@@ -56,7 +62,10 @@ export function createRuntimeSocialActivitySnapshotObserver(
     },
 
     async onActivityDeleted(activity: Activity): Promise<void> {
-      const identity = await dependencies.identityRepository.readIdentity();
+      const storedIdentity = await dependencies.identityRepository.readIdentity();
+      const identity = dependencies.reconcileIdentity
+        ? await dependencies.reconcileIdentity(storedIdentity)
+        : storedIdentity;
       await removePublishedSocialActivitySnapshots({
         context: {
           identity,
@@ -89,12 +98,20 @@ export function createRuntimeSocialActivitySnapshotObserver(
   };
 }
 
+const runtimeSocialIdentityRepository = new DexieSocialIdentityRepository(appDatabase);
+
 export const runtimeSocialActivitySnapshotObserver = createRuntimeSocialActivitySnapshotObserver({
-  identityRepository: new DexieSocialIdentityRepository(appDatabase),
+  identityRepository: runtimeSocialIdentityRepository,
   privacyRepository: new DexieFriendsPrivacyRepository(appDatabase),
   outboxRepository: runtimeSocialActivitySnapshotOutboxRepository,
   workoutSessions: repositories.workoutSessions,
   strengthSets: repositories.strengthSets,
   strengthExercises: repositories.strengthExercises,
   notifyOutboxChanged: notifySocialActivitySnapshotOutboxChanged,
+  reconcileIdentity: async (identity) => (
+    await reconcileRuntimeSocialIdentity({
+      identity,
+      repository: runtimeSocialIdentityRepository,
+    })
+  ).identity,
 });

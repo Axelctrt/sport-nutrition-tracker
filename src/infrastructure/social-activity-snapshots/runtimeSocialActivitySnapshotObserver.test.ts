@@ -208,6 +208,41 @@ describe('runtime social activity snapshot observer', () => {
     expect(notifyOutboxChanged).toHaveBeenCalledOnce();
   });
 
+
+  it('utilise le userId canonique avant de créer l’outbox', async () => {
+    const outboxRepository = new MemoryOutboxRepository();
+    const canonicalIdentity = {
+      ...identity,
+      userId: 'dexie-user-123' as EntityId,
+    };
+    const observer = createRuntimeSocialActivitySnapshotObserver({
+      identityRepository: { readIdentity: vi.fn(async () => identity), saveIdentity: vi.fn() },
+      privacyRepository: {
+        readSnapshot: vi.fn(async () => privacySnapshot),
+        saveSnapshot: vi.fn(),
+      },
+      outboxRepository,
+      workoutSessions: { listExercises: vi.fn(async () => []) },
+      strengthSets: { listBySession: vi.fn(async () => []) },
+      strengthExercises: { listAll: vi.fn(async () => []) },
+      reconcileIdentity: vi.fn(async () => canonicalIdentity),
+    });
+    const activity = createEntity(
+      createRunningActivityInput(),
+      'activity-canonical-owner',
+      '2026-07-08T10:00:00.000Z',
+    );
+
+    await observer.onActivitySaved(activity);
+
+    expect([...outboxRepository.records.values()][0]).toMatchObject({
+      ownerUserId: canonicalIdentity.userId,
+      snapshot: {
+        ownerUserId: canonicalIdentity.userId,
+      },
+    });
+  });
+
   it('charge les exercices et séries uniquement après une séance terminée', async () => {
     const outboxRepository = new MemoryOutboxRepository();
     const notifyOutboxChanged = vi.fn();

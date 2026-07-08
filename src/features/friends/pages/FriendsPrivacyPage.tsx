@@ -76,6 +76,8 @@ import { DexieFriendsPrivacyRepository } from '@/infrastructure/repositories/dex
 import { DexieSocialIdentityRepository } from '@/infrastructure/repositories/dexie/DexieSocialIdentityRepository';
 import { createRuntimeSocialCloudUserLookupGateway } from '@/infrastructure/sync-prototype/realSocialCloudUserLookupGateway';
 import { getSyncPrototypeClient } from '@/infrastructure/sync-prototype/syncPrototypeClient';
+import { reconcileRuntimeSocialIdentity } from '@/infrastructure/sync-prototype/runtimeSocialIdentityReconciliation';
+import type { SocialIdentityReconciliationResult } from '@/application/friends/socialIdentityReconciliationService';
 import { createRuntimeSocialCloudFriendRequestPort } from '@/infrastructure/sync-prototype/realSocialCloudFriendRequestService';
 import { createSocialFriendsGateway, type SocialFriendsGateway } from '@/infrastructure/sync-prototype/socialFriendsGateway';
 import type { SocialActivitySnapshotCloudCredentials } from '@/infrastructure/social-activity-snapshots/socialActivitySnapshotCloudGateway';
@@ -108,6 +110,7 @@ interface FriendsPrivacyPageProps {
   readonly activityFeedOnline?: () => boolean;
   readonly activityFeedCloudSubscription?: (listener: () => void) => () => void;
   readonly privacyReconciliation?: () => Promise<unknown>;
+  readonly identityReconciliation?: (identity: SocialIdentity) => Promise<SocialIdentityReconciliationResult>;
 }
 
 const visibilityOptions: readonly FriendVisibilityLevel[] = ['private', 'friends', 'public'];
@@ -166,6 +169,7 @@ export function FriendsPrivacyPage({
   activityFeedOnline,
   activityFeedCloudSubscription,
   privacyReconciliation,
+  identityReconciliation,
 }: FriendsPrivacyPageProps = {}) {
   const [defaultRepository] = useState(() =>
     initialSnapshot ? undefined : new DexieFriendsPrivacyRepository(appDatabase),
@@ -202,6 +206,27 @@ export function FriendsPrivacyPage({
     ?? (import.meta.env.MODE === 'test' || initialSnapshot || repository
       ? undefined
       : reconcileRuntimeSocialActivityPrivacy);
+  const activeIdentityReconciliation = useMemo(() => {
+    if (identityReconciliation) return identityReconciliation;
+    if (
+      import.meta.env.MODE === 'test'
+      || initialIdentity
+      || identityRepository
+      || !activeIdentityRepository
+    ) {
+      return undefined;
+    }
+
+    return (currentIdentity: SocialIdentity) => reconcileRuntimeSocialIdentity({
+      identity: currentIdentity,
+      repository: activeIdentityRepository,
+    });
+  }, [
+    identityReconciliation,
+    initialIdentity,
+    identityRepository,
+    activeIdentityRepository,
+  ]);
   const initialSnapshotState = useMemo(
     () => initialSnapshot ?? createEmptyFriendsPrivacySnapshot(),
     [initialSnapshot],
@@ -249,29 +274,42 @@ export function FriendsPrivacyPage({
       .then(async ([loadedSnapshot, loadedIdentity]) => {
         if (!active) return;
 
+        const identityReconciliationResult = activeIdentityReconciliation
+          ? await activeIdentityReconciliation(loadedIdentity)
+          : undefined;
+        const effectiveIdentity = identityReconciliationResult?.identity ?? loadedIdentity;
+        if (
+          identityReconciliationResult
+          && ['reconciled', 'conflict', 'unavailable'].includes(
+            identityReconciliationResult.status,
+          )
+        ) {
+          setIdentityFeedback(identityReconciliationResult.message);
+        }
+
         let nextSnapshot = loadedSnapshot;
         if (activeCloudFriendRequestPort) {
           const [incomingCloudRequests, outgoingCloudRequests] = await Promise.all([
-            activeCloudFriendRequestPort.listIncomingRequests(loadedIdentity.userId),
-            activeCloudFriendRequestPort.listOutgoingRequests(loadedIdentity.userId),
+            activeCloudFriendRequestPort.listIncomingRequests(effectiveIdentity.userId),
+            activeCloudFriendRequestPort.listOutgoingRequests(effectiveIdentity.userId),
           ]);
           const localRequests = [...incomingCloudRequests, ...outgoingCloudRequests].flatMap((request) => {
-            const report = normalizeCloudFriendRequestForUser(request, loadedIdentity.userId);
+            const report = normalizeCloudFriendRequestForUser(request, effectiveIdentity.userId);
             return report ? [cloudFriendRequestToLocalRequest(report)] : [];
           });
           nextSnapshot = mergeCloudFriendRequestsIntoSnapshot(loadedSnapshot, localRequests);
         }
 
         if (activeSocialFriendsGateway) {
-          const { friendships, profiles } = await activeSocialFriendsGateway.listFriendshipsWithProfiles(loadedIdentity.userId);
-          nextSnapshot = mergeCloudFriendshipsIntoSnapshot(nextSnapshot, loadedIdentity.userId, friendships, profiles);
+          const { friendships, profiles } = await activeSocialFriendsGateway.listFriendshipsWithProfiles(effectiveIdentity.userId);
+          nextSnapshot = mergeCloudFriendshipsIntoSnapshot(nextSnapshot, effectiveIdentity.userId, friendships, profiles);
         } else if (activeCloudFriendshipPort) {
-          const friendships = await activeCloudFriendshipPort.listFriendships(loadedIdentity.userId);
-          nextSnapshot = mergeCloudFriendshipsIntoSnapshot(nextSnapshot, loadedIdentity.userId, friendships, []);
+          const friendships = await activeCloudFriendshipPort.listFriendships(effectiveIdentity.userId);
+          nextSnapshot = mergeCloudFriendshipsIntoSnapshot(nextSnapshot, effectiveIdentity.userId, friendships, []);
         }
 
         if (activeCloudFriendPermissionPort) {
-          const permissions = await activeCloudFriendPermissionPort.listPermissions(loadedIdentity.userId);
+          const permissions = await activeCloudFriendPermissionPort.listPermissions(effectiveIdentity.userId);
           nextSnapshot = ensureFriendActivityPermissions({
             ...nextSnapshot,
             activityPermissions: permissions,
@@ -292,9 +330,9 @@ export function FriendsPrivacyPage({
 
         if (!active) return;
         setSnapshot(nextSnapshot);
-        setIdentity(loadedIdentity);
-        setIdentityHandle(formatSocialHandle(loadedIdentity.handle));
-        setDisplayName(loadedIdentity.displayName);
+        setIdentity(effectiveIdentity);
+        setIdentityHandle(formatSocialHandle(effectiveIdentity.handle));
+        setDisplayName(effectiveIdentity.displayName);
 
         if (cloudSocialSnapshotLoaded && activePrivacyReconciliation) {
           void activePrivacyReconciliation().catch(() => undefined);
@@ -327,6 +365,7 @@ export function FriendsPrivacyPage({
     activeCloudFriendshipPort,
     activeCloudFriendPermissionPort,
     activePrivacyReconciliation,
+    activeIdentityReconciliation,
   ]);
 
   useEffect(() => {
