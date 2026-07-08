@@ -1,47 +1,54 @@
-# Retour arrière — SportPilot 0.28.0
+# Retour arrière — SportPilot 0.29.0
 
-Le fix-forward est privilégié. SportPilot 0.28.0 finalise la préparation du backend social cloud réel : identités cloud, réservation de handles, recherche exacte, demandes d’amis cloud, amitiés cloud, permissions synchronisées et snapshots sociaux distants filtrés.
+Le fix-forward reste la stratégie prioritaire. SportPilot 0.29.0 utilise des données sociales réelles dans Cloudflare D1 ; une régression front ne doit donc pas conduire à supprimer les tables ou à rejouer des migrations déjà appliquées.
 
-## En cas de problème sur la page Amis
+## Incident de déploiement front
 
-1. désactiver temporairement les blocs cloud social par fix-forward ;
-2. conserver l’AppDatabase Dexie v10 pour éviter toute perte de données sociales locales ;
-3. conserver la sauvegarde JSON v9 ;
-4. vérifier que les préférences, demandes, amis et permissions restent restaurables.
+1. identifier le dernier déploiement Cloudflare Pages stable ;
+2. restaurer temporairement ce déploiement depuis Cloudflare ;
+3. conserver D1, Dexie v10 et le format de sauvegarde JSON v9 ;
+4. ouvrir une branche corrective depuis `main` ;
+5. republier un correctif avec les contrôles de sécurité A24 et de recette A25.
 
-## En cas de problème de recherche ou demandes cloud
+## Incident sur les routes sociales
 
-1. remettre `VITE_ENABLE_REAL_SOCIAL_CLOUD=false` ;
-2. conserver la recherche exacte locale/fallback ;
-3. vérifier que les messages `Identifiant inexistant` et `Service cloud indisponible` restent visibles ;
-4. livrer un correctif sans ouvrir d’annuaire public ni de suggestions.
+1. ne jamais contourner l’authentification Bearer ;
+2. désactiver temporairement l’accès au module par fix-forward si nécessaire ;
+3. conserver les réponses `401` et `403` pour les accès non autorisés ;
+4. ne pas exposer les erreurs SQL, stacks ou identifiants internes ;
+5. vérifier les bindings Pages Functions et `SOCIAL_DIRECTORY_DB` avant toute modification de données.
 
-## En cas de problème d’amitiés ou permissions cloud
+## Incident de partage ou de confidentialité
 
-1. suspendre la création d’amitiés cloud via fix-forward ;
-2. conserver les relations basées sur `userId` ;
-3. conserver le résumé par défaut ;
-4. ne jamais activer le détail sans consentement explicite.
+1. privilégier la révocation du partage concerné ;
+2. conserver le mode Aucun comme arrêt immédiat du partage ;
+3. vérifier l’amitié active et la permission dans D1 ;
+4. supprimer uniquement les snapshots concernés si une correction de données est indispensable ;
+5. ne jamais créer d’export ou de table d’activités brutes.
 
-## En cas de problème de snapshots sociaux cloud
+## Incident de synchronisation
 
-1. suspendre la publication de snapshots distants ;
-2. conserver uniquement les snapshots filtrés déjà validés ;
-3. vérifier que `rawActivityShared` reste à `false` ;
-4. ne jamais créer de table `socialRawActivities`.
+1. ne pas vider le cache local sur une simple indisponibilité serveur ;
+2. conserver l’outbox locale pour permettre la reprise ;
+3. vérifier la reconnexion et l’isolation du compte actif ;
+4. préférer un correctif de reprise à une suppression globale des données locales.
 
-## En cas de problème IA Gemini
+## Migrations
 
-1. désactiver `VITE_PHOTO_NUTRITION_AI_ENDPOINT` dans l’environnement front ;
-2. retirer temporairement `PHOTO_NUTRITION_AI_API_KEY` côté serveur ;
-3. vérifier que le fallback local redevient le comportement par défaut ;
-4. livrer un correctif si nécessaire.
+- ne pas rejouer `0002_social_friend_permission_fields_0_29_0.sql` ;
+- ne pas supprimer les colonnes `field_selection_json` ;
+- A26 n’ajoute aucune migration D1 ou Dexie ;
+- toute migration corrective future doit être additive, versionnée et testée sur une base de copie.
 
-## En cas de problème applicatif majeur
+## Après restauration
 
-1. repasser temporairement au tag `v0.27.0` ;
-2. ne pas réécrire le tag `v0.28.0` si celui-ci a déjà été publié ;
-3. préparer un fix-forward depuis une branche dédiée ;
-4. publier une nouvelle version et un nouveau tag annoté.
+Relancer au minimum :
 
-Ne jamais réécrire un tag publié. Conserver `v0.28.0` et livrer chaque correctif avec une nouvelle version.
+```text
+npm run audit:social-security-hardening
+npm run audit:social-complete-acceptance
+npm run audit:social-release-finalization
+npm run build
+```
+
+Puis vérifier avec deux comptes que l’accès retiré ne revient pas et que les routes anonymes répondent toujours `401`.

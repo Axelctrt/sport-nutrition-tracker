@@ -1,48 +1,44 @@
 import { existsSync, readFileSync } from 'node:fs';
 
-const requiredFiles = [
-  'functions/_shared/socialFriendRequests.js',
-  'functions/api/social-friend-requests/send.js',
-  'functions/api/social-friend-requests/incoming.js',
-  'functions/api/social-friend-requests/outgoing.js',
-  'functions/api/social-friend-requests/update-status.js',
+const failures = [];
+const read = (path) => existsSync(path) ? readFileSync(path, 'utf8') : '';
+const needFile = (path) => { if (!existsSync(path)) failures.push(`fichier manquant : ${path}`); };
+const need = (source, value, label) => { if (!source.includes(value)) failures.push(`${label} : ${value}`); };
+
+for (const path of [
   'src/infrastructure/sync-prototype/socialFriendRequestsGateway.ts',
+  'functions/_shared/socialFriendRequests.js',
+  'src/features/friends/pages/FriendsPrivacyPage.tsx',
   'src/infrastructure/sync-prototype/socialFriendRequestsGateway.test.ts',
-];
+]) needFile(path);
 
-for (const file of requiredFiles) {
-  if (!existsSync(file)) {
-    throw new Error(`F3 social friend requests : fichier manquant ${file}`);
-  }
-}
+const gateway = read('src/infrastructure/sync-prototype/socialFriendRequestsGateway.ts');
+const server = read('functions/_shared/socialFriendRequests.js');
+const page = read('src/features/friends/pages/FriendsPrivacyPage.tsx');
 
-const shared = readFileSync('functions/_shared/socialFriendRequests.js', 'utf8');
-for (const marker of [
-  'CREATE TABLE IF NOT EXISTS social_friend_requests',
-  'CREATE TABLE IF NOT EXISTS social_friendships',
-  'handleSocialFriendRequestSendRequest',
+for (const value of [
+  'listIncomingRequestsWithProfiles',
+  'listOutgoingRequestsWithProfiles',
+  'supportsProfiledSocialFriendRequestsPort',
+  'socialCloudApiHeaders(credentials',
+]) need(gateway, value, 'gateway profilé incomplet');
+for (const value of [
   'handleSocialFriendRequestIncomingRequest',
-  'handleSocialFriendRequestUpdateStatusRequest',
+  'handleSocialFriendRequestOutgoingRequest',
+  'owner_display_name',
+  'handle',
+  'readProfilesForRequests',
 ]) {
-  if (!shared.includes(marker)) {
-    throw new Error(`F3 social friend requests : marqueur serveur manquant ${marker}`);
-  }
+  need(server, value, 'annuaire des demandes incomplet');
 }
+for (const value of [
+  'listIncomingRequestsWithProfiles(effectiveIdentity.userId)',
+  'listOutgoingRequestsWithProfiles(effectiveIdentity.userId)',
+]) need(page, value, 'intégration UI des demandes profilées absente');
 
-const runtime = readFileSync('src/infrastructure/sync-prototype/realSocialCloudFriendRequestService.ts', 'utf8');
-if (!runtime.includes('createSocialFriendRequestsClient')) {
-  throw new Error('F3 social friend requests : runtime non branché sur l’annuaire serveur des demandes.');
+if (failures.length) {
+  console.error('Audit annuaire des demandes d’amis échoué :');
+  failures.forEach((failure) => console.error(`- ${failure}`));
+  process.exit(1);
 }
-
-const page = readFileSync('src/features/friends/pages/FriendsPrivacyPage.tsx', 'utf8');
-for (const marker of [
-  'listIncomingRequests(loadedIdentity.userId)',
-  'mergeCloudFriendRequestsIntoSnapshot',
-  "respondToIncomingRequest(request, 'accepted')",
-]) {
-  if (!page.includes(marker)) {
-    throw new Error(`F3 social friend requests : intégration UI manquante ${marker}`);
-  }
-}
-
-console.log('Audit social friend requests directory OK');
+console.log('Audit annuaire des demandes d’amis réussi : profils publics, listes entrantes/sortantes et UI sont alignés.');

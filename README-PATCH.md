@@ -1,62 +1,57 @@
-# SportPilot 0.28.0 — release social cloud
+# SportPilot 0.29.0 — release sociale privée
 
-Branche de développement : `feature/social-cloud-0.28.0`
+Branche de finalisation : `release/0.29.0`
 
-SportPilot 0.28.0 finalise le backend social cloud réel préparé par les phases F1 à F6. La release stabilise la version, les audits, la documentation et les garde-fous de confidentialité.
+SportPilot 0.29.0 clôt la roadmap sociale A1 à A26. La release transforme le socle cloud préparé en 0.28.x en un module d’amis utilisable avec de vrais comptes, des permissions par ami, un fil d’activité filtré, une fiche détaillée et des contrôles stricts de sécurité.
 
 ## Contenu livré
 
-- contrat cloud social global ;
-- identités cloud et réservation unique des handles ;
-- recherche exacte par identifiant public complet ;
-- demandes d’amis cloud par `requesterUserId` et `recipientUserId` ;
-- amitiés cloud stables basées sur `userId` ;
-- permissions de partage synchronisées par ami ;
-- publication de snapshots sociaux filtrés ;
-- lecture des snapshots autorisés pour le feed amis ;
-- fallback propre quand `VITE_ENABLE_REAL_SOCIAL_CLOUD=false` ;
-- audits sociaux cloud F1 à F6 intégrés au pipeline.
+- identité sociale canonique et handles uniques ;
+- annuaire limité à la recherche exacte ;
+- demandes d’amis complètes avec nettoyage des états terminaux ;
+- amitiés bilatérales, suppression et recréation ;
+- source unique de partage configurée par ami ;
+- modes Aucun, Résumé et Personnalisé ;
+- sélection granulaire des champs musculation et cardio ;
+- snapshots sociaux filtrés stockés dans D1 ;
+- fil social déterministe et fiche détaillée sécurisée ;
+- synchronisation résiliente hors ligne ;
+- authentification et autorisation renforcées sur toutes les routes ;
+- recette réelle ordinateur et iPhone 15 finalisée.
 
 ## Versions techniques
 
-- application : `0.28.0` ;
+- application : `0.29.0` ;
 - AppDatabase locale : Dexie v10 ;
 - sauvegarde JSON : v9 ;
 - runtime Dexie Cloud prototype : v14 ;
-- collections cloud sociales : `socialIdentities`, `socialHandleReservations`, `socialFriendRequests`, `socialFriendships`, `socialFriendPermissions`, `socialActivitySnapshots`.
+- contrat de snapshot : `0.29.0-a3` ;
+- migrations D1 déjà requises : `0001` et `0002` ;
+- migration supplémentaire A26 : aucune.
 
 ## Validation attendue
 
-- `npm run audit:social-cloud-contract` ;
-- `npm run audit:social-cloud-identity` ;
-- `npm run audit:social-cloud-lookup` ;
-- `npm run audit:social-cloud-friend-requests` ;
-- `npm run audit:social-cloud-friendships` ;
-- `npm run audit:social-cloud-activity-snapshots` ;
-- `npm run audit:social-release` ;
-- `npm run audit:release` ;
-- `npm run audit:repository` ;
-- `npm run build` ;
-- `npm run lint` ;
-- `npm run test` ;
-- `npm run check` ;
-- `npm run test:stability`.
+```text
+npm run audit:social-complete-acceptance
+npm run audit:social-release-finalization
+npm run audit:social-release
+npm run audit:release
+npm run audit:repository
+npm run lint
+npm run test
+npm run build
+npm run check
+npm run test:stability
+npm audit
+```
 
-## Hors périmètre volontaire
+## Publication attendue
 
-- pas d’annuaire public ;
-- pas de suggestions ;
-- pas de recherche approximative ;
-- pas de likes ;
-- pas de commentaires ;
-- pas de messagerie ;
-- pas de groupes ;
-- pas de classements ;
-- pas d’export d’activité brute ;
-- pas de table `socialRawActivities`.
-
-Tag attendu à la publication finale : `v0.28.0`.
-
-## SportPilot 0.28.1 F1 — Activation contrôlée du cloud social réel
-
-La phase 0.28.1 F1 prépare l’ouverture contrôlée du social cloud réel : le défaut public reste `VITE_ENABLE_REAL_SOCIAL_CLOUD=false`, mais les variables `VITE_*` définies par Cloudflare peuvent désormais surcharger ce défaut en production. Cela permet d’activer le social cloud sur une Preview de test sans repatcher le code.
+1. Committer la finalisation sur `release/0.29.0`.
+2. Fusionner manuellement la branche dans `develop`.
+3. Relancer les contrôles de release sur `develop`.
+4. Fusionner manuellement `develop` dans `main`.
+5. Construire puis déployer `main` sur Cloudflare Pages.
+6. Vérifier la production avec les deux comptes réels.
+7. Créer et pousser le tag annoté `v0.29.0`.
+8. Resynchroniser `develop` avec `main`.

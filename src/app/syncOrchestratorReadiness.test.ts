@@ -12,7 +12,7 @@ import {
 
 describe('préparation F1 de l’orchestrateur de synchronisation 0.26.0', () => {
   it('conserve les versions de publication 0.26.0 pendant la construction du socle', () => {
-    expect(__APP_VERSION__).toBe('0.28.1');
+    expect(__APP_VERSION__).toBe('0.29.0');
     expect(databaseSchemaVersion).toBe(10);
     expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(9);
     expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(14);

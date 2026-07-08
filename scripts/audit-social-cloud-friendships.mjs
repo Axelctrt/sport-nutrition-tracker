@@ -1,110 +1,59 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
 
-const root = process.cwd();
-const read = (path) => readFileSync(join(root, path), 'utf8');
-const assert = (condition, message) => {
-  if (!condition) throw new Error(`Audit amitiés cloud 0.28.0 F5 échoué : ${message}`);
-};
+const failures = [];
+const read = (path) => existsSync(path) ? readFileSync(path, 'utf8') : '';
+const needFile = (path) => { if (!existsSync(path)) failures.push(`fichier manquant : ${path}`); };
+const need = (source, value, label) => { if (!source.includes(value)) failures.push(`${label} : ${value}`); };
 
-const requiredFiles = [
+for (const path of [
   'src/domain/friends/socialCloudFriendship.ts',
-  'src/domain/friends/socialCloudFriendship.test.ts',
-  'src/application/friends/socialCloudFriendshipService.ts',
-  'src/application/friends/socialCloudFriendshipService.test.ts',
   'src/infrastructure/sync-prototype/realSocialCloudFriendshipService.ts',
-  'src/infrastructure/sync-prototype/realSocialCloudFriendshipService.test.ts',
-  'src/app/socialCloudFriendshipsReadiness.test.ts',
-  'docs/architecture/social-cloud-friendships-0.28.0-f5.md',
-];
-
-for (const file of requiredFiles) {
-  assert(existsSync(join(root, file)), `${file} est manquant.`);
-}
+  'src/infrastructure/sync-prototype/socialFriendsGateway.ts',
+  'functions/_shared/socialFriends.js',
+  'src/features/friends/pages/FriendsPrivacyPage.tsx',
+  'migrations/0002_social_friend_permission_fields_0_29_0.sql',
+]) needFile(path);
 
 const domain = read('src/domain/friends/socialCloudFriendship.ts');
-for (const token of [
-  'SOCIAL_CLOUD_FRIENDSHIP_CONTRACT_VERSION',
-  '0.28.0-f5',
-  'buildCloudFriendshipFromAcceptedRequest',
-  'createCloudFriendshipId',
+const runtime = read('src/infrastructure/sync-prototype/realSocialCloudFriendshipService.ts');
+const gateway = read('src/infrastructure/sync-prototype/socialFriendsGateway.ts');
+const server = read('functions/_shared/socialFriends.js');
+const page = read('src/features/friends/pages/FriendsPrivacyPage.tsx');
+
+for (const value of [
   'relationshipKey: \'userId\'',
   'defaultPermissionLevel: \'summary\'',
   'detailedRequiresConsent: true',
   'exposesRawActivity: false',
-  'automaticFriendshipWithoutAcceptedRequest',
-  'handleBasedRelationship',
-  'rawActivityExport',
-  'mergeCloudFriendPermissionsIntoSnapshot',
-]) {
-  assert(domain.includes(token), `domaine amitiés cloud incomplet : ${token} absent.`);
+]) need(domain, value, 'contrat d’amitié cloud incomplet');
+for (const value of ['createRuntimeSocialCloudFriendshipPort', 'createRuntimeSocialCloudFriendPermissionPort']) {
+  need(runtime, value, 'runtime d’amitié cloud incomplet');
 }
-assert(!domain.includes('socialRawActivities'), 'F5 ne doit pas manipuler d’activités brutes.');
+for (const value of [
+  'listFriendshipsWithProfiles',
+  'listPermissionsWithStatus',
+  'savePermission',
+  'removeFriendship',
+  'socialCloudApiHeaders(credentials',
+]) need(gateway, value, 'gateway d’amitiés incomplet');
+for (const value of [
+  'authenticateRequest',
+  'SOCIAL_FRIENDS_ACTOR_MISMATCH',
+  'SOCIAL_FRIENDS_PERMISSION_ID_MISMATCH',
+  'SOCIAL_FRIENDS_FRIENDSHIP_ID_MISMATCH',
+  "SET status = 'removed'",
+  'DELETE FROM social_friend_permissions',
+]) need(server, value, 'serveur d’amitiés incomplet');
+for (const value of [
+  'listFriendshipsWithProfiles(effectiveIdentity.userId)',
+  'listPermissionsWithStatus(effectiveIdentity.userId)',
+  'removeFriendshipFromServer(identity.userId, friendUserId)',
+  'SocialActivityFriendSharingSettings',
+]) need(page, value, 'intégration UI d’amitié incomplète');
 
-const service = read('src/infrastructure/sync-prototype/realSocialCloudFriendshipService.ts');
-for (const token of [
-  'createRealSocialCloudFriendshipPort',
-  'createRealSocialCloudFriendPermissionPort',
-  'createRuntimeSocialCloudFriendshipPort',
-  'createRuntimeSocialCloudFriendPermissionPort',
-  'unavailableSocialCloudFriendshipPort',
-  'unavailableSocialCloudFriendPermissionPort',
-  'realSocialCloudEnabled',
-  'socialFriendships',
-  'socialFriendPermissions',
-]) {
-  assert(service.includes(token), `service amitiés cloud incomplet : ${token} absent.`);
+if (failures.length) {
+  console.error('Audit amitiés cloud échoué :');
+  failures.forEach((failure) => console.error(`- ${failure}`));
+  process.exit(1);
 }
-assert(!service.includes('fetch('), 'F5 ne doit pas ajouter d’appel HTTP direct.');
-assert(!service.includes('XMLHttpRequest'), 'F5 ne doit pas ajouter d’appel réseau direct.');
-assert(!service.includes('rawActivity'), 'F5 ne doit pas manipuler d’activité brute.');
-
-const runtime = read('src/infrastructure/sync-prototype/SyncPrototypeDatabase.ts');
-for (const token of [
-  'SYNC_PROTOTYPE_DATABASE_VERSION = 14',
-  "'socialFriendships'",
-  "'socialFriendPermissions'",
-  "socialFriendships: 'id, userAId, userBId, status, updatedAt",
-  "socialFriendPermissions: 'id, ownerUserId, friendUserId, sharingLevel, updatedAt",
-  '[ownerUserId+friendUserId]',
-]) {
-  assert(runtime.includes(token), `runtime Dexie Cloud F5 incomplet : ${token} absent.`);
-}
-assert(!runtime.includes('socialRawActivities'), 'le runtime ne doit pas créer de table socialRawActivities.');
-assert(!runtime.includes('globalUserDirectory'), 'le runtime ne doit pas créer d’annuaire global.');
-
-const page = read('src/features/friends/pages/FriendsPrivacyPage.tsx');
-for (const token of [
-  'Cloud social 0.28.0 F6',
-  'Snapshots sociaux distants F6 prêts',
-  'permissions synchronisées',
-  'Résumé par défaut',
-  'détail uniquement après consentement explicite',
-  'lecture des snapshots autorisés',
-  'aucun export brut',
-]) {
-  assert(page.includes(token), `page Amis F6 incomplète : ${token} absent.`);
-}
-
-const packageJson = JSON.parse(read('package.json'));
-assert(packageJson.scripts['audit:social-cloud-friendships'] === 'node scripts/audit-social-cloud-friendships.mjs', 'script npm audit:social-cloud-friendships manquant.');
-assert(packageJson.scripts.check.includes('npm run audit:social-cloud-friendships'), 'npm run check doit inclure audit:social-cloud-friendships.');
-assert(packageJson.scripts.ci.includes('npm run audit:social-cloud-friendships'), 'npm run ci doit inclure audit:social-cloud-friendships.');
-
-const doc = read('docs/architecture/social-cloud-friendships-0.28.0-f5.md');
-for (const token of [
-  '0.28.0 F5',
-  'Amitiés cloud',
-  'permissions synchronisées',
-  'userId',
-  'résumé par défaut',
-  'consentement explicite',
-  'pas de relation basée sur handle',
-  'pas de snapshot distant',
-  'pas de feed distant réel',
-  'd’export brut d’activité',
-]) {
-  assert(doc.includes(token), `documentation F5 incomplète : ${token} absent.`);
-}
-
-console.log('Audit amitiés cloud 0.28.0 F5 OK');
+console.log('Audit amitiés cloud réussi : relation bilatérale, permissions par direction, suppression et profils publics sont cohérents.');

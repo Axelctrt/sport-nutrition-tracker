@@ -1,49 +1,44 @@
-# Limitations connues — SportPilot 0.28.0
+# Limitations connues — SportPilot 0.29.0
 
-## Cloud social réel sous contrôle
+## Réseau volontairement privé
 
-SportPilot 0.28.0 prépare le backend social cloud réel avec identités, handles réservés, recherche exacte, demandes d’amis, amitiés, permissions et snapshots sociaux distants filtrés. L’activation reste contrôlée par `VITE_ENABLE_REAL_SOCIAL_CLOUD` et par la configuration Dexie Cloud disponible.
-
-## Pas d’annuaire public
-
-La recherche utilisateur reste strictement exacte. Il n’y a pas de suggestions, pas de découverte publique d’utilisateurs, pas d’annuaire ouvert et pas de recherche globale.
-
-## Relations basées sur userId
-
-Les handles publics servent à trouver un utilisateur exact. Les demandes, amitiés, permissions et snapshots sociaux cloud restent basés sur `userId`, jamais sur le handle public comme clé relationnelle.
-
-## Partage contrôlé
-
-Les permissions par ami utilisent le résumé par défaut. Le détail n’est autorisé qu’après consentement explicite. Les snapshots détaillés peuvent être dégradés en résumé si la permission n’est plus suffisante.
-
-## Aucun export d’activité brute
-
-Le feed amis ne lit que des snapshots sociaux filtrés. Les activités privées complètes, notes libres, champs internes, horaires précis non nécessaires, calculs techniques et données sensibles ne doivent pas être exposés dans le cloud social.
+La recherche reste exacte par handle complet. SportPilot ne propose ni annuaire public, ni suggestions, ni recherche approximative, ni import automatique de contacts.
 
 ## Interactions sociales hors périmètre
 
-La version 0.28.0 ne livre pas les likes, commentaires, messagerie, groupes, classements ou réactions. Ces fonctionnalités nécessiteraient de nouveaux contrats de modération, confidentialité et stockage.
+La version 0.29.0 ne contient pas de likes, réactions, commentaires, messagerie, groupes, défis partagés ou classements. Ces fonctions demanderaient des règles supplémentaires de modération, de notification et de confidentialité.
 
-## Restauration et conflits sociaux
+## Pas de graphique cardio partagé
 
-La sauvegarde JSON v9 conserve les données sociales locales. Les stratégies fines de conflit multi-appareil, de modération et de révocation rétroactive de snapshots déjà publiés devront être traitées dans une version ultérieure.
+Les graphiques sociaux ne sont pas affichés tant qu’une véritable série temporelle filtrée et autorisée n’est pas disponible. Les métriques ponctuelles existantes peuvent être partagées selon la sélection de l’utilisateur.
 
-## Estimation nutritionnelle non médicale
+## Données affichées uniquement lorsqu’elles existent
 
-L’analyse photo IA propose une estimation approximative. Elle ne doit pas être présentée comme un diagnostic nutritionnel, une mesure médicale ou une vérité absolue. La correction manuelle reste obligatoire avant l’ajout au journal.
+RPE, calories, fréquence cardiaque, cadence, dénivelé, repos ou intervalles ne sont visibles que lorsqu’ils sont présents dans l’activité source et autorisés pour l’ami concerné.
 
-## Dépendance au Free Tier Gemini
+## Dépendance aux services cloud
 
-Le parcours photo IA Gemini reste soumis aux quotas Google, aux limites de débit et à la disponibilité du compte utilisé. Si le quota est atteint ou si Gemini répond mal, l’app doit revenir au fallback local.
+Les fonctions sociales réelles nécessitent :
 
-## Secrets serveur uniquement
+- une session Dexie Cloud valide ;
+- les Pages Functions déployées ;
+- le binding D1 `SOCIAL_DIRECTORY_DB` ;
+- la disponibilité de Cloudflare et du réseau.
 
-Les clés `PHOTO_NUTRITION_AI_API_KEY` ou `GEMINI_API_KEY` doivent rester côté serveur, dans le terminal du proxy local ou dans les variables d’environnement de l’hébergeur. Elles ne doivent jamais être placées dans React, dans une variable `VITE_*`, dans Git, ni dans un fichier `.env.local` destiné au front.
+En cas d’indisponibilité, les caches locaux valides peuvent rester visibles, mais les nouvelles opérations distantes attendent le retour du service.
 
-## Bundle JavaScript
+## Synchronisation multi-appareil
 
-La version 0.28.0 conserve le budget JavaScript accepté pour l’UX photo, IA, synchronisation et social. L’optimisation du bundle doit être traitée plus tard comme chantier technique global.
+Le serveur reste la référence pour les amitiés et permissions. Une brève latence peut exister entre deux appareils avant actualisation. Les réponses anciennes sont ignorées lorsqu’une mutation plus récente a déjà été confirmée.
 
-## Social cloud réel — activation contrôlée 0.28.1 F1
+## Suppression et historique distant
 
-Le cloud social réel reste désactivé par défaut dans la configuration publique. Il peut être activé par environnement avec `VITE_ENABLE_REAL_SOCIAL_CLOUD=true`, idéalement d’abord sur Cloudflare Preview avec des comptes de test. La production doit rester à `false` tant que la recette multi-comptes et les règles d’accès ne sont pas validées.
+Le retrait d’un ami révoque l’accès courant et les snapshots deviennent inaccessibles. Les journaux techniques propres à l’hébergeur ne constituent pas une fonction utilisateur et suivent les politiques de rétention du fournisseur.
+
+## Stockage local et sauvegarde
+
+La sauvegarde JSON v9 conserve les données locales prévues par son schéma. Elle ne remplace pas D1 comme source autoritaire pour les relations sociales distantes et ne doit pas servir à recréer artificiellement une ancienne permission.
+
+## Estimation nutritionnelle
+
+L’analyse photo nutritionnelle reste une estimation non médicale. Elle dépend du service configuré et nécessite toujours une validation manuelle avant ajout au journal.
