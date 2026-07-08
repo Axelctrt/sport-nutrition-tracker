@@ -82,6 +82,14 @@ function normalizeHandle(value) {
   return handle.replace(/[^a-z0-9._-]/gu, '').slice(0, 32);
 }
 
+function createFriendshipId(userAId, userBId) {
+  if (userAId === userBId) {
+    throw new SocialFriendsError(403, 'SOCIAL_FRIENDS_SELF_FRIENDSHIP', 'Impossible de modifier une amitié vers soi-même.');
+  }
+  const [first, second] = userAId < userBId ? [userAId, userBId] : [userBId, userAId];
+  return `cloud-friendship:${first}<->${second}`;
+}
+
 function sanitizeSharingLevel(value) {
   const sharingLevel = typeof value === 'string' ? value.trim() : '';
   if (!SHARING_LEVELS.has(sharingLevel)) {
@@ -368,6 +376,74 @@ async function savePermission(database, payload) {
   };
 }
 
+async function removeFriendship(database, payload) {
+  const userId = sanitizeUserId(payload?.userId ?? payload?.ownerUserId, 'userId');
+  const friendUserId = sanitizeUserId(payload?.friendUserId, 'friendUserId');
+  const friendshipId = sanitizeFriendshipId(payload?.friendshipId ?? createFriendshipId(userId, friendUserId));
+  const timestamp = nowIso();
+
+  await ensureSocialFriendsSchema(database);
+
+  const friendship = await database.prepare(`
+    SELECT id, user_a_id, user_b_id, status, created_at, updated_at
+    FROM social_friendships
+    WHERE id = ?1
+      AND (user_a_id = ?2 OR user_b_id = ?2)
+    LIMIT 1
+  `).bind(friendshipId, userId).first();
+
+  if (!friendship) {
+    return {
+      status: 404,
+      payload: {
+        status: 'notFound',
+        code: 'SOCIAL_FRIENDS_FRIENDSHIP_NOT_FOUND',
+        message: 'Amitié serveur introuvable pour ce compte.',
+      },
+    };
+  }
+
+  const actualFriendUserId = friendship.user_a_id === userId ? friendship.user_b_id : friendship.user_a_id;
+  if (actualFriendUserId !== friendUserId) {
+    return {
+      status: 403,
+      payload: {
+        status: 'forbidden',
+        code: 'SOCIAL_FRIENDS_REMOVE_MISMATCH',
+        message: 'Suppression refusée : cette amitié ne cible pas cet ami.',
+      },
+    };
+  }
+
+  await database.prepare(`
+    UPDATE social_friendships
+    SET status = 'removed', updated_at = ?2
+    WHERE id = ?1
+  `).bind(friendship.id, timestamp).run();
+
+  await database.prepare(`
+    DELETE FROM social_friend_permissions
+    WHERE (owner_user_id = ?1 AND friend_user_id = ?2)
+       OR (owner_user_id = ?2 AND friend_user_id = ?1)
+  `).bind(userId, friendUserId).run();
+
+  const removed = await database.prepare(`
+    SELECT id, user_a_id, user_b_id, status, created_at, updated_at
+    FROM social_friendships
+    WHERE id = ?1
+    LIMIT 1
+  `).bind(friendship.id).first();
+
+  return {
+    status: 200,
+    payload: {
+      status: 'updated',
+      message: 'Ami supprimé. Les permissions associées ont été retirées.',
+      friendship: friendshipFromRow(removed),
+    },
+  };
+}
+
 async function readJsonBody(request) {
   try {
     return await request.json();
@@ -429,8 +505,22 @@ export async function handleSocialFriendsPermissionSaveRequest(request, env = {}
   }
 }
 
+export async function handleSocialFriendsRemoveRequest(request, env = {}) {
+  try {
+    const methodResponse = assertMethod(request, 'POST');
+    if (methodResponse) return methodResponse;
+    const database = readDatabase(env);
+    const payload = await readJsonBody(request);
+    const result = await removeFriendship(database, payload);
+    return jsonResponse(result.status, result.payload);
+  } catch (error) {
+    return errorResponse(error);
+  }
+}
+
 export const socialFriendsInternals = {
   listFriendships,
   listPermissions,
   savePermission,
+  removeFriendship,
 };

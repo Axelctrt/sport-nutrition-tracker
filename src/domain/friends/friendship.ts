@@ -435,6 +435,42 @@ export function declineFriendRequest(
   };
 }
 
+export function removeFriendFromSnapshot(
+  snapshot: FriendsPrivacySnapshot,
+  friendId: EntityId,
+): FriendsPrivacySnapshot {
+  const friend = snapshot.friends.find((candidate) => (
+    candidate.id === friendId
+    || candidate.userId === friendId
+    || normalizeFriendHandle(candidate.handle) === friendId
+  ));
+  if (!friend) return snapshot;
+
+  const friendUserId = friend.userId;
+  const friendHandle = normalizeFriendHandle(friend.handle);
+
+  return ensureFriendActivityPermissions({
+    ...snapshot,
+    friends: snapshot.friends.filter((candidate) => (
+      candidate.id !== friend.id
+      && (friendUserId === undefined || candidate.userId !== friendUserId)
+      && normalizeFriendHandle(candidate.handle) !== friendHandle
+    )),
+    requests: snapshot.requests.filter((request) => (
+      (friendUserId === undefined || (
+        request.requesterUserId !== friendUserId
+        && request.recipientUserId !== friendUserId
+      ))
+      && normalizeFriendHandle(request.handle) !== friendHandle
+    )),
+    activityPermissions: (snapshot.activityPermissions ?? []).filter((permission) => (
+      (friendUserId === undefined || permission.friendUserId !== friendUserId)
+      && permission.id !== createFriendActivityPermissionId(friend)
+      && normalizeFriendHandle(permission.friendHandle) !== friendHandle
+    )),
+  });
+}
+
 export function addOutgoingFriendRequest(
   snapshot: FriendsPrivacySnapshot,
   rawHandle: string,

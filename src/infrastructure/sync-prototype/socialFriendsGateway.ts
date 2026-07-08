@@ -19,6 +19,10 @@ export interface SocialFriendsGateway {
   readonly friendshipPort: SocialCloudFriendshipPort;
   readonly permissionPort: SocialCloudFriendPermissionPort;
   readonly listFriendshipsWithProfiles: (userId: EntityId) => Promise<SocialFriendsGatewayListResult>;
+  readonly removeFriendship?: (
+    userId: EntityId,
+    friendUserId: EntityId,
+  ) => Promise<SocialCloudMutationResult<CloudFriendship>>;
 }
 
 interface SocialFriendsClientOptions {
@@ -26,7 +30,7 @@ interface SocialFriendsClientOptions {
   readonly fetcher?: typeof fetch;
 }
 
-type FriendPermissionMutationStatus = 'created' | 'updated' | 'alreadyExists' | 'forbidden' | 'unavailable';
+type FriendMutationStatus = 'created' | 'updated' | 'alreadyExists' | 'forbidden' | 'notFound' | 'unavailable';
 
 const friendshipStatuses = new Set(['active', 'removed']);
 const sharingLevels = new Set(['summary', 'detailed']);
@@ -127,8 +131,14 @@ function parsePermission(value: unknown): FriendActivityPermission | undefined {
   };
 }
 
-function parseMutationStatus(value: unknown): FriendPermissionMutationStatus {
-  if (value === 'created' || value === 'updated' || value === 'alreadyExists' || value === 'forbidden') return value;
+function parseMutationStatus(value: unknown): FriendMutationStatus {
+  if (
+    value === 'created'
+    || value === 'updated'
+    || value === 'alreadyExists'
+    || value === 'forbidden'
+    || value === 'notFound'
+  ) return value;
   return 'unavailable';
 }
 
@@ -206,6 +216,30 @@ export function createSocialFriendsGateway(options: SocialFriendsClientOptions =
     };
   }
 
+  async function removeFriendship(
+    userId: EntityId,
+    friendUserId: EntityId,
+  ): Promise<SocialCloudMutationResult<CloudFriendship>> {
+    const response = await fetcher(`${endpoint}/remove`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ userId, friendUserId }),
+    });
+    const payload = await readJson(response);
+    const status = payload && typeof payload === 'object' && 'status' in payload
+      ? parseMutationStatus(payload.status)
+      : 'unavailable';
+    const parsedFriendship = payload && typeof payload === 'object' && 'friendship' in payload
+      ? parseFriendship(payload.friendship)
+      : undefined;
+
+    return {
+      status: response.ok && okMutationStatuses.has(status) ? status : status,
+      ...(parsedFriendship ? { value: parsedFriendship } : {}),
+      message: payloadMessage(payload, response.ok ? 'Ami supprimé.' : 'Suppression ami serveur indisponible.'),
+    };
+  }
+
   return {
     friendshipPort: {
       async listFriendships(userId) {
@@ -217,11 +251,13 @@ export function createSocialFriendsGateway(options: SocialFriendsClientOptions =
           message: 'Les amitiés serveur sont créées par acceptation de demande, pas par le client.',
         };
       },
+      removeFriendship,
     },
     permissionPort: {
       listPermissions,
       savePermission,
     },
     listFriendshipsWithProfiles,
+    removeFriendship,
   };
 }

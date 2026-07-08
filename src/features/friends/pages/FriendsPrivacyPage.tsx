@@ -642,6 +642,60 @@ export function FriendsPrivacyPage({
       });
   };
 
+  const removeFriend = (friend: FriendProfileSummary) => {
+    setRequestFeedback(undefined);
+    setErrorMessage(undefined);
+
+    const confirmed = window.confirm(
+      `Supprimer ${friend.displayName} de tes amis ?
+
+Vous ne pourrez plus voir vos activités respectives. Une nouvelle demande sera nécessaire pour redevenir amis.`,
+    );
+    if (!confirmed) return;
+
+    const applyLocalRemoval = (feedback: string) => {
+      const service = createFriendsPrivacyService(snapshot);
+      const next = service.actions.removeFriend(friend.id);
+      reconcilePrivacy(persistSnapshot({ ...next, lastFeedback: feedback }));
+      setRequestFeedback(feedback);
+    };
+
+    const removeFriendshipFromServer = activeSocialFriendsGateway?.removeFriendship;
+    if (!removeFriendshipFromServer) {
+      applyLocalRemoval('Ami supprimé localement. La suppression serveur sera possible une fois le cloud social disponible.');
+      return;
+    }
+
+    setRequestFeedback('Suppression de l’ami côté serveur en cours…');
+    const permission = selectFriendActivityPermission(snapshot, friend);
+
+    void resolveCloudFriendUserId(friend, permission)
+      .then((friendUserId) => {
+        if (!friendUserId) {
+          setRequestFeedback('Suppression serveur impossible : userId ami introuvable dans les amitiés actives.');
+          return undefined;
+        }
+
+        return removeFriendshipFromServer(identity.userId, friendUserId);
+      })
+      .then((result) => {
+        if (!result) return;
+        if (['updated', 'alreadyExists'].includes(result.status)) {
+          applyLocalRemoval(result.message);
+          return;
+        }
+
+        setRequestFeedback(result.message);
+      })
+      .catch((error) => {
+        setRequestFeedback(
+          error instanceof Error
+            ? error.message
+            : 'Service cloud indisponible : suppression ami impossible pour le moment.',
+        );
+      });
+  };
+
   const submitRequest = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setRequestFeedback(undefined);
@@ -1195,6 +1249,14 @@ export function FriendsPrivacyPage({
                         aria-pressed={friendSharingGuard.permission.sharingLevel === 'detailed'}
                       >
                         Autoriser le détail
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => removeFriend(friend)}
+                      >
+                        <X aria-hidden="true" className="size-4" />
+                        Supprimer cet ami
                       </Button>
                     </div>
                   </div>

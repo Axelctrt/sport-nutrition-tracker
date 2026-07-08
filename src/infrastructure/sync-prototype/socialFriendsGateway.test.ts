@@ -99,3 +99,39 @@ describe('socialFriendsGateway', () => {
     await expect(gateway.permissionPort.listPermissions('social-user:alex' as EntityId)).resolves.toEqual([]);
   });
 });
+
+it('supprime une amitié active côté serveur', async () => {
+  const calls: Array<{ url: string; init: RequestInit | undefined }> = [];
+  const gateway = createSocialFriendsGateway({
+    endpoint: '/api/social-friends',
+    fetcher: async (url, init) => {
+      calls.push({ url: String(url), init });
+      return jsonResponse(200, {
+        status: 'updated',
+        message: 'Ami supprimé. Les permissions associées ont été retirées.',
+        friendship: {
+          id: 'cloud-friendship:social-user:alex<->social-user:lina',
+          userAId: 'social-user:alex',
+          userBId: 'social-user:lina',
+          status: 'removed',
+          createdAt: '2026-07-08T10:00:00.000Z',
+          updatedAt: '2026-07-08T11:00:00.000Z',
+        },
+      });
+    },
+  });
+
+  await expect(gateway.removeFriendship?.(
+    'social-user:alex' as EntityId,
+    'social-user:lina' as EntityId,
+  )).resolves.toMatchObject({
+    status: 'updated',
+    value: expect.objectContaining({ status: 'removed' }),
+  });
+
+  expect(calls[0]).toMatchObject({ url: '/api/social-friends/remove' });
+  expect(JSON.parse(String(calls[0]?.init?.body))).toEqual({
+    userId: 'social-user:alex',
+    friendUserId: 'social-user:lina',
+  });
+});

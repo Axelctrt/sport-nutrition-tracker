@@ -10,6 +10,7 @@ import {
   evaluateFriendActivitySharingGuard,
   summarizeFriendsPrivacy,
   updateFriendActivityPermission,
+  removeFriendFromSnapshot,
   updateFriendsPrivacySettings,
   type FriendActivitySharingLevel,
   type FriendProfileSummary,
@@ -37,6 +38,7 @@ export interface FriendsPrivacyServiceActions {
   readonly setRequestsOpen: (open: boolean) => FriendsPrivacyServiceState;
   readonly setSocialActivitySharingPolicy: (policy: SocialActivityGlobalSharingPolicy) => FriendsPrivacyServiceState;
   readonly setFriendActivityPermission: (friendId: EntityId, sharing: 'summary' | 'detailed') => FriendsPrivacyServiceState;
+  readonly removeFriend: (friendId: EntityId) => FriendsPrivacyServiceState;
 }
 
 export interface FriendsPrivacyService {
@@ -185,6 +187,10 @@ export function createFriendsPrivacyService(
         sharing === 'detailed'
           ? 'Consentement détaillé enregistré pour cet ami. Seuls les snapshots sociaux filtrés peuvent utiliser ce niveau.'
           : 'Permission ramenée au résumé uniquement pour cet ami.',
+      ),
+      removeFriend: (friendId) => setState(
+        removeFriendFromSnapshot(state, friendId),
+        'Ami supprimé. Les permissions et demandes associées ont été retirées localement.',
       ),
     },
   };

@@ -876,3 +876,58 @@ describe('FriendsPrivacyPage', () => {
 
 });
 
+
+it('supprime un ami après confirmation et succès serveur', async () => {
+  const user = userEvent.setup();
+  const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+  const removeFriendship = vi.fn(async () => ({
+    status: 'updated' as const,
+    value: {
+      id: 'cloud-friendship:social-user:alex123<->social-user:lea' as EntityId,
+      userAId: identity.userId,
+      userBId: 'social-user:lea' as EntityId,
+      status: 'removed' as const,
+      createdAt: '2026-07-05T12:00:00.000Z',
+      updatedAt: '2026-07-08T12:00:00.000Z',
+    },
+    message: 'Ami supprimé. Les permissions associées ont été retirées.',
+  }));
+  const socialFriendsGateway: SocialFriendsGateway = {
+    friendshipPort: {
+      listFriendships: vi.fn(async () => []),
+      upsertFriendship: vi.fn(async () => ({
+        status: 'unavailable' as const,
+        message: 'Non utilisé.',
+      })),
+      removeFriendship,
+    },
+    permissionPort: {
+      listPermissions: vi.fn(async () => []),
+      savePermission: vi.fn(async (_userId, permission) => ({
+        status: 'updated' as const,
+        value: permission,
+        message: 'Non utilisé.',
+      })),
+    },
+    listFriendshipsWithProfiles: vi.fn(async () => ({
+      status: 'synchronized' as const,
+      friendships: [],
+      profiles: [],
+    })),
+    removeFriendship,
+  };
+
+  try {
+    renderPage({ socialFriendsGateway });
+
+    await user.click(screen.getByRole('button', { name: /Supprimer cet ami/u }));
+
+    await waitFor(() => {
+      expect(removeFriendship).toHaveBeenCalledWith(identity.userId, 'social-user:lea');
+      expect(screen.queryByText('Léa Cardio')).not.toBeInTheDocument();
+      expect(screen.getAllByText(/Ami supprimé/u).length).toBeGreaterThan(0);
+    });
+  } finally {
+    confirmSpy.mockRestore();
+  }
+});
