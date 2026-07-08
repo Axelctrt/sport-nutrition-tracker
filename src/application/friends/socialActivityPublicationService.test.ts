@@ -7,6 +7,7 @@ import {
 } from '@/application/friends/socialActivityPublicationService';
 import {
   DEFAULT_DETAILED_SOCIAL_ACTIVITY_FIELD_SELECTION,
+  type SocialActivityFieldSelection,
   type SocialActivityGlobalSharingPolicy,
 } from '@/domain/friends/socialActivitySharingPolicy';
 import type { SocialActivitySnapshotOutboxRecord } from '@/domain/friends/socialActivitySnapshotOutbox';
@@ -81,6 +82,7 @@ function privacySnapshot(input: {
   readonly policy?: SocialActivityGlobalSharingPolicy;
   readonly friends?: readonly FriendProfileSummary[];
   readonly detailedFriendIds?: readonly EntityId[];
+  readonly fieldSelectionByFriendId?: Readonly<Record<string, SocialActivityFieldSelection>>;
 } = {}): FriendsPrivacySnapshot {
   const friends = input.friends ?? [friend('friend-summary', 'summary.friend')];
   const detailedFriendIds = new Set(input.detailedFriendIds ?? []);
@@ -108,6 +110,8 @@ function privacySnapshot(input: {
       ...(detailedFriendIds.has(candidate.userId ?? candidate.id)
         ? { detailedConsentGrantedAt: '2026-07-07T09:00:00.000Z' }
         : {}),
+      fieldSelection: input.fieldSelectionByFriendId?.[candidate.userId ?? candidate.id]
+        ?? DEFAULT_DETAILED_SOCIAL_ACTIVITY_FIELD_SELECTION,
     })),
   };
 }
@@ -322,6 +326,62 @@ describe('social activity publication service', () => {
       .toMatchObject({ state: 'active', visibility: 'summary' });
     expect(records.find((record) => record.recipientUserId === 'friend-detailed')?.snapshot)
       .toMatchObject({ state: 'active', visibility: 'detailed', detail: { family: 'cardio' } });
+  });
+
+  it('projette des champs différents pour deux amis détaillés selon leur sélection', async () => {
+    const repository = new MemoryPublicationRepository();
+    const friends = [
+      friend('friend-distance', 'distance.friend'),
+      friend('friend-pace', 'pace.friend'),
+    ];
+
+    await reconcileStoredActivitySocialSnapshots({
+      context: {
+        identity,
+        privacySnapshot: privacySnapshot({
+          sharing: 'detailed',
+          friends,
+          detailedFriendIds: ['friend-distance', 'friend-pace'],
+          fieldSelectionByFriendId: {
+            'friend-distance': {
+              common: ['activityType', 'date', 'duration'],
+              cardio: ['distance'],
+              strength: [],
+            },
+            'friend-pace': {
+              common: ['activityType', 'title', 'date', 'duration'],
+              cardio: ['distance', 'pace'],
+              strength: [],
+            },
+          },
+        }),
+        repository,
+      },
+      activity: runningActivity(),
+      stagedAt: '2026-07-07T11:00:00.000Z',
+    });
+
+    const records = [...repository.records.values()];
+    const distanceSnapshot = records.find((record) => record.recipientUserId === 'friend-distance')?.snapshot;
+    const paceSnapshot = records.find((record) => record.recipientUserId === 'friend-pace')?.snapshot;
+
+    expect(distanceSnapshot).toMatchObject({
+      state: 'active',
+      allowedFields: {
+        common: ['activityType', 'date', 'duration'],
+        cardio: ['distance'],
+        strength: [],
+      },
+    });
+    expect(distanceSnapshot).not.toHaveProperty('title');
+    expect(paceSnapshot).toMatchObject({
+      state: 'active',
+      allowedFields: {
+        common: ['activityType', 'title', 'date', 'duration'],
+        cardio: ['distance', 'pace'],
+        strength: [],
+      },
+    });
   });
 
   it('remplace les snapshots existants par des tombstones si le partage est désactivé', async () => {

@@ -24,7 +24,10 @@ import { prepareSocialActivityFeed } from '@/application/friends/socialActivityF
 import { socialActivityGlobalPolicyFromFriendsPrivacy } from '@/application/friends/socialActivityPublicationService';
 import { SocialActivityCloudReadinessPanel } from '@/features/friends/components/SocialActivityCloudReadinessPanel';
 import { SocialActivityFeedPanel } from '@/features/friends/components/SocialActivityFeedPanel';
-import { SocialActivityGlobalSharingSettings } from '@/features/friends/components/SocialActivitySharingSettings';
+import {
+  SocialActivityFriendFieldSelectionSettings,
+  SocialActivityGlobalSharingSettings,
+} from '@/features/friends/components/SocialActivitySharingSettings';
 import { sendExactFriendRequest } from '@/application/friends/socialFriendRequestService';
 import {
   cloudFriendRequestToLocalRequest,
@@ -72,7 +75,11 @@ import {
   type SocialIdentityAvailabilityResult,
 } from '@/domain/friends/socialIdentity';
 import type { SocialActivitySnapshot } from '@/domain/friends/socialActivitySnapshot';
-import type { SocialActivityGlobalSharingPolicy } from '@/domain/friends/socialActivitySharingPolicy';
+import {
+  DEFAULT_DETAILED_SOCIAL_ACTIVITY_FIELD_SELECTION,
+  type SocialActivityFieldSelection,
+  type SocialActivityGlobalSharingPolicy,
+} from '@/domain/friends/socialActivitySharingPolicy';
 import { appDatabase } from '@/infrastructure/database/database';
 import { DexieFriendsPrivacyRepository } from '@/infrastructure/repositories/dexie/DexieFriendsPrivacyRepository';
 import { DexieSocialIdentityRepository } from '@/infrastructure/repositories/dexie/DexieSocialIdentityRepository';
@@ -557,23 +564,18 @@ export function FriendsPrivacyPage({
     return counterpartIds.length === 1 ? counterpartIds[0] : undefined;
   };
 
-  const updateFriendPermission = (friend: FriendProfileSummary, sharing: 'summary' | 'detailed') => {
-    setRequestFeedback(undefined);
-    setErrorMessage(undefined);
-
-    const service = createFriendsPrivacyService(snapshot);
-    const next = service.actions.setFriendActivityPermission(friend.id, sharing);
-    const permission = selectFriendActivityPermission(next, friend);
-
-    // Mise à jour optimiste de l’interface, sans republier de snapshot avant
-    // confirmation D1. Le serveur reste la source d’autorité du niveau effectif.
+  const synchronizeFriendPermission = (
+    friend: FriendProfileSummary,
+    next: FriendsPrivacyServiceState,
+    permission: ReturnType<typeof selectFriendActivityPermission>,
+    localFeedback: string,
+  ) => {
+    const previousSnapshot = snapshot;
     const optimisticPersistence = persistSnapshot(next);
 
     if (!activeCloudFriendPermissionPort) {
       reconcilePrivacy(optimisticPersistence);
-      setRequestFeedback(sharing === 'detailed'
-        ? 'Détail autorisé localement pour cet ami après consentement explicite.'
-        : 'Partage ami limité au résumé localement.');
+      setRequestFeedback(localFeedback);
       return;
     }
 
@@ -586,7 +588,7 @@ export function FriendsPrivacyPage({
       })
       .then((friendUserId) => {
         if (!friendUserId) {
-          void persistSnapshot(snapshot);
+          void persistSnapshot(previousSnapshot);
           setRequestFeedback('Permission ami serveur impossible : userId ami introuvable dans les amitiés actives.');
           return undefined;
         }
@@ -605,7 +607,7 @@ export function FriendsPrivacyPage({
         if (['created', 'updated', 'alreadyExists'].includes(result.status)) {
           const confirmedPermission = result.value;
           if (!confirmedPermission) {
-            void persistSnapshot(snapshot);
+            void persistSnapshot(previousSnapshot);
             setRequestFeedback(result.message);
             return;
           }
@@ -629,17 +631,52 @@ export function FriendsPrivacyPage({
           return;
         }
 
-        void persistSnapshot(snapshot);
+        void persistSnapshot(previousSnapshot);
         setRequestFeedback(result.message);
       })
       .catch((error) => {
-        void persistSnapshot(snapshot);
+        void persistSnapshot(previousSnapshot);
         setRequestFeedback(
           error instanceof Error
             ? error.message
             : 'Service cloud indisponible : permission ami impossible à synchroniser.',
         );
       });
+  };
+
+  const updateFriendPermission = (friend: FriendProfileSummary, sharing: 'summary' | 'detailed') => {
+    setRequestFeedback(undefined);
+    setErrorMessage(undefined);
+
+    const service = createFriendsPrivacyService(snapshot);
+    const next = service.actions.setFriendActivityPermission(friend.id, sharing);
+    const permission = selectFriendActivityPermission(next, friend);
+    synchronizeFriendPermission(
+      friend,
+      next,
+      permission,
+      sharing === 'detailed'
+        ? 'Détail autorisé localement pour cet ami après consentement explicite.'
+        : 'Partage ami limité au résumé localement.',
+    );
+  };
+
+  const updateFriendFieldSelection = (
+    friend: FriendProfileSummary,
+    fieldSelection: SocialActivityFieldSelection,
+  ) => {
+    setRequestFeedback(undefined);
+    setErrorMessage(undefined);
+
+    const service = createFriendsPrivacyService(snapshot);
+    const next = service.actions.setFriendActivityFieldSelection(friend.id, fieldSelection);
+    const permission = selectFriendActivityPermission(next, friend);
+    synchronizeFriendPermission(
+      friend,
+      next,
+      permission,
+      'Champs partagés avec cet ami enregistrés localement.',
+    );
   };
 
   const removeFriend = (friend: FriendProfileSummary) => {
@@ -1263,6 +1300,17 @@ Vous ne pourrez plus voir vos activités respectives. Une nouvelle demande sera 
                   <p className="mt-3 rounded-xl bg-slate-50 px-3 py-2 text-sm leading-6 text-slate-600 dark:bg-slate-950 dark:text-slate-300">
                     {friendSharingGuard.reason}
                   </p>
+                  {friendSharingGuard.permission.sharingLevel === 'detailed' ? (
+                    <SocialActivityFriendFieldSelectionSettings
+                      friendDisplayName={friend.displayName}
+                      value={friendSharingGuard.permission.fieldSelection ?? DEFAULT_DETAILED_SOCIAL_ACTIVITY_FIELD_SELECTION}
+                      onSave={(fieldSelection) => updateFriendFieldSelection(friend, fieldSelection)}
+                    />
+                  ) : (
+                    <p className="mt-3 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                      Active le détail pour choisir les métriques autorisées pour cet ami.
+                    </p>
+                  )}
                 </div>
               );
             })}

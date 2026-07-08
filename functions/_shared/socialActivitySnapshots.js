@@ -1,4 +1,9 @@
 import { validateSocialActivitySnapshotPayload } from './socialActivitySnapshotValidation.js';
+import {
+  intersectSocialActivityFieldSelections,
+  socialActivityFieldSelectionIsSubset,
+  socialActivityPermissionFieldSelectionFromStored,
+} from './socialActivityFieldSelection.js';
 
 class SocialActivitySnapshotsError extends Error {
   constructor(status, code, message) {
@@ -403,7 +408,7 @@ async function hasActiveFriendship(database, ownerUserId, recipientUserId) {
 
 async function readPermission(database, ownerUserId, recipientUserId) {
   return database.prepare(`
-    SELECT sharing_level, detailed_consent
+    SELECT sharing_level, detailed_consent, field_selection_json
     FROM social_friend_permissions
     WHERE owner_user_id = ?1 AND friend_user_id = ?2
     LIMIT 1
@@ -417,6 +422,16 @@ async function authorizeActiveSnapshot(database, snapshot) {
   const permission = await readPermission(database, snapshot.ownerUserId, snapshot.recipientUserId);
   if (!permission) {
     throw new SocialActivitySnapshotsError(403, 'SOCIAL_ACTIVITY_PERMISSION_MISSING', 'Publication refusée : permission ami absente.');
+  }
+  const permissionFields = socialActivityPermissionFieldSelectionFromStored(
+    permission.field_selection_json,
+  );
+  if (!socialActivityFieldSelectionIsSubset(snapshot.allowedFields, permissionFields)) {
+    throw new SocialActivitySnapshotsError(
+      403,
+      'SOCIAL_ACTIVITY_FIELDS_EXCEEDED',
+      'Publication refusée : le snapshot contient des champs non autorisés pour cet ami.',
+    );
   }
   if (permission.sharing_level === 'summary' && snapshot.visibility !== 'summary') {
     throw new SocialActivitySnapshotsError(403, 'SOCIAL_ACTIVITY_SCOPE_EXCEEDED', 'Publication refusée : niveau de détail supérieur à la permission ami.');
@@ -590,6 +605,138 @@ function parseStoredSnapshot(row) {
   }
 }
 
+function filterSummaryForAllowedFields(summary, allowedFields) {
+  const filtered = {};
+  Object.entries(summary).forEach(([key, value]) => {
+    const field = SUMMARY_FIELD_BY_KEY[key];
+    if (field && fieldIsAllowed(allowedFields, field)) filtered[key] = value;
+  });
+  return filtered;
+}
+
+function redactCardioDetail(detail, allowedFields) {
+  const redacted = { family: 'cardio' };
+  const simpleFields = [
+    ['sessionType', 'sessionType'],
+    ['terrainType', 'terrain'],
+    ['mainStroke', 'stroke'],
+    ['poolLengthMeters', 'poolLength'],
+    ['bikeType', 'bikeType'],
+    ['environment', 'environment'],
+    ['paceSeries', 'paceSeries'],
+    ['intervals', 'intervals'],
+    ['laps', 'laps'],
+    ['segments', 'segments'],
+  ];
+  simpleFields.forEach(([key, field]) => {
+    if (detail[key] !== undefined && fieldIsAllowed(allowedFields, field)) {
+      redacted[key] = detail[key];
+    }
+  });
+
+  const chartMetricFields = {
+    pace: 'pace',
+    speed: 'speed',
+    heartRate: 'heartRate',
+    cadence: 'cadence',
+  };
+  const chartMetricField = detail.chart && chartMetricFields[detail.chart.metric];
+  if (
+    detail.chart !== undefined
+    && fieldIsAllowed(allowedFields, 'chart')
+    && chartMetricField
+    && fieldIsAllowed(allowedFields, chartMetricField)
+  ) {
+    redacted.chart = detail.chart;
+  }
+
+  return Object.keys(redacted).length > 1 ? redacted : undefined;
+}
+
+function redactStrengthSet(set, allowedFields) {
+  const redacted = {
+    setNumber: set.setNumber,
+    ...(set.type === undefined ? {} : { type: set.type }),
+  };
+  if (set.repetitions !== undefined && fieldIsAllowed(allowedFields, 'repetitions')) {
+    redacted.repetitions = set.repetitions;
+  }
+  if (set.loadKg !== undefined && fieldIsAllowed(allowedFields, 'loads')) {
+    redacted.loadKg = set.loadKg;
+  }
+  if (
+    set.loadUnit !== undefined
+    && (
+      (set.loadUnit === 'bodyweight' && fieldIsAllowed(allowedFields, 'bodyweight'))
+      || (set.loadUnit !== 'bodyweight' && fieldIsAllowed(allowedFields, 'loads'))
+    )
+  ) {
+    redacted.loadUnit = set.loadUnit;
+  }
+  if (set.durationSeconds !== undefined) redacted.durationSeconds = set.durationSeconds;
+  if (set.distanceMeters !== undefined) redacted.distanceMeters = set.distanceMeters;
+  if (set.rpe !== undefined && fieldIsAllowed(allowedFields, 'rpe')) redacted.rpe = set.rpe;
+  if (set.restSeconds !== undefined && fieldIsAllowed(allowedFields, 'restTimes')) {
+    redacted.restSeconds = set.restSeconds;
+  }
+  return redacted;
+}
+
+function redactStrengthDetail(detail, allowedFields) {
+  const redacted = { family: 'strength' };
+  if (detail.sessionName !== undefined && fieldIsAllowed(allowedFields, 'sessionName')) {
+    redacted.sessionName = detail.sessionName;
+  }
+  if (Array.isArray(detail.exercises) && fieldIsAllowed(allowedFields, 'exercises')) {
+    redacted.exercises = detail.exercises.map((exercise) => ({
+      name: exercise.name,
+      ...(exercise.muscleGroups !== undefined && fieldIsAllowed(allowedFields, 'muscleGroups')
+        ? { muscleGroups: exercise.muscleGroups }
+        : {}),
+      ...(exercise.trackingMode === undefined ? {} : { trackingMode: exercise.trackingMode }),
+      ...(Array.isArray(exercise.sets) && fieldIsAllowed(allowedFields, 'sets')
+        ? { sets: exercise.sets.map((set) => redactStrengthSet(set, allowedFields)) }
+        : {}),
+    }));
+  }
+  return Object.keys(redacted).length > 1 ? redacted : undefined;
+}
+
+function redactSnapshotToFieldSelection(snapshot, permissionFields) {
+  const allowedFields = intersectSocialActivityFieldSelections(
+    snapshot.allowedFields,
+    permissionFields,
+  );
+  const {
+    allowedFields: _allowedFields,
+    summary: _summary,
+    detail: _detail,
+    occurredTime: _occurredTime,
+    occurredAt: _occurredAt,
+    title,
+    ...identity
+  } = snapshot;
+  const detail = snapshot.detail?.family === 'cardio'
+    ? redactCardioDetail(snapshot.detail, allowedFields)
+    : snapshot.detail?.family === 'strength'
+      ? redactStrengthDetail(snapshot.detail, allowedFields)
+      : undefined;
+
+  return normalizeSnapshot({
+    ...identity,
+    ...(title !== undefined && allowedFields.common.includes('title') ? { title } : {}),
+    ...(snapshot.occurredTime !== undefined && allowedFields.common.includes('time')
+      ? { occurredTime: snapshot.occurredTime }
+      : {}),
+    ...(snapshot.occurredAt !== undefined && allowedFields.common.includes('time')
+      ? { occurredAt: snapshot.occurredAt }
+      : {}),
+    allowedFields,
+    summary: filterSummaryForAllowedFields(snapshot.summary, allowedFields),
+    ...(detail ? { detail } : {}),
+  });
+}
+
 function permissionAllowsDetailed(row) {
   return row.sharing_level === 'detailed' && row.detailed_consent === 'granted';
 }
@@ -606,11 +753,7 @@ function redactSnapshotToSummary(snapshot) {
     cardio: snapshot.allowedFields.cardio.filter((field) => SUMMARY_ALLOWED_FIELDS.cardio.has(field)),
     strength: snapshot.allowedFields.strength.filter((field) => SUMMARY_ALLOWED_FIELDS.strength.has(field)),
   };
-  const summary = {};
-  Object.entries(snapshot.summary).forEach(([key, value]) => {
-    const field = SUMMARY_FIELD_BY_KEY[key];
-    if (field && fieldIsAllowed(allowedFields, field)) summary[key] = value;
-  });
+  const summary = filterSummaryForAllowedFields(snapshot.summary, allowedFields);
   const {
     visibility: _visibility,
     allowedFields: _allowedFields,
@@ -633,8 +776,13 @@ function redactSnapshotToSummary(snapshot) {
 
 function snapshotForCurrentPermission(row) {
   const snapshot = parseStoredSnapshot(row);
-  if (snapshot.visibility === 'summary' || permissionAllowsDetailed(row)) return snapshot;
-  return redactSnapshotToSummary(snapshot);
+  const permissionFields = socialActivityPermissionFieldSelectionFromStored(
+    row.field_selection_json,
+  );
+  const scopeLimitedSnapshot = snapshot.visibility === 'summary' || permissionAllowsDetailed(row)
+    ? snapshot
+    : redactSnapshotToSummary(snapshot);
+  return redactSnapshotToFieldSelection(scopeLimitedSnapshot, permissionFields);
 }
 
 function toFeedCard(row) {
@@ -664,7 +812,7 @@ async function listFeed(database, recipientUserId, url) {
 
   const baseSql = `
     SELECT s.snapshot_id, s.updated_at, s.snapshot_json,
-           p.sharing_level, p.detailed_consent,
+           p.sharing_level, p.detailed_consent, p.field_selection_json,
            ${sortExpression} AS sort_time,
            (
              SELECT h.handle
@@ -727,7 +875,7 @@ async function readSnapshotDetail(database, recipientUserId, snapshotId) {
   await assertSocialActivitySchemaReady(database);
   const normalizedSnapshotId = sanitizeIdentifier(snapshotId, 'snapshotId');
   const row = await database.prepare(`
-    SELECT s.snapshot_id, s.snapshot_json, p.sharing_level, p.detailed_consent
+    SELECT s.snapshot_id, s.snapshot_json, p.sharing_level, p.detailed_consent, p.field_selection_json
     FROM social_activity_snapshots s
     INNER JOIN social_friend_permissions p
       ON p.owner_user_id = s.owner_user_id
@@ -826,5 +974,6 @@ export const socialActivitySnapshotsInternals = {
   encodeCursor,
   decodeCursor,
   redactSnapshotToSummary,
+  redactSnapshotToFieldSelection,
   snapshotForCurrentPermission,
 };

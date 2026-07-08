@@ -160,6 +160,7 @@ class FakeStatement {
         snapshot_json: row.snapshot_json,
         sharing_level: permission.sharing_level,
         detailed_consent: permission.detailed_consent,
+        field_selection_json: permission.field_selection_json,
       };
     }
     if (this.sql.includes('FROM social_friendships')) {
@@ -203,6 +204,7 @@ class FakeStatement {
             ...row,
             sharing_level: permission.sharing_level,
             detailed_consent: permission.detailed_consent,
+            field_selection_json: permission.field_selection_json,
           };
         })
         .sort((left, right) => (
@@ -254,10 +256,51 @@ class FakeD1Database {
     this.profiles.set(userId, { handle, displayName });
   }
 
-  addPermission(owner, friend, sharingLevel = 'detailed', detailedConsent = 'granted') {
+  addPermission(
+    owner,
+    friend,
+    sharingLevel = 'detailed',
+    detailedConsent = 'granted',
+    fieldSelection = {
+      common: ['activityType', 'title', 'date', 'time', 'duration', 'intensity', 'calories'],
+      cardio: [
+        'distance',
+        'sessionType',
+        'terrain',
+        'stroke',
+        'poolLength',
+        'bikeType',
+        'environment',
+        'pace',
+        'speed',
+        'paceSeries',
+        'elevation',
+        'heartRate',
+        'cadence',
+        'intervals',
+        'laps',
+        'segments',
+        'chart',
+      ],
+      strength: [
+        'sessionName',
+        'muscleGroups',
+        'exerciseCount',
+        'exercises',
+        'sets',
+        'repetitions',
+        'loads',
+        'bodyweight',
+        'restTimes',
+        'rpe',
+        'volume',
+      ],
+    },
+  ) {
     this.permissions.set(`${owner}->${friend}`, {
       sharing_level: sharingLevel,
       detailed_consent: detailedConsent,
+      field_selection_json: JSON.stringify(fieldSelection),
     });
   }
 
@@ -669,6 +712,190 @@ describe('social activity snapshots Pages Functions', () => {
       },
       summary: { durationMinutes: 42, distanceKm: 8, caloriesKcal: 500 },
     }))).toThrowError(/trop détaillé/u);
+  });
+
+
+  it('refuse une publication qui dépasse la sélection de champs de l’ami', async () => {
+    const database = new FakeD1Database();
+    const snapshot = activeSnapshot({
+      visibility: 'detailed',
+      allowedFields: {
+        common: ['activityType', 'title', 'date', 'time', 'duration'],
+        cardio: ['distance', 'pace'],
+        strength: [],
+      },
+      summary: {
+        durationMinutes: 42,
+        distanceKm: 8,
+        paceMinutesPerKm: 5.25,
+      },
+      detail: { family: 'cardio' },
+    });
+    database.addFriendship(snapshot.ownerUserId, snapshot.recipientUserId);
+    database.addPermission(
+      snapshot.ownerUserId,
+      snapshot.recipientUserId,
+      'detailed',
+      'granted',
+      {
+        common: ['activityType', 'title', 'date', 'duration'],
+        cardio: ['distance'],
+        strength: [],
+      },
+    );
+
+    await expect(socialActivitySnapshotsInternals.persistSnapshotMutation(
+      database,
+      snapshot.ownerUserId,
+      { mutationSequence: 1, snapshot },
+    )).rejects.toMatchObject({ code: 'SOCIAL_ACTIVITY_FIELDS_EXCEEDED' });
+  });
+
+  it('retire rétroactivement les métriques décochées d’un snapshot cardio déjà stocké', async () => {
+    const database = new FakeD1Database();
+    const snapshot = activeSnapshot({
+      visibility: 'detailed',
+      allowedFields: {
+        common: ['activityType', 'title', 'date', 'time', 'duration', 'calories'],
+        cardio: ['distance', 'sessionType', 'terrain', 'pace', 'speed', 'elevation'],
+        strength: [],
+      },
+      summary: {
+        durationMinutes: 42,
+        distanceKm: 8,
+        caloriesKcal: 500,
+        paceMinutesPerKm: 5.25,
+        speedKph: 11.4,
+        elevationGainMeters: 120,
+      },
+      detail: {
+        family: 'cardio',
+        sessionType: 'endurance',
+        terrainType: 'trail',
+      },
+    });
+    database.addFriendship(snapshot.ownerUserId, snapshot.recipientUserId);
+    database.addPermission(snapshot.ownerUserId, snapshot.recipientUserId, 'detailed', 'granted', {
+      common: ['activityType', 'title', 'date', 'time', 'duration', 'calories'],
+      cardio: ['distance', 'sessionType', 'terrain', 'pace', 'speed', 'elevation'],
+      strength: [],
+    });
+    await socialActivitySnapshotsInternals.persistSnapshotMutation(database, snapshot.ownerUserId, {
+      mutationSequence: 1,
+      snapshot,
+    });
+
+    database.addPermission(snapshot.ownerUserId, snapshot.recipientUserId, 'detailed', 'granted', {
+      common: ['activityType', 'date', 'duration'],
+      cardio: ['distance'],
+      strength: [],
+    });
+
+    const detail = await socialActivitySnapshotsInternals.readSnapshotDetail(
+      database,
+      snapshot.recipientUserId,
+      snapshot.snapshotId,
+    );
+    expect(detail).toMatchObject({
+      visibility: 'detailed',
+      allowedFields: {
+        common: ['activityType', 'date', 'duration'],
+        cardio: ['distance'],
+        strength: [],
+      },
+      summary: { durationMinutes: 42, distanceKm: 8 },
+    });
+    expect(detail).not.toHaveProperty('title');
+    expect(detail).not.toHaveProperty('detail');
+    expect(detail.summary).not.toHaveProperty('caloriesKcal');
+    expect(detail.summary).not.toHaveProperty('paceMinutesPerKm');
+    expect(detail.summary).not.toHaveProperty('speedKph');
+    expect(detail.summary).not.toHaveProperty('elevationGainMeters');
+  });
+
+  it('conserve les répétitions mais retire les charges et le volume selon la permission musculation', async () => {
+    const database = new FakeD1Database();
+    const snapshot = activeSnapshot({
+      sourceKind: 'strengthSession',
+      sourceActivityId: 'strength-session-a20',
+      visibility: 'detailed',
+      family: 'strength',
+      activityType: 'strengthTraining',
+      allowedFields: {
+        common: ['activityType', 'title', 'date', 'time', 'duration'],
+        cardio: [],
+        strength: [
+          'sessionName',
+          'muscleGroups',
+          'exerciseCount',
+          'exercises',
+          'sets',
+          'repetitions',
+          'loads',
+          'volume',
+        ],
+      },
+      summary: {
+        durationMinutes: 60,
+        exerciseCount: 1,
+        muscleGroups: ['pectorals'],
+        volumeKg: 600,
+      },
+      detail: {
+        family: 'strength',
+        sessionName: 'Push A20',
+        exercises: [{
+          name: 'Développé couché',
+          muscleGroups: ['pectorals'],
+          trackingMode: 'loadRepetitions',
+          sets: [{
+            setNumber: 1,
+            type: 'working',
+            repetitions: 10,
+            loadKg: 60,
+            loadUnit: 'kg',
+          }],
+        }],
+      },
+    });
+    database.addFriendship(snapshot.ownerUserId, snapshot.recipientUserId);
+    database.addPermission(snapshot.ownerUserId, snapshot.recipientUserId, 'detailed', 'granted', {
+      common: ['activityType', 'title', 'date', 'time', 'duration'],
+      cardio: [],
+      strength: [
+        'sessionName',
+        'muscleGroups',
+        'exerciseCount',
+        'exercises',
+        'sets',
+        'repetitions',
+        'loads',
+        'volume',
+      ],
+    });
+    await socialActivitySnapshotsInternals.persistSnapshotMutation(database, snapshot.ownerUserId, {
+      mutationSequence: 1,
+      snapshot,
+    });
+
+    database.addPermission(snapshot.ownerUserId, snapshot.recipientUserId, 'detailed', 'granted', {
+      common: ['activityType', 'title', 'date', 'duration'],
+      cardio: [],
+      strength: ['sessionName', 'muscleGroups', 'exerciseCount', 'exercises', 'sets', 'repetitions'],
+    });
+
+    const detail = await socialActivitySnapshotsInternals.readSnapshotDetail(
+      database,
+      snapshot.recipientUserId,
+      snapshot.snapshotId,
+    );
+    expect(detail.detail.exercises[0].sets[0]).toMatchObject({
+      setNumber: 1,
+      repetitions: 10,
+    });
+    expect(detail.detail.exercises[0].sets[0]).not.toHaveProperty('loadKg');
+    expect(detail.detail.exercises[0].sets[0]).not.toHaveProperty('loadUnit');
+    expect(detail.summary).not.toHaveProperty('volumeKg');
   });
 
   it('acquitte sans écrire un tombstone sans snapshot serveur existant', async () => {

@@ -76,6 +76,7 @@ describe('social activity sharing policy', () => {
       strength: ['loads'],
     });
 
+    expect(normalized.common).toEqual(['activityType', 'date']);
     expect(normalized.cardio).toEqual(['chart', 'paceSeries', 'pace']);
     expect(normalized.strength).toEqual(['loads', 'exercises', 'sets']);
   });
@@ -102,6 +103,33 @@ describe('social activity sharing policy', () => {
       cardio: [],
       strength: [],
     });
+  });
+
+  it('intersecte la politique propriétaire avec les champs choisis pour un ami', () => {
+    const ownerPolicy = resolveSocialActivitySharingPolicy(detailedPolicy);
+    const recipientPolicy = applyFriendScopeToSocialActivitySharingPolicy(
+      ownerPolicy,
+      'detailed',
+      {
+        common: ['activityType', 'date', 'duration'],
+        cardio: ['distance', 'pace'],
+        strength: ['exercises', 'sets', 'repetitions'],
+      },
+    );
+
+    expect(recipientPolicy).toMatchObject({
+      visibility: 'detailed',
+      recipientScope: 'detailed',
+      permissionLimited: true,
+      publishSnapshot: true,
+      fields: {
+        common: ['activityType', 'date', 'duration'],
+        cardio: ['distance', 'pace'],
+        strength: ['exercises', 'sets', 'repetitions'],
+      },
+    });
+    expect(recipientPolicy.fields.common).not.toContain('calories');
+    expect(recipientPolicy.fields.strength).not.toContain('loads');
   });
 
   it('bloque entièrement un destinataire sans permission', () => {

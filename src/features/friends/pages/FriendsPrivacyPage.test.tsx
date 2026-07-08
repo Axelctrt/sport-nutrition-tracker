@@ -667,6 +667,51 @@ describe('FriendsPrivacyPage', () => {
     await waitFor(() => expect(privacyReconciliation).toHaveBeenCalledOnce());
   });
 
+  it('enregistre les champs granulaires d’un ami avant de réconcilier ses snapshots', async () => {
+    const user = userEvent.setup();
+    const privacyReconciliation = vi.fn(async () => undefined);
+    const savePermission = vi.fn(async (_userId, permission) => ({
+      status: 'updated' as const,
+      value: permission,
+      message: 'Champs ami serveur mis à jour.',
+    }));
+    const cloudFriendPermissionPort: SocialCloudFriendPermissionPort = {
+      listPermissions: vi.fn(async () => []),
+      savePermission,
+    };
+    const detailedSnapshot = updateFriendActivityPermission({
+      ...snapshot,
+      privacy: {
+        ...snapshot.privacy,
+        profileVisibility: 'friends',
+        activitySharing: 'detailed',
+        socialActivitySharingPolicy: {
+          visibility: 'detailed',
+          fields: snapshot.privacy.socialActivitySharingPolicy!.fields,
+        },
+      },
+    }, 'social-user:lea' as EntityId, 'detailed', '2026-07-08T12:00:00.000Z');
+
+    render(
+      <FriendsPrivacyPage
+        initialSnapshot={detailedSnapshot}
+        initialIdentity={identity}
+        cloudFriendPermissionPort={cloudFriendPermissionPort}
+        privacyReconciliation={privacyReconciliation}
+      />,
+    );
+
+    await user.click(screen.getByText(/Choisir les informations partagées avec Léa Cardio/u));
+    await user.click(screen.getByLabelText('Charges'));
+    await user.click(screen.getByRole('button', { name: 'Enregistrer les champs' }));
+
+    await waitFor(() => expect(savePermission).toHaveBeenCalledOnce());
+    const savedPermission = savePermission.mock.calls[0]?.[1];
+    expect(savedPermission?.fieldSelection?.strength).not.toContain('loads');
+    await waitFor(() => expect(privacyReconciliation).toHaveBeenCalledOnce());
+    expect(screen.getAllByText(/Champs ami serveur mis à jour/u).length).toBeGreaterThan(0);
+  });
+
   it('branche le fil cloud réel lorsqu’un gateway authentifié est fourni', async () => {
     const activityFeedCloudGateway: SocialActivityFeedCloudGateway = {
       listPage: vi.fn(async () => ({

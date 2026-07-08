@@ -1,3 +1,10 @@
+import {
+  DEFAULT_SOCIAL_ACTIVITY_PERMISSION_FIELD_SELECTION,
+  sanitizeSocialActivityPermissionFieldSelection,
+  serializeSocialActivityPermissionFieldSelection,
+  socialActivityPermissionFieldSelectionFromStored,
+} from './socialActivityFieldSelection.js';
+
 class SocialFriendsError extends Error {
   constructor(status, code, message) {
     super(message);
@@ -163,6 +170,7 @@ async function ensureSocialFriendsSchema(database) {
       sharing_level TEXT NOT NULL,
       detailed_consent TEXT NOT NULL,
       detailed_consent_granted_at TEXT,
+      field_selection_json TEXT,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     )
@@ -177,6 +185,7 @@ async function ensureSocialFriendsSchema(database) {
     CREATE INDEX IF NOT EXISTS idx_social_friend_permissions_owner
     ON social_friend_permissions(owner_user_id)
   `).run();
+
 }
 
 function friendshipFromRow(row) {
@@ -199,6 +208,7 @@ function permissionFromRow(row) {
     detailedConsent: row.detailed_consent,
   };
   if (row.detailed_consent_granted_at) permission.detailedConsentGrantedAt = row.detailed_consent_granted_at;
+  permission.fieldSelection = socialActivityPermissionFieldSelectionFromStored(row.field_selection_json);
   return permission;
 }
 
@@ -276,7 +286,7 @@ async function listPermissions(database, userId) {
   await ensureSocialFriendsSchema(database);
 
   const result = await database.prepare(`
-    SELECT id, owner_user_id, friend_user_id, friend_handle, sharing_level, detailed_consent, detailed_consent_granted_at, created_at, updated_at
+    SELECT id, owner_user_id, friend_user_id, friend_handle, sharing_level, detailed_consent, detailed_consent_granted_at, field_selection_json, created_at, updated_at
     FROM social_friend_permissions
     WHERE owner_user_id = ?1
     ORDER BY updated_at DESC
@@ -335,11 +345,29 @@ async function savePermission(database, payload) {
   }
 
   const existing = await database.prepare(`
-    SELECT id, created_at
+    SELECT id, created_at, field_selection_json
     FROM social_friend_permissions
     WHERE owner_user_id = ?1 AND friend_user_id = ?2
     LIMIT 1
   `).bind(ownerUserId, friendUserId).first();
+
+  const fieldSelection = permission.fieldSelection === undefined
+    ? (existing
+        ? socialActivityPermissionFieldSelectionFromStored(existing.field_selection_json)
+        : {
+            common: [...DEFAULT_SOCIAL_ACTIVITY_PERMISSION_FIELD_SELECTION.common],
+            cardio: [...DEFAULT_SOCIAL_ACTIVITY_PERMISSION_FIELD_SELECTION.cardio],
+            strength: [...DEFAULT_SOCIAL_ACTIVITY_PERMISSION_FIELD_SELECTION.strength],
+          })
+    : sanitizeSocialActivityPermissionFieldSelection(permission.fieldSelection);
+  if (!fieldSelection) {
+    throw new SocialFriendsError(
+      400,
+      'SOCIAL_FRIENDS_INVALID_FIELD_SELECTION',
+      'Sélection des champs partagés invalide.',
+    );
+  }
+  const fieldSelectionJson = serializeSocialActivityPermissionFieldSelection(fieldSelection);
 
   if (existing) {
     await database.prepare(`
@@ -349,18 +377,42 @@ async function savePermission(database, payload) {
           sharing_level = ?5,
           detailed_consent = ?6,
           detailed_consent_granted_at = ?7,
-          updated_at = ?8
+          field_selection_json = ?8,
+          updated_at = ?9
       WHERE owner_user_id = ?1 AND friend_user_id = ?2
-    `).bind(ownerUserId, friendUserId, id, friendHandle, sharingLevel, detailedConsent, detailedConsentGrantedAt ?? null, timestamp).run();
+    `).bind(
+      ownerUserId,
+      friendUserId,
+      id,
+      friendHandle,
+      sharingLevel,
+      detailedConsent,
+      detailedConsentGrantedAt ?? null,
+      fieldSelectionJson,
+      timestamp,
+    ).run();
   } else {
     await database.prepare(`
-      INSERT INTO social_friend_permissions(id, owner_user_id, friend_user_id, friend_handle, sharing_level, detailed_consent, detailed_consent_granted_at, created_at, updated_at)
-      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8)
-    `).bind(id, ownerUserId, friendUserId, friendHandle, sharingLevel, detailedConsent, detailedConsentGrantedAt ?? null, timestamp).run();
+      INSERT INTO social_friend_permissions(
+        id, owner_user_id, friend_user_id, friend_handle, sharing_level,
+        detailed_consent, detailed_consent_granted_at, field_selection_json,
+        created_at, updated_at
+      ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?9)
+    `).bind(
+      id,
+      ownerUserId,
+      friendUserId,
+      friendHandle,
+      sharingLevel,
+      detailedConsent,
+      detailedConsentGrantedAt ?? null,
+      fieldSelectionJson,
+      timestamp,
+    ).run();
   }
 
   const saved = await database.prepare(`
-    SELECT id, owner_user_id, friend_user_id, friend_handle, sharing_level, detailed_consent, detailed_consent_granted_at, created_at, updated_at
+    SELECT id, owner_user_id, friend_user_id, friend_handle, sharing_level, detailed_consent, detailed_consent_granted_at, field_selection_json, created_at, updated_at
     FROM social_friend_permissions
     WHERE owner_user_id = ?1 AND friend_user_id = ?2
     LIMIT 1

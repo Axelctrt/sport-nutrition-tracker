@@ -1,8 +1,13 @@
 import type { EntityId, IsoDateTime } from '@/domain/models/common';
 import type { PublicUserProfile, SocialIdentity } from '@/domain/friends/socialIdentity';
-import type {
-  SocialActivityGlobalSharingPolicy,
-  SocialActivityVisibility,
+import {
+  ALL_SOCIAL_ACTIVITY_FIELD_SELECTION,
+  DEFAULT_DETAILED_SOCIAL_ACTIVITY_FIELD_SELECTION,
+  cloneSocialActivityFieldSelection,
+  normalizeSocialActivityFieldSelection,
+  type SocialActivityFieldSelection,
+  type SocialActivityGlobalSharingPolicy,
+  type SocialActivityVisibility,
 } from '@/domain/friends/socialActivitySharingPolicy';
 
 export type FriendRequestStatus = 'pending' | 'accepted' | 'declined' | 'cancelled';
@@ -55,6 +60,7 @@ export interface FriendActivityPermission {
   readonly sharingLevel: FriendActivityPermissionLevel;
   readonly detailedConsent: FriendDetailedConsentStatus;
   readonly detailedConsentGrantedAt?: IsoDateTime;
+  readonly fieldSelection?: SocialActivityFieldSelection;
 }
 
 export interface StoredFriendProfile extends FriendProfileSummary {
@@ -244,6 +250,9 @@ export function createDefaultFriendActivityPermission(
     friendHandle: normalizeFriendHandle(friend.handle),
     sharingLevel: 'summary',
     detailedConsent: 'notRequested',
+    fieldSelection: cloneSocialActivityFieldSelection(
+      DEFAULT_DETAILED_SOCIAL_ACTIVITY_FIELD_SELECTION,
+    ),
   };
 
   return permission;
@@ -289,6 +298,9 @@ export function ensureFriendActivityPermissions(
       id: createFriendActivityPermissionId(friend),
       ...(friend.userId ? { friendUserId: friend.userId } : {}),
       friendHandle: normalizeFriendHandle(friend.handle),
+      fieldSelection: normalizeSocialActivityFieldSelection(
+        permission.fieldSelection ?? ALL_SOCIAL_ACTIVITY_FIELD_SELECTION,
+      ),
     };
   });
 
@@ -324,7 +336,36 @@ export function updateFriendActivityPermission(
         friendHandle: basePermission.friendHandle,
         sharingLevel: 'summary',
         detailedConsent: 'notRequested',
+        fieldSelection: basePermission.fieldSelection
+          ?? cloneSocialActivityFieldSelection(ALL_SOCIAL_ACTIVITY_FIELD_SELECTION),
       };
+
+  return {
+    ...normalized,
+    activityPermissions: (normalized.activityPermissions ?? []).map((permission) => (
+      permission.id === basePermission.id ? nextPermission : permission
+    )),
+  };
+}
+
+export function updateFriendActivityFieldSelection(
+  snapshot: FriendsPrivacySnapshot,
+  friendId: EntityId,
+  fieldSelection: SocialActivityFieldSelection,
+): FriendsPrivacySnapshot {
+  const friend = snapshot.friends.find((candidate) => (
+    candidate.id === friendId
+    || candidate.userId === friendId
+    || normalizeFriendHandle(candidate.handle) === friendId
+  ));
+  if (!friend) return snapshot;
+
+  const normalized = ensureFriendActivityPermissions(snapshot);
+  const basePermission = selectFriendActivityPermission(normalized, friend);
+  const nextPermission: FriendActivityPermission = {
+    ...basePermission,
+    fieldSelection: normalizeSocialActivityFieldSelection(fieldSelection),
+  };
 
   return {
     ...normalized,

@@ -1,5 +1,12 @@
 import type { EntityId } from '@/domain/models/common';
 import type { FriendActivityPermission } from '@/domain/friends/friendship';
+import {
+  ALL_SOCIAL_ACTIVITY_FIELD_SELECTION,
+  SUMMARY_SOCIAL_ACTIVITY_FIELD_SELECTION,
+  cloneSocialActivityFieldSelection,
+  normalizeSocialActivityFieldSelection,
+} from '@/domain/friends/socialActivitySharingPolicy';
+import { socialActivityFieldSelectionSchema } from '@/shared/validation/socialActivitySharingSchema';
 import type {
   SocialCloudFriendPermissionPort,
   SocialCloudFriendshipPort,
@@ -119,6 +126,15 @@ function parsePermission(value: unknown): FriendActivityPermission | undefined {
     return undefined;
   }
 
+  const parsedFieldSelection = candidate.fieldSelection === undefined
+    ? cloneSocialActivityFieldSelection(ALL_SOCIAL_ACTIVITY_FIELD_SELECTION)
+    : (() => {
+        const parsed = socialActivityFieldSelectionSchema.safeParse(candidate.fieldSelection);
+        return parsed.success
+          ? normalizeSocialActivityFieldSelection(parsed.data)
+          : cloneSocialActivityFieldSelection(SUMMARY_SOCIAL_ACTIVITY_FIELD_SELECTION);
+      })();
+
   return {
     id: candidate.id as EntityId,
     friendUserId: candidate.friendUserId as EntityId,
@@ -128,6 +144,7 @@ function parsePermission(value: unknown): FriendActivityPermission | undefined {
     ...(typeof candidate.detailedConsentGrantedAt === 'string'
       ? { detailedConsentGrantedAt: candidate.detailedConsentGrantedAt }
       : {}),
+    fieldSelection: parsedFieldSelection,
   };
 }
 

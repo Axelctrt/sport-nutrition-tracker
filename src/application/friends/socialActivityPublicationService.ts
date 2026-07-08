@@ -183,12 +183,16 @@ async function reconcilePublicationPlans(input: {
       });
     }
 
-    const friendScope = evaluateFriendScopedActivitySharingGuard(
+    const friendGuard = evaluateFriendScopedActivitySharingGuard(
       input.context.privacySnapshot,
       plan.friend,
       resolvedPolicy.visibility,
-    ).allowedScope;
-    const policy = applyFriendScopeToSocialActivitySharingPolicy(resolvedPolicy, friendScope);
+    );
+    const policy = applyFriendScopeToSocialActivitySharingPolicy(
+      resolvedPolicy,
+      friendGuard.allowedScope,
+      friendGuard.permission.fieldSelection,
+    );
     const nextSnapshot = input.project({
       ownerUserId: input.context.identity.userId,
       recipientUserId: plan.recipientUserId,
