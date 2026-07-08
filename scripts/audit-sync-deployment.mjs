@@ -66,8 +66,7 @@ if (existsSync(runtimeConfigPath)) {
   if (!source.includes('...syncPublicDeploymentConfig') || !source.includes('...environment')) {
     fail('la fusion production doit combiner les valeurs publiques et les variables hébergeur.');
   }
-  if (!source.includes(`...syncPublicDeploymentConfig,
-    ...environment`)) {
+  if (!/\.\.\.syncPublicDeploymentConfig,\s*\.\.\.environment/.test(source)) {
     fail('les variables VITE_* de l’hébergeur doivent garder la priorité sur les valeurs publiques par défaut.');
   }
 }

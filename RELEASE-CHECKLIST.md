@@ -1,60 +1,55 @@
-# Checklist de publication — SportPilot 0.28.0
+# Checklist de publication — SportPilot 0.29.0
 
 ## Préparation Git
 
-- [ ] La branche `feature/social-cloud-0.28.0` est propre et synchronisée.
-- [ ] `package.json` et `package-lock.json` indiquent `0.28.0`.
-- [ ] Paramètres affiche `0.28.0`.
-- [ ] Aucun fichier temporaire de patch, ZIP ou dossier `patch-files/` n’est stagé.
-- [ ] Aucun fichier `.env`, `.env.local`, `.env.production` ou secret IA n’est stagé.
+- [ ] La branche `release/0.29.0` est propre et synchronisée.
+- [ ] `package.json` et `package-lock.json` indiquent `0.29.0`.
+- [ ] Paramètres affiche `0.29.0`.
+- [ ] Aucun ZIP, dossier `patch-files/`, rapport temporaire ou fichier généré n’est stagé.
+- [ ] Aucun `.env`, secret Cloudflare, token Dexie Cloud ou clé IA n’est stagé.
+- [ ] Les migrations D1 `0001` et `0002` sont déjà présentes ; `0002` ne sera pas rejouée.
 
 ## Contrôles automatiques
 
-- [ ] `npm run audit:social-cloud-contract` passe.
-- [ ] `npm run audit:social-cloud-identity` passe.
-- [ ] `npm run audit:social-cloud-lookup` passe.
-- [ ] `npm run audit:social-cloud-friend-requests` passe.
-- [ ] `npm run audit:social-cloud-friendships` passe.
-- [ ] `npm run audit:social-cloud-activity-snapshots` passe.
-- [ ] `npm run audit:friends-privacy` passe.
-- [ ] `npm run audit:social-identity` passe.
-- [ ] `npm run audit:social-friend-requests` passe.
-- [ ] `npm run audit:social-friend-permissions` passe.
-- [ ] `npm run audit:social-activity-snapshots` passe.
-- [ ] `npm run audit:social-activity-feed` passe.
+- [ ] `npm run audit:social-complete-acceptance` passe.
+- [ ] `npm run audit:social-release-finalization` passe.
 - [ ] `npm run audit:social-release` passe.
 - [ ] `npm run audit:release` passe.
+- [ ] `npm run audit:security` passe.
 - [ ] `npm run audit:repository` passe.
-- [ ] `npm run build` passe.
-- [ ] `npm run lint` passe.
+- [ ] `npm run lint` passe sans erreur.
 - [ ] `npm run test` passe.
+- [ ] `npm run build` passe.
 - [ ] `npm run check` passe.
 - [ ] `npm run test:stability` passe.
+- [ ] `npm audit` annonce zéro vulnérabilité.
 
 ## Recette fonctionnelle
 
-- [ ] La page Amis s’ouvre depuis la navigation.
-- [ ] Le bloc affiche `Cloud social 0.28.0 F6`.
-- [ ] L’identité sociale affiche un `userId` privé et un handle public.
-- [ ] La recherche exacte refuse les handles invalides et ne propose aucun annuaire.
-- [ ] Une demande d’ami cloud passe par la recherche exacte.
-- [ ] Une demande vers soi-même est bloquée.
-- [ ] Un handle inexistant affiche `Identifiant inexistant`.
-- [ ] Un backend indisponible affiche `Service cloud indisponible`.
-- [ ] Une demande acceptée peut créer une amitié cloud stable par `userId`.
-- [ ] Les permissions synchronisées restent sur résumé par défaut.
-- [ ] Le détail nécessite un consentement explicite.
-- [ ] Les snapshots sociaux cloud sont filtrés.
-- [ ] Le feed amis lit uniquement les snapshots autorisés.
-- [ ] Aucun export brut d’activité n’est visible.
-- [ ] Aucune table ou option `socialRawActivities` n’est présente.
-- [ ] Aucun like, commentaire, message, groupe, classement, suggestion ou annuaire public n’est visible.
+- [ ] La recette A25 est clôturée avec les comptes A et B.
+- [ ] Profil, handle exact, demande, acceptation, refus et annulation fonctionnent.
+- [ ] L’amitié est visible dans les deux sens sans doublon.
+- [ ] Les modes Aucun, Résumé et Personnalisé sont effectifs par ami.
+- [ ] Les champs musculation et cardio respectent la sélection autorisée.
+- [ ] Le fil se met à jour après modification, masquage ou suppression.
+- [ ] Le détail est revérifié côté serveur à chaque ouverture.
+- [ ] Le hors-ligne et la reconnexion ne créent aucun doublon.
+- [ ] La suppression puis la recréation de l’amitié repart sans permission obsolète.
+- [ ] Le changement de compte n’affiche aucune donnée de l’ancien compte.
+- [ ] Les routes anonymes renvoient `401 Unauthorized`.
+- [ ] Aucun email n’est affiché comme handle public.
+- [ ] Aucun champ brut, note privée, stack ou détail SQL n’est exposé.
+- [ ] La Preview est validée sur ordinateur et iPhone 15 sous iOS 26.
 
 ## Publication
 
-- [ ] Commit de finalisation sur `feature/social-cloud-0.28.0` avec `chore(release): finaliser SportPilot 0.28.0`.
-- [ ] Fusion manuelle dans `develop` avec `merge: intégrer SportPilot 0.28.0`.
-- [ ] Contrôles release relancés sur `develop`.
-- [ ] Fusion manuelle dans `main` avec `merge: publier SportPilot 0.28.0`.
-- [ ] Tag annoté `v0.28.0` créé sur le commit publié.
+- [ ] Commit `chore(release): finaliser SportPilot 0.29.0` créé sur `release/0.29.0`.
+- [ ] `release/0.29.0` fusionnée manuellement dans `develop`.
+- [ ] Contrôles critiques relancés sur `develop`.
+- [ ] `develop` fusionnée manuellement dans `main`.
+- [ ] `main` poussée avant le déploiement de production.
+- [ ] Production Cloudflare Pages construite depuis `main`.
+- [ ] Version, PWA et module social vérifiés en production.
+- [ ] Tag annoté `v0.29.0` créé sur le commit publié.
+- [ ] Tag `v0.29.0` poussé vers `origin`.
 - [ ] `develop` resynchronisée avec `main`.
