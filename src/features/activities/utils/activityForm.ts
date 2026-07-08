@@ -9,9 +9,26 @@ import type {
   SwimmingActivity,
 } from '@/domain/models/activity';
 import type { ActivityDraft } from '@/application/activities/activityService';
+import type { SocialActivitySharingOverride } from '@/domain/friends/socialActivitySharingPolicy';
 import type { AppSettings } from '@/domain/models/settings';
 import type { ActivityFormValues } from '@/features/activities/schemas/activityFormSchema';
 import { toLocalDate } from '@/shared/utils/dates';
+
+
+export function socialSharingOverrideToFormValue(
+  value: SocialActivitySharingOverride,
+): ActivityFormValues['socialSharing'] {
+  return value.mode === 'custom'
+    ? {
+        mode: 'custom',
+        fields: {
+          common: [...value.fields.common],
+          cardio: [...value.fields.cardio],
+          strength: [...value.fields.strength],
+        },
+      }
+    : { mode: value.mode };
+}
 
 function optionalText(value: string): string | undefined {
   const trimmed = value.trim();
@@ -30,6 +47,7 @@ function commonDraft(values: ActivityFormValues) {
     ...(values.manualCaloriesKcal !== undefined
       ? { manualCaloriesKcal: values.manualCaloriesKcal }
       : {}),
+    socialSharing: values.socialSharing,
   };
 }
 
@@ -131,6 +149,7 @@ export function defaultActivityFormValues(type: ActivityType, settings: AppSetti
     cyclingEnvironment: 'outdoor',
     met: metByType[type],
     includedInDailySteps: type === 'walking',
+    socialSharing: { mode: 'inherit' },
   };
 }
 
@@ -157,6 +176,7 @@ export function activityToFormValues(activity: Activity): ActivityFormValues {
     cyclingEnvironment: 'outdoor',
     met: undefined,
     includedInDailySteps: false,
+    socialSharing: socialSharingOverrideToFormValue(activity.socialSharing ?? { mode: 'inherit' }),
   };
 
   if (activity.type === 'running') {

@@ -1,103 +1,65 @@
 import { existsSync, readFileSync } from 'node:fs';
 
 const failures = [];
-const requiredFiles = [
-  'src/domain/friends/socialActivitySnapshot.ts',
-  'src/domain/friends/socialActivitySnapshot.test.ts',
-  'src/application/friends/socialActivitySnapshotService.ts',
-  'src/application/friends/socialActivitySnapshotService.test.ts',
-  'src/app/socialActivitySnapshotsReadiness.test.ts',
-  'src/features/friends/pages/FriendsPrivacyPage.tsx',
-  'docs/architecture/social-activity-snapshots-0.27.0-f4.md',
-];
+const read = (path) => existsSync(path) ? readFileSync(path, 'utf8') : '';
+const needFile = (path) => { if (!existsSync(path)) failures.push(`fichier manquant : ${path}`); };
+const need = (source, value, label) => { if (!source.includes(value)) failures.push(`${label} : ${value}`); };
 
-for (const file of requiredFiles) {
-  if (!existsSync(file)) failures.push(`fichier manquant : ${file}`);
+for (const path of [
+  'src/domain/friends/socialActivitySnapshotContract.ts',
+  'src/domain/friends/socialCloudActivitySnapshot.ts',
+  'src/application/friends/socialActivityProjectionService.ts',
+  'src/application/friends/socialActivityPublicationService.ts',
+  'src/domain/friends/socialActivitySnapshotOutbox.ts',
+  'functions/_shared/socialActivitySnapshots.js',
+  'migrations/0001_social_activity_snapshots_0_29_0.sql',
+  'migrations/0002_social_friend_permission_fields_0_29_0.sql',
+]) needFile(path);
+
+const contract = read('src/domain/friends/socialActivitySnapshotContract.ts');
+const cloud = read('src/domain/friends/socialCloudActivitySnapshot.ts');
+const projection = read('src/application/friends/socialActivityProjectionService.ts');
+const publication = read('src/application/friends/socialActivityPublicationService.ts');
+const outbox = read('src/domain/friends/socialActivitySnapshotOutbox.ts');
+const server = read('functions/_shared/socialActivitySnapshots.js');
+
+need(contract, "SOCIAL_ACTIVITY_SNAPSHOT_CONTRACT_VERSION = '0.29.0-a3'", 'contrat snapshot absent');
+need(outbox, "SOCIAL_ACTIVITY_SNAPSHOT_OUTBOX_RECORD_VERSION = '0.29.0-a4'", 'version outbox absente');
+for (const value of ['rawActivityShared: false', 'ownerUserId', 'publishedForUserId']) {
+  need(cloud, value, 'snapshot cloud incomplet');
 }
-
-function read(path) {
-  return existsSync(path) ? readFileSync(path, 'utf8') : '';
-}
-
-const domain = read('src/domain/friends/socialActivitySnapshot.ts');
-const service = read('src/application/friends/socialActivitySnapshotService.ts');
-const friendship = read('src/domain/friends/friendship.ts');
-const page = read('src/features/friends/pages/FriendsPrivacyPage.tsx');
-const readiness = read('src/app/socialActivitySnapshotsReadiness.test.ts');
-const docs = read('docs/architecture/social-activity-snapshots-0.27.0-f4.md');
-const packageJson = read('package.json');
-
-for (const symbol of [
-  'SocialActivitySnapshot',
-  'SocialActivitySummarySnapshot',
-  'SocialActivityDetailedSnapshot',
-  'createSocialActivitySnapshotForFriend',
-  'createSocialActivitySnapshotsForFriends',
-  'downgradedToSummary',
+for (const value of [
+  'projectStoredActivityToSocialSnapshotV2',
+  'projectCompletedStrengthSessionToSocialSnapshotV2',
 ]) {
-  if (!domain.includes(symbol)) failures.push(`contrat snapshot social manquant : ${symbol}`);
+  need(projection, value, 'projection sociale incomplète');
 }
-
-for (const symbol of [
-  'prepareSocialActivitySnapshots',
-  'rawActivityShared: false',
-  'summaryCount',
-  'detailedCount',
+for (const value of [
+  'socialActivityGlobalPolicyFromFriendsPrivacy',
+  'reconcilePublicationPlans',
+  'reconcileStoredActivitySocialSnapshots',
+  'reconcileCompletedStrengthSessionSocialSnapshots',
+  'removePublishedSocialActivitySnapshots',
+  'reconcileSocialActivitySnapshot',
 ]) {
-  if (!service.includes(symbol)) failures.push(`service snapshots sociaux incomplet : ${symbol}`);
+  need(publication, value, 'publication sociale incomplète');
+}
+for (const value of [
+  'authenticateRequest',
+  'redactSnapshotToSummary',
+  'redactSnapshotToFieldSelection',
+  'listFeed',
+  'readSnapshotDetail',
+  'field_selection_json',
+]) need(server, value, 'serveur snapshot incomplet');
+
+for (const forbidden of ['privateNotes', 'socialRawActivities']) {
+  if (cloud.includes(forbidden)) failures.push(`champ ou table brute interdite : ${forbidden}`);
 }
 
-for (const phrase of [
-  'Snapshots sociaux F4 actifs',
-  'Fil d’activité amis F5 actif',
-  'Aucun export brut d’activité',
-  'ni likes, ni commentaires, ni discussions privées',
-]) {
-  if (!page.includes(phrase)) failures.push(`texte F4 manquant dans la page amis : ${phrase}`);
-}
-
-for (const forbidden of [
-  'notes:',
-  'time:',
-  'rpe:',
-  'manualCaloriesKcal:',
-  'calculation:',
-  'averageCadenceSpm:',
-  'intervalDetails:',
-]) {
-  if (domain.includes(forbidden)) failures.push(`champ brut exposé dans le snapshot : ${forbidden}`);
-}
-
-for (const forbidden of ['fetch(', 'axios', 'supabase', 'firebase']) {
-  if (domain.includes(forbidden) || service.includes(forbidden)) {
-    failures.push(`F4 ne doit pas inventer de backend concret : ${forbidden}`);
-  }
-}
-
-if (!friendship.includes('Snapshots sociaux filtrés disponibles')) {
-  failures.push('garde-fou F4 non mis à jour pour les snapshots filtrés');
-}
-
-if (!readiness.includes('not.toContain') || !readiness.includes('rawActivityShared')) {
-  failures.push('tests readiness F4 incomplets sur anti-fuite et absence d’export brut');
-}
-
-if (!docs.includes('Aucun export brut') || !docs.includes('pas un fil d’activité')) {
-  failures.push('documentation F4 incomplète sur limites et anti-fuite');
-}
-
-if (!packageJson.includes('audit:social-activity-snapshots')) {
-  failures.push('script audit:social-activity-snapshots absent de package.json');
-}
-
-if (/socialFeed|messagerie|classement/u.test(domain + service + page)) {
-  failures.push('F4 ne doit pas introduire de fil concret, messagerie ou classement');
-}
-
-if (failures.length > 0) {
-  console.error('Audit snapshots sociaux d’activité 0.27.0 F4 échoué :');
-  for (const failure of failures) console.error(`- ${failure}`);
+if (failures.length) {
+  console.error('Audit snapshots sociaux échoué :');
+  failures.forEach((failure) => console.error(`- ${failure}`));
   process.exit(1);
 }
-
-console.log('Audit snapshots sociaux d’activité 0.27.0 F4 réussi : snapshots résumé/détail filtrés, anti-fuite, sans backend, sans fil social et sans export brut.');
+console.log('Audit snapshots sociaux réussi : contrat filtré, outbox, redaction serveur, détail et migrations D1 sont présents.');

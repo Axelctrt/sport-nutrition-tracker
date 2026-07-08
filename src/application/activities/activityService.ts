@@ -1,4 +1,8 @@
 import { calculateAndPersistDailyTarget } from '@/application/daily/dailyTargetCoordinator';
+import {
+  runSocialActivitySnapshotObserverBestEffort,
+  type SocialActivitySnapshotObserver,
+} from '@/application/friends/socialActivitySnapshotObserver';
 import { estimateActivityCalories } from '@/domain/calculations/activityCalories';
 import type {
   Activity,
@@ -14,6 +18,7 @@ import type { ActivityRepository } from '@/infrastructure/repositories/contracts
 import type { SettingsRepository } from '@/infrastructure/repositories/contracts/SettingsRepository';
 import type { WeightRepository } from '@/infrastructure/repositories/contracts/WeightRepository';
 import { repositories } from '@/infrastructure/repositories/repositories';
+import { runtimeSocialActivitySnapshotObserver } from '@/infrastructure/social-activity-snapshots/runtimeSocialActivitySnapshotObserver';
 
 export type ActivityDraft =
   | Omit<NewEntity<RunningActivity>, 'calculation' | 'rpe'>
@@ -30,6 +35,10 @@ export interface ActivityServiceDependencies {
     date: string,
     profile: UserProfile,
   ) => Promise<unknown>;
+  socialActivitySnapshots?: Pick<
+    SocialActivitySnapshotObserver,
+    'onActivitySaved' | 'onActivityDeleted'
+  >;
 }
 
 const defaultDependencies: ActivityServiceDependencies = {
@@ -37,6 +46,9 @@ const defaultDependencies: ActivityServiceDependencies = {
   weight: repositories.weight,
   activities: repositories.activities,
   recalculateDailyTarget: calculateAndPersistDailyTarget,
+  ...(import.meta.env.MODE === 'test'
+    ? {}
+    : { socialActivitySnapshots: runtimeSocialActivitySnapshotObserver }),
 };
 
 function toActivityInput(
@@ -79,6 +91,12 @@ export async function createActivityFromDraft(
     toActivityInput(draft, profile, weightEntry?.weightKg, settings),
   );
   await recalculateDates([activity.date], profile, dependencies);
+  const socialActivitySnapshots = dependencies.socialActivitySnapshots;
+  await runSocialActivitySnapshotObserverBestEffort(
+    socialActivitySnapshots
+      ? () => socialActivitySnapshots.onActivitySaved(activity)
+      : undefined,
+  );
   return activity;
 }
 
@@ -107,6 +125,12 @@ export async function updateActivityFromDraft(
   } as Activity);
 
   await recalculateDates([existing.date, saved.date], profile, dependencies);
+  const socialActivitySnapshots = dependencies.socialActivitySnapshots;
+  await runSocialActivitySnapshotObserverBestEffort(
+    socialActivitySnapshots
+      ? () => socialActivitySnapshots.onActivitySaved(saved)
+      : undefined,
+  );
   return saved;
 }
 
@@ -122,4 +146,10 @@ export async function deleteActivityAndRecalculate(
 
   await dependencies.activities.delete(activityId);
   await recalculateDates([existing.date], profile, dependencies);
+  const socialActivitySnapshots = dependencies.socialActivitySnapshots;
+  await runSocialActivitySnapshotObserverBestEffort(
+    socialActivitySnapshots
+      ? () => socialActivitySnapshots.onActivityDeleted(existing)
+      : undefined,
+  );
 }

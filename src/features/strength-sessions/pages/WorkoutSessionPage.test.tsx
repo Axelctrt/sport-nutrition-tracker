@@ -317,4 +317,14 @@ describe('WorkoutSessionPage', () => {
     expect(within(getBenchCard()!).getByText('Passé temporairement')).toBeInTheDocument();
   });
 
+
+  it('ne présente plus de réglage social dans la séance', async () => {
+    renderSessionPage();
+
+    await screen.findByRole('heading', { name: 'Séance libre' });
+    expect(screen.queryByText('Partage avec les amis')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Privée' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Enregistrer le partage' })).not.toBeInTheDocument();
+  });
+
 });

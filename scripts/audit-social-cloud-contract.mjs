@@ -1,37 +1,30 @@
-import { readFileSync, existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, readFileSync } from 'node:fs';
 
-const root = process.cwd();
+const failures = [];
+const read = (path) => existsSync(path) ? readFileSync(path, 'utf8') : '';
+const needFile = (path) => { if (!existsSync(path)) failures.push(`fichier manquant : ${path}`); };
+const need = (source, value, label) => { if (!source.includes(value)) failures.push(`${label} : ${value}`); };
 
-function read(path) {
-  return readFileSync(join(root, path), 'utf8');
-}
-
-function assert(condition, message) {
-  if (!condition) {
-    throw new Error(`Audit cloud social 0.28.1 F1 échoué : ${message}`);
-  }
-}
-
-const requiredFiles = [
+for (const path of [
   'src/domain/friends/socialCloudContract.ts',
-  'src/domain/friends/socialCloudContract.test.ts',
-  'src/application/friends/socialCloudReadinessService.ts',
-  'src/application/friends/socialCloudReadinessService.test.ts',
-  'src/infrastructure/sync-prototype/socialCloudReadinessAdapter.ts',
-  'src/infrastructure/sync-prototype/socialCloudReadinessAdapter.test.ts',
-  'src/app/socialCloudContractReadiness.test.ts',
-  'docs/architecture/social-cloud-contract-0.28.0-f1.md',
-];
-
-for (const file of requiredFiles) {
-  assert(existsSync(join(root, file)), `${file} est manquant.`);
-}
+  'src/infrastructure/sync-prototype/syncPrototypeConfig.ts',
+  'src/infrastructure/sync-prototype/syncPublicDeploymentConfig.ts',
+  'src/infrastructure/sync-prototype/SyncPrototypeDatabase.ts',
+  'functions/api/social-directory/lookup.js',
+  'functions/api/social-friend-requests/send.js',
+  'functions/api/social-friends/friendships.js',
+  'functions/api/social-activity-feed/index.js',
+  'migrations/0001_social_activity_snapshots_0_29_0.sql',
+  'migrations/0002_social_friend_permission_fields_0_29_0.sql',
+]) needFile(path);
 
 const contract = read('src/domain/friends/socialCloudContract.ts');
-for (const token of [
+const config = read('src/infrastructure/sync-prototype/syncPrototypeConfig.ts');
+const publicConfig = read('src/infrastructure/sync-prototype/syncPublicDeploymentConfig.ts');
+const runtime = read('src/infrastructure/sync-prototype/SyncPrototypeDatabase.ts');
+
+for (const value of [
   'SOCIAL_CLOUD_CONTRACT_VERSION',
-  '0.28.0-f1',
   'socialIdentities',
   'socialHandleReservations',
   'socialFriendRequests',
@@ -41,56 +34,32 @@ for (const token of [
   'rawActivityExport',
   'globalUserDirectory',
   'publicSuggestions',
-  'likes',
-  'comments',
-  'messaging',
-  'groups',
-  'leaderboards',
-]) {
-  assert(contract.includes(token), `contrat incomplet : ${token} absent.`);
-}
-assert(!contract.includes('socialRawActivities'), 'le contrat ne doit pas définir de collection socialRawActivities.');
+]) need(contract, value, 'contrat cloud incomplet');
 
-const service = read('src/application/friends/socialCloudReadinessService.ts');
-assert(service.includes('unavailableSocialCloudBackend'), 'fallback cloud indisponible manquant.');
-assert(service.includes('Backend social cloud indisponible'), 'message indisponible explicite manquant.');
-assert(!service.includes('fetch('), 'F1 ne doit pas appeler un backend HTTP réel.');
-assert(!service.includes('XMLHttpRequest'), 'F1 ne doit pas ajouter d’appel réseau direct.');
+for (const value of [
+  'VITE_ENABLE_REAL_SOCIAL_CLOUD',
+  'mergeSyncPrototypeProductionEnvironment',
+  'realSocialCloudEnabled',
+  'readEnabledFlag',
+]) need(config, value, 'configuration cloud incomplète');
+need(publicConfig, "VITE_ENABLE_REAL_SOCIAL_CLOUD: 'false'", 'défaut public prudent absent');
+need(runtime, 'SYNC_PROTOTYPE_DATABASE_VERSION = 14', 'runtime cloud v14 absent');
+for (const collection of [
+  'socialIdentities',
+  'socialHandleReservations',
+  'socialFriendRequests',
+  'socialFriendships',
+  'socialFriendPermissions',
+  'socialActivitySnapshots',
+]) need(runtime, collection, 'collection runtime absente');
 
-const config = read('src/infrastructure/sync-prototype/syncPrototypeConfig.ts');
-assert(config.includes('VITE_ENABLE_REAL_SOCIAL_CLOUD'), 'flag VITE_ENABLE_REAL_SOCIAL_CLOUD manquant.');
-assert(config.includes('realSocialCloudEnabled'), 'config realSocialCloudEnabled manquante.');
-
-const publicConfig = read('src/infrastructure/sync-prototype/syncPublicDeploymentConfig.ts');
-assert(publicConfig.includes("VITE_ENABLE_REAL_SOCIAL_CLOUD: 'false'"), 'le cloud social réel doit rester désactivé par défaut en configuration publique.');
-assert(publicConfig.includes('variables VITE_*') || publicConfig.includes('hébergeur'), 'la configuration publique doit documenter la surcharge par environnement.');
-assert(config.includes(`...syncPublicDeploymentConfig,
-    ...environment`), 'les variables hébergeur doivent pouvoir activer le cloud social réel sans repatcher le code.');
-
-const envExample = read('.env.example');
-assert(envExample.includes('VITE_ENABLE_REAL_SOCIAL_CLOUD=false'), '.env.example doit documenter le flag social.');
-
-const page = read('src/features/friends/pages/FriendsPrivacyPage.tsx');
-assert(page.includes('Cloud social 0.28.0 F6'), 'la page Amis doit afficher la readiness cloud social courante.');
-assert(page.includes('aucun annuaire'), 'la page doit rappeler qu’aucun annuaire public n’est ouvert.');
-
-const packageJson = JSON.parse(read('package.json'));
-assert(packageJson.scripts['audit:social-cloud-contract'] === 'node scripts/audit-social-cloud-contract.mjs', 'script npm audit:social-cloud-contract manquant.');
-assert(packageJson.scripts['audit:social-cloud-identity'] === 'node scripts/audit-social-cloud-identity.mjs', 'script npm audit:social-cloud-identity manquant.');
-assert(packageJson.scripts.check.includes('npm run audit:social-cloud-contract'), 'npm run check doit inclure audit:social-cloud-contract.');
-assert(packageJson.scripts.ci.includes('npm run audit:social-cloud-contract'), 'npm run ci doit inclure audit:social-cloud-contract.');
-
-const doc = read('docs/architecture/social-cloud-contract-0.28.0-f1.md');
-for (const token of [
-  '0.28.0 F1',
-  'aucune demande cloud réelle',
-  'aucun snapshot distant',
-  'pas d’annuaire public',
-  'userId',
-  'handle',
-  'snapshots filtrés',
-]) {
-  assert(doc.includes(token), `documentation F1 incomplète : ${token} absent.`);
+if (contract.includes('socialRawActivities') || runtime.includes('socialRawActivities')) {
+  failures.push('la collection socialRawActivities est interdite');
 }
 
-console.log('Audit cloud social 0.28.1 F1 OK');
+if (failures.length) {
+  console.error('Audit contrat cloud social échoué :');
+  failures.forEach((failure) => console.error(`- ${failure}`));
+  process.exit(1);
+}
+console.log('Audit contrat cloud social réussi : activation hébergeur, runtime v14, routes Pages et collections filtrées sont cohérents.');

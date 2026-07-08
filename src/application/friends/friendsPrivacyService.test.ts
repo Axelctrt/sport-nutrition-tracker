@@ -10,7 +10,8 @@ describe('friendsPrivacyService', () => {
       friendCount: 1,
       incomingPendingCount: 1,
       outgoingPendingCount: 1,
-      sharingEnabled: false,
+      sharingEnabled: true,
+      summaryPermissionCount: 1,
     });
   });
 
@@ -56,4 +57,24 @@ describe('friendsPrivacyService', () => {
     });
     expect(service.getState().lastFeedback).toContain('bloqué jusqu’au consentement explicite');
   });
+
+  it('conserve les anciens réglages en stockage sans modifier la permission effective de l’ami', () => {
+    const service = createFriendsPrivacyService();
+    const state = service.actions.setSocialActivitySharingPolicy({
+      visibility: 'custom',
+      fields: {
+        common: ['activityType', 'date', 'duration'],
+        cardio: ['distance', 'pace'],
+        strength: ['sessionName', 'exercises', 'sets', 'repetitions'],
+      },
+    });
+
+    expect(state.privacy.socialActivitySharingPolicy).toMatchObject({ visibility: 'custom' });
+    expect(service.getSharingGuard()).toMatchObject({
+      allowedScope: 'summary',
+      canShareSummary: true,
+      canShareDetailed: false,
+    });
+  });
+
 });

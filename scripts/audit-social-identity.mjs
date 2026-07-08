@@ -1,115 +1,70 @@
 import { existsSync, readFileSync } from 'node:fs';
 
 const failures = [];
-const requiredFiles = [
+const read = (path) => existsSync(path) ? readFileSync(path, 'utf8') : '';
+const expectFile = (path) => { if (!existsSync(path)) failures.push(`fichier manquant : ${path}`); };
+const expectToken = (source, token, label) => { if (!source.includes(token)) failures.push(`${label} : ${token}`); };
+
+for (const file of [
   'src/domain/friends/socialIdentity.ts',
-  'src/domain/friends/socialIdentity.test.ts',
   'src/application/friends/socialIdentityService.ts',
-  'src/application/friends/socialIdentityService.test.ts',
   'src/infrastructure/repositories/dexie/DexieSocialIdentityRepository.ts',
-  'src/infrastructure/repositories/dexie/DexieSocialIdentityRepository.test.ts',
-  'src/app/socialIdentityReadiness.test.ts',
+  'src/infrastructure/sync-prototype/socialDirectoryGateway.ts',
+  'src/infrastructure/sync-prototype/realSocialCloudIdentityService.ts',
+  'functions/_shared/socialDirectory.js',
+  'functions/_shared/socialIdentityReconciliation.js',
   'src/features/friends/pages/FriendsPrivacyPage.tsx',
-  'docs/architecture/social-identity-0.27.0-f1.md',
-];
-
-for (const file of requiredFiles) {
-  if (!existsSync(file)) failures.push(`fichier manquant : ${file}`);
-}
-
-function read(path) {
-  return existsSync(path) ? readFileSync(path, 'utf8') : '';
-}
+  'src/app/socialIdentityCanonicalReconciliationReadiness.test.ts',
+]) expectFile(file);
 
 const domain = read('src/domain/friends/socialIdentity.ts');
 const service = read('src/application/friends/socialIdentityService.ts');
 const repository = read('src/infrastructure/repositories/dexie/DexieSocialIdentityRepository.ts');
+const gateway = read('src/infrastructure/sync-prototype/socialDirectoryGateway.ts');
+const directory = read('functions/_shared/socialDirectory.js');
+const reconciliation = read('functions/_shared/socialIdentityReconciliation.js');
 const page = read('src/features/friends/pages/FriendsPrivacyPage.tsx');
-const friendship = read('src/domain/friends/friendship.ts');
-const backupSchemas = read('src/infrastructure/backup/backupSchemas.ts');
-const packageJson = read('package.json');
+const backup = read('src/infrastructure/backup/backupSchemas.ts');
 
-for (const symbol of [
+for (const token of [
   'SocialIdentity',
   'PublicUserProfile',
-  'SocialUserLookupResult',
-  'CloudFriendRequest',
-  'CloudFriendship',
   'validateSocialHandle',
   'RESERVED_SOCIAL_HANDLES',
-]) {
-  if (!domain.includes(symbol)) failures.push(`contrat identité sociale manquant : ${symbol}`);
-}
+  'createDefaultSocialIdentity',
+  'publicProfileFromIdentity',
+]) expectToken(domain, token, 'domaine identité incomplet');
+expectToken(service, 'lookupByHandle', 'service de recherche exacte absent');
+expectToken(repository, 'socialIdentity', 'persistance locale de l’identité absente');
+expectToken(backup, 'socialIdentitySchema', 'sauvegarde de l’identité absente');
 
-for (const phrase of [
+for (const token of [
   'Mon identifiant SportPilot',
   'Copier mon identifiant',
   'Vérifier disponibilité',
   'Enregistrer',
-  'Identifiant valide',
-  'Identifiant invalide',
-  'Compte cloud indisponible',
-  'Utilisateur non connecté au cloud social',
-  'Snapshots sociaux F4 actifs',
-]) {
-  if (!page.includes(phrase)) failures.push(`texte F1 manquant dans la page amis : ${phrase}`);
-}
+]) expectToken(page, token, 'interface identité incomplète');
 
-for (const reserved of [
-  'admin',
-  'support',
-  'sportpilot',
-  'root',
-  'api',
-  'system',
-  'moderator',
-  'null',
-  'undefined',
-  'me',
-]) {
-  if (!domain.includes(`'${reserved}'`)) failures.push(`mot réservé non bloqué : ${reserved}`);
-}
+for (const token of [
+  'socialCloudApiHeaders(credentials',
+  "cache: 'no-store'",
+  'reserveIdentity',
+  'lookupByHandle',
+]) expectToken(gateway, token, 'gateway identité non sécurisé');
+for (const token of [
+  'authenticateRequest',
+  'SOCIAL_DIRECTORY_ACTOR_MISMATCH',
+  'reserveSocialHandle',
+]) expectToken(directory, token, 'route annuaire incomplète');
+for (const token of [
+  'authenticateRequest',
+  'privateIdentity.userId === previousUserId',
+  'existingHandle?.owner_user_id === previousUserId',
+]) expectToken(reconciliation, token, 'réconciliation canonique incomplète');
 
-if (!/\^\[a-z0-9\._-\]\+\$/.test(domain)) {
-  failures.push('validation stricte du handle absente');
-}
-
-if (!domain.includes('withoutPrefix.length < 3 || withoutPrefix.length > 24')) {
-  failures.push('limite 3 à 24 caractères absente');
-}
-
-if (!service.includes('unavailableSocialUserLookupGateway')) {
-  failures.push('gateway cloud indisponible par défaut absent');
-}
-
-if (!service.includes('lookupByHandle')) {
-  failures.push('port de recherche exacte absent');
-}
-
-if (!repository.includes('friendsPrivacySettings') || !repository.includes('socialIdentity')) {
-  failures.push('persistance locale de l’identité sociale non branchée');
-}
-
-if (!friendship.includes('readonly socialIdentity?: SocialIdentity')) {
-  failures.push('identité sociale non préservée dans les réglages amis persistés');
-}
-
-if (!backupSchemas.includes('socialIdentitySchema') || !backupSchemas.includes('socialIdentity: socialIdentitySchema.optional()')) {
-  failures.push('sauvegarde JSON v9 ne préserve pas l’identité sociale optionnelle');
-}
-
-if (!packageJson.includes('audit:social-identity')) {
-  failures.push('script audit:social-identity absent de package.json');
-}
-
-if (/activitySnapshot|socialFeed|like|commentaire|messagerie/u.test(domain + service + repository)) {
-  failures.push('F1 ne doit pas introduire de fil, likes, commentaires, messagerie ou snapshots sociaux');
-}
-
-if (failures.length > 0) {
-  console.error('Audit identité sociale 0.27.0 F1 échoué :');
-  for (const failure of failures) console.error(`- ${failure}`);
+if (failures.length) {
+  console.error('Audit identité sociale échoué :');
+  failures.forEach((failure) => console.error(`- ${failure}`));
   process.exit(1);
 }
-
-console.log('Audit identité sociale 0.27.0 F1 réussi : handle public, userId privé, recherche exacte préparée, cloud indisponible par défaut et garde-fou social conservé.');
+console.log('Audit identité sociale réussi : handle exact, persistance, annuaire authentifié et réconciliation canonique sont présents.');

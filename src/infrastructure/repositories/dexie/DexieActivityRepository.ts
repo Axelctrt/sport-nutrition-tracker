@@ -37,6 +37,14 @@ export class DexieActivityRepository implements ActivityRepository {
     );
   }
 
+  listAll(): Promise<Activity[]> {
+    return runRepositoryOperation(
+      'read',
+      'Impossible de charger les activités enregistrées.',
+      () => this.database.activities.orderBy('date').toArray(),
+    );
+  }
+
   create(data: NewEntity<Activity>): Promise<Activity> {
     return runRepositoryOperation(
       'create',

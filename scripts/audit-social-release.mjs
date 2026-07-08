@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+const VERSION = '0.29.0';
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const read = (path) => readFileSync(join(root, path), 'utf8');
 const failures = [];
@@ -10,11 +11,14 @@ const fail = (message) => failures.push(message);
 const packageJson = JSON.parse(read('package.json'));
 const packageLock = JSON.parse(read('package-lock.json'));
 
-if (packageJson.version !== '0.28.0') {
-  fail(`package.json doit publier 0.28.0, version reçue ${String(packageJson.version)}.`);
+if (packageJson.version !== VERSION) {
+  fail(`package.json doit publier ${VERSION}, version reçue ${String(packageJson.version)}.`);
 }
-if (packageLock.version !== packageJson.version || packageLock.packages?.['']?.version !== packageJson.version) {
-  fail('package-lock.json ne correspond pas à package.json pour 0.28.0.');
+if (
+  packageLock.version !== packageJson.version
+  || packageLock.packages?.['']?.version !== packageJson.version
+) {
+  fail(`package-lock.json ne correspond pas à package.json pour ${VERSION}.`);
 }
 
 const requiredDocs = [
@@ -22,24 +26,25 @@ const requiredDocs = [
   'README-PATCH.md',
   'INSTALLATION.txt',
   'RELEASE-CHECKLIST.md',
-  'RELEASE-NOTES-0.28.0.md',
+  'RELEASE-NOTES-0.29.0.md',
   'ROLLBACK.md',
   'KNOWN-LIMITATIONS.md',
-  'docs/architecture/social-cloud-release-0.28.0-f7.md',
-  'docs/architecture/social-cloud-contract-0.28.0-f1.md',
-  'docs/architecture/social-cloud-identity-0.28.0-f2.md',
-  'docs/architecture/social-cloud-lookup-0.28.0-f3.md',
-  'docs/architecture/social-cloud-friend-requests-0.28.0-f4.md',
-  'docs/architecture/social-cloud-friendships-0.28.0-f5.md',
-  'docs/architecture/social-cloud-activity-snapshots-0.28.0-f6.md',
+  'docs/architecture/social-complete-acceptance-0.29.0-a25.md',
+  'docs/architecture/social-release-finalization-0.29.0-a26.md',
+  'docs/architecture/social-security-hardening-0.29.0-a24.md',
+  'docs/architecture/social-sync-resilience-0.29.0-a23.md',
+  'docs/architecture/social-feed-finalization-0.29.0-a22.md',
+  'docs/architecture/social-activity-detail-0.29.0-a21.md',
+  'docs/architecture/social-sharing-single-source-0.29.0-a20-r3.md',
+  'docs/architecture/social-friend-removal-0.29.0-a19.md',
+  'docs/architecture/social-activity-sharing-enforcement-0.29.0-a18.md',
+  'docs/architecture/social-friend-requests-0.29.0-a17.md',
+  'docs/architecture/social-activity-feed-0.29.0-a14.md',
 ];
 for (const path of requiredDocs) {
   if (!existsSync(join(root, path))) {
     fail(`${path} est absent.`);
-    continue;
   }
-  const content = read(path);
-  if (!content.includes('0.28.0')) fail(`${path} ne référence pas 0.28.0.`);
 }
 
 const packageText = read('package.json');
@@ -56,41 +61,47 @@ for (const command of [
   'audit:social-cloud-friend-requests',
   'audit:social-cloud-friendships',
   'audit:social-cloud-activity-snapshots',
+  'audit:social-complete-acceptance',
+  'audit:social-release-finalization',
   'audit:social-release',
 ]) {
   if (!packageText.includes(command)) fail(`${command} est absent du pipeline package.json.`);
 }
 
-const releaseNotes = read('RELEASE-NOTES-0.28.0.md');
+const releaseNotes = read('RELEASE-NOTES-0.29.0.md');
 for (const expected of [
-  'identités cloud',
-  'réservation unique des handles',
+  'identité canonique',
   'recherche exacte',
-  'demandes d’amis cloud',
-  'amitiés cloud',
-  'permissions synchronisées',
-  'snapshots sociaux distants filtrés',
-  'Aucun export d’activité brute',
+  'demandes entrantes et sortantes',
+  'Amitiés complètes',
+  'Aucun',
+  'Résumé',
+  'Personnalisé',
+  'fiche détaillée',
+  'Résilience',
+  'Sécurité et confidentialité',
+  'aucune activité brute',
   'AppDatabase locale : Dexie v10',
   'Sauvegarde JSON : v9',
   'Runtime Dexie Cloud prototype : v14',
-  'v0.28.0',
+  'v0.29.0',
 ]) {
-  if (!releaseNotes.includes(expected)) fail(`RELEASE-NOTES-0.28.0.md ne couvre pas : ${expected}.`);
+  if (!releaseNotes.includes(expected)) {
+    fail(`RELEASE-NOTES-0.29.0.md ne couvre pas : ${expected}.`);
+  }
 }
 
 const releaseReadiness = read('src/app/releaseReadiness.test.ts');
-if (!releaseReadiness.includes("expect(__APP_VERSION__).toBe('0.28.0')")) {
-  fail('releaseReadiness ne valide pas la version 0.28.0.');
+if (!releaseReadiness.includes("expect(__APP_VERSION__).toBe('0.29.0')")) {
+  fail('releaseReadiness ne valide pas la version 0.29.0.');
 }
-if (!existsSync(join(root, 'src/app/socialCloudReleaseReadiness.test.ts'))) {
-  fail('socialCloudReleaseReadiness.test.ts est absent.');
+if (!existsSync(join(root, 'src/app/socialReleaseFinalizationReadiness.test.ts'))) {
+  fail('socialReleaseFinalizationReadiness.test.ts est absent.');
 }
 
 const contract = read('src/domain/friends/socialCloudContract.ts');
 for (const token of [
   'SOCIAL_CLOUD_CONTRACT_VERSION',
-  '0.28.0-f1',
   'socialIdentities',
   'socialHandleReservations',
   'socialFriendRequests',
@@ -125,19 +136,26 @@ if (runtime.includes('socialRawActivities')) {
 
 const friendsPrivacyPage = read('src/features/friends/pages/FriendsPrivacyPage.tsx');
 for (const expected of [
-  'Cloud social 0.28.0 F6',
-  'Snapshots sociaux distants F6 prêts',
-  'publication cloud de snapshots filtrés',
-  'lecture des snapshots autorisés',
-  'aucune activité brute',
-  'aucun export brut',
-  'aucun annuaire, aucune suggestion',
+  'Partage défini par ami',
+  'Fil d’activité sécurisé 0.29',
+  'Aucun, Résumé ou Personnalisé',
+  'snapshots filtrés',
+  'activité métier brute',
+  'revérifié par le serveur',
 ]) {
-  if (!friendsPrivacyPage.includes(expected)) fail(`FriendsPrivacyPage ne contient pas le garde-fou attendu : ${expected}.`);
+  if (!friendsPrivacyPage.includes(expected)) {
+    fail(`FriendsPrivacyPage ne contient pas le garde-fou attendu : ${expected}.`);
+  }
 }
 
 const cloudSnapshotDomain = read('src/domain/friends/socialCloudActivitySnapshot.ts');
-for (const forbidden of ['privateNotes', 'internalScore', 'rawActivity:', 'rawPayload', 'socialRawActivities']) {
+for (const forbidden of [
+  'privateNotes',
+  'internalScore',
+  'rawActivity:',
+  'rawPayload',
+  'socialRawActivities',
+]) {
   if (cloudSnapshotDomain.includes(forbidden)) {
     fail(`Le domaine cloud snapshot expose un champ brut interdit : ${forbidden}.`);
   }
@@ -145,14 +163,27 @@ for (const forbidden of ['privateNotes', 'internalScore', 'rawActivity:', 'rawPa
 if (!cloudSnapshotDomain.includes('rawActivityShared: false')) {
   fail('Le domaine cloud snapshot ne fige pas explicitement rawActivityShared à false.');
 }
-if (!cloudSnapshotDomain.includes('ownerUserId') || !cloudSnapshotDomain.includes('publishedForUserId')) {
+if (
+  !cloudSnapshotDomain.includes('ownerUserId')
+  || !cloudSnapshotDomain.includes('publishedForUserId')
+) {
   fail('Le domaine cloud snapshot doit distinguer ownerUserId et publishedForUserId.');
 }
 
+for (const migration of [
+  'migrations/0001_social_activity_snapshots_0_29_0.sql',
+  'migrations/0002_social_friend_permission_fields_0_29_0.sql',
+]) {
+  if (!existsSync(join(root, migration))) fail(`la migration ${migration} est absente.`);
+}
+
 if (failures.length > 0) {
-  console.error('\nAudit release sociale 0.28.0 échoué :');
+  console.error(`\nAudit release sociale ${VERSION} échoué :`);
   failures.forEach((failure) => console.error(`- ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log('Audit release sociale 0.28.0 réussi : cloud social F1-F6, documentation, version, snapshots filtrés et garde-fous sont prêts pour publication.');
+  console.log(
+    `Audit release sociale ${VERSION} réussi : identité, amitiés, permissions par ami, `
+    + 'fil filtré, détail sécurisé, résilience et garde-fous sont prêts pour publication.',
+  );
 }

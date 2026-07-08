@@ -134,13 +134,17 @@ describe('social activity snapshots', () => {
     expectNoRawActivityLeak(result.snapshot);
   });
 
-  it('bloque toute création lorsque le partage global est désactivé', () => {
+  it('bloque toute création lorsque cet ami est réglé sur aucun partage', () => {
+    const privacySnapshot = updateFriendActivityPermission(
+      baseSnapshot,
+      friend.id,
+      'none',
+      '2026-07-05T19:00:00.000Z',
+    );
+
     const result = createSocialActivitySnapshotForFriend({
       activity,
-      privacySnapshot: {
-        ...baseSnapshot,
-        privacy: DEFAULT_FRIENDS_PRIVACY_SETTINGS,
-      },
+      privacySnapshot,
       friend,
     });
 

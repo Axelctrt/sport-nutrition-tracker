@@ -45,14 +45,14 @@ describe('friendship domain', () => {
 
     expect(accepted.friends).toHaveLength(1);
     expect(accepted.friends[0]?.handle).toBe('nora.trail');
-    expect(accepted.requests[0]?.status).toBe('accepted');
+    expect(accepted.requests).toEqual([]);
   });
 
   it('refuse une demande sans créer d’ami', () => {
     const declined = declineFriendRequest(baseSnapshot, 'request-1' as EntityId);
 
     expect(declined.friends).toHaveLength(0);
-    expect(declined.requests[0]?.status).toBe('declined');
+    expect(declined.requests).toEqual([]);
   });
 
   it('ajoute une demande sortante unique', () => {
@@ -185,8 +185,113 @@ describe('friendship domain', () => {
       detailedConsent: 'granted',
       detailedConsentGrantedAt: '2026-07-05T12:00:00.000Z',
     });
-    expect(canExposeFriendActivityDetails(detailedSnapshot)).toBe(false);
+    expect(canExposeFriendActivityDetails(detailedSnapshot)).toBe(true);
     expect(canExposeFriendActivityDetailsToFriend(detailedSnapshot, friend)).toBe(true);
+  });
+
+
+  it('ignore les anciens modes d’activité et applique uniquement la permission de l’ami', () => {
+    const friend = {
+      id: 'social-user:nora' as EntityId,
+      userId: 'social-user:nora' as EntityId,
+      displayName: 'Nora Trail',
+      handle: 'nora.trail',
+      initials: 'NT',
+    };
+    const snapshot = {
+      ...baseSnapshot,
+      friends: [friend],
+      privacy: {
+        ...DEFAULT_FRIENDS_PRIVACY_SETTINGS,
+        profileVisibility: 'friends' as const,
+        activitySharing: 'disabled' as const,
+      },
+    };
+
+    expect(evaluateFriendScopedActivitySharingGuard(snapshot, friend, 'summary')).toMatchObject({
+      allowedScope: 'summary',
+      canShareSummary: true,
+      canShareDetailed: false,
+    });
+    expect(evaluateFriendScopedActivitySharingGuard(snapshot, friend, 'private')).toMatchObject({
+      allowedScope: 'summary',
+      canShareSummary: true,
+      canShareDetailed: false,
+    });
+  });
+
+  it('sépare la visibilité du profil des permissions de partage par ami', () => {
+    const friend = {
+      id: 'social-user:nora' as EntityId,
+      userId: 'social-user:nora' as EntityId,
+      displayName: 'Nora Trail',
+      handle: 'nora.trail',
+      initials: 'NT',
+    };
+    const snapshot = {
+      ...baseSnapshot,
+      friends: [friend],
+      privacy: {
+        ...DEFAULT_FRIENDS_PRIVACY_SETTINGS,
+        profileVisibility: 'private' as const,
+        activitySharing: 'disabled' as const,
+      },
+    };
+
+    expect(evaluateFriendScopedActivitySharingGuard(snapshot, friend, 'detailed')).toMatchObject({
+      allowedScope: 'summary',
+      canShareSummary: true,
+      canShareDetailed: false,
+    });
+  });
+
+
+  it('permet de couper tout partage pour un ami sans modifier les autres réglages', () => {
+    const friend = {
+      id: 'social-user:nora' as EntityId,
+      userId: 'social-user:nora' as EntityId,
+      displayName: 'Nora Trail',
+      handle: 'nora.trail',
+      initials: 'NT',
+    };
+    const disabledSnapshot = updateFriendActivityPermission({
+      ...baseSnapshot,
+      friends: [friend],
+    }, friend.id, 'none', '2026-07-05T12:00:00.000Z');
+
+    expect(disabledSnapshot.activityPermissions?.[0]).toMatchObject({
+      friendUserId: friend.userId,
+      sharingLevel: 'none',
+      detailedConsent: 'notRequested',
+    });
+    expect(evaluateFriendScopedActivitySharingGuard(disabledSnapshot, friend)).toMatchObject({
+      allowedScope: 'none',
+      canShareSummary: false,
+      canShareDetailed: false,
+    });
+    expect(summarizeFriendsPrivacy(disabledSnapshot).sharingEnabled).toBe(false);
+  });
+
+  it('conserve la politique de partage configurée lorsque le profil devient privé', () => {
+    const current = {
+      ...DEFAULT_FRIENDS_PRIVACY_SETTINGS,
+      socialActivitySharingPolicy: {
+        visibility: 'custom' as const,
+        fields: {
+          common: ['activityType', 'date', 'duration'] as const,
+          cardio: ['distance'] as const,
+          strength: ['sessionName', 'exerciseCount'] as const,
+        },
+      },
+      activitySharing: 'detailed' as const,
+    };
+
+    const privateSettings = updateFriendsPrivacySettings(current, { profileVisibility: 'private' });
+    const restored = updateFriendsPrivacySettings(privateSettings, { profileVisibility: 'friends' });
+
+    expect(privateSettings.activitySharing).toBe('disabled');
+    expect(privateSettings.socialActivitySharingPolicy?.visibility).toBe('custom');
+    expect(restored.activitySharing).toBe('detailed');
   });
 
 });

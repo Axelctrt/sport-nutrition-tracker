@@ -21,6 +21,10 @@ import {
   weeklyMissionCompletionId,
 } from '@/infrastructure/user-state/userStateModels';
 import { isValidLocalDate } from '@/shared/validation/localDate';
+import {
+  socialActivityGlobalSharingPolicySchema,
+  socialActivitySharingOverrideSchema,
+} from '@/shared/validation/socialActivitySharingSchema';
 
 import { achievementCatalog } from '@/domain/rewards/achievements';
 import { visualThemeCatalog } from '@/domain/rewards/visualThemes';
@@ -200,6 +204,7 @@ const activityBaseShape = {
   notes: z.string().max(10_000).optional(),
   manualCaloriesKcal: nonNegativeNumber.optional(),
   calculation: activityCalculationSnapshotSchema,
+  socialSharing: socialActivitySharingOverrideSchema.optional(),
 };
 
 const runningActivitySchema = datedEntitySchema.extend({
@@ -540,6 +545,7 @@ const workoutSessionSchema = entityMetadataSchema.extend({
   completedAt: isoDateTimeSchema.optional(),
   durationMinutes: nonNegativeNumber.optional(),
   notes: z.string().max(10_000).optional(),
+  socialSharing: socialActivitySharingOverrideSchema.optional(),
 });
 
 const workoutSessionExerciseSchema = entityMetadataSchema.extend({
@@ -835,6 +841,9 @@ const friendsPrivacySettingsSchema = entityMetadataSchema.extend({
   allowFriendRequests: z.boolean(),
   requireManualApproval: z.boolean(),
   socialIdentity: socialIdentitySchema.optional(),
+  socialActivitySharingPolicy: socialActivityGlobalSharingPolicySchema.optional(),
+  profileVisibilityUpdatedAt: isoDateTimeSchema.optional(),
+  socialActivitySharingPolicyUpdatedAt: isoDateTimeSchema.optional(),
 });
 
 const backupUserStateTableNameSchema = z.enum(
@@ -1426,7 +1435,7 @@ export const backupEnvelopeSchema = z.object({
 });
 
 export function validateBackupEnvelope(input: unknown): BackupEnvelope {
-  return backupEnvelopeSchema.parse(input) as BackupEnvelope;
+  return backupEnvelopeSchema.parse(input) as unknown as BackupEnvelope;
 }
 
 export function formatBackupValidationError(error: z.ZodError): string {

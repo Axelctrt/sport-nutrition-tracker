@@ -415,6 +415,8 @@ function buildPreview(
       total
       + (aggregate.profile ? 1 : 0)
       + (isDefaultSyncedUserSettings(aggregate.settings) ? 0 : 1)
+      + Number(Boolean(aggregate.socialProfileVisibility))
+      + Number(Boolean(aggregate.socialActivitySharing))
     ),
     0,
   );
@@ -454,7 +456,7 @@ function buildPreview(
     {
       key: 'accountPreferences',
       label: 'Profil et réglages',
-      description: 'Profil, objectifs généraux, calculs, tableau de bord et modèles d’endurance.',
+      description: 'Profil, objectifs généraux, calculs, tableau de bord, modèles d’endurance et confidentialité sociale.',
       recordCount: accountPreferencesCount,
     },
     {

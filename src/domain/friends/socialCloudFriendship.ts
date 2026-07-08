@@ -9,6 +9,10 @@ import {
   type FriendsPrivacySnapshot,
 } from '@/domain/friends/friendship';
 import type { CloudFriendRequest, CloudFriendship, PublicUserProfile } from '@/domain/friends/socialIdentity';
+import {
+  ALL_SOCIAL_ACTIVITY_FIELD_SELECTION,
+  cloneSocialActivityFieldSelection,
+} from '@/domain/friends/socialActivitySharingPolicy';
 
 export const SOCIAL_CLOUD_FRIENDSHIP_CONTRACT_VERSION = '0.28.0-f5' as const;
 
@@ -189,6 +193,43 @@ export function mergeCloudFriendshipsIntoSnapshot(
   });
 }
 
+export function synchronizeCloudFriendshipsIntoSnapshot(
+  snapshot: FriendsPrivacySnapshot,
+  currentUserId: EntityId,
+  friendships: readonly CloudFriendship[],
+  profiles: readonly PublicUserProfile[],
+): FriendsPrivacySnapshot {
+  const merged = mergeCloudFriendshipsIntoSnapshot(
+    snapshot,
+    currentUserId,
+    friendships,
+    profiles,
+  );
+  const activeFriendUserIds = new Set<EntityId>();
+
+  for (const friendship of friendships) {
+    const friendUserId = getCloudFriendshipCounterpartUserId(friendship, currentUserId);
+    if (friendUserId) activeFriendUserIds.add(friendUserId);
+  }
+
+  const synchronizedFriends = merged.friends.filter((friend) => (
+    friend.userId !== undefined && activeFriendUserIds.has(friend.userId)
+  ));
+  const synchronizedHandles = new Set(
+    synchronizedFriends.map((friend) => normalizeFriendHandle(friend.handle)),
+  );
+  const synchronizedPermissions = (snapshot.activityPermissions ?? []).filter((permission) => (
+    (permission.friendUserId !== undefined && activeFriendUserIds.has(permission.friendUserId))
+    || synchronizedHandles.has(normalizeFriendHandle(permission.friendHandle))
+  ));
+
+  return ensureFriendActivityPermissions({
+    ...merged,
+    friends: synchronizedFriends,
+    activityPermissions: synchronizedPermissions,
+  });
+}
+
 export function buildCloudFriendPermissionRecord(
   ownerUserId: EntityId,
   friend: FriendProfileSummary,
@@ -210,6 +251,9 @@ export function buildCloudFriendPermissionRecord(
     sharingLevel: permission.sharingLevel,
     detailedConsent: permission.detailedConsent,
     ...(detailedConsentGrantedAt ? { detailedConsentGrantedAt } : {}),
+    fieldSelection: cloneSocialActivityFieldSelection(
+      permission.fieldSelection ?? ALL_SOCIAL_ACTIVITY_FIELD_SELECTION,
+    ),
     createdAt: now,
     updatedAt: now,
   };
@@ -227,6 +271,9 @@ export function cloudPermissionRecordToLocalPermission(
     sharingLevel: record.sharingLevel,
     detailedConsent: record.detailedConsent,
     ...(record.detailedConsentGrantedAt ? { detailedConsentGrantedAt: record.detailedConsentGrantedAt } : {}),
+    fieldSelection: cloneSocialActivityFieldSelection(
+      record.fieldSelection ?? ALL_SOCIAL_ACTIVITY_FIELD_SELECTION,
+    ),
   };
 }
 

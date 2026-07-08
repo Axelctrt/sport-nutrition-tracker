@@ -61,14 +61,14 @@ describe('readiness sociale amis 0.27.0 F5', () => {
     );
   });
 
-  it('conserve le garde-fou global même quand les snapshots sociaux filtrés sont livrés', () => {
+  it('ignore l’ancien réglage global et applique uniquement les permissions par ami', () => {
     const guard = evaluateFriendActivitySharingGuard(detailedSharingSnapshot);
 
     expect(guard.allowedScope).toBe('summary');
     expect(guard.canShareSummary).toBe(true);
     expect(guard.canShareDetailed).toBe(false);
     expect(guard.detailedSharingBlocked).toBe(true);
-    expect(guard.reason).toMatch(/Résumé autorisé par défaut/u);
+    expect(guard.reason).toMatch(/séparément pour chaque ami/u);
   });
 
   it('prépare le fil F5 sans exposer l’activité brute', () => {

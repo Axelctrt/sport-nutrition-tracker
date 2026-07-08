@@ -1,3 +1,7 @@
+import type {
+  SocialActivityFieldSelection,
+  SocialActivityGlobalSharingPolicy,
+} from '@/domain/friends/socialActivitySharingPolicy';
 import type { EntityId } from '@/domain/models/common';
 import {
   acceptFriendRequest,
@@ -9,7 +13,10 @@ import {
   evaluateFriendActivitySharingGuard,
   summarizeFriendsPrivacy,
   updateFriendActivityPermission,
+  updateFriendActivityFieldSelection,
+  removeFriendFromSnapshot,
   updateFriendsPrivacySettings,
+  type FriendActivityPermissionLevel,
   type FriendActivitySharingLevel,
   type FriendProfileSummary,
   type FriendRequest,
@@ -34,7 +41,13 @@ export interface FriendsPrivacyServiceActions {
   readonly setProfileVisibility: (visibility: FriendVisibilityLevel) => FriendsPrivacyServiceState;
   readonly setActivitySharing: (sharing: FriendActivitySharingLevel) => FriendsPrivacyServiceState;
   readonly setRequestsOpen: (open: boolean) => FriendsPrivacyServiceState;
-  readonly setFriendActivityPermission: (friendId: EntityId, sharing: 'summary' | 'detailed') => FriendsPrivacyServiceState;
+  readonly setSocialActivitySharingPolicy: (policy: SocialActivityGlobalSharingPolicy) => FriendsPrivacyServiceState;
+  readonly setFriendActivityPermission: (friendId: EntityId, sharing: FriendActivityPermissionLevel) => FriendsPrivacyServiceState;
+  readonly setFriendActivityFieldSelection: (
+    friendId: EntityId,
+    fieldSelection: SocialActivityFieldSelection,
+  ) => FriendsPrivacyServiceState;
+  readonly removeFriend: (friendId: EntityId) => FriendsPrivacyServiceState;
 }
 
 export interface FriendsPrivacyService {
@@ -153,7 +166,7 @@ export function createFriendsPrivacyService(
       setProfileVisibility: (visibility) => updatePrivacy(
         { profileVisibility: visibility },
         visibility === 'private'
-          ? 'Profil passé en privé. Le partage d’activité est désactivé.'
+          ? 'Profil passé en privé. Les permissions de partage par ami restent inchangées.'
           : 'Visibilité du profil mise à jour.',
       ),
       setActivitySharing: (sharing) => updatePrivacy(
@@ -168,11 +181,31 @@ export function createFriendsPrivacyService(
         { allowFriendRequests: open },
         open ? 'Les demandes d’amis sont autorisées.' : 'Les nouvelles demandes d’amis sont bloquées.',
       ),
+      setSocialActivitySharingPolicy: (policy) => updatePrivacy(
+        { socialActivitySharingPolicy: policy },
+        policy.visibility === 'private'
+          ? 'Toutes les activités restent privées.'
+          : policy.visibility === 'summary'
+            ? 'Les activités utilisent un résumé prudent par défaut.'
+            : policy.visibility === 'custom'
+              ? 'Les champs personnalisés sont enregistrés comme réglage global.'
+              : 'Le détail autorisé est activé selon les permissions de chaque ami.',
+      ),
       setFriendActivityPermission: (friendId, sharing) => setState(
         updateFriendActivityPermission(state, friendId, sharing),
         sharing === 'detailed'
-          ? 'Consentement détaillé enregistré pour cet ami. Seuls les snapshots sociaux filtrés peuvent utiliser ce niveau.'
-          : 'Permission ramenée au résumé uniquement pour cet ami.',
+          ? 'Partage personnalisé enregistré pour cet ami.'
+          : sharing === 'summary'
+            ? 'Permission ramenée au résumé pour cet ami.'
+            : 'Partage d’activité désactivé pour cet ami.',
+      ),
+      setFriendActivityFieldSelection: (friendId, fieldSelection) => setState(
+        updateFriendActivityFieldSelection(state, friendId, fieldSelection),
+        'Champs partagés avec cet ami mis à jour.',
+      ),
+      removeFriend: (friendId) => setState(
+        removeFriendFromSnapshot(state, friendId),
+        'Ami supprimé. Les permissions et demandes associées ont été retirées localement.',
       ),
     },
   };

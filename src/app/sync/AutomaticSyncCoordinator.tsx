@@ -7,6 +7,9 @@ import {
   type SyncPrototypeClient,
 } from '@/infrastructure/sync-prototype/syncPrototypeClient';
 import { readSyncPrototypeConfigSafely } from '@/infrastructure/sync-prototype/syncPrototypeConfig';
+import { attachRuntimeSocialActivitySnapshotCloudDelivery } from '@/infrastructure/social-activity-snapshots/runtimeSocialActivitySnapshotCloudDelivery';
+import { reconcileRuntimeSocialActivityPrivacy } from '@/infrastructure/social-activity-snapshots/runtimeSocialActivityPrivacyReconciliation';
+import { SOCIAL_ACTIVITY_PRIVACY_CHANGED_EVENT } from '@/infrastructure/sync-prototype/socialActivityPrivacySyncEvents';
 
 interface NavigatorWithConnection extends Navigator {
   readonly connection?: {
@@ -58,8 +61,29 @@ export function AutomaticSyncCoordinator({
       connectionType: currentConnectionType,
     });
 
+    const detachSocialActivitySnapshotDelivery =
+      attachRuntimeSocialActivitySnapshotCloudDelivery({
+        client,
+        eventTarget: window,
+        isOnline: () => navigator.onLine !== false,
+      });
+    const reconcileSocialActivityPrivacy = () => {
+      void reconcileRuntimeSocialActivityPrivacy().catch(() => undefined);
+    };
+    window.addEventListener(
+      SOCIAL_ACTIVITY_PRIVACY_CHANGED_EVENT,
+      reconcileSocialActivityPrivacy,
+    );
+
     void controller.initialize().catch(() => undefined);
-    return () => controller.dispose();
+    return () => {
+      window.removeEventListener(
+        SOCIAL_ACTIVITY_PRIVACY_CHANGED_EVENT,
+        reconcileSocialActivityPrivacy,
+      );
+      detachSocialActivitySnapshotDelivery();
+      controller.dispose();
+    };
   }, [client]);
 
   return null;

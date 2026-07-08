@@ -372,6 +372,7 @@ export function WorkoutSessionPage() {
         />
       ) : null}
 
+
       {editable ? (
         <CollapsibleSection
           className="mt-6"

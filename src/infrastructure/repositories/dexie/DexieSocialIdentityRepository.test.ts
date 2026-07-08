@@ -40,6 +40,9 @@ describe('DexieSocialIdentityRepository', () => {
 
   it('préserve les réglages de confidentialité quand le handle est sauvegardé', async () => {
     await new DexieFriendsPrivacyRepository(database).saveSnapshot(snapshot);
+    const beforeIdentity = await database.friendsPrivacySettings.get(
+      FRIENDS_PRIVACY_SETTINGS_ID,
+    );
     const repository = new DexieSocialIdentityRepository(database);
     const identity = createDefaultSocialIdentity('2026-07-05T10:00:00.000Z', 'abc123');
     const updated = updateSocialIdentity(identity, {
@@ -59,5 +62,13 @@ describe('DexieSocialIdentityRepository', () => {
       handle: 'alex.run',
       displayName: 'Alex Run',
     });
+    await expect(database.friendsPrivacySettings.get(FRIENDS_PRIVACY_SETTINGS_ID))
+      .resolves.toMatchObject({
+        profileVisibilityUpdatedAt: beforeIdentity?.profileVisibilityUpdatedAt,
+        socialActivitySharingPolicyUpdatedAt:
+          beforeIdentity?.socialActivitySharingPolicyUpdatedAt,
+        socialActivitySharingPolicy:
+          beforeIdentity?.socialActivitySharingPolicy,
+      });
   });
 });

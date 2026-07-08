@@ -81,4 +81,64 @@ describe('DexieFriendsPrivacyRepository', () => {
       await database.delete();
     }
   });
+
+  it('horodate séparément la visibilité et la politique globale', async () => {
+    const database = createDatabase();
+    const timestamps = [
+      '2026-07-07T08:00:00.000Z',
+      '2026-07-07T09:00:00.000Z',
+      '2026-07-07T10:00:00.000Z',
+    ];
+    const repository = new DexieFriendsPrivacyRepository(
+      database,
+      () => timestamps.shift()!,
+    );
+
+    try {
+      await database.open();
+      await repository.saveSnapshot(snapshot);
+      const first = await database.friendsPrivacySettings.get(
+        FRIENDS_PRIVACY_SETTINGS_ID,
+      );
+
+      await repository.saveSnapshot({
+        ...snapshot,
+        requests: [],
+      });
+      const afterRequestChange = await database.friendsPrivacySettings.get(
+        FRIENDS_PRIVACY_SETTINGS_ID,
+      );
+
+      await repository.saveSnapshot({
+        ...snapshot,
+        privacy: {
+          ...snapshot.privacy,
+          socialActivitySharingPolicy: {
+            ...snapshot.privacy.socialActivitySharingPolicy!,
+            visibility: 'detailed',
+          },
+        },
+      });
+      const afterPolicyChange = await database.friendsPrivacySettings.get(
+        FRIENDS_PRIVACY_SETTINGS_ID,
+      );
+
+      expect(first).toMatchObject({
+        profileVisibilityUpdatedAt: '2026-07-07T08:00:00.000Z',
+        socialActivitySharingPolicyUpdatedAt: '2026-07-07T08:00:00.000Z',
+      });
+      expect(afterRequestChange).toMatchObject({
+        profileVisibilityUpdatedAt: '2026-07-07T08:00:00.000Z',
+        socialActivitySharingPolicyUpdatedAt: '2026-07-07T08:00:00.000Z',
+        updatedAt: '2026-07-07T09:00:00.000Z',
+      });
+      expect(afterPolicyChange).toMatchObject({
+        profileVisibilityUpdatedAt: '2026-07-07T08:00:00.000Z',
+        socialActivitySharingPolicyUpdatedAt: '2026-07-07T10:00:00.000Z',
+      });
+    } finally {
+      database.close();
+      await database.delete();
+    }
+  });
 });

@@ -1,10 +1,16 @@
 import type { EntityId, IsoDateTime } from '@/domain/models/common';
 import type { SocialCloudFriendRequestPort, SocialCloudMutationResult } from '@/domain/friends/socialCloudContract';
-import type { CloudFriendRequest } from '@/domain/friends/socialIdentity';
+import type { CloudFriendRequest, PublicUserProfile } from '@/domain/friends/socialIdentity';
+import {
+  resolveSocialCloudApiCredentials,
+  socialCloudApiHeaders,
+  type SocialCloudApiCredentialsProvider,
+} from '@/infrastructure/sync-prototype/socialCloudApiCredentials';
 
 export interface SocialFriendRequestsClientOptions {
   readonly endpoint?: string;
   readonly fetcher?: typeof fetch;
+  readonly getCredentials?: SocialCloudApiCredentialsProvider;
 }
 
 interface SocialFriendRequestPayload {
@@ -18,11 +24,39 @@ interface SocialFriendRequestPayload {
   readonly updatedAt?: unknown;
 }
 
+interface SocialFriendRequestProfilePayload {
+  readonly userId?: unknown;
+  readonly handle?: unknown;
+  readonly displayName?: unknown;
+  readonly createdAt?: unknown;
+  readonly updatedAt?: unknown;
+}
+
 interface SocialFriendRequestsResponsePayload {
   readonly status?: unknown;
   readonly message?: unknown;
   readonly request?: SocialFriendRequestPayload;
   readonly requests?: readonly SocialFriendRequestPayload[];
+  readonly profiles?: readonly SocialFriendRequestProfilePayload[];
+}
+
+export interface SocialFriendRequestsListResult {
+  readonly status: 'synchronized';
+  readonly requests: readonly CloudFriendRequest[];
+  readonly profiles: readonly PublicUserProfile[];
+}
+
+export interface SocialFriendRequestsProfiledPort extends SocialCloudFriendRequestPort {
+  readonly listIncomingRequestsWithProfiles: (userId: EntityId) => Promise<SocialFriendRequestsListResult>;
+  readonly listOutgoingRequestsWithProfiles: (userId: EntityId) => Promise<SocialFriendRequestsListResult>;
+}
+
+export function supportsProfiledSocialFriendRequestsPort(
+  port: SocialCloudFriendRequestPort,
+): port is SocialFriendRequestsProfiledPort {
+  const candidate = port as Partial<SocialFriendRequestsProfiledPort>;
+  return typeof candidate.listIncomingRequestsWithProfiles === 'function'
+    && typeof candidate.listOutgoingRequestsWithProfiles === 'function';
 }
 
 function readConfiguredEndpoint(): string | undefined {
@@ -81,6 +115,25 @@ function toCloudFriendRequest(payload?: SocialFriendRequestPayload): CloudFriend
     : request;
 }
 
+function toPublicUserProfile(payload?: SocialFriendRequestProfilePayload): PublicUserProfile | undefined {
+  if (
+    !payload
+    || typeof payload.userId !== 'string'
+    || typeof payload.handle !== 'string'
+    || typeof payload.displayName !== 'string'
+    || typeof payload.createdAt !== 'string'
+    || typeof payload.updatedAt !== 'string'
+  ) return undefined;
+
+  return {
+    userId: payload.userId as EntityId,
+    handle: payload.handle,
+    displayName: payload.displayName,
+    createdAt: payload.createdAt as IsoDateTime,
+    updatedAt: payload.updatedAt as IsoDateTime,
+  };
+}
+
 async function readPayload(response: Response): Promise<SocialFriendRequestsResponsePayload> {
   try {
     const payload = await response.json();
@@ -110,21 +163,51 @@ function mutationFromResponse<T>(
 
 export function createSocialFriendRequestsClient(
   options: SocialFriendRequestsClientOptions = {},
-): SocialCloudFriendRequestPort {
+): SocialFriendRequestsProfiledPort {
   const endpoint = options.endpoint?.trim().replace(/\/+$/u, '') || readConfiguredEndpoint();
   const fetcher = options.fetcher ?? globalThis.fetch?.bind(globalThis);
+  const getCredentials = options.getCredentials;
+
+  async function listRequestsWithProfiles(
+    direction: 'incoming' | 'outgoing',
+    userId: EntityId,
+  ): Promise<SocialFriendRequestsListResult> {
+    if (!endpoint || !fetcher) throw new Error('Demandes sociales serveur indisponibles.');
+    const credentials = resolveSocialCloudApiCredentials(getCredentials, userId);
+    if (!credentials) throw new Error('Connexion SportPilot requise.');
+
+    const response = await fetcher(`${endpoint}/${direction}?userId=${encodeURIComponent(userId)}`, {
+      method: 'GET',
+      cache: 'no-store',
+      headers: socialCloudApiHeaders(credentials),
+    });
+    const payload = await readPayload(response);
+    if (!response.ok) {
+      throw new Error(responseMessage(payload, 'Demandes sociales serveur indisponibles.'));
+    }
+
+    return {
+      status: 'synchronized',
+      requests: Array.isArray(payload.requests)
+        ? payload.requests.map(toCloudFriendRequest).filter((request): request is CloudFriendRequest => Boolean(request))
+        : [],
+      profiles: Array.isArray(payload.profiles)
+        ? payload.profiles.map(toPublicUserProfile).filter((profile): profile is PublicUserProfile => Boolean(profile))
+        : [],
+    };
+  }
 
   return {
     async sendRequest(request) {
       if (!endpoint || !fetcher) return unavailableMutation();
+      const credentials = resolveSocialCloudApiCredentials(getCredentials, request.requesterUserId);
+      if (!credentials) return unavailableMutation('Connexion SportPilot requise.');
 
       try {
         const response = await fetcher(`${endpoint}/send`, {
           method: 'POST',
-          headers: {
-            accept: 'application/json',
-            'content-type': 'application/json',
-          },
+          cache: 'no-store',
+          headers: socialCloudApiHeaders(credentials, true),
           body: JSON.stringify({
             requesterUserId: request.requesterUserId,
             recipientUserId: request.recipientUserId,
@@ -141,51 +224,39 @@ export function createSocialFriendRequestsClient(
     },
 
     async listIncomingRequests(userId) {
-      if (!endpoint || !fetcher) return [];
-
       try {
-        const response = await fetcher(`${endpoint}/incoming?userId=${encodeURIComponent(userId)}`, {
-          method: 'GET',
-          headers: { accept: 'application/json' },
-        });
-        if (!response.ok) return [];
-        const payload = await readPayload(response);
-        return Array.isArray(payload.requests)
-          ? payload.requests.map(toCloudFriendRequest).filter((request): request is CloudFriendRequest => Boolean(request))
-          : [];
+        return (await listRequestsWithProfiles('incoming', userId)).requests;
       } catch {
         return [];
       }
     },
 
     async listOutgoingRequests(userId) {
-      if (!endpoint || !fetcher) return [];
-
       try {
-        const response = await fetcher(`${endpoint}/outgoing?userId=${encodeURIComponent(userId)}`, {
-          method: 'GET',
-          headers: { accept: 'application/json' },
-        });
-        if (!response.ok) return [];
-        const payload = await readPayload(response);
-        return Array.isArray(payload.requests)
-          ? payload.requests.map(toCloudFriendRequest).filter((request): request is CloudFriendRequest => Boolean(request))
-          : [];
+        return (await listRequestsWithProfiles('outgoing', userId)).requests;
       } catch {
         return [];
       }
     },
 
+    listIncomingRequestsWithProfiles(userId) {
+      return listRequestsWithProfiles('incoming', userId);
+    },
+
+    listOutgoingRequestsWithProfiles(userId) {
+      return listRequestsWithProfiles('outgoing', userId);
+    },
+
     async updateRequestStatus(requestId, status, respondedAt) {
       if (!endpoint || !fetcher) return unavailableMutation();
+      const credentials = resolveSocialCloudApiCredentials(getCredentials);
+      if (!credentials) return unavailableMutation('Connexion SportPilot requise.');
 
       try {
         const response = await fetcher(`${endpoint}/update-status`, {
           method: 'POST',
-          headers: {
-            accept: 'application/json',
-            'content-type': 'application/json',
-          },
+          cache: 'no-store',
+          headers: socialCloudApiHeaders(credentials, true),
           body: JSON.stringify({ requestId, status, respondedAt }),
         });
         const payload = await readPayload(response);
