@@ -30,6 +30,7 @@ import {
   cloudFriendRequestToLocalRequest,
   mergeCloudFriendRequestsIntoSnapshot,
   normalizeCloudFriendRequestForUser,
+  synchronizeCloudFriendRequestsIntoSnapshot,
 } from '@/domain/friends/socialCloudFriendRequest';
 import {
   getCloudFriendshipCounterpartUserId,
@@ -75,6 +76,7 @@ import type { SocialActivityGlobalSharingPolicy } from '@/domain/friends/socialA
 import { appDatabase } from '@/infrastructure/database/database';
 import { DexieFriendsPrivacyRepository } from '@/infrastructure/repositories/dexie/DexieFriendsPrivacyRepository';
 import { DexieSocialIdentityRepository } from '@/infrastructure/repositories/dexie/DexieSocialIdentityRepository';
+import { supportsProfiledSocialFriendRequestsPort } from '@/infrastructure/sync-prototype/socialFriendRequestsGateway';
 import { createRuntimeSocialCloudUserLookupGateway } from '@/infrastructure/sync-prototype/realSocialCloudUserLookupGateway';
 import { getSyncPrototypeClient } from '@/infrastructure/sync-prototype/syncPrototypeClient';
 import { reconcileRuntimeSocialIdentity } from '@/infrastructure/sync-prototype/runtimeSocialIdentityReconciliation';
@@ -290,15 +292,37 @@ export function FriendsPrivacyPage({
 
         let nextSnapshot = loadedSnapshot;
         if (activeCloudFriendRequestPort) {
-          const [incomingCloudRequests, outgoingCloudRequests] = await Promise.all([
-            activeCloudFriendRequestPort.listIncomingRequests(effectiveIdentity.userId),
-            activeCloudFriendRequestPort.listOutgoingRequests(effectiveIdentity.userId),
-          ]);
-          const localRequests = [...incomingCloudRequests, ...outgoingCloudRequests].flatMap((request) => {
-            const report = normalizeCloudFriendRequestForUser(request, effectiveIdentity.userId);
-            return report ? [cloudFriendRequestToLocalRequest(report)] : [];
-          });
-          nextSnapshot = mergeCloudFriendRequestsIntoSnapshot(loadedSnapshot, localRequests);
+          if (supportsProfiledSocialFriendRequestsPort(activeCloudFriendRequestPort)) {
+            try {
+              const [incomingResult, outgoingResult] = await Promise.all([
+                activeCloudFriendRequestPort.listIncomingRequestsWithProfiles(effectiveIdentity.userId),
+                activeCloudFriendRequestPort.listOutgoingRequestsWithProfiles(effectiveIdentity.userId),
+              ]);
+              const profileByUserId = new Map(
+                [...incomingResult.profiles, ...outgoingResult.profiles]
+                  .map((profile) => [profile.userId, profile] as const),
+              );
+              const localRequests = [...incomingResult.requests, ...outgoingResult.requests].flatMap((request) => {
+                const report = normalizeCloudFriendRequestForUser(request, effectiveIdentity.userId);
+                return report
+                  ? [cloudFriendRequestToLocalRequest(report, profileByUserId.get(report.counterpartUserId))]
+                  : [];
+              });
+              nextSnapshot = synchronizeCloudFriendRequestsIntoSnapshot(nextSnapshot, localRequests);
+            } catch {
+              // Preserve the local request cache while the social backend is unavailable.
+            }
+          } else {
+            const [incomingCloudRequests, outgoingCloudRequests] = await Promise.all([
+              activeCloudFriendRequestPort.listIncomingRequests(effectiveIdentity.userId),
+              activeCloudFriendRequestPort.listOutgoingRequests(effectiveIdentity.userId),
+            ]);
+            const localRequests = [...incomingCloudRequests, ...outgoingCloudRequests].flatMap((request) => {
+              const report = normalizeCloudFriendRequestForUser(request, effectiveIdentity.userId);
+              return report ? [cloudFriendRequestToLocalRequest(report)] : [];
+            });
+            nextSnapshot = mergeCloudFriendRequestsIntoSnapshot(nextSnapshot, localRequests);
+          }
         }
 
         if (activeSocialFriendsGateway) {

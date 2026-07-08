@@ -9,7 +9,11 @@ import { createCloudFriendRequestId } from '@/domain/friends/friendship';
 import {
   createSyncPrototypeDatabase,
 } from '@/infrastructure/sync-prototype/SyncPrototypeDatabase';
-import { createSocialFriendRequestsClient } from '@/infrastructure/sync-prototype/socialFriendRequestsGateway';
+import {
+  createSocialFriendRequestsClient,
+  supportsProfiledSocialFriendRequestsPort,
+  type SocialFriendRequestsProfiledPort,
+} from '@/infrastructure/sync-prototype/socialFriendRequestsGateway';
 import {
   readSyncPrototypeConfigSafely,
   type EnabledSyncPrototypeConfig,
@@ -192,7 +196,30 @@ export function createRealSocialCloudFriendRequestPort(
 
 export function createRuntimeSocialCloudFriendRequestPort(
   options: RuntimeSocialCloudFriendRequestPortOptions = {},
-): SocialCloudFriendRequestPort {
+): SocialFriendRequestsProfiledPort {
+  async function listServerRequestsWithProfiles(
+    userId: EntityId,
+    direction: 'incoming' | 'outgoing',
+  ) {
+    const configResult = options.configResult ?? readSyncPrototypeConfigSafely();
+    const config = configResult.config;
+    if (configResult.errorMessage || !config.enabled || !config.realSocialCloudEnabled) {
+      throw new Error(unavailableMessage());
+    }
+
+    const serverPort = createServerFriendRequestPort(options);
+    if (!supportsProfiledSocialFriendRequestsPort(serverPort)) {
+      const requests = direction === 'incoming'
+        ? await serverPort.listIncomingRequests(userId)
+        : await serverPort.listOutgoingRequests(userId);
+      return { status: 'synchronized' as const, requests, profiles: [] };
+    }
+
+    return direction === 'incoming'
+      ? serverPort.listIncomingRequestsWithProfiles(userId)
+      : serverPort.listOutgoingRequestsWithProfiles(userId);
+  }
+
   return {
     async sendRequest(request) {
       const configResult = options.configResult ?? readSyncPrototypeConfigSafely();
@@ -222,6 +249,14 @@ export function createRuntimeSocialCloudFriendRequestPort(
       } finally {
         database.close?.();
       }
+    },
+
+    listIncomingRequestsWithProfiles(userId) {
+      return listServerRequestsWithProfiles(userId, 'incoming');
+    },
+
+    listOutgoingRequestsWithProfiles(userId) {
+      return listServerRequestsWithProfiles(userId, 'outgoing');
     },
 
     async listIncomingRequests(userId) {

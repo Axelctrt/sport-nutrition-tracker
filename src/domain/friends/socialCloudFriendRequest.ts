@@ -195,6 +195,22 @@ export function mergeCloudFriendRequestsIntoSnapshot(
   });
 }
 
+export function synchronizeCloudFriendRequestsIntoSnapshot(
+  snapshot: FriendsPrivacySnapshot,
+  localRequests: readonly FriendRequest[],
+): FriendsPrivacySnapshot {
+  const synchronizedRequests = [...new Map(
+    localRequests
+      .filter((request) => request.status === 'pending')
+      .map((request) => [request.id, request] as const),
+  ).values()].sort((a, b) => b.requestedAt.localeCompare(a.requestedAt));
+
+  return {
+    ...snapshot,
+    requests: synchronizedRequests,
+  };
+}
+
 export function assertSocialCloudFriendRequestContractIntegrity(): true {
   const statuses = new Set(SOCIAL_CLOUD_FRIEND_REQUEST_STATUSES);
   for (const status of ['pending', 'accepted', 'declined', 'cancelled'] as const) {

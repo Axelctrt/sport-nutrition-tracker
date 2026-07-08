@@ -45,14 +45,14 @@ describe('friendship domain', () => {
 
     expect(accepted.friends).toHaveLength(1);
     expect(accepted.friends[0]?.handle).toBe('nora.trail');
-    expect(accepted.requests[0]?.status).toBe('accepted');
+    expect(accepted.requests).toEqual([]);
   });
 
   it('refuse une demande sans créer d’ami', () => {
     const declined = declineFriendRequest(baseSnapshot, 'request-1' as EntityId);
 
     expect(declined.friends).toHaveLength(0);
-    expect(declined.requests[0]?.status).toBe('declined');
+    expect(declined.requests).toEqual([]);
   });
 
   it('ajoute une demande sortante unique', () => {
