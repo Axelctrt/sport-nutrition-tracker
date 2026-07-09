@@ -511,13 +511,13 @@ export function ActivityForm({
         {preview ? (
           <dl className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
             <div className="rounded-xl bg-white/80 p-3 dark:bg-slate-900/70">
-              <dt className="text-xs text-slate-500 dark:text-slate-400">Estimation</dt>
+              <dt className="text-xs text-slate-500 dark:text-slate-400">Estimation nette</dt>
               <dd className="mt-1 font-bold tabular-nums text-slate-950 dark:text-white">
                 {Math.round(preview.calculation.estimatedCaloriesKcal)} kcal
               </dd>
             </div>
             <div className="rounded-xl bg-white/80 p-3 dark:bg-slate-900/70">
-              <dt className="text-xs text-slate-500 dark:text-slate-400">Retenues</dt>
+              <dt className="text-xs text-slate-500 dark:text-slate-400">Calories retenues</dt>
               <dd className="mt-1 font-bold tabular-nums text-slate-950 dark:text-white">
                 {Math.round(preview.effectiveCalories)} kcal
               </dd>

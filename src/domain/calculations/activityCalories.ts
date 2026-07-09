@@ -1,5 +1,5 @@
 import { ACTIVITY_CALCULATION_VERSION } from '@/domain/calculations/constants';
-import { calculateMetCalories } from '@/domain/calculations/met';
+import { calculateNetMetCalories } from '@/domain/calculations/met';
 import { calculateRunningCalories } from '@/domain/calculations/running';
 import { assertNonNegativeNumber, assertPositiveNumber } from '@/domain/calculations/validation';
 import type {
@@ -46,7 +46,7 @@ export function estimateActivityCalories(
 
   return {
     weightKg,
-    estimatedCaloriesKcal: calculateMetCalories(
+    estimatedCaloriesKcal: calculateNetMetCalories(
       activity.durationMinutes,
       met,
       weightKg,

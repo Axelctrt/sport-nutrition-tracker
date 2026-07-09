@@ -45,8 +45,9 @@ const formulas = [
     icon: Activity,
     lines: [
       'Course : poids × distance × coefficient de course.',
-      'Natation et autres activités : durée × MET × 3,5 × poids / 200.',
-      'Une correction manuelle remplace l’estimation ; elle ne s’y ajoute jamais.',
+      'Natation et autres activités : durée × (MET − 1) × 3,5 × poids / 200.',
+      'Le retrait de 1 MET évite de recompter la dépense de repos déjà incluse dans le socle quotidien.',
+      'Une correction manuelle remplace l’estimation nette ; elle ne s’y ajoute jamais.',
     ],
   },
   {
@@ -78,6 +79,7 @@ const formulas = [
     icon: Calculator,
     lines: [
       'Ajustement = poids × variation hebdomadaire en % × 7 700 / 7.',
+      'Le moteur impose un signe cohérent : négatif en perte, nul en maintien et positif en prise.',
       'La cible additionne la dépense, l’ajustement d’objectif et les calibrations acceptées.',
       'Le plancher calorique est protégé avant l’arrondi final au multiple de 10 kcal.',
     ],

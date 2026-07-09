@@ -1,7 +1,7 @@
 import type { OccupationalActivity } from '@/domain/models/profile';
 
-export const ACTIVITY_CALCULATION_VERSION = 1;
-export const DAILY_TARGET_CALCULATION_VERSION = 2;
+export const ACTIVITY_CALCULATION_VERSION = 2;
+export const DAILY_TARGET_CALCULATION_VERSION = 3;
 export const KCAL_PER_KILOGRAM_OF_BODY_WEIGHT = 7_700;
 
 export const OCCUPATIONAL_ACTIVITY_MULTIPLIERS: Readonly<

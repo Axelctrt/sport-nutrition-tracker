@@ -1,3 +1,4 @@
+import { resolveActivityCalculationContext } from '@/application/activities/activityCalculationContext';
 import { calculateAndPersistDailyTarget } from '@/application/daily/dailyTargetCoordinator';
 import {
   runSocialActivitySnapshotObserverBestEffort,
@@ -29,7 +30,7 @@ export type ActivityDraft =
 
 export interface ActivityServiceDependencies {
   settings: Pick<SettingsRepository, 'get'>;
-  weight: Pick<WeightRepository, 'getLatestOnOrBefore'>;
+  weight: Pick<WeightRepository, 'listBetween'>;
   activities: Pick<ActivityRepository, 'getById' | 'create' | 'save' | 'delete'>;
   recalculateDailyTarget: (
     date: string,
@@ -53,12 +54,14 @@ const defaultDependencies: ActivityServiceDependencies = {
 
 function toActivityInput(
   draft: ActivityDraft,
-  profile: UserProfile,
-  weightEntryKg: number | undefined,
+  calculationWeightKg: number,
   settings: Awaited<ReturnType<SettingsRepository['get']>>,
 ): NewEntity<Activity> {
-  const weightKg = weightEntryKg ?? profile.initialWeightKg;
-  const calculation = estimateActivityCalories(draft, weightKg, settings);
+  const calculation = estimateActivityCalories(
+    draft,
+    calculationWeightKg,
+    settings,
+  );
 
   return {
     ...draft,
@@ -82,13 +85,13 @@ export async function createActivityFromDraft(
   profile: UserProfile,
   dependencies: ActivityServiceDependencies = defaultDependencies,
 ): Promise<Activity> {
-  const [settings, weightEntry] = await Promise.all([
+  const [settings, calculationContext] = await Promise.all([
     dependencies.settings.get(),
-    dependencies.weight.getLatestOnOrBefore(draft.date),
+    resolveActivityCalculationContext(draft.date, profile, dependencies.weight),
   ]);
 
   const activity = await dependencies.activities.create(
-    toActivityInput(draft, profile, weightEntry?.weightKg, settings),
+    toActivityInput(draft, calculationContext.weight.weightKg, settings),
   );
   await recalculateDates([activity.date], profile, dependencies);
   const socialActivitySnapshots = dependencies.socialActivitySnapshots;
@@ -111,11 +114,15 @@ export async function updateActivityFromDraft(
     throw new Error('Cette activité est introuvable ou a déjà été supprimée.');
   }
 
-  const [settings, weightEntry] = await Promise.all([
+  const [settings, calculationContext] = await Promise.all([
     dependencies.settings.get(),
-    dependencies.weight.getLatestOnOrBefore(draft.date),
+    resolveActivityCalculationContext(draft.date, profile, dependencies.weight),
   ]);
-  const input = toActivityInput(draft, profile, weightEntry?.weightKg, settings);
+  const input = toActivityInput(
+    draft,
+    calculationContext.weight.weightKg,
+    settings,
+  );
   const saved = await dependencies.activities.save({
     ...input,
     ...(existing.rpe === undefined ? {} : { rpe: existing.rpe }),
