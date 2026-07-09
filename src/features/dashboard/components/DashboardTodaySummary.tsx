@@ -43,9 +43,8 @@ export function DashboardTodaySummary({
 }: DashboardTodaySummaryProps) {
   const consumedCalories = rounded(nutrition.consumed.caloriesKcal);
   const remainingCalories = rounded(nutrition.remaining.caloriesKcal);
-  const todayWeight = snapshot.weight.source === 'weightEntry'
-    && snapshot.weight.weightEntry.date === snapshot.date
-    ? snapshot.weight.weightKg
+  const todayWeight = snapshot.dateWeightEntry?.date === snapshot.date
+    ? snapshot.dateWeightEntry.weightKg
     : undefined;
 
   return (

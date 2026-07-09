@@ -8,6 +8,7 @@ export * from '@/domain/calculations/expenditure';
 export * from '@/domain/calculations/macros';
 export * from '@/domain/calculations/met';
 export * from '@/domain/calculations/occupationalActivity';
+export * from '@/domain/calculations/referenceWeight';
 export * from '@/domain/calculations/rounding';
 export * from '@/domain/calculations/running';
 export * from '@/domain/calculations/swimming';

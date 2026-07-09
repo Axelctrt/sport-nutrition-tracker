@@ -6,6 +6,11 @@ import type { AppSettings } from '@/domain/models/settings';
 import type { DailySteps } from '@/domain/models/steps';
 import type { DailyTarget } from '@/domain/models/targets';
 import type { AcceptedCalorieAdjustment } from '@/domain/models/weeklyReview';
+import {
+  getPreviousCalendarWeekRange,
+  resolveReferenceWeight,
+  type ReferenceWeightResolution,
+} from '@/domain/calculations/referenceWeight';
 import type { WeightEntry } from '@/domain/models/weight';
 import type { ActivityRepository } from '@/infrastructure/repositories/contracts/ActivityRepository';
 import type { SettingsRepository } from '@/infrastructure/repositories/contracts/SettingsRepository';
@@ -15,20 +20,11 @@ import type { WeeklyReviewRepository } from '@/infrastructure/repositories/contr
 import type { WeightRepository } from '@/infrastructure/repositories/contracts/WeightRepository';
 import { repositories } from '@/infrastructure/repositories/repositories';
 
-export type CalculationWeightResolution =
-  | {
-      weightKg: number;
-      source: 'weightEntry';
-      weightEntry: WeightEntry;
-    }
-  | {
-      weightKg: number;
-      source: 'profile';
-    };
+export type CalculationWeightResolution = ReferenceWeightResolution;
 
 export interface DailyTargetCoordinatorDependencies {
   settings: Pick<SettingsRepository, 'get'>;
-  weight: Pick<WeightRepository, 'getLatestOnOrBefore'>;
+  weight: Pick<WeightRepository, 'getByDate' | 'listBetween'>;
   steps: Pick<StepsRepository, 'getByDate'>;
   activities: Pick<ActivityRepository, 'listByDate'>;
   targets: Pick<TargetRepository, 'upsertTarget'>;
@@ -41,6 +37,7 @@ export interface DailyTargetSnapshot {
   calculation: DailyTargetCalculationResult;
   target: DailyTarget;
   weight: CalculationWeightResolution;
+  dateWeightEntry: WeightEntry | undefined;
   stepsEntry: DailySteps | undefined;
   activities: Activity[];
 }
@@ -55,21 +52,15 @@ const defaultDependencies: DailyTargetCoordinatorDependencies = {
 };
 
 export function resolveCalculationWeight(
+  date: LocalDate,
   profile: UserProfile,
-  weightEntry: WeightEntry | undefined,
+  previousWeekEntries: readonly WeightEntry[],
 ): CalculationWeightResolution {
-  if (weightEntry) {
-    return {
-      weightKg: weightEntry.weightKg,
-      source: 'weightEntry',
-      weightEntry,
-    };
-  }
-
-  return {
-    weightKg: profile.initialWeightKg,
-    source: 'profile',
-  };
+  return resolveReferenceWeight(
+    date,
+    profile.initialWeightKg,
+    previousWeekEntries,
+  );
 }
 
 function isAdjustmentActiveOnDate(
@@ -130,15 +121,24 @@ export async function calculateAndPersistDailyTarget(
   profile: UserProfile,
   dependencies: DailyTargetCoordinatorDependencies = defaultDependencies,
 ): Promise<DailyTargetSnapshot> {
-  const [settings, weightEntry, stepsEntry, activities, adjustments] = await Promise.all([
+  const referencePeriod = getPreviousCalendarWeekRange(date);
+  const [
+    settings,
+    previousWeekEntries,
+    dateWeightEntry,
+    stepsEntry,
+    activities,
+    adjustments,
+  ] = await Promise.all([
     dependencies.settings.get(),
-    dependencies.weight.getLatestOnOrBefore(date),
+    dependencies.weight.listBetween(referencePeriod.start, referencePeriod.end),
+    dependencies.weight.getByDate(date),
     dependencies.steps.getByDate(date),
     dependencies.activities.listByDate(date),
     dependencies.weeklyReviews.listAdjustments(),
   ]);
 
-  const weight = resolveCalculationWeight(profile, weightEntry);
+  const weight = resolveCalculationWeight(date, profile, previousWeekEntries);
   const acceptedCalibrationAdjustmentKcal = resolveAcceptedCalibrationAdjustment(
     adjustments,
     date,
@@ -162,6 +162,7 @@ export async function calculateAndPersistDailyTarget(
     calculation,
     target,
     weight,
+    dateWeightEntry,
     stepsEntry,
     activities,
   };

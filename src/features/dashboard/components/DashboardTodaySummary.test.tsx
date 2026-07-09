@@ -22,17 +22,21 @@ function createSnapshot(weightDate = '2026-06-25'): DailyTargetSnapshot {
       },
     },
     weight: {
-      source: 'weightEntry',
+      source: 'previousWeekAverage',
       weightKg: 60.5,
-      weightEntry: {
-        id: 'weight-1',
-        date: weightDate,
-        weightKg: 60.5,
-        createdAt: '2026-06-25T07:00:00.000Z',
-        updatedAt: '2026-06-25T07:00:00.000Z',
-      },
+      period: { start: '2026-06-15', end: '2026-06-21' },
+      dailyWeights: [],
     },
-  } as DailyTargetSnapshot;
+    dateWeightEntry: weightDate === '2026-06-25'
+      ? {
+          id: 'weight-1',
+          date: weightDate,
+          weightKg: 60.5,
+          createdAt: '2026-06-25T07:00:00.000Z',
+          updatedAt: '2026-06-25T07:00:00.000Z',
+        }
+      : undefined,
+  } as unknown as DailyTargetSnapshot;
 }
 
 const nutrition: DailyDashboardNutrition = {

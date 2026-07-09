@@ -113,9 +113,8 @@ export function DashboardPage() {
               ? { stepsEntry: snapshot.stepsEntry }
               : {})}
             weightKg={snapshot.weight.weightKg}
-            {...(snapshot.weight.source === 'weightEntry' &&
-            snapshot.weight.weightEntry.date === date
-              ? { weightEntry: snapshot.weight.weightEntry }
+            {...(snapshot.dateWeightEntry?.date === date
+              ? { weightEntry: snapshot.dateWeightEntry }
               : {})}
             {...(activeWorkout ? { activeWorkout } : {})}
             onSaveWeight={saveWeight}

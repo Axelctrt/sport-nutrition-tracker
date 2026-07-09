@@ -24,7 +24,7 @@ import { createProfileInput } from '@/test/factories/profileFactory';
       carbohydratesGrams: 245,
       fatGrams: 55,
     });
-    expect(result.calculationVersion).toBe(1);
+    expect(result.calculationVersion).toBe(2);
   });
 
   it('intègre un ajustement calorique accepté', () => {

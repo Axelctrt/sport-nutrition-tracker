@@ -1,5 +1,5 @@
 import { calculateCalorieTarget } from '@/domain/calculations/calorieTarget';
-import { CALCULATION_VERSION } from '@/domain/calculations/constants';
+import { DAILY_TARGET_CALCULATION_VERSION } from '@/domain/calculations/constants';
 import {
   calculateDailyExpenditure,
   type DailyExpenditureInput,
@@ -69,6 +69,6 @@ export function calculateDailyTarget({
       carbohydratesClampedToZero:
         macroResult.carbohydratesClampedToZero,
     },
-    calculationVersion: CALCULATION_VERSION,
+    calculationVersion: DAILY_TARGET_CALCULATION_VERSION,
   };
 }

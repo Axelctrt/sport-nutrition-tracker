@@ -1,7 +1,7 @@
 import { CalendarDays, Scale, Trash2, TrendingDown } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { calculateAndPersistDailyTarget } from '@/application/daily/dailyTargetCoordinator';
+import { recalculateTargetsAfterWeightChange } from '@/application/daily/referenceWeightRecalculationService';
 import { useProfile } from '@/app/providers/profile/useProfile';
 import type { WeightEntry } from '@/domain/models/weight';
 import { WeightEntryForm } from '@/features/weight/components/WeightEntryForm';
@@ -107,8 +107,8 @@ export function WeightPage() {
     }, 2_500);
   };
 
-  const recalculateTarget = async (date: string) => {
-    await calculateAndPersistDailyTarget(date, profile);
+  const recalculateAffectedTargets = async (date: string) => {
+    await recalculateTargetsAfterWeightChange(date, profile);
   };
 
   const handleSubmit = async (values: WeightEntryFormValues) => {
@@ -117,7 +117,7 @@ export function WeightPage() {
 
     try {
       const saved = await save(weightFormValuesToEntity(values));
-      await recalculateTarget(values.date);
+      await recalculateAffectedTargets(values.date);
       highlightEntry(saved.id);
       setFeedback({
         tone: 'success',
@@ -153,10 +153,10 @@ export function WeightPage() {
 
     try {
       await remove(pendingDeleteEntry.date);
-      await recalculateTarget(pendingDeleteEntry.date);
+      await recalculateAffectedTargets(pendingDeleteEntry.date);
       setFeedback({
         tone: 'success',
-        message: `La pesée du ${formatLocalDate(pendingDeleteEntry.date)} a été supprimée. Le dernier poids antérieur disponible sera utilisé.`,
+        message: `La pesée du ${formatLocalDate(pendingDeleteEntry.date)} a été supprimée. Le poids de référence de la semaine suivante a été actualisé si nécessaire.`,
       });
       actionToast.success({
         key: 'weight-delete',
@@ -257,7 +257,7 @@ export function WeightPage() {
 
               <div className="mt-4 rounded-xl bg-slate-50 px-3 py-3 text-sm dark:bg-slate-950/70">
                 <p className="font-semibold text-slate-900 dark:text-white">
-                  Poids applicable : {applicableWeight.weightKg.toLocaleString('fr-FR')} kg
+                  Valeur proposée : {applicableWeight.weightKg.toLocaleString('fr-FR')} kg
                 </p>
                 <p className="mt-1 leading-5 text-slate-600 dark:text-slate-300">
                   {applicableWeight.source === 'entry'
@@ -312,7 +312,7 @@ export function WeightPage() {
                   className="m-4 border-0 shadow-none sm:m-5"
                   icon={Scale}
                   title="Aucune pesée enregistrée"
-                  description="Le poids initial du profil reste utilisé tant qu’aucune pesée n’est ajoutée."
+                  description="Le poids du profil sert de secours pour les calculs lorsqu’aucune pesée n’existe pendant la semaine précédente."
                   primaryAction={(
                     <Button onClick={() => selectDate(toLocalDate(), true)}>
                       Ajouter la pesée du jour

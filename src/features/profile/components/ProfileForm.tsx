@@ -232,7 +232,7 @@ export function ProfileForm({
           <FormField
             id="initialWeightKg"
             label="Poids actuel en kilogrammes"
-            description="Le poids initial sert de valeur de secours tant qu’aucune pesée quotidienne antérieure n’existe."
+            description="Le poids du profil sert de valeur de secours lorsqu’aucune pesée n’existe pendant la semaine civile précédente."
             error={errors.initialWeightKg?.message}
             required
           >

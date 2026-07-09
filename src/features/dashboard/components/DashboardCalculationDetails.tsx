@@ -51,9 +51,9 @@ export function DashboardCalculationDetails({ snapshot }: { snapshot: DailyTarge
           <dd className="text-right font-semibold tabular-nums text-slate-950 dark:text-white">
             {snapshot.weight.weightKg.toLocaleString('fr-FR')} kg
             <span className="block text-xs font-normal text-slate-500 dark:text-slate-400">
-              {snapshot.weight.source === 'weightEntry'
-                ? `pesée du ${formatLocalDate(snapshot.weight.weightEntry.date)}`
-                : 'profil initial'}
+              {snapshot.weight.source === 'previousWeekAverage'
+                ? `moyenne du ${formatLocalDate(snapshot.weight.period.start)} au ${formatLocalDate(snapshot.weight.period.end)} (${snapshot.weight.dailyWeights.length} jour${snapshot.weight.dailyWeights.length > 1 ? 's' : ''})`
+                : `poids du profil — aucune pesée du ${formatLocalDate(snapshot.weight.period.start)} au ${formatLocalDate(snapshot.weight.period.end)}`}
             </span>
           </dd>
         </div>
