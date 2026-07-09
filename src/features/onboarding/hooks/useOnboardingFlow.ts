@@ -61,10 +61,12 @@ export function useOnboardingFlow<TStepId extends string>({
 
     const frameId = window.requestAnimationFrame(() => {
       headingRef.current?.focus({ preventScroll: true });
-      headingRef.current?.scrollIntoView({
-        block: 'start',
-        behavior: prefersReducedMotion() ? 'auto' : 'smooth',
-      });
+      if (typeof headingRef.current?.scrollIntoView === 'function') {
+        headingRef.current.scrollIntoView({
+          block: 'start',
+          behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+        });
+      }
     });
 
     return () => window.cancelAnimationFrame(frameId);

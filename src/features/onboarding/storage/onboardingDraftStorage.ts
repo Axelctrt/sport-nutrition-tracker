@@ -1,4 +1,13 @@
 export const ONBOARDING_DRAFT_STORAGE_KEY = 'sportpilot:onboarding:draft:v1';
+
+export function onboardingDraftStorageKeyForScope(scopeId?: string): string {
+  const normalizedScopeId = scopeId?.trim();
+  if (!normalizedScopeId || normalizedScopeId === 'guest') {
+    return ONBOARDING_DRAFT_STORAGE_KEY;
+  }
+
+  return `${ONBOARDING_DRAFT_STORAGE_KEY}:${normalizedScopeId}`;
+}
 export const ONBOARDING_DRAFT_VERSION = 1;
 
 export interface OnboardingDraft<TValues> {
@@ -36,16 +45,17 @@ function isValidDraftEnvelope(value: unknown): value is OnboardingDraft<unknown>
 export function loadOnboardingDraft<TValues>(
   normalizeValues: (value: unknown) => TValues,
   storage = getDefaultStorage(),
+  storageKey = ONBOARDING_DRAFT_STORAGE_KEY,
 ): OnboardingDraftLoadResult<TValues> {
   if (!storage) return { status: 'unavailable' };
 
   try {
-    const raw = storage.getItem(ONBOARDING_DRAFT_STORAGE_KEY);
+    const raw = storage.getItem(storageKey);
     if (!raw) return { status: 'empty' };
 
     const parsed: unknown = JSON.parse(raw);
     if (!isValidDraftEnvelope(parsed)) {
-      storage.removeItem(ONBOARDING_DRAFT_STORAGE_KEY);
+      storage.removeItem(storageKey);
       return { status: 'discarded' };
     }
 
@@ -60,7 +70,7 @@ export function loadOnboardingDraft<TValues>(
     };
   } catch {
     try {
-      storage.removeItem(ONBOARDING_DRAFT_STORAGE_KEY);
+      storage.removeItem(storageKey);
     } catch {
       return { status: 'unavailable' };
     }
@@ -72,6 +82,7 @@ export function saveOnboardingDraft<TValues>(
   stepId: string,
   values: TValues,
   storage = getDefaultStorage(),
+  storageKey = ONBOARDING_DRAFT_STORAGE_KEY,
 ): boolean {
   if (!storage) return false;
 
@@ -83,18 +94,21 @@ export function saveOnboardingDraft<TValues>(
   };
 
   try {
-    storage.setItem(ONBOARDING_DRAFT_STORAGE_KEY, JSON.stringify(draft));
+    storage.setItem(storageKey, JSON.stringify(draft));
     return true;
   } catch {
     return false;
   }
 }
 
-export function clearOnboardingDraft(storage = getDefaultStorage()): boolean {
+export function clearOnboardingDraft(
+  storage = getDefaultStorage(),
+  storageKey = ONBOARDING_DRAFT_STORAGE_KEY,
+): boolean {
   if (!storage) return false;
 
   try {
-    storage.removeItem(ONBOARDING_DRAFT_STORAGE_KEY);
+    storage.removeItem(storageKey);
     return true;
   } catch {
     return false;

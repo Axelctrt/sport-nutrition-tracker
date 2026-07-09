@@ -21,6 +21,10 @@ interface ProfileFormProps {
   onSubmit: (values: ProfileFormValues) => Promise<void>;
   onValuesChange?: (values: ProfileFormValues) => void;
   formId?: string;
+  secondaryAction?: {
+    label: string;
+    onClick: () => void;
+  };
 }
 
 const integerRegistrationOptions = {
@@ -41,6 +45,7 @@ export function ProfileForm({
   onSubmit,
   onValuesChange,
   formId = 'profile-form',
+  secondaryAction,
 }: ProfileFormProps) {
   const formRef = useRef<HTMLFormElement>(null);
   const {
@@ -417,7 +422,19 @@ export function ProfileForm({
         </fieldset>
       </CollapsibleSection>
 
-      <div className="flex justify-end border-t border-slate-200 pt-5 dark:border-slate-800">
+      <div className="flex flex-col-reverse gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:justify-end dark:border-slate-800">
+        {secondaryAction ? (
+          <Button
+            type="button"
+            size="lg"
+            className="w-full sm:w-auto"
+            disabled={isSubmitting}
+            onClick={secondaryAction.onClick}
+            variant="secondary"
+          >
+            {secondaryAction.label}
+          </Button>
+        ) : null}
         <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={isSubmitting}>
           <Save aria-hidden="true" className="size-5" />
           {isSubmitting ? 'Enregistrement…' : submitLabel}

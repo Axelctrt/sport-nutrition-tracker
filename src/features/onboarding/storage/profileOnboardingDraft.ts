@@ -1,12 +1,16 @@
+import type { DataSpaceId } from '@/domain/data-spaces/dataSpace';
 import type { ProfileFormValues } from '@/features/profile/schemas/profileSchema';
 import { DEFAULT_PROFILE_FORM_VALUES } from '@/features/profile/utils/defaultProfileFormValues';
 import {
   clearOnboardingDraft,
   loadOnboardingDraft,
+  onboardingDraftStorageKeyForScope,
   saveOnboardingDraft,
   type OnboardingDraftLoadResult,
 } from '@/features/onboarding/storage/onboardingDraftStorage';
+import { activeDataSpace } from '@/infrastructure/database/database';
 
+export const STORAGE_ONBOARDING_STEP_ID = 'storage';
 export const PROFILE_ONBOARDING_STEP_ID = 'profile';
 
 const sexValues = new Set<ProfileFormValues['sexForEnergyEquation']>(['male', 'female']);
@@ -73,14 +77,42 @@ export function normalizeProfileOnboardingValues(value: unknown): ProfileFormVal
   };
 }
 
-export function loadProfileOnboardingDraft(): OnboardingDraftLoadResult<ProfileFormValues> {
-  return loadOnboardingDraft(normalizeProfileOnboardingValues);
+export function profileOnboardingDraftStorageKey(
+  dataSpaceId: DataSpaceId = activeDataSpace.id,
+): string {
+  return onboardingDraftStorageKeyForScope(dataSpaceId);
 }
 
-export function saveProfileOnboardingDraft(values: ProfileFormValues): boolean {
-  return saveOnboardingDraft(PROFILE_ONBOARDING_STEP_ID, values);
+export function loadProfileOnboardingDraft(
+  dataSpaceId: DataSpaceId = activeDataSpace.id,
+  storage?: Storage,
+): OnboardingDraftLoadResult<ProfileFormValues> {
+  return loadOnboardingDraft(
+    normalizeProfileOnboardingValues,
+    storage,
+    profileOnboardingDraftStorageKey(dataSpaceId),
+  );
 }
 
-export function clearProfileOnboardingDraft(): boolean {
-  return clearOnboardingDraft();
+export function saveProfileOnboardingDraft(
+  values: ProfileFormValues,
+  dataSpaceId: DataSpaceId = activeDataSpace.id,
+  storage?: Storage,
+): boolean {
+  return saveOnboardingDraft(
+    PROFILE_ONBOARDING_STEP_ID,
+    values,
+    storage,
+    profileOnboardingDraftStorageKey(dataSpaceId),
+  );
+}
+
+export function clearProfileOnboardingDraft(
+  dataSpaceId: DataSpaceId = activeDataSpace.id,
+  storage?: Storage,
+): boolean {
+  return clearOnboardingDraft(
+    storage,
+    profileOnboardingDraftStorageKey(dataSpaceId),
+  );
 }
