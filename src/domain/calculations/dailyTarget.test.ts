@@ -27,7 +27,7 @@ import { createProfileInput } from '@/test/factories/profileFactory';
       carbohydratesGrams: 245,
       fatGrams: 55,
     });
-    expect(result.calculationVersion).toBe(3);
+    expect(result.calculationVersion).toBe(4);
   });
 
   it('normalise une variation incohérente avant de calculer la cible', () => {
@@ -62,4 +62,44 @@ import { createProfileInput } from '@/test/factories/profileFactory';
     expect(result.acceptedCalibrationAdjustmentKcal).toBe(100);
     expect(result.targetCaloriesKcal).toBe(2_020);
   });
+
+  it('ajoute intégralement la projection calorique planifiée à la cible', () => {
+    const base = calculateDailyTarget({
+      date: '2026-06-23',
+      profile: createEntity<UserProfile>(createProfileInput()),
+      settings: createDefaultAppSettings(),
+      weightKg: 60,
+      totalSteps: 3_000,
+      activities: [],
+    });
+    const planned = calculateDailyTarget({
+      date: '2026-06-23',
+      profile: createEntity<UserProfile>(createProfileInput()),
+      settings: createDefaultAppSettings(),
+      weightKg: 60,
+      totalSteps: 3_000,
+      activities: [],
+      plannedActivities: [{
+        id: 'strengthSession:planned-1',
+        source: 'strengthSession',
+        sourceId: 'planned-1',
+        title: 'Haut du corps',
+        date: '2026-06-23',
+        activityType: 'strengthTraining',
+        estimatedCaloriesKcal: 210,
+        weightKg: 60,
+        calculationVersion: 1,
+        basis: 'plannedDuration',
+        durationMinutes: 60,
+        metUsed: 3,
+      }],
+    });
+
+    expect(planned.energy.plannedActivitiesKcal).toBe(210);
+    expect(planned.energy.totalEstimatedExpenditureKcal)
+      .toBe(base.energy.totalEstimatedExpenditureKcal + 210);
+    expect(planned.targetCaloriesKcal).toBe(base.targetCaloriesKcal + 210);
+    expect(planned.plannedActivities).toHaveLength(1);
+  });
+
 });

@@ -5,6 +5,7 @@ import type { LocalDate } from '@/domain/models/common';
 import type { WorkoutSessionSummary } from '@/application/strength/workoutSessionService';
 import { getWorkoutSessionTitle } from '@/application/strength/workoutSessionService';
 import { planningDateForSession } from '@/application/strength/weeklyPlanningService';
+import { strengthSessionStyleLabels } from '@/application/planning/plannedActivityCalories';
 import { workoutSessionPath } from '@/app/routePaths';
 import { workoutSessionStatusLabel } from '@/features/strength-sessions/utils/sessionLabels';
 import { inputClassName } from '@/shared/forms/formStyles';
@@ -63,6 +64,10 @@ export function WeeklyPlanningSessionCard({
           <h3 className="break-words font-semibold text-slate-950 dark:text-white">{getWorkoutSessionTitle(session)}</h3>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
             {exerciseCount} exercice{exerciseCount > 1 ? 's' : ''}
+            {session.plannedDurationMinutes ? ` · ${session.plannedDurationMinutes} min prévues` : ''}
+            {session.strengthSessionStyle
+              ? ` · ${strengthSessionStyleLabels[session.strengthSessionStyle]}`
+              : ''}
           </p>
         </div>
         <span className={`inline-flex shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${statusClasses[session.status]}`}>

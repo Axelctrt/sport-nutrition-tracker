@@ -23,7 +23,7 @@ export function DashboardCalculationDetails({ snapshot }: { snapshot: DailyTarge
           <Calculator aria-hidden="true" className="size-5" />
         </span>
         <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">
-          La cible tient compte du profil, du poids de calcul, des pas, des activités et de l’objectif choisi.{' '}
+          La cible tient compte du profil, du poids de calcul, des pas, des activités enregistrées, des séances prévues et de l’objectif choisi.{' '}
           <Link
             to={routePaths.calculationsInformation}
             className="font-semibold text-brand-700 hover:underline dark:text-brand-300"
@@ -78,7 +78,41 @@ export function DashboardCalculationDetails({ snapshot }: { snapshot: DailyTarge
             {snapshot.activities.length}
           </dd>
         </div>
+        <div className="flex justify-between gap-4">
+          <dt className="text-slate-600 dark:text-slate-300">Séances prévues ou détaillées</dt>
+          <dd className="text-right font-semibold tabular-nums text-slate-950 dark:text-white">
+            {snapshot.plannedActivities.length}
+            <span className="block text-xs font-normal text-slate-500 dark:text-slate-400">
+              {rounded(snapshot.target.energy.plannedActivitiesKcal ?? 0).toLocaleString('fr-FR')} kcal
+            </span>
+          </dd>
+        </div>
       </dl>
+
+      {snapshot.plannedActivities.length > 0 ? (
+        <div className="mt-4 rounded-xl bg-slate-50 p-3 dark:bg-slate-950/60">
+          <p className="text-sm font-semibold text-slate-950 dark:text-white">
+            Projection sportive de la journée
+          </p>
+          <ul className="mt-2 space-y-2 text-sm text-slate-600 dark:text-slate-300">
+            {snapshot.plannedActivities.map((activity) => (
+              <li key={activity.id} className="flex justify-between gap-3">
+                <span>
+                  {activity.title}
+                  <span className="block text-xs text-slate-500 dark:text-slate-400">
+                    {activity.basis === 'actualDuration'
+                      ? 'durée réelle de la séance détaillée'
+                      : 'estimation planifiée'}
+                  </span>
+                </span>
+                <span className="shrink-0 font-semibold tabular-nums text-slate-950 dark:text-white">
+                  {rounded(activity.estimatedCaloriesKcal)} kcal
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
 
       {snapshot.calculation.goalRateWasNormalized ? (
         <InlineNotice className="mt-4" title="Variation hebdomadaire normalisée">

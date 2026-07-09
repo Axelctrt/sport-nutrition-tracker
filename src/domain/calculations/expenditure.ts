@@ -12,6 +12,7 @@ import { CalculationError } from '@/domain/errors/CalculationError';
 import type { Activity } from '@/domain/models/activity';
 import type { LocalDate } from '@/domain/models/common';
 import type { UserProfile } from '@/domain/models/profile';
+import type { PlannedActivityCalorieSnapshot } from '@/domain/models/plannedActivity';
 import type { AppSettings } from '@/domain/models/settings';
 import type { DailyEnergyBreakdown } from '@/domain/models/targets';
 
@@ -22,6 +23,7 @@ export interface DailyExpenditureInput {
   weightKg: number;
   totalSteps: number;
   activities: readonly Activity[];
+  plannedActivities?: readonly PlannedActivityCalorieSnapshot[];
 }
 
 export interface DailyExpenditureResult {
@@ -37,6 +39,7 @@ export function calculateDailyExpenditure({
   weightKg,
   totalSteps,
   activities,
+  plannedActivities = [],
 }: DailyExpenditureInput): DailyExpenditureResult {
   assertPositiveNumber(weightKg, 'weightKg');
 
@@ -46,6 +49,17 @@ export function calculateDailyExpenditure({
         `L’activité ${activity.id} n’appartient pas à la journée ${date}.`,
         'INCONSISTENT_DATE',
         'activities',
+      );
+    }
+  }
+
+
+  for (const plannedActivity of plannedActivities) {
+    if (plannedActivity.date !== date) {
+      throw new CalculationError(
+        `L’activité prévue ${plannedActivity.id} n’appartient pas à la journée ${date}.`,
+        'INCONSISTENT_DATE',
+        'plannedActivities',
       );
     }
   }
@@ -106,12 +120,17 @@ export function calculateDailyExpenditure({
     kcalPerKgPerKm: settings.walkingKcalPerKgPerKm,
   });
 
+  const plannedActivitiesKcal = plannedActivities.reduce(
+    (total, activity) => total + activity.estimatedCaloriesKcal,
+    0,
+  );
   const totalEstimatedExpenditureKcal = occupationalBaseKcal
     + steps.caloriesKcal
     + runningKcal
     + swimmingKcal
     + strengthTrainingKcal
-    + otherActivitiesKcal;
+    + otherActivitiesKcal
+    + plannedActivitiesKcal;
 
   return {
     ageYears,
@@ -124,6 +143,7 @@ export function calculateDailyExpenditure({
       swimmingKcal,
       strengthTrainingKcal,
       otherActivitiesKcal,
+      plannedActivitiesKcal,
       totalEstimatedExpenditureKcal,
     },
   };

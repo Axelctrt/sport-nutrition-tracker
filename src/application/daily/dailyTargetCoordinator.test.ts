@@ -113,6 +113,8 @@ describe('dailyTargetCoordinator', () => {
       activities: { listByDate: vi.fn(async () => []) },
       targets: { upsertTarget: savedTarget },
       weeklyReviews: { listAdjustments: vi.fn(async () => []) },
+      workoutSessions: { listAll: vi.fn(async () => []) },
+      listEndurancePlanningSessions: vi.fn(async () => []),
     };
 
     const snapshot = await calculateAndPersistDailyTarget(

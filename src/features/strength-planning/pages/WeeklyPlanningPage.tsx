@@ -19,6 +19,8 @@ import {
   useSearchParams,
 } from 'react-router-dom';
 import type { LocalDate } from '@/domain/models/common';
+import type { StrengthSessionStyle } from '@/domain/models/strength';
+import { strengthSessionStyleLabels } from '@/application/planning/plannedActivityCalories';
 import { formatWeekRange } from '@/application/strength/weeklyPlanningService';
 import { routePaths, workoutSessionPath } from '@/app/routePaths';
 import { WeeklyPlanningSessionCard } from '@/features/strength-planning/components/WeeklyPlanningSessionCard';
@@ -80,6 +82,9 @@ export function WeeklyPlanningPage() {
   } = useWeeklyPlanning();
   const [templateId, setTemplateId] = useState('');
   const [scheduledDate, setScheduledDate] = useState<LocalDate>(toLocalDate());
+  const [plannedDurationMinutes, setPlannedDurationMinutes] = useState('60');
+  const [strengthSessionStyle, setStrengthSessionStyle] =
+    useState<StrengthSessionStyle>('classic');
   const [expandedDays, setExpandedDays] =
     useState<Set<LocalDate>>(
       () => new Set(),
@@ -209,10 +214,19 @@ export function WeeklyPlanningPage() {
   );
 
   const submitPlan = async () => {
-    if (!templateId || !scheduledDate) return;
+    const parsedDuration = Number(plannedDurationMinutes);
+    if (
+      !templateId ||
+      !scheduledDate ||
+      !Number.isFinite(parsedDuration) ||
+      parsedDuration <= 0 ||
+      parsedDuration > 1_440
+    ) return;
     const created = await plan(
       templateId,
       scheduledDate,
+      parsedDuration,
+      strengthSessionStyle,
     );
 
     if (created) {
@@ -277,7 +291,7 @@ export function WeeklyPlanningPage() {
         </div>
 
         {templates.length > 0 ? (
-          <div className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(11rem,0.55fr)_auto] sm:items-end">
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(10rem,0.45fr)_minmax(9rem,0.4fr)_minmax(12rem,0.55fr)_auto] xl:items-end">
             <div>
               <label htmlFor="planning-template" className="text-sm font-semibold text-slate-800 dark:text-slate-100">Séance modèle</label>
               <select id="planning-template" value={templateId} onChange={(event) => setTemplateId(event.target.value)} className={`${inputClassName} mt-1`}>
@@ -288,7 +302,33 @@ export function WeeklyPlanningPage() {
               <label htmlFor="planning-date" className="text-sm font-semibold text-slate-800 dark:text-slate-100">Date prévue</label>
               <input id="planning-date" type="date" value={scheduledDate} onChange={(event) => setScheduledDate(event.target.value)} className={`${inputClassName} mt-1`} />
             </div>
-            <Button size="lg" disabled={actionId === 'create' || !templateId || !scheduledDate} onClick={() => void submitPlan()}>
+            <div>
+              <label htmlFor="planning-duration" className="text-sm font-semibold text-slate-800 dark:text-slate-100">Durée prévue</label>
+              <input
+                id="planning-duration"
+                type="number"
+                min="1"
+                max="1440"
+                step="1"
+                value={plannedDurationMinutes}
+                onChange={(event) => setPlannedDurationMinutes(event.target.value)}
+                className={`${inputClassName} mt-1`}
+              />
+            </div>
+            <div>
+              <label htmlFor="planning-strength-style" className="text-sm font-semibold text-slate-800 dark:text-slate-100">Type de séance</label>
+              <select
+                id="planning-strength-style"
+                value={strengthSessionStyle}
+                onChange={(event) => setStrengthSessionStyle(event.target.value as StrengthSessionStyle)}
+                className={`${inputClassName} mt-1`}
+              >
+                {Object.entries(strengthSessionStyleLabels).map(([value, label]) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
+            </div>
+            <Button size="lg" disabled={actionId === 'create' || !templateId || !scheduledDate || !plannedDurationMinutes || Number(plannedDurationMinutes) <= 0 || Number(plannedDurationMinutes) > 1_440} onClick={() => void submitPlan()}>
               <CalendarDays aria-hidden="true" className="size-5" />{actionId === 'create' ? 'Planification…' : 'Planifier'}
             </Button>
           </div>

@@ -27,6 +27,7 @@ import {
   type EndurancePlanningWeek,
 } from '@/application/planning/endurancePlanningService';
 import { routePaths } from '@/app/routePaths';
+import { recalculatePlannedActivityTargetsForCurrentProfile } from '@/application/planning/plannedActivityTargetService';
 import type {
   ActivityIntensity,
   Activity as ActivityModel,
@@ -223,6 +224,31 @@ export function EndurancePlanningPanel({
     };
   }, [load]);
 
+  const recalculateDates = useCallback(async (dates: LocalDate[]) => {
+    await recalculatePlannedActivityTargetsForCurrentProfile(dates);
+  }, []);
+
+  const updateStatus = useCallback(async (
+    session: PlannedEnduranceSession,
+    status: 'planned' | 'skipped',
+  ) => {
+    setPlannedEnduranceStatus(session.id, status);
+    await recalculateDates([session.date]);
+  }, [recalculateDates]);
+
+  const reschedule = useCallback(async (
+    session: PlannedEnduranceSession,
+    nextDate: LocalDate,
+  ) => {
+    reschedulePlannedEnduranceSession(session.id, nextDate);
+    await recalculateDates([session.date, nextDate]);
+  }, [recalculateDates]);
+
+  const remove = useCallback(async (session: PlannedEnduranceSession) => {
+    deletePlannedEnduranceSession(session.id);
+    await recalculateDates([session.date]);
+  }, [recalculateDates]);
+
   const showDistance = useMemo(
     () =>
       activityType === 'running' ||
@@ -231,7 +257,7 @@ export function EndurancePlanningPanel({
     [activityType],
   );
 
-  const submit = () => {
+  const submit = async () => {
     setError(undefined);
 
     try {
@@ -274,6 +300,8 @@ export function EndurancePlanningPanel({
           ? { notes: notes.trim() }
           : {}),
       });
+
+      await recalculateDates([plannedSession.date]);
 
       toast.success(
         'Activité planifiée',
@@ -482,7 +510,7 @@ export function EndurancePlanningPanel({
 
           <Button
             className="mt-4"
-            onClick={submit}
+            onClick={() => void submit()}
           >
             <CalendarPlus
               aria-hidden="true"
@@ -604,8 +632,8 @@ export function EndurancePlanningPanel({
                               size="sm"
                               variant="secondary"
                               onClick={() =>
-                                setPlannedEnduranceStatus(
-                                  view.session.id,
+                                void updateStatus(
+                                  view.session,
                                   'skipped',
                                 )
                               }
@@ -624,8 +652,8 @@ export function EndurancePlanningPanel({
                               size="sm"
                               variant="secondary"
                               onClick={() =>
-                                setPlannedEnduranceStatus(
-                                  view.session.id,
+                                void updateStatus(
+                                  view.session,
                                   'planned',
                                 )
                               }
@@ -685,13 +713,9 @@ export function EndurancePlanningPanel({
                               size="sm"
                               variant="secondary"
                               onClick={() =>
-                                reschedulePlannedEnduranceSession(
-                                  view.session.id,
-                                  rescheduleDates[
-                                    view.session.id
-                                  ] ??
-                                    view.session
-                                      .date,
+                                void reschedule(
+                                  view.session,
+                                  (rescheduleDates[view.session.id] ?? view.session.date) as LocalDate,
                                 )
                               }
                             >
@@ -721,10 +745,9 @@ export function EndurancePlanningPanel({
         tone="danger"
         onConfirm={() => {
           if (deleteCandidate) {
-            deletePlannedEnduranceSession(
-              deleteCandidate.id,
-            );
+            const candidate = deleteCandidate;
             setDeleteCandidate(undefined);
+            void remove(candidate);
           }
         }}
         onCancel={() =>

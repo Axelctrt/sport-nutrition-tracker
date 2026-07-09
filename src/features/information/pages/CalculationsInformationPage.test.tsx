@@ -16,6 +16,8 @@ describe('CalculationsInformationPage', () => {
     expect(screen.getByText(/Une hausse de charge est seulement proposée/)).toBeInTheDocument();
     expect(screen.getByText(/moyenne des pesées de la semaine civile précédente/)).toBeInTheDocument();
     expect(screen.getByText(/durée × \(MET − 1\)/)).toBeInTheDocument();
+    expect(screen.getByText(/séances planifiées sont intégrées à l’avance/)).toBeInTheDocument();
+    expect(screen.getByText(/séance détaillée de musculation utilise sa durée prévue ou réelle/)).toBeInTheDocument();
     expect(screen.getByText(/signe cohérent/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Ouvrir le profil/ })).toHaveAttribute('href', '/profile');
     expect(screen.getByRole('link', { name: /Ouvrir les paramètres/ })).toHaveAttribute(

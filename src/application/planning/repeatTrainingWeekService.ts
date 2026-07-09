@@ -13,6 +13,7 @@ import {
 import type {
   WorkoutSessionSummary,
 } from '@/application/strength/workoutSessionService';
+import type { StrengthSessionStyle } from '@/domain/models/strength';
 import type {
   EntityId,
   LocalDate,
@@ -44,6 +45,8 @@ export interface RepeatTrainingWeekDependencies {
 export interface RepeatableStrengthSession {
   templateId: EntityId;
   plannedDate: LocalDate;
+  plannedDurationMinutes?: number;
+  strengthSessionStyle?: StrengthSessionStyle;
 }
 
 export interface RepeatTrainingWeekPlan {
@@ -128,6 +131,12 @@ function repeatableStrengthSessions(
         templateId: session.sourceTemplateId,
         plannedDate:
           planningDateForSession(session),
+        ...(session.plannedDurationMinutes === undefined
+          ? {}
+          : { plannedDurationMinutes: session.plannedDurationMinutes }),
+        ...(session.strengthSessionStyle === undefined
+          ? {}
+          : { strengthSessionStyle: session.strengthSessionStyle }),
       },
     ];
   });
@@ -220,6 +229,12 @@ export function buildRepeatTrainingWeekPlan(
     strengthToCreate.push({
       templateId: source.templateId,
       plannedDate: targetDate,
+      ...(source.plannedDurationMinutes === undefined
+        ? {}
+        : { plannedDurationMinutes: source.plannedDurationMinutes }),
+      ...(source.strengthSessionStyle === undefined
+        ? {}
+        : { strengthSessionStyle: source.strengthSessionStyle }),
     });
   }
 
@@ -336,6 +351,12 @@ export async function repeatTrainingWeek(
         dependencies.strengthExercises,
         item.templateId,
         item.plannedDate,
+        item.plannedDurationMinutes === undefined
+          ? undefined
+          : {
+              plannedDurationMinutes: item.plannedDurationMinutes,
+              strengthSessionStyle: item.strengthSessionStyle ?? 'classic',
+            },
         now,
       );
       createdStrengthCount += 1;
