@@ -56,32 +56,22 @@ function enduranceMet(
   }
 }
 
-function strengthProjection(
+export function estimateStrengthSessionPlannedProjection(
   session: WorkoutSession,
   date: LocalDate,
   weightKg: number,
 ): PlannedActivityCalorieSnapshot | undefined {
-  if (
-    session.status === 'abandoned' ||
-    session.status === 'skipped' ||
-    session.completedActivityId !== undefined
-  ) {
-    return undefined;
-  }
-
-  const durationMinutes =
-    session.status === 'completed' && session.durationMinutes
+  const durationMinutes = session.plannedDurationMinutes ?? (
+    session.status === 'planned' || session.status === 'inProgress'
       ? session.durationMinutes
-      : session.plannedDurationMinutes ?? session.durationMinutes;
+      : undefined
+  );
 
   if (!durationMinutes || durationMinutes <= 0) {
     return undefined;
   }
 
   const metUsed = strengthSessionMet(session.strengthSessionStyle ?? 'classic');
-  const basis = session.status === 'completed' && session.durationMinutes
-    ? 'actualDuration'
-    : 'plannedDuration';
 
   return {
     id: `strengthSession:${session.id}`,
@@ -97,21 +87,55 @@ function strengthProjection(
     ),
     weightKg,
     calculationVersion: PLANNED_ACTIVITY_CALCULATION_VERSION,
-    basis,
+    basis: 'plannedDuration',
     durationMinutes,
     metUsed,
   };
 }
 
-function enduranceProjection(
+function strengthProjection(
+  session: WorkoutSession,
+  date: LocalDate,
+  weightKg: number,
+): PlannedActivityCalorieSnapshot | undefined {
+  if (
+    session.status === 'abandoned' ||
+    session.status === 'skipped' ||
+    session.completedActivityId !== undefined
+  ) {
+    return undefined;
+  }
+
+  if (session.status === 'completed' && session.durationMinutes) {
+    const metUsed = strengthSessionMet(session.strengthSessionStyle ?? 'classic');
+    return {
+      id: `strengthSession:${session.id}`,
+      source: 'strengthSession',
+      sourceId: session.id,
+      title: session.sourceTemplateNameSnapshot ?? 'Séance de musculation',
+      date,
+      activityType: 'strengthTraining',
+      estimatedCaloriesKcal: calculateNetMetCalories(
+        session.durationMinutes,
+        metUsed,
+        weightKg,
+      ),
+      weightKg,
+      calculationVersion: PLANNED_ACTIVITY_CALCULATION_VERSION,
+      basis: 'actualDuration',
+      durationMinutes: session.durationMinutes,
+      metUsed,
+    };
+  }
+
+  return estimateStrengthSessionPlannedProjection(session, date, weightKg);
+}
+
+export function estimateEnduranceSessionPlannedProjection(
   session: PlannedEnduranceSession,
   weightKg: number,
   settings: AppSettings,
 ): PlannedActivityCalorieSnapshot | undefined {
-  if (session.status !== 'planned' || session.completedActivityId !== undefined) {
-    return undefined;
-  }
-
   if (
     session.activityType === 'running' &&
     session.targetDistanceKm !== undefined &&
@@ -166,6 +190,18 @@ function enduranceProjection(
     durationMinutes: session.targetDurationMinutes,
     metUsed,
   };
+}
+
+function enduranceProjection(
+  session: PlannedEnduranceSession,
+  weightKg: number,
+  settings: AppSettings,
+): PlannedActivityCalorieSnapshot | undefined {
+  if (session.status !== 'planned' || session.completedActivityId !== undefined) {
+    return undefined;
+  }
+
+  return estimateEnduranceSessionPlannedProjection(session, weightKg, settings);
 }
 
 export interface BuildPlannedActivityCaloriesInput {

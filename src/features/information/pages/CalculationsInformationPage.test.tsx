@@ -19,6 +19,7 @@ describe('CalculationsInformationPage', () => {
     expect(screen.getByText(/séances planifiées sont intégrées à l’avance/)).toBeInTheDocument();
     expect(screen.getByText(/associée explicitement/)).toBeInTheDocument();
     expect(screen.getByText(/séance détaillée de musculation utilise sa durée prévue ou réelle/)).toBeInTheDocument();
+    expect(screen.getByText(/distingue la cible avant sport/)).toBeInTheDocument();
     expect(screen.getByText(/signe cohérent/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Ouvrir le profil/ })).toHaveAttribute('href', '/profile');
     expect(screen.getByRole('link', { name: /Ouvrir les paramètres/ })).toHaveAttribute(

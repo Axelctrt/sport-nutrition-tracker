@@ -43,6 +43,7 @@ export function DashboardTodaySummary({
 }: DashboardTodaySummaryProps) {
   const consumedCalories = rounded(nutrition.consumed.caloriesKcal);
   const remainingCalories = rounded(nutrition.remaining.caloriesKcal);
+  const transparency = snapshot.energyTransparency;
   const todayWeight = snapshot.dateWeightEntry?.date === snapshot.date
     ? snapshot.dateWeightEntry.weightKg
     : undefined;
@@ -67,6 +68,16 @@ export function DashboardTodaySummary({
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
               Cible : {snapshot.target.targetCaloriesKcal.toLocaleString('fr-FR')} kcal
             </p>
+            {transparency && transparency.rawSportCaloriesKcal > 0 ? (
+              <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs">
+                <span className="text-slate-500 dark:text-slate-400">
+                  Avant sport : {transparency.targetBeforeSportKcal.toLocaleString('fr-FR')} kcal
+                </span>
+                <span className="font-semibold text-brand-700 dark:text-brand-300">
+                  Sport : +{Math.round(transparency.targetSportImpactKcal).toLocaleString('fr-FR')} kcal
+                </span>
+              </div>
+            ) : null}
           </div>
           <div
             className={`shrink-0 rounded-xl px-3 py-2 text-right ${

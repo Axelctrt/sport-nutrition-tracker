@@ -51,6 +51,7 @@ const formulas = [
       'Les séances planifiées sont intégrées à l’avance lorsqu’une durée ou une distance permet une estimation.',
       'Une activité réelle ne remplace une prévision que lorsqu’elle lui est associée explicitement ; la date et le type seuls ne suffisent plus.',
       'Une séance détaillée de musculation utilise sa durée prévue ou réelle et un MET interne lié au type de séance.',
+      'L’Accueil distingue la cible avant sport, les calories encore prévues, les calories réellement enregistrées et l’écart entre prévision et réalisation.',
     ],
   },
   {
