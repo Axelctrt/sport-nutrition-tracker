@@ -2,8 +2,12 @@ import { ArrowLeft } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { resolveActivityCalculationContext } from '@/application/activities/activityCalculationContext';
-import { listPlannedActivityLinkOptions, type PlannedActivityLinkOption } from '@/application/planning/activityReconciliationService';
-import { plannedActivityReferenceKey } from '@/domain/models/plannedActivity';
+import {
+  listPlannedActivityLinkOptions,
+  resolvePlannedActivityLinkOption,
+  type PlannedActivityLinkOption,
+} from '@/application/planning/activityReconciliationService';
+import { plannedActivityReferenceKey, type PlannedActivityReference } from '@/domain/models/plannedActivity';
 import {
   createActivityFromDraft,
   updateActivityFromDraft,
@@ -53,6 +57,27 @@ async function loadPlannedActivityOptionsSafely(): Promise<PlannedActivityLinkOp
   }
 }
 
+async function resolveRequestedPlannedActivityOptionSafely(
+  reference: PlannedActivityReference | undefined,
+): Promise<PlannedActivityLinkOption | undefined> {
+  if (!reference) return undefined;
+  try {
+    return await resolvePlannedActivityLinkOption(reference);
+  } catch {
+    return undefined;
+  }
+}
+
+function requestedPlannedActivityReference(
+  source: string | null | undefined,
+  sourceId: string | null | undefined,
+): PlannedActivityReference | undefined {
+  if (!sourceId || (source !== 'strengthSession' && source !== 'endurancePlanning')) {
+    return undefined;
+  }
+  return { source, sourceId };
+}
+
 function ActivityEditor({
   initialType,
   allowedTypes,
@@ -85,10 +110,15 @@ function ActivityEditor({
       setLoading(true);
       setErrorMessage(undefined);
       try {
-        const [settings, existingActivity, plannedActivityOptions] = await Promise.all([
+        const requestedReference = requestedPlannedActivityReference(
+          requestedPlannedSource,
+          requestedPlannedId,
+        );
+        const [settings, existingActivity, plannedActivityOptions, requestedPlannedOption] = await Promise.all([
           repositories.settings.get(),
           activityId ? repositories.activities.getById(activityId) : Promise.resolve(undefined),
           loadPlannedActivityOptionsSafely(),
+          resolveRequestedPlannedActivityOptionSafely(requestedReference),
         ]);
 
         if (activityId && !existingActivity) {
@@ -111,14 +141,14 @@ function ActivityEditor({
                   : initialType,
                 settings,
               );
-        const requestedReference =
-          requestedPlannedSource && requestedPlannedId
-            ? plannedActivityReferenceKey({
-                source: requestedPlannedSource as 'strengthSession' | 'endurancePlanning',
-                sourceId: requestedPlannedId,
-              })
-            : '';
-        const availableOptions = plannedActivityOptions.filter((option) =>
+        const requestedReferenceKey = requestedReference
+          ? plannedActivityReferenceKey(requestedReference)
+          : '';
+        const mergedOptions = requestedPlannedOption
+          && !plannedActivityOptions.some((option) => option.key === requestedPlannedOption.key)
+          ? [requestedPlannedOption, ...plannedActivityOptions]
+          : plannedActivityOptions;
+        const availableOptions = mergedOptions.filter((option) =>
           !option.alreadyLinkedActivityId || option.alreadyLinkedActivityId === existingActivity?.id
         );
         const initialValues: ActivityFormValues = {
@@ -126,8 +156,8 @@ function ActivityEditor({
           ...(requestedDate && isValidLocalDate(requestedDate)
             ? { date: requestedDate }
             : {}),
-          ...(requestedReference && availableOptions.some((option) => option.key === requestedReference)
-            ? { plannedActivityKey: requestedReference }
+          ...(requestedReferenceKey && availableOptions.some((option) => option.key === requestedReferenceKey)
+            ? { plannedActivityKey: requestedReferenceKey }
             : {}),
         };
 
