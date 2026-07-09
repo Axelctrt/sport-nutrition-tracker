@@ -385,6 +385,7 @@ const dailyEnergyBreakdownSchema = z.object({
   swimmingKcal: nonNegativeNumber,
   strengthTrainingKcal: nonNegativeNumber,
   otherActivitiesKcal: nonNegativeNumber,
+  plannedActivitiesKcal: nonNegativeNumber.optional(),
   totalEstimatedExpenditureKcal: nonNegativeNumber,
 });
 
@@ -392,6 +393,22 @@ const dailyMacroTargetsSchema = z.object({
   proteinGrams: nonNegativeNumber,
   carbohydratesGrams: nonNegativeNumber,
   fatGrams: nonNegativeNumber,
+});
+
+const plannedActivityCalorieSnapshotSchema = z.object({
+  id: z.string().min(1),
+  source: z.enum(['strengthSession', 'endurancePlanning']),
+  sourceId: z.string().min(1),
+  title: z.string().min(1).max(200),
+  date: localDateSchema,
+  activityType: z.enum(['running', 'swimming', 'strengthTraining', 'cycling', 'walking', 'otherCardio']),
+  estimatedCaloriesKcal: nonNegativeNumber,
+  weightKg: positiveNumber,
+  calculationVersion: positiveInteger,
+  basis: z.enum(['plannedDuration', 'actualDuration', 'plannedDistance']),
+  durationMinutes: positiveNumber.optional(),
+  metUsed: nonNegativeNumber.optional(),
+  coefficientUsed: nonNegativeNumber.optional(),
 });
 
 const dailyTargetSchema = datedEntitySchema.extend({
@@ -403,6 +420,7 @@ const dailyTargetSchema = datedEntitySchema.extend({
   calorieFloorKcal: nonNegativeNumber,
   targetCaloriesKcal: nonNegativeNumber,
   macros: dailyMacroTargetsSchema,
+  plannedActivities: z.array(plannedActivityCalorieSnapshotSchema).optional(),
   calculationVersion: positiveInteger,
 });
 
@@ -545,6 +563,8 @@ const workoutSessionSchema = entityMetadataSchema.extend({
   startedAt: isoDateTimeSchema.optional(),
   completedAt: isoDateTimeSchema.optional(),
   durationMinutes: nonNegativeNumber.optional(),
+  plannedDurationMinutes: positiveNumber.optional(),
+  strengthSessionStyle: z.enum(['classic', 'strength', 'circuit', 'veryIntense']).optional(),
   notes: z.string().max(10_000).optional(),
   socialSharing: socialActivitySharingOverrideSchema.optional(),
 });

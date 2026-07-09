@@ -2,7 +2,7 @@ import { addDays, addWeeks, endOfWeek, format, parseISO, startOfWeek } from 'dat
 import { fr } from 'date-fns/locale';
 import { RepositoryError } from '@/domain/errors/RepositoryError';
 import type { EntityId, LocalDate } from '@/domain/models/common';
-import type { WorkoutSession } from '@/domain/models/strength';
+import type { StrengthSessionStyle, WorkoutSession } from '@/domain/models/strength';
 import type { StrengthExerciseRepository } from '@/infrastructure/repositories/contracts/StrengthExerciseRepository';
 import type { WorkoutSessionRepository } from '@/infrastructure/repositories/contracts/WorkoutSessionRepository';
 import type { WorkoutTemplateRepository } from '@/infrastructure/repositories/contracts/WorkoutTemplateRepository';
@@ -14,6 +14,28 @@ import {
 } from '@/application/strength/workoutSessionService';
 import { compareLocalDates, toLocalDate } from '@/shared/utils/dates';
 import { isValidLocalDate } from '@/shared/validation/localDate';
+
+
+export interface PlannedWorkoutEnergyInput {
+  plannedDurationMinutes: number;
+  strengthSessionStyle: StrengthSessionStyle;
+}
+
+function validatePlannedWorkoutEnergy(
+  energy: PlannedWorkoutEnergyInput | undefined,
+): void {
+  if (
+    energy &&
+    (!Number.isFinite(energy.plannedDurationMinutes) ||
+      energy.plannedDurationMinutes <= 0 ||
+      energy.plannedDurationMinutes > 1_440)
+  ) {
+    throw new RepositoryError(
+      'La durée prévue doit être comprise entre 1 minute et 24 heures.',
+      'create',
+    );
+  }
+}
 
 export interface WeeklyPlanningDay {
   date: LocalDate;
@@ -94,9 +116,13 @@ export async function planWorkoutSessionFromTemplate(
   exerciseRepository: StrengthExerciseRepository,
   templateId: EntityId,
   scheduledDate: LocalDate,
+  energyOrNow?: PlannedWorkoutEnergyInput | Date,
   now = new Date(),
 ): Promise<WorkoutSessionView> {
   requireValidDate(scheduledDate);
+  const energy = energyOrNow instanceof Date ? undefined : energyOrNow;
+  const effectiveNow = energyOrNow instanceof Date ? energyOrNow : now;
+  validatePlannedWorkoutEnergy(energy);
   const { template, exercises } = await createWorkoutTemplateSessionSnapshot(
     templateRepository,
     exerciseRepository,
@@ -117,9 +143,15 @@ export async function planWorkoutSessionFromTemplate(
     status: 'planned',
     plannedDate: scheduledDate,
     originalPlannedDate: scheduledDate,
-    plannedAt: now.toISOString(),
+    plannedAt: effectiveNow.toISOString(),
     sourceTemplateId: template.id,
     sourceTemplateNameSnapshot: template.name,
+    ...(energy
+      ? {
+          plannedDurationMinutes: energy.plannedDurationMinutes,
+          strengthSessionStyle: energy.strengthSessionStyle,
+        }
+      : {}),
     ...(template.notes ? { notes: template.notes } : {}),
   }, exercises);
 }

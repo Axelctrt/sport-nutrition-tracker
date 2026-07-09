@@ -60,6 +60,10 @@ describe('weeklyPlanningService', () => {
       exerciseRepository,
       'template-push',
       '2026-06-29',
+      {
+        plannedDurationMinutes: 75,
+        strengthSessionStyle: 'strength',
+      },
       new Date('2026-06-26T18:00:00.000Z'),
     );
 
@@ -69,6 +73,8 @@ describe('weeklyPlanningService', () => {
       originalPlannedDate: '2026-06-29',
       status: 'planned',
       sourceTemplateNameSnapshot: 'Push A',
+      plannedDurationMinutes: 75,
+      strengthSessionStyle: 'strength',
     });
     expect(planned.exercises).toHaveLength(1);
 
@@ -154,4 +160,19 @@ describe('weeklyPlanningService', () => {
   it('calcule toujours le lundi comme début de semaine', () => {
     expect(getWeekStart('2026-07-02')).toBe('2026-06-29');
   });
+
+  it('refuse une durée prévue supérieure à 24 heures', async () => {
+    await expect(planWorkoutSessionFromTemplate(
+      sessionRepository,
+      templateRepository,
+      exerciseRepository,
+      'template-push',
+      '2026-06-29',
+      {
+        plannedDurationMinutes: 1_441,
+        strengthSessionStyle: 'classic',
+      },
+    )).rejects.toThrow('comprise entre 1 minute et 24 heures');
+  });
+
 });

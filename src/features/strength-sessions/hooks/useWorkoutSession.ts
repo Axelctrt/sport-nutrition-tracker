@@ -40,6 +40,7 @@ import {
   type StrengthSetChanges,
 } from '@/application/strength/strengthSetService';
 import { repositories } from '@/infrastructure/repositories/repositories';
+import { recalculatePlannedActivityTargetsForCurrentProfile } from '@/application/planning/plannedActivityTargetService';
 import { useToast } from '@/shared/toast/useToast';
 import type { SaveStatusValue } from '@/shared/ui/SaveStatus';
 
@@ -174,6 +175,7 @@ export function useWorkoutSession(sessionId: string) {
         repositories.progressionSuggestions,
         sessionId,
       );
+      await recalculatePlannedActivityTargetsForCurrentProfile([completed.date]);
       return completed;
     },
   ), [runAction, sessionId]);
@@ -189,7 +191,14 @@ export function useWorkoutSession(sessionId: string) {
 
   const abandon = useCallback(() => runAction(
     'abandon',
-    () => abandonWorkoutSession(repositories.workoutSessions, sessionId),
+    async () => {
+      const abandoned = await abandonWorkoutSession(
+        repositories.workoutSessions,
+        sessionId,
+      );
+      await recalculatePlannedActivityTargetsForCurrentProfile([abandoned.date]);
+      return abandoned;
+    },
   ), [runAction, sessionId]);
 
   const addSet = useCallback((sessionExerciseId: string) => runAction(

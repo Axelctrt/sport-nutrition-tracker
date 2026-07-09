@@ -301,7 +301,7 @@ describe('synchronisation C3 du suivi nutritionnel', () => {
       .toMatchObject({
         acceptedCalibrationAdjustmentKcal: 100,
         calculationWeightKg: 71,
-        calculationVersion: 3,
+        calculationVersion: 4,
       });
   });
 

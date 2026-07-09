@@ -2,6 +2,8 @@ import { calculateDailyTarget, type DailyTargetCalculationResult } from '@/domai
 import type { Activity } from '@/domain/models/activity';
 import type { LocalDate, NewEntity } from '@/domain/models/common';
 import type { UserProfile } from '@/domain/models/profile';
+import type { PlannedActivityCalorieSnapshot } from '@/domain/models/plannedActivity';
+import type { PlannedEnduranceSession } from '@/domain/planning/endurancePlanningState';
 import type { AppSettings } from '@/domain/models/settings';
 import type { DailySteps } from '@/domain/models/steps';
 import type { DailyTarget } from '@/domain/models/targets';
@@ -12,13 +14,16 @@ import {
   type ReferenceWeightResolution,
 } from '@/domain/calculations/referenceWeight';
 import type { WeightEntry } from '@/domain/models/weight';
+import { buildPlannedActivityCalories } from '@/application/planning/plannedActivityCalories';
 import type { ActivityRepository } from '@/infrastructure/repositories/contracts/ActivityRepository';
 import type { SettingsRepository } from '@/infrastructure/repositories/contracts/SettingsRepository';
 import type { StepsRepository } from '@/infrastructure/repositories/contracts/StepsRepository';
 import type { TargetRepository } from '@/infrastructure/repositories/contracts/TargetRepository';
 import type { WeeklyReviewRepository } from '@/infrastructure/repositories/contracts/WeeklyReviewRepository';
 import type { WeightRepository } from '@/infrastructure/repositories/contracts/WeightRepository';
+import type { WorkoutSessionRepository } from '@/infrastructure/repositories/contracts/WorkoutSessionRepository';
 import { repositories } from '@/infrastructure/repositories/repositories';
+import { readEndurancePlanningState } from '@/domain/planning/endurancePlanningState';
 
 export type CalculationWeightResolution = ReferenceWeightResolution;
 
@@ -29,6 +34,8 @@ export interface DailyTargetCoordinatorDependencies {
   activities: Pick<ActivityRepository, 'listByDate'>;
   targets: Pick<TargetRepository, 'upsertTarget'>;
   weeklyReviews: Pick<WeeklyReviewRepository, 'listAdjustments'>;
+  workoutSessions: Pick<WorkoutSessionRepository, 'listAll'>;
+  listEndurancePlanningSessions: () => Promise<PlannedEnduranceSession[]> | PlannedEnduranceSession[];
 }
 
 export interface DailyTargetSnapshot {
@@ -40,6 +47,7 @@ export interface DailyTargetSnapshot {
   dateWeightEntry: WeightEntry | undefined;
   stepsEntry: DailySteps | undefined;
   activities: Activity[];
+  plannedActivities: PlannedActivityCalorieSnapshot[];
 }
 
 const defaultDependencies: DailyTargetCoordinatorDependencies = {
@@ -49,6 +57,8 @@ const defaultDependencies: DailyTargetCoordinatorDependencies = {
   activities: repositories.activities,
   targets: repositories.targets,
   weeklyReviews: repositories.weeklyReviews,
+  workoutSessions: repositories.workoutSessions,
+  listEndurancePlanningSessions: () => readEndurancePlanningState().sessions,
 };
 
 export function resolveCalculationWeight(
@@ -114,6 +124,7 @@ function toDailyTargetInput(
     calorieFloorKcal: calculation.calorieFloorKcal,
     targetCaloriesKcal: calculation.targetCaloriesKcal,
     macros: calculation.macros,
+    plannedActivities: calculation.plannedActivities,
     calculationVersion: calculation.calculationVersion,
   };
 }
@@ -131,6 +142,8 @@ export async function calculateAndPersistDailyTarget(
     stepsEntry,
     activities,
     adjustments,
+    strengthSessions,
+    enduranceSessions,
   ] = await Promise.all([
     dependencies.settings.get(),
     dependencies.weight.listBetween(referencePeriod.start, referencePeriod.end),
@@ -138,6 +151,8 @@ export async function calculateAndPersistDailyTarget(
     dependencies.steps.getByDate(date),
     dependencies.activities.listByDate(date),
     dependencies.weeklyReviews.listAdjustments(),
+    dependencies.workoutSessions.listAll(),
+    dependencies.listEndurancePlanningSessions(),
   ]);
 
   const weight = resolveCalculationWeight(date, profile, previousWeekEntries);
@@ -145,6 +160,14 @@ export async function calculateAndPersistDailyTarget(
     adjustments,
     date,
   );
+  const plannedActivities = buildPlannedActivityCalories({
+    date,
+    weightKg: weight.weightKg,
+    settings,
+    activities,
+    strengthSessions,
+    enduranceSessions,
+  });
   const calculation = calculateDailyTarget({
     date,
     profile,
@@ -152,6 +175,7 @@ export async function calculateAndPersistDailyTarget(
     weightKg: weight.weightKg,
     totalSteps: stepsEntry?.totalSteps ?? 0,
     activities,
+    plannedActivities,
     acceptedCalibrationAdjustmentKcal,
   });
   const target = await dependencies.targets.upsertTarget(
@@ -167,5 +191,6 @@ export async function calculateAndPersistDailyTarget(
     dateWeightEntry,
     stepsEntry,
     activities,
+    plannedActivities,
   };
 }

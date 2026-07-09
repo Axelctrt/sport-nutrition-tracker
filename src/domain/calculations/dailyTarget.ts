@@ -10,6 +10,7 @@ import {
   type MacroTargetsResult,
 } from '@/domain/calculations/macros';
 import type { DailyMacroTargets } from '@/domain/models/targets';
+import type { PlannedActivityCalorieSnapshot } from '@/domain/models/plannedActivity';
 
 export interface DailyTargetCalculationInput extends DailyExpenditureInput {
   acceptedCalibrationAdjustmentKcal?: number;
@@ -27,14 +28,19 @@ export interface DailyTargetCalculationResult extends DailyExpenditureResult {
   floorApplied: boolean;
   macros: DailyMacroTargets;
   macroDetails: Omit<MacroTargetsResult, 'macros'>;
+  plannedActivities: PlannedActivityCalorieSnapshot[];
   calculationVersion: number;
 }
 
 export function calculateDailyTarget({
   acceptedCalibrationAdjustmentKcal = 0,
+  plannedActivities = [],
   ...expenditureInput
 }: DailyTargetCalculationInput): DailyTargetCalculationResult {
-  const expenditure = calculateDailyExpenditure(expenditureInput);
+  const expenditure = calculateDailyExpenditure({
+    ...expenditureInput,
+    plannedActivities,
+  });
   const calorieTarget = calculateCalorieTarget({
     weightKg: expenditureInput.weightKg,
     goal: expenditureInput.profile.goal,
@@ -68,6 +74,7 @@ export function calculateDailyTarget({
     targetCaloriesKcal: calorieTarget.targetCaloriesKcal,
     floorApplied: calorieTarget.floorApplied,
     macros: macroResult.macros,
+    plannedActivities: [...plannedActivities],
     macroDetails: {
       fixedMacroCaloriesKcal: macroResult.fixedMacroCaloriesKcal,
       remainingCaloriesForCarbohydratesKcal:
