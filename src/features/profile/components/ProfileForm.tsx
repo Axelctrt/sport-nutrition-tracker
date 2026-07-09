@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Save } from 'lucide-react';
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { SUGGESTED_WEEKLY_CHANGE_PERCENT } from '@/domain/defaults/userProfile';
 import type { WeightGoal } from '@/domain/models/profile';
@@ -19,6 +19,7 @@ interface ProfileFormProps {
   initialValues: ProfileFormValues;
   submitLabel: string;
   onSubmit: (values: ProfileFormValues) => Promise<void>;
+  onValuesChange?: (values: ProfileFormValues) => void;
   formId?: string;
 }
 
@@ -38,6 +39,7 @@ export function ProfileForm({
   initialValues,
   submitLabel,
   onSubmit,
+  onValuesChange,
   formId = 'profile-form',
 }: ProfileFormProps) {
   const formRef = useRef<HTMLFormElement>(null);
@@ -45,6 +47,7 @@ export function ProfileForm({
     register,
     handleSubmit,
     watch,
+    getValues,
     setValue,
     formState: { errors, isSubmitting, submitCount },
   } = useForm<ProfileFormValues>({
@@ -52,6 +55,16 @@ export function ProfileForm({
     defaultValues: initialValues,
     mode: 'onBlur',
   });
+
+  useEffect(() => {
+    if (!onValuesChange) return undefined;
+
+    const subscription = watch(() => {
+      onValuesChange(getValues());
+    });
+
+    return () => subscription.unsubscribe();
+  }, [getValues, onValuesChange, watch]);
 
   const ageMode = watch('ageMode');
   const goal = watch('goal');

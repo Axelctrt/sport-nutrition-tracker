@@ -8,6 +8,7 @@ import { appDatabase } from '@/infrastructure/database/database';
 import { repositories } from '@/infrastructure/repositories/repositories';
 import { flushUserStatePersistence } from '@/infrastructure/user-state/userStateRuntime';
 import { createProfileInput } from '@/test/factories/profileFactory';
+import { ONBOARDING_DRAFT_STORAGE_KEY } from '@/features/onboarding/storage/onboardingDraftStorage';
 import '@/features/onboarding/pages/OnboardingPage';
 import '@/features/dashboard/pages/DashboardPage';
 
@@ -53,6 +54,8 @@ describe('App', () => {
     render(<App />);
 
     await screen.findByRole('heading', { name: 'Créer le profil local' }, { timeout: 5_000 });
+    await user.type(screen.getByLabelText('Prénom'), 'Axel');
+    expect(window.localStorage.getItem(ONBOARDING_DRAFT_STORAGE_KEY)).not.toBeNull();
     await user.click(screen.getByRole('button', { name: 'Créer mon profil' }));
 
     await waitFor(
@@ -65,7 +68,9 @@ describe('App', () => {
     await act(async () => {
       await flushUserStatePersistence();
     });
+    expect(window.localStorage.getItem(ONBOARDING_DRAFT_STORAGE_KEY)).toBeNull();
     expect(await repositories.profile.get()).toMatchObject({
+      firstName: 'Axel',
       heightCm: 175,
       initialWeightKg: 70,
       goal: 'maintenance',
