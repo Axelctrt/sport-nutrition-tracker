@@ -57,6 +57,53 @@ function sourceTitle(
   return enduranceSession?.title ?? 'Activité d’endurance';
 }
 
+
+export async function resolvePlannedActivityLinkOption(
+  reference: PlannedActivityReference,
+  dependencies: ActivityReconciliationDependencies = defaultDependencies,
+): Promise<PlannedActivityLinkOption | undefined> {
+  const activities = await dependencies.activities.listAll();
+  const linkedActivity = activities.find((activity) =>
+    samePlannedActivityReference(activity.plannedActivity, reference)
+  );
+
+  if (reference.source === 'strengthSession') {
+    const session = await dependencies.workoutSessions.getById(reference.sourceId);
+    if (!session || (session.status !== 'planned' && session.completedActivityId === undefined)) {
+      return undefined;
+    }
+
+    return {
+      key: plannedActivityReferenceKey(reference),
+      reference,
+      title: sourceTitle('strengthSession', session, undefined),
+      date: effectiveStrengthDate(session),
+      activityType: 'strengthTraining',
+      ...((session.completedActivityId ?? linkedActivity?.id)
+        ? { alreadyLinkedActivityId: session.completedActivityId ?? linkedActivity!.id }
+        : {}),
+    };
+  }
+
+  const session = dependencies.readEnduranceSessions().find(
+    (candidate) => candidate.id === reference.sourceId,
+  );
+  if (!session || session.status !== 'planned') {
+    return undefined;
+  }
+
+  return {
+    key: plannedActivityReferenceKey(reference),
+    reference,
+    title: session.title,
+    date: session.date,
+    activityType: session.activityType,
+    ...((session.completedActivityId ?? linkedActivity?.id)
+      ? { alreadyLinkedActivityId: session.completedActivityId ?? linkedActivity!.id }
+      : {}),
+  };
+}
+
 export async function listPlannedActivityLinkOptions(
   dependencies: ActivityReconciliationDependencies = defaultDependencies,
 ): Promise<PlannedActivityLinkOption[]> {

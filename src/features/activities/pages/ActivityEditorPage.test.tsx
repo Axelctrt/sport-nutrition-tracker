@@ -110,7 +110,10 @@ describe('ActivityEditorPage', () => {
     });
   });
 
-  it('préassocie une activité ouverte depuis une séance d’endurance planifiée', async () => {
+  it('préassocie une activité ouverte depuis une séance d’endurance planifiée même si la liste générale échoue', async () => {
+    vi.mocked(repositories.workoutSessions.listAll).mockRejectedValueOnce(
+      new Error('liste temporairement indisponible'),
+    );
     writeEndurancePlanningState({
       version: 1,
       sessions: [{

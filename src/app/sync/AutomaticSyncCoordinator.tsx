@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from 'react';
 
 import { AutomaticSyncController } from '@/application/sync/automaticSyncController';
+import { reconcilePersistedActivityLinksBestEffort } from '@/application/planning/activityLinkIntegrityService';
 import { repositories } from '@/infrastructure/repositories/repositories';
 import {
   getSyncPrototypeClient,
@@ -49,7 +50,34 @@ export function AutomaticSyncCoordinator({
   );
 
   useEffect(() => {
+    void reconcilePersistedActivityLinksBestEffort();
+  }, []);
+
+  useEffect(() => {
     if (!client) return;
+
+    let lastActivitySyncCompletedAt =
+      client.getSnapshot().realActivities?.lastResult?.completedAt;
+    let lastStrengthSyncCompletedAt =
+      client.getSnapshot().realStrength?.lastResult?.completedAt;
+    const reconcileAfterRelevantSync = () => {
+      const snapshot = client.getSnapshot();
+      const nextActivitySyncCompletedAt =
+        snapshot.realActivities?.lastResult?.completedAt;
+      const nextStrengthSyncCompletedAt =
+        snapshot.realStrength?.lastResult?.completedAt;
+      const changed =
+        nextActivitySyncCompletedAt !== lastActivitySyncCompletedAt ||
+        nextStrengthSyncCompletedAt !== lastStrengthSyncCompletedAt;
+      lastActivitySyncCompletedAt = nextActivitySyncCompletedAt;
+      lastStrengthSyncCompletedAt = nextStrengthSyncCompletedAt;
+      if (changed) {
+        void reconcilePersistedActivityLinksBestEffort();
+      }
+    };
+    const unsubscribeActivityLinkReconciliation = client.subscribe(
+      reconcileAfterRelevantSync,
+    );
 
     const controller = new AutomaticSyncController({
       client,
@@ -82,6 +110,7 @@ export function AutomaticSyncCoordinator({
         reconcileSocialActivityPrivacy,
       );
       detachSocialActivitySnapshotDelivery();
+      unsubscribeActivityLinkReconciliation();
       controller.dispose();
     };
   }, [client]);
