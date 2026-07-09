@@ -397,6 +397,7 @@ const dailyMacroTargetsSchema = z.object({
 const dailyTargetSchema = datedEntitySchema.extend({
   calculationWeightKg: positiveNumber,
   energy: dailyEnergyBreakdownSchema,
+  targetWeeklyWeightChangePercentUsed: finiteNumber.optional(),
   goalAdjustmentKcal: finiteNumber,
   acceptedCalibrationAdjustmentKcal: finiteNumber,
   calorieFloorKcal: nonNegativeNumber,

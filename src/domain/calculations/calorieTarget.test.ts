@@ -2,9 +2,10 @@ import { describe, expect, it } from 'vitest';
 import {
   calculateCalorieTarget,
   calculateGoalAdjustmentKcal,
+  resolveGoalCompatibleWeeklyChangePercent,
 } from '@/domain/calculations/calorieTarget';
 
- describe('objectif calorique', () => {
+describe('objectif calorique', () => {
   it('calcule le déficit correspondant à -0,5 % par semaine', () => {
     expect(calculateGoalAdjustmentKcal(80, -0.5)).toBe(-440);
   });
@@ -13,9 +14,16 @@ import {
     expect(calculateGoalAdjustmentKcal(80, 0.25)).toBe(220);
   });
 
+  it('normalise le signe de la variation selon l’objectif', () => {
+    expect(resolveGoalCompatibleWeeklyChangePercent('loss', 0.5)).toBe(-0.5);
+    expect(resolveGoalCompatibleWeeklyChangePercent('gain', -0.25)).toBe(0.25);
+    expect(resolveGoalCompatibleWeeklyChangePercent('maintenance', 0.5)).toBe(0);
+  });
+
   it('additionne la dépense, l’objectif et la calibration acceptée', () => {
     const result = calculateCalorieTarget({
       weightKg: 80,
+      goal: 'loss',
       targetWeeklyWeightChangePercent: -0.5,
       totalEstimatedExpenditureKcal: 2_500,
       bmrKcal: 1_700,
@@ -26,11 +34,28 @@ import {
     expect(result.targetBeforeFloorKcal).toBe(2_160);
     expect(result.targetCaloriesKcal).toBe(2_160);
     expect(result.floorApplied).toBe(false);
+    expect(result.goalRateWasNormalized).toBe(false);
+  });
+
+  it('corrige une ancienne variation incohérente sans inventer de magnitude', () => {
+    const result = calculateCalorieTarget({
+      weightKg: 80,
+      goal: 'loss',
+      targetWeeklyWeightChangePercent: 0.5,
+      totalEstimatedExpenditureKcal: 2_500,
+      bmrKcal: 1_700,
+      calorieFloorBmrMultiplier: 1.1,
+    });
+
+    expect(result.targetWeeklyWeightChangePercentUsed).toBe(-0.5);
+    expect(result.goalAdjustmentKcal).toBe(-440);
+    expect(result.goalRateWasNormalized).toBe(true);
   });
 
   it('applique le plancher avant de finaliser la cible', () => {
     const result = calculateCalorieTarget({
       weightKg: 80,
+      goal: 'loss',
       targetWeeklyWeightChangePercent: -0.5,
       totalEstimatedExpenditureKcal: 1_600,
       bmrKcal: 1_648.75,
@@ -45,6 +70,7 @@ import {
   it('arrondit la cible au multiple de 10 le plus proche', () => {
     const result = calculateCalorieTarget({
       weightKg: 70,
+      goal: 'maintenance',
       targetWeeklyWeightChangePercent: 0,
       totalEstimatedExpenditureKcal: 2_056,
       bmrKcal: 1_500,

@@ -67,7 +67,7 @@ describe('ActivityEditorPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.spyOn(repositories.settings, 'get').mockResolvedValue(createDefaultAppSettings());
-    vi.spyOn(repositories.weight, 'getLatestOnOrBefore').mockResolvedValue(undefined);
+    vi.spyOn(repositories.weight, 'listBetween').mockResolvedValue([]);
     vi.spyOn(repositories.activities, 'getById').mockResolvedValue(undefined);
     mocks.createActivityFromDraft.mockResolvedValue(savedActivity);
   });

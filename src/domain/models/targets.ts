@@ -20,6 +20,7 @@ export interface DailyMacroTargets {
 export interface DailyTarget extends DatedEntity {
   calculationWeightKg: number;
   energy: DailyEnergyBreakdown;
+  targetWeeklyWeightChangePercentUsed?: number;
   goalAdjustmentKcal: number;
   acceptedCalibrationAdjustmentKcal: number;
   calorieFloorKcal: number;

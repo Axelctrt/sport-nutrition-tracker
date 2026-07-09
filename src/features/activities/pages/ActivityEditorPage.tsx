@@ -1,6 +1,7 @@
 import { ArrowLeft } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { resolveActivityCalculationContext } from '@/application/activities/activityCalculationContext';
 import {
   createActivityFromDraft,
   updateActivityFromDraft,
@@ -127,14 +128,14 @@ function ActivityEditor({
     let active = true;
     const loadWeight = async () => {
       try {
-        const entry = await repositories.weight.getLatestOnOrBefore(selectedDate);
+        const calculationContext = await resolveActivityCalculationContext(
+          selectedDate,
+          profile,
+          repositories.weight,
+        );
         if (active) {
-          setCalculationWeightKg(entry?.weightKg ?? profile.initialWeightKg);
-          setCalculationWeightSource(
-            entry
-              ? `pesée du ${entry.date.split('-').reverse().join('/')}`
-              : 'poids initial du profil',
-          );
+          setCalculationWeightKg(calculationContext.weight.weightKg);
+          setCalculationWeightSource(calculationContext.sourceLabel);
         }
       } catch (error) {
         if (active) {

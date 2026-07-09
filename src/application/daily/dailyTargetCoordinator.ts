@@ -106,6 +106,8 @@ function toDailyTargetInput(
     date,
     calculationWeightKg: calculation.calculationWeightKg,
     energy: calculation.energy,
+    targetWeeklyWeightChangePercentUsed:
+      calculation.targetWeeklyWeightChangePercentUsed,
     goalAdjustmentKcal: calculation.goalAdjustmentKcal,
     acceptedCalibrationAdjustmentKcal:
       calculation.acceptedCalibrationAdjustmentKcal,

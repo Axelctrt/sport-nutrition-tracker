@@ -48,10 +48,10 @@ function createDependencies(existing?: Activity): {
     dependencies: {
       settings: { get: vi.fn(async () => createDefaultAppSettings()) },
       weight: {
-        getLatestOnOrBefore: vi.fn(async () => createEntity({
-          date: '2026-06-20',
-          weightKg: 62,
-        })),
+        listBetween: vi.fn(async () => [
+          createEntity({ date: '2026-06-16', weightKg: 62 }),
+          createEntity({ date: '2026-06-18', weightKg: 60 }),
+        ]),
       },
       activities: {
         getById: vi.fn(async () => existing),
@@ -75,13 +75,14 @@ function createDependencies(existing?: Activity): {
 }
 
 describe('activityService', () => {
-  it('crée le snapshot avec le poids applicable puis recalcule la journée', async () => {
+  it('crée le snapshot avec le poids moyen précédent puis recalcule la journée', async () => {
     const { dependencies, create, recalculate } = createDependencies();
 
     const activity = await createActivityFromDraft(runningDraft(), profile(), dependencies);
 
-    expect(activity.calculation.weightKg).toBe(62);
-    expect(activity.calculation.estimatedCaloriesKcal).toBe(620);
+    expect(activity.calculation.weightKg).toBe(61);
+    expect(activity.calculation.estimatedCaloriesKcal).toBe(610);
+    expect(activity.calculation.calculationVersion).toBe(2);
     expect(create).toHaveBeenCalledOnce();
     expect(create.mock.calls[0]?.[0]).not.toHaveProperty('rpe');
     expect(recalculate).toHaveBeenCalledWith('2026-06-23', expect.any(Object));

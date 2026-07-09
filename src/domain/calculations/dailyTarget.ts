@@ -17,6 +17,8 @@ export interface DailyTargetCalculationInput extends DailyExpenditureInput {
 
 export interface DailyTargetCalculationResult extends DailyExpenditureResult {
   calculationWeightKg: number;
+  targetWeeklyWeightChangePercentUsed: number;
+  goalRateWasNormalized: boolean;
   goalAdjustmentKcal: number;
   acceptedCalibrationAdjustmentKcal: number;
   targetBeforeFloorKcal: number;
@@ -35,6 +37,7 @@ export function calculateDailyTarget({
   const expenditure = calculateDailyExpenditure(expenditureInput);
   const calorieTarget = calculateCalorieTarget({
     weightKg: expenditureInput.weightKg,
+    goal: expenditureInput.profile.goal,
     targetWeeklyWeightChangePercent:
       expenditureInput.profile.targetWeeklyWeightChangePercent,
     totalEstimatedExpenditureKcal:
@@ -54,6 +57,9 @@ export function calculateDailyTarget({
   return {
     ...expenditure,
     calculationWeightKg: expenditureInput.weightKg,
+    targetWeeklyWeightChangePercentUsed:
+      calorieTarget.targetWeeklyWeightChangePercentUsed,
+    goalRateWasNormalized: calorieTarget.goalRateWasNormalized,
     goalAdjustmentKcal: calorieTarget.goalAdjustmentKcal,
     acceptedCalibrationAdjustmentKcal:
       calorieTarget.acceptedCalibrationAdjustmentKcal,

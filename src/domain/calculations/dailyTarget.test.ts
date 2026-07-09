@@ -19,12 +19,33 @@ import { createProfileInput } from '@/test/factories/profileFactory';
     expect(result.calculationWeightKg).toBe(60);
     expect(result.energy.totalEstimatedExpenditureKcal).toBe(1_921.5);
     expect(result.targetCaloriesKcal).toBe(1_920);
+
+    expect(result.targetWeeklyWeightChangePercentUsed).toBe(0);
+    expect(result.goalRateWasNormalized).toBe(false);
     expect(result.macros).toEqual({
       proteinGrams: 110,
       carbohydratesGrams: 245,
       fatGrams: 55,
     });
-    expect(result.calculationVersion).toBe(2);
+    expect(result.calculationVersion).toBe(3);
+  });
+
+  it('normalise une variation incohérente avant de calculer la cible', () => {
+    const result = calculateDailyTarget({
+      date: '2026-06-23',
+      profile: createEntity<UserProfile>(createProfileInput({
+        goal: 'loss',
+        targetWeeklyWeightChangePercent: 0.5,
+      })),
+      settings: createDefaultAppSettings(),
+      weightKg: 60,
+      totalSteps: 3_000,
+      activities: [],
+    });
+
+    expect(result.targetWeeklyWeightChangePercentUsed).toBe(-0.5);
+    expect(result.goalRateWasNormalized).toBe(true);
+    expect(result.goalAdjustmentKcal).toBe(-330);
   });
 
   it('intègre un ajustement calorique accepté', () => {

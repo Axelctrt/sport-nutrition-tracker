@@ -80,6 +80,12 @@ export function DashboardCalculationDetails({ snapshot }: { snapshot: DailyTarge
         </div>
       </dl>
 
+      {snapshot.calculation.goalRateWasNormalized ? (
+        <InlineNotice className="mt-4" title="Variation hebdomadaire normalisée">
+          Le signe enregistré ne correspondait pas à l’objectif du profil. SportPilot a utilisé {snapshot.calculation.targetWeeklyWeightChangePercentUsed.toLocaleString('fr-FR')} % par semaine pour garantir un calcul cohérent.
+        </InlineNotice>
+      ) : null}
+
       {snapshot.calculation.macroDetails.carbohydratesClampedToZero ? (
         <InlineNotice className="mt-4" title="Glucides ramenés à zéro">
           Les objectifs de protéines et de lipides utilisent déjà toute la cible calorique disponible.
