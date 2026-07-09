@@ -132,6 +132,11 @@ describe('dailyTargetCoordinator', () => {
     );
     expect(snapshot.calculation.steps.totalSteps).toBe(9_000);
     expect(snapshot.target.targetCaloriesKcal).toBeGreaterThan(0);
+    expect(snapshot.energyTransparency).toMatchObject({
+      plannedSportCaloriesKcal: 0,
+      actualSportCaloriesKcal: 0,
+      rawSportCaloriesKcal: 0,
+    });
     expect(savedTarget).toHaveBeenCalledOnce();
   });
 });

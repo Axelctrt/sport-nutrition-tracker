@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { EntityId, LocalDate } from '@/domain/models/common';
 import type { StrengthSessionStyle } from '@/domain/models/strength';
+import type { PlannedActivityCalorieSnapshot } from '@/domain/models/plannedActivity';
 import type { WorkoutTemplateSummary } from '@/application/strength/workoutTemplateService';
 import { listWorkoutTemplates } from '@/application/strength/workoutTemplateService';
 import {
@@ -22,6 +23,9 @@ export function useWeeklyPlanning() {
   const [weekStart, setWeekStart] = useState<LocalDate>(() => getWeekStart());
   const [days, setDays] = useState<WeeklyPlanningDay[]>([]);
   const [templates, setTemplates] = useState<WorkoutTemplateSummary[]>([]);
+  const [calorieProjections, setCalorieProjections] = useState<
+    Record<string, PlannedActivityCalorieSnapshot>
+  >({});
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [errorMessage, setErrorMessage] = useState<string>();
   const [actionId, setActionId] = useState<EntityId | 'create'>();
@@ -34,8 +38,29 @@ export function useWeeklyPlanning() {
         listWeeklyPlanning(repositories.workoutSessions, weekStart),
         listWorkoutTemplates(repositories.workoutTemplates, false),
       ]);
+      let nextCalorieProjections: Record<string, PlannedActivityCalorieSnapshot> = {};
+      const firstDate = nextDays.at(0)?.date;
+      const lastDate = nextDays.at(-1)?.date;
+
+      if (firstDate && lastDate) {
+        try {
+          const targets = await repositories.targets.listTargetsBetween(
+            firstDate,
+            lastDate,
+          );
+          nextCalorieProjections = Object.fromEntries(
+            targets.flatMap((target) => (target.plannedActivities ?? []))
+              .filter((projection) => projection.source === 'strengthSession')
+              .map((projection) => [projection.sourceId, projection]),
+          );
+        } catch {
+          // L’estimation affichée est secondaire : le planning reste utilisable.
+        }
+      }
+
       setDays(nextDays);
       setTemplates(nextTemplates);
+      setCalorieProjections(nextCalorieProjections);
       setStatus('ready');
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Impossible de charger le planning.');
@@ -162,6 +187,7 @@ export function useWeeklyPlanning() {
     weekStart,
     days,
     templates,
+    calorieProjections,
     status,
     errorMessage,
     actionId,

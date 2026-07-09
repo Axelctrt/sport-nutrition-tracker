@@ -27,6 +27,17 @@ function createSnapshot(weightDate = '2026-06-25'): DailyTargetSnapshot {
       period: { start: '2026-06-15', end: '2026-06-21' },
       dailyWeights: [],
     },
+    energyTransparency: {
+      expenditureWithoutSportKcal: 1_950,
+      targetBeforeSportKcal: 2_000,
+      plannedSportCaloriesKcal: 120,
+      actualSportCaloriesKcal: 80,
+      rawSportCaloriesKcal: 200,
+      targetSportImpactKcal: 200,
+      currentTargetKcal: 2_200,
+      floorLimitedSportImpact: false,
+      items: [],
+    },
     dateWeightEntry: weightDate === '2026-06-25'
       ? {
           id: 'weight-1',
@@ -67,6 +78,8 @@ describe('DashboardTodaySummary', () => {
     );
 
     expect(screen.getByText('Calories consommées')).toBeInTheDocument();
+    expect(screen.getByText('Avant sport : 2 000 kcal')).toBeInTheDocument();
+    expect(screen.getByText('Sport : +200 kcal')).toBeInTheDocument();
     expect(screen.getByText('kcal restantes')).toBeInTheDocument();
     expect(screen.getByRole('progressbar', { name: 'Progression calorique' })).toHaveAttribute(
       'aria-valuenow',

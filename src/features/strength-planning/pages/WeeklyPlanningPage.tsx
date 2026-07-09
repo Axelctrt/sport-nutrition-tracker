@@ -68,6 +68,7 @@ export function WeeklyPlanningPage() {
     weekStart,
     days,
     templates,
+    calorieProjections,
     status,
     errorMessage,
     actionId,
@@ -424,6 +425,12 @@ export function WeeklyPlanningPage() {
                               summary.session.id
                             }
                             summary={summary}
+                            {...(calorieProjections[summary.session.id]
+                              ? {
+                                  calorieProjection:
+                                    calorieProjections[summary.session.id],
+                                }
+                              : {})}
                             busy={
                               actionId ===
                               summary.session.id

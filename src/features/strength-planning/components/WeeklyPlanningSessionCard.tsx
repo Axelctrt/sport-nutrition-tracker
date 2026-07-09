@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { LocalDate } from '@/domain/models/common';
 import type { WorkoutSessionSummary } from '@/application/strength/workoutSessionService';
+import type { PlannedActivityCalorieSnapshot } from '@/domain/models/plannedActivity';
 import { getWorkoutSessionTitle } from '@/application/strength/workoutSessionService';
 import { planningDateForSession } from '@/application/strength/weeklyPlanningService';
 import { strengthSessionStyleLabels } from '@/application/planning/plannedActivityCalories';
@@ -15,6 +16,7 @@ import { formatLocalDate } from '@/shared/utils/dates';
 
 interface Props {
   summary: WorkoutSessionSummary;
+  calorieProjection?: PlannedActivityCalorieSnapshot;
   busy: boolean;
   highlighted?: boolean;
   onStart: (sessionId: string) => void;
@@ -43,6 +45,7 @@ const statusClasses = {
 
 export function WeeklyPlanningSessionCard({
   summary,
+  calorieProjection,
   busy,
   highlighted = false,
   onStart,
@@ -78,6 +81,9 @@ export function WeeklyPlanningSessionCard({
             {session.plannedDurationMinutes ? ` · ${session.plannedDurationMinutes} min prévues` : ''}
             {session.strengthSessionStyle
               ? ` · ${strengthSessionStyleLabels[session.strengthSessionStyle]}`
+              : ''}
+            {calorieProjection
+              ? ` · ${Math.round(calorieProjection.estimatedCaloriesKcal).toLocaleString('fr-FR')} kcal ${calorieProjection.basis === 'actualDuration' ? 'réelles' : 'estimées'}`
               : ''}
           </p>
         </div>

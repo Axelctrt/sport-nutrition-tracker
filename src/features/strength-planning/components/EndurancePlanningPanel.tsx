@@ -1,3 +1,4 @@
+import { addDays, parseISO } from 'date-fns';
 import {
   Activity,
   Bike,
@@ -28,12 +29,14 @@ import {
 } from '@/application/planning/endurancePlanningService';
 import { routePaths } from '@/app/routePaths';
 import { recalculatePlannedActivityTargetsForCurrentProfile } from '@/application/planning/plannedActivityTargetService';
+import { getEffectiveActivityCalories } from '@/domain/calculations/activityCalories';
 import { unlinkPlannedSource } from '@/application/planning/activityReconciliationService';
 import type {
   ActivityIntensity,
   Activity as ActivityModel,
 } from '@/domain/models/activity';
 import type { LocalDate } from '@/domain/models/common';
+import type { PlannedActivityCalorieSnapshot } from '@/domain/models/plannedActivity';
 import {
   ENDURANCE_PLANNING_CHANGED_EVENT,
   readEndurancePlanningState,
@@ -168,6 +171,9 @@ export function EndurancePlanningPanel({
   const toast = useToast();
   const [week, setWeek] =
     useState<EndurancePlanningWeek>();
+  const [calorieProjections, setCalorieProjections] = useState<
+    Record<string, PlannedActivityCalorieSnapshot>
+  >({});
   const [error, setError] = useState<string>();
   const [title, setTitle] = useState('');
   const [activityType, setActivityType] =
@@ -191,6 +197,14 @@ export function EndurancePlanningPanel({
 
     try {
       const data = await readBackupData(appDatabase);
+      const weekEnd = toLocalDate(addDays(parseISO(weekStart), 6));
+      const nextCalorieProjections = Object.fromEntries(
+        data.dailyTargets
+          .filter((target) => target.date >= weekStart && target.date <= weekEnd)
+          .flatMap((target) => target.plannedActivities ?? [])
+          .filter((projection) => projection.source === 'endurancePlanning')
+          .map((projection) => [projection.sourceId, projection]),
+      );
       setWeek(
         buildEndurancePlanningWeek(
           readEndurancePlanningState(),
@@ -198,6 +212,7 @@ export function EndurancePlanningPanel({
           weekStart,
         ),
       );
+      setCalorieProjections(nextCalorieProjections);
     } catch (caughtError) {
       setError(
         caughtError instanceof Error
@@ -591,6 +606,9 @@ export function EndurancePlanningPanel({
                               {target
                                 ? ` · ${target}`
                                 : ''}
+                              {calorieProjections[view.session.id]
+                                ? ` · ≈ ${Math.round(calorieProjections[view.session.id]!.estimatedCaloriesKcal).toLocaleString('fr-FR')} kcal prévues`
+                                : ''}
                             </p>
 
                             {view.matchedActivity ? (
@@ -600,9 +618,11 @@ export function EndurancePlanningPanel({
                                   className="mr-1 inline size-4"
                                 />
                                 {
-                                  actualLabel(
-                                    view.matchedActivity,
-                                  )
+                                  `${actualLabel(view.matchedActivity)} · ${Math.round(
+                                    view.matchedActivity.type === 'walking' && view.matchedActivity.includedInDailySteps
+                                      ? 0
+                                      : getEffectiveActivityCalories(view.matchedActivity),
+                                  ).toLocaleString('fr-FR')} kcal réelles`
                                 }
                               </p>
                             ) : null}

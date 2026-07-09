@@ -24,6 +24,10 @@ import type { WeightRepository } from '@/infrastructure/repositories/contracts/W
 import type { WorkoutSessionRepository } from '@/infrastructure/repositories/contracts/WorkoutSessionRepository';
 import { repositories } from '@/infrastructure/repositories/repositories';
 import { readEndurancePlanningState } from '@/domain/planning/endurancePlanningState';
+import {
+  buildDailyEnergyTransparency,
+  type DailyEnergyTransparency,
+} from '@/application/daily/dailyEnergyTransparency';
 
 export type CalculationWeightResolution = ReferenceWeightResolution;
 
@@ -48,6 +52,7 @@ export interface DailyTargetSnapshot {
   stepsEntry: DailySteps | undefined;
   activities: Activity[];
   plannedActivities: PlannedActivityCalorieSnapshot[];
+  energyTransparency: DailyEnergyTransparency;
 }
 
 const defaultDependencies: DailyTargetCoordinatorDependencies = {
@@ -181,6 +186,16 @@ export async function calculateAndPersistDailyTarget(
   const target = await dependencies.targets.upsertTarget(
     toDailyTargetInput(date, calculation),
   );
+  const energyTransparency = buildDailyEnergyTransparency({
+    date,
+    calculation,
+    activities,
+    plannedActivities,
+    strengthSessions,
+    enduranceSessions,
+    settings,
+    weightKg: weight.weightKg,
+  });
 
   return {
     date,
@@ -192,5 +207,6 @@ export async function calculateAndPersistDailyTarget(
     stepsEntry,
     activities,
     plannedActivities,
+    energyTransparency,
   };
 }
