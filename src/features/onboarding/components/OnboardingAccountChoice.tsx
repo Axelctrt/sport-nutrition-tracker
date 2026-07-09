@@ -280,7 +280,7 @@ export function OnboardingAccountChoice({
             Connecter un compte
           </h3>
           <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-            Authentification par email et code à usage unique. Après connexion, SportPilot demandera s’il faut ouvrir, restaurer, associer ou créer l’espace de données du compte.
+            Authentification par email et code à usage unique. Après le choix de l’espace, SportPilot demandera un pseudonyme public unique avant de créer le profil sportif.
           </p>
 
           {!accountEnabled || !client ? (
