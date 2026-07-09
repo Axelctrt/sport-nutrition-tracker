@@ -23,6 +23,7 @@ const formulas = [
     lines: [
       'Homme : 10 × poids + 6,25 × taille − 5 × âge + 5',
       'Femme : 10 × poids + 6,25 × taille − 5 × âge − 161',
+      'Le poids utilisé est la moyenne des pesées de la semaine civile précédente, ou le poids du profil si cette semaine ne contient aucune pesée.',
       'Le moteur applique ensuite le coefficient d’activité quotidienne sélectionné dans le profil.',
     ],
   },

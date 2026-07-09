@@ -36,20 +36,26 @@ function createAdjustment(
 }
 
 describe('dailyTargetCoordinator', () => {
-  it('utilise la dernière pesée disponible avant la date', () => {
-    const weightEntry = createWeightEntry();
+  it('utilise la moyenne des pesées de la semaine civile précédente', () => {
+    const entries = [
+      createWeightEntry('2026-06-29', 60),
+      createWeightEntry('2026-07-01', 61),
+      createWeightEntry('2026-07-05', 62),
+    ];
 
-    expect(resolveCalculationWeight(createProfile(), weightEntry)).toEqual({
+    expect(resolveCalculationWeight('2026-07-09', createProfile(), entries)).toMatchObject({
       weightKg: 61,
-      source: 'weightEntry',
-      weightEntry,
+      source: 'previousWeekAverage',
+      period: { start: '2026-06-29', end: '2026-07-05' },
     });
   });
 
-  it('revient au poids initial du profil sans pesée antérieure', () => {
-    expect(resolveCalculationWeight(createProfile(), undefined)).toEqual({
+  it('revient au poids initial du profil sans pesée la semaine précédente', () => {
+    expect(resolveCalculationWeight('2026-07-09', createProfile(), [])).toEqual({
       weightKg: 60,
       source: 'profile',
+      period: { start: '2026-06-29', end: '2026-07-05' },
+      dailyWeights: [],
     });
   });
 
@@ -90,7 +96,13 @@ describe('dailyTargetCoordinator', () => {
     }));
     const dependencies: DailyTargetCoordinatorDependencies = {
       settings: { get: vi.fn(async () => createDefaultAppSettings()) },
-      weight: { getLatestOnOrBefore: vi.fn(async () => createWeightEntry('2026-06-23', 62)) },
+      weight: {
+        listBetween: vi.fn(async () => [
+          createWeightEntry('2026-06-15', 61),
+          createWeightEntry('2026-06-18', 63),
+        ]),
+        getByDate: vi.fn(async () => createWeightEntry('2026-06-23', 62)),
+      },
       steps: {
         getByDate: vi.fn(async () => createEntity({
           date: '2026-06-23',
@@ -110,6 +122,12 @@ describe('dailyTargetCoordinator', () => {
     );
 
     expect(snapshot.weight.weightKg).toBe(62);
+    expect(snapshot.weight.source).toBe('previousWeekAverage');
+    expect(snapshot.dateWeightEntry?.weightKg).toBe(62);
+    expect(dependencies.weight.listBetween).toHaveBeenCalledWith(
+      '2026-06-15',
+      '2026-06-21',
+    );
     expect(snapshot.calculation.steps.totalSteps).toBe(9_000);
     expect(snapshot.target.targetCaloriesKcal).toBeGreaterThan(0);
     expect(savedTarget).toHaveBeenCalledOnce();

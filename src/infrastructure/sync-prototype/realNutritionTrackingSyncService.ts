@@ -5,6 +5,7 @@ import type {
   WeeklyReview,
 } from '@/domain/models/weeklyReview';
 import { calculateDailyTarget } from '@/domain/calculations/dailyTarget';
+import { resolveReferenceWeight } from '@/domain/calculations/referenceWeight';
 import { resolveAcceptedCalibrationAdjustment } from '@/application/daily/dailyTargetCoordinator';
 import type { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import { DexieSettingsRepository } from '@/infrastructure/repositories/dexie/DexieSettingsRepository';
@@ -227,15 +228,6 @@ export async function previewRealNutritionTrackingSync(
   return buildPreview(state, resolveFinalState(state));
 }
 
-function latestWeightOnOrBefore<T extends { date: LocalDate }>(
-  values: readonly T[],
-  date: LocalDate,
-): T | undefined {
-  return values
-    .filter((value) => value.date <= date)
-    .sort((left, right) => right.date.localeCompare(left.date))[0];
-}
-
 async function reconcileDailyTargets(
   localDatabase: AppDatabase,
   adjustments: readonly AcceptedCalorieAdjustment[],
@@ -266,14 +258,18 @@ async function reconcileDailyTargets(
   }
 
   const recalculated: DailyTarget[] = mismatched.map((target) => {
-    const weight = latestWeightOnOrBefore(weights, target.date);
+    const weight = resolveReferenceWeight(
+      target.date,
+      profile.initialWeightKg,
+      weights,
+    );
     const acceptedCalibrationAdjustmentKcal =
       resolveAcceptedCalibrationAdjustment(adjustments, target.date);
     const calculation = calculateDailyTarget({
       date: target.date,
       profile,
       settings,
-      weightKg: weight?.weightKg ?? profile.initialWeightKg,
+      weightKg: weight.weightKg,
       totalSteps: stepsByDate.get(target.date)?.totalSteps ?? 0,
       activities: activitiesByDate.get(target.date) ?? [],
       acceptedCalibrationAdjustmentKcal,

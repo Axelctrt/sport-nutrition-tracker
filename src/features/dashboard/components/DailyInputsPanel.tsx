@@ -31,16 +31,14 @@ export function DailyInputsPanel({
   const actionToast = useActionToast();
   const [weightFeedback, setWeightFeedback] = useState<Feedback>();
   const [stepsFeedback, setStepsFeedback] = useState<Feedback>();
-  const weightEntry = snapshot.weight.source === 'weightEntry'
-    ? snapshot.weight.weightEntry
-    : undefined;
+  const weightEntry = snapshot.dateWeightEntry;
 
   const handleWeightSubmit = async (values: WeightEntryFormValues) => {
     setWeightFeedback(undefined);
 
     try {
       await onSaveWeight(weightFormValuesToEntity(values));
-      const message = 'La pesée et les objectifs du jour ont été recalculés.';
+      const message = 'La pesée est enregistrée. Elle contribuera au poids de référence de la semaine suivante.';
       setWeightFeedback({ tone: 'success', message });
       actionToast.success({ key: 'dashboard-weight-save', title: 'Poids enregistré', description: message });
     } catch (error) {
@@ -86,7 +84,7 @@ export function DailyInputsPanel({
             Renseigner le poids
           </h2>
           <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-            Le dernier poids connu est utilisé pour tous les calculs jusqu’à la prochaine pesée.
+            Les pesées de cette semaine servent à calculer le poids de référence de la semaine suivante.
           </p>
         </div>
 

@@ -3,6 +3,7 @@ import {
   calculateAndPersistDailyTarget,
   type DailyTargetSnapshot,
 } from '@/application/daily/dailyTargetCoordinator';
+import { recalculateTargetsAfterWeightChange } from '@/application/daily/referenceWeightRecalculationService';
 import { useProfile } from '@/app/providers/profile/useProfile';
 import {
   calculateDailyNutrition,
@@ -12,6 +13,7 @@ import {
 } from '@/domain/calculations/nutrition';
 import type { NewEntity } from '@/domain/models/common';
 import type { DailyJournalStatus } from '@/domain/models/food';
+import type { UserProfile } from '@/domain/models/profile';
 import type { WorkoutSession } from '@/domain/models/strength';
 import type { DailySteps } from '@/domain/models/steps';
 import type { WeightEntry } from '@/domain/models/weight';
@@ -31,8 +33,38 @@ export interface ActiveWorkoutSummary {
   exerciseCount: number;
 }
 
-export function useDailyDashboard() {
-  const { profile } = useProfile();
+export interface DailyDashboardDependencies {
+  calculateTarget: typeof calculateAndPersistDailyTarget;
+  recalculateTargetsAfterWeightChange: typeof recalculateTargetsAfterWeightChange;
+  repositories: {
+    weight: Pick<typeof repositories.weight, 'upsert'>;
+    food: Pick<
+      typeof repositories.food,
+      'listEntriesByDate' | 'getJournalStatus'
+    >;
+    workoutSessions: Pick<
+      typeof repositories.workoutSessions,
+      'getInProgress' | 'listExercises'
+    >;
+    steps: Pick<typeof repositories.steps, 'upsert'>;
+  };
+}
+
+export interface UseDailyDashboardOptions {
+  profileOverride?: UserProfile;
+  dependencies?: DailyDashboardDependencies;
+}
+
+const defaultDependencies: DailyDashboardDependencies = {
+  calculateTarget: calculateAndPersistDailyTarget,
+  recalculateTargetsAfterWeightChange,
+  repositories,
+};
+
+export function useDailyDashboard(options: UseDailyDashboardOptions = {}) {
+  const { profile: contextProfile } = useProfile();
+  const profile = options.profileOverride ?? contextProfile;
+  const dependencies = options.dependencies ?? defaultDependencies;
   const [status, setStatus] = useState<DailyDashboardStatus>('loading');
   const [snapshot, setSnapshot] = useState<DailyTargetSnapshot>();
   const [nutrition, setNutrition] = useState<DailyDashboardNutrition>();
@@ -50,13 +82,13 @@ export function useDailyDashboard() {
 
     try {
       const [nextSnapshot, entries, journalStatus, inProgressSession] = await Promise.all([
-        calculateAndPersistDailyTarget(date, profile),
-        repositories.food.listEntriesByDate(date),
-        repositories.food.getJournalStatus(date),
-        repositories.workoutSessions.getInProgress(),
+        dependencies.calculateTarget(date, profile),
+        dependencies.repositories.food.listEntriesByDate(date),
+        dependencies.repositories.food.getJournalStatus(date),
+        dependencies.repositories.workoutSessions.getInProgress(),
       ]);
       const inProgressExercises = inProgressSession
-        ? await repositories.workoutSessions.listExercises(inProgressSession.id)
+        ? await dependencies.repositories.workoutSessions.listExercises(inProgressSession.id)
         : [];
       const consumed = calculateDailyNutrition(entries);
       setSnapshot(nextSnapshot);
@@ -81,21 +113,24 @@ export function useDailyDashboard() {
       );
       setStatus('error');
     }
-  }, [date, profile]);
+  }, [date, dependencies, profile]);
 
   useEffect(() => {
     void refresh();
   }, [refresh]);
 
   const saveWeight = useCallback(async (data: NewEntity<WeightEntry>) => {
-    await repositories.weight.upsert(data);
+    await dependencies.repositories.weight.upsert(data);
+    if (profile) {
+      await dependencies.recalculateTargetsAfterWeightChange(data.date, profile);
+    }
     await refresh();
-  }, [refresh]);
+  }, [dependencies, profile, refresh]);
 
   const saveSteps = useCallback(async (data: NewEntity<DailySteps>) => {
-    await repositories.steps.upsert(data);
+    await dependencies.repositories.steps.upsert(data);
     await refresh();
-  }, [refresh]);
+  }, [dependencies, refresh]);
 
   return {
     date,
