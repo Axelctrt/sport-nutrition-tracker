@@ -1,4 +1,9 @@
 import { resolveActivityCalculationContext } from '@/application/activities/activityCalculationContext';
+import {
+  reconcileActivityPlannedLink,
+  unlinkDeletedActivity,
+  validateActivityPlannedLink,
+} from '@/application/planning/activityReconciliationService';
 import { calculateAndPersistDailyTarget } from '@/application/daily/dailyTargetCoordinator';
 import {
   runSocialActivitySnapshotObserverBestEffort,
@@ -36,6 +41,11 @@ export interface ActivityServiceDependencies {
     date: string,
     profile: UserProfile,
   ) => Promise<unknown>;
+  plannedActivityLinks?: {
+    validate: typeof validateActivityPlannedLink;
+    reconcile: typeof reconcileActivityPlannedLink;
+    unlinkDeleted: typeof unlinkDeletedActivity;
+  };
   socialActivitySnapshots?: Pick<
     SocialActivitySnapshotObserver,
     'onActivitySaved' | 'onActivityDeleted'
@@ -47,6 +57,11 @@ const defaultDependencies: ActivityServiceDependencies = {
   weight: repositories.weight,
   activities: repositories.activities,
   recalculateDailyTarget: calculateAndPersistDailyTarget,
+  plannedActivityLinks: {
+    validate: validateActivityPlannedLink,
+    reconcile: reconcileActivityPlannedLink,
+    unlinkDeleted: unlinkDeletedActivity,
+  },
   ...(import.meta.env.MODE === 'test'
     ? {}
     : { socialActivitySnapshots: runtimeSocialActivitySnapshotObserver }),
@@ -90,10 +105,26 @@ export async function createActivityFromDraft(
     resolveActivityCalculationContext(draft.date, profile, dependencies.weight),
   ]);
 
-  const activity = await dependencies.activities.create(
-    toActivityInput(draft, calculationContext.weight.weightKg, settings),
-  );
-  await recalculateDates([activity.date], profile, dependencies);
+  const input = toActivityInput(draft, calculationContext.weight.weightKg, settings);
+  const plannedActivityLinks = dependencies.plannedActivityLinks;
+  if (input.plannedActivity && plannedActivityLinks) {
+    await plannedActivityLinks.validate({
+      ...input,
+      id: '__new_activity__',
+    } as Activity);
+  }
+
+  const activity = await dependencies.activities.create(input);
+  let affectedDates = [activity.date];
+  if (activity.plannedActivity && plannedActivityLinks) {
+    try {
+      affectedDates = await plannedActivityLinks.reconcile(undefined, activity);
+    } catch (error) {
+      await dependencies.activities.delete(activity.id);
+      throw error;
+    }
+  }
+  await recalculateDates(affectedDates, profile, dependencies);
   const socialActivitySnapshots = dependencies.socialActivitySnapshots;
   await runSocialActivitySnapshotObserverBestEffort(
     socialActivitySnapshots
@@ -123,15 +154,31 @@ export async function updateActivityFromDraft(
     calculationContext.weight.weightKg,
     settings,
   );
-  const saved = await dependencies.activities.save({
+  const candidate = {
     ...input,
     ...(existing.rpe === undefined ? {} : { rpe: existing.rpe }),
     id: existing.id,
     createdAt: existing.createdAt,
     updatedAt: existing.updatedAt,
-  } as Activity);
+  } as Activity;
+  const plannedActivityLinks = dependencies.plannedActivityLinks;
+  if (candidate.plannedActivity && plannedActivityLinks) {
+    await plannedActivityLinks.validate(candidate);
+  }
 
-  await recalculateDates([existing.date, saved.date], profile, dependencies);
+  const saved = await dependencies.activities.save(candidate);
+  let linkedDates: readonly string[] = [];
+  if (plannedActivityLinks) {
+    try {
+      linkedDates = await plannedActivityLinks.reconcile(existing, saved);
+    } catch (error) {
+      await dependencies.activities.save(existing);
+      await plannedActivityLinks.reconcile(saved, existing);
+      throw error;
+    }
+  }
+
+  await recalculateDates([existing.date, saved.date, ...linkedDates], profile, dependencies);
   const socialActivitySnapshots = dependencies.socialActivitySnapshots;
   await runSocialActivitySnapshotObserverBestEffort(
     socialActivitySnapshots
@@ -151,8 +198,21 @@ export async function deleteActivityAndRecalculate(
     return;
   }
 
-  await dependencies.activities.delete(activityId);
-  await recalculateDates([existing.date], profile, dependencies);
+  const plannedActivityLinks = dependencies.plannedActivityLinks;
+  let affectedDates: readonly string[] = [existing.date];
+  if (plannedActivityLinks) {
+    affectedDates = await plannedActivityLinks.unlinkDeleted(existing);
+  }
+
+  try {
+    await dependencies.activities.delete(activityId);
+  } catch (error) {
+    if (plannedActivityLinks) {
+      await plannedActivityLinks.reconcile(undefined, existing);
+    }
+    throw error;
+  }
+  await recalculateDates(affectedDates, profile, dependencies);
   const socialActivitySnapshots = dependencies.socialActivitySnapshots;
   await runSocialActivitySnapshotObserverBestEffort(
     socialActivitySnapshots

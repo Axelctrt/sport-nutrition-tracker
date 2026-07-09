@@ -1,7 +1,7 @@
 import { PLANNED_ACTIVITY_CALCULATION_VERSION } from '@/domain/calculations/constants';
 import { calculateNetMetCalories } from '@/domain/calculations/met';
 import { calculateRunningCalories } from '@/domain/calculations/running';
-import type { Activity, ActivityIntensity, ActivityType } from '@/domain/models/activity';
+import type { Activity, ActivityIntensity } from '@/domain/models/activity';
 import type { LocalDate } from '@/domain/models/common';
 import type { PlannedActivityCalorieSnapshot } from '@/domain/models/plannedActivity';
 import type { AppSettings } from '@/domain/models/settings';
@@ -63,7 +63,8 @@ function strengthProjection(
 ): PlannedActivityCalorieSnapshot | undefined {
   if (
     session.status === 'abandoned' ||
-    session.status === 'skipped'
+    session.status === 'skipped' ||
+    session.completedActivityId !== undefined
   ) {
     return undefined;
   }
@@ -107,7 +108,7 @@ function enduranceProjection(
   weightKg: number,
   settings: AppSettings,
 ): PlannedActivityCalorieSnapshot | undefined {
-  if (session.status !== 'planned') {
+  if (session.status !== 'planned' || session.completedActivityId !== undefined) {
     return undefined;
   }
 
@@ -167,20 +168,6 @@ function enduranceProjection(
   };
 }
 
-function consumeMatchingActivity(
-  activities: readonly Activity[],
-  usedActivityIds: Set<string>,
-  type: ActivityType,
-): boolean {
-  const match = activities.find(
-    (activity) => activity.type === type && !usedActivityIds.has(activity.id),
-  );
-
-  if (!match) return false;
-  usedActivityIds.add(match.id);
-  return true;
-}
-
 export interface BuildPlannedActivityCaloriesInput {
   date: LocalDate;
   weightKg: number;
@@ -198,7 +185,6 @@ export function buildPlannedActivityCalories({
   strengthSessions,
   enduranceSessions,
 }: BuildPlannedActivityCaloriesInput): PlannedActivityCalorieSnapshot[] {
-  const usedActivityIds = new Set<string>();
   const projections: PlannedActivityCalorieSnapshot[] = [];
 
   const strengthCandidates = strengthSessions
@@ -214,7 +200,10 @@ export function buildPlannedActivityCalories({
     const projection = strengthProjection(session, date, weightKg);
     if (!projection) continue;
 
-    if (consumeMatchingActivity(activities, usedActivityIds, 'strengthTraining')) {
+    if (activities.some((activity) =>
+      activity.plannedActivity?.source === 'strengthSession' &&
+      activity.plannedActivity.sourceId === session.id
+    )) {
       continue;
     }
 
@@ -229,7 +218,10 @@ export function buildPlannedActivityCalories({
     const projection = enduranceProjection(session, weightKg, settings);
     if (!projection) continue;
 
-    if (consumeMatchingActivity(activities, usedActivityIds, session.activityType)) {
+    if (activities.some((activity) =>
+      activity.plannedActivity?.source === 'endurancePlanning' &&
+      activity.plannedActivity.sourceId === session.id
+    )) {
       continue;
     }
 

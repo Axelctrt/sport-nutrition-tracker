@@ -9,15 +9,15 @@ import { createEntity } from '@/shared/utils/entities';
 function strengthSession(
   overrides: Partial<WorkoutSession> = {},
 ): WorkoutSession {
-  return createEntity({
+  const created = createEntity<WorkoutSession>({
     date: '2026-07-13',
-    status: 'planned' as const,
+    status: 'planned',
     plannedDate: '2026-07-13',
     plannedDurationMinutes: 60,
-    strengthSessionStyle: 'classic' as const,
+    strengthSessionStyle: 'classic',
     sourceTemplateNameSnapshot: 'Haut du corps',
-    ...overrides,
   });
+  return { ...created, ...overrides };
 }
 
 function enduranceSession(
@@ -38,13 +38,14 @@ function enduranceSession(
   };
 }
 
-function actualStrengthActivity(): Activity {
+function actualStrengthActivity(sessionId = 'planned-session'): Activity {
   return createEntity<StrengthTrainingActivity>({
     type: 'strengthTraining' as const,
     date: '2026-07-13',
     durationMinutes: 60,
     intensity: 'moderate' as const,
     met: 5,
+    plannedActivity: { source: 'strengthSession', sourceId: sessionId },
     calculation: {
       weightKg: 70,
       estimatedCaloriesKcal: 294,
@@ -124,8 +125,8 @@ describe('plannedActivityCalories', () => {
       date: '2026-07-13',
       weightKg: 70,
       settings,
-      activities: [actualStrengthActivity()],
-      strengthSessions: [strengthSession()],
+      activities: [actualStrengthActivity('planned-session')],
+      strengthSessions: [strengthSession({ id: 'planned-session' })],
       enduranceSessions: [],
     });
 
@@ -192,7 +193,7 @@ describe('plannedActivityCalories', () => {
       date: '2026-07-13',
       weightKg: 70,
       settings,
-      activities: [actualStrengthActivity()],
+      activities: [actualStrengthActivity('planned-session')],
       strengthSessions: [
         strengthSession({
           id: 'skipped-session',

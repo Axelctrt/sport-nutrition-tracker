@@ -2,6 +2,8 @@ import { ArrowLeft } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { resolveActivityCalculationContext } from '@/application/activities/activityCalculationContext';
+import { listPlannedActivityLinkOptions, type PlannedActivityLinkOption } from '@/application/planning/activityReconciliationService';
+import { plannedActivityReferenceKey } from '@/domain/models/plannedActivity';
 import {
   createActivityFromDraft,
   updateActivityFromDraft,
@@ -40,6 +42,15 @@ interface EditorState {
   settings: AppSettings;
   initialValues: ActivityFormValues;
   existingActivity?: Activity;
+  plannedActivityOptions: PlannedActivityLinkOption[];
+}
+
+async function loadPlannedActivityOptionsSafely(): Promise<PlannedActivityLinkOption[]> {
+  try {
+    return await listPlannedActivityLinkOptions();
+  } catch {
+    return [];
+  }
 }
 
 function ActivityEditor({
@@ -54,6 +65,10 @@ function ActivityEditor({
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const templateId = activityId ? undefined : searchParams.get('templateId') ?? undefined;
+  const requestedDate = activityId ? undefined : searchParams.get('date') ?? undefined;
+  const requestedType = activityId ? undefined : searchParams.get('type') as ActivityType | null;
+  const requestedPlannedSource = activityId ? undefined : searchParams.get('plannedSource');
+  const requestedPlannedId = activityId ? undefined : searchParams.get('plannedId');
   const navigationState = location.state as ActivityJournalNavigationState | null;
   const returnContext = navigationState?.activityJournalReturn;
   const [state, setState] = useState<EditorState>();
@@ -70,9 +85,10 @@ function ActivityEditor({
       setLoading(true);
       setErrorMessage(undefined);
       try {
-        const [settings, existingActivity] = await Promise.all([
+        const [settings, existingActivity, plannedActivityOptions] = await Promise.all([
           repositories.settings.get(),
           activityId ? repositories.activities.getById(activityId) : Promise.resolve(undefined),
+          loadPlannedActivityOptionsSafely(),
         ]);
 
         if (activityId && !existingActivity) {
@@ -85,16 +101,41 @@ function ActivityEditor({
         if (template && !allowedTypes.includes(template.activityType)) {
           throw new Error('Ce modèle ne correspond pas au type d’activité ouvert.');
         }
-        const initialValues = existingActivity
+        const baseValues = existingActivity
           ? activityToFormValues(existingActivity)
           : template
             ? enduranceTemplateToFormValues(template, settings)
-            : defaultActivityFormValues(initialType, settings);
+            : defaultActivityFormValues(
+                requestedType && allowedTypes.includes(requestedType)
+                  ? requestedType
+                  : initialType,
+                settings,
+              );
+        const requestedReference =
+          requestedPlannedSource && requestedPlannedId
+            ? plannedActivityReferenceKey({
+                source: requestedPlannedSource as 'strengthSession' | 'endurancePlanning',
+                sourceId: requestedPlannedId,
+              })
+            : '';
+        const availableOptions = plannedActivityOptions.filter((option) =>
+          !option.alreadyLinkedActivityId || option.alreadyLinkedActivityId === existingActivity?.id
+        );
+        const initialValues: ActivityFormValues = {
+          ...baseValues,
+          ...(requestedDate && isValidLocalDate(requestedDate)
+            ? { date: requestedDate }
+            : {}),
+          ...(requestedReference && availableOptions.some((option) => option.key === requestedReference)
+            ? { plannedActivityKey: requestedReference }
+            : {}),
+        };
 
         if (active) {
           setState({
             settings,
             initialValues,
+            plannedActivityOptions: availableOptions,
             ...(existingActivity ? { existingActivity } : {}),
           });
           setSelectedDate(initialValues.date);
@@ -118,7 +159,16 @@ function ActivityEditor({
     return () => {
       active = false;
     };
-  }, [activityId, allowedTypes, initialType, templateId]);
+  }, [
+    activityId,
+    allowedTypes,
+    initialType,
+    requestedDate,
+    requestedPlannedId,
+    requestedPlannedSource,
+    requestedType,
+    templateId,
+  ]);
 
   useEffect(() => {
     if (!profile || !isValidLocalDate(selectedDate)) {
@@ -243,6 +293,7 @@ function ActivityEditor({
             calculationWeightSource={calculationWeightSource}
             submitLabel={state.existingActivity ? 'Enregistrer les modifications' : 'Ajouter l’activité'}
             onDateChange={handleDateChange}
+            plannedActivityOptions={state.plannedActivityOptions}
             onSubmit={handleSubmit}
           />
         </div>

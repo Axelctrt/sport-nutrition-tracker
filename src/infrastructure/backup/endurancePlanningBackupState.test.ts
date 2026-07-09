@@ -24,6 +24,7 @@ describe('sauvegarde du planning d’endurance', () => {
           date: '2026-07-01',
           intensity: 'low',
           status: 'planned',
+          completedActivityId: 'activity-plan-1',
           createdAt: '2026-06-28T10:00:00.000Z',
           updatedAt: '2026-06-28T10:00:00.000Z',
         },
@@ -33,7 +34,10 @@ describe('sauvegarde du planning d’endurance', () => {
     expect(
       readRewardBackupState()
         .endurancePlanning?.sessions,
-    ).toHaveLength(1);
+    ).toEqual([expect.objectContaining({
+      id: 'plan-1',
+      completedActivityId: 'activity-plan-1',
+    })]);
   });
 
   it('restaure le planning sans casser les anciennes sauvegardes', async () => {

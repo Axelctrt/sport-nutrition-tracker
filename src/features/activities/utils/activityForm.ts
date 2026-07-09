@@ -9,6 +9,10 @@ import type {
   SwimmingActivity,
 } from '@/domain/models/activity';
 import type { ActivityDraft } from '@/application/activities/activityService';
+import {
+  parsePlannedActivityReferenceKey,
+  plannedActivityReferenceKey,
+} from '@/domain/models/plannedActivity';
 import type { SocialActivitySharingOverride } from '@/domain/friends/socialActivitySharingPolicy';
 import type { AppSettings } from '@/domain/models/settings';
 import type { ActivityFormValues } from '@/features/activities/schemas/activityFormSchema';
@@ -37,6 +41,7 @@ function optionalText(value: string): string | undefined {
 
 function commonDraft(values: ActivityFormValues) {
   const notes = optionalText(values.notes);
+  const plannedActivity = parsePlannedActivityReferenceKey(values.plannedActivityKey);
 
   return {
     date: values.date,
@@ -47,6 +52,7 @@ function commonDraft(values: ActivityFormValues) {
     ...(values.manualCaloriesKcal !== undefined
       ? { manualCaloriesKcal: values.manualCaloriesKcal }
       : {}),
+    ...(plannedActivity ? { plannedActivity } : {}),
     socialSharing: values.socialSharing,
   };
 }
@@ -149,6 +155,7 @@ export function defaultActivityFormValues(type: ActivityType, settings: AppSetti
     cyclingEnvironment: 'outdoor',
     met: metByType[type],
     includedInDailySteps: type === 'walking',
+    plannedActivityKey: '',
     socialSharing: { mode: 'inherit' },
   };
 }
@@ -176,6 +183,9 @@ export function activityToFormValues(activity: Activity): ActivityFormValues {
     cyclingEnvironment: 'outdoor',
     met: undefined,
     includedInDailySteps: false,
+    plannedActivityKey: activity.plannedActivity
+      ? plannedActivityReferenceKey(activity.plannedActivity)
+      : '',
     socialSharing: socialSharingOverrideToFormValue(activity.socialSharing ?? { mode: 'inherit' }),
   };
 

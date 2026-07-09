@@ -37,6 +37,7 @@ function runningActivity(
     sessionType: 'easy',
     distanceKm,
     averageCadenceSpm: 170,
+    plannedActivity: { source: 'endurancePlanning', sourceId: 'endurance-1' },
     calculation: {
       weightKg: 70,
       estimatedCaloriesKcal: 300,
@@ -45,16 +46,37 @@ function runningActivity(
   };
 }
 
+function strengthActivity(id: string, date: string, sessionId: string): Activity {
+  return {
+    id,
+    date,
+    createdAt: `${date}T18:00:00.000Z`,
+    updatedAt: `${date}T18:00:00.000Z`,
+    type: 'strengthTraining',
+    durationMinutes: 60,
+    intensity: 'moderate',
+    met: 3.5,
+    plannedActivity: { source: 'strengthSession', sourceId: sessionId },
+    calculation: {
+      weightKg: 70,
+      estimatedCaloriesKcal: 184,
+      calculationVersion: 2,
+    },
+  };
+}
+
 function workoutSession(
   id: string,
   plannedDate: string,
   status: WorkoutSession['status'],
+  completedActivityId?: string,
 ): WorkoutSession {
   return {
     id,
     date: plannedDate,
     plannedDate,
     status,
+    ...(completedActivityId ? { completedActivityId } : {}),
     createdAt: `${plannedDate}T08:00:00.000Z`,
     updatedAt: `${plannedDate}T08:00:00.000Z`,
   };
@@ -70,6 +92,7 @@ const endurancePlanningState: EndurancePlanningState = {
       date: '2026-06-03',
       intensity: 'moderate',
       status: 'planned',
+      completedActivityId: 'run-1',
       createdAt: '2026-06-01T08:00:00.000Z',
       updatedAt: '2026-06-01T08:00:00.000Z',
     },
@@ -79,12 +102,13 @@ const endurancePlanningState: EndurancePlanningState = {
 describe('buildProgressInsights', () => {
   it('calcule l’adhérence unifiée sans doubler une activité de musculation', () => {
     const running = runningActivity('run-1', '2026-06-03', 10);
+    const strength = strengthActivity('strength-activity', '2026-06-02', 'strength-1');
     const result = buildProgressInsights({
       weeks,
-      periodActivities: [running],
-      allActivities: [running],
+      periodActivities: [running, strength],
+      allActivities: [running, strength],
       workoutSessions: [
-        workoutSession('strength-1', '2026-06-02', 'completed'),
+        workoutSession('strength-1', '2026-06-02', 'completed', strength.id),
       ],
       endurancePlanningState,
       referenceDate: '2026-06-15',
@@ -102,6 +126,7 @@ describe('buildProgressInsights', () => {
 
   it('ne pénalise pas une semaine sans planning et conserve l’activité libre', () => {
     const running = runningActivity('run-2', '2026-06-10', 5);
+    delete running.plannedActivity;
     const result = buildProgressInsights({
       weeks,
       periodActivities: [running],

@@ -6,7 +6,7 @@ import type { WorkoutSessionSummary } from '@/application/strength/workoutSessio
 import { getWorkoutSessionTitle } from '@/application/strength/workoutSessionService';
 import { planningDateForSession } from '@/application/strength/weeklyPlanningService';
 import { strengthSessionStyleLabels } from '@/application/planning/plannedActivityCalories';
-import { workoutSessionPath } from '@/app/routePaths';
+import { routePaths, workoutSessionPath } from '@/app/routePaths';
 import { workoutSessionStatusLabel } from '@/features/strength-sessions/utils/sessionLabels';
 import { inputClassName } from '@/shared/forms/formStyles';
 import { Button } from '@/shared/ui/Button';
@@ -20,6 +20,17 @@ interface Props {
   onStart: (sessionId: string) => void;
   onReschedule: (sessionId: string, date: LocalDate) => Promise<boolean>;
   onSkip: (sessionId: string) => Promise<boolean>;
+}
+
+
+function simpleStrengthActivityPath(sessionId: string, date: LocalDate): string {
+  const params = new URLSearchParams({
+    date,
+    type: 'strengthTraining',
+    plannedSource: 'strengthSession',
+    plannedId: sessionId,
+  });
+  return `${routePaths.addStrengthActivity}?${params.toString()}`;
 }
 
 const statusClasses = {
@@ -91,6 +102,12 @@ export function WeeklyPlanningSessionCard({
           <Button size="sm" disabled={busy} onClick={() => onStart(session.id)}>
             <Play aria-hidden="true" className="size-4" />Démarrer
           </Button>
+          <Link
+            to={simpleStrengthActivityPath(session.id, plannedDate)}
+            className="inline-flex min-h-10 items-center justify-center rounded-xl border border-slate-300 px-3 text-sm font-semibold text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-800"
+          >
+            Saisir en activité simple
+          </Link>
           <Button size="sm" variant="secondary" disabled={busy} onClick={() => setShowReschedule((current) => !current)}>
             <CalendarClock aria-hidden="true" className="size-4" />Reporter
           </Button>

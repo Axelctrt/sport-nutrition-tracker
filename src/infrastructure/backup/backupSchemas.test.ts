@@ -207,6 +207,45 @@ describe("backupEnvelopeSchema", () => {
     expect(parsed.data.activities[3]).not.toHaveProperty("terrainType");
   });
 
+
+  it("conserve les liens explicites entre activité réelle et séance planifiée", () => {
+    const envelope = createValidEnvelope();
+    envelope.data.activities = [
+      createEntity<RunningActivity>(
+        {
+          ...createRunningActivityInput({ date: "2026-07-13" }),
+          plannedActivity: {
+            source: "endurancePlanning",
+            sourceId: "planned-run",
+          },
+        },
+        "activity-linked",
+      ),
+    ];
+    envelope.data.workoutSessions = [
+      createEntity(
+        createWorkoutSessionInput({
+          status: "completed",
+          date: "2026-07-14",
+          completedActivityId: "activity-strength-linked",
+        }),
+        "strength-plan",
+      ),
+    ];
+
+    const parsed = backupEnvelopeSchema.parse(envelope);
+
+    expect(parsed.data.activities[0]).toMatchObject({
+      plannedActivity: {
+        source: "endurancePlanning",
+        sourceId: "planned-run",
+      },
+    });
+    expect(parsed.data.workoutSessions[0]).toMatchObject({
+      completedActivityId: "activity-strength-linked",
+    });
+  });
+
   it("refuse deux pesées pour la même date", () => {
     const envelope = createValidEnvelope();
     envelope.data.weights = [

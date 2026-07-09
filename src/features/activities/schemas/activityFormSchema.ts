@@ -100,6 +100,7 @@ export const activityFormSchema = z
         .max(25, 'La valeur MET ne peut pas dépasser 25.'),
     ),
     includedInDailySteps: z.boolean(),
+    plannedActivityKey: z.string().max(500).optional(),
     socialSharing: socialActivitySharingOverrideSchema,
   })
   .superRefine((values, context) => {

@@ -36,6 +36,9 @@ function createDependencies(existing?: Activity): {
   recalculate: ReturnType<typeof vi.fn>;
   onActivitySaved: ReturnType<typeof vi.fn>;
   onActivityDeleted: ReturnType<typeof vi.fn>;
+  validateLink: ReturnType<typeof vi.fn>;
+  reconcileLink: ReturnType<typeof vi.fn>;
+  unlinkDeleted: ReturnType<typeof vi.fn>;
 } {
   const create = vi.fn(async (data) => createEntity(data));
   const save = vi.fn(async (activity) => activity);
@@ -43,6 +46,9 @@ function createDependencies(existing?: Activity): {
   const recalculate = vi.fn(async () => undefined);
   const onActivitySaved = vi.fn(async () => undefined);
   const onActivityDeleted = vi.fn(async () => undefined);
+  const validateLink = vi.fn(async () => undefined);
+  const reconcileLink = vi.fn(async (_previous, saved: Activity) => [saved.date]);
+  const unlinkDeleted = vi.fn(async (activity: Activity) => [activity.date]);
 
   return {
     dependencies: {
@@ -60,6 +66,11 @@ function createDependencies(existing?: Activity): {
         delete: remove,
       },
       recalculateDailyTarget: recalculate,
+      plannedActivityLinks: {
+        validate: validateLink,
+        reconcile: reconcileLink,
+        unlinkDeleted,
+      },
       socialActivitySnapshots: {
         onActivitySaved,
         onActivityDeleted,
@@ -71,6 +82,9 @@ function createDependencies(existing?: Activity): {
     recalculate,
     onActivitySaved,
     onActivityDeleted,
+    validateLink,
+    reconcileLink,
+    unlinkDeleted,
   };
 }
 
@@ -156,6 +170,50 @@ describe('activityService', () => {
 
     expect(remove).not.toHaveBeenCalled();
     expect(recalculate).not.toHaveBeenCalled();
+  });
+
+
+  it('persiste une liaison planifiée explicite et recalcule la date prévue', async () => {
+    const { dependencies, create, validateLink, reconcileLink, recalculate } = createDependencies();
+    reconcileLink.mockResolvedValueOnce(['2026-07-13', '2026-07-14']);
+
+    const activity = await createActivityFromDraft(
+      runningDraft({
+        date: '2026-07-14',
+        plannedActivity: { source: 'endurancePlanning', sourceId: 'run-plan' },
+      }),
+      profile(),
+      dependencies,
+    );
+
+    expect(create.mock.calls[0]?.[0]).toMatchObject({
+      plannedActivity: { source: 'endurancePlanning', sourceId: 'run-plan' },
+    });
+    expect(validateLink).toHaveBeenCalledOnce();
+    expect(reconcileLink).toHaveBeenCalledWith(undefined, activity);
+    expect(recalculate).toHaveBeenCalledWith('2026-07-13', expect.any(Object));
+    expect(recalculate).toHaveBeenCalledWith('2026-07-14', expect.any(Object));
+  });
+
+  it('retire la liaison avant de supprimer une activité réelle', async () => {
+    const existing = createEntity({
+      ...runningDraft({
+        plannedActivity: { source: 'endurancePlanning', sourceId: 'run-plan' },
+      }),
+      calculation: {
+        weightKg: 60,
+        estimatedCaloriesKcal: 600,
+        coefficientUsed: 1,
+        calculationVersion: 2,
+      },
+    }) as Activity;
+    const { dependencies, unlinkDeleted, remove } = createDependencies(existing);
+    unlinkDeleted.mockResolvedValueOnce(['2026-06-23', '2026-06-24']);
+
+    await deleteActivityAndRecalculate(existing.id, profile(), dependencies);
+
+    expect(unlinkDeleted).toHaveBeenCalledWith(existing);
+    expect(remove).toHaveBeenCalledWith(existing.id);
   });
 
   it('alimente le cycle social après une création sans modifier le résultat sportif', async () => {
