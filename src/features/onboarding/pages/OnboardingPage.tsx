@@ -1,26 +1,33 @@
-import { Dumbbell, LockKeyhole } from 'lucide-react';
+import { Cloud, CloudOff, Dumbbell, LockKeyhole } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCallback, useState } from 'react';
 import { useProfile } from '@/app/providers/profile/useProfile';
 import { routePaths } from '@/app/routePaths';
+import { OnboardingAccountChoice } from '@/features/onboarding/components/OnboardingAccountChoice';
 import { OnboardingProgress } from '@/features/onboarding/components/OnboardingProgress';
 import { useOnboardingFlow } from '@/features/onboarding/hooks/useOnboardingFlow';
 import {
   clearProfileOnboardingDraft,
   loadProfileOnboardingDraft,
   PROFILE_ONBOARDING_STEP_ID,
+  STORAGE_ONBOARDING_STEP_ID,
   saveProfileOnboardingDraft,
 } from '@/features/onboarding/storage/profileOnboardingDraft';
 import { ProfileForm } from '@/features/profile/components/ProfileForm';
 import type { ProfileFormValues } from '@/features/profile/schemas/profileSchema';
 import { DEFAULT_PROFILE_FORM_VALUES } from '@/features/profile/utils/defaultProfileFormValues';
 import { profileFormValuesToEntity } from '@/features/profile/utils/profileForm';
+import { activateGuestDataSpace } from '@/infrastructure/data-spaces/dataSpaceRegistry';
+import { activeDataSpace } from '@/infrastructure/database/database';
 import { useActionToast } from '@/shared/toast/useActionToast';
 import { Card } from '@/shared/ui/Card';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 import { SaveStatus, type SaveStatusValue } from '@/shared/ui/SaveStatus';
 
-const onboardingSteps = [{ id: PROFILE_ONBOARDING_STEP_ID }] as const;
+const onboardingSteps = [
+  { id: STORAGE_ONBOARDING_STEP_ID },
+  { id: PROFILE_ONBOARDING_STEP_ID },
+] as const;
 
 interface InitialOnboardingState {
   initialValues: ProfileFormValues;
@@ -64,6 +71,16 @@ export function OnboardingPage() {
     setDraftStatus('saving');
     setDraftStatus(saveProfileOnboardingDraft(values) ? 'saved' : 'error');
   }, []);
+
+  const handleChooseLocal = () => {
+    if (activeDataSpace.kind === 'account') {
+      activateGuestDataSpace();
+      window.location.reload();
+      return;
+    }
+
+    flow.goNext();
+  };
 
   const handleSubmit = async (values: ProfileFormValues) => {
     setSaveError(undefined);
@@ -116,9 +133,9 @@ export function OnboardingPage() {
             <div className="flex items-start gap-3">
               <LockKeyhole aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-brand-700 dark:text-brand-300" />
               <div>
-                <h2 className="font-semibold text-slate-950 dark:text-white">Données locales</h2>
+                <h2 className="font-semibold text-slate-950 dark:text-white">Données protégées</h2>
                 <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                  Le profil reste dans IndexedDB sur cet appareil. Aucun compte et aucun serveur ne sont utilisés.
+                  Le mode local reste disponible. Si un compte est connecté, SportPilot demande explicitement quel espace ouvrir avant d’afficher les données.
                 </p>
                 <Link
                   to={routePaths.privacy}
@@ -131,22 +148,28 @@ export function OnboardingPage() {
           </div>
         </Card>
 
-        <section aria-labelledby="onboarding-profile-title" className="min-w-0">
+        <section aria-labelledby="onboarding-step-title" className="min-w-0">
           <div className="mb-6 space-y-4">
             <div>
               <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
-                Profil local
+                {flow.state.currentStepId === STORAGE_ONBOARDING_STEP_ID
+                  ? 'Mode de démarrage'
+                  : 'Profil'}
               </p>
               <h2
                 ref={flow.headingRef}
-                id="onboarding-profile-title"
+                id="onboarding-step-title"
                 tabIndex={-1}
                 className="mt-1 text-2xl font-bold tracking-tight text-slate-950 outline-none dark:text-white"
               >
-                Créer le profil local
+                {flow.state.currentStepId === STORAGE_ONBOARDING_STEP_ID
+                  ? 'Choisir le mode local ou compte'
+                  : 'Créer le profil'}
               </h2>
               <p className="mt-2 text-slate-600 dark:text-slate-300">
-                Tous les paramètres pourront être modifiés ensuite depuis la page Profil.
+                {flow.state.currentStepId === STORAGE_ONBOARDING_STEP_ID
+                  ? 'Ce choix protège l’espace de données avant la création du profil.'
+                  : 'Tous les paramètres pourront être modifiés ensuite depuis la page Profil.'}
               </p>
             </div>
 
@@ -160,30 +183,62 @@ export function OnboardingPage() {
             </div>
           </div>
 
-          {initialState.restored ? (
-            <InlineNotice tone="success" title="Configuration reprise" className="mb-6">
-              Les réponses enregistrées sur cet appareil ont été restaurées automatiquement.
-            </InlineNotice>
-          ) : null}
+          {flow.state.currentStepId === STORAGE_ONBOARDING_STEP_ID ? (
+            <OnboardingAccountChoice
+              onChooseLocal={handleChooseLocal}
+              onContinueWithAccount={flow.goNext}
+            />
+          ) : (
+            <>
+              <InlineNotice
+                tone="info"
+                title={activeDataSpace.kind === 'account' ? 'Compte et espace confirmés' : 'Mode local confirmé'}
+                className="mb-6"
+              >
+                <div className="flex items-start gap-2">
+                  {activeDataSpace.kind === 'account' ? (
+                    <Cloud aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+                  ) : (
+                    <CloudOff aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+                  )}
+                  <p>
+                    {activeDataSpace.kind === 'account'
+                      ? 'Le profil sera créé dans l’espace isolé du compte actuellement ouvert. Tu peux revenir au choix précédent avant l’enregistrement.'
+                      : 'Le profil restera dans l’espace local de cet appareil. Tu pourras connecter un compte plus tard depuis Paramètres → Compte et appareils.'}
+                  </p>
+                </div>
+              </InlineNotice>
 
-          {draftStatus === 'error' ? (
-            <InlineNotice tone="warning" title="Brouillon local indisponible" className="mb-6">
-              Tu peux continuer, mais les réponses ne pourront pas être reprises après la fermeture de l’application.
-            </InlineNotice>
-          ) : null}
+              {initialState.restored ? (
+                <InlineNotice tone="success" title="Configuration reprise" className="mb-6">
+                  Les réponses enregistrées sur cet appareil ont été restaurées automatiquement.
+                </InlineNotice>
+              ) : null}
 
-          {saveError ? (
-            <InlineNotice tone="error" title="Enregistrement impossible" className="mb-6">
-              {saveError}
-            </InlineNotice>
-          ) : null}
+              {draftStatus === 'error' ? (
+                <InlineNotice tone="warning" title="Brouillon local indisponible" className="mb-6">
+                  Tu peux continuer, mais les réponses ne pourront pas être reprises après la fermeture de l’application.
+                </InlineNotice>
+              ) : null}
 
-          <ProfileForm
-            initialValues={initialState.initialValues}
-            submitLabel="Créer mon profil"
-            onSubmit={handleSubmit}
-            onValuesChange={handleValuesChange}
-          />
+              {saveError ? (
+                <InlineNotice tone="error" title="Enregistrement impossible" className="mb-6">
+                  {saveError}
+                </InlineNotice>
+              ) : null}
+
+              <ProfileForm
+                initialValues={initialState.initialValues}
+                submitLabel="Créer mon profil"
+                secondaryAction={{
+                  label: 'Revenir au choix local ou compte',
+                  onClick: flow.goBack,
+                }}
+                onSubmit={handleSubmit}
+                onValuesChange={handleValuesChange}
+              />
+            </>
+          )}
         </section>
       </div>
     </main>

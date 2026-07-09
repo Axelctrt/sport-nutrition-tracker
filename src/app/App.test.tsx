@@ -44,7 +44,7 @@ describe('App', () => {
 
     expect(screen.getByTestId('app-splash-screen')).toBeInTheDocument();
     expect(
-      await screen.findByRole('heading', { name: 'Créer le profil local' }, { timeout: 5_000 }),
+      await screen.findByRole('heading', { name: 'Choisir le mode local ou compte' }, { timeout: 5_000 }),
     ).toBeInTheDocument();
     expect(screen.queryByTestId('app-splash-screen')).not.toBeInTheDocument();
   }, 15_000);
@@ -53,7 +53,9 @@ describe('App', () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await screen.findByRole('heading', { name: 'Créer le profil local' }, { timeout: 5_000 });
+    await screen.findByRole('heading', { name: 'Choisir le mode local ou compte' }, { timeout: 5_000 });
+    await user.click(screen.getByRole('button', { name: 'Choisir le mode local' }));
+    await screen.findByRole('heading', { name: 'Créer le profil' }, { timeout: 5_000 });
     await user.type(screen.getByLabelText('Prénom'), 'Axel');
     expect(window.localStorage.getItem(ONBOARDING_DRAFT_STORAGE_KEY)).not.toBeNull();
     await user.click(screen.getByRole('button', { name: 'Créer mon profil' }));

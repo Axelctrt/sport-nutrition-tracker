@@ -1,6 +1,8 @@
 import {
+  clearProfileOnboardingDraft,
   loadProfileOnboardingDraft,
   normalizeProfileOnboardingValues,
+  profileOnboardingDraftStorageKey,
   saveProfileOnboardingDraft,
 } from '@/features/onboarding/storage/profileOnboardingDraft';
 import { DEFAULT_PROFILE_FORM_VALUES } from '@/features/profile/utils/defaultProfileFormValues';
@@ -40,4 +42,39 @@ describe('profileOnboardingDraft', () => {
       },
     });
   });
+
+  it('cloisonne les brouillons entre l’espace invité et les comptes', () => {
+    const guestValues = {
+      ...DEFAULT_PROFILE_FORM_VALUES,
+      firstName: 'Invité',
+    };
+    const accountValues = {
+      ...DEFAULT_PROFILE_FORM_VALUES,
+      firstName: 'Compte',
+    };
+    const accountSpaceId = 'account:acct-test' as const;
+
+    expect(saveProfileOnboardingDraft(guestValues, 'guest')).toBe(true);
+    expect(saveProfileOnboardingDraft(accountValues, accountSpaceId)).toBe(true);
+
+    expect(profileOnboardingDraftStorageKey('guest')).not.toBe(
+      profileOnboardingDraftStorageKey(accountSpaceId),
+    );
+    expect(loadProfileOnboardingDraft('guest')).toMatchObject({
+      status: 'restored',
+      draft: { values: { firstName: 'Invité' } },
+    });
+    expect(loadProfileOnboardingDraft(accountSpaceId)).toMatchObject({
+      status: 'restored',
+      draft: { values: { firstName: 'Compte' } },
+    });
+
+    expect(clearProfileOnboardingDraft(accountSpaceId)).toBe(true);
+    expect(loadProfileOnboardingDraft(accountSpaceId)).toEqual({ status: 'empty' });
+    expect(loadProfileOnboardingDraft('guest')).toMatchObject({
+      status: 'restored',
+      draft: { values: { firstName: 'Invité' } },
+    });
+  });
+
 });
