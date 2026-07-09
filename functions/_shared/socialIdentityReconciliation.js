@@ -17,6 +17,21 @@ const REQUIRED_TABLES = Object.freeze([
   'social_activity_snapshots',
 ]);
 const MAX_JSON_BYTES = 32_768;
+const SOCIAL_HANDLE_PATTERN = /^[a-z0-9][a-z0-9._-]{2,23}$/u;
+const RESERVED_SOCIAL_HANDLES = new Set([
+  'admin',
+  'administrator',
+  'api',
+  'me',
+  'moderator',
+  'null',
+  'root',
+  'security',
+  'sportpilot',
+  'support',
+  'system',
+  'undefined',
+]);
 
 function jsonResponse(status, payload) {
   return new Response(JSON.stringify(payload), {
@@ -85,7 +100,11 @@ function sanitizeUserId(value, fieldName = 'userId') {
 
 function normalizeHandle(value) {
   const raw = typeof value === 'string' ? value.trim().replace(/^@/u, '') : '';
-  if (raw !== raw.toLowerCase() || !/^[a-z0-9._-]{3,24}$/u.test(raw)) {
+  if (
+    raw !== raw.toLowerCase()
+    || !SOCIAL_HANDLE_PATTERN.test(raw)
+    || RESERVED_SOCIAL_HANDLES.has(raw)
+  ) {
     throw new SocialIdentityReconciliationError(
       400,
       'SOCIAL_IDENTITY_RECONCILIATION_INVALID_HANDLE',

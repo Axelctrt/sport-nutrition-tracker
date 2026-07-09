@@ -1,6 +1,7 @@
 import { RouterProvider } from "react-router-dom";
 
 import { DataSpaceAccountGate } from '@/app/data-spaces/DataSpaceAccountGate';
+import { SocialIdentityAccountGate } from '@/app/social-identity/SocialIdentityAccountGate';
 import { AppProviders } from "@/app/providers/AppProviders";
 import { RoutineReminderNotifier } from "@/app/reminders/RoutineReminderNotifier";
 import { RewardUnlockNotifier } from "@/app/rewards/RewardUnlockNotifier";
@@ -14,13 +15,15 @@ export function App() {
   return (
     <DataSpaceAccountGate>
       <AppProviders>
-        <RouterProvider router={router} />
-        <RoutineReminderNotifier />
-        <RewardUnlockNotifier />
-        <WeeklyMissionCompletionNotifier />
-        <WeightSyncCoordinator />
-        <AutomaticSyncCoordinator />
-        <PwaUpdatePrompt />
+        <SocialIdentityAccountGate>
+          <RouterProvider router={router} />
+          <RoutineReminderNotifier />
+          <RewardUnlockNotifier />
+          <WeeklyMissionCompletionNotifier />
+          <WeightSyncCoordinator />
+          <AutomaticSyncCoordinator />
+          <PwaUpdatePrompt />
+        </SocialIdentityAccountGate>
       </AppProviders>
     </DataSpaceAccountGate>
   );

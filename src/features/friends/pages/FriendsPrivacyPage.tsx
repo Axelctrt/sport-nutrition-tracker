@@ -21,6 +21,10 @@ import {
   type FriendsPrivacySnapshotRepository,
 } from '@/application/friends/friendsPrivacyService';
 import { prepareSocialActivityFeed } from '@/application/friends/socialActivityFeedService';
+import {
+  checkAccountSocialHandleAvailability,
+  provisionAccountSocialIdentity,
+} from '@/application/friends/accountSocialIdentityService';
 import { SocialActivityCloudReadinessPanel } from '@/features/friends/components/SocialActivityCloudReadinessPanel';
 import { SocialActivityFeedPanel } from '@/features/friends/components/SocialActivityFeedPanel';
 import { SocialActivityFriendSharingSettings } from '@/features/friends/components/SocialActivitySharingSettings';
@@ -75,7 +79,7 @@ import {
   DEFAULT_DETAILED_SOCIAL_ACTIVITY_FIELD_SELECTION,
   type SocialActivityFieldSelection,
 } from '@/domain/friends/socialActivitySharingPolicy';
-import { appDatabase } from '@/infrastructure/database/database';
+import { appDatabase, activeDataSpace } from '@/infrastructure/database/database';
 import { DexieFriendsPrivacyRepository } from '@/infrastructure/repositories/dexie/DexieFriendsPrivacyRepository';
 import { DexieSocialIdentityRepository } from '@/infrastructure/repositories/dexie/DexieSocialIdentityRepository';
 import { supportsProfiledSocialFriendRequestsPort } from '@/infrastructure/sync-prototype/socialFriendRequestsGateway';
@@ -97,6 +101,16 @@ import { SOCIAL_ACTIVITY_PRIVACY_CHANGED_EVENT } from '@/infrastructure/sync-pro
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
+
+
+function currentAccountUserId(): string | undefined {
+  if (activeDataSpace.kind !== 'account') return undefined;
+  try {
+    return getSyncPrototypeClient().getCloudCredentials?.()?.userId;
+  } catch {
+    return undefined;
+  }
+}
 
 interface FriendsPrivacyPageProps {
   readonly initialSnapshot?: FriendsPrivacySnapshot;
@@ -841,10 +855,23 @@ Vous ne pourrez plus voir vos activités respectives. Une nouvelle demande sera 
     setErrorMessage(undefined);
     setIdentityFeedback(undefined);
 
-    void saveSocialIdentity(activeIdentityRepository, identity, {
-      handle: identityHandle,
-      displayName,
-    })
+    const accountUserId = currentAccountUserId();
+
+    const saveOperation = accountUserId && activeCloudIdentityPort && activeIdentityRepository
+      ? provisionAccountSocialIdentity({
+          accountUserId,
+          currentIdentity: identity,
+          handle: identityHandle,
+          displayName,
+          repository: activeIdentityRepository,
+          cloudPort: activeCloudIdentityPort,
+        })
+      : saveSocialIdentity(activeIdentityRepository, identity, {
+          handle: identityHandle,
+          displayName,
+        });
+
+    void saveOperation
       .then(async (result) => {
         if (result.status !== 'saved') {
           setIdentityFeedback(result.message);
@@ -854,6 +881,11 @@ Vous ne pourrez plus voir vos activités respectives. Une nouvelle demande sera 
         setIdentity(result.identity);
         setIdentityHandle(formatSocialHandle(result.identity.handle));
         setDisplayName(result.identity.displayName);
+
+        if (accountUserId && activeCloudIdentityPort) {
+          setIdentityFeedback(result.message);
+          return;
+        }
 
         if (!activeCloudIdentityPort) {
           setIdentityFeedback(result.message);
@@ -872,7 +904,7 @@ Vous ne pourrez plus voir vos activités respectives. Une nouvelle demande sera 
         setErrorMessage(
           error instanceof Error
             ? error.message
-            : 'L’identité sociale n’a pas pu être enregistrée localement.',
+            : 'L’identité sociale n’a pas pu être enregistrée.',
         );
       });
   };
@@ -881,7 +913,16 @@ Vous ne pourrez plus voir vos activités respectives. Une nouvelle demande sera 
     setIsCheckingAvailability(true);
     setIdentityFeedback(undefined);
 
-    void checkSocialHandleAvailability(activeLookupGateway, identityHandle)
+    const accountUserId = currentAccountUserId();
+    const availabilityOperation = accountUserId && activeCloudIdentityPort
+      ? checkAccountSocialHandleAvailability(
+          activeCloudIdentityPort,
+          identityHandle,
+          accountUserId,
+        )
+      : checkSocialHandleAvailability(activeLookupGateway, identityHandle);
+
+    void availabilityOperation
       .then((result) => {
         setAvailability(result);
       })
@@ -1052,7 +1093,9 @@ Vous ne pourrez plus voir vos activités respectives. Une nouvelle demande sera 
             <p>{availability.message}</p>
           </div>
           <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-950 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
-            Utilisateur non connecté au cloud social : la sauvegarde locale reste active et la réservation cloud attend le backend réel.
+            {activeDataSpace.kind === 'account'
+              ? 'Compte connecté : toute modification du pseudonyme doit être réservée côté serveur avant d’être enregistrée localement.'
+              : 'Mode local : cette identité reste sur cet appareil et son unicité cloud n’est pas garantie tant qu’aucun compte n’est connecté.'}
           </div>
         </div>
       </Card>

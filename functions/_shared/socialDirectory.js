@@ -9,18 +9,22 @@ class SocialDirectoryError extends Error {
   }
 }
 
-const HANDLE_PATTERN = /^[a-z0-9][a-z0-9._-]{2,31}$/u;
+const HANDLE_PATTERN = /^[a-z0-9][a-z0-9._-]{2,23}$/u;
 const MAX_JSON_BYTES = 32_768;
 
 const RESERVED_HANDLES = new Set([
   'admin',
   'administrator',
   'api',
+  'me',
+  'moderator',
+  'null',
   'root',
   'security',
   'sportpilot',
   'support',
   'system',
+  'undefined',
 ]);
 
 function isDirectoryError(error) {
@@ -177,38 +181,47 @@ async function reserveSocialHandle(database, payload, actorUserId) {
     };
   }
 
-  await deletePreviousReservations(database, ownerUserId, handle);
+  const wasAlreadyOwned = Boolean(existing);
 
-  if (existing) {
+  if (!existing) {
     await database.prepare(`
-      UPDATE social_directory_handles
-      SET owner_display_name = ?2, updated_at = ?3
-      WHERE handle = ?1
-    `).bind(handle, ownerDisplayName, timestamp).run();
+      INSERT OR IGNORE INTO social_directory_handles(
+        handle, owner_user_id, owner_display_name, reserved_at, updated_at
+      )
+      VALUES (?1, ?2, ?3, ?4, ?4)
+    `).bind(handle, ownerUserId, ownerDisplayName, timestamp).run();
 
-    const updated = await readReservation(database, handle);
-    return {
-      status: 200,
-      payload: {
-        status: 'alreadyExists',
-        message: 'Identifiant déjà réservé par ce compte SportPilot.',
-        profile: profileFromRow(updated),
-      },
-    };
+    const claimed = await readReservation(database, handle);
+    if (!claimed || claimed.owner_user_id !== ownerUserId) {
+      return {
+        status: 409,
+        payload: {
+          status: 'conflict',
+          code: 'SOCIAL_DIRECTORY_HANDLE_TAKEN',
+          message: 'Identifiant déjà réservé par un autre compte SportPilot.',
+        },
+      };
+    }
   }
 
   await database.prepare(`
-    INSERT INTO social_directory_handles(handle, owner_user_id, owner_display_name, reserved_at, updated_at)
-    VALUES (?1, ?2, ?3, ?4, ?4)
-  `).bind(handle, ownerUserId, ownerDisplayName, timestamp).run();
+    UPDATE social_directory_handles
+    SET owner_display_name = ?2, updated_at = ?3
+    WHERE handle = ?1 AND owner_user_id = ?4
+  `).bind(handle, ownerDisplayName, timestamp, ownerUserId).run();
 
-  const created = await readReservation(database, handle);
+  // L’ancien handle n’est libéré qu’après confirmation de la nouvelle réservation.
+  await deletePreviousReservations(database, ownerUserId, handle);
+
+  const reserved = await readReservation(database, handle);
   return {
-    status: 201,
+    status: wasAlreadyOwned ? 200 : 201,
     payload: {
-      status: 'created',
-      message: 'Identifiant social réservé dans l’annuaire serveur.',
-      profile: profileFromRow(created),
+      status: wasAlreadyOwned ? 'alreadyExists' : 'created',
+      message: wasAlreadyOwned
+        ? 'Identifiant déjà réservé par ce compte SportPilot.'
+        : 'Identifiant social réservé dans l’annuaire serveur.',
+      profile: profileFromRow(reserved),
     },
   };
 }
