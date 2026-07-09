@@ -28,6 +28,7 @@ import {
 } from '@/application/planning/endurancePlanningService';
 import { routePaths } from '@/app/routePaths';
 import { recalculatePlannedActivityTargetsForCurrentProfile } from '@/application/planning/plannedActivityTargetService';
+import { unlinkPlannedSource } from '@/application/planning/activityReconciliationService';
 import type {
   ActivityIntensity,
   Activity as ActivityModel,
@@ -83,19 +84,21 @@ const statusLabels = {
 } as const;
 
 function activityPath(
-  type: PlannedEnduranceActivityType,
-  date: LocalDate,
+  session: PlannedEnduranceSession,
 ): string {
   const base =
-    type === 'running'
+    session.activityType === 'running'
       ? routePaths.addRunningActivity
-      : type === 'swimming'
+      : session.activityType === 'swimming'
         ? routePaths.addSwimmingActivity
         : routePaths.addOtherActivity;
-
-  return `${base}?date=${encodeURIComponent(
-    date,
-  )}&type=${encodeURIComponent(type)}`;
+  const params = new URLSearchParams({
+    date: session.date,
+    type: session.activityType,
+    plannedSource: 'endurancePlanning',
+    plannedId: session.id,
+  });
+  return `${base}?${params.toString()}`;
 }
 
 function formatDate(date: LocalDate): string {
@@ -245,6 +248,7 @@ export function EndurancePlanningPanel({
   }, [recalculateDates]);
 
   const remove = useCallback(async (session: PlannedEnduranceSession) => {
+    await unlinkPlannedSource({ source: 'endurancePlanning', sourceId: session.id });
     deletePlannedEnduranceSession(session.id);
     await recalculateDates([session.date]);
   }, [recalculateDates]);
@@ -329,7 +333,7 @@ export function EndurancePlanningPanel({
         sectionId="endurance-planning"
         storageKey="sportpilot:planning:endurance"
         title="Course, natation, vélo et cardio"
-        description="Planifie les activités d’endurance et rapproche-les automatiquement de ce qui est réellement saisi."
+        description="Planifie les activités d’endurance et associe explicitement chaque réalisation pour éviter tout double comptage."
         icon={CalendarPlus}
         defaultOpen
       >
@@ -615,11 +619,7 @@ export function EndurancePlanningPanel({
                           {view.displayStatus ===
                           'planned' ? (
                             <Link
-                              to={activityPath(
-                                view.session
-                                  .activityType,
-                                view.session.date,
-                              )}
+                              to={activityPath(view.session)}
                               className="inline-flex min-h-10 items-center justify-center rounded-xl bg-brand-600 px-3 text-sm font-semibold text-white hover:bg-brand-700"
                             >
                               Saisir l’activité

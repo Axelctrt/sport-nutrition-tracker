@@ -49,7 +49,7 @@ const formulas = [
       'Le retrait de 1 MET évite de recompter la dépense de repos déjà incluse dans le socle quotidien.',
       'Une correction manuelle remplace l’estimation nette ; elle ne s’y ajoute jamais.',
       'Les séances planifiées sont intégrées à l’avance lorsqu’une durée ou une distance permet une estimation.',
-      'Lorsqu’une activité réelle correspond au même sport et à la même date, elle remplace la prévision au lieu de s’y ajouter.',
+      'Une activité réelle ne remplace une prévision que lorsqu’elle lui est associée explicitement ; la date et le type seuls ne suffisent plus.',
       'Une séance détaillée de musculation utilise sa durée prévue ou réelle et un MET interne lié au type de séance.',
     ],
   },

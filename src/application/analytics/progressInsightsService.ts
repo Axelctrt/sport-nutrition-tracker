@@ -120,16 +120,15 @@ function recordedActivityCount(
   from: LocalDate,
   to: LocalDate,
 ): number {
-  const completedStrengthDates = new Set(
-    completedStrengthSessions.map((session) => planningDateForSession(session)),
+  const projectedStrengthActivityIds = new Set(
+    completedStrengthSessions.flatMap((session) =>
+      session.completedActivityId ? [session.completedActivityId] : []
+    ),
   );
 
   const genericActivities = activities.filter((activity) => (
     inRange(activity.date, from, to)
-    && (
-      activity.type !== 'strengthTraining'
-      || !completedStrengthDates.has(activity.date)
-    )
+    && !projectedStrengthActivityIds.has(activity.id)
   ));
 
   return genericActivities.length + completedStrengthSessions.length;

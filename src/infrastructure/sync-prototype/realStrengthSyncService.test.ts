@@ -269,6 +269,27 @@ describe('synchronisation B3 de la musculation', () => {
     expect(await cloud.realWorkoutSessions.count()).toBe(1);
   });
 
+
+  it('synchronise l’identifiant de l’activité ayant réalisé la séance planifiée', async () => {
+    const workout = {
+      ...session('session-linked'),
+      completedActivityId: 'activity-strength-linked',
+    };
+    await local.workoutSessions.add(workout);
+
+    await synchronizeRealStrength(
+      local,
+      cloud as unknown as SyncPrototypeDatabase,
+      'user-1',
+    );
+
+    expect(await cloud.realWorkoutSessions.get('#session-linked')).toMatchObject({
+      session: {
+        completedActivityId: 'activity-strength-linked',
+      },
+    });
+  });
+
   it('ignore les métadonnées techniques Dexie Cloud', async () => {
     const exercise = customExercise('exercise-metadata');
     await local.exerciseDefinitions.add(exercise);

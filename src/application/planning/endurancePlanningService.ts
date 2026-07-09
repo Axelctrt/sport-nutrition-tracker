@@ -164,6 +164,9 @@ export function savePlannedEnduranceSession(
     ...(existing?.skippedAt
       ? { skippedAt: existing.skippedAt }
       : {}),
+    ...(existing?.completedActivityId
+      ? { completedActivityId: existing.completedActivityId }
+      : {}),
   };
 
   persist(
@@ -197,6 +200,13 @@ export function reschedulePlannedEnduranceSession(
   }
 
   const state = readEndurancePlanningState();
+  const selected = state.sessions.find((session) => session.id === sessionId);
+  if (!selected) {
+    throw new Error('La séance d’endurance prévue est introuvable.');
+  }
+  if (selected.completedActivityId) {
+    throw new Error('Une activité déjà réalisée doit être dissociée avant de reporter cette séance.');
+  }
 
   persist(
     state.sessions.map((session) => {
@@ -220,6 +230,13 @@ export function setPlannedEnduranceStatus(
   now = new Date(),
 ): void {
   const state = readEndurancePlanningState();
+  const selected = state.sessions.find((session) => session.id === sessionId);
+  if (!selected) {
+    throw new Error('La séance d’endurance prévue est introuvable.');
+  }
+  if (selected.completedActivityId) {
+    throw new Error('Une activité déjà réalisée doit être dissociée avant de modifier ce statut.');
+  }
 
   persist(
     state.sessions.map((session) => {
@@ -262,8 +279,9 @@ function activityMatches(
   activity: Activity,
 ): boolean {
   return (
-    session.date === activity.date &&
-    session.activityType === activity.type
+    session.completedActivityId === activity.id &&
+    activity.plannedActivity?.source === 'endurancePlanning' &&
+    activity.plannedActivity.sourceId === session.id
   );
 }
 
@@ -277,8 +295,6 @@ export function buildEndurancePlanningWeek(
     toLocalDate(addDays(parseISO(weekStart), index)),
   );
   const dateSet = new Set(dates);
-  const usedActivityIds = new Set<string>();
-
   const sessionViews = state.sessions
     .filter(({ date }) => dateSet.has(date))
     .sort((left, right) =>
@@ -294,14 +310,10 @@ export function buildEndurancePlanningWeek(
       }
 
       const matchedActivity = activities.find(
-        (activity) =>
-          !usedActivityIds.has(activity.id) &&
-          activityMatches(session, activity),
+        (activity) => activityMatches(session, activity),
       );
 
       if (matchedActivity) {
-        usedActivityIds.add(matchedActivity.id);
-
         return {
           session,
           displayStatus: 'completed',

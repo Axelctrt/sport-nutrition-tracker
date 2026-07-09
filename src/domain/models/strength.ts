@@ -116,6 +116,7 @@ export interface WorkoutSession extends EntityMetadata {
   plannedDurationMinutes?: number;
   strengthSessionStyle?: StrengthSessionStyle;
   notes?: string;
+  completedActivityId?: string;
   socialSharing?: SocialActivitySharingOverride;
 }
 

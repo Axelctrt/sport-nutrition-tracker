@@ -3,6 +3,7 @@ import { Calculator, ChevronDown, Save } from 'lucide-react';
 import { useEffect, useMemo, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { estimateActivityCalories } from '@/domain/calculations/activityCalories';
+import type { PlannedActivityLinkOption } from '@/application/planning/activityReconciliationService';
 import { calculateRunningPaceSecondsPerKm, calculateRunningSteps, formatPace } from '@/domain/calculations/running';
 import { calculateSwimmingPaceSecondsPer100Meters } from '@/domain/calculations/swimming';
 import { calculateAverageSpeedKmh, calculatePoolLengths } from '@/domain/calculations/endurance';
@@ -25,6 +26,7 @@ import {
 import { toActivityDraft } from '@/features/activities/utils/activityForm';
 import { checkboxClassName, inputClassName } from '@/shared/forms/formStyles';
 import { focusFirstInvalidField } from '@/shared/hooks/focusFirstInvalidField';
+import { formatLocalDate } from '@/shared/utils/dates';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { FormField } from '@/shared/ui/FormField';
@@ -38,6 +40,7 @@ interface ActivityFormProps {
   calculationWeightSource: string;
   submitLabel: string;
   onDateChange: (date: string) => void;
+  plannedActivityOptions?: readonly PlannedActivityLinkOption[];
   onSubmit: (values: ActivityFormValues) => Promise<void>;
 }
 
@@ -61,6 +64,7 @@ export function ActivityForm({
   calculationWeightSource,
   submitLabel,
   onDateChange,
+  plannedActivityOptions = [],
   onSubmit,
 }: ActivityFormProps) {
   const formRef = useRef<HTMLFormElement>(null);
@@ -84,6 +88,21 @@ export function ActivityForm({
   const values = watch();
   const activityType = values.activityType;
   const errorCount = Object.keys(errors).length;
+
+  const matchingPlannedActivityOptions = useMemo(
+    () => plannedActivityOptions.filter((option) =>
+      option.activityType === activityType
+    ),
+    [activityType, plannedActivityOptions],
+  );
+
+  useEffect(() => {
+    if (!values.plannedActivityKey) return;
+    if (matchingPlannedActivityOptions.some((option) => option.key === values.plannedActivityKey)) {
+      return;
+    }
+    setValue('plannedActivityKey', '', { shouldDirty: true, shouldValidate: true });
+  }, [matchingPlannedActivityOptions, setValue, values.plannedActivityKey]);
 
   useEffect(() => {
     onDateChange(values.date);
@@ -204,6 +223,32 @@ export function ActivityForm({
                 {...register('time')}
               />
             </FormField>
+
+
+            {matchingPlannedActivityOptions.length > 0 || values.plannedActivityKey ? (
+              <div className="col-span-2">
+                <FormField
+                  id="activity-planned-link"
+                  label="Séance prévue associée"
+                  description="Associe explicitement cette activité pour remplacer l’estimation prévue sans double comptage."
+                  error={errors.plannedActivityKey?.message}
+                >
+                  <select
+                    id="activity-planned-link"
+                    className={inputClassName}
+                    aria-invalid={Boolean(errors.plannedActivityKey)}
+                    {...register('plannedActivityKey')}
+                  >
+                    <option value="">Aucune — activité imprévue</option>
+                    {matchingPlannedActivityOptions.map((option) => (
+                      <option key={option.key} value={option.key}>
+                        {option.title} · {formatLocalDate(option.date)}
+                      </option>
+                    ))}
+                  </select>
+                </FormField>
+              </div>
+            ) : null}
 
             <FormField id="activity-duration" label="Durée (min)" error={errors.durationMinutes?.message} required>
               <input

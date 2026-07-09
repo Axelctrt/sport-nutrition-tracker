@@ -187,6 +187,12 @@ const dailyStepsSchema = datedEntitySchema.extend({
   source: z.literal('manual'),
 });
 
+
+const plannedActivityReferenceSchema = z.object({
+  source: z.enum(['strengthSession', 'endurancePlanning']),
+  sourceId: z.string().min(1),
+});
+
 const activityCalculationSnapshotSchema = z.object({
   weightKg: positiveNumber,
   estimatedCaloriesKcal: nonNegativeNumber,
@@ -204,6 +210,7 @@ const activityBaseShape = {
   notes: z.string().max(10_000).optional(),
   manualCaloriesKcal: nonNegativeNumber.optional(),
   calculation: activityCalculationSnapshotSchema,
+  plannedActivity: plannedActivityReferenceSchema.optional(),
   socialSharing: socialActivitySharingOverrideSchema.optional(),
 };
 
@@ -565,6 +572,7 @@ const workoutSessionSchema = entityMetadataSchema.extend({
   durationMinutes: nonNegativeNumber.optional(),
   plannedDurationMinutes: positiveNumber.optional(),
   strengthSessionStyle: z.enum(['classic', 'strength', 'circuit', 'veryIntense']).optional(),
+  completedActivityId: z.string().min(1).optional(),
   notes: z.string().max(10_000).optional(),
   socialSharing: socialActivitySharingOverrideSchema.optional(),
 });
@@ -747,6 +755,7 @@ const plannedEnduranceSessionSchema = z.object({
   createdAt: isoDateTimeSchema,
   updatedAt: isoDateTimeSchema,
   skippedAt: isoDateTimeSchema.optional(),
+  completedActivityId: z.string().min(1).optional(),
 });
 
 const endurancePlanningStateSchema = z.object({
