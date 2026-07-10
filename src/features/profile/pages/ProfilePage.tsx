@@ -7,6 +7,8 @@ import {
 import { useState } from 'react';
 
 import { useProfile } from '@/app/providers/profile/useProfile';
+import type { NewEntity } from '@/domain/models/common';
+import type { UserProfile } from '@/domain/models/profile';
 import { ProfileForm } from '@/features/profile/components/ProfileForm';
 import { ProfileOverview } from '@/features/profile/components/ProfileOverview';
 import type { ProfileFormValues } from '@/features/profile/schemas/profileSchema';
@@ -18,6 +20,7 @@ import {
   SettingsSectionDirectory,
   type SettingsDirectoryItem,
 } from '@/features/settings/components/SettingsSectionDirectory';
+import { useCurrentWeight } from '@/features/weight/hooks/useCurrentWeight';
 import { useActionToast } from '@/shared/toast/useActionToast';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 
@@ -25,7 +28,7 @@ const profileSections: readonly SettingsDirectoryItem[] = [
   {
     id: 'profile-personal',
     label: 'Informations personnelles',
-    description: 'Sexe, âge, taille et poids de référence.',
+    description: 'Sexe, âge, taille et poids initial historique.',
     keywords: ['age', 'taille', 'sexe', 'poids'],
     icon: UserRound,
   },
@@ -45,9 +48,14 @@ const profileSections: readonly SettingsDirectoryItem[] = [
   },
 ] as const;
 
-export function ProfilePage() {
-  const { profile, saveProfile } = useProfile();
+interface ProfilePageContentProps {
+  profile: UserProfile;
+  saveProfile: (profile: NewEntity<UserProfile>) => Promise<UserProfile>;
+}
+
+function ProfilePageContent({ profile, saveProfile }: ProfilePageContentProps) {
   const actionToast = useActionToast();
+  const { currentWeight } = useCurrentWeight(profile);
   const [feedback, setFeedback] = useState<
     | {
         tone: 'success' | 'error';
@@ -55,8 +63,6 @@ export function ProfilePage() {
       }
     | undefined
   >();
-
-  if (!profile) return null;
 
   const handleSubmit = async (
     values: ProfileFormValues,
@@ -124,7 +130,7 @@ export function ProfilePage() {
       </div>
 
       <div className="mt-4">
-        <ProfileOverview profile={profile} />
+        <ProfileOverview profile={profile} currentWeight={currentWeight} />
       </div>
 
       {feedback ? (
@@ -157,4 +163,12 @@ export function ProfilePage() {
       </div>
     </section>
   );
+}
+
+export function ProfilePage() {
+  const { profile, saveProfile } = useProfile();
+
+  if (!profile) return null;
+
+  return <ProfilePageContent profile={profile} saveProfile={saveProfile} />;
 }
