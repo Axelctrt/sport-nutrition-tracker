@@ -93,6 +93,42 @@ describe('FoodJournalPage — expérience mobile', () => {
     expect(screen.queryByText('Copier toute la journée vers')).not.toBeInTheDocument();
   });
 
+
+  it('ouvre une seule carte de repas à la fois et propose l’ajout principal', async () => {
+    const user = userEvent.setup();
+    renderJournal();
+
+    await screen.findByRole('heading', { name: 'Journal alimentaire' });
+    const breakfastToggle = await screen.findByRole('button', { name: /^Petit-déjeuner/ });
+    expect(breakfastToggle).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('button', { name: /^Déjeuner/ })).toHaveAttribute('aria-expanded', 'false');
+
+    await user.click(screen.getByRole('button', { name: /^Déjeuner/ }));
+    expect(breakfastToggle).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByRole('button', { name: /^Déjeuner/ })).toHaveAttribute('aria-expanded', 'true');
+
+    await user.click(screen.getAllByRole('button', { name: 'Ajouter un aliment' })[0]!);
+    expect(await screen.findByRole('dialog', { name: 'Ajouter un aliment' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Petit-déjeuner/ })).toHaveAttribute(
+      'href',
+      '/food/select?date=2026-06-24&slot=breakfast',
+    );
+  });
+
+
+  it('ne conserve pas les données de la journée précédente lors de la navigation', async () => {
+    const user = userEvent.setup();
+    await seedLunchEntry();
+    renderJournal();
+
+    expect(await screen.findByText('Yaourt grec')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Jour suivant' }));
+
+    await waitFor(() => expect(screen.getByLabelText('Choisir une date')).toHaveValue('2026-06-25'));
+    await screen.findByRole('heading', { name: 'Aucun aliment pour cette journée' });
+    expect(screen.queryByText('Yaourt grec')).not.toBeInTheDocument();
+  });
+
   it('modifie une quantité dans le repas sans quitter ni démonter le journal', async () => {
     const user = userEvent.setup();
     const { entry } = await seedLunchEntry();

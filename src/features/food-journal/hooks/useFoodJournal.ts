@@ -30,8 +30,12 @@ export function useFoodJournal(date: LocalDate) {
   const toast = useToast();
 
   const refresh = useCallback(async ({ silent = false }: RefreshOptions = {}) => {
-    if (silent) setIsRefreshing(true);
-    else setStatus('loading');
+    if (silent) {
+      setIsRefreshing(true);
+    } else {
+      setStatus('loading');
+      setSnapshot(undefined);
+    }
     setErrorMessage(undefined);
     try {
       setSnapshot(await loadFoodJournal(date));
