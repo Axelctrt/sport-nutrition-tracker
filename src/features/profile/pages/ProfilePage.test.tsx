@@ -5,6 +5,24 @@ import { ProfileContext } from '@/app/providers/profile/ProfileContext';
 import { ProfilePage } from '@/features/profile/pages/ProfilePage';
 import { createProfileInput } from '@/test/factories/profileFactory';
 
+vi.mock('@/features/weight/hooks/useCurrentWeight', () => ({
+  useCurrentWeight: () => ({
+    status: 'ready',
+    currentWeight: {
+      source: 'entry',
+      weightKg: 59.8,
+      measuredAt: '2026-07-10',
+      entry: {
+        id: 'weight:2026-07-10',
+        date: '2026-07-10',
+        weightKg: 59.8,
+        createdAt: '2026-07-10T08:00:00.000Z',
+        updatedAt: '2026-07-10T08:00:00.000Z',
+      },
+    },
+  }),
+}));
+
 const storedProfile = {
   ...createProfileInput(),
   id: 'profile-1',
@@ -63,5 +81,6 @@ describe('ProfilePage', () => {
 
     expect(container.querySelector('section')).toHaveClass('min-w-0', 'overflow-x-clip');
     expect(screen.getByLabelText(/Taille en centimètres/)).toHaveClass('max-w-full');
+    expect(screen.getByText(/59,8 kg/)).toBeInTheDocument();
   });
 });
