@@ -152,3 +152,13 @@ describe('hub Progression', () => {
     expect(routePaths.analytics).toBe('/analytics');
   });
 });
+
+
+describe('architecture des paramètres', () => {
+  it('conserve l’accueil historique et expose des sous-pages dédiées', () => {
+    expect(routePaths.settings).toBe('/settings');
+    expect(routePaths.settingsAppearanceAccessibility).toBe('/settings/appearance-accessibility');
+    expect(routePaths.settingsDataBackup).toBe('/settings/data-backup');
+    expect(routePaths.settingsAdvanced).toBe('/settings/advanced');
+  });
+});

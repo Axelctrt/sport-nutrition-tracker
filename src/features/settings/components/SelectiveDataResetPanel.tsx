@@ -25,6 +25,7 @@ interface SelectiveDataResetPanelProps {
   resetData?: (
     categories: readonly SelectiveDataResetCategory[],
   ) => Promise<SelectiveDataResetResult>;
+  createSafetyBackup?: typeof createAndDownloadSafetyBackup;
 }
 
 function categoryTitle(categoryName: SelectiveDataResetCategory): string {
@@ -55,6 +56,7 @@ export function SelectiveDataResetPanel({
   className,
   loadPreview = getSelectiveDataResetPreview,
   resetData = resetSelectedData,
+  createSafetyBackup = createAndDownloadSafetyBackup,
 }: SelectiveDataResetPanelProps) {
   const actionToast = useActionToast();
   const [selectedCategories, setSelectedCategories] = useState<
@@ -149,9 +151,7 @@ export function SelectiveDataResetPanel({
     setIsResetting(true);
     setError(null);
     try {
-      await createAndDownloadSafetyBackup(
-        'before-selective-reset',
-      );
+      await createSafetyBackup('before-selective-reset');
       const resetResult = await resetData(preview.requestedCategories);
       setResult(resetResult);
       setSelectedCategories([]);

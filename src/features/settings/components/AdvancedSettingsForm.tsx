@@ -14,10 +14,18 @@ import { CollapsibleSection } from '@/shared/ui/CollapsibleSection';
 import { ConfirmationDialog } from '@/shared/ui/ConfirmationDialog';
 import { focusFirstInvalidField } from '@/shared/hooks/focusFirstInvalidField';
 
+export type AdvancedSettingsSectionId =
+  | 'display-storage'
+  | 'rest-timer'
+  | 'energy'
+  | 'calibration';
+
 interface AdvancedSettingsFormProps {
   initialValues: SettingsFormValues;
   onSubmit: (values: SettingsFormValues) => Promise<void>;
   onResetToDefaults: () => Promise<SettingsFormValues>;
+  visibleSections?: readonly AdvancedSettingsSectionId[];
+  showResetToDefaults?: boolean;
 }
 
 const numericRegistrationOptions = {
@@ -28,6 +36,8 @@ export function AdvancedSettingsForm({
   initialValues,
   onSubmit,
   onResetToDefaults,
+  visibleSections,
+  showResetToDefaults = true,
 }: AdvancedSettingsFormProps) {
   const formRef = useRef<HTMLFormElement>(null);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
@@ -46,6 +56,9 @@ export function AdvancedSettingsForm({
   useEffect(() => {
     reset(initialValues);
   }, [initialValues, reset]);
+
+  const isVisible = (sectionId: AdvancedSettingsSectionId) =>
+    !visibleSections || visibleSections.includes(sectionId);
 
   const handleReset = async () => {
     setIsResetting(true);
@@ -78,6 +91,7 @@ export function AdvancedSettingsForm({
         </InlineNotice>
       ) : null}
 
+      {isVisible('display-storage') ? (
       <CollapsibleSection
         sectionId="settings-display-storage"
         storageKey="sportpilot:settings:display-storage"
@@ -114,7 +128,9 @@ export function AdvancedSettingsForm({
         </label>
         </fieldset>
       </CollapsibleSection>
+      ) : null}
 
+      {isVisible('rest-timer') ? (
       <CollapsibleSection
         sectionId="settings-rest-timer"
         storageKey="sportpilot:settings:rest-timer"
@@ -147,7 +163,10 @@ export function AdvancedSettingsForm({
           </label>
         </fieldset>
       </CollapsibleSection>
+      ) : null}
 
+      {isVisible('energy') ? (
+        <>
       <CollapsibleSection
         sectionId="settings-energy"
         storageKey="sportpilot:settings:energy"
@@ -367,7 +386,10 @@ export function AdvancedSettingsForm({
         </div>
         </fieldset>
       </CollapsibleSection>
+        </>
+      ) : null}
 
+      {isVisible('calibration') ? (
       <CollapsibleSection
         sectionId="settings-calibration"
         storageKey="sportpilot:settings:calibration"
@@ -427,19 +449,22 @@ export function AdvancedSettingsForm({
         </div>
         </fieldset>
       </CollapsibleSection>
+      ) : null}
 
-      <div className="flex flex-col-reverse gap-3 border-t border-slate-200 pt-6 sm:flex-row sm:justify-between dark:border-slate-800">
-        <Button
-          type="button"
-          variant="secondary"
-          size="lg"
-          className="w-full sm:w-auto"
-          disabled={isSubmitting || isResetting}
-          onClick={() => setResetDialogOpen(true)}
-        >
-          <RotateCcw aria-hidden="true" className="size-5" />
-          Rétablir les valeurs par défaut
-        </Button>
+      <div className={`flex flex-col-reverse gap-3 border-t border-slate-200 pt-6 sm:flex-row dark:border-slate-800 ${showResetToDefaults ? 'sm:justify-between' : 'sm:justify-end'}`}>
+        {showResetToDefaults ? (
+          <Button
+            type="button"
+            variant="secondary"
+            size="lg"
+            className="w-full sm:w-auto"
+            disabled={isSubmitting || isResetting}
+            onClick={() => setResetDialogOpen(true)}
+          >
+            <RotateCcw aria-hidden="true" className="size-5" />
+            Rétablir les valeurs par défaut
+          </Button>
+        ) : null}
         <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={isSubmitting || isResetting}>
           <Save aria-hidden="true" className="size-5" />
           {isSubmitting ? 'Enregistrement…' : 'Enregistrer les paramètres'}
@@ -447,15 +472,17 @@ export function AdvancedSettingsForm({
       </div>
       </form>
 
-      <ConfirmationDialog
-        open={resetDialogOpen}
-        title="Rétablir les paramètres par défaut ?"
-        description="Les coefficients personnalisés seront remplacés par les valeurs recommandées de SportPilot. Les données de suivi ne seront pas supprimées."
-        confirmLabel="Rétablir"
-        isPending={isResetting}
-        onConfirm={() => void handleReset()}
-        onCancel={() => setResetDialogOpen(false)}
-      />
+      {showResetToDefaults ? (
+        <ConfirmationDialog
+          open={resetDialogOpen}
+          title="Rétablir les paramètres par défaut ?"
+          description="Les coefficients personnalisés seront remplacés par les valeurs recommandées de SportPilot. Les données de suivi ne seront pas supprimées."
+          confirmLabel="Rétablir"
+          isPending={isResetting}
+          onConfirm={() => void handleReset()}
+          onCancel={() => setResetDialogOpen(false)}
+        />
+      ) : null}
     </>
   );
 }

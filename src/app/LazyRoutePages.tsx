@@ -34,6 +34,18 @@ const ProfilePage = lazy(() =>
   })),
 );
 
+const SettingsHomePage = lazy(() =>
+  import('@/features/settings/pages/SettingsHomePage').then((module) => ({
+    default: module.SettingsHomePage,
+  })),
+);
+
+const SettingsCategoryPage = lazy(() =>
+  import('@/features/settings/pages/SettingsCategoryPage').then((module) => ({
+    default: module.SettingsCategoryPage,
+  })),
+);
+
 const AdvancedSettingsPage = lazy(() =>
   import('@/features/settings/pages/AdvancedSettingsPage').then((module) => ({
     default: module.AdvancedSettingsPage,
@@ -355,6 +367,22 @@ export function LazyProfilePage() {
   return (
     <RouteSuspense variant="form">
       <ProfilePage />
+    </RouteSuspense>
+  );
+}
+
+export function LazySettingsHomePage() {
+  return (
+    <RouteSuspense variant="list">
+      <SettingsHomePage />
+    </RouteSuspense>
+  );
+}
+
+export function LazySettingsCategoryPage() {
+  return (
+    <RouteSuspense variant="form">
+      <SettingsCategoryPage />
     </RouteSuspense>
   );
 }
