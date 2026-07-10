@@ -40,18 +40,28 @@ describe('ToastProvider', () => {
     expect(screen.queryByText('Profil mis à jour')).not.toBeInTheDocument();
   });
 
-  it('ferme automatiquement les succès mais garde les erreurs plus longtemps', () => {
+  it('remplace une notification précédente par le retour d’action le plus récent', () => {
     render(<ToastProvider><ToastHarness /></ToastProvider>);
 
     fireEvent.click(screen.getByRole('button', { name: 'Succès' }));
     fireEvent.click(screen.getByRole('button', { name: 'Erreur' }));
 
-    act(() => vi.advanceTimersByTime(3_600));
     expect(screen.queryByText('Profil mis à jour')).not.toBeInTheDocument();
     expect(screen.getByRole('alert')).toHaveTextContent('Enregistrement impossible');
 
-    act(() => vi.advanceTimersByTime(4_500));
+    act(() => vi.advanceTimersByTime(10_100));
     expect(screen.queryByText('Enregistrement impossible')).not.toBeInTheDocument();
+  });
+
+  it('n’affiche qu’une notification principale à la fois', () => {
+    render(<ToastProvider><ToastHarness /></ToastProvider>);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Succès' }));
+    expect(screen.getByText('Profil mis à jour')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Erreur' }));
+    expect(screen.queryByText('Profil mis à jour')).not.toBeInTheDocument();
+    expect(screen.getByText('Enregistrement impossible')).toBeInTheDocument();
   });
 
   it('affiche une confirmation conservée avant un rechargement', () => {

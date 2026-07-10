@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 
 import { RewardUnlockNotifier } from "@/app/rewards/RewardUnlockNotifier";
 import { buildAchievementSnapshot } from "@/application/rewards/achievementService";
@@ -45,6 +45,13 @@ describe("RewardUnlockNotifier", () => {
     expect(
       await screen.findByText("Nouveau badge : Premier élan"),
     ).toBeInTheDocument();
+    expect(
+      screen.queryByText("Nouveau thème : Horizon endurance"),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", {
+      name: "Fermer la notification : Nouveau badge : Premier élan",
+    }));
     expect(
       screen.getByText("Nouveau thème : Horizon endurance"),
     ).toBeInTheDocument();

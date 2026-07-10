@@ -100,6 +100,7 @@ import { notifySyncLocalDataChanged } from '@/application/sync/syncLocalChangeEv
 import { SOCIAL_ACTIVITY_PRIVACY_CHANGED_EVENT } from '@/infrastructure/sync-prototype/socialActivityPrivacySyncEvents';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
+import { ConfirmationDialog } from '@/shared/ui/ConfirmationDialog';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 
 
@@ -272,6 +273,8 @@ export function FriendsPrivacyPage({
     (activeRepository && !initialSnapshot) || (activeIdentityRepository && !initialIdentity),
   ));
   const [errorMessage, setErrorMessage] = useState<string>();
+  const [pendingFriendRemoval, setPendingFriendRemoval] = useState<FriendProfileSummary>();
+  const [isRemovingFriend, setIsRemovingFriend] = useState(false);
   const persistenceQueueRef = useRef<Promise<void>>(Promise.resolve());
   const persistenceSequenceRef = useRef(0);
   const permissionMutationVersionsRef = useRef(new Map<string, number>());
@@ -730,16 +733,10 @@ export function FriendsPrivacyPage({
     );
   };
 
-  const removeFriend = (friend: FriendProfileSummary) => {
+  const removeFriend = async (friend: FriendProfileSummary) => {
     setRequestFeedback(undefined);
     setErrorMessage(undefined);
-
-    const confirmed = window.confirm(
-      `Supprimer ${friend.displayName} de tes amis ?
-
-Vous ne pourrez plus voir vos activités respectives. Une nouvelle demande sera nécessaire pour redevenir amis.`,
-    );
-    if (!confirmed) return;
+    setIsRemovingFriend(true);
 
     const applyLocalRemoval = (feedback: string) => {
       const service = createFriendsPrivacyService(snapshot);
@@ -748,40 +745,39 @@ Vous ne pourrez plus voir vos activités respectives. Une nouvelle demande sera 
       setRequestFeedback(feedback);
     };
 
-    const removeFriendshipFromServer = activeSocialFriendsGateway?.removeFriendship;
-    if (!removeFriendshipFromServer) {
-      applyLocalRemoval('Ami supprimé localement. La suppression serveur sera possible une fois le cloud social disponible.');
-      return;
+    try {
+      const removeFriendshipFromServer = activeSocialFriendsGateway?.removeFriendship;
+      if (!removeFriendshipFromServer) {
+        applyLocalRemoval('Ami supprimé localement. La suppression serveur sera possible une fois le cloud social disponible.');
+        return;
+      }
+
+      setRequestFeedback('Suppression de l’ami côté serveur en cours…');
+      const permission = selectFriendActivityPermission(snapshot, friend);
+      const friendUserId = await resolveCloudFriendUserId(friend, permission);
+
+      if (!friendUserId) {
+        setRequestFeedback('Suppression serveur impossible : userId ami introuvable dans les amitiés actives.');
+        return;
+      }
+
+      const result = await removeFriendshipFromServer(identity.userId, friendUserId);
+      if (['updated', 'alreadyExists'].includes(result.status)) {
+        applyLocalRemoval(result.message);
+        return;
+      }
+
+      setRequestFeedback(result.message);
+    } catch (error) {
+      setRequestFeedback(
+        error instanceof Error
+          ? error.message
+          : 'Service cloud indisponible : suppression ami impossible pour le moment.',
+      );
+    } finally {
+      setIsRemovingFriend(false);
+      setPendingFriendRemoval(undefined);
     }
-
-    setRequestFeedback('Suppression de l’ami côté serveur en cours…');
-    const permission = selectFriendActivityPermission(snapshot, friend);
-
-    void resolveCloudFriendUserId(friend, permission)
-      .then((friendUserId) => {
-        if (!friendUserId) {
-          setRequestFeedback('Suppression serveur impossible : userId ami introuvable dans les amitiés actives.');
-          return undefined;
-        }
-
-        return removeFriendshipFromServer(identity.userId, friendUserId);
-      })
-      .then((result) => {
-        if (!result) return;
-        if (['updated', 'alreadyExists'].includes(result.status)) {
-          applyLocalRemoval(result.message);
-          return;
-        }
-
-        setRequestFeedback(result.message);
-      })
-      .catch((error) => {
-        setRequestFeedback(
-          error instanceof Error
-            ? error.message
-            : 'Service cloud indisponible : suppression ami impossible pour le moment.',
-        );
-      });
   };
 
   const submitRequest = (event: FormEvent<HTMLFormElement>) => {
@@ -1333,7 +1329,7 @@ Vous ne pourrez plus voir vos activités respectives. Une nouvelle demande sera 
                     <Button
                       size="sm"
                       variant="secondary"
-                      onClick={() => removeFriend(friend)}
+                      onClick={() => setPendingFriendRemoval(friend)}
                     >
                       <X aria-hidden="true" className="size-4" />
                       Supprimer
@@ -1397,6 +1393,19 @@ Vous ne pourrez plus voir vos activités respectives. Une nouvelle demande sera 
           </div>
         </Card>
       </div>
+
+      <ConfirmationDialog
+        open={Boolean(pendingFriendRemoval)}
+        title={pendingFriendRemoval ? `Supprimer ${pendingFriendRemoval.displayName} ?` : 'Supprimer cet ami ?'}
+        description="Vous ne pourrez plus voir vos activités respectives. Une nouvelle demande sera nécessaire pour redevenir amis."
+        confirmLabel="Supprimer l’ami"
+        tone="danger"
+        isPending={isRemovingFriend}
+        onCancel={() => setPendingFriendRemoval(undefined)}
+        onConfirm={() => {
+          if (pendingFriendRemoval) void removeFriend(pendingFriendRemoval);
+        }}
+      />
     </section>
   );
 }

@@ -51,6 +51,7 @@ import {
   LazyWorkoutTemplateEditorPage,
   LazyWorkoutTemplatesPage,
 } from '@/app/LazyRoutePages';
+import { AppRouteErrorPage } from '@/app/errors/AppRouteErrorPage';
 import { OnboardingGuard } from '@/app/guards/OnboardingGuard';
 import { OnboardingRoute } from '@/app/guards/OnboardingRoute';
 import { AppLayout } from '@/app/layouts/AppLayout';
@@ -132,9 +133,12 @@ export const appShellRoutes: RouteObject[] = [
   },
 ];
 
+const routeErrorElement = <AppRouteErrorPage />;
+
 export const router = createHashRouter([
   {
     path: routePaths.onboarding,
+    errorElement: routeErrorElement,
     element: (
       <OnboardingRoute>
         <LazyOnboardingPage />
@@ -143,13 +147,16 @@ export const router = createHashRouter([
   },
   {
     path: routePaths.privacy,
+    errorElement: routeErrorElement,
     element: <LazyPrivacyPage />,
   },
   {
     path: routePaths.offline,
+    errorElement: routeErrorElement,
     element: <OfflinePage />,
   },
   {
+    errorElement: routeErrorElement,
     element: (
       <OnboardingGuard>
         <AppLayout />
@@ -159,6 +166,7 @@ export const router = createHashRouter([
   },
   {
     path: '*',
+    errorElement: routeErrorElement,
     element: <NotFoundPage />,
   },
 ]);

@@ -17,6 +17,7 @@ import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 import { PageSkeleton } from '@/shared/ui/PageSkeleton';
+import { RefreshStatus } from '@/shared/ui/RefreshStatus';
 import { formatLocalDate, toLocalDate } from '@/shared/utils/dates';
 import { isValidLocalDate } from '@/shared/validation/localDate';
 import type { DailyTarget } from '@/domain/models/targets';
@@ -35,6 +36,7 @@ export function FoodJournalPage() {
     status,
     errorMessage,
     busyId,
+    isRefreshing,
     refresh,
     duplicate,
     remove,
@@ -119,6 +121,12 @@ export function FoodJournalPage() {
           />
         </div>
       </div>
+
+      <RefreshStatus
+        visible={isRefreshing}
+        label="Actualisation du journal…"
+        className="mt-4"
+      />
 
       {errorMessage ? (
         <InlineNotice className="mt-6" tone="error" title="Opération impossible">

@@ -28,10 +28,12 @@ export function useWeeklyPlanning() {
   >({});
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [errorMessage, setErrorMessage] = useState<string>();
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [actionId, setActionId] = useState<EntityId | 'create'>();
 
   const refresh = useCallback(async (showLoading = true) => {
     if (showLoading) setStatus('loading');
+    else setIsRefreshing(true);
     setErrorMessage(undefined);
     try {
       const [nextDays, nextTemplates] = await Promise.all([
@@ -64,7 +66,9 @@ export function useWeeklyPlanning() {
       setStatus('ready');
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Impossible de charger le planning.');
-      setStatus('error');
+      if (showLoading) setStatus('error');
+    } finally {
+      setIsRefreshing(false);
     }
   }, [weekStart]);
 
@@ -190,6 +194,7 @@ export function useWeeklyPlanning() {
     calorieProjections,
     status,
     errorMessage,
+    isRefreshing,
     actionId,
     refresh,
     changeWeek,
