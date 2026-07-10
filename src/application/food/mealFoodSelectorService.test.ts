@@ -59,4 +59,16 @@ describe('mealFoodSelectorService', () => {
     expect(filterMealFoodProducts(products, 'energie')).toEqual([products[0]]);
     expect(filterMealFoodProducts(products, '301234')).toEqual([products[0]]);
   });
+
+
+  it('tolère une faute simple dans un mot suffisamment long', () => {
+    const products = [
+      product('yogurt', 'Yaourt grec'),
+      product('rice', 'Riz complet'),
+    ];
+
+    expect(filterMealFoodProducts(products, 'yaort')).toEqual([products[0]]);
+    expect(filterMealFoodProducts(products, 'complte')).toEqual([products[1]]);
+  });
+
 });
