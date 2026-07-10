@@ -9,6 +9,7 @@ import { repositories } from '@/infrastructure/repositories/repositories';
 import { flushUserStatePersistence } from '@/infrastructure/user-state/userStateRuntime';
 import { createProfileInput } from '@/test/factories/profileFactory';
 import { ONBOARDING_DRAFT_STORAGE_KEY } from '@/features/onboarding/storage/onboardingDraftStorage';
+import { readProfileOnboardingCompletion } from '@/features/onboarding/storage/onboardingCompletionStorage';
 import '@/features/onboarding/pages/OnboardingPage';
 import '@/features/dashboard/pages/DashboardPage';
 
@@ -74,7 +75,14 @@ describe('App', () => {
       await screen.findByRole('heading', { name: heading });
     }
 
-    await user.click(screen.getByRole('button', { name: 'Créer mon profil' }));
+    await user.click(screen.getByRole('button', { name: 'Suivant' }));
+    await screen.findByRole('heading', { name: 'Vérifiez votre configuration' });
+    expect(screen.getByText('Axel')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Modifier le poids' }));
+    await screen.findByRole('heading', { name: 'Quel est votre poids actuel ?' });
+    await user.click(screen.getByRole('button', { name: 'Suivant' }));
+    await screen.findByRole('heading', { name: 'Vérifiez votre configuration' });
+    await user.click(screen.getByRole('button', { name: 'Commencer avec SportPilot' }));
 
     await waitFor(
       () => expect(router.state.location.pathname).toBe('/'),
@@ -93,6 +101,10 @@ describe('App', () => {
       initialWeightKg: 70,
       goal: 'maintenance',
     });
+    expect(await repositories.weight.listAll()).toEqual([
+      expect.objectContaining({ weightKg: 70 }),
+    ]);
+    expect(readProfileOnboardingCompletion()).toMatchObject({ version: 1 });
   }, 15_000);
 
   it('affiche directement le tableau de bord quand un profil existe', async () => {

@@ -465,7 +465,7 @@ function WeightStep({ values, errors, onChange }: Omit<OnboardingProfileStepProp
       </FormField>
 
       <ContextHelp className="mt-5" tone="brand">
-        Ce poids devient la valeur initiale du profil. La création de la première pesée et sa présentation dans le récapitulatif seront finalisées dans l’étape U6.
+        Ce poids devient la valeur initiale du profil. S’il n’existe encore aucun historique, une première pesée sera créée à la validation finale.
       </ContextHelp>
     </Card>
   );
@@ -695,5 +695,7 @@ export function OnboardingProfileStep(props: OnboardingProfileStepProps) {
       return <ActivityStep {...props} />;
     case PROFILE_ONBOARDING_STEP_IDS.steps:
       return <StepsStep {...props} />;
+    case PROFILE_ONBOARDING_STEP_IDS.summary:
+      return null;
   }
 }

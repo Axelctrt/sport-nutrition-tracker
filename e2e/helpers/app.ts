@@ -24,7 +24,9 @@ export async function createLocalProfile(page: Page, firstName = 'E2E'): Promise
     await expect(page.getByRole('heading', { name: heading })).toBeVisible();
   }
 
-  await page.getByRole('button', { name: 'Créer mon profil' }).click();
+  await page.getByRole('button', { name: 'Suivant' }).click();
+  await expect(page.getByRole('heading', { name: 'Vérifiez votre configuration' })).toBeVisible();
+  await page.getByRole('button', { name: 'Commencer avec SportPilot' }).click();
   await expect(page.getByRole('heading', { name: `Bonjour ${firstName}` })).toBeVisible();
 }
 

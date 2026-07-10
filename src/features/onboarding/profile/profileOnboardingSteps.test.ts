@@ -9,6 +9,9 @@ import {
 
 describe('profileOnboardingSteps', () => {
   it('reprend une étape connue et convertit l’ancienne étape monolithique', () => {
+    expect(normalizeProfileOnboardingStepId(PROFILE_ONBOARDING_STEP_IDS.summary)).toBe(
+      PROFILE_ONBOARDING_STEP_IDS.summary,
+    );
     expect(normalizeProfileOnboardingStepId(PROFILE_ONBOARDING_STEP_IDS.height)).toBe(
       PROFILE_ONBOARDING_STEP_IDS.height,
     );
@@ -31,6 +34,7 @@ describe('profileOnboardingSteps', () => {
     expect(validateProfileOnboardingStep(PROFILE_ONBOARDING_STEP_IDS.weight, values)).toEqual({
       initialWeightKg: 'Le poids doit être au moins de 30 kg.',
     });
+    expect(validateProfileOnboardingStep(PROFILE_ONBOARDING_STEP_IDS.summary, values)).toEqual({});
   });
 
   it('associe une erreur complète à la bonne étape', () => {

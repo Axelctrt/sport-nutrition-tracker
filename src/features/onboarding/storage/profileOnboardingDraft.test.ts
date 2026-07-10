@@ -44,6 +44,26 @@ describe('profileOnboardingDraft', () => {
     });
   });
 
+
+  it('reprend directement le récapitulatif final', () => {
+    const values = {
+      ...DEFAULT_PROFILE_FORM_VALUES,
+      firstName: 'Résumé',
+    };
+
+    expect(saveProfileOnboardingDraft(
+      values,
+      PROFILE_ONBOARDING_STEP_IDS.summary,
+    )).toBe(true);
+    expect(loadProfileOnboardingDraft()).toMatchObject({
+      status: 'restored',
+      draft: {
+        stepId: PROFILE_ONBOARDING_STEP_IDS.summary,
+        values: { firstName: 'Résumé' },
+      },
+    });
+  });
+
   it('cloisonne les brouillons entre l’espace invité et les comptes', () => {
     const guestValues = {
       ...DEFAULT_PROFILE_FORM_VALUES,

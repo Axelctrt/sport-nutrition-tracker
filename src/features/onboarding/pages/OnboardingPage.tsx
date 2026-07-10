@@ -1,10 +1,12 @@
 import { ArrowLeft, ArrowRight, Cloud, CloudOff, Dumbbell, LockKeyhole, Save } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useProfile } from '@/app/providers/profile/useProfile';
+import { completeProfileOnboarding } from '@/application/onboarding/completeProfileOnboarding';
 import { routePaths } from '@/app/routePaths';
 import { OnboardingAccountChoice } from '@/features/onboarding/components/OnboardingAccountChoice';
 import { OnboardingProfileStep } from '@/features/onboarding/components/OnboardingProfileStep';
+import { OnboardingProfileSummary } from '@/features/onboarding/components/OnboardingProfileSummary';
 import { OnboardingProgress } from '@/features/onboarding/components/OnboardingProgress';
 import { useOnboardingFlow } from '@/features/onboarding/hooks/useOnboardingFlow';
 import {
@@ -17,6 +19,7 @@ import {
   type ProfileOnboardingErrors,
   type ProfileOnboardingStepId,
 } from '@/features/onboarding/profile/profileOnboardingSteps';
+import { saveProfileOnboardingCompletion } from '@/features/onboarding/storage/onboardingCompletionStorage';
 import {
   clearProfileOnboardingDraft,
   loadProfileOnboardingDraft,
@@ -26,8 +29,11 @@ import {
 import type { ProfileFormValues } from '@/features/profile/schemas/profileSchema';
 import { DEFAULT_PROFILE_FORM_VALUES } from '@/features/profile/utils/defaultProfileFormValues';
 import { profileFormValuesToEntity } from '@/features/profile/utils/profileForm';
+import { formatSocialHandle } from '@/domain/friends/socialIdentity';
 import { activateGuestDataSpace } from '@/infrastructure/data-spaces/dataSpaceRegistry';
-import { activeDataSpace } from '@/infrastructure/database/database';
+import { appDatabase, activeDataSpace } from '@/infrastructure/database/database';
+import { DexieSocialIdentityRepository } from '@/infrastructure/repositories/dexie/DexieSocialIdentityRepository';
+import { repositories } from '@/infrastructure/repositories/repositories';
 import { useActionToast } from '@/shared/toast/useActionToast';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
@@ -99,6 +105,8 @@ export function OnboardingPage() {
   const [errors, setErrors] = useState<ProfileOnboardingErrors>({});
   const [saveError, setSaveError] = useState<string | undefined>();
   const [draftStatus, setDraftStatus] = useState<SaveStatusValue>(initialState.saveStatus);
+  const [socialHandle, setSocialHandle] = useState<string | undefined>();
+  const [editingFromSummary, setEditingFromSummary] = useState(false);
 
   const persistDraft = useCallback((stepId: OnboardingStepId, nextValues = valuesRef.current) => {
     if (!isProfileOnboardingStepId(stepId)) return;
@@ -119,6 +127,27 @@ export function OnboardingPage() {
   const currentCopy = currentProfileStepId
     ? PROFILE_ONBOARDING_STEP_COPY[currentProfileStepId]
     : undefined;
+
+  useEffect(() => {
+    if (
+      activeDataSpace.kind !== 'account'
+      || currentProfileStepId !== PROFILE_ONBOARDING_STEP_IDS.summary
+    ) {
+      return;
+    }
+
+    let cancelled = false;
+    const repository = new DexieSocialIdentityRepository(appDatabase);
+    void repository.readIdentity().then((identity) => {
+      if (!cancelled) setSocialHandle(formatSocialHandle(identity.handle));
+    }).catch(() => {
+      if (!cancelled) setSocialHandle(undefined);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentProfileStepId]);
 
   const handleValuesChange = useCallback((patch: Partial<ProfileFormValues>) => {
     setValues((current) => {
@@ -154,6 +183,11 @@ export function OnboardingPage() {
   const handleBack = () => {
     if (!currentProfileStepId) return;
     setErrors({});
+    if (editingFromSummary) {
+      setEditingFromSummary(false);
+      flow.goTo(PROFILE_ONBOARDING_STEP_IDS.summary);
+      return;
+    }
     const previousProfileStep = profileStepBefore(currentProfileStepId);
     if (previousProfileStep) {
       flow.goTo(previousProfileStep);
@@ -172,8 +206,19 @@ export function OnboardingPage() {
     }
 
     setErrors({});
+    if (editingFromSummary) {
+      setEditingFromSummary(false);
+      flow.goTo(PROFILE_ONBOARDING_STEP_IDS.summary);
+      return;
+    }
     const nextProfileStep = profileStepAfter(currentProfileStepId);
     if (nextProfileStep) flow.goTo(nextProfileStep);
+  };
+
+  const handleEditSummary = (stepId: ProfileOnboardingStepId) => {
+    setErrors({});
+    setEditingFromSummary(true);
+    flow.goTo(stepId);
   };
 
   const handleSubmit = async () => {
@@ -183,6 +228,7 @@ export function OnboardingPage() {
     if (!validation.parsedValues) {
       setErrors(validation.errors);
       if (validation.firstInvalidStepId) {
+        setEditingFromSummary(false);
         flow.goTo(validation.firstInvalidStepId);
       }
       focusFirstInvalidField();
@@ -193,12 +239,21 @@ export function OnboardingPage() {
 
     await flow.runSubmission(async () => {
       try {
-        await saveProfile(profileFormValuesToEntity(validation.parsedValues!));
+        const completion = await completeProfileOnboarding(
+          profileFormValuesToEntity(validation.parsedValues!),
+          {
+            saveProfile,
+            weightRepository: repositories.weight,
+          },
+        );
+        saveProfileOnboardingCompletion();
         clearProfileOnboardingDraft();
         actionToast.success({
           key: 'onboarding-profile-create',
           title: 'Profil créé',
-          description: 'SportPilot est prêt à suivre tes données.',
+          description: completion.initialWeightCreated
+            ? 'SportPilot est prêt et la première pesée a été enregistrée.'
+            : 'SportPilot est prêt. L’historique de poids existant a été conservé.',
         });
         navigate(routePaths.dashboard, { replace: true });
       } catch (error) {
@@ -213,7 +268,7 @@ export function OnboardingPage() {
     });
   };
 
-  const isLastProfileStep = currentProfileStepId === PROFILE_ONBOARDING_STEP_IDS.steps;
+  const isSummaryStep = currentProfileStepId === PROFILE_ONBOARDING_STEP_IDS.summary;
 
   return (
     <main className="min-h-screen px-4 py-4 sm:px-6 sm:py-6 lg:py-10">
@@ -345,12 +400,21 @@ export function OnboardingPage() {
                   </InlineNotice>
                 ) : null}
 
-                <OnboardingProfileStep
-                  stepId={currentProfileStepId}
-                  values={values}
-                  errors={errors}
-                  onChange={handleValuesChange}
-                />
+                {isSummaryStep ? (
+                  <OnboardingProfileSummary
+                    values={values}
+                    dataSpaceKind={activeDataSpace.kind}
+                    socialHandle={socialHandle}
+                    onEdit={handleEditSummary}
+                  />
+                ) : (
+                  <OnboardingProfileStep
+                    stepId={currentProfileStepId}
+                    values={values}
+                    errors={errors}
+                    onChange={handleValuesChange}
+                  />
+                )}
 
                 <StickyActionBar mobileBottomOffset="0rem" toastOffset="6rem">
                   <div className="grid grid-cols-2 gap-3">
@@ -364,16 +428,16 @@ export function OnboardingPage() {
                       <ArrowLeft aria-hidden="true" className="size-5" />
                       Retour
                     </Button>
-                    {isLastProfileStep ? (
+                    {isSummaryStep ? (
                       <Button
                         type="button"
                         size="lg"
                         loading={flow.state.submissionStatus === 'submitting'}
-                        loadingLabel="Création…"
+                        loadingLabel="Démarrage…"
                         onClick={() => void handleSubmit()}
                       >
                         <Save aria-hidden="true" className="size-5" />
-                        Créer mon profil
+                        Commencer avec SportPilot
                       </Button>
                     ) : (
                       <Button type="button" size="lg" onClick={handleNext}>
