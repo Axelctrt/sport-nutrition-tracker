@@ -89,6 +89,7 @@ describe('WorkoutSessionPage', () => {
     await waitFor(() => expect(finishButton).toBeEnabled());
     await user.click(finishButton);
     const dialog = await screen.findByRole('alertdialog');
+    expect(within(dialog).getByText(/Il reste 2 exercices sans série validée/)).toBeInTheDocument();
     await user.click(within(dialog).getByRole('button', { name: 'Terminer la séance' }));
     expect(await screen.findByRole('heading', { name: 'Retour au carnet' })).toBeInTheDocument();
     expect((await appDatabase.workoutSessions.get('session-current'))?.status).toBe('completed');
@@ -119,6 +120,11 @@ describe('WorkoutSessionPage', () => {
     });
     expect(screen.queryByText('Série validée')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Chargement de la page')).not.toBeInTheDocument();
+    expect(await screen.findByText('60 kg · 12 reps · RPE 8')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Charge en kg')).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByRole('progressbar', { name: 'Progression de la séance' })).toHaveAttribute('aria-valuenow', '100');
+    });
     expect(await screen.findByRole('region', { name: 'Minuteur de repos' })).toBeInTheDocument();
     expect(screen.getByRole('timer')).toHaveTextContent(/01:5[89]|02:00/);
     await user.click(screen.getByRole('button', { name: 'Pause' }));
