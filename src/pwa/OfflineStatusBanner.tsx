@@ -78,7 +78,7 @@ export function OfflineStatusBanner() {
         <span>
           {restored
             ? 'Connexion rétablie.'
-            : 'Mode hors connexion : les données locales restent disponibles. Les services externes attendront le retour du réseau.'}
+            : 'Hors ligne — modifications conservées sur cet appareil. La synchronisation reprendra au retour du réseau.'}
         </span>
       </div>
     </div>

@@ -19,7 +19,7 @@ describe('OfflineStatusBanner', () => {
     setOnline(false);
     render(<OfflineStatusBanner />);
 
-    expect(screen.getByText(/Mode hors connexion/)).toBeInTheDocument();
+    expect(screen.getByText(/Hors ligne — modifications conservées/)).toBeInTheDocument();
 
     setOnline(true);
     act(() => window.dispatchEvent(new Event('online')));

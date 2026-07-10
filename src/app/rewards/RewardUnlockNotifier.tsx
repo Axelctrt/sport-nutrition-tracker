@@ -66,6 +66,7 @@ export function RewardUnlockNotifier({
           dedupeKey: `reward-themes:${batch.themes
             .map((progress) => progress.theme.id)
             .join(",")}`,
+          enqueue: batch.achievements.length > 0,
         });
       }
     };

@@ -15,6 +15,7 @@ export interface ToastInput {
   tone?: ToastTone;
   durationMs?: number | null;
   dedupeKey?: string;
+  enqueue?: boolean;
 }
 
 export interface ToastItem extends Required<Pick<ToastInput, 'title' | 'tone'>> {

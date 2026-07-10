@@ -33,6 +33,7 @@ import { Card } from '@/shared/ui/Card';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 import { PageSkeleton } from '@/shared/ui/PageSkeleton';
+import { RefreshStatus } from '@/shared/ui/RefreshStatus';
 import {
   toLocalDate,
   formatLocalDate,
@@ -71,6 +72,7 @@ export function WeeklyPlanningPage() {
     calorieProjections,
     status,
     errorMessage,
+    isRefreshing,
     actionId,
     refresh,
     changeWeek,
@@ -342,6 +344,12 @@ export function WeeklyPlanningPage() {
       </Card>
 
       {errorMessage ? <InlineNotice className="mt-4" tone="error" title="Action impossible"><p>{errorMessage}</p><Button className="mt-3" variant="secondary" onClick={() => void refresh()}>Réessayer</Button></InlineNotice> : null}
+
+      <RefreshStatus
+        visible={isRefreshing}
+        label="Actualisation du planning…"
+        className="mt-4"
+      />
 
       <div
         id="weekly-planning-upcoming"
