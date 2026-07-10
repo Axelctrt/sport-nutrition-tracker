@@ -87,10 +87,10 @@ export const mobileMoreNavigation: NavigationSection[] = [
     title: 'Sport',
     items: [
       {
-        label: 'Journal des activités',
+        label: 'Hub Sport',
         path: routePaths.activities,
         icon: Activity,
-        description: 'Démarrer une activité ou relire les entraînements réalisés.',
+        description: 'Démarrer une activité, consulter le programme et l’historique récent.',
       },
       {
         label: 'Mes entraînements',
