@@ -82,6 +82,32 @@ describe("backupEnvelopeSchema", () => {
     });
   });
 
+
+  it("conserve le journal limité des impacts du profil", () => {
+    const envelope = createValidEnvelope();
+    const storedProfile = envelope.data.userProfile[0]!;
+    envelope.data.userProfile = [{
+      ...storedProfile,
+      profileImpactHistory: [{
+        id: "impact-1",
+        changedAt: "2026-07-10T09:00:00.000Z",
+        effectiveDate: "2026-07-10",
+        changedFields: ["goal", "targetWeeklyWeightChangePercent"],
+        summary: "Les objectifs nutritionnels de la journée ont été recalculés.",
+        beforeTargetCaloriesKcal: 2400,
+        afterTargetCaloriesKcal: 2180,
+        beforeMacros: { proteinGrams: 108, carbohydratesGrams: 322, fatGrams: 54 },
+        afterMacros: { proteinGrams: 108, carbohydratesGrams: 267, fatGrams: 54 },
+      }],
+    }];
+
+    const parsed = backupEnvelopeSchema.parse(envelope);
+
+    expect(parsed.data.userProfile[0]?.profileImpactHistory).toEqual(
+      envelope.data.userProfile[0]?.profileImpactHistory,
+    );
+  });
+
   it("complète les nouveaux réglages absents d’une sauvegarde 0.15.0", () => {
     const envelope = createValidEnvelope();
     const legacySettings = { ...envelope.data.appSettings![0] } as Record<
