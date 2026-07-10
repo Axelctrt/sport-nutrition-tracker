@@ -1,6 +1,6 @@
 import type { EntityMetadata, IsoDateTime } from '@/domain/models/common';
 import type { EnduranceTemplate, SwimmingSessionType } from '@/domain/models/activity';
-import type { DashboardPreferences } from '@/domain/dashboard/dashboardPreferences';
+import type { DashboardDensity, DashboardPreferences } from '@/domain/dashboard/dashboardPreferences';
 import type { RoutineReminderPreferences } from '@/domain/reminders/routineReminder';
 
 export type ThemePreference = 'system' | 'light' | 'dark';
@@ -47,6 +47,7 @@ export interface DeviceSettings extends EntityMetadata {
   lastBackupExportedAt?: IsoDateTime;
   lastBackupAppVersion?: string;
   lastBackupSchemaVersion?: number;
+  dashboardDensity: DashboardDensity;
 }
 
 /** Vue recomposée utilisée par l’application. */
@@ -65,4 +66,5 @@ export interface AppSettings extends UserSettings {
   lastBackupExportedAt?: IsoDateTime;
   lastBackupAppVersion?: string;
   lastBackupSchemaVersion?: number;
+  dashboardDensity: DashboardDensity;
 }

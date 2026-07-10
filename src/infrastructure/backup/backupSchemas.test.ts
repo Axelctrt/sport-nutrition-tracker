@@ -137,7 +137,10 @@ describe("backupEnvelopeSchema", () => {
     expect(parsed.data.appSettings![0]?.dashboardPreferences).toMatchObject({
       preset: "balanced",
       hidden: [],
+      quickActions: expect.arrayContaining(["addFood", "workout"]),
+      summaryMetrics: ["macros", "steps", "weight"],
     });
+    expect(parsed.data.appSettings![0]?.dashboardDensity).toBe("comfortable");
     expect(
       Object.values(
         parsed.data.appSettings![0]?.routineReminderPreferences?.rules ?? {},

@@ -8,6 +8,8 @@ import { normalizeRoutineReminderPreferences } from '@/domain/reminders/routineR
 import { DEFAULT_ENDURANCE_TEMPLATES } from '@/domain/defaults/appSettings';
 import {
   createDefaultDashboardPreferences,
+  DASHBOARD_QUICK_ACTION_IDS,
+  DASHBOARD_SUMMARY_METRIC_IDS,
   DASHBOARD_WIDGET_IDS,
 } from "@/domain/dashboard/dashboardPreferences";
 import { APP_SETTINGS_ID, LOCAL_USER_PROFILE_ID, USER_SETTINGS_ID } from '@/domain/defaults/identifiers';
@@ -152,11 +154,19 @@ const enduranceTemplateSchema = z.object({
 
 
 const dashboardWidgetIdSchema = z.enum(DASHBOARD_WIDGET_IDS);
+const dashboardQuickActionIdSchema = z.enum(DASHBOARD_QUICK_ACTION_IDS);
+const dashboardSummaryMetricIdSchema = z.enum(DASHBOARD_SUMMARY_METRIC_IDS);
 
 const dashboardPreferencesSchema = z.object({
   preset: z.enum(['balanced', 'nutrition', 'training', 'minimal', 'custom']),
   order: z.array(dashboardWidgetIdSchema),
   hidden: z.array(dashboardWidgetIdSchema),
+  quickActions: z.array(dashboardQuickActionIdSchema).default(
+    createDefaultDashboardPreferences().quickActions,
+  ),
+  summaryMetrics: z.array(dashboardSummaryMetricIdSchema).default(
+    createDefaultDashboardPreferences().summaryMetrics,
+  ),
 });
 
 const appSettingsSchema = entityMetadataSchema.extend({
@@ -192,6 +202,7 @@ const appSettingsSchema = entityMetadataSchema.extend({
   lastBackupExportedAt: isoDateTimeSchema.optional(),
   lastBackupAppVersion: z.string().min(1).max(100).optional(),
   lastBackupSchemaVersion: positiveInteger.optional(),
+  dashboardDensity: z.enum(['comfortable', 'compact']).default('comfortable'),
 });
 
 
@@ -205,6 +216,7 @@ const userSettingsSchema = appSettingsSchema.omit({
   lastBackupExportedAt: true,
   lastBackupAppVersion: true,
   lastBackupSchemaVersion: true,
+  dashboardDensity: true,
 }).extend({
   id: z.literal(USER_SETTINGS_ID),
 });

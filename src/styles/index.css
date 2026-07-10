@@ -276,3 +276,8 @@ input[type='week']::-webkit-datetime-edit {
 
 /* Champ natif masqué derrière les choix caméra/galerie. */
 .photo-native-input{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;padding:0;margin:-1px}
+
+/* L’affichage compact réduit les espacements verticaux sans diminuer les cibles tactiles. */
+.dashboard-widget-stack[data-density='compact'] > [data-dashboard-widget] > :first-child {
+  margin-top: 0.75rem !important;
+}

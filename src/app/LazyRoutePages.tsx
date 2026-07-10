@@ -242,6 +242,12 @@ const FriendsPrivacyPage = lazy(() =>
 );
 
 
+const ProgressionHubPage = lazy(() =>
+  import('@/features/progression/pages/ProgressionHubPage').then((module) => ({
+    default: module.ProgressionHubPage,
+  })),
+);
+
 const AnalyticsPage = lazy(() =>
   import('@/features/analytics/pages/AnalyticsPage').then((module) => ({
     default: module.AnalyticsPage,
@@ -385,6 +391,14 @@ export function LazyAccountDevicesPage() {
   );
 }
 
+
+export function LazyProgressionHubPage() {
+  return (
+    <RouteSuspense variant="dashboard">
+      <ProgressionHubPage />
+    </RouteSuspense>
+  );
+}
 
 export function LazyAnalyticsPage() {
   return (

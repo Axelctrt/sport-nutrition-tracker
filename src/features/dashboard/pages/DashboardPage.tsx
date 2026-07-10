@@ -20,6 +20,7 @@ import { DashboardTrainingAgenda } from '@/features/dashboard/components/Dashboa
 import { DashboardWeeklyMissions } from '@/features/dashboard/components/DashboardWeeklyMissions';
 import { DashboardWidgetStack } from '@/features/dashboard/components/DashboardWidgetStack';
 import { useDailyDashboard } from '@/features/dashboard/hooks/useDailyDashboard';
+import { useCurrentWeight } from '@/features/weight/hooks/useCurrentWeight';
 import { useDashboardPreferences } from '@/features/dashboard-customization/hooks/useDashboardPreferences';
 import { Button } from '@/shared/ui/Button';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
@@ -41,12 +42,14 @@ export function DashboardPage() {
   } = useDailyDashboard();
   const {
     preferences,
+    density,
     isLoading: preferencesLoading,
     errorMessage: preferencesError,
   } = useDashboardPreferences();
 
-  if (!profile) return null;
+  const currentWeightState = useCurrentWeight(profile);
 
+  if (!profile) return null;
   const firstName = profile.firstName?.trim();
 
   const renderWidget = (widgetId: DashboardWidgetId) => {
@@ -99,6 +102,12 @@ export function DashboardPage() {
             snapshot={snapshot}
             nutrition={nutrition}
             dailyStepGoal={profile.dailyStepGoal}
+            visibleMetrics={preferences.summaryMetrics}
+            currentWeightKg={currentWeightState.currentWeight.weightKg}
+            {...(currentWeightState.currentWeight.source === 'entry'
+              ? { currentWeightMeasuredAt: currentWeightState.currentWeight.measuredAt }
+              : {})}
+            density={density}
             isRefreshing={status === 'loading'}
           />
         );
@@ -117,6 +126,8 @@ export function DashboardPage() {
               ? { weightEntry: snapshot.dateWeightEntry }
               : {})}
             {...(activeWorkout ? { activeWorkout } : {})}
+            visibleActions={preferences.quickActions}
+            density={density}
             onSaveWeight={saveWeight}
             onSaveSteps={saveSteps}
           />
@@ -232,6 +243,7 @@ export function DashboardPage() {
         <>
           <DashboardWidgetStack
             preferences={preferences}
+            density={density}
             isLoading={preferencesLoading}
             renderWidget={renderWidget}
           />

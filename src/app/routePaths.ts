@@ -43,6 +43,7 @@ export const routePaths = {
   editActivity: '/activities/:activityId/edit',
   weight: '/weight',
   history: '/history',
+  progression: '/progression',
   analytics: '/analytics',
   reports: '/reports',
   goals: '/goals',

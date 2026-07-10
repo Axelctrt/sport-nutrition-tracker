@@ -25,10 +25,13 @@ describe('DashboardCustomizationForm', () => {
     await user.click(screen.getByRole('button', { name: 'Enregistrer' }));
 
     expect(onSubmit).toHaveBeenCalledTimes(1);
-    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({
-      preset: 'custom',
-      hidden: expect.arrayContaining(['activities']),
-    }));
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        preset: 'custom',
+        hidden: expect.arrayContaining(['activities']),
+      }),
+      'comfortable',
+    );
   });
 
   it('rétablit l’affichage équilibré', async () => {
@@ -39,12 +42,14 @@ describe('DashboardCustomizationForm', () => {
           preset: 'minimal',
           order: ['todaySummary', 'quickActions', 'activeWorkout', 'activities', 'calculationDetails'],
           hidden: ['activities', 'calculationDetails'],
+          quickActions: ['addFood', 'steps'],
+          summaryMetrics: ['steps', 'weight'],
         }}
         onSubmit={() => undefined}
       />,
     );
 
-    await user.click(screen.getByRole('button', { name: 'Rétablir l’affichage équilibré' }));
+    await user.click(screen.getByRole('button', { name: 'Rétablir la disposition recommandée' }));
 
     expect(screen.getByRole('button', { name: /Équilibré/ })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByRole('checkbox', { name: 'Afficher Activités du jour' })).toBeChecked();

@@ -122,6 +122,7 @@ export function createDefaultDeviceSettings(
       automaticWeightSyncEnabled: false,
       automaticAccountSyncEnabled: false,
       automaticAccountSyncConnectionMode: 'any-connection',
+      dashboardDensity: 'comfortable',
     },
     DEVICE_SETTINGS_ID,
   );
@@ -173,6 +174,7 @@ export function normalizeDeviceSettings(
       settings.automaticAccountSyncEnabled ?? false,
     automaticAccountSyncConnectionMode:
       settings.automaticAccountSyncConnectionMode ?? 'any-connection',
+    dashboardDensity: settings.dashboardDensity ?? 'comfortable',
     ...(automaticWeightSyncAccountFingerprint?.trim()
       ? {
           automaticWeightSyncAccountFingerprint:
@@ -216,6 +218,7 @@ export function composeAppSettings(
       normalizedDevice.automaticAccountSyncEnabled ?? false,
     automaticAccountSyncConnectionMode:
       normalizedDevice.automaticAccountSyncConnectionMode ?? 'any-connection',
+    dashboardDensity: normalizedDevice.dashboardDensity,
     ...(normalizedDevice.automaticWeightSyncAccountFingerprint
       ? {
           automaticWeightSyncAccountFingerprint:
@@ -256,6 +259,7 @@ export function splitAppSettings(settings: AppSettings): {
     automaticAccountSyncEnabled,
     automaticAccountSyncConnectionMode,
     automaticAccountSyncAccountFingerprint,
+    dashboardDensity,
     lastBackupExportedAt,
     lastBackupAppVersion,
     lastBackupSchemaVersion,
@@ -281,6 +285,7 @@ export function splitAppSettings(settings: AppSettings): {
       automaticWeightSyncEnabled,
       automaticAccountSyncEnabled,
       automaticAccountSyncConnectionMode,
+      dashboardDensity,
       ...(automaticWeightSyncAccountFingerprint === undefined
         ? {}
         : { automaticWeightSyncAccountFingerprint }),

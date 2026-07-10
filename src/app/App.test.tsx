@@ -88,9 +88,12 @@ describe('App', () => {
       () => expect(router.state.location.pathname).toBe('/'),
       { timeout: 10_000 },
     );
-    expect(
-      await screen.findByRole('link', { name: 'Tableau de bord' }, { timeout: 12_000 }),
-    ).toHaveAttribute('aria-current', 'page');
+    const homeLinks = await screen.findAllByRole(
+      'link',
+      { name: 'Accueil' },
+      { timeout: 12_000 },
+    );
+    expect(homeLinks.every((link) => link.getAttribute('aria-current') === 'page')).toBe(true);
     await act(async () => {
       await flushUserStatePersistence();
     });
