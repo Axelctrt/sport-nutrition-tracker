@@ -1,67 +1,34 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { PageHeader } from '@/app/layouts/PageHeader';
+import { mobileHeaderBackDestination } from '@/app/layouts/mobileHeaderNavigation';
 import { ThemeProvider } from '@/app/providers/ThemeProvider';
 
-function renderHeader(initialEntry = '/') {
+function renderHeader(pathname: string) {
   return render(
-    <MemoryRouter initialEntries={[initialEntry]}>
-      <ThemeProvider>
+    <ThemeProvider>
+      <MemoryRouter initialEntries={[pathname]}>
         <PageHeader />
-      </ThemeProvider>
-    </MemoryRouter>,
+      </MemoryRouter>
+    </ThemeProvider>,
   );
 }
 
-afterEach(cleanup);
-
 describe('PageHeader', () => {
-
-  it('propose un accès direct aux paramètres dans l’en-tête mobile', () => {
-    renderHeader();
-
-    const settingsLink = screen.getByRole('link', { name: 'Ouvrir les paramètres' });
-    expect(settingsLink).toHaveAttribute('href', '/settings');
-    expect(settingsLink).toHaveClass('lg:hidden');
+  it('place les paramètres à gauche sur une rubrique principale', () => {
+    renderHeader('/food');
+    expect(screen.getByRole('link', { name: 'Ouvrir les paramètres' })).toHaveAttribute('href', '/settings');
+    expect(screen.queryByRole('link', { name: 'Retour' })).not.toBeInTheDocument();
   });
 
-  it('indique la page paramètres comme active', () => {
-    renderHeader('/settings');
-
-    expect(screen.getByRole('link', { name: 'Ouvrir les paramètres' })).toHaveClass(
-      'bg-brand-100',
-    );
+  it('réserve la gauche au retour sur un écran secondaire', () => {
+    renderHeader('/food/add');
+    expect(screen.getByRole('link', { name: 'Retour' })).toHaveAttribute('href', '/food');
+    expect(screen.queryByRole('link', { name: 'Ouvrir les paramètres' })).not.toBeInTheDocument();
   });
 
-  it('ne garde pas Paramètres actif sur la page des rappels', () => {
-    renderHeader('/settings/reminders');
-
-    expect(screen.getByRole('link', { name: 'Ouvrir les paramètres' })).not.toHaveClass(
-      'bg-brand-100',
-    );
+  it('ramène les écrans de suivi vers le hub Progression', () => {
+    expect(mobileHeaderBackDestination('/weight')).toBe('/progression');
+    expect(mobileHeaderBackDestination('/weekly-review')).toBe('/progression');
   });
-
-  it('propose un accès direct au profil dans l’en-tête mobile', () => {
-    renderHeader();
-
-    const profileLink = screen.getByRole('link', { name: 'Modifier le profil' });
-    expect(profileLink).toHaveAttribute('href', '/profile');
-    expect(profileLink).toHaveClass('lg:hidden');
-  });
-
-  it('indique la page profil comme active', () => {
-    renderHeader('/profile');
-
-    expect(screen.getByRole('link', { name: 'Modifier le profil' })).toHaveClass(
-      'bg-brand-100',
-    );
-  });
-
-  it('affiche le titre de la page courante dans l’en-tête mobile', () => {
-    renderHeader('/strength/sessions/session-1');
-
-    expect(screen.getByText('Séance de musculation')).toBeInTheDocument();
-    expect(document.title).toBe('Séance de musculation · SportPilot');
-  });
-
 });

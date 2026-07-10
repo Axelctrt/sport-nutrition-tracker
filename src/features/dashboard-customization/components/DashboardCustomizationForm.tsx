@@ -1,12 +1,29 @@
-import { ArrowDown, ArrowUp, Check, LayoutDashboard, RotateCcw, Save } from 'lucide-react';
+import {
+  ArrowDown,
+  ArrowUp,
+  Check,
+  Gauge,
+  LayoutDashboard,
+  RotateCcw,
+  Save,
+  Zap,
+} from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import {
   createDashboardPreferencesFromPreset,
+  DASHBOARD_QUICK_ACTION_IDS,
+  DASHBOARD_QUICK_ACTION_LABELS,
+  DASHBOARD_SUMMARY_METRIC_IDS,
+  DASHBOARD_SUMMARY_METRIC_LABELS,
   DASHBOARD_WIDGET_DESCRIPTIONS,
   DASHBOARD_WIDGET_LABELS,
   isDashboardWidgetVisible,
   moveDashboardWidget,
+  normalizeDashboardPreferences,
+  toggleDashboardQuickAction,
+  toggleDashboardSummaryMetric,
   toggleDashboardWidget,
+  type DashboardDensity,
   type DashboardPreferences,
   type DashboardPreset,
 } from '@/domain/dashboard/dashboardPreferences';
@@ -15,8 +32,12 @@ import { Card } from '@/shared/ui/Card';
 
 interface DashboardCustomizationFormProps {
   initialPreferences: DashboardPreferences;
+  initialDensity?: DashboardDensity;
   isSubmitting?: boolean;
-  onSubmit: (preferences: DashboardPreferences) => Promise<void> | void;
+  onSubmit: (
+    preferences: DashboardPreferences,
+    density: DashboardDensity,
+  ) => Promise<void> | void;
 }
 
 const PRESETS: Array<{
@@ -30,16 +51,36 @@ const PRESETS: Array<{
   { id: 'minimal', title: 'Essentiel', description: 'Résumé et actions rapides uniquement.' },
 ];
 
+const DENSITIES: Array<{
+  id: DashboardDensity;
+  title: string;
+  description: string;
+}> = [
+  {
+    id: 'comfortable',
+    title: 'Confortable',
+    description: 'Plus d’espace entre les cartes et les informations.',
+  },
+  {
+    id: 'compact',
+    title: 'Compact',
+    description: 'Davantage d’informations visibles sans réduire les zones tactiles.',
+  },
+];
+
 export function DashboardCustomizationForm({
   initialPreferences,
+  initialDensity = 'comfortable',
   isSubmitting = false,
   onSubmit,
 }: DashboardCustomizationFormProps) {
-  const [preferences, setPreferences] = useState(initialPreferences);
+  const [preferences, setPreferences] = useState(() => normalizeDashboardPreferences(initialPreferences));
+  const [density, setDensity] = useState<DashboardDensity>(initialDensity);
 
   useEffect(() => {
-    setPreferences(initialPreferences);
-  }, [initialPreferences]);
+    setPreferences(normalizeDashboardPreferences(initialPreferences));
+    setDensity(initialDensity);
+  }, [initialDensity, initialPreferences]);
 
   const visibleCount = useMemo(
     () => preferences.order.filter((widgetId) => isDashboardWidgetVisible(preferences, widgetId)).length,
@@ -52,20 +93,20 @@ export function DashboardCustomizationForm({
 
   return (
     <form
-      className="space-y-6"
+      className="space-y-7"
       onSubmit={(event) => {
         event.preventDefault();
-        void onSubmit(preferences);
+        void onSubmit(preferences, density);
       }}
     >
       <section aria-labelledby="dashboard-presets-title">
         <div className="flex items-end justify-between gap-3">
           <div>
             <h2 id="dashboard-presets-title" className="text-lg font-bold text-slate-950 dark:text-white">
-              Préréglages
+              Disposition recommandée
             </h2>
             <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-              Choisis une base, puis ajuste chaque bloc si nécessaire.
+              Choisissez une base claire, puis adaptez uniquement ce qui vous est utile.
             </p>
           </div>
           <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
@@ -96,6 +137,94 @@ export function DashboardCustomizationForm({
               </button>
             );
           })}
+        </div>
+      </section>
+
+      <section aria-labelledby="dashboard-density-title">
+        <h2 id="dashboard-density-title" className="text-lg font-bold text-slate-950 dark:text-white">
+          Densité sur cet appareil
+        </h2>
+        <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+          Ce choix reste propre à cet appareil afin d’adapter séparément le mobile et l’ordinateur.
+        </p>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          {DENSITIES.map((option) => {
+            const selected = density === option.id;
+            return (
+              <button
+                key={option.id}
+                type="button"
+                aria-pressed={selected}
+                className={`min-h-20 rounded-2xl border p-4 text-left transition-colors ${selected
+                  ? 'border-brand-500 bg-brand-50 dark:border-brand-600 dark:bg-brand-950/40'
+                  : 'border-slate-200 bg-white hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800'}`}
+                onClick={() => setDensity(option.id)}
+              >
+                <span className="flex items-center gap-2 font-bold text-slate-950 dark:text-white">
+                  <Gauge aria-hidden="true" className="size-5" />
+                  {option.title}
+                </span>
+                <span className="mt-1 block text-sm leading-5 text-slate-600 dark:text-slate-300">
+                  {option.description}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      <section aria-labelledby="dashboard-metrics-title">
+        <h2 id="dashboard-metrics-title" className="text-lg font-bold text-slate-950 dark:text-white">
+          Métriques du résumé
+        </h2>
+        <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+          Les calories restent toujours visibles. Choisissez les autres indicateurs principaux.
+        </p>
+        <div className="mt-3 grid gap-2 sm:grid-cols-3">
+          {DASHBOARD_SUMMARY_METRIC_IDS.map((metricId) => (
+            <label
+              key={metricId}
+              className="flex min-h-14 cursor-pointer items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900"
+            >
+              <span className="font-semibold text-slate-900 dark:text-white">
+                {DASHBOARD_SUMMARY_METRIC_LABELS[metricId]}
+              </span>
+              <input
+                type="checkbox"
+                className="size-5 shrink-0 accent-brand-700"
+                checked={preferences.summaryMetrics.includes(metricId)}
+                onChange={() => setPreferences((current) => toggleDashboardSummaryMetric(current, metricId))}
+              />
+            </label>
+          ))}
+        </div>
+      </section>
+
+      <section aria-labelledby="dashboard-actions-title">
+        <h2 id="dashboard-actions-title" className="text-lg font-bold text-slate-950 dark:text-white">
+          Raccourcis visibles
+        </h2>
+        <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+          Au moins une action reste affichée pour conserver un Accueil immédiatement utilisable.
+        </p>
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          {DASHBOARD_QUICK_ACTION_IDS.map((actionId) => (
+            <label
+              key={actionId}
+              className="flex min-h-14 cursor-pointer items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900"
+            >
+              <span className="flex min-w-0 items-center gap-2 font-semibold text-slate-900 dark:text-white">
+                <Zap aria-hidden="true" className="size-4 shrink-0 text-brand-700 dark:text-brand-300" />
+                {DASHBOARD_QUICK_ACTION_LABELS[actionId]}
+              </span>
+              <input
+                type="checkbox"
+                className="size-5 shrink-0 accent-brand-700"
+                checked={preferences.quickActions.includes(actionId)}
+                onChange={() => setPreferences((current) => toggleDashboardQuickAction(current, actionId))}
+              />
+            </label>
+          ))}
         </div>
       </section>
 
@@ -142,7 +271,7 @@ export function DashboardCustomizationForm({
                       />
                     </label>
 
-                    <div className="mt-3 flex gap-2">
+                    <div className="mt-3 flex flex-wrap gap-2">
                       <Button
                         type="button"
                         size="sm"
@@ -187,7 +316,7 @@ export function DashboardCustomizationForm({
           onClick={() => applyPreset('balanced')}
         >
           <RotateCcw aria-hidden="true" className="size-4" />
-          Rétablir l’affichage équilibré
+          Rétablir la disposition recommandée
         </Button>
       </div>
     </form>

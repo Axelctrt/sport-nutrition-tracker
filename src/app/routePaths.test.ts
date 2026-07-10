@@ -144,3 +144,11 @@ describe('amis et confidentialité', () => {
     expect(routePaths.friends).toBe('/friends');
   });
 });
+
+describe('hub Progression', () => {
+  it('utilise une nouvelle route stable sans remplacer les écrans historiques', () => {
+    expect(routePaths.progression).toBe('/progression');
+    expect(routePaths.weight).toBe('/weight');
+    expect(routePaths.analytics).toBe('/analytics');
+  });
+});

@@ -1,42 +1,30 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { vi } from 'vitest';
-import type { CurrentWeightResolution } from '@/application/weight/currentWeightService';
+import type {
+  CurrentWeightObserver,
+  CurrentWeightSubscriber,
+} from '@/features/weight/hooks/useCurrentWeight';
 import { useCurrentWeight } from '@/features/weight/hooks/useCurrentWeight';
 
-const observable = vi.hoisted(() => ({
-  observer: undefined as
-    | {
-        next: (value: CurrentWeightResolution) => void;
-        error: (error: unknown) => void;
-      }
-    | undefined,
-  unsubscribe: vi.fn(),
-}));
-
-vi.mock('dexie', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('dexie')>();
-  return {
-    ...actual,
-    liveQuery: vi.fn(() => ({
-      subscribe: (observer: typeof observable.observer) => {
-        observable.observer = observer;
-        return { unsubscribe: observable.unsubscribe };
-      },
-    })),
-  };
-});
-
 describe('useCurrentWeight', () => {
+  let observer: CurrentWeightObserver | undefined;
+  const unsubscribe = vi.fn();
+  const subscribe: CurrentWeightSubscriber = vi.fn((_, nextObserver) => {
+    observer = nextObserver;
+    return { unsubscribe };
+  });
+
   beforeEach(() => {
-    observable.observer = undefined;
-    observable.unsubscribe.mockClear();
+    observer = undefined;
+    unsubscribe.mockClear();
+    vi.mocked(subscribe).mockClear();
   });
 
   it('utilise le poids initial pendant le chargement puis suit les changements de pesée', async () => {
     const { result, unmount } = renderHook(() => useCurrentWeight({
       id: 'profile-1',
       initialWeightKg: 70,
-    }));
+    }, subscribe));
 
     expect(result.current).toMatchObject({
       status: 'loading',
@@ -44,7 +32,7 @@ describe('useCurrentWeight', () => {
     });
 
     act(() => {
-      observable.observer?.next({
+      observer?.next({
         source: 'entry',
         weightKg: 68.7,
         measuredAt: '2026-07-10',
@@ -66,17 +54,17 @@ describe('useCurrentWeight', () => {
     });
 
     unmount();
-    expect(observable.unsubscribe).toHaveBeenCalledOnce();
+    expect(unsubscribe).toHaveBeenCalledOnce();
   });
 
   it('revient au poids initial lorsque la lecture réactive échoue', async () => {
     const { result } = renderHook(() => useCurrentWeight({
       id: 'profile-1',
       initialWeightKg: 70,
-    }));
+    }, subscribe));
 
     act(() => {
-      observable.observer?.error(new Error('Lecture impossible'));
+      observer?.error(new Error('Lecture impossible'));
     });
 
     await waitFor(() => {

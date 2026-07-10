@@ -15,11 +15,31 @@ export interface CurrentWeightState {
   errorMessage?: string;
 }
 
+export interface CurrentWeightObserver {
+  next: (currentWeight: CurrentWeightResolution) => void;
+  error: (error: unknown) => void;
+}
+
+export interface CurrentWeightSubscription {
+  unsubscribe: () => void;
+}
+
+export type CurrentWeightSubscriber = (
+  initialWeightKg: number,
+  observer: CurrentWeightObserver,
+) => CurrentWeightSubscription;
+
+export const subscribeToCurrentWeight: CurrentWeightSubscriber = (
+  initialWeightKg,
+  observer,
+) => liveQuery(() => loadCurrentWeight({ initialWeightKg })).subscribe(observer);
+
 export function useCurrentWeight(
-  profile: Pick<UserProfile, 'id' | 'initialWeightKg'>,
+  profile?: Pick<UserProfile, 'id' | 'initialWeightKg'>,
+  subscribe: CurrentWeightSubscriber = subscribeToCurrentWeight,
 ): CurrentWeightState {
-  const profileId = profile.id;
-  const initialWeightKg = profile.initialWeightKg;
+  const profileId = profile?.id ?? 'profile-unavailable';
+  const initialWeightKg = profile?.initialWeightKg ?? 1;
   const fallback = useMemo(
     () => resolveCurrentWeight(initialWeightKg, []),
     [initialWeightKg],
@@ -30,14 +50,17 @@ export function useCurrentWeight(
   });
 
   useEffect(() => {
+    if (profileId === 'profile-unavailable') {
+      setState({ status: 'loading', currentWeight: fallback });
+      return undefined;
+    }
+
     setState({
       status: 'loading',
       currentWeight: fallback,
     });
 
-    const subscription = liveQuery(() => loadCurrentWeight({
-      initialWeightKg,
-    })).subscribe({
+    const subscription = subscribe(initialWeightKg, {
       next: (currentWeight) => {
         setState({ status: 'ready', currentWeight });
       },
@@ -53,7 +76,7 @@ export function useCurrentWeight(
     });
 
     return () => subscription.unsubscribe();
-  }, [fallback, initialWeightKg, profileId]);
+  }, [fallback, initialWeightKg, profileId, subscribe]);
 
   return state;
 }

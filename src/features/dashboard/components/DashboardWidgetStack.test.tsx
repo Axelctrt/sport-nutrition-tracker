@@ -18,6 +18,8 @@ describe('DashboardWidgetStack', () => {
             'calculationDetails',
           ],
           hidden: ['rewardsOverview', 'calculationDetails'],
+          quickActions: ['addFood'],
+          summaryMetrics: ['macros', 'steps', 'weight'],
         }}
         renderWidget={(widgetId) => <span>{widgetId}</span>}
       />,

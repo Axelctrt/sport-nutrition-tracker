@@ -2,7 +2,11 @@ import { ArrowLeft, Eye } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { routePaths } from '@/app/routePaths';
-import { normalizeDashboardPreferences, type DashboardPreferences } from '@/domain/dashboard/dashboardPreferences';
+import {
+  normalizeDashboardPreferences,
+  type DashboardDensity,
+  type DashboardPreferences,
+} from '@/domain/dashboard/dashboardPreferences';
 import { DashboardCustomizationForm } from '@/features/dashboard-customization/components/DashboardCustomizationForm';
 import { repositories } from '@/infrastructure/repositories/repositories';
 import { useActionToast } from '@/shared/toast/useActionToast';
@@ -12,6 +16,7 @@ import { PageSkeleton } from '@/shared/ui/PageSkeleton';
 export function DashboardCustomizationPage() {
   const actionToast = useActionToast();
   const [preferences, setPreferences] = useState<DashboardPreferences>();
+  const [density, setDensity] = useState<DashboardDensity>('comfortable');
   const [isSaving, setIsSaving] = useState(false);
   const [feedback, setFeedback] = useState<{ tone: 'success' | 'error'; message: string }>();
   const [loadError, setLoadError] = useState<string>();
@@ -19,7 +24,9 @@ export function DashboardCustomizationPage() {
   useEffect(() => {
     let mounted = true;
     void repositories.settings.get().then((settings) => {
-      if (mounted) setPreferences(normalizeDashboardPreferences(settings.dashboardPreferences));
+      if (!mounted) return;
+      setPreferences(normalizeDashboardPreferences(settings.dashboardPreferences));
+      setDensity(settings.dashboardDensity ?? 'comfortable');
     }).catch((error: unknown) => {
       if (mounted) {
         setLoadError(error instanceof Error ? error.message : 'La personnalisation n’a pas pu être chargée.');
@@ -28,17 +35,27 @@ export function DashboardCustomizationPage() {
     return () => { mounted = false; };
   }, []);
 
-  const savePreferences = async (nextPreferences: DashboardPreferences) => {
+  const savePreferences = async (
+    nextPreferences: DashboardPreferences,
+    nextDensity: DashboardDensity,
+  ) => {
     setIsSaving(true);
     setFeedback(undefined);
     try {
-      const updated = await repositories.settings.update({ dashboardPreferences: nextPreferences });
+      const updated = await repositories.settings.update({
+        dashboardPreferences: nextPreferences,
+        dashboardDensity: nextDensity,
+      });
       const normalized = normalizeDashboardPreferences(updated.dashboardPreferences);
       setPreferences(normalized);
-      setFeedback({ tone: 'success', message: 'Le tableau de bord a été personnalisé sur cet appareil.' });
+      setDensity(updated.dashboardDensity ?? 'comfortable');
+      setFeedback({
+        tone: 'success',
+        message: 'La disposition est enregistrée. Les blocs et raccourcis suivent le compte ; la densité reste propre à cet appareil.',
+      });
       actionToast.success({
         key: 'dashboard-customization',
-        title: 'Tableau de bord personnalisé',
+        title: 'Accueil personnalisé',
       });
     } catch (error) {
       const fallback = 'La personnalisation n’a pas pu être enregistrée.';
@@ -68,25 +85,25 @@ export function DashboardCustomizationPage() {
         className="inline-flex min-h-10 items-center gap-2 text-sm font-semibold text-brand-700 hover:underline dark:text-brand-300"
       >
         <ArrowLeft aria-hidden="true" className="size-4" />
-        Retour au tableau de bord
+        Retour à l’Accueil
       </Link>
 
       <div className="mt-3">
         <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
-          Affichage local
+          Accueil personnel
         </p>
         <h1 id="dashboard-customization-title" className="mt-1 text-3xl font-bold tracking-tight text-slate-950 dark:text-white">
-          Personnaliser le tableau de bord
+          Personnaliser l’Accueil
         </h1>
         <p className="mt-3 max-w-3xl text-slate-600 dark:text-slate-300">
-          Choisis les informations prioritaires et leur ordre. Les données ne sont pas supprimées lorsqu’un bloc est masqué.
+          Organisez les informations utiles aujourd’hui, les métriques principales et les raccourcis. Masquer un bloc ne supprime aucune donnée.
         </p>
       </div>
 
-      <InlineNotice className="mt-5" title="Aperçu après enregistrement">
-        <span className="inline-flex items-center gap-2">
-          <Eye aria-hidden="true" className="size-4" />
-          Les changements seront visibles dès le prochain affichage du tableau de bord.
+      <InlineNotice className="mt-5" title="Synchronisation maîtrisée">
+        <span className="inline-flex items-start gap-2">
+          <Eye aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+          L’ordre, les blocs et les raccourcis peuvent suivre le compte. La densité confortable ou compacte reste propre à cet appareil.
         </span>
       </InlineNotice>
 
@@ -104,6 +121,7 @@ export function DashboardCustomizationPage() {
       <div className="mt-6">
         <DashboardCustomizationForm
           initialPreferences={preferences}
+          initialDensity={density}
           isSubmitting={isSaving}
           onSubmit={savePreferences}
         />

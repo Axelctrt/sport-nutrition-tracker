@@ -1,6 +1,10 @@
 import { Dumbbell } from 'lucide-react';
-import { NavLink } from 'react-router-dom';
-import { primaryNavigation, secondaryNavigation } from '@/app/navigation';
+import { Link, useLocation } from 'react-router-dom';
+import {
+  navigationItemIsActive,
+  primaryNavigation,
+  secondaryNavigation,
+} from '@/app/navigation';
 import { cn } from '@/shared/utils/cn';
 
 function navigationClassName(isActive: boolean): string {
@@ -13,6 +17,8 @@ function navigationClassName(isActive: boolean): string {
 }
 
 export function DesktopSidebar() {
+  const location = useLocation();
+
   return (
     <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 overflow-hidden border-r border-slate-200 bg-white/95 p-4 backdrop-blur lg:flex lg:flex-col dark:border-slate-800 dark:bg-slate-950/95">
       <div className="flex shrink-0 items-center gap-3 px-2 py-3">
@@ -30,16 +36,17 @@ export function DesktopSidebar() {
           <nav aria-label="Navigation principale" className="mt-5 space-y-1">
             {primaryNavigation.map((item) => {
               const Icon = item.icon;
+              const isActive = navigationItemIsActive(location.pathname, item);
               return (
-                <NavLink
+                <Link
                   key={item.path}
                   to={item.path}
-                  end={item.end ?? false}
-                  className={({ isActive }) => navigationClassName(isActive)}
+                  aria-current={isActive ? 'page' : undefined}
+                  className={navigationClassName(isActive)}
                 >
                   <Icon aria-hidden="true" className="size-5" />
                   {item.label}
-                </NavLink>
+                </Link>
               );
             })}
           </nav>
@@ -50,16 +57,17 @@ export function DesktopSidebar() {
           >
             {secondaryNavigation.map((item) => {
               const Icon = item.icon;
+              const isActive = navigationItemIsActive(location.pathname, item);
               return (
-                <NavLink
+                <Link
                   key={item.path}
                   to={item.path}
-                  end={item.end ?? false}
-                  className={({ isActive }) => navigationClassName(isActive)}
+                  aria-current={isActive ? 'page' : undefined}
+                  className={navigationClassName(isActive)}
                 >
                   <Icon aria-hidden="true" className="size-5" />
                   {item.label}
-                </NavLink>
+                </Link>
               );
             })}
           </nav>

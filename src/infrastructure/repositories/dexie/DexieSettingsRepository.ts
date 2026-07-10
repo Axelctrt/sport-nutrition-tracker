@@ -41,6 +41,7 @@ const deviceSettingKeys = new Set<keyof AppSettings>([
   'lastBackupExportedAt',
   'lastBackupAppVersion',
   'lastBackupSchemaVersion',
+  'dashboardDensity',
 ]);
 
 export class DexieSettingsRepository implements SettingsRepository {

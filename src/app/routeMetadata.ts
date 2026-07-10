@@ -48,6 +48,7 @@ const routeMetadata: RouteMetadata[] = [
   { pattern: routePaths.editActivity, title: 'Modifier une activité' },
   { pattern: routePaths.addActivity, title: 'Ajouter une activité' },
   { pattern: routePaths.activities, title: 'Activités' },
+  { pattern: routePaths.progression, title: 'Progression' },
   { pattern: routePaths.weight, title: 'Poids' },
   { pattern: routePaths.history, title: 'Historique' },
   { pattern: routePaths.analytics, title: 'Progression' },

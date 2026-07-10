@@ -92,7 +92,7 @@ describe('DashboardTodaySummary', () => {
     expect(screen.getByText('Pas du jour').parentElement).toHaveTextContent('8 000');
   });
 
-  it('distingue une cible dépassée et une absence de pesée du jour', () => {
+  it('distingue une cible dépassée et affiche le poids actuel même sans pesée du jour', () => {
     render(
       <DashboardTodaySummary
         snapshot={createSnapshot('2026-06-24')}
@@ -106,7 +106,8 @@ describe('DashboardTodaySummary', () => {
     );
 
     expect(screen.getByText('kcal dépassées')).toBeInTheDocument();
-    expect(screen.getByText('Non saisi')).toBeInTheDocument();
-    expect(screen.getByText('Calcul actuel : 60,5 kg')).toBeInTheDocument();
+    expect(screen.getByText('Poids actuel')).toBeInTheDocument();
+    expect(screen.getByText('60,5 kg')).toBeInTheDocument();
+    expect(screen.getByText('Valeur initiale du profil')).toBeInTheDocument();
   });
 });

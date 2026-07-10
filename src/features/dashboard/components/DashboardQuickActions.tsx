@@ -1,5 +1,5 @@
 import { Activity, Dumbbell, Footprints, Plus, Scale, ScanLine } from 'lucide-react';
-import { useCallback, useState, type ComponentType, type SVGProps } from 'react';
+import { useCallback, useState, type ComponentType, type ReactNode, type SVGProps } from 'react';
 import { Link } from 'react-router-dom';
 import {
   addFoodPath,
@@ -7,6 +7,11 @@ import {
   routePaths,
   workoutSessionPath,
 } from '@/app/routePaths';
+import {
+  DASHBOARD_QUICK_ACTION_IDS,
+  type DashboardDensity,
+  type DashboardQuickActionId,
+} from '@/domain/dashboard/dashboardPreferences';
 import type { NewEntity } from '@/domain/models/common';
 import type { DailySteps } from '@/domain/models/steps';
 import type { WeightEntry } from '@/domain/models/weight';
@@ -27,6 +32,8 @@ interface DashboardQuickActionsProps {
   weightKg: number;
   weightEntry?: WeightEntry;
   activeWorkout?: ActiveWorkoutSummary;
+  visibleActions?: readonly DashboardQuickActionId[];
+  density?: DashboardDensity;
   onSaveWeight: (data: NewEntity<WeightEntry>) => Promise<void>;
   onSaveSteps: (data: NewEntity<DailySteps>) => Promise<void>;
 }
@@ -39,8 +46,6 @@ type Feedback = {
   title: string;
   message: string;
 };
-
-const actionClassName = 'flex min-h-16 min-w-0 items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-left text-sm font-semibold text-slate-800 shadow-sm transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800';
 
 function ActionContent({ icon: Icon, label }: { icon: ActionIcon; label: string }) {
   return (
@@ -60,6 +65,8 @@ export function DashboardQuickActions({
   weightKg,
   weightEntry,
   activeWorkout,
+  visibleActions = DASHBOARD_QUICK_ACTION_IDS,
+  density = 'comfortable',
   onSaveWeight,
   onSaveSteps,
 }: DashboardQuickActionsProps) {
@@ -70,6 +77,9 @@ export function DashboardQuickActions({
   const workoutPath = activeWorkout
     ? workoutSessionPath(activeWorkout.session.id)
     : routePaths.workoutSessions;
+  const actionClassName = density === 'compact'
+    ? 'flex min-h-14 min-w-0 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-left text-sm font-semibold text-slate-800 shadow-sm transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800'
+    : 'flex min-h-16 min-w-0 items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-left text-sm font-semibold text-slate-800 shadow-sm transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800';
 
   const openQuickEntry = useCallback((entry: QuickEntry) => {
     setFeedback(undefined);
@@ -84,19 +94,10 @@ export function DashboardQuickActions({
 
   const handleStepsSubmit = async (values: StepsFormValues) => {
     setDialogError(undefined);
-
     try {
-      await onSaveSteps({
-        date,
-        totalSteps: values.totalSteps,
-        source: 'manual',
-      });
+      await onSaveSteps({ date, totalSteps: values.totalSteps, source: 'manual' });
       const message = 'Les pas du jour et la dépense estimée ont été actualisés.';
-      setFeedback({
-        tone: 'success',
-        title: 'Pas enregistrés',
-        message,
-      });
+      setFeedback({ tone: 'success', title: 'Pas enregistrés', message });
       actionToast.success({
         key: `dashboard-steps:${date}`,
         title: 'Pas enregistrés',
@@ -105,22 +106,13 @@ export function DashboardQuickActions({
       setQuickEntry(undefined);
     } catch (error) {
       const fallback = 'Les pas n’ont pas pu être enregistrés.';
-      setDialogError(
-        error instanceof Error
-          ? error.message
-          : fallback,
-      );
-      actionToast.error({
-        key: `dashboard-steps:${date}`,
-        error,
-        fallback,
-      });
+      setDialogError(error instanceof Error ? error.message : fallback);
+      actionToast.error({ key: `dashboard-steps:${date}`, error, fallback });
     }
   };
 
   const handleWeightSubmit = async (values: WeightEntryFormValues) => {
     setDialogError(undefined);
-
     try {
       await onSaveWeight({
         date,
@@ -128,11 +120,7 @@ export function DashboardQuickActions({
         ...(values.note.trim() ? { note: values.note.trim() } : {}),
       });
       const message = 'Le poids du jour et les objectifs associés ont été actualisés.';
-      setFeedback({
-        tone: 'success',
-        title: 'Poids enregistré',
-        message,
-      });
+      setFeedback({ tone: 'success', title: 'Poids enregistré', message });
       actionToast.success({
         key: `dashboard-weight:${date}`,
         title: 'Poids enregistré',
@@ -141,52 +129,57 @@ export function DashboardQuickActions({
       setQuickEntry(undefined);
     } catch (error) {
       const fallback = 'La pesée n’a pas pu être enregistrée.';
-      setDialogError(
-        error instanceof Error
-          ? error.message
-          : fallback,
-      );
-      actionToast.error({
-        key: `dashboard-weight:${date}`,
-        error,
-        fallback,
-      });
+      setDialogError(error instanceof Error ? error.message : fallback);
+      actionToast.error({ key: `dashboard-weight:${date}`, error, fallback });
     }
   };
 
-  return (
-    <>
-      <Card className="mt-4 p-4 sm:p-5">
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="text-base font-bold text-slate-950 dark:text-white">Actions rapides</h2>
-          <span className="text-xs text-slate-500 dark:text-slate-400">Aujourd’hui</span>
-        </div>
-        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3">
+  const renderAction = (actionId: DashboardQuickActionId): ReactNode => {
+    switch (actionId) {
+      case 'addFood':
+        return (
           <Link
+            key={actionId}
             to={addFoodPath(date, 'snacks')}
-            className="flex min-h-16 min-w-0 items-center gap-3 rounded-xl bg-brand-700 px-3 py-2.5 text-left text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-800 dark:bg-brand-600 dark:hover:bg-brand-500"
+            className={`flex min-w-0 items-center rounded-xl bg-brand-700 px-3 text-left text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-800 dark:bg-brand-600 dark:hover:bg-brand-500 ${density === 'compact' ? 'min-h-14 gap-2 py-2' : 'min-h-16 gap-3 py-2.5'}`}
           >
             <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-white/15">
               <Plus aria-hidden="true" className="size-5" />
             </span>
             <span className="min-w-0 leading-tight">Ajouter un aliment</span>
           </Link>
-          <Link to={barcodeScannerPath(date, 'snacks')} className={actionClassName}>
+        );
+      case 'scanFood':
+        return (
+          <Link key={actionId} to={barcodeScannerPath(date, 'snacks')} className={actionClassName}>
             <ActionContent icon={ScanLine} label="Scanner un produit" />
           </Link>
-          <button type="button" className={actionClassName} onClick={() => openQuickEntry('steps')}>
+        );
+      case 'steps':
+        return (
+          <button key={actionId} type="button" className={actionClassName} onClick={() => openQuickEntry('steps')}>
             <ActionContent icon={Footprints} label="Saisir les pas" />
           </button>
-          <button type="button" className={actionClassName} onClick={() => openQuickEntry('weight')}>
+        );
+      case 'weight':
+        return (
+          <button key={actionId} type="button" className={actionClassName} onClick={() => openQuickEntry('weight')}>
             <ActionContent icon={Scale} label="Saisir le poids" />
           </button>
-          <Link to={routePaths.addActivity} className={actionClassName}>
+        );
+      case 'addActivity':
+        return (
+          <Link key={actionId} to={routePaths.addActivity} className={actionClassName}>
             <ActionContent icon={Activity} label="Ajouter une activité" />
           </Link>
+        );
+      case 'workout':
+        return (
           <Link
+            key={actionId}
             to={workoutPath}
             className={activeWorkout
-              ? 'flex min-h-16 min-w-0 items-center gap-3 rounded-xl border border-brand-300 bg-brand-50 px-3 py-2.5 text-left text-sm font-semibold text-brand-900 shadow-sm transition-colors hover:bg-brand-100 dark:border-brand-800 dark:bg-brand-950/40 dark:text-brand-100 dark:hover:bg-brand-950/70'
+              ? `flex min-w-0 items-center rounded-xl border border-brand-300 bg-brand-50 px-3 text-left text-sm font-semibold text-brand-900 shadow-sm transition-colors hover:bg-brand-100 dark:border-brand-800 dark:bg-brand-950/40 dark:text-brand-100 dark:hover:bg-brand-950/70 ${density === 'compact' ? 'min-h-14 gap-2 py-2' : 'min-h-16 gap-3 py-2.5'}`
               : actionClassName}
           >
             <ActionContent
@@ -194,6 +187,19 @@ export function DashboardQuickActions({
               label={activeWorkout ? 'Reprendre la séance' : 'Démarrer une séance'}
             />
           </Link>
+        );
+    }
+  };
+
+  return (
+    <>
+      <Card className={density === 'compact' ? 'mt-3 p-4' : 'mt-4 p-4 sm:p-5'}>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-base font-bold text-slate-950 dark:text-white">Actions rapides</h2>
+          <span className="text-xs text-slate-500 dark:text-slate-400">Aujourd’hui</span>
+        </div>
+        <div className={`mt-3 grid grid-cols-2 gap-2 ${density === 'comfortable' ? 'sm:grid-cols-3 sm:gap-3' : 'sm:grid-cols-3'}`}>
+          {visibleActions.map(renderAction)}
         </div>
 
         {feedback ? (
