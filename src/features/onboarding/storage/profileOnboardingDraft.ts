@@ -1,5 +1,11 @@
 import type { DataSpaceId } from '@/domain/data-spaces/dataSpace';
 import type { ProfileFormValues } from '@/features/profile/schemas/profileSchema';
+import {
+  LEGACY_PROFILE_ONBOARDING_STEP_ID,
+  PROFILE_ONBOARDING_STEP_IDS,
+  normalizeProfileOnboardingStepId,
+  type ProfileOnboardingStepId,
+} from '@/features/onboarding/profile/profileOnboardingSteps';
 import { DEFAULT_PROFILE_FORM_VALUES } from '@/features/profile/utils/defaultProfileFormValues';
 import {
   clearOnboardingDraft,
@@ -11,7 +17,7 @@ import {
 import { activeDataSpace } from '@/infrastructure/database/database';
 
 export const STORAGE_ONBOARDING_STEP_ID = 'storage';
-export const PROFILE_ONBOARDING_STEP_ID = 'profile';
+export const PROFILE_ONBOARDING_STEP_ID = LEGACY_PROFILE_ONBOARDING_STEP_ID;
 
 const sexValues = new Set<ProfileFormValues['sexForEnergyEquation']>(['male', 'female']);
 const ageModeValues = new Set<ProfileFormValues['ageMode']>(['birthDate', 'age']);
@@ -87,20 +93,31 @@ export function loadProfileOnboardingDraft(
   dataSpaceId: DataSpaceId = activeDataSpace.id,
   storage?: Storage,
 ): OnboardingDraftLoadResult<ProfileFormValues> {
-  return loadOnboardingDraft(
+  const result = loadOnboardingDraft(
     normalizeProfileOnboardingValues,
     storage,
     profileOnboardingDraftStorageKey(dataSpaceId),
   );
+
+  if (result.status !== 'restored') return result;
+
+  return {
+    status: 'restored',
+    draft: {
+      ...result.draft,
+      stepId: normalizeProfileOnboardingStepId(result.draft.stepId),
+    },
+  };
 }
 
 export function saveProfileOnboardingDraft(
   values: ProfileFormValues,
+  stepId: ProfileOnboardingStepId = PROFILE_ONBOARDING_STEP_IDS.name,
   dataSpaceId: DataSpaceId = activeDataSpace.id,
   storage?: Storage,
 ): boolean {
   return saveOnboardingDraft(
-    PROFILE_ONBOARDING_STEP_ID,
+    stepId,
     values,
     storage,
     profileOnboardingDraftStorageKey(dataSpaceId),

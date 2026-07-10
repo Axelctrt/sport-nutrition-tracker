@@ -2,8 +2,28 @@ import { expect, type Page } from '@playwright/test';
 
 export async function createLocalProfile(page: Page, firstName = 'E2E'): Promise<void> {
   await page.goto('/#/onboarding');
-  await expect(page.getByRole('heading', { name: 'Créer le profil local' })).toBeVisible();
-  await page.getByLabel('Prénom').fill(firstName);
+  await expect(page.getByRole('heading', { name: 'Choisir le mode local ou compte' })).toBeVisible();
+  await page.getByRole('button', { name: 'Choisir le mode local' }).click();
+  await expect(page.getByRole('heading', {
+    name: 'Comment souhaitez-vous être appelé dans SportPilot ?',
+  })).toBeVisible();
+  await page.getByLabel(/Nom utilisé dans SportPilot/).fill(firstName);
+
+  const profileStepHeadings = [
+    'Quel sexe doit être utilisé pour les calculs énergétiques ?',
+    'Quelle est votre date de naissance ?',
+    'Quelle est votre taille ?',
+    'Quel est votre poids actuel ?',
+    'Quel est votre objectif principal ?',
+    'À quoi ressemble votre activité professionnelle ?',
+    'Quel objectif de pas souhaitez-vous viser chaque jour ?',
+  ];
+
+  for (const heading of profileStepHeadings) {
+    await page.getByRole('button', { name: 'Suivant' }).click();
+    await expect(page.getByRole('heading', { name: heading })).toBeVisible();
+  }
+
   await page.getByRole('button', { name: 'Créer mon profil' }).click();
   await expect(page.getByRole('heading', { name: `Bonjour ${firstName}` })).toBeVisible();
 }
