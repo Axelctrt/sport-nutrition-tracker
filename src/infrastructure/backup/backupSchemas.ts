@@ -72,6 +72,37 @@ const ageInformationSchema = z.discriminatedUnion('mode', [
   }),
 ]);
 
+const profileImpactHistoryEntrySchema = z.object({
+  id: z.string().min(1),
+  changedAt: isoDateTimeSchema,
+  effectiveDate: localDateSchema,
+  changedFields: z.array(z.enum([
+    'sexForEnergyEquation',
+    'ageInformation',
+    'heightCm',
+    'initialWeightKg',
+    'goal',
+    'targetWeeklyWeightChangePercent',
+    'occupationalActivity',
+    'dailyStepGoal',
+    'proteinGramsPerKg',
+    'fatGramsPerKg',
+  ])).max(10),
+  summary: z.string().min(1).max(300),
+  beforeTargetCaloriesKcal: nonNegativeNumber,
+  afterTargetCaloriesKcal: nonNegativeNumber,
+  beforeMacros: z.object({
+    proteinGrams: nonNegativeNumber,
+    carbohydratesGrams: nonNegativeNumber,
+    fatGrams: nonNegativeNumber,
+  }),
+  afterMacros: z.object({
+    proteinGrams: nonNegativeNumber,
+    carbohydratesGrams: nonNegativeNumber,
+    fatGrams: nonNegativeNumber,
+  }),
+});
+
 const userProfileSchema = entityMetadataSchema.extend({
   firstName: z.string().max(100).optional(),
   sexForEnergyEquation: z.enum(['male', 'female']),
@@ -84,6 +115,7 @@ const userProfileSchema = entityMetadataSchema.extend({
   dailyStepGoal: nonNegativeInteger,
   proteinGramsPerKg: nonNegativeNumber,
   fatGramsPerKg: nonNegativeNumber,
+  profileImpactHistory: z.array(profileImpactHistoryEntrySchema).max(12).optional(),
 });
 
 const swimmingMetValuesSchema = z.object({
