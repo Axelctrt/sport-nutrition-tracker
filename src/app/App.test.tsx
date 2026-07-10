@@ -55,9 +55,25 @@ describe('App', () => {
 
     await screen.findByRole('heading', { name: 'Choisir le mode local ou compte' }, { timeout: 5_000 });
     await user.click(screen.getByRole('button', { name: 'Choisir le mode local' }));
-    await screen.findByRole('heading', { name: 'Créer le profil' }, { timeout: 5_000 });
-    await user.type(screen.getByLabelText('Prénom'), 'Axel');
+    await screen.findByRole('heading', {
+      name: 'Comment souhaitez-vous être appelé dans SportPilot ?',
+    }, { timeout: 5_000 });
+    await user.type(screen.getByLabelText(/Nom utilisé dans SportPilot/), 'Axel');
     expect(window.localStorage.getItem(ONBOARDING_DRAFT_STORAGE_KEY)).not.toBeNull();
+
+    for (const heading of [
+      'Quel sexe doit être utilisé pour les calculs énergétiques ?',
+      'Quelle est votre date de naissance ?',
+      'Quelle est votre taille ?',
+      'Quel est votre poids actuel ?',
+      'Quel est votre objectif principal ?',
+      'À quoi ressemble votre activité professionnelle ?',
+      'Quel objectif de pas souhaitez-vous viser chaque jour ?',
+    ]) {
+      await user.click(screen.getByRole('button', { name: 'Suivant' }));
+      await screen.findByRole('heading', { name: heading });
+    }
+
     await user.click(screen.getByRole('button', { name: 'Créer mon profil' }));
 
     await waitFor(
