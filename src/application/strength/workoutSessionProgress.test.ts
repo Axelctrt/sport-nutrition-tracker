@@ -1,0 +1,109 @@
+import { describe, expect, it } from 'vitest';
+import { buildWorkoutSessionProgress } from '@/application/strength/workoutSessionProgress';
+import type { StrengthSet, WorkoutSessionExercise } from '@/domain/models/strength';
+import { createEntity } from '@/shared/utils/entities';
+import {
+  createStrengthSetInput,
+  createWorkoutSessionExerciseInput,
+} from '@/test/factories/strengthFactory';
+
+function exercise(
+  id: string,
+  overrides: Partial<WorkoutSessionExercise> = {},
+): WorkoutSessionExercise {
+  const result = createEntity(createWorkoutSessionExerciseInput({
+    sessionId: 'session-1',
+    exerciseDefinitionId: `definition-${id}`,
+    exerciseNameSnapshot: id === 'bench' ? 'Développé couché' : 'Rowing barre',
+    ...overrides,
+  }), id);
+  if (!Object.prototype.hasOwnProperty.call(overrides, 'plannedSets')) {
+    delete result.plannedSets;
+  }
+  return result;
+}
+
+function strengthSet(
+  id: string,
+  sessionExerciseId: string,
+  setNumber: number,
+  overrides: Partial<StrengthSet> = {},
+): StrengthSet {
+  return createEntity(createStrengthSetInput({
+    sessionId: 'session-1',
+    sessionExerciseId,
+    setNumber,
+    ...overrides,
+  }), id);
+}
+
+describe('buildWorkoutSessionProgress', () => {
+  it('calcule les séries prévues et pointe vers la prochaine série incomplète', () => {
+    const exercises = [
+      exercise('bench', { plannedSets: 3 }),
+      exercise('row', { plannedSets: 2 }),
+    ];
+    const sets = [
+      strengthSet('bench-warmup', 'bench', 1, { type: 'warmup', isCompleted: true }),
+      strengthSet('bench-1', 'bench', 2, { isCompleted: true }),
+      strengthSet('bench-2', 'bench', 3, { isCompleted: false }),
+      strengthSet('row-1', 'row', 1, { isCompleted: false }),
+    ];
+
+    expect(buildWorkoutSessionProgress(exercises, sets)).toEqual({
+      completedExerciseCount: 0,
+      exerciseCount: 2,
+      completedSetCount: 1,
+      totalSetCount: 5,
+      remainingSetCount: 4,
+      incompleteExerciseCount: 2,
+      percentage: 20,
+      isComplete: false,
+      nextStep: {
+        exerciseId: 'bench',
+        exerciseName: 'Développé couché',
+        setId: 'bench-2',
+        setNumber: 3,
+      },
+    });
+  });
+
+  it('propose de créer la série suivante lorsqu’un objectif planifié reste incomplet', () => {
+    const progress = buildWorkoutSessionProgress(
+      [exercise('bench', { plannedSets: 3 })],
+      [
+        strengthSet('bench-1', 'bench', 1, { isCompleted: true }),
+        strengthSet('bench-2', 'bench', 2, { isCompleted: true }),
+      ],
+    );
+
+    expect(progress.nextStep).toEqual({
+      exerciseId: 'bench',
+      exerciseName: 'Développé couché',
+      setNumber: 3,
+    });
+    expect(progress.percentage).toBe(67);
+  });
+
+  it('considère une séance terminée lorsque toutes les séries suivies sont validées', () => {
+    const progress = buildWorkoutSessionProgress(
+      [exercise('bench'), exercise('row')],
+      [
+        strengthSet('bench-1', 'bench', 1, { isCompleted: true }),
+        strengthSet('row-1', 'row', 1, { isCompleted: true }),
+      ],
+    );
+
+    expect(progress).toMatchObject({
+      completedExerciseCount: 2,
+      exerciseCount: 2,
+      completedSetCount: 2,
+      totalSetCount: 2,
+      remainingSetCount: 0,
+      incompleteExerciseCount: 0,
+      percentage: 100,
+      isComplete: true,
+    });
+    expect(progress.nextStep).toBeUndefined();
+  });
+});

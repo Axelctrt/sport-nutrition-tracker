@@ -41,6 +41,7 @@ interface WorkoutExerciseCardProps {
   restButtonLabel?: string | undefined;
   temporarilySkipped?: boolean | undefined;
   onSkip?: ((exercise: WorkoutSessionExercise) => void) | undefined;
+  isCurrent?: boolean | undefined;
 }
 
 function exerciseCompletion(exercise: WorkoutSessionExercise, sets: StrengthSet[]) {
@@ -77,6 +78,7 @@ export function WorkoutExerciseCard({
   restButtonLabel,
   temporarilySkipped = false,
   onSkip,
+  isCurrent = false,
 }: WorkoutExerciseCardProps) {
   const completion = exerciseCompletion(exercise, sets);
   const [expanded, setExpanded] = useState(() => editable || !completion.complete);
@@ -89,6 +91,7 @@ export function WorkoutExerciseCard({
         'scroll-mt-24 overflow-hidden',
         temporarilySkipped && 'opacity-70',
         groupLabel && 'border-brand-200 dark:border-brand-900',
+        isCurrent && !completion.complete && 'border-violet-400 ring-2 ring-violet-100 dark:border-violet-700 dark:ring-violet-950',
         completion.complete && 'border-emerald-200 dark:border-emerald-900',
       )}
     >
@@ -110,6 +113,11 @@ export function WorkoutExerciseCard({
                 {completion.complete ? <CheckCircle2 aria-hidden="true" className="size-3.5" /> : null}
                 {completion.target > 0 ? `${completion.count}/${completion.target} séries` : `${completion.count} série${completion.count > 1 ? 's' : ''}`}
               </span>
+              {isCurrent && !completion.complete ? (
+                <span className="rounded-full bg-violet-100 px-2.5 py-1 text-xs font-semibold text-violet-800 dark:bg-violet-950 dark:text-violet-200">
+                  À faire maintenant
+                </span>
+              ) : null}
             </div>
             <h2 className="mt-1 text-xl font-semibold text-slate-950 dark:text-white">
               {exercise.exerciseNameSnapshot}

@@ -101,4 +101,35 @@ describe('ActivityForm', () => {
     }));
   });
 
+  it('applique les raccourcis de durée et d’intensité au formulaire', async () => {
+    const user = userEvent.setup();
+    const settings = createDefaultAppSettings();
+    const onSubmit = vi.fn(async (_values: ActivityFormValues) => undefined);
+
+    render(
+      <ActivityForm
+        initialValues={defaultActivityFormValues('running', settings)}
+        allowedTypes={['running']}
+        settings={settings}
+        calculationWeightKg={60}
+        calculationWeightSource="poids de test"
+        submitLabel="Enregistrer"
+        onDateChange={vi.fn()}
+        onSubmit={onSubmit}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: '60 minutes' }));
+    await user.click(screen.getByRole('button', { name: 'Élevée' }));
+
+    expect(screen.getByLabelText(/Durée \(min\)/)).toHaveValue(60);
+    await user.click(screen.getByRole('button', { name: 'Enregistrer' }));
+
+    expect(onSubmit.mock.calls[0]?.[0]).toEqual(expect.objectContaining({
+      durationMinutes: 60,
+      intensity: 'high',
+    }));
+  });
+
+
 });

@@ -1,6 +1,7 @@
 import { ArrowLeft, Dumbbell, Plus, Save } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import { buildWorkoutSessionProgress, type WorkoutSessionProgress } from '@/application/strength/workoutSessionProgress';
 import { getWorkoutSessionTitle } from '@/application/strength/workoutSessionService';
 import { routePaths } from '@/app/routePaths';
 import type { StrengthSetChanges } from '@/application/strength/strengthSetService';
@@ -10,6 +11,7 @@ import { buildExerciseGroups, exerciseGroupPosition, groupRestAfterExercise } fr
 import { ProgressionSuggestionsPanel } from '@/features/strength-progression/components/ProgressionSuggestionsPanel';
 import { WorkoutExerciseCard } from '@/features/strength-sessions/components/WorkoutExerciseCard';
 import { WorkoutSessionActionBar } from '@/features/strength-sessions/components/WorkoutSessionActionBar';
+import { WorkoutSessionProgressCard } from '@/features/strength-sessions/components/WorkoutSessionProgressCard';
 import { RestTimerBar } from '@/features/strength-rest-timer/components/RestTimerBar';
 import { defaultRestTimerPreferences, useRestTimer } from '@/features/strength-rest-timer/hooks/useRestTimer';
 import { useWorkoutSession } from '@/features/strength-sessions/hooks/useWorkoutSession';
@@ -47,12 +49,20 @@ function revealElement(id: string): void {
   }
 }
 
-function confirmationContent(request: ConfirmationRequest | undefined) {
+function confirmationContent(
+  request: ConfirmationRequest | undefined,
+  progress: WorkoutSessionProgress,
+) {
   if (!request) return undefined;
   if (request.type === 'finish') {
+    const remainingDescription = progress.isComplete
+      ? 'Toutes les séries prévues sont validées.'
+      : progress.remainingSetCount > 0
+        ? `Il reste ${progress.remainingSetCount} série${progress.remainingSetCount > 1 ? 's' : ''} prévue${progress.remainingSetCount > 1 ? 's' : ''} à valider.`
+        : `Il reste ${progress.incompleteExerciseCount} exercice${progress.incompleteExerciseCount > 1 ? 's' : ''} sans série validée.`;
     return {
       title: 'Terminer la séance ?',
-      description: 'La séance passera dans l’historique et ne pourra plus être modifiée.',
+      description: `${remainingDescription} La séance passera dans l’historique et ne pourra plus être modifiée.`,
       confirmLabel: 'Terminer la séance',
       tone: 'default' as const,
     };
@@ -178,6 +188,16 @@ export function WorkoutSessionPage() {
     }
     return result;
   }, [strengthSets]);
+
+
+  const progress = useMemo(
+    () => buildWorkoutSessionProgress(exercises, strengthSets),
+    [exercises, strengthSets],
+  );
+
+  const revealWorkoutStep = (exerciseId: string, setId?: string) => {
+    revealElement(setId ? `strength-set-${setId}` : `workout-exercise-${exerciseId}`);
+  };
 
   const addSelectedExercise = async () => {
     if (!selectedExerciseId) return;
@@ -316,7 +336,7 @@ export function WorkoutSessionPage() {
   }
 
   const editable = session.status === 'inProgress';
-  const dialogContent = confirmationContent(confirmation);
+  const dialogContent = confirmationContent(confirmation, progress);
 
   return (
     <section
@@ -369,8 +389,17 @@ export function WorkoutSessionPage() {
           onFinish={() => setConfirmation({ type: 'finish' })}
           onAbandon={() => setConfirmation({ type: 'abandon' })}
           hasRestTimer={restTimer.isVisible}
+          progressLabel={progress.totalSetCount > 0
+            ? `${progress.completedSetCount}/${progress.totalSetCount} séries`
+            : `${progress.completedExerciseCount}/${progress.exerciseCount} exercices`}
         />
       ) : null}
+
+
+      <WorkoutSessionProgressCard
+        progress={progress}
+        onContinue={revealWorkoutStep}
+      />
 
 
       {editable ? (
@@ -449,6 +478,7 @@ export function WorkoutSessionPage() {
               restButtonLabel={restPlan.label}
               temporarilySkipped={temporarilySkippedExerciseIds.has(exercise.id)}
               onSkip={groupPosition ? handleSkipExercise : undefined}
+              isCurrent={progress.nextStep?.exerciseId === exercise.id}
             />
           );
         })}

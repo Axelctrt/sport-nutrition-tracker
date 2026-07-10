@@ -12,6 +12,7 @@ interface WorkoutSessionActionBarProps {
   onFinish: () => void;
   onAbandon: () => void;
   hasRestTimer?: boolean;
+  progressLabel?: string;
 }
 
 function elapsedMinutes(session: WorkoutSession, now: number): number {
@@ -27,6 +28,7 @@ export function WorkoutSessionActionBar({
   onFinish,
   onAbandon,
   hasRestTimer = false,
+  progressLabel,
 }: WorkoutSessionActionBarProps) {
   const [now, setNow] = useState(() => Date.now());
 
@@ -41,9 +43,16 @@ export function WorkoutSessionActionBar({
     <StickyActionBar toastOffset={hasRestTimer ? '14.5rem' : '5.5rem'}>
       <div className="flex items-center gap-2">
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5 text-sm font-semibold text-slate-950 dark:text-white">
-            <Clock3 aria-hidden="true" className="size-4 text-brand-700 dark:text-brand-300" />
-            {duration} min
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-semibold text-slate-950 dark:text-white">
+            <span className="inline-flex items-center gap-1.5">
+              <Clock3 aria-hidden="true" className="size-4 text-brand-700 dark:text-brand-300" />
+              {duration} min
+            </span>
+            {progressLabel ? (
+              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                {progressLabel}
+              </span>
+            ) : null}
           </div>
           <SaveStatus status={saveStatus} className="mt-0.5" />
         </div>

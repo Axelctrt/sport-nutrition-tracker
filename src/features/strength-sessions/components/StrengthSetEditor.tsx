@@ -1,4 +1,4 @@
-import { Check, ChevronDown, CopyPlus, Plus, RotateCcw, Save, Trash2 } from 'lucide-react';
+import { Check, ChevronDown, CopyPlus, Pencil, Plus, RotateCcw, Save, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { StrengthSet, StrengthTrackingMode, WorkoutSessionExercise } from '@/domain/models/strength';
 import { resolveTrackingMode } from '@/domain/strength/strengthTracking';
@@ -61,6 +61,28 @@ function measurementHint(mode: StrengthTrackingMode): string | undefined {
   return undefined;
 }
 
+function formatCompletedSetSummary(set: StrengthSet, mode: StrengthTrackingMode): string {
+  const parts: string[] = [];
+  if (
+    mode === 'loadRepetitions'
+    || mode === 'bodyweightRepetitions'
+    || mode === 'assistedRepetitions'
+  ) {
+    parts.push(`${set.weightKg ?? 0} kg`);
+  }
+  if (mode !== 'duration' && mode !== 'distance') {
+    parts.push(`${set.repetitions} rep${set.repetitions > 1 ? 's' : ''}`);
+  }
+  if (mode === 'duration' && set.durationSeconds !== undefined) {
+    parts.push(`${set.durationSeconds} s`);
+  }
+  if (mode === 'distance' && set.distanceMeters !== undefined) {
+    parts.push(`${set.distanceMeters.toLocaleString('fr-FR')} m`);
+  }
+  if (set.rpe !== undefined) parts.push(`RPE ${set.rpe}`);
+  return parts.join(' · ');
+}
+
 function StrengthSetRow({
   exercise,
   set,
@@ -80,6 +102,7 @@ function StrengthSetRow({
   const [type, setType] = useState(set.type);
   const [notes, setNotes] = useState(set.notes ?? '');
   const [validationError, setValidationError] = useState<string>();
+  const [expanded, setExpanded] = useState(() => !set.isCompleted);
 
   useEffect(() => {
     setRepetitions(numberInputValue(set.repetitions));
@@ -89,6 +112,7 @@ function StrengthSetRow({
     setRpe(numberInputValue(set.rpe));
     setType(set.type);
     setNotes(set.notes ?? '');
+    setExpanded(!set.isCompleted);
   }, [set]);
 
   const isDirty = repetitions !== numberInputValue(set.repetitions)
@@ -163,6 +187,69 @@ function StrengthSetRow({
   const usesRepetitions = trackingMode !== 'duration' && trackingMode !== 'distance';
   const mainColumnCount = usesLoad && usesRepetitions ? 'grid-cols-3' : 'grid-cols-2';
   const hint = measurementHint(trackingMode);
+  const completedSummary = formatCompletedSetSummary(set, trackingMode);
+
+  if (set.isCompleted && !expanded) {
+    return (
+      <article
+        id={baseId}
+        className="scroll-mt-28 rounded-2xl border border-emerald-300 bg-emerald-50/70 p-3.5 dark:border-emerald-900 dark:bg-emerald-950/20 sm:p-4"
+        aria-labelledby={`${baseId}-title`}
+        data-strength-set-completed="true"
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h4 id={`${baseId}-title`} className="font-semibold text-slate-950 dark:text-white">
+                Série {set.setNumber}
+              </h4>
+              <span className="rounded-full bg-emerald-700 px-2.5 py-1 text-xs font-semibold text-white">
+                Validée
+              </span>
+            </div>
+            <p className="mt-1 text-sm font-medium text-slate-700 dark:text-slate-200">
+              {completedSummary || strengthSetTypeLabels[set.type]}
+            </p>
+            {set.notes ? (
+              <p className="mt-1 truncate text-xs text-slate-500 dark:text-slate-400">{set.notes}</p>
+            ) : null}
+          </div>
+        </div>
+
+        {editable ? (
+          <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={isBusy}
+              aria-label={`Modifier la série ${set.setNumber}`}
+              onClick={() => setExpanded(true)}
+            >
+              <Pencil aria-hidden="true" className="size-4" />
+              Modifier
+            </Button>
+            <Button size="sm" variant="secondary" disabled={isBusy} onClick={() => void toggleCompletion()}>
+              <RotateCcw aria-hidden="true" className="size-4" />
+              Rouvrir la série
+            </Button>
+            <Button size="sm" variant="secondary" disabled={isBusy} onClick={() => void onDuplicate(exercise.id, set.id)}>
+              <CopyPlus aria-hidden="true" className="size-4" />
+              Dupliquer
+            </Button>
+            <Button
+              size="sm"
+              variant="dangerGhost"
+              disabled={isBusy}
+              onClick={() => onDelete(exercise.id, set.id)}
+            >
+              <Trash2 aria-hidden="true" className="size-4" />
+              Supprimer la série
+            </Button>
+          </div>
+        ) : null}
+      </article>
+    );
+  }
 
   return (
     <article
@@ -174,6 +261,7 @@ function StrengthSetRow({
           : 'border-slate-200 bg-slate-50/70 dark:border-slate-800 dark:bg-slate-950/40',
       )}
       aria-labelledby={`${baseId}-title`}
+      data-strength-set-completed={set.isCompleted ? 'true' : 'false'}
     >
       <div className="flex items-center justify-between gap-3">
         <div>

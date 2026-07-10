@@ -17,12 +17,12 @@ import {
   activityTypeLabels,
   bikeTypeLabels,
   cyclingEnvironmentLabels,
-  intensityLabels,
   runningSessionLabels,
   strokeLabels,
   swimmingSessionLabels,
   terrainLabels,
 } from '@/features/activities/utils/activityLabels';
+import { ActivityQuickControls } from '@/features/activities/components/ActivityQuickControls';
 import { toActivityDraft } from '@/features/activities/utils/activityForm';
 import { checkboxClassName, inputClassName } from '@/shared/forms/formStyles';
 import { focusFirstInvalidField } from '@/shared/hooks/focusFirstInvalidField';
@@ -250,34 +250,44 @@ export function ActivityForm({
               </div>
             ) : null}
 
-            <FormField id="activity-duration" label="Durée (min)" error={errors.durationMinutes?.message} required>
-              <input
-                id="activity-duration"
-                type="number"
-                min="1"
-                max="1440"
-                step="1"
-                inputMode="numeric"
-                enterKeyHint="next"
-                className={inputClassName}
-                aria-invalid={Boolean(errors.durationMinutes)}
-                aria-describedby={errors.durationMinutes ? 'activity-duration-error' : undefined}
-                {...register('durationMinutes', numberRegistration)}
-              />
-            </FormField>
+            <div className="col-span-2 sm:col-span-1">
+              <FormField id="activity-duration" label="Durée (min)" error={errors.durationMinutes?.message} required>
+                <input
+                  id="activity-duration"
+                  type="number"
+                  min="1"
+                  max="1440"
+                  step="1"
+                  inputMode="numeric"
+                  enterKeyHint="next"
+                  className={inputClassName}
+                  aria-invalid={Boolean(errors.durationMinutes)}
+                  aria-describedby={errors.durationMinutes ? 'activity-duration-error' : undefined}
+                  {...register('durationMinutes', numberRegistration)}
+                />
+              </FormField>
+            </div>
 
-            <FormField id="activity-intensity" label="Intensité" error={errors.intensity?.message} required>
-              <select
-                id="activity-intensity"
-                className={inputClassName}
-                aria-invalid={Boolean(errors.intensity)}
-                {...register('intensity')}
-              >
-                {Object.entries(intensityLabels).map(([value, label]) => (
-                  <option key={value} value={value}>{label}</option>
-                ))}
-              </select>
-            </FormField>
+            <input type="hidden" {...register('intensity')} />
+            <div className="col-span-2">
+              <ActivityQuickControls
+                durationMinutes={values.durationMinutes}
+                intensity={values.intensity}
+                onDurationChange={(durationMinutes) => setValue('durationMinutes', durationMinutes, {
+                  shouldDirty: true,
+                  shouldValidate: true,
+                })}
+                onIntensityChange={(intensity) => setValue('intensity', intensity, {
+                  shouldDirty: true,
+                  shouldValidate: true,
+                })}
+              />
+              {errors.intensity?.message ? (
+                <p className="mt-2 text-sm font-medium text-red-700 dark:text-red-300" role="alert">
+                  {errors.intensity.message}
+                </p>
+              ) : null}
+            </div>
           </div>
         </section>
 
