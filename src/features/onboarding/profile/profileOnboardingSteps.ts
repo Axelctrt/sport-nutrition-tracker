@@ -12,6 +12,7 @@ export const PROFILE_ONBOARDING_STEP_IDS = {
   goal: 'goal',
   activity: 'activity',
   steps: 'steps',
+  summary: 'summary',
 } as const;
 
 export type ProfileOnboardingStepId =
@@ -26,6 +27,7 @@ export const PROFILE_ONBOARDING_STEPS = [
   { id: PROFILE_ONBOARDING_STEP_IDS.goal },
   { id: PROFILE_ONBOARDING_STEP_IDS.activity },
   { id: PROFILE_ONBOARDING_STEP_IDS.steps },
+  { id: PROFILE_ONBOARDING_STEP_IDS.summary },
 ] as const;
 
 export const PROFILE_ONBOARDING_STEP_COPY: Record<
@@ -72,6 +74,11 @@ export const PROFILE_ONBOARDING_STEP_COPY: Record<
     title: 'Quel objectif de pas souhaitez-vous viser chaque jour ?',
     description: 'Vous pourrez l’ajuster à tout moment depuis votre profil.',
   },
+  [PROFILE_ONBOARDING_STEP_IDS.summary]: {
+    eyebrow: 'Dernière vérification',
+    title: 'Vérifiez votre configuration',
+    description: 'Relisez les informations avant de commencer avec SportPilot.',
+  },
 };
 
 const stepFields: Record<ProfileOnboardingStepId, readonly (keyof ProfileFormValues)[]> = {
@@ -83,6 +90,7 @@ const stepFields: Record<ProfileOnboardingStepId, readonly (keyof ProfileFormVal
   [PROFILE_ONBOARDING_STEP_IDS.goal]: ['goal', 'targetWeeklyWeightChangePercent'],
   [PROFILE_ONBOARDING_STEP_IDS.activity]: ['occupationalActivity'],
   [PROFILE_ONBOARDING_STEP_IDS.steps]: ['dailyStepGoal'],
+  [PROFILE_ONBOARDING_STEP_IDS.summary]: [],
 };
 
 const fieldStep = Object.fromEntries(
