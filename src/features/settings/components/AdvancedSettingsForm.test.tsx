@@ -46,4 +46,21 @@ describe('AdvancedSettingsForm', () => {
     await user.click(screen.getByRole('button', { name: 'Rétablir' }));
     expect(onResetToDefaults).toHaveBeenCalledTimes(1);
   });
+  it('peut limiter le formulaire à une catégorie sans afficher la réinitialisation globale', () => {
+    render(
+      <AdvancedSettingsForm
+        initialValues={settingsToFormValues(createDefaultAppSettings())}
+        onSubmit={vi.fn()}
+        onResetToDefaults={vi.fn()}
+        visibleSections={['rest-timer']}
+        showResetToDefaults={false}
+      />,
+    );
+
+    expect(screen.getByText('Minuteur de repos')).toBeInTheDocument();
+    expect(screen.queryByText('Dépense quotidienne et activités')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Rétablir les valeurs par défaut' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Enregistrer les paramètres' })).toBeInTheDocument();
+  });
+
 });

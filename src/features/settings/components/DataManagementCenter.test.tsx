@@ -1,23 +1,8 @@
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { vi } from "vitest";
-
 import { routePaths } from "@/app/routePaths";
 import { DataManagementCenter } from "@/features/settings/components/DataManagementCenter";
 
-vi.mock("@/features/settings/components/DatabaseIntegrityPanel", () => ({
-  DatabaseIntegrityPanel: () => <div>Diagnostic d’intégrité intégré</div>,
-}));
-
-vi.mock("@/features/settings/components/SelectiveDataResetPanel", () => ({
-  SelectiveDataResetPanel: () => <div>Réinitialisation sélective intégrée</div>,
-}));
-
-vi.mock("@/features/settings/components/DataConsistencyPanel", () => ({
-  DataConsistencyPanel: () => (
-    <p>Contrôle de cohérence intégré</p>
-  ),
-}));
 describe("DataManagementCenter", () => {
   it("regroupe le stockage, la sauvegarde et les outils de maintenance", () => {
     render(
@@ -25,6 +10,9 @@ describe("DataManagementCenter", () => {
         <DataManagementCenter
           storageStatus="persisted"
           lastBackupExportedAt={undefined}
+          integrityPanel={<div>Diagnostic d’intégrité intégré</div>}
+          consistencyPanel={<p>Contrôle de cohérence intégré</p>}
+          selectiveResetPanel={<div>Réinitialisation sélective intégrée</div>}
         />
       </MemoryRouter>,
     );

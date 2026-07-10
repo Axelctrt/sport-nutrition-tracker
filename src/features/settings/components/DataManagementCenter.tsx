@@ -4,6 +4,7 @@ import {
   HardDrive,
   ShieldCheck,
 } from "lucide-react";
+import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 
 import { routePaths } from "@/app/routePaths";
@@ -19,6 +20,9 @@ interface DataManagementCenterProps {
   className?: string;
   storageStatus: PersistentStorageStatus;
   lastBackupExportedAt: string | undefined;
+  integrityPanel?: ReactNode;
+  consistencyPanel?: ReactNode;
+  selectiveResetPanel?: ReactNode;
 }
 
 const storageStatusLabels: Record<PersistentStorageStatus, string> = {
@@ -43,6 +47,9 @@ export function DataManagementCenter({
   className,
   storageStatus,
   lastBackupExportedAt,
+  integrityPanel,
+  consistencyPanel,
+  selectiveResetPanel,
 }: DataManagementCenterProps) {
   return (
     <section
@@ -124,9 +131,9 @@ export function DataManagementCenter({
         </div>
       </Card>
 
-      <DatabaseIntegrityPanel className="mt-4" />
-      <DataConsistencyPanel />
-      <SelectiveDataResetPanel className="mt-4" />
+      {integrityPanel ?? <DatabaseIntegrityPanel className="mt-4" />}
+      {consistencyPanel ?? <DataConsistencyPanel />}
+      {selectiveResetPanel ?? <SelectiveDataResetPanel className="mt-4" />}
     </section>
   );
 }

@@ -414,17 +414,16 @@ export function AdvancedSettingsPage() {
     >
       <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6 dark:border-slate-800 dark:bg-slate-900">
         <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
-          Espace de configuration
+          Configuration avancée
         </p>
         <h1
           id="advanced-settings-title"
           className="mt-1 text-3xl font-bold tracking-tight text-slate-950 dark:text-white"
         >
-          Paramètres
+          Paramètres avancés
         </h1>
         <p className="mt-3 max-w-3xl leading-7 text-slate-600 dark:text-slate-300">
-          Toutes les rubriques restent repliées pour garder une
-          vue compacte. Leur état est mémorisé sur cet appareil.
+          Cette page regroupe les coefficients experts, les diagnostics et les outils techniques. Les réglages courants restent accessibles depuis l’accueil des Paramètres.
         </p>
       </div>
 
