@@ -37,6 +37,9 @@ export function FoodProductPickerCard({
               {product.brand}
             </p>
           ) : null}
+          <span className="mt-2 inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+            {product.source.type === 'openFoodFacts' ? 'Open Food Facts' : 'Mes aliments'}
+          </span>
         </div>
         <p className="shrink-0 text-sm font-bold tabular-nums text-slate-950 dark:text-white">
           {Math.round(product.nutritionPer100.caloriesKcal)} kcal

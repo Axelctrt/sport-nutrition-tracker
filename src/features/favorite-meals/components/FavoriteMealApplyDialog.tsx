@@ -11,6 +11,7 @@ import { InlineNotice } from '@/shared/ui/InlineNotice';
 interface FavoriteMealApplyDialogProps {
   favorite: FavoriteMealSummary | undefined;
   initialDate: string;
+  initialSlot?: MealSlot;
   busy: boolean;
   errorMessage?: string;
   onClose: () => void;
@@ -29,6 +30,7 @@ const FOCUSABLE_SELECTOR = [
 export function FavoriteMealApplyDialog({
   favorite,
   initialDate,
+  initialSlot,
   busy,
   errorMessage,
   onClose,
@@ -41,8 +43,8 @@ export function FavoriteMealApplyDialog({
   useEffect(() => {
     if (!favorite) return;
     setDate(initialDate);
-    setSlot(favorite.favoriteMeal.defaultSlot ?? 'lunch');
-  }, [favorite, initialDate]);
+    setSlot(initialSlot ?? favorite.favoriteMeal.defaultSlot ?? 'lunch');
+  }, [favorite, initialDate, initialSlot]);
 
   useEffect(() => {
     if (!favorite) return undefined;

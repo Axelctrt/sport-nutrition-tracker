@@ -102,8 +102,8 @@ describe('PhotoNutritionEstimatePage', () => {
     expect(screen.getByText('Choisir une photo')).toBeInTheDocument();
     expect(screen.getByLabelText('Choisir une photo')).not.toHaveAttribute('capture');
     expect(screen.getByText('Aucune photo sélectionnée pour le moment.')).toBeInTheDocument();
-    expect(screen.getByText('Analyse IA sécurisée')).toBeInTheDocument();
-    expect(screen.getByText('Aucun proxy IA configuré : l’analyse restera locale et prudente.')).toBeInTheDocument();
+    expect(screen.getByText('Autoriser l’analyse IA pour cette photo')).toBeInTheDocument();
+    expect(screen.getByText('Le proxy distant est indisponible. L’analyse restera locale et aucune photo ne sera envoyée.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Analyser en local' })).toBeDisabled();
 
     await user.upload(screen.getByLabelText('Choisir une photo'), file);
@@ -154,8 +154,8 @@ describe('PhotoNutritionEstimatePage', () => {
     await user.click(screen.getByRole('button', { name: 'Supprimer la photo sélectionnée' }));
     expect(screen.queryByText('nouveau-repas.jpg')).not.toBeInTheDocument();
     expect(screen.getByText('Aucune photo sélectionnée pour le moment.')).toBeInTheDocument();
-    expect(screen.getByText('Analyse IA sécurisée')).toBeInTheDocument();
-    expect(screen.getByText('Aucun proxy IA configuré : l’analyse restera locale et prudente.')).toBeInTheDocument();
+    expect(screen.getByText('Autoriser l’analyse IA pour cette photo')).toBeInTheDocument();
+    expect(screen.getByText('Le proxy distant est indisponible. L’analyse restera locale et aucune photo ne sera envoyée.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Analyser en local' })).toBeDisabled();
   });
 
@@ -184,10 +184,10 @@ describe('PhotoNutritionEstimatePage', () => {
     const file = new File([new Uint8Array(128)], 'repas.jpg', { type: 'image/jpeg' });
 
     await user.upload(screen.getByLabelText('Choisir une photo'), file);
-    expect(screen.getByText('Le proxy IA est configuré. La photo ne sera envoyée qu’après accord explicite.')).toBeInTheDocument();
+    expect(screen.getByText('La photo sera envoyée une seule fois au proxy sécurisé, uniquement après activation de cet interrupteur.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Analyser en local' })).toBeInTheDocument();
 
-    await user.click(screen.getByRole('checkbox', { name: /J’autorise l’envoi ponctuel/i }));
+    await user.click(screen.getByRole('switch', { name: /Autoriser l’analyse IA distante/i }));
     await user.click(screen.getByRole('button', { name: 'Analyser avec l’IA' }));
 
     expect(createRemoteAiPort).toHaveBeenCalledWith({ endpointUrl: '/api/photo-nutrition/analyze', timeoutMs: 12000 });
@@ -215,7 +215,7 @@ describe('PhotoNutritionEstimatePage', () => {
     const file = new File([new Uint8Array(128)], 'repas.jpg', { type: 'image/jpeg' });
 
     await user.upload(screen.getByLabelText('Choisir une photo'), file);
-    await user.click(screen.getByRole('checkbox', { name: /J’autorise l’envoi ponctuel/i }));
+    await user.click(screen.getByRole('switch', { name: /Autoriser l’analyse IA distante/i }));
     await user.click(screen.getByRole('button', { name: 'Analyser avec l’IA' }));
 
     expect(await screen.findByText('IA indisponible, fallback local utilisé')).toBeInTheDocument();

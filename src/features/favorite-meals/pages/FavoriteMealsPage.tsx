@@ -1,11 +1,15 @@
 import { Search, Star } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import type { FavoriteMealSummary } from '@/application/food/favoriteMealService';
-import { foodJournalPath, routePaths } from '@/app/routePaths';
+import { foodJournalPath } from '@/app/routePaths';
 import type { MealSlot } from '@/domain/models/food';
 import { FavoriteMealApplyDialog } from '@/features/favorite-meals/components/FavoriteMealApplyDialog';
 import { FavoriteMealCard } from '@/features/favorite-meals/components/FavoriteMealCard';
+import {
+  createFoodJournalFeedbackState,
+  type FoodJournalNavigationState,
+} from '@/features/food-journal/navigation/foodJournalNavigation';
 import { FavoriteMealsSummary } from '@/features/favorite-meals/components/FavoriteMealsSummary';
 import { useFavoriteMeals } from '@/features/favorite-meals/hooks/useFavoriteMeals';
 import { inputClassName } from '@/shared/forms/formStyles';
@@ -16,6 +20,13 @@ import { EmptyState } from '@/shared/ui/EmptyState';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 import { PageSkeleton } from '@/shared/ui/PageSkeleton';
 import { toLocalDate } from '@/shared/utils/dates';
+import { isValidLocalDate } from '@/shared/validation/localDate';
+
+const mealSlots: readonly MealSlot[] = ['breakfast', 'lunch', 'dinner', 'snacks'];
+
+function isMealSlot(value: string | null): value is MealSlot {
+  return value !== null && mealSlots.includes(value as MealSlot);
+}
 
 interface SuccessFeedback {
   title: string;
@@ -25,6 +36,14 @@ interface SuccessFeedback {
 
 export function FavoriteMealsPage() {
   const actionToast = useActionToast();
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const navigationState = location.state as FoodJournalNavigationState | null;
+  const requestedDate = searchParams.get('date');
+  const requestedSlot = searchParams.get('slot');
+  const targetDate = requestedDate && isValidLocalDate(requestedDate) ? requestedDate : toLocalDate();
+  const targetSlot = isMealSlot(requestedSlot) ? requestedSlot : 'lunch';
   const {
     favorites,
     status,
@@ -37,7 +56,6 @@ export function FavoriteMealsPage() {
   const [query, setQuery] = useState('');
   const [selectedFavorite, setSelectedFavorite] = useState<FavoriteMealSummary>();
   const [success, setSuccess] = useState<SuccessFeedback>();
-  const today = toLocalDate();
 
   const visibleFavorites = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase('fr');
@@ -57,6 +75,17 @@ export function FavoriteMealsPage() {
       return;
     }
     const description = `${count} entrée${count > 1 ? 's' : ''} ajoutée${count > 1 ? 's' : ''}.`;
+    const returnContext = navigationState?.foodJournalReturn;
+    if (returnContext) {
+      await navigate(returnContext.path, {
+        state: createFoodJournalFeedbackState(returnContext, {
+          title: 'Repas favori ajouté',
+          mealSlot: slot,
+        }),
+      });
+      return;
+    }
+
     setSuccess({
       title: 'Repas ajouté au journal',
       message: description,
@@ -104,7 +133,7 @@ export function FavoriteMealsPage() {
             Réutilise en une seule opération les aliments et recettes d’un repas déjà enregistré.
           </p>
         </div>
-        <Link to={routePaths.food} className="inline-flex min-h-12 w-full items-center justify-center rounded-xl border border-slate-300 px-4 font-semibold text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-800 sm:w-auto">
+        <Link to={foodJournalPath(targetDate)} className="inline-flex min-h-12 w-full items-center justify-center rounded-xl border border-slate-300 px-4 font-semibold text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-800 sm:w-auto">
           Ouvrir le journal
         </Link>
       </div>
@@ -157,7 +186,7 @@ export function FavoriteMealsPage() {
               title="Aucun repas favori"
               description="Depuis le journal alimentaire, ouvre les options d’un repas puis enregistre-le comme favori."
               primaryAction={(
-                <Link to={routePaths.food} className="inline-flex min-h-11 items-center justify-center rounded-xl bg-brand-700 px-4 text-sm font-semibold text-white hover:bg-brand-800">
+                <Link to={foodJournalPath(targetDate)} className="inline-flex min-h-11 items-center justify-center rounded-xl bg-brand-700 px-4 text-sm font-semibold text-white hover:bg-brand-800">
                   Ouvrir le journal
                 </Link>
               )}
@@ -188,7 +217,8 @@ export function FavoriteMealsPage() {
 
       <FavoriteMealApplyDialog
         favorite={selectedFavorite}
-        initialDate={today}
+        initialDate={targetDate}
+        initialSlot={targetSlot}
         busy={Boolean(selectedFavorite && busyId === `apply-${selectedFavorite.favoriteMeal.id}`)}
         {...(selectedFavorite && errorMessage ? { errorMessage } : {})}
         onClose={() => setSelectedFavorite(undefined)}
