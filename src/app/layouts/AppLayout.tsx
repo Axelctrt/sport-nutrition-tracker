@@ -7,9 +7,11 @@ import { DesktopSidebar } from '@/app/layouts/DesktopSidebar';
 import { MobileBottomNavigation } from '@/app/layouts/MobileBottomNavigation';
 import { PageHeader } from '@/app/layouts/PageHeader';
 import { OfflineStatusBanner } from '@/pwa/OfflineStatusBanner';
+import { useClearInputValueOnFocus } from '@/shared/forms/useClearInputValueOnFocus';
 
 export function AppLayout() {
   const location = useLocation();
+  useClearInputValueOnFocus();
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });

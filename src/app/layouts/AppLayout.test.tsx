@@ -1,32 +1,21 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { createHashRouter, RouterProvider } from 'react-router-dom';
 import { AppLayout } from '@/app/layouts/AppLayout';
-
-vi.mock('@/app/backup/BackupReminderCoordinator', () => ({
-  BackupReminderCoordinator: () => null,
-}));
-vi.mock('@/app/search/GlobalSearchShortcut', () => ({
-  GlobalSearchShortcut: () => null,
-}));
-vi.mock('@/app/layouts/DesktopSidebar', () => ({
-  DesktopSidebar: () => null,
-}));
-vi.mock('@/app/layouts/MobileBottomNavigation', () => ({
-  MobileBottomNavigation: () => null,
-}));
-vi.mock('@/app/layouts/PageHeader', () => ({
-  PageHeader: () => null,
-}));
-vi.mock('@/pwa/OfflineStatusBanner', () => ({
-  OfflineStatusBanner: () => null,
-}));
+import { ThemeProvider } from '@/app/providers/ThemeProvider';
+import { ToastProvider } from '@/shared/toast/ToastProvider';
 
 describe('AppLayout', () => {
   it('déplace le focus vers le contenu sans modifier la route du HashRouter', async () => {
     window.location.hash = '#/food';
     const router = createHashRouter([
       {
-        element: <AppLayout />,
+        element: (
+          <ThemeProvider>
+            <ToastProvider>
+              <AppLayout />
+            </ToastProvider>
+          </ThemeProvider>
+        ),
         children: [
           { path: '/food', element: <h1>Journal alimentaire</h1> },
         ],

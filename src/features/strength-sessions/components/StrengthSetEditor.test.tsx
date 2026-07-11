@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { StrengthSetEditor } from '@/features/strength-sessions/components/StrengthSetEditor';
@@ -48,20 +48,18 @@ function renderEditor(overrides: { editable?: boolean } = {}) {
 }
 
 describe('StrengthSetEditor', () => {
-  it('compacte une série validée et permet de rouvrir son formulaire', async () => {
-    const user = userEvent.setup();
+  it('affiche une série validée sous forme de ligne compacte directement éditable', () => {
     renderEditor();
 
-    expect(screen.getByText('60 kg · 12 reps · RPE 8')).toBeInTheDocument();
-    expect(screen.queryByLabelText('Charge en kg')).not.toBeInTheDocument();
-
-    await user.click(screen.getByRole('button', { name: 'Modifier la série 1' }));
-
+    expect(screen.getByText('1/3 lignes · 1 validée')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Série 1' })).toBeInTheDocument();
     expect(screen.getByLabelText('Charge en kg')).toHaveValue(60);
     expect(screen.getByLabelText('Répétitions')).toHaveValue(12);
+    expect(screen.getByLabelText('RPE')).toHaveValue(8);
+    expect(screen.getByRole('button', { name: 'Rouvrir la série' })).toBeInTheDocument();
   });
 
-  it('conserve les actions rapides sur une série compactée', async () => {
+  it('regroupe les options secondaires dans un panneau discret', async () => {
     const user = userEvent.setup();
     const callbacks = renderEditor();
 
@@ -73,10 +71,14 @@ describe('StrengthSetEditor', () => {
       false,
     );
 
-    await user.click(screen.getByRole('button', { name: 'Dupliquer' }));
+    await user.click(screen.getByText('Options discrètes'));
+    const options = screen.getByText('Options discrètes').closest('details');
+    expect(options).not.toBeNull();
+
+    await user.click(within(options as HTMLElement).getByRole('button', { name: 'Dupliquer' }));
     expect(callbacks.onDuplicate).toHaveBeenCalledWith('bench', 'set-1');
 
-    await user.click(screen.getByRole('button', { name: 'Supprimer la série' }));
+    await user.click(within(options as HTMLElement).getByRole('button', { name: 'Supprimer la série' }));
     expect(callbacks.onDelete).toHaveBeenCalledWith('bench', 'set-1');
   });
 });

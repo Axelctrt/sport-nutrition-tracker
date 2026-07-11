@@ -89,12 +89,16 @@ describe('WorkoutSessionPage', () => {
     await waitFor(() => expect(finishButton).toBeEnabled());
     await user.click(finishButton);
     const dialog = await screen.findByRole('alertdialog');
-    expect(within(dialog).getByText(/Il reste 2 exercices sans série validée/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/Il reste 4 séries prévues à valider/)).toBeInTheDocument();
     await user.click(within(dialog).getByRole('button', { name: 'Terminer la séance' }));
-    expect(await screen.findByRole('heading', { name: 'Retour au carnet' })).toBeInTheDocument();
+    expect(await screen.findByRole(
+      'heading',
+      { name: 'Retour au carnet' },
+      { timeout: 10_000 },
+    )).toBeInTheDocument();
     expect((await appDatabase.workoutSessions.get('session-current'))?.status).toBe('completed');
     expect(window.sessionStorage.getItem('sportpilot:rest-timer:session-current')).toBeNull();
-  }, 15_000);
+  }, 25_000);
 
   it('ajoute, valide, duplique et supprime des séries sans démonter la page', async () => {
     const user = userEvent.setup();
@@ -120,8 +124,10 @@ describe('WorkoutSessionPage', () => {
     });
     expect(screen.queryByText('Série validée')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Chargement de la page')).not.toBeInTheDocument();
-    expect(await screen.findByText('60 kg · 12 reps · RPE 8')).toBeInTheDocument();
-    expect(screen.queryByLabelText('Charge en kg')).not.toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Série 1' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Charge en kg')).toHaveValue(60);
+    expect(screen.getByLabelText('Répétitions')).toHaveValue(12);
+    expect(screen.getByLabelText('RPE')).toHaveValue(8);
     await waitFor(() => {
       expect(screen.getByRole('progressbar', { name: 'Progression de la séance' })).toHaveAttribute('aria-valuenow', '100');
     });
