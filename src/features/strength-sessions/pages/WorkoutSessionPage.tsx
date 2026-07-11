@@ -25,6 +25,7 @@ import { InlineNotice } from '@/shared/ui/InlineNotice';
 import { PageSkeleton } from '@/shared/ui/PageSkeleton';
 import { SaveStatus } from '@/shared/ui/SaveStatus';
 import { formatLocalDate } from '@/shared/utils/dates';
+import { cn } from '@/shared/utils/cn';
 import { repositories } from '@/infrastructure/repositories/repositories';
 
 interface RemoveExerciseConfirmation {
@@ -121,6 +122,7 @@ export function WorkoutSessionPage() {
     decideProgression,
   } = useWorkoutSession(sessionId);
   const [selectedExerciseId, setSelectedExerciseId] = useState('');
+  const [selectedExerciseSetCount, setSelectedExerciseSetCount] = useState(4);
   const [notes, setNotes] = useState('');
   const [confirmation, setConfirmation] = useState<ConfirmationRequest>();
   const [temporarilySkippedExerciseIds, setTemporarilySkippedExerciseIds] = useState<Set<string>>(() => new Set());
@@ -204,6 +206,10 @@ export function WorkoutSessionPage() {
     const created = await addExercise(selectedExerciseId);
     if (!created) return;
     setSelectedExerciseId('');
+    const seriesToCreate = Math.max(1, Math.min(12, selectedExerciseSetCount));
+    for (let index = 0; index < seriesToCreate; index += 1) {
+      await addSet(created.id);
+    }
     revealElement(`workout-exercise-${created.id}`);
   };
 
@@ -425,10 +431,72 @@ export function WorkoutSessionPage() {
                 ))}
               </select>
             </div>
-            <Button disabled={!selectedExerciseId || action === 'addExercise'} onClick={() => void addSelectedExercise()}>
+            <Button aria-label="Ajouter" disabled={!selectedExerciseId || action === 'addExercise'} onClick={() => void addSelectedExercise()}>
               <Plus aria-hidden="true" className="size-4" />
-              {action === 'addExercise' ? 'Ajout…' : 'Ajouter'}
+              {action === 'addExercise' ? 'Ajout…' : `Ajouter ${selectedExerciseSetCount} série${selectedExerciseSetCount > 1 ? 's' : ''}`}
             </Button>
+          </div>
+          <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3 dark:border-slate-800 dark:bg-slate-950/40">
+            <label htmlFor="session-exercise-set-count" className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+              Nombre de séries prévues
+            </label>
+            <div className="mt-2 grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                disabled={selectedExerciseSetCount <= 1}
+                aria-label="Retirer une série prévue"
+                onClick={() => setSelectedExerciseSetCount((current) => Math.max(1, current - 1))}
+              >
+                −
+              </Button>
+              <input
+                id="session-exercise-set-count"
+                type="number"
+                inputMode="numeric"
+                min="1"
+                max="12"
+                step="1"
+                value={selectedExerciseSetCount}
+                onChange={(event) => {
+                  const parsed = Number.parseInt(event.target.value, 10);
+                  setSelectedExerciseSetCount(Number.isFinite(parsed) ? Math.max(1, Math.min(12, parsed)) : 1);
+                }}
+                className={`${inputClassName} text-center font-semibold`}
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                disabled={selectedExerciseSetCount >= 12}
+                aria-label="Ajouter une série prévue"
+                onClick={() => setSelectedExerciseSetCount((current) => Math.min(12, current + 1))}
+              >
+                +
+              </Button>
+            </div>
+            <div className="mt-2 grid grid-cols-6 gap-1.5" aria-label="Choix rapides du nombre de séries">
+              {[1, 2, 3, 4, 5, 6].map((count) => (
+                <button
+                  key={count}
+                  type="button"
+                  className={cn(
+                    'min-h-10 rounded-lg border text-sm font-semibold transition-colors',
+                    selectedExerciseSetCount === count
+                      ? 'border-brand-700 bg-brand-700 text-white'
+                      : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200',
+                  )}
+                  aria-pressed={selectedExerciseSetCount === count}
+                  onClick={() => setSelectedExerciseSetCount(count)}
+                >
+                  {count}
+                </button>
+              ))}
+            </div>
+            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+              Les lignes seront créées immédiatement et garderont les mêmes options qu’une séance planifiée.
+            </p>
           </div>
           {availableExercises.length === 0 ? (
             <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
