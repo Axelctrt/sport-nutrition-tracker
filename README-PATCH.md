@@ -1,41 +1,25 @@
-# SportPilot 0.29.0 — release sociale privée
+# SportPilot 0.30.0 — release UX mobile
 
-Branche de finalisation : `release/0.29.0`
+Branche de finalisation : `release/0.30.0`
 
-SportPilot 0.29.0 clôt la roadmap sociale A1 à A26. La release transforme le socle cloud préparé en 0.28.x en un module d’amis utilisable avec de vrais comptes, des permissions par ami, un fil d’activité filtré, une fiche détaillée et des contrôles stricts de sécurité.
+SportPilot 0.30.0 clôt la refonte UX mobile menée sur les phases U1 à U16. La release stabilise les hubs Accueil, Nutrition et Sport, les parcours d’ajout, les comportements globaux, les séances compactes et la recette mobile/accessibilité.
 
-## Contenu livré
+## Périmètre
 
-- identité sociale canonique et handles uniques ;
-- annuaire limité à la recherche exacte ;
-- demandes d’amis complètes avec nettoyage des états terminaux ;
-- amitiés bilatérales, suppression et recréation ;
-- source unique de partage configurée par ami ;
-- modes Aucun, Résumé et Personnalisé ;
-- sélection granulaire des champs musculation et cardio ;
-- snapshots sociaux filtrés stockés dans D1 ;
-- fil social déterministe et fiche détaillée sécurisée ;
-- synchronisation résiliente hors ligne ;
-- authentification et autorisation renforcées sur toutes les routes ;
-- recette réelle ordinateur et iPhone 15 finalisée.
+- version applicative : `0.30.0` ;
+- tag attendu : `v0.30.0` ;
+- migrations D1 ajoutées : aucune ;
+- migrations Dexie ajoutées : aucune ;
+- contrats sociaux 0.29 conservés ;
+- moteur calorique conservé.
 
-## Versions techniques
-
-- application : `0.29.0` ;
-- AppDatabase locale : Dexie v10 ;
-- sauvegarde JSON : v9 ;
-- runtime Dexie Cloud prototype : v14 ;
-- contrat de snapshot : `0.29.0-a3` ;
-- migrations D1 déjà requises : `0001` et `0002` ;
-- migration supplémentaire A26 : aucune.
-
-## Validation attendue
+## Contrôles obligatoires
 
 ```text
-npm run audit:social-complete-acceptance
-npm run audit:social-release-finalization
-npm run audit:social-release
+npm run audit:ux-mobile-acceptance
 npm run audit:release
+npm run audit:security
+npm run audit:production
 npm run audit:repository
 npm run lint
 npm run test
@@ -45,13 +29,12 @@ npm run test:stability
 npm audit
 ```
 
-## Publication attendue
+## Publication
 
-1. Committer la finalisation sur `release/0.29.0`.
-2. Fusionner manuellement la branche dans `develop`.
-3. Relancer les contrôles de release sur `develop`.
-4. Fusionner manuellement `develop` dans `main`.
-5. Construire puis déployer `main` sur Cloudflare Pages.
-6. Vérifier la production avec les deux comptes réels.
-7. Créer et pousser le tag annoté `v0.29.0`.
-8. Resynchroniser `develop` avec `main`.
+1. Committer la finalisation sur `release/0.30.0`.
+2. Fusionner `release/0.30.0` dans `develop`.
+3. Déployer et valider la Preview.
+4. Fusionner `develop` dans `main`.
+5. Déployer la production Cloudflare Pages depuis `main`.
+6. Créer et pousser le tag annoté `v0.30.0`.
+7. Resynchroniser `develop` avec `main`.
