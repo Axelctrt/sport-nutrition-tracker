@@ -133,7 +133,11 @@ export function useWeeklyPlanning() {
     setErrorMessage(undefined);
     try {
       const previous = findSession(sessionId);
-      const session = await startPlannedWorkoutSession(repositories.workoutSessions, sessionId);
+      const session = await startPlannedWorkoutSession(
+        repositories.workoutSessions,
+        sessionId,
+        repositories.strengthSets,
+      );
       await recalculateDates([
         ...(previous ? [planningDateForSession(previous)] : []),
         session.date,
