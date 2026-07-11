@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const VERSION = '0.29.0';
+const SOCIAL_RELEASE_VERSION = '0.29.0';
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const read = (path) => readFileSync(join(root, path), 'utf8');
 const failures = [];
@@ -11,14 +11,14 @@ const fail = (message) => failures.push(message);
 const packageJson = JSON.parse(read('package.json'));
 const packageLock = JSON.parse(read('package-lock.json'));
 
-if (packageJson.version !== VERSION) {
-  fail(`package.json doit publier ${VERSION}, version reçue ${String(packageJson.version)}.`);
+if (typeof packageJson.version !== 'string' || !/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(packageJson.version)) {
+  fail(`package.json doit exposer une version sémantique, version reçue ${String(packageJson.version)}.`);
 }
 if (
   packageLock.version !== packageJson.version
   || packageLock.packages?.['']?.version !== packageJson.version
 ) {
-  fail(`package-lock.json ne correspond pas à package.json pour ${VERSION}.`);
+  fail('package-lock.json ne correspond pas à package.json.');
 }
 
 const requiredDocs = [
@@ -92,8 +92,8 @@ for (const expected of [
 }
 
 const releaseReadiness = read('src/app/releaseReadiness.test.ts');
-if (!releaseReadiness.includes("expect(__APP_VERSION__).toBe('0.29.0')")) {
-  fail('releaseReadiness ne valide pas la version 0.29.0.');
+if (!releaseReadiness.includes("expect(__APP_VERSION__).toBe('0.30.0')")) {
+  fail('releaseReadiness ne valide pas la version applicative 0.30.0.');
 }
 if (!existsSync(join(root, 'src/app/socialReleaseFinalizationReadiness.test.ts'))) {
   fail('socialReleaseFinalizationReadiness.test.ts est absent.');
@@ -178,12 +178,12 @@ for (const migration of [
 }
 
 if (failures.length > 0) {
-  console.error(`\nAudit release sociale ${VERSION} échoué :`);
+  console.error(`\nAudit release sociale ${SOCIAL_RELEASE_VERSION} échoué :`);
   failures.forEach((failure) => console.error(`- ${failure}`));
   process.exitCode = 1;
 } else {
   console.log(
-    `Audit release sociale ${VERSION} réussi : identité, amitiés, permissions par ami, `
+    `Audit release sociale ${SOCIAL_RELEASE_VERSION} réussi : identité, amitiés, permissions par ami, `
     + 'fil filtré, détail sécurisé, résilience et garde-fous sont prêts pour publication.',
   );
 }

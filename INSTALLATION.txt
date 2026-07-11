@@ -1,37 +1,32 @@
-SPORTPILOT 0.29.0
+SPORTPILOT 0.30.0
 
-Procédure de validation et de publication
+Checklist d’installation et publication :
 
-1. Vérifier que la branche release/0.29.0 est propre et synchronisée.
-2. Vérifier que package.json et package-lock.json indiquent 0.29.0.
-3. Vérifier que Paramètres affiche 0.29.0.
-4. Vérifier qu’aucun ZIP, dossier patch-files, fichier .env ou secret réel n’est stagé.
-5. Ne pas rejouer la migration D1 0002 déjà appliquée.
-6. Lancer npm run audit:social-complete-acceptance.
-7. Lancer npm run audit:social-release-finalization.
-8. Lancer npm run audit:social-release.
-9. Lancer npm run audit:release.
-10. Lancer npm run audit:repository.
-11. Lancer npm run lint.
-12. Lancer npm run test.
-13. Supprimer dist puis lancer npm run build.
-14. Lancer npm run check.
-15. Lancer npm run test:stability.
-16. Lancer npm audit.
-17. Vérifier que la recette A25 est validée sur ordinateur et iPhone 15.
-18. Committer avec chore(release): finaliser SportPilot 0.29.0.
-19. Pousser release/0.29.0.
-20. Fusionner manuellement release/0.29.0 dans develop.
-21. Pousser develop et relancer les contrôles critiques.
-22. Fusionner manuellement develop dans main.
-23. Pousser main.
-24. Construire main avec npm run build.
-25. Déployer dist sur le projet Cloudflare Pages sportpilot-pages, branche main.
-26. Vérifier la version 0.29.0 en production.
-27. Vérifier recherche, amitié, permissions, fil et détail avec les deux comptes réels.
-28. Vérifier que les routes sociales anonymes répondent toujours 401.
-29. Créer le tag annoté v0.29.0 sur le commit publié.
-30. Pousser le tag v0.29.0.
-31. Resynchroniser develop avec main.
-
-Aucune migration Dexie ou D1 supplémentaire n’est requise par A26.
+1. Vérifier que la branche release/0.30.0 est propre et synchronisée.
+2. Vérifier que package.json et package-lock.json indiquent 0.30.0.
+3. Vérifier que Paramètres affiche 0.30.0.
+4. Vérifier qu’aucun ZIP, patch-files, rapport temporaire ou secret n’est stagé.
+5. Exécuter npm run audit:ux-mobile-acceptance.
+6. Exécuter npm run audit:release.
+7. Exécuter npm run audit:security.
+8. Exécuter npm run audit:production.
+9. Exécuter npm run audit:repository.
+10. Exécuter npm run lint.
+11. Exécuter npm run test.
+12. Exécuter npm run build.
+13. Exécuter npm run check.
+14. Exécuter npm run test:stability.
+15. Exécuter npm audit.
+16. Valider la recette iPhone 15 iOS 26.
+17. Committer avec chore(release): finaliser SportPilot 0.30.0.
+18. Pousser release/0.30.0.
+19. Fusionner manuellement release/0.30.0 dans develop.
+20. Déployer la Preview develop et la valider.
+21. Fusionner develop dans main.
+22. Pousser main.
+23. Déployer la production Cloudflare Pages depuis main.
+24. Vérifier la version 0.30.0 en production.
+25. Vérifier Accueil, Nutrition, Sport, Progression et Paramètres en production.
+26. Créer le tag annoté v0.30.0 sur le commit publié.
+27. Pousser le tag v0.30.0.
+28. Resynchroniser develop avec main.
