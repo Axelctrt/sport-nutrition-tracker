@@ -10,72 +10,101 @@ import { ToastViewport } from '@/shared/toast/ToastViewport';
 import { consumePendingToast } from '@/shared/toast/pendingToast';
 import { createEntityId } from '@/shared/utils/entities';
 
-const MAX_VISIBLE_TOASTS = 4;
 const DEFAULT_DURATION: Record<ToastTone, number> = {
   success: 3_500,
   info: 5_000,
-  error: 8_000,
+  error: 10_000,
 };
 
 function createDedupeKey(input: ToastInput, tone: ToastTone): string {
   return input.dedupeKey ?? `${tone}:${input.title}:${input.description ?? ''}`;
 }
 
+function refreshToast(item: ToastItem, input: ToastInput, tone: ToastTone, durationMs: number | null): ToastItem {
+  return {
+    id: item.id,
+    dedupeKey: item.dedupeKey,
+    title: input.title,
+    tone,
+    durationMs,
+    ...(input.description === undefined ? {} : { description: input.description }),
+    ...(input.action === undefined ? {} : { action: input.action }),
+  };
+}
+
 export function ToastProvider({ children }: PropsWithChildren) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const toastsRef = useRef<ToastItem[]>([]);
+  const queueRef = useRef<ToastItem[]>([]);
   const timersRef = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  const dismissToastRef = useRef<(id: string) => void>(() => undefined);
 
   const commit = useCallback((next: ToastItem[]) => {
     toastsRef.current = next;
     setToasts(next);
   }, []);
 
-  const dismissToast = useCallback((id: string) => {
+  const clearTimer = useCallback((id: string) => {
     const timer = timersRef.current.get(id);
-    if (timer) {
-      clearTimeout(timer);
-      timersRef.current.delete(id);
-    }
-    commit(toastsRef.current.filter((toast) => toast.id !== id));
-  }, [commit]);
+    if (timer) clearTimeout(timer);
+    timersRef.current.delete(id);
+  }, []);
 
   const scheduleDismiss = useCallback((id: string, durationMs: number | null) => {
-    const currentTimer = timersRef.current.get(id);
-    if (currentTimer) clearTimeout(currentTimer);
-    timersRef.current.delete(id);
-
+    clearTimer(id);
     if (durationMs === null) return;
 
     timersRef.current.set(
       id,
-      setTimeout(() => dismissToast(id), durationMs),
+      setTimeout(() => dismissToastRef.current(id), durationMs),
     );
-  }, [dismissToast]);
+  }, [clearTimer]);
+
+  const activateNext = useCallback(() => {
+    const next = queueRef.current.shift();
+    if (!next) {
+      commit([]);
+      return;
+    }
+
+    commit([next]);
+    scheduleDismiss(next.id, next.durationMs);
+  }, [commit, scheduleDismiss]);
+
+  const dismissToast = useCallback((id: string) => {
+    const visible = toastsRef.current.some((toast) => toast.id === id);
+    clearTimer(id);
+
+    if (!visible) {
+      queueRef.current = queueRef.current.filter((toast) => toast.id !== id);
+      return;
+    }
+
+    commit([]);
+    activateNext();
+  }, [activateNext, clearTimer, commit]);
+  dismissToastRef.current = dismissToast;
 
   const showToast = useCallback((input: ToastInput): string => {
     const tone = input.tone ?? 'info';
     const dedupeKey = createDedupeKey(input, tone);
     const durationMs = input.durationMs === undefined ? DEFAULT_DURATION[tone] : input.durationMs;
-    const duplicate = toastsRef.current.find((toast) => toast.dedupeKey === dedupeKey);
+    const visibleDuplicate = toastsRef.current.find((toast) => toast.dedupeKey === dedupeKey);
 
-    if (duplicate) {
-      const {
-      description: _previousDescription,
-      action: _previousAction,
-      ...duplicateWithoutOptionalContent
-    } = duplicate;
-      const refreshed: ToastItem = {
-        ...duplicateWithoutOptionalContent,
-        title: input.title,
-        tone,
-        durationMs,
-        ...(input.description === undefined ? {} : { description: input.description }),
-      ...(input.action === undefined ? {} : { action: input.action }),
-      };
-      commit(toastsRef.current.map((toast) => toast.id === duplicate.id ? refreshed : toast));
-      scheduleDismiss(duplicate.id, durationMs);
-      return duplicate.id;
+    if (visibleDuplicate) {
+      const refreshed = refreshToast(visibleDuplicate, input, tone, durationMs);
+      commit([refreshed]);
+      scheduleDismiss(refreshed.id, durationMs);
+      return refreshed.id;
+    }
+
+    const queuedIndex = queueRef.current.findIndex((toast) => toast.dedupeKey === dedupeKey);
+    if (queuedIndex >= 0) {
+      const queued = queueRef.current[queuedIndex];
+      if (!queued) return '';
+      const refreshed = refreshToast(queued, input, tone, durationMs);
+      queueRef.current = queueRef.current.map((toast, index) => index === queuedIndex ? refreshed : toast);
+      return refreshed.id;
     }
 
     const item: ToastItem = {
@@ -87,19 +116,20 @@ export function ToastProvider({ children }: PropsWithChildren) {
       ...(input.description === undefined ? {} : { description: input.description }),
       ...(input.action === undefined ? {} : { action: input.action }),
     };
-    const next = [...toastsRef.current, item].slice(-MAX_VISIBLE_TOASTS);
-    const nextIds = new Set(next.map((toast) => toast.id));
-    for (const toast of toastsRef.current) {
-      if (!nextIds.has(toast.id)) {
-        const timer = timersRef.current.get(toast.id);
-        if (timer) clearTimeout(timer);
-        timersRef.current.delete(toast.id);
-      }
+
+    if (toastsRef.current.length === 0) {
+      commit([item]);
+      scheduleDismiss(item.id, durationMs);
+    } else if (input.enqueue) {
+      queueRef.current.push(item);
+    } else {
+      for (const toast of toastsRef.current) clearTimer(toast.id);
+      commit([item]);
+      scheduleDismiss(item.id, durationMs);
     }
-    commit(next);
-    scheduleDismiss(item.id, durationMs);
+
     return item.id;
-  }, [commit, scheduleDismiss]);
+  }, [clearTimer, commit, scheduleDismiss]);
 
   useEffect(() => {
     const pendingToast = consumePendingToast();
@@ -121,6 +151,7 @@ export function ToastProvider({ children }: PropsWithChildren) {
   useEffect(() => () => {
     for (const timer of timersRef.current.values()) clearTimeout(timer);
     timersRef.current.clear();
+    queueRef.current = [];
   }, []);
 
   const value = useMemo<ToastContextValue>(() => ({

@@ -4,9 +4,11 @@ export const SOCIAL_IDENTITY_STORAGE_KEY = 'friends-privacy-social-identity' as 
 
 export const RESERVED_SOCIAL_HANDLES = [
   'admin',
+  'administrator',
   'support',
   'sportpilot',
   'root',
+  'security',
   'api',
   'system',
   'moderator',
@@ -126,12 +128,12 @@ export function validateSocialHandle(value: string): SocialHandleValidationResul
     };
   }
 
-  if (!/^[a-z0-9._-]+$/u.test(withoutPrefix)) {
+  if (!/^[a-z0-9][a-z0-9._-]{2,23}$/u.test(withoutPrefix)) {
     return {
       status: 'invalid',
       handle: withoutPrefix,
       displayHandle,
-      message: 'Identifiant invalide : lettres, chiffres, point, tiret et underscore uniquement.',
+      message: 'Identifiant invalide : commence par une lettre ou un chiffre, puis utilise lettres, chiffres, point, tiret ou underscore.',
     };
   }
 
@@ -204,6 +206,52 @@ export function updateSocialIdentity(
   return current.handleUpdatedAt
     ? { ...updated, handleUpdatedAt: current.handleUpdatedAt }
     : updated;
+}
+
+
+export function isGeneratedDefaultSocialIdentity(identity: SocialIdentity): boolean {
+  return identity.displayName.trim() === 'SportPilot'
+    && /^sp-[a-z0-9]{1,10}$/u.test(identity.handle);
+}
+
+export function isAccountSocialIdentityComplete(
+  identity: SocialIdentity,
+  accountUserId: string,
+): boolean {
+  const normalizedAccountUserId = accountUserId.trim();
+  if (!normalizedAccountUserId || identity.userId !== normalizedAccountUserId) return false;
+  if (validateSocialHandle(identity.handle).status !== 'valid') return false;
+  return !isGeneratedDefaultSocialIdentity(identity);
+}
+
+export function createAccountSocialIdentityCandidate(
+  current: SocialIdentity,
+  accountUserId: string,
+  changes: { readonly handle: string; readonly displayName?: string },
+  now: IsoDateTime = new Date().toISOString(),
+): SocialIdentity {
+  const normalizedAccountUserId = accountUserId.trim();
+  if (!normalizedAccountUserId) {
+    throw new Error('Compte SportPilot requis pour créer une identité sociale.');
+  }
+
+  const validation = validateSocialHandle(changes.handle);
+  if (validation.status === 'invalid') {
+    throw new Error(validation.message);
+  }
+
+  const displayName = changes.displayName?.trim() || validation.displayHandle;
+  const handleChanged = validation.handle !== current.handle
+    || current.userId !== normalizedAccountUserId;
+
+  return {
+    ...current,
+    userId: normalizedAccountUserId as EntityId,
+    handle: validation.handle,
+    displayName: displayName.slice(0, 80),
+    updatedAt: now,
+    handleUpdatedAt: handleChanged ? now : current.handleUpdatedAt ?? now,
+  };
 }
 
 export function publicProfileFromIdentity(identity: SocialIdentity): PublicUserProfile {

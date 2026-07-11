@@ -1,4 +1,5 @@
-import type { EntityMetadata, LocalDate } from '@/domain/models/common';
+import type { EntityMetadata, IsoDateTime, LocalDate } from '@/domain/models/common';
+import type { DailyMacroTargets } from '@/domain/models/targets';
 
 export type SexForEnergyEquation = 'male' | 'female';
 
@@ -21,6 +22,31 @@ export type OccupationalActivity =
   | 'active'
   | 'veryActive';
 
+
+export type ProfileImpactField =
+  | 'sexForEnergyEquation'
+  | 'ageInformation'
+  | 'heightCm'
+  | 'initialWeightKg'
+  | 'goal'
+  | 'targetWeeklyWeightChangePercent'
+  | 'occupationalActivity'
+  | 'dailyStepGoal'
+  | 'proteinGramsPerKg'
+  | 'fatGramsPerKg';
+
+export interface ProfileImpactHistoryEntry {
+  id: string;
+  changedAt: IsoDateTime;
+  effectiveDate: LocalDate;
+  changedFields: ProfileImpactField[];
+  summary: string;
+  beforeTargetCaloriesKcal: number;
+  afterTargetCaloriesKcal: number;
+  beforeMacros: DailyMacroTargets;
+  afterMacros: DailyMacroTargets;
+}
+
 export interface UserProfile extends EntityMetadata {
   firstName?: string;
   sexForEnergyEquation: SexForEnergyEquation;
@@ -33,4 +59,5 @@ export interface UserProfile extends EntityMetadata {
   dailyStepGoal: number;
   proteinGramsPerKg: number;
   fatGramsPerKg: number;
+  profileImpactHistory?: ProfileImpactHistoryEntry[];
 }

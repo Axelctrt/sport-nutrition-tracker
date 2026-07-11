@@ -18,8 +18,15 @@ import { InlineNotice } from '@/shared/ui/InlineNotice';
 
 const localDataItems = [
   'Le profil, le poids, les pas, les activités, les repas et les séances sont enregistrés dans IndexedDB sur cet appareil.',
-  'SportPilot ne nécessite ni compte, ni backend, ni synchronisation vers un serveur SportPilot.',
+  'Le mode local ne nécessite aucun compte. Un compte connecté utilise un espace de données séparé et les synchronisations explicitement activées.',
   'SportPilot n’intègre pas de publicité, de suivi publicitaire ni d’outil d’analyse d’audience.',
+] as const;
+
+const accountAndSocialItems = [
+  'Le compte utilise une adresse email et un code à usage unique gérés par Dexie Cloud. Le code OTP n’est pas conservé dans le brouillon d’onboarding.',
+  'Le pseudonyme social, le nom affiché et l’identifiant technique du compte sont envoyés à l’annuaire social afin de garantir l’unicité du pseudonyme.',
+  'Le prénom du profil sportif, le poids, les repas et les séances ne sont jamais utilisés automatiquement comme identité publique.',
+  'Le mode local reste utilisable sans identité sociale ni publication dans l’annuaire.',
 ] as const;
 
 const externalRequestItems = [
@@ -85,7 +92,7 @@ export function PrivacyPage() {
         </header>
 
         <InlineNotice className="mt-6" title="Principe principal">
-          Les données de suivi restent localement sur l’appareil. Une connexion externe est utilisée uniquement pour rechercher volontairement un produit dans Open Food Facts ou télécharger une mise à jour de la PWA.
+          Le mode local conserve les données de suivi sur l’appareil. Lorsqu’un compte est connecté, SportPilot sépare son espace de données et n’envoie que les domaines synchronisés ou les informations sociales nécessaires au pseudonyme unique.
         </InlineNotice>
 
         <div className="mt-5 grid gap-4 lg:grid-cols-2">
@@ -113,6 +120,20 @@ export function PrivacyPage() {
                   Open Food Facts
                 </h2>
                 <BulletList items={externalRequestItems} />
+              </div>
+            </div>
+          </Card>
+
+          <Card className="p-5">
+            <div className="flex items-start gap-3">
+              <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-brand-100 text-brand-800 dark:bg-brand-900 dark:text-brand-100">
+                <ShieldCheck aria-hidden="true" className="size-5" />
+              </span>
+              <div className="min-w-0">
+                <h2 className="text-lg font-semibold text-slate-950 dark:text-white">
+                  Compte et identité sociale
+                </h2>
+                <BulletList items={accountAndSocialItems} />
               </div>
             </div>
           </Card>

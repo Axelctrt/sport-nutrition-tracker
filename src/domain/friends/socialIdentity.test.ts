@@ -1,6 +1,9 @@
 import {
+  createAccountSocialIdentityCandidate,
   createDefaultSocialIdentity,
   formatSocialHandle,
+  isAccountSocialIdentityComplete,
+  isGeneratedDefaultSocialIdentity,
   mapLookupResultToAvailability,
   publicProfileFromIdentity,
   updateSocialIdentity,
@@ -22,6 +25,23 @@ describe('socialIdentity domain', () => {
     expect(validateSocialHandle('@éloise').status).toBe('invalid');
     expect(validateSocialHandle('@@alex').status).toBe('invalid');
     expect(validateSocialHandle('@sportpilot').status).toBe('invalid');
+    expect(validateSocialHandle('@_alex').status).toBe('invalid');
+    expect(validateSocialHandle(`@${'a'.repeat(25)}`).status).toBe('invalid');
+  });
+
+  it('distingue une identité générée d’un pseudonyme confirmé pour le compte', () => {
+    const generated = createDefaultSocialIdentity('2026-07-05T10:00:00.000Z', 'abc123');
+    const confirmed = createAccountSocialIdentityCandidate(
+      generated,
+      'dexie-user-123',
+      { handle: 'alex.run', displayName: 'Alex Trail' },
+      '2026-07-05T11:00:00.000Z',
+    );
+
+    expect(isGeneratedDefaultSocialIdentity(generated)).toBe(true);
+    expect(isAccountSocialIdentityComplete(generated, 'dexie-user-123')).toBe(false);
+    expect(isGeneratedDefaultSocialIdentity(confirmed)).toBe(false);
+    expect(isAccountSocialIdentityComplete(confirmed, 'dexie-user-123')).toBe(true);
   });
 
   it('conserve un userId stable privé quand le handle public change', () => {

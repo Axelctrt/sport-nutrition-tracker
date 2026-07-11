@@ -5,9 +5,11 @@ import {
   assertNonNegativeNumber,
   assertPositiveNumber,
 } from '@/domain/calculations/validation';
+import type { WeightGoal } from '@/domain/models/profile';
 
 export interface CalorieTargetInput {
   weightKg: number;
+  goal: WeightGoal;
   targetWeeklyWeightChangePercent: number;
   totalEstimatedExpenditureKcal: number;
   bmrKcal: number;
@@ -16,12 +18,31 @@ export interface CalorieTargetInput {
 }
 
 export interface CalorieTargetResult {
+  targetWeeklyWeightChangePercentUsed: number;
+  goalRateWasNormalized: boolean;
   goalAdjustmentKcal: number;
   acceptedCalibrationAdjustmentKcal: number;
   targetBeforeFloorKcal: number;
   calorieFloorKcal: number;
   targetCaloriesKcal: number;
   floorApplied: boolean;
+}
+
+export function resolveGoalCompatibleWeeklyChangePercent(
+  goal: WeightGoal,
+  targetWeeklyWeightChangePercent: number,
+): number {
+  assertFiniteNumber(
+    targetWeeklyWeightChangePercent,
+    'targetWeeklyWeightChangePercent',
+  );
+
+  if (goal === 'maintenance') {
+    return 0;
+  }
+
+  const magnitude = Math.abs(targetWeeklyWeightChangePercent);
+  return goal === 'loss' ? -magnitude : magnitude;
 }
 
 export function calculateGoalAdjustmentKcal(
@@ -43,6 +64,7 @@ export function calculateGoalAdjustmentKcal(
 
 export function calculateCalorieTarget({
   weightKg,
+  goal,
   targetWeeklyWeightChangePercent,
   totalEstimatedExpenditureKcal,
   bmrKcal,
@@ -60,9 +82,14 @@ export function calculateCalorieTarget({
     'acceptedCalibrationAdjustmentKcal',
   );
 
+  const targetWeeklyWeightChangePercentUsed =
+    resolveGoalCompatibleWeeklyChangePercent(
+      goal,
+      targetWeeklyWeightChangePercent,
+    );
   const goalAdjustmentKcal = calculateGoalAdjustmentKcal(
     weightKg,
-    targetWeeklyWeightChangePercent,
+    targetWeeklyWeightChangePercentUsed,
   );
   const targetBeforeFloorKcal = totalEstimatedExpenditureKcal
     + goalAdjustmentKcal
@@ -73,6 +100,9 @@ export function calculateCalorieTarget({
   const targetCaloriesKcal = Math.max(roundedTarget, calorieFloorKcal);
 
   return {
+    targetWeeklyWeightChangePercentUsed,
+    goalRateWasNormalized:
+      targetWeeklyWeightChangePercentUsed !== targetWeeklyWeightChangePercent,
     goalAdjustmentKcal,
     acceptedCalibrationAdjustmentKcal,
     targetBeforeFloorKcal,

@@ -9,6 +9,7 @@ import {
 } from '@/application/strength/weeklyPlanningService';
 import { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import { DexieStrengthExerciseRepository } from '@/infrastructure/repositories/dexie/DexieStrengthExerciseRepository';
+import { DexieStrengthSetRepository } from '@/infrastructure/repositories/dexie/DexieStrengthSetRepository';
 import { DexieWorkoutSessionRepository } from '@/infrastructure/repositories/dexie/DexieWorkoutSessionRepository';
 import { DexieWorkoutTemplateRepository } from '@/infrastructure/repositories/dexie/DexieWorkoutTemplateRepository';
 import { createEntity } from '@/shared/utils/entities';
@@ -23,6 +24,7 @@ describe('weeklyPlanningService', () => {
   let sessionRepository: DexieWorkoutSessionRepository;
   let templateRepository: DexieWorkoutTemplateRepository;
   let exerciseRepository: DexieStrengthExerciseRepository;
+  let setRepository: DexieStrengthSetRepository;
 
   beforeEach(async () => {
     database = new AppDatabase(`sportpilot-weekly-planning-${crypto.randomUUID()}`);
@@ -30,6 +32,7 @@ describe('weeklyPlanningService', () => {
     sessionRepository = new DexieWorkoutSessionRepository(database);
     templateRepository = new DexieWorkoutTemplateRepository(database);
     exerciseRepository = new DexieStrengthExerciseRepository(database);
+    setRepository = new DexieStrengthSetRepository(database);
 
     await database.exerciseDefinitions.add(createEntity(
       createExerciseDefinitionInput({ name: 'Développé couché' }),
@@ -60,6 +63,10 @@ describe('weeklyPlanningService', () => {
       exerciseRepository,
       'template-push',
       '2026-06-29',
+      {
+        plannedDurationMinutes: 75,
+        strengthSessionStyle: 'strength',
+      },
       new Date('2026-06-26T18:00:00.000Z'),
     );
 
@@ -69,6 +76,8 @@ describe('weeklyPlanningService', () => {
       originalPlannedDate: '2026-06-29',
       status: 'planned',
       sourceTemplateNameSnapshot: 'Push A',
+      plannedDurationMinutes: 75,
+      strengthSessionStyle: 'strength',
     });
     expect(planned.exercises).toHaveLength(1);
 
@@ -116,6 +125,7 @@ describe('weeklyPlanningService', () => {
     const started = await startPlannedWorkoutSession(
       sessionRepository,
       planned.session.id,
+      setRepository,
       new Date('2026-06-30T17:30:00.000Z'),
     );
 
@@ -127,6 +137,10 @@ describe('weeklyPlanningService', () => {
       startedAt: '2026-06-30T17:30:00.000Z',
     });
     expect(planningDateForSession(started)).toBe('2026-06-29');
+    const sets = await setRepository.listBySession(started.id);
+    expect(sets).toHaveLength(4);
+    expect(sets.map((set) => set.setNumber)).toEqual([1, 2, 3, 4]);
+    expect(sets.every((set) => set.repetitions === 8 && set.weightKg === 60)).toBe(true);
   });
 
   it('marque une séance prévue comme non réalisée', async () => {
@@ -154,4 +168,19 @@ describe('weeklyPlanningService', () => {
   it('calcule toujours le lundi comme début de semaine', () => {
     expect(getWeekStart('2026-07-02')).toBe('2026-06-29');
   });
+
+  it('refuse une durée prévue supérieure à 24 heures', async () => {
+    await expect(planWorkoutSessionFromTemplate(
+      sessionRepository,
+      templateRepository,
+      exerciseRepository,
+      'template-push',
+      '2026-06-29',
+      {
+        plannedDurationMinutes: 1_441,
+        strengthSessionStyle: 'classic',
+      },
+    )).rejects.toThrow('comprise entre 1 minute et 24 heures');
+  });
+
 });

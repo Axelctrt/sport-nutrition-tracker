@@ -25,18 +25,26 @@ export function useFoodJournal(date: LocalDate) {
   const [snapshot, setSnapshot] = useState<FoodJournalSnapshot>();
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [errorMessage, setErrorMessage] = useState<string>();
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [busyId, setBusyId] = useState<string>();
   const toast = useToast();
 
   const refresh = useCallback(async ({ silent = false }: RefreshOptions = {}) => {
-    if (!silent) setStatus('loading');
+    if (silent) {
+      setIsRefreshing(true);
+    } else {
+      setStatus('loading');
+      setSnapshot(undefined);
+    }
     setErrorMessage(undefined);
     try {
       setSnapshot(await loadFoodJournal(date));
       setStatus('ready');
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Impossible de charger le journal alimentaire.');
-      setStatus('error');
+      if (!silent) setStatus('error');
+    } finally {
+      setIsRefreshing(false);
     }
   }, [date]);
 
@@ -92,6 +100,7 @@ export function useFoodJournal(date: LocalDate) {
     status,
     errorMessage,
     busyId,
+    isRefreshing,
     refresh,
     updateQuantity,
     duplicate: (id: EntityId) => run(`duplicate-${id}`, () => duplicateFoodEntry(id), 'Entrée dupliquée'),

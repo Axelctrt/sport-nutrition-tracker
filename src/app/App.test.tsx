@@ -8,6 +8,8 @@ import { appDatabase } from '@/infrastructure/database/database';
 import { repositories } from '@/infrastructure/repositories/repositories';
 import { flushUserStatePersistence } from '@/infrastructure/user-state/userStateRuntime';
 import { createProfileInput } from '@/test/factories/profileFactory';
+import { ONBOARDING_DRAFT_STORAGE_KEY } from '@/features/onboarding/storage/onboardingDraftStorage';
+import { readProfileOnboardingCompletion } from '@/features/onboarding/storage/onboardingCompletionStorage';
 import '@/features/onboarding/pages/OnboardingPage';
 import '@/features/dashboard/pages/DashboardPage';
 
@@ -43,7 +45,7 @@ describe('App', () => {
 
     expect(screen.getByTestId('app-splash-screen')).toBeInTheDocument();
     expect(
-      await screen.findByRole('heading', { name: 'Créer le profil local' }, { timeout: 5_000 }),
+      await screen.findByRole('heading', { name: 'Choisir le mode local ou compte' }, { timeout: 5_000 }),
     ).toBeInTheDocument();
     expect(screen.queryByTestId('app-splash-screen')).not.toBeInTheDocument();
   }, 15_000);
@@ -52,24 +54,60 @@ describe('App', () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await screen.findByRole('heading', { name: 'Créer le profil local' }, { timeout: 5_000 });
-    await user.click(screen.getByRole('button', { name: 'Créer mon profil' }));
+    await screen.findByRole('heading', { name: 'Choisir le mode local ou compte' }, { timeout: 5_000 });
+    await user.click(screen.getByRole('button', { name: 'Choisir le mode local' }));
+    await screen.findByRole('heading', {
+      name: 'Comment souhaitez-vous être appelé dans SportPilot ?',
+    }, { timeout: 5_000 });
+    await user.type(screen.getByLabelText(/Nom utilisé dans SportPilot/), 'Axel');
+    expect(window.localStorage.getItem(ONBOARDING_DRAFT_STORAGE_KEY)).not.toBeNull();
+
+    for (const heading of [
+      'Quel sexe doit être utilisé pour les calculs énergétiques ?',
+      'Quelle est votre date de naissance ?',
+      'Quelle est votre taille ?',
+      'Quel est votre poids actuel ?',
+      'Quel est votre objectif principal ?',
+      'À quoi ressemble votre activité professionnelle ?',
+      'Quel objectif de pas souhaitez-vous viser chaque jour ?',
+    ]) {
+      await user.click(screen.getByRole('button', { name: 'Suivant' }));
+      await screen.findByRole('heading', { name: heading });
+    }
+
+    await user.click(screen.getByRole('button', { name: 'Suivant' }));
+    await screen.findByRole('heading', { name: 'Vérifiez votre configuration' });
+    expect(screen.getByText('Axel')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Modifier le poids' }));
+    await screen.findByRole('heading', { name: 'Quel est votre poids actuel ?' });
+    await user.click(screen.getByRole('button', { name: 'Suivant' }));
+    await screen.findByRole('heading', { name: 'Vérifiez votre configuration' });
+    await user.click(screen.getByRole('button', { name: 'Commencer avec SportPilot' }));
 
     await waitFor(
       () => expect(router.state.location.pathname).toBe('/'),
       { timeout: 10_000 },
     );
-    expect(
-      await screen.findByRole('link', { name: 'Tableau de bord' }, { timeout: 12_000 }),
-    ).toHaveAttribute('aria-current', 'page');
+    const homeLinks = await screen.findAllByRole(
+      'link',
+      { name: 'Accueil' },
+      { timeout: 12_000 },
+    );
+    expect(homeLinks.every((link) => link.getAttribute('aria-current') === 'page')).toBe(true);
     await act(async () => {
       await flushUserStatePersistence();
     });
+    expect(window.localStorage.getItem(ONBOARDING_DRAFT_STORAGE_KEY)).toBeNull();
     expect(await repositories.profile.get()).toMatchObject({
+      firstName: 'Axel',
       heightCm: 175,
       initialWeightKg: 70,
       goal: 'maintenance',
     });
+    expect(await repositories.weight.listAll()).toEqual([
+      expect.objectContaining({ weightKg: 70 }),
+    ]);
+    expect(readProfileOnboardingCompletion()).toMatchObject({ version: 1 });
   }, 15_000);
 
   it('affiche directement le tableau de bord quand un profil existe', async () => {

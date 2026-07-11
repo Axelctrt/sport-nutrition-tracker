@@ -2,6 +2,7 @@ import {
   addStrengthSet,
   deleteStrengthSet,
   duplicateStrengthSet,
+  ensurePlannedStrengthSetsForSession,
   setStrengthSetCompletion,
   updateStrengthSet,
 } from '@/application/strength/strengthSetService';
@@ -56,6 +57,29 @@ describe('strengthSetService', () => {
       type: 'working',
       isCompleted: false,
     });
+  });
+
+  it('prépare une seule fois toutes les séries prévues par un modèle', async () => {
+    const firstPass = await ensurePlannedStrengthSetsForSession(
+      sessionRepository,
+      setRepository,
+      'session-1',
+    );
+    const secondPass = await ensurePlannedStrengthSetsForSession(
+      sessionRepository,
+      setRepository,
+      'session-1',
+    );
+
+    expect(firstPass).toHaveLength(4);
+    expect(secondPass).toHaveLength(4);
+    expect(secondPass.map((set) => set.setNumber)).toEqual([1, 2, 3, 4]);
+    expect(secondPass.every((set) => (
+      set.repetitions === 8
+      && set.weightKg === 60
+      && set.type === 'working'
+      && !set.isCompleted
+    ))).toBe(true);
   });
 
   it('enregistre puis valide une série avec son RPE', async () => {

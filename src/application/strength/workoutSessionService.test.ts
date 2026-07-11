@@ -14,6 +14,7 @@ import {
 } from '@/application/strength/workoutSessionService';
 import { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import { DexieStrengthExerciseRepository } from '@/infrastructure/repositories/dexie/DexieStrengthExerciseRepository';
+import { DexieStrengthSetRepository } from '@/infrastructure/repositories/dexie/DexieStrengthSetRepository';
 import { DexieWorkoutSessionRepository } from '@/infrastructure/repositories/dexie/DexieWorkoutSessionRepository';
 import { DexieWorkoutTemplateRepository } from '@/infrastructure/repositories/dexie/DexieWorkoutTemplateRepository';
 import { createEntity } from '@/shared/utils/entities';
@@ -28,6 +29,7 @@ describe('workoutSessionService', () => {
   let sessionRepository: DexieWorkoutSessionRepository;
   let templateRepository: DexieWorkoutTemplateRepository;
   let exerciseRepository: DexieStrengthExerciseRepository;
+  let setRepository: DexieStrengthSetRepository;
 
   beforeEach(async () => {
     database = new AppDatabase(`sportpilot-session-service-${crypto.randomUUID()}`);
@@ -35,6 +37,7 @@ describe('workoutSessionService', () => {
     sessionRepository = new DexieWorkoutSessionRepository(database);
     templateRepository = new DexieWorkoutTemplateRepository(database);
     exerciseRepository = new DexieStrengthExerciseRepository(database);
+    setRepository = new DexieStrengthSetRepository(database);
     await database.exerciseDefinitions.bulkAdd([
       createEntity(createExerciseDefinitionInput({ name: 'Développé couché' }), 'exercise-bench'),
       createEntity(createExerciseDefinitionInput({ name: 'Rowing barre', primaryMuscleGroup: 'back' }), 'exercise-row'),
@@ -81,6 +84,7 @@ describe('workoutSessionService', () => {
       templateRepository,
       exerciseRepository,
       'template-push',
+      setRepository,
       new Date('2026-06-25T17:00:00.000Z'),
     );
 
@@ -102,6 +106,16 @@ describe('workoutSessionService', () => {
       exerciseGroupRestBetweenExercisesSeconds: 10,
       exerciseGroupRestBetweenRoundsSeconds: 90,
     });
+
+    const sets = await setRepository.listBySession(started.session.id);
+    expect(sets).toHaveLength(7);
+    const benchSets = sets.filter((set) => set.sessionExerciseId === started.exercises[0]?.id);
+    const lateralSets = sets.filter((set) => set.sessionExerciseId === started.exercises[1]?.id);
+    expect(benchSets).toHaveLength(4);
+    expect(lateralSets).toHaveLength(3);
+    expect(sets.every((set) => set.type === 'working' && !set.isCompleted)).toBe(true);
+    expect(benchSets[0]).toMatchObject({ repetitions: 8, weightKg: 60, setNumber: 1 });
+    expect(lateralSets[0]).toMatchObject({ repetitions: 12, weightKg: 60, setNumber: 1 });
 
     await database.exerciseDefinitions.update('exercise-bench', { name: 'Nom modifié' });
     expect((await sessionRepository.listExercises(started.session.id))[0]?.exerciseNameSnapshot).toBe('Développé couché');

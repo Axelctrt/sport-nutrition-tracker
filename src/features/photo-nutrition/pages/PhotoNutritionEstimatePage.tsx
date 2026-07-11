@@ -1,7 +1,8 @@
-import { ImagePlus, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Bot, ImagePlus } from 'lucide-react';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
+import { foodJournalPath } from '@/app/routePaths';
 import {
   createRemotePhotoNutritionAnalysisPort,
   readPhotoNutritionAiConfig,
@@ -15,8 +16,14 @@ import {
   type PhotoNutritionEstimate,
 } from '@/application/photo-nutrition/photoNutritionEstimationService';
 import type { MealSlot } from '@/domain/models/food';
+import {
+  createFoodJournalFeedbackState,
+  type FoodJournalNavigationState,
+} from '@/features/food-journal/navigation/foodJournalNavigation';
+import { mealSlotLabels } from '@/features/food-journal/utils/foodLabels';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
+import { ContextHelp } from '@/shared/ui/ContextHelp';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 
 const fields = [
@@ -89,6 +96,8 @@ export function PhotoNutritionEstimatePage({
 }: PhotoNutritionEstimatePageProps) {
   const [params] = useSearchParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const navigationState = location.state as FoodJournalNavigationState | null;
   const date = params.get('date') || new Date().toISOString().slice(0, 10);
   const mealSlot = slotOf(params.get('slot'));
   const [analysis, setAnalysis] = useState<PhotoNutritionAnalysisResult>();
@@ -176,8 +185,15 @@ export function PhotoNutritionEstimatePage({
     setIsSaving(true);
     setError('');
     try {
-      await saveEstimate({ date, mealSlot, estimate });
-      await navigate('/food');
+      const result = await saveEstimate({ date, mealSlot, estimate });
+      const returnContext = navigationState?.foodJournalReturn;
+      await navigate(returnContext?.path ?? foodJournalPath(date), {
+        state: createFoodJournalFeedbackState(returnContext, {
+          title: `Estimation photo ajoutée au ${mealSlotLabels[mealSlot].toLocaleLowerCase('fr')}`,
+          mealSlot,
+          entryId: result.entry.id,
+        }),
+      });
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Ajout impossible.');
     } finally {
@@ -187,6 +203,17 @@ export function PhotoNutritionEstimatePage({
 
   return (
     <section aria-labelledby="photo-estimate-title" className="space-y-5 pb-8">
+      <Link
+        to={navigationState?.foodJournalReturn?.path ?? foodJournalPath(date)}
+        state={navigationState?.foodJournalReturn ? {
+          scroll: 'restore',
+          restoreScrollKey: navigationState.foodJournalReturn.scrollKey,
+        } : undefined}
+        className="inline-flex items-center gap-2 text-sm font-semibold text-brand-700 hover:underline dark:text-brand-300"
+      >
+        <ArrowLeft aria-hidden="true" className="size-4" />
+        Retour au journal
+      </Link>
       <div>
         <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">Journal alimentaire</p>
         <h1 id="photo-estimate-title" className="mt-1 text-3xl font-bold tracking-tight text-slate-950 dark:text-white">
@@ -257,30 +284,48 @@ export function PhotoNutritionEstimatePage({
             </p>
           )}
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950">
+          <div className="rounded-2xl border border-brand-200 bg-brand-50/70 p-4 dark:border-brand-900 dark:bg-brand-950/30 sm:p-5">
             <div className="flex items-start gap-3">
-              <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                <ShieldCheck aria-hidden="true" className="size-5" />
+              <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-brand-700 text-white dark:bg-brand-500">
+                <Bot aria-hidden="true" className="size-5" />
               </span>
               <div className="min-w-0 flex-1">
-                <p className="font-semibold text-slate-950 dark:text-white">Analyse IA sécurisée</p>
-                <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                  {aiConfig.enabled
-                    ? 'Le proxy IA est configuré. La photo ne sera envoyée qu’après accord explicite.'
-                    : 'Aucun proxy IA configuré : l’analyse restera locale et prudente.'}
-                </p>
-                {aiConfig.enabled ? (
-                  <label className="mt-3 flex items-start gap-2 text-sm font-medium text-slate-700 dark:text-slate-200">
-                    <input
-                      type="checkbox"
-                      className="mt-1 size-4 rounded border-slate-300 text-brand-700 focus:ring-brand-600"
-                      checked={useRemoteAi}
-                      onChange={(event) => setUseRemoteAi(event.currentTarget.checked)}
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="font-semibold text-slate-950 dark:text-white">Autoriser l’analyse IA pour cette photo</p>
+                    <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                      {aiConfig.enabled
+                        ? 'La photo sera envoyée une seule fois au proxy sécurisé, uniquement après activation de cet interrupteur.'
+                        : 'Le proxy distant est indisponible. L’analyse restera locale et aucune photo ne sera envoyée.'}
+                    </p>
+                  </div>
+                  {aiConfig.enabled ? (
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={useRemoteAi}
+                      aria-label="Autoriser l’analyse IA distante pour cette photo"
                       disabled={isAnalyzing || isSaving}
-                    />
-                    <span>J’autorise l’envoi ponctuel de cette photo au proxy IA pour générer une estimation à corriger.</span>
-                  </label>
-                ) : null}
+                      onClick={() => setUseRemoteAi((current) => !current)}
+                      className="inline-flex min-h-11 shrink-0 items-center gap-3 rounded-xl border border-brand-300 bg-white px-3 text-sm font-semibold text-slate-800 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 disabled:opacity-60 dark:border-brand-800 dark:bg-slate-900 dark:text-slate-100"
+                    >
+                      <span
+                        aria-hidden="true"
+                        className={`relative h-6 w-11 rounded-full transition-colors ${useRemoteAi ? 'bg-brand-700 dark:bg-brand-500' : 'bg-slate-300 dark:bg-slate-700'}`}
+                      >
+                        <span className={`absolute top-0.5 size-5 rounded-full bg-white shadow transition-transform ${useRemoteAi ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                      </span>
+                      {useRemoteAi ? 'Activée' : 'Désactivée'}
+                    </button>
+                  ) : (
+                    <span className="inline-flex min-h-11 items-center rounded-xl bg-slate-100 px-3 text-sm font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                      Analyse locale
+                    </span>
+                  )}
+                </div>
+                <ContextHelp className="mt-3" question="Pourquoi demander cette autorisation ?" tone="brand">
+                  La photo peut contenir des informations personnelles. SportPilot ne l’envoie jamais automatiquement : ton accord vaut uniquement pour la photo sélectionnée et doit être redonné pour une nouvelle analyse.
+                </ContextHelp>
               </div>
             </div>
           </div>

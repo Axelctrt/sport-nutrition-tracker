@@ -1,4 +1,5 @@
 import { Minus, Scale, Target, TrendingDown, TrendingUp } from 'lucide-react';
+import { resolveCurrentWeight } from '@/application/weight/currentWeightService';
 import { calculateWeightMovingAverage } from '@/domain/aggregations/analytics';
 import type { UserProfile } from '@/domain/models/profile';
 import type { WeightEntry } from '@/domain/models/weight';
@@ -30,10 +31,12 @@ function TrendIcon({ value }: { value: number | undefined }) {
 
 export function WeightSummary({ entries, profile }: WeightSummaryProps) {
   const ordered = [...entries].sort((left, right) => left.date.localeCompare(right.date));
-  const latestEntry = ordered.at(-1);
-  const previousEntry = ordered.at(-2);
+  const currentWeight = resolveCurrentWeight(profile.initialWeightKg, ordered);
+  const latestEntry = currentWeight.source === 'entry' ? currentWeight.entry : undefined;
+  const previousEntry = latestEntry
+    ? ordered.filter((entry) => entry.date < latestEntry.date).at(-1)
+    : undefined;
   const latestPoint = calculateWeightMovingAverage(ordered, profile).at(-1);
-  const currentWeight = latestEntry?.weightKg ?? profile.initialWeightKg;
   const changeFromPrevious = latestEntry && previousEntry
     ? latestEntry.weightKg - previousEntry.weightKg
     : undefined;
@@ -46,10 +49,10 @@ export function WeightSummary({ entries, profile }: WeightSummaryProps) {
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">
-            {latestEntry ? 'Dernière pesée' : 'Poids de référence'}
+            {latestEntry ? 'Dernière pesée' : 'Poids initial du profil'}
           </p>
           <p className="mt-1 text-3xl font-bold tabular-nums tracking-tight text-slate-950 dark:text-white">
-            {formatWeight(currentWeight)}
+            {formatWeight(currentWeight.weightKg)}
           </p>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
             {latestEntry

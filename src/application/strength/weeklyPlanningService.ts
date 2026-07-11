@@ -2,8 +2,9 @@ import { addDays, addWeeks, endOfWeek, format, parseISO, startOfWeek } from 'dat
 import { fr } from 'date-fns/locale';
 import { RepositoryError } from '@/domain/errors/RepositoryError';
 import type { EntityId, LocalDate } from '@/domain/models/common';
-import type { WorkoutSession } from '@/domain/models/strength';
+import type { StrengthSessionStyle, WorkoutSession } from '@/domain/models/strength';
 import type { StrengthExerciseRepository } from '@/infrastructure/repositories/contracts/StrengthExerciseRepository';
+import type { StrengthSetRepository } from '@/infrastructure/repositories/contracts/StrengthSetRepository';
 import type { WorkoutSessionRepository } from '@/infrastructure/repositories/contracts/WorkoutSessionRepository';
 import type { WorkoutTemplateRepository } from '@/infrastructure/repositories/contracts/WorkoutTemplateRepository';
 import {
@@ -14,6 +15,29 @@ import {
 } from '@/application/strength/workoutSessionService';
 import { compareLocalDates, toLocalDate } from '@/shared/utils/dates';
 import { isValidLocalDate } from '@/shared/validation/localDate';
+import { ensurePlannedStrengthSetsForSession } from '@/application/strength/strengthSetService';
+
+
+export interface PlannedWorkoutEnergyInput {
+  plannedDurationMinutes: number;
+  strengthSessionStyle: StrengthSessionStyle;
+}
+
+function validatePlannedWorkoutEnergy(
+  energy: PlannedWorkoutEnergyInput | undefined,
+): void {
+  if (
+    energy &&
+    (!Number.isFinite(energy.plannedDurationMinutes) ||
+      energy.plannedDurationMinutes <= 0 ||
+      energy.plannedDurationMinutes > 1_440)
+  ) {
+    throw new RepositoryError(
+      'La durée prévue doit être comprise entre 1 minute et 24 heures.',
+      'create',
+    );
+  }
+}
 
 export interface WeeklyPlanningDay {
   date: LocalDate;
@@ -94,9 +118,13 @@ export async function planWorkoutSessionFromTemplate(
   exerciseRepository: StrengthExerciseRepository,
   templateId: EntityId,
   scheduledDate: LocalDate,
+  energyOrNow?: PlannedWorkoutEnergyInput | Date,
   now = new Date(),
 ): Promise<WorkoutSessionView> {
   requireValidDate(scheduledDate);
+  const energy = energyOrNow instanceof Date ? undefined : energyOrNow;
+  const effectiveNow = energyOrNow instanceof Date ? energyOrNow : now;
+  validatePlannedWorkoutEnergy(energy);
   const { template, exercises } = await createWorkoutTemplateSessionSnapshot(
     templateRepository,
     exerciseRepository,
@@ -117,9 +145,15 @@ export async function planWorkoutSessionFromTemplate(
     status: 'planned',
     plannedDate: scheduledDate,
     originalPlannedDate: scheduledDate,
-    plannedAt: now.toISOString(),
+    plannedAt: effectiveNow.toISOString(),
     sourceTemplateId: template.id,
     sourceTemplateNameSnapshot: template.name,
+    ...(energy
+      ? {
+          plannedDurationMinutes: energy.plannedDurationMinutes,
+          strengthSessionStyle: energy.strengthSessionStyle,
+        }
+      : {}),
     ...(template.notes ? { notes: template.notes } : {}),
   }, exercises);
 }
@@ -127,8 +161,11 @@ export async function planWorkoutSessionFromTemplate(
 export async function startPlannedWorkoutSession(
   repository: WorkoutSessionRepository,
   sessionId: EntityId,
+  setRepositoryOrNow?: StrengthSetRepository | Date,
   now = new Date(),
 ): Promise<WorkoutSession> {
+  const setRepository = setRepositoryOrNow instanceof Date ? undefined : setRepositoryOrNow;
+  const effectiveNow = setRepositoryOrNow instanceof Date ? setRepositoryOrNow : now;
   const current = await repository.getInProgress();
   if (current && current.id !== sessionId) {
     throw new RepositoryError(
@@ -144,12 +181,16 @@ export async function startPlannedWorkoutSession(
   }
 
   const scheduledDate = planningDateForSession(session);
-  return repository.update(sessionId, {
+  const started = await repository.update(sessionId, {
     status: 'inProgress',
     plannedDate: scheduledDate,
-    date: toLocalDate(now),
-    startedAt: now.toISOString(),
+    date: toLocalDate(effectiveNow),
+    startedAt: effectiveNow.toISOString(),
   });
+  if (setRepository) {
+    await ensurePlannedStrengthSetsForSession(repository, setRepository, sessionId);
+  }
+  return started;
 }
 
 export async function reschedulePlannedWorkoutSession(

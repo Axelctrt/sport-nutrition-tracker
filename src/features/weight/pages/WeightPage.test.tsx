@@ -7,14 +7,14 @@ import { WeightPage } from '@/features/weight/pages/WeightPage';
 import { ToastProvider } from '@/shared/toast/ToastProvider';
 
 const mocks = vi.hoisted(() => ({
-  recalculateTarget: vi.fn(),
+  recalculateTargets: vi.fn(),
   save: vi.fn(),
   remove: vi.fn(),
   useWeightHistory: vi.fn(),
 }));
 
-vi.mock('@/application/daily/dailyTargetCoordinator', () => ({
-  calculateAndPersistDailyTarget: mocks.recalculateTarget,
+vi.mock('@/application/daily/referenceWeightRecalculationService', () => ({
+  recalculateTargetsAfterWeightChange: mocks.recalculateTargets,
 }));
 
 vi.mock('@/app/providers/profile/useProfile', () => ({
@@ -48,7 +48,7 @@ const entry: WeightEntry = {
 };
 
 beforeEach(() => {
-  mocks.recalculateTarget.mockResolvedValue(undefined);
+  mocks.recalculateTargets.mockResolvedValue([]);
   mocks.remove.mockResolvedValue(undefined);
   mocks.save.mockResolvedValue({
     ...entry,
@@ -101,6 +101,10 @@ describe('WeightPage', () => {
         note: 'Pesée au réveil',
       });
     });
+    expect(mocks.recalculateTargets).toHaveBeenCalledWith(
+      '2026-06-25',
+      expect.objectContaining({ id: 'profile-1' }),
+    );
     expect(await screen.findByText('Pesée mise à jour')).toBeInTheDocument();
     expect(screen.getByText('61,4 kg le 25 juin 2026.')).toBeInTheDocument();
   });

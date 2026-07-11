@@ -3,6 +3,7 @@ import { Calculator, ChevronDown, Save } from 'lucide-react';
 import { useEffect, useMemo, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { estimateActivityCalories } from '@/domain/calculations/activityCalories';
+import type { PlannedActivityLinkOption } from '@/application/planning/activityReconciliationService';
 import { calculateRunningPaceSecondsPerKm, calculateRunningSteps, formatPace } from '@/domain/calculations/running';
 import { calculateSwimmingPaceSecondsPer100Meters } from '@/domain/calculations/swimming';
 import { calculateAverageSpeedKmh, calculatePoolLengths } from '@/domain/calculations/endurance';
@@ -16,15 +17,16 @@ import {
   activityTypeLabels,
   bikeTypeLabels,
   cyclingEnvironmentLabels,
-  intensityLabels,
   runningSessionLabels,
   strokeLabels,
   swimmingSessionLabels,
   terrainLabels,
 } from '@/features/activities/utils/activityLabels';
+import { ActivityQuickControls } from '@/features/activities/components/ActivityQuickControls';
 import { toActivityDraft } from '@/features/activities/utils/activityForm';
 import { checkboxClassName, inputClassName } from '@/shared/forms/formStyles';
 import { focusFirstInvalidField } from '@/shared/hooks/focusFirstInvalidField';
+import { formatLocalDate } from '@/shared/utils/dates';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { FormField } from '@/shared/ui/FormField';
@@ -38,6 +40,7 @@ interface ActivityFormProps {
   calculationWeightSource: string;
   submitLabel: string;
   onDateChange: (date: string) => void;
+  plannedActivityOptions?: readonly PlannedActivityLinkOption[];
   onSubmit: (values: ActivityFormValues) => Promise<void>;
 }
 
@@ -61,6 +64,7 @@ export function ActivityForm({
   calculationWeightSource,
   submitLabel,
   onDateChange,
+  plannedActivityOptions = [],
   onSubmit,
 }: ActivityFormProps) {
   const formRef = useRef<HTMLFormElement>(null);
@@ -84,6 +88,21 @@ export function ActivityForm({
   const values = watch();
   const activityType = values.activityType;
   const errorCount = Object.keys(errors).length;
+
+  const matchingPlannedActivityOptions = useMemo(
+    () => plannedActivityOptions.filter((option) =>
+      option.activityType === activityType
+    ),
+    [activityType, plannedActivityOptions],
+  );
+
+  useEffect(() => {
+    if (!values.plannedActivityKey) return;
+    if (matchingPlannedActivityOptions.some((option) => option.key === values.plannedActivityKey)) {
+      return;
+    }
+    setValue('plannedActivityKey', '', { shouldDirty: true, shouldValidate: true });
+  }, [matchingPlannedActivityOptions, setValue, values.plannedActivityKey]);
 
   useEffect(() => {
     onDateChange(values.date);
@@ -205,34 +224,70 @@ export function ActivityForm({
               />
             </FormField>
 
-            <FormField id="activity-duration" label="Durée (min)" error={errors.durationMinutes?.message} required>
-              <input
-                id="activity-duration"
-                type="number"
-                min="1"
-                max="1440"
-                step="1"
-                inputMode="numeric"
-                enterKeyHint="next"
-                className={inputClassName}
-                aria-invalid={Boolean(errors.durationMinutes)}
-                aria-describedby={errors.durationMinutes ? 'activity-duration-error' : undefined}
-                {...register('durationMinutes', numberRegistration)}
-              />
-            </FormField>
 
-            <FormField id="activity-intensity" label="Intensité" error={errors.intensity?.message} required>
-              <select
-                id="activity-intensity"
-                className={inputClassName}
-                aria-invalid={Boolean(errors.intensity)}
-                {...register('intensity')}
-              >
-                {Object.entries(intensityLabels).map(([value, label]) => (
-                  <option key={value} value={value}>{label}</option>
-                ))}
-              </select>
-            </FormField>
+            {matchingPlannedActivityOptions.length > 0 || values.plannedActivityKey ? (
+              <div className="col-span-2">
+                <FormField
+                  id="activity-planned-link"
+                  label="Séance prévue associée"
+                  description="Associe explicitement cette activité pour remplacer l’estimation prévue sans double comptage."
+                  error={errors.plannedActivityKey?.message}
+                >
+                  <select
+                    id="activity-planned-link"
+                    className={inputClassName}
+                    aria-invalid={Boolean(errors.plannedActivityKey)}
+                    {...register('plannedActivityKey')}
+                  >
+                    <option value="">Aucune — activité imprévue</option>
+                    {matchingPlannedActivityOptions.map((option) => (
+                      <option key={option.key} value={option.key}>
+                        {option.title} · {formatLocalDate(option.date)}
+                      </option>
+                    ))}
+                  </select>
+                </FormField>
+              </div>
+            ) : null}
+
+            <div className="col-span-2 sm:col-span-1">
+              <FormField id="activity-duration" label="Durée (min)" error={errors.durationMinutes?.message} required>
+                <input
+                  id="activity-duration"
+                  type="number"
+                  min="1"
+                  max="1440"
+                  step="1"
+                  inputMode="numeric"
+                  enterKeyHint="next"
+                  className={inputClassName}
+                  aria-invalid={Boolean(errors.durationMinutes)}
+                  aria-describedby={errors.durationMinutes ? 'activity-duration-error' : undefined}
+                  {...register('durationMinutes', numberRegistration)}
+                />
+              </FormField>
+            </div>
+
+            <input type="hidden" {...register('intensity')} />
+            <div className="col-span-2">
+              <ActivityQuickControls
+                durationMinutes={values.durationMinutes}
+                intensity={values.intensity}
+                onDurationChange={(durationMinutes) => setValue('durationMinutes', durationMinutes, {
+                  shouldDirty: true,
+                  shouldValidate: true,
+                })}
+                onIntensityChange={(intensity) => setValue('intensity', intensity, {
+                  shouldDirty: true,
+                  shouldValidate: true,
+                })}
+              />
+              {errors.intensity?.message ? (
+                <p className="mt-2 text-sm font-medium text-red-700 dark:text-red-300" role="alert">
+                  {errors.intensity.message}
+                </p>
+              ) : null}
+            </div>
           </div>
         </section>
 
@@ -511,13 +566,13 @@ export function ActivityForm({
         {preview ? (
           <dl className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
             <div className="rounded-xl bg-white/80 p-3 dark:bg-slate-900/70">
-              <dt className="text-xs text-slate-500 dark:text-slate-400">Estimation</dt>
+              <dt className="text-xs text-slate-500 dark:text-slate-400">Estimation nette</dt>
               <dd className="mt-1 font-bold tabular-nums text-slate-950 dark:text-white">
                 {Math.round(preview.calculation.estimatedCaloriesKcal)} kcal
               </dd>
             </div>
             <div className="rounded-xl bg-white/80 p-3 dark:bg-slate-900/70">
-              <dt className="text-xs text-slate-500 dark:text-slate-400">Retenues</dt>
+              <dt className="text-xs text-slate-500 dark:text-slate-400">Calories retenues</dt>
               <dd className="mt-1 font-bold tabular-nums text-slate-950 dark:text-white">
                 {Math.round(preview.effectiveCalories)} kcal
               </dd>

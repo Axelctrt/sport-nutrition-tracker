@@ -1,11 +1,27 @@
-import { CopyPlus, MoreHorizontal, Pencil, Plus, Save, Trash2, Utensils } from 'lucide-react';
-import { useState } from 'react';
+import {
+  Camera,
+  ChevronDown,
+  CopyPlus,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  Save,
+  Trash2,
+  Utensils,
+} from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { FoodEntryWithProduct, MealJournalSnapshot } from '@/application/food/foodJournalService';
-import { addRecipeToJournalPath, editFoodEntryPath, photoNutritionEstimatePath, routePaths, selectFoodPath } from '@/app/routePaths';
-import type { FoodJournalNavigationState } from '@/features/food-journal/navigation/foodJournalNavigation';
+import {
+  addRecipeToJournalPath,
+  editFoodEntryPath,
+  photoNutritionEstimatePath,
+  routePaths,
+  selectFoodPath,
+} from '@/app/routePaths';
 import { CopyMealForm } from '@/features/food-journal/components/CopyMealForm';
 import { SaveFavoriteMealForm } from '@/features/food-journal/components/SaveFavoriteMealForm';
+import type { FoodJournalNavigationState } from '@/features/food-journal/navigation/foodJournalNavigation';
 import { mealSlotLabels } from '@/features/food-journal/utils/foodLabels';
 import { inputClassName } from '@/shared/forms/formStyles';
 import { Button } from '@/shared/ui/Button';
@@ -17,9 +33,11 @@ import { formatLocalDate } from '@/shared/utils/dates';
 interface FoodJournalMealCardProps {
   date: string;
   meal: MealJournalSnapshot;
+  expanded: boolean;
   busyId?: string | undefined;
   navigationState: FoodJournalNavigationState;
   highlightedEntryId?: string | undefined;
+  onToggle: () => void;
   onDuplicate: (id: string) => Promise<unknown>;
   onRemove: (id: string) => Promise<unknown>;
   onUpdateQuantity: (item: FoodEntryWithProduct, quantity: number) => Promise<unknown>;
@@ -50,12 +68,20 @@ function entryQuantityLabel(item: FoodEntryWithProduct): string {
   return `${item.entry.reference.inputQuantity} ${item.entry.reference.inputMode === 'servings' ? 'portion(s)' : item.entry.reference.normalizedUnit}`;
 }
 
+function entryCountLabel(count: number): string {
+  if (count === 0) return 'Aucun aliment';
+  if (count === 1) return '1 aliment';
+  return `${count} aliments`;
+}
+
 export function FoodJournalMealCard({
   date,
   meal,
+  expanded,
   busyId,
   navigationState,
   highlightedEntryId,
+  onToggle,
   onDuplicate,
   onRemove,
   onUpdateQuantity,
@@ -67,9 +93,16 @@ export function FoodJournalMealCard({
   const [deleteTarget, setDeleteTarget] = useState<FoodEntryWithProduct>();
   const [optionsOpen, setOptionsOpen] = useState(false);
   const label = mealSlotLabels[meal.slot];
+  const contentId = `food-meal-${meal.slot}-content`;
   const addAriaLabel = meal.slot === 'snacks'
     ? 'Ajouter un aliment aux collations'
     : `Ajouter un aliment au ${label.toLocaleLowerCase('fr')}`;
+
+  useEffect(() => {
+    if (expanded) return;
+    setOptionsOpen(false);
+    setEditingId(undefined);
+  }, [expanded]);
 
   const beginEdit = (item: FoodEntryWithProduct) => {
     setEditingId(item.entry.id);
@@ -84,203 +117,245 @@ export function FoodJournalMealCard({
   };
 
   return (
-    <Card id={`food-meal-${meal.slot}`} className="scroll-mt-24 overflow-hidden">
-      <div className="flex items-start justify-between gap-3 p-4 sm:p-5">
-        <div className="min-w-0">
-          <h2 className="text-xl font-semibold text-slate-950 dark:text-white">{label}</h2>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            {round(meal.totals.caloriesKcal)} kcal · P {round(meal.totals.proteinGrams)} g · G {round(meal.totals.carbohydratesGrams)} g · L {round(meal.totals.fatGrams)} g
-          </p>
-        </div>
-        <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
-          <Link
-            to={photoNutritionEstimatePath(date, meal.slot)}
-            state={navigationState}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
-          >
-            Photo
-          </Link>
+    <Card
+      id={`food-meal-${meal.slot}`}
+      className={cn(
+        'scroll-mt-24 overflow-hidden transition-shadow motion-reduce:transition-none',
+        expanded && 'shadow-[var(--sp-shadow-panel)]',
+      )}
+    >
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-stretch">
+        <button
+          type="button"
+          aria-expanded={expanded}
+          aria-controls={contentId}
+          className="flex min-h-20 min-w-0 items-center gap-3 px-4 text-left hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-600 dark:hover:bg-slate-800/60 sm:px-5"
+          onClick={onToggle}
+        >
+          <span className="min-w-0 flex-1">
+            <span className="flex items-center gap-2">
+              <h2 className="truncate text-lg font-semibold text-slate-950 dark:text-white">{label}</h2>
+              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                {entryCountLabel(meal.entries.length)}
+              </span>
+            </span>
+            <span className="mt-1 block truncate text-sm text-slate-500 dark:text-slate-400">
+              {round(meal.totals.caloriesKcal)} kcal · P {round(meal.totals.proteinGrams)} g · G {round(meal.totals.carbohydratesGrams)} g · L {round(meal.totals.fatGrams)} g
+            </span>
+          </span>
+          <ChevronDown
+            aria-hidden="true"
+            className={cn(
+              'size-5 shrink-0 text-slate-500 transition-transform motion-reduce:transition-none',
+              expanded && 'rotate-180',
+            )}
+          />
+        </button>
+
+        <div className="flex items-center border-l border-slate-200 px-2 dark:border-slate-800">
           <Link
             aria-label={addAriaLabel}
             to={selectFoodPath(date, meal.slot)}
             state={navigationState}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-brand-700 px-3 text-sm font-semibold text-white shadow-sm hover:bg-brand-800 dark:bg-brand-600 dark:hover:bg-brand-500"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-brand-700 px-3 text-sm font-semibold text-white shadow-sm hover:bg-brand-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 dark:bg-brand-600 dark:hover:bg-brand-500"
           >
             <Plus aria-hidden="true" className="size-4" />
-            Ajouter
+            <span className="hidden sm:inline">Ajouter</span>
           </Link>
         </div>
       </div>
 
-      {meal.entries.length === 0 ? (
-        <div className="border-t border-slate-200 px-4 py-5 text-center dark:border-slate-800 sm:px-5">
-          <Utensils aria-hidden="true" className="mx-auto size-8 text-slate-400" />
-          <p className="mt-2 font-semibold text-slate-800 dark:text-slate-100">Aucun aliment pour ce repas</p>
-          <p className="mt-1 text-sm text-slate-500">Ajoute un aliment, une recette ou un produit scanné.</p>
-        </div>
-      ) : (
-        <div className="border-t border-slate-200 px-4 dark:border-slate-800 sm:px-5">
-          {meal.entries.map((item) => {
-            const { entry, nutrition } = item;
-            const isEditing = editingId === entry.id;
-            const editPath = entry.reference.sourceType === 'recipe'
-              ? addRecipeToJournalPath(entry.reference.recipeId, entry.date, entry.mealSlot, entry.id)
-              : editFoodEntryPath(entry.id);
-
-            return (
-              <article
-                key={entry.id}
-                id={`food-entry-${entry.id}`}
-                className={cn(
-                  'scroll-mt-28 border-b border-slate-200 py-3 transition-colors last:border-b-0 dark:border-slate-800 motion-reduce:transition-none',
-                  highlightedEntryId === entry.id && 'rounded-xl bg-brand-50 px-3 dark:bg-brand-950/35',
-                )}
+      {expanded ? (
+        <div id={contentId} className="border-t border-slate-200 dark:border-slate-800">
+          {meal.entries.length === 0 ? (
+            <div className="px-4 py-6 text-center sm:px-5">
+              <Utensils aria-hidden="true" className="mx-auto size-8 text-slate-400" />
+              <p className="mt-2 font-semibold text-slate-800 dark:text-slate-100">Aucun aliment pour ce repas</p>
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                Ajoutez un aliment pour commencer à suivre ce repas.
+              </p>
+              <Link
+                to={selectFoodPath(date, meal.slot)}
+                state={navigationState}
+                className="mt-4 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-brand-700 px-4 text-sm font-semibold text-white shadow-sm hover:bg-brand-800 dark:bg-brand-600 dark:hover:bg-brand-500"
               >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <h3 className="break-words font-semibold text-slate-950 dark:text-white">{entryName(item)}</h3>
-                    <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                      {entryQuantityLabel(item)} · {round(nutrition.caloriesKcal)} kcal
-                    </p>
-                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                      P {nutrition.proteinGrams.toFixed(1)} g · G {nutrition.carbohydratesGrams.toFixed(1)} g · L {nutrition.fatGrams.toFixed(1)} g
-                    </p>
-                  </div>
+                <Plus aria-hidden="true" className="size-4" />Ajouter un aliment
+              </Link>
+            </div>
+          ) : (
+            <div className="px-4 dark:border-slate-800 sm:px-5">
+              {meal.entries.map((item) => {
+                const { entry, nutrition } = item;
+                const isEditing = editingId === entry.id;
+                const editPath = entry.reference.sourceType === 'recipe'
+                  ? addRecipeToJournalPath(entry.reference.recipeId, entry.date, entry.mealSlot, entry.id)
+                  : editFoodEntryPath(entry.id);
 
-                  <details className="relative shrink-0">
-                    <summary
-                      role="button"
-                      aria-label={`Actions pour ${entryName(item)}`}
-                      className="grid size-11 cursor-pointer list-none place-items-center rounded-xl text-slate-600 hover:bg-slate-100 focus-visible:outline-none dark:text-slate-300 dark:hover:bg-slate-800 [&::-webkit-details-marker]:hidden"
-                    >
-                      <MoreHorizontal aria-hidden="true" className="size-5" />
-                    </summary>
-                    <div className="absolute right-0 z-20 mt-1 w-52 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl dark:border-slate-700 dark:bg-slate-900">
-                      <Button
-                        className="w-full justify-start"
-                        size="sm"
-                        variant="ghost"
-                        onClick={(event) => {
-                          event.currentTarget.closest('details')?.removeAttribute('open');
-                          beginEdit(item);
-                        }}
-                      >
-                        <Pencil aria-hidden="true" className="size-4" />Modifier la quantité
-                      </Button>
-                      <Link
-                        to={editPath}
-                        state={navigationState}
-                        onClick={(event) => event.currentTarget.closest('details')?.removeAttribute('open')}
-                        className="inline-flex min-h-9 w-full items-center gap-2 rounded-xl px-3 text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
-                      >
-                        <Pencil aria-hidden="true" className="size-4" />Modifier les détails
-                      </Link>
-                      <Button
-                        className="w-full justify-start"
-                        size="sm"
-                        variant="ghost"
-                        disabled={busyId === `duplicate-${entry.id}`}
-                        onClick={(event) => {
-                          event.currentTarget.closest('details')?.removeAttribute('open');
-                          void onDuplicate(entry.id);
-                        }}
-                      >
-                        <CopyPlus aria-hidden="true" className="size-4" />Dupliquer
-                      </Button>
-                      <Button
-                        className="w-full justify-start"
-                        size="sm"
-                        variant="dangerGhost"
-                        disabled={busyId === `delete-${entry.id}`}
-                        onClick={(event) => {
-                          event.currentTarget.closest('details')?.removeAttribute('open');
-                          setDeleteTarget(item);
-                        }}
-                      >
-                        <Trash2 aria-hidden="true" className="size-4" />Supprimer
-                      </Button>
+                return (
+                  <article
+                    key={entry.id}
+                    id={`food-entry-${entry.id}`}
+                    className={cn(
+                      'scroll-mt-28 border-b border-slate-200 py-3 transition-colors last:border-b-0 dark:border-slate-800 motion-reduce:transition-none',
+                      highlightedEntryId === entry.id && 'rounded-xl bg-brand-50 px-3 dark:bg-brand-950/35',
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <h3 className="break-words font-semibold text-slate-950 dark:text-white">{entryName(item)}</h3>
+                        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                          {entryQuantityLabel(item)} · {round(nutrition.caloriesKcal)} kcal
+                        </p>
+                        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                          P {nutrition.proteinGrams.toFixed(1)} g · G {nutrition.carbohydratesGrams.toFixed(1)} g · L {nutrition.fatGrams.toFixed(1)} g
+                        </p>
+                      </div>
+
+                      <details className="relative shrink-0">
+                        <summary
+                          role="button"
+                          aria-label={`Actions pour ${entryName(item)}`}
+                          className="grid size-11 cursor-pointer list-none place-items-center rounded-xl text-slate-600 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 dark:text-slate-300 dark:hover:bg-slate-800 [&::-webkit-details-marker]:hidden"
+                        >
+                          <MoreHorizontal aria-hidden="true" className="size-5" />
+                        </summary>
+                        <div className="absolute right-0 z-20 mt-1 w-52 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl dark:border-slate-700 dark:bg-slate-900">
+                          <Button
+                            className="w-full justify-start"
+                            size="sm"
+                            variant="ghost"
+                            onClick={(event) => {
+                              event.currentTarget.closest('details')?.removeAttribute('open');
+                              beginEdit(item);
+                            }}
+                          >
+                            <Pencil aria-hidden="true" className="size-4" />Modifier la quantité
+                          </Button>
+                          <Link
+                            to={editPath}
+                            state={navigationState}
+                            onClick={(event) => event.currentTarget.closest('details')?.removeAttribute('open')}
+                            className="inline-flex min-h-9 w-full items-center gap-2 rounded-xl px-3 text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
+                          >
+                            <Pencil aria-hidden="true" className="size-4" />Modifier les détails
+                          </Link>
+                          <Button
+                            className="w-full justify-start"
+                            size="sm"
+                            variant="ghost"
+                            disabled={busyId === `duplicate-${entry.id}`}
+                            onClick={(event) => {
+                              event.currentTarget.closest('details')?.removeAttribute('open');
+                              void onDuplicate(entry.id);
+                            }}
+                          >
+                            <CopyPlus aria-hidden="true" className="size-4" />Dupliquer
+                          </Button>
+                          <Button
+                            className="w-full justify-start"
+                            size="sm"
+                            variant="dangerGhost"
+                            disabled={busyId === `delete-${entry.id}`}
+                            onClick={(event) => {
+                              event.currentTarget.closest('details')?.removeAttribute('open');
+                              setDeleteTarget(item);
+                            }}
+                          >
+                            <Trash2 aria-hidden="true" className="size-4" />Supprimer
+                          </Button>
+                        </div>
+                      </details>
                     </div>
-                  </details>
+
+                    {isEditing ? (
+                      <div className="mt-3 flex flex-col gap-2 rounded-xl bg-slate-50 p-3 dark:bg-slate-950 sm:flex-row sm:items-end">
+                        <div className="min-w-0 flex-1">
+                          <label htmlFor={`quick-quantity-${entry.id}`} className="text-xs font-semibold text-slate-700 dark:text-slate-200">
+                            {entry.reference.sourceType === 'recipe'
+                              ? 'Nombre de portions'
+                              : entry.reference.inputMode === 'servings'
+                                ? 'Nombre de portions'
+                                : `Quantité en ${entry.reference.normalizedUnit}`}
+                          </label>
+                          <input
+                            id={`quick-quantity-${entry.id}`}
+                            type="number"
+                            inputMode="decimal"
+                            min="0.01"
+                            step="0.01"
+                            value={quantity}
+                            onChange={(event) => setQuantity(event.target.value)}
+                            className={`${inputClassName} mt-1`}
+                            autoFocus
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            disabled={busyId === `update-${entry.id}` || !Number.isFinite(Number(quantity.replace(',', '.'))) || Number(quantity.replace(',', '.')) <= 0}
+                            onClick={() => void saveQuantity(item)}
+                          >
+                            <Save aria-hidden="true" className="size-4" />Enregistrer
+                          </Button>
+                          <Button size="sm" variant="secondary" onClick={() => setEditingId(undefined)}>Annuler</Button>
+                        </div>
+                      </div>
+                    ) : null}
+                  </article>
+                );
+              })}
+            </div>
+          )}
+
+          <div className="border-t border-slate-200 dark:border-slate-800">
+            <button
+              type="button"
+              aria-expanded={optionsOpen}
+              aria-label={`Options du ${label.toLocaleLowerCase('fr')}`}
+              className="flex min-h-12 w-full items-center justify-between gap-3 px-4 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800/60 sm:px-5"
+              onClick={() => setOptionsOpen((current) => !current)}
+            >
+              Options du repas
+              <span className="text-xs font-normal text-slate-500">Photo, recette, copie, favori</span>
+            </button>
+            {optionsOpen ? (
+              <div className="border-t border-slate-200 bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-950/50 sm:p-5">
+                <div className="flex flex-wrap gap-2">
+                  <Link
+                    to={photoNutritionEstimatePath(date, meal.slot)}
+                    state={navigationState}
+                    className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+                  >
+                    <Camera aria-hidden="true" className="size-4" />Ajouter par photo
+                  </Link>
+                  <Link
+                    to={`${routePaths.recipes}?date=${encodeURIComponent(date)}&slot=${encodeURIComponent(meal.slot)}`}
+                    state={navigationState}
+                    className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+                  >
+                    <Plus aria-hidden="true" className="size-4" />Ajouter une recette
+                  </Link>
                 </div>
-
-                {isEditing ? (
-                  <div className="mt-3 flex flex-col gap-2 rounded-xl bg-slate-50 p-3 dark:bg-slate-950 sm:flex-row sm:items-end">
-                    <div className="min-w-0 flex-1">
-                      <label htmlFor={`quick-quantity-${entry.id}`} className="text-xs font-semibold text-slate-700 dark:text-slate-200">
-                        {entry.reference.sourceType === 'recipe'
-                          ? 'Nombre de portions'
-                          : entry.reference.inputMode === 'servings'
-                            ? 'Nombre de portions'
-                            : `Quantité en ${entry.reference.normalizedUnit}`}
-                      </label>
-                      <input
-                        id={`quick-quantity-${entry.id}`}
-                        type="number"
-                        inputMode="decimal"
-                        min="0.01"
-                        step="0.01"
-                        value={quantity}
-                        onChange={(event) => setQuantity(event.target.value)}
-                        className={`${inputClassName} mt-1`}
-                        autoFocus
-                      />
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        disabled={busyId === `update-${entry.id}` || !Number.isFinite(Number(quantity.replace(',', '.'))) || Number(quantity.replace(',', '.')) <= 0}
-                        onClick={() => void saveQuantity(item)}
-                      >
-                        <Save aria-hidden="true" className="size-4" />Enregistrer
-                      </Button>
-                      <Button size="sm" variant="secondary" onClick={() => setEditingId(undefined)}>Annuler</Button>
-                    </div>
+                {meal.entries.length > 0 ? (
+                  <div className="mt-3">
+                    <SaveFavoriteMealForm
+                      disabled={busyId === `favorite-${meal.slot}`}
+                      suggestedName={`${label} du ${formatLocalDate(date)}`}
+                      onSave={onSaveFavorite}
+                    />
+                    <CopyMealForm
+                      initialDate={date}
+                      initialSlot={meal.slot}
+                      disabled={busyId === `copy-meal-${meal.slot}`}
+                      onSubmit={async (values) => { await onCopyMeal(values.targetDate, values.targetSlot); }}
+                    />
                   </div>
                 ) : null}
-              </article>
-            );
-          })}
-        </div>
-      )}
-
-      <div className="border-t border-slate-200 dark:border-slate-800">
-        <button
-          type="button"
-          aria-expanded={optionsOpen}
-          aria-label={`Options du ${label.toLocaleLowerCase('fr')}`}
-          className="flex min-h-12 w-full items-center justify-between gap-3 px-4 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800/60 sm:px-5"
-          onClick={() => setOptionsOpen((current) => !current)}
-        >
-          Options du repas
-          <span className="text-xs font-normal text-slate-500">Recette, copie, favori</span>
-        </button>
-        {optionsOpen ? (
-          <div className="border-t border-slate-200 bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-950/50 sm:p-5">
-            <Link
-              to={`${routePaths.recipes}?date=${encodeURIComponent(date)}&slot=${encodeURIComponent(meal.slot)}`}
-              state={navigationState}
-              className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
-            >
-              <Plus aria-hidden="true" className="size-4" />Ajouter une recette
-            </Link>
-            {meal.entries.length > 0 ? (
-              <div className="mt-3">
-                <SaveFavoriteMealForm
-                  disabled={busyId === `favorite-${meal.slot}`}
-                  suggestedName={`${label} du ${formatLocalDate(date)}`}
-                  onSave={onSaveFavorite}
-                />
-                <CopyMealForm
-                  initialDate={date}
-                  initialSlot={meal.slot}
-                  disabled={busyId === `copy-meal-${meal.slot}`}
-                  onSubmit={async (values) => { await onCopyMeal(values.targetDate, values.targetSlot); }}
-                />
               </div>
             ) : null}
           </div>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
 
       <ConfirmationDialog
         open={Boolean(deleteTarget)}

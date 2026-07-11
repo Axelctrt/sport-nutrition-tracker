@@ -4,11 +4,16 @@ describe('getRouteTitle', () => {
   it('retourne un titre mobile précis pour les routes principales et imbriquées', () => {
     expect(getRouteTitle('/')).toBe('Aujourd’hui');
     expect(getRouteTitle('/food')).toBe('Alimentation');
+    expect(getRouteTitle('/activities')).toBe('Sport');
+    expect(getRouteTitle('/progression')).toBe('Progression');
     expect(getRouteTitle('/strength/planning')).toBe('Planning de musculation');
     expect(getRouteTitle('/activities/templates')).toBe('Modèles d’endurance');
     expect(getRouteTitle('/settings/dashboard')).toBe('Personnaliser le tableau de bord');
     expect(getRouteTitle('/settings/sync-prototype')).toBe('Compte de synchronisation');
     expect(getRouteTitle('/settings/account-devices')).toBe('Compte et appareils');
+    expect(getRouteTitle('/settings/account-sync')).toBe('Compte et synchronisation');
+    expect(getRouteTitle('/settings/appearance-accessibility')).toBe('Apparence et accessibilité');
+    expect(getRouteTitle('/settings/advanced')).toBe('Paramètres avancés');
     expect(getRouteTitle('/strength/sessions/session-1')).toBe('Séance de musculation');
     expect(getRouteTitle('/strength/exercises/exercise-1/history')).toBe('Historique de l’exercice');
     expect(getRouteTitle('/rewards')).toBe('Centre de récompenses');

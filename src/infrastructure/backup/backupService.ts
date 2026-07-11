@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { ensureExerciseCatalog } from '@/application/strength/exerciseCatalogSeeder';
+import { reconcilePersistedActivityLinksBestEffort } from '@/application/planning/activityLinkIntegrityService';
 import {
   createDefaultUserSettings,
   normalizeUserSettings,
@@ -645,6 +646,13 @@ export async function replaceDatabaseFromBackup(
     throw new BackupOperationError(
       'La restauration a échoué. Les données précédentes ont été conservées.',
       { cause: error },
+    );
+  }
+
+  if (database === appDatabase) {
+    await reconcilePersistedActivityLinksBestEffort(
+      undefined,
+      { removeDanglingActivityReferences: true },
     );
   }
 }

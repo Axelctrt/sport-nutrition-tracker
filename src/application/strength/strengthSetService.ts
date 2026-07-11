@@ -1,5 +1,5 @@
 import { RepositoryError } from '@/domain/errors/RepositoryError';
-import type { EntityId } from '@/domain/models/common';
+import type { EntityId, NewEntity } from '@/domain/models/common';
 import type { StrengthSet, StrengthSetType, WorkoutSession, WorkoutSessionExercise } from '@/domain/models/strength';
 import { resolveTrackingMode } from '@/domain/strength/strengthTracking';
 import type { StrengthSetRepository } from '@/infrastructure/repositories/contracts/StrengthSetRepository';
@@ -31,6 +31,93 @@ async function getEditableContext(
   return { session, exercise };
 }
 
+
+type StrengthSetSeed = Pick<
+  StrengthSet,
+  'repetitions' | 'weightKg' | 'durationSeconds' | 'distanceMeters' | 'rpe' | 'notes'
+>;
+
+function buildStrengthSetInput(
+  sessionId: EntityId,
+  exercise: WorkoutSessionExercise,
+  setNumber: number,
+  previous?: StrengthSetSeed,
+  type: StrengthSetType = 'working',
+): NewEntity<StrengthSet> {
+  const trackingMode = resolveTrackingMode(exercise);
+  return {
+    sessionId,
+    sessionExerciseId: exercise.id,
+    setNumber,
+    repetitions: trackingMode === 'duration' || trackingMode === 'distance'
+      ? 0
+      : previous?.repetitions ?? exercise.minRepetitions ?? 0,
+    weightKg: trackingMode === 'repetitions' || trackingMode === 'duration' || trackingMode === 'distance'
+      ? 0
+      : previous?.weightKg ?? exercise.targetLoadKg ?? 0,
+    ...(trackingMode === 'duration'
+      ? { durationSeconds: previous?.durationSeconds ?? exercise.targetDurationSeconds ?? 0 }
+      : {}),
+    ...(trackingMode === 'distance'
+      ? { distanceMeters: previous?.distanceMeters ?? exercise.targetDistanceMeters ?? 0 }
+      : {}),
+    ...(previous?.rpe === undefined ? {} : { rpe: previous.rpe }),
+    type,
+    isCompleted: false,
+    ...(previous?.notes ? { notes: previous.notes } : {}),
+  };
+}
+
+export async function ensurePlannedStrengthSetsForSession(
+  sessionRepository: WorkoutSessionRepository,
+  setRepository: StrengthSetRepository,
+  sessionId: EntityId,
+): Promise<StrengthSet[]> {
+  const session = await sessionRepository.getById(sessionId);
+  if (!session) throw new RepositoryError('Séance introuvable.', 'create');
+  if (session.status !== 'inProgress') {
+    throw new RepositoryError('Les séries prévues ne peuvent être préparées que pour une séance en cours.', 'create');
+  }
+
+  const [exercises, existingSets] = await Promise.all([
+    sessionRepository.listExercises(sessionId),
+    setRepository.listBySession(sessionId),
+  ]);
+  const setsToCreate: Array<NewEntity<StrengthSet>> = [];
+
+  for (const exercise of exercises) {
+    const plannedSets = exercise.plannedSets ?? 0;
+    if (plannedSets <= 0) continue;
+
+    const currentSets = existingSets
+      .filter((set) => set.sessionExerciseId === exercise.id)
+      .sort((left, right) => left.setNumber - right.setNumber);
+    const currentWorkingSets = currentSets.filter((set) => set.type === 'working');
+    let previousWorkingSet: StrengthSetSeed | undefined = currentWorkingSets.at(-1);
+    let nextSetNumber = currentSets.length + 1;
+
+    for (let index = currentWorkingSets.length; index < plannedSets; index += 1) {
+      const input = buildStrengthSetInput(
+        sessionId,
+        exercise,
+        nextSetNumber,
+        previousWorkingSet,
+        'working',
+      );
+      setsToCreate.push(input);
+      previousWorkingSet = input;
+      nextSetNumber += 1;
+    }
+  }
+
+  if (setsToCreate.length === 0) return existingSets;
+  const created = await setRepository.createMany(setsToCreate);
+  return [...existingSets, ...created].sort((left, right) => {
+    const exerciseComparison = left.sessionExerciseId.localeCompare(right.sessionExerciseId);
+    return exerciseComparison === 0 ? left.setNumber - right.setNumber : exerciseComparison;
+  });
+}
+
 export async function listStrengthSetsForSession(
   repository: StrengthSetRepository,
   sessionId: EntityId,
@@ -48,25 +135,13 @@ export async function addStrengthSet(
   const current = await setRepository.listBySessionExercise(sessionExerciseId);
   const previous = current.at(-1);
 
-  const trackingMode = resolveTrackingMode(exercise);
-
-  return setRepository.create({
+  return setRepository.create(buildStrengthSetInput(
     sessionId,
-    sessionExerciseId,
-    setNumber: current.length + 1,
-    repetitions: previous?.repetitions ?? exercise.minRepetitions ?? 0,
-    weightKg: previous?.weightKg ?? exercise.targetLoadKg ?? 0,
-    ...(trackingMode === 'duration'
-      ? { durationSeconds: previous?.durationSeconds ?? exercise.targetDurationSeconds ?? 0 }
-      : {}),
-    ...(trackingMode === 'distance'
-      ? { distanceMeters: previous?.distanceMeters ?? exercise.targetDistanceMeters ?? 0 }
-      : {}),
-    ...(previous?.rpe === undefined ? {} : { rpe: previous.rpe }),
-    type: previous?.type ?? 'working',
-    isCompleted: false,
-    ...(previous?.notes ? { notes: previous.notes } : {}),
-  });
+    exercise,
+    current.length + 1,
+    previous,
+    previous?.type ?? 'working',
+  ));
 }
 
 export async function updateStrengthSet(

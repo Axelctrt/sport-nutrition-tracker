@@ -22,17 +22,32 @@ function createSnapshot(weightDate = '2026-06-25'): DailyTargetSnapshot {
       },
     },
     weight: {
-      source: 'weightEntry',
+      source: 'previousWeekAverage',
       weightKg: 60.5,
-      weightEntry: {
-        id: 'weight-1',
-        date: weightDate,
-        weightKg: 60.5,
-        createdAt: '2026-06-25T07:00:00.000Z',
-        updatedAt: '2026-06-25T07:00:00.000Z',
-      },
+      period: { start: '2026-06-15', end: '2026-06-21' },
+      dailyWeights: [],
     },
-  } as DailyTargetSnapshot;
+    energyTransparency: {
+      expenditureWithoutSportKcal: 1_950,
+      targetBeforeSportKcal: 2_000,
+      plannedSportCaloriesKcal: 120,
+      actualSportCaloriesKcal: 80,
+      rawSportCaloriesKcal: 200,
+      targetSportImpactKcal: 200,
+      currentTargetKcal: 2_200,
+      floorLimitedSportImpact: false,
+      items: [],
+    },
+    dateWeightEntry: weightDate === '2026-06-25'
+      ? {
+          id: 'weight-1',
+          date: weightDate,
+          weightKg: 60.5,
+          createdAt: '2026-06-25T07:00:00.000Z',
+          updatedAt: '2026-06-25T07:00:00.000Z',
+        }
+      : undefined,
+  } as unknown as DailyTargetSnapshot;
 }
 
 const nutrition: DailyDashboardNutrition = {
@@ -63,6 +78,8 @@ describe('DashboardTodaySummary', () => {
     );
 
     expect(screen.getByText('Calories consommées')).toBeInTheDocument();
+    expect(screen.getByText('Avant sport : 2 000 kcal')).toBeInTheDocument();
+    expect(screen.getByText('Sport : +200 kcal')).toBeInTheDocument();
     expect(screen.getByText('kcal restantes')).toBeInTheDocument();
     expect(screen.getByRole('progressbar', { name: 'Progression calorique' })).toHaveAttribute(
       'aria-valuenow',
@@ -75,7 +92,7 @@ describe('DashboardTodaySummary', () => {
     expect(screen.getByText('Pas du jour').parentElement).toHaveTextContent('8 000');
   });
 
-  it('distingue une cible dépassée et une absence de pesée du jour', () => {
+  it('distingue une cible dépassée et affiche le poids actuel même sans pesée du jour', () => {
     render(
       <DashboardTodaySummary
         snapshot={createSnapshot('2026-06-24')}
@@ -89,7 +106,8 @@ describe('DashboardTodaySummary', () => {
     );
 
     expect(screen.getByText('kcal dépassées')).toBeInTheDocument();
-    expect(screen.getByText('Non saisi')).toBeInTheDocument();
-    expect(screen.getByText('Calcul actuel : 60,5 kg')).toBeInTheDocument();
+    expect(screen.getByText('Poids actuel')).toBeInTheDocument();
+    expect(screen.getByText('60,5 kg')).toBeInTheDocument();
+    expect(screen.getByText('Valeur initiale du profil')).toBeInTheDocument();
   });
 });

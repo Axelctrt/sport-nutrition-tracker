@@ -17,7 +17,7 @@ describe('ProfileForm sur mobile', () => {
     );
 
     expect(screen.getByLabelText(/Taille en centimètres/)).toHaveAttribute('inputmode', 'decimal');
-    expect(screen.getByLabelText(/Poids actuel en kilogrammes/)).toHaveAttribute('inputmode', 'decimal');
+    expect(screen.getByLabelText(/Poids initial du profil en kilogrammes/)).toHaveAttribute('inputmode', 'decimal');
     expect(screen.getByLabelText(/Objectif quotidien de pas/)).toHaveAttribute('inputmode', 'numeric');
     expect(screen.getByLabelText(/Protéines en g\/kg/)).toHaveAttribute('inputmode', 'decimal');
     expect(screen.getByLabelText(/Lipides en g\/kg/)).toHaveAttribute('enterkeyhint', 'done');

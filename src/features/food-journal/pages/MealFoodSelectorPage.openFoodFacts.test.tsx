@@ -68,7 +68,7 @@ describe('MealFoodSelectorPage — Open Food Facts intégré', () => {
     });
     renderSelector();
 
-    await user.click(await screen.findByRole('button', { name: 'Open Food Facts' }));
+    await user.click(await screen.findByRole('button', { name: /^Open Food Facts/ }));
     await user.type(screen.getByLabelText('Rechercher dans Open Food Facts'), 'pâte noisettes');
     await user.click(screen.getByRole('button', { name: 'Rechercher' }));
 
@@ -114,7 +114,7 @@ describe('MealFoodSelectorPage — Open Food Facts intégré', () => {
     });
     renderSelector();
 
-    await user.click(await screen.findByRole('button', { name: 'Open Food Facts' }));
+    await user.click(await screen.findByRole('button', { name: /^Open Food Facts/ }));
     await user.type(screen.getByLabelText('Rechercher dans Open Food Facts'), 'yaourt');
     await user.click(screen.getByRole('button', { name: 'Rechercher' }));
 
@@ -129,12 +129,12 @@ describe('MealFoodSelectorPage — Open Food Facts intégré', () => {
     );
     renderSelector();
 
-    await user.click(await screen.findByRole('button', { name: 'Open Food Facts' }));
+    await user.click(await screen.findByRole('button', { name: /^Open Food Facts/ }));
     await user.type(screen.getByLabelText('Rechercher dans Open Food Facts'), 'yaourt');
     await user.click(screen.getByRole('button', { name: 'Rechercher' }));
 
     expect(await screen.findByText('Open Food Facts est temporairement indisponible.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Tous (0)' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Créer un aliment manuel' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Mes aliments/ })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /^Ajout manuel/ })).toBeInTheDocument();
   });
 });

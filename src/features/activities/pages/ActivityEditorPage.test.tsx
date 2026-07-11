@@ -6,6 +6,7 @@ import { createDefaultAppSettings } from '@/domain/defaults/appSettings';
 import type { RunningActivity } from '@/domain/models/activity';
 import type { UserProfile } from '@/domain/models/profile';
 import type { ActivityJournalNavigationState } from '@/features/activities/navigation/activityJournalNavigation';
+import { writeEndurancePlanningState } from '@/domain/planning/endurancePlanningState';
 import { createEntity } from '@/shared/utils/entities';
 import { createRunningActivityInput } from '@/test/factories/activityFactory';
 
@@ -48,11 +49,15 @@ const savedActivity = createEntity<RunningActivity>(createRunningActivityInput({
   date: '2026-06-25',
 }), 'activity-saved');
 
-function renderEditor(navigationState?: ActivityJournalNavigationState) {
+function renderEditor(
+  navigationState?: ActivityJournalNavigationState,
+  search = '',
+) {
   render(
     <MemoryRouter
       initialEntries={[{
         pathname: '/activities/add/running',
+        search,
         state: navigationState,
       }]}
     >
@@ -67,8 +72,11 @@ describe('ActivityEditorPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.spyOn(repositories.settings, 'get').mockResolvedValue(createDefaultAppSettings());
-    vi.spyOn(repositories.weight, 'getLatestOnOrBefore').mockResolvedValue(undefined);
+    vi.spyOn(repositories.weight, 'listBetween').mockResolvedValue([]);
+    window.localStorage.clear();
     vi.spyOn(repositories.activities, 'getById').mockResolvedValue(undefined);
+    vi.spyOn(repositories.activities, 'listAll').mockResolvedValue([]);
+    vi.spyOn(repositories.workoutSessions, 'listAll').mockResolvedValue([]);
     mocks.createActivityFromDraft.mockResolvedValue(savedActivity);
   });
 
@@ -101,4 +109,34 @@ describe('ActivityEditorPage', () => {
       });
     });
   });
+
+  it('préassocie une activité ouverte depuis une séance d’endurance planifiée même si la liste générale échoue', async () => {
+    vi.mocked(repositories.workoutSessions.listAll).mockRejectedValueOnce(
+      new Error('liste temporairement indisponible'),
+    );
+    writeEndurancePlanningState({
+      version: 1,
+      sessions: [{
+        id: 'planned-run',
+        title: 'Footing prévu',
+        activityType: 'running',
+        date: '2026-07-13',
+        intensity: 'low',
+        targetDurationMinutes: 45,
+        status: 'planned',
+        createdAt: '2026-07-01T08:00:00.000Z',
+        updatedAt: '2026-07-01T08:00:00.000Z',
+      }],
+    });
+
+    renderEditor(
+      undefined,
+      '?date=2026-07-13&type=running&plannedSource=endurancePlanning&plannedId=planned-run',
+    );
+
+    expect(await screen.findByLabelText('Séance prévue associée')).toHaveValue(
+      'endurancePlanning:planned-run',
+    );
+  });
+
 });

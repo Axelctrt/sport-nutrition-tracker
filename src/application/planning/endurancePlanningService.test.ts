@@ -1,12 +1,18 @@
 import type { Activity } from '@/domain/models/activity';
-import type { EndurancePlanningState } from '@/domain/planning/endurancePlanningState';
+import {
+  writeEndurancePlanningState,
+  type EndurancePlanningState,
+} from '@/domain/planning/endurancePlanningState';
 import {
   buildEndurancePlanningWeek,
+  reschedulePlannedEnduranceSession,
+  setPlannedEnduranceStatus,
 } from '@/application/planning/endurancePlanningService';
 
 function runningActivity(
   id: string,
   date: string,
+  plannedSessionId = 'run-1',
 ): Activity {
   return {
     id,
@@ -17,6 +23,7 @@ function runningActivity(
     sessionType: 'easy',
     distanceKm: 8,
     averageCadenceSpm: 170,
+    plannedActivity: { source: 'endurancePlanning', sourceId: plannedSessionId },
     calculation: {
       weightKg: 70,
       estimatedCaloriesKcal: 500,
@@ -39,6 +46,7 @@ function state(): EndurancePlanningState {
         intensity: 'low',
         targetDurationMinutes: 45,
         status: 'planned',
+        completedActivityId: 'activity-1',
         createdAt: '2026-06-28T08:00:00.000Z',
         updatedAt: '2026-06-28T08:00:00.000Z',
       },
@@ -113,4 +121,14 @@ describe('endurancePlanningService', () => {
     expect(week.completedCount).toBe(1);
     expect(week.plannedCount).toBe(2);
   });
+
+  it('protège une séance déjà liée contre un report ou une annulation silencieuse', () => {
+    writeEndurancePlanningState(state());
+
+    expect(() => reschedulePlannedEnduranceSession('run-1', '2026-07-02'))
+      .toThrow('dissociée');
+    expect(() => setPlannedEnduranceStatus('run-1', 'skipped'))
+      .toThrow('dissociée');
+  });
+
 });

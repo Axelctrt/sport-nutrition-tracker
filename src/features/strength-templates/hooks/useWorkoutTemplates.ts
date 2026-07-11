@@ -77,6 +77,7 @@ export function useWorkoutTemplates(includeArchived: boolean) {
         repositories.workoutTemplates,
         repositories.strengthExercises,
         id,
+        repositories.strengthSets,
       );
       return created.session;
     } catch (error) {

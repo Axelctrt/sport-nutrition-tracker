@@ -10,20 +10,6 @@ import type {
 } from '@/infrastructure/sync-prototype/syncPrototypeClient';
 import { createEmptySyncPrototypeDiagnostics } from '@/infrastructure/sync-prototype/syncPrototypeDiagnostics';
 
-const repositoryMocks = vi.hoisted(() => ({
-  get: vi.fn(),
-  update: vi.fn(),
-}));
-
-vi.mock('@/infrastructure/repositories/repositories', () => ({
-  repositories: {
-    settings: {
-      get: repositoryMocks.get,
-      update: repositoryMocks.update,
-    },
-  },
-}));
-
 function snapshot(): SyncPrototypeSnapshot {
   return {
     account: {
@@ -58,20 +44,25 @@ function settings(overrides: Partial<AppSettings> = {}): AppSettings {
 
 afterEach(() => {
   cleanup();
-  vi.clearAllMocks();
 });
 
 describe('AutomaticSyncSettingsPanel', () => {
   it('autorise le compte connecté et désactive l’ancien automatisme des pesées', async () => {
     const initial = settings();
-    repositoryMocks.get.mockResolvedValue(initial);
-    repositoryMocks.update.mockImplementation(async (changes) => ({
+    const loadSettings = vi.fn().mockResolvedValue(initial);
+    const saveSettings = vi.fn().mockImplementation(async (changes) => ({
       ...initial,
       ...changes,
     }));
     const user = userEvent.setup();
 
-    render(<AutomaticSyncSettingsPanel client={client()} />);
+    render(
+      <AutomaticSyncSettingsPanel
+        client={client()}
+        loadSettings={loadSettings}
+        saveSettings={saveSettings}
+      />,
+    );
 
     const button = await screen.findByRole('button', {
       name: 'Activer pour ce compte',
@@ -79,7 +70,7 @@ describe('AutomaticSyncSettingsPanel', () => {
     await user.click(button);
 
     await waitFor(() =>
-      expect(repositoryMocks.update).toHaveBeenCalledWith(
+      expect(saveSettings).toHaveBeenCalledWith(
         expect.objectContaining({
           automaticAccountSyncEnabled: true,
           automaticWeightSyncEnabled: false,
@@ -88,28 +79,34 @@ describe('AutomaticSyncSettingsPanel', () => {
       ),
     );
     expect(
-      repositoryMocks.update.mock.calls[0]?.[0]
+      saveSettings.mock.calls[0]?.[0]
         .automaticAccountSyncAccountFingerprint,
     ).toBeTruthy();
   });
 
   it('enregistre le mode Wi-Fi uniquement sans activer automatiquement le compte', async () => {
     const initial = settings();
-    repositoryMocks.get.mockResolvedValue(initial);
-    repositoryMocks.update.mockImplementation(async (changes) => ({
+    const loadSettings = vi.fn().mockResolvedValue(initial);
+    const saveSettings = vi.fn().mockImplementation(async (changes) => ({
       ...initial,
       ...changes,
     }));
     const user = userEvent.setup();
 
-    render(<AutomaticSyncSettingsPanel client={client()} />);
+    render(
+      <AutomaticSyncSettingsPanel
+        client={client()}
+        loadSettings={loadSettings}
+        saveSettings={saveSettings}
+      />,
+    );
 
     await user.click(
       await screen.findByRole('radio', { name: /Wi-Fi uniquement/i }),
     );
 
     await waitFor(() =>
-      expect(repositoryMocks.update).toHaveBeenCalledWith({
+      expect(saveSettings).toHaveBeenCalledWith({
         automaticAccountSyncConnectionMode: 'wifi-only',
       }),
     );

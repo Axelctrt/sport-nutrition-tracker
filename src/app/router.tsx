@@ -2,6 +2,8 @@ import { createHashRouter, type RouteObject } from 'react-router-dom';
 import {
   LazyAddActivityPage,
   LazyAdvancedSettingsPage,
+  LazySettingsCategoryPage,
+  LazySettingsHomePage,
   LazyAccountDevicesPage,
   LazyRoutineRemindersPage,
   LazyActivityJournalPage,
@@ -28,6 +30,7 @@ import {
   LazyOtherActivityPage,
   LazyProfilePage,
   LazyProgressReportsPage,
+  LazyProgressionHubPage,
   LazyGoalsPage,
   LazyPrivacyPage,
   LazyRecipeEditorPage,
@@ -48,6 +51,7 @@ import {
   LazyWorkoutTemplateEditorPage,
   LazyWorkoutTemplatesPage,
 } from '@/app/LazyRoutePages';
+import { AppRouteErrorPage } from '@/app/errors/AppRouteErrorPage';
 import { OnboardingGuard } from '@/app/guards/OnboardingGuard';
 import { OnboardingRoute } from '@/app/guards/OnboardingRoute';
 import { AppLayout } from '@/app/layouts/AppLayout';
@@ -64,7 +68,17 @@ export const appShellRoutes: RouteObject[] = [
     element: <LazyGlobalSearchPage />,
   },
   { path: routePaths.profile, element: <LazyProfilePage /> },
-  { path: routePaths.settings, element: <LazyAdvancedSettingsPage /> },
+  { path: routePaths.settings, element: <LazySettingsHomePage /> },
+  { path: routePaths.settingsProfileObjectives, element: <LazySettingsCategoryPage /> },
+  { path: routePaths.settingsAccountSync, element: <LazySettingsCategoryPage /> },
+  { path: routePaths.settingsPrivacyFriends, element: <LazySettingsCategoryPage /> },
+  { path: routePaths.settingsAppearanceAccessibility, element: <LazySettingsCategoryPage /> },
+  { path: routePaths.settingsNotificationsRoutines, element: <LazySettingsCategoryPage /> },
+  { path: routePaths.settingsNutritionCalculations, element: <LazySettingsCategoryPage /> },
+  { path: routePaths.settingsAiPermissions, element: <LazySettingsCategoryPage /> },
+  { path: routePaths.settingsDataBackup, element: <LazySettingsCategoryPage /> },
+  { path: routePaths.settingsAbout, element: <LazySettingsCategoryPage /> },
+  { path: routePaths.settingsAdvanced, element: <LazyAdvancedSettingsPage /> },
   { path: routePaths.reminders, element: <LazyRoutineRemindersPage /> },
   { path: routePaths.dashboardCustomization, element: <LazyDashboardCustomizationPage /> },
   ...getSyncPrototypeRoutes(),
@@ -102,6 +116,7 @@ export const appShellRoutes: RouteObject[] = [
   { path: routePaths.addStrengthActivity, element: <LazyStrengthActivityPage /> },
   { path: routePaths.addOtherActivity, element: <LazyOtherActivityPage /> },
   { path: routePaths.editActivity, element: <LazyEditActivityPage /> },
+  { path: routePaths.progression, element: <LazyProgressionHubPage /> },
   { path: routePaths.weight, element: <LazyWeightPage /> },
   { path: routePaths.history, element: <LazyHistoryPage /> },
   { path: routePaths.analytics, element: <LazyAnalyticsPage /> },
@@ -118,9 +133,12 @@ export const appShellRoutes: RouteObject[] = [
   },
 ];
 
+const routeErrorElement = <AppRouteErrorPage />;
+
 export const router = createHashRouter([
   {
     path: routePaths.onboarding,
+    errorElement: routeErrorElement,
     element: (
       <OnboardingRoute>
         <LazyOnboardingPage />
@@ -129,13 +147,16 @@ export const router = createHashRouter([
   },
   {
     path: routePaths.privacy,
+    errorElement: routeErrorElement,
     element: <LazyPrivacyPage />,
   },
   {
     path: routePaths.offline,
+    errorElement: routeErrorElement,
     element: <OfflinePage />,
   },
   {
+    errorElement: routeErrorElement,
     element: (
       <OnboardingGuard>
         <AppLayout />
@@ -145,6 +166,7 @@ export const router = createHashRouter([
   },
   {
     path: '*',
+    errorElement: routeErrorElement,
     element: <NotFoundPage />,
   },
 ]);

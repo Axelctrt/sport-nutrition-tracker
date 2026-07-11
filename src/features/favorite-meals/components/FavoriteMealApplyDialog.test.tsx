@@ -25,4 +25,22 @@ describe('FavoriteMealApplyDialog', () => {
 
     expect(onApply).toHaveBeenCalledWith('2026-06-25', 'lunch');
   });
+
+
+  it('privilégie le repas demandé par le journal', () => {
+    render(
+      <FavoriteMealApplyDialog
+        favorite={createFavoriteMealSummary()}
+        initialDate="2026-07-10"
+        initialSlot="dinner"
+        busy={false}
+        onClose={vi.fn()}
+        onApply={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByLabelText('Date')).toHaveValue('2026-07-10');
+    expect(screen.getByLabelText('Repas')).toHaveValue('dinner');
+  });
+
 });

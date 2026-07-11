@@ -1,5 +1,6 @@
 import type { SocialActivitySharingOverride } from '@/domain/friends/socialActivitySharingPolicy';
 import type { DatedEntity, LocalTime } from '@/domain/models/common';
+import type { PlannedActivityReference } from '@/domain/models/plannedActivity';
 
 export type ActivityIntensity = 'low' | 'moderate' | 'high';
 
@@ -29,6 +30,7 @@ export interface ActivityBase extends DatedEntity {
   notes?: string;
   manualCaloriesKcal?: number;
   calculation: ActivityCalculationSnapshot;
+  plannedActivity?: PlannedActivityReference;
   socialSharing?: SocialActivitySharingOverride;
 }
 

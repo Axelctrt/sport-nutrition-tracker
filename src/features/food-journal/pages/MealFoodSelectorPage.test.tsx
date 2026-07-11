@@ -71,7 +71,7 @@ describe('MealFoodSelectorPage', () => {
 
     expect(await screen.findByRole('heading', { name: 'Ajouter un aliment' })).toBeInTheDocument();
     expect(screen.getByText(/Petit-déjeuner ·/)).toBeInTheDocument();
-    expect(await screen.findByRole('button', { name: 'Récents (1)' })).toHaveAttribute('aria-pressed', 'true');
+    expect(await screen.findByRole('button', { name: /^Récents/ })).toHaveAttribute('aria-pressed', 'true');
 
     await user.click(screen.getByRole('button', { name: 'Choisir cet aliment' }));
 
@@ -128,11 +128,11 @@ describe('MealFoodSelectorPage', () => {
       </MemoryRouter>,
     );
 
-    const search = await screen.findByLabelText('Rechercher dans les aliments locaux');
+    const search = await screen.findByLabelText('Rechercher dans mes aliments');
     await user.type(search, 'riz');
 
     expect(await screen.findByRole('heading', { name: 'Riz complet' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Résultats locaux' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Résultats dans mes aliments' })).toBeInTheDocument();
   });
 
   it('ouvre directement la recherche Open Food Facts après un échec de scan', async () => {
@@ -144,7 +144,7 @@ describe('MealFoodSelectorPage', () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByRole('button', { name: 'Open Food Facts' })).toHaveAttribute(
+    expect(await screen.findByRole('button', { name: /^Open Food Facts/ })).toHaveAttribute(
       'aria-pressed',
       'true',
     );

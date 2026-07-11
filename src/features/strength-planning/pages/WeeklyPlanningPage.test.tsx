@@ -88,6 +88,8 @@ describe('WeeklyPlanningPage', () => {
     expect(planned).toMatchObject({
       sourceTemplateId: 'template-push',
       plannedDate: toLocalDate(),
+      plannedDurationMinutes: 60,
+      strengthSessionStyle: 'classic',
     });
 
     await user.click(screen.getByRole('button', { name: 'Démarrer' }));

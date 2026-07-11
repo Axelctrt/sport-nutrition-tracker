@@ -48,16 +48,16 @@ function loadInputLabel(mode: StrengthTrackingMode): string {
 }
 
 function loadFieldLabel(mode: StrengthTrackingMode): string {
-  if (mode === 'assistedRepetitions') return 'Assistance';
-  if (mode === 'bodyweightRepetitions') return 'Lest ajouté';
-  return 'Charge';
+  if (mode === 'assistedRepetitions') return 'Assist.';
+  if (mode === 'bodyweightRepetitions') return 'Lest';
+  return 'Kg';
 }
 
 function measurementHint(mode: StrengthTrackingMode): string | undefined {
   if (mode === 'bodyweightRepetitions') return '0 kg correspond au poids du corps seul.';
   if (mode === 'assistedRepetitions') return 'Une assistance plus faible représente une performance supérieure.';
-  if (mode === 'duration') return 'Saisis la durée totale de la série en secondes.';
-  if (mode === 'distance') return 'Saisis la distance parcourue pendant la série.';
+  if (mode === 'duration') return 'Durée totale de la série en secondes.';
+  if (mode === 'distance') return 'Distance parcourue pendant la série.';
   return undefined;
 }
 
@@ -161,73 +161,65 @@ function StrengthSetRow({
     || trackingMode === 'bodyweightRepetitions'
     || trackingMode === 'assistedRepetitions';
   const usesRepetitions = trackingMode !== 'duration' && trackingMode !== 'distance';
-  const mainColumnCount = usesLoad && usesRepetitions ? 'grid-cols-3' : 'grid-cols-2';
   const hint = measurementHint(trackingMode);
 
   return (
     <article
       id={baseId}
       className={cn(
-        'scroll-mt-28 rounded-2xl border p-3.5 sm:p-4',
+        'scroll-mt-28 rounded-xl border px-2.5 py-2.5 sm:px-3',
         set.isCompleted
           ? 'border-emerald-300 bg-emerald-50/70 dark:border-emerald-900 dark:bg-emerald-950/20'
-          : 'border-slate-200 bg-slate-50/70 dark:border-slate-800 dark:bg-slate-950/40',
+          : 'border-slate-200 bg-white/80 dark:border-slate-800 dark:bg-slate-950/40',
       )}
       aria-labelledby={`${baseId}-title`}
+      data-strength-set-completed={set.isCompleted ? 'true' : 'false'}
     >
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h4 id={`${baseId}-title`} className="font-semibold text-slate-950 dark:text-white">
+      <div className="grid min-w-0 grid-cols-[2.25rem_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto] items-end gap-1.5 sm:grid-cols-[3rem_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto] sm:gap-2">
+        <div className="pb-1.5 text-center">
+          <h4 id={`${baseId}-title`} className="text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
             Série {set.setNumber}
           </h4>
-          <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-            {strengthSetTypeLabels[set.type]}
-          </p>
-        </div>
-        <span
-          className={cn(
-            'rounded-full px-2.5 py-1 text-xs font-semibold',
+          <span className={cn(
+            'mt-1 inline-flex size-6 items-center justify-center rounded-full text-xs font-bold',
             set.isCompleted
               ? 'bg-emerald-700 text-white'
               : 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-200',
           )}
-        >
-          {set.isCompleted ? 'Validée' : 'À réaliser'}
-        </span>
-      </div>
+          >
+            {set.isCompleted ? '✓' : set.setNumber}
+          </span>
+        </div>
 
-      <div className={`mt-3 grid min-w-0 ${mainColumnCount} gap-2`}>
         {usesLoad ? (
           <div>
-            <label htmlFor={`${baseId}-weight`} className="block truncate text-xs font-medium text-slate-600 dark:text-slate-300">
+            <label htmlFor={`${baseId}-weight`} className="block truncate text-[0.68rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
               {loadFieldLabel(trackingMode)}
             </label>
-            <div className="relative mt-1">
-              <input
-                id={`${baseId}-weight`}
-                aria-label={loadInputLabel(trackingMode)}
-                type="number"
-                inputMode="decimal"
-                enterKeyHint="next"
-                min="0"
-                step="0.5"
-                value={weightKg}
-                onChange={(event) => setWeightKg(event.target.value)}
-                disabled={!editable}
-                className={`${inputClassName} pr-8 text-center font-semibold`}
-              />
-              <span className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-xs text-slate-400">kg</span>
-            </div>
+            <input
+              id={`${baseId}-weight`}
+              aria-label={loadInputLabel(trackingMode)}
+              type="number"
+              inputMode="decimal"
+              enterKeyHint="next"
+              min="0"
+              step="0.5"
+              value={weightKg}
+              onChange={(event) => setWeightKg(event.target.value)}
+              disabled={!editable}
+              className={`${inputClassName} mt-1 px-2 text-center text-sm font-semibold sm:text-base`}
+            />
           </div>
         ) : null}
 
         {usesRepetitions ? (
           <div>
-            <label htmlFor={`${baseId}-repetitions`} className="block truncate text-xs font-medium text-slate-600 dark:text-slate-300">
-              Répétitions
+            <label htmlFor={`${baseId}-repetitions`} className="block truncate text-[0.68rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              Reps
             </label>
             <input
               id={`${baseId}-repetitions`}
+              aria-label="Répétitions"
               type="number"
               inputMode="numeric"
               enterKeyHint="next"
@@ -236,59 +228,54 @@ function StrengthSetRow({
               value={repetitions}
               onChange={(event) => setRepetitions(event.target.value)}
               disabled={!editable}
-              className={`${inputClassName} mt-1 text-center font-semibold`}
+              className={`${inputClassName} mt-1 px-2 text-center text-sm font-semibold sm:text-base`}
             />
           </div>
         ) : null}
 
         {trackingMode === 'duration' ? (
           <div>
-            <label htmlFor={`${baseId}-duration`} className="block truncate text-xs font-medium text-slate-600 dark:text-slate-300">Durée</label>
-            <div className="relative mt-1">
-              <input
-                id={`${baseId}-duration`}
-                aria-label="Durée en secondes"
-                type="number"
-                inputMode="numeric"
-                min="1"
-                step="1"
-                value={durationSeconds}
-                onChange={(event) => setDurationSeconds(event.target.value)}
-                disabled={!editable}
-                className={`${inputClassName} pr-8 text-center font-semibold`}
-              />
-              <span className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-xs text-slate-400">s</span>
-            </div>
+            <label htmlFor={`${baseId}-duration`} className="block truncate text-[0.68rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Durée</label>
+            <input
+              id={`${baseId}-duration`}
+              aria-label="Durée en secondes"
+              type="number"
+              inputMode="numeric"
+              min="1"
+              step="1"
+              value={durationSeconds}
+              onChange={(event) => setDurationSeconds(event.target.value)}
+              disabled={!editable}
+              className={`${inputClassName} mt-1 px-2 text-center text-sm font-semibold sm:text-base`}
+            />
           </div>
         ) : null}
 
         {trackingMode === 'distance' ? (
           <div>
-            <label htmlFor={`${baseId}-distance`} className="block truncate text-xs font-medium text-slate-600 dark:text-slate-300">Distance</label>
-            <div className="relative mt-1">
-              <input
-                id={`${baseId}-distance`}
-                aria-label="Distance en mètres"
-                type="number"
-                inputMode="decimal"
-                min="0.1"
-                step="0.1"
-                value={distanceMeters}
-                onChange={(event) => setDistanceMeters(event.target.value)}
-                disabled={!editable}
-                className={`${inputClassName} pr-8 text-center font-semibold`}
-              />
-              <span className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-xs text-slate-400">m</span>
-            </div>
+            <label htmlFor={`${baseId}-distance`} className="block truncate text-[0.68rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Distance</label>
+            <input
+              id={`${baseId}-distance`}
+              aria-label="Distance en mètres"
+              type="number"
+              inputMode="decimal"
+              min="0.1"
+              step="0.1"
+              value={distanceMeters}
+              onChange={(event) => setDistanceMeters(event.target.value)}
+              disabled={!editable}
+              className={`${inputClassName} mt-1 px-2 text-center text-sm font-semibold sm:text-base`}
+            />
           </div>
         ) : null}
 
         <div>
-          <label htmlFor={`${baseId}-rpe`} className="block truncate text-xs font-medium text-slate-600 dark:text-slate-300">
+          <label htmlFor={`${baseId}-rpe`} className="block truncate text-[0.68rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
             RPE
           </label>
           <input
             id={`${baseId}-rpe`}
+            aria-label="RPE"
             type="number"
             inputMode="decimal"
             enterKeyHint="done"
@@ -299,16 +286,41 @@ function StrengthSetRow({
             onChange={(event) => setRpe(event.target.value)}
             disabled={!editable}
             placeholder="—"
-            className={`${inputClassName} mt-1 text-center font-semibold`}
+            className={`${inputClassName} mt-1 px-2 text-center text-sm font-semibold sm:text-base`}
           />
         </div>
+
+        {editable ? (
+          <div className="flex flex-col gap-1">
+            <Button
+              size="sm"
+              className="min-h-10 px-2"
+              disabled={isBusy}
+              aria-label={set.isCompleted ? 'Rouvrir la série' : 'Valider la série'}
+              onClick={() => void toggleCompletion()}
+            >
+              {set.isCompleted ? <RotateCcw aria-hidden="true" className="size-4" /> : <Check aria-hidden="true" className="size-4" />}
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              className="min-h-10 px-2"
+              disabled={isBusy || !isDirty}
+              aria-label="Enregistrer"
+              onClick={() => void save()}
+            >
+              <Save aria-hidden="true" className="size-4" />
+            </Button>
+          </div>
+        ) : null}
       </div>
 
       {hint ? <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{hint}</p> : null}
+      {validationError ? <p className="mt-2 text-sm font-medium text-red-700 dark:text-red-300" role="alert">{validationError}</p> : null}
 
-      <details className="group mt-3 rounded-xl border border-slate-200 bg-white/70 dark:border-slate-800 dark:bg-slate-900/50">
-        <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 px-3 text-sm font-medium text-slate-700 dark:text-slate-200 [&::-webkit-details-marker]:hidden">
-          Type et notes
+      <details className="group mt-2 rounded-lg border border-slate-200 bg-slate-50/70 dark:border-slate-800 dark:bg-slate-900/40">
+        <summary className="flex min-h-10 cursor-pointer list-none items-center justify-between gap-2 px-3 text-sm font-medium text-slate-700 dark:text-slate-200 [&::-webkit-details-marker]:hidden">
+          Options discrètes
           <ChevronDown aria-hidden="true" className="size-4 transition-transform group-open:rotate-180 motion-reduce:transition-none" />
         </summary>
         <div className="grid gap-3 border-t border-slate-200 p-3 dark:border-slate-800 sm:grid-cols-2">
@@ -339,33 +351,26 @@ function StrengthSetRow({
               className={`${inputClassName} mt-1`}
             />
           </div>
+          {editable ? (
+            <div className="grid grid-cols-2 gap-2 sm:col-span-2 sm:grid-cols-3">
+              <Button size="sm" variant="secondary" disabled={isBusy} onClick={() => void onDuplicate(exercise.id, set.id)}>
+                <CopyPlus aria-hidden="true" className="size-4" />
+                Dupliquer
+              </Button>
+              <Button
+                size="sm"
+                variant="dangerGhost"
+                disabled={isBusy}
+                aria-label="Supprimer la série"
+                onClick={() => onDelete(exercise.id, set.id)}
+              >
+                <Trash2 aria-hidden="true" className="size-4" />
+                Supprimer
+              </Button>
+            </div>
+          ) : null}
         </div>
       </details>
-
-      {validationError ? <p className="mt-3 text-sm font-medium text-red-700 dark:text-red-300" role="alert">{validationError}</p> : null}
-
-      {editable ? (
-        <div className="mt-3 grid grid-cols-2 gap-2">
-          <Button className="col-span-2" disabled={isBusy} onClick={() => void toggleCompletion()}>
-            {set.isCompleted ? <RotateCcw aria-hidden="true" className="size-4" /> : <Check aria-hidden="true" className="size-4" />}
-            {set.isCompleted ? 'Rouvrir la série' : 'Valider la série'}
-          </Button>
-          <Button variant="secondary" disabled={isBusy || !isDirty} onClick={() => void save()}>
-            <Save aria-hidden="true" className="size-4" />Enregistrer
-          </Button>
-          <Button variant="secondary" disabled={isBusy} onClick={() => void onDuplicate(exercise.id, set.id)}>
-            <CopyPlus aria-hidden="true" className="size-4" />Dupliquer
-          </Button>
-          <Button
-            className="col-span-2"
-            variant="dangerGhost"
-            disabled={isBusy}
-            onClick={() => onDelete(exercise.id, set.id)}
-          >
-            <Trash2 aria-hidden="true" className="size-4" />Supprimer la série
-          </Button>
-        </div>
-      ) : null}
     </article>
   );
 }
@@ -383,22 +388,24 @@ export function StrengthSetEditor({
 }: StrengthSetEditorProps) {
   const completedCount = useMemo(() => sets.filter((set) => set.isCompleted).length, [sets]);
   const targetText = exercise.plannedSets === undefined
-    ? `${completedCount}/${sets.length} validée${completedCount > 1 ? 's' : ''}`
-    : `${completedCount}/${exercise.plannedSets} série${exercise.plannedSets > 1 ? 's' : ''} prévue${exercise.plannedSets > 1 ? 's' : ''}`;
+    ? `${sets.length} ligne${sets.length > 1 ? 's' : ''} · ${completedCount} validée${completedCount > 1 ? 's' : ''}`
+    : `${sets.length}/${exercise.plannedSets} ligne${exercise.plannedSets > 1 ? 's' : ''} · ${completedCount} validée${completedCount > 1 ? 's' : ''}`;
 
   return (
     <section className="mt-4 border-t border-slate-200 pt-4 dark:border-slate-800" aria-label={`Séries de ${exercise.exerciseNameSnapshot}`}>
-      <div>
-        <h3 className="font-semibold text-slate-950 dark:text-white">Séries</h3>
-        <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">{targetText}</p>
+      <div className="flex items-end justify-between gap-3">
+        <div>
+          <h3 className="font-semibold text-slate-950 dark:text-white">Séries</h3>
+          <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">{targetText}</p>
+        </div>
       </div>
 
       {sets.length === 0 ? (
         <p className="mt-4 rounded-xl border border-dashed border-slate-300 px-4 py-5 text-center text-sm text-slate-600 dark:border-slate-700 dark:text-slate-300">
-          Aucune série. La première reprendra automatiquement l’objectif configuré.
+          Aucune série. Choisis le nombre de lignes au moment d’ajouter un exercice libre, ou ajoute une série manuellement.
         </p>
       ) : (
-        <div className="mt-4 space-y-3">
+        <div className="mt-3 space-y-2">
           {sets.map((set) => (
             <StrengthSetRow
               key={set.id}

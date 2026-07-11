@@ -21,6 +21,10 @@ import {
   type FriendsPrivacySnapshotRepository,
 } from '@/application/friends/friendsPrivacyService';
 import { prepareSocialActivityFeed } from '@/application/friends/socialActivityFeedService';
+import {
+  checkAccountSocialHandleAvailability,
+  provisionAccountSocialIdentity,
+} from '@/application/friends/accountSocialIdentityService';
 import { SocialActivityCloudReadinessPanel } from '@/features/friends/components/SocialActivityCloudReadinessPanel';
 import { SocialActivityFeedPanel } from '@/features/friends/components/SocialActivityFeedPanel';
 import { SocialActivityFriendSharingSettings } from '@/features/friends/components/SocialActivitySharingSettings';
@@ -75,7 +79,7 @@ import {
   DEFAULT_DETAILED_SOCIAL_ACTIVITY_FIELD_SELECTION,
   type SocialActivityFieldSelection,
 } from '@/domain/friends/socialActivitySharingPolicy';
-import { appDatabase } from '@/infrastructure/database/database';
+import { appDatabase, activeDataSpace } from '@/infrastructure/database/database';
 import { DexieFriendsPrivacyRepository } from '@/infrastructure/repositories/dexie/DexieFriendsPrivacyRepository';
 import { DexieSocialIdentityRepository } from '@/infrastructure/repositories/dexie/DexieSocialIdentityRepository';
 import { supportsProfiledSocialFriendRequestsPort } from '@/infrastructure/sync-prototype/socialFriendRequestsGateway';
@@ -96,7 +100,18 @@ import { notifySyncLocalDataChanged } from '@/application/sync/syncLocalChangeEv
 import { SOCIAL_ACTIVITY_PRIVACY_CHANGED_EVENT } from '@/infrastructure/sync-prototype/socialActivityPrivacySyncEvents';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
+import { ConfirmationDialog } from '@/shared/ui/ConfirmationDialog';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
+
+
+function currentAccountUserId(): string | undefined {
+  if (activeDataSpace.kind !== 'account') return undefined;
+  try {
+    return getSyncPrototypeClient().getCloudCredentials?.()?.userId;
+  } catch {
+    return undefined;
+  }
+}
 
 interface FriendsPrivacyPageProps {
   readonly initialSnapshot?: FriendsPrivacySnapshot;
@@ -258,6 +273,8 @@ export function FriendsPrivacyPage({
     (activeRepository && !initialSnapshot) || (activeIdentityRepository && !initialIdentity),
   ));
   const [errorMessage, setErrorMessage] = useState<string>();
+  const [pendingFriendRemoval, setPendingFriendRemoval] = useState<FriendProfileSummary>();
+  const [isRemovingFriend, setIsRemovingFriend] = useState(false);
   const persistenceQueueRef = useRef<Promise<void>>(Promise.resolve());
   const persistenceSequenceRef = useRef(0);
   const permissionMutationVersionsRef = useRef(new Map<string, number>());
@@ -716,16 +733,10 @@ export function FriendsPrivacyPage({
     );
   };
 
-  const removeFriend = (friend: FriendProfileSummary) => {
+  const removeFriend = async (friend: FriendProfileSummary) => {
     setRequestFeedback(undefined);
     setErrorMessage(undefined);
-
-    const confirmed = window.confirm(
-      `Supprimer ${friend.displayName} de tes amis ?
-
-Vous ne pourrez plus voir vos activités respectives. Une nouvelle demande sera nécessaire pour redevenir amis.`,
-    );
-    if (!confirmed) return;
+    setIsRemovingFriend(true);
 
     const applyLocalRemoval = (feedback: string) => {
       const service = createFriendsPrivacyService(snapshot);
@@ -734,40 +745,39 @@ Vous ne pourrez plus voir vos activités respectives. Une nouvelle demande sera 
       setRequestFeedback(feedback);
     };
 
-    const removeFriendshipFromServer = activeSocialFriendsGateway?.removeFriendship;
-    if (!removeFriendshipFromServer) {
-      applyLocalRemoval('Ami supprimé localement. La suppression serveur sera possible une fois le cloud social disponible.');
-      return;
+    try {
+      const removeFriendshipFromServer = activeSocialFriendsGateway?.removeFriendship;
+      if (!removeFriendshipFromServer) {
+        applyLocalRemoval('Ami supprimé localement. La suppression serveur sera possible une fois le cloud social disponible.');
+        return;
+      }
+
+      setRequestFeedback('Suppression de l’ami côté serveur en cours…');
+      const permission = selectFriendActivityPermission(snapshot, friend);
+      const friendUserId = await resolveCloudFriendUserId(friend, permission);
+
+      if (!friendUserId) {
+        setRequestFeedback('Suppression serveur impossible : userId ami introuvable dans les amitiés actives.');
+        return;
+      }
+
+      const result = await removeFriendshipFromServer(identity.userId, friendUserId);
+      if (['updated', 'alreadyExists'].includes(result.status)) {
+        applyLocalRemoval(result.message);
+        return;
+      }
+
+      setRequestFeedback(result.message);
+    } catch (error) {
+      setRequestFeedback(
+        error instanceof Error
+          ? error.message
+          : 'Service cloud indisponible : suppression ami impossible pour le moment.',
+      );
+    } finally {
+      setIsRemovingFriend(false);
+      setPendingFriendRemoval(undefined);
     }
-
-    setRequestFeedback('Suppression de l’ami côté serveur en cours…');
-    const permission = selectFriendActivityPermission(snapshot, friend);
-
-    void resolveCloudFriendUserId(friend, permission)
-      .then((friendUserId) => {
-        if (!friendUserId) {
-          setRequestFeedback('Suppression serveur impossible : userId ami introuvable dans les amitiés actives.');
-          return undefined;
-        }
-
-        return removeFriendshipFromServer(identity.userId, friendUserId);
-      })
-      .then((result) => {
-        if (!result) return;
-        if (['updated', 'alreadyExists'].includes(result.status)) {
-          applyLocalRemoval(result.message);
-          return;
-        }
-
-        setRequestFeedback(result.message);
-      })
-      .catch((error) => {
-        setRequestFeedback(
-          error instanceof Error
-            ? error.message
-            : 'Service cloud indisponible : suppression ami impossible pour le moment.',
-        );
-      });
   };
 
   const submitRequest = (event: FormEvent<HTMLFormElement>) => {
@@ -841,10 +851,23 @@ Vous ne pourrez plus voir vos activités respectives. Une nouvelle demande sera 
     setErrorMessage(undefined);
     setIdentityFeedback(undefined);
 
-    void saveSocialIdentity(activeIdentityRepository, identity, {
-      handle: identityHandle,
-      displayName,
-    })
+    const accountUserId = currentAccountUserId();
+
+    const saveOperation = accountUserId && activeCloudIdentityPort && activeIdentityRepository
+      ? provisionAccountSocialIdentity({
+          accountUserId,
+          currentIdentity: identity,
+          handle: identityHandle,
+          displayName,
+          repository: activeIdentityRepository,
+          cloudPort: activeCloudIdentityPort,
+        })
+      : saveSocialIdentity(activeIdentityRepository, identity, {
+          handle: identityHandle,
+          displayName,
+        });
+
+    void saveOperation
       .then(async (result) => {
         if (result.status !== 'saved') {
           setIdentityFeedback(result.message);
@@ -854,6 +877,11 @@ Vous ne pourrez plus voir vos activités respectives. Une nouvelle demande sera 
         setIdentity(result.identity);
         setIdentityHandle(formatSocialHandle(result.identity.handle));
         setDisplayName(result.identity.displayName);
+
+        if (accountUserId && activeCloudIdentityPort) {
+          setIdentityFeedback(result.message);
+          return;
+        }
 
         if (!activeCloudIdentityPort) {
           setIdentityFeedback(result.message);
@@ -872,7 +900,7 @@ Vous ne pourrez plus voir vos activités respectives. Une nouvelle demande sera 
         setErrorMessage(
           error instanceof Error
             ? error.message
-            : 'L’identité sociale n’a pas pu être enregistrée localement.',
+            : 'L’identité sociale n’a pas pu être enregistrée.',
         );
       });
   };
@@ -881,7 +909,16 @@ Vous ne pourrez plus voir vos activités respectives. Une nouvelle demande sera 
     setIsCheckingAvailability(true);
     setIdentityFeedback(undefined);
 
-    void checkSocialHandleAvailability(activeLookupGateway, identityHandle)
+    const accountUserId = currentAccountUserId();
+    const availabilityOperation = accountUserId && activeCloudIdentityPort
+      ? checkAccountSocialHandleAvailability(
+          activeCloudIdentityPort,
+          identityHandle,
+          accountUserId,
+        )
+      : checkSocialHandleAvailability(activeLookupGateway, identityHandle);
+
+    void availabilityOperation
       .then((result) => {
         setAvailability(result);
       })
@@ -1052,7 +1089,9 @@ Vous ne pourrez plus voir vos activités respectives. Une nouvelle demande sera 
             <p>{availability.message}</p>
           </div>
           <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-950 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
-            Utilisateur non connecté au cloud social : la sauvegarde locale reste active et la réservation cloud attend le backend réel.
+            {activeDataSpace.kind === 'account'
+              ? 'Compte connecté : toute modification du pseudonyme doit être réservée côté serveur avant d’être enregistrée localement.'
+              : 'Mode local : cette identité reste sur cet appareil et son unicité cloud n’est pas garantie tant qu’aucun compte n’est connecté.'}
           </div>
         </div>
       </Card>
@@ -1290,7 +1329,7 @@ Vous ne pourrez plus voir vos activités respectives. Une nouvelle demande sera 
                     <Button
                       size="sm"
                       variant="secondary"
-                      onClick={() => removeFriend(friend)}
+                      onClick={() => setPendingFriendRemoval(friend)}
                     >
                       <X aria-hidden="true" className="size-4" />
                       Supprimer
@@ -1354,6 +1393,19 @@ Vous ne pourrez plus voir vos activités respectives. Une nouvelle demande sera 
           </div>
         </Card>
       </div>
+
+      <ConfirmationDialog
+        open={Boolean(pendingFriendRemoval)}
+        title={pendingFriendRemoval ? `Supprimer ${pendingFriendRemoval.displayName} ?` : 'Supprimer cet ami ?'}
+        description="Vous ne pourrez plus voir vos activités respectives. Une nouvelle demande sera nécessaire pour redevenir amis."
+        confirmLabel="Supprimer l’ami"
+        tone="danger"
+        isPending={isRemovingFriend}
+        onCancel={() => setPendingFriendRemoval(undefined)}
+        onConfirm={() => {
+          if (pendingFriendRemoval) void removeFriend(pendingFriendRemoval);
+        }}
+      />
     </section>
   );
 }

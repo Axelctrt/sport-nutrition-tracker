@@ -5,7 +5,9 @@ import type {
   WeeklyReview,
 } from '@/domain/models/weeklyReview';
 import { calculateDailyTarget } from '@/domain/calculations/dailyTarget';
+import { resolveReferenceWeight } from '@/domain/calculations/referenceWeight';
 import { resolveAcceptedCalibrationAdjustment } from '@/application/daily/dailyTargetCoordinator';
+import { buildPlannedActivityCalories } from '@/application/planning/plannedActivityCalories';
 import type { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import { DexieSettingsRepository } from '@/infrastructure/repositories/dexie/DexieSettingsRepository';
 import type { SyncPrototypeDatabase } from '@/infrastructure/sync-prototype/SyncPrototypeDatabase';
@@ -227,15 +229,6 @@ export async function previewRealNutritionTrackingSync(
   return buildPreview(state, resolveFinalState(state));
 }
 
-function latestWeightOnOrBefore<T extends { date: LocalDate }>(
-  values: readonly T[],
-  date: LocalDate,
-): T | undefined {
-  return values
-    .filter((value) => value.date <= date)
-    .sort((left, right) => right.date.localeCompare(left.date))[0];
-}
-
 async function reconcileDailyTargets(
   localDatabase: AppDatabase,
   adjustments: readonly AcceptedCalorieAdjustment[],
@@ -251,11 +244,20 @@ async function reconcileDailyTargets(
   const profile = await localDatabase.userProfile.toCollection().first();
   if (!profile) return 0;
 
-  const [settings, weights, steps, activities] = await Promise.all([
+  const [
+    settings,
+    weights,
+    steps,
+    activities,
+    strengthSessions,
+    enduranceSessions,
+  ] = await Promise.all([
     new DexieSettingsRepository(localDatabase).get(),
     localDatabase.weights.toArray(),
     localDatabase.dailySteps.toArray(),
     localDatabase.activities.toArray(),
+    localDatabase.workoutSessions.toArray(),
+    localDatabase.endurancePlanningSessions.toArray(),
   ]);
   const stepsByDate = new Map(steps.map((value) => [value.date, value]));
   const activitiesByDate = new Map<LocalDate, typeof activities>();
@@ -266,16 +268,30 @@ async function reconcileDailyTargets(
   }
 
   const recalculated: DailyTarget[] = mismatched.map((target) => {
-    const weight = latestWeightOnOrBefore(weights, target.date);
+    const weight = resolveReferenceWeight(
+      target.date,
+      profile.initialWeightKg,
+      weights,
+    );
     const acceptedCalibrationAdjustmentKcal =
       resolveAcceptedCalibrationAdjustment(adjustments, target.date);
+    const dateActivities = activitiesByDate.get(target.date) ?? [];
+    const plannedActivities = buildPlannedActivityCalories({
+      date: target.date,
+      weightKg: weight.weightKg,
+      settings,
+      activities: dateActivities,
+      strengthSessions,
+      enduranceSessions,
+    });
     const calculation = calculateDailyTarget({
       date: target.date,
       profile,
       settings,
-      weightKg: weight?.weightKg ?? profile.initialWeightKg,
+      weightKg: weight.weightKg,
       totalSteps: stepsByDate.get(target.date)?.totalSteps ?? 0,
-      activities: activitiesByDate.get(target.date) ?? [],
+      activities: dateActivities,
+      plannedActivities,
       acceptedCalibrationAdjustmentKcal,
     });
 
@@ -283,12 +299,15 @@ async function reconcileDailyTargets(
       ...target,
       calculationWeightKg: calculation.calculationWeightKg,
       energy: calculation.energy,
+      targetWeeklyWeightChangePercentUsed:
+        calculation.targetWeeklyWeightChangePercentUsed,
       goalAdjustmentKcal: calculation.goalAdjustmentKcal,
       acceptedCalibrationAdjustmentKcal:
         calculation.acceptedCalibrationAdjustmentKcal,
       calorieFloorKcal: calculation.calorieFloorKcal,
       targetCaloriesKcal: calculation.targetCaloriesKcal,
       macros: calculation.macros,
+      plannedActivities: calculation.plannedActivities,
       calculationVersion: calculation.calculationVersion,
       updatedAt: completedAt,
     };

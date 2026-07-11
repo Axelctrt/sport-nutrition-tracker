@@ -34,6 +34,18 @@ const ProfilePage = lazy(() =>
   })),
 );
 
+const SettingsHomePage = lazy(() =>
+  import('@/features/settings/pages/SettingsHomePage').then((module) => ({
+    default: module.SettingsHomePage,
+  })),
+);
+
+const SettingsCategoryPage = lazy(() =>
+  import('@/features/settings/pages/SettingsCategoryPage').then((module) => ({
+    default: module.SettingsCategoryPage,
+  })),
+);
+
 const AdvancedSettingsPage = lazy(() =>
   import('@/features/settings/pages/AdvancedSettingsPage').then((module) => ({
     default: module.AdvancedSettingsPage,
@@ -242,6 +254,12 @@ const FriendsPrivacyPage = lazy(() =>
 );
 
 
+const ProgressionHubPage = lazy(() =>
+  import('@/features/progression/pages/ProgressionHubPage').then((module) => ({
+    default: module.ProgressionHubPage,
+  })),
+);
+
 const AnalyticsPage = lazy(() =>
   import('@/features/analytics/pages/AnalyticsPage').then((module) => ({
     default: module.AnalyticsPage,
@@ -353,6 +371,22 @@ export function LazyProfilePage() {
   );
 }
 
+export function LazySettingsHomePage() {
+  return (
+    <RouteSuspense variant="list">
+      <SettingsHomePage />
+    </RouteSuspense>
+  );
+}
+
+export function LazySettingsCategoryPage() {
+  return (
+    <RouteSuspense variant="form">
+      <SettingsCategoryPage />
+    </RouteSuspense>
+  );
+}
+
 export function LazyAdvancedSettingsPage() {
   return (
     <RouteSuspense variant="form">
@@ -385,6 +419,14 @@ export function LazyAccountDevicesPage() {
   );
 }
 
+
+export function LazyProgressionHubPage() {
+  return (
+    <RouteSuspense variant="dashboard">
+      <ProgressionHubPage />
+    </RouteSuspense>
+  );
+}
 
 export function LazyAnalyticsPage() {
   return (

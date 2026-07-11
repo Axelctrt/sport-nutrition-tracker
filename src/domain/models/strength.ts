@@ -95,6 +95,12 @@ export interface WorkoutTemplateExercise extends EntityMetadata {
 
 export type WorkoutSessionStatus = 'planned' | 'inProgress' | 'completed' | 'abandoned' | 'skipped';
 
+export type StrengthSessionStyle =
+  | 'classic'
+  | 'strength'
+  | 'circuit'
+  | 'veryIntense';
+
 export interface WorkoutSession extends EntityMetadata {
   date: LocalDate;
   status: WorkoutSessionStatus;
@@ -107,7 +113,10 @@ export interface WorkoutSession extends EntityMetadata {
   startedAt?: string;
   completedAt?: string;
   durationMinutes?: number;
+  plannedDurationMinutes?: number;
+  strengthSessionStyle?: StrengthSessionStyle;
   notes?: string;
+  completedActivityId?: string;
   socialSharing?: SocialActivitySharingOverride;
 }
 

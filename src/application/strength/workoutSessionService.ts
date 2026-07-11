@@ -12,8 +12,10 @@ import type {
   WorkoutTemplate,
 } from '@/domain/models/strength';
 import type { StrengthExerciseRepository } from '@/infrastructure/repositories/contracts/StrengthExerciseRepository';
+import type { StrengthSetRepository } from '@/infrastructure/repositories/contracts/StrengthSetRepository';
 import type { WorkoutSessionRepository } from '@/infrastructure/repositories/contracts/WorkoutSessionRepository';
 import { defaultTrackingModeForLoadUnit } from '@/domain/strength/strengthTracking';
+import { ensurePlannedStrengthSetsForSession } from '@/application/strength/strengthSetService';
 import type { WorkoutTemplateRepository } from '@/infrastructure/repositories/contracts/WorkoutTemplateRepository';
 import { toLocalDate } from '@/shared/utils/dates';
 import { runtimeSocialActivitySnapshotObserver } from '@/infrastructure/social-activity-snapshots/runtimeSocialActivitySnapshotObserver';
@@ -143,8 +145,11 @@ export async function startWorkoutSessionFromTemplate(
   templateRepository: WorkoutTemplateRepository,
   exerciseRepository: StrengthExerciseRepository,
   templateId: EntityId,
+  setRepositoryOrNow?: StrengthSetRepository | Date,
   now = new Date(),
 ): Promise<WorkoutSessionView> {
+  const setRepository = setRepositoryOrNow instanceof Date ? undefined : setRepositoryOrNow;
+  const effectiveNow = setRepositoryOrNow instanceof Date ? setRepositoryOrNow : now;
   await ensureNoSessionInProgress(sessionRepository);
   const { template, exercises } = await createWorkoutTemplateSessionSnapshot(
     templateRepository,
@@ -152,12 +157,16 @@ export async function startWorkoutSessionFromTemplate(
     templateId,
   );
 
-  return sessionRepository.createWithExercises({
-    ...sessionBase(now),
+  const created = await sessionRepository.createWithExercises({
+    ...sessionBase(effectiveNow),
     sourceTemplateId: template.id,
     sourceTemplateNameSnapshot: template.name,
     ...(template.notes ? { notes: template.notes } : {}),
   }, exercises);
+  if (setRepository) {
+    await ensurePlannedStrengthSetsForSession(sessionRepository, setRepository, created.session.id);
+  }
+  return created;
 }
 
 export async function listWorkoutSessions(

@@ -1,7 +1,9 @@
 import {
   routePaths,
   barcodeScannerPath,
+  favoriteMealsForMealPath,
   photoNutritionEstimatePath,
+  recipesForMealPath,
   newFoodProductForMealPath,
   selectFoodPath,
   editActivityPath,
@@ -29,6 +31,16 @@ describe('parcours de sélection alimentaire', () => {
   it('conserve le contexte du repas pour l’estimation photo', () => {
     expect(photoNutritionEstimatePath('2026-07-04', 'lunch')).toBe(
       '/food/photo-estimate?date=2026-07-04&slot=lunch',
+    );
+  });
+
+
+  it('conserve le contexte du repas pour les recettes et repas favoris', () => {
+    expect(recipesForMealPath('2026-07-04', 'dinner')).toBe(
+      '/recipes?date=2026-07-04&slot=dinner',
+    );
+    expect(favoriteMealsForMealPath('2026-07-04', 'dinner')).toBe(
+      '/food/favorites?date=2026-07-04&slot=dinner',
     );
   });
 
@@ -142,5 +154,23 @@ describe('page de confidentialité', () => {
 describe('amis et confidentialité', () => {
   it('utilise une route stable dédiée au réseau privé', () => {
     expect(routePaths.friends).toBe('/friends');
+  });
+});
+
+describe('hub Progression', () => {
+  it('utilise une nouvelle route stable sans remplacer les écrans historiques', () => {
+    expect(routePaths.progression).toBe('/progression');
+    expect(routePaths.weight).toBe('/weight');
+    expect(routePaths.analytics).toBe('/analytics');
+  });
+});
+
+
+describe('architecture des paramètres', () => {
+  it('conserve l’accueil historique et expose des sous-pages dédiées', () => {
+    expect(routePaths.settings).toBe('/settings');
+    expect(routePaths.settingsAppearanceAccessibility).toBe('/settings/appearance-accessibility');
+    expect(routePaths.settingsDataBackup).toBe('/settings/data-backup');
+    expect(routePaths.settingsAdvanced).toBe('/settings/advanced');
   });
 });

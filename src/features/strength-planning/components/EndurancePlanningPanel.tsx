@@ -1,3 +1,4 @@
+import { addDays, parseISO } from 'date-fns';
 import {
   Activity,
   Bike,
@@ -27,11 +28,15 @@ import {
   type EndurancePlanningWeek,
 } from '@/application/planning/endurancePlanningService';
 import { routePaths } from '@/app/routePaths';
+import { recalculatePlannedActivityTargetsForCurrentProfile } from '@/application/planning/plannedActivityTargetService';
+import { getEffectiveActivityCalories } from '@/domain/calculations/activityCalories';
+import { unlinkPlannedSource } from '@/application/planning/activityReconciliationService';
 import type {
   ActivityIntensity,
   Activity as ActivityModel,
 } from '@/domain/models/activity';
 import type { LocalDate } from '@/domain/models/common';
+import type { PlannedActivityCalorieSnapshot } from '@/domain/models/plannedActivity';
 import {
   ENDURANCE_PLANNING_CHANGED_EVENT,
   readEndurancePlanningState,
@@ -82,19 +87,21 @@ const statusLabels = {
 } as const;
 
 function activityPath(
-  type: PlannedEnduranceActivityType,
-  date: LocalDate,
+  session: PlannedEnduranceSession,
 ): string {
   const base =
-    type === 'running'
+    session.activityType === 'running'
       ? routePaths.addRunningActivity
-      : type === 'swimming'
+      : session.activityType === 'swimming'
         ? routePaths.addSwimmingActivity
         : routePaths.addOtherActivity;
-
-  return `${base}?date=${encodeURIComponent(
-    date,
-  )}&type=${encodeURIComponent(type)}`;
+  const params = new URLSearchParams({
+    date: session.date,
+    type: session.activityType,
+    plannedSource: 'endurancePlanning',
+    plannedId: session.id,
+  });
+  return `${base}?${params.toString()}`;
 }
 
 function formatDate(date: LocalDate): string {
@@ -164,6 +171,9 @@ export function EndurancePlanningPanel({
   const toast = useToast();
   const [week, setWeek] =
     useState<EndurancePlanningWeek>();
+  const [calorieProjections, setCalorieProjections] = useState<
+    Record<string, PlannedActivityCalorieSnapshot>
+  >({});
   const [error, setError] = useState<string>();
   const [title, setTitle] = useState('');
   const [activityType, setActivityType] =
@@ -187,6 +197,14 @@ export function EndurancePlanningPanel({
 
     try {
       const data = await readBackupData(appDatabase);
+      const weekEnd = toLocalDate(addDays(parseISO(weekStart), 6));
+      const nextCalorieProjections = Object.fromEntries(
+        data.dailyTargets
+          .filter((target) => target.date >= weekStart && target.date <= weekEnd)
+          .flatMap((target) => target.plannedActivities ?? [])
+          .filter((projection) => projection.source === 'endurancePlanning')
+          .map((projection) => [projection.sourceId, projection]),
+      );
       setWeek(
         buildEndurancePlanningWeek(
           readEndurancePlanningState(),
@@ -194,6 +212,7 @@ export function EndurancePlanningPanel({
           weekStart,
         ),
       );
+      setCalorieProjections(nextCalorieProjections);
     } catch (caughtError) {
       setError(
         caughtError instanceof Error
@@ -223,6 +242,32 @@ export function EndurancePlanningPanel({
     };
   }, [load]);
 
+  const recalculateDates = useCallback(async (dates: LocalDate[]) => {
+    await recalculatePlannedActivityTargetsForCurrentProfile(dates);
+  }, []);
+
+  const updateStatus = useCallback(async (
+    session: PlannedEnduranceSession,
+    status: 'planned' | 'skipped',
+  ) => {
+    setPlannedEnduranceStatus(session.id, status);
+    await recalculateDates([session.date]);
+  }, [recalculateDates]);
+
+  const reschedule = useCallback(async (
+    session: PlannedEnduranceSession,
+    nextDate: LocalDate,
+  ) => {
+    reschedulePlannedEnduranceSession(session.id, nextDate);
+    await recalculateDates([session.date, nextDate]);
+  }, [recalculateDates]);
+
+  const remove = useCallback(async (session: PlannedEnduranceSession) => {
+    await unlinkPlannedSource({ source: 'endurancePlanning', sourceId: session.id });
+    deletePlannedEnduranceSession(session.id);
+    await recalculateDates([session.date]);
+  }, [recalculateDates]);
+
   const showDistance = useMemo(
     () =>
       activityType === 'running' ||
@@ -231,7 +276,7 @@ export function EndurancePlanningPanel({
     [activityType],
   );
 
-  const submit = () => {
+  const submit = async () => {
     setError(undefined);
 
     try {
@@ -275,6 +320,8 @@ export function EndurancePlanningPanel({
           : {}),
       });
 
+      await recalculateDates([plannedSession.date]);
+
       toast.success(
         'Activité planifiée',
         `${plannedSession.title} a été ajoutée au planning du ${formatDate(
@@ -301,7 +348,7 @@ export function EndurancePlanningPanel({
         sectionId="endurance-planning"
         storageKey="sportpilot:planning:endurance"
         title="Course, natation, vélo et cardio"
-        description="Planifie les activités d’endurance et rapproche-les automatiquement de ce qui est réellement saisi."
+        description="Planifie les activités d’endurance et associe explicitement chaque réalisation pour éviter tout double comptage."
         icon={CalendarPlus}
         defaultOpen
       >
@@ -482,7 +529,7 @@ export function EndurancePlanningPanel({
 
           <Button
             className="mt-4"
-            onClick={submit}
+            onClick={() => void submit()}
           >
             <CalendarPlus
               aria-hidden="true"
@@ -559,6 +606,9 @@ export function EndurancePlanningPanel({
                               {target
                                 ? ` · ${target}`
                                 : ''}
+                              {calorieProjections[view.session.id]
+                                ? ` · ≈ ${Math.round(calorieProjections[view.session.id]!.estimatedCaloriesKcal).toLocaleString('fr-FR')} kcal prévues`
+                                : ''}
                             </p>
 
                             {view.matchedActivity ? (
@@ -568,9 +618,11 @@ export function EndurancePlanningPanel({
                                   className="mr-1 inline size-4"
                                 />
                                 {
-                                  actualLabel(
-                                    view.matchedActivity,
-                                  )
+                                  `${actualLabel(view.matchedActivity)} · ${Math.round(
+                                    view.matchedActivity.type === 'walking' && view.matchedActivity.includedInDailySteps
+                                      ? 0
+                                      : getEffectiveActivityCalories(view.matchedActivity),
+                                  ).toLocaleString('fr-FR')} kcal réelles`
                                 }
                               </p>
                             ) : null}
@@ -587,11 +639,7 @@ export function EndurancePlanningPanel({
                           {view.displayStatus ===
                           'planned' ? (
                             <Link
-                              to={activityPath(
-                                view.session
-                                  .activityType,
-                                view.session.date,
-                              )}
+                              to={activityPath(view.session)}
                               className="inline-flex min-h-10 items-center justify-center rounded-xl bg-brand-600 px-3 text-sm font-semibold text-white hover:bg-brand-700"
                             >
                               Saisir l’activité
@@ -604,8 +652,8 @@ export function EndurancePlanningPanel({
                               size="sm"
                               variant="secondary"
                               onClick={() =>
-                                setPlannedEnduranceStatus(
-                                  view.session.id,
+                                void updateStatus(
+                                  view.session,
                                   'skipped',
                                 )
                               }
@@ -624,8 +672,8 @@ export function EndurancePlanningPanel({
                               size="sm"
                               variant="secondary"
                               onClick={() =>
-                                setPlannedEnduranceStatus(
-                                  view.session.id,
+                                void updateStatus(
+                                  view.session,
                                   'planned',
                                 )
                               }
@@ -685,13 +733,9 @@ export function EndurancePlanningPanel({
                               size="sm"
                               variant="secondary"
                               onClick={() =>
-                                reschedulePlannedEnduranceSession(
-                                  view.session.id,
-                                  rescheduleDates[
-                                    view.session.id
-                                  ] ??
-                                    view.session
-                                      .date,
+                                void reschedule(
+                                  view.session,
+                                  (rescheduleDates[view.session.id] ?? view.session.date) as LocalDate,
                                 )
                               }
                             >
@@ -721,10 +765,9 @@ export function EndurancePlanningPanel({
         tone="danger"
         onConfirm={() => {
           if (deleteCandidate) {
-            deletePlannedEnduranceSession(
-              deleteCandidate.id,
-            );
+            const candidate = deleteCandidate;
             setDeleteCandidate(undefined);
+            void remove(candidate);
           }
         }}
         onCancel={() =>

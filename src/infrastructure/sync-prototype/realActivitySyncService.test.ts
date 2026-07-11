@@ -106,6 +106,34 @@ describe('synchronisation B1 des activités réelles', () => {
     });
   });
 
+
+  it('synchronise la référence persistante vers la séance planifiée', async () => {
+    const activity = {
+      ...runningActivity(
+        'activity-planned-link',
+        '2026-07-01T09:00:00.000Z',
+      ),
+      plannedActivity: {
+        source: 'endurancePlanning' as const,
+        sourceId: 'planned-run',
+      },
+    };
+    await local.activities.add(activity);
+
+    await synchronizeRealActivities(
+      local,
+      cloud as unknown as SyncPrototypeDatabase,
+      'user-1',
+    );
+
+    expect(await cloud.realActivities.get('#activity-planned-link')).toMatchObject({
+      plannedActivity: {
+        source: 'endurancePlanning',
+        sourceId: 'planned-run',
+      },
+    });
+  });
+
   it('ignore les métadonnées techniques Dexie Cloud dans la comparaison', async () => {
     const activity = runningActivity(
       'activity-cloud-metadata',

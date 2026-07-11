@@ -24,6 +24,64 @@ function normalizeSearchText(value: string): string {
     .trim();
 }
 
+function editDistanceAtMostOne(left: string, right: string): boolean {
+  if (left === right) return true;
+  if (Math.abs(left.length - right.length) > 1) return false;
+
+  if (left.length === right.length) {
+    const mismatches: number[] = [];
+    for (let index = 0; index < left.length; index += 1) {
+      if (left[index] !== right[index]) mismatches.push(index);
+    }
+    if (mismatches.length === 2) {
+      const firstMismatch = mismatches[0]!;
+      const secondMismatch = mismatches[1]!;
+      if (
+        secondMismatch === firstMismatch + 1
+        && left[firstMismatch] === right[secondMismatch]
+        && left[secondMismatch] === right[firstMismatch]
+      ) {
+        return true;
+      }
+    }
+  }
+
+  let leftIndex = 0;
+  let rightIndex = 0;
+  let differences = 0;
+
+  while (leftIndex < left.length && rightIndex < right.length) {
+    if (left[leftIndex] === right[rightIndex]) {
+      leftIndex += 1;
+      rightIndex += 1;
+      continue;
+    }
+
+    differences += 1;
+    if (differences > 1) return false;
+
+    if (left.length > right.length) leftIndex += 1;
+    else if (right.length > left.length) rightIndex += 1;
+    else {
+      leftIndex += 1;
+      rightIndex += 1;
+    }
+  }
+
+  if (leftIndex < left.length || rightIndex < right.length) differences += 1;
+  return differences <= 1;
+}
+
+function matchesSearchToken(searchableText: string, token: string): boolean {
+  if (searchableText.includes(token)) return true;
+  if (token.length < 4) return false;
+
+  return searchableText
+    .split(/[^a-z0-9]+/u)
+    .filter(Boolean)
+    .some((word) => editDistanceAtMostOne(word, token));
+}
+
 function sortProducts(products: FoodProduct[]): FoodProduct[] {
   return [...products].sort((left, right) => {
     if (left.isFavorite !== right.isFavorite) {
@@ -59,10 +117,12 @@ export function filterMealFoodProducts(
     return products;
   }
 
+  const queryTokens = normalizedQuery.split(/\s+/u).filter(Boolean);
+
   return products.filter((product) => {
     const searchableText = normalizeSearchText(
       `${product.name} ${product.brand ?? ''} ${product.barcode ?? ''}`,
     );
-    return searchableText.includes(normalizedQuery);
+    return queryTokens.every((token) => matchesSearchToken(searchableText, token));
   });
 }

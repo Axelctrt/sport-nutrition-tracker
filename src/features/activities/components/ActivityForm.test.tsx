@@ -56,4 +56,80 @@ describe('ActivityForm', () => {
     }));
   });
 
+
+  it('conserve une liaison explicite lorsque l’activité réelle change de date', async () => {
+    const user = userEvent.setup();
+    const settings = createDefaultAppSettings();
+    const onSubmit = vi.fn(async (_values: ActivityFormValues) => undefined);
+    const initialValues = {
+      ...defaultActivityFormValues('running', settings),
+      date: '2026-07-14',
+    };
+
+    render(
+      <ActivityForm
+        initialValues={initialValues}
+        allowedTypes={['running']}
+        settings={settings}
+        calculationWeightKg={70}
+        calculationWeightSource="poids de test"
+        submitLabel="Enregistrer"
+        onDateChange={vi.fn()}
+        plannedActivityOptions={[{
+          key: 'endurancePlanning:planned-run',
+          reference: { source: 'endurancePlanning', sourceId: 'planned-run' },
+          title: 'Footing prévu',
+          date: '2026-07-13',
+          activityType: 'running',
+        }]}
+        onSubmit={onSubmit}
+      />,
+    );
+
+    const linkSelect = screen.getByLabelText('Séance prévue associée');
+    await user.selectOptions(linkSelect, 'endurancePlanning:planned-run');
+    await user.clear(screen.getByLabelText(/Date/));
+    await user.type(screen.getByLabelText(/Date/), '2026-07-15');
+
+    expect(linkSelect).toHaveValue('endurancePlanning:planned-run');
+
+    await user.click(screen.getByRole('button', { name: 'Enregistrer' }));
+
+    expect(onSubmit.mock.calls[0]?.[0]).toEqual(expect.objectContaining({
+      date: '2026-07-15',
+      plannedActivityKey: 'endurancePlanning:planned-run',
+    }));
+  });
+
+  it('applique les raccourcis de durée et d’intensité au formulaire', async () => {
+    const user = userEvent.setup();
+    const settings = createDefaultAppSettings();
+    const onSubmit = vi.fn(async (_values: ActivityFormValues) => undefined);
+
+    render(
+      <ActivityForm
+        initialValues={defaultActivityFormValues('running', settings)}
+        allowedTypes={['running']}
+        settings={settings}
+        calculationWeightKg={60}
+        calculationWeightSource="poids de test"
+        submitLabel="Enregistrer"
+        onDateChange={vi.fn()}
+        onSubmit={onSubmit}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: '60 minutes' }));
+    await user.click(screen.getByRole('button', { name: 'Élevée' }));
+
+    expect(screen.getByLabelText(/Durée \(min\)/)).toHaveValue(60);
+    await user.click(screen.getByRole('button', { name: 'Enregistrer' }));
+
+    expect(onSubmit.mock.calls[0]?.[0]).toEqual(expect.objectContaining({
+      durationMinutes: 60,
+      intensity: 'high',
+    }));
+  });
+
+
 });

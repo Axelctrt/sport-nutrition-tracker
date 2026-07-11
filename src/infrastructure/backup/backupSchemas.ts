@@ -8,6 +8,8 @@ import { normalizeRoutineReminderPreferences } from '@/domain/reminders/routineR
 import { DEFAULT_ENDURANCE_TEMPLATES } from '@/domain/defaults/appSettings';
 import {
   createDefaultDashboardPreferences,
+  DASHBOARD_QUICK_ACTION_IDS,
+  DASHBOARD_SUMMARY_METRIC_IDS,
   DASHBOARD_WIDGET_IDS,
 } from "@/domain/dashboard/dashboardPreferences";
 import { APP_SETTINGS_ID, LOCAL_USER_PROFILE_ID, USER_SETTINGS_ID } from '@/domain/defaults/identifiers';
@@ -72,6 +74,37 @@ const ageInformationSchema = z.discriminatedUnion('mode', [
   }),
 ]);
 
+const profileImpactHistoryEntrySchema = z.object({
+  id: z.string().min(1),
+  changedAt: isoDateTimeSchema,
+  effectiveDate: localDateSchema,
+  changedFields: z.array(z.enum([
+    'sexForEnergyEquation',
+    'ageInformation',
+    'heightCm',
+    'initialWeightKg',
+    'goal',
+    'targetWeeklyWeightChangePercent',
+    'occupationalActivity',
+    'dailyStepGoal',
+    'proteinGramsPerKg',
+    'fatGramsPerKg',
+  ])).max(10),
+  summary: z.string().min(1).max(300),
+  beforeTargetCaloriesKcal: nonNegativeNumber,
+  afterTargetCaloriesKcal: nonNegativeNumber,
+  beforeMacros: z.object({
+    proteinGrams: nonNegativeNumber,
+    carbohydratesGrams: nonNegativeNumber,
+    fatGrams: nonNegativeNumber,
+  }),
+  afterMacros: z.object({
+    proteinGrams: nonNegativeNumber,
+    carbohydratesGrams: nonNegativeNumber,
+    fatGrams: nonNegativeNumber,
+  }),
+});
+
 const userProfileSchema = entityMetadataSchema.extend({
   firstName: z.string().max(100).optional(),
   sexForEnergyEquation: z.enum(['male', 'female']),
@@ -84,6 +117,7 @@ const userProfileSchema = entityMetadataSchema.extend({
   dailyStepGoal: nonNegativeInteger,
   proteinGramsPerKg: nonNegativeNumber,
   fatGramsPerKg: nonNegativeNumber,
+  profileImpactHistory: z.array(profileImpactHistoryEntrySchema).max(12).optional(),
 });
 
 const swimmingMetValuesSchema = z.object({
@@ -120,11 +154,19 @@ const enduranceTemplateSchema = z.object({
 
 
 const dashboardWidgetIdSchema = z.enum(DASHBOARD_WIDGET_IDS);
+const dashboardQuickActionIdSchema = z.enum(DASHBOARD_QUICK_ACTION_IDS);
+const dashboardSummaryMetricIdSchema = z.enum(DASHBOARD_SUMMARY_METRIC_IDS);
 
 const dashboardPreferencesSchema = z.object({
   preset: z.enum(['balanced', 'nutrition', 'training', 'minimal', 'custom']),
   order: z.array(dashboardWidgetIdSchema),
   hidden: z.array(dashboardWidgetIdSchema),
+  quickActions: z.array(dashboardQuickActionIdSchema).default(
+    createDefaultDashboardPreferences().quickActions,
+  ),
+  summaryMetrics: z.array(dashboardSummaryMetricIdSchema).default(
+    createDefaultDashboardPreferences().summaryMetrics,
+  ),
 });
 
 const appSettingsSchema = entityMetadataSchema.extend({
@@ -160,6 +202,7 @@ const appSettingsSchema = entityMetadataSchema.extend({
   lastBackupExportedAt: isoDateTimeSchema.optional(),
   lastBackupAppVersion: z.string().min(1).max(100).optional(),
   lastBackupSchemaVersion: positiveInteger.optional(),
+  dashboardDensity: z.enum(['comfortable', 'compact']).default('comfortable'),
 });
 
 
@@ -173,6 +216,7 @@ const userSettingsSchema = appSettingsSchema.omit({
   lastBackupExportedAt: true,
   lastBackupAppVersion: true,
   lastBackupSchemaVersion: true,
+  dashboardDensity: true,
 }).extend({
   id: z.literal(USER_SETTINGS_ID),
 });
@@ -185,6 +229,12 @@ const weightEntrySchema = datedEntitySchema.extend({
 const dailyStepsSchema = datedEntitySchema.extend({
   totalSteps: nonNegativeInteger,
   source: z.literal('manual'),
+});
+
+
+const plannedActivityReferenceSchema = z.object({
+  source: z.enum(['strengthSession', 'endurancePlanning']),
+  sourceId: z.string().min(1),
 });
 
 const activityCalculationSnapshotSchema = z.object({
@@ -204,6 +254,7 @@ const activityBaseShape = {
   notes: z.string().max(10_000).optional(),
   manualCaloriesKcal: nonNegativeNumber.optional(),
   calculation: activityCalculationSnapshotSchema,
+  plannedActivity: plannedActivityReferenceSchema.optional(),
   socialSharing: socialActivitySharingOverrideSchema.optional(),
 };
 
@@ -385,6 +436,7 @@ const dailyEnergyBreakdownSchema = z.object({
   swimmingKcal: nonNegativeNumber,
   strengthTrainingKcal: nonNegativeNumber,
   otherActivitiesKcal: nonNegativeNumber,
+  plannedActivitiesKcal: nonNegativeNumber.optional(),
   totalEstimatedExpenditureKcal: nonNegativeNumber,
 });
 
@@ -394,14 +446,32 @@ const dailyMacroTargetsSchema = z.object({
   fatGrams: nonNegativeNumber,
 });
 
+const plannedActivityCalorieSnapshotSchema = z.object({
+  id: z.string().min(1),
+  source: z.enum(['strengthSession', 'endurancePlanning']),
+  sourceId: z.string().min(1),
+  title: z.string().min(1).max(200),
+  date: localDateSchema,
+  activityType: z.enum(['running', 'swimming', 'strengthTraining', 'cycling', 'walking', 'otherCardio']),
+  estimatedCaloriesKcal: nonNegativeNumber,
+  weightKg: positiveNumber,
+  calculationVersion: positiveInteger,
+  basis: z.enum(['plannedDuration', 'actualDuration', 'plannedDistance']),
+  durationMinutes: positiveNumber.optional(),
+  metUsed: nonNegativeNumber.optional(),
+  coefficientUsed: nonNegativeNumber.optional(),
+});
+
 const dailyTargetSchema = datedEntitySchema.extend({
   calculationWeightKg: positiveNumber,
   energy: dailyEnergyBreakdownSchema,
+  targetWeeklyWeightChangePercentUsed: finiteNumber.optional(),
   goalAdjustmentKcal: finiteNumber,
   acceptedCalibrationAdjustmentKcal: finiteNumber,
   calorieFloorKcal: nonNegativeNumber,
   targetCaloriesKcal: nonNegativeNumber,
   macros: dailyMacroTargetsSchema,
+  plannedActivities: z.array(plannedActivityCalorieSnapshotSchema).optional(),
   calculationVersion: positiveInteger,
 });
 
@@ -544,6 +614,9 @@ const workoutSessionSchema = entityMetadataSchema.extend({
   startedAt: isoDateTimeSchema.optional(),
   completedAt: isoDateTimeSchema.optional(),
   durationMinutes: nonNegativeNumber.optional(),
+  plannedDurationMinutes: positiveNumber.optional(),
+  strengthSessionStyle: z.enum(['classic', 'strength', 'circuit', 'veryIntense']).optional(),
+  completedActivityId: z.string().min(1).optional(),
   notes: z.string().max(10_000).optional(),
   socialSharing: socialActivitySharingOverrideSchema.optional(),
 });
@@ -726,6 +799,7 @@ const plannedEnduranceSessionSchema = z.object({
   createdAt: isoDateTimeSchema,
   updatedAt: isoDateTimeSchema,
   skippedAt: isoDateTimeSchema.optional(),
+  completedActivityId: z.string().min(1).optional(),
 });
 
 const endurancePlanningStateSchema = z.object({

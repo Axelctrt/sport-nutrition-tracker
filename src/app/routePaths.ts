@@ -4,6 +4,16 @@ export const routePaths = {
   onboarding: '/onboarding',
   profile: '/profile',
   settings: '/settings',
+  settingsProfileObjectives: '/settings/profile-objectives',
+  settingsAccountSync: '/settings/account-sync',
+  settingsPrivacyFriends: '/settings/privacy-friends',
+  settingsAppearanceAccessibility: '/settings/appearance-accessibility',
+  settingsNotificationsRoutines: '/settings/notifications-routines',
+  settingsNutritionCalculations: '/settings/nutrition-calculations',
+  settingsAiPermissions: '/settings/ai-permissions',
+  settingsDataBackup: '/settings/data-backup',
+  settingsAbout: '/settings/about',
+  settingsAdvanced: '/settings/advanced',
   reminders: '/settings/reminders',
   dashboardCustomization: '/settings/dashboard',
   syncPrototype: '/settings/sync-prototype',
@@ -43,6 +53,7 @@ export const routePaths = {
   editActivity: '/activities/:activityId/edit',
   weight: '/weight',
   history: '/history',
+  progression: '/progression',
   analytics: '/analytics',
   reports: '/reports',
   goals: '/goals',
@@ -94,7 +105,7 @@ export function addFoodPath(date: string, slot: string): string {
   return `${routePaths.addFood}?date=${encodeURIComponent(date)}&slot=${encodeURIComponent(slot)}`;
 }
 
-export type FoodSelectorSource = 'openFoodFacts';
+export type FoodSelectorSource = 'recent' | 'favorites' | 'all' | 'openFoodFacts';
 
 export function selectFoodPath(
   date: string,
@@ -136,6 +147,17 @@ export function addRecipeToJournalPath(
   if (entryId) params.set('entryId', entryId);
   const path = routePaths.addRecipeToJournal.replace(':recipeId', encodeURIComponent(recipeId));
   return `${path}?${params.toString()}`;
+}
+
+
+export function favoriteMealsForMealPath(date: string, slot: string): string {
+  const params = new URLSearchParams({ date, slot });
+  return `${routePaths.favoriteMeals}?${params.toString()}`;
+}
+
+export function recipesForMealPath(date: string, slot: string): string {
+  const params = new URLSearchParams({ date, slot });
+  return `${routePaths.recipes}?${params.toString()}`;
 }
 
 export function barcodeScannerPath(date: string, slot: string): string {

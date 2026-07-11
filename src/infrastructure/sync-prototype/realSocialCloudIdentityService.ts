@@ -193,8 +193,8 @@ export function createRealSocialCloudIdentityPort(
           };
         }
 
-        await cleanupPreviousHandleReservations(database, identity, reservation.id);
         await database.socialHandleReservations.put(reservation);
+        await cleanupPreviousHandleReservations(database, identity, reservation.id);
 
         return {
           status: existing ? 'alreadyExists' : 'created',

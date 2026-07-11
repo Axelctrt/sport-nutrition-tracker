@@ -915,7 +915,6 @@ describe('FriendsPrivacyPage', () => {
 
 it('supprime un ami après confirmation et succès serveur', async () => {
   const user = userEvent.setup();
-  const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
   const removeFriendship = vi.fn(async () => ({
     status: 'updated' as const,
     value: {
@@ -953,19 +952,19 @@ it('supprime un ami après confirmation et succès serveur', async () => {
     removeFriendship,
   };
 
-  try {
-    renderPage({ socialFriendsGateway });
+  renderPage({ socialFriendsGateway });
 
-    await user.click(screen.getByRole('button', { name: 'Supprimer' }));
+  await user.click(screen.getByRole('button', { name: 'Supprimer' }));
+  expect(screen.getByRole('alertdialog', { name: 'Supprimer Léa Cardio ?' })).toBeInTheDocument();
+  expect(removeFriendship).not.toHaveBeenCalled();
 
-    await waitFor(() => {
-      expect(removeFriendship).toHaveBeenCalledWith(identity.userId, 'social-user:lea');
-      expect(screen.queryByText('Léa Cardio')).not.toBeInTheDocument();
-      expect(screen.getAllByText(/Ami supprimé/u).length).toBeGreaterThan(0);
-    });
-  } finally {
-    confirmSpy.mockRestore();
-  }
+  await user.click(screen.getByRole('button', { name: 'Supprimer l’ami' }));
+
+  await waitFor(() => {
+    expect(removeFriendship).toHaveBeenCalledWith(identity.userId, 'social-user:lea');
+    expect(screen.queryByText('Léa Cardio')).not.toBeInTheDocument();
+    expect(screen.getAllByText(/Ami supprimé/u).length).toBeGreaterThan(0);
+  });
 });
 
 

@@ -29,6 +29,8 @@ interface NavigatorWithConnection extends Navigator {
 
 interface AutomaticSyncSettingsPanelProps {
   readonly client?: SyncPrototypeClient | null;
+  readonly loadSettings?: () => Promise<AppSettings>;
+  readonly saveSettings?: (changes: EntityChanges<AppSettings>) => Promise<AppSettings>;
 }
 
 const EMPTY_SNAPSHOT: SyncPrototypeSnapshot = {
@@ -40,6 +42,11 @@ const EMPTY_SNAPSHOT: SyncPrototypeSnapshot = {
 
 const subscribeToNothing = (): (() => void) => () => undefined;
 const getEmptySnapshot = (): SyncPrototypeSnapshot => EMPTY_SNAPSHOT;
+
+const loadDefaultSettings = (): Promise<AppSettings> => repositories.settings.get();
+const saveDefaultSettings = (
+  changes: EntityChanges<AppSettings>,
+): Promise<AppSettings> => repositories.settings.update(changes);
 
 function resolveClient(): SyncPrototypeClient | null {
   const { config, errorMessage } = readSyncPrototypeConfigSafely();
@@ -58,6 +65,8 @@ function currentConnectionType(): string | undefined {
 
 export function AutomaticSyncSettingsPanel({
   client: clientOverride,
+  loadSettings = loadDefaultSettings,
+  saveSettings = saveDefaultSettings,
 }: AutomaticSyncSettingsPanelProps) {
   const actionToast = useActionToast();
   const client = useMemo(
@@ -75,8 +84,7 @@ export function AutomaticSyncSettingsPanel({
 
   useEffect(() => {
     let mounted = true;
-    void repositories.settings
-      .get()
+    void loadSettings()
       .then((value) => {
         if (mounted) setSettings(value);
       })
@@ -91,7 +99,7 @@ export function AutomaticSyncSettingsPanel({
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [loadSettings]);
 
   const fingerprint = createSyncPrototypeAccountFingerprint(
     snapshot.account.userId ?? snapshot.account.email,
@@ -112,7 +120,7 @@ export function AutomaticSyncSettingsPanel({
     setBusy(action);
     setErrorMessage(undefined);
     try {
-      const updated = await repositories.settings.update(changes);
+      const updated = await saveSettings(changes);
       setSettings(updated);
       actionToast.success({
         key: `automatic-sync-${action}`,

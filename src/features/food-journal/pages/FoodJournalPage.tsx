@@ -1,8 +1,12 @@
-import { CalendarCheck, Copy, LibraryBig, UtensilsCrossed } from 'lucide-react';
+import { CalendarCheck, Copy, LibraryBig, Plus, UtensilsCrossed } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { routePaths } from '@/app/routePaths';
 import { calculateRemainingNutrition } from '@/domain/calculations/nutrition';
+import type { MealSlot } from '@/domain/models/food';
+import type { DailyTarget } from '@/domain/models/targets';
+import { FoodJournalAddSheet } from '@/features/food-journal/components/FoodJournalAddSheet';
+import { FoodJournalDateNavigator } from '@/features/food-journal/components/FoodJournalDateNavigator';
 import { FoodJournalMealCard } from '@/features/food-journal/components/FoodJournalMealCard';
 import { FoodJournalSummary } from '@/features/food-journal/components/FoodJournalSummary';
 import { useFoodJournal } from '@/features/food-journal/hooks/useFoodJournal';
@@ -15,11 +19,12 @@ import { inputClassName } from '@/shared/forms/formStyles';
 import { useToast } from '@/shared/toast/useToast';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
+import { EmptyState } from '@/shared/ui/EmptyState';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 import { PageSkeleton } from '@/shared/ui/PageSkeleton';
+import { RefreshStatus } from '@/shared/ui/RefreshStatus';
 import { formatLocalDate, toLocalDate } from '@/shared/utils/dates';
 import { isValidLocalDate } from '@/shared/validation/localDate';
-import type { DailyTarget } from '@/domain/models/targets';
 
 export function FoodJournalPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -27,6 +32,7 @@ export function FoodJournalPage() {
   const navigate = useNavigate();
   const toast = useToast();
   const handledFeedbackRef = useRef<string | undefined>(undefined);
+  const initializedMealDateRef = useRef<string | undefined>(undefined);
   const locationState = location.state as FoodJournalNavigationState | null;
   const requestedDate = searchParams.get('date') ?? '';
   const date = isValidLocalDate(requestedDate) ? requestedDate : toLocalDate();
@@ -35,6 +41,7 @@ export function FoodJournalPage() {
     status,
     errorMessage,
     busyId,
+    isRefreshing,
     refresh,
     duplicate,
     remove,
@@ -47,12 +54,35 @@ export function FoodJournalPage() {
   const [copyTargetDate, setCopyTargetDate] = useState(date);
   const [target, setTarget] = useState<DailyTarget>();
   const [dayOptionsOpen, setDayOptionsOpen] = useState(false);
+  const [addSheetOpen, setAddSheetOpen] = useState(false);
+  const [expandedMealSlot, setExpandedMealSlot] = useState<MealSlot>('breakfast');
   const [highlightedEntryId, setHighlightedEntryId] = useState<string>();
   const [returnFeedback, setReturnFeedback] = useState(locationState?.foodJournalFeedback);
 
+  const setJournalDate = (nextDate: string) => {
+    if (!isValidLocalDate(nextDate)) return;
+    setExpandedMealSlot('breakfast');
+    setDayOptionsOpen(false);
+    setSearchParams({ date: nextDate });
+  };
+
   useEffect(() => {
+    let active = true;
     setCopyTargetDate(date);
-    void repositories.targets.getTargetByDate(date).then(setTarget);
+    setTarget(undefined);
+    void repositories.targets.getTargetByDate(date).then((nextTarget) => {
+      if (active) setTarget(nextTarget);
+    });
+    return () => {
+      active = false;
+    };
+  }, [date]);
+
+  useEffect(() => {
+    if (!snapshot || initializedMealDateRef.current === date) return;
+    initializedMealDateRef.current = date;
+    const firstMealWithEntries = snapshot.meals.find((meal) => meal.entries.length > 0);
+    setExpandedMealSlot(firstMealWithEntries?.slot ?? 'breakfast');
   }, [date, snapshot]);
 
   const remaining = snapshot && target
@@ -67,6 +97,7 @@ export function FoodJournalPage() {
     const feedbackKey = `${feedback.title}:${feedback.entryId ?? feedback.mealSlot}`;
     if (handledFeedbackRef.current === feedbackKey) return;
     handledFeedbackRef.current = feedbackKey;
+    setExpandedMealSlot(feedback.mealSlot);
     setReturnFeedback(feedback);
     toast.success(feedback.title);
     void navigate(currentJournalPath, { replace: true, state: null });
@@ -74,6 +105,7 @@ export function FoodJournalPage() {
 
   useEffect(() => {
     if (!snapshot || !returnFeedback) return;
+    setExpandedMealSlot(returnFeedback.mealSlot);
     setHighlightedEntryId(returnFeedback.entryId);
     window.requestAnimationFrame(() => {
       const targetElement = document.getElementById(
@@ -90,35 +122,42 @@ export function FoodJournalPage() {
     return () => window.clearTimeout(timer);
   }, [returnFeedback, snapshot]);
 
-  const navigationStates = useMemo(() => {
-    if (!snapshot) return new Map();
-    return new Map(snapshot.meals.map((meal) => [
+  const navigationStates = useMemo<ReadonlyMap<MealSlot, FoodJournalNavigationState>>(() => {
+    if (!snapshot) return new Map<MealSlot, FoodJournalNavigationState>();
+    return new Map(snapshot.meals.map((meal): [MealSlot, FoodJournalNavigationState] => [
       meal.slot,
       createFoodJournalReturnState(currentJournalPath, location.key, meal.slot),
     ]));
   }, [currentJournalPath, location.key, snapshot]);
 
+  const hasEntries = Boolean(snapshot?.entries.length);
+
   return (
     <section className="min-w-0" aria-labelledby="food-journal-title">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">Nutrition quotidienne</p>
-          <h1 id="food-journal-title" className="mt-1 text-3xl font-bold tracking-tight text-slate-950 dark:text-white">Journal alimentaire</h1>
+          <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
+            Nutrition quotidienne
+          </p>
+          <h1 id="food-journal-title" className="mt-1 text-3xl font-bold tracking-tight text-slate-950 dark:text-white">
+            Journal alimentaire
+          </h1>
           <p className="mt-2 hidden max-w-3xl text-slate-600 dark:text-slate-300 sm:block">
-            Retrouve tes repas et ajuste rapidement les quantités de la journée.
+            Suivez vos calories, vos macros et vos repas sur une seule vue quotidienne.
           </p>
         </div>
-        <div className="w-full sm:w-52">
-          <label htmlFor="food-journal-date" className="text-sm font-semibold">Journée consultée</label>
-          <input
-            id="food-journal-date"
-            type="date"
-            value={date}
-            onChange={(event) => setSearchParams({ date: event.target.value })}
-            className={`${inputClassName} mt-2`}
-          />
-        </div>
+        <Button className="w-full sm:w-auto" size="lg" onClick={() => setAddSheetOpen(true)}>
+          <Plus aria-hidden="true" className="size-5" />Ajouter un aliment
+        </Button>
       </div>
+
+      <FoodJournalDateNavigator className="mt-5" date={date} onChange={setJournalDate} />
+
+      <RefreshStatus
+        visible={isRefreshing}
+        label="Actualisation du journal…"
+        className="mt-4"
+      />
 
       {errorMessage ? (
         <InlineNotice className="mt-6" tone="error" title="Opération impossible">
@@ -131,17 +170,34 @@ export function FoodJournalPage() {
 
       {snapshot ? (
         <>
-          <FoodJournalSummary className="mt-6" totals={snapshot.totals} target={target} remaining={remaining} />
+          <FoodJournalSummary className="mt-5" totals={snapshot.totals} target={target} remaining={remaining} />
 
-          <div className="mt-4 space-y-4">
+          {!hasEntries ? (
+            <EmptyState
+              className="mt-4"
+              compact
+              icon={UtensilsCrossed}
+              title="Aucun aliment pour cette journée"
+              description="Ajoutez votre premier aliment puis complétez les repas au fil de la journée."
+              primaryAction={(
+                <Button onClick={() => setAddSheetOpen(true)}>
+                  <Plus aria-hidden="true" className="size-4" />Ajouter un aliment
+                </Button>
+              )}
+            />
+          ) : null}
+
+          <div className="mt-4 space-y-3">
             {snapshot.meals.map((meal) => (
               <FoodJournalMealCard
                 key={meal.slot}
                 date={date}
                 meal={meal}
+                expanded={expandedMealSlot === meal.slot}
                 busyId={busyId}
                 navigationState={navigationStates.get(meal.slot) ?? {}}
                 highlightedEntryId={highlightedEntryId}
+                onToggle={() => setExpandedMealSlot(meal.slot)}
                 onDuplicate={duplicate}
                 onRemove={remove}
                 onUpdateQuantity={updateQuantity}
@@ -232,6 +288,13 @@ export function FoodJournalPage() {
           </Card>
         </>
       ) : null}
+
+      <FoodJournalAddSheet
+        open={addSheetOpen}
+        date={date}
+        navigationStates={navigationStates}
+        onClose={() => setAddSheetOpen(false)}
+      />
     </section>
   );
 }

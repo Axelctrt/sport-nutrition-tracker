@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Save } from 'lucide-react';
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { SUGGESTED_WEEKLY_CHANGE_PERCENT } from '@/domain/defaults/userProfile';
 import type { WeightGoal } from '@/domain/models/profile';
@@ -19,7 +19,12 @@ interface ProfileFormProps {
   initialValues: ProfileFormValues;
   submitLabel: string;
   onSubmit: (values: ProfileFormValues) => Promise<void>;
+  onValuesChange?: (values: ProfileFormValues) => void;
   formId?: string;
+  secondaryAction?: {
+    label: string;
+    onClick: () => void;
+  };
 }
 
 const integerRegistrationOptions = {
@@ -38,13 +43,16 @@ export function ProfileForm({
   initialValues,
   submitLabel,
   onSubmit,
+  onValuesChange,
   formId = 'profile-form',
+  secondaryAction,
 }: ProfileFormProps) {
   const formRef = useRef<HTMLFormElement>(null);
   const {
     register,
     handleSubmit,
     watch,
+    getValues,
     setValue,
     formState: { errors, isSubmitting, submitCount },
   } = useForm<ProfileFormValues>({
@@ -52,6 +60,16 @@ export function ProfileForm({
     defaultValues: initialValues,
     mode: 'onBlur',
   });
+
+  useEffect(() => {
+    if (!onValuesChange) return undefined;
+
+    const subscription = watch(() => {
+      onValuesChange(getValues());
+    });
+
+    return () => subscription.unsubscribe();
+  }, [getValues, onValuesChange, watch]);
 
   const ageMode = watch('ageMode');
   const goal = watch('goal');
@@ -218,8 +236,8 @@ export function ProfileForm({
 
           <FormField
             id="initialWeightKg"
-            label="Poids actuel en kilogrammes"
-            description="Le poids initial sert de valeur de secours tant qu’aucune pesée quotidienne antérieure n’existe."
+            label="Poids initial du profil en kilogrammes"
+            description="Cette valeur historique reste le point de départ du profil et le secours des calculs datés. Le poids actuel provient de la dernière pesée enregistrée."
             error={errors.initialWeightKg?.message}
             required
           >
@@ -404,7 +422,19 @@ export function ProfileForm({
         </fieldset>
       </CollapsibleSection>
 
-      <div className="flex justify-end border-t border-slate-200 pt-5 dark:border-slate-800">
+      <div className="flex flex-col-reverse gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:justify-end dark:border-slate-800">
+        {secondaryAction ? (
+          <Button
+            type="button"
+            size="lg"
+            className="w-full sm:w-auto"
+            disabled={isSubmitting}
+            onClick={secondaryAction.onClick}
+            variant="secondary"
+          >
+            {secondaryAction.label}
+          </Button>
+        ) : null}
         <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={isSubmitting}>
           <Save aria-hidden="true" className="size-5" />
           {isSubmitting ? 'Enregistrement…' : submitLabel}

@@ -2,8 +2,11 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from '@/app/App';
 import { cleanupLocalDevelopmentPwa } from '@/pwa/cleanupLocalDevelopmentPwa';
+import { installPreloadErrorRecovery, schedulePreloadRecoveryReset } from '@/pwa/preloadErrorRecovery';
 import { AppSplashScreen } from '@/shared/ui/AppSplashScreen';
 import '@/styles/index.css';
+
+installPreloadErrorRecovery();
 
 const rootElement = document.getElementById('root');
 
@@ -32,6 +35,7 @@ async function bootstrap(): Promise<void> {
       <App />
     </StrictMode>,
   );
+  schedulePreloadRecoveryReset();
 }
 
 void bootstrap();

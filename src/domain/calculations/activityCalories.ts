@@ -1,5 +1,5 @@
-import { CALCULATION_VERSION } from '@/domain/calculations/constants';
-import { calculateMetCalories } from '@/domain/calculations/met';
+import { ACTIVITY_CALCULATION_VERSION } from '@/domain/calculations/constants';
+import { calculateNetMetCalories } from '@/domain/calculations/met';
 import { calculateRunningCalories } from '@/domain/calculations/running';
 import { assertNonNegativeNumber, assertPositiveNumber } from '@/domain/calculations/validation';
 import type {
@@ -36,7 +36,7 @@ export function estimateActivityCalories(
         settings.runningKcalPerKgPerKm,
       ),
       coefficientUsed: settings.runningKcalPerKgPerKm,
-      calculationVersion: CALCULATION_VERSION,
+      calculationVersion: ACTIVITY_CALCULATION_VERSION,
     };
   }
 
@@ -46,13 +46,13 @@ export function estimateActivityCalories(
 
   return {
     weightKg,
-    estimatedCaloriesKcal: calculateMetCalories(
+    estimatedCaloriesKcal: calculateNetMetCalories(
       activity.durationMinutes,
       met,
       weightKg,
     ),
     metUsed: met,
-    calculationVersion: CALCULATION_VERSION,
+    calculationVersion: ACTIVITY_CALCULATION_VERSION,
   };
 }
 

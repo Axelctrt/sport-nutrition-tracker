@@ -45,7 +45,7 @@ describe('WeightSummary', () => {
   it('utilise le poids initial avant la première pesée', () => {
     render(<WeightSummary entries={[]} profile={profile} />);
 
-    expect(screen.getByText('Poids de référence')).toBeInTheDocument();
+    expect(screen.getByText('Poids initial du profil')).toBeInTheDocument();
     expect(screen.getByText('60 kg')).toBeInTheDocument();
     expect(screen.getByText(/Ajoute une première pesée/)).toBeInTheDocument();
   });

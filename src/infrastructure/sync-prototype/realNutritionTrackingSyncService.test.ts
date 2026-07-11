@@ -267,6 +267,22 @@ describe('synchronisation C3 du suivi nutritionnel', () => {
 
   it('recalcule les objectifs quotidiens devenus obsolètes', async () => {
     await local.userProfile.add(profile());
+    await local.weights.bulkAdd([
+      {
+        id: 'weight:2026-06-23',
+        date: '2026-06-23',
+        weightKg: 72,
+        createdAt,
+        updatedAt: createdAt,
+      },
+      {
+        id: 'weight:2026-06-27',
+        date: '2026-06-27',
+        weightKg: 70,
+        createdAt,
+        updatedAt: createdAt,
+      },
+    ]);
     await local.dailyTargets.add(dailyTarget());
     await cloud.realNutritionTracking.add({
       ...aggregate(),
@@ -282,7 +298,11 @@ describe('synchronisation C3 du suivi nutritionnel', () => {
 
     expect(result.recalculatedDailyTargets).toBe(1);
     expect(await local.dailyTargets.get('daily-target:2026-07-01'))
-      .toMatchObject({ acceptedCalibrationAdjustmentKcal: 100 });
+      .toMatchObject({
+        acceptedCalibrationAdjustmentKcal: 100,
+        calculationWeightKg: 71,
+        calculationVersion: 4,
+      });
   });
 
   it('isole les bilans appartenant à un autre compte', async () => {

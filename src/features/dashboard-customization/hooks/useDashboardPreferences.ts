@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   createDefaultDashboardPreferences,
   normalizeDashboardPreferences,
+  type DashboardDensity,
   type DashboardPreferences,
 } from '@/domain/dashboard/dashboardPreferences';
 import { repositories } from '@/infrastructure/repositories/repositories';
@@ -10,6 +11,7 @@ export function useDashboardPreferences() {
   const [preferences, setPreferences] = useState<DashboardPreferences>(
     createDefaultDashboardPreferences,
   );
+  const [density, setDensity] = useState<DashboardDensity>('comfortable');
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string>();
 
@@ -19,6 +21,7 @@ export function useDashboardPreferences() {
     try {
       const settings = await repositories.settings.get();
       setPreferences(normalizeDashboardPreferences(settings.dashboardPreferences));
+      setDensity(settings.dashboardDensity ?? 'comfortable');
     } catch (error) {
       setErrorMessage(
         error instanceof Error
@@ -34,5 +37,5 @@ export function useDashboardPreferences() {
     void refresh();
   }, [refresh]);
 
-  return { preferences, isLoading, errorMessage, refresh };
+  return { preferences, density, isLoading, errorMessage, refresh };
 }

@@ -1,5 +1,5 @@
 import { calculateCalorieTarget } from '@/domain/calculations/calorieTarget';
-import { CALCULATION_VERSION } from '@/domain/calculations/constants';
+import { DAILY_TARGET_CALCULATION_VERSION } from '@/domain/calculations/constants';
 import {
   calculateDailyExpenditure,
   type DailyExpenditureInput,
@@ -10,6 +10,7 @@ import {
   type MacroTargetsResult,
 } from '@/domain/calculations/macros';
 import type { DailyMacroTargets } from '@/domain/models/targets';
+import type { PlannedActivityCalorieSnapshot } from '@/domain/models/plannedActivity';
 
 export interface DailyTargetCalculationInput extends DailyExpenditureInput {
   acceptedCalibrationAdjustmentKcal?: number;
@@ -17,6 +18,8 @@ export interface DailyTargetCalculationInput extends DailyExpenditureInput {
 
 export interface DailyTargetCalculationResult extends DailyExpenditureResult {
   calculationWeightKg: number;
+  targetWeeklyWeightChangePercentUsed: number;
+  goalRateWasNormalized: boolean;
   goalAdjustmentKcal: number;
   acceptedCalibrationAdjustmentKcal: number;
   targetBeforeFloorKcal: number;
@@ -25,16 +28,22 @@ export interface DailyTargetCalculationResult extends DailyExpenditureResult {
   floorApplied: boolean;
   macros: DailyMacroTargets;
   macroDetails: Omit<MacroTargetsResult, 'macros'>;
+  plannedActivities: PlannedActivityCalorieSnapshot[];
   calculationVersion: number;
 }
 
 export function calculateDailyTarget({
   acceptedCalibrationAdjustmentKcal = 0,
+  plannedActivities = [],
   ...expenditureInput
 }: DailyTargetCalculationInput): DailyTargetCalculationResult {
-  const expenditure = calculateDailyExpenditure(expenditureInput);
+  const expenditure = calculateDailyExpenditure({
+    ...expenditureInput,
+    plannedActivities,
+  });
   const calorieTarget = calculateCalorieTarget({
     weightKg: expenditureInput.weightKg,
+    goal: expenditureInput.profile.goal,
     targetWeeklyWeightChangePercent:
       expenditureInput.profile.targetWeeklyWeightChangePercent,
     totalEstimatedExpenditureKcal:
@@ -54,6 +63,9 @@ export function calculateDailyTarget({
   return {
     ...expenditure,
     calculationWeightKg: expenditureInput.weightKg,
+    targetWeeklyWeightChangePercentUsed:
+      calorieTarget.targetWeeklyWeightChangePercentUsed,
+    goalRateWasNormalized: calorieTarget.goalRateWasNormalized,
     goalAdjustmentKcal: calorieTarget.goalAdjustmentKcal,
     acceptedCalibrationAdjustmentKcal:
       calorieTarget.acceptedCalibrationAdjustmentKcal,
@@ -62,6 +74,7 @@ export function calculateDailyTarget({
     targetCaloriesKcal: calorieTarget.targetCaloriesKcal,
     floorApplied: calorieTarget.floorApplied,
     macros: macroResult.macros,
+    plannedActivities: [...plannedActivities],
     macroDetails: {
       fixedMacroCaloriesKcal: macroResult.fixedMacroCaloriesKcal,
       remainingCaloriesForCarbohydratesKcal:
@@ -69,6 +82,6 @@ export function calculateDailyTarget({
       carbohydratesClampedToZero:
         macroResult.carbohydratesClampedToZero,
     },
-    calculationVersion: CALCULATION_VERSION,
+    calculationVersion: DAILY_TARGET_CALCULATION_VERSION,
   };
 }

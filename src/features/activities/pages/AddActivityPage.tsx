@@ -38,7 +38,7 @@ const choices = [
   },
   {
     title: 'Vélo, marche ou cardio',
-    description: 'Activité avec valeur MET ajustable.',
+    description: 'Activité avec valeur MET ajustable et estimation nette.',
     path: routePaths.addOtherActivity,
     icon: Bike,
     tone: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200',

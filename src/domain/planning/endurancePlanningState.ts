@@ -28,6 +28,7 @@ export interface PlannedEnduranceSession {
   createdAt: string;
   updatedAt: string;
   skippedAt?: string;
+  completedActivityId?: string;
 }
 
 export interface EndurancePlanningState {
@@ -149,6 +150,9 @@ export function parseSession(
       : {}),
     ...(typeof candidate.skippedAt === 'string'
       ? { skippedAt: candidate.skippedAt }
+      : {}),
+    ...(typeof candidate.completedActivityId === 'string'
+      ? { completedActivityId: candidate.completedActivityId }
       : {}),
   };
 }

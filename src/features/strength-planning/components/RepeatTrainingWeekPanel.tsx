@@ -2,6 +2,7 @@ import {
   CalendarRange,
   Copy,
 } from 'lucide-react';
+import { addDays, parseISO } from 'date-fns';
 import {
   useEffect,
   useMemo,
@@ -21,6 +22,8 @@ import type {
   LocalDate,
 } from '@/domain/models/common';
 import { repositories } from '@/infrastructure/repositories/repositories';
+import { recalculatePlannedActivityTargetsForCurrentProfile } from '@/application/planning/plannedActivityTargetService';
+import { toLocalDate } from '@/shared/utils/dates';
 import { inputClassName } from '@/shared/forms/formStyles';
 import { useToast } from '@/shared/toast/useToast';
 import { Button } from '@/shared/ui/Button';
@@ -112,6 +115,14 @@ export function RepeatTrainingWeekPanel({
       const created =
         result.createdStrengthCount +
         result.createdEnduranceCount;
+
+      if (created > 0) {
+        await recalculatePlannedActivityTargetsForCurrentProfile(
+          Array.from({ length: 7 }, (_, index) =>
+            toLocalDate(addDays(parseISO(result.targetWeekStart), index)),
+          ),
+        );
+      }
 
       if (created === 0) {
         toast.info(

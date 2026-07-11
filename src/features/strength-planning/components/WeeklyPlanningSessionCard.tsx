@@ -3,9 +3,11 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { LocalDate } from '@/domain/models/common';
 import type { WorkoutSessionSummary } from '@/application/strength/workoutSessionService';
+import type { PlannedActivityCalorieSnapshot } from '@/domain/models/plannedActivity';
 import { getWorkoutSessionTitle } from '@/application/strength/workoutSessionService';
 import { planningDateForSession } from '@/application/strength/weeklyPlanningService';
-import { workoutSessionPath } from '@/app/routePaths';
+import { strengthSessionStyleLabels } from '@/application/planning/plannedActivityCalories';
+import { routePaths, workoutSessionPath } from '@/app/routePaths';
 import { workoutSessionStatusLabel } from '@/features/strength-sessions/utils/sessionLabels';
 import { inputClassName } from '@/shared/forms/formStyles';
 import { Button } from '@/shared/ui/Button';
@@ -14,11 +16,23 @@ import { formatLocalDate } from '@/shared/utils/dates';
 
 interface Props {
   summary: WorkoutSessionSummary;
+  calorieProjection?: PlannedActivityCalorieSnapshot;
   busy: boolean;
   highlighted?: boolean;
   onStart: (sessionId: string) => void;
   onReschedule: (sessionId: string, date: LocalDate) => Promise<boolean>;
   onSkip: (sessionId: string) => Promise<boolean>;
+}
+
+
+function simpleStrengthActivityPath(sessionId: string, date: LocalDate): string {
+  const params = new URLSearchParams({
+    date,
+    type: 'strengthTraining',
+    plannedSource: 'strengthSession',
+    plannedId: sessionId,
+  });
+  return `${routePaths.addStrengthActivity}?${params.toString()}`;
 }
 
 const statusClasses = {
@@ -31,6 +45,7 @@ const statusClasses = {
 
 export function WeeklyPlanningSessionCard({
   summary,
+  calorieProjection,
   busy,
   highlighted = false,
   onStart,
@@ -63,6 +78,13 @@ export function WeeklyPlanningSessionCard({
           <h3 className="break-words font-semibold text-slate-950 dark:text-white">{getWorkoutSessionTitle(session)}</h3>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
             {exerciseCount} exercice{exerciseCount > 1 ? 's' : ''}
+            {session.plannedDurationMinutes ? ` · ${session.plannedDurationMinutes} min prévues` : ''}
+            {session.strengthSessionStyle
+              ? ` · ${strengthSessionStyleLabels[session.strengthSessionStyle]}`
+              : ''}
+            {calorieProjection
+              ? ` · ${Math.round(calorieProjection.estimatedCaloriesKcal).toLocaleString('fr-FR')} kcal ${calorieProjection.basis === 'actualDuration' ? 'réelles' : 'estimées'}`
+              : ''}
           </p>
         </div>
         <span className={`inline-flex shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${statusClasses[session.status]}`}>
@@ -86,6 +108,12 @@ export function WeeklyPlanningSessionCard({
           <Button size="sm" disabled={busy} onClick={() => onStart(session.id)}>
             <Play aria-hidden="true" className="size-4" />Démarrer
           </Button>
+          <Link
+            to={simpleStrengthActivityPath(session.id, plannedDate)}
+            className="inline-flex min-h-10 items-center justify-center rounded-xl border border-slate-300 px-3 text-sm font-semibold text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-800"
+          >
+            Saisir en activité simple
+          </Link>
           <Button size="sm" variant="secondary" disabled={busy} onClick={() => setShowReschedule((current) => !current)}>
             <CalendarClock aria-hidden="true" className="size-4" />Reporter
           </Button>

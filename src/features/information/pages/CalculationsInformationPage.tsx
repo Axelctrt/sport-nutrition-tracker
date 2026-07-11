@@ -23,6 +23,7 @@ const formulas = [
     lines: [
       'Homme : 10 × poids + 6,25 × taille − 5 × âge + 5',
       'Femme : 10 × poids + 6,25 × taille − 5 × âge − 161',
+      'Le poids utilisé est la moyenne des pesées de la semaine civile précédente, ou le poids du profil si cette semaine ne contient aucune pesée.',
       'Le moteur applique ensuite le coefficient d’activité quotidienne sélectionné dans le profil.',
     ],
   },
@@ -44,8 +45,13 @@ const formulas = [
     icon: Activity,
     lines: [
       'Course : poids × distance × coefficient de course.',
-      'Natation et autres activités : durée × MET × 3,5 × poids / 200.',
-      'Une correction manuelle remplace l’estimation ; elle ne s’y ajoute jamais.',
+      'Natation et autres activités : durée × (MET − 1) × 3,5 × poids / 200.',
+      'Le retrait de 1 MET évite de recompter la dépense de repos déjà incluse dans le socle quotidien.',
+      'Une correction manuelle remplace l’estimation nette ; elle ne s’y ajoute jamais.',
+      'Les séances planifiées sont intégrées à l’avance lorsqu’une durée ou une distance permet une estimation.',
+      'Une activité réelle ne remplace une prévision que lorsqu’elle lui est associée explicitement ; la date et le type seuls ne suffisent plus.',
+      'Une séance détaillée de musculation utilise sa durée prévue ou réelle et un MET interne lié au type de séance.',
+      'L’Accueil distingue la cible avant sport, les calories encore prévues, les calories réellement enregistrées et l’écart entre prévision et réalisation.',
     ],
   },
   {
@@ -77,6 +83,7 @@ const formulas = [
     icon: Calculator,
     lines: [
       'Ajustement = poids × variation hebdomadaire en % × 7 700 / 7.',
+      'Le moteur impose un signe cohérent : négatif en perte, nul en maintien et positif en prise.',
       'La cible additionne la dépense, l’ajustement d’objectif et les calibrations acceptées.',
       'Le plancher calorique est protégé avant l’arrondi final au multiple de 10 kcal.',
     ],
