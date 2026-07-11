@@ -17,7 +17,9 @@ function renderHeader(pathname: string) {
 describe('PageHeader', () => {
   it('place les paramètres à gauche sur une rubrique principale', () => {
     renderHeader('/food');
-    expect(screen.getByRole('link', { name: 'Ouvrir les paramètres' })).toHaveAttribute('href', '/settings');
+    const settingsLink = screen.getByRole('link', { name: 'Ouvrir les paramètres' });
+    expect(settingsLink).toHaveAttribute('href', '/settings');
+    expect(settingsLink).toHaveClass('size-[var(--sp-touch-target)]');
     expect(screen.queryByRole('link', { name: 'Retour' })).not.toBeInTheDocument();
   });
 

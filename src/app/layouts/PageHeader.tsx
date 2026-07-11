@@ -26,7 +26,7 @@ export function PageHeader() {
               to={routePaths.settings}
               aria-label="Ouvrir les paramètres"
               title="Paramètres"
-              className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl text-slate-700 transition-colors hover:bg-slate-100 lg:hidden dark:text-slate-200 dark:hover:bg-slate-800"
+              className="inline-flex size-[var(--sp-touch-target)] shrink-0 items-center justify-center rounded-xl text-slate-700 transition-colors hover:bg-slate-100 lg:hidden dark:text-slate-200 dark:hover:bg-slate-800"
             >
               <Settings aria-hidden="true" className="size-5" />
             </Link>
@@ -35,7 +35,7 @@ export function PageHeader() {
               to={mobileHeaderBackDestination(location.pathname)}
               aria-label="Retour"
               title="Retour"
-              className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl text-slate-700 transition-colors hover:bg-slate-100 lg:hidden dark:text-slate-200 dark:hover:bg-slate-800"
+              className="inline-flex size-[var(--sp-touch-target)] shrink-0 items-center justify-center rounded-xl text-slate-700 transition-colors hover:bg-slate-100 lg:hidden dark:text-slate-200 dark:hover:bg-slate-800"
             >
               <ArrowLeft aria-hidden="true" className="size-5" />
             </Link>

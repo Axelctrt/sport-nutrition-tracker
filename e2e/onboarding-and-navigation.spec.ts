@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { createLocalProfile, expectNoCriticalHorizontalOverflow } from './helpers/app';
+import { createLocalProfile, expectPageAccessibilityBaseline } from './helpers/app';
 
 test('crée un profil local, le conserve et recharge une route directe', async ({ page }) => {
   await createLocalProfile(page, 'Axel E2E');
@@ -8,10 +8,10 @@ test('crée un profil local, le conserve et recharge une route directe', async (
   await expect(page.getByRole('heading', { name: 'Bonjour Axel E2E' })).toBeVisible();
 
   await page.goto('/#/activities');
-  await expect(page.getByRole('heading', { name: 'Activités' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Sport' })).toBeVisible();
   await page.reload({ waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('heading', { name: 'Activités' })).toBeVisible();
-  await expectNoCriticalHorizontalOverflow(page);
+  await expect(page.getByRole('heading', { name: 'Sport' })).toBeVisible();
+  await expectPageAccessibilityBaseline(page, { expectedHeading: 'Sport', checkShellTouchTargets: true });
 });
 
 test('utilise la navigation principale sur iPhone', async ({ page }, testInfo) => {
@@ -23,6 +23,6 @@ test('utilise la navigation principale sur iPhone', async ({ page }, testInfo) =
   await expect(page.getByRole('heading', { name: 'Journal alimentaire' })).toBeVisible();
 
   await navigation.getByRole('link', { name: 'Sport' }).click();
-  await expect(page.getByRole('heading', { name: 'Activités' })).toBeVisible();
-  await expectNoCriticalHorizontalOverflow(page);
+  await expect(page.getByRole('heading', { name: 'Sport' })).toBeVisible();
+  await expectPageAccessibilityBaseline(page, { expectedHeading: 'Sport', checkShellTouchTargets: true });
 });

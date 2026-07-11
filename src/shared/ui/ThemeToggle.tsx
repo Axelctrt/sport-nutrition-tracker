@@ -24,7 +24,7 @@ export function ThemeToggle() {
     <Button
       variant="ghost"
       size="sm"
-      className="size-10 px-0"
+      className="size-[var(--sp-touch-target)] px-0"
       onClick={() => setTheme(target)}
       aria-label={`${labels[theme]}. Passer à : ${labels[target]}.`}
       title={labels[theme]}
