@@ -45,4 +45,43 @@ describe('ConfirmationDialog', () => {
     fireEvent.click(screen.getAllByRole('button', { name: 'Supprimer' })[1]!);
     expect(onConfirm).toHaveBeenCalledOnce();
   });
+
+  it('utilise des identifiants ARIA uniques et expose l’état occupé', () => {
+    const firstProps = {
+      title: 'Première confirmation',
+      description: 'Première description',
+      onConfirm: vi.fn(),
+      onCancel: vi.fn(),
+    };
+    const secondProps = {
+      title: 'Deuxième confirmation',
+      description: 'Deuxième description',
+      onConfirm: vi.fn(),
+      onCancel: vi.fn(),
+    };
+
+    const view = render(
+      <>
+        <ConfirmationDialog open isPending {...firstProps} />
+        <ConfirmationDialog open={false} {...secondProps} />
+      </>,
+    );
+
+    const firstDialog = screen.getByRole('alertdialog');
+    expect(firstDialog).toHaveAttribute('aria-busy', 'true');
+    const firstLabelledBy = firstDialog.getAttribute('aria-labelledby');
+    const firstDescribedBy = firstDialog.getAttribute('aria-describedby');
+
+    view.rerender(
+      <>
+        <ConfirmationDialog open={false} {...firstProps} />
+        <ConfirmationDialog open {...secondProps} />
+      </>,
+    );
+
+    const secondDialog = screen.getByRole('alertdialog');
+    expect(secondDialog.getAttribute('aria-labelledby')).not.toBe(firstLabelledBy);
+    expect(secondDialog.getAttribute('aria-describedby')).not.toBe(firstDescribedBy);
+  });
+
 });

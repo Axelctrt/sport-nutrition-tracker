@@ -1,5 +1,5 @@
 import { createPortal } from 'react-dom';
-import { useEffect, useRef } from 'react';
+import { useEffect, useId, useRef } from 'react';
 import { Button } from '@/shared/ui/Button';
 
 interface ConfirmationDialogProps {
@@ -34,6 +34,8 @@ export function ConfirmationDialog({
   onConfirm,
   onCancel,
 }: ConfirmationDialogProps) {
+  const titleId = useId();
+  const descriptionId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
   const cancelButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -93,14 +95,15 @@ export function ConfirmationDialog({
         ref={dialogRef}
         role="alertdialog"
         aria-modal="true"
-        aria-labelledby="confirmation-dialog-title"
-        aria-describedby="confirmation-dialog-description"
+        aria-labelledby={titleId}
+        aria-describedby={descriptionId}
+        aria-busy={isPending || undefined}
         className="safe-area-bottom w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-800 dark:bg-slate-900 sm:p-6"
       >
-        <h2 id="confirmation-dialog-title" className="text-xl font-semibold text-slate-950 dark:text-white">
+        <h2 id={titleId} className="text-xl font-semibold text-slate-950 dark:text-white">
           {title}
         </h2>
-        <p id="confirmation-dialog-description" className="mt-2 leading-6 text-slate-600 dark:text-slate-300">
+        <p id={descriptionId} className="mt-2 leading-6 text-slate-600 dark:text-slate-300">
           {description}
         </p>
         <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">

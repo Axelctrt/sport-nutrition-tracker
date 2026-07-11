@@ -36,6 +36,7 @@ describe('MobileAppMenu', () => {
     renderMenu();
 
     const trigger = screen.getByRole('button', { name: 'Ouvrir le menu de l’application' });
+    expect(trigger).toHaveClass('size-[var(--sp-touch-target)]');
     await user.click(trigger);
     expect(screen.getByRole('dialog')).toBeInTheDocument();
 
