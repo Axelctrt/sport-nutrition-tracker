@@ -28,4 +28,22 @@ describe('AnalyticsSection', () => {
     expect(toggle).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByText('Graphique détaillé')).toBeInTheDocument();
   });
+
+  it('réduit une section sans données à une ligne non interactive', () => {
+    render(
+      <AnalyticsSection
+        title="Natation"
+        description="Distance et durée"
+        summary="0 km"
+        icon={Activity}
+        hasData={false}
+      >
+        <p>État vide détaillé</p>
+      </AnalyticsSection>,
+    );
+
+    expect(screen.getByLabelText('Natation sans données')).toHaveTextContent('Pas de données');
+    expect(screen.queryByRole('button', { name: /Natation/ })).not.toBeInTheDocument();
+    expect(screen.queryByText('État vide détaillé')).not.toBeInTheDocument();
+  });
 });

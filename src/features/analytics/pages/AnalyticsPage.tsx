@@ -261,6 +261,7 @@ export function AnalyticsPage() {
               summary={`${summary.runningDistance.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} km`}
               icon={Footprints}
               defaultOpen={summary.runningSessions > 0}
+              hasData={summary.runningSessions > 0}
               toneClassName="bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-200"
             >
               {summary.runningSessions === 0 ? (
@@ -321,6 +322,7 @@ export function AnalyticsPage() {
               description="Distance, durée, allure et séance la plus longue"
               summary={`${(summary.swimmingDistance / 1000).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} km`}
               icon={Waves}
+              hasData={summary.swimmingSessions > 0}
               toneClassName="bg-cyan-100 text-cyan-800 dark:bg-cyan-950 dark:text-cyan-200"
             >
               {summary.swimmingSessions === 0 ? (
@@ -380,6 +382,7 @@ export function AnalyticsPage() {
               description="Distance, durée, vitesse, dénivelé et sortie la plus longue"
               summary={`${summary.cyclingDistance.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} km`}
               icon={Bike}
+              hasData={summary.cyclingSessions > 0}
               toneClassName="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
             >
               {summary.cyclingSessions === 0 ? (
@@ -428,6 +431,7 @@ export function AnalyticsPage() {
               description="Calories et protéines comparées aux objectifs"
               summary={summary.calorieAdherence === undefined ? '—' : `${Math.round(summary.calorieAdherence)} %`}
               icon={Apple}
+              hasData={data.nutrition.some((week) => week.trackedDayCount > 0)}
               toneClassName="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
             >
               {data.nutrition.every((week) => week.trackedDayCount === 0) ? (
@@ -473,6 +477,7 @@ export function AnalyticsPage() {
               description="Pas moyens et temps sportif hebdomadaire"
               summary={formatDuration(sum(data.activity.map((week) => week.totalSportMinutes)))}
               icon={Activity}
+              hasData={data.activity.some((week) => week.recordedStepDays > 0 || week.sessionCount > 0)}
               toneClassName="bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-200"
             >
               {data.activity.every((week) => week.recordedStepDays === 0 && week.sessionCount === 0) ? (
@@ -516,6 +521,7 @@ export function AnalyticsPage() {
               description="Moyenne réelle comparée à la cible"
               summary={summary.latestWeight?.averageWeightKg === undefined ? '—' : `${summary.latestWeight.averageWeightKg.toLocaleString('fr-FR')} kg`}
               icon={Scale}
+              hasData={summary.latestWeight?.averageWeightKg !== undefined}
               toneClassName="bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-200"
             >
               {data.weight.weekly.every((week) => week.averageWeightKg === undefined) ? (
@@ -557,6 +563,7 @@ export function AnalyticsPage() {
               description="Durée cumulée par type d’activité"
               summary={formatDuration(sum(data.activityBreakdown.map((item) => item.durationMinutes)))}
               icon={CalendarRange}
+              hasData={activityPieData.length > 0}
               toneClassName="bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200"
             >
               {activityPieData.length === 0 ? (
