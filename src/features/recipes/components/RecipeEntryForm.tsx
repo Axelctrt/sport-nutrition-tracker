@@ -52,7 +52,7 @@ export function RecipeEntryForm({ details, initialValues, submitLabel, onSubmit 
           </select>
         </FormField>
         <FormField id="recipe-entry-servings" label="Portions consommées" error={errors.servingsConsumed?.message} required>
-          <input id="recipe-entry-servings" type="number" inputMode="decimal" min="0.1" step="0.1" className={inputClassName} {...register('servingsConsumed', { valueAsNumber: true })} />
+          <input id="recipe-entry-servings" data-clear-on-focus="true" type="number" inputMode="decimal" min="0.1" step="0.1" className={inputClassName} {...register('servingsConsumed', { valueAsNumber: true })} />
         </FormField>
       </div>
       <Button type="submit" disabled={isSubmitting}>

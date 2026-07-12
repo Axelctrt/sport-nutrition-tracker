@@ -7,7 +7,7 @@ interface RouteMetadata {
 }
 
 const routeMetadata: RouteMetadata[] = [
-  { pattern: routePaths.dashboard, title: "Aujourd’hui" },
+  { pattern: routePaths.dashboard, title: 'Accueil' },
   { pattern: routePaths.search, title: 'Recherche globale' },
   { pattern: routePaths.profile, title: 'Profil' },
   { pattern: routePaths.settingsProfileObjectives, title: 'Profil et objectifs' },
@@ -39,7 +39,7 @@ const routeMetadata: RouteMetadata[] = [
   { pattern: routePaths.newRecipe, title: 'Créer une recette' },
   { pattern: routePaths.editRecipe, title: 'Modifier une recette' },
   { pattern: routePaths.recipes, title: 'Recettes' },
-  { pattern: routePaths.food, title: 'Alimentation' },
+  { pattern: routePaths.food, title: 'Nutrition' },
   { pattern: routePaths.workoutSession, title: 'Séance de musculation' },
   { pattern: routePaths.newWorkoutTemplate, title: 'Créer une séance modèle' },
   { pattern: routePaths.editWorkoutTemplate, title: 'Modifier une séance modèle' },
@@ -60,8 +60,8 @@ const routeMetadata: RouteMetadata[] = [
   { pattern: routePaths.activities, title: 'Sport' },
   { pattern: routePaths.progression, title: 'Progression' },
   { pattern: routePaths.weight, title: 'Poids' },
-  { pattern: routePaths.history, title: 'Historique' },
-  { pattern: routePaths.analytics, title: 'Progression' },
+  { pattern: routePaths.history, title: 'Historique général' },
+  { pattern: routePaths.analytics, title: 'Analyses' },
   { pattern: routePaths.reports, title: 'Rapport de progression' },
   { pattern: routePaths.goals, title: 'Objectifs et jalons' },
   { pattern: routePaths.weeklyReview, title: 'Bilan hebdomadaire' },

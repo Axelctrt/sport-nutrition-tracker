@@ -82,7 +82,7 @@ export function DashboardCustomizationPage() {
     <section aria-labelledby="dashboard-customization-title" className="min-w-0 overflow-x-clip">
       <Link
         to={routePaths.dashboard}
-        className="inline-flex min-h-10 items-center gap-2 text-sm font-semibold text-brand-700 hover:underline dark:text-brand-300"
+        className="hidden min-h-10 items-center gap-2 text-sm font-semibold text-brand-700 hover:underline lg:inline-flex dark:text-brand-300"
       >
         <ArrowLeft aria-hidden="true" className="size-4" />
         Retour à l’Accueil

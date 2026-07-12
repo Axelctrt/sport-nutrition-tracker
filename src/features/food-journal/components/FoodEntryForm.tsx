@@ -109,7 +109,7 @@ export function FoodEntryForm({ initialValues, products, onSubmit, submitLabel }
           error={errors.inputQuantity?.message}
           required
         >
-          <input id="food-entry-quantity" type="number" inputMode="decimal" min="0.01" step="0.01" className={inputClassName} {...register('inputQuantity', { valueAsNumber: true })} />
+          <input id="food-entry-quantity" data-clear-on-focus="true" type="number" inputMode="decimal" min="0.01" step="0.01" className={inputClassName} {...register('inputQuantity', { valueAsNumber: true })} />
         </FormField>
       </div>
 

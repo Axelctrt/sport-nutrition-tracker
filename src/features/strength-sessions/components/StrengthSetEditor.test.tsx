@@ -54,8 +54,11 @@ describe('StrengthSetEditor', () => {
     expect(screen.getByText('1/3 lignes · 1 validée')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Série 1' })).toBeInTheDocument();
     expect(screen.getByLabelText('Charge en kg')).toHaveValue(60);
+    expect(screen.getByLabelText('Charge en kg')).toHaveAttribute('data-clear-on-focus', 'true');
     expect(screen.getByLabelText('Répétitions')).toHaveValue(12);
+    expect(screen.getByLabelText('Répétitions')).toHaveAttribute('data-clear-on-focus', 'true');
     expect(screen.getByLabelText('RPE')).toHaveValue(8);
+    expect(screen.getByLabelText('RPE')).toHaveAttribute('data-clear-on-focus', 'true');
     expect(screen.getByRole('button', { name: 'Rouvrir la série' })).toBeInTheDocument();
   });
 
