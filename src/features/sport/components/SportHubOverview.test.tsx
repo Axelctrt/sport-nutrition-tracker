@@ -75,12 +75,16 @@ describe('SportHubOverview', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole('heading', { name: 'Démarre rapidement ton activité' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Démarrer ou ajouter une activité' })).toBeInTheDocument();
     expect(screen.getByText('Haut du corps')).toBeInTheDocument();
     expect(screen.getByText('Footing facile')).toBeInTheDocument();
     expect(screen.getByText('Footing')).toBeInTheDocument();
     expect(screen.getByRole('group', { name: 'Résumé de la semaine' })).toHaveTextContent('140 min');
-    expect(screen.getByRole('group', { name: 'Activités fréquentes' })).toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: 'Activités fréquentes' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Séances détaillées/ })).toHaveAttribute(
+      'href',
+      '/strength/sessions',
+    );
   });
 
   it('ouvre le panneau de démarrage depuis l’action principale', () => {
@@ -95,7 +99,7 @@ describe('SportHubOverview', () => {
       </MemoryRouter>,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Démarrer une activité' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Choisir l’activité' }));
     expect(onStart).toHaveBeenCalledOnce();
   });
 

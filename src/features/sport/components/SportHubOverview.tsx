@@ -1,19 +1,13 @@
 import {
   Activity,
-  Bike,
   CalendarDays,
   ChevronRight,
   Clock3,
   Dumbbell,
   Flame,
-  Footprints,
-  HeartPulse,
   Layers3,
-  PersonStanding,
   Play,
   Plus,
-  Waves,
-  type LucideIcon,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -21,13 +15,9 @@ import type {
   SportHubSnapshot,
 } from '@/application/sport/sportHubService';
 import { routePaths } from '@/app/routePaths';
-import type { ActivityType } from '@/domain/models/activity';
 import type { ActivityJournalNavigationState } from '@/features/activities/navigation/activityJournalNavigation';
 import { presentActivity } from '@/features/activities/utils/activityPresentation';
-import {
-  sportActivityCreationPath,
-  sportAgendaEntryPath,
-} from '@/features/sport/sportHubNavigation';
+import { sportAgendaEntryPath } from '@/features/sport/sportHubNavigation';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { formatLocalDate } from '@/shared/utils/dates';
@@ -37,15 +27,6 @@ interface SportHubOverviewProps {
   navigationState: ActivityJournalNavigationState;
   onStart: () => void;
 }
-
-const activityChoices: Record<ActivityType, { label: string; icon: LucideIcon }> = {
-  running: { label: 'Course', icon: PersonStanding },
-  strengthTraining: { label: 'Musculation', icon: Dumbbell },
-  walking: { label: 'Marche', icon: Footprints },
-  cycling: { label: 'Vélo', icon: Bike },
-  swimming: { label: 'Natation', icon: Waves },
-  otherCardio: { label: 'Autre cardio', icon: HeartPulse },
-};
 
 function agendaStatusLabel(status: string): string {
   if (status === 'overdue') return 'En retard';
@@ -70,18 +51,18 @@ export function SportHubOverview({
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm font-semibold text-brand-800 dark:text-brand-200">
-              Que vas-tu faire aujourd’hui ?
+              Action principale
             </p>
             <h2 className="mt-1 text-xl font-bold text-slate-950 dark:text-white">
-              Démarre rapidement ton activité
+              Démarrer ou ajouter une activité
             </h2>
             <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
-              Course, musculation, marche, vélo, natation ou autre cardio.
+              Un seul point d’entrée pour choisir course, cardio, natation ou musculation détaillée.
             </p>
           </div>
           <Button size="lg" className="w-full sm:w-auto" onClick={onStart}>
             <Play aria-hidden="true" className="size-5" />
-            Démarrer une activité
+            Choisir l’activité
           </Button>
         </div>
       </Card>
@@ -154,6 +135,7 @@ export function SportHubOverview({
                 <li key={`${entry.source}-${entry.id}`}>
                   <Link
                     to={sportAgendaEntryPath(entry)}
+                    state={navigationState}
                     className="flex min-h-14 items-center gap-3 rounded-xl border border-slate-200 px-3 py-2 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/60"
                   >
                     <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
@@ -277,32 +259,6 @@ export function SportHubOverview({
         ) : null}
       </Card>
 
-      <Card role="group" className="p-4 sm:p-5" aria-label="Activités fréquentes">
-        <div>
-          <h2 className="font-bold text-slate-950 dark:text-white">Activités fréquentes</h2>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            L’ordre s’adapte à ton historique.
-          </p>
-        </div>
-        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
-          {snapshot.activityTypeOrder.map((type) => {
-            const choice = activityChoices[type];
-            const Icon = choice.icon;
-            return (
-              <Link
-                key={type}
-                to={sportActivityCreationPath(type, snapshot.today)}
-                state={navigationState}
-                className="inline-flex min-h-12 items-center gap-2 rounded-xl border border-slate-200 px-3 text-sm font-semibold text-slate-800 hover:border-brand-300 hover:bg-brand-50 dark:border-slate-800 dark:text-slate-100 dark:hover:border-brand-800 dark:hover:bg-brand-950/30"
-              >
-                <Icon aria-hidden="true" className="size-4 shrink-0 text-brand-700 dark:text-brand-300" />
-                {choice.label}
-              </Link>
-            );
-          })}
-        </div>
-      </Card>
-
       <Card className="p-4 sm:p-5" aria-label="Accès musculation">
         <div className="flex items-start gap-3">
           <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-200">
@@ -311,19 +267,16 @@ export function SportHubOverview({
           <div>
             <h2 className="font-bold text-slate-950 dark:text-white">Musculation</h2>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              Séance libre, modèles, planning et exercices.
+              Utilise la séance détaillée pour suivre les séries. L’activité simple reste réservée à une estimation rapide de durée et d’intensité.
             </p>
           </div>
         </div>
-        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div className="mt-4 grid gap-2 sm:grid-cols-3">
           <Link to={routePaths.workoutSessions} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-violet-700 px-3 text-sm font-semibold text-white hover:bg-violet-800">
-            <Play aria-hidden="true" className="size-4" /> Carnet
+            <Play aria-hidden="true" className="size-4" /> Séances détaillées
           </Link>
           <Link to={routePaths.workoutTemplates} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-slate-300 px-3 text-sm font-semibold text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-800">
             <Layers3 aria-hidden="true" className="size-4" /> Modèles
-          </Link>
-          <Link to={routePaths.weeklyPlanning} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-slate-300 px-3 text-sm font-semibold text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-800">
-            <CalendarDays aria-hidden="true" className="size-4" /> Planning
           </Link>
           <Link to={routePaths.strengthExercises} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-slate-300 px-3 text-sm font-semibold text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-800">
             <Dumbbell aria-hidden="true" className="size-4" /> Exercices
