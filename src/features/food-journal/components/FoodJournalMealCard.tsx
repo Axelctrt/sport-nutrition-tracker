@@ -279,6 +279,7 @@ export function FoodJournalMealCard({
                           </label>
                           <input
                             id={`quick-quantity-${entry.id}`}
+                            data-clear-on-focus="true"
                             type="number"
                             inputMode="decimal"
                             min="0.01"

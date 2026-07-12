@@ -71,7 +71,7 @@ export function WorkoutTemplateEditorPage() {
 
   return (
     <section aria-labelledby="workout-template-editor-title">
-      <Link to={routePaths.workoutTemplates} className="inline-flex items-center gap-2 text-sm font-semibold text-brand-700 hover:underline dark:text-brand-300"><ArrowLeft aria-hidden="true" className="size-4" />Retour aux séances modèles</Link>
+      <Link to={routePaths.workoutTemplates} className="hidden items-center gap-2 text-sm font-semibold text-brand-700 hover:underline lg:inline-flex dark:text-brand-300"><ArrowLeft aria-hidden="true" className="size-4" />Retour aux séances modèles</Link>
       <div className="mt-5">
         <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">Carnet de musculation</p>
         <h1 id="workout-template-editor-title" className="mt-1 text-3xl font-bold tracking-tight text-slate-950 dark:text-white">{templateId ? 'Modifier une séance modèle' : 'Créer une séance modèle'}</h1>

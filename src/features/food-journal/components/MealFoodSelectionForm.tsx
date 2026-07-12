@@ -149,6 +149,7 @@ export function MealFoodSelectionForm({
         >
           <input
             id="meal-selector-quantity"
+            data-clear-on-focus="true"
             type="number"
             inputMode="decimal"
             min="0.01"

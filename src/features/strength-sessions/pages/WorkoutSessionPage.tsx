@@ -334,7 +334,7 @@ export function WorkoutSessionPage() {
         <Button className="mt-3" variant="secondary" onClick={() => void refresh()}>
           Réessayer
         </Button>
-        <Link className="mt-3 ml-3 inline-flex font-semibold text-brand-700 hover:underline dark:text-brand-300" to={routePaths.workoutSessions}>
+        <Link className="mt-3 ml-3 hidden font-semibold text-brand-700 hover:underline lg:inline-flex dark:text-brand-300" to={routePaths.workoutSessions}>
           Retour aux entraînements
         </Link>
       </InlineNotice>
@@ -351,7 +351,7 @@ export function WorkoutSessionPage() {
     >
       <Link
         to={routePaths.workoutSessions}
-        className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-brand-700 hover:underline dark:text-brand-300"
+        className="hidden min-h-11 items-center gap-2 text-sm font-semibold text-brand-700 hover:underline lg:inline-flex dark:text-brand-300"
       >
         <ArrowLeft aria-hidden="true" className="size-4" />
         Retour aux entraînements

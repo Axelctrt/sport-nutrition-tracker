@@ -211,7 +211,7 @@ export function FoodProductEditorPage() {
       <Link
         to={returnPath}
         state={mealReturnContext ? location.state : createFoodLibraryRestoreState(libraryReturn)}
-        className="inline-flex items-center gap-2 text-sm font-semibold text-brand-700 hover:underline dark:text-brand-300"
+        className="hidden items-center gap-2 text-sm font-semibold text-brand-700 hover:underline lg:inline-flex dark:text-brand-300"
       >
         <ArrowLeft aria-hidden="true" className="size-4" />
         {mealReturnContext ? 'Retour au choix de l’aliment' : 'Retour aux aliments'}

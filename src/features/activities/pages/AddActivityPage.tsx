@@ -57,7 +57,7 @@ export function AddActivityPage() {
       <Link
         to={backPath}
         state={backState}
-        className="inline-flex min-h-11 items-center gap-2 rounded-xl px-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
+        className="hidden min-h-11 items-center gap-2 rounded-xl px-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 lg:inline-flex dark:text-slate-200 dark:hover:bg-slate-800"
       >
         <ArrowLeft aria-hidden="true" className="size-4" />
         Retour aux activités
