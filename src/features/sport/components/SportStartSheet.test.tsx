@@ -30,6 +30,14 @@ describe('SportStartSheet', () => {
     expect(links[0]).toHaveAccessibleName(/Marche/);
     expect(links[0]).toHaveAttribute('href', '/activities/add/other?date=2026-07-10&type=walking');
     expect(links[1]).toHaveAccessibleName(/Course/);
+    expect(screen.getByRole('link', { name: /Musculation détaillée/ })).toHaveAttribute(
+      'href',
+      '/strength/sessions',
+    );
+    expect(screen.getByRole('link', { name: /Ajouter une activité simple/ })).toHaveAttribute(
+      'href',
+      '/activities/add/strength?date=2026-07-10',
+    );
   });
 
   it('ferme le panneau lorsqu’une méthode est choisie', () => {

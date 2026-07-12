@@ -31,7 +31,7 @@ const choices = [
   },
   {
     title: 'Musculation simple',
-    description: 'Durée, intensité et estimation énergétique.',
+    description: 'Durée et intensité uniquement, sans suivi des séries.',
     path: routePaths.addStrengthActivity,
     icon: Dumbbell,
     tone: 'bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-200',
@@ -69,7 +69,7 @@ export function AddActivityPage() {
           Ajouter une activité
         </h1>
         <p className="mt-2 hidden max-w-2xl text-slate-600 dark:text-slate-300 sm:block">
-          Choisis le type de séance. Le formulaire adaptera automatiquement les champs et les calculs.
+          Choisis une activité cardio ou une musculation simple. Pour suivre les séries, utilise plutôt les séances détaillées.
         </p>
       </div>
 
@@ -95,25 +95,48 @@ export function AddActivityPage() {
         ))}
       </div>
 
-      <Card className="mt-4 p-4 sm:p-5">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-3">
-            <Layers3 aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-emerald-700 dark:text-emerald-300" />
-            <div>
-              <h2 className="font-semibold text-slate-950 dark:text-white">Modèles d’endurance</h2>
-              <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                Préremplis une course, une natation ou une sortie vélo, puis adapte la séance du jour.
-              </p>
+      <div className="mt-4 grid gap-3 lg:grid-cols-2">
+        <Card className="p-4 sm:p-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <Layers3 aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-emerald-700 dark:text-emerald-300" />
+              <div>
+                <h2 className="font-semibold text-slate-950 dark:text-white">Modèles d’endurance</h2>
+                <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                  Préremplis une course, une natation ou une sortie vélo, puis adapte la séance du jour.
+                </p>
+              </div>
             </div>
+            <Link
+              to={routePaths.enduranceTemplates}
+              className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl border border-slate-300 px-4 text-sm font-semibold text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-800"
+            >
+              Gérer les modèles
+            </Link>
           </div>
-          <Link
-            to={routePaths.enduranceTemplates}
-            className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl border border-slate-300 px-4 text-sm font-semibold text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-800"
-          >
-            Gérer les modèles
-          </Link>
-        </div>
-      </Card>
+        </Card>
+
+        <Card className="p-4 sm:p-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <Dumbbell aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-violet-700 dark:text-violet-300" />
+              <div>
+                <h2 className="font-semibold text-slate-950 dark:text-white">Séances de musculation détaillées</h2>
+                <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                  Pour les exercices, séries, charges, repos et modèles, passe par le carnet détaillé.
+                </p>
+              </div>
+            </div>
+            <Link
+              to={routePaths.workoutSessions}
+              state={navigationState}
+              className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl bg-violet-700 px-4 text-sm font-semibold text-white hover:bg-violet-800 dark:bg-violet-600 dark:hover:bg-violet-500"
+            >
+              Ouvrir le carnet
+            </Link>
+          </div>
+        </Card>
+      </div>
 
       <Card className="mt-4 p-4 sm:p-5">
         <div className="flex items-start gap-3">

@@ -136,7 +136,7 @@ describe("backupEnvelopeSchema", () => {
     expect(parsed.data.appSettings![0]?.enduranceTemplates).toHaveLength(4);
     expect(parsed.data.appSettings![0]?.dashboardPreferences).toMatchObject({
       preset: "balanced",
-      hidden: [],
+      hidden: ['calculationDetails', 'rewardsOverview', 'weeklyMissions'],
       quickActions: expect.arrayContaining(["addFood", "workout"]),
       summaryMetrics: ["macros", "steps", "weight"],
     });
