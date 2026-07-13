@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
 import panelSource from '@/features/settings/components/UnifiedSyncCenterPanel.tsx?raw';
+import advancedDetailsSource from '@/features/settings/components/UnifiedSyncCenterAdvancedDetails.tsx?raw';
 import orchestratorSource from '@/application/sync/syncOrchestrator.ts?raw';
 import historySource from '@/application/sync/syncOperationHistory.ts?raw';
+
+const syncCenterSource = `${panelSource}
+${advancedDetailsSource}`;
 
 describe('préparation F3 — transparence de synchronisation', () => {
   it('journalise toutes les exécutions de l’orchestrateur', () => {
@@ -12,10 +16,10 @@ describe('préparation F3 — transparence de synchronisation', () => {
   });
 
   it('affiche l’historique et distingue les sources', () => {
-    expect(panelSource).toContain('Historique récent');
-    expect(panelSource).toContain('syncSourceLabel(entry.source)');
-    expect(panelSource).toContain('Dernière réussite');
-    expect(panelSource).toContain('Dernier échec');
+    expect(syncCenterSource).toContain('Historique récent');
+    expect(syncCenterSource).toContain('syncSourceLabel(entry.source)');
+    expect(syncCenterSource).toContain('Dernière réussite');
+    expect(syncCenterSource).toContain('Dernier échec');
   });
 
   it('présente les divergences sans choix destructeur silencieux', () => {

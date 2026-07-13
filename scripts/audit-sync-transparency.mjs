@@ -3,7 +3,10 @@ import { readFileSync } from 'node:fs';
 const files = {
   orchestrator: readFileSync('src/application/sync/syncOrchestrator.ts', 'utf8'),
   history: readFileSync('src/application/sync/syncOperationHistory.ts', 'utf8'),
-  panel: readFileSync('src/features/settings/components/UnifiedSyncCenterPanel.tsx', 'utf8'),
+  panel: [
+    readFileSync('src/features/settings/components/UnifiedSyncCenterPanel.tsx', 'utf8'),
+    readFileSync('src/features/settings/components/UnifiedSyncCenterAdvancedDetails.tsx', 'utf8'),
+  ].join('\n'),
   readiness: readFileSync('src/app/syncTransparencyReadiness.test.ts', 'utf8'),
 };
 
