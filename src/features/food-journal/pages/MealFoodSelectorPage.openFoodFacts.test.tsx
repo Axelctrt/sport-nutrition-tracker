@@ -33,6 +33,7 @@ beforeAll(() => {
 });
 
 beforeEach(async () => {
+  localStorage.clear();
   Object.defineProperty(navigator, 'onLine', {
     configurable: true,
     value: true,
@@ -68,7 +69,8 @@ describe('MealFoodSelectorPage — Open Food Facts intégré', () => {
     });
     renderSelector();
 
-    await user.click(await screen.findByRole('button', { name: /^Open Food Facts/ }));
+    await user.click(await screen.findByText('Autres méthodes'));
+    await user.click(screen.getByRole('button', { name: /^Open Food Facts/ }));
     await user.type(screen.getByLabelText('Rechercher dans Open Food Facts'), 'pâte noisettes');
     await user.click(screen.getByRole('button', { name: 'Rechercher' }));
 
@@ -114,7 +116,8 @@ describe('MealFoodSelectorPage — Open Food Facts intégré', () => {
     });
     renderSelector();
 
-    await user.click(await screen.findByRole('button', { name: /^Open Food Facts/ }));
+    await user.click(await screen.findByText('Autres méthodes'));
+    await user.click(screen.getByRole('button', { name: /^Open Food Facts/ }));
     await user.type(screen.getByLabelText('Rechercher dans Open Food Facts'), 'yaourt');
     await user.click(screen.getByRole('button', { name: 'Rechercher' }));
 
@@ -129,11 +132,13 @@ describe('MealFoodSelectorPage — Open Food Facts intégré', () => {
     );
     renderSelector();
 
-    await user.click(await screen.findByRole('button', { name: /^Open Food Facts/ }));
+    await user.click(await screen.findByText('Autres méthodes'));
+    await user.click(screen.getByRole('button', { name: /^Open Food Facts/ }));
     await user.type(screen.getByLabelText('Rechercher dans Open Food Facts'), 'yaourt');
     await user.click(screen.getByRole('button', { name: 'Rechercher' }));
 
     expect(await screen.findByText('Open Food Facts est temporairement indisponible.')).toBeInTheDocument();
+    await user.click(screen.getByText('Autres méthodes'));
     expect(screen.getByRole('button', { name: /^Mes aliments/ })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /^Ajout manuel/ })).toBeInTheDocument();
   });

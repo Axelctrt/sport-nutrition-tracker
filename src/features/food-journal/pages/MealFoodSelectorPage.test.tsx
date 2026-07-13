@@ -13,6 +13,7 @@ beforeAll(() => {
 });
 
 beforeEach(async () => {
+  localStorage.clear();
   appDatabase.close();
   await appDatabase.delete();
   await appDatabase.open();
@@ -74,6 +75,7 @@ describe('MealFoodSelectorPage', () => {
     expect(await screen.findByRole('button', { name: /^Récents/ })).toHaveAttribute('aria-pressed', 'true');
 
     await user.click(screen.getByRole('button', { name: 'Choisir cet aliment' }));
+    expect(localStorage.getItem('sportpilot:nutrition:last-add-method:v1')).toContain('recent');
 
     await waitFor(() => {
       expect(document.querySelector('#meal-selector-slot')).not.toBeNull();
