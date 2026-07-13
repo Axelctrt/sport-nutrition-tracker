@@ -57,8 +57,8 @@ if (failures.length === 0) {
 
   const page = read('src/features/photo-nutrition/pages/PhotoNutritionEstimatePage.tsx');
   for (const marker of [
-    'Analyse IA sécurisée',
-    'J’autorise l’envoi ponctuel de cette photo au proxy IA',
+    'Autoriser l’analyse IA pour cette photo',
+    'Autoriser l’analyse IA distante pour cette photo',
     'createRemotePhotoNutritionAnalysisPort',
     'readPhotoNutritionAiConfig',
     'Analyser avec l’IA',

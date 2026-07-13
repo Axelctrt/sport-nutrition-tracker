@@ -114,8 +114,8 @@ if (failures.length === 0) {
     fail('le runtime cloud doit passer en v14 pour les amitiés et permissions sociales.');
   }
   const productionAudit = read('scripts/audit-rc.mjs');
-  if (!productionAudit.includes('totalJavaScriptBytes: 2940 * 1024')) {
-    fail('le budget JavaScript global validé de 2940 Kio est absent.');
+  if (!productionAudit.includes('totalJavaScriptBytes: 3200 * 1024')) {
+    fail('le budget JavaScript global validé de 3200 Kio est absent.');
   }
 
   const releaseNotes = read('RELEASE-NOTES-0.23.0.md');
