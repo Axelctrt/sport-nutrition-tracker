@@ -1,6 +1,7 @@
 import {
   AlertTriangle,
   CheckCircle2,
+  ChevronDown,
   ChevronRight,
   CloudCog,
   Clock3,
@@ -9,6 +10,7 @@ import {
   WifiOff,
   History,
   ShieldAlert,
+  UserRound,
 } from 'lucide-react';
 import {
   useCallback,
@@ -63,6 +65,7 @@ interface Props {
   readonly client?: SyncPrototypeClient | null;
   readonly activeDetailId?: UnifiedSyncDetailId | undefined;
   readonly onOpenDetail?: (detailId: UnifiedSyncDetailId) => void;
+  readonly initializeClient?: boolean;
 }
 
 type UnifiedDomainId = SyncOrchestratorDomainId;
@@ -600,6 +603,7 @@ export function UnifiedSyncCenterPanel({
   client: clientOverride,
   activeDetailId,
   onOpenDetail,
+  initializeClient = true,
 }: Props) {
   const runtime = useMemo(
     () => clientOverride === undefined ? resolveClient() : { client: clientOverride },
@@ -645,8 +649,9 @@ export function UnifiedSyncCenterPanel({
           : {}),
       }
     : undefined;
-  const [isInitializing, setIsInitializing] = useState(Boolean(client));
+  const [isInitializing, setIsInitializing] = useState(Boolean(client && initializeClient));
   const [isOnline, setIsOnline] = useState(() => navigator.onLine !== false);
+  const [isAdvancedOpen, setIsAdvancedOpen] = useState(Boolean(activeDetailId));
   const [failures, setFailures] = useState<Partial<Record<UnifiedDomainId, DomainFailure>>>({});
   const [lastOperation, setLastOperation] = useState<UnifiedOperation>('analyze');
   const [confirmation, setConfirmation] = useState<ConfirmationState>();
@@ -671,6 +676,10 @@ export function UnifiedSyncCenterPanel({
   }, [storageKey]);
 
   useEffect(() => {
+    if (activeDetailId) setIsAdvancedOpen(true);
+  }, [activeDetailId]);
+
+  useEffect(() => {
     const refresh = () => setOperationHistory(readSyncOperationHistory(accountKey));
     refresh();
     window.addEventListener(SYNC_OPERATION_HISTORY_CHANGED_EVENT, refresh);
@@ -688,7 +697,7 @@ export function UnifiedSyncCenterPanel({
   }, []);
 
   useEffect(() => {
-    if (!client) {
+    if (!client || !initializeClient) {
       setIsInitializing(false);
       return;
     }
@@ -710,7 +719,7 @@ export function UnifiedSyncCenterPanel({
     return () => {
       mounted = false;
     };
-  }, [client]);
+  }, [client, initializeClient]);
 
   const persistHistory = useCallback((nextHistory: SyncHistory) => {
     setHistory(nextHistory);
@@ -856,7 +865,16 @@ export function UnifiedSyncCenterPanel({
             ? `${totalDifferences} ${totalDifferences > 1 ? 'différences' : 'différence'}`
             : analyzedDomains.length === enabledDomains.length && enabledDomains.length > 0
               ? 'Tout est à jour'
-              : 'Prêt à analyser';
+              : snapshot.sync.phase === 'in-sync'
+                ? 'Synchronisation active'
+                : 'Prêt à synchroniser';
+
+  const accountDisplayLabel =
+    snapshot.account.email ?? snapshot.account.displayName ?? 'Compte connecté';
+  const lastSuccessfulSyncAt =
+    operationSummary.lastSuccessfulSync?.completedAt ??
+    history.lastSyncAt ??
+    snapshot.diagnostics.lastSyncCompletedAt;
 
   return (
     <div className="space-y-4">
@@ -866,14 +884,11 @@ export function UnifiedSyncCenterPanel({
             <div className="flex items-center gap-2">
               <CloudCog aria-hidden="true" className="size-6 text-brand-700 dark:text-brand-300" />
               <h3 className="text-lg font-semibold text-slate-950 dark:text-white">
-                Centre de synchronisation
+                Synchronisation du compte
               </h3>
             </div>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
-              Analyse ou synchronise toutes les rubriques du compte, sans masquer les erreurs ni interrompre les domaines restants.
-            </p>
-            <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">
-              Orchestrateur par compte · exécution séquentielle · file d’attente : {orchestratorSnapshot.queueLength}
+              Vérifie l’état général puis synchronise les données de ce compte. Les diagnostics et les rubriques détaillées restent disponibles dans les options avancées.
             </p>
           </div>
           <span className={cn(
@@ -890,9 +905,30 @@ export function UnifiedSyncCenterPanel({
           </span>
         </div>
 
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <div className="rounded-xl border border-slate-200/80 bg-white p-3 dark:border-slate-800 dark:bg-slate-950">
+            <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
+              <UserRound aria-hidden="true" className="size-4" />
+              <p className="text-xs font-semibold uppercase tracking-wide">Compte actif</p>
+            </div>
+            <p className="mt-1 break-all text-sm font-bold text-slate-950 dark:text-white">
+              {accountReady ? accountDisplayLabel : 'Aucun compte connecté'}
+            </p>
+          </div>
+          <div className="rounded-xl border border-slate-200/80 bg-white p-3 dark:border-slate-800 dark:bg-slate-950">
+            <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
+              <Clock3 aria-hidden="true" className="size-4" />
+              <p className="text-xs font-semibold uppercase tracking-wide">Dernière synchronisation réussie</p>
+            </div>
+            <p className="mt-1 text-sm font-bold text-slate-950 dark:text-white">
+              {formatTimestamp(lastSuccessfulSyncAt)}
+            </p>
+          </div>
+        </div>
+
         {!accountReady ? (
           <InlineNotice className="mt-4" tone="info" title="Connexion requise">
-            Connecte le compte associé à cet espace avant d’analyser ou de synchroniser toutes les rubriques.
+            Connecte le compte associé à cet espace avant de synchroniser les données.
           </InlineNotice>
         ) : null}
 
@@ -900,52 +936,25 @@ export function UnifiedSyncCenterPanel({
           <InlineNotice className="mt-4" tone="info" title="Mode hors connexion">
             <span className="inline-flex items-center gap-2">
               <WifiOff aria-hidden="true" className="size-4" />
-              Les données locales restent utilisables. Les actions cloud reprendront après le retour du réseau.
+              Les données locales restent utilisables. Les échanges reprendront après le retour du réseau.
             </span>
           </InlineNotice>
         ) : null}
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-xl border border-slate-200/80 bg-white p-3 dark:border-slate-800 dark:bg-slate-950">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Rubriques à jour</p>
-            <p className="mt-1 text-2xl font-bold text-slate-950 dark:text-white">{upToDateCount}/{enabledDomains.length}</p>
-          </div>
-          <div className="rounded-xl border border-slate-200/80 bg-white p-3 dark:border-slate-800 dark:bg-slate-950">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Différences</p>
-            <p className="mt-1 text-2xl font-bold text-slate-950 dark:text-white">{totalDifferences}</p>
-          </div>
-          <div className="rounded-xl border border-slate-200/80 bg-white p-3 dark:border-slate-800 dark:bg-slate-950">
-            <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
-              <Clock3 aria-hidden="true" className="size-4" />
-              <p className="text-xs font-semibold uppercase tracking-wide">Dernière analyse</p>
-            </div>
-            <p className="mt-1 text-sm font-bold text-slate-950 dark:text-white">{formatTimestamp(history.lastAnalysisAt)}</p>
-          </div>
-          <div className="rounded-xl border border-slate-200/80 bg-white p-3 dark:border-slate-800 dark:bg-slate-950">
-            <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
-              <Clock3 aria-hidden="true" className="size-4" />
-              <p className="text-xs font-semibold uppercase tracking-wide">Dernière synchronisation</p>
-            </div>
-            <p className="mt-1 text-sm font-bold text-slate-950 dark:text-white">{formatTimestamp(history.lastSyncAt)}</p>
-          </div>
-        </div>
-
         <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-          <Button
-            variant="secondary"
-            onClick={() => void runDomains('analyze')}
-            disabled={actionDisabled}
-          >
-            <Search aria-hidden="true" className="size-4" />
-            {busy?.operation === 'analyze' ? 'Analyse en cours…' : 'Analyser tout'}
-          </Button>
           <Button
             onClick={() => setConfirmation({ target: 'all' })}
             disabled={actionDisabled}
           >
-            <RefreshCw aria-hidden="true" className={cn('size-4', busy?.operation === 'sync' && 'animate-spin')} />
-            {busy?.operation === 'sync' ? 'Synchronisation en cours…' : 'Synchroniser tout'}
+            <RefreshCw aria-hidden="true" className={cn('size-4', busy?.operation === 'sync' && 'animate-spin motion-reduce:animate-none')} />
+            {busy?.operation === 'sync' ? 'Synchronisation en cours…' : 'Synchroniser maintenant'}
           </Button>
+          <Link
+            to={routePaths.accountDevices}
+            className="inline-flex min-h-11 items-center justify-center rounded-xl px-4 text-sm font-semibold text-brand-700 hover:bg-white/70 dark:text-brand-300 dark:hover:bg-slate-900"
+          >
+            Gérer le compte et les appareils
+          </Link>
           {activeFailures.length > 0 ? (
             <Button
               variant="dangerGhost"
@@ -990,8 +999,9 @@ export function UnifiedSyncCenterPanel({
                 <Button variant="secondary" onClick={() => {
                   const first = differingDomains[0];
                   if (!first) return;
+                  setIsAdvancedOpen(true);
                   if (onOpenDetail) onOpenDetail(first.detailId);
-                  else scrollToDetail(first.detailId);
+                  else window.setTimeout(() => scrollToDetail(first.detailId), 0);
                 }}>
                   Examiner les différences
                 </Button>
@@ -1007,127 +1017,180 @@ export function UnifiedSyncCenterPanel({
         </div>
       ) : null}
 
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
-        <div className="border-b border-slate-200 px-4 py-3 dark:border-slate-800 sm:px-5">
-          <div className="flex items-center gap-2">
-            <History aria-hidden="true" className="size-5 text-brand-600" />
-            <h4 className="font-semibold text-slate-950 dark:text-white">Historique récent</h4>
-          </div>
-          <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-            Opérations manuelles et automatiques enregistrées localement pour ce compte.
-          </p>
-        </div>
-        {operationHistory.length === 0 ? (
-          <p className="px-4 py-5 text-sm text-slate-600 dark:text-slate-300 sm:px-5">Aucune opération enregistrée.</p>
-        ) : (
-          <ul className="divide-y divide-slate-200 dark:divide-slate-800">
-            {operationHistory.slice(0, 6).map((entry) => (
-              <li key={entry.id} className="flex flex-col gap-1 px-4 py-3 sm:px-5">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="font-semibold text-slate-950 dark:text-white">
-                    {historyOperationLabel(entry)} · {historyOutcomeLabel(entry)}
-                  </p>
-                  <time className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                    {formatTimestamp(entry.completedAt)}
-                  </time>
-                </div>
-                <p className="text-sm text-slate-600 dark:text-slate-300">
-                  {syncSourceLabel(entry.source)} · {entry.completedDomainIds.length} rubrique(s) terminée(s)
-                  {entry.failedDomainIds.length > 0 ? ` · ${entry.failedDomainIds.length} en échec` : ''}
-                  {entry.differingEntityCount > 0 ? ` · ${entry.differingEntityCount} différence(s)` : ''}
-                </p>
-              </li>
-            ))}
-          </ul>
-        )}
-        <div className="grid gap-3 border-t border-slate-200 p-4 dark:border-slate-800 sm:grid-cols-2 sm:px-5">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Dernière réussite</p>
-            <p className="mt-1 text-sm font-semibold text-slate-950 dark:text-white">
-              {operationSummary.lastSuccessfulSync ? formatTimestamp(operationSummary.lastSuccessfulSync.completedAt) : 'Jamais'}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Dernier échec</p>
-            <p className="mt-1 text-sm font-semibold text-slate-950 dark:text-white">
-              {operationSummary.lastFailure ? formatTimestamp(operationSummary.lastFailure.completedAt) : 'Aucun'}
-            </p>
-          </div>
-        </div>
-      </div>
+      <details
+        className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950"
+        open={isAdvancedOpen}
+        onToggle={(event) => setIsAdvancedOpen(event.currentTarget.open)}
+      >
+        <summary className="flex min-h-16 cursor-pointer list-none items-center gap-3 px-4 py-3 font-semibold text-slate-950 marker:hidden hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-600 dark:text-white dark:hover:bg-slate-900 sm:px-5">
+          <CloudCog aria-hidden="true" className="size-5 text-brand-600" />
+          <span className="min-w-0 flex-1">
+            <span className="block">Détails techniques et historique</span>
+            <span className="mt-0.5 block text-sm font-normal text-slate-600 dark:text-slate-300">
+              Analyse, file d’attente, opérations récentes et état par rubrique.
+            </span>
+          </span>
+          <ChevronDown
+            aria-hidden="true"
+            className={cn('size-5 shrink-0 text-slate-500 transition-transform motion-reduce:transition-none', isAdvancedOpen && 'rotate-180')}
+          />
+        </summary>
 
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
-        <div className="border-b border-slate-200 px-4 py-3 dark:border-slate-800 sm:px-5">
-          <h4 className="font-semibold text-slate-950 dark:text-white">État par rubrique</h4>
-          <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-            Ouvre uniquement la rubrique dont tu as besoin avec le bouton Détail.
+        <div className="space-y-4 border-t border-slate-200 p-4 dark:border-slate-800 sm:p-5">
+          <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+            Orchestrateur par compte · exécution séquentielle · file d’attente : {orchestratorSnapshot.queueLength}
           </p>
-        </div>
-        <ul className="divide-y divide-slate-200 dark:divide-slate-800">
-          {domains.map((domain) => {
-            if (!domain.enabled) return null;
-            const failure = failures[domain.id];
-            const status = domainStatus(
-              domain,
-              failure,
-              orchestratorSnapshot.domains[domain.id].status,
-            );
-            const errorMessage = failure?.message ?? domain.snapshotErrorMessage;
-            return (
-              <li key={domain.id} className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    {status === 'up-to-date' ? (
-                      <CheckCircle2 aria-hidden="true" className="size-5 shrink-0 text-emerald-600" />
-                    ) : status === 'error' ? (
-                      <AlertTriangle aria-hidden="true" className="size-5 shrink-0 text-red-600" />
-                    ) : (
-                      <CloudCog aria-hidden="true" className="size-5 shrink-0 text-brand-600" />
-                    )}
-                    <p className="font-semibold text-slate-950 dark:text-white">{domain.label}</p>
-                  </div>
-                  <p className="mt-1 text-sm leading-5 text-slate-600 dark:text-slate-300">{domain.description}</p>
-                  {domain.id === 'nutrition-journal' && status === 'differences' ? (
-                    <p className="mt-1 text-sm font-medium text-amber-700 dark:text-amber-300">
-                      Une pesée ou un réglage de calcul peut modifier l’objectif quotidien sans changer les aliments.
+
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-xl border border-slate-200/80 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Rubriques à jour</p>
+              <p className="mt-1 text-2xl font-bold text-slate-950 dark:text-white">{upToDateCount}/{enabledDomains.length}</p>
+            </div>
+            <div className="rounded-xl border border-slate-200/80 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Différences</p>
+              <p className="mt-1 text-2xl font-bold text-slate-950 dark:text-white">{totalDifferences}</p>
+            </div>
+            <div className="rounded-xl border border-slate-200/80 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Dernière analyse</p>
+              <p className="mt-1 text-sm font-bold text-slate-950 dark:text-white">{formatTimestamp(history.lastAnalysisAt)}</p>
+            </div>
+            <div className="rounded-xl border border-slate-200/80 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">File d’attente</p>
+              <p className="mt-1 text-sm font-bold text-slate-950 dark:text-white">{orchestratorSnapshot.queueLength}</p>
+            </div>
+          </div>
+
+          <Button
+            variant="secondary"
+            onClick={() => void runDomains('analyze')}
+            disabled={actionDisabled}
+          >
+            <Search aria-hidden="true" className="size-4" />
+            {busy?.operation === 'analyze' ? 'Analyse en cours…' : 'Analyser tout'}
+          </Button>
+
+          <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800">
+            <div className="border-b border-slate-200 px-4 py-3 dark:border-slate-800 sm:px-5">
+              <div className="flex items-center gap-2">
+                <History aria-hidden="true" className="size-5 text-brand-600" />
+                <h4 className="font-semibold text-slate-950 dark:text-white">Historique récent</h4>
+              </div>
+              <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                Opérations manuelles et automatiques enregistrées localement pour ce compte.
+              </p>
+            </div>
+            {operationHistory.length === 0 ? (
+              <p className="px-4 py-5 text-sm text-slate-600 dark:text-slate-300 sm:px-5">Aucune opération enregistrée.</p>
+            ) : (
+              <ul className="divide-y divide-slate-200 dark:divide-slate-800">
+                {operationHistory.slice(0, 6).map((entry) => (
+                  <li key={entry.id} className="flex flex-col gap-1 px-4 py-3 sm:px-5">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="font-semibold text-slate-950 dark:text-white">
+                        {historyOperationLabel(entry)} · {historyOutcomeLabel(entry)}
+                      </p>
+                      <time className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                        {formatTimestamp(entry.completedAt)}
+                      </time>
+                    </div>
+                    <p className="text-sm text-slate-600 dark:text-slate-300">
+                      {syncSourceLabel(entry.source)} · {entry.completedDomainIds.length} rubrique(s) terminée(s)
+                      {entry.failedDomainIds.length > 0 ? ` · ${entry.failedDomainIds.length} en échec` : ''}
+                      {entry.differingEntityCount > 0 ? ` · ${entry.differingEntityCount} différence(s)` : ''}
                     </p>
-                  ) : null}
-                  {errorMessage ? (
-                    <p className="mt-1 text-sm font-medium text-red-700 dark:text-red-300">{errorMessage}</p>
-                  ) : null}
-                </div>
-                <div className="flex shrink-0 items-center gap-2 sm:justify-end">
-                  <span className={cn('inline-flex min-h-8 items-center rounded-full px-3 text-xs font-semibold', statusClasses(status))}>
-                    {statusLabel(status, domain.differingEntityCount)}
-                  </span>
-                  <button
-                    type="button"
-                    aria-expanded={activeDetailId === domain.detailId}
-                    onClick={() => {
-                      if (onOpenDetail) {
-                        onOpenDetail(domain.detailId);
-                        return;
-                      }
-                      scrollToDetail(domain.detailId);
-                    }}
-                    className="inline-flex min-h-9 items-center gap-1 rounded-xl px-2 text-sm font-semibold text-brand-700 hover:bg-brand-50 dark:text-brand-300 dark:hover:bg-brand-950/30"
-                  >
-                    {activeDetailId === domain.detailId ? 'Masquer' : 'Détail'}
-                    <ChevronRight
-                      aria-hidden="true"
-                      className={cn(
-                        'size-4 transition-transform motion-reduce:transition-none',
-                        activeDetailId === domain.detailId && 'rotate-90',
-                      )}
-                    />
-                  </button>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="grid gap-3 border-t border-slate-200 p-4 dark:border-slate-800 sm:grid-cols-2 sm:px-5">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Dernière réussite</p>
+                <p className="mt-1 text-sm font-semibold text-slate-950 dark:text-white">
+                  {operationSummary.lastSuccessfulSync ? formatTimestamp(operationSummary.lastSuccessfulSync.completedAt) : 'Jamais'}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Dernier échec</p>
+                <p className="mt-1 text-sm font-semibold text-slate-950 dark:text-white">
+                  {operationSummary.lastFailure ? formatTimestamp(operationSummary.lastFailure.completedAt) : 'Aucun'}
+                </p>
+              </div>
+            </div>
+          </div>
 
+          <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800">
+            <div className="border-b border-slate-200 px-4 py-3 dark:border-slate-800 sm:px-5">
+              <h4 className="font-semibold text-slate-950 dark:text-white">État par rubrique</h4>
+              <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                Ouvre uniquement la rubrique dont tu as besoin avec le bouton Détail.
+              </p>
+            </div>
+            <ul className="divide-y divide-slate-200 dark:divide-slate-800">
+              {domains.map((domain) => {
+                if (!domain.enabled) return null;
+                const failure = failures[domain.id];
+                const status = domainStatus(
+                  domain,
+                  failure,
+                  orchestratorSnapshot.domains[domain.id].status,
+                );
+                const errorMessage = failure?.message ?? domain.snapshotErrorMessage;
+                return (
+                  <li key={domain.id} className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        {status === 'up-to-date' ? (
+                          <CheckCircle2 aria-hidden="true" className="size-5 shrink-0 text-emerald-600" />
+                        ) : status === 'error' ? (
+                          <AlertTriangle aria-hidden="true" className="size-5 shrink-0 text-red-600" />
+                        ) : (
+                          <CloudCog aria-hidden="true" className="size-5 shrink-0 text-brand-600" />
+                        )}
+                        <p className="font-semibold text-slate-950 dark:text-white">{domain.label}</p>
+                      </div>
+                      <p className="mt-1 text-sm leading-5 text-slate-600 dark:text-slate-300">{domain.description}</p>
+                      {domain.id === 'nutrition-journal' && status === 'differences' ? (
+                        <p className="mt-1 text-sm font-medium text-amber-700 dark:text-amber-300">
+                          Une pesée ou un réglage de calcul peut modifier l’objectif quotidien sans changer les aliments.
+                        </p>
+                      ) : null}
+                      {errorMessage ? (
+                        <p className="mt-1 text-sm font-medium text-red-700 dark:text-red-300">{errorMessage}</p>
+                      ) : null}
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2 sm:justify-end">
+                      <span className={cn('inline-flex min-h-8 items-center rounded-full px-3 text-xs font-semibold', statusClasses(status))}>
+                        {statusLabel(status, domain.differingEntityCount)}
+                      </span>
+                      <button
+                        type="button"
+                        aria-expanded={activeDetailId === domain.detailId}
+                        onClick={() => {
+                          if (onOpenDetail) {
+                            onOpenDetail(domain.detailId);
+                            return;
+                          }
+                          scrollToDetail(domain.detailId);
+                        }}
+                        className="inline-flex min-h-9 items-center gap-1 rounded-xl px-2 text-sm font-semibold text-brand-700 hover:bg-brand-50 dark:text-brand-300 dark:hover:bg-brand-950/30"
+                      >
+                        {activeDetailId === domain.detailId ? 'Masquer' : 'Détail'}
+                        <ChevronRight
+                          aria-hidden="true"
+                          className={cn(
+                            'size-4 transition-transform motion-reduce:transition-none',
+                            activeDetailId === domain.detailId && 'rotate-90',
+                          )}
+                        />
+                      </button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        </div>
+      </details>
       <ConfirmationDialog
         open={Boolean(confirmation)}
         title={confirmation?.target === 'failures' ? 'Relancer les synchronisations en échec ?' : 'Synchroniser toutes les rubriques ?'}

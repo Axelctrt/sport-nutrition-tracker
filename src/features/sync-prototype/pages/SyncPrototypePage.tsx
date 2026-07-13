@@ -42,6 +42,7 @@ import { Card } from '@/shared/ui/Card';
 import { FormField } from '@/shared/ui/FormField';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 import { ConfirmationDialog } from '@/shared/ui/ConfirmationDialog';
+import { UnifiedSyncCenterPanel } from '@/features/settings/components/UnifiedSyncCenterPanel';
 
 interface SyncPrototypePageProps {
   client?: SyncPrototypeClient;
@@ -641,7 +642,7 @@ function SyncPrototypeRuntime({
         </InlineNotice>
       ) : null}
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className={diagnosticsEnabled ? 'grid gap-4 lg:grid-cols-2' : 'grid gap-4'}>
         <Card className="p-5 sm:p-6">
           <div className="flex items-start gap-3">
             <span className="rounded-xl bg-slate-100 p-2 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
@@ -815,6 +816,7 @@ function SyncPrototypeRuntime({
           )}
         </Card>
 
+        {diagnosticsEnabled ? (
         <Card className="p-5 sm:p-6">
           <div className="flex items-start gap-3">
             <span className="rounded-xl bg-slate-100 p-2 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
@@ -902,7 +904,12 @@ function SyncPrototypeRuntime({
             </Button>
           ) : null}
         </Card>
+        ) : null}
       </div>
+
+      {!diagnosticsEnabled ? (
+        <UnifiedSyncCenterPanel client={client} initializeClient={false} />
+      ) : null}
 
       {diagnosticsEnabled ? (
         <>
