@@ -18,8 +18,10 @@ const requiredFiles = [
   'src/features/settings/settingsSectionNavigation.ts',
   'src/app/navigation.tsx',
   'src/app/layouts/DesktopSidebar.tsx',
+  'src/app/layouts/DesktopSidebar.test.tsx',
   'src/app/layouts/MobileAppMenu.tsx',
   'src/app/layouts/PageHeader.tsx',
+  'src/app/layouts/PageHeader.test.tsx',
   'docs/architecture/unified-sync-center-0.22.0-e3.md',
 ];
 for (const path of requiredFiles) {
@@ -109,20 +111,44 @@ if (failures.length === 0) {
     if (!appNavigation.includes(marker)) fail(`Correspondance exacte de navigation absente : ${marker}.`);
   }
   const desktopSidebar = read('src/app/layouts/DesktopSidebar.tsx');
-  if (!desktopSidebar.includes('end={item.end ?? false}')) {
-    fail('La navigation de bureau ne respecte pas la correspondance exacte des entrées parentes.');
+  for (const marker of [
+    'navigationItemIsActive(location.pathname, item)',
+    "aria-current={isActive ? 'page' : undefined}",
+  ]) {
+    if (!desktopSidebar.includes(marker)) {
+      fail(`La navigation de bureau ne délègue pas correctement l’état actif : ${marker}.`);
+    }
   }
+  const desktopSidebarTests = read('src/app/layouts/DesktopSidebar.test.tsx');
+  for (const marker of [
+    'ne sélectionne que Rappels sur sa route dédiée',
+    'ne sélectionne que Corbeille sur sa route dédiée',
+  ]) {
+    if (!desktopSidebarTests.includes(marker)) {
+      fail(`La correspondance exacte de la navigation desktop n’est pas testée : ${marker}.`);
+    }
+  }
+
   const mobileMenu = read('src/app/layouts/MobileAppMenu.tsx');
   if (!mobileMenu.includes('end={item.end ?? false}')) {
     fail('Le menu mobile ne respecte pas la correspondance exacte des entrées parentes.');
   }
+
   const pageHeader = read('src/app/layouts/PageHeader.tsx');
+  const settingsHeaderTarget = pageHeader.indexOf('to={routePaths.settings}');
   const settingsHeaderLink = pageHeader.slice(
-    pageHeader.indexOf('to={routePaths.settings}'),
-    pageHeader.indexOf('aria-label="Ouvrir les paramètres"'),
+    pageHeader.lastIndexOf('<Link', settingsHeaderTarget),
+    pageHeader.indexOf('</Link>', settingsHeaderTarget),
   );
-  if (!settingsHeaderLink.includes('end')) {
-    fail('Le raccourci Paramètres de l’en-tête mobile doit être actif uniquement sur /settings.');
+  if (!settingsHeaderLink.includes('aria-label="Ouvrir les paramètres"')) {
+    fail('Le raccourci Paramètres de l’en-tête mobile est absent.');
+  }
+  if (settingsHeaderLink.includes('aria-current') || settingsHeaderLink.includes('NavLink')) {
+    fail('Le raccourci Paramètres de l’en-tête ne doit pas exposer un état actif hors navigation dédiée.');
+  }
+  const pageHeaderTests = read('src/app/layouts/PageHeader.test.tsx');
+  if (!pageHeaderTests.includes('place les paramètres à gauche sur une rubrique principale')) {
+    fail('Le raccourci Paramètres de l’en-tête mobile n’est pas couvert par un test dédié.');
   }
 
   const directory = read('src/features/settings/components/SettingsSectionDirectory.tsx');

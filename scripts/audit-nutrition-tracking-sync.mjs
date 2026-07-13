@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { isStableVersionAtLeast, stableVersionExpectation } from './shared/stableVersion.mjs';
 
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const failures = [];
@@ -79,8 +80,8 @@ if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*9/.test(backup)) {
 }
 
 const packageJson = JSON.parse(read('package.json'));
-if (!/^0\.(?:20|21|22|23|24|25|26|27|28|29)\.\d+$/.test(packageJson.version)) {
-  fail(`la version doit appartenir aux séries stables 0.20.x, 0.21.x, 0.22.x, 0.23.x, 0.24.x, 0.25.x, 0.26.x, 0.27.x, 0.28.x ou 0.29.x, reçue ${String(packageJson.version)}.`);
+if (!isStableVersionAtLeast(packageJson.version, 20)) {
+  fail(`la version doit être ${stableVersionExpectation(20)}, reçue ${String(packageJson.version)}.`);
 }
 const scripts = packageJson.scripts ?? {};
 if (scripts['audit:nutrition-tracking-sync'] !== 'node scripts/audit-nutrition-tracking-sync.mjs') {

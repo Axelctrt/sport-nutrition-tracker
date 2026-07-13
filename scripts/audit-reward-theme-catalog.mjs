@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { isStableVersionAtLeast, stableVersionExpectation } from './shared/stableVersion.mjs';
 
 const root = process.cwd();
 const failures = [];
@@ -28,10 +29,8 @@ const automaticSyncReleaseAudit = read(
   "scripts/audit-automatic-sync-release.mjs",
 );
 
-if (!/^0\.(?:24|25|26|27|28|29)\.\d+$/.test(packageJson.version)) {
-  fail(
-    `le catalogue récompenses/thèmes 0.24.x à 0.29.x doit rester compatible avec la version applicative publiée, version trouvée : ${packageJson.version}.`,
-  );
+if (!isStableVersionAtLeast(packageJson.version, 24)) {
+  fail(`la version doit être ${stableVersionExpectation(24)}, reçue ${String(packageJson.version)}.`);
 }
 if (!packageJson.scripts?.["audit:reward-theme-catalog"]) {
   fail("le script audit:reward-theme-catalog est absent de package.json.");
@@ -200,9 +199,9 @@ if (!themeService.includes("previewableCount")) {
     "le snapshot des thèmes ne déclare pas le nombre de thèmes consultables.",
   );
 }
-if (!productionAudit.includes("totalJavaScriptBytes: 2940 * 1024")) {
+if (!productionAudit.includes("totalJavaScriptBytes: 3200 * 1024")) {
   fail(
-    "le budget JavaScript de production doit rester aligné sur le budget 0.29.0 validé après intégration du module social.",
+    "le budget JavaScript de production doit rester aligné sur le budget 0.31.0 validé après consolidation UX.",
   );
 }
 if (!productionAudit.includes("totalCssBytes: 176 * 1024")) {
@@ -212,10 +211,10 @@ if (!productionAudit.includes("totalCssBytes: 176 * 1024")) {
 }
 if (
   !automaticSyncReleaseAudit.includes(
-    "budget JavaScript global validé de 2940 Kio",
+    "budget JavaScript global validé de 3200 Kio",
   )
 ) {
-  fail("l’audit F4 doit rester aligné avec le budget JavaScript 0.29.0.");
+  fail("l’audit F4 doit rester aligné avec le budget JavaScript 0.31.0.");
 }
 
 for (const marker of [
