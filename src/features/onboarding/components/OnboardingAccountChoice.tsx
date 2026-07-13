@@ -1,4 +1,4 @@
-import { Cloud, CloudOff, KeyRound, LockKeyhole, Mail, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Cloud, CloudOff, KeyRound, LogOut, Mail, ShieldCheck } from 'lucide-react';
 import { type FormEvent, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import {
   getSyncPrototypeClient,
@@ -12,7 +12,10 @@ import { FormField } from '@/shared/ui/FormField';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 
 interface OnboardingAccountChoiceProps {
+  screen: 'choice' | 'connection';
   onChooseLocal: () => void | Promise<void>;
+  onChooseAccount: () => void;
+  onBackToChoice: () => void;
   onContinueWithAccount: () => void;
   client?: SyncPrototypeClient | null;
   accountEnabled?: boolean;
@@ -58,14 +61,17 @@ function interactionError(
     case 'INVALID_EMAIL':
       return 'Cette adresse email n’est pas valide.';
     case 'INVALID_OTP':
-      return 'Le code saisi est incorrect ou a expiré.';
+      return 'Le code est incorrect ou expiré.';
     default:
       return alert.message || 'La connexion a été refusée.';
   }
 }
 
 export function OnboardingAccountChoice({
+  screen,
   onChooseLocal,
+  onChooseAccount,
+  onBackToChoice,
   onContinueWithAccount,
   client: injectedClient,
   accountEnabled: injectedAccountEnabled,
@@ -101,10 +107,7 @@ export function OnboardingAccountChoice({
         setFeedback({
           tone: 'error',
           title: 'Connexion indisponible',
-          message: errorMessage(
-            error,
-            'Le compte ne peut pas être préparé pour le moment.',
-          ),
+          message: errorMessage(error, 'Le compte ne peut pas être préparé.'),
         });
       })
       .finally(() => {
@@ -129,8 +132,8 @@ export function OnboardingAccountChoice({
     if (!normalizedEmail) {
       setFeedback({
         tone: 'error',
-        title: 'Adresse email requise',
-        message: 'Saisis l’adresse qui recevra le code de connexion.',
+        title: 'Adresse requise',
+        message: 'Saisissez l’adresse qui recevra le code.',
       });
       return;
     }
@@ -146,14 +149,6 @@ export function OnboardingAccountChoice({
 
     cancelledLoginRef.current = false;
     void client.login(normalizedEmail)
-      .then(() => {
-        setFeedback({
-          tone: 'success',
-          title: 'Compte connecté',
-          message:
-            'Le compte est authentifié. SportPilot va maintenant demander comment protéger ou associer les données locales.',
-        });
-      })
       .catch((error: unknown) => {
         if (cancelledLoginRef.current) {
           cancelledLoginRef.current = false;
@@ -162,10 +157,7 @@ export function OnboardingAccountChoice({
         setFeedback({
           tone: 'error',
           title: 'Connexion interrompue',
-          message: errorMessage(
-            error,
-            'La connexion par code n’a pas pu être terminée.',
-          ),
+          message: errorMessage(error, 'Le code n’a pas pu être envoyé.'),
         });
       })
       .finally(() => {
@@ -195,7 +187,7 @@ export function OnboardingAccountChoice({
     setFeedback(undefined);
   };
 
-  const logoutAccount = async (showSuccessFeedback: boolean): Promise<boolean> => {
+  const logoutAccount = async (showFeedback: boolean): Promise<boolean> => {
     if (!client) return false;
     setActionStatus('logout');
     setFeedback(undefined);
@@ -203,11 +195,11 @@ export function OnboardingAccountChoice({
       await client.logout();
       setEmail('');
       setOtp('');
-      if (showSuccessFeedback) {
+      if (showFeedback) {
         setFeedback({
           tone: 'success',
           title: 'Compte déconnecté',
-          message: 'Le mode local reste disponible et les données locales sont conservées.',
+          message: 'Vous pouvez utiliser un autre compte.',
         });
       }
       return true;
@@ -223,171 +215,145 @@ export function OnboardingAccountChoice({
     }
   };
 
-  const handleLogout = async () => {
-    await logoutAccount(true);
-  };
-
   const handleChooseLocal = async () => {
     if (isLoggedIn && client) {
       const loggedOut = await logoutAccount(false);
       if (!loggedOut) return;
     }
-
     await onChooseLocal();
   };
 
-  return (
-    <div className="space-y-4">
-      <div>
-        <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
-          Espace de données
-        </p>
-        <h2 className="mt-1 text-2xl font-bold tracking-tight text-slate-950 dark:text-white">
-          Choisir comment démarrer
-        </h2>
-        <p className="mt-2 text-slate-600 dark:text-slate-300">
-          Tu peux rester en local sur cet appareil ou connecter un compte pour préparer la synchronisation. Aucune donnée locale n’est copiée ou supprimée sans confirmation explicite.
-        </p>
-      </div>
+  if (screen === 'choice') {
+    return (
+      <div className="grid grid-cols-2 gap-3">
+        <button
+          aria-label="Choisir le mode local"
+          className="min-h-40 rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-brand-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 dark:border-slate-800 dark:bg-slate-900"
+          disabled={actionStatus === 'logout'}
+          onClick={() => void handleChooseLocal()}
+          type="button"
+        >
+          <CloudOff aria-hidden="true" className="size-7 text-brand-700 dark:text-brand-300" />
+          <span className="mt-3 block font-semibold text-slate-950 dark:text-white">Mode local</span>
+          <span className="mt-1 block text-xs leading-4 text-slate-600 dark:text-slate-300">
+            Données sur cet appareil.
+          </span>
+        </button>
 
+        <button
+          aria-label="Connecter un compte"
+          className="min-h-40 rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-brand-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 disabled:cursor-not-allowed disabled:opacity-55 dark:border-slate-800 dark:bg-slate-900"
+          disabled={!accountEnabled || !client}
+          onClick={onChooseAccount}
+          type="button"
+        >
+          <Cloud aria-hidden="true" className="size-7 text-brand-700 dark:text-brand-300" />
+          <span className="mt-3 block font-semibold text-slate-950 dark:text-white">Compte</span>
+          <span className="mt-1 block text-xs leading-4 text-slate-600 dark:text-slate-300">
+            Synchronisation entre appareils.
+          </span>
+        </button>
+
+        {!accountEnabled || !client ? (
+          <p className="col-span-2 text-center text-xs text-slate-500 dark:text-slate-400" role="status">
+            {configurationError ?? 'Connexion compte indisponible ici.'}
+          </p>
+        ) : null}
+      </div>
+    );
+  }
+
+  return (
+    <Card className="p-4">
       {feedback ? (
-        <InlineNotice tone={feedback.tone} title={feedback.title}>
+        <InlineNotice className="mb-3" tone={feedback.tone} title={feedback.title}>
           {feedback.message}
         </InlineNotice>
       ) : null}
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card className="p-5 sm:p-6">
-          <CloudOff aria-hidden="true" className="size-6 text-brand-700 dark:text-brand-300" />
-          <h3 className="mt-3 text-lg font-semibold text-slate-950 dark:text-white">
-            Continuer en local
-          </h3>
-          <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-            SportPilot utilise uniquement la base locale de cet appareil. Ces données peuvent être perdues si le stockage du navigateur est effacé. Un compte pourra être ajouté plus tard depuis Paramètres → Compte et appareils, sans écrasement silencieux.
-          </p>
-          <Button
-            className="mt-4 w-full"
-            disabled={actionStatus === 'logout'}
-            onClick={() => void handleChooseLocal()}
-          >
-            {actionStatus === 'logout' ? 'Passage en mode local…' : 'Choisir le mode local'}
+      {!accountEnabled || !client ? (
+        <InlineNotice tone="info" title="Compte indisponible">
+          {configurationError ?? 'La connexion compte n’est pas activée ici.'}
+        </InlineNotice>
+      ) : isLoggedIn ? (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-950 dark:bg-emerald-950/40 dark:text-emerald-100">
+            <ShieldCheck aria-hidden="true" className="size-4 shrink-0" />
+            <span className="min-w-0 truncate font-semibold">{accountLabel}</span>
+          </div>
+          <Button className="w-full" onClick={onContinueWithAccount}>
+            Continuer
           </Button>
-        </Card>
-
-        <Card className="p-5 sm:p-6">
-          <Cloud aria-hidden="true" className="size-6 text-brand-700 dark:text-brand-300" />
-          <h3 className="mt-3 text-lg font-semibold text-slate-950 dark:text-white">
-            Connecter un compte
-          </h3>
-          <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-            Authentification par email et code à usage unique. Après le choix de l’espace, SportPilot demandera un pseudonyme public unique avant de créer le profil sportif.
+          <Button
+            className="w-full"
+            disabled={actionStatus === 'logout'}
+            onClick={() => void logoutAccount(true)}
+            variant="secondary"
+          >
+            <LogOut aria-hidden="true" className="size-4" />
+            Changer de compte
+          </Button>
+        </div>
+      ) : interaction?.type === 'otp' ? (
+        <form className="space-y-3" onSubmit={handleOtpSubmit}>
+          <p className="text-sm text-slate-600 dark:text-slate-300">
+            Code envoyé à <span className="font-semibold">{email.trim()}</span>
           </p>
+          <FormField error={fieldError} id="onboarding-account-otp" label="Code reçu" required>
+            <input
+              autoComplete="one-time-code"
+              autoFocus
+              className={inputClasses}
+              id="onboarding-account-otp"
+              inputMode="numeric"
+              onChange={(event) => setOtp(event.target.value)}
+              placeholder="123456"
+              value={otp}
+            />
+          </FormField>
+          <Button className="w-full" disabled={!otp.trim()} type="submit">
+            <KeyRound aria-hidden="true" className="size-4" />
+            Valider le code
+          </Button>
+          <Button className="w-full" onClick={handleCancelInteraction} variant="secondary">
+            Modifier l’adresse
+          </Button>
+        </form>
+      ) : (
+        <form className="space-y-3" onSubmit={handleEmailSubmit}>
+          <FormField error={fieldError} id="onboarding-account-email" label="Adresse e-mail" required>
+            <input
+              autoComplete="email"
+              autoFocus
+              className={inputClasses}
+              disabled={actionStatus === 'email' || actionStatus === 'initializing'}
+              id="onboarding-account-email"
+              inputMode="email"
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder="nom@example.com"
+              type="email"
+              value={email}
+            />
+          </FormField>
+          <Button
+            className="w-full"
+            disabled={actionStatus === 'email' || actionStatus === 'initializing'}
+            type="submit"
+          >
+            <Mail aria-hidden="true" className="size-4" />
+            {actionStatus === 'initializing'
+              ? 'Préparation…'
+              : actionStatus === 'email'
+                ? 'Envoi…'
+                : 'Recevoir un code'}
+          </Button>
+        </form>
+      )}
 
-          {!accountEnabled || !client ? (
-            <InlineNotice
-              className="mt-4"
-              tone="info"
-              title="Compte indisponible dans cet environnement"
-            >
-              {configurationError ??
-                'La connexion compte n’est pas activée ici. Le mode local reste disponible.'}
-            </InlineNotice>
-          ) : isLoggedIn ? (
-            <div className="mt-4 space-y-3">
-              <div className="rounded-2xl bg-emerald-50 p-3 text-sm text-emerald-950 dark:bg-emerald-950/40 dark:text-emerald-100">
-                <div className="flex items-start gap-2">
-                  <ShieldCheck aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-                  <p>
-                    Compte connecté : <span className="font-semibold break-all">{accountLabel}</span>
-                  </p>
-                </div>
-              </div>
-              <Button className="w-full" onClick={onContinueWithAccount}>
-                Continuer avec ce compte
-              </Button>
-              <Button
-                className="w-full"
-                disabled={actionStatus === 'logout'}
-                onClick={() => void handleLogout()}
-                variant="secondary"
-              >
-                Déconnecter ce compte
-              </Button>
-            </div>
-          ) : interaction?.type === 'otp' ? (
-            <form className="mt-4 space-y-3" onSubmit={handleOtpSubmit}>
-              <InlineNotice tone={fieldError ? 'error' : 'info'} title="Code de connexion">
-                {fieldError ?? 'Saisis le code reçu par email pour terminer la connexion.'}
-              </InlineNotice>
-              <FormField id="onboarding-account-otp" label="Code reçu" required>
-                <input
-                  autoComplete="one-time-code"
-                  autoFocus
-                  className={inputClasses}
-                  id="onboarding-account-otp"
-                  inputMode="numeric"
-                  onChange={(event) => setOtp(event.target.value)}
-                  placeholder="Code à usage unique"
-                  value={otp}
-                />
-              </FormField>
-              <div className="grid gap-2 sm:grid-cols-2">
-                <Button disabled={!otp.trim()} type="submit">
-                  <KeyRound aria-hidden="true" className="size-4" />
-                  Valider le code
-                </Button>
-                <Button onClick={handleCancelInteraction} variant="secondary">
-                  Annuler
-                </Button>
-              </div>
-            </form>
-          ) : (
-            <form className="mt-4 space-y-3" onSubmit={handleEmailSubmit}>
-              <FormField
-                error={fieldError}
-                id="onboarding-account-email"
-                label="Email du compte"
-                required
-              >
-                <input
-                  autoComplete="email"
-                  className={inputClasses}
-                  disabled={actionStatus === 'email' || actionStatus === 'initializing'}
-                  id="onboarding-account-email"
-                  inputMode="email"
-                  onChange={(event) => setEmail(event.target.value)}
-                  placeholder="nom@example.com"
-                  type="email"
-                  value={email}
-                />
-              </FormField>
-              <Button
-                className="w-full"
-                disabled={actionStatus === 'email' || actionStatus === 'initializing'}
-                type="submit"
-              >
-                <Mail aria-hidden="true" className="size-4" />
-                {actionStatus === 'initializing'
-                  ? 'Préparation…'
-                  : actionStatus === 'email'
-                    ? 'Envoi du code…'
-                    : 'Recevoir un code'}
-              </Button>
-            </form>
-          )}
-        </Card>
-      </div>
-
-      <InlineNotice tone="info" title="Protection avant association">
-        Les données locales restent dans l’espace invité tant que tu n’as pas choisi explicitement de les associer à un compte. Les codes OTP et secrets ne sont jamais enregistrés dans le brouillon d’onboarding.
-      </InlineNotice>
-
-      <div className="flex items-start gap-3 rounded-2xl border border-slate-200 p-4 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">
-        <LockKeyhole aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-brand-700 dark:text-brand-300" />
-        <p>
-          Si tu connectes un compte existant, l’écran de protection des données demandera ensuite s’il faut restaurer le cloud, ouvrir un espace déjà connu, rattacher les données invitées ou créer un espace vide.
-        </p>
-      </div>
-    </div>
+      <Button className="mt-3 w-full" onClick={onBackToChoice} variant="ghost">
+        <ArrowLeft aria-hidden="true" className="size-4" />
+        Retour au choix
+      </Button>
+    </Card>
   );
 }

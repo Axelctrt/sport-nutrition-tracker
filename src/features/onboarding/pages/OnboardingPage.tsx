@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, Cloud, CloudOff, Dumbbell, LockKeyhole, Save } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Dumbbell, LockKeyhole, Save } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useProfile } from '@/app/providers/profile/useProfile';
@@ -41,8 +41,11 @@ import { InlineNotice } from '@/shared/ui/InlineNotice';
 import { SaveStatus, type SaveStatusValue } from '@/shared/ui/SaveStatus';
 import { StickyActionBar } from '@/shared/ui/StickyActionBar';
 
+const ACCOUNT_ONBOARDING_STEP_ID = 'account';
+
 const onboardingSteps = [
   { id: STORAGE_ONBOARDING_STEP_ID },
+  { id: ACCOUNT_ONBOARDING_STEP_ID },
   ...PROFILE_ONBOARDING_STEPS,
 ] as const;
 
@@ -165,6 +168,11 @@ export function OnboardingPage() {
     ) as ProfileOnboardingErrors);
   }, [flow.state.currentStepId, persistDraft]);
 
+  const openAccountStep = () => {
+    setErrors({});
+    flow.goTo(ACCOUNT_ONBOARDING_STEP_ID);
+  };
+
   const openFirstProfileStep = () => {
     setErrors({});
     flow.goTo(PROFILE_ONBOARDING_STEP_IDS.name);
@@ -269,21 +277,25 @@ export function OnboardingPage() {
   };
 
   const isSummaryStep = currentProfileStepId === PROFILE_ONBOARDING_STEP_IDS.summary;
+  const profileStepIndex = currentProfileStepId
+    ? PROFILE_ONBOARDING_STEPS.findIndex((step) => step.id === currentProfileStepId) + 1
+    : 0;
+  const isAccountStep = currentStepId === ACCOUNT_ONBOARDING_STEP_ID;
+  const screenCopy = isAccountStep
+    ? { eyebrow: 'Compte', title: 'Connecter un compte', description: 'Recevez un code par e-mail.' }
+    : currentCopy ?? { eyebrow: 'Démarrage', title: 'Local ou compte ?', description: 'Choisissez où conserver vos données.' };
 
   return (
-    <main className="min-h-screen px-4 py-4 sm:px-6 sm:py-6 lg:py-10">
-      <div className="mx-auto max-w-6xl">
-        <div className="mb-5 flex items-center gap-3 lg:hidden">
-          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand-700 text-white">
-            <Dumbbell aria-hidden="true" className="size-5" />
+    <main className="h-[100dvh] overflow-hidden px-4 py-3 sm:px-6 sm:py-5 lg:min-h-screen lg:h-auto lg:overflow-visible lg:py-10">
+      <div className="mx-auto flex h-full max-w-6xl flex-col lg:block">
+        <div className="mb-2 flex items-center gap-2 lg:hidden">
+          <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-brand-700 text-white">
+            <Dumbbell aria-hidden="true" className="size-4" />
           </span>
-          <div>
-            <p className="font-bold text-slate-950 dark:text-white">SportPilot</p>
-            <p className="text-sm text-slate-600 dark:text-slate-300">Configuration du profil</p>
-          </div>
+          <p className="text-sm font-bold text-slate-950 dark:text-white">SportPilot</p>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[0.8fr_1.4fr] lg:items-start">
+        <div className="min-h-0 flex-1 lg:grid lg:grid-cols-[0.8fr_1.4fr] lg:items-start lg:gap-6">
           <Card className="hidden overflow-hidden lg:sticky lg:top-10 lg:block">
             <div className="bg-brand-700 p-8 text-white">
               <span className="grid size-12 place-items-center rounded-2xl bg-white/15">
@@ -296,7 +308,7 @@ export function OnboardingPage() {
                 Configurez votre suivi étape par étape.
               </h1>
               <p className="mt-4 leading-7 text-brand-50">
-                Une question principale par écran, avec sauvegarde automatique et reprise après fermeture.
+                Une question par écran, avec sauvegarde automatique.
               </p>
             </div>
             <div className="p-8">
@@ -305,150 +317,116 @@ export function OnboardingPage() {
                 <div>
                   <h2 className="font-semibold text-slate-950 dark:text-white">Données protégées</h2>
                   <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                    Le mode local reste disponible. Les comptes utilisent un espace isolé et une identité sociale distincte du profil privé.
+                    Le mode local et les espaces de compte restent isolés.
                   </p>
                   <Link
                     to={routePaths.privacy}
                     className="mt-3 inline-flex min-h-10 items-center text-sm font-semibold text-brand-700 hover:underline dark:text-brand-300"
                   >
-                    Lire la politique de confidentialité
+                    Politique de confidentialité
                   </Link>
                 </div>
               </div>
             </div>
           </Card>
 
-          <section aria-labelledby="onboarding-step-title" className="min-w-0 pb-28 lg:pb-0">
-            <div className="mb-5 space-y-4">
-              <div>
-                <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
-                  {currentCopy?.eyebrow ?? 'Mode de démarrage'}
-                </p>
-                <h1
-                  ref={flow.headingRef}
-                  id="onboarding-step-title"
-                  tabIndex={-1}
-                  className="mt-1 text-2xl font-bold tracking-tight text-slate-950 outline-none dark:text-white sm:text-3xl"
-                >
-                  {currentCopy?.title ?? 'Choisir le mode local ou compte'}
-                </h1>
-                <p className="mt-2 text-slate-600 dark:text-slate-300">
-                  {currentCopy?.description
-                    ?? 'Ce choix protège l’espace de données avant la création du profil.'}
-                </p>
-              </div>
+          <section
+            aria-labelledby="onboarding-step-title"
+            className="flex h-full min-h-0 min-w-0 flex-col pb-[calc(4.75rem+env(safe-area-inset-bottom))] lg:h-auto lg:pb-0"
+          >
+            <div className="mb-2 shrink-0">
+              <p className="text-xs font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
+                {screenCopy.eyebrow}
+              </p>
+              <h1
+                ref={flow.headingRef}
+                id="onboarding-step-title"
+                tabIndex={-1}
+                className="mt-0.5 text-xl font-bold tracking-tight text-slate-950 outline-none dark:text-white sm:text-2xl"
+              >
+                {screenCopy.title}
+              </h1>
+              <p className="mt-1 text-sm leading-5 text-slate-600 dark:text-slate-300">
+                {screenCopy.description}
+              </p>
 
-              <div className="flex items-end gap-4">
-                <OnboardingProgress
-                  currentStep={flow.progress.currentPosition}
-                  totalSteps={flow.progress.totalSteps}
-                  className="min-w-0 flex-1"
-                />
-                <SaveStatus status={draftStatus} className="mb-0.5 shrink-0" />
-              </div>
+              {currentProfileStepId ? (
+                <div className="mt-2 flex items-center gap-3">
+                  <OnboardingProgress
+                    currentStep={profileStepIndex}
+                    totalSteps={PROFILE_ONBOARDING_STEPS.length}
+                    className="min-w-0 flex-1"
+                  />
+                  <SaveStatus status={draftStatus} className="shrink-0" />
+                </div>
+              ) : null}
             </div>
 
-            {currentStepId === STORAGE_ONBOARDING_STEP_ID ? (
-              <OnboardingAccountChoice
-                onChooseLocal={handleChooseLocal}
-                onContinueWithAccount={openFirstProfileStep}
-              />
-            ) : currentProfileStepId ? (
-              <>
-                {currentProfileStepId === PROFILE_ONBOARDING_STEP_IDS.name ? (
-                  <InlineNotice
-                    tone="info"
-                    title={activeDataSpace.kind === 'account' ? 'Compte et espace confirmés' : 'Mode local confirmé'}
-                    className="mb-5"
-                  >
-                    <div className="flex items-start gap-2">
-                      {activeDataSpace.kind === 'account' ? (
-                        <Cloud aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-                      ) : (
-                        <CloudOff aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-                      )}
-                      <p>
-                        {activeDataSpace.kind === 'account'
-                          ? 'Le profil sera créé dans l’espace isolé du compte actuellement ouvert.'
-                          : 'Le profil restera sur cet appareil. Un compte pourra être connecté plus tard depuis Paramètres → Compte et appareils.'}
-                      </p>
-                    </div>
-                  </InlineNotice>
-                ) : null}
+            <div className="min-h-0 flex-1">
+              {currentStepId === STORAGE_ONBOARDING_STEP_ID || isAccountStep ? (
+                <OnboardingAccountChoice
+                  screen={isAccountStep ? 'connection' : 'choice'}
+                  onChooseLocal={handleChooseLocal}
+                  onChooseAccount={openAccountStep}
+                  onBackToChoice={() => flow.goTo(STORAGE_ONBOARDING_STEP_ID)}
+                  onContinueWithAccount={openFirstProfileStep}
+                />
+              ) : currentProfileStepId ? (
+                <>
+                  {saveError ? (
+                    <InlineNotice tone="error" title="Enregistrement impossible" className="mb-2">
+                      {saveError}
+                    </InlineNotice>
+                  ) : null}
 
-                {initialState.restored ? (
-                  <InlineNotice tone="success" title="Configuration reprise" className="mb-5">
-                    Les réponses et l’étape enregistrées sur cet appareil ont été restaurées automatiquement.
-                  </InlineNotice>
-                ) : null}
+                  {isSummaryStep ? (
+                    <OnboardingProfileSummary
+                      values={values}
+                      dataSpaceKind={activeDataSpace.kind}
+                      socialHandle={socialHandle}
+                      onEdit={handleEditSummary}
+                    />
+                  ) : (
+                    <OnboardingProfileStep
+                      stepId={currentProfileStepId}
+                      values={values}
+                      errors={errors}
+                      onChange={handleValuesChange}
+                    />
+                  )}
 
-                {draftStatus === 'error' ? (
-                  <InlineNotice tone="warning" title="Brouillon local indisponible" className="mb-5">
-                    Vous pouvez continuer, mais les réponses ne pourront pas être reprises après la fermeture de l’application.
-                  </InlineNotice>
-                ) : null}
-
-                {saveError ? (
-                  <InlineNotice tone="error" title="Enregistrement impossible" className="mb-5">
-                    {saveError}
-                  </InlineNotice>
-                ) : null}
-
-                {Object.keys(errors).length > 0 ? (
-                  <InlineNotice tone="error" title="Une réponse doit être corrigée" className="mb-5">
-                    Vérifiez le message affiché sous le champ concerné avant de continuer.
-                  </InlineNotice>
-                ) : null}
-
-                {isSummaryStep ? (
-                  <OnboardingProfileSummary
-                    values={values}
-                    dataSpaceKind={activeDataSpace.kind}
-                    socialHandle={socialHandle}
-                    onEdit={handleEditSummary}
-                  />
-                ) : (
-                  <OnboardingProfileStep
-                    stepId={currentProfileStepId}
-                    values={values}
-                    errors={errors}
-                    onChange={handleValuesChange}
-                  />
-                )}
-
-                <StickyActionBar mobileBottomOffset="0rem" toastOffset="6rem">
-                  <div className="grid grid-cols-2 gap-3">
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="lg"
-                      onClick={handleBack}
-                      disabled={flow.state.submissionStatus === 'submitting'}
-                    >
-                      <ArrowLeft aria-hidden="true" className="size-5" />
-                      Retour
-                    </Button>
-                    {isSummaryStep ? (
+                  <StickyActionBar mobileBottomOffset="0rem" toastOffset="5rem" contentClassName="max-w-lg">
+                    <div className="grid grid-cols-2 gap-2">
                       <Button
                         type="button"
-                        size="lg"
-                        loading={flow.state.submissionStatus === 'submitting'}
-                        loadingLabel="Démarrage…"
-                        onClick={() => void handleSubmit()}
+                        variant="secondary"
+                        onClick={handleBack}
+                        disabled={flow.state.submissionStatus === 'submitting'}
                       >
-                        <Save aria-hidden="true" className="size-5" />
-                        Commencer avec SportPilot
+                        <ArrowLeft aria-hidden="true" className="size-4" />
+                        Retour
                       </Button>
-                    ) : (
-                      <Button type="button" size="lg" onClick={handleNext}>
-                        Suivant
-                        <ArrowRight aria-hidden="true" className="size-5" />
-                      </Button>
-                    )}
-                  </div>
-                </StickyActionBar>
-              </>
-            ) : null}
+                      {isSummaryStep ? (
+                        <Button
+                          type="button"
+                          loading={flow.state.submissionStatus === 'submitting'}
+                          loadingLabel="Démarrage…"
+                          onClick={() => void handleSubmit()}
+                        >
+                          <Save aria-hidden="true" className="size-4" />
+                          Commencer
+                        </Button>
+                      ) : (
+                        <Button type="button" onClick={handleNext}>
+                          Continuer
+                          <ArrowRight aria-hidden="true" className="size-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </StickyActionBar>
+                </>
+              ) : null}
+            </div>
           </section>
         </div>
       </div>

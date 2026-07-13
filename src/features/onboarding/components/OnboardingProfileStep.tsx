@@ -2,7 +2,6 @@ import {
   Armchair,
   BriefcaseBusiness,
   Dumbbell,
-  Footprints,
   Mars,
   Minus,
   PersonStanding,
@@ -10,7 +9,7 @@ import {
   TrendingUp,
   Venus,
 } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
+import { useMemo } from 'react';
 import { SUGGESTED_WEEKLY_CHANGE_PERCENT } from '@/domain/defaults/userProfile';
 import type { OccupationalActivity, WeightGoal } from '@/domain/models/profile';
 import {
@@ -20,10 +19,8 @@ import {
 } from '@/features/onboarding/profile/profileOnboardingSteps';
 import type { ProfileFormValues } from '@/features/profile/schemas/profileSchema';
 import { inputClassName } from '@/shared/forms/formStyles';
-import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
-import { ChoiceCard, ChoiceCardGroup } from '@/shared/ui/ChoiceCard';
-import { ContextHelp } from '@/shared/ui/ContextHelp';
+import { ChoiceCard } from '@/shared/ui/ChoiceCard';
 import { FormField } from '@/shared/ui/FormField';
 import { SegmentedControl } from '@/shared/ui/SegmentedControl';
 import { WheelPicker, type WheelPickerOption } from '@/shared/ui/WheelPicker';
@@ -35,108 +32,61 @@ interface OnboardingProfileStepProps {
   onChange: (patch: Partial<ProfileFormValues>) => void;
 }
 
-interface NumericTextInputProps {
-  id: string;
-  value: number;
-  onValueChange: (value: number) => void;
-  inputMode?: 'decimal' | 'numeric';
-  pattern?: string | undefined;
-  min: number;
-  max: number;
-  step: number;
-  enterKeyHint?: 'next' | 'done';
-  className?: string | undefined;
-  invalid?: boolean | undefined;
-  describedBy?: string | undefined;
-  readOnly?: boolean | undefined;
+function formatOptionValue(value: number): string {
+  return Number(value.toFixed(2)).toString();
 }
 
-function formatNumericValue(value: number): string {
-  return Number.isFinite(value) ? String(value).replace('.', ',') : '';
+function formatNumber(value: number, maximumFractionDigits = 2): string {
+  return value.toLocaleString('fr-FR', { maximumFractionDigits });
 }
 
-function NumericTextInput({
-  id,
-  value,
-  onValueChange,
-  inputMode = 'decimal',
-  pattern,
-  min,
-  max,
-  step,
-  enterKeyHint = 'next',
-  className,
-  invalid,
-  describedBy,
-  readOnly = false,
-}: NumericTextInputProps) {
-  const ref = useRef<HTMLInputElement>(null);
-  const [draft, setDraft] = useState(() => formatNumericValue(value));
-
-  useEffect(() => {
-    if (document.activeElement !== ref.current) {
-      setDraft(formatNumericValue(value));
-    }
-  }, [value]);
-
-  const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const nextDraft = event.target.value;
-    setDraft(nextDraft);
-
-    if (nextDraft.trim() === '') {
-      onValueChange(Number.NaN);
-      return;
-    }
-
-    const parsed = Number(nextDraft.replace(',', '.'));
-    onValueChange(Number.isFinite(parsed) ? parsed : Number.NaN);
-  };
-
-  return (
-    <input
-      ref={ref}
-      id={id}
-      type="text"
-      inputMode={inputMode}
-      enterKeyHint={enterKeyHint}
-      pattern={pattern}
-      min={min}
-      max={max}
-      step={step}
-      value={draft}
-      onChange={handleChange}
-      readOnly={readOnly}
-      onBlur={() => setDraft(formatNumericValue(value))}
-      className={className}
-      aria-invalid={invalid || undefined}
-      aria-describedby={describedBy}
-    />
-  );
-}
-
-function createNumberOptions(min: number, max: number, suffix: string): WheelPickerOption[] {
-  return Array.from({ length: max - min + 1 }, (_, index) => {
-    const value = String(min + index);
-    return { value, label: suffix ? `${value} ${suffix}` : value };
+function createSteppedOptions(
+  min: number,
+  max: number,
+  step: number,
+  suffix = '',
+  maximumFractionDigits = 2,
+): WheelPickerOption[] {
+  const count = Math.round((max - min) / step);
+  return Array.from({ length: count + 1 }, (_, index) => {
+    const number = Number((min + index * step).toFixed(2));
+    const value = formatOptionValue(number);
+    return {
+      value,
+      label: `${formatNumber(number, maximumFractionDigits)}${suffix ? ` ${suffix}` : ''}`,
+    };
   });
 }
 
-const heightOptions = createNumberOptions(100, 250, 'cm');
-const weightOptions = createNumberOptions(30, 350, 'kg');
-const monthLabels = [
-  'janvier',
-  'février',
-  'mars',
-  'avril',
-  'mai',
-  'juin',
-  'juillet',
-  'août',
-  'septembre',
-  'octobre',
-  'novembre',
-  'décembre',
-] as const;
+function optionsWithCurrent(
+  options: readonly WheelPickerOption[],
+  current: number,
+  suffix: string,
+  maximumFractionDigits = 2,
+): WheelPickerOption[] {
+  const currentValue = formatOptionValue(current);
+  if (!Number.isFinite(current) || options.some((option) => option.value === currentValue)) {
+    return [...options];
+  }
+
+  return [
+    ...options,
+    {
+      value: currentValue,
+      label: `${formatNumber(current, maximumFractionDigits)}${suffix ? ` ${suffix}` : ''}`,
+    },
+  ].sort((left, right) => Number(left.value) - Number(right.value));
+}
+
+const ageOptions = createSteppedOptions(13, 120, 1, 'ans', 0);
+const heightOptions = createSteppedOptions(100, 250, 1, 'cm', 0);
+const weightOptions = createSteppedOptions(30, 350, 0.5, 'kg', 1);
+const stepGoalOptions = createSteppedOptions(0, 100_000, 500, 'pas', 0);
+
+const monthLabels = Array.from({ length: 12 }, (_, index) => {
+  const value = String(index + 1);
+  return { value, label: String(index + 1).padStart(2, '0') };
+});
 
 function pad(value: number): string {
   return String(value).padStart(2, '0');
@@ -186,18 +136,13 @@ function defaultBirthDate(ageYears: number): string {
   return toLocalDate(year, month, Math.min(today.getDate(), maximumDay));
 }
 
-function nearestInteger(value: number, min: number, max: number, fallback: number): string {
-  const safe = Number.isFinite(value) ? Math.round(value) : fallback;
-  return String(Math.min(max, Math.max(min, safe)));
-}
-
 function NameStep({ values, errors, onChange }: Omit<OnboardingProfileStepProps, 'stepId'>) {
   return (
-    <Card className="p-5 sm:p-6">
+    <Card className="p-4">
       <FormField
         id="onboarding-first-name"
-        label="Nom utilisé dans SportPilot"
-        description="Facultatif. Il sert uniquement à personnaliser l’interface et reste distinct du pseudonyme social."
+        label="Nom affiché"
+        description="Facultatif et modifiable plus tard."
         error={errors.firstName}
         optionalLabel="facultatif"
       >
@@ -219,36 +164,35 @@ function NameStep({ values, errors, onChange }: Omit<OnboardingProfileStepProps,
 
 function SexStep({ values, errors, onChange }: Omit<OnboardingProfileStepProps, 'stepId'>) {
   return (
-    <Card className="p-5 sm:p-6">
-      <ChoiceCardGroup
-        label="Sexe utilisé pour l’équation énergétique"
-        description={errors.sexForEnergyEquation}
-        columns={2}
-      >
+    <fieldset>
+      <legend className="sr-only">Sexe utilisé pour l’équation énergétique</legend>
+      {errors.sexForEnergyEquation ? (
+        <p className="mb-2 text-sm text-rose-700" role="alert">{errors.sexForEnergyEquation}</p>
+      ) : null}
+      <div className="grid grid-cols-2 gap-3">
         <ChoiceCard
+          compact
           name="sexForEnergyEquation"
           value="male"
           title="Masculin"
-          description="Utilise les constantes masculines de l’équation énergétique actuelle."
           icon={Mars}
           selected={values.sexForEnergyEquation === 'male'}
           onSelect={() => onChange({ sexForEnergyEquation: 'male' })}
         />
         <ChoiceCard
+          compact
           name="sexForEnergyEquation"
           value="female"
           title="Féminin"
-          description="Utilise les constantes féminines de l’équation énergétique actuelle."
           icon={Venus}
           selected={values.sexForEnergyEquation === 'female'}
           onSelect={() => onChange({ sexForEnergyEquation: 'female' })}
         />
-      </ChoiceCardGroup>
-
-      <ContextHelp className="mt-5" tone="brand">
-        Cette information est utilisée uniquement dans le calcul énergétique. Elle n’est jamais affichée dans le profil social ni partagée avec les amis.
-      </ContextHelp>
-    </Card>
+      </div>
+      <p className="mt-3 text-center text-xs text-slate-500 dark:text-slate-400">
+        Utilisé uniquement pour l’estimation énergétique.
+      </p>
+    </fieldset>
   );
 }
 
@@ -263,18 +207,14 @@ function BirthDateStep({ values, errors, onChange }: Omit<OnboardingProfileStepP
   const daysInMonth = new Date(parsed.year, parsed.month, 0).getDate();
 
   const dayOptions = useMemo(
-    () => createNumberOptions(1, daysInMonth, ''),
+    () => createSteppedOptions(1, daysInMonth, 1, '', 0).map((option) => ({
+      ...option,
+      label: option.value.padStart(2, '0'),
+    })),
     [daysInMonth],
   );
-  const monthOptions = useMemo<WheelPickerOption[]>(
-    () => monthLabels.map((label, index) => ({ value: String(index + 1), label })),
-    [],
-  );
   const yearOptions = useMemo(
-    () => Array.from({ length: maximumYear - minimumYear + 1 }, (_, index) => {
-      const value = String(minimumYear + index);
-      return { value, label: value };
-    }),
+    () => createSteppedOptions(minimumYear, maximumYear, 1, '', 0).reverse(),
     [maximumYear, minimumYear],
   );
 
@@ -303,199 +243,105 @@ function BirthDateStep({ values, errors, onChange }: Omit<OnboardingProfileStepP
     : values.ageYears;
 
   return (
-    <Card className="p-5 sm:p-6">
+    <div className="space-y-3">
       <SegmentedControl
-        label="Méthode de saisie de l’âge"
+        label="Méthode"
         value={values.ageMode}
         onChange={switchAgeMode}
         items={[
           { value: 'birthDate', label: 'Date de naissance' },
-          { value: 'age', label: 'Âge actuel' },
+          { value: 'age', label: 'Âge' },
         ]}
       />
 
       {values.ageMode === 'birthDate' ? (
-        <>
-          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <WheelPicker
-              label="Jour"
-              value={String(parsed.day)}
-              options={dayOptions}
-              onChange={(value) => setDatePart({ day: Number(value) })}
-            />
-            <WheelPicker
-              label="Mois"
-              value={String(parsed.month)}
-              options={monthOptions}
-              onChange={(value) => setDatePart({ month: Number(value) })}
-            />
-            <WheelPicker
-              label="Année"
-              value={String(parsed.year)}
-              options={yearOptions}
-              onChange={(value) => setDatePart({ year: Number(value) })}
-            />
-          </div>
-
-          <FormField
-            id="onboarding-birth-date"
-            label="Saisie manuelle"
-            description="Alternative accessible aux sélecteurs."
+        <div className="grid grid-cols-3 gap-2" aria-label="Date de naissance">
+          <WheelPicker
+            label="JJ"
+            value={String(parsed.day)}
+            options={dayOptions}
+            onChange={(value) => setDatePart({ day: Number(value) })}
             error={errors.birthDate}
-            className="mt-6"
-            required
-          >
-            <input
-              id="onboarding-birth-date"
-              type="date"
-              min={`${minimumYear}-01-01`}
-              max={`${maximumYear}-12-31`}
-              value={currentDate}
-              onChange={(event) => onChange({ birthDate: event.target.value })}
-              className={inputClassName}
-              aria-invalid={Boolean(errors.birthDate) || undefined}
-              aria-describedby={errors.birthDate ? 'onboarding-birth-date-error' : 'onboarding-birth-date-description'}
-            />
-          </FormField>
-        </>
-      ) : (
-        <FormField
-          id="onboarding-age-years"
-          label="Âge actuel"
-          error={errors.ageYears}
-          className="mt-6"
-          required
-        >
-          <NumericTextInput
-            id="onboarding-age-years"
-            value={values.ageYears}
-            onValueChange={(ageYears) => onChange({ ageYears })}
-            inputMode="numeric"
-            pattern="[0-9]*"
-            min={13}
-            max={120}
-            step={1}
-            className={inputClassName}
-            invalid={Boolean(errors.ageYears)}
-            describedBy={errors.ageYears ? 'onboarding-age-years-error' : undefined}
           />
-        </FormField>
+          <WheelPicker
+            label="MM"
+            value={String(parsed.month)}
+            options={monthLabels}
+            onChange={(value) => setDatePart({ month: Number(value) })}
+          />
+          <WheelPicker
+            label="AAAA"
+            value={String(parsed.year)}
+            options={yearOptions}
+            onChange={(value) => setDatePart({ year: Number(value) })}
+          />
+        </div>
+      ) : (
+        <WheelPicker
+          className="mx-auto max-w-xs"
+          label="Âge"
+          value={formatOptionValue(values.ageYears)}
+          options={optionsWithCurrent(ageOptions, values.ageYears, 'ans', 0)}
+          onChange={(value) => onChange({ ageYears: Number(value) })}
+          error={errors.ageYears}
+        />
       )}
 
       {typeof age === 'number' && Number.isFinite(age) ? (
-        <p className="mt-5 rounded-xl bg-slate-100 px-4 py-3 text-center text-sm font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-          Âge calculé : {Math.round(age)} ans
+        <p className="text-center text-sm font-semibold text-slate-700 dark:text-slate-200">
+          {Math.round(age)} ans
         </p>
       ) : null}
-
-      <ContextHelp className="mt-5">
-        L’âge intervient dans l’équation énergétique. La date complète reste dans le profil privé et n’est pas publiée dans le module social.
-      </ContextHelp>
-    </Card>
+    </div>
   );
 }
 
 function HeightStep({ values, errors, onChange }: Omit<OnboardingProfileStepProps, 'stepId'>) {
   return (
-    <Card className="p-5 sm:p-6">
-      <WheelPicker
-        label="Taille"
-        value={nearestInteger(values.heightCm, 100, 250, 175)}
-        options={heightOptions}
-        onChange={(value) => onChange({ heightCm: Number(value) })}
-      />
-
-      <FormField
-        id="onboarding-height"
-        label="Saisie précise en centimètres"
-        error={errors.heightCm}
-        className="mt-6"
-        required
-      >
-        <NumericTextInput
-          id="onboarding-height"
-          value={values.heightCm}
-          onValueChange={(heightCm) => onChange({ heightCm })}
-          min={100}
-          max={250}
-          step={0.1}
-          pattern="[0-9]*[.,]?[0-9]*"
-          className={inputClassName}
-          invalid={Boolean(errors.heightCm)}
-          describedBy={errors.heightCm ? 'onboarding-height-error' : undefined}
-        />
-      </FormField>
-
-      <ContextHelp className="mt-5">
-        La taille est utilisée avec le poids, l’âge et le sexe pour estimer le métabolisme de base.
-      </ContextHelp>
-    </Card>
+    <WheelPicker
+      className="mx-auto max-w-xs"
+      label="Taille"
+      value={formatOptionValue(values.heightCm)}
+      options={optionsWithCurrent(heightOptions, values.heightCm, 'cm', 1)}
+      onChange={(value) => onChange({ heightCm: Number(value) })}
+      error={errors.heightCm}
+      visibleItems={5}
+    />
   );
 }
 
 function WeightStep({ values, errors, onChange }: Omit<OnboardingProfileStepProps, 'stepId'>) {
   return (
-    <Card className="p-5 sm:p-6">
-      <WheelPicker
-        label="Poids"
-        value={nearestInteger(values.initialWeightKg, 30, 350, 70)}
-        options={weightOptions}
-        onChange={(value) => onChange({ initialWeightKg: Number(value) })}
-      />
-
-      <FormField
-        id="onboarding-weight"
-        label="Saisie précise en kilogrammes"
-        error={errors.initialWeightKg}
-        className="mt-6"
-        required
-      >
-        <NumericTextInput
-          id="onboarding-weight"
-          value={values.initialWeightKg}
-          onValueChange={(initialWeightKg) => onChange({ initialWeightKg })}
-          min={30}
-          max={350}
-          step={0.1}
-          pattern="[0-9]*[.,]?[0-9]*"
-          className={inputClassName}
-          invalid={Boolean(errors.initialWeightKg)}
-          describedBy={errors.initialWeightKg ? 'onboarding-weight-error' : undefined}
-        />
-      </FormField>
-
-      <ContextHelp className="mt-5" tone="brand">
-        Ce poids devient la valeur initiale du profil. S’il n’existe encore aucun historique, une première pesée sera créée à la validation finale.
-      </ContextHelp>
-    </Card>
+    <WheelPicker
+      className="mx-auto max-w-xs"
+      label="Poids"
+      value={formatOptionValue(values.initialWeightKg)}
+      options={optionsWithCurrent(weightOptions, values.initialWeightKg, 'kg', 1)}
+      onChange={(value) => onChange({ initialWeightKg: Number(value) })}
+      error={errors.initialWeightKg}
+      visibleItems={5}
+    />
   );
 }
 
 const goalCards: Array<{
   value: WeightGoal;
   title: string;
-  description: string;
   icon: typeof TrendingDown;
 }> = [
-  {
-    value: 'loss',
-    title: 'Perdre du poids',
-    description: 'Utilise une variation hebdomadaire négative.',
-    icon: TrendingDown,
-  },
-  {
-    value: 'maintenance',
-    title: 'Maintenir',
-    description: 'Conserve une variation hebdomadaire de 0 %.',
-    icon: Minus,
-  },
-  {
-    value: 'gain',
-    title: 'Prendre du poids ou de la masse',
-    description: 'Utilise une variation hebdomadaire positive.',
-    icon: TrendingUp,
-  },
+  { value: 'loss', title: 'Perdre', icon: TrendingDown },
+  { value: 'maintenance', title: 'Maintenir', icon: Minus },
+  { value: 'gain', title: 'Prendre', icon: TrendingUp },
 ];
+
+function weeklyChangeOptions(goal: WeightGoal, current: number): WheelPickerOption[] {
+  const base = goal === 'loss'
+    ? createSteppedOptions(-2, -0.05, 0.05, '%', 2)
+    : goal === 'gain'
+      ? createSteppedOptions(0.05, 2, 0.05, '%', 2)
+      : [{ value: '0', label: '0 %' }];
+  return optionsWithCurrent(base, current, '%', 2);
+}
 
 function GoalStep({ values, errors, onChange }: Omit<OnboardingProfileStepProps, 'stepId'>) {
   const chooseGoal = (goal: WeightGoal) => {
@@ -506,174 +352,87 @@ function GoalStep({ values, errors, onChange }: Omit<OnboardingProfileStepProps,
   };
 
   return (
-    <Card className="p-5 sm:p-6">
-      <ChoiceCardGroup label="Objectif de poids" columns={1}>
-        {goalCards.map((card) => (
-          <ChoiceCard
-            key={card.value}
-            name="goal"
-            value={card.value}
-            title={card.title}
-            description={card.description}
-            icon={card.icon}
-            selected={values.goal === card.value}
-            onSelect={() => chooseGoal(card.value)}
-          />
-        ))}
-      </ChoiceCardGroup>
-
-      <FormField
-        id="onboarding-weekly-change"
-        label="Variation hebdomadaire souhaitée"
-        description="Pourcentage du poids par semaine."
-        error={errors.targetWeeklyWeightChangePercent}
-        className="mt-6"
-        required
-      >
-        <div className="relative">
-          <NumericTextInput
-            id="onboarding-weekly-change"
-            value={values.targetWeeklyWeightChangePercent}
-            onValueChange={(targetWeeklyWeightChangePercent) =>
-              onChange({ targetWeeklyWeightChangePercent })}
-            min={-2}
-            max={2}
-            step={0.05}
-            pattern="-?[0-9]*[.,]?[0-9]*"
-            className={`${inputClassName} pr-10`}
-            invalid={Boolean(errors.targetWeeklyWeightChangePercent)}
-            describedBy={errors.targetWeeklyWeightChangePercent
-              ? 'onboarding-weekly-change-error'
-              : 'onboarding-weekly-change-description'}
-            readOnly={values.goal === 'maintenance'}
-          />
-          <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-slate-500">%</span>
+    <div className="space-y-3">
+      <fieldset>
+        <legend className="sr-only">Objectif de poids</legend>
+        <div className="grid grid-cols-3 gap-2">
+          {goalCards.map((card) => (
+            <ChoiceCard
+              compact
+              key={card.value}
+              name="goal"
+              value={card.value}
+              title={card.title}
+              icon={card.icon}
+              selected={values.goal === card.value}
+              onSelect={() => chooseGoal(card.value)}
+            />
+          ))}
         </div>
-      </FormField>
-
-      <ContextHelp className="mt-5">
-        Le maintien force 0 %. Les valeurs proposées pour la perte et la prise reprennent strictement les réglages métier existants ; aucune formule n’est modifiée dans U5.
-      </ContextHelp>
-    </Card>
+      </fieldset>
+      <WheelPicker
+        className="mx-auto max-w-xs"
+        label="Variation par semaine"
+        value={formatOptionValue(values.targetWeeklyWeightChangePercent)}
+        options={weeklyChangeOptions(values.goal, values.targetWeeklyWeightChangePercent)}
+        onChange={(value) => onChange({ targetWeeklyWeightChangePercent: Number(value) })}
+        error={errors.targetWeeklyWeightChangePercent}
+        disabled={values.goal === 'maintenance'}
+      />
+    </div>
   );
 }
 
 const activityCards: Array<{
   value: OccupationalActivity;
   title: string;
-  description: string;
   icon: typeof Armchair;
 }> = [
-  {
-    value: 'sedentary',
-    title: 'Principalement assis',
-    description: 'Bureau, études ou conduite avec peu de déplacements.',
-    icon: Armchair,
-  },
-  {
-    value: 'lightlyActive',
-    title: 'Modérément actif',
-    description: 'Déplacements réguliers, station debout ou marche légère.',
-    icon: BriefcaseBusiness,
-  },
-  {
-    value: 'active',
-    title: 'Physiquement actif',
-    description: 'Marche fréquente, manutention légère ou travail mobile.',
-    icon: PersonStanding,
-  },
-  {
-    value: 'veryActive',
-    title: 'Très physique',
-    description: 'Efforts soutenus, manutention lourde ou activité manuelle intense.',
-    icon: Dumbbell,
-  },
+  { value: 'sedentary', title: 'Assis', icon: Armchair },
+  { value: 'lightlyActive', title: 'Modéré', icon: BriefcaseBusiness },
+  { value: 'active', title: 'Actif', icon: PersonStanding },
+  { value: 'veryActive', title: 'Très actif', icon: Dumbbell },
 ];
 
 function ActivityStep({ values, errors, onChange }: Omit<OnboardingProfileStepProps, 'stepId'>) {
   return (
-    <Card className="p-5 sm:p-6">
-      <ChoiceCardGroup
-        label="Niveau d’activité professionnelle"
-        description={errors.occupationalActivity}
-        columns={2}
-      >
+    <fieldset>
+      <legend className="sr-only">Niveau d’activité professionnelle</legend>
+      {errors.occupationalActivity ? (
+        <p className="mb-2 text-sm text-rose-700" role="alert">{errors.occupationalActivity}</p>
+      ) : null}
+      <div className="grid grid-cols-2 gap-3">
         {activityCards.map((card) => (
           <ChoiceCard
+            compact
             key={card.value}
             name="occupationalActivity"
             value={card.value}
             title={card.title}
-            description={card.description}
             icon={card.icon}
             selected={values.occupationalActivity === card.value}
             onSelect={() => onChange({ occupationalActivity: card.value })}
           />
         ))}
-      </ChoiceCardGroup>
-
-      <ContextHelp className="mt-5" tone="brand">
-        Ce niveau représente le socle quotidien hors séances sportives ajoutées. Les coefficients actuels sont réutilisés sans modification.
-      </ContextHelp>
-    </Card>
+      </div>
+      <p className="mt-3 text-center text-xs text-slate-500 dark:text-slate-400">
+        Activité habituelle hors séances sportives.
+      </p>
+    </fieldset>
   );
 }
 
-const quickStepGoals = [5_000, 7_500, 10_000, 12_000] as const;
-
 function StepsStep({ values, errors, onChange }: Omit<OnboardingProfileStepProps, 'stepId'>) {
   return (
-    <Card className="p-5 sm:p-6">
-      <div className="rounded-[var(--sp-radius-card)] bg-brand-50 px-4 py-6 text-center dark:bg-brand-950/30">
-        <Footprints aria-hidden="true" className="mx-auto size-7 text-brand-700 dark:text-brand-300" />
-        <p className="mt-3 text-4xl font-bold tracking-tight text-slate-950 dark:text-white">
-          {Number.isFinite(values.dailyStepGoal)
-            ? Math.round(values.dailyStepGoal).toLocaleString('fr-FR')
-            : '—'}
-        </p>
-        <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">pas par jour</p>
-      </div>
-
-      <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4" aria-label="Valeurs rapides">
-        {quickStepGoals.map((goal) => (
-          <Button
-            key={goal}
-            type="button"
-            variant={values.dailyStepGoal === goal ? 'primary' : 'secondary'}
-            onClick={() => onChange({ dailyStepGoal: goal })}
-          >
-            {goal.toLocaleString('fr-FR')}
-          </Button>
-        ))}
-      </div>
-
-      <FormField
-        id="onboarding-daily-step-goal"
-        label="Objectif précis"
-        error={errors.dailyStepGoal}
-        className="mt-6"
-        required
-      >
-        <NumericTextInput
-          id="onboarding-daily-step-goal"
-          value={values.dailyStepGoal}
-          onValueChange={(dailyStepGoal) => onChange({ dailyStepGoal })}
-          inputMode="numeric"
-          pattern="[0-9]*"
-          min={0}
-          max={100_000}
-          step={100}
-          enterKeyHint="done"
-          className={inputClassName}
-          invalid={Boolean(errors.dailyStepGoal)}
-          describedBy={errors.dailyStepGoal ? 'onboarding-daily-step-goal-error' : undefined}
-        />
-      </FormField>
-
-      <ContextHelp className="mt-5">
-        Cet objectif sert au suivi quotidien. Les pas réellement enregistrés restent distincts de cette cible.
-      </ContextHelp>
-    </Card>
+    <WheelPicker
+      className="mx-auto max-w-xs"
+      label="Pas par jour"
+      value={formatOptionValue(values.dailyStepGoal)}
+      options={optionsWithCurrent(stepGoalOptions, values.dailyStepGoal, 'pas', 0)}
+      onChange={(value) => onChange({ dailyStepGoal: Number(value) })}
+      error={errors.dailyStepGoal}
+      visibleItems={5}
+    />
   );
 }
 

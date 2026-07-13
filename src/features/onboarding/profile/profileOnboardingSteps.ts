@@ -36,48 +36,48 @@ export const PROFILE_ONBOARDING_STEP_COPY: Record<
 > = {
   [PROFILE_ONBOARDING_STEP_IDS.name]: {
     eyebrow: 'Votre profil',
-    title: 'Comment souhaitez-vous être appelé dans SportPilot ?',
-    description: 'Ce nom reste local au profil et peut être modifié plus tard.',
+    title: 'Comment vous appeler ?',
+    description: 'Facultatif et modifiable plus tard.',
   },
   [PROFILE_ONBOARDING_STEP_IDS.sex]: {
     eyebrow: 'Informations personnelles',
-    title: 'Quel sexe doit être utilisé pour les calculs énergétiques ?',
-    description: 'Cette donnée sert uniquement aux équations de dépense énergétique.',
+    title: 'Quel sexe utiliser pour les calculs ?',
+    description: 'Uniquement pour l’estimation énergétique.',
   },
   [PROFILE_ONBOARDING_STEP_IDS.birthDate]: {
     eyebrow: 'Informations personnelles',
-    title: 'Quelle est votre date de naissance ?',
-    description: 'Vous pouvez utiliser les sélecteurs ou saisir directement la date.',
+    title: 'Votre date de naissance',
+    description: 'Faites défiler chaque colonne.',
   },
   [PROFILE_ONBOARDING_STEP_IDS.height]: {
     eyebrow: 'Mesures',
-    title: 'Quelle est votre taille ?',
-    description: 'La valeur est enregistrée en centimètres.',
+    title: 'Votre taille',
+    description: 'Faites défiler pour choisir.',
   },
   [PROFILE_ONBOARDING_STEP_IDS.weight]: {
     eyebrow: 'Mesures',
-    title: 'Quel est votre poids actuel ?',
-    description: 'Cette valeur initiale servira de référence tant qu’aucune pesée plus récente n’existe.',
+    title: 'Votre poids actuel',
+    description: 'Faites défiler pour choisir.',
   },
   [PROFILE_ONBOARDING_STEP_IDS.goal]: {
     eyebrow: 'Objectif',
-    title: 'Quel est votre objectif principal ?',
-    description: 'La variation hebdomadaire reste ajustable sur ce même écran.',
+    title: 'Votre objectif',
+    description: 'Choisissez puis ajustez le rythme.',
   },
   [PROFILE_ONBOARDING_STEP_IDS.activity]: {
     eyebrow: 'Activité quotidienne',
-    title: 'À quoi ressemble votre activité professionnelle ?',
-    description: 'Choisissez le niveau qui décrit le mieux une journée habituelle hors sport.',
+    title: 'Votre activité quotidienne',
+    description: 'Hors séances sportives.',
   },
   [PROFILE_ONBOARDING_STEP_IDS.steps]: {
     eyebrow: 'Activité quotidienne',
-    title: 'Quel objectif de pas souhaitez-vous viser chaque jour ?',
-    description: 'Vous pourrez l’ajuster à tout moment depuis votre profil.',
+    title: 'Votre objectif de pas',
+    description: 'Par paliers de 500.',
   },
   [PROFILE_ONBOARDING_STEP_IDS.summary]: {
     eyebrow: 'Dernière vérification',
-    title: 'Vérifiez votre configuration',
-    description: 'Relisez les informations avant de commencer avec SportPilot.',
+    title: 'Vérifiez votre profil',
+    description: 'Touchez une information pour la modifier.',
   },
 };
 

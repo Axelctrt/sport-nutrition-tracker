@@ -45,7 +45,7 @@ describe('App', () => {
 
     expect(screen.getByTestId('app-splash-screen')).toBeInTheDocument();
     expect(
-      await screen.findByRole('heading', { name: 'Choisir le mode local ou compte' }, { timeout: 5_000 }),
+      await screen.findByRole('heading', { name: 'Local ou compte ?' }, { timeout: 5_000 }),
     ).toBeInTheDocument();
     expect(screen.queryByTestId('app-splash-screen')).not.toBeInTheDocument();
   }, 15_000);
@@ -54,35 +54,35 @@ describe('App', () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await screen.findByRole('heading', { name: 'Choisir le mode local ou compte' }, { timeout: 5_000 });
+    await screen.findByRole('heading', { name: 'Local ou compte ?' }, { timeout: 5_000 });
     await user.click(screen.getByRole('button', { name: 'Choisir le mode local' }));
     await screen.findByRole('heading', {
-      name: 'Comment souhaitez-vous être appelé dans SportPilot ?',
+      name: 'Comment vous appeler ?',
     }, { timeout: 5_000 });
-    await user.type(screen.getByLabelText(/Nom utilisé dans SportPilot/), 'Axel');
+    await user.type(screen.getByLabelText(/Nom affiché/), 'Axel');
     expect(window.localStorage.getItem(ONBOARDING_DRAFT_STORAGE_KEY)).not.toBeNull();
 
     for (const heading of [
-      'Quel sexe doit être utilisé pour les calculs énergétiques ?',
-      'Quelle est votre date de naissance ?',
-      'Quelle est votre taille ?',
-      'Quel est votre poids actuel ?',
-      'Quel est votre objectif principal ?',
-      'À quoi ressemble votre activité professionnelle ?',
-      'Quel objectif de pas souhaitez-vous viser chaque jour ?',
+      'Quel sexe utiliser pour les calculs ?',
+      'Votre date de naissance',
+      'Votre taille',
+      'Votre poids actuel',
+      'Votre objectif',
+      'Votre activité quotidienne',
+      'Votre objectif de pas',
     ]) {
-      await user.click(screen.getByRole('button', { name: 'Suivant' }));
+      await user.click(screen.getByRole('button', { name: 'Continuer' }));
       await screen.findByRole('heading', { name: heading });
     }
 
-    await user.click(screen.getByRole('button', { name: 'Suivant' }));
-    await screen.findByRole('heading', { name: 'Vérifiez votre configuration' });
+    await user.click(screen.getByRole('button', { name: 'Continuer' }));
+    await screen.findByRole('heading', { name: 'Vérifiez votre profil' });
     expect(screen.getByText('Axel')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Modifier le poids' }));
-    await screen.findByRole('heading', { name: 'Quel est votre poids actuel ?' });
-    await user.click(screen.getByRole('button', { name: 'Suivant' }));
-    await screen.findByRole('heading', { name: 'Vérifiez votre configuration' });
-    await user.click(screen.getByRole('button', { name: 'Commencer avec SportPilot' }));
+    await screen.findByRole('heading', { name: 'Votre poids actuel' });
+    await user.click(screen.getByRole('button', { name: 'Continuer' }));
+    await screen.findByRole('heading', { name: 'Vérifiez votre profil' });
+    await user.click(screen.getByRole('button', { name: 'Commencer' }));
 
     await waitFor(
       () => expect(router.state.location.pathname).toBe('/'),

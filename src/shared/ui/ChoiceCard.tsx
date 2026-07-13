@@ -13,6 +13,7 @@ export interface ChoiceCardProps {
   disabled?: boolean;
   className?: string;
   onSelect: (value: string) => void;
+  compact?: boolean;
 }
 
 export function ChoiceCard({
@@ -26,6 +27,7 @@ export function ChoiceCard({
   disabled = false,
   className,
   onSelect,
+  compact = false,
 }: ChoiceCardProps) {
   const titleId = useId();
   const descriptionId = useId();
@@ -45,7 +47,8 @@ export function ChoiceCard({
       />
       <span
         className={cn(
-          'relative flex min-h-24 w-full items-start gap-4 rounded-[var(--sp-radius-card)] border p-4 text-left transition-[border-color,background-color,box-shadow,transform]',
+          'relative flex w-full items-start rounded-[var(--sp-radius-card)] border text-left transition-[border-color,background-color,box-shadow,transform]',
+          compact ? 'min-h-16 gap-2 p-2.5' : 'min-h-24 gap-4 p-4',
           'peer-focus-visible:outline peer-focus-visible:outline-[3px] peer-focus-visible:outline-offset-2 peer-focus-visible:outline-brand-500/60',
           'peer-disabled:opacity-60',
           selected
@@ -56,18 +59,19 @@ export function ChoiceCard({
         {Icon ? (
           <span
             className={cn(
-              'grid size-11 shrink-0 place-items-center rounded-xl',
+              'grid shrink-0 place-items-center rounded-xl',
+              compact ? 'size-9' : 'size-11',
               selected
                 ? 'bg-brand-700 text-white dark:bg-brand-500'
                 : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200',
             )}
           >
-            <Icon aria-hidden="true" className="size-5" />
+            <Icon aria-hidden="true" className={compact ? 'size-4' : 'size-5'} />
           </span>
         ) : null}
         <span className="min-w-0 flex-1">
           <span className="flex flex-wrap items-center gap-2">
-            <span id={titleId} className="font-semibold text-slate-950 dark:text-white">
+            <span id={titleId} className={cn('font-semibold text-slate-950 dark:text-white', compact && 'text-sm leading-5')}>
               {title}
             </span>
             {badge ? (
@@ -77,7 +81,7 @@ export function ChoiceCard({
             ) : null}
           </span>
           {description ? (
-            <span id={descriptionId} className="mt-1 block text-sm leading-5 text-slate-600 dark:text-slate-300">
+            <span id={descriptionId} className={cn('mt-1 block text-sm leading-5 text-slate-600 dark:text-slate-300', compact && 'text-xs leading-4')}>
               {description}
             </span>
           ) : null}
