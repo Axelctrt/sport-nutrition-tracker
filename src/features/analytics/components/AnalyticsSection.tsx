@@ -10,6 +10,7 @@ interface AnalyticsSectionProps extends PropsWithChildren {
   icon: LucideIcon;
   defaultOpen?: boolean;
   toneClassName?: string;
+  hasData?: boolean;
 }
 
 export function AnalyticsSection({
@@ -19,10 +20,33 @@ export function AnalyticsSection({
   icon: Icon,
   defaultOpen = false,
   toneClassName = 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200',
+  hasData = true,
   children,
 }: AnalyticsSectionProps) {
   const [open, setOpen] = useState(defaultOpen);
   const contentId = useId();
+
+  if (!hasData) {
+    return (
+      <div
+        className="flex min-h-16 items-center gap-3 rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/50"
+        aria-label={`${title} sans données`}
+      >
+        <span className={cn('grid size-9 shrink-0 place-items-center rounded-lg opacity-70', toneClassName)}>
+          <Icon aria-hidden="true" className="size-4.5" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-semibold text-slate-700 dark:text-slate-200">{title}</span>
+          <span className="block truncate text-xs text-slate-500 dark:text-slate-400">
+            {description}
+          </span>
+        </span>
+        <span className="shrink-0 text-xs font-semibold text-slate-500 dark:text-slate-400">
+          Pas de données
+        </span>
+      </div>
+    );
+  }
 
   return (
     <Card className="overflow-hidden">

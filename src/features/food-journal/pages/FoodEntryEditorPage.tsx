@@ -8,6 +8,7 @@ import { FoodEntryForm } from '@/features/food-journal/components/FoodEntryForm'
 import type { FoodEntryFormValues } from '@/features/food-journal/schemas/foodEntrySchema';
 import {
   createFoodJournalFeedbackState,
+  createFoodJournalRestoreState,
   type FoodJournalNavigationState,
 } from '@/features/food-journal/navigation/foodJournalNavigation';
 import { mealSlotLabels } from '@/features/food-journal/utils/foodLabels';
@@ -86,10 +87,7 @@ export function FoodEntryEditorPage() {
     <section aria-labelledby="food-entry-editor-title">
       <Link
         to={navigationState?.foodJournalReturn?.path ?? foodJournalPath(entry?.date ?? defaultDate)}
-        state={navigationState?.foodJournalReturn ? {
-          scroll: 'restore',
-          restoreScrollKey: navigationState.foodJournalReturn.scrollKey,
-        } : undefined} className="inline-flex items-center gap-2 text-sm font-semibold text-brand-700 hover:underline dark:text-brand-300"><ArrowLeft aria-hidden="true" className="size-4" />Retour au journal</Link>
+        state={createFoodJournalRestoreState(navigationState?.foodJournalReturn)} className="hidden items-center gap-2 text-sm font-semibold text-brand-700 hover:underline lg:inline-flex dark:text-brand-300"><ArrowLeft aria-hidden="true" className="size-4" />Retour au journal</Link>
       <div className="mt-5">
         <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">Journal alimentaire</p>
         <h1 id="food-entry-editor-title" className="mt-1 text-3xl font-bold tracking-tight text-slate-950 dark:text-white">{entryId ? 'Modifier un aliment consommé' : 'Ajouter un aliment'}</h1>

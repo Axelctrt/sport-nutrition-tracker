@@ -28,9 +28,11 @@ const checks = [
   ],
   [
     'page provides a confirmed remove action',
-    privacyPage.includes('onClick={() => removeFriend(friend)}')
-      && privacyPage.includes('Supprimer ${friend.displayName} de tes amis ?')
-      && privacyPage.includes('Supprimer'),
+    privacyPage.includes('onClick={() => setPendingFriendRemoval(friend)}')
+      && privacyPage.includes('<ConfirmationDialog')
+      && privacyPage.includes('Supprimer ${pendingFriendRemoval.displayName} ?')
+      && privacyPage.includes('confirmLabel="Supprimer l’ami"')
+      && privacyPage.includes('void removeFriend(pendingFriendRemoval)'),
   ],
   [
     'A19 domain tests exist',

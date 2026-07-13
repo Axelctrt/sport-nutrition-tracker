@@ -47,3 +47,14 @@ export function createFoodJournalFeedbackState(
       : {}),
   };
 }
+
+export function createFoodJournalRestoreState(
+  context: FoodJournalReturnContext | undefined,
+): FoodJournalNavigationState | undefined {
+  if (!context) return undefined;
+
+  return {
+    scroll: 'restore',
+    restoreScrollKey: context.scrollKey,
+  };
+}

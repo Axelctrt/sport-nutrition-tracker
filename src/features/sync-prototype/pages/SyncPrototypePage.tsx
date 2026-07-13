@@ -1,9 +1,7 @@
 import {
   ChevronDown,
-  ClipboardCopy,
   Cloud,
   CloudOff,
-  Fingerprint,
   KeyRound,
   LogOut,
   Mail,
@@ -22,130 +20,39 @@ import {
   useState,
   useSyncExternalStore,
 } from 'react';
+import type { WeightEntry } from '@/domain/models/weight';
+import { UnifiedSyncCenterPanel } from '@/features/settings/components/UnifiedSyncCenterPanel';
 import {
   getSyncPrototypeClient,
   type SyncPrototypeClient,
-  type SyncPrototypeInteractionSnapshot,
-  type SyncPrototypeSyncSnapshot,
   type SyncPrototypeWeightDraft,
 } from '@/infrastructure/sync-prototype/syncPrototypeClient';
-import {
-  createSyncPrototypeDiagnosticReport,
-} from '@/infrastructure/sync-prototype/syncPrototypeDiagnostics';
-import type { WeightEntry } from '@/domain/models/weight';
-import { SYNC_PROTOTYPE_DATABASE_NAME } from '@/infrastructure/sync-prototype/SyncPrototypeDatabase';
 import { readSyncPrototypeConfigSafely } from '@/infrastructure/sync-prototype/syncPrototypeConfig';
-import { formatLocalDate, toLocalDate } from '@/shared/utils/dates';
+import { createSyncPrototypeDiagnosticReport } from '@/infrastructure/sync-prototype/syncPrototypeDiagnostics';
 import { useToast } from '@/shared/toast/useToast';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
+import { ConfirmationDialog } from '@/shared/ui/ConfirmationDialog';
 import { FormField } from '@/shared/ui/FormField';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
-import { ConfirmationDialog } from '@/shared/ui/ConfirmationDialog';
+import { formatLocalDate } from '@/shared/utils/dates';
+import { SyncPrototypeDiagnosticsCard } from './SyncPrototypeDiagnosticsCard';
+import { SyncPrototypeSafeguardsCard } from './SyncPrototypeSafeguardsCard';
+import { SyncPrototypeStatusCard } from './SyncPrototypeStatusCard';
+import {
+  createEmptyWeightDraft,
+  errorMessage,
+  inputClasses,
+  interactionError,
+  interactionMessage,
+  maskEmail,
+  type ActionStatus,
+  type WeightDraftState,
+} from './syncPrototypePresentation';
 
 interface SyncPrototypePageProps {
   client?: SyncPrototypeClient;
   diagnosticsEnabled?: boolean;
-}
-
-type ActionStatus =
-  | 'idle'
-  | 'email'
-  | 'otp'
-  | 'logout'
-  | 'sync'
-  | 'weight-save'
-  | 'weight-delete'
-  | 'real-weight-analyze'
-  | 'real-weight-sync';
-
-interface WeightDraftState {
-  date: string;
-  weightKg: string;
-  note: string;
-}
-
-function createEmptyWeightDraft(): WeightDraftState {
-  return {
-    date: toLocalDate(),
-    weightKg: '',
-    note: '',
-  };
-}
-
-const inputClasses =
-  'min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-slate-950 shadow-sm outline-none transition focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20 disabled:cursor-not-allowed disabled:opacity-70 dark:border-slate-700 dark:bg-slate-950 dark:text-white';
-
-const syncStatusLabels: Record<
-  SyncPrototypeSyncSnapshot['status'],
-  string
-> = {
-  'not-started': 'Non démarrée',
-  connecting: 'Connexion en cours',
-  connected: 'Connectée',
-  disconnected: 'Déconnectée',
-  error: 'Erreur',
-  offline: 'Hors ligne',
-};
-
-const syncPhaseLabels: Record<
-  SyncPrototypeSyncSnapshot['phase'],
-  string
-> = {
-  initial: 'Initialisation',
-  'not-in-sync': 'Modifications en attente',
-  pushing: 'Envoi des modifications',
-  pulling: 'Réception des modifications',
-  'in-sync': 'À jour',
-  error: 'Erreur',
-  offline: 'Hors ligne',
-};
-
-function errorMessage(error: unknown, fallback: string): string {
-  return error instanceof Error ? error.message : fallback;
-}
-
-function maskEmail(email: string): string {
-  const [localPart, domain] = email.split('@');
-  if (!localPart || !domain) return email;
-  const visible = localPart.slice(0, Math.min(2, localPart.length));
-  return `${visible}***@${domain}`;
-}
-
-function interactionError(
-  interaction: SyncPrototypeInteractionSnapshot | undefined,
-): string | undefined {
-  const alert = interaction?.alerts.find((item) => item.type === 'error');
-  if (!alert) return undefined;
-
-  switch (alert.messageCode) {
-    case 'INVALID_EMAIL':
-      return 'Cette adresse email n’est pas valide.';
-    case 'INVALID_OTP':
-      return 'Le code saisi est incorrect ou a expiré.';
-    case 'LICENSE_LIMIT_REACHED':
-      return 'La limite de comptes autorisés pour ce service est atteinte.';
-    default:
-      return alert.message || 'Dexie Cloud a refusé cette opération.';
-  }
-}
-
-function interactionMessage(
-  interaction: SyncPrototypeInteractionSnapshot,
-): string {
-  return (
-    interaction.alerts.map((alert) => alert.message).filter(Boolean).join(' ') ||
-    'Dexie Cloud demande une confirmation.'
-  );
-}
-
-function formatDiagnosticDate(value: string | undefined): string {
-  if (!value) return 'Jamais';
-
-  return new Intl.DateTimeFormat('fr-FR', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(new Date(value));
 }
 
 function SyncPrototypeRuntime({
@@ -641,7 +548,7 @@ function SyncPrototypeRuntime({
         </InlineNotice>
       ) : null}
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className={diagnosticsEnabled ? 'grid gap-4 lg:grid-cols-2' : 'grid gap-4'}>
         <Card className="p-5 sm:p-6">
           <div className="flex items-start gap-3">
             <span className="rounded-xl bg-slate-100 p-2 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
@@ -815,206 +722,30 @@ function SyncPrototypeRuntime({
           )}
         </Card>
 
-        <Card className="p-5 sm:p-6">
-          <div className="flex items-start gap-3">
-            <span className="rounded-xl bg-slate-100 p-2 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-              <RefreshCw aria-hidden="true" className="size-5" />
-            </span>
-            <div className="min-w-0">
-              <h2 className="text-lg font-semibold text-slate-950 dark:text-white">
-                État de synchronisation
-              </h2>
-              <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                {diagnosticsEnabled
-                  ? 'État technique de la base expérimentale uniquement.'
-                  : 'État de la connexion au service de synchronisation.'}
-              </p>
-            </div>
-          </div>
-
-          <dl className="mt-5 grid gap-3 text-sm sm:grid-cols-2">
-            <div>
-              <dt className="font-medium text-slate-500 dark:text-slate-400">
-                Connexion
-              </dt>
-              <dd className="mt-1 font-semibold text-slate-950 dark:text-white">
-                {syncStatusLabels[snapshot.sync.status]}
-              </dd>
-            </div>
-            <div>
-              <dt className="font-medium text-slate-500 dark:text-slate-400">
-                Phase
-              </dt>
-              <dd className="mt-1 font-semibold text-slate-950 dark:text-white">
-                {syncPhaseLabels[snapshot.sync.phase]}
-              </dd>
-            </div>
-            {typeof snapshot.sync.progress === 'number' ? (
-              <div>
-                <dt className="font-medium text-slate-500 dark:text-slate-400">
-                  Progression
-                </dt>
-                <dd className="mt-1 font-semibold text-slate-950 dark:text-white">
-                  {Math.round(snapshot.sync.progress)} %
-                </dd>
-              </div>
-            ) : null}
-            {diagnosticsEnabled ? (
-              <div>
-                <dt className="font-medium text-slate-500 dark:text-slate-400">
-                  Base locale
-                </dt>
-                <dd className="mt-1 break-all font-mono text-xs text-slate-950 dark:text-white">
-                  {SYNC_PROTOTYPE_DATABASE_NAME}
-                </dd>
-              </div>
-            ) : null}
-          </dl>
-
-          {snapshot.sync.errorMessage ? (
-            <InlineNotice
-              className="mt-4"
-              tone="error"
-              title={diagnosticsEnabled ? 'Erreur Dexie Cloud' : 'Erreur du service'}
-            >
-              {snapshot.sync.errorMessage}
-            </InlineNotice>
-          ) : null}
-
-          {diagnosticsEnabled ? (
-            <Button
-              className="mt-5 w-full sm:w-auto"
-              disabled={!isLoggedIn || isCloudActionBusy || isInitializing}
-              onClick={() => void handleSync()}
-              variant="secondary"
-            >
-              <RefreshCw
-                aria-hidden="true"
-                className={
-                  actionStatus === 'sync'
-                    ? 'size-4 animate-spin motion-reduce:animate-none'
-                    : 'size-4'
-                }
-              />
-              {actionStatus === 'sync'
-                ? 'Synchronisation…'
-                : 'Synchroniser maintenant'}
-            </Button>
-          ) : null}
-        </Card>
+        {diagnosticsEnabled ? (
+          <SyncPrototypeStatusCard
+            sync={snapshot.sync}
+            isLoggedIn={isLoggedIn}
+            isCloudActionBusy={isCloudActionBusy}
+            isInitializing={isInitializing}
+            actionStatus={actionStatus}
+            onSync={() => void handleSync()}
+          />
+        ) : null}
       </div>
+
+      {!diagnosticsEnabled ? (
+        <UnifiedSyncCenterPanel client={client} initializeClient={false} />
+      ) : null}
 
       {diagnosticsEnabled ? (
         <>
-          <Card className="overflow-hidden p-0">
-        <button
-          aria-controls="sync-prototype-diagnostics-content"
-          aria-expanded={isDiagnosticsOpen}
-          className="flex min-h-20 w-full items-center gap-3 p-5 text-left transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-600 sm:p-6 dark:hover:bg-slate-800/60"
-          onClick={() => setIsDiagnosticsOpen((current) => !current)}
-          type="button"
-        >
-          <span className="rounded-xl bg-emerald-50 p-2 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
-            <Fingerprint aria-hidden="true" className="size-5" />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-lg font-semibold text-slate-950 dark:text-white">
-              Diagnostic C3
-            </span>
-            <span className="mt-1 block text-sm leading-6 text-slate-600 dark:text-slate-300">
-              Rapport non sensible pour comparer les appareils et les comptes.
-            </span>
-          </span>
-          <ChevronDown
-            aria-hidden="true"
-            className={`size-5 shrink-0 text-slate-500 transition-transform motion-reduce:transition-none ${
-              isDiagnosticsOpen ? 'rotate-180' : ''
-            }`}
+          <SyncPrototypeDiagnosticsCard
+            diagnostics={snapshot.diagnostics}
+            isOpen={isDiagnosticsOpen}
+            onToggle={() => setIsDiagnosticsOpen((current) => !current)}
+            onCopy={() => void handleCopyDiagnostics()}
           />
-        </button>
-
-        {isDiagnosticsOpen ? (
-          <div
-            className="space-y-5 border-t border-slate-200 p-5 sm:p-6 dark:border-slate-800"
-            id="sync-prototype-diagnostics-content"
-          >
-            <InlineNotice tone="info" title="Politique de conflit testée">
-              Des propriétés différentes se fusionnent. Pour une même
-              propriété, la dernière opération reçue gagne. Un marqueur de
-              suppression masque toujours une ancienne pesée réintroduite par
-              un appareil hors ligne.
-            </InlineNotice>
-
-            <dl className="grid gap-4 text-sm sm:grid-cols-2 xl:grid-cols-3">
-              <div>
-                <dt className="font-medium text-slate-500 dark:text-slate-400">
-                  Empreinte du compte
-                </dt>
-                <dd className="mt-1 break-all font-mono text-xs font-semibold text-slate-950 dark:text-white">
-                  {snapshot.diagnostics.accountFingerprint ?? 'Non connecté'}
-                </dd>
-              </div>
-              <div>
-                <dt className="font-medium text-slate-500 dark:text-slate-400">
-                  Base expérimentale
-                </dt>
-                <dd className="mt-1 break-all font-mono text-xs font-semibold text-slate-950 dark:text-white">
-                  {snapshot.diagnostics.databaseName} v
-                  {snapshot.diagnostics.databaseVersion}
-                </dd>
-              </div>
-              <div>
-                <dt className="font-medium text-slate-500 dark:text-slate-400">
-                  Données visibles
-                </dt>
-                <dd className="mt-1 font-semibold text-slate-950 dark:text-white">
-                  {snapshot.diagnostics.visibleWeightCount} pesée
-                  {snapshot.diagnostics.visibleWeightCount > 1 ? 's' : ''} —{' '}
-                  {snapshot.diagnostics.deletedWeightCount} suppression
-                  {snapshot.diagnostics.deletedWeightCount > 1 ? 's' : ''}
-                </dd>
-              </div>
-              <div>
-                <dt className="font-medium text-slate-500 dark:text-slate-400">
-                  Dernière synchronisation terminée
-                </dt>
-                <dd className="mt-1 font-semibold text-slate-950 dark:text-white">
-                  {formatDiagnosticDate(
-                    snapshot.diagnostics.lastSyncCompletedAt,
-                  )}
-                </dd>
-              </div>
-              <div>
-                <dt className="font-medium text-slate-500 dark:text-slate-400">
-                  Dernier rafraîchissement local
-                </dt>
-                <dd className="mt-1 font-semibold text-slate-950 dark:text-white">
-                  {formatDiagnosticDate(snapshot.diagnostics.lastRefreshAt)}
-                </dd>
-              </div>
-              <div>
-                <dt className="font-medium text-slate-500 dark:text-slate-400">
-                  Dernière pesée modifiée
-                </dt>
-                <dd className="mt-1 font-semibold text-slate-950 dark:text-white">
-                  {formatDiagnosticDate(
-                    snapshot.diagnostics.latestWeightUpdatedAt,
-                  )}
-                </dd>
-              </div>
-            </dl>
-
-            <Button
-              className="w-full sm:w-auto"
-              onClick={() => void handleCopyDiagnostics()}
-              variant="secondary"
-            >
-              <ClipboardCopy aria-hidden="true" className="size-4" />
-              Copier le diagnostic
-            </Button>
-          </div>
-        ) : null}
-      </Card>
 
       <Card className="overflow-hidden p-0">
         <button
@@ -1403,25 +1134,7 @@ function SyncPrototypeRuntime({
         ) : null}
       </Card>
 
-      <Card className="p-5 sm:p-6">
-        <div className="flex items-start gap-3">
-          <span className="rounded-xl bg-emerald-50 p-2 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
-            <ShieldCheck aria-hidden="true" className="size-5" />
-          </span>
-          <div>
-            <h2 className="text-lg font-semibold text-slate-950 dark:text-white">
-              Garde-fous actifs
-            </h2>
-            <ul className="mt-2 space-y-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-              <li>Base IndexedDB distincte de la base réelle.</li>
-              <li>Aucune donnée SportPilot importée automatiquement.</li>
-              <li>Les vraies pesées exigent un flag distinct et une confirmation.</li>
-              <li>Route de gestion toujours accessible, avec erreur locale si la configuration est indisponible.</li>
-              <li>Jetons et clés Dexie Cloud non exposés à l’interface.</li>
-            </ul>
-          </div>
-        </div>
-      </Card>
+      <SyncPrototypeSafeguardsCard />
 
       <ConfirmationDialog
         open={isRealWeightConfirmationOpen}

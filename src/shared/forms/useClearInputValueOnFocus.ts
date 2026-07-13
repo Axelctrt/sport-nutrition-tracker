@@ -27,10 +27,12 @@ const excludedInputTypes = new Set([
   'week',
 ]);
 
-function isTextEntryField(target: EventTarget | null): target is HTMLInputElement | HTMLTextAreaElement {
+function isClearOnFocusField(
+  target: EventTarget | null,
+): target is HTMLInputElement | HTMLTextAreaElement {
   if (!(target instanceof HTMLInputElement) && !(target instanceof HTMLTextAreaElement)) return false;
   if (target.disabled || target.readOnly) return false;
-  if (target.dataset.clearOnFocus === 'false') return false;
+  if (target.dataset.clearOnFocus !== 'true') return false;
   if (target instanceof HTMLInputElement && excludedInputTypes.has(target.type)) return false;
   return true;
 }
@@ -47,7 +49,7 @@ function setElementValue(element: HTMLInputElement | HTMLTextAreaElement, value:
 export function useClearInputValueOnFocus(): void {
   useEffect(() => {
     const handleFocusIn = (event: FocusEvent) => {
-      if (!isTextEntryField(event.target)) return;
+      if (!isClearOnFocusField(event.target)) return;
       const field = event.target;
       if (field.value === '') return;
       activeInputs.set(field, { initialValue: field.value, changed: false });
@@ -55,14 +57,14 @@ export function useClearInputValueOnFocus(): void {
     };
 
     const handleInput = (event: Event) => {
-      if (!isTextEntryField(event.target)) return;
+      if (!isClearOnFocusField(event.target)) return;
       const state = activeInputs.get(event.target);
       if (!state) return;
       if (event.target.value !== '') state.changed = true;
     };
 
     const handleFocusOut = (event: FocusEvent) => {
-      if (!isTextEntryField(event.target)) return;
+      if (!isClearOnFocusField(event.target)) return;
       const field = event.target;
       const state = activeInputs.get(field);
       if (!state) return;

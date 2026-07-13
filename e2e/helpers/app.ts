@@ -6,15 +6,13 @@ export async function createLocalProfile(page: Page, firstName = 'E2E'): Promise
   });
 
   await page.goto('/#/onboarding', { waitUntil: 'domcontentloaded' });
-  const onboardingReady = await modeChoiceHeading
-    .isVisible({ timeout: 10_000 })
-    .catch(() => false);
 
-  if (!onboardingReady) {
-    await page.goto('/#/onboarding', { waitUntil: 'domcontentloaded' });
+  try {
+    await expect(modeChoiceHeading).toBeVisible({ timeout: 15_000 });
+  } catch {
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await expect(modeChoiceHeading).toBeVisible({ timeout: 20_000 });
   }
-
-  await expect(modeChoiceHeading).toBeVisible();
   await page.getByRole('button', { name: 'Choisir le mode local' }).click();
   await expect(page.getByRole('heading', {
     name: 'Comment souhaitez-vous être appelé dans SportPilot ?',

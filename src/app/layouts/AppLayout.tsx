@@ -1,24 +1,20 @@
-import { useEffect } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet } from 'react-router-dom';
 
 import { BackupReminderCoordinator } from '@/app/backup/BackupReminderCoordinator';
 import { GlobalSearchShortcut } from '@/app/search/GlobalSearchShortcut';
 import { DesktopSidebar } from '@/app/layouts/DesktopSidebar';
 import { MobileBottomNavigation } from '@/app/layouts/MobileBottomNavigation';
+import { NavigationScrollManager } from '@/app/layouts/NavigationScrollManager';
 import { PageHeader } from '@/app/layouts/PageHeader';
 import { OfflineStatusBanner } from '@/pwa/OfflineStatusBanner';
 import { useClearInputValueOnFocus } from '@/shared/forms/useClearInputValueOnFocus';
 
 export function AppLayout() {
-  const location = useLocation();
   useClearInputValueOnFocus();
-
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'instant' });
-  }, [location.pathname]);
 
   return (
     <div className="sport-theme-app min-h-screen text-slate-900 dark:text-slate-100">
+      <NavigationScrollManager />
       <a
         href="#main-content"
         onClick={(event) => {

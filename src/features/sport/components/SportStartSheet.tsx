@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
+import { routePaths } from '@/app/routePaths';
 import type { ActivityType } from '@/domain/models/activity';
 import type { LocalDate } from '@/domain/models/common';
 import type { ActivityJournalNavigationState } from '@/features/activities/navigation/activityJournalNavigation';
@@ -42,8 +43,8 @@ const choices: Record<ActivityType, ActivityChoice> = {
   },
   strengthTraining: {
     type: 'strengthTraining',
-    label: 'Musculation',
-    description: 'Séance libre, modèle ou reprise en cours.',
+    label: 'Musculation détaillée',
+    description: 'Séries, repos, modèles et reprise en cours.',
     icon: Dumbbell,
     tone: 'bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-200',
   },
@@ -117,6 +118,23 @@ export function SportStartSheet({
             </Link>
           );
         })}
+      </div>
+
+      <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950/50">
+        <p className="text-sm font-semibold text-slate-900 dark:text-white">
+          Besoin d’une saisie musculation très rapide ?
+        </p>
+        <p className="mt-1 text-sm leading-5 text-slate-600 dark:text-slate-300">
+          Utilise l’activité simple uniquement pour enregistrer une durée et une intensité, sans détail des séries.
+        </p>
+        <Link
+          to={`${routePaths.addStrengthActivity}?${new URLSearchParams({ date }).toString()}`}
+          state={navigationState}
+          onClick={onClose}
+          className="mt-3 inline-flex min-h-10 items-center rounded-xl border border-slate-300 px-3 text-sm font-semibold text-slate-800 hover:bg-white dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-900"
+        >
+          Ajouter une activité simple
+        </Link>
       </div>
     </BottomSheet>
   );

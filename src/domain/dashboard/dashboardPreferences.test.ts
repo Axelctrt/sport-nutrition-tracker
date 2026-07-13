@@ -29,11 +29,9 @@ describe('préférences du tableau de bord', () => {
     expect(normalized.hidden).toEqual(['activities']);
     expect(normalized.quickActions).toEqual([
       'addFood',
-      'scanFood',
-      'steps',
-      'weight',
-      'addActivity',
       'workout',
+      'weight',
+      'steps',
     ]);
     expect(normalized.summaryMetrics).toEqual(['macros', 'steps', 'weight']);
   });
@@ -48,18 +46,40 @@ describe('préférences du tableau de bord', () => {
     expect(createDefaultDashboardPreferences().preset).toBe('balanced');
   });
 
+  it('fournit un Accueil essentiel par défaut', () => {
+    const defaults = createDefaultDashboardPreferences();
+
+    expect(defaults.order.slice(0, 4)).toEqual([
+      'todaySummary',
+      'quickActions',
+      'activeWorkout',
+      'trainingAgenda',
+    ]);
+    expect(defaults.hidden).toEqual([
+      'calculationDetails',
+      'rewardsOverview',
+      'weeklyMissions',
+    ]);
+    expect(defaults.quickActions).toEqual([
+      'addFood',
+      'workout',
+      'weight',
+      'steps',
+    ]);
+  });
+
   it('déplace et masque les blocs en passant en mode personnalisé', () => {
-    const initial = createDefaultDashboardPreferences();
+    const initial = createDashboardPreferencesFromPreset('training');
     const moved = moveDashboardWidget(initial, 'weeklyMissions', 'up');
     const hidden = toggleDashboardWidget(moved, 'rewardsOverview');
 
-    expect(moved.order.at(-2)).toBe('weeklyMissions');
+    expect(moved.order.indexOf('weeklyMissions')).toBeLessThan(initial.order.indexOf('weeklyMissions'));
     expect(hidden.hidden).toContain('rewardsOverview');
     expect(hidden.preset).toBe('custom');
   });
 
   it('personnalise les métriques et les raccourcis', () => {
-    const initial = createDefaultDashboardPreferences();
+    const initial = createDashboardPreferencesFromPreset('nutrition');
     const withoutMacros = toggleDashboardSummaryMetric(initial, 'macros');
     const withoutScanner = toggleDashboardQuickAction(withoutMacros, 'scanFood');
 

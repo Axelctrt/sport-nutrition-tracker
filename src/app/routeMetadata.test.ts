@@ -2,10 +2,12 @@ import { getRouteTitle } from '@/app/routeMetadata';
 
 describe('getRouteTitle', () => {
   it('retourne un titre mobile précis pour les routes principales et imbriquées', () => {
-    expect(getRouteTitle('/')).toBe('Aujourd’hui');
-    expect(getRouteTitle('/food')).toBe('Alimentation');
+    expect(getRouteTitle('/')).toBe('Accueil');
+    expect(getRouteTitle('/food')).toBe('Nutrition');
     expect(getRouteTitle('/activities')).toBe('Sport');
     expect(getRouteTitle('/progression')).toBe('Progression');
+    expect(getRouteTitle('/analytics')).toBe('Analyses');
+    expect(getRouteTitle('/history')).toBe('Historique général');
     expect(getRouteTitle('/strength/planning')).toBe('Planning de musculation');
     expect(getRouteTitle('/activities/templates')).toBe('Modèles d’endurance');
     expect(getRouteTitle('/settings/dashboard')).toBe('Personnaliser le tableau de bord');

@@ -1,17 +1,24 @@
 import { ArrowLeft, Settings } from 'lucide-react';
 import { useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { MobileAppMenu } from '@/app/layouts/MobileAppMenu';
-import { mobileHeaderBackDestination, primaryMobileRoutes } from '@/app/layouts/mobileHeaderNavigation';
+import {
+  primaryMobileRoutes,
+  resolveMobileHeaderBackAction,
+} from '@/app/layouts/mobileHeaderNavigation';
 import { getRouteTitle } from '@/app/routeMetadata';
 import { routePaths } from '@/app/routePaths';
 import { InstallPwaButton } from '@/shared/ui/InstallPwaButton';
 import { ThemeToggle } from '@/shared/ui/ThemeToggle';
 
+const mobileNavigationButtonClassName = 'inline-flex size-[var(--sp-touch-target)] shrink-0 items-center justify-center rounded-xl text-slate-700 transition-colors hover:bg-slate-100 lg:hidden dark:text-slate-200 dark:hover:bg-slate-800';
+
 export function PageHeader() {
   const location = useLocation();
+  const navigate = useNavigate();
   const title = getRouteTitle(location.pathname);
   const isPrimaryMobileRoute = primaryMobileRoutes.has(location.pathname);
+  const backAction = resolveMobileHeaderBackAction(location);
 
   useEffect(() => {
     document.title = title === 'SportPilot' ? title : `${title} · SportPilot`;
@@ -26,16 +33,27 @@ export function PageHeader() {
               to={routePaths.settings}
               aria-label="Ouvrir les paramètres"
               title="Paramètres"
-              className="inline-flex size-[var(--sp-touch-target)] shrink-0 items-center justify-center rounded-xl text-slate-700 transition-colors hover:bg-slate-100 lg:hidden dark:text-slate-200 dark:hover:bg-slate-800"
+              className={mobileNavigationButtonClassName}
             >
               <Settings aria-hidden="true" className="size-5" />
             </Link>
-          ) : (
-            <Link
-              to={mobileHeaderBackDestination(location.pathname)}
+          ) : backAction.kind === 'history' ? (
+            <button
+              type="button"
               aria-label="Retour"
               title="Retour"
-              className="inline-flex size-[var(--sp-touch-target)] shrink-0 items-center justify-center rounded-xl text-slate-700 transition-colors hover:bg-slate-100 lg:hidden dark:text-slate-200 dark:hover:bg-slate-800"
+              className={mobileNavigationButtonClassName}
+              onClick={() => void navigate(-1)}
+            >
+              <ArrowLeft aria-hidden="true" className="size-5" />
+            </button>
+          ) : (
+            <Link
+              to={backAction.to}
+              state={backAction.state}
+              aria-label="Retour"
+              title="Retour"
+              className={mobileNavigationButtonClassName}
             >
               <ArrowLeft aria-hidden="true" className="size-5" />
             </Link>

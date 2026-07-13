@@ -81,15 +81,23 @@ export const DASHBOARD_SUMMARY_METRIC_LABELS: Record<DashboardSummaryMetricId, s
   weight: 'Poids actuel',
 };
 
-const ALL_QUICK_ACTIONS = [...DASHBOARD_QUICK_ACTION_IDS];
 const ALL_SUMMARY_METRICS = [...DASHBOARD_SUMMARY_METRIC_IDS];
 
 const PRESET_PREFERENCES: Record<Exclude<DashboardPreset, 'custom'>, DashboardPreferences> = {
   balanced: {
     preset: 'balanced',
-    order: [...DASHBOARD_WIDGET_IDS],
-    hidden: [],
-    quickActions: [...ALL_QUICK_ACTIONS],
+    order: [
+      'todaySummary',
+      'quickActions',
+      'activeWorkout',
+      'trainingAgenda',
+      'activities',
+      'calculationDetails',
+      'rewardsOverview',
+      'weeklyMissions',
+    ],
+    hidden: ['calculationDetails', 'rewardsOverview', 'weeklyMissions'],
+    quickActions: ['addFood', 'workout', 'weight', 'steps'],
     summaryMetrics: [...ALL_SUMMARY_METRICS],
   },
   nutrition: {

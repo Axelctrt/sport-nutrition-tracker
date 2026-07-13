@@ -21,6 +21,12 @@ function pathIsActive(pathname: string, path: string): boolean {
   return pathname === path || pathname.startsWith(`${path}/`);
 }
 
+const MOBILE_MENU_PRIMARY_LIMITS: Record<string, number> = {
+  Sport: 3,
+  Progression: 3,
+  'Compte et application': 4,
+};
+
 export function MobileAppMenu() {
   const location = useLocation();
   const { isIos, isStandalone } = usePwaEnvironment();
@@ -156,46 +162,66 @@ export function MobileAppMenu() {
                 </div>
 
                 <div className="mt-6 space-y-6">
-                  {mobileMoreNavigation.map((section) => (
-                    <div key={section.title}>
-                      <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                        {section.title}
-                      </h3>
-                      <div className="mt-2 grid gap-2">
-                        {section.items.map((item) => {
-                          const Icon = item.icon;
-                          return (
-                            <NavLink
-                              key={item.path}
-                              to={item.path}
-                              end={item.end ?? false}
-                              onClick={() => setIsOpen(false)}
-                              className={({ isActive }) =>
-                                cn(
-                                  'flex min-h-16 items-center gap-3 rounded-2xl border px-3 py-3 transition-colors',
-                                  isActive
-                                    ? 'border-brand-300 bg-brand-50 text-brand-950 dark:border-brand-700 dark:bg-brand-950/50 dark:text-brand-50'
-                                    : 'border-slate-200 bg-slate-50/70 text-slate-800 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-950/50 dark:text-slate-100 dark:hover:bg-slate-800',
-                                )
-                              }
-                            >
-                              <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-white text-brand-700 shadow-sm dark:bg-slate-900 dark:text-brand-300">
-                                <Icon aria-hidden="true" className="size-5" />
+                  {mobileMoreNavigation.map((section) => {
+                    const primaryLimit = MOBILE_MENU_PRIMARY_LIMITS[section.title] ?? section.items.length;
+                    const primaryItems = section.items.slice(0, primaryLimit);
+                    const secondaryItems = section.items.slice(primaryLimit);
+                    const renderMenuItem = (item: (typeof section.items)[number]) => {
+                      const Icon = item.icon;
+                      return (
+                        <NavLink
+                          key={item.path}
+                          to={item.path}
+                          end={item.end ?? false}
+                          onClick={() => setIsOpen(false)}
+                          className={({ isActive }) =>
+                            cn(
+                              'flex min-h-14 items-center gap-3 rounded-2xl border px-3 py-2.5 transition-colors',
+                              isActive
+                                ? 'border-brand-300 bg-brand-50 text-brand-950 dark:border-brand-700 dark:bg-brand-950/50 dark:text-brand-50'
+                                : 'border-slate-200 bg-slate-50/70 text-slate-800 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-950/50 dark:text-slate-100 dark:hover:bg-slate-800',
+                            )
+                          }
+                        >
+                          <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-white text-brand-700 shadow-sm dark:bg-slate-900 dark:text-brand-300">
+                            <Icon aria-hidden="true" className="size-4.5" />
+                          </span>
+                          <span className="min-w-0">
+                            <span className="block font-semibold">{item.label}</span>
+                            {item.description ? (
+                              <span className="mt-0.5 block text-xs leading-5 text-slate-500 dark:text-slate-400">
+                                {item.description}
                               </span>
-                              <span className="min-w-0">
-                                <span className="block font-semibold">{item.label}</span>
-                                {item.description ? (
-                                  <span className="mt-0.5 block text-xs leading-5 text-slate-500 dark:text-slate-400">
-                                    {item.description}
-                                  </span>
-                                ) : null}
+                            ) : null}
+                          </span>
+                        </NavLink>
+                      );
+                    };
+
+                    return (
+                      <div key={section.title}>
+                        <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                          {section.title}
+                        </h3>
+                        <div className="mt-2 grid gap-2">
+                          {primaryItems.map(renderMenuItem)}
+                        </div>
+                        {secondaryItems.length > 0 ? (
+                          <details className="mt-2 rounded-2xl border border-slate-200 bg-slate-50/70 dark:border-slate-800 dark:bg-slate-950/50">
+                            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-3 text-sm font-semibold text-slate-700 marker:hidden dark:text-slate-200">
+                              <span>Autres écrans {section.title.toLowerCase()}</span>
+                              <span aria-hidden="true" className="text-xs text-slate-500 dark:text-slate-400">
+                                +{secondaryItems.length}
                               </span>
-                            </NavLink>
-                          );
-                        })}
+                            </summary>
+                            <div className="grid gap-2 border-t border-slate-200 p-2 dark:border-slate-800">
+                              {secondaryItems.map(renderMenuItem)}
+                            </div>
+                          </details>
+                        ) : null}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60">

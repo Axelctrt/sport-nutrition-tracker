@@ -59,7 +59,7 @@ test('piège puis restitue le focus dans un panneau mobile', async ({ page }, te
   await createLocalProfile(page);
   await page.goto('/#/activities');
 
-  const trigger = page.getByRole('button', { name: 'Démarrer une activité' });
+  const trigger = page.getByRole('button', { name: 'Choisir l’activité' });
   await trigger.focus();
   await trigger.click();
 
@@ -84,7 +84,7 @@ test('respecte la réduction des animations système', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await createLocalProfile(page);
   await page.goto('/#/activities');
-  await page.getByRole('button', { name: 'Démarrer une activité' }).click();
+  await page.getByRole('button', { name: 'Choisir l’activité' }).click();
 
   const duration = await page.getByRole('dialog', { name: 'Démarrer ou ajouter une activité' }).evaluate((element) => {
     const value = window.getComputedStyle(element).animationDuration.trim();

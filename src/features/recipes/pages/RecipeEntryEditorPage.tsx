@@ -10,6 +10,7 @@ import { foodJournalPath, routePaths } from '@/app/routePaths';
 import type { FoodEntry, MealSlot } from '@/domain/models/food';
 import {
   createFoodJournalFeedbackState,
+  createFoodJournalRestoreState,
   type FoodJournalNavigationState,
 } from '@/features/food-journal/navigation/foodJournalNavigation';
 import { mealSlotLabels } from '@/features/food-journal/utils/foodLabels';
@@ -108,10 +109,7 @@ export function RecipeEntryEditorPage() {
     <section aria-labelledby="recipe-entry-title">
       <Link
         to={navigationState?.foodJournalReturn?.path ?? foodJournalPath(initialValues.date)}
-        state={navigationState?.foodJournalReturn ? {
-          scroll: 'restore',
-          restoreScrollKey: navigationState.foodJournalReturn.scrollKey,
-        } : undefined} className="inline-flex items-center gap-2 text-sm font-semibold text-brand-700 hover:underline dark:text-brand-300"><ArrowLeft aria-hidden="true" className="size-4" />Retour au journal</Link>
+        state={createFoodJournalRestoreState(navigationState?.foodJournalReturn)} className="hidden items-center gap-2 text-sm font-semibold text-brand-700 hover:underline lg:inline-flex dark:text-brand-300"><ArrowLeft aria-hidden="true" className="size-4" />Retour au journal</Link>
       <div className="mt-5">
         <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">Journal alimentaire</p>
         <h1 id="recipe-entry-title" className="mt-1 text-3xl font-bold tracking-tight text-slate-950 dark:text-white">{entryId ? 'Modifier la recette consommée' : 'Ajouter une recette au journal'}</h1>

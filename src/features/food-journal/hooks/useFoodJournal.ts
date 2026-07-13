@@ -106,6 +106,7 @@ export function useFoodJournal(date: LocalDate) {
     duplicate: (id: EntityId) => run(`duplicate-${id}`, () => duplicateFoodEntry(id), 'Entrée dupliquée'),
     remove: (id: EntityId) => run(`delete-${id}`, () => removeFoodEntry(id), 'Entrée supprimée'),
     copyMealTo: (input: CopyMealInput) => run(`copy-meal-${input.sourceSlot}`, () => copyMeal(input), 'Repas copié'),
+    repeatMealTo: (input: CopyMealInput) => run(`repeat-meal-${input.targetSlot}`, () => copyMeal(input), 'Repas répété'),
     copyDayTo: (targetDate: LocalDate) => run('copy-day', () => copyDay(date, targetDate), 'Journée copiée'),
     toggleComplete: (complete: boolean) => run(
       'complete',

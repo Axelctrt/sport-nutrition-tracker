@@ -13,7 +13,7 @@ import actionToastSource from '@/shared/toast/useActionToast.ts?raw';
 
 describe('publication SportPilot 0.26.0 — confirmations d’action', () => {
   it('publie le correctif sans migration de données', () => {
-    expect(__APP_VERSION__).toBe('0.30.0');
+    expect(__APP_VERSION__).toBe('0.31.0');
     expect(databaseSchemaVersion).toBe(10);
     expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(9);
   });

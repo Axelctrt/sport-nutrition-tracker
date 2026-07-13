@@ -31,6 +31,17 @@ describe('MobileAppMenu', () => {
     );
   });
 
+  it('regroupe les destinations avancées dans des sections repliables', async () => {
+    const user = userEvent.setup();
+    renderMenu();
+
+    await user.click(screen.getByRole('button', { name: 'Ouvrir le menu de l’application' }));
+
+    expect(screen.getByText('Autres écrans progression')).toBeInTheDocument();
+    expect(screen.getByText('Autres écrans compte et application')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Planning hebdomadaire/ })).toBeInTheDocument();
+  });
+
   it('se ferme avec Échap et restitue le focus au bouton d’origine', async () => {
     const user = userEvent.setup();
     renderMenu();

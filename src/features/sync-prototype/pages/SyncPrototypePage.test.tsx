@@ -1,5 +1,6 @@
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router-dom';
 import { SyncPrototypePage } from '@/features/sync-prototype/pages/SyncPrototypePage';
 import type {
   SyncPrototypeClient,
@@ -309,9 +310,11 @@ function createFakeClient(realWeightSyncEnabled = false) {
 
 function renderPage(client: SyncPrototypeClient) {
   return render(
-    <ToastProvider>
-      <SyncPrototypePage client={client} />
-    </ToastProvider>,
+    <MemoryRouter>
+      <ToastProvider>
+        <SyncPrototypePage client={client} />
+      </ToastProvider>
+    </MemoryRouter>,
   );
 }
 
@@ -330,9 +333,11 @@ describe('écran du prototype Dexie Cloud', () => {
     const { client } = createFakeClient(true);
 
     render(
-      <ToastProvider>
-        <SyncPrototypePage client={client} diagnosticsEnabled={false} />
-      </ToastProvider>,
+      <MemoryRouter>
+        <ToastProvider>
+          <SyncPrototypePage client={client} diagnosticsEnabled={false} />
+        </ToastProvider>
+      </MemoryRouter>,
     );
 
     expect(
@@ -354,6 +359,8 @@ describe('écran du prototype Dexie Cloud', () => {
     expect(
       screen.queryByText('Synchroniser les vraies pesées'),
     ).not.toBeInTheDocument();
+    expect(screen.getByText('Synchronisation du compte')).toBeInTheDocument();
+    expect(screen.getByText('Détails techniques et historique')).toBeInTheDocument();
   });
 
   it('intègre l’email et le code OTP directement dans la page', async () => {

@@ -1,3 +1,4 @@
+import { addDays, parseISO } from 'date-fns';
 import {
   calculateDailyNutrition,
   calculateFoodEntryNutrition,
@@ -18,6 +19,7 @@ import type { FoodRepository } from '@/infrastructure/repositories/contracts/Foo
 import type { RecipeRepository } from '@/infrastructure/repositories/contracts/RecipeRepository';
 import type { Recipe } from '@/domain/models/recipe';
 import { repositories } from '@/infrastructure/repositories/repositories';
+import { toLocalDate } from '@/shared/utils/dates';
 
 export const MEAL_SLOTS: readonly MealSlot[] = [
   'breakfast',
@@ -44,6 +46,7 @@ export interface FoodJournalSnapshot {
   date: LocalDate;
   meals: MealJournalSnapshot[];
   entries: FoodEntry[];
+  repeatSourceDates: Partial<Record<MealSlot, LocalDate>>;
   totals: DailyNutritionSummary;
   status: DailyJournalStatus | undefined;
 }
@@ -102,12 +105,15 @@ export async function loadFoodJournal(
   date: LocalDate,
   dependencies: FoodJournalServiceDependencies = defaultDependencies,
 ): Promise<FoodJournalSnapshot> {
-  const [meals, entries, products, recipes, status] = await Promise.all([
+  const repeatRangeEnd = toLocalDate(addDays(parseISO(date), -1));
+  const repeatRangeStart = toLocalDate(addDays(parseISO(date), -30));
+  const [meals, entries, products, recipes, status, recentEntries] = await Promise.all([
     dependencies.food.listMealsByDate(date),
     dependencies.food.listEntriesByDate(date),
     dependencies.food.listProducts(true),
     dependencies.recipes?.listAll() ?? Promise.resolve([]),
     dependencies.food.getJournalStatus(date),
+    dependencies.food.listEntriesBetween(repeatRangeStart, repeatRangeEnd),
   ]);
   const productById = new Map(products.map((product) => [product.id, product]));
   const recipeById = new Map(recipes.map((recipe) => [recipe.id, recipe]));
@@ -137,10 +143,20 @@ export async function loadFoodJournal(
     };
   });
 
+  const repeatSourceDates = recentEntries.reduce<Partial<Record<MealSlot, LocalDate>>>(
+    (sources, entry) => {
+      const current = sources[entry.mealSlot];
+      if (!current || entry.date > current) sources[entry.mealSlot] = entry.date;
+      return sources;
+    },
+    {},
+  );
+
   return {
     date,
     meals: mealSnapshots,
     entries,
+    repeatSourceDates,
     totals: calculateDailyNutrition(entries),
     status,
   };

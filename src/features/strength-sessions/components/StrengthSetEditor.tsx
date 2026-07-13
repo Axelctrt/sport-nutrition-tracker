@@ -199,6 +199,7 @@ function StrengthSetRow({
             <input
               id={`${baseId}-weight`}
               aria-label={loadInputLabel(trackingMode)}
+              data-clear-on-focus="true"
               type="number"
               inputMode="decimal"
               enterKeyHint="next"
@@ -220,6 +221,7 @@ function StrengthSetRow({
             <input
               id={`${baseId}-repetitions`}
               aria-label="Répétitions"
+              data-clear-on-focus="true"
               type="number"
               inputMode="numeric"
               enterKeyHint="next"
@@ -239,6 +241,7 @@ function StrengthSetRow({
             <input
               id={`${baseId}-duration`}
               aria-label="Durée en secondes"
+              data-clear-on-focus="true"
               type="number"
               inputMode="numeric"
               min="1"
@@ -257,6 +260,7 @@ function StrengthSetRow({
             <input
               id={`${baseId}-distance`}
               aria-label="Distance en mètres"
+              data-clear-on-focus="true"
               type="number"
               inputMode="decimal"
               min="0.1"
@@ -276,6 +280,7 @@ function StrengthSetRow({
           <input
             id={`${baseId}-rpe`}
             aria-label="RPE"
+            data-clear-on-focus="true"
             type="number"
             inputMode="decimal"
             enterKeyHint="done"

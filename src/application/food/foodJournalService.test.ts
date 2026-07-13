@@ -86,6 +86,33 @@ describe('foodJournalService', () => {
     expect(journal.meals.find((meal) => meal.slot === 'lunch')?.entries).toHaveLength(1);
   });
 
+  it('identifie le dernier repas équivalent disponible sur les trente jours précédents', async () => {
+    const product = await createProduct();
+    for (const [date, mealSlot] of [
+      ['2026-06-10', 'breakfast'],
+      ['2026-06-20', 'breakfast'],
+      ['2026-06-18', 'dinner'],
+    ] as const) {
+      await saveProductEntry(
+        {
+          date,
+          mealSlot,
+          productId: product.id,
+          inputMode: 'amount',
+          inputQuantity: 100,
+        },
+        { food },
+      );
+    }
+
+    const journal = await loadFoodJournal('2026-06-24', { food });
+
+    expect(journal.repeatSourceDates).toEqual({
+      breakfast: '2026-06-20',
+      dinner: '2026-06-18',
+    });
+  });
+
   it('marque les deux journées incomplètes lorsqu’une entrée change de date', async () => {
     const product = await createProduct();
     const source = await saveProductEntry(
