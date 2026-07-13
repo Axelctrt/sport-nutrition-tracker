@@ -1,10 +1,10 @@
 import {
-  Camera,
   ChevronDown,
   CopyPlus,
   MoreHorizontal,
   Pencil,
   Plus,
+  RefreshCcw,
   Save,
   Trash2,
   Utensils,
@@ -15,8 +15,6 @@ import type { FoodEntryWithProduct, MealJournalSnapshot } from '@/application/fo
 import {
   addRecipeToJournalPath,
   editFoodEntryPath,
-  photoNutritionEstimatePath,
-  routePaths,
   selectFoodPath,
 } from '@/app/routePaths';
 import { CopyMealForm } from '@/features/food-journal/components/CopyMealForm';
@@ -37,11 +35,13 @@ interface FoodJournalMealCardProps {
   busyId?: string | undefined;
   navigationState: FoodJournalNavigationState;
   highlightedEntryId?: string | undefined;
+  repeatSourceDate?: string | undefined;
   onToggle: () => void;
   onDuplicate: (id: string) => Promise<unknown>;
   onRemove: (id: string) => Promise<unknown>;
   onUpdateQuantity: (item: FoodEntryWithProduct, quantity: number) => Promise<unknown>;
   onCopyMeal: (targetDate: string, targetSlot: MealJournalSnapshot['slot']) => Promise<unknown>;
+  onRepeatMeal: (sourceDate: string) => Promise<unknown>;
   onSaveFavorite: (name: string) => Promise<unknown>;
 }
 
@@ -81,11 +81,13 @@ export function FoodJournalMealCard({
   busyId,
   navigationState,
   highlightedEntryId,
+  repeatSourceDate,
   onToggle,
   onDuplicate,
   onRemove,
   onUpdateQuantity,
   onCopyMeal,
+  onRepeatMeal,
   onSaveFavorite,
 }: FoodJournalMealCardProps) {
   const [editingId, setEditingId] = useState<string>();
@@ -172,15 +174,35 @@ export function FoodJournalMealCard({
               <Utensils aria-hidden="true" className="mx-auto size-8 text-slate-400" />
               <p className="mt-2 font-semibold text-slate-800 dark:text-slate-100">Aucun aliment pour ce repas</p>
               <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                Ajoutez un aliment pour commencer à suivre ce repas.
+                Ajoutez un aliment ou reprenez votre dernier repas équivalent.
               </p>
-              <Link
-                to={selectFoodPath(date, meal.slot)}
-                state={navigationState}
-                className="mt-4 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-brand-700 px-4 text-sm font-semibold text-white shadow-sm hover:bg-brand-800 dark:bg-brand-600 dark:hover:bg-brand-500"
-              >
-                <Plus aria-hidden="true" className="size-4" />Ajouter un aliment
-              </Link>
+              {repeatSourceDate ? (
+                <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                  Dernier {label.toLocaleLowerCase('fr')} enregistré le {formatLocalDate(repeatSourceDate)}.
+                </p>
+              ) : null}
+              <div className="mt-4 flex flex-wrap justify-center gap-2">
+                {repeatSourceDate ? (
+                  <Button
+                    disabled={busyId === `repeat-meal-${meal.slot}`}
+                    onClick={() => void onRepeatMeal(repeatSourceDate)}
+                  >
+                    <RefreshCcw aria-hidden="true" className="size-4" />Répéter ce repas
+                  </Button>
+                ) : null}
+                <Link
+                  to={selectFoodPath(date, meal.slot)}
+                  state={navigationState}
+                  className={cn(
+                    'inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold shadow-sm',
+                    repeatSourceDate
+                      ? 'border border-slate-300 bg-white text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800'
+                      : 'bg-brand-700 text-white hover:bg-brand-800 dark:bg-brand-600 dark:hover:bg-brand-500',
+                  )}
+                >
+                  <Plus aria-hidden="true" className="size-4" />Ajouter un aliment
+                </Link>
+              </div>
             </div>
           ) : (
             <div className="px-4 dark:border-slate-800 sm:px-5">
@@ -308,53 +330,35 @@ export function FoodJournalMealCard({
             </div>
           )}
 
-          <div className="border-t border-slate-200 dark:border-slate-800">
-            <button
-              type="button"
-              aria-expanded={optionsOpen}
-              aria-label={`Options du ${label.toLocaleLowerCase('fr')}`}
-              className="flex min-h-12 w-full items-center justify-between gap-3 px-4 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800/60 sm:px-5"
-              onClick={() => setOptionsOpen((current) => !current)}
-            >
-              Options du repas
-              <span className="text-xs font-normal text-slate-500">Photo, recette, copie, favori</span>
-            </button>
-            {optionsOpen ? (
-              <div className="border-t border-slate-200 bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-950/50 sm:p-5">
-                <div className="flex flex-wrap gap-2">
-                  <Link
-                    to={photoNutritionEstimatePath(date, meal.slot)}
-                    state={navigationState}
-                    className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
-                  >
-                    <Camera aria-hidden="true" className="size-4" />Ajouter par photo
-                  </Link>
-                  <Link
-                    to={`${routePaths.recipes}?date=${encodeURIComponent(date)}&slot=${encodeURIComponent(meal.slot)}`}
-                    state={navigationState}
-                    className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
-                  >
-                    <Plus aria-hidden="true" className="size-4" />Ajouter une recette
-                  </Link>
+          {meal.entries.length > 0 ? (
+            <div className="border-t border-slate-200 dark:border-slate-800">
+              <button
+                type="button"
+                aria-expanded={optionsOpen}
+                aria-label={`Options du ${label.toLocaleLowerCase('fr')}`}
+                className="flex min-h-12 w-full items-center justify-between gap-3 px-4 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800/60 sm:px-5"
+                onClick={() => setOptionsOpen((current) => !current)}
+              >
+                Options du repas
+                <span className="text-xs font-normal text-slate-500">Copier ou enregistrer en favori</span>
+              </button>
+              {optionsOpen ? (
+                <div className="border-t border-slate-200 bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-950/50 sm:p-5">
+                  <SaveFavoriteMealForm
+                    disabled={busyId === `favorite-${meal.slot}`}
+                    suggestedName={`${label} du ${formatLocalDate(date)}`}
+                    onSave={onSaveFavorite}
+                  />
+                  <CopyMealForm
+                    initialDate={date}
+                    initialSlot={meal.slot}
+                    disabled={busyId === `copy-meal-${meal.slot}`}
+                    onSubmit={async (values) => { await onCopyMeal(values.targetDate, values.targetSlot); }}
+                  />
                 </div>
-                {meal.entries.length > 0 ? (
-                  <div className="mt-3">
-                    <SaveFavoriteMealForm
-                      disabled={busyId === `favorite-${meal.slot}`}
-                      suggestedName={`${label} du ${formatLocalDate(date)}`}
-                      onSave={onSaveFavorite}
-                    />
-                    <CopyMealForm
-                      initialDate={date}
-                      initialSlot={meal.slot}
-                      disabled={busyId === `copy-meal-${meal.slot}`}
-                      onSubmit={async (values) => { await onCopyMeal(values.targetDate, values.targetSlot); }}
-                    />
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
-          </div>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       ) : null}
 

@@ -22,7 +22,7 @@ function renderJournal(initialEntry: string | { pathname: string; search?: strin
   );
 }
 
-async function seedLunchEntry() {
+async function seedLunchEntry(date = '2026-06-24') {
   const product = await repositories.food.createProduct({
     name: 'Yaourt grec',
     brand: 'SportPilot',
@@ -39,9 +39,9 @@ async function seedLunchEntry() {
     isFavorite: true,
     isArchived: false,
   });
-  const meal = await repositories.food.getOrCreateMeal('2026-06-24', 'lunch');
+  const meal = await repositories.food.getOrCreateMeal(date, 'lunch');
   const entry = await repositories.food.createEntry({
-    date: '2026-06-24',
+    date,
     mealId: meal.id,
     mealSlot: 'lunch',
     sourceType: 'product',
@@ -115,6 +115,24 @@ describe('FoodJournalPage — expérience mobile', () => {
     );
   });
 
+
+  it('répète en un geste le dernier repas équivalent lorsqu’un repas est vide', async () => {
+    const user = userEvent.setup();
+    await seedLunchEntry('2026-06-23');
+    renderJournal();
+
+    await screen.findByRole('heading', { name: 'Journal alimentaire' });
+    await user.click(await screen.findByRole('button', { name: /^Déjeuner/ }));
+
+    expect(await screen.findByText('Dernier déjeuner enregistré le 23 juin 2026.')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Répéter ce repas' }));
+
+    await waitFor(async () => {
+      expect(await repositories.food.listEntriesByDate('2026-06-24')).toHaveLength(1);
+    });
+    expect(await screen.findByText('Repas répété')).toBeInTheDocument();
+    expect(await screen.findByText('Yaourt grec')).toBeInTheDocument();
+  });
 
   it('ne conserve pas les données de la journée précédente lors de la navigation', async () => {
     const user = userEvent.setup();

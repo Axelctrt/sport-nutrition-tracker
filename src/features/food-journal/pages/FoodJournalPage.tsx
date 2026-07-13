@@ -47,6 +47,7 @@ export function FoodJournalPage() {
     remove,
     updateQuantity,
     copyMealTo,
+    repeatMealTo,
     copyDayTo,
     toggleComplete,
     saveFavorite,
@@ -197,6 +198,7 @@ export function FoodJournalPage() {
                 busyId={busyId}
                 navigationState={navigationStates.get(meal.slot) ?? {}}
                 highlightedEntryId={highlightedEntryId}
+                repeatSourceDate={snapshot.repeatSourceDates[meal.slot]}
                 onToggle={() => setExpandedMealSlot(meal.slot)}
                 onDuplicate={duplicate}
                 onRemove={remove}
@@ -206,6 +208,12 @@ export function FoodJournalPage() {
                   sourceSlot: meal.slot,
                   targetDate,
                   targetSlot,
+                })}
+                onRepeatMeal={(sourceDate) => repeatMealTo({
+                  sourceDate,
+                  sourceSlot: meal.slot,
+                  targetDate: date,
+                  targetSlot: meal.slot,
                 })}
                 onSaveFavorite={(name) => saveFavorite(meal.slot, name)}
               />

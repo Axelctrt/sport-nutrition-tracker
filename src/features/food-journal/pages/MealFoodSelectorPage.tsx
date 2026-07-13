@@ -14,6 +14,11 @@ import { FoodProductPickerCard } from '@/features/food-journal/components/FoodPr
 import { FoodEntryQuickDialog } from '@/features/food-journal/components/FoodEntryQuickDialog';
 import { MealOpenFoodFactsSearchPanel } from '@/features/food-journal/components/MealOpenFoodFactsSearchPanel';
 import type { FoodEntryFormValues } from '@/features/food-journal/schemas/foodEntrySchema';
+import {
+  getLastFoodAddMethod,
+  saveLastFoodAddMethod,
+  type FoodAddMethod,
+} from '@/features/food-journal/preferences/foodAddMethodPreference';
 import { useMealFoodSelector } from '@/features/food-journal/hooks/useMealFoodSelector';
 import {
   createFoodJournalFeedbackState,
@@ -67,6 +72,9 @@ export function MealFoodSelectorPage() {
   const [source, setSource] = useState<FoodSelectorSource>(
     isFoodSelectorSource(requestedSource) ? requestedSource : 'recent',
   );
+  const [lastMethod, setLastMethod] = useState<FoodAddMethod | undefined>(() =>
+    getLastFoodAddMethod(mealSlot),
+  );
   const [query, setQuery] = useState('');
   const [searchMode, setSearchMode] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState<string | undefined>(
@@ -75,6 +83,10 @@ export function MealFoodSelectorPage() {
   const [remoteSelectedProduct, setRemoteSelectedProduct] = useState<FoodProduct>();
   const [submitError, setSubmitError] = useState<string>();
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setLastMethod(getLastFoodAddMethod(mealSlot));
+  }, [mealSlot]);
 
   useEffect(() => {
     if (!data || isFoodSelectorSource(requestedSource)) return;
@@ -107,6 +119,11 @@ export function MealFoodSelectorPage() {
     (product) => product.id === selectedProductId,
   ) ?? (remoteSelectedProduct?.id === selectedProductId ? remoteSelectedProduct : undefined);
 
+  const rememberMethod = (method: FoodAddMethod) => {
+    setLastMethod(method);
+    saveLastFoodAddMethod(mealSlot, method);
+  };
+
   const selectSource = (nextSource: FoodSelectorSource) => {
     setQuery('');
     setSearchMode(false);
@@ -121,12 +138,14 @@ export function MealFoodSelectorPage() {
   };
 
   const handleSelect = (product: FoodProduct) => {
+    rememberMethod(searchMode ? 'search' : source);
     setRemoteSelectedProduct(undefined);
     setSelectedProductId(product.id);
     setSubmitError(undefined);
   };
 
   const handleRemoteProductReady = async (product: FoodProduct) => {
+    rememberMethod('openFoodFacts');
     setRemoteSelectedProduct(product);
     setSelectedProductId(product.id);
     setSubmitError(undefined);
@@ -207,9 +226,12 @@ export function MealFoodSelectorPage() {
                 mealSlot={mealSlot}
                 activeSource={source}
                 searchActive={searchMode}
+                hasFavoriteProducts={data.favoriteProducts.length > 0}
+                lastMethod={lastMethod}
                 navigationState={navigationState}
                 onSelectSource={selectSource}
                 onSearchRequested={requestSearch}
+                onMethodUsed={rememberMethod}
               />
             </div>
 
