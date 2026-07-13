@@ -156,20 +156,20 @@ function CategoryContent({
         <>
           <div className="grid gap-3 md:grid-cols-2">
             <SettingsLinkCard
-              to={routePaths.accountDevices}
-              title="Compte et appareils"
-              description="Compte actif, appareil actuel, association et données locales."
-              icon={MonitorSmartphone}
-            />
-            <SettingsLinkCard
               to={routePaths.syncPrototype}
-              title="Centre de synchronisation"
-              description="État détaillé, opérations récentes et actions requises."
+              title="Compte et synchronisation"
+              description="Compte actif, état global, dernière synchronisation et action principale."
               icon={Cloud}
               value={settings.automaticAccountSyncEnabled ? 'Synchronisation automatique active' : 'Synchronisation automatique désactivée'}
             />
+            <SettingsLinkCard
+              to={routePaths.accountDevices}
+              title="Appareils et données locales"
+              description="Appareil actuel, association au compte et données conservées localement."
+              icon={MonitorSmartphone}
+            />
           </div>
-          <CategorySection title="Synchronisation automatique" description="Les détails techniques restent disponibles dans le centre de synchronisation.">
+          <CategorySection title="Synchronisation automatique" description="Les files, conflits, diagnostics et états par rubrique restent accessibles dans les détails avancés.">
             <AutomaticSyncSettingsPanel />
           </CategorySection>
         </>

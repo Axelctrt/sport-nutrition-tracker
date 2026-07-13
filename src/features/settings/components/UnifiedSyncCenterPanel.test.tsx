@@ -12,7 +12,7 @@ import { createEmptySyncPrototypeDiagnostics } from '@/infrastructure/sync-proto
 function createClient() {
   const listeners = new Set<() => void>();
   let snapshot: SyncPrototypeSnapshot = {
-    account: { isLoggedIn: true, isLoading: false, userId: 'user-e3' },
+    account: { isLoggedIn: true, isLoading: false, userId: 'user-e3', email: 'user@example.com' },
     sync: { status: 'connected', phase: 'in-sync' },
     weights: { weights: [], deletedCount: 0, isLoading: false },
     realAccountPreferences: { enabled: true, status: 'idle' },
@@ -114,6 +114,26 @@ describe('UnifiedSyncCenterPanel', () => {
       .toHaveAttribute('href', '/settings/account-devices');
   });
 
+  it('présente d’abord le compte, l’état global et l’action principale', async () => {
+    const { client } = createClient();
+
+    render(
+      <MemoryRouter>
+        <UnifiedSyncCenterPanel client={client} />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(client.initialize).toHaveBeenCalledTimes(1));
+    expect(screen.getByText('Compte actif')).toBeInTheDocument();
+    expect(screen.getByText('user@example.com')).toBeInTheDocument();
+    expect(screen.getByText('Dernière synchronisation réussie')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Synchroniser maintenant' })).toBeInTheDocument();
+
+    const advanced = screen.getByText('Détails techniques et historique').closest('details');
+    expect(advanced).not.toBeNull();
+    expect(advanced).not.toHaveAttribute('open');
+  });
+
   it('analyse toutes les rubriques et relance uniquement celle en échec', async () => {
     const user = userEvent.setup();
     const {
@@ -130,6 +150,7 @@ describe('UnifiedSyncCenterPanel', () => {
     );
 
     await waitFor(() => expect(client.initialize).toHaveBeenCalledTimes(1));
+    await user.click(screen.getByText('Détails techniques et historique'));
     await user.click(screen.getByRole('button', { name: 'Analyser tout' }));
 
     await waitFor(() => {
@@ -172,6 +193,7 @@ describe('UnifiedSyncCenterPanel', () => {
       );
 
       await waitFor(() => expect(client.initialize).toHaveBeenCalledTimes(1));
+      await user.click(screen.getByText('Détails techniques et historique'));
       const row = screen.getByText('Profil et réglages').closest('li');
       expect(row).not.toBeNull();
       await user.click(within(row!).getByRole('button', { name: 'Détail' }));
@@ -208,6 +230,7 @@ describe('UnifiedSyncCenterPanel', () => {
     );
 
     await waitFor(() => expect(client.initialize).toHaveBeenCalledTimes(1));
+    await user.click(screen.getByText('Détails techniques et historique'));
     const row = screen.getByText('Profil et réglages').closest('li');
     expect(row).not.toBeNull();
     const button = within(row!).getByRole('button', { name: 'Masquer' });
@@ -221,6 +244,7 @@ describe('UnifiedSyncCenterPanel', () => {
   });
 
   it('explique qu’une pesée peut légitimement modifier l’objectif du journal', async () => {
+    const user = userEvent.setup();
     const snapshot: SyncPrototypeSnapshot = {
       account: { isLoggedIn: true, isLoading: false, userId: 'user-journal' },
       sync: { status: 'connected', phase: 'in-sync' },
@@ -255,6 +279,7 @@ describe('UnifiedSyncCenterPanel', () => {
     );
 
     await waitFor(() => expect(client.initialize).toHaveBeenCalledTimes(1));
+    await user.click(screen.getByText('Détails techniques et historique'));
     expect(screen.getByText(/objectifs quotidiens recalculés, notamment après une pesée/i))
       .toBeInTheDocument();
     expect(screen.getByText(/peut modifier l’objectif quotidien sans changer les aliments/i))
@@ -277,7 +302,7 @@ describe('UnifiedSyncCenterPanel', () => {
     );
 
     await waitFor(() => expect(client.initialize).toHaveBeenCalledTimes(1));
-    await user.click(screen.getByRole('button', { name: 'Synchroniser tout' }));
+    await user.click(screen.getByRole('button', { name: 'Synchroniser maintenant' }));
 
     let dialog = screen.getByRole('alertdialog');
     expect(within(dialog).getByText('Synchroniser toutes les rubriques ?')).toBeInTheDocument();
