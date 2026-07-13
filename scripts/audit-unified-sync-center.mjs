@@ -10,6 +10,9 @@ const fail = (message) => failures.push(message);
 const requiredFiles = [
   'src/features/settings/components/UnifiedSyncCenterPanel.tsx',
   'src/features/settings/components/UnifiedSyncCenterPanel.test.tsx',
+  'src/features/settings/components/UnifiedSyncCenterAdvancedDetails.tsx',
+  'src/features/settings/components/unifiedSyncCenterModel.ts',
+  'src/features/settings/components/unifiedSyncDomainRegistry.ts',
   'src/app/unifiedSyncCenterReadiness.test.ts',
   'src/features/settings/components/SettingsSectionDirectory.tsx',
   'src/features/settings/settingsSectionNavigation.ts',
@@ -24,7 +27,12 @@ for (const path of requiredFiles) {
 }
 
 if (failures.length === 0) {
-  const panel = read(requiredFiles[0]);
+  const panel = [
+    read('src/features/settings/components/UnifiedSyncCenterPanel.tsx'),
+    read('src/features/settings/components/UnifiedSyncCenterAdvancedDetails.tsx'),
+    read('src/features/settings/components/unifiedSyncCenterModel.ts'),
+    read('src/features/settings/components/unifiedSyncDomainRegistry.ts'),
+  ].join('\n');
   for (const marker of [
     'Centre de synchronisation',
     'Analyser tout',

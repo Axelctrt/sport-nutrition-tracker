@@ -79,7 +79,11 @@ if (failures.length === 0) {
     fail('les diagnostics de laboratoire doivent rester désactivés en production.');
   }
 
-  const center = read('src/features/settings/components/UnifiedSyncCenterPanel.tsx');
+  const center = [
+    read('src/features/settings/components/UnifiedSyncCenterPanel.tsx'),
+    read('src/features/settings/components/UnifiedSyncCenterAdvancedDetails.tsx'),
+    read('src/features/settings/components/unifiedSyncDomainRegistry.ts'),
+  ].join('\n');
   for (const marker of [
     'Analyser tout',
     'Synchroniser tout',

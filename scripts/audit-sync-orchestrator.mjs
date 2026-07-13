@@ -12,6 +12,8 @@ const requiredFiles = [
   'src/application/sync/syncOrchestrator.test.ts',
   'src/app/syncOrchestratorReadiness.test.ts',
   'src/features/settings/components/UnifiedSyncCenterPanel.tsx',
+  'src/features/settings/components/UnifiedSyncCenterAdvancedDetails.tsx',
+  'src/features/settings/components/unifiedSyncDomainRegistry.ts',
   'docs/architecture/automatic-sync-orchestrator-0.23.0-f1.md',
 ];
 for (const path of requiredFiles) {
@@ -38,7 +40,11 @@ if (failures.length === 0) {
     }
   }
 
-  const panel = read('src/features/settings/components/UnifiedSyncCenterPanel.tsx');
+  const panel = [
+    read('src/features/settings/components/UnifiedSyncCenterPanel.tsx'),
+    read('src/features/settings/components/UnifiedSyncCenterAdvancedDetails.tsx'),
+    read('src/features/settings/components/unifiedSyncDomainRegistry.ts'),
+  ].join('\n');
   for (const marker of [
     'createSyncOrchestrator',
     'createOrchestratorDomains',
