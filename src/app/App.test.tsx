@@ -45,16 +45,20 @@ describe('App', () => {
 
     expect(screen.getByTestId('app-splash-screen')).toBeInTheDocument();
     expect(
-      await screen.findByRole('heading', { name: 'Local ou compte ?' }, { timeout: 5_000 }),
+      await screen.findByRole('heading', { name: 'Comment utiliser SportPilot ?' }, { timeout: 5_000 }),
     ).toBeInTheDocument();
     expect(screen.queryByTestId('app-splash-screen')).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(document.documentElement.style.overflow).toBe('hidden');
+      expect(document.body.style.overflow).toBe('hidden');
+    });
   }, 15_000);
 
   it('crée un profil avec les valeurs initiales puis ouvre le tableau de bord', async () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await screen.findByRole('heading', { name: 'Local ou compte ?' }, { timeout: 5_000 });
+    await screen.findByRole('heading', { name: 'Comment utiliser SportPilot ?' }, { timeout: 5_000 });
     await user.click(screen.getByRole('button', { name: 'Choisir le mode local' }));
     await screen.findByRole('heading', {
       name: 'Comment vous appeler ?',
@@ -64,24 +68,24 @@ describe('App', () => {
 
     for (const heading of [
       'Quel sexe utiliser pour les calculs ?',
-      'Votre date de naissance',
-      'Votre taille',
-      'Votre poids actuel',
-      'Votre objectif',
-      'Votre activité quotidienne',
-      'Votre objectif de pas',
+      'Quelle est votre date de naissance ?',
+      'Quelle est votre taille ?',
+      'Quel est votre poids actuel ?',
+      'Quel est votre objectif ?',
+      'Quel est votre niveau d’activité ?',
+      'Quel objectif de pas quotidien ?',
     ]) {
       await user.click(screen.getByRole('button', { name: 'Continuer' }));
       await screen.findByRole('heading', { name: heading });
     }
 
     await user.click(screen.getByRole('button', { name: 'Continuer' }));
-    await screen.findByRole('heading', { name: 'Vérifiez votre profil' });
+    await screen.findByRole('heading', { name: 'Votre profil est prêt' });
     expect(screen.getByText('Axel')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Modifier le poids' }));
-    await screen.findByRole('heading', { name: 'Votre poids actuel' });
+    await screen.findByRole('heading', { name: 'Quel est votre poids actuel ?' });
     await user.click(screen.getByRole('button', { name: 'Continuer' }));
-    await screen.findByRole('heading', { name: 'Vérifiez votre profil' });
+    await screen.findByRole('heading', { name: 'Votre profil est prêt' });
     await user.click(screen.getByRole('button', { name: 'Commencer' }));
 
     await waitFor(
@@ -108,6 +112,10 @@ describe('App', () => {
       expect.objectContaining({ weightKg: 70 }),
     ]);
     expect(readProfileOnboardingCompletion()).toMatchObject({ version: 1 });
+    await waitFor(() => {
+      expect(document.documentElement.style.overflow).not.toBe('hidden');
+      expect(document.body.style.overflow).not.toBe('hidden');
+    });
   }, 15_000);
 
   it('affiche directement le tableau de bord quand un profil existe', async () => {

@@ -1,41 +1,55 @@
 import { expect, type Page } from '@playwright/test';
 
-export async function createLocalProfile(page: Page, firstName = 'E2E'): Promise<void> {
-  const modeChoiceHeading = page.getByRole('heading', {
-    name: 'Local ou compte ?',
+const ONBOARDING_BOOTSTRAP_ATTEMPTS = 3;
+const ONBOARDING_BOOTSTRAP_TIMEOUT_MS = 8_000;
+
+async function openOnboarding(page: Page): Promise<void> {
+  const localModeButton = page.getByRole('button', {
+    name: 'Choisir le mode local',
   });
+  let lastError: unknown;
 
-  await page.goto('/#/onboarding', { waitUntil: 'domcontentloaded' });
+  for (let attempt = 1; attempt <= ONBOARDING_BOOTSTRAP_ATTEMPTS; attempt += 1) {
+    const cacheBuster = `${Date.now()}-${attempt}`;
 
-  try {
-    await expect(modeChoiceHeading).toBeVisible({ timeout: 15_000 });
-  } catch {
-    await page.reload({ waitUntil: 'domcontentloaded' });
-    await expect(modeChoiceHeading).toBeVisible({ timeout: 20_000 });
+    try {
+      await page.goto(`/?e2eBootstrap=${cacheBuster}#/onboarding`, {
+        waitUntil: 'domcontentloaded',
+      });
+      await expect(localModeButton).toBeVisible({
+        timeout: ONBOARDING_BOOTSTRAP_TIMEOUT_MS,
+      });
+      return;
+    } catch (error) {
+      lastError = error;
+      if (attempt < ONBOARDING_BOOTSTRAP_ATTEMPTS) {
+        await page.goto('about:blank', { waitUntil: 'load' });
+      }
+    }
   }
+
+  throw lastError instanceof Error
+    ? lastError
+    : new Error('Impossible de charger le choix du mode onboarding.');
+}
+
+export async function createLocalProfile(page: Page, firstName = 'E2E'): Promise<void> {
+  await openOnboarding(page);
+
   await page.getByRole('button', { name: 'Choisir le mode local' }).click();
-  await expect(page.getByRole('heading', {
-    name: 'Comment vous appeler ?',
-  })).toBeVisible();
+
+  const profileProgress = page.getByRole('progressbar', {
+    name: 'Progression de la configuration',
+  });
+  await expect(profileProgress).toHaveAttribute('aria-valuenow', '1');
   await page.getByLabel(/Nom affiché/).fill(firstName);
 
-  const profileStepHeadings = [
-    'Quel sexe utiliser pour les calculs ?',
-    'Votre date de naissance',
-    'Votre taille',
-    'Votre poids actuel',
-    'Votre objectif',
-    'Votre activité quotidienne',
-    'Votre objectif de pas',
-  ];
-
-  for (const heading of profileStepHeadings) {
+  for (let step = 2; step <= 9; step += 1) {
     await page.getByRole('button', { name: 'Continuer' }).click();
-    await expect(page.getByRole('heading', { name: heading })).toBeVisible();
+    await expect(profileProgress).toHaveAttribute('aria-valuenow', String(step));
   }
 
-  await page.getByRole('button', { name: 'Continuer' }).click();
-  await expect(page.getByRole('heading', { name: 'Vérifiez votre profil' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Commencer' })).toBeVisible();
   await page.getByRole('button', { name: 'Commencer' }).click();
   await expect(page.getByRole('heading', { name: `Bonjour ${firstName}` })).toBeVisible();
 }

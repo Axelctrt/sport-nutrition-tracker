@@ -1,6 +1,7 @@
 import {
   Armchair,
   BriefcaseBusiness,
+  CircleHelp,
   Dumbbell,
   Mars,
   Minus,
@@ -9,7 +10,7 @@ import {
   TrendingUp,
   Venus,
 } from 'lucide-react';
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { SUGGESTED_WEEKLY_CHANGE_PERCENT } from '@/domain/defaults/userProfile';
 import type { OccupationalActivity, WeightGoal } from '@/domain/models/profile';
 import {
@@ -136,13 +137,29 @@ function defaultBirthDate(ageYears: number): string {
   return toLocalDate(year, month, Math.min(today.getDate(), maximumDay));
 }
 
+function WhyNote({ children }: { children: string }) {
+  return (
+    <div className="mt-3 flex items-start gap-2 rounded-xl bg-slate-100 px-3 py-2.5 text-xs leading-4 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+      <CircleHelp aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-brand-700 dark:text-brand-300" />
+      <p>
+        <span className="font-semibold text-slate-800 dark:text-slate-100">Pourquoi ? </span>
+        {children}
+      </p>
+    </div>
+  );
+}
+
+function StepCard({ children }: { children: ReactNode }) {
+  return <Card className="mx-auto w-full max-w-xl p-4 sm:p-5">{children}</Card>;
+}
+
 function NameStep({ values, errors, onChange }: Omit<OnboardingProfileStepProps, 'stepId'>) {
   return (
-    <Card className="p-4">
+    <StepCard>
       <FormField
         id="onboarding-first-name"
         label="Nom affiché"
-        description="Facultatif et modifiable plus tard."
+        description="Ce nom sera utilisé dans l’application."
         error={errors.firstName}
         optionalLabel="facultatif"
       >
@@ -158,41 +175,42 @@ function NameStep({ values, errors, onChange }: Omit<OnboardingProfileStepProps,
           aria-describedby={errors.firstName ? 'onboarding-first-name-error' : 'onboarding-first-name-description'}
         />
       </FormField>
-    </Card>
+      <WhyNote>Vous pourrez le modifier plus tard depuis votre profil.</WhyNote>
+    </StepCard>
   );
 }
 
 function SexStep({ values, errors, onChange }: Omit<OnboardingProfileStepProps, 'stepId'>) {
   return (
-    <fieldset>
-      <legend className="sr-only">Sexe utilisé pour l’équation énergétique</legend>
-      {errors.sexForEnergyEquation ? (
-        <p className="mb-2 text-sm text-rose-700" role="alert">{errors.sexForEnergyEquation}</p>
-      ) : null}
-      <div className="grid grid-cols-2 gap-3">
-        <ChoiceCard
-          compact
-          name="sexForEnergyEquation"
-          value="male"
-          title="Masculin"
-          icon={Mars}
-          selected={values.sexForEnergyEquation === 'male'}
-          onSelect={() => onChange({ sexForEnergyEquation: 'male' })}
-        />
-        <ChoiceCard
-          compact
-          name="sexForEnergyEquation"
-          value="female"
-          title="Féminin"
-          icon={Venus}
-          selected={values.sexForEnergyEquation === 'female'}
-          onSelect={() => onChange({ sexForEnergyEquation: 'female' })}
-        />
-      </div>
-      <p className="mt-3 text-center text-xs text-slate-500 dark:text-slate-400">
-        Utilisé uniquement pour l’estimation énergétique.
-      </p>
-    </fieldset>
+    <StepCard>
+      <fieldset>
+        <legend className="sr-only">Sexe utilisé pour l’équation énergétique</legend>
+        {errors.sexForEnergyEquation ? (
+          <p className="mb-2 text-sm text-rose-700" role="alert">{errors.sexForEnergyEquation}</p>
+        ) : null}
+        <div className="grid grid-cols-2 gap-3">
+          <ChoiceCard
+            name="sexForEnergyEquation"
+            value="male"
+            title="Masculin"
+            description="Constantes masculines"
+            icon={Mars}
+            selected={values.sexForEnergyEquation === 'male'}
+            onSelect={() => onChange({ sexForEnergyEquation: 'male' })}
+          />
+          <ChoiceCard
+            name="sexForEnergyEquation"
+            value="female"
+            title="Féminin"
+            description="Constantes féminines"
+            icon={Venus}
+            selected={values.sexForEnergyEquation === 'female'}
+            onSelect={() => onChange({ sexForEnergyEquation: 'female' })}
+          />
+        </div>
+      </fieldset>
+      <WhyNote>Certaines formules utilisent cette donnée pour estimer le métabolisme de base.</WhyNote>
+    </StepCard>
   );
 }
 
@@ -238,12 +256,8 @@ function BirthDateStep({ values, errors, onChange }: Omit<OnboardingProfileStepP
     });
   };
 
-  const age = values.ageMode === 'birthDate'
-    ? calculateAge(currentDate)
-    : values.ageYears;
-
   return (
-    <div className="space-y-3">
+    <StepCard>
       <SegmentedControl
         label="Méthode"
         value={values.ageMode}
@@ -255,72 +269,78 @@ function BirthDateStep({ values, errors, onChange }: Omit<OnboardingProfileStepP
       />
 
       {values.ageMode === 'birthDate' ? (
-        <div className="grid grid-cols-3 gap-2" aria-label="Date de naissance">
+        <div className="mt-4 grid grid-cols-3 gap-2" aria-label="Date de naissance">
           <WheelPicker
             label="JJ"
             value={String(parsed.day)}
             options={dayOptions}
             onChange={(value) => setDatePart({ day: Number(value) })}
             error={errors.birthDate}
+            visibleItems={3}
           />
           <WheelPicker
             label="MM"
             value={String(parsed.month)}
             options={monthLabels}
             onChange={(value) => setDatePart({ month: Number(value) })}
+            visibleItems={3}
           />
           <WheelPicker
             label="AAAA"
             value={String(parsed.year)}
             options={yearOptions}
             onChange={(value) => setDatePart({ year: Number(value) })}
+            visibleItems={3}
           />
         </div>
       ) : (
         <WheelPicker
-          className="mx-auto max-w-xs"
+          className="mx-auto mt-4 max-w-sm"
           label="Âge"
           value={formatOptionValue(values.ageYears)}
           options={optionsWithCurrent(ageOptions, values.ageYears, 'ans', 0)}
           onChange={(value) => onChange({ ageYears: Number(value) })}
           error={errors.ageYears}
+          visibleItems={3}
         />
       )}
 
-      {typeof age === 'number' && Number.isFinite(age) ? (
-        <p className="text-center text-sm font-semibold text-slate-700 dark:text-slate-200">
-          {Math.round(age)} ans
-        </p>
-      ) : null}
-    </div>
+      <WhyNote>L’âge intervient dans l’estimation de vos besoins énergétiques.</WhyNote>
+    </StepCard>
   );
 }
 
 function HeightStep({ values, errors, onChange }: Omit<OnboardingProfileStepProps, 'stepId'>) {
   return (
-    <WheelPicker
-      className="mx-auto max-w-xs"
-      label="Taille"
-      value={formatOptionValue(values.heightCm)}
-      options={optionsWithCurrent(heightOptions, values.heightCm, 'cm', 1)}
-      onChange={(value) => onChange({ heightCm: Number(value) })}
-      error={errors.heightCm}
-      visibleItems={5}
-    />
+    <StepCard>
+      <WheelPicker
+        className="mx-auto max-w-sm"
+        label="Taille"
+        value={formatOptionValue(values.heightCm)}
+        options={optionsWithCurrent(heightOptions, values.heightCm, 'cm', 1)}
+        onChange={(value) => onChange({ heightCm: Number(value) })}
+        error={errors.heightCm}
+        visibleItems={3}
+      />
+      <WhyNote>La taille est utilisée avec le poids et l’âge pour estimer vos besoins.</WhyNote>
+    </StepCard>
   );
 }
 
 function WeightStep({ values, errors, onChange }: Omit<OnboardingProfileStepProps, 'stepId'>) {
   return (
-    <WheelPicker
-      className="mx-auto max-w-xs"
-      label="Poids"
-      value={formatOptionValue(values.initialWeightKg)}
-      options={optionsWithCurrent(weightOptions, values.initialWeightKg, 'kg', 1)}
-      onChange={(value) => onChange({ initialWeightKg: Number(value) })}
-      error={errors.initialWeightKg}
-      visibleItems={5}
-    />
+    <StepCard>
+      <WheelPicker
+        className="mx-auto max-w-sm"
+        label="Poids"
+        value={formatOptionValue(values.initialWeightKg)}
+        options={optionsWithCurrent(weightOptions, values.initialWeightKg, 'kg', 1)}
+        onChange={(value) => onChange({ initialWeightKg: Number(value) })}
+        error={errors.initialWeightKg}
+        visibleItems={3}
+      />
+      <WhyNote>Cette valeur sert de référence pour vos objectifs et votre progression.</WhyNote>
+    </StepCard>
   );
 }
 
@@ -352,13 +372,13 @@ function GoalStep({ values, errors, onChange }: Omit<OnboardingProfileStepProps,
   };
 
   return (
-    <div className="space-y-3">
+    <StepCard>
       <fieldset>
         <legend className="sr-only">Objectif de poids</legend>
         <div className="grid grid-cols-3 gap-2">
           {goalCards.map((card) => (
             <ChoiceCard
-              compact
+              comfortable
               key={card.value}
               name="goal"
               value={card.value}
@@ -371,7 +391,7 @@ function GoalStep({ values, errors, onChange }: Omit<OnboardingProfileStepProps,
         </div>
       </fieldset>
       <WheelPicker
-        className="mx-auto max-w-xs"
+        className="mx-auto mt-4 max-w-sm"
         label="Variation par semaine"
         value={formatOptionValue(values.targetWeeklyWeightChangePercent)}
         options={weeklyChangeOptions(values.goal, values.targetWeeklyWeightChangePercent)}
@@ -379,60 +399,66 @@ function GoalStep({ values, errors, onChange }: Omit<OnboardingProfileStepProps,
         error={errors.targetWeeklyWeightChangePercent}
         disabled={values.goal === 'maintenance'}
       />
-    </div>
+      <WhyNote>Un rythme progressif est généralement plus facile à maintenir.</WhyNote>
+    </StepCard>
   );
 }
 
 const activityCards: Array<{
   value: OccupationalActivity;
   title: string;
+  description: string;
   icon: typeof Armchair;
 }> = [
-  { value: 'sedentary', title: 'Assis', icon: Armchair },
-  { value: 'lightlyActive', title: 'Modéré', icon: BriefcaseBusiness },
-  { value: 'active', title: 'Actif', icon: PersonStanding },
-  { value: 'veryActive', title: 'Très actif', icon: Dumbbell },
+  { value: 'sedentary', title: 'Faible', description: 'Peu d’activité au quotidien', icon: Armchair },
+  { value: 'lightlyActive', title: 'Légère', description: 'Activité occasionnelle', icon: BriefcaseBusiness },
+  { value: 'active', title: 'Modérée', description: 'Activité régulière', icon: PersonStanding },
+  { value: 'veryActive', title: 'Élevée', description: 'Activité fréquente', icon: Dumbbell },
 ];
 
 function ActivityStep({ values, errors, onChange }: Omit<OnboardingProfileStepProps, 'stepId'>) {
   return (
-    <fieldset>
-      <legend className="sr-only">Niveau d’activité professionnelle</legend>
-      {errors.occupationalActivity ? (
-        <p className="mb-2 text-sm text-rose-700" role="alert">{errors.occupationalActivity}</p>
-      ) : null}
-      <div className="grid grid-cols-2 gap-3">
-        {activityCards.map((card) => (
-          <ChoiceCard
-            compact
-            key={card.value}
-            name="occupationalActivity"
-            value={card.value}
-            title={card.title}
-            icon={card.icon}
-            selected={values.occupationalActivity === card.value}
-            onSelect={() => onChange({ occupationalActivity: card.value })}
-          />
-        ))}
-      </div>
-      <p className="mt-3 text-center text-xs text-slate-500 dark:text-slate-400">
-        Activité habituelle hors séances sportives.
-      </p>
-    </fieldset>
+    <StepCard>
+      <fieldset>
+        <legend className="sr-only">Niveau d’activité professionnelle</legend>
+        {errors.occupationalActivity ? (
+          <p className="mb-2 text-sm text-rose-700" role="alert">{errors.occupationalActivity}</p>
+        ) : null}
+        <div className="grid grid-cols-2 gap-3">
+          {activityCards.map((card) => (
+            <ChoiceCard
+              comfortable
+              key={card.value}
+              name="occupationalActivity"
+              value={card.value}
+              title={card.title}
+              description={card.description}
+              icon={card.icon}
+              selected={values.occupationalActivity === card.value}
+              onSelect={() => onChange({ occupationalActivity: card.value })}
+            />
+          ))}
+        </div>
+      </fieldset>
+      <WhyNote>Ce niveau ajuste l’estimation de votre dépense quotidienne hors sport.</WhyNote>
+    </StepCard>
   );
 }
 
 function StepsStep({ values, errors, onChange }: Omit<OnboardingProfileStepProps, 'stepId'>) {
   return (
-    <WheelPicker
-      className="mx-auto max-w-xs"
-      label="Pas par jour"
-      value={formatOptionValue(values.dailyStepGoal)}
-      options={optionsWithCurrent(stepGoalOptions, values.dailyStepGoal, 'pas', 0)}
-      onChange={(value) => onChange({ dailyStepGoal: Number(value) })}
-      error={errors.dailyStepGoal}
-      visibleItems={5}
-    />
+    <StepCard>
+      <WheelPicker
+        className="mx-auto max-w-sm"
+        label="Pas par jour"
+        value={formatOptionValue(values.dailyStepGoal)}
+        options={optionsWithCurrent(stepGoalOptions, values.dailyStepGoal, 'pas', 0)}
+        onChange={(value) => onChange({ dailyStepGoal: Number(value) })}
+        error={errors.dailyStepGoal}
+        visibleItems={3}
+      />
+      <WhyNote>Cet objectif suit votre activité quotidienne en dehors des séances.</WhyNote>
+    </StepCard>
   );
 }
 

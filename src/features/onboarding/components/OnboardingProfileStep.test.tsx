@@ -28,6 +28,7 @@ describe('OnboardingProfileStep', () => {
     expect(screen.getByRole('listbox', { name: 'JJ' })).toBeInTheDocument();
     expect(screen.getByRole('listbox', { name: 'MM' })).toBeInTheDocument();
     expect(screen.getByRole('listbox', { name: 'AAAA' })).toBeInTheDocument();
+    expect(screen.getByRole('listbox', { name: 'JJ' }).getAttribute('style')).toContain('--wheel-picker-height: 156px');
     expect(screen.queryByDisplayValue('2000-07-12')).not.toBeInTheDocument();
   });
 

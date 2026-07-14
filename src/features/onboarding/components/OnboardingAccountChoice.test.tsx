@@ -57,6 +57,8 @@ describe('OnboardingAccountChoice', () => {
     render(<OnboardingAccountChoice {...baseProps} accountEnabled client={createClient()} screen="choice" onChooseLocal={onChooseLocal} onChooseAccount={onChooseAccount} />);
 
     expect(screen.queryByLabelText(/Adresse e-mail/)).not.toBeInTheDocument();
+    expect(screen.getByText(/Paramètres → Compte et appareils/)).toBeInTheDocument();
+    expect(screen.getByText(/L’adresse e-mail sera demandée à l’étape suivante/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Choisir le mode local' }));
     expect(onChooseLocal).toHaveBeenCalledTimes(1);
     await userEvent.click(screen.getByRole('button', { name: 'Connecter un compte' }));

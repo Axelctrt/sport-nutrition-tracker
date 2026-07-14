@@ -1,6 +1,9 @@
 import { expect, test, type Page } from '@playwright/test';
 
 async function expectOnboardingFitsViewport(page: Page): Promise<void> {
+  await page.evaluate(() => window.scrollTo(0, 400));
+  await page.waitForTimeout(50);
+
   const metrics = await page.evaluate(() => {
     const main = document.querySelector('main');
     const actionRegion = document.querySelector('[aria-label="Actions de la page"]');
@@ -14,12 +17,16 @@ async function expectOnboardingFitsViewport(page: Page): Promise<void> {
       mainBottom: mainRect?.bottom ?? -1,
       actionBottom: actionRect?.bottom ?? 0,
       viewportHeight: window.innerHeight,
+      rootOverflow: getComputedStyle(document.documentElement).overflow,
+      bodyOverflowStyle: getComputedStyle(document.body).overflow,
     };
   });
 
   expect(metrics.documentOverflow).toBeLessThanOrEqual(1);
   expect(metrics.bodyOverflow).toBeLessThanOrEqual(1);
   expect(metrics.scrollY).toBe(0);
+  expect(metrics.rootOverflow).toBe('hidden');
+  expect(metrics.bodyOverflowStyle).toBe('hidden');
   expect(metrics.mainTop).toBeGreaterThanOrEqual(0);
   expect(metrics.mainBottom).toBeLessThanOrEqual(metrics.viewportHeight + 1);
   if (metrics.actionBottom > 0) {
@@ -29,7 +36,7 @@ async function expectOnboardingFitsViewport(page: Page): Promise<void> {
 
 test('maintient chaque étape locale dans la hauteur de l’iPhone 15', async ({ page }) => {
   await page.goto('/#/onboarding', { waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('heading', { name: 'Local ou compte ?' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Comment utiliser SportPilot ?' })).toBeVisible();
   await expect(page.getByLabel(/Adresse e-mail/)).toHaveCount(0);
   await expectOnboardingFitsViewport(page);
 
@@ -40,13 +47,13 @@ test('maintient chaque étape locale dans la hauteur de l’iPhone 15', async ({
 
   const headings = [
     'Quel sexe utiliser pour les calculs ?',
-    'Votre date de naissance',
-    'Votre taille',
-    'Votre poids actuel',
-    'Votre objectif',
-    'Votre activité quotidienne',
-    'Votre objectif de pas',
-    'Vérifiez votre profil',
+    'Quelle est votre date de naissance ?',
+    'Quelle est votre taille ?',
+    'Quel est votre poids actuel ?',
+    'Quel est votre objectif ?',
+    'Quel est votre niveau d’activité ?',
+    'Quel objectif de pas quotidien ?',
+    'Votre profil est prêt',
   ];
 
   for (const heading of headings) {
@@ -64,7 +71,7 @@ test('affiche les rouleaux sans saisie numérique manuelle', async ({ page }) =>
 
   await page.getByRole('button', { name: 'Continuer' }).click();
   await page.getByRole('button', { name: 'Continuer' }).click();
-  await expect(page.getByRole('heading', { name: 'Votre date de naissance' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Quelle est votre date de naissance ?' })).toBeVisible();
   await expect(page.getByRole('listbox', { name: 'Âge' })).toBeVisible();
 
   await page.getByRole('radio', { name: 'Date de naissance' }).click();

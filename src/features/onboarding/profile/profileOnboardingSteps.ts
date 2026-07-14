@@ -37,47 +37,47 @@ export const PROFILE_ONBOARDING_STEP_COPY: Record<
   [PROFILE_ONBOARDING_STEP_IDS.name]: {
     eyebrow: 'Votre profil',
     title: 'Comment vous appeler ?',
-    description: 'Facultatif et modifiable plus tard.',
+    description: 'Ce nom sera utilisé dans l’application.',
   },
   [PROFILE_ONBOARDING_STEP_IDS.sex]: {
     eyebrow: 'Informations personnelles',
     title: 'Quel sexe utiliser pour les calculs ?',
-    description: 'Uniquement pour l’estimation énergétique.',
+    description: 'Cette information affine l’estimation de vos besoins.',
   },
   [PROFILE_ONBOARDING_STEP_IDS.birthDate]: {
     eyebrow: 'Informations personnelles',
-    title: 'Votre date de naissance',
+    title: 'Quelle est votre date de naissance ?',
     description: 'Faites défiler chaque colonne.',
   },
   [PROFILE_ONBOARDING_STEP_IDS.height]: {
     eyebrow: 'Mesures',
-    title: 'Votre taille',
-    description: 'Faites défiler pour choisir.',
+    title: 'Quelle est votre taille ?',
+    description: 'Faites défiler pour sélectionner votre taille.',
   },
   [PROFILE_ONBOARDING_STEP_IDS.weight]: {
     eyebrow: 'Mesures',
-    title: 'Votre poids actuel',
-    description: 'Faites défiler pour choisir.',
+    title: 'Quel est votre poids actuel ?',
+    description: 'Sélectionnez votre poids de départ.',
   },
   [PROFILE_ONBOARDING_STEP_IDS.goal]: {
     eyebrow: 'Objectif',
-    title: 'Votre objectif',
-    description: 'Choisissez puis ajustez le rythme.',
+    title: 'Quel est votre objectif ?',
+    description: 'Vous pourrez modifier cet objectif plus tard.',
   },
   [PROFILE_ONBOARDING_STEP_IDS.activity]: {
     eyebrow: 'Activité quotidienne',
-    title: 'Votre activité quotidienne',
-    description: 'Hors séances sportives.',
+    title: 'Quel est votre niveau d’activité ?',
+    description: 'En dehors de vos séances sportives.',
   },
   [PROFILE_ONBOARDING_STEP_IDS.steps]: {
     eyebrow: 'Activité quotidienne',
-    title: 'Votre objectif de pas',
-    description: 'Par paliers de 500.',
+    title: 'Quel objectif de pas quotidien ?',
+    description: 'Choisissez un objectif adapté à votre quotidien.',
   },
   [PROFILE_ONBOARDING_STEP_IDS.summary]: {
     eyebrow: 'Dernière vérification',
-    title: 'Vérifiez votre profil',
-    description: 'Touchez une information pour la modifier.',
+    title: 'Votre profil est prêt',
+    description: 'Vérifiez les informations principales avant de commencer.',
   },
 };
 

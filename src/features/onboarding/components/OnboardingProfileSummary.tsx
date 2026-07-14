@@ -72,13 +72,13 @@ function SummaryItem({ label, value, editLabel, onEdit }: SummaryItemProps) {
     <li>
       <button
         aria-label={editLabel}
-        className="flex min-h-14 w-full items-center gap-2 rounded-xl border border-slate-200 bg-white p-2 text-left transition hover:border-brand-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 dark:border-slate-800 dark:bg-slate-900"
+        className="flex min-h-16 w-full items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3 text-left transition hover:border-brand-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 dark:border-slate-800 dark:bg-slate-900"
         onClick={onEdit}
         type="button"
       >
         <span className="min-w-0 flex-1">
-          <span className="block text-[11px] font-medium leading-4 text-slate-500 dark:text-slate-400">{label}</span>
-          <span className="block truncate text-sm font-semibold leading-5 text-slate-950 dark:text-white">{value}</span>
+          <span className="block text-xs font-medium leading-4 text-slate-500 dark:text-slate-400">{label}</span>
+          <span className="mt-0.5 block truncate text-sm font-semibold leading-5 text-slate-950 dark:text-white">{value}</span>
         </span>
         <Pencil aria-hidden="true" className="size-3.5 shrink-0 text-slate-400" />
       </button>
@@ -97,12 +97,14 @@ export function OnboardingProfileSummary({
     : 'Mode local';
 
   return (
-    <div className="space-y-2">
-      <p className="rounded-xl bg-brand-50 px-3 py-2 text-center text-xs font-semibold text-brand-900 dark:bg-brand-950/35 dark:text-brand-100">
+    <div className="mx-auto w-full max-w-xl space-y-3">
+      <p className="rounded-2xl bg-brand-50 px-4 py-2.5 text-center text-sm font-semibold text-brand-900 dark:bg-brand-950/35 dark:text-brand-100">
         {modeLabel}
       </p>
-      <Card className="p-2">
-        <ul aria-label="Récapitulatif du profil" className="grid grid-cols-2 gap-2">
+
+      <Card className="p-3">
+        <h2 className="mb-2 px-1 text-sm font-semibold text-slate-800 dark:text-slate-100">Profil</h2>
+        <ul aria-label="Informations du profil" className="grid grid-cols-2 gap-2">
           <SummaryItem
             label="Nom"
             value={values.firstName.trim() || 'Non renseigné'}
@@ -127,6 +129,12 @@ export function OnboardingProfileSummary({
             editLabel="Modifier la taille"
             onEdit={() => onEdit(PROFILE_ONBOARDING_STEP_IDS.height)}
           />
+        </ul>
+      </Card>
+
+      <Card className="p-3">
+        <h2 className="mb-2 px-1 text-sm font-semibold text-slate-800 dark:text-slate-100">Objectifs</h2>
+        <ul aria-label="Objectifs du profil" className="grid grid-cols-2 gap-2">
           <SummaryItem
             label="Poids"
             value={`${values.initialWeightKg.toLocaleString('fr-FR')} kg`}

@@ -18,7 +18,7 @@ interface WheelPickerProps {
   visibleItems?: 3 | 5;
 }
 
-const ITEM_HEIGHT = 44;
+const ITEM_HEIGHT = 52;
 const SCROLL_SETTLE_DELAY_MS = 90;
 
 export function WheelPicker({
@@ -136,7 +136,7 @@ export function WheelPicker({
 
   return (
     <div className={cn('min-w-0 text-center', className)}>
-      <p id={`${id}-label`} className="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">
+      <p id={`${id}-label`} className="text-sm font-semibold text-slate-700 dark:text-slate-200">
         {label}
       </p>
       {description ? (
@@ -144,10 +144,11 @@ export function WheelPicker({
           {description}
         </p>
       ) : null}
-      <div className="relative mx-auto mt-1.5 max-w-sm overflow-hidden rounded-2xl border border-slate-300 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
+      <div className="relative mx-auto mt-2 max-w-sm overflow-hidden rounded-3xl border border-slate-300 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 top-1/2 z-10 h-11 -translate-y-1/2 border-y border-brand-500/40 bg-brand-50/70 dark:bg-brand-950/35"
+          className="pointer-events-none absolute inset-x-0 top-1/2 z-10 -translate-y-1/2 border-y border-brand-500/50 bg-brand-50/80 dark:bg-brand-950/40"
+          style={{ height: ITEM_HEIGHT }}
         />
         <div
           ref={viewportRef}
@@ -173,23 +174,24 @@ export function WheelPicker({
             <div
               aria-selected={index === selectedIndex}
               className={cn(
-                'flex h-11 snap-center items-center justify-center px-2 text-center text-base transition-[color,font-weight,opacity] motion-reduce:transition-none',
+                'flex snap-center items-center justify-center px-2 text-center text-base transition-[color,font-size,font-weight,opacity] motion-reduce:transition-none',
                 index === selectedIndex
-                  ? 'font-bold text-slate-950 dark:text-white'
+                  ? 'text-lg font-bold text-slate-950 dark:text-white'
                   : 'text-slate-500 opacity-65 dark:text-slate-400',
               )}
               id={`${id}-option-${index}`}
               key={option.value}
               onClick={() => selectIndex(index)}
               role="option"
+              style={{ height: ITEM_HEIGHT }}
             >
               {option.label}
             </div>
           ))}
           <div aria-hidden="true" style={{ height: edgePadding }} />
         </div>
-        <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 z-30 h-10 bg-gradient-to-b from-white to-transparent dark:from-slate-900" />
-        <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 z-30 h-10 bg-gradient-to-t from-white to-transparent dark:from-slate-900" />
+        <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 z-30 h-12 bg-gradient-to-b from-white to-transparent dark:from-slate-900" />
+        <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 z-30 h-12 bg-gradient-to-t from-white to-transparent dark:from-slate-900" />
       </div>
       {error ? (
         <p className="mt-1 text-xs font-medium text-rose-700 dark:text-rose-300" id={errorId} role="alert">

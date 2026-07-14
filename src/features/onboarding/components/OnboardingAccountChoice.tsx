@@ -225,37 +225,51 @@ export function OnboardingAccountChoice({
 
   if (screen === 'choice') {
     return (
-      <div className="grid grid-cols-2 gap-3">
+      <div className="mx-auto grid w-full max-w-xl gap-3 sm:grid-cols-2">
         <button
           aria-label="Choisir le mode local"
-          className="min-h-40 rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-brand-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 dark:border-slate-800 dark:bg-slate-900"
+          className="min-h-32 rounded-3xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-brand-400 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 dark:border-slate-800 dark:bg-slate-900"
           disabled={actionStatus === 'logout'}
           onClick={() => void handleChooseLocal()}
           type="button"
         >
-          <CloudOff aria-hidden="true" className="size-7 text-brand-700 dark:text-brand-300" />
-          <span className="mt-3 block font-semibold text-slate-950 dark:text-white">Mode local</span>
-          <span className="mt-1 block text-xs leading-4 text-slate-600 dark:text-slate-300">
-            Données sur cet appareil.
+          <span className="flex items-center gap-3">
+            <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-brand-50 text-brand-700 dark:bg-brand-950/45 dark:text-brand-300">
+              <CloudOff aria-hidden="true" className="size-6" />
+            </span>
+            <span className="text-lg font-semibold text-slate-950 dark:text-white">Mode local</span>
+          </span>
+          <span className="mt-3 block text-sm leading-5 text-slate-600 dark:text-slate-300">
+            Utilisez SportPilot immédiatement. Vos données restent sur cet appareil.
+          </span>
+          <span className="mt-2 block text-xs font-medium leading-4 text-brand-700 dark:text-brand-300">
+            Un compte pourra être associé plus tard depuis Paramètres → Compte et appareils.
           </span>
         </button>
 
         <button
           aria-label="Connecter un compte"
-          className="min-h-40 rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-brand-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 disabled:cursor-not-allowed disabled:opacity-55 dark:border-slate-800 dark:bg-slate-900"
+          className="min-h-32 rounded-3xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-brand-400 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 disabled:cursor-not-allowed disabled:opacity-55 dark:border-slate-800 dark:bg-slate-900"
           disabled={!accountEnabled || !client}
           onClick={onChooseAccount}
           type="button"
         >
-          <Cloud aria-hidden="true" className="size-7 text-brand-700 dark:text-brand-300" />
-          <span className="mt-3 block font-semibold text-slate-950 dark:text-white">Compte</span>
-          <span className="mt-1 block text-xs leading-4 text-slate-600 dark:text-slate-300">
-            Synchronisation entre appareils.
+          <span className="flex items-center gap-3">
+            <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-brand-50 text-brand-700 dark:bg-brand-950/45 dark:text-brand-300">
+              <Cloud aria-hidden="true" className="size-6" />
+            </span>
+            <span className="text-lg font-semibold text-slate-950 dark:text-white">Compte</span>
+          </span>
+          <span className="mt-3 block text-sm leading-5 text-slate-600 dark:text-slate-300">
+            Synchronisez vos données et retrouvez-les sur plusieurs appareils.
+          </span>
+          <span className="mt-2 block text-xs font-medium leading-4 text-brand-700 dark:text-brand-300">
+            L’adresse e-mail sera demandée à l’étape suivante.
           </span>
         </button>
 
         {!accountEnabled || !client ? (
-          <p className="col-span-2 text-center text-xs text-slate-500 dark:text-slate-400" role="status">
+          <p className="text-center text-xs text-slate-500 dark:text-slate-400 sm:col-span-2" role="status">
             {configurationError ?? 'Connexion compte indisponible ici.'}
           </p>
         ) : null}
@@ -264,7 +278,7 @@ export function OnboardingAccountChoice({
   }
 
   return (
-    <Card className="p-4">
+    <Card className="mx-auto w-full max-w-xl p-5 sm:p-6">
       {feedback ? (
         <InlineNotice className="mb-3" tone={feedback.tone} title={feedback.title}>
           {feedback.message}
@@ -302,7 +316,6 @@ export function OnboardingAccountChoice({
           <FormField error={fieldError} id="onboarding-account-otp" label="Code reçu" required>
             <input
               autoComplete="one-time-code"
-              autoFocus
               className={inputClasses}
               id="onboarding-account-otp"
               inputMode="numeric"
@@ -324,7 +337,6 @@ export function OnboardingAccountChoice({
           <FormField error={fieldError} id="onboarding-account-email" label="Adresse e-mail" required>
             <input
               autoComplete="email"
-              autoFocus
               className={inputClasses}
               disabled={actionStatus === 'email' || actionStatus === 'initializing'}
               id="onboarding-account-email"
@@ -335,6 +347,9 @@ export function OnboardingAccountChoice({
               value={email}
             />
           </FormField>
+          <p className="rounded-xl bg-slate-100 px-3 py-2 text-xs leading-4 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+            Aucun mot de passe à retenir : le code reçu est temporaire.
+          </p>
           <Button
             className="w-full"
             disabled={actionStatus === 'email' || actionStatus === 'initializing'}
