@@ -455,7 +455,14 @@ export function OnboardingPage() {
               ) : null}
             </header>
 
-            <div className="flex min-h-0 items-start overflow-hidden py-1 lg:block lg:overflow-visible lg:py-0">
+            <div
+              data-onboarding-summary-scroll={isSummaryStep ? "" : undefined}
+              className={
+                isSummaryStep
+                  ? "min-h-0 overflow-y-auto overscroll-contain py-1 pr-1 lg:block lg:overflow-visible lg:py-0 lg:pr-0"
+                  : "flex min-h-0 items-start overflow-hidden py-1 lg:block lg:overflow-visible lg:py-0"
+              }
+            >
               <div className="w-full">
                 {currentStepId === STORAGE_ONBOARDING_STEP_ID ||
                 isAccountStep ? (

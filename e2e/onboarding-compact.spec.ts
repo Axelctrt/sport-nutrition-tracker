@@ -46,14 +46,13 @@ test('maintient chaque étape locale dans la hauteur de l’iPhone 15', async ({
   await page.getByLabel(/Nom affiché/).fill('Test');
 
   const headings = [
-    'Quel sexe utiliser pour les calculs ?',
+    'Sexe utilisé pour les calculs',
     'Quelle est votre date de naissance ?',
     'Quelle est votre taille ?',
     'Quel est votre poids actuel ?',
     'Quel est votre objectif ?',
     'Quel est votre niveau d’activité ?',
     'Quel objectif de pas quotidien ?',
-    'Votre profil est prêt',
   ];
 
   for (const heading of headings) {
@@ -62,6 +61,16 @@ test('maintient chaque étape locale dans la hauteur de l’iPhone 15', async ({
     await expectOnboardingFitsViewport(page);
   }
 
+  await page.getByRole('button', { name: 'Continuer' }).click();
+  await expect(page.getByRole('heading', { name: 'Votre profil est prêt' })).toBeVisible();
+  await expectOnboardingFitsViewport(page);
+
+  const summaryScroll = page.locator('[data-onboarding-summary-scroll]');
+  await expect(summaryScroll).toHaveCSS('overflow-y', 'auto');
+  await summaryScroll.evaluate((element) => {
+    element.scrollTop = element.scrollHeight;
+  });
+  await expect(page.getByRole('button', { name: 'Modifier l’objectif', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Commencer' })).toBeVisible();
 });
 

@@ -48,6 +48,21 @@ describe('OnboardingProfileStep', () => {
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
   });
 
+  it('présente les aides comme des informations sans libellé Pourquoi', () => {
+    render(<OnboardingProfileStep stepId={PROFILE_ONBOARDING_STEP_IDS.name} values={DEFAULT_PROFILE_FORM_VALUES} errors={{}} onChange={vi.fn()} />);
+    expect(screen.getByText(/Vous pourrez modifier ce nom plus tard/)).toBeInTheDocument();
+    expect(screen.queryByText(/Pourquoi/)).not.toBeInTheDocument();
+  });
+
+  it('affiche les objectifs et activités sur des lignes pleine largeur', () => {
+    const { rerender } = render(<OnboardingProfileStep stepId={PROFILE_ONBOARDING_STEP_IDS.goal} values={DEFAULT_PROFILE_FORM_VALUES} errors={{}} onChange={vi.fn()} />);
+    expect(screen.getByRole('radio', { name: 'Maintenir' })).toBeInTheDocument();
+
+    rerender(<OnboardingProfileStep stepId={PROFILE_ONBOARDING_STEP_IDS.activity} values={DEFAULT_PROFILE_FORM_VALUES} errors={{}} onChange={vi.fn()} />);
+    expect(screen.getByRole('radio', { name: /Faible/ })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /Élevée/ })).toBeInTheDocument();
+  });
+
   it('associe une erreur de taille au rouleau', () => {
     render(<OnboardingProfileStep stepId={PROFILE_ONBOARDING_STEP_IDS.height} values={{ ...DEFAULT_PROFILE_FORM_VALUES, heightCm: 80 }} errors={{ heightCm: 'Taille invalide' }} onChange={vi.fn()} />);
     expect(screen.getByRole('alert')).toHaveTextContent('Taille invalide');

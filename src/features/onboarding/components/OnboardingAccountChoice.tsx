@@ -228,7 +228,7 @@ export function OnboardingAccountChoice({
       <div className="mx-auto grid w-full max-w-xl gap-3 sm:grid-cols-2">
         <button
           aria-label="Choisir le mode local"
-          className="min-h-32 rounded-3xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-brand-400 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 dark:border-slate-800 dark:bg-slate-900"
+          className="min-h-36 rounded-3xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-brand-400 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 dark:border-slate-800 dark:bg-slate-900"
           disabled={actionStatus === 'logout'}
           onClick={() => void handleChooseLocal()}
           type="button"
@@ -249,7 +249,7 @@ export function OnboardingAccountChoice({
 
         <button
           aria-label="Connecter un compte"
-          className="min-h-32 rounded-3xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-brand-400 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 disabled:cursor-not-allowed disabled:opacity-55 dark:border-slate-800 dark:bg-slate-900"
+          className="min-h-36 rounded-3xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-brand-400 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 disabled:cursor-not-allowed disabled:opacity-55 dark:border-slate-800 dark:bg-slate-900"
           disabled={!accountEnabled || !client}
           onClick={onChooseAccount}
           type="button"
@@ -258,7 +258,7 @@ export function OnboardingAccountChoice({
             <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-brand-50 text-brand-700 dark:bg-brand-950/45 dark:text-brand-300">
               <Cloud aria-hidden="true" className="size-6" />
             </span>
-            <span className="text-lg font-semibold text-slate-950 dark:text-white">Compte</span>
+            <span className="text-lg font-semibold text-slate-950 dark:text-white">Connecter un compte</span>
           </span>
           <span className="mt-3 block text-sm leading-5 text-slate-600 dark:text-slate-300">
             Synchronisez vos données et retrouvez-les sur plusieurs appareils.

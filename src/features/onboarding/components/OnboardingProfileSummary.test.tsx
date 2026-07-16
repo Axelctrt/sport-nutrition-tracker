@@ -25,6 +25,8 @@ describe('OnboardingProfileSummary', () => {
     expect(screen.getByText('Axel')).toBeInTheDocument();
     expect(screen.getByText('70 kg')).toBeInTheDocument();
     expect(screen.getByText('10 000 pas')).toBeInTheDocument();
+    expect(screen.getByLabelText('Informations du profil')).toHaveClass('grid-cols-1');
+    expect(screen.getByText('Axel')).not.toHaveClass('truncate');
   });
 
   it('affiche le pseudonyme du compte et ouvre l’étape demandée', async () => {

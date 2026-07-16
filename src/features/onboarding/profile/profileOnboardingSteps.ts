@@ -41,8 +41,8 @@ export const PROFILE_ONBOARDING_STEP_COPY: Record<
   },
   [PROFILE_ONBOARDING_STEP_IDS.sex]: {
     eyebrow: 'Informations personnelles',
-    title: 'Quel sexe utiliser pour les calculs ?',
-    description: 'Cette information affine l’estimation de vos besoins.',
+    title: 'Sexe utilisé pour les calculs',
+    description: 'Choisissez la référence utilisée par les formules énergétiques.',
   },
   [PROFILE_ONBOARDING_STEP_IDS.birthDate]: {
     eyebrow: 'Informations personnelles',

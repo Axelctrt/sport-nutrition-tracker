@@ -67,7 +67,7 @@ describe('App', () => {
     expect(window.localStorage.getItem(ONBOARDING_DRAFT_STORAGE_KEY)).not.toBeNull();
 
     for (const heading of [
-      'Quel sexe utiliser pour les calculs ?',
+      'Sexe utilisé pour les calculs',
       'Quelle est votre date de naissance ?',
       'Quelle est votre taille ?',
       'Quel est votre poids actuel ?',
