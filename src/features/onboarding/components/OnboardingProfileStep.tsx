@@ -185,18 +185,19 @@ function NameStep({ values, errors, onChange }: Omit<OnboardingProfileStepProps,
 
 function SexStep({ values, errors, onChange }: Omit<OnboardingProfileStepProps, 'stepId'>) {
   return (
-    <StepCard className="min-h-[17rem]">
+    <StepCard className="min-h-[18rem]">
       <fieldset>
         <legend className="sr-only">Sexe utilisé pour l’équation énergétique</legend>
         {errors.sexForEnergyEquation ? (
           <p className="mb-2 text-sm text-rose-700" role="alert">{errors.sexForEnergyEquation}</p>
         ) : null}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-3">
           <ChoiceCard
             name="sexForEnergyEquation"
             value="male"
             title="Masculin"
             icon={Mars}
+            comfortable
             selected={values.sexForEnergyEquation === 'male'}
             onSelect={() => onChange({ sexForEnergyEquation: 'male' })}
           />
@@ -205,6 +206,7 @@ function SexStep({ values, errors, onChange }: Omit<OnboardingProfileStepProps, 
             value="female"
             title="Féminin"
             icon={Venus}
+            comfortable
             selected={values.sexForEnergyEquation === 'female'}
             onSelect={() => onChange({ sexForEnergyEquation: 'female' })}
           />
@@ -373,13 +375,13 @@ function GoalStep({ values, errors, onChange }: Omit<OnboardingProfileStepProps,
   };
 
   return (
-    <StepCard className="min-h-[20rem]">
+    <StepCard className="min-h-0 py-3 sm:p-4">
       <fieldset>
         <legend className="sr-only">Objectif de poids</legend>
-        <div className="grid grid-cols-1 gap-2.5">
+        <div className="grid grid-cols-1 gap-2">
           {goalCards.map((card) => (
             <ChoiceCard
-              compact
+              dense
               key={card.value}
               name="goal"
               value={card.value}
@@ -392,8 +394,9 @@ function GoalStep({ values, errors, onChange }: Omit<OnboardingProfileStepProps,
         </div>
       </fieldset>
       <WheelPicker
-        className="mx-auto mt-4 max-w-sm"
+        className="mx-auto mt-3 max-w-sm"
         label="Variation par semaine"
+        compact
         value={formatOptionValue(values.targetWeeklyWeightChangePercent)}
         options={weeklyChangeOptions(values.goal, values.targetWeeklyWeightChangePercent)}
         onChange={(value) => onChange({ targetWeeklyWeightChangePercent: Number(value) })}

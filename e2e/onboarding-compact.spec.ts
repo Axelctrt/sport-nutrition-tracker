@@ -62,14 +62,24 @@ test('maintient chaque étape locale dans la hauteur de l’iPhone 15', async ({
   }
 
   await page.getByRole('button', { name: 'Continuer' }).click();
-  await expect(page.getByRole('heading', { name: 'Votre profil est prêt' })).toBeVisible();
-  await expectOnboardingFitsViewport(page);
+  const summaryHeading = page.getByRole('heading', { name: 'Votre profil est prêt' });
+  await expect(summaryHeading).toBeVisible();
 
-  const summaryScroll = page.locator('[data-onboarding-summary-scroll]');
-  await expect(summaryScroll).toHaveCSS('overflow-y', 'auto');
-  await summaryScroll.evaluate((element) => {
+  const summaryPage = page.locator('main[data-onboarding-page-scroll="summary"]');
+  const summaryContent = page.locator('[data-onboarding-summary-content]');
+  await expect(summaryPage).toHaveCSS('overflow-y', 'auto');
+  await expect(summaryContent).not.toHaveCSS('overflow-y', 'auto');
+
+  const headingTopBeforeScroll = await summaryHeading.evaluate((element) => element.getBoundingClientRect().top);
+  const scrollTop = await summaryPage.evaluate((element) => {
     element.scrollTop = element.scrollHeight;
+    return element.scrollTop;
   });
+  await expect.poll(async () => summaryPage.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+  const headingTopAfterScroll = await summaryHeading.evaluate((element) => element.getBoundingClientRect().top);
+
+  expect(scrollTop).toBeGreaterThan(0);
+  expect(headingTopAfterScroll).toBeLessThan(headingTopBeforeScroll);
   await expect(page.getByRole('button', { name: 'Modifier l’objectif', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Commencer' })).toBeVisible();
 });

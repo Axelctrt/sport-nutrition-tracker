@@ -11,7 +11,9 @@ describe('OnboardingProfileStep', () => {
   it('présente le sexe sous forme de cartes tactiles compactes', async () => {
     const onChange = vi.fn();
     render(<OnboardingProfileStep stepId={PROFILE_ONBOARDING_STEP_IDS.sex} values={DEFAULT_PROFILE_FORM_VALUES} errors={{}} onChange={onChange} />);
-    expect(screen.getByRole('radio', { name: /Masculin/ })).toBeChecked();
+    const masculine = screen.getByRole('radio', { name: /Masculin/ });
+    expect(masculine).toBeChecked();
+    expect(masculine.closest('label')?.parentElement).toHaveClass('grid-cols-1');
     await userEvent.click(screen.getByRole('radio', { name: /Féminin/ }));
     expect(onChange).toHaveBeenCalledWith({ sexForEnergyEquation: 'female' });
   });
@@ -57,6 +59,7 @@ describe('OnboardingProfileStep', () => {
   it('affiche les objectifs et activités sur des lignes pleine largeur', () => {
     const { rerender } = render(<OnboardingProfileStep stepId={PROFILE_ONBOARDING_STEP_IDS.goal} values={DEFAULT_PROFILE_FORM_VALUES} errors={{}} onChange={vi.fn()} />);
     expect(screen.getByRole('radio', { name: 'Maintenir' })).toBeInTheDocument();
+    expect(screen.getByRole('listbox', { name: 'Variation par semaine' }).getAttribute('style')).toContain('--wheel-picker-height: 132px');
 
     rerender(<OnboardingProfileStep stepId={PROFILE_ONBOARDING_STEP_IDS.activity} values={DEFAULT_PROFILE_FORM_VALUES} errors={{}} onChange={vi.fn()} />);
     expect(screen.getByRole('radio', { name: /Faible/ })).toBeInTheDocument();

@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, type CSSProperties, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, type CSSProperties, type KeyboardEvent } from 'react';
 import { cn } from '@/shared/utils/cn';
 
 export interface WheelPickerOption {
@@ -16,6 +16,7 @@ interface WheelPickerProps {
   disabled?: boolean;
   className?: string;
   visibleItems?: 3 | 5;
+  compact?: boolean;
 }
 
 const ITEM_HEIGHT = 52;
@@ -31,6 +32,7 @@ export function WheelPicker({
   disabled = false,
   className,
   visibleItems = 3,
+  compact = false,
 }: WheelPickerProps) {
   const id = useId();
   const descriptionId = useId();
@@ -39,18 +41,19 @@ export function WheelPicker({
   const scrollTimerRef = useRef<number | undefined>(undefined);
   const selectedIndex = Math.max(0, options.findIndex((option) => option.value === value));
   const safeVisibleItems = visibleItems % 2 === 0 ? visibleItems + 1 : visibleItems;
-  const edgePadding = ((safeVisibleItems - 1) / 2) * ITEM_HEIGHT;
+  const itemHeight = compact ? 44 : ITEM_HEIGHT;
+  const edgePadding = ((safeVisibleItems - 1) / 2) * itemHeight;
   const activeOptionId = `${id}-option-${selectedIndex}`;
 
   const viewportStyle = useMemo(() => ({
-    '--wheel-picker-height': `${safeVisibleItems * ITEM_HEIGHT}px`,
+    '--wheel-picker-height': `${safeVisibleItems * itemHeight}px`,
     '--wheel-picker-edge': `${edgePadding}px`,
-  }) as CSSProperties, [edgePadding, safeVisibleItems]);
+  }) as CSSProperties, [edgePadding, itemHeight, safeVisibleItems]);
 
-  const scrollToIndex = (index: number, behavior: ScrollBehavior = 'smooth') => {
+  const scrollToIndex = useCallback((index: number, behavior: ScrollBehavior = 'smooth') => {
     const viewport = viewportRef.current;
     if (!viewport) return;
-    const top = index * ITEM_HEIGHT;
+    const top = index * itemHeight;
     const resolvedBehavior = behavior === 'smooth'
       && typeof window.matchMedia === 'function'
       && window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -61,11 +64,11 @@ export function WheelPicker({
     } else {
       viewport.scrollTop = top;
     }
-  };
+  }, [itemHeight]);
 
   useEffect(() => {
     scrollToIndex(selectedIndex, 'auto');
-  }, [options, selectedIndex]);
+  }, [scrollToIndex, selectedIndex]);
 
   useEffect(() => () => {
     if (scrollTimerRef.current !== undefined) {
@@ -87,7 +90,7 @@ export function WheelPicker({
     if (!viewport || disabled || options.length === 0) return;
     const nextIndex = Math.min(
       options.length - 1,
-      Math.max(0, Math.round(viewport.scrollTop / ITEM_HEIGHT)),
+      Math.max(0, Math.round(viewport.scrollTop / itemHeight)),
     );
     const option = options[nextIndex];
     if (option && option.value !== value) onChange(option.value);
@@ -148,7 +151,7 @@ export function WheelPicker({
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-x-0 top-1/2 z-10 -translate-y-1/2 border-y border-brand-500/50 bg-brand-50/80 dark:bg-brand-950/40"
-          style={{ height: ITEM_HEIGHT }}
+          style={{ height: itemHeight }}
         />
         <div
           ref={viewportRef}
@@ -183,7 +186,7 @@ export function WheelPicker({
               key={option.value}
               onClick={() => selectIndex(index)}
               role="option"
-              style={{ height: ITEM_HEIGHT }}
+              style={{ height: itemHeight }}
             >
               {option.label}
             </div>

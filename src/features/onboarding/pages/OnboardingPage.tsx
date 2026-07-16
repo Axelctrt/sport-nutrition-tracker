@@ -367,8 +367,21 @@ export function OnboardingPage() {
       });
 
   return (
-    <main className="fixed inset-0 h-[100dvh] overflow-hidden overscroll-none bg-slate-50 px-4 py-3 dark:bg-slate-950 sm:px-6 sm:py-5 lg:static lg:min-h-screen lg:h-auto lg:overflow-visible lg:bg-transparent lg:py-10">
-      <div className="mx-auto flex h-full max-w-6xl flex-col lg:block">
+    <main
+      className={`fixed inset-0 h-[100dvh] bg-slate-50 px-4 py-3 dark:bg-slate-950 sm:px-6 sm:py-5 lg:static lg:min-h-screen lg:h-auto lg:overflow-visible lg:bg-transparent lg:py-10 ${
+        isSummaryStep
+          ? "overflow-y-auto overscroll-contain"
+          : "overflow-hidden overscroll-none"
+      }`}
+      data-onboarding-page-scroll={isSummaryStep ? "summary" : undefined}
+    >
+      <div
+        className={
+          isSummaryStep
+            ? "mx-auto min-h-full max-w-6xl lg:block"
+            : "mx-auto flex h-full max-w-6xl flex-col lg:block"
+        }
+      >
         <div className="mb-3 flex shrink-0 items-center gap-2 lg:hidden">
           <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-brand-700 text-white">
             <Dumbbell aria-hidden="true" className="size-5" />
@@ -425,7 +438,11 @@ export function OnboardingPage() {
 
           <section
             aria-labelledby="onboarding-step-title"
-            className="grid h-full min-h-0 min-w-0 grid-rows-[auto_minmax(0,1fr)_auto] lg:block lg:h-auto"
+            className={
+              isSummaryStep
+                ? "min-w-0 lg:block lg:h-auto"
+                : "grid h-full min-h-0 min-w-0 grid-rows-[auto_minmax(0,1fr)_auto] lg:block lg:h-auto"
+            }
           >
             <header className="shrink-0 pb-3">
               <p className="text-xs font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
@@ -456,10 +473,10 @@ export function OnboardingPage() {
             </header>
 
             <div
-              data-onboarding-summary-scroll={isSummaryStep ? "" : undefined}
+              data-onboarding-summary-content={isSummaryStep ? "" : undefined}
               className={
                 isSummaryStep
-                  ? "min-h-0 overflow-y-auto overscroll-contain py-1 pr-1 lg:block lg:overflow-visible lg:py-0 lg:pr-0"
+                  ? "py-1 lg:block lg:py-0"
                   : "flex min-h-0 items-start overflow-hidden py-1 lg:block lg:overflow-visible lg:py-0"
               }
             >
@@ -508,7 +525,7 @@ export function OnboardingPage() {
             {currentProfileStepId ? (
               <div
                 aria-label="Actions de la page"
-                className="shrink-0 border-t border-slate-200 bg-slate-50 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] dark:border-slate-800 dark:bg-slate-950 lg:mt-5 lg:rounded-[var(--sp-radius-card)] lg:border lg:bg-white lg:p-3 lg:shadow-sm lg:dark:bg-slate-900"
+                className={`shrink-0 border-t border-slate-200 bg-slate-50 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] dark:border-slate-800 dark:bg-slate-950 lg:mt-5 lg:rounded-[var(--sp-radius-card)] lg:border lg:bg-white lg:p-3 lg:shadow-sm lg:dark:bg-slate-900 ${isSummaryStep ? "mt-3" : ""}`}
                 role="region"
               >
                 <div className="mx-auto grid max-w-lg grid-cols-2 gap-3">
