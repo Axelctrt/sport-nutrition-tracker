@@ -21,11 +21,12 @@ describe('OnboardingProfileSummary', () => {
       />,
     );
 
-    expect(screen.getByText('Mode local sur cet appareil')).toBeInTheDocument();
+    expect(screen.getByText('Mode local')).toBeInTheDocument();
     expect(screen.getByText('Axel')).toBeInTheDocument();
     expect(screen.getByText('70 kg')).toBeInTheDocument();
     expect(screen.getByText('10 000 pas')).toBeInTheDocument();
-    expect(screen.getByText(/aucune pesée/i)).toBeInTheDocument();
+    expect(screen.getByLabelText('Informations du profil')).toHaveClass('grid-cols-1');
+    expect(screen.getByText('Axel')).not.toHaveClass('truncate');
   });
 
   it('affiche le pseudonyme du compte et ouvre l’étape demandée', async () => {
@@ -41,7 +42,7 @@ describe('OnboardingProfileSummary', () => {
       />,
     );
 
-    expect(screen.getByText('Compte connecté · @axel.run')).toBeInTheDocument();
+    expect(screen.getByText('Compte · @axel.run')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Modifier le poids' }));
     expect(onEdit).toHaveBeenCalledWith(PROFILE_ONBOARDING_STEP_IDS.weight);
   });

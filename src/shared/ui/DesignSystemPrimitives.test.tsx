@@ -122,7 +122,7 @@ describe('fondations du design system', () => {
     expect(screen.getByRole('radio', { name: 'Compact' })).toHaveFocus();
   });
 
-  it('utilise le sélecteur natif pour bénéficier de la roue iOS', () => {
+  it('expose un rouleau tactile et pilotable au clavier', () => {
     const onChange = vi.fn();
     render(
       <WheelPicker
@@ -137,12 +137,12 @@ describe('fondations du design system', () => {
       />,
     );
 
-    fireEvent.change(screen.getByRole('combobox', { name: 'Objectif de pas' }), {
-      target: { value: '10000' },
-    });
+    const picker = screen.getByRole('listbox', { name: 'Objectif de pas' });
+    fireEvent.keyDown(picker, { key: 'ArrowDown' });
     expect(onChange).toHaveBeenCalledWith('10000');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Diminuer objectif de pas' }));
+    fireEvent.click(screen.getByRole('option', { name: '5 000' }));
     expect(onChange).toHaveBeenCalledWith('5000');
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
   });
 });

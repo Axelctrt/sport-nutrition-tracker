@@ -1,15 +1,4 @@
-import {
-  Activity,
-  CalendarDays,
-  Cloud,
-  CloudOff,
-  Footprints,
-  Goal,
-  Pencil,
-  Ruler,
-  Scale,
-  UserRound,
-} from 'lucide-react';
+import { Pencil } from 'lucide-react';
 import type { DataSpaceKind } from '@/domain/data-spaces/dataSpace';
 import type { OccupationalActivity, WeightGoal } from '@/domain/models/profile';
 import {
@@ -17,9 +6,7 @@ import {
   type ProfileOnboardingStepId,
 } from '@/features/onboarding/profile/profileOnboardingSteps';
 import type { ProfileFormValues } from '@/features/profile/schemas/profileSchema';
-import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
-import { InlineNotice } from '@/shared/ui/InlineNotice';
 import { formatLocalDate } from '@/shared/utils/dates';
 
 interface OnboardingProfileSummaryProps {
@@ -30,7 +17,6 @@ interface OnboardingProfileSummaryProps {
 }
 
 interface SummaryItemProps {
-  icon: typeof UserRound;
   label: string;
   value: string;
   editLabel: string;
@@ -38,86 +24,64 @@ interface SummaryItemProps {
 }
 
 const goalLabels: Record<WeightGoal, string> = {
-  loss: 'Perdre du poids',
-  maintenance: 'Maintenir le poids',
-  gain: 'Prendre du poids ou de la masse',
+  loss: 'Perte',
+  maintenance: 'Maintien',
+  gain: 'Prise',
 };
 
 const activityLabels: Record<OccupationalActivity, string> = {
-  sedentary: 'Principalement assis',
-  lightlyActive: 'Modérément actif',
-  active: 'Physiquement actif',
-  veryActive: 'Très physique',
+  sedentary: 'Assis',
+  lightlyActive: 'Modéré',
+  active: 'Actif',
+  veryActive: 'Très actif',
 };
 
 function calculateAgeFromBirthDate(value: string): number | undefined {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/u.exec(value);
   if (!match) return undefined;
-
   const year = Number(match[1]);
   const month = Number(match[2]);
   const day = Number(match[3]);
   const date = new Date(year, month - 1, day);
-  if (
-    date.getFullYear() !== year
-    || date.getMonth() !== month - 1
-    || date.getDate() !== day
-  ) {
+  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
     return undefined;
   }
-
   const today = new Date();
   let age = today.getFullYear() - year;
-  if (
-    today.getMonth() + 1 < month
-    || (today.getMonth() + 1 === month && today.getDate() < day)
-  ) {
+  if (today.getMonth() + 1 < month || (today.getMonth() + 1 === month && today.getDate() < day)) {
     age -= 1;
   }
-
   return age;
 }
 
 function formatAge(values: ProfileFormValues): string {
-  if (values.ageMode === 'age') {
-    return `${Math.round(values.ageYears)} ans`;
-  }
-
+  if (values.ageMode === 'age') return `${Math.round(values.ageYears)} ans`;
   const age = calculateAgeFromBirthDate(values.birthDate);
   const formattedDate = formatLocalDate(values.birthDate);
   return typeof age === 'number' ? `${formattedDate} · ${age} ans` : formattedDate;
 }
 
 function formatWeeklyChange(values: ProfileFormValues): string {
-  if (values.goal === 'maintenance') return '0 % par semaine';
-  const formatter = new Intl.NumberFormat('fr-FR', {
-    maximumFractionDigits: 2,
-    signDisplay: 'always',
-  });
-  return `${formatter.format(values.targetWeeklyWeightChangePercent)} % par semaine`;
+  if (values.goal === 'maintenance') return '0 %/sem.';
+  const formatter = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2, signDisplay: 'always' });
+  return `${formatter.format(values.targetWeeklyWeightChangePercent)} %/sem.`;
 }
 
-function SummaryItem({ icon: Icon, label, value, editLabel, onEdit }: SummaryItemProps) {
+function SummaryItem({ label, value, editLabel, onEdit }: SummaryItemProps) {
   return (
-    <li className="flex items-start gap-3 border-b border-slate-200 py-4 last:border-b-0 dark:border-slate-800">
-      <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-        <Icon aria-hidden="true" className="size-5" />
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{label}</p>
-        <p className="mt-1 break-words font-semibold text-slate-950 dark:text-white">{value}</p>
-      </div>
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
+    <li>
+      <button
         aria-label={editLabel}
+        className="flex min-h-14 w-full items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-left transition hover:border-brand-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 dark:border-slate-800 dark:bg-slate-900"
         onClick={onEdit}
-        className="shrink-0"
+        type="button"
       >
-        <Pencil aria-hidden="true" className="size-4" />
-        <span className="hidden sm:inline">Modifier</span>
-      </Button>
+        <span className="min-w-0 flex-1">
+          <span className="block text-xs font-medium leading-4 text-slate-500 dark:text-slate-400">{label}</span>
+          <span className="mt-0.5 block break-words text-sm font-semibold leading-5 text-slate-950 dark:text-white">{value}</span>
+        </span>
+        <Pencil aria-hidden="true" className="size-3.5 shrink-0 text-slate-400" />
+      </button>
     </li>
   );
 }
@@ -129,91 +93,74 @@ export function OnboardingProfileSummary({
   onEdit,
 }: OnboardingProfileSummaryProps) {
   const modeLabel = dataSpaceKind === 'account'
-    ? socialHandle
-      ? `Compte connecté · ${socialHandle}`
-      : 'Compte connecté · identité sociale confirmée'
-    : 'Mode local sur cet appareil';
+    ? socialHandle ? `Compte · ${socialHandle}` : 'Compte connecté'
+    : 'Mode local';
 
   return (
-    <div className="space-y-5">
-      <InlineNotice
-        tone={dataSpaceKind === 'account' ? 'success' : 'info'}
-        title={dataSpaceKind === 'account' ? 'Compte prêt' : 'Mode local prêt'}
-      >
-        <div className="flex items-start gap-2">
-          {dataSpaceKind === 'account' ? (
-            <Cloud aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-          ) : (
-            <CloudOff aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-          )}
-          <p>{modeLabel}</p>
-        </div>
-      </InlineNotice>
+    <div className="mx-auto w-full max-w-xl space-y-3">
+      <p className="rounded-2xl bg-brand-50 px-4 py-2.5 text-center text-sm font-semibold text-brand-900 dark:bg-brand-950/35 dark:text-brand-100">
+        {modeLabel}
+      </p>
 
-      <Card className="px-5 sm:px-6">
-        <ul aria-label="Récapitulatif du profil">
+      <Card className="p-3">
+        <h2 className="mb-2 px-1 text-sm font-semibold text-slate-800 dark:text-slate-100">Profil</h2>
+        <ul aria-label="Informations du profil" className="grid grid-cols-1 gap-2">
           <SummaryItem
-            icon={UserRound}
-            label="Nom dans SportPilot"
-            value={values.firstName.trim() || 'Aucun nom renseigné'}
+            label="Nom"
+            value={values.firstName.trim() || 'Non renseigné'}
             editLabel="Modifier le nom"
             onEdit={() => onEdit(PROFILE_ONBOARDING_STEP_IDS.name)}
           />
           <SummaryItem
-            icon={UserRound}
-            label="Sexe utilisé pour les calculs"
+            label="Calcul"
             value={values.sexForEnergyEquation === 'male' ? 'Masculin' : 'Féminin'}
             editLabel="Modifier le sexe"
             onEdit={() => onEdit(PROFILE_ONBOARDING_STEP_IDS.sex)}
           />
           <SummaryItem
-            icon={CalendarDays}
             label="Âge"
             value={formatAge(values)}
             editLabel="Modifier la date de naissance ou l’âge"
             onEdit={() => onEdit(PROFILE_ONBOARDING_STEP_IDS.birthDate)}
           />
           <SummaryItem
-            icon={Ruler}
             label="Taille"
             value={`${values.heightCm.toLocaleString('fr-FR')} cm`}
             editLabel="Modifier la taille"
             onEdit={() => onEdit(PROFILE_ONBOARDING_STEP_IDS.height)}
           />
+        </ul>
+      </Card>
+
+      <Card className="p-3">
+        <h2 className="mb-2 px-1 text-sm font-semibold text-slate-800 dark:text-slate-100">Objectifs</h2>
+        <ul aria-label="Objectifs du profil" className="grid grid-cols-1 gap-2">
           <SummaryItem
-            icon={Scale}
-            label="Poids actuel"
+            label="Poids"
             value={`${values.initialWeightKg.toLocaleString('fr-FR')} kg`}
             editLabel="Modifier le poids"
             onEdit={() => onEdit(PROFILE_ONBOARDING_STEP_IDS.weight)}
           />
           <SummaryItem
-            icon={Goal}
             label="Objectif"
             value={`${goalLabels[values.goal]} · ${formatWeeklyChange(values)}`}
             editLabel="Modifier l’objectif"
             onEdit={() => onEdit(PROFILE_ONBOARDING_STEP_IDS.goal)}
           />
           <SummaryItem
-            icon={Activity}
-            label="Activité professionnelle"
+            label="Activité"
             value={activityLabels[values.occupationalActivity]}
             editLabel="Modifier l’activité professionnelle"
             onEdit={() => onEdit(PROFILE_ONBOARDING_STEP_IDS.activity)}
           />
           <SummaryItem
-            icon={Footprints}
-            label="Objectif quotidien"
+            label="Pas"
             value={`${values.dailyStepGoal.toLocaleString('fr-FR')} pas`}
             editLabel="Modifier l’objectif de pas"
             onEdit={() => onEdit(PROFILE_ONBOARDING_STEP_IDS.steps)}
           />
         </ul>
       </Card>
-
-      <InlineNotice tone="info" title="Première pesée">
-        Si cet espace ne contient encore aucune pesée, SportPilot enregistrera automatiquement ce poids à la date du jour. Un historique restauré ou déjà présent ne sera jamais écrasé.
-      </InlineNotice>
     </div>
   );
 }

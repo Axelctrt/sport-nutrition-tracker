@@ -45,44 +45,48 @@ describe('App', () => {
 
     expect(screen.getByTestId('app-splash-screen')).toBeInTheDocument();
     expect(
-      await screen.findByRole('heading', { name: 'Choisir le mode local ou compte' }, { timeout: 5_000 }),
+      await screen.findByRole('heading', { name: 'Comment utiliser SportPilot ?' }, { timeout: 5_000 }),
     ).toBeInTheDocument();
     expect(screen.queryByTestId('app-splash-screen')).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(document.documentElement.style.overflow).toBe('hidden');
+      expect(document.body.style.overflow).toBe('hidden');
+    });
   }, 15_000);
 
   it('crée un profil avec les valeurs initiales puis ouvre le tableau de bord', async () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await screen.findByRole('heading', { name: 'Choisir le mode local ou compte' }, { timeout: 5_000 });
+    await screen.findByRole('heading', { name: 'Comment utiliser SportPilot ?' }, { timeout: 5_000 });
     await user.click(screen.getByRole('button', { name: 'Choisir le mode local' }));
     await screen.findByRole('heading', {
-      name: 'Comment souhaitez-vous être appelé dans SportPilot ?',
+      name: 'Comment vous appeler ?',
     }, { timeout: 5_000 });
-    await user.type(screen.getByLabelText(/Nom utilisé dans SportPilot/), 'Axel');
+    await user.type(screen.getByLabelText(/Nom affiché/), 'Axel');
     expect(window.localStorage.getItem(ONBOARDING_DRAFT_STORAGE_KEY)).not.toBeNull();
 
     for (const heading of [
-      'Quel sexe doit être utilisé pour les calculs énergétiques ?',
+      'Sexe utilisé pour les calculs',
       'Quelle est votre date de naissance ?',
       'Quelle est votre taille ?',
       'Quel est votre poids actuel ?',
-      'Quel est votre objectif principal ?',
-      'À quoi ressemble votre activité professionnelle ?',
-      'Quel objectif de pas souhaitez-vous viser chaque jour ?',
+      'Quel est votre objectif ?',
+      'Quel est votre niveau d’activité ?',
+      'Quel objectif de pas quotidien ?',
     ]) {
-      await user.click(screen.getByRole('button', { name: 'Suivant' }));
+      await user.click(screen.getByRole('button', { name: 'Continuer' }));
       await screen.findByRole('heading', { name: heading });
     }
 
-    await user.click(screen.getByRole('button', { name: 'Suivant' }));
-    await screen.findByRole('heading', { name: 'Vérifiez votre configuration' });
+    await user.click(screen.getByRole('button', { name: 'Continuer' }));
+    await screen.findByRole('heading', { name: 'Votre profil est prêt' });
     expect(screen.getByText('Axel')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Modifier le poids' }));
     await screen.findByRole('heading', { name: 'Quel est votre poids actuel ?' });
-    await user.click(screen.getByRole('button', { name: 'Suivant' }));
-    await screen.findByRole('heading', { name: 'Vérifiez votre configuration' });
-    await user.click(screen.getByRole('button', { name: 'Commencer avec SportPilot' }));
+    await user.click(screen.getByRole('button', { name: 'Continuer' }));
+    await screen.findByRole('heading', { name: 'Votre profil est prêt' });
+    await user.click(screen.getByRole('button', { name: 'Commencer' }));
 
     await waitFor(
       () => expect(router.state.location.pathname).toBe('/'),
@@ -108,6 +112,10 @@ describe('App', () => {
       expect.objectContaining({ weightKg: 70 }),
     ]);
     expect(readProfileOnboardingCompletion()).toMatchObject({ version: 1 });
+    await waitFor(() => {
+      expect(document.documentElement.style.overflow).not.toBe('hidden');
+      expect(document.body.style.overflow).not.toBe('hidden');
+    });
   }, 15_000);
 
   it('affiche directement le tableau de bord quand un profil existe', async () => {
