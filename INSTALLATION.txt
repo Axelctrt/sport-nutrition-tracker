@@ -1,31 +1,32 @@
-SPORTPILOT 0.31.0
+SPORTPILOT 0.32.0
 
 Checklist d’installation et publication :
 
-1. Verifier que la branche release/0.31.0 est propre et synchronisee.
-2. Verifier que package.json et package-lock.json indiquent 0.31.0.
-3. Verifier que Parametres affiche 0.31.0.
+1. Verifier que la branche release/0.32.0 est propre et synchronisee.
+2. Verifier que package.json et package-lock.json indiquent 0.32.0.
+3. Verifier que Parametres affiche 0.32.0.
 4. Verifier qu’aucun ZIP, patch-files, resultat Playwright ou secret n’est stage.
 5. Executer npm run lint.
 6. Executer npx tsc -b --pretty false.
 7. Executer la suite Vitest complete en lots deterministes.
-8. Executer npm run test:e2e:acceptance.
-9. Executer npm run build.
-10. Executer npm run audit:release-consolidation.
-11. Executer npm run check.
-12. Executer npm run test:stability ou consigner les lots deterministes equivalents.
-13. Executer npm audit.
-14. Valider la recette iPhone 15 iOS 26.
-15. Committer avec chore(release): finaliser SportPilot 0.31.0.
-16. Pousser release/0.31.0.
-17. Deployer et valider la Preview de la branche release.
-18. Fusionner manuellement release/0.31.0 dans develop.
-19. Relancer les controles critiques sur develop.
-20. Fusionner develop dans main.
-21. Pousser main.
-22. Deployer la production Cloudflare Pages depuis main.
-23. Verifier la version 0.31.0 en production.
-24. Verifier Accueil, Nutrition, Sport, Progression, Compte et Synchronisation.
-25. Creer le tag annote v0.31.0 sur le commit publie.
-26. Pousser le tag v0.31.0.
-27. Resynchroniser develop avec main.
+8. Executer npm run test:e2e:onboarding.
+9. Executer npm run test:e2e:acceptance.
+10. Executer npm run build.
+11. Executer npm run audit:release-consolidation.
+12. Executer npm run check.
+13. Executer npm run test:stability ou consigner les lots deterministes equivalents.
+14. Executer npm audit.
+15. Valider la recette onboarding sur iPhone 15.
+16. Committer avec chore(release): finaliser SportPilot 0.32.0.
+17. Pousser release/0.32.0.
+18. Deployer et valider la Preview de la branche release.
+19. Fusionner manuellement release/0.32.0 dans develop.
+20. Relancer les controles critiques sur develop.
+21. Fusionner develop dans main.
+22. Pousser main.
+23. Deployer la production Cloudflare Pages depuis main.
+24. Verifier la version 0.32.0 en production.
+25. Verifier onboarding, Accueil, Nutrition, Sport, Progression, Compte et Synchronisation.
+26. Creer le tag annote v0.32.0 sur le commit publie.
+27. Pousser le tag v0.32.0.
+28. Resynchroniser develop avec main.

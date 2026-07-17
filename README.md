@@ -1,59 +1,51 @@
-# SportPilot 0.31.0
+# SportPilot 0.32.0
 
-SportPilot 0.31.0 consolide la refonte mobile de la version 0.30.0. La release réduit la charge mentale sur les parcours fréquents, hiérarchise les fonctions avancées et fiabilise les audits de publication sans modifier les données existantes.
+SportPilot 0.32.0 finalise un onboarding mobile plus lisible, plus direct et mieux adapté à l’iPhone 15. Le choix entre mode local et compte est clarifié, les données du profil sont renseignées avec des rouleaux tactiles et chaque étape ordinaire reste entièrement visible sans défilement global.
 
 L’application reste mobile-first, locale-first, compatible compte/cloud, hors ligne et installable en PWA.
 
 ## Principales évolutions
 
-### Navigation et saisie
+### Démarrage local ou compte
 
-- retours mobiles fondés sur l’historique réel avec repli contextuel ;
-- contexte Nutrition et position de défilement restaurés ;
-- doubles retours supprimés sur mobile ;
-- notes et textes préremplis conservés au focus ;
-- remplacement rapide maintenu pour les valeurs numériques.
+- choix initial limité à **Mode local** et **Connecter un compte** ;
+- connexion e-mail et code déplacée sur l’écran suivant ;
+- rappel qu’un profil local peut être associé plus tard depuis Paramètres → Compte et appareils ;
+- logique de stockage, de connexion et de synchronisation inchangée.
 
-### Accueil, menu et Sport
+### Profil compact
 
-- Accueil allégé par défaut sans écraser les personnalisations ;
-- menu mobile secondaire regroupé et repliable ;
-- hub Sport recentré sur une action principale ;
-- distinction entre activité de musculation simple et séance détaillée.
+- neuf étapes de profil structurées et accessibles ;
+- pages ordinaires verrouillées dans la hauteur de l’écran ;
+- textes explicatifs raccourcis et informations utiles signalées par une icône `i` ;
+- choix du sexe empilés et choix d’objectif ou d’activité présentés sur des lignes lisibles ;
+- résumé final seul autorisé à faire défiler l’ensemble de la page.
 
-### Progression et Nutrition
+### Rouleaux tactiles
 
-- synthèse Progression limitée à l’activité, la tendance de poids et l’objectif prioritaire ;
-- états sans données plus explicites ;
-- trois méthodes d’ajout Nutrition prioritaires ;
-- méthodes avancées conservées ;
-- dernière méthode mémorisée par repas ;
-- répétition rapide du dernier repas équivalent.
-
-### Compte et synchronisation
-
-- vue standard centrée sur le compte, l’état global et la dernière réussite ;
-- diagnostics, file, historique et domaines placés dans un volet avancé ;
-- centre de synchronisation et page compte découpés en modules testables ;
-- protocoles, conflits et isolation local/cloud inchangés.
+- date de naissance ou âge sans saisie numérique manuelle ;
+- taille, poids et objectif de pas sélectionnés par rouleaux ;
+- pas proposés par paliers de 500 ;
+- sensibilité légèrement accrue sur les rouleaux ordinaires ;
+- variation hebdomadaire conservée à sa sensibilité précise ;
+- navigation clavier, VoiceOver, réduction des animations et inertie iOS préservées.
 
 ### Qualité
 
-- audits historiques compatibles avec les versions stables actuelles ;
-- garde-fous de navigation alignés sur l’architecture réelle ;
-- budget JavaScript consolidé à 3 200 Kio ;
-- audits social et Photo IA alignés sur les confirmations et consentements actuels ;
-- préparation Playwright WebKit renforcée.
+- recette Playwright dédiée à l’onboarding sur WebKit iPhone 15 ;
+- acceptation mobile maintenue sur Chromium desktop et WebKit ;
+- bootstrap E2E et contrôles de focus rendus plus stables ;
+- aucun changement de calcul calorique, de contrat social ou de schéma de stockage.
 
 ## Stockage et versions techniques
 
-- Application : `0.31.0`.
+- Application : `0.32.0`.
 - AppDatabase locale : Dexie v10.
 - Sauvegarde JSON : v9.
 - Runtime Dexie Cloud prototype : v14.
 - Contrat de snapshot social : `0.29.0-a3`.
-- Migrations D1 ajoutées par 0.31.0 : aucune.
-- Migrations Dexie ajoutées par 0.31.0 : aucune.
+- Migrations D1 ajoutées par 0.32.0 : aucune.
+- Migrations Dexie ajoutées par 0.32.0 : aucune.
 
 ## Contrôles de publication
 
@@ -61,12 +53,13 @@ L’application reste mobile-first, locale-first, compatible compte/cloud, hors 
 npm run lint
 npx tsc -b --pretty false
 npm run build
+npm run test:e2e:onboarding
 npm run test:e2e:acceptance
 npm run audit:release-consolidation
 npm run check
 npm audit
 ```
 
-La recette réelle sur iPhone 15 sous iOS 26 doit valider Accueil, Nutrition, Sport, Progression, compte, synchronisation, hors ligne, PWA et accessibilité.
+La recette réelle sur iPhone 15 doit valider le mode local, la connexion compte séparée, les rouleaux, l’absence de scroll sur les étapes ordinaires, le résumé scrollable, la PWA et l’accessibilité.
 
-Tag attendu : `v0.31.0`.
+Tag attendu : `v0.32.0`.

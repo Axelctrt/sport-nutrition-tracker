@@ -10,7 +10,7 @@ import { syncPublicDeploymentConfig } from '@/infrastructure/sync-prototype/sync
 
 describe('compatibilité E1 avec la publication 0.26.0', () => {
   it('ajoute le domaine cloud sans migrer la base métier ni la sauvegarde', () => {
-    expect(__APP_VERSION__).toBe('0.31.0');
+    expect(__APP_VERSION__).toBe('0.32.0');
     expect(databaseSchemaVersion).toBe(10);
     expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(9);
     expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(14);
