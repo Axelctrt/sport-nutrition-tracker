@@ -137,9 +137,11 @@ function defaultBirthDate(ageYears: number): string {
   return toLocalDate(year, month, Math.min(today.getDate(), maximumDay));
 }
 
-function InfoNote({ children }: { children: string }) {
+function InfoNote({ children, compact = false }: { children: string; compact?: boolean }) {
   return (
-    <div className="mt-3 flex items-start gap-2 rounded-xl bg-slate-100 px-3 py-2.5 text-xs leading-4 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+    <div className={compact
+      ? 'mt-2 flex items-start gap-2 rounded-xl bg-slate-100 px-3 py-2 text-xs leading-4 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
+      : 'mt-3 flex items-start gap-2 rounded-xl bg-slate-100 px-3 py-2.5 text-xs leading-4 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}>
       <Info aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-brand-700 dark:text-brand-300" />
       <p>{children}</p>
     </div>
@@ -375,13 +377,13 @@ function GoalStep({ values, errors, onChange }: Omit<OnboardingProfileStepProps,
   };
 
   return (
-    <StepCard className="min-h-0 py-3 sm:p-4">
+    <StepCard className="min-h-0 px-4 py-2 sm:p-3">
       <fieldset>
         <legend className="sr-only">Objectif de poids</legend>
-        <div className="grid grid-cols-1 gap-2">
+        <div className="grid grid-cols-1 gap-1.5">
           {goalCards.map((card) => (
             <ChoiceCard
-              dense
+              tight
               key={card.value}
               name="goal"
               value={card.value}
@@ -394,16 +396,18 @@ function GoalStep({ values, errors, onChange }: Omit<OnboardingProfileStepProps,
         </div>
       </fieldset>
       <WheelPicker
-        className="mx-auto mt-3 max-w-sm"
+        className="mx-auto mt-2 max-w-sm"
         label="Variation par semaine"
         compact
+        itemHeight={40}
+        scrollSensitivity={1}
         value={formatOptionValue(values.targetWeeklyWeightChangePercent)}
         options={weeklyChangeOptions(values.goal, values.targetWeeklyWeightChangePercent)}
         onChange={(value) => onChange({ targetWeeklyWeightChangePercent: Number(value) })}
         error={errors.targetWeeklyWeightChangePercent}
         disabled={values.goal === 'maintenance'}
       />
-      <InfoNote>Un rythme progressif est généralement plus facile à maintenir.</InfoNote>
+      <InfoNote compact>Un rythme progressif est généralement plus facile à maintenir.</InfoNote>
     </StepCard>
   );
 }

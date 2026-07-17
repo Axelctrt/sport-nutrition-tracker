@@ -40,6 +40,7 @@ describe('OnboardingProfileStep', () => {
 
     rerender(<OnboardingProfileStep stepId={PROFILE_ONBOARDING_STEP_IDS.height} values={DEFAULT_PROFILE_FORM_VALUES} errors={{}} onChange={vi.fn()} />);
     expect(screen.getByRole('listbox', { name: 'Taille' })).toBeInTheDocument();
+    expect(screen.getByRole('listbox', { name: 'Taille' })).toHaveAttribute('data-scroll-sensitivity', '1.15');
 
     rerender(<OnboardingProfileStep stepId={PROFILE_ONBOARDING_STEP_IDS.weight} values={DEFAULT_PROFILE_FORM_VALUES} errors={{}} onChange={vi.fn()} />);
     expect(screen.getByRole('listbox', { name: 'Poids' })).toBeInTheDocument();
@@ -59,7 +60,9 @@ describe('OnboardingProfileStep', () => {
   it('affiche les objectifs et activités sur des lignes pleine largeur', () => {
     const { rerender } = render(<OnboardingProfileStep stepId={PROFILE_ONBOARDING_STEP_IDS.goal} values={DEFAULT_PROFILE_FORM_VALUES} errors={{}} onChange={vi.fn()} />);
     expect(screen.getByRole('radio', { name: 'Maintenir' })).toBeInTheDocument();
-    expect(screen.getByRole('listbox', { name: 'Variation par semaine' }).getAttribute('style')).toContain('--wheel-picker-height: 132px');
+    expect(screen.getByRole('listbox', { name: 'Variation par semaine' }).getAttribute('style')).toContain('--wheel-picker-height: 120px');
+    expect(screen.getByRole('listbox', { name: 'Variation par semaine' })).toHaveAttribute('data-scroll-sensitivity', '1');
+    expect(screen.getByRole('radio', { name: 'Maintenir' }).closest('label')?.querySelector('span')).toHaveClass('min-h-11');
 
     rerender(<OnboardingProfileStep stepId={PROFILE_ONBOARDING_STEP_IDS.activity} values={DEFAULT_PROFILE_FORM_VALUES} errors={{}} onChange={vi.fn()} />);
     expect(screen.getByRole('radio', { name: /Faible/ })).toBeInTheDocument();

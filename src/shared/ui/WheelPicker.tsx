@@ -17,6 +17,8 @@ interface WheelPickerProps {
   className?: string;
   visibleItems?: 3 | 5;
   compact?: boolean;
+  itemHeight?: number;
+  scrollSensitivity?: number;
 }
 
 const ITEM_HEIGHT = 52;
@@ -33,6 +35,8 @@ export function WheelPicker({
   className,
   visibleItems = 3,
   compact = false,
+  itemHeight: itemHeightOverride,
+  scrollSensitivity = 1.15,
 }: WheelPickerProps) {
   const id = useId();
   const descriptionId = useId();
@@ -41,7 +45,8 @@ export function WheelPicker({
   const scrollTimerRef = useRef<number | undefined>(undefined);
   const selectedIndex = Math.max(0, options.findIndex((option) => option.value === value));
   const safeVisibleItems = visibleItems % 2 === 0 ? visibleItems + 1 : visibleItems;
-  const itemHeight = compact ? 44 : ITEM_HEIGHT;
+  const itemHeight = itemHeightOverride ?? (compact ? 44 : ITEM_HEIGHT);
+  const safeScrollSensitivity = Math.min(1.5, Math.max(1, scrollSensitivity));
   const edgePadding = ((safeVisibleItems - 1) / 2) * itemHeight;
   const activeOptionId = `${id}-option-${selectedIndex}`;
 
@@ -88,9 +93,10 @@ export function WheelPicker({
   const commitScrollPosition = () => {
     const viewport = viewportRef.current;
     if (!viewport || disabled || options.length === 0) return;
+    const scrollDeltaInItems = (viewport.scrollTop - selectedIndex * itemHeight) / itemHeight;
     const nextIndex = Math.min(
       options.length - 1,
-      Math.max(0, Math.round(viewport.scrollTop / itemHeight)),
+      Math.max(0, selectedIndex + Math.round(scrollDeltaInItems * safeScrollSensitivity)),
     );
     const option = options[nextIndex];
     if (option && option.value !== value) onChange(option.value);
@@ -160,6 +166,7 @@ export function WheelPicker({
           aria-disabled={disabled || undefined}
           aria-invalid={Boolean(error) || undefined}
           aria-labelledby={`${id}-label`}
+          data-scroll-sensitivity={safeScrollSensitivity}
           className={cn(
             'relative z-20 h-[var(--wheel-picker-height)] snap-y snap-mandatory overflow-y-auto overscroll-contain touch-pan-y scroll-smooth motion-reduce:scroll-auto outline-none',
             '[scrollbar-width:none] [&::-webkit-scrollbar]:hidden',

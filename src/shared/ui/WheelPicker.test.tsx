@@ -37,4 +37,55 @@ describe('WheelPicker', () => {
     await userEvent.click(screen.getByRole('option', { name: '70,5 kg' }));
     expect(onChange).toHaveBeenCalledWith('70.5');
   });
+
+  it('amplifie légèrement le geste de défilement sans modifier la hauteur visuelle', () => {
+    vi.useFakeTimers();
+    const onChange = vi.fn();
+    const options = Array.from({ length: 10 }, (_, index) => ({
+      value: String(index),
+      label: String(index),
+    }));
+    render(<WheelPicker label="Pas" value="5" options={options} onChange={onChange} />);
+    const picker = screen.getByRole('listbox', { name: 'Pas' });
+    expect(picker).toHaveAttribute('data-scroll-sensitivity', '1.15');
+    Object.defineProperty(picker, 'scrollTop', {
+      configurable: true,
+      writable: true,
+      value: 5 * 52 + 2.2 * 52,
+    });
+    fireEvent.scroll(picker);
+    vi.advanceTimersByTime(100);
+    expect(onChange).toHaveBeenCalledWith('8');
+    vi.useRealTimers();
+  });
+
+  it('permet de conserver la sensibilité standard pour un rouleau précis', () => {
+    vi.useFakeTimers();
+    const onChange = vi.fn();
+    const options = Array.from({ length: 10 }, (_, index) => ({
+      value: String(index),
+      label: String(index),
+    }));
+    render(
+      <WheelPicker
+        label="Variation"
+        value="5"
+        options={options}
+        onChange={onChange}
+        scrollSensitivity={1}
+      />,
+    );
+    const picker = screen.getByRole('listbox', { name: 'Variation' });
+    expect(picker).toHaveAttribute('data-scroll-sensitivity', '1');
+    Object.defineProperty(picker, 'scrollTop', {
+      configurable: true,
+      writable: true,
+      value: 5 * 52 + 2.2 * 52,
+    });
+    fireEvent.scroll(picker);
+    vi.advanceTimersByTime(100);
+    expect(onChange).toHaveBeenCalledWith('7');
+    vi.useRealTimers();
+  });
+
 });
