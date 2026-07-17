@@ -37,8 +37,15 @@ test('rend le lien d’évitement et le focus clavier opérationnels', async ({ 
 
   const skipLink = page.getByRole('link', { name: 'Aller au contenu' });
   if (testInfo.project.name === 'chromium-desktop') {
+    await expect(page.getByRole('heading', { name: 'Journal alimentaire' })).toBeVisible();
+    await page.evaluate(() => {
+      document.body.setAttribute('tabindex', '-1');
+      document.body.focus({ preventScroll: true });
+    });
+    await expect(page.locator('body')).toBeFocused();
     await page.keyboard.press('Tab');
     await expect(skipLink).toBeFocused();
+    await page.evaluate(() => document.body.removeAttribute('tabindex'));
     await page.keyboard.press('Enter');
   } else {
     await skipLink.focus();

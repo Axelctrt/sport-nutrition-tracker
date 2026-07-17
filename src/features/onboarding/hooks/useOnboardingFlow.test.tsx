@@ -29,7 +29,7 @@ function FlowHarness({ operation }: { operation: () => Promise<void> }) {
 }
 
 describe('useOnboardingFlow', () => {
-  it('recentre le titre de l’étape après une transition', async () => {
+  it('focalise le titre sans déplacer la page après une transition', async () => {
     const user = userEvent.setup();
     const scrollIntoView = vi.fn();
     Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
@@ -43,7 +43,7 @@ describe('useOnboardingFlow', () => {
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: 'two' })).toHaveFocus();
     });
-    expect(scrollIntoView).toHaveBeenCalled();
+    expect(scrollIntoView).not.toHaveBeenCalled();
   });
 
   it('empêche une double soumission concurrente', async () => {

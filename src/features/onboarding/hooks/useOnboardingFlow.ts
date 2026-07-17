@@ -32,10 +32,6 @@ interface UseOnboardingFlowResult<TStepId extends string> {
   runSubmission: (operation: () => Promise<void>) => Promise<boolean>;
 }
 
-function prefersReducedMotion(): boolean {
-  return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
-}
-
 export function useOnboardingFlow<TStepId extends string>({
   steps,
   restoredStepId,
@@ -61,12 +57,6 @@ export function useOnboardingFlow<TStepId extends string>({
 
     const frameId = window.requestAnimationFrame(() => {
       headingRef.current?.focus({ preventScroll: true });
-      if (typeof headingRef.current?.scrollIntoView === 'function') {
-        headingRef.current.scrollIntoView({
-          block: 'start',
-          behavior: prefersReducedMotion() ? 'auto' : 'smooth',
-        });
-      }
     });
 
     return () => window.cancelAnimationFrame(frameId);

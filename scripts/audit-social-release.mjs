@@ -92,8 +92,8 @@ for (const expected of [
 }
 
 const releaseReadiness = read('src/app/releaseReadiness.test.ts');
-if (!releaseReadiness.includes("expect(__APP_VERSION__).toBe('0.31.0')")) {
-  fail('releaseReadiness ne valide pas la version applicative 0.31.0.');
+if (!releaseReadiness.includes("expect(__APP_VERSION__).toBe('0.32.0')")) {
+  fail('releaseReadiness ne valide pas la version applicative 0.32.0.');
 }
 if (!existsSync(join(root, 'src/app/socialReleaseFinalizationReadiness.test.ts'))) {
   fail('socialReleaseFinalizationReadiness.test.ts est absent.');

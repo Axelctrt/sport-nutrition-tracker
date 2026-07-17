@@ -1,7 +1,7 @@
 {
   "name": "sport-nutrition-tracker",
   "private": true,
-  "version": "0.31.0",
+  "version": "0.32.0",
   "type": "module",
   "engines": {
     "node": "^20.19.0 || >=22.13.0"
@@ -77,7 +77,8 @@
     "audit:social-release-finalization": "node scripts/audit-social-release-finalization-0.29.0.mjs",
     "test:e2e:acceptance": "playwright test e2e/ux-mobile-acceptance.spec.ts --project=chromium-desktop --project=webkit-iphone-15",
     "audit:ux-mobile-acceptance": "node scripts/audit-ux-mobile-acceptance.mjs",
-    "audit:release-consolidation": "node scripts/audit-release-consolidation.mjs"
+    "audit:release-consolidation": "node scripts/audit-release-consolidation.mjs",
+    "test:e2e:onboarding": "playwright test e2e/onboarding-compact.spec.ts --project=webkit-iphone-15"
   },
   "dependencies": {
     "@ericblade/quagga2": "^1.12.1",
