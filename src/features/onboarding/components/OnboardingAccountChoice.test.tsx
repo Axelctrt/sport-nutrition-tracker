@@ -74,8 +74,11 @@ describe('OnboardingAccountChoice', () => {
     await waitFor(() => expect(client.initialize).toHaveBeenCalledTimes(1));
     await user.type(screen.getByLabelText(/Adresse e-mail/), 'maya@example.com');
     await user.click(screen.getByRole('button', { name: 'Recevoir un code' }));
-    expect(await screen.findByLabelText(/Code reçu/)).toBeInTheDocument();
-    await user.type(screen.getByLabelText(/Code reçu/), '123456');
+    const otpInput = await screen.findByLabelText(/Code reçu/);
+    expect(otpInput).toHaveAttribute('inputmode', 'text');
+    expect(otpInput).toHaveAttribute('autocapitalize', 'none');
+    expect(otpInput).toHaveAttribute('autocomplete', 'one-time-code');
+    await user.type(otpInput, 'A1B2C3');
     await user.click(screen.getByRole('button', { name: 'Valider le code' }));
     expect(await screen.findByText(/maya@example.com/)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Continuer' }));

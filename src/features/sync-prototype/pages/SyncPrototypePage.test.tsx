@@ -386,24 +386,22 @@ describe('écran du prototype Dexie Cloud', () => {
     );
 
     expect(login).toHaveBeenCalledWith('test@example.com');
-    expect(
-      await screen.findByRole('textbox', {
-        name: /code de connexion/i,
-      }),
-    ).toBeInTheDocument();
+    const otpInput = await screen.findByRole('textbox', {
+      name: /code de connexion/i,
+    });
+    expect(otpInput).toHaveAttribute('inputmode', 'text');
+    expect(otpInput).toHaveAttribute('autocapitalize', 'none');
+    expect(otpInput).toHaveAttribute('autocomplete', 'one-time-code');
     expect(
       await screen.findByText(/te\*\*\*@example\.com/i),
     ).toBeInTheDocument();
 
-    await user.type(
-      screen.getByRole('textbox', { name: /code de connexion/i }),
-      '123456',
-    );
+    await user.type(otpInput, 'A1B2C3');
     await user.click(
       screen.getByRole('button', { name: 'Valider le code' }),
     );
 
-    expect(submitInteraction).toHaveBeenCalledWith({ otp: '123456' });
+    expect(submitInteraction).toHaveBeenCalledWith({ otp: 'A1B2C3' });
     expect(await screen.findByText('Connecté')).toBeInTheDocument();
     expect(screen.getByText('test@example.com')).toBeInTheDocument();
   });

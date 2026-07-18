@@ -203,4 +203,23 @@ describe('CloudAccountRestorePanel', () => {
       screen.queryByRole('button', { name: 'Restaurer depuis le cloud' }),
     ).not.toBeInTheDocument();
   });
+  it('reste compact dans le parcours compte mobile', () => {
+    const value = prepared();
+
+    render(
+      <CloudAccountRestorePanel
+        accountFingerprint={ACCOUNT_FINGERPRINT}
+        client={createClient(value)}
+        compact
+        preparedRestore={value}
+        reload={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('Retrouvez les données déjà synchronisées avec ce compte.')).toBeInTheDocument();
+    expect(screen.queryByText('Historique des pesées synchronisées.')).not.toBeInTheDocument();
+    expect(screen.queryByText(/restauration est préparée dans une base temporaire/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Restaurer depuis le cloud' })).toBeVisible();
+  });
+
 });

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type PropsWithChildren } from 'react';
+import { routePaths } from '@/app/routePaths';
 import type { SocialIdentityReconciliationResult } from '@/application/friends/socialIdentityReconciliationService';
 import type { SocialIdentityRepository } from '@/application/friends/socialIdentityService';
 import type { SocialCloudIdentityPort } from '@/domain/friends/socialCloudContract';
@@ -8,6 +9,13 @@ import {
   type SocialIdentity,
 } from '@/domain/friends/socialIdentity';
 import { OnboardingSocialIdentity } from '@/features/onboarding/components/OnboardingSocialIdentity';
+import { PROFILE_ONBOARDING_STEP_IDS } from '@/features/onboarding/profile/profileOnboardingSteps';
+import { readProfileOnboardingCompletion } from '@/features/onboarding/storage/onboardingCompletionStorage';
+import {
+  loadProfileOnboardingDraft,
+  saveProfileOnboardingDraft,
+} from '@/features/onboarding/storage/profileOnboardingDraft';
+import { DEFAULT_PROFILE_FORM_VALUES } from '@/features/profile/utils/defaultProfileFormValues';
 import { activateGuestDataSpace } from '@/infrastructure/data-spaces/dataSpaceRegistry';
 import { appDatabase, activeDataSpace } from '@/infrastructure/database/database';
 import { DexieSocialIdentityRepository } from '@/infrastructure/repositories/dexie/DexieSocialIdentityRepository';
@@ -36,6 +44,7 @@ interface SocialIdentityAccountGateProps extends PropsWithChildren {
   ) => Promise<SocialIdentityReconciliationResult>;
   readonly activateGuest?: () => void;
   readonly reload?: () => void;
+  readonly resumeProfileOnboarding?: () => void;
 }
 
 type GateState =
@@ -48,6 +57,11 @@ type GateState =
       readonly message?: string;
     }
   | { readonly status: 'error'; readonly message: string };
+
+function defaultResumeProfileOnboarding(): void {
+  const onboardingUrl = `${window.location.pathname}${window.location.search}#${routePaths.onboarding}`;
+  window.location.replace(onboardingUrl);
+}
 
 function runtimeClient(): Pick<SyncPrototypeClient, 'getCloudCredentials' | 'logout'> | undefined {
   try {
@@ -66,6 +80,7 @@ export function SocialIdentityAccountGate({
   reconcileIdentity,
   activateGuest = activateGuestDataSpace,
   reload = () => window.location.reload(),
+  resumeProfileOnboarding = defaultResumeProfileOnboarding,
 }: SocialIdentityAccountGateProps) {
   const repository = useMemo(
     () => injectedRepository ?? new DexieSocialIdentityRepository(appDatabase),
@@ -184,6 +199,33 @@ export function SocialIdentityAccountGate({
     reload();
   };
 
+  const handleIdentityCompleted = () => {
+    if (!readProfileOnboardingCompletion()) {
+      const restored = loadProfileOnboardingDraft();
+      const values = restored.status === 'restored'
+        ? restored.draft.values
+        : DEFAULT_PROFILE_FORM_VALUES;
+      const draftSaved = saveProfileOnboardingDraft(
+        values,
+        PROFILE_ONBOARDING_STEP_IDS.name,
+      );
+
+      if (!draftSaved) {
+        setState({
+          status: 'error',
+          message: 'La reprise du formulaire de profil n’a pas pu être préparée.',
+        });
+        return;
+      }
+
+      setState({ status: 'ready' });
+      resumeProfileOnboarding();
+      return;
+    }
+
+    setState({ status: 'ready' });
+  };
+
   if (state.status === 'ready') return children;
 
   if (state.status === 'loading') {
@@ -220,7 +262,7 @@ export function SocialIdentityAccountGate({
         cloudPort={cloudPort}
         initialIdentity={state.identity}
         {...(state.message ? { initialNotice: state.message } : {})}
-        onCompleted={() => setState({ status: 'ready' })}
+        onCompleted={handleIdentityCompleted}
         onUseLocal={handleUseLocalMode}
         repository={repository}
       />

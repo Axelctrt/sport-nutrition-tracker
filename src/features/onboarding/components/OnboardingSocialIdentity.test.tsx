@@ -35,15 +35,21 @@ describe('OnboardingSocialIdentity', () => {
       />,
     );
 
-    expect(screen.getByLabelText('Nom affiché publiquement')).toHaveValue('');
-    await user.type(screen.getByLabelText(/Pseudonyme public unique/), 'alex.run');
-    await user.type(screen.getByLabelText('Nom affiché publiquement'), 'Alex Trail');
-    await user.click(screen.getByRole('button', { name: 'Réserver et continuer' }));
+    expect(screen.getByRole('heading', { name: 'Votre identité sociale' })).toBeInTheDocument();
+    expect(document.querySelector('main')).toHaveClass('fixed', 'h-[100dvh]', 'overflow-hidden');
+    expect(screen.queryByText(/réservation est effectuée côté serveur/i)).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Nom affiché')).toHaveValue('');
+    expect(document.querySelector('main')).toHaveClass('fixed', 'h-[100dvh]', 'overflow-hidden');
+    expect(screen.getByPlaceholderText('axel_aka_dieu')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Axel le Dieu')).toBeInTheDocument();
+    await user.type(screen.getByLabelText(/Identifiant public/), 'axel_aka_dieu');
+    await user.type(screen.getByLabelText('Nom affiché'), 'Axel le Dieu');
+    await user.click(screen.getByRole('button', { name: 'Enregistrer et continuer' }));
 
     expect(saveIdentity).toHaveBeenCalledWith(expect.objectContaining({
       userId: 'dexie-user-123',
-      handle: 'alex.run',
-      displayName: 'Alex Trail',
+      handle: 'axel_aka_dieu',
+      displayName: 'Axel le Dieu',
     }));
     expect(onCompleted).toHaveBeenCalledTimes(1);
   });
@@ -75,8 +81,8 @@ describe('OnboardingSocialIdentity', () => {
       />,
     );
 
-    await user.type(screen.getByLabelText(/Pseudonyme public unique/), 'alex.run');
-    await user.click(screen.getByRole('button', { name: 'Réserver et continuer' }));
+    await user.type(screen.getByLabelText(/Identifiant public/), 'axel_aka_dieu');
+    await user.click(screen.getByRole('button', { name: 'Enregistrer et continuer' }));
 
     expect(await screen.findByText('Identifiant déjà pris.')).toBeInTheDocument();
     expect(saveIdentity).not.toHaveBeenCalled();

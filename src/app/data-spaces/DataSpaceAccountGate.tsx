@@ -280,62 +280,54 @@ export function DataSpaceAccountGate({
     );
 
   return (
-    <main className="min-h-screen px-5 py-8 sm:grid sm:place-items-center">
-      <Card className="mx-auto w-full max-w-2xl p-5 sm:p-7">
-        <div className="flex items-start gap-3">
-          <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-brand-100 text-brand-800 dark:bg-brand-950 dark:text-brand-200">
+    <main className="fixed inset-0 h-[100dvh] overflow-hidden bg-slate-50 px-4 py-3 dark:bg-slate-950 sm:grid sm:place-items-center sm:px-6 sm:py-5">
+      <Card className="mx-auto grid h-full w-full max-w-2xl grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden p-4 sm:h-auto sm:max-h-[calc(100dvh-2.5rem)] sm:p-6">
+        <header className="flex items-start gap-3 pb-3">
+          <div className="grid size-11 shrink-0 place-items-center rounded-2xl bg-brand-100 text-brand-800 dark:bg-brand-950 dark:text-brand-200">
             <ShieldCheck aria-hidden="true" className="size-6" />
           </div>
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-700 dark:text-brand-300">
-              Protection des données
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
+              Données du compte
             </p>
             <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-950 dark:text-white">
-              Choisir l’espace de ce compte
+              Comment souhaitez-vous commencer ?
             </h1>
-            <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-              SportPilot bloque l’accès aux données actuelles tant que le compte
-              connecté n’est pas associé à son propre espace local.
+            <p className="mt-1 text-sm leading-5 text-slate-600 dark:text-slate-300">
+              Reprenez les données du compte ou démarrez avec un profil vierge.
             </p>
           </div>
-        </div>
+        </header>
 
-        {state.hasExistingSpace ? (
-          <>
-            <section className="mt-6 rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
-              <div className="flex items-start gap-3">
-                <Cloud
-                  aria-hidden="true"
-                  className="mt-0.5 size-5 text-brand-700 dark:text-brand-300"
-                />
-                <div>
-                  <h2 className="font-semibold text-slate-950 dark:text-white">
-                    {state.existingSpaceLinkedToDevice
-                      ? "Espace déjà connu sur cet appareil"
-                      : "Espace local conservé après désassociation"}
-                  </h2>
-                  <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                    {state.existingSpaceLinkedToDevice
-                      ? "Ouvre l’espace local précédemment associé à ce compte. Les autres espaces restent fermés et inchangés."
-                      : "Les données locales du compte sont toujours présentes. Réassocie explicitement cet appareil pour les ouvrir."}
-                  </p>
+        <div className="grid min-h-0 content-start gap-2 overflow-hidden">
+          {state.hasExistingSpace ? (
+            <>
+              <section className="rounded-2xl border border-sky-200 p-3 dark:border-sky-900">
+                <div className="flex items-start gap-3">
+                  <Cloud aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-sky-700 dark:text-sky-300" />
+                  <div className="min-w-0">
+                    <h2 className="font-semibold text-slate-950 dark:text-white">
+                      Reprendre mes données
+                    </h2>
+                    <p className="mt-1 text-sm leading-5 text-slate-600 dark:text-slate-300">
+                      {state.existingSpaceLinkedToDevice
+                        ? "Ouvrez le profil déjà associé à ce compte sur cet appareil."
+                        : "Réassociez cet appareil au profil local conservé pour ce compte."}
+                    </p>
+                  </div>
                 </div>
-              </div>
-              <Button
-                className="mt-4 w-full"
-                onClick={() => void openExisting()}
-              >
-                {state.existingSpaceLinkedToDevice
-                  ? "Ouvrir l’espace de ce compte"
-                  : "Réassocier et ouvrir cet espace"}
-              </Button>
-            </section>
-            {state.canAttachCurrentData ? (
-              <div className="mt-4">
+                <Button className="mt-3 w-full" onClick={() => void openExisting()}>
+                  {state.existingSpaceLinkedToDevice
+                    ? "Reprendre ce profil"
+                    : "Réassocier et reprendre"}
+                </Button>
+              </section>
+
+              {state.canAttachCurrentData ? (
                 <Suspense
                   fallback={
                     <InlineNotice tone="info" title="Préparation de l’import">
-                      Chargement de l’analyse des données invitées.
+                      Analyse des données locales en cours.
                     </InlineNotice>
                   }
                 >
@@ -357,89 +349,84 @@ export function DataSpaceAccountGate({
                       : {})}
                   />
                 </Suspense>
-              </div>
-            ) : null}
-          </>
-        ) : (
-          <div className="mt-6 grid gap-4">
-            <Suspense
-              fallback={
-                <InlineNotice tone="info" title="Recherche des données cloud">
-                  Vérification des données déjà synchronisées pour ce compte.
-                </InlineNotice>
-              }
-            >
-              <CloudAccountRestorePanel
-                accountFingerprint={state.accountFingerprint}
-                client={runtimeClient!}
-                autoAnalyze
-                compact
-                reload={reload}
-                onAnalysisChange={(status) => setCloudAnalysisStatus(status)}
-              />
-            </Suspense>
-
-            {state.canAttachCurrentData ? (
+              ) : null}
+            </>
+          ) : (
+            <>
               <Suspense
                 fallback={
-                  <InlineNotice tone="info" title="Préparation de l’import">
-                    Chargement de l’analyse des données invitées.
+                  <InlineNotice tone="info" title="Recherche des données">
+                    Vérification du compte en cours.
                   </InlineNotice>
                 }
               >
-                <GuestDataImportPanel
+                <CloudAccountRestorePanel
                   accountFingerprint={state.accountFingerprint}
+                  client={runtimeClient!}
+                  autoAnalyze
                   compact
                   reload={reload}
-                  {...(prepareGuestImport
-                    ? {
-                        prepareImport: (fingerprint: string) =>
-                          prepareGuestImport(fingerprint, serviceOptions),
-                      }
-                    : {})}
-                  {...(applyGuestImport
-                    ? {
-                        applyImport: (prepared: PreparedGuestDataImport) =>
-                          applyGuestImport(prepared, serviceOptions),
-                      }
-                    : {})}
+                  onAnalysisChange={(status) => setCloudAnalysisStatus(status)}
                 />
               </Suspense>
-            ) : null}
 
-            <section className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
-              <Cloud
-                aria-hidden="true"
-                className="size-5 text-slate-600 dark:text-slate-300"
-              />
-              <h2 className="mt-3 font-semibold text-slate-950 dark:text-white">
-                Commencer avec un espace vide
-              </h2>
-              <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                Crée une base locale neuve pour ce compte. Aucune donnée de
-                l’espace actuel n’est copiée ou supprimée.
-              </p>
-              <Button
-                className="mt-4 w-full"
-                variant="secondary"
-                disabled={cloudAnalysisStatus === "loading"}
-                onClick={() => void createEmpty()}
-              >
-                {cloudAnalysisStatus === "loading"
-                  ? "Vérification du cloud…"
-                  : "Commencer avec un espace vide"}
-              </Button>
-            </section>
-          </div>
-        )}
+              {state.canAttachCurrentData ? (
+                <Suspense
+                  fallback={
+                    <InlineNotice tone="info" title="Préparation de l’import">
+                      Analyse des données locales en cours.
+                    </InlineNotice>
+                  }
+                >
+                  <GuestDataImportPanel
+                    accountFingerprint={state.accountFingerprint}
+                    compact
+                    reload={reload}
+                    {...(prepareGuestImport
+                      ? {
+                          prepareImport: (fingerprint: string) =>
+                            prepareGuestImport(fingerprint, serviceOptions),
+                        }
+                      : {})}
+                    {...(applyGuestImport
+                      ? {
+                          applyImport: (prepared: PreparedGuestDataImport) =>
+                            applyGuestImport(prepared, serviceOptions),
+                        }
+                      : {})}
+                  />
+                </Suspense>
+              ) : null}
+
+              <section className="rounded-2xl border border-slate-200 p-3 dark:border-slate-800">
+                <h2 className="font-semibold text-slate-950 dark:text-white">
+                  Créer un nouveau profil
+                </h2>
+                <p className="mt-1 text-sm leading-5 text-slate-600 dark:text-slate-300">
+                  Commencez avec un espace vierge. Les autres données ne sont pas supprimées.
+                </p>
+                <Button
+                  className="mt-3 w-full"
+                  variant="secondary"
+                  disabled={cloudAnalysisStatus === "loading"}
+                  onClick={() => void createEmpty()}
+                >
+                  {cloudAnalysisStatus === "loading"
+                    ? "Vérification du compte…"
+                    : "Créer un nouveau profil"}
+                </Button>
+              </section>
+            </>
+          )}
+        </div>
 
         <Button
-          className="mt-5 w-full"
+          className="mt-3 w-full shrink-0"
           variant="ghost"
           onClick={() => void runtimeClient?.logout()}
         >
           <LogOut aria-hidden="true" className="size-4" />
-          Se déconnecter du compte
+          Utiliser un autre compte
         </Button>
       </Card>
     </main>

@@ -150,7 +150,7 @@ export function CloudAccountRestorePanel({
     <section
       className={
         compact
-          ? 'rounded-2xl border border-sky-200 p-4 dark:border-sky-900'
+          ? 'space-y-3 rounded-2xl border border-sky-200 p-3 dark:border-sky-900'
           : 'space-y-4'
       }
     >
@@ -163,10 +163,10 @@ export function CloudAccountRestorePanel({
           <h2 className="font-semibold text-slate-950 dark:text-white">
             Restaurer depuis le cloud
           </h2>
-          <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
-            Recherche les données déjà synchronisées pour ce compte et les
-            restaure dans son espace local. Le cloud n’est jamais vidé ni
-            remplacé par cette opération.
+          <p className="mt-1 text-sm leading-5 text-slate-600 dark:text-slate-300">
+            {compact
+              ? 'Retrouvez les données déjà synchronisées avec ce compte.'
+              : 'Recherche les données déjà synchronisées pour ce compte et les restaure dans son espace local. Le cloud n’est jamais vidé ni remplacé par cette opération.'}
           </p>
         </div>
       </div>
@@ -216,26 +216,28 @@ export function CloudAccountRestorePanel({
               : ''}.
           </InlineNotice>
 
-          <div className="divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 dark:divide-slate-800 dark:border-slate-800">
-            {preview.categories.map((category) => (
-              <div
-                key={category.key}
-                className="flex items-center justify-between gap-4 px-4 py-3"
-              >
-                <div>
-                  <p className="text-sm font-semibold text-slate-950 dark:text-white">
-                    {category.label}
-                  </p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    {category.description}
-                  </p>
+          {!compact ? (
+            <div className="divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 dark:divide-slate-800 dark:border-slate-800">
+              {preview.categories.map((category) => (
+                <div
+                  key={category.key}
+                  className="flex items-center justify-between gap-4 px-4 py-3"
+                >
+                  <div>
+                    <p className="text-sm font-semibold text-slate-950 dark:text-white">
+                      {category.label}
+                    </p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      {category.description}
+                    </p>
+                  </div>
+                  <span className="shrink-0 font-bold text-sky-700 dark:text-sky-300">
+                    {category.recordCount}
+                  </span>
                 </div>
-                <span className="shrink-0 font-bold text-sky-700 dark:text-sky-300">
-                  {category.recordCount}
-                </span>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : null}
 
           {!preview.canRestore ? (
             <InlineNotice tone="info" title="Espace local déjà utilisé">
@@ -247,12 +249,14 @@ export function CloudAccountRestorePanel({
             </InlineNotice>
           ) : (
             <>
-              <div className="flex items-start gap-2 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100">
-                <ShieldCheck aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-                La restauration est préparée dans une base temporaire puis
-                appliquée atomiquement. En cas d’erreur, l’espace local reste
-                inchangé.
-              </div>
+              {!compact ? (
+                <div className="flex items-start gap-2 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100">
+                  <ShieldCheck aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+                  La restauration est préparée dans une base temporaire puis
+                  appliquée atomiquement. En cas d’erreur, l’espace local reste
+                  inchangé.
+                </div>
+              ) : null}
               <Button
                 className="w-full"
                 disabled={state.status === 'restoring'}
