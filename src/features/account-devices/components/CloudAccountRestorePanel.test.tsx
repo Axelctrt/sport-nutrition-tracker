@@ -216,7 +216,16 @@ describe('CloudAccountRestorePanel', () => {
       />,
     );
 
-    expect(screen.getByText('Retrouvez les données déjà synchronisées avec ce compte.')).toBeInTheDocument();
+    expect(
+      screen.getByText('Des données ont été trouvées pour ce compte'),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText('Retrouvez les données déjà synchronisées avec ce compte.'),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: 'Restaurer depuis le cloud' }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/2 données restaurables/i)).not.toBeInTheDocument();
     expect(screen.queryByText('Historique des pesées synchronisées.')).not.toBeInTheDocument();
     expect(screen.queryByText(/restauration est préparée dans une base temporaire/i)).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Restaurer depuis le cloud' })).toBeVisible();

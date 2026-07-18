@@ -188,6 +188,11 @@ describe("DataSpaceAccountGate", () => {
         name: "Comment souhaitez-vous commencer ?",
       }),
     ).toBeInTheDocument();
+    expect(
+      screen.queryByText(
+        "Reprenez les données du compte ou démarrez avec un profil vierge.",
+      ),
+    ).not.toBeInTheDocument();
     expect(document.querySelector("main")).toHaveClass(
       "fixed",
       "h-[100dvh]",

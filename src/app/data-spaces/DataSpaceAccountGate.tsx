@@ -280,43 +280,40 @@ export function DataSpaceAccountGate({
     );
 
   return (
-    <main className="fixed inset-0 h-[100dvh] overflow-hidden bg-slate-50 px-4 py-3 dark:bg-slate-950 sm:grid sm:place-items-center sm:px-6 sm:py-5">
-      <Card className="mx-auto grid h-full w-full max-w-2xl grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden p-4 sm:h-auto sm:max-h-[calc(100dvh-2.5rem)] sm:p-6">
-        <header className="flex items-start gap-3 pb-3">
-          <div className="grid size-11 shrink-0 place-items-center rounded-2xl bg-brand-100 text-brand-800 dark:bg-brand-950 dark:text-brand-200">
-            <ShieldCheck aria-hidden="true" className="size-6" />
+    <main className="fixed inset-0 h-[100dvh] overflow-hidden bg-slate-50 px-4 py-2 dark:bg-slate-950 sm:grid sm:place-items-center sm:px-6 sm:py-4">
+      <Card className="mx-auto grid h-full w-full max-w-2xl grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden p-3 sm:h-auto sm:max-h-[calc(100dvh-2rem)] sm:p-5">
+        <header className="flex items-start gap-2.5 pb-2">
+          <div className="grid size-10 shrink-0 place-items-center rounded-2xl bg-brand-100 text-brand-800 dark:bg-brand-950 dark:text-brand-200">
+            <ShieldCheck aria-hidden="true" className="size-5" />
           </div>
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
               Données du compte
             </p>
-            <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-950 dark:text-white">
+            <h1 className="mt-0.5 text-xl font-bold tracking-tight text-slate-950 dark:text-white sm:text-2xl">
               Comment souhaitez-vous commencer ?
             </h1>
-            <p className="mt-1 text-sm leading-5 text-slate-600 dark:text-slate-300">
-              Reprenez les données du compte ou démarrez avec un profil vierge.
-            </p>
           </div>
         </header>
 
-        <div className="grid min-h-0 content-start gap-2 overflow-hidden">
+        <div className="grid min-h-0 content-start gap-1.5 overflow-hidden">
           {state.hasExistingSpace ? (
             <>
-              <section className="rounded-2xl border border-sky-200 p-3 dark:border-sky-900">
+              <section className="rounded-2xl border border-sky-200 p-2.5 dark:border-sky-900">
                 <div className="flex items-start gap-3">
                   <Cloud aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-sky-700 dark:text-sky-300" />
                   <div className="min-w-0">
                     <h2 className="font-semibold text-slate-950 dark:text-white">
                       Reprendre mes données
                     </h2>
-                    <p className="mt-1 text-sm leading-5 text-slate-600 dark:text-slate-300">
+                    <p className="mt-0.5 text-xs leading-4 text-slate-600 dark:text-slate-300">
                       {state.existingSpaceLinkedToDevice
                         ? "Ouvrez le profil déjà associé à ce compte sur cet appareil."
                         : "Réassociez cet appareil au profil local conservé pour ce compte."}
                     </p>
                   </div>
                 </div>
-                <Button className="mt-3 w-full" onClick={() => void openExisting()}>
+                <Button className="mt-2 w-full" size="sm" onClick={() => void openExisting()}>
                   {state.existingSpaceLinkedToDevice
                     ? "Reprendre ce profil"
                     : "Réassocier et reprendre"}
@@ -398,16 +395,17 @@ export function DataSpaceAccountGate({
                 </Suspense>
               ) : null}
 
-              <section className="rounded-2xl border border-slate-200 p-3 dark:border-slate-800">
+              <section className="rounded-2xl border border-slate-200 p-2.5 dark:border-slate-800">
                 <h2 className="font-semibold text-slate-950 dark:text-white">
                   Créer un nouveau profil
                 </h2>
-                <p className="mt-1 text-sm leading-5 text-slate-600 dark:text-slate-300">
+                <p className="mt-0.5 text-xs leading-4 text-slate-600 dark:text-slate-300">
                   Commencez avec un espace vierge. Les autres données ne sont pas supprimées.
                 </p>
                 <Button
-                  className="mt-3 w-full"
+                  className="mt-2 w-full"
                   variant="secondary"
+                  size="sm"
                   disabled={cloudAnalysisStatus === "loading"}
                   onClick={() => void createEmpty()}
                 >
@@ -421,7 +419,8 @@ export function DataSpaceAccountGate({
         </div>
 
         <Button
-          className="mt-3 w-full shrink-0"
+          className="mt-2 w-full shrink-0"
+          size="sm"
           variant="ghost"
           onClick={() => void runtimeClient?.logout()}
         >
