@@ -1,7 +1,11 @@
 import { ArrowLeft, Dumbbell, Plus, Save } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { buildWorkoutSessionProgress, type WorkoutSessionProgress } from '@/application/strength/workoutSessionProgress';
+import {
+  buildWorkoutExerciseProgress,
+  buildWorkoutSessionProgress,
+  type WorkoutSessionProgress,
+} from '@/application/strength/workoutSessionProgress';
 import { getWorkoutSessionTitle } from '@/application/strength/workoutSessionService';
 import { routePaths } from '@/app/routePaths';
 import type { StrengthSetChanges } from '@/application/strength/strengthSetService';
@@ -197,6 +201,25 @@ export function WorkoutSessionPage() {
     [exercises, strengthSets],
   );
 
+  const executionBlockCompleteByExerciseId = useMemo(() => {
+    const progressByExerciseId = new Map(exercises.map((exercise) => [
+      exercise.id,
+      buildWorkoutExerciseProgress(exercise, setsByExercise.get(exercise.id) ?? []),
+    ]));
+    const result = new Map<string, boolean>();
+
+    for (const exercise of exercises) {
+      const group = exercise.exerciseGroupId
+        ? exerciseGroups.find((candidate) => candidate.id === exercise.exerciseGroupId)
+        : undefined;
+      const members = group?.exercises ?? [exercise];
+      const complete = members.every((member) => progressByExerciseId.get(member.id)?.isComplete ?? false);
+      for (const member of members) result.set(member.id, complete);
+    }
+
+    return result;
+  }, [exerciseGroups, exercises, setsByExercise]);
+
   const revealWorkoutStep = (exerciseId: string, setId?: string) => {
     revealElement(setId ? `strength-set-${setId}` : `workout-exercise-${exerciseId}`);
   };
@@ -242,7 +265,13 @@ export function WorkoutSessionPage() {
 
     const updated = await completeSet(sessionExerciseId, setId, values, isCompleted);
     if (!updated || !isCompleted || values.type !== 'working' || !exercise || !restPlan) return;
-    if (restPlan.nextExercise) revealElement(`workout-exercise-${restPlan.nextExercise.id}`);
+
+    const predictedSets = strengthSets.map((set) => set.id === updated.id ? updated : set);
+    const predictedProgress = buildWorkoutSessionProgress(exercises, predictedSets);
+    if (predictedProgress.nextStep) {
+      revealWorkoutStep(predictedProgress.nextStep.exerciseId, predictedProgress.nextStep.setId);
+    }
+
     if (!shouldStartRest) return;
     restTimer.start({
       sessionId,
@@ -315,7 +344,27 @@ export function WorkoutSessionPage() {
       } else if (confirmation.type === 'removeExercise') {
         await removeExercise(confirmation.exercise.id);
       } else {
-        await removeSet(confirmation.sessionExerciseId, confirmation.setId);
+        const deletedWasCurrent = progress.nextStep?.setId === confirmation.setId;
+        const remainingExerciseSets = await removeSet(
+          confirmation.sessionExerciseId,
+          confirmation.setId,
+        );
+        if (remainingExerciseSets && deletedWasCurrent) {
+          const predictedSets = [
+            ...strengthSets.filter((set) => set.sessionExerciseId !== confirmation.sessionExerciseId),
+            ...remainingExerciseSets,
+          ];
+          const remainingWorkingSetCount = remainingExerciseSets.filter((set) => set.type === 'working').length;
+          const predictedExercises = exercises.map((exercise) => (
+            exercise.id === confirmation.sessionExerciseId && exercise.plannedSets !== undefined
+              ? { ...exercise, plannedSets: remainingWorkingSetCount }
+              : exercise
+          ));
+          const predictedProgress = buildWorkoutSessionProgress(predictedExercises, predictedSets);
+          if (predictedProgress.nextStep) {
+            revealWorkoutStep(predictedProgress.nextStep.exerciseId, predictedProgress.nextStep.setId);
+          }
+        }
       }
     } finally {
       setIsConfirming(false);
@@ -547,6 +596,7 @@ export function WorkoutSessionPage() {
               temporarilySkipped={temporarilySkippedExerciseIds.has(exercise.id)}
               onSkip={groupPosition ? handleSkipExercise : undefined}
               isCurrent={progress.nextStep?.exerciseId === exercise.id}
+              executionBlockComplete={executionBlockCompleteByExerciseId.get(exercise.id) ?? false}
             />
           );
         })}

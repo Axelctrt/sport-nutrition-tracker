@@ -203,4 +203,59 @@ describe('CloudAccountRestorePanel', () => {
       screen.queryByRole('button', { name: 'Restaurer depuis le cloud' }),
     ).not.toBeInTheDocument();
   });
+  it('résume l’absence de données en une seule ligne dans le parcours compact', () => {
+    const value = prepared({
+      hasCloudData: false,
+      cloudRecordCount: 0,
+      cloudDeletionMarkerCount: 0,
+      canRestore: false,
+    });
+
+    render(
+      <CloudAccountRestorePanel
+        accountFingerprint={ACCOUNT_FINGERPRINT}
+        client={createClient(value)}
+        compact
+        preparedRestore={value}
+        reload={vi.fn()}
+      />,
+    );
+
+    const emptyState = screen.getByText('Aucune donnée associée à ce compte');
+    expect(emptyState).toBeInTheDocument();
+    expect(emptyState).toHaveClass('text-xs');
+    expect(screen.getByRole('heading', { name: 'Restaurer depuis le cloud' })).toBeInTheDocument();
+    expect(screen.queryByText('Aucune donnée cloud trouvée')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Aucun domaine synchronisé/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Retrouvez les données déjà synchronisées/i)).not.toBeInTheDocument();
+  });
+
+  it('reste compact dans le parcours compte mobile', () => {
+    const value = prepared();
+
+    render(
+      <CloudAccountRestorePanel
+        accountFingerprint={ACCOUNT_FINGERPRINT}
+        client={createClient(value)}
+        compact
+        preparedRestore={value}
+        reload={vi.fn()}
+      />,
+    );
+
+    const foundNotice = screen.getByText('Des données ont été trouvées pour ce compte');
+    expect(foundNotice).toBeInTheDocument();
+    expect(foundNotice).toHaveClass('text-xs');
+    expect(
+      screen.queryByText('Retrouvez les données déjà synchronisées avec ce compte.'),
+    ).not.toBeInTheDocument();
+    const title = screen.getByRole('heading', { name: 'Restaurer depuis le cloud' });
+    expect(title).toBeInTheDocument();
+    expect(title).toHaveClass('text-xs');
+    expect(screen.queryByText(/2 données restaurables/i)).not.toBeInTheDocument();
+    expect(screen.queryByText('Historique des pesées synchronisées.')).not.toBeInTheDocument();
+    expect(screen.queryByText(/restauration est préparée dans une base temporaire/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Restaurer depuis le cloud' })).toBeVisible();
+  });
+
 });

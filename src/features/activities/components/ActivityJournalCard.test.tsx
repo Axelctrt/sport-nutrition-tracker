@@ -44,7 +44,8 @@ describe('ActivityJournalCard', () => {
     expect(screen.getByText('8 km')).toBeInTheDocument();
     expect(screen.getByText('50 min')).toBeInTheDocument();
     expect(screen.getByText('480 kcal')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Modifier' }).closest('details')).not.toHaveAttribute('open');
+    expect(screen.getByRole('button', { name: 'Actions pour Footing' })).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('menu', { name: 'Actions pour Footing' })).not.toBeInTheDocument();
   });
 
   it('regroupe modifier et dupliquer dans le menu secondaire', async () => {

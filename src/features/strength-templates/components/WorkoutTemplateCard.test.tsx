@@ -22,7 +22,8 @@ describe('WorkoutTemplateCard', () => {
 
     await user.click(screen.getByRole('button', { name: 'Démarrer la séance' }));
     expect(onStart).toHaveBeenCalledWith('template-1');
-    expect(screen.getByRole('button', { name: 'Actions pour Push A' }).closest('details')).not.toHaveAttribute('open');
+    expect(screen.getByRole('button', { name: 'Actions pour Push A' })).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('menu', { name: 'Actions pour Push A' })).not.toBeInTheDocument();
   });
 
   it('confirme l’archivage', async () => {

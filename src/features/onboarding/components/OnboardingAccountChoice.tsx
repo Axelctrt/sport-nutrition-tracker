@@ -315,12 +315,15 @@ export function OnboardingAccountChoice({
           </p>
           <FormField error={fieldError} id="onboarding-account-otp" label="Code reçu" required>
             <input
+              autoCapitalize="none"
               autoComplete="one-time-code"
+              autoCorrect="off"
               className={inputClasses}
               id="onboarding-account-otp"
-              inputMode="numeric"
+              inputMode="text"
               onChange={(event) => setOtp(event.target.value)}
-              placeholder="123456"
+              placeholder="A1B2C3"
+              spellCheck={false}
               value={otp}
             />
           </FormField>

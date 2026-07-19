@@ -1,6 +1,6 @@
-import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { Pencil, Trash2 } from 'lucide-react';
 import type { WeightEntry } from '@/domain/models/weight';
+import { ActionMenu } from '@/shared/ui/ActionMenu';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { cn } from '@/shared/utils/cn';
@@ -33,14 +33,11 @@ export function WeightHistoryEntryCard({
   onDelete,
 }: WeightHistoryEntryCardProps) {
   const delta = formatDelta(entry.weightKg, previousWeightKg);
-  const [actionsOpen, setActionsOpen] = useState(false);
-
   return (
     <Card
       id={`weight-entry-${entry.id}`}
       className={cn(
         'relative scroll-mt-28 p-4 transition-colors motion-reduce:transition-none',
-        actionsOpen && 'z-30',
         selected && 'border-blue-300 dark:border-blue-800',
         highlighted && 'bg-blue-50/80 dark:bg-blue-950/30',
       )}
@@ -66,48 +63,28 @@ export function WeightHistoryEntryCard({
           </span>
         </button>
 
-        <details
-          className="relative shrink-0"
-          onToggle={(event) => setActionsOpen(event.currentTarget.open)}
-        >
-          <summary
-            role="button"
-            aria-label={`Actions pour la pesée du ${formatLocalDate(entry.date)}`}
-            className="grid size-11 cursor-pointer list-none place-items-center rounded-xl text-slate-600 hover:bg-slate-100 focus-visible:outline-none dark:text-slate-300 dark:hover:bg-slate-800 [&::-webkit-details-marker]:hidden"
+        <ActionMenu label={`Actions pour la pesée du ${formatLocalDate(entry.date)}`}>
+          <Button
+            className="w-full justify-start"
+            size="sm"
+            variant="ghost"
+            disabled={deleting}
+            onClick={() => onEdit(entry)}
           >
-            <MoreHorizontal aria-hidden="true" className="size-5" />
-          </summary>
-          <div className="absolute right-0 z-40 mt-1 w-48 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl dark:border-slate-700 dark:bg-slate-900">
-            <Button
-              className="w-full justify-start"
-              size="sm"
-              variant="ghost"
-              disabled={deleting}
-              onClick={(event) => {
-                setActionsOpen(false);
-                event.currentTarget.closest('details')?.removeAttribute('open');
-                onEdit(entry);
-              }}
-            >
-              <Pencil aria-hidden="true" className="size-4" />
-              Modifier
-            </Button>
-            <Button
-              className="w-full justify-start"
-              size="sm"
-              variant="dangerGhost"
-              disabled={deleting}
-              onClick={(event) => {
-                setActionsOpen(false);
-                event.currentTarget.closest('details')?.removeAttribute('open');
-                onDelete(entry);
-              }}
-            >
-              <Trash2 aria-hidden="true" className="size-4" />
-              {deleting ? 'Suppression…' : 'Supprimer'}
-            </Button>
-          </div>
-        </details>
+            <Pencil aria-hidden="true" className="size-4" />
+            Modifier
+          </Button>
+          <Button
+            className="w-full justify-start"
+            size="sm"
+            variant="dangerGhost"
+            disabled={deleting}
+            onClick={() => onDelete(entry)}
+          >
+            <Trash2 aria-hidden="true" className="size-4" />
+            {deleting ? 'Suppression…' : 'Supprimer'}
+          </Button>
+        </ActionMenu>
       </div>
 
       {entry.note ? (

@@ -1,7 +1,8 @@
 import { ArrowDown, ArrowUp, CheckCircle2, ChevronDown, Layers3, SkipForward, TimerReset, Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { ExerciseHistoryEntry } from '@/application/strength/strengthHistoryService';
 import type { StrengthSetChanges } from '@/application/strength/strengthSetService';
+import { buildWorkoutExerciseProgress } from '@/application/strength/workoutSessionProgress';
 import type { StrengthSet, WorkoutSessionExercise } from '@/domain/models/strength';
 import { formatRestDuration } from '@/domain/strength/restTimer';
 import { PreviousExercisePerformance } from '@/features/strength-history/components/PreviousExercisePerformance';
@@ -42,15 +43,7 @@ interface WorkoutExerciseCardProps {
   temporarilySkipped?: boolean | undefined;
   onSkip?: ((exercise: WorkoutSessionExercise) => void) | undefined;
   isCurrent?: boolean | undefined;
-}
-
-function exerciseCompletion(exercise: WorkoutSessionExercise, sets: StrengthSet[]) {
-  const completedSets = sets.filter((set) => set.isCompleted);
-  const completedWorkingSets = completedSets.filter((set) => set.type === 'working');
-  const target = exercise.plannedSets ?? sets.length;
-  const count = exercise.plannedSets === undefined ? completedSets.length : completedWorkingSets.length;
-  const complete = target > 0 && count >= target;
-  return { complete, count, target };
+  executionBlockComplete?: boolean | undefined;
 }
 
 export function WorkoutExerciseCard({
@@ -79,10 +72,24 @@ export function WorkoutExerciseCard({
   temporarilySkipped = false,
   onSkip,
   isCurrent = false,
+  executionBlockComplete = false,
 }: WorkoutExerciseCardProps) {
-  const completion = exerciseCompletion(exercise, sets);
+  const exerciseProgress = buildWorkoutExerciseProgress(exercise, sets);
+  const completion = {
+    complete: exerciseProgress.isComplete,
+    count: exerciseProgress.completedSetCount,
+    target: exerciseProgress.totalSetCount,
+  };
   const [expanded, setExpanded] = useState(() => editable || !completion.complete);
   const contentId = `workout-exercise-content-${exercise.id}`;
+
+  useEffect(() => {
+    if (isCurrent) {
+      setExpanded(true);
+      return;
+    }
+    if (executionBlockComplete) setExpanded(false);
+  }, [executionBlockComplete, isCurrent]);
 
   return (
     <Card

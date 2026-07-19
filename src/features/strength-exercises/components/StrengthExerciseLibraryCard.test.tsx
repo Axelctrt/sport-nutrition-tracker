@@ -24,7 +24,8 @@ describe('StrengthExerciseLibraryCard', () => {
     renderCard();
 
     expect(screen.getByRole('link', { name: 'Historique et progression' })).toHaveAttribute('href', '/strength/exercises/exercise-1/history');
-    expect(screen.getByRole('button', { name: 'Actions pour Développé couché' }).closest('details')).not.toHaveAttribute('open');
+    expect(screen.getByRole('button', { name: 'Actions pour Développé couché' })).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('menu', { name: 'Actions pour Développé couché' })).not.toBeInTheDocument();
   });
 
   it('demande confirmation avant archivage', async () => {

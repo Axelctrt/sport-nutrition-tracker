@@ -124,7 +124,10 @@ describe('WorkoutSessionPage', () => {
     });
     expect(screen.queryByText('Série validée')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Chargement de la page')).not.toBeInTheDocument();
-    expect(await screen.findByRole('heading', { name: 'Série 1' })).toBeInTheDocument();
+    const benchCard = screen.getByRole('heading', { name: 'Développé couché' })
+      .closest('[id^="workout-exercise-"]') as HTMLElement;
+    await user.click(await within(benchCard).findByRole('button', { name: 'Développer Développé couché' }));
+    expect(await within(benchCard).findByRole('heading', { name: 'Série 1' })).toBeInTheDocument();
     expect(screen.getByLabelText('Charge en kg')).toHaveValue(60);
     expect(screen.getByLabelText('Répétitions')).toHaveValue(12);
     expect(screen.getByLabelText('RPE')).toHaveValue(8);
@@ -329,6 +332,101 @@ describe('WorkoutSessionPage', () => {
     expect(within(getBenchCard()!).getByText('Passé temporairement')).toBeInTheDocument();
   });
 
+
+  it('referme le dernier exercice terminé et ouvre automatiquement le suivant', async () => {
+    await appDatabase.workoutSessionExercises.update('session-exercise-bench', {
+      plannedSets: 1,
+      restSeconds: 0,
+    });
+    await appDatabase.workoutSessionExercises.add(createEntity(createWorkoutSessionExerciseInput({
+      sessionId: 'session-current',
+      exerciseDefinitionId: 'exercise-row',
+      exerciseNameSnapshot: 'Rowing barre',
+      sortOrder: 1,
+      plannedSets: 1,
+      restSeconds: 0,
+    }), 'session-exercise-row'));
+    await appDatabase.strengthSets.bulkAdd([
+      createEntity(createStrengthSetInput({
+        sessionId: 'session-current',
+        sessionExerciseId: 'session-exercise-bench',
+        setNumber: 1,
+        isCompleted: false,
+      }), 'bench-set-1'),
+      createEntity(createStrengthSetInput({
+        sessionId: 'session-current',
+        sessionExerciseId: 'session-exercise-row',
+        setNumber: 1,
+        isCompleted: false,
+      }), 'row-set-1'),
+    ]);
+
+    const user = userEvent.setup();
+    renderSessionPage();
+
+    const benchCard = (await screen.findByRole('heading', { name: 'Développé couché' }))
+      .closest('[id^="workout-exercise-"]') as HTMLElement;
+    const rowCard = screen.getByRole('heading', { name: 'Rowing barre' })
+      .closest('[id^="workout-exercise-"]') as HTMLElement;
+
+    expect(within(benchCard).getByText('À faire maintenant')).toBeInTheDocument();
+    await user.click(within(benchCard).getByRole('button', { name: 'Valider la série' }));
+
+    await waitFor(() => {
+      expect(within(benchCard).getByRole('button', { name: 'Développer Développé couché' })).toBeInTheDocument();
+      expect(within(rowCard).getByText('À faire maintenant')).toBeInTheDocument();
+      expect(within(rowCard).getByRole('button', { name: 'Réduire Rowing barre' })).toBeInTheDocument();
+    });
+  });
+
+  it('avance vers le prochain exercice lorsque la dernière série restante est supprimée', async () => {
+    await appDatabase.workoutSessionExercises.update('session-exercise-bench', {
+      plannedSets: 1,
+      restSeconds: 0,
+    });
+    await appDatabase.workoutSessionExercises.add(createEntity(createWorkoutSessionExerciseInput({
+      sessionId: 'session-current',
+      exerciseDefinitionId: 'exercise-row',
+      exerciseNameSnapshot: 'Rowing barre',
+      sortOrder: 1,
+      plannedSets: 1,
+      restSeconds: 0,
+    }), 'session-exercise-row'));
+    await appDatabase.strengthSets.bulkAdd([
+      createEntity(createStrengthSetInput({
+        sessionId: 'session-current',
+        sessionExerciseId: 'session-exercise-bench',
+        setNumber: 1,
+        isCompleted: false,
+      }), 'bench-set-1'),
+      createEntity(createStrengthSetInput({
+        sessionId: 'session-current',
+        sessionExerciseId: 'session-exercise-row',
+        setNumber: 1,
+        isCompleted: false,
+      }), 'row-set-1'),
+    ]);
+
+    const user = userEvent.setup();
+    renderSessionPage();
+
+    const benchCard = (await screen.findByRole('heading', { name: 'Développé couché' }))
+      .closest('[id^="workout-exercise-"]') as HTMLElement;
+    const rowCard = screen.getByRole('heading', { name: 'Rowing barre' })
+      .closest('[id^="workout-exercise-"]') as HTMLElement;
+
+    await user.click(within(benchCard).getByText('Options discrètes'));
+    await user.click(within(benchCard).getByRole('button', { name: 'Supprimer la série' }));
+    const dialog = await screen.findByRole('alertdialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Supprimer la série' }));
+
+    await waitFor(async () => {
+      expect(await appDatabase.strengthSets.where('sessionExerciseId').equals('session-exercise-bench').count()).toBe(0);
+      expect(within(benchCard).getByRole('button', { name: 'Développer Développé couché' })).toBeInTheDocument();
+      expect(within(rowCard).getByText('À faire maintenant')).toBeInTheDocument();
+      expect(within(rowCard).getByRole('button', { name: 'Réduire Rowing barre' })).toBeInTheDocument();
+    });
+  });
 
   it('ne présente plus de réglage social dans la séance', async () => {
     renderSessionPage();

@@ -1,7 +1,8 @@
-import { CalendarPlus, MoreHorizontal, Trash2 } from 'lucide-react';
+import { CalendarPlus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import type { FavoriteMealSummary } from '@/application/food/favoriteMealService';
 import { mealSlotLabels } from '@/features/food-journal/utils/foodLabels';
+import { ActionMenu } from '@/shared/ui/ActionMenu';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { ConfirmationDialog } from '@/shared/ui/ConfirmationDialog';
@@ -33,29 +34,17 @@ export function FavoriteMealCard({ summary, deleting = false, onApply, onDelete 
             </p>
           </div>
 
-          <details className="relative shrink-0">
-            <summary
-              role="button"
-              aria-label={`Actions pour ${favoriteMeal.name}`}
-              className="grid size-11 cursor-pointer list-none place-items-center rounded-xl text-slate-600 hover:bg-slate-100 focus-visible:outline-none dark:text-slate-300 dark:hover:bg-slate-800 [&::-webkit-details-marker]:hidden"
+          <ActionMenu label={`Actions pour ${favoriteMeal.name}`}>
+            <Button
+              className="w-full justify-start"
+              size="sm"
+              variant="dangerGhost"
+              disabled={deleting}
+              onClick={() => setDeleteOpen(true)}
             >
-              <MoreHorizontal aria-hidden="true" className="size-5" />
-            </summary>
-            <div className="absolute right-0 z-20 mt-1 w-52 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl dark:border-slate-700 dark:bg-slate-900">
-              <Button
-                className="w-full justify-start"
-                size="sm"
-                variant="dangerGhost"
-                disabled={deleting}
-                onClick={(event) => {
-                  event.currentTarget.closest('details')?.removeAttribute('open');
-                  setDeleteOpen(true);
-                }}
-              >
-                <Trash2 aria-hidden="true" className="size-4" />Supprimer
-              </Button>
-            </div>
-          </details>
+              <Trash2 aria-hidden="true" className="size-4" />Supprimer
+            </Button>
+          </ActionMenu>
         </div>
 
         <div className="mt-3 flex flex-wrap gap-2 text-xs">

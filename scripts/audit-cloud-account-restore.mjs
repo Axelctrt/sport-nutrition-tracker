@@ -73,7 +73,7 @@ if (failures.length === 0) {
     '<CloudAccountRestorePanel',
     'autoAnalyze',
     'cloudAnalysisStatus === "loading"',
-    'Commencer avec un espace vide',
+    'Créer un nouveau profil',
   ]) {
     if (!gate.includes(marker)) fail(`Barrière D3 incomplète : ${marker}.`);
   }

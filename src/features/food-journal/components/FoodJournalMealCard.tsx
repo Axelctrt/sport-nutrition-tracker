@@ -1,7 +1,6 @@
 import {
   ChevronDown,
   CopyPlus,
-  MoreHorizontal,
   Pencil,
   Plus,
   RefreshCcw,
@@ -22,6 +21,7 @@ import { SaveFavoriteMealForm } from '@/features/food-journal/components/SaveFav
 import type { FoodJournalNavigationState } from '@/features/food-journal/navigation/foodJournalNavigation';
 import { mealSlotLabels } from '@/features/food-journal/utils/foodLabels';
 import { inputClassName } from '@/shared/forms/formStyles';
+import { ActionMenu } from '@/shared/ui/ActionMenu';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { ConfirmationDialog } from '@/shared/ui/ConfirmationDialog';
@@ -233,60 +233,41 @@ export function FoodJournalMealCard({
                         </p>
                       </div>
 
-                      <details className="relative shrink-0">
-                        <summary
-                          role="button"
-                          aria-label={`Actions pour ${entryName(item)}`}
-                          className="grid size-11 cursor-pointer list-none place-items-center rounded-xl text-slate-600 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 dark:text-slate-300 dark:hover:bg-slate-800 [&::-webkit-details-marker]:hidden"
+                      <ActionMenu label={`Actions pour ${entryName(item)}`}>
+                        <Button
+                          className="w-full justify-start"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => beginEdit(item)}
                         >
-                          <MoreHorizontal aria-hidden="true" className="size-5" />
-                        </summary>
-                        <div className="absolute right-0 z-20 mt-1 w-52 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl dark:border-slate-700 dark:bg-slate-900">
-                          <Button
-                            className="w-full justify-start"
-                            size="sm"
-                            variant="ghost"
-                            onClick={(event) => {
-                              event.currentTarget.closest('details')?.removeAttribute('open');
-                              beginEdit(item);
-                            }}
-                          >
-                            <Pencil aria-hidden="true" className="size-4" />Modifier la quantité
-                          </Button>
-                          <Link
-                            to={editPath}
-                            state={navigationState}
-                            onClick={(event) => event.currentTarget.closest('details')?.removeAttribute('open')}
-                            className="inline-flex min-h-9 w-full items-center gap-2 rounded-xl px-3 text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
-                          >
-                            <Pencil aria-hidden="true" className="size-4" />Modifier les détails
-                          </Link>
-                          <Button
-                            className="w-full justify-start"
-                            size="sm"
-                            variant="ghost"
-                            disabled={busyId === `duplicate-${entry.id}`}
-                            onClick={(event) => {
-                              event.currentTarget.closest('details')?.removeAttribute('open');
-                              void onDuplicate(entry.id);
-                            }}
-                          >
-                            <CopyPlus aria-hidden="true" className="size-4" />Dupliquer
-                          </Button>
-                          <Button
-                            className="w-full justify-start"
-                            size="sm"
-                            variant="dangerGhost"
-                            disabled={busyId === `delete-${entry.id}`}
-                            onClick={(event) => {
-                              event.currentTarget.closest('details')?.removeAttribute('open');
-                              setDeleteTarget(item);
-                            }}
-                          >
-                            <Trash2 aria-hidden="true" className="size-4" />Supprimer
-                          </Button>
-                        </div>
-                      </details>
+                          <Pencil aria-hidden="true" className="size-4" />Modifier la quantité
+                        </Button>
+                        <Link
+                          to={editPath}
+                          state={navigationState}
+                          className="inline-flex min-h-9 w-full items-center gap-2 rounded-xl px-3 text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
+                        >
+                          <Pencil aria-hidden="true" className="size-4" />Modifier les détails
+                        </Link>
+                        <Button
+                          className="w-full justify-start"
+                          size="sm"
+                          variant="ghost"
+                          disabled={busyId === `duplicate-${entry.id}`}
+                          onClick={() => void onDuplicate(entry.id)}
+                        >
+                          <CopyPlus aria-hidden="true" className="size-4" />Dupliquer
+                        </Button>
+                        <Button
+                          className="w-full justify-start"
+                          size="sm"
+                          variant="dangerGhost"
+                          disabled={busyId === `delete-${entry.id}`}
+                          onClick={() => setDeleteTarget(item)}
+                        >
+                          <Trash2 aria-hidden="true" className="size-4" />Supprimer
+                        </Button>
+                      </ActionMenu>
                     </div>
 
                     {isEditing ? (

@@ -637,13 +637,16 @@ function SyncPrototypeRuntime({
                 required
               >
                 <input
+                  autoCapitalize="none"
                   autoComplete="one-time-code"
+                  autoCorrect="off"
                   autoFocus
                   className={inputClasses}
                   disabled={actionStatus === 'otp'}
                   id="sync-prototype-otp"
-                  inputMode="numeric"
+                  inputMode="text"
                   onChange={(event) => setOtp(event.target.value)}
+                  spellCheck={false}
                   placeholder="Saisir le code reçu"
                   value={otp}
                 />
