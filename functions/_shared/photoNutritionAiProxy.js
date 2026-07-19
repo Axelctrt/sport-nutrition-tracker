@@ -4,6 +4,8 @@ const DEFAULT_MODEL = 'gemini-2.5-flash-lite';
 const GEMINI_API_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
 const MAX_IMAGE_SIZE_BYTES = 8 * 1024 * 1024;
 const MAX_MULTIPART_SIZE_BYTES = MAX_IMAGE_SIZE_BYTES + 512 * 1024;
+const PHOTO_ANALYSIS_LIMIT_PER_MINUTE = 10;
+const RATE_LIMIT_WINDOW_MS = 60_000;
 
 class PhotoNutritionAiProxyError extends Error {
   constructor(status, code, message) {
@@ -228,6 +230,43 @@ async function callGemini({ image, apiKey, model, fetcher = fetch }) {
   return normalizeGeminiContract(parseJsonFromGemini(geminiPayload));
 }
 
+async function limitPhotoAnalysisWithD1(database, subject, now) {
+  if (!database || typeof database.prepare !== 'function') return undefined;
+
+  await database
+    .prepare('DELETE FROM photo_nutrition_rate_limits WHERE expires_at <= ?')
+    .bind(now)
+    .run();
+
+  const windowStart = Math.floor(now / RATE_LIMIT_WINDOW_MS) * RATE_LIMIT_WINDOW_MS;
+  const bucketKey = `${windowStart}:${subject}`;
+  const row = await database
+    .prepare(`
+      INSERT INTO photo_nutrition_rate_limits (
+        bucket_key,
+        request_count,
+        expires_at
+      )
+      VALUES (?, 1, ?)
+      ON CONFLICT(bucket_key) DO UPDATE SET
+        request_count = request_count + 1
+      RETURNING request_count
+    `)
+    .bind(bucketKey, windowStart + (RATE_LIMIT_WINDOW_MS * 2))
+    .first();
+  const requestCount = Number(row?.request_count);
+
+  if (!Number.isFinite(requestCount)) {
+    throw new PhotoNutritionAiProxyError(
+      503,
+      'PHOTO_AI_RATE_LIMIT_NOT_CONFIGURED',
+      'Analyse IA temporairement indisponible.',
+    );
+  }
+
+  return requestCount <= PHOTO_ANALYSIS_LIMIT_PER_MINUTE;
+}
+
 async function authenticateAndRateLimit(request, env, options) {
   const authenticateRequest = options.authenticateRequest
     ?? socialActivitySnapshotsInternals.authenticateRequest;
@@ -237,15 +276,22 @@ async function authenticateAndRateLimit(request, env, options) {
     options.authFetcher ?? fetch,
   );
   const limiter = env?.PHOTO_NUTRITION_RATE_LIMITER;
-  if (!limiter || typeof limiter.limit !== 'function') {
+  const limitSucceeded = limiter && typeof limiter.limit === 'function'
+    ? (await limiter.limit({ key: actor.subject }))?.success
+    : await limitPhotoAnalysisWithD1(
+        env?.SOCIAL_DIRECTORY_DB,
+        actor.subject,
+        options.now?.() ?? Date.now(),
+      );
+
+  if (limitSucceeded === undefined) {
     throw new PhotoNutritionAiProxyError(
       503,
       'PHOTO_AI_RATE_LIMIT_NOT_CONFIGURED',
       'Analyse IA temporairement indisponible.',
     );
   }
-  const result = await limiter.limit({ key: actor.subject });
-  if (!result?.success) {
+  if (!limitSucceeded) {
     throw new PhotoNutritionAiProxyError(
       429,
       'PHOTO_AI_RATE_LIMITED',

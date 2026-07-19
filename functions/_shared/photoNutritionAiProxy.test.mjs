@@ -30,6 +30,22 @@ function configuredEnv(overrides = {}) {
   };
 }
 
+function d1RateLimiter(requestCount) {
+  const cleanupRun = vi.fn(async () => ({ success: true }));
+  const incrementFirst = vi.fn(async () => ({ request_count: requestCount }));
+  const prepare = vi.fn((query) => ({
+    bind: vi.fn(() => query.includes('DELETE FROM')
+      ? { run: cleanupRun }
+      : { first: incrementFirst }),
+  }));
+
+  return {
+    database: { prepare },
+    cleanupRun,
+    incrementFirst,
+  };
+}
+
 function geminiResponseFromContract(contract) {
   return {
     candidates: [
@@ -152,6 +168,57 @@ describe('photoNutritionAiProxy Gemini', () => {
 
     expect(response.status).toBe(429);
     expect(limiter.limit).toHaveBeenCalledWith({ key: 'user-123' });
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it('utilise D1 pour limiter une Pages Function sans binding Workers', async () => {
+    const d1 = d1RateLimiter(1);
+    const fetcher = vi.fn(async () => new Response(JSON.stringify(geminiResponseFromContract({
+      estimate: {
+        name: 'Repas D1',
+        amount: 250,
+        nutrition: {
+          caloriesKcal: 500,
+          proteinGrams: 25,
+          carbohydratesGrams: 55,
+          fatGrams: 18,
+        },
+      },
+      confidence: 'medium',
+      warnings: [],
+    })), { status: 200 }));
+
+    const response = await handlePhotoNutritionAiProxyRequest(
+      requestWithPhoto(),
+      configuredEnv({
+        PHOTO_NUTRITION_RATE_LIMITER: undefined,
+        SOCIAL_DIRECTORY_DB: d1.database,
+      }),
+      { ...authenticated, fetcher, now: () => 60_000 },
+    );
+
+    expect(response.status).toBe(200);
+    expect(d1.cleanupRun).toHaveBeenCalledOnce();
+    expect(d1.incrementFirst).toHaveBeenCalledOnce();
+  });
+
+  it('refuse la onzieme analyse de la minute comptee dans D1', async () => {
+    const d1 = d1RateLimiter(11);
+    const fetcher = vi.fn();
+
+    const response = await handlePhotoNutritionAiProxyRequest(
+      requestWithPhoto(),
+      configuredEnv({
+        PHOTO_NUTRITION_RATE_LIMITER: undefined,
+        SOCIAL_DIRECTORY_DB: d1.database,
+      }),
+      { ...authenticated, fetcher, now: () => 60_000 },
+    );
+
+    expect(response.status).toBe(429);
+    await expect(response.json()).resolves.toMatchObject({
+      code: 'PHOTO_AI_RATE_LIMITED',
+    });
     expect(fetcher).not.toHaveBeenCalled();
   });
 });
