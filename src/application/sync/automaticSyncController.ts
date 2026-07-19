@@ -71,22 +71,6 @@ function accountFingerprint(snapshot: SyncPrototypeSnapshot): string | undefined
   )?.toLowerCase();
 }
 
-function hasActiveDomainOperation(snapshot: SyncPrototypeSnapshot): boolean {
-  const statuses = [
-    snapshot.realAccountPreferences?.status,
-    snapshot.realRewardsRoutines?.status,
-    snapshot.realWeights?.status,
-    snapshot.realActivities?.status,
-    snapshot.realGoals?.status,
-    snapshot.realStrength?.status,
-    snapshot.realNutritionJournal?.status,
-    snapshot.realNutritionLibrary?.status,
-    snapshot.realNutritionTracking?.status,
-  ];
-
-  return statuses.some((status) => status === 'analyzing' || status === 'syncing');
-}
-
 function automaticDomainIds(settings: AppSettings): SyncOrchestratorDomainId[] {
   return SYNC_ORCHESTRATOR_DOMAIN_IDS.filter(
     (domainId) => !(domainId === 'weights' && settings.automaticWeightSyncEnabled),
@@ -497,7 +481,6 @@ export class AutomaticSyncController {
     const allowedDomainIds = this.eligibleDomainIds();
     const orchestrator = this.orchestrator;
     if (!orchestrator || allowedDomainIds.length === 0) return;
-    if (hasActiveDomainOperation(this.client.getSnapshot())) return;
 
     const domainIds = normalizeDomains(requestedDomainIds, allowedDomainIds);
     if (domainIds.length === 0) return;

@@ -24,6 +24,17 @@ import {
   type CloudSyncExecutionOptions,
 } from '@/infrastructure/sync-prototype/cloudSyncValue';
 import type { NutritionJournalDayAggregate } from '@/infrastructure/sync-prototype/realNutritionJournalSyncService';
+import { sameLocalCollection } from '@/infrastructure/sync-prototype/localSyncCompareAndSwap';
+import {
+  logicalSyncStamp,
+  maximumLogicalSyncStamp,
+  persistLogicalSyncBaseline,
+  resolveDatabaseLogicalSyncState,
+  resolveSyncActorId,
+  stripLogicalSyncFields,
+  upsertLogicalCloudValue,
+  type LogicalSyncFields,
+} from '@/infrastructure/sync-prototype/logicalSyncState';
 
 const LIBRARY_MARKER_TYPES = ['favoriteMeal', 'recipe', 'recipeIngredient'] as const;
 type LibraryMarkerType = (typeof LIBRARY_MARKER_TYPES)[number];
@@ -35,10 +46,10 @@ export interface NutritionRecipeAggregate {
   readonly updatedAt: string;
 }
 
-type CloudFoodProduct = Omit<FoodProduct, 'id'> & { readonly id: string };
-type CloudRecipeAggregate = Omit<NutritionRecipeAggregate, 'id'> & { readonly id: string };
-type CloudFavoriteMeal = Omit<FavoriteMeal, 'id'> & { readonly id: string };
-type CloudDeletionRecord = Omit<DeletionRecord, 'id'> & { readonly id: string };
+type CloudFoodProduct = Omit<FoodProduct, 'id'> & { readonly id: string } & LogicalSyncFields;
+type CloudRecipeAggregate = Omit<NutritionRecipeAggregate, 'id'> & { readonly id: string } & LogicalSyncFields;
+type CloudFavoriteMeal = Omit<FavoriteMeal, 'id'> & { readonly id: string } & LogicalSyncFields;
+type CloudDeletionRecord = Omit<DeletionRecord, 'id'> & { readonly id: string } & LogicalSyncFields;
 
 export interface RealNutritionLibrarySyncPreview {
   readonly localProductCount: number;
@@ -68,6 +79,14 @@ export interface RealNutritionLibrarySyncResult extends RealNutritionLibrarySync
 }
 
 interface LibraryState {
+  readonly localSnapshot: {
+    readonly products: FoodProduct[];
+    readonly recipes: Recipe[];
+    readonly ingredients: RecipeIngredient[];
+    readonly favorites: FavoriteMeal[];
+    readonly entries: FoodEntry[];
+    readonly markers: DeletionRecord[];
+  };
   readonly localProducts: FoodProduct[];
   readonly cloudProducts: FoodProduct[];
   readonly localRecipes: NutritionRecipeAggregate[];
@@ -76,6 +95,10 @@ interface LibraryState {
   readonly cloudFavorites: FavoriteMeal[];
   readonly localMarkers: DeletionRecord[];
   readonly cloudMarkers: DeletionRecord[];
+  readonly cloudProductRows: readonly CloudOwned<CloudFoodProduct>[];
+  readonly cloudRecipeRows: readonly CloudOwned<CloudRecipeAggregate>[];
+  readonly cloudFavoriteRows: readonly CloudOwned<CloudFavoriteMeal>[];
+  readonly cloudMarkerRows: readonly CloudOwned<CloudDeletionRecord>[];
 }
 
 interface FinalLibraryState {
@@ -85,6 +108,8 @@ interface FinalLibraryState {
   readonly markers: DeletionRecord[];
   readonly productAliases: ReadonlyMap<string, string>;
 }
+
+type LibraryLogicalState = Omit<FinalLibraryState, 'productAliases'>;
 
 function sortById<T extends { id: string }>(values: readonly T[]): T[] {
   return [...values].sort((left, right) => left.id.localeCompare(right.id));
@@ -152,7 +177,7 @@ function toCloudProduct(product: FoodProduct): CloudFoodProduct {
 function fromCloudProduct(product: CloudOwned<CloudFoodProduct>): FoodProduct | undefined {
   const id = localIdFromCloud(product.id);
   if (!id) return undefined;
-  return { ...stripCloudFields(product), id };
+  return { ...stripLogicalSyncFields(stripCloudFields(product)), id };
 }
 
 function toCloudRecipe(aggregate: NutritionRecipeAggregate): CloudRecipeAggregate {
@@ -164,7 +189,10 @@ function fromCloudRecipe(
 ): NutritionRecipeAggregate | undefined {
   const id = localIdFromCloud(aggregate.id);
   if (!id) return undefined;
-  const value = { ...stripCloudFields(aggregate), id } as NutritionRecipeAggregate;
+  const value = {
+    ...stripLogicalSyncFields(stripCloudFields(aggregate)),
+    id,
+  } as NutritionRecipeAggregate;
   validateRecipeAggregate(value);
   return value;
 }
@@ -178,7 +206,7 @@ function fromCloudFavorite(
 ): FavoriteMeal | undefined {
   const id = localIdFromCloud(favorite.id);
   if (!id) return undefined;
-  return { ...stripCloudFields(favorite), id };
+  return { ...stripLogicalSyncFields(stripCloudFields(favorite)), id };
 }
 
 function toCloudMarker(marker: DeletionRecord): CloudDeletionRecord {
@@ -190,7 +218,7 @@ function fromCloudMarker(
 ): DeletionRecord | undefined {
   const id = localIdFromCloud(marker.id);
   if (!id) return undefined;
-  return { ...stripCloudFields(marker), id };
+  return { ...stripLogicalSyncFields(stripCloudFields(marker)), id };
 }
 
 function collectReferencedProductIds(
@@ -255,33 +283,49 @@ async function readState(
     localFavorites,
   );
 
-  const cloudProducts = cloudProductRows
-    .filter((product) => belongsToCurrentUser(product, currentUserId))
+  const ownedCloudProductRows = cloudProductRows
+    .filter((product) => belongsToCurrentUser(product, currentUserId));
+  const ownedCloudRecipeRows = cloudRecipeRows
+    .filter((recipe) => belongsToCurrentUser(recipe, currentUserId));
+  const ownedCloudFavoriteRows = cloudFavoriteRows
+    .filter((favorite) => belongsToCurrentUser(favorite, currentUserId));
+  const ownedCloudMarkerRows = cloudMarkerRows
+    .filter((marker) => belongsToCurrentUser(marker, currentUserId));
+  const cloudProducts = ownedCloudProductRows
     .map(fromCloudProduct)
     .filter((product): product is FoodProduct => product !== undefined);
   const cloudProductIds = new Set(cloudProducts.map((product) => product.id));
 
   return {
+    localSnapshot: {
+      products: localAllProducts,
+      recipes: localRecipeRows,
+      ingredients: localIngredientRows,
+      favorites: localFavorites,
+      entries: localEntries,
+      markers: localMarkerRows,
+    },
     localProducts: localAllProducts.filter((product) =>
       shouldSynchronizeProduct(product, referencedProductIds)
       || cloudProductIds.has(product.id)),
     cloudProducts,
     localRecipes: buildRecipeAggregates(localRecipeRows, localIngredientRows),
-    cloudRecipes: cloudRecipeRows
-      .filter((recipe) => belongsToCurrentUser(recipe, currentUserId))
+    cloudRecipes: ownedCloudRecipeRows
       .map(fromCloudRecipe)
       .filter((recipe): recipe is NutritionRecipeAggregate => recipe !== undefined),
     localFavorites,
-    cloudFavorites: cloudFavoriteRows
-      .filter((favorite) => belongsToCurrentUser(favorite, currentUserId))
+    cloudFavorites: ownedCloudFavoriteRows
       .map(fromCloudFavorite)
       .filter((favorite): favorite is FavoriteMeal => favorite !== undefined),
     localMarkers: localMarkerRows.filter(isLibraryMarker),
-    cloudMarkers: cloudMarkerRows
-      .filter((marker) => belongsToCurrentUser(marker, currentUserId))
+    cloudMarkers: ownedCloudMarkerRows
       .map(fromCloudMarker)
       .filter((marker): marker is DeletionRecord => marker !== undefined)
       .filter(isLibraryMarker),
+    cloudProductRows: ownedCloudProductRows,
+    cloudRecipeRows: ownedCloudRecipeRows,
+    cloudFavoriteRows: ownedCloudFavoriteRows,
+    cloudMarkerRows: ownedCloudMarkerRows,
   };
 }
 
@@ -616,7 +660,54 @@ export async function synchronizeRealNutritionLibrary(
 ): Promise<RealNutritionLibrarySyncResult> {
   const writeCloud = options.writeCloud !== false;
   const state = await readState(localDatabase, cloudDatabase, currentUserId);
-  const final = resolveFinalState(state);
+  const localFinal = resolveFinalState({
+    ...state,
+    cloudProducts: [],
+    cloudRecipes: [],
+    cloudFavorites: [],
+    cloudMarkers: [],
+  });
+  const cloudFinal = resolveFinalState({
+    ...state,
+    localProducts: [],
+    localRecipes: [],
+    localFavorites: [],
+    localMarkers: [],
+  });
+  const mergedFinal = resolveFinalState(state);
+  const toLogicalState = (value: FinalLibraryState): LibraryLogicalState => ({
+    products: value.products,
+    recipes: value.recipes,
+    favorites: value.favorites,
+    markers: value.markers,
+  });
+  const actorId = await resolveSyncActorId(localDatabase);
+  const resolution = await resolveDatabaseLogicalSyncState({
+    cloudDatabase,
+    accountUserId: currentUserId,
+    domainId: 'nutrition-library',
+    entityId: 'library',
+    actorId,
+    localValue: toLogicalState(localFinal),
+    cloudValue: toLogicalState(cloudFinal),
+    cloudStamp: maximumLogicalSyncStamp([
+      ...state.cloudProductRows,
+      ...state.cloudRecipeRows,
+      ...state.cloudFavoriteRows,
+      ...state.cloudMarkerRows,
+    ]),
+    legacyResolve: () => toLogicalState(mergedFinal),
+    concurrentResolve: () => toLogicalState(mergedFinal),
+  });
+  const productAliases = resolution.source === 'cloud'
+    ? cloudFinal.productAliases
+    : resolution.source === 'local' || resolution.source === 'equal'
+      ? localFinal.productAliases
+      : mergedFinal.productAliases;
+  const final: FinalLibraryState = {
+    ...resolution.value,
+    productAliases,
+  };
   const preview = buildPreview(state, final);
   const completedAt = new Date().toISOString();
 
@@ -678,6 +769,7 @@ export async function synchronizeRealNutritionLibrary(
     : 0;
 
   let remappedProductReferences = 0;
+  let localStateApplied = false;
   await localDatabase.transaction(
     'rw',
     [
@@ -689,6 +781,30 @@ export async function synchronizeRealNutritionLibrary(
       localDatabase.deletionRecords,
     ],
     async () => {
+      const [
+        currentProducts,
+        currentRecipes,
+        currentIngredients,
+        currentFavorites,
+        currentEntries,
+        currentMarkers,
+      ] = await Promise.all([
+        localDatabase.foodProducts.toArray(),
+        localDatabase.recipes.toArray(),
+        localDatabase.recipeIngredients.toArray(),
+        localDatabase.favoriteMeals.toArray(),
+        localDatabase.foodEntries.toArray(),
+        localDatabase.deletionRecords.toArray(),
+      ]);
+      const unchanged =
+        sameLocalCollection(currentProducts, state.localSnapshot.products)
+        && sameLocalCollection(currentRecipes, state.localSnapshot.recipes)
+        && sameLocalCollection(currentIngredients, state.localSnapshot.ingredients)
+        && sameLocalCollection(currentFavorites, state.localSnapshot.favorites)
+        && sameLocalCollection(currentEntries, state.localSnapshot.entries)
+        && sameLocalCollection(currentMarkers, state.localSnapshot.markers);
+      if (!unchanged) return;
+
       if (final.productAliases.size > 0) {
         const entries = await localDatabase.foodEntries.toArray();
         const remappedEntries = entries.map((entry) => remapFoodEntry(entry, final.productAliases, completedAt));
@@ -715,10 +831,11 @@ export async function synchronizeRealNutritionLibrary(
       }
       if (final.favorites.length > 0) await localDatabase.favoriteMeals.bulkPut(final.favorites);
       if (final.markers.length > 0) await localDatabase.deletionRecords.bulkPut(final.markers);
+      localStateApplied = true;
     },
   );
 
-  if (writeCloud) await cloudDatabase.transaction(
+  if (writeCloud && localStateApplied) await cloudDatabase.transaction(
     'rw',
     cloudDatabase.realNutritionProducts,
     cloudDatabase.realNutritionRecipes,
@@ -726,6 +843,30 @@ export async function synchronizeRealNutritionLibrary(
     cloudDatabase.realNutritionLibraryDeletionRecords,
     cloudDatabase.realNutritionJournalDays,
     async () => {
+      const cloudProductRowById = new Map(
+        state.cloudProductRows.flatMap((row) => {
+          const id = localIdFromCloud(row.id);
+          return id ? [[id, row] as const] : [];
+        }),
+      );
+      const cloudRecipeRowById = new Map(
+        state.cloudRecipeRows.flatMap((row) => {
+          const id = localIdFromCloud(row.id);
+          return id ? [[id, row] as const] : [];
+        }),
+      );
+      const cloudFavoriteRowById = new Map(
+        state.cloudFavoriteRows.flatMap((row) => {
+          const id = localIdFromCloud(row.id);
+          return id ? [[id, row] as const] : [];
+        }),
+      );
+      const cloudMarkerRowById = new Map(
+        state.cloudMarkerRows.flatMap((row) => {
+          const id = localIdFromCloud(row.id);
+          return id ? [[id, row] as const] : [];
+        }),
+      );
       const finalProductById = mapById(final.products);
       for (const product of state.cloudProducts) {
         if (!finalProductById.has(product.id)) {
@@ -733,9 +874,14 @@ export async function synchronizeRealNutritionLibrary(
         }
       }
       for (const product of final.products) {
-        if (!sameEntity(cloudProductById.get(product.id), product)) {
-          await cloudDatabase.realNutritionProducts.put(toCloudProduct(product));
-        }
+        await upsertLogicalCloudValue(
+          cloudDatabase.realNutritionProducts,
+          cloudProductById.get(product.id),
+          cloudProductRowById.get(product.id),
+          product,
+          resolution.stamp,
+          (value) => toCloudProduct(value) as FoodProduct,
+        );
       }
 
       const finalRecipeById = mapById(final.recipes);
@@ -745,9 +891,14 @@ export async function synchronizeRealNutritionLibrary(
         }
       }
       for (const recipe of final.recipes) {
-        if (!sameEntity(cloudRecipeById.get(recipe.id), recipe)) {
-          await cloudDatabase.realNutritionRecipes.put(toCloudRecipe(recipe));
-        }
+        await upsertLogicalCloudValue(
+          cloudDatabase.realNutritionRecipes,
+          cloudRecipeById.get(recipe.id),
+          cloudRecipeRowById.get(recipe.id),
+          recipe,
+          resolution.stamp,
+          (value) => toCloudRecipe(value) as NutritionRecipeAggregate,
+        );
       }
 
       const finalFavoriteById = mapById(final.favorites);
@@ -757,15 +908,25 @@ export async function synchronizeRealNutritionLibrary(
         }
       }
       for (const favorite of final.favorites) {
-        if (!sameEntity(cloudFavoriteById.get(favorite.id), favorite)) {
-          await cloudDatabase.realFavoriteMeals.put(toCloudFavorite(favorite));
-        }
+        await upsertLogicalCloudValue(
+          cloudDatabase.realFavoriteMeals,
+          cloudFavoriteById.get(favorite.id),
+          cloudFavoriteRowById.get(favorite.id),
+          favorite,
+          resolution.stamp,
+          (value) => toCloudFavorite(value) as FavoriteMeal,
+        );
       }
 
       for (const marker of final.markers) {
-        if (!sameEntity(cloudMarkerById.get(marker.id), marker)) {
-          await cloudDatabase.realNutritionLibraryDeletionRecords.put(toCloudMarker(marker));
-        }
+        await upsertLogicalCloudValue(
+          cloudDatabase.realNutritionLibraryDeletionRecords,
+          cloudMarkerById.get(marker.id),
+          cloudMarkerRowById.get(marker.id),
+          marker,
+          resolution.stamp,
+          (value) => toCloudMarker(value) as DeletionRecord,
+        );
       }
 
       if (final.productAliases.size > 0) {
@@ -774,32 +935,41 @@ export async function synchronizeRealNutritionLibrary(
           if (!belongsToCurrentUser(row, currentUserId)) continue;
           const localId = localIdFromCloud(row.id);
           if (!localId) continue;
-          const day = { ...stripCloudFields(row), id: localId } as NutritionJournalDayAggregate;
+          const day = {
+            ...stripLogicalSyncFields(stripCloudFields(row)),
+            id: localId,
+          } as NutritionJournalDayAggregate;
           const remapped = remapJournalDay(day, final.productAliases, completedAt);
           if (!sameEntity(day, remapped)) {
+            const journalStamp = logicalSyncStamp(row);
             await cloudDatabase.realNutritionJournalDays.put({
               ...remapped,
               id: cloudPrivateId(remapped.id),
-            });
+              syncRevision: journalStamp.revision,
+              syncActorId: journalStamp.actorId,
+            } as NutritionJournalDayAggregate);
           }
         }
       }
     },
   );
+  if (writeCloud && localStateApplied) {
+    await persistLogicalSyncBaseline(cloudDatabase, resolution.baseline);
+  }
 
   return {
     ...preview,
-    uploadedProducts,
-    downloadedProducts,
-    uploadedRecipes,
-    downloadedRecipes,
-    uploadedFavoriteMeals,
-    downloadedFavoriteMeals,
-    removedLocalEntities,
-    removedCloudEntities,
-    uploadedDeletionRecords,
-    downloadedDeletionRecords,
-    remappedProductReferences,
+    uploadedProducts: localStateApplied ? uploadedProducts : 0,
+    downloadedProducts: localStateApplied ? downloadedProducts : 0,
+    uploadedRecipes: localStateApplied ? uploadedRecipes : 0,
+    downloadedRecipes: localStateApplied ? downloadedRecipes : 0,
+    uploadedFavoriteMeals: localStateApplied ? uploadedFavoriteMeals : 0,
+    downloadedFavoriteMeals: localStateApplied ? downloadedFavoriteMeals : 0,
+    removedLocalEntities: localStateApplied ? removedLocalEntities : 0,
+    removedCloudEntities: localStateApplied ? removedCloudEntities : 0,
+    uploadedDeletionRecords: localStateApplied ? uploadedDeletionRecords : 0,
+    downloadedDeletionRecords: localStateApplied ? downloadedDeletionRecords : 0,
+    remappedProductReferences: localStateApplied ? remappedProductReferences : 0,
     completedAt,
   };
 }

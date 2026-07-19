@@ -12,10 +12,12 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { routePaths } from "@/app/routePaths";
+import { createAndDownloadSafetyBackup } from "@/application/backup/safetyBackupService";
 import { CloudAccountRestorePanel } from "@/features/account-devices/components/CloudAccountRestorePanel";
 import { GuestDataImportPanel } from "@/features/account-devices/components/GuestDataImportPanel";
 import type { DataSpaceDescriptor } from "@/domain/data-spaces/dataSpace";
 import {
+  deleteCloudAndLocalAccountData,
   deleteLocalAccountData,
   detachCurrentDeviceFromAccount,
   disconnectAccount,
@@ -48,9 +50,16 @@ interface AccountDevicesPageProps {
   disconnect?: typeof disconnectAccount;
   detachDevice?: typeof detachCurrentDeviceFromAccount;
   deleteLocalData?: typeof deleteLocalAccountData;
+  deleteCloudAndLocalData?: typeof deleteCloudAndLocalAccountData;
+  createSafetyBackup?: typeof createAndDownloadSafetyBackup;
 }
 
-type PendingAction = "disconnect" | "detach" | "delete" | undefined;
+type PendingAction =
+  | "disconnect"
+  | "detach"
+  | "delete"
+  | "deleteRemote"
+  | undefined;
 
 type Feedback = {
   readonly tone: "success" | "error" | "info";
@@ -113,6 +122,8 @@ export function AccountDevicesPage({
   disconnect = disconnectAccount,
   detachDevice = detachCurrentDeviceFromAccount,
   deleteLocalData = deleteLocalAccountData,
+  deleteCloudAndLocalData = deleteCloudAndLocalAccountData,
+  createSafetyBackup = createAndDownloadSafetyBackup,
 }: AccountDevicesPageProps = {}) {
   const actionToast = useActionToast();
   const safeConfig = useMemo(() => readSyncPrototypeConfigSafely(), []);
@@ -136,7 +147,9 @@ export function AccountDevicesPage({
   const [disconnectDialogOpen, setDisconnectDialogOpen] = useState(false);
   const [detachDialogOpen, setDetachDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [remoteDeleteDialogOpen, setRemoteDeleteDialogOpen] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
+  const [remoteDeleteConfirmation, setRemoteDeleteConfirmation] = useState("");
   const [currentDevice] = useState<CurrentDeviceDescriptor>(
     () => currentDeviceOverride ?? getOrCreateCurrentDevice(),
   );
@@ -199,6 +212,10 @@ export function AccountDevicesPage({
         delete: {
           title: 'Données locales supprimées',
           description: 'Les données cloud de ce compte restent intactes.',
+        },
+        deleteRemote: {
+          title: 'Données du compte supprimées',
+          description: 'Les données cloud, sociales et locales ont été effacées.',
         },
       } as const;
       const success = successMessages[action];
@@ -533,6 +550,50 @@ export function AccountDevicesPage({
         </div>
       </Card>
 
+      <Card className="border-red-300 p-5 dark:border-red-900">
+        <div className="flex items-start gap-3">
+          <Trash2
+            aria-hidden="true"
+            className="mt-0.5 size-6 shrink-0 text-red-700 dark:text-red-300"
+          />
+          <div className="min-w-0">
+            <h2 className="text-lg font-bold text-slate-950 dark:text-white">
+              Effacer les données du compte
+            </h2>
+            <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
+              Supprime les données synchronisées, le profil social et les relations
+              associées, puis efface cet espace sur l’appareil. Une sauvegarde JSON
+              est téléchargée avant toute suppression.
+            </p>
+          </div>
+        </div>
+        <label className="mt-4 block max-w-md text-sm font-semibold text-red-950 dark:text-red-100">
+          Saisis EFFACER LE COMPTE
+          <input
+            type="text"
+            value={remoteDeleteConfirmation}
+            onChange={(event) => setRemoteDeleteConfirmation(event.target.value)}
+            className="mt-2 min-h-11 w-full rounded-xl border border-red-300 bg-white px-3 text-slate-950 dark:border-red-800 dark:bg-slate-950 dark:text-white"
+            autoComplete="off"
+            spellCheck={false}
+          />
+        </label>
+        <Button
+          className="mt-4 w-full sm:w-auto"
+          variant="danger"
+          disabled={
+            remoteDeleteConfirmation !== "EFFACER LE COMPTE"
+            || !loggedIn
+            || !accountSpaceActive
+            || actionPending
+          }
+          onClick={() => setRemoteDeleteDialogOpen(true)}
+        >
+          <Trash2 aria-hidden="true" className="size-4" />
+          Effacer partout
+        </Button>
+      </Card>
+
       <ConfirmationDialog
         open={disconnectDialogOpen}
         title="Déconnecter le compte ?"
@@ -574,6 +635,23 @@ export function AccountDevicesPage({
           void runAction("delete", () =>
             deleteLocalData(runtimeClient, managementOptions),
           );
+        }}
+      />
+
+      <ConfirmationDialog
+        open={remoteDeleteDialogOpen}
+        title="Effacer les données cloud et locales ?"
+        description="La sauvegarde sera créée d’abord. SportPilot vérifiera ensuite la suppression distante avant d’effacer cet espace local. Cette opération est irréversible sans la sauvegarde JSON."
+        confirmLabel="Créer la sauvegarde et tout effacer"
+        tone="danger"
+        isPending={pendingAction === "deleteRemote"}
+        onCancel={() => setRemoteDeleteDialogOpen(false)}
+        onConfirm={() => {
+          setRemoteDeleteDialogOpen(false);
+          void runAction("deleteRemote", async () => {
+            await createSafetyBackup("before-cloud-account-reset");
+            await deleteCloudAndLocalData(runtimeClient, managementOptions);
+          });
         }}
       />
     </section>

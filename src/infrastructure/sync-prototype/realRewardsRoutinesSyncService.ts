@@ -39,6 +39,16 @@ import {
   type VisualThemePreferenceRecord,
 } from '@/infrastructure/user-state/userStateModels';
 import { notifyRoutineReminderChanged } from '@/application/reminders/routineReminderService';
+import { sameLocalCollection } from '@/infrastructure/sync-prototype/localSyncCompareAndSwap';
+import {
+  logicalSyncStamp,
+  persistLogicalSyncBaseline,
+  resolveDatabaseLogicalSyncState,
+  resolveSyncActorId,
+  stripLogicalSyncFields,
+  upsertLogicalCloudValue,
+  type LogicalSyncFields,
+} from '@/infrastructure/sync-prototype/logicalSyncState';
 
 export const REWARDS_ROUTINES_AGGREGATE_ID = 'rewards-routines';
 
@@ -60,7 +70,7 @@ export interface RewardsRoutinesAggregate {
 
 type CloudRewardsRoutinesAggregate = Omit<RewardsRoutinesAggregate, 'id'> & {
   readonly id: string;
-};
+} & LogicalSyncFields;
 
 export interface RealRewardsRoutinesSyncPreview {
   readonly localAchievementCount: number;
@@ -93,8 +103,17 @@ export interface RealRewardsRoutinesSyncResult
 }
 
 interface RewardsRoutinesState {
+  readonly localSnapshot: {
+    readonly earnedAchievements: EarnedAchievementRecord[];
+    readonly unlockedVisualThemes: UnlockedVisualThemeRecord[];
+    readonly visualThemePreference: VisualThemePreferenceRecord | undefined;
+    readonly weeklyMissionCompletions: CompletedWeeklyMissionRecord[];
+    readonly routineReminderCompletions: RoutineReminderCompletionRecord[];
+    readonly settings: UserSettings;
+  };
   readonly local: RewardsRoutinesAggregate;
   readonly cloud?: RewardsRoutinesAggregate;
+  readonly cloudRow?: CloudRewardsRoutinesAggregate;
 }
 
 function maxTimestamp(...values: readonly (string | undefined)[]): string {
@@ -309,7 +328,7 @@ function fromCloudAggregate(
   const id = localIdFromCloud(aggregate.id);
   if (id !== REWARDS_ROUTINES_AGGREGATE_ID) return undefined;
   const value = {
-    ...stripCloudFields(aggregate),
+    ...stripLogicalSyncFields(stripCloudFields(aggregate)),
     id,
   } as RewardsRoutinesAggregate;
   validateAggregate(value);
@@ -489,8 +508,9 @@ async function readState(
     routineReminderPreferences:
       createRoutineReminderPreferencesSnapshot(settings),
   });
-  const cloudValues = cloudRows
-    .filter((row) => belongsToCurrentUser(row, currentUserId))
+  const cloudValueRows = cloudRows
+    .filter((row) => belongsToCurrentUser(row, currentUserId));
+  const cloudValues = cloudValueRows
     .map(fromCloudAggregate)
     .filter((row): row is RewardsRoutinesAggregate => row !== undefined);
 
@@ -501,8 +521,19 @@ async function readState(
   }
 
   return {
+    localSnapshot: {
+      earnedAchievements,
+      unlockedVisualThemes,
+      visualThemePreference: storedThemePreference,
+      weeklyMissionCompletions,
+      routineReminderCompletions,
+      settings,
+    },
     local,
     ...(cloudValues[0] ? { cloud: cloudValues[0] } : {}),
+    ...(cloudValueRows[0]
+      ? { cloudRow: cloudValueRows[0] as CloudRewardsRoutinesAggregate }
+      : {}),
   };
 }
 
@@ -517,23 +548,10 @@ export async function previewRealRewardsRoutinesSync(
 
 async function applyAggregateToLocal(
   localDatabase: AppDatabase,
+  expected: RewardsRoutinesState['localSnapshot'],
   aggregate: RewardsRoutinesAggregate,
-): Promise<void> {
-  const currentSettings = normalizeUserSettings(
-    (await localDatabase.userSettings.get(USER_SETTINGS_ID)) ??
-      createDefaultUserSettings(),
-  );
-  const nextSettings = normalizeUserSettings({
-    ...currentSettings,
-    routineReminderPreferences: aggregate.routineReminderPreferences.value,
-    routineReminderUpdatedAt: aggregate.routineReminderPreferences.updatedAt,
-    updatedAt: maxTimestamp(
-      currentSettings.updatedAt,
-      aggregate.routineReminderPreferences.updatedAt,
-    ),
-  });
-
-  await localDatabase.transaction(
+): Promise<boolean> {
+  const applied = await localDatabase.transaction(
     'rw',
     [
       localDatabase.earnedAchievements,
@@ -544,6 +562,51 @@ async function applyAggregateToLocal(
       localDatabase.userSettings,
     ],
     async () => {
+      const [
+        currentAchievements,
+        currentThemes,
+        currentThemePreference,
+        currentMissions,
+        currentReminderCompletions,
+        storedSettings,
+      ] = await Promise.all([
+        localDatabase.earnedAchievements.toArray(),
+        localDatabase.unlockedVisualThemes.toArray(),
+        localDatabase.visualThemePreferences.get(VISUAL_THEME_PREFERENCE_ID),
+        localDatabase.weeklyMissionCompletions.toArray(),
+        localDatabase.routineReminderCompletions.toArray(),
+        localDatabase.userSettings.get(USER_SETTINGS_ID),
+      ]);
+      const currentSettings = normalizeUserSettings(
+        storedSettings ?? createDefaultUserSettings(),
+      );
+      const unchanged =
+        sameLocalCollection(
+          currentAchievements,
+          expected.earnedAchievements,
+        )
+        && sameLocalCollection(currentThemes, expected.unlockedVisualThemes)
+        && sameEntity(currentThemePreference, expected.visualThemePreference)
+        && sameLocalCollection(
+          currentMissions,
+          expected.weeklyMissionCompletions,
+        )
+        && sameLocalCollection(
+          currentReminderCompletions,
+          expected.routineReminderCompletions,
+        )
+        && sameEntity(currentSettings, expected.settings);
+      if (!unchanged) return false;
+
+      const nextSettings = normalizeUserSettings({
+        ...currentSettings,
+        routineReminderPreferences: aggregate.routineReminderPreferences.value,
+        routineReminderUpdatedAt: aggregate.routineReminderPreferences.updatedAt,
+        updatedAt: maxTimestamp(
+          currentSettings.updatedAt,
+          aggregate.routineReminderPreferences.updatedAt,
+        ),
+      });
       await Promise.all([
         localDatabase.earnedAchievements.clear(),
         localDatabase.unlockedVisualThemes.clear(),
@@ -574,12 +637,16 @@ async function applyAggregateToLocal(
         );
       }
       await localDatabase.userSettings.put(nextSettings);
+      return true;
     },
   );
 
-  await reloadUserStateRuntime(localDatabase);
-  notifyRoutineReminderChanged();
-  notifyRewardsRoutinesChanged();
+  if (applied) {
+    await reloadUserStateRuntime(localDatabase);
+    notifyRoutineReminderChanged();
+    notifyRewardsRoutinesChanged();
+  }
+  return applied;
 }
 
 export async function synchronizeRealRewardsRoutines(
@@ -590,7 +657,20 @@ export async function synchronizeRealRewardsRoutines(
 ): Promise<RealRewardsRoutinesSyncResult> {
   const writeCloud = options.writeCloud !== false;
   const state = await readState(localDatabase, cloudDatabase, currentUserId);
-  const final = resolveFinalState(state.local, state.cloud);
+  const actorId = await resolveSyncActorId(localDatabase);
+  const resolution = await resolveDatabaseLogicalSyncState({
+    cloudDatabase,
+    accountUserId: currentUserId,
+    domainId: 'rewards-routines',
+    entityId: REWARDS_ROUTINES_AGGREGATE_ID,
+    actorId,
+    localValue: state.local,
+    cloudValue: state.cloud ?? state.local,
+    cloudStamp: logicalSyncStamp(state.cloudRow),
+    legacyResolve: (local, cloud) => resolveFinalState(local, cloud),
+    concurrentResolve: (local, cloud) => resolveFinalState(local, cloud),
+  });
+  const final = resolution.value;
   const preview = buildPreview(state, final);
 
   const downloadedAchievements = changedRecordCount(
@@ -648,6 +728,7 @@ export async function synchronizeRealRewardsRoutines(
       )
     : 0;
 
+  let localStateApplied = true;
   if (
     downloadedAchievements +
       downloadedThemes +
@@ -657,36 +738,43 @@ export async function synchronizeRealRewardsRoutines(
       downloadedReminderPreferences >
     0
   ) {
-    await applyAggregateToLocal(localDatabase, final);
+    localStateApplied = await applyAggregateToLocal(
+      localDatabase,
+      state.localSnapshot,
+      final,
+    );
   }
 
-  if (
-    writeCloud &&
-    uploadedAchievements +
-      uploadedThemes +
-      uploadedThemePreference +
-      uploadedWeeklyMissions +
-      uploadedReminderCompletions +
-      uploadedReminderPreferences >
-      0
-  ) {
-    await cloudDatabase.realRewardsRoutines.put(toCloudAggregate(final));
+  if (writeCloud && localStateApplied) {
+    await upsertLogicalCloudValue(
+      cloudDatabase.realRewardsRoutines,
+      state.cloud,
+      state.cloudRow,
+      final,
+      resolution.stamp,
+      (value) => toCloudAggregate(value) as RewardsRoutinesAggregate,
+    );
+    await persistLogicalSyncBaseline(cloudDatabase, resolution.baseline);
   }
 
   return {
     ...preview,
     uploadedAchievements,
-    downloadedAchievements,
+    downloadedAchievements: localStateApplied ? downloadedAchievements : 0,
     uploadedThemes,
-    downloadedThemes,
+    downloadedThemes: localStateApplied ? downloadedThemes : 0,
     uploadedThemePreference,
-    downloadedThemePreference,
+    downloadedThemePreference: localStateApplied ? downloadedThemePreference : 0,
     uploadedWeeklyMissions,
-    downloadedWeeklyMissions,
+    downloadedWeeklyMissions: localStateApplied ? downloadedWeeklyMissions : 0,
     uploadedReminderCompletions,
-    downloadedReminderCompletions,
+    downloadedReminderCompletions: localStateApplied
+      ? downloadedReminderCompletions
+      : 0,
     uploadedReminderPreferences,
-    downloadedReminderPreferences,
+    downloadedReminderPreferences: localStateApplied
+      ? downloadedReminderPreferences
+      : 0,
     completedAt: new Date().toISOString(),
   };
 }

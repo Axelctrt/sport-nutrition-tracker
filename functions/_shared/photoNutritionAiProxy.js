@@ -1,7 +1,9 @@
 import { Buffer } from 'node:buffer';
+import { socialActivitySnapshotsInternals } from './socialActivitySnapshots.js';
 const DEFAULT_MODEL = 'gemini-2.5-flash-lite';
 const GEMINI_API_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
 const MAX_IMAGE_SIZE_BYTES = 8 * 1024 * 1024;
+const MAX_MULTIPART_SIZE_BYTES = MAX_IMAGE_SIZE_BYTES + 512 * 1024;
 
 class PhotoNutritionAiProxyError extends Error {
   constructor(status, code, message) {
@@ -50,6 +52,18 @@ function isFileLike(value) {
 }
 
 async function readImageFromRequest(request) {
+  const contentLength = Number(request.headers.get('content-length') ?? 0);
+  if (
+    Number.isFinite(contentLength)
+    && contentLength > MAX_MULTIPART_SIZE_BYTES
+  ) {
+    throw new PhotoNutritionAiProxyError(
+      413,
+      'PHOTO_AI_IMAGE_TOO_LARGE',
+      'Photo trop volumineuse : limite 8 Mo.',
+    );
+  }
+
   let formData;
   try {
     formData = await request.formData();
@@ -196,10 +210,13 @@ function normalizeGeminiContract(payload) {
 }
 
 async function callGemini({ image, apiKey, model, fetcher = fetch }) {
-  const endpoint = `${GEMINI_API_BASE_URL}/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+  const endpoint = `${GEMINI_API_BASE_URL}/${encodeURIComponent(model)}:generateContent`;
   const response = await fetcher(endpoint, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: {
+      'content-type': 'application/json',
+      'x-goog-api-key': apiKey,
+    },
     body: JSON.stringify(buildGeminiPayload(image)),
   });
 
@@ -209,6 +226,32 @@ async function callGemini({ image, apiKey, model, fetcher = fetch }) {
 
   const geminiPayload = await response.json();
   return normalizeGeminiContract(parseJsonFromGemini(geminiPayload));
+}
+
+async function authenticateAndRateLimit(request, env, options) {
+  const authenticateRequest = options.authenticateRequest
+    ?? socialActivitySnapshotsInternals.authenticateRequest;
+  const actor = await authenticateRequest(
+    request,
+    env,
+    options.authFetcher ?? fetch,
+  );
+  const limiter = env?.PHOTO_NUTRITION_RATE_LIMITER;
+  if (!limiter || typeof limiter.limit !== 'function') {
+    throw new PhotoNutritionAiProxyError(
+      503,
+      'PHOTO_AI_RATE_LIMIT_NOT_CONFIGURED',
+      'Analyse IA temporairement indisponible.',
+    );
+  }
+  const result = await limiter.limit({ key: actor.subject });
+  if (!result?.success) {
+    throw new PhotoNutritionAiProxyError(
+      429,
+      'PHOTO_AI_RATE_LIMITED',
+      'Trop d’analyses rapprochées. Réessaie dans une minute.',
+    );
+  }
 }
 
 export async function handlePhotoNutritionAiProxyRequest(request, env = {}, options = {}) {
@@ -226,6 +269,7 @@ export async function handlePhotoNutritionAiProxyRequest(request, env = {}, opti
       throw new PhotoNutritionAiProxyError(503, 'PHOTO_AI_NOT_CONFIGURED', 'Proxy IA Gemini non configuré : clé serveur manquante.');
     }
 
+    await authenticateAndRateLimit(request, env, options);
     const image = await readImageFromRequest(request);
     const payload = await callGemini({ image, apiKey: config.apiKey, model: config.model, fetcher: options.fetcher });
     return jsonResponse(200, payload);
@@ -234,8 +278,10 @@ export async function handlePhotoNutritionAiProxyRequest(request, env = {}, opti
       return jsonResponse(error.status, { code: error.code, message: error.message });
     }
 
-    const message = error instanceof Error ? error.message : 'Erreur inconnue.';
-    return jsonResponse(502, { code: 'PHOTO_AI_PROXY_ERROR', message: `Proxy IA Gemini indisponible : ${message}` });
+    return jsonResponse(502, {
+      code: 'PHOTO_AI_PROXY_ERROR',
+      message: 'Proxy IA Gemini indisponible.',
+    });
   }
 }
 

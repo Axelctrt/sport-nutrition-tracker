@@ -41,6 +41,7 @@ import {
   MAX_BACKUP_FILE_SIZE_BYTES,
   type BackupSummary,
 } from '@/infrastructure/backup/backupService';
+import { activeDataSpace } from '@/infrastructure/database/database';
 import {
   createDiagnosticFileName,
   createTechnicalDiagnostic,
@@ -408,6 +409,7 @@ export function BackupPage() {
     : undefined;
   const reminderStatus = settings ? getBackupReminderStatus(settings) : undefined;
   const lastBackupLabel = formatRelativeBackupDate(settings?.lastBackupExportedAt);
+  const isAccountSpace = activeDataSpace.kind === 'account';
 
   return (
     <section aria-labelledby="backup-title" className="min-w-0 overflow-x-clip">
@@ -718,9 +720,16 @@ export function BackupPage() {
           className="border-red-200 dark:border-red-900"
         >
           <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">
-            Une sauvegarde JSON de sécurité sera téléchargée automatiquement avant l’effacement.
+            {isAccountSpace
+              ? 'Pour éviter que les données reviennent depuis le cloud, retire-les depuis « Compte et appareils ».'
+              : 'Une sauvegarde JSON de sécurité sera téléchargée automatiquement avant l’effacement.'}
           </p>
-          <Button className="mt-4 w-full sm:w-auto" variant="danger" onClick={() => setDeleteDialogOpen(true)}>
+          <Button
+            className="mt-4 w-full sm:w-auto"
+            variant="danger"
+            disabled={isAccountSpace}
+            onClick={() => setDeleteDialogOpen(true)}
+          >
             <Trash2 aria-hidden="true" className="size-4" />
             Effacer les données locales
           </Button>

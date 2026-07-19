@@ -17,7 +17,7 @@ test('utilise un modèle de course puis enregistre une sortie vélo enrichie', a
   await page.getByLabel('Dénivelé positif (m)').fill('120');
   await page.getByRole('button', { name: 'Ajouter l’activité' }).click();
 
-  await expect(page.getByRole('heading', { name: 'Footing' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Footing' }).first()).toBeVisible();
   await expect(page.getByText('D+ 120 m')).toBeVisible();
   await expect(page.getByText('Trail')).toBeVisible();
 
@@ -31,8 +31,8 @@ test('utilise un modèle de course puis enregistre une sortie vélo enrichie', a
   await page.getByRole('button', { name: 'Ajouter l’activité' }).click();
 
   await expect(page.getByRole('heading', { name: 'Vélo' })).toBeVisible();
-  await expect(page.getByText('30 km/h')).toBeVisible();
-  await expect(page.getByText('D+ 250 m')).toBeVisible();
+  await expect(page.getByText('30 km/h').first()).toBeVisible();
+  await expect(page.getByText('D+ 250 m').first()).toBeVisible();
   await expectNoCriticalHorizontalOverflow(page);
 
   await page.goto('/#/analytics');

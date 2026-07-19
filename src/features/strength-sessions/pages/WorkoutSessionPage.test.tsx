@@ -128,6 +128,9 @@ describe('WorkoutSessionPage', () => {
       .closest('[id^="workout-exercise-"]') as HTMLElement;
     await user.click(await within(benchCard).findByRole('button', { name: 'Développer Développé couché' }));
     expect(await within(benchCard).findByRole('heading', { name: 'Série 1' })).toBeInTheDocument();
+    await user.click(
+      within(benchCard).getByRole('button', { name: 'Modifier la série 1' }),
+    );
     expect(screen.getByLabelText('Charge en kg')).toHaveValue(60);
     expect(screen.getByLabelText('Répétitions')).toHaveValue(12);
     expect(screen.getByLabelText('RPE')).toHaveValue(8);

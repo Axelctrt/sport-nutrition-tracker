@@ -33,9 +33,10 @@ import type {
 import type { CloudFriendRequest, CloudFriendship } from '@/domain/friends/socialIdentity';
 import type { CloudFriendActivityPermissionRecord } from '@/domain/friends/socialCloudFriendship';
 import type { CloudSocialActivitySnapshotRecord } from '@/domain/friends/socialCloudActivitySnapshot';
+import type { LogicalSyncBaseline } from '@/infrastructure/sync-prototype/logicalSyncState';
 
 export const LEGACY_SYNC_PROTOTYPE_DATABASE_NAME = 'sportpilot-sync-prototype';
-export const SYNC_PROTOTYPE_DATABASE_VERSION = 14;
+export const SYNC_PROTOTYPE_DATABASE_VERSION = 15;
 export const SYNC_PROTOTYPE_DATABASE_NAME =
   `sportpilot-sync-runtime-0.20.0-v${SYNC_PROTOTYPE_DATABASE_VERSION}`;
 export const SYNC_PROTOTYPE_TABLE_NAMES = [
@@ -66,6 +67,7 @@ export const SYNC_PROTOTYPE_TABLE_NAMES = [
   'socialFriendships',
   'socialFriendPermissions',
   'socialActivitySnapshots',
+  'realSyncBaselines',
 ] as const;
 
 export class SyncPrototypeDatabase extends Dexie {
@@ -96,6 +98,7 @@ export class SyncPrototypeDatabase extends Dexie {
   declare socialFriendships: Table<CloudFriendship, EntityId | string>;
   declare socialFriendPermissions: Table<CloudFriendActivityPermissionRecord, EntityId | string>;
   declare socialActivitySnapshots: Table<CloudSocialActivitySnapshotRecord, EntityId | string>;
+  declare realSyncBaselines: Table<LogicalSyncBaseline, string>;
 
   constructor(
     { databaseUrl }: EnabledSyncPrototypeConfig,
@@ -180,6 +183,7 @@ export class SyncPrototypeDatabase extends Dexie {
       socialFriendships: 'id, userAId, userBId, status, updatedAt, [userAId+status], [userBId+status]',
       socialFriendPermissions: 'id, ownerUserId, friendUserId, sharingLevel, updatedAt, [ownerUserId+friendUserId]',
       socialActivitySnapshots: 'id, ownerUserId, publishedForUserId, sourceActivityId, activityType, date, scope, updatedAt, [publishedForUserId+date], [ownerUserId+publishedForUserId]',
+      realSyncBaselines: 'id, accountUserId, domainId, entityId, updatedAt, [accountUserId+domainId]',
     });
 
     this.cloud.configure({
@@ -190,6 +194,7 @@ export class SyncPrototypeDatabase extends Dexie {
       nameSuffix: true,
       socialAuth: false,
       disableEagerSync: true,
+      unsyncedTables: ['realSyncBaselines'],
     });
   }
 }

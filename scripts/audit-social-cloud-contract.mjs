@@ -43,7 +43,7 @@ for (const value of [
   'readEnabledFlag',
 ]) need(config, value, 'configuration cloud incomplète');
 need(publicConfig, "VITE_ENABLE_REAL_SOCIAL_CLOUD: 'false'", 'défaut public prudent absent');
-need(runtime, 'SYNC_PROTOTYPE_DATABASE_VERSION = 14', 'runtime cloud v14 absent');
+need(runtime, 'SYNC_PROTOTYPE_DATABASE_VERSION = 15', 'runtime cloud v15 absent');
 for (const collection of [
   'socialIdentities',
   'socialHandleReservations',
@@ -62,4 +62,4 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`- ${failure}`));
   process.exit(1);
 }
-console.log('Audit contrat cloud social réussi : activation hébergeur, runtime v14, routes Pages et collections filtrées sont cohérents.');
+console.log('Audit contrat cloud social réussi : activation hébergeur, runtime v15, routes Pages et collections filtrées sont cohérents.');

@@ -8,6 +8,11 @@ function imageFile(name = 'repas.jpg', size = 128): File {
   return new File([new Uint8Array(size)], name, { type: 'image/jpeg' });
 }
 
+const credentialsProvider = () => ({
+  userId: 'user-123',
+  accessToken: 'secret-token',
+});
+
 describe('photoNutritionAiClient', () => {
   it('lit une configuration IA photo sans activer de clé côté front', () => {
     const config = readPhotoNutritionAiConfig({
@@ -48,12 +53,16 @@ describe('photoNutritionAiClient', () => {
     const port = createRemotePhotoNutritionAnalysisPort({
       endpointUrl: '/api/photo-nutrition/analyze',
       fetcher,
+      credentialsProvider,
     });
 
     const result = await port.analyze(imageFile());
 
     expect(fetcher).toHaveBeenCalledWith('/api/photo-nutrition/analyze', expect.objectContaining({
       method: 'POST',
+      headers: expect.objectContaining({
+        authorization: 'Bearer secret-token',
+      }),
       body: expect.any(FormData),
     }));
     expect(result.mode).toBe('remote-ai');
@@ -72,6 +81,7 @@ describe('photoNutritionAiClient', () => {
   it('refuse une réponse IA distante sans estimation exploitable', async () => {
     const port = createRemotePhotoNutritionAnalysisPort({
       endpointUrl: '/api/photo-nutrition/analyze',
+      credentialsProvider,
       fetcher: vi.fn(async () => new Response(JSON.stringify({ estimate: { amount: 250 } }), { status: 200 })),
     });
 
@@ -81,6 +91,7 @@ describe('photoNutritionAiClient', () => {
   it('convertit une erreur HTTP en message de fallback local exploitable', async () => {
     const port = createRemotePhotoNutritionAnalysisPort({
       endpointUrl: '/api/photo-nutrition/analyze',
+      credentialsProvider,
       fetcher: vi.fn(async () => new Response('{}', { status: 503 })),
     });
 

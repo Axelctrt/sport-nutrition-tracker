@@ -40,10 +40,10 @@ test('crée un superset et conserve ses exercices indépendants dans la séance'
   const firstCard = page.getByText('A1', { exact: true }).locator(
     'xpath=ancestor::div[starts-with(@id, "workout-exercise-")][1]',
   );
-  await firstCard.getByRole('button', { name: 'Ajouter une série' }).click();
-  await firstCard.getByLabel('Répétitions').fill('10');
-  await firstCard.getByRole('button', { name: 'Valider la série' }).click();
-  await expect(firstCard.getByRole('button', { name: 'Rouvrir la série' })).toBeVisible();
+  const firstSet = firstCard.getByRole('article', { name: 'Série 1' });
+  await firstSet.getByLabel('Répétitions').fill('10');
+  await firstSet.getByRole('button', { name: 'Valider la série' }).click();
+  await expect(firstSet.getByRole('button', { name: 'Modifier la série 1' })).toBeVisible();
 
   const restTimer = page.getByRole('region', { name: 'Minuteur de repos' });
   await expect(restTimer).toBeVisible();

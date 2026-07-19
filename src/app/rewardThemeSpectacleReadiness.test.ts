@@ -44,7 +44,7 @@ describe("rewardThemeSpectacleReadiness", () => {
       "forge",
       "nexus-vivant",
     ]) {
-      expect(css).toContain(`data-sport-preview=\"${themeId}\"`);
+      expect(css).toContain(`data-sport-preview="${themeId}"`);
     }
   });
 });

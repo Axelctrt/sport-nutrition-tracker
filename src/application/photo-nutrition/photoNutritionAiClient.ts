@@ -5,6 +5,10 @@ import type {
   PhotoNutritionEstimate,
 } from '@/application/photo-nutrition/photoNutritionEstimationService';
 import type { NutritionValues } from '@/domain/models/food';
+import {
+  resolveSocialCloudApiCredentials,
+  type SocialCloudApiCredentialsProvider,
+} from '@/infrastructure/sync-prototype/socialCloudApiCredentials';
 
 export interface PhotoNutritionAiConfig {
   enabled: boolean;
@@ -16,6 +20,7 @@ export interface PhotoNutritionAiClientOptions {
   endpointUrl: string;
   timeoutMs?: number;
   fetcher?: typeof fetch;
+  credentialsProvider?: SocialCloudApiCredentialsProvider;
 }
 
 interface RemotePhotoNutritionResponse {
@@ -151,6 +156,7 @@ export function createRemotePhotoNutritionAnalysisPort({
   endpointUrl,
   timeoutMs = DEFAULT_TIMEOUT_MS,
   fetcher = fetch,
+  credentialsProvider,
 }: PhotoNutritionAiClientOptions): PhotoNutritionAnalysisPort {
   assertPhotoNutritionAiEndpoint(endpointUrl);
 
@@ -164,11 +170,21 @@ export function createRemotePhotoNutritionAnalysisPort({
       const formData = new FormData();
       formData.append('photo', file, file.name || 'repas.jpg');
       formData.append('contractVersion', 'sportpilot-photo-nutrition-v1');
+      const credentials = resolveSocialCloudApiCredentials(credentialsProvider);
+      if (!credentials) {
+        throw new Error(
+          'Connexion SportPilot requise pour l’analyse IA distante. Le fallback local reste disponible.',
+        );
+      }
 
       let response: Response;
       try {
         response = await fetcher(endpointUrl, {
           method: 'POST',
+          headers: {
+            accept: 'application/json',
+            authorization: `Bearer ${credentials.accessToken}`,
+          },
           body: formData,
           signal: mergeSignals(timeoutMs, signal),
         });

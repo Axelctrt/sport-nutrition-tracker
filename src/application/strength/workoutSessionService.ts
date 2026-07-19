@@ -32,6 +32,7 @@ export interface WorkoutSessionView {
 
 export interface WorkoutSessionCompletionDependencies {
   readonly socialSharing?: SocialActivitySharingOverride;
+  readonly allowLongDuration?: boolean;
   readonly socialActivitySnapshots?: Pick<
     SocialActivitySnapshotObserver,
     'onStrengthSessionCompleted'
@@ -280,6 +281,8 @@ function durationMinutes(startedAt: string | undefined, now: Date): number | und
   return Math.max(0, elapsed);
 }
 
+export const LONG_WORKOUT_DURATION_MINUTES = 6 * 60;
+
 export async function completeWorkoutSession(
   repository: WorkoutSessionRepository,
   sessionId: EntityId,
@@ -298,6 +301,16 @@ export async function completeWorkoutSession(
     ...defaultWorkoutSessionCompletionDependencies,
     ...dependencies,
   };
+  if (
+    duration !== undefined
+    && duration > LONG_WORKOUT_DURATION_MINUTES
+    && !resolvedDependencies.allowLongDuration
+  ) {
+    throw new RepositoryError(
+      'Cette séance semble durer depuis plus de 6 heures. Confirme sa durée avant de la terminer.',
+      'update',
+    );
+  }
   const completed = await repository.update(sessionId, {
     status: 'completed',
     completedAt: now.toISOString(),
@@ -352,10 +365,15 @@ export async function abandonWorkoutSession(
   if (!session) throw new RepositoryError('Séance introuvable.', 'update');
   ensureSessionCanBeEdited(session);
   const duration = durationMinutes(session.startedAt, now);
+  const boundedDuration = duration === undefined
+    ? undefined
+    : Math.min(duration, LONG_WORKOUT_DURATION_MINUTES);
   return repository.update(sessionId, {
     status: 'abandoned',
     completedAt: now.toISOString(),
-    ...(duration === undefined ? {} : { durationMinutes: duration }),
+    ...(boundedDuration === undefined
+      ? {}
+      : { durationMinutes: boundedDuration }),
   });
 }
 

@@ -167,4 +167,45 @@ describe('AccountDevicesPage', () => {
     await waitFor(() => expect(deleteLocalData).toHaveBeenCalledTimes(1));
     expect(reload).toHaveBeenCalledTimes(1);
   });
+
+  it('exige une sauvegarde et une confirmation distincte avant la suppression distante', async () => {
+    const createSafetyBackupMock = vi.fn(async () => ({}));
+    const createSafetyBackup = createSafetyBackupMock as unknown as
+      typeof import('@/application/backup/safetyBackupService')['createAndDownloadSafetyBackup'];
+    const deleteCloudAndLocalData = vi.fn(async () => ({
+      databaseName: accountSpace.databaseName,
+      deletedSocialRecords: 2,
+      deletedCloudRecords: 8,
+      deletedByTable: { realWeights: 1 },
+    }));
+    const reload = vi.fn();
+    renderPage({
+      createSafetyBackup,
+      deleteCloudAndLocalData,
+      reload,
+    });
+
+    const deleteButton = await screen.findByRole('button', {
+      name: 'Effacer partout',
+    });
+    expect(deleteButton).toBeDisabled();
+    await userEvent.type(
+      screen.getByLabelText('Saisis EFFACER LE COMPTE'),
+      'EFFACER LE COMPTE',
+    );
+    expect(deleteButton).toBeEnabled();
+    await userEvent.click(deleteButton);
+    await userEvent.click(screen.getByRole('button', {
+      name: 'Créer la sauvegarde et tout effacer',
+    }));
+
+    await waitFor(() => expect(deleteCloudAndLocalData).toHaveBeenCalledOnce());
+    expect(createSafetyBackupMock).toHaveBeenCalledWith(
+      'before-cloud-account-reset',
+    );
+    expect(createSafetyBackupMock.mock.invocationCallOrder[0]!).toBeLessThan(
+      deleteCloudAndLocalData.mock.invocationCallOrder[0]!,
+    );
+    expect(reload).toHaveBeenCalledOnce();
+  });
 });

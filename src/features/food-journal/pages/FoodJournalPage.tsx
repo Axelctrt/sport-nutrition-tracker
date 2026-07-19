@@ -114,7 +114,12 @@ export function FoodJournalPage() {
           ? `food-entry-${returnFeedback.entryId}`
           : `food-meal-${returnFeedback.mealSlot}`,
       );
-      targetElement?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      targetElement?.scrollIntoView({
+        behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+          ? 'auto'
+          : 'smooth',
+        block: 'nearest',
+      });
     });
     const timer = window.setTimeout(() => {
       setHighlightedEntryId(undefined);

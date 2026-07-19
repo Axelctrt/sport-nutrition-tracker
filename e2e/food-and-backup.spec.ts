@@ -16,6 +16,7 @@ test('crée un aliment local puis l’ajoute au journal', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Ajouter un aliment' })).toBeVisible();
   const quickDialog = page.getByRole('dialog', { name: 'Yaourt E2E' });
   await expect(quickDialog).toBeVisible();
+  await quickDialog.locator('#meal-selector-quantity').fill('100');
   await quickDialog.getByRole('button', { name: /Ajouter au déjeuner/i }).click();
 
   await expect(page.getByRole('heading', { name: 'Journal alimentaire' })).toBeVisible();
@@ -68,7 +69,7 @@ test('exporte puis restaure une sauvegarde JSON', async ({ page }) => {
   await backupInput.setInputFiles(backupPath!);
 
   await expect(
-    page.getByText('Sauvegarde validée'),
+    page.getByRole('heading', { name: 'Sauvegarde prête à être restaurée' }),
   ).toBeVisible();
 
   const restoreButton = page.getByRole('button', {

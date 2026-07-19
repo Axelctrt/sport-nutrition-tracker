@@ -11,7 +11,22 @@ function requestWithPhoto(photo = imageFile()) {
   formData.append('photo', photo);
   return {
     method: 'POST',
+    headers: new Headers(),
     formData: vi.fn(async () => formData),
+  };
+}
+
+const authenticated = {
+  authenticateRequest: vi.fn(async () => ({ subject: 'user-123' })),
+};
+
+function configuredEnv(overrides = {}) {
+  return {
+    PHOTO_NUTRITION_AI_API_KEY: 'server-secret',
+    PHOTO_NUTRITION_RATE_LIMITER: {
+      limit: vi.fn(async () => ({ success: true })),
+    },
+    ...overrides,
   };
 }
 
@@ -49,8 +64,9 @@ describe('photoNutritionAiProxy Gemini', () => {
     formData.append('photo', new File([new Uint8Array(8)], 'note.txt', { type: 'text/plain' }));
     const response = await handlePhotoNutritionAiProxyRequest({
       method: 'POST',
+      headers: new Headers(),
       formData: vi.fn(async () => formData),
-    }, { PHOTO_NUTRITION_AI_API_KEY: 'server-secret' });
+    }, configuredEnv(), authenticated);
 
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toMatchObject({ code: 'PHOTO_AI_INVALID_IMAGE' });
@@ -67,15 +83,20 @@ describe('photoNutritionAiProxy Gemini', () => {
       warnings: ['Portion estimée à partir de la photo.'],
     })), { status: 200 }));
 
-    const response = await handlePhotoNutritionAiProxyRequest(requestWithPhoto(), {
-      PHOTO_NUTRITION_AI_API_KEY: 'server-secret',
+    const response = await handlePhotoNutritionAiProxyRequest(requestWithPhoto(), configuredEnv({
       PHOTO_NUTRITION_AI_MODEL: 'gemini-2.5-flash-lite',
-    }, { fetcher });
+    }), { ...authenticated, fetcher });
 
     expect(response.status).toBe(200);
     expect(fetcher).toHaveBeenCalledWith(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=server-secret',
-      expect.objectContaining({ method: 'POST', headers: { 'content-type': 'application/json' } }),
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent',
+      expect.objectContaining({
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'x-goog-api-key': 'server-secret',
+        },
+      }),
     );
     const body = await response.json();
     expect(body).toMatchObject({
@@ -95,11 +116,42 @@ describe('photoNutritionAiProxy Gemini', () => {
   it('convertit une erreur Gemini en erreur proxy exploitable par le fallback local', async () => {
     const fetcher = vi.fn(async () => new Response(JSON.stringify({ error: { message: 'quota' } }), { status: 429 }));
 
-    const response = await handlePhotoNutritionAiProxyRequest(requestWithPhoto(), {
-      PHOTO_NUTRITION_AI_API_KEY: 'server-secret',
-    }, { fetcher });
+    const response = await handlePhotoNutritionAiProxyRequest(
+      requestWithPhoto(),
+      configuredEnv(),
+      { ...authenticated, fetcher },
+    );
 
     expect(response.status).toBe(429);
     await expect(response.json()).resolves.toMatchObject({ code: 'PHOTO_AI_PROVIDER_ERROR' });
+  });
+
+  it('bloque la requête avant parsing lorsque la taille multipart dépasse la limite', async () => {
+    const request = requestWithPhoto();
+    request.headers.set('content-length', String(9 * 1024 * 1024));
+
+    const response = await handlePhotoNutritionAiProxyRequest(
+      request,
+      configuredEnv(),
+      authenticated,
+    );
+
+    expect(response.status).toBe(413);
+    expect(request.formData).not.toHaveBeenCalled();
+  });
+
+  it('applique le quota au sujet authentifié avant l’appel fournisseur', async () => {
+    const limiter = { limit: vi.fn(async () => ({ success: false })) };
+    const fetcher = vi.fn();
+
+    const response = await handlePhotoNutritionAiProxyRequest(
+      requestWithPhoto(),
+      configuredEnv({ PHOTO_NUTRITION_RATE_LIMITER: limiter }),
+      { ...authenticated, fetcher },
+    );
+
+    expect(response.status).toBe(429);
+    expect(limiter.limit).toHaveBeenCalledWith({ key: 'user-123' });
+    expect(fetcher).not.toHaveBeenCalled();
   });
 });

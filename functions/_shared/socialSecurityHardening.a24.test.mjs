@@ -204,7 +204,7 @@ describe('social security hardening A24', () => {
     });
   });
 
-  it('does not migrate an unrelated legacy id without direct private proof', async () => {
+  it('does not trust client-controlled private objects as migration proof', async () => {
     const database = {
       prepare(sql) {
         return {
@@ -240,7 +240,7 @@ describe('social security hardening A24', () => {
       fetcher,
     });
 
-    expect([...legacyIds]).toEqual(['sp-owned-by-current-user']);
+    expect([...legacyIds]).toEqual([]);
     expect(legacyIds.has('social-user:victim')).toBe(false);
   });
 

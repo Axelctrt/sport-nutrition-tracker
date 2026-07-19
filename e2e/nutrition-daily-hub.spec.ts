@@ -21,7 +21,7 @@ test('affiche le hub Nutrition quotidien et prépare un ajout par repas', async 
   await expect(addSheet).toBeVisible();
   await expect(addSheet.getByRole('link', { name: /Déjeuner/ })).toHaveAttribute(
     'href',
-    `/food/select?date=${date}&slot=lunch`,
+    `#/food/select?date=${date}&slot=lunch`,
   );
 
   await expectNoCriticalHorizontalOverflow(page);

@@ -291,7 +291,7 @@ function tokenForSubject(subject) {
 }
 
 describe('social identity reconciliation endpoint', () => {
-  it('migre le graphe social vers le sujet Dexie Cloud authentifié', async () => {
+  it('refuse de migrer un graphe social revendiqué uniquement par des objets client', async () => {
     const database = new FakeD1Database();
     const subject = 'dexie-user-123';
     const token = tokenForSubject(subject);
@@ -336,29 +336,28 @@ describe('social identity reconciliation endpoint', () => {
     }, { fetcher });
     const payload = await response.json();
 
-    expect(response.status).toBe(200);
-    expect(payload.identity).toEqual(expect.objectContaining({
-      userId: subject,
-      handle: 'test',
-      displayName: 'TEST',
-    }));
-    expect(payload.migratedUserIds.sort()).toEqual(['social-user:browser', 'sp-old']);
-    expect(database.directory.get('test').owner_user_id).toBe(subject);
+    expect(response.status).toBe(409);
+    expect(payload.code).toBe(
+      'SOCIAL_IDENTITY_RECONCILIATION_HANDLE_CONFLICT',
+    );
+    expect(database.directory.get('test').owner_user_id).toBe('sp-old');
     expect([...database.friendships.values()][0]).toEqual(expect.objectContaining({
-      user_a_id: subject,
-      user_b_id: 'friend-user',
+      user_a_id: 'friend-user',
+      user_b_id: 'social-user:browser',
       status: 'active',
     }));
     expect([...database.permissions.values()][0]).toEqual(expect.objectContaining({
-      owner_user_id: subject,
+      owner_user_id: 'sp-old',
       friend_user_id: 'friend-user',
     }));
     expect([...database.requests.values()][0]).toEqual(expect.objectContaining({
-      requester_user_id: subject,
+      requester_user_id: 'social-user:browser',
       recipient_user_id: 'friend-user',
     }));
-    const migratedSnapshot = [...database.snapshots.values()][0];
-    expect(migratedSnapshot.owner_user_id).toBe(subject);
-    expect(JSON.parse(migratedSnapshot.snapshot_json).ownerUserId).toBe(subject);
+    const unchangedSnapshot = [...database.snapshots.values()][0];
+    expect(unchangedSnapshot.owner_user_id).toBe('social-user:browser');
+    expect(JSON.parse(unchangedSnapshot.snapshot_json).ownerUserId).toBe(
+      'social-user:browser',
+    );
   });
 });

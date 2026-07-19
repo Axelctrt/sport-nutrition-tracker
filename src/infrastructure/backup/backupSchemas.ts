@@ -671,6 +671,58 @@ const strengthSetSchema = entityMetadataSchema.extend({
   notes: z.string().max(10_000).optional(),
 });
 
+const trashItemBaseSchema = z.object({
+  id: z.string().min(1),
+  entityId: z.string().min(1),
+  label: z.string().min(1).max(300),
+  deletedAt: isoDateTimeSchema,
+  purgeAt: isoDateTimeSchema,
+});
+
+export const trashItemSchema = z.discriminatedUnion('entityType', [
+  trashItemBaseSchema.extend({
+    entityType: z.literal('activity'),
+    payload: activitySchema,
+  }),
+  trashItemBaseSchema.extend({
+    entityType: z.literal('weight'),
+    payload: weightEntrySchema,
+  }),
+  trashItemBaseSchema.extend({
+    entityType: z.literal('foodEntry'),
+    payload: foodEntrySchema,
+  }),
+  trashItemBaseSchema.extend({
+    entityType: z.literal('meal'),
+    payload: z.object({
+      meal: mealSchema,
+      entries: z.array(foodEntrySchema),
+    }),
+  }),
+  trashItemBaseSchema.extend({
+    entityType: z.literal('favoriteMeal'),
+    payload: favoriteMealSchema,
+  }),
+  trashItemBaseSchema.extend({
+    entityType: z.literal('recipe'),
+    payload: z.object({
+      recipe: recipeSchema,
+      ingredients: z.array(recipeIngredientSchema),
+    }),
+  }),
+  trashItemBaseSchema.extend({
+    entityType: z.literal('strengthSet'),
+    payload: strengthSetSchema,
+  }),
+  trashItemBaseSchema.extend({
+    entityType: z.literal('workoutSessionExercise'),
+    payload: z.object({
+      exercise: workoutSessionExerciseSchema,
+      sets: z.array(strengthSetSchema),
+    }),
+  }),
+]);
+
 const progressionSuggestionSchema = entityMetadataSchema.extend({
   sessionId: z.string().min(1),
   sessionExerciseId: z.string().min(1),

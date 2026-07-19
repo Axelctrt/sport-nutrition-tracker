@@ -17,7 +17,10 @@ import {
   migrateBackupEnvelope,
 } from '@/infrastructure/backup/backupMigrations';
 import { formatBackupValidationError } from '@/infrastructure/backup/backupSchemas';
-import { appDatabase } from '@/infrastructure/database/database';
+import {
+  activeDataSpace,
+  appDatabase,
+} from '@/infrastructure/database/database';
 import {
   flushUserStatePersistence,
   reloadUserStateRuntime,
@@ -111,9 +114,20 @@ export function allUserDataTableList(database: AppDatabase) {
   ] as const;
 }
 
+export function clearableUserDataTableList(database: AppDatabase) {
+  return [
+    ...allUserDataTableList(database),
+    database.trashItems,
+  ] as const;
+}
+
 export async function readBackupData(
   database: AppDatabase,
 ): Promise<BackupData> {
+  return database.transaction(
+    'r',
+    allUserDataTableList(database),
+    async () => {
   const [
     userProfile,
     userSettings,
@@ -186,7 +200,7 @@ export async function readBackupData(
     database.deletionRecords.toArray(),
   ]);
 
-  return {
+      return {
     userProfile,
     userSettings: userSettings.map(normalizeUserSettings),
     weights,
@@ -220,8 +234,10 @@ export async function readBackupData(
     visualThemePreferences,
     weeklyMissionCompletions,
     routineReminderCompletions,
-    deletionRecords,
-  };
+        deletionRecords,
+      };
+    },
+  );
 }
 
 export async function createBackupEnvelope(
@@ -660,15 +676,22 @@ export async function replaceDatabaseFromBackup(
 export async function clearAllUserData(
   database: AppDatabase = appDatabase,
 ): Promise<void> {
+  if (database === appDatabase && activeDataSpace.kind === 'account') {
+    throw new BackupOperationError(
+      'Pour un compte synchronisé, supprime les données locales depuis « Compte et appareils » afin d’éviter leur réapparition depuis le cloud.',
+    );
+  }
+
   try {
     await database.transaction(
       'rw',
-      allUserDataTableList(database),
+      clearableUserDataTableList(database),
       async () => {
         await clearTables(database);
         for (const table of userStateTableList(database)) {
           await table.clear();
         }
+        await database.trashItems.clear();
         await database.userSettings.add(createDefaultUserSettings());
         await ensureExerciseCatalog(database);
       },

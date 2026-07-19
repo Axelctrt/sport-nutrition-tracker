@@ -38,6 +38,8 @@ if (failures.length === 0) {
     'Photo trop volumineuse',
     'fallback local conseillé',
     'SENSITIVE_QUERY_KEYS',
+    'resolveSocialCloudApiCredentials',
+    'authorization: `Bearer ${credentials.accessToken}`',
     'Réponse IA invalide',
     'valeurs nutritionnelles manquantes',
   ]) {
@@ -48,8 +50,6 @@ if (failures.length === 0) {
     'VITE_OPENAI_API_KEY',
     'VITE_MISTRAL_API_KEY',
     'VITE_ANTHROPIC_API_KEY',
-    'Authorization',
-    'Bearer ',
     'x-api-key',
   ]) {
     if (client.includes(forbidden)) fail(`secret ou en-tête sensible interdit dans le client IA photo : ${forbidden}.`);
@@ -143,6 +143,9 @@ if (failures.length === 0) {
     'responseMimeType',
     'PHOTO_AI_NOT_CONFIGURED',
     'PHOTO_AI_INVALID_IMAGE',
+    'authenticateRequest',
+    'PHOTO_NUTRITION_RATE_LIMITER',
+    "'x-goog-api-key': apiKey",
     'Photo transmise à Google Gemini',
   ]) {
     if (!proxy.includes(marker)) fail(`proxy IA Gemini incomplet : ${marker}.`);

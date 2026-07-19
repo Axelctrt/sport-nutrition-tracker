@@ -120,7 +120,7 @@ if (contract.includes('socialRawActivities')) {
 
 const runtime = read('src/infrastructure/sync-prototype/SyncPrototypeDatabase.ts');
 for (const token of [
-  'SYNC_PROTOTYPE_DATABASE_VERSION = 14',
+  'SYNC_PROTOTYPE_DATABASE_VERSION = 15',
   'socialIdentities',
   'socialHandleReservations',
   'socialFriendRequests',

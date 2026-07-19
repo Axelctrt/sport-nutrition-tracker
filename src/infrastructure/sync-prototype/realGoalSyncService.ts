@@ -8,6 +8,10 @@ import {
 import type { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import type { SyncPrototypeDatabase } from '@/infrastructure/sync-prototype/SyncPrototypeDatabase';
 import {
+  deleteLocalIfUnchanged,
+  putLocalIfUnchanged,
+} from '@/infrastructure/sync-prototype/localSyncCompareAndSwap';
+import {
   belongsToCurrentUser,
   chooseLatest,
   cloudPrivateId,
@@ -17,11 +21,22 @@ import {
   type CloudOwned,
   type CloudSyncExecutionOptions,
 } from '@/infrastructure/sync-prototype/cloudSyncValue';
+import {
+  maximumLogicalSyncStamp,
+  persistLogicalSyncBaseline,
+  resolveDatabaseLogicalSyncState,
+  resolveSyncActorId,
+  stripLogicalSyncFields,
+  upsertLogicalCloudValue,
+  type LogicalSyncFields,
+} from '@/infrastructure/sync-prototype/logicalSyncState';
 
-type CloudGoal = Omit<Goal, 'id'> & { readonly id: string };
+type CloudGoal = Omit<Goal, 'id'> & {
+  readonly id: string;
+} & LogicalSyncFields;
 type CloudDeletionRecord = Omit<DeletionRecord, 'id'> & {
   readonly id: string;
-};
+} & LogicalSyncFields;
 
 export interface RealGoalSyncPreview {
   readonly localGoalCount: number;
@@ -55,7 +70,10 @@ function fromCloudGoal(
 ): Goal | undefined {
   const localId = localIdFromCloud(goal.id);
   if (!localId) return undefined;
-  return { ...stripCloudFields(goal), id: localId } as Goal;
+  return {
+    ...stripLogicalSyncFields(stripCloudFields(goal)),
+    id: localId,
+  } as Goal;
 }
 
 function toCloudMarker(marker: DeletionRecord): CloudDeletionRecord {
@@ -67,7 +85,10 @@ function fromCloudMarker(
 ): DeletionRecord | undefined {
   const localId = localIdFromCloud(marker.id);
   if (!localId) return undefined;
-  return { ...stripCloudFields(marker), id: localId };
+  return {
+    ...stripLogicalSyncFields(stripCloudFields(marker)),
+    id: localId,
+  };
 }
 
 function resolveState(
@@ -138,6 +159,8 @@ async function readState(
     localMarkers,
     cloudGoals,
     cloudMarkers,
+    cloudGoalRows,
+    cloudMarkerRows,
   };
 }
 
@@ -186,17 +209,6 @@ function buildPreview(
   };
 }
 
-async function upsertCloud<T extends { id: string }>(
-  table: Table<T, string>,
-  current: T | undefined,
-  target: T,
-  toCloudValue: (value: T) => T,
-): Promise<boolean> {
-  if (current && sameEntity(current, target)) return false;
-  await table.put(toCloudValue(target));
-  return true;
-}
-
 export async function previewRealGoalSync(
   localDatabase: AppDatabase,
   cloudDatabase: SyncPrototypeDatabase,
@@ -237,6 +249,19 @@ export async function synchronizeRealGoals(
   const cloudGoalById = mapById(state.cloudGoals);
   const localMarkerById = mapById(state.localMarkers);
   const cloudMarkerById = mapById(state.cloudMarkers);
+  const cloudGoalRowById = new Map(
+    state.cloudGoalRows.flatMap((row) => {
+      const id = localIdFromCloud(row.id);
+      return id ? [[id, row] as const] : [];
+    }),
+  );
+  const cloudMarkerRowByEntityId = new Map(
+    state.cloudMarkerRows.flatMap((row) => {
+      const marker = fromCloudMarker(row);
+      return marker ? [[marker.entityId, row] as const] : [];
+    }),
+  );
+  const actorId = await resolveSyncActorId(localDatabase);
   const ids = new Set([
     ...localGoalById.keys(),
     ...cloudGoalById.keys(),
@@ -265,55 +290,100 @@ export async function synchronizeRealGoals(
       ...(cloudGoal ? { goal: cloudGoal } : {}),
       ...(cloudMarker ? { marker: cloudMarker } : {}),
     };
-    const resolved = resolveState(localState, cloudState);
+    const resolution = await resolveDatabaseLogicalSyncState({
+      cloudDatabase,
+      accountUserId: currentUserId,
+      domainId: 'goals',
+      entityId: id,
+      actorId,
+      localValue: localState,
+      cloudValue: cloudState,
+      cloudStamp: maximumLogicalSyncStamp([
+        cloudGoalRowById.get(id),
+        cloudMarkerRowByEntityId.get(id),
+      ]),
+      legacyResolve: resolveState,
+    });
+    const resolved = resolution.value;
+    let localStateUnchanged = true;
 
     if (resolved.goal) {
       if (!sameEntity(localState.goal, resolved.goal)) {
-        await localDatabase.goals.put(resolved.goal);
-        downloadedGoals += 1;
-      }
-      if (
-        writeCloud &&
-        await upsertCloud(
-          cloudDatabase.realGoals as Table<Goal, string>,
-          cloudState.goal,
+        const applied = await putLocalIfUnchanged(
+          localDatabase,
+          localDatabase.goals,
+          id,
+          localState.goal,
           resolved.goal,
-          (value) => toCloudGoal(value) as Goal,
-        )
-      ) {
-        uploadedGoals += 1;
+        );
+        if (applied) downloadedGoals += 1;
+        else localStateUnchanged = false;
       }
     } else {
       if (localState.goal) {
-        await localDatabase.goals.delete(id);
-        removedLocalGoals += 1;
-      }
-      if (writeCloud && cloudState.goal) {
-        await cloudDatabase.realGoals.delete(cloudPrivateId(id));
-        removedCloudGoals += 1;
+        const applied = await deleteLocalIfUnchanged(
+          localDatabase,
+          localDatabase.goals,
+          id,
+          localState.goal,
+        );
+        if (applied) removedLocalGoals += 1;
+        else localStateUnchanged = false;
       }
     }
 
     if (resolved.marker) {
       if (!sameEntity(localState.marker, resolved.marker)) {
-        await localDatabase.deletionRecords.put(resolved.marker);
-        downloadedDeletionRecords += 1;
-      }
-      if (
-        writeCloud &&
-        await upsertCloud(
-          cloudDatabase.realGoalDeletionRecords as Table<
-            DeletionRecord,
-            string
-          >,
-          cloudState.marker,
+        const applied = await putLocalIfUnchanged(
+          localDatabase,
+          localDatabase.deletionRecords,
+          markerId,
+          localState.marker,
           resolved.marker,
-          (value) => toCloudMarker(value) as DeletionRecord,
-        )
-      ) {
-        uploadedDeletionRecords += 1;
+        );
+        if (applied) downloadedDeletionRecords += 1;
+        else localStateUnchanged = false;
       }
     }
+
+    if (!localStateUnchanged || !writeCloud) continue;
+
+    if (resolved.goal) {
+      if (
+        await upsertLogicalCloudValue(
+          cloudDatabase.realGoals as Table<Goal, string>,
+          cloudState.goal,
+          cloudGoalRowById.get(id),
+          resolved.goal,
+          resolution.stamp,
+          (value) => toCloudGoal(value) as Goal,
+        )
+      ) {
+        uploadedGoals += 1;
+      }
+    } else if (cloudState.goal) {
+      await cloudDatabase.realGoals.delete(cloudPrivateId(id));
+      removedCloudGoals += 1;
+    }
+
+    if (
+      resolved.marker
+      && await upsertLogicalCloudValue(
+        cloudDatabase.realGoalDeletionRecords as Table<
+          DeletionRecord,
+          string
+        >,
+        cloudState.marker,
+        cloudMarkerRowByEntityId.get(id),
+        resolved.marker,
+        resolution.stamp,
+        (value) => toCloudMarker(value) as DeletionRecord,
+      )
+    ) {
+      uploadedDeletionRecords += 1;
+    }
+
+    await persistLogicalSyncBaseline(cloudDatabase, resolution.baseline);
   }
 
   return {

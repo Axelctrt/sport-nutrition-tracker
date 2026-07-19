@@ -12,8 +12,8 @@ test('ajoute une course et recharge directement le journal', async ({ page }) =>
   await page.getByRole('button', { name: 'Ajouter l’activité' }).click();
 
   await expect(page.getByRole('heading', { name: 'Sport' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Footing' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Footing', level: 3 }).first()).toBeVisible();
 
   await page.reload({ waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('heading', { name: 'Footing' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Footing', level: 3 }).first()).toBeVisible();
 });

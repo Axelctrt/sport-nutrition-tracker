@@ -13,7 +13,7 @@ import {
 describe('readiness identités cloud 0.28.0 F2', () => {
   it('ajoute les collections cloud nécessaires aux identités et réservations exactes', () => {
     expect(SOCIAL_CLOUD_IDENTITY_CONTRACT_VERSION).toBe('0.28.0-f2');
-    expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(14);
+    expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(15);
     expect(SYNC_PROTOTYPE_TABLE_NAMES).toEqual(
       expect.arrayContaining([
         'socialIdentities',

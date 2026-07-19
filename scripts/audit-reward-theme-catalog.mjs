@@ -24,6 +24,7 @@ const panel = read("src/features/settings/components/RewardThemesPanel.tsx");
 const css = read("src/styles/unlockableThemes.css");
 const desktopSidebar = read("src/app/layouts/DesktopSidebar.tsx");
 const goalCard = read("src/features/goals/components/GoalCard.tsx");
+const goalValueFormatter = read("src/features/goals/utils/formatGoalValue.ts");
 const productionAudit = read("scripts/audit-rc.mjs");
 const automaticSyncReleaseAudit = read(
   "scripts/audit-automatic-sync-release.mjs",
@@ -323,7 +324,7 @@ for (const accessibleTheme of [
   "nuit-polaire",
 ]) {
   const themeRulePattern = new RegExp(
-    `html\\[data-sport-theme=\"${accessibleTheme}\"\\][\\s\\S]*?--sport-reward-vignette:[\\s\\S]*?--sport-reward-foreground:`,
+    `html\\[data-sport-theme="${accessibleTheme}"\\][\\s\\S]*?--sport-reward-vignette:[\\s\\S]*?--sport-reward-foreground:`,
     "m",
   );
   if (!themeRulePattern.test(css)) {
@@ -340,7 +341,7 @@ if (!read("src/app/layouts/AppLayout.tsx").includes("sport-theme-app")) {
 
 if (
   !goalCard.includes("formatGoalValue") ||
-  !goalCard.includes("unit === 'km' ? 1 : 2")
+  !goalValueFormatter.includes("unit === 'km' ? 1 : 2")
 ) {
   fail(
     "les objectifs doivent arrondir les distances en kilomètres à une décimale.",

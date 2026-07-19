@@ -19,6 +19,7 @@ import { useActionToast } from "@/shared/toast/useActionToast";
 
 interface SelectiveDataResetPanelProps {
   className?: string;
+  isAccountSpace?: boolean;
   loadPreview?: (
     categories: readonly SelectiveDataResetCategory[],
   ) => Promise<SelectiveDataResetPreview>;
@@ -54,6 +55,7 @@ function formatDeletionResult(count: number): string {
 
 export function SelectiveDataResetPanel({
   className,
+  isAccountSpace = false,
   loadPreview = getSelectiveDataResetPreview,
   resetData = resetSelectedData,
   createSafetyBackup = createAndDownloadSafetyBackup,
@@ -208,6 +210,18 @@ export function SelectiveDataResetPanel({
               diagnostics techniques ne sont jamais supprimés ici.
             </InlineNotice>
 
+            {isAccountSpace ? (
+              <InlineNotice
+                className="mt-4"
+                title="Compte synchronisé"
+                tone="warning"
+              >
+                La suppression ciblée est désactivée pour éviter que les
+                données reviennent depuis le cloud. Utilise « Compte et
+                appareils » pour retirer proprement les données de cet appareil.
+              </InlineNotice>
+            ) : null}
+
             <fieldset className="mt-4 space-y-3">
               <legend className="text-sm font-semibold text-slate-950 dark:text-white">
                 Données à effacer
@@ -221,6 +235,7 @@ export function SelectiveDataResetPanel({
                     type="checkbox"
                     className="mt-1 size-4 shrink-0 accent-brand-700"
                     checked={selectedCategories.includes(category.name)}
+                    disabled={isAccountSpace}
                     onChange={() => toggleCategory(category.name)}
                   />
                   <span className="min-w-0">
@@ -268,7 +283,7 @@ export function SelectiveDataResetPanel({
             <div className="mt-4 flex justify-end">
               <Button
                 variant="danger"
-                disabled={isPreparing || isResetting}
+                disabled={isAccountSpace || isPreparing || isResetting}
                 onClick={() => void prepareReset()}
               >
                 {isPreparing

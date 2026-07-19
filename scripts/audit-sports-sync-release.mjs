@@ -34,7 +34,7 @@ for (const path of [
 
 const cloudDatabase = read('src/infrastructure/sync-prototype/SyncPrototypeDatabase.ts');
 for (const expected of [
-  'SYNC_PROTOTYPE_DATABASE_VERSION = 14',
+  'SYNC_PROTOTYPE_DATABASE_VERSION = 15',
   'sportpilot-sync-runtime-0.20.0-v${SYNC_PROTOTYPE_DATABASE_VERSION}',
   'disableEagerSync: true',
   'realWeights',
@@ -97,9 +97,11 @@ for (const [label, path] of services) {
 
 const strength = read('src/infrastructure/sync-prototype/realStrengthSyncService.ts');
 for (const expected of [
-  'applyTemplateAggregate',
-  'applySessionAggregate',
-  'database.transaction',
+  'resolveStrengthLogicalState',
+  'sameLocalCollection',
+  'localDatabase.transaction',
+  'upsertLogicalCloudValue',
+  'persistLogicalSyncBaseline',
   "marker.entityType === 'strengthSet'",
   "marker.entityType === 'workoutSessionExercise'",
 ]) {
@@ -147,6 +149,6 @@ if (failures.length > 0) {
   process.exitCode = 1;
 } else {
   console.log(
-    'Audit du socle sportif réussi : quatre domaines synchronisés, convergence commune, suppressions durables, agrégats de musculation atomiques et runtime cloud v14 validés.',
+    'Audit du socle sportif réussi : quatre domaines synchronisés, convergence commune, suppressions durables, agrégats de musculation atomiques et runtime cloud v15 validés.',
   );
 }

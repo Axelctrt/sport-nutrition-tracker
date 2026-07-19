@@ -39,6 +39,7 @@ function renderActions(overrides?: Partial<React.ComponentProps<typeof Dashboard
     stepsEntry,
     weightKg: 60.2,
     weightEntry,
+    currentHour: 15,
     onSaveWeight: vi.fn().mockResolvedValue(undefined),
     onSaveSteps: vi.fn().mockResolvedValue(undefined),
     ...overrides,
@@ -72,6 +73,19 @@ describe('DashboardQuickActions', () => {
     expect(screen.getByRole('link', { name: 'Démarrer une séance' })).toHaveAttribute(
       'href',
       '/strength/sessions',
+    );
+  });
+
+  it('préclasse les aliments selon le moment de la journée', () => {
+    renderActions({ currentHour: 12 });
+
+    expect(screen.getByRole('link', { name: 'Ajouter un aliment' })).toHaveAttribute(
+      'href',
+      '/food/add?date=2026-06-25&slot=lunch',
+    );
+    expect(screen.getByRole('link', { name: 'Scanner un produit' })).toHaveAttribute(
+      'href',
+      '/food/barcode-scanner?date=2026-06-25&slot=lunch',
     );
   });
 

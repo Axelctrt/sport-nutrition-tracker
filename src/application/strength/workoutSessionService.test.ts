@@ -154,6 +154,49 @@ describe('workoutSessionService', () => {
     expect(await sessionRepository.getInProgress()).toBeUndefined();
   });
 
+  it('exige une confirmation explicite pour une séance ouverte depuis plus de 6 heures', async () => {
+    const started = await startEmptyWorkoutSession(
+      sessionRepository,
+      new Date('2026-06-25T08:00:00.000Z'),
+    );
+    await addExerciseToWorkoutSession(
+      sessionRepository,
+      exerciseRepository,
+      started.session.id,
+      'exercise-bench',
+    );
+
+    await expect(
+      completeWorkoutSession(
+        sessionRepository,
+        started.session.id,
+        new Date('2026-06-25T15:00:00.000Z'),
+      ),
+    ).rejects.toThrow('plus de 6 heures');
+
+    const completed = await completeWorkoutSession(
+      sessionRepository,
+      started.session.id,
+      new Date('2026-06-25T15:00:00.000Z'),
+      { allowLongDuration: true },
+    );
+    expect(completed.durationMinutes).toBe(420);
+  });
+
+  it('borne la durée d’une séance abandonnée oubliée', async () => {
+    const started = await startEmptyWorkoutSession(
+      sessionRepository,
+      new Date('2026-06-25T08:00:00.000Z'),
+    );
+    const abandoned = await abandonWorkoutSession(
+      sessionRepository,
+      started.session.id,
+      new Date('2026-06-26T08:00:00.000Z'),
+    );
+
+    expect(abandoned.durationMinutes).toBe(360);
+  });
+
   it('conserve une séance abandonnée dans l’historique', async () => {
     const started = await startEmptyWorkoutSession(sessionRepository, new Date('2026-06-25T17:00:00.000Z'));
     const abandoned = await abandonWorkoutSession(

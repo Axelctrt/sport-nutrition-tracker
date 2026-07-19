@@ -127,14 +127,6 @@ function sanitizeIsoDateTime(value, fallback) {
     : fallback;
 }
 
-function socialIdentityRecordId(userId) {
-  return `social-identity:${userId.replace(/[^a-z0-9._:-]/gu, '').toLowerCase()}`;
-}
-
-function socialHandleReservationId(handle) {
-  return `social-handle:${handle}`;
-}
-
 function canonicalFriendshipId(userAId, userBId) {
   const [first, second] = userAId < userBId
     ? [userAId, userBId]
@@ -233,61 +225,6 @@ function canonicalizeSnapshotRow(row, canonicalUserId, legacyIds) {
   };
 }
 
-function privateEntityValue(payload) {
-  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return undefined;
-  if (payload.data && typeof payload.data === 'object' && !Array.isArray(payload.data)) {
-    return payload.data;
-  }
-  if (payload.value && typeof payload.value === 'object' && !Array.isArray(payload.value)) {
-    return payload.value;
-  }
-  return payload;
-}
-
-async function readPrivateEntity(databaseUrl, token, tableName, entityId, fetcher) {
-  let response;
-  try {
-    response = await fetcher(
-      `${databaseUrl}/my/${tableName}/${encodeURIComponent(entityId)}`,
-      {
-        method: 'GET',
-        headers: {
-          accept: 'application/json',
-          authorization: `Bearer ${token}`,
-        },
-      },
-    );
-  } catch {
-    throw new SocialIdentityReconciliationError(
-      503,
-      'SOCIAL_IDENTITY_RECONCILIATION_AUTH_UNAVAILABLE',
-      'Vérification de l’ancienne identité cloud indisponible.',
-    );
-  }
-
-  if (response.status === 404) return undefined;
-  if (response.status === 401 || response.status === 403) {
-    throw new SocialIdentityReconciliationError(
-      401,
-      'SOCIAL_IDENTITY_RECONCILIATION_AUTH_INVALID',
-      'Session SportPilot invalide ou expirée.',
-    );
-  }
-  if (!response.ok) {
-    throw new SocialIdentityReconciliationError(
-      503,
-      'SOCIAL_IDENTITY_RECONCILIATION_AUTH_UNAVAILABLE',
-      'Vérification de l’ancienne identité cloud indisponible.',
-    );
-  }
-
-  try {
-    return privateEntityValue(await response.json());
-  } catch {
-    return undefined;
-  }
-}
-
 async function readJsonBody(request) {
   const contentLength = Number(request.headers.get('content-length') ?? 0);
   if (Number.isFinite(contentLength) && contentLength > MAX_JSON_BYTES) {
@@ -368,50 +305,13 @@ async function readDirectoryByOwner(database, ownerUserId) {
 async function discoverLegacyUserIds({
   database,
   canonicalUserId,
-  previousUserId,
   handle,
-  databaseUrl,
-  token,
-  fetcher,
 }) {
   const legacyIds = new Set();
-  const reservation = await readPrivateEntity(
-    databaseUrl,
-    token,
-    'socialHandleReservations',
-    socialHandleReservationId(handle),
-    fetcher,
-  );
-  if (
-    reservation
-    && reservation.handle === handle
-    && typeof reservation.ownerUserId === 'string'
-    && reservation.ownerUserId !== canonicalUserId
-  ) {
-    legacyIds.add(reservation.ownerUserId);
-  }
-
-  const privateIdentity = await readPrivateEntity(
-    databaseUrl,
-    token,
-    'socialIdentities',
-    socialIdentityRecordId(previousUserId),
-    fetcher,
-  );
-  if (
-    privateIdentity
-    && privateIdentity.userId === previousUserId
-    && privateIdentity.handle === handle
-    && previousUserId !== canonicalUserId
-  ) {
-    legacyIds.add(previousUserId);
-  }
-
   const existingHandle = await readDirectoryByHandle(database, handle);
   if (
     existingHandle
     && existingHandle.owner_user_id !== canonicalUserId
-    && !legacyIds.has(existingHandle.owner_user_id)
   ) {
     throw new SocialIdentityReconciliationError(
       409,
@@ -420,15 +320,6 @@ async function discoverLegacyUserIds({
     );
   }
 
-  if (
-    previousUserId !== canonicalUserId
-    && /^(?:social-user:|sp-)/u.test(previousUserId)
-    && existingHandle?.owner_user_id === previousUserId
-  ) {
-    legacyIds.add(previousUserId);
-  }
-
-  legacyIds.delete(canonicalUserId);
   return { legacyIds, existingHandle };
 }
 
@@ -684,24 +575,18 @@ async function migrateDirectory(database, canonicalUserId, legacyIds, profile, t
   ).run();
 }
 
-async function reconcileIdentity(database, actor, input, env, fetcher) {
+async function reconcileIdentity(database, actor, input) {
   await assertRequiredSchema(database);
   const canonicalUserId = sanitizeUserId(actor.subject, 'canonicalUserId');
   const previousUserId = sanitizeUserId(input?.previousUserId, 'previousUserId');
   const requestedHandle = normalizeHandle(input?.handle);
   const requestedDisplayName = sanitizeDisplayName(input?.displayName);
   const timestamp = new Date().toISOString();
-  const databaseUrl = new URL(String(env.DEXIE_CLOUD_DATABASE_URL)).origin;
-
   const canonicalDirectory = await readDirectoryByOwner(database, canonicalUserId);
   const { legacyIds, existingHandle } = await discoverLegacyUserIds({
     database,
     canonicalUserId,
-    previousUserId,
     handle: requestedHandle,
-    databaseUrl,
-    token: actor.token,
-    fetcher,
   });
 
   const sourceProfile = canonicalDirectory ?? existingHandle;
@@ -785,8 +670,6 @@ export async function handleSocialIdentityReconciliationRequest(
       database,
       actor,
       input,
-      env,
-      context.fetcher ?? fetch,
     );
     return jsonResponse(200, result);
   } catch (error) {

@@ -293,7 +293,7 @@ export function PhotoNutritionEstimatePage({
                     <p className="font-semibold text-slate-950 dark:text-white">Autoriser l’analyse IA pour cette photo</p>
                     <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
                       {aiConfig.enabled
-                        ? 'La photo sera envoyée une seule fois au proxy sécurisé, uniquement après activation de cet interrupteur.'
+                        ? 'Après activation, la photo sera transmise une fois par le proxy SportPilot à Google Gemini pour estimer le repas. Une connexion SportPilot est requise et les valeurs devront être vérifiées.'
                         : 'Le proxy distant est indisponible. L’analyse restera locale et aucune photo ne sera envoyée.'}
                     </p>
                   </div>
@@ -322,7 +322,7 @@ export function PhotoNutritionEstimatePage({
                   )}
                 </div>
                 <ContextHelp className="mt-3" question="Pourquoi demander cette autorisation ?" tone="brand">
-                  La photo peut contenir des informations personnelles. SportPilot ne l’envoie jamais automatiquement : ton accord vaut uniquement pour la photo sélectionnée et doit être redonné pour une nouvelle analyse.
+                  La photo peut contenir des informations personnelles. SportPilot ne l’envoie jamais automatiquement : ton accord vaut uniquement pour la photo sélectionnée, doit être redonné pour une nouvelle analyse et autorise son traitement par Google Gemini.
                 </ContextHelp>
               </div>
             </div>

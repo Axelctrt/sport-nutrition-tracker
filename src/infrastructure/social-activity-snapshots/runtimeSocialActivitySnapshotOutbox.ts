@@ -8,3 +8,13 @@ export const runtimeSocialActivitySnapshotOutboxRepository =
   new DexieSocialActivitySnapshotOutboxRepository(
     runtimeSocialActivitySnapshotOutboxDatabase,
   );
+
+export async function purgeRuntimeSocialActivitySnapshotOutbox(
+  ownerUserId: string,
+): Promise<number> {
+  if (!ownerUserId.trim()) return 0;
+  return runtimeSocialActivitySnapshotOutboxDatabase.records
+    .where('ownerUserId')
+    .equals(ownerUserId)
+    .delete();
+}

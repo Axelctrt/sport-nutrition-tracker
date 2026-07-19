@@ -36,7 +36,7 @@ const mainVersions = read(
 );
 
 for (const expected of [
-  'SYNC_PROTOTYPE_DATABASE_VERSION = 14',
+  'SYNC_PROTOTYPE_DATABASE_VERSION = 15',
   'sportpilot-sync-runtime-0.20.0-v${SYNC_PROTOTYPE_DATABASE_VERSION}',
 ]) {
   if (!cloudDatabase.includes(expected)) {
@@ -67,9 +67,11 @@ for (const expected of ['owner', 'realmId', '$ts', '_hasBlobRefs']) {
 for (const expected of [
   'previewRealStrengthSync',
   'synchronizeRealStrength',
-  'applyTemplateAggregate',
-  'applySessionAggregate',
-  'database.transaction',
+  'resolveStrengthLogicalState',
+  'sameLocalCollection',
+  'localDatabase.transaction',
+  'upsertLogicalCloudValue',
+  'persistLogicalSyncBaseline',
   "marker.entityType === 'strengthSet'",
   "marker.entityType === 'workoutSessionExercise'",
   "exercise.source === 'user'",

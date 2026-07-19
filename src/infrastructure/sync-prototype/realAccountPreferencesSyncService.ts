@@ -35,6 +35,16 @@ import {
 } from '@/infrastructure/sync-prototype/cloudSyncValue';
 import { notifyAccountPreferencesChanged } from '@/infrastructure/sync-prototype/accountPreferencesSyncEvents';
 import { notifySocialActivityPrivacyChanged } from '@/infrastructure/sync-prototype/socialActivityPrivacySyncEvents';
+import { putLocalIfUnchanged } from '@/infrastructure/sync-prototype/localSyncCompareAndSwap';
+import {
+  logicalSyncStamp,
+  persistLogicalSyncBaseline,
+  resolveDatabaseLogicalSyncState,
+  resolveSyncActorId,
+  stripLogicalSyncFields,
+  upsertLogicalCloudValue,
+  type LogicalSyncFields,
+} from '@/infrastructure/sync-prototype/logicalSyncState';
 
 export const ACCOUNT_PREFERENCES_AGGREGATE_ID = 'account-preferences';
 export const SOCIAL_PROFILE_VISIBILITY_PREFERENCES_ID =
@@ -73,7 +83,7 @@ type CloudAccountPreferencesAggregate = Omit<
   'id'
 > & {
   readonly id: string;
-};
+} & LogicalSyncFields;
 
 export interface RealAccountPreferencesSyncPreview {
   readonly localProfilePresent: boolean;
@@ -95,6 +105,7 @@ export interface RealAccountPreferencesSyncResult
 interface AccountPreferencesState {
   readonly local: AccountPreferencesAggregate;
   readonly cloud?: AccountPreferencesAggregate;
+  readonly cloudRow?: CloudAccountPreferencesAggregate;
 }
 
 function maxTimestamp(...values: readonly (string | undefined)[]): string {
@@ -223,7 +234,7 @@ function fromCloudAggregate(
   const id = localIdFromCloud(aggregate.id);
   if (id !== ACCOUNT_PREFERENCES_AGGREGATE_ID) return undefined;
   const value = {
-    ...stripCloudFields(aggregate),
+    ...stripLogicalSyncFields(stripCloudFields(aggregate)),
     id,
   } as AccountPreferencesAggregate;
   validateAggregate(value);
@@ -337,8 +348,9 @@ async function readState(
   const settings = createSyncedUserSettingsSnapshot(
     storedSettings ?? createDefaultUserSettings(),
   );
-  const cloudValues = cloudRows
-    .filter((row) => belongsToCurrentUser(row, currentUserId))
+  const cloudValueRows = cloudRows
+    .filter((row) => belongsToCurrentUser(row, currentUserId));
+  const cloudValues = cloudValueRows
     .map(fromCloudAggregate)
     .filter((row): row is AccountPreferencesAggregate => row !== undefined);
 
@@ -354,6 +366,9 @@ async function readState(
       socialActivitySharingFromStored(storedPrivacy),
     ),
     ...(cloudValues[0] ? { cloud: cloudValues[0] } : {}),
+    ...(cloudValueRows[0]
+      ? { cloudRow: cloudValueRows[0] as CloudAccountPreferencesAggregate }
+      : {}),
   };
 }
 
@@ -368,73 +383,103 @@ export async function previewRealAccountPreferencesSync(
 
 async function applySettingsToLocal(
   localDatabase: AppDatabase,
+  expected: SyncedUserSettings,
   target: SyncedUserSettings,
-): Promise<void> {
-  const current = normalizeUserSettings(
-    (await localDatabase.userSettings.get(USER_SETTINGS_ID))
-      ?? createDefaultUserSettings(),
-  );
-  const next = normalizeUserSettings({
-    ...target,
-    id: USER_SETTINGS_ID,
-    createdAt: target.createdAt,
-    updatedAt: maxTimestamp(current.updatedAt, target.updatedAt),
-    syncableUpdatedAt: target.updatedAt,
-    routineReminderPreferences: current.routineReminderPreferences!,
-    ...(current.routineReminderUpdatedAt
-      ? { routineReminderUpdatedAt: current.routineReminderUpdatedAt }
-      : {}),
+): Promise<boolean> {
+  return localDatabase.transaction('rw', localDatabase.userSettings, async () => {
+    const current = normalizeUserSettings(
+      (await localDatabase.userSettings.get(USER_SETTINGS_ID))
+        ?? createDefaultUserSettings(),
+    );
+    if (!sameEntity(createSyncedUserSettingsSnapshot(current), expected)) {
+      return false;
+    }
+    const next = normalizeUserSettings({
+      ...target,
+      id: USER_SETTINGS_ID,
+      createdAt: target.createdAt,
+      updatedAt: maxTimestamp(current.updatedAt, target.updatedAt),
+      syncableUpdatedAt: target.updatedAt,
+      routineReminderPreferences: current.routineReminderPreferences!,
+      ...(current.routineReminderUpdatedAt
+        ? { routineReminderUpdatedAt: current.routineReminderUpdatedAt }
+        : {}),
+    });
+    await localDatabase.userSettings.put(next);
+    return true;
   });
-  await localDatabase.userSettings.put(next);
 }
 
 async function applySocialPrivacyToLocal(
   localDatabase: AppDatabase,
+  expected: {
+    readonly socialProfileVisibility?: SyncedSocialProfileVisibility;
+    readonly socialActivitySharing?: SyncedSocialActivitySharingPreferences;
+  },
   input: {
     readonly socialProfileVisibility?: SyncedSocialProfileVisibility;
     readonly socialActivitySharing?: SyncedSocialActivitySharingPreferences;
   },
-): Promise<void> {
-  const current = await localDatabase.friendsPrivacySettings.get(
-    FRIENDS_PRIVACY_SETTINGS_ID,
+): Promise<boolean> {
+  return localDatabase.transaction(
+    'rw',
+    localDatabase.friendsPrivacySettings,
+    async () => {
+      const current = await localDatabase.friendsPrivacySettings.get(
+        FRIENDS_PRIVACY_SETTINGS_ID,
+      );
+      if (
+        !sameEntity(
+          socialProfileVisibilityFromStored(current),
+          expected.socialProfileVisibility,
+        )
+        || !sameEntity(
+          socialActivitySharingFromStored(current),
+          expected.socialActivitySharing,
+        )
+      ) {
+        return false;
+      }
+      const firstTimestamp = maxTimestamp(
+        input.socialProfileVisibility?.updatedAt,
+        input.socialActivitySharing?.updatedAt,
+      );
+      const base: StoredFriendsPrivacySettings = current ?? {
+        id: FRIENDS_PRIVACY_SETTINGS_ID,
+        ...DEFAULT_FRIENDS_PRIVACY_SETTINGS,
+        createdAt: firstTimestamp,
+        updatedAt: firstTimestamp,
+      };
+      const policy = input.socialActivitySharing?.policy
+        ?? base.socialActivitySharingPolicy
+        ?? socialActivityGlobalPolicyFromLegacyPrivacy(base);
+      const next: StoredFriendsPrivacySettings = {
+        ...base,
+        ...(input.socialProfileVisibility
+          ? {
+              profileVisibility: input.socialProfileVisibility.visibility,
+              profileVisibilityUpdatedAt:
+                input.socialProfileVisibility.updatedAt,
+            }
+          : {}),
+        ...(input.socialActivitySharing
+          ? {
+              activitySharing: legacyFriendActivitySharingForPolicy(policy),
+              socialActivitySharingPolicy: policy,
+              socialActivitySharingPolicyUpdatedAt:
+                input.socialActivitySharing.updatedAt,
+            }
+          : {}),
+        updatedAt: maxTimestamp(
+          base.updatedAt,
+          input.socialProfileVisibility?.updatedAt,
+          input.socialActivitySharing?.updatedAt,
+        ),
+      };
+      await localDatabase.friendsPrivacySettings.put(next);
+      return true;
+    },
   );
-  const firstTimestamp = maxTimestamp(
-    input.socialProfileVisibility?.updatedAt,
-    input.socialActivitySharing?.updatedAt,
-  );
-  const base: StoredFriendsPrivacySettings = current ?? {
-    id: FRIENDS_PRIVACY_SETTINGS_ID,
-    ...DEFAULT_FRIENDS_PRIVACY_SETTINGS,
-    createdAt: firstTimestamp,
-    updatedAt: firstTimestamp,
-  };
-  const policy = input.socialActivitySharing?.policy
-    ?? base.socialActivitySharingPolicy
-    ?? socialActivityGlobalPolicyFromLegacyPrivacy(base);
-  const next: StoredFriendsPrivacySettings = {
-    ...base,
-    ...(input.socialProfileVisibility
-      ? {
-          profileVisibility: input.socialProfileVisibility.visibility,
-          profileVisibilityUpdatedAt:
-            input.socialProfileVisibility.updatedAt,
-        }
-      : {}),
-    ...(input.socialActivitySharing
-      ? {
-          activitySharing: legacyFriendActivitySharingForPolicy(policy),
-          socialActivitySharingPolicy: policy,
-          socialActivitySharingPolicyUpdatedAt:
-            input.socialActivitySharing.updatedAt,
-        }
-      : {}),
-    updatedAt: maxTimestamp(
-      base.updatedAt,
-      input.socialProfileVisibility?.updatedAt,
-      input.socialActivitySharing?.updatedAt,
-    ),
-  };
-  await localDatabase.friendsPrivacySettings.put(next);
 }
 
 export async function synchronizeRealAccountPreferences(
@@ -445,7 +490,20 @@ export async function synchronizeRealAccountPreferences(
 ): Promise<RealAccountPreferencesSyncResult> {
   const writeCloud = options.writeCloud !== false;
   const state = await readState(localDatabase, cloudDatabase, currentUserId);
-  const final = resolveFinalState(state.local, state.cloud);
+  const actorId = await resolveSyncActorId(localDatabase);
+  const resolution = await resolveDatabaseLogicalSyncState({
+    cloudDatabase,
+    accountUserId: currentUserId,
+    domainId: 'account-preferences',
+    entityId: ACCOUNT_PREFERENCES_AGGREGATE_ID,
+    actorId,
+    localValue: state.local,
+    cloudValue: state.cloud ?? state.local,
+    cloudStamp: logicalSyncStamp(state.cloudRow),
+    legacyResolve: (local, cloud) => resolveFinalState(local, cloud),
+    concurrentResolve: (local, cloud) => resolveFinalState(local, cloud),
+  });
+  const final = resolution.value;
   const preview = buildPreview(state, final);
 
   const downloadedProfiles = Number(
@@ -463,9 +521,6 @@ export async function synchronizeRealAccountPreferences(
       final.socialActivitySharing,
     ),
   );
-  const downloadedSettings = Number(
-    !sameEntity(state.local.settings, final.settings),
-  ) + downloadedSocialProfileVisibility + downloadedSocialActivitySharing;
   const uploadedProfiles = writeCloud
     ? Number(!sameEntity(state.cloud?.profile, final.profile))
     : 0;
@@ -481,39 +536,88 @@ export async function synchronizeRealAccountPreferences(
       ))
     : 0;
 
+  let appliedProfiles = 0;
+  let appliedSettings = 0;
+  let appliedSocialProfileVisibility = 0;
+  let appliedSocialActivitySharing = 0;
   if (downloadedProfiles > 0 && final.profile) {
-    await localDatabase.userProfile.put(final.profile);
+    const applied = await putLocalIfUnchanged(
+      localDatabase,
+      localDatabase.userProfile,
+      LOCAL_USER_PROFILE_ID,
+      state.local.profile,
+      final.profile,
+    );
+    if (applied) appliedProfiles = 1;
   }
   if (!sameEntity(state.local.settings, final.settings)) {
-    await applySettingsToLocal(localDatabase, final.settings);
+    const applied = await applySettingsToLocal(
+      localDatabase,
+      state.local.settings,
+      final.settings,
+    );
+    if (applied) appliedSettings = 1;
   }
   if (
     downloadedSocialProfileVisibility > 0
     || downloadedSocialActivitySharing > 0
   ) {
-    await applySocialPrivacyToLocal(localDatabase, {
-      ...(downloadedSocialProfileVisibility > 0 && final.socialProfileVisibility
-        ? { socialProfileVisibility: final.socialProfileVisibility }
-        : {}),
-      ...(downloadedSocialActivitySharing > 0 && final.socialActivitySharing
-        ? { socialActivitySharing: final.socialActivitySharing }
-        : {}),
-    });
+    const applied = await applySocialPrivacyToLocal(
+      localDatabase,
+      {
+        ...(state.local.socialProfileVisibility
+          ? { socialProfileVisibility: state.local.socialProfileVisibility }
+          : {}),
+        ...(state.local.socialActivitySharing
+          ? { socialActivitySharing: state.local.socialActivitySharing }
+          : {}),
+      },
+      {
+        ...(downloadedSocialProfileVisibility > 0 && final.socialProfileVisibility
+          ? { socialProfileVisibility: final.socialProfileVisibility }
+          : {}),
+        ...(downloadedSocialActivitySharing > 0 && final.socialActivitySharing
+          ? { socialActivitySharing: final.socialActivitySharing }
+          : {}),
+      },
+    );
+    if (applied) {
+      appliedSocialProfileVisibility = downloadedSocialProfileVisibility;
+      appliedSocialActivitySharing = downloadedSocialActivitySharing;
+    }
   }
 
-  if (
-    writeCloud
-    && (uploadedProfiles > 0 || uploadedSettings > 0)
-  ) {
-    await cloudDatabase.realAccountPreferences.put(toCloudAggregate(final));
+  const localStateApplied =
+    (downloadedProfiles === 0 || appliedProfiles > 0)
+    && (sameEntity(state.local.settings, final.settings) || appliedSettings > 0)
+    && (
+      (downloadedSocialProfileVisibility === 0
+        && downloadedSocialActivitySharing === 0)
+      || appliedSocialProfileVisibility > 0
+      || appliedSocialActivitySharing > 0
+    );
+  if (writeCloud && localStateApplied) {
+    await upsertLogicalCloudValue(
+      cloudDatabase.realAccountPreferences,
+      state.cloud,
+      state.cloudRow,
+      final,
+      resolution.stamp,
+      (value) => toCloudAggregate(value) as AccountPreferencesAggregate,
+    );
+    await persistLogicalSyncBaseline(cloudDatabase, resolution.baseline);
   }
 
-  if (downloadedProfiles > 0 || downloadedSettings > 0) {
+  const appliedDownloadedSettings =
+    appliedSettings
+    + appliedSocialProfileVisibility
+    + appliedSocialActivitySharing;
+  if (appliedProfiles > 0 || appliedDownloadedSettings > 0) {
     notifyAccountPreferencesChanged();
   }
   if (
-    downloadedSocialProfileVisibility > 0
-    || downloadedSocialActivitySharing > 0
+    appliedSocialProfileVisibility > 0
+    || appliedSocialActivitySharing > 0
   ) {
     notifySocialActivityPrivacyChanged();
   }
@@ -521,9 +625,9 @@ export async function synchronizeRealAccountPreferences(
   return {
     ...preview,
     uploadedProfiles,
-    downloadedProfiles,
+    downloadedProfiles: appliedProfiles,
     uploadedSettings,
-    downloadedSettings,
+    downloadedSettings: appliedDownloadedSettings,
     completedAt: new Date().toISOString(),
   };
 }

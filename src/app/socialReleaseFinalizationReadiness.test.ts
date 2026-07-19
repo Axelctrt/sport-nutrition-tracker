@@ -19,7 +19,7 @@ describe('release finalization readiness 0.32.0', () => {
   it('conserve les versions de stockage validées', () => {
     expect(databaseSchemaVersion).toBe(10);
     expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(9);
-    expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(14);
+    expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(15);
     expect(SOCIAL_ACTIVITY_SNAPSHOT_CONTRACT_VERSION).toBe('0.29.0-a3');
   });
 

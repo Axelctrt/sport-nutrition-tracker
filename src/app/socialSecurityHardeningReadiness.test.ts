@@ -43,9 +43,12 @@ describe('social security hardening readiness 0.29.0 A24', () => {
     expect(friendRequestsSource).toContain("handle: 'sportpilot-user'");
   });
 
-  it('requires direct ownership proof before reconciling a legacy identity', () => {
-    expect(reconciliationSource).toContain('privateIdentity.userId === previousUserId');
-    expect(reconciliationSource).toContain('existingHandle?.owner_user_id === previousUserId');
-    expect(reconciliationSource).not.toContain('legacyIds.size > 0 || existingHandle?.owner_user_id === previousUserId');
+  it('refuses client-controlled ownership proof during reconciliation', () => {
+    expect(reconciliationSource).toContain(
+      'SOCIAL_IDENTITY_RECONCILIATION_HANDLE_CONFLICT',
+    );
+    expect(reconciliationSource).not.toContain('socialHandleReservations');
+    expect(reconciliationSource).not.toContain('socialIdentities');
+    expect(reconciliationSource).not.toContain('privateIdentity');
   });
 });

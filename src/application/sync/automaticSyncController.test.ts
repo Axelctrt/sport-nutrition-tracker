@@ -454,7 +454,7 @@ describe('AutomaticSyncController', () => {
     controller.dispose();
   });
 
-  it('ignore les événements locaux émis pendant une synchronisation active', async () => {
+  it('met en file les événements locaux émis pendant une synchronisation active', async () => {
     const eventTarget = new EventTarget();
     const { client } = createClient(createSnapshot({
       realActivities: {
@@ -484,7 +484,12 @@ describe('AutomaticSyncController', () => {
     );
     await flush();
 
-    expect(schedule).not.toHaveBeenCalled();
+    expect(schedule).toHaveBeenCalledWith({
+      operation: 'sync',
+      source: 'local-change',
+      domainIds: ['activities'],
+      delayMs: 0,
+    });
     controller.dispose();
   });
 

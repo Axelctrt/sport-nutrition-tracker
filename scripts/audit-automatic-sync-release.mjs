@@ -43,11 +43,14 @@ if (failures.length === 0) {
     'generation === this.identityGeneration',
     'orchestrator === this.orchestrator',
     'foregroundMinimumIntervalMs',
-    'hasActiveDomainOperation',
   ]) {
     if (!controller.includes(marker)) {
       fail(`garde-fou F4 absent du contrôleur : ${marker}.`);
     }
+  }
+
+  if (controller.includes('hasActiveDomainOperation')) {
+    fail('le controleur ne doit plus perdre une mutation locale pendant une synchronisation active.');
   }
 
   const orchestrator = read('src/application/sync/syncOrchestrator.ts');
@@ -69,7 +72,7 @@ if (failures.length === 0) {
     'borne les analyses répétées au premier plan',
     'reprend une analyse au retour en ligne même après plusieurs jours',
     'conserve une modification immédiate après une restauration cloud',
-    'ignore les événements locaux émis pendant une synchronisation active',
+    'met en file les événements locaux émis pendant une synchronisation active',
     'ignore la fin tardive d’une opération appartenant à l’ancien compte',
   ]) {
     if (!controllerTests.includes(marker)) {
@@ -110,8 +113,8 @@ if (failures.length === 0) {
     fail('la sauvegarde JSON doit rester en v7.');
   }
   const cloud = read('src/infrastructure/sync-prototype/SyncPrototypeDatabase.ts');
-  if (!cloud.includes('SYNC_PROTOTYPE_DATABASE_VERSION = 14')) {
-    fail('le runtime cloud doit passer en v14 pour les amitiés et permissions sociales.');
+  if (!cloud.includes('SYNC_PROTOTYPE_DATABASE_VERSION = 15')) {
+    fail('le runtime cloud doit utiliser la v15 pour les amitiés et permissions sociales.');
   }
   const productionAudit = read('scripts/audit-rc.mjs');
   if (!productionAudit.includes('totalJavaScriptBytes: 3200 * 1024')) {

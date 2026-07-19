@@ -1,6 +1,6 @@
 export const DEFAULT_DATABASE_NAME = 'sportpilot-local-database';
 
-const ACCOUNT_DATABASE_SUFFIX_PATTERN = /^acct-[0-9a-f]{8}$/i;
+const ACCOUNT_DATABASE_SUFFIX_PATTERN = /^acct-(?:[0-9a-f]{8}|[0-9a-f]{32})$/i;
 
 export function accountDatabaseNameForFingerprint(
   accountFingerprint: string,

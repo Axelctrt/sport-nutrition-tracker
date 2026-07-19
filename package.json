@@ -24,6 +24,7 @@
     "test:e2e": "playwright test",
     "test:e2e:chromium": "playwright test --project=chromium-desktop",
     "test:e2e:webkit": "playwright test --project=webkit-iphone-15",
+    "test:e2e:pwa": "playwright test --config=playwright.pwa.config.ts",
     "test:e2e:ui": "playwright test --ui",
     "audit:security": "node scripts/audit-security.mjs",
     "audit:production": "node scripts/audit-rc.mjs --auto",

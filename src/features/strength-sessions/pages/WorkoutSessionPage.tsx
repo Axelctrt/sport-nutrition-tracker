@@ -6,7 +6,10 @@ import {
   buildWorkoutSessionProgress,
   type WorkoutSessionProgress,
 } from '@/application/strength/workoutSessionProgress';
-import { getWorkoutSessionTitle } from '@/application/strength/workoutSessionService';
+import {
+  getWorkoutSessionTitle,
+  LONG_WORKOUT_DURATION_MINUTES,
+} from '@/application/strength/workoutSessionService';
 import { routePaths } from '@/app/routePaths';
 import type { StrengthSetChanges } from '@/application/strength/strengthSetService';
 import type { StrengthSet, WorkoutSessionExercise } from '@/domain/models/strength';
@@ -43,7 +46,11 @@ interface DeleteSetConfirmation {
   setId: string;
 }
 
-type ConfirmationRequest = RemoveExerciseConfirmation | DeleteSetConfirmation | { type: 'finish' } | { type: 'abandon' };
+type ConfirmationRequest =
+  | RemoveExerciseConfirmation
+  | DeleteSetConfirmation
+  | { type: 'finish'; allowLongDuration?: boolean }
+  | { type: 'abandon' };
 
 function revealElement(id: string): void {
   const reveal = () => document.getElementById(id)?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
@@ -67,7 +74,9 @@ function confirmationContent(
         : `Il reste ${progress.incompleteExerciseCount} exercice${progress.incompleteExerciseCount > 1 ? 's' : ''} sans série validée.`;
     return {
       title: 'Terminer la séance ?',
-      description: `${remainingDescription} La séance passera dans l’historique et ne pourra plus être modifiée.`,
+      description: request.allowLongDuration
+        ? `${remainingDescription} Cette séance est ouverte depuis plus de 6 heures. Confirme que cette durée est correcte avant de l’enregistrer dans l’historique.`
+        : `${remainingDescription} La séance passera dans l’historique et ne pourra plus être modifiée.`,
       confirmLabel: 'Terminer la séance',
       tone: 'default' as const,
     };
@@ -330,7 +339,10 @@ export function WorkoutSessionPage() {
     setIsConfirming(true);
     try {
       if (confirmation.type === 'finish') {
-        const completed = await complete();
+        const completed = await complete(
+          undefined,
+          confirmation.allowLongDuration,
+        );
         if (completed) {
           restTimer.stop();
           await navigate(routePaths.workoutSessions);
@@ -391,6 +403,14 @@ export function WorkoutSessionPage() {
   }
 
   const editable = session.status === 'inProgress';
+  const sessionElapsedMinutes = session.startedAt
+    ? Math.max(
+        0,
+        Math.round(
+          (Date.now() - new Date(session.startedAt).getTime()) / 60_000,
+        ),
+      )
+    : 0;
   const dialogContent = confirmationContent(confirmation, progress);
 
   return (
@@ -441,7 +461,12 @@ export function WorkoutSessionPage() {
           session={session}
           saveStatus={saveStatus}
           isPending={Boolean(action) || isConfirming}
-          onFinish={() => setConfirmation({ type: 'finish' })}
+          onFinish={() => setConfirmation({
+            type: 'finish',
+            ...(sessionElapsedMinutes > LONG_WORKOUT_DURATION_MINUTES
+              ? { allowLongDuration: true }
+              : {}),
+          })}
           onAbandon={() => setConfirmation({ type: 'abandon' })}
           hasRestTimer={restTimer.isVisible}
           progressLabel={progress.totalSetCount > 0

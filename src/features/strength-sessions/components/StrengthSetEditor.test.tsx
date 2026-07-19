@@ -48,11 +48,16 @@ function renderEditor(overrides: { editable?: boolean } = {}) {
 }
 
 describe('StrengthSetEditor', () => {
-  it('affiche une série validée sous forme de ligne compacte directement éditable', () => {
+  it('affiche une série validée sous forme de résumé compact modifiable à la demande', async () => {
+    const user = userEvent.setup();
     renderEditor();
 
     expect(screen.getByText('1/3 lignes · 1 validée')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Série 1' })).toBeInTheDocument();
+    expect(screen.getByText('12 reps · 60 kg · RPE 8')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Charge en kg')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Modifier la série 1' }));
     expect(screen.getByLabelText('Charge en kg')).toHaveValue(60);
     expect(screen.getByLabelText('Charge en kg')).toHaveAttribute('data-clear-on-focus', 'true');
     expect(screen.getByLabelText('Répétitions')).toHaveValue(12);
@@ -66,6 +71,7 @@ describe('StrengthSetEditor', () => {
     const user = userEvent.setup();
     const callbacks = renderEditor();
 
+    await user.click(screen.getByRole('button', { name: 'Modifier la série 1' }));
     await user.click(screen.getByRole('button', { name: 'Rouvrir la série' }));
     expect(callbacks.onCompletion).toHaveBeenCalledWith(
       'bench',

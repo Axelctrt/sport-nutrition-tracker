@@ -8,6 +8,10 @@ import {
 import type { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import type { SyncPrototypeDatabase } from '@/infrastructure/sync-prototype/SyncPrototypeDatabase';
 import {
+  deleteLocalIfUnchanged,
+  putLocalIfUnchanged,
+} from '@/infrastructure/sync-prototype/localSyncCompareAndSwap';
+import {
   belongsToCurrentUser,
   chooseLatest,
   cloudPrivateId,
@@ -17,11 +21,22 @@ import {
   type CloudOwned,
   type CloudSyncExecutionOptions,
 } from '@/infrastructure/sync-prototype/cloudSyncValue';
+import {
+  maximumLogicalSyncStamp,
+  persistLogicalSyncBaseline,
+  resolveDatabaseLogicalSyncState,
+  resolveSyncActorId,
+  stripLogicalSyncFields,
+  upsertLogicalCloudValue,
+  type LogicalSyncFields,
+} from '@/infrastructure/sync-prototype/logicalSyncState';
 
-type CloudActivity = Omit<Activity, 'id'> & { readonly id: string };
+type CloudActivity = Omit<Activity, 'id'> & {
+  readonly id: string;
+} & LogicalSyncFields;
 type CloudDeletionRecord = Omit<DeletionRecord, 'id'> & {
   readonly id: string;
-};
+} & LogicalSyncFields;
 
 export interface RealActivitySyncPreview {
   readonly localActivityCount: number;
@@ -55,7 +70,10 @@ function fromCloudActivity(
 ): Activity | undefined {
   const localId = localIdFromCloud(activity.id);
   if (!localId) return undefined;
-  return { ...stripCloudFields(activity), id: localId } as Activity;
+  return {
+    ...stripLogicalSyncFields(stripCloudFields(activity)),
+    id: localId,
+  } as Activity;
 }
 
 function toCloudMarker(marker: DeletionRecord): CloudDeletionRecord {
@@ -67,7 +85,10 @@ function fromCloudMarker(
 ): DeletionRecord | undefined {
   const localId = localIdFromCloud(marker.id);
   if (!localId) return undefined;
-  return { ...stripCloudFields(marker), id: localId };
+  return {
+    ...stripLogicalSyncFields(stripCloudFields(marker)),
+    id: localId,
+  };
 }
 
 function resolveState(
@@ -138,6 +159,8 @@ async function readState(
     localMarkers,
     cloudActivities,
     cloudMarkers,
+    cloudActivityRows,
+    cloudMarkerRows,
   };
 }
 
@@ -186,17 +209,6 @@ function buildPreview(
   };
 }
 
-async function upsertCloud<T extends { id: string }>(
-  table: Table<T, string>,
-  current: T | undefined,
-  target: T,
-  toCloudValue: (value: T) => T,
-): Promise<boolean> {
-  if (current && sameEntity(current, target)) return false;
-  await table.put(toCloudValue(target));
-  return true;
-}
-
 export async function previewRealActivitySync(
   localDatabase: AppDatabase,
   cloudDatabase: SyncPrototypeDatabase,
@@ -237,6 +249,19 @@ export async function synchronizeRealActivities(
   const cloudActivityById = mapById(state.cloudActivities);
   const localMarkerById = mapById(state.localMarkers);
   const cloudMarkerById = mapById(state.cloudMarkers);
+  const cloudActivityRowById = new Map(
+    state.cloudActivityRows.flatMap((row) => {
+      const id = localIdFromCloud(row.id);
+      return id ? [[id, row] as const] : [];
+    }),
+  );
+  const cloudMarkerRowByEntityId = new Map(
+    state.cloudMarkerRows.flatMap((row) => {
+      const marker = fromCloudMarker(row);
+      return marker ? [[marker.entityId, row] as const] : [];
+    }),
+  );
+  const actorId = await resolveSyncActorId(localDatabase);
   const ids = new Set([
     ...localActivityById.keys(),
     ...cloudActivityById.keys(),
@@ -265,55 +290,100 @@ export async function synchronizeRealActivities(
       ...(cloudActivity ? { activity: cloudActivity } : {}),
       ...(cloudMarker ? { marker: cloudMarker } : {}),
     };
-    const resolved = resolveState(localState, cloudState);
+    const resolution = await resolveDatabaseLogicalSyncState({
+      cloudDatabase,
+      accountUserId: currentUserId,
+      domainId: 'activities',
+      entityId: id,
+      actorId,
+      localValue: localState,
+      cloudValue: cloudState,
+      cloudStamp: maximumLogicalSyncStamp([
+        cloudActivityRowById.get(id),
+        cloudMarkerRowByEntityId.get(id),
+      ]),
+      legacyResolve: resolveState,
+    });
+    const resolved = resolution.value;
+    let localStateUnchanged = true;
 
     if (resolved.activity) {
       if (!sameEntity(localState.activity, resolved.activity)) {
-        await localDatabase.activities.put(resolved.activity);
-        downloadedActivities += 1;
-      }
-      if (
-        writeCloud &&
-        await upsertCloud(
-          cloudDatabase.realActivities as Table<Activity, string>,
-          cloudState.activity,
+        const applied = await putLocalIfUnchanged(
+          localDatabase,
+          localDatabase.activities,
+          id,
+          localState.activity,
           resolved.activity,
-          (value) => toCloudActivity(value) as Activity,
-        )
-      ) {
-        uploadedActivities += 1;
+        );
+        if (applied) downloadedActivities += 1;
+        else localStateUnchanged = false;
       }
     } else {
       if (localState.activity) {
-        await localDatabase.activities.delete(id);
-        removedLocalActivities += 1;
-      }
-      if (writeCloud && cloudState.activity) {
-        await cloudDatabase.realActivities.delete(cloudPrivateId(id));
-        removedCloudActivities += 1;
+        const applied = await deleteLocalIfUnchanged(
+          localDatabase,
+          localDatabase.activities,
+          id,
+          localState.activity,
+        );
+        if (applied) removedLocalActivities += 1;
+        else localStateUnchanged = false;
       }
     }
 
     if (resolved.marker) {
       if (!sameEntity(localState.marker, resolved.marker)) {
-        await localDatabase.deletionRecords.put(resolved.marker);
-        downloadedDeletionRecords += 1;
-      }
-      if (
-        writeCloud &&
-        await upsertCloud(
-          cloudDatabase.realActivityDeletionRecords as Table<
-            DeletionRecord,
-            string
-          >,
-          cloudState.marker,
+        const applied = await putLocalIfUnchanged(
+          localDatabase,
+          localDatabase.deletionRecords,
+          markerId,
+          localState.marker,
           resolved.marker,
-          (value) => toCloudMarker(value) as DeletionRecord,
-        )
-      ) {
-        uploadedDeletionRecords += 1;
+        );
+        if (applied) downloadedDeletionRecords += 1;
+        else localStateUnchanged = false;
       }
     }
+
+    if (!localStateUnchanged || !writeCloud) continue;
+
+    if (resolved.activity) {
+      if (
+        await upsertLogicalCloudValue(
+          cloudDatabase.realActivities as Table<Activity, string>,
+          cloudState.activity,
+          cloudActivityRowById.get(id),
+          resolved.activity,
+          resolution.stamp,
+          (value) => toCloudActivity(value) as Activity,
+        )
+      ) {
+        uploadedActivities += 1;
+      }
+    } else if (cloudState.activity) {
+      await cloudDatabase.realActivities.delete(cloudPrivateId(id));
+      removedCloudActivities += 1;
+    }
+
+    if (
+      resolved.marker
+      && await upsertLogicalCloudValue(
+        cloudDatabase.realActivityDeletionRecords as Table<
+          DeletionRecord,
+          string
+        >,
+        cloudState.marker,
+        cloudMarkerRowByEntityId.get(id),
+        resolved.marker,
+        resolution.stamp,
+        (value) => toCloudMarker(value) as DeletionRecord,
+      )
+    ) {
+      uploadedDeletionRecords += 1;
+    }
+
+    await persistLogicalSyncBaseline(cloudDatabase, resolution.baseline);
   }
 
   return {

@@ -17,7 +17,7 @@ const read = (path) => {
 
 const database = read('src/infrastructure/sync-prototype/SyncPrototypeDatabase.ts');
 for (const expected of [
-  'SYNC_PROTOTYPE_DATABASE_VERSION = 14',
+  'SYNC_PROTOTYPE_DATABASE_VERSION = 15',
   'sportpilot-sync-runtime-0.20.0-v${SYNC_PROTOTYPE_DATABASE_VERSION}',
   'realNutritionTracking',
   'realNutritionJournalDays',
@@ -99,6 +99,6 @@ if (failures.length > 0) {
   process.exitCode = 1;
 } else {
   console.log(
-    'Audit C3 réussi : bilans et ajustements atomiques, objectifs quotidiens recalculés, propagation C1 et runtime cloud v14 validés.',
+    'Audit C3 réussi : bilans et ajustements atomiques, objectifs quotidiens recalculés, propagation C1 et runtime cloud v15 validés.',
   );
 }

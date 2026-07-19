@@ -121,6 +121,15 @@ const server = createServer((request, response) => {
     return;
   }
 
+  if (
+    request.method === 'POST' &&
+    requestUrl.pathname === '/__pwa-test/shutdown'
+  ) {
+    sendJson(response, 200, { shuttingDown: true });
+    setTimeout(shutdown, 0);
+    return;
+  }
+
   if (request.method !== 'GET' && request.method !== 'HEAD') {
     sendJson(response, 405, { error: 'Méthode non autorisée.' });
     return;

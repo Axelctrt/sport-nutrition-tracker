@@ -17,7 +17,7 @@ test('expose les en-têtes de sécurité et la confidentialité avant le profil'
 
   await expect(page.getByRole('heading', { name: 'Confidentialité' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Open Food Facts' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Caméra et scanner' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Caméra, scanner et analyse photo' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Retour à la création du profil' })).toBeVisible();
   await expectNoCriticalHorizontalOverflow(page);
 });

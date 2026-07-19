@@ -184,7 +184,7 @@ describe('PhotoNutritionEstimatePage', () => {
     const file = new File([new Uint8Array(128)], 'repas.jpg', { type: 'image/jpeg' });
 
     await user.upload(screen.getByLabelText('Choisir une photo'), file);
-    expect(screen.getByText('La photo sera envoyée une seule fois au proxy sécurisé, uniquement après activation de cet interrupteur.')).toBeInTheDocument();
+    expect(screen.getByText(/transmise une fois par le proxy SportPilot à Google Gemini/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Analyser en local' })).toBeInTheDocument();
 
     await user.click(screen.getByRole('switch', { name: /Autoriser l’analyse IA distante/i }));

@@ -34,7 +34,9 @@ async function expectOnboardingFitsViewport(page: Page): Promise<void> {
   }
 }
 
-test('maintient chaque étape locale dans la hauteur de l’iPhone 15', async ({ page }) => {
+test('maintient chaque étape locale dans la hauteur de l’iPhone 15', async ({ page, isMobile }) => {
+  test.skip(!isMobile, 'Ce contrôle cible le viewport mobile configuré pour l’iPhone 15.');
+
   await page.goto('/#/onboarding', { waitUntil: 'domcontentloaded' });
   await expect(page.getByRole('heading', { name: 'Comment utiliser SportPilot ?' })).toBeVisible();
   await expect(page.getByLabel(/Adresse e-mail/)).toHaveCount(0);

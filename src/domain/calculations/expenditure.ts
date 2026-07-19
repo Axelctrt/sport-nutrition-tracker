@@ -100,7 +100,7 @@ export function calculateDailyExpenditure({
         strengthTrainingKcal += calories;
         break;
       case 'walking':
-        if (!activity.includedInDailySteps) {
+        if (!activity.includedInDailySteps || totalSteps === 0) {
           otherActivitiesKcal += calories;
         }
         break;

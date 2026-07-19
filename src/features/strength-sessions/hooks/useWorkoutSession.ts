@@ -160,14 +160,22 @@ export function useWorkoutSession(sessionId: string) {
     () => updateWorkoutSessionNotes(repositories.workoutSessions, sessionId, notes),
   ), [runAction, sessionId]);
 
-  const complete = useCallback((socialSharing?: SocialActivitySharingOverride) => runAction(
+  const complete = useCallback((
+    socialSharing?: SocialActivitySharingOverride,
+    allowLongDuration = false,
+  ) => runAction(
     'complete',
     async () => {
       const completed = await completeWorkoutSession(
         repositories.workoutSessions,
         sessionId,
         new Date(),
-        socialSharing ? { socialSharing } : undefined,
+        socialSharing || allowLongDuration
+          ? {
+              ...(socialSharing ? { socialSharing } : {}),
+              ...(allowLongDuration ? { allowLongDuration: true } : {}),
+            }
+          : undefined,
       );
       await generateProgressionSuggestions(
         repositories.workoutSessions,

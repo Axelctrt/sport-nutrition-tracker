@@ -44,9 +44,9 @@ describe('préparation F2 de la synchronisation automatique', () => {
     expect(__APP_VERSION__).toBe('0.32.0');
     expect(databaseSchemaVersion).toBe(10);
     expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(9);
-    expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(14);
+    expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(15);
     expect(SYNC_PROTOTYPE_DATABASE_NAME).toBe(
-      'sportpilot-sync-runtime-0.20.0-v14',
+      'sportpilot-sync-runtime-0.20.0-v15',
     );
   });
 

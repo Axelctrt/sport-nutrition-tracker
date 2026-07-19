@@ -110,6 +110,19 @@ function createWalkingActivity(includedInDailySteps: boolean): OtherActivity {
     expect(separate.energy.otherActivitiesKcal).toBe(220.5);
   });
 
+  it('conserve les calories d’une marche si aucun podomètre n’est renseigné', () => {
+    const result = calculateDailyExpenditure({
+      date: '2026-06-23',
+      profile,
+      settings,
+      weightKg: 60,
+      totalSteps: 0,
+      activities: [createWalkingActivity(true)],
+    });
+
+    expect(result.energy.otherActivitiesKcal).toBe(220.5);
+  });
+
   it('refuse une activité provenant d’une autre date', () => {
     const activity = createEntity<RunningActivity>(createRunningActivityInput({ date: '2026-06-22' }));
 

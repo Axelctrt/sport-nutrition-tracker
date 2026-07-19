@@ -159,6 +159,34 @@ export default defineConfig({
         clientsClaim: true,
         navigateFallback: 'index.html',
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
+        globIgnores: [
+          '**/AccountDevicesPage-*.js',
+          '**/AnalyticsPage-*.js',
+          '**/BarcodeScannerPage-*.js',
+          '**/CartesianChart-*.js',
+          '**/FriendsPrivacyPage-*.js',
+          '**/OpenFoodFacts*.js',
+          '**/PhotoNutritionEstimatePage-*.js',
+          '**/SyncPrototypePage-*.js',
+        ],
+        runtimeCaching: [
+          {
+            urlPattern: ({ request, url }) =>
+              request.destination === 'script'
+              && url.pathname.includes('/assets/'),
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: `sportpilot-lazy-scripts-${appVersion}`,
+              expiration: {
+                maxEntries: 80,
+                maxAgeSeconds: 30 * 24 * 60 * 60,
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
+        ],
       },
       devOptions: {
         enabled: false,
