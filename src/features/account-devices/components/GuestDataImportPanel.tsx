@@ -152,7 +152,13 @@ export function GuestDataImportPanel({
           <h2 className="font-semibold text-slate-950 dark:text-white">
             Importer les données de l’espace invité
           </h2>
-          <p className="mt-1 text-sm leading-5 text-slate-600 dark:text-slate-300">
+          <p
+            className={
+              compact
+                ? "mt-0.5 text-xs leading-4 text-slate-600 dark:text-slate-300"
+                : "mt-1 text-sm leading-5 text-slate-600 dark:text-slate-300"
+            }
+          >
             {compact
               ? 'Ajoutez au compte les données déjà présentes en mode local.'
               : 'Analyse puis fusionne le profil, le sport, la nutrition, les pesées et les réglages synchronisables. La donnée la plus récente est conservée et l’espace invité n’est jamais effacé.'}
@@ -182,7 +188,7 @@ export function GuestDataImportPanel({
           {isAnalyzing ? "Analyse en cours" : "Analyser les données invitées"}
         </Button>
       ) : (
-        <div className="mt-4 space-y-4">
+        <div className={compact ? "mt-2.5 space-y-2.5" : "mt-4 space-y-4"}>
           {!preview.hasGuestData ? (
             <InlineNotice tone="info" title="Espace invité vide">
               Aucune donnée utilisateur n’est disponible dans l’espace invité.
@@ -190,7 +196,7 @@ export function GuestDataImportPanel({
           ) : (
             <>
               {compact ? (
-                <p className="rounded-xl bg-brand-50 px-3 py-2 text-sm font-medium text-brand-900 dark:bg-brand-950/35 dark:text-brand-100">
+                <p className="rounded-xl bg-brand-50 px-2.5 py-1.5 text-xs font-medium leading-4 text-brand-900 dark:bg-brand-950/35 dark:text-brand-100">
                   {preview.recordsToAdd} à ajouter · {preview.recordsToUpdate} à mettre à jour
                 </p>
               ) : (
