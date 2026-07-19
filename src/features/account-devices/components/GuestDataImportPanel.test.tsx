@@ -165,6 +165,9 @@ describe("GuestDataImportPanel", () => {
     expect(compactSummary.parentElement).toHaveClass("mt-2.5", "space-y-2.5");
     expect(screen.queryByText("Nutrition")).not.toBeInTheDocument();
     expect(screen.queryByText(/L’import est atomique/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Relancer l’analyse" }),
+    ).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Importer dans mon compte" })).toBeVisible();
   });
 

@@ -291,18 +291,20 @@ export function GuestDataImportPanel({
             </>
           )}
 
-          <Button
-            className="w-full"
-            variant="ghost"
-            disabled={isAnalyzing || isImporting}
-            onClick={() => void analyze()}
-          >
-            <RefreshCw
-              aria-hidden="true"
-              className={`size-4 ${isAnalyzing ? "animate-spin" : ""}`}
-            />
-            Relancer l’analyse
-          </Button>
+          {!compact ? (
+            <Button
+              className="w-full"
+              variant="ghost"
+              disabled={isAnalyzing || isImporting}
+              onClick={() => void analyze()}
+            >
+              <RefreshCw
+                aria-hidden="true"
+                className={`size-4 ${isAnalyzing ? "animate-spin" : ""}`}
+              />
+              Relancer l’analyse
+            </Button>
+          ) : null}
         </div>
       )}
 
