@@ -216,15 +216,15 @@ describe('CloudAccountRestorePanel', () => {
       />,
     );
 
-    expect(
-      screen.getByText('Des données ont été trouvées pour ce compte'),
-    ).toBeInTheDocument();
+    const foundNotice = screen.getByText('Des données ont été trouvées pour ce compte');
+    expect(foundNotice).toBeInTheDocument();
+    expect(foundNotice).toHaveClass('text-xs');
     expect(
       screen.queryByText('Retrouvez les données déjà synchronisées avec ce compte.'),
     ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole('heading', { name: 'Restaurer depuis le cloud' }),
-    ).not.toBeInTheDocument();
+    const title = screen.getByRole('heading', { name: 'Restaurer depuis le cloud' });
+    expect(title).toBeInTheDocument();
+    expect(title).toHaveClass('text-xs');
     expect(screen.queryByText(/2 données restaurables/i)).not.toBeInTheDocument();
     expect(screen.queryByText('Historique des pesées synchronisées.')).not.toBeInTheDocument();
     expect(screen.queryByText(/restauration est préparée dans une base temporaire/i)).not.toBeInTheDocument();

@@ -1,7 +1,6 @@
-import { AtSign, CheckCircle2, Cloud, Info, RefreshCw } from 'lucide-react';
+import { AtSign, CheckCircle2, Cloud, Info } from 'lucide-react';
 import { type FormEvent, useMemo, useState } from 'react';
 import {
-  checkAccountSocialHandleAvailability,
   provisionAccountSocialIdentity,
 } from '@/application/friends/accountSocialIdentityService';
 import type { SocialIdentityRepository } from '@/application/friends/socialIdentityService';
@@ -11,7 +10,6 @@ import {
   isGeneratedDefaultSocialIdentity,
   validateSocialHandle,
   type SocialIdentity,
-  type SocialIdentityAvailabilityResult,
 } from '@/domain/friends/socialIdentity';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
@@ -26,11 +24,6 @@ interface OnboardingSocialIdentityProps {
   readonly onUseLocal?: () => void | Promise<void>;
   readonly initialNotice?: string;
 }
-
-const idleAvailability: SocialIdentityAvailabilityResult = {
-  status: 'idle',
-  message: 'La disponibilité sera vérifiée avant l’enregistrement.',
-};
 
 const inputClasses =
   'min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-slate-950 shadow-sm outline-none transition focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20 disabled:cursor-not-allowed disabled:opacity-70 dark:border-slate-700 dark:bg-slate-950 dark:text-white';
@@ -47,8 +40,6 @@ export function OnboardingSocialIdentity({
   const generatedIdentity = isGeneratedDefaultSocialIdentity(initialIdentity);
   const [handle, setHandle] = useState(generatedIdentity ? '' : formatSocialHandle(initialIdentity.handle));
   const [displayName, setDisplayName] = useState(generatedIdentity ? '' : initialIdentity.displayName);
-  const [availability, setAvailability] = useState<SocialIdentityAvailabilityResult>(idleAvailability);
-  const [isChecking, setIsChecking] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isSwitchingLocal, setIsSwitchingLocal] = useState(false);
   const [feedback, setFeedback] = useState<
@@ -57,27 +48,6 @@ export function OnboardingSocialIdentity({
   >();
 
   const validation = useMemo(() => validateSocialHandle(handle), [handle]);
-
-  const verifyAvailability = async () => {
-    setIsChecking(true);
-    setFeedback(undefined);
-    try {
-      setAvailability(await checkAccountSocialHandleAvailability(
-        cloudPort,
-        handle,
-        accountUserId,
-      ));
-    } catch (error) {
-      setAvailability({
-        status: 'unavailable',
-        message: error instanceof Error
-          ? error.message
-          : 'Vérification indisponible. La réservation finale reste protégée.',
-      });
-    } finally {
-      setIsChecking(false);
-    }
-  };
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -191,10 +161,7 @@ export function OnboardingSocialIdentity({
                 autoComplete="username"
                 className={inputClasses}
                 id="onboarding-social-handle"
-                onChange={(event) => {
-                  setHandle(event.target.value);
-                  setAvailability(idleAvailability);
-                }}
+                onChange={(event) => setHandle(event.target.value)}
                 placeholder="axel_aka_dieu"
                 spellCheck={false}
                 value={handle}
@@ -216,29 +183,6 @@ export function OnboardingSocialIdentity({
                 value={displayName}
               />
             </FormField>
-          </div>
-
-          <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
-            <p
-              className={`flex min-h-10 items-center gap-2 rounded-xl px-3 py-2 text-sm ${
-                availability.status === 'alreadyTaken' || availability.status === 'invalidHandle'
-                  ? 'bg-rose-50 text-rose-800 dark:bg-rose-950/35 dark:text-rose-200'
-                  : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
-              }`}
-              role="status"
-            >
-              <Info aria-hidden="true" className="size-4 shrink-0" />
-              <span>{availability.message}</span>
-            </p>
-            <Button
-              disabled={isChecking || validation.status === 'invalid'}
-              onClick={() => void verifyAvailability()}
-              type="button"
-              variant="secondary"
-            >
-              <RefreshCw aria-hidden="true" className={isChecking ? 'size-4 animate-spin' : 'size-4'} />
-              {isChecking ? 'Vérification…' : 'Vérifier'}
-            </Button>
           </div>
 
           <p className="flex items-start gap-2 text-xs leading-4 text-slate-500 dark:text-slate-400">

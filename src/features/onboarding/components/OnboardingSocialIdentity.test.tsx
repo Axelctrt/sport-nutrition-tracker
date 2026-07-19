@@ -42,6 +42,7 @@ describe('OnboardingSocialIdentity', () => {
     expect(document.querySelector('main')).toHaveClass('fixed', 'h-[100dvh]', 'overflow-hidden');
     expect(screen.getByPlaceholderText('axel_aka_dieu')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Axel le Dieu')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Vérifier' })).not.toBeInTheDocument();
     await user.type(screen.getByLabelText(/Identifiant public/), 'axel_aka_dieu');
     await user.type(screen.getByLabelText('Nom affiché'), 'Axel le Dieu');
     await user.click(screen.getByRole('button', { name: 'Enregistrer et continuer' }));

@@ -18,6 +18,8 @@ describe('onboarding compte compact et cohérent', () => {
     expect(socialIdentitySource).toContain('axel_aka_dieu');
     expect(socialIdentitySource).toContain('Axel le Dieu');
     expect(socialIdentitySource).not.toContain('La réservation est effectuée côté serveur');
+    expect(socialIdentitySource).not.toContain('Vérifier');
+    expect(socialIdentitySource).not.toContain('checkAccountSocialHandleAvailability');
   });
 
   it('reprend le formulaire de profil directement à l’étape du nom', () => {

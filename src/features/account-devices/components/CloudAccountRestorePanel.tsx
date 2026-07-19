@@ -154,30 +154,30 @@ export function CloudAccountRestorePanel({
           : 'space-y-4'
       }
     >
-      {!compact || !preview?.hasCloudData ? (
-        <div className="flex items-start gap-2.5">
-          <CloudDownload
-            aria-hidden="true"
-            className="mt-0.5 size-5 text-sky-700 dark:text-sky-300"
-          />
-          <div>
-            <h2 className="font-semibold text-slate-950 dark:text-white">
-              Restaurer depuis le cloud
-            </h2>
-            <p
-              className={
-                compact
-                  ? 'mt-0.5 text-xs leading-4 text-slate-600 dark:text-slate-300'
-                  : 'mt-1 text-sm leading-5 text-slate-600 dark:text-slate-300'
-              }
-            >
-              {compact
-                ? 'Retrouvez les données déjà synchronisées avec ce compte.'
-                : 'Recherche les données déjà synchronisées pour ce compte et les restaure dans son espace local. Le cloud n’est jamais vidé ni remplacé par cette opération.'}
+      <div className={compact ? 'flex items-center gap-2' : 'flex items-start gap-2.5'}>
+        <CloudDownload
+          aria-hidden="true"
+          className={compact
+            ? 'size-4 text-sky-700 dark:text-sky-300'
+            : 'mt-0.5 size-5 text-sky-700 dark:text-sky-300'}
+        />
+        <div>
+          <h2 className={compact
+            ? 'text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-200'
+            : 'font-semibold text-slate-950 dark:text-white'}>
+            Restaurer depuis le cloud
+          </h2>
+          {!compact ? (
+            <p className="mt-1 text-sm leading-5 text-slate-600 dark:text-slate-300">
+              Recherche les données déjà synchronisées pour ce compte et les restaure dans son espace local. Le cloud n’est jamais vidé ni remplacé par cette opération.
             </p>
-          </div>
+          ) : !preview?.hasCloudData ? (
+            <p className="mt-0.5 text-xs leading-4 text-slate-600 dark:text-slate-300">
+              Retrouvez les données déjà synchronisées avec ce compte.
+            </p>
+          ) : null}
         </div>
-      ) : null}
+      </div>
 
       {state.status === 'idle' ? (
         <Button className="w-full" variant="secondary" onClick={() => void analyze()}>
@@ -214,23 +214,27 @@ export function CloudAccountRestorePanel({
 
       {preview?.hasCloudData ? (
         <>
-          <InlineNotice
-            tone="success"
-            title="Des données ont été trouvées pour ce compte"
-            className={compact ? 'p-3' : undefined}
-          >
-            {!compact ? (
-              <>
-                {preview.cloudRecordCount} donnée
-                {preview.cloudRecordCount > 1 ? 's' : ''} restaurable
-                {preview.cloudDeletionMarkerCount > 0
-                  ? ` et ${preview.cloudDeletionMarkerCount} marqueur${
-                      preview.cloudDeletionMarkerCount > 1 ? 's' : ''
-                    } de suppression`
-                  : ''}.
-              </>
-            ) : null}
-          </InlineNotice>
+          {compact ? (
+            <div
+              className="rounded-lg bg-emerald-50 px-2.5 py-1.5 text-xs font-medium leading-4 text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100"
+              role="status"
+            >
+              Des données ont été trouvées pour ce compte
+            </div>
+          ) : (
+            <InlineNotice
+              tone="success"
+              title="Des données ont été trouvées pour ce compte"
+            >
+              {preview.cloudRecordCount} donnée
+              {preview.cloudRecordCount > 1 ? 's' : ''} restaurable
+              {preview.cloudDeletionMarkerCount > 0
+                ? ` et ${preview.cloudDeletionMarkerCount} marqueur${
+                    preview.cloudDeletionMarkerCount > 1 ? 's' : ''
+                  } de suppression`
+                : ''}.
+            </InlineNotice>
+          )}
 
           {!compact ? (
             <div className="divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 dark:divide-slate-800 dark:border-slate-800">
