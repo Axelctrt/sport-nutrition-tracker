@@ -2,6 +2,9 @@ import { Cloud, LogOut, ShieldCheck } from "lucide-react";
 import { lazy, Suspense, type ReactNode, useEffect, useMemo, useState } from "react";
 
 import type { DataSpaceDescriptor } from "@/domain/data-spaces/dataSpace";
+import { PROFILE_ONBOARDING_STEP_IDS } from "@/features/onboarding/profile/profileOnboardingSteps";
+import { saveProfileOnboardingDraft } from "@/features/onboarding/storage/profileOnboardingDraft";
+import { DEFAULT_PROFILE_FORM_VALUES } from "@/features/profile/utils/defaultProfileFormValues";
 import {
   activateGuestDataSpace,
   type DataSpaceStorage,
@@ -274,10 +277,34 @@ export function DataSpaceAccountGate({
       activateExistingSpace(state.accountFingerprint, serviceOptions),
     );
 
-  const createEmpty = () =>
-    runAction("Création d’un espace vide et isolé", () =>
-      createEmptySpace(state.accountFingerprint, serviceOptions),
-    );
+  const createEmpty = async () => {
+    setState({
+      status: "working",
+      message: "Création d’un espace vide et isolé",
+    });
+
+    try {
+      const result = await createEmptySpace(
+        state.accountFingerprint,
+        serviceOptions,
+      );
+      const draftSaved = saveProfileOnboardingDraft(
+        DEFAULT_PROFILE_FORM_VALUES,
+        PROFILE_ONBOARDING_STEP_IDS.name,
+        result.space.id,
+      );
+
+      if (!draftSaved) {
+        throw new Error(
+          "La reprise du formulaire de profil n’a pas pu être préparée.",
+        );
+      }
+
+      reload();
+    } catch (error) {
+      setState({ status: "error", message: errorMessage(error) });
+    }
+  };
 
   return (
     <main className="fixed inset-0 h-[100dvh] overflow-hidden bg-slate-50 px-4 py-2 dark:bg-slate-950 sm:grid sm:place-items-center sm:px-6 sm:py-4">

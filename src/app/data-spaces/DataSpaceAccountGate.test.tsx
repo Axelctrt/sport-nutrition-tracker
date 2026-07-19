@@ -2,6 +2,8 @@ import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import type { DataSpaceDescriptor } from "@/domain/data-spaces/dataSpace";
+import { PROFILE_ONBOARDING_STEP_IDS } from "@/features/onboarding/profile/profileOnboardingSteps";
+import { loadProfileOnboardingDraft } from "@/features/onboarding/storage/profileOnboardingDraft";
 import { DataSpaceAccountGate } from "@/app/data-spaces/DataSpaceAccountGate";
 import {
   createDefaultDataSpaceRegistry,
@@ -259,7 +261,7 @@ describe("DataSpaceAccountGate", () => {
     ).toBeEnabled();
   });
 
-  it("crée explicitement un espace vide puis recharge l’application", async () => {
+  it("crée un espace vide puis prépare directement l’étape du nom", async () => {
     const createEmptySpace = vi.fn(async () => ({
       space: accountSpace,
       copiedRecords: 0,
@@ -290,6 +292,13 @@ describe("DataSpaceAccountGate", () => {
     );
 
     await waitFor(() => expect(createEmptySpace).toHaveBeenCalledTimes(1));
+    expect(loadProfileOnboardingDraft(accountSpace.id, window.localStorage)).toMatchObject({
+      status: "restored",
+      draft: {
+        stepId: PROFILE_ONBOARDING_STEP_IDS.name,
+        values: { firstName: "" },
+      },
+    });
     expect(reload).toHaveBeenCalledTimes(1);
   });
 

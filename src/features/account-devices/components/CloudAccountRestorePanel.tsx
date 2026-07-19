@@ -171,10 +171,6 @@ export function CloudAccountRestorePanel({
             <p className="mt-1 text-sm leading-5 text-slate-600 dark:text-slate-300">
               Recherche les données déjà synchronisées pour ce compte et les restaure dans son espace local. Le cloud n’est jamais vidé ni remplacé par cette opération.
             </p>
-          ) : !preview?.hasCloudData ? (
-            <p className="mt-0.5 text-xs leading-4 text-slate-600 dark:text-slate-300">
-              Retrouvez les données déjà synchronisées avec ce compte.
-            </p>
           ) : null}
         </div>
       </div>
@@ -206,10 +202,19 @@ export function CloudAccountRestorePanel({
       ) : null}
 
       {preview && !preview.hasCloudData ? (
-        <InlineNotice tone="info" title="Aucune donnée cloud trouvée">
-          Aucun domaine synchronisé ne contient actuellement de données pour ce
-          compte. Commencer avec un espace vide ne modifiera pas le cloud.
-        </InlineNotice>
+        compact ? (
+          <div
+            className="rounded-lg bg-slate-100 px-2.5 py-1.5 text-xs font-medium leading-4 text-slate-700 dark:bg-slate-900 dark:text-slate-200"
+            role="status"
+          >
+            Aucune donnée associée à ce compte
+          </div>
+        ) : (
+          <InlineNotice tone="info" title="Aucune donnée cloud trouvée">
+            Aucun domaine synchronisé ne contient actuellement de données pour ce
+            compte. Commencer avec un espace vide ne modifiera pas le cloud.
+          </InlineNotice>
+        )
       ) : null}
 
       {preview?.hasCloudData ? (

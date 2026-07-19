@@ -10,6 +10,8 @@ describe('onboarding compte compact et cohérent', () => {
     expect(dataSpaceGateSource).toContain('Comment souhaitez-vous commencer ?');
     expect(dataSpaceGateSource).toContain('Reprendre mes données');
     expect(dataSpaceGateSource).toContain('Créer un nouveau profil');
+    expect(dataSpaceGateSource).toContain('PROFILE_ONBOARDING_STEP_IDS.name');
+    expect(dataSpaceGateSource).toContain('saveProfileOnboardingDraft');
     expect(dataSpaceGateSource).not.toContain('Choisir l’espace de ce compte');
   });
 
