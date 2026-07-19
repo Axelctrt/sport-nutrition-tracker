@@ -258,14 +258,29 @@ export function useWorkoutSession(sessionId: string) {
 
   const removeSet = useCallback((sessionExerciseId: string, setId: string) => runAction(
     `deleteSet:${setId}`,
-    () => deleteStrengthSet(
-      repositories.workoutSessions,
-      repositories.strengthSets,
-      sessionId,
-      sessionExerciseId,
-      setId,
-    ),
-  ), [runAction, sessionId]);
+    async () => {
+      const remainingSets = await deleteStrengthSet(
+        repositories.workoutSessions,
+        repositories.strengthSets,
+        sessionId,
+        sessionExerciseId,
+        setId,
+      );
+      const exercise = exercises.find((candidate) => candidate.id === sessionExerciseId);
+      if (exercise?.plannedSets !== undefined) {
+        const remainingWorkingSetCount = remainingSets.filter((set) => set.type === 'working').length;
+        if (remainingWorkingSetCount !== exercise.plannedSets) {
+          await repositories.workoutSessions.replaceExercises(
+            sessionId,
+            exercises.map((candidate) => candidate.id === sessionExerciseId
+              ? { ...candidate, plannedSets: remainingWorkingSetCount }
+              : candidate),
+          );
+        }
+      }
+      return remainingSets;
+    },
+  ), [exercises, runAction, sessionId]);
 
   const reusePreviousSets = useCallback((sessionExerciseId: string) => runAction(
     `reusePreviousSets:${sessionExerciseId}`,

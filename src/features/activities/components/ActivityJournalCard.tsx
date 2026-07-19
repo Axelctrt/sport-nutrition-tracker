@@ -4,7 +4,6 @@ import {
   Dumbbell,
   Flame,
   Footprints,
-  MoreHorizontal,
   Pencil,
   PersonStanding,
   Trash2,
@@ -17,6 +16,7 @@ import { editActivityPath } from '@/app/routePaths';
 import type { Activity, ActivityType } from '@/domain/models/activity';
 import type { ActivityJournalNavigationState } from '@/features/activities/navigation/activityJournalNavigation';
 import { presentActivity } from '@/features/activities/utils/activityPresentation';
+import { ActionMenu } from '@/shared/ui/ActionMenu';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { ConfirmationDialog } from '@/shared/ui/ConfirmationDialog';
@@ -95,52 +95,36 @@ export function ActivityJournalCard({
                 </p>
               </div>
 
-              <details className="relative shrink-0">
-                <summary
-                  role="button"
-                  aria-label={`Actions pour ${presentation.title}`}
-                  className="grid size-11 cursor-pointer list-none place-items-center rounded-xl text-slate-600 hover:bg-slate-100 focus-visible:outline-none dark:text-slate-300 dark:hover:bg-slate-800 [&::-webkit-details-marker]:hidden"
+              <ActionMenu label={`Actions pour ${presentation.title}`}>
+                <Link
+                  to={editActivityPath(activity.id)}
+                  state={navigationState}
+                  className="inline-flex min-h-10 w-full items-center gap-2 rounded-xl px-3 text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
                 >
-                  <MoreHorizontal aria-hidden="true" className="size-5" />
-                </summary>
-                <div className="absolute right-0 z-20 mt-1 w-52 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl dark:border-slate-700 dark:bg-slate-900">
-                  <Link
-                    to={editActivityPath(activity.id)}
-                    state={navigationState}
-                    onClick={(event) => event.currentTarget.closest('details')?.removeAttribute('open')}
-                    className="inline-flex min-h-10 w-full items-center gap-2 rounded-xl px-3 text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
-                  >
-                    <Pencil aria-hidden="true" className="size-4" />
-                    Modifier
-                  </Link>
-                  <Button
-                    className="w-full justify-start"
-                    size="sm"
-                    variant="ghost"
-                    disabled={duplicateBusy || deleteBusy}
-                    onClick={(event) => {
-                      event.currentTarget.closest('details')?.removeAttribute('open');
-                      void onDuplicate(activity.id);
-                    }}
-                  >
-                    <CopyPlus aria-hidden="true" className="size-4" />
-                    {duplicateBusy ? 'Duplication…' : 'Dupliquer'}
-                  </Button>
-                  <Button
-                    className="w-full justify-start"
-                    size="sm"
-                    variant="dangerGhost"
-                    disabled={duplicateBusy || deleteBusy}
-                    onClick={(event) => {
-                      event.currentTarget.closest('details')?.removeAttribute('open');
-                      setDeleteOpen(true);
-                    }}
-                  >
-                    <Trash2 aria-hidden="true" className="size-4" />
-                    Supprimer
-                  </Button>
-                </div>
-              </details>
+                  <Pencil aria-hidden="true" className="size-4" />
+                  Modifier
+                </Link>
+                <Button
+                  className="w-full justify-start"
+                  size="sm"
+                  variant="ghost"
+                  disabled={duplicateBusy || deleteBusy}
+                  onClick={() => void onDuplicate(activity.id)}
+                >
+                  <CopyPlus aria-hidden="true" className="size-4" />
+                  {duplicateBusy ? 'Duplication…' : 'Dupliquer'}
+                </Button>
+                <Button
+                  className="w-full justify-start"
+                  size="sm"
+                  variant="dangerGhost"
+                  disabled={duplicateBusy || deleteBusy}
+                  onClick={() => setDeleteOpen(true)}
+                >
+                  <Trash2 aria-hidden="true" className="size-4" />
+                  Supprimer
+                </Button>
+              </ActionMenu>
             </div>
 
             <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">

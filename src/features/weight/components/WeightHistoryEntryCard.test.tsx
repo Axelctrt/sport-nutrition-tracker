@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, vi } from 'vitest';
 import type { WeightEntry } from '@/domain/models/weight';
@@ -35,7 +35,7 @@ describe('WeightHistoryEntryCard', () => {
   });
 
 
-  it('place toute la carte au-dessus des pesées suivantes lorsque le menu est ouvert', async () => {
+  it('rend les actions dans une couche au-dessus des pesées suivantes', async () => {
     const user = userEvent.setup();
 
     render(
@@ -47,14 +47,14 @@ describe('WeightHistoryEntryCard', () => {
       />,
     );
 
-    const card = document.getElementById(`weight-entry-${entry.id}`);
-    expect(card).not.toHaveClass('z-30');
-
     await user.click(screen.getByRole('button', { name: /Actions pour la pesée/i }));
-    await waitFor(() => expect(card).toHaveClass('z-30'));
+
+    const menu = screen.getByRole('menu', { name: /Actions pour la pesée/i });
+    expect(menu.parentElement).toBe(document.body);
+    expect(menu).toHaveClass('fixed', 'z-[120]');
 
     await user.click(screen.getByRole('button', { name: 'Modifier' }));
-    await waitFor(() => expect(card).not.toHaveClass('z-30'));
+    expect(screen.queryByRole('menu', { name: /Actions pour la pesée/i })).not.toBeInTheDocument();
   });
 
   it('regroupe la suppression dans les actions secondaires', async () => {

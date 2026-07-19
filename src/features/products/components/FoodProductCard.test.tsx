@@ -28,7 +28,8 @@ describe('FoodProductCard', () => {
 
     expect(screen.getByRole('heading', { name: 'Yaourt grec' })).toBeInTheDocument();
     expect(screen.getByText('120 kcal / 100 g')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Modifier' }).closest('details')).not.toHaveAttribute('open');
+    expect(screen.getByRole('button', { name: 'Actions pour Yaourt grec' })).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('menu', { name: 'Actions pour Yaourt grec' })).not.toBeInTheDocument();
   });
 
   it('conserve deux décimales pour une petite quantité de sel', () => {
