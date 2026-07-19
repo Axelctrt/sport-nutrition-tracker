@@ -2,6 +2,8 @@ import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import type { DataSpaceDescriptor } from "@/domain/data-spaces/dataSpace";
+import { PROFILE_ONBOARDING_STEP_IDS } from "@/features/onboarding/profile/profileOnboardingSteps";
+import { loadProfileOnboardingDraft } from "@/features/onboarding/storage/profileOnboardingDraft";
 import { DataSpaceAccountGate } from "@/app/data-spaces/DataSpaceAccountGate";
 import {
   createDefaultDataSpaceRegistry,
@@ -185,9 +187,19 @@ describe("DataSpaceAccountGate", () => {
 
     expect(
       await screen.findByRole("heading", {
-        name: "Choisir l’espace de ce compte",
+        name: "Comment souhaitez-vous commencer ?",
       }),
     ).toBeInTheDocument();
+    expect(
+      screen.queryByText(
+        "Reprenez les données du compte ou démarrez avec un profil vierge.",
+      ),
+    ).not.toBeInTheDocument();
+    expect(document.querySelector("main")).toHaveClass(
+      "fixed",
+      "h-[100dvh]",
+      "overflow-hidden",
+    );
     expect(screen.queryByText("Données privées")).not.toBeInTheDocument();
     expect(
       await screen.findByRole("button", {
@@ -196,7 +208,7 @@ describe("DataSpaceAccountGate", () => {
     ).toBeInTheDocument();
     expect(
       await screen.findByRole("button", {
-        name: "Commencer avec un espace vide",
+        name: "Créer un nouveau profil",
       }),
     ).toBeInTheDocument();
   });
@@ -229,7 +241,7 @@ describe("DataSpaceAccountGate", () => {
     );
 
     expect(
-      await screen.findByRole("button", { name: "Vérification du cloud…" }),
+      await screen.findByRole("button", { name: "Vérification du compte…" }),
     ).toBeDisabled();
 
     await waitFor(() =>
@@ -245,11 +257,11 @@ describe("DataSpaceAccountGate", () => {
       await screen.findByText("Des données ont été trouvées pour ce compte"),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Commencer avec un espace vide" }),
+      screen.getByRole("button", { name: "Créer un nouveau profil" }),
     ).toBeEnabled();
   });
 
-  it("crée explicitement un espace vide puis recharge l’application", async () => {
+  it("crée un espace vide puis prépare directement l’étape du nom", async () => {
     const createEmptySpace = vi.fn(async () => ({
       space: accountSpace,
       copiedRecords: 0,
@@ -275,11 +287,18 @@ describe("DataSpaceAccountGate", () => {
 
     await userEvent.click(
       await screen.findByRole("button", {
-        name: "Commencer avec un espace vide",
+        name: "Créer un nouveau profil",
       }),
     );
 
     await waitFor(() => expect(createEmptySpace).toHaveBeenCalledTimes(1));
+    expect(loadProfileOnboardingDraft(accountSpace.id, window.localStorage)).toMatchObject({
+      status: "restored",
+      draft: {
+        stepId: PROFILE_ONBOARDING_STEP_IDS.name,
+        values: { firstName: "" },
+      },
+    });
     expect(reload).toHaveBeenCalledTimes(1);
   });
 
@@ -307,7 +326,7 @@ describe("DataSpaceAccountGate", () => {
     );
 
     expect(
-      await screen.findByText("Espace déjà connu sur cet appareil"),
+      await screen.findByText("Reprendre mes données"),
     ).toBeInTheDocument();
     expect(
       await screen.findByRole("button", {
@@ -317,7 +336,7 @@ describe("DataSpaceAccountGate", () => {
 
     await userEvent.click(
       screen.getByRole("button", {
-        name: "Ouvrir l’espace de ce compte",
+        name: "Reprendre ce profil",
       }),
     );
 
@@ -349,11 +368,11 @@ describe("DataSpaceAccountGate", () => {
     );
 
     expect(
-      await screen.findByText("Espace local conservé après désassociation"),
+      await screen.findByText("Reprendre mes données"),
     ).toBeInTheDocument();
     await userEvent.click(
       screen.getByRole("button", {
-        name: "Réassocier et ouvrir cet espace",
+        name: "Réassocier et reprendre",
       }),
     );
     expect(activateExistingSpace).toHaveBeenCalledTimes(1);
@@ -396,7 +415,7 @@ describe("DataSpaceAccountGate", () => {
 
     expect(
       await screen.findByRole("heading", {
-        name: "Choisir l’espace de ce compte",
+        name: "Comment souhaitez-vous commencer ?",
       }),
     ).toBeInTheDocument();
     expect(screen.queryByText("Données du compte A")).not.toBeInTheDocument();

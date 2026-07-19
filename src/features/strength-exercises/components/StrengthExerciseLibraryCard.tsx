@@ -1,4 +1,4 @@
-import { Archive, Copy, History, MoreHorizontal, Pencil, RotateCcw } from 'lucide-react';
+import { Archive, Copy, History, Pencil, RotateCcw } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { editStrengthExercisePath, strengthExerciseHistoryPath } from '@/app/routePaths';
@@ -11,6 +11,7 @@ import {
   muscleGroupLabel,
   movementTypeLabel,
 } from '@/features/strength-exercises/utils/exerciseLabels';
+import { ActionMenu } from '@/shared/ui/ActionMenu';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { ConfirmationDialog } from '@/shared/ui/ConfirmationDialog';
@@ -52,55 +53,39 @@ export function StrengthExerciseLibraryCard({
                 </p>
               </div>
 
-              <details className="relative shrink-0">
-                <summary
-                  role="button"
-                  aria-label={`Actions pour ${exercise.name}`}
-                  className="grid size-11 cursor-pointer list-none place-items-center rounded-xl text-slate-600 hover:bg-slate-100 focus-visible:outline-none dark:text-slate-300 dark:hover:bg-slate-800 [&::-webkit-details-marker]:hidden"
+              <ActionMenu label={`Actions pour ${exercise.name}`} width="wide">
+                {exercise.source === 'user' ? (
+                  <Link
+                    to={editStrengthExercisePath(exercise.id)}
+                    className="inline-flex min-h-10 w-full items-center gap-2 rounded-xl px-3 text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
+                  >
+                    <Pencil aria-hidden="true" className="size-4" />
+                    Modifier
+                  </Link>
+                ) : null}
+                <Button
+                  className="w-full justify-start"
+                  size="sm"
+                  variant="ghost"
+                  disabled={busy}
+                  onClick={() => void onDuplicate(exercise.id)}
                 >
-                  <MoreHorizontal aria-hidden="true" className="size-5" />
-                </summary>
-                <div className="absolute right-0 z-20 mt-1 w-56 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl dark:border-slate-700 dark:bg-slate-900">
-                  {exercise.source === 'user' ? (
-                    <Link
-                      to={editStrengthExercisePath(exercise.id)}
-                      onClick={(event) => event.currentTarget.closest('details')?.removeAttribute('open')}
-                      className="inline-flex min-h-10 w-full items-center gap-2 rounded-xl px-3 text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
-                    >
-                      <Pencil aria-hidden="true" className="size-4" />
-                      Modifier
-                    </Link>
-                  ) : null}
+                  <Copy aria-hidden="true" className="size-4" />
+                  Dupliquer
+                </Button>
+                {exercise.source === 'user' ? (
                   <Button
                     className="w-full justify-start"
                     size="sm"
-                    variant="ghost"
+                    variant={exercise.isArchived ? 'ghost' : 'dangerGhost'}
                     disabled={busy}
-                    onClick={(event) => {
-                      event.currentTarget.closest('details')?.removeAttribute('open');
-                      void onDuplicate(exercise.id);
-                    }}
+                    onClick={() => setConfirmationOpen(true)}
                   >
-                    <Copy aria-hidden="true" className="size-4" />
-                    Dupliquer
+                    {exercise.isArchived ? <RotateCcw aria-hidden="true" className="size-4" /> : <Archive aria-hidden="true" className="size-4" />}
+                    {exercise.isArchived ? 'Réactiver' : 'Archiver'}
                   </Button>
-                  {exercise.source === 'user' ? (
-                    <Button
-                      className="w-full justify-start"
-                      size="sm"
-                      variant={exercise.isArchived ? 'ghost' : 'dangerGhost'}
-                      disabled={busy}
-                      onClick={(event) => {
-                        event.currentTarget.closest('details')?.removeAttribute('open');
-                        setConfirmationOpen(true);
-                      }}
-                    >
-                      {exercise.isArchived ? <RotateCcw aria-hidden="true" className="size-4" /> : <Archive aria-hidden="true" className="size-4" />}
-                      {exercise.isArchived ? 'Réactiver' : 'Archiver'}
-                    </Button>
-                  ) : null}
-                </div>
-              </details>
+                ) : null}
+              </ActionMenu>
             </div>
 
             <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-600 dark:text-slate-300">

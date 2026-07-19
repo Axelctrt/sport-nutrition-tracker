@@ -1,9 +1,10 @@
-import { Archive, MoreHorizontal, Pencil, Star } from 'lucide-react';
+import { Archive, Pencil, Star } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { editFoodProductPath } from '@/app/routePaths';
 import type { FoodProduct } from '@/domain/models/food';
 import type { FoodLibraryNavigationState } from '@/features/food-library/navigation/foodLibraryNavigation';
+import { ActionMenu } from '@/shared/ui/ActionMenu';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { ConfirmationDialog } from '@/shared/ui/ConfirmationDialog';
@@ -56,39 +57,26 @@ export function FoodProductCard({
                 </p>
               </div>
 
-              <details className="relative shrink-0">
-                <summary
-                  role="button"
-                  aria-label={`Actions pour ${product.name}`}
-                  className="grid size-11 cursor-pointer list-none place-items-center rounded-xl text-slate-600 hover:bg-slate-100 focus-visible:outline-none dark:text-slate-300 dark:hover:bg-slate-800 [&::-webkit-details-marker]:hidden"
+              <ActionMenu label={`Actions pour ${product.name}`}>
+                <Link
+                  to={editFoodProductPath(product.id)}
+                  state={navigationState}
+                  className="inline-flex min-h-10 w-full items-center gap-2 rounded-xl px-3 text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
                 >
-                  <MoreHorizontal aria-hidden="true" className="size-5" />
-                </summary>
-                <div className="absolute right-0 z-20 mt-1 w-52 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl dark:border-slate-700 dark:bg-slate-900">
-                  <Link
-                    to={editFoodProductPath(product.id)}
-                    state={navigationState}
-                    onClick={(event) => event.currentTarget.closest('details')?.removeAttribute('open')}
-                    className="inline-flex min-h-10 w-full items-center gap-2 rounded-xl px-3 text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
-                  >
-                    <Pencil aria-hidden="true" className="size-4" />
-                    Modifier
-                  </Link>
-                  <Button
-                    className="w-full justify-start"
-                    size="sm"
-                    variant="dangerGhost"
-                    disabled={archiving}
-                    onClick={(event) => {
-                      event.currentTarget.closest('details')?.removeAttribute('open');
-                      setArchiveOpen(true);
-                    }}
-                  >
-                    <Archive aria-hidden="true" className="size-4" />
-                    Archiver
-                  </Button>
-                </div>
-              </details>
+                  <Pencil aria-hidden="true" className="size-4" />
+                  Modifier
+                </Link>
+                <Button
+                  className="w-full justify-start"
+                  size="sm"
+                  variant="dangerGhost"
+                  disabled={archiving}
+                  onClick={() => setArchiveOpen(true)}
+                >
+                  <Archive aria-hidden="true" className="size-4" />
+                  Archiver
+                </Button>
+              </ActionMenu>
             </div>
 
             <div className="mt-3 flex flex-wrap gap-2 text-xs">

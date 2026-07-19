@@ -134,4 +134,41 @@ describe("GuestDataImportPanel", () => {
       screen.queryByRole("button", { name: "Importer dans mon compte" }),
     ).not.toBeInTheDocument();
   });
+
+  it("résume l’import sans détails longs dans le parcours compte mobile", async () => {
+    render(
+      <GuestDataImportPanel
+        accountFingerprint="acct-d2f00baa"
+        compact
+        prepareImport={vi.fn(async () => preparedImport())}
+      />,
+    );
+
+    const compactDescription = screen.getByText(
+      "Ajoutez au compte les données déjà présentes en mode local.",
+    );
+    expect(compactDescription).toHaveClass("text-xs", "leading-4", "mt-0.5");
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Analyser les données invitées" }),
+    );
+
+    const compactSummary = await screen.findByText(
+      "2 à ajouter · 1 à mettre à jour",
+    );
+    expect(compactSummary).toHaveClass(
+      "text-xs",
+      "leading-4",
+      "px-2.5",
+      "py-1.5",
+    );
+    expect(compactSummary.parentElement).toHaveClass("mt-2.5", "space-y-2.5");
+    expect(screen.queryByText("Nutrition")).not.toBeInTheDocument();
+    expect(screen.queryByText(/L’import est atomique/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Relancer l’analyse" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Importer dans mon compte" })).toBeVisible();
+  });
+
 });

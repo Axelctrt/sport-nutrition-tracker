@@ -1,6 +1,12 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SocialIdentityAccountGate } from '@/app/social-identity/SocialIdentityAccountGate';
+import { PROFILE_ONBOARDING_STEP_IDS } from '@/features/onboarding/profile/profileOnboardingSteps';
+import {
+  loadProfileOnboardingDraft,
+  saveProfileOnboardingDraft,
+} from '@/features/onboarding/storage/profileOnboardingDraft';
+import { DEFAULT_PROFILE_FORM_VALUES } from '@/features/profile/utils/defaultProfileFormValues';
 import {
   createAccountSocialIdentityCandidate,
   createDefaultSocialIdentity,
@@ -12,7 +18,7 @@ const defaultIdentity = createDefaultSocialIdentity('2026-07-09T10:00:00.000Z', 
 const completeIdentity = createAccountSocialIdentityCandidate(
   defaultIdentity,
   accountUserId,
-  { handle: 'alex.run', displayName: 'Alex Trail' },
+  { handle: 'axel_aka_dieu', displayName: 'Alex Trail' },
   '2026-07-09T11:00:00.000Z',
 );
 
@@ -24,6 +30,9 @@ function credentialsClient() {
 }
 
 describe('SocialIdentityAccountGate', () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
   it('laisse le mode local accéder directement à l’application', () => {
     render(
       <SocialIdentityAccountGate accountRequired={false}>
@@ -87,7 +96,7 @@ describe('SocialIdentityAccountGate', () => {
   it('réconcilie une identité personnalisée ancienne vers le compte connecté', async () => {
     const legacyIdentity = updateSocialIdentity(
       defaultIdentity,
-      { handle: 'alex.run', displayName: 'Alex Trail' },
+      { handle: 'axel_aka_dieu', displayName: 'Alex Trail' },
       '2026-07-09T10:30:00.000Z',
     );
     const reconcileIdentity = vi.fn(async () => ({
@@ -153,8 +162,13 @@ describe('SocialIdentityAccountGate', () => {
     expect(reload).toHaveBeenCalledTimes(1);
   });
 
-  it('bloque un compte avec identité générée jusqu’à la réservation', async () => {
+  it('bloque un compte avec identité générée puis reprend le formulaire au nom', async () => {
     const user = userEvent.setup();
+    const resumeProfileOnboarding = vi.fn();
+    saveProfileOnboardingDraft(
+      { ...DEFAULT_PROFILE_FORM_VALUES, firstName: 'Profil conservé' },
+      PROFILE_ONBOARDING_STEP_IDS.summary,
+    );
 
     render(
       <SocialIdentityAccountGate
@@ -177,17 +191,25 @@ describe('SocialIdentityAccountGate', () => {
           readIdentity: vi.fn(async () => defaultIdentity),
           saveIdentity: vi.fn(),
         }}
+        resumeProfileOnboarding={resumeProfileOnboarding}
       >
         <p>Application prête</p>
       </SocialIdentityAccountGate>,
     );
 
-    expect(await screen.findByRole('heading', { name: 'Choisir ton pseudonyme SportPilot' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Votre identité sociale' })).toBeInTheDocument();
     expect(screen.queryByText('Application prête')).not.toBeInTheDocument();
 
-    await user.type(screen.getByLabelText(/Pseudonyme public unique/), 'alex.run');
-    await user.click(screen.getByRole('button', { name: 'Réserver et continuer' }));
+    await user.type(screen.getByLabelText(/Identifiant public/), 'axel_aka_dieu');
+    await user.click(screen.getByRole('button', { name: 'Enregistrer et continuer' }));
 
     await waitFor(() => expect(screen.getByText('Application prête')).toBeInTheDocument());
+    expect(resumeProfileOnboarding).toHaveBeenCalledTimes(1);
+    const draft = loadProfileOnboardingDraft();
+    expect(draft.status).toBe('restored');
+    if (draft.status === 'restored') {
+      expect(draft.draft.stepId).toBe(PROFILE_ONBOARDING_STEP_IDS.name);
+      expect(draft.draft.values.firstName).toBe('Profil conservé');
+    }
   });
 });

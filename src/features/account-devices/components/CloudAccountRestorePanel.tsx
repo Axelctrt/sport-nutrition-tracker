@@ -150,24 +150,28 @@ export function CloudAccountRestorePanel({
     <section
       className={
         compact
-          ? 'rounded-2xl border border-sky-200 p-4 dark:border-sky-900'
+          ? 'space-y-2 rounded-2xl border border-sky-200 p-2.5 dark:border-sky-900'
           : 'space-y-4'
       }
     >
-      <div className="flex items-start gap-3">
+      <div className={compact ? 'flex items-center gap-2' : 'flex items-start gap-2.5'}>
         <CloudDownload
           aria-hidden="true"
-          className="mt-0.5 size-5 text-sky-700 dark:text-sky-300"
+          className={compact
+            ? 'size-4 text-sky-700 dark:text-sky-300'
+            : 'mt-0.5 size-5 text-sky-700 dark:text-sky-300'}
         />
         <div>
-          <h2 className="font-semibold text-slate-950 dark:text-white">
+          <h2 className={compact
+            ? 'text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-200'
+            : 'font-semibold text-slate-950 dark:text-white'}>
             Restaurer depuis le cloud
           </h2>
-          <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
-            Recherche les données déjà synchronisées pour ce compte et les
-            restaure dans son espace local. Le cloud n’est jamais vidé ni
-            remplacé par cette opération.
-          </p>
+          {!compact ? (
+            <p className="mt-1 text-sm leading-5 text-slate-600 dark:text-slate-300">
+              Recherche les données déjà synchronisées pour ce compte et les restaure dans son espace local. Le cloud n’est jamais vidé ni remplacé par cette opération.
+            </p>
+          ) : null}
         </div>
       </div>
 
@@ -198,44 +202,67 @@ export function CloudAccountRestorePanel({
       ) : null}
 
       {preview && !preview.hasCloudData ? (
-        <InlineNotice tone="info" title="Aucune donnée cloud trouvée">
-          Aucun domaine synchronisé ne contient actuellement de données pour ce
-          compte. Commencer avec un espace vide ne modifiera pas le cloud.
-        </InlineNotice>
+        compact ? (
+          <div
+            className="rounded-lg bg-slate-100 px-2.5 py-1.5 text-xs font-medium leading-4 text-slate-700 dark:bg-slate-900 dark:text-slate-200"
+            role="status"
+          >
+            Aucune donnée associée à ce compte
+          </div>
+        ) : (
+          <InlineNotice tone="info" title="Aucune donnée cloud trouvée">
+            Aucun domaine synchronisé ne contient actuellement de données pour ce
+            compte. Commencer avec un espace vide ne modifiera pas le cloud.
+          </InlineNotice>
+        )
       ) : null}
 
       {preview?.hasCloudData ? (
         <>
-          <InlineNotice tone="success" title="Des données ont été trouvées pour ce compte">
-            {preview.cloudRecordCount} donnée
-            {preview.cloudRecordCount > 1 ? 's' : ''} restaurable
-            {preview.cloudDeletionMarkerCount > 0
-              ? ` et ${preview.cloudDeletionMarkerCount} marqueur${
-                  preview.cloudDeletionMarkerCount > 1 ? 's' : ''
-                } de suppression`
-              : ''}.
-          </InlineNotice>
+          {compact ? (
+            <div
+              className="rounded-lg bg-emerald-50 px-2.5 py-1.5 text-xs font-medium leading-4 text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100"
+              role="status"
+            >
+              Des données ont été trouvées pour ce compte
+            </div>
+          ) : (
+            <InlineNotice
+              tone="success"
+              title="Des données ont été trouvées pour ce compte"
+            >
+              {preview.cloudRecordCount} donnée
+              {preview.cloudRecordCount > 1 ? 's' : ''} restaurable
+              {preview.cloudDeletionMarkerCount > 0
+                ? ` et ${preview.cloudDeletionMarkerCount} marqueur${
+                    preview.cloudDeletionMarkerCount > 1 ? 's' : ''
+                  } de suppression`
+                : ''}.
+            </InlineNotice>
+          )}
 
-          <div className="divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 dark:divide-slate-800 dark:border-slate-800">
-            {preview.categories.map((category) => (
-              <div
-                key={category.key}
-                className="flex items-center justify-between gap-4 px-4 py-3"
-              >
-                <div>
-                  <p className="text-sm font-semibold text-slate-950 dark:text-white">
-                    {category.label}
-                  </p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    {category.description}
-                  </p>
+          {!compact ? (
+            <div className="divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 dark:divide-slate-800 dark:border-slate-800">
+              {preview.categories.map((category) => (
+                <div
+                  key={category.key}
+                  className="flex items-center justify-between gap-4 px-4 py-3"
+                >
+                  <div>
+                    <p className="text-sm font-semibold text-slate-950 dark:text-white">
+                      {category.label}
+                    </p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      {category.description}
+                    </p>
+                  </div>
+                  <span className="shrink-0 font-bold text-sky-700 dark:text-sky-300">
+                    {category.recordCount}
+                  </span>
                 </div>
-                <span className="shrink-0 font-bold text-sky-700 dark:text-sky-300">
-                  {category.recordCount}
-                </span>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : null}
 
           {!preview.canRestore ? (
             <InlineNotice tone="info" title="Espace local déjà utilisé">
@@ -247,14 +274,17 @@ export function CloudAccountRestorePanel({
             </InlineNotice>
           ) : (
             <>
-              <div className="flex items-start gap-2 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100">
-                <ShieldCheck aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-                La restauration est préparée dans une base temporaire puis
-                appliquée atomiquement. En cas d’erreur, l’espace local reste
-                inchangé.
-              </div>
+              {!compact ? (
+                <div className="flex items-start gap-2 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100">
+                  <ShieldCheck aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+                  La restauration est préparée dans une base temporaire puis
+                  appliquée atomiquement. En cas d’erreur, l’espace local reste
+                  inchangé.
+                </div>
+              ) : null}
               <Button
                 className="w-full"
+                size={compact ? 'sm' : 'md'}
                 disabled={state.status === 'restoring'}
                 onClick={() => setConfirmationOpen(true)}
               >
