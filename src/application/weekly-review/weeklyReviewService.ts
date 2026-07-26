@@ -19,6 +19,12 @@ import {
   CALORIE_ADAPTATION_WINDOW_DAYS,
 } from '@/domain/reviews/calorieAdaptationAssessment';
 import { buildCalorieAdaptationObservations } from '@/domain/reviews/calorieAdaptationObservations';
+import {
+  loadEnergyArchitectureRetrospective,
+} from '@/application/daily/energyArchitectureRetrospectiveService';
+import type {
+  EnergyArchitectureRetrospectiveReport,
+} from '@/domain/calculations/energyArchitectureRetrospective';
 
 import type { ActivityRepository } from '@/infrastructure/repositories/contracts/ActivityRepository';
 import type { DailyCoachingRepository } from '@/infrastructure/repositories/contracts/DailyCoachingRepository';
@@ -47,6 +53,10 @@ export interface WeeklyReviewServiceDependencies {
   activities?: Pick<ActivityRepository, 'listBetween'>;
   workoutSessions?: Pick<WorkoutSessionRepository, 'listAll'>;
   readEndurancePlanningState?: () => EndurancePlanningState;
+  loadEnergyRetrospective: (
+    analysisEnd: LocalDate,
+    profile: UserProfile,
+  ) => Promise<EnergyArchitectureRetrospectiveReport>;
 
   weeklyReviews: Pick<
     WeeklyReviewRepository,
@@ -64,6 +74,7 @@ const defaultDependencies: WeeklyReviewServiceDependencies = {
   activities: repositories.activities,
   workoutSessions: repositories.workoutSessions,
   readEndurancePlanningState,
+  loadEnergyRetrospective: loadEnergyArchitectureRetrospective,
 
   weeklyReviews: repositories.weeklyReviews,
 };
@@ -73,6 +84,7 @@ export interface WeeklyReviewSnapshot {
   reviews: WeeklyReview[];
   adjustments: AcceptedCalorieAdjustment[];
   insights?: WeeklyReviewInsights;
+  energyRetrospective?: EnergyArchitectureRetrospectiveReport;
 }
 
 function median(values: readonly number[]): number | undefined {
@@ -108,6 +120,7 @@ export async function loadWeeklyReview(
     endurancePlanningState,
     checkIns,
     checkOuts,
+    energyRetrospective,
   ] = await Promise.all([
     dependencies.weeklyReviews.getByWeekStart(period.weekStart),
     dependencies.settings.get(),
@@ -127,6 +140,8 @@ export async function loadWeeklyReview(
     ),
     dependencies.dailyCoaching.listCheckInsBetween(analysisStart, period.weekEnd),
     dependencies.dailyCoaching.listCheckOutsBetween(analysisStart, period.weekEnd),
+    dependencies.loadEnergyRetrospective(period.weekEnd, profile)
+      .catch(() => undefined),
   ]);
   const inPeriod = (date: LocalDate, from: LocalDate, to: LocalDate) => (
     date >= from && date <= to
@@ -162,7 +177,13 @@ export async function loadWeeklyReview(
   });
   if (existing?.decisionStatus === 'accepted' || existing?.decisionStatus === 'rejected') {
     const reviews = await dependencies.weeklyReviews.listAll();
-    return { review: existing, reviews, adjustments, insights: insightsFor(existing) };
+    return {
+      review: existing,
+      reviews,
+      adjustments,
+      insights: insightsFor(existing),
+      ...(energyRetrospective ? { energyRetrospective } : {}),
+    };
   }
 
   const effectiveFrom = getAdjustmentEffectiveDate({ weekEnd: period.weekEnd });
@@ -217,7 +238,13 @@ export async function loadWeeklyReview(
   });
   const review = await dependencies.weeklyReviews.upsert(calculated);
   const reviews = await dependencies.weeklyReviews.listAll();
-  return { review, reviews, adjustments, insights: insightsFor(review) };
+  return {
+    review,
+    reviews,
+    adjustments,
+    insights: insightsFor(review),
+    ...(energyRetrospective ? { energyRetrospective } : {}),
+  };
 }
 
 export async function acceptWeeklyReview(

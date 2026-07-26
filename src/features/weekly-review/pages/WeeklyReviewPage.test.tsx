@@ -10,6 +10,9 @@ import {
   createCalorieAdaptationAssessment,
   createWeeklyReview,
 } from '@/test/factories/weeklyReviewFactory';
+import {
+  createEnergyArchitectureRetrospectiveReport,
+} from '@/test/factories/energyArchitectureRetrospectiveFactory';
 
 const mocks = vi.hoisted(() => ({
   accept: vi.fn(),
@@ -63,6 +66,8 @@ describe('WeeklyReviewPage adaptative', () => {
       review,
       reviews: [review],
       adjustments: [],
+      energyRetrospective:
+        createEnergyArchitectureRetrospectiveReport(),
     };
 
     renderPage();
@@ -70,6 +75,7 @@ describe('WeeklyReviewPage adaptative', () => {
     expect(screen.getByRole('heading', { name: 'Plateau probable' })).toBeInTheDocument();
     expect(screen.getAllByText('-100 kcal/j')).not.toHaveLength(0);
     expect(screen.getByRole('button', { name: 'Accepter la proposition' })).toBeInTheDocument();
+    expect(screen.getByText('Diagnostic du moteur énergétique')).toBeInTheDocument();
   });
 
   it('demande une confirmation explicite même lorsque la cible est maintenue', () => {
@@ -88,6 +94,8 @@ describe('WeeklyReviewPage adaptative', () => {
       review,
       reviews: [review],
       adjustments: [],
+      energyRetrospective:
+        createEnergyArchitectureRetrospectiveReport(),
     };
 
     renderPage();

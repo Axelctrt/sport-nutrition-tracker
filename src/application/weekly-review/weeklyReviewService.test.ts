@@ -9,6 +9,9 @@ import {
   rejectWeeklyReview,
   type WeeklyReviewServiceDependencies,
 } from '@/application/weekly-review/weeklyReviewService';
+import {
+  createEnergyArchitectureRetrospectiveReport,
+} from '@/test/factories/energyArchitectureRetrospectiveFactory';
 
 function createDependencies(existing?: WeeklyReview): WeeklyReviewServiceDependencies {
   let stored = existing;
@@ -26,6 +29,9 @@ function createDependencies(existing?: WeeklyReview): WeeklyReviewServiceDepende
       listCheckInsBetween: vi.fn().mockResolvedValue([]),
       listCheckOutsBetween: vi.fn().mockResolvedValue([]),
     },
+    loadEnergyRetrospective: vi.fn().mockResolvedValue(
+      createEnergyArchitectureRetrospectiveReport(),
+    ),
     weeklyReviews: {
       getByWeekStart: vi.fn().mockImplementation(() => Promise.resolve(stored)),
       upsert: vi.fn().mockImplementation((data) => { stored = createEntity(data, stored?.id ?? 'review'); return Promise.resolve(stored); }),
@@ -73,6 +79,11 @@ describe('weekly review service', () => {
     expect(dependencies.dailyCoaching.listCheckInsBetween)
       .toHaveBeenCalledWith('2026-05-25', '2026-06-14');
     expect(result.insights?.training.hasPlanning).toBe(false);
+    expect(result.energyRetrospective?.status).toBe('insufficientData');
+    expect(dependencies.loadEnergyRetrospective).toHaveBeenCalledWith(
+      '2026-06-14',
+      profile,
+    );
     expect(dependencies.weeklyReviews.upsert).toHaveBeenCalledOnce();
   });
 
@@ -81,7 +92,21 @@ describe('weekly review service', () => {
     const result = await loadWeeklyReview('2026-06-10', profile, dependencies);
     expect(result.review.decisionStatus).toBe('accepted');
     expect(result.insights).toBeDefined();
+    expect(result.energyRetrospective).toBeDefined();
     expect(dependencies.weeklyReviews.upsert).not.toHaveBeenCalled();
+  });
+
+  it('conserve le bilan si le diagnostic énergétique est indisponible', async () => {
+    const dependencies = createDependencies();
+    vi.mocked(dependencies.loadEnergyRetrospective).mockRejectedValue(
+      new Error('diagnostic unavailable'),
+    );
+
+    const result = await loadWeeklyReview('2026-06-10', profile, dependencies);
+
+    expect(result.review.weekStart).toBe('2026-06-08');
+    expect(result.energyRetrospective).toBeUndefined();
+    expect(dependencies.weeklyReviews.upsert).toHaveBeenCalledOnce();
   });
 
   it('accepte une proposition et crée un ajustement effectif la semaine suivante', async () => {

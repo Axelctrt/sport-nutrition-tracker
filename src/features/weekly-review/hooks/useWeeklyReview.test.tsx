@@ -5,6 +5,9 @@ import { useWeeklyReview } from '@/features/weekly-review/hooks/useWeeklyReview'
 import { createEntity } from '@/shared/utils/entities';
 import { createProfileInput } from '@/test/factories/profileFactory';
 import { createAcceptedAdjustment, createWeeklyReview } from '@/test/factories/weeklyReviewFactory';
+import {
+  createEnergyArchitectureRetrospectiveReport,
+} from '@/test/factories/energyArchitectureRetrospectiveFactory';
 
 const loadWeeklyReview = vi.fn();
 const acceptWeeklyReview = vi.fn();
@@ -22,6 +25,7 @@ function snapshot(status: 'pending' | 'accepted' = 'pending'): WeeklyReviewSnaps
     review,
     reviews: [review],
     adjustments: status === 'accepted' ? [createAcceptedAdjustment()] : [],
+    energyRetrospective: createEnergyArchitectureRetrospectiveReport(),
   };
 }
 

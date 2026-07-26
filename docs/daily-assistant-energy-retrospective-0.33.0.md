@@ -85,11 +85,21 @@ formula.
    exclude it. Product or clinical review must inspect heavily affected windows.
 6. This local report cannot satisfy a cohort-level release criterion by itself.
 
-## Runtime surface
+## Weekly review surface
 
 `loadEnergyArchitectureRetrospective(analysisEnd, profile)` returns the report
 without writing to Dexie or cloud storage.
 
-The next product phase may expose this report in an expert diagnostics surface
-or attach a concise, non-actionable summary to the weekly review. That phase
-must keep the production target isolated from the report status.
+The weekly review snapshot now includes this report as
+`energyRetrospective`. The page exposes it in a collapsed expert diagnostic
+after the primary decision and weekly guidance:
+
+- the summary states that the comparison is experimental;
+- the detail opens automatically only for `reviewRequired`;
+- coverage, valid windows, weigh-ins, exclusions, and errors remain visible;
+- no accept, apply, or switch command exists;
+- the report status never changes the weekly calorie proposal.
+
+The report remains ephemeral and isolated from the persisted `WeeklyReview`.
+Its loading also fails soft: an unavailable diagnostic is omitted and cannot
+block the weekly review or its decision workflow.

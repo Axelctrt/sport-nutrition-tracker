@@ -19,6 +19,7 @@ import type {
 import { getDefaultWeeklyReviewReferenceDate } from '@/domain/reviews/weeklyReview';
 import { AdaptiveAssessmentCard } from '@/features/weekly-review/components/AdaptiveAssessmentCard';
 import { CalibrationAdjustmentCard } from '@/features/weekly-review/components/CalibrationAdjustmentCard';
+import { EnergyArchitectureDiagnostic } from '@/features/weekly-review/components/EnergyArchitectureDiagnostic';
 import { WeeklyReviewHistoryCard } from '@/features/weekly-review/components/WeeklyReviewHistoryCard';
 import { WeeklyReviewGuidance } from '@/features/weekly-review/components/WeeklyReviewGuidance';
 import { WeeklyReviewSummary } from '@/features/weekly-review/components/WeeklyReviewSummary';
@@ -248,6 +249,11 @@ export function WeeklyReviewPage() {
           ) : null}
 
           <div className="mt-4 space-y-3">
+            {data.energyRetrospective ? (
+              <EnergyArchitectureDiagnostic
+                report={data.energyRetrospective}
+              />
+            ) : null}
 
             <CollapsibleSection
               title="Détail du score de suivi"
