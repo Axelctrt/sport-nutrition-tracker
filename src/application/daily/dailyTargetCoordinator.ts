@@ -5,6 +5,10 @@ import {
   type DailyExpenditureResult,
 } from '@/domain/calculations/expenditure';
 import {
+  compareEnergyArchitectures,
+  type EnergyArchitectureShadowComparison,
+} from '@/domain/calculations/energyArchitectureShadow';
+import {
   estimateExpectedSteps,
   EXPECTED_STEPS_OBSERVATION_WINDOW_DAYS,
 } from '@/domain/calculations/expectedSteps';
@@ -67,12 +71,18 @@ export interface DailyTargetSnapshot {
   plannedActivities: PlannedActivityCalorieSnapshot[];
   energyTransparency: DailyEnergyTransparency;
   energyGuidance: DailyEnergyGuidance;
+  energyArchitectureShadow: DailyEnergyArchitectureShadow;
 }
 
 export interface DailyEnergyGuidance {
   expectedSteps: ExpectedStepsEstimate;
   finalStatus: 'open' | 'missingSteps' | 'final';
   finalExpenditure?: DailyExpenditureResult;
+}
+
+export interface DailyEnergyArchitectureShadow {
+  guided: EnergyArchitectureShadowComparison;
+  final?: EnergyArchitectureShadowComparison;
 }
 
 const defaultDependencies: DailyTargetCoordinatorDependencies = {
@@ -229,6 +239,15 @@ export async function calculateAndPersistDailyTarget(
     plannedActivities,
     acceptedCalibrationAdjustmentKcal,
   });
+  const guidedEnergyArchitectureShadow = compareEnergyArchitectures({
+    date,
+    profile,
+    settings,
+    weightKg: weight.weightKg,
+    totalSteps: expectedSteps.expectedSteps,
+    activities,
+    plannedActivities,
+  });
   const target = await dependencies.targets.upsertTarget(
     toDailyTargetInput(date, calculation, expectedSteps),
   );
@@ -247,6 +266,16 @@ export async function calculateAndPersistDailyTarget(
     : undefined;
   const finalExpenditure = checkOut && finalStepsEntry
     ? calculateDailyExpenditure({
+        date,
+        profile,
+        settings,
+        weightKg: weight.weightKg,
+        totalSteps: finalStepsEntry.totalSteps,
+        activities,
+      })
+    : undefined;
+  const finalEnergyArchitectureShadow = checkOut && finalStepsEntry
+    ? compareEnergyArchitectures({
         date,
         profile,
         settings,
@@ -277,5 +306,11 @@ export async function calculateAndPersistDailyTarget(
     plannedActivities,
     energyTransparency,
     energyGuidance,
+    energyArchitectureShadow: {
+      guided: guidedEnergyArchitectureShadow,
+      ...(finalEnergyArchitectureShadow
+        ? { final: finalEnergyArchitectureShadow }
+        : {}),
+    },
   };
 }

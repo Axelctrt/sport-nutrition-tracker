@@ -157,12 +157,61 @@ describe('dailyTargetCoordinator', () => {
       observationWindowDays: 28,
     });
     expect(snapshot.target.targetCaloriesKcal).toBeGreaterThan(0);
+    expect(snapshot.energyArchitectureShadow.guided.currentTotalKcal).toBeCloseTo(
+      snapshot.calculation.energy.totalEstimatedExpenditureKcal,
+      2,
+    );
+    expect(snapshot.energyArchitectureShadow.guided.overlapRisk).toBe(
+      'negligible',
+    );
+    expect(snapshot.energyArchitectureShadow.final).toBeUndefined();
     expect(snapshot.energyTransparency).toMatchObject({
       plannedSportCaloriesKcal: 0,
       actualSportCaloriesKcal: 0,
       rawSportCaloriesKcal: 0,
     });
     expect(savedTarget).toHaveBeenCalledOnce();
+  });
+
+  it('n’expose pas de shadow final sans relevé de pas lié au bilan', async () => {
+    const date = '2026-07-14';
+    const checkOut = createEntity<DailyCheckOut>({
+      date,
+      stepsEntryId: 'missing-steps-entry',
+      foodJournalComplete: true,
+      contextFlags: [],
+      contextSyncPreference: 'localOnly',
+      completedAt: '2026-07-14T21:00:00.000Z',
+    });
+    const dependencies: DailyTargetCoordinatorDependencies = {
+      settings: { get: vi.fn(async () => createDefaultAppSettings()) },
+      weight: {
+        listBetween: vi.fn(async () => []),
+        getByDate: vi.fn(async () => undefined),
+      },
+      steps: {
+        getByDate: vi.fn(async () => undefined),
+        listBetween: vi.fn(async () => []),
+      },
+      dailyCoaching: { getCheckOut: vi.fn(async () => checkOut) },
+      activities: { listByDate: vi.fn(async () => []) },
+      targets: {
+        upsertTarget: vi.fn(async (target) => createEntity(target)),
+      },
+      weeklyReviews: { listAdjustments: vi.fn(async () => []) },
+      workoutSessions: { listAll: vi.fn(async () => []) },
+      listEndurancePlanningSessions: vi.fn(async () => []),
+    };
+
+    const snapshot = await calculateAndPersistDailyTarget(
+      date,
+      createProfile(),
+      dependencies,
+    );
+
+    expect(snapshot.energyGuidance.finalStatus).toBe('missingSteps');
+    expect(snapshot.energyGuidance.finalExpenditure).toBeUndefined();
+    expect(snapshot.energyArchitectureShadow.final).toBeUndefined();
   });
 
   it('sépare la cible guidée de la dépense finale sans compter deux fois le sport', async () => {
@@ -268,10 +317,26 @@ describe('dailyTargetCoordinator', () => {
       strengthTrainingKcal: 252,
       plannedActivitiesKcal: 0,
     });
+    expect(snapshot.energyArchitectureShadow.guided.currentTotalKcal).toBeCloseTo(
+      snapshot.calculation.energy.totalEstimatedExpenditureKcal,
+      2,
+    );
+    expect(snapshot.energyArchitectureShadow.final?.currentTotalKcal).toBeCloseTo(
+      snapshot.energyGuidance.finalExpenditure?.energy
+        .totalEstimatedExpenditureKcal ?? 0,
+      2,
+    );
+    expect(
+      snapshot.energyArchitectureShadow.guided.currentTotalKcal
+      - (snapshot.energyArchitectureShadow.final?.currentTotalKcal ?? 0),
+    ).toBe(157.5);
     expect(
       snapshot.calculation.energy.totalEstimatedExpenditureKcal
       - (snapshot.energyGuidance.finalExpenditure?.energy
         .totalEstimatedExpenditureKcal ?? 0),
     ).toBe(157.5);
+    expect(savedTarget.mock.calls[0]?.[0]).not.toHaveProperty(
+      'energyArchitectureShadow',
+    );
   });
 });
