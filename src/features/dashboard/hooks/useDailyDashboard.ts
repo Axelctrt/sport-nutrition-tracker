@@ -3,6 +3,16 @@ import {
   calculateAndPersistDailyTarget,
   type DailyTargetSnapshot,
 } from '@/application/daily/dailyTargetCoordinator';
+import {
+  completeDailyCheckIn,
+  completeDailyCheckOut,
+  readDailyCoachingDay,
+  setDailyActivityDecision,
+  type CompleteDailyCheckInInput,
+  type CompleteDailyCheckOutInput,
+  type DailyCoachingDay,
+  type SetDailyActivityDecisionInput,
+} from '@/application/daily/dailyCoachingService';
 import { recalculateTargetsAfterWeightChange } from '@/application/daily/referenceWeightRecalculationService';
 import { useProfile } from '@/app/providers/profile/useProfile';
 import {
@@ -36,6 +46,12 @@ export interface ActiveWorkoutSummary {
 export interface DailyDashboardDependencies {
   calculateTarget: typeof calculateAndPersistDailyTarget;
   recalculateTargetsAfterWeightChange: typeof recalculateTargetsAfterWeightChange;
+  dailyCoaching: {
+    read: typeof readDailyCoachingDay;
+    completeCheckIn: typeof completeDailyCheckIn;
+    setActivityDecision: typeof setDailyActivityDecision;
+    completeCheckOut: typeof completeDailyCheckOut;
+  };
   repositories: {
     weight: Pick<typeof repositories.weight, 'upsert'>;
     food: Pick<
@@ -58,6 +74,12 @@ export interface UseDailyDashboardOptions {
 const defaultDependencies: DailyDashboardDependencies = {
   calculateTarget: calculateAndPersistDailyTarget,
   recalculateTargetsAfterWeightChange,
+  dailyCoaching: {
+    read: readDailyCoachingDay,
+    completeCheckIn: completeDailyCheckIn,
+    setActivityDecision: setDailyActivityDecision,
+    completeCheckOut: completeDailyCheckOut,
+  },
   repositories,
 };
 
@@ -69,6 +91,7 @@ export function useDailyDashboard(options: UseDailyDashboardOptions = {}) {
   const [snapshot, setSnapshot] = useState<DailyTargetSnapshot>();
   const [nutrition, setNutrition] = useState<DailyDashboardNutrition>();
   const [activeWorkout, setActiveWorkout] = useState<ActiveWorkoutSummary>();
+  const [dailyCoaching, setDailyCoaching] = useState<DailyCoachingDay>();
   const [errorMessage, setErrorMessage] = useState<string>();
   const date = toLocalDate();
 
@@ -81,11 +104,18 @@ export function useDailyDashboard(options: UseDailyDashboardOptions = {}) {
     setErrorMessage(undefined);
 
     try {
-      const [nextSnapshot, entries, journalStatus, inProgressSession] = await Promise.all([
+      const [
+        nextSnapshot,
+        entries,
+        journalStatus,
+        inProgressSession,
+        nextDailyCoaching,
+      ] = await Promise.all([
         dependencies.calculateTarget(date, profile),
         dependencies.repositories.food.listEntriesByDate(date),
         dependencies.repositories.food.getJournalStatus(date),
         dependencies.repositories.workoutSessions.getInProgress(),
+        dependencies.dailyCoaching.read(date),
       ]);
       const inProgressExercises = inProgressSession
         ? await dependencies.repositories.workoutSessions.listExercises(inProgressSession.id)
@@ -104,6 +134,7 @@ export function useDailyDashboard(options: UseDailyDashboardOptions = {}) {
       setActiveWorkout(inProgressSession
         ? { session: inProgressSession, exerciseCount: inProgressExercises.length }
         : undefined);
+      setDailyCoaching(nextDailyCoaching);
       setStatus('ready');
     } catch (error) {
       setErrorMessage(
@@ -132,15 +163,40 @@ export function useDailyDashboard(options: UseDailyDashboardOptions = {}) {
     await refresh();
   }, [dependencies, refresh]);
 
+  const saveCheckIn = useCallback(async (input: CompleteDailyCheckInInput) => {
+    await dependencies.dailyCoaching.completeCheckIn(input);
+    if (profile && typeof input.weightKg === 'number') {
+      await dependencies.recalculateTargetsAfterWeightChange(input.date, profile);
+    }
+    await refresh();
+  }, [dependencies, profile, refresh]);
+
+  const saveActivityDecision = useCallback(
+    async (input: SetDailyActivityDecisionInput) => {
+      await dependencies.dailyCoaching.setActivityDecision(input);
+      await refresh();
+    },
+    [dependencies, refresh],
+  );
+
+  const saveCheckOut = useCallback(async (input: CompleteDailyCheckOutInput) => {
+    await dependencies.dailyCoaching.completeCheckOut(input);
+    await refresh();
+  }, [dependencies, refresh]);
+
   return {
     date,
     status,
     snapshot,
     nutrition,
     activeWorkout,
+    dailyCoaching,
     errorMessage,
     refresh,
     saveWeight,
     saveSteps,
+    saveCheckIn,
+    saveActivityDecision,
+    saveCheckOut,
   };
 }

@@ -21,6 +21,7 @@ describe('préférences du tableau de bord', () => {
       'todaySummary',
       'activeWorkout',
       'trainingAgenda',
+      'dailyAssistant',
       'activities',
       'calculationDetails',
       'rewardsOverview',
@@ -51,11 +52,14 @@ describe('préférences du tableau de bord', () => {
 
     expect(defaults.order.slice(0, 4)).toEqual([
       'todaySummary',
+      'dailyAssistant',
       'quickActions',
       'activeWorkout',
-      'trainingAgenda',
     ]);
     expect(defaults.hidden).toEqual([
+      'activeWorkout',
+      'trainingAgenda',
+      'quickActions',
       'calculationDetails',
       'rewardsOverview',
       'weeklyMissions',
@@ -95,6 +99,7 @@ describe('préférences du tableau de bord', () => {
         'activeWorkout',
         'trainingAgenda',
         'todaySummary',
+        'dailyAssistant',
         'quickActions',
         'activities',
         'calculationDetails',

@@ -13,6 +13,7 @@ import {
 import { DashboardActiveWorkout } from '@/features/dashboard/components/DashboardActiveWorkout';
 import { DashboardActivities } from '@/features/dashboard/components/DashboardActivities';
 import { DashboardCalculationDetails } from '@/features/dashboard/components/DashboardCalculationDetails';
+import { DashboardDailyAssistant } from '@/features/dashboard/components/DashboardDailyAssistant';
 import { DashboardQuickActions } from '@/features/dashboard/components/DashboardQuickActions';
 import { DashboardRewardsOverview } from '@/features/dashboard/components/DashboardRewardsOverview';
 import { DashboardTodaySummary } from '@/features/dashboard/components/DashboardTodaySummary';
@@ -35,10 +36,14 @@ export function DashboardPage() {
     snapshot,
     nutrition,
     activeWorkout,
+    dailyCoaching,
     errorMessage,
     refresh,
     saveWeight,
     saveSteps,
+    saveCheckIn,
+    saveActivityDecision,
+    saveCheckOut,
   } = useDailyDashboard();
   const {
     preferences,
@@ -111,6 +116,21 @@ export function DashboardPage() {
             isRefreshing={status === 'loading'}
           />
         );
+
+      case 'dailyAssistant':
+        return dailyCoaching ? (
+          <DashboardDailyAssistant
+            key={widgetId}
+            date={date}
+            snapshot={snapshot}
+            nutrition={nutrition}
+            dailyCoaching={dailyCoaching}
+            {...(activeWorkout ? { activeWorkout } : {})}
+            onSaveCheckIn={saveCheckIn}
+            onSaveActivityDecision={saveActivityDecision}
+            onSaveCheckOut={saveCheckOut}
+          />
+        ) : null;
 
       case 'quickActions':
         return (

@@ -58,6 +58,11 @@ export function DashboardTodaySummary({
   const consumedCalories = rounded(nutrition.consumed.caloriesKcal);
   const remainingCalories = rounded(nutrition.remaining.caloriesKcal);
   const transparency = snapshot.energyTransparency;
+  const expectedSteps = snapshot.energyGuidance?.expectedSteps.expectedSteps
+    ?? snapshot.calculation.steps.totalSteps;
+  const actualSteps = snapshot.stepsEntry?.totalSteps;
+  const finalExpenditureKcal = snapshot.energyGuidance?.finalExpenditure
+    ?.energy.totalEstimatedExpenditureKcal;
   const showMacros = visibleMetrics.includes('macros');
   const showSteps = visibleMetrics.includes('steps');
   const showWeight = visibleMetrics.includes('weight');
@@ -73,7 +78,9 @@ export function DashboardTodaySummary({
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">Calories consommées</p>
+              <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">
+                Cible alimentaire guidée
+              </p>
               {isRefreshing ? (
                 <span className="text-xs font-medium text-brand-700 dark:text-brand-300" role="status">
                   Mise à jour…
@@ -82,11 +89,17 @@ export function DashboardTodaySummary({
             </div>
             <p className={`${density === 'compact' ? 'mt-0.5 text-2xl' : 'mt-1 text-3xl'} font-bold tracking-tight tabular-nums text-slate-950 dark:text-white`}>
               {consumedCalories.toLocaleString('fr-FR')}
-              <span className="ml-1 text-base font-semibold text-slate-500 dark:text-slate-400">kcal</span>
+              <span className="mx-1 text-xl font-semibold text-slate-400 dark:text-slate-500">/</span>
+              {snapshot.target.targetCaloriesKcal.toLocaleString('fr-FR')}
+              <span className="ml-1 text-base font-semibold text-slate-500 dark:text-slate-400">
+                kcal
+              </span>
             </p>
-            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-              Cible : {snapshot.target.targetCaloriesKcal.toLocaleString('fr-FR')} kcal
-            </p>
+            {finalExpenditureKcal !== undefined ? (
+              <p className="mt-1 text-xs font-medium text-emerald-700 dark:text-emerald-300">
+                Dépense finale estimée : {Math.round(finalExpenditureKcal).toLocaleString('fr-FR')} kcal
+              </p>
+            ) : null}
             {transparency && transparency.rawSportCaloriesKcal > 0 ? (
               <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs">
                 <span className="text-slate-500 dark:text-slate-400">
@@ -147,13 +160,15 @@ export function DashboardTodaySummary({
             <div className={`min-w-0 p-4 ${showWeight ? 'border-r border-slate-200 dark:border-slate-800' : ''}`}>
               <dt className="flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
                 <Footprints aria-hidden="true" className="size-4" />
-                Pas du jour
+                {actualSteps === undefined ? 'Pas attendus' : 'Pas réels'}
               </dt>
               <dd className="mt-1 text-lg font-bold tabular-nums text-slate-950 dark:text-white">
-                {snapshot.calculation.steps.totalSteps.toLocaleString('fr-FR')}
+                {(actualSteps ?? expectedSteps).toLocaleString('fr-FR')}
               </dd>
               <p className="truncate text-xs text-slate-500 dark:text-slate-400">
-                sur {dailyStepGoal.toLocaleString('fr-FR')}
+                {actualSteps === undefined
+                  ? `objectif ${dailyStepGoal.toLocaleString('fr-FR')}`
+                  : `attendus ${expectedSteps.toLocaleString('fr-FR')} · objectif ${dailyStepGoal.toLocaleString('fr-FR')}`}
               </p>
             </div>
           ) : null}

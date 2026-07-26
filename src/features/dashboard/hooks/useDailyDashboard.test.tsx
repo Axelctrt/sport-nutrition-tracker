@@ -16,6 +16,10 @@ const mocks = vi.hoisted(() => ({
   getJournalStatus: vi.fn(),
   getInProgress: vi.fn(),
   listExercises: vi.fn(),
+  readDailyCoaching: vi.fn(),
+  completeCheckIn: vi.fn(),
+  setActivityDecision: vi.fn(),
+  completeCheckOut: vi.fn(),
 }));
 
 const profile = {
@@ -57,6 +61,12 @@ function ProfileWrapper({ children }: PropsWithChildren) {
 const dependencies: DailyDashboardDependencies = {
   calculateTarget: mocks.calculateTarget,
   recalculateTargetsAfterWeightChange: mocks.recalculateTargets,
+  dailyCoaching: {
+    read: mocks.readDailyCoaching,
+    completeCheckIn: mocks.completeCheckIn,
+    setActivityDecision: mocks.setActivityDecision,
+    completeCheckOut: mocks.completeCheckOut,
+  },
   repositories: {
     weight: { upsert: mocks.upsertWeight },
     food: {
@@ -92,6 +102,14 @@ describe('useDailyDashboard', () => {
     mocks.getJournalStatus.mockResolvedValue(undefined);
     mocks.getInProgress.mockResolvedValue(undefined);
     mocks.listExercises.mockResolvedValue([]);
+    mocks.readDailyCoaching.mockResolvedValue({
+      checkIn: undefined,
+      activityDecision: undefined,
+      checkOut: undefined,
+    });
+    mocks.completeCheckIn.mockResolvedValue(undefined);
+    mocks.setActivityDecision.mockResolvedValue(undefined);
+    mocks.completeCheckOut.mockResolvedValue(undefined);
   });
 
   it('recalcule les cibles affectées après une pesée enregistrée depuis l’accueil', async () => {
@@ -114,5 +132,29 @@ describe('useDailyDashboard', () => {
       '2026-07-09',
       profile,
     );
+  });
+
+  it('enregistre le check-in puis recharge le cycle quotidien', async () => {
+    const { result } = renderHook(
+      () => useDailyDashboard({ profileOverride: profile, dependencies }),
+      { wrapper: ProfileWrapper },
+    );
+
+    await waitFor(() => expect(result.current.status).toBe('ready'));
+
+    await act(async () => {
+      await result.current.saveCheckIn({
+        date: '2026-07-09',
+        weightKg: null,
+        readiness: 'normal',
+      });
+    });
+
+    expect(mocks.completeCheckIn).toHaveBeenCalledWith({
+      date: '2026-07-09',
+      weightKg: null,
+      readiness: 'normal',
+    });
+    expect(mocks.calculateTarget).toHaveBeenCalledTimes(2);
   });
 });

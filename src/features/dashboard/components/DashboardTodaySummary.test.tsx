@@ -77,7 +77,7 @@ describe('DashboardTodaySummary', () => {
       />,
     );
 
-    expect(screen.getByText('Calories consommées')).toBeInTheDocument();
+    expect(screen.getByText('Cible alimentaire guidée')).toBeInTheDocument();
     expect(screen.getByText('Avant sport : 2 000 kcal')).toBeInTheDocument();
     expect(screen.getByText('Sport : +200 kcal')).toBeInTheDocument();
     expect(screen.getByText('kcal restantes')).toBeInTheDocument();
@@ -89,7 +89,7 @@ describe('DashboardTodaySummary', () => {
     expect(screen.getByText('Glucides')).toBeInTheDocument();
     expect(screen.getByText('Lipides')).toBeInTheDocument();
     expect(screen.getByText('60,5 kg')).toBeInTheDocument();
-    expect(screen.getByText('Pas du jour').parentElement).toHaveTextContent('8 000');
+    expect(screen.getByText('Pas attendus').parentElement).toHaveTextContent('8 000');
   });
 
   it('distingue une cible dépassée et affiche le poids actuel même sans pesée du jour', () => {
@@ -109,5 +109,55 @@ describe('DashboardTodaySummary', () => {
     expect(screen.getByText('Poids actuel')).toBeInTheDocument();
     expect(screen.getByText('60,5 kg')).toBeInTheDocument();
     expect(screen.getByText('Valeur initiale du profil')).toBeInTheDocument();
+  });
+
+  it('distingue les pas réels et la dépense finale après le check-out', () => {
+    const currentSnapshot = createSnapshot();
+    currentSnapshot.stepsEntry = {
+      id: 'steps:2026-06-25',
+      date: '2026-06-25',
+      totalSteps: 6_500,
+      source: 'manual',
+      createdAt: '2026-06-25T21:00:00.000Z',
+      updatedAt: '2026-06-25T21:00:00.000Z',
+    };
+    currentSnapshot.energyGuidance = {
+      expectedSteps: {
+        expectedSteps: 8_000,
+        stepGoal: 10_000,
+        source: 'recentHistory',
+        confidence: 'established',
+        observedDayCount: 20,
+        observationWindowDays: 28,
+      },
+      finalStatus: 'final',
+      finalExpenditure: {
+        ageYears: 22,
+        steps: currentSnapshot.calculation.steps,
+        energy: {
+          bmrKcal: 1_600,
+          occupationalBaseKcal: 1_920,
+          walkingKcal: 100,
+          runningKcal: 0,
+          swimmingKcal: 0,
+          strengthTrainingKcal: 180,
+          otherActivitiesKcal: 0,
+          plannedActivitiesKcal: 0,
+          totalEstimatedExpenditureKcal: 2_200,
+        },
+      },
+    };
+
+    render(
+      <DashboardTodaySummary
+        snapshot={currentSnapshot}
+        nutrition={nutrition}
+        dailyStepGoal={10_000}
+      />,
+    );
+
+    expect(screen.getByText('Pas réels').parentElement).toHaveTextContent('6 500');
+    expect(screen.getByText(/attendus 8 000/)).toBeInTheDocument();
+    expect(screen.getByText('Dépense finale estimée : 2 200 kcal')).toBeInTheDocument();
   });
 });
