@@ -485,6 +485,16 @@ const dailyMacroTargetsSchema = z.object({
   fatGrams: nonNegativeNumber,
 });
 
+const dailyTargetStepBasisSchema = z.object({
+  mode: z.literal('expected'),
+  steps: nonNegativeInteger,
+  stepGoal: nonNegativeInteger,
+  source: z.enum(['profileFallback', 'recentBlend', 'recentHistory']),
+  confidence: z.enum(['fallback', 'emerging', 'established']),
+  observedDayCount: nonNegativeInteger,
+  observationWindowDays: positiveInteger,
+});
+
 const plannedActivityCalorieSnapshotSchema = z.object({
   id: z.string().min(1),
   source: z.enum(['strengthSession', 'endurancePlanning']),
@@ -511,6 +521,7 @@ const dailyTargetSchema = datedEntitySchema.extend({
   targetCaloriesKcal: nonNegativeNumber,
   macros: dailyMacroTargetsSchema,
   plannedActivities: z.array(plannedActivityCalorieSnapshotSchema).optional(),
+  stepBasis: dailyTargetStepBasisSchema.optional(),
   calculationVersion: positiveInteger,
 });
 

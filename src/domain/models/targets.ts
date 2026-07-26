@@ -1,5 +1,9 @@
 import type { PlannedActivityCalorieSnapshot } from '@/domain/models/plannedActivity';
 import type { DatedEntity } from '@/domain/models/common';
+import type {
+  ExpectedStepsConfidence,
+  ExpectedStepsSource,
+} from '@/domain/models/steps';
 
 export interface DailyEnergyBreakdown {
   bmrKcal: number;
@@ -29,5 +33,14 @@ export interface DailyTarget extends DatedEntity {
   targetCaloriesKcal: number;
   macros: DailyMacroTargets;
   plannedActivities?: PlannedActivityCalorieSnapshot[];
+  stepBasis?: {
+    mode: 'expected';
+    steps: number;
+    stepGoal: number;
+    source: ExpectedStepsSource;
+    confidence: ExpectedStepsConfidence;
+    observedDayCount: number;
+    observationWindowDays: number;
+  };
   calculationVersion: number;
 }

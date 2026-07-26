@@ -5,6 +5,7 @@ import type {
   WeeklyReview,
 } from '@/domain/models/weeklyReview';
 import { calculateDailyTarget } from '@/domain/calculations/dailyTarget';
+import { estimateExpectedSteps } from '@/domain/calculations/expectedSteps';
 import { resolveReferenceWeight } from '@/domain/calculations/referenceWeight';
 import { resolveAcceptedCalibrationAdjustment } from '@/application/daily/dailyTargetCoordinator';
 import { buildPlannedActivityCalories } from '@/application/planning/plannedActivityCalories';
@@ -275,7 +276,6 @@ async function reconcileDailyTargets(
     localDatabase.workoutSessions.toArray(),
     localDatabase.endurancePlanningSessions.toArray(),
   ]);
-  const stepsByDate = new Map(steps.map((value) => [value.date, value]));
   const activitiesByDate = new Map<LocalDate, typeof activities>();
   for (const activity of activities) {
     const current = activitiesByDate.get(activity.date) ?? [];
@@ -300,12 +300,19 @@ async function reconcileDailyTargets(
       strengthSessions,
       enduranceSessions,
     });
+    const expectedSteps = estimateExpectedSteps({
+      date: target.date,
+      occupationalActivity: profile.occupationalActivity,
+      stepGoal: profile.dailyStepGoal,
+      includedBaseSteps: settings.includedBaseSteps,
+      history: steps,
+    });
     const calculation = calculateDailyTarget({
       date: target.date,
       profile,
       settings,
       weightKg: weight.weightKg,
-      totalSteps: stepsByDate.get(target.date)?.totalSteps ?? 0,
+      totalSteps: expectedSteps.expectedSteps,
       activities: dateActivities,
       plannedActivities,
       acceptedCalibrationAdjustmentKcal,
@@ -324,6 +331,15 @@ async function reconcileDailyTargets(
       targetCaloriesKcal: calculation.targetCaloriesKcal,
       macros: calculation.macros,
       plannedActivities: calculation.plannedActivities,
+      stepBasis: {
+        mode: 'expected',
+        steps: expectedSteps.expectedSteps,
+        stepGoal: expectedSteps.stepGoal,
+        source: expectedSteps.source,
+        confidence: expectedSteps.confidence,
+        observedDayCount: expectedSteps.observedDayCount,
+        observationWindowDays: expectedSteps.observationWindowDays,
+      },
       calculationVersion: calculation.calculationVersion,
       updatedAt: completedAt,
     };

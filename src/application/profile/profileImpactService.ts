@@ -1,7 +1,11 @@
-import { format } from 'date-fns';
+import { format, parseISO, subDays } from 'date-fns';
 import { resolveAcceptedCalibrationAdjustment } from '@/application/daily/dailyTargetCoordinator';
 import { buildPlannedActivityCalories } from '@/application/planning/plannedActivityCalories';
 import { calculateDailyTarget } from '@/domain/calculations/dailyTarget';
+import {
+  estimateExpectedSteps,
+  EXPECTED_STEPS_OBSERVATION_WINDOW_DAYS,
+} from '@/domain/calculations/expectedSteps';
 import { getPreviousCalendarWeekRange, resolveReferenceWeight } from '@/domain/calculations/referenceWeight';
 import type { LocalDate, NewEntity } from '@/domain/models/common';
 import type {
@@ -13,6 +17,7 @@ import type { DailyMacroTargets } from '@/domain/models/targets';
 import { readEndurancePlanningState } from '@/domain/planning/endurancePlanningState';
 import { repositories } from '@/infrastructure/repositories/repositories';
 import { createEntityId } from '@/shared/utils/entities';
+import { toLocalDate } from '@/shared/utils/dates';
 
 export const MAX_PROFILE_IMPACT_HISTORY_ENTRIES = 12;
 
@@ -85,17 +90,21 @@ async function calculateProfileTarget(
   profile: UserProfile,
 ): Promise<ProfileImpactTargetSnapshot> {
   const referencePeriod = getPreviousCalendarWeekRange(date);
+  const stepHistoryStart = toLocalDate(
+    subDays(parseISO(date), EXPECTED_STEPS_OBSERVATION_WINDOW_DAYS),
+  );
+  const stepHistoryEnd = toLocalDate(subDays(parseISO(date), 1));
   const [
     settings,
     previousWeekEntries,
-    stepsEntry,
+    stepHistory,
     activities,
     adjustments,
     strengthSessions,
   ] = await Promise.all([
     repositories.settings.get(),
     repositories.weight.listBetween(referencePeriod.start, referencePeriod.end),
-    repositories.steps.getByDate(date),
+    repositories.steps.listBetween(stepHistoryStart, stepHistoryEnd),
     repositories.activities.listByDate(date),
     repositories.weeklyReviews.listAdjustments(),
     repositories.workoutSessions.listAll(),
@@ -114,12 +123,19 @@ async function calculateProfileTarget(
     strengthSessions,
     enduranceSessions,
   });
+  const expectedSteps = estimateExpectedSteps({
+    date,
+    occupationalActivity: profile.occupationalActivity,
+    stepGoal: profile.dailyStepGoal,
+    includedBaseSteps: settings.includedBaseSteps,
+    history: stepHistory,
+  });
   const result = calculateDailyTarget({
     date,
     profile,
     settings,
     weightKg: weight.weightKg,
-    totalSteps: stepsEntry?.totalSteps ?? 0,
+    totalSteps: expectedSteps.expectedSteps,
     activities,
     plannedActivities,
     acceptedCalibrationAdjustmentKcal,

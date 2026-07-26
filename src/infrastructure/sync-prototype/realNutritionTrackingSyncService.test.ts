@@ -1,4 +1,5 @@
 import Dexie, { type Table } from 'dexie';
+import { DAILY_TARGET_CALCULATION_VERSION } from '@/domain/calculations/constants';
 import type { UserProfile } from '@/domain/models/profile';
 import type { DailyTarget } from '@/domain/models/targets';
 import type {
@@ -301,7 +302,7 @@ describe('synchronisation C3 du suivi nutritionnel', () => {
       .toMatchObject({
         acceptedCalibrationAdjustmentKcal: 100,
         calculationWeightKg: 71,
-        calculationVersion: 4,
+        calculationVersion: DAILY_TARGET_CALCULATION_VERSION,
       });
   });
 
