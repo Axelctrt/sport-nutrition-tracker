@@ -1,4 +1,7 @@
 import {
+  dailyActivityDecisionIdForDate,
+  dailyCheckInIdForDate,
+  dailyCheckOutIdForDate,
   dailyJournalStatusIdForDate,
   dailyStepsIdForDate,
   dailyTargetIdForDate,
@@ -11,6 +14,15 @@ describe('deterministicEntityIds', () => {
   it('génère des identifiants stables pour les entités uniques par date', () => {
     expect(weightEntryIdForDate('2026-06-23')).toBe('weight:2026-06-23');
     expect(dailyStepsIdForDate('2026-06-23')).toBe('steps:2026-06-23');
+    expect(dailyCheckInIdForDate('2026-06-23')).toBe(
+      'daily-check-in:2026-06-23',
+    );
+    expect(dailyActivityDecisionIdForDate('2026-06-23')).toBe(
+      'daily-activity-decision:2026-06-23',
+    );
+    expect(dailyCheckOutIdForDate('2026-06-23')).toBe(
+      'daily-check-out:2026-06-23',
+    );
     expect(dailyTargetIdForDate('2026-06-23')).toBe(
       'daily-target:2026-06-23',
     );

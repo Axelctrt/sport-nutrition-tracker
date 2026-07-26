@@ -86,6 +86,7 @@ const EMPTY_ORCHESTRATOR_SNAPSHOT: SyncOrchestratorSnapshot = {
     'nutrition-journal': { status: 'idle' },
     'nutrition-library': { status: 'idle' },
     'nutrition-tracking': { status: 'idle' },
+    'daily-coaching': { status: 'idle' },
   },
 };
 

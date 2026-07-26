@@ -34,7 +34,7 @@ describe('social activity privacy cloud sync readiness 0.29.0 A10', () => {
   });
 
   it('ne change aucune version de stockage pour des champs optionnels', () => {
-    expect(appDatabaseVersionsSource).toContain('CURRENT_DATABASE_VERSION = DATABASE_VERSION_10');
-    expect(syncDatabaseSource).toContain('SYNC_PROTOTYPE_DATABASE_VERSION = 15');
+    expect(appDatabaseVersionsSource).toContain('CURRENT_DATABASE_VERSION = DATABASE_VERSION_11');
+    expect(syncDatabaseSource).toContain('SYNC_PROTOTYPE_DATABASE_VERSION = 16');
   });
 });

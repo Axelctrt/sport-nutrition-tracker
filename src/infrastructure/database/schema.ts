@@ -5,6 +5,9 @@ export const databaseTableNames = [
   'userSettings',
   'weights',
   'dailySteps',
+  'dailyCheckIns',
+  'dailyActivityDecisions',
+  'dailyCheckOuts',
   'activities',
   'foodProducts',
   'meals',
@@ -150,4 +153,11 @@ export const schemaVersion10 = {
   ...schemaVersion9,
   friendActivityPermissions:
     'id, friendUserId, friendHandle, sharingLevel, updatedAt',
+} as const;
+
+export const schemaVersion11 = {
+  ...schemaVersion10,
+  dailyCheckIns: 'id, &date, completedAt, updatedAt',
+  dailyActivityDecisions: 'id, &date, decision, confirmedAt, updatedAt',
+  dailyCheckOuts: 'id, &date, completedAt, updatedAt',
 } as const;

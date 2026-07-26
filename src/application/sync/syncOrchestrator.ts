@@ -8,7 +8,8 @@ export type SyncOrchestratorDomainId =
   | 'strength'
   | 'nutrition-journal'
   | 'nutrition-library'
-  | 'nutrition-tracking';
+  | 'nutrition-tracking'
+  | 'daily-coaching';
 
 export type SyncOrchestratorOperation = 'analyze' | 'sync';
 
@@ -165,6 +166,7 @@ function initialDomainSnapshots(): Record<
     'nutrition-journal': { status: 'idle' },
     'nutrition-library': { status: 'idle' },
     'nutrition-tracking': { status: 'idle' },
+    'daily-coaching': { status: 'idle' },
   };
 }
 

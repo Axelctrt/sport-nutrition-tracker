@@ -14,12 +14,12 @@ describe('publication de la continuité complète du compte 0.26.0', () => {
   });
 
   it('conserve les formats de données validés sans migration', () => {
-    expect(databaseSchemaVersion).toBe(10);
-    expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(9);
+    expect(databaseSchemaVersion).toBe(11);
+    expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(10);
     expect(DATA_SPACE_REGISTRY_VERSION).toBe(1);
-    expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(15);
+    expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(16);
     expect(SYNC_PROTOTYPE_DATABASE_NAME).toBe(
-      'sportpilot-sync-runtime-0.20.0-v15',
+      'sportpilot-sync-runtime-0.20.0-v16',
     );
   });
 

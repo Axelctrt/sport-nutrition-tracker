@@ -18,8 +18,8 @@ describe('préparation de la version stable 0.32.0', () => {
   });
 
   it('conserve les versions de schéma attendues', () => {
-    expect(databaseSchemaVersion).toBe(10);
-    expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(9);
+    expect(databaseSchemaVersion).toBe(11);
+    expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(10);
     expect(databaseTableNames).toEqual(
       expect.arrayContaining([
         'userProfile',

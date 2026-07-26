@@ -231,6 +231,45 @@ const dailyStepsSchema = datedEntitySchema.extend({
   source: z.literal('manual'),
 });
 
+const dailyContextFlagSchema = z.enum([
+  'menstrualCycle',
+  'illness',
+  'travel',
+  'exceptionalPoorSleep',
+  'highSodiumMeal',
+  'creatineChange',
+  'muscleSoreness',
+  'other',
+]);
+const dailySignalLevelSchema = z.enum(['low', 'normal', 'high']);
+const dailyContextSyncPreferenceSchema = z.enum(['localOnly', 'account']);
+
+const dailyCheckInSchema = datedEntitySchema.extend({
+  weightEntryId: z.string().min(1).optional(),
+  sleepDurationMinutes: z.number().int().min(0).max(1_440).optional(),
+  sleepQuality: z.enum(['poor', 'average', 'good']).optional(),
+  readiness: dailySignalLevelSchema.optional(),
+  waistCm: positiveNumber.optional(),
+  contextFlags: z.array(dailyContextFlagSchema),
+  contextSyncPreference: dailyContextSyncPreferenceSchema,
+  completedAt: isoDateTimeSchema,
+});
+
+const dailyActivityDecisionSchema = datedEntitySchema.extend({
+  decision: z.enum(['open', 'rest', 'activities']),
+  confirmedAt: isoDateTimeSchema.optional(),
+});
+
+const dailyCheckOutSchema = datedEntitySchema.extend({
+  stepsEntryId: z.string().min(1).optional(),
+  hunger: dailySignalLevelSchema.optional(),
+  energy: dailySignalLevelSchema.optional(),
+  foodJournalComplete: z.boolean(),
+  contextFlags: z.array(dailyContextFlagSchema),
+  contextSyncPreference: dailyContextSyncPreferenceSchema,
+  completedAt: isoDateTimeSchema,
+});
+
 
 const plannedActivityReferenceSchema = z.object({
   source: z.enum(['strengthSession', 'endurancePlanning']),
@@ -982,6 +1021,9 @@ const backupDataSchema = z.object({
   userSettings: z.array(userSettingsSchema).max(1).optional(),
   weights: z.array(weightEntrySchema),
   dailySteps: z.array(dailyStepsSchema),
+  dailyCheckIns: z.array(dailyCheckInSchema).optional(),
+  dailyActivityDecisions: z.array(dailyActivityDecisionSchema).optional(),
+  dailyCheckOuts: z.array(dailyCheckOutSchema).optional(),
   activities: z.array(activitySchema),
   foodProducts: z.array(foodProductSchema),
   meals: z.array(mealSchema),
@@ -1152,6 +1194,22 @@ export const backupEnvelopeSchema = z.object({
     });
   }
 
+  if (envelope.schemaVersion >= 10) {
+    for (const tableName of [
+      'dailyCheckIns',
+      'dailyActivityDecisions',
+      'dailyCheckOuts',
+    ] as const) {
+      if (data[tableName] === undefined) {
+        context.addIssue({
+          code: 'custom',
+          path: ['data', tableName],
+          message: `La table ${tableName} est requise en sauvegarde v10.`,
+        });
+      }
+    }
+  }
+
   if (data.appSettings?.[0]?.id !== undefined && data.appSettings[0].id !== APP_SETTINGS_ID) {
     context.addIssue({
       code: 'custom',
@@ -1166,6 +1224,9 @@ export const backupEnvelopeSchema = z.object({
     ['userSettings', data.userSettings ?? []],
     ['weights', data.weights],
     ['dailySteps', data.dailySteps],
+    ['dailyCheckIns', data.dailyCheckIns ?? []],
+    ['dailyActivityDecisions', data.dailyActivityDecisions ?? []],
+    ['dailyCheckOuts', data.dailyCheckOuts ?? []],
     ['activities', data.activities],
     ['foodProducts', data.foodProducts],
     ['meals', data.meals],
@@ -1216,6 +1277,9 @@ export const backupEnvelopeSchema = z.object({
 
   addDuplicateIssues(data.weights, (value) => value.date, ['data', 'weights'], 'Les pesées', context);
   addDuplicateIssues(data.dailySteps, (value) => value.date, ['data', 'dailySteps'], 'Les pas', context);
+  addDuplicateIssues(data.dailyCheckIns ?? [], (value) => value.date, ['data', 'dailyCheckIns'], 'Les check-ins', context);
+  addDuplicateIssues(data.dailyActivityDecisions ?? [], (value) => value.date, ['data', 'dailyActivityDecisions'], 'Les decisions quotidiennes', context);
+  addDuplicateIssues(data.dailyCheckOuts ?? [], (value) => value.date, ['data', 'dailyCheckOuts'], 'Les check-outs', context);
   addDuplicateIssues(data.dailyTargets, (value) => value.date, ['data', 'dailyTargets'], 'Les objectifs quotidiens', context);
   addDuplicateIssues(
     data.dailyJournalStatuses,

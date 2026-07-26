@@ -9,8 +9,8 @@ import themeCssSource from "@/styles/unlockableThemes.css?raw";
 describe("SportPilot 0.26.0 R4.5 — pop-up unique, complet supprimé et sombre stabilisé", () => {
   it("reste une phase visuelle sans migration ni passage de version finale", () => {
     expect(__APP_VERSION__).toBe("0.32.0");
-    expect(databaseSchemaVersion).toBe(10);
-    expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(9);
+    expect(databaseSchemaVersion).toBe(11);
+    expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(10);
   });
 
   it("revient à des fonds CSS colorés sans assets image ni mouvement de thème", () => {

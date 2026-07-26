@@ -13,7 +13,7 @@ describe('base isolée du prototype Dexie Cloud', () => {
     expect(SYNC_PROTOTYPE_DATABASE_NAME).not.toBe(
       LEGACY_SYNC_PROTOTYPE_DATABASE_NAME,
     );
-    expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(15);
+    expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(16);
     expect(SYNC_PROTOTYPE_DATABASE_NAME).toBe(
       `sportpilot-sync-runtime-0.20.0-v${SYNC_PROTOTYPE_DATABASE_VERSION}`,
     );
@@ -26,6 +26,7 @@ describe('base isolée du prototype Dexie Cloud', () => {
       'realWeights',
       'realWeightDeletionRecords',
       'realActivities',
+      'realEndurancePlanningSessions',
       'realActivityDeletionRecords',
       'realGoals',
       'realGoalDeletionRecords',
@@ -42,6 +43,7 @@ describe('base isolée du prototype Dexie Cloud', () => {
       'realNutritionTracking',
       'realAccountPreferences',
       'realRewardsRoutines',
+      'realDailyCoachingDays',
       'socialIdentities',
       'socialHandleReservations',
       'socialFriendRequests',
@@ -86,6 +88,7 @@ describe('base isolée du prototype Dexie Cloud', () => {
     expect(database.table('realWeights').schema.primKey.keyPath).toBe('id');
     expect(database.table('realWeightDeletionRecords').schema.primKey.keyPath).toBe('id');
     expect(database.table('realActivities').schema.primKey.keyPath).toBe('id');
+    expect(database.table('realEndurancePlanningSessions').schema.primKey.keyPath).toBe('id');
     expect(database.table('realActivityDeletionRecords').schema.primKey.keyPath).toBe('id');
     expect(database.table('realGoals').schema.primKey.keyPath).toBe('id');
     expect(database.table('realGoalDeletionRecords').schema.primKey.keyPath).toBe('id');
@@ -102,6 +105,7 @@ describe('base isolée du prototype Dexie Cloud', () => {
     expect(database.table('realNutritionTracking').schema.primKey.keyPath).toBe('id');
     expect(database.table('realAccountPreferences').schema.primKey.keyPath).toBe('id');
     expect(database.table('realRewardsRoutines').schema.primKey.keyPath).toBe('id');
+    expect(database.table('realDailyCoachingDays').schema.primKey.keyPath).toBe('id');
     expect(database.table('socialIdentities').schema.primKey.keyPath).toBe('id');
     expect(database.table('socialHandleReservations').schema.primKey.keyPath).toBe('id');
     expect(database.table('socialFriendRequests').schema.primKey.keyPath).toBe('id');

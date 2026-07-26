@@ -43,6 +43,7 @@ function emptySource(): CloudAccountRestoreSourceSnapshot {
     weights: [],
     weightMarkers: [],
     activities: [],
+    endurancePlanningSessions: [],
     activityMarkers: [],
     goals: [],
     goalMarkers: [],
@@ -59,6 +60,7 @@ function emptySource(): CloudAccountRestoreSourceSnapshot {
     nutritionTracking: [],
     accountPreferences: [],
     rewardsRoutines: [],
+    dailyCoachingDays: [],
   };
 }
 

@@ -22,8 +22,8 @@ describe('readiness branchement runtime des snapshots sociaux 0.29.0 A5', () => 
   });
 
   it('ne modifie aucun schéma publié avant la persistance cloud', () => {
-    expect(databaseSchemaVersion).toBe(10);
-    expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(15);
+    expect(databaseSchemaVersion).toBe(11);
+    expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(16);
     expect(SOCIAL_ACTIVITY_SNAPSHOT_OUTBOX_DATABASE_VERSION).toBe(1);
     expect(SOCIAL_ACTIVITY_SNAPSHOT_OUTBOX_RECORD_VERSION).toBe('0.29.0-a4');
   });

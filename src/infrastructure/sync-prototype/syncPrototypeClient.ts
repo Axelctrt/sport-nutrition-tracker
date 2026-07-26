@@ -75,6 +75,12 @@ import {
   type RealNutritionTrackingSyncPreview,
   type RealNutritionTrackingSyncResult,
 } from '@/infrastructure/sync-prototype/realNutritionTrackingSyncService';
+import {
+  previewRealDailyCoachingSync,
+  synchronizeRealDailyCoaching,
+  type RealDailyCoachingSyncPreview,
+  type RealDailyCoachingSyncResult,
+} from '@/infrastructure/sync-prototype/realDailyCoachingSyncService';
 import { reloadUserStateRuntime } from '@/infrastructure/user-state/userStateRuntime';
 import {
   previewRealAccountPreferencesSync,
@@ -287,6 +293,20 @@ export interface SyncPrototypeRealNutritionTrackingSnapshot {
   readonly errorMessage?: string;
 }
 
+export interface SyncPrototypeRealDailyCoachingSnapshot {
+  readonly enabled: boolean;
+  readonly status:
+    | 'disabled'
+    | 'idle'
+    | 'analyzing'
+    | 'ready'
+    | 'syncing'
+    | 'error';
+  readonly preview?: RealDailyCoachingSyncPreview;
+  readonly lastResult?: RealDailyCoachingSyncResult;
+  readonly errorMessage?: string;
+}
+
 export interface SyncPrototypeSnapshot {
   readonly account: SyncPrototypeAccountSnapshot;
   readonly sync: SyncPrototypeSyncSnapshot;
@@ -298,6 +318,7 @@ export interface SyncPrototypeSnapshot {
   readonly realNutritionJournal?: SyncPrototypeRealNutritionJournalSnapshot;
   readonly realNutritionLibrary?: SyncPrototypeRealNutritionLibrarySnapshot;
   readonly realNutritionTracking?: SyncPrototypeRealNutritionTrackingSnapshot;
+  readonly realDailyCoaching?: SyncPrototypeRealDailyCoachingSnapshot;
   readonly realAccountPreferences?: SyncPrototypeRealAccountPreferencesSnapshot;
   readonly realRewardsRoutines?: SyncPrototypeRealRewardsRoutinesSnapshot;
   readonly diagnostics: SyncPrototypeDiagnosticsSnapshot;
@@ -344,6 +365,8 @@ export interface SyncPrototypeClient {
   syncRealNutritionLibrary?(): Promise<RealNutritionLibrarySyncResult>;
   analyzeRealNutritionTracking?(): Promise<RealNutritionTrackingSyncPreview>;
   syncRealNutritionTracking?(): Promise<RealNutritionTrackingSyncResult>;
+  analyzeRealDailyCoaching?(): Promise<RealDailyCoachingSyncPreview>;
+  syncRealDailyCoaching?(): Promise<RealDailyCoachingSyncResult>;
   analyzeRealAccountPreferences?(): Promise<RealAccountPreferencesSyncPreview>;
   syncRealAccountPreferences?(): Promise<RealAccountPreferencesSyncResult>;
   analyzeRealRewardsRoutines?(): Promise<RealRewardsRoutinesSyncPreview>;
@@ -461,6 +484,7 @@ export interface SyncPrototypeClientOptions {
   readonly realNutritionJournalSyncEnabled?: boolean;
   readonly realNutritionLibrarySyncEnabled?: boolean;
   readonly realNutritionTrackingSyncEnabled?: boolean;
+  readonly realDailyCoachingSyncEnabled?: boolean;
   readonly realAccountPreferencesSyncEnabled?: boolean;
   readonly realRewardsRoutinesSyncEnabled?: boolean;
   readonly localDatabase?: AppDatabase;
@@ -484,6 +508,7 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
   private readonly realNutritionJournalSyncEnabled: boolean;
   private readonly realNutritionLibrarySyncEnabled: boolean;
   private readonly realNutritionTrackingSyncEnabled: boolean;
+  private readonly realDailyCoachingSyncEnabled: boolean;
   private readonly realAccountPreferencesSyncEnabled: boolean;
   private readonly realRewardsRoutinesSyncEnabled: boolean;
   private readonly localDatabase: AppDatabase;
@@ -509,6 +534,8 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
       options.realNutritionLibrarySyncEnabled === true;
     this.realNutritionTrackingSyncEnabled =
       options.realNutritionTrackingSyncEnabled === true;
+    this.realDailyCoachingSyncEnabled =
+      options.realDailyCoachingSyncEnabled === true;
     this.realAccountPreferencesSyncEnabled =
       options.realAccountPreferencesSyncEnabled === true;
     this.realRewardsRoutinesSyncEnabled =
@@ -553,6 +580,9 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
         : {}),
       ...(this.realNutritionTrackingSyncEnabled
         ? { realNutritionTracking: { enabled: true, status: 'idle' as const } }
+        : {}),
+      ...(this.realDailyCoachingSyncEnabled
+        ? { realDailyCoaching: { enabled: true, status: 'idle' as const } }
         : {}),
       ...(this.realAccountPreferencesSyncEnabled
         ? { realAccountPreferences: { enabled: true, status: 'idle' as const } }
@@ -757,6 +787,9 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
         : {}),
       ...(this.realNutritionTrackingSyncEnabled
         ? { realNutritionTracking: { enabled: true, status: 'idle' as const } }
+        : {}),
+      ...(this.realDailyCoachingSyncEnabled
+        ? { realDailyCoaching: { enabled: true, status: 'idle' as const } }
         : {}),
       ...(this.realAccountPreferencesSyncEnabled
         ? { realAccountPreferences: { enabled: true, status: 'idle' as const } }
@@ -1514,6 +1547,91 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
     }
   }
 
+  async analyzeRealDailyCoaching(): Promise<RealDailyCoachingSyncPreview> {
+    await this.initialize();
+    this.assertRealDailyCoachingSyncAvailable();
+    this.snapshot = {
+      ...this.snapshot,
+      realDailyCoaching: { enabled: true, status: 'analyzing' },
+    };
+    this.notify();
+
+    try {
+      const currentUserId = await this.syncCloudForCurrentAccount();
+      const preview = await previewRealDailyCoachingSync(
+        this.localDatabase,
+        this.database,
+        currentUserId,
+      );
+      this.snapshot = {
+        ...this.snapshot,
+        realDailyCoaching: { enabled: true, status: 'ready', preview },
+      };
+      this.notify();
+      return preview;
+    } catch (error) {
+      const errorMessage = error instanceof Error
+        ? error.message
+        : 'L analyse de l accompagnement quotidien a echoue.';
+      this.snapshot = {
+        ...this.snapshot,
+        realDailyCoaching: { enabled: true, status: 'error', errorMessage },
+      };
+      this.notify();
+      throw error;
+    }
+  }
+
+  async syncRealDailyCoaching(): Promise<RealDailyCoachingSyncResult> {
+    await this.initialize();
+    this.assertRealDailyCoachingSyncAvailable();
+    this.snapshot = {
+      ...this.snapshot,
+      realDailyCoaching: {
+        ...(this.snapshot.realDailyCoaching ?? {}),
+        enabled: true,
+        status: 'syncing',
+      },
+    };
+    this.notify();
+
+    try {
+      const currentUserId = await this.syncCloudForCurrentAccount();
+      const result = await synchronizeRealDailyCoaching(
+        this.localDatabase,
+        this.database,
+        currentUserId,
+      );
+      await this.syncCloudForAccount(currentUserId);
+      const preview = await previewRealDailyCoachingSync(
+        this.localDatabase,
+        this.database,
+        currentUserId,
+      );
+      this.snapshot = {
+        ...this.snapshot,
+        realDailyCoaching: {
+          enabled: true,
+          status: 'ready',
+          preview,
+          lastResult: result,
+        },
+      };
+      this.notify();
+      return result;
+    } catch (error) {
+      const errorMessage = error instanceof Error
+        ? error.message
+        : 'La synchronisation de l accompagnement quotidien a echoue.';
+      this.snapshot = {
+        ...this.snapshot,
+        realDailyCoaching: { enabled: true, status: 'error', errorMessage },
+      };
+      this.notify();
+      throw error;
+    }
+  }
+
   async analyzeRealAccountPreferences(): Promise<RealAccountPreferencesSyncPreview> {
     await this.initialize();
     this.assertRealAccountPreferencesSyncAvailable();
@@ -1822,6 +1940,15 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
     this.assertLoggedIn();
   }
 
+  private assertRealDailyCoachingSyncAvailable(): void {
+    if (!this.realDailyCoachingSyncEnabled) {
+      throw new Error(
+        'La synchronisation de l accompagnement quotidien est desactivee par configuration.',
+      );
+    }
+    this.assertLoggedIn();
+  }
+
   private assertRealNutritionLibrarySyncAvailable(): void {
     if (!this.realNutritionLibrarySyncEnabled) {
       throw new Error(
@@ -2012,6 +2139,8 @@ export function getSyncPrototypeClient(): SyncPrototypeClient {
       config.realNutritionLibrarySyncEnabled,
     realNutritionTrackingSyncEnabled:
       config.realNutritionTrackingSyncEnabled,
+    realDailyCoachingSyncEnabled:
+      config.realDailyCoachingSyncEnabled === true,
     realAccountPreferencesSyncEnabled:
       config.realAccountPreferencesSyncEnabled,
     realRewardsRoutinesSyncEnabled:

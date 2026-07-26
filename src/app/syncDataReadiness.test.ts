@@ -9,24 +9,27 @@ import {
 
 describe('préparation locale à la synchronisation multiappareil', () => {
   it('fige les versions validées à la clôture de la phase B', () => {
-    expect(databaseSchemaVersion).toBe(10);
-    expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(9);
+    expect(databaseSchemaVersion).toBe(11);
+    expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(10);
   });
 
   it('sépare les trente-quatre tables utilisateur des quatre tables locales', () => {
-    expect(databaseTableNames).toHaveLength(34);
+    expect(databaseTableNames).toHaveLength(37);
     expect(databaseInternalTableNames).toEqual([
       'deviceSettings',
       'migrationJournal',
       'databaseDiagnostics',
       'trashItems',
     ]);
-    expect(allDatabaseTableNames).toHaveLength(38);
+    expect(allDatabaseTableNames).toHaveLength(41);
 
     expect(databaseTableNames).toEqual(
       expect.arrayContaining([
         'userSettings',
         'weights',
+        'dailyCheckIns',
+        'dailyActivityDecisions',
+        'dailyCheckOuts',
         'goals',
         'endurancePlanningSessions',
         'routineReminderCompletions',

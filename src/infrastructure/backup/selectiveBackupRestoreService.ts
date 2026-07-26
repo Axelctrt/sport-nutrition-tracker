@@ -156,6 +156,8 @@ function countCategoryRecords(
       return (
         data.weights.length +
         data.dailySteps.length +
+        (data.dailyCheckIns?.length ?? 0) +
+        (data.dailyCheckOuts?.length ?? 0) +
         countDeletionRecords(
           data,
           DELETION_ENTITY_TYPES_BY_CATEGORY.bodyTracking ?? [],
@@ -164,6 +166,7 @@ function countCategoryRecords(
     case 'activities':
       return (
         data.activities.length +
+        (data.dailyActivityDecisions?.length ?? 0) +
         countDeletionRecords(
           data,
           DELETION_ENTITY_TYPES_BY_CATEGORY.activities ?? [],
@@ -300,6 +303,8 @@ async function replaceBodyTracking(
 ): Promise<void> {
   await database.weights.clear();
   await database.dailySteps.clear();
+  await database.dailyCheckIns.clear();
+  await database.dailyCheckOuts.clear();
 
   if (data.weights.length > 0) {
     await database.weights.bulkAdd(data.weights);
@@ -308,6 +313,12 @@ async function replaceBodyTracking(
   if (data.dailySteps.length > 0) {
     await database.dailySteps.bulkAdd(data.dailySteps);
   }
+  if ((data.dailyCheckIns?.length ?? 0) > 0) {
+    await database.dailyCheckIns.bulkAdd(data.dailyCheckIns ?? []);
+  }
+  if ((data.dailyCheckOuts?.length ?? 0) > 0) {
+    await database.dailyCheckOuts.bulkAdd(data.dailyCheckOuts ?? []);
+  }
 }
 
 async function replaceActivities(
@@ -315,9 +326,15 @@ async function replaceActivities(
   data: BackupData,
 ): Promise<void> {
   await database.activities.clear();
+  await database.dailyActivityDecisions.clear();
 
   if (data.activities.length > 0) {
     await database.activities.bulkAdd(data.activities);
+  }
+  if ((data.dailyActivityDecisions?.length ?? 0) > 0) {
+    await database.dailyActivityDecisions.bulkAdd(
+      data.dailyActivityDecisions ?? [],
+    );
   }
 }
 

@@ -8,6 +8,11 @@ import {
 } from '@/domain/goals/goalState';
 import type { LocalDate } from '@/domain/models/common';
 import {
+  createDeletedDeletionRecord,
+  createRestoredDeletionRecord,
+  deletionRecordId,
+} from '@/domain/models/deletion';
+import {
   ENDURANCE_PLANNING_STORAGE_KEY,
   emptyEndurancePlanningState,
   parseEndurancePlanningState,
@@ -289,7 +294,57 @@ export async function replaceEndurancePlanningStateInDatabase(
   await database.transaction(
     'rw',
     database.endurancePlanningSessions,
+    database.deletionRecords,
     async () => {
+      const current = await database.endurancePlanningSessions.toArray();
+      const incomingById = new Map(
+        state.sessions.map((session) => [session.id, session]),
+      );
+      const timestamp = new Date().toISOString();
+
+      for (const session of current) {
+        if (incomingById.has(session.id)) continue;
+        const markerId = deletionRecordId(
+          'endurancePlanningSession',
+          session.id,
+        );
+        const existing = await database.deletionRecords.get(markerId);
+        await database.deletionRecords.put(
+          createDeletedDeletionRecord(
+            {
+              entityType: 'endurancePlanningSession',
+              entityId: session.id,
+            },
+            timestamp,
+            existing,
+          ),
+        );
+      }
+
+      for (const session of state.sessions) {
+        const markerId = deletionRecordId(
+          'endurancePlanningSession',
+          session.id,
+        );
+        const existing = await database.deletionRecords.get(markerId);
+        if (
+          existing?.status === 'deleted'
+          && session.updatedAt > existing.updatedAt
+        ) {
+          await database.deletionRecords.put(
+            createRestoredDeletionRecord(
+              {
+                entityType: 'endurancePlanningSession',
+                entityId: session.id,
+              },
+              session.updatedAt,
+              existing.deletedAt,
+              existing,
+            ),
+          );
+        }
+      }
+
       await replaceTable(
         database.endurancePlanningSessions,
         state.sessions,

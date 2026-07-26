@@ -9,6 +9,18 @@ export function dailyStepsIdForDate(date: LocalDate): EntityId {
   return `steps:${date}`;
 }
 
+export function dailyCheckInIdForDate(date: LocalDate): EntityId {
+  return `daily-check-in:${date}`;
+}
+
+export function dailyActivityDecisionIdForDate(date: LocalDate): EntityId {
+  return `daily-activity-decision:${date}`;
+}
+
+export function dailyCheckOutIdForDate(date: LocalDate): EntityId {
+  return `daily-check-out:${date}`;
+}
+
 export function mealIdForDateAndSlot(
   date: LocalDate,
   slot: MealSlot,

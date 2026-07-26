@@ -34,8 +34,8 @@ const snapshot: FriendsPrivacySnapshot = {
 
 describe('readiness permissions amis 0.27.0 F3', () => {
   it('installe Dexie v10 et sauvegarde JSON v9 pour les permissions par ami', () => {
-    expect(databaseSchemaVersion).toBe(10);
-    expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(9);
+    expect(databaseSchemaVersion).toBe(11);
+    expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(10);
     expect(databaseTableNames).toContain('friendActivityPermissions');
   });
 

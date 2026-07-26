@@ -31,6 +31,8 @@ function snapshotPreview(
       return snapshot.realNutritionLibrary?.preview;
     case 'nutrition-tracking':
       return snapshot.realNutritionTracking?.preview;
+    case 'daily-coaching':
+      return snapshot.realDailyCoaching?.preview;
   }
 }
 
@@ -111,6 +113,15 @@ export function createOrchestratorDomains(
       : undefined,
     client.syncRealNutritionTracking
       ? () => client.syncRealNutritionTracking!()
+      : undefined,
+  );
+  add(
+    'daily-coaching',
+    client.analyzeRealDailyCoaching
+      ? () => client.analyzeRealDailyCoaching!()
+      : undefined,
+    client.syncRealDailyCoaching
+      ? () => client.syncRealDailyCoaching!()
       : undefined,
   );
 
@@ -327,6 +338,27 @@ export function createDomains(
             : {}),
           ...(client?.syncRealNutritionTracking
             ? { synchronize: () => client.syncRealNutritionTracking!() }
+            : {}),
+        };
+      }
+      case 'daily-coaching': {
+        const state = snapshot.realDailyCoaching;
+        return {
+          ...descriptor,
+          detailId: 'sync-detail-nutrition-tracking',
+          enabled: Boolean(
+            state
+            && client?.analyzeRealDailyCoaching
+            && client.syncRealDailyCoaching,
+          ),
+          snapshotStatus: state?.status,
+          differingEntityCount: preview?.differingEntityCount,
+          snapshotErrorMessage: state?.errorMessage,
+          ...(client?.analyzeRealDailyCoaching
+            ? { analyze: () => client.analyzeRealDailyCoaching!() }
+            : {}),
+          ...(client?.syncRealDailyCoaching
+            ? { synchronize: () => client.syncRealDailyCoaching!() }
             : {}),
         };
       }

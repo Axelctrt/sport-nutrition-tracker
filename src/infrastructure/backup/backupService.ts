@@ -69,6 +69,9 @@ export function tableList(database: AppDatabase) {
     database.userSettings,
     database.weights,
     database.dailySteps,
+    database.dailyCheckIns,
+    database.dailyActivityDecisions,
+    database.dailyCheckOuts,
     database.activities,
     database.foodProducts,
     database.meals,
@@ -133,6 +136,9 @@ export async function readBackupData(
     userSettings,
     weights,
     dailySteps,
+    dailyCheckIns,
+    dailyActivityDecisions,
+    dailyCheckOuts,
     activities,
     foodProducts,
     meals,
@@ -168,6 +174,9 @@ export async function readBackupData(
     database.userSettings.toArray(),
     database.weights.toArray(),
     database.dailySteps.toArray(),
+    database.dailyCheckIns.toArray(),
+    database.dailyActivityDecisions.toArray(),
+    database.dailyCheckOuts.toArray(),
     database.activities.toArray(),
     database.foodProducts.toArray(),
     database.meals.toArray(),
@@ -205,6 +214,9 @@ export async function readBackupData(
     userSettings: userSettings.map(normalizeUserSettings),
     weights,
     dailySteps,
+    dailyCheckIns,
+    dailyActivityDecisions,
+    dailyCheckOuts,
     activities,
     foodProducts,
     meals,
@@ -421,6 +433,17 @@ async function populateTables(
   }
   if (data.dailySteps.length > 0) {
     await database.dailySteps.bulkAdd(data.dailySteps);
+  }
+  if ((data.dailyCheckIns?.length ?? 0) > 0) {
+    await database.dailyCheckIns.bulkAdd(data.dailyCheckIns ?? []);
+  }
+  if ((data.dailyActivityDecisions?.length ?? 0) > 0) {
+    await database.dailyActivityDecisions.bulkAdd(
+      data.dailyActivityDecisions ?? [],
+    );
+  }
+  if ((data.dailyCheckOuts?.length ?? 0) > 0) {
+    await database.dailyCheckOuts.bulkAdd(data.dailyCheckOuts ?? []);
   }
   if (data.activities.length > 0) {
     await database.activities.bulkAdd(data.activities);

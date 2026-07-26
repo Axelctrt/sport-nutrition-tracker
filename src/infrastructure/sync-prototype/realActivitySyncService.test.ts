@@ -1,5 +1,6 @@
 import Dexie, { type Table } from 'dexie';
 import type { Activity } from '@/domain/models/activity';
+import type { PlannedEnduranceSession } from '@/domain/planning/endurancePlanningState';
 import {
   createDeletedDeletionRecord,
   type DeletionRecord,
@@ -19,15 +20,22 @@ type CloudMetadata = {
 };
 type CloudActivity = Activity & CloudMetadata;
 type CloudMarker = DeletionRecord & CloudMetadata;
+type CloudEndurancePlanningSession = PlannedEnduranceSession & CloudMetadata;
 
 class TestCloudDatabase extends Dexie {
   declare realActivities: Table<CloudActivity, string>;
+  declare realEndurancePlanningSessions: Table<
+    CloudEndurancePlanningSession,
+    string
+  >;
   declare realActivityDeletionRecords: Table<CloudMarker, string>;
 
   constructor() {
     super(`sportpilot-b1-cloud-${crypto.randomUUID()}`);
     this.version(1).stores({
       realActivities: 'id, date, type, [date+type], updatedAt',
+      realEndurancePlanningSessions:
+        'id, date, activityType, status, updatedAt',
       realActivityDeletionRecords:
         'id, entityType, entityId, status, updatedAt',
     });
@@ -300,5 +308,74 @@ describe('synchronisation B1 des activités réelles', () => {
       differingEntityCount: 1,
     });
     expect(await cloud.realActivities.count()).toBe(0);
+  });
+
+  it('synchronise aussi les seances d endurance planifiees', async () => {
+    const planned: PlannedEnduranceSession = {
+      id: 'planned-run-1',
+      title: 'Sortie facile',
+      activityType: 'running',
+      date: '2026-07-02',
+      intensity: 'low',
+      targetDurationMinutes: 40,
+      status: 'planned',
+      createdAt: '2026-07-01T09:00:00.000Z',
+      updatedAt: '2026-07-01T09:00:00.000Z',
+    };
+    await local.endurancePlanningSessions.add(planned);
+
+    const result = await synchronizeRealActivities(
+      local,
+      cloud as unknown as SyncPrototypeDatabase,
+      'user-1',
+    );
+
+    expect(result.uploadedEndurancePlanningSessions).toBe(1);
+    expect(
+      await cloud.realEndurancePlanningSessions.get('#planned-run-1'),
+    ).toMatchObject({ title: 'Sortie facile' });
+  });
+
+  it('propage la suppression d une seance d endurance planifiee', async () => {
+    const planned: PlannedEnduranceSession = {
+      id: 'planned-run-deleted',
+      title: 'Sortie annulee',
+      activityType: 'running',
+      date: '2026-07-03',
+      intensity: 'low',
+      status: 'planned',
+      createdAt: '2026-07-01T09:00:00.000Z',
+      updatedAt: '2026-07-01T09:00:00.000Z',
+    };
+    await cloud.realEndurancePlanningSessions.add({
+      ...planned,
+      id: `#${planned.id}`,
+      owner: 'user-1',
+    });
+    await local.deletionRecords.add(
+      createDeletedDeletionRecord(
+        {
+          entityType: 'endurancePlanningSession',
+          entityId: planned.id,
+        },
+        '2026-07-01T10:00:00.000Z',
+      ),
+    );
+
+    const result = await synchronizeRealActivities(
+      local,
+      cloud as unknown as SyncPrototypeDatabase,
+      'user-1',
+    );
+
+    expect(result.removedCloudEndurancePlanningSessions).toBe(1);
+    expect(
+      await cloud.realEndurancePlanningSessions.get(`#${planned.id}`),
+    ).toBeUndefined();
+    expect(
+      await cloud.realActivityDeletionRecords.get(
+        `#deletion:endurancePlanningSession:${planned.id}`,
+      ),
+    ).toMatchObject({ status: 'deleted' });
   });
 });

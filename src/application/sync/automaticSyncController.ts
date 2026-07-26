@@ -18,6 +18,7 @@ import {
   syncLocalDataChangedDetail,
 } from '@/application/sync/syncLocalChangeEvents';
 import { GOAL_STATE_CHANGED_EVENT } from '@/domain/goals/goalState';
+import { ENDURANCE_PLANNING_CHANGED_EVENT } from '@/domain/planning/endurancePlanningState';
 import { WEEKLY_MISSION_HISTORY_CHANGED_EVENT } from '@/domain/rewards/weeklyMissionHistory';
 import type { AppSettings } from '@/domain/models/settings';
 import { ROUTINE_REMINDER_CHANGED_EVENT } from '@/application/reminders/routineReminderService';
@@ -163,6 +164,10 @@ export class AutomaticSyncController {
     void this.triggerLocalChange(['rewards-routines']);
   };
 
+  private readonly handleEndurancePlanningChange = () => {
+    void this.triggerLocalChange(['activities']);
+  };
+
   constructor(options: AutomaticSyncControllerOptions) {
     this.client = options.client;
     this.settingsRepository = options.settingsRepository;
@@ -260,6 +265,10 @@ export class AutomaticSyncController {
       this.handleGoalChange,
     );
     this.eventTarget?.addEventListener(
+      ENDURANCE_PLANNING_CHANGED_EVENT,
+      this.handleEndurancePlanningChange,
+    );
+    this.eventTarget?.addEventListener(
       WEEKLY_MISSION_HISTORY_CHANGED_EVENT,
       this.handleRewardsChange,
     );
@@ -295,6 +304,10 @@ export class AutomaticSyncController {
     this.eventTarget?.removeEventListener(
       GOAL_STATE_CHANGED_EVENT,
       this.handleGoalChange,
+    );
+    this.eventTarget?.removeEventListener(
+      ENDURANCE_PLANNING_CHANGED_EVENT,
+      this.handleEndurancePlanningChange,
     );
     this.eventTarget?.removeEventListener(
       WEEKLY_MISSION_HISTORY_CHANGED_EVENT,

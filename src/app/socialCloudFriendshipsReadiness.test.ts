@@ -18,7 +18,7 @@ describe('readiness amitiés cloud 0.28.0 F5', () => {
   });
 
   it('prépare les tables cloud dédiées sans migrer AppDatabase', () => {
-    expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(15);
+    expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(16);
     expect(SYNC_PROTOTYPE_TABLE_NAMES).toContain('socialFriendships');
     expect(SYNC_PROTOTYPE_TABLE_NAMES).toContain('socialFriendPermissions');
     expect(SYNC_PROTOTYPE_TABLE_NAMES).not.toContain('socialRawActivities' as never);

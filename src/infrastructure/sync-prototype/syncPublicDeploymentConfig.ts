@@ -18,6 +18,7 @@ export const syncPublicDeploymentConfig = Object.freeze({
   VITE_ENABLE_REAL_NUTRITION_JOURNAL_SYNC: 'true',
   VITE_ENABLE_REAL_NUTRITION_LIBRARY_SYNC: 'true',
   VITE_ENABLE_REAL_NUTRITION_TRACKING_SYNC: 'true',
+  VITE_ENABLE_REAL_DAILY_COACHING_SYNC: 'true',
   VITE_ENABLE_REAL_ACCOUNT_PREFERENCES_SYNC: 'true',
   VITE_ENABLE_REAL_REWARDS_ROUTINES_SYNC: 'true',
   // Désactivé par défaut : l’ouverture réelle se pilote par variable d’environnement.
