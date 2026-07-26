@@ -110,3 +110,6 @@ The candidate must remain in shadow mode until all of the following are true:
 If a production switch is approved, it requires a new calculation version,
 historical snapshot compatibility tests, release notes, and an explicit
 rollback path. The existing shadow result is not sufficient on its own.
+
+The local 28-day evidence report and its statistical limits are defined in
+`docs/daily-assistant-energy-retrospective-0.33.0.md`.
