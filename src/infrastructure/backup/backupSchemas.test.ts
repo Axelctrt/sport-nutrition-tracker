@@ -19,6 +19,10 @@ import {
   createWorkoutTemplateInput,
   createWorkoutSessionInput,
 } from "@/test/factories/strengthFactory";
+import {
+  createCalorieAdaptationAssessment,
+  createWeeklyReview,
+} from "@/test/factories/weeklyReviewFactory";
 
 function createValidEnvelope(): BackupEnvelope {
   return {
@@ -80,6 +84,25 @@ describe("backupEnvelopeSchema", () => {
       format: "sportpilot-backup",
       schemaVersion: 2,
     });
+  });
+
+  it("conserve l’évaluation adaptative optionnelle d’un bilan", () => {
+    const envelope = createValidEnvelope();
+    envelope.data.weeklyReviews = [
+      createWeeklyReview({
+        adaptation: createCalorieAdaptationAssessment({
+          detectedState: "possibleRecomposition",
+          proposedAdjustmentKcal: 0,
+        }),
+      }),
+    ];
+
+    expect(backupEnvelopeSchema.parse(envelope).data.weeklyReviews[0]?.adaptation)
+      .toMatchObject({
+        calculationVersion: 1,
+        detectedState: "possibleRecomposition",
+        proposedAdjustmentKcal: 0,
+      });
   });
 
 

@@ -125,4 +125,22 @@ describe('dailyCoachingService', () => {
     expect(await database.dailySteps.count()).toBe(0);
     expect(day.checkOut?.id).toBe(checkOut.id);
   });
+
+  it('relit les check-ins et check-outs sur une période bornée', async () => {
+    await completeDailyCheckIn({ date: '2026-07-20', readiness: 'normal' }, dependencies);
+    await completeDailyCheckIn({ date: '2026-07-29', readiness: 'high' }, dependencies);
+    await completeDailyCheckOut({
+      date: '2026-07-29',
+      foodJournalComplete: true,
+    }, dependencies);
+
+    await expect(dependencies.dailyCoaching.listCheckInsBetween(
+      '2026-07-21',
+      '2026-07-31',
+    )).resolves.toHaveLength(1);
+    await expect(dependencies.dailyCoaching.listCheckOutsBetween(
+      '2026-07-21',
+      '2026-07-31',
+    )).resolves.toHaveLength(1);
+  });
 });

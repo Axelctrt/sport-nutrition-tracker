@@ -3,6 +3,60 @@ import type { EntityId, EntityMetadata, IsoDateTime, LocalDate } from '@/domain/
 export type AdherenceLevel = 'excellent' | 'good' | 'needsStrengthening' | 'insufficient';
 export type WeeklyCalibrationDecision = 'keep' | 'increase' | 'decrease';
 export type WeeklyReviewDecisionStatus = 'pending' | 'accepted' | 'rejected' | 'notEligible';
+export type CalorieAdaptationConfidenceLevel =
+  | 'insufficient'
+  | 'uncertain'
+  | 'usable'
+  | 'reliable';
+export type CalorieAdaptationDetectedState =
+  | 'insufficientData'
+  | 'insufficientFoodTracking'
+  | 'onTrack'
+  | 'temporaryWaterVariation'
+  | 'possibleRecomposition'
+  | 'conflictingSignals'
+  | 'truePlateau'
+  | 'targetTooHigh'
+  | 'targetTooLow'
+  | 'excessiveLoss'
+  | 'excessiveGain'
+  | 'activityBelowExpected'
+  | 'degradedRecovery';
+
+export interface CalorieAdaptationConfidence {
+  weight: number;
+  food: number;
+  activity: number;
+  recovery: number;
+  overall: number;
+  level: CalorieAdaptationConfidenceLevel;
+}
+
+export interface CalorieAdaptationAssessment {
+  calculationVersion: number;
+  analysisStart: LocalDate;
+  analysisEnd: LocalDate;
+  trackingSpanDays: number;
+  weightTrendKgPerWeek?: number;
+  waistTrendCmPerWeek?: number;
+  averageCalorieDeviationPercent?: number;
+  proteinAdherencePercent?: number;
+  actualToExpectedStepsPercent?: number;
+  weighInCount: number;
+  completedFoodDays: number;
+  comparableFoodDays: number;
+  recordedStepDays: number;
+  recoverySignalDays: number;
+  recoveryConcernDays: number;
+  contextDayCount: number;
+  strengthSessionCount: number;
+  confidence: CalorieAdaptationConfidence;
+  detectedState: CalorieAdaptationDetectedState;
+  reasons: string[];
+  blockingFactors: string[];
+  rawWeightBasedAdjustmentKcal: number;
+  proposedAdjustmentKcal: number;
+}
 
 export interface WeeklyReview extends EntityMetadata {
   weekStart: LocalDate;
@@ -41,6 +95,7 @@ export interface WeeklyReview extends EntityMetadata {
   adherenceScore: number;
   adherenceLevel: AdherenceLevel;
 
+  adaptation?: CalorieAdaptationAssessment;
   decisionStatus: WeeklyReviewDecisionStatus;
   decidedAt?: IsoDateTime;
 }

@@ -17,6 +17,7 @@ import type {
   WeeklyReviewDecisionStatus,
 } from '@/domain/models/weeklyReview';
 import { getDefaultWeeklyReviewReferenceDate } from '@/domain/reviews/weeklyReview';
+import { AdaptiveAssessmentCard } from '@/features/weekly-review/components/AdaptiveAssessmentCard';
 import { CalibrationAdjustmentCard } from '@/features/weekly-review/components/CalibrationAdjustmentCard';
 import { WeeklyReviewHistoryCard } from '@/features/weekly-review/components/WeeklyReviewHistoryCard';
 import { WeeklyReviewGuidance } from '@/features/weekly-review/components/WeeklyReviewGuidance';
@@ -136,9 +137,15 @@ export function WeeklyReviewPage() {
             title={`Du ${formatLocalDate(data.review.weekStart)} au ${formatLocalDate(data.review.weekEnd)}`}
           >
             {data.review.isCalibrationEligible
-              ? 'Les données minimales sont suffisantes pour produire une proposition contrôlée.'
-              : 'Le suivi reste utile, mais les données sont insuffisantes pour modifier la cible calorique.'}
+              ? 'La tendance est exploitable. Toute modification reste soumise à ta validation.'
+              : 'La cible reste inchangée tant que les signaux ne permettent pas une conclusion suffisamment fiable.'}
           </InlineNotice>
+
+          {data.review.adaptation ? (
+            <div className="mt-4">
+              <AdaptiveAssessmentCard assessment={data.review.adaptation} />
+            </div>
+          ) : null}
 
           <Card className="mt-4 p-4 sm:p-5" aria-labelledby="weekly-decision-title">
             <div className="flex items-start justify-between gap-3">
@@ -179,6 +186,10 @@ export function WeeklyReviewPage() {
                   </div>
                 </div>
               </div>
+            ) : data.review.adaptation ? (
+              <p className="mt-4 border-l-2 border-slate-300 pl-3 text-sm leading-6 text-slate-600 dark:border-slate-700 dark:text-slate-300">
+                Aucun changement calorique n’est proposé. Les conditions à renforcer sont détaillées dans l’analyse ci-dessus.
+              </p>
             ) : (
               <ul className="mt-4 space-y-2 rounded-xl bg-slate-50 p-4 text-sm text-slate-700 dark:bg-slate-950/60 dark:text-slate-200">
                 {data.review.ineligibilityReasons.map((reason) => (
@@ -193,7 +204,11 @@ export function WeeklyReviewPage() {
               <div className="mt-4 grid gap-2 sm:grid-cols-2">
                 <Button className="w-full" onClick={() => void accept()} disabled={actionStatus !== 'idle'}>
                   <Check aria-hidden="true" className="size-4" />
-                  {actionStatus === 'accepting' ? 'Application…' : 'Accepter la proposition'}
+                  {actionStatus === 'accepting'
+                    ? 'Application…'
+                    : data.review.proposedAdjustmentKcal === 0
+                      ? 'Confirmer le maintien'
+                      : 'Accepter la proposition'}
                 </Button>
                 <Button className="w-full" variant="secondary" onClick={() => void reject()} disabled={actionStatus !== 'idle'}>
                   <X aria-hidden="true" className="size-4" />
@@ -257,7 +272,7 @@ export function WeeklyReviewPage() {
                 ))}
               </div>
               <p className="mt-4 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                Écart calorique moyen : {data.review.calorieDeviationPercent?.toLocaleString('fr-FR') ?? '—'} %. Correction brute calculée : {formatSigned(data.review.rawProposedAdjustmentKcal, 'kcal/j')}.
+                Écart calorique moyen : {data.review.calorieDeviationPercent?.toLocaleString('fr-FR') ?? '—'} %. Indicateur brut fondé sur le poids : {formatSigned(data.review.rawProposedAdjustmentKcal, 'kcal/j')}. Cet indicateur ne décide jamais seul d’une correction.
               </p>
             </CollapsibleSection>
 

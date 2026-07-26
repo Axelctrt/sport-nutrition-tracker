@@ -6,6 +6,7 @@ import { createProfileInput } from '@/test/factories/profileFactory';
 import { createEntity } from '@/shared/utils/entities';
 import type { DailyTarget } from '@/domain/models/targets';
 import type { WeightEntry } from '@/domain/models/weight';
+import { createCalorieAdaptationAssessment } from '@/test/factories/weeklyReviewFactory';
 import {
   calculateAdherenceScore,
   calculateCalibrationProposal,
@@ -80,5 +81,36 @@ describe('weekly review', () => {
     const review = calculateWeeklyReview(input);
     expect(review.isCalibrationEligible).toBe(false);
     expect(review.calorieDeviationPercent).toBe(25);
+  });
+
+  it('utilise la décision multi-signal plutôt que la correction brute du poids', () => {
+    const input = baseInput();
+    input.adaptation = createCalorieAdaptationAssessment({
+      detectedState: 'degradedRecovery',
+      rawWeightBasedAdjustmentKcal: 320,
+      proposedAdjustmentKcal: 50,
+    });
+
+    const review = calculateWeeklyReview(input);
+
+    expect(review.adaptation?.detectedState).toBe('degradedRecovery');
+    expect(review.rawProposedAdjustmentKcal).toBe(320);
+    expect(review.proposedDecision).toBe('increase');
+    expect(review.proposedAdjustmentKcal).toBe(50);
+  });
+
+  it('conserve la cible lorsque l’évaluation contient un facteur bloquant', () => {
+    const input = baseInput();
+    input.adaptation = createCalorieAdaptationAssessment({
+      detectedState: 'truePlateau',
+      blockingFactors: ['Une correction a déjà été appliquée il y a moins de 14 jours.'],
+      proposedAdjustmentKcal: 0,
+    });
+
+    const review = calculateWeeklyReview(input);
+
+    expect(review.isCalibrationEligible).toBe(false);
+    expect(review.decisionStatus).toBe('notEligible');
+    expect(review.proposedAdjustmentKcal).toBe(0);
   });
 });

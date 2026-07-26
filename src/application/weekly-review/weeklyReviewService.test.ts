@@ -22,6 +22,10 @@ function createDependencies(existing?: WeeklyReview): WeeklyReviewServiceDepende
     food: { listEntriesBetween: vi.fn().mockResolvedValue([]), listJournalStatusesBetween: vi.fn().mockResolvedValue([]) },
     steps: { listBetween: vi.fn().mockResolvedValue([]) },
     targets: { listTargetsBetween: vi.fn().mockResolvedValue([]) },
+    dailyCoaching: {
+      listCheckInsBetween: vi.fn().mockResolvedValue([]),
+      listCheckOutsBetween: vi.fn().mockResolvedValue([]),
+    },
     weeklyReviews: {
       getByWeekStart: vi.fn().mockImplementation(() => Promise.resolve(stored)),
       upsert: vi.fn().mockImplementation((data) => { stored = createEntity(data, stored?.id ?? 'review'); return Promise.resolve(stored); }),
@@ -60,19 +64,24 @@ describe('weekly review service', () => {
   it('calcule et persiste un bilan non encore décidé', async () => {
     const dependencies = createDependencies();
     const result = await loadWeeklyReview('2026-06-10', profile, dependencies);
-        expect(result.review.weekStart).toBe('2026-06-08');
+    expect(result.review.weekStart).toBe('2026-06-08');
+    expect(result.review.adaptation).toMatchObject({
+      analysisStart: '2026-05-25',
+      analysisEnd: '2026-06-14',
+      detectedState: 'insufficientData',
+    });
+    expect(dependencies.dailyCoaching.listCheckInsBetween)
+      .toHaveBeenCalledWith('2026-05-25', '2026-06-14');
     expect(result.insights?.training.hasPlanning).toBe(false);
     expect(dependencies.weeklyReviews.upsert).toHaveBeenCalledOnce();
-
   });
 
   it('ne recalcule pas un bilan déjà accepté', async () => {
     const dependencies = createDependencies({ ...eligibleReview(), decisionStatus: 'accepted' });
     const result = await loadWeeklyReview('2026-06-10', profile, dependencies);
-        expect(result.review.decisionStatus).toBe('accepted');
+    expect(result.review.decisionStatus).toBe('accepted');
     expect(result.insights).toBeDefined();
     expect(dependencies.weeklyReviews.upsert).not.toHaveBeenCalled();
-
   });
 
   it('accepte une proposition et crée un ajustement effectif la semaine suivante', async () => {

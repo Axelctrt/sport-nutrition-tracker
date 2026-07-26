@@ -73,6 +73,28 @@ export class DexieDailyCoachingRepository implements DailyCoachingRepository {
     );
   }
 
+  listCheckInsBetween(from: LocalDate, to: LocalDate): Promise<DailyCheckIn[]> {
+    return runRepositoryOperation(
+      'read',
+      'Impossible de lire les check-ins sur cette période.',
+      () => this.database.dailyCheckIns
+        .where('date')
+        .between(from, to, true, true)
+        .toArray(),
+    );
+  }
+
+  listCheckOutsBetween(from: LocalDate, to: LocalDate): Promise<DailyCheckOut[]> {
+    return runRepositoryOperation(
+      'read',
+      'Impossible de lire les check-outs sur cette période.',
+      () => this.database.dailyCheckOuts
+        .where('date')
+        .between(from, to, true, true)
+        .toArray(),
+    );
+  }
+
   upsertCheckIn(data: NewEntity<DailyCheckIn>): Promise<DailyCheckIn> {
     return runRepositoryOperation(
       'update',

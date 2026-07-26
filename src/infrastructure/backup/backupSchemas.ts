@@ -525,6 +525,55 @@ const dailyTargetSchema = datedEntitySchema.extend({
   calculationVersion: positiveInteger,
 });
 
+const calorieAdaptationConfidenceSchema = z.object({
+  weight: nonNegativeNumber.max(100),
+  food: nonNegativeNumber.max(100),
+  activity: nonNegativeNumber.max(100),
+  recovery: nonNegativeNumber.max(100),
+  overall: nonNegativeNumber.max(100),
+  level: z.enum(['insufficient', 'uncertain', 'usable', 'reliable']),
+});
+
+const calorieAdaptationAssessmentSchema = z.object({
+  calculationVersion: positiveInteger,
+  analysisStart: localDateSchema,
+  analysisEnd: localDateSchema,
+  trackingSpanDays: nonNegativeInteger,
+  weightTrendKgPerWeek: finiteNumber.optional(),
+  waistTrendCmPerWeek: finiteNumber.optional(),
+  averageCalorieDeviationPercent: finiteNumber.optional(),
+  proteinAdherencePercent: nonNegativeNumber.max(100).optional(),
+  actualToExpectedStepsPercent: nonNegativeNumber.optional(),
+  weighInCount: nonNegativeInteger,
+  completedFoodDays: nonNegativeInteger,
+  comparableFoodDays: nonNegativeInteger,
+  recordedStepDays: nonNegativeInteger,
+  recoverySignalDays: nonNegativeInteger,
+  recoveryConcernDays: nonNegativeInteger,
+  contextDayCount: nonNegativeInteger,
+  strengthSessionCount: nonNegativeInteger,
+  confidence: calorieAdaptationConfidenceSchema,
+  detectedState: z.enum([
+    'insufficientData',
+    'insufficientFoodTracking',
+    'onTrack',
+    'temporaryWaterVariation',
+    'possibleRecomposition',
+    'conflictingSignals',
+    'truePlateau',
+    'targetTooHigh',
+    'targetTooLow',
+    'excessiveLoss',
+    'excessiveGain',
+    'activityBelowExpected',
+    'degradedRecovery',
+  ]),
+  reasons: z.array(z.string()),
+  blockingFactors: z.array(z.string()),
+  rawWeightBasedAdjustmentKcal: finiteNumber,
+  proposedAdjustmentKcal: finiteNumber,
+});
+
 const weeklyReviewSchema = entityMetadataSchema.extend({
   weekStart: localDateSchema,
   weekEnd: localDateSchema,
@@ -555,6 +604,7 @@ const weeklyReviewSchema = entityMetadataSchema.extend({
   resultingCumulativeAdjustmentKcal: finiteNumber,
   adherenceScore: nonNegativeNumber,
   adherenceLevel: z.enum(['excellent', 'good', 'needsStrengthening', 'insufficient']),
+  adaptation: calorieAdaptationAssessmentSchema.optional(),
   decisionStatus: z.enum(['pending', 'accepted', 'rejected', 'notEligible']),
   decidedAt: isoDateTimeSchema.optional(),
 });
