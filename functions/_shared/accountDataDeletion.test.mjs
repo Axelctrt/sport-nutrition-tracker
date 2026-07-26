@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { accountDataDeletionInternals } from './accountDataDeletion.js';
+import {
+  accountDataDeletionInternals,
+  handleAccountDataDeletionRequest,
+} from './accountDataDeletion.js';
 
 describe('account data deletion', () => {
   it('deletes every social row involving the authenticated account in one batch', async () => {
@@ -35,5 +38,19 @@ describe('account data deletion', () => {
       ]),
     );
     expect(deleted).toBe(10);
+  });
+
+  it('preserves the structured authentication error when the bearer token is absent', async () => {
+    const response = await handleAccountDataDeletionRequest(
+      new Request('https://sportpilot.test/api/account-data', {
+        method: 'DELETE',
+      }),
+    );
+
+    expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toMatchObject({
+      status: 'error',
+      code: 'SOCIAL_ACTIVITY_AUTH_REQUIRED',
+    });
   });
 });

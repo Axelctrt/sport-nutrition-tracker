@@ -94,7 +94,18 @@ async function deleteSocialAccountData(database, userId) {
 }
 
 function errorResponse(error) {
-  if (error instanceof AccountDataDeletionError) {
+  if (
+    error instanceof AccountDataDeletionError
+    || (
+      error
+      && typeof error === 'object'
+      && Number.isInteger(error.status)
+      && error.status >= 400
+      && error.status <= 599
+      && typeof error.code === 'string'
+      && typeof error.message === 'string'
+    )
+  ) {
     return jsonResponse(error.status, {
       status: 'error',
       code: error.code,
