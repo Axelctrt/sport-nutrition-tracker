@@ -8,9 +8,9 @@ test('crée un profil local, le conserve et recharge une route directe', async (
   await expect(page.getByRole('heading', { name: 'Bonjour Axel E2E' })).toBeVisible();
 
   await page.goto('/#/activities');
-  await expect(page.getByRole('heading', { name: 'Sport' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Sport', exact: true })).toBeVisible();
   await page.reload({ waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('heading', { name: 'Sport' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Sport', exact: true })).toBeVisible();
   await expectPageAccessibilityBaseline(page, { expectedHeading: 'Sport', checkShellTouchTargets: true });
 });
 
@@ -20,9 +20,9 @@ test('utilise la navigation principale sur iPhone', async ({ page }, testInfo) =
 
   const navigation = page.getByRole('navigation', { name: 'Navigation mobile' });
   await navigation.getByRole('link', { name: 'Nutrition' }).click();
-  await expect(page.getByRole('heading', { name: 'Journal alimentaire' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Nutrition', exact: true })).toBeVisible();
 
   await navigation.getByRole('link', { name: 'Sport' }).click();
-  await expect(page.getByRole('heading', { name: 'Sport' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Sport', exact: true })).toBeVisible();
   await expectPageAccessibilityBaseline(page, { expectedHeading: 'Sport', checkShellTouchTargets: true });
 });

@@ -19,7 +19,7 @@ test('crée un aliment local puis l’ajoute au journal', async ({ page }) => {
   await quickDialog.locator('#meal-selector-quantity').fill('100');
   await quickDialog.getByRole('button', { name: /Ajouter au déjeuner/i }).click();
 
-  await expect(page.getByRole('heading', { name: 'Journal alimentaire' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Nutrition', exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Yaourt E2E' })).toBeVisible();
 });
 

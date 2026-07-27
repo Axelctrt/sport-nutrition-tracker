@@ -4,21 +4,18 @@ import { createLocalProfile } from './helpers/app';
 test('enregistre les pas et le poids depuis le tableau de bord', async ({ page }) => {
   await createLocalProfile(page);
 
-  const dashboard = page.getByRole('region', { name: 'Bonjour E2E' });
+  await page.getByRole('button', { name: 'Faire le check-in' }).click();
+  const checkIn = page.getByRole('dialog', { name: 'Check-in du matin' });
+  await checkIn.getByLabel('Poids').fill('69.4');
+  await checkIn.getByRole('button', { name: 'Enregistrer le check-in' }).click();
+  await expect(page.getByRole('button', { name: 'Modifier le check-in' })).toBeVisible();
 
-  await page.getByRole('button', { name: 'Saisir les pas' }).click();
-  await page.getByRole('spinbutton', { name: /Pas totaux de la journée/ }).fill('12500');
-  await page.getByRole('dialog', { name: 'Saisir les pas' })
-    .getByRole('button', { name: 'Enregistrer' })
-    .click();
-  await expect(dashboard.getByRole('status')).toContainText('Pas enregistrés');
-
-  await page.getByRole('button', { name: 'Saisir le poids' }).click();
-  await page.getByRole('spinbutton', { name: /Poids en kilogrammes/ }).fill('69.4');
-  await page.getByRole('dialog', { name: 'Saisir le poids' })
-    .getByRole('button', { name: 'Enregistrer' })
-    .click();
-  await expect(dashboard.getByRole('status')).toContainText('Poids enregistré');
+  await page.getByRole('button', { name: 'Clôturer la journée' }).click();
+  const checkOut = page.getByRole('dialog', { name: 'Check-out du soir' });
+  await checkOut.getByText('Confirmer', { exact: true }).click();
+  await checkOut.getByLabel('Pas totaux').fill('12500');
+  await checkOut.getByRole('button', { name: 'Clôturer la journée' }).click();
+  await expect(page.getByText('Bilan de la journée disponible')).toBeVisible();
 
   await page.goto('/#/weight');
   await expect(page.getByRole('button', { name: /69[,.]4 kg/ })).toBeVisible();

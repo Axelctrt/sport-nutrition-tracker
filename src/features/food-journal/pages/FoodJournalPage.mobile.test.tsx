@@ -129,8 +129,9 @@ describe('FoodJournalPage — expérience mobile', () => {
     const user = userEvent.setup();
     renderJournal();
 
-    await screen.findByRole('heading', { name: 'Nutrition' });
-    await user.click(screen.getByRole('button', { name: /Bibliothèque/ }));
+    await user.click(
+      await screen.findByRole('button', { name: /Bibliothèque/ }),
+    );
 
     const library = await screen.findByRole('dialog', { name: 'Bibliothèque nutritionnelle' });
     for (const destination of [

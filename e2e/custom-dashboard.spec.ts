@@ -1,27 +1,29 @@
 import { expect, test } from '@playwright/test';
 import { createLocalProfile, expectNoCriticalHorizontalOverflow } from './helpers/app';
 
-test('personnalise les blocs du tableau de bord et conserve le choix', async ({ page, isMobile }) => {
+test('personnalise l’affichage de l’Accueil et conserve le choix', async ({ page, isMobile }) => {
   await createLocalProfile(page);
 
-  await page.getByRole('link', { name: /Personnaliser|Blocs/ }).click();
-  await expect(page.getByRole('heading', { name: 'Personnaliser l’Accueil' })).toBeVisible();
+  await page.locator('a[href="#/settings/dashboard"]').click();
+  await expect(page.getByRole('heading', { name: 'Affichage de l’Accueil' })).toBeVisible();
 
-  await page.getByRole('button', { name: /Essentiel/ }).click();
+  await page.getByText('Progression de la semaine', { exact: true }).click();
+  await page.getByText('Compact', { exact: true }).click();
   await page.getByRole('button', { name: 'Enregistrer' }).click();
-  await expect(page.getByText(/La disposition est enregistrée/)).toBeVisible();
+  await expect(page.getByText(/L’affichage est enregistré/)).toBeVisible();
   await expectNoCriticalHorizontalOverflow(page);
 
   if (isMobile) {
-    await page.getByRole('button', { name: 'Retour' }).click();
+    await page.getByLabel('Retour', { exact: true }).click();
   } else {
     await page.getByRole('link', { name: 'Retour à l’Accueil' }).click();
   }
-  await expect(page.getByText('Calories consommées')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Actions rapides' })).toBeVisible();
-  await expect(page.getByRole('button', { name: /Objectifs et détails du calcul/ })).toHaveCount(0);
+  await expect(page.getByText('Cible alimentaire guidée')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Assistant du jour' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Cette semaine' })).toBeVisible();
+  await expect(page.locator('[data-dashboard-widget]')).toHaveCount(0);
 
   await page.reload({ waitUntil: 'domcontentloaded' });
-  await expect(page.getByText('Calories consommées')).toBeVisible();
-  await expect(page.getByRole('button', { name: /Objectifs et détails du calcul/ })).toHaveCount(0);
+  await expect(page.getByText('Cible alimentaire guidée')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Cette semaine' })).toBeVisible();
 });
