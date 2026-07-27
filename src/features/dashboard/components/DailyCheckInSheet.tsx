@@ -1,5 +1,5 @@
 import { MoonStar, Scale, Sparkles } from 'lucide-react';
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import type {
   CompleteDailyCheckInInput,
 } from '@/application/daily/dailyCoachingService';
@@ -44,6 +44,7 @@ export function DailyCheckInSheet({
   const [contextFlags, setContextFlags] = useState<DailyContextFlag[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>();
+  const waistInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -233,7 +234,21 @@ export function DailyCheckInSheet({
           />
         </div>
 
-        <details className="group rounded-xl border border-slate-200 dark:border-slate-800">
+        <details
+          className="group rounded-xl border border-slate-200 dark:border-slate-800"
+          onToggle={(event) => {
+            if (!event.currentTarget.open) return;
+            window.requestAnimationFrame(() => {
+              waistInputRef.current?.focus({ preventScroll: true });
+              waistInputRef.current?.scrollIntoView?.({
+                behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+                  ? 'auto'
+                  : 'smooth',
+                block: 'center',
+              });
+            });
+          }}
+        >
           <summary className="min-h-12 cursor-pointer list-none px-3 py-3 text-sm font-semibold text-slate-800 dark:text-slate-100 [&::-webkit-details-marker]:hidden">
             Tour de taille <span className="font-normal text-slate-500">(facultatif)</span>
           </summary>
@@ -245,6 +260,7 @@ export function DailyCheckInSheet({
             >
               <div className="relative">
                 <input
+                  ref={waistInputRef}
                   id="daily-check-in-waist"
                   type="number"
                   inputMode="decimal"

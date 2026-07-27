@@ -59,24 +59,62 @@ export function BottomSheet({
   } | undefined>(undefined);
   const [dragOffset, setDragOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
 
   useEffect(() => {
-    if (!open) return undefined;
+    if (!open) {
+      setKeyboardOpen(false);
+      return undefined;
+    }
     const viewport = window.visualViewport;
     const backdrop = backdropRef.current;
-    if (!viewport || !backdrop) return undefined;
+    const panel = panelRef.current;
+    if (!viewport || !backdrop || !panel) return undefined;
+    let centerTimer: number | undefined;
+
+    const centerActiveField = () => {
+      const activeElement = document.activeElement;
+      if (
+        !(activeElement instanceof HTMLInputElement)
+        && !(activeElement instanceof HTMLTextAreaElement)
+        && !(activeElement instanceof HTMLSelectElement)
+      ) {
+        return;
+      }
+      if (!panel.contains(activeElement)) return;
+      const target = activeElement.closest<HTMLElement>('[data-form-field]') ?? activeElement;
+      window.clearTimeout(centerTimer);
+      centerTimer = window.setTimeout(() => {
+        target.scrollIntoView?.({
+          behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+            ? 'auto'
+            : 'smooth',
+          block: 'center',
+          inline: 'nearest',
+        });
+      }, 80);
+    };
 
     const syncViewport = () => {
       backdrop.style.height = `${viewport.height}px`;
       backdrop.style.top = `${viewport.offsetTop}px`;
+      const nextKeyboardOpen = window.innerHeight - viewport.height > 140;
+      setKeyboardOpen(nextKeyboardOpen);
+      if (nextKeyboardOpen) centerActiveField();
+    };
+    const handleFocusIn = () => {
+      centerActiveField();
     };
 
     syncViewport();
     viewport.addEventListener('resize', syncViewport);
     viewport.addEventListener('scroll', syncViewport);
+    panel.addEventListener('focusin', handleFocusIn);
     return () => {
+      window.clearTimeout(centerTimer);
       viewport.removeEventListener('resize', syncViewport);
       viewport.removeEventListener('scroll', syncViewport);
+      panel.removeEventListener('focusin', handleFocusIn);
     };
   }, [open]);
 
@@ -202,6 +240,7 @@ export function BottomSheet({
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={description ? descriptionId : undefined}
+        data-keyboard-open={keyboardOpen ? 'true' : 'false'}
         tabIndex={-1}
         style={{ transform: `translateY(${dragOffset}px)` }}
         className={cn(
@@ -251,7 +290,10 @@ export function BottomSheet({
         {footer ? (
           <div
             data-bottom-sheet-footer
-            className="shrink-0 border-t border-slate-200 bg-white/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur dark:border-slate-800 dark:bg-slate-900/95 sm:px-5"
+            className={cn(
+              'shrink-0 border-t border-slate-200 bg-white/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur dark:border-slate-800 dark:bg-slate-900/95 sm:px-5',
+              keyboardOpen && 'hidden',
+            )}
           >
             {footer}
           </div>

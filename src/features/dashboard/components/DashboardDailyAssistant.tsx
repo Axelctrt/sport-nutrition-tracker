@@ -1,4 +1,5 @@
 import {
+  CalendarDays,
   Check,
   ChevronRight,
   Circle,
@@ -30,7 +31,7 @@ import {
   dashboardMealAddPath,
   routePaths,
   workoutSessionPath,
-  type DashboardMealAddStep,
+  type MealAddStep,
 } from '@/app/routePaths';
 import type { MealSlot } from '@/domain/models/food';
 import type { DailyDashboardNutrition, ActiveWorkoutSummary } from '@/features/dashboard/hooks/useDailyDashboard';
@@ -209,7 +210,7 @@ function restActionClassName() {
 
 function readMealAddPanel(search: string): {
   slot: MealSlot;
-  step: DashboardMealAddStep;
+  step: MealAddStep;
 } | undefined {
   const params = new URLSearchParams(search);
   if (params.get('panel') !== 'meal-add') return undefined;
@@ -219,7 +220,11 @@ function readMealAddPanel(search: string): {
   }
   return {
     slot,
-    step: params.get('step') === 'method' ? 'method' : 'meal',
+    step: params.get('step') === 'method'
+      ? 'method'
+      : params.get('step') === 'overview'
+        ? 'overview'
+        : 'meal',
   };
 }
 
@@ -343,7 +348,7 @@ export function DashboardDailyAssistant({
     (['breakfast', 'lunch', 'dinner', 'snacks'] as const).map((slot) => [
       slot,
       createFoodJournalReturnState(
-        routePaths.dashboard,
+        dashboardMealAddPath(slot, 'overview'),
         'dashboard-nutrition',
         slot,
         dashboardMealAddPath(slot, 'method'),
@@ -495,19 +500,12 @@ export function DashboardDailyAssistant({
           state={stageState('sport', sportComplete)}
           summary={
             restConfirmed
-              ? 'Aucune activité prévue.'
+              ? <span className="whitespace-nowrap">Aucune activité prévue.</span>
               : hasConcreteSport
                 ? `${plannedCount} prévue${plannedCount > 1 ? 's' : ''} · ${performedActivityCount} réalisée${performedActivityCount > 1 ? 's' : ''}`
                 : legacyActivitiesDecision
                   ? 'Ton ancienne intention sportive est conservée. Choisis maintenant une activité précise.'
                   : 'Aucune activité prévue.'
-          }
-          action={
-            restConfirmed ? (
-              <button type="button" className={secondaryActionClassName()} onClick={() => openPlanner()}>
-                Prévoir malgré tout
-              </button>
-            ) : undefined
           }
         >
           <div className="mt-3 space-y-3">
@@ -651,7 +649,16 @@ export function DashboardDailyAssistant({
 
             <div className="flex flex-col items-start gap-3 pt-1">
               {!hasConcreteSport ? (
-                restConfirmed ? null : (
+                restConfirmed ? (
+                  <button
+                    type="button"
+                    className={`${secondaryActionClassName()} whitespace-nowrap`}
+                    onClick={() => openPlanner()}
+                  >
+                    <Plus aria-hidden="true" className="size-4" />
+                    Prévoir malgré tout
+                  </button>
+                ) : (
                   <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
                     <button type="button" className={primaryActionClassName()} onClick={() => openPlanner()}>
                       <Plus aria-hidden="true" className="size-4" />
@@ -677,8 +684,9 @@ export function DashboardDailyAssistant({
               )}
               <Link
                 to={`${routePaths.weeklyPlanning}?date=${encodeURIComponent(date)}&section=upcoming`}
-                className="inline-flex min-h-11 w-fit items-center text-sm font-semibold leading-5 text-slate-600 hover:underline dark:text-slate-300"
+                className="inline-flex min-h-11 w-fit items-center gap-2 whitespace-nowrap text-sm font-semibold leading-5 text-brand-700 hover:underline dark:text-brand-300"
               >
+                <CalendarDays aria-hidden="true" className="size-4" />
                 Planification avancée
               </Link>
             </div>
@@ -779,6 +787,9 @@ export function DashboardDailyAssistant({
           : {})}
         onStepChange={(step, slot) => {
           navigate(dashboardMealAddPath(slot, step), { replace: true });
+        }}
+        onFinish={() => {
+          navigate(routePaths.dashboard, { replace: true });
         }}
         onClose={() => {
           navigate(routePaths.dashboard, { replace: true });

@@ -216,6 +216,11 @@ describe('DashboardDailyAssistant', () => {
       .toHaveAttribute('data-stage-state', 'current');
     expect(screen.getByRole('button', { name: /Ajouter un repas/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Prévoir malgré tout' })).toBeInTheDocument();
+    expect(screen.getByText('Aucune activité prévue.')).toHaveClass('whitespace-nowrap');
+    expect(screen.getByRole('link', { name: 'Planification avancée' })).toHaveClass(
+      'whitespace-nowrap',
+      'text-brand-700',
+    );
     expect(screen.queryByRole('button', { name: 'Prévoir une autre activité' }))
       .not.toBeInTheDocument();
   });
@@ -356,8 +361,11 @@ describe('DashboardDailyAssistant', () => {
     await user.click(screen.getByRole('button', { name: 'Ajouter un repas' }));
 
     const dialog = screen.getByRole('dialog', { name: 'Ajouter un repas' });
-    expect(within(dialog).getByRole('radio', { name: /Dîner/ })).toBeChecked();
-    await user.click(within(dialog).getByRole('button', { name: 'Continuer' }));
+    const dinner = within(dialog).getByRole('radio', { name: /Dîner/ });
+    expect(dinner).toBeChecked();
+    await user.click(dinner);
+    expect(within(dialog).getByRole('button', { name: 'Terminer le repas' })).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'Ajouter un élément' }));
     expect(within(dialog).getByRole('link', { name: /Scanner un produit/ })).toHaveAttribute(
       'href',
       '/food/barcode-scanner?date=2026-07-29&slot=dinner',

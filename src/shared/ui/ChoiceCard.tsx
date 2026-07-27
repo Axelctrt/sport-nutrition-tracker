@@ -48,6 +48,9 @@ export function ChoiceCard({
         disabled={disabled}
         aria-labelledby={titleId}
         aria-describedby={description ? descriptionId : undefined}
+        onClick={() => {
+          if (selected) onSelect(value);
+        }}
         onChange={() => onSelect(value)}
         className="peer sr-only"
       />

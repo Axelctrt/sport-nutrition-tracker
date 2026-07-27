@@ -85,9 +85,16 @@ describe('FoodJournalPage — expérience mobile', () => {
 
     expect(await screen.findByRole('heading', { name: 'Journal alimentaire' })).toBeInTheDocument();
     expect(await screen.findByLabelText('Résumé nutritionnel de la journée')).toBeInTheDocument();
+    const user = userEvent.setup();
     for (const meal of ['Petit-déjeuner', 'Déjeuner', 'Dîner', 'Collations']) {
       expect(screen.getByRole('heading', { name: meal })).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: meal === 'Collations' ? 'Ajouter un aliment aux collations' : `Ajouter un aliment au ${meal.toLocaleLowerCase('fr')}` })).toBeInTheDocument();
+      const toggle = screen.getByRole('button', { name: new RegExp(`^${meal}`) });
+      if (toggle.getAttribute('aria-expanded') !== 'true') await user.click(toggle);
+      expect(screen.getByRole('button', {
+        name: meal === 'Collations'
+          ? 'Ajouter un aliment aux collations'
+          : `Ajouter un aliment au ${meal.toLocaleLowerCase('fr')}`,
+      })).toBeInTheDocument();
     }
     expect(screen.getByRole('button', { name: 'Options de la journée' })).toHaveAttribute('aria-expanded', 'false');
     expect(screen.queryByText('Copier toute la journée vers')).not.toBeInTheDocument();
@@ -110,7 +117,7 @@ describe('FoodJournalPage — expérience mobile', () => {
     await user.click(screen.getAllByRole('button', { name: 'Ajouter un aliment' })[0]!);
     const dialog = await screen.findByRole('dialog', { name: 'Ajouter un repas' });
     await user.click(within(dialog).getByRole('radio', { name: /Petit-déjeuner/ }));
-    await user.click(within(dialog).getByRole('button', { name: 'Continuer' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Ajouter un élément' }));
     expect(within(dialog).getByRole('link', { name: /Rechercher un aliment/ })).toHaveAttribute(
       'href',
       '/food/select?date=2026-06-24&slot=breakfast',

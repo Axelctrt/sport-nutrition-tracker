@@ -8,13 +8,20 @@ import {
   FilePlus2,
   Heart,
   MoonStar,
+  Plus,
   Salad,
   ScanLine,
   Search,
+  Utensils,
   type LucideIcon,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import {
+  loadFoodJournal,
+  type FoodEntryWithProduct,
+  type MealJournalSnapshot,
+} from '@/application/food/foodJournalService';
 import {
   barcodeScannerPath,
   favoriteMealsForMealPath,
@@ -22,7 +29,7 @@ import {
   photoNutritionEstimatePath,
   recipesForMealPath,
   selectFoodPath,
-  type DashboardMealAddStep,
+  type MealAddStep,
 } from '@/app/routePaths';
 import type { MealSlot } from '@/domain/models/food';
 import type { FoodJournalNavigationState } from '@/features/food-journal/navigation/foodJournalNavigation';
@@ -42,8 +49,10 @@ interface FoodJournalAddSheetProps {
   entryCounts?: MealEntryCounts;
   currentHour?: number;
   initialSlot?: MealSlot;
-  initialStep?: DashboardMealAddStep;
-  onStepChange?: (step: DashboardMealAddStep, slot: MealSlot) => void;
+  initialStep?: MealAddStep;
+  meals?: readonly MealJournalSnapshot[];
+  onStepChange?: (step: MealAddStep, slot: MealSlot) => void;
+  onFinish?: (slot: MealSlot) => void;
   onClose: () => void;
 }
 
@@ -120,6 +129,25 @@ const addMethods: readonly AddMethod[] = [
   },
 ];
 
+function entryName(item: FoodEntryWithProduct): string {
+  return item.product?.name
+    ?? item.recipe?.name
+    ?? (item.entry.reference.sourceType === 'recipe'
+      ? 'Recette indisponible'
+      : 'Aliment indisponible');
+}
+
+function entryQuantity(item: FoodEntryWithProduct): string {
+  if (item.entry.reference.sourceType === 'recipe') {
+    return `${item.entry.reference.servingsConsumed} portion(s)`;
+  }
+  return `${item.entry.reference.inputQuantity} ${
+    item.entry.reference.inputMode === 'servings'
+      ? 'portion(s)'
+      : item.entry.reference.normalizedUnit
+  }`;
+}
+
 export function FoodJournalAddSheet({
   open,
   date,
@@ -128,11 +156,15 @@ export function FoodJournalAddSheet({
   currentHour = new Date().getHours(),
   initialSlot,
   initialStep = 'meal',
+  meals,
   onStepChange,
+  onFinish,
   onClose,
 }: FoodJournalAddSheetProps) {
-  const [step, setStep] = useState<DashboardMealAddStep>('meal');
+  const [step, setStep] = useState<MealAddStep>('meal');
   const [selectedSlot, setSelectedSlot] = useState<MealSlot>('breakfast');
+  const [availableMeals, setAvailableMeals] = useState<readonly MealJournalSnapshot[]>([]);
+  const [isLoadingMeal, setIsLoadingMeal] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -143,19 +175,46 @@ export function FoodJournalAddSheet({
     ));
   }, [currentHour, entryCounts, initialSlot, initialStep, open]);
 
-  const changeStep = (nextStep: DashboardMealAddStep) => {
+  useEffect(() => {
+    if (!open) return undefined;
+    if (meals) {
+      setAvailableMeals(meals);
+      setIsLoadingMeal(false);
+      return undefined;
+    }
+
+    let active = true;
+    setIsLoadingMeal(true);
+    void loadFoodJournal(date)
+      .then((snapshot) => {
+        if (active) setAvailableMeals(snapshot.meals);
+      })
+      .catch(() => {
+        if (active) setAvailableMeals([]);
+      })
+      .finally(() => {
+        if (active) setIsLoadingMeal(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [date, meals, open]);
+
+  const changeStep = (nextStep: MealAddStep, slot = selectedSlot) => {
     setStep(nextStep);
-    onStepChange?.(nextStep, selectedSlot);
+    onStepChange?.(nextStep, slot);
   };
+  const selectedMeal = availableMeals.find((meal) => meal.slot === selectedSlot);
+  const selectedEntries = selectedMeal?.entries ?? [];
 
   const title = (
     <span className="flex items-center gap-2">
-      {step === 'method' ? (
+      {step !== 'meal' ? (
         <button
           type="button"
-          aria-label="Choisir un autre repas"
+          aria-label={step === 'method' ? 'Retour au repas' : 'Choisir un autre repas'}
           className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
-          onClick={() => changeStep('meal')}
+          onClick={() => changeStep(step === 'method' ? 'overview' : 'meal')}
         >
           <ArrowLeft aria-hidden="true" className="size-5" />
         </button>
@@ -170,13 +229,15 @@ export function FoodJournalAddSheet({
       title={title}
       description={
         step === 'meal'
-          ? 'Le repas le plus pertinent est présélectionné, mais tu peux le modifier.'
-          : `Choisis comment compléter le ${mealSlotLabels[selectedSlot].toLocaleLowerCase('fr')}.`
+          ? 'Choisis le repas que tu souhaites compléter.'
+          : step === 'overview'
+            ? `Ajoute autant d’éléments que nécessaire au ${mealSlotLabels[selectedSlot].toLocaleLowerCase('fr')}.`
+            : `Choisis comment compléter le ${mealSlotLabels[selectedSlot].toLocaleLowerCase('fr')}.`
       }
       onClose={onClose}
-      footer={step === 'meal' ? (
-        <Button fullWidth onClick={() => changeStep('method')}>
-          Continuer
+      footer={step === 'overview' ? (
+        <Button fullWidth onClick={() => (onFinish ?? onClose)(selectedSlot)}>
+          Terminer le repas
         </Button>
       ) : undefined}
     >
@@ -191,11 +252,60 @@ export function FoodJournalAddSheet({
               description={description}
               icon={icon}
               selected={selectedSlot === slot}
-              onSelect={() => setSelectedSlot(slot)}
+              onSelect={() => {
+                setSelectedSlot(slot);
+                changeStep('overview', slot);
+              }}
               comfortable
             />
           ))}
         </ChoiceCardGroup>
+      ) : step === 'overview' ? (
+        <div className="space-y-4">
+          <div
+            className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800"
+            aria-label={`Contenu du ${mealSlotLabels[selectedSlot].toLocaleLowerCase('fr')}`}
+          >
+            {isLoadingMeal ? (
+              <p className="px-4 py-5 text-sm text-slate-500 dark:text-slate-400" role="status">
+                Chargement du repas…
+              </p>
+            ) : selectedEntries.length === 0 ? (
+              <div className="px-4 py-6 text-center">
+                <Utensils aria-hidden="true" className="mx-auto size-8 text-slate-400" />
+                <p className="mt-2 font-semibold text-slate-900 dark:text-white">
+                  Aucun élément enregistré
+                </p>
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                  Commence avec la méthode qui te convient.
+                </p>
+              </div>
+            ) : (
+              <div className="divide-y divide-slate-200 dark:divide-slate-800">
+                {selectedEntries.map((item) => (
+                  <article key={item.entry.id} className="flex items-start justify-between gap-3 px-4 py-3">
+                    <div className="min-w-0">
+                      <p className="break-words text-sm font-semibold text-slate-950 dark:text-white">
+                        {entryName(item)}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                        {entryQuantity(item)}
+                      </p>
+                    </div>
+                    <span className="shrink-0 text-sm font-semibold tabular-nums text-slate-700 dark:text-slate-200">
+                      {Math.round(item.nutrition.caloriesKcal)} kcal
+                    </span>
+                  </article>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <Button fullWidth onClick={() => changeStep('method')}>
+            <Plus aria-hidden="true" className="size-4" />
+            {selectedEntries.length > 0 ? 'Ajouter un autre élément' : 'Ajouter un élément'}
+          </Button>
+        </div>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2" aria-label="Méthodes d’ajout">
           {addMethods.map(({ id, title: methodTitle, description, icon: Icon, path }) => (

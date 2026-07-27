@@ -1,7 +1,12 @@
 import { CalendarCheck, Copy, LibraryBig, Plus, UtensilsCrossed } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { routePaths } from '@/app/routePaths';
+import {
+  foodJournalMealComposerPath,
+  foodJournalMealPath,
+  routePaths,
+  type MealAddStep,
+} from '@/app/routePaths';
 import { calculateRemainingNutrition } from '@/domain/calculations/nutrition';
 import type { MealSlot } from '@/domain/models/food';
 import type { DailyTarget } from '@/domain/models/targets';
@@ -39,13 +44,17 @@ export function FoodJournalPage() {
   const toast = useToast();
   const handledFeedbackRef = useRef<string | undefined>(undefined);
   const initializedMealDateRef = useRef<string | undefined>(undefined);
-  const handledAddRequestRef = useRef<string | undefined>(undefined);
   const locationState = location.state as FoodJournalNavigationState | null;
   const requestedDate = searchParams.get('date') ?? '';
   const date = isValidLocalDate(requestedDate) ? requestedDate : toLocalDate();
   const requestedSlotValue = searchParams.get('slot');
   const requestedSlot = isMealSlot(requestedSlotValue) ? requestedSlotValue : undefined;
   const addRequested = searchParams.get('add') === 'true';
+  const requestedStep: MealAddStep = searchParams.get('step') === 'method'
+    ? 'method'
+    : searchParams.get('step') === 'overview'
+      ? 'overview'
+      : 'meal';
   const {
     snapshot,
     status,
@@ -65,7 +74,6 @@ export function FoodJournalPage() {
   const [copyTargetDate, setCopyTargetDate] = useState(date);
   const [target, setTarget] = useState<DailyTarget>();
   const [dayOptionsOpen, setDayOptionsOpen] = useState(false);
-  const [addSheetOpen, setAddSheetOpen] = useState(false);
   const [expandedMealSlot, setExpandedMealSlot] = useState<MealSlot>('breakfast');
   const [highlightedEntryId, setHighlightedEntryId] = useState<string>();
   const [returnFeedback, setReturnFeedback] = useState(locationState?.foodJournalFeedback);
@@ -99,7 +107,7 @@ export function FoodJournalPage() {
     setExpandedMealSlot(nextSlot);
     if (requestedSlot) {
       window.requestAnimationFrame(() => {
-        document.getElementById(`food-meal-${requestedSlot}`)?.scrollIntoView({
+        document.getElementById(`food-meal-${requestedSlot}`)?.scrollIntoView?.({
           behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
             ? 'auto'
             : 'smooth',
@@ -110,17 +118,8 @@ export function FoodJournalPage() {
   }, [date, requestedSlot, snapshot]);
 
   useEffect(() => {
-    if (!addRequested) {
-      handledAddRequestRef.current = undefined;
-      return;
-    }
-    if (!snapshot || !requestedSlot) return;
-    const requestKey = `${date}:${requestedSlot}`;
-    if (handledAddRequestRef.current === requestKey) return;
-    handledAddRequestRef.current = requestKey;
-    setExpandedMealSlot(requestedSlot);
-    setAddSheetOpen(true);
-  }, [addRequested, date, requestedSlot, snapshot]);
+    if (addRequested && requestedSlot) setExpandedMealSlot(requestedSlot);
+  }, [addRequested, requestedSlot]);
 
   const remaining = snapshot && target
     ? calculateRemainingNutrition(target.targetCaloriesKcal, target.macros, snapshot.totals)
@@ -168,9 +167,14 @@ export function FoodJournalPage() {
     if (!snapshot) return new Map<MealSlot, FoodJournalNavigationState>();
     return new Map(snapshot.meals.map((meal): [MealSlot, FoodJournalNavigationState] => [
       meal.slot,
-      createFoodJournalReturnState(currentJournalPath, location.key, meal.slot),
+      createFoodJournalReturnState(
+        foodJournalMealComposerPath(date, meal.slot, 'overview'),
+        location.key,
+        meal.slot,
+        foodJournalMealComposerPath(date, meal.slot, 'method'),
+      ),
     ]));
-  }, [currentJournalPath, location.key, snapshot]);
+  }, [date, location.key, snapshot]);
   const entryCounts = useMemo<Partial<Record<MealSlot, number>>>(() => (
     Object.fromEntries(
       snapshot?.meals.map((meal) => [meal.slot, meal.entries.length] as const) ?? [],
@@ -193,7 +197,11 @@ export function FoodJournalPage() {
             Suivez vos calories, vos macros et vos repas sur une seule vue quotidienne.
           </p>
         </div>
-        <Button className="w-full sm:w-auto" size="lg" onClick={() => setAddSheetOpen(true)}>
+        <Button
+          className="w-full sm:w-auto"
+          size="lg"
+          onClick={() => navigate(foodJournalMealComposerPath(date, expandedMealSlot, 'meal'))}
+        >
           <Plus aria-hidden="true" className="size-5" />Ajouter un aliment
         </Button>
       </div>
@@ -227,7 +235,7 @@ export function FoodJournalPage() {
               title="Aucun aliment pour cette journée"
               description="Ajoutez votre premier aliment puis complétez les repas au fil de la journée."
               primaryAction={(
-                <Button onClick={() => setAddSheetOpen(true)}>
+                <Button onClick={() => navigate(foodJournalMealComposerPath(date, expandedMealSlot, 'meal'))}>
                   <Plus aria-hidden="true" className="size-4" />Ajouter un aliment
                 </Button>
               )}
@@ -246,6 +254,7 @@ export function FoodJournalPage() {
                 highlightedEntryId={highlightedEntryId}
                 repeatSourceDate={snapshot.repeatSourceDates[meal.slot]}
                 onToggle={() => setExpandedMealSlot(meal.slot)}
+                onAdd={() => navigate(foodJournalMealComposerPath(date, meal.slot, 'overview'))}
                 onDuplicate={duplicate}
                 onRemove={remove}
                 onUpdateQuantity={updateQuantity}
@@ -344,12 +353,26 @@ export function FoodJournalPage() {
       ) : null}
 
       <FoodJournalAddSheet
-        open={addSheetOpen}
+        open={addRequested && Boolean(requestedSlot)}
         date={date}
         navigationStates={navigationStates}
         entryCounts={entryCounts}
-        {...(requestedSlot ? { initialSlot: requestedSlot } : {})}
-        onClose={() => setAddSheetOpen(false)}
+        {...(snapshot ? { meals: snapshot.meals } : {})}
+        {...(requestedSlot
+          ? {
+              initialSlot: requestedSlot,
+              initialStep: requestedStep,
+            }
+          : {})}
+        onStepChange={(step, slot) => {
+          navigate(foodJournalMealComposerPath(date, slot, step), { replace: true });
+        }}
+        onFinish={(slot) => {
+          navigate(foodJournalMealPath(date, slot), { replace: true });
+        }}
+        onClose={() => {
+          navigate(foodJournalMealPath(date, requestedSlot ?? expandedMealSlot), { replace: true });
+        }}
       />
     </section>
   );

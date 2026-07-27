@@ -39,7 +39,7 @@ export function FormField({
   };
 
   return (
-    <div className={className} {...props}>
+    <div data-form-field className={className} {...props}>
       <label htmlFor={id} className="text-sm font-semibold text-slate-800 dark:text-slate-100">
         {label}
         {required ? (

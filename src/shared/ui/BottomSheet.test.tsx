@@ -28,6 +28,8 @@ function BottomSheetHarness({
         footer={<button type="button">Continuer</button>}
       >
         <div className="h-[60rem]">
+          <label htmlFor="sheet-test-input">Valeur</label>
+          <input id="sheet-test-input" />
           <button type="button">Rechercher</button>
         </div>
       </BottomSheet>
@@ -82,6 +84,47 @@ describe('BottomSheet', () => {
     expect(content).toHaveClass('min-h-0', 'flex-1', 'overflow-y-auto');
     expect(footer).toHaveClass('shrink-0');
     expect(footer).toHaveClass('pb-[max(0.75rem,env(safe-area-inset-bottom))]');
+  });
+
+  it('masque le footer et recentre le champ lorsque le clavier reduit la zone visible', () => {
+    vi.useFakeTimers();
+    const originalVisualViewport = window.visualViewport;
+    const originalInnerHeight = window.innerHeight;
+    const scrollIntoView = vi.fn();
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 800 });
+    Object.defineProperty(window, 'visualViewport', {
+      configurable: true,
+      value: {
+        height: 500,
+        offsetTop: 0,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      } as unknown as VisualViewport,
+    });
+
+    render(<BottomSheetHarness />);
+    fireEvent.click(screen.getByRole('button', { name: 'Ouvrir les méthodes d’ajout' }));
+
+    const dialog = screen.getByRole('dialog');
+    const footer = dialog.querySelector('[data-bottom-sheet-footer]');
+    const input = screen.getByLabelText('Valeur');
+    Object.defineProperty(input, 'scrollIntoView', { configurable: true, value: scrollIntoView });
+    input.focus();
+    vi.advanceTimersByTime(100);
+
+    expect(dialog).toHaveAttribute('data-keyboard-open', 'true');
+    expect(footer).toHaveClass('hidden');
+    expect(scrollIntoView).toHaveBeenCalledWith(expect.objectContaining({ block: 'center' }));
+
+    Object.defineProperty(window, 'visualViewport', {
+      configurable: true,
+      value: originalVisualViewport,
+    });
+    Object.defineProperty(window, 'innerHeight', {
+      configurable: true,
+      value: originalInnerHeight,
+    });
+    vi.useRealTimers();
   });
 
   it('reste ouvert après un glissement court et revient en place', () => {

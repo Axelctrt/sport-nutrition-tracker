@@ -3,6 +3,7 @@ import {
   barcodeScannerPath,
   dashboardMealAddPath,
   foodJournalMealPath,
+  foodJournalMealComposerPath,
   favoriteMealsForMealPath,
   photoNutritionEstimatePath,
   recipesForMealPath,
@@ -187,6 +188,14 @@ describe('panneau repas du tableau de bord', () => {
   it('memorise le repas et l etape des methodes', () => {
     expect(dashboardMealAddPath('dinner', 'method')).toBe(
       '/?panel=meal-add&slot=dinner&step=method',
+    );
+  });
+});
+
+describe('composition d un repas', () => {
+  it('conserve le repas et l etape de composition', () => {
+    expect(foodJournalMealComposerPath('2026-07-10', 'dinner', 'overview')).toBe(
+      '/food?date=2026-07-10&slot=dinner&add=true&step=overview',
     );
   });
 });

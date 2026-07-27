@@ -1,4 +1,5 @@
 import { ChevronDown } from 'lucide-react';
+import { useRef } from 'react';
 import {
   DAILY_CONTEXT_FLAGS,
   type DailyContextFlag,
@@ -25,6 +26,7 @@ export function DailyContextFlagsField({
   value,
   onChange,
 }: DailyContextFlagsFieldProps) {
+  const firstCheckboxRef = useRef<HTMLInputElement>(null);
   const toggle = (flag: DailyContextFlag) => {
     onChange(
       value.includes(flag)
@@ -34,7 +36,21 @@ export function DailyContextFlagsField({
   };
 
   return (
-    <details className="group rounded-xl border border-slate-200 dark:border-slate-800">
+    <details
+      className="group rounded-xl border border-slate-200 dark:border-slate-800"
+      onToggle={(event) => {
+        if (!event.currentTarget.open) return;
+        window.requestAnimationFrame(() => {
+          firstCheckboxRef.current?.focus({ preventScroll: true });
+          firstCheckboxRef.current?.scrollIntoView?.({
+            behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+              ? 'auto'
+              : 'smooth',
+            block: 'center',
+          });
+        });
+      }}
+    >
       <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 focus-visible:outline-none [&::-webkit-details-marker]:hidden">
         <span>
           <span className="block text-sm font-semibold text-slate-800 dark:text-slate-100">
@@ -58,6 +74,7 @@ export function DailyContextFlagsField({
             className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg px-2 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800"
           >
             <input
+              ref={flag === DAILY_CONTEXT_FLAGS[0] ? firstCheckboxRef : undefined}
               type="checkbox"
               className={checkboxClassName}
               checked={value.includes(flag)}

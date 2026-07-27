@@ -1,4 +1,5 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { selectFoodPath } from '@/app/routePaths';
 import { FoodJournalPage } from '@/features/food-journal/pages/FoodJournalPage';
@@ -24,6 +25,7 @@ describe('FoodJournalPage — accès au sélecteur', () => {
     ['dîner', 'dinner'],
     ['collations', 'snacks'],
   ] as const)('ouvre le sélecteur depuis le %s avec le bon repas', async (label, slot) => {
+    const user = userEvent.setup();
     render(
       <ToastProvider>
       <MemoryRouter initialEntries={['/food?date=2026-06-24']}>
@@ -33,7 +35,15 @@ describe('FoodJournalPage — accès au sélecteur', () => {
     );
 
     const accessibleName = slot === 'snacks' ? 'Ajouter un aliment aux collations' : `Ajouter un aliment au ${label}`;
-    const link = await screen.findByRole('link', { name: accessibleName });
+    const mealToggle = await screen.findByRole('button', {
+      name: new RegExp(`^${slot === 'snacks' ? 'Collations' : label}`, 'i'),
+    });
+    if (mealToggle.getAttribute('aria-expanded') !== 'true') await user.click(mealToggle);
+    await user.click(screen.getByRole('button', { name: accessibleName }));
+
+    const dialog = await screen.findByRole('dialog', { name: 'Ajouter un repas' });
+    await user.click(within(dialog).getByRole('button', { name: 'Ajouter un élément' }));
+    const link = within(dialog).getByRole('link', { name: /Rechercher un aliment/ });
     expect(link).toHaveAttribute('href', selectFoodPath('2026-06-24', slot));
   });
 });
