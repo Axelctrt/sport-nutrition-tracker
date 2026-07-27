@@ -34,26 +34,17 @@ describe('DesktopSidebar', () => {
     expect(secondaryNavigation).not.toHaveClass('mt-auto');
   });
 
-  it('ne sélectionne que Rappels sur sa route dédiée', () => {
-    renderSidebar('/settings/reminders');
+  it('conserve une navigation secondaire courte et laisse Paramètres actif sur ses sous-pages', () => {
+    renderSidebar('/settings/notifications-routines');
 
-    expect(screen.getByRole('link', { name: 'Rappels' })).toHaveClass(
+    const secondaryNavigation = screen.getByRole('navigation', {
+      name: 'Navigation secondaire',
+    });
+    expect(secondaryNavigation.querySelectorAll('a')).toHaveLength(3);
+    expect(screen.getByRole('link', { name: 'Paramètres' })).toHaveClass(
       'bg-brand-100',
     );
-    expect(screen.getByRole('link', { name: 'Paramètres' })).not.toHaveClass(
-      'bg-brand-100',
-    );
-  });
-
-  it('ne sélectionne que Corbeille sur sa route dédiée', () => {
-    renderSidebar('/backup/trash');
-
-    expect(screen.getByRole('link', { name: 'Corbeille' })).toHaveClass(
-      'bg-brand-100',
-    );
-    expect(screen.getByRole('link', { name: 'Sauvegarde' })).not.toHaveClass(
-      'bg-brand-100',
-    );
+    expect(screen.queryByRole('link', { name: 'Rappels' })).not.toBeInTheDocument();
   });
 
 });

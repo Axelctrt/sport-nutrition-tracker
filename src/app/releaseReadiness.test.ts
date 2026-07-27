@@ -36,24 +36,32 @@ describe('préparation de la version stable 0.32.0', () => {
     );
   });
 
-  it('rend les écrans secondaires accessibles depuis le menu mobile', () => {
+  it('regroupe les écrans secondaires sans dupliquer les hubs métier', () => {
     const mobilePaths = mobileMoreNavigation.flatMap((section) =>
       section.items.map((item) => item.path),
     );
 
     expect(mobilePaths).toEqual(
       expect.arrayContaining([
-        routePaths.workoutSessions,
-        routePaths.weeklyPlanning,
-        routePaths.strengthExercises,
-        routePaths.history,
-        routePaths.weeklyReview,
-        routePaths.reminders,
+        routePaths.profile,
+        routePaths.accountDevices,
+        routePaths.dashboardCustomization,
+        routePaths.settingsNotificationsRoutines,
+        routePaths.settingsAccountSync,
         routePaths.backup,
         routePaths.trash,
+        routePaths.settingsAdvanced,
         routePaths.calculationsInformation,
+        routePaths.privacy,
+        routePaths.settingsAbout,
       ]),
     );
+    expect(mobilePaths).not.toEqual(expect.arrayContaining([
+      routePaths.workoutSessions,
+      routePaths.weeklyPlanning,
+      routePaths.history,
+      routePaths.weeklyReview,
+    ]));
   });
 
   it('conserve les parcours de recherche et d’ajout alimentaire', () => {

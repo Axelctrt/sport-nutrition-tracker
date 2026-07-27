@@ -20,7 +20,7 @@ const routeMetadata: RouteMetadata[] = [
   { pattern: routePaths.settingsDataBackup, title: 'Données et sauvegardes' },
   { pattern: routePaths.settingsAbout, title: 'À propos' },
   { pattern: routePaths.settingsAdvanced, title: 'Paramètres avancés' },
-  { pattern: routePaths.dashboardCustomization, title: 'Personnaliser le tableau de bord' },
+  { pattern: routePaths.dashboardCustomization, title: 'Affichage de l’Accueil' },
   { pattern: routePaths.syncPrototype, title: 'Compte de synchronisation' },
   { pattern: routePaths.accountDevices, title: 'Compte et appareils' },
   { pattern: routePaths.settings, title: 'Paramètres' },

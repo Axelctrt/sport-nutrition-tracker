@@ -10,7 +10,7 @@ describe('getRouteTitle', () => {
     expect(getRouteTitle('/history')).toBe('Historique général');
     expect(getRouteTitle('/strength/planning')).toBe('Planning de musculation');
     expect(getRouteTitle('/activities/templates')).toBe('Modèles d’endurance');
-    expect(getRouteTitle('/settings/dashboard')).toBe('Personnaliser le tableau de bord');
+    expect(getRouteTitle('/settings/dashboard')).toBe('Affichage de l’Accueil');
     expect(getRouteTitle('/settings/sync-prototype')).toBe('Compte de synchronisation');
     expect(getRouteTitle('/settings/account-devices')).toBe('Compte et appareils');
     expect(getRouteTitle('/settings/account-sync')).toBe('Compte et synchronisation');

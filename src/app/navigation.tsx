@@ -1,28 +1,20 @@
 import {
   Activity,
   Apple,
-  BarChart3,
   Bell,
-  ClipboardCheck,
-  CalendarDays,
-  Layers3,
-  PlayCircle,
   DatabaseBackup,
-  Dumbbell,
-  FileText,
   Gauge,
-  History,
   Info,
+  Laptop,
+  LockKeyhole,
   Search,
   Settings,
   SlidersHorizontal,
   Trash2,
-  Trophy,
-  Target,
   TrendingUp,
   UsersRound,
   UserRound,
-  Weight,
+  Wrench,
   type LucideIcon,
 } from 'lucide-react';
 import { routePaths } from '@/app/routePaths';
@@ -55,6 +47,7 @@ const progressionActivePaths = [
   routePaths.goals,
   routePaths.weeklyReview,
   routePaths.history,
+  routePaths.rewards,
 ];
 
 export const primaryNavigation: NavigationItem[] = [
@@ -71,108 +64,38 @@ export const primaryNavigation: NavigationItem[] = [
 
 export const secondaryNavigation: NavigationItem[] = [
   { label: 'Recherche', path: routePaths.search, icon: Search },
-  { label: 'Amis', path: routePaths.friends, icon: UsersRound },
   { label: 'Profil', path: routePaths.profile, icon: UserRound },
-  { label: 'Paramètres', path: routePaths.settings, icon: Settings, end: true },
-  { label: 'Rappels', path: routePaths.reminders, icon: Bell },
-  { label: 'Sauvegarde', path: routePaths.backup, icon: DatabaseBackup, end: true },
-  { label: 'Corbeille', path: routePaths.trash, icon: Trash2 },
-  { label: 'Calculs', path: routePaths.calculationsInformation, icon: Info },
+  { label: 'Paramètres', path: routePaths.settings, icon: Settings },
 ];
 
 export const mobileNavigation: NavigationItem[] = primaryNavigation;
 
 export const mobileMoreNavigation: NavigationSection[] = [
   {
-    title: 'Sport',
+    title: 'Compte',
     items: [
       {
-        label: 'Hub Sport',
-        path: routePaths.activities,
-        icon: Activity,
-        description: 'Démarrer une activité, consulter le programme et l’historique récent.',
+        label: 'Profil',
+        path: routePaths.profile,
+        icon: UserRound,
+        description: 'Informations personnelles, objectifs et mensurations.',
       },
       {
-        label: 'Mes entraînements',
-        path: routePaths.workoutSessions,
-        icon: PlayCircle,
-        description: 'Reprendre une séance ou consulter l’historique de musculation.',
+        label: 'Amis et confidentialité',
+        path: routePaths.friends,
+        icon: UsersRound,
+        description: 'Invitations, identité sociale et permissions de partage.',
       },
       {
-        label: 'Planning hebdomadaire',
-        path: routePaths.weeklyPlanning,
-        icon: CalendarDays,
-        description: 'Prévoir, reporter et démarrer les séances de la semaine.',
-      },
-      {
-        label: 'Exercices',
-        path: routePaths.strengthExercises,
-        icon: Dumbbell,
-        description: 'Catalogue, exercices personnels et progression.',
-      },
-      {
-        label: 'Séances modèles',
-        path: routePaths.workoutTemplates,
-        icon: Layers3,
-        description: 'Préparer et démarrer des entraînements récurrents.',
+        label: 'Compte et appareils',
+        path: routePaths.accountDevices,
+        icon: Laptop,
+        description: 'Gérer le compte actif et les appareils associés.',
       },
     ],
   },
   {
-    title: 'Progression',
-    items: [
-      {
-        label: 'Hub Progression',
-        path: routePaths.progression,
-        icon: TrendingUp,
-        description: 'Poids, analyses, objectifs, rapports et bilan hebdomadaire.',
-      },
-      {
-        label: 'Poids',
-        path: routePaths.weight,
-        icon: Weight,
-        description: 'Ajouter une pesée et suivre la tendance.',
-      },
-      {
-        label: 'Analyses',
-        path: routePaths.analytics,
-        icon: BarChart3,
-        description: 'Observer les tendances sportives et nutritionnelles.',
-      },
-      {
-        label: 'Objectifs et jalons',
-        path: routePaths.goals,
-        icon: Target,
-        description: 'Créer des objectifs mesurables et suivre leur progression.',
-      },
-      {
-        label: 'Rapport de progression',
-        path: routePaths.reports,
-        icon: FileText,
-        description: 'Synthétiser et partager une période de suivi.',
-      },
-      {
-        label: 'Bilan hebdomadaire',
-        path: routePaths.weeklyReview,
-        icon: ClipboardCheck,
-        description: 'Examiner les données et décider des ajustements.',
-      },
-      {
-        label: 'Historique',
-        path: routePaths.history,
-        icon: History,
-        description: 'Relire les journées et ouvrir leurs données.',
-      },
-      {
-        label: 'Récompenses',
-        path: routePaths.rewards,
-        icon: Trophy,
-        description: 'Badges, missions, séries et thèmes débloqués.',
-      },
-    ],
-  },
-  {
-    title: 'Compte et application',
+    title: 'Application',
     items: [
       {
         label: 'Recherche globale',
@@ -181,35 +104,39 @@ export const mobileMoreNavigation: NavigationSection[] = [
         description: 'Retrouver séances, aliments, recettes, activités et pesées.',
       },
       {
-        label: 'Amis et confidentialité',
-        path: routePaths.friends,
-        icon: UsersRound,
-        description: 'Invitations, permissions et limites de partage.',
-      },
-      {
-        label: 'Profil',
-        path: routePaths.profile,
-        icon: UserRound,
-        description: 'Objectifs, mensurations et macronutriments.',
-      },
-      {
-        label: 'Personnaliser l’Accueil',
+        label: 'Affichage de l’Accueil',
         path: routePaths.dashboardCustomization,
         icon: SlidersHorizontal,
-        description: 'Choisir les blocs, métriques, raccourcis et leur ordre.',
+        description: 'Choisir les informations et le bloc complémentaire.',
       },
       {
-        label: 'Paramètres',
-        path: routePaths.settings,
+        label: 'Apparence et accessibilité',
+        path: routePaths.settingsAppearanceAccessibility,
         icon: Settings,
-        end: true,
-        description: 'Compte, apparence, calculs et stockage local.',
+        description: 'Adapter le thème et le confort de lecture.',
       },
       {
-        label: 'Rappels et routines',
-        path: routePaths.reminders,
+        label: 'Rappels',
+        path: routePaths.settingsNotificationsRoutines,
         icon: Bell,
-        description: 'Configurer les rappels internes de suivi.',
+        description: 'Configurer les rappels, routines et le minuteur.',
+      },
+      {
+        label: 'Calculs et nutrition',
+        path: routePaths.settingsNutritionCalculations,
+        icon: Gauge,
+        description: 'Régler les repères nutritionnels et les coefficients.',
+      },
+    ],
+  },
+  {
+    title: 'Données',
+    items: [
+      {
+        label: 'Synchronisation',
+        path: routePaths.settingsAccountSync,
+        icon: Laptop,
+        description: 'Consulter l’état du compte, du cloud et du hors-ligne.',
       },
       {
         label: 'Sauvegarde',
@@ -225,10 +152,33 @@ export const mobileMoreNavigation: NavigationSection[] = [
         description: 'Restaurer les éléments supprimés récemment.',
       },
       {
-        label: 'Informations sur les calculs',
+        label: 'Gestion des données',
+        path: routePaths.settingsAdvanced,
+        icon: Wrench,
+        description: 'Accéder aux opérations locales avancées.',
+      },
+    ],
+  },
+  {
+    title: 'Informations',
+    items: [
+      {
+        label: 'Comprendre les calculs',
         path: routePaths.calculationsInformation,
         icon: Info,
-        description: 'Comprendre les formules et leurs limites.',
+        description: 'Comprendre les formules, estimations et limites.',
+      },
+      {
+        label: 'Confidentialité',
+        path: routePaths.privacy,
+        icon: LockKeyhole,
+        description: 'Consulter les règles de confidentialité de SportPilot.',
+      },
+      {
+        label: 'À propos',
+        path: routePaths.settingsAbout,
+        icon: Info,
+        description: 'Version et informations sur l’application.',
       },
     ],
   },
