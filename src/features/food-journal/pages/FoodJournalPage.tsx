@@ -1,4 +1,13 @@
-import { CalendarCheck, Copy, LibraryBig, Plus, UtensilsCrossed } from 'lucide-react';
+import {
+  BookOpen,
+  CalendarCheck,
+  Copy,
+  LibraryBig,
+  PackagePlus,
+  Plus,
+  Search,
+  UtensilsCrossed,
+} from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import {
@@ -23,6 +32,7 @@ import { repositories } from '@/infrastructure/repositories/repositories';
 import { inputClassName } from '@/shared/forms/formStyles';
 import { useToast } from '@/shared/toast/useToast';
 import { Button } from '@/shared/ui/Button';
+import { BottomSheet } from '@/shared/ui/BottomSheet';
 import { Card } from '@/shared/ui/Card';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
@@ -74,6 +84,7 @@ export function FoodJournalPage() {
   const [copyTargetDate, setCopyTargetDate] = useState(date);
   const [target, setTarget] = useState<DailyTarget>();
   const [dayOptionsOpen, setDayOptionsOpen] = useState(false);
+  const [libraryOpen, setLibraryOpen] = useState(false);
   const [expandedMealSlot, setExpandedMealSlot] = useState<MealSlot>('breakfast');
   const [highlightedEntryId, setHighlightedEntryId] = useState<string>();
   const [returnFeedback, setReturnFeedback] = useState(locationState?.foodJournalFeedback);
@@ -188,10 +199,12 @@ export function FoodJournalPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
-            Nutrition quotidienne
+            {date === toLocalDate()
+              ? `Aujourd’hui, ${formatLocalDate(date, 'EEEE d MMMM')}`
+              : formatLocalDate(date, 'EEEE d MMMM')}
           </p>
           <h1 id="food-journal-title" className="mt-1 text-3xl font-bold tracking-tight text-slate-950 dark:text-white">
-            Journal alimentaire
+            Nutrition
           </h1>
           <p className="mt-2 hidden max-w-3xl text-slate-600 dark:text-slate-300 sm:block">
             Suivez vos calories, vos macros et vos repas sur une seule vue quotidienne.
@@ -202,7 +215,7 @@ export function FoodJournalPage() {
           size="lg"
           onClick={() => navigate(foodJournalMealComposerPath(date, expandedMealSlot, 'meal'))}
         >
-          <Plus aria-hidden="true" className="size-5" />Ajouter un aliment
+          <Plus aria-hidden="true" className="size-5" />Ajouter un repas
         </Button>
       </div>
 
@@ -234,11 +247,6 @@ export function FoodJournalPage() {
               icon={UtensilsCrossed}
               title="Aucun aliment pour cette journée"
               description="Ajoutez votre premier aliment puis complétez les repas au fil de la journée."
-              primaryAction={(
-                <Button onClick={() => navigate(foodJournalMealComposerPath(date, expandedMealSlot, 'meal'))}>
-                  <Plus aria-hidden="true" className="size-4" />Ajouter un aliment
-                </Button>
-              )}
             />
           ) : null}
 
@@ -278,6 +286,25 @@ export function FoodJournalPage() {
           <Card className="mt-4 overflow-hidden">
             <button
               type="button"
+              aria-label="Bibliothèque"
+              className="flex min-h-16 w-full items-center gap-3 px-4 text-left hover:bg-slate-50 dark:hover:bg-slate-800/60 sm:px-5"
+              onClick={() => setLibraryOpen(true)}
+            >
+              <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-700 dark:bg-brand-950 dark:text-brand-300">
+                <LibraryBig aria-hidden="true" className="size-5" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block font-semibold text-slate-950 dark:text-white">Bibliothèque</span>
+                <span className="mt-0.5 block text-sm text-slate-500 dark:text-slate-400">
+                  Aliments, recettes, favoris et recherche externe
+                </span>
+              </span>
+            </button>
+          </Card>
+
+          <Card className="mt-4 overflow-hidden">
+            <button
+              type="button"
               aria-expanded={dayOptionsOpen}
               aria-label="Options de la journée"
               className="flex min-h-14 w-full items-center justify-between gap-4 px-4 text-left sm:px-5"
@@ -286,7 +313,7 @@ export function FoodJournalPage() {
               <span>
                 <span className="block font-semibold text-slate-950 dark:text-white">Options de la journée</span>
                 <span className="mt-1 block text-sm text-slate-500 dark:text-slate-400">
-                  Copie, bibliothèque et statut du {formatLocalDate(date)}
+                  Copie et statut du {formatLocalDate(date)}
                 </span>
               </span>
               <LibraryBig aria-hidden="true" className="size-5 shrink-0 text-slate-500" />
@@ -294,19 +321,7 @@ export function FoodJournalPage() {
 
             {dayOptionsOpen ? (
               <div className="border-t border-slate-200 p-4 dark:border-slate-800 sm:p-5">
-                <div className="grid gap-3 sm:grid-cols-3">
-                  <Link to={routePaths.foodProducts} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-300 px-4 text-sm font-semibold hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800">
-                    Aliments locaux
-                  </Link>
-                  <Link to={routePaths.recipes} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-300 px-4 text-sm font-semibold hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800">
-                    Recettes
-                  </Link>
-                  <Link to={routePaths.favoriteMeals} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-300 px-4 text-sm font-semibold hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800">
-                    Repas favoris
-                  </Link>
-                </div>
-
-                <div className="mt-5 grid min-w-0 gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+                <div className="grid min-w-0 gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
                   <div className="min-w-0">
                     <label htmlFor="copy-day-date" className="text-sm font-semibold">Copier toute la journée vers</label>
                     <input
@@ -374,6 +389,66 @@ export function FoodJournalPage() {
           navigate(foodJournalMealPath(date, requestedSlot ?? expandedMealSlot), { replace: true });
         }}
       />
+
+      <BottomSheet
+        open={libraryOpen}
+        title="Bibliothèque nutritionnelle"
+        description="Retrouve ou crée les éléments réutilisables de ton journal."
+        onClose={() => setLibraryOpen(false)}
+      >
+        <nav className="space-y-2" aria-label="Bibliothèque nutritionnelle">
+          {[
+            {
+              path: routePaths.foodProducts,
+              label: 'Aliments enregistrés',
+              description: 'Consulter et modifier les produits locaux.',
+              icon: LibraryBig,
+            },
+            {
+              path: routePaths.recipes,
+              label: 'Recettes',
+              description: 'Composer et réutiliser des recettes.',
+              icon: BookOpen,
+            },
+            {
+              path: routePaths.favoriteMeals,
+              label: 'Repas favoris',
+              description: 'Retrouver les repas enregistrés.',
+              icon: CalendarCheck,
+            },
+            {
+              path: routePaths.foodSearch,
+              label: 'Recherche externe',
+              description: 'Rechercher un produit dans Open Food Facts.',
+              icon: Search,
+            },
+            {
+              path: routePaths.newFoodProduct,
+              label: 'Créer un aliment',
+              description: 'Ajouter manuellement un aliment ou un produit.',
+              icon: PackagePlus,
+            },
+          ].map((destination) => {
+            const Icon = destination.icon;
+            return (
+              <Link
+                key={destination.path}
+                to={destination.path}
+                className="flex min-h-16 items-center gap-3 rounded-xl border border-slate-200 px-3 py-2 hover:border-brand-300 hover:bg-slate-50 dark:border-slate-800 dark:hover:border-brand-700 dark:hover:bg-slate-800/60"
+                onClick={() => setLibraryOpen(false)}
+              >
+                <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                  <Icon aria-hidden="true" className="size-4" />
+                </span>
+                <span className="min-w-0">
+                  <span className="block font-semibold text-slate-950 dark:text-white">{destination.label}</span>
+                  <span className="block text-xs text-slate-500 dark:text-slate-400">{destination.description}</span>
+                </span>
+              </Link>
+            );
+          })}
+        </nav>
+      </BottomSheet>
     </section>
   );
 }
