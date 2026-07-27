@@ -280,7 +280,7 @@ export function WeightPage() {
                 <Button
                   className="mt-2 w-full lg:w-auto"
                   variant="dangerGhost"
-                  onClick={() => setPendingDeleteEntry(exactEntry)}
+                  onClick={() => void handleDelete(exactEntry)}
                 >
                   <Trash2 aria-hidden="true" className="size-4" />
                   Supprimer cette pesée

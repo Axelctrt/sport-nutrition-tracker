@@ -17,7 +17,11 @@ test('conserve les contenus essentiels sur la matrice responsive', async ({ page
     await expectEssentialContentVisible(page);
   }
 
-  const navigation = page.getByRole('navigation', { name: 'Navigation mobile' });
+  const navigation = page.getByRole('navigation', {
+    name: (page.viewportSize()?.width ?? 0) >= 1024
+      ? 'Navigation principale'
+      : 'Navigation mobile',
+  });
   await expect(navigation.getByRole('link')).toHaveCount(4);
   await expect(navigation.getByRole('link', { name: 'Progression' })).toBeVisible();
 });

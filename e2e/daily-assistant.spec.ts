@@ -167,7 +167,7 @@ test('centralise les actions sport et nutrition dans le cœur fixe de l’accuei
     snacks: 'Collations',
   }[selectedSlot ?? ''];
   expect(selectedMealLabel).toBeTruthy();
-  await nutritionDialog.getByText(selectedMealLabel!, { exact: true }).click();
+  await selectedMeal.locator('..').click();
   await expect(nutritionDialog.getByRole('button', { name: 'Terminer le repas' })).toBeVisible();
   await nutritionDialog.getByRole('button', { name: 'Ajouter un élément' }).click();
   await expect(nutritionDialog.getByRole('link', { name: /Rechercher un aliment/ })).toBeVisible();

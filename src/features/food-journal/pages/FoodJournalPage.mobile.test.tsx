@@ -118,7 +118,7 @@ describe('FoodJournalPage — expérience mobile', () => {
     expect(breakfastToggle).toHaveAttribute('aria-expanded', 'false');
     expect(screen.getByRole('button', { name: /^Déjeuner/ })).toHaveAttribute('aria-expanded', 'true');
 
-    await user.click(screen.getAllByRole('button', { name: 'Ajouter un repas' })[0]);
+    await user.click(screen.getAllByRole('button', { name: 'Ajouter un repas' })[0]!);
     const dialog = await screen.findByRole('dialog', { name: 'Ajouter un repas' });
     await user.click(within(dialog).getByRole('radio', { name: /Petit-déjeuner/ }));
     await user.click(within(dialog).getByRole('button', { name: 'Ajouter un élément' }));

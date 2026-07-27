@@ -201,7 +201,7 @@ export function DashboardPage() {
                   nutrition={nutrition}
                   dailyCoaching={dailyCoaching}
                   activityPlanning={activityPlanning}
-                  highlightedStage={highlightedStage}
+                  {...(highlightedStage ? { highlightedStage } : {})}
                   {...(activeWorkout ? { activeWorkout } : {})}
                   onSaveCheckIn={saveCheckIn}
                   onSaveActivityDecision={saveActivityDecision}

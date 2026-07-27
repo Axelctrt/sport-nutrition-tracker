@@ -42,13 +42,19 @@ export async function createLocalProfile(page: Page, firstName = 'E2E'): Promise
     name: 'Progression de la configuration',
   });
   await expect(profileProgress).toHaveAttribute('aria-valuenow', '1');
-  await page.getByLabel(/Nom affiché/).fill(firstName);
+  const firstNameInput = page.getByLabel(/Nom affiché/);
+  await firstNameInput.fill(firstName);
+  await expect(firstNameInput).toHaveValue(firstName);
+  await firstNameInput.blur();
 
   for (let step = 2; step <= 9; step += 1) {
     await page.getByRole('button', { name: 'Continuer' }).click();
     await expect(profileProgress).toHaveAttribute('aria-valuenow', String(step));
   }
 
+  await expect(
+    page.getByRole('list', { name: 'Informations du profil' }).getByText(firstName, { exact: true }),
+  ).toBeVisible();
   await expect(page.getByRole('button', { name: 'Commencer' })).toBeVisible();
   await page.getByRole('button', { name: 'Commencer' }).click();
   await expect(page.getByRole('heading', { name: `Bonjour ${firstName}` })).toBeVisible();
