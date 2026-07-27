@@ -1,6 +1,4 @@
 import {
-  Activity,
-  Bike,
   Check,
   ChevronRight,
   Circle,
@@ -11,11 +9,11 @@ import {
   Play,
   Plus,
   ScanLine,
+  Trash2,
   Utensils,
-  Waves,
 } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import type {
   CompleteDailyCheckInInput,
   CompleteDailyCheckOutInput,
@@ -23,6 +21,12 @@ import type {
   SetDailyActivityDecisionInput,
 } from '@/application/daily/dailyCoachingService';
 import type { DailyTargetSnapshot } from '@/application/daily/dailyTargetCoordinator';
+import type {
+  DailyActivityPlanningSnapshot,
+  PlanDailyStrengthInput,
+  UpdateDailyStrengthInput,
+} from '@/application/planning/dailyActivityPlanningService';
+import type { PlannedEnduranceInput } from '@/application/planning/endurancePlanningService';
 import {
   addFoodPath,
   barcodeScannerPath,
@@ -33,7 +37,14 @@ import {
 import type { DailyDashboardNutrition, ActiveWorkoutSummary } from '@/features/dashboard/hooks/useDailyDashboard';
 import { DailyCheckInSheet } from '@/features/dashboard/components/DailyCheckInSheet';
 import { DailyCheckOutSheet } from '@/features/dashboard/components/DailyCheckOutSheet';
-import { DailySportDecisionSheet } from '@/features/dashboard/components/DailySportDecisionSheet';
+import {
+  DailyActivityPlannerSheet,
+  type DailyActivityPlannerEdit,
+} from '@/features/dashboard/components/DailyActivityPlannerSheet';
+import { getWorkoutSessionTitle } from '@/application/strength/workoutSessionService';
+import { createActivityJournalReturnState } from '@/features/activities/navigation/activityJournalNavigation';
+import { activityTypeLabels } from '@/features/activities/utils/activityLabels';
+import type { PlannedEnduranceSession } from '@/domain/planning/endurancePlanningState';
 import { useActionToast } from '@/shared/toast/useActionToast';
 import { Card } from '@/shared/ui/Card';
 import { ProgressBar } from '@/shared/ui/ProgressBar';
@@ -47,11 +58,18 @@ interface DashboardDailyAssistantProps {
   snapshot: DailyTargetSnapshot;
   nutrition: DailyDashboardNutrition;
   dailyCoaching: DailyCoachingDay;
+  activityPlanning: DailyActivityPlanningSnapshot;
   activeWorkout?: ActiveWorkoutSummary;
   currentHour?: number;
   onSaveCheckIn: (input: CompleteDailyCheckInInput) => Promise<void>;
   onSaveActivityDecision: (input: SetDailyActivityDecisionInput) => Promise<void>;
   onSaveCheckOut: (input: CompleteDailyCheckOutInput) => Promise<void>;
+  onPlanStrength: (input: PlanDailyStrengthInput) => Promise<unknown>;
+  onUpdateStrength: (input: UpdateDailyStrengthInput) => Promise<unknown>;
+  onStartStrength: (sessionId: string) => Promise<{ id: string } | undefined>;
+  onSkipStrength: (sessionId: string) => Promise<void>;
+  onSaveEndurance: (input: PlannedEnduranceInput, sessionId?: string) => Promise<unknown>;
+  onSkipEndurance: (sessionId: string) => Promise<void>;
 }
 
 interface StageCardProps {
@@ -70,6 +88,14 @@ const mealLabels = {
   dinner: 'dîner',
   snacks: 'collation',
 } as const;
+
+const enduranceTypeLabels: Record<PlannedEnduranceSession['activityType'], string> = {
+  running: 'Course',
+  swimming: 'Natation',
+  cycling: 'Vélo',
+  walking: 'Marche',
+  otherCardio: 'Autre cardio',
+};
 
 function preferredMealSlotForHour(hour: number): keyof typeof mealLabels {
   if (hour >= 5 && hour < 11) return 'breakfast';
@@ -182,24 +208,50 @@ function secondaryActionClassName() {
   return 'inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800';
 }
 
+function enduranceActivityPath(session: PlannedEnduranceSession): string {
+  const path = session.activityType === 'running'
+    ? routePaths.addRunningActivity
+    : session.activityType === 'swimming'
+      ? routePaths.addSwimmingActivity
+      : routePaths.addOtherActivity;
+  const params = new URLSearchParams({
+    date: session.date,
+    type: session.activityType,
+    plannedSource: 'endurancePlanning',
+    plannedId: session.id,
+  });
+  return `${path}?${params.toString()}`;
+}
+
 export function DashboardDailyAssistant({
   date,
   snapshot,
   nutrition,
   dailyCoaching,
-  activeWorkout,
+  activityPlanning,
   currentHour = new Date().getHours(),
   onSaveCheckIn,
   onSaveActivityDecision,
   onSaveCheckOut,
+  onPlanStrength,
+  onUpdateStrength,
+  onStartStrength,
+  onSkipStrength,
+  onSaveEndurance,
+  onSkipEndurance,
 }: DashboardDailyAssistantProps) {
   const actionToast = useActionToast();
+  const navigate = useNavigate();
   const [openSheet, setOpenSheet] = useState<AssistantStage>();
+  const [plannerEdit, setPlannerEdit] = useState<DailyActivityPlannerEdit>();
   const checkInComplete = Boolean(dailyCoaching.checkIn);
-  const sportComplete = Boolean(
-    dailyCoaching.activityDecision
-    && dailyCoaching.activityDecision.decision !== 'open',
-  );
+  const actualActivityCount = snapshot.activities.length;
+  const plannedActivityCount = activityPlanning.strengthSessions.length
+    + activityPlanning.enduranceSessions.length;
+  const hasConcreteSport = plannedActivityCount > 0 || actualActivityCount > 0;
+  const restConfirmed = dailyCoaching.activityDecision?.decision === 'rest'
+    && !hasConcreteSport;
+  const sportComplete = hasConcreteSport || restConfirmed;
   const nutritionComplete = Boolean(
     dailyCoaching.checkOut?.foodJournalComplete
     || nutrition.journalStatus?.isComplete,
@@ -241,9 +293,24 @@ export function DashboardDailyAssistant({
           ? 'état normal'
           : undefined,
   ].filter(Boolean);
-  const activityDecision = dailyCoaching.activityDecision?.decision;
-  const actualActivityCount = snapshot.activities.length;
-  const plannedCount = snapshot.plannedActivities.length;
+  const legacyActivitiesDecision = dailyCoaching.activityDecision?.decision === 'activities'
+    && !hasConcreteSport;
+  const plannedCount = activityPlanning.strengthSessions
+    .filter(({ session }) => session.status === 'planned' || session.status === 'inProgress')
+    .length
+    + activityPlanning.enduranceSessions
+      .filter(({ completedActivity }) => !completedActivity)
+      .length;
+  const linkedActivityIds = new Set([
+    ...activityPlanning.strengthSessions
+      .map(({ session }) => session.completedActivityId)
+      .filter((activityId): activityId is string => Boolean(activityId)),
+    ...activityPlanning.enduranceSessions
+      .map(({ completedActivity }) => completedActivity?.id)
+      .filter((activityId): activityId is string => Boolean(activityId)),
+  ]);
+  const standaloneActivities = snapshot.activities
+    .filter((activity) => !linkedActivityIds.has(activity.id));
   const preferredMealSlot = preferredMealSlotForHour(currentHour);
 
   const saveCheckIn = async (input: CompleteDailyCheckInInput) => {
@@ -254,13 +321,6 @@ export function DashboardDailyAssistant({
       description: 'Tes repères du matin sont à jour.',
     });
   };
-  const saveActivityDecision = async (input: SetDailyActivityDecisionInput) => {
-    await onSaveActivityDecision(input);
-    actionToast.success({
-      key: `daily-sport-decision:${date}`,
-      title: input.decision === 'rest' ? 'Journée de repos confirmée' : 'Sport du jour mis à jour',
-    });
-  };
   const saveCheckOut = async (input: CompleteDailyCheckOutInput) => {
     await onSaveCheckOut(input);
     actionToast.success({
@@ -268,6 +328,67 @@ export function DashboardDailyAssistant({
       title: 'Journée clôturée',
       description: 'Le bilan final de la journée est disponible.',
     });
+  };
+
+  const confirmRest = async () => {
+    await onSaveActivityDecision({ date, decision: 'rest' });
+    actionToast.success({
+      key: `daily-sport-rest:${date}`,
+      title: 'Journée de repos confirmée',
+    });
+  };
+
+  const startStrength = async (sessionId: string) => {
+    try {
+      const session = await onStartStrength(sessionId);
+      if (session) navigate(workoutSessionPath(session.id));
+    } catch (error) {
+      actionToast.error({
+        key: `daily-strength-start:${sessionId}`,
+        title: 'Démarrage impossible',
+        error,
+        fallback: 'La séance n’a pas pu être démarrée.',
+      });
+    }
+  };
+
+  const skipStrength = async (sessionId: string) => {
+    try {
+      await onSkipStrength(sessionId);
+      actionToast.success({
+        key: `daily-strength-skip:${sessionId}`,
+        title: 'Séance retirée du planning',
+      });
+    } catch (error) {
+      actionToast.error({
+        key: `daily-strength-skip:${sessionId}`,
+        title: 'Retrait impossible',
+        error,
+        fallback: 'La séance n’a pas pu être retirée.',
+      });
+    }
+  };
+
+  const skipEndurance = async (sessionId: string) => {
+    try {
+      await onSkipEndurance(sessionId);
+      actionToast.success({
+        key: `daily-endurance-skip:${sessionId}`,
+        title: 'Activité retirée du planning',
+      });
+    } catch (error) {
+      actionToast.error({
+        key: `daily-endurance-skip:${sessionId}`,
+        title: 'Retrait impossible',
+        error,
+        fallback: 'L’activité n’a pas pu être retirée.',
+      });
+    }
+  };
+
+  const openPlanner = (edit?: DailyActivityPlannerEdit) => {
+    setPlannerEdit(edit);
+    setOpenSheet('sport');
   };
 
   return (
@@ -324,73 +445,203 @@ export function DashboardDailyAssistant({
         <StageCard
           eyebrow="Sport"
           title={
-            activityDecision === 'rest'
+            restConfirmed
               ? 'Repos confirmé'
-              : sportComplete
+              : hasConcreteSport
                 ? 'Sport prévu'
-                : 'Sport aujourd’hui ?'
+                : 'Sport aujourd’hui'
           }
-          icon={activityDecision === 'rest' ? Moon : Dumbbell}
+          icon={restConfirmed ? Moon : Dumbbell}
           state={stageState('sport', sportComplete)}
           summary={
-            activityDecision === 'rest'
-              ? 'Aucune séance prévue aujourd’hui.'
-              : actualActivityCount > 0 || plannedCount > 0
+            restConfirmed
+              ? 'Aucune activité prévue.'
+              : hasConcreteSport
                 ? `${plannedCount} prévue${plannedCount > 1 ? 's' : ''} · ${actualActivityCount} réalisée${actualActivityCount > 1 ? 's' : ''}`
-                : sportComplete
-                  ? 'Choisis maintenant une activité ou ajoute-la plus tard.'
-                  : 'Repos, musculation, endurance ou plusieurs activités.'
+                : legacyActivitiesDecision
+                  ? 'Ton ancienne intention sportive est conservée. Choisis maintenant une activité précise.'
+                  : 'Aucune activité prévue.'
           }
           action={
-            sportComplete && activityDecision === 'rest' ? (
-              <EditButton label="Modifier le sport du jour" onClick={() => setOpenSheet('sport')} />
-            ) : sportComplete ? (
-              <EditButton label="Modifier la décision sportive" onClick={() => setOpenSheet('sport')} />
-            ) : (
-              <button type="button" className={primaryActionClassName()} onClick={() => setOpenSheet('sport')}>
-                Choisir
-                <ChevronRight aria-hidden="true" className="size-4" />
+            restConfirmed ? (
+              <button type="button" className={secondaryActionClassName()} onClick={() => openPlanner()}>
+                Prévoir malgré tout
               </button>
-            )
+            ) : undefined
           }
         >
-          {activityDecision === 'activities' ? (
-            <div className="mt-3">
-              {activeWorkout ? (
-                <Link
-                  to={workoutSessionPath(activeWorkout.session.id)}
-                  className={`${primaryActionClassName()} mb-2`}
+          <div className="mt-3 space-y-3">
+            {activityPlanning.strengthSessions.map(({ session, exerciseCount }) => {
+              const isInProgress = session.status === 'inProgress';
+              const isCompleted = session.status === 'completed';
+              return (
+                <div
+                  key={session.id}
+                  className="border-t border-slate-200 pt-3 dark:border-slate-800"
                 >
-                  <Play aria-hidden="true" className="size-4" />
-                  Reprendre la séance
-                </Link>
-              ) : null}
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                <Link to={routePaths.workoutSessions} className={secondaryActionClassName()}>
-                  <Dumbbell aria-hidden="true" className="size-4" />
-                  Musculation
-                </Link>
-                <Link to={`${routePaths.addRunningActivity}?date=${encodeURIComponent(date)}`} className={secondaryActionClassName()}>
-                  <Activity aria-hidden="true" className="size-4" />
-                  Course
-                </Link>
-                <Link to={`${routePaths.addSwimmingActivity}?date=${encodeURIComponent(date)}`} className={secondaryActionClassName()}>
-                  <Waves aria-hidden="true" className="size-4" />
-                  Natation
-                </Link>
-                <Link to={`${routePaths.addOtherActivity}?date=${encodeURIComponent(date)}&type=cycling`} className={secondaryActionClassName()}>
-                  <Bike aria-hidden="true" className="size-4" />
-                  Vélo / autre
-                </Link>
-              </div>
-              <Link
-                to={`${routePaths.weeklyPlanning}?date=${encodeURIComponent(date)}&section=upcoming`}
-                className="mt-2 inline-flex min-h-10 items-center text-sm font-semibold text-brand-700 hover:underline dark:text-brand-300"
+                  <p className="font-semibold text-slate-950 dark:text-white">
+                    {getWorkoutSessionTitle(session)}
+                  </p>
+                  <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">
+                    Musculation
+                    {session.plannedDurationMinutes
+                      ? ` · environ ${session.plannedDurationMinutes} min`
+                      : ''}
+                    {exerciseCount > 0
+                      ? ` · ${exerciseCount} exercice${exerciseCount > 1 ? 's' : ''}`
+                      : ''}
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {isInProgress ? (
+                      <Link to={workoutSessionPath(session.id)} className={primaryActionClassName()}>
+                        <Play aria-hidden="true" className="size-4" />
+                        Reprendre la séance
+                      </Link>
+                    ) : isCompleted ? (
+                      <span className="inline-flex min-h-10 items-center gap-2 text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+                        <Check aria-hidden="true" className="size-4" />
+                        Terminée
+                      </span>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          className={primaryActionClassName()}
+                          onClick={() => void startStrength(session.id)}
+                        >
+                          <Play aria-hidden="true" className="size-4" />
+                          Démarrer
+                        </button>
+                        <button
+                          type="button"
+                          className={secondaryActionClassName()}
+                          onClick={() => openPlanner({ kind: 'strength', session })}
+                        >
+                          <Pencil aria-hidden="true" className="size-4" />
+                          Modifier
+                        </button>
+                        <button
+                          type="button"
+                          className={secondaryActionClassName()}
+                          onClick={() => void skipStrength(session.id)}
+                        >
+                          <Trash2 aria-hidden="true" className="size-4" />
+                          Retirer
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+
+            {activityPlanning.enduranceSessions.map(({ session, completedActivity }) => (
+              <div
+                key={session.id}
+                className="border-t border-slate-200 pt-3 dark:border-slate-800"
               >
-                Préparer plusieurs jours
-              </Link>
-            </div>
-          ) : null}
+                <p className="font-semibold text-slate-950 dark:text-white">{session.title}</p>
+                <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">
+                  {enduranceTypeLabels[session.activityType]}
+                  {completedActivity
+                    ? ` · ${completedActivity.durationMinutes} min réalisés`
+                    : session.targetDurationMinutes
+                      ? ` · ${session.targetDurationMinutes} min`
+                      : ''}
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {completedActivity ? (
+                    <span className="inline-flex min-h-10 items-center gap-2 text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+                      <Check aria-hidden="true" className="size-4" />
+                      Terminée
+                    </span>
+                  ) : (
+                    <>
+                      <Link
+                        to={enduranceActivityPath(session)}
+                        state={createActivityJournalReturnState(
+                          routePaths.dashboard,
+                          'dashboard-sport',
+                          date,
+                        )}
+                        className={primaryActionClassName()}
+                      >
+                        <Play aria-hidden="true" className="size-4" />
+                        Démarrer
+                      </Link>
+                      <button
+                        type="button"
+                        className={secondaryActionClassName()}
+                        onClick={() => openPlanner({ kind: 'endurance', session })}
+                      >
+                        <Pencil aria-hidden="true" className="size-4" />
+                        Modifier
+                      </button>
+                      <button
+                        type="button"
+                        className={secondaryActionClassName()}
+                        onClick={() => void skipEndurance(session.id)}
+                      >
+                        <Trash2 aria-hidden="true" className="size-4" />
+                        Retirer
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            ))}
+
+            {standaloneActivities.map((activity) => (
+              <div
+                key={activity.id}
+                className="border-t border-slate-200 pt-3 dark:border-slate-800"
+              >
+                <p className="font-semibold text-slate-950 dark:text-white">
+                  {activityTypeLabels[activity.type]}
+                </p>
+                <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">
+                  {activity.durationMinutes} min réalisés
+                </p>
+                <span className="mt-2 inline-flex min-h-10 items-center gap-2 text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+                  <Check aria-hidden="true" className="size-4" />
+                  Terminée
+                </span>
+              </div>
+            ))}
+
+            {!hasConcreteSport ? (
+              restConfirmed ? null : (
+                <div className="flex flex-col items-start gap-2">
+                  <button type="button" className={primaryActionClassName()} onClick={() => openPlanner()}>
+                    <Plus aria-hidden="true" className="size-4" />
+                    Prévoir une activité
+                  </button>
+                  <button
+                    type="button"
+                    className="inline-flex min-h-10 items-center text-sm font-semibold text-slate-600 hover:underline dark:text-slate-300"
+                    onClick={() => void confirmRest()}
+                  >
+                    Repos aujourd’hui
+                  </button>
+                </div>
+              )
+            ) : (
+              <button
+                type="button"
+                className="inline-flex min-h-10 items-center gap-2 text-sm font-semibold text-brand-700 hover:underline dark:text-brand-300"
+                onClick={() => openPlanner()}
+              >
+                <Plus aria-hidden="true" className="size-4" />
+                Prévoir une autre activité
+              </button>
+            )}
+            <Link
+              to={`${routePaths.weeklyPlanning}?date=${encodeURIComponent(date)}&section=upcoming`}
+              className="inline-flex min-h-10 items-center text-sm font-semibold text-slate-600 hover:underline dark:text-slate-300"
+            >
+              Planification avancée
+            </Link>
+          </div>
         </StageCard>
 
         <StageCard
@@ -476,15 +727,18 @@ export function DashboardDailyAssistant({
         onClose={() => setOpenSheet(undefined)}
         onSubmit={saveCheckIn}
       />
-      <DailySportDecisionSheet
+      <DailyActivityPlannerSheet
         open={openSheet === 'sport'}
         date={date}
-        {...(dailyCoaching.activityDecision
-          ? { decision: dailyCoaching.activityDecision }
-          : {})}
-        plannedCount={plannedCount}
-        onClose={() => setOpenSheet(undefined)}
-        onSubmit={saveActivityDecision}
+        templates={activityPlanning.templates}
+        {...(plannerEdit ? { edit: plannerEdit } : {})}
+        onClose={() => {
+          setOpenSheet(undefined);
+          setPlannerEdit(undefined);
+        }}
+        onPlanStrength={onPlanStrength}
+        onUpdateStrength={onUpdateStrength}
+        onSaveEndurance={onSaveEndurance}
       />
       <DailyCheckOutSheet
         open={openSheet === 'checkOut'}

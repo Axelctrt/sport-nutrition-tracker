@@ -14,6 +14,19 @@ import {
   type SetDailyActivityDecisionInput,
 } from '@/application/daily/dailyCoachingService';
 import { recalculateTargetsAfterWeightChange } from '@/application/daily/referenceWeightRecalculationService';
+import {
+  loadDailyActivityPlanning,
+  planDailyStrengthActivity,
+  saveDailyEnduranceActivity,
+  skipDailyEnduranceActivity,
+  skipDailyStrengthActivity,
+  startDailyStrengthActivity,
+  updateDailyStrengthActivity,
+  type DailyActivityPlanningSnapshot,
+  type PlanDailyStrengthInput,
+  type UpdateDailyStrengthInput,
+} from '@/application/planning/dailyActivityPlanningService';
+import type { PlannedEnduranceInput } from '@/application/planning/endurancePlanningService';
 import { useProfile } from '@/app/providers/profile/useProfile';
 import {
   calculateDailyNutrition,
@@ -64,6 +77,15 @@ export interface DailyDashboardDependencies {
     >;
     steps: Pick<typeof repositories.steps, 'upsert'>;
   };
+  planning?: {
+    load: typeof loadDailyActivityPlanning;
+    planStrength: typeof planDailyStrengthActivity;
+    updateStrength: typeof updateDailyStrengthActivity;
+    startStrength: typeof startDailyStrengthActivity;
+    skipStrength: typeof skipDailyStrengthActivity;
+    saveEndurance: typeof saveDailyEnduranceActivity;
+    skipEndurance: typeof skipDailyEnduranceActivity;
+  };
 }
 
 export interface UseDailyDashboardOptions {
@@ -81,6 +103,15 @@ const defaultDependencies: DailyDashboardDependencies = {
     completeCheckOut: completeDailyCheckOut,
   },
   repositories,
+  planning: {
+    load: loadDailyActivityPlanning,
+    planStrength: planDailyStrengthActivity,
+    updateStrength: updateDailyStrengthActivity,
+    startStrength: startDailyStrengthActivity,
+    skipStrength: skipDailyStrengthActivity,
+    saveEndurance: saveDailyEnduranceActivity,
+    skipEndurance: skipDailyEnduranceActivity,
+  },
 };
 
 export function useDailyDashboard(options: UseDailyDashboardOptions = {}) {
@@ -91,6 +122,11 @@ export function useDailyDashboard(options: UseDailyDashboardOptions = {}) {
   const [snapshot, setSnapshot] = useState<DailyTargetSnapshot>();
   const [nutrition, setNutrition] = useState<DailyDashboardNutrition>();
   const [activeWorkout, setActiveWorkout] = useState<ActiveWorkoutSummary>();
+  const [activityPlanning, setActivityPlanning] = useState<DailyActivityPlanningSnapshot>({
+    strengthSessions: [],
+    enduranceSessions: [],
+    templates: [],
+  });
   const [dailyCoaching, setDailyCoaching] = useState<DailyCoachingDay>();
   const [errorMessage, setErrorMessage] = useState<string>();
   const date = toLocalDate();
@@ -110,12 +146,18 @@ export function useDailyDashboard(options: UseDailyDashboardOptions = {}) {
         journalStatus,
         inProgressSession,
         nextDailyCoaching,
+        nextActivityPlanning,
       ] = await Promise.all([
         dependencies.calculateTarget(date, profile),
         dependencies.repositories.food.listEntriesByDate(date),
         dependencies.repositories.food.getJournalStatus(date),
         dependencies.repositories.workoutSessions.getInProgress(),
         dependencies.dailyCoaching.read(date),
+        dependencies.planning?.load(date) ?? Promise.resolve({
+          strengthSessions: [],
+          enduranceSessions: [],
+          templates: [],
+        }),
       ]);
       const inProgressExercises = inProgressSession
         ? await dependencies.repositories.workoutSessions.listExercises(inProgressSession.id)
@@ -135,6 +177,7 @@ export function useDailyDashboard(options: UseDailyDashboardOptions = {}) {
         ? { session: inProgressSession, exerciseCount: inProgressExercises.length }
         : undefined);
       setDailyCoaching(nextDailyCoaching);
+      setActivityPlanning(nextActivityPlanning);
       setStatus('ready');
     } catch (error) {
       setErrorMessage(
@@ -184,12 +227,67 @@ export function useDailyDashboard(options: UseDailyDashboardOptions = {}) {
     await refresh();
   }, [dependencies, refresh]);
 
+  const clearRestDecision = useCallback(async () => {
+    if (dailyCoaching?.activityDecision?.decision === 'rest') {
+      await dependencies.dailyCoaching.setActivityDecision({
+        date,
+        decision: 'open',
+      });
+    }
+  }, [dailyCoaching?.activityDecision?.decision, date, dependencies.dailyCoaching]);
+
+  const planStrengthActivity = useCallback(async (input: PlanDailyStrengthInput) => {
+    if (!dependencies.planning) return undefined;
+    const session = await dependencies.planning.planStrength(input);
+    await clearRestDecision();
+    await refresh();
+    return session;
+  }, [clearRestDecision, dependencies.planning, refresh]);
+
+  const updateStrengthActivity = useCallback(async (input: UpdateDailyStrengthInput) => {
+    if (!dependencies.planning) return undefined;
+    const session = await dependencies.planning.updateStrength(input);
+    await refresh();
+    return session;
+  }, [dependencies.planning, refresh]);
+
+  const startStrengthActivity = useCallback(async (sessionId: string) => {
+    if (!dependencies.planning) return undefined;
+    const session = await dependencies.planning.startStrength(sessionId);
+    await refresh();
+    return session;
+  }, [dependencies.planning, refresh]);
+
+  const skipStrengthActivity = useCallback(async (sessionId: string) => {
+    if (!dependencies.planning) return;
+    await dependencies.planning.skipStrength(sessionId);
+    await refresh();
+  }, [dependencies.planning, refresh]);
+
+  const saveEnduranceActivity = useCallback(async (
+    input: PlannedEnduranceInput,
+    sessionId?: string,
+  ) => {
+    if (!dependencies.planning) return undefined;
+    const session = await dependencies.planning.saveEndurance(input, sessionId);
+    await clearRestDecision();
+    await refresh();
+    return session;
+  }, [clearRestDecision, dependencies.planning, refresh]);
+
+  const skipEnduranceActivity = useCallback(async (sessionId: string) => {
+    if (!dependencies.planning) return;
+    await dependencies.planning.skipEndurance(sessionId);
+    await refresh();
+  }, [dependencies.planning, refresh]);
+
   return {
     date,
     status,
     snapshot,
     nutrition,
     activeWorkout,
+    activityPlanning,
     dailyCoaching,
     errorMessage,
     refresh,
@@ -198,5 +296,11 @@ export function useDailyDashboard(options: UseDailyDashboardOptions = {}) {
     saveCheckIn,
     saveActivityDecision,
     saveCheckOut,
+    planStrengthActivity,
+    updateStrengthActivity,
+    startStrengthActivity,
+    skipStrengthActivity,
+    saveEnduranceActivity,
+    skipEnduranceActivity,
   };
 }

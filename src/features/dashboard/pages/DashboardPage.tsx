@@ -36,6 +36,7 @@ export function DashboardPage() {
     snapshot,
     nutrition,
     activeWorkout,
+    activityPlanning,
     dailyCoaching,
     errorMessage,
     refresh,
@@ -44,6 +45,12 @@ export function DashboardPage() {
     saveCheckIn,
     saveActivityDecision,
     saveCheckOut,
+    planStrengthActivity,
+    updateStrengthActivity,
+    startStrengthActivity,
+    skipStrengthActivity,
+    saveEnduranceActivity,
+    skipEnduranceActivity,
   } = useDailyDashboard();
   const {
     preferences,
@@ -125,10 +132,17 @@ export function DashboardPage() {
             snapshot={snapshot}
             nutrition={nutrition}
             dailyCoaching={dailyCoaching}
+            activityPlanning={activityPlanning}
             {...(activeWorkout ? { activeWorkout } : {})}
             onSaveCheckIn={saveCheckIn}
             onSaveActivityDecision={saveActivityDecision}
             onSaveCheckOut={saveCheckOut}
+            onPlanStrength={planStrengthActivity}
+            onUpdateStrength={updateStrengthActivity}
+            onStartStrength={startStrengthActivity}
+            onSkipStrength={skipStrengthActivity}
+            onSaveEndurance={saveEnduranceActivity}
+            onSkipEndurance={skipEnduranceActivity}
           />
         ) : null;
 

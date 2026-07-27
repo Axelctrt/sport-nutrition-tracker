@@ -1,6 +1,7 @@
 import {
   getWeekStart,
   listWeeklyPlanning,
+  planEmptyWorkoutSession,
   planWorkoutSessionFromTemplate,
   planningDateForSession,
   reschedulePlannedWorkoutSession,
@@ -88,6 +89,29 @@ describe('weeklyPlanningService', () => {
     expect(days).toHaveLength(7);
     expect(days[0]?.date).toBe('2026-06-29');
     expect(days[0]?.sessions[0]?.session.id).toBe(planned.session.id);
+  });
+
+  it('planifie une séance libre vide sans la démarrer', async () => {
+    const planned = await planEmptyWorkoutSession(
+      sessionRepository,
+      '2026-06-29',
+      {
+        plannedDurationMinutes: 60,
+        strengthSessionStyle: 'classic',
+      },
+      new Date('2026-06-28T12:00:00.000Z'),
+    );
+
+    expect(planned.session).toMatchObject({
+      date: '2026-06-29',
+      plannedDate: '2026-06-29',
+      originalPlannedDate: '2026-06-29',
+      status: 'planned',
+      plannedDurationMinutes: 60,
+      plannedAt: '2026-06-28T12:00:00.000Z',
+    });
+    expect(planned.session.startedAt).toBeUndefined();
+    expect(planned.exercises).toEqual([]);
   });
 
   it('reporte une séance en conservant sa date initiale', async () => {
