@@ -7,6 +7,8 @@ import {
 import type { TwelveWeekAnalytics } from '@/domain/models/analytics';
 import type { LocalDate } from '@/domain/models/common';
 import type { UserProfile } from '@/domain/models/profile';
+import type { WeeklyReview } from '@/domain/models/weeklyReview';
+import { repositories } from '@/infrastructure/repositories/repositories';
 
 const WEIGHT_STABILITY_THRESHOLD_KG = 0.1;
 const MAINTENANCE_ATTENTION_THRESHOLD_KG = 0.5;
@@ -45,10 +47,29 @@ export interface ProgressionGoalSummary {
   daysRemaining?: number;
 }
 
+export type ProgressionReviewState =
+  | 'empty'
+  | 'insufficient'
+  | 'noChange'
+  | 'adjustmentProposed'
+  | 'accepted'
+  | 'rejected';
+
+export interface ProgressionReviewSummary {
+  state: ProgressionReviewState;
+  weekStart?: LocalDate;
+  proposedAdjustmentKcal?: number;
+  confidenceLevel?: WeeklyReview['adaptation'] extends infer T
+    ? T extends { confidence: { level: infer L } } ? L : never
+    : never;
+  waistTrendCmPerWeek?: number;
+}
+
 export interface ProgressionHubSummary {
   activity: ProgressionActivitySummary;
   weight: ProgressionWeightSummary;
   goal: ProgressionGoalSummary;
+  review: ProgressionReviewSummary;
 }
 
 export interface BuildProgressionHubSummaryInput {
@@ -56,6 +77,7 @@ export interface BuildProgressionHubSummaryInput {
   goalViews: readonly GoalProgressView[];
   profile: UserProfile;
   referenceDate: LocalDate;
+  reviews?: readonly WeeklyReview[];
 }
 
 function buildActivitySummary(
@@ -176,16 +198,42 @@ function buildGoalSummary(
   };
 }
 
+function buildReviewSummary(reviews: readonly WeeklyReview[]): ProgressionReviewSummary {
+  const latest = [...reviews].sort((left, right) => right.weekStart.localeCompare(left.weekStart))[0];
+  if (!latest) return { state: 'empty' };
+
+  const details = {
+    weekStart: latest.weekStart,
+    proposedAdjustmentKcal: latest.proposedAdjustmentKcal,
+    ...(latest.adaptation?.confidence.level
+      ? { confidenceLevel: latest.adaptation.confidence.level }
+      : {}),
+    ...(latest.adaptation?.waistTrendCmPerWeek !== undefined
+      ? { waistTrendCmPerWeek: latest.adaptation.waistTrendCmPerWeek }
+      : {}),
+  };
+
+  if (!latest.isCalibrationEligible || latest.decisionStatus === 'notEligible') {
+    return { state: 'insufficient', ...details };
+  }
+  if (latest.decisionStatus === 'accepted') return { state: 'accepted', ...details };
+  if (latest.decisionStatus === 'rejected') return { state: 'rejected', ...details };
+  if (latest.proposedAdjustmentKcal === 0) return { state: 'noChange', ...details };
+  return { state: 'adjustmentProposed', ...details };
+}
+
 export function buildProgressionHubSummary({
   analytics,
   goalViews,
   profile,
   referenceDate,
+  reviews = [],
 }: BuildProgressionHubSummaryInput): ProgressionHubSummary {
   return {
     activity: buildActivitySummary(analytics),
     weight: buildWeightSummary(analytics, profile),
     goal: buildGoalSummary(goalViews, referenceDate),
+    review: buildReviewSummary(reviews),
   };
 }
 
@@ -193,9 +241,10 @@ export async function loadProgressionHubSummary(
   referenceDate: LocalDate,
   profile: UserProfile,
 ): Promise<ProgressionHubSummary> {
-  const [analytics, goalViews] = await Promise.all([
+  const [analytics, goalViews, reviews] = await Promise.all([
     loadTwelveWeekAnalytics(referenceDate, profile),
     refreshGoalProgress(),
+    repositories.weeklyReviews.listAll(),
   ]);
 
   return buildProgressionHubSummary({
@@ -203,5 +252,6 @@ export async function loadProgressionHubSummary(
     goalViews,
     profile,
     referenceDate,
+    reviews,
   });
 }

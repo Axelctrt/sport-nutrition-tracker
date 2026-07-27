@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ProgressionHubPage } from '@/features/progression/pages/ProgressionHubPage';
 import { createProfileInput } from '@/test/factories/profileFactory';
@@ -17,12 +17,13 @@ vi.mock('@/features/progression/hooks/useProgressionHubSummary', () => ({
       activity: { sessionCount: 0, totalMinutes: 0, recordedStepDays: 0 },
       weight: { state: 'empty' },
       goal: { state: 'empty' },
+      review: { state: 'empty' },
     },
     refresh: vi.fn(),
   }),
 }));
 
-it('hiérarchise la synthèse, les décisions et les accès historiques sans modifier les routes', () => {
+it('hiérarchise évolution, bilan et objectifs sans mettre les récompenses au premier niveau', () => {
   render(
     <MemoryRouter>
       <ProgressionHubPage />
@@ -30,10 +31,15 @@ it('hiérarchise la synthèse, les décisions et les accès historiques sans mod
   );
 
   expect(screen.getByRole('heading', { name: 'Progression' })).toBeInTheDocument();
-  expect(screen.getByRole('heading', { name: 'À retenir cette semaine' })).toBeInTheDocument();
-  expect(screen.getAllByRole('link', { name: /Ajouter une pesée/ })[0]).toHaveAttribute('href', '/weight');
-  expect(screen.getAllByRole('link', { name: /Analyses/ })[0]).toHaveAttribute('href', '/analytics');
-  expect(screen.getByRole('link', { name: /Rapports/ })).toHaveAttribute('href', '/reports');
-  expect(screen.getByRole('link', { name: /Bilan hebdomadaire/ })).toHaveAttribute('href', '/weekly-review');
-  expect(screen.getAllByRole('link', { name: /Objectifs et jalons/ })[0]).toHaveAttribute('href', '/goals');
+  expect(screen.getByRole('heading', { name: 'Mon évolution' })).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: /Ajouter une pesée/ })).toHaveAttribute('href', '/weight');
+  expect(screen.getByRole('link', { name: /Voir les tendances/ })).toHaveAttribute('href', '/analytics');
+  expect(screen.getByRole('link', { name: /Ouvrir le bilan/ })).toHaveAttribute('href', '/weekly-review');
+  expect(screen.getByRole('link', { name: /Voir mes objectifs/ })).toHaveAttribute('href', '/goals');
+  expect(screen.queryByRole('link', { name: 'Récompenses' })).not.toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Plus d’outils de progression' }));
+  expect(screen.getByRole('link', { name: 'Rapports' })).toHaveAttribute('href', '/reports');
+  expect(screen.getByRole('link', { name: 'Historique détaillé' })).toHaveAttribute('href', '/history');
+  expect(screen.getByRole('link', { name: 'Récompenses' })).toHaveAttribute('href', '/rewards');
 });

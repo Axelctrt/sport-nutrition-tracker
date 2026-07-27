@@ -1,176 +1,232 @@
 import {
+  Activity,
   ArrowRight,
   BarChart3,
-  ClipboardCheck,
   FileText,
   History,
+  MoreHorizontal,
   Plus,
   Scale,
   Target,
   Trophy,
 } from 'lucide-react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useProfile } from '@/app/providers/profile/useProfile';
 import { routePaths } from '@/app/routePaths';
-import { ProgressionDecisionSummary } from '@/features/progression/components/ProgressionDecisionSummary';
+import type { ProgressionHubSummary } from '@/application/progression/progressionHubSummaryService';
 import { useProgressionHubSummary } from '@/features/progression/hooks/useProgressionHubSummary';
+import { BottomSheet } from '@/shared/ui/BottomSheet';
+import { Button } from '@/shared/ui/Button';
+import { Card } from '@/shared/ui/Card';
+import { InlineNotice } from '@/shared/ui/InlineNotice';
 import { toLocalDate } from '@/shared/utils/dates';
 
-const decisionDestinations = [
-  {
-    title: 'Analyses',
-    description: 'Explorer les graphiques et tendances détaillées sur douze semaines.',
-    path: routePaths.analytics,
-    icon: BarChart3,
-  },
-  {
-    title: 'Rapports',
-    description: 'Créer une synthèse lisible sur une période choisie et la partager.',
-    path: routePaths.reports,
-    icon: FileText,
-  },
-  {
-    title: 'Bilan hebdomadaire',
-    description: 'Relire la semaine, noter les constats et décider des ajustements utiles.',
-    path: routePaths.weeklyReview,
-    icon: ClipboardCheck,
-  },
-] as const;
+function weightTrendLabel(weight: ProgressionHubSummary['weight']): string {
+  if (weight.state === 'empty') return 'Aucune donnée';
+  if (weight.state === 'insufficient') return 'Tendance à confirmer';
+  if (weight.state === 'aligned') return 'Dans le sens de l’objectif';
+  if (weight.state === 'stable') return 'Tendance stable';
+  return 'Tendance à surveiller';
+}
 
-const followUpDestinations = [
-  {
-    title: 'Poids',
-    description: 'Pesées et trajectoire',
-    path: routePaths.weight,
-    icon: Scale,
-  },
-  {
-    title: 'Objectifs et jalons',
-    description: 'Priorités et avancement',
-    path: routePaths.goals,
-    icon: Target,
-  },
-  {
-    title: 'Historique',
-    description: 'Journées et données associées',
-    path: routePaths.history,
-    icon: History,
-  },
-  {
-    title: 'Récompenses',
-    description: 'Badges, missions et thèmes',
-    path: routePaths.rewards,
-    icon: Trophy,
-  },
-] as const;
+function waistTrendLabel(review: ProgressionHubSummary['review']): string {
+  const trend = review.waistTrendCmPerWeek;
+  if (trend === undefined) return 'Données insuffisantes';
+  if (Math.abs(trend) < 0.1) return 'Tendance stable';
+  return trend < 0 ? 'En baisse' : 'En hausse';
+}
+
+function activityTrendLabel(activity: ProgressionHubSummary['activity']): string {
+  if (activity.sessionCount === 0) return 'Aucune séance cette semaine';
+  if (activity.sessionCount >= 3) return 'Entraînement régulier';
+  return `${activity.sessionCount} séance${activity.sessionCount > 1 ? 's' : ''} cette semaine`;
+}
+
+function reviewLabels(review: ProgressionHubSummary['review']): {
+  title: string;
+  detail: string;
+} {
+  if (review.state === 'empty') {
+    return { title: 'Aucun bilan disponible', detail: 'Complète suffisamment de journées pour obtenir une analyse.' };
+  }
+  if (review.state === 'insufficient') {
+    return { title: 'Données encore insuffisantes', detail: 'Le moteur attend davantage de suivi avant de conseiller un changement.' };
+  }
+  if (review.state === 'noChange') {
+    return { title: 'Aucun changement conseillé', detail: 'La tendance actuelle ne justifie pas de modifier la cible.' };
+  }
+  if (review.state === 'adjustmentProposed') {
+    const adjustment = review.proposedAdjustmentKcal ?? 0;
+    return {
+      title: 'Ajustement à examiner',
+      detail: `${adjustment > 0 ? '+' : ''}${adjustment} kcal/j proposés, à valider dans le bilan.`,
+    };
+  }
+  if (review.state === 'accepted') {
+    return { title: 'Ajustement validé', detail: 'La dernière recommandation a été acceptée.' };
+  }
+  return { title: 'Ajustement refusé', detail: 'La dernière recommandation a été conservée dans l’historique.' };
+}
+
+function goalLabels(goal: ProgressionHubSummary['goal']): {
+  title: string;
+  detail: string;
+} {
+  if (goal.state === 'empty') return { title: 'Aucun objectif actif', detail: 'Crée un objectif pour suivre une priorité concrète.' };
+  if (goal.state === 'overdue') return { title: goal.title ?? 'Objectif en retard', detail: 'Échéance dépassée, objectif à revoir.' };
+  if (goal.state === 'dueSoon') return { title: goal.title ?? 'Objectif proche', detail: `${goal.daysRemaining ?? 0} jour(s) restant(s).` };
+  return {
+    title: goal.title ?? 'Objectif actif',
+    detail: goal.progressPercent === undefined
+      ? 'Progression en cours.'
+      : `${Math.round(goal.progressPercent)} % atteint.`,
+  };
+}
 
 export function ProgressionHubPage() {
   const { profile } = useProfile();
   const summary = useProgressionHubSummary(toLocalDate(), profile);
+  const [moreOpen, setMoreOpen] = useState(false);
 
   if (!profile) return null;
+  const review = summary.data ? reviewLabels(summary.data.review) : undefined;
+  const goal = summary.data ? goalLabels(summary.data.goal) : undefined;
 
   return (
     <section aria-labelledby="progression-hub-title" className="min-w-0">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
-            Suivre et décider
+            Évolution et décisions
           </p>
-          <h1
-            id="progression-hub-title"
-            className="mt-1 text-3xl font-bold tracking-tight text-slate-950 dark:text-white"
-          >
+          <h1 id="progression-hub-title" className="mt-1 text-3xl font-bold tracking-tight text-slate-950 dark:text-white">
             Progression
           </h1>
-          <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600 sm:text-base dark:text-slate-300">
-            Commence par les signaux de la semaine, puis ouvre uniquement le niveau de détail utile.
+          <p className="mt-2 max-w-3xl text-slate-600 dark:text-slate-300">
+            Suis ton évolution, consulte les recommandations du moteur et garde tes objectifs en vue.
           </p>
         </div>
-
-        <Link
-          to={routePaths.weight}
-          className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-xl bg-brand-700 px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-800 dark:bg-brand-600 dark:hover:bg-brand-500"
-        >
-          <Plus aria-hidden="true" className="size-5" />
-          Ajouter une pesée
-        </Link>
+        <div className="flex gap-2">
+          <Link
+            to={routePaths.weight}
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+          >
+            <Plus aria-hidden="true" className="size-4" />
+            Ajouter une pesée
+          </Link>
+          <Button variant="secondary" aria-label="Plus d’outils de progression" onClick={() => setMoreOpen(true)}>
+            <MoreHorizontal aria-hidden="true" className="size-5" />
+            Plus
+          </Button>
+        </div>
       </div>
 
-      <ProgressionDecisionSummary
-        data={summary.data}
-        status={summary.status}
-        errorMessage={summary.errorMessage}
-        onRetry={() => void summary.refresh()}
-      />
+      {summary.status === 'error' ? (
+        <InlineNotice className="mt-6" tone="error" title="Synthèse indisponible" role="alert">
+          <p>{summary.errorMessage}</p>
+          <Button className="mt-3" variant="secondary" onClick={() => void summary.refresh()}>Réessayer</Button>
+        </InlineNotice>
+      ) : null}
 
-      <section className="mt-6" aria-labelledby="progression-decision-actions-title">
-        <div>
-          <h2 id="progression-decision-actions-title" className="text-lg font-bold text-slate-950 dark:text-white">
-            Approfondir
-          </h2>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Analyses pour comprendre, rapport pour synthétiser, bilan pour décider.
-          </p>
+      {summary.status === 'loading' || !summary.data ? (
+        <div className="mt-6 grid gap-4" aria-label="Chargement de la progression">
+          {Array.from({ length: 3 }, (_, index) => (
+            <div key={index} className="h-40 animate-pulse rounded-xl bg-slate-100 motion-reduce:animate-none dark:bg-slate-800" />
+          ))}
         </div>
+      ) : (
+        <div className="mt-6 space-y-4">
+          <Card className="overflow-hidden" aria-labelledby="progression-evolution-title">
+            <div className="border-b border-slate-200 px-4 py-4 dark:border-slate-800 sm:px-5">
+              <h2 id="progression-evolution-title" className="text-xl font-bold text-slate-950 dark:text-white">
+                Mon évolution
+              </h2>
+            </div>
+            <dl className="grid gap-px bg-slate-200 sm:grid-cols-3 dark:bg-slate-800">
+              {[
+                { label: 'Poids', value: weightTrendLabel(summary.data.weight), icon: Scale },
+                { label: 'Tour de taille', value: waistTrendLabel(summary.data.review), icon: BarChart3 },
+                { label: 'Entraînement', value: activityTrendLabel(summary.data.activity), icon: Activity },
+              ].map((metric) => {
+                const Icon = metric.icon;
+                return (
+                  <div key={metric.label} className="bg-white p-4 dark:bg-slate-900">
+                    <dt className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+                      <Icon aria-hidden="true" className="size-4" />
+                      {metric.label}
+                    </dt>
+                    <dd className="mt-2 font-semibold text-slate-950 dark:text-white">{metric.value}</dd>
+                  </div>
+                );
+              })}
+            </dl>
+            <div className="px-4 py-3 sm:px-5">
+              <Link to={routePaths.analytics} className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-brand-700 hover:underline dark:text-brand-300">
+                Voir les tendances
+                <ArrowRight aria-hidden="true" className="size-4" />
+              </Link>
+            </div>
+          </Card>
 
-        <div className="mt-3 grid gap-3 sm:grid-cols-3">
-          {decisionDestinations.map((destination) => {
+          <Card className="p-4 sm:p-5" aria-labelledby="progression-review-title">
+            <p className="text-xs font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
+              Bilan de la semaine
+            </p>
+            <h2 id="progression-review-title" className="mt-1 text-xl font-bold text-slate-950 dark:text-white">
+              {review?.title}
+            </h2>
+            <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{review?.detail}</p>
+            <Link to={routePaths.weeklyReview} className="mt-3 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-brand-700 hover:underline dark:text-brand-300">
+              Ouvrir le bilan
+              <ArrowRight aria-hidden="true" className="size-4" />
+            </Link>
+          </Card>
+
+          <Card className="p-4 sm:p-5" aria-labelledby="progression-goals-title">
+            <p className="text-xs font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
+              Objectifs
+            </p>
+            <h2 id="progression-goals-title" className="mt-1 text-xl font-bold text-slate-950 dark:text-white">
+              {goal?.title}
+            </h2>
+            <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{goal?.detail}</p>
+            <Link to={routePaths.goals} className="mt-3 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-brand-700 hover:underline dark:text-brand-300">
+              Voir mes objectifs
+              <ArrowRight aria-hidden="true" className="size-4" />
+            </Link>
+          </Card>
+        </div>
+      )}
+
+      <BottomSheet
+        open={moreOpen}
+        title="Plus d’outils"
+        description="Rapports, historique détaillé et accomplissements."
+        onClose={() => setMoreOpen(false)}
+      >
+        <nav className="space-y-2" aria-label="Outils secondaires de progression">
+          {[
+            { path: routePaths.reports, label: 'Rapports', icon: FileText },
+            { path: routePaths.history, label: 'Historique détaillé', icon: History },
+            { path: routePaths.rewards, label: 'Récompenses', icon: Trophy },
+            { path: routePaths.goals, label: 'Tous les objectifs', icon: Target },
+          ].map((destination) => {
             const Icon = destination.icon;
             return (
               <Link
                 key={destination.path}
                 to={destination.path}
-                className="group flex min-h-36 items-start gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-[border-color,box-shadow,transform] hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-md dark:border-slate-800 dark:bg-slate-900 dark:hover:border-brand-700"
+                className="flex min-h-16 items-center gap-3 rounded-xl border border-slate-200 px-3 hover:border-brand-300 dark:border-slate-800 dark:hover:border-brand-700"
+                onClick={() => setMoreOpen(false)}
               >
-                <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-700 dark:bg-brand-950/60 dark:text-brand-300">
-                  <Icon aria-hidden="true" className="size-5" />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="flex items-center justify-between gap-3 font-bold text-slate-950 dark:text-white">
-                    {destination.title}
-                    <ArrowRight aria-hidden="true" className="size-4 shrink-0 transition-transform group-hover:translate-x-0.5" />
-                  </span>
-                  <span className="mt-2 block text-sm leading-6 text-slate-600 dark:text-slate-300">
-                    {destination.description}
-                  </span>
-                </span>
+                <Icon aria-hidden="true" className="size-5 shrink-0 text-brand-700 dark:text-brand-300" />
+                <span className="font-semibold text-slate-950 dark:text-white">{destination.label}</span>
               </Link>
             );
           })}
-        </div>
-      </section>
-
-      <section className="mt-6" aria-labelledby="progression-follow-up-title">
-        <h2 id="progression-follow-up-title" className="text-lg font-bold text-slate-950 dark:text-white">
-          Suivi et historique
-        </h2>
-        <div className="mt-3 grid gap-2 sm:grid-cols-2">
-          {followUpDestinations.map((destination) => {
-            const Icon = destination.icon;
-            return (
-              <Link
-                key={destination.path}
-                to={destination.path}
-                className="group flex min-h-16 items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm hover:border-brand-300 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-brand-700"
-              >
-                <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                  <Icon aria-hidden="true" className="size-4.5" />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block font-semibold text-slate-950 dark:text-white">
-                    {destination.title}
-                  </span>
-                  <span className="block truncate text-xs text-slate-500 dark:text-slate-400">
-                    {destination.description}
-                  </span>
-                </span>
-                <ArrowRight aria-hidden="true" className="size-4 shrink-0 text-slate-400 transition-transform group-hover:translate-x-0.5" />
-              </Link>
-            );
-          })}
-        </div>
-      </section>
+        </nav>
+      </BottomSheet>
     </section>
   );
 }

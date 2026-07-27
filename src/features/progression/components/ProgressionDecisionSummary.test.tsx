@@ -21,6 +21,9 @@ const summary = {
     progressPercent: 60,
     daysRemaining: 5,
   },
+  review: {
+    state: 'noChange' as const,
+  },
 };
 
 describe('ProgressionDecisionSummary', () => {

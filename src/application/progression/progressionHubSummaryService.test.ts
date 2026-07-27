@@ -3,6 +3,7 @@ import { createTwelveWeekWindow } from '@/domain/aggregations/analytics';
 import type { GoalProgressView } from '@/application/goals/goalProgressService';
 import type { TwelveWeekAnalytics, WeightWeekSummary } from '@/domain/models/analytics';
 import type { UserProfile } from '@/domain/models/profile';
+import type { WeeklyReview } from '@/domain/models/weeklyReview';
 import {
   buildProgressionHubSummary,
 } from '@/application/progression/progressionHubSummaryService';
@@ -124,6 +125,7 @@ describe('buildProgressionHubSummary', () => {
     });
     expect(summary.weight).toEqual({ state: 'empty' });
     expect(summary.goal).toEqual({ state: 'empty' });
+    expect(summary.review).toEqual({ state: 'empty' });
   });
 
   it('expose les données partielles sans conclure trop tôt sur le poids', () => {
@@ -211,6 +213,35 @@ describe('buildProgressionHubSummary', () => {
       title: 'Nager 10 km',
       progressPercent: 40,
       daysRemaining: 7,
+    });
+  });
+
+  it('expose la dernière recommandation adaptative sans recalculer le moteur', () => {
+    const review = {
+      weekStart: '2026-07-06',
+      isCalibrationEligible: true,
+      decisionStatus: 'pending',
+      proposedAdjustmentKcal: 100,
+      adaptation: {
+        waistTrendCmPerWeek: -0.4,
+        confidence: { level: 'usable' },
+      },
+    } as unknown as WeeklyReview;
+
+    const summary = buildProgressionHubSummary({
+      analytics: createAnalytics(),
+      goalViews: [],
+      profile: profile(),
+      referenceDate: REFERENCE_DATE,
+      reviews: [review],
+    });
+
+    expect(summary.review).toEqual({
+      state: 'adjustmentProposed',
+      weekStart: '2026-07-06',
+      proposedAdjustmentKcal: 100,
+      confidenceLevel: 'usable',
+      waistTrendCmPerWeek: -0.4,
     });
   });
 });
