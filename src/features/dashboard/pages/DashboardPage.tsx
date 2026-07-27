@@ -15,7 +15,7 @@ import { DashboardActiveWorkout } from '@/features/dashboard/components/Dashboar
 import { DashboardActivities } from '@/features/dashboard/components/DashboardActivities';
 import { DashboardCalculationDetails } from '@/features/dashboard/components/DashboardCalculationDetails';
 import { DashboardDailyAssistant } from '@/features/dashboard/components/DashboardDailyAssistant';
-import { DashboardQuickActions } from '@/features/dashboard/components/DashboardQuickActions';
+import { DashboardFixedCore } from '@/features/dashboard/components/DashboardFixedCore';
 import { DashboardRewardsOverview } from '@/features/dashboard/components/DashboardRewardsOverview';
 import { DashboardTodaySummary } from '@/features/dashboard/components/DashboardTodaySummary';
 import { DashboardTrainingAgenda } from '@/features/dashboard/components/DashboardTrainingAgenda';
@@ -48,8 +48,6 @@ export function DashboardPage() {
     dailyCoaching,
     errorMessage,
     refresh,
-    saveWeight,
-    saveSteps,
     saveCheckIn,
     saveActivityDecision,
     saveCheckOut,
@@ -129,66 +127,6 @@ export function DashboardPage() {
           />
         ) : null;
 
-      case 'todaySummary':
-        return (
-          <DashboardTodaySummary
-            key={widgetId}
-            snapshot={snapshot}
-            nutrition={nutrition}
-            dailyStepGoal={profile.dailyStepGoal}
-            visibleMetrics={preferences.summaryMetrics}
-            currentWeightKg={currentWeightState.currentWeight.weightKg}
-            {...(currentWeightState.currentWeight.source === 'entry'
-              ? { currentWeightMeasuredAt: currentWeightState.currentWeight.measuredAt }
-              : {})}
-            density={density}
-            isRefreshing={status === 'loading'}
-          />
-        );
-
-      case 'dailyAssistant':
-        return dailyCoaching ? (
-          <DashboardDailyAssistant
-            key={widgetId}
-            date={date}
-            snapshot={snapshot}
-            nutrition={nutrition}
-            dailyCoaching={dailyCoaching}
-            activityPlanning={activityPlanning}
-            {...(activeWorkout ? { activeWorkout } : {})}
-            onSaveCheckIn={saveCheckIn}
-            onSaveActivityDecision={saveActivityDecision}
-            onSaveCheckOut={saveCheckOut}
-            onPlanStrength={planStrengthActivity}
-            onUpdateStrength={updateStrengthActivity}
-            onStartStrength={startStrengthActivity}
-            onSkipStrength={skipStrengthActivity}
-            onSaveEndurance={saveEnduranceActivity}
-            onSkipEndurance={skipEnduranceActivity}
-          />
-        ) : null;
-
-      case 'quickActions':
-        return (
-          <DashboardQuickActions
-            key={widgetId}
-            date={date}
-            totalSteps={snapshot.calculation.steps.totalSteps}
-            {...(snapshot.stepsEntry
-              ? { stepsEntry: snapshot.stepsEntry }
-              : {})}
-            weightKg={snapshot.weight.weightKg}
-            {...(snapshot.dateWeightEntry?.date === date
-              ? { weightEntry: snapshot.dateWeightEntry }
-              : {})}
-            {...(activeWorkout ? { activeWorkout } : {})}
-            visibleActions={preferences.quickActions}
-            density={density}
-            onSaveWeight={saveWeight}
-            onSaveSteps={saveSteps}
-          />
-        );
-
       case 'activities':
         return (
           <DashboardActivities
@@ -205,6 +143,11 @@ export function DashboardPage() {
             snapshot={snapshot}
           />
         );
+
+      case 'todaySummary':
+      case 'dailyAssistant':
+      case 'quickActions':
+        return null;
     }
   };
 
@@ -297,6 +240,42 @@ export function DashboardPage() {
 
       {snapshot && nutrition ? (
         <>
+          <DashboardFixedCore
+            summary={(
+              <DashboardTodaySummary
+                snapshot={snapshot}
+                nutrition={nutrition}
+                dailyStepGoal={profile.dailyStepGoal}
+                visibleMetrics={preferences.summaryMetrics}
+                currentWeightKg={currentWeightState.currentWeight.weightKg}
+                {...(currentWeightState.currentWeight.source === 'entry'
+                  ? { currentWeightMeasuredAt: currentWeightState.currentWeight.measuredAt }
+                  : {})}
+                density={density}
+                isRefreshing={status === 'loading'}
+              />
+            )}
+            assistant={dailyCoaching ? (
+                <DashboardDailyAssistant
+                  date={date}
+                  snapshot={snapshot}
+                  nutrition={nutrition}
+                  dailyCoaching={dailyCoaching}
+                  activityPlanning={activityPlanning}
+                  {...(activeWorkout ? { activeWorkout } : {})}
+                  onSaveCheckIn={saveCheckIn}
+                  onSaveActivityDecision={saveActivityDecision}
+                  onSaveCheckOut={saveCheckOut}
+                  onPlanStrength={planStrengthActivity}
+                  onUpdateStrength={updateStrengthActivity}
+                  onStartStrength={startStrengthActivity}
+                  onSkipStrength={skipStrengthActivity}
+                  onSaveEndurance={saveEnduranceActivity}
+                  onSkipEndurance={skipEnduranceActivity}
+                />
+            ) : null}
+          />
+
           <DashboardWidgetStack
             preferences={preferences}
             density={density}

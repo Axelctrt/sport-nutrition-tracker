@@ -6,21 +6,18 @@ import {
   LayoutDashboard,
   RotateCcw,
   Save,
-  Zap,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import {
   createDashboardPreferencesFromPreset,
-  DASHBOARD_QUICK_ACTION_IDS,
-  DASHBOARD_QUICK_ACTION_LABELS,
   DASHBOARD_SUMMARY_METRIC_IDS,
   DASHBOARD_SUMMARY_METRIC_LABELS,
   DASHBOARD_WIDGET_DESCRIPTIONS,
   DASHBOARD_WIDGET_LABELS,
+  isDashboardSecondaryWidget,
   isDashboardWidgetVisible,
   moveDashboardWidget,
   normalizeDashboardPreferences,
-  toggleDashboardQuickAction,
   toggleDashboardSummaryMetric,
   toggleDashboardWidget,
   type DashboardDensity,
@@ -45,10 +42,10 @@ const PRESETS: Array<{
   title: string;
   description: string;
 }> = [
-  { id: 'balanced', title: 'Équilibré', description: 'Nutrition, actions, sport et détails.' },
-  { id: 'nutrition', title: 'Nutrition', description: 'Le suivi alimentaire passe en premier.' },
-  { id: 'training', title: 'Entraînement', description: 'Séance, actions et activités prioritaires.' },
-  { id: 'minimal', title: 'Essentiel', description: 'Résumé et actions rapides uniquement.' },
+  { id: 'balanced', title: 'Équilibré', description: 'Activités et repères secondaires utiles.' },
+  { id: 'nutrition', title: 'Nutrition', description: 'Davantage de métriques alimentaires.' },
+  { id: 'training', title: 'Entraînement', description: 'Séance, agenda et activités prioritaires.' },
+  { id: 'minimal', title: 'Essentiel', description: 'Aucun bloc secondaire superflu.' },
 ];
 
 const DENSITIES: Array<{
@@ -82,9 +79,15 @@ export function DashboardCustomizationForm({
     setDensity(initialDensity);
   }, [initialDensity, initialPreferences]);
 
+  const secondaryWidgetOrder = useMemo(
+    () => preferences.order.filter(isDashboardSecondaryWidget),
+    [preferences.order],
+  );
   const visibleCount = useMemo(
-    () => preferences.order.filter((widgetId) => isDashboardWidgetVisible(preferences, widgetId)).length,
-    [preferences],
+    () => secondaryWidgetOrder
+      .filter((widgetId) => isDashboardWidgetVisible(preferences, widgetId))
+      .length,
+    [preferences, secondaryWidgetOrder],
   );
 
   const applyPreset = (preset: Exclude<DashboardPreset, 'custom'>) => {
@@ -200,42 +203,14 @@ export function DashboardCustomizationForm({
         </div>
       </section>
 
-      <section aria-labelledby="dashboard-actions-title">
-        <h2 id="dashboard-actions-title" className="text-lg font-bold text-slate-950 dark:text-white">
-          Raccourcis visibles
-        </h2>
-        <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-          Au moins une action reste affichée pour conserver un Accueil immédiatement utilisable.
-        </p>
-        <div className="mt-3 grid gap-2 sm:grid-cols-2">
-          {DASHBOARD_QUICK_ACTION_IDS.map((actionId) => (
-            <label
-              key={actionId}
-              className="flex min-h-14 cursor-pointer items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900"
-            >
-              <span className="flex min-w-0 items-center gap-2 font-semibold text-slate-900 dark:text-white">
-                <Zap aria-hidden="true" className="size-4 shrink-0 text-brand-700 dark:text-brand-300" />
-                {DASHBOARD_QUICK_ACTION_LABELS[actionId]}
-              </span>
-              <input
-                type="checkbox"
-                className="size-5 shrink-0 accent-brand-700"
-                checked={preferences.quickActions.includes(actionId)}
-                onChange={() => setPreferences((current) => toggleDashboardQuickAction(current, actionId))}
-              />
-            </label>
-          ))}
-        </div>
-      </section>
-
       <section aria-labelledby="dashboard-blocks-title">
         <div className="flex items-end justify-between gap-3">
           <div>
             <h2 id="dashboard-blocks-title" className="text-lg font-bold text-slate-950 dark:text-white">
-              Blocs et ordre d’affichage
+              Blocs secondaires
             </h2>
             <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-              Les boutons de déplacement restent utilisables au clavier et sur mobile.
+              Le résumé et l’assistant restent toujours affichés au-dessus de cette zone.
             </p>
           </div>
           <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
@@ -244,7 +219,7 @@ export function DashboardCustomizationForm({
         </div>
 
         <div className="mt-3 space-y-3">
-          {preferences.order.map((widgetId, index) => {
+          {secondaryWidgetOrder.map((widgetId, index) => {
             const visible = isDashboardWidgetVisible(preferences, widgetId);
             return (
               <Card key={widgetId} className="p-4">
@@ -287,7 +262,7 @@ export function DashboardCustomizationForm({
                         type="button"
                         size="sm"
                         variant="secondary"
-                        disabled={index === preferences.order.length - 1}
+                        disabled={index === secondaryWidgetOrder.length - 1}
                         aria-label={`Descendre ${DASHBOARD_WIDGET_LABELS[widgetId]}`}
                         onClick={() => setPreferences((current) => moveDashboardWidget(current, widgetId, 'down'))}
                       >

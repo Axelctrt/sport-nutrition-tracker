@@ -69,13 +69,14 @@ const impactPreview = {
 
 beforeEach(() => {
   window.localStorage.clear();
+  mocks.previewProfileImpact.mockReset();
+  mocks.previewProfileImpact.mockResolvedValue(impactPreview);
+  mocks.recalculateTarget.mockReset();
+  mocks.recalculateTarget.mockResolvedValue(undefined);
 });
 
 afterEach(() => {
   cleanup();
-  vi.clearAllMocks();
-  mocks.previewProfileImpact.mockResolvedValue(impactPreview);
-  mocks.recalculateTarget.mockResolvedValue(undefined);
 });
 
 describe('ProfilePage', () => {

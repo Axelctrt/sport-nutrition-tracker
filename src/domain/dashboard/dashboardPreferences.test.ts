@@ -1,6 +1,7 @@
 import {
   createDashboardPreferencesFromPreset,
   createDefaultDashboardPreferences,
+  isDashboardWidgetVisible,
   moveDashboardWidget,
   normalizeDashboardPreferences,
   toggleDashboardQuickAction,
@@ -92,7 +93,7 @@ describe('préférences du tableau de bord', () => {
     expect(withoutScanner.preset).toBe('custom');
   });
 
-  it('conserve une action rapide et le résumé quotidien', () => {
+  it('normalise les anciennes préférences sans permettre de masquer le cœur quotidien', () => {
     const normalized = normalizeDashboardPreferences({
       preset: 'custom',
       hidden: [
@@ -110,6 +111,18 @@ describe('préférences du tableau de bord', () => {
     });
 
     expect(normalized.hidden).not.toContain('todaySummary');
+    expect(normalized.hidden).not.toContain('dailyAssistant');
+    expect(isDashboardWidgetVisible(normalized, 'todaySummary')).toBe(true);
+    expect(isDashboardWidgetVisible(normalized, 'dailyAssistant')).toBe(true);
     expect(normalized.quickActions).toEqual(['addFood']);
+  });
+
+  it('ignore une tentative de masquer un widget fixe', () => {
+    const initial = normalizeDashboardPreferences({
+      hidden: ['activities'],
+    });
+    const toggled = toggleDashboardWidget(initial, 'dailyAssistant');
+
+    expect(toggled.hidden).toEqual(['activities']);
   });
 });

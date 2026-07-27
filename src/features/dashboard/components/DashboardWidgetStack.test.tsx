@@ -33,11 +33,11 @@ describe('DashboardWidgetStack', () => {
 
     expect(widgets).toEqual([
       'weeklyMissions',
-      'quickActions',
       'activeWorkout',
-      'todaySummary',
       'activities',
     ]);
+    expect(screen.queryByText('quickActions')).not.toBeInTheDocument();
+    expect(screen.queryByText('todaySummary')).not.toBeInTheDocument();
     expect(
       screen.queryByText('rewardsOverview'),
     ).not.toBeInTheDocument();

@@ -51,7 +51,7 @@ export function DashboardCustomizationPage() {
       setDensity(updated.dashboardDensity ?? 'comfortable');
       setFeedback({
         tone: 'success',
-        message: 'La disposition est enregistrée. Les blocs et raccourcis suivent le compte ; la densité reste propre à cet appareil.',
+        message: 'La disposition secondaire est enregistrée. Les blocs suivent le compte ; la densité reste propre à cet appareil.',
       });
       actionToast.success({
         key: 'dashboard-customization',
@@ -96,14 +96,14 @@ export function DashboardCustomizationPage() {
           Personnaliser l’Accueil
         </h1>
         <p className="mt-3 max-w-3xl text-slate-600 dark:text-slate-300">
-          Organisez les informations utiles aujourd’hui, les métriques principales et les raccourcis. Masquer un bloc ne supprime aucune donnée.
+          Le résumé et l’assistant restent fixes. Organisez les métriques principales et les blocs secondaires sans supprimer aucune donnée.
         </p>
       </div>
 
       <InlineNotice className="mt-5" title="Synchronisation maîtrisée">
         <span className="inline-flex items-start gap-2">
           <Eye aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-          L’ordre, les blocs et les raccourcis peuvent suivre le compte. La densité confortable ou compacte reste propre à cet appareil.
+          L’ordre des blocs secondaires et les métriques peuvent suivre le compte. La densité confortable ou compacte reste propre à cet appareil.
         </span>
       </InlineNotice>
 

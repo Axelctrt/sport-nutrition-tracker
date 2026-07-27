@@ -21,7 +21,7 @@ describe('DashboardCustomizationForm', () => {
     await user.click(screen.getByRole('checkbox', { name: 'Afficher Activités du jour' }));
     expect(screen.getByRole('checkbox', { name: 'Afficher Activités du jour' })).not.toBeChecked();
 
-    await user.click(screen.getByRole('button', { name: 'Monter Résumé de la journée' }));
+    await user.click(screen.getByRole('button', { name: 'Monter Activités du jour' }));
     await user.click(screen.getByRole('button', { name: 'Enregistrer' }));
 
     expect(onSubmit).toHaveBeenCalledTimes(1);
@@ -32,6 +32,9 @@ describe('DashboardCustomizationForm', () => {
       }),
       'comfortable',
     );
+    expect(screen.queryByRole('checkbox', { name: 'Afficher Résumé de la journée' }))
+      .not.toBeInTheDocument();
+    expect(screen.queryByText('Raccourcis visibles')).not.toBeInTheDocument();
   });
 
   it('rétablit l’affichage équilibré', async () => {

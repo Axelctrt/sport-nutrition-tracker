@@ -128,3 +128,40 @@ test('guide le check-in quotidien sans débordement mobile', async ({ page }) =>
   await expect(checkOutDialog).toBeHidden();
   await expectNoCriticalHorizontalOverflow(page);
 });
+
+test('centralise les actions sport et nutrition dans le cœur fixe de l’accueil', async ({ page }) => {
+  await createLocalProfile(page, 'Accueil quotidien E2E');
+
+  const fixedWidgets = await page.locator('[data-dashboard-fixed-widget]').evaluateAll(
+    (elements) => elements.map((element) => element.getAttribute('data-dashboard-fixed-widget')),
+  );
+  expect(fixedWidgets).toEqual(['todaySummary', 'dailyAssistant']);
+  await expect(page.locator('[data-dashboard-widget="quickActions"]')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Prévoir une activité' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Musculation' })).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'Prévoir une activité' }).click();
+  const sportDialog = page.getByRole('dialog', { name: 'Prévoir une activité' });
+  await sportDialog.getByText('Marche', { exact: true }).click();
+  await sportDialog.getByText('Marche active', { exact: true }).click();
+  await sportDialog.getByRole('button', { name: 'Continuer' }).click();
+  await sportDialog.getByRole('button', { name: 'Planifier pour aujourd’hui' }).click();
+
+  await expect(sportDialog).toBeHidden();
+  await expect(page.getByText('Marche active', { exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Démarrer' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Prévoir une autre activité' })).toBeVisible();
+
+  await expect(page.getByRole('link', { name: 'Scanner', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Journal', exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Ajouter un repas' }).click();
+
+  const nutritionDialog = page.getByRole('dialog', { name: 'Ajouter un repas' });
+  await expect(nutritionDialog.getByRole('radio', { checked: true })).toHaveCount(1);
+  await nutritionDialog.getByRole('button', { name: 'Continuer' }).click();
+  await expect(nutritionDialog.getByRole('link', { name: /Rechercher un aliment/ })).toBeVisible();
+  await expect(nutritionDialog.getByRole('link', { name: /Scanner un produit/ })).toBeVisible();
+  await expect(nutritionDialog.getByRole('link', { name: /Photo du repas/ })).toBeVisible();
+  await expect(nutritionDialog.getByRole('link', { name: /Utiliser une recette/ })).toBeVisible();
+  await expectNoCriticalHorizontalOverflow(page);
+});
