@@ -1,3 +1,4 @@
+import { buildDailyTargetEnergyInputSnapshot } from "@/domain/calculations/dailyTargetInputSnapshot";
 import { createDefaultAppSettings } from "@/domain/defaults/appSettings";
 import { LOCAL_USER_PROFILE_ID } from "@/domain/defaults/identifiers";
 import type { BackupEnvelope } from "@/domain/models/backup";
@@ -8,6 +9,7 @@ import type {
   SwimmingActivity,
 } from "@/domain/models/activity";
 import type { UserProfile } from "@/domain/models/profile";
+import type { DailyTarget } from "@/domain/models/targets";
 import { migrateBackupEnvelope } from "@/infrastructure/backup/backupMigrations";
 import { backupEnvelopeSchema } from "@/infrastructure/backup/backupSchemas";
 import { createEntity } from "@/shared/utils/entities";
@@ -78,6 +80,36 @@ function createVersion1Envelope(): unknown {
   };
 }
 
+function createDailyTarget(
+  energyInputSnapshot?: DailyTarget["energyInputSnapshot"],
+): DailyTarget {
+  return createEntity<DailyTarget>({
+    date: "2026-07-01",
+    calculationWeightKg: 70,
+    ...(energyInputSnapshot ? { energyInputSnapshot } : {}),
+    energy: {
+      bmrKcal: 1_600,
+      occupationalBaseKcal: 320,
+      walkingKcal: 180,
+      runningKcal: 0,
+      swimmingKcal: 0,
+      strengthTrainingKcal: 0,
+      otherActivitiesKcal: 0,
+      totalEstimatedExpenditureKcal: 2_100,
+    },
+    goalAdjustmentKcal: 0,
+    acceptedCalibrationAdjustmentKcal: 0,
+    calorieFloorKcal: 1_600,
+    targetCaloriesKcal: 2_100,
+    macros: {
+      proteinGrams: 126,
+      carbohydratesGrams: 266,
+      fatGrams: 56,
+    },
+    calculationVersion: 5,
+  }, "daily-target:2026-07-01");
+}
+
 describe("backupEnvelopeSchema", () => {
   it("valide une sauvegarde complète au format courant", () => {
     expect(backupEnvelopeSchema.parse(createValidEnvelope())).toMatchObject({
@@ -103,6 +135,28 @@ describe("backupEnvelopeSchema", () => {
         detectedState: "possibleRecomposition",
         proposedAdjustmentKcal: 0,
       });
+  });
+
+  it("conserve le snapshot historique d'une cible quotidienne", () => {
+    const envelope = createValidEnvelope();
+    const snapshot = buildDailyTargetEnergyInputSnapshot(
+      envelope.data.userProfile[0]!,
+      envelope.data.appSettings![0]!,
+    );
+    envelope.data.dailyTargets = [createDailyTarget(snapshot)];
+
+    const parsed = backupEnvelopeSchema.parse(envelope);
+
+    expect(parsed.data.dailyTargets[0]?.energyInputSnapshot).toEqual(snapshot);
+  });
+
+  it("accepte une ancienne cible quotidienne sans snapshot historique", () => {
+    const envelope = createValidEnvelope();
+    envelope.data.dailyTargets = [createDailyTarget()];
+
+    const parsed = backupEnvelopeSchema.parse(envelope);
+
+    expect(parsed.data.dailyTargets[0]?.energyInputSnapshot).toBeUndefined();
   });
 
 

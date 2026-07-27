@@ -44,6 +44,9 @@ import {
   type DailyEnergyTransparency,
 } from '@/application/daily/dailyEnergyTransparency';
 import { toLocalDate } from '@/shared/utils/dates';
+import {
+  buildDailyTargetEnergyInputSnapshot,
+} from '@/domain/calculations/dailyTargetInputSnapshot';
 
 export type CalculationWeightResolution = ReferenceWeightResolution;
 
@@ -148,10 +151,14 @@ function toDailyTargetInput(
   date: LocalDate,
   calculation: DailyTargetCalculationResult,
   expectedSteps: ExpectedStepsEstimate,
+  profile: UserProfile,
+  settings: AppSettings,
 ): NewEntity<DailyTarget> {
   return {
     date,
     calculationWeightKg: calculation.calculationWeightKg,
+    energyInputSnapshot:
+      buildDailyTargetEnergyInputSnapshot(profile, settings),
     energy: calculation.energy,
     targetWeeklyWeightChangePercentUsed:
       calculation.targetWeeklyWeightChangePercentUsed,
@@ -249,7 +256,13 @@ export async function calculateAndPersistDailyTarget(
     plannedActivities,
   });
   const target = await dependencies.targets.upsertTarget(
-    toDailyTargetInput(date, calculation, expectedSteps),
+    toDailyTargetInput(
+      date,
+      calculation,
+      expectedSteps,
+      profile,
+      settings,
+    ),
   );
   const energyTransparency = buildDailyEnergyTransparency({
     date,

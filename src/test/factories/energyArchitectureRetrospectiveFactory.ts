@@ -20,6 +20,7 @@ export function createEnergyArchitectureRetrospectiveReport(
       missingFoodData: 20,
       missingLinkedSteps: 20,
       missingDailyTarget: 20,
+      missingHistoricalInputs: 20,
     },
     excludedDays: [],
     windows: [],

@@ -20,7 +20,8 @@ export type EnergyArchitectureExclusionReason =
   | 'incompleteFoodJournal'
   | 'missingFoodData'
   | 'missingLinkedSteps'
-  | 'missingDailyTarget';
+  | 'missingDailyTarget'
+  | 'missingHistoricalInputs';
 
 export type EnergyArchitectureRetrospectiveStatus =
   | 'insufficientData'
@@ -35,6 +36,7 @@ export interface EnergyArchitectureRetrospectiveDay {
   journalComplete: boolean;
   linkedStepsAvailable: boolean;
   dailyTargetAvailable: boolean;
+  historicalInputsAvailable: boolean;
   consumedCaloriesKcal?: number;
   currentExpenditureKcal?: number;
   candidateExpenditureKcal?: number;
@@ -155,12 +157,19 @@ function exclusionReasons(
     reasons.push('missingFoodData');
   }
   if (!day?.linkedStepsAvailable) reasons.push('missingLinkedSteps');
-  if (
-    !day?.dailyTargetAvailable
-    || day.currentExpenditureKcal === undefined
-    || day.candidateExpenditureKcal === undefined
-  ) {
+  if (!day?.dailyTargetAvailable) {
     reasons.push('missingDailyTarget');
+  } else if (
+    !day.historicalInputsAvailable
+    || (
+      day.linkedStepsAvailable
+      && (
+        day.currentExpenditureKcal === undefined
+        || day.candidateExpenditureKcal === undefined
+      )
+    )
+  ) {
+    reasons.push('missingHistoricalInputs');
   }
   return reasons;
 }
@@ -294,6 +303,7 @@ export function buildEnergyArchitectureRetrospective(
     missingFoodData: 0,
     missingLinkedSteps: 0,
     missingDailyTarget: 0,
+    missingHistoricalInputs: 0,
   };
   const excludedDays: EnergyArchitectureExcludedDay[] = [];
   const eligibleDays = new Map<LocalDate, EnergyArchitectureRetrospectiveDay>();

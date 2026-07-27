@@ -5,8 +5,11 @@ import type {
   WeeklyReview,
 } from '@/domain/models/weeklyReview';
 import { calculateDailyTarget } from '@/domain/calculations/dailyTarget';
+import {
+  buildDailyTargetEnergyInputSnapshot,
+  restoreDailyTargetEnergyContext,
+} from '@/domain/calculations/dailyTargetInputSnapshot';
 import { estimateExpectedSteps } from '@/domain/calculations/expectedSteps';
-import { resolveReferenceWeight } from '@/domain/calculations/referenceWeight';
 import { resolveAcceptedCalibrationAdjustment } from '@/application/daily/dailyTargetCoordinator';
 import { buildPlannedActivityCalories } from '@/application/planning/plannedActivityCalories';
 import type { AppDatabase } from '@/infrastructure/database/AppDatabase';
@@ -263,14 +266,12 @@ async function reconcileDailyTargets(
 
   const [
     settings,
-    weights,
     steps,
     activities,
     strengthSessions,
     enduranceSessions,
   ] = await Promise.all([
     new DexieSettingsRepository(localDatabase).get(),
-    localDatabase.weights.toArray(),
     localDatabase.dailySteps.toArray(),
     localDatabase.activities.toArray(),
     localDatabase.workoutSessions.toArray(),
@@ -284,35 +285,40 @@ async function reconcileDailyTargets(
   }
 
   const recalculated: DailyTarget[] = mismatched.map((target) => {
-    const weight = resolveReferenceWeight(
-      target.date,
-      profile.initialWeightKg,
-      weights,
-    );
+    const calculationContext = target.energyInputSnapshot
+      ? restoreDailyTargetEnergyContext(
+          target.energyInputSnapshot,
+          profile,
+          settings,
+        )
+      : { profile, settings };
     const acceptedCalibrationAdjustmentKcal =
       resolveAcceptedCalibrationAdjustment(adjustments, target.date);
     const dateActivities = activitiesByDate.get(target.date) ?? [];
-    const plannedActivities = buildPlannedActivityCalories({
-      date: target.date,
-      weightKg: weight.weightKg,
-      settings,
-      activities: dateActivities,
-      strengthSessions,
-      enduranceSessions,
-    });
+    const plannedActivities = target.plannedActivities
+      ?? buildPlannedActivityCalories({
+        date: target.date,
+        weightKg: target.calculationWeightKg,
+        settings: calculationContext.settings,
+        activities: dateActivities,
+        strengthSessions,
+        enduranceSessions,
+      });
     const expectedSteps = estimateExpectedSteps({
       date: target.date,
-      occupationalActivity: profile.occupationalActivity,
-      stepGoal: profile.dailyStepGoal,
-      includedBaseSteps: settings.includedBaseSteps,
+      occupationalActivity:
+        calculationContext.profile.occupationalActivity,
+      stepGoal: calculationContext.profile.dailyStepGoal,
+      includedBaseSteps:
+        calculationContext.settings.includedBaseSteps,
       history: steps,
     });
     const calculation = calculateDailyTarget({
       date: target.date,
-      profile,
-      settings,
-      weightKg: weight.weightKg,
-      totalSteps: expectedSteps.expectedSteps,
+      profile: calculationContext.profile,
+      settings: calculationContext.settings,
+      weightKg: target.calculationWeightKg,
+      totalSteps: target.stepBasis?.steps ?? expectedSteps.expectedSteps,
       activities: dateActivities,
       plannedActivities,
       acceptedCalibrationAdjustmentKcal,
@@ -321,6 +327,9 @@ async function reconcileDailyTargets(
     return {
       ...target,
       calculationWeightKg: calculation.calculationWeightKg,
+      energyInputSnapshot:
+        target.energyInputSnapshot
+        ?? buildDailyTargetEnergyInputSnapshot(profile, settings),
       energy: calculation.energy,
       targetWeeklyWeightChangePercentUsed:
         calculation.targetWeeklyWeightChangePercentUsed,
@@ -331,7 +340,7 @@ async function reconcileDailyTargets(
       targetCaloriesKcal: calculation.targetCaloriesKcal,
       macros: calculation.macros,
       plannedActivities: calculation.plannedActivities,
-      stepBasis: {
+      stepBasis: target.stepBasis ?? {
         mode: 'expected',
         steps: expectedSteps.expectedSteps,
         stepGoal: expectedSteps.stepGoal,

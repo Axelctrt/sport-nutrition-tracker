@@ -16,7 +16,8 @@ A day is eligible only when all of these inputs exist:
 2. a complete food journal with at least one positive calorie entry;
 3. a step entry whose identifier matches `DailyCheckOut.stepsEntryId`;
 4. a historical `DailyTarget` providing the calculation weight;
-5. a current and candidate final expenditure comparison.
+5. a versioned historical profile and settings snapshot on that target;
+6. a current and candidate final expenditure comparison.
 
 The report records every excluded date and all applicable reasons:
 
@@ -25,6 +26,7 @@ The report records every excluded date and all applicable reasons:
 - `missingFoodData`;
 - `missingLinkedSteps`;
 - `missingDailyTarget`.
+- `missingHistoricalInputs`.
 
 Missing data cannot silently become a zero.
 
@@ -78,9 +80,9 @@ formula.
 2. Rolling windows overlap and are not independent observations. Fifteen valid
    windows from 28 days do not equal fifteen independent users or periods.
 3. Food logging error directly affects inferred expenditure.
-4. The historical target stores calculation weight and energy results, but not
-   a full snapshot of occupational profile and expert coefficients. The service
-   reruns both architectures with the current profile and settings.
+4. Targets created before the versioned input snapshot cannot be compared
+   reliably. They are excluded as `missingHistoricalInputs`; they are never
+   reconstructed with the current profile or settings.
 5. Temporary context flags are counted per window but do not automatically
    exclude it. Product or clinical review must inspect heavily affected windows.
 6. This local report cannot satisfy a cohort-level release criterion by itself.

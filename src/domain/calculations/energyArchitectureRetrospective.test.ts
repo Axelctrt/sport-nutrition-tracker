@@ -25,6 +25,7 @@ function completeDays(
     journalComplete: true,
     linkedStepsAvailable: true,
     dailyTargetAvailable: true,
+    historicalInputsAvailable: true,
     consumedCaloriesKcal: 2_200,
     currentExpenditureKcal: 2_400,
     candidateExpenditureKcal: 2_220,
@@ -124,8 +125,13 @@ describe('energy architecture retrospective', () => {
 
   it('exclut les journées sans pas liés et refuse une fenêtre incomplète', () => {
     const days = completeDays(14);
+    const {
+      currentExpenditureKcal: _currentExpenditureKcal,
+      candidateExpenditureKcal: _candidateExpenditureKcal,
+      ...dayWithoutComparison
+    } = days[6]!;
     days[6] = {
-      ...days[6]!,
+      ...dayWithoutComparison,
       linkedStepsAvailable: false,
     };
     const report = buildEnergyArchitectureRetrospective({
@@ -160,5 +166,29 @@ describe('energy architecture retrospective', () => {
       'missingLinkedSteps',
       'missingDailyTarget',
     ]);
+  });
+
+  it('distingue une ancienne cible sans paramètres historiques', () => {
+    const day = completeDays(1)[0]!;
+    const {
+      currentExpenditureKcal: _currentExpenditureKcal,
+      candidateExpenditureKcal: _candidateExpenditureKcal,
+      ...legacyDay
+    } = day;
+    const report = buildEnergyArchitectureRetrospective({
+      analysisStart,
+      analysisEnd: analysisStart,
+      days: [{
+        ...legacyDay,
+        historicalInputsAvailable: false,
+      }],
+      weights: [],
+    });
+
+    expect(report.excludedDays[0]?.reasons).toEqual([
+      'missingHistoricalInputs',
+    ]);
+    expect(report.exclusionCounts.missingHistoricalInputs).toBe(1);
+    expect(report.exclusionCounts.missingDailyTarget).toBe(0);
   });
 });

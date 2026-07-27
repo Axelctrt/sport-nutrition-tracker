@@ -35,6 +35,7 @@ describe('EnergyArchitectureDiagnostic', () => {
             missingFoodData: 0,
             missingLinkedSteps: 0,
             missingDailyTarget: 0,
+            missingHistoricalInputs: 0,
           },
           status: 'candidateSupported',
           blockingFactors: [],

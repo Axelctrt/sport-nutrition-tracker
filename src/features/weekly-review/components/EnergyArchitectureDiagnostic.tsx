@@ -61,6 +61,7 @@ const exclusionLabels: Record<EnergyArchitectureExclusionReason, string> = {
   missingFoodData: 'Calories consommées absentes',
   missingLinkedSteps: 'Pas non reliés au bilan',
   missingDailyTarget: 'Cible historique absente',
+  missingHistoricalInputs: 'Paramètres historiques absents',
 };
 
 function formatKcal(value: number | undefined): string {

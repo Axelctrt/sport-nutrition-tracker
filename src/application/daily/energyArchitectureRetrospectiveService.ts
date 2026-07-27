@@ -2,6 +2,9 @@ import { parseISO, subDays } from 'date-fns';
 import { calculateDailyNutrition } from '@/domain/calculations/nutrition';
 import { compareEnergyArchitectures } from '@/domain/calculations/energyArchitectureShadow';
 import {
+  restoreDailyTargetEnergyContext,
+} from '@/domain/calculations/dailyTargetInputSnapshot';
+import {
   buildEnergyArchitectureRetrospective,
   type EnergyArchitectureRetrospectiveDay,
   type EnergyArchitectureRetrospectiveReport,
@@ -113,11 +116,18 @@ export async function loadEnergyArchitectureRetrospective(
     const consumedCaloriesKcal = dayEntries.length > 0
       ? calculateDailyNutrition(dayEntries).caloriesKcal
       : undefined;
-    const comparison = linkedSteps && target
-      ? compareEnergyArchitectures({
-          date,
+    const historicalContext = target?.energyInputSnapshot
+      ? restoreDailyTargetEnergyContext(
+          target.energyInputSnapshot,
           profile,
           settings,
+        )
+      : undefined;
+    const comparison = linkedSteps && target && historicalContext
+      ? compareEnergyArchitectures({
+          date,
+          profile: historicalContext.profile,
+          settings: historicalContext.settings,
           weightKg: target.calculationWeightKg,
           totalSteps: linkedSteps.totalSteps,
           activities: activitiesByDate.get(date) ?? [],
@@ -133,6 +143,7 @@ export async function loadEnergyArchitectureRetrospective(
         ?? false,
       linkedStepsAvailable: Boolean(linkedSteps),
       dailyTargetAvailable: Boolean(target),
+      historicalInputsAvailable: Boolean(historicalContext),
       ...(consumedCaloriesKcal === undefined
         ? {}
         : { consumedCaloriesKcal }),

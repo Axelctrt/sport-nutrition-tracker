@@ -157,6 +157,17 @@ describe('dailyTargetCoordinator', () => {
       observationWindowDays: 28,
     });
     expect(snapshot.target.targetCaloriesKcal).toBeGreaterThan(0);
+    expect(snapshot.target.energyInputSnapshot).toMatchObject({
+      version: 1,
+      profile: {
+        occupationalActivity: 'sedentary',
+        heightCm: 177,
+      },
+      settings: {
+        includedBaseSteps: 3_000,
+        walkingKcalPerKgPerKm: 0.5,
+      },
+    });
     expect(snapshot.energyArchitectureShadow.guided.currentTotalKcal).toBeCloseTo(
       snapshot.calculation.energy.totalEstimatedExpenditureKcal,
       2,

@@ -4,6 +4,9 @@ import {
   loadEnergyArchitectureRetrospective,
   type EnergyArchitectureRetrospectiveDependencies,
 } from '@/application/daily/energyArchitectureRetrospectiveService';
+import {
+  buildDailyTargetEnergyInputSnapshot,
+} from '@/domain/calculations/dailyTargetInputSnapshot';
 import { createDefaultAppSettings } from '@/domain/defaults/appSettings';
 import type { DailyCheckOut } from '@/domain/models/dailyCoaching';
 import type { FoodEntry } from '@/domain/models/food';
@@ -45,9 +48,16 @@ function foodEntry(date: string): FoodEntry {
 }
 
 function dailyTarget(date: string): DailyTarget {
+  const profile = createEntity(createProfileInput({
+    occupationalActivity: 'active',
+  }));
+  const settings = createDefaultAppSettings();
+
   return createEntity<DailyTarget>({
     date,
     calculationWeightKg: 70,
+    energyInputSnapshot:
+      buildDailyTargetEnergyInputSnapshot(profile, settings),
     energy: {
       bmrKcal: 1_700,
       occupationalBaseKcal: 2_295,

@@ -495,6 +495,37 @@ const dailyTargetStepBasisSchema = z.object({
   observationWindowDays: positiveInteger,
 });
 
+const dailyTargetEnergyInputSnapshotSchema = z.object({
+  version: z.literal(1),
+  profile: z.object({
+    sexForEnergyEquation: z.enum(['male', 'female']),
+    ageInformation: ageInformationSchema,
+    heightCm: positiveNumber,
+    goal: z.enum(['loss', 'maintenance', 'gain']),
+    targetWeeklyWeightChangePercent: finiteNumber,
+    occupationalActivity: z.enum([
+      'sedentary',
+      'lightlyActive',
+      'active',
+      'veryActive',
+    ]),
+    dailyStepGoal: nonNegativeInteger,
+    proteinGramsPerKg: nonNegativeNumber,
+    fatGramsPerKg: nonNegativeNumber,
+  }),
+  settings: z.object({
+    includedBaseSteps: nonNegativeInteger,
+    walkingKcalPerKgPerKm: nonNegativeNumber,
+    runningKcalPerKgPerKm: nonNegativeNumber,
+    strengthTrainingMet: nonNegativeNumber,
+    calorieFloorBmrMultiplier: nonNegativeNumber,
+    defaultCyclingMet: nonNegativeNumber,
+    defaultWalkingMet: nonNegativeNumber,
+    defaultOtherCardioMet: nonNegativeNumber,
+    swimmingMetValues: swimmingMetValuesSchema,
+  }),
+});
+
 const plannedActivityCalorieSnapshotSchema = z.object({
   id: z.string().min(1),
   source: z.enum(['strengthSession', 'endurancePlanning']),
@@ -513,6 +544,7 @@ const plannedActivityCalorieSnapshotSchema = z.object({
 
 const dailyTargetSchema = datedEntitySchema.extend({
   calculationWeightKg: positiveNumber,
+  energyInputSnapshot: dailyTargetEnergyInputSnapshotSchema.optional(),
   energy: dailyEnergyBreakdownSchema,
   targetWeeklyWeightChangePercentUsed: finiteNumber.optional(),
   goalAdjustmentKcal: finiteNumber,
