@@ -67,7 +67,7 @@ test('piège puis restitue le focus dans un panneau mobile', async ({ page }, te
   await page.goto('/#/activities');
 
   const trigger = page.getByRole('button', {
-    name: 'Enregistrer une activité déjà réalisée',
+    name: 'Ajouter une activité déjà réalisée',
   });
   await trigger.focus();
   await trigger.click();
@@ -94,7 +94,7 @@ test('respecte la réduction des animations système', async ({ page }) => {
   await createLocalProfile(page);
   await page.goto('/#/activities');
   await page.getByRole('button', {
-    name: 'Enregistrer une activité déjà réalisée',
+    name: 'Ajouter une activité déjà réalisée',
   }).click();
 
   const duration = await page.getByRole('dialog', { name: 'Enregistrer une activité' }).evaluate((element) => {

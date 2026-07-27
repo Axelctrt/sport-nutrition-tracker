@@ -63,6 +63,10 @@ export interface ProgressionReviewSummary {
     ? T extends { confidence: { level: infer L } } ? L : never
     : never;
   waistTrendCmPerWeek?: number;
+  completedFoodDays?: number;
+  trackingSpanDays?: number;
+  reasons?: string[];
+  blockingFactors?: string[];
 }
 
 export interface ProgressionHubSummary {
@@ -211,6 +215,20 @@ function buildReviewSummary(reviews: readonly WeeklyReview[]): ProgressionReview
     ...(latest.adaptation?.waistTrendCmPerWeek !== undefined
       ? { waistTrendCmPerWeek: latest.adaptation.waistTrendCmPerWeek }
       : {}),
+    ...(latest.adaptation?.completedFoodDays !== undefined
+      ? { completedFoodDays: latest.adaptation.completedFoodDays }
+      : {}),
+    ...(latest.adaptation?.trackingSpanDays !== undefined
+      ? { trackingSpanDays: latest.adaptation.trackingSpanDays }
+      : {}),
+    ...(latest.adaptation?.reasons?.length
+      ? { reasons: [...latest.adaptation.reasons] }
+      : {}),
+    ...(latest.adaptation?.blockingFactors?.length
+      ? { blockingFactors: [...latest.adaptation.blockingFactors] }
+      : latest.ineligibilityReasons?.length
+        ? { blockingFactors: [...latest.ineligibilityReasons] }
+        : {}),
   };
 
   if (!latest.isCalibrationEligible || latest.decisionStatus === 'notEligible') {

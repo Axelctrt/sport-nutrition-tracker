@@ -35,7 +35,7 @@ it('hiérarchise évolution, bilan et objectifs sans mettre les récompenses au 
   expect(screen.getByRole('link', { name: /Ajouter une pesée/ })).toHaveAttribute('href', '/weight');
   expect(screen.getByRole('link', { name: /Voir les tendances/ })).toHaveAttribute('href', '/analytics');
   expect(screen.getByRole('link', { name: /Ouvrir le bilan/ })).toHaveAttribute('href', '/weekly-review');
-  expect(screen.getByRole('link', { name: /Voir mes objectifs/ })).toHaveAttribute('href', '/goals');
+  expect(screen.getByRole('link', { name: /Créer un objectif/ })).toHaveAttribute('href', '/goals');
   expect(screen.queryByRole('link', { name: 'Récompenses' })).not.toBeInTheDocument();
 
   fireEvent.click(screen.getByRole('button', { name: 'Plus d’outils de progression' }));

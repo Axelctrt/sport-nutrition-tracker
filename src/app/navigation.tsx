@@ -78,7 +78,7 @@ export const mobileMoreNavigation: NavigationSection[] = [
         label: 'Profil',
         path: routePaths.profile,
         icon: UserRound,
-        description: 'Informations personnelles, objectifs et mensurations.',
+        description: 'Identité, objectifs et mesures.',
       },
       {
         label: 'Amis et confidentialité',
@@ -119,7 +119,7 @@ export const mobileMoreNavigation: NavigationSection[] = [
         label: 'Rappels',
         path: routePaths.settingsNotificationsRoutines,
         icon: Bell,
-        description: 'Configurer les rappels, routines et le minuteur.',
+        description: 'Rappels, routines et minuteur.',
       },
       {
         label: 'Calculs et nutrition',
@@ -136,7 +136,7 @@ export const mobileMoreNavigation: NavigationSection[] = [
         label: 'Synchronisation',
         path: routePaths.settingsAccountSync,
         icon: Laptop,
-        description: 'Consulter l’état du compte, du cloud et du hors-ligne.',
+        description: 'Compte, cloud et hors-ligne.',
       },
       {
         label: 'Sauvegarde',

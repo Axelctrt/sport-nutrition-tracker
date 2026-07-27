@@ -2,6 +2,7 @@ import {
   Activity,
   ArrowRight,
   BarChart3,
+  CheckCircle2,
   FileText,
   History,
   MoreHorizontal,
@@ -46,34 +47,48 @@ function activityTrendLabel(activity: ProgressionHubSummary['activity']): string
 function reviewLabels(review: ProgressionHubSummary['review']): {
   title: string;
   detail: string;
+  reasons: string[];
 } {
   if (review.state === 'empty') {
-    return { title: 'Aucun bilan disponible', detail: 'Complète suffisamment de journées pour obtenir une analyse.' };
+    return { title: 'Encore quelques journées nécessaires', detail: 'Aucun bilan exploitable pour le moment.', reasons: [] };
   }
   if (review.state === 'insufficient') {
-    return { title: 'Données encore insuffisantes', detail: 'Le moteur attend davantage de suivi avant de conseiller un changement.' };
+    const tracked = review.completedFoodDays;
+    const span = review.trackingSpanDays;
+    return {
+      title: 'Encore quelques journées nécessaires',
+      detail: tracked !== undefined && span !== undefined
+        ? `${tracked} jour${tracked > 1 ? 's' : ''} exploitable${tracked > 1 ? 's' : ''} sur ${span}`
+        : 'Données encore trop variables cette semaine.',
+      reasons: review.blockingFactors ?? [],
+    };
   }
   if (review.state === 'noChange') {
-    return { title: 'Aucun changement conseillé', detail: 'La tendance actuelle ne justifie pas de modifier la cible.' };
+    return {
+      title: 'Aucun ajustement',
+      detail: 'La tendance actuelle ne justifie pas de modifier la cible.',
+      reasons: review.reasons ?? [],
+    };
   }
   if (review.state === 'adjustmentProposed') {
     const adjustment = review.proposedAdjustmentKcal ?? 0;
     return {
-      title: 'Ajustement à examiner',
-      detail: `${adjustment > 0 ? '+' : ''}${adjustment} kcal/j proposés, à valider dans le bilan.`,
+      title: `${adjustment > 0 ? '+' : ''}${adjustment} kcal/j recommandé`,
+      detail: 'À valider dans le bilan.',
+      reasons: review.reasons ?? [],
     };
   }
   if (review.state === 'accepted') {
-    return { title: 'Ajustement validé', detail: 'La dernière recommandation a été acceptée.' };
+    return { title: 'Ajustement validé', detail: 'La dernière recommandation a été acceptée.', reasons: review.reasons ?? [] };
   }
-  return { title: 'Ajustement refusé', detail: 'La dernière recommandation a été conservée dans l’historique.' };
+  return { title: 'Ajustement refusé', detail: 'La cible actuelle est conservée.', reasons: review.reasons ?? [] };
 }
 
 function goalLabels(goal: ProgressionHubSummary['goal']): {
   title: string;
   detail: string;
 } {
-  if (goal.state === 'empty') return { title: 'Aucun objectif actif', detail: 'Crée un objectif pour suivre une priorité concrète.' };
+  if (goal.state === 'empty') return { title: 'Aucun objectif actif', detail: '' };
   if (goal.state === 'overdue') return { title: goal.title ?? 'Objectif en retard', detail: 'Échéance dépassée, objectif à revoir.' };
   if (goal.state === 'dueSoon') return { title: goal.title ?? 'Objectif proche', detail: `${goal.daysRemaining ?? 0} jour(s) restant(s).` };
   return {
@@ -97,15 +112,9 @@ export function ProgressionHubPage() {
     <section aria-labelledby="progression-hub-title" className="min-w-0">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
-            Évolution et décisions
-          </p>
-          <h1 id="progression-hub-title" className="mt-1 text-3xl font-bold tracking-tight text-slate-950 dark:text-white">
+          <h1 id="progression-hub-title" className="text-3xl font-bold tracking-tight text-slate-950 dark:text-white">
             Progression
           </h1>
-          <p className="mt-2 max-w-3xl text-slate-600 dark:text-slate-300">
-            Suis ton évolution, consulte les recommandations du moteur et garde tes objectifs en vue.
-          </p>
         </div>
         <div className="flex gap-2">
           <Link
@@ -177,6 +186,16 @@ export function ProgressionHubPage() {
               {review?.title}
             </h2>
             <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{review?.detail}</p>
+            {review?.reasons.length ? (
+              <ul className="mt-3 space-y-1.5" aria-label="Raisons de la recommandation">
+                {review.reasons.slice(0, 3).map((reason) => (
+                  <li key={reason} className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-300">
+                    <CheckCircle2 aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-brand-700 dark:text-brand-300" />
+                    <span>{reason}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
             <Link to={routePaths.weeklyReview} className="mt-3 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-brand-700 hover:underline dark:text-brand-300">
               Ouvrir le bilan
               <ArrowRight aria-hidden="true" className="size-4" />
@@ -190,9 +209,11 @@ export function ProgressionHubPage() {
             <h2 id="progression-goals-title" className="mt-1 text-xl font-bold text-slate-950 dark:text-white">
               {goal?.title}
             </h2>
-            <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{goal?.detail}</p>
+            {goal?.detail ? (
+              <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{goal.detail}</p>
+            ) : null}
             <Link to={routePaths.goals} className="mt-3 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-brand-700 hover:underline dark:text-brand-300">
-              Voir mes objectifs
+              {summary.data.goal.state === 'empty' ? 'Créer un objectif' : 'Voir mon objectif'}
               <ArrowRight aria-hidden="true" className="size-4" />
             </Link>
           </Card>

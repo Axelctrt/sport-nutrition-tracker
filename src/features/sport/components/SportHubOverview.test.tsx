@@ -76,14 +76,14 @@ describe('SportHubOverview', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole('heading', { name: 'Ma journée sportive' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Aujourd’hui' })).toBeInTheDocument();
     expect(screen.getByText('Haut du corps')).toBeInTheDocument();
     expect(screen.getByText('Footing facile')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Organiser' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Planification' })).toHaveAttribute('href', '/strength/planning');
     expect(screen.getByRole('heading', { name: 'Dernières activités' })).toBeInTheDocument();
     expect(screen.getByText('Footing')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Voir tout l’historique/ })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /Tout voir/ })).toHaveAttribute(
       'href',
       '/activities?view=history&date=2026-07-10',
     );
@@ -101,7 +101,7 @@ describe('SportHubOverview', () => {
       </MemoryRouter>,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer une activité déjà réalisée' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Ajouter une activité déjà réalisée' }));
     expect(onRecord).toHaveBeenCalledOnce();
   });
 

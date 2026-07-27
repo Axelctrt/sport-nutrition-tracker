@@ -21,6 +21,7 @@ import { EmptyState } from '@/shared/ui/EmptyState';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 import { PageSkeleton } from '@/shared/ui/PageSkeleton';
 import { RefreshStatus } from '@/shared/ui/RefreshStatus';
+import { DateContextBanner } from '@/shared/ui/DateContextBanner';
 import { formatLocalDate, toLocalDate } from '@/shared/utils/dates';
 import { isValidLocalDate } from '@/shared/validation/localDate';
 
@@ -125,6 +126,11 @@ function ActivityHistoryView({
 
   return (
     <div className="mt-6">
+      <DateContextBanner
+        date={date}
+        className="mb-4"
+        onReturnToday={() => onChangeDate(toLocalDate())}
+      />
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 className="text-2xl font-bold text-slate-950 dark:text-white">
@@ -234,17 +240,19 @@ export function ActivityJournalPage() {
             Retour au hub Sport
           </Link>
         ) : null}
-        <p className={`${historyMode ? 'mt-2' : ''} text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300`}>
-          {historyMode ? 'Historique complet' : 'Entraînement'}
-        </p>
+        {historyMode ? (
+          <p className="mt-2 text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
+            Historique complet
+          </p>
+        ) : null}
         <h1 id="sport-hub-title" className="mt-1 text-3xl font-bold tracking-tight text-slate-950 dark:text-white">
           Sport
         </h1>
-        <p className="mt-2 max-w-2xl text-slate-600 dark:text-slate-300">
-          {historyMode
-            ? 'Retrouve toutes les activités d’une journée et leurs détails.'
-            : 'Vois ce qui est prévu aujourd’hui, organise tes entraînements et retrouve tes dernières activités.'}
-        </p>
+        {historyMode ? (
+          <p className="mt-2 max-w-2xl text-slate-600 dark:text-slate-300">
+            Retrouve toutes les activités d’une journée et leurs détails.
+          </p>
+        ) : null}
       </div>
 
       {isRefreshing ? <RefreshStatus visible className="mt-4" label="Actualisation du hub Sport…" /> : null}

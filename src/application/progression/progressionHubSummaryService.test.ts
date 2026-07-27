@@ -225,6 +225,13 @@ describe('buildProgressionHubSummary', () => {
       adaptation: {
         waistTrendCmPerWeek: -0.4,
         confidence: { level: 'usable' },
+        completedFoodDays: 6,
+        trackingSpanDays: 7,
+        reasons: [
+          'Poids stable depuis 3 semaines',
+          'Suivi suffisamment complet',
+          'Activité habituelle stable',
+        ],
       },
     } as unknown as WeeklyReview;
 
@@ -242,6 +249,43 @@ describe('buildProgressionHubSummary', () => {
       proposedAdjustmentKcal: 100,
       confidenceLevel: 'usable',
       waistTrendCmPerWeek: -0.4,
+      completedFoodDays: 6,
+      trackingSpanDays: 7,
+      reasons: [
+        'Poids stable depuis 3 semaines',
+        'Suivi suffisamment complet',
+        'Activité habituelle stable',
+      ],
+    });
+  });
+
+  it('expose les facteurs bloquants d’un bilan insuffisant', () => {
+    const review = {
+      weekStart: '2026-07-06',
+      isCalibrationEligible: false,
+      decisionStatus: 'notEligible',
+      proposedAdjustmentKcal: 0,
+      adaptation: {
+        completedFoodDays: 4,
+        trackingSpanDays: 7,
+        confidence: { level: 'insufficient' },
+        blockingFactors: ['Données encore trop variables cette semaine'],
+      },
+    } as unknown as WeeklyReview;
+
+    const summary = buildProgressionHubSummary({
+      analytics: createAnalytics(),
+      goalViews: [],
+      profile: profile(),
+      referenceDate: REFERENCE_DATE,
+      reviews: [review],
+    });
+
+    expect(summary.review).toMatchObject({
+      state: 'insufficient',
+      completedFoodDays: 4,
+      trackingSpanDays: 7,
+      blockingFactors: ['Données encore trop variables cette semaine'],
     });
   });
 });

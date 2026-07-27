@@ -22,6 +22,7 @@ import { sportAgendaEntryPath } from '@/features/sport/sportHubNavigation';
 import { BottomSheet } from '@/shared/ui/BottomSheet';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
+import { FirstUseHint } from '@/shared/ui/FirstUseHint';
 import { formatLocalDate } from '@/shared/utils/dates';
 
 interface SportHubOverviewProps {
@@ -54,14 +55,9 @@ export function SportHubOverview({
     <div className="mt-5 space-y-6">
       <section aria-labelledby="sport-today-title">
         <div className="flex items-end justify-between gap-3">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
-              Aujourd’hui
-            </p>
-            <h2 id="sport-today-title" className="mt-1 text-xl font-bold text-slate-950 dark:text-white">
-              Ma journée sportive
-            </h2>
-          </div>
+          <h2 id="sport-today-title" className="text-xl font-bold text-slate-950 dark:text-white">
+            Aujourd’hui
+          </h2>
           <Link
             to={`${routePaths.weeklyPlanning}?date=${encodeURIComponent(snapshot.today)}&section=upcoming`}
             className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl bg-brand-700 px-3 text-sm font-semibold text-white hover:bg-brand-800 dark:bg-brand-600 dark:hover:bg-brand-500"
@@ -70,6 +66,16 @@ export function SportHubOverview({
             Prévoir
           </Link>
         </div>
+
+        {!snapshot.currentSession && todayPlannedEntries.length === 0 && todayActivities.length === 0 ? (
+          <FirstUseHint
+            hintKey="sport-plan-activity"
+            title="Planifier une activité"
+            className="mt-3"
+          >
+            Prévois une activité ici. Tu pourras ensuite la démarrer depuis Accueil ou Sport.
+          </FirstUseHint>
+        ) : null}
 
         <Card className="mt-3 overflow-hidden">
           {snapshot.currentSession ? (
@@ -148,15 +154,17 @@ export function SportHubOverview({
           {!snapshot.currentSession && todayPlannedEntries.length === 0 && todayActivities.length === 0 ? (
             <div className="p-5 text-center">
               <p className="font-semibold text-slate-900 dark:text-white">Aucune activité aujourd’hui</p>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                Prévois une séance ou enregistre une activité déjà réalisée.
-              </p>
             </div>
           ) : null}
 
           <div className="border-t border-slate-200 px-4 py-3 dark:border-slate-800">
-            <Button variant="ghost" className="w-full sm:w-auto" onClick={onRecord}>
-              Enregistrer une activité déjà réalisée
+            <Button
+              variant="ghost"
+              className="w-full sm:w-auto"
+              aria-label="Ajouter une activité déjà réalisée"
+              onClick={onRecord}
+            >
+              Ajouter une activité passée
             </Button>
           </div>
         </Card>
@@ -186,7 +194,7 @@ export function SportHubOverview({
             onClick={() => setLibraryOpen(true)}
           >
             <LibraryBig aria-hidden="true" className="size-5 shrink-0 text-brand-700 dark:text-brand-300" />
-            <span className="font-semibold text-slate-950 dark:text-white">Bibliothèque sportive</span>
+            <span className="font-semibold text-slate-950 dark:text-white">Bibliothèque</span>
           </button>
         </div>
       </section>
@@ -200,7 +208,7 @@ export function SportHubOverview({
             to={`${routePaths.activities}?view=history&date=${encodeURIComponent(snapshot.today)}`}
             className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-brand-700 hover:underline dark:text-brand-300"
           >
-            Voir tout l’historique
+            Tout voir
             <ChevronRight aria-hidden="true" className="size-4" />
           </Link>
         </div>

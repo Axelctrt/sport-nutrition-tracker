@@ -206,9 +206,6 @@ export function FoodJournalPage() {
           <h1 id="food-journal-title" className="mt-1 text-3xl font-bold tracking-tight text-slate-950 dark:text-white">
             Nutrition
           </h1>
-          <p className="mt-2 hidden max-w-3xl text-slate-600 dark:text-slate-300 sm:block">
-            Suivez vos calories, vos macros et vos repas sur une seule vue quotidienne.
-          </p>
         </div>
         <Button
           className="w-full sm:w-auto"
@@ -245,8 +242,15 @@ export function FoodJournalPage() {
               className="mt-4"
               compact
               icon={UtensilsCrossed}
-              title="Aucun aliment pour cette journée"
-              description="Ajoutez votre premier aliment puis complétez les repas au fil de la journée."
+              title={date === toLocalDate() ? 'Aucun aliment aujourd’hui' : 'Aucun aliment ce jour-là'}
+              primaryAction={(
+                <Button
+                  onClick={() => navigate(foodJournalMealComposerPath(date, expandedMealSlot, 'meal'))}
+                >
+                  <Plus aria-hidden="true" className="size-4" />
+                  Ajouter un repas
+                </Button>
+              )}
             />
           ) : null}
 
@@ -296,7 +300,7 @@ export function FoodJournalPage() {
               <span className="min-w-0 flex-1">
                 <span className="block font-semibold text-slate-950 dark:text-white">Bibliothèque</span>
                 <span className="mt-0.5 block text-sm text-slate-500 dark:text-slate-400">
-                  Aliments, recettes, favoris et recherche externe
+                  Aliments, recettes et favoris
                 </span>
               </span>
             </button>
