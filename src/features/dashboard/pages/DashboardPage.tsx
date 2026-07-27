@@ -7,20 +7,11 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 import { useProfile } from '@/app/providers/profile/useProfile';
 import { routePaths } from '@/app/routePaths';
-import {
-  isDashboardWidgetVisible,
-  type DashboardWidgetId,
-} from '@/domain/dashboard/dashboardPreferences';
-import { DashboardActiveWorkout } from '@/features/dashboard/components/DashboardActiveWorkout';
-import { DashboardActivities } from '@/features/dashboard/components/DashboardActivities';
-import { DashboardCalculationDetails } from '@/features/dashboard/components/DashboardCalculationDetails';
 import { DashboardDailyAssistant } from '@/features/dashboard/components/DashboardDailyAssistant';
 import { DashboardFixedCore } from '@/features/dashboard/components/DashboardFixedCore';
 import { DashboardRewardsOverview } from '@/features/dashboard/components/DashboardRewardsOverview';
 import { DashboardTodaySummary } from '@/features/dashboard/components/DashboardTodaySummary';
-import { DashboardTrainingAgenda } from '@/features/dashboard/components/DashboardTrainingAgenda';
-import { DashboardWeeklyMissions } from '@/features/dashboard/components/DashboardWeeklyMissions';
-import { DashboardWidgetStack } from '@/features/dashboard/components/DashboardWidgetStack';
+import { DashboardWeeklyProgress } from '@/features/dashboard/components/DashboardWeeklyProgress';
 import { useDailyDashboard } from '@/features/dashboard/hooks/useDailyDashboard';
 import type { FoodJournalNavigationState } from '@/features/food-journal/navigation/foodJournalNavigation';
 import { useCurrentWeight } from '@/features/weight/hooks/useCurrentWeight';
@@ -61,7 +52,6 @@ export function DashboardPage() {
   const {
     preferences,
     density,
-    isLoading: preferencesLoading,
     errorMessage: preferencesError,
   } = useDashboardPreferences();
 
@@ -84,73 +74,6 @@ export function DashboardPage() {
   if (!profile) return null;
   const firstName = profile.firstName?.trim();
 
-  const renderWidget = (widgetId: DashboardWidgetId) => {
-    if (!isDashboardWidgetVisible(preferences, widgetId)) {
-      return null;
-    }
-
-    if (widgetId === 'rewardsOverview') {
-      return (
-        <DashboardRewardsOverview
-          key={widgetId}
-          className="mt-6"
-        />
-      );
-    }
-
-    if (widgetId === 'trainingAgenda') {
-    return (
-      <DashboardTrainingAgenda
-        key={widgetId}
-        className="mt-6"
-      />
-    );
-  }
-
-  if (widgetId === 'weeklyMissions') {
-      return (
-        <DashboardWeeklyMissions
-          key={widgetId}
-          className="mt-6"
-        />
-      );
-    }
-
-    if (!snapshot || !nutrition) return null;
-
-    switch (widgetId) {
-      case 'activeWorkout':
-        return activeWorkout ? (
-          <DashboardActiveWorkout
-            key={widgetId}
-            workout={activeWorkout}
-          />
-        ) : null;
-
-      case 'activities':
-        return (
-          <DashboardActivities
-            key={widgetId}
-            activities={snapshot.activities}
-            date={date}
-          />
-        );
-
-      case 'calculationDetails':
-        return (
-          <DashboardCalculationDetails
-            key={widgetId}
-            snapshot={snapshot}
-          />
-        );
-
-      case 'todaySummary':
-      case 'dailyAssistant':
-      case 'quickActions':
-        return null;
-    }
-  };
-
   return (
     <section aria-labelledby="dashboard-title">
       <div className="flex items-start justify-between gap-4">
@@ -167,7 +90,7 @@ export function DashboardPage() {
               : 'Tableau de bord'}
           </h1>
           <p className="mt-2 max-w-2xl text-sm text-slate-600 dark:text-slate-300">
-            L’essentiel de ta journée, dans l’ordre qui te convient.
+            L’essentiel de ta journée, au même endroit.
           </p>
         </div>
 
@@ -179,8 +102,8 @@ export function DashboardPage() {
             aria-hidden="true"
             className="size-4"
           />
-          <span className="hidden sm:inline">Personnaliser</span>
-          <span className="sm:hidden">Blocs</span>
+          <span className="hidden sm:inline">Affichage</span>
+          <span className="sm:hidden">Vue</span>
         </Link>
       </div>
 
@@ -233,8 +156,7 @@ export function DashboardPage() {
           tone="error"
           title="Affichage personnalisé indisponible"
         >
-          {preferencesError} L’ordre équilibré est utilisé
-          temporairement.
+          {preferencesError} L’affichage recommandé est utilisé temporairement.
         </InlineNotice>
       ) : null}
 
@@ -276,12 +198,13 @@ export function DashboardPage() {
             ) : null}
           />
 
-          <DashboardWidgetStack
-            preferences={preferences}
-            density={density}
-            isLoading={preferencesLoading}
-            renderWidget={renderWidget}
-          />
+          {preferences.supplementalBlock === 'weeklyProgress' ? (
+            <DashboardWeeklyProgress profile={profile} />
+          ) : null}
+
+          {preferences.supplementalBlock === 'achievements' ? (
+            <DashboardRewardsOverview className="mt-5" compact />
+          ) : null}
 
           <p className="mt-5 text-xs leading-5 text-slate-500 dark:text-slate-400">
             Les calories et macronutriments sont des estimations de

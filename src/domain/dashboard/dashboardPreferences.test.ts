@@ -35,7 +35,8 @@ describe('préférences du tableau de bord', () => {
       'weight',
       'steps',
     ]);
-    expect(normalized.summaryMetrics).toEqual(['macros', 'steps', 'weight']);
+    expect(normalized.summaryMetrics).toEqual(['macros', 'steps']);
+    expect(normalized.supplementalBlock).toBe('achievements');
   });
 
   it('applique les préréglages sans partager leurs tableaux', () => {
@@ -71,6 +72,8 @@ describe('préférences du tableau de bord', () => {
       'weight',
       'steps',
     ]);
+    expect(defaults.summaryMetrics).toEqual(['macros', 'steps']);
+    expect(defaults.supplementalBlock).toBe('none');
   });
 
   it('déplace et masque les blocs en passant en mode personnalisé', () => {
@@ -125,4 +128,21 @@ describe('préférences du tableau de bord', () => {
 
     expect(toggled.hidden).toEqual(['activities']);
   });
+
+  it.each([
+    ['balanced', 'none'],
+    ['nutrition', 'none'],
+    ['training', 'weeklyProgress'],
+    ['minimal', 'none'],
+  ] as const)(
+    'convertit l’ancien préréglage %s vers un seul bloc complémentaire',
+    (preset, expectedBlock) => {
+      const legacy = createDashboardPreferencesFromPreset(preset);
+      const { supplementalBlock: _removed, ...withoutNewPreference } = legacy;
+
+      expect(
+        normalizeDashboardPreferences(withoutNewPreference).supplementalBlock,
+      ).toBe(expectedBlock);
+    },
+  );
 });

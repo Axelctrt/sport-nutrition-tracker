@@ -222,7 +222,8 @@ describe("backupEnvelopeSchema", () => {
         'weeklyMissions',
       ],
       quickActions: expect.arrayContaining(["addFood", "workout"]),
-      summaryMetrics: ["macros", "steps", "weight"],
+      summaryMetrics: ["macros", "steps"],
+      supplementalBlock: "none",
     });
     expect(parsed.data.appSettings![0]?.dashboardDensity).toBe("comfortable");
     expect(

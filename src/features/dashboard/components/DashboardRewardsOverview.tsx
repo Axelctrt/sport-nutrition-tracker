@@ -13,6 +13,7 @@ import { InlineNotice } from "@/shared/ui/InlineNotice";
 interface DashboardRewardsOverviewProps {
   className?: string;
   observeSnapshot?: AchievementSnapshotObserver;
+  compact?: boolean;
 }
 
 function formatEarnedAt(value: string): string {
@@ -25,6 +26,7 @@ function formatEarnedAt(value: string): string {
 export function DashboardRewardsOverview({
   className,
   observeSnapshot = observeAchievementPreview,
+  compact = false,
 }: DashboardRewardsOverviewProps) {
   const [snapshot, setSnapshot] = useState<AchievementSnapshot>();
   const [loadError, setLoadError] = useState<string>();
@@ -64,7 +66,10 @@ export function DashboardRewardsOverview({
   return (
     <section aria-labelledby="dashboard-rewards-title" className={className}>
       <Card className="overflow-hidden p-0">
-        <div className="bg-gradient-to-br from-amber-50 via-white to-brand-50 p-4 sm:p-5 dark:from-amber-950/35 dark:via-slate-900 dark:to-brand-950/35">
+        <div className={compact
+          ? 'p-4 sm:p-5'
+          : 'bg-gradient-to-br from-amber-50 via-white to-brand-50 p-4 sm:p-5 dark:from-amber-950/35 dark:via-slate-900 dark:to-brand-950/35'}
+        >
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="flex min-w-0 items-start gap-3">
               <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200">
@@ -77,10 +82,12 @@ export function DashboardRewardsOverview({
                 >
                   Tes accomplissements
                 </h2>
-                <p className="mt-1 text-sm leading-5 text-slate-600 dark:text-slate-300">
-                  Garde ton prochain objectif visible sans quitter le tableau de
-                  bord.
-                </p>
+                {!compact ? (
+                  <p className="mt-1 text-sm leading-5 text-slate-600 dark:text-slate-300">
+                    Garde ton prochain objectif visible sans quitter le tableau de
+                    bord.
+                  </p>
+                ) : null}
               </div>
             </div>
 
@@ -167,7 +174,7 @@ export function DashboardRewardsOverview({
             </InlineNotice>
           ) : null}
 
-          {latestAchievements.length > 0 ? (
+          {!compact && latestAchievements.length > 0 ? (
             <div className="mt-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                 Derniers badges

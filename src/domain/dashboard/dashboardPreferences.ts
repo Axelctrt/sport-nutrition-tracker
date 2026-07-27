@@ -45,6 +45,7 @@ export type DashboardSecondaryWidgetId = (typeof DASHBOARD_SECONDARY_WIDGET_IDS)
 export type DashboardQuickActionId = (typeof DASHBOARD_QUICK_ACTION_IDS)[number];
 export type DashboardSummaryMetricId = (typeof DASHBOARD_SUMMARY_METRIC_IDS)[number];
 export type DashboardDensity = 'comfortable' | 'compact';
+export type DashboardSupplementalBlock = 'none' | 'weeklyProgress' | 'achievements';
 
 export type DashboardPreset =
   | 'balanced'
@@ -59,6 +60,7 @@ export interface DashboardPreferences {
   hidden: DashboardWidgetId[];
   quickActions: DashboardQuickActionId[];
   summaryMetrics: DashboardSummaryMetricId[];
+  supplementalBlock: DashboardSupplementalBlock;
 }
 
 export const DASHBOARD_WIDGET_LABELS: Record<DashboardWidgetId, string> = {
@@ -100,8 +102,6 @@ export const DASHBOARD_SUMMARY_METRIC_LABELS: Record<DashboardSummaryMetricId, s
   weight: 'Poids actuel',
 };
 
-const ALL_SUMMARY_METRICS = [...DASHBOARD_SUMMARY_METRIC_IDS];
-
 const PRESET_PREFERENCES: Record<Exclude<DashboardPreset, 'custom'>, DashboardPreferences> = {
   balanced: {
     preset: 'balanced',
@@ -125,7 +125,8 @@ const PRESET_PREFERENCES: Record<Exclude<DashboardPreset, 'custom'>, DashboardPr
       'weeklyMissions',
     ],
     quickActions: ['addFood', 'workout', 'weight', 'steps'],
-    summaryMetrics: [...ALL_SUMMARY_METRICS],
+    summaryMetrics: ['macros', 'steps'],
+    supplementalBlock: 'none',
   },
   nutrition: {
     preset: 'nutrition',
@@ -142,7 +143,8 @@ const PRESET_PREFERENCES: Record<Exclude<DashboardPreset, 'custom'>, DashboardPr
     ],
     hidden: [],
     quickActions: ['addFood', 'scanFood', 'steps', 'weight'],
-    summaryMetrics: [...ALL_SUMMARY_METRICS],
+    summaryMetrics: ['macros', 'steps'],
+    supplementalBlock: 'none',
   },
   training: {
     preset: 'training',
@@ -160,6 +162,7 @@ const PRESET_PREFERENCES: Record<Exclude<DashboardPreset, 'custom'>, DashboardPr
     hidden: [],
     quickActions: ['workout', 'addActivity', 'steps', 'weight', 'addFood'],
     summaryMetrics: ['steps', 'weight', 'macros'],
+    supplementalBlock: 'weeklyProgress',
   },
   minimal: {
     preset: 'minimal',
@@ -183,6 +186,7 @@ const PRESET_PREFERENCES: Record<Exclude<DashboardPreset, 'custom'>, DashboardPr
     ],
     quickActions: ['addFood', 'workout', 'weight', 'steps'],
     summaryMetrics: ['steps', 'weight'],
+    supplementalBlock: 'none',
   },
 };
 
@@ -210,6 +214,35 @@ function isDashboardSummaryMetricId(value: unknown): value is DashboardSummaryMe
   return typeof value === 'string' && DASHBOARD_SUMMARY_METRIC_IDS.includes(value as DashboardSummaryMetricId);
 }
 
+function isDashboardSupplementalBlock(value: unknown): value is DashboardSupplementalBlock {
+  return value === 'none' || value === 'weeklyProgress' || value === 'achievements';
+}
+
+function migrateLegacySupplementalBlock(
+  preferences: Partial<DashboardPreferences> | undefined,
+  preset: DashboardPreset,
+  hidden: DashboardWidgetId[],
+): DashboardSupplementalBlock {
+  if (isDashboardSupplementalBlock(preferences?.supplementalBlock)) {
+    return preferences.supplementalBlock;
+  }
+  if (preset === 'training') return 'weeklyProgress';
+  if (preset !== 'custom') return 'none';
+
+  const isVisible = (widgetId: DashboardWidgetId) => !hidden.includes(widgetId);
+  if (isVisible('rewardsOverview') || isVisible('weeklyMissions')) {
+    return 'achievements';
+  }
+  if (
+    isVisible('activeWorkout')
+    || isVisible('trainingAgenda')
+    || isVisible('activities')
+  ) {
+    return 'weeklyProgress';
+  }
+  return 'none';
+}
+
 export function createDefaultDashboardPreferences(): DashboardPreferences {
   return createDashboardPreferencesFromPreset('balanced');
 }
@@ -224,6 +257,7 @@ export function createDashboardPreferencesFromPreset(
     hidden: [...preferences.hidden],
     quickActions: [...preferences.quickActions],
     summaryMetrics: [...preferences.summaryMetrics],
+    supplementalBlock: preferences.supplementalBlock,
   };
 }
 
@@ -270,6 +304,11 @@ export function normalizeDashboardPreferences(
     hidden,
     quickActions,
     summaryMetrics,
+    supplementalBlock: migrateLegacySupplementalBlock(
+      preferences,
+      normalizedPreset,
+      hidden,
+    ),
   };
 }
 
@@ -322,6 +361,17 @@ export function toggleDashboardSummaryMetric(
     summaryMetrics: isVisible
       ? preferences.summaryMetrics.filter((current) => current !== metricId)
       : [...preferences.summaryMetrics, metricId],
+  });
+}
+
+export function setDashboardSupplementalBlock(
+  preferences: DashboardPreferences,
+  supplementalBlock: DashboardSupplementalBlock,
+): DashboardPreferences {
+  return normalizeDashboardPreferences({
+    ...preferences,
+    preset: 'custom',
+    supplementalBlock,
   });
 }
 

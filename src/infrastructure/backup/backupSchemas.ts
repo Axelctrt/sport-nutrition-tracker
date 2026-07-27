@@ -11,6 +11,7 @@ import {
   DASHBOARD_QUICK_ACTION_IDS,
   DASHBOARD_SUMMARY_METRIC_IDS,
   DASHBOARD_WIDGET_IDS,
+  normalizeDashboardPreferences,
 } from "@/domain/dashboard/dashboardPreferences";
 import { APP_SETTINGS_ID, LOCAL_USER_PROFILE_ID, USER_SETTINGS_ID } from '@/domain/defaults/identifiers';
 import {
@@ -167,7 +168,11 @@ const dashboardPreferencesSchema = z.object({
   summaryMetrics: z.array(dashboardSummaryMetricIdSchema).default(
     createDefaultDashboardPreferences().summaryMetrics,
   ),
-});
+  supplementalBlock: z.enum(['none', 'weeklyProgress', 'achievements']).optional(),
+}).transform(({ supplementalBlock, ...preferences }) => normalizeDashboardPreferences({
+  ...preferences,
+  ...(supplementalBlock ? { supplementalBlock } : {}),
+}));
 
 const appSettingsSchema = entityMetadataSchema.extend({
   syncableUpdatedAt: isoDateTimeSchema.optional(),
