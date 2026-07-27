@@ -1,5 +1,5 @@
 import { Activity, Footprints, Utensils } from 'lucide-react';
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import type {
   CompleteDailyCheckOutInput,
 } from '@/application/daily/dailyCoachingService';
@@ -9,6 +9,7 @@ import { checkboxClassName, inputClassName } from '@/shared/forms/formStyles';
 import { BottomSheet } from '@/shared/ui/BottomSheet';
 import { Button } from '@/shared/ui/Button';
 import { FormField } from '@/shared/ui/FormField';
+import { FirstUseHint } from '@/shared/ui/FirstUseHint';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 import { SegmentedControl } from '@/shared/ui/SegmentedControl';
 
@@ -47,6 +48,8 @@ export function DailyCheckOutSheet({
   const [contextFlags, setContextFlags] = useState<DailyContextFlag[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>();
+  const [stepsError, setStepsError] = useState<string>();
+  const stepsInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -57,6 +60,7 @@ export function DailyCheckOutSheet({
     setJournalComplete(checkOut?.foodJournalComplete ?? foodJournalComplete);
     setContextFlags([...(checkOut?.contextFlags ?? [])]);
     setErrorMessage(undefined);
+    setStepsError(undefined);
   }, [actualSteps, checkOut, foodJournalComplete, open]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -66,12 +70,17 @@ export function DailyCheckOutSheet({
       stepsMode === 'record'
       && (!Number.isInteger(parsedSteps) || parsedSteps < 0 || parsedSteps > 100_000)
     ) {
-      setErrorMessage('Indique un nombre de pas compris entre 0 et 100 000, ou choisis de les ignorer.');
+      setStepsError('Indique un nombre de pas compris entre 0 et 100 000, ou choisis de les ignorer.');
+      window.requestAnimationFrame(() => {
+        stepsInputRef.current?.focus({ preventScroll: true });
+        stepsInputRef.current?.scrollIntoView?.({ block: 'center' });
+      });
       return;
     }
 
     setIsSubmitting(true);
     setErrorMessage(undefined);
+    setStepsError(undefined);
     try {
       await onSubmit({
         date,
@@ -110,6 +119,10 @@ export function DailyCheckOutSheet({
       )}
     >
       <form id="daily-check-out-form" className="space-y-5" onSubmit={handleSubmit} noValidate>
+        <FirstUseHint hintKey="daily-check-out" title="Finaliser le bilan">
+          Le check-out utilise tes pas réels pour finaliser le bilan de la journée.
+        </FirstUseHint>
+
         {errorMessage ? (
           <InlineNotice tone="error" title="Saisie à vérifier" role="alert">
             {errorMessage}
@@ -159,18 +172,27 @@ export function DailyCheckOutSheet({
             onChange={(value) => setStepsMode(value as StepsMode)}
           />
           {stepsMode === 'record' ? (
-            <FormField id="daily-check-out-steps" label="Pas totaux" className="mt-3">
-              <input
-                id="daily-check-out-steps"
+            <FormField
+              id="daily-check-out-steps"
+              label="Pas totaux"
+              className="mt-3"
+              error={stepsError}
+            >
+              {(controlProps) => <input
+                ref={stepsInputRef}
                 type="number"
                 inputMode="numeric"
                 min="0"
                 max="100000"
                 step="1"
                 value={steps}
-                onChange={(event) => setSteps(event.target.value)}
+                onChange={(event) => {
+                  setSteps(event.target.value);
+                  setStepsError(undefined);
+                }}
                 className={inputClassName}
-              />
+                {...controlProps}
+              />}
             </FormField>
           ) : null}
         </div>

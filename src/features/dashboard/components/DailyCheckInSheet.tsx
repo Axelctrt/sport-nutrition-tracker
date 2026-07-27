@@ -44,6 +44,13 @@ export function DailyCheckInSheet({
   const [contextFlags, setContextFlags] = useState<DailyContextFlag[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>();
+  const [validationError, setValidationError] = useState<{
+    field: 'weight' | 'sleepHours' | 'sleepMinutes' | 'waist';
+    message: string;
+  }>();
+  const weightInputRef = useRef<HTMLInputElement>(null);
+  const sleepHoursInputRef = useRef<HTMLInputElement>(null);
+  const sleepMinutesInputRef = useRef<HTMLInputElement>(null);
   const waistInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -58,7 +65,20 @@ export function DailyCheckInSheet({
     setWaistCm(checkIn?.waistCm === undefined ? '' : String(checkIn.waistCm));
     setContextFlags([...(checkIn?.contextFlags ?? [])]);
     setErrorMessage(undefined);
+    setValidationError(undefined);
   }, [checkIn, fallbackWeightKg, open, weightEntry]);
+
+  const reportValidationError = (
+    field: 'weight' | 'sleepHours' | 'sleepMinutes' | 'waist',
+    message: string,
+    input: HTMLInputElement | null,
+  ) => {
+    setValidationError({ field, message });
+    window.requestAnimationFrame(() => {
+      input?.focus({ preventScroll: true });
+      input?.scrollIntoView?.({ block: 'center' });
+    });
+  };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -68,27 +88,41 @@ export function DailyCheckInSheet({
     const parsedWaist = waistCm.trim() ? Number(waistCm) : undefined;
 
     if (weightMode === 'record' && (!Number.isFinite(parsedWeight) || parsedWeight < 20 || parsedWeight > 500)) {
-      setErrorMessage('Indique un poids compris entre 20 et 500 kg, ou choisis de ne pas te peser.');
+      reportValidationError(
+        'weight',
+        'Indique un poids compris entre 20 et 500 kg, ou choisis de ne pas te peser.',
+        weightInputRef.current,
+      );
       return;
     }
-    if (
-      !Number.isInteger(parsedHours)
-      || parsedHours < 0
-      || parsedHours > 24
-      || !Number.isInteger(parsedMinutes)
-      || parsedMinutes < 0
-      || parsedMinutes > 59
-    ) {
-      setErrorMessage('Vérifie la durée de sommeil.');
+    if (!Number.isInteger(parsedHours) || parsedHours < 0 || parsedHours > 24) {
+      reportValidationError(
+        'sleepHours',
+        'Indique un nombre d’heures compris entre 0 et 24.',
+        sleepHoursInputRef.current,
+      );
+      return;
+    }
+    if (!Number.isInteger(parsedMinutes) || parsedMinutes < 0 || parsedMinutes > 59) {
+      reportValidationError(
+        'sleepMinutes',
+        'Indique un nombre de minutes compris entre 0 et 59.',
+        sleepMinutesInputRef.current,
+      );
       return;
     }
     if (parsedWaist !== undefined && (!Number.isFinite(parsedWaist) || parsedWaist < 30 || parsedWaist > 300)) {
-      setErrorMessage('Le tour de taille doit être compris entre 30 et 300 cm.');
+      reportValidationError(
+        'waist',
+        'Le tour de taille doit être compris entre 30 et 300 cm.',
+        waistInputRef.current,
+      );
       return;
     }
 
     setIsSubmitting(true);
     setErrorMessage(undefined);
+    setValidationError(undefined);
     try {
       const hasSleep = sleepHours.trim().length > 0 || sleepMinutes.trim().length > 0;
       await onSubmit({
@@ -150,23 +184,32 @@ export function DailyCheckInSheet({
             onChange={(value) => setWeightMode(value as WeightMode)}
           />
           {weightMode === 'record' ? (
-            <FormField id="daily-check-in-weight" label="Poids" className="mt-3">
-              <div className="relative">
+            <FormField
+              id="daily-check-in-weight"
+              label="Poids"
+              className="mt-3"
+              error={validationError?.field === 'weight' ? validationError.message : undefined}
+            >
+              {(controlProps) => <div className="relative">
                 <input
-                  id="daily-check-in-weight"
+                  ref={weightInputRef}
                   type="number"
                   inputMode="decimal"
                   min="20"
                   max="500"
                   step="0.1"
                   value={weightKg}
-                  onChange={(event) => setWeightKg(event.target.value)}
+                  onChange={(event) => {
+                    setWeightKg(event.target.value);
+                    if (validationError?.field === 'weight') setValidationError(undefined);
+                  }}
                   className={`${inputClassName} pr-12`}
+                  {...controlProps}
                 />
                 <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-slate-500">
                   kg
                 </span>
-              </div>
+              </div>}
             </FormField>
           ) : null}
         </div>
@@ -177,31 +220,47 @@ export function DailyCheckInSheet({
             Sommeil
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <FormField id="daily-check-in-sleep-hours" label="Heures" optionalLabel="facultatif">
-              <input
-                id="daily-check-in-sleep-hours"
+            <FormField
+              id="daily-check-in-sleep-hours"
+              label="Heures"
+              error={validationError?.field === 'sleepHours' ? validationError.message : undefined}
+            >
+              {(controlProps) => <input
+                ref={sleepHoursInputRef}
                 type="number"
                 inputMode="numeric"
                 min="0"
                 max="24"
                 step="1"
                 value={sleepHours}
-                onChange={(event) => setSleepHours(event.target.value)}
+                onChange={(event) => {
+                  setSleepHours(event.target.value);
+                  if (validationError?.field === 'sleepHours') setValidationError(undefined);
+                }}
                 className={inputClassName}
-              />
+                {...controlProps}
+              />}
             </FormField>
-            <FormField id="daily-check-in-sleep-minutes" label="Minutes">
-              <input
-                id="daily-check-in-sleep-minutes"
+            <FormField
+              id="daily-check-in-sleep-minutes"
+              label="Minutes"
+              error={validationError?.field === 'sleepMinutes' ? validationError.message : undefined}
+            >
+              {(controlProps) => <input
+                ref={sleepMinutesInputRef}
                 type="number"
                 inputMode="numeric"
                 min="0"
                 max="59"
                 step="1"
                 value={sleepMinutes}
-                onChange={(event) => setSleepMinutes(event.target.value)}
+                onChange={(event) => {
+                  setSleepMinutes(event.target.value);
+                  if (validationError?.field === 'sleepMinutes') setValidationError(undefined);
+                }}
                 className={inputClassName}
-              />
+                {...controlProps}
+              />}
             </FormField>
           </div>
           <SegmentedControl
@@ -257,24 +316,28 @@ export function DailyCheckInSheet({
               id="daily-check-in-waist"
               label="Tour de taille"
               description="Mesure toujours au même emplacement et dans des conditions comparables."
+              error={validationError?.field === 'waist' ? validationError.message : undefined}
             >
-              <div className="relative">
+              {(controlProps) => <div className="relative">
                 <input
                   ref={waistInputRef}
-                  id="daily-check-in-waist"
                   type="number"
                   inputMode="decimal"
                   min="30"
                   max="300"
                   step="0.1"
                   value={waistCm}
-                  onChange={(event) => setWaistCm(event.target.value)}
+                  onChange={(event) => {
+                    setWaistCm(event.target.value);
+                    if (validationError?.field === 'waist') setValidationError(undefined);
+                  }}
                   className={`${inputClassName} pr-12`}
+                  {...controlProps}
                 />
                 <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-slate-500">
                   cm
                 </span>
-              </div>
+              </div>}
             </FormField>
           </div>
         </details>

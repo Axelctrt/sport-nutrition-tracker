@@ -5,19 +5,22 @@ import { FoodJournalPage } from '@/features/food-journal/pages/FoodJournalPage';
 import { appDatabase } from '@/infrastructure/database/database';
 import { repositories } from '@/infrastructure/repositories/repositories';
 import { ToastProvider } from '@/shared/toast/ToastProvider';
+import { TrashUndoCoordinator } from '@/app/trash/TrashUndoCoordinator';
 
 const originalRequestAnimationFrame = window.requestAnimationFrame;
 
 function renderJournal(initialEntry: string | { pathname: string; search?: string; state?: unknown } = '/food?date=2026-06-24') {
   return render(
     <ToastProvider>
-      <MemoryRouter initialEntries={[initialEntry]}>
-        <Routes>
-          <Route path="/food" element={<FoodJournalPage />} />
-          <Route path="/food/select" element={<h1>Sélecteur</h1>} />
-          <Route path="/food/entries/:entryId/edit" element={<h1>Éditeur</h1>} />
-        </Routes>
-      </MemoryRouter>
+      <TrashUndoCoordinator>
+        <MemoryRouter initialEntries={[initialEntry]}>
+          <Routes>
+            <Route path="/food" element={<FoodJournalPage />} />
+            <Route path="/food/select" element={<h1>Sélecteur</h1>} />
+            <Route path="/food/entries/:entryId/edit" element={<h1>Éditeur</h1>} />
+          </Routes>
+        </MemoryRouter>
+      </TrashUndoCoordinator>
     </ToastProvider>,
   );
 }
@@ -115,7 +118,7 @@ describe('FoodJournalPage — expérience mobile', () => {
     expect(breakfastToggle).toHaveAttribute('aria-expanded', 'false');
     expect(screen.getByRole('button', { name: /^Déjeuner/ })).toHaveAttribute('aria-expanded', 'true');
 
-    await user.click(screen.getByRole('button', { name: 'Ajouter un repas' }));
+    await user.click(screen.getAllByRole('button', { name: 'Ajouter un repas' })[0]);
     const dialog = await screen.findByRole('dialog', { name: 'Ajouter un repas' });
     await user.click(within(dialog).getByRole('radio', { name: /Petit-déjeuner/ }));
     await user.click(within(dialog).getByRole('button', { name: 'Ajouter un élément' }));
@@ -195,7 +198,7 @@ describe('FoodJournalPage — expérience mobile', () => {
     await user.click(screen.getByRole('button', { name: 'Jour suivant' }));
 
     await waitFor(() => expect(screen.getByLabelText('Choisir une date')).toHaveValue('2026-06-25'));
-    await screen.findByRole('heading', { name: 'Aucun aliment pour cette journée' });
+    await screen.findByRole('heading', { name: 'Aucun aliment ce jour-là' });
     expect(screen.queryByText('Yaourt grec')).not.toBeInTheDocument();
   });
 
@@ -222,7 +225,7 @@ describe('FoodJournalPage — expérience mobile', () => {
     expect(screen.getByText(/80 g · 96 kcal/)).toBeInTheDocument();
   });
 
-  it('confirme une suppression dans un dialogue accessible', async () => {
+  it('supprime immédiatement une entrée et permet de l’annuler', async () => {
     const user = userEvent.setup();
     const { entry } = await seedLunchEntry();
     renderJournal();
@@ -231,13 +234,10 @@ describe('FoodJournalPage — expérience mobile', () => {
     await user.click(screen.getByRole('button', { name: 'Actions pour Yaourt grec' }));
     await user.click(screen.getByRole('button', { name: 'Supprimer' }));
 
-    const dialog = await screen.findByRole('alertdialog');
-    expect(dialog).toHaveTextContent('Supprimer cette entrée ?');
-    await user.click(within(dialog).getByRole('button', { name: 'Supprimer' }));
-
     await waitFor(async () => expect(await repositories.food.getEntryById(entry.id)).toBeUndefined());
-    expect(await screen.findByText('Entrée supprimée')).toBeInTheDocument();
-    await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
+    expect(await screen.findByText('Élément déplacé dans la corbeille')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /Annuler la suppression/ }));
+    await waitFor(async () => expect(await repositories.food.getEntryById(entry.id)).toBeDefined());
   });
 
   it('affiche une confirmation unique et cible le repas après un retour d’ajout', async () => {

@@ -41,6 +41,7 @@ import {
 import { BottomSheet } from '@/shared/ui/BottomSheet';
 import { Button } from '@/shared/ui/Button';
 import { ChoiceCard, ChoiceCardGroup } from '@/shared/ui/ChoiceCard';
+import { FirstUseHint } from '@/shared/ui/FirstUseHint';
 
 interface FoodJournalAddSheetProps {
   open: boolean;
@@ -262,6 +263,9 @@ export function FoodJournalAddSheet({
         </ChoiceCardGroup>
       ) : step === 'overview' ? (
         <div className="space-y-4">
+          <FirstUseHint hintKey="nutrition-compose-meal" title="Composer ton repas">
+            Ajoute plusieurs éléments, puis termine le repas quand il est complet.
+          </FirstUseHint>
           <div
             className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800"
             aria-label={`Contenu du ${mealSlotLabels[selectedSlot].toLocaleLowerCase('fr')}`}

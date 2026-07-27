@@ -23,7 +23,6 @@ import { inputClassName } from '@/shared/forms/formStyles';
 import { ActionMenu } from '@/shared/ui/ActionMenu';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
-import { ConfirmationDialog } from '@/shared/ui/ConfirmationDialog';
 import { cn } from '@/shared/utils/cn';
 import { formatLocalDate } from '@/shared/utils/dates';
 
@@ -93,7 +92,6 @@ export function FoodJournalMealCard({
 }: FoodJournalMealCardProps) {
   const [editingId, setEditingId] = useState<string>();
   const [quantity, setQuantity] = useState('');
-  const [deleteTarget, setDeleteTarget] = useState<FoodEntryWithProduct>();
   const [optionsOpen, setOptionsOpen] = useState(false);
   const label = mealSlotLabels[meal.slot];
   const contentId = `food-meal-${meal.slot}-content`;
@@ -250,7 +248,7 @@ export function FoodJournalMealCard({
                           size="sm"
                           variant="dangerGhost"
                           disabled={busyId === `delete-${entry.id}`}
-                          onClick={() => setDeleteTarget(item)}
+                          onClick={() => void onRemove(item.entry.id)}
                         >
                           <Trash2 aria-hidden="true" className="size-4" />Supprimer
                         </Button>
@@ -346,19 +344,6 @@ export function FoodJournalMealCard({
         </div>
       ) : null}
 
-      <ConfirmationDialog
-        open={Boolean(deleteTarget)}
-        title="Supprimer cette entrée ?"
-        description={deleteTarget ? `« ${entryName(deleteTarget)} » sera retiré du ${label.toLocaleLowerCase('fr')}.` : ''}
-        confirmLabel="Supprimer"
-        tone="danger"
-        isPending={deleteTarget ? busyId === `delete-${deleteTarget.entry.id}` : false}
-        onCancel={() => setDeleteTarget(undefined)}
-        onConfirm={() => {
-          if (!deleteTarget) return;
-          void onRemove(deleteTarget.entry.id).then(() => setDeleteTarget(undefined));
-        }}
-      />
     </Card>
   );
 }
