@@ -1,4 +1,5 @@
-import { Footprints, Scale } from 'lucide-react';
+import { ChevronDown, Footprints, Scale } from 'lucide-react';
+import { useState } from 'react';
 import type { DailyTargetSnapshot } from '@/application/daily/dailyTargetCoordinator';
 import {
   DASHBOARD_SUMMARY_METRIC_IDS,
@@ -55,6 +56,7 @@ export function DashboardTodaySummary({
   density = 'comfortable',
   isRefreshing = false,
 }: DashboardTodaySummaryProps) {
+  const [energyBalanceOpen, setEnergyBalanceOpen] = useState(false);
   const consumedCalories = rounded(nutrition.consumed.caloriesKcal);
   const remainingCalories = rounded(nutrition.remaining.caloriesKcal);
   const transparency = snapshot.energyTransparency;
@@ -63,6 +65,8 @@ export function DashboardTodaySummary({
   const actualSteps = snapshot.stepsEntry?.totalSteps;
   const finalExpenditureKcal = snapshot.energyGuidance?.finalExpenditure
     ?.energy.totalEstimatedExpenditureKcal;
+  const hasFinalEnergyBalance = snapshot.energyGuidance?.finalStatus === 'final'
+    && finalExpenditureKcal !== undefined;
   const showMacros = visibleMetrics.includes('macros');
   const showSteps = visibleMetrics.includes('steps');
   const showWeight = visibleMetrics.includes('weight');
@@ -95,11 +99,6 @@ export function DashboardTodaySummary({
                 kcal
               </span>
             </p>
-            {finalExpenditureKcal !== undefined ? (
-              <p className="mt-1 text-xs font-medium text-emerald-700 dark:text-emerald-300">
-                Dépense finale estimée : {Math.round(finalExpenditureKcal).toLocaleString('fr-FR')} kcal
-              </p>
-            ) : null}
             {transparency && transparency.rawSportCaloriesKcal > 0 ? (
               <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs">
                 <span className="text-slate-500 dark:text-slate-400">
@@ -151,6 +150,63 @@ export function DashboardTodaySummary({
               target={snapshot.target.macros.fatGrams}
             />
           </dl>
+        ) : null}
+
+        {hasFinalEnergyBalance ? (
+          <div className={`${density === 'compact' ? 'mt-3' : 'mt-4'} border-t border-slate-200 pt-3 dark:border-slate-800`}>
+            <button
+              type="button"
+              aria-expanded={energyBalanceOpen}
+              className="flex min-h-11 w-full items-center justify-between gap-3 text-left text-sm font-semibold text-brand-700 hover:underline dark:text-brand-300"
+              onClick={() => setEnergyBalanceOpen((current) => !current)}
+            >
+              Bilan de la journée disponible
+              <ChevronDown
+                aria-hidden="true"
+                className={`size-4 shrink-0 transition-transform ${energyBalanceOpen ? 'rotate-180' : ''}`}
+              />
+            </button>
+
+            {energyBalanceOpen ? (
+              <div className="pb-1 pt-2" aria-label="Bilan énergétique de la journée">
+                <dl className="space-y-2 text-sm">
+                  <div className="flex items-center justify-between gap-4">
+                    <dt className="text-slate-600 dark:text-slate-300">Calories enregistrées</dt>
+                    <dd className="shrink-0 font-semibold tabular-nums text-slate-950 dark:text-white">
+                      {consumedCalories.toLocaleString('fr-FR')} kcal
+                    </dd>
+                  </div>
+                  <div className="flex items-center justify-between gap-4">
+                    <dt className="text-slate-600 dark:text-slate-300">Cible alimentaire guidée</dt>
+                    <dd className="shrink-0 font-semibold tabular-nums text-slate-950 dark:text-white">
+                      {snapshot.target.targetCaloriesKcal.toLocaleString('fr-FR')} kcal
+                    </dd>
+                  </div>
+                  <div className="flex items-center justify-between gap-4">
+                    <dt className="text-slate-600 dark:text-slate-300">Dépense du jour estimée</dt>
+                    <dd className="shrink-0 font-semibold tabular-nums text-slate-950 dark:text-white">
+                      {Math.round(finalExpenditureKcal).toLocaleString('fr-FR')} kcal
+                    </dd>
+                  </div>
+                  <div className="flex items-center justify-between gap-4">
+                    <dt className="text-slate-600 dark:text-slate-300">Pas réels</dt>
+                    <dd className="shrink-0 font-semibold tabular-nums text-slate-950 dark:text-white">
+                      {(actualSteps ?? 0).toLocaleString('fr-FR')}
+                    </dd>
+                  </div>
+                  <div className="flex items-center justify-between gap-4">
+                    <dt className="text-slate-600 dark:text-slate-300">Activités réalisées</dt>
+                    <dd className="shrink-0 font-semibold tabular-nums text-slate-950 dark:text-white">
+                      {snapshot.activities?.length ?? 0}
+                    </dd>
+                  </div>
+                </dl>
+                <p className="mt-3 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                  La dépense est une estimation utilisée pour analyser la journée et améliorer les tendances futures. Elle ne remplace pas ta cible alimentaire.
+                </p>
+              </div>
+            ) : null}
+          </div>
         ) : null}
       </div>
 

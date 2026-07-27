@@ -1,4 +1,5 @@
 import { cleanup, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import type { DailyTargetSnapshot } from '@/application/daily/dailyTargetCoordinator';
 import { DashboardTodaySummary } from '@/features/dashboard/components/DashboardTodaySummary';
 import type { DailyDashboardNutrition } from '@/features/dashboard/hooks/useDailyDashboard';
@@ -117,7 +118,8 @@ describe('DashboardTodaySummary', () => {
     expect(screen.getByText('Valeur initiale du profil')).toBeInTheDocument();
   });
 
-  it('distingue les pas réels et la dépense finale après le check-out', () => {
+  it('distingue les pas réels et affiche le bilan énergétique après le check-out', async () => {
+    const user = userEvent.setup();
     const currentSnapshot = createSnapshot();
     currentSnapshot.stepsEntry = {
       id: 'steps:2026-06-25',
@@ -164,6 +166,26 @@ describe('DashboardTodaySummary', () => {
 
     expect(screen.getByText('Pas réels').parentElement).toHaveTextContent('6 500');
     expect(screen.getByText(/attendus 8 000/)).toBeInTheDocument();
-    expect(screen.getByText('Dépense finale estimée : 2 200 kcal')).toBeInTheDocument();
+    expect(screen.queryByText(/Dépense finale estimée/)).not.toBeInTheDocument();
+    const balanceButton = screen.getByRole('button', { name: 'Bilan de la journée disponible' });
+    expect(balanceButton).toHaveAttribute('aria-expanded', 'false');
+    await user.click(balanceButton);
+    expect(screen.getByText('Dépense du jour estimée').parentElement).toHaveTextContent('2 200 kcal');
+    expect(screen.getByText('Calories enregistrées').parentElement).toHaveTextContent('1 500 kcal');
+    expect(screen.getByText('Activités réalisées').parentElement).toHaveTextContent('0');
+    expect(screen.getByText(/Elle ne remplace pas ta cible alimentaire/)).toBeInTheDocument();
+  });
+
+  it('ne propose pas de bilan énergétique tant que les données finales sont absentes', () => {
+    render(
+      <DashboardTodaySummary
+        snapshot={createSnapshot()}
+        nutrition={nutrition}
+        dailyStepGoal={10_000}
+      />,
+    );
+
+    expect(screen.queryByRole('button', { name: 'Bilan de la journée disponible' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Dépense du jour estimée')).not.toBeInTheDocument();
   });
 });

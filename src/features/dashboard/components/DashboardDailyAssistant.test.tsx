@@ -358,7 +358,9 @@ describe('DashboardDailyAssistant', () => {
 
     expect(screen.queryByRole('link', { name: 'Scanner' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Journal' })).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Ajouter un repas' }));
+    const addMealButton = screen.getByRole('button', { name: 'Ajouter un repas' });
+    expect(addMealButton).toHaveClass('whitespace-nowrap', 'min-h-11');
+    await user.click(addMealButton);
 
     const dialog = screen.getByRole('dialog', { name: 'Ajouter un repas' });
     const dinner = within(dialog).getByRole('radio', { name: /Dîner/ });

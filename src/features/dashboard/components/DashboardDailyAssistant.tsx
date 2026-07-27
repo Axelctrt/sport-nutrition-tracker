@@ -148,14 +148,14 @@ function StageCard({
 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-            <div>
+            <div className="min-w-0">
               <p className={cn(
                 'text-xs font-semibold uppercase text-slate-500 dark:text-slate-400',
                 isCurrent && 'text-brand-700 dark:text-brand-300',
               )}>
                 {eyebrow}
               </p>
-              <h3 className="mt-0.5 font-bold text-slate-950 dark:text-white">
+              <h3 className="mt-0.5 whitespace-nowrap font-bold text-slate-950 dark:text-white">
                 {title}
               </h3>
             </div>
@@ -700,17 +700,22 @@ export function DashboardDailyAssistant({
           state={stageState('nutrition', nutritionComplete)}
           summary={
             nutrition.consumed.entryCount > 0
-              ? `${Math.round(nutrition.consumed.caloriesKcal).toLocaleString('fr-FR')} kcal · ${Math.round(nutrition.consumed.proteinGrams).toLocaleString('fr-FR')} g de protéines`
+              ? (
+                  <span className="block whitespace-nowrap text-[0.8125rem] sm:text-sm">
+                    {Math.round(nutrition.consumed.caloriesKcal).toLocaleString('fr-FR')} kcal · {Math.round(nutrition.consumed.proteinGrams).toLocaleString('fr-FR')} g de protéines
+                  </span>
+                )
               : `Ajouter ton ${mealLabels[preferredMealSlot]}.`
           }
           action={
             <button
               type="button"
-              className={nutritionComplete ? secondaryActionClassName() : primaryActionClassName()}
+              aria-label="Ajouter un repas"
+              className={`${nutritionComplete ? secondaryActionClassName() : primaryActionClassName()} min-h-11 whitespace-nowrap px-3`}
               onClick={() => navigate(dashboardMealAddPath(preferredMealSlot))}
             >
               <Plus aria-hidden="true" className="size-4" />
-              Ajouter un repas
+              Ajouter
             </button>
           }
         />
