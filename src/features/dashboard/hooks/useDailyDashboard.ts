@@ -35,7 +35,7 @@ import {
   type RemainingNutrition,
 } from '@/domain/calculations/nutrition';
 import type { NewEntity } from '@/domain/models/common';
-import type { DailyJournalStatus } from '@/domain/models/food';
+import type { DailyJournalStatus, MealSlot } from '@/domain/models/food';
 import type { UserProfile } from '@/domain/models/profile';
 import type { WorkoutSession } from '@/domain/models/strength';
 import type { DailySteps } from '@/domain/models/steps';
@@ -49,6 +49,7 @@ export interface DailyDashboardNutrition {
   consumed: DailyNutritionSummary;
   remaining: RemainingNutrition;
   journalStatus: DailyJournalStatus | undefined;
+  entryCounts: Readonly<Record<MealSlot, number>>;
 }
 
 export interface ActiveWorkoutSummary {
@@ -163,6 +164,18 @@ export function useDailyDashboard(options: UseDailyDashboardOptions = {}) {
         ? await dependencies.repositories.workoutSessions.listExercises(inProgressSession.id)
         : [];
       const consumed = calculateDailyNutrition(entries);
+      const entryCounts = entries.reduce<Record<MealSlot, number>>(
+        (counts, entry) => ({
+          ...counts,
+          [entry.mealSlot]: counts[entry.mealSlot] + 1,
+        }),
+        {
+          breakfast: 0,
+          lunch: 0,
+          dinner: 0,
+          snacks: 0,
+        },
+      );
       setSnapshot(nextSnapshot);
       setNutrition({
         consumed,
@@ -172,6 +185,7 @@ export function useDailyDashboard(options: UseDailyDashboardOptions = {}) {
           consumed,
         ),
         journalStatus,
+        entryCounts,
       });
       setActiveWorkout(inProgressSession
         ? { session: inProgressSession, exerciseCount: inProgressExercises.length }

@@ -8,7 +8,6 @@ import {
   Pencil,
   Play,
   Plus,
-  ScanLine,
   Trash2,
   Utensils,
 } from 'lucide-react';
@@ -28,9 +27,6 @@ import type {
 } from '@/application/planning/dailyActivityPlanningService';
 import type { PlannedEnduranceInput } from '@/application/planning/endurancePlanningService';
 import {
-  addFoodPath,
-  barcodeScannerPath,
-  foodJournalPath,
   routePaths,
   workoutSessionPath,
 } from '@/app/routePaths';
@@ -44,6 +40,9 @@ import {
 import { getWorkoutSessionTitle } from '@/application/strength/workoutSessionService';
 import { createActivityJournalReturnState } from '@/features/activities/navigation/activityJournalNavigation';
 import { activityTypeLabels } from '@/features/activities/utils/activityLabels';
+import { FoodJournalAddSheet } from '@/features/food-journal/components/FoodJournalAddSheet';
+import { createFoodJournalReturnState } from '@/features/food-journal/navigation/foodJournalNavigation';
+import { recommendedMealSlot } from '@/features/food-journal/utils/recommendedMealSlot';
 import type { PlannedEnduranceSession } from '@/domain/planning/endurancePlanningState';
 import { useActionToast } from '@/shared/toast/useActionToast';
 import { Card } from '@/shared/ui/Card';
@@ -96,13 +95,6 @@ const enduranceTypeLabels: Record<PlannedEnduranceSession['activityType'], strin
   walking: 'Marche',
   otherCardio: 'Autre cardio',
 };
-
-function preferredMealSlotForHour(hour: number): keyof typeof mealLabels {
-  if (hour >= 5 && hour < 11) return 'breakfast';
-  if (hour >= 11 && hour < 15) return 'lunch';
-  if (hour >= 18 && hour < 22) return 'dinner';
-  return 'snacks';
-}
 
 function formatSleep(minutes: number | undefined): string | undefined {
   if (minutes === undefined) return undefined;
@@ -311,7 +303,13 @@ export function DashboardDailyAssistant({
   ]);
   const standaloneActivities = snapshot.activities
     .filter((activity) => !linkedActivityIds.has(activity.id));
-  const preferredMealSlot = preferredMealSlotForHour(currentHour);
+  const preferredMealSlot = recommendedMealSlot(currentHour, nutrition.entryCounts);
+  const nutritionNavigationStates = new Map(
+    (['breakfast', 'lunch', 'dinner', 'snacks'] as const).map((slot) => [
+      slot,
+      createFoodJournalReturnState(routePaths.dashboard, 'dashboard-nutrition', slot),
+    ]),
+  );
 
   const saveCheckIn = async (input: CompleteDailyCheckInInput) => {
     await onSaveCheckIn(input);
@@ -655,30 +653,14 @@ export function DashboardDailyAssistant({
               : `Ajouter ton ${mealLabels[preferredMealSlot]}.`
           }
           action={
-            nutritionComplete ? (
-              <Link
-                to={foodJournalPath(date)}
-                aria-label="Ouvrir le journal alimentaire"
-                title="Ouvrir le journal alimentaire"
-                className="inline-flex size-10 items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
-              >
-                <ChevronRight aria-hidden="true" className="size-5" />
-              </Link>
-            ) : (
-              <div className="flex flex-wrap gap-2">
-                <Link to={addFoodPath(date, preferredMealSlot)} className={primaryActionClassName()}>
-                  <Plus aria-hidden="true" className="size-4" />
-                  Ajouter un repas
-                </Link>
-                <Link to={barcodeScannerPath(date, preferredMealSlot)} className={secondaryActionClassName()}>
-                  <ScanLine aria-hidden="true" className="size-4" />
-                  Scanner
-                </Link>
-                <Link to={foodJournalPath(date)} className={secondaryActionClassName()}>
-                  Journal
-                </Link>
-              </div>
-            )
+            <button
+              type="button"
+              className={nutritionComplete ? secondaryActionClassName() : primaryActionClassName()}
+              onClick={() => setOpenSheet('nutrition')}
+            >
+              <Plus aria-hidden="true" className="size-4" />
+              Ajouter un repas
+            </button>
           }
         />
 
@@ -739,6 +721,14 @@ export function DashboardDailyAssistant({
         onPlanStrength={onPlanStrength}
         onUpdateStrength={onUpdateStrength}
         onSaveEndurance={onSaveEndurance}
+      />
+      <FoodJournalAddSheet
+        open={openSheet === 'nutrition'}
+        date={date}
+        navigationStates={nutritionNavigationStates}
+        entryCounts={nutrition.entryCounts}
+        currentHour={currentHour}
+        onClose={() => setOpenSheet(undefined)}
       />
       <DailyCheckOutSheet
         open={openSheet === 'checkOut'}

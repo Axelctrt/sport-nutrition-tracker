@@ -65,6 +65,12 @@ const nutrition: DailyDashboardNutrition = {
     fatGrams: 15,
   },
   journalStatus: undefined,
+  entryCounts: {
+    breakfast: 2,
+    lunch: 2,
+    dinner: 2,
+    snacks: 0,
+  },
 };
 
 describe('DashboardTodaySummary', () => {

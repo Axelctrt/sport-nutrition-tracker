@@ -2,7 +2,8 @@ import {
   CircleAlert,
   SlidersHorizontal,
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { useEffect, useRef } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 import { useProfile } from '@/app/providers/profile/useProfile';
 import { routePaths } from '@/app/routePaths';
@@ -21,8 +22,10 @@ import { DashboardTrainingAgenda } from '@/features/dashboard/components/Dashboa
 import { DashboardWeeklyMissions } from '@/features/dashboard/components/DashboardWeeklyMissions';
 import { DashboardWidgetStack } from '@/features/dashboard/components/DashboardWidgetStack';
 import { useDailyDashboard } from '@/features/dashboard/hooks/useDailyDashboard';
+import type { FoodJournalNavigationState } from '@/features/food-journal/navigation/foodJournalNavigation';
 import { useCurrentWeight } from '@/features/weight/hooks/useCurrentWeight';
 import { useDashboardPreferences } from '@/features/dashboard-customization/hooks/useDashboardPreferences';
+import { useToast } from '@/shared/toast/useToast';
 import { Button } from '@/shared/ui/Button';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 import { PageSkeleton } from '@/shared/ui/PageSkeleton';
@@ -30,6 +33,11 @@ import { formatLocalDate } from '@/shared/utils/dates';
 
 export function DashboardPage() {
   const { profile } = useProfile();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const toast = useToast();
+  const handledFoodFeedbackRef = useRef<string | undefined>(undefined);
+  const locationState = location.state as FoodJournalNavigationState | null;
   const {
     date,
     status,
@@ -60,6 +68,20 @@ export function DashboardPage() {
   } = useDashboardPreferences();
 
   const currentWeightState = useCurrentWeight(profile);
+
+  useEffect(() => {
+    const feedback = locationState?.foodJournalFeedback;
+    if (!feedback) return;
+    const feedbackKey = `${feedback.title}:${feedback.entryId ?? feedback.mealSlot}`;
+    if (handledFoodFeedbackRef.current === feedbackKey) return;
+    handledFoodFeedbackRef.current = feedbackKey;
+    toast.success(feedback.title);
+    void refresh();
+    void navigate(`${location.pathname}${location.search}`, {
+      replace: true,
+      state: null,
+    });
+  }, [location.pathname, location.search, locationState, navigate, refresh, toast]);
 
   if (!profile) return null;
   const firstName = profile.firstName?.trim();

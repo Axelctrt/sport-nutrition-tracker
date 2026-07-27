@@ -48,6 +48,12 @@ const nutrition: DailyDashboardNutrition = {
     fatGrams: 55,
   },
   journalStatus: undefined,
+  entryCounts: {
+    breakfast: 0,
+    lunch: 0,
+    dinner: 0,
+    snacks: 0,
+  },
 };
 
 const emptyDay: DailyCoachingDay = {
@@ -206,7 +212,7 @@ describe('DashboardDailyAssistant', () => {
 
     expect(screen.getByText('Check-out').closest('[data-stage-state]'))
       .toHaveAttribute('data-stage-state', 'current');
-    expect(screen.getByRole('link', { name: /Ajouter un repas/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Ajouter un repas/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Prévoir malgré tout' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Prévoir une autre activité' }))
       .not.toBeInTheDocument();
@@ -266,6 +272,34 @@ describe('DashboardDailyAssistant', () => {
       strengthSessionStyle: 'classic',
     });
     expect(onStartStrength).not.toHaveBeenCalled();
+  });
+
+  it('ouvre un seul parcours nutrition et présélectionne le repas pertinent', async () => {
+    const user = userEvent.setup();
+    renderAssistant(emptyDay, {
+      currentHour: 20,
+      nutrition: {
+        ...nutrition,
+        entryCounts: {
+          breakfast: 0,
+          lunch: 2,
+          dinner: 0,
+          snacks: 0,
+        },
+      },
+    });
+
+    expect(screen.queryByRole('link', { name: 'Scanner' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Journal' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Ajouter un repas' }));
+
+    const dialog = screen.getByRole('dialog', { name: 'Ajouter un repas' });
+    expect(within(dialog).getByRole('radio', { name: /Dîner/ })).toBeChecked();
+    await user.click(within(dialog).getByRole('button', { name: 'Continuer' }));
+    expect(within(dialog).getByRole('link', { name: /Scanner un produit/ })).toHaveAttribute(
+      'href',
+      '/food/barcode-scanner?date=2026-07-29&slot=dinner',
+    );
   });
 
   it('affiche plusieurs activités et pilote démarrage, modification et retrait', async () => {

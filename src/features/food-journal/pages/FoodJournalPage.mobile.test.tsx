@@ -108,11 +108,29 @@ describe('FoodJournalPage — expérience mobile', () => {
     expect(screen.getByRole('button', { name: /^Déjeuner/ })).toHaveAttribute('aria-expanded', 'true');
 
     await user.click(screen.getAllByRole('button', { name: 'Ajouter un aliment' })[0]!);
-    expect(await screen.findByRole('dialog', { name: 'Ajouter un aliment' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Petit-déjeuner/ })).toHaveAttribute(
+    const dialog = await screen.findByRole('dialog', { name: 'Ajouter un repas' });
+    await user.click(within(dialog).getByRole('radio', { name: /Petit-déjeuner/ }));
+    await user.click(within(dialog).getByRole('button', { name: 'Continuer' }));
+    expect(within(dialog).getByRole('link', { name: /Rechercher un aliment/ })).toHaveAttribute(
       'href',
       '/food/select?date=2026-06-24&slot=breakfast',
     );
+  });
+
+  it('ouvre le repas et le panneau demandés explicitement par l’URL', async () => {
+    renderJournal('/food?date=2026-06-24&slot=dinner&add=true');
+
+    const dialog = await screen.findByRole('dialog', { name: 'Ajouter un repas' });
+    await waitFor(() => {
+      expect(within(dialog).getByRole('radio', { name: /Dîner/ })).toBeChecked();
+    });
+    expect(screen.getByRole('button', { name: /^Dîner/ })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    );
+    await waitFor(() => {
+      expect(HTMLElement.prototype.scrollIntoView).toHaveBeenCalled();
+    });
   });
 
 

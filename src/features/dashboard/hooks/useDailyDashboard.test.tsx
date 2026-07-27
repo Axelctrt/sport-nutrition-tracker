@@ -141,6 +141,12 @@ describe('useDailyDashboard', () => {
     );
 
     await waitFor(() => expect(result.current.status).toBe('ready'));
+    expect(result.current.nutrition?.entryCounts).toEqual({
+      breakfast: 0,
+      lunch: 0,
+      dinner: 0,
+      snacks: 0,
+    });
 
     await act(async () => {
       await result.current.saveCheckIn({

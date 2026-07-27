@@ -97,6 +97,16 @@ export function foodJournalPath(date: string): string {
   return `${routePaths.food}?date=${encodeURIComponent(date)}`;
 }
 
+export function foodJournalMealPath(
+  date: string,
+  slot: string,
+  openAddSheet = false,
+): string {
+  const params = new URLSearchParams({ date, slot });
+  if (openAddSheet) params.set('add', 'true');
+  return `${routePaths.food}?${params.toString()}`;
+}
+
 export function weightPath(date: string): string {
   return `${routePaths.weight}?date=${encodeURIComponent(date)}`;
 }

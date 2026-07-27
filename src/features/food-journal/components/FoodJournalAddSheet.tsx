@@ -1,65 +1,216 @@
-import { Apple, Coffee, MoonStar, Salad } from 'lucide-react';
+import {
+  Apple,
+  ArrowLeft,
+  BookOpen,
+  Camera,
+  Clock3,
+  Coffee,
+  FilePlus2,
+  Heart,
+  MoonStar,
+  Salad,
+  ScanLine,
+  Search,
+  type LucideIcon,
+} from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { selectFoodPath } from '@/app/routePaths';
+import {
+  barcodeScannerPath,
+  favoriteMealsForMealPath,
+  newFoodProductForMealPath,
+  photoNutritionEstimatePath,
+  recipesForMealPath,
+  selectFoodPath,
+} from '@/app/routePaths';
 import type { MealSlot } from '@/domain/models/food';
 import type { FoodJournalNavigationState } from '@/features/food-journal/navigation/foodJournalNavigation';
 import { mealSlotLabels } from '@/features/food-journal/utils/foodLabels';
+import {
+  recommendedMealSlot,
+  type MealEntryCounts,
+} from '@/features/food-journal/utils/recommendedMealSlot';
 import { BottomSheet } from '@/shared/ui/BottomSheet';
+import { Button } from '@/shared/ui/Button';
+import { ChoiceCard, ChoiceCardGroup } from '@/shared/ui/ChoiceCard';
 
 interface FoodJournalAddSheetProps {
   open: boolean;
   date: string;
   navigationStates: ReadonlyMap<MealSlot, FoodJournalNavigationState>;
+  entryCounts?: MealEntryCounts;
+  currentHour?: number;
+  initialSlot?: MealSlot;
   onClose: () => void;
 }
 
 const mealOptions = [
-  { slot: 'breakfast', icon: Coffee, description: 'Commencer la journée' },
+  { slot: 'breakfast', icon: Coffee, description: 'Petit-déjeuner' },
   { slot: 'lunch', icon: Salad, description: 'Repas du midi' },
   { slot: 'dinner', icon: MoonStar, description: 'Repas du soir' },
-  { slot: 'snacks', icon: Apple, description: 'Collations et encas' },
+  { slot: 'snacks', icon: Apple, description: 'Collation ou encas' },
 ] satisfies ReadonlyArray<{
   slot: MealSlot;
-  icon: typeof Coffee;
+  icon: LucideIcon;
   description: string;
 }>;
+
+const emptyEntryCounts: MealEntryCounts = {};
+
+interface AddMethod {
+  id: string;
+  title: string;
+  description: string;
+  icon: LucideIcon;
+  path: (date: string, slot: MealSlot) => string;
+}
+
+const addMethods: readonly AddMethod[] = [
+  {
+    id: 'search',
+    title: 'Rechercher un aliment',
+    description: 'Trouver un aliment local ou en ligne.',
+    icon: Search,
+    path: (date, slot) => selectFoodPath(date, slot),
+  },
+  {
+    id: 'scanner',
+    title: 'Scanner un produit',
+    description: 'Lire son code-barres avec l’appareil photo.',
+    icon: ScanLine,
+    path: barcodeScannerPath,
+  },
+  {
+    id: 'recent',
+    title: 'Utiliser un aliment récent',
+    description: 'Reprendre rapidement un aliment déjà ajouté.',
+    icon: Clock3,
+    path: (date, slot) => selectFoodPath(date, slot, undefined, 'recent'),
+  },
+  {
+    id: 'favorite-meal',
+    title: 'Utiliser un repas favori',
+    description: 'Ajouter en une fois un repas enregistré.',
+    icon: Heart,
+    path: favoriteMealsForMealPath,
+  },
+  {
+    id: 'recipe',
+    title: 'Utiliser une recette',
+    description: 'Choisir une recette et le nombre de portions.',
+    icon: BookOpen,
+    path: recipesForMealPath,
+  },
+  {
+    id: 'photo',
+    title: 'Photo du repas',
+    description: 'Estimer le repas depuis une photo, puis vérifier.',
+    icon: Camera,
+    path: photoNutritionEstimatePath,
+  },
+  {
+    id: 'manual',
+    title: 'Saisie manuelle',
+    description: 'Créer un produit avec ses valeurs nutritionnelles.',
+    icon: FilePlus2,
+    path: newFoodProductForMealPath,
+  },
+];
 
 export function FoodJournalAddSheet({
   open,
   date,
   navigationStates,
+  entryCounts,
+  currentHour = new Date().getHours(),
+  initialSlot,
   onClose,
 }: FoodJournalAddSheetProps) {
+  const [step, setStep] = useState<'meal' | 'method'>('meal');
+  const [selectedSlot, setSelectedSlot] = useState<MealSlot>('breakfast');
+
+  useEffect(() => {
+    if (!open) return;
+    setStep('meal');
+    setSelectedSlot(initialSlot ?? recommendedMealSlot(
+      currentHour,
+      entryCounts ?? emptyEntryCounts,
+    ));
+  }, [currentHour, entryCounts, initialSlot, open]);
+
+  const title = (
+    <span className="flex items-center gap-2">
+      {step === 'method' ? (
+        <button
+          type="button"
+          aria-label="Choisir un autre repas"
+          className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+          onClick={() => setStep('meal')}
+        >
+          <ArrowLeft aria-hidden="true" className="size-5" />
+        </button>
+      ) : null}
+      <span>Ajouter un repas</span>
+    </span>
+  );
+
   return (
     <BottomSheet
       open={open}
-      title="Ajouter un aliment"
-      description="Choisissez le repas à compléter. Les autres méthodes d’ajout restent accessibles dans l’écran suivant."
+      title={title}
+      description={
+        step === 'meal'
+          ? 'Le repas le plus pertinent est présélectionné, mais tu peux le modifier.'
+          : `Choisis comment compléter le ${mealSlotLabels[selectedSlot].toLocaleLowerCase('fr')}.`
+      }
       onClose={onClose}
+      footer={step === 'meal' ? (
+        <Button fullWidth onClick={() => setStep('method')}>
+          Continuer
+        </Button>
+      ) : undefined}
     >
-      <div className="grid gap-3 sm:grid-cols-2">
-        {mealOptions.map(({ slot, icon: Icon, description }) => (
-          <Link
-            key={slot}
-            to={selectFoodPath(date, slot)}
-            state={navigationStates.get(slot) ?? {}}
-            onClick={onClose}
-            className="flex min-h-20 items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition-colors hover:border-brand-300 hover:bg-brand-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-brand-700 dark:hover:bg-brand-950/40"
-          >
-            <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-brand-100 text-brand-700 dark:bg-brand-950 dark:text-brand-300">
-              <Icon aria-hidden="true" className="size-5" />
-            </span>
-            <span className="min-w-0">
-              <span className="block font-semibold text-slate-950 dark:text-white">
-                {mealSlotLabels[slot]}
+      {step === 'meal' ? (
+        <ChoiceCardGroup label="Quel repas souhaites-tu compléter ?" columns={1}>
+          {mealOptions.map(({ slot, icon, description }) => (
+            <ChoiceCard
+              key={slot}
+              name="meal-add-slot"
+              value={slot}
+              title={mealSlotLabels[slot]}
+              description={description}
+              icon={icon}
+              selected={selectedSlot === slot}
+              onSelect={() => setSelectedSlot(slot)}
+              comfortable
+            />
+          ))}
+        </ChoiceCardGroup>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2" aria-label="Méthodes d’ajout">
+          {addMethods.map(({ id, title: methodTitle, description, icon: Icon, path }) => (
+            <Link
+              key={id}
+              to={path(date, selectedSlot)}
+              state={navigationStates.get(selectedSlot) ?? {}}
+              onClick={onClose}
+              className="flex min-h-20 items-start gap-3 rounded-xl border border-slate-200 bg-white p-3 text-left transition-colors hover:border-brand-300 hover:bg-brand-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-brand-700 dark:hover:bg-brand-950/40"
+            >
+              <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand-100 text-brand-700 dark:bg-brand-950 dark:text-brand-300">
+                <Icon aria-hidden="true" className="size-5" />
               </span>
-              <span className="mt-1 block text-sm text-slate-500 dark:text-slate-400">
-                {description}
+              <span className="min-w-0">
+                <span className="block text-sm font-semibold text-slate-950 dark:text-white">
+                  {methodTitle}
+                </span>
+                <span className="mt-1 block text-xs leading-4 text-slate-500 dark:text-slate-400">
+                  {description}
+                </span>
               </span>
-            </span>
-          </Link>
-        ))}
-      </div>
+            </Link>
+          ))}
+        </div>
+      )}
     </BottomSheet>
   );
 }

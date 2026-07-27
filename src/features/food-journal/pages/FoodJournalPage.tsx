@@ -26,6 +26,12 @@ import { RefreshStatus } from '@/shared/ui/RefreshStatus';
 import { formatLocalDate, toLocalDate } from '@/shared/utils/dates';
 import { isValidLocalDate } from '@/shared/validation/localDate';
 
+const mealSlots: readonly MealSlot[] = ['breakfast', 'lunch', 'dinner', 'snacks'];
+
+function isMealSlot(value: string | null): value is MealSlot {
+  return value !== null && mealSlots.includes(value as MealSlot);
+}
+
 export function FoodJournalPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
@@ -33,9 +39,13 @@ export function FoodJournalPage() {
   const toast = useToast();
   const handledFeedbackRef = useRef<string | undefined>(undefined);
   const initializedMealDateRef = useRef<string | undefined>(undefined);
+  const handledAddRequestRef = useRef<string | undefined>(undefined);
   const locationState = location.state as FoodJournalNavigationState | null;
   const requestedDate = searchParams.get('date') ?? '';
   const date = isValidLocalDate(requestedDate) ? requestedDate : toLocalDate();
+  const requestedSlotValue = searchParams.get('slot');
+  const requestedSlot = isMealSlot(requestedSlotValue) ? requestedSlotValue : undefined;
+  const addRequested = searchParams.get('add') === 'true';
   const {
     snapshot,
     status,
@@ -80,11 +90,37 @@ export function FoodJournalPage() {
   }, [date]);
 
   useEffect(() => {
-    if (!snapshot || initializedMealDateRef.current === date) return;
-    initializedMealDateRef.current = date;
+    if (!snapshot) return;
+    const initializationKey = `${date}:${requestedSlot ?? 'automatic'}`;
+    if (initializedMealDateRef.current === initializationKey) return;
+    initializedMealDateRef.current = initializationKey;
     const firstMealWithEntries = snapshot.meals.find((meal) => meal.entries.length > 0);
-    setExpandedMealSlot(firstMealWithEntries?.slot ?? 'breakfast');
-  }, [date, snapshot]);
+    const nextSlot = requestedSlot ?? firstMealWithEntries?.slot ?? 'breakfast';
+    setExpandedMealSlot(nextSlot);
+    if (requestedSlot) {
+      window.requestAnimationFrame(() => {
+        document.getElementById(`food-meal-${requestedSlot}`)?.scrollIntoView({
+          behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+            ? 'auto'
+            : 'smooth',
+          block: 'nearest',
+        });
+      });
+    }
+  }, [date, requestedSlot, snapshot]);
+
+  useEffect(() => {
+    if (!addRequested) {
+      handledAddRequestRef.current = undefined;
+      return;
+    }
+    if (!snapshot || !requestedSlot) return;
+    const requestKey = `${date}:${requestedSlot}`;
+    if (handledAddRequestRef.current === requestKey) return;
+    handledAddRequestRef.current = requestKey;
+    setExpandedMealSlot(requestedSlot);
+    setAddSheetOpen(true);
+  }, [addRequested, date, requestedSlot, snapshot]);
 
   const remaining = snapshot && target
     ? calculateRemainingNutrition(target.targetCaloriesKcal, target.macros, snapshot.totals)
@@ -135,6 +171,11 @@ export function FoodJournalPage() {
       createFoodJournalReturnState(currentJournalPath, location.key, meal.slot),
     ]));
   }, [currentJournalPath, location.key, snapshot]);
+  const entryCounts = useMemo<Partial<Record<MealSlot, number>>>(() => (
+    Object.fromEntries(
+      snapshot?.meals.map((meal) => [meal.slot, meal.entries.length] as const) ?? [],
+    )
+  ), [snapshot]);
 
   const hasEntries = Boolean(snapshot?.entries.length);
 
@@ -306,6 +347,8 @@ export function FoodJournalPage() {
         open={addSheetOpen}
         date={date}
         navigationStates={navigationStates}
+        entryCounts={entryCounts}
+        {...(requestedSlot ? { initialSlot: requestedSlot } : {})}
         onClose={() => setAddSheetOpen(false)}
       />
     </section>

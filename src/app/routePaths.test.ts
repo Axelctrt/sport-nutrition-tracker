@@ -1,6 +1,7 @@
 import {
   routePaths,
   barcodeScannerPath,
+  foodJournalMealPath,
   favoriteMealsForMealPath,
   photoNutritionEstimatePath,
   recipesForMealPath,
@@ -16,6 +17,12 @@ import {
 } from '@/app/routePaths';
 
 describe('parcours de sélection alimentaire', () => {
+  it('ouvre le journal sur un repas précis et peut demander le panneau d’ajout', () => {
+    expect(foodJournalMealPath('2026-07-10', 'dinner', true)).toBe(
+      '/food?date=2026-07-10&slot=dinner&add=true',
+    );
+  });
+
   it('conserve la date, le repas et le produit présélectionné', () => {
     expect(selectFoodPath('2026-06-24', 'breakfast', 'product-1')).toBe(
       '/food/select?date=2026-06-24&slot=breakfast&productId=product-1',
