@@ -188,4 +188,36 @@ describe('DashboardTodaySummary', () => {
     expect(screen.queryByRole('button', { name: 'Bilan de la journée disponible' })).not.toBeInTheDocument();
     expect(screen.queryByText('Dépense du jour estimée')).not.toBeInTheDocument();
   });
+
+  it('conserve les grands chiffres complets dans les valeurs essentielles', () => {
+    const largeSnapshot = createSnapshot();
+    largeSnapshot.target.targetCaloriesKcal = 13_000;
+    largeSnapshot.target.macros.proteinGrams = 245;
+    largeSnapshot.calculation.steps.totalSteps = 123_456;
+
+    render(
+      <DashboardTodaySummary
+        snapshot={largeSnapshot}
+        nutrition={{
+          ...nutrition,
+          consumed: {
+            ...nutrition.consumed,
+            caloriesKcal: 12_450,
+            proteinGrams: 245,
+          },
+          remaining: {
+            ...nutrition.remaining,
+            caloriesKcal: 550,
+          },
+        }}
+        dailyStepGoal={123_456}
+        currentWeightKg={199.9}
+      />,
+    );
+
+    expect(screen.getByText(/12 450/)).toHaveTextContent(/12 450\/13 000\s*kcal/);
+    expect(screen.getByText('245').parentElement).toHaveTextContent('245 / 245 g');
+    expect(screen.getByText('123 456')).toBeInTheDocument();
+    expect(screen.getByText('199,9 kg')).toBeInTheDocument();
+  });
 });

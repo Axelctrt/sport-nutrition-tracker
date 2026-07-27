@@ -86,7 +86,7 @@ describe('BottomSheet', () => {
     expect(footer).toHaveClass('pb-[max(0.75rem,env(safe-area-inset-bottom))]');
   });
 
-  it('masque le footer et recentre le champ lorsque le clavier reduit la zone visible', () => {
+  it('compacte le footer et recentre le champ lorsque le clavier reduit la zone visible', () => {
     vi.useFakeTimers();
     const originalVisualViewport = window.visualViewport;
     const originalInnerHeight = window.innerHeight;
@@ -113,7 +113,8 @@ describe('BottomSheet', () => {
     vi.advanceTimersByTime(100);
 
     expect(dialog).toHaveAttribute('data-keyboard-open', 'true');
-    expect(footer).toHaveClass('hidden');
+    expect(footer).not.toHaveClass('hidden');
+    expect(footer).toHaveClass('pt-2');
     expect(scrollIntoView).toHaveBeenCalledWith(expect.objectContaining({ block: 'center' }));
 
     Object.defineProperty(window, 'visualViewport', {

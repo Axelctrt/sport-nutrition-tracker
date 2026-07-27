@@ -63,6 +63,62 @@ export async function expectNoCriticalHorizontalOverflow(page: Page): Promise<vo
   expect(overflow).toBeLessThanOrEqual(1);
 }
 
+export async function expectEssentialContentVisible(page: Page): Promise<void> {
+  const issues = await page.evaluate(() => {
+    const viewportWidth = document.documentElement.clientWidth;
+    const viewportHeight = window.innerHeight;
+    const elements = Array.from(document.querySelectorAll<HTMLElement>(
+      '[data-responsive-essential], main h1, main h2, nav[aria-label="Navigation mobile"] a[href]',
+    ));
+
+    return elements.flatMap((element) => {
+      const style = window.getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      if (
+        style.display === 'none'
+        || style.visibility === 'hidden'
+        || rect.width === 0
+        || rect.height === 0
+      ) {
+        return [];
+      }
+
+      const label = element.getAttribute('aria-label')
+        ?? element.textContent?.replace(/\s+/g, ' ').trim()
+        ?? element.tagName;
+      const problems: string[] = [];
+      if (rect.left < -1 || rect.right > viewportWidth + 1) {
+        problems.push('sort horizontalement du viewport');
+      }
+      if (element.matches('[data-responsive-essential="action"]')) {
+        if (rect.width < 44 || rect.height < 44) {
+          problems.push(`zone tactile ${Math.round(rect.width)}×${Math.round(rect.height)}`);
+        }
+        if (element.scrollWidth > element.clientWidth + 1) {
+          problems.push('libellé horizontalement masqué');
+        }
+        if (element.scrollHeight > element.clientHeight + 1) {
+          problems.push('libellé verticalement masqué');
+        }
+      }
+      if (
+        element.matches('[data-responsive-essential="value"]')
+        && (element.scrollWidth > element.clientWidth + 1
+          || element.scrollHeight > element.clientHeight + 1)
+      ) {
+        problems.push('valeur masquée');
+      }
+      if (rect.top < viewportHeight && rect.bottom > 0 && style.opacity === '0') {
+        problems.push('contenu essentiel invisible');
+      }
+
+      return problems.map((problem) => ({ label, problem }));
+    });
+  });
+
+  expect(issues, JSON.stringify(issues, null, 2)).toEqual([]);
+}
+
 export async function getBrowserLocalDate(page: Page): Promise<string> {
   return page.evaluate(() => {
     const now = new Date();

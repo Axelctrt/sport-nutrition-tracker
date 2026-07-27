@@ -8,7 +8,7 @@ export type EmptyStateTone = 'brand' | 'neutral' | 'success';
 interface EmptyStateProps {
   icon: LucideIcon;
   title: string;
-  description: string;
+  description?: string;
   primaryAction?: ReactNode;
   secondaryAction?: ReactNode;
   className?: string;
@@ -38,9 +38,11 @@ export function EmptyState({
         <Icon aria-hidden="true" className="size-6" />
       </div>
       <h2 className="mt-4 text-lg font-semibold text-slate-950 dark:text-white">{title}</h2>
-      <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-600 dark:text-slate-300">
-        {description}
-      </p>
+      {description ? (
+        <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-600 dark:text-slate-300">
+          {description}
+        </p>
+      ) : null}
       {primaryAction || secondaryAction ? (
         <div className="mt-5 flex flex-col justify-center gap-2 sm:flex-row">
           {primaryAction}

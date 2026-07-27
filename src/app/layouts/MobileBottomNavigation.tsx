@@ -19,8 +19,9 @@ export function MobileBottomNavigation() {
               <Link
                 to={item.path}
                 aria-current={isActive ? 'page' : undefined}
+                data-responsive-essential="action"
                 className={cn(
-                  'flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[0.7rem] font-medium transition-colors',
+                  'flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl px-0.5 text-xs font-medium transition-colors',
                   isActive
                     ? 'bg-brand-100 text-brand-900 dark:bg-brand-900/50 dark:text-brand-100'
                     : 'text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800',

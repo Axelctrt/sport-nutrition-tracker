@@ -292,7 +292,8 @@ export function BottomSheet({
             data-bottom-sheet-footer
             className={cn(
               'shrink-0 border-t border-slate-200 bg-white/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur dark:border-slate-800 dark:bg-slate-900/95 sm:px-5',
-              keyboardOpen && 'hidden',
+              keyboardOpen
+                && 'px-3 pb-[max(0.35rem,env(safe-area-inset-bottom))] pt-2 sm:px-4 [&_button]:min-h-11',
             )}
           >
             {footer}

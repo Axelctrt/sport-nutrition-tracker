@@ -45,6 +45,57 @@ export default defineConfig({
         ...devices['iPhone 15'],
       },
     },
+    {
+      name: 'chromium-mobile-360',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 360, height: 800 },
+        hasTouch: true,
+        isMobile: true,
+        ...(chromiumExecutablePath
+          ? { launchOptions: { executablePath: chromiumExecutablePath } }
+          : {}),
+      },
+    },
+    {
+      name: 'chromium-small-320',
+      testMatch: 'responsive-universal.spec.ts',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 320, height: 568 },
+        hasTouch: true,
+        isMobile: true,
+        ...(chromiumExecutablePath
+          ? { launchOptions: { executablePath: chromiumExecutablePath } }
+          : {}),
+      },
+    },
+    {
+      name: 'chromium-large-412',
+      testMatch: 'responsive-universal.spec.ts',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 412, height: 915 },
+        hasTouch: true,
+        isMobile: true,
+        ...(chromiumExecutablePath
+          ? { launchOptions: { executablePath: chromiumExecutablePath } }
+          : {}),
+      },
+    },
+    {
+      name: 'chromium-landscape',
+      testMatch: 'responsive-universal.spec.ts',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 740, height: 360 },
+        hasTouch: true,
+        isMobile: true,
+        ...(chromiumExecutablePath
+          ? { launchOptions: { executablePath: chromiumExecutablePath } }
+          : {}),
+      },
+    },
   ],
   webServer: {
     command: 'npm run build && npm run preview -- --host 127.0.0.1 --port 4173',

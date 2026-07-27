@@ -8,6 +8,7 @@ import {
 } from '@/domain/dashboard/dashboardPreferences';
 import type { DailyDashboardNutrition } from '@/features/dashboard/hooks/useDailyDashboard';
 import { Card } from '@/shared/ui/Card';
+import { ContextHelp } from '@/shared/ui/ContextHelp';
 import { ProgressBar } from '@/shared/ui/ProgressBar';
 import { formatLocalDate } from '@/shared/utils/dates';
 
@@ -38,7 +39,7 @@ function MacroMetric({
   return (
     <div className="min-w-0 text-center">
       <dt className="truncate text-xs font-medium text-slate-500 dark:text-slate-400">{label}</dt>
-      <dd className="mt-1 text-sm font-bold tabular-nums text-slate-950 dark:text-white sm:text-base">
+      <dd data-responsive-essential="value" className="mt-1 text-[0.8125rem] font-bold tabular-nums text-slate-950 dark:text-white sm:text-base">
         {rounded(consumed).toLocaleString('fr-FR')}
         <span className="font-medium text-slate-400 dark:text-slate-500"> / {target.toLocaleString('fr-FR')} g</span>
       </dd>
@@ -79,19 +80,30 @@ export function DashboardTodaySummary({
   return (
     <Card className={`${density === 'compact' ? 'mt-3' : 'mt-5'} overflow-hidden`} aria-busy={isRefreshing}>
       <div className={density === 'compact' ? 'p-4' : 'p-4 sm:p-5'}>
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-col items-stretch gap-3 min-[380px]:flex-row min-[380px]:items-start min-[380px]:justify-between">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">
                 Cible alimentaire guidée
               </p>
+              <ContextHelp
+                iconOnly
+                question="À propos de la cible alimentaire"
+                tone="brand"
+              >
+                Les calories et macronutriments sont des estimations de pilotage,
+                pas des mesures médicales.
+              </ContextHelp>
               {isRefreshing ? (
                 <span className="text-xs font-medium text-brand-700 dark:text-brand-300" role="status">
                   Mise à jour…
                 </span>
               ) : null}
             </div>
-            <p className={`${density === 'compact' ? 'mt-0.5 text-2xl' : 'mt-1 text-3xl'} font-bold tracking-tight tabular-nums text-slate-950 dark:text-white`}>
+            <p
+              data-responsive-essential="value"
+              className={`${density === 'compact' ? 'mt-0.5 text-2xl' : 'mt-1 text-3xl'} font-bold tracking-tight tabular-nums text-slate-950 dark:text-white`}
+            >
               {consumedCalories.toLocaleString('fr-FR')}
               <span className="mx-1 text-xl font-semibold text-slate-400 dark:text-slate-500">/</span>
               {snapshot.target.targetCaloriesKcal.toLocaleString('fr-FR')}
@@ -111,7 +123,8 @@ export function DashboardTodaySummary({
             ) : null}
           </div>
           <div
-            className={`shrink-0 rounded-xl px-3 py-2 text-right ${
+            data-responsive-essential="value"
+            className={`w-fit shrink-0 self-start rounded-xl px-3 py-2 text-left min-[380px]:self-auto min-[380px]:text-right ${
               remainingCalories >= 0
                 ? 'bg-brand-50 text-brand-900 dark:bg-brand-950/70 dark:text-brand-100'
                 : 'bg-red-50 text-red-800 dark:bg-red-950/60 dark:text-red-200'
@@ -218,7 +231,7 @@ export function DashboardTodaySummary({
                 <Footprints aria-hidden="true" className="size-4" />
                 {actualSteps === undefined ? 'Pas attendus' : 'Pas réels'}
               </dt>
-              <dd className="mt-1 text-lg font-bold tabular-nums text-slate-950 dark:text-white">
+              <dd data-responsive-essential="value" className="mt-1 text-lg font-bold tabular-nums text-slate-950 dark:text-white">
                 {(actualSteps ?? expectedSteps).toLocaleString('fr-FR')}
               </dd>
               <p className="truncate text-xs text-slate-500 dark:text-slate-400">
@@ -234,7 +247,7 @@ export function DashboardTodaySummary({
                 <Scale aria-hidden="true" className="size-4" />
                 Poids actuel
               </dt>
-              <dd className="mt-1 truncate text-lg font-bold tabular-nums text-slate-950 dark:text-white">
+              <dd data-responsive-essential="value" className="mt-1 truncate text-lg font-bold tabular-nums text-slate-950 dark:text-white">
                 {resolvedCurrentWeight.toLocaleString('fr-FR')} kg
               </dd>
               <p className="truncate text-xs text-slate-500 dark:text-slate-400">
