@@ -17,6 +17,8 @@ import { recalculateTargetsAfterWeightChange } from '@/application/daily/referen
 import {
   loadDailyActivityPlanning,
   planDailyStrengthActivity,
+  restoreDailyEnduranceActivity,
+  restoreDailyStrengthActivity,
   saveDailyEnduranceActivity,
   skipDailyEnduranceActivity,
   skipDailyStrengthActivity,
@@ -84,8 +86,10 @@ export interface DailyDashboardDependencies {
     updateStrength: typeof updateDailyStrengthActivity;
     startStrength: typeof startDailyStrengthActivity;
     skipStrength: typeof skipDailyStrengthActivity;
+    restoreStrength?: typeof restoreDailyStrengthActivity;
     saveEndurance: typeof saveDailyEnduranceActivity;
     skipEndurance: typeof skipDailyEnduranceActivity;
+    restoreEndurance?: typeof restoreDailyEnduranceActivity;
   };
 }
 
@@ -110,8 +114,10 @@ const defaultDependencies: DailyDashboardDependencies = {
     updateStrength: updateDailyStrengthActivity,
     startStrength: startDailyStrengthActivity,
     skipStrength: skipDailyStrengthActivity,
+    restoreStrength: restoreDailyStrengthActivity,
     saveEndurance: saveDailyEnduranceActivity,
     skipEndurance: skipDailyEnduranceActivity,
+    restoreEndurance: restoreDailyEnduranceActivity,
   },
 };
 
@@ -278,6 +284,12 @@ export function useDailyDashboard(options: UseDailyDashboardOptions = {}) {
     await refresh();
   }, [dependencies.planning, refresh]);
 
+  const restoreStrengthActivity = useCallback(async (sessionId: string) => {
+    if (!dependencies.planning?.restoreStrength) return;
+    await dependencies.planning.restoreStrength(sessionId);
+    await refresh();
+  }, [dependencies.planning, refresh]);
+
   const saveEnduranceActivity = useCallback(async (
     input: PlannedEnduranceInput,
     sessionId?: string,
@@ -292,6 +304,12 @@ export function useDailyDashboard(options: UseDailyDashboardOptions = {}) {
   const skipEnduranceActivity = useCallback(async (sessionId: string) => {
     if (!dependencies.planning) return;
     await dependencies.planning.skipEndurance(sessionId);
+    await refresh();
+  }, [dependencies.planning, refresh]);
+
+  const restoreEnduranceActivity = useCallback(async (sessionId: string) => {
+    if (!dependencies.planning?.restoreEndurance) return;
+    await dependencies.planning.restoreEndurance(sessionId);
     await refresh();
   }, [dependencies.planning, refresh]);
 
@@ -314,7 +332,9 @@ export function useDailyDashboard(options: UseDailyDashboardOptions = {}) {
     updateStrengthActivity,
     startStrengthActivity,
     skipStrengthActivity,
+    restoreStrengthActivity,
     saveEnduranceActivity,
     skipEnduranceActivity,
+    restoreEnduranceActivity,
   };
 }

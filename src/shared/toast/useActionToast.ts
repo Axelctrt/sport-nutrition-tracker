@@ -1,12 +1,14 @@
 import { useContext, useMemo } from 'react';
 
-import { ToastContext } from '@/shared/toast/ToastContext';
+import { ToastContext, type ToastAction } from '@/shared/toast/ToastContext';
 import { queuePendingToast } from '@/shared/toast/pendingToast';
 
 interface ActionSuccessInput {
   key: string;
   title: string;
   description?: string;
+  action?: ToastAction;
+  durationMs?: number;
 }
 
 interface ActionErrorInput {
@@ -26,13 +28,15 @@ export function useActionToast() {
   const toast = useContext(ToastContext);
 
   return useMemo(() => ({
-    success({ key, title, description }: ActionSuccessInput): string {
+    success({ key, title, description, action, durationMs }: ActionSuccessInput): string {
       if (!toast) return '';
       return toast.showToast({
         title,
         tone: 'success',
         dedupeKey: `action-success:${key}`,
         ...(description === undefined ? {} : { description }),
+        ...(action === undefined ? {} : { action }),
+        ...(durationMs === undefined ? {} : { durationMs }),
       });
     },
     successAfterReload({ key, title, description }: ActionSuccessInput): void {

@@ -12,7 +12,10 @@ import type { OtherActivity } from '@/domain/models/activity';
 import type { WorkoutSession, WorkoutTemplate } from '@/domain/models/strength';
 import type { PlannedEnduranceSession } from '@/domain/planning/endurancePlanningState';
 import { DashboardDailyAssistant } from '@/features/dashboard/components/DashboardDailyAssistant';
-import type { DailyDashboardNutrition } from '@/features/dashboard/hooks/useDailyDashboard';
+import type {
+  ActiveWorkoutSummary,
+  DailyDashboardNutrition,
+} from '@/features/dashboard/hooks/useDailyDashboard';
 import { ToastProvider } from '@/shared/toast/ToastProvider';
 import { createEntity } from '@/shared/utils/entities';
 
@@ -124,6 +127,7 @@ function renderAssistant(
     snapshot: DailyTargetSnapshot;
     nutrition: DailyDashboardNutrition;
     activityPlanning: DailyActivityPlanningSnapshot;
+    activeWorkout: ActiveWorkoutSummary;
     initialEntry: string;
   }> = {},
 ) {
@@ -134,8 +138,10 @@ function renderAssistant(
   const onUpdateStrength = vi.fn().mockResolvedValue(undefined);
   const onStartStrength = vi.fn().mockResolvedValue(undefined);
   const onSkipStrength = vi.fn().mockResolvedValue(undefined);
+  const onRestoreStrength = vi.fn().mockResolvedValue(undefined);
   const onSaveEndurance = vi.fn().mockResolvedValue(undefined);
   const onSkipEndurance = vi.fn().mockResolvedValue(undefined);
+  const onRestoreEndurance = vi.fn().mockResolvedValue(undefined);
   render(
     <MemoryRouter initialEntries={[overrides.initialEntry ?? '/']}>
       <ToastProvider>
@@ -145,6 +151,7 @@ function renderAssistant(
           nutrition={overrides.nutrition ?? nutrition}
           dailyCoaching={dailyCoaching}
           activityPlanning={overrides.activityPlanning ?? emptyPlanning}
+          {...(overrides.activeWorkout ? { activeWorkout: overrides.activeWorkout } : {})}
           currentHour={overrides.currentHour ?? 9}
           onSaveCheckIn={onSaveCheckIn}
           onSaveActivityDecision={onSaveActivityDecision}
@@ -153,8 +160,10 @@ function renderAssistant(
           onUpdateStrength={onUpdateStrength}
           onStartStrength={onStartStrength}
           onSkipStrength={onSkipStrength}
+          onRestoreStrength={onRestoreStrength}
           onSaveEndurance={onSaveEndurance}
           onSkipEndurance={onSkipEndurance}
+          onRestoreEndurance={onRestoreEndurance}
         />
       </ToastProvider>
     </MemoryRouter>,
@@ -167,8 +176,10 @@ function renderAssistant(
     onUpdateStrength,
     onStartStrength,
     onSkipStrength,
+    onRestoreStrength,
     onSaveEndurance,
     onSkipEndurance,
+    onRestoreEndurance,
   };
 }
 
@@ -215,12 +226,14 @@ describe('DashboardDailyAssistant', () => {
     expect(screen.getByText('Check-out').closest('[data-stage-state]'))
       .toHaveAttribute('data-stage-state', 'current');
     expect(screen.getByRole('button', { name: /Ajouter un repas/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Prévoir malgré tout' })).toBeInTheDocument();
-    expect(screen.getByText('Aucune activité prévue.')).toHaveClass('whitespace-nowrap');
-    expect(screen.getByRole('link', { name: 'Planification avancée' })).toHaveClass(
-      'whitespace-nowrap',
-      'text-brand-700',
-    );
+    expect(screen.getByRole('button', {
+      name: 'Prévoir une activité malgré le repos',
+    })).toBeInTheDocument();
+    expect(screen.getByText('Repos prévu')).not.toHaveClass('whitespace-nowrap');
+    expect(screen.getByRole('link', { name: 'Planification avancée' }))
+      .not.toHaveClass('whitespace-nowrap');
+    expect(screen.getByRole('link', { name: 'Planification avancée' }))
+      .toHaveClass('text-brand-700');
     expect(screen.queryByRole('button', { name: 'Prévoir une autre activité' }))
       .not.toBeInTheDocument();
   });
@@ -229,13 +242,13 @@ describe('DashboardDailyAssistant', () => {
     const user = userEvent.setup();
     const { onSaveActivityDecision } = renderAssistant();
 
-    await user.click(screen.getByRole('button', { name: 'Repos aujourd’hui' }));
+    await user.click(screen.getByRole('button', { name: 'Prévoir du repos aujourd’hui' }));
 
     expect(onSaveActivityDecision).toHaveBeenCalledWith({
       date: '2026-07-29',
       decision: 'rest',
     });
-    expect(screen.getByRole('button', { name: /Repos aujourd/ }))
+    expect(screen.getByRole('button', { name: /Prévoir du repos aujourd/ }))
       .toHaveClass('border-brand-300');
   });
 
@@ -359,7 +372,8 @@ describe('DashboardDailyAssistant', () => {
     expect(screen.queryByRole('link', { name: 'Scanner' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Journal' })).not.toBeInTheDocument();
     const addMealButton = screen.getByRole('button', { name: 'Ajouter un repas' });
-    expect(addMealButton).toHaveClass('whitespace-nowrap', 'min-h-11');
+    expect(addMealButton).not.toHaveClass('whitespace-nowrap');
+    expect(addMealButton).toHaveClass('min-h-11');
     await user.click(addMealButton);
 
     const dialog = screen.getByRole('dialog', { name: 'Ajouter un repas' });
@@ -399,8 +413,8 @@ describe('DashboardDailyAssistant', () => {
     await user.click(startButtons[0]!);
     expect(onStartStrength).toHaveBeenCalledWith('strength-push');
 
-    const modifyButtons = screen.getAllByRole('button', { name: 'Modifier' });
-    await user.click(modifyButtons[0]!);
+    await user.click(screen.getByRole('button', { name: 'Actions pour Push' }));
+    await user.click(screen.getByRole('button', { name: 'Modifier' }));
     const dialog = screen.getByRole('dialog', { name: 'Modifier l’activité prévue' });
     await user.clear(within(dialog).getByLabelText('Durée prévue'));
     await user.type(within(dialog).getByLabelText('Durée prévue'), '50');
@@ -412,8 +426,8 @@ describe('DashboardDailyAssistant', () => {
       plannedDurationMinutes: 50,
     }));
 
-    const removeButtons = screen.getAllByRole('button', { name: 'Retirer' });
-    await user.click(removeButtons.at(-1)!);
+    await user.click(screen.getByRole('button', { name: 'Actions pour Footing facile' }));
+    await user.click(screen.getByRole('button', { name: 'Retirer' }));
     expect(onSkipEndurance).toHaveBeenCalledWith('endurance-run');
   });
 
@@ -443,13 +457,56 @@ describe('DashboardDailyAssistant', () => {
       },
     });
 
-    expect(screen.getByRole('link', { name: 'Reprendre la séance' }))
+    expect(screen.getByRole('link', { name: 'Reprendre' }))
       .toHaveAttribute('href', expect.stringContaining('strength-push'));
     expect(screen.getByText('Marche')).toBeInTheDocument();
     expect(screen.getByText(/Sport r/).closest('[data-stage-state]'))
       .toHaveAttribute('data-stage-state', 'complete');
     expect(screen.getByText('42 min réalisés')).toBeInTheDocument();
     expect(screen.getByText('Terminée')).toBeInTheDocument();
+  });
+
+  it('signale une séance ancienne interrompue sans en créer une nouvelle', () => {
+    const startedAt = new Date(Date.now() - 3 * 60 * 60 * 1_000).toISOString();
+    const activeWorkout: ActiveWorkoutSummary = {
+      session: createEntity<WorkoutSession>({
+        date: '2026-07-28',
+        status: 'inProgress',
+        startedAt,
+        sourceTemplateNameSnapshot: 'Full body',
+      }, 'interrupted-session', startedAt),
+      exerciseCount: 6,
+    };
+
+    renderAssistant(emptyDay, { activeWorkout });
+
+    expect(screen.getByText('Séance interrompue')).toBeInTheDocument();
+    expect(screen.getByText(/Dernière activité il y a 3 h/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Reprendre' })).toHaveAttribute(
+      'href',
+      '/strength/sessions/interrupted-session',
+    );
+    expect(screen.getByRole('link', { name: 'Terminer' })).toHaveAttribute(
+      'href',
+      '/strength/sessions/interrupted-session?finish=true',
+    );
+  });
+
+  it('permet d’annuler le retrait d’une activité planifiée', async () => {
+    const user = userEvent.setup();
+    const { onSkipEndurance, onRestoreEndurance } = renderAssistant(emptyDay, {
+      activityPlanning: {
+        ...emptyPlanning,
+        enduranceSessions: [{ session: endurancePlan() }],
+      },
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Actions pour Footing facile' }));
+    await user.click(screen.getByRole('button', { name: 'Retirer' }));
+    expect(onSkipEndurance).toHaveBeenCalledWith('endurance-run');
+
+    await user.click(await screen.findByRole('button', { name: 'Annuler le retrait de l’activité' }));
+    expect(onRestoreEndurance).toHaveBeenCalledWith('endurance-run');
   });
 
   it('clôt la journée sans fabriquer de pas lorsque ceux-ci sont ignorés', async () => {

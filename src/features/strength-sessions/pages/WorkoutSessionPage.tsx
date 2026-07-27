@@ -1,6 +1,6 @@
 import { ArrowLeft, Dumbbell, Plus, Save } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   buildWorkoutExerciseProgress,
   buildWorkoutSessionProgress,
@@ -34,6 +34,10 @@ import { SaveStatus } from '@/shared/ui/SaveStatus';
 import { formatLocalDate } from '@/shared/utils/dates';
 import { cn } from '@/shared/utils/cn';
 import { repositories } from '@/infrastructure/repositories/repositories';
+import {
+  createWorkoutSessionFeedbackState,
+  type WorkoutSessionNavigationState,
+} from '@/features/strength-sessions/navigation/workoutSessionNavigation';
 
 interface RemoveExerciseConfirmation {
   type: 'removeExercise';
@@ -108,6 +112,9 @@ function confirmationContent(
 export function WorkoutSessionPage() {
   const { sessionId = '' } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigationState = location.state as WorkoutSessionNavigationState | null;
   const {
     session,
     exercises,
@@ -209,6 +216,14 @@ export function WorkoutSessionPage() {
     () => buildWorkoutSessionProgress(exercises, strengthSets),
     [exercises, strengthSets],
   );
+
+  useEffect(() => {
+    if (searchParams.get('finish') !== 'true' || session?.status !== 'inProgress') return;
+    setConfirmation({ type: 'finish' });
+    const next = new URLSearchParams(searchParams);
+    next.delete('finish');
+    setSearchParams(next, { replace: true });
+  }, [searchParams, session?.status, setSearchParams]);
 
   const executionBlockCompleteByExerciseId = useMemo(() => {
     const progressByExerciseId = new Map(exercises.map((exercise) => [
@@ -345,7 +360,13 @@ export function WorkoutSessionPage() {
         );
         if (completed) {
           restTimer.stop();
-          await navigate(routePaths.workoutSessions);
+          const returnContext = navigationState?.workoutSessionReturn;
+          await navigate(
+            returnContext?.path ?? routePaths.workoutSessions,
+            returnContext
+              ? { state: createWorkoutSessionFeedbackState(returnContext, completed.id) }
+              : undefined,
+          );
         }
       } else if (confirmation.type === 'abandon') {
         const abandoned = await abandon();

@@ -1,6 +1,8 @@
 import {
   loadDailyActivityPlanning,
   planDailyStrengthActivity,
+  restoreDailyEnduranceActivity,
+  restoreDailyStrengthActivity,
   saveDailyEnduranceActivity,
   skipDailyEnduranceActivity,
   skipDailyStrengthActivity,
@@ -102,6 +104,10 @@ describe('dailyActivityPlanningService', () => {
     await skipDailyStrengthActivity(plannedFree.id, dependencies);
     const afterSkip = await loadDailyActivityPlanning('2026-07-29', dependencies);
     expect(afterSkip.strengthSessions.map(({ session }) => session.id)).toEqual([started.id]);
+    await restoreDailyStrengthActivity(plannedFree.id, dependencies);
+    const afterRestore = await loadDailyActivityPlanning('2026-07-29', dependencies);
+    expect(afterRestore.strengthSessions.map(({ session }) => session.id))
+      .toEqual(expect.arrayContaining([started.id, plannedFree.id]));
     expect(recalculateTargets).toHaveBeenCalledWith(['2026-07-29']);
   });
 
@@ -138,6 +144,9 @@ describe('dailyActivityPlanningService', () => {
     await skipDailyEnduranceActivity(swim.id, dependencies);
     expect((await loadDailyActivityPlanning('2026-07-29', dependencies)).enduranceSessions)
       .toEqual([]);
+    await restoreDailyEnduranceActivity(swim.id, dependencies);
+    expect((await loadDailyActivityPlanning('2026-07-29', dependencies)).enduranceSessions)
+      .toHaveLength(1);
   });
 
   it('modifie et reporte une séance libre encore prévue', async () => {

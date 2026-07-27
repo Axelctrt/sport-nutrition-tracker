@@ -185,6 +185,22 @@ export async function skipDailyStrengthActivity(
   }
 }
 
+export async function restoreDailyStrengthActivity(
+  sessionId: EntityId,
+  dependencies: DailyActivityPlanningDependencies = defaultDependencies,
+): Promise<WorkoutSession> {
+  const previous = await dependencies.workoutSessions.getById(sessionId);
+  if (!previous || previous.status !== 'skipped') {
+    throw new Error('La séance retirée ne peut plus être restaurée.');
+  }
+  const restored = await dependencies.workoutSessions.update(sessionId, {
+    status: 'planned',
+    skippedAt: undefined,
+  });
+  await dependencies.recalculateTargets([planningDateForSession(restored)]);
+  return restored;
+}
+
 export async function saveDailyEnduranceActivity(
   input: PlannedEnduranceInput,
   sessionId?: string,
@@ -209,4 +225,21 @@ export async function skipDailyEnduranceActivity(
     .find((session) => session.id === sessionId);
   setPlannedEnduranceStatus(sessionId, 'skipped');
   if (previous) await dependencies.recalculateTargets([previous.date]);
+}
+
+export async function restoreDailyEnduranceActivity(
+  sessionId: string,
+  dependencies: DailyActivityPlanningDependencies = defaultDependencies,
+): Promise<PlannedEnduranceSession> {
+  const previous = dependencies.readEnduranceSessions()
+    .find((session) => session.id === sessionId);
+  if (!previous || previous.status !== 'skipped') {
+    throw new Error('L’activité retirée ne peut plus être restaurée.');
+  }
+  setPlannedEnduranceStatus(sessionId, 'planned');
+  await dependencies.recalculateTargets([previous.date]);
+  const restored = dependencies.readEnduranceSessions()
+    .find((session) => session.id === sessionId);
+  if (!restored) throw new Error('L’activité restaurée est introuvable.');
+  return restored;
 }

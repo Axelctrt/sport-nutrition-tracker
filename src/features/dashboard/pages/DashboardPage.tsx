@@ -2,7 +2,7 @@ import {
   CircleAlert,
   SlidersHorizontal,
 } from 'lucide-react';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 import { useProfile } from '@/app/providers/profile/useProfile';
@@ -14,6 +14,7 @@ import { DashboardTodaySummary } from '@/features/dashboard/components/Dashboard
 import { DashboardWeeklyProgress } from '@/features/dashboard/components/DashboardWeeklyProgress';
 import { useDailyDashboard } from '@/features/dashboard/hooks/useDailyDashboard';
 import type { FoodJournalNavigationState } from '@/features/food-journal/navigation/foodJournalNavigation';
+import type { WorkoutSessionNavigationState } from '@/features/strength-sessions/navigation/workoutSessionNavigation';
 import { useCurrentWeight } from '@/features/weight/hooks/useCurrentWeight';
 import { useDashboardPreferences } from '@/features/dashboard-customization/hooks/useDashboardPreferences';
 import { useToast } from '@/shared/toast/useToast';
@@ -28,7 +29,10 @@ export function DashboardPage() {
   const navigate = useNavigate();
   const toast = useToast();
   const handledFoodFeedbackRef = useRef<string | undefined>(undefined);
-  const locationState = location.state as FoodJournalNavigationState | null;
+  const locationState = location.state as (
+    FoodJournalNavigationState & WorkoutSessionNavigationState
+  ) | null;
+  const [highlightedStage, setHighlightedStage] = useState<'sport'>();
   const {
     date,
     status,
@@ -46,8 +50,10 @@ export function DashboardPage() {
     updateStrengthActivity,
     startStrengthActivity,
     skipStrengthActivity,
+    restoreStrengthActivity,
     saveEnduranceActivity,
     skipEnduranceActivity,
+    restoreEnduranceActivity,
   } = useDailyDashboard();
   const {
     preferences,
@@ -71,6 +77,20 @@ export function DashboardPage() {
     });
   }, [location.pathname, location.search, locationState, navigate, refresh, toast]);
 
+  useEffect(() => {
+    const feedback = locationState?.workoutSessionFeedback;
+    if (!feedback) return;
+    toast.success(feedback.title);
+    setHighlightedStage('sport');
+    void refresh();
+    void navigate(`${location.pathname}${location.search}`, {
+      replace: true,
+      state: null,
+    });
+    const timer = window.setTimeout(() => setHighlightedStage(undefined), 2_500);
+    return () => window.clearTimeout(timer);
+  }, [location.pathname, location.search, locationState, navigate, refresh, toast]);
+
   if (!profile) return null;
   const firstName = profile.firstName?.trim();
 
@@ -89,9 +109,6 @@ export function DashboardPage() {
               ? `Bonjour ${firstName}`
               : 'Tableau de bord'}
           </h1>
-          <p className="mt-2 max-w-2xl text-sm text-slate-600 dark:text-slate-300">
-            L’essentiel de ta journée, au même endroit.
-          </p>
         </div>
 
         <Link
@@ -184,6 +201,7 @@ export function DashboardPage() {
                   nutrition={nutrition}
                   dailyCoaching={dailyCoaching}
                   activityPlanning={activityPlanning}
+                  highlightedStage={highlightedStage}
                   {...(activeWorkout ? { activeWorkout } : {})}
                   onSaveCheckIn={saveCheckIn}
                   onSaveActivityDecision={saveActivityDecision}
@@ -192,8 +210,10 @@ export function DashboardPage() {
                   onUpdateStrength={updateStrengthActivity}
                   onStartStrength={startStrengthActivity}
                   onSkipStrength={skipStrengthActivity}
+                  onRestoreStrength={restoreStrengthActivity}
                   onSaveEndurance={saveEnduranceActivity}
                   onSkipEndurance={skipEnduranceActivity}
+                  onRestoreEndurance={restoreEnduranceActivity}
                 />
             ) : null}
           />
@@ -205,11 +225,6 @@ export function DashboardPage() {
           {preferences.supplementalBlock === 'achievements' ? (
             <DashboardRewardsOverview className="mt-5" compact />
           ) : null}
-
-          <p className="mt-5 text-xs leading-5 text-slate-500 dark:text-slate-400">
-            Les calories et macronutriments sont des estimations de
-            pilotage, pas des mesures médicales.
-          </p>
         </>
       ) : status !== 'loading' && status !== 'error' ? (
         <InlineNotice
