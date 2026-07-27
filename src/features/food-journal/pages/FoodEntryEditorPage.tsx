@@ -9,6 +9,7 @@ import type { FoodEntryFormValues } from '@/features/food-journal/schemas/foodEn
 import {
   createFoodJournalFeedbackState,
   createFoodJournalRestoreState,
+  foodJournalCancelPath,
   type FoodJournalNavigationState,
 } from '@/features/food-journal/navigation/foodJournalNavigation';
 import { mealSlotLabels } from '@/features/food-journal/utils/foodLabels';
@@ -86,8 +87,18 @@ export function FoodEntryEditorPage() {
   return (
     <section aria-labelledby="food-entry-editor-title">
       <Link
-        to={navigationState?.foodJournalReturn?.path ?? foodJournalPath(entry?.date ?? defaultDate)}
-        state={createFoodJournalRestoreState(navigationState?.foodJournalReturn)} className="hidden items-center gap-2 text-sm font-semibold text-brand-700 hover:underline lg:inline-flex dark:text-brand-300"><ArrowLeft aria-hidden="true" className="size-4" />Retour au journal</Link>
+        to={foodJournalCancelPath(
+          navigationState?.foodJournalReturn,
+          foodJournalPath(entry?.date ?? defaultDate),
+        )}
+        state={createFoodJournalRestoreState(navigationState?.foodJournalReturn)}
+        className="hidden items-center gap-2 text-sm font-semibold text-brand-700 hover:underline lg:inline-flex dark:text-brand-300"
+      >
+        <ArrowLeft aria-hidden="true" className="size-4" />
+        {navigationState?.foodJournalReturn?.addMethodsPath
+          ? 'Retour aux méthodes d’ajout'
+          : 'Retour au journal'}
+      </Link>
       <div className="mt-5">
         <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">Journal alimentaire</p>
         <h1 id="food-entry-editor-title" className="mt-1 text-3xl font-bold tracking-tight text-slate-950 dark:text-white">{entryId ? 'Modifier un aliment consommé' : 'Ajouter un aliment'}</h1>

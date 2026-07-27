@@ -7,6 +7,7 @@ import type { DailyCoachingDay } from '@/application/daily/dailyCoachingService'
 import type { DailyActivityPlanningSnapshot } from '@/application/planning/dailyActivityPlanningService';
 import type { WorkoutSessionSummary } from '@/application/strength/workoutSessionService';
 import type { WorkoutTemplateSummary } from '@/application/strength/workoutTemplateService';
+import { dashboardMealAddPath } from '@/app/routePaths';
 import type { OtherActivity } from '@/domain/models/activity';
 import type { WorkoutSession, WorkoutTemplate } from '@/domain/models/strength';
 import type { PlannedEnduranceSession } from '@/domain/planning/endurancePlanningState';
@@ -123,6 +124,7 @@ function renderAssistant(
     snapshot: DailyTargetSnapshot;
     nutrition: DailyDashboardNutrition;
     activityPlanning: DailyActivityPlanningSnapshot;
+    initialEntry: string;
   }> = {},
 ) {
   const onSaveCheckIn = vi.fn().mockResolvedValue(undefined);
@@ -135,7 +137,7 @@ function renderAssistant(
   const onSaveEndurance = vi.fn().mockResolvedValue(undefined);
   const onSkipEndurance = vi.fn().mockResolvedValue(undefined);
   render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[overrides.initialEntry ?? '/']}>
       <ToastProvider>
         <DashboardDailyAssistant
           date="2026-07-29"
@@ -228,6 +230,8 @@ describe('DashboardDailyAssistant', () => {
       date: '2026-07-29',
       decision: 'rest',
     });
+    expect(screen.getByRole('button', { name: /Repos aujourd/ }))
+      .toHaveClass('border-brand-300');
   });
 
   it('reste actionnable sans plan précis, y compris pour une ancienne décision activities', () => {
@@ -272,6 +276,64 @@ describe('DashboardDailyAssistant', () => {
       strengthSessionStyle: 'classic',
     });
     expect(onStartStrength).not.toHaveBeenCalled();
+  });
+
+  it('ne preselectionne pas la seance libre et permet de la planifier', async () => {
+    const user = userEvent.setup();
+    const { onPlanStrength } = renderAssistant();
+
+    await user.click(screen.getByRole('button', { name: /voir une activit/ }));
+    const dialog = screen.getByRole('dialog', { name: /voir une activit/ });
+    await user.click(within(dialog).getByRole('radio', { name: 'Musculation' }));
+
+    const freeSession = within(dialog).getByRole('radio', { name: /ance libre/ });
+    expect(freeSession).not.toBeChecked();
+    await user.click(freeSession);
+    await user.click(within(dialog).getByRole('button', { name: 'Continuer' }));
+    await user.click(within(dialog).getByRole('button', { name: /Planifier pour aujourd/ }));
+
+    expect(onPlanStrength).toHaveBeenCalledWith({
+      date: '2026-07-29',
+      plannedDurationMinutes: 60,
+      strengthSessionStyle: 'classic',
+    });
+  });
+
+  it('laisse une activite seulement prevue dans l etat a faire', () => {
+    const dailyCoaching: DailyCoachingDay = {
+      ...emptyDay,
+      checkIn: createEntity({
+        date: '2026-07-29',
+        contextFlags: [],
+        contextSyncPreference: 'localOnly' as const,
+        completedAt: '2026-07-29T07:00:00.000Z',
+      }),
+    };
+
+    renderAssistant(dailyCoaching, {
+      activityPlanning: {
+        ...emptyPlanning,
+        strengthSessions: [strengthPlan()],
+      },
+    });
+
+    expect(screen.getByText(/Sport pr/).closest('[data-stage-state]'))
+      .toHaveAttribute('data-stage-state', 'current');
+    expect(screen.getByText(/1 .*tape sur 4/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Repos aujourd/ })).not.toBeInTheDocument();
+  });
+
+  it('restaure les methodes d ajout depuis l URL de l accueil', () => {
+    renderAssistant(emptyDay, {
+      initialEntry: dashboardMealAddPath('dinner', 'method'),
+    });
+
+    const dialog = screen.getByRole('dialog', { name: 'Ajouter un repas' });
+    expect(within(dialog).getByRole('link', { name: /Scanner un produit/ })).toHaveAttribute(
+      'href',
+      '/food/barcode-scanner?date=2026-07-29&slot=dinner',
+    );
+    expect(within(dialog).queryByRole('radio')).not.toBeInTheDocument();
   });
 
   it('ouvre un seul parcours nutrition et présélectionne le repas pertinent', async () => {
@@ -374,6 +436,8 @@ describe('DashboardDailyAssistant', () => {
     expect(screen.getByRole('link', { name: 'Reprendre la séance' }))
       .toHaveAttribute('href', expect.stringContaining('strength-push'));
     expect(screen.getByText('Marche')).toBeInTheDocument();
+    expect(screen.getByText(/Sport r/).closest('[data-stage-state]'))
+      .toHaveAttribute('data-stage-state', 'complete');
     expect(screen.getByText('42 min réalisés')).toBeInTheDocument();
     expect(screen.getByText('Terminée')).toBeInTheDocument();
   });

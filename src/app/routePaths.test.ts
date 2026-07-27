@@ -1,6 +1,7 @@
 import {
   routePaths,
   barcodeScannerPath,
+  dashboardMealAddPath,
   foodJournalMealPath,
   favoriteMealsForMealPath,
   photoNutritionEstimatePath,
@@ -179,5 +180,13 @@ describe('architecture des paramètres', () => {
     expect(routePaths.settingsAppearanceAccessibility).toBe('/settings/appearance-accessibility');
     expect(routePaths.settingsDataBackup).toBe('/settings/data-backup');
     expect(routePaths.settingsAdvanced).toBe('/settings/advanced');
+  });
+});
+
+describe('panneau repas du tableau de bord', () => {
+  it('memorise le repas et l etape des methodes', () => {
+    expect(dashboardMealAddPath('dinner', 'method')).toBe(
+      '/?panel=meal-add&slot=dinner&step=method',
+    );
   });
 });

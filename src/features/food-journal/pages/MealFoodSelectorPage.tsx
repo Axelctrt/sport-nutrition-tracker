@@ -23,6 +23,7 @@ import { useMealFoodSelector } from '@/features/food-journal/hooks/useMealFoodSe
 import {
   createFoodJournalFeedbackState,
   createFoodJournalRestoreState,
+  foodJournalCancelPath,
   type FoodJournalNavigationState,
 } from '@/features/food-journal/navigation/foodJournalNavigation';
 import { mealSlotLabels } from '@/features/food-journal/utils/foodLabels';
@@ -175,12 +176,17 @@ export function MealFoodSelectorPage() {
   return (
     <section className="min-w-0 overflow-x-clip" aria-labelledby="meal-food-selector-title">
       <Link
-        to={navigationState?.foodJournalReturn?.path ?? foodJournalPath(date)}
+        to={foodJournalCancelPath(
+          navigationState?.foodJournalReturn,
+          foodJournalPath(date),
+        )}
         state={createFoodJournalRestoreState(navigationState?.foodJournalReturn)}
         className="hidden items-center gap-2 text-sm font-semibold text-brand-700 hover:underline lg:inline-flex dark:text-brand-300"
       >
         <ArrowLeft aria-hidden="true" className="size-4" />
-        Retour au journal
+        {navigationState?.foodJournalReturn?.addMethodsPath
+          ? 'Retour aux méthodes d’ajout'
+          : 'Retour au journal'}
       </Link>
 
       <div className="mt-5 min-w-0">

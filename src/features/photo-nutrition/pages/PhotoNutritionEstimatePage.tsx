@@ -19,6 +19,7 @@ import type { MealSlot } from '@/domain/models/food';
 import {
   createFoodJournalFeedbackState,
   createFoodJournalRestoreState,
+  foodJournalCancelPath,
   type FoodJournalNavigationState,
 } from '@/features/food-journal/navigation/foodJournalNavigation';
 import { mealSlotLabels } from '@/features/food-journal/utils/foodLabels';
@@ -205,12 +206,17 @@ export function PhotoNutritionEstimatePage({
   return (
     <section aria-labelledby="photo-estimate-title" className="space-y-5 pb-8">
       <Link
-        to={navigationState?.foodJournalReturn?.path ?? foodJournalPath(date)}
+        to={foodJournalCancelPath(
+          navigationState?.foodJournalReturn,
+          foodJournalPath(date),
+        )}
         state={createFoodJournalRestoreState(navigationState?.foodJournalReturn)}
         className="hidden items-center gap-2 text-sm font-semibold text-brand-700 hover:underline lg:inline-flex dark:text-brand-300"
       >
         <ArrowLeft aria-hidden="true" className="size-4" />
-        Retour au journal
+        {navigationState?.foodJournalReturn?.addMethodsPath
+          ? 'Retour aux méthodes d’ajout'
+          : 'Retour au journal'}
       </Link>
       <div>
         <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">Journal alimentaire</p>

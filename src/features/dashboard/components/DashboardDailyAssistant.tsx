@@ -12,7 +12,7 @@ import {
   Utensils,
 } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import type {
   CompleteDailyCheckInInput,
   CompleteDailyCheckOutInput,
@@ -27,9 +27,12 @@ import type {
 } from '@/application/planning/dailyActivityPlanningService';
 import type { PlannedEnduranceInput } from '@/application/planning/endurancePlanningService';
 import {
+  dashboardMealAddPath,
   routePaths,
   workoutSessionPath,
+  type DashboardMealAddStep,
 } from '@/app/routePaths';
+import type { MealSlot } from '@/domain/models/food';
 import type { DailyDashboardNutrition, ActiveWorkoutSummary } from '@/features/dashboard/hooks/useDailyDashboard';
 import { DailyCheckInSheet } from '@/features/dashboard/components/DailyCheckInSheet';
 import { DailyCheckOutSheet } from '@/features/dashboard/components/DailyCheckOutSheet';
@@ -200,6 +203,26 @@ function secondaryActionClassName() {
   return 'inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800';
 }
 
+function restActionClassName() {
+  return 'inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-brand-300 bg-white px-3 text-sm font-semibold text-brand-700 hover:bg-brand-50 dark:border-brand-700 dark:bg-slate-900 dark:text-brand-300 dark:hover:bg-brand-950/40 sm:w-auto';
+}
+
+function readMealAddPanel(search: string): {
+  slot: MealSlot;
+  step: DashboardMealAddStep;
+} | undefined {
+  const params = new URLSearchParams(search);
+  if (params.get('panel') !== 'meal-add') return undefined;
+  const slot = params.get('slot');
+  if (slot !== 'breakfast' && slot !== 'lunch' && slot !== 'dinner' && slot !== 'snacks') {
+    return undefined;
+  }
+  return {
+    slot,
+    step: params.get('step') === 'method' ? 'method' : 'meal',
+  };
+}
+
 function enduranceActivityPath(session: PlannedEnduranceSession): string {
   const path = session.activityType === 'running'
     ? routePaths.addRunningActivity
@@ -234,16 +257,28 @@ export function DashboardDailyAssistant({
 }: DashboardDailyAssistantProps) {
   const actionToast = useActionToast();
   const navigate = useNavigate();
+  const location = useLocation();
   const [openSheet, setOpenSheet] = useState<AssistantStage>();
   const [plannerEdit, setPlannerEdit] = useState<DailyActivityPlannerEdit>();
+  const mealAddPanel = readMealAddPanel(location.search);
   const checkInComplete = Boolean(dailyCoaching.checkIn);
   const actualActivityCount = snapshot.activities.length;
   const plannedActivityCount = activityPlanning.strengthSessions.length
     + activityPlanning.enduranceSessions.length;
+  const completedPlannedActivityCount = activityPlanning.strengthSessions
+    .filter(({ session }) => session.status === 'completed')
+    .length
+    + activityPlanning.enduranceSessions
+      .filter(({ completedActivity }) => Boolean(completedActivity))
+      .length;
+  const performedActivityCount = Math.max(
+    actualActivityCount,
+    completedPlannedActivityCount,
+  );
   const hasConcreteSport = plannedActivityCount > 0 || actualActivityCount > 0;
   const restConfirmed = dailyCoaching.activityDecision?.decision === 'rest'
     && !hasConcreteSport;
-  const sportComplete = hasConcreteSport || restConfirmed;
+  const sportComplete = performedActivityCount > 0 || restConfirmed;
   const nutritionComplete = Boolean(
     dailyCoaching.checkOut?.foodJournalComplete
     || nutrition.journalStatus?.isComplete,
@@ -307,7 +342,12 @@ export function DashboardDailyAssistant({
   const nutritionNavigationStates = new Map(
     (['breakfast', 'lunch', 'dinner', 'snacks'] as const).map((slot) => [
       slot,
-      createFoodJournalReturnState(routePaths.dashboard, 'dashboard-nutrition', slot),
+      createFoodJournalReturnState(
+        routePaths.dashboard,
+        'dashboard-nutrition',
+        slot,
+        dashboardMealAddPath(slot, 'method'),
+      ),
     ]),
   );
 
@@ -445,6 +485,8 @@ export function DashboardDailyAssistant({
           title={
             restConfirmed
               ? 'Repos confirmé'
+              : performedActivityCount > 0
+                ? 'Sport réalisé'
               : hasConcreteSport
                 ? 'Sport prévu'
                 : 'Sport aujourd’hui'
@@ -455,7 +497,7 @@ export function DashboardDailyAssistant({
             restConfirmed
               ? 'Aucune activité prévue.'
               : hasConcreteSport
-                ? `${plannedCount} prévue${plannedCount > 1 ? 's' : ''} · ${actualActivityCount} réalisée${actualActivityCount > 1 ? 's' : ''}`
+                ? `${plannedCount} prévue${plannedCount > 1 ? 's' : ''} · ${performedActivityCount} réalisée${performedActivityCount > 1 ? 's' : ''}`
                 : legacyActivitiesDecision
                   ? 'Ton ancienne intention sportive est conservée. Choisis maintenant une activité précise.'
                   : 'Aucune activité prévue.'
@@ -607,38 +649,39 @@ export function DashboardDailyAssistant({
               </div>
             ))}
 
-            {!hasConcreteSport ? (
-              restConfirmed ? null : (
-                <div className="flex flex-col items-start gap-2">
+            <div className="flex flex-col items-start gap-3 pt-1">
+              {!hasConcreteSport ? (
+                restConfirmed ? null : (
+                  <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
+                    <button type="button" className={primaryActionClassName()} onClick={() => openPlanner()}>
+                      <Plus aria-hidden="true" className="size-4" />
+                      Prévoir une activité
+                    </button>
+                    <button
+                      type="button"
+                      className={restActionClassName()}
+                      onClick={() => void confirmRest()}
+                    >
+                      <Moon aria-hidden="true" className="size-4" />
+                      Repos aujourd’hui
+                    </button>
+                  </div>
+                )
+              ) : (
+                <div>
                   <button type="button" className={primaryActionClassName()} onClick={() => openPlanner()}>
                     <Plus aria-hidden="true" className="size-4" />
-                    Prévoir une activité
-                  </button>
-                  <button
-                    type="button"
-                    className="inline-flex min-h-10 items-center text-sm font-semibold text-slate-600 hover:underline dark:text-slate-300"
-                    onClick={() => void confirmRest()}
-                  >
-                    Repos aujourd’hui
+                    Prévoir une autre activité
                   </button>
                 </div>
-              )
-            ) : (
-              <button
-                type="button"
-                className="inline-flex min-h-10 items-center gap-2 text-sm font-semibold text-brand-700 hover:underline dark:text-brand-300"
-                onClick={() => openPlanner()}
+              )}
+              <Link
+                to={`${routePaths.weeklyPlanning}?date=${encodeURIComponent(date)}&section=upcoming`}
+                className="inline-flex min-h-11 w-fit items-center text-sm font-semibold leading-5 text-slate-600 hover:underline dark:text-slate-300"
               >
-                <Plus aria-hidden="true" className="size-4" />
-                Prévoir une autre activité
-              </button>
-            )}
-            <Link
-              to={`${routePaths.weeklyPlanning}?date=${encodeURIComponent(date)}&section=upcoming`}
-              className="inline-flex min-h-10 items-center text-sm font-semibold text-slate-600 hover:underline dark:text-slate-300"
-            >
-              Planification avancée
-            </Link>
+                Planification avancée
+              </Link>
+            </div>
           </div>
         </StageCard>
 
@@ -656,7 +699,7 @@ export function DashboardDailyAssistant({
             <button
               type="button"
               className={nutritionComplete ? secondaryActionClassName() : primaryActionClassName()}
-              onClick={() => setOpenSheet('nutrition')}
+              onClick={() => navigate(dashboardMealAddPath(preferredMealSlot))}
             >
               <Plus aria-hidden="true" className="size-4" />
               Ajouter un repas
@@ -723,12 +766,23 @@ export function DashboardDailyAssistant({
         onSaveEndurance={onSaveEndurance}
       />
       <FoodJournalAddSheet
-        open={openSheet === 'nutrition'}
+        open={Boolean(mealAddPanel)}
         date={date}
         navigationStates={nutritionNavigationStates}
         entryCounts={nutrition.entryCounts}
         currentHour={currentHour}
-        onClose={() => setOpenSheet(undefined)}
+        {...(mealAddPanel
+          ? {
+              initialSlot: mealAddPanel.slot,
+              initialStep: mealAddPanel.step,
+            }
+          : {})}
+        onStepChange={(step, slot) => {
+          navigate(dashboardMealAddPath(slot, step), { replace: true });
+        }}
+        onClose={() => {
+          navigate(routePaths.dashboard, { replace: true });
+        }}
       />
       <DailyCheckOutSheet
         open={openSheet === 'checkOut'}

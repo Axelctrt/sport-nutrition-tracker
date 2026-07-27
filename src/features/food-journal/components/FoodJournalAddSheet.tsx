@@ -22,6 +22,7 @@ import {
   photoNutritionEstimatePath,
   recipesForMealPath,
   selectFoodPath,
+  type DashboardMealAddStep,
 } from '@/app/routePaths';
 import type { MealSlot } from '@/domain/models/food';
 import type { FoodJournalNavigationState } from '@/features/food-journal/navigation/foodJournalNavigation';
@@ -41,6 +42,8 @@ interface FoodJournalAddSheetProps {
   entryCounts?: MealEntryCounts;
   currentHour?: number;
   initialSlot?: MealSlot;
+  initialStep?: DashboardMealAddStep;
+  onStepChange?: (step: DashboardMealAddStep, slot: MealSlot) => void;
   onClose: () => void;
 }
 
@@ -124,19 +127,26 @@ export function FoodJournalAddSheet({
   entryCounts,
   currentHour = new Date().getHours(),
   initialSlot,
+  initialStep = 'meal',
+  onStepChange,
   onClose,
 }: FoodJournalAddSheetProps) {
-  const [step, setStep] = useState<'meal' | 'method'>('meal');
+  const [step, setStep] = useState<DashboardMealAddStep>('meal');
   const [selectedSlot, setSelectedSlot] = useState<MealSlot>('breakfast');
 
   useEffect(() => {
     if (!open) return;
-    setStep('meal');
+    setStep(initialStep);
     setSelectedSlot(initialSlot ?? recommendedMealSlot(
       currentHour,
       entryCounts ?? emptyEntryCounts,
     ));
-  }, [currentHour, entryCounts, initialSlot, open]);
+  }, [currentHour, entryCounts, initialSlot, initialStep, open]);
+
+  const changeStep = (nextStep: DashboardMealAddStep) => {
+    setStep(nextStep);
+    onStepChange?.(nextStep, selectedSlot);
+  };
 
   const title = (
     <span className="flex items-center gap-2">
@@ -145,7 +155,7 @@ export function FoodJournalAddSheet({
           type="button"
           aria-label="Choisir un autre repas"
           className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
-          onClick={() => setStep('meal')}
+          onClick={() => changeStep('meal')}
         >
           <ArrowLeft aria-hidden="true" className="size-5" />
         </button>
@@ -165,7 +175,7 @@ export function FoodJournalAddSheet({
       }
       onClose={onClose}
       footer={step === 'meal' ? (
-        <Button fullWidth onClick={() => setStep('method')}>
+        <Button fullWidth onClick={() => changeStep('method')}>
           Continuer
         </Button>
       ) : undefined}
@@ -193,7 +203,6 @@ export function FoodJournalAddSheet({
               key={id}
               to={path(date, selectedSlot)}
               state={navigationStates.get(selectedSlot) ?? {}}
-              onClick={onClose}
               className="flex min-h-20 items-start gap-3 rounded-xl border border-slate-200 bg-white p-3 text-left transition-colors hover:border-brand-300 hover:bg-brand-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-brand-700 dark:hover:bg-brand-950/40"
             >
               <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand-100 text-brand-700 dark:bg-brand-950 dark:text-brand-300">

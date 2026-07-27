@@ -163,5 +163,15 @@ test('centralise les actions sport et nutrition dans le cœur fixe de l’accuei
   await expect(nutritionDialog.getByRole('link', { name: /Scanner un produit/ })).toBeVisible();
   await expect(nutritionDialog.getByRole('link', { name: /Photo du repas/ })).toBeVisible();
   await expect(nutritionDialog.getByRole('link', { name: /Utiliser une recette/ })).toBeVisible();
+
+  await nutritionDialog.getByRole('link', { name: /Scanner un produit/ }).click();
+  await expect(page).toHaveURL(/#\/food\/barcode-scanner\?/);
+  await page.goBack();
+  await expect(page).toHaveURL(/#\/\?panel=meal-add&slot=.*&step=method/);
+  await expect(page.getByRole('dialog', { name: 'Ajouter un repas' })).toBeVisible();
+  await expect(
+    page.getByRole('dialog', { name: 'Ajouter un repas' })
+      .getByRole('link', { name: /Scanner un produit/ }),
+  ).toBeVisible();
   await expectNoCriticalHorizontalOverflow(page);
 });

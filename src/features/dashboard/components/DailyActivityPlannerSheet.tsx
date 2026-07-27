@@ -132,7 +132,7 @@ export function DailyActivityPlannerSheet({
 }: DailyActivityPlannerSheetProps) {
   const [step, setStep] = useState<PlannerStep>('type');
   const [activityType, setActivityType] = useState<PlannerActivityType>();
-  const [templateId, setTemplateId] = useState<string>();
+  const [templateId, setTemplateId] = useState<string | null>();
   const [plannedDate, setPlannedDate] = useState(date);
   const [title, setTitle] = useState('');
   const [duration, setDuration] = useState('45');
@@ -158,7 +158,7 @@ export function DailyActivityPlannerSheet({
     if (edit?.kind === 'strength') {
       setStep('details');
       setActivityType('strengthTraining');
-      setTemplateId(edit.session.sourceTemplateId);
+      setTemplateId(edit.session.sourceTemplateId ?? null);
       setTitle(edit.session.sourceTemplateNameSnapshot ?? 'Séance libre');
       setDuration(String(edit.session.plannedDurationMinutes ?? 60));
       setStrengthStyle(edit.session.strengthSessionStyle ?? 'classic');
@@ -239,7 +239,7 @@ export function DailyActivityPlannerSheet({
         } else {
           await onPlanStrength({
             date: plannedDate,
-            ...(templateId ? { templateId } : {}),
+            ...(typeof templateId === 'string' ? { templateId } : {}),
             plannedDurationMinutes: parsedDuration,
             strengthSessionStyle: strengthStyle,
           });
@@ -364,9 +364,9 @@ export function DailyActivityPlannerSheet({
             title="Séance libre"
             description="Ajoute les exercices au moment de démarrer."
             icon={Dumbbell}
-            selected={templateId === undefined}
+            selected={templateId === null}
             onSelect={() => {
-              setTemplateId(undefined);
+              setTemplateId(null);
               setTitle('Séance libre');
               setDuration('60');
               setStep('details');

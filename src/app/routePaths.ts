@@ -107,6 +107,20 @@ export function foodJournalMealPath(
   return `${routePaths.food}?${params.toString()}`;
 }
 
+export type DashboardMealAddStep = 'meal' | 'method';
+
+export function dashboardMealAddPath(
+  slot: string,
+  step: DashboardMealAddStep = 'meal',
+): string {
+  const params = new URLSearchParams({
+    panel: 'meal-add',
+    slot,
+    step,
+  });
+  return `${routePaths.dashboard}?${params.toString()}`;
+}
+
 export function weightPath(date: string): string {
   return `${routePaths.weight}?date=${encodeURIComponent(date)}`;
 }
