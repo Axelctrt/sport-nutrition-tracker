@@ -1,23 +1,25 @@
 import {
   Activity,
+  BookOpen,
   CalendarDays,
   ChevronRight,
-  Clock3,
   Dumbbell,
-  Flame,
+  History,
   Layers3,
+  LibraryBig,
+  ListChecks,
   Play,
   Plus,
 } from 'lucide-react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
-import type {
-  SportHubSnapshot,
-} from '@/application/sport/sportHubService';
+import type { SportHubSnapshot } from '@/application/sport/sportHubService';
 import { routePaths } from '@/app/routePaths';
 import type { ActivityJournalNavigationState } from '@/features/activities/navigation/activityJournalNavigation';
 import { presentActivity } from '@/features/activities/utils/activityPresentation';
 import { sportAgendaEntryPath } from '@/features/sport/sportHubNavigation';
+import { BottomSheet } from '@/shared/ui/BottomSheet';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { formatLocalDate } from '@/shared/utils/dates';
@@ -25,264 +27,275 @@ import { formatLocalDate } from '@/shared/utils/dates';
 interface SportHubOverviewProps {
   snapshot: SportHubSnapshot;
   navigationState: ActivityJournalNavigationState;
-  onStart: () => void;
+  onRecord: () => void;
 }
 
-function agendaStatusLabel(status: string): string {
-  if (status === 'overdue') return 'En retard';
-  if (status === 'today') return 'Aujourd’hui';
+function todayStatusLabel(status: string): string {
   if (status === 'inProgress') return 'En cours';
-  return 'À venir';
+  if (status === 'overdue') return 'À replanifier';
+  return 'Prévue';
 }
 
 export function SportHubOverview({
   snapshot,
   navigationState,
-  onStart,
+  onRecord,
 }: SportHubOverviewProps) {
-  const latestPresentation = snapshot.latestActivity
-    ? presentActivity(snapshot.latestActivity)
-    : undefined;
-  const currentSession = snapshot.currentSession;
+  const [programsOpen, setProgramsOpen] = useState(false);
+  const [libraryOpen, setLibraryOpen] = useState(false);
+  const todayPlannedEntries = snapshot.plannedEntries.filter(
+    (entry) => entry.date === snapshot.today || entry.status === 'overdue',
+  );
+  const todayActivities = snapshot.recentActivities.filter(
+    (activity) => activity.date === snapshot.today,
+  );
 
   return (
-    <div className="mt-5 space-y-4">
-      <Card className="overflow-hidden border-brand-200 bg-gradient-to-br from-brand-50 to-white p-4 dark:border-brand-900 dark:from-brand-950/50 dark:to-slate-900 sm:p-5">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="mt-5 space-y-6">
+      <section aria-labelledby="sport-today-title">
+        <div className="flex items-end justify-between gap-3">
           <div>
-            <p className="text-sm font-semibold text-brand-800 dark:text-brand-200">
-              Action principale
+            <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
+              Aujourd’hui
             </p>
-            <h2 className="mt-1 text-xl font-bold text-slate-950 dark:text-white">
-              Démarrer ou ajouter une activité
+            <h2 id="sport-today-title" className="mt-1 text-xl font-bold text-slate-950 dark:text-white">
+              Ma journée sportive
             </h2>
-            <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
-              Un seul point d’entrée pour choisir course, cardio, natation ou musculation détaillée.
-            </p>
           </div>
-          <Button size="lg" className="w-full sm:w-auto" onClick={onStart}>
-            <Play aria-hidden="true" className="size-5" />
-            Choisir l’activité
-          </Button>
+          <Link
+            to={`${routePaths.weeklyPlanning}?date=${encodeURIComponent(snapshot.today)}&section=upcoming`}
+            className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl bg-brand-700 px-3 text-sm font-semibold text-white hover:bg-brand-800 dark:bg-brand-600 dark:hover:bg-brand-500"
+          >
+            <Plus aria-hidden="true" className="size-4" />
+            Prévoir
+          </Link>
         </div>
-      </Card>
 
-      {currentSession ? (
-        <Card className="border-violet-300 p-4 dark:border-violet-800 sm:p-5">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex min-w-0 items-start gap-3">
-              <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-200">
+        <Card className="mt-3 overflow-hidden">
+          {snapshot.currentSession ? (
+            <div className="flex items-center gap-3 border-b border-slate-200 p-4 dark:border-slate-800">
+              <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-200">
                 <Dumbbell aria-hidden="true" className="size-5" />
               </span>
-              <div className="min-w-0">
-                <p className="text-xs font-semibold uppercase tracking-wide text-violet-700 dark:text-violet-300">
-                  Séance en cours
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-semibold text-slate-950 dark:text-white">
+                  {snapshot.currentSession.title}
                 </p>
-                <h2 className="mt-1 truncate text-lg font-bold text-slate-950 dark:text-white">
-                  {currentSession.title}
-                </h2>
-                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                  Commencée le {formatLocalDate(currentSession.date)}
-                </p>
+                <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">En cours</p>
               </div>
+              <Link
+                to={sportAgendaEntryPath(snapshot.currentSession)}
+                className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl bg-violet-700 px-3 text-sm font-semibold text-white hover:bg-violet-800"
+              >
+                <Play aria-hidden="true" className="size-4" />
+                Reprendre
+              </Link>
             </div>
-            <Link
-              to={sportAgendaEntryPath(currentSession)}
-              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-violet-700 px-4 font-semibold text-white hover:bg-violet-800 dark:bg-violet-600 dark:hover:bg-violet-500"
-            >
-              <Play aria-hidden="true" className="size-4" />
-              Reprendre
-            </Link>
-          </div>
-        </Card>
-      ) : null}
+          ) : null}
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card className="p-4 sm:p-5" aria-label="Programme sportif">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-start gap-3">
-              <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand-100 text-brand-800 dark:bg-brand-950 dark:text-brand-200">
-                <CalendarDays aria-hidden="true" className="size-5" />
+          {todayPlannedEntries.map((entry) => (
+            <div
+              key={`${entry.source}-${entry.id}`}
+              className="flex items-center gap-3 border-b border-slate-200 p-4 last:border-b-0 dark:border-slate-800"
+            >
+              <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-700 dark:bg-brand-950 dark:text-brand-300">
+                {entry.source === 'strength'
+                  ? <Dumbbell aria-hidden="true" className="size-5" />
+                  : <Activity aria-hidden="true" className="size-5" />}
               </span>
-              <div>
-                <h2 className="font-bold text-slate-950 dark:text-white">Programme</h2>
-                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                  Les prochaines séances à réaliser.
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-semibold text-slate-950 dark:text-white">{entry.title}</p>
+                <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">
+                  {todayStatusLabel(entry.status)}
+                  {'targetDurationMinutes' in entry && entry.targetDurationMinutes
+                    ? ` · ${entry.targetDurationMinutes} min`
+                    : ''}
                 </p>
               </div>
+              <Link
+                to={sportAgendaEntryPath(entry)}
+                state={navigationState}
+                className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl border border-slate-300 px-3 text-sm font-semibold text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-800"
+              >
+                <Play aria-hidden="true" className="size-4" />
+                Démarrer
+              </Link>
             </div>
-            <Link
-              to={routePaths.weeklyPlanning}
-              className="inline-flex min-h-10 items-center gap-1 rounded-xl px-2 text-sm font-semibold text-brand-700 hover:bg-brand-50 dark:text-brand-300 dark:hover:bg-brand-950/40"
-            >
-              Planning
-              <ChevronRight aria-hidden="true" className="size-4" />
-            </Link>
-          </div>
+          ))}
 
-          {snapshot.plannedEntries.length === 0 ? (
-            <div className="mt-4 rounded-xl bg-slate-50 p-4 text-center dark:bg-slate-950/50">
-              <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
-                Aucune séance planifiée
-              </p>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                Planifie une séance ou démarre librement.
-              </p>
-            </div>
-          ) : (
-            <ul className="mt-4 space-y-2">
-              {snapshot.plannedEntries.map((entry) => (
-                <li key={`${entry.source}-${entry.id}`}>
-                  <Link
-                    to={sportAgendaEntryPath(entry)}
-                    state={navigationState}
-                    className="flex min-h-14 items-center gap-3 rounded-xl border border-slate-200 px-3 py-2 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/60"
-                  >
-                    <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                      {entry.source === 'strength' ? (
-                        <Dumbbell aria-hidden="true" className="size-4" />
-                      ) : (
-                        <Activity aria-hidden="true" className="size-4" />
-                      )}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate font-semibold text-slate-950 dark:text-white">
-                        {entry.title}
-                      </span>
-                      <span className="mt-0.5 block text-xs text-slate-500 dark:text-slate-400">
-                        {agendaStatusLabel(entry.status)} · {formatLocalDate(entry.date)}
-                      </span>
-                    </span>
-                    <ChevronRight aria-hidden="true" className="size-4 shrink-0 text-slate-400" />
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
-
-        <Card className="p-4 sm:p-5" aria-label="Dernier entraînement">
-          <div className="flex items-start gap-3">
-            <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-200">
-              <Clock3 aria-hidden="true" className="size-5" />
-            </span>
-            <div>
-              <h2 className="font-bold text-slate-950 dark:text-white">Dernier entraînement</h2>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                Ton activité la plus récente.
-              </p>
-            </div>
-          </div>
-
-          {snapshot.latestActivity && latestPresentation ? (
-            <Link
-              to={`${routePaths.activities}?date=${encodeURIComponent(snapshot.latestActivity.date)}`}
-              className="mt-4 block rounded-xl border border-slate-200 p-3 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/60"
-            >
-              <div className="flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <h3 className="truncate font-semibold text-slate-950 dark:text-white">
-                    {latestPresentation.title}
-                  </h3>
-                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                    {formatLocalDate(snapshot.latestActivity.date)} · {snapshot.latestActivity.durationMinutes} min
-                  </p>
-                </div>
-                <ChevronRight aria-hidden="true" className="size-5 shrink-0 text-slate-400" />
-              </div>
-              <div className="mt-3 flex flex-wrap gap-2 text-xs">
-                {latestPresentation.metrics.slice(0, 2).map((metric) => (
-                  <span key={metric} className="rounded-lg bg-slate-100 px-2 py-1 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                    {metric}
+          {todayActivities.map((activity) => {
+            const presentation = presentActivity(activity);
+            return (
+              <Link
+                key={activity.id}
+                to={`${routePaths.activities}?view=history&date=${encodeURIComponent(activity.date)}`}
+                className="flex min-h-16 items-center gap-3 border-b border-slate-200 p-4 last:border-b-0 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/60"
+              >
+                <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
+                  <ListChecks aria-hidden="true" className="size-5" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-semibold text-slate-950 dark:text-white">{presentation.title}</span>
+                  <span className="mt-0.5 block text-sm text-emerald-700 dark:text-emerald-300">
+                    Terminée · {activity.durationMinutes} min
                   </span>
-                ))}
-              </div>
-            </Link>
-          ) : (
-            <div className="mt-4 rounded-xl bg-slate-50 p-4 text-center dark:bg-slate-950/50">
-              <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
-                Aucun entraînement enregistré
+                </span>
+                <ChevronRight aria-hidden="true" className="size-4 shrink-0 text-slate-400" />
+              </Link>
+            );
+          })}
+
+          {!snapshot.currentSession && todayPlannedEntries.length === 0 && todayActivities.length === 0 ? (
+            <div className="p-5 text-center">
+              <p className="font-semibold text-slate-900 dark:text-white">Aucune activité aujourd’hui</p>
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                Prévois une séance ou enregistre une activité déjà réalisée.
               </p>
-              <Button className="mt-3" size="sm" onClick={onStart}>
-                <Plus aria-hidden="true" className="size-4" />
-                Ajouter le premier
-              </Button>
             </div>
+          ) : null}
+
+          <div className="border-t border-slate-200 px-4 py-3 dark:border-slate-800">
+            <Button variant="ghost" className="w-full sm:w-auto" onClick={onRecord}>
+              Enregistrer une activité déjà réalisée
+            </Button>
+          </div>
+        </Card>
+      </section>
+
+      <section aria-labelledby="sport-organize-title">
+        <h2 id="sport-organize-title" className="text-xl font-bold text-slate-950 dark:text-white">Organiser</h2>
+        <div className="mt-3 grid gap-3 sm:grid-cols-3">
+          <button
+            type="button"
+            className="flex min-h-20 items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 text-left hover:border-brand-300 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-brand-700"
+            onClick={() => setProgramsOpen(true)}
+          >
+            <Layers3 aria-hidden="true" className="size-5 shrink-0 text-brand-700 dark:text-brand-300" />
+            <span className="font-semibold text-slate-950 dark:text-white">Mes programmes</span>
+          </button>
+          <Link
+            to={routePaths.weeklyPlanning}
+            className="flex min-h-20 items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 hover:border-brand-300 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-brand-700"
+          >
+            <CalendarDays aria-hidden="true" className="size-5 shrink-0 text-brand-700 dark:text-brand-300" />
+            <span className="font-semibold text-slate-950 dark:text-white">Planification</span>
+          </Link>
+          <button
+            type="button"
+            className="flex min-h-20 items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 text-left hover:border-brand-300 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-brand-700"
+            onClick={() => setLibraryOpen(true)}
+          >
+            <LibraryBig aria-hidden="true" className="size-5 shrink-0 text-brand-700 dark:text-brand-300" />
+            <span className="font-semibold text-slate-950 dark:text-white">Bibliothèque sportive</span>
+          </button>
+        </div>
+      </section>
+
+      <section aria-labelledby="sport-recent-title">
+        <div className="flex items-end justify-between gap-3">
+          <h2 id="sport-recent-title" className="text-xl font-bold text-slate-950 dark:text-white">
+            Dernières activités
+          </h2>
+          <Link
+            to={`${routePaths.activities}?view=history&date=${encodeURIComponent(snapshot.today)}`}
+            className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-brand-700 hover:underline dark:text-brand-300"
+          >
+            Voir tout l’historique
+            <ChevronRight aria-hidden="true" className="size-4" />
+          </Link>
+        </div>
+        <Card className="mt-3 overflow-hidden">
+          {snapshot.recentActivities.length > 0 ? (
+            snapshot.recentActivities.map((activity) => {
+              const presentation = presentActivity(activity);
+              return (
+                <Link
+                  key={activity.id}
+                  to={`${routePaths.activities}?view=history&date=${encodeURIComponent(activity.date)}`}
+                  className="flex min-h-16 items-center gap-3 border-b border-slate-200 px-4 py-3 last:border-b-0 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/60"
+                >
+                  <Activity aria-hidden="true" className="size-5 shrink-0 text-slate-500" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-semibold text-slate-950 dark:text-white">{presentation.title}</span>
+                    <span className="block text-sm text-slate-500 dark:text-slate-400">
+                      {formatLocalDate(activity.date)} · {activity.durationMinutes} min
+                    </span>
+                  </span>
+                  <ChevronRight aria-hidden="true" className="size-4 shrink-0 text-slate-400" />
+                </Link>
+              );
+            })
+          ) : (
+            <p className="p-5 text-center text-sm text-slate-500 dark:text-slate-400">
+              Aucune activité enregistrée.
+            </p>
           )}
         </Card>
-      </div>
+      </section>
 
-      <Card role="group" className="p-4 sm:p-5" aria-label="Résumé de la semaine">
-        <div className="flex items-start gap-3">
-          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
-            <Activity aria-hidden="true" className="size-5" />
-          </span>
-          <div>
-            <h2 className="font-bold text-slate-950 dark:text-white">Cette semaine</h2>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              Du {formatLocalDate(snapshot.week.startDate)} au {formatLocalDate(snapshot.week.endDate)}.
-            </p>
-          </div>
+      <BottomSheet
+        open={programsOpen}
+        title="Mes programmes"
+        description="Choisis le type de modèles à organiser."
+        onClose={() => setProgramsOpen(false)}
+      >
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Link
+            to={routePaths.workoutTemplates}
+            className="flex min-h-20 items-center gap-3 rounded-xl border border-slate-200 p-3 hover:border-brand-300 dark:border-slate-800 dark:hover:border-brand-700"
+            onClick={() => setProgramsOpen(false)}
+          >
+            <Dumbbell aria-hidden="true" className="size-5 shrink-0 text-violet-700 dark:text-violet-300" />
+            <span>
+              <span className="block font-semibold text-slate-950 dark:text-white">Musculation</span>
+              <span className="block text-sm text-slate-500 dark:text-slate-400">Modèles de séances</span>
+            </span>
+          </Link>
+          <Link
+            to={routePaths.enduranceTemplates}
+            className="flex min-h-20 items-center gap-3 rounded-xl border border-slate-200 p-3 hover:border-brand-300 dark:border-slate-800 dark:hover:border-brand-700"
+            onClick={() => setProgramsOpen(false)}
+          >
+            <Activity aria-hidden="true" className="size-5 shrink-0 text-emerald-700 dark:text-emerald-300" />
+            <span>
+              <span className="block font-semibold text-slate-950 dark:text-white">Endurance</span>
+              <span className="block text-sm text-slate-500 dark:text-slate-400">Course, vélo, natation et cardio</span>
+            </span>
+          </Link>
         </div>
-        <dl className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-          <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-950/50">
-            <dt className="text-xs font-medium text-slate-500 dark:text-slate-400">Séances</dt>
-            <dd className="mt-1 text-xl font-bold tabular-nums text-slate-950 dark:text-white">
-              {snapshot.week.activityCount}
-            </dd>
-          </div>
-          <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-950/50">
-            <dt className="text-xs font-medium text-slate-500 dark:text-slate-400">Durée</dt>
-            <dd className="mt-1 text-xl font-bold tabular-nums text-slate-950 dark:text-white">
-              {snapshot.week.totalDurationMinutes} min
-            </dd>
-          </div>
-          <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-950/50">
-            <dt className="flex items-center gap-1 text-xs font-medium text-slate-500 dark:text-slate-400">
-              <Flame aria-hidden="true" className="size-3.5" /> Calories
-            </dt>
-            <dd className="mt-1 text-xl font-bold tabular-nums text-slate-950 dark:text-white">
-              {Math.round(snapshot.week.totalCaloriesKcal)}
-            </dd>
-          </div>
-          <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-950/50">
-            <dt className="text-xs font-medium text-slate-500 dark:text-slate-400">Distance</dt>
-            <dd className="mt-1 text-xl font-bold tabular-nums text-slate-950 dark:text-white">
-              {snapshot.week.distanceKm.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} km
-            </dd>
-          </div>
-        </dl>
-        {snapshot.week.swimmingDistanceMeters > 0 ? (
-          <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
-            Natation : {snapshot.week.swimmingDistanceMeters.toLocaleString('fr-FR')} m.
-          </p>
-        ) : null}
-      </Card>
+      </BottomSheet>
 
-      <Card className="p-4 sm:p-5" aria-label="Accès musculation">
-        <div className="flex items-start gap-3">
-          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-200">
-            <Dumbbell aria-hidden="true" className="size-5" />
-          </span>
-          <div>
-            <h2 className="font-bold text-slate-950 dark:text-white">Musculation</h2>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              Utilise la séance détaillée pour suivre les séries. L’activité simple reste réservée à une estimation rapide de durée et d’intensité.
-            </p>
-          </div>
-        </div>
-        <div className="mt-4 grid gap-2 sm:grid-cols-3">
-          <Link to={routePaths.workoutSessions} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-violet-700 px-3 text-sm font-semibold text-white hover:bg-violet-800">
-            <Play aria-hidden="true" className="size-4" /> Séances détaillées
-          </Link>
-          <Link to={routePaths.workoutTemplates} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-slate-300 px-3 text-sm font-semibold text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-800">
-            <Layers3 aria-hidden="true" className="size-4" /> Modèles
-          </Link>
-          <Link to={routePaths.strengthExercises} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-slate-300 px-3 text-sm font-semibold text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-800">
-            <Dumbbell aria-hidden="true" className="size-4" /> Exercices
-          </Link>
-        </div>
-      </Card>
+      <BottomSheet
+        open={libraryOpen}
+        title="Bibliothèque sportive"
+        description="Retrouve les exercices et les historiques détaillés."
+        onClose={() => setLibraryOpen(false)}
+      >
+        <nav className="space-y-2" aria-label="Bibliothèque sportive">
+          {[
+            { path: routePaths.strengthExercises, label: 'Exercices', icon: BookOpen },
+            { path: routePaths.workoutSessions, label: 'Historique de musculation', icon: Dumbbell },
+            {
+              path: `${routePaths.activities}?view=history&date=${encodeURIComponent(snapshot.today)}`,
+              label: 'Historique complet des activités',
+              icon: History,
+            },
+          ].map((destination) => {
+            const Icon = destination.icon;
+            return (
+              <Link
+                key={destination.path}
+                to={destination.path}
+                className="flex min-h-16 items-center gap-3 rounded-xl border border-slate-200 px-3 hover:border-brand-300 dark:border-slate-800 dark:hover:border-brand-700"
+                onClick={() => setLibraryOpen(false)}
+              >
+                <Icon aria-hidden="true" className="size-5 shrink-0 text-brand-700 dark:text-brand-300" />
+                <span className="font-semibold text-slate-950 dark:text-white">{destination.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
+      </BottomSheet>
     </div>
   );
 }

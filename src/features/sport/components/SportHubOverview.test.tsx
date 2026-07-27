@@ -62,6 +62,7 @@ const snapshot: SportHubSnapshot = {
     swimmingDistanceMeters: 1_000,
   },
 };
+snapshot.recentActivities = snapshot.latestActivity ? [snapshot.latestActivity] : [];
 
 describe('SportHubOverview', () => {
   it('affiche les informations prioritaires du hub Sport', () => {
@@ -70,40 +71,41 @@ describe('SportHubOverview', () => {
         <SportHubOverview
           snapshot={snapshot}
           navigationState={createActivityJournalReturnState('/activities', 'key', '2026-07-10')}
-          onStart={vi.fn()}
+          onRecord={vi.fn()}
         />
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole('heading', { name: 'Démarrer ou ajouter une activité' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Ma journée sportive' })).toBeInTheDocument();
     expect(screen.getByText('Haut du corps')).toBeInTheDocument();
     expect(screen.getByText('Footing facile')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Organiser' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Planification' })).toHaveAttribute('href', '/strength/planning');
+    expect(screen.getByRole('heading', { name: 'Dernières activités' })).toBeInTheDocument();
     expect(screen.getByText('Footing')).toBeInTheDocument();
-    expect(screen.getByRole('group', { name: 'Résumé de la semaine' })).toHaveTextContent('140 min');
-    expect(screen.queryByRole('group', { name: 'Activités fréquentes' })).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Séances détaillées/ })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /Voir tout l’historique/ })).toHaveAttribute(
       'href',
-      '/strength/sessions',
+      '/activities?view=history&date=2026-07-10',
     );
   });
 
-  it('ouvre le panneau de démarrage depuis l’action principale', () => {
-    const onStart = vi.fn();
+  it('ouvre le panneau d’enregistrement depuis l’action secondaire', () => {
+    const onRecord = vi.fn();
     render(
       <MemoryRouter>
         <SportHubOverview
           snapshot={snapshot}
           navigationState={createActivityJournalReturnState('/activities', 'key', '2026-07-10')}
-          onStart={onStart}
+          onRecord={onRecord}
         />
       </MemoryRouter>,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Choisir l’activité' }));
-    expect(onStart).toHaveBeenCalledOnce();
+    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer une activité déjà réalisée' }));
+    expect(onRecord).toHaveBeenCalledOnce();
   });
 
-  it('propose une première action lorsque le hub est vide', () => {
+  it('propose la planification et les hubs d’organisation lorsque le hub est vide', () => {
     render(
       <MemoryRouter>
         <SportHubOverview
@@ -122,12 +124,20 @@ describe('SportHubOverview', () => {
             },
           }}
           navigationState={createActivityJournalReturnState('/activities', 'key', '2026-07-10')}
-          onStart={vi.fn()}
+          onRecord={vi.fn()}
         />
       </MemoryRouter>,
     );
 
-    expect(screen.getByText('Aucune séance planifiée')).toBeInTheDocument();
-    expect(screen.getByText('Aucun entraînement enregistré')).toBeInTheDocument();
+    expect(screen.getByText('Aucune activité aujourd’hui')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Prévoir/ })).toHaveAttribute(
+      'href',
+      '/strength/planning?date=2026-07-10&section=upcoming',
+    );
+    expect(screen.getByText('Aucune activité enregistrée.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Mes programmes' }));
+    expect(screen.getByRole('dialog', { name: 'Mes programmes' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Musculation/ })).toHaveAttribute('href', '/strength/templates');
+    expect(screen.getByRole('link', { name: /Endurance/ })).toHaveAttribute('href', '/activities/templates');
   });
 });
