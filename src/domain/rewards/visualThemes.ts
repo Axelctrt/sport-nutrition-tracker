@@ -149,7 +149,7 @@ export const visualThemeCatalog: readonly SportPilotThemeDefinition[] = [
   {
     id: "core",
     name: "Core",
-    description: "L'identite officielle SportPilot, claire, fiable et orientee performance.",
+    description: "L'identite SportPilot, claire et performante.",
     rarity: "standard",
     palette: { light: coreLight, dark: coreDark },
     backgroundStyle: "technical-grid",
@@ -168,7 +168,7 @@ export const visualThemeCatalog: readonly SportPilotThemeDefinition[] = [
   {
     id: "neon-pulse",
     name: "Neon Pulse",
-    description: "Une energie cyber sportive controlee, rythmee par le cyan et le violet.",
+    description: "Une energie sportive cyan et violette.",
     rarity: "rare",
     palette: {
       light: {
@@ -224,7 +224,7 @@ export const visualThemeCatalog: readonly SportPilotThemeDefinition[] = [
   {
     id: "emerald-focus",
     name: "Emerald Focus",
-    description: "Une identite calme et precise pour la discipline et la regularite.",
+    description: "Calme et precision pour la regularite.",
     rarity: "rare",
     palette: {
       light: {
@@ -280,7 +280,7 @@ export const visualThemeCatalog: readonly SportPilotThemeDefinition[] = [
   {
     id: "aurora",
     name: "Aurora",
-    description: "Une experience premium, fluide et immersive aux accents froids.",
+    description: "Une experience premium aux accents froids.",
     rarity: "epic",
     palette: {
       light: {
@@ -336,7 +336,7 @@ export const visualThemeCatalog: readonly SportPilotThemeDefinition[] = [
   {
     id: "zenith-gold",
     name: "Zenith Gold",
-    description: "Une maitrise sobre et prestigieuse, soulignee par un or profond.",
+    description: "Une maitrise sobre soulignee par l'or.",
     rarity: "legendary",
     palette: {
       light: {

@@ -150,6 +150,7 @@ export async function initializeUserStateRuntime(
 ): Promise<void> {
   const state = await migrateLegacyUserState(database);
   configureRuntime(database, state);
+  applyStoredVisualTheme();
 }
 
 export async function reloadUserStateRuntime(

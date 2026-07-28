@@ -160,6 +160,34 @@ describe('PhotoNutritionEstimatePage', () => {
     expect(screen.getByDisplayValue('720')).toBeInTheDocument();
   });
 
+  it('affiche une progression honnête et stable pendant l’analyse', async () => {
+    const user = userEvent.setup();
+    let resolveAnalysis:
+      | ((value: PhotoNutritionAnalysisResult) => void)
+      | undefined;
+    const analyzePhoto = vi.fn(() => new Promise<PhotoNutritionAnalysisResult>((resolve) => {
+      resolveAnalysis = resolve;
+    }));
+    renderPage(analyzePhoto);
+    await selectPhoto(user);
+    await user.click(screen.getByRole('switch', { name: 'Activer l’analyse IA pour cette photo' }));
+    await user.click(screen.getByRole('button', { name: 'Analyser avec l’IA' }));
+
+    expect(screen.getByRole('button', { name: 'Analyse en cours…' })).toHaveAttribute(
+      'aria-busy',
+      'true',
+    );
+    const loader = screen.getByLabelText('Étapes de l’analyse photo');
+    expect(loader).toBeInTheDocument();
+    expect(loader.getElementsByTagName('li')[1]).toHaveAttribute(
+      'aria-current',
+      'step',
+    );
+
+    resolveAnalysis?.(remoteAnalysisResult);
+    expect(await screen.findByRole('button', { name: 'Analyse terminée' })).toBeInTheDocument();
+  });
+
   it('affiche une erreur traçable sans fallback automatique et propose la saisie vide', async () => {
     const user = userEvent.setup();
     const analyzePhoto = vi.fn(async () => {

@@ -61,6 +61,8 @@ type AnalyticsPeriod = 4 | 8 | 12;
 type BodyPeriod = "30" | "90" | "180" | "365" | "all";
 
 const chartMargin = { top: 8, right: 8, left: -20, bottom: 0 };
+const filterLabelClassName = "text-sm font-bold text-[var(--sp-text-primary)]";
+const relatedLinkClassName = "sp-button sp-button--secondary inline-flex min-h-11 items-center gap-2 rounded-[var(--sp-radius-control)] px-4 text-sm font-bold";
 const chartColors = {
   primary: "var(--sp-chart-1)",
   secondary: "var(--sp-chart-2)",
@@ -142,7 +144,7 @@ function WeightChart({
     return (
       <SportPilotEmptyChart
         title="Tendance encore indisponible"
-        description="Ajoute au moins deux pesées sur des jours différents pour faire apparaître une tendance."
+        description="Ajoute deux pesées sur des jours distincts."
         action={{ label: "Ajouter une pesée", to: routePaths.weight }}
       />
     );
@@ -154,7 +156,24 @@ function WeightChart({
         height={compact ? "compact" : "standard"}
       >
         <LineChart data={points} margin={chartMargin} accessibilityLayer>
-          {chartAxes()}
+          <CartesianGrid vertical={false} stroke={chartColors.grid} strokeDasharray="3 3" />
+          <XAxis
+            dataKey="label"
+            tick={{ fill: chartColors.text, fontSize: 11 }}
+            axisLine={false}
+            tickLine={false}
+            interval="preserveStartEnd"
+          />
+          <YAxis
+            domain={[
+              (dataMin: number) => Math.floor(dataMin - 1),
+              (dataMax: number) => Math.ceil(dataMax + 1),
+            ]}
+            tick={{ fill: chartColors.text, fontSize: 11 }}
+            axisLine={false}
+            tickLine={false}
+            width={44}
+          />
           <Tooltip content={<SportPilotChartTooltip />} />
           <Line type="monotone" dataKey="poids" name="Poids" unit=" kg" stroke={chartColors.primary} strokeWidth={1.5} dot={{ r: 2 }} isAnimationActive={animate} />
           <Line type="monotone" dataKey="moyenne" name="Moyenne 7 jours" unit=" kg" stroke={chartColors.accent} strokeWidth={3} dot={false} isAnimationActive={animate} />
@@ -196,7 +215,7 @@ function NutritionCaloriesChart({
     return (
       <SportPilotEmptyChart
         title="Aucune moyenne nutritionnelle"
-        description="Renseigne quelques journées de repas pour obtenir une moyenne fiable."
+        description="Renseigne quelques repas pour obtenir une moyenne."
         action={{ label: "Renseigner un repas", to: routePaths.food }}
       />
     );
@@ -256,7 +275,7 @@ function ActivityMinutesChart({
     return (
       <SportPilotEmptyChart
         title="Aucune activité sur cette période"
-        description="Termine une activité pour commencer à comparer ton volume sportif."
+        description="Termine une activité pour comparer ton volume."
         action={{ label: "Ajouter une activité", to: routePaths.addActivity }}
       />
     );
@@ -265,7 +284,7 @@ function ActivityMinutesChart({
   return (
     <>
       <div className="mb-3">
-        <label htmlFor="analytics-activity-volume-metric" className="text-sm font-bold text-[var(--sp-text-primary)]">
+        <label htmlFor="analytics-activity-volume-metric" className={filterLabelClassName}>
           Mesure
         </label>
         <select
@@ -346,7 +365,7 @@ function PlannedActualChart({
     return (
       <SportPilotEmptyChart
         title="Aucune semaine à comparer"
-        description="Planifie puis termine des activités pour comparer ce qui était prévu et réalisé."
+        description="Planifie et termine des activités pour comparer prévu et réalisé."
         action={{ label: "Ouvrir le planning", to: routePaths.weeklyPlanning }}
       />
     );
@@ -395,7 +414,7 @@ function RegularityChart({
     return (
       <SportPilotEmptyChart
         title="Régularité encore indisponible"
-        description="Continue à renseigner tes journées pour faire apparaître une tendance fiable."
+        description="Renseigne davantage de journées pour voir une tendance."
         action={{ label: "Revenir à l’accueil", to: routePaths.dashboard }}
       />
     );
@@ -449,7 +468,7 @@ function StrengthCharts({
     return (
       <SportPilotEmptyChart
         title="Aucune progression de musculation"
-        description="Termine plusieurs séances avec un exercice pour comparer ta progression."
+        description="Termine plusieurs séances pour comparer cet exercice."
         action={{ label: "Voir mes séances", to: routePaths.workoutSessions }}
       />
     );
@@ -466,7 +485,7 @@ function StrengthCharts({
   return (
     <div className="space-y-4">
       <div>
-        <label htmlFor="analytics-strength-exercise" className="text-sm font-bold text-[var(--sp-text-primary)]">
+        <label htmlFor="analytics-strength-exercise" className={filterLabelClassName}>
           Exercice
         </label>
         <select
@@ -496,7 +515,7 @@ function StrengthCharts({
         {oneRepMaxPoints.length < 2 ? (
           <SportPilotEmptyChart
             title="Deux séances comparables nécessaires"
-            description="Termine plusieurs séances avec cet exercice pour tracer l’évolution du 1RM estimé."
+            description="Termine plusieurs séances pour tracer le 1RM estimé."
             action={{ label: "Voir l’historique", to: routePaths.strengthExercises }}
           />
         ) : (
@@ -512,7 +531,7 @@ function StrengthCharts({
 
       <SportPilotChartCard
         title="Volume par séance"
-        description="Charge multipliée par les répétitions terminées, en kilogrammes."
+        description="Charge multipliée par les répétitions terminées."
       >
         <SportPilotChartContainer label={`Volume de ${selected.name} par séance, en kilogrammes`}>
           <BarChart data={selected.points} margin={chartMargin} accessibilityLayer>
@@ -535,7 +554,7 @@ function StrengthCharts({
 
       <SportPilotChartCard
         title="Meilleure série"
-        description="Série de travail la plus forte sur la période, séparée du volume."
+        description="Meilleure série de travail de la période."
         metric={bestPoint?.personalRecord ? "Record personnel" : undefined}
         metricLabel={bestPoint?.personalRecord ? "sur les données enregistrées" : undefined}
       >
@@ -558,7 +577,7 @@ function StrengthCharts({
 
       <SportPilotChartCard
         title="Groupes musculaires"
-        description="Présence hebdomadaire fondée sur les séries de travail terminées."
+        description="Présence fondée sur les séries de travail terminées."
       >
         <MuscleGroupHeatmap data={data} />
       </SportPilotChartCard>
@@ -574,7 +593,7 @@ function MacroChart({ data }: { data: PerformanceAnalyticsSnapshot }) {
     return (
       <SportPilotEmptyChart
         title="Macros encore indisponibles"
-        description="Renseigne quelques journées de repas pour comparer protéines, glucides et lipides."
+        description="Renseigne quelques repas pour comparer les macros."
         action={{ label: "Renseigner un repas", to: routePaths.food }}
       />
     );
@@ -664,7 +683,7 @@ function MealBreakdown({ data }: { data: PerformanceAnalyticsSnapshot }) {
     return (
       <SportPilotEmptyChart
         title="Répartition des repas indisponible"
-        description="Ajoute des aliments à un repas pour afficher sa part calorique."
+        description="Ajoute des aliments pour afficher la part du repas."
         action={{ label: "Renseigner un repas", to: routePaths.food }}
       />
     );
@@ -725,7 +744,7 @@ function ActivityBreakdown({ data }: { data: PerformanceAnalyticsSnapshot }) {
     return (
       <SportPilotEmptyChart
         title="Aucune répartition disponible"
-        description="Termine une activité pour afficher la part de chaque discipline."
+        description="Termine une activité pour répartir les disciplines."
         action={{ label: "Ajouter une activité", to: routePaths.addActivity }}
       />
     );
@@ -796,7 +815,9 @@ function EnduranceVolumeChart({
   const [discipline, setDiscipline] = useState(
     () => available[0]?.id ?? "running",
   );
-  const [metric, setMetric] = useState<"duration" | "distance" | "sessions">(
+  const [metric, setMetric] = useState<
+    "duration" | "distance" | "sessions" | "elevation"
+  >(
     "duration",
   );
   const animate = useSportPilotChartAnimation();
@@ -805,7 +826,7 @@ function EnduranceVolumeChart({
     return (
       <SportPilotEmptyChart
         title="Aucune donnée d’endurance"
-        description="Termine une sortie de course, vélo ou natation pour comparer ton volume."
+        description="Termine une sortie d’endurance pour comparer le volume."
         action={{ label: "Ajouter une activité", to: routePaths.addActivity }}
       />
     );
@@ -820,12 +841,17 @@ function EnduranceVolumeChart({
       duration: row.durationMinutes,
       distance,
       sessions: row.sessionCount,
+      elevation: "elevationGainMeters" in row
+        ? row.elevationGainMeters
+        : 0,
     };
   });
   const unit = metric === "duration"
     ? " min"
     : metric === "sessions"
       ? ""
+      : metric === "elevation"
+        ? " m"
       : selected.id === "swimming"
         ? " m"
         : " km";
@@ -833,19 +859,27 @@ function EnduranceVolumeChart({
     ? "Durée"
     : metric === "sessions"
       ? "Séances"
+      : metric === "elevation"
+        ? "Dénivelé positif"
       : "Distance";
 
   return (
     <>
       <div className="mb-3 grid gap-3 sm:grid-cols-2">
         <div>
-          <label htmlFor="analytics-endurance-discipline" className="text-sm font-bold text-[var(--sp-text-primary)]">
+          <label htmlFor="analytics-endurance-discipline" className={filterLabelClassName}>
             Discipline
           </label>
           <select
             id="analytics-endurance-discipline"
             value={selected.id}
-            onChange={(event) => setDiscipline(event.target.value)}
+            onChange={(event) => {
+              const next = event.target.value;
+              setDiscipline(next);
+              if (metric === "elevation" && next !== "cycling") {
+                setMetric("duration");
+              }
+            }}
             className={`${inputClassName} mt-2`}
           >
             {available.map((option) => (
@@ -854,20 +888,27 @@ function EnduranceVolumeChart({
           </select>
         </div>
         <div>
-          <label htmlFor="analytics-endurance-metric" className="text-sm font-bold text-[var(--sp-text-primary)]">
+          <label htmlFor="analytics-endurance-metric" className={filterLabelClassName}>
             Mesure
           </label>
           <select
             id="analytics-endurance-metric"
             value={metric}
             onChange={(event) => setMetric(
-              event.target.value as "duration" | "distance" | "sessions",
+              event.target.value as
+                | "duration"
+                | "distance"
+                | "sessions"
+                | "elevation",
             )}
             className={`${inputClassName} mt-2`}
           >
             <option value="duration">Durée</option>
             <option value="distance">Distance</option>
             <option value="sessions">Nombre de séances</option>
+            {selected.id === "cycling" ? (
+              <option value="elevation">Dénivelé positif</option>
+            ) : null}
           </select>
         </div>
       </div>
@@ -933,7 +974,7 @@ function RecoveryChart({ data }: { data: PerformanceAnalyticsSnapshot }) {
     return (
       <SportPilotEmptyChart
         title="Récupération encore indisponible"
-        description="Renseigne un check-in ou un check-out pour suivre les signaux disponibles."
+        description="Renseigne un check-in ou check-out pour suivre ce signal."
         action={{ label: "Revenir à l’accueil", to: routePaths.dashboard }}
       />
     );
@@ -941,7 +982,7 @@ function RecoveryChart({ data }: { data: PerformanceAnalyticsSnapshot }) {
   return (
     <>
       <div className="mb-3">
-        <label htmlFor="analytics-recovery-metric" className="text-sm font-bold text-[var(--sp-text-primary)]">
+        <label htmlFor="analytics-recovery-metric" className={filterLabelClassName}>
           Signal
         </label>
         <select
@@ -1038,7 +1079,7 @@ function MuscleGroupHeatmap({
     return (
       <SportPilotEmptyChart
         title="Aucun groupe musculaire à comparer"
-        description="Termine une séance avec des séries de travail pour remplir la heatmap."
+        description="Termine des séries de travail pour remplir la heatmap."
         action={{ label: "Voir mes séances", to: routePaths.workoutSessions }}
       />
     );
@@ -1101,7 +1142,7 @@ function ThemeProgressBars({
     return (
       <SportPilotEmptyChart
         title="Progression des thèmes indisponible"
-        description="Ouvre la collection pour consulter les critères de déblocage."
+        description="Ouvre la collection pour voir les critères."
         action={{ label: "Voir la collection", to: routePaths.rewards }}
       />
     );
@@ -1285,7 +1326,7 @@ export function AnalyticsPage() {
 
       <div className="mt-5 grid gap-3 sm:grid-cols-2">
         <div>
-          <label htmlFor="analytics-reference-date" className="text-sm font-bold text-[var(--sp-text-primary)]">
+          <label htmlFor="analytics-reference-date" className={filterLabelClassName}>
             Semaine de référence
           </label>
           <input
@@ -1297,7 +1338,7 @@ export function AnalyticsPage() {
           />
         </div>
         <div>
-          <label htmlFor="analytics-period" className="text-sm font-bold text-[var(--sp-text-primary)]">
+          <label htmlFor="analytics-period" className={filterLabelClassName}>
             Période
           </label>
           <select
@@ -1344,7 +1385,7 @@ export function AnalyticsPage() {
               <div className="grid gap-4 lg:grid-cols-2">
                 <SportPilotChartCard
                   title="Tendance du poids"
-                  description="Valeur brute, moyenne mobile et trajectoire d’objectif."
+                  description="Poids brut, moyenne mobile et objectif."
                   metric={latestWeight === undefined ? undefined : `${formatNumber(latestWeight, 2)} kg`}
                   action={{ label: "Ouvrir Corps", to: `${routePaths.analytics}?tab=body&weeks=${period}` }}
                 >
@@ -1352,7 +1393,7 @@ export function AnalyticsPage() {
                 </SportPilotChartCard>
                 <SportPilotChartCard
                   title="Calories contre cible"
-                  description="Moyenne des journées réellement renseignées."
+                  description="Moyenne des journées renseignées."
                   metric={latestNutrition?.averageConsumedCaloriesKcal === undefined
                     ? undefined
                     : `${formatNumber(latestNutrition.averageConsumedCaloriesKcal)} kcal`}
@@ -1362,7 +1403,7 @@ export function AnalyticsPage() {
                 </SportPilotChartCard>
                 <SportPilotChartCard
                   title="Volume sportif"
-                  description="Durée totale des activités terminées."
+                  description="Durée des activités terminées."
                   metric={`${formatNumber(currentActivity?.totalSportMinutes)} min`}
                   action={{ label: "Ouvrir Activité", to: `${routePaths.analytics}?tab=activity&weeks=${period}` }}
                 >
@@ -1370,7 +1411,7 @@ export function AnalyticsPage() {
                 </SportPilotChartCard>
                 <SportPilotChartCard
                   title="Régularité"
-                  description="Jours de suivi et de nutrition par semaine."
+                  description="Suivi et nutrition par semaine."
                   metric={`${balancedWeeks} sem.`}
                   metricLabel="équilibrées"
                   action={{ label: "Ouvrir Régularité", to: `${routePaths.analytics}?tab=regularity&weeks=${period}` }}
@@ -1379,7 +1420,7 @@ export function AnalyticsPage() {
                 </SportPilotChartCard>
                 <SportPilotChartCard
                   title="Prévu contre réalisé"
-                  description="Activités planifiées puis effectivement terminées."
+                  description="Activités planifiées et terminées."
                   metric={currentPlan
                     ? `${currentPlan.completedActivities} / ${currentPlan.plannedActivities}`
                     : undefined}
@@ -1394,12 +1435,12 @@ export function AnalyticsPage() {
             {activeTab === "body" ? (
               <SportPilotChartCard
                 title="Corps et poids"
-                description="Le poids brut reste distinct de sa moyenne mobile sur sept jours."
+                description="Poids brut et moyenne sur sept jours restent distincts."
                 metric={latestWeight === undefined ? undefined : `${formatNumber(latestWeight, 2)} kg`}
                 action={{ label: "Ajouter une pesée", to: routePaths.weight }}
               >
                 <div className="mb-4">
-                  <label htmlFor="analytics-body-period" className="text-sm font-bold text-[var(--sp-text-primary)]">
+                  <label htmlFor="analytics-body-period" className={filterLabelClassName}>
                     Période du poids
                   </label>
                   <select
@@ -1426,19 +1467,19 @@ export function AnalyticsPage() {
               <div className="grid gap-4 xl:grid-cols-2">
                 <SportPilotChartCard
                   title="Calories contre cible"
-                  description="Les changements de cible sont conservés semaine par semaine."
+                  description="Les cibles variables sont conservées par semaine."
                 >
                   <NutritionCaloriesChart data={data} />
                 </SportPilotChartCard>
                 <SportPilotChartCard
                   title="Répartition des macros"
-                  description="Progression quotidienne vers les trois cibles, toutes en grammes."
+                  description="Progression quotidienne des trois macros, en grammes."
                 >
                   <MacroChart data={data} />
                 </SportPilotChartCard>
                 <SportPilotChartCard
                   title="Répartition des repas"
-                  description="Part calorique des repas sur la période sélectionnée."
+                  description="Part calorique des repas de la période."
                   className="xl:col-span-2"
                 >
                   <MealBreakdown data={data} />
@@ -1450,26 +1491,26 @@ export function AnalyticsPage() {
               <div className="grid gap-4 xl:grid-cols-2">
                 <SportPilotChartCard
                   title="Durée sportive"
-                  description="Volume hebdomadaire des activités terminées, en minutes."
+                  description="Volume hebdomadaire terminé, en minutes."
                 >
                   <ActivityMinutesChart data={data} />
                 </SportPilotChartCard>
                 <SportPilotChartCard
                   title="Répartition des sports"
-                  description="Part de chaque discipline dans le temps total enregistré."
+                  description="Part de chaque discipline dans le temps total."
                 >
                   <ActivityBreakdown data={data} />
                 </SportPilotChartCard>
                 <SportPilotChartCard
                   title="Prévu contre réalisé"
-                  description="Les plans réalisés sont reliés à une activité ou séance terminée."
+                  description="Les plans réalisés sont liés à une séance terminée."
                   className="xl:col-span-2"
                 >
                   <PlannedActualChart data={data} />
                 </SportPilotChartCard>
                 <SportPilotChartCard
                   title="Volume d’endurance"
-                  description="Une discipline et une unité à la fois pour préserver le sens de la donnée."
+                  description="Une discipline et une unité comparables à la fois."
                   className="xl:col-span-2"
                 >
                   <EnduranceVolumeChart data={data} />
@@ -1483,13 +1524,13 @@ export function AnalyticsPage() {
               <div className="grid gap-4 xl:grid-cols-2">
                 <SportPilotChartCard
                   title="Régularité hebdomadaire"
-                  description="Suivi quotidien et nutrition, exprimés en jours renseignés."
+                  description="Suivi et nutrition exprimés en jours."
                 >
                   <RegularityChart data={data} />
                 </SportPilotChartCard>
                 <SportPilotChartCard
                   title="Heatmap de continuité"
-                  description="Intensité fondée sur le suivi, la nutrition et l’activité ou le repos confirmé."
+                  description="Intensité issue du suivi, de la nutrition et du sport."
                   metric={`${balancedWeeks} / ${period}`}
                   metricLabel="semaines équilibrées"
                 >
@@ -1501,20 +1542,20 @@ export function AnalyticsPage() {
                   ) : (
                     <SportPilotEmptyChart
                       title="Aucune continuité à afficher"
-                      description="Continue à renseigner tes journées pour faire apparaître une tendance fiable."
+                      description="Renseigne davantage de journées pour voir une tendance."
                       action={{ label: "Revenir à l’accueil", to: routePaths.dashboard }}
                     />
                   )}
                 </SportPilotChartCard>
                 <SportPilotChartCard
                   title="Check-in et check-out"
-                  description="Un signal déclaré à la fois, sans diagnostic ni recommandation médicale."
+                  description="Un signal déclaré à la fois, sans diagnostic."
                 >
                   <RecoveryChart data={data} />
                 </SportPilotChartCard>
                 <SportPilotChartCard
                   title="Progression vers les thèmes"
-                  description="Critères calculés sur les données réelles de suivi et d’activité."
+                  description="Critères issus des données réelles de suivi."
                 >
                   <ThemeProgressBars data={data} />
                 </SportPilotChartCard>
@@ -1523,23 +1564,23 @@ export function AnalyticsPage() {
           </div>
 
           <nav className="mt-6 flex flex-wrap gap-3 border-t border-[var(--sp-border-subtle)] pt-5" aria-label="Analyses associées">
-            <Link className="sp-button sp-button--secondary inline-flex min-h-11 items-center gap-2 rounded-[var(--sp-radius-control)] px-4 text-sm font-bold" to={routePaths.reports}>
+            <Link className={relatedLinkClassName} to={routePaths.reports}>
               <ShieldCheck aria-hidden="true" className="size-4" />
               Rapports
             </Link>
-            <Link className="sp-button sp-button--secondary inline-flex min-h-11 items-center gap-2 rounded-[var(--sp-radius-control)] px-4 text-sm font-bold" to={routePaths.progression}>
+            <Link className={relatedLinkClassName} to={routePaths.progression}>
               <Scale aria-hidden="true" className="size-4" />
               Progression
             </Link>
-            <Link className="sp-button sp-button--secondary inline-flex min-h-11 items-center gap-2 rounded-[var(--sp-radius-control)] px-4 text-sm font-bold" to={routePaths.food}>
+            <Link className={relatedLinkClassName} to={routePaths.food}>
               <Apple aria-hidden="true" className="size-4" />
               Journal nutritionnel
             </Link>
-            <Link className="sp-button sp-button--secondary inline-flex min-h-11 items-center gap-2 rounded-[var(--sp-radius-control)] px-4 text-sm font-bold" to={routePaths.activities}>
+            <Link className={relatedLinkClassName} to={routePaths.activities}>
               <Activity aria-hidden="true" className="size-4" />
               Activités
             </Link>
-            <Link className="sp-button sp-button--secondary inline-flex min-h-11 items-center gap-2 rounded-[var(--sp-radius-control)] px-4 text-sm font-bold" to={routePaths.strengthExercises}>
+            <Link className={relatedLinkClassName} to={routePaths.strengthExercises}>
               <Dumbbell aria-hidden="true" className="size-4" />
               Exercices
             </Link>

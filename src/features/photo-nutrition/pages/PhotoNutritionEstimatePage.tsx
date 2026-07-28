@@ -1,4 +1,4 @@
-import { ArrowLeft, ImagePlus, Pencil, RotateCcw } from 'lucide-react';
+import { ArrowLeft, ImagePlus, Pencil } from 'lucide-react';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
@@ -29,6 +29,8 @@ import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { ContextHelp } from '@/shared/ui/ContextHelp';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
+import { SportPilotMultiStepLoader } from '@/shared/ui/SportPilotMultiStepLoader';
+import { SportPilotStatefulButton } from '@/shared/ui/SportPilotStatefulButton';
 
 const fields = [
   ['caloriesKcal', 'Calories approximatives'],
@@ -47,6 +49,12 @@ const EMPTY_ESTIMATE: PhotoNutritionEstimate = {
     fatGrams: 0,
   },
 };
+
+const analysisSteps = [
+  { id: 'photo-ready', label: 'Photo prête' },
+  { id: 'analysis', label: 'Analyse en cours' },
+  { id: 'verification', label: 'Vérification du résultat' },
+] as const;
 
 interface AnalysisFailure {
   message: string;
@@ -157,6 +165,13 @@ export function PhotoNutritionEstimatePage({
   const photoInputRef = useRef<HTMLInputElement>(null);
   const estimate = analysis?.estimate ?? manualEstimate;
   const isManual = Boolean(manualEstimate);
+  const analysisButtonState = isAnalyzing
+    ? 'loading'
+    : failure
+      ? 'error'
+      : analysis
+        ? 'success'
+        : 'idle';
 
   useEffect(() => {
     if (!selectedFile || typeof URL.createObjectURL !== 'function') {
@@ -375,13 +390,24 @@ export function PhotoNutritionEstimatePage({
             enregistrée dans ton journal alimentaire.
           </ContextHelp>
 
-          <Button
+          <SportPilotStatefulButton
             onClick={() => void runAnalysis()}
-            className="w-full sm:w-auto"
+            state={analysisButtonState}
+            idleLabel={useRemoteAi ? 'Analyser avec l’IA' : 'Saisir manuellement'}
+            loadingLabel="Analyse en cours…"
+            successLabel="Analyse terminée"
+            errorLabel="Réessayer"
+            fullWidth
+            className="sm:w-auto"
             disabled={!selectedFile || isAnalyzing || isSaving}
-          >
-            {isAnalyzing ? 'Analyse en cours…' : useRemoteAi ? 'Analyser avec l’IA' : 'Saisir manuellement'}
-          </Button>
+          />
+          {isAnalyzing ? (
+            <SportPilotMultiStepLoader
+              steps={analysisSteps}
+              activeStep={1}
+              label="Étapes de l’analyse photo"
+            />
+          ) : null}
         </div>
       </Card>
 
@@ -411,17 +437,7 @@ export function PhotoNutritionEstimatePage({
                   ? 'Se reconnecter'
                   : 'Gérer le compte'}
               </Link>
-            ) : (
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => void runAnalysis()}
-                disabled={isAnalyzing}
-              >
-                <RotateCcw aria-hidden="true" className="size-4" />
-                Réessayer
-              </Button>
-            )}
+            ) : null}
             <Button type="button" variant="secondary" onClick={openManualEntry}>
               <Pencil aria-hidden="true" className="size-4" />
               Saisir manuellement

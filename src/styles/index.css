@@ -177,7 +177,6 @@ a {
     transform var(--sp-motion-fast) var(--sp-ease-standard);
 }
 
-.sp-card--interactive:hover,
 .sp-card--interactive:focus-within {
   border-color: color-mix(in srgb, var(--sp-accent-primary) 55%, var(--sp-border-subtle));
   box-shadow: 0 10px 28px var(--sp-card-glow);
@@ -200,11 +199,6 @@ a {
     color var(--sp-motion-standard) var(--sp-ease-standard),
     background-color var(--sp-motion-standard) var(--sp-ease-standard),
     transform var(--sp-motion-fast) var(--sp-ease-standard);
-}
-
-.sp-navigation-link:hover {
-  color: var(--sp-text-primary);
-  background: var(--sp-surface-muted);
 }
 
 .sp-navigation-link[aria-current="page"],
@@ -571,10 +565,6 @@ a {
     box-shadow var(--sp-motion-standard) var(--sp-ease-standard);
 }
 
-.sp-button:hover {
-  background: color-mix(in srgb, var(--sp-accent-primary) 86%, black);
-}
-
 .sp-button:active {
   transform: scale(var(--sp-press-scale));
 }
@@ -586,19 +576,47 @@ a {
   box-shadow: var(--sp-shadow-card);
 }
 
-.sp-button--secondary:hover {
-  background: var(--sp-surface-muted);
-}
-
 .sp-button--ghost {
   color: var(--sp-text-secondary);
   background: transparent;
   box-shadow: none;
 }
 
-.sp-button--ghost:hover {
-  color: var(--sp-text-primary);
-  background: var(--sp-surface-muted);
+@media (hover: hover) and (pointer: fine) {
+  .sp-card--interactive:hover {
+    border-color: color-mix(in srgb, var(--sp-accent-primary) 55%, var(--sp-border-subtle));
+    box-shadow: 0 10px 28px var(--sp-card-glow);
+  }
+
+  .sp-navigation-link:hover {
+    color: var(--sp-text-primary);
+    background: var(--sp-surface-muted);
+  }
+
+  .sp-button:hover {
+    background: color-mix(in srgb, var(--sp-accent-primary) 86%, black);
+  }
+
+  .sp-button--secondary:hover {
+    background: var(--sp-surface-muted);
+  }
+
+  .sp-button--ghost:hover {
+    color: var(--sp-text-primary);
+    background: var(--sp-surface-muted);
+  }
+}
+
+@media (hover: none), (pointer: coarse) {
+  .sp-card--interactive:active {
+    border-color: color-mix(in srgb, var(--sp-accent-primary) 55%, var(--sp-border-subtle));
+    box-shadow: 0 8px 22px var(--sp-card-glow);
+  }
+
+  .sp-button:active,
+  .sp-navigation-link:active {
+    filter: brightness(0.96);
+  }
 }
 
 .sp-motion-card {
