@@ -35,9 +35,9 @@ export const SportPilotStatefulButton = forwardRef<
   {
     state = "idle",
     idleLabel,
-    loadingLabel = "Traitement...",
-    successLabel = "Termine",
-    errorLabel = "Reessayer",
+    loadingLabel = "Traitement…",
+    successLabel = "Terminé",
+    errorLabel = "Réessayer",
     fullWidth = false,
     disabled,
     className,
@@ -87,4 +87,3 @@ export const SportPilotStatefulButton = forwardRef<
     </button>
   );
 });
-
