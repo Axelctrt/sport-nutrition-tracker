@@ -290,8 +290,8 @@ function CategoryContent({
         <>
           <InlineNotice tone={aiConfig.enabled ? 'success' : 'info'} title={aiConfig.enabled ? 'Analyse photo disponible' : 'Analyse photo distante indisponible'}>
             {aiConfig.enabled
-              ? 'La photo n’est envoyée au proxy sécurisé qu’après un consentement explicite sur l’écran d’analyse. Aucune clé n’est exposée dans l’application.'
-              : 'Le fallback local reste disponible. Aucune photo n’est envoyée à un service distant tant que le proxy sécurisé n’est pas configuré.'}
+              ? 'Ta photo est analysée uniquement lorsque tu actives l’option pour la photo sélectionnée.'
+              : 'Tu peux toujours saisir ton repas manuellement.'}
           </InlineNotice>
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             <SettingsLinkCard
