@@ -58,12 +58,13 @@ import { OnboardingRoute } from '@/app/guards/OnboardingRoute';
 import { AppLayout } from '@/app/layouts/AppLayout';
 import { routePaths } from '@/app/routePaths';
 import { getSyncPrototypeRoutes } from '@/app/syncPrototypeRoutes';
+import {
+  visualLabBuildEnabled,
+  visualLabHostnameAllowed,
+} from '@/app/visualLabAvailability';
 import { NotFoundPage } from '@/features/foundation/pages/NotFoundPage';
 import { CalculationsInformationPage } from '@/features/information/pages/CalculationsInformationPage';
 import { OfflinePage } from '@/pwa/OfflinePage';
-
-const visualLabBuildEnabled = import.meta.env.DEV
-  || import.meta.env.VITE_ENABLE_VISUAL_LAB === 'true';
 
 const LazyVisualLabPage = visualLabBuildEnabled
   ? lazy(async () => {
@@ -73,12 +74,11 @@ const LazyVisualLabPage = visualLabBuildEnabled
   : null;
 
 function visualLabEnabled(): boolean {
-  if (!visualLabBuildEnabled || !LazyVisualLabPage) return false;
-  if (import.meta.env.DEV) return true;
-  if (typeof window === 'undefined') return false;
-  const hostname = window.location.hostname;
-  return hostname !== 'sportpilot-pages.pages.dev'
-    && hostname.endsWith('.sportpilot-pages.pages.dev');
+  return Boolean(
+    visualLabBuildEnabled
+    && LazyVisualLabPage
+    && visualLabHostnameAllowed(),
+  );
 }
 
 export const appShellRoutes: RouteObject[] = [
