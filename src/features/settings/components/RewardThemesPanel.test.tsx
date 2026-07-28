@@ -50,12 +50,12 @@ describe("RewardThemesPanel", () => {
       <RewardThemesPanel loadSnapshot={async () => snapshot()} />,
     );
 
-    expect(await screen.findByRole("heading", { name: "Themes" }))
+    expect(await screen.findByRole("heading", { name: "Thèmes" }))
       .toBeInTheDocument();
     expect(screen.getByText("1 / 5")).toBeInTheDocument();
     expect(screen.getAllByText("Core").length).toBeGreaterThan(0);
     expect(screen.getByText("Neon Pulse")).toBeInTheDocument();
-    expect(screen.getByText("20 activites terminees")).toBeInTheDocument();
+    expect(screen.getByText("20 activités terminées")).toBeInTheDocument();
     for (const themeId of [
       "core",
       "neon-pulse",
@@ -125,16 +125,16 @@ describe("RewardThemesPanel", () => {
     });
     await user.click(within(emeraldTitle.closest("article")!).getByRole(
       "button",
-      { name: "Previsualiser" },
+      { name: "Prévisualiser" },
     ));
     await user.click(screen.getByRole("button", { name: "Essayer maintenant" }));
 
-    expect(screen.getByText("Theme en essai")).toBeInTheDocument();
+    expect(screen.getByText("Thème en essai")).toBeInTheDocument();
     expect(document.documentElement.dataset.sportTheme).toBe("emerald-focus");
     expect(readVisualThemeState().activeThemeId).toBe("core");
 
     await user.click(screen.getByRole("button", {
-      name: "Revenir a l'ancien theme",
+      name: "Revenir à l’ancien thème",
     }));
     expect(document.documentElement.dataset.sportTheme).toBe("core");
     expect(JSON.parse(
