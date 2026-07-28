@@ -145,13 +145,12 @@ export function CalculationsInformationPage() {
       </InlineNotice>
 
       <div className="mt-5 space-y-3">
-        {formulas.map(({ title, summary, description, icon: Icon, lines }, index) => (
+        {formulas.map(({ title, summary, description, icon: Icon, lines }) => (
           <CollapsibleSection
             key={title}
             title={title}
             description={description}
             summary={summary}
-            defaultOpen={index === 0}
           >
             <div className="flex items-start gap-3">
               <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand-100 text-brand-800 dark:bg-brand-900 dark:text-brand-100">

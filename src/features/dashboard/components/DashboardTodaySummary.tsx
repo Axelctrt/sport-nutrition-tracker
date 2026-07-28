@@ -8,7 +8,6 @@ import {
 } from '@/domain/dashboard/dashboardPreferences';
 import type { DailyDashboardNutrition } from '@/features/dashboard/hooks/useDailyDashboard';
 import { Card } from '@/shared/ui/Card';
-import { ContextHelp } from '@/shared/ui/ContextHelp';
 import { ProgressBar } from '@/shared/ui/ProgressBar';
 import { formatLocalDate } from '@/shared/utils/dates';
 
@@ -86,14 +85,6 @@ export function DashboardTodaySummary({
               <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">
                 Cible alimentaire guidée
               </p>
-              <ContextHelp
-                iconOnly
-                question="À propos de la cible alimentaire"
-                tone="brand"
-              >
-                Les calories et macronutriments sont des estimations de pilotage,
-                pas des mesures médicales.
-              </ContextHelp>
               {isRefreshing ? (
                 <span className="text-xs font-medium text-brand-700 dark:text-brand-300" role="status">
                   Mise à jour…
