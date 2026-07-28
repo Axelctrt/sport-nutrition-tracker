@@ -35,7 +35,7 @@ describe("SportPilot 0.34.0 - thèmes Performance Glass", () => {
     expect(themePanelSource).toContain("ThemeCriteria");
     expect(themePanelSource).toContain("beginVisualThemeTrial");
     expect(themePanelSource).toContain("confirmVisualThemeTrial");
-    expect(themePanelSource).toContain("Revenir a l'ancien theme");
+    expect(themePanelSource).toContain("Revenir à l’ancien thème");
     expect(themePanelSource).toContain("data-theme-preview");
   });
 
