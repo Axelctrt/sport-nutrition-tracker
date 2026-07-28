@@ -69,7 +69,7 @@
   overflow: hidden;
 }
 
-.sp-collapsible[data-open="true"] .sp-collapsible-content {
+.sp-collapsible[open] .sp-collapsible-content {
   grid-template-rows: 1fr;
   opacity: 1;
 }
