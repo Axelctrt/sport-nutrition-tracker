@@ -2,7 +2,8 @@ import { ArrowLeft, ImagePlus, Pencil, RotateCcw } from 'lucide-react';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
-import { foodJournalPath } from '@/app/routePaths';
+import { foodJournalPath, routePaths } from '@/app/routePaths';
+import { CloudAccountAccessError } from '@/application/account/cloudAccountAccess';
 import {
   createRemotePhotoNutritionAnalysisPort,
   PhotoNutritionAiError,
@@ -50,6 +51,7 @@ const EMPTY_ESTIMATE: PhotoNutritionEstimate = {
 interface AnalysisFailure {
   message: string;
   diagnosticRef?: string;
+  accountAction?: 'reactivate' | 'reauthenticate';
 }
 
 export interface PhotoNutritionEstimatePageProps {
@@ -84,6 +86,28 @@ function estimateFromForm(data: FormData): PhotoNutritionEstimate {
 }
 
 function failureOf(caught: unknown): AnalysisFailure {
+  if (caught instanceof CloudAccountAccessError) {
+    if (
+      caught.code === 'LICENSE_EXPIRED'
+      || caught.code === 'LICENSE_DEACTIVATED'
+    ) {
+      return {
+        message:
+          'La synchronisation de ton compte doit être réactivée avant d’utiliser l’analyse photo.',
+        accountAction: 'reactivate',
+      };
+    }
+    if (
+      caught.code === 'SESSION_EXPIRED'
+      || caught.code === 'ACCOUNT_SIGNED_OUT'
+    ) {
+      return {
+        message:
+          'Renouvelle ta connexion SportPilot pour utiliser l’analyse photo.',
+        accountAction: 'reauthenticate',
+      };
+    }
+  }
   if (caught instanceof PhotoNutritionAiError) {
     return {
       message: caught.message,
@@ -324,13 +348,15 @@ export function PhotoNutritionEstimatePage({
                 >
                   <span
                     aria-hidden="true"
-                    className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${
+                    data-testid="photo-ai-switch-track"
+                    className={`relative h-7 w-12 shrink-0 rounded-full transition-colors motion-reduce:transition-none ${
                       useRemoteAi ? 'bg-brand-700 dark:bg-brand-500' : 'bg-slate-300 dark:bg-slate-700'
                     }`}
                   >
                     <span
-                      className={`absolute top-1 size-5 rounded-full bg-white shadow transition-transform ${
-                        useRemoteAi ? 'translate-x-6' : 'translate-x-1'
+                      data-testid="photo-ai-switch-thumb"
+                      className={`absolute left-[3px] top-[3px] size-[22px] rounded-full bg-white shadow transition-transform motion-reduce:transition-none ${
+                        useRemoteAi ? 'translate-x-5' : 'translate-x-0'
                       }`}
                     />
                   </span>
@@ -339,7 +365,7 @@ export function PhotoNutritionEstimatePage({
             </div>
             <p className="pb-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
               {aiConfig.enabled
-                ? 'La photo sera envoyée à Google Gemini uniquement pour cette analyse.'
+                ? 'Une connexion SportPilot valide sera vérifiée avant tout envoi pour cette analyse.'
                 : 'L’analyse en ligne est temporairement indisponible.'}
             </p>
           </div>
@@ -360,21 +386,42 @@ export function PhotoNutritionEstimatePage({
       </Card>
 
       {failure ? (
-        <InlineNotice role="alert" tone="error" title="Analyse indisponible">
+        <InlineNotice
+          role="alert"
+          tone="error"
+          title={
+            failure.accountAction === 'reauthenticate'
+              ? 'Reconnexion requise'
+              : failure.accountAction === 'reactivate'
+                ? 'Analyse IA indisponible'
+                : 'Analyse indisponible'
+          }
+        >
           <p>{failure.message}</p>
           {failure.diagnosticRef ? (
             <p className="mt-1 text-xs">Référence : {failure.diagnosticRef}</p>
           ) : null}
           <div className="mt-3 flex flex-wrap gap-2">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => void runAnalysis()}
-              disabled={isAnalyzing}
-            >
-              <RotateCcw aria-hidden="true" className="size-4" />
-              Réessayer
-            </Button>
+            {failure.accountAction ? (
+              <Link
+                to={routePaths.syncPrototype}
+                className="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+              >
+                {failure.accountAction === 'reauthenticate'
+                  ? 'Se reconnecter'
+                  : 'Gérer le compte'}
+              </Link>
+            ) : (
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => void runAnalysis()}
+                disabled={isAnalyzing}
+              >
+                <RotateCcw aria-hidden="true" className="size-4" />
+                Réessayer
+              </Button>
+            )}
             <Button type="button" variant="secondary" onClick={openManualEntry}>
               <Pencil aria-hidden="true" className="size-4" />
               Saisir manuellement

@@ -263,7 +263,7 @@ export function createRemotePhotoNutritionAnalysisPort({
 
   return {
     async analyze(file, signal) {
-      const credentials = resolveSocialCloudApiCredentials(credentialsProvider);
+      const credentials = await resolveSocialCloudApiCredentials(credentialsProvider);
       if (!credentials) {
         throw new PhotoNutritionAiError(
           'PHOTO_AI_AUTH_REQUIRED',
