@@ -1,7 +1,12 @@
 import { ArrowLeft, RefreshCw, ShieldCheck } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { editFoodProductPath, routePaths, selectFoodPath } from '@/app/routePaths';
+import {
+  editFoodProductPath,
+  routePaths,
+  selectFoodPath,
+  type FoodSelectorSource,
+} from '@/app/routePaths';
 import { findFoodProductDuplicates, type FoodProductDuplicateMatch } from '@/application/food/foodProductDuplicateService';
 import { refreshOpenFoodFactsProduct } from '@/application/open-food-facts/openFoodFactsProductService';
 import { collectFoodProductLocalOverrides } from '@/domain/food/foodProductFields';
@@ -55,23 +60,29 @@ export function FoodProductEditorPage() {
   const returnDate = searchParams.get('returnDate');
   const returnSlot = searchParams.get('returnSlot');
   const requestedBarcode = searchParams.get('barcode');
+  const requestedName = searchParams.get('name');
+  const requestedReturnSource = searchParams.get('returnSource');
+  const returnSource: FoodSelectorSource | undefined =
+    requestedReturnSource === 'all' || requestedReturnSource === 'openFoodFacts'
+      ? requestedReturnSource
+      : undefined;
   const mealReturnContext = !productId && returnDate !== null && isValidLocalDate(returnDate) && isMealSlot(returnSlot)
     ? { date: returnDate, slot: returnSlot }
     : undefined;
   const returnPath = mealReturnContext
-    ? selectFoodPath(mealReturnContext.date, mealReturnContext.slot)
+    ? selectFoodPath(mealReturnContext.date, mealReturnContext.slot, undefined, returnSource)
     : libraryReturn?.path ?? routePaths.foodProducts;
   const [product, setProduct] = useState<FoodProduct>();
   const initialValues = useMemo(() => {
     if (product) return productToFormValues(product);
-    if (requestedBarcode && isSupportedBarcode(requestedBarcode)) {
-      return {
-        ...defaultFoodProductFormValues,
-        barcode: normalizeOpenFoodFactsBarcode(requestedBarcode),
-      };
-    }
-    return defaultFoodProductFormValues;
-  }, [product, requestedBarcode]);
+    return {
+      ...defaultFoodProductFormValues,
+      ...(requestedName?.trim() ? { name: requestedName.trim() } : {}),
+      ...(requestedBarcode && isSupportedBarcode(requestedBarcode)
+        ? { barcode: normalizeOpenFoodFactsBarcode(requestedBarcode) }
+        : {}),
+    };
+  }, [product, requestedBarcode, requestedName]);
   const [loading, setLoading] = useState(Boolean(productId));
   const [errorMessage, setErrorMessage] = useState<string>();
   const [actionErrorMessage, setActionErrorMessage] = useState<string>();
@@ -149,7 +160,12 @@ export function FoodProductEditorPage() {
         title: 'Aliment créé',
       });
       await navigate(
-        selectFoodPath(mealReturnContext.date, mealReturnContext.slot, createdProduct.id),
+        selectFoodPath(
+          mealReturnContext.date,
+          mealReturnContext.slot,
+          createdProduct.id,
+          returnSource,
+        ),
         { state: location.state },
       );
       return;

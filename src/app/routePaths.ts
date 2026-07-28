@@ -145,6 +145,12 @@ export function addFoodPath(date: string, slot: string): string {
 
 export type FoodSelectorSource = 'recent' | 'favorites' | 'all' | 'openFoodFacts';
 
+export interface NewFoodProductForMealOptions {
+  barcode?: string;
+  name?: string;
+  returnSource?: FoodSelectorSource;
+}
+
 export function selectFoodPath(
   date: string,
   slot: string,
@@ -160,10 +166,13 @@ export function selectFoodPath(
 export function newFoodProductForMealPath(
   date: string,
   slot: string,
-  barcode?: string,
+  options?: string | NewFoodProductForMealOptions,
 ): string {
   const params = new URLSearchParams({ returnDate: date, returnSlot: slot });
-  if (barcode) params.set('barcode', barcode);
+  const normalizedOptions = typeof options === 'string' ? { barcode: options } : options;
+  if (normalizedOptions?.barcode) params.set('barcode', normalizedOptions.barcode);
+  if (normalizedOptions?.name) params.set('name', normalizedOptions.name);
+  if (normalizedOptions?.returnSource) params.set('returnSource', normalizedOptions.returnSource);
   return `${routePaths.newFoodProduct}?${params.toString()}`;
 }
 

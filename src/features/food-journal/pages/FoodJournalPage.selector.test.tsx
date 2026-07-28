@@ -43,7 +43,8 @@ describe('FoodJournalPage — accès au sélecteur', () => {
 
     const dialog = await screen.findByRole('dialog', { name: 'Ajouter un repas' });
     await user.click(within(dialog).getByRole('button', { name: 'Ajouter un élément' }));
-    const link = within(dialog).getByRole('link', { name: /Rechercher un aliment/ });
-    expect(link).toHaveAttribute('href', selectFoodPath('2026-06-24', slot));
+    await user.click(within(dialog).getByRole('button', { name: /Rechercher un aliment/ }));
+    const link = within(dialog).getByRole('link', { name: /Mes aliments/ });
+    expect(link).toHaveAttribute('href', selectFoodPath('2026-06-24', slot, undefined, 'all'));
   });
 });

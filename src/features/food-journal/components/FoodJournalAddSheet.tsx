@@ -5,7 +5,9 @@ import {
   Camera,
   Clock3,
   Coffee,
+  Database,
   FilePlus2,
+  Globe2,
   Heart,
   MoonStar,
   Plus,
@@ -166,10 +168,12 @@ export function FoodJournalAddSheet({
   const [selectedSlot, setSelectedSlot] = useState<MealSlot>('breakfast');
   const [availableMeals, setAvailableMeals] = useState<readonly MealJournalSnapshot[]>([]);
   const [isLoadingMeal, setIsLoadingMeal] = useState(false);
+  const [searchSourceOpen, setSearchSourceOpen] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     setStep(initialStep);
+    setSearchSourceOpen(false);
     setSelectedSlot(initialSlot ?? recommendedMealSlot(
       currentHour,
       entryCounts ?? emptyEntryCounts,
@@ -203,6 +207,7 @@ export function FoodJournalAddSheet({
 
   const changeStep = (nextStep: MealAddStep, slot = selectedSlot) => {
     setStep(nextStep);
+    setSearchSourceOpen(false);
     onStepChange?.(nextStep, slot);
   };
   const selectedMeal = availableMeals.find((meal) => meal.slot === selectedSlot);
@@ -213,9 +218,16 @@ export function FoodJournalAddSheet({
       {step !== 'meal' ? (
         <button
           type="button"
-          aria-label={step === 'method' ? 'Retour au repas' : 'Choisir un autre repas'}
+          aria-label={searchSourceOpen
+            ? 'Retour aux méthodes d’ajout'
+            : step === 'method'
+              ? 'Retour au repas'
+              : 'Choisir un autre repas'}
           className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
-          onClick={() => changeStep(step === 'method' ? 'overview' : 'meal')}
+          onClick={() => {
+            if (searchSourceOpen) setSearchSourceOpen(false);
+            else changeStep(step === 'method' ? 'overview' : 'meal');
+          }}
         >
           <ArrowLeft aria-hidden="true" className="size-5" />
         </button>
@@ -233,7 +245,9 @@ export function FoodJournalAddSheet({
           ? 'Choisis le repas que tu souhaites compléter.'
           : step === 'overview'
             ? `Ajoute autant d’éléments que nécessaire au ${mealSlotLabels[selectedSlot].toLocaleLowerCase('fr')}.`
-            : `Choisis comment compléter le ${mealSlotLabels[selectedSlot].toLocaleLowerCase('fr')}.`
+            : searchSourceOpen
+              ? 'Choisis où rechercher cet aliment.'
+              : `Choisis comment compléter le ${mealSlotLabels[selectedSlot].toLocaleLowerCase('fr')}.`
       }
       onClose={onClose}
       footer={step === 'overview' ? (
@@ -310,15 +324,44 @@ export function FoodJournalAddSheet({
             {selectedEntries.length > 0 ? 'Ajouter un autre élément' : 'Ajouter un élément'}
           </Button>
         </div>
+      ) : searchSourceOpen ? (
+        <div className="grid gap-3" aria-label="Source de recherche">
+          <Link
+            to={selectFoodPath(date, selectedSlot, undefined, 'all')}
+            state={navigationStates.get(selectedSlot) ?? {}}
+            className="flex min-h-20 items-start gap-3 rounded-xl border border-slate-200 bg-white p-3 text-left transition-colors hover:border-brand-300 hover:bg-brand-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-brand-700 dark:hover:bg-brand-950/40"
+          >
+            <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand-100 text-brand-700 dark:bg-brand-950 dark:text-brand-300">
+              <Database aria-hidden="true" className="size-5" />
+            </span>
+            <span className="min-w-0">
+              <span className="block text-sm font-semibold text-slate-950 dark:text-white">Mes aliments</span>
+              <span className="mt-1 block text-xs leading-4 text-slate-500 dark:text-slate-400">
+                Recherche par nom, marque ou code-barres dans tes aliments enregistrés.
+              </span>
+            </span>
+          </Link>
+          <Link
+            to={selectFoodPath(date, selectedSlot, undefined, 'openFoodFacts')}
+            state={navigationStates.get(selectedSlot) ?? {}}
+            className="flex min-h-20 items-start gap-3 rounded-xl border border-slate-200 bg-white p-3 text-left transition-colors hover:border-brand-300 hover:bg-brand-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-brand-700 dark:hover:bg-brand-950/40"
+          >
+            <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-300">
+              <Globe2 aria-hidden="true" className="size-5" />
+            </span>
+            <span className="min-w-0">
+              <span className="block text-sm font-semibold text-slate-950 dark:text-white">Open Food Facts</span>
+              <span className="mt-1 block text-xs leading-4 text-slate-500 dark:text-slate-400">
+                Recherche en ligne dans le catalogue Open Food Facts.
+              </span>
+            </span>
+          </Link>
+        </div>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2" aria-label="Méthodes d’ajout">
-          {addMethods.map(({ id, title: methodTitle, description, icon: Icon, path }) => (
-            <Link
-              key={id}
-              to={path(date, selectedSlot)}
-              state={navigationStates.get(selectedSlot) ?? {}}
-              className="flex min-h-20 items-start gap-3 rounded-xl border border-slate-200 bg-white p-3 text-left transition-colors hover:border-brand-300 hover:bg-brand-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-brand-700 dark:hover:bg-brand-950/40"
-            >
+          {addMethods.map(({ id, title: methodTitle, description, icon: Icon, path }) => {
+            const content = (
+              <>
               <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand-100 text-brand-700 dark:bg-brand-950 dark:text-brand-300">
                 <Icon aria-hidden="true" className="size-5" />
               </span>
@@ -330,8 +373,30 @@ export function FoodJournalAddSheet({
                   {description}
                 </span>
               </span>
-            </Link>
-          ))}
+              </>
+            );
+            const className = 'flex min-h-20 items-start gap-3 rounded-xl border border-slate-200 bg-white p-3 text-left transition-colors hover:border-brand-300 hover:bg-brand-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-brand-700 dark:hover:bg-brand-950/40';
+
+            return id === 'search' ? (
+              <button
+                key={id}
+                type="button"
+                className={className}
+                onClick={() => setSearchSourceOpen(true)}
+              >
+                {content}
+              </button>
+            ) : (
+              <Link
+                key={id}
+                to={path(date, selectedSlot)}
+                state={navigationStates.get(selectedSlot) ?? {}}
+                className={className}
+              >
+                {content}
+              </Link>
+            );
+          })}
         </div>
       )}
     </BottomSheet>

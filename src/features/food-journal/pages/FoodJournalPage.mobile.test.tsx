@@ -111,8 +111,13 @@ describe('FoodJournalPage — expérience mobile', () => {
 
     await screen.findByRole('heading', { name: 'Nutrition' });
     const breakfastToggle = await screen.findByRole('button', { name: /^Petit-déjeuner/ });
-    expect(breakfastToggle).toHaveAttribute('aria-expanded', 'true');
+    expect(breakfastToggle).toHaveAttribute('aria-expanded', 'false');
     expect(screen.getByRole('button', { name: /^Déjeuner/ })).toHaveAttribute('aria-expanded', 'false');
+
+    await user.click(breakfastToggle);
+    expect(breakfastToggle).toHaveAttribute('aria-expanded', 'true');
+    await user.click(breakfastToggle);
+    expect(breakfastToggle).toHaveAttribute('aria-expanded', 'false');
 
     await user.click(screen.getByRole('button', { name: /^Déjeuner/ }));
     expect(breakfastToggle).toHaveAttribute('aria-expanded', 'false');
@@ -122,9 +127,10 @@ describe('FoodJournalPage — expérience mobile', () => {
     const dialog = await screen.findByRole('dialog', { name: 'Ajouter un repas' });
     await user.click(within(dialog).getByRole('radio', { name: /Petit-déjeuner/ }));
     await user.click(within(dialog).getByRole('button', { name: 'Ajouter un élément' }));
-    expect(within(dialog).getByRole('link', { name: /Rechercher un aliment/ })).toHaveAttribute(
+    await user.click(within(dialog).getByRole('button', { name: /Rechercher un aliment/ }));
+    expect(within(dialog).getByRole('link', { name: /Mes aliments/ })).toHaveAttribute(
       'href',
-      '/food/select?date=2026-06-24&slot=breakfast',
+      '/food/select?date=2026-06-24&slot=breakfast&source=all',
     );
   });
 
@@ -194,6 +200,7 @@ describe('FoodJournalPage — expérience mobile', () => {
     await seedLunchEntry();
     renderJournal();
 
+    await user.click(await screen.findByRole('button', { name: /^Déjeuner/ }));
     expect(await screen.findByText('Yaourt grec')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Jour suivant' }));
 
@@ -207,6 +214,7 @@ describe('FoodJournalPage — expérience mobile', () => {
     const { entry } = await seedLunchEntry();
     renderJournal();
 
+    await user.click(await screen.findByRole('button', { name: /^Déjeuner/ }));
     await screen.findByText('Yaourt grec');
     await user.click(screen.getByRole('button', { name: 'Actions pour Yaourt grec' }));
     await user.click(screen.getByRole('button', { name: 'Modifier la quantité' }));
@@ -230,6 +238,7 @@ describe('FoodJournalPage — expérience mobile', () => {
     const { entry } = await seedLunchEntry();
     renderJournal();
 
+    await user.click(await screen.findByRole('button', { name: /^Déjeuner/ }));
     await screen.findByText('Yaourt grec');
     await user.click(screen.getByRole('button', { name: 'Actions pour Yaourt grec' }));
     await user.click(screen.getByRole('button', { name: 'Supprimer' }));

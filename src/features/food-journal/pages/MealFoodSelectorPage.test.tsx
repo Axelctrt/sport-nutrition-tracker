@@ -146,11 +146,31 @@ describe('MealFoodSelectorPage', () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByRole('button', { name: /^Open Food Facts/ })).toHaveAttribute(
-      'aria-pressed',
-      'true',
+    const search = await screen.findByLabelText('Rechercher dans Open Food Facts');
+    expect(search).toHaveFocus();
+    expect(screen.queryByRole('button', { name: /^Open Food Facts/ })).not.toBeInTheDocument();
+    expect(screen.queryByText('Choisir une méthode')).not.toBeInTheDocument();
+  });
+
+  it('ouvre directement mes aliments et propose une création préremplie sans résultat', async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter initialEntries={['/food/select?date=2026-06-24&slot=lunch&source=all']}>
+        <Routes>
+          <Route path="/food/select" element={<MealFoodSelectorPage />} />
+        </Routes>
+      </MemoryRouter>,
     );
-    expect(screen.getByLabelText('Rechercher dans Open Food Facts')).toBeInTheDocument();
+
+    const search = await screen.findByLabelText('Rechercher dans mes aliments');
+    expect(search).toHaveFocus();
+    expect(screen.queryByText('Choisir une méthode')).not.toBeInTheDocument();
+    await user.type(search, 'Skyr vanille');
+
+    expect(await screen.findByRole('link', { name: 'Créer cet aliment' })).toHaveAttribute(
+      'href',
+      '/food/products/new?returnDate=2026-06-24&returnSlot=lunch&name=Skyr+vanille&returnSource=all',
+    );
   });
 
 });

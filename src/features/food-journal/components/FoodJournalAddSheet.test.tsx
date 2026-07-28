@@ -74,7 +74,6 @@ describe('FoodJournalAddSheet', () => {
     await user.click(screen.getByRole('button', { name: 'Ajouter un élément' }));
 
     const expectedLinks = [
-      ['Rechercher un aliment', selectFoodPath('2026-07-10', 'dinner')],
       ['Scanner un produit', barcodeScannerPath('2026-07-10', 'dinner')],
       ['Utiliser un aliment récent', selectFoodPath('2026-07-10', 'dinner', undefined, 'recent')],
       ['Utiliser un repas favori', favoriteMealsForMealPath('2026-07-10', 'dinner')],
@@ -85,6 +84,16 @@ describe('FoodJournalAddSheet', () => {
     for (const [label, path] of expectedLinks) {
       expect(screen.getByRole('link', { name: new RegExp(label) })).toHaveAttribute('href', path);
     }
+
+    await user.click(screen.getByRole('button', { name: /Rechercher un aliment/ }));
+    expect(screen.getByRole('link', { name: /Mes aliments/ })).toHaveAttribute(
+      'href',
+      selectFoodPath('2026-07-10', 'dinner', undefined, 'all'),
+    );
+    expect(screen.getByRole('link', { name: /Open Food Facts/ })).toHaveAttribute(
+      'href',
+      selectFoodPath('2026-07-10', 'dinner', undefined, 'openFoodFacts'),
+    );
   });
 
   it('affiche les elements deja ajoutes et laisse l utilisateur terminer', async () => {

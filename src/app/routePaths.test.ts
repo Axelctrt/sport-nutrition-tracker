@@ -182,6 +182,19 @@ describe('architecture des paramètres', () => {
     expect(routePaths.settingsDataBackup).toBe('/settings/data-backup');
     expect(routePaths.settingsAdvanced).toBe('/settings/advanced');
   });
+
+  it('préremplit le nom ou le code-barres et conserve la source de recherche', () => {
+    expect(newFoodProductForMealPath('2026-06-24', 'lunch', {
+      name: 'Yaourt grec',
+      returnSource: 'all',
+    })).toBe(
+      '/food/products/new?returnDate=2026-06-24&returnSlot=lunch&name=Yaourt+grec&returnSource=all',
+    );
+    expect(newFoodProductForMealPath('2026-06-24', 'lunch', {
+      barcode: '3017624010701',
+      returnSource: 'openFoodFacts',
+    })).toContain('barcode=3017624010701');
+  });
 });
 
 describe('panneau repas du tableau de bord', () => {

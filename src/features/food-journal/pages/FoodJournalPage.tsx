@@ -28,6 +28,7 @@ import {
   createFoodJournalReturnState,
   type FoodJournalNavigationState,
 } from '@/features/food-journal/navigation/foodJournalNavigation';
+import { recommendedMealSlot } from '@/features/food-journal/utils/recommendedMealSlot';
 import { repositories } from '@/infrastructure/repositories/repositories';
 import { inputClassName } from '@/shared/forms/formStyles';
 import { useToast } from '@/shared/toast/useToast';
@@ -85,13 +86,13 @@ export function FoodJournalPage() {
   const [target, setTarget] = useState<DailyTarget>();
   const [dayOptionsOpen, setDayOptionsOpen] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(false);
-  const [expandedMealSlot, setExpandedMealSlot] = useState<MealSlot>('breakfast');
+  const [expandedMealSlot, setExpandedMealSlot] = useState<MealSlot>();
   const [highlightedEntryId, setHighlightedEntryId] = useState<string>();
   const [returnFeedback, setReturnFeedback] = useState(locationState?.foodJournalFeedback);
 
   const setJournalDate = (nextDate: string) => {
     if (!isValidLocalDate(nextDate)) return;
-    setExpandedMealSlot('breakfast');
+    setExpandedMealSlot(undefined);
     setDayOptionsOpen(false);
     setSearchParams({ date: nextDate });
   };
@@ -113,9 +114,7 @@ export function FoodJournalPage() {
     const initializationKey = `${date}:${requestedSlot ?? 'automatic'}`;
     if (initializedMealDateRef.current === initializationKey) return;
     initializedMealDateRef.current = initializationKey;
-    const firstMealWithEntries = snapshot.meals.find((meal) => meal.entries.length > 0);
-    const nextSlot = requestedSlot ?? firstMealWithEntries?.slot ?? 'breakfast';
-    setExpandedMealSlot(nextSlot);
+    setExpandedMealSlot(requestedSlot);
     if (requestedSlot) {
       window.requestAnimationFrame(() => {
         document.getElementById(`food-meal-${requestedSlot}`)?.scrollIntoView?.({
@@ -191,6 +190,7 @@ export function FoodJournalPage() {
       snapshot?.meals.map((meal) => [meal.slot, meal.entries.length] as const) ?? [],
     )
   ), [snapshot]);
+  const suggestedMealSlot = recommendedMealSlot(new Date().getHours(), entryCounts);
 
   const hasEntries = Boolean(snapshot?.entries.length);
 
@@ -210,7 +210,7 @@ export function FoodJournalPage() {
         <Button
           className="w-full sm:w-auto"
           size="lg"
-          onClick={() => navigate(foodJournalMealComposerPath(date, expandedMealSlot, 'meal'))}
+          onClick={() => navigate(foodJournalMealComposerPath(date, expandedMealSlot ?? suggestedMealSlot, 'meal'))}
         >
           <Plus aria-hidden="true" className="size-5" />Ajouter un repas
         </Button>
@@ -245,7 +245,7 @@ export function FoodJournalPage() {
               title={date === toLocalDate() ? 'Aucun aliment aujourd’hui' : 'Aucun aliment ce jour-là'}
               primaryAction={(
                 <Button
-                  onClick={() => navigate(foodJournalMealComposerPath(date, expandedMealSlot, 'meal'))}
+                  onClick={() => navigate(foodJournalMealComposerPath(date, expandedMealSlot ?? suggestedMealSlot, 'meal'))}
                 >
                   <Plus aria-hidden="true" className="size-4" />
                   Ajouter un repas
@@ -265,7 +265,7 @@ export function FoodJournalPage() {
                 navigationState={navigationStates.get(meal.slot) ?? {}}
                 highlightedEntryId={highlightedEntryId}
                 repeatSourceDate={snapshot.repeatSourceDates[meal.slot]}
-                onToggle={() => setExpandedMealSlot(meal.slot)}
+                onToggle={() => setExpandedMealSlot((current) => current === meal.slot ? undefined : meal.slot)}
                 onAdd={() => navigate(foodJournalMealComposerPath(date, meal.slot, 'overview'))}
                 onDuplicate={duplicate}
                 onRemove={remove}
@@ -390,7 +390,7 @@ export function FoodJournalPage() {
           navigate(foodJournalMealPath(date, slot), { replace: true });
         }}
         onClose={() => {
-          navigate(foodJournalMealPath(date, requestedSlot ?? expandedMealSlot), { replace: true });
+          navigate(foodJournalMealPath(date, requestedSlot ?? expandedMealSlot ?? suggestedMealSlot), { replace: true });
         }}
       />
 
