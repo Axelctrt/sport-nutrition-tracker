@@ -17,7 +17,7 @@ const read = (path) => {
 
 const database = read('src/infrastructure/sync-prototype/SyncPrototypeDatabase.ts');
 for (const expected of [
-  'SYNC_PROTOTYPE_DATABASE_VERSION = 15',
+  'SYNC_PROTOTYPE_DATABASE_VERSION = 16',
   'sportpilot-sync-runtime-0.20.0-v${SYNC_PROTOTYPE_DATABASE_VERSION}',
   'realNutritionProducts',
   'realNutritionRecipes',
@@ -76,11 +76,11 @@ if (!deployment.includes("VITE_ENABLE_REAL_NUTRITION_LIBRARY_SYNC: 'true'")) {
 }
 
 const versions = read('src/infrastructure/database/migrations/versions.ts');
-if (!/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_10/.test(versions)) {
+if (!/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_11/.test(versions)) {
   fail('la base métier principale n’est plus en Dexie v8.');
 }
 const backup = read('src/infrastructure/backup/backupMigrations.ts');
-if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*9/.test(backup)) {
+if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*10/.test(backup)) {
   fail('la sauvegarde n’est plus en JSON v9.');
 }
 
@@ -104,6 +104,6 @@ if (failures.length > 0) {
   process.exitCode = 1;
 } else {
   console.log(
-    'Audit C2 réussi : produits utiles, recettes atomiques, favoris, déduplication Open Food Facts, suppressions durables et runtime cloud v15 validés.',
+    'Audit C2 réussi : produits utiles, recettes atomiques, favoris, déduplication Open Food Facts, suppressions durables et runtime cloud v16 validés.',
   );
 }

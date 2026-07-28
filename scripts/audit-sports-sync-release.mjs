@@ -34,7 +34,7 @@ for (const path of [
 
 const cloudDatabase = read('src/infrastructure/sync-prototype/SyncPrototypeDatabase.ts');
 for (const expected of [
-  'SYNC_PROTOTYPE_DATABASE_VERSION = 15',
+  'SYNC_PROTOTYPE_DATABASE_VERSION = 16',
   'sportpilot-sync-runtime-0.20.0-v${SYNC_PROTOTYPE_DATABASE_VERSION}',
   'disableEagerSync: true',
   'realWeights',
@@ -135,11 +135,11 @@ for (const pipeline of ['check', 'ci']) {
 }
 
 const databaseVersions = read('src/infrastructure/database/migrations/versions.ts');
-if (!/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_10/.test(databaseVersions)) {
+if (!/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_11/.test(databaseVersions)) {
   fail('la base métier principale n’est plus en Dexie v8.');
 }
 const backupMigrations = read('src/infrastructure/backup/backupMigrations.ts');
-if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*9/.test(backupMigrations)) {
+if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*10/.test(backupMigrations)) {
   fail('la sauvegarde n’est plus en JSON v9.');
 }
 
@@ -149,6 +149,6 @@ if (failures.length > 0) {
   process.exitCode = 1;
 } else {
   console.log(
-    'Audit du socle sportif réussi : quatre domaines synchronisés, convergence commune, suppressions durables, agrégats de musculation atomiques et runtime cloud v15 validés.',
+    'Audit du socle sportif réussi : quatre domaines synchronisés, convergence commune, suppressions durables, agrégats de musculation atomiques et runtime cloud v16 validés.',
   );
 }

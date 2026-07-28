@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-const APP_VERSION = '0.32.0';
+const APP_VERSION = '0.33.1';
 const root = process.cwd();
 const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'utf8');
 const exists = (relativePath) => fs.existsSync(path.join(root, relativePath));
@@ -47,9 +47,9 @@ check(
 const releaseReadiness = read('src/app/releaseReadiness.test.ts');
 const settingsTest = read('src/features/settings/components/SettingsOverview.test.tsx');
 const openFoodFactsProxy = read('functions/_shared/openFoodFactsProxy.js');
-check('release readiness version', releaseReadiness.includes("expect(__APP_VERSION__).toBe('0.32.0')"));
-check('settings version', settingsTest.includes("getByText('0.32.0')"));
-check('Open Food Facts user agent', openFoodFactsProxy.includes('SportPilot/0.32.0'));
+check('release readiness version', releaseReadiness.includes("expect(__APP_VERSION__).toBe('0.33.1')"));
+check('settings version', settingsTest.includes("getByText('0.33.1')"));
+check('Open Food Facts user agent', openFoodFactsProxy.includes('SportPilot/0.33.1'));
 check('A26 readiness test', exists('src/app/socialReleaseFinalizationReadiness.test.ts'));
 
 const notes = read('RELEASE-NOTES-0.29.0.md');

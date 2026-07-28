@@ -1,6 +1,6 @@
-# Retour arrière — SportPilot 0.32.0
+# Retour arrière — SportPilot 0.33.1
 
-Le fix-forward reste la stratégie prioritaire. SportPilot 0.32.0 ne modifie pas les schémas Dexie, les migrations D1, les contrats sociaux, les protocoles de synchronisation ni le moteur calorique.
+Le fix-forward reste la stratégie prioritaire. SportPilot 0.33.1 ne modifie pas les schémas Dexie, les migrations D1, les contrats sociaux, les protocoles de synchronisation ni le moteur calorique.
 
 ## Avant rollback
 
@@ -12,7 +12,7 @@ Le fix-forward reste la stratégie prioritaire. SportPilot 0.32.0 ne modifie pas
 
 ## Stratégie recommandée
 
-1. créer une branche `fix/production-0.32.0-*` depuis `main` ;
+1. créer une branche `fix/production-0.33.1-*` depuis `main` ;
 2. corriger uniquement le défaut identifié ;
 3. relancer lint, TypeScript, tests ciblés, E2E onboarding, build et audits concernés ;
 4. fusionner manuellement dans `main` ;

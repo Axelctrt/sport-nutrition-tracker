@@ -1,10 +1,10 @@
-# Checklist de publication — SportPilot 0.32.0
+# Checklist de publication — SportPilot 0.33.1
 
 ## Préparation Git
 
-- [ ] La branche `release/0.32.0` est propre et synchronisée.
-- [ ] `package.json` et `package-lock.json` indiquent `0.32.0`.
-- [ ] Paramètres affiche `0.32.0`.
+- [ ] La branche `fix/ux-photo-search-0.33.1` est propre et synchronisée.
+- [ ] `package.json` et `package-lock.json` indiquent `0.33.1`.
+- [ ] Paramètres affiche `0.33.1`.
 - [ ] Aucun ZIP, dossier `patch-files/`, résultat Playwright ou fichier généré n’est stagé.
 - [ ] Aucun `.env`, secret Cloudflare, token Dexie Cloud ou clé IA n’est stagé.
 - [ ] Aucune migration D1 ou Dexie nouvelle n’est attendue pour cette release.
@@ -50,13 +50,13 @@
 
 ## Publication
 
-- [ ] Commit `chore(release): finaliser SportPilot 0.32.0` créé sur `release/0.32.0`.
-- [ ] `release/0.32.0` fusionnée manuellement dans `develop`.
+- [ ] Commit `chore(release): finaliser SportPilot 0.33.1` créé sur `fix/ux-photo-search-0.33.1`.
+- [ ] `fix/ux-photo-search-0.33.1` fusionnée manuellement dans `develop`.
 - [ ] Contrôles critiques relancés sur `develop`.
 - [ ] `develop` fusionnée manuellement dans `main`.
 - [ ] `main` poussée avant le déploiement de production.
 - [ ] Production Cloudflare Pages construite depuis `main`.
 - [ ] Version, PWA, onboarding et parcours principaux vérifiés en production.
-- [ ] Tag annoté `v0.32.0` créé sur le commit publié.
-- [ ] Tag `v0.32.0` poussé vers `origin`.
+- [ ] Tag annoté `v0.33.1` créé sur le commit publié.
+- [ ] Tag `v0.33.1` poussé vers `origin`.
 - [ ] `develop` resynchronisée avec `main`.

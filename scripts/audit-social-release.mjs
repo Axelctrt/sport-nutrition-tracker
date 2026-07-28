@@ -92,8 +92,8 @@ for (const expected of [
 }
 
 const releaseReadiness = read('src/app/releaseReadiness.test.ts');
-if (!releaseReadiness.includes("expect(__APP_VERSION__).toBe('0.32.0')")) {
-  fail('releaseReadiness ne valide pas la version applicative 0.32.0.');
+if (!releaseReadiness.includes("expect(__APP_VERSION__).toBe('0.33.1')")) {
+  fail('releaseReadiness ne valide pas la version applicative 0.33.1.');
 }
 if (!existsSync(join(root, 'src/app/socialReleaseFinalizationReadiness.test.ts'))) {
   fail('socialReleaseFinalizationReadiness.test.ts est absent.');
@@ -120,7 +120,7 @@ if (contract.includes('socialRawActivities')) {
 
 const runtime = read('src/infrastructure/sync-prototype/SyncPrototypeDatabase.ts');
 for (const token of [
-  'SYNC_PROTOTYPE_DATABASE_VERSION = 15',
+  'SYNC_PROTOTYPE_DATABASE_VERSION = 16',
   'socialIdentities',
   'socialHandleReservations',
   'socialFriendRequests',

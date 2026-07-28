@@ -1,13 +1,15 @@
-# SportPilot 0.32.0 — onboarding compact et release
+# SportPilot 0.33.1 — analyse photo et finitions UX
 
-Branche de finalisation : `release/0.32.0`
+Branche de finalisation : `fix/ux-photo-search-0.33.1`
 
-SportPilot 0.32.0 publie l’onboarding mobile compact validé sur iPhone 15 : choix local ou compte clarifié, connexion séparée, rouleaux tactiles, pages ordinaires statiques et résumé final entièrement scrollable.
+SportPilot 0.33.1 corrige la route d’analyse photo, prépare les images avant
+l’envoi, supprime toute estimation locale fictive et simplifie les parcours
+Nutrition, de recherche et d’aide contextuelle.
 
 ## Périmètre
 
-- version applicative : `0.32.0` ;
-- tag attendu : `v0.32.0` ;
+- version applicative : `0.33.1` ;
+- tag attendu : `v0.33.1` ;
 - migrations D1 ajoutées : aucune ;
 - migrations Dexie ajoutées : aucune ;
 - contrats sociaux 0.29 conservés ;
@@ -20,8 +22,9 @@ SportPilot 0.32.0 publie l’onboarding mobile compact validé sur iPhone 15 : c
 npm run lint
 npx tsc -b --pretty false
 npm run build
-npm run test:e2e:onboarding
-npm run test:e2e:acceptance
+npm run test
+npm run test:e2e
+npm run audit:photo-ai
 npm run audit:release-consolidation
 npm run check
 npm run test:stability
@@ -30,11 +33,11 @@ npm audit
 
 ## Publication
 
-1. Committer la finalisation sur `release/0.32.0`.
-2. Déployer et valider la Preview de la branche release.
-3. Fusionner `release/0.32.0` dans `develop`.
+1. Committer la finalisation sur `fix/ux-photo-search-0.33.1`.
+2. Déployer et valider la Preview uniquement après autorisation explicite.
+3. Fusionner `fix/ux-photo-search-0.33.1` dans `develop`.
 4. Relancer les contrôles critiques sur `develop`.
 5. Fusionner `develop` dans `main`.
 6. Déployer la production Cloudflare Pages depuis `main`.
-7. Créer et pousser le tag annoté `v0.32.0`.
+7. Créer et pousser le tag annoté `v0.33.1`.
 8. Resynchroniser `develop` avec `main`.

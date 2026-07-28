@@ -1,7 +1,7 @@
 {
   "name": "sport-nutrition-tracker",
   "private": true,
-  "version": "0.32.0",
+  "version": "0.33.1",
   "type": "module",
   "engines": {
     "node": "^20.19.0 || >=22.13.0"
@@ -56,7 +56,9 @@
     "audit:goal-prefill": "node scripts/audit-goal-prefill.mjs",
     "audit:reward-theme-catalog": "node scripts/audit-reward-theme-catalog.mjs",
     "audit:photo-nutrition": "node scripts/audit-photo-nutrition.mjs",
-    "audit:photo-ai": "node scripts/audit-photo-ai.mjs",
+    "audit:photo-ai": "node scripts/audit-photo-ai.mjs && node scripts/audit-user-facing-copy.mjs",
+    "audit:user-facing-copy": "node scripts/audit-user-facing-copy.mjs",
+    "smoke:photo-ai": "node scripts/smoke-photo-nutrition-ai.mjs",
     "dev:photo-ai-proxy": "node scripts/photo-nutrition-gemini-proxy-local.mjs",
     "audit:friends-privacy": "node scripts/audit-friends-privacy.mjs",
     "audit:social-identity": "node scripts/audit-social-identity.mjs",

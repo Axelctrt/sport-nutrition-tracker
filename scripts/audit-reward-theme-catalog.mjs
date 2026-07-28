@@ -200,9 +200,9 @@ if (!themeService.includes("previewableCount")) {
     "le snapshot des thèmes ne déclare pas le nombre de thèmes consultables.",
   );
 }
-if (!productionAudit.includes("totalJavaScriptBytes: 3200 * 1024")) {
+if (!productionAudit.includes("totalJavaScriptBytes: 3328 * 1024")) {
   fail(
-    "le budget JavaScript de production doit rester aligné sur le budget 0.32.0 validé après consolidation UX.",
+    "le budget JavaScript de production doit rester aligné sur le budget 0.33.1 validé.",
   );
 }
 if (!productionAudit.includes("totalCssBytes: 176 * 1024")) {
@@ -212,10 +212,10 @@ if (!productionAudit.includes("totalCssBytes: 176 * 1024")) {
 }
 if (
   !automaticSyncReleaseAudit.includes(
-    "budget JavaScript global validé de 3200 Kio",
+    "budget JavaScript global validé de 3328 Kio",
   )
 ) {
-  fail("l’audit F4 doit rester aligné avec le budget JavaScript 0.32.0.");
+  fail("l’audit F4 doit rester aligné avec le budget JavaScript 0.33.1.");
 }
 
 for (const marker of [

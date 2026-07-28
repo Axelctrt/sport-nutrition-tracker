@@ -1,10 +1,10 @@
-SPORTPILOT 0.32.0
+SPORTPILOT 0.33.1
 
 Checklist d’installation et publication :
 
-1. Verifier que la branche release/0.32.0 est propre et synchronisee.
-2. Verifier que package.json et package-lock.json indiquent 0.32.0.
-3. Verifier que Parametres affiche 0.32.0.
+1. Verifier que la branche fix/ux-photo-search-0.33.1 est propre et synchronisee.
+2. Verifier que package.json et package-lock.json indiquent 0.33.1.
+3. Verifier que Parametres affiche 0.33.1.
 4. Verifier qu’aucun ZIP, patch-files, resultat Playwright ou secret n’est stage.
 5. Executer npm run lint.
 6. Executer npx tsc -b --pretty false.
@@ -17,16 +17,16 @@ Checklist d’installation et publication :
 13. Executer npm run test:stability ou consigner les lots deterministes equivalents.
 14. Executer npm audit.
 15. Valider la recette onboarding sur iPhone 15.
-16. Committer avec chore(release): finaliser SportPilot 0.32.0.
-17. Pousser release/0.32.0.
+16. Committer avec chore(release): finaliser SportPilot 0.33.1.
+17. Pousser fix/ux-photo-search-0.33.1.
 18. Deployer et valider la Preview de la branche release.
-19. Fusionner manuellement release/0.32.0 dans develop.
+19. Fusionner manuellement fix/ux-photo-search-0.33.1 dans develop.
 20. Relancer les controles critiques sur develop.
 21. Fusionner develop dans main.
 22. Pousser main.
 23. Deployer la production Cloudflare Pages depuis main.
-24. Verifier la version 0.32.0 en production.
+24. Verifier la version 0.33.1 en production.
 25. Verifier onboarding, Accueil, Nutrition, Sport, Progression, Compte et Synchronisation.
-26. Creer le tag annote v0.32.0 sur le commit publie.
-27. Pousser le tag v0.32.0.
+26. Creer le tag annote v0.33.1 sur le commit publie.
+27. Pousser le tag v0.33.1.
 28. Resynchroniser develop avec main.

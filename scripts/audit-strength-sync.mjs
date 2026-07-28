@@ -36,7 +36,7 @@ const mainVersions = read(
 );
 
 for (const expected of [
-  'SYNC_PROTOTYPE_DATABASE_VERSION = 15',
+  'SYNC_PROTOTYPE_DATABASE_VERSION = 16',
   'sportpilot-sync-runtime-0.20.0-v${SYNC_PROTOTYPE_DATABASE_VERSION}',
 ]) {
   if (!cloudDatabase.includes(expected)) {
@@ -109,7 +109,7 @@ if (!deployment.includes("VITE_ENABLE_REAL_STRENGTH_SYNC: 'true'")) {
   fail('le build de production n’active pas explicitement le lot B3.');
 }
 
-if (!/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_10/.test(mainVersions)) {
+if (!/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_11/.test(mainVersions)) {
   fail('le lot B3 ne doit pas modifier la version de la base locale principale.');
 }
 
