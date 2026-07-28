@@ -65,9 +65,9 @@ export function AchievementsPanel({
 
   return (
     <section aria-labelledby="achievements-title" className={className}>
-      <Card className="p-4 sm:p-5">
+      <Card className="border-[var(--sp-border-subtle)] bg-[var(--sp-surface-card)] p-4 sm:p-5">
         <div className="flex items-start gap-3">
-          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200">
+          <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200">
             <Medal aria-hidden="true" className="size-5" />
           </span>
           <div className="min-w-0 flex-1">
@@ -75,17 +75,17 @@ export function AchievementsPanel({
               <div>
                 <h2
                   id="achievements-title"
-                  className="font-semibold text-slate-950 dark:text-white"
+                  className="font-semibold text-[var(--sp-text-primary)]"
                 >
                   Accomplissements
                 </h2>
-                <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                <p className="mt-1 text-sm leading-6 text-[var(--sp-text-secondary)]">
                   Suis tes jalons sportifs et conserve les badges déjà gagnés,
                   même après le nettoyage de données de test.
                 </p>
               </div>
               {snapshot ? (
-                <span className="inline-flex min-h-8 items-center gap-2 rounded-full bg-amber-50 px-3 text-sm font-semibold text-amber-800 dark:bg-amber-950/60 dark:text-amber-200">
+                <span className="inline-flex min-h-8 items-center gap-2 border border-amber-300 bg-amber-50 px-3 text-sm font-semibold text-amber-800 dark:border-amber-800 dark:bg-amber-950/60 dark:text-amber-200">
                   <Trophy aria-hidden="true" className="size-4" />
                   {`${snapshot.earnedCount}/${snapshot.totalCount} badges gagnés`}
                 </span>
@@ -110,7 +110,7 @@ export function AchievementsPanel({
             ) : null}
 
             {snapshot && nextAchievement ? (
-              <div className="mt-4 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/30">
+              <div className="mt-4 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/30">
                 <Target
                   aria-hidden="true"
                   className="mt-0.5 size-5 shrink-0 text-amber-700 dark:text-amber-300"
@@ -144,14 +144,14 @@ export function AchievementsPanel({
                 {snapshot.achievements.map((progress) => (
                   <article
                     key={progress.achievement.id}
-                    className="rounded-2xl border border-slate-200 p-4 dark:border-slate-700"
+                    className="rounded-lg border border-[var(--sp-border-subtle)] bg-[var(--sp-surface-elevated)] p-4"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <h3 className="font-semibold text-slate-950 dark:text-white">
+                        <h3 className="font-semibold text-[var(--sp-text-primary)]">
                           {progress.achievement.name}
                         </h3>
-                        <p className="mt-1 text-sm leading-5 text-slate-600 dark:text-slate-300">
+                        <p className="mt-1 text-sm leading-5 text-[var(--sp-text-secondary)]">
                           {progress.achievement.description}
                         </p>
                       </div>
