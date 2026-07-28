@@ -117,7 +117,7 @@ export function SportPilotChartContainer({
       aria-label={label}
       data-chart-motion={reducedMotion || !visible ? "paused" : "active"}
       className={cn(
-        "min-w-0 overflow-hidden rounded-lg border border-[var(--sp-border-subtle)] bg-[var(--sp-surface-elevated)] p-2",
+        "min-w-0 touch-pan-y overflow-hidden rounded-lg border border-[var(--sp-border-subtle)] bg-[var(--sp-surface-elevated)] p-2",
         heightClasses[height],
         className,
       )}
@@ -127,12 +127,6 @@ export function SportPilotChartContainer({
       </ResponsiveContainer>
     </div>
   );
-}
-
-export function useSportPilotChartAnimation(): boolean {
-  const reducedMotion = useReducedMotion();
-  return !reducedMotion
-    && (typeof document === "undefined" || document.visibilityState !== "hidden");
 }
 
 interface TooltipEntry {

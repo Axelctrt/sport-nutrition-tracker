@@ -3,8 +3,8 @@ import userEvent from "@testing-library/user-event";
 
 import {
   RewardUnlockNotifier,
-  rewardRevealContextIsSafe,
 } from "@/app/rewards/RewardUnlockNotifier";
+import { rewardRevealContextIsSafe } from "@/app/rewards/rewardRevealContext";
 import { buildAchievementSnapshot } from "@/application/rewards/achievementService";
 import type {
   RewardUnlockBatch,

@@ -1,18 +1,21 @@
 import {
   Activity,
   Apple,
+  BarChart3,
   CalendarRange,
   Dumbbell,
   Scale,
   ShieldCheck,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { format, parseISO, subDays } from "date-fns";
+import { Fragment, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
   Bar,
   BarChart,
   CartesianGrid,
   Cell,
+  ComposedChart,
   Line,
   LineChart,
   Pie,
@@ -27,6 +30,7 @@ import { routePaths } from "@/app/routePaths";
 import type { PerformanceAnalyticsSnapshot } from "@/application/analytics/performanceAnalyticsService";
 import { activityTypeLabels } from "@/features/activities/utils/activityLabels";
 import { usePerformanceAnalytics } from "@/features/analytics/hooks/usePerformanceAnalytics";
+import { muscleGroupLabel } from "@/features/strength-exercises/utils/exerciseLabels";
 import { inputClassName } from "@/shared/forms/formStyles";
 import {
   SportPilotAccessibleSummary,
@@ -36,8 +40,8 @@ import {
   SportPilotEmptyChart,
   SportPilotHeatmap,
   SportPilotLegend,
-  useSportPilotChartAnimation,
 } from "@/shared/charts/SportPilotCharts";
+import { useSportPilotChartAnimation } from "@/shared/charts/useSportPilotChartAnimation";
 import { InlineNotice } from "@/shared/ui/InlineNotice";
 import { PageSkeleton } from "@/shared/ui/PageSkeleton";
 import { SportPilotAnimatedTabs } from "@/shared/ui/SportPilotAnimatedTabs";
@@ -54,6 +58,7 @@ const analyticsTabs = [
 
 type AnalyticsTabId = (typeof analyticsTabs)[number]["id"];
 type AnalyticsPeriod = 4 | 8 | 12;
+type BodyPeriod = "30" | "90" | "180" | "365" | "all";
 
 const chartMargin = { top: 8, right: 8, left: -20, bottom: 0 };
 const chartColors = {
@@ -74,6 +79,16 @@ function validTab(value: string | null): AnalyticsTabId {
 
 function validPeriod(value: string | null): AnalyticsPeriod {
   return value === "4" || value === "8" ? Number(value) as 4 | 8 : 12;
+}
+
+function validBodyPeriod(value: string | null): BodyPeriod {
+  return value === "30"
+    || value === "90"
+    || value === "180"
+    || value === "365"
+    || value === "all"
+    ? value
+    : "90";
 }
 
 function formatNumber(value: number | undefined, digits = 0): string {
@@ -106,12 +121,15 @@ function chartAxes() {
 function WeightChart({
   data,
   compact = false,
+  sourcePoints,
 }: {
   data: PerformanceAnalyticsSnapshot;
   compact?: boolean;
+  sourcePoints?: PerformanceAnalyticsSnapshot["allWeightPoints"];
 }) {
   const animate = useSportPilotChartAnimation();
-  const points = data.base.weight.movingAverage.map((point) => ({
+  const weightPoints = sourcePoints ?? data.base.weight.movingAverage;
+  const points = weightPoints.map((point) => ({
     label: new Intl.DateTimeFormat("fr-FR", {
       day: "numeric",
       month: "short",
@@ -120,7 +138,7 @@ function WeightChart({
     moyenne: point.movingAverageKg,
     objectif: point.targetWeightKg,
   }));
-  if (new Set(data.base.weight.movingAverage.map(({ date }) => date)).size < 2) {
+  if (new Set(weightPoints.map(({ date }) => date)).size < 2) {
     return (
       <SportPilotEmptyChart
         title="Tendance encore indisponible"
@@ -169,13 +187,12 @@ function NutritionCaloriesChart({
   data: PerformanceAnalyticsSnapshot;
 }) {
   const animate = useSportPilotChartAnimation();
-  const points = data.base.nutrition.map((week) => ({
-    label: week.label,
-    calories: week.averageConsumedCaloriesKcal,
-    cible: week.averageTargetCaloriesKcal,
-    jours: week.trackedDayCount,
+  const points = data.nutritionDays.slice(-7).map((day) => ({
+    label: day.label,
+    calories: day.caloriesKcal,
+    cible: day.targetCaloriesKcal,
   }));
-  if (!points.some(({ jours }) => jours > 0)) {
+  if (!points.some(({ calories }) => calories !== undefined)) {
     return (
       <SportPilotEmptyChart
         title="Aucune moyenne nutritionnelle"
@@ -186,26 +203,25 @@ function NutritionCaloriesChart({
   }
   return (
     <>
-      <SportPilotChartContainer label="Calories moyennes consommées et cibles variables, en kilocalories">
-        <BarChart data={points} margin={chartMargin} accessibilityLayer>
+      <SportPilotChartContainer label="Calories consommées et cibles quotidiennes variables, en kilocalories">
+        <ComposedChart data={points} margin={chartMargin} accessibilityLayer>
           {chartAxes()}
           <Tooltip content={<SportPilotChartTooltip />} />
           <Bar dataKey="calories" name="Consommé" unit=" kcal" fill={chartColors.primary} radius={[4, 4, 0, 0]} isAnimationActive={animate} />
-          <Bar dataKey="cible" name="Cible" unit=" kcal" fill={chartColors.success} radius={[4, 4, 0, 0]} isAnimationActive={animate} />
-        </BarChart>
+          <Line type="linear" dataKey="cible" name="Cible" unit=" kcal" stroke={chartColors.success} strokeWidth={2} dot={{ r: 3 }} connectNulls={false} isAnimationActive={animate} />
+        </ComposedChart>
       </SportPilotChartContainer>
       <SportPilotLegend items={[
         { label: "Consommé", color: chartColors.primary },
-        { label: "Cible du jour", color: chartColors.success },
+        { label: "Cible calculée du jour", color: chartColors.success },
       ]} />
       <SportPilotAccessibleSummary
-        caption="Calories moyennes par semaine"
+        caption="Calories et cible des sept derniers jours disponibles"
         rows={points.map((point) => ({
           label: point.label,
           values: [
             { label: "Consommé", value: `${formatNumber(point.calories)} kcal` },
             { label: "Cible", value: `${formatNumber(point.cible)} kcal` },
-            { label: "Jours renseignés", value: String(point.jours) },
           ],
         }))}
       />
@@ -218,12 +234,25 @@ function ActivityMinutesChart({
 }: {
   data: PerformanceAnalyticsSnapshot;
 }) {
+  const [metric, setMetric] = useState<"duration" | "sessions">("duration");
   const animate = useSportPilotChartAnimation();
-  const points = data.base.activity.map((week) => ({
+  const activityTypes = [...new Set(
+    data.base.activity.flatMap((week) => week.breakdown.map(({ type }) => type)),
+  )];
+  const points: Array<Record<string, string | number> & {
+    label: string;
+    totalDuration: number;
+    totalSessions: number;
+  }> = data.base.activity.map((week) => ({
     label: week.label,
-    minutes: week.totalSportMinutes,
+    totalDuration: week.totalSportMinutes,
+    totalSessions: week.sessionCount,
+    ...Object.fromEntries(week.breakdown.map((item) => [
+      `${item.type}-${metric}`,
+      metric === "duration" ? item.durationMinutes : item.sessionCount,
+    ])),
   }));
-  if (!points.some(({ minutes }) => minutes > 0)) {
+  if (!points.some(({ totalDuration }) => totalDuration > 0)) {
     return (
       <SportPilotEmptyChart
         title="Aucune activité sur cette période"
@@ -232,20 +261,73 @@ function ActivityMinutesChart({
       />
     );
   }
+  const unit = metric === "duration" ? " min" : "";
   return (
     <>
-      <SportPilotChartContainer label="Durée sportive terminée par semaine, en minutes">
+      <div className="mb-3">
+        <label htmlFor="analytics-activity-volume-metric" className="text-sm font-bold text-[var(--sp-text-primary)]">
+          Mesure
+        </label>
+        <select
+          id="analytics-activity-volume-metric"
+          value={metric}
+          onChange={(event) => setMetric(
+            event.target.value as "duration" | "sessions",
+          )}
+          className={`${inputClassName} mt-2`}
+        >
+          <option value="duration">Durée</option>
+          <option value="sessions">Nombre de séances</option>
+        </select>
+      </div>
+      <SportPilotChartContainer label={`${metric === "duration" ? "Durée" : "Nombre de séances"} par sport et par semaine`}>
         <BarChart data={points} margin={chartMargin} accessibilityLayer>
           {chartAxes()}
           <Tooltip content={<SportPilotChartTooltip />} />
-          <Bar dataKey="minutes" name="Durée" unit=" min" fill={chartColors.warning} radius={[4, 4, 0, 0]} isAnimationActive={animate} />
+          {activityTypes.map((type, index) => (
+            <Bar
+              key={type}
+              dataKey={`${type}-${metric}`}
+              name={activityTypeLabels[type]}
+              unit={unit}
+              stackId="sport-volume"
+              fill={[
+                chartColors.primary,
+                chartColors.secondary,
+                chartColors.success,
+                chartColors.accent,
+                chartColors.warning,
+              ][index % 5] ?? chartColors.primary}
+              radius={index === activityTypes.length - 1 ? [4, 4, 0, 0] : 0}
+              isAnimationActive={animate}
+            />
+          ))}
         </BarChart>
       </SportPilotChartContainer>
+      <SportPilotLegend items={activityTypes.map((type, index) => ({
+        label: activityTypeLabels[type],
+        color: [
+          chartColors.primary,
+          chartColors.secondary,
+          chartColors.success,
+          chartColors.accent,
+          chartColors.warning,
+        ][index % 5]!,
+      }))} />
       <SportPilotAccessibleSummary
-        caption="Durée sportive hebdomadaire"
+        caption={`${metric === "duration" ? "Durée sportive" : "Séances"} par semaine`}
         rows={points.map((point) => ({
           label: point.label,
-          values: [{ label: "Durée", value: `${formatNumber(point.minutes)} min` }],
+          values: [
+            ...activityTypes.map((type) => ({
+              label: activityTypeLabels[type],
+              value: `${formatNumber(Number(point[`${type}-${metric}`] ?? 0))}${unit}`,
+            })),
+            {
+              label: "Total",
+              value: `${metric === "duration" ? point.totalDuration : point.totalSessions}${unit}`,
+            },
+          ],
         }))}
       />
     </>
@@ -376,6 +458,11 @@ function StrengthCharts({
   const oneRepMaxPoints = selected.points.filter(
     ({ estimatedOneRepMaxKg }) => estimatedOneRepMaxKg !== undefined,
   );
+  const bestPoint = [...selected.points].sort((left, right) => (
+    (right.estimatedOneRepMaxKg ?? right.bestSetWeightKg)
+      - (left.estimatedOneRepMaxKg ?? left.bestSetWeightKg)
+    || right.date.localeCompare(left.date)
+  ))[0];
   return (
     <div className="space-y-4">
       <div>
@@ -445,13 +532,45 @@ function StrengthCharts({
           }))}
         />
       </SportPilotChartCard>
+
+      <SportPilotChartCard
+        title="Meilleure série"
+        description="Série de travail la plus forte sur la période, séparée du volume."
+        metric={bestPoint?.personalRecord ? "Record personnel" : undefined}
+        metricLabel={bestPoint?.personalRecord ? "sur les données enregistrées" : undefined}
+      >
+        {bestPoint ? (
+          <dl className="grid gap-px overflow-hidden rounded-lg border border-[var(--sp-border-subtle)] bg-[var(--sp-border-subtle)] sm:grid-cols-4">
+            {[
+              { label: "Charge", value: `${formatNumber(bestPoint.bestSetWeightKg, 1)} kg` },
+              { label: "Répétitions", value: String(bestPoint.bestSetRepetitions) },
+              { label: "RPE", value: formatNumber(bestPoint.bestSetRpe, 1) },
+              { label: "Date", value: bestPoint.label },
+            ].map((item) => (
+              <div key={item.label} className="bg-[var(--sp-surface-elevated)] p-3">
+                <dt className="text-xs text-[var(--sp-text-muted)]">{item.label}</dt>
+                <dd className="mt-1 font-bold text-[var(--sp-text-primary)]">{item.value}</dd>
+              </div>
+            ))}
+          </dl>
+        ) : null}
+      </SportPilotChartCard>
+
+      <SportPilotChartCard
+        title="Groupes musculaires"
+        description="Présence hebdomadaire fondée sur les séries de travail terminées."
+      >
+        <MuscleGroupHeatmap data={data} />
+      </SportPilotChartCard>
     </div>
   );
 }
 
 function MacroChart({ data }: { data: PerformanceAnalyticsSnapshot }) {
-  const animate = useSportPilotChartAnimation();
-  if (!data.macroWeeks.some(({ trackedDays }) => trackedDays > 0)) {
+  const latest = data.nutritionDays.filter(
+    ({ caloriesKcal }) => caloriesKcal !== undefined,
+  ).at(-1);
+  if (!latest) {
     return (
       <SportPilotEmptyChart
         title="Macros encore indisponibles"
@@ -460,35 +579,140 @@ function MacroChart({ data }: { data: PerformanceAnalyticsSnapshot }) {
       />
     );
   }
+  const rows = [
+    {
+      label: "Protéines",
+      value: latest.proteinGrams,
+      target: latest.targetProteinGrams,
+      color: chartColors.primary,
+    },
+    {
+      label: "Glucides",
+      value: latest.carbohydratesGrams,
+      target: latest.targetCarbohydratesGrams,
+      color: chartColors.secondary,
+    },
+    {
+      label: "Lipides",
+      value: latest.fatGrams,
+      target: latest.targetFatGrams,
+      color: chartColors.warning,
+    },
+  ];
+  return (
+    <div aria-label={`Macronutriments du ${latest.label}`} className="space-y-4">
+      <p className="text-xs text-[var(--sp-text-muted)]">
+        Dernière journée renseignée : {latest.label}
+      </p>
+      {rows.map((row) => {
+        const value = row.value ?? 0;
+        const percentage = row.target && row.target > 0
+          ? Math.min(100, value / row.target * 100)
+          : 0;
+        return (
+          <div key={row.label}>
+            <div className="mb-2 flex items-center justify-between gap-3 text-sm">
+              <span className="font-bold text-[var(--sp-text-primary)]">{row.label}</span>
+              <span className="tabular-nums text-[var(--sp-text-secondary)]">
+                {formatNumber(row.value, 1)} / {formatNumber(row.target, 1)} g
+              </span>
+            </div>
+            <div
+              className="h-2.5 overflow-hidden rounded-full bg-[var(--sp-surface-muted)]"
+              role={row.target === undefined ? undefined : "progressbar"}
+              aria-label={row.target === undefined ? undefined : `${row.label} consommées`}
+              aria-valuemin={row.target === undefined ? undefined : 0}
+              aria-valuemax={row.target}
+              aria-valuenow={row.value}
+            >
+              <span
+                className="block h-full rounded-full"
+                style={{ width: `${percentage}%`, background: row.color }}
+              />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function MealBreakdown({ data }: { data: PerformanceAnalyticsSnapshot }) {
+  const animate = useSportPilotChartAnimation();
+  const labels = {
+    breakfast: "Petit-déjeuner",
+    lunch: "Déjeuner",
+    dinner: "Dîner",
+    snacks: "Collations",
+  } as const;
+  const totals = data.nutritionDays.reduce(
+    (current, day) => ({
+      breakfast: current.breakfast + day.mealCalories.breakfast,
+      lunch: current.lunch + day.mealCalories.lunch,
+      dinner: current.dinner + day.mealCalories.dinner,
+      snacks: current.snacks + day.mealCalories.snacks,
+    }),
+    { breakfast: 0, lunch: 0, dinner: 0, snacks: 0 },
+  );
+  const items = Object.entries(totals)
+    .map(([slot, value]) => ({
+      name: labels[slot as keyof typeof labels],
+      value: roundForDisplay(value),
+    }))
+    .filter(({ value }) => value > 0);
+  if (items.length === 0) {
+    return (
+      <SportPilotEmptyChart
+        title="Répartition des repas indisponible"
+        description="Ajoute des aliments à un repas pour afficher sa part calorique."
+        action={{ label: "Renseigner un repas", to: routePaths.food }}
+      />
+    );
+  }
   return (
     <>
-      <SportPilotChartContainer label="Moyennes hebdomadaires de protéines, glucides et lipides, en grammes">
-        <BarChart data={data.macroWeeks} margin={chartMargin} accessibilityLayer>
-          {chartAxes()}
+      <SportPilotChartContainer label="Répartition des calories par repas">
+        <PieChart accessibilityLayer>
           <Tooltip content={<SportPilotChartTooltip />} />
-          <Bar dataKey="proteinGrams" name="Protéines" unit=" g" fill={chartColors.primary} radius={[4, 4, 0, 0]} isAnimationActive={animate} />
-          <Bar dataKey="carbohydratesGrams" name="Glucides" unit=" g" fill={chartColors.secondary} radius={[4, 4, 0, 0]} isAnimationActive={animate} />
-          <Bar dataKey="fatGrams" name="Lipides" unit=" g" fill={chartColors.warning} radius={[4, 4, 0, 0]} isAnimationActive={animate} />
-        </BarChart>
+          <Pie
+            data={items}
+            dataKey="value"
+            nameKey="name"
+            innerRadius="50%"
+            outerRadius="76%"
+            paddingAngle={2}
+            isAnimationActive={animate}
+          >
+            {items.map((item, index) => (
+              <Cell
+                key={item.name}
+                fill={[
+                  chartColors.primary,
+                  chartColors.secondary,
+                  chartColors.success,
+                  chartColors.warning,
+                ][index % 4] ?? chartColors.primary}
+              />
+            ))}
+          </Pie>
+        </PieChart>
       </SportPilotChartContainer>
-      <SportPilotLegend items={[
-        { label: "Protéines", color: chartColors.primary },
-        { label: "Glucides", color: chartColors.secondary },
-        { label: "Lipides", color: chartColors.warning },
-      ]} />
-      <SportPilotAccessibleSummary
-        caption="Macronutriments moyens par semaine"
-        rows={data.macroWeeks.map((week) => ({
-          label: week.label,
-          values: [
-            { label: "Protéines", value: `${formatNumber(week.proteinGrams, 1)} g` },
-            { label: "Glucides", value: `${formatNumber(week.carbohydratesGrams, 1)} g` },
-            { label: "Lipides", value: `${formatNumber(week.fatGrams, 1)} g` },
-          ],
-        }))}
-      />
+      <SportPilotLegend items={items.map((item, index) => ({
+        label: item.name,
+        detail: `${item.value.toLocaleString("fr-FR")} kcal`,
+        color: [
+          chartColors.primary,
+          chartColors.secondary,
+          chartColors.success,
+          chartColors.warning,
+        ][index % 4]!,
+      }))} />
     </>
   );
+}
+
+function roundForDisplay(value: number): number {
+  return Math.round(value);
 }
 
 function ActivityBreakdown({ data }: { data: PerformanceAnalyticsSnapshot }) {
@@ -559,12 +783,377 @@ function ActivityBreakdown({ data }: { data: PerformanceAnalyticsSnapshot }) {
   );
 }
 
+function EnduranceVolumeChart({
+  data,
+}: {
+  data: PerformanceAnalyticsSnapshot;
+}) {
+  const available = [
+    { id: "running", label: "Course", rows: data.base.running },
+    { id: "cycling", label: "Vélo", rows: data.base.cycling },
+    { id: "swimming", label: "Natation", rows: data.base.swimming },
+  ].filter(({ rows }) => rows.some(({ sessionCount }) => sessionCount > 0));
+  const [discipline, setDiscipline] = useState(
+    () => available[0]?.id ?? "running",
+  );
+  const [metric, setMetric] = useState<"duration" | "distance" | "sessions">(
+    "duration",
+  );
+  const animate = useSportPilotChartAnimation();
+  const selected = available.find(({ id }) => id === discipline) ?? available[0];
+  if (!selected) {
+    return (
+      <SportPilotEmptyChart
+        title="Aucune donnée d’endurance"
+        description="Termine une sortie de course, vélo ou natation pour comparer ton volume."
+        action={{ label: "Ajouter une activité", to: routePaths.addActivity }}
+      />
+    );
+  }
+
+  const points = selected.rows.map((row) => {
+    const distance = "distanceMeters" in row
+      ? row.distanceMeters
+      : row.distanceKm;
+    return {
+      label: row.label,
+      duration: row.durationMinutes,
+      distance,
+      sessions: row.sessionCount,
+    };
+  });
+  const unit = metric === "duration"
+    ? " min"
+    : metric === "sessions"
+      ? ""
+      : selected.id === "swimming"
+        ? " m"
+        : " km";
+  const metricLabel = metric === "duration"
+    ? "Durée"
+    : metric === "sessions"
+      ? "Séances"
+      : "Distance";
+
+  return (
+    <>
+      <div className="mb-3 grid gap-3 sm:grid-cols-2">
+        <div>
+          <label htmlFor="analytics-endurance-discipline" className="text-sm font-bold text-[var(--sp-text-primary)]">
+            Discipline
+          </label>
+          <select
+            id="analytics-endurance-discipline"
+            value={selected.id}
+            onChange={(event) => setDiscipline(event.target.value)}
+            className={`${inputClassName} mt-2`}
+          >
+            {available.map((option) => (
+              <option key={option.id} value={option.id}>{option.label}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label htmlFor="analytics-endurance-metric" className="text-sm font-bold text-[var(--sp-text-primary)]">
+            Mesure
+          </label>
+          <select
+            id="analytics-endurance-metric"
+            value={metric}
+            onChange={(event) => setMetric(
+              event.target.value as "duration" | "distance" | "sessions",
+            )}
+            className={`${inputClassName} mt-2`}
+          >
+            <option value="duration">Durée</option>
+            <option value="distance">Distance</option>
+            <option value="sessions">Nombre de séances</option>
+          </select>
+        </div>
+      </div>
+      <SportPilotChartContainer label={`${metricLabel} de ${selected.label} par semaine${unit ? `, en ${unit.trim()}` : ""}`}>
+        <BarChart data={points} margin={chartMargin} accessibilityLayer>
+          {chartAxes()}
+          <Tooltip content={<SportPilotChartTooltip />} />
+          <Bar
+            dataKey={metric}
+            name={metricLabel}
+            unit={unit}
+            fill={chartColors.secondary}
+            radius={[4, 4, 0, 0]}
+            isAnimationActive={animate}
+          />
+        </BarChart>
+      </SportPilotChartContainer>
+      <SportPilotAccessibleSummary
+        caption={`${metricLabel} de ${selected.label}`}
+        rows={points.map((point) => ({
+          label: point.label,
+          values: [{
+            label: metricLabel,
+            value: `${formatNumber(point[metric], metric === "distance" ? 1 : 0)}${unit}`,
+          }],
+        }))}
+      />
+    </>
+  );
+}
+
+const recoveryOptions = [
+  { id: "energy", label: "Énergie", unit: "niveau" },
+  { id: "readiness", label: "Préparation", unit: "niveau" },
+  { id: "sleepHours", label: "Sommeil", unit: "h" },
+  { id: "hunger", label: "Faim", unit: "niveau" },
+] as const;
+
+type RecoveryMetric = (typeof recoveryOptions)[number]["id"];
+
+function signalLabel(value: number): string {
+  if (value === 1) return "Faible";
+  if (value === 2) return "Normal";
+  return "Élevé";
+}
+
+function RecoveryChart({ data }: { data: PerformanceAnalyticsSnapshot }) {
+  const firstAvailable = recoveryOptions.find(({ id }) => (
+    data.recoveryDays.some((day) => day[id] !== undefined)
+  ));
+  const [metric, setMetric] = useState<RecoveryMetric>(
+    () => firstAvailable?.id ?? "energy",
+  );
+  const animate = useSportPilotChartAnimation();
+  const option = recoveryOptions.find(({ id }) => id === metric)!;
+  const points = data.recoveryDays
+    .filter((day) => day[metric] !== undefined)
+    .map((day) => ({
+      label: day.label,
+      value: day[metric],
+    }));
+  if (!firstAvailable) {
+    return (
+      <SportPilotEmptyChart
+        title="Récupération encore indisponible"
+        description="Renseigne un check-in ou un check-out pour suivre les signaux disponibles."
+        action={{ label: "Revenir à l’accueil", to: routePaths.dashboard }}
+      />
+    );
+  }
+  return (
+    <>
+      <div className="mb-3">
+        <label htmlFor="analytics-recovery-metric" className="text-sm font-bold text-[var(--sp-text-primary)]">
+          Signal
+        </label>
+        <select
+          id="analytics-recovery-metric"
+          value={metric}
+          onChange={(event) => setMetric(event.target.value as RecoveryMetric)}
+          className={`${inputClassName} mt-2`}
+        >
+          {recoveryOptions.map((item) => (
+            <option
+              key={item.id}
+              value={item.id}
+              disabled={!data.recoveryDays.some((day) => day[item.id] !== undefined)}
+            >
+              {item.label}
+            </option>
+          ))}
+        </select>
+      </div>
+      <SportPilotChartContainer label={`${option.label} renseigné au fil des check-ins et check-outs`}>
+        <LineChart data={points} margin={chartMargin} accessibilityLayer>
+          <CartesianGrid vertical={false} stroke={chartColors.grid} strokeDasharray="3 3" />
+          <XAxis dataKey="label" tick={{ fill: chartColors.text, fontSize: 11 }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
+          <YAxis
+            domain={metric === "sleepHours" ? ["auto", "auto"] : [1, 3]}
+            {...(metric === "sleepHours"
+              ? {}
+              : { ticks: [1, 2, 3], tickFormatter: signalLabel })}
+            tick={{ fill: chartColors.text, fontSize: 11 }}
+            axisLine={false}
+            tickLine={false}
+            width={54}
+          />
+          <Tooltip
+            content={(
+              <SportPilotChartTooltip
+                valueFormatter={(value) => (
+                  metric === "sleepHours"
+                    ? `${formatNumber(Number(value), 1)} h`
+                    : signalLabel(Number(value))
+                )}
+              />
+            )}
+          />
+          <Line
+            type="monotone"
+            dataKey="value"
+            name={option.label}
+            stroke={chartColors.accent}
+            strokeWidth={3}
+            dot={{ r: 3 }}
+            connectNulls={false}
+            isAnimationActive={animate}
+          />
+        </LineChart>
+      </SportPilotChartContainer>
+      <SportPilotAccessibleSummary
+        caption={`${option.label} par journée renseignée`}
+        rows={points.map((point) => ({
+          label: point.label,
+          values: [{
+            label: option.label,
+            value: metric === "sleepHours"
+              ? `${formatNumber(point.value, 1)} h`
+              : signalLabel(Number(point.value)),
+          }],
+        }))}
+      />
+    </>
+  );
+}
+
+function MuscleGroupHeatmap({
+  data,
+}: {
+  data: PerformanceAnalyticsSnapshot;
+}) {
+  const end = parseISO(data.base.to);
+  const dates = Array.from({ length: 7 }, (_, index) => {
+    const date = format(subDays(end, 6 - index), "yyyy-MM-dd");
+    return {
+      date,
+      label: new Intl.DateTimeFormat("fr-FR", { weekday: "narrow" }).format(
+        parseISO(date),
+      ),
+    };
+  });
+  const groups = [...new Set(
+    data.muscleGroupCells
+      .filter(({ date }) => dates.some((item) => item.date === date))
+      .map(({ muscleGroup }) => muscleGroup),
+  )];
+  if (groups.length === 0) {
+    return (
+      <SportPilotEmptyChart
+        title="Aucun groupe musculaire à comparer"
+        description="Termine une séance avec des séries de travail pour remplir la heatmap."
+        action={{ label: "Voir mes séances", to: routePaths.workoutSessions }}
+      />
+    );
+  }
+  const maximum = Math.max(
+    1,
+    ...data.muscleGroupCells.map(({ workingSets }) => workingSets),
+  );
+  return (
+    <div
+      role="grid"
+      aria-label="Séries de travail par groupe musculaire sur sept jours"
+      className="grid grid-cols-[minmax(4.75rem,1fr)_repeat(7,minmax(1.5rem,2rem))] gap-1"
+    >
+      <span aria-hidden="true" />
+      {dates.map((date) => (
+        <span key={date.date} role="columnheader" className="text-center text-xs font-bold text-[var(--sp-text-muted)]">
+          {date.label}
+        </span>
+      ))}
+      {groups.map((group) => (
+        <Fragment key={group}>
+          <span key={`${group}-label`} role="rowheader" className="self-center text-xs font-semibold text-[var(--sp-text-secondary)]">
+            {muscleGroupLabel(group)}
+          </span>
+          {dates.map((date) => {
+            const workingSets = data.muscleGroupCells.find(
+              (cell) => cell.date === date.date && cell.muscleGroup === group,
+            )?.workingSets ?? 0;
+            return (
+              <span
+                key={`${group}-${date.date}`}
+                role="gridcell"
+                aria-label={`${muscleGroupLabel(group)}, ${date.date} : ${workingSets} série${workingSets > 1 ? "s" : ""} de travail`}
+                className="aspect-square rounded-[3px] border border-[var(--sp-border-subtle)]"
+                style={{
+                  background: workingSets === 0
+                    ? "var(--sp-surface-muted)"
+                    : `color-mix(in srgb, var(--sp-chart-4) ${35 + workingSets / maximum * 60}%, var(--sp-surface-card))`,
+                }}
+              />
+            );
+          })}
+        </Fragment>
+      ))}
+      <p className="col-span-full mt-2 text-xs text-[var(--sp-text-muted)]">
+        Unité : séries de travail terminées, attribuées au groupe principal de l’exercice.
+      </p>
+    </div>
+  );
+}
+
+function ThemeProgressBars({
+  data,
+}: {
+  data: PerformanceAnalyticsSnapshot;
+}) {
+  const themes = data.themeProgress.filter(({ theme }) => theme.id !== "core");
+  if (themes.length === 0) {
+    return (
+      <SportPilotEmptyChart
+        title="Progression des thèmes indisponible"
+        description="Ouvre la collection pour consulter les critères de déblocage."
+        action={{ label: "Voir la collection", to: routePaths.rewards }}
+      />
+    );
+  }
+  return (
+    <div className="space-y-4">
+      {themes.map((progress) => (
+        <div key={progress.theme.id}>
+          <div className="mb-2 flex items-center justify-between gap-3 text-sm">
+            <span className="font-bold text-[var(--sp-text-primary)]">{progress.theme.name}</span>
+            <span className="tabular-nums text-[var(--sp-text-secondary)]">
+              {progress.unlocked ? "Débloqué" : `${progress.progressPercent} %`}
+            </span>
+          </div>
+          <div
+            className="h-2.5 overflow-hidden rounded-full bg-[var(--sp-surface-muted)]"
+            role="progressbar"
+            aria-label={`Progression vers ${progress.theme.name}`}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={progress.unlocked ? 100 : progress.progressPercent}
+          >
+            <span
+              className="block h-full rounded-full bg-[var(--sp-accent-primary)]"
+              style={{
+                width: `${progress.unlocked ? 100 : progress.progressPercent}%`,
+              }}
+            />
+          </div>
+          <p className="mt-1 text-xs text-[var(--sp-text-muted)]">
+            {progress.requirementLabel}
+          </p>
+        </div>
+      ))}
+      <Link
+        to={routePaths.rewards}
+        className="inline-flex min-h-11 items-center gap-2 text-sm font-bold text-[var(--sp-accent-primary)]"
+      >
+        Voir la collection
+        <BarChart3 aria-hidden="true" className="size-4" />
+      </Link>
+    </div>
+  );
+}
+
 export function AnalyticsPage() {
   const { profile } = useProfile();
   const [searchParams, setSearchParams] = useSearchParams();
   const [referenceDate, setReferenceDate] = useState(toLocalDate());
   const activeTab = validTab(searchParams.get("tab"));
   const period = validPeriod(searchParams.get("weeks"));
+  const bodyPeriod = validBodyPeriod(searchParams.get("bodyPeriod"));
   const { data: fullData, status, errorMessage, refresh } = usePerformanceAnalytics(
     referenceDate,
     profile,
@@ -615,6 +1204,11 @@ export function AnalyticsPage() {
       regularity: fullData.regularity.slice(-period),
       plannedActual: fullData.plannedActual.slice(-period),
       macroWeeks: fullData.macroWeeks.slice(-period),
+      nutritionDays: fullData.nutritionDays.filter(({ date }) => date >= firstWeek),
+      recoveryDays: fullData.recoveryDays.filter(({ date }) => date >= firstWeek),
+      muscleGroupCells: fullData.muscleGroupCells.filter(
+        ({ date }) => date >= firstWeek,
+      ),
       heatmap: fullData.heatmap.filter(({ date }) => date >= firstWeek),
       strengthExercises: fullData.strengthExercises.map((exercise) => {
         const points = exercise.points.filter(({ date }) => date >= firstWeek);
@@ -647,7 +1241,19 @@ export function AnalyticsPage() {
     };
   }, [fullData, period]);
 
-  const updateFilter = (key: "tab" | "weeks", value: string) => {
+  const bodyWeightPoints = useMemo(() => {
+    if (!fullData || bodyPeriod === "all") {
+      return fullData?.allWeightPoints ?? [];
+    }
+    const days = Number(bodyPeriod);
+    const from = format(subDays(parseISO(referenceDate), days - 1), "yyyy-MM-dd");
+    return fullData.allWeightPoints.filter(({ date }) => date >= from);
+  }, [bodyPeriod, fullData, referenceDate]);
+
+  const updateFilter = (
+    key: "tab" | "weeks" | "bodyPeriod",
+    value: string,
+  ) => {
     const next = new URLSearchParams(searchParams);
     next.set(key, value);
     setSearchParams(next, { replace: true });
@@ -792,7 +1398,27 @@ export function AnalyticsPage() {
                 metric={latestWeight === undefined ? undefined : `${formatNumber(latestWeight, 2)} kg`}
                 action={{ label: "Ajouter une pesée", to: routePaths.weight }}
               >
-                <WeightChart data={data} />
+                <div className="mb-4">
+                  <label htmlFor="analytics-body-period" className="text-sm font-bold text-[var(--sp-text-primary)]">
+                    Période du poids
+                  </label>
+                  <select
+                    id="analytics-body-period"
+                    value={bodyPeriod}
+                    onChange={(event) => updateFilter(
+                      "bodyPeriod",
+                      event.target.value,
+                    )}
+                    className={`${inputClassName} mt-2`}
+                  >
+                    <option value="30">30 jours</option>
+                    <option value="90">3 mois</option>
+                    <option value="180">6 mois</option>
+                    <option value="365">1 an</option>
+                    <option value="all">Tout</option>
+                  </select>
+                </div>
+                <WeightChart data={data} sourcePoints={bodyWeightPoints} />
               </SportPilotChartCard>
             ) : null}
 
@@ -806,9 +1432,16 @@ export function AnalyticsPage() {
                 </SportPilotChartCard>
                 <SportPilotChartCard
                   title="Répartition des macros"
-                  description="Moyennes de protéines, glucides et lipides, toutes en grammes."
+                  description="Progression quotidienne vers les trois cibles, toutes en grammes."
                 >
                   <MacroChart data={data} />
+                </SportPilotChartCard>
+                <SportPilotChartCard
+                  title="Répartition des repas"
+                  description="Part calorique des repas sur la période sélectionnée."
+                  className="xl:col-span-2"
+                >
+                  <MealBreakdown data={data} />
                 </SportPilotChartCard>
               </div>
             ) : null}
@@ -833,6 +1466,13 @@ export function AnalyticsPage() {
                   className="xl:col-span-2"
                 >
                   <PlannedActualChart data={data} />
+                </SportPilotChartCard>
+                <SportPilotChartCard
+                  title="Volume d’endurance"
+                  description="Une discipline et une unité à la fois pour préserver le sens de la donnée."
+                  className="xl:col-span-2"
+                >
+                  <EnduranceVolumeChart data={data} />
                 </SportPilotChartCard>
               </div>
             ) : null}
@@ -865,6 +1505,18 @@ export function AnalyticsPage() {
                       action={{ label: "Revenir à l’accueil", to: routePaths.dashboard }}
                     />
                   )}
+                </SportPilotChartCard>
+                <SportPilotChartCard
+                  title="Check-in et check-out"
+                  description="Un signal déclaré à la fois, sans diagnostic ni recommandation médicale."
+                >
+                  <RecoveryChart data={data} />
+                </SportPilotChartCard>
+                <SportPilotChartCard
+                  title="Progression vers les thèmes"
+                  description="Critères calculés sur les données réelles de suivi et d’activité."
+                >
+                  <ThemeProgressBars data={data} />
                 </SportPilotChartCard>
               </div>
             ) : null}

@@ -375,15 +375,15 @@ function buildSeries(
   return {
     weight: definedValues(
       analytics.weight.weekly
-        .slice(-8)
+        .slice(-12)
         .map(({ averageWeightKg }) => averageWeightKg),
     ),
     activity: analytics.activity
-      .slice(-8)
+      .slice(-12)
       .map(({ totalSportMinutes }) => totalSportMinutes),
     nutrition: definedValues(
       analytics.nutrition
-        .slice(-8)
+        .slice(-12)
         .map(({ averageConsumedCaloriesKcal }) => averageConsumedCaloriesKcal),
     ),
     strength,

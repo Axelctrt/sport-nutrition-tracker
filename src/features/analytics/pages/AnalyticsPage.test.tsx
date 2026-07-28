@@ -39,6 +39,7 @@ const analytics = {
     weight: { movingAverage: [], weekly: [] },
     activityBreakdown: [],
   },
+  allWeightPoints: [],
   regularity: weeks.map((week) => ({
     ...week,
     trackingDays: 0,
@@ -58,6 +59,10 @@ const analytics = {
   })),
   strengthExercises: [],
   macroWeeks: weeks.map((week) => ({ ...week, trackedDays: 0 })),
+  nutritionDays: [],
+  recoveryDays: [],
+  muscleGroupCells: [],
+  themeProgress: [],
   heatmap: [],
 } as unknown as PerformanceAnalyticsSnapshot;
 
@@ -106,4 +111,24 @@ it("conserve le domaine et la période dans l’URL", async () => {
   expect(screen.getByRole("heading", { name: "Durée sportive" }))
     .toBeInTheDocument();
   expect(screen.getByText("Aucune répartition disponible")).toBeInTheDocument();
+});
+
+it("conserve aussi la période longue du poids dans une route profonde", async () => {
+  const user = userEvent.setup();
+  render(
+    <MemoryRouter initialEntries={["/analytics?tab=body&weeks=12&bodyPeriod=30"]}>
+      <AnalyticsPage />
+      <LocationProbe />
+    </MemoryRouter>,
+  );
+
+  expect(screen.getByRole("tab", { name: "Corps" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  expect(screen.getByLabelText("Période du poids")).toHaveValue("30");
+  await user.selectOptions(screen.getByLabelText("Période du poids"), "180");
+  expect(screen.getByLabelText("Adresse courante")).toHaveTextContent(
+    "?tab=body&weeks=12&bodyPeriod=180",
+  );
 });

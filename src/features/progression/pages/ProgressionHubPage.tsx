@@ -14,7 +14,7 @@ import {
   Trophy,
   Utensils,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 
 import { useProfile } from "@/app/providers/profile/useProfile";
 import { routePaths } from "@/app/routePaths";
@@ -28,6 +28,7 @@ import { SportPilotMiniChart } from "@/shared/charts/SportPilotCharts";
 import { Button } from "@/shared/ui/Button";
 import { Card } from "@/shared/ui/Card";
 import { InlineNotice } from "@/shared/ui/InlineNotice";
+import { SportPilotAnimatedTabs } from "@/shared/ui/SportPilotAnimatedTabs";
 import { cn } from "@/shared/utils/cn";
 import { toLocalDate } from "@/shared/utils/dates";
 
@@ -39,6 +40,26 @@ const destinationPaths: Record<ProgressionSignalDestination, string> = {
   strength: `${routePaths.analytics}?tab=strength`,
   regularity: `${routePaths.analytics}?tab=regularity`,
 };
+
+const progressionRanges = [
+  { id: "7", label: "7 jours" },
+  { id: "30", label: "30 jours" },
+  { id: "90", label: "3 mois" },
+] as const;
+
+type ProgressionRange = (typeof progressionRanges)[number]["id"];
+
+function validRange(value: string | null): ProgressionRange {
+  return progressionRanges.some(({ id }) => id === value)
+    ? value as ProgressionRange
+    : "30";
+}
+
+function rangeWeeks(range: ProgressionRange): number {
+  if (range === "7") return 1;
+  if (range === "30") return 4;
+  return 12;
+}
 
 function signed(value: number, unit: string): string {
   return `${value > 0 ? "+" : ""}${value.toLocaleString("fr-FR", {
@@ -217,7 +238,16 @@ function GoalSummary({ goal }: { goal: ProgressionHubSummary["goal"] }) {
 
 export function ProgressionHubPage() {
   const { profile } = useProfile();
+  const [searchParams, setSearchParams] = useSearchParams();
   const summary = useProgressionHubSummary(toLocalDate(), profile);
+  const range = validRange(searchParams.get("range"));
+  const visibleWeeks = rangeWeeks(range);
+
+  const updateRange = (nextRange: string) => {
+    const next = new URLSearchParams(searchParams);
+    next.set("range", nextRange);
+    setSearchParams(next, { replace: true });
+  };
 
   if (!profile) return null;
 
@@ -229,7 +259,7 @@ export function ProgressionHubPage() {
             Progression
           </h1>
           <p className="mt-1 text-sm text-[var(--sp-text-secondary)]">
-            Les faits utiles pour décider de la suite.
+            Comprendre l’évolution de tes données et décider de la suite.
           </p>
         </div>
         <Link to={routePaths.weight} className="sp-button sp-button--secondary inline-flex min-h-11 items-center justify-center gap-2 px-4 text-sm font-bold">
@@ -237,6 +267,14 @@ export function ProgressionHubPage() {
           Ajouter une pesée
         </Link>
       </div>
+
+      <SportPilotAnimatedTabs
+        label="Période de progression"
+        tabs={progressionRanges}
+        activeTab={range}
+        onChange={updateRange}
+        className="mt-5"
+      />
 
       {summary.status === "error" ? (
         <InlineNotice className="mt-6" tone="error" title="Synthèse indisponible" role="alert">
@@ -306,8 +344,8 @@ export function ProgressionHubPage() {
                 title="Poids"
                 value={weightValue(summary.data.weight)}
                 detail={weightDetail(summary.data.weight)}
-                values={summary.data.series.weight}
-                chartLabel="Évolution des moyennes de poids"
+                values={summary.data.series.weight.slice(-visibleWeeks)}
+                chartLabel={`Évolution des moyennes de poids sur ${progressionRanges.find(({ id }) => id === range)?.label}`}
                 to={`${routePaths.analytics}?tab=body`}
                 icon={Scale}
               />
@@ -315,8 +353,8 @@ export function ProgressionHubPage() {
                 title="Activité"
                 value={`${summary.data.activity.totalMinutes} min`}
                 detail={`${summary.data.activity.sessionCount} séance${summary.data.activity.sessionCount > 1 ? "s" : ""} terminée${summary.data.activity.sessionCount > 1 ? "s" : ""} cette semaine`}
-                values={summary.data.series.activity}
-                chartLabel="Minutes d’activité par semaine"
+                values={summary.data.series.activity.slice(-visibleWeeks)}
+                chartLabel={`Minutes d’activité sur ${progressionRanges.find(({ id }) => id === range)?.label}`}
                 to={`${routePaths.analytics}?tab=activity`}
                 icon={Activity}
               />
@@ -324,8 +362,8 @@ export function ProgressionHubPage() {
                 title="Nutrition"
                 value={nutritionValue(summary.data.nutrition)}
                 detail={nutritionDetail(summary.data.nutrition)}
-                values={summary.data.series.nutrition}
-                chartLabel="Calories moyennes par semaine suivie"
+                values={summary.data.series.nutrition.slice(-visibleWeeks)}
+                chartLabel={`Calories moyennes sur ${progressionRanges.find(({ id }) => id === range)?.label}`}
                 to={`${routePaths.analytics}?tab=nutrition`}
                 icon={Utensils}
               />
@@ -336,7 +374,7 @@ export function ProgressionHubPage() {
                     ? summary.data.strength.exerciseName ?? "Exercice suivi"
                     : `${summary.data.strength.latestOneRepMaxKg.toLocaleString("fr-FR", { maximumFractionDigits: 1 })} kg`}
                   detail={`${summary.data.strength.exerciseName ?? "Exercice"}${summary.data.strength.changePercent === undefined ? "" : `, ${signed(summary.data.strength.changePercent, "%")} sur la période`}`}
-                  values={summary.data.series.strength}
+                  values={summary.data.series.strength.slice(-visibleWeeks)}
                   chartLabel={`Progression de ${summary.data.strength.exerciseName ?? "l’exercice"}`}
                   to={`${routePaths.analytics}?tab=strength`}
                   icon={Dumbbell}
@@ -344,6 +382,40 @@ export function ProgressionHubPage() {
               ) : null}
             </div>
           </section>
+
+          <nav aria-labelledby="progression-domains-title">
+            <div className="mb-3">
+              <h2 id="progression-domains-title" className="text-lg font-bold text-[var(--sp-text-primary)]">
+                Tes domaines
+              </h2>
+              <p className="text-sm text-[var(--sp-text-secondary)]">Accède directement à l’analyse utile.</p>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {[
+                { path: `${routePaths.analytics}?tab=body`, label: "Corps et poids", icon: Scale },
+                { path: `${routePaths.analytics}?tab=nutrition`, label: "Nutrition", icon: Utensils },
+                { path: `${routePaths.analytics}?tab=activity`, label: "Activité et endurance", icon: Activity },
+                { path: `${routePaths.analytics}?tab=strength`, label: "Musculation", icon: Dumbbell },
+                { path: `${routePaths.analytics}?tab=regularity`, label: "Régularité et récupération", icon: CalendarCheck2 },
+                { path: routePaths.goals, label: "Objectifs", icon: Target },
+              ].map((domain) => {
+                const Icon = domain.icon;
+                return (
+                  <Link
+                    key={domain.label}
+                    to={domain.path}
+                    className="flex min-h-12 items-center justify-between gap-3 rounded-[var(--sp-radius-control)] border border-[var(--sp-border-subtle)] bg-[var(--sp-surface-card)] px-3 text-sm font-bold text-[var(--sp-text-primary)] hover:border-[var(--sp-accent-primary)]"
+                  >
+                    <span className="flex items-center gap-3">
+                      <Icon aria-hidden="true" className="size-4 text-[var(--sp-accent-primary)]" />
+                      {domain.label}
+                    </span>
+                    <ArrowRight aria-hidden="true" className="size-4 text-[var(--sp-text-muted)]" />
+                  </Link>
+                );
+              })}
+            </div>
+          </nav>
 
           <section aria-labelledby="progression-week-title">
             <div className="mb-3">
@@ -402,10 +474,13 @@ export function ProgressionHubPage() {
             <h2 className="text-base font-bold text-[var(--sp-text-primary)]">Explorer</h2>
             <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
               {[
+                { path: routePaths.analytics, label: "Analyses détaillées", icon: BarChart3 },
                 { path: routePaths.reports, label: "Rapports", icon: FileText },
+                { path: routePaths.weeklyReview, label: "Bilan hebdomadaire", icon: CalendarCheck2 },
                 { path: routePaths.history, label: "Historique détaillé", icon: History },
+                { path: routePaths.weight, label: "Poids", icon: Scale },
                 { path: routePaths.rewards, label: "Récompenses", icon: Trophy },
-                { path: routePaths.goals, label: "Tous les objectifs", icon: Target },
+                { path: routePaths.goals, label: "Objectifs", icon: Target },
               ].map((destination) => {
                 const Icon = destination.icon;
                 return (

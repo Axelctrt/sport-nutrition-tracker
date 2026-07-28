@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, renderHook, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 
@@ -7,6 +7,7 @@ import {
   SportPilotEmptyChart,
   SportPilotHeatmap,
 } from "@/shared/charts/SportPilotCharts";
+import { useSportPilotChartAnimation } from "@/shared/charts/useSportPilotChartAnimation";
 
 describe("SportPilotCharts", () => {
   it("propose une action utile dans un état vide", () => {
@@ -60,5 +61,38 @@ describe("SportPilotCharts", () => {
       name: "7 juillet : suivi quotidien, nutrition",
     }));
     expect(screen.getByText("suivi quotidien, nutrition")).toBeInTheDocument();
+  });
+
+  it("arrête les animations quand l’onglet devient masqué", () => {
+    let visibility: DocumentVisibilityState = "visible";
+    const visibilitySpy = vi.spyOn(document, "visibilityState", "get")
+      .mockImplementation(() => visibility);
+    const { result } = renderHook(useSportPilotChartAnimation);
+
+    expect(result.current).toBe(true);
+    visibility = "hidden";
+    act(() => document.dispatchEvent(new Event("visibilitychange")));
+    expect(result.current).toBe(false);
+
+    visibilitySpy.mockRestore();
+  });
+
+  it("désactive les animations en réduction de mouvement", () => {
+    const matchMediaSpy = vi.spyOn(window, "matchMedia").mockImplementation(
+      (query) => ({
+        matches: query === "(prefers-reduced-motion: reduce)",
+        media: query,
+        onchange: null,
+        addListener: () => undefined,
+        removeListener: () => undefined,
+        addEventListener: () => undefined,
+        removeEventListener: () => undefined,
+        dispatchEvent: () => false,
+      }),
+    );
+
+    const { result } = renderHook(useSportPilotChartAnimation);
+    expect(result.current).toBe(false);
+    matchMediaSpy.mockRestore();
   });
 });

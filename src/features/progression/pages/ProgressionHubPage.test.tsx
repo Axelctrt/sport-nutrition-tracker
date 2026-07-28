@@ -1,5 +1,5 @@
-import { render, screen } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { MemoryRouter, useLocation } from "react-router-dom";
 
 import { ProgressionHubPage } from "@/features/progression/pages/ProgressionHubPage";
 import { createProfileInput } from "@/test/factories/profileFactory";
@@ -42,9 +42,14 @@ vi.mock("@/features/progression/hooks/useProgressionHubSummary", () => ({
 }));
 
 it("hiérarchise le signal, la synthèse puis les destinations secondaires", () => {
+  function LocationProbe() {
+    return <output aria-label="Adresse courante">{useLocation().search}</output>;
+  }
+
   render(
     <MemoryRouter>
       <ProgressionHubPage />
+      <LocationProbe />
     </MemoryRouter>,
   );
 
@@ -56,6 +61,13 @@ it("hiérarchise le signal, la synthèse puis les destinations secondaires", () 
   ).toBeInTheDocument();
   expect(screen.getByRole("heading", { name: "Vue d’ensemble" })).toBeInTheDocument();
   expect(screen.getByRole("heading", { name: "Cette semaine" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Tes domaines" })).toBeInTheDocument();
+  expect(screen.getByRole("tab", { name: "30 jours" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  fireEvent.click(screen.getByRole("tab", { name: "7 jours" }));
+  expect(screen.getByLabelText("Adresse courante")).toHaveTextContent("?range=7");
   expect(screen.getByRole("link", { name: /Ajouter une pesée/ })).toHaveAttribute(
     "href",
     "/weight",
@@ -79,5 +91,9 @@ it("hiérarchise le signal, la synthèse puis les destinations secondaires", () 
   expect(screen.getByRole("link", { name: "Récompenses" })).toHaveAttribute(
     "href",
     "/rewards",
+  );
+  expect(screen.getByRole("link", { name: "Analyses détaillées" })).toHaveAttribute(
+    "href",
+    "/analytics",
   );
 });

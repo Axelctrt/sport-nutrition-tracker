@@ -1,24 +1,37 @@
 import { addDays, format, parseISO } from "date-fns";
 
 import { loadTwelveWeekAnalytics } from "@/application/analytics/analyticsService";
+import {
+  buildThemeAchievementSnapshot,
+  type ThemeAchievementProgress,
+} from "@/application/rewards/themeAchievementService";
+import { calculateWeightMovingAverage } from "@/domain/aggregations/analytics";
 import { calculateEstimatedOneRepMax } from "@/domain/calculations/strength";
-import { calculateDailyNutrition } from "@/domain/calculations/nutrition";
+import {
+  calculateDailyNutrition,
+  calculateFoodEntryNutrition,
+} from "@/domain/calculations/nutrition";
 import type { Activity } from "@/domain/models/activity";
 import type {
   DailyActivityDecision,
   DailyCheckIn,
   DailyCheckOut,
 } from "@/domain/models/dailyCoaching";
-import type { FoodEntry } from "@/domain/models/food";
-import type { TwelveWeekAnalytics } from "@/domain/models/analytics";
+import type { FoodEntry, MealSlot } from "@/domain/models/food";
+import type {
+  TwelveWeekAnalytics,
+  WeightMovingAveragePoint,
+} from "@/domain/models/analytics";
 import type { LocalDate } from "@/domain/models/common";
 import type { UserProfile } from "@/domain/models/profile";
 import type {
   ExerciseDefinition,
+  MuscleGroup,
   StrengthSet,
   WorkoutSession,
   WorkoutSessionExercise,
 } from "@/domain/models/strength";
+import type { DailyTarget } from "@/domain/models/targets";
 import type { PlannedEnduranceSession } from "@/domain/planning/endurancePlanningState";
 import { appDatabase } from "@/infrastructure/database/database";
 
@@ -49,6 +62,10 @@ export interface PerformanceStrengthPoint {
   label: string;
   volumeKg: number;
   bestSetLabel: string;
+  bestSetWeightKg: number;
+  bestSetRepetitions: number;
+  bestSetRpe?: number;
+  personalRecord: boolean;
   estimatedOneRepMaxKg?: number;
 }
 
@@ -77,12 +94,47 @@ export interface PerformanceHeatmapDay {
   detail: string;
 }
 
+export interface PerformanceNutritionDay {
+  date: LocalDate;
+  label: string;
+  caloriesKcal?: number;
+  targetCaloriesKcal?: number;
+  proteinGrams?: number;
+  targetProteinGrams?: number;
+  carbohydratesGrams?: number;
+  targetCarbohydratesGrams?: number;
+  fatGrams?: number;
+  targetFatGrams?: number;
+  mealCalories: Record<MealSlot, number>;
+}
+
+export interface PerformanceRecoveryDay {
+  date: LocalDate;
+  label: string;
+  readiness?: number;
+  energy?: number;
+  hunger?: number;
+  sleepHours?: number;
+}
+
+export interface PerformanceMuscleGroupCell {
+  date: LocalDate;
+  label: string;
+  muscleGroup: MuscleGroup;
+  workingSets: number;
+}
+
 export interface PerformanceAnalyticsSnapshot {
   base: TwelveWeekAnalytics;
+  allWeightPoints: WeightMovingAveragePoint[];
   regularity: PerformanceRegularityWeek[];
   plannedActual: PlannedActualWeek[];
   strengthExercises: PerformanceStrengthExercise[];
   macroWeeks: PerformanceMacroWeek[];
+  nutritionDays: PerformanceNutritionDay[];
+  recoveryDays: PerformanceRecoveryDay[];
+  muscleGroupCells: PerformanceMuscleGroupCell[];
+  themeProgress: ThemeAchievementProgress[];
   heatmap: PerformanceHeatmapDay[];
 }
 
@@ -93,6 +145,7 @@ export interface PerformanceAnalyticsSource {
   checkOuts: readonly DailyCheckOut[];
   activityDecisions: readonly DailyActivityDecision[];
   foodEntries: readonly FoodEntry[];
+  dailyTargets: readonly DailyTarget[];
   workoutSessions: readonly WorkoutSession[];
   workoutSessionExercises: readonly WorkoutSessionExercise[];
   strengthSets: readonly StrengthSet[];
@@ -272,6 +325,10 @@ function buildStrengthExercises(
       label: format(parseISO(session.date), "dd/MM"),
       volumeKg: round(volumeKg, 1),
       bestSetLabel: `${bestSet.weightKg.toLocaleString("fr-FR")} kg × ${bestSet.repetitions}`,
+      bestSetWeightKg: bestSet.weightKg,
+      bestSetRepetitions: bestSet.repetitions,
+      ...(bestSet.rpe === undefined ? {} : { bestSetRpe: bestSet.rpe }),
+      personalRecord: false,
       ...(estimatedOneRepMaxKg === undefined
         ? {}
         : { estimatedOneRepMaxKg }),
@@ -283,9 +340,19 @@ function buildStrengthExercises(
 
   return [...pointsByExercise.entries()]
     .map(([exerciseId, unsortedPoints]) => {
-      const points = [...unsortedPoints].sort((left, right) => (
+      const orderedPoints = [...unsortedPoints].sort((left, right) => (
         left.date.localeCompare(right.date)
       ));
+      const recordValue = Math.max(
+        ...orderedPoints.map((point) => (
+          point.estimatedOneRepMaxKg ?? point.bestSetWeightKg
+        )),
+      );
+      const points = orderedPoints.map((point) => ({
+        ...point,
+        personalRecord:
+          (point.estimatedOneRepMaxKg ?? point.bestSetWeightKg) === recordValue,
+      }));
       const oneRepMaxPoints = points.filter(
         (point) => point.estimatedOneRepMaxKg !== undefined,
       );
@@ -341,6 +408,153 @@ function buildMacroWeeks(
   });
 }
 
+function emptyMealCalories(): Record<MealSlot, number> {
+  return {
+    breakfast: 0,
+    lunch: 0,
+    dinner: 0,
+    snacks: 0,
+  };
+}
+
+function buildNutritionDays(
+  source: PerformanceAnalyticsSource,
+): PerformanceNutritionDay[] {
+  const entriesByDate = new Map<LocalDate, FoodEntry[]>();
+  for (const entry of source.foodEntries) {
+    const current = entriesByDate.get(entry.date) ?? [];
+    current.push(entry);
+    entriesByDate.set(entry.date, current);
+  }
+  const targetsByDate = new Map(
+    source.dailyTargets.map((target) => [target.date, target]),
+  );
+  const dates = new Set([
+    ...entriesByDate.keys(),
+    ...targetsByDate.keys(),
+  ]);
+
+  return [...dates]
+    .sort((left, right) => left.localeCompare(right))
+    .map((date) => {
+      const entries = entriesByDate.get(date) ?? [];
+      const target = targetsByDate.get(date);
+      const nutrition = entries.length > 0
+        ? calculateDailyNutrition(entries)
+        : undefined;
+      const mealCalories = emptyMealCalories();
+      for (const entry of entries) {
+        mealCalories[entry.mealSlot] +=
+          calculateFoodEntryNutrition(entry).caloriesKcal;
+      }
+      return {
+        date,
+        label: format(parseISO(date), "dd/MM"),
+        ...(nutrition
+          ? {
+              caloriesKcal: round(nutrition.caloriesKcal, 0),
+              proteinGrams: round(nutrition.proteinGrams, 1),
+              carbohydratesGrams: round(nutrition.carbohydratesGrams, 1),
+              fatGrams: round(nutrition.fatGrams, 1),
+            }
+          : {}),
+        ...(target
+          ? {
+              targetCaloriesKcal: round(target.targetCaloriesKcal, 0),
+              targetProteinGrams: round(target.macros.proteinGrams, 1),
+              targetCarbohydratesGrams: round(
+                target.macros.carbohydratesGrams,
+                1,
+              ),
+              targetFatGrams: round(target.macros.fatGrams, 1),
+            }
+          : {}),
+        mealCalories,
+      };
+    });
+}
+
+function signalLevel(value: "low" | "normal" | "high" | undefined): number | undefined {
+  if (value === "low") return 1;
+  if (value === "normal") return 2;
+  if (value === "high") return 3;
+  return undefined;
+}
+
+function buildRecoveryDays(
+  source: PerformanceAnalyticsSource,
+): PerformanceRecoveryDay[] {
+  const checkIns = new Map(source.checkIns.map((checkIn) => [checkIn.date, checkIn]));
+  const checkOuts = new Map(
+    source.checkOuts.map((checkOut) => [checkOut.date, checkOut]),
+  );
+  const dates = new Set([...checkIns.keys(), ...checkOuts.keys()]);
+  return [...dates]
+    .sort((left, right) => left.localeCompare(right))
+    .map((date) => {
+      const checkIn = checkIns.get(date);
+      const checkOut = checkOuts.get(date);
+      const readiness = signalLevel(checkIn?.readiness);
+      const energy = signalLevel(checkOut?.energy);
+      const hunger = signalLevel(checkOut?.hunger);
+      return {
+        date,
+        label: format(parseISO(date), "dd/MM"),
+        ...(readiness === undefined ? {} : { readiness }),
+        ...(energy === undefined ? {} : { energy }),
+        ...(hunger === undefined ? {} : { hunger }),
+        ...(checkIn?.sleepDurationMinutes === undefined
+          ? {}
+          : { sleepHours: round(checkIn.sleepDurationMinutes / 60, 1) }),
+      };
+    });
+}
+
+function buildMuscleGroupCells(
+  source: PerformanceAnalyticsSource,
+): PerformanceMuscleGroupCell[] {
+  const sessions = new Map(
+    source.workoutSessions
+      .filter(({ date, status }) => (
+        status === "completed"
+        && inRange(date, source.base.from, source.base.to)
+      ))
+      .map((session) => [session.id, session]),
+  );
+  const definitions = new Map(
+    source.exerciseDefinitions.map((definition) => [definition.id, definition]),
+  );
+  const completedSets = new Map<string, number>();
+  for (const set of source.strengthSets) {
+    if (!set.isCompleted || set.type === "warmup") continue;
+    completedSets.set(
+      set.sessionExerciseId,
+      (completedSets.get(set.sessionExerciseId) ?? 0) + 1,
+    );
+  }
+  const totals = new Map<string, PerformanceMuscleGroupCell>();
+  for (const sessionExercise of source.workoutSessionExercises) {
+    const session = sessions.get(sessionExercise.sessionId);
+    const definition = definitions.get(
+      sessionExercise.exerciseDefinitionId,
+    );
+    const workingSets = completedSets.get(sessionExercise.id) ?? 0;
+    if (!session || !definition || workingSets === 0) continue;
+    const key = `${session.date}:${definition.primaryMuscleGroup}`;
+    const current = totals.get(key);
+    totals.set(key, {
+      date: session.date,
+      label: format(parseISO(session.date), "dd/MM"),
+      muscleGroup: definition.primaryMuscleGroup,
+      workingSets: (current?.workingSets ?? 0) + workingSets,
+    });
+  }
+  return [...totals.values()].sort((left, right) => (
+    left.date.localeCompare(right.date)
+    || left.muscleGroup.localeCompare(right.muscleGroup)
+  ));
+}
+
 function buildHeatmap(
   source: PerformanceAnalyticsSource,
 ): PerformanceHeatmapDay[] {
@@ -386,10 +600,15 @@ export function buildPerformanceAnalytics(
 ): PerformanceAnalyticsSnapshot {
   return {
     base: source.base,
+    allWeightPoints: source.base.weight.movingAverage,
     regularity: buildRegularity(source),
     plannedActual: buildPlannedActual(source),
     strengthExercises: buildStrengthExercises(source),
     macroWeeks: buildMacroWeeks(source),
+    nutritionDays: buildNutritionDays(source),
+    recoveryDays: buildRecoveryDays(source),
+    muscleGroupCells: buildMuscleGroupCells(source),
+    themeProgress: [],
     heatmap: buildHeatmap(source),
   };
 }
@@ -405,11 +624,13 @@ export async function loadPerformanceAnalytics(
     checkOuts,
     activityDecisions,
     foodEntries,
+    dailyTargets,
     workoutSessions,
     workoutSessionExercises,
     strengthSets,
     exerciseDefinitions,
     endurancePlanningSessions,
+    weights,
   ] = await Promise.all([
     loadTwelveWeekAnalytics(referenceDate, profile),
     appDatabase.activities.toArray(),
@@ -417,15 +638,17 @@ export async function loadPerformanceAnalytics(
     appDatabase.dailyCheckOuts.toArray(),
     appDatabase.dailyActivityDecisions.toArray(),
     appDatabase.foodEntries.toArray(),
+    appDatabase.dailyTargets.toArray(),
     appDatabase.workoutSessions.toArray(),
     appDatabase.workoutSessionExercises.toArray(),
     appDatabase.strengthSets.toArray(),
     appDatabase.exerciseDefinitions.toArray(),
     appDatabase.endurancePlanningSessions.toArray(),
+    appDatabase.weights.toArray(),
   ]);
   const from = base.from;
   const to = base.to;
-  return buildPerformanceAnalytics({
+  const snapshot = buildPerformanceAnalytics({
     base,
     activities: activities.filter(({ date }) => inRange(date, from, to)),
     checkIns: checkIns.filter(({ date }) => inRange(date, from, to)),
@@ -434,6 +657,7 @@ export async function loadPerformanceAnalytics(
       ({ date }) => inRange(date, from, to),
     ),
     foodEntries: foodEntries.filter(({ date }) => inRange(date, from, to)),
+    dailyTargets: dailyTargets.filter(({ date }) => inRange(date, from, to)),
     workoutSessions,
     workoutSessionExercises,
     strengthSets,
@@ -442,4 +666,17 @@ export async function loadPerformanceAnalytics(
       ({ date }) => inRange(date, from, to),
     ),
   });
+  const themeSnapshot = buildThemeAchievementSnapshot({
+    activities,
+    workoutSessions,
+    checkIns,
+    checkOuts,
+    foodEntries,
+    activityDecisions,
+  }, referenceDate);
+  return {
+    ...snapshot,
+    allWeightPoints: calculateWeightMovingAverage(weights, profile),
+    themeProgress: themeSnapshot.themes,
+  };
 }

@@ -6,6 +6,7 @@ import type { Activity } from "@/domain/models/activity";
 import type {
   DailyActivityDecision,
   DailyCheckIn,
+  DailyCheckOut,
 } from "@/domain/models/dailyCoaching";
 import type { FoodEntry } from "@/domain/models/food";
 import type { TwelveWeekAnalytics } from "@/domain/models/analytics";
@@ -16,6 +17,7 @@ import type {
   WorkoutSessionExercise,
 } from "@/domain/models/strength";
 import type { PlannedEnduranceSession } from "@/domain/planning/endurancePlanningState";
+import type { DailyTarget } from "@/domain/models/targets";
 
 const CREATED_AT = "2026-07-01T08:00:00.000Z";
 
@@ -44,7 +46,54 @@ function checkIn(id: string, date: string): DailyCheckIn {
     date,
     contextFlags: [],
     contextSyncPreference: "localOnly",
+    readiness: "normal",
+    sleepDurationMinutes: 480,
     completedAt: `${date}T07:00:00.000Z`,
+    createdAt: CREATED_AT,
+    updatedAt: CREATED_AT,
+  };
+}
+
+function checkOut(id: string, date: string): DailyCheckOut {
+  return {
+    id,
+    date,
+    energy: "high",
+    hunger: "normal",
+    foodJournalComplete: true,
+    contextFlags: [],
+    contextSyncPreference: "localOnly",
+    completedAt: `${date}T21:00:00.000Z`,
+    createdAt: CREATED_AT,
+    updatedAt: CREATED_AT,
+  };
+}
+
+function dailyTarget(id: string, date: string): DailyTarget {
+  return {
+    id,
+    date,
+    calculationWeightKg: 70,
+    energy: {
+      bmrKcal: 1_600,
+      occupationalBaseKcal: 1_900,
+      walkingKcal: 0,
+      runningKcal: 0,
+      swimmingKcal: 0,
+      strengthTrainingKcal: 0,
+      otherActivitiesKcal: 0,
+      totalEstimatedExpenditureKcal: 1_900,
+    },
+    goalAdjustmentKcal: -200,
+    acceptedCalibrationAdjustmentKcal: 0,
+    calorieFloorKcal: 1_600,
+    targetCaloriesKcal: 2_200,
+    macros: {
+      proteinGrams: 120,
+      carbohydratesGrams: 250,
+      fatGrams: 70,
+    },
+    calculationVersion: 1,
     createdAt: CREATED_AT,
     updatedAt: CREATED_AT,
   };
@@ -244,9 +293,14 @@ function source(): PerformanceAnalyticsSource {
     base,
     activities,
     checkIns,
-    checkOuts: [],
+    checkOuts: [checkOut("out-1", "2026-07-07")],
     activityDecisions,
     foodEntries,
+    dailyTargets: [
+      dailyTarget("target-1", "2026-07-07"),
+      dailyTarget("target-2", "2026-07-08"),
+      dailyTarget("target-3", "2026-07-09"),
+    ],
     workoutSessions,
     workoutSessionExercises,
     strengthSets,
@@ -307,11 +361,55 @@ describe("performanceAnalyticsService", () => {
         volumeKg: 500,
         bestSetLabel: "100 kg × 5",
         estimatedOneRepMaxKg: 116.7,
+        personalRecord: false,
       }),
       expect.objectContaining({
         volumeKg: 525,
         bestSetLabel: "105 kg × 5",
         estimatedOneRepMaxKg: 122.5,
+        personalRecord: true,
+      }),
+    ]);
+  });
+
+  it("sépare les consommations, cibles et repas au niveau quotidien", () => {
+    const snapshot = buildPerformanceAnalytics(source());
+
+    expect(snapshot.nutritionDays[0]).toMatchObject({
+      date: "2026-07-07",
+      caloriesKcal: 200,
+      targetCaloriesKcal: 2_200,
+      proteinGrams: 10,
+      targetProteinGrams: 120,
+      mealCalories: {
+        breakfast: 0,
+        lunch: 200,
+        dinner: 0,
+        snacks: 0,
+      },
+    });
+  });
+
+  it("expose uniquement les signaux déclarés et les séries musculaires réelles", () => {
+    const snapshot = buildPerformanceAnalytics(source());
+
+    expect(snapshot.recoveryDays[0]).toMatchObject({
+      date: "2026-07-07",
+      readiness: 2,
+      energy: 3,
+      hunger: 2,
+      sleepHours: 8,
+    });
+    expect(snapshot.muscleGroupCells).toEqual([
+      expect.objectContaining({
+        date: "2026-07-09",
+        muscleGroup: "pectorals",
+        workingSets: 1,
+      }),
+      expect.objectContaining({
+        date: "2026-07-12",
+        muscleGroup: "pectorals",
+        workingSets: 1,
       }),
     ]);
   });

@@ -1,13 +1,13 @@
 import {
   useCallback,
   useEffect,
-  useMemo,
   useRef,
   useState,
 } from "react";
 
 import { routePaths } from "@/app/routePaths";
 import { router } from "@/app/router";
+import { rewardRevealContextIsSafe } from "@/app/rewards/rewardRevealContext";
 import {
   observeRewardUnlocks,
   type RewardUnlockBatch,
@@ -57,30 +57,6 @@ function initialPendingThemeIds(): VisualThemeId[] {
   });
 }
 
-export function rewardRevealContextIsSafe(
-  pathname: string,
-  root: Document = document,
-): boolean {
-  if (pathname !== routePaths.dashboard && pathname !== routePaths.rewards) {
-    return false;
-  }
-  const activeElement = root.activeElement;
-  if (
-    activeElement instanceof HTMLInputElement
-    || activeElement instanceof HTMLTextAreaElement
-    || activeElement instanceof HTMLSelectElement
-    || (activeElement instanceof HTMLElement && activeElement.isContentEditable)
-  ) {
-    return false;
-  }
-  return root.querySelector([
-    '[role="dialog"]',
-    '[aria-busy="true"]',
-    "[data-bottom-sheet-content]",
-    "form[data-submitting='true']",
-  ].join(",")) === null;
-}
-
 export function RewardUnlockNotifier({
   observeUnlocks = observeRewardUnlocks,
   currentPathname,
@@ -95,7 +71,7 @@ export function RewardUnlockNotifier({
   );
   const [explicitRevealId, setExplicitRevealId] = useState<VisualThemeId>();
   const [trialThemeId, setTrialThemeId] = useState<VisualThemeId>();
-  const [contextRevision, setContextRevision] = useState(0);
+  const [, setContextRevision] = useState(0);
   const notifiedThemeIds = useRef(new Set<VisualThemeId>());
   const pathname = currentPathname ?? routerPathname;
 
@@ -106,10 +82,7 @@ export function RewardUnlockNotifier({
     });
   }, [currentPathname]);
 
-  const contextSafe = useMemo(
-    () => rewardRevealContextIsSafe(pathname),
-    [contextRevision, pathname],
-  );
+  const contextSafe = rewardRevealContextIsSafe(pathname);
   const revealThemeId = explicitRevealId
     ?? (contextSafe ? pendingThemeIds[0] : undefined);
   const revealTheme = revealThemeId
