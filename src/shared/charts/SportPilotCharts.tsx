@@ -131,7 +131,8 @@ export function SportPilotChartContainer({
 
 export function useSportPilotChartAnimation(): boolean {
   const reducedMotion = useReducedMotion();
-  return !reducedMotion && document.visibilityState !== "hidden";
+  return !reducedMotion
+    && (typeof document === "undefined" || document.visibilityState !== "hidden");
 }
 
 interface TooltipEntry {

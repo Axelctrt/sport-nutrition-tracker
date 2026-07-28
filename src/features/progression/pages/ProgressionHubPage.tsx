@@ -357,7 +357,7 @@ export function ProgressionHubPage() {
                 {[
                   {
                     label: "Activités prévues / réalisées",
-                    value: `${summary.data.week.realizedPlannedActivities} / ${summary.data.week.plannedActivities}`,
+                    value: `${summary.data.week.completedActivities} / ${summary.data.week.plannedActivities}`,
                     icon: CalendarCheck2,
                   },
                   {

@@ -419,12 +419,12 @@ export function selectProgressionMainSignal({
 
   if (
     week.plannedActivities > 0
-    && week.realizedPlannedActivities < week.plannedActivities
+    && week.completedActivities < week.plannedActivities
   ) {
     return {
       tone: 'attention',
       title: 'Le prévu et le réalisé diffèrent cette semaine',
-      detail: `${week.realizedPlannedActivities} activité${week.realizedPlannedActivities > 1 ? 's' : ''} réalisée${week.realizedPlannedActivities > 1 ? 's' : ''} sur ${week.plannedActivities} planifiée${week.plannedActivities > 1 ? 's' : ''}.`,
+      detail: `${week.completedActivities} activité${week.completedActivities > 1 ? 's' : ''} réalisée${week.completedActivities > 1 ? 's' : ''} sur ${week.plannedActivities} planifiée${week.plannedActivities > 1 ? 's' : ''}.`,
       destination: 'activity',
     };
   }

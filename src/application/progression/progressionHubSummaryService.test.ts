@@ -340,7 +340,7 @@ describe('selectProgressionMainSignal', () => {
     expect(signal).toEqual({
       tone: 'attention',
       title: 'Le prévu et le réalisé diffèrent cette semaine',
-      detail: '1 activité réalisée sur 3 planifiées.',
+      detail: '2 activités réalisées sur 3 planifiées.',
       destination: 'activity',
     });
   });
