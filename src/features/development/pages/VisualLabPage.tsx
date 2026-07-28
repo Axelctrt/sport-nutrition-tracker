@@ -1,4 +1,4 @@
-import { Moon, Play, RotateCcw, Sparkles, Sun, Trophy } from "lucide-react";
+import { Moon, RotateCcw, Sparkles, Sun, Trophy } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import {
