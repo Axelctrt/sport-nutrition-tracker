@@ -208,7 +208,7 @@ function requirementLabel(
   themeId: VisualThemeId,
   criteria: readonly ThemeUnlockCriterion[],
 ): string {
-  if (themeId === "core") return "Disponible immediatement";
+  if (themeId === "core") return "Disponible immédiatement";
   return criteria.map(({ label }) => label).join(" et ");
 }
 
@@ -305,13 +305,13 @@ export function buildThemeAchievementSnapshot(
     "neon-pulse": [
       criterion(
         "completed-activities",
-        "20 activites terminees",
+        "20 activités terminées",
         metrics.completedActivities,
         NEON_ACTIVITY_TARGET,
       ),
       criterion(
         "regular-weeks",
-        "3 semaines avec au moins 3 activites",
+        "3 semaines avec au moins 3 activités",
         metrics.regularActivityWeeks,
         NEON_REGULAR_WEEK_TARGET,
       ),
@@ -319,13 +319,13 @@ export function buildThemeAchievementSnapshot(
     "emerald-focus": [
       criterion(
         "complete-days-30",
-        "12 journees avec check-in et check-out sur 30 jours",
+        "12 journées avec check-in et check-out sur 30 jours",
         metrics.completeDaysInThirtyDays,
         EMERALD_COMPLETE_DAY_TARGET,
       ),
       criterion(
         "nutrition-days-30",
-        "10 journees nutritionnelles renseignees sur 30 jours",
+        "10 journées nutritionnelles renseignées sur 30 jours",
         metrics.nutritionDaysInThirtyDays,
         EMERALD_NUTRITION_DAY_TARGET,
       ),
@@ -333,7 +333,7 @@ export function buildThemeAchievementSnapshot(
     aurora: [
       criterion(
         "balanced-weeks",
-        "4 semaines equilibrees",
+        "4 semaines équilibrées",
         metrics.balancedWeeks,
         AURORA_BALANCED_WEEK_TARGET,
       ),
@@ -341,19 +341,19 @@ export function buildThemeAchievementSnapshot(
     "zenith-gold": [
       criterion(
         "mastery-weeks",
-        "8 semaines equilibrees sur les 12 dernieres",
+        "8 semaines équilibrées sur les 12 dernières",
         metrics.balancedWeeksInTwelveWeeks,
         ZENITH_BALANCED_WEEK_TARGET,
       ),
       criterion(
         "completed-activities",
-        "50 activites terminees",
+        "50 activités terminées",
         metrics.completedActivities,
         ZENITH_ACTIVITY_TARGET,
       ),
       criterion(
         "complete-days",
-        "40 journees avec check-in et check-out",
+        "40 journées avec check-in et check-out",
         metrics.completeDaysAllTime,
         ZENITH_COMPLETE_DAY_TARGET,
       ),
