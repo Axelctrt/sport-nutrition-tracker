@@ -252,11 +252,11 @@ requireMarkers(
 requireMarkers(
   themesPanel,
   [
-    "Theme actif",
+    "Thème actif",
     "Ma collection",
     "ThemeMiniInterface",
     "Voir ma progression",
-    "Appliquer ce theme",
+    "Thème actuellement utilisé",
     "beginVisualThemeTrial",
     "confirmVisualThemeTrial",
     "cancelVisualThemeTrial",
