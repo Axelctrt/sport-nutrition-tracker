@@ -197,7 +197,8 @@ describe("RewardUnlockNotifier", () => {
       .not.toBeInTheDocument();
   });
 
-  it("annonce toujours les badges en parallèle du système de reveal", async () => {
+  it("célèbre les badges après le reveal prioritaire d'un thème", async () => {
+    const user = userEvent.setup();
     const achievementSnapshot = buildAchievementSnapshot({
       totalLoggedSessions: 1,
       enduranceActivities: 0,
@@ -220,9 +221,21 @@ describe("RewardUnlockNotifier", () => {
       </ToastProvider>,
     );
 
-    expect(await screen.findByText("Nouveau badge : Premier élan"))
+    expect(await screen.findByRole("dialog", { name: "Neon Pulse" }))
       .toBeInTheDocument();
-    expect(screen.getByRole("dialog", { name: "Neon Pulse" }))
+    expect(screen.queryByRole("dialog", { name: "Premier élan" }))
+      .not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", {
+      name: "Conserver mon thème actuel",
+    }));
+
+    expect(await screen.findByRole("dialog", { name: "Premier élan" }))
       .toBeInTheDocument();
+    expect(screen.getByText("Badge débloqué")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Continuer" }));
+    expect(screen.queryByRole("dialog", { name: "Premier élan" }))
+      .not.toBeInTheDocument();
   });
 });
