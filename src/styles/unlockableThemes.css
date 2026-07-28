@@ -1,1206 +1,429 @@
-/* SportPilot 0.24.0 R4.4 — stable CSS reward themes.
-   Direction: full/minimal styles, accessible dark-mode fixes, isolated quick preview, no theme motion. */
-:root {
-  --sport-reward-accent-500: #0ea5e9;
-  --sport-reward-accent-600: #0284c7;
-  --sport-reward-accent-700: #0369a1;
-  --sport-reward-accent-800: #075985;
-  --sport-reward-soft: rgba(14, 165, 233, 0.14);
-  --sport-reward-base: linear-gradient(135deg, #0369a1, #38bdf8);
-  --sport-reward-pattern:
-    radial-gradient(
-      circle at 10% 0%,
-      var(--sport-reward-soft),
-      transparent 34rem
-    ),
-    radial-gradient(
-      circle at 100% 20%,
-      var(--sport-reward-soft),
-      transparent 30rem
-    );
-  --sport-reward-atmosphere: transparent;
-  --sport-reward-foreground: transparent;
-  --sport-reward-vignette: linear-gradient(
-    180deg,
-    rgba(248, 250, 252, 0.46),
-    rgba(248, 250, 252, 0.84)
-  );
-  --sport-reward-card-glow: rgba(14, 165, 233, 0.12);
-  --sport-reward-card-tint: rgba(255, 255, 255, 0.72);
-  --sport-reward-shell-tint: rgba(255, 255, 255, 0.82);
-  --sport-reward-border-tint: rgba(14, 165, 233, 0.18);
+/*
+ * SportPilot 0.34.0 - Performance Glass themes.
+ * Theme and appearance are independent: data-sport-theme selects an identity,
+ * while the .dark class selects the palette variant.
+ */
+
+html[data-sport-theme="core"] {
+  --sp-bg-primary: #f4f7fb;
+  --sp-bg-secondary: #eaf0f8;
+  --sp-surface-card: rgb(255 255 255 / 0.9);
+  --sp-surface-elevated: #ffffff;
+  --sp-surface-muted: #e9eff7;
+  --sp-border-subtle: #c5d0df;
+  --sp-border-strong: #91a4bd;
+  --sp-text-primary: #101827;
+  --sp-text-secondary: #40516a;
+  --sp-text-muted: #65758c;
+  --sp-accent-primary: #2563eb;
+  --sp-accent-secondary: #0891b2;
+  --sp-accent-intense: #7c3aed;
+  --sp-success: #059669;
+  --sp-warning: #b45309;
+  --sp-error: #e11d48;
+  --sp-progress: #7c3aed;
+  --sp-chart-1: #2563eb;
+  --sp-chart-2: #0891b2;
+  --sp-chart-3: #059669;
+  --sp-chart-4: #7c3aed;
+  --sp-chart-5: #d97706;
+  --sp-chart-grid: #cbd5e1;
+  --sp-chart-target: #64748b;
+  --sp-card-backdrop: 12px;
+  --sp-card-glow: rgb(37 99 235 / 0.12);
+  --sp-button-background: linear-gradient(115deg, #2563eb, #087c91);
+  --sp-background-decoration:
+    linear-gradient(135deg, rgb(37 99 235 / 0.08), transparent 42%),
+    repeating-linear-gradient(90deg, transparent 0 31px, rgb(37 99 235 / 0.025) 31px 32px);
 }
 
-html.dark {
-  --sport-reward-vignette: linear-gradient(
-    180deg,
-    rgba(2, 6, 23, 0.5),
-    rgba(2, 6, 23, 0.86)
-  );
-  --sport-reward-card-tint: rgba(15, 23, 42, 0.76);
-  --sport-reward-shell-tint: rgba(15, 23, 42, 0.84);
+html.dark[data-sport-theme="core"] {
+  --sp-bg-primary: #070b17;
+  --sp-bg-secondary: #0b1222;
+  --sp-surface-card: rgb(17 26 46 / 0.9);
+  --sp-surface-elevated: #17233a;
+  --sp-surface-muted: #111a2e;
+  --sp-border-subtle: #26344f;
+  --sp-border-strong: #3b4d6d;
+  --sp-text-primary: #f6f8fc;
+  --sp-text-secondary: #aab5c8;
+  --sp-text-muted: #78869f;
+  --sp-accent-primary: #3b82f6;
+  --sp-accent-secondary: #22d3ee;
+  --sp-accent-intense: #8b5cf6;
+  --sp-success: #34d399;
+  --sp-warning: #fbbf24;
+  --sp-error: #fb7185;
+  --sp-progress: #8b5cf6;
+  --sp-chart-1: #60a5fa;
+  --sp-chart-2: #22d3ee;
+  --sp-chart-3: #34d399;
+  --sp-chart-4: #a78bfa;
+  --sp-chart-5: #fbbf24;
+  --sp-chart-grid: #26344f;
+  --sp-chart-target: #aab5c8;
+  --sp-button-background: linear-gradient(115deg, #3b82f6, #0891b2);
+  --sp-background-decoration:
+    linear-gradient(135deg, rgb(59 130 246 / 0.12), transparent 42%),
+    repeating-linear-gradient(90deg, transparent 0 31px, rgb(34 211 238 / 0.03) 31px 32px);
 }
 
-html[data-sport-theme="endurance"] {
-  --sport-reward-base: linear-gradient(135deg, #0f766e, #22d3ee);
-  --sport-reward-accent-500: #2dd4bf;
-  --sport-reward-accent-600: #0d9488;
-  --sport-reward-accent-700: #0f766e;
-  --sport-reward-accent-800: #115e59;
-  --sport-reward-soft: rgba(45, 212, 191, 0.2);
-  --sport-reward-vignette: linear-gradient(
-    180deg,
-    rgba(240, 253, 250, 0.24),
-    rgba(15, 118, 110, 0.32)
-  );
-  --sport-reward-atmosphere:
-    radial-gradient(
-      ellipse at 16% 10%,
-      rgba(45, 212, 191, 0.42),
-      transparent 34rem
-    ),
-    radial-gradient(
-      ellipse at 84% 22%,
-      rgba(14, 165, 233, 0.3),
-      transparent 32rem
-    );
-  --sport-reward-foreground: linear-gradient(
-    135deg,
-    rgba(204, 251, 241, 0.14),
-    transparent 55%
-  );
-  --sport-reward-pattern:
-    linear-gradient(135deg, rgba(15, 118, 110, 0.18), transparent 48rem),
-    repeating-linear-gradient(
-      130deg,
-      rgba(13, 148, 136, 0.09) 0 1px,
-      transparent 1px 30px
-    );
-  --sport-reward-card-tint: rgba(255, 255, 255, 0.64);
-  --sport-reward-shell-tint: rgba(255, 255, 255, 0.74);
+html[data-sport-theme="neon-pulse"] {
+  --sp-bg-primary: #f3f7ff;
+  --sp-bg-secondary: #e7eeff;
+  --sp-surface-card: rgb(255 255 255 / 0.86);
+  --sp-surface-elevated: #f8faff;
+  --sp-surface-muted: #e8edfa;
+  --sp-border-subtle: #a8b8dd;
+  --sp-border-strong: #7087bd;
+  --sp-text-primary: #10152a;
+  --sp-text-secondary: #47516d;
+  --sp-text-muted: #68738f;
+  --sp-accent-primary: #007c91;
+  --sp-accent-secondary: #6d28d9;
+  --sp-accent-intense: #a21caf;
+  --sp-success: #047857;
+  --sp-warning: #a16207;
+  --sp-error: #db2860;
+  --sp-progress: #7c3aed;
+  --sp-chart-1: #007c91;
+  --sp-chart-2: #6d28d9;
+  --sp-chart-3: #a21caf;
+  --sp-chart-4: #047857;
+  --sp-chart-5: #ca8a04;
+  --sp-chart-grid: #b9c5e1;
+  --sp-chart-target: #64748b;
+  --sp-card-backdrop: 16px;
+  --sp-card-glow: rgb(0 124 145 / 0.2);
+  --sp-button-background: linear-gradient(115deg, #007c91, #6d28d9);
+  --sp-motion-standard: 190ms;
+  --sp-motion-emphasis: 440ms;
+  --sp-press-scale: 0.97;
+  --sp-background-decoration:
+    linear-gradient(120deg, rgb(0 124 145 / 0.1), transparent 44%),
+    repeating-linear-gradient(0deg, transparent 0 23px, rgb(109 40 217 / 0.035) 23px 24px),
+    repeating-linear-gradient(90deg, transparent 0 23px, rgb(0 124 145 / 0.035) 23px 24px);
 }
 
-html[data-sport-theme="power"] {
-  --sport-reward-base: linear-gradient(135deg, #c2410c, #f59e0b);
-  --sport-reward-accent-500: #f59e0b;
-  --sport-reward-accent-600: #ea580c;
-  --sport-reward-accent-700: #c2410c;
-  --sport-reward-accent-800: #9a3412;
-  --sport-reward-soft: rgba(245, 158, 11, 0.2);
-  --sport-reward-vignette: linear-gradient(
-    180deg,
-    rgba(255, 247, 237, 0.22),
-    rgba(154, 52, 18, 0.34)
-  );
-  --sport-reward-atmosphere:
-    radial-gradient(
-      ellipse at 78% 10%,
-      rgba(251, 191, 36, 0.44),
-      transparent 31rem
-    ),
-    radial-gradient(
-      ellipse at 20% 72%,
-      rgba(249, 115, 22, 0.26),
-      transparent 30rem
-    );
-  --sport-reward-foreground: radial-gradient(
-    ellipse at 75% 108%,
-    rgba(251, 191, 36, 0.16),
-    transparent 34rem
-  );
-  --sport-reward-pattern:
-    linear-gradient(120deg, rgba(124, 45, 18, 0.18), transparent 45rem),
-    repeating-linear-gradient(
-      110deg,
-      rgba(251, 146, 60, 0.1) 0 1px,
-      transparent 1px 34px
-    );
-  --sport-reward-card-tint: rgba(255, 255, 255, 0.64);
-  --sport-reward-shell-tint: rgba(255, 255, 255, 0.74);
+html.dark[data-sport-theme="neon-pulse"] {
+  --sp-bg-primary: #040612;
+  --sp-bg-secondary: #080b1c;
+  --sp-surface-card: rgb(14 19 40 / 0.84);
+  --sp-surface-elevated: #151b36;
+  --sp-surface-muted: #0e1328;
+  --sp-border-subtle: #24305a;
+  --sp-border-strong: #38509a;
+  --sp-text-primary: #f8faff;
+  --sp-text-secondary: #aeb8d2;
+  --sp-text-muted: #7f8aaa;
+  --sp-accent-primary: #00e5ff;
+  --sp-accent-secondary: #7c3aed;
+  --sp-accent-intense: #d946ef;
+  --sp-success: #39ffb6;
+  --sp-warning: #ffd166;
+  --sp-error: #ff4d7d;
+  --sp-progress: #d946ef;
+  --sp-chart-1: #00e5ff;
+  --sp-chart-2: #a78bfa;
+  --sp-chart-3: #d946ef;
+  --sp-chart-4: #39ffb6;
+  --sp-chart-5: #ffd166;
+  --sp-chart-grid: #24305a;
+  --sp-chart-target: #aeb8d2;
+  --sp-card-glow: rgb(0 229 255 / 0.18);
+  --sp-button-background: linear-gradient(115deg, #007f94, #6d28d9);
+  --sp-background-decoration:
+    linear-gradient(120deg, rgb(0 229 255 / 0.11), transparent 44%),
+    repeating-linear-gradient(0deg, transparent 0 23px, rgb(124 58 237 / 0.04) 23px 24px),
+    repeating-linear-gradient(90deg, transparent 0 23px, rgb(0 229 255 / 0.035) 23px 24px);
 }
 
-html[data-sport-theme="balance"] {
-  --sport-reward-base: linear-gradient(135deg, #7e22ce, #ec4899);
-  --sport-reward-accent-500: #c084fc;
-  --sport-reward-accent-600: #9333ea;
-  --sport-reward-accent-700: #7e22ce;
-  --sport-reward-accent-800: #6b21a8;
-  --sport-reward-soft: rgba(168, 85, 247, 0.2);
-  --sport-reward-vignette: linear-gradient(
-    180deg,
-    rgba(250, 245, 255, 0.22),
-    rgba(126, 34, 206, 0.32)
-  );
-  --sport-reward-atmosphere:
-    radial-gradient(
-      ellipse at 18% 0%,
-      rgba(236, 72, 153, 0.38),
-      transparent 32rem
-    ),
-    radial-gradient(
-      ellipse at 92% 24%,
-      rgba(147, 51, 234, 0.34),
-      transparent 34rem
-    );
-  --sport-reward-foreground: radial-gradient(
-    ellipse at 54% 108%,
-    rgba(236, 72, 153, 0.14),
-    transparent 34rem
-  );
-  --sport-reward-pattern:
-    linear-gradient(140deg, rgba(126, 34, 206, 0.16), transparent 52rem),
-    repeating-linear-gradient(
-      45deg,
-      rgba(168, 85, 247, 0.08) 0 1px,
-      transparent 1px 28px
-    );
-  --sport-reward-card-tint: rgba(255, 255, 255, 0.64);
-  --sport-reward-shell-tint: rgba(255, 255, 255, 0.74);
+html[data-sport-theme="emerald-focus"] {
+  --sp-bg-primary: #f2f8f5;
+  --sp-bg-secondary: #e4f1eb;
+  --sp-surface-card: rgb(255 255 255 / 0.9);
+  --sp-surface-elevated: #f8fcfa;
+  --sp-surface-muted: #e5f0eb;
+  --sp-border-subtle: #a9c9be;
+  --sp-border-strong: #6e9f8f;
+  --sp-text-primary: #11221d;
+  --sp-text-secondary: #405f55;
+  --sp-text-muted: #647f76;
+  --sp-accent-primary: #047857;
+  --sp-accent-secondary: #0f8f83;
+  --sp-accent-intense: #065f46;
+  --sp-success: #047857;
+  --sp-warning: #b45309;
+  --sp-error: #db365f;
+  --sp-progress: #059669;
+  --sp-chart-1: #047857;
+  --sp-chart-2: #0f8f83;
+  --sp-chart-3: #65a30d;
+  --sp-chart-4: #2563eb;
+  --sp-chart-5: #b45309;
+  --sp-chart-grid: #bfd4cc;
+  --sp-chart-target: #647f76;
+  --sp-card-backdrop: 10px;
+  --sp-card-glow: rgb(4 120 87 / 0.12);
+  --sp-button-background: linear-gradient(115deg, #047857, #0f8f83);
+  --sp-motion-standard: 240ms;
+  --sp-motion-emphasis: 360ms;
+  --sp-background-decoration:
+    linear-gradient(140deg, rgb(4 120 87 / 0.08), transparent 46%),
+    repeating-linear-gradient(155deg, transparent 0 34px, rgb(15 143 131 / 0.035) 34px 35px);
 }
 
-html[data-sport-theme="aurore"] {
-  --sport-reward-base: linear-gradient(135deg, #fb7185, #fbbf24);
-  --sport-reward-accent-500: #fb7185;
-  --sport-reward-accent-600: #f97316;
-  --sport-reward-accent-700: #e11d48;
-  --sport-reward-accent-800: #be123c;
-  --sport-reward-soft: rgba(251, 113, 133, 0.2);
-  --sport-reward-vignette: linear-gradient(
-    180deg,
-    rgba(255, 247, 237, 0.18),
-    rgba(251, 113, 133, 0.26),
-    rgba(180, 83, 9, 0.3)
-  );
-  --sport-reward-atmosphere:
-    radial-gradient(
-      ellipse at 24% 12%,
-      rgba(254, 240, 138, 0.62),
-      transparent 34rem
-    ),
-    radial-gradient(
-      ellipse at 74% 2%,
-      rgba(251, 113, 133, 0.44),
-      transparent 30rem
-    ),
-    linear-gradient(140deg, rgba(253, 186, 116, 0.26), transparent 54rem);
-  --sport-reward-foreground: radial-gradient(
-    ellipse at 70% 112%,
-    rgba(251, 191, 36, 0.2),
-    transparent 34rem
-  );
-  --sport-reward-pattern: linear-gradient(
-    180deg,
-    rgba(255, 247, 237, 0.22),
-    transparent 60%
-  );
-  --sport-reward-card-glow: rgba(251, 113, 133, 0.22);
-  --sport-reward-card-tint: rgba(255, 255, 255, 0.62);
-  --sport-reward-shell-tint: rgba(255, 255, 255, 0.72);
+html.dark[data-sport-theme="emerald-focus"] {
+  --sp-bg-primary: #06110f;
+  --sp-bg-secondary: #0a1916;
+  --sp-surface-card: rgb(16 35 30 / 0.9);
+  --sp-surface-elevated: #163029;
+  --sp-surface-muted: #10231e;
+  --sp-border-subtle: #285045;
+  --sp-border-strong: #397565;
+  --sp-text-primary: #f3fbf8;
+  --sp-text-secondary: #abc8be;
+  --sp-text-muted: #72988b;
+  --sp-accent-primary: #10b981;
+  --sp-accent-secondary: #5eead4;
+  --sp-accent-intense: #047857;
+  --sp-success: #6ee7b7;
+  --sp-warning: #fbbf24;
+  --sp-error: #fb7185;
+  --sp-progress: #a7f3d0;
+  --sp-chart-1: #10b981;
+  --sp-chart-2: #5eead4;
+  --sp-chart-3: #a7f3d0;
+  --sp-chart-4: #60a5fa;
+  --sp-chart-5: #fbbf24;
+  --sp-chart-grid: #285045;
+  --sp-chart-target: #abc8be;
+  --sp-button-background: linear-gradient(115deg, #047857, #0f8f83);
+  --sp-background-decoration:
+    linear-gradient(140deg, rgb(16 185 129 / 0.1), transparent 46%),
+    repeating-linear-gradient(155deg, transparent 0 34px, rgb(94 234 212 / 0.035) 34px 35px);
 }
 
-html[data-sport-theme="foret"] {
-  --sport-reward-base: linear-gradient(135deg, #166534, #84cc16);
-  --sport-reward-accent-500: #84cc16;
-  --sport-reward-accent-600: #16a34a;
-  --sport-reward-accent-700: #166534;
-  --sport-reward-accent-800: #14532d;
-  --sport-reward-soft: rgba(34, 197, 94, 0.18);
-  --sport-reward-vignette: linear-gradient(
-    180deg,
-    rgba(240, 253, 244, 0.18),
-    rgba(20, 83, 45, 0.34)
-  );
-  --sport-reward-atmosphere:
-    radial-gradient(
-      ellipse at 22% 0%,
-      rgba(190, 242, 100, 0.44),
-      transparent 30rem
-    ),
-    radial-gradient(
-      ellipse at 85% 20%,
-      rgba(22, 163, 74, 0.3),
-      transparent 32rem
-    ),
-    linear-gradient(120deg, rgba(20, 83, 45, 0.2), transparent 48rem);
-  --sport-reward-foreground:
-    radial-gradient(
-      ellipse 16rem 4rem at 20% 32%,
-      rgba(20, 83, 45, 0.2),
-      transparent 72%
-    ),
-    radial-gradient(
-      ellipse 18rem 5rem at 84% 42%,
-      rgba(22, 101, 52, 0.18),
-      transparent 72%
-    );
-  --sport-reward-pattern: repeating-linear-gradient(
-    135deg,
-    rgba(22, 101, 52, 0.12) 0 1px,
-    transparent 1px 22px
-  );
-  --sport-reward-card-glow: rgba(34, 197, 94, 0.18);
-  --sport-reward-card-tint: rgba(255, 255, 255, 0.64);
-  --sport-reward-shell-tint: rgba(255, 255, 255, 0.74);
+html[data-sport-theme="aurora"] {
+  --sp-bg-primary: #f7f5fc;
+  --sp-bg-secondary: #edeaf7;
+  --sp-surface-card: rgb(255 255 255 / 0.74);
+  --sp-surface-elevated: rgb(252 250 255 / 0.9);
+  --sp-surface-muted: rgb(237 234 247 / 0.82);
+  --sp-border-subtle: #c6bfdc;
+  --sp-border-strong: #9187b2;
+  --sp-text-primary: #18152a;
+  --sp-text-secondary: #554f70;
+  --sp-text-muted: #756e90;
+  --sp-accent-primary: #087c91;
+  --sp-accent-secondary: #7c3aed;
+  --sp-accent-intense: #a21caf;
+  --sp-success: #0f8f83;
+  --sp-warning: #a16207;
+  --sp-error: #d94763;
+  --sp-progress: #7c3aed;
+  --sp-chart-1: #087c91;
+  --sp-chart-2: #7c3aed;
+  --sp-chart-3: #a21caf;
+  --sp-chart-4: #0f8f83;
+  --sp-chart-5: #ca8a04;
+  --sp-chart-grid: #cbc4df;
+  --sp-chart-target: #756e90;
+  --sp-card-backdrop: 20px;
+  --sp-card-glow: rgb(124 58 237 / 0.18);
+  --sp-button-background: linear-gradient(115deg, #087c91, #7c3aed);
+  --sp-motion-standard: 270ms;
+  --sp-motion-emphasis: 500ms;
+  --sp-background-decoration:
+    linear-gradient(115deg, rgb(8 124 145 / 0.11), transparent 38%),
+    linear-gradient(145deg, transparent 42%, rgb(124 58 237 / 0.1) 72%, transparent),
+    linear-gradient(175deg, transparent 60%, rgb(162 28 175 / 0.07));
 }
 
-html[data-sport-theme="ocean"] {
-  --sport-reward-base: linear-gradient(135deg, #0284c7, #2dd4bf);
-  --sport-reward-accent-500: #2dd4bf;
-  --sport-reward-accent-600: #0891b2;
-  --sport-reward-accent-700: #0284c7;
-  --sport-reward-accent-800: #075985;
-  --sport-reward-soft: rgba(45, 212, 191, 0.2);
-  --sport-reward-vignette: linear-gradient(
-    180deg,
-    rgba(240, 253, 250, 0.42),
-    rgba(12, 74, 110, 0.3)
-  );
-  --sport-reward-atmosphere:
-    radial-gradient(
-      ellipse at 20% 10%,
-      rgba(125, 211, 252, 0.38),
-      transparent 34rem
-    ),
-    radial-gradient(
-      ellipse at 80% 18%,
-      rgba(45, 212, 191, 0.28),
-      transparent 30rem
-    ),
-    linear-gradient(
-      115deg,
-      transparent 0 16%,
-      rgba(224, 242, 254, 0.18) 17% 20%,
-      transparent 31% 58%,
-      rgba(125, 211, 252, 0.12) 59% 62%,
-      transparent 78%
-    );
-  --sport-reward-foreground: radial-gradient(
-    ellipse at 50% 108%,
-    rgba(6, 78, 59, 0.22),
-    transparent 42rem
-  );
-  --sport-reward-pattern:
-    radial-gradient(
-      circle at 18% 30%,
-      rgba(240, 253, 250, 0.5) 0 0.1rem,
-      transparent 0.18rem
-    ),
-    radial-gradient(
-      circle at 62% 16%,
-      rgba(240, 253, 250, 0.36) 0 0.09rem,
-      transparent 0.17rem
-    ),
-    repeating-linear-gradient(
-      180deg,
-      rgba(14, 165, 233, 0.08) 0 1px,
-      transparent 1px 34px
-    );
-  --sport-reward-card-glow: rgba(45, 212, 191, 0.2);
+html.dark[data-sport-theme="aurora"] {
+  --sp-bg-primary: #070713;
+  --sp-bg-secondary: #0e0c20;
+  --sp-surface-card: rgb(23 21 44 / 0.76);
+  --sp-surface-elevated: rgb(33 30 61 / 0.9);
+  --sp-surface-muted: rgb(23 21 44 / 0.82);
+  --sp-border-subtle: #38335d;
+  --sp-border-strong: #5d5592;
+  --sp-text-primary: #fcfaff;
+  --sp-text-secondary: #c5bed9;
+  --sp-text-muted: #8d85a8;
+  --sp-accent-primary: #67e8f9;
+  --sp-accent-secondary: #a78bfa;
+  --sp-accent-intense: #f0abfc;
+  --sp-success: #5eead4;
+  --sp-warning: #fcd34d;
+  --sp-error: #fda4af;
+  --sp-progress: #a78bfa;
+  --sp-chart-1: #67e8f9;
+  --sp-chart-2: #a78bfa;
+  --sp-chart-3: #f0abfc;
+  --sp-chart-4: #5eead4;
+  --sp-chart-5: #fcd34d;
+  --sp-chart-grid: #38335d;
+  --sp-chart-target: #c5bed9;
+  --sp-card-glow: rgb(167 139 250 / 0.18);
+  --sp-button-background: linear-gradient(115deg, #087c91, #7c3aed);
+  --sp-background-decoration:
+    linear-gradient(115deg, rgb(103 232 249 / 0.11), transparent 38%),
+    linear-gradient(145deg, transparent 42%, rgb(167 139 250 / 0.12) 72%, transparent),
+    linear-gradient(175deg, transparent 60%, rgb(240 171 252 / 0.08));
 }
 
-html[data-sport-theme="acier"] {
-  --sport-reward-base: linear-gradient(135deg, #475569, #dc2626);
-  --sport-reward-accent-500: #f87171;
-  --sport-reward-accent-600: #dc2626;
-  --sport-reward-accent-700: #475569;
-  --sport-reward-accent-800: #334155;
-  --sport-reward-soft: rgba(100, 116, 139, 0.18);
-  --sport-reward-vignette: linear-gradient(
-    180deg,
-    rgba(241, 245, 249, 0.22),
-    rgba(71, 85, 105, 0.32)
-  );
-  --sport-reward-atmosphere:
-    linear-gradient(115deg, rgba(148, 163, 184, 0.32), transparent 36rem),
-    radial-gradient(
-      ellipse at 76% 18%,
-      rgba(220, 38, 38, 0.24),
-      transparent 30rem
-    );
-  --sport-reward-foreground: linear-gradient(
-    135deg,
-    rgba(226, 232, 240, 0.18),
-    transparent 42rem
-  );
-  --sport-reward-pattern:
-    repeating-linear-gradient(
-      90deg,
-      rgba(71, 85, 105, 0.2) 0 1px,
-      transparent 1px 18px
-    ),
-    repeating-linear-gradient(
-      0deg,
-      rgba(148, 163, 184, 0.12) 0 1px,
-      transparent 1px 44px
-    );
-  --sport-reward-card-glow: rgba(100, 116, 139, 0.18);
-  --sport-reward-card-tint: rgba(255, 255, 255, 0.64);
-  --sport-reward-shell-tint: rgba(255, 255, 255, 0.76);
+html[data-sport-theme="zenith-gold"] {
+  --sp-bg-primary: #f8f7f2;
+  --sp-bg-secondary: #eeece2;
+  --sp-surface-card: rgb(255 255 255 / 0.9);
+  --sp-surface-elevated: #fcfbf6;
+  --sp-surface-muted: #eeece2;
+  --sp-border-subtle: #c8be98;
+  --sp-border-strong: #9a8950;
+  --sp-text-primary: #211f16;
+  --sp-text-secondary: #5f5943;
+  --sp-text-muted: #7d7558;
+  --sp-accent-primary: #8c6a18;
+  --sp-accent-secondary: #b68a1f;
+  --sp-accent-intense: #6f5210;
+  --sp-success: #3f7d47;
+  --sp-warning: #a16207;
+  --sp-error: #c74343;
+  --sp-progress: #8c6a18;
+  --sp-chart-1: #8c6a18;
+  --sp-chart-2: #3f7d47;
+  --sp-chart-3: #2563eb;
+  --sp-chart-4: #7c3aed;
+  --sp-chart-5: #b45309;
+  --sp-chart-grid: #d1c8a8;
+  --sp-chart-target: #7d7558;
+  --sp-card-backdrop: 8px;
+  --sp-card-glow: rgb(140 106 24 / 0.14);
+  --sp-button-background: linear-gradient(115deg, #8c6a18, #b68a1f);
+  --sp-button-foreground: #fffdf5;
+  --sp-motion-standard: 260ms;
+  --sp-motion-emphasis: 520ms;
+  --sp-background-decoration:
+    linear-gradient(130deg, rgb(140 106 24 / 0.08), transparent 44%),
+    repeating-linear-gradient(165deg, transparent 0 40px, rgb(140 106 24 / 0.03) 40px 41px);
 }
 
-html[data-sport-theme="nuit-polaire"] {
-  --sport-reward-base: linear-gradient(135deg, #0f172a, #06b6d4);
-  --sport-reward-accent-500: #22d3ee;
-  --sport-reward-accent-600: #06b6d4;
-  --sport-reward-accent-700: #0891b2;
-  --sport-reward-accent-800: #0e7490;
-  --sport-reward-soft: rgba(34, 211, 238, 0.2);
-  --sport-reward-vignette: linear-gradient(
-    180deg,
-    rgba(15, 23, 42, 0.2),
-    rgba(8, 47, 73, 0.4)
-  );
-  --sport-reward-atmosphere:
-    radial-gradient(
-      ellipse at 28% 0%,
-      rgba(103, 232, 249, 0.48),
-      transparent 28rem
-    ),
-    radial-gradient(
-      ellipse at 76% 6%,
-      rgba(99, 102, 241, 0.34),
-      transparent 34rem
-    ),
-    linear-gradient(140deg, rgba(15, 23, 42, 0.34), transparent 52rem);
-  --sport-reward-foreground: radial-gradient(
-    ellipse at 48% 110%,
-    rgba(14, 165, 233, 0.16),
-    transparent 34rem
-  );
-  --sport-reward-pattern: repeating-radial-gradient(
-    circle at 80% 12%,
-    rgba(255, 255, 255, 0.2) 0 1px,
-    transparent 2px 34px
-  );
-  --sport-reward-card-glow: rgba(34, 211, 238, 0.2);
-  --sport-reward-card-tint: rgba(255, 255, 255, 0.66);
-  --sport-reward-shell-tint: rgba(255, 255, 255, 0.76);
+html.dark[data-sport-theme="zenith-gold"] {
+  --sp-bg-primary: #080806;
+  --sp-bg-secondary: #11100c;
+  --sp-surface-card: rgb(25 23 15 / 0.92);
+  --sp-surface-elevated: #242116;
+  --sp-surface-muted: #19170f;
+  --sp-border-subtle: #4a4225;
+  --sp-border-strong: #74662f;
+  --sp-text-primary: #fffdf5;
+  --sp-text-secondary: #cfc6a5;
+  --sp-text-muted: #918867;
+  --sp-accent-primary: #d4af37;
+  --sp-accent-secondary: #f6d978;
+  --sp-accent-intense: #8c6a18;
+  --sp-success: #a7d8a0;
+  --sp-warning: #ffd166;
+  --sp-error: #ff8a8a;
+  --sp-progress: #d4af37;
+  --sp-chart-1: #d4af37;
+  --sp-chart-2: #a7d8a0;
+  --sp-chart-3: #67e8f9;
+  --sp-chart-4: #a78bfa;
+  --sp-chart-5: #ffd166;
+  --sp-chart-grid: #4a4225;
+  --sp-chart-target: #cfc6a5;
+  --sp-card-glow: rgb(212 175 55 / 0.12);
+  --sp-button-background: linear-gradient(115deg, #b68a1f, #f6d978);
+  --sp-button-foreground: #211f16;
+  --sp-background-decoration:
+    linear-gradient(130deg, rgb(212 175 55 / 0.08), transparent 44%),
+    repeating-linear-gradient(165deg, transparent 0 40px, rgb(246 217 120 / 0.025) 40px 41px);
 }
 
-html[data-sport-theme="abysses"] {
-  --sport-reward-base: linear-gradient(135deg, #082f49, #0e7490);
-  --sport-reward-accent-500: #22d3ee;
-  --sport-reward-accent-600: #0891b2;
-  --sport-reward-accent-700: #0e7490;
-  --sport-reward-accent-800: #164e63;
-  --sport-reward-soft: rgba(8, 47, 73, 0.3);
-  --sport-reward-vignette: linear-gradient(
-    180deg,
-    rgba(8, 47, 73, 0.34),
-    rgba(2, 6, 23, 0.56)
-  );
-  --sport-reward-atmosphere:
-    radial-gradient(
-      ellipse at 18% 8%,
-      rgba(34, 211, 238, 0.24),
-      transparent 31rem
-    ),
-    radial-gradient(
-      ellipse at 74% 20%,
-      rgba(14, 116, 144, 0.24),
-      transparent 34rem
-    ),
-    linear-gradient(
-      112deg,
-      transparent 0 20%,
-      rgba(125, 211, 252, 0.12) 21% 23%,
-      transparent 34% 66%,
-      rgba(103, 232, 249, 0.09) 67% 69%,
-      transparent 80%
-    );
-  --sport-reward-foreground: radial-gradient(
-    ellipse at 50% 112%,
-    rgba(2, 6, 23, 0.36),
-    transparent 44rem
-  );
-  --sport-reward-pattern:
-    radial-gradient(
-      circle at 20% 28%,
-      rgba(224, 242, 254, 0.3) 0 0.08rem,
-      transparent 0.17rem
-    ),
-    radial-gradient(
-      circle at 82% 18%,
-      rgba(103, 232, 249, 0.26) 0 0.09rem,
-      transparent 0.18rem
-    ),
-    repeating-linear-gradient(
-      180deg,
-      rgba(8, 145, 178, 0.07) 0 1px,
-      transparent 1px 38px
-    );
-  --sport-reward-card-glow: rgba(34, 211, 238, 0.18);
-}
-
-html[data-sport-theme="volcan"] {
-  --sport-reward-base: linear-gradient(135deg, #1c1917, #f97316);
-  --sport-reward-accent-500: #fb923c;
-  --sport-reward-accent-600: #f97316;
-  --sport-reward-accent-700: #ea580c;
-  --sport-reward-accent-800: #9a3412;
-  --sport-reward-soft: rgba(249, 115, 22, 0.22);
-  --sport-reward-vignette: linear-gradient(
-    180deg,
-    rgba(28, 25, 23, 0.24),
-    rgba(12, 10, 9, 0.52)
-  );
-  --sport-reward-atmosphere:
-    radial-gradient(
-      ellipse at 66% 8%,
-      rgba(168, 162, 158, 0.28),
-      transparent 25rem
-    ),
-    radial-gradient(
-      ellipse at 55% 76%,
-      rgba(251, 146, 60, 0.28),
-      transparent 28rem
-    ),
-    linear-gradient(
-      126deg,
-      transparent 0 38%,
-      rgba(251, 146, 60, 0.18) 40% 45%,
-      transparent 54%
-    );
-  --sport-reward-foreground:
-    radial-gradient(
-      circle at 48% 82%,
-      rgba(251, 146, 60, 0.18),
-      transparent 24rem
-    ),
-    linear-gradient(180deg, transparent, rgba(12, 10, 9, 0.2));
-  --sport-reward-pattern:
-    radial-gradient(
-      circle at 68% 18%,
-      rgba(251, 146, 60, 0.36) 0 0.08rem,
-      transparent 0.16rem
-    ),
-    radial-gradient(
-      circle at 78% 8%,
-      rgba(251, 146, 60, 0.22) 0 0.07rem,
-      transparent 0.14rem
-    ),
-    repeating-linear-gradient(
-      115deg,
-      rgba(68, 64, 60, 0.16) 0 1px,
-      transparent 1px 32px
-    );
-  --sport-reward-card-glow: rgba(249, 115, 22, 0.22);
-}
-
-html[data-sport-theme="canopee"] {
-  --sport-reward-base: linear-gradient(135deg, #14532d, #a3e635);
-  --sport-reward-accent-500: #a3e635;
-  --sport-reward-accent-600: #65a30d;
-  --sport-reward-accent-700: #15803d;
-  --sport-reward-accent-800: #14532d;
-  --sport-reward-soft: rgba(132, 204, 22, 0.2);
-  --sport-reward-vignette: linear-gradient(
-    180deg,
-    rgba(236, 252, 203, 0.28),
-    rgba(20, 83, 45, 0.34)
-  );
-  --sport-reward-atmosphere:
-    radial-gradient(
-      ellipse at 22% 4%,
-      rgba(217, 249, 157, 0.28),
-      transparent 31rem
-    ),
-    radial-gradient(
-      ellipse at 78% 8%,
-      rgba(22, 163, 74, 0.2),
-      transparent 30rem
-    ),
-    linear-gradient(
-      112deg,
-      rgba(236, 252, 203, 0.14),
-      transparent 18% 70%,
-      rgba(190, 242, 100, 0.1)
-    );
-  --sport-reward-foreground: radial-gradient(
-    ellipse at 50% 112%,
-    rgba(20, 83, 45, 0.28),
-    transparent 42rem
-  );
-  --sport-reward-pattern:
-    radial-gradient(
-      ellipse 9rem 2.2rem at 16% 28%,
-      rgba(20, 83, 45, 0.2),
-      transparent 72%
-    ),
-    radial-gradient(
-      ellipse 10rem 2.4rem at 84% 36%,
-      rgba(21, 128, 61, 0.17),
-      transparent 72%
-    ),
-    repeating-linear-gradient(
-      135deg,
-      rgba(22, 101, 52, 0.08) 0 1px,
-      transparent 1px 26px
-    );
-  --sport-reward-card-glow: rgba(132, 204, 22, 0.18);
-}
-
-html[data-sport-theme="cosmos"] {
-  --sport-reward-base: linear-gradient(135deg, #312e81, #f0abfc);
-  --sport-reward-accent-500: #e879f9;
-  --sport-reward-accent-600: #a855f7;
-  --sport-reward-accent-700: #7c3aed;
-  --sport-reward-accent-800: #5b21b6;
-  --sport-reward-soft: rgba(168, 85, 247, 0.22);
-  --sport-reward-vignette: linear-gradient(
-    180deg,
-    rgba(15, 23, 42, 0.28),
-    rgba(2, 6, 23, 0.58)
-  );
-  --sport-reward-atmosphere:
-    radial-gradient(
-      ellipse at 50% 38%,
-      rgba(240, 171, 252, 0.24),
-      transparent 38rem
-    ),
-    radial-gradient(
-      ellipse at 74% 24%,
-      rgba(59, 130, 246, 0.2),
-      transparent 36rem
-    ),
-    radial-gradient(
-      ellipse at 20% 22%,
-      rgba(168, 85, 247, 0.22),
-      transparent 34rem
-    );
-  --sport-reward-foreground: radial-gradient(
-    ellipse at 50% 112%,
-    rgba(49, 46, 129, 0.3),
-    transparent 42rem
-  );
-  --sport-reward-pattern:
-    radial-gradient(
-      circle at 12% 18%,
-      rgba(255, 255, 255, 0.56) 0 0.055rem,
-      transparent 0.12rem
-    ),
-    radial-gradient(
-      circle at 84% 18%,
-      rgba(255, 255, 255, 0.5) 0 0.055rem,
-      transparent 0.12rem
-    ),
-    radial-gradient(
-      circle at 45% 12%,
-      rgba(255, 255, 255, 0.4) 0 0.045rem,
-      transparent 0.11rem
-    ),
-    repeating-radial-gradient(
-      circle at 50% 44%,
-      rgba(216, 180, 254, 0.08) 0 1px,
-      transparent 1px 54px
-    );
-  --sport-reward-card-glow: rgba(168, 85, 247, 0.22);
-}
-
-html[data-sport-theme="forge"] {
-  --sport-reward-base: linear-gradient(135deg, #334155, #f97316);
-  --sport-reward-accent-500: #fb923c;
-  --sport-reward-accent-600: #f97316;
-  --sport-reward-accent-700: #475569;
-  --sport-reward-accent-800: #334155;
-  --sport-reward-soft: rgba(100, 116, 139, 0.22);
-  --sport-reward-vignette: linear-gradient(
-    180deg,
-    rgba(15, 23, 42, 0.22),
-    rgba(15, 23, 42, 0.46)
-  );
-  --sport-reward-atmosphere:
-    radial-gradient(
-      ellipse at 72% 18%,
-      rgba(251, 146, 60, 0.28),
-      transparent 30rem
-    ),
-    linear-gradient(115deg, rgba(148, 163, 184, 0.18), transparent 38rem);
-  --sport-reward-foreground: radial-gradient(
-    ellipse at 76% 90%,
-    rgba(251, 146, 60, 0.16),
-    transparent 26rem
-  );
-  --sport-reward-pattern:
-    repeating-linear-gradient(
-      90deg,
-      rgba(100, 116, 139, 0.2) 0 1px,
-      transparent 1px 18px
-    ),
-    repeating-linear-gradient(
-      0deg,
-      rgba(203, 213, 225, 0.08) 0 1px,
-      transparent 1px 58px
-    );
-  --sport-reward-card-glow: rgba(251, 146, 60, 0.18);
-}
-
-html[data-sport-theme="nexus-vivant"] {
-  --sport-reward-base: linear-gradient(135deg, #0f172a, #22c55e);
-  --sport-reward-accent-500: #22c55e;
-  --sport-reward-accent-600: #14b8a6;
-  --sport-reward-accent-700: #0f766e;
-  --sport-reward-accent-800: #115e59;
-  --sport-reward-soft: rgba(34, 197, 94, 0.22);
-  --sport-reward-vignette: linear-gradient(
-    180deg,
-    rgba(2, 6, 23, 0.22),
-    rgba(2, 6, 23, 0.58)
-  );
-  --sport-reward-atmosphere:
-    radial-gradient(
-      circle at 50% 44%,
-      rgba(236, 254, 255, 0.28),
-      transparent 13rem
-    ),
-    radial-gradient(
-      ellipse at 42% 40%,
-      rgba(34, 197, 94, 0.24),
-      transparent 34rem
-    ),
-    radial-gradient(
-      ellipse at 66% 32%,
-      rgba(232, 121, 249, 0.18),
-      transparent 34rem
-    ),
-    conic-gradient(
-      from 225deg at 50% 44%,
-      transparent 0 10%,
-      rgba(94, 234, 212, 0.13) 16%,
-      transparent 24%,
-      rgba(232, 121, 249, 0.1) 34%,
-      transparent 48%,
-      rgba(34, 197, 94, 0.13) 60%,
-      transparent 76%,
-      rgba(103, 232, 249, 0.1) 84%,
-      transparent 100%
-    );
-  --sport-reward-foreground: radial-gradient(
-    ellipse at 50% 112%,
-    rgba(2, 6, 23, 0.38),
-    transparent 42rem
-  );
-  --sport-reward-pattern:
-    radial-gradient(
-      circle at 50% 44%,
-      rgba(236, 254, 255, 0.42) 0 0.12rem,
-      transparent 0.2rem
-    ),
-    repeating-radial-gradient(
-      circle at 50% 44%,
-      rgba(94, 234, 212, 0.08) 0 1px,
-      transparent 1px 52px
-    ),
-    repeating-linear-gradient(
-      130deg,
-      rgba(45, 212, 191, 0.05) 0 1px,
-      transparent 1px 34px
-    );
-  --sport-reward-card-glow: rgba(45, 212, 191, 0.24);
-}
-
-html.dark[data-sport-theme]:not([data-sport-theme="classic"]) {
-  --sport-reward-vignette: linear-gradient(
-    180deg,
-    rgba(2, 6, 23, 0.54),
-    rgba(2, 6, 23, 0.82)
-  );
-  --sport-reward-card-tint: rgba(15, 23, 42, 0.78);
-  --sport-reward-shell-tint: rgba(15, 23, 42, 0.86);
-  --sport-reward-border-tint: rgba(148, 163, 184, 0.18);
-}
-
-html.dark[data-sport-theme="aurore"],
-html.dark[data-sport-theme="power"],
-html.dark[data-sport-theme="balance"],
-html.dark[data-sport-theme="foret"],
-html.dark[data-sport-theme="acier"],
-html.dark[data-sport-theme="nuit-polaire"],
-html.dark[data-sport-theme="endurance"] {
-  --sport-reward-card-tint: rgba(15, 23, 42, 0.8);
-  --sport-reward-shell-tint: rgba(15, 23, 42, 0.88);
-}
-
-
-html[data-sport-theme]:not([data-sport-theme="classic"]):not(
-    [data-sport-theme-style="minimal"]
-  )
-  body {
-  background-color: #f8fafc;
-  background-image:
-    var(--sport-reward-vignette), var(--sport-reward-foreground),
-    var(--sport-reward-atmosphere), var(--sport-reward-pattern),
-    var(--sport-reward-base);
-  background-attachment: scroll, scroll, scroll, scroll, scroll;
-  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, no-repeat;
-  background-size: cover, cover, cover, cover, cover;
-  background-position:
-    center top,
-    center,
-    center,
-    center top,
-    center;
-}
-
-html.dark[data-sport-theme]:not([data-sport-theme="classic"]) body {
-  background-color: #020617;
-}
-
-html[data-sport-theme]:not([data-sport-theme="classic"]):not(
-    [data-sport-theme-style="minimal"]
-  )
-  .sport-theme-app {
+.sport-theme-app {
   min-height: 100vh;
-  background-color: transparent;
-  background-image:
-    var(--sport-reward-vignette), var(--sport-reward-foreground),
-    var(--sport-reward-atmosphere), var(--sport-reward-pattern),
-    var(--sport-reward-base);
-  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, no-repeat;
-  background-size: cover, cover, cover, cover, cover;
-  background-position:
-    center top,
-    center,
-    center,
-    center top,
-    center;
+  color: var(--sp-text-primary);
 }
 
-html[data-sport-theme]:not([data-sport-theme="classic"]):not(
-    [data-sport-theme-style="minimal"]
-  )
-  .sport-theme-app
-  header,
-html[data-sport-theme]:not([data-sport-theme="classic"]):not(
-    [data-sport-theme-style="minimal"]
-  )
-  .sport-theme-app
-  aside {
-  border-color: var(--sport-reward-border-tint) !important;
-  background-color: var(--sport-reward-shell-tint) !important;
-  box-shadow: 0 1rem 3rem
-    color-mix(in srgb, var(--sport-reward-card-glow) 42%, transparent);
+html[data-sport-theme] .sp-button,
+html[data-sport-theme] .sp-stateful-button {
+  color: var(--sp-button-foreground, white);
+  background: var(--sp-button-background);
 }
 
-html[data-sport-theme]:not([data-sport-theme="classic"]):not(
-    [data-sport-theme-style="minimal"]
-  )
-  .sport-theme-app
-  main
-  [class~="bg-white"],
-html[data-sport-theme]:not([data-sport-theme="classic"]):not(
-    [data-sport-theme-style="minimal"]
-  )
-  .sport-theme-app
-  main
-  [class~="bg-white/90"],
-html[data-sport-theme]:not([data-sport-theme="classic"]):not(
-    [data-sport-theme-style="minimal"]
-  )
-  .sport-theme-app
-  main
-  [class~="bg-white/80"],
-html[data-sport-theme]:not([data-sport-theme="classic"]):not(
-    [data-sport-theme-style="minimal"]
-  )
-  .sport-theme-app
-  main
-  [class~="bg-white/75"],
-html[data-sport-theme]:not([data-sport-theme="classic"]):not(
-    [data-sport-theme-style="minimal"]
-  )
-  .sport-theme-app
-  main
-  [class~="bg-slate-50"],
-html[data-sport-theme]:not([data-sport-theme="classic"]):not(
-    [data-sport-theme-style="minimal"]
-  )
-  .sport-theme-app
-  main
-  [class~="bg-slate-50/70"],
-html[data-sport-theme]:not([data-sport-theme="classic"]):not(
-    [data-sport-theme-style="minimal"]
-  )
-  .sport-theme-app
-  main
-  [class~="bg-slate-50/80"] {
-  border-color: var(--sport-reward-border-tint) !important;
-  background-color: var(--sport-reward-card-tint) !important;
-  backdrop-filter: blur(18px) saturate(1.12);
+html[data-sport-theme="neon-pulse"] .sp-motion-card--priority,
+html[data-sport-theme="aurora"] .sp-motion-card--priority {
+  box-shadow:
+    0 12px 36px var(--sp-card-glow),
+    inset 0 0 0 1px color-mix(in srgb, var(--sp-accent-primary) 28%, transparent);
 }
 
-html[data-sport-theme] [data-theme-preview-dialog] {
-  border-color: rgb(226, 232, 240) !important;
-  background-color: rgb(255, 255, 255) !important;
-  background-image: none !important;
-  color: rgb(15, 23, 42) !important;
-  backdrop-filter: none !important;
+html[data-sport-theme="zenith-gold"] .sp-motion-card--priority {
+  border-color: var(--sp-accent-primary);
+  box-shadow: 0 14px 34px rgb(0 0 0 / 0.22);
 }
 
-html.dark[data-sport-theme] [data-theme-preview-dialog] {
-  border-color: rgb(51, 65, 85) !important;
-  background-color: rgb(2, 6, 23) !important;
-  color: rgb(248, 250, 252) !important;
-}
-
-html[data-sport-theme] [data-theme-quick-preview] {
-  background-color: rgb(2, 6, 23) !important;
-}
-
-html[data-sport-theme-style="minimal"] body,
-html[data-sport-theme-style="minimal"] .sport-theme-app {
-  background-image: none !important;
-}
-
-html[data-sport-theme] [class~="bg-brand-700"] {
-  background-color: var(--sport-reward-accent-700) !important;
-}
-html[data-sport-theme] [class~="hover:bg-brand-800"]:hover {
-  background-color: var(--sport-reward-accent-800) !important;
-}
-html[data-sport-theme] [class~="text-brand-700"] {
-  color: var(--sport-reward-accent-700) !important;
-}
-html[data-sport-theme] [class~="border-brand-700"] {
-  border-color: var(--sport-reward-accent-700) !important;
-}
-html.dark[data-sport-theme] [class~="dark:bg-brand-600"] {
-  background-color: var(--sport-reward-accent-600) !important;
-}
-html.dark[data-sport-theme] [class~="dark:bg-brand-500"] {
-  background-color: var(--sport-reward-accent-500) !important;
-}
-html.dark[data-sport-theme] [class~="dark:hover:bg-brand-500"]:hover {
-  background-color: var(--sport-reward-accent-500) !important;
-}
-html.dark[data-sport-theme] [class~="dark:text-brand-300"] {
-  color: color-mix(
-    in srgb,
-    var(--sport-reward-accent-500) 58%,
-    white
-  ) !important;
-}
-
-html[data-sport-theme]:not([data-sport-theme="classic"]) .sport-theme-preview,
-html[data-sport-theme]:not([data-sport-theme="classic"]):not(
-    [data-sport-theme-style="minimal"]
-  )
-  [class~="shadow-sm"] {
-  box-shadow: 0 1rem 3rem
-    color-mix(in srgb, var(--sport-reward-card-glow) 56%, transparent) !important;
-}
-
-.sport-theme-preview {
-  --sport-preview-scene: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.18),
-    transparent 52%
-  );
-  --sport-preview-atmosphere: transparent;
-  --sport-preview-foreground: transparent;
-  background-size: cover;
-  isolation: isolate;
-}
-
-.sport-theme-preview::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 3;
-  pointer-events: none;
-  background: linear-gradient(
-    180deg,
-    rgba(2, 6, 23, 0.04),
-    rgba(2, 6, 23, 0.28)
-  );
-}
-
-.sport-theme-preview__scene,
-.sport-theme-preview__glow {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-.sport-theme-preview__scene {
-  z-index: 1;
-  background-image:
-    var(--sport-preview-foreground), var(--sport-preview-atmosphere),
-    var(--sport-preview-scene);
-  background-size: cover, cover, cover;
-  background-position: center;
-  opacity: 0.98;
-  transform-origin: center;
-}
-
-.sport-theme-preview__glow {
-  z-index: 2;
+[data-theme-preview] {
+  --preview-from: var(--sp-accent-primary);
+  --preview-to: var(--sp-accent-secondary);
+  color: white;
   background:
-    radial-gradient(
-      circle at 50% 30%,
-      rgba(255, 255, 255, 0.22),
-      transparent 34%
-    ),
-    linear-gradient(135deg, transparent, rgba(2, 6, 23, 0.18));
-  mix-blend-mode: screen;
+    linear-gradient(130deg, rgb(0 0 0 / 0.3), transparent 58%),
+    linear-gradient(135deg, var(--preview-from), var(--preview-to));
 }
 
-.sport-theme-preview[data-sport-preview="classic"] {
-  --sport-preview-scene:
-    radial-gradient(
-      circle at 30% 20%,
-      rgba(125, 211, 252, 0.54),
-      transparent 42%
-    ),
-    linear-gradient(135deg, #0369a1, #38bdf8);
+[data-theme-preview="core"] {
+  --preview-from: #2563eb;
+  --preview-to: #22d3ee;
 }
-.sport-theme-preview[data-sport-preview="endurance"] {
-  --sport-preview-scene:
-    radial-gradient(
-      circle at 24% 20%,
-      rgba(94, 234, 212, 0.54),
-      transparent 42%
-    ),
-    linear-gradient(135deg, #0f766e, #22d3ee);
+
+[data-theme-preview="neon-pulse"] {
+  --preview-from: #007c91;
+  --preview-to: #6d28d9;
 }
-.sport-theme-preview[data-sport-preview="power"] {
-  --sport-preview-scene:
-    radial-gradient(
-      circle at 70% 18%,
-      rgba(253, 224, 71, 0.46),
-      transparent 40%
-    ),
-    linear-gradient(135deg, #7c2d12, #f59e0b);
+
+[data-theme-preview="emerald-focus"] {
+  --preview-from: #047857;
+  --preview-to: #0f8f83;
 }
-.sport-theme-preview[data-sport-preview="balance"] {
-  --sport-preview-scene:
-    radial-gradient(
-      circle at 32% 22%,
-      rgba(236, 72, 153, 0.44),
-      transparent 42%
-    ),
-    linear-gradient(135deg, #581c87, #ec4899);
+
+[data-theme-preview="aurora"] {
+  --preview-from: #087c91;
+  --preview-to: #7c3aed;
 }
-.sport-theme-preview[data-sport-preview="aurore"] {
-  --sport-preview-scene:
-    radial-gradient(
-      ellipse at 26% 20%,
-      rgba(254, 240, 138, 0.7),
-      transparent 42%
-    ),
-    radial-gradient(
-      ellipse at 72% 10%,
-      rgba(251, 113, 133, 0.5),
-      transparent 44%
-    ),
-    linear-gradient(135deg, #fb7185, #fbbf24);
-}
-.sport-theme-preview[data-sport-preview="foret"] {
-  --sport-preview-scene:
-    radial-gradient(
-      ellipse at 20% 10%,
-      rgba(190, 242, 100, 0.46),
-      transparent 38%
-    ),
-    linear-gradient(135deg, #14532d, #84cc16);
-  --sport-preview-foreground:
-    radial-gradient(
-      ellipse 4rem 1.3rem at 25% 26%,
-      rgba(20, 83, 45, 0.42),
-      transparent 72%
-    ),
-    radial-gradient(
-      ellipse 5rem 1.5rem at 76% 38%,
-      rgba(20, 83, 45, 0.36),
-      transparent 72%
-    );
-}
-.sport-theme-preview[data-sport-preview="ocean"] {
-  --sport-preview-scene:
-    radial-gradient(
-      circle at 18% 30%,
-      rgba(240, 253, 250, 0.48) 0 0.16rem,
-      transparent 0.28rem
-    ),
-    radial-gradient(
-      circle at 72% 18%,
-      rgba(125, 211, 252, 0.46),
-      transparent 40%
-    ),
-    linear-gradient(135deg, #075985, #2dd4bf);
-  --sport-preview-foreground: linear-gradient(
-    115deg,
-    transparent 0 20%,
-    rgba(224, 242, 254, 0.18) 21% 25%,
-    transparent 44%
-  );
-}
-.sport-theme-preview[data-sport-preview="acier"] {
-  --sport-preview-scene:
-    repeating-linear-gradient(
-      90deg,
-      rgba(203, 213, 225, 0.2) 0 1px,
-      transparent 1px 15px
-    ),
-    linear-gradient(135deg, #334155, #dc2626);
-}
-.sport-theme-preview[data-sport-preview="nuit-polaire"] {
-  --sport-preview-scene:
-    radial-gradient(
-      ellipse at 30% 8%,
-      rgba(103, 232, 249, 0.58),
-      transparent 42%
-    ),
-    radial-gradient(
-      ellipse at 74% 18%,
-      rgba(99, 102, 241, 0.4),
-      transparent 44%
-    ),
-    linear-gradient(135deg, #020617, #06b6d4);
-}
-.sport-theme-preview[data-sport-preview="abysses"] {
-  --sport-preview-scene:
-    radial-gradient(
-      circle at 24% 30%,
-      rgba(224, 242, 254, 0.28) 0 0.12rem,
-      transparent 0.22rem
-    ),
-    radial-gradient(
-      ellipse at 74% 20%,
-      rgba(34, 211, 238, 0.26),
-      transparent 44%
-    ),
-    linear-gradient(135deg, #020617, #0e7490);
-  --sport-preview-foreground: linear-gradient(
-    180deg,
-    rgba(2, 6, 23, 0.04),
-    rgba(2, 6, 23, 0.44)
-  );
-}
-.sport-theme-preview[data-sport-preview="volcan"] {
-  --sport-preview-scene:
-    radial-gradient(
-      ellipse at 64% 14%,
-      rgba(168, 162, 158, 0.34),
-      transparent 38%
-    ),
-    radial-gradient(
-      ellipse at 55% 78%,
-      rgba(251, 146, 60, 0.46),
-      transparent 40%
-    ),
-    linear-gradient(135deg, #1c1917, #ea580c);
-  --sport-preview-foreground: linear-gradient(
-    126deg,
-    transparent 0 38%,
-    rgba(251, 146, 60, 0.24) 40% 45%,
-    transparent 55%
-  );
-}
-.sport-theme-preview[data-sport-preview="canopee"] {
-  --sport-preview-scene:
-    radial-gradient(
-      ellipse at 20% 0%,
-      rgba(217, 249, 157, 0.34),
-      transparent 42%
-    ),
-    radial-gradient(
-      ellipse at 80% 28%,
-      rgba(22, 163, 74, 0.28),
-      transparent 42%
-    ),
-    linear-gradient(135deg, #14532d, #a3e635);
-  --sport-preview-foreground: radial-gradient(
-    ellipse 6rem 1.4rem at 24% 30%,
-    rgba(20, 83, 45, 0.32),
-    transparent 72%
-  );
-}
-.sport-theme-preview[data-sport-preview="cosmos"] {
-  --sport-preview-scene:
-    radial-gradient(
-      circle at 12% 18%,
-      rgba(255, 255, 255, 0.55) 0 0.07rem,
-      transparent 0.14rem
-    ),
-    radial-gradient(
-      ellipse at 50% 42%,
-      rgba(240, 171, 252, 0.28),
-      transparent 44%
-    ),
-    radial-gradient(
-      ellipse at 74% 24%,
-      rgba(59, 130, 246, 0.22),
-      transparent 44%
-    ),
-    linear-gradient(135deg, #020617, #7c3aed);
-}
-.sport-theme-preview[data-sport-preview="forge"] {
-  --sport-preview-scene:
-    repeating-linear-gradient(
-      90deg,
-      rgba(203, 213, 225, 0.2) 0 1px,
-      transparent 1px 14px
-    ),
-    radial-gradient(
-      ellipse at 72% 18%,
-      rgba(251, 146, 60, 0.42),
-      transparent 38%
-    ),
-    linear-gradient(135deg, #0f172a, #334155);
-  --sport-preview-foreground: linear-gradient(
-    180deg,
-    transparent 62%,
-    rgba(15, 23, 42, 0.44)
-  );
-}
-.sport-theme-preview[data-sport-preview="nexus-vivant"] {
-  --sport-preview-scene:
-    radial-gradient(
-      circle at 50% 48%,
-      rgba(236, 254, 255, 0.34),
-      transparent 26%
-    ),
-    conic-gradient(
-      from 225deg at 50% 48%,
-      transparent 0 10%,
-      rgba(94, 234, 212, 0.22) 16%,
-      transparent 24%,
-      rgba(232, 121, 249, 0.18) 34%,
-      transparent 48%,
-      rgba(34, 197, 94, 0.2) 60%,
-      transparent 76%,
-      rgba(103, 232, 249, 0.18) 84%,
-      transparent 100%
-    ),
-    linear-gradient(135deg, #020617, #0f766e);
-  --sport-preview-foreground: radial-gradient(
-    ellipse at 50% 110%,
-    rgba(2, 6, 23, 0.34),
-    transparent 42%
-  );
+
+[data-theme-preview="zenith-gold"] {
+  --preview-from: #8c6a18;
+  --preview-to: #b68a1f;
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  html[data-sport-theme] [class~="bg-brand-700"],
-  html[data-sport-theme] [class~="text-brand-700"] {
-    transition:
-      background-color 180ms ease,
-      color 180ms ease;
+  html[data-sport-theme="neon-pulse"] .sp-stateful-button[data-state="loading"] {
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--sp-accent-primary) 16%, transparent);
+  }
+
+  html[data-sport-theme="aurora"] body {
+    background-size: 130% 130%, 145% 145%, 100% 100%;
+    animation: sp-aurora-background 18s ease-in-out infinite alternate;
   }
 }
 
-@media (max-width: 640px) {
-  html[data-sport-theme]:not([data-sport-theme="classic"]):not(
-      [data-sport-theme-style="minimal"]
-    )
-    body {
-    background-size: cover, cover, cover, cover, cover;
-    background-position:
-      center top,
-      center,
-      center,
-      center top,
-      center;
+@keyframes sp-aurora-background {
+  from { background-position: 0% 0%, 100% 0%, 0% 0%; }
+  to { background-position: 12% 5%, 88% 8%, 0% 0%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-sport-theme] body {
+    animation: none !important;
+    background-position: 0 0 !important;
+  }
+}
+
+@media (max-width: 24.5rem) {
+  html[data-sport-theme] body {
+    background-attachment: scroll;
   }
 }

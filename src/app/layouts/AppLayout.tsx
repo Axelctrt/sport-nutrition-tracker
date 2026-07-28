@@ -13,7 +13,7 @@ export function AppLayout() {
   useClearInputValueOnFocus();
 
   return (
-    <div className="sport-theme-app min-h-screen text-slate-900 dark:text-slate-100">
+    <div className="sport-theme-app min-h-screen text-[var(--sp-text-primary)]">
       <NavigationScrollManager />
       <a
         href="#main-content"

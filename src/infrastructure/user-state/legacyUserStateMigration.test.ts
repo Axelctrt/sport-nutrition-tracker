@@ -102,8 +102,9 @@ describe('migration des états utilisateur historiques', () => {
       endurancePlanning: planningState,
       achievements: { earnedAchievements: [] },
       visualThemes: {
-        activeThemeId: 'classic',
-        unlockedThemeIds: ['classic'],
+        activeThemeId: 'core',
+        unlockedThemeIds: ['core'],
+        unlockMetadata: {},
       },
       weeklyMissions: { completedWeeks: [] },
       routineReminderCompletions: {
@@ -198,8 +199,9 @@ describe('migration des états utilisateur historiques', () => {
       },
     ]);
     expect(migrated.visualThemes).toEqual({
-      activeThemeId: 'power',
-      unlockedThemeIds: ['classic', 'power'],
+      activeThemeId: 'core',
+      unlockedThemeIds: ['core'],
+      unlockMetadata: {},
     });
     expect(migrated.weeklyMissions.completedWeeks).toEqual([
       {
@@ -226,12 +228,12 @@ describe('migration des états utilisateur historiques', () => {
       id: 'first-session',
       earnedAt: '2026-06-27T12:00:00.000Z',
     });
-    expect(await database.unlockedVisualThemes.count()).toBe(2);
+    expect(await database.unlockedVisualThemes.count()).toBe(1);
     expect(
       await database.visualThemePreferences.get(
         VISUAL_THEME_PREFERENCE_ID,
       ),
-    ).toMatchObject({ activeThemeId: 'power' });
+    ).toMatchObject({ activeThemeId: 'core' });
     expect(
       await database.weeklyMissionCompletions.get(
         weeklyMissionCompletionId('2026-06-22'),

@@ -21,6 +21,7 @@ export interface EarnedAchievementRecord extends EarnedAchievement {
 export interface UnlockedVisualThemeRecord {
   id: VisualThemeId;
   unlockedAt: string;
+  revealSeenAt?: string;
   updatedAt: string;
 }
 

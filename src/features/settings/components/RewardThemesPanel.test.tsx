@@ -1,224 +1,144 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { buildThemeAchievementSnapshot } from "@/application/rewards/themeAchievementService";
 import {
+  readVisualThemeState,
+  resetVisualThemeStateRuntimeForTests,
   VISUAL_THEME_STORAGE_KEY,
-  VISUAL_THEME_STYLE_STORAGE_KEY,
+  type VisualThemeState,
+  writeVisualThemeState,
 } from "@/domain/rewards/visualThemes";
 import { RewardThemesPanel } from "@/features/settings/components/RewardThemesPanel";
 
-const emptyThemeMetrics = {
-  totalLoggedSessions: 0,
-  enduranceActivities: 0,
-  runningKm: 0,
-  swimmingActivities: 0,
-  swimmingMeters: 0,
-  completedStrengthSessions: 0,
-  strengthVolumeKg: 0,
-  activeDays: 0,
+const EMPTY_DATA = {
+  activities: [],
+  workoutSessions: [],
+  checkIns: [],
+  checkOuts: [],
+  foodEntries: [],
+  activityDecisions: [],
 };
+const REFERENCE_DATE = "2026-07-28";
+const UNLOCKED_STATE: VisualThemeState = {
+  activeThemeId: "core",
+  unlockedThemeIds: ["core", "emerald-focus"],
+  unlockMetadata: {
+    "emerald-focus": {
+      unlockedAt: "2026-07-20T08:00:00.000Z",
+    },
+  },
+};
+
+function snapshot(state: VisualThemeState = {
+  activeThemeId: "core",
+  unlockedThemeIds: ["core"],
+  unlockMetadata: {},
+}) {
+  return buildThemeAchievementSnapshot(EMPTY_DATA, REFERENCE_DATE, state);
+}
 
 describe("RewardThemesPanel", () => {
   beforeEach(() => {
-    window.localStorage.removeItem(VISUAL_THEME_STORAGE_KEY);
-    window.localStorage.removeItem(VISUAL_THEME_STYLE_STORAGE_KEY);
+    resetVisualThemeStateRuntimeForTests();
+    window.localStorage.clear();
     document.documentElement.removeAttribute("data-sport-theme");
-    document.documentElement.removeAttribute("data-sport-theme-style");
   });
 
-  it("affiche les thèmes débloqués et la progression restante", async () => {
-    render(
-      <RewardThemesPanel
-        loadSnapshot={async () =>
-          buildThemeAchievementSnapshot({
-            ...emptyThemeMetrics,
-            enduranceActivities: 2,
-            activeDays: 3,
-          })
-        }
-      />,
+  it("affiche Core, la collection complète et la progression réelle", async () => {
+    const { container } = render(
+      <RewardThemesPanel loadSnapshot={async () => snapshot()} />,
     );
 
-    expect(await screen.findByText("1/15 débloqués")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Complet" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
-    expect(screen.getByRole("button", { name: "Minimaliste" })).toHaveAttribute(
-      "aria-pressed",
-      "false",
-    );
-    expect(screen.getByText("Horizon endurance")).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Encore 3 à accomplir" }),
-    ).toBeDisabled();
-    expect(
-      screen.getByRole("button", {
-        name: "Voir un aperçu rapide de Horizon endurance",
-      }),
-    ).toBeEnabled();
+    expect(await screen.findByRole("heading", { name: "Themes" }))
+      .toBeInTheDocument();
+    expect(screen.getByText("1 / 5")).toBeInTheDocument();
+    expect(screen.getAllByText("Core").length).toBeGreaterThan(0);
+    expect(screen.getByText("Neon Pulse")).toBeInTheDocument();
+    expect(screen.getByText("20 activites terminees")).toBeInTheDocument();
+    for (const themeId of [
+      "core",
+      "neon-pulse",
+      "emerald-focus",
+      "aurora",
+      "zenith-gold",
+    ]) {
+      expect(container.querySelector(`[data-theme-preview="${themeId}"]`))
+        .not.toBeNull();
+    }
+  });
+
+  it("ouvre la progression d'un thème verrouillé sans l'appliquer", async () => {
+    const user = userEvent.setup();
+    render(<RewardThemesPanel loadSnapshot={async () => snapshot()} />);
+
+    const neonTitle = await screen.findByRole("heading", { name: "Neon Pulse" });
+    const neonCard = neonTitle.closest("article");
+    expect(neonCard).not.toBeNull();
+    await user.click(within(neonCard!).getByRole("button", {
+      name: "Voir ma progression",
+    }));
+
+    expect(screen.getByRole("dialog", { name: "Neon Pulse" }))
+      .toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Essayer maintenant" }))
+      .not.toBeInTheDocument();
+    expect(document.documentElement.dataset.sportTheme).toBeUndefined();
   });
 
   it("active immédiatement un thème déjà débloqué", async () => {
     const user = userEvent.setup();
     const activateTheme = vi.fn(() => true);
+    writeVisualThemeState(UNLOCKED_STATE);
 
     render(
       <RewardThemesPanel
-        loadSnapshot={async () =>
-          buildThemeAchievementSnapshot(emptyThemeMetrics, ["classic", "power"])
-        }
+        loadSnapshot={async () => snapshot(UNLOCKED_STATE)}
         activateTheme={activateTheme}
       />,
     );
 
-    await user.click(
-      await screen.findByRole("button", { name: "Utiliser ce thème" }),
-    );
+    const emeraldTitle = await screen.findByRole("heading", {
+      name: "Emerald Focus",
+    });
+    await user.click(within(emeraldTitle.closest("article")!).getByRole(
+      "button",
+      { name: "Appliquer" },
+    ));
 
-    expect(activateTheme).toHaveBeenCalledWith("power");
-    expect(screen.getAllByRole("button", { name: "Thème actif" })).toHaveLength(
-      1,
-    );
+    expect(activateTheme).toHaveBeenCalledWith("emerald-focus");
+    await waitFor(() => {
+      expect(within(emeraldTitle.closest("article")!).getByText("Actif"))
+        .toBeInTheDocument();
+    });
   });
 
-  it("ouvre une mini pop-up d’aperçu sans appliquer le thème à toute l’app", async () => {
+  it("essaie un thème sans persister puis restaure Core à l'annulation", async () => {
     const user = userEvent.setup();
-
+    writeVisualThemeState(UNLOCKED_STATE);
     render(
-      <RewardThemesPanel
-        loadSnapshot={async () =>
-          buildThemeAchievementSnapshot(emptyThemeMetrics)
-        }
-      />,
+      <RewardThemesPanel loadSnapshot={async () => snapshot(UNLOCKED_STATE)} />,
     );
 
-    await user.click(
-      await screen.findByRole("button", {
-        name: "Voir un aperçu rapide de Volcan",
-      }),
-    );
+    const emeraldTitle = await screen.findByRole("heading", {
+      name: "Emerald Focus",
+    });
+    await user.click(within(emeraldTitle.closest("article")!).getByRole(
+      "button",
+      { name: "Previsualiser" },
+    ));
+    await user.click(screen.getByRole("button", { name: "Essayer maintenant" }));
 
-    const dialog = screen.getByRole("dialog", { name: "Volcan" });
-    expect(dialog).toBeInTheDocument();
-    expect(dialog).toHaveAttribute("data-theme-preview-dialog", "true");
-    expect(
-      screen.getByText(
-        "Aperçu indicatif du fond et des cartes, sans appliquer le thème à l’application.",
-      ),
-    ).toBeInTheDocument();
-    expect(document.documentElement.dataset.sportTheme).toBeUndefined();
+    expect(screen.getByText("Theme en essai")).toBeInTheDocument();
+    expect(document.documentElement.dataset.sportTheme).toBe("emerald-focus");
+    expect(readVisualThemeState().activeThemeId).toBe("core");
 
-    await user.click(
-      screen.getByRole("button", { name: "Fermer l’aperçu du thème" }),
-    );
-    await waitFor(() =>
-      expect(
-        screen.queryByRole("dialog", { name: "Volcan" }),
-      ).not.toBeInTheDocument(),
-    );
-  });
-
-  it("ne propose plus d’aperçu complet appliqué à toute l’app", async () => {
-    render(
-      <RewardThemesPanel
-        loadSnapshot={async () =>
-          buildThemeAchievementSnapshot(emptyThemeMetrics)
-        }
-      />,
-    );
-
-    await screen.findByText("Volcan");
-
-    expect(
-      screen.queryByRole("button", {
-        name: /Prévisualiser tout le thème/,
-      }),
-    ).not.toBeInTheDocument();
-    expect(screen.queryByText("Aperçu complet temporaire")).not.toBeInTheDocument();
-    expect(document.documentElement.dataset.sportTheme).toBeUndefined();
-  });
-
-  it("permet de choisir un style complet ou minimaliste pour les thèmes", async () => {
-    const user = userEvent.setup();
-
-    render(
-      <RewardThemesPanel
-        loadSnapshot={async () =>
-          buildThemeAchievementSnapshot(emptyThemeMetrics)
-        }
-      />,
-    );
-
-    await screen.findByText("Thèmes récompenses");
-    await user.click(screen.getByRole("button", { name: "Minimaliste" }));
-
-    expect(document.documentElement.dataset.sportThemeStyle).toBe("minimal");
-    expect(screen.getByRole("button", { name: "Minimaliste" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
-
-    expect(document.documentElement.dataset.sportThemeStyle).toBe("minimal");
-    expect(
-      screen.queryByRole("button", {
-        name: /Prévisualiser tout le thème/,
-      }),
-    ).not.toBeInTheDocument();
-  });
-
-  it("grise SportPilot classique en style complet mais le conserve en minimaliste", async () => {
-    const user = userEvent.setup();
-
-    render(
-      <RewardThemesPanel
-        loadSnapshot={async () =>
-          buildThemeAchievementSnapshot(emptyThemeMetrics)
-        }
-      />,
-    );
-
-    await screen.findByText("SportPilot classique");
-
-    expect(
-      screen.getByRole("button", {
-        name: "SportPilot classique n’a pas d’aperçu complet",
-      }),
-    ).toBeDisabled();
-    expect(
-      screen.getAllByRole("button", { name: "Minimaliste uniquement" })
-        .length,
-    ).toBeGreaterThan(0);
-
-    await user.click(screen.getByRole("button", { name: "Minimaliste" }));
-
-    expect(
-      screen.getByRole("button", {
-        name: "Voir un aperçu rapide de SportPilot classique",
-      }),
-    ).toBeEnabled();
-  });
-
-  it("affiche des miniatures thématiques dédiées aux décors spectaculaires", async () => {
-    const { container } = render(
-      <RewardThemesPanel
-        loadSnapshot={async () =>
-          buildThemeAchievementSnapshot(emptyThemeMetrics)
-        }
-      />,
-    );
-
-    await screen.findByText("Volcan");
-
-    expect(
-      container.querySelector('[data-sport-preview="volcan"]'),
-    ).not.toBeNull();
-    expect(
-      container.querySelector('[data-sport-preview="abysses"]'),
-    ).not.toBeNull();
-    expect(
-      container.querySelector('[data-sport-preview="nexus-vivant"]'),
-    ).not.toBeNull();
+    await user.click(screen.getByRole("button", {
+      name: "Revenir a l'ancien theme",
+    }));
+    expect(document.documentElement.dataset.sportTheme).toBe("core");
+    expect(JSON.parse(
+      window.localStorage.getItem(VISUAL_THEME_STORAGE_KEY) ?? "{}",
+    )).toMatchObject({ activeThemeId: "core" });
   });
 });

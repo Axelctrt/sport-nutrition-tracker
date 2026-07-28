@@ -3,7 +3,10 @@ import {
   normalizeRoutineReminderPreferences,
   type RoutineReminderPreferences,
 } from '@/domain/reminders/routineReminder';
-import { DEFAULT_VISUAL_THEME_ID } from '@/domain/rewards/visualThemes';
+import {
+  DEFAULT_VISUAL_THEME_ID,
+  isVisualThemeId,
+} from '@/domain/rewards/visualThemes';
 import { USER_SETTINGS_ID } from '@/domain/defaults/identifiers';
 import {
   createDefaultUserSettings,
@@ -173,12 +176,30 @@ function mergeUnlockedThemes(
   local: readonly UnlockedVisualThemeRecord[],
   cloud: readonly UnlockedVisualThemeRecord[],
 ): UnlockedVisualThemeRecord[] {
-  return mergeEarliestById(
-    local,
-    cloud,
-    (value) => value.unlockedAt,
-    (value, unlockedAt) => ({ ...value, unlockedAt, updatedAt: unlockedAt }),
-  );
+  const byId = new Map<string, UnlockedVisualThemeRecord>();
+  for (const value of [...local, ...cloud].filter(({ id }) => isVisualThemeId(id))) {
+    const existing = byId.get(value.id);
+    if (!existing) {
+      byId.set(value.id, value);
+      continue;
+    }
+    const unlockedAt = earliestTimestamp(existing.unlockedAt, value.unlockedAt);
+    const revealSeenAt = [existing.revealSeenAt, value.revealSeenAt]
+      .filter((date): date is string => Boolean(date))
+      .sort()[0];
+    byId.set(value.id, {
+      id: value.id,
+      unlockedAt,
+      ...(revealSeenAt ? { revealSeenAt } : {}),
+      updatedAt: maxTimestamp(
+        existing.updatedAt,
+        value.updatedAt,
+        revealSeenAt,
+        unlockedAt,
+      ),
+    });
+  }
+  return sortById([...byId.values()]);
 }
 
 function mergeWeeklyMissions(
@@ -284,11 +305,30 @@ function validateAggregate(aggregate: RewardsRoutinesAggregate): void {
 function buildAggregate(
   values: Omit<RewardsRoutinesAggregate, 'id' | 'updatedAt'>,
 ): RewardsRoutinesAggregate {
-  const unlockedVisualThemes = sortById(values.unlockedVisualThemes);
+  const normalizedThemes = values.unlockedVisualThemes.filter(
+    ({ id }) => isVisualThemeId(id),
+  );
+  const fallbackTimestamp = maxTimestamp(
+    values.visualThemePreference.updatedAt,
+    values.routineReminderPreferences.updatedAt,
+    ...normalizedThemes.map(({ updatedAt }) => updatedAt),
+  );
+  const unlockedVisualThemes = sortById(
+    normalizedThemes.some(({ id }) => id === DEFAULT_VISUAL_THEME_ID)
+      ? normalizedThemes
+      : [
+          ...normalizedThemes,
+          {
+            id: DEFAULT_VISUAL_THEME_ID,
+            unlockedAt: fallbackTimestamp,
+            updatedAt: fallbackTimestamp,
+          },
+        ],
+  );
   const unlockedIds = new Set(unlockedVisualThemes.map((value) => value.id));
-  const visualThemePreference = unlockedIds.has(
+  const visualThemePreference = isVisualThemeId(
     values.visualThemePreference.activeThemeId,
-  )
+  ) && unlockedIds.has(values.visualThemePreference.activeThemeId)
     ? values.visualThemePreference
     : {
         ...values.visualThemePreference,
@@ -331,8 +371,14 @@ function fromCloudAggregate(
     ...stripLogicalSyncFields(stripCloudFields(aggregate)),
     id,
   } as RewardsRoutinesAggregate;
-  validateAggregate(value);
-  return value;
+  return buildAggregate({
+    earnedAchievements: value.earnedAchievements,
+    unlockedVisualThemes: value.unlockedVisualThemes,
+    visualThemePreference: value.visualThemePreference,
+    weeklyMissionCompletions: value.weeklyMissionCompletions,
+    routineReminderCompletions: value.routineReminderCompletions,
+    routineReminderPreferences: value.routineReminderPreferences,
+  });
 }
 
 function isUninitializedLocalState(

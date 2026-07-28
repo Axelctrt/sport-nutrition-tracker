@@ -902,6 +902,13 @@ const visualThemeStateSchema = z
   .object({
     activeThemeId: visualThemeIdSchema,
     unlockedThemeIds: z.array(visualThemeIdSchema),
+    unlockMetadata: z.record(
+      visualThemeIdSchema,
+      z.object({
+        unlockedAt: isoDateTimeSchema,
+        revealSeenAt: isoDateTimeSchema.optional(),
+      }),
+    ).optional().default({}),
   })
   .refine(
     (state) =>

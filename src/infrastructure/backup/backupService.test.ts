@@ -264,13 +264,13 @@ describe('backupService', () => {
       },
     });
     await database.unlockedVisualThemes.add({
-      id: 'power',
+      id: 'emerald-focus',
       unlockedAt: '2026-06-29T08:00:00.000Z',
       updatedAt: '2026-06-29T08:00:00.000Z',
     });
     await database.visualThemePreferences.add({
       id: 'visual-theme-preference',
-      activeThemeId: 'power',
+      activeThemeId: 'emerald-focus',
       updatedAt: '2026-06-29T08:00:00.000Z',
     });
     await database.weeklyMissionCompletions.add({

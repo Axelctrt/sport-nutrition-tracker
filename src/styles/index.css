@@ -187,6 +187,37 @@ a {
   transform: scale(var(--sp-press-scale));
 }
 
+.sp-navigation-shell {
+  color: var(--sp-text-primary);
+  border-color: var(--sp-border-subtle);
+  background: color-mix(in srgb, var(--sp-surface-card) 94%, transparent);
+  backdrop-filter: blur(18px);
+}
+
+.sp-navigation-link {
+  color: var(--sp-text-secondary);
+  transition:
+    color var(--sp-motion-standard) var(--sp-ease-standard),
+    background-color var(--sp-motion-standard) var(--sp-ease-standard),
+    transform var(--sp-motion-fast) var(--sp-ease-standard);
+}
+
+.sp-navigation-link:hover {
+  color: var(--sp-text-primary);
+  background: var(--sp-surface-muted);
+}
+
+.sp-navigation-link[aria-current="page"],
+.sp-navigation-link.is-active {
+  color: var(--sp-text-primary);
+  background: color-mix(in srgb, var(--sp-accent-primary) 16%, var(--sp-surface-card));
+  box-shadow: inset 3px 0 0 var(--sp-accent-primary);
+}
+
+.sp-navigation-link:active {
+  transform: scale(var(--sp-press-scale));
+}
+
 .sp-button {
   color: white;
   background: var(--sp-accent-primary);

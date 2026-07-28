@@ -41,8 +41,8 @@ import {
   VISUAL_THEME_STORAGE_KEY,
   emptyVisualThemeState,
   parseVisualThemeState,
+  isVisualThemeId,
   visualThemeCatalog,
-  type VisualThemeId,
   type VisualThemeState,
 } from '@/domain/rewards/visualThemes';
 import {
@@ -221,24 +221,32 @@ export async function readVisualThemeStateFromDatabase(
     database.unlockedVisualThemes.toArray(),
     database.visualThemePreferences.get(VISUAL_THEME_PREFERENCE_ID),
   ]);
-  const catalogOrder = new Map(
-    visualThemeCatalog.map((theme, index) => [theme.id, index]),
-  );
-  const unlockedThemeIds = Array.from(
-    new Set<VisualThemeId>([
-      DEFAULT_VISUAL_THEME_ID,
-      ...records.map((record) => record.id),
-    ]),
-  ).sort(
-    (left, right) =>
-      (catalogOrder.get(left) ?? 0) - (catalogOrder.get(right) ?? 0),
-  );
+  const validRecords = records.filter((record) => isVisualThemeId(record.id));
+  const unlockedThemeIds = visualThemeCatalog
+    .map(({ id }) => id)
+    .filter((id) => (
+      id === DEFAULT_VISUAL_THEME_ID
+      || validRecords.some((record) => record.id === id)
+    ));
   const activeThemeId =
-    preference && unlockedThemeIds.includes(preference.activeThemeId)
+    preference
+    && isVisualThemeId(preference.activeThemeId)
+    && unlockedThemeIds.includes(preference.activeThemeId)
       ? preference.activeThemeId
       : DEFAULT_VISUAL_THEME_ID;
+  const unlockMetadata = Object.fromEntries(
+    validRecords
+      .filter(({ id }) => id !== DEFAULT_VISUAL_THEME_ID)
+      .map(({ id, unlockedAt, revealSeenAt }) => [
+      id,
+      {
+        unlockedAt,
+        ...(revealSeenAt ? { revealSeenAt } : {}),
+      },
+      ]),
+  );
 
-  return { activeThemeId, unlockedThemeIds };
+  return { activeThemeId, unlockedThemeIds, unlockMetadata };
 }
 
 export async function readWeeklyMissionHistoryStateFromDatabase(
@@ -391,10 +399,17 @@ export async function replaceVisualThemeStateInDatabase(
       const records: UnlockedVisualThemeRecord[] =
         state.unlockedThemeIds.map((id) => {
           const current = existing.get(id);
-          return current ?? {
+          const metadata = state.unlockMetadata[id];
+          const unlockedAt = metadata?.unlockedAt
+            ?? current?.unlockedAt
+            ?? updatedAt;
+          const revealSeenAt = metadata?.revealSeenAt
+            ?? current?.revealSeenAt;
+          return {
             id,
-            unlockedAt: updatedAt,
-            updatedAt,
+            unlockedAt,
+            ...(revealSeenAt ? { revealSeenAt } : {}),
+            updatedAt: revealSeenAt ?? current?.updatedAt ?? unlockedAt,
           };
         });
       const currentPreference =

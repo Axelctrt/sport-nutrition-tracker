@@ -593,8 +593,9 @@ describe("migrateBackupEnvelope", () => {
           ],
         },
         visualThemes: {
-          activeThemeId: "endurance",
-          unlockedThemeIds: ["classic", "endurance"],
+          activeThemeId: "neon-pulse",
+          unlockedThemeIds: ["core", "neon-pulse"],
+          unlockMetadata: {},
         },
         weeklyMissions: {
           completedWeeks: [
@@ -627,7 +628,7 @@ describe("migrateBackupEnvelope", () => {
     expect(migrated.data.visualThemePreferences).toEqual([
       expect.objectContaining({
         id: "visual-theme-preference",
-        activeThemeId: "endurance",
+        activeThemeId: "neon-pulse",
       }),
     ]);
     expect(migrated.data.weeklyMissionCompletions).toEqual([

@@ -395,13 +395,13 @@ describe('guestDataImportService', () => {
       updatedAt: '2026-07-01T08:00:00.000Z',
     };
     const unlockedTheme = {
-      id: 'classic' as const,
+      id: 'core' as const,
       unlockedAt: '2026-07-01T08:00:00.000Z',
       updatedAt: '2026-07-01T08:00:00.000Z',
     };
     const themePreference = {
       id: 'visual-theme-preference' as const,
-      activeThemeId: 'classic' as const,
+      activeThemeId: 'core' as const,
       updatedAt: '2026-07-01T08:00:00.000Z',
     };
 

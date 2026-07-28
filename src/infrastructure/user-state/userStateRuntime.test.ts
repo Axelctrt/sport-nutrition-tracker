@@ -121,8 +121,8 @@ describe('runtime des états utilisateur Dexie', () => {
       ['first-session'],
       '2026-06-29T08:00:00.000Z',
     );
-    unlockVisualThemes(['power']);
-    activateVisualTheme('power');
+    unlockVisualThemes(['emerald-focus']);
+    activateVisualTheme('emerald-focus');
     recordCompletedWeeklyMission(
       '2026-06-22',
       '2026-06-29T09:00:00.000Z',
@@ -146,12 +146,12 @@ describe('runtime des états utilisateur Dexie', () => {
     ).toMatchObject({
       earnedAt: '2026-06-29T08:00:00.000Z',
     });
-    expect(await database.unlockedVisualThemes.get('power')).toBeDefined();
+    expect(await database.unlockedVisualThemes.get('emerald-focus')).toBeDefined();
     expect(
       await database.visualThemePreferences.get(
         'visual-theme-preference',
       ),
-    ).toMatchObject({ activeThemeId: 'power' });
+    ).toMatchObject({ activeThemeId: 'emerald-focus' });
     expect(await database.weeklyMissionCompletions.count()).toBe(1);
     expect(await database.routineReminderCompletions.count()).toBe(1);
 

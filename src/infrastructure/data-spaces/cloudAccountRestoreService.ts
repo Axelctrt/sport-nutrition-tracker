@@ -8,6 +8,7 @@ import type { WeightEntry } from '@/domain/models/weight';
 import type { Activity } from '@/domain/models/activity';
 import type { PlannedEnduranceSession } from '@/domain/planning/endurancePlanningState';
 import type { Goal } from '@/domain/goals/goalState';
+import { DEFAULT_VISUAL_THEME_ID } from '@/domain/rewards/visualThemes';
 import {
   activateAccountDataSpace,
   type DataSpaceStorage,
@@ -448,8 +449,13 @@ function buildPreview(
     (total, aggregate) => (
       total +
       aggregate.earnedAchievements.length +
-      aggregate.unlockedVisualThemes.filter((value) => value.id !== 'classic').length +
-      Number(aggregate.visualThemePreference.activeThemeId !== 'classic') +
+      aggregate.unlockedVisualThemes.filter(
+        (value) => value.id !== DEFAULT_VISUAL_THEME_ID,
+      ).length +
+      Number(
+        aggregate.visualThemePreference.activeThemeId
+          !== DEFAULT_VISUAL_THEME_ID,
+      ) +
       aggregate.weeklyMissionCompletions.length +
       aggregate.routineReminderCompletions.length +
       Number(!isDefaultRoutineReminderPreferencesSnapshot(
