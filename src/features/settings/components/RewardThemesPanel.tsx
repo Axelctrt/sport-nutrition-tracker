@@ -1,11 +1,15 @@
 import {
+  Activity,
+  BarChart3,
   CalendarCheck2,
   ChartNoAxesCombined,
   Check,
   Eye,
+  Home,
   LockKeyhole,
   Palette,
   Sparkles,
+  Trophy,
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -43,8 +47,8 @@ interface RewardThemesPanelProps {
 const rarityLabels: Record<SportPilotThemeRarity, string> = {
   standard: "Standard",
   rare: "Rare",
-  epic: "Epique",
-  legendary: "Legendaire",
+  epic: "Épique",
+  legendary: "Légendaire",
 };
 
 const rarityClasses: Record<SportPilotThemeRarity, string> = {
@@ -53,6 +57,8 @@ const rarityClasses: Record<SportPilotThemeRarity, string> = {
   epic: "border-violet-500/45 text-violet-700 dark:text-violet-300",
   legendary: "border-amber-500/50 text-amber-700 dark:text-amber-300",
 };
+
+const previewNavigation = [Home, Activity, BarChart3, Trophy] as const;
 
 function formatUnlockDate(value: string): string {
   return new Intl.DateTimeFormat("fr-FR", {
@@ -76,6 +82,7 @@ function ThemeMiniInterface({
         compact ? "h-36 rounded-lg" : "min-h-72 rounded-lg",
       )}
       data-theme-preview={progress.theme.id}
+      aria-label={`Aperçu du thème ${progress.theme.name}`}
     >
       <div className={cn("relative z-10 flex h-full flex-col", compact ? "p-3" : "p-5")}>
         <div className="flex items-center justify-between gap-3">
@@ -111,16 +118,16 @@ function ThemeMiniInterface({
           </div>
         </div>
         <div className={cn("grid grid-cols-4 gap-2", compact ? "mt-2" : "mt-4")}>
-          {["A", "S", "P", "R"].map((label, index) => (
+          {previewNavigation.map((Icon, index) => (
             <span
-              key={label}
+              key={Icon.displayName ?? index}
               className={cn(
-                "grid place-items-center border border-white/20 text-xs font-bold text-white",
+                "grid place-items-center border border-white/20 text-white",
                 compact ? "h-6" : "h-9",
                 index === 2 ? "bg-white/25" : "bg-black/15",
               )}
             >
-              {label}
+              <Icon aria-hidden="true" className={compact ? "size-3" : "size-4"} />
             </span>
           ))}
         </div>
@@ -133,7 +140,7 @@ function ThemeCriteria({ progress }: { progress: ThemeAchievementProgress }) {
   if (progress.criteria.length === 0) {
     return (
       <p className="text-sm text-[var(--sp-text-secondary)]">
-        Disponible immediatement.
+        Disponible immédiatement.
       </p>
     );
   }
@@ -190,7 +197,7 @@ export function RewardThemesPanel({
         setLoadError(
           error instanceof Error
             ? error.message
-            : "La collection de themes est indisponible.",
+            : "La collection de thèmes est indisponible.",
         );
       }
     };
@@ -209,6 +216,7 @@ export function RewardThemesPanel({
   const previewTheme = snapshot?.themes.find(
     ({ theme }) => theme.id === previewThemeId,
   );
+  const previewIsActive = previewTheme?.theme.id === activeThemeId;
   const unlockedCount = snapshot?.themes.filter(({ unlocked }) => unlocked).length ?? 0;
 
   const sortedThemes = useMemo(
@@ -253,10 +261,10 @@ export function RewardThemesPanel({
             Collection visuelle
           </p>
           <h2 id="reward-themes-title" className="mt-1 text-xl font-bold text-[var(--sp-text-primary)]">
-            Themes
+            Thèmes
           </h2>
           <p className="mt-1 text-sm text-[var(--sp-text-secondary)]">
-            Chaque identite se debloque avec tes donnees reelles.
+            Chaque identité se débloque avec tes données réelles.
           </p>
         </div>
         {snapshot ? (
@@ -271,15 +279,15 @@ export function RewardThemesPanel({
         <InlineNotice
           className="mt-4"
           tone="info"
-          title="Theme en essai"
+          title="Thème en essai"
           role="status"
         >
-          <p>La preference synchronisee reste inchangee jusqu'a ta confirmation.</p>
+          <p>La préférence synchronisée reste inchangée jusqu’à ta confirmation.</p>
           <div className="mt-3 flex flex-wrap gap-2">
             <SportPilotStatefulButton
               state="idle"
-              idleLabel="Conserver ce theme"
-              successLabel="Theme conserve"
+              idleLabel="Conserver ce thème"
+              successLabel="Thème conservé"
               onClick={confirmTrial}
             />
             <button
@@ -287,27 +295,27 @@ export function RewardThemesPanel({
               className="sp-button sp-button--secondary min-h-12 rounded-[var(--sp-radius-control)] px-4 text-sm font-semibold"
               onClick={cancelTrial}
             >
-              Revenir a l'ancien theme
+              Revenir à l’ancien thème
             </button>
           </div>
         </InlineNotice>
       ) : null}
 
       {loadError ? (
-        <InlineNotice className="mt-4" tone="error" title="Themes indisponibles" role="alert">
+        <InlineNotice className="mt-4" tone="error" title="Thèmes indisponibles" role="alert">
           {loadError}
         </InlineNotice>
       ) : null}
 
       {!snapshot && !loadError ? (
-        <div className="mt-4 h-72 animate-pulse bg-[var(--sp-surface-muted)] motion-reduce:animate-none" aria-label="Chargement des themes" />
+        <div className="mt-4 h-72 animate-pulse bg-[var(--sp-surface-muted)] motion-reduce:animate-none" aria-label="Chargement des thèmes" />
       ) : null}
 
       {activeTheme ? (
         <section className="mt-5" aria-labelledby="active-theme-title">
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
-              <p className="text-xs font-bold uppercase text-[var(--sp-text-muted)]">Theme actif</p>
+              <p className="text-xs font-bold uppercase text-[var(--sp-text-muted)]">Thème actif</p>
               <h3 id="active-theme-title" className="mt-1 text-lg font-bold text-[var(--sp-text-primary)]">
                 {activeTheme.theme.name}
               </h3>
@@ -327,7 +335,7 @@ export function RewardThemesPanel({
               Ma collection
             </h3>
             <span className="text-sm text-[var(--sp-text-muted)]">
-              {snapshot.previewableCount} apercus
+              {snapshot.previewableCount} aperçus
             </span>
           </div>
 
@@ -356,12 +364,12 @@ export function RewardThemesPanel({
                         {progress.unlocked ? (
                           <span className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--sp-success)]">
                             <Check aria-hidden="true" className="size-4" />
-                            {active ? "Actif" : "Debloque"}
+                            {active ? "Actif" : "Débloqué"}
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--sp-text-muted)]">
                             <LockKeyhole aria-hidden="true" className="size-4" />
-                            Verrouille
+                            Verrouillé
                           </span>
                         )}
                       </div>
@@ -375,7 +383,7 @@ export function RewardThemesPanel({
                       {progress.unlockedAt ? (
                         <p className="mt-3 inline-flex items-center gap-2 text-xs text-[var(--sp-text-muted)]">
                           <CalendarCheck2 aria-hidden="true" className="size-4" />
-                          Debloque le {formatUnlockDate(progress.unlockedAt)}
+                          Débloqué le {formatUnlockDate(progress.unlockedAt)}
                         </p>
                       ) : null}
 
@@ -386,13 +394,13 @@ export function RewardThemesPanel({
                           onClick={() => setPreviewThemeId(progress.theme.id)}
                         >
                           <Eye aria-hidden="true" className="size-4" />
-                          {progress.unlocked ? "Previsualiser" : "Voir ma progression"}
+                          {progress.unlocked ? "Prévisualiser" : "Voir ma progression"}
                         </button>
                         {progress.unlocked && !active ? (
                           <SportPilotStatefulButton
                             state={buttonState}
                             idleLabel="Appliquer"
-                            successLabel="Theme applique"
+                            successLabel="Thème appliqué"
                             errorLabel="Indisponible"
                             onClick={() => applyTheme(progress.theme.id)}
                           />
@@ -409,7 +417,7 @@ export function RewardThemesPanel({
 
       <BottomSheet
         open={Boolean(previewTheme)}
-        title={previewTheme?.theme.name ?? "Apercu du theme"}
+        title={previewTheme?.theme.name ?? "Aperçu du thème"}
         description={previewTheme?.theme.description}
         onClose={() => setPreviewThemeId(undefined)}
       >
@@ -436,7 +444,12 @@ export function RewardThemesPanel({
               </div>
             </div>
             <div className="mt-6 flex flex-col gap-2 sm:flex-row">
-              {previewTheme.unlocked ? (
+              {previewIsActive ? (
+                <div className="flex min-h-12 w-full items-center justify-center gap-2 rounded-[var(--sp-radius-control)] border border-[var(--sp-success)] bg-[color-mix(in_srgb,var(--sp-success)_10%,var(--sp-surface-card))] px-4 text-sm font-semibold text-[var(--sp-success)]">
+                  <Check aria-hidden="true" className="size-4" />
+                  Thème actuellement utilisé
+                </div>
+              ) : previewTheme.unlocked ? (
                 <>
                   <SportPilotStatefulButton
                     fullWidth
@@ -450,7 +463,7 @@ export function RewardThemesPanel({
                     onClick={() => applyTheme(previewTheme.theme.id)}
                   >
                     <Check aria-hidden="true" className="size-4" />
-                    Appliquer ce theme
+                    Appliquer ce thème
                   </button>
                 </>
               ) : (
@@ -460,7 +473,7 @@ export function RewardThemesPanel({
                   onClick={() => setPreviewThemeId(undefined)}
                 >
                   <X aria-hidden="true" className="size-4" />
-                  Revenir a la collection
+                  Revenir à la collection
                 </button>
               )}
             </div>
