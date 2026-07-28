@@ -60,10 +60,10 @@ export function SportPilotMultiStepLoader({
               <span>{step.label}</span>
               <span className="sr-only">
                 {status === "complete"
-                  ? "terminee"
+                  ? "terminée"
                   : status === "active"
                     ? "en cours"
-                    : "a venir"}
+                    : "à venir"}
               </span>
             </li>
           );
@@ -72,4 +72,3 @@ export function SportPilotMultiStepLoader({
     </div>
   );
 }
-
