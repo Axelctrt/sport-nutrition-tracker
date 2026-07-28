@@ -62,12 +62,18 @@ import { NotFoundPage } from '@/features/foundation/pages/NotFoundPage';
 import { CalculationsInformationPage } from '@/features/information/pages/CalculationsInformationPage';
 import { OfflinePage } from '@/pwa/OfflinePage';
 
-const LazyVisualLabPage = lazy(async () => {
-  const module = await import('@/features/development/pages/VisualLabPage');
-  return { default: module.VisualLabPage };
-});
+const visualLabBuildEnabled = import.meta.env.DEV
+  || import.meta.env.VITE_ENABLE_VISUAL_LAB === 'true';
+
+const LazyVisualLabPage = visualLabBuildEnabled
+  ? lazy(async () => {
+      const module = await import('@/features/development/pages/VisualLabPage');
+      return { default: module.VisualLabPage };
+    })
+  : null;
 
 function visualLabEnabled(): boolean {
+  if (!visualLabBuildEnabled || !LazyVisualLabPage) return false;
   if (import.meta.env.DEV) return true;
   if (typeof window === 'undefined') return false;
   const hostname = window.location.hostname;
@@ -148,7 +154,7 @@ export const appShellRoutes: RouteObject[] = [
 ];
 
 const routeErrorElement = <AppRouteErrorPage />;
-const visualLabRoutes: RouteObject[] = visualLabEnabled()
+const visualLabRoutes: RouteObject[] = visualLabEnabled() && LazyVisualLabPage
   ? [{
       path: '/__visual-lab',
       errorElement: routeErrorElement,
