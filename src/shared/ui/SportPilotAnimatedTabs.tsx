@@ -1,8 +1,14 @@
 import {
+  useCallback,
+  useLayoutEffect,
   useRef,
+  useState,
+  type CSSProperties,
   type KeyboardEvent,
+  type UIEvent,
 } from "react";
 
+import "@/shared/ui/uxMotionPolish.css";
 import { cn } from "@/shared/utils/cn";
 
 export interface SportPilotTab {
@@ -19,6 +25,11 @@ interface SportPilotAnimatedTabsProps {
   className?: string;
 }
 
+interface IndicatorGeometry {
+  left: number;
+  width: number;
+}
+
 export function SportPilotAnimatedTabs({
   label,
   tabs,
@@ -26,7 +37,47 @@ export function SportPilotAnimatedTabs({
   onChange,
   className,
 }: SportPilotAnimatedTabsProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
   const refs = useRef<Array<HTMLButtonElement | null>>([]);
+  const [indicator, setIndicator] = useState<IndicatorGeometry>({ left: 0, width: 0 });
+  const [canScrollStart, setCanScrollStart] = useState(false);
+  const [canScrollEnd, setCanScrollEnd] = useState(false);
+
+  const refreshGeometry = useCallback(() => {
+    const container = containerRef.current;
+    const activeIndex = tabs.findIndex(({ id }) => id === activeTab);
+    const activeNode = refs.current[activeIndex];
+    if (!container || !activeNode) return;
+
+    setIndicator({
+      left: activeNode.offsetLeft,
+      width: activeNode.offsetWidth,
+    });
+
+    const maxScroll = Math.max(0, container.scrollWidth - container.clientWidth);
+    setCanScrollStart(container.scrollLeft > 2);
+    setCanScrollEnd(container.scrollLeft < maxScroll - 2);
+  }, [activeTab, tabs]);
+
+  useLayoutEffect(() => {
+    refreshGeometry();
+    const container = containerRef.current;
+    if (!container || typeof ResizeObserver === "undefined") return undefined;
+
+    const observer = new ResizeObserver(refreshGeometry);
+    observer.observe(container);
+    refs.current.forEach((node) => {
+      if (node) observer.observe(node);
+    });
+    return () => observer.disconnect();
+  }, [refreshGeometry]);
+
+  const handleScroll = (event: UIEvent<HTMLDivElement>) => {
+    const node = event.currentTarget;
+    const maxScroll = Math.max(0, node.scrollWidth - node.clientWidth);
+    setCanScrollStart(node.scrollLeft > 2);
+    setCanScrollEnd(node.scrollLeft < maxScroll - 2);
+  };
 
   const move = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
     if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
@@ -54,19 +105,32 @@ export function SportPilotAnimatedTabs({
     nextNode?.focus();
     if (typeof nextNode?.scrollIntoView === "function") {
       nextNode.scrollIntoView({
-        behavior: "smooth",
+        behavior: window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
+          ? "auto"
+          : "smooth",
         block: "nearest",
         inline: "center",
       });
     }
   };
 
+  const style = {
+    "--sp-tab-indicator-left": `${indicator.left}px`,
+    "--sp-tab-indicator-width": `${indicator.width}px`,
+  } as CSSProperties;
+
   return (
     <div
+      ref={containerRef}
       role="tablist"
       aria-label={label}
+      data-can-scroll-start={canScrollStart ? "true" : "false"}
+      data-can-scroll-end={canScrollEnd ? "true" : "false"}
+      onScroll={handleScroll}
+      style={style}
       className={cn("sp-animated-tabs", className)}
     >
+      <span className="sp-animated-tabs__indicator" aria-hidden="true" />
       {tabs.map((tab, index) => {
         const selected = tab.id === activeTab;
         return (
