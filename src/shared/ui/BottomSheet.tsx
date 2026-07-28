@@ -88,7 +88,7 @@ export function BottomSheet({
   }, [open, rendered]);
 
   useEffect(() => {
-    if (!open) {
+    if (!open || (!rendered && !open)) {
       setKeyboardOpen(false);
       return undefined;
     }
@@ -142,10 +142,10 @@ export function BottomSheet({
       viewport.removeEventListener('scroll', syncViewport);
       panel.removeEventListener('focusin', handleFocusIn);
     };
-  }, [open]);
+  }, [open, rendered]);
 
   useEffect(() => {
-    if (!open) return undefined;
+    if (!open || (!rendered && !open)) return undefined;
 
     const previouslyFocused = document.activeElement instanceof HTMLElement
       ? document.activeElement
@@ -195,7 +195,7 @@ export function BottomSheet({
       document.body.style.overflow = previousOverflow;
       previouslyFocused?.focus();
     };
-  }, [dismissible, onClose, open]);
+  }, [dismissible, onClose, open, rendered]);
 
   useEffect(() => {
     if (open) {
@@ -250,7 +250,7 @@ export function BottomSheet({
     }
   };
 
-  if (!rendered) return null;
+  if (!rendered && !open) return null;
 
   return createPortal(
     <div
