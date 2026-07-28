@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from 'react';
 import { IconAction } from '@/shared/ui/IconAction';
+import '@/shared/ui/uxMotionPolish.css';
 import { cn } from '@/shared/utils/cn';
 
 const FOCUSABLE_SELECTOR = [
@@ -23,6 +24,7 @@ const FOCUSABLE_SELECTOR = [
 const DISMISS_DISTANCE_PX = 110;
 const DISMISS_VELOCITY_PX_PER_MS = 0.65;
 const MINIMUM_VELOCITY_DISMISS_DISTANCE_PX = 24;
+const EXIT_DURATION_MS = 220;
 
 interface BottomSheetProps {
   open: boolean;
@@ -60,6 +62,30 @@ export function BottomSheet({
   const [dragOffset, setDragOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [keyboardOpen, setKeyboardOpen] = useState(false);
+  const [rendered, setRendered] = useState(open);
+  const [closing, setClosing] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setRendered(true);
+      setClosing(false);
+      return undefined;
+    }
+    if (!rendered) return undefined;
+
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      setRendered(false);
+      setClosing(false);
+      return undefined;
+    }
+
+    setClosing(true);
+    const timer = window.setTimeout(() => {
+      setRendered(false);
+      setClosing(false);
+    }, EXIT_DURATION_MS);
+    return () => window.clearTimeout(timer);
+  }, [open, rendered]);
 
   useEffect(() => {
     if (!open) {
@@ -186,7 +212,7 @@ export function BottomSheet({
   };
 
   const handlePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (!dismissible || !event.isPrimary || event.button > 0) return;
+    if (!dismissible || !event.isPrimary || event.button > 0 || closing) return;
     dragRef.current = {
       pointerId: event.pointerId,
       startY: event.clientY,
@@ -224,14 +250,15 @@ export function BottomSheet({
     }
   };
 
-  if (!open) return null;
+  if (!rendered) return null;
 
   return createPortal(
     <div
       ref={backdropRef}
-      className="fixed inset-x-0 top-0 z-[80] flex h-dvh items-end justify-center overflow-hidden bg-slate-950/55 backdrop-blur-[2px]"
+      data-closing={closing ? 'true' : 'false'}
+      className="sp-bottom-sheet-backdrop fixed inset-x-0 top-0 z-[80] flex h-dvh items-end justify-center overflow-hidden bg-slate-950/55 backdrop-blur-[2px]"
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget && dismissible) onClose();
+        if (event.target === event.currentTarget && dismissible && !closing) onClose();
       }}
     >
       <div
@@ -241,11 +268,11 @@ export function BottomSheet({
         aria-labelledby={titleId}
         aria-describedby={description ? descriptionId : undefined}
         data-keyboard-open={keyboardOpen ? 'true' : 'false'}
+        data-closing={closing ? 'true' : 'false'}
         tabIndex={-1}
-        style={{ transform: `translateY(${dragOffset}px)` }}
+        style={{ transform: closing ? undefined : `translateY(${dragOffset}px)` }}
         className={cn(
-          'flex max-h-[min(100%,48rem)] w-full max-w-2xl flex-col overflow-hidden rounded-t-[var(--sp-radius-sheet)] border border-b-0 border-slate-200 bg-white shadow-[var(--sp-shadow-panel)] dark:border-slate-800 dark:bg-slate-900',
-          'motion-safe:animate-[sheet-in_220ms_ease-out] motion-reduce:animate-none',
+          'sp-bottom-sheet-panel flex max-h-[min(100%,48rem)] w-full max-w-2xl flex-col overflow-hidden rounded-t-[var(--sp-radius-sheet)] border border-b-0 border-slate-200 bg-white shadow-[var(--sp-shadow-panel)] dark:border-slate-800 dark:bg-slate-900',
           isDragging
             ? 'transition-none'
             : 'transition-transform duration-200 ease-out motion-reduce:transition-none',
