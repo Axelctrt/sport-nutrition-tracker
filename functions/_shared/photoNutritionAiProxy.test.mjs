@@ -18,6 +18,11 @@ function requestWithPhoto(photo = imageFile()) {
 
 const authenticated = {
   authenticateRequest: vi.fn(async () => ({ subject: 'user-123' })),
+  logger: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  },
 };
 
 function configuredEnv(overrides = {}) {
@@ -123,13 +128,31 @@ describe('photoNutritionAiProxy Gemini', () => {
       },
       confidence: 'medium',
     });
-    expect(body.warnings).toEqual(expect.arrayContaining([
-      'Analyse IA Gemini Free Tier : estimation expérimentale à corriger avant validation.',
-      'Photo transmise à Google Gemini après consentement explicite ; ne pas utiliser avec des photos sensibles.',
-    ]));
+    expect(body.warnings).toEqual(['Portion estimée à partir de la photo.']);
+    expect(body.diagnosticRef).toMatch(/^PA-[A-Z0-9]{8}$/);
+    expect(response.headers.get('x-sportpilot-request-id')).toBe(body.diagnosticRef);
   });
 
-  it('convertit une erreur Gemini en erreur proxy exploitable par le fallback local', async () => {
+  it('conserve le statut et le code d’une authentification refusée', async () => {
+    const response = await handlePhotoNutritionAiProxyRequest(
+      requestWithPhoto(),
+      configuredEnv(),
+      {
+        ...authenticated,
+        authenticateRequest: vi.fn(async () => {
+          throw { status: 401, code: 'AUTH_TOKEN_EXPIRED', message: 'Session expirée.' };
+        }),
+      },
+    );
+
+    expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toMatchObject({
+      code: 'AUTH_TOKEN_EXPIRED',
+      diagnosticRef: expect.stringMatching(/^PA-/),
+    });
+  });
+
+  it('distingue la limite fournisseur et renvoie une référence exploitable', async () => {
     const fetcher = vi.fn(async () => new Response(JSON.stringify({ error: { message: 'quota' } }), { status: 429 }));
 
     const response = await handlePhotoNutritionAiProxyRequest(
@@ -139,7 +162,61 @@ describe('photoNutritionAiProxy Gemini', () => {
     );
 
     expect(response.status).toBe(429);
-    await expect(response.json()).resolves.toMatchObject({ code: 'PHOTO_AI_PROVIDER_ERROR' });
+    const body = await response.json();
+    expect(body).toMatchObject({
+      code: 'PHOTO_AI_PROVIDER_QUOTA',
+      diagnosticRef: expect.stringMatching(/^PA-[A-Z0-9]{8}$/),
+    });
+    expect(response.headers.get('x-sportpilot-request-id')).toBe(body.diagnosticRef);
+  });
+
+  it('interrompt explicitement Gemini lorsque le délai fournisseur est dépassé', async () => {
+    const fetcher = vi.fn((_url, init) => new Promise((_resolve, reject) => {
+      init.signal.addEventListener('abort', () => {
+        reject(new DOMException('Aborted', 'AbortError'));
+      }, { once: true });
+    }));
+
+    const response = await handlePhotoNutritionAiProxyRequest(
+      requestWithPhoto(),
+      configuredEnv(),
+      { ...authenticated, fetcher, providerTimeoutMs: 5 },
+    );
+
+    expect(response.status).toBe(504);
+    await expect(response.json()).resolves.toMatchObject({
+      code: 'PHOTO_AI_PROVIDER_TIMEOUT',
+      diagnosticRef: expect.stringMatching(/^PA-/),
+    });
+  });
+
+  it('journalise uniquement les métadonnées de diagnostic', async () => {
+    const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
+    const fetcher = vi.fn(async () => new Response('not-json', { status: 200 }));
+
+    const response = await handlePhotoNutritionAiProxyRequest(
+      requestWithPhoto(),
+      configuredEnv(),
+      { ...authenticated, fetcher, logger, createDiagnosticRef: () => 'PA-LOGTEST1' },
+    );
+
+    expect(response.status).toBe(502);
+    expect(logger.error).toHaveBeenCalledWith(expect.objectContaining({
+      event: 'photo_nutrition_analysis',
+      diagnosticRef: 'PA-LOGTEST1',
+      code: 'PHOTO_AI_INVALID_RESPONSE',
+      timingsMs: expect.objectContaining({
+        authentication: expect.any(Number),
+        rateLimit: expect.any(Number),
+        imageRead: expect.any(Number),
+        provider: expect.any(Number),
+        total: expect.any(Number),
+      }),
+    }));
+    const logged = JSON.stringify(logger.error.mock.calls);
+    expect(logged).not.toContain('server-secret');
+    expect(logged).not.toContain('secret-token');
+    expect(logged).not.toContain('base64');
   });
 
   it('bloque la requête avant parsing lorsque la taille multipart dépasse la limite', async () => {

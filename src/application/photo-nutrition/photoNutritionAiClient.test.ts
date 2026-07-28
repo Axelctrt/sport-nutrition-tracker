@@ -27,8 +27,18 @@ describe('photoNutritionAiClient', () => {
     });
   });
 
-  it('reste désactivé tant que le proxy IA n’est pas configuré', () => {
-    expect(readPhotoNutritionAiConfig({}).enabled).toBe(false);
+  it('utilise la route Pages Function et 30 secondes par défaut', () => {
+    expect(readPhotoNutritionAiConfig({})).toEqual({
+      enabled: true,
+      endpointUrl: '/api/photo-nutrition/analyze',
+      timeoutMs: 30000,
+    });
+  });
+
+  it('corrige automatiquement l’ancienne route qui renvoyait le HTML de la PWA', () => {
+    expect(readPhotoNutritionAiConfig({
+      VITE_PHOTO_NUTRITION_AI_ENDPOINT: '/api/photo-nutrition-ai',
+    }).endpointUrl).toBe('/api/photo-nutrition/analyze');
   });
 
   it('refuse un endpoint HTTP public', () => {
@@ -54,6 +64,7 @@ describe('photoNutritionAiClient', () => {
       endpointUrl: '/api/photo-nutrition/analyze',
       fetcher,
       credentialsProvider,
+      preparePhoto: async (file) => file,
     });
 
     const result = await port.analyze(imageFile());
@@ -71,8 +82,7 @@ describe('photoNutritionAiClient', () => {
     expect(result.estimate.name).toBe('Pâtes au poulet');
     expect(result.estimate.nutrition.caloriesKcal).toBe(720);
     expect(result.warnings).toEqual(expect.arrayContaining([
-      'Analyse IA distante via proxy sécurisé : corrige les valeurs avant validation.',
-      'Photo envoyée uniquement après consentement explicite et non conservée dans le journal alimentaire.',
+      'Estimation à vérifier avant de l’ajouter au repas.',
     ]));
   });
 
@@ -82,20 +92,29 @@ describe('photoNutritionAiClient', () => {
     const port = createRemotePhotoNutritionAnalysisPort({
       endpointUrl: '/api/photo-nutrition/analyze',
       credentialsProvider,
+      preparePhoto: async (file) => file,
       fetcher: vi.fn(async () => new Response(JSON.stringify({ estimate: { amount: 250 } }), { status: 200 })),
     });
 
-    await expect(port.analyze(imageFile())).rejects.toThrow('Réponse IA invalide');
+    await expect(port.analyze(imageFile())).rejects.toThrow('valeurs nutritionnelles');
   });
 
-  it('convertit une erreur HTTP en message de fallback local exploitable', async () => {
+  it('convertit une erreur proxy en message clair et conserve la référence', async () => {
     const port = createRemotePhotoNutritionAnalysisPort({
       endpointUrl: '/api/photo-nutrition/analyze',
       credentialsProvider,
-      fetcher: vi.fn(async () => new Response('{}', { status: 503 })),
+      preparePhoto: async (file) => file,
+      fetcher: vi.fn(async () => new Response(JSON.stringify({
+        code: 'PHOTO_AI_PROVIDER_TIMEOUT',
+        diagnosticRef: 'PA-TEST1234',
+      }), { status: 504 })),
     });
 
-    await expect(port.analyze(imageFile())).rejects.toThrow('fallback local conseillé');
+    await expect(port.analyze(imageFile())).rejects.toMatchObject({
+      code: 'PHOTO_AI_PROVIDER_TIMEOUT',
+      diagnosticRef: 'PA-TEST1234',
+      message: expect.stringContaining('pris trop de temps'),
+    });
   });
 
   it('bloque les photos trop volumineuses avant l’appel réseau', async () => {
@@ -103,9 +122,90 @@ describe('photoNutritionAiClient', () => {
     const port = createRemotePhotoNutritionAnalysisPort({
       endpointUrl: '/api/photo-nutrition/analyze',
       fetcher,
+      credentialsProvider,
+      preparePhoto: async (file) => file,
     });
 
-    await expect(port.analyze(imageFile('gros-repas.jpg', 8 * 1024 * 1024 + 1))).rejects.toThrow('Photo trop volumineuse');
+    await expect(port.analyze(imageFile('gros-repas.jpg', 8 * 1024 * 1024 + 1))).rejects.toThrow('trop volumineuse');
     expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it('explique clairement qu’un compte SportPilot est requis', async () => {
+    const fetcher = vi.fn();
+    const port = createRemotePhotoNutritionAnalysisPort({
+      endpointUrl: '/api/photo-nutrition/analyze',
+      fetcher,
+      credentialsProvider: () => undefined,
+      preparePhoto: async (file) => file,
+    });
+
+    await expect(port.analyze(imageFile())).rejects.toMatchObject({
+      code: 'PHOTO_AI_AUTH_REQUIRED',
+      message: 'Connecte ton compte SportPilot pour utiliser l’analyse photo.',
+    });
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it('distingue un token expiré d’une indisponibilité Gemini', async () => {
+    const port = createRemotePhotoNutritionAnalysisPort({
+      endpointUrl: '/api/photo-nutrition/analyze',
+      credentialsProvider,
+      preparePhoto: async (file) => file,
+      fetcher: vi.fn(async () => new Response(JSON.stringify({
+        code: 'AUTH_TOKEN_EXPIRED',
+        diagnosticRef: 'PA-AUTH0001',
+      }), { status: 401 })),
+    });
+
+    await expect(port.analyze(imageFile())).rejects.toMatchObject({
+      status: 401,
+      diagnosticRef: 'PA-AUTH0001',
+      message: expect.stringContaining('expiré'),
+    });
+  });
+
+  it('distingue le hors-ligne d’une erreur fournisseur', async () => {
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: false });
+    const port = createRemotePhotoNutritionAnalysisPort({
+      endpointUrl: '/api/photo-nutrition/analyze',
+      credentialsProvider,
+      preparePhoto: async (file) => file,
+      fetcher: vi.fn(async () => { throw new TypeError('fetch failed'); }),
+    });
+
+    try {
+      await expect(port.analyze(imageFile())).rejects.toMatchObject({
+        code: 'PHOTO_AI_NETWORK_UNAVAILABLE',
+      });
+    } finally {
+      Object.defineProperty(navigator, 'onLine', { configurable: true, value: true });
+    }
+  });
+
+  it('interrompt le client après son délai sans laisser la requête ouverte', async () => {
+    vi.useFakeTimers();
+    const fetcher = vi.fn((_url: RequestInfo | URL, init?: RequestInit) => new Promise<Response>((_resolve, reject) => {
+      init?.signal?.addEventListener('abort', () => {
+        reject(new DOMException('Aborted', 'AbortError'));
+      }, { once: true });
+    }));
+    const port = createRemotePhotoNutritionAnalysisPort({
+      endpointUrl: '/api/photo-nutrition/analyze',
+      timeoutMs: 3000,
+      credentialsProvider,
+      preparePhoto: async (file) => file,
+      fetcher,
+    });
+
+    try {
+      const analysis = port.analyze(imageFile());
+      const assertion = expect(analysis).rejects.toMatchObject({
+        code: 'PHOTO_AI_CLIENT_TIMEOUT',
+      });
+      await vi.advanceTimersByTimeAsync(3000);
+      await assertion;
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
