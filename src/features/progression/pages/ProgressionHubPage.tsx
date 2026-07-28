@@ -11,7 +11,6 @@ import {
   Plus,
   Scale,
   Target,
-  Trophy,
   Utensils,
 } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
@@ -143,7 +142,7 @@ function MetricCard({
         <Link
           to={to}
           aria-label={`Voir le détail ${title.toLowerCase()}`}
-          className="grid size-11 shrink-0 place-items-center rounded-[var(--sp-radius-control)] text-[var(--sp-accent-primary)] hover:bg-[var(--sp-surface-muted)]"
+          className="sp-button--pressable grid size-11 shrink-0 place-items-center rounded-[var(--sp-radius-control)] text-[var(--sp-accent-primary)] hover:bg-[var(--sp-surface-muted)]"
         >
           <ArrowRight aria-hidden="true" className="size-4" />
         </Link>
@@ -151,7 +150,9 @@ function MetricCard({
       {values.length > 0 ? (
         <SportPilotMiniChart values={values} label={chartLabel} />
       ) : (
-        <div className="mt-3 h-12 rounded-md border border-dashed border-[var(--sp-border-subtle)] bg-[var(--sp-surface-muted)]" />
+        <div className="mt-3 grid h-12 place-items-center rounded-md border border-dashed border-[var(--sp-border-subtle)] bg-[var(--sp-surface-muted)] px-2 text-center text-xs font-medium text-[var(--sp-text-muted)]">
+          Données insuffisantes
+        </div>
       )}
     </Card>
   );
@@ -298,7 +299,7 @@ export function ProgressionHubPage() {
         <div className="mt-6 space-y-6">
           <Card
             padding="md"
-            className={cn("border-2", signalClasses(summary.data.signal.tone))}
+            className={cn("sp-motion-card sp-motion-card--priority border-2", signalClasses(summary.data.signal.tone))}
             aria-labelledby="progression-main-signal"
           >
             <div className="flex items-start gap-3">
@@ -332,7 +333,7 @@ export function ProgressionHubPage() {
                 <h2 id="progression-overview-title" className="text-lg font-bold text-[var(--sp-text-primary)]">
                   Vue d’ensemble
                 </h2>
-                <p className="text-sm text-[var(--sp-text-secondary)]">Aperçu compact, détails dans Analytics.</p>
+                <p className="text-sm text-[var(--sp-text-secondary)]">Aperçu compact, détails dans Analyses.</p>
               </div>
               <Link to={routePaths.analytics} className="hidden min-h-11 items-center gap-2 text-sm font-bold text-[var(--sp-accent-primary)] sm:inline-flex">
                 Tous les graphiques
@@ -404,7 +405,7 @@ export function ProgressionHubPage() {
                   <Link
                     key={domain.label}
                     to={domain.path}
-                    className="flex min-h-12 items-center justify-between gap-3 rounded-[var(--sp-radius-control)] border border-[var(--sp-border-subtle)] bg-[var(--sp-surface-card)] px-3 text-sm font-bold text-[var(--sp-text-primary)] hover:border-[var(--sp-accent-primary)]"
+                    className="sp-card sp-card--interactive flex min-h-12 items-center justify-between gap-3 px-3 text-sm font-bold text-[var(--sp-text-primary)]"
                   >
                     <span className="flex items-center gap-3">
                       <Icon aria-hidden="true" className="size-4 text-[var(--sp-accent-primary)]" />
@@ -428,23 +429,23 @@ export function ProgressionHubPage() {
               <dl className="grid gap-px bg-[var(--sp-border-subtle)] sm:grid-cols-2 lg:grid-cols-4">
                 {[
                   {
-                    label: "Activités prévues / réalisées",
+                    label: "Activités réalisées / prévues",
                     value: `${summary.data.week.completedActivities} / ${summary.data.week.plannedActivities}`,
                     icon: CalendarCheck2,
                   },
                   {
-                    label: "Activités terminées",
-                    value: summary.data.week.completedActivities.toString(),
-                    icon: Activity,
-                  },
-                  {
-                    label: "Repos confirmé",
+                    label: "Repos confirmés",
                     value: summary.data.week.confirmedRestDays.toString(),
                     icon: CheckCircle2,
                   },
                   {
-                    label: "Check-ins / jours nutrition",
-                    value: `${summary.data.week.checkInDays} / ${summary.data.week.nutritionDays}`,
+                    label: "Jours avec check-in",
+                    value: summary.data.week.checkInDays.toString(),
+                    icon: Activity,
+                  },
+                  {
+                    label: "Jours avec nutrition",
+                    value: summary.data.week.nutritionDays.toString(),
                     icon: Utensils,
                   },
                 ].map((item) => {
@@ -470,24 +471,20 @@ export function ProgressionHubPage() {
             <GoalSummary goal={summary.data.goal} />
           </div>
 
-          <nav aria-label="Domaines de progression" className="border-t border-[var(--sp-border-subtle)] pt-5">
+          <nav aria-label="Ressources de progression" className="border-t border-[var(--sp-border-subtle)] pt-5">
             <h2 className="text-base font-bold text-[var(--sp-text-primary)]">Explorer</h2>
-            <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mt-3 grid gap-2 sm:grid-cols-3">
               {[
-                { path: routePaths.analytics, label: "Analyses détaillées", icon: BarChart3 },
                 { path: routePaths.reports, label: "Rapports", icon: FileText },
                 { path: routePaths.weeklyReview, label: "Bilan hebdomadaire", icon: CalendarCheck2 },
                 { path: routePaths.history, label: "Historique détaillé", icon: History },
-                { path: routePaths.weight, label: "Poids", icon: Scale },
-                { path: routePaths.rewards, label: "Récompenses", icon: Trophy },
-                { path: routePaths.goals, label: "Objectifs", icon: Target },
               ].map((destination) => {
                 const Icon = destination.icon;
                 return (
                   <Link
                     key={destination.path}
                     to={destination.path}
-                    className="flex min-h-12 items-center gap-3 rounded-[var(--sp-radius-control)] border border-[var(--sp-border-subtle)] px-3 text-sm font-bold text-[var(--sp-text-primary)] hover:border-[var(--sp-accent-primary)]"
+                    className="sp-card sp-card--interactive flex min-h-12 items-center gap-3 px-3 text-sm font-bold text-[var(--sp-text-primary)]"
                   >
                     <Icon aria-hidden="true" className="size-4 text-[var(--sp-accent-primary)]" />
                     {destination.label}
