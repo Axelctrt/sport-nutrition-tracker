@@ -1,4 +1,5 @@
 import { Trophy } from "lucide-react";
+import type { CSSProperties } from "react";
 import { createPortal } from "react-dom";
 
 import "@/shared/ui/uxMotionPolish.css";
@@ -42,7 +43,7 @@ export function SportPilotBadgeReveal({
               top: spark.top,
               "--spark-x": spark.x,
               "--delay": spark.delay,
-            } as React.CSSProperties}
+            } as CSSProperties}
           />
         ))}
         <div className="relative z-10">
