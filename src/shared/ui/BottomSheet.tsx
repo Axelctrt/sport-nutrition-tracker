@@ -255,6 +255,7 @@ export function BottomSheet({
   return createPortal(
     <div
       ref={backdropRef}
+      aria-hidden={closing || undefined}
       data-closing={closing ? 'true' : 'false'}
       className="sp-bottom-sheet-backdrop fixed inset-x-0 top-0 z-[80] flex h-dvh items-end justify-center overflow-hidden bg-slate-950/55 backdrop-blur-[2px]"
       onMouseDown={(event) => {
