@@ -11,9 +11,9 @@ import {
   databaseTableNames,
 } from '@/infrastructure/database/schema';
 
-describe('préparation de la version stable 0.33.1', () => {
+describe('préparation de la version stable 0.33.2', () => {
   it('expose la version stable dans le build', () => {
-    expect(__APP_VERSION__).toBe('0.33.1');
+    expect(__APP_VERSION__).toBe('0.33.2');
     expect(__APP_VERSION__).toMatch(/^\d+\.\d+\.\d+$/);
   });
 

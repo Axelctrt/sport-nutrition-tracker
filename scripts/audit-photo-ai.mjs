@@ -35,6 +35,7 @@ if (failures.length === 0) {
     'PHOTO_AI_CLIENT_TIMEOUT',
     'diagnosticRef',
     'resolveSocialCloudApiCredentials',
+    'await resolveSocialCloudApiCredentials',
     'authorization: `Bearer ${credentials.accessToken}`',
   ]) {
     if (!client.includes(marker)) fail(`client IA photo incomplet : ${marker}.`);
@@ -51,11 +52,16 @@ if (failures.length === 0) {
   const page = read('src/features/photo-nutrition/pages/PhotoNutritionEstimatePage.tsx');
   for (const marker of [
     'Activer l’analyse IA pour cette photo',
-    'La photo sera envoyée à Google Gemini uniquement pour cette analyse.',
+    'Une connexion SportPilot valide sera vérifiée avant tout envoi pour cette analyse.',
     'Analyser avec l’IA',
     'Saisir manuellement',
     'Réessayer',
     'Référence :',
+    'h-7 w-12',
+    'size-[22px]',
+    'left-[3px] top-[3px]',
+    'translate-x-5',
+    'motion-reduce:transition-none',
   ]) {
     if (!page.includes(marker)) fail(`interface IA photo incomplète : ${marker}.`);
   }

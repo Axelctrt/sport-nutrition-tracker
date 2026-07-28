@@ -1,6 +1,6 @@
-# SportPilot 0.33.1
+# SportPilot 0.33.2
 
-SportPilot 0.33.1 fiabilise l’analyse nutritionnelle par photo et affine les
+SportPilot 0.33.2 fiabilise l’accès cloud, l’analyse nutritionnelle par photo et affine les
 parcours de recherche et de journal alimentaire sur mobile.
 
 L’application reste mobile-first, locale-first, compatible compte/cloud, hors ligne et installable en PWA.
@@ -37,13 +37,13 @@ L’application reste mobile-first, locale-first, compatible compte/cloud, hors 
 
 ## Stockage et versions techniques
 
-- Application : `0.33.1`.
+- Application : `0.33.2`.
 - AppDatabase locale : Dexie v11.
 - Sauvegarde JSON : v10.
 - Runtime Dexie Cloud prototype : v16.
 - Contrat de snapshot social : `0.29.0-a3`.
-- Migrations D1 ajoutées par 0.33.1 : aucune.
-- Migrations Dexie ajoutées par 0.33.1 : aucune.
+- Migrations D1 ajoutées par 0.33.2 : aucune.
+- Migrations Dexie ajoutées par 0.33.2 : aucune.
 
 ## Contrôles de publication
 
@@ -63,4 +63,4 @@ La recette réelle sur iPhone et Android doit valider la photothèque, la camér
 le clavier, le switch, l’analyse réelle, le retour au repas, la PWA et le
 fonctionnement hors ligne.
 
-Tag attendu : `v0.33.1`.
+Tag attendu : `v0.33.2`.

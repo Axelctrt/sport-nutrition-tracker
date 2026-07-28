@@ -9,7 +9,7 @@ const failures = [];
 const fail = (message) => failures.push(message);
 
 const requiredFiles = [
-  'RELEASE-NOTES-0.33.1.md',
+  'RELEASE-NOTES-0.33.2.md',
   'RELEASE-CHECKLIST.md',
   'docs/onboarding-compact-0.32.0.md',
   'e2e/onboarding-compact.spec.ts',
@@ -29,9 +29,9 @@ for (const path of requiredFiles) {
 if (failures.length === 0) {
   const packageJson = JSON.parse(read('package.json'));
   const packageLock = JSON.parse(read('package-lock.json'));
-  if (packageJson.version !== '0.33.1') fail(`package.json doit publier 0.33.1, reçu ${packageJson.version}.`);
-  if (packageLock.version !== '0.33.1' || packageLock.packages?.['']?.version !== '0.33.1') {
-    fail('package-lock.json doit être aligné sur 0.33.1.');
+  if (packageJson.version !== '0.33.2') fail(`package.json doit publier 0.33.2, reçu ${packageJson.version}.`);
+  if (packageLock.version !== '0.33.2' || packageLock.packages?.['']?.version !== '0.33.2') {
+    fail('package-lock.json doit être aligné sur 0.33.2.');
   }
   if (!isStableVersionAtLeast(packageJson.version, 20)) {
     fail('la version courante doit être reconnue comme stable par le garde-fou partagé.');
@@ -87,27 +87,27 @@ if (failures.length === 0) {
   const photoAudit = read('scripts/audit-photo-ai.mjs');
   for (const marker of [
     'Activer l’analyse IA pour cette photo',
-    'La photo sera envoyée à Google Gemini uniquement pour cette analyse.',
+    'Une connexion SportPilot valide sera vérifiée avant tout envoi pour cette analyse.',
   ]) {
     if (!photoAudit.includes(marker)) fail(`l’audit Photo IA ne suit pas le consentement actuel : ${marker}.`);
   }
 
-  const releaseNotes = read('RELEASE-NOTES-0.33.1.md');
+  const releaseNotes = read('RELEASE-NOTES-0.33.2.md');
   const checklist = read('RELEASE-CHECKLIST.md');
   const onboardingDocumentation = read('docs/onboarding-compact-0.32.0.md');
   for (const marker of [
-    'SportPilot 0.33.1',
-    'Tag attendu : `v0.33.1`',
-    'compression JPEG adaptative jusqu’à 1,5 Mo',
-    'sans estimation fictive',
-    'Mes aliments',
-    'Open Food Facts',
+    'SportPilot 0.33.2',
+    'fix/account-sync-ux-0.33.2',
+    'Compte et synchronisation',
+    'switch IA',
+    'création manuelle',
+    'Aucune donnée locale n’est supprimée',
   ]) {
     if (!releaseNotes.includes(marker)) fail(`notes de release incomplètes : ${marker}.`);
   }
   for (const marker of [
-    'fix/ux-photo-search-0.33.1',
-    'Tag annoté `v0.33.1`',
+    'fix/account-sync-ux-0.33.2',
+    'Tag annoté `v0.33.2`',
     'audit:release-consolidation',
     'test:e2e:onboarding',
   ]) {
@@ -164,9 +164,9 @@ if (failures.length === 0) {
 }
 
 if (failures.length > 0) {
-  console.error('Audit de consolidation 0.33.1 échoué :');
+  console.error('Audit de consolidation 0.33.2 échoué :');
   for (const failure of failures) console.error(`- ${failure}`);
   process.exit(1);
 }
 
-console.log('Audit de consolidation 0.33.1 réussi : version, audits, budgets, navigation, consentements et contrats de stockage sont alignés.');
+console.log('Audit de consolidation 0.33.2 réussi : version, audits, budgets, navigation, consentements et contrats de stockage sont alignés.');

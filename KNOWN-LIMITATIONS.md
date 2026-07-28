@@ -1,14 +1,14 @@
-# Limitations connues — SportPilot 0.33.1
+# Limitations connues — SportPilot 0.33.2
 
 ## Moteur calorique
 
-La version 0.33.1 améliore l’analyse photo et les parcours Nutrition, mais ne
+La version 0.33.2 améliore l’accès cloud, l’analyse photo et les parcours de musculation, mais ne
 change pas les formules de calories, de macros, de métabolisme ou d’ajustement
 hebdomadaire.
 
 ## Social
 
-Les contrats sociaux restent ceux de la version 0.29.0. La version 0.33.1 n’ajoute pas d’annuaire public, likes, commentaires, messagerie, groupes, défis partagés ou classements.
+Les contrats sociaux restent ceux de la version 0.29.0. La version 0.33.2 n’ajoute pas d’annuaire public, likes, commentaires, messagerie, groupes, défis partagés ou classements.
 
 ## Photo nutrition
 
@@ -26,4 +26,4 @@ Les étapes ordinaires sont conçues pour tenir sans scroll global sur un iPhone
 
 ## Accessibilité
 
-La recette 0.33.1 couvre les rouleaux, le clavier, le focus, le lien d’évitement, la réduction des animations et les zones sûres iOS. Les lecteurs d’écran tiers peuvent présenter des différences selon le navigateur, la version iOS et les réglages système.
+La recette 0.33.2 couvre les rouleaux, le clavier, le focus, le lien d’évitement, la réduction des animations et les zones sûres iOS. Les lecteurs d’écran tiers peuvent présenter des différences selon le navigateur, la version iOS et les réglages système.
