@@ -4,7 +4,7 @@ import {
   Palette,
   Trophy,
 } from "lucide-react";
-import { useSearchParams } from "react-router-dom";
+import { useState } from "react";
 
 import { DashboardWeeklyMissions } from "@/features/dashboard/components/DashboardWeeklyMissions";
 import { AchievementsPanel } from "@/features/settings/components/AchievementsPanel";
@@ -26,15 +26,15 @@ function validTab(value: string | null): RewardTabId {
     : "themes";
 }
 
-export function RewardsCenterPage() {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab = validTab(searchParams.get("tab"));
+function initialTab(): RewardTabId {
+  if (typeof window === "undefined") return "themes";
+  const hashQuery = window.location.hash.split("?")[1] ?? "";
+  const locationQuery = window.location.search.slice(1);
+  return validTab(new URLSearchParams(hashQuery || locationQuery).get("tab"));
+}
 
-  const updateTab = (nextTab: string) => {
-    const next = new URLSearchParams(searchParams);
-    next.set("tab", validTab(nextTab));
-    setSearchParams(next, { replace: true });
-  };
+export function RewardsCenterPage() {
+  const [activeTab, setActiveTab] = useState<RewardTabId>(initialTab);
 
   return (
     <section aria-labelledby="rewards-title" className="min-w-0">
@@ -66,7 +66,7 @@ export function RewardsCenterPage() {
         label="Sections des récompenses"
         tabs={rewardTabs}
         activeTab={activeTab}
-        onChange={updateTab}
+        onChange={(nextTab) => setActiveTab(validTab(nextTab))}
         className="mt-5"
       />
 
