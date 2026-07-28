@@ -84,16 +84,14 @@ it("hiérarchise le signal, la synthèse puis les destinations secondaires", () 
     "href",
     "/reports",
   );
+  expect(screen.getByRole("link", { name: "Bilan hebdomadaire" })).toHaveAttribute(
+    "href",
+    "/weekly-review",
+  );
   expect(screen.getByRole("link", { name: "Historique détaillé" })).toHaveAttribute(
     "href",
     "/history",
   );
-  expect(screen.getByRole("link", { name: "Récompenses" })).toHaveAttribute(
-    "href",
-    "/rewards",
-  );
-  expect(screen.getByRole("link", { name: "Analyses détaillées" })).toHaveAttribute(
-    "href",
-    "/analytics",
-  );
+  expect(screen.queryByRole("link", { name: "Récompenses" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("link", { name: "Analyses détaillées" })).not.toBeInTheDocument();
 });
