@@ -1,6 +1,6 @@
 import { ArrowLeft } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { routePaths } from '@/app/routePaths';
 import {
   createCustomExercise,
@@ -8,6 +8,12 @@ import {
 } from '@/application/strength/exerciseDefinitionService';
 import type { ExerciseDefinition } from '@/domain/models/strength';
 import { StrengthExerciseForm } from '@/features/strength-exercises/components/StrengthExerciseForm';
+import {
+  readStrengthExerciseCreationContext,
+  strengthExerciseCancelledState,
+  strengthExerciseCreatedState,
+  strengthExerciseCreationReturnPath,
+} from '@/features/strength-exercises/navigation/strengthExerciseCreationNavigation';
 import type { StrengthExerciseFormValues } from '@/features/strength-exercises/schemas/strengthExerciseSchema';
 import {
   defaultStrengthExerciseFormValues,
@@ -23,14 +29,33 @@ import { PageSkeleton } from '@/shared/ui/PageSkeleton';
 export function StrengthExerciseEditorPage() {
   const actionToast = useActionToast();
   const { exerciseId } = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [exercise, setExercise] = useState<ExerciseDefinition>();
   const [loading, setLoading] = useState(Boolean(exerciseId));
   const [errorMessage, setErrorMessage] = useState<string>();
-  const initialValues = useMemo(
-    () => exercise ? exerciseToFormValues(exercise) : defaultStrengthExerciseFormValues,
-    [exercise],
+  const creationContext = useMemo(
+    () => exerciseId
+      ? undefined
+      : readStrengthExerciseCreationContext(searchParams),
+    [exerciseId, searchParams],
   );
+  const initialValues = useMemo(() => {
+    if (exercise) return exerciseToFormValues(exercise);
+    if (!creationContext) return defaultStrengthExerciseFormValues;
+    return {
+      ...defaultStrengthExerciseFormValues,
+      name: creationContext.query,
+      primaryMuscleGroup: 'other' as const,
+      equipment: 'other' as const,
+      category: 'other' as const,
+      movementType: 'other' as const,
+      trackingMode: 'repetitions' as const,
+    };
+  }, [creationContext, exercise]);
+  const returnPath = creationContext
+    ? strengthExerciseCreationReturnPath(creationContext)
+    : routePaths.strengthExercises;
 
   useEffect(() => {
     if (!exerciseId) return;
@@ -54,11 +79,29 @@ export function StrengthExerciseEditorPage() {
   const handleSubmit = async (values: StrengthExerciseFormValues) => {
     try {
       const input = formValuesToExerciseInput(values);
-      if (exerciseId) await updateCustomExercise(repositories.strengthExercises, exerciseId, input);
-      else await createCustomExercise(repositories.strengthExercises, input);
+      if (exerciseId) {
+        await updateCustomExercise(repositories.strengthExercises, exerciseId, input);
+        actionToast.success({
+          key: `strength-exercise-update:${exerciseId}`,
+          title: 'Exercice modifié',
+        });
+        await navigate(routePaths.strengthExercises);
+        return;
+      }
+      const created = await createCustomExercise(
+        repositories.strengthExercises,
+        input,
+      );
+      if (creationContext) {
+        await navigate(returnPath, {
+          state: strengthExerciseCreatedState(created.id, creationContext),
+          replace: true,
+        });
+        return;
+      }
       actionToast.success({
-        key: exerciseId ? `strength-exercise-update:${exerciseId}` : 'strength-exercise-create',
-        title: exerciseId ? 'Exercice modifié' : 'Exercice créé',
+        key: 'strength-exercise-create',
+        title: 'Exercice créé',
       });
       await navigate(routePaths.strengthExercises);
     } catch (error) {
@@ -73,9 +116,18 @@ export function StrengthExerciseEditorPage() {
 
   return (
     <section aria-labelledby="strength-exercise-editor-title">
-      <Link to={routePaths.strengthExercises} className="hidden items-center gap-2 text-sm font-semibold text-brand-700 hover:underline lg:inline-flex dark:text-brand-300">
+      <Link
+        to={returnPath}
+        state={
+          creationContext
+            ? strengthExerciseCancelledState(creationContext)
+            : undefined
+        }
+        replace={Boolean(creationContext)}
+        className="hidden items-center gap-2 text-sm font-semibold text-brand-700 hover:underline lg:inline-flex dark:text-brand-300"
+      >
         <ArrowLeft aria-hidden="true" className="size-4" />
-        Retour au catalogue
+        {creationContext ? 'Annuler et revenir' : 'Retour au catalogue'}
       </Link>
       <div className="mt-5">
         <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">Carnet de musculation</p>
