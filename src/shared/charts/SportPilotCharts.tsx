@@ -88,9 +88,13 @@ export function SportPilotChartCard({
   );
 }
 
+interface ChartElementProps {
+  data?: readonly unknown[];
+}
+
 interface SportPilotChartContainerProps {
   label: string;
-  children: ReactElement;
+  children: ReactElement<ChartElementProps>;
   height?: "compact" | "standard" | "large";
   className?: string;
 }
@@ -109,6 +113,19 @@ export function SportPilotChartContainer({
 }: SportPilotChartContainerProps) {
   const reducedMotion = useReducedMotion();
   const { ref, visible } = useMotionVisibility<HTMLDivElement>();
+  const pointCount = Array.isArray(children.props.data)
+    ? children.props.data.length
+    : undefined;
+  const resolvedHeight = height === "standard" && pointCount !== undefined && pointCount <= 2
+    ? "compact"
+    : height;
+  const density = pointCount === undefined
+    ? "unknown"
+    : pointCount <= 1
+      ? "single"
+      : pointCount <= 3
+        ? "sparse"
+        : "normal";
 
   return (
     <div
@@ -116,9 +133,10 @@ export function SportPilotChartContainer({
       role="img"
       aria-label={label}
       data-chart-motion={reducedMotion || !visible ? "paused" : "active"}
+      data-chart-density={density}
       className={cn(
-        "min-w-0 touch-pan-y overflow-hidden rounded-lg border border-[var(--sp-border-subtle)] bg-[var(--sp-surface-elevated)] p-2",
-        heightClasses[height],
+        "min-w-0 touch-pan-y overflow-hidden rounded-lg border border-[var(--sp-border-subtle)] bg-[var(--sp-surface-elevated)] p-2 transition-[height] duration-300 ease-out motion-reduce:transition-none",
+        heightClasses[resolvedHeight],
         className,
       )}
     >
