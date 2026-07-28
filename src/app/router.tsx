@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { createHashRouter, type RouteObject } from 'react-router-dom';
 import {
   LazyAddActivityPage,
@@ -60,6 +61,19 @@ import { getSyncPrototypeRoutes } from '@/app/syncPrototypeRoutes';
 import { NotFoundPage } from '@/features/foundation/pages/NotFoundPage';
 import { CalculationsInformationPage } from '@/features/information/pages/CalculationsInformationPage';
 import { OfflinePage } from '@/pwa/OfflinePage';
+
+const LazyVisualLabPage = lazy(async () => {
+  const module = await import('@/features/development/pages/VisualLabPage');
+  return { default: module.VisualLabPage };
+});
+
+function visualLabEnabled(): boolean {
+  if (import.meta.env.DEV) return true;
+  if (typeof window === 'undefined') return false;
+  const hostname = window.location.hostname;
+  return hostname !== 'sportpilot-pages.pages.dev'
+    && hostname.endsWith('.sportpilot-pages.pages.dev');
+}
 
 export const appShellRoutes: RouteObject[] = [
   { path: routePaths.dashboard, element: <LazyDashboardPage /> },
@@ -134,8 +148,20 @@ export const appShellRoutes: RouteObject[] = [
 ];
 
 const routeErrorElement = <AppRouteErrorPage />;
+const visualLabRoutes: RouteObject[] = visualLabEnabled()
+  ? [{
+      path: '/__visual-lab',
+      errorElement: routeErrorElement,
+      element: (
+        <Suspense fallback={<div className="min-h-dvh bg-slate-950" />}>
+          <LazyVisualLabPage />
+        </Suspense>
+      ),
+    }]
+  : [];
 
 export const router = createHashRouter([
+  ...visualLabRoutes,
   {
     path: routePaths.onboarding,
     errorElement: routeErrorElement,
