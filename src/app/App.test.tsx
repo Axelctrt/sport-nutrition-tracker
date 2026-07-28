@@ -31,6 +31,7 @@ describe('App', () => {
     appDatabase.close();
     await appDatabase.delete();
     window.localStorage.clear();
+    window.sessionStorage.clear();
     await router.navigate('/');
   });
 
@@ -63,8 +64,14 @@ describe('App', () => {
     await screen.findByRole('heading', {
       name: 'Comment vous appeler ?',
     }, { timeout: 5_000 });
-    await user.type(screen.getByLabelText(/Nom affiché/), 'Axel');
-    expect(window.localStorage.getItem(ONBOARDING_DRAFT_STORAGE_KEY)).not.toBeNull();
+    const displayedName = screen.getByLabelText(/Nom affiché/);
+    await user.type(displayedName, 'Axel');
+    expect(displayedName).toHaveValue('Axel');
+    await waitFor(() => {
+      const serializedDraft = window.localStorage.getItem(ONBOARDING_DRAFT_STORAGE_KEY);
+      expect(serializedDraft).not.toBeNull();
+      expect(serializedDraft).toContain('Axel');
+    });
 
     for (const heading of [
       'Sexe utilisé pour les calculs',
