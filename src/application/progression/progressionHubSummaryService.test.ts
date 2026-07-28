@@ -6,6 +6,7 @@ import type { UserProfile } from '@/domain/models/profile';
 import type { WeeklyReview } from '@/domain/models/weeklyReview';
 import {
   buildProgressionHubSummary,
+  selectProgressionMainSignal,
 } from '@/application/progression/progressionHubSummaryService';
 import { createProfileInput } from '@/test/factories/profileFactory';
 import { createEntity } from '@/shared/utils/entities';
@@ -286,6 +287,84 @@ describe('buildProgressionHubSummary', () => {
       completedFoodDays: 4,
       trackingSpanDays: 7,
       blockingFactors: ['Données encore trop variables cette semaine'],
+    });
+  });
+});
+
+describe('selectProgressionMainSignal', () => {
+  it('priorise une décision hebdomadaire en attente sur les autres signaux', () => {
+    const signal = selectProgressionMainSignal({
+      review: { state: 'adjustmentProposed', proposedAdjustmentKcal: 100 },
+      week: {
+        plannedActivities: 4,
+        realizedPlannedActivities: 2,
+        completedActivities: 2,
+        confirmedRestDays: 0,
+        checkInDays: 5,
+        nutritionDays: 5,
+      },
+      weight: { state: 'attention', latestAverageKg: 71, changeKg: 0.5 },
+      activity: { sessionCount: 2, totalMinutes: 120, recordedStepDays: 0 },
+      nutrition: { trackedDays: 5 },
+      strength: {
+        state: 'ready',
+        exerciseName: 'Développé couché',
+        changePercent: 4,
+      },
+    });
+
+    expect(signal).toMatchObject({
+      tone: 'attention',
+      destination: 'weeklyReview',
+      title: 'Une décision nutrition est en attente',
+    });
+  });
+
+  it('décrit un écart prévu-réalisé sans relation causale', () => {
+    const signal = selectProgressionMainSignal({
+      review: { state: 'noChange' },
+      week: {
+        plannedActivities: 3,
+        realizedPlannedActivities: 1,
+        completedActivities: 2,
+        confirmedRestDays: 1,
+        checkInDays: 4,
+        nutritionDays: 4,
+      },
+      weight: { state: 'stable', latestAverageKg: 71, changeKg: 0 },
+      activity: { sessionCount: 2, totalMinutes: 90, recordedStepDays: 0 },
+      nutrition: { trackedDays: 4 },
+      strength: { state: 'empty' },
+    });
+
+    expect(signal).toEqual({
+      tone: 'attention',
+      title: 'Le prévu et le réalisé diffèrent cette semaine',
+      detail: '1 activité réalisée sur 3 planifiées.',
+      destination: 'activity',
+    });
+  });
+
+  it('reste neutre quand les données ne suffisent pas', () => {
+    const signal = selectProgressionMainSignal({
+      review: { state: 'empty' },
+      week: {
+        plannedActivities: 0,
+        realizedPlannedActivities: 0,
+        completedActivities: 0,
+        confirmedRestDays: 0,
+        checkInDays: 0,
+        nutritionDays: 0,
+      },
+      weight: { state: 'empty' },
+      activity: { sessionCount: 0, totalMinutes: 0, recordedStepDays: 0 },
+      nutrition: { trackedDays: 0 },
+      strength: { state: 'empty' },
+    });
+
+    expect(signal).toMatchObject({
+      tone: 'neutral',
+      destination: 'regularity',
     });
   });
 });
