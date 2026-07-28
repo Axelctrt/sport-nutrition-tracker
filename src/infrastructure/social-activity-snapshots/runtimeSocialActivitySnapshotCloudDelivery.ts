@@ -5,7 +5,10 @@ import { runtimeSocialActivitySnapshotOutboxRepository } from '@/infrastructure/
 import { SOCIAL_ACTIVITY_SNAPSHOT_OUTBOX_CHANGED_EVENT } from '@/infrastructure/social-activity-snapshots/socialActivitySnapshotOutboxEvents';
 
 export interface RuntimeSocialActivitySnapshotCloudDeliveryOptions {
-  readonly client: Pick<SyncPrototypeClient, 'subscribe' | 'getCloudCredentials'>;
+  readonly client: Pick<
+    SyncPrototypeClient,
+    'subscribe' | 'getCloudCredentials' | 'ensureValidCloudCredentials'
+  >;
   readonly eventTarget?: EventTarget;
   readonly isOnline?: () => boolean;
   readonly deliver?: typeof deliverSocialActivitySnapshotOutbox;
@@ -50,23 +53,26 @@ export function attachRuntimeSocialActivitySnapshotCloudDelivery(
 
   const trigger = (): void => {
     if (disposed || !isOnline()) return;
-    const credentials = options.client.getCloudCredentials?.();
-    if (!credentials) return;
-
     if (running) {
       queued = true;
       return;
     }
 
     clearRetryTimer();
-    running = deliver({
-      credentials,
-      repository: runtimeSocialActivitySnapshotOutboxRepository,
-      gateway,
-    })
-      .then((report) => {
+    running = (async () => {
+      const credentials = options.client.ensureValidCloudCredentials
+        ? await options.client.ensureValidCloudCredentials()
+        : options.client.getCloudCredentials?.();
+      if (!credentials) return;
+      const report = await deliver({
+        credentials,
+        repository: runtimeSocialActivitySnapshotOutboxRepository,
+        gateway,
+      });
+      if (!disposed) {
         scheduleRetry(report.nextRetryAt);
-      })
+      }
+    })()
       .catch(() => undefined)
       .finally(() => {
         running = undefined;

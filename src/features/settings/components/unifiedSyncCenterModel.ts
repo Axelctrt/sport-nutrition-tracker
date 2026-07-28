@@ -31,6 +31,7 @@ export type UnifiedOperation = 'analyze' | 'sync';
 
 export type DomainStatus =
   | 'not-analyzed'
+  | 'not-run'
   | 'queued'
   | 'analyzing'
   | 'syncing'
@@ -41,6 +42,7 @@ export type DomainStatus =
 export interface DomainFailure {
   readonly operation: UnifiedOperation;
   readonly message: string;
+  readonly notExecuted?: boolean;
 }
 
 export interface SyncHistory {
@@ -175,6 +177,7 @@ export function domainStatus(
   failure: DomainFailure | undefined,
   orchestratorStatus: SyncOrchestratorSnapshot['domains'][UnifiedDomainId]['status'],
 ): DomainStatus {
+  if (failure?.notExecuted || orchestratorStatus === 'not-run') return 'not-run';
   if (failure || domain.snapshotStatus === 'error' || orchestratorStatus === 'temporary-failure') return 'error';
   if (orchestratorStatus === 'queued') return 'queued';
   if (domain.snapshotStatus === 'analyzing' || orchestratorStatus === 'analyzing') return 'analyzing';
@@ -185,6 +188,8 @@ export function domainStatus(
 
 export function statusLabel(status: DomainStatus, differences = 0): string {
   switch (status) {
+    case 'not-run':
+      return 'Non exécutée';
     case 'not-analyzed':
       return 'À analyser';
     case 'queued':
@@ -204,6 +209,8 @@ export function statusLabel(status: DomainStatus, differences = 0): string {
 
 export function statusClasses(status: DomainStatus): string {
   switch (status) {
+    case 'not-run':
+      return 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200';
     case 'up-to-date':
       return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200';
     case 'differences':

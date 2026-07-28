@@ -179,7 +179,7 @@ export function createSocialFriendsGateway(options: SocialFriendsClientOptions =
   const getCredentials = options.getCredentials;
 
   async function listFriendshipsWithProfiles(userId: EntityId): Promise<SocialFriendsGatewayListResult> {
-    const credentials = resolveSocialCloudApiCredentials(getCredentials, userId);
+    const credentials = await resolveSocialCloudApiCredentials(getCredentials, userId);
     if (!credentials) {
       return {
         status: 'unavailable',
@@ -252,7 +252,7 @@ export function createSocialFriendsGateway(options: SocialFriendsClientOptions =
   async function listPermissionsWithStatus(
     userId: EntityId,
   ): Promise<SocialFriendPermissionsListResult> {
-    const credentials = resolveSocialCloudApiCredentials(getCredentials, userId);
+    const credentials = await resolveSocialCloudApiCredentials(getCredentials, userId);
     if (!credentials) {
       return {
         status: 'unavailable',
@@ -313,7 +313,7 @@ export function createSocialFriendsGateway(options: SocialFriendsClientOptions =
     userId: EntityId,
     permission: FriendActivityPermission,
   ): Promise<SocialCloudMutationResult<FriendActivityPermission>> {
-    const credentials = resolveSocialCloudApiCredentials(getCredentials, userId);
+    const credentials = await resolveSocialCloudApiCredentials(getCredentials, userId);
     if (!credentials) {
       return {
         status: 'unavailable',
@@ -353,7 +353,7 @@ export function createSocialFriendsGateway(options: SocialFriendsClientOptions =
     userId: EntityId,
     friendUserId: EntityId,
   ): Promise<SocialCloudMutationResult<CloudFriendship>> {
-    const credentials = resolveSocialCloudApiCredentials(getCredentials, userId);
+    const credentials = await resolveSocialCloudApiCredentials(getCredentials, userId);
     if (!credentials) {
       return {
         status: 'unavailable',

@@ -12,7 +12,18 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { routePaths } from "@/app/routePaths";
+import {
+  cloudAccountStatusLabel,
+  cloudLicenseLabel,
+  resolveCloudAccountAccess,
+  type CloudAccountAccessSnapshot,
+} from "@/application/account/cloudAccountAccess";
 import { createAndDownloadSafetyBackup } from "@/application/backup/safetyBackupService";
+import {
+  readSyncOperationHistory,
+  resolveLastSuccessfulSyncAt,
+  summarizeSyncOperationHistory,
+} from "@/application/sync/syncOperationHistory";
 import { CloudAccountRestorePanel } from "@/features/account-devices/components/CloudAccountRestorePanel";
 import { GuestDataImportPanel } from "@/features/account-devices/components/GuestDataImportPanel";
 import type { DataSpaceDescriptor } from "@/domain/data-spaces/dataSpace";
@@ -72,7 +83,7 @@ function defaultReload(): void {
 }
 
 function formatDateTime(value: string | undefined): string {
-  if (!value) return "Aucun échange réussi";
+  if (!value) return "Jamais";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "Date inconnue";
   return new Intl.DateTimeFormat("fr-FR", {
@@ -81,11 +92,11 @@ function formatDateTime(value: string | undefined): string {
   }).format(date);
 }
 
-function syncStatusLabel(snapshot: SyncPrototypeSnapshot): string {
-  if (!snapshot.account.isLoggedIn) return "Déconnecté";
-  if (snapshot.sync.status === "offline" || snapshot.sync.phase === "offline") {
-    return "Hors connexion";
-  }
+function syncStatusLabel(
+  snapshot: SyncPrototypeSnapshot,
+  access: CloudAccountAccessSnapshot,
+): string {
+  if (!access.isOperational) return cloudAccountStatusLabel(access);
   if (snapshot.sync.status === "error" || snapshot.sync.phase === "error") {
     return "Erreur";
   }
@@ -142,6 +153,9 @@ export function AccountDevicesPage({
     () => runtimeClient?.getSnapshot(),
   );
   const [isInitializing, setIsInitializing] = useState(Boolean(runtimeClient));
+  const [isOnline, setIsOnline] = useState(
+    () => typeof navigator === "undefined" || navigator.onLine !== false,
+  );
   const [feedback, setFeedback] = useState<Feedback>();
   const [pendingAction, setPendingAction] = useState<PendingAction>();
   const [disconnectDialogOpen, setDisconnectDialogOpen] = useState(false);
@@ -191,6 +205,16 @@ export function AccountDevicesPage({
       unsubscribe();
     };
   }, [runtimeClient]);
+
+  useEffect(() => {
+    const updateOnlineState = () => setIsOnline(navigator.onLine !== false);
+    window.addEventListener("online", updateOnlineState);
+    window.addEventListener("offline", updateOnlineState);
+    return () => {
+      window.removeEventListener("online", updateOnlineState);
+      window.removeEventListener("offline", updateOnlineState);
+    };
+  }, []);
 
   const runAction = async (
     action: Exclude<PendingAction, undefined>,
@@ -273,6 +297,21 @@ export function AccountDevicesPage({
   }
 
   const loggedIn = snapshot.account.isLoggedIn;
+  const cloudAccess = runtimeClient.getCloudAccessState?.()
+    ?? resolveCloudAccountAccess({
+      ...snapshot.account,
+      hasAccessToken:
+        snapshot.account.hasAccessToken ?? snapshot.account.isLoggedIn,
+    }, { isOnline });
+  const accountKey =
+    snapshot.diagnostics.accountFingerprint?.toLowerCase();
+  const operationSummary = summarizeSyncOperationHistory(
+    readSyncOperationHistory(accountKey),
+  );
+  const lastSuccessfulSyncAt = resolveLastSuccessfulSyncAt(
+    operationSummary.lastSuccessfulSync?.completedAt,
+    snapshot.diagnostics.lastSyncCompletedAt,
+  );
   const cloudDatabaseLabel = safeConfig.config.enabled
     ? new URL(safeConfig.config.databaseUrl).hostname
     : "Non configuré";
@@ -305,6 +344,12 @@ export function AccountDevicesPage({
         </InlineNotice>
       ) : null}
 
+      {loggedIn && !cloudAccess.isOperational && isOnline ? (
+        <InlineNotice tone="info" title="Compte connecté, accès cloud indisponible">
+          {cloudAccess.message}
+        </InlineNotice>
+      ) : null}
+
       {feedback ? (
         <InlineNotice tone={feedback.tone} title={feedback.title}>
           {feedback.message}
@@ -334,7 +379,7 @@ export function AccountDevicesPage({
                 État
               </dt>
               <dd className="mt-1 font-bold text-slate-950 dark:text-white">
-                {syncStatusLabel(snapshot)}
+                {syncStatusLabel(snapshot, cloudAccess)}
               </dd>
             </div>
             <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-800">
@@ -355,10 +400,18 @@ export function AccountDevicesPage({
             </div>
             <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-800">
               <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                Licence
+              </dt>
+              <dd className="mt-1 font-bold text-slate-950 dark:text-white">
+                {cloudLicenseLabel(snapshot.account.license)}
+              </dd>
+            </div>
+            <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-800">
+              <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                 Dernier échange réussi
               </dt>
               <dd className="mt-1 font-bold text-slate-950 dark:text-white">
-                {formatDateTime(snapshot.diagnostics.lastSyncCompletedAt)}
+                {formatDateTime(lastSuccessfulSyncAt)}
               </dd>
             </div>
           </dl>

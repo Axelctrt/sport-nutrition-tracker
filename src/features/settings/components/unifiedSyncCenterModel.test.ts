@@ -45,6 +45,7 @@ describe('unifiedSyncCenterModel', () => {
     expect(statusLabel('differences', 1)).toBe('1 différence');
     expect(statusLabel('differences', 2)).toBe('2 différences');
     expect(statusLabel('error')).toBe('En échec');
+    expect(statusLabel('not-run')).toBe('Non exécutée');
     expect(statusClasses('up-to-date')).toContain('emerald');
     expect(statusClasses('error')).toContain('red');
   });

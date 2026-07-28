@@ -61,7 +61,7 @@ export async function deleteLocalAccountData(
   requireAccountSpace(space);
 
   const database = options.database ?? appDatabase;
-  const ownerUserId = client.getCloudCredentials?.()?.userId;
+  const ownerUserId = client.getSnapshot()?.account?.userId;
 
   await client.logout();
   if (ownerUserId) {

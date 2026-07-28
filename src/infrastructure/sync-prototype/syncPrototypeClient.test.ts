@@ -40,7 +40,6 @@ function createFakeDatabase() {
     lastLogin: new Date('2026-06-29T18:00:00.000Z'),
     isLoggedIn: false,
     isLoading: false,
-    accessToken: 'secret-token',
   });
   const syncState = new FakeObservable<SyncState>({
     status: 'not-started',
@@ -315,6 +314,7 @@ describe('client sécurisé du prototype Dexie Cloud', () => {
         email: 'test@example.com',
         userId: 'test@example.com',
         displayName: 'Compte test',
+        hasAccessToken: true,
         license: {
           type: 'eval',
           status: 'ok',
@@ -392,7 +392,17 @@ describe('client sécurisé du prototype Dexie Cloud', () => {
   });
 
   it('ouvre une seule fois la base avant les commandes cloud', async () => {
-    const { database, open, logout, sync } = createFakeDatabase();
+    const { database, currentUser, open, logout, sync } = createFakeDatabase();
+    currentUser.next({
+      claims: {},
+      lastLogin: new Date('2026-06-29T18:05:00.000Z'),
+      isLoggedIn: true,
+      isLoading: false,
+      email: 'test@example.com',
+      userId: 'test@example.com',
+      accessToken: 'secret-token',
+    });
+    database.cloud.currentUserId = 'test@example.com';
     const client = createClient(database);
 
     await client.initialize();
@@ -403,6 +413,64 @@ describe('client sécurisé du prototype Dexie Cloud', () => {
     expect(open).toHaveBeenCalledTimes(1);
     expect(sync).toHaveBeenCalledTimes(1);
     expect(logout).toHaveBeenCalledTimes(1);
+  });
+
+  it('mutualise une seule tentative officielle de renouvellement des credentials', async () => {
+    const fixture = createFakeDatabase();
+    fixture.currentUser.next({
+      claims: {},
+      lastLogin: new Date(),
+      isLoggedIn: true,
+      isLoading: false,
+      email: 'test@example.com',
+      userId: 'test@example.com',
+      accessToken: 'expired-token',
+      accessTokenExpiration: new Date(Date.now() - 60_000),
+      refreshToken: 'refresh-token',
+      refreshTokenExpiration: new Date(Date.now() + 3_600_000),
+      license: { type: 'prod', status: 'ok' },
+    });
+    fixture.database.cloud.currentUserId = 'test@example.com';
+    fixture.sync.mockImplementationOnce(async () => {
+      fixture.currentUser.next({
+        ...fixture.currentUser.value,
+        accessToken: 'fresh-token',
+        accessTokenExpiration: new Date(Date.now() + 3_600_000),
+      });
+    });
+    const client = createClient(fixture.database);
+
+    const [first, second] = await Promise.all([
+      client.ensureValidCloudCredentials!(),
+      client.ensureValidCloudCredentials!(),
+    ]);
+
+    expect(first.accessToken).toBe('fresh-token');
+    expect(second.accessToken).toBe('fresh-token');
+    expect(fixture.sync).toHaveBeenCalledTimes(1);
+  });
+
+  it('demande une reconnexion sans lancer de retry quand le refresh token est expiré', async () => {
+    const fixture = createFakeDatabase();
+    fixture.currentUser.next({
+      claims: {},
+      lastLogin: new Date(),
+      isLoggedIn: true,
+      isLoading: false,
+      email: 'test@example.com',
+      userId: 'test@example.com',
+      accessToken: 'expired-token',
+      accessTokenExpiration: new Date(Date.now() - 60_000),
+      refreshToken: 'expired-refresh-token',
+      refreshTokenExpiration: new Date(Date.now() - 1),
+      license: { type: 'prod', status: 'ok' },
+    });
+    fixture.database.cloud.currentUserId = 'test@example.com';
+    const client = createClient(fixture.database);
+
+    await expect(client.ensureValidCloudCredentials!())
+      .rejects.toMatchObject({ code: 'SESSION_EXPIRED' });
+    expect(fixture.sync).not.toHaveBeenCalled();
   });
 
   it('refuse une analyse de restauration préparée pour un autre compte', async () => {
@@ -741,6 +809,7 @@ describe('client sécurisé du prototype Dexie Cloud', () => {
         isLoading: false,
         email: 'test@example.com',
         userId: 'test@example.com',
+        accessToken: 'secret-token',
       });
       database.cloud.currentUserId = 'test@example.com';
       const client = createClient(database, {

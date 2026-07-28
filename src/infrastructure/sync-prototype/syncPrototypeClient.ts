@@ -4,6 +4,12 @@ import type {
   SyncState,
   UserLogin,
 } from 'dexie-cloud-addon';
+import {
+  cloudAccountAccessError,
+  mapCloudOperationError,
+  resolveCloudAccountAccess,
+  type CloudAccountAccessSnapshot,
+} from '@/application/account/cloudAccountAccess';
 import type { EntityId, LocalDate } from '@/domain/models/common';
 import type { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import { appDatabase } from '@/infrastructure/database/database';
@@ -116,6 +122,10 @@ export interface SyncPrototypeAccountSnapshot {
   readonly email?: string;
   readonly userId?: string;
   readonly displayName?: string;
+  readonly hasAccessToken?: boolean;
+  readonly accessTokenExpiresAt?: string;
+  readonly hasRefreshToken?: boolean;
+  readonly refreshTokenExpiresAt?: string;
   readonly license?: {
     readonly type: 'demo' | 'eval' | 'prod' | 'client';
     readonly status: 'ok' | 'expired' | 'deactivated';
@@ -337,6 +347,8 @@ export interface RemoteAccountDataDeletionResult
 export interface SyncPrototypeClient {
   getSnapshot(): SyncPrototypeSnapshot;
   getCloudCredentials?(): SyncPrototypeCloudCredentials | undefined;
+  getCloudAccessState?(): CloudAccountAccessSnapshot;
+  ensureValidCloudCredentials?(): Promise<SyncPrototypeCloudCredentials>;
   subscribe(listener: () => void): () => void;
   initialize(): Promise<void>;
   login(email: string): Promise<void>;
@@ -387,6 +399,14 @@ function sanitizeAccount(user: UserLogin): SyncPrototypeAccountSnapshot {
     ...(user.email ? { email: user.email } : {}),
     ...(user.userId ? { userId: user.userId } : {}),
     ...(user.name ? { displayName: user.name } : {}),
+    ...(user.accessToken ? { hasAccessToken: true } : {}),
+    ...(user.accessTokenExpiration
+      ? { accessTokenExpiresAt: user.accessTokenExpiration.toISOString() }
+      : {}),
+    ...(user.refreshToken ? { hasRefreshToken: true } : {}),
+    ...(user.refreshTokenExpiration
+      ? { refreshTokenExpiresAt: user.refreshTokenExpiration.toISOString() }
+      : {}),
     ...(user.license
       ? {
           license: {
@@ -517,6 +537,9 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
   private readonly clearTimer: typeof globalThis.clearTimeout;
   private readonly deleteRemoteSocialData: typeof deleteRemoteSocialAccountData;
   private blockedInitializationReject: ((error: Error) => void) | undefined;
+  private credentialRenewalPromise:
+    | Promise<SyncPrototypeCloudCredentials>
+    | undefined;
 
   constructor(
     database: SyncPrototypeDatabase,
@@ -660,8 +683,9 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
 
   getCloudCredentials = (): SyncPrototypeCloudCredentials | undefined => {
     const user = this.database.cloud.currentUser.value;
+    const access = this.getCloudAccessState();
     if (
-      user.isLoggedIn !== true
+      !access.isOperational
       || typeof user.userId !== 'string'
       || !user.userId.trim()
       || typeof user.accessToken !== 'string'
@@ -675,6 +699,47 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
       accessToken: user.accessToken,
     };
   };
+
+  getCloudAccessState = (): CloudAccountAccessSnapshot =>
+    resolveCloudAccountAccess(
+      sanitizeAccount(this.database.cloud.currentUser.value),
+      {
+        isOnline:
+          typeof navigator === 'undefined' || navigator.onLine !== false,
+      },
+    );
+
+  ensureValidCloudCredentials =
+    async (): Promise<SyncPrototypeCloudCredentials> => {
+      await this.initialize();
+      const initialAccess = this.getCloudAccessState();
+      if (initialAccess.isOperational) {
+        return this.getCloudCredentials()!;
+      }
+      if (!initialAccess.canAttemptRenewal) {
+        throw cloudAccountAccessError(initialAccess);
+      }
+      if (this.credentialRenewalPromise) return this.credentialRenewalPromise;
+
+      this.credentialRenewalPromise = (async () => {
+        try {
+          await this.database.cloud.sync();
+        } catch (error) {
+          throw mapCloudOperationError(error, this.getCloudAccessState());
+        }
+
+        const renewedAccess = this.getCloudAccessState();
+        const credentials = this.getCloudCredentials();
+        if (!renewedAccess.isOperational || !credentials) {
+          throw cloudAccountAccessError(renewedAccess);
+        }
+        return credentials;
+      })().finally(() => {
+        this.credentialRenewalPromise = undefined;
+      });
+
+      return this.credentialRenewalPromise;
+    };
 
   getSnapshot = (): SyncPrototypeSnapshot => this.snapshot;
 
@@ -819,15 +884,25 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
   }
 
   private async syncCloudForCurrentAccount(): Promise<string> {
-    const currentUserId = this.cloudUserId();
-    await this.database.cloud.sync();
-    this.assertCloudUserId(currentUserId);
-    return currentUserId;
+    const credentials = await this.ensureValidCloudCredentials();
+    this.assertCloudUserId(credentials.userId);
+    try {
+      await this.database.cloud.sync();
+    } catch (error) {
+      throw mapCloudOperationError(error, this.getCloudAccessState());
+    }
+    this.assertCloudUserId(credentials.userId);
+    return credentials.userId;
   }
 
   private async syncCloudForAccount(currentUserId: string): Promise<void> {
     this.assertCloudUserId(currentUserId);
-    await this.database.cloud.sync();
+    await this.ensureValidCloudCredentials();
+    try {
+      await this.database.cloud.sync();
+    } catch (error) {
+      throw mapCloudOperationError(error, this.getCloudAccessState());
+    }
     this.assertCloudUserId(currentUserId);
   }
 
@@ -839,10 +914,7 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
 
   async deleteRemoteAccountData(): Promise<RemoteAccountDataDeletionResult> {
     await this.initialize();
-    const credentials = this.getCloudCredentials();
-    if (!credentials) {
-      throw new Error('Reconnecte le compte avant de supprimer ses données distantes.');
-    }
+    const credentials = await this.ensureValidCloudCredentials();
     this.assertCloudUserId(credentials.userId);
 
     const social = await this.deleteRemoteSocialData(credentials);

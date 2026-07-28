@@ -112,6 +112,7 @@ export class AutomaticSyncController {
   private initializationPromise: Promise<void> | undefined;
   private disposed = false;
   private previousLoggedIn = false;
+  private previousCloudReady = false;
   private previousFingerprint: string | undefined;
   private lastForegroundTriggerAt = 0;
   private snapshot: AutomaticSyncControllerSnapshot = {
@@ -190,6 +191,9 @@ export class AutomaticSyncController {
           accountKey,
           domains: createSyncOrchestratorDomains(client),
           isOnline: this.isOnline,
+          preflight: async () => {
+            await client.ensureValidCloudCredentials?.();
+          },
         }));
   }
 
@@ -395,6 +399,10 @@ export class AutomaticSyncController {
     this.replaceOrchestratorForAccount(nextFingerprint);
     this.previousFingerprint = nextFingerprint;
     this.previousLoggedIn = snapshot.account.isLoggedIn;
+    const access = this.client.getCloudAccessState?.();
+    this.previousCloudReady = access
+      ? access.isOperational || access.canAttemptRenewal
+      : snapshot.account.isLoggedIn;
     this.updatePreferenceSnapshot();
   }
 
@@ -404,14 +412,20 @@ export class AutomaticSyncController {
     const becameConnected =
       clientSnapshot.account.isLoggedIn &&
       (!this.previousLoggedIn || nextFingerprint !== this.previousFingerprint);
+    const access = this.client.getCloudAccessState?.();
+    const cloudReady = access
+      ? access.isOperational || access.canAttemptRenewal
+      : clientSnapshot.account.isLoggedIn;
+    const becameCloudReady = cloudReady && !this.previousCloudReady;
 
     this.replaceOrchestratorForAccount(nextFingerprint);
 
     this.previousLoggedIn = clientSnapshot.account.isLoggedIn;
+    this.previousCloudReady = cloudReady;
     this.previousFingerprint = nextFingerprint;
     this.updatePreferenceSnapshot();
 
-    if (becameConnected) {
+    if (becameConnected || becameCloudReady) {
       await this.triggerLifecycle('account-connected');
     }
   }
@@ -422,10 +436,14 @@ export class AutomaticSyncController {
     const currentFingerprint = accountFingerprint(clientSnapshot);
     const authorizedFingerprint =
       settings?.automaticAccountSyncAccountFingerprint?.toLowerCase();
+    const cloudAccess = this.client.getCloudAccessState?.();
 
     if (
       !settings?.automaticAccountSyncEnabled ||
       !clientSnapshot.account.isLoggedIn ||
+      (cloudAccess
+        && !cloudAccess.isOperational
+        && !cloudAccess.canAttemptRenewal) ||
       !currentFingerprint ||
       currentFingerprint !== authorizedFingerprint ||
       !this.isOnline() ||

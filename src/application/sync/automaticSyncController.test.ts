@@ -2,6 +2,7 @@ import {
   AutomaticSyncController,
   type AutomaticSyncConnectionType,
 } from '@/application/sync/automaticSyncController';
+import type { CloudAccountAccessSnapshot } from '@/application/account/cloudAccountAccess';
 import {
   AUTOMATIC_ACCOUNT_SYNC_PREFERENCE_CHANGED_EVENT,
   CLOUD_ACCOUNT_RESTORED_EVENT,
@@ -490,6 +491,57 @@ describe('AutomaticSyncController', () => {
       domainIds: ['activities'],
       delayMs: 0,
     });
+    controller.dispose();
+  });
+
+  it('relance une analyse unique quand un accès cloud suspendu redevient prêt', async () => {
+    const initialSnapshot = createSnapshot();
+    const { client, updateSnapshot } = createClient(initialSnapshot);
+    let cloudReady = false;
+    client.getCloudAccessState = vi.fn((): CloudAccountAccessSnapshot => cloudReady
+      ? {
+          status: 'ready',
+          isIdentityConnected: true,
+          isOperational: true,
+          canAttemptRenewal: false,
+          message: 'Compte cloud opérationnel.',
+        }
+      : {
+          status: 'license-expired',
+          errorCode: 'LICENSE_EXPIRED',
+          isIdentityConnected: true,
+          isOperational: false,
+          canAttemptRenewal: false,
+          message: 'L’accès cloud de ce compte a expiré.',
+          actionLabel: 'Gérer le compte',
+        });
+    const { repository } = createSettingsRepository();
+    const { orchestrator, schedule } = createOrchestrator();
+    const controller = new AutomaticSyncController({
+      client,
+      settingsRepository: repository,
+      createOrchestrator: () => orchestrator,
+      lifecycleDebounceMs: 0,
+    });
+
+    await controller.initialize();
+    expect(schedule).not.toHaveBeenCalled();
+
+    cloudReady = true;
+    updateSnapshot({
+      ...initialSnapshot,
+      diagnostics: {
+        ...initialSnapshot.diagnostics,
+        lastRefreshAt: '2026-07-28T12:00:00.000Z',
+      },
+    });
+    await flush();
+
+    expect(schedule).toHaveBeenCalledTimes(1);
+    expect(schedule).toHaveBeenCalledWith(expect.objectContaining({
+      operation: 'analyze',
+      source: 'account-connected',
+    }));
     controller.dispose();
   });
 

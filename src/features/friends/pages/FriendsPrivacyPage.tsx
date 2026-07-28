@@ -107,7 +107,7 @@ import { InlineNotice } from '@/shared/ui/InlineNotice';
 function currentAccountUserId(): string | undefined {
   if (activeDataSpace.kind !== 'account') return undefined;
   try {
-    return getSyncPrototypeClient().getCloudCredentials?.()?.userId;
+    return getSyncPrototypeClient().getSnapshot().account.userId;
   } catch {
     return undefined;
   }
@@ -126,7 +126,10 @@ interface FriendsPrivacyPageProps {
   readonly socialFriendsGateway?: SocialFriendsGateway;
   readonly initialActivitySnapshots?: readonly SocialActivitySnapshot[];
   readonly activityFeedCloudGateway?: SocialActivityFeedCloudGateway;
-  readonly activityFeedCloudCredentials?: () => SocialActivitySnapshotCloudCredentials | undefined;
+  readonly activityFeedCloudCredentials?: () =>
+    | SocialActivitySnapshotCloudCredentials
+    | undefined
+    | Promise<SocialActivitySnapshotCloudCredentials | undefined>;
   readonly activityFeedOnline?: () => boolean;
   readonly activityFeedCloudSubscription?: (listener: () => void) => () => void;
   readonly privacyReconciliation?: () => Promise<unknown>;
@@ -142,9 +145,14 @@ function subscribeRuntimeSocialActivityFeed(listener: () => void): () => void {
   }
 }
 
-function readRuntimeSocialActivityFeedCredentials(): SocialActivitySnapshotCloudCredentials | undefined {
+async function readRuntimeSocialActivityFeedCredentials(): Promise<
+  SocialActivitySnapshotCloudCredentials | undefined
+> {
   try {
-    return getSyncPrototypeClient().getCloudCredentials?.();
+    const client = getSyncPrototypeClient();
+    return client.ensureValidCloudCredentials
+      ? client.ensureValidCloudCredentials()
+      : client.getCloudCredentials?.();
   } catch {
     return undefined;
   }

@@ -1,6 +1,9 @@
 import Dexie from 'dexie';
 
-import type { SyncPrototypeClient } from '@/infrastructure/sync-prototype/syncPrototypeClient';
+import type {
+  SyncPrototypeClient,
+  SyncPrototypeSnapshot,
+} from '@/infrastructure/sync-prototype/syncPrototypeClient';
 import {
   deleteCloudAndLocalAccountData,
   deleteLocalAccountData,
@@ -93,10 +96,13 @@ describe('accountDeviceManagementService', () => {
       updatedAt: NOW,
     });
     const client = createClient();
-    vi.mocked(client.getCloudCredentials!).mockReturnValue({
-      userId: 'account-user',
-      accessToken: 'token',
-    });
+    vi.mocked(client.getSnapshot).mockReturnValue({
+      account: {
+        isLoggedIn: true,
+        isLoading: false,
+        userId: 'account-user',
+      },
+    } as SyncPrototypeSnapshot);
     const purgeSocialOutbox = vi.fn(async () => 2);
 
     await deleteLocalAccountData(client, {
