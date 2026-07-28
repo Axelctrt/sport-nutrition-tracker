@@ -2,10 +2,10 @@ import { ChevronDown, type LucideIcon } from 'lucide-react';
 import {
   useCallback,
   useEffect,
-  useId,
   useState,
   type PropsWithChildren,
   type ReactNode,
+  type SyntheticEvent,
 } from 'react';
 
 import '@/shared/ui/uxMotionPolish.css';
@@ -42,22 +42,14 @@ function readStoredOpenState(
 function matchesHash(sectionId: string | undefined): boolean {
   if (!sectionId || typeof window === 'undefined') return false;
 
-  return (
-    decodeURIComponent(window.location.hash.slice(1)) === sectionId
-  );
+  return decodeURIComponent(window.location.hash.slice(1)) === sectionId;
 }
 
 function prefersReducedMotion(): boolean {
-  return (
-    window.matchMedia?.(
-      '(prefers-reduced-motion: reduce)',
-    ).matches ?? false
-  );
+  return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 }
 
-function scheduleSectionScroll(
-  sectionId: string,
-): void {
+function scheduleSectionScroll(sectionId: string): void {
   window.requestAnimationFrame(() => {
     window.requestAnimationFrame(() => {
       document.getElementById(sectionId)?.scrollIntoView?.({
@@ -80,67 +72,46 @@ export function CollapsibleSection({
   icon: Icon,
   children,
 }: CollapsibleSectionProps) {
-  const generatedId = useId();
-  const contentId = `${sectionId ?? generatedId}-content`;
   const [isOpen, setIsOpen] = useState(
-    () =>
-      matchesHash(sectionId) ||
-      readStoredOpenState(storageKey, defaultOpen),
+    () => matchesHash(sectionId) || readStoredOpenState(storageKey, defaultOpen),
   );
-
-  const persistOpenState = useCallback((nextOpen: boolean) => {
-    if (!storageKey) return;
-    try {
-      window.localStorage.setItem(
-        storageKey,
-        nextOpen ? 'open' : 'closed',
-      );
-    } catch {
-      // Le repli reste fonctionnel si le stockage est indisponible.
-    }
-  }, [storageKey]);
 
   const openFromHash = useCallback(() => {
     if (!matchesHash(sectionId) || !sectionId) return;
-
     setIsOpen(true);
-    persistOpenState(true);
     scheduleSectionScroll(sectionId);
-  }, [persistOpenState, sectionId]);
+  }, [sectionId]);
 
   useEffect(() => {
     openFromHash();
     window.addEventListener('hashchange', openFromHash);
-
-    return () => {
-      window.removeEventListener('hashchange', openFromHash);
-    };
+    return () => window.removeEventListener('hashchange', openFromHash);
   }, [openFromHash]);
 
-  const toggle = () => {
-    setIsOpen((current) => {
-      const nextOpen = !current;
-      persistOpenState(nextOpen);
-      return nextOpen;
-    });
+  const handleToggle = (event: SyntheticEvent<HTMLDetailsElement>) => {
+    const nextOpen = event.currentTarget.open;
+    setIsOpen(nextOpen);
+
+    if (storageKey) {
+      try {
+        window.localStorage.setItem(storageKey, nextOpen ? 'open' : 'closed');
+      } catch {
+        // Le repli reste fonctionnel si le stockage est indisponible.
+      }
+    }
   };
 
   return (
-    <section
+    <details
       id={sectionId}
-      data-open={isOpen ? 'true' : 'false'}
+      open={isOpen}
+      onToggle={handleToggle}
       className={cn(
-        'sp-collapsible overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900',
+        'sp-collapsible group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900',
         className,
       )}
     >
-      <button
-        type="button"
-        aria-expanded={isOpen}
-        aria-controls={contentId}
-        onClick={toggle}
-        className="sp-collapsible-summary flex min-h-16 w-full cursor-pointer items-center gap-3 px-4 py-3 text-left sm:px-5"
-      >
+      <summary className="sp-collapsible-summary flex min-h-16 cursor-pointer list-none items-center gap-3 px-4 py-3 marker:hidden sm:px-5 [&::-webkit-details-marker]:hidden">
         {Icon ? (
           <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-700 dark:bg-brand-950/50 dark:text-brand-300">
             <Icon aria-hidden="true" className="size-5" />
@@ -166,25 +137,17 @@ export function CollapsibleSection({
 
         <ChevronDown
           aria-hidden="true"
-          className={cn(
-            'size-5 shrink-0 text-slate-500 transition-transform duration-200 motion-reduce:transition-none',
-            isOpen && 'rotate-180',
-          )}
+          className="size-5 shrink-0 text-slate-500 transition-transform duration-200 group-open:rotate-180 motion-reduce:transition-none"
         />
-      </button>
+      </summary>
 
-      <div
-        id={contentId}
-        role="region"
-        aria-hidden={!isOpen}
-        className="sp-collapsible-content"
-      >
+      <div className="sp-collapsible-content">
         <div>
           <div className="border-t border-slate-200 p-4 sm:p-5 dark:border-slate-800">
             {children}
           </div>
         </div>
       </div>
-    </section>
+    </details>
   );
 }
