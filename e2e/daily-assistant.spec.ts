@@ -170,7 +170,7 @@ test('centralise les actions sport et nutrition dans le cœur fixe de l’accuei
   await selectedMeal.locator('..').click();
   await expect(nutritionDialog.getByRole('button', { name: 'Terminer le repas' })).toBeVisible();
   await nutritionDialog.getByRole('button', { name: 'Ajouter un élément' }).click();
-  await expect(nutritionDialog.getByRole('link', { name: /Rechercher un aliment/ })).toBeVisible();
+  await expect(nutritionDialog.getByRole('button', { name: /Rechercher un aliment/ })).toBeVisible();
   await expect(nutritionDialog.getByRole('link', { name: /Scanner un produit/ })).toBeVisible();
   await expect(nutritionDialog.getByRole('link', { name: /Photo du repas/ })).toBeVisible();
   await expect(nutritionDialog.getByRole('link', { name: /Utiliser une recette/ })).toBeVisible();

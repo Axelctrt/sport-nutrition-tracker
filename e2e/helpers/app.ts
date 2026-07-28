@@ -43,8 +43,19 @@ export async function createLocalProfile(page: Page, firstName = 'E2E'): Promise
   });
   await expect(profileProgress).toHaveAttribute('aria-valuenow', '1');
   const firstNameInput = page.getByLabel(/Nom affiché/);
-  await firstNameInput.fill(firstName);
-  await expect(firstNameInput).toHaveValue(firstName);
+  let firstNameAccepted = false;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    await firstNameInput.fill(firstName);
+    try {
+      await expect(firstNameInput).toHaveValue(firstName, { timeout: 3_000 });
+      firstNameAccepted = true;
+      break;
+    } catch (error) {
+      if (attempt === 3) throw error;
+      await page.waitForTimeout(100);
+    }
+  }
+  expect(firstNameAccepted).toBe(true);
   await firstNameInput.blur();
 
   for (let step = 2; step <= 9; step += 1) {

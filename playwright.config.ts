@@ -1,6 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
 
 const chromiumExecutablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
+const previewPort = Number(process.env.PLAYWRIGHT_PORT ?? 4173);
+const previewUrl = `http://127.0.0.1:${previewPort}`;
 
 export default defineConfig({
   testDir: './e2e',
@@ -21,7 +23,7 @@ export default defineConfig({
       ]
     : [['list']],
   use: {
-    baseURL: 'http://127.0.0.1:4173',
+    baseURL: previewUrl,
     locale: 'fr-FR',
     timezoneId: 'Africa/Tunis',
     serviceWorkers: 'block',
@@ -59,7 +61,10 @@ export default defineConfig({
     },
     {
       name: 'chromium-small-320',
-      testMatch: 'responsive-universal.spec.ts',
+      testMatch: [
+        'responsive-universal.spec.ts',
+        'performance-glass-0.34.0.spec.ts',
+      ],
       use: {
         ...devices['Desktop Chrome'],
         viewport: { width: 320, height: 568 },
@@ -72,7 +77,10 @@ export default defineConfig({
     },
     {
       name: 'chromium-large-412',
-      testMatch: 'responsive-universal.spec.ts',
+      testMatch: [
+        'responsive-universal.spec.ts',
+        'performance-glass-0.34.0.spec.ts',
+      ],
       use: {
         ...devices['Desktop Chrome'],
         viewport: { width: 412, height: 915 },
@@ -98,8 +106,8 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'npm run build && npm run preview -- --host 127.0.0.1 --port 4173',
-    url: 'http://127.0.0.1:4173',
+    command: `npm run build && npm run preview -- --host 127.0.0.1 --port ${previewPort}`,
+    url: previewUrl,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },

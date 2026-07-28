@@ -174,3 +174,146 @@ progression avant deblocage, mais ne reverrouille jamais un theme acquis.
 4. Ajouter le contenu de preview et de reveal.
 5. Verifier sauvegarde, restauration, synchronisation et fallback.
 6. Valider contraste, mouvement reduit, mobile et graphiques.
+
+## Implementation livree
+
+### Tokens et primitives
+
+- `src/styles/index.css` porte les tokens communs de surface, texte, bordure,
+  accent, graphique, focus, profondeur et mouvement.
+- `src/styles/unlockableThemes.css` ne contient plus que les cinq identites
+  Performance Glass, chacune en clair et sombre.
+- `SportPilotMotionCard`, `SportPilotActiveBorder`,
+  `SportPilotAnimatedNumber`, `SportPilotProgressTransition` et
+  `SportPilotSuccessEffect` couvrent les transitions de contenu.
+- `SportPilotStatefulButton` couvre `idle`, `pressed`, `loading`, `success`,
+  `error` et `disabled` avec une largeur stable.
+- `SportPilotMultiStepLoader` n'affiche que des etapes connues ou des libelles
+  honnetes, sans pourcentage artificiel.
+- `SportPilotAnimatedTabs` conserve le focus, les fleches, Home et End.
+- `SportPilotUnlockReveal` reserve les effets les plus visibles aux themes
+  rares, epiques et legendaires.
+
+Les effets souris sont places sous `hover: hover` et `pointer: fine`. Les
+appareils tactiles disposent d'etats actifs ou selectionnes. Tous les mouvements
+non indispensables sont neutralises par `prefers-reduced-motion`.
+
+Le theme de demarrage est lu par `public/theme-boot.js`, charge comme script
+externe pour respecter la CSP `script-src 'self'`. Apres hydratation de Dexie,
+le runtime reapplique la preference partageable; une valeur inconnue retombe
+sur Core. Le provider React ne remplace pas un theme deja pose par le bootstrap.
+
+### Catalogue final
+
+| Theme | Rarete | Mouvement | Identite |
+| --- | --- | --- | --- |
+| Core | standard | balanced | bleu/cyan net et officiel |
+| Neon Pulse | rare | energetic | cyan/violet, impulsions courtes |
+| Emerald Focus | rare | focused | vert/menthe, fondus calmes |
+| Aurora | epic | smooth-premium | cyan/violet/rose froid, verre controle |
+| Zenith Gold | legendary | prestige | or/ivoire, mouvement rare |
+
+Chaque definition fournit deux palettes completes, les styles de fond, surface,
+bouton et graphique, le profil de mouvement et l'effet de recompense.
+L'apparence `system | light | dark` reste independante du theme. Les anciennes
+valeurs inconnues sont normalisees vers `core`.
+
+### Conditions de deblocage
+
+- Core: disponible immediatement.
+- Neon Pulse: 20 activites terminees et 3 semaines avec au moins 3 activites.
+- Emerald Focus, fenetre glissante de 30 jours: 12 journees avec check-in et
+  check-out, et 10 journees nutritionnelles renseignees.
+- Aurora: 4 semaines equilibrees. Une semaine equilibree comporte au moins
+  3 jours de suivi, 3 jours de nutrition et soit 2 activites, soit 1 activite
+  avec 1 repos confirme.
+- Zenith Gold: sur les 12 dernieres semaines, 8 semaines equilibrees, plus
+  50 activites terminees et 40 journees completes.
+
+Un theme acquis reste acquis. Une suppression peut diminuer une progression
+avant deblocage, mais ne reverrouille jamais un theme. `unlockedAt` et
+`revealSeenAt` sont sauvegardes et synchronises avec les preferences de
+recompenses.
+
+### Reveal et essai
+
+Le reveal automatique n'est autorise que sur l'accueil ou Recompenses, sans
+dialogue, formulaire actif ni saisie focalisee. Sinon, un toast propose
+explicitement de l'ouvrir. L'apparition est unique et marque `revealSeenAt`.
+
+`Essayer maintenant` applique une preference locale temporaire. La barre
+d'essai permet ensuite de confirmer ou d'annuler. Aucune preference de theme
+n'est synchronisee avant confirmation; un rechargement annule proprement
+l'essai. `Conserver mon theme actuel` ferme le reveal sans modifier le theme.
+
+### Architecture des analyses
+
+`performanceAnalyticsService` lit les tables existantes et construit des
+series pures pour:
+
+- calories et cibles quotidiennes variables;
+- macros et repartition calorique des repas;
+- regularite, check-in/check-out et heatmap;
+- activites planifiees, terminees et reliees au planning;
+- endurance par discipline et unite;
+- force estimee avec la formule Epley centralisee;
+- volume, meilleure serie et records;
+- series de travail par groupe musculaire;
+- progression vers les themes.
+
+Les composants React ne recalculent que le filtrage de presentation d'une
+periode deja agregee. Ils n'ecrivent jamais dans les tables metier.
+
+### Representations retenues
+
+- Poids: points reels, moyenne mobile 7 jours et objectif sur une meme unite.
+- Calories: barres quotidiennes et ligne de cible quotidienne.
+- Macros: trois barres horizontales en grammes.
+- Repas: donut, car les repas forment un total calorique.
+- Volume sportif: barres empilees par sport, duree ou nombre de seances.
+- Endurance: une discipline et une unite selectionnees a la fois.
+- Musculation: vues separees 1RM estime, volume et meilleure serie.
+- Groupes musculaires: heatmap de series de travail terminees.
+- Prevu/realise: barres groupees, avec distinction des plans relies.
+- Regularite: barres hebdomadaires et heatmap calendaire.
+- Themes: barres de progression, jamais une collection d'anneaux.
+
+Chaque graphique principal utilise `ResponsiveContainer`,
+`accessibilityLayer`, une zone tactile de hauteur stable, un tooltip et une
+alternative textuelle ou tabulaire. Les animations sont desactivees en
+reduction de mouvement et lorsque l'onglet devient masque.
+
+### Progression et Analyses
+
+- Progression conserve son role de centre de decision: periodes 7 jours,
+  30 jours et 3 mois, signal principal deterministe, trois ou quatre cartes
+  utiles, six domaines compacts, semaine prevue/realisee, bilan et objectif.
+- Analyses conserve les filtres dans l'URL et separe Vue d'ensemble, Corps,
+  Nutrition, Activite, Musculation et Regularite.
+- Le poids propose 30 jours, 3 mois, 6 mois, 1 an et Tout.
+- Les etats vides ne tracent aucune valeur artificielle et proposent une action
+  vers la source de donnees correspondante.
+
+## Ajouter un graphique ulterieurement
+
+1. Formuler la question metier et l'unite avant de choisir la representation.
+2. Ajouter l'agregation pure dans un service ou selecteur, avec cas vide, nul,
+   valeur extreme et ordre chronologique.
+3. Choisir une primitive Recharts adaptee sans melanger les unites.
+4. Utiliser les tokens `--sp-chart-*`, jamais une palette locale fixe.
+5. Ajouter tooltip tactile, valeur principale et interpretation factuelle.
+6. Fournir un tableau ou resume textuel et un etat vide actionnable.
+7. Tester clavier, tactile, mouvement reduit, changement de periode et 320 px.
+8. Comparer le poids gzip de la route et du bundle principal.
+
+## Validation de reference
+
+- Vitest: 522 fichiers et 2 060 tests, en ordre normal puis melange.
+- Playwright: 114 scenarios applicables valides sur desktop, WebKit iPhone 15,
+  320, 360 et 412 px; 12 exclusions intentionnelles liees aux projets.
+- PWA: mise a jour de deux builds sous la meme origine sans perte IndexedDB.
+- Production: 144 chunks JavaScript, 3 327 Kio, 147 Kio de CSS, plus gros
+  chunk a 404 Kio et 147 entrees de precache.
+- Captures: Progression, Analyses, Recompenses, collection verrouillee et
+  debloquee, reveals, loader, graphiques, heatmap, clair, sombre, mouvement
+  reduit, 320 px et iPhone 15 avec donnees controlees hors production.

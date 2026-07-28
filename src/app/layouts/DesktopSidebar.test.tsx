@@ -42,7 +42,11 @@ describe('DesktopSidebar', () => {
     });
     expect(secondaryNavigation.querySelectorAll('a')).toHaveLength(3);
     expect(screen.getByRole('link', { name: 'Paramètres' })).toHaveClass(
-      'bg-brand-100',
+      'is-active',
+    );
+    expect(screen.getByRole('link', { name: 'Paramètres' })).toHaveAttribute(
+      'aria-current',
+      'page',
     );
     expect(screen.queryByRole('link', { name: 'Rappels' })).not.toBeInTheDocument();
   });

@@ -35,10 +35,16 @@ test('utilise un modèle de course puis enregistre une sortie vélo enrichie', a
   await expect(page.getByText('D+ 250 m').first()).toBeVisible();
   await expectNoCriticalHorizontalOverflow(page);
 
-  await page.goto('/#/analytics');
+  await page.goto('/#/analytics?tab=activity&weeks=12');
   await expect(page.getByRole('heading', { name: 'Analyses' })).toBeVisible();
-  await expect(page.getByText('120 m', { exact: true })).toBeVisible();
-  await page.getByRole('button', { name: /^Vélo/ }).click();
-  const highestCyclingElevation = page.getByText('Plus grand D+', { exact: true }).locator('..');
-  await expect(highestCyclingElevation.getByText('250 m', { exact: true })).toBeVisible();
+  const enduranceCard = page.getByRole('region', {
+    name: 'Volume d’endurance',
+  });
+  await enduranceCard.getByLabel('Discipline', { exact: true }).selectOption('cycling');
+  await enduranceCard.getByLabel('Mesure', { exact: true }).selectOption('elevation');
+  await enduranceCard.getByText('Voir les données du graphique').click();
+  await expect(
+    enduranceCard.getByRole('table', { name: 'Dénivelé positif de Vélo' })
+      .getByText('250 m', { exact: true }),
+  ).toBeVisible();
 });

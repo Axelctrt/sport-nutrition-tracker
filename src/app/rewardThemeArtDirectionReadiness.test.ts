@@ -8,7 +8,7 @@ import themeCssSource from "@/styles/unlockableThemes.css?raw";
 
 describe("SportPilot 0.34.0 - thèmes Performance Glass", () => {
   it("préserve les versions de données pendant la phase visuelle", () => {
-    expect(__APP_VERSION__).toBe("0.33.2");
+    expect(__APP_VERSION__).toBe("0.34.0");
     expect(databaseSchemaVersion).toBe(11);
     expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(10);
   });

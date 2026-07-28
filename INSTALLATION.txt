@@ -1,32 +1,24 @@
-SPORTPILOT 0.33.2
+SPORTPILOT 0.34.0
 
 Checklist d’installation et publication :
 
-1. Verifier que la branche fix/account-sync-ux-0.33.2 est propre et synchronisee.
-2. Verifier que package.json et package-lock.json indiquent 0.33.2.
-3. Verifier que Parametres affiche 0.33.2.
-4. Verifier qu’aucun ZIP, patch-files, resultat Playwright ou secret n’est stage.
+1. Verifier que la branche feat/design-themes-analytics-0.34.0 est propre.
+2. Verifier que package.json et package-lock.json indiquent 0.34.0.
+3. Verifier que Parametres affiche 0.34.0.
+4. Verifier qu’aucun ZIP, resultat Playwright ou secret n’est stage.
 5. Executer npm run lint.
 6. Executer npx tsc -b --pretty false.
-7. Executer la suite Vitest complete en lots deterministes.
+7. Executer npm run test.
 8. Executer npm run test:e2e:onboarding.
 9. Executer npm run test:e2e:acceptance.
-10. Executer npm run build.
-11. Executer npm run audit:release-consolidation.
-12. Executer npm run check.
-13. Executer npm run test:stability ou consigner les lots deterministes equivalents.
-14. Executer npm audit.
-15. Valider la recette onboarding sur iPhone 15.
-16. Committer avec test(release): valider SportPilot 0.33.2.
-17. Pousser fix/account-sync-ux-0.33.2.
-18. Deployer et valider la Preview de la branche release.
-19. Fusionner manuellement fix/account-sync-ux-0.33.2 dans develop.
-20. Relancer les controles critiques sur develop.
-21. Fusionner develop dans main.
-22. Pousser main.
-23. Deployer la production Cloudflare Pages depuis main.
-24. Verifier la version 0.33.2 en production.
-25. Verifier onboarding, Accueil, Nutrition, Sport, Progression, Compte et Synchronisation.
-26. Creer le tag annote v0.33.2 sur le commit publie.
-27. Pousser le tag v0.33.2.
-28. Resynchroniser develop avec main.
+10. Executer les recettes mobiles 320, 360, 393 et 412 px.
+11. Executer npm run build.
+12. Executer npm run audit:release-consolidation.
+13. Executer npm run check.
+14. Executer npm run test:stability.
+15. Executer npm audit.
+16. Committer avec test(release): valider SportPilot 0.34.0.
+17. Pousser feat/design-themes-analytics-0.34.0.
+18. Ne deployer ou fusionner qu’apres autorisation explicite.
+19. Verifier manifeste, service worker et routes profondes.
+20. Creer le tag annote v0.34.0 sur le commit publie.
