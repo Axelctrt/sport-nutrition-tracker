@@ -147,7 +147,7 @@ describe('MealFoodSelectorPage', () => {
     );
 
     const search = await screen.findByLabelText('Rechercher dans Open Food Facts');
-    expect(search).toHaveFocus();
+    await waitFor(() => expect(search).toHaveFocus());
     expect(screen.queryByRole('button', { name: /^Open Food Facts/ })).not.toBeInTheDocument();
     expect(screen.queryByText('Choisir une méthode')).not.toBeInTheDocument();
   });
@@ -163,7 +163,7 @@ describe('MealFoodSelectorPage', () => {
     );
 
     const search = await screen.findByLabelText('Rechercher dans mes aliments');
-    expect(search).toHaveFocus();
+    await waitFor(() => expect(search).toHaveFocus());
     expect(screen.queryByText('Choisir une méthode')).not.toBeInTheDocument();
     await user.type(search, 'Skyr vanille');
 
@@ -172,5 +172,4 @@ describe('MealFoodSelectorPage', () => {
       '/food/products/new?returnDate=2026-06-24&returnSlot=lunch&name=Skyr+vanille&returnSource=all',
     );
   });
-
 });
