@@ -135,6 +135,16 @@ export function RewardUnlockNotifier({
   ]);
 
   useEffect(() => {
+    if (pendingAchievements.length === 0 || achievementReveal || revealTheme) {
+      return undefined;
+    }
+    const timer = window.setInterval(() => {
+      setContextRevision((revision) => revision + 1);
+    }, 120);
+    return () => window.clearInterval(timer);
+  }, [achievementReveal, pendingAchievements.length, revealTheme]);
+
+  useEffect(() => {
     if (!revealThemeId) return;
     markVisualThemeRevealSeen(revealThemeId);
   }, [revealThemeId]);
@@ -168,7 +178,7 @@ export function RewardUnlockNotifier({
             action: {
               label: "Voir",
               ariaLabel: "Voir les badges débloqués",
-              onClick: () => void router.navigate(routePaths.rewards),
+              onClick: () => void router.navigate(`${routePaths.rewards}?tab=badges`),
             },
             durationMs: 8_000,
             dedupeKey: `reward-achievements:${batch.achievements
@@ -198,6 +208,9 @@ export function RewardUnlockNotifier({
     setExplicitRevealId((current) => (
       current === themeId ? undefined : current
     ));
+    window.setTimeout(() => {
+      setContextRevision((revision) => revision + 1);
+    }, 0);
   }, []);
 
   const consumeAchievement = useCallback((achievementId: string) => {
