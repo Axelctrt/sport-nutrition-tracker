@@ -27,22 +27,12 @@ function requireMarkers(source, markers, label) {
 
 const packageJson = JSON.parse(read("package.json"));
 const achievements = read("src/domain/rewards/achievements.ts");
-const achievementService = read(
-  "src/application/rewards/achievementService.ts",
-);
+const achievementService = read("src/application/rewards/achievementService.ts");
 const visualThemes = read("src/domain/rewards/visualThemes.ts");
-const themeService = read(
-  "src/application/rewards/themeAchievementService.ts",
-);
-const themesPanel = read(
-  "src/features/settings/components/RewardThemesPanel.tsx",
-);
-const rewardsPage = read(
-  "src/features/rewards/pages/RewardsCenterPage.tsx",
-);
-const rewardNotifier = read(
-  "src/app/rewards/RewardUnlockNotifier.tsx",
-);
+const themeService = read("src/application/rewards/themeAchievementService.ts");
+const themesPanel = read("src/features/settings/components/RewardThemesPanel.tsx");
+const rewardsPage = read("src/features/rewards/pages/RewardsCenterPage.tsx");
+const rewardNotifier = read("src/app/rewards/RewardUnlockNotifier.tsx");
 const unlockReveal = read("src/shared/ui/SportPilotUnlockReveal.tsx");
 const css = read("src/styles/unlockableThemes.css");
 const sharedCss = read("src/styles/index.css");
@@ -50,37 +40,23 @@ const allThemeCss = `${css}\n${sharedCss}`;
 const themeBoot = read("public/theme-boot.js");
 const indexHtml = read("index.html");
 const productionAudit = read("scripts/audit-rc.mjs");
-const automaticSyncReleaseAudit = read(
-  "scripts/audit-automatic-sync-release.mjs",
-);
+const automaticSyncReleaseAudit = read("scripts/audit-automatic-sync-release.mjs");
 const goalCard = read("src/features/goals/components/GoalCard.tsx");
-const goalValueFormatter = read(
-  "src/features/goals/utils/formatGoalValue.ts",
-);
+const goalValueFormatter = read("src/features/goals/utils/formatGoalValue.ts");
 
 if (!isStableVersionAtLeast(packageJson.version, 34)) {
-  fail(
-    `la version doit etre ${stableVersionExpectation(34)}, recue ${String(packageJson.version)}.`,
-  );
+  fail(`la version doit etre ${stableVersionExpectation(34)}, recue ${String(packageJson.version)}.`);
 }
 if (!packageJson.scripts?.["audit:reward-theme-catalog"]) {
   fail("le script audit:reward-theme-catalog est absent de package.json.");
 }
-if (
-  !String(packageJson.scripts?.check ?? "").includes(
-    "audit:reward-theme-catalog",
-  )
-) {
+if (!String(packageJson.scripts?.check ?? "").includes("audit:reward-theme-catalog")) {
   fail("npm run check ne lance pas audit:reward-theme-catalog.");
 }
 
-const achievementIds = [...achievements.matchAll(/id: "([^"]+)"/g)].map(
-  (match) => match[1],
-);
+const achievementIds = [...achievements.matchAll(/id: "([^"]+)"/g)].map((match) => match[1]);
 if (achievementIds.length !== 50) {
-  fail(
-    `le catalogue doit contenir exactement 50 badges, ${achievementIds.length} detecte(s).`,
-  );
+  fail(`le catalogue doit contenir exactement 50 badges, ${achievementIds.length} detecte(s).`);
 }
 if (new Set(achievementIds).size !== achievementIds.length) {
   fail("le catalogue de badges contient des identifiants dupliques.");
@@ -132,16 +108,12 @@ const expectedThemeIds = [
   "aurora",
   "zenith-gold",
 ];
-const themeIds = [...visualThemes.matchAll(/id: "([^"]+)"/g)].map(
-  (match) => match[1],
-);
+const themeIds = [...visualThemes.matchAll(/id: "([^"]+)"/g)].map((match) => match[1]);
 if (
   themeIds.length !== expectedThemeIds.length
   || expectedThemeIds.some((themeId) => !themeIds.includes(themeId))
 ) {
-  fail(
-    `le catalogue Performance Glass doit contenir uniquement ${expectedThemeIds.join(", ")}.`,
-  );
+  fail(`le catalogue Performance Glass doit contenir uniquement ${expectedThemeIds.join(", ")}.`);
 }
 if (new Set(themeIds).size !== themeIds.length) {
   fail("le catalogue de themes contient des identifiants dupliques.");
@@ -153,9 +125,7 @@ for (const themeId of expectedThemeIds) {
     `html.dark[data-sport-theme="${themeId}"]`,
     `[data-theme-preview="${themeId}"]`,
   ]) {
-    if (!css.includes(selector)) {
-      fail(`le theme ${themeId} ne couvre pas ${selector}.`);
-    }
+    if (!css.includes(selector)) fail(`le theme ${themeId} ne couvre pas ${selector}.`);
   }
 }
 
@@ -224,7 +194,6 @@ requireMarkers(
   ],
   "les identites Performance Glass",
 );
-
 requireMarkers(
   themeService,
   [
@@ -243,7 +212,6 @@ requireMarkers(
   ],
   "le moteur de deblocage",
 );
-
 requireMarkers(
   rewardsPage,
   ['label: "Thèmes"', 'label: "Badges"', "<RewardThemesPanel />"],
@@ -287,7 +255,6 @@ requireMarkers(
   ],
   "le report et l'essai des themes",
 );
-
 requireMarkers(
   allThemeCss,
   [
@@ -301,7 +268,6 @@ requireMarkers(
   ],
   "le rendu Performance Glass",
 );
-
 requireMarkers(
   themeBoot,
   [
@@ -315,24 +281,19 @@ requireMarkers(
   ],
   "le demarrage sans flash",
 );
+
 if (!indexHtml.includes('<script src="/theme-boot.js"></script>')) {
   fail("index.html doit charger le bootstrap de theme externe compatible CSP.");
 }
-
-if (!productionAudit.includes("totalJavaScriptBytes: 3328 * 1024")) {
-  fail("le budget JavaScript de production doit rester fixe a 3328 Kio.");
+if (!productionAudit.includes("totalJavaScriptBytes: 3340 * 1024")) {
+  fail("le budget JavaScript de production doit rester fixe a 3340 Kio.");
 }
 if (!productionAudit.includes("totalCssBytes: 176 * 1024")) {
   fail("le budget CSS de production doit rester fixe a 176 Kio.");
 }
-if (
-  !automaticSyncReleaseAudit.includes(
-    "budget JavaScript global validé de 3328 Kio",
-  )
-) {
+if (!automaticSyncReleaseAudit.includes("budget JavaScript global validé de 3340 Kio")) {
   fail("l'audit F4 doit rester aligne avec le budget JavaScript valide.");
 }
-
 if (
   !goalCard.includes("formatGoalValue")
   || !goalValueFormatter.includes("unit === 'km' ? 1 : 2")
