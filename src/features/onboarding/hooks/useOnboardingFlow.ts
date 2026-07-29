@@ -32,6 +32,16 @@ interface UseOnboardingFlowResult<TStepId extends string> {
   runSubmission: (operation: () => Promise<void>) => Promise<boolean>;
 }
 
+function interactiveElementHasFocus(): boolean {
+  const activeElement = document.activeElement;
+  return activeElement instanceof HTMLInputElement
+    || activeElement instanceof HTMLTextAreaElement
+    || activeElement instanceof HTMLSelectElement
+    || activeElement instanceof HTMLButtonElement
+    || activeElement instanceof HTMLAnchorElement
+    || (activeElement instanceof HTMLElement && activeElement.isContentEditable);
+}
+
 export function useOnboardingFlow<TStepId extends string>({
   steps,
   restoredStepId,
@@ -56,7 +66,9 @@ export function useOnboardingFlow<TStepId extends string>({
     onStepChange?.(state.currentStepId);
 
     const frameId = window.requestAnimationFrame(() => {
-      headingRef.current?.focus({ preventScroll: true });
+      if (!interactiveElementHasFocus()) {
+        headingRef.current?.focus({ preventScroll: true });
+      }
     });
 
     return () => window.cancelAnimationFrame(frameId);
