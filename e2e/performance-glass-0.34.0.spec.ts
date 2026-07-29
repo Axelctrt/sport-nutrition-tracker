@@ -56,7 +56,7 @@ test('valide les thèmes, graphiques et écrans de décision avec des données c
   });
   await openReadyPage(page, '/rewards', 'Récompenses');
   await expect(page.getByText('1 / 5', { exact: true })).toBeVisible();
-  await expect(page.getByText('Verrouille')).toHaveCount(4);
+  await expect(page.getByText('Verrouillé', { exact: true })).toHaveCount(4);
   if (testInfo.project.name === 'chromium-desktop') {
     await capture(page, testInfo, 'rewards-collection-locked-core-light.png');
   }
