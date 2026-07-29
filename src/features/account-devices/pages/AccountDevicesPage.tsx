@@ -12,10 +12,23 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { routePaths } from "@/app/routePaths";
+import {
+  cloudAccountStatusLabel,
+  cloudLicenseLabel,
+  resolveCloudAccountAccess,
+  type CloudAccountAccessSnapshot,
+} from "@/application/account/cloudAccountAccess";
+import { createAndDownloadSafetyBackup } from "@/application/backup/safetyBackupService";
+import {
+  readSyncOperationHistory,
+  resolveLastSuccessfulSyncAt,
+  summarizeSyncOperationHistory,
+} from "@/application/sync/syncOperationHistory";
 import { CloudAccountRestorePanel } from "@/features/account-devices/components/CloudAccountRestorePanel";
 import { GuestDataImportPanel } from "@/features/account-devices/components/GuestDataImportPanel";
 import type { DataSpaceDescriptor } from "@/domain/data-spaces/dataSpace";
 import {
+  deleteCloudAndLocalAccountData,
   deleteLocalAccountData,
   detachCurrentDeviceFromAccount,
   disconnectAccount,
@@ -48,9 +61,16 @@ interface AccountDevicesPageProps {
   disconnect?: typeof disconnectAccount;
   detachDevice?: typeof detachCurrentDeviceFromAccount;
   deleteLocalData?: typeof deleteLocalAccountData;
+  deleteCloudAndLocalData?: typeof deleteCloudAndLocalAccountData;
+  createSafetyBackup?: typeof createAndDownloadSafetyBackup;
 }
 
-type PendingAction = "disconnect" | "detach" | "delete" | undefined;
+type PendingAction =
+  | "disconnect"
+  | "detach"
+  | "delete"
+  | "deleteRemote"
+  | undefined;
 
 type Feedback = {
   readonly tone: "success" | "error" | "info";
@@ -63,7 +83,7 @@ function defaultReload(): void {
 }
 
 function formatDateTime(value: string | undefined): string {
-  if (!value) return "Aucun échange réussi";
+  if (!value) return "Jamais";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "Date inconnue";
   return new Intl.DateTimeFormat("fr-FR", {
@@ -72,11 +92,11 @@ function formatDateTime(value: string | undefined): string {
   }).format(date);
 }
 
-function syncStatusLabel(snapshot: SyncPrototypeSnapshot): string {
-  if (!snapshot.account.isLoggedIn) return "Déconnecté";
-  if (snapshot.sync.status === "offline" || snapshot.sync.phase === "offline") {
-    return "Hors connexion";
-  }
+function syncStatusLabel(
+  snapshot: SyncPrototypeSnapshot,
+  access: CloudAccountAccessSnapshot,
+): string {
+  if (!access.isOperational) return cloudAccountStatusLabel(access);
   if (snapshot.sync.status === "error" || snapshot.sync.phase === "error") {
     return "Erreur";
   }
@@ -113,6 +133,8 @@ export function AccountDevicesPage({
   disconnect = disconnectAccount,
   detachDevice = detachCurrentDeviceFromAccount,
   deleteLocalData = deleteLocalAccountData,
+  deleteCloudAndLocalData = deleteCloudAndLocalAccountData,
+  createSafetyBackup = createAndDownloadSafetyBackup,
 }: AccountDevicesPageProps = {}) {
   const actionToast = useActionToast();
   const safeConfig = useMemo(() => readSyncPrototypeConfigSafely(), []);
@@ -131,12 +153,17 @@ export function AccountDevicesPage({
     () => runtimeClient?.getSnapshot(),
   );
   const [isInitializing, setIsInitializing] = useState(Boolean(runtimeClient));
+  const [isOnline, setIsOnline] = useState(
+    () => typeof navigator === "undefined" || navigator.onLine !== false,
+  );
   const [feedback, setFeedback] = useState<Feedback>();
   const [pendingAction, setPendingAction] = useState<PendingAction>();
   const [disconnectDialogOpen, setDisconnectDialogOpen] = useState(false);
   const [detachDialogOpen, setDetachDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [remoteDeleteDialogOpen, setRemoteDeleteDialogOpen] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
+  const [remoteDeleteConfirmation, setRemoteDeleteConfirmation] = useState("");
   const [currentDevice] = useState<CurrentDeviceDescriptor>(
     () => currentDeviceOverride ?? getOrCreateCurrentDevice(),
   );
@@ -179,6 +206,16 @@ export function AccountDevicesPage({
     };
   }, [runtimeClient]);
 
+  useEffect(() => {
+    const updateOnlineState = () => setIsOnline(navigator.onLine !== false);
+    window.addEventListener("online", updateOnlineState);
+    window.addEventListener("offline", updateOnlineState);
+    return () => {
+      window.removeEventListener("online", updateOnlineState);
+      window.removeEventListener("offline", updateOnlineState);
+    };
+  }, []);
+
   const runAction = async (
     action: Exclude<PendingAction, undefined>,
     operation: () => Promise<unknown>,
@@ -199,6 +236,10 @@ export function AccountDevicesPage({
         delete: {
           title: 'Données locales supprimées',
           description: 'Les données cloud de ce compte restent intactes.',
+        },
+        deleteRemote: {
+          title: 'Données du compte supprimées',
+          description: 'Les données cloud, sociales et locales ont été effacées.',
         },
       } as const;
       const success = successMessages[action];
@@ -256,6 +297,21 @@ export function AccountDevicesPage({
   }
 
   const loggedIn = snapshot.account.isLoggedIn;
+  const cloudAccess = runtimeClient.getCloudAccessState?.()
+    ?? resolveCloudAccountAccess({
+      ...snapshot.account,
+      hasAccessToken:
+        snapshot.account.hasAccessToken ?? snapshot.account.isLoggedIn,
+    }, { isOnline });
+  const accountKey =
+    snapshot.diagnostics.accountFingerprint?.toLowerCase();
+  const operationSummary = summarizeSyncOperationHistory(
+    readSyncOperationHistory(accountKey),
+  );
+  const lastSuccessfulSyncAt = resolveLastSuccessfulSyncAt(
+    operationSummary.lastSuccessfulSync?.completedAt,
+    snapshot.diagnostics.lastSyncCompletedAt,
+  );
   const cloudDatabaseLabel = safeConfig.config.enabled
     ? new URL(safeConfig.config.databaseUrl).hostname
     : "Non configuré";
@@ -288,6 +344,12 @@ export function AccountDevicesPage({
         </InlineNotice>
       ) : null}
 
+      {loggedIn && !cloudAccess.isOperational && isOnline ? (
+        <InlineNotice tone="info" title="Compte connecté, accès cloud indisponible">
+          {cloudAccess.message}
+        </InlineNotice>
+      ) : null}
+
       {feedback ? (
         <InlineNotice tone={feedback.tone} title={feedback.title}>
           {feedback.message}
@@ -317,7 +379,7 @@ export function AccountDevicesPage({
                 État
               </dt>
               <dd className="mt-1 font-bold text-slate-950 dark:text-white">
-                {syncStatusLabel(snapshot)}
+                {syncStatusLabel(snapshot, cloudAccess)}
               </dd>
             </div>
             <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-800">
@@ -338,10 +400,18 @@ export function AccountDevicesPage({
             </div>
             <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-800">
               <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                Licence
+              </dt>
+              <dd className="mt-1 font-bold text-slate-950 dark:text-white">
+                {cloudLicenseLabel(snapshot.account.license)}
+              </dd>
+            </div>
+            <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-800">
+              <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                 Dernier échange réussi
               </dt>
               <dd className="mt-1 font-bold text-slate-950 dark:text-white">
-                {formatDateTime(snapshot.diagnostics.lastSyncCompletedAt)}
+                {formatDateTime(lastSuccessfulSyncAt)}
               </dd>
             </div>
           </dl>
@@ -533,6 +603,50 @@ export function AccountDevicesPage({
         </div>
       </Card>
 
+      <Card className="border-red-300 p-5 dark:border-red-900">
+        <div className="flex items-start gap-3">
+          <Trash2
+            aria-hidden="true"
+            className="mt-0.5 size-6 shrink-0 text-red-700 dark:text-red-300"
+          />
+          <div className="min-w-0">
+            <h2 className="text-lg font-bold text-slate-950 dark:text-white">
+              Effacer les données du compte
+            </h2>
+            <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
+              Supprime les données synchronisées, le profil social et les relations
+              associées, puis efface cet espace sur l’appareil. Une sauvegarde JSON
+              est téléchargée avant toute suppression.
+            </p>
+          </div>
+        </div>
+        <label className="mt-4 block max-w-md text-sm font-semibold text-red-950 dark:text-red-100">
+          Saisis EFFACER LE COMPTE
+          <input
+            type="text"
+            value={remoteDeleteConfirmation}
+            onChange={(event) => setRemoteDeleteConfirmation(event.target.value)}
+            className="mt-2 min-h-11 w-full rounded-xl border border-red-300 bg-white px-3 text-slate-950 dark:border-red-800 dark:bg-slate-950 dark:text-white"
+            autoComplete="off"
+            spellCheck={false}
+          />
+        </label>
+        <Button
+          className="mt-4 w-full sm:w-auto"
+          variant="danger"
+          disabled={
+            remoteDeleteConfirmation !== "EFFACER LE COMPTE"
+            || !loggedIn
+            || !accountSpaceActive
+            || actionPending
+          }
+          onClick={() => setRemoteDeleteDialogOpen(true)}
+        >
+          <Trash2 aria-hidden="true" className="size-4" />
+          Effacer partout
+        </Button>
+      </Card>
+
       <ConfirmationDialog
         open={disconnectDialogOpen}
         title="Déconnecter le compte ?"
@@ -574,6 +688,23 @@ export function AccountDevicesPage({
           void runAction("delete", () =>
             deleteLocalData(runtimeClient, managementOptions),
           );
+        }}
+      />
+
+      <ConfirmationDialog
+        open={remoteDeleteDialogOpen}
+        title="Effacer les données cloud et locales ?"
+        description="La sauvegarde sera créée d’abord. SportPilot vérifiera ensuite la suppression distante avant d’effacer cet espace local. Cette opération est irréversible sans la sauvegarde JSON."
+        confirmLabel="Créer la sauvegarde et tout effacer"
+        tone="danger"
+        isPending={pendingAction === "deleteRemote"}
+        onCancel={() => setRemoteDeleteDialogOpen(false)}
+        onConfirm={() => {
+          setRemoteDeleteDialogOpen(false);
+          void runAction("deleteRemote", async () => {
+            await createSafetyBackup("before-cloud-account-reset");
+            await deleteCloudAndLocalData(runtimeClient, managementOptions);
+          });
         }}
       />
     </section>

@@ -122,6 +122,7 @@ function createFakeClient(realWeightSyncEnabled = false) {
           account: {
             isLoggedIn: true,
             isLoading: false,
+            userId: 'account-user',
             email: 'test@example.com',
           },
           sync: {
@@ -402,7 +403,7 @@ describe('écran du prototype Dexie Cloud', () => {
     );
 
     expect(submitInteraction).toHaveBeenCalledWith({ otp: 'A1B2C3' });
-    expect(await screen.findByText('Connecté')).toBeInTheDocument();
+    expect(await screen.findByText('Connecté et opérationnel')).toBeInTheDocument();
     expect(screen.getByText('test@example.com')).toBeInTheDocument();
   });
 

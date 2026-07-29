@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { WorkoutTemplateEditorPage } from '@/features/strength-templates/pages/WorkoutTemplateEditorPage';
 import { appDatabase } from '@/infrastructure/database/database';
 import { initializeDatabase } from '@/infrastructure/database/databaseLifecycle';
+import { defaultWorkoutTemplateFormValues } from '@/features/strength-templates/utils/workoutTemplateForm';
 
 describe('WorkoutTemplateEditorPage', () => {
   beforeEach(async () => {
@@ -11,12 +12,14 @@ describe('WorkoutTemplateEditorPage', () => {
     appDatabase.close();
     await appDatabase.delete();
     await initializeDatabase();
+    window.sessionStorage.clear();
   });
 
   afterEach(async () => {
     cleanup();
     appDatabase.close();
     await appDatabase.delete();
+    window.sessionStorage.clear();
   });
 
   it('crée une séance modèle avec un exercice du catalogue', async () => {
@@ -84,5 +87,49 @@ describe('WorkoutTemplateEditorPage', () => {
       exerciseGroupRestBetweenRoundsSeconds: 90,
     });
   }, 15_000);
+
+  it('restaure le brouillon et insère l’exercice créé à la position attendue', async () => {
+    const definition = (await appDatabase.exerciseDefinitions.toArray())[0]!;
+    const draftKey = 'strength-template-draft:test-return';
+    window.sessionStorage.setItem(draftKey, JSON.stringify({
+      ...defaultWorkoutTemplateFormValues,
+      name: 'Brouillon conservé',
+    }));
+
+    render(
+      <MemoryRouter initialEntries={[{
+        pathname: '/strength/templates/new',
+        state: {
+          strengthExerciseCreationContext: {
+            returnTo: 'template',
+            query: 'Exercice personnel',
+            insertionIndex: 0,
+            draftKey,
+          },
+          strengthExerciseCreated: {
+            exerciseId: definition.id,
+            context: {
+              returnTo: 'template',
+              query: 'Exercice personnel',
+              insertionIndex: 0,
+              draftKey,
+            },
+          },
+        },
+      }]}>
+        <Routes>
+          <Route path="/strength/templates/new" element={<WorkoutTemplateEditorPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByLabelText(/Nom de la séance/))
+      .toHaveValue('Brouillon conservé');
+    const exerciseSelect = screen.getAllByRole('combobox').find(
+      (element) => element.id.startsWith('workout-template-exercise-'),
+    );
+    expect(exerciseSelect).toHaveValue(definition.id);
+    expect(window.sessionStorage.getItem(draftKey)).toBeNull();
+  });
 
 });

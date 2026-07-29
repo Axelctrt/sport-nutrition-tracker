@@ -68,7 +68,8 @@ for (const [label, content] of [
 const privacyRequiredCopy = [
   'IndexedDB',
   'Open Food Facts',
-  'Les images sont analysées dans le navigateur',
+  'L’analyse nutritionnelle reste locale par défaut',
+  'Google Gemini après ton consentement',
   'ne remplace pas un médecin',
 ];
 for (const copy of privacyRequiredCopy) {

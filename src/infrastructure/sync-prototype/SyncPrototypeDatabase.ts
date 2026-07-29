@@ -1,6 +1,7 @@
 import Dexie, { type Table } from 'dexie';
 import dexieCloud from 'dexie-cloud-addon';
 import type { Activity } from '@/domain/models/activity';
+import type { PlannedEnduranceSession } from '@/domain/planning/endurancePlanningState';
 import type { Goal } from '@/domain/goals/goalState';
 import type { DeletionRecord } from '@/domain/models/deletion';
 import type { EntityId } from '@/domain/models/common';
@@ -8,6 +9,7 @@ import type { WeightEntry } from '@/domain/models/weight';
 import type {
   NutritionJournalDayAggregate,
 } from '@/infrastructure/sync-prototype/realNutritionJournalSyncService';
+import type { DailyCoachingDayAggregate } from '@/infrastructure/sync-prototype/realDailyCoachingSyncService';
 import type {
   NutritionRecipeAggregate,
 } from '@/infrastructure/sync-prototype/realNutritionLibrarySyncService';
@@ -33,9 +35,10 @@ import type {
 import type { CloudFriendRequest, CloudFriendship } from '@/domain/friends/socialIdentity';
 import type { CloudFriendActivityPermissionRecord } from '@/domain/friends/socialCloudFriendship';
 import type { CloudSocialActivitySnapshotRecord } from '@/domain/friends/socialCloudActivitySnapshot';
+import type { LogicalSyncBaseline } from '@/infrastructure/sync-prototype/logicalSyncState';
 
 export const LEGACY_SYNC_PROTOTYPE_DATABASE_NAME = 'sportpilot-sync-prototype';
-export const SYNC_PROTOTYPE_DATABASE_VERSION = 14;
+export const SYNC_PROTOTYPE_DATABASE_VERSION = 16;
 export const SYNC_PROTOTYPE_DATABASE_NAME =
   `sportpilot-sync-runtime-0.20.0-v${SYNC_PROTOTYPE_DATABASE_VERSION}`;
 export const SYNC_PROTOTYPE_TABLE_NAMES = [
@@ -44,6 +47,7 @@ export const SYNC_PROTOTYPE_TABLE_NAMES = [
   'realWeights',
   'realWeightDeletionRecords',
   'realActivities',
+  'realEndurancePlanningSessions',
   'realActivityDeletionRecords',
   'realGoals',
   'realGoalDeletionRecords',
@@ -60,12 +64,14 @@ export const SYNC_PROTOTYPE_TABLE_NAMES = [
   'realNutritionTracking',
   'realAccountPreferences',
   'realRewardsRoutines',
+  'realDailyCoachingDays',
   'socialIdentities',
   'socialHandleReservations',
   'socialFriendRequests',
   'socialFriendships',
   'socialFriendPermissions',
   'socialActivitySnapshots',
+  'realSyncBaselines',
 ] as const;
 
 export class SyncPrototypeDatabase extends Dexie {
@@ -74,6 +80,7 @@ export class SyncPrototypeDatabase extends Dexie {
   declare realWeights: Table<WeightEntry, EntityId>;
   declare realWeightDeletionRecords: Table<DeletionRecord, EntityId>;
   declare realActivities: Table<Activity, EntityId>;
+  declare realEndurancePlanningSessions: Table<PlannedEnduranceSession, EntityId>;
   declare realActivityDeletionRecords: Table<DeletionRecord, EntityId>;
   declare realGoals: Table<Goal, EntityId>;
   declare realGoalDeletionRecords: Table<DeletionRecord, EntityId>;
@@ -90,12 +97,14 @@ export class SyncPrototypeDatabase extends Dexie {
   declare realNutritionTracking: Table<NutritionTrackingAggregate, EntityId>;
   declare realAccountPreferences: Table<AccountPreferencesAggregate, EntityId>;
   declare realRewardsRoutines: Table<RewardsRoutinesAggregate, EntityId>;
+  declare realDailyCoachingDays: Table<DailyCoachingDayAggregate, EntityId>;
   declare socialIdentities: Table<SocialCloudIdentityRecord, EntityId>;
   declare socialHandleReservations: Table<SocialHandleReservation, EntityId>;
   declare socialFriendRequests: Table<CloudFriendRequest, EntityId | string>;
   declare socialFriendships: Table<CloudFriendship, EntityId | string>;
   declare socialFriendPermissions: Table<CloudFriendActivityPermissionRecord, EntityId | string>;
   declare socialActivitySnapshots: Table<CloudSocialActivitySnapshotRecord, EntityId | string>;
+  declare realSyncBaselines: Table<LogicalSyncBaseline, string>;
 
   constructor(
     { databaseUrl }: EnabledSyncPrototypeConfig,
@@ -153,6 +162,8 @@ export class SyncPrototypeDatabase extends Dexie {
       realWeightDeletionRecords:
         'id, entityType, entityId, status, deletedAt, restoredAt, updatedAt, [entityType+entityId]',
       realActivities: 'id, date, type, [date+type], updatedAt',
+      realEndurancePlanningSessions:
+        'id, date, activityType, status, updatedAt',
       realActivityDeletionRecords:
         'id, entityType, entityId, status, deletedAt, restoredAt, updatedAt, [entityType+entityId]',
       realGoals: 'id, metric, status, startDate, deadline, updatedAt',
@@ -174,12 +185,14 @@ export class SyncPrototypeDatabase extends Dexie {
       realNutritionTracking: 'id, updatedAt',
       realAccountPreferences: 'id, updatedAt',
       realRewardsRoutines: 'id, updatedAt',
+      realDailyCoachingDays: 'id, date, updatedAt',
       socialIdentities: 'id, &userId, &handle, updatedAt',
       socialHandleReservations: 'id, &handle, ownerUserId, updatedAt',
       socialFriendRequests: 'id, requesterUserId, recipientUserId, status, requestedAt, updatedAt, [recipientUserId+status], [requesterUserId+status]',
       socialFriendships: 'id, userAId, userBId, status, updatedAt, [userAId+status], [userBId+status]',
       socialFriendPermissions: 'id, ownerUserId, friendUserId, sharingLevel, updatedAt, [ownerUserId+friendUserId]',
       socialActivitySnapshots: 'id, ownerUserId, publishedForUserId, sourceActivityId, activityType, date, scope, updatedAt, [publishedForUserId+date], [ownerUserId+publishedForUserId]',
+      realSyncBaselines: 'id, accountUserId, domainId, entityId, updatedAt, [accountUserId+domainId]',
     });
 
     this.cloud.configure({
@@ -190,6 +203,7 @@ export class SyncPrototypeDatabase extends Dexie {
       nameSuffix: true,
       socialAuth: false,
       disableEagerSync: true,
+      unsyncedTables: ['realSyncBaselines'],
     });
   }
 }

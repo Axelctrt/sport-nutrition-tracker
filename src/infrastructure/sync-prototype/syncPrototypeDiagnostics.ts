@@ -50,7 +50,20 @@ export interface SyncPrototypeDiagnosticReport {
   };
 }
 
-export function createSyncPrototypeAccountFingerprint(
+const LEGACY_DATA_SPACE_REGISTRY_KEY = 'sportpilot:data-spaces:v1';
+const FNV_64_PRIME = 0x100000001b3n;
+const FNV_64_MASK = 0xffffffffffffffffn;
+
+function fnv1a64(value: string, offset: bigint): string {
+  let hash = offset;
+  for (const character of value) {
+    hash ^= BigInt(character.codePointAt(0) ?? 0);
+    hash = (hash * FNV_64_PRIME) & FNV_64_MASK;
+  }
+  return hash.toString(16).padStart(16, '0');
+}
+
+export function createLegacySyncPrototypeAccountFingerprint(
   accountId: string | undefined,
 ): string | undefined {
   if (!accountId) return undefined;
@@ -62,6 +75,49 @@ export function createSyncPrototypeAccountFingerprint(
   }
 
   return `acct-${(hash >>> 0).toString(16).padStart(8, '0').toUpperCase()}`;
+}
+
+function registeredLegacyFingerprint(
+  accountId: string,
+): string | undefined {
+  if (typeof window === 'undefined') return undefined;
+  const legacy = createLegacySyncPrototypeAccountFingerprint(accountId);
+  if (!legacy) return undefined;
+
+  try {
+    const raw = window.localStorage.getItem(LEGACY_DATA_SPACE_REGISTRY_KEY);
+    if (!raw) return undefined;
+    const registry = JSON.parse(raw) as {
+      readonly spaces?: readonly {
+        readonly accountFingerprint?: string;
+      }[];
+    };
+    return registry.spaces?.some(
+      (space) =>
+        space.accountFingerprint?.toLowerCase() === legacy.toLowerCase(),
+    )
+      ? legacy
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export function createSyncPrototypeAccountFingerprint(
+  accountId: string | undefined,
+): string | undefined {
+  if (!accountId) return undefined;
+
+  const normalized = accountId.trim().toLowerCase();
+  const legacy = registeredLegacyFingerprint(normalized);
+  if (legacy) return legacy;
+
+  const first = fnv1a64(normalized, 0xcbf29ce484222325n);
+  const second = fnv1a64(
+    `sportpilot-account-space:${normalized}`,
+    0x84222325cbf29ce4n,
+  );
+  return `acct-${`${first}${second}`.toUpperCase()}`;
 }
 
 export function createEmptySyncPrototypeDiagnostics(

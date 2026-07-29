@@ -1,6 +1,9 @@
 import {
   routePaths,
   barcodeScannerPath,
+  dashboardMealAddPath,
+  foodJournalMealPath,
+  foodJournalMealComposerPath,
   favoriteMealsForMealPath,
   photoNutritionEstimatePath,
   recipesForMealPath,
@@ -16,6 +19,12 @@ import {
 } from '@/app/routePaths';
 
 describe('parcours de sélection alimentaire', () => {
+  it('ouvre le journal sur un repas précis et peut demander le panneau d’ajout', () => {
+    expect(foodJournalMealPath('2026-07-10', 'dinner', true)).toBe(
+      '/food?date=2026-07-10&slot=dinner&add=true',
+    );
+  });
+
   it('conserve la date, le repas et le produit présélectionné', () => {
     expect(selectFoodPath('2026-06-24', 'breakfast', 'product-1')).toBe(
       '/food/select?date=2026-06-24&slot=breakfast&productId=product-1',
@@ -172,5 +181,34 @@ describe('architecture des paramètres', () => {
     expect(routePaths.settingsAppearanceAccessibility).toBe('/settings/appearance-accessibility');
     expect(routePaths.settingsDataBackup).toBe('/settings/data-backup');
     expect(routePaths.settingsAdvanced).toBe('/settings/advanced');
+  });
+
+  it('préremplit le nom ou le code-barres et conserve la source de recherche', () => {
+    expect(newFoodProductForMealPath('2026-06-24', 'lunch', {
+      name: 'Yaourt grec',
+      returnSource: 'all',
+    })).toBe(
+      '/food/products/new?returnDate=2026-06-24&returnSlot=lunch&name=Yaourt+grec&returnSource=all',
+    );
+    expect(newFoodProductForMealPath('2026-06-24', 'lunch', {
+      barcode: '3017624010701',
+      returnSource: 'openFoodFacts',
+    })).toContain('barcode=3017624010701');
+  });
+});
+
+describe('panneau repas du tableau de bord', () => {
+  it('memorise le repas et l etape des methodes', () => {
+    expect(dashboardMealAddPath('dinner', 'method')).toBe(
+      '/?panel=meal-add&slot=dinner&step=method',
+    );
+  });
+});
+
+describe('composition d un repas', () => {
+  it('conserve le repas et l etape de composition', () => {
+    expect(foodJournalMealComposerPath('2026-07-10', 'dinner', 'overview')).toBe(
+      '/food?date=2026-07-10&slot=dinner&add=true&step=overview',
+    );
   });
 });

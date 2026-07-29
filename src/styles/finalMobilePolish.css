@@ -1,0 +1,70 @@
+/* Finition mobile globale chargée avec la navigation principale. */
+
+/* Un seul point n'est pas une tendance : on affiche un repère compact et centré. */
+div[role="img"]:has(> i:only-child) {
+  position: relative;
+  height: 3rem;
+  align-items: center;
+  justify-content: center;
+  padding-inline: 0.75rem;
+}
+
+div[role="img"]:has(> i:only-child)::before {
+  content: "";
+  position: absolute;
+  left: 0.75rem;
+  right: 0.75rem;
+  top: 50%;
+  height: 1px;
+  background: color-mix(in srgb, var(--sp-chart-1) 22%, var(--sp-border-subtle));
+}
+
+div[role="img"] > i:only-child {
+  z-index: 1;
+  flex: 0 0 0.8rem;
+  width: 0.8rem;
+  min-width: 0.8rem;
+  height: 0.8rem !important;
+  border: 2px solid var(--sp-surface-elevated);
+  border-radius: 999px;
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--sp-chart-1) 24%, transparent),
+    0 4px 14px color-mix(in srgb, var(--sp-chart-1) 28%, transparent);
+}
+
+/* Deux ou trois valeurs restent compactes mais suffisamment espacées pour lire la tendance. */
+div[role="img"]:has(> i:first-child:nth-last-child(2)),
+div[role="img"]:has(> i:first-child:nth-last-child(3)) {
+  gap: 0.45rem;
+  padding-inline: 0.5rem;
+}
+
+div[role="img"]:has(> i:first-child:nth-last-child(2)) > i,
+div[role="img"]:has(> i:first-child:nth-last-child(3)) > i {
+  max-width: 2.75rem;
+  border-radius: 0.35rem 0.35rem 0.15rem 0.15rem;
+}
+
+@media (hover: none), (pointer: coarse) {
+  .sp-card--interactive,
+  [data-responsive-essential="action"] {
+    transition:
+      transform 140ms var(--sp-ease-standard),
+      filter 140ms var(--sp-ease-standard),
+      border-color 220ms var(--sp-ease-standard),
+      box-shadow 220ms var(--sp-ease-standard);
+  }
+
+  .sp-card--interactive:active,
+  [data-responsive-essential="action"]:active {
+    transform: scale(0.97);
+    filter: brightness(0.96);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sp-card--interactive,
+  [data-responsive-essential="action"] {
+    transition: none !important;
+  }
+}

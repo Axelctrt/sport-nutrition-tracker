@@ -9,7 +9,7 @@ const failures = [];
 const fail = (message) => failures.push(message);
 
 const requiredFiles = [
-  'RELEASE-NOTES-0.32.0.md',
+  'RELEASE-NOTES-0.34.0.md',
   'RELEASE-CHECKLIST.md',
   'docs/onboarding-compact-0.32.0.md',
   'e2e/onboarding-compact.spec.ts',
@@ -29,9 +29,9 @@ for (const path of requiredFiles) {
 if (failures.length === 0) {
   const packageJson = JSON.parse(read('package.json'));
   const packageLock = JSON.parse(read('package-lock.json'));
-  if (packageJson.version !== '0.32.0') fail(`package.json doit publier 0.32.0, reçu ${packageJson.version}.`);
-  if (packageLock.version !== '0.32.0' || packageLock.packages?.['']?.version !== '0.32.0') {
-    fail('package-lock.json doit être aligné sur 0.32.0.');
+  if (packageJson.version !== '0.34.0') fail(`package.json doit publier 0.34.0, reçu ${packageJson.version}.`);
+  if (packageLock.version !== '0.34.0' || packageLock.packages?.['']?.version !== '0.34.0') {
+    fail('package-lock.json doit être aligné sur 0.34.0.');
   }
   if (!isStableVersionAtLeast(packageJson.version, 20)) {
     fail('la version courante doit être reconnue comme stable par le garde-fou partagé.');
@@ -58,14 +58,14 @@ if (failures.length === 0) {
     ['synchronisation automatique', automaticSyncAudit],
     ['récompenses', rewardAudit],
   ]) {
-    if (!source.includes('3200 * 1024')) fail(`le budget JavaScript ${label} n’est pas aligné sur 3200 Kio.`);
+    if (!source.includes('3340 * 1024')) fail(`le budget JavaScript ${label} n’est pas aligné sur 3340 Kio.`);
     if (source.includes('2940 * 1024')) fail(`le budget JavaScript ${label} conserve l’ancien seuil de 2940 Kio.`);
   }
 
   const navigationAudit = read('scripts/audit-unified-sync-center.mjs');
   for (const marker of [
     'navigationItemIsActive(location.pathname, item)',
-    'ne sélectionne que Rappels sur sa route dédiée',
+    'conserve une navigation secondaire courte et laisse Paramètres actif sur ses sous-pages',
     'Le raccourci Paramètres de l’en-tête ne doit pas exposer un état actif',
   ]) {
     if (!navigationAudit.includes(marker)) fail(`le garde-fou E3 actuel est incomplet : ${marker}.`);
@@ -86,30 +86,34 @@ if (failures.length === 0) {
 
   const photoAudit = read('scripts/audit-photo-ai.mjs');
   for (const marker of [
-    'Autoriser l’analyse IA pour cette photo',
-    'Autoriser l’analyse IA distante pour cette photo',
+    'Activer l’analyse IA pour cette photo',
+    'Une connexion SportPilot valide sera vérifiée avant tout envoi pour cette analyse.',
   ]) {
     if (!photoAudit.includes(marker)) fail(`l’audit Photo IA ne suit pas le consentement actuel : ${marker}.`);
   }
 
-  const releaseNotes = read('RELEASE-NOTES-0.32.0.md');
+  const releaseNotes = read('RELEASE-NOTES-0.34.0.md');
   const checklist = read('RELEASE-CHECKLIST.md');
   const onboardingDocumentation = read('docs/onboarding-compact-0.32.0.md');
   for (const marker of [
-    'SportPilot 0.32.0',
-    'Tag attendu : `v0.32.0`',
-    'Migration Dexie : aucune',
-    'budget de production actuel de 3 200 Kio',
-    'Connecter un compte',
-    'résumé final seul autorisé à faire défiler toute la page',
+    'SportPilot 0.34.0',
+    'Branche de publication : `release/0.34.0`',
+    'Tag prévu : `v0.34.0`',
+    'Performance Glass',
+    'Neon Pulse',
+    'Progression et Analyses',
+    'Journée complétée',
+    'Aucune donnée locale n’est supprimée',
   ]) {
     if (!releaseNotes.includes(marker)) fail(`notes de release incomplètes : ${marker}.`);
   }
   for (const marker of [
-    'release/0.32.0',
-    'Tag annoté `v0.32.0`',
-    'audit:release-consolidation',
-    'test:e2e:onboarding',
+    'Branche `release/0.34.0` créée',
+    'Tag annoté `v0.34.0`',
+    'Lint, TypeScript, tests, build PWA, audits et budget JavaScript passent',
+    'Playwright passe sur Chromium desktop et WebKit iPhone 15',
+    'La mise à jour réelle du service worker conserve les données',
+    'Obtenir une Preview de recette sur le commit de publication',
   ]) {
     if (!checklist.includes(marker)) fail(`checklist de publication incomplète : ${marker}.`);
   }
@@ -158,15 +162,15 @@ if (failures.length === 0) {
   const versions = read('src/infrastructure/database/migrations/versions.ts');
   const backup = read('src/infrastructure/backup/backupMigrations.ts');
   const cloud = read('src/infrastructure/sync-prototype/SyncPrototypeDatabase.ts');
-  if (!/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_10\b/.test(versions)) fail('Dexie doit rester en v10.');
-  if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*9\b/.test(backup)) fail('la sauvegarde JSON doit rester en v9.');
-  if (!cloud.includes('SYNC_PROTOTYPE_DATABASE_VERSION = 14')) fail('le runtime cloud doit rester en v14.');
+  if (!/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_11\b/.test(versions)) fail('Dexie doit rester en v11.');
+  if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*10\b/.test(backup)) fail('la sauvegarde JSON doit rester en v10.');
+  if (!cloud.includes('SYNC_PROTOTYPE_DATABASE_VERSION = 16')) fail('le runtime cloud doit utiliser la v16.');
 }
 
 if (failures.length > 0) {
-  console.error('Audit de consolidation 0.32.0 échoué :');
+  console.error('Audit de consolidation 0.34.0 échoué :');
   for (const failure of failures) console.error(`- ${failure}`);
   process.exit(1);
 }
 
-console.log('Audit de consolidation 0.32.0 réussi : version, audits, budgets, navigation, consentements et contrats de stockage sont alignés.');
+console.log('Audit de consolidation 0.34.0 réussi : version, audits, budgets, navigation, consentements et contrats de stockage sont alignés.');

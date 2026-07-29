@@ -58,7 +58,7 @@ describe('sauvegarde amis et confidentialité', () => {
 
       const envelope = await createBackupEnvelope(source, '2026-07-05T10:30:00.000Z');
 
-      expect(envelope.schemaVersion).toBe(9);
+      expect(envelope.schemaVersion).toBe(10);
       expect(envelope.data.friendProfiles).toEqual([
         expect.objectContaining({ userId: 'social-user:backup-runner', handle: 'backup.runner' }),
       ]);

@@ -1,11 +1,19 @@
 import { Dumbbell, Plus, Search, SlidersHorizontal } from 'lucide-react';
-import { useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { editStrengthExercisePath, routePaths } from '@/app/routePaths';
+import {
+  findSimilarExerciseDefinitions,
+  normalizeExerciseName,
+} from '@/application/strength/exerciseDefinitionService';
 import type { ExerciseEquipment, ExerciseSource, MuscleGroup } from '@/domain/models/strength';
 import { StrengthExerciseLibraryCard } from '@/features/strength-exercises/components/StrengthExerciseLibraryCard';
 import { StrengthExercisesSummary } from '@/features/strength-exercises/components/StrengthExercisesSummary';
 import { useStrengthExercises } from '@/features/strength-exercises/hooks/useStrengthExercises';
+import {
+  newStrengthExercisePath,
+  type StrengthExerciseCreatedNavigationState,
+} from '@/features/strength-exercises/navigation/strengthExerciseCreationNavigation';
 import { equipmentOptions, muscleGroupOptions } from '@/features/strength-exercises/utils/exerciseLabels';
 import { checkboxClassName, inputClassName } from '@/shared/forms/formStyles';
 import { useActionToast } from '@/shared/toast/useActionToast';
@@ -18,6 +26,9 @@ import { PageSkeleton } from '@/shared/ui/PageSkeleton';
 export function StrengthExercisesPage() {
   const actionToast = useActionToast();
   const navigate = useNavigate();
+  const location = useLocation();
+  const navigationState =
+    location.state as StrengthExerciseCreatedNavigationState | null;
   const [query, setQuery] = useState('');
   const [muscleGroup, setMuscleGroup] = useState<MuscleGroup | 'all'>('all');
   const [equipment, setEquipment] = useState<ExerciseEquipment | 'all'>('all');
@@ -28,6 +39,7 @@ export function StrengthExercisesPage() {
     [query, muscleGroup, equipment, source, includeArchived],
   );
   const {
+    allExercises,
     exercises,
     status,
     errorMessage,
@@ -37,6 +49,41 @@ export function StrengthExercisesPage() {
     setArchived,
     duplicate,
   } = useStrengthExercises(filters);
+  const normalizedQuery = normalizeExerciseName(query);
+  const similarExercises = useMemo(
+    () => findSimilarExerciseDefinitions(allExercises, query),
+    [allExercises, query],
+  );
+  const [highlightedExerciseId, setHighlightedExerciseId] = useState<string>();
+
+  useEffect(() => {
+    const context = navigationState?.strengthExerciseCreationContext;
+    if (context?.returnTo === 'library' && !navigationState?.strengthExerciseCreated) {
+      setQuery(context.query);
+    }
+    const created = navigationState?.strengthExerciseCreated;
+    if (!created || created.context.returnTo !== 'library') return;
+    setQuery('');
+    setHighlightedExerciseId(created.exerciseId);
+    actionToast.success({
+      key: `strength-exercise-created-added:${created.exerciseId}`,
+      title: 'Exercice créé',
+    });
+    void navigate(routePaths.strengthExercises, { replace: true });
+  }, [actionToast, navigate, navigationState]);
+
+  useEffect(() => {
+    if (!highlightedExerciseId || status !== 'ready') return;
+    const element = document.getElementById(
+      `strength-exercise-${highlightedExerciseId}`,
+    );
+    element?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+    const timeout = window.setTimeout(
+      () => setHighlightedExerciseId(undefined),
+      2_500,
+    );
+    return () => window.clearTimeout(timeout);
+  }, [highlightedExerciseId, status]);
 
   const duplicateAndEdit = async (id: string) => {
     const created = await duplicate(id);
@@ -162,9 +209,52 @@ export function StrengthExercisesPage() {
         <EmptyState
           className="mt-5"
           icon={Dumbbell}
-          title="Aucun exercice trouvé"
-          description="Modifie la recherche ou les filtres, ou crée un exercice personnel."
-          primaryAction={<Link to={routePaths.newStrengthExercise} className="inline-flex min-h-11 items-center justify-center rounded-xl bg-brand-700 px-4 text-sm font-semibold text-white">Créer un exercice</Link>}
+          title={
+            normalizedQuery
+              ? `Aucun exercice trouvé pour « ${query.trim()} »`
+              : 'Aucun exercice trouvé'
+          }
+          description={
+            similarExercises.length > 0
+              ? 'Vérifie les exercices similaires avant de créer un doublon.'
+              : 'Modifie la recherche ou les filtres, ou crée un exercice personnel.'
+          }
+          primaryAction={
+            normalizedQuery ? (
+              <div className="space-y-3">
+                {similarExercises.length > 0 ? (
+                  <div className="text-left">
+                    <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                      Exercices similaires
+                    </p>
+                    <ul className="mt-2 space-y-1 text-sm text-slate-600 dark:text-slate-300">
+                      {similarExercises.map((exercise) => (
+                        <li key={exercise.id}>{exercise.name}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+                <Link
+                  to={newStrengthExercisePath({
+                    returnTo: 'library',
+                    query: query.trim(),
+                  })}
+                  className="inline-flex min-h-11 items-center justify-center rounded-xl bg-brand-700 px-4 text-sm font-semibold text-white"
+                >
+                  {similarExercises.length > 0
+                    ? 'Aucun ne correspond — créer l’exercice'
+                    : 'Créer cet exercice'}
+                </Link>
+              </div>
+            ) : (
+              <Link
+                to={routePaths.newStrengthExercise}
+                className="inline-flex min-h-11 items-center justify-center rounded-xl bg-brand-700 px-4 text-sm font-semibold text-white"
+              >
+                Créer un exercice
+              </Link>
+            )
+          }
         />
       ) : null}
 
@@ -177,6 +267,7 @@ export function StrengthExercisesPage() {
               busy={actionId === exercise.id}
               onArchiveChange={changeArchived}
               onDuplicate={duplicateAndEdit}
+              highlighted={highlightedExerciseId === exercise.id}
             />
           ))}
         </div>

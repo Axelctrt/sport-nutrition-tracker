@@ -115,7 +115,6 @@ export function ProfileForm({
         title="Informations personnelles"
         description="Identité, âge, taille et poids de référence."
         summary="Essentiel"
-        defaultOpen
       >
         <fieldset className="min-w-0 space-y-5">
           <legend className="sr-only">Informations personnelles</legend>
@@ -266,7 +265,6 @@ export function ProfileForm({
         title="Objectif et activité quotidienne"
         description="Objectif de poids, activité professionnelle et pas quotidiens."
         summary="Suivi"
-        defaultOpen
       >
         <fieldset className="min-w-0 space-y-5">
           <legend className="sr-only">Objectif et activité quotidienne</legend>

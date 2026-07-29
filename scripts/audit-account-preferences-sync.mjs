@@ -48,7 +48,7 @@ if (failures.length === 0) {
 
   const database = read('src/infrastructure/sync-prototype/SyncPrototypeDatabase.ts');
   for (const marker of [
-    'SYNC_PROTOTYPE_DATABASE_VERSION = 14',
+    'SYNC_PROTOTYPE_DATABASE_VERSION = 16',
     "'realAccountPreferences'",
     "realAccountPreferences: 'id, updatedAt'",
   ]) {
@@ -97,11 +97,11 @@ if (failures.length === 0) {
   const localVersions = read(
     'src/infrastructure/database/migrations/versions.ts',
   );
-  if (!/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_10\b/.test(localVersions)) {
+  if (!/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_11\b/.test(localVersions)) {
     fail('La base métier doit rester en Dexie v8.');
   }
   const backup = read('src/infrastructure/backup/backupMigrations.ts');
-  if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*9\b/.test(backup)) {
+  if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*10\b/.test(backup)) {
     fail('La sauvegarde JSON doit rester en v7.');
   }
 
@@ -126,5 +126,5 @@ if (failures.length > 0) {
 }
 
 console.log(
-  'Audit E1 réussi : profil, réglages partageables, exclusions appareil/domaine E2, restauration initiale, isolation et runtime cloud v14 validés.',
+  'Audit E1 réussi : profil, réglages partageables, exclusions appareil/domaine E2, restauration initiale, isolation et runtime cloud v16 validés.',
 );

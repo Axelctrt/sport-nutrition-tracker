@@ -21,12 +21,6 @@ function pathIsActive(pathname: string, path: string): boolean {
   return pathname === path || pathname.startsWith(`${path}/`);
 }
 
-const MOBILE_MENU_PRIMARY_LIMITS: Record<string, number> = {
-  Sport: 3,
-  Progression: 3,
-  'Compte et application': 4,
-};
-
 export function MobileAppMenu() {
   const location = useLocation();
   const { isIos, isStandalone } = usePwaEnvironment();
@@ -163,9 +157,6 @@ export function MobileAppMenu() {
 
                 <div className="mt-6 space-y-6">
                   {mobileMoreNavigation.map((section) => {
-                    const primaryLimit = MOBILE_MENU_PRIMARY_LIMITS[section.title] ?? section.items.length;
-                    const primaryItems = section.items.slice(0, primaryLimit);
-                    const secondaryItems = section.items.slice(primaryLimit);
                     const renderMenuItem = (item: (typeof section.items)[number]) => {
                       const Icon = item.icon;
                       return (
@@ -204,21 +195,8 @@ export function MobileAppMenu() {
                           {section.title}
                         </h3>
                         <div className="mt-2 grid gap-2">
-                          {primaryItems.map(renderMenuItem)}
+                          {section.items.map(renderMenuItem)}
                         </div>
-                        {secondaryItems.length > 0 ? (
-                          <details className="mt-2 rounded-2xl border border-slate-200 bg-slate-50/70 dark:border-slate-800 dark:bg-slate-950/50">
-                            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-3 text-sm font-semibold text-slate-700 marker:hidden dark:text-slate-200">
-                              <span>Autres écrans {section.title.toLowerCase()}</span>
-                              <span aria-hidden="true" className="text-xs text-slate-500 dark:text-slate-400">
-                                +{secondaryItems.length}
-                              </span>
-                            </summary>
-                            <div className="grid gap-2 border-t border-slate-200 p-2 dark:border-slate-800">
-                              {secondaryItems.map(renderMenuItem)}
-                            </div>
-                          </details>
-                        ) : null}
                       </div>
                     );
                   })}

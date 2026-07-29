@@ -2,12 +2,15 @@ import { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import Dexie, { type Table } from 'dexie';
 import type { DeletionRecord } from '@/domain/models/deletion';
 import type { WeightEntry } from '@/domain/models/weight';
+import type { LogicalSyncBaseline } from '@/infrastructure/sync-prototype/logicalSyncState';
 
 type CloudWeightEntry = WeightEntry & {
   owner?: string;
   realmId?: string;
   $ts?: number;
   _hasBlobRefs?: 1;
+  syncRevision?: number;
+  syncActorId?: string;
 };
 type CloudDeletionRecord = DeletionRecord & {
   owner?: string;
@@ -25,6 +28,7 @@ import { createDeletedDeletionRecord } from '@/domain/models/deletion';
 class TestCloudDatabase extends Dexie {
   declare realWeights: Table<CloudWeightEntry, string>;
   declare realWeightDeletionRecords: Table<CloudDeletionRecord, string>;
+  declare realSyncBaselines: Table<LogicalSyncBaseline, string>;
 
   constructor() {
     super(`sportpilot-c4-cloud-${crypto.randomUUID()}`);
@@ -32,6 +36,7 @@ class TestCloudDatabase extends Dexie {
       realWeights: 'id, date, updatedAt',
       realWeightDeletionRecords:
         'id, entityType, entityId, status, updatedAt',
+      realSyncBaselines: 'id, accountUserId, domainId, entityId, updatedAt',
     });
   }
 }
@@ -189,6 +194,48 @@ describe('synchronisation C4 des vraies pesées', () => {
 
     expect((await cloud.realWeights.get('#weight:2026-07-02'))?.weightKg).toBe(69);
     expect(second.differingEntityCount).toBe(0);
+  });
+
+  it('résout les conflits suivants par révision logique malgré une horloge incorrecte', async () => {
+    const initial: WeightEntry = {
+      id: 'weight:logical-clock',
+      date: '2026-07-02',
+      weightKg: 70,
+      createdAt: '2026-07-02T07:00:00.000Z',
+      updatedAt: '2026-07-02T08:00:00.000Z',
+    };
+    await local.weights.add(initial);
+    await cloud.realWeights.add({ ...initial, id: `#${initial.id}` });
+    await synchronizeRealWeights(
+      local,
+      cloud as unknown as SyncPrototypeDatabase,
+      'user-1',
+    );
+
+    await local.weights.put({
+      ...initial,
+      weightKg: 68,
+      updatedAt: '2020-01-01T00:00:00.000Z',
+    });
+    await cloud.realWeights.put({
+      ...initial,
+      id: `#${initial.id}`,
+      weightKg: 72,
+      updatedAt: '2040-01-01T00:00:00.000Z',
+      syncRevision: 2,
+      syncActorId: 'remote-device',
+    });
+
+    await synchronizeRealWeights(
+      local,
+      cloud as unknown as SyncPrototypeDatabase,
+      'user-1',
+    );
+
+    expect(await cloud.realWeights.get(`#${initial.id}`)).toMatchObject({
+      weightKg: 68,
+      syncRevision: 3,
+    });
   });
 
   it('propage une suppression plus récente sans résurrection', async () => {

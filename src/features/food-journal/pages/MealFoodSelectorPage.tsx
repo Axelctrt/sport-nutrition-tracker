@@ -23,6 +23,7 @@ import { useMealFoodSelector } from '@/features/food-journal/hooks/useMealFoodSe
 import {
   createFoodJournalFeedbackState,
   createFoodJournalRestoreState,
+  foodJournalCancelPath,
   type FoodJournalNavigationState,
 } from '@/features/food-journal/navigation/foodJournalNavigation';
 import { mealSlotLabels } from '@/features/food-journal/utils/foodLabels';
@@ -34,6 +35,7 @@ import { InlineNotice } from '@/shared/ui/InlineNotice';
 import { PageSkeleton } from '@/shared/ui/PageSkeleton';
 import { formatLocalDate, toLocalDate } from '@/shared/utils/dates';
 import { isValidLocalDate } from '@/shared/validation/localDate';
+import { isSupportedBarcode, sanitizeBarcode } from '@/infrastructure/open-food-facts/barcode';
 
 const mealSlots: readonly MealSlot[] = ['breakfast', 'lunch', 'dinner', 'snacks'];
 const selectorSources: readonly FoodSelectorSource[] = [
@@ -66,6 +68,7 @@ export function MealFoodSelectorPage() {
   const requestedSlot = searchParams.get('slot');
   const requestedProductId = searchParams.get('productId');
   const requestedSource = searchParams.get('source');
+  const directSearchSource = requestedSource === 'all' || requestedSource === 'openFoodFacts';
   const date = requestedDate && isValidLocalDate(requestedDate) ? requestedDate : toLocalDate();
   const mealSlot = isMealSlot(requestedSlot) ? requestedSlot : 'snacks';
   const { data, status, errorMessage, refresh } = useMealFoodSelector();
@@ -76,7 +79,7 @@ export function MealFoodSelectorPage() {
     getLastFoodAddMethod(mealSlot),
   );
   const [query, setQuery] = useState('');
-  const [searchMode, setSearchMode] = useState(false);
+  const [searchMode, setSearchMode] = useState(requestedSource === 'all');
   const [selectedProductId, setSelectedProductId] = useState<string | undefined>(
     requestedProductId ?? undefined,
   );
@@ -102,6 +105,12 @@ export function MealFoodSelectorPage() {
       setSelectedProductId(requestedProductId);
     }
   }, [data, requestedProductId]);
+
+  useEffect(() => {
+    if (status !== 'ready' || requestedSource !== 'all') return;
+    searchInputRef.current?.focus();
+    window.requestAnimationFrame(() => searchInputRef.current?.focus());
+  }, [requestedSource, status]);
 
   const sourceProducts = useMemo(() => {
     if (!data || source === 'openFoodFacts') return [];
@@ -175,12 +184,17 @@ export function MealFoodSelectorPage() {
   return (
     <section className="min-w-0 overflow-x-clip" aria-labelledby="meal-food-selector-title">
       <Link
-        to={navigationState?.foodJournalReturn?.path ?? foodJournalPath(date)}
+        to={foodJournalCancelPath(
+          navigationState?.foodJournalReturn,
+          foodJournalPath(date),
+        )}
         state={createFoodJournalRestoreState(navigationState?.foodJournalReturn)}
         className="hidden items-center gap-2 text-sm font-semibold text-brand-700 hover:underline lg:inline-flex dark:text-brand-300"
       >
         <ArrowLeft aria-hidden="true" className="size-4" />
-        Retour au journal
+        {navigationState?.foodJournalReturn?.addMethodsPath
+          ? 'Retour aux méthodes d’ajout'
+          : 'Retour au journal'}
       </Link>
 
       <div className="mt-5 min-w-0">
@@ -212,31 +226,35 @@ export function MealFoodSelectorPage() {
       {status === 'ready' && data ? (
         <>
           <Card className="mt-6 min-w-0 p-4 sm:p-5">
-            <div>
-              <h2 className="text-lg font-semibold text-slate-950 dark:text-white">
-                Choisir une méthode
-              </h2>
-              <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-                Les aliments locaux restent disponibles hors connexion. Open Food Facts, le scanner et l’IA peuvent nécessiter le réseau.
-              </p>
-            </div>
-            <div className="mt-4">
-              <FoodAddMethodGrid
-                date={date}
-                mealSlot={mealSlot}
-                activeSource={source}
-                searchActive={searchMode}
-                hasFavoriteProducts={data.favoriteProducts.length > 0}
-                lastMethod={lastMethod}
-                navigationState={navigationState}
-                onSelectSource={selectSource}
-                onSearchRequested={requestSearch}
-                onMethodUsed={rememberMethod}
-              />
-            </div>
+            {!directSearchSource ? (
+              <>
+                <div>
+                  <h2 className="text-lg font-semibold text-slate-950 dark:text-white">
+                    Choisir une méthode
+                  </h2>
+                  <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                    Les aliments locaux restent disponibles hors connexion. Open Food Facts, le scanner et l’IA peuvent nécessiter le réseau.
+                  </p>
+                </div>
+                <div className="mt-4">
+                  <FoodAddMethodGrid
+                    date={date}
+                    mealSlot={mealSlot}
+                    activeSource={source}
+                    searchActive={searchMode}
+                    hasFavoriteProducts={data.favoriteProducts.length > 0}
+                    lastMethod={lastMethod}
+                    navigationState={navigationState}
+                    onSelectSource={selectSource}
+                    onSearchRequested={requestSearch}
+                    onMethodUsed={rememberMethod}
+                  />
+                </div>
+              </>
+            ) : null}
 
             {source !== 'openFoodFacts' ? (
-              <div className="mt-5 border-t border-slate-200 pt-5 dark:border-slate-800">
+              <div className={directSearchSource ? '' : 'mt-5 border-t border-slate-200 pt-5 dark:border-slate-800'}>
                 <label htmlFor="meal-food-search" className="text-sm font-semibold text-slate-800 dark:text-slate-100">
                   Rechercher dans mes aliments
                 </label>
@@ -275,6 +293,10 @@ export function MealFoodSelectorPage() {
                 localProducts={data.allProducts}
                 selectedProductId={selectedProductId}
                 onProductReady={handleRemoteProductReady}
+                date={date}
+                mealSlot={mealSlot}
+                navigationState={location.state}
+                autoFocus={requestedSource === 'openFoodFacts'}
               />
             </div>
           ) : (
@@ -315,19 +337,26 @@ export function MealFoodSelectorPage() {
                   description="Essaie un autre nom, recherche dans Open Food Facts ou crée un aliment manuel."
                   primaryAction={(
                     <Link
-                      to={newFoodProductForMealPath(date, mealSlot)}
+                      to={newFoodProductForMealPath(date, mealSlot, {
+                        ...(isSupportedBarcode(query.trim())
+                          ? { barcode: sanitizeBarcode(query.trim()) }
+                          : query.trim()
+                            ? { name: query.trim() }
+                            : {}),
+                        returnSource: source,
+                      })}
                       state={location.state}
                       className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-brand-700 px-4 text-sm font-semibold text-white hover:bg-brand-800"
                     >
                       <Plus aria-hidden="true" className="size-4" />
-                      Créer un aliment
+                      {query.trim() ? 'Créer cet aliment' : 'Créer un aliment'}
                     </Link>
                   )}
-                  secondaryAction={(
+                  secondaryAction={!directSearchSource ? (
                     <Button variant="secondary" onClick={() => selectSource('openFoodFacts')}>
                       Rechercher dans Open Food Facts
                     </Button>
-                  )}
+                  ) : undefined}
                 />
               )}
             </>

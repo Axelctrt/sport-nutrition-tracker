@@ -101,4 +101,38 @@ describe('migration des marqueurs de suppression', () => {
       await Dexie.delete(databaseName);
     }
   });
+
+  it('écarte un payload de corbeille invalide au lieu de le restaurer plus tard', async () => {
+    const databaseName = `sportpilot-invalid-trash-${crypto.randomUUID()}`;
+    const previousDatabase = new Dexie(databaseName);
+    let upgradedDatabase: AppDatabase | undefined;
+
+    try {
+      previousDatabase.version(DATABASE_VERSION_7).stores(schemaVersion7);
+      await previousDatabase.open();
+      await previousDatabase.table('trashItems').add({
+        id: 'meal:corrupted',
+        entityType: 'meal',
+        entityId: 'corrupted',
+        label: 'Repas corrompu',
+        deletedAt: '2026-06-29T12:00:00.000Z',
+        purgeAt: '2026-07-29T12:00:00.000Z',
+        payload: {
+          meal: { id: 'corrupted', date: 'pas-une-date' },
+          entries: 'not-an-array',
+        },
+      });
+      previousDatabase.close();
+
+      upgradedDatabase = new AppDatabase(databaseName);
+      await upgradedDatabase.open();
+
+      expect(await upgradedDatabase.trashItems.count()).toBe(0);
+      expect(await upgradedDatabase.deletionRecords.count()).toBe(0);
+    } finally {
+      previousDatabase.close();
+      upgradedDatabase?.close();
+      await Dexie.delete(databaseName);
+    }
+  });
 });

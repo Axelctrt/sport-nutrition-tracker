@@ -1,4 +1,3 @@
-import type { Table } from 'dexie';
 import type { EntityMetadata } from '@/domain/models/common';
 import type { DeletionRecord } from '@/domain/models/deletion';
 import {
@@ -14,6 +13,7 @@ import type {
 } from '@/domain/models/strength';
 import type { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import type { SyncPrototypeDatabase } from '@/infrastructure/sync-prototype/SyncPrototypeDatabase';
+import { sameLocalCollection } from '@/infrastructure/sync-prototype/localSyncCompareAndSwap';
 import {
   belongsToCurrentUser,
   chooseLatest,
@@ -24,6 +24,15 @@ import {
   type CloudOwned,
   type CloudSyncExecutionOptions,
 } from '@/infrastructure/sync-prototype/cloudSyncValue';
+import {
+  maximumLogicalSyncStamp,
+  persistLogicalSyncBaseline,
+  resolveDatabaseLogicalSyncState,
+  resolveSyncActorId,
+  stripLogicalSyncFields,
+  upsertLogicalCloudValue,
+  type LogicalSyncFields,
+} from '@/infrastructure/sync-prototype/logicalSyncState';
 
 export interface StrengthExerciseAggregate {
   readonly id: string;
@@ -79,6 +88,17 @@ interface StrengthState {
   cloudSessions: WorkoutSessionAggregate[];
   localMarkers: DeletionRecord[];
   cloudMarkers: DeletionRecord[];
+  cloudExerciseRows: readonly CloudOwned<StrengthExerciseAggregate & LogicalSyncFields>[];
+  cloudTemplateRows: readonly CloudOwned<WorkoutTemplateAggregate & LogicalSyncFields>[];
+  cloudSessionRows: readonly CloudOwned<WorkoutSessionAggregate & LogicalSyncFields>[];
+  cloudMarkerRows: readonly CloudOwned<DeletionRecord & LogicalSyncFields>[];
+}
+
+interface StrengthLogicalState {
+  readonly exercises: readonly StrengthExerciseAggregate[];
+  readonly templates: readonly WorkoutTemplateAggregate[];
+  readonly sessions: readonly WorkoutSessionAggregate[];
+  readonly markers: readonly DeletionRecord[];
 }
 
 const STRENGTH_DELETION_TYPES = new Set([
@@ -164,11 +184,18 @@ function fromCloudRow<T extends { id: string }>(
 ): T | undefined {
   const localId = localIdFromCloud(value.id);
   if (!localId) return undefined;
-  return { ...stripCloudFields(value), id: localId } as T;
+  return {
+    ...stripLogicalSyncFields(stripCloudFields(value)),
+    id: localId,
+  } as T;
 }
 
 function mapById<T extends { id: string }>(values: readonly T[]) {
   return new Map(values.map((value) => [value.id, value]));
+}
+
+function sortById<T extends { id: string }>(values: readonly T[]): T[] {
+  return [...values].sort((left, right) => left.id.localeCompare(right.id));
 }
 
 function collectEntitiesById(
@@ -334,26 +361,30 @@ async function readState(
       cloudDatabase.realStrengthDeletionRecords.toArray(),
     ]);
 
-  const cloudExercises = cloudExerciseRows
-    .filter((row) => belongsToCurrentUser(row, currentUserId))
-    .map(fromCloudRow)
-    .filter((row): row is StrengthExerciseAggregate => row !== undefined);
-  const cloudTemplates = cloudTemplateRows
-    .filter((row) => belongsToCurrentUser(row, currentUserId))
-    .map(fromCloudRow)
-    .filter((row): row is WorkoutTemplateAggregate => row !== undefined)
-    .map((row) => templateAggregate(row.template, row.exercises));
-  const cloudSessions = cloudSessionRows
-    .filter((row) => belongsToCurrentUser(row, currentUserId))
-    .map(fromCloudRow)
-    .filter((row): row is WorkoutSessionAggregate => row !== undefined)
-    .map((row) => sessionAggregate(row.session, row.exercises, row.sets));
-  const cloudMarkers = cloudMarkerRows
+  const ownedCloudExerciseRows = cloudExerciseRows
+    .filter((row) => belongsToCurrentUser(row, currentUserId));
+  const ownedCloudTemplateRows = cloudTemplateRows
+    .filter((row) => belongsToCurrentUser(row, currentUserId));
+  const ownedCloudSessionRows = cloudSessionRows
+    .filter((row) => belongsToCurrentUser(row, currentUserId));
+  const ownedCloudMarkerRows = cloudMarkerRows
     .filter(
       (row) =>
         belongsToCurrentUser(row, currentUserId) &&
         STRENGTH_DELETION_TYPES.has(row.entityType),
-    )
+    );
+  const cloudExercises = ownedCloudExerciseRows
+    .map(fromCloudRow)
+    .filter((row): row is StrengthExerciseAggregate => row !== undefined);
+  const cloudTemplates = ownedCloudTemplateRows
+    .map(fromCloudRow)
+    .filter((row): row is WorkoutTemplateAggregate => row !== undefined)
+    .map((row) => templateAggregate(row.template, row.exercises));
+  const cloudSessions = ownedCloudSessionRows
+    .map(fromCloudRow)
+    .filter((row): row is WorkoutSessionAggregate => row !== undefined)
+    .map((row) => sessionAggregate(row.session, row.exercises, row.sets));
+  const cloudMarkers = ownedCloudMarkerRows
     .map(fromCloudRow)
     .filter((row): row is DeletionRecord => row !== undefined);
 
@@ -366,6 +397,10 @@ async function readState(
     cloudSessions,
     localMarkers: local.markers,
     cloudMarkers,
+    cloudExerciseRows: ownedCloudExerciseRows,
+    cloudTemplateRows: ownedCloudTemplateRows,
+    cloudSessionRows: ownedCloudSessionRows,
+    cloudMarkerRows: ownedCloudMarkerRows,
   };
 }
 
@@ -422,108 +457,41 @@ function buildPreview(state: StrengthState): RealStrengthSyncPreview {
   };
 }
 
-async function putCloud<T extends { id: string }>(
-  table: Table<T, string>,
-  current: T | undefined,
-  target: T,
-): Promise<boolean> {
-  if (current && sameEntity(current, target)) return false;
-  await table.put(toCloudRow(target));
-  return true;
-}
+function resolveStrengthLogicalState(
+  localValue: StrengthLogicalState,
+  cloudValue: StrengthLogicalState,
+): StrengthLogicalState {
+  const resolveEntities = <T extends { id: string; updatedAt: string }>(
+    localEntities: readonly T[],
+    cloudEntities: readonly T[],
+  ) => {
+    const localById = mapById(localEntities);
+    const cloudById = mapById(cloudEntities);
+    const ids = new Set([...localById.keys(), ...cloudById.keys()]);
+    return sortById(
+      [...ids]
+        .map((id) => chooseLatest(localById.get(id), cloudById.get(id)))
+        .filter((value): value is T => value !== undefined),
+    );
+  };
 
-async function applyTemplateAggregate(
-  database: AppDatabase,
-  aggregate: WorkoutTemplateAggregate,
-): Promise<void> {
-  await database.transaction(
-    'rw',
-    [database.workoutTemplates, database.workoutTemplateExercises],
-    async () => {
-      const existing = await database.workoutTemplateExercises
-        .where('templateId')
-        .equals(aggregate.id)
-        .toArray();
-      const targetIds = new Set(aggregate.exercises.map((exercise) => exercise.id));
-      const removedIds = existing
-        .filter((exercise) => !targetIds.has(exercise.id))
-        .map((exercise) => exercise.id);
-      await database.workoutTemplates.put(aggregate.template);
-      if (removedIds.length > 0) {
-        await database.workoutTemplateExercises.bulkDelete(removedIds);
-      }
-      if (aggregate.exercises.length > 0) {
-        await database.workoutTemplateExercises.bulkPut([...aggregate.exercises]);
-      }
-    },
+  const markers = resolveMarkers(
+    localValue.markers,
+    cloudValue.markers,
+    localValue.sessions,
+    cloudValue.sessions,
   );
-}
+  const sessions = resolveEntities(
+    localValue.sessions,
+    cloudValue.sessions,
+  ).map((session) => applyMarkersToSession(session, markers));
 
-async function applySessionAggregate(
-  database: AppDatabase,
-  aggregate: WorkoutSessionAggregate,
-): Promise<void> {
-  await database.transaction(
-    'rw',
-    [
-      database.workoutSessions,
-      database.workoutSessionExercises,
-      database.strengthSets,
-    ],
-    async () => {
-      const [existingExercises, existingSets] = await Promise.all([
-        database.workoutSessionExercises
-          .where('sessionId')
-          .equals(aggregate.id)
-          .toArray(),
-        database.strengthSets
-          .where('sessionId')
-          .equals(aggregate.id)
-          .toArray(),
-      ]);
-      const targetExerciseIds = new Set(aggregate.exercises.map((exercise) => exercise.id));
-      const targetSetIds = new Set(aggregate.sets.map((set) => set.id));
-      const removedExerciseIds = existingExercises
-        .filter((exercise) => !targetExerciseIds.has(exercise.id))
-        .map((exercise) => exercise.id);
-      const removedSetIds = existingSets
-        .filter((set) => !targetSetIds.has(set.id))
-        .map((set) => set.id);
-
-      await database.workoutSessions.put(aggregate.session);
-      if (removedSetIds.length > 0) await database.strengthSets.bulkDelete(removedSetIds);
-      if (removedExerciseIds.length > 0) {
-        await database.workoutSessionExercises.bulkDelete(removedExerciseIds);
-      }
-      if (aggregate.exercises.length > 0) {
-        await database.workoutSessionExercises.bulkPut([...aggregate.exercises]);
-      }
-      if (aggregate.sets.length > 0) {
-        await database.strengthSets.bulkPut([...aggregate.sets]);
-      }
-    },
-  );
-}
-
-async function applyDeletedMarker(
-  database: AppDatabase,
-  marker: DeletionRecord,
-): Promise<void> {
-  if (marker.status !== 'deleted') return;
-  if (marker.entityType === 'strengthSet') {
-    await database.strengthSets.delete(marker.entityId);
-    return;
-  }
-  if (marker.entityType === 'workoutSessionExercise') {
-    const sets = await database.strengthSets
-      .where('sessionExerciseId')
-      .equals(marker.entityId)
-      .toArray();
-    if (sets.length > 0) {
-      await database.strengthSets.bulkDelete(sets.map((set) => set.id));
-    }
-    await database.workoutSessionExercises.delete(marker.entityId);
-  }
+  return {
+    exercises: resolveEntities(localValue.exercises, cloudValue.exercises),
+    templates: resolveEntities(localValue.templates, cloudValue.templates),
+    sessions,
+    markers: sortById([...markers.values()]),
+  };
 }
 
 export async function previewRealStrengthSync(
@@ -543,6 +511,44 @@ export async function synchronizeRealStrength(
   const writeCloud = options.writeCloud !== false;
   const state = await readState(localDatabase, cloudDatabase, currentUserId);
   const preview = buildPreview(state);
+  const empty: StrengthLogicalState = {
+    exercises: [],
+    templates: [],
+    sessions: [],
+    markers: [],
+  };
+  const localLogical = resolveStrengthLogicalState({
+    exercises: state.localExercises,
+    templates: state.localTemplates,
+    sessions: state.localSessions,
+    markers: state.localMarkers,
+  }, empty);
+  const cloudLogical = resolveStrengthLogicalState(empty, {
+    exercises: state.cloudExercises,
+    templates: state.cloudTemplates,
+    sessions: state.cloudSessions,
+    markers: state.cloudMarkers,
+  });
+  const mergedLogical = resolveStrengthLogicalState(localLogical, cloudLogical);
+  const actorId = await resolveSyncActorId(localDatabase);
+  const resolution = await resolveDatabaseLogicalSyncState({
+    cloudDatabase,
+    accountUserId: currentUserId,
+    domainId: 'strength',
+    entityId: 'strength',
+    actorId,
+    localValue: localLogical,
+    cloudValue: cloudLogical,
+    cloudStamp: maximumLogicalSyncStamp([
+      ...state.cloudExerciseRows,
+      ...state.cloudTemplateRows,
+      ...state.cloudSessionRows,
+      ...state.cloudMarkerRows,
+    ]),
+    legacyResolve: () => mergedLogical,
+    concurrentResolve: () => mergedLogical,
+  });
+  const final = resolution.value;
   const localExercises = mapById(state.localExercises);
   const cloudExercises = mapById(state.cloudExercises);
   const localTemplates = mapById(state.localTemplates);
@@ -551,113 +557,256 @@ export async function synchronizeRealStrength(
   const cloudSessions = mapById(state.cloudSessions);
   const localMarkers = mapById(state.localMarkers);
   const cloudMarkers = mapById(state.cloudMarkers);
-  const resolvedMarkers = resolveMarkers(
-    state.localMarkers,
-    state.cloudMarkers,
-    state.localSessions,
-    state.cloudSessions,
+  const countChanged = <T extends { id: string }>(
+    current: ReadonlyMap<string, T>,
+    target: readonly T[],
+  ) => target.filter((value) => !sameEntity(current.get(value.id), value)).length;
+  const uploadedExercises = writeCloud
+    ? countChanged(cloudExercises, final.exercises)
+    : 0;
+  const downloadedExercises = countChanged(localExercises, final.exercises);
+  const uploadedTemplates = writeCloud
+    ? countChanged(cloudTemplates, final.templates)
+    : 0;
+  const downloadedTemplates = countChanged(localTemplates, final.templates);
+  const uploadedSessions = writeCloud
+    ? countChanged(cloudSessions, final.sessions)
+    : 0;
+  const downloadedSessions = countChanged(localSessions, final.sessions);
+  const uploadedDeletionRecords = writeCloud
+    ? countChanged(cloudMarkers, final.markers)
+    : 0;
+  const downloadedDeletionRecords = countChanged(localMarkers, final.markers);
+
+  let localStateApplied = false;
+  await localDatabase.transaction(
+    'rw',
+    [
+      localDatabase.exerciseDefinitions,
+      localDatabase.workoutTemplates,
+      localDatabase.workoutTemplateExercises,
+      localDatabase.workoutSessions,
+      localDatabase.workoutSessionExercises,
+      localDatabase.strengthSets,
+      localDatabase.deletionRecords,
+    ],
+    async () => {
+      const current = await readLocalState(localDatabase);
+      if (
+        !sameLocalCollection(current.exercises, state.localExercises)
+        || !sameLocalCollection(current.templates, state.localTemplates)
+        || !sameLocalCollection(current.sessions, state.localSessions)
+        || !sameLocalCollection(current.markers, state.localMarkers)
+      ) {
+        return;
+      }
+
+      const finalExerciseIds = new Set(final.exercises.map((value) => value.id));
+      const finalTemplateIds = new Set(final.templates.map((value) => value.id));
+      const finalTemplateExerciseIds = new Set(
+        final.templates.flatMap((value) => value.exercises.map((item) => item.id)),
+      );
+      const finalSessionIds = new Set(final.sessions.map((value) => value.id));
+      const finalSessionExerciseIds = new Set(
+        final.sessions.flatMap((value) => value.exercises.map((item) => item.id)),
+      );
+      const finalSetIds = new Set(
+        final.sessions.flatMap((value) => value.sets.map((item) => item.id)),
+      );
+      const finalMarkerIds = new Set(final.markers.map((value) => value.id));
+
+      await localDatabase.strengthSets.bulkDelete(
+        state.localSessions
+          .flatMap((value) => value.sets)
+          .filter((value) => !finalSetIds.has(value.id))
+          .map((value) => value.id),
+      );
+      await localDatabase.workoutSessionExercises.bulkDelete(
+        state.localSessions
+          .flatMap((value) => value.exercises)
+          .filter((value) => !finalSessionExerciseIds.has(value.id))
+          .map((value) => value.id),
+      );
+      await localDatabase.workoutSessions.bulkDelete(
+        state.localSessions
+          .filter((value) => !finalSessionIds.has(value.id))
+          .map((value) => value.id),
+      );
+      await localDatabase.workoutTemplateExercises.bulkDelete(
+        state.localTemplates
+          .flatMap((value) => value.exercises)
+          .filter((value) => !finalTemplateExerciseIds.has(value.id))
+          .map((value) => value.id),
+      );
+      await localDatabase.workoutTemplates.bulkDelete(
+        state.localTemplates
+          .filter((value) => !finalTemplateIds.has(value.id))
+          .map((value) => value.id),
+      );
+      await localDatabase.exerciseDefinitions.bulkDelete(
+        state.localExercises
+          .filter((value) => !finalExerciseIds.has(value.id))
+          .map((value) => value.id),
+      );
+      await localDatabase.deletionRecords.bulkDelete(
+        state.localMarkers
+          .filter((value) => !finalMarkerIds.has(value.id))
+          .map((value) => value.id),
+      );
+
+      if (final.exercises.length > 0) {
+        await localDatabase.exerciseDefinitions.bulkPut(
+          final.exercises.map((value) => value.exercise),
+        );
+      }
+      if (final.templates.length > 0) {
+        await localDatabase.workoutTemplates.bulkPut(
+          final.templates.map((value) => value.template),
+        );
+        const exercises = final.templates.flatMap((value) => [...value.exercises]);
+        if (exercises.length > 0) {
+          await localDatabase.workoutTemplateExercises.bulkPut(exercises);
+        }
+      }
+      if (final.sessions.length > 0) {
+        await localDatabase.workoutSessions.bulkPut(
+          final.sessions.map((value) => value.session),
+        );
+        const exercises = final.sessions.flatMap((value) => [...value.exercises]);
+        const sets = final.sessions.flatMap((value) => [...value.sets]);
+        if (exercises.length > 0) {
+          await localDatabase.workoutSessionExercises.bulkPut(exercises);
+        }
+        if (sets.length > 0) await localDatabase.strengthSets.bulkPut(sets);
+      }
+      if (final.markers.length > 0) {
+        await localDatabase.deletionRecords.bulkPut([...final.markers]);
+      }
+      localStateApplied = true;
+    },
   );
 
-  let uploadedExercises = 0;
-  let downloadedExercises = 0;
-  let uploadedTemplates = 0;
-  let downloadedTemplates = 0;
-  let uploadedSessions = 0;
-  let downloadedSessions = 0;
-  let uploadedDeletionRecords = 0;
-  let downloadedDeletionRecords = 0;
+  if (writeCloud && localStateApplied) {
+    const cloudExerciseRowById = new Map(
+      state.cloudExerciseRows.flatMap((row) => {
+        const id = localIdFromCloud(row.id);
+        return id ? [[id, row] as const] : [];
+      }),
+    );
+    const cloudTemplateRowById = new Map(
+      state.cloudTemplateRows.flatMap((row) => {
+        const id = localIdFromCloud(row.id);
+        return id ? [[id, row] as const] : [];
+      }),
+    );
+    const cloudSessionRowById = new Map(
+      state.cloudSessionRows.flatMap((row) => {
+        const id = localIdFromCloud(row.id);
+        return id ? [[id, row] as const] : [];
+      }),
+    );
+    const cloudMarkerRowById = new Map(
+      state.cloudMarkerRows.flatMap((row) => {
+        const id = localIdFromCloud(row.id);
+        return id ? [[id, row] as const] : [];
+      }),
+    );
 
-  for (const marker of resolvedMarkers.values()) {
-    const local = localMarkers.get(marker.id);
-    const cloud = cloudMarkers.get(marker.id);
-    if (!sameEntity(local, marker)) {
-      await localDatabase.deletionRecords.put(marker);
-      await applyDeletedMarker(localDatabase, marker);
-      downloadedDeletionRecords += 1;
-    }
-    if (
-      writeCloud &&
-      await putCloud(
-        cloudDatabase.realStrengthDeletionRecords as Table<DeletionRecord, string>,
-        cloud,
-        marker,
-      )
-    ) {
-      uploadedDeletionRecords += 1;
-    }
-  }
+    await cloudDatabase.transaction(
+      'rw',
+      [
+        cloudDatabase.realStrengthExercises,
+        cloudDatabase.realWorkoutTemplates,
+        cloudDatabase.realWorkoutSessions,
+        cloudDatabase.realStrengthDeletionRecords,
+      ],
+      async () => {
+        const deleteMissing = async <T extends { id: string }>(
+          current: readonly T[],
+          target: readonly T[],
+          remove: (id: string) => Promise<unknown>,
+        ) => {
+          const targetIds = new Set(target.map((value) => value.id));
+          for (const value of current) {
+            if (!targetIds.has(value.id)) await remove(cloudPrivateId(value.id));
+          }
+        };
+        await deleteMissing(
+          state.cloudExercises,
+          final.exercises,
+          (id) => cloudDatabase.realStrengthExercises.delete(id),
+        );
+        await deleteMissing(
+          state.cloudTemplates,
+          final.templates,
+          (id) => cloudDatabase.realWorkoutTemplates.delete(id),
+        );
+        await deleteMissing(
+          state.cloudSessions,
+          final.sessions,
+          (id) => cloudDatabase.realWorkoutSessions.delete(id),
+        );
+        await deleteMissing(
+          state.cloudMarkers,
+          final.markers,
+          (id) => cloudDatabase.realStrengthDeletionRecords.delete(id),
+        );
 
-  const exerciseIds = new Set([...localExercises.keys(), ...cloudExercises.keys()]);
-  for (const id of exerciseIds) {
-    const resolved = chooseLatest(localExercises.get(id), cloudExercises.get(id));
-    if (!resolved) continue;
-    if (!sameEntity(localExercises.get(id), resolved)) {
-      const existing = await localDatabase.exerciseDefinitions.get(id);
-      if (!existing || existing.source === 'user') {
-        await localDatabase.exerciseDefinitions.put(resolved.exercise);
-        downloadedExercises += 1;
-      }
-    }
-    if (
-      writeCloud &&
-      await putCloud(
-        cloudDatabase.realStrengthExercises as Table<StrengthExerciseAggregate, string>,
-        cloudExercises.get(id),
-        resolved,
-      )
-    ) uploadedExercises += 1;
-  }
-
-  const templateIds = new Set([...localTemplates.keys(), ...cloudTemplates.keys()]);
-  for (const id of templateIds) {
-    const resolved = chooseLatest(localTemplates.get(id), cloudTemplates.get(id));
-    if (!resolved) continue;
-    if (!sameEntity(localTemplates.get(id), resolved)) {
-      await applyTemplateAggregate(localDatabase, resolved);
-      downloadedTemplates += 1;
-    }
-    if (
-      writeCloud &&
-      await putCloud(
-        cloudDatabase.realWorkoutTemplates as Table<WorkoutTemplateAggregate, string>,
-        cloudTemplates.get(id),
-        resolved,
-      )
-    ) uploadedTemplates += 1;
-  }
-
-  const sessionIds = new Set([...localSessions.keys(), ...cloudSessions.keys()]);
-  for (const id of sessionIds) {
-    const chosen = chooseLatest(localSessions.get(id), cloudSessions.get(id));
-    if (!chosen) continue;
-    const resolved = applyMarkersToSession(chosen, resolvedMarkers);
-    const localResolved = localSessions.get(id)
-      ? applyMarkersToSession(localSessions.get(id)!, resolvedMarkers)
-      : undefined;
-    if (!sameEntity(localResolved, resolved)) {
-      await applySessionAggregate(localDatabase, resolved);
-      downloadedSessions += 1;
-    }
-    if (
-      writeCloud &&
-      await putCloud(
-        cloudDatabase.realWorkoutSessions as Table<WorkoutSessionAggregate, string>,
-        cloudSessions.get(id),
-        resolved,
-      )
-    ) uploadedSessions += 1;
+        for (const value of final.exercises) {
+          await upsertLogicalCloudValue(
+            cloudDatabase.realStrengthExercises,
+            cloudExercises.get(value.id),
+            cloudExerciseRowById.get(value.id),
+            value,
+            resolution.stamp,
+            (target) => toCloudRow(target),
+          );
+        }
+        for (const value of final.templates) {
+          await upsertLogicalCloudValue(
+            cloudDatabase.realWorkoutTemplates,
+            cloudTemplates.get(value.id),
+            cloudTemplateRowById.get(value.id),
+            value,
+            resolution.stamp,
+            (target) => toCloudRow(target),
+          );
+        }
+        for (const value of final.sessions) {
+          await upsertLogicalCloudValue(
+            cloudDatabase.realWorkoutSessions,
+            cloudSessions.get(value.id),
+            cloudSessionRowById.get(value.id),
+            value,
+            resolution.stamp,
+            (target) => toCloudRow(target),
+          );
+        }
+        for (const value of final.markers) {
+          await upsertLogicalCloudValue(
+            cloudDatabase.realStrengthDeletionRecords,
+            cloudMarkers.get(value.id),
+            cloudMarkerRowById.get(value.id),
+            value,
+            resolution.stamp,
+            (target) => toCloudRow(target),
+          );
+        }
+      },
+    );
+    await persistLogicalSyncBaseline(cloudDatabase, resolution.baseline);
   }
 
   return {
     ...preview,
-    uploadedExercises,
-    downloadedExercises,
-    uploadedTemplates,
-    downloadedTemplates,
-    uploadedSessions,
-    downloadedSessions,
-    uploadedDeletionRecords,
-    downloadedDeletionRecords,
+    uploadedExercises: localStateApplied ? uploadedExercises : 0,
+    downloadedExercises: localStateApplied ? downloadedExercises : 0,
+    uploadedTemplates: localStateApplied ? uploadedTemplates : 0,
+    downloadedTemplates: localStateApplied ? downloadedTemplates : 0,
+    uploadedSessions: localStateApplied ? uploadedSessions : 0,
+    downloadedSessions: localStateApplied ? downloadedSessions : 0,
+    uploadedDeletionRecords: localStateApplied ? uploadedDeletionRecords : 0,
+    downloadedDeletionRecords: localStateApplied ? downloadedDeletionRecords : 0,
     completedAt: new Date().toISOString(),
   };
 }

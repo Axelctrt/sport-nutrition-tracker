@@ -15,6 +15,7 @@ import {
 import type { GoalProgressView } from '@/application/goals/goalProgressService';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
+import { formatGoalValue } from '@/features/goals/utils/formatGoalValue';
 
 interface GoalCardProps {
   view: GoalProgressView;
@@ -29,17 +30,6 @@ const statusLabels: Record<GoalStatus, string> = {
   completed: 'Atteint',
   archived: 'Archivé',
 };
-
-export function formatGoalValue(
-  value: number,
-  unit: string,
-): string {
-  const maximumFractionDigits = unit === 'km' ? 1 : 2;
-
-  return `${new Intl.NumberFormat('fr-FR', {
-    maximumFractionDigits,
-  }).format(value)} ${unit}`;
-}
 
 function formatDate(value: string): string {
   return new Intl.DateTimeFormat('fr-FR', {

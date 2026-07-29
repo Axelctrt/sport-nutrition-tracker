@@ -19,6 +19,7 @@ import {
   DATABASE_VERSION_4,
 } from '@/infrastructure/database/migrations/versions';
 import { schemaVersion4 } from '@/infrastructure/database/schema';
+import { VISUAL_THEME_PREFERENCE_ID } from '@/infrastructure/user-state/userStateModels';
 
 const goals: GoalState = {
   version: 1,
@@ -140,7 +141,12 @@ describe('migration v4 vers v9 des états utilisateur', () => {
         ),
       ).toBeNull();
       expect(await upgradedDatabase.earnedAchievements.count()).toBe(1);
-      expect(await upgradedDatabase.unlockedVisualThemes.count()).toBe(2);
+      expect(await upgradedDatabase.unlockedVisualThemes.count()).toBe(1);
+      expect(
+        await upgradedDatabase.visualThemePreferences.get(
+          VISUAL_THEME_PREFERENCE_ID,
+        ),
+      ).toMatchObject({ activeThemeId: 'core' });
       expect(await upgradedDatabase.weeklyMissionCompletions.count()).toBe(1);
       expect(await upgradedDatabase.routineReminderCompletions.count()).toBe(1);
       expect(

@@ -42,13 +42,30 @@ export async function createLocalProfile(page: Page, firstName = 'E2E'): Promise
     name: 'Progression de la configuration',
   });
   await expect(profileProgress).toHaveAttribute('aria-valuenow', '1');
-  await page.getByLabel(/Nom affiché/).fill(firstName);
+  const firstNameInput = page.getByLabel(/Nom affiché/);
+  let firstNameAccepted = false;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    await firstNameInput.fill(firstName);
+    try {
+      await expect(firstNameInput).toHaveValue(firstName, { timeout: 3_000 });
+      firstNameAccepted = true;
+      break;
+    } catch (error) {
+      if (attempt === 3) throw error;
+      await page.waitForTimeout(100);
+    }
+  }
+  expect(firstNameAccepted).toBe(true);
+  await firstNameInput.blur();
 
   for (let step = 2; step <= 9; step += 1) {
     await page.getByRole('button', { name: 'Continuer' }).click();
     await expect(profileProgress).toHaveAttribute('aria-valuenow', String(step));
   }
 
+  await expect(
+    page.getByRole('list', { name: 'Informations du profil' }).getByText(firstName, { exact: true }),
+  ).toBeVisible();
   await expect(page.getByRole('button', { name: 'Commencer' })).toBeVisible();
   await page.getByRole('button', { name: 'Commencer' }).click();
   await expect(page.getByRole('heading', { name: `Bonjour ${firstName}` })).toBeVisible();
@@ -61,6 +78,62 @@ export async function expectNoCriticalHorizontalOverflow(page: Page): Promise<vo
   });
 
   expect(overflow).toBeLessThanOrEqual(1);
+}
+
+export async function expectEssentialContentVisible(page: Page): Promise<void> {
+  const issues = await page.evaluate(() => {
+    const viewportWidth = document.documentElement.clientWidth;
+    const viewportHeight = window.innerHeight;
+    const elements = Array.from(document.querySelectorAll<HTMLElement>(
+      '[data-responsive-essential], main h1, main h2, nav[aria-label="Navigation mobile"] a[href]',
+    ));
+
+    return elements.flatMap((element) => {
+      const style = window.getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      if (
+        style.display === 'none'
+        || style.visibility === 'hidden'
+        || rect.width === 0
+        || rect.height === 0
+      ) {
+        return [];
+      }
+
+      const label = element.getAttribute('aria-label')
+        ?? element.textContent?.replace(/\s+/g, ' ').trim()
+        ?? element.tagName;
+      const problems: string[] = [];
+      if (rect.left < -1 || rect.right > viewportWidth + 1) {
+        problems.push('sort horizontalement du viewport');
+      }
+      if (element.matches('[data-responsive-essential="action"]')) {
+        if (rect.width < 44 || rect.height < 44) {
+          problems.push(`zone tactile ${Math.round(rect.width)}×${Math.round(rect.height)}`);
+        }
+        if (element.scrollWidth > element.clientWidth + 1) {
+          problems.push('libellé horizontalement masqué');
+        }
+        if (element.scrollHeight > element.clientHeight + 1) {
+          problems.push('libellé verticalement masqué');
+        }
+      }
+      if (
+        element.matches('[data-responsive-essential="value"]')
+        && (element.scrollWidth > element.clientWidth + 1
+          || element.scrollHeight > element.clientHeight + 1)
+      ) {
+        problems.push('valeur masquée');
+      }
+      if (rect.top < viewportHeight && rect.bottom > 0 && style.opacity === '0') {
+        problems.push('contenu essentiel invisible');
+      }
+
+      return problems.map((problem) => ({ label, problem }));
+    });
+  });
+
+  expect(issues, JSON.stringify(issues, null, 2)).toEqual([]);
 }
 
 export async function getBrowserLocalDate(page: Page): Promise<string> {

@@ -18,6 +18,7 @@ export const SYNC_ORCHESTRATOR_DOMAIN_IDS = [
   'nutrition-journal',
   'nutrition-library',
   'nutrition-tracking',
+  'daily-coaching',
 ] as const satisfies readonly SyncOrchestratorDomainId[];
 
 export function readSyncOrchestratorPreview(
@@ -43,6 +44,8 @@ export function readSyncOrchestratorPreview(
       return snapshot.realNutritionLibrary?.preview;
     case 'nutrition-tracking':
       return snapshot.realNutritionTracking?.preview;
+    case 'daily-coaching':
+      return snapshot.realDailyCoaching?.preview;
   }
 }
 
@@ -125,6 +128,15 @@ export function createSyncOrchestratorDomains(
       : undefined,
     client.syncRealNutritionTracking
       ? () => client.syncRealNutritionTracking!()
+      : undefined,
+  );
+  add(
+    'daily-coaching',
+    client.analyzeRealDailyCoaching
+      ? () => client.analyzeRealDailyCoaching!()
+      : undefined,
+    client.syncRealDailyCoaching
+      ? () => client.syncRealDailyCoaching!()
       : undefined,
   );
 

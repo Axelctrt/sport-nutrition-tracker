@@ -14,6 +14,10 @@ import {
   X,
 } from 'lucide-react';
 import {
+  cloudLicenseLabel,
+  resolveCloudAccountAccess,
+} from '@/application/account/cloudAccountAccess';
+import {
   type FormEvent,
   useEffect,
   useRef,
@@ -147,6 +151,17 @@ function SyncPrototypeRuntime({
   }, [email, interaction, toast]);
 
   const isLoggedIn = snapshot.account.isLoggedIn;
+  const cloudAccess = client.getCloudAccessState?.() ?? resolveCloudAccountAccess(
+    {
+      ...snapshot.account,
+      hasAccessToken:
+        snapshot.account.hasAccessToken ?? snapshot.account.isLoggedIn,
+    },
+    {
+      isOnline:
+        typeof navigator === 'undefined' || navigator.onLine !== false,
+    },
+  );
 
   useEffect(() => {
     if (wasLoggedInRef.current && !isLoggedIn) {
@@ -577,7 +592,9 @@ function SyncPrototypeRuntime({
                     État
                   </dt>
                   <dd className="mt-1 font-semibold text-emerald-700 dark:text-emerald-300">
-                    Connecté
+                    {cloudAccess.isOperational
+                      ? 'Connecté et opérationnel'
+                      : cloudAccess.message}
                   </dd>
                 </div>
                 <div>
@@ -596,12 +613,7 @@ function SyncPrototypeRuntime({
                       Licence
                     </dt>
                     <dd className="mt-1 text-slate-950 dark:text-white">
-                      {snapshot.account.license.type} —{' '}
-                      {snapshot.account.license.status}
-                      {typeof snapshot.account.license.evalDaysLeft ===
-                      'number'
-                        ? ` — ${snapshot.account.license.evalDaysLeft} jours d’évaluation`
-                        : ''}
+                      {cloudLicenseLabel(snapshot.account.license)}
                     </dd>
                   </div>
                 ) : null}

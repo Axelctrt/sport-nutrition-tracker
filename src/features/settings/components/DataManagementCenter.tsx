@@ -18,6 +18,7 @@ import { Card } from "@/shared/ui/Card";
 
 interface DataManagementCenterProps {
   className?: string;
+  isAccountSpace?: boolean;
   storageStatus: PersistentStorageStatus;
   lastBackupExportedAt: string | undefined;
   integrityPanel?: ReactNode;
@@ -45,6 +46,7 @@ function formatBackupDate(value: string | undefined): string {
 
 export function DataManagementCenter({
   className,
+  isAccountSpace = false,
   storageStatus,
   lastBackupExportedAt,
   integrityPanel,
@@ -133,7 +135,12 @@ export function DataManagementCenter({
 
       {integrityPanel ?? <DatabaseIntegrityPanel className="mt-4" />}
       {consistencyPanel ?? <DataConsistencyPanel />}
-      {selectiveResetPanel ?? <SelectiveDataResetPanel className="mt-4" />}
+      {selectiveResetPanel ?? (
+        <SelectiveDataResetPanel
+          className="mt-4"
+          isAccountSpace={isAccountSpace}
+        />
+      )}
     </section>
   );
 }

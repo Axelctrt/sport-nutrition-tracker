@@ -36,7 +36,7 @@ const packageJson = read('package.json');
 
 requireToken(routes, "friends: '/friends'", 'route amis absente');
 requireToken(router, 'LazyFriendsPrivacyPage', 'page amis absente du router');
-requireToken(navigation, "label: 'Amis'", 'navigation Amis absente');
+requireToken(navigation, "label: 'Amis et confidentialité'", 'navigation Amis et confidentialité absente');
 
 for (const token of [
   'Amis et confidentialité',

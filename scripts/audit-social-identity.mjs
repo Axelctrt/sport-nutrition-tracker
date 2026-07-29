@@ -4,6 +4,7 @@ const failures = [];
 const read = (path) => existsSync(path) ? readFileSync(path, 'utf8') : '';
 const expectFile = (path) => { if (!existsSync(path)) failures.push(`fichier manquant : ${path}`); };
 const expectToken = (source, token, label) => { if (!source.includes(token)) failures.push(`${label} : ${token}`); };
+const rejectToken = (source, token, label) => { if (source.includes(token)) failures.push(`${label} : ${token}`); };
 
 for (const file of [
   'src/domain/friends/socialIdentity.ts',
@@ -58,9 +59,15 @@ for (const token of [
 ]) expectToken(directory, token, 'route annuaire incomplète');
 for (const token of [
   'authenticateRequest',
+  'const legacyIds = new Set();',
+  'existingHandle.owner_user_id !== canonicalUserId',
+  'SOCIAL_IDENTITY_RECONCILIATION_HANDLE_CONFLICT',
+]) expectToken(reconciliation, token, 'réconciliation canonique incomplète');
+
+for (const token of [
   'privateIdentity.userId === previousUserId',
   'existingHandle?.owner_user_id === previousUserId',
-]) expectToken(reconciliation, token, 'réconciliation canonique incomplète');
+]) rejectToken(reconciliation, token, 'reconciliation canonique accepte encore une preuve privee non fiable');
 
 if (failures.length) {
   console.error('Audit identité sociale échoué :');

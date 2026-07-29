@@ -16,19 +16,78 @@ export interface ExerciseFilters {
   includeArchived?: boolean;
 }
 
-function normalizeSearchValue(value: string): string {
+export function normalizeExerciseName(value: string): string {
   return value
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLocaleLowerCase('fr')
-    .trim();
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim()
+    .replace(/\s+/g, ' ');
+}
+
+function editDistance(left: string, right: string): number {
+  const previous = Array.from({ length: right.length + 1 }, (_, index) => index);
+  for (let leftIndex = 1; leftIndex <= left.length; leftIndex += 1) {
+    const current = [leftIndex];
+    for (let rightIndex = 1; rightIndex <= right.length; rightIndex += 1) {
+      current[rightIndex] = Math.min(
+        current[rightIndex - 1]! + 1,
+        previous[rightIndex]! + 1,
+        previous[rightIndex - 1]!
+          + (left[leftIndex - 1] === right[rightIndex - 1] ? 0 : 1),
+      );
+    }
+    previous.splice(0, previous.length, ...current);
+  }
+  return previous[right.length] ?? 0;
+}
+
+function similarityScore(left: string, right: string): number {
+  if (!left || !right) return 0;
+  if (left === right) return 1;
+  if (left.includes(right) || right.includes(left)) return 0.9;
+  const leftTokens = new Set(left.split(' '));
+  const rightTokens = new Set(right.split(' '));
+  const sharedTokenCount = [...leftTokens].filter((token) =>
+    rightTokens.has(token),
+  ).length;
+  const tokenScore =
+    sharedTokenCount / Math.max(leftTokens.size, rightTokens.size);
+  const distanceScore =
+    1 - editDistance(left, right) / Math.max(left.length, right.length);
+  return Math.max(tokenScore, distanceScore);
+}
+
+export function findSimilarExerciseDefinitions(
+  exercises: readonly ExerciseDefinition[],
+  query: string,
+  limit = 4,
+): ExerciseDefinition[] {
+  const normalizedQuery = normalizeExerciseName(query);
+  if (normalizedQuery.length < 2) return [];
+  return exercises
+    .map((exercise) => ({
+      exercise,
+      score: similarityScore(
+        normalizedQuery,
+        normalizeExerciseName(exercise.name),
+      ),
+    }))
+    .filter(({ score }) => score >= 0.45)
+    .sort((left, right) =>
+      right.score - left.score
+      || left.exercise.name.localeCompare(right.exercise.name, 'fr'),
+    )
+    .slice(0, limit)
+    .map(({ exercise }) => exercise);
 }
 
 export function filterExerciseDefinitions(
   exercises: readonly ExerciseDefinition[],
   filters: ExerciseFilters = {},
 ): ExerciseDefinition[] {
-  const query = normalizeSearchValue(filters.query ?? '');
+  const query = normalizeExerciseName(filters.query ?? '');
 
   return exercises
     .filter((exercise) => filters.includeArchived || !exercise.isArchived)
@@ -40,8 +99,8 @@ export function filterExerciseDefinitions(
     .filter((exercise) => filters.source === undefined || filters.source === 'all'
       || exercise.source === filters.source)
     .filter((exercise) => query.length === 0
-      || normalizeSearchValue(exercise.name).includes(query)
-      || normalizeSearchValue(exercise.description ?? '').includes(query))
+      || normalizeExerciseName(exercise.name).includes(query)
+      || normalizeExerciseName(exercise.description ?? '').includes(query))
     .sort((left, right) => {
       if (left.isArchived !== right.isArchived) return left.isArchived ? 1 : -1;
       if (left.source !== right.source) return left.source === 'user' ? -1 : 1;
@@ -56,10 +115,20 @@ export async function listExerciseDefinitions(
   return filterExerciseDefinitions(await repository.listAll(), filters);
 }
 
-export function createCustomExercise(
+export async function createCustomExercise(
   repository: StrengthExerciseRepository,
   input: Omit<NewEntity<ExerciseDefinition>, 'source' | 'isArchived'>,
 ): Promise<ExerciseDefinition> {
+  const normalizedName = normalizeExerciseName(input.name);
+  const duplicate = (await repository.listAll()).find(
+    (exercise) => normalizeExerciseName(exercise.name) === normalizedName,
+  );
+  if (duplicate) {
+    throw new RepositoryError(
+      `Un exercice nommé « ${duplicate.name} » existe déjà.`,
+      'create',
+    );
+  }
   return repository.create({
     ...input,
     source: 'user',

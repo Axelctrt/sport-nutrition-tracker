@@ -17,7 +17,7 @@ const read = (path) => {
 
 const database = read('src/infrastructure/sync-prototype/SyncPrototypeDatabase.ts');
 for (const expected of [
-  'SYNC_PROTOTYPE_DATABASE_VERSION = 14',
+  'SYNC_PROTOTYPE_DATABASE_VERSION = 16',
   'sportpilot-sync-runtime-0.20.0-v${SYNC_PROTOTYPE_DATABASE_VERSION}',
   'realNutritionJournalDays',
   'realNutritionJournalDeletionRecords',
@@ -94,11 +94,11 @@ if (!deployment.includes("VITE_ENABLE_REAL_NUTRITION_JOURNAL_SYNC: 'true'")) {
 }
 
 const appDatabase = read('src/infrastructure/database/migrations/versions.ts');
-if (!/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_10/.test(appDatabase)) {
+if (!/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_11/.test(appDatabase)) {
   fail('la base métier principale n’est plus en Dexie v8.');
 }
 const backup = read('src/infrastructure/backup/backupMigrations.ts');
-if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*9/.test(backup)) {
+if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*10/.test(backup)) {
   fail('la sauvegarde n’est plus en JSON v9.');
 }
 
@@ -122,6 +122,6 @@ if (failures.length > 0) {
   process.exitCode = 1;
 } else {
   console.log(
-    'Audit C1 réussi : journées nutritionnelles atomiques, suppressions repas/entrées, runtime cloud v14 et invariants métier validés.',
+    'Audit C1 réussi : journées nutritionnelles atomiques, suppressions repas/entrées, runtime cloud v16 et invariants métier validés.',
   );
 }

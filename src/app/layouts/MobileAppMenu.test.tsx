@@ -12,34 +12,37 @@ function renderMenu(initialEntry = '/') {
 }
 
 describe('MobileAppMenu', () => {
-  it('rend accessibles les écrans absents de la navigation basse', async () => {
+  it('rend accessibles les réglages absents de la navigation basse', async () => {
     const user = userEvent.setup();
     renderMenu();
 
     await user.click(screen.getByRole('button', { name: 'Ouvrir le menu de l’application' }));
 
     expect(screen.getByRole('dialog', { name: 'Menu SportPilot' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Mes entraînements/ })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /Compte et appareils/ })).toHaveAttribute(
       'href',
-      '/strength/sessions',
+      '/settings/account-devices',
     );
-    expect(screen.getByRole('link', { name: /Historique/ })).toHaveAttribute('href', '/history');
     expect(screen.getByRole('link', { name: /Sauvegarde/ })).toHaveAttribute('href', '/backup');
-    expect(screen.getByRole('link', { name: /Informations sur les calculs/ })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /Comprendre les calculs/ })).toHaveAttribute(
       'href',
       '/information/calculations',
     );
   });
 
-  it('regroupe les destinations avancées dans des sections repliables', async () => {
+  it('regroupe les destinations par usage sans dupliquer Sport et Progression', async () => {
     const user = userEvent.setup();
     renderMenu();
 
     await user.click(screen.getByRole('button', { name: 'Ouvrir le menu de l’application' }));
 
-    expect(screen.getByText('Autres écrans progression')).toBeInTheDocument();
-    expect(screen.getByText('Autres écrans compte et application')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Planning hebdomadaire/ })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Compte' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Application' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Données' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Informations' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Sport' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Progression' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /Planning hebdomadaire/ })).not.toBeInTheDocument();
   });
 
   it('se ferme avec Échap et restitue le focus au bouton d’origine', async () => {
@@ -57,8 +60,8 @@ describe('MobileAppMenu', () => {
     expect(trigger).toHaveFocus();
   });
 
-  it('indique qu’une route secondaire est active', () => {
-    renderMenu('/strength/sessions');
+  it('indique qu’une route secondaire regroupée est active', () => {
+    renderMenu('/settings/account-sync');
 
     expect(screen.getByRole('button', { name: 'Ouvrir le menu de l’application' })).toHaveClass(
       'bg-brand-100',
@@ -66,16 +69,16 @@ describe('MobileAppMenu', () => {
   });
 
 
-  it('ne sélectionne que Rappels et routines sur sa route dédiée', async () => {
+  it('ne sélectionne que Rappels sur sa route dédiée', async () => {
     const user = userEvent.setup();
-    renderMenu('/settings/reminders');
+    renderMenu('/settings/notifications-routines');
 
     await user.click(screen.getByRole('button', { name: 'Ouvrir le menu de l’application' }));
 
-    expect(screen.getByRole('link', { name: /Rappels et routines/ })).toHaveClass(
+    expect(screen.getByRole('link', { name: /^Rappels/ })).toHaveClass(
       'bg-brand-50',
     );
-    expect(screen.getByRole('link', { name: /^Paramètres/ })).not.toHaveClass(
+    expect(screen.getByRole('link', { name: /Affichage de l’Accueil/ })).not.toHaveClass(
       'bg-brand-50',
     );
   });

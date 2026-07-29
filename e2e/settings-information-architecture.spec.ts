@@ -17,7 +17,7 @@ test('parcourt les catégories de paramètres sans perdre les routes existantes'
 
   await page.getByRole('link', { name: /Données, sauvegardes et export/ }).click();
   await expect(page.getByRole('heading', { name: 'Données, sauvegardes et export', level: 1 })).toBeVisible();
-  await expect(page.getByRole('link', { name: /Sauvegardes, import et export/ })).toHaveAttribute('href', '/backup');
+  await expect(page.getByRole('link', { name: /Sauvegardes, import et export/ })).toHaveAttribute('href', '#/backup');
   await expectNoCriticalHorizontalOverflow(page);
 
   await page.goto('/#/settings/advanced');

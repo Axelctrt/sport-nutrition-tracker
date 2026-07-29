@@ -102,72 +102,6 @@ function readDatabase(env = {}) {
   return database;
 }
 
-async function ensureFriendRequestsSchema(database) {
-  await database.prepare(`
-    CREATE TABLE IF NOT EXISTS social_directory_handles (
-      handle TEXT PRIMARY KEY,
-      owner_user_id TEXT NOT NULL,
-      owner_display_name TEXT NOT NULL,
-      reserved_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    )
-  `).run();
-
-  await database.prepare(`
-    CREATE INDEX IF NOT EXISTS idx_social_directory_handles_owner
-    ON social_directory_handles(owner_user_id)
-  `).run();
-
-  await database.prepare(`
-    CREATE TABLE IF NOT EXISTS social_friend_requests (
-      id TEXT PRIMARY KEY,
-      requester_user_id TEXT NOT NULL,
-      recipient_user_id TEXT NOT NULL,
-      status TEXT NOT NULL,
-      requested_at TEXT NOT NULL,
-      responded_at TEXT,
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    )
-  `).run();
-
-  await database.prepare(`
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_social_friend_requests_pair
-    ON social_friend_requests(requester_user_id, recipient_user_id)
-  `).run();
-
-  await database.prepare(`
-    CREATE INDEX IF NOT EXISTS idx_social_friend_requests_recipient
-    ON social_friend_requests(recipient_user_id, status, requested_at)
-  `).run();
-
-  await database.prepare(`
-    CREATE INDEX IF NOT EXISTS idx_social_friend_requests_requester
-    ON social_friend_requests(requester_user_id, status, requested_at)
-  `).run();
-
-  await database.prepare(`
-    CREATE TABLE IF NOT EXISTS social_friendships (
-      id TEXT PRIMARY KEY,
-      user_a_id TEXT NOT NULL,
-      user_b_id TEXT NOT NULL,
-      status TEXT NOT NULL,
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    )
-  `).run();
-
-  await database.prepare(`
-    CREATE INDEX IF NOT EXISTS idx_social_friendships_user_a
-    ON social_friendships(user_a_id, status)
-  `).run();
-
-  await database.prepare(`
-    CREATE INDEX IF NOT EXISTS idx_social_friendships_user_b
-    ON social_friendships(user_b_id, status)
-  `).run();
-}
-
 function requestFromRow(row) {
   const request = {
     id: row.id,
@@ -265,7 +199,6 @@ async function sendFriendRequest(database, payload, actorUserId) {
     };
   }
 
-  await ensureFriendRequestsSchema(database);
   const recipientProfile = await database.prepare(`
     SELECT owner_user_id
     FROM social_directory_handles
@@ -348,7 +281,6 @@ async function sendFriendRequest(database, payload, actorUserId) {
 
 async function listRequests(database, userId, direction) {
   const field = direction === 'incoming' ? 'recipient_user_id' : 'requester_user_id';
-  await ensureFriendRequestsSchema(database);
   const result = await database.prepare(`
     SELECT id, requester_user_id, recipient_user_id, status, requested_at, responded_at, created_at, updated_at
     FROM social_friend_requests
@@ -396,7 +328,6 @@ async function updateFriendRequestStatus(database, payload, actorUserId) {
   const status = sanitizeStatus(payload?.status);
   const actor = sanitizeUserId(actorUserId, 'actorUserId');
   const respondedAt = nowIso();
-  await ensureFriendRequestsSchema(database);
 
   const existing = await readRequest(database, requestId);
   if (!existing) {

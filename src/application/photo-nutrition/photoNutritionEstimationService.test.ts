@@ -81,23 +81,28 @@ class FakeFoodRepository implements FoodRepository {
 }
 
 describe('photoNutritionEstimationService', () => {
-  it('fournit une estimation prudente, locale et explicitement faible', async () => {
-    const result = await analyzePhotoNutrition(imageFile('repas.jpg'));
+  it('délègue l’analyse au port réel sans fabriquer d’estimation locale', async () => {
+    const result = {
+      estimate: {
+        name: 'Repas reconnu',
+        amount: 250,
+        nutrition: { caloriesKcal: 450, proteinGrams: 22, carbohydratesGrams: 48, fatGrams: 16 },
+      },
+      mode: 'remote-ai' as const,
+      confidence: 'medium' as const,
+      privacy: 'external-consent-required' as const,
+      warnings: [],
+    };
+    const port: PhotoNutritionAnalysisPort = { analyze: vi.fn(async () => result) };
 
-    expect(result.estimate.name).toBe('Repas à vérifier');
-    expect(result.estimate.amount).toBe(250);
-    expect(result.estimate.nutrition.caloriesKcal).toBe(450);
-    expect(result.mode).toBe('local-fallback');
-    expect(result.confidence).toBe('low');
-    expect(result.privacy).toBe('local-only');
-    expect(result.warnings).toEqual(expect.arrayContaining([
-      'Estimation locale sans reconnaissance IA réelle branchée.',
-      'Photo non conservée dans le journal alimentaire.',
-    ]));
+    await expect(analyzePhotoNutrition(imageFile('repas.jpg'), port)).resolves.toEqual(result);
+    expect(port.analyze).toHaveBeenCalledOnce();
   });
 
   it('signale une photo illisible avant toute estimation', async () => {
-    await expect(analyzePhotoNutrition(imageFile('vide.jpg', 0))).rejects.toThrow('Photo illisible');
+    const port: PhotoNutritionAnalysisPort = { analyze: vi.fn() };
+    await expect(analyzePhotoNutrition(imageFile('vide.jpg', 0), port)).rejects.toThrow('Photo illisible');
+    expect(port.analyze).not.toHaveBeenCalled();
   });
 
   it('refuse un fichier qui n’est pas une image', async () => {

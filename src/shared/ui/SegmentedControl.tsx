@@ -59,7 +59,7 @@ export function SegmentedControl({
       aria-label={label}
       aria-disabled={disabled || undefined}
       className={cn(
-        'grid min-h-[var(--sp-control-height-md)] auto-cols-fr grid-flow-col rounded-[var(--sp-radius-control)] bg-slate-100 p-1 dark:bg-slate-800',
+        'grid min-h-[var(--sp-control-height-md)] auto-cols-fr grid-flow-col rounded-[var(--sp-radius-control)] border border-[var(--sp-border-subtle)] bg-[var(--sp-surface-muted)] p-1',
         className,
       )}
     >
@@ -80,8 +80,8 @@ export function SegmentedControl({
             className={cn(
               'min-h-10 min-w-0 rounded-lg px-3 py-2 text-sm font-semibold transition-colors',
               selected
-                ? 'bg-white text-slate-950 shadow-sm dark:bg-slate-950 dark:text-white'
-                : 'text-slate-600 hover:text-slate-950 dark:text-slate-300 dark:hover:text-white',
+                ? 'bg-[var(--sp-surface-elevated)] text-[var(--sp-text-primary)] shadow-sm'
+                : 'text-[var(--sp-text-secondary)] hover:text-[var(--sp-text-primary)]',
               'disabled:cursor-not-allowed disabled:opacity-50',
             )}
           >

@@ -42,8 +42,8 @@ describe('rewardBackupState', () => {
       ['first-session'],
       '2026-06-27T18:00:00.000Z',
     );
-    unlockVisualThemes(['endurance']);
-    activateVisualTheme('endurance');
+    unlockVisualThemes(['neon-pulse']);
+    activateVisualTheme('neon-pulse');
     recordCompletedWeeklyMission(
       '2026-06-22',
       '2026-06-27T19:00:00.000Z',
@@ -68,8 +68,13 @@ describe('rewardBackupState', () => {
         ],
       },
       visualThemes: {
-        activeThemeId: 'endurance',
-        unlockedThemeIds: ['classic', 'endurance'],
+        activeThemeId: 'neon-pulse',
+        unlockedThemeIds: ['core', 'neon-pulse'],
+        unlockMetadata: {
+          'neon-pulse': {
+            unlockedAt: expect.any(String),
+          },
+        },
       },
       weeklyMissions: {
         completedWeeks: [
@@ -93,8 +98,13 @@ describe('rewardBackupState', () => {
         ],
       },
       visualThemes: {
-        activeThemeId: 'power',
-        unlockedThemeIds: ['classic', 'power'],
+        activeThemeId: 'emerald-focus',
+        unlockedThemeIds: ['core', 'emerald-focus'],
+        unlockMetadata: {
+          'emerald-focus': {
+            unlockedAt: '2026-06-20T10:00:00.000Z',
+          },
+        },
       },
       weeklyMissions: {
         completedWeeks: [
@@ -113,8 +123,13 @@ describe('rewardBackupState', () => {
       },
     ]);
     expect(readVisualThemeState()).toEqual({
-      activeThemeId: 'power',
-      unlockedThemeIds: ['classic', 'power'],
+      activeThemeId: 'emerald-focus',
+      unlockedThemeIds: ['core', 'emerald-focus'],
+      unlockMetadata: {
+        'emerald-focus': {
+          unlockedAt: '2026-06-20T10:00:00.000Z',
+        },
+      },
     });
     expect(readWeeklyMissionHistoryState().completedWeeks).toEqual([
       {
@@ -123,7 +138,7 @@ describe('rewardBackupState', () => {
       },
     ]);
     expect(document.documentElement.dataset.sportTheme).toBe(
-      'power',
+      'emerald-focus',
     );
   });
 });

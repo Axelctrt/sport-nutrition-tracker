@@ -31,7 +31,7 @@ describe('fondations du design system', () => {
     expect(screen.getByRole('heading', { level: 2, name: 'Aujourd’hui' })).toBeInTheDocument();
     expect(screen.getByText('Texte principal')).toHaveClass('text-base');
     expect(screen.getByText('Texte secondaire')).toHaveClass('text-sm');
-    expect(screen.getByText('Contenu')).toHaveClass('bg-slate-50/90');
+    expect(screen.getByText('Contenu')).toHaveClass('sp-card--muted');
     expect(screen.getByRole('button', { name: 'Enregistrement' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Enregistrement' })).toHaveAttribute('aria-busy', 'true');
     expect(screen.getByRole('button', { name: 'Ajouter une activité' })).toHaveAttribute('title', 'Ajouter une activité');

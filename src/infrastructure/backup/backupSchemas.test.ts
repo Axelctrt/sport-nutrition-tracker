@@ -1,3 +1,4 @@
+import { buildDailyTargetEnergyInputSnapshot } from "@/domain/calculations/dailyTargetInputSnapshot";
 import { createDefaultAppSettings } from "@/domain/defaults/appSettings";
 import { LOCAL_USER_PROFILE_ID } from "@/domain/defaults/identifiers";
 import type { BackupEnvelope } from "@/domain/models/backup";
@@ -8,6 +9,7 @@ import type {
   SwimmingActivity,
 } from "@/domain/models/activity";
 import type { UserProfile } from "@/domain/models/profile";
+import type { DailyTarget } from "@/domain/models/targets";
 import { migrateBackupEnvelope } from "@/infrastructure/backup/backupMigrations";
 import { backupEnvelopeSchema } from "@/infrastructure/backup/backupSchemas";
 import { createEntity } from "@/shared/utils/entities";
@@ -19,6 +21,10 @@ import {
   createWorkoutTemplateInput,
   createWorkoutSessionInput,
 } from "@/test/factories/strengthFactory";
+import {
+  createCalorieAdaptationAssessment,
+  createWeeklyReview,
+} from "@/test/factories/weeklyReviewFactory";
 
 function createValidEnvelope(): BackupEnvelope {
   return {
@@ -74,12 +80,83 @@ function createVersion1Envelope(): unknown {
   };
 }
 
+function createDailyTarget(
+  energyInputSnapshot?: DailyTarget["energyInputSnapshot"],
+): DailyTarget {
+  return createEntity<DailyTarget>({
+    date: "2026-07-01",
+    calculationWeightKg: 70,
+    ...(energyInputSnapshot ? { energyInputSnapshot } : {}),
+    energy: {
+      bmrKcal: 1_600,
+      occupationalBaseKcal: 320,
+      walkingKcal: 180,
+      runningKcal: 0,
+      swimmingKcal: 0,
+      strengthTrainingKcal: 0,
+      otherActivitiesKcal: 0,
+      totalEstimatedExpenditureKcal: 2_100,
+    },
+    goalAdjustmentKcal: 0,
+    acceptedCalibrationAdjustmentKcal: 0,
+    calorieFloorKcal: 1_600,
+    targetCaloriesKcal: 2_100,
+    macros: {
+      proteinGrams: 126,
+      carbohydratesGrams: 266,
+      fatGrams: 56,
+    },
+    calculationVersion: 5,
+  }, "daily-target:2026-07-01");
+}
+
 describe("backupEnvelopeSchema", () => {
   it("valide une sauvegarde complète au format courant", () => {
     expect(backupEnvelopeSchema.parse(createValidEnvelope())).toMatchObject({
       format: "sportpilot-backup",
       schemaVersion: 2,
     });
+  });
+
+  it("conserve l’évaluation adaptative optionnelle d’un bilan", () => {
+    const envelope = createValidEnvelope();
+    envelope.data.weeklyReviews = [
+      createWeeklyReview({
+        adaptation: createCalorieAdaptationAssessment({
+          detectedState: "possibleRecomposition",
+          proposedAdjustmentKcal: 0,
+        }),
+      }),
+    ];
+
+    expect(backupEnvelopeSchema.parse(envelope).data.weeklyReviews[0]?.adaptation)
+      .toMatchObject({
+        calculationVersion: 1,
+        detectedState: "possibleRecomposition",
+        proposedAdjustmentKcal: 0,
+      });
+  });
+
+  it("conserve le snapshot historique d'une cible quotidienne", () => {
+    const envelope = createValidEnvelope();
+    const snapshot = buildDailyTargetEnergyInputSnapshot(
+      envelope.data.userProfile[0]!,
+      envelope.data.appSettings![0]!,
+    );
+    envelope.data.dailyTargets = [createDailyTarget(snapshot)];
+
+    const parsed = backupEnvelopeSchema.parse(envelope);
+
+    expect(parsed.data.dailyTargets[0]?.energyInputSnapshot).toEqual(snapshot);
+  });
+
+  it("accepte une ancienne cible quotidienne sans snapshot historique", () => {
+    const envelope = createValidEnvelope();
+    envelope.data.dailyTargets = [createDailyTarget()];
+
+    const parsed = backupEnvelopeSchema.parse(envelope);
+
+    expect(parsed.data.dailyTargets[0]?.energyInputSnapshot).toBeUndefined();
   });
 
 
@@ -136,9 +213,17 @@ describe("backupEnvelopeSchema", () => {
     expect(parsed.data.appSettings![0]?.enduranceTemplates).toHaveLength(4);
     expect(parsed.data.appSettings![0]?.dashboardPreferences).toMatchObject({
       preset: "balanced",
-      hidden: ['calculationDetails', 'rewardsOverview', 'weeklyMissions'],
+      hidden: [
+        'activeWorkout',
+        'trainingAgenda',
+        'quickActions',
+        'calculationDetails',
+        'rewardsOverview',
+        'weeklyMissions',
+      ],
       quickActions: expect.arrayContaining(["addFood", "workout"]),
-      summaryMetrics: ["macros", "steps", "weight"],
+      summaryMetrics: ["macros", "steps"],
+      supplementalBlock: "none",
     });
     expect(parsed.data.appSettings![0]?.dashboardDensity).toBe("comfortable");
     expect(
@@ -476,7 +561,10 @@ describe("migrateBackupEnvelope", () => {
   it("migre une sauvegarde version 1 vers la version 9 sans altérer ses données", () => {
     const migrated = migrateBackupEnvelope(createVersion1Envelope());
 
-    expect(migrated.schemaVersion).toBe(9);
+    expect(migrated.schemaVersion).toBe(10);
+    expect(migrated.data.dailyCheckIns).toEqual([]);
+    expect(migrated.data.dailyActivityDecisions).toEqual([]);
+    expect(migrated.data.dailyCheckOuts).toEqual([]);
     expect(migrated.data.userProfile).toHaveLength(1);
     expect(migrated.data.exerciseDefinitions).toEqual([]);
     expect(migrated.data.userSettings?.[0]?.id).toBe('user-settings');
@@ -488,7 +576,7 @@ describe("migrateBackupEnvelope", () => {
   });
 
   it("migre directement la version 2 vers la version 9", () => {
-    expect(migrateBackupEnvelope(createValidEnvelope()).schemaVersion).toBe(9);
+    expect(migrateBackupEnvelope(createValidEnvelope()).schemaVersion).toBe(10);
   });
 
   it("convertit le rewardState v4 en tables utilisateur couvertes explicitement", () => {
@@ -505,8 +593,9 @@ describe("migrateBackupEnvelope", () => {
           ],
         },
         visualThemes: {
-          activeThemeId: "endurance",
-          unlockedThemeIds: ["classic", "endurance"],
+          activeThemeId: "neon-pulse",
+          unlockedThemeIds: ["core", "neon-pulse"],
+          unlockMetadata: {},
         },
         weeklyMissions: {
           completedWeeks: [
@@ -521,7 +610,7 @@ describe("migrateBackupEnvelope", () => {
 
     const migrated = migrateBackupEnvelope(legacy);
 
-    expect(migrated.schemaVersion).toBe(9);
+    expect(migrated.schemaVersion).toBe(10);
     expect(migrated.rewardState).toBeUndefined();
     expect(migrated.includedUserStateTables).toEqual([
       "earnedAchievements",
@@ -539,7 +628,7 @@ describe("migrateBackupEnvelope", () => {
     expect(migrated.data.visualThemePreferences).toEqual([
       expect.objectContaining({
         id: "visual-theme-preference",
-        activeThemeId: "endurance",
+        activeThemeId: "neon-pulse",
       }),
     ]);
     expect(migrated.data.weeklyMissionCompletions).toEqual([

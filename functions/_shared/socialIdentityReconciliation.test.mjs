@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { socialIdentityReconciliationInternals } from './socialIdentityReconciliation.js';
 
@@ -98,50 +98,33 @@ describe('social identity reconciliation legacy ownership', () => {
     };
   }
 
-  it('reconnaît la réservation privée et le userId temporaire du navigateur', async () => {
-    const fetcher = async (url) => {
-      if (String(url).includes('socialHandleReservations')) {
-        return new Response(JSON.stringify({
-          id: 'social-handle:test',
-          handle: 'test',
-          ownerUserId: 'sp-old',
-          ownerDisplayName: 'TEST',
-        }), { status: 200 });
-      }
-      if (String(url).includes('socialIdentities')) {
-        return new Response(JSON.stringify({
-          id: 'social-identity:social-user:browser',
-          userId: 'social-user:browser',
-          handle: 'test',
-        }), { status: 200 });
-      }
-      return new Response(null, { status: 404 });
-    };
+  it('ne fait jamais confiance aux identifiants historiques contenus dans les objets privés', async () => {
+    const fetcher = vi.fn(async () => new Response(JSON.stringify({
+      handle: 'test',
+      ownerUserId: 'victim-user',
+      userId: 'victim-user',
+    }), { status: 200 }));
 
     const result = await socialIdentityReconciliationInternals.discoverLegacyUserIds({
-      database: directoryDatabase({
-        handle: 'test',
-        owner_user_id: 'sp-old',
-        owner_display_name: 'TEST',
-        reserved_at: '2026-07-01T10:00:00.000Z',
-        updated_at: '2026-07-07T10:00:00.000Z',
-      }),
+      database: directoryDatabase(undefined),
       canonicalUserId: 'dexie-user-123',
-      previousUserId: 'social-user:browser',
+      previousUserId: 'victim-user',
       handle: 'test',
       databaseUrl: 'https://example.dexie.cloud',
       token: 'token',
       fetcher,
     });
 
-    expect([...result.legacyIds].sort()).toEqual([
-      'social-user:browser',
-      'sp-old',
-    ]);
+    expect([...result.legacyIds]).toEqual([]);
+    expect(fetcher).not.toHaveBeenCalled();
   });
 
-  it('refuse de reprendre un handle non prouvé pour le compte authentifié', async () => {
-    const fetcher = async () => new Response(null, { status: 404 });
+  it('refuse une réservation forgée qui revendique le propriétaire D1', async () => {
+    const fetcher = vi.fn(async () => new Response(JSON.stringify({
+      id: 'social-handle:victim',
+      handle: 'victim',
+      ownerUserId: 'other-user',
+    }), { status: 200 }));
 
     await expect(
       socialIdentityReconciliationInternals.discoverLegacyUserIds({
@@ -163,5 +146,6 @@ describe('social identity reconciliation legacy ownership', () => {
       status: 409,
       code: 'SOCIAL_IDENTITY_RECONCILIATION_HANDLE_CONFLICT',
     });
+    expect(fetcher).not.toHaveBeenCalled();
   });
 });

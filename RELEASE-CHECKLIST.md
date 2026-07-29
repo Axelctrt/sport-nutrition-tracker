@@ -1,62 +1,60 @@
-# Checklist de publication — SportPilot 0.32.0
+# Checklist de publication — SportPilot 0.34.0
 
 ## Préparation Git
 
-- [ ] La branche `release/0.32.0` est propre et synchronisée.
-- [ ] `package.json` et `package-lock.json` indiquent `0.32.0`.
-- [ ] Paramètres affiche `0.32.0`.
-- [ ] Aucun ZIP, dossier `patch-files/`, résultat Playwright ou fichier généré n’est stagé.
-- [ ] Aucun `.env`, secret Cloudflare, token Dexie Cloud ou clé IA n’est stagé.
-- [ ] Aucune migration D1 ou Dexie nouvelle n’est attendue pour cette release.
+- [x] La branche `release/0.34.0` est créée depuis le commit `develop` validé.
+- [x] `package.json` et `package-lock.json` indiquent `0.34.0`.
+- [x] Paramètres affiche `0.34.0`.
+- [x] Aucun secret, ZIP, résultat Playwright ou fichier généré n’est suivi.
+- [x] Le chantier final n’ajoute aucune migration D1 ou Dexie.
+- [x] `develop` est en avance sur `main` sans être en retard.
 
 ## Contrôles automatiques
 
-- [ ] `npm run lint` passe sans erreur.
-- [ ] `npx tsc -b --pretty false` passe.
-- [ ] La suite Vitest complète passe en lots déterministes.
-- [ ] `npm run test:e2e:onboarding` passe sur WebKit iPhone 15.
-- [ ] `npm run test:e2e:acceptance` passe sur Chromium desktop et WebKit iPhone 15.
-- [ ] `npm run build` passe.
-- [ ] `npm run check` passe.
-- [ ] `npm run test:stability` passe ou chaque lot déterministe équivalent est consigné.
-- [ ] `npm audit` annonce zéro vulnérabilité.
-- [ ] `npm run audit:release-consolidation` passe.
-- [ ] `npm run audit:ux-mobile-acceptance` passe.
-- [ ] `npm run audit:release` passe.
-- [ ] `npm run audit:security` passe.
-- [ ] `npm run audit:production` passe.
-- [ ] `npm run audit:repository` passe.
-- [ ] Les audits Sport, Nutrition, compte, synchronisation, Photo IA et social passent.
+- [x] Lint, TypeScript, tests, build PWA, audits et budget JavaScript passent.
+- [x] La suite passe avec ordre de tests mélangé.
+- [x] Playwright passe sur Chromium desktop et WebKit iPhone 15.
+- [x] La mise à jour réelle du service worker conserve les données.
+- [x] Les contrôles ont été obtenus sur le commit fonctionnel final
+  `d12b997f0c623b7b82035bb525f66d4129b48d4c`.
+- [x] Ce code a été fusionné dans `develop` au commit
+  `4abf66fa594cc6594b4ece4a25dd822bfe21494e`.
 
-## Recette onboarding
+## Recette 0.34.0
 
-- [ ] La première page affiche Mode local et Connecter un compte sans champ e-mail.
-- [ ] Le mode local précise qu’un compte peut être associé plus tard depuis Paramètres → Compte et appareils.
-- [ ] La connexion e-mail et le code sont gérés sur l’écran suivant.
-- [ ] Les neuf étapes de profil sont accessibles et les étapes ordinaires ne défilent pas globalement.
-- [ ] Date ou âge, taille, poids et pas utilisent les rouleaux sans saisie numérique manuelle.
-- [ ] Les pas progressent par paliers de 500.
-- [ ] Les rouleaux ordinaires sont légèrement plus réactifs et la variation d’objectif conserve sa sensibilité précise.
-- [ ] Les choix Masculin/Féminin, objectif et activité sont lisibles sans chevauchement.
-- [ ] Le résumé final fait défiler toute la page et toutes les actions Modifier restent accessibles.
-- [ ] VoiceOver, clavier, focus, lien d’évitement, réduction des animations et zones sûres iOS sont validés.
+- [x] Les cinq thèmes fonctionnent en clair et sombre.
+- [x] Un ancien identifiant inconnu retombe sur Core sans perte de données.
+- [x] L’analyse IA validée reste inchangée par le patch final.
+- [x] Les conditions de déblocage reflètent les données réellement enregistrées.
+- [x] Le reveal de badge s’affiche sans toast intermédiaire.
+- [x] La célébration de journée complète exige check-in, sport réel,
+  alimentation complète et premier check-out.
+- [x] La célébration ne se répète pas pour une même date.
+- [x] L’indicateur de navigation mobile glisse entre les quatre rubriques.
+- [x] Progression adapte ses visuels à 0, 1, 2–3 ou davantage de mesures.
+- [x] Les textes nutrition et force sont explicites.
+- [x] Aucun débordement horizontal critique n’est détecté sur mobile.
+- [x] Clair, sombre, réduction de mouvement et iPhone 15 sont validés.
+- [x] Manifeste, service worker, routes profondes et console sont contrôlés.
 
-## Recette générale
+## Cloudflare
 
-- [ ] Accueil, Nutrition, Sport, Progression, Compte et Synchronisation restent fonctionnels.
-- [ ] Mode local, hors connexion, synchronisation et restauration sont validés.
-- [ ] Aucun débordement horizontal sur iPhone 15.
-- [ ] La mise à jour PWA conserve les données existantes.
+- [ ] Lire le premier message d’erreur des builds automatiques Cloudflare ayant
+  échoué sur la PR de finition.
+- [ ] Corriger ou confirmer la configuration de build Cloudflare.
+- [ ] Obtenir une Preview de recette sur le commit de publication.
+- [ ] Vérifier la conservation des données et les fonctionnalités dépendantes
+  des Functions/D1 sur cette Preview.
 
-## Publication
+## Publication Git
 
-- [ ] Commit `chore(release): finaliser SportPilot 0.32.0` créé sur `release/0.32.0`.
-- [ ] `release/0.32.0` fusionnée manuellement dans `develop`.
-- [ ] Contrôles critiques relancés sur `develop`.
-- [ ] `develop` fusionnée manuellement dans `main`.
-- [ ] `main` poussée avant le déploiement de production.
-- [ ] Production Cloudflare Pages construite depuis `main`.
-- [ ] Version, PWA, onboarding et parcours principaux vérifiés en production.
-- [ ] Tag annoté `v0.32.0` créé sur le commit publié.
-- [ ] Tag `v0.32.0` poussé vers `origin`.
-- [ ] `develop` resynchronisée avec `main`.
+- [x] Branche `release/0.34.0` créée.
+- [x] Notes de version finales enregistrées.
+- [ ] PR `release/0.34.0` vers `main` ouverte.
+- [ ] CI de la PR de publication entièrement verte.
+- [ ] Validation finale explicite avant fusion vers `main`.
+- [ ] Fusion de la PR de publication.
+- [ ] Tag annoté `v0.34.0` créé sur le commit publié.
+- [ ] Tag `v0.34.0` poussé vers `origin`.
+- [ ] Déploiement de production confirmé.
+- [ ] Vérifications post-déploiement effectuées.

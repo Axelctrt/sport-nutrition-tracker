@@ -13,8 +13,11 @@ describe('social identity canonical reconciliation readiness 0.29.0 A14', () => 
     expect(reconcileRuntimeSocialIdentity).toBeTypeOf('function');
     expect(routeSource).toContain('handleSocialIdentityReconciliationRequest');
     expect(serverSource).toContain('authenticateRequest');
-    expect(serverSource).toContain('socialHandleReservations');
-    expect(serverSource).toContain('socialIdentities');
+    expect(serverSource).toContain(
+      'SOCIAL_IDENTITY_RECONCILIATION_HANDLE_CONFLICT',
+    );
+    expect(serverSource).not.toContain('socialHandleReservations');
+    expect(serverSource).not.toContain('socialIdentities');
     expect(gatewaySource).toContain('authorization: `Bearer ${credentials.accessToken}`');
   });
 

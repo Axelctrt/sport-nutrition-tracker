@@ -22,8 +22,24 @@ describe('MobileBottomNavigation', () => {
     ]);
   });
 
+  it('déplace l’indicateur jusqu’à la rubrique active', () => {
+    const { container, unmount } = renderNavigation('/');
+    expect(container.querySelector('.sp-mobile-navigation-indicator'))
+      .toHaveStyle({ transform: 'translateX(0%)' });
+    unmount();
+
+    const progression = renderNavigation('/analytics');
+    expect(progression.container.querySelector('.sp-mobile-navigation-indicator'))
+      .toHaveStyle({ transform: 'translateX(300%)' });
+  });
+
   it('garde Progression active sur les anciennes routes de suivi', () => {
     renderNavigation('/weight');
+    expect(screen.getByRole('link', { name: 'Progression' })).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('garde Progression active dans le centre de récompenses', () => {
+    renderNavigation('/rewards');
     expect(screen.getByRole('link', { name: 'Progression' })).toHaveAttribute('aria-current', 'page');
   });
 

@@ -8,6 +8,7 @@ import type { DailySteps } from '@/domain/models/steps';
 import type { DailyTarget } from '@/domain/models/targets';
 import type {
   AdherenceLevel,
+  CalorieAdaptationAssessment,
   WeeklyCalibrationDecision,
   WeeklyReview,
 } from '@/domain/models/weeklyReview';
@@ -38,6 +39,7 @@ export interface WeeklyReviewCalculationInput extends WeeklyReviewPeriod {
   journalStatuses: readonly DailyJournalStatus[];
   dailySteps: readonly DailySteps[];
   currentCumulativeAdjustmentKcal: number;
+  adaptation?: CalorieAdaptationAssessment;
 }
 
 function round(value: number, digits = 1): number {
@@ -218,21 +220,36 @@ export function calculateWeeklyReview(
     ineligibilityReasons.push('L’évolution réelle du poids ne peut pas encore être calculée.');
   }
 
-  const isCalibrationEligible = ineligibilityReasons.length === 0;
-  const proposal = isCalibrationEligible && actualWeightChangeKg !== undefined
-    ? calculateCalibrationProposal({
-        actualWeightChangeKg,
-        targetWeightChangeKg,
-        currentCumulativeAdjustmentKcal: input.currentCumulativeAdjustmentKcal,
-        maximumWeeklyAdjustmentKcal: input.settings.maximumWeeklyAdjustmentKcal,
-        maximumCumulativeAdjustmentKcal: input.settings.maximumCumulativeAdjustmentKcal,
-      })
-    : {
-        rawAdjustmentKcal: 0,
-        proposedAdjustmentKcal: 0,
-        resultingCumulativeAdjustmentKcal: input.currentCumulativeAdjustmentKcal,
-        decision: 'keep' as const,
-      };
+  const effectiveIneligibilityReasons = input.adaptation
+    ? input.adaptation.blockingFactors
+    : ineligibilityReasons;
+  const isCalibrationEligible = effectiveIneligibilityReasons.length === 0;
+  const proposal = input.adaptation
+    ? {
+        rawAdjustmentKcal: input.adaptation.rawWeightBasedAdjustmentKcal,
+        proposedAdjustmentKcal: input.adaptation.proposedAdjustmentKcal,
+        resultingCumulativeAdjustmentKcal:
+          input.currentCumulativeAdjustmentKcal + input.adaptation.proposedAdjustmentKcal,
+        decision: input.adaptation.proposedAdjustmentKcal > 0
+          ? 'increase' as const
+          : input.adaptation.proposedAdjustmentKcal < 0
+            ? 'decrease' as const
+            : 'keep' as const,
+      }
+    : isCalibrationEligible && actualWeightChangeKg !== undefined
+      ? calculateCalibrationProposal({
+          actualWeightChangeKg,
+          targetWeightChangeKg,
+          currentCumulativeAdjustmentKcal: input.currentCumulativeAdjustmentKcal,
+          maximumWeeklyAdjustmentKcal: input.settings.maximumWeeklyAdjustmentKcal,
+          maximumCumulativeAdjustmentKcal: input.settings.maximumCumulativeAdjustmentKcal,
+        })
+      : {
+          rawAdjustmentKcal: 0,
+          proposedAdjustmentKcal: 0,
+          resultingCumulativeAdjustmentKcal: input.currentCumulativeAdjustmentKcal,
+          decision: 'keep' as const,
+        };
   const adherence = calculateAdherenceScore({
     completedFoodDays: completedDates.length,
     proteinTargetDays,
@@ -262,7 +279,7 @@ export function calculateWeeklyReview(
     stepGoalDays,
     recordedStepDays: input.dailySteps.length,
     isCalibrationEligible,
-    ineligibilityReasons,
+    ineligibilityReasons: effectiveIneligibilityReasons,
     rawProposedAdjustmentKcal: proposal.rawAdjustmentKcal,
     proposedDecision: proposal.decision,
     proposedAdjustmentKcal: proposal.proposedAdjustmentKcal,
@@ -270,6 +287,7 @@ export function calculateWeeklyReview(
     resultingCumulativeAdjustmentKcal: proposal.resultingCumulativeAdjustmentKcal,
     adherenceScore: adherence.score,
     adherenceLevel: adherence.level,
+    ...(input.adaptation ? { adaptation: input.adaptation } : {}),
     decisionStatus: isCalibrationEligible ? 'pending' : 'notEligible',
   };
 }

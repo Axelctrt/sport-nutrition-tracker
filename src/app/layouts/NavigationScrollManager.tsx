@@ -49,6 +49,11 @@ export function NavigationScrollManager() {
 
     runAfterPaint(() => {
       window.scrollTo({ top: target, behavior: 'instant' });
+      if (navigationType === 'PUSH') {
+        document.getElementById('main-content')?.focus({
+          preventScroll: true,
+        });
+      }
     });
     previousLocationRef.current = location;
   }, [location, navigationType]);

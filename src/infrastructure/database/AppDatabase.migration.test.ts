@@ -3,12 +3,12 @@ import Dexie from "dexie";
 import { AppDatabase } from "@/infrastructure/database/AppDatabase";
 import {
   DATABASE_VERSION_1,
-  DATABASE_VERSION_10,
+  DATABASE_VERSION_11,
 } from "@/infrastructure/database/migrations/versions";
 import {
   allDatabaseTableNames,
   schemaVersion1,
-  schemaVersion10,
+  schemaVersion11,
 } from "@/infrastructure/database/schema";
 
 type PersistedRecord = Record<string, unknown> & { id: string };
@@ -318,16 +318,16 @@ describe("chaîne de migrations Dexie", () => {
       upgradedDatabase = new AppDatabase(databaseName);
       await upgradedDatabase.open();
 
-      expect(upgradedDatabase.verno).toBe(DATABASE_VERSION_10);
+      expect(upgradedDatabase.verno).toBe(DATABASE_VERSION_11);
       await expectFixture(upgradedDatabase, version1Fixture);
       expect(await upgradedDatabase.userSettings.count()).toBe(1);
       expect(await upgradedDatabase.deviceSettings.count()).toBe(1);
       expect((await upgradedDatabase.deviceSettings.toCollection().first())?.theme).toBe('dark');
 
-      for (const tableName of Object.keys(schemaVersion10).filter(
+      for (const tableName of Object.keys(schemaVersion11).filter(
         (name) => !(name in schemaVersion1),
       )) {
-        const expectedCount = tableName === "migrationJournal" ? 8 : (tableName === "userSettings" || tableName === "deviceSettings" ? 1 : 0);
+        const expectedCount = tableName === "migrationJournal" ? 9 : (tableName === "userSettings" || tableName === "deviceSettings" ? 1 : 0);
         expect(await upgradedDatabase.table(tableName).count()).toBe(
           expectedCount,
         );
@@ -374,13 +374,13 @@ describe("chaîne de migrations Dexie", () => {
       currentDatabase.close();
 
       futureDatabase = new AppDatabase(databaseName);
-      futureDatabase.version(10).stores({
-        ...schemaVersion10,
+      futureDatabase.version(12).stores({
+        ...schemaVersion11,
         migrationProbe: "id",
       });
       await futureDatabase.open();
 
-      expect(futureDatabase.verno).toBe(10);
+      expect(futureDatabase.verno).toBe(12);
       await expectFixture(futureDatabase, version2Fixture);
       expect(await futureDatabase.table("migrationProbe").count()).toBe(0);
     } finally {

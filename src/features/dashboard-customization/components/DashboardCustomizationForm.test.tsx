@@ -4,7 +4,7 @@ import { createDefaultDashboardPreferences } from '@/domain/dashboard/dashboardP
 import { DashboardCustomizationForm } from '@/features/dashboard-customization/components/DashboardCustomizationForm';
 
 describe('DashboardCustomizationForm', () => {
-  it('applique un préréglage, masque un bloc, change son ordre puis enregistre', async () => {
+  it('enregistre la densité, les métriques et un seul bloc complémentaire', async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn();
 
@@ -15,43 +15,48 @@ describe('DashboardCustomizationForm', () => {
       />,
     );
 
-    await user.click(screen.getByRole('button', { name: /Entraînement/ }));
-    expect(screen.getByRole('button', { name: /Entraînement/ })).toHaveAttribute('aria-pressed', 'true');
-
-    await user.click(screen.getByRole('checkbox', { name: 'Afficher Activités du jour' }));
-    expect(screen.getByRole('checkbox', { name: 'Afficher Activités du jour' })).not.toBeChecked();
-
-    await user.click(screen.getByRole('button', { name: 'Monter Résumé de la journée' }));
+    expect(screen.getByRole('radio', { name: /Aucun/ })).toBeChecked();
+    await user.click(screen.getByRole('radio', { name: /Compact/ }));
+    await user.click(screen.getByRole('checkbox', { name: 'Poids actuel' }));
+    await user.click(screen.getByRole('radio', { name: /Accomplissements/ }));
     await user.click(screen.getByRole('button', { name: 'Enregistrer' }));
 
-    expect(onSubmit).toHaveBeenCalledTimes(1);
     expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({
         preset: 'custom',
-        hidden: expect.arrayContaining(['activities']),
+        summaryMetrics: ['macros', 'steps', 'weight'],
+        supplementalBlock: 'achievements',
       }),
-      'comfortable',
+      'compact',
     );
+    expect(screen.getByRole('radio', { name: /Progression de la semaine/ }))
+      .not.toBeChecked();
+    expect(screen.queryByText('Disposition recommandée')).not.toBeInTheDocument();
+    expect(screen.queryByText('Blocs secondaires')).not.toBeInTheDocument();
   });
 
-  it('rétablit l’affichage équilibré', async () => {
+  it('rétablit l’affichage recommandé', async () => {
     const user = userEvent.setup();
     render(
       <DashboardCustomizationForm
         initialPreferences={{
-          preset: 'minimal',
-          order: ['todaySummary', 'quickActions', 'activeWorkout', 'activities', 'calculationDetails'],
-          hidden: ['activities', 'calculationDetails'],
-          quickActions: ['addFood', 'steps'],
-          summaryMetrics: ['steps', 'weight'],
+          ...createDefaultDashboardPreferences(),
+          summaryMetrics: ['weight'],
+          supplementalBlock: 'weeklyProgress',
         }}
+        initialDensity="compact"
         onSubmit={() => undefined}
       />,
     );
 
-    await user.click(screen.getByRole('button', { name: 'Rétablir la disposition recommandée' }));
+    await user.click(
+      screen.getByRole('button', { name: 'Rétablir l’affichage recommandé' }),
+    );
 
-    expect(screen.getByRole('button', { name: /Équilibré/ })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('checkbox', { name: 'Afficher Activités du jour' })).toBeChecked();
+    expect(screen.getByRole('radio', { name: /Confortable/ })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'Macronutriments' })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'Pas du jour' })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'Poids actuel' })).not.toBeChecked();
+    expect(screen.getByRole('radio', { name: /Aucun/ })).toBeChecked();
   });
 });

@@ -27,7 +27,7 @@ import { createProfileInput } from '@/test/factories/profileFactory';
       carbohydratesGrams: 245,
       fatGrams: 55,
     });
-    expect(result.calculationVersion).toBe(4);
+    expect(result.calculationVersion).toBe(5);
   });
 
   it('normalise une variation incohérente avant de calculer la cible', () => {

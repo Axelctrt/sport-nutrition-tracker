@@ -28,6 +28,7 @@ import { FoodEntryQuickDialog } from '@/features/food-journal/components/FoodEnt
 import type { FoodEntryFormValues } from '@/features/food-journal/schemas/foodEntrySchema';
 import {
   createFoodJournalFeedbackState,
+  foodJournalCancelPath,
   type FoodJournalNavigationState,
 } from '@/features/food-journal/navigation/foodJournalNavigation';
 import { mealSlotLabels } from '@/features/food-journal/utils/foodLabels';
@@ -259,12 +260,17 @@ export function BarcodeScannerPage({
   return (
     <section className="min-w-0 overflow-x-clip" aria-labelledby="barcode-scanner-title">
       <Link
-        to={selectFoodPath(date, mealSlot)}
+        to={foodJournalCancelPath(
+          navigationState?.foodJournalReturn,
+          selectFoodPath(date, mealSlot),
+        )}
         state={location.state}
         className="hidden items-center gap-2 text-sm font-semibold text-brand-700 hover:underline lg:inline-flex dark:text-brand-300"
       >
         <ArrowLeft aria-hidden="true" className="size-4" />
-        Retour au sélecteur
+        {navigationState?.foodJournalReturn?.addMethodsPath
+          ? 'Retour aux méthodes d’ajout'
+          : 'Retour au sélecteur'}
       </Link>
 
       <div className="mt-5">

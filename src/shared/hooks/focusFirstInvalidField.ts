@@ -11,6 +11,12 @@ export function focusFirstInvalidField(container: ParentNode): HTMLElement | nul
   }
 
   field.focus({ preventScroll: true });
-  field.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+  field.scrollIntoView({
+    behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+      ? 'auto'
+      : 'smooth',
+    block: 'center',
+    inline: 'nearest',
+  });
   return field;
 }

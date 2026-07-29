@@ -265,11 +265,27 @@ describe('guestDataImportService', () => {
       totalSteps: 5_000,
       source: 'manual',
     });
+    await guest.dailyCheckIns.put({
+      ...metadata('check-in-guest', '2026-07-01T08:00:00.000Z'),
+      date: '2026-07-01',
+      readiness: 'low',
+      contextFlags: [],
+      contextSyncPreference: 'localOnly',
+      completedAt: '2026-07-01T08:00:00.000Z',
+    });
     await account.dailySteps.put({
       ...metadata('steps-account', '2026-07-02T08:00:00.000Z'),
       date: '2026-07-01',
       totalSteps: 10_000,
       source: 'manual',
+    });
+    await account.dailyCheckIns.put({
+      ...metadata('check-in-account', '2026-07-02T08:00:00.000Z'),
+      date: '2026-07-01',
+      readiness: 'high',
+      contextFlags: [],
+      contextSyncPreference: 'localOnly',
+      completedAt: '2026-07-02T08:00:00.000Z',
     });
 
     const prepared = await prepareGuestDataImport(ACCOUNT, {
@@ -286,6 +302,12 @@ describe('guestDataImportService', () => {
       expect.objectContaining({
         id: 'steps-account',
         totalSteps: 10_000,
+      }),
+    ]);
+    expect(await account.dailyCheckIns.toArray()).toEqual([
+      expect.objectContaining({
+        id: 'check-in-account',
+        readiness: 'high',
       }),
     ]);
 
@@ -373,13 +395,13 @@ describe('guestDataImportService', () => {
       updatedAt: '2026-07-01T08:00:00.000Z',
     };
     const unlockedTheme = {
-      id: 'classic' as const,
+      id: 'core' as const,
       unlockedAt: '2026-07-01T08:00:00.000Z',
       updatedAt: '2026-07-01T08:00:00.000Z',
     };
     const themePreference = {
       id: 'visual-theme-preference' as const,
-      activeThemeId: 'classic' as const,
+      activeThemeId: 'core' as const,
       updatedAt: '2026-07-01T08:00:00.000Z',
     };
 

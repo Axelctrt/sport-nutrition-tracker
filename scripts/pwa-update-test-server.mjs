@@ -15,7 +15,10 @@ import process from 'node:process';
 const projectRoot = process.cwd();
 const port = Number(process.env.PWA_UPDATE_TEST_PORT ?? 4174);
 const distDirectory = join(projectRoot, 'dist');
-const buildRoot = join(projectRoot, 'test-results', 'pwa-update-builds');
+const buildRoot = resolve(
+  process.env.PWA_UPDATE_BUILD_ROOT
+    ?? join(projectRoot, 'test-results', 'pwa-update-builds'),
+);
 const oldBuildDirectory = join(buildRoot, 'old');
 const newBuildDirectory = join(buildRoot, 'new');
 const markerSourcePath = join(
@@ -118,6 +121,15 @@ const server = createServer((request, response) => {
   ) {
     activeBuildDirectory = newBuildDirectory;
     sendJson(response, 200, { activeBuild: 'new' });
+    return;
+  }
+
+  if (
+    request.method === 'POST' &&
+    requestUrl.pathname === '/__pwa-test/shutdown'
+  ) {
+    sendJson(response, 200, { shuttingDown: true });
+    setTimeout(shutdown, 0);
     return;
   }
 

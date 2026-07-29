@@ -3,6 +3,11 @@ import Dexie, { type Table } from "dexie";
 import { DEFAULT_DATABASE_NAME } from '@/infrastructure/database/databaseNames';
 
 import type { Activity } from "@/domain/models/activity";
+import type {
+  DailyActivityDecision,
+  DailyCheckIn,
+  DailyCheckOut,
+} from '@/domain/models/dailyCoaching';
 import type { DeletionRecord } from '@/domain/models/deletion';
 import type { Goal } from '@/domain/goals/goalState';
 import type { PlannedEnduranceSession } from '@/domain/planning/endurancePlanningState';
@@ -61,6 +66,7 @@ import { registerVersion7 } from '@/infrastructure/database/migrations/version7'
 import { registerVersion8 } from '@/infrastructure/database/migrations/version8';
 import { registerVersion9 } from '@/infrastructure/database/migrations/version9';
 import { registerVersion10 } from '@/infrastructure/database/migrations/version10';
+import { registerVersion11 } from '@/infrastructure/database/migrations/version11';
 
 export { DEFAULT_DATABASE_NAME } from '@/infrastructure/database/databaseNames';
 
@@ -70,6 +76,9 @@ export class AppDatabase extends Dexie {
   declare deviceSettings: Table<DeviceSettings, EntityId>;
   declare weights: Table<WeightEntry, EntityId>;
   declare dailySteps: Table<DailySteps, EntityId>;
+  declare dailyCheckIns: Table<DailyCheckIn, EntityId>;
+  declare dailyActivityDecisions: Table<DailyActivityDecision, EntityId>;
+  declare dailyCheckOuts: Table<DailyCheckOut, EntityId>;
   declare activities: Table<Activity, EntityId>;
   declare foodProducts: Table<FoodProduct, EntityId>;
   declare meals: Table<Meal, EntityId>;
@@ -131,5 +140,6 @@ export class AppDatabase extends Dexie {
     registerVersion8(this);
     registerVersion9(this);
     registerVersion10(this);
+    registerVersion11(this);
   }
 }

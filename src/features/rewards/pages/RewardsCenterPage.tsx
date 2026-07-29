@@ -3,38 +3,91 @@ import {
   Flame,
   Palette,
   Trophy,
-} from 'lucide-react';
+} from "lucide-react";
+import { useState } from "react";
 
-import { DashboardWeeklyMissions } from '@/features/dashboard/components/DashboardWeeklyMissions';
-import { AchievementsPanel } from '@/features/settings/components/AchievementsPanel';
-import { ConsistencyStreakPanel } from '@/features/settings/components/ConsistencyStreakPanel';
-import { RewardThemesPanel } from '@/features/settings/components/RewardThemesPanel';
-import { CollapsibleSection } from '@/shared/ui/CollapsibleSection';
+import { DashboardWeeklyMissions } from "@/features/dashboard/components/DashboardWeeklyMissions";
+import { AchievementsPanel } from "@/features/settings/components/AchievementsPanel";
+import { ConsistencyStreakPanel } from "@/features/settings/components/ConsistencyStreakPanel";
+import { RewardThemesPanel } from "@/features/settings/components/RewardThemesPanel";
+import { CollapsibleSection } from "@/shared/ui/CollapsibleSection";
+import { SportPilotAnimatedTabs } from "@/shared/ui/SportPilotAnimatedTabs";
+
+const rewardTabs = [
+  { id: "themes", label: "Thèmes" },
+  { id: "badges", label: "Badges" },
+] as const;
+
+type RewardTabId = (typeof rewardTabs)[number]["id"];
+
+function validTab(value: string | null): RewardTabId {
+  return rewardTabs.some(({ id }) => id === value)
+    ? value as RewardTabId
+    : "themes";
+}
+
+function initialTab(): RewardTabId {
+  if (typeof window === "undefined") return "themes";
+  const hashQuery = window.location.hash.split("?")[1] ?? "";
+  const locationQuery = window.location.search.slice(1);
+  return validTab(new URLSearchParams(hashQuery || locationQuery).get("tab"));
+}
 
 export function RewardsCenterPage() {
+  const [activeTab, setActiveTab] = useState<RewardTabId>(initialTab);
+
   return (
-    <section
-      aria-labelledby="rewards-title"
-      className="min-w-0"
-    >
-      <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6 dark:border-slate-800 dark:bg-slate-900">
-        <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
-          Progression et régularité
-        </p>
-        <h1
-          id="rewards-title"
-          className="mt-1 text-3xl font-bold tracking-tight text-slate-950 dark:text-white"
-        >
-          Centre de récompenses
-        </h1>
-        <p className="mt-3 max-w-3xl leading-7 text-slate-600 dark:text-slate-300">
-          Missions, séries, badges et thèmes sont désormais
-          regroupés dans des sections indépendantes et
-          repliables.
-        </p>
+    <section aria-labelledby="rewards-title" className="min-w-0">
+      <header className="border-b border-[var(--sp-border-subtle)] pb-5">
+        <div className="flex items-start gap-3">
+          <span className="grid size-11 shrink-0 place-items-center rounded-lg border border-[var(--sp-border-subtle)] bg-[var(--sp-surface-elevated)] text-[var(--sp-accent-primary)]">
+            {activeTab === "themes"
+              ? <Palette aria-hidden="true" className="size-5" />
+              : <Trophy aria-hidden="true" className="size-5" />}
+          </span>
+          <div>
+            <p className="text-xs font-bold uppercase text-[var(--sp-text-muted)]">
+              Progression et régularité
+            </p>
+            <h1
+              id="rewards-title"
+              className="mt-1 text-2xl font-bold text-[var(--sp-text-primary)] sm:text-3xl"
+            >
+              Récompenses
+            </h1>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--sp-text-secondary)]">
+              Consulte ta collection visuelle et les jalons gagnés au fil de tes données réelles.
+            </p>
+          </div>
+        </div>
+      </header>
+
+      <SportPilotAnimatedTabs
+        label="Sections des récompenses"
+        tabs={rewardTabs}
+        activeTab={activeTab}
+        onChange={(nextTab) => setActiveTab(validTab(nextTab))}
+        className="mt-5"
+      />
+
+      <div
+        id="themes-panel"
+        role="tabpanel"
+        aria-labelledby="themes-tab"
+        hidden={activeTab !== "themes"}
+        className="mt-5"
+      >
+        <RewardThemesPanel />
       </div>
 
-      <div className="mt-4 space-y-3">
+      <div
+        id="badges-panel"
+        role="tabpanel"
+        aria-labelledby="badges-tab"
+        hidden={activeTab !== "badges"}
+        className="mt-5 space-y-3"
+      >
+        <AchievementsPanel />
         <CollapsibleSection
           sectionId="rewards-missions"
           storageKey="sportpilot:rewards:missions"
@@ -45,7 +98,6 @@ export function RewardsCenterPage() {
         >
           <DashboardWeeklyMissions />
         </CollapsibleSection>
-
         <CollapsibleSection
           sectionId="rewards-streaks"
           storageKey="sportpilot:rewards:streaks"
@@ -55,28 +107,6 @@ export function RewardsCenterPage() {
           className="scroll-mt-24"
         >
           <ConsistencyStreakPanel />
-        </CollapsibleSection>
-
-        <CollapsibleSection
-          sectionId="rewards-achievements"
-          storageKey="sportpilot:rewards:achievements"
-          title="Badges et accomplissements"
-          description="Consulter les jalons atteints et ceux encore à débloquer."
-          icon={Trophy}
-          className="scroll-mt-24"
-        >
-          <AchievementsPanel />
-        </CollapsibleSection>
-
-        <CollapsibleSection
-          sectionId="rewards-themes"
-          storageKey="sportpilot:rewards:themes"
-          title="Thèmes visuels"
-          description="Activer une palette déjà débloquée."
-          icon={Palette}
-          className="scroll-mt-24"
-        >
-          <RewardThemesPanel />
         </CollapsibleSection>
       </div>
     </section>

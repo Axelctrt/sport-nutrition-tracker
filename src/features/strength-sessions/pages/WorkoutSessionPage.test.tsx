@@ -100,6 +100,53 @@ describe('WorkoutSessionPage', () => {
     expect(window.sessionStorage.getItem('sportpilot:rest-timer:session-current')).toBeNull();
   }, 25_000);
 
+  it('ajoute automatiquement l’exercice créé dans le contexte de la séance', async () => {
+    render(
+      <ToastProvider>
+        <MemoryRouter initialEntries={[{
+          pathname: '/strength/sessions/session-current',
+          state: {
+            strengthExerciseCreationContext: {
+              returnTo: 'session',
+              query: 'Rowing barre',
+              sessionId: 'session-current',
+              plannedSets: 3,
+            },
+            strengthExerciseCreated: {
+              exerciseId: 'exercise-row',
+              context: {
+                returnTo: 'session',
+                query: 'Rowing barre',
+                sessionId: 'session-current',
+                plannedSets: 3,
+              },
+            },
+          },
+        }]}>
+          <Routes>
+            <Route path="/strength/sessions/:sessionId" element={<WorkoutSessionPage />} />
+          </Routes>
+        </MemoryRouter>
+      </ToastProvider>,
+    );
+
+    expect(await screen.findByRole('heading', { name: 'Rowing barre' }))
+      .toBeInTheDocument();
+    expect(await screen.findByText('Exercice créé et ajouté.'))
+      .toBeInTheDocument();
+    await waitFor(async () => {
+      const added = await appDatabase.workoutSessionExercises
+        .where('exerciseDefinitionId')
+        .equals('exercise-row')
+        .first();
+      expect(added).toBeDefined();
+      expect(await appDatabase.strengthSets
+        .where('sessionExerciseId')
+        .equals(added!.id)
+        .count()).toBe(3);
+    });
+  });
+
   it('ajoute, valide, duplique et supprime des séries sans démonter la page', async () => {
     const user = userEvent.setup();
     renderSessionPage();
@@ -128,6 +175,9 @@ describe('WorkoutSessionPage', () => {
       .closest('[id^="workout-exercise-"]') as HTMLElement;
     await user.click(await within(benchCard).findByRole('button', { name: 'Développer Développé couché' }));
     expect(await within(benchCard).findByRole('heading', { name: 'Série 1' })).toBeInTheDocument();
+    await user.click(
+      within(benchCard).getByRole('button', { name: 'Modifier la série 1' }),
+    );
     expect(screen.getByLabelText('Charge en kg')).toHaveValue(60);
     expect(screen.getByLabelText('Répétitions')).toHaveValue(12);
     expect(screen.getByLabelText('RPE')).toHaveValue(8);

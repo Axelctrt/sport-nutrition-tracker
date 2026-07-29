@@ -173,7 +173,7 @@ export function createSocialFriendRequestsClient(
     userId: EntityId,
   ): Promise<SocialFriendRequestsListResult> {
     if (!endpoint || !fetcher) throw new Error('Demandes sociales serveur indisponibles.');
-    const credentials = resolveSocialCloudApiCredentials(getCredentials, userId);
+    const credentials = await resolveSocialCloudApiCredentials(getCredentials, userId);
     if (!credentials) throw new Error('Connexion SportPilot requise.');
 
     const response = await fetcher(`${endpoint}/${direction}?userId=${encodeURIComponent(userId)}`, {
@@ -200,7 +200,7 @@ export function createSocialFriendRequestsClient(
   return {
     async sendRequest(request) {
       if (!endpoint || !fetcher) return unavailableMutation();
-      const credentials = resolveSocialCloudApiCredentials(getCredentials, request.requesterUserId);
+      const credentials = await resolveSocialCloudApiCredentials(getCredentials, request.requesterUserId);
       if (!credentials) return unavailableMutation('Connexion SportPilot requise.');
 
       try {
@@ -249,7 +249,7 @@ export function createSocialFriendRequestsClient(
 
     async updateRequestStatus(requestId, status, respondedAt) {
       if (!endpoint || !fetcher) return unavailableMutation();
-      const credentials = resolveSocialCloudApiCredentials(getCredentials);
+      const credentials = await resolveSocialCloudApiCredentials(getCredentials);
       if (!credentials) return unavailableMutation('Connexion SportPilot requise.');
 
       try {

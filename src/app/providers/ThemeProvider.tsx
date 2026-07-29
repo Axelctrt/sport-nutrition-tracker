@@ -47,7 +47,9 @@ export function ThemeProvider({ children }: PropsWithChildren) {
   const resolvedTheme = theme === "system" ? systemTheme : theme;
 
   useEffect(() => {
-    applyStoredVisualTheme();
+    if (!document.documentElement.dataset.sportTheme) {
+      applyStoredVisualTheme();
+    }
   }, []);
 
   useEffect(() => {

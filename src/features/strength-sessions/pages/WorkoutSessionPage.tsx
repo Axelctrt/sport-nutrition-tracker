@@ -1,13 +1,21 @@
 import { ArrowLeft, Dumbbell, Plus, Save } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import {
+  filterExerciseDefinitions,
+  findSimilarExerciseDefinitions,
+  normalizeExerciseName,
+} from '@/application/strength/exerciseDefinitionService';
 import {
   buildWorkoutExerciseProgress,
   buildWorkoutSessionProgress,
   type WorkoutSessionProgress,
 } from '@/application/strength/workoutSessionProgress';
-import { getWorkoutSessionTitle } from '@/application/strength/workoutSessionService';
-import { routePaths } from '@/app/routePaths';
+import {
+  getWorkoutSessionTitle,
+  LONG_WORKOUT_DURATION_MINUTES,
+} from '@/application/strength/workoutSessionService';
+import { routePaths, workoutSessionPath } from '@/app/routePaths';
 import type { StrengthSetChanges } from '@/application/strength/strengthSetService';
 import type { StrengthSet, WorkoutSessionExercise } from '@/domain/models/strength';
 import { createDefaultAppSettings } from '@/domain/defaults/appSettings';
@@ -21,6 +29,11 @@ import { defaultRestTimerPreferences, useRestTimer } from '@/features/strength-r
 import { useWorkoutSession } from '@/features/strength-sessions/hooks/useWorkoutSession';
 import { workoutSessionStatusLabel } from '@/features/strength-sessions/utils/sessionLabels';
 import { inputClassName } from '@/shared/forms/formStyles';
+import {
+  newStrengthExercisePath,
+  type StrengthExerciseCreatedNavigationState,
+} from '@/features/strength-exercises/navigation/strengthExerciseCreationNavigation';
+import { useActionToast } from '@/shared/toast/useActionToast';
 import { Button } from '@/shared/ui/Button';
 import { CollapsibleSection } from '@/shared/ui/CollapsibleSection';
 import { ConfirmationDialog } from '@/shared/ui/ConfirmationDialog';
@@ -31,6 +44,10 @@ import { SaveStatus } from '@/shared/ui/SaveStatus';
 import { formatLocalDate } from '@/shared/utils/dates';
 import { cn } from '@/shared/utils/cn';
 import { repositories } from '@/infrastructure/repositories/repositories';
+import {
+  createWorkoutSessionFeedbackState,
+  type WorkoutSessionNavigationState,
+} from '@/features/strength-sessions/navigation/workoutSessionNavigation';
 
 interface RemoveExerciseConfirmation {
   type: 'removeExercise';
@@ -43,7 +60,11 @@ interface DeleteSetConfirmation {
   setId: string;
 }
 
-type ConfirmationRequest = RemoveExerciseConfirmation | DeleteSetConfirmation | { type: 'finish' } | { type: 'abandon' };
+type ConfirmationRequest =
+  | RemoveExerciseConfirmation
+  | DeleteSetConfirmation
+  | { type: 'finish'; allowLongDuration?: boolean }
+  | { type: 'abandon' };
 
 function revealElement(id: string): void {
   const reveal = () => document.getElementById(id)?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
@@ -67,7 +88,9 @@ function confirmationContent(
         : `Il reste ${progress.incompleteExerciseCount} exercice${progress.incompleteExerciseCount > 1 ? 's' : ''} sans série validée.`;
     return {
       title: 'Terminer la séance ?',
-      description: `${remainingDescription} La séance passera dans l’historique et ne pourra plus être modifiée.`,
+      description: request.allowLongDuration
+        ? `${remainingDescription} Cette séance est ouverte depuis plus de 6 heures. Confirme que cette durée est correcte avant de l’enregistrer dans l’historique.`
+        : `${remainingDescription} La séance passera dans l’historique et ne pourra plus être modifiée.`,
       confirmLabel: 'Terminer la séance',
       tone: 'default' as const,
     };
@@ -99,6 +122,12 @@ function confirmationContent(
 export function WorkoutSessionPage() {
   const { sessionId = '' } = useParams();
   const navigate = useNavigate();
+  const actionToast = useActionToast();
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigationState = location.state as
+    | (WorkoutSessionNavigationState & StrengthExerciseCreatedNavigationState)
+    | null;
   const {
     session,
     exercises,
@@ -127,6 +156,9 @@ export function WorkoutSessionPage() {
   } = useWorkoutSession(sessionId);
   const [selectedExerciseId, setSelectedExerciseId] = useState('');
   const [selectedExerciseSetCount, setSelectedExerciseSetCount] = useState(4);
+  const [exerciseQuery, setExerciseQuery] = useState('');
+  const [highlightedExerciseId, setHighlightedExerciseId] = useState<string>();
+  const handledCreatedExerciseRef = useRef<string | undefined>(undefined);
   const [notes, setNotes] = useState('');
   const [confirmation, setConfirmation] = useState<ConfirmationRequest>();
   const [temporarilySkippedExerciseIds, setTemporarilySkippedExerciseIds] = useState<Set<string>>(() => new Set());
@@ -134,6 +166,16 @@ export function WorkoutSessionPage() {
   const [restTimerPreferences, setRestTimerPreferences] = useState(defaultRestTimerPreferences);
   const [restTimerPreferencesReady, setRestTimerPreferencesReady] = useState(false);
   const restTimer = useRestTimer(sessionId, restTimerPreferences);
+  const filteredAvailableExercises = useMemo(
+    () => filterExerciseDefinitions(availableExercises, {
+      query: exerciseQuery,
+    }),
+    [availableExercises, exerciseQuery],
+  );
+  const similarExercises = useMemo(
+    () => findSimilarExerciseDefinitions(availableExercises, exerciseQuery),
+    [availableExercises, exerciseQuery],
+  );
 
   useEffect(() => {
     let mounted = true;
@@ -163,6 +205,49 @@ export function WorkoutSessionPage() {
   useEffect(() => {
     setNotes(session?.notes ?? '');
   }, [session?.notes]);
+
+  useEffect(() => {
+    const context = navigationState?.strengthExerciseCreationContext;
+    if (!context || context.returnTo !== 'session' || context.sessionId !== sessionId) {
+      return;
+    }
+    const created = navigationState?.strengthExerciseCreated;
+    if (!created) {
+      setExerciseQuery(context.query);
+      void navigate(workoutSessionPath(sessionId), { replace: true });
+      return;
+    }
+    if (
+      status !== 'ready'
+      || handledCreatedExerciseRef.current === created.exerciseId
+    ) return;
+    handledCreatedExerciseRef.current = created.exerciseId;
+    void (async () => {
+      const sessionExercise = await addExercise(created.exerciseId);
+      if (!sessionExercise) return;
+      for (let index = 0; index < context.plannedSets; index += 1) {
+        await addSet(sessionExercise.id);
+      }
+      setExerciseQuery('');
+      setSelectedExerciseId('');
+      setHighlightedExerciseId(sessionExercise.id);
+      revealElement(`workout-exercise-${sessionExercise.id}`);
+      actionToast.success({
+        key: `strength-exercise-created-added:${created.exerciseId}`,
+        title: 'Exercice créé et ajouté.',
+      });
+      await navigate(workoutSessionPath(sessionId), { replace: true });
+      window.setTimeout(() => setHighlightedExerciseId(undefined), 2_500);
+    })();
+  }, [
+    actionToast,
+    addExercise,
+    addSet,
+    navigate,
+    navigationState,
+    sessionId,
+    status,
+  ]);
 
   const exerciseGroups = useMemo(() => buildExerciseGroups(exercises), [exercises]);
 
@@ -200,6 +285,14 @@ export function WorkoutSessionPage() {
     () => buildWorkoutSessionProgress(exercises, strengthSets),
     [exercises, strengthSets],
   );
+
+  useEffect(() => {
+    if (searchParams.get('finish') !== 'true' || session?.status !== 'inProgress') return;
+    setConfirmation({ type: 'finish' });
+    const next = new URLSearchParams(searchParams);
+    next.delete('finish');
+    setSearchParams(next, { replace: true });
+  }, [searchParams, session?.status, setSearchParams]);
 
   const executionBlockCompleteByExerciseId = useMemo(() => {
     const progressByExerciseId = new Map(exercises.map((exercise) => [
@@ -330,10 +423,19 @@ export function WorkoutSessionPage() {
     setIsConfirming(true);
     try {
       if (confirmation.type === 'finish') {
-        const completed = await complete();
+        const completed = await complete(
+          undefined,
+          confirmation.allowLongDuration,
+        );
         if (completed) {
           restTimer.stop();
-          await navigate(routePaths.workoutSessions);
+          const returnContext = navigationState?.workoutSessionReturn;
+          await navigate(
+            returnContext?.path ?? routePaths.workoutSessions,
+            returnContext
+              ? { state: createWorkoutSessionFeedbackState(returnContext, completed.id) }
+              : undefined,
+          );
         }
       } else if (confirmation.type === 'abandon') {
         const abandoned = await abandon();
@@ -391,6 +493,14 @@ export function WorkoutSessionPage() {
   }
 
   const editable = session.status === 'inProgress';
+  const sessionElapsedMinutes = session.startedAt
+    ? Math.max(
+        0,
+        Math.round(
+          (Date.now() - new Date(session.startedAt).getTime()) / 60_000,
+        ),
+      )
+    : 0;
   const dialogContent = confirmationContent(confirmation, progress);
 
   return (
@@ -441,7 +551,12 @@ export function WorkoutSessionPage() {
           session={session}
           saveStatus={saveStatus}
           isPending={Boolean(action) || isConfirming}
-          onFinish={() => setConfirmation({ type: 'finish' })}
+          onFinish={() => setConfirmation({
+            type: 'finish',
+            ...(sessionElapsedMinutes > LONG_WORKOUT_DURATION_MINUTES
+              ? { allowLongDuration: true }
+              : {}),
+          })}
           onAbandon={() => setConfirmation({ type: 'abandon' })}
           hasRestTimer={restTimer.isVisible}
           progressLabel={progress.totalSetCount > 0
@@ -475,7 +590,7 @@ export function WorkoutSessionPage() {
                 className={inputClassName}
               >
                 <option value="">Choisir dans le catalogue</option>
-                {availableExercises.map((exercise) => (
+                {filteredAvailableExercises.map((exercise) => (
                   <option key={exercise.id} value={exercise.id}>{exercise.name}</option>
                 ))}
               </select>
@@ -484,6 +599,22 @@ export function WorkoutSessionPage() {
               <Plus aria-hidden="true" className="size-4" />
               {action === 'addExercise' ? 'Ajout…' : `Ajouter ${selectedExerciseSetCount} série${selectedExerciseSetCount > 1 ? 's' : ''}`}
             </Button>
+          </div>
+          <div className="mt-3">
+            <label htmlFor="session-exercise-search" className="sr-only">
+              Rechercher un exercice à ajouter
+            </label>
+            <input
+              id="session-exercise-search"
+              type="search"
+              value={exerciseQuery}
+              onChange={(event) => {
+                setExerciseQuery(event.target.value);
+                setSelectedExerciseId('');
+              }}
+              className={inputClassName}
+              placeholder="Rechercher un exercice à ajouter"
+            />
           </div>
           <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3 dark:border-slate-800 dark:bg-slate-950/40">
             <label htmlFor="session-exercise-set-count" className="text-sm font-semibold text-slate-700 dark:text-slate-200">
@@ -547,7 +678,39 @@ export function WorkoutSessionPage() {
               Les lignes seront créées immédiatement et garderont les mêmes options qu’une séance planifiée.
             </p>
           </div>
-          {availableExercises.length === 0 ? (
+          {normalizeExerciseName(exerciseQuery)
+            && filteredAvailableExercises.length === 0 ? (
+            <div className="mt-3 rounded-xl border border-slate-200 p-3 dark:border-slate-800">
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                Aucun exercice trouvé pour « {exerciseQuery.trim()} »
+              </p>
+              {similarExercises.length > 0 ? (
+                <>
+                  <p className="mt-3 text-xs font-semibold uppercase text-slate-500">
+                    Exercices similaires
+                  </p>
+                  <ul className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                    {similarExercises.map((exercise) => (
+                      <li key={exercise.id}>{exercise.name}</li>
+                    ))}
+                  </ul>
+                </>
+              ) : null}
+              <Link
+                to={newStrengthExercisePath({
+                  returnTo: 'session',
+                  query: exerciseQuery.trim(),
+                  sessionId,
+                  plannedSets: selectedExerciseSetCount,
+                })}
+                className="mt-3 inline-flex min-h-11 items-center justify-center rounded-xl bg-brand-700 px-4 text-sm font-semibold text-white"
+              >
+                {similarExercises.length > 0
+                  ? 'Aucun ne correspond — créer l’exercice'
+                  : 'Créer cet exercice'}
+              </Link>
+            </div>
+          ) : availableExercises.length === 0 ? (
             <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
               Tous les exercices actifs du catalogue sont déjà présents.
             </p>
@@ -597,6 +760,7 @@ export function WorkoutSessionPage() {
               onSkip={groupPosition ? handleSkipExercise : undefined}
               isCurrent={progress.nextStep?.exerciseId === exercise.id}
               executionBlockComplete={executionBlockCompleteByExerciseId.get(exercise.id) ?? false}
+              highlighted={highlightedExerciseId === exercise.id}
             />
           );
         })}

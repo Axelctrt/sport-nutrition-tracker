@@ -7,7 +7,7 @@ import {
 
 const primaryRoutes = [
   { path: '/', heading: /^Bonjour / },
-  { path: '/food', heading: 'Journal alimentaire' },
+  { path: '/food', heading: 'Nutrition' },
   { path: '/activities', heading: 'Sport' },
   { path: '/progression', heading: 'Progression' },
 ] as const;
@@ -37,7 +37,7 @@ test('rend le lien d’évitement et le focus clavier opérationnels', async ({ 
 
   const skipLink = page.getByRole('link', { name: 'Aller au contenu' });
   if (testInfo.project.name === 'chromium-desktop') {
-    await expect(page.getByRole('heading', { name: 'Journal alimentaire' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Nutrition' })).toBeVisible();
     await page.evaluate(() => {
       document.body.setAttribute('tabindex', '-1');
       document.body.focus({ preventScroll: true });
@@ -57,7 +57,7 @@ test('rend le lien d’évitement et le focus clavier opérationnels', async ({ 
   await expect(page).toHaveURL(/#\/food$/);
 
   await expectPageAccessibilityBaseline(page, {
-    expectedHeading: 'Journal alimentaire',
+    expectedHeading: 'Nutrition',
     checkShellTouchTargets: true,
   });
 });
@@ -66,11 +66,13 @@ test('piège puis restitue le focus dans un panneau mobile', async ({ page }, te
   await createLocalProfile(page);
   await page.goto('/#/activities');
 
-  const trigger = page.getByRole('button', { name: 'Choisir l’activité' });
+  const trigger = page.getByRole('button', {
+    name: 'Ajouter une activité déjà réalisée',
+  });
   await trigger.focus();
   await trigger.click();
 
-  const dialog = page.getByRole('dialog', { name: 'Démarrer ou ajouter une activité' });
+  const dialog = page.getByRole('dialog', { name: 'Enregistrer une activité' });
   await expect(dialog).toBeVisible();
   await expect(dialog.getByRole('button', { name: 'Fermer', exact: true })).toBeFocused();
 
@@ -91,9 +93,11 @@ test('respecte la réduction des animations système', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await createLocalProfile(page);
   await page.goto('/#/activities');
-  await page.getByRole('button', { name: 'Choisir l’activité' }).click();
+  await page.getByRole('button', {
+    name: 'Ajouter une activité déjà réalisée',
+  }).click();
 
-  const duration = await page.getByRole('dialog', { name: 'Démarrer ou ajouter une activité' }).evaluate((element) => {
+  const duration = await page.getByRole('dialog', { name: 'Enregistrer une activité' }).evaluate((element) => {
     const value = window.getComputedStyle(element).animationDuration.trim();
     if (value.endsWith('ms')) return Number.parseFloat(value);
     if (value.endsWith('s')) return Number.parseFloat(value) * 1000;

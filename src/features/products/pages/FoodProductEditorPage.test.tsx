@@ -18,4 +18,20 @@ describe('FoodProductEditorPage', () => {
       '/food/select?date=2026-06-24&slot=lunch',
     );
   });
+
+  it('préremplit le nom et conserve la source de retour', async () => {
+    render(
+      <MemoryRouter initialEntries={['/food/products/new?returnDate=2026-06-24&returnSlot=lunch&name=Skyr+vanille&returnSource=all']}>
+        <Routes>
+          <Route path="/food/products/new" element={<FoodProductEditorPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByLabelText(/Nom de l’aliment/)).toHaveValue('Skyr vanille');
+    expect(screen.getByRole('link', { name: 'Retour au choix de l’aliment' })).toHaveAttribute(
+      'href',
+      '/food/select?date=2026-06-24&slot=lunch&source=all',
+    );
+  });
 });

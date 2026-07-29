@@ -32,7 +32,10 @@ type PanelStatus =
 
 interface SocialActivityCloudReadinessPanelProps {
   readonly gateway: SocialActivityFeedCloudGateway;
-  readonly getCredentials: () => SocialActivitySnapshotCloudCredentials | undefined;
+  readonly getCredentials: () =>
+    | SocialActivitySnapshotCloudCredentials
+    | undefined
+    | Promise<SocialActivitySnapshotCloudCredentials | undefined>;
   readonly isOnline?: () => boolean;
   readonly subscribeCredentials?: (listener: () => void) => () => void;
 }
@@ -58,7 +61,7 @@ export function SocialActivityCloudReadinessPanel({
   const [message, setMessage] = useState<string>();
 
   const checkReadiness = useCallback(async () => {
-    const credentials = getCredentials();
+    const credentials = await getCredentials();
     if (!credentials) {
       setStatus('authRequired');
       setReadiness(undefined);

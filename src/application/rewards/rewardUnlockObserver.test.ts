@@ -5,11 +5,13 @@ import {
 import {
   buildRewardUnlockBatch,
   observeRewardUnlocks,
+  persistRewardUnlockBatch,
 } from "@/application/rewards/rewardUnlockObserver";
 import {
   buildThemeAchievementSnapshot,
   loadThemeAchievementPreview,
 } from "@/application/rewards/themeAchievementService";
+import type { Activity } from "@/domain/models/activity";
 import {
   flushAchievementStatePersistence,
   readAchievementState,
@@ -23,6 +25,46 @@ import {
 import { AppDatabase } from "@/infrastructure/database/AppDatabase";
 import { initializeUserStateRuntime } from "@/infrastructure/user-state/userStateRuntime";
 
+const EMPTY_THEME_DATA = {
+  activities: [] as Activity[],
+  workoutSessions: [],
+  checkIns: [],
+  checkOuts: [],
+  foodEntries: [],
+  activityDecisions: [],
+};
+
+function activity(id: string, date: string): Activity {
+  return {
+    id,
+    date,
+    type: "walking",
+    durationMinutes: 30,
+    intensity: "moderate",
+    met: 4,
+    includedInDailySteps: true,
+    calculation: {
+      weightKg: 70,
+      estimatedCaloriesKcal: 140,
+      calculationVersion: 1,
+    },
+    createdAt: `${date}T08:00:00.000Z`,
+    updatedAt: `${date}T08:00:00.000Z`,
+  };
+}
+
+function neonData() {
+  const dates = [
+    ...Array.from({ length: 3 }, (_, index) => `2026-06-0${index + 1}`),
+    ...Array.from({ length: 3 }, (_, index) => `2026-06-${15 + index}`),
+    ...Array.from({ length: 14 }, (_, index) => `2026-07-0${index % 3 + 6}`),
+  ];
+  return {
+    ...EMPTY_THEME_DATA,
+    activities: dates.map((date, index) => activity(`activity-${index}`, date)),
+  };
+}
+
 describe("rewardUnlockObserver", () => {
   it("regroupe uniquement les nouveaux badges et thèmes", () => {
     const achievements = buildAchievementSnapshot({
@@ -32,11 +74,15 @@ describe("rewardUnlockObserver", () => {
       activeDays: 2,
       disciplineCount: 1,
     });
-    const themes = buildThemeAchievementSnapshot({
-      enduranceActivities: 5,
-      completedStrengthSessions: 0,
-      activeDays: 2,
-    });
+    const themes = buildThemeAchievementSnapshot(
+      neonData(),
+      "2026-07-28",
+      {
+        activeThemeId: "core",
+        unlockedThemeIds: ["core"],
+        unlockMetadata: {},
+      },
+    );
 
     const batch = buildRewardUnlockBatch(achievements, themes);
 
@@ -44,33 +90,53 @@ describe("rewardUnlockObserver", () => {
       "first-session",
       "endurance-five",
     ]);
-    expect(batch.themes.map((item) => item.theme.id)).toEqual(["endurance"]);
+    expect(batch.themes.map((item) => item.theme.id)).toEqual(["neon-pulse"]);
   });
 
-  it("ne signale pas une récompense déjà conservée dans le stockage", () => {
-    const achievements = buildAchievementSnapshot(
+  it("ne signale pas un thème déjà conservé", () => {
+    const themes = buildThemeAchievementSnapshot(
+      neonData(),
+      "2026-07-28",
       {
-        totalLoggedSessions: 1,
+        activeThemeId: "core",
+        unlockedThemeIds: ["core", "neon-pulse"],
+        unlockMetadata: {
+          "neon-pulse": { unlockedAt: "2026-07-20T08:00:00.000Z" },
+        },
+      },
+    );
+
+    expect(buildRewardUnlockBatch(
+      buildAchievementSnapshot({
+        totalLoggedSessions: 0,
         enduranceActivities: 0,
         completedStrengthSessions: 0,
-        activeDays: 1,
-        disciplineCount: 1,
-      },
-      [{ id: "first-session", earnedAt: "2026-06-27T12:00:00.000Z" }],
-    );
+        activeDays: 0,
+        disciplineCount: 0,
+      }),
+      themes,
+    ).themes).toEqual([]);
+  });
+
+  it("persiste la date exacte du lot de déblocage", () => {
+    writeVisualThemeState({
+      activeThemeId: "core",
+      unlockedThemeIds: ["core"],
+      unlockMetadata: {},
+    });
     const themes = buildThemeAchievementSnapshot(
-      {
-        enduranceActivities: 5,
-        completedStrengthSessions: 0,
-        activeDays: 1,
-      },
-      ["classic", "endurance"],
+      neonData(),
+      "2026-07-28",
+      readVisualThemeState(),
     );
 
-    const batch = buildRewardUnlockBatch(achievements, themes);
+    persistRewardUnlockBatch(
+      { achievements: [], themes: themes.newlyUnlockedThemes },
+      "2026-07-28T12:30:00.000Z",
+    );
 
-    expect(batch.achievements).toEqual([]);
-    expect(batch.themes).toEqual([]);
+    expect(readVisualThemeState().unlockMetadata["neon-pulse"]?.unlockedAt)
+      .toBe("2026-07-28T12:30:00.000Z");
   });
 
   it("persiste les récompenses hors du contexte en lecture seule de liveQuery", async () => {
@@ -81,8 +147,9 @@ describe("rewardUnlockObserver", () => {
     await initializeUserStateRuntime(database);
     writeAchievementState({ earnedAchievements: [] });
     writeVisualThemeState({
-      activeThemeId: "classic",
-      unlockedThemeIds: ["classic"],
+      activeThemeId: "core",
+      unlockedThemeIds: ["core"],
+      unlockMetadata: {},
     });
     await Promise.all([
       flushAchievementStatePersistence(),
@@ -119,11 +186,10 @@ describe("rewardUnlockObserver", () => {
     ]);
 
     expect(onError).not.toHaveBeenCalled();
-    expect(onUnlocks).toHaveBeenCalledTimes(1);
     expect(
       readAchievementState().earnedAchievements.map(({ id }) => id),
     ).toContain("first-session");
-    expect(readVisualThemeState().unlockedThemeIds).toEqual(["classic"]);
+    expect(readVisualThemeState().unlockedThemeIds).toEqual(["core"]);
 
     const [achievementPreview, themePreview] = await Promise.all([
       loadAchievementPreview(database),

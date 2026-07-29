@@ -5,19 +5,22 @@ import { FoodJournalPage } from '@/features/food-journal/pages/FoodJournalPage';
 import { appDatabase } from '@/infrastructure/database/database';
 import { repositories } from '@/infrastructure/repositories/repositories';
 import { ToastProvider } from '@/shared/toast/ToastProvider';
+import { TrashUndoCoordinator } from '@/app/trash/TrashUndoCoordinator';
 
 const originalRequestAnimationFrame = window.requestAnimationFrame;
 
 function renderJournal(initialEntry: string | { pathname: string; search?: string; state?: unknown } = '/food?date=2026-06-24') {
   return render(
     <ToastProvider>
-      <MemoryRouter initialEntries={[initialEntry]}>
-        <Routes>
-          <Route path="/food" element={<FoodJournalPage />} />
-          <Route path="/food/select" element={<h1>Sélecteur</h1>} />
-          <Route path="/food/entries/:entryId/edit" element={<h1>Éditeur</h1>} />
-        </Routes>
-      </MemoryRouter>
+      <TrashUndoCoordinator>
+        <MemoryRouter initialEntries={[initialEntry]}>
+          <Routes>
+            <Route path="/food" element={<FoodJournalPage />} />
+            <Route path="/food/select" element={<h1>Sélecteur</h1>} />
+            <Route path="/food/entries/:entryId/edit" element={<h1>Éditeur</h1>} />
+          </Routes>
+        </MemoryRouter>
+      </TrashUndoCoordinator>
     </ToastProvider>,
   );
 }
@@ -83,13 +86,21 @@ describe('FoodJournalPage — expérience mobile', () => {
   it('regroupe le résumé et les quatre repas avec une action Ajouter immédiatement visible', async () => {
     renderJournal();
 
-    expect(await screen.findByRole('heading', { name: 'Journal alimentaire' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Nutrition' })).toBeInTheDocument();
     expect(await screen.findByLabelText('Résumé nutritionnel de la journée')).toBeInTheDocument();
+    const user = userEvent.setup();
     for (const meal of ['Petit-déjeuner', 'Déjeuner', 'Dîner', 'Collations']) {
       expect(screen.getByRole('heading', { name: meal })).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: meal === 'Collations' ? 'Ajouter un aliment aux collations' : `Ajouter un aliment au ${meal.toLocaleLowerCase('fr')}` })).toBeInTheDocument();
+      const toggle = screen.getByRole('button', { name: new RegExp(`^${meal}`) });
+      if (toggle.getAttribute('aria-expanded') !== 'true') await user.click(toggle);
+      expect(screen.getByRole('button', {
+        name: meal === 'Collations'
+          ? 'Ajouter un aliment aux collations'
+          : `Ajouter un aliment au ${meal.toLocaleLowerCase('fr')}`,
+      })).toBeInTheDocument();
     }
     expect(screen.getByRole('button', { name: 'Options de la journée' })).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByRole('button', { name: 'Bibliothèque' })).toBeInTheDocument();
     expect(screen.queryByText('Copier toute la journée vers')).not.toBeInTheDocument();
   });
 
@@ -98,21 +109,71 @@ describe('FoodJournalPage — expérience mobile', () => {
     const user = userEvent.setup();
     renderJournal();
 
-    await screen.findByRole('heading', { name: 'Journal alimentaire' });
+    await screen.findByRole('heading', { name: 'Nutrition' });
     const breakfastToggle = await screen.findByRole('button', { name: /^Petit-déjeuner/ });
-    expect(breakfastToggle).toHaveAttribute('aria-expanded', 'true');
+    expect(breakfastToggle).toHaveAttribute('aria-expanded', 'false');
     expect(screen.getByRole('button', { name: /^Déjeuner/ })).toHaveAttribute('aria-expanded', 'false');
+
+    await user.click(breakfastToggle);
+    expect(breakfastToggle).toHaveAttribute('aria-expanded', 'true');
+    await user.click(breakfastToggle);
+    expect(breakfastToggle).toHaveAttribute('aria-expanded', 'false');
 
     await user.click(screen.getByRole('button', { name: /^Déjeuner/ }));
     expect(breakfastToggle).toHaveAttribute('aria-expanded', 'false');
     expect(screen.getByRole('button', { name: /^Déjeuner/ })).toHaveAttribute('aria-expanded', 'true');
 
-    await user.click(screen.getAllByRole('button', { name: 'Ajouter un aliment' })[0]!);
-    expect(await screen.findByRole('dialog', { name: 'Ajouter un aliment' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Petit-déjeuner/ })).toHaveAttribute(
+    await user.click(screen.getAllByRole('button', { name: 'Ajouter un repas' })[0]!);
+    const dialog = await screen.findByRole('dialog', { name: 'Ajouter un repas' });
+    await user.click(within(dialog).getByRole('radio', { name: /Petit-déjeuner/ }));
+    await user.click(within(dialog).getByRole('button', { name: 'Ajouter un élément' }));
+    await user.click(within(dialog).getByRole('button', { name: /Rechercher un aliment/ }));
+    expect(within(dialog).getByRole('link', { name: /Mes aliments/ })).toHaveAttribute(
       'href',
-      '/food/select?date=2026-06-24&slot=breakfast',
+      '/food/select?date=2026-06-24&slot=breakfast&source=all',
     );
+  });
+
+  it('sépare la bibliothèque des options propres à la journée', async () => {
+    const user = userEvent.setup();
+    renderJournal();
+
+    await user.click(
+      await screen.findByRole('button', { name: /Bibliothèque/ }),
+    );
+
+    const library = await screen.findByRole('dialog', { name: 'Bibliothèque nutritionnelle' });
+    for (const destination of [
+      'Aliments enregistrés',
+      'Recettes',
+      'Repas favoris',
+      'Recherche externe',
+      'Créer un aliment',
+    ]) {
+      expect(within(library).getByRole('link', { name: new RegExp(destination) })).toBeInTheDocument();
+    }
+
+    await user.click(within(library).getByRole('button', { name: 'Fermer' }));
+    await user.click(screen.getByRole('button', { name: 'Options de la journée' }));
+    expect(screen.getByText('Copier toute la journée vers')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /Aliments enregistrés/ })).not.toBeInTheDocument();
+    expect(screen.getByText(/Journée en cours/)).toBeInTheDocument();
+  });
+
+  it('ouvre le repas et le panneau demandés explicitement par l’URL', async () => {
+    renderJournal('/food?date=2026-06-24&slot=dinner&add=true');
+
+    const dialog = await screen.findByRole('dialog', { name: 'Ajouter un repas' });
+    await waitFor(() => {
+      expect(within(dialog).getByRole('radio', { name: /Dîner/ })).toBeChecked();
+    });
+    expect(screen.getByRole('button', { name: /^Dîner/ })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    );
+    await waitFor(() => {
+      expect(HTMLElement.prototype.scrollIntoView).toHaveBeenCalled();
+    });
   });
 
 
@@ -121,7 +182,7 @@ describe('FoodJournalPage — expérience mobile', () => {
     await seedLunchEntry('2026-06-23');
     renderJournal();
 
-    await screen.findByRole('heading', { name: 'Journal alimentaire' });
+    await screen.findByRole('heading', { name: 'Nutrition' });
     await user.click(await screen.findByRole('button', { name: /^Déjeuner/ }));
 
     expect(await screen.findByText('Dernier déjeuner enregistré le 23 juin 2026.')).toBeInTheDocument();
@@ -139,11 +200,12 @@ describe('FoodJournalPage — expérience mobile', () => {
     await seedLunchEntry();
     renderJournal();
 
+    await user.click(await screen.findByRole('button', { name: /^Déjeuner/ }));
     expect(await screen.findByText('Yaourt grec')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Jour suivant' }));
 
     await waitFor(() => expect(screen.getByLabelText('Choisir une date')).toHaveValue('2026-06-25'));
-    await screen.findByRole('heading', { name: 'Aucun aliment pour cette journée' });
+    await screen.findByRole('heading', { name: 'Aucun aliment ce jour-là' });
     expect(screen.queryByText('Yaourt grec')).not.toBeInTheDocument();
   });
 
@@ -152,6 +214,7 @@ describe('FoodJournalPage — expérience mobile', () => {
     const { entry } = await seedLunchEntry();
     renderJournal();
 
+    await user.click(await screen.findByRole('button', { name: /^Déjeuner/ }));
     await screen.findByText('Yaourt grec');
     await user.click(screen.getByRole('button', { name: 'Actions pour Yaourt grec' }));
     await user.click(screen.getByRole('button', { name: 'Modifier la quantité' }));
@@ -170,22 +233,20 @@ describe('FoodJournalPage — expérience mobile', () => {
     expect(screen.getByText(/80 g · 96 kcal/)).toBeInTheDocument();
   });
 
-  it('confirme une suppression dans un dialogue accessible', async () => {
+  it('supprime immédiatement une entrée et permet de l’annuler', async () => {
     const user = userEvent.setup();
     const { entry } = await seedLunchEntry();
     renderJournal();
 
+    await user.click(await screen.findByRole('button', { name: /^Déjeuner/ }));
     await screen.findByText('Yaourt grec');
     await user.click(screen.getByRole('button', { name: 'Actions pour Yaourt grec' }));
     await user.click(screen.getByRole('button', { name: 'Supprimer' }));
 
-    const dialog = await screen.findByRole('alertdialog');
-    expect(dialog).toHaveTextContent('Supprimer cette entrée ?');
-    await user.click(within(dialog).getByRole('button', { name: 'Supprimer' }));
-
     await waitFor(async () => expect(await repositories.food.getEntryById(entry.id)).toBeUndefined());
-    expect(await screen.findByText('Entrée supprimée')).toBeInTheDocument();
-    await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
+    expect(await screen.findByText('Élément déplacé dans la corbeille')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /Annuler la suppression/ }));
+    await waitFor(async () => expect(await repositories.food.getEntryById(entry.id)).toBeDefined());
   });
 
   it('affiche une confirmation unique et cible le repas après un retour d’ajout', async () => {

@@ -2,49 +2,40 @@ import { visualThemeCatalog } from "@/domain/rewards/visualThemes";
 import css from "@/styles/unlockableThemes.css?raw";
 
 describe("rewardThemeSpectacleReadiness", () => {
-  it("documente les thèmes colorés statiques avec pop-up unique et mode sombre stable", () => {
-    const byId = new Map(visualThemeCatalog.map((theme) => [theme.id, theme]));
-
-    expect(byId.get("volcan")?.description).toContain("lave suggérée");
-    expect(byId.get("volcan")?.description).toContain(
-      "sans image lourde ni mouvement",
-    );
-    expect(byId.get("ocean")?.description).toContain(
-      "bleu-turquoise plus coloré",
-    );
-    expect(byId.get("abysses")?.description).toContain("sans animation");
-    expect(byId.get("cosmos")?.description).toContain("sci-fi sans animation");
-    expect(byId.get("nexus-vivant")?.description).toContain(
-      "sans animation ni asset image",
-    );
+  it("définit cinq identités visuelles complètes et prévisualisables", () => {
+    expect(visualThemeCatalog.map(({ id }) => id)).toEqual([
+      "core",
+      "neon-pulse",
+      "emerald-focus",
+      "aurora",
+      "zenith-gold",
+    ]);
+    expect(visualThemeCatalog.map(({ rarity }) => rarity)).toEqual([
+      "standard",
+      "rare",
+      "rare",
+      "epic",
+      "legendary",
+    ]);
+    expect(visualThemeCatalog.every(({ palette }) => (
+      palette.light.backgroundPrimary !== palette.dark.backgroundPrimary
+    ))).toBe(true);
   });
 
-  it("ne dépend plus d’images publiques ni d’animations de thème", () => {
-    expect(css).toContain("accessible dark-mode fixes");
-    expect(css).toContain("--sport-reward-atmosphere");
-    expect(css).toContain("--sport-reward-pattern");
-    expect(css).toContain("--sport-reward-base");
-    expect(css).toContain("sport-theme-app");
-    expect(css).toContain("data-theme-preview-dialog");
-    expect(css).toContain('html.dark[data-sport-theme]:not([data-sport-theme="classic"])');
-    expect(css).toContain('data-sport-theme-style="minimal"');
-    expect(css).not.toContain("/theme-scenes/");
-    expect(css).not.toContain("--sport-preview-image");
-    expect(css).not.toContain("@keyframes");
-    expect(css).not.toMatch(/animation\s*:/);
-  });
-
-  it("conserve des miniatures vitrines sans assets externes", () => {
-    for (const themeId of [
-      "ocean",
-      "abysses",
-      "volcan",
-      "canopee",
-      "cosmos",
-      "forge",
-      "nexus-vivant",
-    ]) {
-      expect(css).toContain(`data-sport-preview=\"${themeId}\"`);
+  it("fournit les cinq rendus clair et sombre sans asset distant", () => {
+    for (const themeId of visualThemeCatalog.map(({ id }) => id)) {
+      expect(css).toContain(`html[data-sport-theme="${themeId}"]`);
+      expect(css).toContain(`html.dark[data-sport-theme="${themeId}"]`);
+      expect(css).toContain(`[data-theme-preview="${themeId}"]`);
     }
+    expect(css).not.toContain("url(http");
+    expect(css).not.toContain("/theme-scenes/");
+  });
+
+  it("limite le mouvement décoratif à Aurora et respecte reduced-motion", () => {
+    expect(css).toContain("@keyframes sp-aurora-background");
+    expect(css).toContain('html[data-sport-theme="aurora"] body');
+    expect(css).toContain("@media (prefers-reduced-motion: reduce)");
+    expect(css).toContain("animation: none !important");
   });
 });

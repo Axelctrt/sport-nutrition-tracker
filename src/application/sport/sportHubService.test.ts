@@ -111,6 +111,7 @@ describe('sportHubService', () => {
       'swim-upcoming',
     ]);
     expect(snapshot.latestActivity).toMatchObject({ id: 'bike' });
+    expect(snapshot.recentActivities.map(({ id }) => id)).toEqual(['bike', 'swim', 'run']);
     expect(snapshot.week).toMatchObject({
       startDate: '2026-07-06',
       endDate: '2026-07-12',

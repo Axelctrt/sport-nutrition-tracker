@@ -4,6 +4,7 @@ const failures = [];
 const read = (path) => existsSync(path) ? readFileSync(path, 'utf8') : '';
 const needFile = (path) => { if (!existsSync(path)) failures.push(`fichier manquant : ${path}`); };
 const need = (source, value, label) => { if (!source.includes(value)) failures.push(`${label} : ${value}`); };
+const reject = (source, value, label) => { if (source.includes(value)) failures.push(`${label} : ${value}`); };
 
 for (const path of [
   'src/infrastructure/sync-prototype/realSocialCloudIdentityService.ts',
@@ -36,12 +37,22 @@ need(credentials, 'authorization: `Bearer ${credentials.accessToken}`', 'Bearer 
 for (const value of ['authenticateRequest', 'SOCIAL_DIRECTORY_ACTOR_MISMATCH', 'reserveSocialHandle']) {
   need(directory, value, 'serveur identité cloud incomplet');
 }
-for (const value of ['authenticateRequest', 'privateIdentity.userId === previousUserId']) {
+for (const value of [
+  'authenticateRequest',
+  'const legacyIds = new Set();',
+  'SOCIAL_IDENTITY_RECONCILIATION_HANDLE_CONFLICT',
+]) {
   need(reconciliation, value, 'réconciliation d’identité incomplète');
 }
 for (const value of ['Mon identifiant SportPilot', 'Vérifier disponibilité', 'Enregistrer']) {
   need(page, value, 'interface identité cloud incomplète');
 }
+
+reject(
+  reconciliation,
+  'privateIdentity.userId === previousUserId',
+  'reconciliation d identite accepte encore une preuve privee non fiable',
+);
 
 if (failures.length) {
   console.error('Audit identités cloud sociales échoué :');

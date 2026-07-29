@@ -39,7 +39,7 @@ const externalRequestItems = [
 const controlItems = [
   'Les sauvegardes JSON et les exports CSV sont téléchargés comme fichiers sur l’appareil choisi par l’utilisateur.',
   'Une restauration affiche une prévisualisation et demande une confirmation avant de remplacer les données locales.',
-  'La page Sauvegarde permet d’effacer les données SportPilot. La suppression des données du site dans le navigateur produit le même effet.',
+  'La page Sauvegarde efface les données locales. Pour un compte connecté, la page Compte et appareils propose séparément une suppression vérifiée des données cloud, sociales et locales.',
   'Un diagnostic technique contient des versions, des capacités et des compteurs, sans détail des données personnelles.',
 ] as const;
 
@@ -145,10 +145,10 @@ export function PrivacyPage() {
               </span>
               <div className="min-w-0">
                 <h2 className="text-lg font-semibold text-slate-950 dark:text-white">
-                  Caméra et scanner
+                  Caméra, scanner et analyse photo
                 </h2>
                 <p className="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                  La caméra démarre uniquement après une action explicite et avec l’autorisation du navigateur. Les images sont analysées dans le navigateur : elles ne sont ni enregistrées ni envoyées à SportPilot ou à Open Food Facts. Seul le code-barres détecté peut être transmis lors d’une recherche de produit.
+                  La caméra démarre uniquement après une action explicite et avec l’autorisation du navigateur. Le scanner analyse l’image dans le navigateur ; seul le code-barres détecté peut être transmis à Open Food Facts. L’analyse nutritionnelle reste locale par défaut. Si tu actives l’IA distante pour une photo, une connexion SportPilot est requise et le proxy transmet cette photo à Google Gemini après ton consentement. La photo n’est pas ajoutée au journal alimentaire.
                 </p>
               </div>
             </div>

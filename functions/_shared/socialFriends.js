@@ -130,70 +130,6 @@ function readDatabase(env = {}) {
   return database;
 }
 
-async function ensureSocialFriendsSchema(database) {
-  await database.prepare(`
-    CREATE TABLE IF NOT EXISTS social_directory_handles (
-      handle TEXT PRIMARY KEY,
-      owner_user_id TEXT NOT NULL,
-      owner_display_name TEXT NOT NULL,
-      reserved_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    )
-  `).run();
-
-  await database.prepare(`
-    CREATE INDEX IF NOT EXISTS idx_social_directory_handles_owner
-    ON social_directory_handles(owner_user_id)
-  `).run();
-
-  await database.prepare(`
-    CREATE TABLE IF NOT EXISTS social_friendships (
-      id TEXT PRIMARY KEY,
-      user_a_id TEXT NOT NULL,
-      user_b_id TEXT NOT NULL,
-      status TEXT NOT NULL,
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    )
-  `).run();
-
-  await database.prepare(`
-    CREATE INDEX IF NOT EXISTS idx_social_friendships_user_a
-    ON social_friendships(user_a_id, status)
-  `).run();
-
-  await database.prepare(`
-    CREATE INDEX IF NOT EXISTS idx_social_friendships_user_b
-    ON social_friendships(user_b_id, status)
-  `).run();
-
-  await database.prepare(`
-    CREATE TABLE IF NOT EXISTS social_friend_permissions (
-      id TEXT PRIMARY KEY,
-      owner_user_id TEXT NOT NULL,
-      friend_user_id TEXT NOT NULL,
-      friend_handle TEXT NOT NULL,
-      sharing_level TEXT NOT NULL,
-      detailed_consent TEXT NOT NULL,
-      detailed_consent_granted_at TEXT,
-      field_selection_json TEXT,
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    )
-  `).run();
-
-  await database.prepare(`
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_social_friend_permissions_owner_friend
-    ON social_friend_permissions(owner_user_id, friend_user_id)
-  `).run();
-
-  await database.prepare(`
-    CREATE INDEX IF NOT EXISTS idx_social_friend_permissions_owner
-    ON social_friend_permissions(owner_user_id)
-  `).run();
-
-}
-
 function friendshipFromRow(row) {
   return {
     id: row.id,
@@ -270,7 +206,6 @@ async function readProfilesForFriendships(database, friendships, currentUserId) 
 
 async function listFriendships(database, userId) {
   const currentUserId = sanitizeUserId(userId, 'userId');
-  await ensureSocialFriendsSchema(database);
 
   const result = await database.prepare(`
     SELECT id, user_a_id, user_b_id, status, created_at, updated_at
@@ -289,7 +224,6 @@ async function listFriendships(database, userId) {
 
 async function listPermissions(database, userId) {
   const ownerUserId = sanitizeUserId(userId, 'userId');
-  await ensureSocialFriendsSchema(database);
 
   const result = await database.prepare(`
     SELECT id, owner_user_id, friend_user_id, friend_handle, sharing_level, detailed_consent, detailed_consent_granted_at, field_selection_json, created_at, updated_at
@@ -333,7 +267,6 @@ async function savePermission(database, payload) {
     ? timestamp
     : undefined;
 
-  await ensureSocialFriendsSchema(database);
 
   const friendship = await database.prepare(`
     SELECT id
@@ -460,7 +393,6 @@ async function removeFriendship(database, payload) {
   }
   const timestamp = nowIso();
 
-  await ensureSocialFriendsSchema(database);
 
   const friendship = await database.prepare(`
     SELECT id, user_a_id, user_b_id, status, created_at, updated_at

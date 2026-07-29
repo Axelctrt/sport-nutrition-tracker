@@ -1,4 +1,5 @@
-import { Footprints, Scale } from 'lucide-react';
+import { ChevronDown, Footprints, Scale } from 'lucide-react';
+import { useState } from 'react';
 import type { DailyTargetSnapshot } from '@/application/daily/dailyTargetCoordinator';
 import {
   DASHBOARD_SUMMARY_METRIC_IDS,
@@ -37,7 +38,7 @@ function MacroMetric({
   return (
     <div className="min-w-0 text-center">
       <dt className="truncate text-xs font-medium text-slate-500 dark:text-slate-400">{label}</dt>
-      <dd className="mt-1 text-sm font-bold tabular-nums text-slate-950 dark:text-white sm:text-base">
+      <dd data-responsive-essential="value" className="mt-1 text-[0.8125rem] font-bold tabular-nums text-slate-950 dark:text-white sm:text-base">
         {rounded(consumed).toLocaleString('fr-FR')}
         <span className="font-medium text-slate-400 dark:text-slate-500"> / {target.toLocaleString('fr-FR')} g</span>
       </dd>
@@ -55,9 +56,17 @@ export function DashboardTodaySummary({
   density = 'comfortable',
   isRefreshing = false,
 }: DashboardTodaySummaryProps) {
+  const [energyBalanceOpen, setEnergyBalanceOpen] = useState(false);
   const consumedCalories = rounded(nutrition.consumed.caloriesKcal);
   const remainingCalories = rounded(nutrition.remaining.caloriesKcal);
   const transparency = snapshot.energyTransparency;
+  const expectedSteps = snapshot.energyGuidance?.expectedSteps.expectedSteps
+    ?? snapshot.calculation.steps.totalSteps;
+  const actualSteps = snapshot.stepsEntry?.totalSteps;
+  const finalExpenditureKcal = snapshot.energyGuidance?.finalExpenditure
+    ?.energy.totalEstimatedExpenditureKcal;
+  const hasFinalEnergyBalance = snapshot.energyGuidance?.finalStatus === 'final'
+    && finalExpenditureKcal !== undefined;
   const showMacros = visibleMetrics.includes('macros');
   const showSteps = visibleMetrics.includes('steps');
   const showWeight = visibleMetrics.includes('weight');
@@ -70,22 +79,28 @@ export function DashboardTodaySummary({
   return (
     <Card className={`${density === 'compact' ? 'mt-3' : 'mt-5'} overflow-hidden`} aria-busy={isRefreshing}>
       <div className={density === 'compact' ? 'p-4' : 'p-4 sm:p-5'}>
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-col items-stretch gap-3 min-[380px]:flex-row min-[380px]:items-start min-[380px]:justify-between">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">Calories consommées</p>
+              <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">
+                Cible alimentaire guidée
+              </p>
               {isRefreshing ? (
                 <span className="text-xs font-medium text-brand-700 dark:text-brand-300" role="status">
                   Mise à jour…
                 </span>
               ) : null}
             </div>
-            <p className={`${density === 'compact' ? 'mt-0.5 text-2xl' : 'mt-1 text-3xl'} font-bold tracking-tight tabular-nums text-slate-950 dark:text-white`}>
+            <p
+              data-responsive-essential="value"
+              className={`${density === 'compact' ? 'mt-0.5 text-2xl' : 'mt-1 text-3xl'} font-bold tracking-tight tabular-nums text-slate-950 dark:text-white`}
+            >
               {consumedCalories.toLocaleString('fr-FR')}
-              <span className="ml-1 text-base font-semibold text-slate-500 dark:text-slate-400">kcal</span>
-            </p>
-            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-              Cible : {snapshot.target.targetCaloriesKcal.toLocaleString('fr-FR')} kcal
+              <span className="mx-1 text-xl font-semibold text-slate-400 dark:text-slate-500">/</span>
+              {snapshot.target.targetCaloriesKcal.toLocaleString('fr-FR')}
+              <span className="ml-1 text-base font-semibold text-slate-500 dark:text-slate-400">
+                kcal
+              </span>
             </p>
             {transparency && transparency.rawSportCaloriesKcal > 0 ? (
               <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs">
@@ -99,7 +114,8 @@ export function DashboardTodaySummary({
             ) : null}
           </div>
           <div
-            className={`shrink-0 rounded-xl px-3 py-2 text-right ${
+            data-responsive-essential="value"
+            className={`w-fit shrink-0 self-start rounded-xl px-3 py-2 text-left min-[380px]:self-auto min-[380px]:text-right ${
               remainingCalories >= 0
                 ? 'bg-brand-50 text-brand-900 dark:bg-brand-950/70 dark:text-brand-100'
                 : 'bg-red-50 text-red-800 dark:bg-red-950/60 dark:text-red-200'
@@ -139,6 +155,63 @@ export function DashboardTodaySummary({
             />
           </dl>
         ) : null}
+
+        {hasFinalEnergyBalance ? (
+          <div className={`${density === 'compact' ? 'mt-3' : 'mt-4'} border-t border-slate-200 pt-3 dark:border-slate-800`}>
+            <button
+              type="button"
+              aria-expanded={energyBalanceOpen}
+              className="flex min-h-11 w-full items-center justify-between gap-3 text-left text-sm font-semibold text-brand-700 hover:underline dark:text-brand-300"
+              onClick={() => setEnergyBalanceOpen((current) => !current)}
+            >
+              Bilan de la journée disponible
+              <ChevronDown
+                aria-hidden="true"
+                className={`size-4 shrink-0 transition-transform ${energyBalanceOpen ? 'rotate-180' : ''}`}
+              />
+            </button>
+
+            {energyBalanceOpen ? (
+              <div className="pb-1 pt-2" aria-label="Bilan énergétique de la journée">
+                <dl className="space-y-2 text-sm">
+                  <div className="flex items-center justify-between gap-4">
+                    <dt className="text-slate-600 dark:text-slate-300">Calories enregistrées</dt>
+                    <dd className="shrink-0 font-semibold tabular-nums text-slate-950 dark:text-white">
+                      {consumedCalories.toLocaleString('fr-FR')} kcal
+                    </dd>
+                  </div>
+                  <div className="flex items-center justify-between gap-4">
+                    <dt className="text-slate-600 dark:text-slate-300">Cible alimentaire guidée</dt>
+                    <dd className="shrink-0 font-semibold tabular-nums text-slate-950 dark:text-white">
+                      {snapshot.target.targetCaloriesKcal.toLocaleString('fr-FR')} kcal
+                    </dd>
+                  </div>
+                  <div className="flex items-center justify-between gap-4">
+                    <dt className="text-slate-600 dark:text-slate-300">Dépense du jour estimée</dt>
+                    <dd className="shrink-0 font-semibold tabular-nums text-slate-950 dark:text-white">
+                      {Math.round(finalExpenditureKcal).toLocaleString('fr-FR')} kcal
+                    </dd>
+                  </div>
+                  <div className="flex items-center justify-between gap-4">
+                    <dt className="text-slate-600 dark:text-slate-300">Pas réels</dt>
+                    <dd className="shrink-0 font-semibold tabular-nums text-slate-950 dark:text-white">
+                      {(actualSteps ?? 0).toLocaleString('fr-FR')}
+                    </dd>
+                  </div>
+                  <div className="flex items-center justify-between gap-4">
+                    <dt className="text-slate-600 dark:text-slate-300">Activités réalisées</dt>
+                    <dd className="shrink-0 font-semibold tabular-nums text-slate-950 dark:text-white">
+                      {snapshot.activities?.length ?? 0}
+                    </dd>
+                  </div>
+                </dl>
+                <p className="mt-3 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                  La dépense est une estimation utilisée pour analyser la journée et améliorer les tendances futures. Elle ne remplace pas ta cible alimentaire.
+                </p>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       {secondaryMetricCount > 0 ? (
@@ -147,13 +220,15 @@ export function DashboardTodaySummary({
             <div className={`min-w-0 p-4 ${showWeight ? 'border-r border-slate-200 dark:border-slate-800' : ''}`}>
               <dt className="flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
                 <Footprints aria-hidden="true" className="size-4" />
-                Pas du jour
+                {actualSteps === undefined ? 'Pas attendus' : 'Pas réels'}
               </dt>
-              <dd className="mt-1 text-lg font-bold tabular-nums text-slate-950 dark:text-white">
-                {snapshot.calculation.steps.totalSteps.toLocaleString('fr-FR')}
+              <dd data-responsive-essential="value" className="mt-1 text-lg font-bold tabular-nums text-slate-950 dark:text-white">
+                {(actualSteps ?? expectedSteps).toLocaleString('fr-FR')}
               </dd>
               <p className="truncate text-xs text-slate-500 dark:text-slate-400">
-                sur {dailyStepGoal.toLocaleString('fr-FR')}
+                {actualSteps === undefined
+                  ? `objectif ${dailyStepGoal.toLocaleString('fr-FR')}`
+                  : `attendus ${expectedSteps.toLocaleString('fr-FR')} · objectif ${dailyStepGoal.toLocaleString('fr-FR')}`}
               </p>
             </div>
           ) : null}
@@ -163,7 +238,7 @@ export function DashboardTodaySummary({
                 <Scale aria-hidden="true" className="size-4" />
                 Poids actuel
               </dt>
-              <dd className="mt-1 truncate text-lg font-bold tabular-nums text-slate-950 dark:text-white">
+              <dd data-responsive-essential="value" className="mt-1 truncate text-lg font-bold tabular-nums text-slate-950 dark:text-white">
                 {resolvedCurrentWeight.toLocaleString('fr-FR')} kg
               </dd>
               <p className="truncate text-xs text-slate-500 dark:text-slate-400">

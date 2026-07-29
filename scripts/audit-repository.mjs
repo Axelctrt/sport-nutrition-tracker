@@ -4,6 +4,7 @@ import { basename, extname, join } from 'node:path';
 
 const failures = [];
 const fail = (message) => failures.push(message);
+const root = process.cwd();
 const excludedDirectories = new Set([
   '.git',
   'node_modules',
@@ -26,7 +27,16 @@ function collectRepositoryFiles(directory = '.', prefix = '') {
 let repositoryFiles = [];
 let sourceLabel = 'fichiers du projet';
 try {
-  repositoryFiles = execFileSync('git', ['ls-files', '-z'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })
+  const safeRoot = root.replaceAll('\\', '/');
+  repositoryFiles = execFileSync(
+    'git',
+    ['-c', `safe.directory=${safeRoot}`, 'ls-files', '-z'],
+    {
+      cwd: root,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    },
+  )
     .split('\0')
     .filter(Boolean)
     .map((path) => path.replaceAll('\\', '/'));

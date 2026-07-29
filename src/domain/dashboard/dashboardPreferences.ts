@@ -2,7 +2,22 @@ export const DASHBOARD_WIDGET_IDS = [
   'activeWorkout',
   'trainingAgenda',
   'todaySummary',
+  'dailyAssistant',
   'quickActions',
+  'activities',
+  'calculationDetails',
+  'rewardsOverview',
+  'weeklyMissions',
+] as const;
+
+export const DASHBOARD_FIXED_WIDGET_IDS = [
+  'todaySummary',
+  'dailyAssistant',
+] as const;
+
+export const DASHBOARD_SECONDARY_WIDGET_IDS = [
+  'activeWorkout',
+  'trainingAgenda',
   'activities',
   'calculationDetails',
   'rewardsOverview',
@@ -25,9 +40,12 @@ export const DASHBOARD_SUMMARY_METRIC_IDS = [
 ] as const;
 
 export type DashboardWidgetId = (typeof DASHBOARD_WIDGET_IDS)[number];
+export type DashboardFixedWidgetId = (typeof DASHBOARD_FIXED_WIDGET_IDS)[number];
+export type DashboardSecondaryWidgetId = (typeof DASHBOARD_SECONDARY_WIDGET_IDS)[number];
 export type DashboardQuickActionId = (typeof DASHBOARD_QUICK_ACTION_IDS)[number];
 export type DashboardSummaryMetricId = (typeof DASHBOARD_SUMMARY_METRIC_IDS)[number];
 export type DashboardDensity = 'comfortable' | 'compact';
+export type DashboardSupplementalBlock = 'none' | 'weeklyProgress' | 'achievements';
 
 export type DashboardPreset =
   | 'balanced'
@@ -42,12 +60,14 @@ export interface DashboardPreferences {
   hidden: DashboardWidgetId[];
   quickActions: DashboardQuickActionId[];
   summaryMetrics: DashboardSummaryMetricId[];
+  supplementalBlock: DashboardSupplementalBlock;
 }
 
 export const DASHBOARD_WIDGET_LABELS: Record<DashboardWidgetId, string> = {
   activeWorkout: 'Séance en cours',
   trainingAgenda: 'Programme du jour',
   todaySummary: 'Résumé de la journée',
+  dailyAssistant: 'Assistant du jour',
   quickActions: 'Actions rapides',
   activities: 'Activités du jour',
   calculationDetails: 'Objectifs et détails du calcul',
@@ -59,6 +79,7 @@ export const DASHBOARD_WIDGET_DESCRIPTIONS: Record<DashboardWidgetId, string> = 
   activeWorkout: 'Reprendre immédiatement une séance de musculation en cours.',
   trainingAgenda: 'Voir les activités prévues aujourd’hui et accéder au reste du planning.',
   todaySummary: 'Calories, macronutriments, pas et poids actuel.',
+  dailyAssistant: 'Suivre le check-in, le sport, la nutrition et le check-out.',
   quickActions: 'Accéder aux actions que vous utilisez le plus souvent.',
   activities: 'Relire les activités enregistrées aujourd’hui.',
   calculationDetails: 'Consulter la cible énergétique et les paramètres utilisés.',
@@ -81,13 +102,12 @@ export const DASHBOARD_SUMMARY_METRIC_LABELS: Record<DashboardSummaryMetricId, s
   weight: 'Poids actuel',
 };
 
-const ALL_SUMMARY_METRICS = [...DASHBOARD_SUMMARY_METRIC_IDS];
-
 const PRESET_PREFERENCES: Record<Exclude<DashboardPreset, 'custom'>, DashboardPreferences> = {
   balanced: {
     preset: 'balanced',
     order: [
       'todaySummary',
+      'dailyAssistant',
       'quickActions',
       'activeWorkout',
       'trainingAgenda',
@@ -96,14 +116,23 @@ const PRESET_PREFERENCES: Record<Exclude<DashboardPreset, 'custom'>, DashboardPr
       'rewardsOverview',
       'weeklyMissions',
     ],
-    hidden: ['calculationDetails', 'rewardsOverview', 'weeklyMissions'],
+    hidden: [
+      'activeWorkout',
+      'trainingAgenda',
+      'quickActions',
+      'calculationDetails',
+      'rewardsOverview',
+      'weeklyMissions',
+    ],
     quickActions: ['addFood', 'workout', 'weight', 'steps'],
-    summaryMetrics: [...ALL_SUMMARY_METRICS],
+    summaryMetrics: ['macros', 'steps'],
+    supplementalBlock: 'none',
   },
   nutrition: {
     preset: 'nutrition',
     order: [
       'todaySummary',
+      'dailyAssistant',
       'quickActions',
       'activities',
       'trainingAgenda',
@@ -114,12 +143,14 @@ const PRESET_PREFERENCES: Record<Exclude<DashboardPreset, 'custom'>, DashboardPr
     ],
     hidden: [],
     quickActions: ['addFood', 'scanFood', 'steps', 'weight'],
-    summaryMetrics: [...ALL_SUMMARY_METRICS],
+    summaryMetrics: ['macros', 'steps'],
+    supplementalBlock: 'none',
   },
   training: {
     preset: 'training',
     order: [
       'activeWorkout',
+      'dailyAssistant',
       'trainingAgenda',
       'quickActions',
       'activities',
@@ -131,11 +162,13 @@ const PRESET_PREFERENCES: Record<Exclude<DashboardPreset, 'custom'>, DashboardPr
     hidden: [],
     quickActions: ['workout', 'addActivity', 'steps', 'weight', 'addFood'],
     summaryMetrics: ['steps', 'weight', 'macros'],
+    supplementalBlock: 'weeklyProgress',
   },
   minimal: {
     preset: 'minimal',
     order: [
       'todaySummary',
+      'dailyAssistant',
       'quickActions',
       'activeWorkout',
       'trainingAgenda',
@@ -153,11 +186,24 @@ const PRESET_PREFERENCES: Record<Exclude<DashboardPreset, 'custom'>, DashboardPr
     ],
     quickActions: ['addFood', 'workout', 'weight', 'steps'],
     summaryMetrics: ['steps', 'weight'],
+    supplementalBlock: 'none',
   },
 };
 
 function isDashboardWidgetId(value: unknown): value is DashboardWidgetId {
   return typeof value === 'string' && DASHBOARD_WIDGET_IDS.includes(value as DashboardWidgetId);
+}
+
+export function isDashboardFixedWidget(
+  value: DashboardWidgetId,
+): value is DashboardFixedWidgetId {
+  return DASHBOARD_FIXED_WIDGET_IDS.includes(value as DashboardFixedWidgetId);
+}
+
+export function isDashboardSecondaryWidget(
+  value: DashboardWidgetId,
+): value is DashboardSecondaryWidgetId {
+  return DASHBOARD_SECONDARY_WIDGET_IDS.includes(value as DashboardSecondaryWidgetId);
 }
 
 function isDashboardQuickActionId(value: unknown): value is DashboardQuickActionId {
@@ -166,6 +212,35 @@ function isDashboardQuickActionId(value: unknown): value is DashboardQuickAction
 
 function isDashboardSummaryMetricId(value: unknown): value is DashboardSummaryMetricId {
   return typeof value === 'string' && DASHBOARD_SUMMARY_METRIC_IDS.includes(value as DashboardSummaryMetricId);
+}
+
+function isDashboardSupplementalBlock(value: unknown): value is DashboardSupplementalBlock {
+  return value === 'none' || value === 'weeklyProgress' || value === 'achievements';
+}
+
+function migrateLegacySupplementalBlock(
+  preferences: Partial<DashboardPreferences> | undefined,
+  preset: DashboardPreset,
+  hidden: DashboardWidgetId[],
+): DashboardSupplementalBlock {
+  if (isDashboardSupplementalBlock(preferences?.supplementalBlock)) {
+    return preferences.supplementalBlock;
+  }
+  if (preset === 'training') return 'weeklyProgress';
+  if (preset !== 'custom') return 'none';
+
+  const isVisible = (widgetId: DashboardWidgetId) => !hidden.includes(widgetId);
+  if (isVisible('rewardsOverview') || isVisible('weeklyMissions')) {
+    return 'achievements';
+  }
+  if (
+    isVisible('activeWorkout')
+    || isVisible('trainingAgenda')
+    || isVisible('activities')
+  ) {
+    return 'weeklyProgress';
+  }
+  return 'none';
 }
 
 export function createDefaultDashboardPreferences(): DashboardPreferences {
@@ -182,6 +257,7 @@ export function createDashboardPreferencesFromPreset(
     hidden: [...preferences.hidden],
     quickActions: [...preferences.quickActions],
     summaryMetrics: [...preferences.summaryMetrics],
+    supplementalBlock: preferences.supplementalBlock,
   };
 }
 
@@ -199,7 +275,9 @@ export function normalizeDashboardPreferences(
   }
 
   const hidden = Array.isArray(preferences?.hidden)
-    ? [...new Set(preferences.hidden.filter(isDashboardWidgetId))]
+    ? [...new Set(preferences.hidden
+      .filter(isDashboardWidgetId)
+      .filter((widgetId) => !isDashboardFixedWidget(widgetId)))]
     : [];
   const preset = preferences?.preset;
   const normalizedPreset: DashboardPreset =
@@ -210,10 +288,6 @@ export function normalizeDashboardPreferences(
     preset === 'custom'
       ? preset
       : fallback.preset;
-
-  if (hidden.length === DASHBOARD_WIDGET_IDS.length) {
-    hidden.splice(hidden.indexOf('todaySummary'), 1);
-  }
 
   const quickActions = Array.isArray(preferences?.quickActions)
     ? [...new Set(preferences.quickActions.filter(isDashboardQuickActionId))]
@@ -230,6 +304,11 @@ export function normalizeDashboardPreferences(
     hidden,
     quickActions,
     summaryMetrics,
+    supplementalBlock: migrateLegacySupplementalBlock(
+      preferences,
+      normalizedPreset,
+      hidden,
+    ),
   };
 }
 
@@ -237,13 +316,16 @@ export function isDashboardWidgetVisible(
   preferences: DashboardPreferences,
   widgetId: DashboardWidgetId,
 ): boolean {
-  return !preferences.hidden.includes(widgetId);
+  return isDashboardFixedWidget(widgetId) || !preferences.hidden.includes(widgetId);
 }
 
 export function toggleDashboardWidget(
   preferences: DashboardPreferences,
   widgetId: DashboardWidgetId,
 ): DashboardPreferences {
+  if (isDashboardFixedWidget(widgetId)) {
+    return normalizeDashboardPreferences(preferences);
+  }
   const isHidden = preferences.hidden.includes(widgetId);
   return normalizeDashboardPreferences({
     ...preferences,
@@ -282,25 +364,41 @@ export function toggleDashboardSummaryMetric(
   });
 }
 
+export function setDashboardSupplementalBlock(
+  preferences: DashboardPreferences,
+  supplementalBlock: DashboardSupplementalBlock,
+): DashboardPreferences {
+  return normalizeDashboardPreferences({
+    ...preferences,
+    preset: 'custom',
+    supplementalBlock,
+  });
+}
+
 export function moveDashboardWidget(
   preferences: DashboardPreferences,
   widgetId: DashboardWidgetId,
   direction: 'up' | 'down',
 ): DashboardPreferences {
-  const index = preferences.order.indexOf(widgetId);
+  const movableOrder = isDashboardSecondaryWidget(widgetId)
+    ? preferences.order.filter(isDashboardSecondaryWidget)
+    : preferences.order;
+  const index = movableOrder.indexOf(widgetId);
   const targetIndex = direction === 'up' ? index - 1 : index + 1;
 
-  if (index < 0 || targetIndex < 0 || targetIndex >= preferences.order.length) {
+  if (index < 0 || targetIndex < 0 || targetIndex >= movableOrder.length) {
     return preferences;
   }
 
   const nextOrder = [...preferences.order];
-  const currentWidget = nextOrder[index];
-  const targetWidget = nextOrder[targetIndex];
-  if (!currentWidget || !targetWidget) return preferences;
+  const targetWidget = movableOrder[targetIndex];
+  if (!targetWidget) return preferences;
+  const currentPosition = nextOrder.indexOf(widgetId);
+  const targetPosition = nextOrder.indexOf(targetWidget);
+  if (currentPosition < 0 || targetPosition < 0) return preferences;
 
-  nextOrder[index] = targetWidget;
-  nextOrder[targetIndex] = currentWidget;
+  nextOrder[currentPosition] = targetWidget;
+  nextOrder[targetPosition] = widgetId;
 
   return normalizeDashboardPreferences({
     ...preferences,

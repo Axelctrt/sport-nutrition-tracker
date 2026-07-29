@@ -257,7 +257,6 @@ export function AdvancedCsvExportPanel({
           jeux sélectionnés
         </span>
       }
-      defaultOpen
     >
       <div className="space-y-5">
         <div>

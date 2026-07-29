@@ -350,7 +350,6 @@ export function EndurancePlanningPanel({
         title="Course, natation, vélo et cardio"
         description="Planifie les activités d’endurance et associe explicitement chaque réalisation pour éviter tout double comptage."
         icon={CalendarPlus}
-        defaultOpen
       >
         {error ? (
           <InlineNotice

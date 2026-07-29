@@ -44,6 +44,10 @@ export class DexieStepsRepository implements StepsRepository {
         await this.database.dailySteps.add(entry);
         return entry;
       },
+      {
+        syncDomainIds: ['daily-coaching'],
+        syncReason: 'daily-steps-write',
+      },
     );
   }
 
@@ -53,6 +57,10 @@ export class DexieStepsRepository implements StepsRepository {
       'Impossible de supprimer les pas.',
       async () => {
         await this.database.dailySteps.where('date').equals(date).delete();
+      },
+      {
+        syncDomainIds: ['daily-coaching'],
+        syncReason: 'daily-steps-write',
       },
     );
   }

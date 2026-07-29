@@ -25,6 +25,9 @@ function readPackageMetadata(): PackageMetadata {
 }
 
 const { version: appVersion } = readPackageMetadata();
+const standardBuildInput = fileURLToPath(new URL('./index.html', import.meta.url));
+const visualLabBuildInput = fileURLToPath(new URL('./visual-lab.html', import.meta.url));
+const includeVisualLab = process.env.VITE_ENABLE_VISUAL_LAB === 'true';
 
 function readCloudflareSecurityHeaders(): Record<string, string> {
   const headersFile = readFileSync(new URL('./public/_headers', import.meta.url), 'utf8');
@@ -44,7 +47,6 @@ function readCloudflareSecurityHeaders(): Record<string, string> {
 }
 
 const previewSecurityHeaders = readCloudflareSecurityHeaders();
-
 
 const viteCacheDir = process.platform === 'win32'
   ? join(process.env.LOCALAPPDATA ?? tmpdir(), 'SportPilot', 'vite-cache')
@@ -113,7 +115,6 @@ export default defineConfig({
             url: './#/activities/add',
             icons: [{ src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' }],
           },
-
           {
             name: 'Carnet de musculation',
             short_name: 'Musculation',
@@ -159,6 +160,36 @@ export default defineConfig({
         clientsClaim: true,
         navigateFallback: 'index.html',
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
+        globIgnores: [
+          '**/AccountDevicesPage-*.js',
+          '**/AnalyticsPage-*.js',
+          '**/BarcodeScannerPage-*.js',
+          '**/CartesianChart-*.js',
+          '**/FriendsPrivacyPage-*.js',
+          '**/OpenFoodFacts*.js',
+          '**/PhotoNutritionEstimatePage-*.js',
+          '**/SyncPrototypePage-*.js',
+          '**/visual-lab*.js',
+          'visual-lab.html',
+        ],
+        runtimeCaching: [
+          {
+            urlPattern: ({ request, url }) =>
+              request.destination === 'script'
+              && url.pathname.includes('/assets/'),
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: `sportpilot-lazy-scripts-${appVersion}`,
+              expiration: {
+                maxEntries: 80,
+                maxAgeSeconds: 30 * 24 * 60 * 60,
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
+        ],
       },
       devOptions: {
         enabled: false,
@@ -194,6 +225,12 @@ export default defineConfig({
   },
   build: {
     rollupOptions: {
+      input: includeVisualLab
+        ? {
+            main: standardBuildInput,
+            'visual-lab': visualLabBuildInput,
+          }
+        : standardBuildInput,
       output: {
         manualChunks(id) {
           const normalizedId = id.replaceAll('\\', '/');

@@ -11,6 +11,7 @@ import {
   DASHBOARD_QUICK_ACTION_IDS,
   DASHBOARD_SUMMARY_METRIC_IDS,
   DASHBOARD_WIDGET_IDS,
+  normalizeDashboardPreferences,
 } from "@/domain/dashboard/dashboardPreferences";
 import { APP_SETTINGS_ID, LOCAL_USER_PROFILE_ID, USER_SETTINGS_ID } from '@/domain/defaults/identifiers';
 import {
@@ -167,7 +168,11 @@ const dashboardPreferencesSchema = z.object({
   summaryMetrics: z.array(dashboardSummaryMetricIdSchema).default(
     createDefaultDashboardPreferences().summaryMetrics,
   ),
-});
+  supplementalBlock: z.enum(['none', 'weeklyProgress', 'achievements']).optional(),
+}).transform(({ supplementalBlock, ...preferences }) => normalizeDashboardPreferences({
+  ...preferences,
+  ...(supplementalBlock ? { supplementalBlock } : {}),
+}));
 
 const appSettingsSchema = entityMetadataSchema.extend({
   syncableUpdatedAt: isoDateTimeSchema.optional(),
@@ -229,6 +234,45 @@ const weightEntrySchema = datedEntitySchema.extend({
 const dailyStepsSchema = datedEntitySchema.extend({
   totalSteps: nonNegativeInteger,
   source: z.literal('manual'),
+});
+
+const dailyContextFlagSchema = z.enum([
+  'menstrualCycle',
+  'illness',
+  'travel',
+  'exceptionalPoorSleep',
+  'highSodiumMeal',
+  'creatineChange',
+  'muscleSoreness',
+  'other',
+]);
+const dailySignalLevelSchema = z.enum(['low', 'normal', 'high']);
+const dailyContextSyncPreferenceSchema = z.enum(['localOnly', 'account']);
+
+const dailyCheckInSchema = datedEntitySchema.extend({
+  weightEntryId: z.string().min(1).optional(),
+  sleepDurationMinutes: z.number().int().min(0).max(1_440).optional(),
+  sleepQuality: z.enum(['poor', 'average', 'good']).optional(),
+  readiness: dailySignalLevelSchema.optional(),
+  waistCm: positiveNumber.optional(),
+  contextFlags: z.array(dailyContextFlagSchema),
+  contextSyncPreference: dailyContextSyncPreferenceSchema,
+  completedAt: isoDateTimeSchema,
+});
+
+const dailyActivityDecisionSchema = datedEntitySchema.extend({
+  decision: z.enum(['open', 'rest', 'activities']),
+  confirmedAt: isoDateTimeSchema.optional(),
+});
+
+const dailyCheckOutSchema = datedEntitySchema.extend({
+  stepsEntryId: z.string().min(1).optional(),
+  hunger: dailySignalLevelSchema.optional(),
+  energy: dailySignalLevelSchema.optional(),
+  foodJournalComplete: z.boolean(),
+  contextFlags: z.array(dailyContextFlagSchema),
+  contextSyncPreference: dailyContextSyncPreferenceSchema,
+  completedAt: isoDateTimeSchema,
 });
 
 
@@ -446,6 +490,47 @@ const dailyMacroTargetsSchema = z.object({
   fatGrams: nonNegativeNumber,
 });
 
+const dailyTargetStepBasisSchema = z.object({
+  mode: z.literal('expected'),
+  steps: nonNegativeInteger,
+  stepGoal: nonNegativeInteger,
+  source: z.enum(['profileFallback', 'recentBlend', 'recentHistory']),
+  confidence: z.enum(['fallback', 'emerging', 'established']),
+  observedDayCount: nonNegativeInteger,
+  observationWindowDays: positiveInteger,
+});
+
+const dailyTargetEnergyInputSnapshotSchema = z.object({
+  version: z.literal(1),
+  profile: z.object({
+    sexForEnergyEquation: z.enum(['male', 'female']),
+    ageInformation: ageInformationSchema,
+    heightCm: positiveNumber,
+    goal: z.enum(['loss', 'maintenance', 'gain']),
+    targetWeeklyWeightChangePercent: finiteNumber,
+    occupationalActivity: z.enum([
+      'sedentary',
+      'lightlyActive',
+      'active',
+      'veryActive',
+    ]),
+    dailyStepGoal: nonNegativeInteger,
+    proteinGramsPerKg: nonNegativeNumber,
+    fatGramsPerKg: nonNegativeNumber,
+  }),
+  settings: z.object({
+    includedBaseSteps: nonNegativeInteger,
+    walkingKcalPerKgPerKm: nonNegativeNumber,
+    runningKcalPerKgPerKm: nonNegativeNumber,
+    strengthTrainingMet: nonNegativeNumber,
+    calorieFloorBmrMultiplier: nonNegativeNumber,
+    defaultCyclingMet: nonNegativeNumber,
+    defaultWalkingMet: nonNegativeNumber,
+    defaultOtherCardioMet: nonNegativeNumber,
+    swimmingMetValues: swimmingMetValuesSchema,
+  }),
+});
+
 const plannedActivityCalorieSnapshotSchema = z.object({
   id: z.string().min(1),
   source: z.enum(['strengthSession', 'endurancePlanning']),
@@ -464,6 +549,7 @@ const plannedActivityCalorieSnapshotSchema = z.object({
 
 const dailyTargetSchema = datedEntitySchema.extend({
   calculationWeightKg: positiveNumber,
+  energyInputSnapshot: dailyTargetEnergyInputSnapshotSchema.optional(),
   energy: dailyEnergyBreakdownSchema,
   targetWeeklyWeightChangePercentUsed: finiteNumber.optional(),
   goalAdjustmentKcal: finiteNumber,
@@ -472,7 +558,57 @@ const dailyTargetSchema = datedEntitySchema.extend({
   targetCaloriesKcal: nonNegativeNumber,
   macros: dailyMacroTargetsSchema,
   plannedActivities: z.array(plannedActivityCalorieSnapshotSchema).optional(),
+  stepBasis: dailyTargetStepBasisSchema.optional(),
   calculationVersion: positiveInteger,
+});
+
+const calorieAdaptationConfidenceSchema = z.object({
+  weight: nonNegativeNumber.max(100),
+  food: nonNegativeNumber.max(100),
+  activity: nonNegativeNumber.max(100),
+  recovery: nonNegativeNumber.max(100),
+  overall: nonNegativeNumber.max(100),
+  level: z.enum(['insufficient', 'uncertain', 'usable', 'reliable']),
+});
+
+const calorieAdaptationAssessmentSchema = z.object({
+  calculationVersion: positiveInteger,
+  analysisStart: localDateSchema,
+  analysisEnd: localDateSchema,
+  trackingSpanDays: nonNegativeInteger,
+  weightTrendKgPerWeek: finiteNumber.optional(),
+  waistTrendCmPerWeek: finiteNumber.optional(),
+  averageCalorieDeviationPercent: finiteNumber.optional(),
+  proteinAdherencePercent: nonNegativeNumber.max(100).optional(),
+  actualToExpectedStepsPercent: nonNegativeNumber.optional(),
+  weighInCount: nonNegativeInteger,
+  completedFoodDays: nonNegativeInteger,
+  comparableFoodDays: nonNegativeInteger,
+  recordedStepDays: nonNegativeInteger,
+  recoverySignalDays: nonNegativeInteger,
+  recoveryConcernDays: nonNegativeInteger,
+  contextDayCount: nonNegativeInteger,
+  strengthSessionCount: nonNegativeInteger,
+  confidence: calorieAdaptationConfidenceSchema,
+  detectedState: z.enum([
+    'insufficientData',
+    'insufficientFoodTracking',
+    'onTrack',
+    'temporaryWaterVariation',
+    'possibleRecomposition',
+    'conflictingSignals',
+    'truePlateau',
+    'targetTooHigh',
+    'targetTooLow',
+    'excessiveLoss',
+    'excessiveGain',
+    'activityBelowExpected',
+    'degradedRecovery',
+  ]),
+  reasons: z.array(z.string()),
+  blockingFactors: z.array(z.string()),
+  rawWeightBasedAdjustmentKcal: finiteNumber,
+  proposedAdjustmentKcal: finiteNumber,
 });
 
 const weeklyReviewSchema = entityMetadataSchema.extend({
@@ -505,6 +641,7 @@ const weeklyReviewSchema = entityMetadataSchema.extend({
   resultingCumulativeAdjustmentKcal: finiteNumber,
   adherenceScore: nonNegativeNumber,
   adherenceLevel: z.enum(['excellent', 'good', 'needsStrengthening', 'insufficient']),
+  adaptation: calorieAdaptationAssessmentSchema.optional(),
   decisionStatus: z.enum(['pending', 'accepted', 'rejected', 'notEligible']),
   decidedAt: isoDateTimeSchema.optional(),
 });
@@ -671,6 +808,58 @@ const strengthSetSchema = entityMetadataSchema.extend({
   notes: z.string().max(10_000).optional(),
 });
 
+const trashItemBaseSchema = z.object({
+  id: z.string().min(1),
+  entityId: z.string().min(1),
+  label: z.string().min(1).max(300),
+  deletedAt: isoDateTimeSchema,
+  purgeAt: isoDateTimeSchema,
+});
+
+export const trashItemSchema = z.discriminatedUnion('entityType', [
+  trashItemBaseSchema.extend({
+    entityType: z.literal('activity'),
+    payload: activitySchema,
+  }),
+  trashItemBaseSchema.extend({
+    entityType: z.literal('weight'),
+    payload: weightEntrySchema,
+  }),
+  trashItemBaseSchema.extend({
+    entityType: z.literal('foodEntry'),
+    payload: foodEntrySchema,
+  }),
+  trashItemBaseSchema.extend({
+    entityType: z.literal('meal'),
+    payload: z.object({
+      meal: mealSchema,
+      entries: z.array(foodEntrySchema),
+    }),
+  }),
+  trashItemBaseSchema.extend({
+    entityType: z.literal('favoriteMeal'),
+    payload: favoriteMealSchema,
+  }),
+  trashItemBaseSchema.extend({
+    entityType: z.literal('recipe'),
+    payload: z.object({
+      recipe: recipeSchema,
+      ingredients: z.array(recipeIngredientSchema),
+    }),
+  }),
+  trashItemBaseSchema.extend({
+    entityType: z.literal('strengthSet'),
+    payload: strengthSetSchema,
+  }),
+  trashItemBaseSchema.extend({
+    entityType: z.literal('workoutSessionExercise'),
+    payload: z.object({
+      exercise: workoutSessionExerciseSchema,
+      sets: z.array(strengthSetSchema),
+    }),
+  }),
+]);
+
 const progressionSuggestionSchema = entityMetadataSchema.extend({
   sessionId: z.string().min(1),
   sessionExerciseId: z.string().min(1),
@@ -713,6 +902,13 @@ const visualThemeStateSchema = z
   .object({
     activeThemeId: visualThemeIdSchema,
     unlockedThemeIds: z.array(visualThemeIdSchema),
+    unlockMetadata: z.record(
+      visualThemeIdSchema,
+      z.object({
+        unlockedAt: isoDateTimeSchema,
+        revealSeenAt: isoDateTimeSchema.optional(),
+      }),
+    ).optional().default({}),
   })
   .refine(
     (state) =>
@@ -930,6 +1126,9 @@ const backupDataSchema = z.object({
   userSettings: z.array(userSettingsSchema).max(1).optional(),
   weights: z.array(weightEntrySchema),
   dailySteps: z.array(dailyStepsSchema),
+  dailyCheckIns: z.array(dailyCheckInSchema).optional(),
+  dailyActivityDecisions: z.array(dailyActivityDecisionSchema).optional(),
+  dailyCheckOuts: z.array(dailyCheckOutSchema).optional(),
   activities: z.array(activitySchema),
   foodProducts: z.array(foodProductSchema),
   meals: z.array(mealSchema),
@@ -1100,6 +1299,22 @@ export const backupEnvelopeSchema = z.object({
     });
   }
 
+  if (envelope.schemaVersion >= 10) {
+    for (const tableName of [
+      'dailyCheckIns',
+      'dailyActivityDecisions',
+      'dailyCheckOuts',
+    ] as const) {
+      if (data[tableName] === undefined) {
+        context.addIssue({
+          code: 'custom',
+          path: ['data', tableName],
+          message: `La table ${tableName} est requise en sauvegarde v10.`,
+        });
+      }
+    }
+  }
+
   if (data.appSettings?.[0]?.id !== undefined && data.appSettings[0].id !== APP_SETTINGS_ID) {
     context.addIssue({
       code: 'custom',
@@ -1114,6 +1329,9 @@ export const backupEnvelopeSchema = z.object({
     ['userSettings', data.userSettings ?? []],
     ['weights', data.weights],
     ['dailySteps', data.dailySteps],
+    ['dailyCheckIns', data.dailyCheckIns ?? []],
+    ['dailyActivityDecisions', data.dailyActivityDecisions ?? []],
+    ['dailyCheckOuts', data.dailyCheckOuts ?? []],
     ['activities', data.activities],
     ['foodProducts', data.foodProducts],
     ['meals', data.meals],
@@ -1164,6 +1382,9 @@ export const backupEnvelopeSchema = z.object({
 
   addDuplicateIssues(data.weights, (value) => value.date, ['data', 'weights'], 'Les pesées', context);
   addDuplicateIssues(data.dailySteps, (value) => value.date, ['data', 'dailySteps'], 'Les pas', context);
+  addDuplicateIssues(data.dailyCheckIns ?? [], (value) => value.date, ['data', 'dailyCheckIns'], 'Les check-ins', context);
+  addDuplicateIssues(data.dailyActivityDecisions ?? [], (value) => value.date, ['data', 'dailyActivityDecisions'], 'Les decisions quotidiennes', context);
+  addDuplicateIssues(data.dailyCheckOuts ?? [], (value) => value.date, ['data', 'dailyCheckOuts'], 'Les check-outs', context);
   addDuplicateIssues(data.dailyTargets, (value) => value.date, ['data', 'dailyTargets'], 'Les objectifs quotidiens', context);
   addDuplicateIssues(
     data.dailyJournalStatuses,

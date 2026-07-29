@@ -33,4 +33,31 @@ describe('StrengthExercisesPage', () => {
     expect(screen.queryByText('Développé couché')).not.toBeInTheDocument();
     expect(repositories.strengthExercises.listAll).toHaveBeenCalledTimes(1);
   });
+
+  it('propose de créer immédiatement la recherche sans résultat', async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <StrengthExercisesPage />
+      </MemoryRouter>,
+    );
+
+    const search = await screen.findByRole('searchbox', {
+      name: 'Rechercher un exercice',
+    });
+    await user.type(search, 'tirage unilatéral poulie');
+
+    const createLink = await screen.findByRole('link', {
+      name: 'Créer cet exercice',
+    });
+    expect(createLink).toHaveAttribute(
+      'href',
+      expect.stringContaining(
+        'query=tirage+unilat%C3%A9ral+poulie',
+      ),
+    );
+    expect(screen.getByText(
+      'Aucun exercice trouvé pour « tirage unilatéral poulie »',
+    )).toBeInTheDocument();
+  });
 });

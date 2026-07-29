@@ -8,7 +8,8 @@ export type SyncOrchestratorDomainId =
   | 'strength'
   | 'nutrition-journal'
   | 'nutrition-library'
-  | 'nutrition-tracking';
+  | 'nutrition-tracking'
+  | 'daily-coaching';
 
 export type SyncOrchestratorOperation = 'analyze' | 'sync';
 
@@ -32,6 +33,7 @@ export type SyncOrchestratorDomainStatus =
   | 'cloud-changes-available'
   | 'action-required'
   | 'syncing'
+  | 'not-run'
   | 'temporary-failure'
   | 'offline';
 
@@ -116,6 +118,7 @@ interface SyncOrchestratorOptions {
   readonly accountKey: string;
   readonly domains: readonly SyncOrchestratorDomainAdapter[];
   readonly isOnline?: () => boolean;
+  readonly preflight?: () => Promise<void>;
   readonly now?: () => Date;
   readonly defaultDebounceMs?: number;
   readonly setTimer?: (callback: () => void, delayMs: number) => ReturnType<typeof setTimeout>;
@@ -165,6 +168,7 @@ function initialDomainSnapshots(): Record<
     'nutrition-journal': { status: 'idle' },
     'nutrition-library': { status: 'idle' },
     'nutrition-tracking': { status: 'idle' },
+    'daily-coaching': { status: 'idle' },
   };
 }
 
@@ -240,6 +244,7 @@ export function createSyncOrchestrator(
   const queue: QueuedRequest[] = [];
   const scheduled = new Map<string, ScheduledRequest>();
   const isOnline = options.isOnline ?? (() => navigator.onLine !== false);
+  const preflight = options.preflight;
   const now = options.now ?? (() => new Date());
   const defaultDebounceMs = options.defaultDebounceMs ?? 750;
   const setTimer = options.setTimer ?? ((callback, delayMs) => setTimeout(callback, delayMs));
@@ -335,6 +340,45 @@ export function createSyncOrchestrator(
         };
         appendSyncOperationHistory(accountKey, result);
         return result;
+      }
+
+      if (preflight) {
+        try {
+          await preflight();
+        } catch (error) {
+          const errorMessage = error instanceof Error
+            ? error.message
+            : 'L’accès cloud n’a pas pu être vérifié.';
+          for (const domainId of request.domainIds) {
+            updateDomain(domainId, {
+              status: 'not-run',
+              errorMessage,
+              lastOperation: request.operation,
+              lastSource: request.source,
+              updatedAt: startedAt,
+            });
+          }
+          const result: SyncOrchestratorRunResult = {
+            operation: request.operation,
+            source: request.source,
+            startedAt,
+            completedAt: startedAt,
+            completedDomainIds: [],
+            failedDomainIds: [...request.domainIds],
+            domainResults: request.domainIds.map((domainId) => ({
+              domainId,
+              status: 'not-run',
+              errorMessage,
+            })),
+          };
+          lastFailedRequest = {
+            operation: request.operation,
+            source: request.source,
+            domainIds: [...request.domainIds],
+          };
+          appendSyncOperationHistory(accountKey, result);
+          return result;
+        }
       }
 
       updateSnapshot((current) => ({
@@ -520,8 +564,9 @@ export function createSyncOrchestrator(
     for (const domainId of domainIds) {
       const current = snapshot.domains[domainId];
       if (current.status === 'analyzing' || current.status === 'syncing') continue;
+      const { errorMessage: _previousError, ...rest } = current;
       updateDomain(domainId, {
-        ...current,
+        ...rest,
         status: 'queued',
         lastOperation: request.operation,
         lastSource: source,

@@ -8,6 +8,10 @@ import {
 import type { WeightEntry } from '@/domain/models/weight';
 import type { SyncPrototypeDatabase } from '@/infrastructure/sync-prototype/SyncPrototypeDatabase';
 import {
+  deleteLocalIfUnchanged,
+  putLocalIfUnchanged,
+} from '@/infrastructure/sync-prototype/localSyncCompareAndSwap';
+import {
   belongsToCurrentUser,
   chooseLatest,
   cloudPrivateId,
@@ -17,9 +21,22 @@ import {
   type CloudOwned,
   type CloudSyncExecutionOptions,
 } from '@/infrastructure/sync-prototype/cloudSyncValue';
+import {
+  maximumLogicalSyncStamp,
+  persistLogicalSyncBaseline,
+  resolveDatabaseLogicalSyncState,
+  resolveSyncActorId,
+  stripLogicalSyncFields,
+  upsertLogicalCloudValue,
+  type LogicalSyncFields,
+} from '@/infrastructure/sync-prototype/logicalSyncState';
 
-type CloudWeightEntry = Omit<WeightEntry, 'id'> & { readonly id: string };
-type CloudDeletionRecord = Omit<DeletionRecord, 'id'> & { readonly id: string };
+type CloudWeightEntry = Omit<WeightEntry, 'id'> & {
+  readonly id: string;
+} & LogicalSyncFields;
+type CloudDeletionRecord = Omit<DeletionRecord, 'id'> & {
+  readonly id: string;
+} & LogicalSyncFields;
 
 export interface RealWeightSyncPreview {
   readonly localWeightCount: number;
@@ -53,7 +70,10 @@ function fromCloudWeight(
 ): WeightEntry | undefined {
   const localId = localIdFromCloud(entry.id);
   if (!localId) return undefined;
-  return { ...stripCloudFields(entry), id: localId };
+  return {
+    ...stripLogicalSyncFields(stripCloudFields(entry)),
+    id: localId,
+  };
 }
 
 function toCloudMarker(marker: DeletionRecord): CloudDeletionRecord {
@@ -65,7 +85,10 @@ function fromCloudMarker(
 ): DeletionRecord | undefined {
   const localId = localIdFromCloud(marker.id);
   if (!localId) return undefined;
-  return { ...stripCloudFields(marker), id: localId };
+  return {
+    ...stripLogicalSyncFields(stripCloudFields(marker)),
+    id: localId,
+  };
 }
 
 function resolveState(
@@ -127,7 +150,14 @@ async function readState(
     .map(fromCloudMarker)
     .filter((marker): marker is DeletionRecord => marker !== undefined);
 
-  return { localWeights, localMarkers, cloudWeights, cloudMarkers };
+  return {
+    localWeights,
+    localMarkers,
+    cloudWeights,
+    cloudMarkers,
+    cloudWeightRows,
+    cloudMarkerRows,
+  };
 }
 
 function mapById<T extends { id: string }>(values: readonly T[]) {
@@ -175,17 +205,6 @@ function buildPreview(
   };
 }
 
-async function upsertCloud<T extends { id: string }>(
-  table: Table<T, string>,
-  current: T | undefined,
-  target: T,
-  toCloudValue: (value: T) => T,
-): Promise<boolean> {
-  if (current && sameEntity(current, target)) return false;
-  await table.put(toCloudValue(target));
-  return true;
-}
-
 export async function previewRealWeightSync(
   localDatabase: AppDatabase,
   cloudDatabase: SyncPrototypeDatabase,
@@ -218,6 +237,19 @@ export async function synchronizeRealWeights(
   const cloudWeightById = mapById(state.cloudWeights);
   const localMarkerById = mapById(state.localMarkers);
   const cloudMarkerById = mapById(state.cloudMarkers);
+  const cloudWeightRowById = new Map(
+    state.cloudWeightRows.flatMap((row) => {
+      const id = localIdFromCloud(row.id);
+      return id ? [[id, row] as const] : [];
+    }),
+  );
+  const cloudMarkerRowByEntityId = new Map(
+    state.cloudMarkerRows.flatMap((row) => {
+      const marker = fromCloudMarker(row);
+      return marker ? [[marker.entityId, row] as const] : [];
+    }),
+  );
+  const actorId = await resolveSyncActorId(localDatabase);
   const ids = new Set([
     ...localWeightById.keys(),
     ...cloudWeightById.keys(),
@@ -246,52 +278,97 @@ export async function synchronizeRealWeights(
       ...(cloudWeight ? { weight: cloudWeight } : {}),
       ...(cloudMarker ? { marker: cloudMarker } : {}),
     };
-    const resolved = resolveState(localState, cloudState);
+    const resolution = await resolveDatabaseLogicalSyncState({
+      cloudDatabase,
+      accountUserId: currentUserId,
+      domainId: 'weights',
+      entityId: id,
+      actorId,
+      localValue: localState,
+      cloudValue: cloudState,
+      cloudStamp: maximumLogicalSyncStamp([
+        cloudWeightRowById.get(id),
+        cloudMarkerRowByEntityId.get(id),
+      ]),
+      legacyResolve: resolveState,
+    });
+    const resolved = resolution.value;
+    let localStateUnchanged = true;
 
     if (resolved.weight) {
       if (!sameEntity(localState.weight, resolved.weight)) {
-        await localDatabase.weights.put(resolved.weight);
-        downloadedWeights += 1;
-      }
-      if (
-        writeCloud &&
-        await upsertCloud(
-          cloudDatabase.realWeights as Table<WeightEntry, string>,
-          cloudState.weight,
+        const applied = await putLocalIfUnchanged(
+          localDatabase,
+          localDatabase.weights,
+          id,
+          localState.weight,
           resolved.weight,
-          (value) => toCloudWeight(value) as WeightEntry,
-        )
-      ) {
-        uploadedWeights += 1;
+        );
+        if (applied) downloadedWeights += 1;
+        else localStateUnchanged = false;
       }
     } else {
       if (localState.weight) {
-        await localDatabase.weights.delete(id);
-        removedLocalWeights += 1;
-      }
-      if (writeCloud && cloudState.weight) {
-        await cloudDatabase.realWeights.delete(cloudPrivateId(id));
-        removedCloudWeights += 1;
+        const applied = await deleteLocalIfUnchanged(
+          localDatabase,
+          localDatabase.weights,
+          id,
+          localState.weight,
+        );
+        if (applied) removedLocalWeights += 1;
+        else localStateUnchanged = false;
       }
     }
 
     if (resolved.marker) {
       if (!sameEntity(localState.marker, resolved.marker)) {
-        await localDatabase.deletionRecords.put(resolved.marker);
-        downloadedDeletionRecords += 1;
-      }
-      if (
-        writeCloud &&
-        await upsertCloud(
-          cloudDatabase.realWeightDeletionRecords as Table<DeletionRecord, string>,
-          cloudState.marker,
+        const applied = await putLocalIfUnchanged(
+          localDatabase,
+          localDatabase.deletionRecords,
+          markerId,
+          localState.marker,
           resolved.marker,
-          (value) => toCloudMarker(value) as DeletionRecord,
-        )
-      ) {
-        uploadedDeletionRecords += 1;
+        );
+        if (applied) downloadedDeletionRecords += 1;
+        else localStateUnchanged = false;
       }
     }
+
+    if (!localStateUnchanged || !writeCloud) continue;
+
+    if (resolved.weight) {
+      if (
+        await upsertLogicalCloudValue(
+          cloudDatabase.realWeights as Table<WeightEntry, string>,
+          cloudState.weight,
+          cloudWeightRowById.get(id),
+          resolved.weight,
+          resolution.stamp,
+          (value) => toCloudWeight(value) as WeightEntry,
+        )
+      ) {
+        uploadedWeights += 1;
+      }
+    } else if (cloudState.weight) {
+      await cloudDatabase.realWeights.delete(cloudPrivateId(id));
+      removedCloudWeights += 1;
+    }
+
+    if (
+      resolved.marker
+      && await upsertLogicalCloudValue(
+        cloudDatabase.realWeightDeletionRecords as Table<DeletionRecord, string>,
+        cloudState.marker,
+        cloudMarkerRowByEntityId.get(id),
+        resolved.marker,
+        resolution.stamp,
+        (value) => toCloudMarker(value) as DeletionRecord,
+      )
+    ) {
+      uploadedDeletionRecords += 1;
+    }
+
+    await persistLogicalSyncBaseline(cloudDatabase, resolution.baseline);
   }
 
   return {

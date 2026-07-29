@@ -5,12 +5,20 @@ import type {
   WeeklyReview,
 } from '@/domain/models/weeklyReview';
 import { calculateDailyTarget } from '@/domain/calculations/dailyTarget';
-import { resolveReferenceWeight } from '@/domain/calculations/referenceWeight';
+import {
+  buildDailyTargetEnergyInputSnapshot,
+  restoreDailyTargetEnergyContext,
+} from '@/domain/calculations/dailyTargetInputSnapshot';
+import { estimateExpectedSteps } from '@/domain/calculations/expectedSteps';
 import { resolveAcceptedCalibrationAdjustment } from '@/application/daily/dailyTargetCoordinator';
 import { buildPlannedActivityCalories } from '@/application/planning/plannedActivityCalories';
 import type { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import { DexieSettingsRepository } from '@/infrastructure/repositories/dexie/DexieSettingsRepository';
 import type { SyncPrototypeDatabase } from '@/infrastructure/sync-prototype/SyncPrototypeDatabase';
+import {
+  putLocalIfUnchanged,
+  sameLocalCollection,
+} from '@/infrastructure/sync-prototype/localSyncCompareAndSwap';
 import {
   belongsToCurrentUser,
   chooseLatest,
@@ -21,6 +29,16 @@ import {
   type CloudOwned,
   type CloudSyncExecutionOptions,
 } from '@/infrastructure/sync-prototype/cloudSyncValue';
+import {
+  logicalSyncStamp,
+  persistLogicalSyncBaseline,
+  resolveDatabaseLogicalSyncState,
+  resolveSyncActorId,
+  stripLogicalSyncFields,
+  upsertLogicalCloudValue,
+  type DatabaseLogicalSyncResolution,
+  type LogicalSyncFields,
+} from '@/infrastructure/sync-prototype/logicalSyncState';
 
 export interface NutritionTrackingAggregate {
   readonly id: string;
@@ -31,7 +49,7 @@ export interface NutritionTrackingAggregate {
 
 type CloudNutritionTrackingAggregate = Omit<NutritionTrackingAggregate, 'id'> & {
   readonly id: string;
-};
+} & LogicalSyncFields;
 
 export interface RealNutritionTrackingSyncPreview {
   readonly localReviewCount: number;
@@ -53,6 +71,7 @@ export interface RealNutritionTrackingSyncResult extends RealNutritionTrackingSy
 interface TrackingState {
   readonly local: NutritionTrackingAggregate[];
   readonly cloud: NutritionTrackingAggregate[];
+  readonly cloudRows: readonly CloudNutritionTrackingAggregate[];
 }
 
 function sortById<T extends { id: string }>(values: readonly T[]): T[] {
@@ -149,7 +168,7 @@ function fromCloudAggregate(
   const localId = localIdFromCloud(aggregate.id);
   if (!localId) return undefined;
   const value = {
-    ...stripCloudFields(aggregate),
+    ...stripLogicalSyncFields(stripCloudFields(aggregate)),
     id: localId,
   } as NutritionTrackingAggregate;
   validateAggregate(value);
@@ -217,6 +236,7 @@ async function readState(
       .filter((row) => belongsToCurrentUser(row, currentUserId))
       .map(fromCloudAggregate)
       .filter((row): row is NutritionTrackingAggregate => row !== undefined),
+    cloudRows,
   };
 }
 
@@ -246,20 +266,17 @@ async function reconcileDailyTargets(
 
   const [
     settings,
-    weights,
     steps,
     activities,
     strengthSessions,
     enduranceSessions,
   ] = await Promise.all([
     new DexieSettingsRepository(localDatabase).get(),
-    localDatabase.weights.toArray(),
     localDatabase.dailySteps.toArray(),
     localDatabase.activities.toArray(),
     localDatabase.workoutSessions.toArray(),
     localDatabase.endurancePlanningSessions.toArray(),
   ]);
-  const stepsByDate = new Map(steps.map((value) => [value.date, value]));
   const activitiesByDate = new Map<LocalDate, typeof activities>();
   for (const activity of activities) {
     const current = activitiesByDate.get(activity.date) ?? [];
@@ -268,28 +285,40 @@ async function reconcileDailyTargets(
   }
 
   const recalculated: DailyTarget[] = mismatched.map((target) => {
-    const weight = resolveReferenceWeight(
-      target.date,
-      profile.initialWeightKg,
-      weights,
-    );
+    const calculationContext = target.energyInputSnapshot
+      ? restoreDailyTargetEnergyContext(
+          target.energyInputSnapshot,
+          profile,
+          settings,
+        )
+      : { profile, settings };
     const acceptedCalibrationAdjustmentKcal =
       resolveAcceptedCalibrationAdjustment(adjustments, target.date);
     const dateActivities = activitiesByDate.get(target.date) ?? [];
-    const plannedActivities = buildPlannedActivityCalories({
+    const plannedActivities = target.plannedActivities
+      ?? buildPlannedActivityCalories({
+        date: target.date,
+        weightKg: target.calculationWeightKg,
+        settings: calculationContext.settings,
+        activities: dateActivities,
+        strengthSessions,
+        enduranceSessions,
+      });
+    const expectedSteps = estimateExpectedSteps({
       date: target.date,
-      weightKg: weight.weightKg,
-      settings,
-      activities: dateActivities,
-      strengthSessions,
-      enduranceSessions,
+      occupationalActivity:
+        calculationContext.profile.occupationalActivity,
+      stepGoal: calculationContext.profile.dailyStepGoal,
+      includedBaseSteps:
+        calculationContext.settings.includedBaseSteps,
+      history: steps,
     });
     const calculation = calculateDailyTarget({
       date: target.date,
-      profile,
-      settings,
-      weightKg: weight.weightKg,
-      totalSteps: stepsByDate.get(target.date)?.totalSteps ?? 0,
+      profile: calculationContext.profile,
+      settings: calculationContext.settings,
+      weightKg: target.calculationWeightKg,
+      totalSteps: target.stepBasis?.steps ?? expectedSteps.expectedSteps,
       activities: dateActivities,
       plannedActivities,
       acceptedCalibrationAdjustmentKcal,
@@ -298,6 +327,9 @@ async function reconcileDailyTargets(
     return {
       ...target,
       calculationWeightKg: calculation.calculationWeightKg,
+      energyInputSnapshot:
+        target.energyInputSnapshot
+        ?? buildDailyTargetEnergyInputSnapshot(profile, settings),
       energy: calculation.energy,
       targetWeeklyWeightChangePercentUsed:
         calculation.targetWeeklyWeightChangePercentUsed,
@@ -308,13 +340,32 @@ async function reconcileDailyTargets(
       targetCaloriesKcal: calculation.targetCaloriesKcal,
       macros: calculation.macros,
       plannedActivities: calculation.plannedActivities,
+      stepBasis: target.stepBasis ?? {
+        mode: 'expected',
+        steps: expectedSteps.expectedSteps,
+        stepGoal: expectedSteps.stepGoal,
+        source: expectedSteps.source,
+        confidence: expectedSteps.confidence,
+        observedDayCount: expectedSteps.observedDayCount,
+        observationWindowDays: expectedSteps.observationWindowDays,
+      },
       calculationVersion: calculation.calculationVersion,
       updatedAt: completedAt,
     };
   });
 
-  await localDatabase.dailyTargets.bulkPut(recalculated);
-  return recalculated.length;
+  let applied = 0;
+  for (const [index, target] of recalculated.entries()) {
+    const updated = await putLocalIfUnchanged(
+      localDatabase,
+      localDatabase.dailyTargets,
+      target.id,
+      mismatched[index],
+      target,
+    );
+    if (updated) applied += 1;
+  }
+  return applied;
 }
 
 export async function synchronizeRealNutritionTracking(
@@ -325,22 +376,66 @@ export async function synchronizeRealNutritionTracking(
 ): Promise<RealNutritionTrackingSyncResult> {
   const writeCloud = options.writeCloud !== false;
   const state = await readState(localDatabase, cloudDatabase, currentUserId);
-  const final = resolveFinalState(state);
+  const localById = mapById(state.local);
+  const cloudById = mapById(state.cloud);
+  const cloudRowById = new Map(
+    state.cloudRows.flatMap((row) => {
+      const id = localIdFromCloud(row.id);
+      return id ? [[id, row] as const] : [];
+    }),
+  );
+  const actorId = await resolveSyncActorId(localDatabase);
+  const ids = new Set([...localById.keys(), ...cloudById.keys()]);
+  const resolutions: DatabaseLogicalSyncResolution<
+    NutritionTrackingAggregate | undefined
+  >[] = [];
+  for (const id of ids) {
+    resolutions.push(await resolveDatabaseLogicalSyncState({
+      cloudDatabase,
+      accountUserId: currentUserId,
+      domainId: 'nutrition-tracking',
+      entityId: id,
+      actorId,
+      localValue: localById.get(id),
+      cloudValue: cloudById.get(id),
+      cloudStamp: logicalSyncStamp(cloudRowById.get(id)),
+      legacyResolve: (local, cloud) => chooseLatest(local, cloud),
+    }));
+  }
+  const final = sortById(
+    resolutions
+      .map((resolution) => resolution.value)
+      .filter(
+        (value): value is NutritionTrackingAggregate => value !== undefined,
+      ),
+  );
   const preview = buildPreview(state, final);
   const completedAt = new Date().toISOString();
 
-  const localById = mapById(state.local);
-  const cloudById = mapById(state.cloud);
   const uploaded = writeCloud
     ? final.filter((value) => !sameEntity(cloudById.get(value.id), value))
     : [];
   const downloaded = final.filter((value) => !sameEntity(localById.get(value.id), value));
 
+  let localStateApplied = false;
   await localDatabase.transaction(
     'rw',
     localDatabase.weeklyReviews,
     localDatabase.acceptedCalorieAdjustments,
     async () => {
+      const [currentReviews, currentAdjustments] = await Promise.all([
+        localDatabase.weeklyReviews.toArray(),
+        localDatabase.acceptedCalorieAdjustments.toArray(),
+      ]);
+      if (
+        !sameLocalCollection(
+          buildAggregates(currentReviews, currentAdjustments),
+          state.local,
+        )
+      ) {
+        return;
+      }
+
       for (const aggregate of final) {
         validateAggregate(aggregate);
         await localDatabase.weeklyReviews.put(aggregate.review);
@@ -353,26 +448,39 @@ export async function synchronizeRealNutritionTracking(
           );
         }
       }
+      localStateApplied = true;
     },
   );
 
-  if (writeCloud && uploaded.length > 0) {
-    await cloudDatabase.realNutritionTracking.bulkPut(uploaded.map(toCloudAggregate));
+  if (writeCloud && localStateApplied) {
+    for (const resolution of resolutions) {
+      const aggregate = resolution.value;
+      if (!aggregate) continue;
+      await upsertLogicalCloudValue(
+        cloudDatabase.realNutritionTracking,
+        cloudById.get(aggregate.id),
+        cloudRowById.get(aggregate.id),
+        aggregate,
+        resolution.stamp,
+        (value) => toCloudAggregate(value) as NutritionTrackingAggregate,
+      );
+      await persistLogicalSyncBaseline(cloudDatabase, resolution.baseline);
+    }
   }
 
   const allAdjustments = final.flatMap((value) => [...value.adjustments]);
-  const recalculatedDailyTargets = await reconcileDailyTargets(
-    localDatabase,
-    allAdjustments,
-    completedAt,
-  );
+  const recalculatedDailyTargets = localStateApplied
+    ? await reconcileDailyTargets(localDatabase, allAdjustments, completedAt)
+    : 0;
 
   return {
     ...preview,
     uploadedReviews: uploaded.length,
-    downloadedReviews: downloaded.length,
+    downloadedReviews: localStateApplied ? downloaded.length : 0,
     uploadedAdjustments: uploaded.reduce((sum, value) => sum + value.adjustments.length, 0),
-    downloadedAdjustments: downloaded.reduce((sum, value) => sum + value.adjustments.length, 0),
+    downloadedAdjustments: localStateApplied
+      ? downloaded.reduce((sum, value) => sum + value.adjustments.length, 0)
+      : 0,
     recalculatedDailyTargets,
     completedAt,
   };

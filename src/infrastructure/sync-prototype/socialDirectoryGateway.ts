@@ -99,7 +99,7 @@ export function createSocialDirectoryClient(options: SocialDirectoryClientOption
       const validation = validateSocialHandle(handle);
       if (validation.status === 'invalid') return { status: 'invalidHandle' };
       if (!endpoint || !fetcher) return unavailableLookup();
-      const credentials = resolveSocialCloudApiCredentials(getCredentials);
+      const credentials = await resolveSocialCloudApiCredentials(getCredentials);
       if (!credentials) return unavailableLookup();
 
       try {
@@ -127,7 +127,7 @@ export function createSocialDirectoryClient(options: SocialDirectoryClientOption
         return { status: 'invalidHandle', message: validation.message };
       }
       if (!endpoint || !fetcher) return unavailableMutation();
-      const credentials = resolveSocialCloudApiCredentials(getCredentials, identity.userId);
+      const credentials = await resolveSocialCloudApiCredentials(getCredentials, identity.userId);
       if (!credentials) {
         return unavailableMutation('Connexion SportPilot requise pour réserver cet identifiant.');
       }

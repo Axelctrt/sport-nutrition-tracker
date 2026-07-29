@@ -56,6 +56,7 @@ export function persistRewardUnlockBatch(
   );
   unlockVisualThemes(
     batch.themes.map((progress) => progress.theme.id as VisualThemeId),
+    earnedAt,
   );
 }
 

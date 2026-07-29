@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import {
+  isDashboardSecondaryWidget,
   isDashboardWidgetVisible,
   type DashboardDensity,
   type DashboardPreferences,
@@ -26,6 +27,7 @@ export function DashboardWidgetStack({
       aria-busy={isLoading}
     >
       {preferences.order
+        .filter(isDashboardSecondaryWidget)
         .filter((widgetId) => isDashboardWidgetVisible(preferences, widgetId))
         .map((widgetId) => (
           <div key={widgetId} data-dashboard-widget={widgetId}>

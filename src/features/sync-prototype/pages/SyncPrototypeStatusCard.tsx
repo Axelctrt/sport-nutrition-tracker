@@ -74,8 +74,9 @@ export function SyncPrototypeStatusCard({
       </dl>
 
       {sync.errorMessage ? (
-        <InlineNotice className="mt-4" tone="error" title="Erreur Dexie Cloud">
-          {sync.errorMessage}
+        <InlineNotice className="mt-4" tone="error" title="Erreur de synchronisation">
+          <p>{sync.errorMessage}</p>
+          <p className="mt-1">Tes données restent enregistrées sur cet appareil.</p>
         </InlineNotice>
       ) : null}
 

@@ -4,6 +4,7 @@ const requiredFiles = [
   'functions/_shared/socialDirectory.js',
   'functions/api/social-directory/reserve.js',
   'functions/api/social-directory/lookup.js',
+  'migrations/0000_social_core_0_32_1.sql',
   'src/infrastructure/sync-prototype/socialDirectoryGateway.ts',
   'src/infrastructure/sync-prototype/socialDirectoryGateway.test.ts',
 ];
@@ -15,6 +16,7 @@ for (const file of requiredFiles) {
 }
 
 const server = readFileSync('functions/_shared/socialDirectory.js', 'utf8');
+const migration = readFileSync('migrations/0000_social_core_0_32_1.sql', 'utf8');
 const client = readFileSync('src/infrastructure/sync-prototype/socialDirectoryGateway.ts', 'utf8');
 const identityRuntime = readFileSync('src/infrastructure/sync-prototype/realSocialCloudIdentityService.ts', 'utf8');
 const lookupRuntime = readFileSync('src/infrastructure/sync-prototype/realSocialCloudUserLookupGateway.ts', 'utf8');
@@ -22,14 +24,15 @@ const envExample = readFileSync('.env.example', 'utf8');
 
 const checks = [
   [server.includes('SOCIAL_DIRECTORY_DB'), 'Le serveur doit utiliser le binding D1 SOCIAL_DIRECTORY_DB.'],
-  [server.includes('CREATE TABLE IF NOT EXISTS social_directory_handles'), 'Le serveur doit créer le contrat D1 social_directory_handles.'],
-  [server.includes('Identifiant déjà réservé par un autre compte SportPilot.'), 'Le conflit handle déjà pris doit être explicite.'],
+  [migration.includes('CREATE TABLE IF NOT EXISTS social_directory_handles'), 'La migration D1 doit creer le contrat social_directory_handles.'],
+  [!server.includes('CREATE TABLE IF NOT EXISTS social_directory_handles'), 'Le handler ne doit pas creer le schema D1 a la volee.'],
+  [server.includes('SOCIAL_DIRECTORY_HANDLE_TAKEN'), 'Le conflit handle deja pris doit etre explicite.'],
   [client.includes('VITE_SOCIAL_DIRECTORY_ENDPOINT'), 'Le front doit passer par un endpoint public configurable, sans secret VITE.'],
-  [client.includes('/lookup?handle='), 'Le lookup exact doit passer par l’annuaire serveur.'],
-  [client.includes('/reserve'), 'La réservation de handle doit passer par l’annuaire serveur.'],
-  [identityRuntime.includes('createSocialDirectoryClient'), 'La publication identité runtime doit brancher l’annuaire serveur.'],
-  [lookupRuntime.includes('socialDirectoryLookupClient'), 'La recherche runtime doit prioriser l’annuaire serveur.'],
-  [envExample.includes('VITE_SOCIAL_DIRECTORY_ENDPOINT'), '.env.example doit documenter l’endpoint front.'],
+  [client.includes('/lookup?handle='), 'Le lookup exact doit passer par l annuaire serveur.'],
+  [client.includes('/reserve'), 'La reservation de handle doit passer par l annuaire serveur.'],
+  [identityRuntime.includes('createSocialDirectoryClient'), 'La publication identite runtime doit brancher l annuaire serveur.'],
+  [lookupRuntime.includes('socialDirectoryLookupClient'), 'La recherche runtime doit prioriser l annuaire serveur.'],
+  [envExample.includes('VITE_SOCIAL_DIRECTORY_ENDPOINT'), '.env.example doit documenter l endpoint front.'],
   [envExample.includes('SOCIAL_DIRECTORY_DB'), '.env.example doit documenter le binding serveur D1.'],
 ];
 

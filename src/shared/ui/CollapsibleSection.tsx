@@ -8,6 +8,7 @@ import {
   type SyntheticEvent,
 } from 'react';
 
+import '@/shared/ui/uxMotionPolish.css';
 import { cn } from '@/shared/utils/cn';
 
 export interface CollapsibleSectionProps
@@ -41,22 +42,14 @@ function readStoredOpenState(
 function matchesHash(sectionId: string | undefined): boolean {
   if (!sectionId || typeof window === 'undefined') return false;
 
-  return (
-    decodeURIComponent(window.location.hash.slice(1)) === sectionId
-  );
+  return decodeURIComponent(window.location.hash.slice(1)) === sectionId;
 }
 
 function prefersReducedMotion(): boolean {
-  return (
-    window.matchMedia?.(
-      '(prefers-reduced-motion: reduce)',
-    ).matches ?? false
-  );
+  return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 }
 
-function scheduleSectionScroll(
-  sectionId: string,
-): void {
+function scheduleSectionScroll(sectionId: string): void {
   window.requestAnimationFrame(() => {
     window.requestAnimationFrame(() => {
       document.getElementById(sectionId)?.scrollIntoView?.({
@@ -80,14 +73,11 @@ export function CollapsibleSection({
   children,
 }: CollapsibleSectionProps) {
   const [isOpen, setIsOpen] = useState(
-    () =>
-      matchesHash(sectionId) ||
-      readStoredOpenState(storageKey, defaultOpen),
+    () => matchesHash(sectionId) || readStoredOpenState(storageKey, defaultOpen),
   );
 
   const openFromHash = useCallback(() => {
     if (!matchesHash(sectionId) || !sectionId) return;
-
     setIsOpen(true);
     scheduleSectionScroll(sectionId);
   }, [sectionId]);
@@ -95,24 +85,16 @@ export function CollapsibleSection({
   useEffect(() => {
     openFromHash();
     window.addEventListener('hashchange', openFromHash);
-
-    return () => {
-      window.removeEventListener('hashchange', openFromHash);
-    };
+    return () => window.removeEventListener('hashchange', openFromHash);
   }, [openFromHash]);
 
-  const handleToggle = (
-    event: SyntheticEvent<HTMLDetailsElement>,
-  ) => {
+  const handleToggle = (event: SyntheticEvent<HTMLDetailsElement>) => {
     const nextOpen = event.currentTarget.open;
     setIsOpen(nextOpen);
 
     if (storageKey) {
       try {
-        window.localStorage.setItem(
-          storageKey,
-          nextOpen ? 'open' : 'closed',
-        );
+        window.localStorage.setItem(storageKey, nextOpen ? 'open' : 'closed');
       } catch {
         // Le repli reste fonctionnel si le stockage est indisponible.
       }
@@ -125,11 +107,11 @@ export function CollapsibleSection({
       open={isOpen}
       onToggle={handleToggle}
       className={cn(
-        'group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900',
+        'sp-collapsible group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900',
         className,
       )}
     >
-      <summary className="flex min-h-16 cursor-pointer list-none items-center gap-3 px-4 py-3 marker:hidden sm:px-5 [&::-webkit-details-marker]:hidden">
+      <summary className="sp-collapsible-summary flex min-h-16 cursor-pointer list-none items-center gap-3 px-4 py-3 marker:hidden sm:px-5 [&::-webkit-details-marker]:hidden">
         {Icon ? (
           <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-700 dark:bg-brand-950/50 dark:text-brand-300">
             <Icon aria-hidden="true" className="size-5" />
@@ -159,8 +141,12 @@ export function CollapsibleSection({
         />
       </summary>
 
-      <div className="border-t border-slate-200 p-4 sm:p-5 dark:border-slate-800">
-        {children}
+      <div className="sp-collapsible-content">
+        <div>
+          <div className="border-t border-slate-200 p-4 sm:p-5 dark:border-slate-800">
+            {children}
+          </div>
+        </div>
       </div>
     </details>
   );
