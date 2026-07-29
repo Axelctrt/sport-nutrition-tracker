@@ -148,7 +148,9 @@ test('centralise les actions sport et nutrition dans le cœur fixe de l’accuei
   await sportDialog.getByRole('button', { name: 'Planifier pour aujourd’hui' }).click();
 
   await expect(sportDialog).toBeHidden();
-  await expect(page.getByText('Marche active', { exact: true })).toBeVisible();
+  await expect(
+    page.getByLabel('Assistant du jour').getByText('Marche active', { exact: true }),
+  ).toBeVisible();
   await expect(page.getByRole('link', { name: 'Démarrer' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Prévoir une autre activité' })).toBeVisible();
 
