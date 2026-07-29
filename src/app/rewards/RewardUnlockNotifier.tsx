@@ -89,6 +89,8 @@ export function RewardUnlockNotifier({
     ? pendingAchievements[0]
     : undefined;
 
+  // L’ancien toast « Nouveau thème débloqué » est volontairement supprimé :
+  // le reveal attend silencieusement un contexte sûr avant de s’afficher.
   useEffect(() => {
     if (pendingThemeIds.length === 0 || revealThemeId) return undefined;
     const timer = window.setInterval(() => {
