@@ -11,20 +11,30 @@ import { WeightSyncCoordinator } from '@/app/sync/WeightSyncCoordinator';
 import { router } from "@/app/router";
 import { PwaUpdatePrompt } from "@/pwa/PwaUpdatePrompt";
 
+function AppRuntime() {
+  return (
+    <AppProviders>
+      <SocialIdentityAccountGate>
+        <RouterProvider router={router} />
+        <RoutineReminderNotifier />
+        <RewardUnlockNotifier />
+        <WeeklyMissionCompletionNotifier />
+        <WeightSyncCoordinator />
+        <AutomaticSyncCoordinator />
+        <PwaUpdatePrompt />
+      </SocialIdentityAccountGate>
+    </AppProviders>
+  );
+}
+
 export function App() {
+  const onboardingRouteActive = window.location.hash.startsWith('#/onboarding');
+
+  if (onboardingRouteActive) return <AppRuntime />;
+
   return (
     <DataSpaceAccountGate>
-      <AppProviders>
-        <SocialIdentityAccountGate>
-          <RouterProvider router={router} />
-          <RoutineReminderNotifier />
-          <RewardUnlockNotifier />
-          <WeeklyMissionCompletionNotifier />
-          <WeightSyncCoordinator />
-          <AutomaticSyncCoordinator />
-          <PwaUpdatePrompt />
-        </SocialIdentityAccountGate>
-      </AppProviders>
+      <AppRuntime />
     </DataSpaceAccountGate>
   );
 }
