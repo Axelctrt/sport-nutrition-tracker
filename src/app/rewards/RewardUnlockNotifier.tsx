@@ -1,7 +1,6 @@
 import {
   useCallback,
   useEffect,
-  useRef,
   useState,
 } from "react";
 
@@ -28,7 +27,6 @@ import {
   SportPilotThemeTrialBar,
   SportPilotUnlockReveal,
 } from "@/shared/ui/SportPilotUnlockReveal";
-import { useToast } from "@/shared/toast/useToast";
 
 export type RewardUnlockObserver = (
   onUnlocks: RewardUnlockListener,
@@ -61,7 +59,6 @@ export function RewardUnlockNotifier({
   currentPathname,
   navigateToDashboard = () => router.navigate(routePaths.dashboard),
 }: RewardUnlockNotifierProps) {
-  const { showToast } = useToast();
   const [routerPathname, setRouterPathname] = useState(
     () => router.state.location.pathname,
   );
@@ -69,10 +66,8 @@ export function RewardUnlockNotifier({
     initialPendingThemeIds,
   );
   const [pendingAchievements, setPendingAchievements] = useState<AchievementUnlock[]>([]);
-  const [explicitRevealId, setExplicitRevealId] = useState<VisualThemeId>();
   const [trialThemeId, setTrialThemeId] = useState<VisualThemeId>();
   const [, setContextRevision] = useState(0);
-  const notifiedThemeIds = useRef(new Set<VisualThemeId>());
   const pathname = currentPathname ?? routerPathname;
 
   useEffect(() => {
@@ -83,8 +78,7 @@ export function RewardUnlockNotifier({
   }, [currentPathname]);
 
   const contextSafe = rewardRevealContextIsSafe(pathname);
-  const revealThemeId = explicitRevealId
-    ?? (contextSafe ? pendingThemeIds[0] : undefined);
+  const revealThemeId = contextSafe ? pendingThemeIds[0] : undefined;
   const revealTheme = revealThemeId
     ? getVisualThemeDefinition(revealThemeId)
     : undefined;
@@ -95,40 +89,13 @@ export function RewardUnlockNotifier({
     ? pendingAchievements[0]
     : undefined;
 
-  const announceDeferredTheme = useCallback((themeId: VisualThemeId) => {
-    if (notifiedThemeIds.current.has(themeId)) return;
-    notifiedThemeIds.current.add(themeId);
-    const theme = getVisualThemeDefinition(themeId);
-    showToast({
-      tone: "success",
-      title: "Nouveau thème débloqué",
-      description: `${theme.name} rejoint ta collection.`,
-      action: {
-        label: "Voir",
-        ariaLabel: `Voir le thème ${theme.name}`,
-        onClick: () => setExplicitRevealId(themeId),
-      },
-      durationMs: 10_000,
-      dedupeKey: `reward-theme-deferred:${themeId}`,
-    });
-  }, [showToast]);
-
   useEffect(() => {
     if (pendingThemeIds.length === 0 || revealThemeId) return undefined;
-    const nextThemeId = pendingThemeIds[0];
-    if (!nextThemeId) return undefined;
-    if (!contextSafe) announceDeferredTheme(nextThemeId);
-
     const timer = window.setInterval(() => {
       setContextRevision((revision) => revision + 1);
     }, 400);
     return () => window.clearInterval(timer);
-  }, [
-    announceDeferredTheme,
-    contextSafe,
-    pendingThemeIds,
-    revealThemeId,
-  ]);
+  }, [pendingThemeIds.length, revealThemeId]);
 
   useEffect(() => {
     if (pendingAchievements.length === 0 || achievementReveal || revealTheme) {
@@ -174,9 +141,6 @@ export function RewardUnlockNotifier({
 
   const consumeReveal = useCallback((themeId: VisualThemeId) => {
     setPendingThemeIds((current) => current.filter((id) => id !== themeId));
-    setExplicitRevealId((current) => (
-      current === themeId ? undefined : current
-    ));
     window.setTimeout(() => {
       setContextRevision((revision) => revision + 1);
     }, 0);
