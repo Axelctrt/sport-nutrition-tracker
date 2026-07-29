@@ -23,10 +23,12 @@ describe('release finalization readiness 0.34.0', () => {
     expect(SOCIAL_ACTIVITY_SNAPSHOT_CONTRACT_VERSION).toBe('0.29.0-a3');
   });
 
-  it('documente la release et le tag stable', () => {
+  it('documente la branche de publication et le tag stable prévu', () => {
     expect(releaseNotesSource).toContain('SportPilot 0.34.0');
-    expect(releaseNotesSource).toContain('Branche : `feat/design-themes-analytics-0.34.0`');
-    expect(releaseChecklistSource).toContain('feat/design-themes-analytics-0.34.0');
+    expect(releaseNotesSource).toContain('Branche de publication : `release/0.34.0`');
+    expect(releaseNotesSource).toContain('Tag prévu : `v0.34.0`');
+    expect(releaseChecklistSource).toContain('Branche `release/0.34.0` créée');
+    expect(releaseChecklistSource).toContain('Tag annoté `v0.34.0`');
   });
 
   it('gèle le périmètre de confidentialité', () => {
