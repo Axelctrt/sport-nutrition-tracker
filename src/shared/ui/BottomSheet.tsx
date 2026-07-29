@@ -58,7 +58,7 @@ export function BottomSheet({
     pointerId: number;
     startY: number;
     startedAt: number;
-  } | undefined>(undefined);
+  }>();
   const [dragOffset, setDragOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [keyboardOpen, setKeyboardOpen] = useState(false);
@@ -69,14 +69,14 @@ export function BottomSheet({
     if (open) {
       setRendered(true);
       setClosing(false);
-      return undefined;
+      return;
     }
-    if (!rendered) return undefined;
+    if (!rendered) return;
 
     if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
       setRendered(false);
       setClosing(false);
-      return undefined;
+      return;
     }
 
     setClosing(true);
@@ -88,14 +88,14 @@ export function BottomSheet({
   }, [open, rendered]);
 
   useEffect(() => {
-    if (!open || (!rendered && !open)) {
+    if (!open) {
       setKeyboardOpen(false);
-      return undefined;
+      return;
     }
     const viewport = window.visualViewport;
     const backdrop = backdropRef.current;
     const panel = panelRef.current;
-    if (!viewport || !backdrop || !panel) return undefined;
+    if (!viewport || !backdrop || !panel) return;
     let centerTimer: number | undefined;
 
     const centerActiveField = () => {
@@ -104,9 +104,7 @@ export function BottomSheet({
         !(activeElement instanceof HTMLInputElement)
         && !(activeElement instanceof HTMLTextAreaElement)
         && !(activeElement instanceof HTMLSelectElement)
-      ) {
-        return;
-      }
+      ) return;
       if (!panel.contains(activeElement)) return;
       const target = activeElement.closest<HTMLElement>('[data-form-field]') ?? activeElement;
       window.clearTimeout(centerTimer);
@@ -128,24 +126,21 @@ export function BottomSheet({
       setKeyboardOpen(nextKeyboardOpen);
       if (nextKeyboardOpen) centerActiveField();
     };
-    const handleFocusIn = () => {
-      centerActiveField();
-    };
 
     syncViewport();
     viewport.addEventListener('resize', syncViewport);
     viewport.addEventListener('scroll', syncViewport);
-    panel.addEventListener('focusin', handleFocusIn);
+    panel.addEventListener('focusin', centerActiveField);
     return () => {
       window.clearTimeout(centerTimer);
       viewport.removeEventListener('resize', syncViewport);
       viewport.removeEventListener('scroll', syncViewport);
-      panel.removeEventListener('focusin', handleFocusIn);
+      panel.removeEventListener('focusin', centerActiveField);
     };
-  }, [open, rendered]);
+  }, [open]);
 
   useEffect(() => {
-    if (!open || (!rendered && !open)) return undefined;
+    if (!open) return;
 
     const previouslyFocused = document.activeElement instanceof HTMLElement
       ? document.activeElement
@@ -153,11 +148,8 @@ export function BottomSheet({
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
 
-    if (dismissible) {
-      closeButtonRef.current?.focus();
-    } else {
-      panelRef.current?.focus();
-    }
+    if (dismissible) closeButtonRef.current?.focus();
+    else panelRef.current?.focus();
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && dismissible) {
@@ -193,9 +185,16 @@ export function BottomSheet({
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = previousOverflow;
-      previouslyFocused?.focus();
+      const activeElement = document.activeElement;
+      if (
+        previouslyFocused?.isConnected
+        && (
+          activeElement === document.body
+          || (activeElement instanceof Node && panelRef.current?.contains(activeElement))
+        )
+      ) previouslyFocused.focus();
     };
-  }, [dismissible, onClose, open, rendered]);
+  }, [dismissible, onClose, open]);
 
   useEffect(() => {
     if (open) {
@@ -233,8 +232,7 @@ export function BottomSheet({
     if (!drag || drag.pointerId !== event.pointerId) return;
 
     const distance = Math.max(0, event.clientY - drag.startY);
-    const elapsed = Math.max(1, event.timeStamp - drag.startedAt);
-    const velocity = distance / elapsed;
+    const velocity = distance / Math.max(1, event.timeStamp - drag.startedAt);
     const shouldDismiss = distance >= DISMISS_DISTANCE_PX
       || (
         distance >= MINIMUM_VELOCITY_DISMISS_DISTANCE_PX
@@ -243,11 +241,8 @@ export function BottomSheet({
 
     dragRef.current = undefined;
     setIsDragging(false);
-    if (shouldDismiss) {
-      onClose();
-    } else {
-      setDragOffset(0);
-    }
+    if (shouldDismiss) onClose();
+    else setDragOffset(0);
   };
 
   if (!rendered && !open) return null;
