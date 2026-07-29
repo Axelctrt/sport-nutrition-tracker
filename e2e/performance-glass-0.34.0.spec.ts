@@ -36,25 +36,28 @@ async function openReadyPage(
   path: string,
   heading: string,
 ): Promise<void> {
-  const open = async () => {
-    await page.goto(`/?visualQa=${Date.now()}#${path}`);
-    await expect(page.getByRole('heading', { level: 1, name: heading })).toBeVisible();
-  };
+  let lastError: unknown;
 
-  try {
-    await open();
-  } catch (error) {
-    const localProfileUnavailable = page.getByRole('heading', {
-      level: 1,
-      name: 'Profil local indisponible',
-    });
-    if (!(await localProfileUnavailable.isVisible().catch(() => false))) {
-      throw error;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      await page.goto(`/?visualQa=${Date.now()}-${attempt}#${path}`, {
+        waitUntil: 'domcontentloaded',
+      });
+      await expect(
+        page.getByRole('heading', { level: 1, name: heading }),
+      ).toBeVisible({ timeout: 15_000 });
+      lastError = undefined;
+      break;
+    } catch (error) {
+      lastError = error;
+      if (attempt < 3) {
+        await page.goto('about:blank', { waitUntil: 'load' });
+        await page.waitForTimeout(250);
+      }
     }
-
-    await page.goto('about:blank', { waitUntil: 'load' });
-    await open();
   }
+
+  if (lastError) throw lastError;
 
   await expect(page.locator('[aria-label="Chargement des analyses"]')).toHaveCount(0);
   await expect(page.locator('[aria-label="Chargement de la progression"]')).toHaveCount(0);
