@@ -1,6 +1,7 @@
 import { RouterProvider } from "react-router-dom";
 
 import { DataSpaceAccountGate } from '@/app/data-spaces/DataSpaceAccountGate';
+import { OnboardingCompletionNotifier } from '@/app/onboarding/OnboardingCompletionNotifier';
 import { SocialIdentityAccountGate } from '@/app/social-identity/SocialIdentityAccountGate';
 import { AppProviders } from "@/app/providers/AppProviders";
 import { RoutineReminderNotifier } from "@/app/reminders/RoutineReminderNotifier";
@@ -17,6 +18,7 @@ function AppRuntime() {
     <AppProviders>
       <SocialIdentityAccountGate>
         <RouterProvider router={router} />
+        <OnboardingCompletionNotifier />
         <RoutineReminderNotifier />
         <RewardUnlockNotifier />
         <WeeklyMissionCompletionNotifier />
