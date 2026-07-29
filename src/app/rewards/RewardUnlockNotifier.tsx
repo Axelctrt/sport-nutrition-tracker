@@ -43,10 +43,6 @@ interface RewardUnlockNotifierProps {
   navigateToDashboard?: () => void | Promise<void>;
 }
 
-function joinNames(names: readonly string[]): string {
-  return names.join(", ");
-}
-
 function initialPendingThemeIds(): VisualThemeId[] {
   const state = readVisualThemeState();
   return visualThemeCatalog.flatMap(({ id }) => {
@@ -159,33 +155,6 @@ export function RewardUnlockNotifier({
             ...batch.achievements.filter(({ achievement }) => !knownIds.has(achievement.id)),
           ];
         });
-
-        if (!rewardRevealContextIsSafe(currentPathname ?? router.state.location.pathname)) {
-          const names = batch.achievements.map(
-            (progress) => progress.achievement.name,
-          );
-          const firstAchievement = batch.achievements[0];
-          showToast({
-            tone: "success",
-            title:
-              names.length === 1
-                ? `Nouveau badge : ${names[0]}`
-                : `${names.length} nouveaux badges gagnés`,
-            description:
-              names.length === 1 && firstAchievement
-                ? firstAchievement.achievement.description
-                : joinNames(names),
-            action: {
-              label: "Voir",
-              ariaLabel: "Voir les badges débloqués",
-              onClick: () => void router.navigate(`${routePaths.rewards}?tab=badges`),
-            },
-            durationMs: 8_000,
-            dedupeKey: `reward-achievements:${batch.achievements
-              .map((progress) => progress.achievement.id)
-              .join(",")}`,
-          });
-        }
       }
 
       const newThemeIds = batch.themes
@@ -201,7 +170,7 @@ export function RewardUnlockNotifier({
     };
 
     return observeUnlocks(handleUnlocks, () => undefined);
-  }, [currentPathname, observeUnlocks, showToast]);
+  }, [observeUnlocks]);
 
   const consumeReveal = useCallback((themeId: VisualThemeId) => {
     setPendingThemeIds((current) => current.filter((id) => id !== themeId));
