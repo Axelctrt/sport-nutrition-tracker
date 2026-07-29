@@ -9,6 +9,7 @@ import { WeeklyMissionCompletionNotifier } from "@/app/rewards/WeeklyMissionComp
 import { AutomaticSyncCoordinator } from '@/app/sync/AutomaticSyncCoordinator';
 import { WeightSyncCoordinator } from '@/app/sync/WeightSyncCoordinator';
 import { router } from "@/app/router";
+import '@/features/onboarding/styles/onboardingMotion.css';
 import { PwaUpdatePrompt } from "@/pwa/PwaUpdatePrompt";
 
 function AppRuntime() {
