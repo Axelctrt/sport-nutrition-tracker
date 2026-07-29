@@ -36,8 +36,26 @@ async function openReadyPage(
   path: string,
   heading: string,
 ): Promise<void> {
-  await page.goto(`/?visualQa=${Date.now()}#${path}`);
-  await expect(page.getByRole('heading', { level: 1, name: heading })).toBeVisible();
+  const open = async () => {
+    await page.goto(`/?visualQa=${Date.now()}#${path}`);
+    await expect(page.getByRole('heading', { level: 1, name: heading })).toBeVisible();
+  };
+
+  try {
+    await open();
+  } catch (error) {
+    const localProfileUnavailable = page.getByRole('heading', {
+      level: 1,
+      name: 'Profil local indisponible',
+    });
+    if (!(await localProfileUnavailable.isVisible().catch(() => false))) {
+      throw error;
+    }
+
+    await page.goto('about:blank', { waitUntil: 'load' });
+    await open();
+  }
+
   await expect(page.locator('[aria-label="Chargement des analyses"]')).toHaveCount(0);
   await expect(page.locator('[aria-label="Chargement de la progression"]')).toHaveCount(0);
   await expectNoCriticalHorizontalOverflow(page);
