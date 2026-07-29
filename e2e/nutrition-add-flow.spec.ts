@@ -35,7 +35,7 @@ test('propose les méthodes d’ajout Nutrition et conserve le repas', async ({ 
   if (isMobile) {
     await page.getByRole('button', { name: 'Retour' }).click();
     await expect(page).toHaveURL(
-      new RegExp(`#\/food\/select\?date=${date}&slot=lunch$`),
+      new RegExp(`#\\/food\\/select\\?date=${date}&slot=lunch$`),
     );
   } else {
     await expect(page.getByRole('link', { name: 'Retour au journal' })).toHaveAttribute(
