@@ -1,5 +1,6 @@
 import { useContext, useMemo } from 'react';
 
+import { routePaths } from '@/app/routePaths';
 import {
   ToastContext,
   type ToastAction,
@@ -31,6 +32,16 @@ const dedicatedFeedbackSuccessKeys = new Set([
   'progress-report-generate',
   'progress-report-delivery',
 ]);
+const defaultSuccessDestinations: Partial<Record<string, ToastDestination>> = {
+  'guest-data-import': {
+    path: routePaths.accountDevices,
+    label: 'Voir le compte et les appareils',
+  },
+  'cloud-account-restore': {
+    path: routePaths.dashboard,
+    label: 'Ouvrir l’accueil',
+  },
+};
 
 export function suppressNextActionToast(key: string): void {
   suppressedActionToasts.add(key);
@@ -46,6 +57,10 @@ function successToastIsSuppressed(key: string): boolean {
   return dedicatedFeedbackSuccessKeys.has(key) || consumeActionToastSuppression(key);
 }
 
+function destinationFor(key: string, destination?: ToastDestination): ToastDestination | undefined {
+  return destination ?? defaultSuccessDestinations[key];
+}
+
 export function getActionErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error && error.message.trim() !== ''
     ? error.message
@@ -58,24 +73,26 @@ export function useActionToast() {
   return useMemo(() => ({
     success({ key, title, description, action, destination, durationMs }: ActionSuccessInput): string {
       if (successToastIsSuppressed(key) || !toast) return '';
+      const resolvedDestination = destinationFor(key, destination);
       return toast.showToast({
         title,
         tone: 'success',
         dedupeKey: `action-success:${key}`,
         ...(description === undefined ? {} : { description }),
         ...(action === undefined ? {} : { action }),
-        ...(destination === undefined ? {} : { destination }),
+        ...(resolvedDestination === undefined ? {} : { destination: resolvedDestination }),
         ...(durationMs === undefined ? {} : { durationMs }),
       });
     },
     successAfterReload({ key, title, description, destination }: ActionSuccessInput): void {
       if (successToastIsSuppressed(key)) return;
+      const resolvedDestination = destinationFor(key, destination);
       queuePendingToast({
         title,
         tone: 'success',
         dedupeKey: `action-success:${key}`,
         ...(description === undefined ? {} : { description }),
-        ...(destination === undefined ? {} : { destination }),
+        ...(resolvedDestination === undefined ? {} : { destination: resolvedDestination }),
       });
     },
     error({ key, title = 'Modification impossible', error, fallback, destination }: ActionErrorInput): string {
