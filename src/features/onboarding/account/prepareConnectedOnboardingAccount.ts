@@ -12,7 +12,11 @@ import { createSyncPrototypeAccountFingerprint } from '@/infrastructure/sync-pro
 
 export type ConnectedOnboardingAccountPreparation =
   | { status: 'ready'; reloading: boolean }
-  | { status: 'choice-required'; reason: 'cloud-data' | 'unknown-cloud-state' };
+  | {
+      status: 'choice-required';
+      reason: 'cloud-data' | 'unknown-cloud-state';
+      reloading: false;
+    };
 
 function fingerprintFromClient(client: SyncPrototypeClient): string {
   const snapshot = client.getSnapshot();
@@ -47,12 +51,20 @@ export async function prepareConnectedOnboardingAccount(
   }
 
   if (!client.prepareCloudRestore) {
-    return { status: 'choice-required', reason: 'unknown-cloud-state' };
+    return {
+      status: 'choice-required',
+      reason: 'unknown-cloud-state',
+      reloading: false,
+    };
   }
 
   const preparedCloud = await client.prepareCloudRestore(fingerprint);
   if (preparedCloud.preview.hasCloudData) {
-    return { status: 'choice-required', reason: 'cloud-data' };
+    return {
+      status: 'choice-required',
+      reason: 'cloud-data',
+      reloading: false,
+    };
   }
 
   const result = await createEmptyAccountDataSpace(fingerprint);
