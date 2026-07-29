@@ -1,5 +1,7 @@
 import { ArrowLeft, Cloud, CloudOff, KeyRound, LogOut, Mail, ShieldCheck } from 'lucide-react';
 import { type FormEvent, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { routePaths } from '@/app/routePaths';
+import { prepareConnectedOnboardingAccount } from '@/features/onboarding/account/prepareConnectedOnboardingAccount';
 import {
   getSyncPrototypeClient,
   type SyncPrototypeClient,
@@ -16,13 +18,13 @@ interface OnboardingAccountChoiceProps {
   onChooseLocal: () => void | Promise<void>;
   onChooseAccount: () => void;
   onBackToChoice: () => void;
-  onContinueWithAccount: () => void;
+  onContinueWithAccount: () => void | Promise<void>;
   client?: SyncPrototypeClient | null;
   accountEnabled?: boolean;
   configurationError?: string;
 }
 
-type AccountActionStatus = 'idle' | 'initializing' | 'email' | 'otp' | 'logout';
+type AccountActionStatus = 'idle' | 'initializing' | 'email' | 'otp' | 'preparing' | 'logout';
 
 const inputClasses =
   'min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-slate-950 shadow-sm outline-none transition focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20 disabled:cursor-not-allowed disabled:opacity-70 dark:border-slate-700 dark:bg-slate-950 dark:text-white';
@@ -89,6 +91,7 @@ export function OnboardingAccountChoice({
     | undefined
   >();
   const cancelledLoginRef = useRef(false);
+  const handledConnectedRef = useRef(false);
 
   const snapshot = useSyncExternalStore(
     client?.subscribe ?? (() => () => undefined),
@@ -124,6 +127,51 @@ export function OnboardingAccountChoice({
   const isLoggedIn = snapshot?.account.isLoggedIn === true;
   const accountLabel = snapshot?.account.email ?? snapshot?.account.userId ?? 'Compte connecté';
 
+  useEffect(() => {
+    if (fieldError && actionStatus === 'otp') setActionStatus('idle');
+  }, [actionStatus, fieldError]);
+
+  useEffect(() => {
+    if (
+      screen !== 'connection'
+      || !client
+      || !isLoggedIn
+      || handledConnectedRef.current
+    ) return;
+
+    handledConnectedRef.current = true;
+    setActionStatus('preparing');
+    setFeedback({
+      tone: 'info',
+      title: 'Compte validé',
+      message: 'SportPilot prépare ton espace et recherche tes données existantes.',
+    });
+
+    void (async () => {
+      try {
+        if (injectedClient === undefined) {
+          const preparation = await prepareConnectedOnboardingAccount(client);
+          if (preparation.reloading) return;
+          if (preparation.status === 'choice-required') {
+            window.location.hash = routePaths.dashboard;
+            return;
+          }
+        }
+
+        await onContinueWithAccount();
+        setActionStatus('idle');
+      } catch (error) {
+        handledConnectedRef.current = false;
+        setActionStatus('idle');
+        setFeedback({
+          tone: 'error',
+          title: 'Préparation interrompue',
+          message: errorMessage(error, 'L’espace de ce compte n’a pas pu être préparé.'),
+        });
+      }
+    })();
+  }, [client, injectedClient, isLoggedIn, onContinueWithAccount, screen]);
+
   const handleEmailSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!client) return;
@@ -133,7 +181,7 @@ export function OnboardingAccountChoice({
       setFeedback({
         tone: 'error',
         title: 'Adresse requise',
-        message: 'Saisissez l’adresse qui recevra le code.',
+        message: 'Saisis l’adresse qui recevra le code.',
       });
       return;
     }
@@ -161,9 +209,7 @@ export function OnboardingAccountChoice({
         });
       })
       .finally(() => {
-        setActionStatus((current) =>
-          current === 'email' || current === 'otp' ? 'idle' : current,
-        );
+        setActionStatus((current) => current === 'email' ? 'idle' : current);
       });
   };
 
@@ -171,11 +217,11 @@ export function OnboardingAccountChoice({
     event.preventDefault();
     if (!client) return;
     const normalizedOtp = otp.trim();
-    if (!normalizedOtp) return;
+    if (!normalizedOtp || actionStatus === 'otp' || actionStatus === 'preparing') return;
 
+    setFeedback(undefined);
     setActionStatus('otp');
     client.submitInteraction({ otp: normalizedOtp });
-    setActionStatus('idle');
   };
 
   const handleCancelInteraction = () => {
@@ -193,13 +239,14 @@ export function OnboardingAccountChoice({
     setFeedback(undefined);
     try {
       await client.logout();
+      handledConnectedRef.current = false;
       setEmail('');
       setOtp('');
       if (showFeedback) {
         setFeedback({
           tone: 'success',
           title: 'Compte déconnecté',
-          message: 'Vous pouvez utiliser un autre compte.',
+          message: 'Tu peux utiliser un autre compte.',
         });
       }
       return true;
@@ -228,7 +275,7 @@ export function OnboardingAccountChoice({
       <div className="mx-auto grid w-full max-w-xl gap-3 sm:grid-cols-2">
         <button
           aria-label="Choisir le mode local"
-          className="min-h-36 rounded-3xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-brand-400 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 dark:border-slate-800 dark:bg-slate-900"
+          className="min-h-36 rounded-3xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-brand-400 hover:shadow-md active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 dark:border-slate-800 dark:bg-slate-900"
           disabled={actionStatus === 'logout'}
           onClick={() => void handleChooseLocal()}
           type="button"
@@ -240,7 +287,7 @@ export function OnboardingAccountChoice({
             <span className="text-lg font-semibold text-slate-950 dark:text-white">Mode local</span>
           </span>
           <span className="mt-3 block text-sm leading-5 text-slate-600 dark:text-slate-300">
-            Utilisez SportPilot immédiatement. Vos données restent sur cet appareil.
+            Utilise SportPilot immédiatement. Tes données restent sur cet appareil.
           </span>
           <span className="mt-2 block text-xs font-medium leading-4 text-brand-700 dark:text-brand-300">
             Un compte pourra être associé plus tard depuis Paramètres → Compte et appareils.
@@ -249,7 +296,7 @@ export function OnboardingAccountChoice({
 
         <button
           aria-label="Connecter un compte"
-          className="min-h-36 rounded-3xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-brand-400 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 disabled:cursor-not-allowed disabled:opacity-55 dark:border-slate-800 dark:bg-slate-900"
+          className="min-h-36 rounded-3xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-brand-400 hover:shadow-md active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 disabled:cursor-not-allowed disabled:opacity-55 dark:border-slate-800 dark:bg-slate-900"
           disabled={!accountEnabled || !client}
           onClick={onChooseAccount}
           type="button"
@@ -261,10 +308,10 @@ export function OnboardingAccountChoice({
             <span className="text-lg font-semibold text-slate-950 dark:text-white">Connecter un compte</span>
           </span>
           <span className="mt-3 block text-sm leading-5 text-slate-600 dark:text-slate-300">
-            Synchronisez vos données et retrouvez-les sur plusieurs appareils.
+            Synchronise tes données et retrouve-les sur plusieurs appareils.
           </span>
           <span className="mt-2 block text-xs font-medium leading-4 text-brand-700 dark:text-brand-300">
-            L’adresse e-mail sera demandée à l’étape suivante.
+            Ton adresse e-mail sera demandée à l’étape suivante.
           </span>
         </button>
 
@@ -289,13 +336,28 @@ export function OnboardingAccountChoice({
         <InlineNotice tone="info" title="Compte indisponible">
           {configurationError ?? 'La connexion compte n’est pas activée ici.'}
         </InlineNotice>
+      ) : actionStatus === 'preparing' ? (
+        <div className="space-y-3" aria-live="polite" aria-busy="true">
+          <div className="flex items-center gap-2 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-950 dark:bg-emerald-950/40 dark:text-emerald-100">
+            <ShieldCheck aria-hidden="true" className="size-4 shrink-0" />
+            <span className="min-w-0 truncate font-semibold">{accountLabel}</span>
+          </div>
+          <div className="rounded-2xl border border-brand-200 bg-brand-50/60 p-4 dark:border-brand-900 dark:bg-brand-950/25">
+            <p className="font-semibold text-slate-950 dark:text-white">Préparation de ton espace</p>
+            <ol className="mt-3 space-y-2 text-sm text-slate-600 dark:text-slate-300">
+              <li>✓ Compte vérifié</li>
+              <li className="font-semibold text-brand-700 dark:text-brand-300">● Recherche de tes données</li>
+              <li>○ Préparation du profil</li>
+            </ol>
+          </div>
+        </div>
       ) : isLoggedIn ? (
         <div className="space-y-3">
           <div className="flex items-center gap-2 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-950 dark:bg-emerald-950/40 dark:text-emerald-100">
             <ShieldCheck aria-hidden="true" className="size-4 shrink-0" />
             <span className="min-w-0 truncate font-semibold">{accountLabel}</span>
           </div>
-          <Button className="w-full" onClick={onContinueWithAccount}>
+          <Button className="w-full" onClick={() => void onContinueWithAccount()}>
             Continuer
           </Button>
           <Button
@@ -315,10 +377,12 @@ export function OnboardingAccountChoice({
           </p>
           <FormField error={fieldError} id="onboarding-account-otp" label="Code reçu" required>
             <input
+              autoFocus
               autoCapitalize="none"
               autoComplete="one-time-code"
               autoCorrect="off"
               className={inputClasses}
+              disabled={actionStatus === 'otp'}
               id="onboarding-account-otp"
               inputMode="text"
               onChange={(event) => setOtp(event.target.value)}
@@ -327,11 +391,11 @@ export function OnboardingAccountChoice({
               value={otp}
             />
           </FormField>
-          <Button className="w-full" disabled={!otp.trim()} type="submit">
+          <Button className="w-full" disabled={!otp.trim() || actionStatus === 'otp'} type="submit">
             <KeyRound aria-hidden="true" className="size-4" />
-            Valider le code
+            {actionStatus === 'otp' ? 'Validation…' : 'Valider le code'}
           </Button>
-          <Button className="w-full" onClick={handleCancelInteraction} variant="secondary">
+          <Button className="w-full" disabled={actionStatus === 'otp'} onClick={handleCancelInteraction} variant="secondary">
             Modifier l’adresse
           </Button>
         </form>
@@ -368,7 +432,7 @@ export function OnboardingAccountChoice({
         </form>
       )}
 
-      <Button className="mt-3 w-full" onClick={onBackToChoice} variant="ghost">
+      <Button className="mt-3 w-full" disabled={actionStatus === 'otp' || actionStatus === 'preparing'} onClick={onBackToChoice} variant="ghost">
         <ArrowLeft aria-hidden="true" className="size-4" />
         Retour au choix
       </Button>

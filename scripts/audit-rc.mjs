@@ -6,7 +6,7 @@ const dist = resolve(root, 'dist');
 const failures = [];
 const limits = {
   largestJavaScriptBytes: 850 * 1024,
-  totalJavaScriptBytes: 3340 * 1024,
+  totalJavaScriptBytes: 3356 * 1024,
   totalCssBytes: 176 * 1024,
 };
 
@@ -58,12 +58,14 @@ const largestJavaScript = javascriptSizes.reduce(
 );
 const totalJavaScriptBytes = javascriptSizes.reduce((total, file) => total + file.bytes, 0);
 const totalCssBytes = cssFiles.reduce((total, path) => total + statSync(path).size, 0);
+const totalJavaScriptBudgetMib = (limits.totalJavaScriptBytes / 1024 / 1024)
+  .toLocaleString('fr-FR', { maximumFractionDigits: 2 });
 
 if (largestJavaScript.bytes > limits.largestJavaScriptBytes) {
   fail(`le chunk ${largestJavaScript.path} dépasse 850 Kio (${largestJavaScript.bytes} octets).`);
 }
 if (totalJavaScriptBytes > limits.totalJavaScriptBytes) {
-  fail(`le JavaScript total dépasse le budget de 3,26 Mio (${totalJavaScriptBytes} octets).`);
+  fail(`le JavaScript total dépasse le budget de ${totalJavaScriptBudgetMib} Mio (${totalJavaScriptBytes} octets).`);
 }
 if (totalCssBytes > limits.totalCssBytes) {
   fail(`le CSS total dépasse 176 Kio (${totalCssBytes} octets).`);

@@ -35,7 +35,6 @@ export function FoodProductsPage() {
   const highlightTimerRef = useRef<number | undefined>(undefined);
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<ProductFilter>('all');
-  const [feedback, setFeedback] = useState<string>();
   const [highlightedProductId, setHighlightedProductId] = useState<string>();
   const {
     products,
@@ -77,10 +76,18 @@ export function FoodProductsPage() {
     const key = `${returnFeedback.title}:${returnFeedback.itemId ?? ''}`;
     if (handledFeedbackRef.current === key) return;
     handledFeedbackRef.current = key;
-    setFeedback(returnFeedback.title);
     actionToast.success({
       key: `food-product-return:${returnFeedback.itemId ?? returnFeedback.title}`,
       title: returnFeedback.title,
+      ...(returnFeedback.itemId
+        ? {
+            destination: {
+              path: currentPath,
+              label: `${returnFeedback.title} : afficher l’aliment`,
+              highlightId: `food-product-${returnFeedback.itemId}`,
+            },
+          }
+        : {}),
     });
     if (returnFeedback.itemId) highlightProduct(returnFeedback.itemId);
     void navigate(currentPath, { replace: true, state: null });
@@ -99,7 +106,6 @@ export function FoodProductsPage() {
   const handleArchive = async (productId: string) => {
     const archived = await archive(productId);
     if (archived) {
-      setFeedback('Aliment archivé');
       actionToast.success({
         key: `food-product-archive:${productId}`,
         title: 'Aliment archivé',
@@ -132,7 +138,7 @@ export function FoodProductsPage() {
         <div className="grid w-full grid-cols-2 gap-2 sm:w-auto">
           <Link
             to={routePaths.foodSearch}
-            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800 sm:px-4"
+            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-800 hover:bg-slate-50 active:scale-[0.98] dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800 sm:px-4"
           >
             <DatabaseZap aria-hidden="true" className="size-5" />
             Rechercher
@@ -140,7 +146,7 @@ export function FoodProductsPage() {
           <Link
             to={routePaths.newFoodProduct}
             state={navigationState}
-            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-brand-700 px-3 text-sm font-semibold text-white hover:bg-brand-800 dark:bg-brand-600 dark:hover:bg-brand-500 sm:px-4"
+            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-brand-700 px-3 text-sm font-semibold text-white hover:bg-brand-800 active:scale-[0.98] dark:bg-brand-600 dark:hover:bg-brand-500 sm:px-4"
           >
             <Plus aria-hidden="true" className="size-5" />
             Créer
@@ -152,12 +158,6 @@ export function FoodProductsPage() {
         <InlineNotice className="mt-5" tone="error" title="Catalogue indisponible" role="alert">
           <p>{errorMessage}</p>
           {status === 'error' ? <Button className="mt-3" variant="secondary" onClick={() => void refresh()}>Réessayer</Button> : null}
-        </InlineNotice>
-      ) : null}
-
-      {feedback ? (
-        <InlineNotice className="mt-5" tone="success" title={feedback} role="status">
-          La bibliothèque locale a été actualisée.
         </InlineNotice>
       ) : null}
 

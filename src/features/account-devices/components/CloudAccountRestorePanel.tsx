@@ -6,10 +6,11 @@ import type {
   PreparedCloudAccountRestore,
 } from '@/infrastructure/data-spaces/cloudAccountRestoreService';
 import type { SyncPrototypeClient } from '@/infrastructure/sync-prototype/syncPrototypeClient';
+import { useActionToast } from '@/shared/toast/useActionToast';
 import { Button } from '@/shared/ui/Button';
 import { ConfirmationDialog } from '@/shared/ui/ConfirmationDialog';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
-import { useActionToast } from '@/shared/toast/useActionToast';
+import { SportPilotMultiStepLoader } from '@/shared/ui/SportPilotMultiStepLoader';
 
 interface CloudAccountRestorePanelProps {
   readonly accountFingerprint: string;
@@ -34,6 +35,19 @@ type PanelState =
   | { readonly status: 'restoring'; readonly prepared: PreparedCloudAccountRestore }
   | { readonly status: 'success'; readonly result: CloudAccountRestoreResult }
   | { readonly status: 'error'; readonly message: string };
+
+const analysisSteps = [
+  { id: 'session', label: 'Vérification de la session du compte' },
+  { id: 'domains', label: 'Inventaire des domaines synchronisés' },
+  { id: 'preview', label: 'Préparation du bilan restaurable' },
+] as const;
+
+const restoreSteps = [
+  { id: 'temporary', label: 'Préparation dans un espace temporaire' },
+  { id: 'integrity', label: 'Vérification de l’intégrité' },
+  { id: 'apply', label: 'Application atomique sur cet appareil' },
+  { id: 'reload', label: 'Ouverture du profil restauré' },
+] as const;
 
 function defaultReload(): void {
   window.location.reload();
@@ -183,9 +197,21 @@ export function CloudAccountRestorePanel({
       ) : null}
 
       {state.status === 'loading' ? (
-        <InlineNotice tone="info" title="Recherche des données cloud">
-          SportPilot vérifie les domaines synchronisés de ce compte.
-        </InlineNotice>
+        <SportPilotMultiStepLoader
+          activeStep={1}
+          className="rounded-2xl border border-sky-200 bg-sky-50/60 p-4 dark:border-sky-900 dark:bg-sky-950/20"
+          label="Recherche des données cloud"
+          steps={analysisSteps}
+        />
+      ) : null}
+
+      {state.status === 'restoring' ? (
+        <SportPilotMultiStepLoader
+          activeStep={0}
+          className="rounded-2xl border border-sky-200 bg-sky-50/60 p-4 dark:border-sky-900 dark:bg-sky-950/20"
+          label="Restauration des données cloud"
+          steps={restoreSteps}
+        />
       ) : null}
 
       {state.status === 'error' ? (
@@ -211,13 +237,12 @@ export function CloudAccountRestorePanel({
           </div>
         ) : (
           <InlineNotice tone="info" title="Aucune donnée cloud trouvée">
-            Aucun domaine synchronisé ne contient actuellement de données pour ce
-            compte. Commencer avec un espace vide ne modifiera pas le cloud.
+            Aucun domaine synchronisé ne contient actuellement de données pour ce compte. Commencer avec un espace vide ne modifiera pas le cloud.
           </InlineNotice>
         )
       ) : null}
 
-      {preview?.hasCloudData ? (
+      {preview?.hasCloudData && state.status !== 'restoring' ? (
         <>
           {compact ? (
             <div
@@ -227,16 +252,10 @@ export function CloudAccountRestorePanel({
               Des données ont été trouvées pour ce compte
             </div>
           ) : (
-            <InlineNotice
-              tone="success"
-              title="Des données ont été trouvées pour ce compte"
-            >
-              {preview.cloudRecordCount} donnée
-              {preview.cloudRecordCount > 1 ? 's' : ''} restaurable
+            <InlineNotice tone="success" title="Des données ont été trouvées pour ce compte">
+              {preview.cloudRecordCount} donnée{preview.cloudRecordCount > 1 ? 's' : ''} restaurable
               {preview.cloudDeletionMarkerCount > 0
-                ? ` et ${preview.cloudDeletionMarkerCount} marqueur${
-                    preview.cloudDeletionMarkerCount > 1 ? 's' : ''
-                  } de suppression`
+                ? ` et ${preview.cloudDeletionMarkerCount} marqueur${preview.cloudDeletionMarkerCount > 1 ? 's' : ''} de suppression`
                 : ''}.
             </InlineNotice>
           )}
@@ -249,16 +268,10 @@ export function CloudAccountRestorePanel({
                   className="flex items-center justify-between gap-4 px-4 py-3"
                 >
                   <div>
-                    <p className="text-sm font-semibold text-slate-950 dark:text-white">
-                      {category.label}
-                    </p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      {category.description}
-                    </p>
+                    <p className="text-sm font-semibold text-slate-950 dark:text-white">{category.label}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{category.description}</p>
                   </div>
-                  <span className="shrink-0 font-bold text-sky-700 dark:text-sky-300">
-                    {category.recordCount}
-                  </span>
+                  <span className="shrink-0 font-bold text-sky-700 dark:text-sky-300">{category.recordCount}</span>
                 </div>
               ))}
             </div>
@@ -266,26 +279,19 @@ export function CloudAccountRestorePanel({
 
           {!preview.canRestore ? (
             <InlineNotice tone="info" title="Espace local déjà utilisé">
-              Cet espace contient {preview.localMeaningfulRecordCount} donnée
-              {preview.localMeaningfulRecordCount > 1 ? 's' : ''} locale
-              {preview.localMeaningfulRecordCount > 1 ? 's' : ''}. Utilise les
-              synchronisations par rubrique pour fusionner les données sans les
-              remplacer.
+              Cet espace contient {preview.localMeaningfulRecordCount} donnée{preview.localMeaningfulRecordCount > 1 ? 's' : ''} locale{preview.localMeaningfulRecordCount > 1 ? 's' : ''}. Utilise les synchronisations par rubrique pour fusionner les données sans les remplacer.
             </InlineNotice>
           ) : (
             <>
               {!compact ? (
                 <div className="flex items-start gap-2 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100">
                   <ShieldCheck aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-                  La restauration est préparée dans une base temporaire puis
-                  appliquée atomiquement. En cas d’erreur, l’espace local reste
-                  inchangé.
+                  La restauration est préparée dans une base temporaire puis appliquée atomiquement. En cas d’erreur, l’espace local reste inchangé.
                 </div>
               ) : null}
               <Button
                 className="w-full"
                 size={compact ? 'sm' : 'md'}
-                disabled={state.status === 'restoring'}
                 onClick={() => setConfirmationOpen(true)}
               >
                 <CloudDownload aria-hidden="true" className="size-4" />
@@ -298,10 +304,7 @@ export function CloudAccountRestorePanel({
 
       {state.status === 'success' ? (
         <InlineNotice tone="success" title="Restauration terminée">
-          {state.result.restoredRecords} enregistrement
-          {state.result.restoredRecords > 1 ? 's' : ''} restauré
-          {state.result.restoredRecords > 1 ? 's' : ''}. Les données cloud sont
-          restées intactes.
+          {state.result.restoredRecords} enregistrement{state.result.restoredRecords > 1 ? 's' : ''} restauré{state.result.restoredRecords > 1 ? 's' : ''}. Les données cloud sont restées intactes.
         </InlineNotice>
       ) : null}
 

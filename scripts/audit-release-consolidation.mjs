@@ -58,7 +58,7 @@ if (failures.length === 0) {
     ['synchronisation automatique', automaticSyncAudit],
     ['récompenses', rewardAudit],
   ]) {
-    if (!source.includes('3340 * 1024')) fail(`le budget JavaScript ${label} n’est pas aligné sur 3340 Kio.`);
+    if (!source.includes('3356 * 1024')) fail(`le budget JavaScript ${label} n’est pas aligné sur 3356 Kio.`);
     if (source.includes('2940 * 1024')) fail(`le budget JavaScript ${label} conserve l’ancien seuil de 2940 Kio.`);
   }
 

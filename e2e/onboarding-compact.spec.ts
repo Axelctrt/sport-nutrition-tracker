@@ -93,11 +93,13 @@ test('affiche les rouleaux sans saisie numérique manuelle', async ({ page }) =>
   await page.getByRole('button', { name: 'Continuer' }).click();
   await page.getByRole('button', { name: 'Continuer' }).click();
   await expect(page.getByRole('heading', { name: 'Quelle est votre date de naissance ?' })).toBeVisible();
-  await expect(page.getByRole('listbox', { name: 'Âge' })).toBeVisible();
 
-  await page.getByRole('radio', { name: 'Date de naissance' }).click();
+  await expect(page.getByRole('radio', { name: 'Date de naissance' })).toBeChecked();
   await expect(page.getByRole('listbox', { name: 'JJ' })).toBeVisible();
   await expect(page.getByRole('listbox', { name: 'MM' })).toBeVisible();
   await expect(page.getByRole('listbox', { name: 'AAAA' })).toBeVisible();
+
+  await page.getByRole('radio', { name: 'Âge' }).click();
+  await expect(page.getByRole('listbox', { name: 'Âge' })).toBeVisible();
   await expect(page.locator('input[type="date"]')).toHaveCount(0);
 });

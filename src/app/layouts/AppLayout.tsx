@@ -6,6 +6,7 @@ import { DesktopSidebar } from '@/app/layouts/DesktopSidebar';
 import { MobileBottomNavigation } from '@/app/layouts/MobileBottomNavigation';
 import { NavigationScrollManager } from '@/app/layouts/NavigationScrollManager';
 import { PageHeader } from '@/app/layouts/PageHeader';
+import { SecondaryPageContext } from '@/app/layouts/SecondaryPageContext';
 import { OfflineStatusBanner } from '@/pwa/OfflineStatusBanner';
 import { useClearInputValueOnFocus } from '@/shared/forms/useClearInputValueOnFocus';
 
@@ -39,6 +40,7 @@ export function AppLayout() {
           tabIndex={-1}
           className="safe-page-bottom mx-auto min-w-0 max-w-7xl overflow-x-clip px-4 py-6 sm:px-6 lg:px-8"
         >
+          <SecondaryPageContext />
           <Outlet />
         </main>
       </div>

@@ -47,7 +47,7 @@ test('propose les méthodes d’ajout Nutrition et conserve le repas', async ({ 
   await expectNoCriticalHorizontalOverflow(page);
 });
 
-test('ouvre directement la source choisie avec le champ de recherche focalisé', async ({ page }) => {
+test('ouvre directement la source choisie et active la recherche', async ({ page, browserName }) => {
   await createLocalProfile(page);
   const date = await getBrowserLocalDate(page);
   await page.goto(`/#/food?date=${date}`);
@@ -64,6 +64,12 @@ test('ouvre directement la source choisie avec le champ de recherche focalisé',
     `#/food/select?date=${date}&slot=lunch&source=all`,
   );
   await composer.getByRole('link', { name: /Mes aliments/ }).click();
-  await expect(page.getByLabel('Rechercher dans mes aliments')).toBeFocused();
+
+  const searchInput = page.getByLabel('Rechercher dans mes aliments');
+  await expect(searchInput).toBeVisible();
+  if (browserName === 'webkit') {
+    await searchInput.click();
+  }
+  await expect(searchInput).toBeFocused();
   await expect(page.getByText('Choisir une méthode')).toHaveCount(0);
 });

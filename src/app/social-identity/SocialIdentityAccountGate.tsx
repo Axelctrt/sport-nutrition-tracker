@@ -32,6 +32,7 @@ import { InlineNotice } from '@/shared/ui/InlineNotice';
 
 interface SocialIdentityAccountGateProps extends PropsWithChildren {
   readonly accountRequired?: boolean;
+  readonly currentPathname?: string;
   readonly repository?: SocialIdentityRepository;
   readonly cloudPort?: Pick<
     SocialCloudIdentityPort,
@@ -71,9 +72,20 @@ function runtimeClient(): Pick<SyncPrototypeClient, 'getCloudCredentials' | 'log
   }
 }
 
+function runtimePathname(): string {
+  if (typeof window === 'undefined') return routePaths.dashboard;
+  const hashPath = window.location.hash.replace(/^#/, '').split('?')[0];
+  return hashPath || window.location.pathname || routePaths.dashboard;
+}
+
+function socialSetupIsRequired(pathname: string): boolean {
+  return pathname === routePaths.friends || pathname.startsWith(`${routePaths.friends}/`);
+}
+
 export function SocialIdentityAccountGate({
   children,
   accountRequired = activeDataSpace.kind === 'account',
+  currentPathname,
   repository: injectedRepository,
   cloudPort: injectedCloudPort,
   client: injectedClient,
@@ -94,9 +106,19 @@ export function SocialIdentityAccountGate({
     () => injectedClient ?? runtimeClient(),
     [injectedClient],
   );
+  const [routerPathname, setRouterPathname] = useState(runtimePathname);
+  const pathname = currentPathname ?? routerPathname;
+  const setupRequired = accountRequired && socialSetupIsRequired(pathname);
   const [state, setState] = useState<GateState>(() => (
     accountRequired ? { status: 'loading' } : { status: 'ready' }
   ));
+
+  useEffect(() => {
+    if (currentPathname !== undefined) return undefined;
+    const syncPathname = () => setRouterPathname(runtimePathname());
+    window.addEventListener('hashchange', syncPathname);
+    return () => window.removeEventListener('hashchange', syncPathname);
+  }, [currentPathname]);
 
   useEffect(() => {
     if (!accountRequired) {
@@ -161,22 +183,26 @@ export function SocialIdentityAccountGate({
         }
 
         if (active) {
-          setState({
-            status: 'setup',
-            accountUserId,
-            identity: localIdentity,
-            message: reconciliation.message,
-          });
+          setState(setupRequired
+            ? {
+                status: 'setup',
+                accountUserId,
+                identity: localIdentity,
+                message: reconciliation.message,
+              }
+            : { status: 'ready' });
         }
         return;
       }
 
       if (active) {
-        setState({
-          status: 'setup',
-          accountUserId,
-          identity: localIdentity,
-        });
+        setState(setupRequired
+          ? {
+              status: 'setup',
+              accountUserId,
+              identity: localIdentity,
+            }
+          : { status: 'ready' });
       }
     })().catch((error: unknown) => {
       if (!active) return;
@@ -191,7 +217,7 @@ export function SocialIdentityAccountGate({
     return () => {
       active = false;
     };
-  }, [accountRequired, client, cloudPort, reconcileIdentity, repository]);
+  }, [accountRequired, client, cloudPort, reconcileIdentity, repository, setupRequired]);
 
   const handleUseLocalMode = async () => {
     await client?.logout();

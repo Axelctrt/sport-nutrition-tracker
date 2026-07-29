@@ -34,8 +34,12 @@ describe('OnboardingProfileStep', () => {
     expect(screen.queryByDisplayValue('2000-07-12')).not.toBeInTheDocument();
   });
 
-  it('utilise un rouleau pour l’âge, la taille, le poids et les pas', () => {
+  it('affiche la date par défaut et conserve un rouleau pour l’âge, la taille, le poids et les pas', () => {
     const { rerender } = render(<OnboardingProfileStep stepId={PROFILE_ONBOARDING_STEP_IDS.birthDate} values={DEFAULT_PROFILE_FORM_VALUES} errors={{}} onChange={vi.fn()} />);
+    expect(screen.getByRole('radio', { name: 'Date de naissance' })).toBeChecked();
+    expect(screen.getByRole('listbox', { name: 'JJ' })).toBeInTheDocument();
+
+    rerender(<OnboardingProfileStep stepId={PROFILE_ONBOARDING_STEP_IDS.birthDate} values={{ ...DEFAULT_PROFILE_FORM_VALUES, ageMode: 'age' }} errors={{}} onChange={vi.fn()} />);
     expect(screen.getByRole('listbox', { name: 'Âge' })).toBeInTheDocument();
 
     rerender(<OnboardingProfileStep stepId={PROFILE_ONBOARDING_STEP_IDS.height} values={DEFAULT_PROFILE_FORM_VALUES} errors={{}} onChange={vi.fn()} />);
