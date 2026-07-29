@@ -97,20 +97,23 @@ if (failures.length === 0) {
   const onboardingDocumentation = read('docs/onboarding-compact-0.32.0.md');
   for (const marker of [
     'SportPilot 0.34.0',
-    'feat/design-themes-analytics-0.34.0',
+    'Branche de publication : `release/0.34.0`',
+    'Tag prévu : `v0.34.0`',
     'Performance Glass',
     'Neon Pulse',
     'Progression et Analyses',
+    'Journée complétée',
     'Aucune donnée locale n’est supprimée',
   ]) {
     if (!releaseNotes.includes(marker)) fail(`notes de release incomplètes : ${marker}.`);
   }
   for (const marker of [
-    'feat/design-themes-analytics-0.34.0',
+    'Branche `release/0.34.0` créée',
     'Tag annoté `v0.34.0`',
-    'audit:release-consolidation',
-    'L’onboarding passe sur WebKit iPhone 15',
-    'Les 114 scénarios Playwright applicables passent',
+    'Lint, TypeScript, tests, build PWA, audits et budget JavaScript passent',
+    'Playwright passe sur Chromium desktop et WebKit iPhone 15',
+    'La mise à jour réelle du service worker conserve les données',
+    'Obtenir une Preview de recette sur le commit de publication',
   ]) {
     if (!checklist.includes(marker)) fail(`checklist de publication incomplète : ${marker}.`);
   }
