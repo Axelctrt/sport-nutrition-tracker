@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SocialIdentityAccountGate } from '@/app/social-identity/SocialIdentityAccountGate';
+import { routePaths } from '@/app/routePaths';
 import { PROFILE_ONBOARDING_STEP_IDS } from '@/features/onboarding/profile/profileOnboardingSteps';
 import {
   loadProfileOnboardingDraft,
@@ -33,6 +34,7 @@ describe('SocialIdentityAccountGate', () => {
   beforeEach(() => {
     window.localStorage.clear();
   });
+
   it('laisse le mode local accéder directement à l’application', () => {
     render(
       <SocialIdentityAccountGate accountRequired={false}>
@@ -162,7 +164,31 @@ describe('SocialIdentityAccountGate', () => {
     expect(reload).toHaveBeenCalledTimes(1);
   });
 
-  it('bloque un compte avec identité générée puis reprend le formulaire au nom', async () => {
+  it('ne bloque pas l’application avec une identité générée hors de la rubrique Amis', async () => {
+    render(
+      <SocialIdentityAccountGate
+        accountRequired
+        currentPathname={routePaths.dashboard}
+        client={credentialsClient()}
+        cloudPort={{
+          readCurrentIdentity: vi.fn(async () => undefined),
+          lookupByHandle: vi.fn(),
+          publishIdentity: vi.fn(),
+        }}
+        repository={{
+          readIdentity: vi.fn(async () => defaultIdentity),
+          saveIdentity: vi.fn(),
+        }}
+      >
+        <p>Application prête</p>
+      </SocialIdentityAccountGate>,
+    );
+
+    expect(await screen.findByText('Application prête')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Votre identité sociale' })).not.toBeInTheDocument();
+  });
+
+  it('demande l’identité générée à la première ouverture d’Amis puis reprend le formulaire au nom', async () => {
     const user = userEvent.setup();
     const resumeProfileOnboarding = vi.fn();
     saveProfileOnboardingDraft(
@@ -173,6 +199,7 @@ describe('SocialIdentityAccountGate', () => {
     render(
       <SocialIdentityAccountGate
         accountRequired
+        currentPathname={routePaths.friends}
         client={credentialsClient()}
         cloudPort={{
           readCurrentIdentity: vi.fn(async () => undefined),
