@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react';
-import { readProfileOnboardingCompletion } from '@/features/onboarding/storage/onboardingCompletionStorage';
+import {
+  PROFILE_ONBOARDING_COMPLETED_EVENT,
+  readProfileOnboardingCompletion,
+} from '@/features/onboarding/storage/onboardingCompletionStorage';
 import { SportPilotOnboardingCompleteReveal } from '@/shared/ui/SportPilotOnboardingCompleteReveal';
 
 const SEEN_STORAGE_KEY = 'sportpilot:onboarding:completion-reveal:v1';
@@ -22,6 +25,12 @@ function shouldRevealCompletion(): boolean {
 
 export function OnboardingCompletionNotifier() {
   const [open, setOpen] = useState(shouldRevealCompletion);
+
+  useEffect(() => {
+    const handleCompletion = () => setOpen(shouldRevealCompletion());
+    window.addEventListener(PROFILE_ONBOARDING_COMPLETED_EVENT, handleCompletion);
+    return () => window.removeEventListener(PROFILE_ONBOARDING_COMPLETED_EVENT, handleCompletion);
+  }, []);
 
   useEffect(() => {
     if (!open) return;
