@@ -32,14 +32,13 @@ interface UseOnboardingFlowResult<TStepId extends string> {
   runSubmission: (operation: () => Promise<void>) => Promise<boolean>;
 }
 
-function interactiveElementHasFocus(): boolean {
-  const activeElement = document.activeElement;
-  return activeElement instanceof HTMLInputElement
-    || activeElement instanceof HTMLTextAreaElement
-    || activeElement instanceof HTMLSelectElement
-    || activeElement instanceof HTMLButtonElement
-    || activeElement instanceof HTMLAnchorElement
-    || (activeElement instanceof HTMLElement && activeElement.isContentEditable);
+function interactiveElementHasFocus(element: Element | null): boolean {
+  return element instanceof HTMLInputElement
+    || element instanceof HTMLTextAreaElement
+    || element instanceof HTMLSelectElement
+    || element instanceof HTMLButtonElement
+    || element instanceof HTMLAnchorElement
+    || (element instanceof HTMLElement && element.isContentEditable);
 }
 
 export function useOnboardingFlow<TStepId extends string>({
@@ -64,9 +63,13 @@ export function useOnboardingFlow<TStepId extends string>({
 
     previousStepRef.current = state.currentStepId;
     onStepChange?.(state.currentStepId);
+    const focusedAtTransition = document.activeElement;
 
     const frameId = window.requestAnimationFrame(() => {
-      if (!interactiveElementHasFocus()) {
+      const currentFocus = document.activeElement;
+      const userSelectedAnotherControl = currentFocus !== focusedAtTransition
+        && interactiveElementHasFocus(currentFocus);
+      if (!userSelectedAnotherControl) {
         headingRef.current?.focus({ preventScroll: true });
       }
     });
