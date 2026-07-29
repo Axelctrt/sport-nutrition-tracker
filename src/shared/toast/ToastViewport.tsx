@@ -1,5 +1,7 @@
 import { ChevronRight, CircleAlert, CircleCheck, Info, X } from 'lucide-react';
+import type { CSSProperties } from 'react';
 import type { ToastItem } from '@/shared/toast/ToastContext';
+import '@/shared/toast/toast.css';
 import { cn } from '@/shared/utils/cn';
 
 interface ToastViewportProps {
@@ -110,7 +112,7 @@ export function ToastViewport({ toasts, onDismiss, onAction }: ToastViewportProp
               <span
                 aria-hidden="true"
                 className="absolute inset-x-0 bottom-0 h-0.5 origin-left bg-current opacity-20 motion-safe:animate-[toast-progress_var(--toast-duration)_linear_forwards] motion-reduce:hidden"
-                style={{ '--toast-duration': `${toast.durationMs}ms` } as React.CSSProperties}
+                style={{ '--toast-duration': `${toast.durationMs}ms` } as CSSProperties}
               />
             ) : null}
           </div>
