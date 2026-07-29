@@ -1,4 +1,4 @@
-import { render, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import type { PropsWithChildren } from "react";
 import { vi } from "vitest";
 
@@ -34,27 +34,25 @@ const completionSnapshot: WeeklyMissionCompletionSnapshot = {
 describe("WeeklyMissionCompletionNotifier", () => {
   beforeEach(() => {
     window.sessionStorage.clear();
+    window.history.replaceState({}, '', '/');
   });
 
-  it("affiche une célébration pour une nouvelle semaine terminée", async () => {
+  it("affiche une carte événementielle pour une nouvelle semaine terminée", async () => {
     const observeCompletions = vi.fn((onCompletion) => {
       onCompletion(completionSnapshot);
       return vi.fn();
     });
 
-    const { findByText } = render(
+    render(
       <WeeklyMissionCompletionNotifier
         observeCompletions={observeCompletions}
       />,
       { wrapper: Wrapper },
     );
 
-    expect(
-      await findByText("Semaine accomplie !"),
-    ).toBeInTheDocument();
-    expect(
-      await findByText(/Cette semaine rejoint ton historique/),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole('dialog', { name: 'Semaine accomplie' })).toBeInTheDocument();
+    expect(screen.getByText(/Cette semaine rejoint ton historique/)).toBeInTheDocument();
+    expect(screen.getByText('5 sur 5')).toBeInTheDocument();
   });
 
   it("ne rend aucun contenu sans nouvelle complétion", async () => {
@@ -70,6 +68,6 @@ describe("WeeklyMissionCompletionNotifier", () => {
     await waitFor(() => {
       expect(observeCompletions).toHaveBeenCalledTimes(1);
     });
-    expect(container.querySelector('[role="status"]')).toBeNull();
+    expect(container.querySelector('[role="dialog"]')).toBeNull();
   });
 });
