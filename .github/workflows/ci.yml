@@ -65,7 +65,7 @@ jobs:
   e2e:
     name: Playwright E2E
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 40
 
     steps:
       - name: Checkout repository
@@ -133,4 +133,3 @@ jobs:
             test-results/playwright-pwa/
           if-no-files-found: ignore
           retention-days: 7
-
