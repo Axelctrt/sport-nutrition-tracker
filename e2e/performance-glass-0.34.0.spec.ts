@@ -31,6 +31,15 @@ async function capture(
   });
 }
 
+async function prepareVisualTheme(
+  page: Page,
+  options: Parameters<typeof setVisualThemeState>[1],
+): Promise<void> {
+  await page.goto('/visual-lab.html', { waitUntil: 'domcontentloaded' });
+  await expect(page.locator('#root')).not.toBeEmpty();
+  await setVisualThemeState(page, options);
+}
+
 async function openReadyPage(
   page: Page,
   path: string,
@@ -70,7 +79,7 @@ test('valide les thèmes, graphiques et écrans de décision avec des données c
   test.setTimeout(180_000);
   await createLocalProfile(page, 'Performance Glass');
 
-  await setVisualThemeState(page, {
+  await prepareVisualTheme(page, {
     activeThemeId: 'core',
     unlockedThemeIds: ['core'],
     appearance: 'light',
@@ -83,7 +92,7 @@ test('valide les thèmes, graphiques et écrans de décision avec des données c
   }
 
   await seedPerformanceGlassData(page);
-  await setVisualThemeState(page, {
+  await prepareVisualTheme(page, {
     activeThemeId: 'core',
     unlockedThemeIds: allThemes,
     appearance: 'light',
@@ -103,7 +112,7 @@ test('valide les thèmes, graphiques et écrans de décision avec des données c
   await page.getByRole('tab', { name: '3 mois' }).click();
   await expect(page).toHaveURL(/range=90/);
 
-  await setVisualThemeState(page, {
+  await prepareVisualTheme(page, {
     activeThemeId: 'core',
     unlockedThemeIds: allThemes,
     appearance: 'dark',
@@ -115,7 +124,7 @@ test('valide les thèmes, graphiques et écrans de décision avec des données c
     await capture(page, testInfo, 'progression-core-dark.png');
   }
 
-  await setVisualThemeState(page, {
+  await prepareVisualTheme(page, {
     activeThemeId: 'aurora',
     unlockedThemeIds: allThemes,
     appearance: 'dark',
@@ -195,7 +204,7 @@ test('capture les reveals uniques et le mode mouvement réduit', async ({
   await createLocalProfile(page, 'Reveal');
 
   for (const themeId of ['neon-pulse', 'aurora', 'zenith-gold'] as const) {
-    await setVisualThemeState(page, {
+    await prepareVisualTheme(page, {
       activeThemeId: 'core',
       unlockedThemeIds: ['core', themeId],
       appearance: 'dark',
@@ -218,7 +227,7 @@ test('capture les reveals uniques et le mode mouvement réduit', async ({
   }
 
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await setVisualThemeState(page, {
+  await prepareVisualTheme(page, {
     activeThemeId: 'core',
     unlockedThemeIds: ['core', 'aurora'],
     appearance: 'dark',
