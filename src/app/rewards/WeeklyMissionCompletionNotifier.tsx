@@ -17,18 +17,26 @@ export type WeeklyMissionCompletionObserver = (
 
 interface WeeklyMissionCompletionNotifierProps {
   observeCompletions?: WeeklyMissionCompletionObserver;
+  currentPathname?: string;
+  navigateToProgression?: () => void | Promise<void>;
 }
 
 type CompletedWeek = NonNullable<Parameters<WeeklyMissionCompletionListener>[0]['newlyCompletedWeek']>;
 
 export function WeeklyMissionCompletionNotifier({
   observeCompletions = observeWeeklyMissionCompletions,
+  currentPathname,
+  navigateToProgression = () => router.navigate(routePaths.progression),
 }: WeeklyMissionCompletionNotifierProps) {
   const [pending, setPending] = useState<CompletedWeek>();
-  const [pathname, setPathname] = useState(() => router.state.location.pathname);
+  const [routerPathname, setRouterPathname] = useState(() => router.state.location.pathname);
   const [, setContextRevision] = useState(0);
+  const pathname = currentPathname ?? routerPathname;
 
-  useEffect(() => router.subscribe((state) => setPathname(state.location.pathname)), []);
+  useEffect(() => {
+    if (currentPathname !== undefined) return undefined;
+    return router.subscribe((state) => setRouterPathname(state.location.pathname));
+  }, [currentPathname]);
 
   useEffect(
     () =>
@@ -65,7 +73,7 @@ export function WeeklyMissionCompletionNotifier({
       onContinue={() => setPending(undefined)}
       onPrimary={() => {
         setPending(undefined);
-        void router.navigate(routePaths.progression);
+        void navigateToProgression();
       }}
     />
   );
