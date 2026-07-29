@@ -86,32 +86,6 @@ function WorkflowGuide({
   );
 }
 
-function SearchShortcuts() {
-  return (
-    <aside className="mb-4 rounded-2xl border border-[var(--sp-border-subtle)] bg-[var(--sp-surface-card)] p-4 shadow-[var(--sp-shadow-card)]">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h2 className="font-semibold text-slate-950 dark:text-white">Accès rapides</h2>
-          <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-            La recherche couvre les données enregistrées. Ouvre directement une bibliothèque pour la parcourir ou la filtrer.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {libraryItems.slice(0, 5).map(({ label, path }) => (
-            <NavLink
-              className="inline-flex min-h-10 items-center rounded-xl border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:border-brand-400 hover:bg-brand-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-brand-950/30"
-              key={path}
-              to={path}
-            >
-              {label}
-            </NavLink>
-          ))}
-        </div>
-      </div>
-    </aside>
-  );
-}
-
 export function SecondaryPageContext() {
   const { pathname } = useLocation();
   const libraryVisible = libraryRoots.some((root) => pathnameMatchesRoot(pathname, root));
@@ -121,7 +95,6 @@ export function SecondaryPageContext() {
     <>
       {libraryVisible ? <LibraryNavigation /> : null}
       {workflow ? <WorkflowGuide {...workflow} /> : null}
-      {pathname === routePaths.search ? <SearchShortcuts /> : null}
     </>
   );
 }
