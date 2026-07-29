@@ -1,6 +1,10 @@
 import { useContext, useMemo } from 'react';
 
-import { ToastContext, type ToastAction } from '@/shared/toast/ToastContext';
+import {
+  ToastContext,
+  type ToastAction,
+  type ToastDestination,
+} from '@/shared/toast/ToastContext';
 import { queuePendingToast } from '@/shared/toast/pendingToast';
 
 interface ActionSuccessInput {
@@ -8,6 +12,7 @@ interface ActionSuccessInput {
   title: string;
   description?: string;
   action?: ToastAction;
+  destination?: ToastDestination;
   durationMs?: number;
 }
 
@@ -16,6 +21,7 @@ interface ActionErrorInput {
   title?: string;
   error: unknown;
   fallback: string;
+  destination?: ToastDestination;
 }
 
 const suppressedActionToasts = new Set<string>();
@@ -40,7 +46,7 @@ export function useActionToast() {
   const toast = useContext(ToastContext);
 
   return useMemo(() => ({
-    success({ key, title, description, action, durationMs }: ActionSuccessInput): string {
+    success({ key, title, description, action, destination, durationMs }: ActionSuccessInput): string {
       if (consumeActionToastSuppression(key) || !toast) return '';
       return toast.showToast({
         title,
@@ -48,25 +54,28 @@ export function useActionToast() {
         dedupeKey: `action-success:${key}`,
         ...(description === undefined ? {} : { description }),
         ...(action === undefined ? {} : { action }),
+        ...(destination === undefined ? {} : { destination }),
         ...(durationMs === undefined ? {} : { durationMs }),
       });
     },
-    successAfterReload({ key, title, description }: ActionSuccessInput): void {
+    successAfterReload({ key, title, description, destination }: ActionSuccessInput): void {
       if (consumeActionToastSuppression(key)) return;
       queuePendingToast({
         title,
         tone: 'success',
         dedupeKey: `action-success:${key}`,
         ...(description === undefined ? {} : { description }),
+        ...(destination === undefined ? {} : { destination }),
       });
     },
-    error({ key, title = 'Modification impossible', error, fallback }: ActionErrorInput): string {
+    error({ key, title = 'Modification impossible', error, fallback, destination }: ActionErrorInput): string {
       if (!toast) return '';
       return toast.showToast({
         title,
         description: getActionErrorMessage(error, fallback),
         tone: 'error',
         dedupeKey: `action-error:${key}`,
+        ...(destination === undefined ? {} : { destination }),
       });
     },
   }), [toast]);
