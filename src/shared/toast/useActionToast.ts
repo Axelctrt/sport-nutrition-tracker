@@ -18,6 +18,18 @@ interface ActionErrorInput {
   fallback: string;
 }
 
+const suppressedActionToasts = new Set<string>();
+
+export function suppressNextActionToast(key: string): void {
+  suppressedActionToasts.add(key);
+}
+
+function consumeActionToastSuppression(key: string): boolean {
+  if (!suppressedActionToasts.has(key)) return false;
+  suppressedActionToasts.delete(key);
+  return true;
+}
+
 export function getActionErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error && error.message.trim() !== ''
     ? error.message
@@ -29,7 +41,7 @@ export function useActionToast() {
 
   return useMemo(() => ({
     success({ key, title, description, action, durationMs }: ActionSuccessInput): string {
-      if (!toast) return '';
+      if (consumeActionToastSuppression(key) || !toast) return '';
       return toast.showToast({
         title,
         tone: 'success',
@@ -40,6 +52,7 @@ export function useActionToast() {
       });
     },
     successAfterReload({ key, title, description }: ActionSuccessInput): void {
+      if (consumeActionToastSuppression(key)) return;
       queuePendingToast({
         title,
         tone: 'success',
