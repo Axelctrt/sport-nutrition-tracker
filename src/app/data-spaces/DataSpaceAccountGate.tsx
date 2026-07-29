@@ -333,7 +333,7 @@ export function DataSpaceAccountGate({
               Données du compte
             </p>
             <h1 className="mt-0.5 text-xl font-bold tracking-tight text-slate-950 dark:text-white sm:text-2xl">
-              Comment souhaites-tu commencer ?
+              Comment souhaitez-vous commencer ?
             </h1>
           </div>
         </header>
