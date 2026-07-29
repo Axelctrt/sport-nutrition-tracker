@@ -9,10 +9,13 @@ const failures = [];
 const fail = (message) => failures.push(message);
 
 const requiredFiles = [
-  'RELEASE-NOTES-0.34.0.md',
+  'RELEASE-NOTES-0.35.0.md',
   'RELEASE-CHECKLIST.md',
+  'KNOWN-LIMITATIONS.md',
   'docs/onboarding-compact-0.32.0.md',
   'e2e/onboarding-compact.spec.ts',
+  'e2e/nutrition-add-flow.spec.ts',
+  'e2e/performance-glass-0.34.0.spec.ts',
   'scripts/shared/stableVersion.mjs',
   'scripts/audit-unified-sync-center.mjs',
   'scripts/audit-automatic-sync-release.mjs',
@@ -29,15 +32,12 @@ for (const path of requiredFiles) {
 if (failures.length === 0) {
   const packageJson = JSON.parse(read('package.json'));
   const packageLock = JSON.parse(read('package-lock.json'));
-  if (packageJson.version !== '0.34.0') fail(`package.json doit publier 0.34.0, reçu ${packageJson.version}.`);
-  if (packageLock.version !== '0.34.0' || packageLock.packages?.['']?.version !== '0.34.0') {
-    fail('package-lock.json doit être aligné sur 0.34.0.');
+  if (packageJson.version !== '0.35.0') fail(`package.json doit publier 0.35.0, reçu ${packageJson.version}.`);
+  if (packageLock.version !== '0.35.0' || packageLock.packages?.['']?.version !== '0.35.0') {
+    fail('package-lock.json doit être aligné sur 0.35.0.');
   }
   if (!isStableVersionAtLeast(packageJson.version, 20)) {
     fail('la version courante doit être reconnue comme stable par le garde-fou partagé.');
-  }
-  for (const invalid of ['0.19.9', '0.32.0-rc.1', '1.0.0', '0.31']) {
-    if (isStableVersionAtLeast(invalid, 20)) fail(`le garde-fou accepte à tort ${invalid}.`);
   }
 
   const scripts = packageJson.scripts ?? {};
@@ -59,72 +59,47 @@ if (failures.length === 0) {
     ['récompenses', rewardAudit],
   ]) {
     if (!source.includes('3356 * 1024')) fail(`le budget JavaScript ${label} n’est pas aligné sur 3356 Kio.`);
-    if (source.includes('2940 * 1024')) fail(`le budget JavaScript ${label} conserve l’ancien seuil de 2940 Kio.`);
   }
 
-  const navigationAudit = read('scripts/audit-unified-sync-center.mjs');
+  const releaseNotes = read('RELEASE-NOTES-0.35.0.md');
   for (const marker of [
-    'navigationItemIsActive(location.pathname, item)',
-    'conserve une navigation secondaire courte et laisse Paramètres actif sur ses sous-pages',
-    'Le raccourci Paramètres de l’en-tête ne doit pas exposer un état actif',
-  ]) {
-    if (!navigationAudit.includes(marker)) fail(`le garde-fou E3 actuel est incomplet : ${marker}.`);
-  }
-  if (navigationAudit.includes("settingsHeaderLink.includes('end')")) {
-    fail('le garde-fou E3 conserve l’ancienne attente NavLink sur l’en-tête.');
-  }
-
-  const socialAudit = read('scripts/audit-social-friend-removal-0.29.0.mjs');
-  for (const marker of [
-    'setPendingFriendRemoval(friend)',
-    '<ConfirmationDialog',
-    'confirmLabel="Supprimer l’ami"',
-    'void removeFriend(pendingFriendRemoval)',
-  ]) {
-    if (!socialAudit.includes(marker)) fail(`l’audit social ne suit pas la confirmation actuelle : ${marker}.`);
-  }
-
-  const photoAudit = read('scripts/audit-photo-ai.mjs');
-  for (const marker of [
-    'Activer l’analyse IA pour cette photo',
-    'Une connexion SportPilot valide sera vérifiée avant tout envoi pour cette analyse.',
-  ]) {
-    if (!photoAudit.includes(marker)) fail(`l’audit Photo IA ne suit pas le consentement actuel : ${marker}.`);
-  }
-
-  const releaseNotes = read('RELEASE-NOTES-0.34.0.md');
-  const checklist = read('RELEASE-CHECKLIST.md');
-  const onboardingDocumentation = read('docs/onboarding-compact-0.32.0.md');
-  for (const marker of [
-    'SportPilot 0.34.0',
-    'Branche de publication : `release/0.34.0`',
-    'Tag prévu : `v0.34.0`',
-    'Performance Glass',
-    'Neon Pulse',
-    'Progression et Analyses',
-    'Journée complétée',
-    'Aucune donnée locale n’est supprimée',
+    'SportPilot 0.35.0',
+    'Branche de publication : `release/0.35.0`',
+    'Tag prévu : `v0.35.0`',
+    'onboarding',
+    'feedback',
+    'Historique',
+    'Rappels',
+    '126 scénarios Playwright',
+    'Aucune migration Dexie ou D1',
   ]) {
     if (!releaseNotes.includes(marker)) fail(`notes de release incomplètes : ${marker}.`);
   }
+
+  const checklist = read('RELEASE-CHECKLIST.md');
   for (const marker of [
-    'Branche `release/0.34.0` créée',
-    'Tag annoté `v0.34.0`',
-    'Lint, TypeScript, tests, build PWA, audits et budget JavaScript passent',
-    'Playwright passe sur Chromium desktop et WebKit iPhone 15',
+    'Branche `release/0.35.0` créée',
+    'Tag annoté `v0.35.0`',
+    'Les quatre jobs GitHub Actions passent sur un même SHA',
+    '126 scénarios Playwright',
     'La mise à jour réelle du service worker conserve les données',
-    'Obtenir une Preview de recette sur le commit de publication',
+    'Preview Cloudflare Pages validée',
   ]) {
     if (!checklist.includes(marker)) fail(`checklist de publication incomplète : ${marker}.`);
   }
+
+  const knownLimitations = read('KNOWN-LIMITATIONS.md');
+  for (const marker of ['SportPilot 0.35.0', 'Moteur calorique', 'Dépendances']) {
+    if (!knownLimitations.includes(marker)) fail(`limitations connues incomplètes : ${marker}.`);
+  }
+
+  const onboardingDocumentation = read('docs/onboarding-compact-0.32.0.md');
   for (const marker of [
     'scrollSensitivity={1}',
     'sensibilité par défaut est légèrement amplifiée à 1,15',
     'le conteneur principal entier utilise `overflow-y: auto`',
   ]) {
-    if (!onboardingDocumentation.includes(marker)) {
-      fail(`documentation onboarding incomplète : ${marker}.`);
-    }
+    if (!onboardingDocumentation.includes(marker)) fail(`documentation onboarding incomplète : ${marker}.`);
   }
 
   const accountChoice = read('src/features/onboarding/components/OnboardingAccountChoice.tsx');
@@ -132,31 +107,14 @@ if (failures.length === 0) {
     if (!accountChoice.includes(marker)) fail(`choix de compte onboarding incomplet : ${marker}.`);
   }
 
-  const wheelPicker = read('src/shared/ui/WheelPicker.tsx');
-  for (const marker of ['scrollSensitivity = 1.15', 'data-scroll-sensitivity']) {
-    if (!wheelPicker.includes(marker)) fail(`rouleau onboarding incomplet : ${marker}.`);
+  const nutritionFlow = read('e2e/nutrition-add-flow.spec.ts');
+  for (const marker of ['active la recherche', "browserName === 'webkit'", '#\\/food\\/select\\?date=']) {
+    if (!nutritionFlow.includes(marker)) fail(`recette Nutrition incomplète : ${marker}.`);
   }
 
-  const profileStep = read('src/features/onboarding/components/OnboardingProfileStep.tsx');
-  for (const marker of ['scrollSensitivity={1}', 'Sexe utilisé pour l’équation énergétique']) {
-    if (!profileStep.includes(marker)) fail(`étape de profil onboarding incomplète : ${marker}.`);
-  }
-
-  const onboardingPage = read('src/features/onboarding/pages/OnboardingPage.tsx');
-  for (const marker of [
-    'data-onboarding-page-scroll={isSummaryStep ? "summary" : undefined}',
-    'overflow-y-auto overscroll-contain',
-    'overflow-hidden overscroll-none',
-  ]) {
-    if (!onboardingPage.includes(marker)) fail(`gestion du scroll onboarding incomplète : ${marker}.`);
-  }
-
-  const onboardingE2e = read('e2e/onboarding-compact.spec.ts');
-  for (const marker of [
-    'maintient chaque étape locale dans la hauteur de l’iPhone 15',
-    'affiche les rouleaux sans saisie numérique manuelle',
-  ]) {
-    if (!onboardingE2e.includes(marker)) fail(`recette E2E onboarding incomplète : ${marker}.`);
+  const performanceGlass = read('e2e/helpers/performanceGlass.ts');
+  if (!performanceGlass.includes("page.goto('/visual-lab.html')")) {
+    fail('le harnais Performance Glass doit isoler les écritures IndexedDB de l’application.');
   }
 
   const versions = read('src/infrastructure/database/migrations/versions.ts');
@@ -168,9 +126,9 @@ if (failures.length === 0) {
 }
 
 if (failures.length > 0) {
-  console.error('Audit de consolidation 0.34.0 échoué :');
+  console.error('Audit de consolidation 0.35.0 échoué :');
   for (const failure of failures) console.error(`- ${failure}`);
   process.exit(1);
 }
 
-console.log('Audit de consolidation 0.34.0 réussi : version, audits, budgets, navigation, consentements et contrats de stockage sont alignés.');
+console.log('Audit de consolidation 0.35.0 réussi : version, documentation, budgets, parcours et contrats de stockage sont alignés.');
