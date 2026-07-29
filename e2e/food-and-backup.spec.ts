@@ -17,9 +17,11 @@ test('crée un aliment local puis l’ajoute au journal', async ({ page }) => {
   const quickDialog = page.getByRole('dialog', { name: 'Yaourt E2E' });
   await expect(quickDialog).toBeVisible();
   const quantityInput = quickDialog.locator('#meal-selector-quantity');
-  await quantityInput.fill('');
+  await quantityInput.click();
   await quantityInput.fill('125');
+  await quantityInput.blur();
   await expect(quantityInput).toHaveValue('125');
+  await expect(quickDialog.getByText(/Aperçu pour 125/)).toBeVisible();
   const addButton = quickDialog.getByRole('button', { name: /Ajouter au déjeuner/i });
   await expect(addButton).toBeEnabled();
   await addButton.click();
