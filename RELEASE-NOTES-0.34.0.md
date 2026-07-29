@@ -6,6 +6,9 @@
 - Centralise les surfaces, bordures, accents, graphiques et tokens de mouvement.
 - Ajoute des boutons stateful, des onglets animés, un loader multi-étapes
   honnête et des effets de réussite compatibles avec la réduction de mouvement.
+- Renforce les retours tactiles sur les boutons, cartes et actions principales.
+- Ajoute un indicateur réellement glissant dans la navigation mobile, avec une
+  durée stable entre les quatre rubriques.
 
 ## Thèmes et récompenses
 
@@ -16,6 +19,18 @@
   complètes, nutrition et repos confirmé réellement enregistrés.
 - Recompose la collection Récompenses avec aperçus, raretés, progression,
   reveal unique et mode d’essai sans synchronisation avant confirmation.
+- Supprime le toast vert intermédiaire lors du déblocage d’un badge et affiche
+  directement une célébration renforcée avec halo, particules et pulsation.
+
+## Accomplissement quotidien
+
+- Ajoute une carte premium « Journée complétée » à la place du simple toast.
+- Déclenche cette célébration uniquement lorsque le check-in, une activité
+  sportive réellement effectuée, le suivi alimentaire complet et le premier
+  check-out de la date sont tous présents.
+- Ne traite pas une journée de repos comme une journée sportive complète.
+- Mémorise l’affichage par date afin d’éviter toute répétition ou célébration
+  rétroactive intempestive.
 
 ## Progression et Analyses
 
@@ -27,13 +42,18 @@
 - Ajoute calories/cible quotidiennes, macros, repas, endurance, force estimée,
   volume, meilleure série, groupes musculaires, récupération, heatmap et
   progression vers les thèmes.
-- Fournit des états vides actionnables et des alternatives textuelles ou
-  tabulaires aux graphiques.
+- Adapte les cartes et graphiques à la densité réelle : état vide sans donnée,
+  repère compact pour une mesure, mini-tendance pour deux ou trois mesures,
+  puis graphique complet.
+- Clarifie la cible nutrition comme cible journalière moyenne et les valeurs de
+  force comme 1RM estimé avec évolution stable ou chiffrée.
+- Supprime le CTA de pesée redondant lorsque l’état poids est vide.
+- Fournit des alternatives textuelles ou tabulaires aux graphiques.
 
 ## Données et compatibilité
 
-- Aucun schéma Dexie, format de sauvegarde ou contrat de synchronisation n’est
-  modifié.
+- Le chantier de finition 0.34.0 n’ajoute aucun schéma Dexie, format de
+  sauvegarde ou contrat de synchronisation.
 - Aucune donnée locale n’est supprimée ou réinitialisée.
 - Les données métier restent la seule source des graphiques et déblocages.
 - Le thème initial est appliqué par un script externe compatible avec la CSP,
@@ -41,20 +61,24 @@
 - Les contrats sociaux existants restent inchangés : aucun annuaire public,
   likes, commentaires, messagerie ou export d’activité brute n’est ajouté.
 
-## Validation
+## Validation finale
 
-- `npm run check` : 522 fichiers et 2 060 tests Vitest réussis, TypeScript,
-  build PWA et tous les audits réussis.
-- `npm run test:stability` : 2 060 tests réussis dans un ordre mélangé.
-- Playwright : 114 scénarios applicables réussis sur Chromium desktop,
-  WebKit iPhone 15, 320, 360, 412 px et paysage ; 12 exclusions prévues par
-  projet.
-- Mise à jour PWA : remplacement du service worker sous la même origine validé
-  sans perte de données.
-- Build : 144 chunks JavaScript, 3 327 Kio au total, 147 Kio de CSS, plus gros
-  chunk à 404 Kio et 147 entrées précachées.
-- Les captures de référence utilisent uniquement des données E2E contrôlées et
-  restent hors du dépôt.
+Le commit fonctionnel final `d12b997f0c623b7b82035bb525f66d4129b48d4c`
+a passé les quatre jobs GitHub Actions :
 
-Branche : `feat/design-themes-analytics-0.34.0`.
-Déploiement : aucun déploiement inclus sans autorisation explicite.
+- lint, TypeScript, tests, build PWA, audits et budget JavaScript ;
+- stabilité de la suite avec ordre des tests mélangé ;
+- Playwright sur Chromium desktop et WebKit iPhone 15 ;
+- mise à jour réelle du service worker avec conservation des données.
+
+Le code validé a ensuite été fusionné dans `develop` au commit
+`4abf66fa594cc6594b4ece4a25dd822bfe21494e`.
+
+## Publication
+
+- Branche de publication : `release/0.34.0`.
+- Cible : `main`.
+- Tag prévu : `v0.34.0`, uniquement après validation de la PR de publication.
+- Les déploiements Cloudflare automatiques associés à la PR de finition ont
+  échoué hors du pipeline applicatif ; leur journal détaillé reste à contrôler
+  dans le tableau de bord Cloudflare avant la mise en production.
