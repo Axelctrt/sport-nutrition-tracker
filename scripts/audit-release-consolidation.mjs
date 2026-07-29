@@ -58,7 +58,7 @@ if (failures.length === 0) {
     ['synchronisation automatique', automaticSyncAudit],
     ['récompenses', rewardAudit],
   ]) {
-    if (!source.includes('3328 * 1024')) fail(`le budget JavaScript ${label} n’est pas aligné sur 3328 Kio.`);
+    if (!source.includes('3340 * 1024')) fail(`le budget JavaScript ${label} n’est pas aligné sur 3340 Kio.`);
     if (source.includes('2940 * 1024')) fail(`le budget JavaScript ${label} conserve l’ancien seuil de 2940 Kio.`);
   }
 
@@ -109,7 +109,8 @@ if (failures.length === 0) {
     'feat/design-themes-analytics-0.34.0',
     'Tag annoté `v0.34.0`',
     'audit:release-consolidation',
-    'test:e2e:onboarding',
+    'L’onboarding passe sur WebKit iPhone 15',
+    'Les 114 scénarios Playwright applicables passent',
   ]) {
     if (!checklist.includes(marker)) fail(`checklist de publication incomplète : ${marker}.`);
   }
