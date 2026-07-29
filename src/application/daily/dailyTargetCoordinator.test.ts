@@ -6,6 +6,10 @@ import {
   type DailyTargetCoordinatorDependencies,
 } from '@/application/daily/dailyTargetCoordinator';
 import { createDefaultAppSettings } from '@/domain/defaults/appSettings';
+import type { StrengthTrainingActivity } from '@/domain/models/activity';
+import type { DailyCheckOut } from '@/domain/models/dailyCoaching';
+import type { DailySteps } from '@/domain/models/steps';
+import type { WorkoutSession } from '@/domain/models/strength';
 import type { AcceptedCalorieAdjustment } from '@/domain/models/weeklyReview';
 import type { WeightEntry } from '@/domain/models/weight';
 import { createEntity } from '@/shared/utils/entities';
@@ -109,7 +113,9 @@ describe('dailyTargetCoordinator', () => {
           totalSteps: 9_000,
           source: 'manual' as const,
         })),
+        listBetween: vi.fn(async () => []),
       },
+      dailyCoaching: { getCheckOut: vi.fn(async () => undefined) },
       activities: { listByDate: vi.fn(async () => []) },
       targets: { upsertTarget: savedTarget },
       weeklyReviews: { listAdjustments: vi.fn(async () => []) },
@@ -130,13 +136,218 @@ describe('dailyTargetCoordinator', () => {
       '2026-06-15',
       '2026-06-21',
     );
-    expect(snapshot.calculation.steps.totalSteps).toBe(9_000);
+    expect(snapshot.calculation.steps.totalSteps).toBe(5_000);
+    expect(snapshot.energyGuidance).toMatchObject({
+      expectedSteps: {
+        expectedSteps: 5_000,
+        stepGoal: 10_000,
+        source: 'profileFallback',
+        confidence: 'fallback',
+        observedDayCount: 0,
+      },
+      finalStatus: 'open',
+    });
+    expect(snapshot.target.stepBasis).toEqual({
+      mode: 'expected',
+      steps: 5_000,
+      stepGoal: 10_000,
+      source: 'profileFallback',
+      confidence: 'fallback',
+      observedDayCount: 0,
+      observationWindowDays: 28,
+    });
     expect(snapshot.target.targetCaloriesKcal).toBeGreaterThan(0);
+    expect(snapshot.target.energyInputSnapshot).toMatchObject({
+      version: 1,
+      profile: {
+        occupationalActivity: 'sedentary',
+        heightCm: 177,
+      },
+      settings: {
+        includedBaseSteps: 3_000,
+        walkingKcalPerKgPerKm: 0.5,
+      },
+    });
+    expect(snapshot.energyArchitectureShadow.guided.currentTotalKcal).toBeCloseTo(
+      snapshot.calculation.energy.totalEstimatedExpenditureKcal,
+      2,
+    );
+    expect(snapshot.energyArchitectureShadow.guided.overlapRisk).toBe(
+      'negligible',
+    );
+    expect(snapshot.energyArchitectureShadow.final).toBeUndefined();
     expect(snapshot.energyTransparency).toMatchObject({
       plannedSportCaloriesKcal: 0,
       actualSportCaloriesKcal: 0,
       rawSportCaloriesKcal: 0,
     });
     expect(savedTarget).toHaveBeenCalledOnce();
+  });
+
+  it('n’expose pas de shadow final sans relevé de pas lié au bilan', async () => {
+    const date = '2026-07-14';
+    const checkOut = createEntity<DailyCheckOut>({
+      date,
+      stepsEntryId: 'missing-steps-entry',
+      foodJournalComplete: true,
+      contextFlags: [],
+      contextSyncPreference: 'localOnly',
+      completedAt: '2026-07-14T21:00:00.000Z',
+    });
+    const dependencies: DailyTargetCoordinatorDependencies = {
+      settings: { get: vi.fn(async () => createDefaultAppSettings()) },
+      weight: {
+        listBetween: vi.fn(async () => []),
+        getByDate: vi.fn(async () => undefined),
+      },
+      steps: {
+        getByDate: vi.fn(async () => undefined),
+        listBetween: vi.fn(async () => []),
+      },
+      dailyCoaching: { getCheckOut: vi.fn(async () => checkOut) },
+      activities: { listByDate: vi.fn(async () => []) },
+      targets: {
+        upsertTarget: vi.fn(async (target) => createEntity(target)),
+      },
+      weeklyReviews: { listAdjustments: vi.fn(async () => []) },
+      workoutSessions: { listAll: vi.fn(async () => []) },
+      listEndurancePlanningSessions: vi.fn(async () => []),
+    };
+
+    const snapshot = await calculateAndPersistDailyTarget(
+      date,
+      createProfile(),
+      dependencies,
+    );
+
+    expect(snapshot.energyGuidance.finalStatus).toBe('missingSteps');
+    expect(snapshot.energyGuidance.finalExpenditure).toBeUndefined();
+    expect(snapshot.energyArchitectureShadow.final).toBeUndefined();
+  });
+
+  it('sépare la cible guidée de la dépense finale sans compter deux fois le sport', async () => {
+    const date = '2026-07-13';
+    const linkedSession = createEntity<WorkoutSession>({
+      date,
+      status: 'planned',
+      plannedDate: date,
+      plannedDurationMinutes: 60,
+      strengthSessionStyle: 'classic',
+      sourceTemplateNameSnapshot: 'Séance liée',
+    });
+    const remainingSession = createEntity<WorkoutSession>({
+      date,
+      status: 'planned',
+      plannedDate: date,
+      plannedDurationMinutes: 60,
+      strengthSessionStyle: 'classic',
+      sourceTemplateNameSnapshot: 'Séance encore prévue',
+    });
+    const cancelledSession = createEntity<WorkoutSession>({
+      date,
+      status: 'skipped',
+      plannedDate: date,
+      plannedDurationMinutes: 60,
+      strengthSessionStyle: 'classic',
+      sourceTemplateNameSnapshot: 'Séance annulée',
+    });
+    const actualActivity = createEntity<StrengthTrainingActivity>({
+      date,
+      type: 'strengthTraining',
+      durationMinutes: 60,
+      intensity: 'moderate',
+      met: 5,
+      plannedActivity: {
+        source: 'strengthSession',
+        sourceId: linkedSession.id,
+      },
+      calculation: {
+        weightKg: 60,
+        estimatedCaloriesKcal: 252,
+        metUsed: 5,
+        calculationVersion: 2,
+      },
+    });
+    const checkOut = createEntity<DailyCheckOut>({
+      date,
+      stepsEntryId: `steps:${date}`,
+      foodJournalComplete: true,
+      contextFlags: [],
+      contextSyncPreference: 'localOnly',
+      completedAt: '2026-07-13T21:00:00.000Z',
+    });
+    const settings = createDefaultAppSettings();
+    const savedTarget = vi.fn(async (target) => createEntity(target));
+    const dependencies: DailyTargetCoordinatorDependencies = {
+      settings: { get: vi.fn(async () => settings) },
+      weight: {
+        listBetween: vi.fn(async () => []),
+        getByDate: vi.fn(async () => undefined),
+      },
+      steps: {
+        getByDate: vi.fn(async () => createEntity({
+          date,
+          totalSteps: 8_000,
+          source: 'manual' as const,
+        }, `steps:${date}`)),
+        listBetween: vi.fn(async () =>
+          Array.from({ length: 14 }, (_, index) => createEntity<DailySteps>({
+            date: `2026-06-${String(30 - index).padStart(2, '0')}`,
+            totalSteps: 8_000,
+            source: 'manual' as const,
+          }))),
+      },
+      dailyCoaching: { getCheckOut: vi.fn(async () => checkOut) },
+      activities: { listByDate: vi.fn(async () => [actualActivity]) },
+      targets: { upsertTarget: savedTarget },
+      weeklyReviews: { listAdjustments: vi.fn(async () => []) },
+      workoutSessions: {
+        listAll: vi.fn(async () => [
+          linkedSession,
+          remainingSession,
+          cancelledSession,
+        ]),
+      },
+      listEndurancePlanningSessions: vi.fn(async () => []),
+    };
+
+    const snapshot = await calculateAndPersistDailyTarget(
+      date,
+      createProfile(),
+      dependencies,
+    );
+
+    expect(snapshot.plannedActivities).toHaveLength(1);
+    expect(snapshot.plannedActivities[0]?.sourceId).toBe(remainingSession.id);
+    expect(snapshot.calculation.energy).toMatchObject({
+      strengthTrainingKcal: 252,
+      plannedActivitiesKcal: 157.5,
+    });
+    expect(snapshot.energyGuidance.finalStatus).toBe('final');
+    expect(snapshot.energyGuidance.finalExpenditure?.energy).toMatchObject({
+      strengthTrainingKcal: 252,
+      plannedActivitiesKcal: 0,
+    });
+    expect(snapshot.energyArchitectureShadow.guided.currentTotalKcal).toBeCloseTo(
+      snapshot.calculation.energy.totalEstimatedExpenditureKcal,
+      2,
+    );
+    expect(snapshot.energyArchitectureShadow.final?.currentTotalKcal).toBeCloseTo(
+      snapshot.energyGuidance.finalExpenditure?.energy
+        .totalEstimatedExpenditureKcal ?? 0,
+      2,
+    );
+    expect(
+      snapshot.energyArchitectureShadow.guided.currentTotalKcal
+      - (snapshot.energyArchitectureShadow.final?.currentTotalKcal ?? 0),
+    ).toBe(157.5);
+    expect(
+      snapshot.calculation.energy.totalEstimatedExpenditureKcal
+      - (snapshot.energyGuidance.finalExpenditure?.energy
+        .totalEstimatedExpenditureKcal ?? 0),
+    ).toBe(157.5);
+    expect(savedTarget.mock.calls[0]?.[0]).not.toHaveProperty(
+      'energyArchitectureShadow',
+    );
   });
 });

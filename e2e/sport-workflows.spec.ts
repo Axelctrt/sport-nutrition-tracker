@@ -18,15 +18,14 @@ test('guide une séance de musculation et compacte une série validée', async (
   await expect(page.getByRole('progressbar', { name: 'Progression de la séance' })).toHaveAttribute('aria-valuenow', '0');
   await expect(page.getByText('À faire maintenant').first()).toBeVisible();
 
-  await page.getByRole('button', { name: 'Ajouter une série' }).click();
-  await page.getByLabel('Charge en kg').fill('50');
-  await page.getByLabel('Répétitions').fill('10');
-  await page.getByLabel('RPE').fill('8');
-  await page.getByRole('button', { name: 'Valider la série' }).click();
+  const firstSet = page.getByRole('article', { name: 'Série 1' });
+  await firstSet.getByLabel('Charge en kg').fill('50');
+  await firstSet.getByLabel('Répétitions').fill('10');
+  await firstSet.getByLabel('RPE').fill('8');
+  await firstSet.getByRole('button', { name: 'Valider la série' }).click();
 
-  await expect(page.getByText('50 kg · 10 reps · RPE 8')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Modifier' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Rouvrir la série' })).toBeVisible();
+  await expect(firstSet.getByText('10 reps · 50 kg · RPE 8')).toBeVisible();
+  await expect(firstSet.getByRole('button', { name: 'Modifier la série 1' })).toBeVisible();
   await expectNoCriticalHorizontalOverflow(page);
 });
 

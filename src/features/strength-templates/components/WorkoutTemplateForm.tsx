@@ -1,8 +1,13 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowDown, ArrowUp, Copy, Layers3, Plus, Save, Trash2, Unlink } from 'lucide-react';
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFieldArray, useForm, useWatch } from 'react-hook-form';
 import type { ExerciseDefinition, ExerciseGroupType, StrengthTrackingMode } from '@/domain/models/strength';
+import {
+  filterExerciseDefinitions,
+  findSimilarExerciseDefinitions,
+  normalizeExerciseName,
+} from '@/application/strength/exerciseDefinitionService';
 import { exerciseGroupTypeLabel } from '@/domain/strength/exerciseGroups';
 import { defaultTrackingModeForLoadUnit } from '@/domain/strength/strengthTracking';
 import {
@@ -17,12 +22,20 @@ import { FormField } from '@/shared/ui/FormField';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 import { CollapsibleSection } from '@/shared/ui/CollapsibleSection';
 import { focusFirstInvalidField } from '@/shared/hooks/focusFirstInvalidField';
+import { cn } from '@/shared/utils/cn';
 
 interface WorkoutTemplateFormProps {
   initialValues: WorkoutTemplateFormValues;
   exerciseDefinitions: ExerciseDefinition[];
   submitLabel: string;
   onSubmit: (values: WorkoutTemplateFormValues) => Promise<void>;
+  onCreateExercise?: (
+    query: string,
+    insertionIndex: number,
+    draft: WorkoutTemplateFormValues,
+  ) => void;
+  initialExerciseQuery?: string;
+  highlightedExerciseId?: string;
 }
 
 const optionalNumberRegistration = {
@@ -34,6 +47,9 @@ export function WorkoutTemplateForm({
   exerciseDefinitions,
   submitLabel,
   onSubmit,
+  onCreateExercise,
+  initialExerciseQuery = '',
+  highlightedExerciseId,
 }: WorkoutTemplateFormProps) {
   const formRef = useRef<HTMLFormElement>(null);
   const {
@@ -51,6 +67,17 @@ export function WorkoutTemplateForm({
   });
   const { fields, append, remove, move } = useFieldArray({ control, name: 'exercises' });
   const watchedExercises = useWatch({ control, name: 'exercises' });
+  const [exerciseQuery, setExerciseQuery] = useState(initialExerciseQuery);
+  const filteredExerciseDefinitions = useMemo(
+    () => filterExerciseDefinitions(exerciseDefinitions, {
+      query: exerciseQuery,
+    }),
+    [exerciseDefinitions, exerciseQuery],
+  );
+  const similarExercises = useMemo(
+    () => findSimilarExerciseDefinitions(exerciseDefinitions, exerciseQuery),
+    [exerciseDefinitions, exerciseQuery],
+  );
   const groups = useMemo(() => {
     const result: Array<{ id: string; type: ExerciseGroupType; name: string; memberIndexes: number[] }> = [];
     for (const [index, exercise] of (watchedExercises ?? []).entries()) {
@@ -73,6 +100,17 @@ export function WorkoutTemplateForm({
   useEffect(() => {
     reset(initialValues);
   }, [initialValues, reset]);
+
+  useEffect(() => {
+    setExerciseQuery(initialExerciseQuery);
+  }, [initialExerciseQuery]);
+
+  useEffect(() => {
+    if (!highlightedExerciseId) return;
+    document
+      .getElementById(`workout-template-exercise-card-${highlightedExerciseId}`)
+      ?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+  }, [highlightedExerciseId]);
 
   useEffect(() => {
     if (submitCount > 0 && Object.keys(errors).length > 0 && formRef.current) {
@@ -174,7 +212,9 @@ export function WorkoutTemplateForm({
   };
 
   const addExercise = () => {
-    const firstAvailable = exerciseDefinitions.find((exercise) => !exercise.isArchived);
+    const firstAvailable = filteredExerciseDefinitions.find(
+      (exercise) => !exercise.isArchived,
+    );
     append({
       ...defaultWorkoutTemplateExerciseValues,
       exerciseDefinitionId: firstAvailable?.id ?? '',
@@ -214,11 +254,61 @@ export function WorkoutTemplateForm({
             <h2 id="workout-template-exercises-title" className="text-xl font-semibold text-slate-950 dark:text-white">Exercices prévus</h2>
             <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">L’ordre défini ici sera repris au démarrage d’une séance.</p>
           </div>
-          <Button type="button" variant="secondary" onClick={addExercise} disabled={exerciseDefinitions.length === 0}>
+          <Button type="button" variant="secondary" onClick={addExercise} disabled={filteredExerciseDefinitions.length === 0}>
             <Plus aria-hidden="true" className="size-4" />
             Ajouter un exercice
           </Button>
         </div>
+
+        <div className="mt-4">
+          <label htmlFor="workout-template-exercise-search" className="sr-only">
+            Rechercher un exercice à ajouter au modèle
+          </label>
+          <input
+            id="workout-template-exercise-search"
+            type="search"
+            value={exerciseQuery}
+            onChange={(event) => setExerciseQuery(event.target.value)}
+            className={inputClassName}
+            placeholder="Rechercher un exercice à ajouter"
+          />
+        </div>
+
+        {normalizeExerciseName(exerciseQuery)
+          && filteredExerciseDefinitions.length === 0
+          && onCreateExercise ? (
+          <div className="mt-3 rounded-xl border border-slate-200 p-3 dark:border-slate-800">
+            <p className="text-sm font-semibold text-slate-900 dark:text-white">
+              Aucun exercice trouvé pour « {exerciseQuery.trim()} »
+            </p>
+            {similarExercises.length > 0 ? (
+              <>
+                <p className="mt-3 text-xs font-semibold uppercase text-slate-500">
+                  Exercices similaires
+                </p>
+                <ul className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                  {similarExercises.map((exercise) => (
+                    <li key={exercise.id}>{exercise.name}</li>
+                  ))}
+                </ul>
+              </>
+            ) : null}
+            <Button
+              className="mt-3"
+              type="button"
+              onClick={() => onCreateExercise(
+                exerciseQuery.trim(),
+                fields.length,
+                getValues(),
+              )}
+            >
+              <Plus aria-hidden="true" className="size-4" />
+              {similarExercises.length > 0
+                ? 'Aucun ne correspond — créer l’exercice'
+                : 'Créer cet exercice'}
+            </Button>
+          </div>
+        ) : null}
 
         <InlineNotice className="mt-4" tone="info" title="Supersets, tri-sets et circuits">
           Groupe les exercices, règle les tours et les temps de transition. Les séries et statistiques restent propres à chaque exercice.
@@ -247,7 +337,21 @@ export function WorkoutTemplateForm({
             const isGroupLeader = currentGroup?.memberIndexes[0] === index;
             const hasStandalonePartner = (watchedExercises ?? []).some((exercise, candidateIndex) => candidateIndex !== index && !exercise?.exerciseGroupId);
             return (
-              <Card key={field.id} className="p-5 sm:p-6">
+              <Card
+                key={field.id}
+                id={
+                  watchedExercises?.[index]?.exerciseDefinitionId
+                    ? `workout-template-exercise-card-${watchedExercises[index]!.exerciseDefinitionId}`
+                    : undefined
+                }
+                className={cn(
+                  'p-5 transition-colors sm:p-6 motion-reduce:transition-none',
+                  highlightedExerciseId
+                    && watchedExercises?.[index]?.exerciseDefinitionId
+                      === highlightedExerciseId
+                    && 'ring-2 ring-brand-500 bg-brand-50 dark:bg-brand-950/30',
+                )}
+              >
                 <div className="flex items-start justify-between gap-4">
                   <div><h3 className="font-semibold text-slate-950 dark:text-white">{currentGroup ? `${currentGroup.name || exerciseGroupTypeLabel(currentGroup.type)} · ${currentGroup.memberIndexes.length > 1 ? `${String.fromCharCode(65 + groups.indexOf(currentGroup))}${groupPosition + 1}` : 'groupe incomplet'}` : `Exercice ${index + 1}`}</h3>{currentGroup ? <p className="mt-1 text-xs font-medium text-brand-700 dark:text-brand-300">{currentGroup.memberIndexes.length} exercice{currentGroup.memberIndexes.length > 1 ? 's' : ''} dans le groupe</p> : null}</div>
                   <div className="flex gap-1">

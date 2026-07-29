@@ -163,12 +163,12 @@ describe("selectiveBackupRestoreService", () => {
       ];
       incoming.unlockedVisualThemes = [
         {
-          id: "classic",
+          id: "core",
           unlockedAt: "2026-06-01T08:00:00.000Z",
           updatedAt: "2026-06-01T08:00:00.000Z",
         },
         {
-          id: "endurance",
+          id: "neon-pulse",
           unlockedAt: "2026-06-28T08:00:00.000Z",
           updatedAt: "2026-06-28T08:00:00.000Z",
         },
@@ -176,7 +176,7 @@ describe("selectiveBackupRestoreService", () => {
       incoming.visualThemePreferences = [
         {
           id: "visual-theme-preference",
-          activeThemeId: "endurance",
+          activeThemeId: "neon-pulse",
           updatedAt: "2026-06-28T08:00:00.000Z",
         },
       ];
@@ -236,7 +236,7 @@ describe("selectiveBackupRestoreService", () => {
         }),
       ]);
       expect(await database.visualThemePreferences.toArray()).toEqual([
-        expect.objectContaining({ activeThemeId: "endurance" }),
+        expect.objectContaining({ activeThemeId: "neon-pulse" }),
       ]);
     } finally {
       database.close();

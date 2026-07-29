@@ -1,4 +1,13 @@
-import { Check, ChevronDown, CopyPlus, Plus, RotateCcw, Save, Trash2 } from 'lucide-react';
+import {
+  Check,
+  ChevronDown,
+  CopyPlus,
+  Pencil,
+  Plus,
+  RotateCcw,
+  Save,
+  Trash2,
+} from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { StrengthSet, StrengthTrackingMode, WorkoutSessionExercise } from '@/domain/models/strength';
 import { resolveTrackingMode } from '@/domain/strength/strengthTracking';
@@ -80,6 +89,7 @@ function StrengthSetRow({
   const [type, setType] = useState(set.type);
   const [notes, setNotes] = useState(set.notes ?? '');
   const [validationError, setValidationError] = useState<string>();
+  const [editingCompleted, setEditingCompleted] = useState(false);
 
   useEffect(() => {
     setRepetitions(numberInputValue(set.repetitions));
@@ -147,7 +157,10 @@ function StrengthSetRow({
 
   const save = async () => {
     const parsed = values();
-    if (parsed) await onSave(exercise.id, set.id, parsed);
+    if (parsed) {
+      await onSave(exercise.id, set.id, parsed);
+      setEditingCompleted(false);
+    }
   };
 
   const toggleCompletion = async () => {
@@ -162,6 +175,45 @@ function StrengthSetRow({
     || trackingMode === 'assistedRepetitions';
   const usesRepetitions = trackingMode !== 'duration' && trackingMode !== 'distance';
   const hint = measurementHint(trackingMode);
+
+  if (set.isCompleted && editable && !editingCompleted) {
+    const performance = (() => {
+      if (trackingMode === 'duration') return `${set.durationSeconds ?? 0} s`;
+      if (trackingMode === 'distance') return `${set.distanceMeters ?? 0} m`;
+      const load = usesLoad ? ` · ${set.weightKg} kg` : '';
+      return `${set.repetitions} reps${load}`;
+    })();
+
+    return (
+      <article
+        id={baseId}
+        className="scroll-mt-28 flex min-h-14 items-center gap-3 rounded-xl border border-emerald-300 bg-emerald-50/70 px-3 py-2 dark:border-emerald-900 dark:bg-emerald-950/20"
+        aria-labelledby={`${baseId}-title`}
+        data-strength-set-completed="true"
+      >
+        <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-emerald-700 text-sm font-bold text-white">
+          <Check aria-hidden="true" className="size-4" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <h4 id={`${baseId}-title`} className="text-sm font-semibold text-slate-950 dark:text-white">
+            Série {set.setNumber}
+          </h4>
+          <p className="truncate text-sm text-slate-600 dark:text-slate-300">
+            {performance}{set.rpe !== undefined ? ` · RPE ${set.rpe}` : ''}
+          </p>
+        </div>
+        <Button
+          size="sm"
+          variant="secondary"
+          aria-label={`Modifier la série ${set.setNumber}`}
+          onClick={() => setEditingCompleted(true)}
+        >
+          <Pencil aria-hidden="true" className="size-4" />
+          Modifier
+        </Button>
+      </article>
+    );
+  }
 
   return (
     <article

@@ -153,6 +153,21 @@ function ActivityEditor({
         );
         const initialValues: ActivityFormValues = {
           ...baseValues,
+          ...(requestedPlannedOption?.plannedDurationMinutes
+            ? { durationMinutes: requestedPlannedOption.plannedDurationMinutes }
+            : {}),
+          ...(requestedPlannedOption?.plannedDistanceKm
+            ? { distanceKm: requestedPlannedOption.plannedDistanceKm }
+            : {}),
+          ...(requestedPlannedOption?.plannedDistanceMeters
+            ? { distanceMeters: requestedPlannedOption.plannedDistanceMeters }
+            : {}),
+          ...(requestedPlannedOption?.plannedIntensity
+            ? { intensity: requestedPlannedOption.plannedIntensity }
+            : {}),
+          ...(requestedPlannedOption?.plannedNotes
+            ? { notes: requestedPlannedOption.plannedNotes }
+            : {}),
           ...(requestedDate && isValidLocalDate(requestedDate)
             ? { date: requestedDate }
             : {}),

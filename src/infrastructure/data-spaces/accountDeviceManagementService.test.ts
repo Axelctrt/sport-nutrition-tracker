@@ -1,7 +1,11 @@
 import Dexie from 'dexie';
 
-import type { SyncPrototypeClient } from '@/infrastructure/sync-prototype/syncPrototypeClient';
+import type {
+  SyncPrototypeClient,
+  SyncPrototypeSnapshot,
+} from '@/infrastructure/sync-prototype/syncPrototypeClient';
 import {
+  deleteCloudAndLocalAccountData,
   deleteLocalAccountData,
   detachCurrentDeviceFromAccount,
   disconnectAccount,
@@ -34,6 +38,7 @@ function createClient(): SyncPrototypeClient {
     login: vi.fn(async () => undefined),
     submitInteraction: vi.fn(),
     cancelInteraction: vi.fn(),
+    getCloudCredentials: vi.fn(() => undefined),
     logout: vi.fn(async () => undefined),
     syncNow: vi.fn(async () => undefined),
     analyzeRealWeights: vi.fn() as SyncPrototypeClient['analyzeRealWeights'],
@@ -91,16 +96,79 @@ describe('accountDeviceManagementService', () => {
       updatedAt: NOW,
     });
     const client = createClient();
+    vi.mocked(client.getSnapshot).mockReturnValue({
+      account: {
+        isLoggedIn: true,
+        isLoading: false,
+        userId: 'account-user',
+      },
+    } as SyncPrototypeSnapshot);
+    const purgeSocialOutbox = vi.fn(async () => 2);
 
-    await deleteLocalAccountData(client, { space, storage, database, now: NOW });
+    await deleteLocalAccountData(client, {
+      space,
+      storage,
+      database,
+      now: NOW,
+      purgeSocialOutbox,
+    });
 
     expect(await Dexie.exists(space.databaseName)).toBe(false);
     expect(client.logout).toHaveBeenCalledTimes(1);
+    expect(purgeSocialOutbox).toHaveBeenCalledWith('account-user');
     expect(getActiveDataSpace(storage).kind).toBe('guest');
     expect(
       readDataSpaceRegistry(storage).spaces.some(
         (candidate) => candidate.id === space.id,
       ),
     ).toBe(false);
+  });
+
+  it('conserve la base et le registre lorsque la déconnexion échoue', async () => {
+    const storage = new MemoryStorage();
+    const space = activateAccountDataSpace(FINGERPRINT, storage, NOW);
+    const database = new AppDatabase(space.databaseName);
+    await database.open();
+    const client = createClient();
+    vi.mocked(client.logout).mockRejectedValueOnce(new Error('logout failed'));
+
+    await expect(
+      deleteLocalAccountData(client, { space, storage, database, now: NOW }),
+    ).rejects.toThrow('logout failed');
+
+    expect(await Dexie.exists(space.databaseName)).toBe(true);
+    expect(getActiveDataSpace(storage).id).toBe(space.id);
+    database.close();
+    await Dexie.delete(space.databaseName);
+  });
+
+  it('ne supprime la base locale qu’après confirmation de la purge distante', async () => {
+    const storage = new MemoryStorage();
+    const space = activateAccountDataSpace(FINGERPRINT, storage, NOW);
+    const database = new AppDatabase(space.databaseName);
+    await database.open();
+    const client = createClient();
+    client.deleteRemoteAccountData = vi.fn(async () => ({
+      deletedSocialRecords: 2,
+      deletedCloudRecords: 4,
+      deletedByTable: { realWeights: 4 },
+    }));
+
+    const result = await deleteCloudAndLocalAccountData(client, {
+      space,
+      storage,
+      database,
+      now: NOW,
+      purgeSocialOutbox: vi.fn(async () => 0),
+    });
+
+    expect(client.deleteRemoteAccountData).toHaveBeenCalledOnce();
+    expect(client.logout).toHaveBeenCalledOnce();
+    expect(await Dexie.exists(space.databaseName)).toBe(false);
+    expect(result).toMatchObject({
+      databaseName: space.databaseName,
+      deletedSocialRecords: 2,
+      deletedCloudRecords: 4,
+    });
   });
 });

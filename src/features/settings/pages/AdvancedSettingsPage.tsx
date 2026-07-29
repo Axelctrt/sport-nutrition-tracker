@@ -17,6 +17,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { routePaths } from '@/app/routePaths';
+import { recalculateExistingTargetsAfterSettingsChange } from '@/application/daily/settingsTargetRecalculationService';
 import { useTheme } from '@/app/providers/useTheme';
 import type { AppSettings } from '@/domain/models/settings';
 import { AchievementsPanel } from '@/features/settings/components/AchievementsPanel';
@@ -58,6 +59,7 @@ import {
 } from '@/infrastructure/storage/persistentStorage';
 import { openSettingsSection } from '@/features/settings/settingsSectionNavigation';
 import { useActionToast } from '@/shared/toast/useActionToast';
+import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { CollapsibleSection } from '@/shared/ui/CollapsibleSection';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
@@ -315,6 +317,7 @@ export function AdvancedSettingsPage() {
       const updated = await repositories.settings.update(
         settingsFormValuesToChanges(values),
       );
+      await recalculateExistingTargetsAfterSettingsChange();
       setSettings(updated);
       setTheme(updated.theme);
 
@@ -359,6 +362,7 @@ export function AdvancedSettingsPage() {
       try {
         const defaults =
           await repositories.settings.reset();
+        await recalculateExistingTargetsAfterSettingsChange();
         setSettings(defaults);
         setTheme(defaults.theme);
         setStorageStatus(
@@ -398,7 +402,14 @@ export function AdvancedSettingsPage() {
   if (loadError) {
     return (
       <InlineNotice tone="error" title="Chargement impossible">
-        {loadError}
+        <p>{loadError}</p>
+        <Button
+          className="mt-3"
+          variant="secondary"
+          onClick={() => void loadSettings()}
+        >
+          Réessayer
+        </Button>
       </InlineNotice>
     );
   }
@@ -628,6 +639,7 @@ export function AdvancedSettingsPage() {
         >
           <div className="space-y-4">
             <DataManagementCenter
+              isAccountSpace={activeDataSpace.kind === 'account'}
               storageStatus={storageStatus}
               lastBackupExportedAt={
                 settings.lastBackupExportedAt

@@ -78,8 +78,8 @@ describe('sauvegarde des états utilisateur', () => {
       ['first-session'],
       '2026-06-27T18:00:00.000Z',
     );
-    unlockVisualThemes(['endurance']);
-    activateVisualTheme('endurance');
+    unlockVisualThemes(['neon-pulse']);
+    activateVisualTheme('neon-pulse');
     recordCompletedWeeklyMission(
       '2026-06-22',
       '2026-06-27T19:00:00.000Z',
@@ -128,7 +128,7 @@ describe('sauvegarde des états utilisateur', () => {
       '2026-06-27T20:00:00.000Z',
     );
 
-    expect(envelope.schemaVersion).toBe(9);
+    expect(envelope.schemaVersion).toBe(10);
     expect(envelope.rewardState).toBeUndefined();
     expect(envelope.includedUserStateTables).toEqual(
       BACKUP_USER_STATE_TABLE_NAMES,
@@ -148,12 +148,12 @@ describe('sauvegarde des états utilisateur', () => {
     ]);
     expect(envelope.data.unlockedVisualThemes).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ id: 'classic' }),
-        expect.objectContaining({ id: 'endurance' }),
+        expect.objectContaining({ id: 'core' }),
+        expect.objectContaining({ id: 'neon-pulse' }),
       ]),
     );
     expect(envelope.data.visualThemePreferences).toEqual([
-      expect.objectContaining({ activeThemeId: 'endurance' }),
+      expect.objectContaining({ activeThemeId: 'neon-pulse' }),
     ]);
     expect(envelope.data.weeklyMissionCompletions).toEqual([
       expect.objectContaining({
@@ -169,7 +169,7 @@ describe('sauvegarde des états utilisateur', () => {
     await replaceDatabaseFromBackup(envelope, database);
 
     expect(readAchievementState().earnedAchievements).toHaveLength(1);
-    expect(readVisualThemeState().activeThemeId).toBe('endurance');
+    expect(readVisualThemeState().activeThemeId).toBe('neon-pulse');
     expect(
       readWeeklyMissionHistoryState().completedWeeks,
     ).toHaveLength(1);
@@ -185,8 +185,8 @@ describe('sauvegarde des états utilisateur', () => {
   });
 
   it('migre une sauvegarde v2 sans effacer les états absents', async () => {
-    unlockVisualThemes(['power']);
-    activateVisualTheme('power');
+    unlockVisualThemes(['emerald-focus']);
+    activateVisualTheme('emerald-focus');
 
     const envelope = await createBackupEnvelope(
       database,
@@ -207,11 +207,11 @@ describe('sauvegarde des états utilisateur', () => {
       serializeBackupEnvelope(versionTwoEnvelope),
     );
 
-    expect(parsed.schemaVersion).toBe(9);
+    expect(parsed.schemaVersion).toBe(10);
     expect(parsed.includedUserStateTables).toEqual([]);
 
     await replaceDatabaseFromBackup(parsed, database);
 
-    expect(readVisualThemeState().activeThemeId).toBe('power');
+    expect(readVisualThemeState().activeThemeId).toBe('emerald-focus');
   });
 });

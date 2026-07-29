@@ -71,6 +71,7 @@ export function useStrengthExercises(filters: ExerciseFilters) {
   }, []);
 
   return {
+    allExercises,
     exercises,
     status,
     errorMessage,

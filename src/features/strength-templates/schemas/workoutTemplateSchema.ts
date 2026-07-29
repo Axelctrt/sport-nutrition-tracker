@@ -80,4 +80,11 @@ export const workoutTemplateFormSchema = z.object({
   }
 });
 
+export const workoutTemplateDraftSchema = z.object({
+  name: z.string().max(100),
+  description: z.string().max(500),
+  notes: z.string().max(1_000),
+  exercises: z.array(workoutTemplateExerciseFormSchema).max(30),
+});
+
 export type WorkoutTemplateFormValues = z.infer<typeof workoutTemplateFormSchema>;

@@ -10,6 +10,12 @@ function requireText(source, text, label) {
   }
 }
 
+function rejectText(source, text, label) {
+  if (source.includes(text)) {
+    throw new Error(`Audit A14 incomplet : ${label}`);
+  }
+}
+
 const server = read('functions/_shared/socialIdentityReconciliation.js');
 const route = read('functions/api/social-identity/reconcile.js');
 const page = read('src/features/friends/pages/FriendsPrivacyPage.tsx');
@@ -19,8 +25,10 @@ const service = read('src/application/friends/socialIdentityReconciliationServic
 
 requireText(route, 'handleSocialIdentityReconciliationRequest', 'route Pages Function');
 requireText(server, 'authenticateRequest', 'authentification Dexie Cloud');
-requireText(server, 'socialHandleReservations', 'preuve privée du handle');
-requireText(server, 'socialIdentities', 'preuve privée de l’identité');
+requireText(server, 'const legacyIds = new Set();', 'migration legacy desactivee par defaut');
+requireText(server, 'SOCIAL_IDENTITY_RECONCILIATION_HANDLE_CONFLICT', 'conflit de handle canonique');
+rejectText(server, 'socialHandleReservations', 'preuve privee du handle encore acceptee');
+rejectText(server, 'socialIdentities', 'preuve privee de l identite encore acceptee');
 requireText(server, 'migrateFriendships', 'migration des amitiés');
 requireText(server, 'migratePermissions', 'migration des permissions');
 requireText(server, 'migrateRequests', 'migration des demandes');

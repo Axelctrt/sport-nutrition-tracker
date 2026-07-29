@@ -1,24 +1,24 @@
-# Retour arrière — SportPilot 0.32.0
+# Retour arrière — SportPilot 0.34.0
 
-Le fix-forward reste la stratégie prioritaire. SportPilot 0.32.0 ne modifie pas les schémas Dexie, les migrations D1, les contrats sociaux, les protocoles de synchronisation ni le moteur calorique.
+Le fix-forward reste la stratégie prioritaire. SportPilot 0.34.0 ne modifie ni
+les schémas Dexie, ni les migrations D1, ni les contrats sociaux, ni le moteur
+calorique.
 
 ## Avant rollback
 
-- identifier le commit exact publié sur `main` ;
-- vérifier les logs Cloudflare Pages et la version du service worker ;
-- confirmer si la régression concerne l’onboarding, la PWA, le build, la synchronisation ou les données ;
-- ne pas rejouer de migration D1 existante ;
-- ne pas supprimer de données locales ou sociales réelles.
+- identifier le commit exact publié ;
+- conserver le commit `a82fd0834e53ae8ef85a2d4e7e5787c929e5d690`
+  comme référence fonctionnelle 0.33.2 ;
+- vérifier les logs Cloudflare Pages, le manifeste et le service worker ;
+- ne supprimer aucune donnée locale ou synchronisée.
 
 ## Stratégie recommandée
 
-1. créer une branche `fix/production-0.32.0-*` depuis `main` ;
+1. créer une branche `fix/production-0.34.0-*` depuis le commit publié ;
 2. corriger uniquement le défaut identifié ;
-3. relancer lint, TypeScript, tests ciblés, E2E onboarding, build et audits concernés ;
-4. fusionner manuellement dans `main` ;
-5. redéployer Cloudflare Pages ;
-6. resynchroniser `develop`.
+3. relancer lint, TypeScript, tests, E2E, build et audits concernés ;
+4. publier le correctif uniquement après autorisation.
 
-## Rollback Git exceptionnel
-
-Un retour au tag précédent ne doit être utilisé qu’en cas de blocage critique de production, après sauvegarde de l’état courant. Les migrations D1 `0001` et `0002` restent en place et ne doivent pas être rejouées.
+Un retour au commit 0.33.2 ne doit être utilisé qu’en cas de blocage critique,
+après sauvegarde de l’état courant. Les migrations existantes ne doivent pas
+être rejouées.

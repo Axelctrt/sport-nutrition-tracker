@@ -25,7 +25,7 @@ export function PageHeader() {
   }, [title]);
 
   return (
-    <header className="sticky top-0 z-20 border-b border-slate-200/80 bg-slate-50/90 backdrop-blur dark:border-slate-800 dark:bg-slate-950/90">
+    <header className="sp-navigation-shell sticky top-0 z-20 border-b">
       <div className="mx-auto flex min-h-16 max-w-7xl min-w-0 items-center justify-between gap-2 px-4 sm:gap-4 sm:px-6 lg:px-8">
         <div className="flex min-w-0 items-center gap-2">
           {isPrimaryMobileRoute ? (
@@ -60,10 +60,10 @@ export function PageHeader() {
           )}
 
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-slate-950 dark:text-white">
+            <p className="truncate text-sm font-semibold text-[var(--sp-text-primary)]">
               {title}
             </p>
-            <p className="hidden text-xs text-slate-500 lg:block dark:text-slate-400">
+            <p className="hidden text-xs text-[var(--sp-text-muted)] lg:block">
               SportPilot
             </p>
           </div>

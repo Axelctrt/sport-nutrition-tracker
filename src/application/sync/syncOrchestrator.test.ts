@@ -160,6 +160,30 @@ describe('syncOrchestrator', () => {
     expect(activitiesAnalyze).toHaveBeenCalledTimes(1);
   });
 
+  it('prévalide une seule fois et ne lance aucun domaine si le compte cloud est inutilisable', async () => {
+    const weights = adapter('weights');
+    const activities = adapter('activities');
+    const preflight = vi.fn(async () => {
+      throw new Error('Ta session cloud a expiré. Reconnecte-toi pour continuer.');
+    });
+    const orchestrator = createSyncOrchestrator({
+      accountKey: 'expired-account',
+      domains: [weights, activities],
+      preflight,
+    });
+
+    const result = await orchestrator.run({ operation: 'sync' });
+
+    expect(preflight).toHaveBeenCalledTimes(1);
+    expect(weights.synchronize).not.toHaveBeenCalled();
+    expect(activities.synchronize).not.toHaveBeenCalled();
+    expect(result.domainResults).toEqual([
+      expect.objectContaining({ domainId: 'weights', status: 'not-run' }),
+      expect.objectContaining({ domainId: 'activities', status: 'not-run' }),
+    ]);
+    expect(orchestrator.getSnapshot().domains.weights.status).toBe('not-run');
+  });
+
   it('regroupe les demandes différées rapprochées dans une seule file', async () => {
     vi.useFakeTimers();
     const weightsAnalyze = vi.fn(async () => ({ differingEntityCount: 0 }));

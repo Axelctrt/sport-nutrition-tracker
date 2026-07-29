@@ -11,9 +11,9 @@ test('ajoute une course et recharge directement le journal', async ({ page }) =>
   await page.locator('#running-cadence').fill('172');
   await page.getByRole('button', { name: 'Ajouter l’activité' }).click();
 
-  await expect(page.getByRole('heading', { name: 'Sport' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Footing' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Sport', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Footing', level: 2 })).toBeVisible();
 
   await page.reload({ waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('heading', { name: 'Footing' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Footing', level: 2 })).toBeVisible();
 });

@@ -46,8 +46,8 @@ describe('syncPrototypePresentation', () => {
   });
 
   it('centralise les libellés de synchronisation et le brouillon initial', () => {
-    expect(syncStatusLabels.connected).toBe('Connectée');
-    expect(syncPhaseLabels['in-sync']).toBe('À jour');
+    expect(syncStatusLabels.connected).toBe('Cloud connecté');
+    expect(syncPhaseLabels['in-sync']).toBe('Synchronisé');
     expect(createEmptyWeightDraft()).toMatchObject({
       weightKg: '',
       note: '',

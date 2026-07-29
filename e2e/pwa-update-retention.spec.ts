@@ -5,7 +5,7 @@ import { createLocalProfile, getBrowserLocalDate } from './helpers/app';
 const DATABASE_NAME = 'sportpilot-local-database';
 const CRITICAL_STORES = [
   'userProfile',
-  'appSettings',
+  'userSettings',
   'weights',
   'dailySteps',
   'activities',
@@ -27,6 +27,10 @@ const CRITICAL_STORES = [
   'strengthSets',
   'progressionSuggestions',
 ] as const;
+
+test.afterAll(async ({ request }) => {
+  await request.post('/__pwa-test/shutdown');
+});
 
 interface DatabaseSnapshot {
   counts: Record<string, number>;

@@ -1,4 +1,4 @@
-import { formatGoalValue } from "@/features/goals/components/GoalCard";
+import { formatGoalValue } from "@/features/goals/utils/formatGoalValue";
 
 describe("GoalCard", () => {
   it("arrondit les distances restantes en kilomètres à une décimale", () => {

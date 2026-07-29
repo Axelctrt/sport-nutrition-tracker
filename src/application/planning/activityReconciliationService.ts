@@ -20,6 +20,11 @@ export interface PlannedActivityLinkOption {
   title: string;
   date: string;
   activityType: ActivityType;
+  plannedDurationMinutes?: number;
+  plannedDistanceKm?: number;
+  plannedDistanceMeters?: number;
+  plannedIntensity?: PlannedEnduranceSession['intensity'];
+  plannedNotes?: string;
   alreadyLinkedActivityId?: string;
 }
 
@@ -79,6 +84,9 @@ export async function resolvePlannedActivityLinkOption(
       title: sourceTitle('strengthSession', session, undefined),
       date: effectiveStrengthDate(session),
       activityType: 'strengthTraining',
+      ...(session.plannedDurationMinutes
+        ? { plannedDurationMinutes: session.plannedDurationMinutes }
+        : {}),
       ...((session.completedActivityId ?? linkedActivity?.id)
         ? { alreadyLinkedActivityId: session.completedActivityId ?? linkedActivity!.id }
         : {}),
@@ -98,6 +106,17 @@ export async function resolvePlannedActivityLinkOption(
     title: session.title,
     date: session.date,
     activityType: session.activityType,
+    ...(session.targetDurationMinutes
+      ? { plannedDurationMinutes: session.targetDurationMinutes }
+      : {}),
+    ...(session.targetDistanceKm
+      ? { plannedDistanceKm: session.targetDistanceKm }
+      : {}),
+    ...(session.targetDistanceMeters
+      ? { plannedDistanceMeters: session.targetDistanceMeters }
+      : {}),
+    plannedIntensity: session.intensity,
+    ...(session.notes ? { plannedNotes: session.notes } : {}),
     ...((session.completedActivityId ?? linkedActivity?.id)
       ? { alreadyLinkedActivityId: session.completedActivityId ?? linkedActivity!.id }
       : {}),
@@ -136,6 +155,9 @@ export async function listPlannedActivityLinkOptions(
         title: sourceTitle('strengthSession', session, undefined),
         date: effectiveStrengthDate(session),
         activityType: 'strengthTraining',
+        ...(session.plannedDurationMinutes
+          ? { plannedDurationMinutes: session.plannedDurationMinutes }
+          : {}),
         ...((session.completedActivityId ?? linkedBySource.get(plannedActivityReferenceKey(reference)))
           ? { alreadyLinkedActivityId: session.completedActivityId ?? linkedBySource.get(plannedActivityReferenceKey(reference))! }
           : {}),
@@ -155,6 +177,17 @@ export async function listPlannedActivityLinkOptions(
         title: session.title,
         date: session.date,
         activityType: session.activityType,
+        ...(session.targetDurationMinutes
+          ? { plannedDurationMinutes: session.targetDurationMinutes }
+          : {}),
+        ...(session.targetDistanceKm
+          ? { plannedDistanceKm: session.targetDistanceKm }
+          : {}),
+        ...(session.targetDistanceMeters
+          ? { plannedDistanceMeters: session.targetDistanceMeters }
+          : {}),
+        plannedIntensity: session.intensity,
+        ...(session.notes ? { plannedNotes: session.notes } : {}),
         ...((session.completedActivityId ?? linkedBySource.get(plannedActivityReferenceKey(reference)))
           ? { alreadyLinkedActivityId: session.completedActivityId ?? linkedBySource.get(plannedActivityReferenceKey(reference))! }
           : {}),

@@ -1,4 +1,5 @@
 import type { ExerciseHistoryEntry } from '@/application/strength/strengthHistoryService';
+import { calculateEstimatedOneRepMax } from '@/domain/calculations/strength';
 import type { StrengthSet, StrengthTrackingMode } from '@/domain/models/strength';
 import {
   calculateEffectiveLoadKg,
@@ -85,21 +86,14 @@ export interface StrengthExerciseAnalytics {
   comparison?: StrengthExerciseComparison;
 }
 
+export { calculateEstimatedOneRepMax } from '@/domain/calculations/strength';
+
 function roundToOneDecimal(value: number): number {
   return Math.round(value * 10) / 10;
 }
 
 function sessionTimestamp(entry: ExerciseHistoryEntry): string {
   return entry.session.completedAt ?? entry.session.startedAt ?? entry.session.date;
-}
-
-export function calculateEstimatedOneRepMax(
-  weightKg: number,
-  repetitions: number,
-): number | undefined {
-  if (weightKg <= 0 || repetitions <= 0 || repetitions > 12) return undefined;
-  if (repetitions === 1) return weightKg;
-  return roundToOneDecimal(weightKg * (1 + repetitions / 30));
 }
 
 function effectiveLoads(

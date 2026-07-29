@@ -93,6 +93,16 @@ describe('backupService', () => {
     await database.weights.add(
       createEntity({ date: '2026-06-23', weightKg: 60 }, 'weight-1'),
     );
+    await database.dailyCheckIns.add({
+      id: 'daily-check-in:2026-06-23',
+      date: '2026-06-23',
+      readiness: 'normal',
+      contextFlags: ['travel'],
+      contextSyncPreference: 'localOnly',
+      completedAt: '2026-06-23T07:00:00.000Z',
+      createdAt: '2026-06-23T07:00:00.000Z',
+      updatedAt: '2026-06-23T07:00:00.000Z',
+    });
     await database.deletionRecords.add({
       id: 'deletion:activity:activity-deleted',
       entityType: 'activity',
@@ -107,10 +117,16 @@ describe('backupService', () => {
     const parsed = parseBackupText(serializeBackupEnvelope(envelope));
     const summary = summarizeBackup(parsed);
 
-    expect(parsed.schemaVersion).toBe(9);
+    expect(parsed.schemaVersion).toBe(10);
     expect(parsed.appVersion).toBe(__APP_VERSION__);
     expect(parsed.data.userProfile).toHaveLength(1);
     expect(parsed.data.weights).toHaveLength(1);
+    expect(parsed.data.dailyCheckIns).toEqual([
+      expect.objectContaining({
+        id: 'daily-check-in:2026-06-23',
+        contextFlags: ['travel'],
+      }),
+    ]);
     expect(parsed.data.userSettings?.[0]?.id).toBe(USER_SETTINGS_ID);
     expect(parsed.data.appSettings).toBeUndefined();
     expect(parsed.data.exerciseDefinitions).toHaveLength(exerciseCatalog.length);
@@ -121,7 +137,7 @@ describe('backupService', () => {
         status: 'deleted',
       }),
     ]);
-    expect(summary.totalRecords).toBe(exerciseCatalog.length + 4);
+    expect(summary.totalRecords).toBe(exerciseCatalog.length + 5);
     expect(summary.hasProfile).toBe(true);
     expect(summary.appVersion).toBe(__APP_VERSION__);
     expect(summary.requiresMigration).toBe(false);
@@ -232,14 +248,29 @@ describe('backupService', () => {
       earnedAt: '2026-06-29T08:00:00.000Z',
       updatedAt: '2026-06-29T08:00:00.000Z',
     });
+    await database.trashItems.add({
+      id: 'trash:weight:weight-deleted',
+      entityType: 'weight',
+      entityId: 'weight-deleted',
+      label: 'Poids supprimé',
+      deletedAt: '2026-06-29T08:00:00.000Z',
+      purgeAt: '2026-07-29T08:00:00.000Z',
+      payload: {
+        id: 'weight-deleted',
+        date: '2026-06-29',
+        weightKg: 61,
+        createdAt: '2026-06-29T08:00:00.000Z',
+        updatedAt: '2026-06-29T08:00:00.000Z',
+      },
+    });
     await database.unlockedVisualThemes.add({
-      id: 'power',
+      id: 'emerald-focus',
       unlockedAt: '2026-06-29T08:00:00.000Z',
       updatedAt: '2026-06-29T08:00:00.000Z',
     });
     await database.visualThemePreferences.add({
       id: 'visual-theme-preference',
-      activeThemeId: 'power',
+      activeThemeId: 'emerald-focus',
       updatedAt: '2026-06-29T08:00:00.000Z',
     });
     await database.weeklyMissionCompletions.add({
@@ -282,6 +313,7 @@ describe('backupService', () => {
     expect(await database.weeklyMissionCompletions.count()).toBe(0);
     expect(await database.routineReminderCompletions.count()).toBe(0);
     expect(await database.deletionRecords.count()).toBe(0);
+    expect(await database.trashItems.count()).toBe(0);
     expect(await database.userSettings.count()).toBe(1);
     expect(await database.userSettings.get(USER_SETTINGS_ID)).toMatchObject({ id: USER_SETTINGS_ID });
     expect(await database.deviceSettings.get(DEVICE_SETTINGS_ID)).toMatchObject({

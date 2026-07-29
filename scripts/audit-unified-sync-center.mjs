@@ -105,8 +105,11 @@ if (failures.length === 0) {
 
   const appNavigation = read('src/app/navigation.tsx');
   for (const marker of [
-    "{ label: 'Paramètres', path: routePaths.settings, icon: Settings, end: true }",
-    "{ label: 'Sauvegarde', path: routePaths.backup, icon: DatabaseBackup, end: true }",
+    "{ label: 'Paramètres', path: routePaths.settings, icon: Settings }",
+    "label: 'Sauvegarde'",
+    'path: routePaths.backup',
+    'icon: DatabaseBackup',
+    'end: true',
   ]) {
     if (!appNavigation.includes(marker)) fail(`Correspondance exacte de navigation absente : ${marker}.`);
   }
@@ -121,8 +124,8 @@ if (failures.length === 0) {
   }
   const desktopSidebarTests = read('src/app/layouts/DesktopSidebar.test.tsx');
   for (const marker of [
-    'ne sélectionne que Rappels sur sa route dédiée',
-    'ne sélectionne que Corbeille sur sa route dédiée',
+    'conserve les paramètres accessibles dans une zone de navigation défilante',
+    'conserve une navigation secondaire courte et laisse Paramètres actif sur ses sous-pages',
   ]) {
     if (!desktopSidebarTests.includes(marker)) {
       fail(`La correspondance exacte de la navigation desktop n’est pas testée : ${marker}.`);
@@ -175,16 +178,16 @@ if (failures.length === 0) {
   }
 
   const versions = read('src/infrastructure/database/migrations/versions.ts');
-  if (!/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_10\b/.test(versions)) {
+  if (!/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_11\b/.test(versions)) {
     fail('La base métier doit rester en Dexie v8.');
   }
   const backup = read('src/infrastructure/backup/backupMigrations.ts');
-  if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*9\b/.test(backup)) {
+  if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*10\b/.test(backup)) {
     fail('La sauvegarde JSON doit rester en v7.');
   }
   const cloud = read('src/infrastructure/sync-prototype/SyncPrototypeDatabase.ts');
-  if (!cloud.includes('SYNC_PROTOTYPE_DATABASE_VERSION = 14')) {
-    fail('Le runtime cloud doit passer en v14 pour les amitiés et permissions sociales.');
+  if (!cloud.includes('SYNC_PROTOTYPE_DATABASE_VERSION = 16')) {
+    fail('Le runtime cloud doit utiliser la v16 pour les amitiés et permissions sociales.');
   }
 }
 
@@ -195,5 +198,5 @@ if (failures.length > 0) {
 }
 
 console.log(
-  'Audit E3 réussi : pilotage global, retour UX vers la rubrique, sélection de navigation unique, détail à la demande, reprise ciblée des échecs, historique isolé par compte et runtime cloud v14 social prêt.',
+  'Audit E3 réussi : pilotage global, retour UX vers la rubrique, sélection de navigation unique, détail à la demande, reprise ciblée des échecs, historique isolé par compte et runtime cloud v16 social prêt.',
 );

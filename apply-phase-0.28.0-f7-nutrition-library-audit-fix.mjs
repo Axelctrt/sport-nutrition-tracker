@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 
 const root = process.cwd();
 const targetPath = join(root, 'scripts/audit-nutrition-library-sync.mjs');

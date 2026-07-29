@@ -1,5 +1,6 @@
 import { appDatabase } from '@/infrastructure/database/database';
 import { DexieActivityRepository } from '@/infrastructure/repositories/dexie/DexieActivityRepository';
+import { DexieDailyCoachingRepository } from '@/infrastructure/repositories/dexie/DexieDailyCoachingRepository';
 import { DexieFoodRepository } from '@/infrastructure/repositories/dexie/DexieFoodRepository';
 import { DexieProgressionSuggestionRepository } from '@/infrastructure/repositories/dexie/DexieProgressionSuggestionRepository';
 import { DexieProfileRepository } from '@/infrastructure/repositories/dexie/DexieProfileRepository';
@@ -19,6 +20,7 @@ export const repositories = {
   settings: new DexieSettingsRepository(appDatabase),
   weight: new DexieWeightRepository(appDatabase),
   steps: new DexieStepsRepository(appDatabase),
+  dailyCoaching: new DexieDailyCoachingRepository(appDatabase),
   activities: new DexieActivityRepository(appDatabase),
   strengthExercises: new DexieStrengthExerciseRepository(appDatabase),
   strengthSets: new DexieStrengthSetRepository(appDatabase),

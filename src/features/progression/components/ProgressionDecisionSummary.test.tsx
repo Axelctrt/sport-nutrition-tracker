@@ -15,11 +15,42 @@ const summary = {
     latestAverageKg: 70.8,
     changeKg: -0.6,
   },
+  nutrition: {
+    trackedDays: 5,
+    averageCaloriesKcal: 2_100,
+    averageTargetCaloriesKcal: 2_200,
+  },
+  strength: {
+    state: 'empty' as const,
+  },
+  week: {
+    plannedActivities: 3,
+    realizedPlannedActivities: 3,
+    completedActivities: 3,
+    confirmedRestDays: 1,
+    checkInDays: 5,
+    nutritionDays: 5,
+  },
+  series: {
+    weight: [71.4, 70.8],
+    activity: [150, 185],
+    nutrition: [2_150, 2_100],
+    strength: [],
+  },
+  signal: {
+    tone: 'positive' as const,
+    title: 'La tendance de poids va dans le sens de l’objectif',
+    detail: 'Comparaison des deux dernières semaines.',
+    destination: 'weight' as const,
+  },
   goal: {
     state: 'dueSoon' as const,
     title: 'Courir 50 km',
     progressPercent: 60,
     daysRemaining: 5,
+  },
+  review: {
+    state: 'noChange' as const,
   },
 };
 

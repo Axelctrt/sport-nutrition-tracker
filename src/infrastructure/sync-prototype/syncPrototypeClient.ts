@@ -4,6 +4,12 @@ import type {
   SyncState,
   UserLogin,
 } from 'dexie-cloud-addon';
+import {
+  cloudAccountAccessError,
+  mapCloudOperationError,
+  resolveCloudAccountAccess,
+  type CloudAccountAccessSnapshot,
+} from '@/application/account/cloudAccountAccess';
 import type { EntityId, LocalDate } from '@/domain/models/common';
 import type { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import { appDatabase } from '@/infrastructure/database/database';
@@ -75,6 +81,12 @@ import {
   type RealNutritionTrackingSyncPreview,
   type RealNutritionTrackingSyncResult,
 } from '@/infrastructure/sync-prototype/realNutritionTrackingSyncService';
+import {
+  previewRealDailyCoachingSync,
+  synchronizeRealDailyCoaching,
+  type RealDailyCoachingSyncPreview,
+  type RealDailyCoachingSyncResult,
+} from '@/infrastructure/sync-prototype/realDailyCoachingSyncService';
 import { reloadUserStateRuntime } from '@/infrastructure/user-state/userStateRuntime';
 import {
   previewRealAccountPreferencesSync,
@@ -89,6 +101,14 @@ import {
   type RealRewardsRoutinesSyncPreview,
   type RealRewardsRoutinesSyncResult,
 } from '@/infrastructure/sync-prototype/realRewardsRoutinesSyncService';
+import {
+  deleteRemoteSocialAccountData,
+  type RemoteSocialDataDeletionResult,
+} from '@/infrastructure/sync-prototype/remoteAccountDataDeletionGateway';
+import {
+  purgeCurrentAccountCloudData,
+  type RemoteAccountCloudPurgeResult,
+} from '@/infrastructure/sync-prototype/remoteAccountCloudPurgeService';
 
 const DEFAULT_INITIALIZATION_TIMEOUT_MS = 15_000;
 const BLOCKED_DATABASE_MESSAGE =
@@ -102,6 +122,10 @@ export interface SyncPrototypeAccountSnapshot {
   readonly email?: string;
   readonly userId?: string;
   readonly displayName?: string;
+  readonly hasAccessToken?: boolean;
+  readonly accessTokenExpiresAt?: string;
+  readonly hasRefreshToken?: boolean;
+  readonly refreshTokenExpiresAt?: string;
   readonly license?: {
     readonly type: 'demo' | 'eval' | 'prod' | 'client';
     readonly status: 'ok' | 'expired' | 'deactivated';
@@ -279,6 +303,20 @@ export interface SyncPrototypeRealNutritionTrackingSnapshot {
   readonly errorMessage?: string;
 }
 
+export interface SyncPrototypeRealDailyCoachingSnapshot {
+  readonly enabled: boolean;
+  readonly status:
+    | 'disabled'
+    | 'idle'
+    | 'analyzing'
+    | 'ready'
+    | 'syncing'
+    | 'error';
+  readonly preview?: RealDailyCoachingSyncPreview;
+  readonly lastResult?: RealDailyCoachingSyncResult;
+  readonly errorMessage?: string;
+}
+
 export interface SyncPrototypeSnapshot {
   readonly account: SyncPrototypeAccountSnapshot;
   readonly sync: SyncPrototypeSyncSnapshot;
@@ -290,6 +328,7 @@ export interface SyncPrototypeSnapshot {
   readonly realNutritionJournal?: SyncPrototypeRealNutritionJournalSnapshot;
   readonly realNutritionLibrary?: SyncPrototypeRealNutritionLibrarySnapshot;
   readonly realNutritionTracking?: SyncPrototypeRealNutritionTrackingSnapshot;
+  readonly realDailyCoaching?: SyncPrototypeRealDailyCoachingSnapshot;
   readonly realAccountPreferences?: SyncPrototypeRealAccountPreferencesSnapshot;
   readonly realRewardsRoutines?: SyncPrototypeRealRewardsRoutinesSnapshot;
   readonly diagnostics: SyncPrototypeDiagnosticsSnapshot;
@@ -301,9 +340,15 @@ export interface SyncPrototypeCloudCredentials {
   readonly accessToken: string;
 }
 
+export interface RemoteAccountDataDeletionResult
+  extends RemoteSocialDataDeletionResult,
+    RemoteAccountCloudPurgeResult {}
+
 export interface SyncPrototypeClient {
   getSnapshot(): SyncPrototypeSnapshot;
   getCloudCredentials?(): SyncPrototypeCloudCredentials | undefined;
+  getCloudAccessState?(): CloudAccountAccessSnapshot;
+  ensureValidCloudCredentials?(): Promise<SyncPrototypeCloudCredentials>;
   subscribe(listener: () => void): () => void;
   initialize(): Promise<void>;
   login(email: string): Promise<void>;
@@ -311,6 +356,7 @@ export interface SyncPrototypeClient {
   cancelInteraction(): void;
   logout(): Promise<void>;
   syncNow(): Promise<void>;
+  deleteRemoteAccountData?(): Promise<RemoteAccountDataDeletionResult>;
   prepareCloudRestore?(
     accountFingerprint: string,
   ): Promise<PreparedCloudAccountRestore>;
@@ -331,6 +377,8 @@ export interface SyncPrototypeClient {
   syncRealNutritionLibrary?(): Promise<RealNutritionLibrarySyncResult>;
   analyzeRealNutritionTracking?(): Promise<RealNutritionTrackingSyncPreview>;
   syncRealNutritionTracking?(): Promise<RealNutritionTrackingSyncResult>;
+  analyzeRealDailyCoaching?(): Promise<RealDailyCoachingSyncPreview>;
+  syncRealDailyCoaching?(): Promise<RealDailyCoachingSyncResult>;
   analyzeRealAccountPreferences?(): Promise<RealAccountPreferencesSyncPreview>;
   syncRealAccountPreferences?(): Promise<RealAccountPreferencesSyncResult>;
   analyzeRealRewardsRoutines?(): Promise<RealRewardsRoutinesSyncPreview>;
@@ -351,6 +399,14 @@ function sanitizeAccount(user: UserLogin): SyncPrototypeAccountSnapshot {
     ...(user.email ? { email: user.email } : {}),
     ...(user.userId ? { userId: user.userId } : {}),
     ...(user.name ? { displayName: user.name } : {}),
+    ...(user.accessToken ? { hasAccessToken: true } : {}),
+    ...(user.accessTokenExpiration
+      ? { accessTokenExpiresAt: user.accessTokenExpiration.toISOString() }
+      : {}),
+    ...(user.refreshToken ? { hasRefreshToken: true } : {}),
+    ...(user.refreshTokenExpiration
+      ? { refreshTokenExpiresAt: user.refreshTokenExpiration.toISOString() }
+      : {}),
     ...(user.license
       ? {
           license: {
@@ -448,12 +504,14 @@ export interface SyncPrototypeClientOptions {
   readonly realNutritionJournalSyncEnabled?: boolean;
   readonly realNutritionLibrarySyncEnabled?: boolean;
   readonly realNutritionTrackingSyncEnabled?: boolean;
+  readonly realDailyCoachingSyncEnabled?: boolean;
   readonly realAccountPreferencesSyncEnabled?: boolean;
   readonly realRewardsRoutinesSyncEnabled?: boolean;
   readonly localDatabase?: AppDatabase;
   readonly initializationTimeoutMs?: number;
   readonly setTimer?: typeof globalThis.setTimeout;
   readonly clearTimer?: typeof globalThis.clearTimeout;
+  readonly deleteRemoteSocialData?: typeof deleteRemoteSocialAccountData;
 }
 
 class DefaultSyncPrototypeClient implements SyncPrototypeClient {
@@ -470,13 +528,18 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
   private readonly realNutritionJournalSyncEnabled: boolean;
   private readonly realNutritionLibrarySyncEnabled: boolean;
   private readonly realNutritionTrackingSyncEnabled: boolean;
+  private readonly realDailyCoachingSyncEnabled: boolean;
   private readonly realAccountPreferencesSyncEnabled: boolean;
   private readonly realRewardsRoutinesSyncEnabled: boolean;
   private readonly localDatabase: AppDatabase;
   private readonly initializationTimeoutMs: number;
   private readonly setTimer: typeof globalThis.setTimeout;
   private readonly clearTimer: typeof globalThis.clearTimeout;
+  private readonly deleteRemoteSocialData: typeof deleteRemoteSocialAccountData;
   private blockedInitializationReject: ((error: Error) => void) | undefined;
+  private credentialRenewalPromise:
+    | Promise<SyncPrototypeCloudCredentials>
+    | undefined;
 
   constructor(
     database: SyncPrototypeDatabase,
@@ -494,6 +557,8 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
       options.realNutritionLibrarySyncEnabled === true;
     this.realNutritionTrackingSyncEnabled =
       options.realNutritionTrackingSyncEnabled === true;
+    this.realDailyCoachingSyncEnabled =
+      options.realDailyCoachingSyncEnabled === true;
     this.realAccountPreferencesSyncEnabled =
       options.realAccountPreferencesSyncEnabled === true;
     this.realRewardsRoutinesSyncEnabled =
@@ -505,6 +570,8 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
     const clearTimer = options.clearTimer ?? globalThis.clearTimeout;
     this.setTimer = setTimer.bind(globalThis);
     this.clearTimer = clearTimer.bind(globalThis);
+    this.deleteRemoteSocialData =
+      options.deleteRemoteSocialData ?? deleteRemoteSocialAccountData;
     this.database.on('blocked', () => {
       this.blockedInitializationReject?.(
         new Error(BLOCKED_DATABASE_MESSAGE),
@@ -536,6 +603,9 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
         : {}),
       ...(this.realNutritionTrackingSyncEnabled
         ? { realNutritionTracking: { enabled: true, status: 'idle' as const } }
+        : {}),
+      ...(this.realDailyCoachingSyncEnabled
+        ? { realDailyCoaching: { enabled: true, status: 'idle' as const } }
         : {}),
       ...(this.realAccountPreferencesSyncEnabled
         ? { realAccountPreferences: { enabled: true, status: 'idle' as const } }
@@ -613,8 +683,9 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
 
   getCloudCredentials = (): SyncPrototypeCloudCredentials | undefined => {
     const user = this.database.cloud.currentUser.value;
+    const access = this.getCloudAccessState();
     if (
-      user.isLoggedIn !== true
+      !access.isOperational
       || typeof user.userId !== 'string'
       || !user.userId.trim()
       || typeof user.accessToken !== 'string'
@@ -628,6 +699,47 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
       accessToken: user.accessToken,
     };
   };
+
+  getCloudAccessState = (): CloudAccountAccessSnapshot =>
+    resolveCloudAccountAccess(
+      sanitizeAccount(this.database.cloud.currentUser.value),
+      {
+        isOnline:
+          typeof navigator === 'undefined' || navigator.onLine !== false,
+      },
+    );
+
+  ensureValidCloudCredentials =
+    async (): Promise<SyncPrototypeCloudCredentials> => {
+      await this.initialize();
+      const initialAccess = this.getCloudAccessState();
+      if (initialAccess.isOperational) {
+        return this.getCloudCredentials()!;
+      }
+      if (!initialAccess.canAttemptRenewal) {
+        throw cloudAccountAccessError(initialAccess);
+      }
+      if (this.credentialRenewalPromise) return this.credentialRenewalPromise;
+
+      this.credentialRenewalPromise = (async () => {
+        try {
+          await this.database.cloud.sync();
+        } catch (error) {
+          throw mapCloudOperationError(error, this.getCloudAccessState());
+        }
+
+        const renewedAccess = this.getCloudAccessState();
+        const credentials = this.getCloudCredentials();
+        if (!renewedAccess.isOperational || !credentials) {
+          throw cloudAccountAccessError(renewedAccess);
+        }
+        return credentials;
+      })().finally(() => {
+        this.credentialRenewalPromise = undefined;
+      });
+
+      return this.credentialRenewalPromise;
+    };
 
   getSnapshot = (): SyncPrototypeSnapshot => this.snapshot;
 
@@ -741,6 +853,9 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
       ...(this.realNutritionTrackingSyncEnabled
         ? { realNutritionTracking: { enabled: true, status: 'idle' as const } }
         : {}),
+      ...(this.realDailyCoachingSyncEnabled
+        ? { realDailyCoaching: { enabled: true, status: 'idle' as const } }
+        : {}),
       ...(this.realAccountPreferencesSyncEnabled
         ? { realAccountPreferences: { enabled: true, status: 'idle' as const } }
         : {}),
@@ -752,10 +867,65 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
     this.notify();
   }
 
+  private cloudUserId(): string {
+    const currentUserId = this.database.cloud.currentUserId;
+    if (!currentUserId) {
+      throw new Error('Le compte cloud actif ne fournit pas d’identifiant exploitable.');
+    }
+    return currentUserId;
+  }
+
+  private assertCloudUserId(expectedUserId: string): void {
+    if (this.cloudUserId() !== expectedUserId) {
+      throw new Error(
+        'Le compte cloud a changé pendant l’opération. Aucune donnée locale n’a été appliquée.',
+      );
+    }
+  }
+
+  private async syncCloudForCurrentAccount(): Promise<string> {
+    const credentials = await this.ensureValidCloudCredentials();
+    this.assertCloudUserId(credentials.userId);
+    try {
+      await this.database.cloud.sync();
+    } catch (error) {
+      throw mapCloudOperationError(error, this.getCloudAccessState());
+    }
+    this.assertCloudUserId(credentials.userId);
+    return credentials.userId;
+  }
+
+  private async syncCloudForAccount(currentUserId: string): Promise<void> {
+    this.assertCloudUserId(currentUserId);
+    await this.ensureValidCloudCredentials();
+    try {
+      await this.database.cloud.sync();
+    } catch (error) {
+      throw mapCloudOperationError(error, this.getCloudAccessState());
+    }
+    this.assertCloudUserId(currentUserId);
+  }
+
   async syncNow(): Promise<void> {
     await this.initialize();
-    await this.database.cloud.sync();
+    await this.syncCloudForCurrentAccount();
     await this.refreshWeights();
+  }
+
+  async deleteRemoteAccountData(): Promise<RemoteAccountDataDeletionResult> {
+    await this.initialize();
+    const credentials = await this.ensureValidCloudCredentials();
+    this.assertCloudUserId(credentials.userId);
+
+    const social = await this.deleteRemoteSocialData(credentials);
+    this.assertCloudUserId(credentials.userId);
+    const cloud = await purgeCurrentAccountCloudData(
+      this.database,
+      credentials.userId,
+    );
+    this.assertCloudUserId(credentials.userId);
+
+    return { ...social, ...cloud };
   }
 
   private cloudRestoreContext(accountFingerprint: string): {
@@ -844,11 +1014,11 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
     this.notify();
 
     try {
-      await this.database.cloud.sync();
+      const currentUserId = await this.syncCloudForCurrentAccount();
       const preview = await previewRealWeightSync(
         this.localDatabase,
         this.database,
-        this.database.cloud.currentUserId,
+        currentUserId,
       );
       this.snapshot = {
         ...this.snapshot,
@@ -883,17 +1053,17 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
     this.notify();
 
     try {
-      await this.database.cloud.sync();
+      const currentUserId = await this.syncCloudForCurrentAccount();
       const result = await synchronizeRealWeights(
         this.localDatabase,
         this.database,
-        this.database.cloud.currentUserId,
+        currentUserId,
       );
-      await this.database.cloud.sync();
+      await this.syncCloudForAccount(currentUserId);
       const preview = await previewRealWeightSync(
         this.localDatabase,
         this.database,
-        this.database.cloud.currentUserId,
+        currentUserId,
       );
       this.snapshot = {
         ...this.snapshot,
@@ -932,11 +1102,11 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
     this.notify();
 
     try {
-      await this.database.cloud.sync();
+      const currentUserId = await this.syncCloudForCurrentAccount();
       const preview = await previewRealActivitySync(
         this.localDatabase,
         this.database,
-        this.database.cloud.currentUserId,
+        currentUserId,
       );
       this.snapshot = {
         ...this.snapshot,
@@ -972,17 +1142,17 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
     this.notify();
 
     try {
-      await this.database.cloud.sync();
+      const currentUserId = await this.syncCloudForCurrentAccount();
       const result = await synchronizeRealActivities(
         this.localDatabase,
         this.database,
-        this.database.cloud.currentUserId,
+        currentUserId,
       );
-      await this.database.cloud.sync();
+      await this.syncCloudForAccount(currentUserId);
       const preview = await previewRealActivitySync(
         this.localDatabase,
         this.database,
-        this.database.cloud.currentUserId,
+        currentUserId,
       );
       this.snapshot = {
         ...this.snapshot,
@@ -1019,11 +1189,11 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
     this.notify();
 
     try {
-      await this.database.cloud.sync();
+      const currentUserId = await this.syncCloudForCurrentAccount();
       const preview = await previewRealGoalSync(
         this.localDatabase,
         this.database,
-        this.database.cloud.currentUserId,
+        currentUserId,
       );
       this.snapshot = {
         ...this.snapshot,
@@ -1059,18 +1229,18 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
     this.notify();
 
     try {
-      await this.database.cloud.sync();
+      const currentUserId = await this.syncCloudForCurrentAccount();
       const result = await synchronizeRealGoals(
         this.localDatabase,
         this.database,
-        this.database.cloud.currentUserId,
+        currentUserId,
       );
       await reloadUserStateRuntime(this.localDatabase);
-      await this.database.cloud.sync();
+      await this.syncCloudForAccount(currentUserId);
       const preview = await previewRealGoalSync(
         this.localDatabase,
         this.database,
-        this.database.cloud.currentUserId,
+        currentUserId,
       );
       this.snapshot = {
         ...this.snapshot,
@@ -1107,11 +1277,11 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
     this.notify();
 
     try {
-      await this.database.cloud.sync();
+      const currentUserId = await this.syncCloudForCurrentAccount();
       const preview = await previewRealStrengthSync(
         this.localDatabase,
         this.database,
-        this.database.cloud.currentUserId,
+        currentUserId,
       );
       this.snapshot = {
         ...this.snapshot,
@@ -1147,17 +1317,17 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
     this.notify();
 
     try {
-      await this.database.cloud.sync();
+      const currentUserId = await this.syncCloudForCurrentAccount();
       const result = await synchronizeRealStrength(
         this.localDatabase,
         this.database,
-        this.database.cloud.currentUserId,
+        currentUserId,
       );
-      await this.database.cloud.sync();
+      await this.syncCloudForAccount(currentUserId);
       const preview = await previewRealStrengthSync(
         this.localDatabase,
         this.database,
-        this.database.cloud.currentUserId,
+        currentUserId,
       );
       this.snapshot = {
         ...this.snapshot,
@@ -1194,11 +1364,11 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
     this.notify();
 
     try {
-      await this.database.cloud.sync();
+      const currentUserId = await this.syncCloudForCurrentAccount();
       const preview = await previewRealNutritionJournalSync(
         this.localDatabase,
         this.database,
-        this.database.cloud.currentUserId,
+        currentUserId,
       );
       this.snapshot = {
         ...this.snapshot,
@@ -1234,17 +1404,17 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
     this.notify();
 
     try {
-      await this.database.cloud.sync();
+      const currentUserId = await this.syncCloudForCurrentAccount();
       const result = await synchronizeRealNutritionJournal(
         this.localDatabase,
         this.database,
-        this.database.cloud.currentUserId,
+        currentUserId,
       );
-      await this.database.cloud.sync();
+      await this.syncCloudForAccount(currentUserId);
       const preview = await previewRealNutritionJournalSync(
         this.localDatabase,
         this.database,
-        this.database.cloud.currentUserId,
+        currentUserId,
       );
       this.snapshot = {
         ...this.snapshot,
@@ -1282,11 +1452,11 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
     this.notify();
 
     try {
-      await this.database.cloud.sync();
+      const currentUserId = await this.syncCloudForCurrentAccount();
       const preview = await previewRealNutritionLibrarySync(
         this.localDatabase,
         this.database,
-        this.database.cloud.currentUserId,
+        currentUserId,
       );
       this.snapshot = {
         ...this.snapshot,
@@ -1321,17 +1491,17 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
     this.notify();
 
     try {
-      await this.database.cloud.sync();
+      const currentUserId = await this.syncCloudForCurrentAccount();
       const result = await synchronizeRealNutritionLibrary(
         this.localDatabase,
         this.database,
-        this.database.cloud.currentUserId,
+        currentUserId,
       );
-      await this.database.cloud.sync();
+      await this.syncCloudForAccount(currentUserId);
       const preview = await previewRealNutritionLibrarySync(
         this.localDatabase,
         this.database,
-        this.database.cloud.currentUserId,
+        currentUserId,
       );
       this.snapshot = {
         ...this.snapshot,
@@ -1367,11 +1537,11 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
     this.notify();
 
     try {
-      await this.database.cloud.sync();
+      const currentUserId = await this.syncCloudForCurrentAccount();
       const preview = await previewRealNutritionTrackingSync(
         this.localDatabase,
         this.database,
-        this.database.cloud.currentUserId,
+        currentUserId,
       );
       this.snapshot = {
         ...this.snapshot,
@@ -1406,24 +1576,24 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
     this.notify();
 
     try {
-      await this.database.cloud.sync();
+      const currentUserId = await this.syncCloudForCurrentAccount();
       const result = await synchronizeRealNutritionTracking(
         this.localDatabase,
         this.database,
-        this.database.cloud.currentUserId,
+        currentUserId,
       );
       if (this.realNutritionJournalSyncEnabled) {
         await synchronizeRealNutritionJournal(
           this.localDatabase,
           this.database,
-          this.database.cloud.currentUserId,
+          currentUserId,
         );
       }
-      await this.database.cloud.sync();
+      await this.syncCloudForAccount(currentUserId);
       const preview = await previewRealNutritionTrackingSync(
         this.localDatabase,
         this.database,
-        this.database.cloud.currentUserId,
+        currentUserId,
       );
       this.snapshot = {
         ...this.snapshot,
@@ -1449,6 +1619,91 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
     }
   }
 
+  async analyzeRealDailyCoaching(): Promise<RealDailyCoachingSyncPreview> {
+    await this.initialize();
+    this.assertRealDailyCoachingSyncAvailable();
+    this.snapshot = {
+      ...this.snapshot,
+      realDailyCoaching: { enabled: true, status: 'analyzing' },
+    };
+    this.notify();
+
+    try {
+      const currentUserId = await this.syncCloudForCurrentAccount();
+      const preview = await previewRealDailyCoachingSync(
+        this.localDatabase,
+        this.database,
+        currentUserId,
+      );
+      this.snapshot = {
+        ...this.snapshot,
+        realDailyCoaching: { enabled: true, status: 'ready', preview },
+      };
+      this.notify();
+      return preview;
+    } catch (error) {
+      const errorMessage = error instanceof Error
+        ? error.message
+        : 'L analyse de l accompagnement quotidien a echoue.';
+      this.snapshot = {
+        ...this.snapshot,
+        realDailyCoaching: { enabled: true, status: 'error', errorMessage },
+      };
+      this.notify();
+      throw error;
+    }
+  }
+
+  async syncRealDailyCoaching(): Promise<RealDailyCoachingSyncResult> {
+    await this.initialize();
+    this.assertRealDailyCoachingSyncAvailable();
+    this.snapshot = {
+      ...this.snapshot,
+      realDailyCoaching: {
+        ...(this.snapshot.realDailyCoaching ?? {}),
+        enabled: true,
+        status: 'syncing',
+      },
+    };
+    this.notify();
+
+    try {
+      const currentUserId = await this.syncCloudForCurrentAccount();
+      const result = await synchronizeRealDailyCoaching(
+        this.localDatabase,
+        this.database,
+        currentUserId,
+      );
+      await this.syncCloudForAccount(currentUserId);
+      const preview = await previewRealDailyCoachingSync(
+        this.localDatabase,
+        this.database,
+        currentUserId,
+      );
+      this.snapshot = {
+        ...this.snapshot,
+        realDailyCoaching: {
+          enabled: true,
+          status: 'ready',
+          preview,
+          lastResult: result,
+        },
+      };
+      this.notify();
+      return result;
+    } catch (error) {
+      const errorMessage = error instanceof Error
+        ? error.message
+        : 'La synchronisation de l accompagnement quotidien a echoue.';
+      this.snapshot = {
+        ...this.snapshot,
+        realDailyCoaching: { enabled: true, status: 'error', errorMessage },
+      };
+      this.notify();
+      throw error;
+    }
+  }
+
   async analyzeRealAccountPreferences(): Promise<RealAccountPreferencesSyncPreview> {
     await this.initialize();
     this.assertRealAccountPreferencesSyncAvailable();
@@ -1459,11 +1714,11 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
     this.notify();
 
     try {
-      await this.database.cloud.sync();
+      const currentUserId = await this.syncCloudForCurrentAccount();
       const preview = await previewRealAccountPreferencesSync(
         this.localDatabase,
         this.database,
-        this.database.cloud.currentUserId,
+        currentUserId,
       );
       this.snapshot = {
         ...this.snapshot,
@@ -1498,17 +1753,17 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
     this.notify();
 
     try {
-      await this.database.cloud.sync();
+      const currentUserId = await this.syncCloudForCurrentAccount();
       const result = await synchronizeRealAccountPreferences(
         this.localDatabase,
         this.database,
-        this.database.cloud.currentUserId,
+        currentUserId,
       );
-      await this.database.cloud.sync();
+      await this.syncCloudForAccount(currentUserId);
       const preview = await previewRealAccountPreferencesSync(
         this.localDatabase,
         this.database,
-        this.database.cloud.currentUserId,
+        currentUserId,
       );
       this.snapshot = {
         ...this.snapshot,
@@ -1544,11 +1799,11 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
     this.notify();
 
     try {
-      await this.database.cloud.sync();
+      const currentUserId = await this.syncCloudForCurrentAccount();
       const preview = await previewRealRewardsRoutinesSync(
         this.localDatabase,
         this.database,
-        this.database.cloud.currentUserId,
+        currentUserId,
       );
       this.snapshot = {
         ...this.snapshot,
@@ -1583,17 +1838,17 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
     this.notify();
 
     try {
-      await this.database.cloud.sync();
+      const currentUserId = await this.syncCloudForCurrentAccount();
       const result = await synchronizeRealRewardsRoutines(
         this.localDatabase,
         this.database,
-        this.database.cloud.currentUserId,
+        currentUserId,
       );
-      await this.database.cloud.sync();
+      await this.syncCloudForAccount(currentUserId);
       const preview = await previewRealRewardsRoutinesSync(
         this.localDatabase,
         this.database,
-        this.database.cloud.currentUserId,
+        currentUserId,
       );
       this.snapshot = {
         ...this.snapshot,
@@ -1752,6 +2007,15 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
     if (!this.realNutritionTrackingSyncEnabled) {
       throw new Error(
         'La synchronisation du suivi nutritionnel est désactivée par configuration.',
+      );
+    }
+    this.assertLoggedIn();
+  }
+
+  private assertRealDailyCoachingSyncAvailable(): void {
+    if (!this.realDailyCoachingSyncEnabled) {
+      throw new Error(
+        'La synchronisation de l accompagnement quotidien est desactivee par configuration.',
       );
     }
     this.assertLoggedIn();
@@ -1947,6 +2211,8 @@ export function getSyncPrototypeClient(): SyncPrototypeClient {
       config.realNutritionLibrarySyncEnabled,
     realNutritionTrackingSyncEnabled:
       config.realNutritionTrackingSyncEnabled,
+    realDailyCoachingSyncEnabled:
+      config.realDailyCoachingSyncEnabled === true,
     realAccountPreferencesSyncEnabled:
       config.realAccountPreferencesSyncEnabled,
     realRewardsRoutinesSyncEnabled:

@@ -13,6 +13,7 @@ import {
   type DashboardQuickActionId,
 } from '@/domain/dashboard/dashboardPreferences';
 import type { NewEntity } from '@/domain/models/common';
+import type { MealSlot } from '@/domain/models/food';
 import type { DailySteps } from '@/domain/models/steps';
 import type { WeightEntry } from '@/domain/models/weight';
 import { DashboardQuickEntryDialog } from '@/features/dashboard/components/DashboardQuickEntryDialog';
@@ -34,6 +35,7 @@ interface DashboardQuickActionsProps {
   activeWorkout?: ActiveWorkoutSummary;
   visibleActions?: readonly DashboardQuickActionId[];
   density?: DashboardDensity;
+  currentHour?: number;
   onSaveWeight: (data: NewEntity<WeightEntry>) => Promise<void>;
   onSaveSteps: (data: NewEntity<DailySteps>) => Promise<void>;
 }
@@ -46,6 +48,13 @@ type Feedback = {
   title: string;
   message: string;
 };
+
+function preferredMealSlotForHour(hour: number): MealSlot {
+  if (hour >= 5 && hour < 11) return 'breakfast';
+  if (hour >= 11 && hour < 15) return 'lunch';
+  if (hour >= 18 && hour < 22) return 'dinner';
+  return 'snacks';
+}
 
 function ActionContent({ icon: Icon, label }: { icon: ActionIcon; label: string }) {
   return (
@@ -67,6 +76,7 @@ export function DashboardQuickActions({
   activeWorkout,
   visibleActions = DASHBOARD_QUICK_ACTION_IDS,
   density = 'comfortable',
+  currentHour = new Date().getHours(),
   onSaveWeight,
   onSaveSteps,
 }: DashboardQuickActionsProps) {
@@ -77,6 +87,7 @@ export function DashboardQuickActions({
   const workoutPath = activeWorkout
     ? workoutSessionPath(activeWorkout.session.id)
     : routePaths.workoutSessions;
+  const preferredMealSlot = preferredMealSlotForHour(currentHour);
   const actionClassName = density === 'compact'
     ? 'flex min-h-14 min-w-0 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-left text-sm font-semibold text-slate-800 shadow-sm transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800'
     : 'flex min-h-16 min-w-0 items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-left text-sm font-semibold text-slate-800 shadow-sm transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800';
@@ -140,7 +151,7 @@ export function DashboardQuickActions({
         return (
           <Link
             key={actionId}
-            to={addFoodPath(date, 'snacks')}
+            to={addFoodPath(date, preferredMealSlot)}
             className={`flex min-w-0 items-center rounded-xl bg-brand-700 px-3 text-left text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-800 dark:bg-brand-600 dark:hover:bg-brand-500 ${density === 'compact' ? 'min-h-14 gap-2 py-2' : 'min-h-16 gap-3 py-2.5'}`}
           >
             <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-white/15">
@@ -151,7 +162,7 @@ export function DashboardQuickActions({
         );
       case 'scanFood':
         return (
-          <Link key={actionId} to={barcodeScannerPath(date, 'snacks')} className={actionClassName}>
+          <Link key={actionId} to={barcodeScannerPath(date, preferredMealSlot)} className={actionClassName}>
             <ActionContent icon={ScanLine} label="Scanner un produit" />
           </Link>
         );

@@ -119,13 +119,18 @@ const CATEGORY_DEFINITIONS: readonly {
     key: "bodyTracking",
     label: "Poids et pas",
     description: "Pesées et relevés quotidiens de pas.",
-    tables: ["weights", "dailySteps"],
+    tables: [
+      "weights",
+      "dailySteps",
+      "dailyCheckIns",
+      "dailyCheckOuts",
+    ],
   },
   {
     key: "activities",
     label: "Activités",
     description: "Activités d’endurance enregistrées.",
-    tables: ["activities"],
+    tables: ["activities", "dailyActivityDecisions"],
   },
   {
     key: "nutrition",
@@ -185,6 +190,7 @@ const ENTITY_TABLE_BY_DELETION_TYPE: Partial<
   Record<DeletionEntityType, DatabaseUserTableName>
 > = {
   activity: "activities",
+  endurancePlanningSession: "endurancePlanningSessions",
   weight: "weights",
   goal: "goals",
   foodEntry: "foodEntries",
@@ -471,6 +477,9 @@ function mergeSnapshots(
     ["userProfile", fieldKey("id")],
     ["userSettings", fieldKey("id")],
     ["dailySteps", fieldKey("date")],
+    ["dailyCheckIns", fieldKey("date")],
+    ["dailyActivityDecisions", fieldKey("date")],
+    ["dailyCheckOuts", fieldKey("date")],
     ["dailyTargets", fieldKey("date")],
     ["dailyJournalStatuses", fieldKey("date")],
     ["weeklyMissionCompletions", fieldKey("weekStart")],

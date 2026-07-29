@@ -6,6 +6,7 @@ import {
 export type SafetyBackupReason =
   | 'before-import'
   | 'before-full-reset'
+  | 'before-cloud-account-reset'
   | 'before-selective-reset'
   | 'before-consistency-repair'
   | 'before-selective-restore';
@@ -31,6 +32,7 @@ export class SafetyBackupError extends Error {
 const reasonFileLabels: Record<SafetyBackupReason, string> = {
   'before-import': 'avant-import',
   'before-full-reset': 'avant-effacement-complet',
+  'before-cloud-account-reset': 'avant-effacement-compte-cloud',
   'before-selective-reset': 'avant-reinitialisation',
   'before-consistency-repair': 'avant-reparation-coherence',
   'before-selective-restore': 'avant-restauration-selective',

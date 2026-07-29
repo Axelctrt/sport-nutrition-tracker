@@ -81,6 +81,7 @@ describe('runtime des états utilisateur Dexie', () => {
   });
 
   afterEach(async () => {
+    delete document.documentElement.dataset.sportTheme;
     database.close();
     await database.delete();
   });
@@ -121,8 +122,8 @@ describe('runtime des états utilisateur Dexie', () => {
       ['first-session'],
       '2026-06-29T08:00:00.000Z',
     );
-    unlockVisualThemes(['power']);
-    activateVisualTheme('power');
+    unlockVisualThemes(['emerald-focus']);
+    activateVisualTheme('emerald-focus');
     recordCompletedWeeklyMission(
       '2026-06-22',
       '2026-06-29T09:00:00.000Z',
@@ -146,12 +147,12 @@ describe('runtime des états utilisateur Dexie', () => {
     ).toMatchObject({
       earnedAt: '2026-06-29T08:00:00.000Z',
     });
-    expect(await database.unlockedVisualThemes.get('power')).toBeDefined();
+    expect(await database.unlockedVisualThemes.get('emerald-focus')).toBeDefined();
     expect(
       await database.visualThemePreferences.get(
         'visual-theme-preference',
       ),
-    ).toMatchObject({ activeThemeId: 'power' });
+    ).toMatchObject({ activeThemeId: 'emerald-focus' });
     expect(await database.weeklyMissionCompletions.count()).toBe(1);
     expect(await database.routineReminderCompletions.count()).toBe(1);
 
@@ -165,6 +166,33 @@ describe('runtime des états utilisateur Dexie', () => {
         ROUTINE_REMINDER_COMPLETION_STORAGE_KEY,
       ),
     ).toBeNull();
+  });
+
+  it('réapplique le thème actif Dexie après l’initialisation à froid', async () => {
+    await database.open();
+    await database.unlockedVisualThemes.bulkPut([
+      {
+        id: 'core',
+        unlockedAt: '2026-07-01T08:00:00.000Z',
+        updatedAt: '2026-07-01T08:00:00.000Z',
+      },
+      {
+        id: 'aurora',
+        unlockedAt: '2026-07-20T08:00:00.000Z',
+        revealSeenAt: '2026-07-20T08:01:00.000Z',
+        updatedAt: '2026-07-20T08:01:00.000Z',
+      },
+    ]);
+    await database.visualThemePreferences.put({
+      id: 'visual-theme-preference',
+      activeThemeId: 'aurora',
+      updatedAt: '2026-07-20T08:02:00.000Z',
+    });
+    document.documentElement.dataset.sportTheme = 'core';
+
+    await initializeDatabase(database);
+
+    expect(document.documentElement.dataset.sportTheme).toBe('aurora');
   });
 
   it('conserve le snapshot local de secours si Dexie refuse une écriture', async () => {

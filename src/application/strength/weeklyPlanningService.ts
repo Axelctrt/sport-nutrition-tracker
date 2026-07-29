@@ -158,6 +158,30 @@ export async function planWorkoutSessionFromTemplate(
   }, exercises);
 }
 
+export async function planEmptyWorkoutSession(
+  sessionRepository: WorkoutSessionRepository,
+  scheduledDate: LocalDate,
+  energy?: PlannedWorkoutEnergyInput,
+  now = new Date(),
+): Promise<WorkoutSessionView> {
+  requireValidDate(scheduledDate);
+  validatePlannedWorkoutEnergy(energy);
+
+  return sessionRepository.createWithExercises({
+    date: scheduledDate,
+    status: 'planned',
+    plannedDate: scheduledDate,
+    originalPlannedDate: scheduledDate,
+    plannedAt: now.toISOString(),
+    ...(energy
+      ? {
+          plannedDurationMinutes: energy.plannedDurationMinutes,
+          strengthSessionStyle: energy.strengthSessionStyle,
+        }
+      : {}),
+  }, []);
+}
+
 export async function startPlannedWorkoutSession(
   repository: WorkoutSessionRepository,
   sessionId: EntityId,

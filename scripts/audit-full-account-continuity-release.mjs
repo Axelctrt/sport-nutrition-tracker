@@ -39,7 +39,7 @@ for (const path of requiredFiles) {
 if (failures.length === 0) {
   const database = read('src/infrastructure/sync-prototype/SyncPrototypeDatabase.ts');
   for (const marker of [
-    'SYNC_PROTOTYPE_DATABASE_VERSION = 14',
+    'SYNC_PROTOTYPE_DATABASE_VERSION = 16',
     'sportpilot-sync-runtime-0.20.0-v${SYNC_PROTOTYPE_DATABASE_VERSION}',
     "'realAccountPreferences'",
     "'realRewardsRoutines'",
@@ -48,11 +48,11 @@ if (failures.length === 0) {
   }
 
   const databaseVersions = read('src/infrastructure/database/migrations/versions.ts');
-  if (!/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_10\b/.test(databaseVersions)) {
+  if (!/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_11\b/.test(databaseVersions)) {
     fail('le schéma métier doit rester en Dexie v8.');
   }
   const backupMigrations = read('src/infrastructure/backup/backupMigrations.ts');
-  if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*9\b/.test(backupMigrations)) {
+  if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*10\b/.test(backupMigrations)) {
     fail('la sauvegarde JSON doit rester en v7.');
   }
   const dataSpace = read('src/domain/data-spaces/dataSpace.ts');

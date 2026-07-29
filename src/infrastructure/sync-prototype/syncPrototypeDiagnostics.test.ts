@@ -1,17 +1,33 @@
 import {
   createSyncPrototypeAccountFingerprint,
   createSyncPrototypeDiagnosticReport,
+  createLegacySyncPrototypeAccountFingerprint,
 } from '@/infrastructure/sync-prototype/syncPrototypeDiagnostics';
 import type { SyncPrototypeSnapshot } from '@/infrastructure/sync-prototype/syncPrototypeClient';
 
 describe('diagnostic non sensible du prototype Dexie Cloud', () => {
   it('produit une empreinte stable sans exposer l’identifiant du compte', () => {
+    localStorage.clear();
     expect(
       createSyncPrototypeAccountFingerprint('Test@Example.com'),
     ).toBe(createSyncPrototypeAccountFingerprint(' test@example.com '));
     expect(
       createSyncPrototypeAccountFingerprint('test@example.com'),
-    ).toMatch(/^acct-[0-9A-F]{8}$/);
+    ).toMatch(/^acct-[0-9A-F]{32}$/);
+  });
+
+  it('conserve l’empreinte historique lorsqu’un espace local existe déjà', () => {
+    const accountId = 'legacy@example.com';
+    const legacy = createLegacySyncPrototypeAccountFingerprint(accountId)!;
+    localStorage.setItem(
+      'sportpilot:data-spaces:v1',
+      JSON.stringify({
+        spaces: [{ accountFingerprint: legacy.toLowerCase() }],
+      }),
+    );
+
+    expect(createSyncPrototypeAccountFingerprint(accountId)).toBe(legacy);
+    localStorage.clear();
   });
 
   it('génère un rapport sans email, jeton ou donnée SportPilot réelle', () => {

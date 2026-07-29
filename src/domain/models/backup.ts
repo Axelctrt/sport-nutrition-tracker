@@ -1,5 +1,10 @@
 import type { Activity } from '@/domain/models/activity';
 import type {
+  DailyActivityDecision,
+  DailyCheckIn,
+  DailyCheckOut,
+} from '@/domain/models/dailyCoaching';
+import type {
   StoredFriendActivityPermission,
   StoredFriendProfile,
   StoredFriendRequest,
@@ -69,6 +74,9 @@ export interface BackupData {
   userSettings?: UserSettings[];
   weights: WeightEntry[];
   dailySteps: DailySteps[];
+  dailyCheckIns?: DailyCheckIn[];
+  dailyActivityDecisions?: DailyActivityDecision[];
+  dailyCheckOuts?: DailyCheckOut[];
   activities: Activity[];
   foodProducts: FoodProduct[];
   meals: Meal[];

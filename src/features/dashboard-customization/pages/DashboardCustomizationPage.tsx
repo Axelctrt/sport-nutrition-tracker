@@ -51,7 +51,7 @@ export function DashboardCustomizationPage() {
       setDensity(updated.dashboardDensity ?? 'comfortable');
       setFeedback({
         tone: 'success',
-        message: 'La disposition est enregistrée. Les blocs et raccourcis suivent le compte ; la densité reste propre à cet appareil.',
+        message: 'L’affichage est enregistré. Les informations et le bloc complémentaire suivent le compte ; la densité reste propre à cet appareil.',
       });
       actionToast.success({
         key: 'dashboard-customization',
@@ -90,20 +90,20 @@ export function DashboardCustomizationPage() {
 
       <div className="mt-3">
         <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
-          Accueil personnel
+          Accueil
         </p>
         <h1 id="dashboard-customization-title" className="mt-1 text-3xl font-bold tracking-tight text-slate-950 dark:text-white">
-          Personnaliser l’Accueil
+          Affichage de l’Accueil
         </h1>
         <p className="mt-3 max-w-3xl text-slate-600 dark:text-slate-300">
-          Organisez les informations utiles aujourd’hui, les métriques principales et les raccourcis. Masquer un bloc ne supprime aucune donnée.
+          Le résumé calorique et l’assistant quotidien restent fixes. Choisis seulement les informations utiles et, si besoin, un bloc complémentaire.
         </p>
       </div>
 
       <InlineNotice className="mt-5" title="Synchronisation maîtrisée">
         <span className="inline-flex items-start gap-2">
           <Eye aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-          L’ordre, les blocs et les raccourcis peuvent suivre le compte. La densité confortable ou compacte reste propre à cet appareil.
+          Les informations du résumé et le bloc complémentaire suivent le compte. La densité confortable ou compacte reste propre à cet appareil.
         </span>
       </InlineNotice>
 

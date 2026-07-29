@@ -21,6 +21,7 @@ import { Link, useLocation } from 'react-router-dom';
 
 import { useTheme } from '@/app/providers/useTheme';
 import { routePaths } from '@/app/routePaths';
+import { recalculateExistingTargetsAfterSettingsChange } from '@/application/daily/settingsTargetRecalculationService';
 import { readPhotoNutritionAiConfig } from '@/application/photo-nutrition/photoNutritionAiClient';
 import type { AppSettings } from '@/domain/models/settings';
 import { AchievementsPanel } from '@/features/settings/components/AchievementsPanel';
@@ -45,6 +46,7 @@ import {
   type PersistentStorageStatus,
 } from '@/infrastructure/storage/persistentStorage';
 import { useActionToast } from '@/shared/toast/useActionToast';
+import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 import { PageSkeleton } from '@/shared/ui/PageSkeleton';
@@ -288,8 +290,8 @@ function CategoryContent({
         <>
           <InlineNotice tone={aiConfig.enabled ? 'success' : 'info'} title={aiConfig.enabled ? 'Analyse photo disponible' : 'Analyse photo distante indisponible'}>
             {aiConfig.enabled
-              ? 'La photo n’est envoyée au proxy sécurisé qu’après un consentement explicite sur l’écran d’analyse. Aucune clé n’est exposée dans l’application.'
-              : 'Le fallback local reste disponible. Aucune photo n’est envoyée à un service distant tant que le proxy sécurisé n’est pas configuré.'}
+              ? 'Ta photo est analysée uniquement lorsque tu actives l’option pour la photo sélectionnée.'
+              : 'Tu peux toujours saisir ton repas manuellement.'}
           </InlineNotice>
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             <SettingsLinkCard
@@ -413,6 +415,7 @@ export function SettingsCategoryPage({
     setFeedback(undefined);
     try {
       const updated = await settingsRepository.update(settingsFormValuesToChanges(values));
+      await recalculateExistingTargetsAfterSettingsChange();
       setSettings(updated);
       setTheme(updated.theme);
       setStorageStatus(updated.requestPersistentStorage ? await persistStorage() : await readStorageStatus());
@@ -427,6 +430,7 @@ export function SettingsCategoryPage({
 
   const handleResetToDefaults = async (): Promise<SettingsFormValues> => {
     const defaults = await settingsRepository.reset();
+    await recalculateExistingTargetsAfterSettingsChange();
     setSettings(defaults);
     setTheme(defaults.theme);
     return settingsToFormValues(defaults);
@@ -437,7 +441,18 @@ export function SettingsCategoryPage({
   }
 
   if (loadError) {
-    return <InlineNotice tone="error" title="Chargement impossible">{loadError}</InlineNotice>;
+    return (
+      <InlineNotice tone="error" title="Chargement impossible">
+        <p>{loadError}</p>
+        <Button
+          className="mt-3"
+          variant="secondary"
+          onClick={() => void load()}
+        >
+          Réessayer
+        </Button>
+      </InlineNotice>
+    );
   }
 
   if (!settings) return <PageSkeleton variant="form" />;

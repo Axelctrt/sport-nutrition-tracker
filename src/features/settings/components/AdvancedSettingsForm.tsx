@@ -98,7 +98,6 @@ export function AdvancedSettingsForm({
         title="Affichage et stockage"
         description="Thème de l’application et protection du stockage local."
         summary="Essentiel"
-        defaultOpen
       >
         <fieldset className="space-y-5">
           <legend className="sr-only">Affichage et stockage</legend>

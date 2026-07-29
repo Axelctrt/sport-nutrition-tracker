@@ -17,7 +17,10 @@ import {
   migrateBackupEnvelope,
 } from '@/infrastructure/backup/backupMigrations';
 import { formatBackupValidationError } from '@/infrastructure/backup/backupSchemas';
-import { appDatabase } from '@/infrastructure/database/database';
+import {
+  activeDataSpace,
+  appDatabase,
+} from '@/infrastructure/database/database';
 import {
   flushUserStatePersistence,
   reloadUserStateRuntime,
@@ -66,6 +69,9 @@ export function tableList(database: AppDatabase) {
     database.userSettings,
     database.weights,
     database.dailySteps,
+    database.dailyCheckIns,
+    database.dailyActivityDecisions,
+    database.dailyCheckOuts,
     database.activities,
     database.foodProducts,
     database.meals,
@@ -111,14 +117,28 @@ export function allUserDataTableList(database: AppDatabase) {
   ] as const;
 }
 
+export function clearableUserDataTableList(database: AppDatabase) {
+  return [
+    ...allUserDataTableList(database),
+    database.trashItems,
+  ] as const;
+}
+
 export async function readBackupData(
   database: AppDatabase,
 ): Promise<BackupData> {
+  return database.transaction(
+    'r',
+    allUserDataTableList(database),
+    async () => {
   const [
     userProfile,
     userSettings,
     weights,
     dailySteps,
+    dailyCheckIns,
+    dailyActivityDecisions,
+    dailyCheckOuts,
     activities,
     foodProducts,
     meals,
@@ -154,6 +174,9 @@ export async function readBackupData(
     database.userSettings.toArray(),
     database.weights.toArray(),
     database.dailySteps.toArray(),
+    database.dailyCheckIns.toArray(),
+    database.dailyActivityDecisions.toArray(),
+    database.dailyCheckOuts.toArray(),
     database.activities.toArray(),
     database.foodProducts.toArray(),
     database.meals.toArray(),
@@ -186,11 +209,14 @@ export async function readBackupData(
     database.deletionRecords.toArray(),
   ]);
 
-  return {
+      return {
     userProfile,
     userSettings: userSettings.map(normalizeUserSettings),
     weights,
     dailySteps,
+    dailyCheckIns,
+    dailyActivityDecisions,
+    dailyCheckOuts,
     activities,
     foodProducts,
     meals,
@@ -220,8 +246,10 @@ export async function readBackupData(
     visualThemePreferences,
     weeklyMissionCompletions,
     routineReminderCompletions,
-    deletionRecords,
-  };
+        deletionRecords,
+      };
+    },
+  );
 }
 
 export async function createBackupEnvelope(
@@ -405,6 +433,17 @@ async function populateTables(
   }
   if (data.dailySteps.length > 0) {
     await database.dailySteps.bulkAdd(data.dailySteps);
+  }
+  if ((data.dailyCheckIns?.length ?? 0) > 0) {
+    await database.dailyCheckIns.bulkAdd(data.dailyCheckIns ?? []);
+  }
+  if ((data.dailyActivityDecisions?.length ?? 0) > 0) {
+    await database.dailyActivityDecisions.bulkAdd(
+      data.dailyActivityDecisions ?? [],
+    );
+  }
+  if ((data.dailyCheckOuts?.length ?? 0) > 0) {
+    await database.dailyCheckOuts.bulkAdd(data.dailyCheckOuts ?? []);
   }
   if (data.activities.length > 0) {
     await database.activities.bulkAdd(data.activities);
@@ -660,15 +699,22 @@ export async function replaceDatabaseFromBackup(
 export async function clearAllUserData(
   database: AppDatabase = appDatabase,
 ): Promise<void> {
+  if (database === appDatabase && activeDataSpace.kind === 'account') {
+    throw new BackupOperationError(
+      'Pour un compte synchronisé, supprime les données locales depuis « Compte et appareils » afin d’éviter leur réapparition depuis le cloud.',
+    );
+  }
+
   try {
     await database.transaction(
       'rw',
-      allUserDataTableList(database),
+      clearableUserDataTableList(database),
       async () => {
         await clearTables(database);
         for (const table of userStateTableList(database)) {
           await table.clear();
         }
+        await database.trashItems.clear();
         await database.userSettings.add(createDefaultUserSettings());
         await ensureExerciseCatalog(database);
       },

@@ -1,6 +1,12 @@
 import Dexie, { type Table } from 'dexie';
+import { DAILY_TARGET_CALCULATION_VERSION } from '@/domain/calculations/constants';
+import { buildDailyTargetEnergyInputSnapshot } from '@/domain/calculations/dailyTargetInputSnapshot';
+import { createDefaultAppSettings } from '@/domain/defaults/appSettings';
 import type { UserProfile } from '@/domain/models/profile';
-import type { DailyTarget } from '@/domain/models/targets';
+import type {
+  DailyTarget,
+  DailyTargetEnergyInputSnapshot,
+} from '@/domain/models/targets';
 import type {
   AcceptedCalorieAdjustment,
   WeeklyReview,
@@ -118,11 +124,14 @@ function profile(): UserProfile {
   };
 }
 
-function dailyTarget(): DailyTarget {
+function dailyTarget(
+  energyInputSnapshot?: DailyTargetEnergyInputSnapshot,
+): DailyTarget {
   return {
     id: 'daily-target:2026-07-01',
     date: '2026-07-01',
     calculationWeightKg: 70,
+    ...(energyInputSnapshot ? { energyInputSnapshot } : {}),
     energy: {
       bmrKcal: 1600,
       occupationalBaseKcal: 400,
@@ -266,6 +275,14 @@ describe('synchronisation C3 du suivi nutritionnel', () => {
   });
 
   it('recalcule les objectifs quotidiens devenus obsolètes', async () => {
+    const historicalSnapshot = buildDailyTargetEnergyInputSnapshot(
+      {
+        ...profile(),
+        heightCm: 185,
+        occupationalActivity: 'veryActive',
+      },
+      createDefaultAppSettings(),
+    );
     await local.userProfile.add(profile());
     await local.weights.bulkAdd([
       {
@@ -283,7 +300,19 @@ describe('synchronisation C3 du suivi nutritionnel', () => {
         updatedAt: createdAt,
       },
     ]);
-    await local.dailyTargets.add(dailyTarget());
+    await local.dailyTargets.add({
+      ...dailyTarget(historicalSnapshot),
+      plannedActivities: [],
+      stepBasis: {
+        mode: 'expected',
+        steps: 8_000,
+        stepGoal: 8_000,
+        source: 'profileFallback',
+        confidence: 'fallback',
+        observedDayCount: 0,
+        observationWindowDays: 0,
+      },
+    });
     await cloud.realNutritionTracking.add({
       ...aggregate(),
       id: '#weekly-review:2026-06-22',
@@ -297,12 +326,19 @@ describe('synchronisation C3 du suivi nutritionnel', () => {
     );
 
     expect(result.recalculatedDailyTargets).toBe(1);
-    expect(await local.dailyTargets.get('daily-target:2026-07-01'))
-      .toMatchObject({
+    const recalculatedTarget = await local.dailyTargets.get(
+      'daily-target:2026-07-01',
+    );
+    expect(recalculatedTarget).toMatchObject({
         acceptedCalibrationAdjustmentKcal: 100,
-        calculationWeightKg: 71,
-        calculationVersion: 4,
+        calculationWeightKg: 70,
+        calculationVersion: DAILY_TARGET_CALCULATION_VERSION,
       });
+    expect(recalculatedTarget?.energyInputSnapshot).toEqual(historicalSnapshot);
+    expect(recalculatedTarget?.energy.occupationalBaseKcal).toBe(
+      recalculatedTarget!.energy.bmrKcal * 1.45,
+    );
+    expect(recalculatedTarget?.stepBasis?.steps).toBe(8_000);
   });
 
   it('isole les bilans appartenant à un autre compte', async () => {

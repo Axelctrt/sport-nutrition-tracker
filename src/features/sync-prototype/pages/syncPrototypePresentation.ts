@@ -36,25 +36,25 @@ export const syncStatusLabels: Record<
   SyncPrototypeSyncSnapshot['status'],
   string
 > = {
-  'not-started': 'Non démarrée',
-  connecting: 'Connexion en cours',
-  connected: 'Connectée',
-  disconnected: 'Déconnectée',
-  error: 'Erreur',
-  offline: 'Hors ligne',
+  'not-started': 'Synchronisation nécessaire',
+  connecting: 'Synchronisation en cours',
+  connected: 'Cloud connecté',
+  disconnected: 'Synchronisation nécessaire',
+  error: 'Erreur de synchronisation',
+  offline: 'Hors ligne — enregistré localement',
 };
 
 export const syncPhaseLabels: Record<
   SyncPrototypeSyncSnapshot['phase'],
   string
 > = {
-  initial: 'Initialisation',
-  'not-in-sync': 'Modifications en attente',
-  pushing: 'Envoi des modifications',
-  pulling: 'Réception des modifications',
-  'in-sync': 'À jour',
-  error: 'Erreur',
-  offline: 'Hors ligne',
+  initial: 'Enregistré sur cet appareil',
+  'not-in-sync': 'Synchronisation nécessaire',
+  pushing: 'Synchronisation en cours',
+  pulling: 'Synchronisation en cours',
+  'in-sync': 'Synchronisé',
+  error: 'Erreur de synchronisation',
+  offline: 'Hors ligne — enregistré localement',
 };
 
 export function errorMessage(error: unknown, fallback: string): string {

@@ -4,6 +4,7 @@ export interface FoodJournalReturnContext {
   path: string;
   scrollKey: string;
   mealSlot: MealSlot;
+  addMethodsPath?: string;
 }
 
 export interface FoodJournalFeedback {
@@ -23,12 +24,14 @@ export function createFoodJournalReturnState(
   path: string,
   scrollKey: string,
   mealSlot: MealSlot,
+  addMethodsPath?: string,
 ): FoodJournalNavigationState {
   return {
     foodJournalReturn: {
       path,
       scrollKey,
       mealSlot,
+      ...(addMethodsPath ? { addMethodsPath } : {}),
     },
   };
 }
@@ -57,4 +60,11 @@ export function createFoodJournalRestoreState(
     scroll: 'restore',
     restoreScrollKey: context.scrollKey,
   };
+}
+
+export function foodJournalCancelPath(
+  context: FoodJournalReturnContext | undefined,
+  fallbackPath: string,
+): string {
+  return context?.addMethodsPath ?? context?.path ?? fallbackPath;
 }

@@ -10,6 +10,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   useSyncExternalStore,
 } from 'react';
@@ -17,7 +18,12 @@ import { Link } from 'react-router-dom';
 
 import { routePaths } from '@/app/routePaths';
 import {
+  cloudAccountStatusLabel,
+  resolveCloudAccountAccess,
+} from '@/application/account/cloudAccountAccess';
+import {
   readSyncOperationHistory,
+  resolveLastSuccessfulSyncAt,
   summarizeSyncOperationHistory,
   SYNC_OPERATION_HISTORY_CHANGED_EVENT,
   type SyncOperationHistoryEntry,
@@ -91,6 +97,9 @@ export function UnifiedSyncCenterPanel({
           accountKey,
           domains: createOrchestratorDomains(client),
           isOnline: () => navigator.onLine !== false,
+          preflight: async () => {
+            await client.ensureValidCloudCredentials?.();
+          },
         })
       : null,
     [accountKey, client],
@@ -110,6 +119,17 @@ export function UnifiedSyncCenterPanel({
     : undefined;
   const [isInitializing, setIsInitializing] = useState(Boolean(client && initializeClient));
   const [isOnline, setIsOnline] = useState(() => navigator.onLine !== false);
+  const cloudAccess = client?.getCloudAccessState?.() ?? resolveCloudAccountAccess(
+    {
+      ...snapshot.account,
+      hasAccessToken:
+        snapshot.account.hasAccessToken ?? snapshot.account.isLoggedIn,
+    },
+    { isOnline },
+  );
+  const accountReady =
+    cloudAccess.isOperational || cloudAccess.canAttemptRenewal;
+  const wasAccountReadyRef = useRef(accountReady);
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(Boolean(activeDetailId));
   const [failures, setFailures] = useState<Partial<Record<UnifiedDomainId, DomainFailure>>>({});
   const [lastOperation, setLastOperation] = useState<UnifiedOperation>('analyze');
@@ -222,6 +242,7 @@ export function UnifiedSyncCenterPanel({
       nextFailures[domainResult.domainId] = {
         operation,
         message: domainResult.errorMessage,
+        ...(domainResult.status === 'not-run' ? { notExecuted: true } : {}),
       };
     }
     setFailures((current) => ({ ...current, ...nextFailures }));
@@ -239,7 +260,16 @@ export function UnifiedSyncCenterPanel({
 
     const completed = result.completedDomainIds.length;
     const failedCount = result.failedDomainIds.length;
-    if (failedCount === 0) {
+    const notRunCount = result.domainResults.filter(
+      (domain) => domain.status === 'not-run',
+    ).length;
+    if (notRunCount === result.domainResults.length && notRunCount > 0) {
+      setFeedback({
+        tone: 'info',
+        message: result.domainResults[0]?.errorMessage
+          ?? 'La synchronisation n’a pas été exécutée.',
+      });
+    } else if (failedCount === 0) {
       setFeedback({
         tone: 'success',
         message:
@@ -254,6 +284,16 @@ export function UnifiedSyncCenterPanel({
       });
     }
   }, [enabledDomains, history, isOnline, orchestrator, orchestratorSnapshot.isRunning, persistHistory]);
+
+  useEffect(() => {
+    const wasReady = wasAccountReadyRef.current;
+    wasAccountReadyRef.current = accountReady;
+    if (wasReady || !accountReady || !client) return;
+
+    setFailures({});
+    setFeedback(undefined);
+    void runDomains('analyze');
+  }, [accountReady, client, runDomains]);
 
   const retryFailures = () => {
     const failedIds = enabledDomains
@@ -287,7 +327,12 @@ export function UnifiedSyncCenterPanel({
     );
   }
 
-  const activeFailures = enabledDomains.filter((domain) => failures[domain.id]);
+  const activeFailures = enabledDomains.filter(
+    (domain) => failures[domain.id] && !failures[domain.id]?.notExecuted,
+  );
+  const notExecutedDomains = enabledDomains.filter(
+    (domain) => failures[domain.id]?.notExecuted,
+  );
   const analyzedDomains = enabledDomains.filter(
     (domain) => domain.differingEntityCount !== undefined,
   );
@@ -301,7 +346,6 @@ export function UnifiedSyncCenterPanel({
     (sum, domain) => sum + (domain.differingEntityCount ?? 0),
     0,
   );
-  const accountReady = snapshot.account.isLoggedIn && !snapshot.account.isLoading;
   const actionDisabled =
     isInitializing ||
     Boolean(busy) ||
@@ -316,8 +360,10 @@ export function UnifiedSyncCenterPanel({
       ? `${orchestratorSnapshot.queueLength} ${orchestratorSnapshot.queueLength > 1 ? 'opérations en attente' : 'opération en attente'}`
     : !isOnline
       ? 'Hors connexion'
+      : notExecutedDomains.length > 0
+        ? 'Synchronisation non exécutée'
       : !accountReady
-        ? 'Compte non connecté'
+        ? cloudAccountStatusLabel(cloudAccess)
         : activeFailures.length > 0
           ? `${activeFailures.length} ${activeFailures.length > 1 ? 'échecs' : 'échec'}`
           : differingDomains.length > 0
@@ -330,10 +376,11 @@ export function UnifiedSyncCenterPanel({
 
   const accountDisplayLabel =
     snapshot.account.email ?? snapshot.account.displayName ?? 'Compte connecté';
-  const lastSuccessfulSyncAt =
-    operationSummary.lastSuccessfulSync?.completedAt ??
-    history.lastSyncAt ??
-    snapshot.diagnostics.lastSyncCompletedAt;
+  const lastSuccessfulSyncAt = resolveLastSuccessfulSyncAt(
+    operationSummary.lastSuccessfulSync?.completedAt,
+    history.lastSyncAt,
+    snapshot.diagnostics.lastSyncCompletedAt,
+  );
 
   return (
     <div className="space-y-4">
@@ -371,7 +418,9 @@ export function UnifiedSyncCenterPanel({
               <p className="text-xs font-semibold uppercase tracking-wide">Compte actif</p>
             </div>
             <p className="mt-1 break-all text-sm font-bold text-slate-950 dark:text-white">
-              {accountReady ? accountDisplayLabel : 'Aucun compte connecté'}
+              {cloudAccess.isIdentityConnected
+                ? accountDisplayLabel
+                : 'Aucun compte connecté'}
             </p>
           </div>
           <div className="rounded-xl border border-slate-200/80 bg-white p-3 dark:border-slate-800 dark:bg-slate-950">
@@ -385,9 +434,9 @@ export function UnifiedSyncCenterPanel({
           </div>
         </div>
 
-        {!accountReady ? (
-          <InlineNotice className="mt-4" tone="info" title="Connexion requise">
-            Connecte le compte associé à cet espace avant de synchroniser les données.
+        {!accountReady && isOnline ? (
+          <InlineNotice className="mt-4" tone="info" title="Accès cloud requis">
+            {cloudAccess.message}
           </InlineNotice>
         ) : null}
 
@@ -436,7 +485,13 @@ export function UnifiedSyncCenterPanel({
           <InlineNotice
             className="mt-4"
             tone={feedback.tone === 'info' ? 'info' : feedback.tone}
-            title={feedback.tone === 'error' ? 'Opération partiellement terminée' : 'Opération terminée'}
+            title={
+              feedback.tone === 'error'
+                ? 'Opération partiellement terminée'
+                : feedback.tone === 'info'
+                  ? 'Opération non exécutée'
+                  : 'Opération terminée'
+            }
           >
             {feedback.message}
           </InlineNotice>

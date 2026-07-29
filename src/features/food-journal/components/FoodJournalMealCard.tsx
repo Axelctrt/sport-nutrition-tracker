@@ -14,7 +14,6 @@ import type { FoodEntryWithProduct, MealJournalSnapshot } from '@/application/fo
 import {
   addRecipeToJournalPath,
   editFoodEntryPath,
-  selectFoodPath,
 } from '@/app/routePaths';
 import { CopyMealForm } from '@/features/food-journal/components/CopyMealForm';
 import { SaveFavoriteMealForm } from '@/features/food-journal/components/SaveFavoriteMealForm';
@@ -24,7 +23,6 @@ import { inputClassName } from '@/shared/forms/formStyles';
 import { ActionMenu } from '@/shared/ui/ActionMenu';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
-import { ConfirmationDialog } from '@/shared/ui/ConfirmationDialog';
 import { cn } from '@/shared/utils/cn';
 import { formatLocalDate } from '@/shared/utils/dates';
 
@@ -37,6 +35,7 @@ interface FoodJournalMealCardProps {
   highlightedEntryId?: string | undefined;
   repeatSourceDate?: string | undefined;
   onToggle: () => void;
+  onAdd: () => void;
   onDuplicate: (id: string) => Promise<unknown>;
   onRemove: (id: string) => Promise<unknown>;
   onUpdateQuantity: (item: FoodEntryWithProduct, quantity: number) => Promise<unknown>;
@@ -83,6 +82,7 @@ export function FoodJournalMealCard({
   highlightedEntryId,
   repeatSourceDate,
   onToggle,
+  onAdd,
   onDuplicate,
   onRemove,
   onUpdateQuantity,
@@ -92,13 +92,9 @@ export function FoodJournalMealCard({
 }: FoodJournalMealCardProps) {
   const [editingId, setEditingId] = useState<string>();
   const [quantity, setQuantity] = useState('');
-  const [deleteTarget, setDeleteTarget] = useState<FoodEntryWithProduct>();
   const [optionsOpen, setOptionsOpen] = useState(false);
   const label = mealSlotLabels[meal.slot];
   const contentId = `food-meal-${meal.slot}-content`;
-  const addAriaLabel = meal.slot === 'snacks'
-    ? 'Ajouter un aliment aux collations'
-    : `Ajouter un aliment au ${label.toLocaleLowerCase('fr')}`;
 
   useEffect(() => {
     if (expanded) return;
@@ -126,7 +122,7 @@ export function FoodJournalMealCard({
         expanded && 'shadow-[var(--sp-shadow-panel)]',
       )}
     >
-      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-stretch">
+      <div>
         <button
           type="button"
           aria-expanded={expanded}
@@ -154,17 +150,6 @@ export function FoodJournalMealCard({
           />
         </button>
 
-        <div className="flex items-center border-l border-slate-200 px-2 dark:border-slate-800">
-          <Link
-            aria-label={addAriaLabel}
-            to={selectFoodPath(date, meal.slot)}
-            state={navigationState}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-brand-700 px-3 text-sm font-semibold text-white shadow-sm hover:bg-brand-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 dark:bg-brand-600 dark:hover:bg-brand-500"
-          >
-            <Plus aria-hidden="true" className="size-4" />
-            <span className="hidden sm:inline">Ajouter</span>
-          </Link>
-        </div>
       </div>
 
       {expanded ? (
@@ -190,18 +175,18 @@ export function FoodJournalMealCard({
                     <RefreshCcw aria-hidden="true" className="size-4" />Répéter ce repas
                   </Button>
                 ) : null}
-                <Link
-                  to={selectFoodPath(date, meal.slot)}
-                  state={navigationState}
+                <Button
+                  variant={repeatSourceDate ? 'secondary' : 'primary'}
+                  aria-label={meal.slot === 'snacks'
+                    ? 'Ajouter un aliment aux collations'
+                    : `Ajouter un aliment au ${label.toLocaleLowerCase('fr')}`}
+                  onClick={onAdd}
                   className={cn(
-                    'inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold shadow-sm',
-                    repeatSourceDate
-                      ? 'border border-slate-300 bg-white text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800'
-                      : 'bg-brand-700 text-white hover:bg-brand-800 dark:bg-brand-600 dark:hover:bg-brand-500',
+                    !repeatSourceDate && 'shadow-sm',
                   )}
                 >
                   <Plus aria-hidden="true" className="size-4" />Ajouter un aliment
-                </Link>
+                </Button>
               </div>
             </div>
           ) : (
@@ -263,7 +248,7 @@ export function FoodJournalMealCard({
                           size="sm"
                           variant="dangerGhost"
                           disabled={busyId === `delete-${entry.id}`}
-                          onClick={() => setDeleteTarget(item)}
+                          onClick={() => void onRemove(item.entry.id)}
                         >
                           <Trash2 aria-hidden="true" className="size-4" />Supprimer
                         </Button>
@@ -312,6 +297,22 @@ export function FoodJournalMealCard({
           )}
 
           {meal.entries.length > 0 ? (
+            <div className="border-t border-slate-200 px-4 py-3 dark:border-slate-800 sm:px-5">
+              <Button
+                className="w-full"
+                variant="secondary"
+                aria-label={meal.slot === 'snacks'
+                  ? 'Ajouter un aliment aux collations'
+                  : `Ajouter un aliment au ${label.toLocaleLowerCase('fr')}`}
+                onClick={onAdd}
+              >
+                <Plus aria-hidden="true" className="size-4" />
+                Ajouter un aliment
+              </Button>
+            </div>
+          ) : null}
+
+          {meal.entries.length > 0 ? (
             <div className="border-t border-slate-200 dark:border-slate-800">
               <button
                 type="button"
@@ -343,19 +344,6 @@ export function FoodJournalMealCard({
         </div>
       ) : null}
 
-      <ConfirmationDialog
-        open={Boolean(deleteTarget)}
-        title="Supprimer cette entrée ?"
-        description={deleteTarget ? `« ${entryName(deleteTarget)} » sera retiré du ${label.toLocaleLowerCase('fr')}.` : ''}
-        confirmLabel="Supprimer"
-        tone="danger"
-        isPending={deleteTarget ? busyId === `delete-${deleteTarget.entry.id}` : false}
-        onCancel={() => setDeleteTarget(undefined)}
-        onConfirm={() => {
-          if (!deleteTarget) return;
-          void onRemove(deleteTarget.entry.id).then(() => setDeleteTarget(undefined));
-        }}
-      />
     </Card>
   );
 }

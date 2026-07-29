@@ -72,6 +72,7 @@ describe('configuration du prototype Dexie Cloud', () => {
       realNutritionJournalSyncEnabled: false,
       realNutritionLibrarySyncEnabled: false,
       realNutritionTrackingSyncEnabled: false,
+      realDailyCoachingSyncEnabled: false,
       realAccountPreferencesSyncEnabled: false,
       realRewardsRoutinesSyncEnabled: false,
       realSocialCloudEnabled: false,

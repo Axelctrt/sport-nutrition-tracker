@@ -32,6 +32,10 @@ const completionSnapshot: WeeklyMissionCompletionSnapshot = {
 };
 
 describe("WeeklyMissionCompletionNotifier", () => {
+  beforeEach(() => {
+    window.sessionStorage.clear();
+  });
+
   it("affiche une célébration pour une nouvelle semaine terminée", async () => {
     const observeCompletions = vi.fn((onCompletion) => {
       onCompletion(completionSnapshot);

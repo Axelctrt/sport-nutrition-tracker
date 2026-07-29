@@ -114,23 +114,6 @@ function readDirectoryDatabase(env = {}) {
   return database;
 }
 
-async function ensureDirectorySchema(database) {
-  await database.prepare(`
-    CREATE TABLE IF NOT EXISTS social_directory_handles (
-      handle TEXT PRIMARY KEY,
-      owner_user_id TEXT NOT NULL,
-      owner_display_name TEXT NOT NULL,
-      reserved_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    )
-  `).run();
-
-  await database.prepare(`
-    CREATE INDEX IF NOT EXISTS idx_social_directory_handles_owner
-    ON social_directory_handles(owner_user_id)
-  `).run();
-}
-
 function profileFromRow(row) {
   return {
     userId: row.owner_user_id,
@@ -167,7 +150,6 @@ async function reserveSocialHandle(database, payload, actorUserId) {
   const ownerDisplayName = sanitizeDisplayName(payload?.displayName);
   const timestamp = nowIso();
 
-  await ensureDirectorySchema(database);
   const existing = await readReservation(database, handle);
 
   if (existing && existing.owner_user_id !== ownerUserId) {
@@ -228,8 +210,6 @@ async function reserveSocialHandle(database, payload, actorUserId) {
 
 async function lookupSocialHandle(database, rawHandle) {
   const handle = normalizeHandle(rawHandle);
-  await ensureDirectorySchema(database);
-
   const row = await readReservation(database, handle);
   if (!row) {
     return {

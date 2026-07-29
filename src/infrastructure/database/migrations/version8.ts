@@ -11,6 +11,7 @@ import {
   DATABASE_VERSION_8,
 } from '@/infrastructure/database/migrations/versions';
 import { schemaVersion8 } from '@/infrastructure/database/schema';
+import { trashItemSchema } from '@/infrastructure/backup/backupSchemas';
 
 export function registerVersion8(database: Dexie): void {
   database
@@ -22,7 +23,13 @@ export function registerVersion8(database: Dexie): void {
         .toArray();
       const recordsById = new Map<string, DeletionRecord>();
 
-      for (const trashItem of trashItems) {
+      for (const candidate of trashItems) {
+        const parsed = trashItemSchema.safeParse(candidate);
+        if (!parsed.success) {
+          await transaction.table('trashItems').delete(candidate.id);
+          continue;
+        }
+        const trashItem = parsed.data as TrashItem;
         for (const target of deletionTargetsForTrashItem(trashItem)) {
           const candidate = createDeletedDeletionRecord(
             target,

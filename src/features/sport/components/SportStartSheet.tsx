@@ -88,8 +88,8 @@ export function SportStartSheet({
   return (
     <BottomSheet
       open={open}
-      title="Démarrer ou ajouter une activité"
-      description="Les activités que tu utilises le plus apparaissent en premier."
+      title="Enregistrer une activité"
+      description="Choisis le type d’activité déjà réalisée à ajouter au journal."
       onClose={onClose}
     >
       <div className="grid gap-2 sm:grid-cols-2">

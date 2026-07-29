@@ -11,7 +11,6 @@ const checks = [
   ['liaison acteur permissions', 'functions/_shared/socialFriends.js', 'SOCIAL_FRIENDS_ACTOR_MISMATCH'],
   ['identifiant permission canonique', 'functions/_shared/socialFriends.js', 'SOCIAL_FRIENDS_PERMISSION_ID_MISMATCH'],
   ['identifiant amitié canonique', 'functions/_shared/socialFriends.js', 'SOCIAL_FRIENDS_FRIENDSHIP_ID_MISMATCH'],
-  ['preuve privée identité legacy', 'functions/_shared/socialIdentityReconciliation.js', 'privateIdentity.userId === previousUserId'],
   ['limite corps annuaire', 'functions/_shared/socialDirectory.js', 'MAX_JSON_BYTES'],
   ['limite corps demandes', 'functions/_shared/socialFriendRequests.js', 'MAX_JSON_BYTES'],
   ['limite corps amitiés', 'functions/_shared/socialFriends.js', 'MAX_JSON_BYTES'],
@@ -37,6 +36,21 @@ for (const [label, file, needle] of checks) {
   }
 }
 
+const forbiddenChecks = [
+  ['preuve privee identite legacy', 'functions/_shared/socialIdentityReconciliation.js', 'privateIdentity.userId === previousUserId'],
+  ['preuve privee handle legacy', 'functions/_shared/socialIdentityReconciliation.js', 'existingHandle?.owner_user_id === previousUserId'],
+];
+for (const [label, file, needle] of forbiddenChecks) {
+  const source = fs.readFileSync(file, 'utf8');
+  if (source.includes(needle)) {
+    console.error(`FAIL ${label}: ${file}`);
+    process.exitCode = 1;
+  } else {
+    passed += 1;
+    console.log(`OK   ${label}`);
+  }
+}
+
 if (!process.exitCode) {
-  console.log(`A24 social security hardening audit: ${passed}/${checks.length} OK`);
+  console.log(`A24 social security hardening audit: ${passed}/${checks.length + forbiddenChecks.length} OK`);
 }

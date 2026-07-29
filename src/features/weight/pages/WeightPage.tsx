@@ -15,10 +15,10 @@ import { inputClassName } from '@/shared/forms/formStyles';
 import { useActionToast } from '@/shared/toast/useActionToast';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
-import { ConfirmationDialog } from '@/shared/ui/ConfirmationDialog';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 import { PageSkeleton } from '@/shared/ui/PageSkeleton';
+import { DateContextBanner } from '@/shared/ui/DateContextBanner';
 import { formatLocalDate, toLocalDate } from '@/shared/utils/dates';
 
 function isLocalDate(value: string | null): value is string {
@@ -45,8 +45,7 @@ export function WeightPage() {
   const [feedback, setFeedback] = useState<
     { tone: 'success' | 'error'; message: string } | undefined
   >();
-  const [pendingDeleteEntry, setPendingDeleteEntry] = useState<WeightEntry>();
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [deletingEntryId, setDeletingEntryId] = useState<string>();
   const [highlightedEntryId, setHighlightedEntryId] = useState<string>();
   const highlightTimerRef = useRef<number | undefined>(undefined);
 
@@ -146,24 +145,17 @@ export function WeightPage() {
     }
   };
 
-  const handleDelete = async () => {
-    if (!pendingDeleteEntry) return;
+  const handleDelete = async (entry: WeightEntry) => {
     setFeedback(undefined);
-    setIsDeleting(true);
+    setDeletingEntryId(entry.id);
 
     try {
-      await remove(pendingDeleteEntry.date);
-      await recalculateAffectedTargets(pendingDeleteEntry.date);
+      await remove(entry.date);
+      await recalculateAffectedTargets(entry.date);
       setFeedback({
         tone: 'success',
-        message: `La pesée du ${formatLocalDate(pendingDeleteEntry.date)} a été supprimée. Le poids de référence de la semaine suivante a été actualisé si nécessaire.`,
+        message: `La pesée du ${formatLocalDate(entry.date)} a été retirée. Tu peux annuler depuis le message affiché.`,
       });
-      actionToast.success({
-        key: 'weight-delete',
-        title: 'Pesée supprimée',
-        description: formatLocalDate(pendingDeleteEntry.date),
-      });
-      setPendingDeleteEntry(undefined);
     } catch (error) {
       actionToast.error({
         key: 'weight-delete',
@@ -178,7 +170,7 @@ export function WeightPage() {
           : 'La pesée n’a pas pu être supprimée.',
       });
     } finally {
-      setIsDeleting(false);
+      setDeletingEntryId(undefined);
     }
   };
 
@@ -221,6 +213,12 @@ export function WeightPage() {
       {status === 'ready' ? (
         <>
           <WeightSummary entries={entries} profile={profile} />
+
+          <DateContextBanner
+            date={selectedDate}
+            className="mt-4"
+            onReturnToday={() => selectDate(toLocalDate(), true)}
+          />
 
           <div className="mt-4 grid min-w-0 gap-4 xl:grid-cols-[minmax(0,400px)_1fr]">
             <Card id="weight-entry-panel" className="min-w-0 scroll-mt-24 p-4 sm:p-5">
@@ -282,7 +280,7 @@ export function WeightPage() {
                 <Button
                   className="mt-2 w-full lg:w-auto"
                   variant="dangerGhost"
-                  onClick={() => setPendingDeleteEntry(exactEntry)}
+                  onClick={() => void handleDelete(exactEntry)}
                 >
                   <Trash2 aria-hidden="true" className="size-4" />
                   Supprimer cette pesée
@@ -328,9 +326,9 @@ export function WeightPage() {
                       previousWeightKg={previousWeightById.get(entry.id)}
                       selected={entry.date === selectedDate}
                       highlighted={entry.id === highlightedEntryId}
-                      deleting={isDeleting && pendingDeleteEntry?.id === entry.id}
+                      deleting={deletingEntryId === entry.id}
                       onEdit={(selectedEntry) => selectDate(selectedEntry.date, true)}
-                      onDelete={setPendingDeleteEntry}
+                      onDelete={(selectedEntry) => void handleDelete(selectedEntry)}
                     />
                   ))}
                 </div>
@@ -340,18 +338,6 @@ export function WeightPage() {
         </>
       ) : null}
 
-      <ConfirmationDialog
-        open={Boolean(pendingDeleteEntry)}
-        title="Supprimer cette pesée ?"
-        description={pendingDeleteEntry
-          ? `La pesée du ${formatLocalDate(pendingDeleteEntry.date)} (${pendingDeleteEntry.weightKg.toLocaleString('fr-FR')} kg) sera supprimée définitivement.`
-          : ''}
-        confirmLabel="Supprimer"
-        tone="danger"
-        isPending={isDeleting}
-        onCancel={() => setPendingDeleteEntry(undefined)}
-        onConfirm={() => void handleDelete()}
-      />
     </section>
   );
 }

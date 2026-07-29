@@ -49,8 +49,8 @@ const socialSnapshot: SocialActivitySnapshot = {
 
 describe('readiness sociale amis 0.27.0 F5', () => {
   it('passe Dexie en v10, sauvegarde JSON en v9 et expose les permissions par ami', () => {
-    expect(databaseSchemaVersion).toBe(10);
-    expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(9);
+    expect(databaseSchemaVersion).toBe(11);
+    expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(10);
     expect(databaseTableNames).toEqual(
       expect.arrayContaining([
         'friendProfiles',

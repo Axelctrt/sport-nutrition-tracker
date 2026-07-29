@@ -1,6 +1,9 @@
 import { ensureExerciseCatalog } from "@/application/strength/exerciseCatalogSeeder";
 import type { AppDatabase } from "@/infrastructure/database/AppDatabase";
-import { appDatabase } from "@/infrastructure/database/database";
+import {
+  activeDataSpace,
+  appDatabase,
+} from "@/infrastructure/database/database";
 import { trackDatabaseWrite } from "@/infrastructure/database/databaseWriteBarrier";
 import {
   databaseTableNames,
@@ -244,6 +247,12 @@ export async function resetSelectedData(
   categories: readonly SelectiveDataResetCategory[],
   database: AppDatabase = appDatabase,
 ): Promise<SelectiveDataResetResult> {
+  if (database === appDatabase && activeDataSpace.kind === "account") {
+    throw new SelectiveDataResetError(
+      "La réinitialisation sélective est indisponible pour un compte synchronisé : les données supprimées localement pourraient revenir depuis le cloud.",
+    );
+  }
+
   const plan = createSelectiveDataResetPlan(categories);
   assertNonEmptyPlan(plan);
 

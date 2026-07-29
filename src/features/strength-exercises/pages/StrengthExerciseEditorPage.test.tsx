@@ -1,6 +1,11 @@
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import {
+  MemoryRouter,
+  Route,
+  Routes,
+  useLocation,
+} from 'react-router-dom';
 import { StrengthExerciseEditorPage } from '@/features/strength-exercises/pages/StrengthExerciseEditorPage';
 import { appDatabase } from '@/infrastructure/database/database';
 import { initializeDatabase } from '@/infrastructure/database/databaseLifecycle';
@@ -42,5 +47,39 @@ describe('StrengthExerciseEditorPage', () => {
         expect.objectContaining({ name: 'Presse convergente', equipment: 'machine' }),
       ]);
     });
+  });
+
+  it('préremplit le nom puis revient au contexte de séance avec le nouvel identifiant', async () => {
+    const user = userEvent.setup();
+    function SessionReceiver() {
+      const location = useLocation();
+      const state = location.state as {
+        strengthExerciseCreated?: { exerciseId?: string };
+      } | null;
+      return (
+        <p>
+          Retour séance {state?.strengthExerciseCreated?.exerciseId ?? 'absent'}
+        </p>
+      );
+    }
+    render(
+      <MemoryRouter initialEntries={[
+        '/strength/exercises/new?returnTo=session&query=tirage+unilat%C3%A9ral+poulie&sessionId=session-1&plannedSets=3',
+      ]}>
+        <Routes>
+          <Route path="/strength/exercises/new" element={<StrengthExerciseEditorPage />} />
+          <Route path="/strength/sessions/:sessionId" element={<SessionReceiver />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByLabelText(/Nom de l’exercice/))
+      .toHaveValue('tirage unilatéral poulie');
+    expect(screen.getByLabelText(/Groupe musculaire principal/))
+      .toHaveValue('other');
+    await user.click(screen.getByRole('button', { name: 'Créer l’exercice' }));
+
+    expect(await screen.findByText(/Retour séance (?!absent)/))
+      .toBeInTheDocument();
   });
 });

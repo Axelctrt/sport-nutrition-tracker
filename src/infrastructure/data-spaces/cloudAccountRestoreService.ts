@@ -6,7 +6,9 @@ import type { FavoriteMeal, FoodProduct } from '@/domain/models/food';
 import type { UserSettings } from '@/domain/models/settings';
 import type { WeightEntry } from '@/domain/models/weight';
 import type { Activity } from '@/domain/models/activity';
+import type { PlannedEnduranceSession } from '@/domain/planning/endurancePlanningState';
 import type { Goal } from '@/domain/goals/goalState';
+import { DEFAULT_VISUAL_THEME_ID } from '@/domain/rewards/visualThemes';
 import {
   activateAccountDataSpace,
   type DataSpaceStorage,
@@ -46,6 +48,10 @@ import type {
 import {
   synchronizeRealNutritionTracking,
 } from '@/infrastructure/sync-prototype/realNutritionTrackingSyncService';
+import {
+  synchronizeRealDailyCoaching,
+  type DailyCoachingDayAggregate,
+} from '@/infrastructure/sync-prototype/realDailyCoachingSyncService';
 import type {
   StrengthExerciseAggregate,
   WorkoutSessionAggregate,
@@ -79,7 +85,8 @@ export type CloudAccountRestoreCategory =
   | 'nutritionJournal'
   | 'nutritionTracking'
   | 'accountPreferences'
-  | 'rewardsRoutines';
+  | 'rewardsRoutines'
+  | 'dailyCoaching';
 
 export interface CloudAccountRestoreCategoryPreview {
   readonly key: CloudAccountRestoreCategory;
@@ -120,6 +127,7 @@ export interface CloudAccountRestoreSourceSnapshot {
   readonly weights: readonly WeightEntry[];
   readonly weightMarkers: readonly DeletionRecord[];
   readonly activities: readonly Activity[];
+  readonly endurancePlanningSessions: readonly PlannedEnduranceSession[];
   readonly activityMarkers: readonly DeletionRecord[];
   readonly goals: readonly Goal[];
   readonly goalMarkers: readonly DeletionRecord[];
@@ -136,6 +144,7 @@ export interface CloudAccountRestoreSourceSnapshot {
   readonly nutritionTracking: readonly NutritionTrackingAggregate[];
   readonly accountPreferences: readonly AccountPreferencesAggregate[];
   readonly rewardsRoutines: readonly RewardsRoutinesAggregate[];
+  readonly dailyCoachingDays: readonly DailyCoachingDayAggregate[];
 }
 
 export interface CloudAccountRestoreRuntime {
@@ -162,6 +171,11 @@ type RestoreTableName = Extract<
   | 'routineReminderCompletions'
   | 'weights'
   | 'activities'
+  | 'endurancePlanningSessions'
+  | 'dailySteps'
+  | 'dailyCheckIns'
+  | 'dailyActivityDecisions'
+  | 'dailyCheckOuts'
   | 'goals'
   | 'exerciseDefinitions'
   | 'workoutTemplates'
@@ -194,6 +208,11 @@ const RESTORE_TABLE_NAMES: readonly RestoreTableName[] = [
   'routineReminderCompletions',
   'weights',
   'activities',
+  'endurancePlanningSessions',
+  'dailySteps',
+  'dailyCheckIns',
+  'dailyActivityDecisions',
+  'dailyCheckOuts',
   'goals',
   'exerciseDefinitions',
   'workoutTemplates',
@@ -217,6 +236,7 @@ const RESTORE_TABLE_NAMES: readonly RestoreTableName[] = [
 const SYNCED_DELETION_TYPES = new Set([
   'weight',
   'activity',
+  'endurancePlanningSession',
   'goal',
   'strengthSet',
   'workoutSessionExercise',
@@ -324,6 +344,11 @@ function meaningfulTargetSnapshot(snapshot: RestoreSnapshot): Record<string, unk
     routineReminderCompletions: snapshot.routineReminderCompletions,
     weights: snapshot.weights,
     activities: snapshot.activities,
+    endurancePlanningSessions: snapshot.endurancePlanningSessions,
+    dailySteps: snapshot.dailySteps,
+    dailyCheckIns: snapshot.dailyCheckIns,
+    dailyActivityDecisions: snapshot.dailyActivityDecisions,
+    dailyCheckOuts: snapshot.dailyCheckOuts,
     goals: snapshot.goals,
     exerciseDefinitions: customExercises,
     workoutTemplates: snapshot.workoutTemplates,
@@ -424,8 +449,13 @@ function buildPreview(
     (total, aggregate) => (
       total +
       aggregate.earnedAchievements.length +
-      aggregate.unlockedVisualThemes.filter((value) => value.id !== 'classic').length +
-      Number(aggregate.visualThemePreference.activeThemeId !== 'classic') +
+      aggregate.unlockedVisualThemes.filter(
+        (value) => value.id !== DEFAULT_VISUAL_THEME_ID,
+      ).length +
+      Number(
+        aggregate.visualThemePreference.activeThemeId
+          !== DEFAULT_VISUAL_THEME_ID,
+      ) +
       aggregate.weeklyMissionCompletions.length +
       aggregate.routineReminderCompletions.length +
       Number(!isDefaultRoutineReminderPreferencesSnapshot(
@@ -475,7 +505,14 @@ function buildPreview(
       key: 'activities',
       label: 'Activités',
       description: 'Activités sportives synchronisées.',
-      recordCount: source.activities.length,
+      recordCount:
+        source.activities.length + source.endurancePlanningSessions.length,
+    },
+    {
+      key: 'dailyCoaching',
+      label: 'Suivi quotidien',
+      description: 'Check-ins, decisions, check-outs et pas quotidiens.',
+      recordCount: source.dailyCoachingDays.length,
     },
     {
       key: 'goals',
@@ -559,6 +596,7 @@ export async function readCloudAccountRestoreSourceSnapshot(
     weights,
     weightMarkers,
     activities,
+    endurancePlanningSessions,
     activityMarkers,
     goals,
     goalMarkers,
@@ -575,10 +613,12 @@ export async function readCloudAccountRestoreSourceSnapshot(
     nutritionTracking,
     accountPreferences,
     rewardsRoutines,
+    dailyCoachingDays,
   ] = await Promise.all([
     database.realWeights.toArray(),
     database.realWeightDeletionRecords.toArray(),
     database.realActivities.toArray(),
+    database.realEndurancePlanningSessions.toArray(),
     database.realActivityDeletionRecords.toArray(),
     database.realGoals.toArray(),
     database.realGoalDeletionRecords.toArray(),
@@ -595,12 +635,17 @@ export async function readCloudAccountRestoreSourceSnapshot(
     database.realNutritionTracking.toArray(),
     database.realAccountPreferences.toArray(),
     database.realRewardsRoutines.toArray(),
+    database.realDailyCoachingDays.toArray(),
   ]);
 
   return {
     weights: normalizeOwnedRows(weights, currentUserId),
     weightMarkers: normalizeOwnedRows(weightMarkers, currentUserId),
     activities: normalizeOwnedRows(activities, currentUserId),
+    endurancePlanningSessions: normalizeOwnedRows(
+      endurancePlanningSessions,
+      currentUserId,
+    ),
     activityMarkers: normalizeOwnedRows(activityMarkers, currentUserId),
     goals: normalizeOwnedRows(goals, currentUserId),
     goalMarkers: normalizeOwnedRows(goalMarkers, currentUserId),
@@ -623,6 +668,7 @@ export async function readCloudAccountRestoreSourceSnapshot(
     nutritionTracking: normalizeOwnedRows(nutritionTracking, currentUserId),
     accountPreferences: normalizeOwnedRows(accountPreferences, currentUserId),
     rewardsRoutines: normalizeOwnedRows(rewardsRoutines, currentUserId),
+    dailyCoachingDays: normalizeOwnedRows(dailyCoachingDays, currentUserId),
   };
 }
 
@@ -663,6 +709,12 @@ export async function restoreCloudAccountDataToDatabase(
     options,
   );
   await synchronizeRealActivities(
+    localDatabase,
+    cloudDatabase,
+    currentUserId,
+    options,
+  );
+  await synchronizeRealDailyCoaching(
     localDatabase,
     cloudDatabase,
     currentUserId,

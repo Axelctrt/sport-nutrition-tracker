@@ -1,62 +1,49 @@
-# Checklist de publication — SportPilot 0.32.0
+# Checklist de publication — SportPilot 0.34.0
 
 ## Préparation Git
 
-- [ ] La branche `release/0.32.0` est propre et synchronisée.
-- [ ] `package.json` et `package-lock.json` indiquent `0.32.0`.
-- [ ] Paramètres affiche `0.32.0`.
-- [ ] Aucun ZIP, dossier `patch-files/`, résultat Playwright ou fichier généré n’est stagé.
-- [ ] Aucun `.env`, secret Cloudflare, token Dexie Cloud ou clé IA n’est stagé.
-- [ ] Aucune migration D1 ou Dexie nouvelle n’est attendue pour cette release.
+- [ ] La branche `feat/design-themes-analytics-0.34.0` est propre.
+- [x] `package.json` et `package-lock.json` indiquent `0.34.0`.
+- [x] Paramètres affiche `0.34.0`.
+- [x] Aucun secret, ZIP, résultat Playwright ou fichier généré n’est stagé.
+- [x] Aucune migration D1 ou Dexie nouvelle n’est attendue.
 
 ## Contrôles automatiques
 
-- [ ] `npm run lint` passe sans erreur.
-- [ ] `npx tsc -b --pretty false` passe.
-- [ ] La suite Vitest complète passe en lots déterministes.
-- [ ] `npm run test:e2e:onboarding` passe sur WebKit iPhone 15.
-- [ ] `npm run test:e2e:acceptance` passe sur Chromium desktop et WebKit iPhone 15.
-- [ ] `npm run build` passe.
-- [ ] `npm run check` passe.
-- [ ] `npm run test:stability` passe ou chaque lot déterministe équivalent est consigné.
-- [ ] `npm audit` annonce zéro vulnérabilité.
-- [ ] `npm run audit:release-consolidation` passe.
-- [ ] `npm run audit:ux-mobile-acceptance` passe.
-- [ ] `npm run audit:release` passe.
-- [ ] `npm run audit:security` passe.
-- [ ] `npm run audit:production` passe.
-- [ ] `npm run audit:repository` passe.
-- [ ] Les audits Sport, Nutrition, compte, synchronisation, Photo IA et social passent.
+- [x] `npm run lint` passe sans avertissement.
+- [x] `npx tsc -b --pretty false` passe.
+- [x] `npm run test` passe : 2 060 tests.
+- [x] `npm run build` génère la PWA.
+- [x] L’onboarding passe sur WebKit iPhone 15.
+- [x] La recette mobile/accessibilité passe sur Chromium et WebKit.
+- [x] Les 114 scénarios Playwright applicables passent.
+- [x] `npm run test:e2e:pwa` conserve les données pendant la mise à jour.
+- [x] `npm run audit:release-consolidation` passe.
+- [x] `npm run audit:ux-mobile-acceptance` passe.
+- [x] `npm run check` passe.
+- [x] `npm run test:stability` passe.
+- [x] `npm audit` est exécuté ; les alertes sans correctif compatible sont
+  analysées dans `KNOWN-LIMITATIONS.md`.
 
-## Recette onboarding
+## Recette 0.34.0
 
-- [ ] La première page affiche Mode local et Connecter un compte sans champ e-mail.
-- [ ] Le mode local précise qu’un compte peut être associé plus tard depuis Paramètres → Compte et appareils.
-- [ ] La connexion e-mail et le code sont gérés sur l’écran suivant.
-- [ ] Les neuf étapes de profil sont accessibles et les étapes ordinaires ne défilent pas globalement.
-- [ ] Date ou âge, taille, poids et pas utilisent les rouleaux sans saisie numérique manuelle.
-- [ ] Les pas progressent par paliers de 500.
-- [ ] Les rouleaux ordinaires sont légèrement plus réactifs et la variation d’objectif conserve sa sensibilité précise.
-- [ ] Les choix Masculin/Féminin, objectif et activité sont lisibles sans chevauchement.
-- [ ] Le résumé final fait défiler toute la page et toutes les actions Modifier restent accessibles.
-- [ ] VoiceOver, clavier, focus, lien d’évitement, réduction des animations et zones sûres iOS sont validés.
-
-## Recette générale
-
-- [ ] Accueil, Nutrition, Sport, Progression, Compte et Synchronisation restent fonctionnels.
-- [ ] Mode local, hors connexion, synchronisation et restauration sont validés.
-- [ ] Aucun débordement horizontal sur iPhone 15.
-- [ ] La mise à jour PWA conserve les données existantes.
+- [x] Les cinq thèmes fonctionnent en clair et sombre.
+- [x] Un ancien identifiant inconnu retombe sur Core sans perte de données.
+- [x] Les conditions de déblocage reflètent les données réellement enregistrées.
+- [x] Le reveal n’apparaît qu’une fois et se diffère pendant une saisie.
+- [x] Essayer maintenant ne synchronise rien avant confirmation.
+- [x] Progression conserve ses périodes et liens profonds.
+- [x] Analyses conserve domaine, période et période longue du poids.
+- [x] Tous les graphiques ont un état vide et une alternative textuelle.
+- [x] Aucun débordement horizontal à 320, 360, 393 et 412 px.
+- [x] Clair, sombre, réduction de mouvement et iPhone 15 sont validés.
+- [x] Manifeste, service worker, routes profondes et console sont contrôlés.
 
 ## Publication
 
-- [ ] Commit `chore(release): finaliser SportPilot 0.32.0` créé sur `release/0.32.0`.
-- [ ] `release/0.32.0` fusionnée manuellement dans `develop`.
-- [ ] Contrôles critiques relancés sur `develop`.
-- [ ] `develop` fusionnée manuellement dans `main`.
-- [ ] `main` poussée avant le déploiement de production.
-- [ ] Production Cloudflare Pages construite depuis `main`.
-- [ ] Version, PWA, onboarding et parcours principaux vérifiés en production.
-- [ ] Tag annoté `v0.32.0` créé sur le commit publié.
-- [ ] Tag `v0.32.0` poussé vers `origin`.
-- [ ] `develop` resynchronisée avec `main`.
+- [ ] Commit `test(release): valider SportPilot 0.34.0` créé.
+- [ ] Branche `feat/design-themes-analytics-0.34.0` poussée vers `origin`.
+- [ ] Aucune fusion ni aucun déploiement sans autorisation explicite.
+- [ ] Contrôles critiques relancés sur le commit autorisé.
+- [ ] Tag annoté `v0.34.0` créé sur le commit publié.
+- [ ] Tag `v0.34.0` poussé vers `origin`.

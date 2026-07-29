@@ -6,77 +6,44 @@ import desktopSidebarSource from "@/app/layouts/DesktopSidebar.tsx?raw";
 import appLayoutSource from "@/app/layouts/AppLayout.tsx?raw";
 import themeCssSource from "@/styles/unlockableThemes.css?raw";
 
-describe("SportPilot 0.26.0 R4.5 — pop-up unique, complet supprimé et sombre stabilisé", () => {
-  it("reste une phase visuelle sans migration ni passage de version finale", () => {
-    expect(__APP_VERSION__).toBe("0.32.0");
-    expect(databaseSchemaVersion).toBe(10);
-    expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(9);
+describe("SportPilot 0.34.0 - thèmes Performance Glass", () => {
+  it("préserve les versions de données pendant la phase visuelle", () => {
+    expect(__APP_VERSION__).toBe("0.34.0");
+    expect(databaseSchemaVersion).toBe(11);
+    expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(10);
   });
 
-  it("revient à des fonds CSS colorés sans assets image ni mouvement de thème", () => {
-    for (const token of [
-      "accessible dark-mode fixes",
-      "--sport-reward-atmosphere",
-      "--sport-reward-pattern",
-      'data-sport-theme-style="minimal"',
-      "sport-theme-app",
-      "--sport-reward-base",
-      'data-sport-preview="volcan"',
-      'data-sport-preview="cosmos"',
-      'data-sport-preview="nexus-vivant"',
+  it("sépare l'apparence claire/sombre des cinq identités", () => {
+    for (const themeId of [
+      "core",
+      "neon-pulse",
+      "emerald-focus",
+      "aurora",
+      "zenith-gold",
     ]) {
-      expect(themeCssSource).toContain(token);
+      expect(themeCssSource).toContain(`data-sport-theme="${themeId}"`);
+      expect(themeCssSource).toContain(`data-theme-preview="${themeId}"`);
+      expect(visualThemesSource).toContain(`id: "${themeId}"`);
     }
-
-    expect(themeCssSource).not.toContain("/theme-scenes/");
-    expect(themeCssSource).toContain("data-theme-preview-dialog");
-    expect(themeCssSource).toContain('html.dark[data-sport-theme]:not([data-sport-theme="classic"])');
-    expect(themeCssSource).not.toContain("--sport-reward-image");
-    expect(themeCssSource).not.toContain("@keyframes");
-    expect(themeCssSource).not.toMatch(/animation\s*:/);
+    expect(themeCssSource).toContain("prefers-reduced-motion: reduce");
+    expect(themeCssSource).not.toContain("data-sport-theme-style");
+    expect(visualThemesSource).not.toContain("VisualThemeStyleMode");
   });
 
-  it("garde une direction artistique plus colorée mais non flashy", () => {
-    for (const token of [
-      "plus coloré",
-      "sans asset image ni animation",
-      "Volcan",
-      "Cosmos",
-      "Océan",
-      "Abysses",
-      "Nexus vivant",
-    ]) {
-      expect(visualThemesSource).toContain(token);
-    }
-
-    expect(visualThemesSource).toContain("dynamic: true");
-    expect(themePanelSource).toContain("Ultime");
-    expect(themePanelSource).toContain("Voir un aperçu rapide de");
-    expect(themePanelSource).not.toContain("Prévisualiser tout");
-    expect(themePanelSource).not.toContain("Aperçu complet temporaire");
-    expect(themePanelSource).toContain("data-theme-preview-dialog");
-    expect(themePanelSource).toContain("SportPilot classique n’a pas d’aperçu complet");
-    expect(themePanelSource).toContain("Minimaliste uniquement");
-    expect(themePanelSource).toContain("Style du thème");
-    expect(themePanelSource).toContain("Minimaliste");
-    expect(themePanelSource).toContain("updateVisualThemeStyleMode");
-    expect(themePanelSource).toContain('role="dialog"');
-    expect(themePanelSource).toContain("data-theme-quick-preview");
-    expect(themePanelSource).not.toContain("Quitter l’aperçu");
-    expect(themePanelSource).toContain("createPortal");
-    expect(themePanelSource).toContain("data-theme-preview-backdrop");
-    expect(themePanelSource).not.toContain("Aperçu actif persistant");
-    expect(visualThemesSource).toContain("VisualThemeStyleMode");
-    expect(visualThemesSource).toContain("styleMode");
+  it("propose une collection, une progression et un essai confirmé", () => {
+    expect(themePanelSource).toContain("Ma collection");
+    expect(themePanelSource).toContain("ThemeCriteria");
+    expect(themePanelSource).toContain("beginVisualThemeTrial");
+    expect(themePanelSource).toContain("confirmVisualThemeTrial");
+    expect(themePanelSource).toContain("Revenir à l’ancien thème");
+    expect(themePanelSource).toContain("data-theme-preview");
   });
 
-  it("corrige le grand espace du menu latéral desktop", () => {
-    expect(desktopSidebarSource).toContain(
-      'className="mt-5 space-y-1 border-t border-slate-200 pt-4 dark:border-slate-800"',
-    );
-    expect(desktopSidebarSource).not.toContain(
-      'className="mt-auto space-y-1 border-t border-slate-200 pt-4 dark:border-slate-800"',
-    );
+  it("applique les tokens Performance Glass à la structure principale", () => {
+    expect(desktopSidebarSource).toContain("sp-navigation-shell");
+    expect(desktopSidebarSource).toContain("sp-navigation-link");
+    expect(desktopSidebarSource).toContain("var(--sp-border-subtle)");
     expect(appLayoutSource).toContain("sport-theme-app");
+    expect(appLayoutSource).toContain("var(--sp-text-primary)");
   });
 });

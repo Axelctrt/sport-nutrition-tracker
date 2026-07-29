@@ -9,10 +9,10 @@ interface SaveStatusProps {
 }
 
 const labels: Record<SaveStatusValue, string> = {
-  idle: 'Prêt',
-  saving: 'Enregistrement…',
-  saved: 'Enregistré',
-  error: 'Erreur de sauvegarde',
+  idle: 'Enregistré sur cet appareil',
+  saving: 'Enregistrement local…',
+  saved: 'Enregistré sur cet appareil',
+  error: 'Erreur d’enregistrement local',
 };
 
 export function SaveStatus({ status, className }: SaveStatusProps) {

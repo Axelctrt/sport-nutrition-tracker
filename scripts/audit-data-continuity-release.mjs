@@ -85,20 +85,20 @@ if (failures.length === 0) {
   }
 
   const runtime = read('src/infrastructure/sync-prototype/SyncPrototypeDatabase.ts');
-  if (!runtime.includes('SYNC_PROTOTYPE_DATABASE_VERSION = 14')) {
-    fail('le runtime cloud v14 attendu est absent.');
+  if (!runtime.includes('SYNC_PROTOTYPE_DATABASE_VERSION = 16')) {
+    fail('le runtime cloud v16 attendu est absent.');
   }
   if (!runtime.includes('sportpilot-sync-runtime-0.20.0-v${SYNC_PROTOTYPE_DATABASE_VERSION}')) {
     fail('le nom du runtime cloud validé a changé sans migration déclarée.');
   }
 
   const databaseVersions = read('src/infrastructure/database/migrations/versions.ts');
-  if (!/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_10\b/.test(databaseVersions)) {
-    fail('le schéma métier doit rester en Dexie v8.');
+  if (!/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_11\b/.test(databaseVersions)) {
+    fail('le schéma métier doit rester en Dexie v11.');
   }
   const backupMigrations = read('src/infrastructure/backup/backupMigrations.ts');
-  if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*9\b/.test(backupMigrations)) {
-    fail('la sauvegarde JSON doit rester en v7.');
+  if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*10\b/.test(backupMigrations)) {
+    fail('la sauvegarde JSON doit rester en v10.');
   }
   const dataSpace = read('src/domain/data-spaces/dataSpace.ts');
   if (!/DATA_SPACE_REGISTRY_VERSION\s*=\s*1\s+as\s+const/.test(dataSpace)) {

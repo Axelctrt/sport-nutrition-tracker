@@ -124,16 +124,16 @@ if (failures.length === 0) {
   }
 
   const versions = read('src/infrastructure/database/migrations/versions.ts');
-  if (!/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_10\b/.test(versions)) {
+  if (!/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_11\b/.test(versions)) {
     fail('La base métier doit rester en Dexie v8.');
   }
   const backup = read('src/infrastructure/backup/backupMigrations.ts');
-  if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*9\b/.test(backup)) {
+  if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*10\b/.test(backup)) {
     fail('La sauvegarde JSON doit rester en v7.');
   }
   const cloud = read('src/infrastructure/sync-prototype/SyncPrototypeDatabase.ts');
-  if (!cloud.includes('SYNC_PROTOTYPE_DATABASE_VERSION = 14')) {
-    fail('Le runtime cloud doit passer en v14 pour les amitiés et permissions sociales.');
+  if (!cloud.includes('SYNC_PROTOTYPE_DATABASE_VERSION = 16')) {
+    fail('Le runtime cloud doit utiliser la v16 pour les amitiés et permissions sociales.');
   }
   if (!/^\d+\.\d+\.\d+$/.test(String(JSON.parse(read('package.json')).version))) {
     fail('La publication F4 doit exposer une version stable.');
@@ -147,5 +147,5 @@ if (failures.length > 0) {
 }
 
 console.log(
-  'Audit F2 réussi : déclencheurs maîtrisés, autorisation par compte, analyse préalable, anti-rebond local, modes réseau et runtime cloud v14 social prêt.',
+  'Audit F2 réussi : déclencheurs maîtrisés, autorisation par compte, analyse préalable, anti-rebond local, modes réseau et runtime cloud v16 social prêt.',
 );

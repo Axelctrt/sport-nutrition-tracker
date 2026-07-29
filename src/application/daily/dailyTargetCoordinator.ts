@@ -1,4 +1,17 @@
+import { parseISO, subDays } from 'date-fns';
 import { calculateDailyTarget, type DailyTargetCalculationResult } from '@/domain/calculations/dailyTarget';
+import {
+  calculateDailyExpenditure,
+  type DailyExpenditureResult,
+} from '@/domain/calculations/expenditure';
+import {
+  compareEnergyArchitectures,
+  type EnergyArchitectureShadowComparison,
+} from '@/domain/calculations/energyArchitectureShadow';
+import {
+  estimateExpectedSteps,
+  EXPECTED_STEPS_OBSERVATION_WINDOW_DAYS,
+} from '@/domain/calculations/expectedSteps';
 import type { Activity } from '@/domain/models/activity';
 import type { LocalDate, NewEntity } from '@/domain/models/common';
 import type { UserProfile } from '@/domain/models/profile';
@@ -6,6 +19,7 @@ import type { PlannedActivityCalorieSnapshot } from '@/domain/models/plannedActi
 import type { PlannedEnduranceSession } from '@/domain/planning/endurancePlanningState';
 import type { AppSettings } from '@/domain/models/settings';
 import type { DailySteps } from '@/domain/models/steps';
+import type { ExpectedStepsEstimate } from '@/domain/models/steps';
 import type { DailyTarget } from '@/domain/models/targets';
 import type { AcceptedCalorieAdjustment } from '@/domain/models/weeklyReview';
 import {
@@ -16,6 +30,7 @@ import {
 import type { WeightEntry } from '@/domain/models/weight';
 import { buildPlannedActivityCalories } from '@/application/planning/plannedActivityCalories';
 import type { ActivityRepository } from '@/infrastructure/repositories/contracts/ActivityRepository';
+import type { DailyCoachingRepository } from '@/infrastructure/repositories/contracts/DailyCoachingRepository';
 import type { SettingsRepository } from '@/infrastructure/repositories/contracts/SettingsRepository';
 import type { StepsRepository } from '@/infrastructure/repositories/contracts/StepsRepository';
 import type { TargetRepository } from '@/infrastructure/repositories/contracts/TargetRepository';
@@ -28,13 +43,18 @@ import {
   buildDailyEnergyTransparency,
   type DailyEnergyTransparency,
 } from '@/application/daily/dailyEnergyTransparency';
+import { toLocalDate } from '@/shared/utils/dates';
+import {
+  buildDailyTargetEnergyInputSnapshot,
+} from '@/domain/calculations/dailyTargetInputSnapshot';
 
 export type CalculationWeightResolution = ReferenceWeightResolution;
 
 export interface DailyTargetCoordinatorDependencies {
   settings: Pick<SettingsRepository, 'get'>;
   weight: Pick<WeightRepository, 'getByDate' | 'listBetween'>;
-  steps: Pick<StepsRepository, 'getByDate'>;
+  steps: Pick<StepsRepository, 'getByDate' | 'listBetween'>;
+  dailyCoaching: Pick<DailyCoachingRepository, 'getCheckOut'>;
   activities: Pick<ActivityRepository, 'listByDate'>;
   targets: Pick<TargetRepository, 'upsertTarget'>;
   weeklyReviews: Pick<WeeklyReviewRepository, 'listAdjustments'>;
@@ -53,12 +73,26 @@ export interface DailyTargetSnapshot {
   activities: Activity[];
   plannedActivities: PlannedActivityCalorieSnapshot[];
   energyTransparency: DailyEnergyTransparency;
+  energyGuidance: DailyEnergyGuidance;
+  energyArchitectureShadow: DailyEnergyArchitectureShadow;
+}
+
+export interface DailyEnergyGuidance {
+  expectedSteps: ExpectedStepsEstimate;
+  finalStatus: 'open' | 'missingSteps' | 'final';
+  finalExpenditure?: DailyExpenditureResult;
+}
+
+export interface DailyEnergyArchitectureShadow {
+  guided: EnergyArchitectureShadowComparison;
+  final?: EnergyArchitectureShadowComparison;
 }
 
 const defaultDependencies: DailyTargetCoordinatorDependencies = {
   settings: repositories.settings,
   weight: repositories.weight,
   steps: repositories.steps,
+  dailyCoaching: repositories.dailyCoaching,
   activities: repositories.activities,
   targets: repositories.targets,
   weeklyReviews: repositories.weeklyReviews,
@@ -116,10 +150,15 @@ export function resolveAcceptedCalibrationAdjustment(
 function toDailyTargetInput(
   date: LocalDate,
   calculation: DailyTargetCalculationResult,
+  expectedSteps: ExpectedStepsEstimate,
+  profile: UserProfile,
+  settings: AppSettings,
 ): NewEntity<DailyTarget> {
   return {
     date,
     calculationWeightKg: calculation.calculationWeightKg,
+    energyInputSnapshot:
+      buildDailyTargetEnergyInputSnapshot(profile, settings),
     energy: calculation.energy,
     targetWeeklyWeightChangePercentUsed:
       calculation.targetWeeklyWeightChangePercentUsed,
@@ -130,6 +169,15 @@ function toDailyTargetInput(
     targetCaloriesKcal: calculation.targetCaloriesKcal,
     macros: calculation.macros,
     plannedActivities: calculation.plannedActivities,
+    stepBasis: {
+      mode: 'expected',
+      steps: expectedSteps.expectedSteps,
+      stepGoal: expectedSteps.stepGoal,
+      source: expectedSteps.source,
+      confidence: expectedSteps.confidence,
+      observedDayCount: expectedSteps.observedDayCount,
+      observationWindowDays: expectedSteps.observationWindowDays,
+    },
     calculationVersion: calculation.calculationVersion,
   };
 }
@@ -140,6 +188,10 @@ export async function calculateAndPersistDailyTarget(
   dependencies: DailyTargetCoordinatorDependencies = defaultDependencies,
 ): Promise<DailyTargetSnapshot> {
   const referencePeriod = getPreviousCalendarWeekRange(date);
+  const stepHistoryStart = toLocalDate(
+    subDays(parseISO(date), EXPECTED_STEPS_OBSERVATION_WINDOW_DAYS),
+  );
+  const stepHistoryEnd = toLocalDate(subDays(parseISO(date), 1));
   const [
     settings,
     previousWeekEntries,
@@ -149,6 +201,8 @@ export async function calculateAndPersistDailyTarget(
     adjustments,
     strengthSessions,
     enduranceSessions,
+    stepHistory,
+    checkOut,
   ] = await Promise.all([
     dependencies.settings.get(),
     dependencies.weight.listBetween(referencePeriod.start, referencePeriod.end),
@@ -158,6 +212,8 @@ export async function calculateAndPersistDailyTarget(
     dependencies.weeklyReviews.listAdjustments(),
     dependencies.workoutSessions.listAll(),
     dependencies.listEndurancePlanningSessions(),
+    dependencies.steps.listBetween(stepHistoryStart, stepHistoryEnd),
+    dependencies.dailyCoaching.getCheckOut(date),
   ]);
 
   const weight = resolveCalculationWeight(date, profile, previousWeekEntries);
@@ -173,18 +229,40 @@ export async function calculateAndPersistDailyTarget(
     strengthSessions,
     enduranceSessions,
   });
+  const expectedSteps = estimateExpectedSteps({
+    date,
+    occupationalActivity: profile.occupationalActivity,
+    stepGoal: profile.dailyStepGoal,
+    includedBaseSteps: settings.includedBaseSteps,
+    history: stepHistory,
+  });
   const calculation = calculateDailyTarget({
     date,
     profile,
     settings,
     weightKg: weight.weightKg,
-    totalSteps: stepsEntry?.totalSteps ?? 0,
+    totalSteps: expectedSteps.expectedSteps,
     activities,
     plannedActivities,
     acceptedCalibrationAdjustmentKcal,
   });
+  const guidedEnergyArchitectureShadow = compareEnergyArchitectures({
+    date,
+    profile,
+    settings,
+    weightKg: weight.weightKg,
+    totalSteps: expectedSteps.expectedSteps,
+    activities,
+    plannedActivities,
+  });
   const target = await dependencies.targets.upsertTarget(
-    toDailyTargetInput(date, calculation),
+    toDailyTargetInput(
+      date,
+      calculation,
+      expectedSteps,
+      profile,
+      settings,
+    ),
   );
   const energyTransparency = buildDailyEnergyTransparency({
     date,
@@ -196,6 +274,38 @@ export async function calculateAndPersistDailyTarget(
     settings,
     weightKg: weight.weightKg,
   });
+  const finalStepsEntry = checkOut?.stepsEntryId === stepsEntry?.id
+    ? stepsEntry
+    : undefined;
+  const finalExpenditure = checkOut && finalStepsEntry
+    ? calculateDailyExpenditure({
+        date,
+        profile,
+        settings,
+        weightKg: weight.weightKg,
+        totalSteps: finalStepsEntry.totalSteps,
+        activities,
+      })
+    : undefined;
+  const finalEnergyArchitectureShadow = checkOut && finalStepsEntry
+    ? compareEnergyArchitectures({
+        date,
+        profile,
+        settings,
+        weightKg: weight.weightKg,
+        totalSteps: finalStepsEntry.totalSteps,
+        activities,
+      })
+    : undefined;
+  const energyGuidance: DailyEnergyGuidance = {
+    expectedSteps,
+    finalStatus: !checkOut
+      ? 'open'
+      : finalExpenditure
+        ? 'final'
+        : 'missingSteps',
+    ...(finalExpenditure ? { finalExpenditure } : {}),
+  };
 
   return {
     date,
@@ -208,5 +318,12 @@ export async function calculateAndPersistDailyTarget(
     activities,
     plannedActivities,
     energyTransparency,
+    energyGuidance,
+    energyArchitectureShadow: {
+      guided: guidedEnergyArchitectureShadow,
+      ...(finalEnergyArchitectureShadow
+        ? { final: finalEnergyArchitectureShadow }
+        : {}),
+    },
   };
 }

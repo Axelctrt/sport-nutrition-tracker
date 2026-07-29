@@ -4,9 +4,9 @@ import type { FoodEntry, FoodProduct, MealSlot, NutritionValues } from '@/domain
 import type { FoodRepository } from '@/infrastructure/repositories/contracts/FoodRepository';
 import { repositories } from '@/infrastructure/repositories/repositories';
 
-export type PhotoNutritionAnalysisMode = 'local-fallback' | 'remote-ai';
+export type PhotoNutritionAnalysisMode = 'remote-ai';
 export type PhotoNutritionConfidence = 'low' | 'medium' | 'high';
-export type PhotoNutritionPrivacyMode = 'local-only' | 'external-consent-required';
+export type PhotoNutritionPrivacyMode = 'external-consent-required';
 
 export interface PhotoNutritionEstimate {
   name: string;
@@ -41,12 +41,6 @@ export interface PhotoNutritionEstimationDependencies {
   food: FoodRepository;
 }
 
-const localWarnings = [
-  'Estimation locale sans reconnaissance IA réelle branchée.',
-  'Quantité approximative à corriger avant l’ajout au journal.',
-  'Photo non conservée dans le journal alimentaire.',
-];
-
 const round = (value: number): number => Math.round(value * 10) / 10;
 
 function assertPhoto(file: File): void {
@@ -57,31 +51,6 @@ function assertPhoto(file: File): void {
 function assertEstimate(estimate: PhotoNutritionEstimate): void {
   if (!(estimate.amount > 0)) throw new Error('Quantité approximative invalide.');
 }
-
-function estimateFor(): PhotoNutritionAnalysisResult {
-  return {
-    estimate: {
-      name: 'Repas à vérifier',
-      amount: 250,
-      nutrition: {
-        caloriesKcal: 450,
-        proteinGrams: 22,
-        carbohydratesGrams: 48,
-        fatGrams: 16,
-      },
-    },
-    mode: 'local-fallback',
-    confidence: 'low',
-    privacy: 'local-only',
-    warnings: localWarnings,
-  };
-}
-
-export const localPhotoNutritionAnalysisPort: PhotoNutritionAnalysisPort = {
-  async analyze() {
-    return estimateFor();
-  },
-};
 
 export function createPhotoEstimatedProductData(
   estimate: PhotoNutritionEstimate,
@@ -110,7 +79,7 @@ export function createPhotoEstimatedProductData(
 
 export async function analyzePhotoNutrition(
   file: File,
-  port: PhotoNutritionAnalysisPort = localPhotoNutritionAnalysisPort,
+  port: PhotoNutritionAnalysisPort,
   signal?: AbortSignal,
 ): Promise<PhotoNutritionAnalysisResult> {
   if (signal?.aborted) throw new Error('Analyse photo annulée.');

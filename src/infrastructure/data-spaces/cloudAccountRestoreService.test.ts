@@ -43,6 +43,7 @@ function emptySource(): CloudAccountRestoreSourceSnapshot {
     weights: [],
     weightMarkers: [],
     activities: [],
+    endurancePlanningSessions: [],
     activityMarkers: [],
     goals: [],
     goalMarkers: [],
@@ -59,6 +60,7 @@ function emptySource(): CloudAccountRestoreSourceSnapshot {
     nutritionTracking: [],
     accountPreferences: [],
     rewardsRoutines: [],
+    dailyCoachingDays: [],
   };
 }
 
@@ -141,12 +143,12 @@ function rewardsRoutines(): RewardsRoutinesAggregate {
       { id: 'first-session', earnedAt: updatedAt, updatedAt },
     ],
     unlockedVisualThemes: [
-      { id: 'classic', unlockedAt: updatedAt, updatedAt },
-      { id: 'endurance', unlockedAt: updatedAt, updatedAt },
+      { id: 'core', unlockedAt: updatedAt, updatedAt },
+      { id: 'neon-pulse', unlockedAt: updatedAt, updatedAt },
     ],
     visualThemePreference: {
       id: VISUAL_THEME_PREFERENCE_ID,
-      activeThemeId: 'endurance',
+      activeThemeId: 'neon-pulse',
       updatedAt,
     },
     weeklyMissionCompletions: [{
@@ -490,7 +492,7 @@ describe('cloudAccountRestoreService', () => {
     expect(await restored.earnedAchievements.count()).toBe(1);
     expect(await restored.unlockedVisualThemes.count()).toBe(2);
     expect(await restored.visualThemePreferences.get(VISUAL_THEME_PREFERENCE_ID))
-      .toMatchObject({ activeThemeId: 'endurance' });
+      .toMatchObject({ activeThemeId: 'neon-pulse' });
     expect(await restored.weeklyMissionCompletions.count()).toBe(1);
     expect(await restored.routineReminderCompletions.count()).toBe(1);
     expect(await restored.userSettings.get(USER_SETTINGS_ID)).toMatchObject({

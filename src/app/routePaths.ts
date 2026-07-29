@@ -97,6 +97,44 @@ export function foodJournalPath(date: string): string {
   return `${routePaths.food}?date=${encodeURIComponent(date)}`;
 }
 
+export function foodJournalMealPath(
+  date: string,
+  slot: string,
+  openAddSheet = false,
+): string {
+  const params = new URLSearchParams({ date, slot });
+  if (openAddSheet) params.set('add', 'true');
+  return `${routePaths.food}?${params.toString()}`;
+}
+
+export type MealAddStep = 'meal' | 'overview' | 'method';
+
+export function dashboardMealAddPath(
+  slot: string,
+  step: MealAddStep = 'meal',
+): string {
+  const params = new URLSearchParams({
+    panel: 'meal-add',
+    slot,
+    step,
+  });
+  return `${routePaths.dashboard}?${params.toString()}`;
+}
+
+export function foodJournalMealComposerPath(
+  date: string,
+  slot: string,
+  step: MealAddStep = 'overview',
+): string {
+  const params = new URLSearchParams({
+    date,
+    slot,
+    add: 'true',
+    step,
+  });
+  return `${routePaths.food}?${params.toString()}`;
+}
+
 export function weightPath(date: string): string {
   return `${routePaths.weight}?date=${encodeURIComponent(date)}`;
 }
@@ -106,6 +144,12 @@ export function addFoodPath(date: string, slot: string): string {
 }
 
 export type FoodSelectorSource = 'recent' | 'favorites' | 'all' | 'openFoodFacts';
+
+export interface NewFoodProductForMealOptions {
+  barcode?: string;
+  name?: string;
+  returnSource?: FoodSelectorSource;
+}
 
 export function selectFoodPath(
   date: string,
@@ -122,10 +166,13 @@ export function selectFoodPath(
 export function newFoodProductForMealPath(
   date: string,
   slot: string,
-  barcode?: string,
+  options?: string | NewFoodProductForMealOptions,
 ): string {
   const params = new URLSearchParams({ returnDate: date, returnSlot: slot });
-  if (barcode) params.set('barcode', barcode);
+  const normalizedOptions = typeof options === 'string' ? { barcode: options } : options;
+  if (normalizedOptions?.barcode) params.set('barcode', normalizedOptions.barcode);
+  if (normalizedOptions?.name) params.set('name', normalizedOptions.name);
+  if (normalizedOptions?.returnSource) params.set('returnSource', normalizedOptions.returnSource);
   return `${routePaths.newFoodProduct}?${params.toString()}`;
 }
 

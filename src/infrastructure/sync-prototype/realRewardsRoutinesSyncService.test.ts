@@ -54,11 +54,11 @@ function aggregate(
     id: REWARDS_ROUTINES_AGGREGATE_ID,
     earnedAchievements: [],
     unlockedVisualThemes: [
-      { id: 'classic', unlockedAt: T1, updatedAt: T1 },
+      { id: 'core', unlockedAt: T1, updatedAt: T1 },
     ],
     visualThemePreference: {
       id: VISUAL_THEME_PREFERENCE_ID,
-      activeThemeId: 'classic',
+      activeThemeId: 'core',
       updatedAt: T1,
     },
     weeklyMissionCompletions: [],
@@ -133,8 +133,8 @@ describe('synchronisation E2 des récompenses et rappels', () => {
       updatedAt: T2,
     });
     await local.unlockedVisualThemes.bulkPut([
-      { id: 'classic', unlockedAt: T2, updatedAt: T2 },
-      { id: 'endurance', unlockedAt: T2, updatedAt: T2 },
+      { id: 'core', unlockedAt: T2, updatedAt: T2 },
+      { id: 'neon-pulse', unlockedAt: T2, updatedAt: T2 },
     ]);
     await local.weeklyMissionCompletions.put({
       id: weeklyMissionCompletionId('2026-06-29'),
@@ -149,8 +149,8 @@ describe('synchronisation E2 des récompenses et rappels', () => {
           { id: 'ten-sessions', earnedAt: T2, updatedAt: T2 },
         ],
         unlockedVisualThemes: [
-          { id: 'classic', unlockedAt: T1, updatedAt: T1 },
-          { id: 'power', unlockedAt: T2, updatedAt: T2 },
+          { id: 'core', unlockedAt: T1, updatedAt: T1 },
+          { id: 'emerald-focus', unlockedAt: T2, updatedAt: T2 },
         ],
         weeklyMissionCompletions: [{
           id: weeklyMissionCompletionId('2026-06-29'),
@@ -174,7 +174,7 @@ describe('synchronisation E2 des récompenses et rappels', () => {
       { id: 'ten-sessions', earnedAt: T2, updatedAt: T2 },
     ]);
     expect((await local.unlockedVisualThemes.toArray()).map(({ id }) => id).sort())
-      .toEqual(['classic', 'endurance', 'power']);
+      .toEqual(['core', 'emerald-focus', 'neon-pulse']);
     expect(await local.weeklyMissionCompletions.get(
       weeklyMissionCompletionId('2026-06-29'),
     )).toMatchObject({ completedAt: T1 });
@@ -190,12 +190,12 @@ describe('synchronisation E2 des récompenses et rappels', () => {
     await cloud.realRewardsRoutines.put({
       ...aggregate({
         unlockedVisualThemes: [
-          { id: 'classic', unlockedAt: T1, updatedAt: T1 },
-          { id: 'power', unlockedAt: T1, updatedAt: T1 },
+          { id: 'core', unlockedAt: T1, updatedAt: T1 },
+          { id: 'emerald-focus', unlockedAt: T1, updatedAt: T1 },
         ],
         visualThemePreference: {
           id: VISUAL_THEME_PREFERENCE_ID,
-          activeThemeId: 'power',
+          activeThemeId: 'emerald-focus',
           updatedAt: T1,
         },
         routineReminderPreferences: {
@@ -215,7 +215,7 @@ describe('synchronisation E2 des récompenses et rappels', () => {
     );
 
     expect(await local.visualThemePreferences.get(VISUAL_THEME_PREFERENCE_ID))
-      .toMatchObject({ activeThemeId: 'power', updatedAt: T1 });
+      .toMatchObject({ activeThemeId: 'emerald-focus', updatedAt: T1 });
     expect(await local.userSettings.get(USER_SETTINGS_ID)).toMatchObject({
       routineReminderPreferences: { snoozeMinutes: 120 },
       routineReminderUpdatedAt: T1,
@@ -229,12 +229,12 @@ describe('synchronisation E2 des récompenses et rappels', () => {
       updatedAt: T1,
     });
     await local.unlockedVisualThemes.bulkPut([
-      { id: 'classic', unlockedAt: T1, updatedAt: T1 },
-      { id: 'endurance', unlockedAt: T1, updatedAt: T1 },
+      { id: 'core', unlockedAt: T1, updatedAt: T1 },
+      { id: 'neon-pulse', unlockedAt: T1, updatedAt: T1 },
     ]);
     await local.visualThemePreferences.put({
       id: VISUAL_THEME_PREFERENCE_ID,
-      activeThemeId: 'endurance',
+      activeThemeId: 'neon-pulse',
       updatedAt: T3,
     });
     const localSettings = createDefaultUserSettings();
@@ -245,12 +245,12 @@ describe('synchronisation E2 des récompenses et rappels', () => {
     await cloud.realRewardsRoutines.put({
       ...aggregate({
         unlockedVisualThemes: [
-          { id: 'classic', unlockedAt: T1, updatedAt: T1 },
-          { id: 'power', unlockedAt: T1, updatedAt: T1 },
+          { id: 'core', unlockedAt: T1, updatedAt: T1 },
+          { id: 'emerald-focus', unlockedAt: T1, updatedAt: T1 },
         ],
         visualThemePreference: {
           id: VISUAL_THEME_PREFERENCE_ID,
-          activeThemeId: 'power',
+          activeThemeId: 'emerald-focus',
           updatedAt: T2,
         },
         routineReminderPreferences: {
@@ -269,7 +269,7 @@ describe('synchronisation E2 des récompenses et rappels', () => {
     );
 
     expect(await local.visualThemePreferences.get(VISUAL_THEME_PREFERENCE_ID))
-      .toMatchObject({ activeThemeId: 'endurance', updatedAt: T3 });
+      .toMatchObject({ activeThemeId: 'neon-pulse', updatedAt: T3 });
     expect(await local.userSettings.get(USER_SETTINGS_ID)).toMatchObject({
       routineReminderPreferences: { snoozeMinutes: 240 },
       routineReminderUpdatedAt: T3,

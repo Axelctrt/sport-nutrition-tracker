@@ -22,6 +22,7 @@ interface StrengthExerciseLibraryCardProps {
   busy?: boolean;
   onArchiveChange: (exerciseId: string, archived: boolean) => Promise<boolean>;
   onDuplicate: (exerciseId: string) => Promise<void>;
+  highlighted?: boolean;
 }
 
 export function StrengthExerciseLibraryCard({
@@ -29,13 +30,21 @@ export function StrengthExerciseLibraryCard({
   busy = false,
   onArchiveChange,
   onDuplicate,
+  highlighted = false,
 }: StrengthExerciseLibraryCardProps) {
   const [confirmationOpen, setConfirmationOpen] = useState(false);
   const nextArchivedState = !exercise.isArchived;
 
   return (
     <>
-      <Card className={cn('p-4 sm:p-5', exercise.isArchived && 'opacity-70')}>
+      <Card
+        id={`strength-exercise-${exercise.id}`}
+        className={cn(
+          'p-4 transition-colors sm:p-5 motion-reduce:transition-none',
+          exercise.isArchived && 'opacity-70',
+          highlighted && 'ring-2 ring-brand-500 bg-brand-50 dark:bg-brand-950/30',
+        )}
+      >
         <div className="flex items-start gap-3">
           <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-violet-100 text-violet-800 dark:bg-violet-950/60 dark:text-violet-200">
             <span className="text-sm font-black">{exercise.name.slice(0, 2).toUpperCase()}</span>

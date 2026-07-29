@@ -15,12 +15,12 @@ test('crée un modèle, démarre une séance, valide une série et termine', asy
   await page.getByRole('button', { name: 'Démarrer la séance' }).click();
 
   await expect(page.getByRole('heading', { name: 'Push E2E' })).toBeVisible();
-  await page.getByRole('button', { name: 'Ajouter une série' }).click();
-  await page.getByLabel('Charge en kg').fill('40');
-  await page.getByLabel('Répétitions').fill('10');
-  await page.getByLabel('RPE').fill('8');
-  await page.getByRole('button', { name: 'Valider la série' }).click();
-  await expect(page.getByRole('button', { name: 'Rouvrir la série' })).toBeVisible();
+  const firstSet = page.getByRole('article', { name: 'Série 1' });
+  await firstSet.getByLabel('Charge en kg').fill('40');
+  await firstSet.getByLabel('Répétitions').fill('10');
+  await firstSet.getByLabel('RPE').fill('8');
+  await firstSet.getByRole('button', { name: 'Valider la série' }).click();
+  await expect(firstSet.getByRole('button', { name: 'Modifier la série 1' })).toBeVisible();
   const restTimer = page.getByRole('region', { name: 'Minuteur de repos' });
   await expect(restTimer).toBeVisible();
   await expect(restTimer.getByRole('timer')).toContainText(/01:5[0-9]|02:00/);

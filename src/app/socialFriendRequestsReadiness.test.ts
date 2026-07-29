@@ -22,8 +22,8 @@ const snapshot: FriendsPrivacySnapshot = {
 
 describe('readiness demandes amis réelles 0.27.0 F2', () => {
   it('conserve Dexie v10 et sauvegarde JSON v9 sans backend inventé', () => {
-    expect(databaseSchemaVersion).toBe(10);
-    expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(9);
+    expect(databaseSchemaVersion).toBe(11);
+    expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(10);
   });
 
   it('envoie une demande compatible userId uniquement après recherche exacte trouvée', async () => {

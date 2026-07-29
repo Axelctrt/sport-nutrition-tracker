@@ -1,8 +1,14 @@
-import { LoaderCircle, PackageSearch, RefreshCw, Search } from 'lucide-react';
-import { type FormEvent, useMemo, useState } from 'react';
-import type { FoodProduct } from '@/domain/models/food';
+import { LoaderCircle, PackageSearch, Plus, RefreshCw, Search } from 'lucide-react';
+import { type FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { newFoodProductForMealPath } from '@/app/routePaths';
+import type { FoodProduct, MealSlot } from '@/domain/models/food';
 import type { OpenFoodFactsProductCandidate } from '@/infrastructure/open-food-facts/OpenFoodFactsMapper';
-import { normalizeOpenFoodFactsBarcode } from '@/infrastructure/open-food-facts/barcode';
+import {
+  isSupportedBarcode,
+  normalizeOpenFoodFactsBarcode,
+  sanitizeBarcode,
+} from '@/infrastructure/open-food-facts/barcode';
 import { MealOpenFoodFactsProductCard } from '@/features/food-journal/components/MealOpenFoodFactsProductCard';
 import { useMealOpenFoodFactsSearch } from '@/features/food-journal/hooks/useMealOpenFoodFactsSearch';
 import { inputClassName } from '@/shared/forms/formStyles';
@@ -15,14 +21,23 @@ interface MealOpenFoodFactsSearchPanelProps {
   localProducts: FoodProduct[];
   selectedProductId: string | undefined;
   onProductReady: (product: FoodProduct, message: string) => Promise<void>;
+  date: string;
+  mealSlot: MealSlot;
+  navigationState?: unknown;
+  autoFocus?: boolean;
 }
 
 export function MealOpenFoodFactsSearchPanel({
   localProducts,
   selectedProductId,
   onProductReady,
+  date,
+  mealSlot,
+  navigationState,
+  autoFocus = false,
 }: MealOpenFoodFactsSearchPanelProps) {
   const [query, setQuery] = useState('');
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [successMessage, setSuccessMessage] = useState<string>();
   const [savedProductsByBarcode, setSavedProductsByBarcode] = useState<Map<string, FoodProduct>>(
     () => new Map(),
@@ -38,6 +53,12 @@ export function MealOpenFoodFactsSearchPanel({
     saveCandidate,
     reset,
   } = useMealOpenFoodFactsSearch();
+
+  useEffect(() => {
+    if (!autoFocus) return;
+    searchInputRef.current?.focus();
+    window.requestAnimationFrame(() => searchInputRef.current?.focus());
+  }, [autoFocus]);
 
   const localProductsByBarcode = useMemo(
     () => new Map(
@@ -89,6 +110,7 @@ export function MealOpenFoodFactsSearchPanel({
                 className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400"
               />
               <input
+                ref={searchInputRef}
                 id="meal-off-search"
                 type="search"
                 value={query}
@@ -153,12 +175,29 @@ export function MealOpenFoodFactsSearchPanel({
         </InlineNotice>
       ) : null}
 
-      {status === 'ready' && products.length === 0 && !informationMessage ? (
+      {status === 'ready' && products.length === 0 ? (
         <EmptyState
           className="mt-4"
           icon={PackageSearch}
           title="Aucun résultat exploitable"
           description="Modifie la recherche ou utilise la création manuelle."
+          primaryAction={(
+            <Link
+              to={newFoodProductForMealPath(date, mealSlot, {
+                ...(isSupportedBarcode(query.trim())
+                  ? { barcode: sanitizeBarcode(query.trim()) }
+                  : query.trim()
+                    ? { name: query.trim() }
+                    : {}),
+                returnSource: 'openFoodFacts',
+              })}
+              state={navigationState}
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-brand-700 px-4 text-sm font-semibold text-white hover:bg-brand-800"
+            >
+              <Plus aria-hidden="true" className="size-4" />
+              {query.trim() ? 'Créer cet aliment' : 'Créer un aliment'}
+            </Link>
+          )}
         />
       ) : null}
 

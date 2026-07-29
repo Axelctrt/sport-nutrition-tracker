@@ -17,6 +17,7 @@ import {
 } from '@/domain/sync/deterministicEntityIds';
 import type { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import type { SyncPrototypeDatabase } from '@/infrastructure/sync-prototype/SyncPrototypeDatabase';
+import { sameLocalCollection } from '@/infrastructure/sync-prototype/localSyncCompareAndSwap';
 import {
   belongsToCurrentUser,
   chooseLatest,
@@ -27,6 +28,15 @@ import {
   type CloudOwned,
   type CloudSyncExecutionOptions,
 } from '@/infrastructure/sync-prototype/cloudSyncValue';
+import {
+  maximumLogicalSyncStamp,
+  persistLogicalSyncBaseline,
+  resolveDatabaseLogicalSyncState,
+  resolveSyncActorId,
+  stripLogicalSyncFields,
+  upsertLogicalCloudValue,
+  type LogicalSyncFields,
+} from '@/infrastructure/sync-prototype/logicalSyncState';
 
 const JOURNAL_MARKER_TYPES = ['meal', 'foodEntry'] as const;
 type JournalMarkerType = (typeof JOURNAL_MARKER_TYPES)[number];
@@ -43,8 +53,10 @@ export interface NutritionJournalDayAggregate {
 
 type CloudNutritionJournalDay = Omit<NutritionJournalDayAggregate, 'id'> & {
   readonly id: string;
-};
-type CloudDeletionRecord = Omit<DeletionRecord, 'id'> & { readonly id: string };
+} & LogicalSyncFields;
+type CloudDeletionRecord = Omit<DeletionRecord, 'id'> & {
+  readonly id: string;
+} & LogicalSyncFields;
 
 export interface RealNutritionJournalSyncPreview {
   readonly localDayCount: number;
@@ -79,6 +91,13 @@ interface JournalState {
   readonly cloudDays: NutritionJournalDayAggregate[];
   readonly localMarkers: DeletionRecord[];
   readonly cloudMarkers: DeletionRecord[];
+  readonly cloudDayRows: readonly CloudOwned<CloudNutritionJournalDay>[];
+  readonly cloudMarkerRows: readonly CloudOwned<CloudDeletionRecord>[];
+}
+
+interface JournalLogicalState {
+  readonly days: readonly NutritionJournalDayAggregate[];
+  readonly markers: readonly DeletionRecord[];
 }
 
 function aggregateId(date: LocalDate): string {
@@ -188,7 +207,10 @@ function fromCloudDay(
 ): NutritionJournalDayAggregate | undefined {
   const localId = localIdFromCloud(day.id);
   if (!localId) return undefined;
-  const value = { ...stripCloudFields(day), id: localId } as NutritionJournalDayAggregate;
+  const value = {
+    ...stripLogicalSyncFields(stripCloudFields(day)),
+    id: localId,
+  } as NutritionJournalDayAggregate;
   validateDayAggregate(value);
   return value;
 }
@@ -202,7 +224,10 @@ function fromCloudMarker(
 ): DeletionRecord | undefined {
   const localId = localIdFromCloud(marker.id);
   if (!localId) return undefined;
-  return { ...stripCloudFields(marker), id: localId };
+  return {
+    ...stripLogicalSyncFields(stripCloudFields(marker)),
+    id: localId,
+  };
 }
 
 function isJournalMarker(marker: DeletionRecord): marker is DeletionRecord & {
@@ -294,12 +319,14 @@ async function readState(
     localTargets,
     localStatuses,
   );
-  const cloudDays = cloudDayRows
-    .filter((day) => belongsToCurrentUser(day, currentUserId))
+  const ownedCloudDayRows = cloudDayRows
+    .filter((day) => belongsToCurrentUser(day, currentUserId));
+  const ownedCloudMarkerRows = cloudMarkerRows
+    .filter((marker) => belongsToCurrentUser(marker, currentUserId));
+  const cloudDays = ownedCloudDayRows
     .map(fromCloudDay)
     .filter((day): day is NutritionJournalDayAggregate => day !== undefined);
-  const cloudMarkers = cloudMarkerRows
-    .filter((marker) => belongsToCurrentUser(marker, currentUserId))
+  const cloudMarkers = ownedCloudMarkerRows
     .map(fromCloudMarker)
     .filter((marker): marker is DeletionRecord => marker !== undefined)
     .filter(isJournalMarker);
@@ -309,6 +336,8 @@ async function readState(
     cloudDays,
     localMarkers: localMarkers.filter(isJournalMarker),
     cloudMarkers,
+    cloudDayRows: ownedCloudDayRows,
+    cloudMarkerRows: ownedCloudMarkerRows,
   };
 }
 
@@ -490,6 +519,24 @@ function resolveFinalState(state: JournalState) {
   };
 }
 
+function resolveJournalLogicalState(
+  localValue: JournalLogicalState,
+  cloudValue: JournalLogicalState,
+) {
+  const resolved = resolveFinalState({
+    localDays: [...localValue.days],
+    cloudDays: [...cloudValue.days],
+    localMarkers: [...localValue.markers],
+    cloudMarkers: [...cloudValue.markers],
+    cloudDayRows: [],
+    cloudMarkerRows: [],
+  });
+  return {
+    days: resolved.days,
+    markers: resolved.markers,
+  };
+}
+
 function countChanged<T extends { id: string }>(
   current: readonly T[],
   target: readonly T[],
@@ -556,7 +603,33 @@ export async function synchronizeRealNutritionJournal(
   const writeCloud = options.writeCloud !== false;
   const state = await readState(localDatabase, cloudDatabase, currentUserId);
   const preview = buildPreview(state);
-  const final = resolveFinalState(state);
+  const actorId = await resolveSyncActorId(localDatabase);
+  const resolution = await resolveDatabaseLogicalSyncState({
+    cloudDatabase,
+    accountUserId: currentUserId,
+    domainId: 'nutrition-journal',
+    entityId: 'journal',
+    actorId,
+    localValue: {
+      days: state.localDays,
+      markers: state.localMarkers,
+    },
+    cloudValue: {
+      days: state.cloudDays,
+      markers: state.cloudMarkers,
+    },
+    cloudStamp: maximumLogicalSyncStamp([
+      ...state.cloudDayRows,
+      ...state.cloudMarkerRows,
+    ]),
+    legacyResolve: resolveJournalLogicalState,
+    concurrentResolve: resolveJournalLogicalState,
+  });
+  const final = {
+    ...flattenDays(resolution.value.days),
+    days: [...resolution.value.days],
+    markers: [...resolution.value.markers],
+  };
   const localFlat = flattenDays(state.localDays, false);
   const cloudFlat = flattenDays(state.cloudDays);
 
@@ -591,6 +664,7 @@ export async function synchronizeRealNutritionJournal(
     ? countChanged(state.cloudMarkers, final.markers)
     : 0;
 
+  let localStateApplied = false;
   await localDatabase.transaction(
     'rw',
     localDatabase.meals,
@@ -599,6 +673,30 @@ export async function synchronizeRealNutritionJournal(
     localDatabase.dailyJournalStatuses,
     localDatabase.deletionRecords,
     async () => {
+      const [
+        currentMeals,
+        currentEntries,
+        currentTargets,
+        currentStatuses,
+        currentMarkers,
+      ] = await Promise.all([
+        localDatabase.meals.toArray(),
+        localDatabase.foodEntries.toArray(),
+        localDatabase.dailyTargets.toArray(),
+        localDatabase.dailyJournalStatuses.toArray(),
+        localDatabase.deletionRecords.toArray(),
+      ]);
+      const unchanged =
+        sameLocalCollection(currentMeals, localFlat.meals)
+        && sameLocalCollection(currentEntries, localFlat.entries)
+        && sameLocalCollection(currentTargets, localFlat.targets)
+        && sameLocalCollection(currentStatuses, localFlat.statuses)
+        && sameLocalCollection(
+          currentMarkers.filter(isJournalMarker),
+          state.localMarkers,
+        );
+      if (!unchanged) return;
+
       const finalMealIds = new Set(final.meals.map((value) => value.id));
       const finalEntryIds = new Set(final.entries.map((value) => value.id));
       const finalTargetIds = new Set(final.targets.map((value) => value.id));
@@ -614,46 +712,72 @@ export async function synchronizeRealNutritionJournal(
       if (final.targets.length > 0) await localDatabase.dailyTargets.bulkPut(final.targets);
       if (final.statuses.length > 0) await localDatabase.dailyJournalStatuses.bulkPut(final.statuses);
       if (final.markers.length > 0) await localDatabase.deletionRecords.bulkPut(final.markers);
+      localStateApplied = true;
     },
   );
 
-  if (writeCloud) await cloudDatabase.transaction(
+  if (writeCloud && localStateApplied) await cloudDatabase.transaction(
     'rw',
     cloudDatabase.realNutritionJournalDays,
     cloudDatabase.realNutritionJournalDeletionRecords,
     async () => {
       const finalDayById = mapById(final.days);
       const cloudDayById = mapById(state.cloudDays);
+      const cloudDayRowById = new Map(
+        state.cloudDayRows.flatMap((row) => {
+          const id = localIdFromCloud(row.id);
+          return id ? [[id, row] as const] : [];
+        }),
+      );
       for (const cloudDay of state.cloudDays) {
         if (!finalDayById.has(cloudDay.id)) {
           await cloudDatabase.realNutritionJournalDays.delete(cloudPrivateId(cloudDay.id));
         }
       }
       for (const day of final.days) {
-        if (!sameEntity(cloudDayById.get(day.id), day)) {
-          await cloudDatabase.realNutritionJournalDays.put(toCloudDay(day));
-        }
+        await upsertLogicalCloudValue(
+          cloudDatabase.realNutritionJournalDays,
+          cloudDayById.get(day.id),
+          cloudDayRowById.get(day.id),
+          day,
+          resolution.stamp,
+          (value) => toCloudDay(value) as NutritionJournalDayAggregate,
+        );
       }
 
       const cloudMarkerById = mapById(state.cloudMarkers);
+      const cloudMarkerRowById = new Map(
+        state.cloudMarkerRows.flatMap((row) => {
+          const id = localIdFromCloud(row.id);
+          return id ? [[id, row] as const] : [];
+        }),
+      );
       for (const marker of final.markers) {
-        if (!sameEntity(cloudMarkerById.get(marker.id), marker)) {
-          await cloudDatabase.realNutritionJournalDeletionRecords.put(toCloudMarker(marker));
-        }
+        await upsertLogicalCloudValue(
+          cloudDatabase.realNutritionJournalDeletionRecords,
+          cloudMarkerById.get(marker.id),
+          cloudMarkerRowById.get(marker.id),
+          marker,
+          resolution.stamp,
+          (value) => toCloudMarker(value) as DeletionRecord,
+        );
       }
     },
   );
+  if (writeCloud && localStateApplied) {
+    await persistLogicalSyncBaseline(cloudDatabase, resolution.baseline);
+  }
 
   return {
     ...preview,
-    uploadedDays,
-    downloadedDays,
-    uploadedEntities,
-    downloadedEntities,
-    removedLocalEntities,
-    removedCloudEntities,
-    uploadedDeletionRecords,
-    downloadedDeletionRecords,
+    uploadedDays: localStateApplied ? uploadedDays : 0,
+    downloadedDays: localStateApplied ? downloadedDays : 0,
+    uploadedEntities: localStateApplied ? uploadedEntities : 0,
+    downloadedEntities: localStateApplied ? downloadedEntities : 0,
+    removedLocalEntities: localStateApplied ? removedLocalEntities : 0,
+    removedCloudEntities: localStateApplied ? removedCloudEntities : 0,
+    uploadedDeletionRecords: localStateApplied ? uploadedDeletionRecords : 0,
+    downloadedDeletionRecords: localStateApplied ? downloadedDeletionRecords : 0,
     completedAt: new Date().toISOString(),
   };
 }

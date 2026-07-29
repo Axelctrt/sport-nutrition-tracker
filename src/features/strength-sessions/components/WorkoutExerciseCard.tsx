@@ -44,6 +44,7 @@ interface WorkoutExerciseCardProps {
   onSkip?: ((exercise: WorkoutSessionExercise) => void) | undefined;
   isCurrent?: boolean | undefined;
   executionBlockComplete?: boolean | undefined;
+  highlighted?: boolean | undefined;
 }
 
 export function WorkoutExerciseCard({
@@ -73,6 +74,7 @@ export function WorkoutExerciseCard({
   onSkip,
   isCurrent = false,
   executionBlockComplete = false,
+  highlighted = false,
 }: WorkoutExerciseCardProps) {
   const exerciseProgress = buildWorkoutExerciseProgress(exercise, sets);
   const completion = {
@@ -100,6 +102,7 @@ export function WorkoutExerciseCard({
         groupLabel && 'border-brand-200 dark:border-brand-900',
         isCurrent && !completion.complete && 'border-violet-400 ring-2 ring-violet-100 dark:border-violet-700 dark:ring-violet-950',
         completion.complete && 'border-emerald-200 dark:border-emerald-900',
+        highlighted && 'ring-2 ring-brand-500 bg-brand-50 dark:bg-brand-950/30',
       )}
     >
       <div className="p-4 sm:p-5">

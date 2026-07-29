@@ -7,6 +7,7 @@ import type { TrashItem } from '@/domain/models/trash';
 
 export const DELETION_ENTITY_TYPES = [
   'activity',
+  'endurancePlanningSession',
   'weight',
   'goal',
   'foodEntry',

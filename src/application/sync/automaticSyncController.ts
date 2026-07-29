@@ -18,6 +18,7 @@ import {
   syncLocalDataChangedDetail,
 } from '@/application/sync/syncLocalChangeEvents';
 import { GOAL_STATE_CHANGED_EVENT } from '@/domain/goals/goalState';
+import { ENDURANCE_PLANNING_CHANGED_EVENT } from '@/domain/planning/endurancePlanningState';
 import { WEEKLY_MISSION_HISTORY_CHANGED_EVENT } from '@/domain/rewards/weeklyMissionHistory';
 import type { AppSettings } from '@/domain/models/settings';
 import { ROUTINE_REMINDER_CHANGED_EVENT } from '@/application/reminders/routineReminderService';
@@ -71,22 +72,6 @@ function accountFingerprint(snapshot: SyncPrototypeSnapshot): string | undefined
   )?.toLowerCase();
 }
 
-function hasActiveDomainOperation(snapshot: SyncPrototypeSnapshot): boolean {
-  const statuses = [
-    snapshot.realAccountPreferences?.status,
-    snapshot.realRewardsRoutines?.status,
-    snapshot.realWeights?.status,
-    snapshot.realActivities?.status,
-    snapshot.realGoals?.status,
-    snapshot.realStrength?.status,
-    snapshot.realNutritionJournal?.status,
-    snapshot.realNutritionLibrary?.status,
-    snapshot.realNutritionTracking?.status,
-  ];
-
-  return statuses.some((status) => status === 'analyzing' || status === 'syncing');
-}
-
 function automaticDomainIds(settings: AppSettings): SyncOrchestratorDomainId[] {
   return SYNC_ORCHESTRATOR_DOMAIN_IDS.filter(
     (domainId) => !(domainId === 'weights' && settings.automaticWeightSyncEnabled),
@@ -127,6 +112,7 @@ export class AutomaticSyncController {
   private initializationPromise: Promise<void> | undefined;
   private disposed = false;
   private previousLoggedIn = false;
+  private previousCloudReady = false;
   private previousFingerprint: string | undefined;
   private lastForegroundTriggerAt = 0;
   private snapshot: AutomaticSyncControllerSnapshot = {
@@ -179,6 +165,10 @@ export class AutomaticSyncController {
     void this.triggerLocalChange(['rewards-routines']);
   };
 
+  private readonly handleEndurancePlanningChange = () => {
+    void this.triggerLocalChange(['activities']);
+  };
+
   constructor(options: AutomaticSyncControllerOptions) {
     this.client = options.client;
     this.settingsRepository = options.settingsRepository;
@@ -201,6 +191,9 @@ export class AutomaticSyncController {
           accountKey,
           domains: createSyncOrchestratorDomains(client),
           isOnline: this.isOnline,
+          preflight: async () => {
+            await client.ensureValidCloudCredentials?.();
+          },
         }));
   }
 
@@ -276,6 +269,10 @@ export class AutomaticSyncController {
       this.handleGoalChange,
     );
     this.eventTarget?.addEventListener(
+      ENDURANCE_PLANNING_CHANGED_EVENT,
+      this.handleEndurancePlanningChange,
+    );
+    this.eventTarget?.addEventListener(
       WEEKLY_MISSION_HISTORY_CHANGED_EVENT,
       this.handleRewardsChange,
     );
@@ -311,6 +308,10 @@ export class AutomaticSyncController {
     this.eventTarget?.removeEventListener(
       GOAL_STATE_CHANGED_EVENT,
       this.handleGoalChange,
+    );
+    this.eventTarget?.removeEventListener(
+      ENDURANCE_PLANNING_CHANGED_EVENT,
+      this.handleEndurancePlanningChange,
     );
     this.eventTarget?.removeEventListener(
       WEEKLY_MISSION_HISTORY_CHANGED_EVENT,
@@ -398,6 +399,10 @@ export class AutomaticSyncController {
     this.replaceOrchestratorForAccount(nextFingerprint);
     this.previousFingerprint = nextFingerprint;
     this.previousLoggedIn = snapshot.account.isLoggedIn;
+    const access = this.client.getCloudAccessState?.();
+    this.previousCloudReady = access
+      ? access.isOperational || access.canAttemptRenewal
+      : snapshot.account.isLoggedIn;
     this.updatePreferenceSnapshot();
   }
 
@@ -407,14 +412,20 @@ export class AutomaticSyncController {
     const becameConnected =
       clientSnapshot.account.isLoggedIn &&
       (!this.previousLoggedIn || nextFingerprint !== this.previousFingerprint);
+    const access = this.client.getCloudAccessState?.();
+    const cloudReady = access
+      ? access.isOperational || access.canAttemptRenewal
+      : clientSnapshot.account.isLoggedIn;
+    const becameCloudReady = cloudReady && !this.previousCloudReady;
 
     this.replaceOrchestratorForAccount(nextFingerprint);
 
     this.previousLoggedIn = clientSnapshot.account.isLoggedIn;
+    this.previousCloudReady = cloudReady;
     this.previousFingerprint = nextFingerprint;
     this.updatePreferenceSnapshot();
 
-    if (becameConnected) {
+    if (becameConnected || becameCloudReady) {
       await this.triggerLifecycle('account-connected');
     }
   }
@@ -425,10 +436,14 @@ export class AutomaticSyncController {
     const currentFingerprint = accountFingerprint(clientSnapshot);
     const authorizedFingerprint =
       settings?.automaticAccountSyncAccountFingerprint?.toLowerCase();
+    const cloudAccess = this.client.getCloudAccessState?.();
 
     if (
       !settings?.automaticAccountSyncEnabled ||
       !clientSnapshot.account.isLoggedIn ||
+      (cloudAccess
+        && !cloudAccess.isOperational
+        && !cloudAccess.canAttemptRenewal) ||
       !currentFingerprint ||
       currentFingerprint !== authorizedFingerprint ||
       !this.isOnline() ||
@@ -497,7 +512,6 @@ export class AutomaticSyncController {
     const allowedDomainIds = this.eligibleDomainIds();
     const orchestrator = this.orchestrator;
     if (!orchestrator || allowedDomainIds.length === 0) return;
-    if (hasActiveDomainOperation(this.client.getSnapshot())) return;
 
     const domainIds = normalizeDomains(requestedDomainIds, allowedDomainIds);
     if (domainIds.length === 0) return;

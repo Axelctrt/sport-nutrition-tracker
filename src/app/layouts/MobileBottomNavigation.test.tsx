@@ -27,6 +27,11 @@ describe('MobileBottomNavigation', () => {
     expect(screen.getByRole('link', { name: 'Progression' })).toHaveAttribute('aria-current', 'page');
   });
 
+  it('garde Progression active dans le centre de récompenses', () => {
+    renderNavigation('/rewards');
+    expect(screen.getByRole('link', { name: 'Progression' })).toHaveAttribute('aria-current', 'page');
+  });
+
   it('garde Sport actif dans les parcours de musculation', () => {
     renderNavigation('/strength/sessions');
     expect(screen.getByRole('link', { name: 'Sport' })).toHaveAttribute('aria-current', 'page');

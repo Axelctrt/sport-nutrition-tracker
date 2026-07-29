@@ -17,7 +17,7 @@ test('utilise un modèle de course puis enregistre une sortie vélo enrichie', a
   await page.getByLabel('Dénivelé positif (m)').fill('120');
   await page.getByRole('button', { name: 'Ajouter l’activité' }).click();
 
-  await expect(page.getByRole('heading', { name: 'Footing' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Footing' }).first()).toBeVisible();
   await expect(page.getByText('D+ 120 m')).toBeVisible();
   await expect(page.getByText('Trail')).toBeVisible();
 
@@ -31,14 +31,20 @@ test('utilise un modèle de course puis enregistre une sortie vélo enrichie', a
   await page.getByRole('button', { name: 'Ajouter l’activité' }).click();
 
   await expect(page.getByRole('heading', { name: 'Vélo' })).toBeVisible();
-  await expect(page.getByText('30 km/h')).toBeVisible();
-  await expect(page.getByText('D+ 250 m')).toBeVisible();
+  await expect(page.getByText('30 km/h').first()).toBeVisible();
+  await expect(page.getByText('D+ 250 m').first()).toBeVisible();
   await expectNoCriticalHorizontalOverflow(page);
 
-  await page.goto('/#/analytics');
+  await page.goto('/#/analytics?tab=activity&weeks=12');
   await expect(page.getByRole('heading', { name: 'Analyses' })).toBeVisible();
-  await expect(page.getByText('120 m', { exact: true })).toBeVisible();
-  await page.getByRole('button', { name: /^Vélo/ }).click();
-  const highestCyclingElevation = page.getByText('Plus grand D+', { exact: true }).locator('..');
-  await expect(highestCyclingElevation.getByText('250 m', { exact: true })).toBeVisible();
+  const enduranceCard = page.getByRole('region', {
+    name: 'Volume d’endurance',
+  });
+  await enduranceCard.getByLabel('Discipline', { exact: true }).selectOption('cycling');
+  await enduranceCard.getByLabel('Mesure', { exact: true }).selectOption('elevation');
+  await enduranceCard.getByText('Voir les données du graphique').click();
+  await expect(
+    enduranceCard.getByRole('table', { name: 'Dénivelé positif de Vélo' })
+      .getByText('250 m', { exact: true }),
+  ).toBeVisible();
 });

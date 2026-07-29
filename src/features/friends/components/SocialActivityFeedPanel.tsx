@@ -38,7 +38,10 @@ const defaultOnlineStatus = () => navigator.onLine !== false;
 
 interface SocialActivityFeedPanelProps {
   readonly gateway: SocialActivityFeedCloudGateway;
-  readonly getCredentials: () => SocialActivitySnapshotCloudCredentials | undefined;
+  readonly getCredentials: () =>
+    | SocialActivitySnapshotCloudCredentials
+    | undefined
+    | Promise<SocialActivitySnapshotCloudCredentials | undefined>;
   readonly isOnline?: () => boolean;
   readonly subscribeCredentials?: (listener: () => void) => () => void;
   readonly pageSize?: number;
@@ -107,7 +110,7 @@ export function SocialActivityFeedPanel({
   }, []);
 
   const loadPage = useCallback(async (mode: 'replace' | 'append') => {
-    const credentials = getCredentials();
+    const credentials = await getCredentials();
     if (!credentials) {
       feedRequestSequenceRef.current += 1;
       activeRecipientRef.current = undefined;
@@ -242,7 +245,7 @@ export function SocialActivityFeedPanel({
     const requestSequence = detailRequestSequenceRef.current + 1;
     detailRequestSequenceRef.current = requestSequence;
     setDetailState({ card, status: 'loading' });
-    const credentials = getCredentials();
+    const credentials = await getCredentials();
     if (!credentials || credentials.userId !== card.recipientUserId) {
       if (detailRequestSequenceRef.current !== requestSequence) return;
       setDetailState({

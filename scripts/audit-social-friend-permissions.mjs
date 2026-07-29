@@ -61,9 +61,9 @@ for (const phrase of [
 
 if (!repository.includes('friendActivityPermissions')) failures.push('repository Dexie non branché aux permissions par ami');
 if (!schema.includes('friendActivityPermissions')) failures.push('table friendActivityPermissions absente du schéma Dexie');
-if (!/DATABASE_VERSION_10\s*=\s*10\s+as\s+const/u.test(versions)) failures.push('DATABASE_VERSION_10 absent');
-if (!/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_10/u.test(versions)) failures.push('CURRENT_DATABASE_VERSION ne pointe pas vers DATABASE_VERSION_10');
-if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*9/u.test(backupMigrations)) failures.push('CURRENT_BACKUP_SCHEMA_VERSION ne pointe pas vers 9');
+if (!/DATABASE_VERSION_11\s*=\s*11\s+as\s+const/u.test(versions)) failures.push('DATABASE_VERSION_11 absent');
+if (!/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_11/u.test(versions)) failures.push('CURRENT_DATABASE_VERSION ne pointe pas vers DATABASE_VERSION_11');
+if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*10/u.test(backupMigrations)) failures.push('CURRENT_BACKUP_SCHEMA_VERSION ne pointe pas vers 10');
 
 for (const source of [backupSchemas, backupModels, backupService]) {
   if (!source.includes('friendActivityPermissions')) failures.push('sauvegarde JSON v9 ne couvre pas friendActivityPermissions');

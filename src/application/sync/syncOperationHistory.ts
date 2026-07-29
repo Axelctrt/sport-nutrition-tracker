@@ -159,6 +159,21 @@ export function summarizeSyncOperationHistory(
   };
 }
 
+export function resolveLastSuccessfulSyncAt(
+  ...values: readonly (string | undefined)[]
+): string | undefined {
+  let latest: { readonly value: string; readonly timestamp: number } | undefined;
+  for (const value of values) {
+    if (!value) continue;
+    const timestamp = Date.parse(value);
+    if (!Number.isFinite(timestamp)) continue;
+    if (!latest || timestamp > latest.timestamp) {
+      latest = { value, timestamp };
+    }
+  }
+  return latest?.value;
+}
+
 export function syncSourceLabel(source: SyncOrchestratorSource): string {
   switch (source) {
     case 'manual': return 'Manuelle';

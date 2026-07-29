@@ -14,9 +14,12 @@ function samplePath(pattern: string): string {
 }
 
 describe('intégrité des routes de la version stable', () => {
-  const registeredPatterns = appShellRoutes
-    .map((route) => route.path)
-    .filter((path): path is string => typeof path === 'string');
+  const registeredPatterns = [
+    ...appShellRoutes
+      .map((route) => route.path)
+      .filter((path): path is string => typeof path === 'string'),
+    routePaths.privacy,
+  ];
 
   it('ne déclare aucune route dupliquée', () => {
     expect(new Set(registeredPatterns).size).toBe(registeredPatterns.length);

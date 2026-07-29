@@ -29,7 +29,10 @@ describe('PrivacyPage', () => {
     expect(screen.getByRole('heading', { name: 'Confidentialité' })).toBeInTheDocument();
     expect(screen.getByText(/IndexedDB sur cet appareil/i)).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Open Food Facts' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Caméra et scanner' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', {
+      name: 'Caméra, scanner et analyse photo',
+    })).toBeInTheDocument();
+    expect(screen.getByText(/transmet cette photo à Google Gemini/i)).toBeInTheDocument();
     expect(screen.getByText(/ne remplace pas un médecin/i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Retour à la création du profil' })).toHaveAttribute(
       'href',

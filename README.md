@@ -1,65 +1,64 @@
-# SportPilot 0.32.0
+# SportPilot 0.34.0
 
-SportPilot 0.32.0 finalise un onboarding mobile plus lisible, plus direct et mieux adapté à l’iPhone 15. Le choix entre mode local et compte est clarifié, les données du profil sont renseignées avec des rouleaux tactiles et chaque étape ordinaire reste entièrement visible sans défilement global.
+SportPilot 0.34.0 introduit la direction visuelle **Performance Glass**, cinq
+thèmes distinctifs et une exploration plus professionnelle des données de
+progression.
 
-L’application reste mobile-first, locale-first, compatible compte/cloud, hors ligne et installable en PWA.
+L’application reste mobile-first, locale-first, hors ligne et installable en
+PWA. Aucun graphique ni déblocage ne repose sur des données de démonstration.
 
 ## Principales évolutions
 
-### Démarrage local ou compte
+### Design et mouvement
 
-- choix initial limité à **Mode local** et **Connecter un compte** ;
-- connexion e-mail et code déplacée sur l’écran suivant ;
-- rappel qu’un profil local peut être associé plus tard depuis Paramètres → Compte et appareils ;
-- logique de stockage, de connexion et de synchronisation inchangée.
+- tokens centralisés pour les surfaces, accents, graphiques et animations ;
+- boutons stateful, onglets tactiles et loader multi-étapes accessible ;
+- effets courts liés aux actions, avec réduction de mouvement obligatoire ;
+- interactions souris facultatives et états tactiles explicites.
 
-### Profil compact
+### Thèmes et récompenses
 
-- neuf étapes de profil structurées et accessibles ;
-- pages ordinaires verrouillées dans la hauteur de l’écran ;
-- textes explicatifs raccourcis et informations utiles signalées par une icône `i` ;
-- choix du sexe empilés et choix d’objectif ou d’activité présentés sur des lignes lisibles ;
-- résumé final seul autorisé à faire défiler l’ensemble de la page.
+- Core, Neon Pulse, Emerald Focus, Aurora et Zenith Gold ;
+- variantes claire et sombre indépendantes du thème choisi ;
+- fallback sûr vers Core pour tout ancien identifiant ;
+- déblocages fondés sur les activités, journées complètes, nutrition, semaines
+  régulières et repos confirmé ;
+- collection visuelle, previews, reveal unique et essai avant confirmation.
 
-### Rouleaux tactiles
+### Progression et Analyses
 
-- date de naissance ou âge sans saisie numérique manuelle ;
-- taille, poids et objectif de pas sélectionnés par rouleaux ;
-- pas proposés par paliers de 500 ;
-- sensibilité légèrement accrue sur les rouleaux ordinaires ;
-- variation hebdomadaire conservée à sa sensibilité précise ;
-- navigation clavier, VoiceOver, réduction des animations et inertie iOS préservées.
-
-### Qualité
-
-- recette Playwright dédiée à l’onboarding sur WebKit iPhone 15 ;
-- acceptation mobile maintenue sur Chromium desktop et WebKit ;
-- bootstrap E2E et contrôles de focus rendus plus stables ;
-- aucun changement de calcul calorique, de contrat social ou de schéma de stockage.
+- hub Progression centré sur un signal principal factuel et le prévu/réalisé ;
+- périodes 7 jours, 30 jours et 3 mois ;
+- domaines Corps, Nutrition, Activité, Musculation et Régularité ;
+- poids et moyenne mobile, calories/cible, macros, repas, endurance, 1RM estimé,
+  volume, meilleure série, groupes musculaires, récupération et heatmap ;
+- états vides actionnables et alternatives textuelles ou tabulaires.
 
 ## Stockage et versions techniques
 
-- Application : `0.32.0`.
-- AppDatabase locale : Dexie v10.
-- Sauvegarde JSON : v9.
-- Runtime Dexie Cloud prototype : v14.
+- Application : `0.34.0`.
+- AppDatabase locale : Dexie v11.
+- Sauvegarde JSON : v10.
+- Runtime Dexie Cloud prototype : v16.
 - Contrat de snapshot social : `0.29.0-a3`.
-- Migrations D1 ajoutées par 0.32.0 : aucune.
-- Migrations Dexie ajoutées par 0.32.0 : aucune.
+- Migrations D1 ajoutées par 0.34.0 : aucune.
+- Migrations Dexie ajoutées par 0.34.0 : aucune.
 
 ## Contrôles de publication
 
 ```text
 npm run lint
 npx tsc -b --pretty false
+npm run test
 npm run build
-npm run test:e2e:onboarding
-npm run test:e2e:acceptance
+npm run test:e2e
 npm run audit:release-consolidation
 npm run check
+npm run test:stability
 npm audit
 ```
 
-La recette réelle sur iPhone 15 doit valider le mode local, la connexion compte séparée, les rouleaux, l’absence de scroll sur les étapes ordinaires, le résumé scrollable, la PWA et l’accessibilité.
+La recette mobile couvre 320, 360, 393 et 412 px, plus WebKit iPhone 15, en
+clair, sombre et réduction de mouvement.
 
-Tag attendu : `v0.32.0`.
+Tag attendu : `v0.34.0`.

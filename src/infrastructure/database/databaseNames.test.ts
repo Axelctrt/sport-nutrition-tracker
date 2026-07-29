@@ -14,6 +14,16 @@ describe('databaseNames', () => {
     );
   });
 
+  it('accepte les nouvelles empreintes de compte sur 128 bits', () => {
+    expect(
+      accountDatabaseNameForFingerprint(
+        'acct-00112233445566778899AABBCCDDEEFF',
+      ),
+    ).toBe(
+      'sportpilot-local-database--acct-00112233445566778899aabbccddeeff',
+    );
+  });
+
   it('refuse une valeur qui pourrait exposer un identifiant brut', () => {
     expect(() =>
       accountDatabaseNameForFingerprint('personne@example.com'),
