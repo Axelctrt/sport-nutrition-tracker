@@ -1,48 +1,45 @@
-# SportPilot 0.34.0
+# SportPilot 0.35.0
 
-SportPilot 0.34.0 introduit la direction visuelle **Performance Glass**, cinq
-thèmes distinctifs et une exploration plus professionnelle des données de
-progression.
+SportPilot 0.35.0 unifie les retours d’action, fluidifie l’onboarding local et compte et simplifie plusieurs parcours secondaires, sans modifier les thèmes validés, les formules caloriques ni le périmètre de l’analyse IA.
 
-L’application reste mobile-first, locale-first, hors ligne et installable en
-PWA. Aucun graphique ni déblocage ne repose sur des données de démonstration.
+L’application reste mobile-first, locale-first, hors ligne et installable en PWA.
 
 ## Principales évolutions
 
-### Design et mouvement
+### Onboarding et compte
 
-- tokens centralisés pour les surfaces, accents, graphiques et animations ;
-- boutons stateful, onglets tactiles et loader multi-étapes accessible ;
-- effets courts liés aux actions, avec réduction de mouvement obligatoire ;
-- interactions souris facultatives et états tactiles explicites.
+- date de naissance proposée par défaut, avec l’âge disponible comme alternative ;
+- validation OTP avec états réels ;
+- sauvegarde et reprise du brouillon ;
+- protection contre les doubles soumissions ;
+- passage direct au profil pour un compte neuf ;
+- identité sociale demandée uniquement lorsqu’elle devient nécessaire dans Amis ;
+- révélation finale « Tout est prêt » synchronisée avec la création du profil.
 
-### Thèmes et récompenses
+### Feedback et traitements longs
 
-- Core, Neon Pulse, Emerald Focus, Aurora et Zenith Gold ;
-- variantes claire et sombre indépendantes du thème choisi ;
-- fallback sûr vers Core pour tout ancien identifiant ;
-- déblocages fondés sur les activités, journées complètes, nutrition, semaines
-  régulières et repos confirmé ;
-- collection visuelle, previews, reveal unique et essai avant confirmation.
+- toasts Performance Glass pressables, dédupliqués et contextualisés ;
+- suppression des confirmations redondantes ;
+- progression multi-étapes fondée sur les jalons réels d’import invité et de restauration cloud ;
+- destinations cohérentes après les actions terminées.
 
-### Progression et Analyses
+### Parcours secondaires
 
-- hub Progression centré sur un signal principal factuel et le prévu/réalisé ;
-- périodes 7 jours, 30 jours et 3 mois ;
-- domaines Corps, Nutrition, Activité, Musculation et Régularité ;
-- poids et moyenne mobile, calories/cible, macros, repas, endurance, 1RM estimé,
-  volume, meilleure série, groupes musculaires, récupération et heatmap ;
-- états vides actionnables et alternatives textuelles ou tabulaires.
+- nouvelle chronologie de l’Historique ;
+- navigation interne d’Amis entre Fil, Amis, Demandes, Mon profil et Diagnostic ;
+- page Rappels compacte avec édition dépliable ;
+- navigation commune entre Aliments, Recettes, Repas favoris, modèles et exercices ;
+- parcours guidés pour les rapports et la restauration de sauvegarde.
 
 ## Stockage et versions techniques
 
-- Application : `0.34.0`.
+- Application : `0.35.0`.
 - AppDatabase locale : Dexie v11.
 - Sauvegarde JSON : v10.
 - Runtime Dexie Cloud prototype : v16.
 - Contrat de snapshot social : `0.29.0-a3`.
-- Migrations D1 ajoutées par 0.34.0 : aucune.
-- Migrations Dexie ajoutées par 0.34.0 : aucune.
+- Migrations D1 ajoutées par 0.35.0 : aucune.
+- Migrations Dexie ajoutées par 0.35.0 : aucune.
 
 ## Contrôles de publication
 
@@ -58,7 +55,6 @@ npm run test:stability
 npm audit
 ```
 
-La recette mobile couvre 320, 360, 393 et 412 px, plus WebKit iPhone 15, en
-clair, sombre et réduction de mouvement.
+La recette couvre 126 scénarios Playwright sur Chromium desktop, WebKit iPhone 15 et les formats mobiles 320, 360, 393 et 412 px.
 
-Tag attendu : `v0.34.0`.
+Tag attendu : `v0.35.0`.
