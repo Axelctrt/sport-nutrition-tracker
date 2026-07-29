@@ -34,7 +34,6 @@ const completionSnapshot: WeeklyMissionCompletionSnapshot = {
 describe("WeeklyMissionCompletionNotifier", () => {
   beforeEach(() => {
     window.sessionStorage.clear();
-    window.history.replaceState({}, '', '/');
   });
 
   it("affiche une carte événementielle pour une nouvelle semaine terminée", async () => {
@@ -45,6 +44,7 @@ describe("WeeklyMissionCompletionNotifier", () => {
 
     render(
       <WeeklyMissionCompletionNotifier
+        currentPathname="/"
         observeCompletions={observeCompletions}
       />,
       { wrapper: Wrapper },
@@ -60,6 +60,7 @@ describe("WeeklyMissionCompletionNotifier", () => {
 
     const { container } = render(
       <WeeklyMissionCompletionNotifier
+        currentPathname="/"
         observeCompletions={observeCompletions}
       />,
       { wrapper: Wrapper },
