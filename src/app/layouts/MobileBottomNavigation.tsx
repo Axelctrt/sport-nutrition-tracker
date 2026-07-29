@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { mobileNavigation, navigationItemIsActive } from '@/app/navigation';
 import { cn } from '@/shared/utils/cn';
+import '@/styles/finalMobilePolish.css';
 
 export function MobileBottomNavigation() {
   const location = useLocation();
