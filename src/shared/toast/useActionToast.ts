@@ -25,8 +25,11 @@ interface ActionErrorInput {
 }
 
 const suppressedActionToasts = new Set<string>();
-const celebrationOnlySuccessKeys = new Set([
+const dedicatedFeedbackSuccessKeys = new Set([
   'onboarding-profile-create',
+  'weight-save',
+  'progress-report-generate',
+  'progress-report-delivery',
 ]);
 
 export function suppressNextActionToast(key: string): void {
@@ -37,6 +40,10 @@ function consumeActionToastSuppression(key: string): boolean {
   if (!suppressedActionToasts.has(key)) return false;
   suppressedActionToasts.delete(key);
   return true;
+}
+
+function successToastIsSuppressed(key: string): boolean {
+  return dedicatedFeedbackSuccessKeys.has(key) || consumeActionToastSuppression(key);
 }
 
 export function getActionErrorMessage(error: unknown, fallback: string): string {
@@ -50,11 +57,7 @@ export function useActionToast() {
 
   return useMemo(() => ({
     success({ key, title, description, action, destination, durationMs }: ActionSuccessInput): string {
-      if (
-        celebrationOnlySuccessKeys.has(key)
-        || consumeActionToastSuppression(key)
-        || !toast
-      ) return '';
+      if (successToastIsSuppressed(key) || !toast) return '';
       return toast.showToast({
         title,
         tone: 'success',
@@ -66,7 +69,7 @@ export function useActionToast() {
       });
     },
     successAfterReload({ key, title, description, destination }: ActionSuccessInput): void {
-      if (celebrationOnlySuccessKeys.has(key) || consumeActionToastSuppression(key)) return;
+      if (successToastIsSuppressed(key)) return;
       queuePendingToast({
         title,
         tone: 'success',
