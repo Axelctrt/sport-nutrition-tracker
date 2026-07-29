@@ -1,4 +1,3 @@
-import { Activity, AtSign, BellDot, UsersRound, Wrench } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -10,39 +9,39 @@ type FriendsSectionId = 'feed' | 'friends' | 'requests' | 'profile' | 'diagnosti
 interface FriendsSectionDefinition {
   id: FriendsSectionId;
   label: string;
-  icon: typeof Activity;
+  shortLabel: string;
   headingPatterns: readonly RegExp[];
 }
 
 const definitions: readonly FriendsSectionDefinition[] = [
   {
     id: 'feed',
-    label: 'Fil',
-    icon: Activity,
+    label: 'Fil d’activité',
+    shortLabel: 'Fil',
     headingPatterns: [/fil d’activité/i, /activité de tes amis/i],
   },
   {
     id: 'friends',
-    label: 'Amis',
-    icon: UsersRound,
+    label: 'Mes amis',
+    shortLabel: 'Amis',
     headingPatterns: [/mes amis/i, /amis enregistrés/i],
   },
   {
     id: 'requests',
-    label: 'Demandes',
-    icon: BellDot,
+    label: 'Demandes d’amis',
+    shortLabel: 'Demandes',
     headingPatterns: [/envoyer une invitation/i, /demandes reçues/i, /demandes d’amis/i],
   },
   {
     id: 'profile',
-    label: 'Mon profil',
-    icon: AtSign,
+    label: 'Mon profil social',
+    shortLabel: 'Mon profil',
     headingPatterns: [/mon identifiant sportpilot/i, /confidentialité/i],
   },
   {
     id: 'diagnostic',
-    label: 'Diagnostic',
-    icon: Wrench,
+    label: 'Diagnostic social',
+    shortLabel: 'Diagnostic',
     headingPatterns: [/préparation cloud/i, /diagnostic/i, /disponibilité cloud/i],
   },
 ] as const;
@@ -56,6 +55,18 @@ function findSection(root: HTMLElement, definition: FriendsSectionDefinition): H
   return heading.closest<HTMLElement>('.sp-card, section, [data-friends-panel]')
     ?? heading.parentElement
     ?? undefined;
+}
+
+function resolveSections(root: HTMLElement): Partial<Record<FriendsSectionId, HTMLElement>> {
+  return Object.fromEntries(
+    definitions.flatMap((definition) => {
+      const section = findSection(root, definition);
+      if (!section) return [];
+      section.id = `friends-section-${definition.id}`;
+      section.dataset.friendsPanel = definition.id;
+      return [[definition.id, section]];
+    }),
+  ) as Partial<Record<FriendsSectionId, HTMLElement>>;
 }
 
 export function FriendsSectionNavigation() {
@@ -89,35 +100,12 @@ export function FriendsSectionNavigation() {
       if (!mount) {
         mount = document.createElement('div');
         mount.dataset.friendsSectionNavigation = '';
-        const header = root.firstElementChild;
-        header?.insertAdjacentElement('afterend', mount);
+        root.firstElementChild?.insertAdjacentElement('afterend', mount);
       }
 
-      const resolved = Object.fromEntries(
-        definitions.flatMap((definition) => {
-          const section = findSection(root, definition);
-          if (!section) return [];
-          section.id = `friends-section-${definition.id}`;
-          section.dataset.friendsPanel = definition.id;
-          return [[definition.id, section]];
-        }),
-      ) as Partial<Record<FriendsSectionId, HTMLElement>>;
-
       setPortalTarget(mount);
-      setSections(resolved);
-
-      observer = new MutationObserver(() => {
-        const next = Object.fromEntries(
-          definitions.flatMap((definition) => {
-            const section = findSection(root, definition);
-            if (!section) return [];
-            section.id = `friends-section-${definition.id}`;
-            section.dataset.friendsPanel = definition.id;
-            return [[definition.id, section]];
-          }),
-        ) as Partial<Record<FriendsSectionId, HTMLElement>>;
-        setSections(next);
-      });
+      setSections(resolveSections(root));
+      observer = new MutationObserver(() => setSections(resolveSections(root)));
       observer.observe(root, { childList: true, subtree: true });
     };
 
@@ -126,8 +114,7 @@ export function FriendsSectionNavigation() {
       disposed = true;
       window.clearTimeout(retryTimer);
       observer?.disconnect();
-      const mount = document.querySelector<HTMLElement>('[data-friends-section-navigation]');
-      mount?.remove();
+      document.querySelector<HTMLElement>('[data-friends-section-navigation]')?.remove();
     };
   }, [pathname]);
 
@@ -143,14 +130,14 @@ export function FriendsSectionNavigation() {
       aria-label="Rubriques Amis"
       className="sticky top-2 z-30 my-3 overflow-x-auto rounded-2xl border border-[var(--sp-border-subtle)] bg-[color-mix(in_srgb,var(--sp-surface-card)_94%,transparent)] p-1.5 shadow-[var(--sp-shadow-card)] backdrop-blur-xl"
     >
-      <div className="grid min-w-[34rem] grid-cols-5 gap-1">
+      <div className="grid min-w-[31rem] grid-cols-5 gap-1">
         {availableDefinitions.map((definition) => {
-          const Icon = definition.icon;
           const selected = activeSection === definition.id;
           return (
             <button
               aria-current={selected ? 'page' : undefined}
-              className={`flex min-h-11 items-center justify-center gap-2 rounded-xl px-3 text-sm font-semibold transition active:scale-[0.98] ${
+              aria-label={definition.label}
+              className={`min-h-11 rounded-xl px-3 text-sm font-semibold transition active:scale-[0.98] ${
                 selected
                   ? 'bg-brand-600 text-white shadow-sm'
                   : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
@@ -165,8 +152,7 @@ export function FriendsSectionNavigation() {
               }}
               type="button"
             >
-              <Icon aria-hidden="true" className="size-4" />
-              {definition.label}
+              {definition.shortLabel}
             </button>
           );
         })}
