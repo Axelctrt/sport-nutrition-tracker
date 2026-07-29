@@ -25,6 +25,9 @@ interface ActionErrorInput {
 }
 
 const suppressedActionToasts = new Set<string>();
+const celebrationOnlySuccessKeys = new Set([
+  'onboarding-profile-create',
+]);
 
 export function suppressNextActionToast(key: string): void {
   suppressedActionToasts.add(key);
@@ -47,7 +50,11 @@ export function useActionToast() {
 
   return useMemo(() => ({
     success({ key, title, description, action, destination, durationMs }: ActionSuccessInput): string {
-      if (consumeActionToastSuppression(key) || !toast) return '';
+      if (
+        celebrationOnlySuccessKeys.has(key)
+        || consumeActionToastSuppression(key)
+        || !toast
+      ) return '';
       return toast.showToast({
         title,
         tone: 'success',
@@ -59,7 +66,7 @@ export function useActionToast() {
       });
     },
     successAfterReload({ key, title, description, destination }: ActionSuccessInput): void {
-      if (consumeActionToastSuppression(key)) return;
+      if (celebrationOnlySuccessKeys.has(key) || consumeActionToastSuppression(key)) return;
       queuePendingToast({
         title,
         tone: 'success',
