@@ -145,6 +145,7 @@ export function BottomSheet({
     const previouslyFocused = document.activeElement instanceof HTMLElement
       ? document.activeElement
       : null;
+    const openingHref = window.location.href;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
 
@@ -186,8 +187,10 @@ export function BottomSheet({
       document.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = previousOverflow;
       const activeElement = document.activeElement;
+      const navigationChanged = window.location.href !== openingHref;
       if (
-        previouslyFocused?.isConnected
+        !navigationChanged
+        && previouslyFocused?.isConnected
         && (
           activeElement === document.body
           || (activeElement instanceof Node && panelRef.current?.contains(activeElement))
