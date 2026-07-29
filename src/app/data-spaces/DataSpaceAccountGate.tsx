@@ -95,6 +95,11 @@ function errorMessage(error: unknown): string {
     : "L’espace de données n’a pas pu être préparé.";
 }
 
+function isOnboardingRoute(): boolean {
+  return typeof window !== 'undefined'
+    && window.location.hash.startsWith('#/onboarding');
+}
+
 export function DataSpaceAccountGate({
   children,
   client: clientOverride,
@@ -118,18 +123,28 @@ export function DataSpaceAccountGate({
       return null;
     }
   }, [clientOverride]);
-
+  const [onboardingRouteActive, setOnboardingRouteActive] = useState(isOnboardingRoute);
   const [state, setState] = useState<GateState>(() =>
-    runtimeClient
-      ? { status: "loading", message: "Vérification du compte connecté" }
-      : { status: "ready" },
+    onboardingRouteActive || !runtimeClient
+      ? { status: "ready" }
+      : { status: "loading", message: "Vérification du compte connecté" },
   );
-
   const [cloudAnalysisStatus, setCloudAnalysisStatus] = useState<
     "idle" | "loading" | "ready" | "error"
   >("idle");
 
   useEffect(() => {
+    const syncRoute = () => setOnboardingRouteActive(isOnboardingRoute());
+    window.addEventListener('hashchange', syncRoute);
+    return () => window.removeEventListener('hashchange', syncRoute);
+  }, []);
+
+  useEffect(() => {
+    if (onboardingRouteActive) {
+      setState({ status: "ready" });
+      return;
+    }
+
     if (!runtimeClient) {
       setState({ status: "ready" });
       return;
@@ -227,7 +242,7 @@ export function DataSpaceAccountGate({
       disposed = true;
       unsubscribe();
     };
-  }, [currentSpace, reload, runtimeClient, storage]);
+  }, [currentSpace, onboardingRouteActive, reload, runtimeClient, storage]);
 
   const runAction = async (
     message: string,
@@ -318,7 +333,7 @@ export function DataSpaceAccountGate({
               Données du compte
             </p>
             <h1 className="mt-0.5 text-xl font-bold tracking-tight text-slate-950 dark:text-white sm:text-2xl">
-              Comment souhaitez-vous commencer ?
+              Comment souhaites-tu commencer ?
             </h1>
           </div>
         </header>
@@ -335,8 +350,8 @@ export function DataSpaceAccountGate({
                     </h2>
                     <p className="mt-0.5 text-xs leading-4 text-slate-600 dark:text-slate-300">
                       {state.existingSpaceLinkedToDevice
-                        ? "Ouvrez le profil déjà associé à ce compte sur cet appareil."
-                        : "Réassociez cet appareil au profil local conservé pour ce compte."}
+                        ? "Ouvre le profil déjà associé à ce compte sur cet appareil."
+                        : "Réassocie cet appareil au profil local conservé pour ce compte."}
                     </p>
                   </div>
                 </div>
@@ -427,7 +442,7 @@ export function DataSpaceAccountGate({
                   Créer un nouveau profil
                 </h2>
                 <p className="mt-0.5 text-xs leading-4 text-slate-600 dark:text-slate-300">
-                  Commencez avec un espace vierge. Les autres données ne sont pas supprimées.
+                  Commence avec un espace vierge. Les autres données ne sont pas supprimées.
                 </p>
                 <Button
                   className="mt-2 w-full"
