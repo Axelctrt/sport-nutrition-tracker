@@ -64,9 +64,10 @@ describe('App', () => {
     await screen.findByRole('heading', {
       name: 'Comment vous appeler ?',
     }, { timeout: 5_000 });
-    const displayedName = screen.getByLabelText(/Nom affiché/);
-    await user.type(displayedName, 'Axel');
-    expect(displayedName).toHaveValue('Axel');
+    await user.type(screen.getByLabelText(/Nom affiché/), 'Axel');
+    await waitFor(() => {
+      expect(screen.getByLabelText(/Nom affiché/)).toHaveValue('Axel');
+    });
     await waitFor(() => {
       const serializedDraft = window.localStorage.getItem(ONBOARDING_DRAFT_STORAGE_KEY);
       expect(serializedDraft).not.toBeNull();
