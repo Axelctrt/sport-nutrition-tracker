@@ -17,6 +17,10 @@ vi.mock('@/app/data-spaces/DataSpaceAccountGate', () => ({
   DataSpaceAccountGate: ({ children }: { children: ReactNode }) => children,
 }));
 
+vi.mock('@/app/social-identity/SocialIdentityAccountGate', () => ({
+  SocialIdentityAccountGate: ({ children }: { children: ReactNode }) => children,
+}));
+
 vi.mock('@/app/sync/WeightSyncCoordinator', () => ({
   WeightSyncCoordinator: () => null,
 }));
