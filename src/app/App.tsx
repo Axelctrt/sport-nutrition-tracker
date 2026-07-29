@@ -1,6 +1,7 @@
 import { RouterProvider } from "react-router-dom";
 
 import { DataSpaceAccountGate } from '@/app/data-spaces/DataSpaceAccountGate';
+import { FriendsSectionNavigation } from '@/app/friends/FriendsSectionNavigation';
 import { OnboardingCompletionNotifier } from '@/app/onboarding/OnboardingCompletionNotifier';
 import { SocialIdentityAccountGate } from '@/app/social-identity/SocialIdentityAccountGate';
 import { AppProviders } from "@/app/providers/AppProviders";
@@ -18,6 +19,7 @@ function AppRuntime() {
     <AppProviders>
       <SocialIdentityAccountGate>
         <RouterProvider router={router} />
+        <FriendsSectionNavigation />
         <OnboardingCompletionNotifier />
         <RoutineReminderNotifier />
         <RewardUnlockNotifier />
