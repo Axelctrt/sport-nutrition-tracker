@@ -1,6 +1,8 @@
 import {
   BellRing,
   CalendarDays,
+  Check,
+  ChevronDown,
   Clock3,
   Dumbbell,
   Save,
@@ -22,14 +24,14 @@ import {
 import { repositories } from '@/infrastructure/repositories/repositories';
 import { useActionToast } from '@/shared/toast/useActionToast';
 
-const WEEKDAYS: Array<{ value: RoutineReminderWeekday; label: string }> = [
-  { value: 1, label: 'L' },
-  { value: 2, label: 'M' },
-  { value: 3, label: 'M' },
-  { value: 4, label: 'J' },
-  { value: 5, label: 'V' },
-  { value: 6, label: 'S' },
-  { value: 0, label: 'D' },
+const WEEKDAYS: Array<{ value: RoutineReminderWeekday; label: string; longLabel: string }> = [
+  { value: 1, label: 'L', longLabel: 'lun.' },
+  { value: 2, label: 'M', longLabel: 'mar.' },
+  { value: 3, label: 'M', longLabel: 'mer.' },
+  { value: 4, label: 'J', longLabel: 'jeu.' },
+  { value: 5, label: 'V', longLabel: 'ven.' },
+  { value: 6, label: 'S', longLabel: 'sam.' },
+  { value: 0, label: 'D', longLabel: 'dim.' },
 ];
 
 const REMINDER_DEFINITIONS: Array<{
@@ -64,6 +66,15 @@ const REMINDER_DEFINITIONS: Array<{
   },
 ];
 
+function formatDays(days: readonly RoutineReminderWeekday[]): string {
+  if (days.length === 7) return 'Tous les jours';
+  const selected = new Set(days);
+  return WEEKDAYS
+    .filter(({ value }) => selected.has(value))
+    .map(({ longLabel }) => longLabel)
+    .join(' · ');
+}
+
 function ReminderRuleCard({
   definition,
   rule,
@@ -74,6 +85,7 @@ function ReminderRuleCard({
   onChange: (rule: RoutineReminderRule) => void;
 }) {
   const Icon = definition.icon;
+  const [expanded, setExpanded] = useState(false);
 
   const toggleDay = (day: RoutineReminderWeekday) => {
     const days = rule.days.includes(day)
@@ -83,69 +95,94 @@ function ReminderRuleCard({
   };
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-      <div className="flex items-start gap-3">
-        <span className="rounded-xl bg-slate-100 p-2 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-          <Icon aria-hidden="true" className="h-5 w-5" />
+    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
+      <div className="flex min-h-20 items-center gap-3 p-3 sm:p-4">
+        <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+          <Icon aria-hidden="true" className="size-5" />
         </span>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="font-semibold text-slate-950 dark:text-white">{definition.title}</h2>
-            <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-200">
-              <input
-                checked={rule.enabled}
-                className="h-5 w-5 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
-                onChange={(event) => onChange({ ...rule, enabled: event.target.checked })}
-                type="checkbox"
-              />
-              Actif
-            </label>
-          </div>
-          <p className="mt-1 text-sm leading-5 text-slate-600 dark:text-slate-300">
-            {definition.description}
-          </p>
-        </div>
-      </div>
-
-      <p className="mt-4 text-xs leading-5 text-slate-500 dark:text-slate-400">
-        Les jours et l’heure restent modifiables même lorsque ce rappel est désactivé.
-      </p>
-
-      <div className="mt-2 grid gap-4 sm:grid-cols-[10rem_1fr]">
-        <label className="text-sm font-medium text-slate-700 dark:text-slate-200">
-          Heure
+        <button
+          aria-expanded={expanded}
+          className="min-w-0 flex-1 rounded-xl text-left outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+          onClick={() => setExpanded((current) => !current)}
+          type="button"
+        >
+          <span className="flex items-center gap-2">
+            <span className="truncate font-semibold text-slate-950 dark:text-white">{definition.title}</span>
+            <span className={`rounded-full px-2 py-0.5 text-[0.68rem] font-bold uppercase tracking-wide ${
+              rule.enabled
+                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200'
+                : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
+            }`}>
+              {rule.enabled ? 'Actif' : 'Inactif'}
+            </span>
+          </span>
+          <span className="mt-1 block truncate text-xs text-slate-500 dark:text-slate-400">
+            {rule.time} · {formatDays(rule.days)}
+          </span>
+        </button>
+        <label className="inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-200">
           <input
-            className="mt-1 h-11 min-h-11 w-full appearance-none rounded-xl border border-slate-300 bg-white px-3 py-0 text-left leading-[2.75rem] text-slate-950 dark:border-slate-600 dark:bg-slate-950 dark:text-white [&::-webkit-date-and-time-value]:m-0 [&::-webkit-date-and-time-value]:text-left [&::-webkit-date-and-time-value]:leading-[2.75rem]"
-            onChange={(event) => onChange({ ...rule, time: event.target.value })}
-            type="time"
-            value={rule.time}
+            checked={rule.enabled}
+            className="size-5 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
+            onChange={(event) => onChange({ ...rule, enabled: event.target.checked })}
+            type="checkbox"
           />
+          <span className="sr-only">Activer {definition.title}</span>
         </label>
-
-        <fieldset>
-          <legend className="text-sm font-medium text-slate-700 dark:text-slate-200">Jours</legend>
-          <div className="mt-1 grid grid-cols-7 gap-1" role="group" aria-label={`Jours pour ${definition.title}`}>
-            {WEEKDAYS.map((day) => {
-              const selected = rule.days.includes(day.value);
-              return (
-                <button
-                  aria-pressed={selected}
-                  className={`min-h-11 rounded-xl border text-sm font-semibold transition ${
-                    selected
-                      ? 'border-sky-600 bg-sky-600 text-white'
-                      : 'border-slate-300 bg-white text-slate-700 dark:border-slate-600 dark:bg-slate-950 dark:text-slate-200'
-                  }`}
-                  key={day.value}
-                  onClick={() => toggleDay(day.value)}
-                  type="button"
-                >
-                  {day.label}
-                </button>
-              );
-            })}
-          </div>
-        </fieldset>
+        <button
+          aria-label={`${expanded ? 'Replier' : 'Modifier'} ${definition.title}`}
+          className="grid size-11 shrink-0 place-items-center rounded-xl text-slate-500 transition hover:bg-slate-100 dark:hover:bg-slate-800"
+          onClick={() => setExpanded((current) => !current)}
+          type="button"
+        >
+          <ChevronDown aria-hidden="true" className={`size-5 transition-transform ${expanded ? 'rotate-180' : ''}`} />
+        </button>
       </div>
+
+      {expanded ? (
+        <div className="border-t border-slate-200 px-4 pb-4 pt-3 dark:border-slate-800">
+          <p className="text-sm leading-5 text-slate-600 dark:text-slate-300">{definition.description}</p>
+          <p className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
+            L’heure et les jours restent modifiables même lorsque ce rappel est désactivé.
+          </p>
+
+          <div className="mt-3 grid gap-4 sm:grid-cols-[10rem_1fr]">
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-200">
+              Heure
+              <input
+                className="mt-1 h-11 min-h-11 w-full appearance-none rounded-xl border border-slate-300 bg-white px-3 py-0 text-left leading-[2.75rem] text-slate-950 dark:border-slate-600 dark:bg-slate-950 dark:text-white [&::-webkit-date-and-time-value]:m-0 [&::-webkit-date-and-time-value]:text-left [&::-webkit-date-and-time-value]:leading-[2.75rem]"
+                onChange={(event) => onChange({ ...rule, time: event.target.value })}
+                type="time"
+                value={rule.time}
+              />
+            </label>
+
+            <fieldset>
+              <legend className="text-sm font-medium text-slate-700 dark:text-slate-200">Jours</legend>
+              <div className="mt-1 grid grid-cols-7 gap-1" role="group" aria-label={`Jours pour ${definition.title}`}>
+                {WEEKDAYS.map((day) => {
+                  const selected = rule.days.includes(day.value);
+                  return (
+                    <button
+                      aria-pressed={selected}
+                      className={`min-h-11 rounded-xl border text-sm font-semibold transition active:scale-[0.97] ${
+                        selected
+                          ? 'border-sky-600 bg-sky-600 text-white'
+                          : 'border-slate-300 bg-white text-slate-700 dark:border-slate-600 dark:bg-slate-950 dark:text-slate-200'
+                      }`}
+                      key={day.value}
+                      onClick={() => toggleDay(day.value)}
+                      type="button"
+                    >
+                      {day.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </fieldset>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -192,10 +229,6 @@ export function RoutineRemindersPage() {
       setPreferences(normalized);
       setStatus('saved');
       notifyRoutineReminderChanged();
-      actionToast.success({
-        key: 'routine-reminders-save',
-        title: 'Rappels enregistrés',
-      });
     } catch (error) {
       setStatus('error');
       actionToast.error({
@@ -219,40 +252,42 @@ export function RoutineRemindersPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-5 pb-28">
+    <div className="mx-auto w-full max-w-3xl space-y-4 pb-28">
       <header className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
         <div className="flex items-start gap-3">
           <span className="rounded-xl bg-sky-100 p-2 text-sky-700 dark:bg-sky-950 dark:text-sky-300">
-            <BellRing aria-hidden="true" className="h-6 w-6" />
+            <BellRing aria-hidden="true" className="size-6" />
           </span>
           <div>
             <h1 className="text-xl font-bold text-slate-950 dark:text-white">Rappels et routines</h1>
             <p className="mt-1 text-sm leading-5 text-slate-600 dark:text-slate-300">
-              Ces rappels sont internes à SportPilot. Ils sont évalués au démarrage et lorsque l’application revient au premier plan.
+              Consulte l’état de chaque rappel puis ouvre uniquement celui que tu souhaites modifier.
             </p>
           </div>
         </div>
       </header>
 
-      {REMINDER_DEFINITIONS.map((definition) => (
-        <ReminderRuleCard
-          definition={definition}
-          key={definition.type}
-          onChange={(rule) => updateRule(definition.type, rule)}
-          rule={preferences.rules[definition.type]}
-        />
-      ))}
+      <section aria-label="Rappels configurés" className="space-y-2">
+        {REMINDER_DEFINITIONS.map((definition) => (
+          <ReminderRuleCard
+            definition={definition}
+            key={definition.type}
+            onChange={(rule) => updateRule(definition.type, rule)}
+            rule={preferences.rules[definition.type]}
+          />
+        ))}
+      </section>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
         <div className="flex items-center gap-2">
-          <Clock3 aria-hidden="true" className="h-5 w-5 text-slate-500" />
+          <Clock3 aria-hidden="true" className="size-5 text-slate-500" />
           <h2 className="font-semibold text-slate-950 dark:text-white">Comportement général</h2>
         </div>
 
         <label className="mt-4 flex min-h-11 items-center gap-3 text-sm font-medium text-slate-700 dark:text-slate-200">
           <input
             checked={preferences.quietHours.enabled}
-            className="h-5 w-5 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
+            className="size-5 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
             onChange={(event) => {
               setPreferences({
                 ...preferences,
@@ -350,13 +385,19 @@ export function RoutineRemindersPage() {
       ) : null}
 
       <button
-        className="fixed inset-x-4 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-40 mx-auto flex min-h-12 max-w-md items-center justify-center gap-2 rounded-2xl bg-sky-600 px-5 py-3 font-semibold text-white shadow-xl hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-60 md:static md:w-full"
+        className={`fixed inset-x-4 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-40 mx-auto flex min-h-12 max-w-md items-center justify-center gap-2 rounded-2xl px-5 py-3 font-semibold text-white shadow-xl disabled:cursor-not-allowed disabled:opacity-60 md:static md:w-full ${
+          status === 'saved' ? 'bg-emerald-600' : 'bg-sky-600 hover:bg-sky-700'
+        }`}
         disabled={status === 'saving'}
         onClick={() => void save()}
         type="button"
       >
-        <Save aria-hidden="true" className="h-5 w-5" />
-        {status === 'saving' ? 'Enregistrement…' : 'Enregistrer les rappels'}
+        {status === 'saved' ? <Check aria-hidden="true" className="size-5" /> : <Save aria-hidden="true" className="size-5" />}
+        {status === 'saving'
+          ? 'Enregistrement…'
+          : status === 'saved'
+            ? 'Enregistré'
+            : 'Enregistrer les rappels'}
       </button>
     </div>
   );
