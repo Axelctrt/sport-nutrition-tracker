@@ -530,6 +530,8 @@ test('conserve les données pendant le remplacement de la PWA sous la même orig
   page,
   request,
 }) => {
+  const resetResponse = await request.post('/__pwa-test/reset-to-old');
+  expect(resetResponse.ok()).toBe(true);
   await page.goto('/');
   await waitForServiceWorkerControl(page);
   await expect

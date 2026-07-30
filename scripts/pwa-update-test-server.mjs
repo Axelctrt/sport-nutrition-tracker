@@ -117,6 +117,15 @@ const server = createServer((request, response) => {
 
   if (
     request.method === 'POST' &&
+    requestUrl.pathname === '/__pwa-test/reset-to-old'
+  ) {
+    activeBuildDirectory = oldBuildDirectory;
+    sendJson(response, 200, { activeBuild: 'old' });
+    return;
+  }
+
+  if (
+    request.method === 'POST' &&
     requestUrl.pathname === '/__pwa-test/switch-to-new'
   ) {
     activeBuildDirectory = newBuildDirectory;
