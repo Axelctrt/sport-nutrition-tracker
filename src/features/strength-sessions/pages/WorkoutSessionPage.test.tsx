@@ -82,6 +82,7 @@ describe('WorkoutSessionPage', () => {
     });
     expect(screen.queryByText('Notes enregistrées')).not.toBeInTheDocument();
 
+    await user.click(screen.getByRole('button', { name: 'Développer Développé couché' }));
     await user.click(screen.getByRole('button', { name: /Démarrer le repos/ }));
     expect(await screen.findByRole('region', { name: 'Minuteur de repos' })).toBeInTheDocument();
 
@@ -153,6 +154,7 @@ describe('WorkoutSessionPage', () => {
 
     await screen.findByRole('heading', { name: 'Séance libre' });
     expect(screen.getByRole('region', { name: 'Actions de la page' })).toBeInTheDocument();
+    await screen.findByRole('button', { name: 'Réduire Développé couché' });
     await user.click(screen.getByRole('button', { name: 'Ajouter une série' }));
 
     const weightInput = await screen.findByLabelText('Charge en kg');
@@ -212,6 +214,7 @@ describe('WorkoutSessionPage', () => {
     renderSessionPage();
 
     await screen.findByRole('heading', { name: 'Séance libre' });
+    await screen.findByRole('button', { name: 'Réduire Développé couché' });
     await user.click(screen.getByRole('button', { name: 'Ajouter une série' }));
     await user.click(await screen.findByRole('button', { name: 'Valider la série' }));
     await waitFor(() => expect(screen.queryByRole('region', { name: 'Minuteur de repos' })).not.toBeInTheDocument());
@@ -222,16 +225,34 @@ describe('WorkoutSessionPage', () => {
     expect(screen.queryByRole('region', { name: 'Minuteur de repos' })).not.toBeInTheDocument();
   });
 
-  it('permet de réduire et développer une carte d’exercice', async () => {
+  it('n’ouvre qu’un exercice, permet de tous les fermer et reprend l’exercice courant', async () => {
+    await appDatabase.workoutSessionExercises.add(createEntity(createWorkoutSessionExerciseInput({
+      sessionId: 'session-current',
+      exerciseDefinitionId: 'exercise-row',
+      exerciseNameSnapshot: 'Rowing barre',
+      sortOrder: 1,
+    }), 'session-exercise-row'));
     const user = userEvent.setup();
     renderSessionPage();
 
-    await screen.findByRole('heading', { name: 'Développé couché' });
-    expect(screen.getByRole('button', { name: 'Ajouter une série' })).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Réduire Développé couché' }));
-    expect(screen.queryByRole('button', { name: 'Ajouter une série' })).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Développer Développé couché' }));
-    expect(screen.getByRole('button', { name: 'Ajouter une série' })).toBeInTheDocument();
+    const benchCard = (await screen.findByRole('heading', { name: 'Développé couché' }))
+      .closest('[id^="workout-exercise-"]') as HTMLElement;
+    const rowCard = screen.getByRole('heading', { name: 'Rowing barre' })
+      .closest('[id^="workout-exercise-"]') as HTMLElement;
+
+    await within(benchCard).findByRole('button', { name: 'Réduire Développé couché' });
+    expect(within(rowCard).getByRole('button', { name: 'Développer Rowing barre' })).toBeInTheDocument();
+
+    await user.click(within(rowCard).getByRole('button', { name: 'Développer Rowing barre' }));
+    expect(within(benchCard).getByRole('button', { name: 'Développer Développé couché' })).toBeInTheDocument();
+    expect(within(rowCard).getByRole('button', { name: 'Réduire Rowing barre' })).toBeInTheDocument();
+
+    await user.click(within(rowCard).getByRole('button', { name: 'Réduire Rowing barre' }));
+    expect(within(benchCard).getByRole('button', { name: 'Développer Développé couché' })).toBeInTheDocument();
+    expect(within(rowCard).getByRole('button', { name: 'Développer Rowing barre' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Continuer' }));
+    expect(await within(benchCard).findByRole('button', { name: 'Réduire Développé couché' })).toBeInTheDocument();
   });
 
   it('affiche et reprend les séries de la séance précédente', async () => {
@@ -363,6 +384,10 @@ describe('WorkoutSessionPage', () => {
     const getBenchCard = () => screen.getByRole('heading', { name: 'Développé couché' })
       .closest('[id^="workout-exercise-"]') as HTMLElement | null;
     expect(getBenchCard()).not.toBeNull();
+    await within(getBenchCard()!).findByRole('button', { name: 'Réduire Développé couché' });
+    await user.click(within(getBenchCard()!).getByRole('button', { name: 'Passer pour l’instant' }));
+    expect(within(getBenchCard()!).getByText('Passé temporairement')).toBeInTheDocument();
+    await user.click(within(getBenchCard()!).getByRole('button', { name: 'Réintégrer' }));
     await user.click(within(getBenchCard()!).getByRole('button', { name: 'Ajouter une série' }));
     await waitFor(async () => expect(await appDatabase.strengthSets.count()).toBe(1));
     const repetitionsInput = await screen.findByLabelText('Répétitions');
@@ -378,8 +403,7 @@ describe('WorkoutSessionPage', () => {
     expect(screen.getByText('Transition vers Rowing barre')).toBeInTheDocument();
     expect(screen.getByRole('timer')).toHaveTextContent(/00:1[34]|00:15/);
 
-    await user.click(within(getBenchCard()!).getByRole('button', { name: 'Passer pour l’instant' }));
-    expect(within(getBenchCard()!).getByText('Passé temporairement')).toBeInTheDocument();
+    await user.click(within(getBenchCard()!).getByRole('button', { name: 'Développer Développé couché' }));
   });
 
 
@@ -420,6 +444,7 @@ describe('WorkoutSessionPage', () => {
       .closest('[id^="workout-exercise-"]') as HTMLElement;
 
     expect(within(benchCard).getByText('À faire maintenant')).toBeInTheDocument();
+    await within(benchCard).findByRole('button', { name: 'Réduire Développé couché' });
     await user.click(within(benchCard).getByRole('button', { name: 'Valider la série' }));
 
     await waitFor(() => {
@@ -465,6 +490,7 @@ describe('WorkoutSessionPage', () => {
     const rowCard = screen.getByRole('heading', { name: 'Rowing barre' })
       .closest('[id^="workout-exercise-"]') as HTMLElement;
 
+    await within(benchCard).findByRole('button', { name: 'Réduire Développé couché' });
     await user.click(within(benchCard).getByText('Options discrètes'));
     await user.click(within(benchCard).getByRole('button', { name: 'Supprimer la série' }));
     const dialog = await screen.findByRole('alertdialog');

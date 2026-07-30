@@ -7,7 +7,6 @@ import {
   normalizeExerciseName,
 } from '@/application/strength/exerciseDefinitionService';
 import {
-  buildWorkoutExerciseProgress,
   buildWorkoutSessionProgress,
   type WorkoutSessionProgress,
 } from '@/application/strength/workoutSessionProgress';
@@ -158,6 +157,9 @@ export function WorkoutSessionPage() {
   const [selectedExerciseSetCount, setSelectedExerciseSetCount] = useState(4);
   const [exerciseQuery, setExerciseQuery] = useState('');
   const [highlightedExerciseId, setHighlightedExerciseId] = useState<string>();
+  const [expandedExerciseId, setExpandedExerciseId] = useState<string>();
+  const previousNextExerciseIdRef = useRef<string>();
+  const hasInitializedExerciseExpansionRef = useRef(false);
   const handledCreatedExerciseRef = useRef<string | undefined>(undefined);
   const [notes, setNotes] = useState('');
   const [confirmation, setConfirmation] = useState<ConfirmationRequest>();
@@ -231,6 +233,7 @@ export function WorkoutSessionPage() {
       setExerciseQuery('');
       setSelectedExerciseId('');
       setHighlightedExerciseId(sessionExercise.id);
+      setExpandedExerciseId(sessionExercise.id);
       revealElement(`workout-exercise-${sessionExercise.id}`);
       actionToast.success({
         key: `strength-exercise-created-added:${created.exerciseId}`,
@@ -287,6 +290,27 @@ export function WorkoutSessionPage() {
   );
 
   useEffect(() => {
+    const nextExerciseId = progress.nextStep?.exerciseId;
+    const previousNextExerciseId = previousNextExerciseIdRef.current;
+    previousNextExerciseIdRef.current = nextExerciseId;
+
+    if (exercises.length === 0) {
+      setExpandedExerciseId(undefined);
+      return;
+    }
+    if (!hasInitializedExerciseExpansionRef.current) {
+      hasInitializedExerciseExpansionRef.current = true;
+      setExpandedExerciseId(nextExerciseId ?? exercises[0]?.id);
+      return;
+    }
+    if (nextExerciseId && previousNextExerciseId && nextExerciseId !== previousNextExerciseId) {
+      setExpandedExerciseId(nextExerciseId);
+    } else if (!nextExerciseId && previousNextExerciseId) {
+      setExpandedExerciseId(undefined);
+    }
+  }, [exercises, expandedExerciseId, progress.nextStep?.exerciseId]);
+
+  useEffect(() => {
     if (searchParams.get('finish') !== 'true' || session?.status !== 'inProgress') return;
     setConfirmation({ type: 'finish' });
     const next = new URLSearchParams(searchParams);
@@ -294,26 +318,8 @@ export function WorkoutSessionPage() {
     setSearchParams(next, { replace: true });
   }, [searchParams, session?.status, setSearchParams]);
 
-  const executionBlockCompleteByExerciseId = useMemo(() => {
-    const progressByExerciseId = new Map(exercises.map((exercise) => [
-      exercise.id,
-      buildWorkoutExerciseProgress(exercise, setsByExercise.get(exercise.id) ?? []),
-    ]));
-    const result = new Map<string, boolean>();
-
-    for (const exercise of exercises) {
-      const group = exercise.exerciseGroupId
-        ? exerciseGroups.find((candidate) => candidate.id === exercise.exerciseGroupId)
-        : undefined;
-      const members = group?.exercises ?? [exercise];
-      const complete = members.every((member) => progressByExerciseId.get(member.id)?.isComplete ?? false);
-      for (const member of members) result.set(member.id, complete);
-    }
-
-    return result;
-  }, [exerciseGroups, exercises, setsByExercise]);
-
   const revealWorkoutStep = (exerciseId: string, setId?: string) => {
+    setExpandedExerciseId(exerciseId);
     revealElement(setId ? `strength-set-${setId}` : `workout-exercise-${exerciseId}`);
   };
 
@@ -327,6 +333,7 @@ export function WorkoutSessionPage() {
       await addSet(created.id);
     }
     revealElement(`workout-exercise-${created.id}`);
+    setExpandedExerciseId(created.id);
   };
 
   const handleAddSet = async (sessionExerciseId: string) => {
@@ -336,7 +343,7 @@ export function WorkoutSessionPage() {
   };
 
   const handleSaveSet = async (sessionExerciseId: string, setId: string, values: StrengthSetChanges) => {
-    await saveSet(sessionExerciseId, setId, values);
+    return saveSet(sessionExerciseId, setId, values);
   };
 
   const handleCompleteSet = async (
@@ -759,8 +766,10 @@ export function WorkoutSessionPage() {
               temporarilySkipped={temporarilySkippedExerciseIds.has(exercise.id)}
               onSkip={groupPosition ? handleSkipExercise : undefined}
               isCurrent={progress.nextStep?.exerciseId === exercise.id}
-              executionBlockComplete={executionBlockCompleteByExerciseId.get(exercise.id) ?? false}
               highlighted={highlightedExerciseId === exercise.id}
+              expanded={expandedExerciseId === exercise.id}
+              saveStatus={saveStatus}
+              onExpandedChange={(expanded) => setExpandedExerciseId(expanded ? exercise.id : undefined)}
             />
           );
         })}

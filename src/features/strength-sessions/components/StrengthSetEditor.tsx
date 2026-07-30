@@ -5,10 +5,9 @@ import {
   Pencil,
   Plus,
   RotateCcw,
-  Save,
   Trash2,
 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { StrengthSet, StrengthTrackingMode, WorkoutSessionExercise } from '@/domain/models/strength';
 import { resolveTrackingMode } from '@/domain/strength/strengthTracking';
 import {
@@ -18,6 +17,7 @@ import {
 import { strengthSetTypeLabels } from '@/features/strength-sessions/utils/strengthSetLabels';
 import { inputClassName } from '@/shared/forms/formStyles';
 import { Button } from '@/shared/ui/Button';
+import type { SaveStatusValue } from '@/shared/ui/SaveStatus';
 import { cn } from '@/shared/utils/cn';
 
 interface StrengthSetEditorProps {
@@ -25,6 +25,7 @@ interface StrengthSetEditorProps {
   sets: StrengthSet[];
   editable: boolean;
   action?: string | undefined;
+  saveStatus?: SaveStatusValue;
   onAdd: (sessionExerciseId: string) => Promise<unknown>;
   onSave: (
     sessionExerciseId: string,
@@ -75,6 +76,7 @@ function StrengthSetRow({
   set,
   editable,
   action,
+  saveStatus = 'idle',
   onSave,
   onCompletion,
   onDuplicate,
@@ -90,6 +92,10 @@ function StrengthSetRow({
   const [notes, setNotes] = useState(set.notes ?? '');
   const [validationError, setValidationError] = useState<string>();
   const [editingCompleted, setEditingCompleted] = useState(false);
+  const [draftSaveStatus, setDraftSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const latestAutoSaveRef = useRef<() => Promise<void>>(async () => undefined);
+  const mountedRef = useRef(true);
 
   useEffect(() => {
     setRepetitions(numberInputValue(set.repetitions));
@@ -109,7 +115,7 @@ function StrengthSetRow({
     || type !== set.type
     || notes !== (set.notes ?? '');
 
-  const values = (): StrengthSetFormValues | undefined => {
+  const draftValues = useCallback((showError = true): StrengthSetFormValues | undefined => {
     const result = strengthSetFormSchema.safeParse({
       repetitions,
       weightKg,
@@ -120,28 +126,13 @@ function StrengthSetRow({
       notes,
     });
     if (!result.success) {
-      setValidationError(result.error.issues[0]?.message ?? 'Vérifie les valeurs de la série.');
+      if (showError) {
+        setValidationError(result.error.issues[0]?.message ?? 'Vérifie les valeurs de la série.');
+      }
       return undefined;
     }
 
-    if (trackingMode === 'duration' && (result.data.durationSeconds ?? 0) <= 0) {
-      setValidationError('La durée doit être supérieure à zéro.');
-      return undefined;
-    }
-    if (trackingMode === 'distance' && (result.data.distanceMeters ?? 0) <= 0) {
-      setValidationError('La distance doit être supérieure à zéro.');
-      return undefined;
-    }
-    if (
-      trackingMode !== 'duration'
-      && trackingMode !== 'distance'
-      && result.data.repetitions <= 0
-    ) {
-      setValidationError('Le nombre de répétitions doit être supérieur à zéro.');
-      return undefined;
-    }
-
-    setValidationError(undefined);
+    if (showError) setValidationError(undefined);
     return {
       ...result.data,
       repetitions: trackingMode === 'duration' || trackingMode === 'distance'
@@ -153,18 +144,76 @@ function StrengthSetRow({
       durationSeconds: trackingMode === 'duration' ? result.data.durationSeconds : undefined,
       distanceMeters: trackingMode === 'distance' ? result.data.distanceMeters : undefined,
     };
+  }, [
+    distanceMeters,
+    durationSeconds,
+    notes,
+    repetitions,
+    rpe,
+    trackingMode,
+    type,
+    weightKg,
+  ]);
+
+  const completionValues = (): StrengthSetFormValues | undefined => {
+    const parsed = draftValues();
+    if (!parsed) return undefined;
+    if (trackingMode === 'duration' && (parsed.durationSeconds ?? 0) <= 0) {
+      setValidationError('La durée doit être supérieure à zéro.');
+      return undefined;
+    }
+    if (trackingMode === 'distance' && (parsed.distanceMeters ?? 0) <= 0) {
+      setValidationError('La distance doit être supérieure à zéro.');
+      return undefined;
+    }
+    if (trackingMode !== 'duration' && trackingMode !== 'distance' && parsed.repetitions <= 0) {
+      setValidationError('Le nombre de répétitions doit être supérieur à zéro.');
+      return undefined;
+    }
+    return parsed;
   };
 
-  const save = async () => {
-    const parsed = values();
-    if (parsed) {
-      await onSave(exercise.id, set.id, parsed);
-      setEditingCompleted(false);
-    }
-  };
+  const autoSave = useCallback(async () => {
+    const parsed = draftValues(false);
+    if (!parsed || !isDirty || !editable) return;
+    if (mountedRef.current) setDraftSaveStatus('saving');
+    const result = await onSave(exercise.id, set.id, parsed);
+    if (!mountedRef.current) return;
+    setDraftSaveStatus(result === undefined ? 'error' : 'saved');
+  }, [draftValues, editable, exercise.id, isDirty, onSave, set.id]);
+
+  useEffect(() => {
+    latestAutoSaveRef.current = autoSave;
+  }, [autoSave]);
+
+  useEffect(() => {
+    if (!isDirty || !editable) return undefined;
+    setDraftSaveStatus('idle');
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => void latestAutoSaveRef.current(), 650);
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    };
+  }, [
+    distanceMeters,
+    durationSeconds,
+    editable,
+    isDirty,
+    notes,
+    repetitions,
+    rpe,
+    type,
+    weightKg,
+  ]);
+
+  useEffect(() => () => {
+    mountedRef.current = false;
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    void latestAutoSaveRef.current();
+  }, []);
 
   const toggleCompletion = async () => {
-    const parsed = values();
+    const parsed = completionValues();
     if (parsed) await onCompletion(exercise.id, set.id, parsed, !set.isCompleted);
   };
 
@@ -226,8 +275,14 @@ function StrengthSetRow({
       )}
       aria-labelledby={`${baseId}-title`}
       data-strength-set-completed={set.isCompleted ? 'true' : 'false'}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null) && isDirty) {
+          if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+          void latestAutoSaveRef.current();
+        }
+      }}
     >
-      <div className="grid min-w-0 grid-cols-[2.25rem_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto] items-end gap-1.5 sm:grid-cols-[3rem_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto] sm:gap-2">
+      <div className="grid min-w-0 grid-cols-[2.25rem_minmax(0,1fr)_minmax(0,1fr)_auto] items-end gap-1.5 sm:grid-cols-[3rem_minmax(0,1fr)_minmax(0,1fr)_auto] sm:gap-2">
         <div className="pb-1.5 text-center">
           <h4 id={`${baseId}-title`} className="text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
             Série {set.setNumber}
@@ -325,62 +380,72 @@ function StrengthSetRow({
           </div>
         ) : null}
 
-        <div>
-          <label htmlFor={`${baseId}-rpe`} className="block truncate text-[0.68rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-            RPE
-          </label>
-          <input
-            id={`${baseId}-rpe`}
-            aria-label="RPE"
-            data-clear-on-focus="true"
-            type="number"
-            inputMode="decimal"
-            enterKeyHint="done"
-            min="1"
-            max="10"
-            step="0.5"
-            value={rpe}
-            onChange={(event) => setRpe(event.target.value)}
-            disabled={!editable}
-            placeholder="—"
-            className={`${inputClassName} mt-1 px-2 text-center text-sm font-semibold sm:text-base`}
-          />
-        </div>
-
         {editable ? (
-          <div className="flex flex-col gap-1">
-            <Button
-              size="sm"
-              className="min-h-10 px-2"
-              disabled={isBusy}
-              aria-label={set.isCompleted ? 'Rouvrir la série' : 'Valider la série'}
-              onClick={() => void toggleCompletion()}
-            >
-              {set.isCompleted ? <RotateCcw aria-hidden="true" className="size-4" /> : <Check aria-hidden="true" className="size-4" />}
-            </Button>
-            <Button
-              size="sm"
-              variant="secondary"
-              className="min-h-10 px-2"
-              disabled={isBusy || !isDirty}
-              aria-label="Enregistrer"
-              onClick={() => void save()}
-            >
-              <Save aria-hidden="true" className="size-4" />
-            </Button>
-          </div>
+          <Button
+            size="sm"
+            className="min-h-10 px-2"
+            disabled={isBusy}
+            aria-label={set.isCompleted ? 'Rouvrir la série' : 'Valider la série'}
+            onClick={() => void toggleCompletion()}
+          >
+            {set.isCompleted ? <RotateCcw aria-hidden="true" className="size-4" /> : <Check aria-hidden="true" className="size-4" />}
+          </Button>
         ) : null}
       </div>
 
       {hint ? <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{hint}</p> : null}
       {validationError ? <p className="mt-2 text-sm font-medium text-red-700 dark:text-red-300" role="alert">{validationError}</p> : null}
+      {editable && (isDirty || draftSaveStatus !== 'idle') ? (
+        <div className="mt-2 flex min-h-8 items-center justify-between gap-2 text-xs font-medium">
+          <span
+            className={draftSaveStatus === 'error' || saveStatus === 'error'
+              ? 'text-red-700 dark:text-red-300'
+              : 'text-slate-500 dark:text-slate-400'}
+            role={draftSaveStatus === 'error' || saveStatus === 'error' ? 'alert' : undefined}
+          >
+            {draftSaveStatus === 'saving' || saveStatus === 'saving'
+              ? 'Enregistrement…'
+              : draftSaveStatus === 'error' || saveStatus === 'error'
+                ? 'Échec de l’enregistrement'
+                : draftSaveStatus === 'saved' && !isDirty
+                  ? 'Enregistré'
+                  : 'Sauvegarde automatique'}
+          </span>
+          {draftSaveStatus === 'error' || saveStatus === 'error' ? (
+            <Button size="sm" variant="secondary" onClick={() => void autoSave()}>
+              Réessayer
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
 
       <details className="group mt-2 rounded-lg border border-slate-200 bg-slate-50/70 dark:border-slate-800 dark:bg-slate-900/40">
         <summary className="flex min-h-10 cursor-pointer list-none items-center justify-between gap-2 px-3 text-sm font-medium text-slate-700 dark:text-slate-200 [&::-webkit-details-marker]:hidden">
           Options discrètes
           <ChevronDown aria-hidden="true" className="size-4 transition-transform group-open:rotate-180 motion-reduce:transition-none" />
         </summary>
-        <div className="grid gap-3 border-t border-slate-200 p-3 dark:border-slate-800 sm:grid-cols-2">
+        <div className="grid gap-3 border-t border-slate-200 p-3 dark:border-slate-800 sm:grid-cols-3">
+          <div>
+            <label htmlFor={`${baseId}-rpe`} className="text-sm font-medium text-slate-700 dark:text-slate-200">
+              RPE
+            </label>
+            <input
+              id={`${baseId}-rpe`}
+              aria-label="RPE"
+              data-clear-on-focus="true"
+              type="number"
+              inputMode="decimal"
+              enterKeyHint="done"
+              min="1"
+              max="10"
+              step="0.5"
+              value={rpe}
+              onChange={(event) => setRpe(event.target.value)}
+              disabled={!editable}
+              placeholder="Facultatif"
+              className={`${inputClassName} mt-1`}
+            />
+          </div>
           <div>
             <label htmlFor={`${baseId}-type`} className="text-sm font-medium text-slate-700 dark:text-slate-200">Type</label>
             <select
@@ -409,7 +474,7 @@ function StrengthSetRow({
             />
           </div>
           {editable ? (
-            <div className="grid grid-cols-2 gap-2 sm:col-span-2 sm:grid-cols-3">
+            <div className="grid grid-cols-2 gap-2 sm:col-span-3">
               <Button size="sm" variant="secondary" disabled={isBusy} onClick={() => void onDuplicate(exercise.id, set.id)}>
                 <CopyPlus aria-hidden="true" className="size-4" />
                 Dupliquer
@@ -437,6 +502,7 @@ export function StrengthSetEditor({
   sets,
   editable,
   action,
+  saveStatus = 'idle',
   onAdd,
   onSave,
   onCompletion,
@@ -470,6 +536,7 @@ export function StrengthSetEditor({
               set={set}
               editable={editable}
               action={action}
+              saveStatus={saveStatus}
               onSave={onSave}
               onCompletion={onCompletion}
               onDuplicate={onDuplicate}

@@ -1,5 +1,6 @@
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { ComponentProps } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { StrengthSetEditor } from '@/features/strength-sessions/components/StrengthSetEditor';
 import { createEntity } from '@/shared/utils/entities';
@@ -26,25 +27,29 @@ const completedSet = createEntity(createStrengthSetInput({
   isCompleted: true,
 }), 'set-1');
 
-function renderEditor(overrides: { editable?: boolean } = {}) {
+function renderEditor(overrides: {
+  editable?: boolean;
+  sets?: Array<typeof completedSet>;
+  onSave?: ComponentProps<typeof StrengthSetEditor>['onSave'];
+} = {}) {
   const callbacks = {
     onAdd: vi.fn(async () => undefined),
-    onSave: vi.fn(async () => undefined),
+    onSave: overrides.onSave ?? vi.fn(async () => completedSet),
     onCompletion: vi.fn(async () => undefined),
     onDuplicate: vi.fn(async () => undefined),
     onDelete: vi.fn(),
   };
 
-  render(
+  const rendered = render(
     <StrengthSetEditor
       exercise={exercise}
-      sets={[completedSet]}
+      sets={overrides.sets ?? [completedSet]}
       editable={overrides.editable ?? true}
       {...callbacks}
     />,
   );
 
-  return callbacks;
+  return { ...callbacks, ...rendered };
 }
 
 describe('StrengthSetEditor', () => {
@@ -89,5 +94,48 @@ describe('StrengthSetEditor', () => {
 
     await user.click(within(options as HTMLElement).getByRole('button', { name: 'Supprimer la série' }));
     expect(callbacks.onDelete).toHaveBeenCalledWith('bench', 'set-1');
+  });
+
+  it('sauvegarde une saisie différée sans bouton Enregistrer', async () => {
+    const draftSet = { ...completedSet, isCompleted: false };
+    const callbacks = renderEditor({ sets: [draftSet] });
+
+    fireEvent.change(screen.getByLabelText('Charge en kg'), { target: { value: '65' } });
+
+    expect(screen.queryByRole('button', { name: 'Enregistrer' })).not.toBeInTheDocument();
+    expect(screen.getByText('Sauvegarde automatique')).toBeInTheDocument();
+    await waitFor(() => expect(callbacks.onSave).toHaveBeenCalledWith(
+      'bench',
+      'set-1',
+      expect.objectContaining({ weightKg: 65 }),
+    ), { timeout: 1_500 });
+  });
+
+  it('sauvegarde au blur et conserve les valeurs si la sauvegarde échoue', async () => {
+    const draftSet = { ...completedSet, isCompleted: false };
+    const onSave = vi.fn(async () => undefined);
+    renderEditor({ sets: [draftSet], onSave });
+
+    const weightInput = screen.getByLabelText('Charge en kg');
+    fireEvent.change(weightInput, { target: { value: '70' } });
+    fireEvent.blur(weightInput, { relatedTarget: null });
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Échec de l’enregistrement');
+    expect(weightInput).toHaveValue(70);
+    expect(screen.getByRole('button', { name: 'Réessayer' })).toBeInTheDocument();
+  });
+
+  it('vide la sauvegarde différée avant le démontage', async () => {
+    const draftSet = { ...completedSet, isCompleted: false };
+    const rendered = renderEditor({ sets: [draftSet] });
+
+    fireEvent.change(screen.getByLabelText('Répétitions'), { target: { value: '9' } });
+    rendered.unmount();
+
+    await waitFor(() => expect(rendered.onSave).toHaveBeenCalledWith(
+      'bench',
+      'set-1',
+      expect.objectContaining({ repetitions: 9 }),
+    ));
   });
 });
