@@ -1,24 +1,21 @@
-SPORTPILOT 0.35.0
+SPORTPILOT 0.36.0
 
-Checklist d’installation et publication :
+Checklist de validation de la branche UX :
 
-1. Verifier que la branche release/0.35.0 est propre et synchronisee avec origin.
-2. Verifier que package.json et package-lock.json indiquent 0.35.0.
-3. Verifier que Parametres affiche 0.35.0.
-4. Verifier qu’aucun ZIP, resultat Playwright, secret ou fichier genere n’est stage.
-5. Executer npm ci.
-6. Executer npm run lint.
-7. Executer npx tsc -b --pretty false.
-8. Executer npm run test.
-9. Executer npm run test:stability.
-10. Executer npm run test:e2e.
-11. Executer npm run test:e2e:pwa.
-12. Executer npm run build.
-13. Executer npm run audit:release-consolidation.
-14. Executer npm run check.
-15. Executer npm audit sans appliquer npm audit fix --force.
-16. Verifier que les quatre jobs GitHub Actions sont verts sur le meme SHA.
-17. Fusionner la PR release/0.35.0 vers main uniquement apres validation.
-18. Deployer Cloudflare Pages depuis le commit publie sur main.
-19. Verifier manifeste, service worker, routes profondes et conservation des donnees.
-20. Creer le tag annote v0.35.0 sur le commit reellement publie.
+1. Verifier que la branche feat/friends-settings-strength-ux-0.36.0 part du commit d067cb2fd718e0cd71d597398e6e1d3f57f3e973.
+2. Verifier que package.json et package-lock.json indiquent 0.36.0.
+3. Verifier que Parametres affiche 0.36.0.
+4. Verifier qu'aucun ZIP, resultat Playwright, secret ou fichier genere n'est stage.
+5. Executer npm run lint.
+6. Executer npx tsc -b --pretty false.
+7. Executer npm run test.
+8. Executer npm run test:stability.
+9. Executer npm run build.
+10. Executer npm run check.
+11. Executer npm run test:e2e.
+12. Executer npm run test:e2e:pwa.
+13. Executer npm audit sans appliquer npm audit fix --force.
+14. Verifier Amis, Parametres et une seance de musculation sur iPhone et Android reels.
+15. Pousser uniquement la branche UX apres validation.
+
+Ne pas fusionner, creer de tag ou deployer sans accord explicite.

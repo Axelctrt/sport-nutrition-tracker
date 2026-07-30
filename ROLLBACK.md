@@ -1,20 +1,24 @@
-# Retour arrière — SportPilot 0.35.0
+# Retour arrière - SportPilot 0.36.0
 
-Le fix-forward reste la stratégie prioritaire. SportPilot 0.35.0 ne modifie ni les schémas Dexie, ni les migrations D1, ni les contrats sociaux, ni le moteur calorique.
+SportPilot 0.36.0 n’ajoute aucune migration Dexie ou D1 et ne modifie aucun format de données. La référence de retour arrière de cette branche est le commit validé 0.35.1 :
 
-## Avant rollback
+```text
+d067cb2fd718e0cd71d597398e6e1d3f57f3e973
+```
 
-- identifier le commit exact publié ;
-- conserver le commit `313cec57071d569d2ed41dac1930de7cb908fce5` comme référence stable SportPilot 0.34.0 ;
-- vérifier les logs Cloudflare Pages, le manifeste et le service worker ;
-- exporter une sauvegarde lorsque l’application reste accessible ;
-- ne supprimer aucune donnée locale ou synchronisée.
+## Avant toute action
 
-## Stratégie recommandée
+- identifier le commit exact concerné ;
+- conserver une sauvegarde des données accessibles ;
+- vérifier les parcours Amis, Paramètres et Musculation ;
+- ne supprimer, déplacer ou réinitialiser aucune base locale ;
+- ne pas rejouer de migration.
 
-1. créer une branche `fix/production-0.35.0-*` depuis le commit publié ;
-2. corriger uniquement le défaut identifié ;
-3. relancer lint, TypeScript, tests, E2E, build et audits concernés ;
-4. publier le correctif uniquement après validation complète.
+## Stratégie
 
-Un retour au commit stable 0.34.0 ne doit être utilisé qu’en cas de blocage critique, après sauvegarde de l’état courant. Les migrations existantes ne doivent pas être rejouées et les données locales ne doivent pas être réinitialisées.
+1. privilégier un correctif ciblé sur une branche dédiée ;
+2. relancer les tests sociaux, de paramètres, de musculation et de continuité de session ;
+3. valider lint, TypeScript, Vitest, Playwright, build PWA et audits ;
+4. demander un accord explicite avant toute publication.
+
+Aucun retour arrière, tag ou déploiement n’est exécuté par la préparation de la branche 0.36.0.

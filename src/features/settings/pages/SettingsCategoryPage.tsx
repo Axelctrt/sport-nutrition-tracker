@@ -24,15 +24,12 @@ import { routePaths } from '@/app/routePaths';
 import { recalculateExistingTargetsAfterSettingsChange } from '@/application/daily/settingsTargetRecalculationService';
 import { readPhotoNutritionAiConfig } from '@/application/photo-nutrition/photoNutritionAiClient';
 import type { AppSettings } from '@/domain/models/settings';
-import { AchievementsPanel } from '@/features/settings/components/AchievementsPanel';
 import {
   AdvancedSettingsForm,
   type AdvancedSettingsSectionId,
 } from '@/features/settings/components/AdvancedSettingsForm';
 import { AutomaticSyncSettingsPanel } from '@/features/settings/components/AutomaticSyncSettingsPanel';
-import { ConsistencyStreakPanel } from '@/features/settings/components/ConsistencyStreakPanel';
 import { DataManagementCenter } from '@/features/settings/components/DataManagementCenter';
-import { RewardThemesPanel } from '@/features/settings/components/RewardThemesPanel';
 import type { SettingsFormValues } from '@/features/settings/schemas/settingsSchema';
 import { settingsCategoryForPath, type SettingsCategoryId } from '@/features/settings/settingsInformationArchitecture';
 import {
@@ -207,6 +204,12 @@ function CategoryContent({
               icon={Palette}
               value={settings.dashboardDensity === 'compact' ? 'Affichage compact' : 'Affichage confortable'}
             />
+            <SettingsLinkCard
+              to={routePaths.settingsNotificationsRoutines}
+              title="Notifications et routines"
+              description="Rappels, heures calmes et minuteur de repos."
+              icon={Sparkles}
+            />
           </div>
           <CategorySection title="Thème et stockage local">
             <AdvancedSettingsForm
@@ -216,9 +219,6 @@ function CategoryContent({
               visibleSections={visibleSections}
               showResetToDefaults={false}
             />
-          </CategorySection>
-          <CategorySection title="Thèmes récompenses" description="Les zones tactiles restent identiques en affichage compact.">
-            <RewardThemesPanel />
           </CategorySection>
           <InlineNotice className="mt-6" title="Accessibilité système respectée">
             SportPilot conserve le focus clavier visible, prend en compte la réduction des animations et ne réserve aucune action importante à un geste ou au survol.
@@ -246,12 +246,14 @@ function CategoryContent({
               showResetToDefaults={false}
             />
           </CategorySection>
-          <CategorySection title="Motivation et régularité">
-            <div className="space-y-4">
-              <AchievementsPanel />
-              <ConsistencyStreakPanel />
-            </div>
-          </CategorySection>
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            <SettingsLinkCard
+              to={routePaths.rewards}
+              title="Récompenses"
+              description="Retrouver les badges, séries et thèmes depuis Progression."
+              icon={Sparkles}
+            />
+          </div>
         </>
       );
 
@@ -314,6 +316,26 @@ function CategoryContent({
     case 'data-backup':
       return (
         <>
+          <div className="mb-4 grid gap-3 md:grid-cols-2">
+            <SettingsLinkCard
+              to={routePaths.friends}
+              title="Amis et partage"
+              description="Profil social, demandes et visibilité accordée à chaque ami."
+              icon={ShieldCheck}
+            />
+            <SettingsLinkCard
+              to={routePaths.settingsAiPermissions}
+              title="Autorisations de l’analyse photo"
+              description="Consentement et traitement des images nutritionnelles."
+              icon={Bot}
+            />
+            <SettingsLinkCard
+              to={routePaths.privacy}
+              title="Politique de confidentialité"
+              description="Comprendre où tes données sont conservées et quand elles sont envoyées."
+              icon={FileText}
+            />
+          </div>
           <DataManagementCenter storageStatus={storageStatus} lastBackupExportedAt={settings.lastBackupExportedAt} />
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             <SettingsLinkCard

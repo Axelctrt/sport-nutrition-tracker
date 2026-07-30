@@ -49,8 +49,9 @@ describe('FriendsPrivacyPage persistance locale', () => {
       />,
     );
 
-    expect(await screen.findByText(/Aucun ami enregistré/u)).toBeInTheDocument();
+    expect(await screen.findByText('Ton fil est vide')).toBeInTheDocument();
 
+    await user.click(screen.getByRole('button', { name: 'Demandes d’amis' }));
     await user.type(screen.getByLabelText('Identifiant SportPilot'), '@romain.run');
     await user.click(screen.getByRole('button', { name: /Envoyer/u }));
 

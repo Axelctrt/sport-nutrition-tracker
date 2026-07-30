@@ -13,7 +13,7 @@ const dataSpace = {
 };
 
 describe('SettingsHomePage', () => {
-  it('présente les catégories principales et sépare les diagnostics avancés', async () => {
+  it('présente exactement cinq catégories simples sans métriques techniques', async () => {
     render(
       <MemoryRouter>
         <SettingsHomePage
@@ -29,13 +29,14 @@ describe('SettingsHomePage', () => {
       'href',
       '/settings/profile-objectives',
     );
-    expect(screen.getByRole('link', { name: /Données, sauvegardes et export/ })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /Confidentialité et données/ })).toHaveAttribute(
       'href',
       '/settings/data-backup',
     );
-    expect(screen.getByRole('link', { name: 'Ouvrir la section avancée' })).toHaveAttribute(
-      'href',
-      '/settings/advanced',
-    );
+    expect(screen.getByRole('link', { name: /À propos et réglages avancés/ }))
+      .toHaveAttribute('href', '/settings/about');
+    expect(screen.getAllByRole('link')).toHaveLength(5);
+    expect(screen.queryByText(/IndexedDB|file d’attente|conflit|runtime|snapshot/i))
+      .not.toBeInTheDocument();
   });
 });

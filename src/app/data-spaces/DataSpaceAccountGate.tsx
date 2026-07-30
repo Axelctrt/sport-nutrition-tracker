@@ -5,10 +5,7 @@ import type { DataSpaceDescriptor } from "@/domain/data-spaces/dataSpace";
 import { PROFILE_ONBOARDING_STEP_IDS } from "@/features/onboarding/profile/profileOnboardingSteps";
 import { saveProfileOnboardingDraft } from "@/features/onboarding/storage/profileOnboardingDraft";
 import { DEFAULT_PROFILE_FORM_VALUES } from "@/features/profile/utils/defaultProfileFormValues";
-import {
-  activateGuestDataSpace,
-  type DataSpaceStorage,
-} from "@/infrastructure/data-spaces/dataSpaceRegistry";
+import { type DataSpaceStorage } from "@/infrastructure/data-spaces/dataSpaceRegistry";
 import {
   activateExistingAccountDataSpace,
   createEmptyAccountDataSpace,
@@ -152,18 +149,21 @@ export function DataSpaceAccountGate({
 
     let disposed = false;
     let initialized = false;
-    let switchingToGuest = false;
     let cloudCheckFingerprint: string | undefined;
 
     const reconcile = () => {
-      if (disposed || !initialized || switchingToGuest) return;
+      if (disposed || !initialized) return;
 
       const snapshot = runtimeClient.getSnapshot();
       if (snapshot.account.isLoading) {
-        setState({
-          status: "loading",
-          message: "Vérification du compte connecté",
-        });
+        if (currentSpace.kind === "account") {
+          setState({ status: "ready" });
+        } else {
+          setState({
+            status: "loading",
+            message: "Vérification du compte connecté",
+          });
+        }
         return;
       }
 
@@ -171,13 +171,7 @@ export function DataSpaceAccountGate({
         cloudCheckFingerprint = undefined;
         setCloudAnalysisStatus("idle");
         if (currentSpace.kind === "account") {
-          switchingToGuest = true;
-          setState({
-            status: "working",
-            message: "Retour à l’espace local invité",
-          });
-          activateGuestDataSpace(storage);
-          reload();
+          setState({ status: "ready" });
           return;
         }
 
@@ -187,11 +181,15 @@ export function DataSpaceAccountGate({
 
       const accountFingerprint = accountFingerprintFromSnapshot(snapshot);
       if (!accountFingerprint) {
-        setState({
-          status: "error",
-          message:
-            "Le compte connecté ne fournit pas d’identifiant local exploitable. Déconnecte-toi puis réessaie.",
-        });
+        if (currentSpace.kind === "account") {
+          setState({ status: "ready" });
+        } else {
+          setState({
+            status: "error",
+            message:
+              "Le compte connecté ne fournit pas d’identifiant local exploitable. Déconnecte-toi puis réessaie.",
+          });
+        }
         return;
       }
 
@@ -232,10 +230,14 @@ export function DataSpaceAccountGate({
       })
       .catch((error: unknown) => {
         if (disposed) return;
-        setState({
-          status: "error",
-          message: errorMessage(error),
-        });
+        if (currentSpace.kind === "account") {
+          setState({ status: "ready" });
+        } else {
+          setState({
+            status: "error",
+            message: errorMessage(error),
+          });
+        }
       });
 
     return () => {

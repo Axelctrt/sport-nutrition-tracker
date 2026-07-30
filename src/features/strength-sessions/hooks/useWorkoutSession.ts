@@ -211,13 +211,21 @@ export function useWorkoutSession(sessionId: string) {
 
   const addSet = useCallback((sessionExerciseId: string) => runAction(
     `addSet:${sessionExerciseId}`,
-    () => addStrengthSet(
-      repositories.workoutSessions,
-      repositories.strengthSets,
-      sessionId,
-      sessionExerciseId,
-    ),
-  ), [runAction, sessionId]);
+    () => {
+      const currentSetCount = strengthSets.filter(
+        (set) => set.sessionExerciseId === sessionExerciseId,
+      ).length;
+      const historicalSets = previousPerformances[sessionExerciseId]?.sets ?? [];
+      const historicalSeed = historicalSets[currentSetCount] ?? historicalSets.at(-1);
+      return addStrengthSet(
+        repositories.workoutSessions,
+        repositories.strengthSets,
+        sessionId,
+        sessionExerciseId,
+        historicalSeed,
+      );
+    },
+  ), [previousPerformances, runAction, sessionId, strengthSets]);
 
   const saveSet = useCallback((
     sessionExerciseId: string,

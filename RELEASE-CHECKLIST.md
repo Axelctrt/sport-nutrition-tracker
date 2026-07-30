@@ -1,51 +1,52 @@
-# Checklist de publication — SportPilot 0.35.0
+# Checklist de validation - SportPilot 0.36.0
 
 ## Préparation Git
 
-- [x] Branche `release/0.35.0` créée depuis `develop` validé.
-- [ ] `package.json` et `package-lock.json` indiquent `0.35.0`.
-- [ ] Paramètres affiche `0.35.0`.
-- [x] Aucun secret, ZIP, résultat Playwright ou fichier généré n’est suivi.
-- [x] Le chantier n’ajoute aucune migration D1 ou Dexie.
+- [x] Branche `feat/friends-settings-strength-ux-0.36.0` créée depuis le commit validé 0.35.1.
+- [x] Dépendance sur `d067cb2fd718e0cd71d597398e6e1d3f57f3e973` documentée.
+- [x] Aucun travail utilisateur local écrasé ou placé dans un stash.
+- [x] Aucun tag créé.
+- [x] Aucun déploiement effectué.
+- [x] Aucune migration D1 ou Dexie ajoutée.
+
+## Contrôles ciblés
+
+- [x] Navigation Amis, URL, Retour, badge et panneaux.
+- [x] Permissions par ami, demandes et profil social.
+- [x] Cinq catégories principales des Paramètres.
+- [x] Diagnostic social dans les réglages avancés.
+- [x] Anciennes routes de Paramètres conservées.
+- [x] Accordéon Musculation à ouverture unique.
+- [x] Validation et autosauvegarde des séries.
+- [x] Préremplissage courant, historique puis objectif.
 
 ## Contrôles automatiques
 
-- [x] Le candidat fonctionnel `e5cbeb5e64bfb9c1cd19e2c99404c5729a604061` est validé.
-- [x] Les quatre jobs GitHub Actions passent sur un même SHA.
-- [x] Lint, TypeScript, tests, build PWA, audits et budget JavaScript passent.
-- [x] La suite passe avec ordre de tests mélangé.
-- [x] 126 scénarios Playwright passent sur Chromium desktop, WebKit iPhone 15 et formats mobiles.
-- [x] La mise à jour réelle du service worker conserve les données.
-- [x] Le candidat fonctionnel est fusionné dans `develop` au commit `66cae975c1af2eabd05e585793c0d8112cee7056`.
-- [ ] La CI de la branche de release passe entièrement sur un même SHA.
+- [ ] Suite Vitest complète.
+- [ ] Ordre de tests mélangé.
+- [ ] Lint et TypeScript.
+- [ ] Build PWA.
+- [ ] Audits du dépôt.
+- [ ] Playwright Chromium desktop.
+- [ ] Playwright Chromium mobile 360 px.
+- [ ] Playwright WebKit iPhone 15.
+- [ ] Scénarios ciblés 320 px et 412 px.
+- [ ] Thèmes clair et sombre sans débordement.
 
-## Recette 0.35.0
+## Recette mobile à réaliser
 
-- [x] Les parcours onboarding local et compte sont couverts.
-- [x] OTP, reprise de brouillon et protection contre les doubles soumissions sont validés.
-- [x] Les toasts d’action sont dédupliqués et contextualisés.
-- [x] Import invité et restauration cloud utilisent des jalons réels.
-- [x] Historique, Amis et Rappels sont couverts par les contrôles applicatifs.
-- [x] Le comportement de recherche Nutrition est validé sous WebKit.
-- [x] Aucun débordement horizontal critique n’est détecté sur mobile.
-- [x] Clair, sombre, réduction de mouvement et iPhone 15 sont validés.
+- [ ] Amis avec deux comptes réels.
+- [ ] Demandes reçues, acceptation et refus.
+- [ ] Partage Aucun, Résumé et Personnalisé.
+- [ ] Navigation Retour entre les rubriques Amis.
+- [ ] Paramètres à 320, 360 et 412 px avec texte agrandi.
+- [ ] Séance issue d’un modèle et séance libre.
+- [ ] Clavier affiché pendant la saisie d’une série.
+- [ ] Reprise après mise en arrière-plan sans perte de valeur.
+- [ ] Synchronisation multi-appareils.
 
-## Cloudflare
+## Publication
 
-- [ ] Preview Cloudflare Pages validée sur le commit de publication.
-- [ ] URL de Preview autorisée dans Dexie Cloud.
-- [ ] Conservation des données vérifiée sur la Preview.
-- [ ] Functions/D1 et parcours compte vérifiés sur la Preview.
-
-## Publication Git
-
-- [x] Branche `release/0.35.0` créée.
-- [x] Notes de version finales enregistrées.
-- [ ] PR `release/0.35.0` vers `main` ouverte.
-- [ ] CI de la PR de publication entièrement verte.
-- [ ] Fusion de la PR de publication.
-- [ ] Tag annoté `v0.35.0` créé sur le commit publié.
-- [ ] Tag `v0.35.0` poussé vers `origin`.
-- [ ] `develop` resynchronisé avec `main`.
-- [ ] Déploiement de production confirmé.
-- [ ] Vérifications post-déploiement effectuées.
+- [ ] Branche poussée sur `origin`.
+- [ ] Pull request brouillon préparée.
+- [ ] Validation utilisateur reçue avant toute fusion, création de tag ou publication.

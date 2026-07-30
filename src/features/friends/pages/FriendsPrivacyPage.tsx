@@ -1,9 +1,7 @@
 import {
   Check,
-  LockKeyhole,
   LoaderCircle,
   Send,
-  ShieldCheck,
   UserPlus,
   UsersRound,
   X,
@@ -25,9 +23,10 @@ import {
   checkAccountSocialHandleAvailability,
   provisionAccountSocialIdentity,
 } from '@/application/friends/accountSocialIdentityService';
-import { SocialActivityCloudReadinessPanel } from '@/features/friends/components/SocialActivityCloudReadinessPanel';
+import { FriendsSectionNavigation } from '@/app/friends/FriendsSectionNavigation';
 import { SocialActivityFeedPanel } from '@/features/friends/components/SocialActivityFeedPanel';
 import { SocialActivityFriendSharingSettings } from '@/features/friends/components/SocialActivitySharingSettings';
+import { useFriendsSection } from '@/features/friends/hooks/useFriendsSection';
 import { sendExactFriendRequest } from '@/application/friends/socialFriendRequestService';
 import {
   cloudFriendRequestToLocalRequest,
@@ -99,6 +98,7 @@ import { reconcileRuntimeSocialActivityPrivacy } from '@/infrastructure/social-a
 import { notifySyncLocalDataChanged } from '@/application/sync/syncLocalChangeEvents';
 import { SOCIAL_ACTIVITY_PRIVACY_CHANGED_EVENT } from '@/infrastructure/sync-prototype/socialActivityPrivacySyncEvents';
 import { Button } from '@/shared/ui/Button';
+import { BottomSheet } from '@/shared/ui/BottomSheet';
 import { Card } from '@/shared/ui/Card';
 import { ConfirmationDialog } from '@/shared/ui/ConfirmationDialog';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
@@ -282,6 +282,7 @@ export function FriendsPrivacyPage({
   ));
   const [errorMessage, setErrorMessage] = useState<string>();
   const [pendingFriendRemoval, setPendingFriendRemoval] = useState<FriendProfileSummary>();
+  const [managedFriend, setManagedFriend] = useState<FriendProfileSummary>();
   const [isRemovingFriend, setIsRemovingFriend] = useState(false);
   const persistenceQueueRef = useRef<Promise<void>>(Promise.resolve());
   const persistenceSequenceRef = useRef(0);
@@ -506,6 +507,8 @@ export function FriendsPrivacyPage({
   const shouldUseCloudActivityFeed = Boolean(activeActivityFeedCloudGateway);
   const incomingRequests = snapshot.requests.filter((request) => request.direction === 'incoming');
   const outgoingRequests = snapshot.requests.filter((request) => request.direction === 'outgoing');
+  const pendingIncomingRequestCount = incomingRequests.filter((request) => request.status === 'pending').length;
+  const { section, selectSection } = useFriendsSection();
 
   const persistSnapshot = async (next: FriendsPrivacyServiceState): Promise<boolean> => {
     const persistenceSequence = persistenceSequenceRef.current + 1;
@@ -953,454 +956,362 @@ export function FriendsPrivacyPage({
       .catch(() => setIdentityFeedback(`Identifiant à copier : ${publicHandle}`));
   };
 
+  const selectedFriend = managedFriend
+    ? snapshot.friends.find((friend) => friend.id === managedFriend.id) ?? managedFriend
+    : undefined;
+  const selectedFriendSharing = selectedFriend
+    ? evaluateFriendScopedActivitySharingGuard(snapshot, selectedFriend)
+    : undefined;
+
   return (
     <section aria-labelledby="friends-title" className="min-w-0 space-y-4">
-      <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6 dark:border-slate-800 dark:bg-slate-900">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <header className="px-1">
+        <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
+          Communauté
+        </p>
+        <div className="mt-1 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
-              Réseau privé
-            </p>
-            <h1
-              id="friends-title"
-              className="mt-1 text-3xl font-bold tracking-tight text-slate-950 dark:text-white"
-            >
-              Amis et confidentialité
+            <h1 id="friends-title" className="text-3xl font-bold text-slate-950 dark:text-white">
+              Amis
             </h1>
-            <p className="mt-3 max-w-3xl leading-7 text-slate-600 dark:text-slate-300">
-              Prépare ton identité publique, les invitations exactes et les limites de visibilité avant tout partage de performances.
+            <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+              Suis les activités de tes proches et choisis ce que chacun peut voir.
             </p>
           </div>
-          <div className="rounded-2xl border border-brand-200 bg-brand-50 px-4 py-3 text-sm font-semibold text-brand-900 dark:border-brand-900 dark:bg-brand-950/40 dark:text-brand-100">
-            {summary.friendCount} ami{summary.friendCount > 1 ? 's' : ''} · {summary.incomingPendingCount} demande{summary.incomingPendingCount > 1 ? 's' : ''} à valider · {summary.detailedPermissionCount} détail autorisé
-          </div>
+          <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">
+            {summary.friendCount} ami{summary.friendCount > 1 ? 's' : ''}
+          </p>
         </div>
-      </div>
+      </header>
 
-      <InlineNotice title="Partage défini par ami">
-        <p>
-          Chaque nouvel ami voit un résumé par défaut. Utilise « Gérer » sur sa carte pour choisir Aucun, Résumé ou Personnalisé. Rien n’est à régler lors de l’enregistrement d’une activité.
-        </p>
-      </InlineNotice>
-
-      <InlineNotice title="Fil d’activité sécurisé 0.29">
-        <p>
-          Le fil charge uniquement des snapshots filtrés. Les cartes ne contiennent jamais l’activité métier brute et le détail est revérifié par le serveur à chaque ouverture.
-        </p>
-        <p>
-          Likes, commentaires, messagerie, défis et partage public restent hors périmètre. L’activation entre vrais comptes nécessite la migration D1 et le déploiement de la version 0.29.0.
-        </p>
-      </InlineNotice>
+      <FriendsSectionNavigation
+        activeSection={section}
+        incomingRequestCount={pendingIncomingRequestCount}
+        onSelect={selectSection}
+      />
 
       {isLoading ? (
-        <InlineNotice title="Chargement local">
+        <InlineNotice title="Chargement">
           <p className="inline-flex items-center gap-2">
             <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
-            Chargement des amis et de l’identité sociale enregistrés sur cet appareil.
+            Tes amis sont en cours de chargement.
           </p>
         </InlineNotice>
       ) : null}
-
       {errorMessage ? (
-        <InlineNotice tone="error" title="Persistance locale indisponible">
-          <p>{errorMessage}</p>
-        </InlineNotice>
+        <InlineNotice tone="error" title="Chargement impossible">{errorMessage}</InlineNotice>
       ) : null}
-
       {snapshot.lastFeedback ? (
-        <InlineNotice tone="success" title="Action prise en compte">
-          <p>{snapshot.lastFeedback}</p>
-        </InlineNotice>
+        <InlineNotice tone="success" title="Action prise en compte">{snapshot.lastFeedback}</InlineNotice>
+      ) : null}
+      {identityFeedback && section === 'profile' ? (
+        <InlineNotice tone="success" title="Profil">{identityFeedback}</InlineNotice>
+      ) : null}
+      {requestFeedback && section === 'requests' ? (
+        <InlineNotice title="Demande d’ami">{requestFeedback}</InlineNotice>
       ) : null}
 
-      {identityFeedback ? (
-        <InlineNotice tone="success" title="Identité sociale">
-          <p>{identityFeedback}</p>
-        </InlineNotice>
-      ) : null}
-
-      {requestFeedback ? (
-        <InlineNotice title="Recherche ami">
-          <p>{requestFeedback}</p>
-        </InlineNotice>
-      ) : null}
-
-      <Card className="p-5 sm:p-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
-              Mon identifiant SportPilot
-            </p>
-            <h2 className="mt-1 text-2xl font-bold text-slate-950 dark:text-white">
-              {formatSocialHandle(identity.handle)}
-            </h2>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
-              Le userId interne reste privé et stable. Les futures relations d’amitié seront rattachées au userId, pas au handle public.
-            </p>
-          </div>
-          <Button type="button" variant="secondary" onClick={copyIdentity}>
-            Copier mon identifiant
-          </Button>
-        </div>
-
-        <form className="mt-5 grid gap-4 lg:grid-cols-[1fr_1fr_auto] lg:items-end" onSubmit={submitIdentity}>
-          <div>
-            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200" htmlFor="social-handle">
-              Identifiant public
-            </label>
-            <input
-              id="social-handle"
-              value={identityHandle}
-              onChange={(event) => {
-                setIdentityHandle(event.target.value);
-                setAvailability(initialAvailability);
-              }}
-              placeholder="ex. @alex.run"
-              className="mt-2 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-950 shadow-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200" htmlFor="social-display-name">
-              Nom affiché
-            </label>
-            <input
-              id="social-display-name"
-              value={displayName}
-              onChange={(event) => setDisplayName(event.target.value)}
-              placeholder="ex. Alex Run"
-              className="mt-2 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-950 shadow-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
-            />
-          </div>
-
-          <div className="flex flex-col gap-2 sm:flex-row lg:flex-col">
-            <Button type="button" variant="secondary" onClick={verifyAvailability} disabled={isCheckingAvailability}>
-              {isCheckingAvailability ? 'Vérification…' : 'Vérifier disponibilité'}
-            </Button>
-            <Button type="submit">
-              Enregistrer
-            </Button>
-          </div>
-        </form>
-
-        <div className="mt-4 grid gap-3 lg:grid-cols-3">
-          <div className="rounded-2xl border border-slate-200 p-4 text-sm leading-6 text-slate-700 dark:border-slate-800 dark:text-slate-200">
-            <p className="font-semibold text-slate-950 dark:text-white">
-              {handleValidation.status === 'valid' ? 'Identifiant valide' : 'Identifiant invalide'}
-            </p>
-            <p>{handleValidation.message}</p>
-          </div>
-          <div className="rounded-2xl border border-slate-200 p-4 text-sm leading-6 text-slate-700 dark:border-slate-800 dark:text-slate-200">
-            <p className="font-semibold text-slate-950 dark:text-white">
-              Recherche exacte
-            </p>
-            <p>{availability.message}</p>
-          </div>
-          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-950 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
-            {activeDataSpace.kind === 'account'
-              ? 'Compte connecté : toute modification du pseudonyme doit être réservée côté serveur avant d’être enregistrée localement.'
-              : 'Mode local : cette identité reste sur cet appareil et son unicité cloud n’est pas garantie tant qu’aucun compte n’est connecté.'}
-          </div>
-        </div>
-      </Card>
-
-      <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-        <Card className="p-5 sm:p-6">
-          <div className="flex items-center gap-3">
-            <div className="rounded-2xl bg-brand-100 p-3 text-brand-700 dark:bg-brand-950 dark:text-brand-200">
-              <ShieldCheck aria-hidden="true" className="size-5" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-slate-950 dark:text-white">
-                Confidentialité
-              </h2>
-              <p className="text-sm text-slate-600 dark:text-slate-300">
-                La visibilité du profil et le partage des activités sont réglés séparément.
+      <div
+        id="friends-panel-feed"
+        role="tabpanel"
+        aria-labelledby="friends-title"
+        className="space-y-4"
+        hidden={section !== 'feed'}
+      >
+          {snapshot.friends.length === 0 ? (
+            <Card className="p-6 text-center sm:p-8">
+              <UsersRound aria-hidden="true" className="mx-auto size-8 text-brand-700 dark:text-brand-300" />
+              <h2 className="mt-3 text-xl font-bold text-slate-950 dark:text-white">Ton fil est vide</h2>
+              <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-600 dark:text-slate-300">
+                Ajoute un ami pour découvrir ses prochaines activités ici.
               </p>
-            </div>
-          </div>
-
-          <div className="mt-5 space-y-5">
-            <div>
-              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-                Visibilité du profil
-              </p>
-              <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                {visibilityOptions.map((option) => (
-                  <Button
-                    key={option}
-                    variant={snapshot.privacy.profileVisibility === option ? 'primary' : 'secondary'}
-                    onClick={() => updateProfileVisibility(option)}
-                    aria-pressed={snapshot.privacy.profileVisibility === option}
-                  >
-                    {FRIEND_PROFILE_VISIBILITY_LABELS[option]}
-                  </Button>
-                ))}
-              </div>
-            </div>
-
-            <p className="rounded-xl bg-slate-50 px-3 py-2 text-sm leading-6 text-slate-600 dark:bg-slate-950 dark:text-slate-300">
-              La visibilité du profil concerne uniquement ton profil social. Le partage des activités se règle séparément pour chaque ami.
-            </p>
-
-            <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="font-semibold text-slate-950 dark:text-white">
-                    Demandes d’amis
-                  </p>
-                  <p className="text-sm text-slate-600 dark:text-slate-300">
-                    {snapshot.privacy.allowFriendRequests
-                      ? 'Les invitations entrantes sont autorisées.'
-                      : 'Les nouvelles invitations sont bloquées.'}
-                  </p>
-                </div>
-                <Button
-                  variant={snapshot.privacy.allowFriendRequests ? 'primary' : 'secondary'}
-                  onClick={() => update((actions) => actions.setRequestsOpen(!snapshot.privacy.allowFriendRequests))}
-                >
-                  {snapshot.privacy.allowFriendRequests ? 'Ouvertes' : 'Bloquées'}
-                </Button>
-              </div>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-5 sm:p-6">
-          <div className="flex items-center gap-3">
-            <UserPlus aria-hidden="true" className="size-5 text-brand-700 dark:text-brand-300" />
-            <h2 className="text-xl font-bold text-slate-950 dark:text-white">
-              Envoyer une invitation
-            </h2>
-          </div>
-          <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-            La demande passe par une recherche exacte d’identifiant SportPilot. En F6, la recherche exacte et les demandes cloud restent protégées : aucune amitié n’est créée sans acceptation explicite.
-          </p>
-
-          <form className="mt-5 space-y-3" onSubmit={submitRequest}>
-            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200" htmlFor="friend-handle">
-              Identifiant SportPilot
-            </label>
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <input
-                id="friend-handle"
-                value={handle}
-                onChange={(event) => setHandle(event.target.value)}
-                placeholder="ex. @lea.cardio"
-                className="min-h-11 flex-1 rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-950 shadow-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
-              />
-              <Button type="submit" disabled={isSendingRequest}>
-                <Send aria-hidden="true" className="size-4" />
-                {isSendingRequest ? 'Recherche…' : 'Envoyer'}
+              <Button className="mt-4" onClick={() => selectSection('requests')}>
+                <UserPlus aria-hidden="true" className="size-4" />
+                Ajouter un ami
               </Button>
-            </div>
-          </form>
-
-          <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-950 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
-            Aucune performance détaillée n’est partagée depuis ce formulaire. Il prépare seulement la demande d’ami et le consentement futur.
-          </div>
-        </Card>
+            </Card>
+          ) : shouldUseCloudActivityFeed && activeActivityFeedCloudGateway && section === 'feed' ? (
+            <SocialActivityFeedPanel
+              gateway={activeActivityFeedCloudGateway}
+              getCredentials={activeActivityFeedCloudCredentials}
+              {...(activityFeedOnline ? { isOnline: activityFeedOnline } : {})}
+              subscribeCredentials={activityFeedCloudSubscription ?? subscribeRuntimeSocialActivityFeed}
+            />
+          ) : (
+            <Card className="p-5 sm:p-6">
+              <h2 className="text-xl font-bold text-slate-950 dark:text-white">Fil d’activité amis</h2>
+              {socialActivityFeed.items.length === 0 ? (
+                <p className="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                  Aucune activité récente de tes amis.
+                </p>
+              ) : (
+                <div className="mt-4 space-y-3">
+                  {socialActivityFeed.items.map((item) => (
+                    <article key={item.id} className="rounded-xl border border-slate-200 p-4 dark:border-slate-800">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex min-w-0 items-center gap-3">
+                          <span className="grid size-10 shrink-0 place-items-center rounded-full bg-brand-100 text-sm font-bold text-brand-700 dark:bg-brand-950 dark:text-brand-200">
+                            {item.friendInitials}
+                          </span>
+                          <div className="min-w-0">
+                            <p className="truncate font-semibold text-slate-950 dark:text-white">{item.friendDisplayName}</p>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">{item.activityLabel}</p>
+                          </div>
+                        </div>
+                        <p className="shrink-0 text-xs font-semibold text-slate-500 dark:text-slate-400">{item.date}</p>
+                      </div>
+                      <p className="mt-3 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                        {item.durationMinutes} min · {item.estimatedCaloriesKcal} kcal
+                      </p>
+                      <div className="mt-3 flex flex-wrap gap-2 text-sm">
+                        <span className="rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                          {item.scope === 'detailed' ? 'Détail autorisé' : 'Résumé'} · {item.activityLabel}
+                        </span>
+                        {item.metricLabels.map((label) => (
+                          <span key={label} className="rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                            {label}
+                          </span>
+                        ))}
+                        {item.detailLabels.map((label) => (
+                          <span key={label} className="rounded-full bg-brand-100 px-3 py-1 font-semibold text-brand-800 dark:bg-brand-950 dark:text-brand-100">
+                            {label}
+                          </span>
+                        ))}
+                      </div>
+                      {item.permissionLimited ? (
+                        <p className="mt-3 text-sm text-amber-800 dark:text-amber-200">
+                          Détail limité par permission actuelle.
+                        </p>
+                      ) : null}
+                    </article>
+                  ))}
+                </div>
+              )}
+            </Card>
+          )}
       </div>
 
-      {shouldUseCloudActivityFeed && activeActivityFeedCloudGateway ? (
-        <>
-          <SocialActivityCloudReadinessPanel
-            gateway={activeActivityFeedCloudGateway}
-            getCredentials={activeActivityFeedCloudCredentials}
-            {...(activityFeedOnline ? { isOnline: activityFeedOnline } : {})}
-            subscribeCredentials={activityFeedCloudSubscription ?? subscribeRuntimeSocialActivityFeed}
-          />
-          <SocialActivityFeedPanel
-            gateway={activeActivityFeedCloudGateway}
-            getCredentials={activeActivityFeedCloudCredentials}
-            {...(activityFeedOnline ? { isOnline: activityFeedOnline } : {})}
-            subscribeCredentials={activityFeedCloudSubscription ?? subscribeRuntimeSocialActivityFeed}
-          />
-        </>
-      ) : (
-      <Card className="p-5 sm:p-6">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
-              Snapshots filtrés uniquement
-            </p>
-            <h2 className="mt-1 text-xl font-bold text-slate-950 dark:text-white">
-              Fil d’activité amis
-            </h2>
-            <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-              {socialActivityFeed.message}
-            </p>
-          </div>
-          <div className="rounded-2xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 dark:border-slate-800 dark:text-slate-200">
-            {socialActivityFeed.items.length} activité{socialActivityFeed.items.length > 1 ? 's' : ''} affichée{socialActivityFeed.items.length > 1 ? 's' : ''}
-          </div>
-        </div>
-
-        {socialActivityFeed.items.length === 0 ? (
-          <p className="mt-4 rounded-2xl border border-slate-200 p-4 text-sm leading-6 text-slate-600 dark:border-slate-800 dark:text-slate-300">
-            {socialActivityFeed.message}
-          </p>
-        ) : (
-          <div className="mt-4 space-y-3">
-            {socialActivityFeed.items.map((item) => (
-              <article
-                key={item.id}
-                className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800"
-              >
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="flex size-11 items-center justify-center rounded-full bg-brand-100 text-sm font-bold text-brand-700 dark:bg-brand-950 dark:text-brand-200">
-                      {item.friendInitials}
-                    </div>
-                    <div>
-                      <p className="font-semibold text-slate-950 dark:text-white">{item.friendDisplayName}</p>
-                      <p className="text-sm text-slate-500 dark:text-slate-400">@{item.friendHandle}</p>
-                      <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                        {item.scope === 'detailed' ? 'Détail autorisé' : 'Résumé'} · {item.activityLabel}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="rounded-xl bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 dark:bg-slate-950 dark:text-slate-200">
-                    {item.date} · {item.durationMinutes} min · {item.estimatedCaloriesKcal} kcal
-                  </div>
-                </div>
-
-                <div className="mt-3 flex flex-wrap gap-2 text-sm">
-                  <span className="rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                    Intensité {item.intensityLabel}
-                  </span>
-                  {item.metricLabels.map((label) => (
-                    <span
-                      key={label}
-                      className="rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200"
-                    >
-                      {label}
-                    </span>
-                  ))}
-                  {item.detailLabels.map((label) => (
-                    <span
-                      key={label}
-                      className="rounded-full bg-brand-100 px-3 py-1 font-semibold text-brand-800 dark:bg-brand-950 dark:text-brand-100"
-                    >
-                      {label}
-                    </span>
-                  ))}
-                </div>
-
-                {item.permissionLimited ? (
-                  <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm leading-6 text-amber-950 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
-                    Détail limité par permission actuelle : affichage résumé uniquement.
-                  </p>
-                ) : null}
-
-                <p className="mt-3 text-xs font-semibold text-slate-500 dark:text-slate-400">
-                  Aucun champ brut d’activité n’est affiché.
-                </p>
-              </article>
-            ))}
-          </div>
-        )}
-      </Card>
-      )}
-
-      <div className="grid gap-4 xl:grid-cols-2">
-        <Card className="p-5 sm:p-6">
-          <div className="flex items-center gap-3">
-            <UsersRound aria-hidden="true" className="size-5 text-brand-700 dark:text-brand-300" />
-            <h2 className="text-xl font-bold text-slate-950 dark:text-white">
-              Amis connectés
-            </h2>
-          </div>
-          <div className="mt-4 space-y-3">
+      <div
+        id="friends-panel-friends"
+        role="tabpanel"
+        aria-labelledby="friends-title"
+        hidden={section !== 'friends'}
+      >
+          <Card className="p-5 sm:p-6">
+          <h2 className="text-xl font-bold text-slate-950 dark:text-white">Mes amis</h2>
+          <div className="mt-4 divide-y divide-slate-200 dark:divide-slate-800">
             {snapshot.friends.length === 0 ? (
-              <p className="rounded-2xl border border-slate-200 p-4 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">
-                Aucun ami enregistré sur cet appareil pour le moment.
-              </p>
+              <div className="py-6 text-center">
+                <p className="text-sm text-slate-600 dark:text-slate-300">Tu n’as pas encore ajouté d’ami.</p>
+                <Button className="mt-4" onClick={() => selectSection('requests')}>Ajouter un ami</Button>
+              </div>
             ) : snapshot.friends.map((friend) => {
-              const friendSharingGuard = evaluateFriendScopedActivitySharingGuard(snapshot, friend);
-
+              const sharing = evaluateFriendScopedActivitySharingGuard(snapshot, friend);
+              const sharingLabel = sharing.permission.sharingLevel === 'none'
+                ? 'Partage : Aucun'
+                : sharing.permission.sharingLevel === 'detailed' ? 'Partage : Personnalisé' : 'Partage : Résumé';
               return (
-                <div
-                  key={friend.id}
-                  className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800"
-                >
-                  <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="flex size-11 items-center justify-center rounded-full bg-brand-100 text-sm font-bold text-brand-700 dark:bg-brand-950 dark:text-brand-200">
-                        {friend.initials}
-                      </div>
-                      <div>
-                        <p className="font-semibold text-slate-950 dark:text-white">{friend.displayName}</p>
-                        <p className="text-sm text-slate-500 dark:text-slate-400">@{friend.handle}</p>
-                      </div>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => setPendingFriendRemoval(friend)}
-                    >
-                      <X aria-hidden="true" className="size-4" />
-                      Supprimer
-                    </Button>
+                <div key={friend.id} className="flex items-center gap-3 py-3">
+                  <span className="grid size-10 shrink-0 place-items-center rounded-full bg-brand-100 text-sm font-bold text-brand-700 dark:bg-brand-950 dark:text-brand-200">
+                    {friend.initials}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-semibold text-slate-950 dark:text-white">{friend.displayName}</p>
+                    <p className="truncate text-sm text-slate-500 dark:text-slate-400">@{friend.handle}</p>
+                    <p className="truncate text-xs font-medium text-slate-500 dark:text-slate-400">{sharingLabel}</p>
                   </div>
-                  <div className="mt-3">
-                    <SocialActivityFriendSharingSettings
-                      friendDisplayName={friend.displayName}
-                      sharingLevel={friendSharingGuard.permission.sharingLevel}
-                      value={friendSharingGuard.permission.fieldSelection ?? DEFAULT_DETAILED_SOCIAL_ACTIVITY_FIELD_SELECTION}
-                      onSharingLevelChange={(sharingLevel) => updateFriendPermission(friend, sharingLevel)}
-                      onSaveFields={(fieldSelection) => updateFriendFieldSelection(friend, fieldSelection)}
-                    />
-                  </div>
+                  <Button size="sm" variant="secondary" onClick={() => setManagedFriend(friend)}>Gérer</Button>
                 </div>
               );
             })}
           </div>
-        </Card>
+          </Card>
+      </div>
 
-        <Card className="p-5 sm:p-6">
-          <div className="flex items-center gap-3">
-            <LockKeyhole aria-hidden="true" className="size-5 text-brand-700 dark:text-brand-300" />
+      <div
+        id="friends-panel-requests"
+        role="tabpanel"
+        aria-labelledby="friends-title"
+        className="space-y-4"
+        hidden={section !== 'requests'}
+      >
+          <Card className="p-5 sm:p-6">
             <h2 className="text-xl font-bold text-slate-950 dark:text-white">
-              Demandes
+              Demandes reçues
+              {pendingIncomingRequestCount > 0 ? ` (${pendingIncomingRequestCount})` : ''}
             </h2>
-          </div>
-
-          <div className="mt-4 space-y-3">
-            {[...incomingRequests, ...outgoingRequests].length === 0 ? (
-              <p className="rounded-2xl border border-slate-200 p-4 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">
-                Aucune demande locale enregistrée.
-              </p>
-            ) : [...incomingRequests, ...outgoingRequests].map((request) => (
-              <div
-                key={request.id}
-                className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800"
-              >
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="mt-4 space-y-3">
+              {incomingRequests.length === 0 ? (
+                <p className="text-sm text-slate-600 dark:text-slate-300">Aucune demande reçue.</p>
+              ) : incomingRequests.map((request) => (
+                <div key={request.id} className="flex flex-col gap-3 rounded-xl border border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800">
                   <div>
                     <p className="font-semibold text-slate-950 dark:text-white">{request.displayName}</p>
                     <p className="text-sm text-slate-500 dark:text-slate-400">
-                      @{request.handle} · {formatRequestDate(request.requestedAt)} · {requestStatusLabel(request)}
+                      @{request.handle} · {formatRequestDate(request.requestedAt)}
                     </p>
                   </div>
-                  {request.direction === 'incoming' && request.status === 'pending' ? (
+                  {request.status === 'pending' ? (
                     <div className="flex gap-2">
                       <Button size="sm" onClick={() => respondToIncomingRequest(request, 'accepted')}>
-                        <Check aria-hidden="true" className="size-4" />
-                        Accepter
+                        <Check aria-hidden="true" className="size-4" />Accepter
                       </Button>
                       <Button size="sm" variant="secondary" onClick={() => respondToIncomingRequest(request, 'declined')}>
-                        <X aria-hidden="true" className="size-4" />
-                        Refuser
+                        <X aria-hidden="true" className="size-4" />Refuser
                       </Button>
                     </div>
-                  ) : null}
+                  ) : <span className="text-sm font-semibold text-slate-500">{requestStatusLabel(request)}</span>}
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          <Card className="p-5 sm:p-6">
+            <div className="flex items-center gap-3">
+              <UserPlus aria-hidden="true" className="size-5 text-brand-700 dark:text-brand-300" />
+              <h2 className="text-xl font-bold text-slate-950 dark:text-white">Ajouter un ami</h2>
+            </div>
+            <form className="mt-4 flex flex-col gap-2 sm:flex-row" onSubmit={submitRequest}>
+              <label className="sr-only" htmlFor="friend-handle">Identifiant SportPilot</label>
+              <input
+                id="friend-handle"
+                value={handle}
+                onChange={(event) => setHandle(event.target.value)}
+                placeholder="@identifiant"
+                className="min-h-11 flex-1 rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-950 shadow-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+              />
+              <Button type="submit" disabled={isSendingRequest}>
+                <Send aria-hidden="true" className="size-4" />
+                {isSendingRequest ? 'Envoi…' : 'Envoyer'}
+              </Button>
+            </form>
+          </Card>
+
+          {outgoingRequests.length > 0 ? (
+            <details className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+              <summary className="min-h-11 cursor-pointer py-2 font-semibold text-slate-900 dark:text-white">
+                Demandes envoyées ({outgoingRequests.length})
+              </summary>
+              <div className="divide-y divide-slate-200 dark:divide-slate-800">
+                {outgoingRequests.map((request) => (
+                  <div key={request.id} className="py-3 text-sm">
+                    <p className="font-semibold text-slate-900 dark:text-white">{request.displayName}</p>
+                    <p className="text-slate-500 dark:text-slate-400">@{request.handle} · {requestStatusLabel(request)}</p>
+                  </div>
+                ))}
+              </div>
+            </details>
+          ) : null}
+      </div>
+
+      <div
+        id="friends-panel-profile"
+        role="tabpanel"
+        aria-labelledby="friends-title"
+        className="space-y-4"
+        hidden={section !== 'profile'}
+      >
+          <Card className="p-5 sm:p-6">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className="text-xl font-bold text-slate-950 dark:text-white">Mon profil</h2>
+                <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{formatSocialHandle(identity.handle)}</p>
+              </div>
+              <Button type="button" size="sm" variant="secondary" onClick={copyIdentity}>Copier</Button>
+            </div>
+            <form className="mt-5 grid gap-4 md:grid-cols-2" onSubmit={submitIdentity}>
+              <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                Identifiant public
+                <input
+                  value={identityHandle}
+                  onChange={(event) => {
+                    setIdentityHandle(event.target.value);
+                    setAvailability(initialAvailability);
+                  }}
+                  className="mt-2 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 font-normal text-slate-950 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                />
+              </label>
+              <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                Nom affiché
+                <input
+                  value={displayName}
+                  onChange={(event) => setDisplayName(event.target.value)}
+                  className="mt-2 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 font-normal text-slate-950 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                />
+              </label>
+              <div className="md:col-span-2">
+                <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Visibilité du profil</p>
+                <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                  {visibilityOptions.map((option) => (
+                    <Button
+                      key={option}
+                      type="button"
+                      variant={snapshot.privacy.profileVisibility === option ? 'primary' : 'secondary'}
+                      onClick={() => updateProfileVisibility(option)}
+                      aria-pressed={snapshot.privacy.profileVisibility === option}
+                    >
+                      {FRIEND_PROFILE_VISIBILITY_LABELS[option]}
+                    </Button>
+                  ))}
                 </div>
               </div>
-            ))}
-          </div>
-        </Card>
+              <label className="flex min-h-11 items-center gap-3 md:col-span-2">
+                <input
+                  type="checkbox"
+                  checked={snapshot.privacy.allowFriendRequests}
+                  onChange={() => update((actions) => actions.setRequestsOpen(!snapshot.privacy.allowFriendRequests))}
+                  className="size-4 rounded border-slate-300 text-brand-700"
+                />
+                <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Autoriser les demandes d’amis</span>
+              </label>
+              <div className="flex flex-wrap gap-2 md:col-span-2">
+                <Button type="button" variant="secondary" onClick={verifyAvailability} disabled={isCheckingAvailability}>
+                  {isCheckingAvailability ? 'Vérification…' : 'Vérifier disponibilité'}
+                </Button>
+                <Button type="submit">Enregistrer</Button>
+              </div>
+              {handleValidation.status !== 'valid' ? (
+                <p className="text-sm text-red-700 md:col-span-2 dark:text-red-300">{handleValidation.message}</p>
+              ) : availability.status !== 'idle' ? (
+                <p className="text-sm text-slate-600 md:col-span-2 dark:text-slate-300">{availability.message}</p>
+              ) : null}
+            </form>
+          </Card>
+          <InlineNotice title="Partage des activités">
+            Les nouvelles relations voient un résumé par défaut. Tu peux personnaliser ce réglage depuis l’onglet Amis.
+          </InlineNotice>
       </div>
+
+      <BottomSheet
+        open={Boolean(selectedFriend)}
+        title={selectedFriend ? `Partage avec ${selectedFriend.displayName}` : 'Gérer le partage'}
+        description="Choisis les informations visibles par cet ami."
+        onClose={() => setManagedFriend(undefined)}
+      >
+        {selectedFriend && selectedFriendSharing ? (
+          <div className="space-y-4">
+            <SocialActivityFriendSharingSettings
+              friendDisplayName={selectedFriend.displayName}
+              sharingLevel={selectedFriendSharing.permission.sharingLevel}
+              value={selectedFriendSharing.permission.fieldSelection ?? DEFAULT_DETAILED_SOCIAL_ACTIVITY_FIELD_SELECTION}
+              onSharingLevelChange={(sharingLevel) => updateFriendPermission(selectedFriend, sharingLevel)}
+              onSaveFields={(fieldSelection) => updateFriendFieldSelection(selectedFriend, fieldSelection)}
+              defaultOpen
+            />
+            <Button
+              className="w-full"
+              variant="dangerGhost"
+              onClick={() => {
+                setManagedFriend(undefined);
+                setPendingFriendRemoval(selectedFriend);
+              }}
+            >
+              <X aria-hidden="true" className="size-4" />
+              Supprimer cet ami
+            </Button>
+          </div>
+        ) : null}
+      </BottomSheet>
 
       <ConfirmationDialog
         open={Boolean(pendingFriendRemoval)}

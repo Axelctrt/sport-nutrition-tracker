@@ -1,45 +1,49 @@
-# SportPilot 0.35.0
+# SportPilot 0.36.0
 
-SportPilot 0.35.0 unifie les retours d’action, fluidifie l’onboarding local et compte et simplifie plusieurs parcours secondaires, sans modifier les thèmes validés, les formules caloriques ni le périmètre de l’analyse IA.
+SportPilot 0.36.0 simplifie trois parcours quotidiens : la page Amis, l’organisation des Paramètres et la saisie détaillée d’une séance de musculation. Cette version repose sur le correctif de continuité de session 0.35.1.
 
-L’application reste mobile-first, locale-first, hors ligne et installable en PWA.
+L’application reste mobile-first, locale-first, utilisable hors ligne et installable en PWA.
 
 ## Principales évolutions
 
-### Onboarding et compte
+### Amis
 
-- date de naissance proposée par défaut, avec l’âge disponible comme alternative ;
-- validation OTP avec états réels ;
-- sauvegarde et reprise du brouillon ;
-- protection contre les doubles soumissions ;
-- passage direct au profil pour un compte neuf ;
-- identité sociale demandée uniquement lorsqu’elle devient nécessaire dans Amis ;
-- révélation finale « Tout est prêt » synchronisée avec la création du profil.
+- quatre rubriques réelles : Fil, Amis, Demandes et Mon profil ;
+- rubrique conservée dans l’URL, compatible avec le rechargement et le bouton Retour ;
+- une seule rubrique visible, avec badge sur les demandes reçues ;
+- permissions détaillées ouvertes dans une feuille de gestion accessible ;
+- diagnostic social déplacé vers les réglages avancés ;
+- fil cloud préparé uniquement lorsque le Fil est ouvert ;
+- retrait des textes techniques des parcours ordinaires.
 
-### Feedback et traitements longs
+### Paramètres
 
-- toasts Performance Glass pressables, dédupliqués et contextualisés ;
-- suppression des confirmations redondantes ;
-- progression multi-étapes fondée sur les jalons réels d’import invité et de restauration cloud ;
-- destinations cohérentes après les actions terminées.
+- cinq catégories principales compréhensibles ;
+- résumés utiles sans métriques techniques sur l’accueil ;
+- confidentialité, amis, autorisations et données regroupés ;
+- réglages avancés débarrassés des doublons courants ;
+- récompenses conservées dans Progression, avec de simples raccourcis depuis les réglages ;
+- anciennes routes toujours accessibles.
 
-### Parcours secondaires
+### Musculation
 
-- nouvelle chronologie de l’Historique ;
-- navigation interne d’Amis entre Fil, Amis, Demandes, Mon profil et Diagnostic ;
-- page Rappels compacte avec édition dépliable ;
-- navigation commune entre Aliments, Recettes, Repas favoris, modèles et exercices ;
-- parcours guidés pour les rapports et la restauration de sauvegarde.
+- accordéon à ouverture unique pour les exercices ;
+- exercice courant ouvert et reprise possible avec `Continuer` ;
+- parcours principal Charge, Répétitions, Valider ;
+- sauvegarde automatique différée, au blur et avant démontage ;
+- état d’enregistrement et nouvelle tentative en cas d’échec ;
+- RPE, type, notes, duplication et suppression placés dans les options secondaires ;
+- préremplissage depuis la série courante, puis l’historique, puis l’objectif prévu.
 
 ## Stockage et versions techniques
 
-- Application : `0.35.0`.
+- Application : `0.36.0`.
 - AppDatabase locale : Dexie v11.
 - Sauvegarde JSON : v10.
 - Runtime Dexie Cloud prototype : v16.
 - Contrat de snapshot social : `0.29.0-a3`.
-- Migrations D1 ajoutées par 0.35.0 : aucune.
-- Migrations Dexie ajoutées par 0.35.0 : aucune.
+- Migrations D1 ajoutées par 0.36.0 : aucune.
+- Migrations Dexie ajoutées par 0.36.0 : aucune.
 
 ## Contrôles de publication
 
@@ -55,6 +59,4 @@ npm run test:stability
 npm audit
 ```
 
-La recette couvre 126 scénarios Playwright sur Chromium desktop, WebKit iPhone 15 et les formats mobiles 320, 360, 393 et 412 px.
-
-Tag attendu : `v0.35.0`.
+Aucun tag, aucune fusion et aucun déploiement ne sont réalisés par la préparation de cette branche.

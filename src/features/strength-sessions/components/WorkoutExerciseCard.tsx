@@ -1,5 +1,4 @@
 import { ArrowDown, ArrowUp, CheckCircle2, ChevronDown, Layers3, SkipForward, TimerReset, Trash2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
 import type { ExerciseHistoryEntry } from '@/application/strength/strengthHistoryService';
 import type { StrengthSetChanges } from '@/application/strength/strengthSetService';
 import { buildWorkoutExerciseProgress } from '@/application/strength/workoutSessionProgress';
@@ -11,6 +10,7 @@ import { loadUnitLabel } from '@/features/strength-exercises/utils/exerciseLabel
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { cn } from '@/shared/utils/cn';
+import type { SaveStatusValue } from '@/shared/ui/SaveStatus';
 
 interface WorkoutExerciseCardProps {
   exercise: WorkoutSessionExercise;
@@ -43,8 +43,10 @@ interface WorkoutExerciseCardProps {
   temporarilySkipped?: boolean | undefined;
   onSkip?: ((exercise: WorkoutSessionExercise) => void) | undefined;
   isCurrent?: boolean | undefined;
-  executionBlockComplete?: boolean | undefined;
   highlighted?: boolean | undefined;
+  expanded: boolean;
+  saveStatus: SaveStatusValue;
+  onExpandedChange: (expanded: boolean) => void;
 }
 
 export function WorkoutExerciseCard({
@@ -73,8 +75,10 @@ export function WorkoutExerciseCard({
   temporarilySkipped = false,
   onSkip,
   isCurrent = false,
-  executionBlockComplete = false,
   highlighted = false,
+  expanded,
+  saveStatus,
+  onExpandedChange,
 }: WorkoutExerciseCardProps) {
   const exerciseProgress = buildWorkoutExerciseProgress(exercise, sets);
   const completion = {
@@ -82,16 +86,7 @@ export function WorkoutExerciseCard({
     count: exerciseProgress.completedSetCount,
     target: exerciseProgress.totalSetCount,
   };
-  const [expanded, setExpanded] = useState(() => editable || !completion.complete);
   const contentId = `workout-exercise-content-${exercise.id}`;
-
-  useEffect(() => {
-    if (isCurrent) {
-      setExpanded(true);
-      return;
-    }
-    if (executionBlockComplete) setExpanded(false);
-  }, [executionBlockComplete, isCurrent]);
 
   return (
     <Card
@@ -147,7 +142,7 @@ export function WorkoutExerciseCard({
             aria-expanded={expanded}
             aria-controls={contentId}
             aria-label={`${expanded ? 'Réduire' : 'Développer'} ${exercise.exerciseNameSnapshot}`}
-            onClick={() => setExpanded((current) => !current)}
+            onClick={() => onExpandedChange(!expanded)}
           >
             <ChevronDown
               aria-hidden="true"
@@ -244,6 +239,7 @@ export function WorkoutExerciseCard({
             sets={sets}
             editable={editable}
             action={action}
+            saveStatus={saveStatus}
             onAdd={onAddSet}
             onSave={onSaveSet}
             onCompletion={onCompleteSet}

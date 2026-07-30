@@ -11,7 +11,7 @@ import {
 
 describe('publication SportPilot 0.26.0 — synchronisation automatique résiliente', () => {
   it('publie la version stable sans migration de données', () => {
-    expect(__APP_VERSION__).toBe('0.35.0');
+    expect(__APP_VERSION__).toBe('0.36.0');
     expect(databaseSchemaVersion).toBe(11);
     expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(10);
     expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(16);

@@ -34,7 +34,7 @@ async function getEditableContext(
 
 type StrengthSetSeed = Pick<
   StrengthSet,
-  'repetitions' | 'weightKg' | 'durationSeconds' | 'distanceMeters' | 'rpe' | 'notes'
+  'repetitions' | 'weightKg' | 'durationSeconds' | 'distanceMeters' | 'rpe' | 'notes' | 'type'
 >;
 
 function buildStrengthSetInput(
@@ -130,10 +130,11 @@ export async function addStrengthSet(
   setRepository: StrengthSetRepository,
   sessionId: EntityId,
   sessionExerciseId: EntityId,
+  historicalSeed?: StrengthSetSeed,
 ): Promise<StrengthSet> {
   const { exercise } = await getEditableContext(sessionRepository, sessionId, sessionExerciseId);
   const current = await setRepository.listBySessionExercise(sessionExerciseId);
-  const previous = current.at(-1);
+  const previous = current.at(-1) ?? historicalSeed;
 
   return setRepository.create(buildStrengthSetInput(
     sessionId,

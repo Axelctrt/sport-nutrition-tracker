@@ -93,26 +93,32 @@ function renderPage(override: {
   return render(<FriendsPrivacyPage {...pageProps} />);
 }
 
+beforeEach(() => {
+  window.history.replaceState({}, '', '/#/friends');
+});
+
 describe('FriendsPrivacyPage', () => {
-  it('affiche le socle amis, l’identité sociale, les demandes et les réglages de confidentialité', () => {
+  it('affiche quatre vraies rubriques sans texte de diagnostic dans le parcours courant', async () => {
+    const user = userEvent.setup();
     renderPage();
 
-    expect(screen.getByRole('heading', { name: 'Amis et confidentialité' })).toBeInTheDocument();
-    expect(screen.getByText('Mon identifiant SportPilot')).toBeInTheDocument();
-    expect(screen.getByText('@sp-alex123')).toBeInTheDocument();
-    expect(screen.getByText(/Le userId interne reste privé/u)).toBeInTheDocument();
-    expect(screen.getByText('Léa Cardio')).toBeInTheDocument();
-    expect(screen.getByText('Nora Trail')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Visible par les amis' })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByText(/Chaque nouvel ami voit un résumé par défaut/u)).toBeInTheDocument();
-    expect(screen.getByText('Fil d’activité sécurisé 0.29')).toBeInTheDocument();
-    expect(screen.getByText(/uniquement des snapshots filtrés/u)).toBeInTheDocument();
-    expect(screen.getByText(/détail est revérifié par le serveur/u)).toBeInTheDocument();
-    expect(screen.getByText(/Likes, commentaires, messagerie, défis/u)).toBeInTheDocument();
-    expect(screen.getByText(/migration D1 et le déploiement/u)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Amis' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Fil d’activité' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByText('Fil d’activité amis')).toBeInTheDocument();
+    expect(screen.queryByText(/migration D1/u)).not.toBeInTheDocument();
+    expect(screen.queryByText(/snapshots filtrés/u)).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Mon profil social' }));
+    expect(screen.getByText('@sp-alex123')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Visible par les amis' })).toHaveAttribute('aria-pressed', 'true');
+
+    await user.click(screen.getByRole('button', { name: 'Mes amis' }));
+    expect(screen.getByText('Léa Cardio')).toBeInTheDocument();
     expect(screen.getByText('Partage : Résumé')).toBeInTheDocument();
-    expect(screen.getByText(/Ce que Léa Cardio peut voir/u)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Gérer' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Demandes d’amis' }));
+    expect(screen.getByText('Nora Trail')).toBeInTheDocument();
   });
 
 
@@ -130,6 +136,7 @@ describe('FriendsPrivacyPage', () => {
 
     try {
       renderPage({ repository });
+      await user.click(screen.getByRole('button', { name: 'Mon profil social' }));
       await user.click(screen.getByRole('button', { name: 'Profil privé' }));
 
       await waitFor(() => {
@@ -322,6 +329,7 @@ describe('FriendsPrivacyPage', () => {
   it('enregistre un handle public valide en sauvegarde locale sans cloud réel', async () => {
     const user = userEvent.setup();
     renderPage();
+    await user.click(screen.getByRole('button', { name: 'Mon profil social' }));
 
     await user.clear(screen.getByLabelText('Identifiant public'));
     await user.type(screen.getByLabelText('Identifiant public'), '@alex.run');
@@ -361,6 +369,7 @@ describe('FriendsPrivacyPage', () => {
     };
 
     renderPage({ cloudIdentityPort });
+    await user.click(screen.getByRole('button', { name: 'Mon profil social' }));
 
     await user.clear(screen.getByLabelText('Identifiant public'));
     await user.type(screen.getByLabelText('Identifiant public'), '@alex.run');
@@ -382,6 +391,7 @@ describe('FriendsPrivacyPage', () => {
     const user = userEvent.setup();
     const lookupGateway = createFoundSocialUserLookupGateway([]);
     renderPage({ lookupGateway });
+    await user.click(screen.getByRole('button', { name: 'Mon profil social' }));
 
     await user.clear(screen.getByLabelText('Identifiant public'));
     await user.type(screen.getByLabelText('Identifiant public'), '@lina.trail');
@@ -393,6 +403,7 @@ describe('FriendsPrivacyPage', () => {
   it('retourne un état cloud indisponible sans backend social', async () => {
     const user = userEvent.setup();
     renderPage();
+    await user.click(screen.getByRole('button', { name: 'Mon profil social' }));
 
     await user.click(screen.getByRole('button', { name: 'Vérifier disponibilité' }));
 
@@ -402,6 +413,7 @@ describe('FriendsPrivacyPage', () => {
   it('accepte une demande reçue sans activer le partage détaillé', async () => {
     const user = userEvent.setup();
     renderPage();
+    await user.click(screen.getByRole('button', { name: 'Demandes d’amis' }));
 
     await user.click(screen.getByRole('button', { name: /Accepter/u }));
 
@@ -425,6 +437,7 @@ describe('FriendsPrivacyPage', () => {
       lookupGateway,
       initialSnapshot: { ...snapshot, requests: [] },
     });
+    await user.click(screen.getByRole('button', { name: 'Demandes d’amis' }));
 
     await user.type(screen.getByLabelText('Identifiant SportPilot'), '@romain.run');
     await user.click(screen.getByRole('button', { name: /Envoyer/u }));
@@ -478,6 +491,7 @@ describe('FriendsPrivacyPage', () => {
       cloudFriendRequestPort,
       initialSnapshot: { ...snapshot, requests: [] },
     });
+    await user.click(screen.getByRole('button', { name: 'Demandes d’amis' }));
 
     await user.type(screen.getByLabelText('Identifiant SportPilot'), '@romain.run');
     await user.click(screen.getByRole('button', { name: /Envoyer/u }));
@@ -495,6 +509,7 @@ describe('FriendsPrivacyPage', () => {
   it('affiche identifiant inexistant lorsque la recherche exacte ne trouve personne', async () => {
     const user = userEvent.setup();
     renderPage({ lookupGateway: createFoundSocialUserLookupGateway([]) });
+    await user.click(screen.getByRole('button', { name: 'Demandes d’amis' }));
 
     await user.type(screen.getByLabelText('Identifiant SportPilot'), '@ghost.run');
     await user.click(screen.getByRole('button', { name: /Envoyer/u }));
@@ -515,6 +530,7 @@ describe('FriendsPrivacyPage', () => {
         },
       ]),
     });
+    await user.click(screen.getByRole('button', { name: 'Demandes d’amis' }));
 
     await user.type(screen.getByLabelText('Identifiant SportPilot'), '@sp-alex123');
     await user.click(screen.getByRole('button', { name: /Envoyer/u }));
@@ -525,13 +541,13 @@ describe('FriendsPrivacyPage', () => {
   it('règle le partage personnalisé directement depuis la carte de l’ami', async () => {
     const user = userEvent.setup();
     renderPage();
+    await user.click(screen.getByRole('button', { name: 'Mes amis' }));
 
     await user.click(screen.getByText('Gérer'));
     await user.click(screen.getByRole('button', { name: 'Personnalisé' }));
 
     expect((await screen.findAllByText(/Partage personnalisé enregistré pour cet ami/u)).length).toBeGreaterThan(0);
-    expect(screen.getByText('Partage : Personnalisé')).toBeInTheDocument();
-    expect(screen.getByText(/1 détail autorisé/u)).toBeInTheDocument();
+    expect(screen.getAllByText('Partage : Personnalisé').length).toBeGreaterThan(0);
   });
 
   it('synchronise la permission serveur pour un ami local enrichi par friendship cloud', async () => {
@@ -699,7 +715,7 @@ describe('FriendsPrivacyPage', () => {
     await user.click(screen.getByText('Gérer'));
     await user.click(screen.getByText('Musculation'));
     await user.click(screen.getByLabelText('Charges'));
-    const sharingPanel = screen.getByText('Partage : Personnalisé').closest('details');
+    const sharingPanel = screen.getAllByText('Partage : Personnalisé').at(-1)?.closest('details');
     if (!sharingPanel) throw new Error('Panneau de partage attendu.');
     await user.click(within(sharingPanel).getByRole('button', { name: 'Enregistrer' }));
 
@@ -707,10 +723,12 @@ describe('FriendsPrivacyPage', () => {
     const savedPermission = savePermission.mock.calls[0]?.[1];
     expect(savedPermission?.fieldSelection?.strength).not.toContain('loads');
     await waitFor(() => expect(privacyReconciliation).toHaveBeenCalledOnce());
-    expect(screen.getAllByText(/Champs ami serveur mis à jour/u).length).toBeGreaterThan(0);
+    expect(screen.getByText(/Réglages enregistrés et snapshots sociaux remis en cohérence/u))
+      .toBeInTheDocument();
   });
 
   it('branche le fil cloud réel lorsqu’un gateway authentifié est fourni', async () => {
+    const user = userEvent.setup();
     const activityFeedCloudGateway: SocialActivityFeedCloudGateway = {
       listPage: vi.fn(async () => ({
         items: [{
@@ -761,9 +779,39 @@ describe('FriendsPrivacyPage', () => {
       activityFeedCloudCredentials: () => ({ userId: identity.userId, accessToken: 'token' }),
     });
 
+    await user.click(screen.getByRole('button', { name: 'Fil d’activité' }));
     expect(await screen.findByText('Course cloud réelle')).toBeInTheDocument();
     expect(screen.getByText('7,4 km')).toBeInTheDocument();
     expect(activityFeedCloudGateway.listPage).toHaveBeenCalledTimes(1);
+  });
+
+  it('diffère le chargement cloud jusqu’à l’ouverture du Fil', async () => {
+    const user = userEvent.setup();
+    const listPage = vi.fn(async () => ({ items: [] }));
+    const activityFeedCloudGateway: SocialActivityFeedCloudGateway = {
+      listPage,
+      readDetail: vi.fn(async () => { throw new Error('Détail non attendu.'); }),
+      readReadiness: vi.fn(async () => ({
+        status: 'ready' as const,
+        contractVersion: '0.29.0-a3',
+        authVerified: true,
+        databaseBound: true,
+        requiredMigration: '0001_social_activity_snapshots_0_29_0.sql',
+        missingPrerequisites: [],
+        missingActivitySchema: [],
+        checkedAt: '2026-07-10T10:00:00.000Z',
+      })),
+    };
+    window.history.replaceState({}, '', '/#/friends?section=friends');
+
+    renderPage({
+      activityFeedCloudGateway,
+      activityFeedCloudCredentials: () => ({ userId: identity.userId, accessToken: 'token' }),
+    });
+
+    expect(listPage).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('button', { name: 'Fil d’activité' }));
+    await waitFor(() => expect(listPage).toHaveBeenCalledOnce());
   });
 
   it('affiche un fil amis minimal depuis des snapshots filtrés', () => {
@@ -810,7 +858,6 @@ describe('FriendsPrivacyPage', () => {
     expect(screen.getByText('D+ 90 m')).toBeInTheDocument();
     expect(screen.getByText('tempo')).toBeInTheDocument();
     expect(screen.getByText('trail')).toBeInTheDocument();
-    expect(screen.getByText('Aucun champ brut d’activité n’est affiché.')).toBeInTheDocument();
     expect(screen.queryByText(/activity:private-feed/u)).not.toBeInTheDocument();
   });
 
@@ -866,7 +913,7 @@ describe('FriendsPrivacyPage', () => {
     await user.click(screen.getByRole('button', { name: 'Aucun' }));
 
     expect(await screen.findByText(/snapshots sociaux remis en cohérence/u)).toBeInTheDocument();
-    expect(screen.getByText('Partage : Aucun')).toBeInTheDocument();
+    expect(screen.getAllByText('Partage : Aucun').length).toBeGreaterThan(0);
     expect(privacyReconciliation).toHaveBeenCalledOnce();
   });
 
@@ -893,7 +940,8 @@ describe('FriendsPrivacyPage', () => {
     expect(privacyReconciliation).toHaveBeenCalledOnce();
   });
 
-  it('conserve le partage par ami lorsque le profil social devient privé', () => {
+  it('conserve le partage par ami lorsque le profil social devient privé', async () => {
+    const user = userEvent.setup();
     renderPage({
       initialSnapshot: {
         ...snapshot,
@@ -905,9 +953,10 @@ describe('FriendsPrivacyPage', () => {
       },
     });
 
+    await user.click(screen.getByRole('button', { name: 'Mon profil social' }));
     expect(screen.getByRole('button', { name: 'Profil privé' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByText('Partage : Résumé')).toBeInTheDocument();
-    expect(screen.getByText(/Le partage des activités se règle séparément pour chaque ami/u)).toBeInTheDocument();
+    expect(screen.getByText(/nouvelles relations voient un résumé par défaut/u)).toBeInTheDocument();
   });
 
 });
@@ -954,7 +1003,9 @@ it('supprime un ami après confirmation et succès serveur', async () => {
 
   renderPage({ socialFriendsGateway });
 
-  await user.click(screen.getByRole('button', { name: 'Supprimer' }));
+  await user.click(screen.getByRole('button', { name: 'Mes amis' }));
+  await user.click(screen.getByRole('button', { name: 'Gérer' }));
+  await user.click(screen.getByRole('button', { name: 'Supprimer cet ami' }));
   expect(screen.getByRole('alertdialog', { name: 'Supprimer Léa Cardio ?' })).toBeInTheDocument();
   expect(removeFriendship).not.toHaveBeenCalled();
 
@@ -1034,7 +1085,6 @@ describe('résilience sociale A23', () => {
     );
 
     expect(await screen.findByText('Partage : Personnalisé')).toBeInTheDocument();
-    expect(screen.getByText(/données locales ont été conservées/u)).toBeInTheDocument();
     await waitFor(() => expect(repository.saveSnapshot).toHaveBeenCalledOnce());
     expect(vi.mocked(repository.saveSnapshot).mock.calls[0]?.[0]).toMatchObject({
       activityPermissions: [expect.objectContaining({
@@ -1108,7 +1158,7 @@ describe('résilience sociale A23', () => {
       />,
     );
 
-    expect(await screen.findByText('Partage : Résumé')).toBeInTheDocument();
+    expect((await screen.findAllByText('Partage : Résumé')).length).toBeGreaterThan(0);
     await waitFor(() => expect(repository.saveSnapshot).toHaveBeenCalledOnce());
     expect(vi.mocked(repository.saveSnapshot).mock.calls[0]?.[0]).toMatchObject({
       activityPermissions: [expect.objectContaining({
@@ -1160,13 +1210,13 @@ describe('résilience sociale A23', () => {
     await user.click(screen.getByRole('button', { name: 'Résumé' }));
 
     await waitFor(() => expect(savePermission).toHaveBeenCalledTimes(2));
-    expect(await screen.findByText('Partage : Résumé')).toBeInTheDocument();
+    expect((await screen.findAllByText('Partage : Résumé')).length).toBeGreaterThan(0);
 
     resolveFirst?.({
       status: 'unavailable',
       message: 'Ancienne requête hors ligne.',
     });
-    await waitFor(() => expect(screen.getByText('Partage : Résumé')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getAllByText('Partage : Résumé').length).toBeGreaterThan(0));
     expect(screen.queryByText('Ancienne requête hors ligne.')).not.toBeInTheDocument();
   });
 });

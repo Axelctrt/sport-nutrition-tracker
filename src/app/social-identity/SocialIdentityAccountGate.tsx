@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type PropsWithChildren } from 'react';
 import { routePaths } from '@/app/routePaths';
+import { CloudAccountAccessError } from '@/application/account/cloudAccountAccess';
 import type { SocialIdentityReconciliationResult } from '@/application/friends/socialIdentityReconciliationService';
 import type { SocialIdentityRepository } from '@/application/friends/socialIdentityService';
 import type { SocialCloudIdentityPort } from '@/domain/friends/socialCloudContract';
@@ -16,7 +17,6 @@ import {
   saveProfileOnboardingDraft,
 } from '@/features/onboarding/storage/profileOnboardingDraft';
 import { DEFAULT_PROFILE_FORM_VALUES } from '@/features/profile/utils/defaultProfileFormValues';
-import { activateGuestDataSpace } from '@/infrastructure/data-spaces/dataSpaceRegistry';
 import { appDatabase, activeDataSpace } from '@/infrastructure/database/database';
 import { DexieSocialIdentityRepository } from '@/infrastructure/repositories/dexie/DexieSocialIdentityRepository';
 import { createRuntimeSocialCloudIdentityPort } from '@/infrastructure/sync-prototype/realSocialCloudIdentityService';
@@ -38,13 +38,15 @@ interface SocialIdentityAccountGateProps extends PropsWithChildren {
     SocialCloudIdentityPort,
     'lookupByHandle' | 'publishIdentity' | 'readCurrentIdentity'
   >;
-  readonly client?: Pick<SyncPrototypeClient, 'getCloudCredentials' | 'logout'>;
+  readonly client?: Pick<
+    SyncPrototypeClient,
+    'getCloudCredentials' | 'ensureValidCloudCredentials'
+  >;
   readonly reconcileIdentity?: (
     identity: SocialIdentity,
     repository: SocialIdentityRepository,
   ) => Promise<SocialIdentityReconciliationResult>;
-  readonly activateGuest?: () => void;
-  readonly reload?: () => void;
+  readonly navigateToReconnect?: () => void;
   readonly resumeProfileOnboarding?: () => void;
 }
 
@@ -64,12 +66,19 @@ function defaultResumeProfileOnboarding(): void {
   window.location.replace(onboardingUrl);
 }
 
-function runtimeClient(): Pick<SyncPrototypeClient, 'getCloudCredentials' | 'logout'> | undefined {
+function runtimeClient(): Pick<
+  SyncPrototypeClient,
+  'getCloudCredentials' | 'ensureValidCloudCredentials'
+> | undefined {
   try {
     return getSyncPrototypeClient();
   } catch {
     return undefined;
   }
+}
+
+function defaultNavigateToReconnect(): void {
+  window.location.hash = routePaths.syncPrototype;
 }
 
 function runtimePathname(): string {
@@ -90,8 +99,7 @@ export function SocialIdentityAccountGate({
   cloudPort: injectedCloudPort,
   client: injectedClient,
   reconcileIdentity,
-  activateGuest = activateGuestDataSpace,
-  reload = () => window.location.reload(),
+  navigateToReconnect = defaultNavigateToReconnect,
   resumeProfileOnboarding = defaultResumeProfileOnboarding,
 }: SocialIdentityAccountGateProps) {
   const repository = useMemo(
@@ -110,7 +118,7 @@ export function SocialIdentityAccountGate({
   const pathname = currentPathname ?? routerPathname;
   const setupRequired = accountRequired && socialSetupIsRequired(pathname);
   const [state, setState] = useState<GateState>(() => (
-    accountRequired ? { status: 'loading' } : { status: 'ready' }
+    setupRequired ? { status: 'loading' } : { status: 'ready' }
   ));
 
   useEffect(() => {
@@ -121,7 +129,7 @@ export function SocialIdentityAccountGate({
   }, [currentPathname]);
 
   useEffect(() => {
-    if (!accountRequired) {
+    if (!setupRequired) {
       setState({ status: 'ready' });
       return undefined;
     }
@@ -130,15 +138,14 @@ export function SocialIdentityAccountGate({
     setState({ status: 'loading' });
 
     void (async () => {
-      const credentials = client?.getCloudCredentials?.();
+      const credentials = client?.ensureValidCloudCredentials
+        ? await client.ensureValidCloudCredentials()
+        : client?.getCloudCredentials?.();
       if (!credentials?.userId.trim() || !credentials.accessToken.trim()) {
-        if (active) {
-          setState({
-            status: 'error',
-            message: 'La session du compte n’est pas disponible. Reconnecte le compte ou repasse en mode local.',
-          });
-        }
-        return;
+        throw new CloudAccountAccessError(
+          'SESSION_EXPIRED',
+          'La session du compte doit être renouvelée.',
+        );
       }
 
       const accountUserId = credentials.userId.trim();
@@ -206,6 +213,13 @@ export function SocialIdentityAccountGate({
       }
     })().catch((error: unknown) => {
       if (!active) return;
+      if (
+        error instanceof CloudAccountAccessError
+        && ['NETWORK_OFFLINE', 'CLOUD_UNAVAILABLE'].includes(error.code)
+      ) {
+        setState({ status: 'ready' });
+        return;
+      }
       setState({
         status: 'error',
         message: error instanceof Error
@@ -217,13 +231,7 @@ export function SocialIdentityAccountGate({
     return () => {
       active = false;
     };
-  }, [accountRequired, client, cloudPort, reconcileIdentity, repository, setupRequired]);
-
-  const handleUseLocalMode = async () => {
-    await client?.logout();
-    activateGuest();
-    reload();
-  };
+  }, [client, cloudPort, reconcileIdentity, repository, setupRequired]);
 
   const handleIdentityCompleted = () => {
     if (!readProfileOnboardingCompletion()) {
@@ -257,8 +265,8 @@ export function SocialIdentityAccountGate({
   if (state.status === 'loading') {
     return (
       <CenteredState
-        title="Vérification de l’identité sociale"
-        description="SportPilot vérifie le pseudonyme associé à ce compte."
+        title="Restauration de la session…"
+        description="SportPilot prépare l’accès à la rubrique Amis."
       />
     );
   }
@@ -267,12 +275,17 @@ export function SocialIdentityAccountGate({
     return (
       <main className="grid min-h-screen place-items-center px-4 py-8">
         <Card className="w-full max-w-xl p-5 sm:p-7">
-          <InlineNotice tone="error" title="Identité sociale indisponible">
+          <InlineNotice tone="warning" title="Reconnexion requise">
             {state.message}
           </InlineNotice>
-          <Button className="mt-4 w-full" onClick={() => void handleUseLocalMode()} variant="secondary">
-            Revenir au mode local
-          </Button>
+          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+            <Button onClick={navigateToReconnect}>
+              Se reconnecter
+            </Button>
+            <Button onClick={() => setState({ status: 'ready' })} variant="secondary">
+              Continuer hors ligne
+            </Button>
+          </div>
         </Card>
       </main>
     );
@@ -289,7 +302,7 @@ export function SocialIdentityAccountGate({
         initialIdentity={state.identity}
         {...(state.message ? { initialNotice: state.message } : {})}
         onCompleted={handleIdentityCompleted}
-        onUseLocal={handleUseLocalMode}
+        onUseLocal={() => setState({ status: 'ready' })}
         repository={repository}
       />
     </>
