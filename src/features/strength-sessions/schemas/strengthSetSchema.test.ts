@@ -35,6 +35,22 @@ describe('strengthSetFormSchema', () => {
     if (result.success) expect(result.data.rpe).toBeUndefined();
   });
 
+  it('ne convertit pas un champ obligatoire vide en zéro', () => {
+    const result = strengthSetFormSchema.safeParse({
+      repetitions: '',
+      weightKg: '',
+      rpe: '',
+      type: 'working',
+      notes: '',
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues.map((issue) => issue.path[0]))
+        .toEqual(expect.arrayContaining(['repetitions', 'weightKg']));
+    }
+  });
+
   it('refuse un RPE hors limites ou avec un pas invalide', () => {
     expect(strengthSetFormSchema.safeParse({ repetitions: 10, weightKg: 50, rpe: 11, type: 'working' }).success).toBe(false);
     expect(strengthSetFormSchema.safeParse({ repetitions: 10, weightKg: 50, rpe: 8.3, type: 'working' }).success).toBe(false);

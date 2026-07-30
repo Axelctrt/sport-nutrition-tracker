@@ -1,6 +1,6 @@
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { WorkoutSessionsPage } from '@/features/strength-sessions/pages/WorkoutSessionsPage';
 import { appDatabase } from '@/infrastructure/database/database';
 import { initializeDatabase } from '@/infrastructure/database/databaseLifecycle';
@@ -9,6 +9,12 @@ import {
   createProgressionSuggestionInput,
   createWorkoutSessionInput,
 } from '@/test/factories/strengthFactory';
+import { ToastProvider } from '@/shared/toast/ToastProvider';
+
+function LocationStateProbe() {
+  const location = useLocation();
+  return <output>{location.state ? 'feedback-présent' : 'feedback-consommé'}</output>;
+}
 
 describe('WorkoutSessionsPage', () => {
   beforeEach(async () => {
@@ -90,6 +96,45 @@ describe('WorkoutSessionsPage', () => {
       'href',
       '/strength/sessions/session-completed',
     );
+  });
+
+  it('affiche une seule fois le toast transmis après la persistance d’une séance terminée', async () => {
+    await appDatabase.workoutSessions.add(createEntity(
+      createWorkoutSessionInput({ status: 'completed' }),
+      'session-completed',
+    ));
+
+    render(
+      <ToastProvider>
+        <MemoryRouter initialEntries={[{
+          pathname: '/strength/sessions',
+          state: {
+            workoutSessionFeedback: {
+              title: 'Séance enregistrée',
+              description: 'Ta séance a bien été ajoutée à l’historique.',
+              sessionId: 'session-completed',
+            },
+          },
+        }]}>
+          <Routes>
+            <Route
+              path="/strength/sessions"
+              element={(
+                <>
+                  <WorkoutSessionsPage />
+                  <LocationStateProbe />
+                </>
+              )}
+            />
+          </Routes>
+        </MemoryRouter>
+      </ToastProvider>,
+    );
+
+    expect(await screen.findByText('Séance enregistrée')).toBeInTheDocument();
+    expect(screen.getByText('Ta séance a bien été ajoutée à l’historique.')).toBeInTheDocument();
+    expect(screen.getAllByText('Séance enregistrée')).toHaveLength(1);
+    expect(await screen.findByText('feedback-consommé')).toBeInTheDocument();
   });
 
 });

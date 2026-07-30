@@ -7,7 +7,8 @@ test('crée un modèle, démarre une séance, valide une série et termine', asy
   await page.goto('/#/strength/templates/new');
   await expect(page.getByRole('heading', { name: 'Créer une séance modèle' })).toBeVisible();
   await page.getByLabel('Nom de la séance').fill('Push E2E');
-  await page.getByRole('button', { name: 'Ajouter un exercice' }).click();
+  await page.getByRole('searchbox', { name: 'Rechercher un exercice à ajouter au modèle' }).fill('Développé couché');
+  await page.getByRole('button', { name: 'Ajouter Développé couché' }).click();
   await page.getByRole('button', { name: 'Créer la séance' }).click();
 
   await expect(page.getByRole('heading', { name: 'Séances modèles' })).toBeVisible();
@@ -17,7 +18,12 @@ test('crée un modèle, démarre une séance, valide une série et termine', asy
   await expect(page.getByRole('heading', { name: 'Push E2E' })).toBeVisible();
   const firstSet = page.getByRole('article', { name: 'Série 1' });
   await firstSet.getByLabel('Charge en kg').fill('40');
-  await firstSet.getByLabel('Répétitions').fill('10');
+  const repetitions = firstSet.getByLabel('Répétitions');
+  await repetitions.fill('1');
+  await page.waitForTimeout(800);
+  await repetitions.pressSequentially('2');
+  await expect(repetitions).toHaveValue('12');
+  await repetitions.fill('10');
   await firstSet.getByText('Options discrètes').click();
   await firstSet.getByLabel('RPE').fill('8');
   await firstSet.getByRole('button', { name: 'Valider la série' }).click();
@@ -35,5 +41,7 @@ test('crée un modèle, démarre une séance, valide une série et termine', asy
   await expect(dialog).toBeVisible();
   await dialog.getByRole('button', { name: 'Terminer la séance' }).click();
   await expect(page.getByRole('heading', { name: 'Mes entraînements' })).toBeVisible();
+  await expect(page.getByText('Séance enregistrée')).toBeVisible();
+  await expect(page.getByText('Ta séance a bien été ajoutée à l’historique.')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Push E2E' })).toBeVisible();
 });

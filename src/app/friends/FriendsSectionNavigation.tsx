@@ -14,7 +14,7 @@ const sections: readonly {
   { id: 'feed', label: 'Fil d’activité', shortLabel: 'Fil' },
   { id: 'friends', label: 'Mes amis', shortLabel: 'Amis' },
   { id: 'requests', label: 'Demandes d’amis', shortLabel: 'Demandes' },
-  { id: 'profile', label: 'Mon profil social', shortLabel: 'Mon profil' },
+  { id: 'profile', label: 'Mon profil social', shortLabel: 'Profil' },
 ] as const;
 
 export function FriendsSectionNavigation({
