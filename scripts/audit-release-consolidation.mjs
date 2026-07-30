@@ -108,13 +108,24 @@ if (failures.length === 0) {
   }
 
   const nutritionFlow = read('e2e/nutrition-add-flow.spec.ts');
-  for (const marker of ['active la recherche', "browserName === 'webkit'", '#\\/food\\/select\\?date=']) {
+  for (const marker of [
+    'active la recherche',
+    "browserName === 'webkit'",
+    'new RegExp(`#\\\\/food\\\\/select\\\\?date=${date}&slot=lunch$`)',
+  ]) {
     if (!nutritionFlow.includes(marker)) fail(`recette Nutrition incomplète : ${marker}.`);
   }
 
-  const performanceGlass = read('e2e/helpers/performanceGlass.ts');
-  if (!performanceGlass.includes("page.goto('/visual-lab.html')")) {
-    fail('le harnais Performance Glass doit isoler les écritures IndexedDB de l’application.');
+  const performanceGlass = read('e2e/performance-glass-0.34.0.spec.ts');
+  for (const marker of [
+    'async function prepareVisualTheme(',
+    "page.goto('/visual-lab.html'",
+    "page.locator('#root')",
+    'await setVisualThemeState(page, options);',
+  ]) {
+    if (!performanceGlass.includes(marker)) {
+      fail(`le harnais Performance Glass doit isoler les écritures IndexedDB : ${marker}.`);
+    }
   }
 
   const versions = read('src/infrastructure/database/migrations/versions.ts');
