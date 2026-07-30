@@ -131,15 +131,20 @@ describe('AccountDevicesPage', () => {
     expect(reload).toHaveBeenCalledTimes(1);
   });
 
-  it('désassocie l’appareil avec une confirmation distincte', async () => {
+  it('passe explicitement en mode invité avec une confirmation distincte', async () => {
     const detachDevice = vi.fn(async () => accountSpace);
     const reload = vi.fn();
     renderPage({ detachDevice, reload });
 
     await userEvent.click(
-      await screen.findByRole('button', { name: 'Désassocier l’appareil' }),
+      await screen.findByRole('button', { name: 'Utiliser le mode invité' }),
     );
-    await userEvent.click(screen.getByRole('button', { name: 'Désassocier' }));
+    expect(
+      screen.getByText(/ni supprimés ni déplacés/i),
+    ).toBeInTheDocument();
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Passer en mode invité' }),
+    );
 
     await waitFor(() => expect(detachDevice).toHaveBeenCalledTimes(1));
     expect(reload).toHaveBeenCalledTimes(1);

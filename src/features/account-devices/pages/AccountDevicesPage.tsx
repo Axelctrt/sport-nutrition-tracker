@@ -549,11 +549,11 @@ export function AccountDevicesPage({
               className="size-5 text-amber-700 dark:text-amber-300"
             />
             <h3 className="mt-3 font-semibold text-slate-950 dark:text-white">
-              Désassocier cet appareil
+              Utiliser le mode invité
             </h3>
             <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
-              Déconnecte le compte et retire son association active. Les données
-              locales restent conservées et pourront être réassociées plus tard.
+              Déconnecte le compte et ouvre l’espace invité séparé. Les données
+              locales restent conservées dans l’espace du compte pour une reprise ultérieure.
             </p>
             <Button
               className="mt-4 w-full"
@@ -561,7 +561,7 @@ export function AccountDevicesPage({
               disabled={!loggedIn || !accountSpaceActive || actionPending}
               onClick={() => setDetachDialogOpen(true)}
             >
-              Désassocier l’appareil
+              Utiliser le mode invité
             </Button>
           </div>
 
@@ -662,9 +662,9 @@ export function AccountDevicesPage({
 
       <ConfirmationDialog
         open={detachDialogOpen}
-        title="Désassocier cet appareil ?"
-        description="Le compte sera déconnecté. Son espace local restera conservé, mais devra être réassocié explicitement lors de la prochaine connexion."
-        confirmLabel="Désassocier"
+        title="Utiliser le mode invité sur cet appareil ?"
+        description="Le compte sera déconnecté et SportPilot ouvrira un espace invité séparé. L’espace local du compte et ses données ne seront ni supprimés ni déplacés."
+        confirmLabel="Passer en mode invité"
         isPending={pendingAction === "detach"}
         onCancel={() => setDetachDialogOpen(false)}
         onConfirm={() => {

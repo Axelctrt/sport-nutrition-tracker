@@ -424,14 +424,17 @@ describe("DataSpaceAccountGate", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("revient à l’espace invité après une déconnexion", async () => {
+  it("conserve l’espace du compte après une déconnexion sans action implicite", async () => {
     const storage = new MemoryStorage();
     registerAccountDataSpace("acct-A1B2C3D4", storage);
     const reload = vi.fn();
+    const client = createClient(createSnapshot());
+    const ensureValidCloudCredentials = vi.fn();
+    client.ensureValidCloudCredentials = ensureValidCloudCredentials;
 
     render(
       <DataSpaceAccountGate
-        client={createClient(createSnapshot())}
+        client={client}
         currentSpace={accountSpace}
         storage={storage}
         reload={reload}
@@ -440,7 +443,66 @@ describe("DataSpaceAccountGate", () => {
       </DataSpaceAccountGate>,
     );
 
-    await waitFor(() => expect(reload).toHaveBeenCalledTimes(1));
-    expect(screen.queryByText("Données privées")).not.toBeInTheDocument();
+    expect(await screen.findByText("Données privées")).toBeInTheDocument();
+    expect(reload).not.toHaveBeenCalled();
+    expect(client.logout).not.toHaveBeenCalled();
+    expect(ensureValidCloudCredentials).not.toHaveBeenCalled();
+  });
+
+  it("laisse le renouvellement au consommateur cloud sans bloquer les données locales", async () => {
+    const client = createClient(
+      createSnapshot({
+        isLoggedIn: true,
+        userId: ACCOUNT_A_ID,
+      }),
+    );
+    const ensureValidCloudCredentials = vi.fn();
+    client.ensureValidCloudCredentials = ensureValidCloudCredentials;
+
+    render(
+      <DataSpaceAccountGate
+        client={client}
+        currentSpace={accountSpace}
+        reload={vi.fn()}
+      >
+        <p>Données du compte</p>
+      </DataSpaceAccountGate>,
+    );
+
+    expect(await screen.findByText("Données du compte")).toBeInTheDocument();
+    expect(ensureValidCloudCredentials).not.toHaveBeenCalled();
+    expect(client.logout).not.toHaveBeenCalled();
+  });
+
+  it("reste dans la base locale du compte pendant les événements réseau et de visibilité", async () => {
+    const client = createClient(
+      createSnapshot({
+        isLoggedIn: true,
+        userId: ACCOUNT_A_ID,
+      }),
+    );
+    const ensureValidCloudCredentials = vi.fn();
+    client.ensureValidCloudCredentials = ensureValidCloudCredentials;
+    const reload = vi.fn();
+
+    render(
+      <DataSpaceAccountGate
+        client={client}
+        currentSpace={accountSpace}
+        reload={reload}
+      >
+        <p>{accountSpace.databaseName}</p>
+      </DataSpaceAccountGate>,
+    );
+
+    expect(await screen.findByText(accountSpace.databaseName)).toBeInTheDocument();
+    await act(async () => {
+      window.dispatchEvent(new Event("online"));
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    expect(screen.getByText(accountSpace.databaseName)).toBeInTheDocument();
+    expect(ensureValidCloudCredentials).not.toHaveBeenCalled();
+    expect(client.logout).not.toHaveBeenCalled();
+    expect(reload).not.toHaveBeenCalled();
   });
 });
