@@ -85,6 +85,44 @@ export const settingsCategories: readonly SettingsCategoryDefinition[] = [
   },
 ] as const;
 
+export const settingsHomeCategories: readonly SettingsCategoryDefinition[] = [
+  {
+    id: 'profile-objectives',
+    path: routePaths.settingsProfileObjectives,
+    title: 'Profil et objectifs',
+    description: 'Informations personnelles, poids, objectifs et macros.',
+    keywords: ['profil', 'poids', 'taille', 'objectif', 'macros', 'activité'],
+  },
+  {
+    id: 'account-sync',
+    path: routePaths.settingsAccountSync,
+    title: 'Compte et synchronisation',
+    description: 'Compte actif, appareils et sauvegarde cloud.',
+    keywords: ['compte', 'appareil', 'cloud', 'synchronisation', 'hors ligne'],
+  },
+  {
+    id: 'appearance-accessibility',
+    path: routePaths.settingsAppearanceAccessibility,
+    title: 'Apparence, notifications et routines',
+    description: 'Thème, confort de lecture, rappels et habitudes.',
+    keywords: ['thème', 'accessibilité', 'notification', 'rappel', 'routine'],
+  },
+  {
+    id: 'data-backup',
+    path: routePaths.settingsDataBackup,
+    title: 'Confidentialité et données',
+    description: 'Amis, autorisations, sauvegardes, export et suppression.',
+    keywords: ['amis', 'confidentialité', 'partage', 'ia', 'sauvegarde', 'export'],
+  },
+  {
+    id: 'about',
+    path: routePaths.settingsAbout,
+    title: 'À propos et réglages avancés',
+    description: 'Version, informations et outils destinés aux usages avancés.',
+    keywords: ['version', 'à propos', 'diagnostic', 'avancé'],
+  },
+] as const;
+
 export function settingsCategoryForPath(pathname: string): SettingsCategoryDefinition | undefined {
   return settingsCategories.find((category) => category.path === pathname);
 }

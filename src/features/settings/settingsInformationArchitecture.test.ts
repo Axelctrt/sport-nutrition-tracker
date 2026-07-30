@@ -1,20 +1,25 @@
-import { routePaths } from '@/app/routePaths';
 import {
   settingsCategories,
-  settingsCategoryForPath,
+  settingsHomeCategories,
 } from '@/features/settings/settingsInformationArchitecture';
 
 describe('settingsInformationArchitecture', () => {
-  it('déclare neuf catégories utilisateur avec une route unique', () => {
-    expect(settingsCategories).toHaveLength(9);
-    expect(new Set(settingsCategories.map((category) => category.path)).size).toBe(9);
-  });
+  it('expose cinq catégories principales sans perdre les routes historiques', () => {
+    expect(settingsHomeCategories.map((category) => category.title)).toEqual([
+      'Profil et objectifs',
+      'Compte et synchronisation',
+      'Apparence, notifications et routines',
+      'Confidentialité et données',
+      'À propos et réglages avancés',
+    ]);
 
-  it('résout une catégorie depuis sa route dédiée', () => {
-    expect(settingsCategoryForPath(routePaths.settingsDataBackup)).toMatchObject({
-      id: 'data-backup',
-      title: 'Données, sauvegardes et export',
-    });
-    expect(settingsCategoryForPath('/settings/inconnue')).toBeUndefined();
+    expect(new Set(settingsHomeCategories.map((category) => category.path)).size).toBe(5);
+    expect(settingsCategories).toHaveLength(9);
+    expect(settingsCategories.map((category) => category.id)).toEqual(expect.arrayContaining([
+      'privacy-friends',
+      'notifications-routines',
+      'nutrition-calculations',
+      'ai-permissions',
+    ]));
   });
 });
