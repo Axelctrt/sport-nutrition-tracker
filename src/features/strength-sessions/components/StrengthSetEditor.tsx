@@ -94,18 +94,23 @@ function StrengthSetRow({
   const [editingCompleted, setEditingCompleted] = useState(false);
   const [draftSaveStatus, setDraftSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const saveTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const autoSaveInFlightRef = useRef<Promise<unknown>>();
   const latestAutoSaveRef = useRef<() => Promise<void>>(async () => undefined);
   const mountedRef = useRef(true);
+  const rowActiveRef = useRef(false);
+  const composingRef = useRef(false);
+  const userDirtyRef = useRef(false);
+  const latestPersistedSetRef = useRef(set);
 
-  useEffect(() => {
-    setRepetitions(numberInputValue(set.repetitions));
-    setWeightKg(numberInputValue(set.weightKg));
-    setDurationSeconds(numberInputValue(set.durationSeconds));
-    setDistanceMeters(numberInputValue(set.distanceMeters));
-    setRpe(numberInputValue(set.rpe));
-    setType(set.type);
-    setNotes(set.notes ?? '');
-  }, [set]);
+  const syncFromPersistedSet = useCallback((persistedSet: StrengthSet) => {
+    setRepetitions(numberInputValue(persistedSet.repetitions));
+    setWeightKg(numberInputValue(persistedSet.weightKg));
+    setDurationSeconds(numberInputValue(persistedSet.durationSeconds));
+    setDistanceMeters(numberInputValue(persistedSet.distanceMeters));
+    setRpe(numberInputValue(persistedSet.rpe));
+    setType(persistedSet.type);
+    setNotes(persistedSet.notes ?? '');
+  }, []);
 
   const isDirty = repetitions !== numberInputValue(set.repetitions)
     || weightKg !== numberInputValue(set.weightKg)
@@ -114,6 +119,19 @@ function StrengthSetRow({
     || rpe !== numberInputValue(set.rpe)
     || type !== set.type
     || notes !== (set.notes ?? '');
+  const hasUserDraft = userDirtyRef.current && isDirty;
+
+  useEffect(() => {
+    latestPersistedSetRef.current = set;
+    if (userDirtyRef.current && !isDirty) userDirtyRef.current = false;
+    if (rowActiveRef.current || composingRef.current || userDirtyRef.current) return;
+    syncFromPersistedSet(set);
+  }, [isDirty, set, syncFromPersistedSet]);
+
+  const markUserEdit = () => {
+    userDirtyRef.current = true;
+    setDraftSaveStatus('idle');
+  };
 
   const draftValues = useCallback((showError = true): StrengthSetFormValues | undefined => {
     const result = strengthSetFormSchema.safeParse({
@@ -174,20 +192,32 @@ function StrengthSetRow({
   };
 
   const autoSave = useCallback(async () => {
+    if (composingRef.current) return;
     const parsed = draftValues(false);
-    if (!parsed || !isDirty || !editable) return;
+    if (!parsed || !hasUserDraft || !editable) return;
     if (mountedRef.current) setDraftSaveStatus('saving');
-    const result = await onSave(exercise.id, set.id, parsed);
+    const saveRequest = onSave(exercise.id, set.id, parsed);
+    autoSaveInFlightRef.current = saveRequest;
+    let result: unknown;
+    try {
+      result = await saveRequest;
+    } catch {
+      result = undefined;
+    } finally {
+      if (autoSaveInFlightRef.current === saveRequest) {
+        autoSaveInFlightRef.current = undefined;
+      }
+    }
     if (!mountedRef.current) return;
     setDraftSaveStatus(result === undefined ? 'error' : 'saved');
-  }, [draftValues, editable, exercise.id, isDirty, onSave, set.id]);
+  }, [draftValues, editable, exercise.id, hasUserDraft, onSave, set.id]);
 
   useEffect(() => {
     latestAutoSaveRef.current = autoSave;
   }, [autoSave]);
 
   useEffect(() => {
-    if (!isDirty || !editable) return undefined;
+    if (!hasUserDraft || !editable) return undefined;
     setDraftSaveStatus('idle');
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => void latestAutoSaveRef.current(), 650);
@@ -198,7 +228,7 @@ function StrengthSetRow({
     distanceMeters,
     durationSeconds,
     editable,
-    isDirty,
+    hasUserDraft,
     notes,
     repetitions,
     rpe,
@@ -214,10 +244,21 @@ function StrengthSetRow({
 
   const toggleCompletion = async () => {
     const parsed = completionValues();
-    if (parsed) await onCompletion(exercise.id, set.id, parsed, !set.isCompleted);
+    if (!parsed) return;
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = undefined;
+    }
+    await autoSaveInFlightRef.current;
+    const result = await onCompletion(exercise.id, set.id, parsed, !set.isCompleted);
+    if (result !== undefined) {
+      userDirtyRef.current = false;
+      if (mountedRef.current) setDraftSaveStatus('saved');
+    }
   };
 
   const isBusy = action?.includes(set.id) ?? false;
+  const isDraftSaveBusy = action === `saveSet:${set.id}`;
   const baseId = `strength-set-${set.id}`;
   const usesLoad = trackingMode === 'loadRepetitions'
     || trackingMode === 'bodyweightRepetitions'
@@ -275,10 +316,25 @@ function StrengthSetRow({
       )}
       aria-labelledby={`${baseId}-title`}
       data-strength-set-completed={set.isCompleted ? 'true' : 'false'}
+      onFocusCapture={() => {
+        rowActiveRef.current = true;
+      }}
+      onCompositionStart={() => {
+        composingRef.current = true;
+      }}
+      onCompositionEnd={() => {
+        composingRef.current = false;
+        markUserEdit();
+      }}
       onBlur={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget as Node | null) && isDirty) {
-          if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-          void latestAutoSaveRef.current();
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+          rowActiveRef.current = false;
+          if (hasUserDraft) {
+            if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+            void latestAutoSaveRef.current();
+          } else {
+            syncFromPersistedSet(latestPersistedSetRef.current);
+          }
         }
       }}
     >
@@ -313,7 +369,10 @@ function StrengthSetRow({
               min="0"
               step="0.5"
               value={weightKg}
-              onChange={(event) => setWeightKg(event.target.value)}
+              onChange={(event) => {
+                markUserEdit();
+                setWeightKg(event.target.value);
+              }}
               disabled={!editable}
               className={`${inputClassName} mt-1 px-2 text-center text-sm font-semibold sm:text-base`}
             />
@@ -335,7 +394,10 @@ function StrengthSetRow({
               min="0"
               step="1"
               value={repetitions}
-              onChange={(event) => setRepetitions(event.target.value)}
+              onChange={(event) => {
+                markUserEdit();
+                setRepetitions(event.target.value);
+              }}
               disabled={!editable}
               className={`${inputClassName} mt-1 px-2 text-center text-sm font-semibold sm:text-base`}
             />
@@ -354,7 +416,10 @@ function StrengthSetRow({
               min="1"
               step="1"
               value={durationSeconds}
-              onChange={(event) => setDurationSeconds(event.target.value)}
+              onChange={(event) => {
+                markUserEdit();
+                setDurationSeconds(event.target.value);
+              }}
               disabled={!editable}
               className={`${inputClassName} mt-1 px-2 text-center text-sm font-semibold sm:text-base`}
             />
@@ -373,7 +438,10 @@ function StrengthSetRow({
               min="0.1"
               step="0.1"
               value={distanceMeters}
-              onChange={(event) => setDistanceMeters(event.target.value)}
+              onChange={(event) => {
+                markUserEdit();
+                setDistanceMeters(event.target.value);
+              }}
               disabled={!editable}
               className={`${inputClassName} mt-1 px-2 text-center text-sm font-semibold sm:text-base`}
             />
@@ -384,7 +452,7 @@ function StrengthSetRow({
           <Button
             size="sm"
             className="min-h-10 px-2"
-            disabled={isBusy}
+            disabled={isBusy && !isDraftSaveBusy}
             aria-label={set.isCompleted ? 'Rouvrir la série' : 'Valider la série'}
             onClick={() => void toggleCompletion()}
           >
@@ -395,7 +463,7 @@ function StrengthSetRow({
 
       {hint ? <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{hint}</p> : null}
       {validationError ? <p className="mt-2 text-sm font-medium text-red-700 dark:text-red-300" role="alert">{validationError}</p> : null}
-      {editable && (isDirty || draftSaveStatus !== 'idle') ? (
+      {editable && (hasUserDraft || draftSaveStatus !== 'idle') ? (
         <div className="mt-2 flex min-h-8 items-center justify-between gap-2 text-xs font-medium">
           <span
             className={draftSaveStatus === 'error' || saveStatus === 'error'
@@ -407,7 +475,7 @@ function StrengthSetRow({
               ? 'Enregistrement…'
               : draftSaveStatus === 'error' || saveStatus === 'error'
                 ? 'Échec de l’enregistrement'
-                : draftSaveStatus === 'saved' && !isDirty
+                : draftSaveStatus === 'saved' && !hasUserDraft
                   ? 'Enregistré'
                   : 'Sauvegarde automatique'}
           </span>
@@ -440,7 +508,10 @@ function StrengthSetRow({
               max="10"
               step="0.5"
               value={rpe}
-              onChange={(event) => setRpe(event.target.value)}
+              onChange={(event) => {
+                markUserEdit();
+                setRpe(event.target.value);
+              }}
               disabled={!editable}
               placeholder="Facultatif"
               className={`${inputClassName} mt-1`}
@@ -451,7 +522,10 @@ function StrengthSetRow({
             <select
               id={`${baseId}-type`}
               value={type}
-              onChange={(event) => setType(event.target.value as StrengthSet['type'])}
+              onChange={(event) => {
+                markUserEdit();
+                setType(event.target.value as StrengthSet['type']);
+              }}
               disabled={!editable}
               className={`${inputClassName} mt-1`}
             >
@@ -465,7 +539,10 @@ function StrengthSetRow({
             <input
               id={`${baseId}-notes`}
               value={notes}
-              onChange={(event) => setNotes(event.target.value)}
+              onChange={(event) => {
+                markUserEdit();
+                setNotes(event.target.value);
+              }}
               disabled={!editable}
               maxLength={500}
               enterKeyHint="done"

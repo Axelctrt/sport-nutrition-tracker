@@ -1,11 +1,12 @@
 import { CalendarDays, Dumbbell, Layers3, Play, Plus } from 'lucide-react';
-import { useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { getWorkoutSessionTitle } from '@/application/strength/workoutSessionService';
 import { routePaths, workoutSessionPath } from '@/app/routePaths';
 import { WorkoutSessionHistoryCard } from '@/features/strength-sessions/components/WorkoutSessionHistoryCard';
 import { WorkoutSessionsSummary } from '@/features/strength-sessions/components/WorkoutSessionsSummary';
 import { useWorkoutSessions } from '@/features/strength-sessions/hooks/useWorkoutSessions';
+import type { WorkoutSessionNavigationState } from '@/features/strength-sessions/navigation/workoutSessionNavigation';
 import { useActionToast } from '@/shared/toast/useActionToast';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
@@ -18,7 +19,9 @@ type SessionFilter = 'all' | 'completed' | 'abandoned';
 
 export function WorkoutSessionsPage() {
   const actionToast = useActionToast();
+  const location = useLocation();
   const navigate = useNavigate();
+  const handledCompletionRef = useRef<string>();
   const [filter, setFilter] = useState<SessionFilter>('all');
   const { sessions, status, errorMessage, isStarting, refresh, startEmpty } = useWorkoutSessions();
   const current = sessions.find(({ session }) => session.status === 'inProgress');
@@ -26,6 +29,22 @@ export function WorkoutSessionsPage() {
     if (session.status !== 'completed' && session.status !== 'abandoned') return false;
     return filter === 'all' || session.status === filter;
   }), [filter, sessions]);
+
+  useEffect(() => {
+    const feedback = (location.state as WorkoutSessionNavigationState | null)
+      ?.workoutSessionFeedback;
+    if (!feedback || handledCompletionRef.current === feedback.sessionId) return;
+    handledCompletionRef.current = feedback.sessionId;
+    actionToast.success({
+      key: `workout-session-complete:${feedback.sessionId}`,
+      title: feedback.title,
+      description: feedback.description,
+    });
+    void navigate(`${location.pathname}${location.search}`, {
+      replace: true,
+      state: null,
+    });
+  }, [actionToast, location.pathname, location.search, location.state, navigate]);
 
   const startFreeSession = async () => {
     const created = await startEmpty();

@@ -7,21 +7,21 @@ test('crée un superset et conserve ses exercices indépendants dans la séance'
   await page.goto('/#/strength/templates/new');
   await expect(page.getByRole('heading', { name: 'Créer une séance modèle' })).toBeVisible();
   await page.getByLabel('Nom de la séance').fill('Superset E2E');
-  await page.getByRole('button', { name: 'Ajouter un exercice' }).click();
-  await page.getByRole('button', { name: 'Ajouter un exercice' }).click();
+  const exerciseSearch = page.getByRole('searchbox', {
+    name: 'Rechercher un exercice à ajouter au modèle',
+  });
+  await exerciseSearch.fill('Développé couché');
+  await page.getByRole('button', { name: 'Ajouter Développé couché' }).click();
+  await exerciseSearch.fill('Rowing barre');
+  await page.getByRole('button', { name: 'Ajouter Rowing barre' }).click();
 
-  const exerciseSelects = page.locator('select[id^="workout-template-exercise-"]');
-  await expect(exerciseSelects).toHaveCount(2);
-  const firstExerciseId = await exerciseSelects.nth(0).inputValue();
-  const secondExerciseId = await exerciseSelects.nth(1).locator('option').evaluateAll(
-    (options, excluded) => options.map((option) => (option as HTMLOptionElement).value)
-      .find((value) => value && value !== excluded),
-    firstExerciseId,
+  await page.getByText('Organiser en superset ou circuit').click();
+  const organization = page.getByText('Organiser en superset ou circuit').locator(
+    'xpath=ancestor::details[1]',
   );
-  expect(secondExerciseId).toBeTruthy();
-  await exerciseSelects.nth(1).selectOption(secondExerciseId!);
-
-  await page.getByRole('button', { name: 'Créer un superset' }).first().click();
+  await organization.getByRole('checkbox', { name: 'Développé couché à la barre' }).check();
+  await organization.getByRole('checkbox', { name: 'Rowing barre' }).check();
+  await organization.getByRole('button', { name: 'Créer le groupe' }).click();
   await page.getByLabel('Nom facultatif').fill('Poussée / tirage');
   await page.getByLabel('Nombre de tours').fill('3');
   await page.getByLabel('Repos entre exercices (s)').fill('15');

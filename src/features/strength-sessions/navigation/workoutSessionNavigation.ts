@@ -7,6 +7,7 @@ export interface WorkoutSessionNavigationState {
   workoutSessionReturn?: WorkoutSessionReturnContext;
   workoutSessionFeedback?: {
     title: string;
+    description: string;
     sessionId: string;
   };
   scroll?: 'top' | 'restore';
@@ -23,15 +24,18 @@ export function createWorkoutSessionReturnState(
 }
 
 export function createWorkoutSessionFeedbackState(
-  context: WorkoutSessionReturnContext,
+  context: WorkoutSessionReturnContext | undefined,
   sessionId: string,
 ): WorkoutSessionNavigationState {
   return {
     workoutSessionFeedback: {
-      title: 'Séance terminée',
+      title: 'Séance enregistrée',
+      description: 'Ta séance a bien été ajoutée à l’historique.',
       sessionId,
     },
-    scroll: 'restore',
-    restoreScrollKey: context.scrollKey,
+    ...(context ? {
+      scroll: 'restore' as const,
+      restoreScrollKey: context.scrollKey,
+    } : {}),
   };
 }

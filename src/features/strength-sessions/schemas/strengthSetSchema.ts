@@ -15,12 +15,30 @@ const optionalRpeSchema = z.preprocess(
     .optional(),
 );
 
+const requiredNonNegativeNumber = (
+  maximum: number,
+  minimumMessage: string,
+  maximumMessage: string,
+) => z.preprocess(
+  (value) => value === '' || value === undefined || value === null ? undefined : Number(value),
+  z.number({
+    error: (issue) => issue.input === undefined
+      ? 'Complète ce champ avant de valider la série.'
+      : undefined,
+  }).min(0, minimumMessage).max(maximum, maximumMessage),
+);
+
 export const strengthSetFormSchema = z.object({
-  repetitions: z.coerce.number().int('Les répétitions doivent être un nombre entier.')
-    .min(0, 'Les répétitions ne peuvent pas être négatives.')
-    .max(999, 'Le nombre de répétitions est trop élevé.'),
-  weightKg: z.coerce.number().min(0, 'La charge ne peut pas être négative.')
-    .max(2_000, 'La charge est trop élevée.'),
+  repetitions: requiredNonNegativeNumber(
+    999,
+    'Les répétitions ne peuvent pas être négatives.',
+    'Le nombre de répétitions est trop élevé.',
+  ).pipe(z.number().int('Les répétitions doivent être un nombre entier.')),
+  weightKg: requiredNonNegativeNumber(
+    2_000,
+    'La charge ne peut pas être négative.',
+    'La charge est trop élevée.',
+  ),
   durationSeconds: optionalNonNegativeNumber(86_400, 'La durée ne peut pas être négative.'),
   distanceMeters: optionalNonNegativeNumber(1_000_000, 'La distance ne peut pas être négative.'),
   rpe: optionalRpeSchema,

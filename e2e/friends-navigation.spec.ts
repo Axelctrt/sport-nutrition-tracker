@@ -26,5 +26,20 @@ test('navigue entre les quatre rubriques Amis sans empiler leur contenu', async 
   await expect(page).toHaveURL(/#\/friends\?section=profile$/);
   await expect(profilePanel).toBeVisible();
   await expect(requestsPanel).toBeHidden();
-  await expectNoCriticalHorizontalOverflow(page);
+  const profileLabel = page.getByRole('button', { name: 'Mon profil social' })
+    .getByText('Profil', { exact: true });
+  await expect(profileLabel).toBeVisible();
+
+  for (const width of [320, 360, 393, 412]) {
+    await page.setViewportSize({ width, height: 844 });
+    await expectNoCriticalHorizontalOverflow(page);
+    const metrics = await profileLabel.evaluate((element) => {
+      const style = window.getComputedStyle(element);
+      return {
+        height: element.getBoundingClientRect().height,
+        lineHeight: Number.parseFloat(style.lineHeight),
+      };
+    });
+    expect(metrics.height).toBeLessThan(metrics.lineHeight * 1.5);
+  }
 });

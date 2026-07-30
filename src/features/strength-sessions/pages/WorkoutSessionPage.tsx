@@ -439,9 +439,7 @@ export function WorkoutSessionPage() {
           const returnContext = navigationState?.workoutSessionReturn;
           await navigate(
             returnContext?.path ?? routePaths.workoutSessions,
-            returnContext
-              ? { state: createWorkoutSessionFeedbackState(returnContext, completed.id) }
-              : undefined,
+            { state: createWorkoutSessionFeedbackState(returnContext, completed.id) },
           );
         }
       } else if (confirmation.type === 'abandon') {

@@ -7,7 +7,8 @@ test('planifie une séance modèle puis démarre la même séance', async ({ pag
   await page.goto('/#/strength/templates/new');
   await expect(page.getByRole('heading', { name: 'Créer une séance modèle' })).toBeVisible();
   await page.getByLabel('Nom de la séance').fill('Planning E2E');
-  await page.getByRole('button', { name: 'Ajouter un exercice' }).click();
+  await page.getByRole('searchbox', { name: 'Rechercher un exercice à ajouter au modèle' }).fill('Développé couché');
+  await page.getByRole('button', { name: 'Ajouter Développé couché' }).click();
   await page.getByRole('button', { name: 'Créer la séance' }).click();
   await expect(page.getByRole('heading', { name: 'Séances modèles' })).toBeVisible();
 
