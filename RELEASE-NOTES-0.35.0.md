@@ -31,6 +31,10 @@ SportPilot 0.35.0 améliore les parcours quotidiens sans modifier les thèmes va
 - navigation commune entre Aliments, Recettes, Repas favoris, modèles et exercices ;
 - parcours guidés pour les rapports et la restauration de sauvegarde.
 
+## Périmètre social conservé
+
+Le chantier 0.35.0 ne modifie pas le contrat social validé. Il n’ajoute pas d’annuaire public, de likes, de commentaires, de messagerie ni d’export d’activité brute.
+
 ## Stabilité et compatibilité
 
 - contention IndexedDB supprimée de la matrice de recette ;
