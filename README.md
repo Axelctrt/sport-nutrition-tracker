@@ -1,6 +1,6 @@
-# SportPilot 0.35.0
+# SportPilot 0.35.1
 
-SportPilot 0.35.0 unifie les retours d’action, fluidifie l’onboarding local et compte et simplifie plusieurs parcours secondaires, sans modifier les thèmes validés, les formules caloriques ni le périmètre de l’analyse IA.
+SportPilot 0.35.1 sécurise la reprise des sessions mobiles et conserve l’espace local du compte hors ligne ou pendant une indisponibilité cloud, sans modifier les thèmes validés, les formules caloriques ni le périmètre de l’analyse IA.
 
 L’application reste mobile-first, locale-first, hors ligne et installable en PWA.
 
@@ -33,13 +33,13 @@ L’application reste mobile-first, locale-first, hors ligne et installable en P
 
 ## Stockage et versions techniques
 
-- Application : `0.35.0`.
+- Application : `0.35.1`.
 - AppDatabase locale : Dexie v11.
 - Sauvegarde JSON : v10.
 - Runtime Dexie Cloud prototype : v16.
 - Contrat de snapshot social : `0.29.0-a3`.
-- Migrations D1 ajoutées par 0.35.0 : aucune.
-- Migrations Dexie ajoutées par 0.35.0 : aucune.
+- Migrations D1 ajoutées par 0.35.1 : aucune.
+- Migrations Dexie ajoutées par 0.35.1 : aucune.
 
 ## Contrôles de publication
 
@@ -57,4 +57,4 @@ npm audit
 
 La recette couvre 126 scénarios Playwright sur Chromium desktop, WebKit iPhone 15 et les formats mobiles 320, 360, 393 et 412 px.
 
-Tag attendu : `v0.35.0`.
+Tag attendu : `v0.35.1`.

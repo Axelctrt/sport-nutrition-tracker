@@ -7,7 +7,7 @@ import { syncPublicDeploymentConfig } from '@/infrastructure/sync-prototype/sync
 
 describe('compatibilité de la synchronisation nutritionnelle avec la publication 0.26.0', () => {
   it('publie la version finale sans modifier les versions métier', () => {
-    expect(__APP_VERSION__).toBe('0.35.0');
+    expect(__APP_VERSION__).toBe('0.35.1');
     expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(16);
     expect(SYNC_PROTOTYPE_DATABASE_NAME).toBe(
       'sportpilot-sync-runtime-0.20.0-v16',

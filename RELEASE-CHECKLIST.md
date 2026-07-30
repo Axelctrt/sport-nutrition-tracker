@@ -1,51 +1,52 @@
-# Checklist de publication — SportPilot 0.35.0
+# Checklist de validation - SportPilot 0.35.1
 
 ## Préparation Git
 
-- [x] Branche `release/0.35.0` créée depuis `develop` validé.
-- [ ] `package.json` et `package-lock.json` indiquent `0.35.0`.
-- [ ] Paramètres affiche `0.35.0`.
-- [x] Aucun secret, ZIP, résultat Playwright ou fichier généré n’est suivi.
-- [x] Le chantier n’ajoute aucune migration D1 ou Dexie.
+- [x] Branche `fix/mobile-session-recovery-0.35.1` créée depuis `v0.35.0`.
+- [x] `main`, `develop` et `v0.35.0` vérifiés sur `a413b8d92cdecb6e03eac7caca901e667e8c9801`.
+- [x] Aucun travail utilisateur local n'a été écrasé ou placé dans un stash.
+- [x] Aucun tag créé.
+- [x] Aucun déploiement effectué.
+- [x] Aucune migration D1 ou Dexie ajoutée.
 
 ## Contrôles automatiques
 
-- [x] Le candidat fonctionnel `e5cbeb5e64bfb9c1cd19e2c99404c5729a604061` est validé.
-- [x] Les quatre jobs GitHub Actions passent sur un même SHA.
-- [x] Lint, TypeScript, tests, build PWA, audits et budget JavaScript passent.
-- [x] La suite passe avec ordre de tests mélangé.
-- [x] 126 scénarios Playwright passent sur Chromium desktop, WebKit iPhone 15 et formats mobiles.
-- [x] La mise à jour réelle du service worker conserve les données.
-- [x] Le candidat fonctionnel est fusionné dans `develop` au commit `66cae975c1af2eabd05e585793c0d8112cee7056`.
-- [ ] La CI de la branche de release passe entièrement sur un même SHA.
+- [x] Tests ciblés des credentials, gates et espaces de données.
+- [x] Renouvellement concurrent limité à une tentative.
+- [x] Panne réseau et expiration réelle distinguées.
+- [x] Retour en ligne et `visibilitychange` couverts.
+- [x] Suite Vitest complète.
+- [x] Ordre de tests mélangé.
+- [x] Lint et TypeScript.
+- [x] Build PWA.
+- [x] Audits de compte, synchronisation, données, sécurité et publication.
+- [x] Playwright Chromium desktop.
+- [x] Playwright Chromium mobile 360 px.
+- [x] Playwright WebKit iPhone 15.
+- [x] Scénarios ciblés 320 px, 412 px et paysage.
+- [x] Remplacement de la PWA old → new sans perte de données locales.
 
-## Recette 0.35.0
+## Recette mobile à réaliser
 
-- [x] Les parcours onboarding local et compte sont couverts.
-- [x] OTP, reprise de brouillon et protection contre les doubles soumissions sont validés.
-- [x] Les toasts d’action sont dédupliqués et contextualisés.
-- [x] Import invité et restauration cloud utilisent des jalons réels.
-- [x] Historique, Amis et Rappels sont couverts par les contrôles applicatifs.
-- [x] Le comportement de recherche Nutrition est validé sous WebKit.
-- [x] Aucun débordement horizontal critique n’est détecté sur mobile.
-- [x] Clair, sombre, réduction de mouvement et iPhone 15 sont validés.
+### iPhone
 
-## Cloudflare
+- [ ] Ouvrir la PWA avec un jeton valide.
+- [ ] La fermer plusieurs heures puis la rouvrir après expiration du jeton d'accès.
+- [ ] Vérifier que le refresh conserve le compte et l'espace local.
+- [ ] Activer le mode avion, utiliser les données locales, puis rétablir le réseau.
+- [ ] Reprendre depuis l'arrière-plan et depuis l'icône installée.
+- [ ] Vérifier qu'aucune déconnexion involontaire ne survient.
 
-- [ ] Preview Cloudflare Pages validée sur le commit de publication.
-- [ ] URL de Preview autorisée dans Dexie Cloud.
-- [ ] Conservation des données vérifiée sur la Preview.
-- [ ] Functions/D1 et parcours compte vérifiés sur la Preview.
+### Android
 
-## Publication Git
+- [ ] Tester Chrome et la PWA installée.
+- [ ] Suspendre l'application puis la rouvrir.
+- [ ] Changer entre Wi-Fi et réseau mobile.
+- [ ] Activer puis désactiver le mode avion.
+- [ ] Vérifier qu'aucune bascule implicite en invité ne survient.
 
-- [x] Branche `release/0.35.0` créée.
-- [x] Notes de version finales enregistrées.
-- [ ] PR `release/0.35.0` vers `main` ouverte.
-- [ ] CI de la PR de publication entièrement verte.
-- [ ] Fusion de la PR de publication.
-- [ ] Tag annoté `v0.35.0` créé sur le commit publié.
-- [ ] Tag `v0.35.0` poussé vers `origin`.
-- [ ] `develop` resynchronisé avec `main`.
-- [ ] Déploiement de production confirmé.
-- [ ] Vérifications post-déploiement effectuées.
+## Publication
+
+- [ ] Branche poussée sur `origin`.
+- [ ] Pull request brouillon préparée.
+- [ ] Validation utilisateur reçue avant toute fusion, création de tag ou publication.

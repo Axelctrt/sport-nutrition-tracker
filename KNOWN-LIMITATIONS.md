@@ -1,4 +1,4 @@
-# Limitations connues — SportPilot 0.35.0
+# Limitations connues — SportPilot 0.35.1
 
 ## Données et analyses
 
@@ -6,11 +6,11 @@ Les graphiques restent volontairement absents lorsque les données disponibles n
 
 ## Moteur calorique
 
-La version 0.35.0 ne modifie pas les formules de calories, macros, métabolisme ou ajustement hebdomadaire.
+La version 0.35.1 ne modifie pas les formules de calories, macros, métabolisme ou ajustement hebdomadaire.
 
 ## Social
 
-Les contrats sociaux restent ceux de la version 0.29.0. La version 0.35.0 améliore l’accès aux sections Amis, mais n’ajoute pas d’annuaire public, likes, commentaires, messagerie, groupes, défis partagés ou classements.
+Les contrats sociaux restent ceux de la version 0.29.0. La version 0.35.1 améliore la reprise de session, mais n’ajoute pas d’annuaire public, likes, commentaires, messagerie, groupes, défis partagés ou classements.
 
 ## Photo nutrition
 
@@ -18,7 +18,7 @@ L’analyse photo reste soumise au consentement explicite par image, à un compt
 
 ## Accessibilité
 
-La recette 0.35.0 couvre clavier, focus, alternatives textuelles, réduction des animations, zones sûres iOS et comportement tactile WebKit. Les lecteurs d’écran tiers peuvent varier selon le navigateur, le système et les réglages utilisateur.
+La recette 0.35.1 couvre clavier, focus, alternatives textuelles, réduction des animations, zones sûres iOS et comportement tactile WebKit. Les lecteurs d’écran tiers peuvent varier selon le navigateur, le système et les réglages utilisateur.
 
 ## Dépendances
 
