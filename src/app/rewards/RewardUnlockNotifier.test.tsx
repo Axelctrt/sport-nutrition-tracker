@@ -133,10 +133,9 @@ describe("RewardUnlockNotifier", () => {
     });
   });
 
-  it("reporte le reveal sur un formulaire et permet une ouverture explicite", async () => {
-    const user = userEvent.setup();
+  it("reporte silencieusement le reveal hors des contextes sûrs", async () => {
     prepareNeonUnlock();
-    render(
+    const rendered = render(
       <ToastProvider>
         <RewardUnlockNotifier
           currentPathname="/food/add"
@@ -145,16 +144,21 @@ describe("RewardUnlockNotifier", () => {
       </ToastProvider>,
     );
 
-    expect(await screen.findByText("Nouveau thème débloqué"))
-      .toBeInTheDocument();
-    expect(screen.queryByRole("dialog", { name: "Neon Pulse" }))
-      .not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByText("Nouveau thème débloqué")).not.toBeInTheDocument();
+      expect(screen.queryByRole("dialog", { name: "Neon Pulse" })).not.toBeInTheDocument();
+    });
 
-    await user.click(screen.getByRole("button", {
-      name: "Voir le thème Neon Pulse",
-    }));
-    expect(screen.getByRole("dialog", { name: "Neon Pulse" }))
-      .toBeInTheDocument();
+    rendered.rerender(
+      <ToastProvider>
+        <RewardUnlockNotifier
+          currentPathname="/"
+          observeUnlocks={noUnlocksObserver}
+        />
+      </ToastProvider>,
+    );
+
+    expect(await screen.findByRole("dialog", { name: "Neon Pulse" })).toBeInTheDocument();
   });
 
   it("reporte aussi le reveal lorsqu'un dialogue de saisie est ouvert sur l'accueil", () => {

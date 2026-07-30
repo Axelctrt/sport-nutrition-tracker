@@ -145,7 +145,7 @@ describe("GuestDataImportPanel", () => {
     );
 
     const compactDescription = screen.getByText(
-      "Ajoutez au compte les données déjà présentes en mode local.",
+      "Ajoute au compte les données déjà présentes en mode local.",
     );
     expect(compactDescription).toHaveClass("text-xs", "leading-4", "mt-0.5");
 
@@ -170,5 +170,4 @@ describe("GuestDataImportPanel", () => {
     ).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Importer dans mon compte" })).toBeVisible();
   });
-
 });

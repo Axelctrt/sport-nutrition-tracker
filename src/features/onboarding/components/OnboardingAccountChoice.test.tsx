@@ -58,17 +58,17 @@ describe('OnboardingAccountChoice', () => {
 
     expect(screen.queryByLabelText(/Adresse e-mail/)).not.toBeInTheDocument();
     expect(screen.getByText(/Paramètres → Compte et appareils/)).toBeInTheDocument();
-    expect(screen.getByText(/L’adresse e-mail sera demandée à l’étape suivante/)).toBeInTheDocument();
+    expect(screen.getByText(/Ton adresse e-mail sera demandée à l’étape suivante/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Choisir le mode local' }));
     expect(onChooseLocal).toHaveBeenCalledTimes(1);
     await userEvent.click(screen.getByRole('button', { name: 'Connecter un compte' }));
     expect(onChooseAccount).toHaveBeenCalledTimes(1);
   });
 
-  it('connecte le compte sur l’écran suivant par email et code', async () => {
+  it('connecte le compte puis reprend automatiquement l’onboarding', async () => {
     const user = userEvent.setup();
     const client = createClient();
-    const onContinueWithAccount = vi.fn();
+    const onContinueWithAccount = vi.fn(async () => undefined);
     render(<OnboardingAccountChoice {...baseProps} accountEnabled client={client} screen="connection" onContinueWithAccount={onContinueWithAccount} />);
 
     await waitFor(() => expect(client.initialize).toHaveBeenCalledTimes(1));
@@ -80,9 +80,9 @@ describe('OnboardingAccountChoice', () => {
     expect(otpInput).toHaveAttribute('autocomplete', 'one-time-code');
     await user.type(otpInput, 'A1B2C3');
     await user.click(screen.getByRole('button', { name: 'Valider le code' }));
+
+    await waitFor(() => expect(onContinueWithAccount).toHaveBeenCalledTimes(1));
     expect(await screen.findByText(/maya@example.com/)).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Continuer' }));
-    expect(onContinueWithAccount).toHaveBeenCalledTimes(1);
   });
 
   it('déconnecte le compte avant de revenir au mode local', async () => {

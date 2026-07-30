@@ -8,10 +8,17 @@ export interface ToastAction {
   onClick: () => void | Promise<void>;
 }
 
+export interface ToastDestination {
+  path: string;
+  label?: string;
+  highlightId?: string;
+}
+
 export interface ToastInput {
   title: string;
   description?: string;
   action?: ToastAction;
+  destination?: ToastDestination;
   tone?: ToastTone;
   durationMs?: number | null;
   dedupeKey?: string;
@@ -22,6 +29,7 @@ export interface ToastItem extends Required<Pick<ToastInput, 'title' | 'tone'>> 
   id: string;
   description?: string;
   action?: ToastAction;
+  destination?: ToastDestination;
   durationMs: number | null;
   dedupeKey: string;
 }

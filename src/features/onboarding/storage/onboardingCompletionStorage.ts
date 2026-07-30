@@ -3,6 +3,7 @@ import { activeDataSpace } from '@/infrastructure/database/database';
 
 export const PROFILE_ONBOARDING_COMPLETION_VERSION = 1 as const;
 export const PROFILE_ONBOARDING_COMPLETION_STORAGE_KEY = 'sportpilot:onboarding:completion:v1';
+export const PROFILE_ONBOARDING_COMPLETED_EVENT = 'sportpilot:onboarding-completed';
 
 export interface ProfileOnboardingCompletion {
   version: typeof PROFILE_ONBOARDING_COMPLETION_VERSION;
@@ -38,6 +39,11 @@ export function saveProfileOnboardingCompletion(
       profileOnboardingCompletionStorageKey(dataSpaceId),
       JSON.stringify(completion),
     );
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent(PROFILE_ONBOARDING_COMPLETED_EVENT, {
+        detail: completion,
+      }));
+    }
     return true;
   } catch {
     return false;

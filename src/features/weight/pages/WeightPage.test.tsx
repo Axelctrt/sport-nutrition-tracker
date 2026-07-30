@@ -76,7 +76,7 @@ afterEach(() => {
 });
 
 describe('WeightPage', () => {
-  it('affiche un toast de succès après la modification d’une pesée existante', async () => {
+  it('affiche le résultat dans la page sans toast de succès redondant', async () => {
     const user = userEvent.setup();
 
     render(
@@ -105,7 +105,8 @@ describe('WeightPage', () => {
       '2026-06-25',
       expect.objectContaining({ id: 'profile-1' }),
     );
-    expect(await screen.findByText('Pesée mise à jour')).toBeInTheDocument();
-    expect(screen.getByText('61,4 kg le 25 juin 2026.')).toBeInTheDocument();
+    expect(await screen.findByText('Historique mis à jour')).toBeInTheDocument();
+    expect(screen.getByText(/La pesée du 25 juin 2026 a été mise à jour/)).toBeInTheDocument();
+    expect(screen.queryByText('Pesée mise à jour')).not.toBeInTheDocument();
   });
 });

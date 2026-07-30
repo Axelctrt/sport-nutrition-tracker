@@ -6,10 +6,11 @@ import type {
   GuestDataImportServiceOptions,
   PreparedGuestDataImport,
 } from "@/infrastructure/data-spaces/guestDataImportService";
+import { useActionToast } from "@/shared/toast/useActionToast";
 import { Button } from "@/shared/ui/Button";
 import { ConfirmationDialog } from "@/shared/ui/ConfirmationDialog";
 import { InlineNotice } from "@/shared/ui/InlineNotice";
-import { useActionToast } from "@/shared/toast/useActionToast";
+import { SportPilotMultiStepLoader } from "@/shared/ui/SportPilotMultiStepLoader";
 
 type PrepareGuestDataImport = (
   accountFingerprint: string,
@@ -48,6 +49,17 @@ type Feedback = {
   readonly title: string;
   readonly message: string;
 };
+
+const analysisSteps = [
+  { id: "read", label: "Lecture des espaces local et compte" },
+  { id: "compare", label: "Comparaison et préparation du plan" },
+] as const;
+
+const importSteps = [
+  { id: "verify", label: "Vérification des données analysées" },
+  { id: "merge", label: "Fusion atomique dans l’espace du compte" },
+  { id: "open", label: "Ouverture du profil importé" },
+] as const;
 
 function defaultReload(): void {
   window.location.reload();
@@ -103,10 +115,9 @@ export function GuestDataImportPanel({
     try {
       const result: GuestDataImportResult = await applyImport(prepared);
       const message = `${pluralize(result.importedRecords, "donnée ajoutée", "données ajoutées")}, ${pluralize(result.updatedRecords, "donnée mise à jour", "données mises à jour")}. L’espace invité est resté intact.`;
-      setFeedback({ tone: "success", title: "Import terminé", message });
       actionToast.successAfterReload({
-        key: 'guest-data-import',
-        title: 'Import terminé',
+        key: "guest-data-import",
+        title: "Import terminé",
         description: message,
       });
       reload();
@@ -118,8 +129,8 @@ export function GuestDataImportPanel({
         message: error instanceof Error ? error.message : fallback,
       });
       actionToast.error({
-        key: 'guest-data-import',
-        title: 'Import interrompu',
+        key: "guest-data-import",
+        title: "Import interrompu",
         error,
         fallback,
       });
@@ -129,10 +140,10 @@ export function GuestDataImportPanel({
 
   const preview = prepared?.preview;
   const hasChanges = Boolean(
-    preview &&
-    (preview.recordsToAdd > 0 ||
-      preview.recordsToUpdate > 0 ||
-      preview.recordsToRemove > 0),
+    preview
+    && (preview.recordsToAdd > 0
+      || preview.recordsToUpdate > 0
+      || preview.recordsToRemove > 0),
   );
 
   return (
@@ -160,8 +171,8 @@ export function GuestDataImportPanel({
             }
           >
             {compact
-              ? 'Ajoutez au compte les données déjà présentes en mode local.'
-              : 'Analyse puis fusionne le profil, le sport, la nutrition, les pesées et les réglages synchronisables. La donnée la plus récente est conservée et l’espace invité n’est jamais effacé.'}
+              ? "Ajoute au compte les données déjà présentes en mode local."
+              : "Analyse puis fusionne le profil, le sport, la nutrition, les pesées et les réglages synchronisables. La donnée la plus récente est conservée et l’espace invité n’est jamais effacé."}
           </p>
         </div>
       </div>
@@ -174,18 +185,22 @@ export function GuestDataImportPanel({
         </div>
       ) : null}
 
-      {!preview ? (
+      {isAnalyzing ? (
+        <SportPilotMultiStepLoader
+          activeStep={0}
+          className="mt-4 rounded-2xl border border-brand-200 bg-white/70 p-4 dark:border-brand-900 dark:bg-slate-950/50"
+          label="Analyse des données invitées"
+          steps={analysisSteps}
+        />
+      ) : !preview ? (
         <Button
           className="mt-4 w-full"
           variant={compact ? "secondary" : "primary"}
-          disabled={isAnalyzing || isImporting}
+          disabled={isImporting}
           onClick={() => void analyze()}
         >
-          <RefreshCw
-            aria-hidden="true"
-            className={`size-4 ${isAnalyzing ? "animate-spin" : ""}`}
-          />
-          {isAnalyzing ? "Analyse en cours" : "Analyser les données invitées"}
+          <RefreshCw aria-hidden="true" className="size-4" />
+          Analyser les données invitées
         </Button>
       ) : (
         <div className={compact ? "mt-2.5 space-y-2.5" : "mt-4 space-y-4"}>
@@ -201,107 +216,79 @@ export function GuestDataImportPanel({
                 </p>
               ) : (
                 <>
-              <div className="grid gap-3 sm:grid-cols-3">
-                <div className="rounded-xl bg-white p-3 dark:bg-slate-950">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                    À ajouter
-                  </p>
-                  <p className="mt-1 text-xl font-bold text-slate-950 dark:text-white">
-                    {preview.recordsToAdd}
-                  </p>
-                </div>
-                <div className="rounded-xl bg-white p-3 dark:bg-slate-950">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                    À mettre à jour
-                  </p>
-                  <p className="mt-1 text-xl font-bold text-slate-950 dark:text-white">
-                    {preview.recordsToUpdate}
-                  </p>
-                </div>
-                <div className="rounded-xl bg-white p-3 dark:bg-slate-950">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                    À retirer
-                  </p>
-                  <p className="mt-1 text-xl font-bold text-slate-950 dark:text-white">
-                    {preview.recordsToRemove}
-                  </p>
-                </div>
-              </div>
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <div className="rounded-xl bg-white p-3 dark:bg-slate-950">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">À ajouter</p>
+                      <p className="mt-1 text-xl font-bold text-slate-950 dark:text-white">{preview.recordsToAdd}</p>
+                    </div>
+                    <div className="rounded-xl bg-white p-3 dark:bg-slate-950">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">À mettre à jour</p>
+                      <p className="mt-1 text-xl font-bold text-slate-950 dark:text-white">{preview.recordsToUpdate}</p>
+                    </div>
+                    <div className="rounded-xl bg-white p-3 dark:bg-slate-950">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">À retirer</p>
+                      <p className="mt-1 text-xl font-bold text-slate-950 dark:text-white">{preview.recordsToRemove}</p>
+                    </div>
+                  </div>
 
-              <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800">
-                <ul className="divide-y divide-slate-200 dark:divide-slate-800">
-                  {preview.categories
-                    .filter(
-                      ({
-                        guestRecords,
-                        recordsToAdd,
-                        recordsToUpdate,
-                        recordsToRemove,
-                      }) =>
-                        guestRecords +
-                          recordsToAdd +
-                          recordsToUpdate +
-                          recordsToRemove >
-                        0,
-                    )
-                    .map((category) => (
-                      <li
-                        key={category.key}
-                        className="flex items-center justify-between gap-4 bg-white px-3 py-3 text-sm dark:bg-slate-950"
-                      >
-                        <div>
-                          <p className="font-semibold text-slate-950 dark:text-white">
-                            {category.label}
-                          </p>
-                          <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-                            {category.guestRecords} dans l’espace invité
-                          </p>
-                        </div>
-                        <p className="text-right font-semibold text-brand-700 dark:text-brand-300">
-                          +{category.recordsToAdd} · ↻{category.recordsToUpdate}
-                        </p>
-                      </li>
-                    ))}
-                </ul>
-              </div>
+                  <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800">
+                    <ul className="divide-y divide-slate-200 dark:divide-slate-800">
+                      {preview.categories
+                        .filter(({ guestRecords, recordsToAdd, recordsToUpdate, recordsToRemove }) =>
+                          guestRecords + recordsToAdd + recordsToUpdate + recordsToRemove > 0)
+                        .map((category) => (
+                          <li
+                            key={category.key}
+                            className="flex items-center justify-between gap-4 bg-white px-3 py-3 text-sm dark:bg-slate-950"
+                          >
+                            <div>
+                              <p className="font-semibold text-slate-950 dark:text-white">{category.label}</p>
+                              <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                                {category.guestRecords} dans l’espace invité
+                              </p>
+                            </div>
+                            <p className="text-right font-semibold text-brand-700 dark:text-brand-300">
+                              +{category.recordsToAdd} · ↻{category.recordsToUpdate}
+                            </p>
+                          </li>
+                        ))}
+                    </ul>
+                  </div>
 
-              <div className="flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm leading-6 text-emerald-950 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-100">
-                <ShieldCheck
-                  aria-hidden="true"
-                  className="mt-0.5 size-4 shrink-0"
-                />
-                L’import est atomique : en cas d’erreur, l’espace du compte
-                reste inchangé. Les données invitées restent disponibles après
-                déconnexion.
-              </div>
+                  <div className="flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm leading-6 text-emerald-950 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-100">
+                    <ShieldCheck aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+                    L’import est atomique : en cas d’erreur, l’espace du compte reste inchangé. Les données invitées restent disponibles après déconnexion.
+                  </div>
                 </>
               )}
 
-              <Button
-                className="w-full"
-                disabled={!hasChanges || isImporting}
-                onClick={() => setConfirmationOpen(true)}
-              >
-                {isImporting
-                  ? "Import en cours"
-                  : hasChanges
-                    ? "Importer dans mon compte"
-                    : "Données déjà fusionnées"}
-              </Button>
+              {isImporting ? (
+                <SportPilotMultiStepLoader
+                  activeStep={0}
+                  className="rounded-2xl border border-brand-200 bg-white/70 p-4 dark:border-brand-900 dark:bg-slate-950/50"
+                  label="Import des données invitées"
+                  steps={importSteps}
+                />
+              ) : (
+                <Button
+                  className="w-full"
+                  disabled={!hasChanges}
+                  onClick={() => setConfirmationOpen(true)}
+                >
+                  {hasChanges ? "Importer dans mon compte" : "Données déjà fusionnées"}
+                </Button>
+              )}
             </>
           )}
 
-          {!compact ? (
+          {!compact && !isImporting ? (
             <Button
               className="w-full"
               variant="ghost"
-              disabled={isAnalyzing || isImporting}
+              disabled={isAnalyzing}
               onClick={() => void analyze()}
             >
-              <RefreshCw
-                aria-hidden="true"
-                className={`size-4 ${isAnalyzing ? "animate-spin" : ""}`}
-              />
+              <RefreshCw aria-hidden="true" className="size-4" />
               Relancer l’analyse
             </Button>
           ) : null}

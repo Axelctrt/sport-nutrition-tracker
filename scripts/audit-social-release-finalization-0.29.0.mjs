@@ -1,7 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-const APP_VERSION = '0.34.0';
 const root = process.cwd();
 const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'utf8');
 const exists = (relativePath) => fs.existsSync(path.join(root, relativePath));
@@ -10,8 +9,9 @@ const check = (label, condition) => checks.push([label, Boolean(condition)]);
 
 const packageJson = JSON.parse(read('package.json'));
 const packageLock = JSON.parse(read('package-lock.json'));
+const APP_VERSION = packageJson.version;
 
-check('package version', packageJson.version === APP_VERSION);
+check('package version', typeof APP_VERSION === 'string' && /^\d+\.\d+\.\d+$/.test(APP_VERSION));
 check(
   'package-lock version',
   packageLock.version === APP_VERSION && packageLock.packages?.['']?.version === APP_VERSION,
@@ -47,9 +47,12 @@ check(
 const releaseReadiness = read('src/app/releaseReadiness.test.ts');
 const settingsTest = read('src/features/settings/components/SettingsOverview.test.tsx');
 const openFoodFactsProxy = read('functions/_shared/openFoodFactsProxy.js');
-check('release readiness version', releaseReadiness.includes("expect(__APP_VERSION__).toBe('0.34.0')"));
-check('settings version', settingsTest.includes("getByText('0.34.0')"));
-check('Open Food Facts user agent', openFoodFactsProxy.includes('SportPilot/0.34.0'));
+check(
+  'release readiness version',
+  releaseReadiness.includes(`expect(__APP_VERSION__).toBe('${APP_VERSION}')`),
+);
+check('settings version', settingsTest.includes(`getByText('${APP_VERSION}')`));
+check('Open Food Facts user agent', openFoodFactsProxy.includes(`SportPilot/${APP_VERSION}`));
 check('A26 readiness test', exists('src/app/socialReleaseFinalizationReadiness.test.ts'));
 
 const notes = read('RELEASE-NOTES-0.29.0.md');

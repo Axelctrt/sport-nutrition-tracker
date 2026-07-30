@@ -16,6 +16,8 @@ const DEFAULT_DURATION: Record<ToastTone, number> = {
   error: 10_000,
 };
 
+export const TOAST_HIGHLIGHT_STORAGE_KEY = 'sportpilot:toast-highlight:v1';
+
 function createDedupeKey(input: ToastInput, tone: ToastTone): string {
   return input.dedupeKey ?? `${tone}:${input.title}:${input.description ?? ''}`;
 }
@@ -29,6 +31,7 @@ function refreshToast(item: ToastItem, input: ToastInput, tone: ToastTone, durat
     durationMs,
     ...(input.description === undefined ? {} : { description: input.description }),
     ...(input.action === undefined ? {} : { action: input.action }),
+    ...(input.destination === undefined ? {} : { destination: input.destination }),
   };
 }
 
@@ -115,6 +118,7 @@ export function ToastProvider({ children }: PropsWithChildren) {
       dedupeKey,
       ...(input.description === undefined ? {} : { description: input.description }),
       ...(input.action === undefined ? {} : { action: input.action }),
+      ...(input.destination === undefined ? {} : { destination: input.destination }),
     };
 
     if (toastsRef.current.length === 0) {
@@ -137,12 +141,30 @@ export function ToastProvider({ children }: PropsWithChildren) {
   }, [showToast]);
 
   const runToastAction = useCallback((toast: ToastItem) => {
-    if (!toast.action) return;
+    if (!toast.action && !toast.destination) return;
 
     dismissToast(toast.id);
 
+    if (toast.destination) {
+      if (toast.destination.highlightId) {
+        try {
+          window.sessionStorage.setItem(
+            TOAST_HIGHLIGHT_STORAGE_KEY,
+            JSON.stringify({
+              id: toast.destination.highlightId,
+              createdAt: Date.now(),
+            }),
+          );
+        } catch {
+          // La navigation reste disponible si le stockage temporaire est bloqué.
+        }
+      }
+      window.location.hash = toast.destination.path;
+      return;
+    }
+
     try {
-      void Promise.resolve(toast.action.onClick()).catch(() => undefined);
+      void Promise.resolve(toast.action?.onClick()).catch(() => undefined);
     } catch {
       // L’action métier publie son propre message d’erreur.
     }

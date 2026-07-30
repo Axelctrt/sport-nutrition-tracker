@@ -1,19 +1,18 @@
-# SportPilot 0.34.0 — Performance Glass, thèmes et analyses
+# SportPilot 0.35.0 — feedback unifié et onboarding fluidifié
 
-Branche de finalisation : `feat/design-themes-analytics-0.34.0`
+Branche de publication : `release/0.35.0`
 
-SportPilot 0.34.0 remplace l’ancien catalogue visuel par cinq thèmes, refond la
-collection Récompenses et sépare clairement le résumé Progression de
-l’exploration détaillée Analyses.
+SportPilot 0.35.0 unifie les retours d’action, fluidifie les parcours d’onboarding local et compte, et simplifie plusieurs écrans secondaires sans modifier le moteur calorique, les thèmes validés ni les contrats de données.
 
 ## Périmètre
 
-- version applicative : `0.34.0` ;
-- tag attendu : `v0.34.0` ;
+- version applicative : `0.35.0` ;
+- tag attendu : `v0.35.0` ;
 - migrations D1 ajoutées : aucune ;
 - migrations Dexie ajoutées : aucune ;
-- contrats sociaux 0.29 conservés ;
+- contrat social `0.29.0-a3` conservé ;
 - moteur calorique conservé ;
+- Dexie locale v11, sauvegarde JSON v10 et runtime cloud v16 conservés ;
 - données locales et protocoles de synchronisation conservés.
 
 ## Contrôles obligatoires
@@ -32,9 +31,10 @@ npm audit
 
 ## Publication
 
-1. Committer la finalisation sur `feat/design-themes-analytics-0.34.0`.
+1. Finaliser les métadonnées et garde-fous sur `release/0.35.0`.
 2. Pousser la branche sans fusion automatique.
-3. Déployer une Preview uniquement après autorisation explicite.
-4. Fusionner manuellement dans `develop`, puis `main`, après validation.
-5. Déployer la production Cloudflare Pages depuis le commit autorisé.
-6. Créer le tag annoté `v0.34.0` sur le commit réellement publié.
+3. Valider les quatre jobs GitHub Actions sur le même SHA.
+4. Fusionner dans `main` uniquement après validation complète.
+5. Déployer la production Cloudflare Pages depuis le commit publié.
+6. Vérifier la version, le manifeste, le service worker, les routes profondes et la conservation des données.
+7. Créer le tag annoté `v0.35.0` sur le commit réellement publié.

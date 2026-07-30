@@ -30,25 +30,27 @@ export function HistoryPage() {
 
   return (
     <section className="min-w-0" aria-labelledby="history-title">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div className="min-w-0">
-          <p className="text-sm font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-300">
-            Vue chronologique
-          </p>
-          <h1 id="history-title" className="mt-1 text-3xl font-bold tracking-tight text-slate-950 dark:text-white">
-            Historique
-          </h1>
-          <p className="mt-2 hidden max-w-3xl text-slate-600 dark:text-slate-300 sm:block">
-            Parcours les journées suivies et retrouve rapidement leur poids, leurs pas, leurs activités et leur alimentation.
-          </p>
+      <div className="rounded-3xl border border-white/70 bg-white/88 p-5 shadow-[var(--sp-shadow-card)] backdrop-blur-xl sm:p-6 dark:border-slate-800 dark:bg-slate-900/88">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
+              Vue chronologique
+            </p>
+            <h1 id="history-title" className="mt-1 text-3xl font-bold tracking-tight text-slate-950 dark:text-white">
+              Historique
+            </h1>
+            <p className="mt-2 hidden max-w-3xl text-slate-600 dark:text-slate-300 sm:block">
+              Parcours les journées suivies et retrouve rapidement leur poids, leurs pas, leurs activités et leur alimentation.
+            </p>
+          </div>
+          <Link
+            to={routePaths.analytics}
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-brand-700 px-4 text-sm font-semibold text-white shadow-sm transition active:scale-[0.98] hover:bg-brand-800"
+          >
+            <BarChart3 aria-hidden="true" className="size-4" />
+            Analyses sur 12 semaines
+          </Link>
         </div>
-        <Link
-          to={routePaths.analytics}
-          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-brand-700 px-4 text-sm font-semibold text-white shadow-sm hover:bg-brand-800"
-        >
-          <BarChart3 aria-hidden="true" className="size-4" />
-          Analyses sur 12 semaines
-        </Link>
       </div>
 
       <HistoryPeriodControls
@@ -86,12 +88,22 @@ export function HistoryPage() {
               description="Élargis la période ou commence à renseigner ton suivi quotidien."
             />
           ) : (
-            <div className="mt-4 space-y-3">
-              {days.map((day) => <HistoryDayCard key={day.date} day={day} />)}
-            </div>
+            <ol className="relative mt-5 space-y-4 before:absolute before:bottom-4 before:left-[0.68rem] before:top-4 before:w-px before:bg-gradient-to-b before:from-brand-400 before:via-slate-300 before:to-transparent dark:before:via-slate-700" aria-label="Chronologie des journées suivies">
+              {days.map((day, index) => (
+                <li key={day.date} className="relative pl-8">
+                  <span
+                    aria-hidden="true"
+                    className="absolute left-0 top-5 grid size-[1.4rem] place-items-center rounded-full border-4 border-[var(--sp-bg-primary)] bg-brand-600 shadow-[0_0_0_1px_var(--sp-border-subtle)]"
+                  >
+                    {index === 0 ? <span className="size-1.5 rounded-full bg-white" /> : null}
+                  </span>
+                  <HistoryDayCard day={day} />
+                </li>
+              ))}
+            </ol>
           )}
 
-          <p className="mt-5 text-xs leading-5 text-slate-500 dark:text-slate-400">
+          <p className="mt-5 text-center text-xs leading-5 text-slate-500 dark:text-slate-400">
             {days.length} {days.length > 1 ? 'journées comportant des données' : 'journée comportant des données'} entre le {formatLocalDate(from)} et le {formatLocalDate(to)} ({periodLength} jours calendaires).
           </p>
         </>
