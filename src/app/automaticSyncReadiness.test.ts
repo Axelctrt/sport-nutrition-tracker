@@ -41,7 +41,7 @@ function snapshot(): SyncPrototypeSnapshot {
 
 describe('préparation F2 de la synchronisation automatique', () => {
   it('conserve les versions de stockage de SportPilot 0.26.0', () => {
-    expect(__APP_VERSION__).toBe('0.35.0');
+    expect(__APP_VERSION__).toBe('0.35.1');
     expect(databaseSchemaVersion).toBe(11);
     expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(10);
     expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(16);

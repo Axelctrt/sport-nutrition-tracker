@@ -473,6 +473,38 @@ describe('client sécurisé du prototype Dexie Cloud', () => {
     expect(fixture.sync).not.toHaveBeenCalled();
   });
 
+  it('conserve la session renouvelable lors d’une panne cloud et autorise un nouveau retry', async () => {
+    const fixture = createFakeDatabase();
+    fixture.currentUser.next({
+      claims: {},
+      lastLogin: new Date(),
+      isLoggedIn: true,
+      isLoading: false,
+      email: 'test@example.com',
+      userId: 'test@example.com',
+      accessToken: 'expired-token',
+      accessTokenExpiration: new Date(Date.now() - 60_000),
+      refreshToken: 'refresh-token',
+      refreshTokenExpiration: new Date(Date.now() + 3_600_000),
+      license: { type: 'prod', status: 'ok' },
+    });
+    fixture.database.cloud.currentUserId = 'test@example.com';
+    fixture.sync.mockRejectedValue(new Error('Network request failed'));
+    const client = createClient(fixture.database);
+
+    await expect(client.ensureValidCloudCredentials!())
+      .rejects.toMatchObject({ code: 'CLOUD_UNAVAILABLE' });
+    await expect(client.ensureValidCloudCredentials!())
+      .rejects.toMatchObject({ code: 'CLOUD_UNAVAILABLE' });
+
+    expect(fixture.sync).toHaveBeenCalledTimes(2);
+    expect(client.getSnapshot().account).toMatchObject({
+      isLoggedIn: true,
+      userId: 'test@example.com',
+      hasRefreshToken: true,
+    });
+  });
+
   it('refuse une analyse de restauration préparée pour un autre compte', async () => {
     const { database, currentUser } = createFakeDatabase();
     currentUser.next({

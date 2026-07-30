@@ -2,6 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SocialIdentityAccountGate } from '@/app/social-identity/SocialIdentityAccountGate';
 import { routePaths } from '@/app/routePaths';
+import { CloudAccountAccessError } from '@/application/account/cloudAccountAccess';
 import { PROFILE_ONBOARDING_STEP_IDS } from '@/features/onboarding/profile/profileOnboardingSteps';
 import {
   loadProfileOnboardingDraft,
@@ -26,7 +27,10 @@ const completeIdentity = createAccountSocialIdentityCandidate(
 function credentialsClient() {
   return {
     getCloudCredentials: () => ({ userId: accountUserId, accessToken: 'token' }),
-    logout: vi.fn(async () => undefined),
+    ensureValidCloudCredentials: vi.fn(async () => ({
+      userId: accountUserId,
+      accessToken: 'token',
+    })),
   };
 }
 
@@ -45,13 +49,15 @@ describe('SocialIdentityAccountGate', () => {
     expect(screen.getByText('Application prête')).toBeInTheDocument();
   });
 
-  it('laisse un compte déjà confirmé fonctionner hors ligne', async () => {
+  it('ne prépare pas l’identité sociale hors de la rubrique Amis', async () => {
     const readCurrentIdentity = vi.fn(async () => undefined);
+    const client = credentialsClient();
 
     render(
       <SocialIdentityAccountGate
         accountRequired
-        client={credentialsClient()}
+        currentPathname={routePaths.dashboard}
+        client={client}
         cloudPort={{
           readCurrentIdentity,
           lookupByHandle: vi.fn(),
@@ -67,7 +73,8 @@ describe('SocialIdentityAccountGate', () => {
     );
 
     expect(await screen.findByText('Application prête')).toBeInTheDocument();
-    expect(readCurrentIdentity).toHaveBeenCalledWith(accountUserId);
+    expect(readCurrentIdentity).not.toHaveBeenCalled();
+    expect(client.ensureValidCloudCredentials).not.toHaveBeenCalled();
   });
 
   it('restaure une identité cloud existante sur un nouvel appareil', async () => {
@@ -76,6 +83,7 @@ describe('SocialIdentityAccountGate', () => {
     render(
       <SocialIdentityAccountGate
         accountRequired
+        currentPathname={routePaths.friends}
         client={credentialsClient()}
         cloudPort={{
           readCurrentIdentity: vi.fn(async () => completeIdentity),
@@ -111,6 +119,7 @@ describe('SocialIdentityAccountGate', () => {
     render(
       <SocialIdentityAccountGate
         accountRequired
+        currentPathname={routePaths.friends}
         client={credentialsClient()}
         cloudPort={{
           readCurrentIdentity: vi.fn(async () => undefined),
@@ -131,23 +140,30 @@ describe('SocialIdentityAccountGate', () => {
     expect(reconcileIdentity).toHaveBeenCalledWith(legacyIdentity, expect.any(Object));
   });
 
-  it('permet de revenir en mode local si la session du compte est indisponible', async () => {
+  it('propose reconnexion ou continuation hors ligne sans déconnexion implicite', async () => {
     const user = userEvent.setup();
-    const logout = vi.fn(async () => undefined);
-    const activateGuest = vi.fn();
-    const reload = vi.fn();
+    const navigateToReconnect = vi.fn();
+    const ensureValidCloudCredentials = vi.fn(async () => {
+      throw new CloudAccountAccessError(
+        'SESSION_EXPIRED',
+        'La session a expiré.',
+      );
+    });
 
     render(
       <SocialIdentityAccountGate
         accountRequired
-        activateGuest={activateGuest}
-        client={{ getCloudCredentials: () => undefined, logout }}
+        currentPathname={routePaths.friends}
+        client={{
+          getCloudCredentials: () => undefined,
+          ensureValidCloudCredentials,
+        }}
         cloudPort={{
           readCurrentIdentity: vi.fn(),
           lookupByHandle: vi.fn(),
           publishIdentity: vi.fn(),
         }}
-        reload={reload}
+        navigateToReconnect={navigateToReconnect}
         repository={{
           readIdentity: vi.fn(async () => defaultIdentity),
           saveIdentity: vi.fn(),
@@ -157,11 +173,47 @@ describe('SocialIdentityAccountGate', () => {
       </SocialIdentityAccountGate>,
     );
 
-    await user.click(await screen.findByRole('button', { name: 'Revenir au mode local' }));
+    expect(await screen.findByText('La session a expiré.')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Se reconnecter' }));
+    expect(navigateToReconnect).toHaveBeenCalledTimes(1);
 
-    expect(logout).toHaveBeenCalledTimes(1);
-    expect(activateGuest).toHaveBeenCalledTimes(1);
-    expect(reload).toHaveBeenCalledTimes(1);
+    await user.click(screen.getByRole('button', { name: 'Continuer hors ligne' }));
+    expect(screen.getByText('Application prête')).toBeInTheDocument();
+    expect(ensureValidCloudCredentials).toHaveBeenCalledTimes(1);
+  });
+
+  it('laisse la rubrique Amis utiliser ses données locales pendant une panne réseau', async () => {
+    const ensureValidCloudCredentials = vi.fn(async () => {
+      throw new CloudAccountAccessError(
+        'NETWORK_OFFLINE',
+        'Aucune connexion réseau.',
+      );
+    });
+
+    render(
+      <SocialIdentityAccountGate
+        accountRequired
+        currentPathname={routePaths.friends}
+        client={{
+          getCloudCredentials: () => undefined,
+          ensureValidCloudCredentials,
+        }}
+        cloudPort={{
+          readCurrentIdentity: vi.fn(),
+          lookupByHandle: vi.fn(),
+          publishIdentity: vi.fn(),
+        }}
+        repository={{
+          readIdentity: vi.fn(async () => completeIdentity),
+          saveIdentity: vi.fn(),
+        }}
+      >
+        <p>Application prête</p>
+      </SocialIdentityAccountGate>,
+    );
+
+    expect(await screen.findByText('Application prête')).toBeInTheDocument();
+    expect(ensureValidCloudCredentials).toHaveBeenCalledTimes(1);
   });
 
   it('ne bloque pas l’application avec une identité générée hors de la rubrique Amis', async () => {
