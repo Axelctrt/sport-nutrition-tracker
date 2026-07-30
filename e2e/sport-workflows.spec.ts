@@ -10,7 +10,10 @@ test('guide une séance de musculation et compacte une série validée', async (
 
   await page.goto('/#/strength/templates/new');
   await page.getByLabel('Nom de la séance').fill('Séance guidée E2E');
-  await page.getByRole('button', { name: 'Ajouter un exercice' }).click();
+  await page.getByRole('searchbox', {
+    name: 'Rechercher un exercice à ajouter au modèle',
+  }).fill('Développé couché');
+  await page.getByRole('button', { name: 'Ajouter Développé couché' }).click();
   await page.getByRole('button', { name: 'Créer la séance' }).click();
   await page.getByRole('button', { name: 'Démarrer la séance' }).click();
 
