@@ -1,7 +1,7 @@
 import openFoodFactsProxySource from '@/../functions/_shared/openFoodFactsProxy.js?raw';
 import packageSource from '@/../package.json?raw';
 import releaseChecklistSource from '@/../RELEASE-CHECKLIST.md?raw';
-import releaseNotesSource from '@/../RELEASE-NOTES-0.35.1.md?raw';
+import releaseNotesSource from '@/../RELEASE-NOTES-0.36.0.md?raw';
 import {
   SOCIAL_ACTIVITY_SNAPSHOT_CONTRACT_VERSION,
 } from '@/domain/friends/socialActivitySnapshotContract';
@@ -9,11 +9,11 @@ import { CURRENT_BACKUP_SCHEMA_VERSION } from '@/infrastructure/backup/backupMig
 import { databaseSchemaVersion } from '@/infrastructure/database/schema';
 import { SYNC_PROTOTYPE_DATABASE_VERSION } from '@/infrastructure/sync-prototype/SyncPrototypeDatabase';
 
-describe('release finalization readiness 0.35.1', () => {
+describe('release finalization readiness 0.36.0', () => {
   it('expose la version stable dans le build et les métadonnées', () => {
-    expect(__APP_VERSION__).toBe('0.35.1');
-    expect(packageSource).toContain('"version": "0.35.1"');
-    expect(openFoodFactsProxySource).toContain('SportPilot/0.35.1');
+    expect(__APP_VERSION__).toBe('0.36.0');
+    expect(packageSource).toContain('"version": "0.36.0"');
+    expect(openFoodFactsProxySource).toContain('SportPilot/0.36.0');
   });
 
   it('conserve les versions de stockage validées', () => {
@@ -23,11 +23,11 @@ describe('release finalization readiness 0.35.1', () => {
     expect(SOCIAL_ACTIVITY_SNAPSHOT_CONTRACT_VERSION).toBe('0.29.0-a3');
   });
 
-  it('documente la branche corrective sans annoncer de publication', () => {
-    expect(releaseNotesSource).toContain('SportPilot 0.35.1');
-    expect(releaseNotesSource).toContain('Branche : `fix/mobile-session-recovery-0.35.1`');
+  it('documente la branche UX sans annoncer de publication', () => {
+    expect(releaseNotesSource).toContain('SportPilot 0.36.0');
+    expect(releaseNotesSource).toContain('Branche : `feat/friends-settings-strength-ux-0.36.0`');
     expect(releaseNotesSource).toContain('Aucun tag ni déploiement');
-    expect(releaseChecklistSource).toContain('Branche `fix/mobile-session-recovery-0.35.1` créée');
+    expect(releaseChecklistSource).toContain('Branche `feat/friends-settings-strength-ux-0.36.0` créée');
     expect(releaseChecklistSource).toContain('Aucun tag créé');
   });
 

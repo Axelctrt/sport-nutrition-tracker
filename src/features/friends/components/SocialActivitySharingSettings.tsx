@@ -243,6 +243,7 @@ interface SocialActivityFriendSharingSettingsProps {
   readonly onSharingLevelChange: (value: FriendActivityPermissionLevel) => void;
   readonly onSaveFields: (value: SocialActivityFieldSelection) => void;
   readonly disabled?: boolean;
+  readonly defaultOpen?: boolean;
 }
 
 const sharingModes: readonly {
@@ -261,6 +262,7 @@ export function SocialActivityFriendSharingSettings({
   onSharingLevelChange,
   onSaveFields,
   disabled = false,
+  defaultOpen = false,
 }: SocialActivityFriendSharingSettingsProps) {
   const sourceSelection = useMemo(
     () => ensureMandatoryCommonFields(value),
@@ -284,6 +286,7 @@ export function SocialActivityFriendSharingSettings({
     <details
       name="sportpilot-friend-sharing"
       className="rounded-xl border border-slate-200 dark:border-slate-800"
+      open={defaultOpen}
     >
       <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 [&::-webkit-details-marker]:hidden">
         <span className="min-w-0">

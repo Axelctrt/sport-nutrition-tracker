@@ -18,6 +18,7 @@ test('crée un modèle, démarre une séance, valide une série et termine', asy
   const firstSet = page.getByRole('article', { name: 'Série 1' });
   await firstSet.getByLabel('Charge en kg').fill('40');
   await firstSet.getByLabel('Répétitions').fill('10');
+  await firstSet.getByText('Options discrètes').click();
   await firstSet.getByLabel('RPE').fill('8');
   await firstSet.getByRole('button', { name: 'Valider la série' }).click();
   await expect(firstSet.getByRole('button', { name: 'Modifier la série 1' })).toBeVisible();

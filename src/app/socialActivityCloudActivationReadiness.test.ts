@@ -3,6 +3,7 @@ import serverSource from '../../functions/_shared/socialActivitySnapshots.js?raw
 import migrationSource from '../../migrations/0001_social_activity_snapshots_0_29_0.sql?raw';
 import panelSource from '@/features/friends/components/SocialActivityCloudReadinessPanel.tsx?raw';
 import pageSource from '@/features/friends/pages/FriendsPrivacyPage.tsx?raw';
+import advancedSettingsSource from '@/features/settings/pages/AdvancedSettingsPage.tsx?raw';
 
 describe('social activity cloud activation readiness 0.29.0 A11', () => {
   it('expose un endpoint authentifié et non mutatif pour vérifier D1', () => {
@@ -28,8 +29,10 @@ describe('social activity cloud activation readiness 0.29.0 A11', () => {
     expect(migrationSource).toContain('CREATE INDEX IF NOT EXISTS idx_social_activity_snapshot_owner');
   });
 
-  it('branche un panneau mobile-first dans la page Amis', () => {
-    expect(pageSource).toContain('SocialActivityCloudReadinessPanel');
+  it('réserve le diagnostic mobile-first aux réglages avancés', () => {
+    expect(pageSource).not.toContain('SocialActivityCloudReadinessPanel');
+    expect(advancedSettingsSource).toContain('SocialActivityCloudReadinessPanel');
+    expect(advancedSettingsSource).toContain('Diagnostic social');
     expect(panelSource).toContain('min-h-11');
     expect(panelSource).toContain('Migration D1 requise');
     expect(panelSource).toContain('Cloud social prêt');

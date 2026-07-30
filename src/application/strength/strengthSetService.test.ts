@@ -59,6 +59,67 @@ describe('strengthSetService', () => {
     });
   });
 
+  it('reprend la performance historique avant l’objectif prévu', async () => {
+    const historicalSet = createEntity(createStrengthSetInput({
+      sessionId: 'session-previous',
+      sessionExerciseId: 'session-exercise-previous',
+      repetitions: 10,
+      weightKg: 72.5,
+      rpe: 8,
+      type: 'working',
+      notes: 'Repère historique',
+    }), 'historical-set');
+
+    const created = await addStrengthSet(
+      sessionRepository,
+      setRepository,
+      'session-1',
+      'session-exercise-1',
+      historicalSet,
+    );
+
+    expect(created).toMatchObject({
+      repetitions: 10,
+      weightKg: 72.5,
+      rpe: 8,
+      notes: 'Repère historique',
+      isCompleted: false,
+    });
+  });
+
+  it('préfère la série courante à la performance historique', async () => {
+    await setRepository.create(createStrengthSetInput({
+      sessionId: 'session-1',
+      sessionExerciseId: 'session-exercise-1',
+      setNumber: 1,
+      repetitions: 12,
+      weightKg: 65,
+      rpe: 7.5,
+      isCompleted: false,
+    }));
+    const historicalSet = createEntity(createStrengthSetInput({
+      repetitions: 8,
+      weightKg: 80,
+      rpe: 9,
+    }), 'historical-set');
+
+    const created = await addStrengthSet(
+      sessionRepository,
+      setRepository,
+      'session-1',
+      'session-exercise-1',
+      historicalSet,
+    );
+
+    expect(created).toMatchObject({
+      setNumber: 2,
+      repetitions: 12,
+      weightKg: 65,
+      rpe: 7.5,
+      isCompleted: false,
+    });
+  });
+
   it('prépare une seule fois toutes les séries prévues par un modèle', async () => {
     const firstPass = await ensurePlannedStrengthSetsForSession(
       sessionRepository,

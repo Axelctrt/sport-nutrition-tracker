@@ -1,23 +1,18 @@
-import { Wrench } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
 
-import { routePaths } from '@/app/routePaths';
 import type { DataSpaceDescriptor } from '@/domain/data-spaces/dataSpace';
 import type { AppSettings } from '@/domain/models/settings';
 import {
   SettingsCategoryDirectory,
   type SettingsCategoryDirectoryItem,
 } from '@/features/settings/components/SettingsCategoryDirectory';
-import { SettingsOverview } from '@/features/settings/components/SettingsOverview';
-import { settingsCategories } from '@/features/settings/settingsInformationArchitecture';
+import { settingsHomeCategories } from '@/features/settings/settingsInformationArchitecture';
 import { activeDataSpace } from '@/infrastructure/database/database';
 import { repositories } from '@/infrastructure/repositories/repositories';
 import {
   getPersistentStorageStatus,
   type PersistentStorageStatus,
 } from '@/infrastructure/storage/persistentStorage';
-import { Card } from '@/shared/ui/Card';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 import { PageSkeleton } from '@/shared/ui/PageSkeleton';
 
@@ -56,18 +51,12 @@ function categorySummary(
       return 'Pseudonyme social et permissions définies par ami';
     case 'appearance-accessibility':
       return `${themeLabels[settings.theme]} · ${densityLabels[settings.dashboardDensity]}`;
-    case 'notifications-routines':
-      return settings.restTimerAutoStart
-        ? 'Minuteur automatique actif · rappels personnalisables'
-        : 'Rappels personnalisables · minuteur manuel';
-    case 'nutrition-calculations':
-      return `${settings.includedBaseSteps.toLocaleString('fr-FR')} pas inclus dans le socle`;
-    case 'ai-permissions':
-      return 'Consentement demandé avant tout envoi de photo';
     case 'data-backup':
       return `${formatBackupDate(settings.lastBackupExportedAt)} · stockage ${storageStatus === 'persisted' ? 'persistant' : 'standard'}`;
     case 'about':
       return `Version ${__APP_VERSION__}`;
+    default:
+      return '';
   }
 }
 
@@ -106,7 +95,7 @@ export function SettingsHomePage({
 
   const categories = useMemo<SettingsCategoryDirectoryItem[]>(() => {
     if (!settings) return [];
-    return settingsCategories.map((category) => ({
+    return settingsHomeCategories.map((category) => ({
       ...category,
       summary: categorySummary(category.id, settings, storageStatus, dataSpace),
     }));
@@ -136,35 +125,16 @@ export function SettingsHomePage({
         </p>
       </div>
 
-      <SettingsOverview
-        settings={settings}
-        storageStatus={storageStatus}
-        activeDataSpace={dataSpace}
-      />
+      <p className="mt-4 px-1 text-sm font-medium text-slate-600 dark:text-slate-300">
+        {dataSpace.kind === 'account'
+          ? `${dataSpace.label} · ${settings.automaticAccountSyncEnabled ? 'synchronisation active' : 'synchronisation manuelle'}`
+          : 'Données conservées sur cet appareil'}
+      </p>
 
       <div className="mt-6">
         <SettingsCategoryDirectory categories={categories} />
       </div>
 
-      <Card className="mt-6 p-4 sm:p-5">
-        <div className="flex items-start gap-3">
-          <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-            <Wrench aria-hidden="true" className="size-5" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <h2 className="font-bold text-slate-950 dark:text-white">Réglages avancés et diagnostics</h2>
-            <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
-              Coefficients détaillés, synchronisation technique, intégrité de la base et outils de diagnostic.
-            </p>
-            <Link
-              to={routePaths.settingsAdvanced}
-              className="mt-4 inline-flex min-h-11 items-center rounded-xl border border-slate-300 px-4 py-2 font-semibold text-slate-800 hover:border-brand-400 hover:text-brand-700 dark:border-slate-700 dark:text-slate-100 dark:hover:border-brand-700 dark:hover:text-brand-300"
-            >
-              Ouvrir la section avancée
-            </Link>
-          </div>
-        </div>
-      </Card>
     </section>
   );
 }

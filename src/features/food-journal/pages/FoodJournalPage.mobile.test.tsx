@@ -167,7 +167,7 @@ describe('FoodJournalPage — expérience mobile', () => {
     await waitFor(() => {
       expect(within(dialog).getByRole('radio', { name: /Dîner/ })).toBeChecked();
     });
-    expect(screen.getByRole('button', { name: /^Dîner/ })).toHaveAttribute(
+    expect(await screen.findByRole('button', { name: /^Dîner/ })).toHaveAttribute(
       'aria-expanded',
       'true',
     );

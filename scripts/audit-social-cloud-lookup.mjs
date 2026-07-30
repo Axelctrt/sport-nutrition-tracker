@@ -32,7 +32,7 @@ for (const value of ['createRuntimeSocialCloudUserLookupGateway', 'realSocialClo
 for (const value of ['authenticateRequest', 'lookupSocialHandle', 'SOCIAL_DIRECTORY_ACTOR_MISMATCH']) {
   need(server, value, 'route de recherche incomplète');
 }
-for (const value of ['Recherche exacte', 'activeLookupGateway', 'sendExactFriendRequest']) {
+for (const value of ['Ajouter un ami', 'activeLookupGateway', 'sendExactFriendRequest']) {
   need(page, value, 'intégration de recherche incomplète');
 }
 if (server.includes('LIKE')) failures.push('la recherche sociale ne doit pas utiliser de matching SQL approximatif');
