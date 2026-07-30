@@ -21,6 +21,7 @@ test('guide une séance de musculation et compacte une série validée', async (
   const firstSet = page.getByRole('article', { name: 'Série 1' });
   await firstSet.getByLabel('Charge en kg').fill('50');
   await firstSet.getByLabel('Répétitions').fill('10');
+  await firstSet.getByText('Options discrètes').click();
   await firstSet.getByLabel('RPE').fill('8');
   await firstSet.getByRole('button', { name: 'Valider la série' }).click();
 

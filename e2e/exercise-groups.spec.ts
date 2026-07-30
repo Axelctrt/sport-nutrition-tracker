@@ -43,6 +43,9 @@ test('crée un superset et conserve ses exercices indépendants dans la séance'
   const firstSet = firstCard.getByRole('article', { name: 'Série 1' });
   await firstSet.getByLabel('Répétitions').fill('10');
   await firstSet.getByRole('button', { name: 'Valider la série' }).click();
+  const reopenFirstExercise = firstCard.getByRole('button', { name: /^Développer / });
+  await expect(reopenFirstExercise).toBeVisible();
+  await reopenFirstExercise.click();
   await expect(firstSet.getByRole('button', { name: 'Modifier la série 1' })).toBeVisible();
 
   const restTimer = page.getByRole('region', { name: 'Minuteur de repos' });

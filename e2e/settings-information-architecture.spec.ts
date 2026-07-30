@@ -24,5 +24,5 @@ test('parcourt les catégories de paramètres sans perdre les routes existantes'
 
   await page.goto('/#/settings/advanced');
   await expect(page.getByRole('heading', { name: 'Paramètres avancés', level: 1 })).toBeVisible();
-  await expect(page.getByText('Diagnostic social')).toBeVisible();
+  await expect(page.getByRole('button', { name: /^Diagnostic social Disponibilité/ })).toBeVisible();
 });
