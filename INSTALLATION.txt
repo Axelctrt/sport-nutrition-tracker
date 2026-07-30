@@ -1,10 +1,10 @@
-SPORTPILOT 0.35.1
+SPORTPILOT 0.36.0
 
-Checklist de validation de la branche corrective :
+Checklist de validation de la branche UX :
 
-1. Verifier que la branche fix/mobile-session-recovery-0.35.1 part de a413b8d92cdecb6e03eac7caca901e667e8c9801.
-2. Verifier que package.json et package-lock.json indiquent 0.35.1.
-3. Verifier que Parametres affiche 0.35.1.
+1. Verifier que la branche feat/friends-settings-strength-ux-0.36.0 part du commit d067cb2fd718e0cd71d597398e6e1d3f57f3e973.
+2. Verifier que package.json et package-lock.json indiquent 0.36.0.
+3. Verifier que Parametres affiche 0.36.0.
 4. Verifier qu'aucun ZIP, resultat Playwright, secret ou fichier genere n'est stage.
 5. Executer npm run lint.
 6. Executer npx tsc -b --pretty false.
@@ -15,7 +15,7 @@ Checklist de validation de la branche corrective :
 11. Executer npm run test:e2e.
 12. Executer npm run test:e2e:pwa.
 13. Executer npm audit sans appliquer npm audit fix --force.
-14. Verifier la reprise apres expiration, le mode avion et le retour reseau sur iPhone et Android reels.
-15. Pousser uniquement la branche corrective apres validation.
+14. Verifier Amis, Parametres et une seance de musculation sur iPhone et Android reels.
+15. Pousser uniquement la branche UX apres validation.
 
 Ne pas fusionner, creer de tag ou deployer sans accord explicite.
