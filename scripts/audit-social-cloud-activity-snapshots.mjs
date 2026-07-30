@@ -43,7 +43,11 @@ for (const value of [
   'handleSocialActivityFeedRequest',
   'handleSocialActivitySnapshotDetailRequest',
 ]) need(server, value, 'serveur snapshot cloud incomplet');
-for (const value of ['Fil d’activité sécurisé 0.29', 'snapshots filtrés', 'activité métier brute']) {
+for (const value of [
+  'SocialActivityFeedPanel',
+  'shouldUseCloudActivityFeed',
+  "section === 'feed'",
+]) {
   need(page, value, 'garde-fou visible du feed absent');
 }
 if (domain.includes('socialRawActivities') || runtime.includes('socialRawActivities')) {

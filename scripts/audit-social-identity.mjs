@@ -40,8 +40,8 @@ expectToken(repository, 'socialIdentity', 'persistance locale de l’identité a
 expectToken(backup, 'socialIdentitySchema', 'sauvegarde de l’identité absente');
 
 for (const token of [
-  'Mon identifiant SportPilot',
-  'Copier mon identifiant',
+  'Mon profil',
+  'copyIdentity',
   'Vérifier disponibilité',
   'Enregistrer',
 ]) expectToken(page, token, 'interface identité incomplète');

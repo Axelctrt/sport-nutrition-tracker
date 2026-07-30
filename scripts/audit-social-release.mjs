@@ -137,12 +137,12 @@ if (runtime.includes('socialRawActivities')) {
 
 const friendsPrivacyPage = read('src/features/friends/pages/FriendsPrivacyPage.tsx');
 for (const expected of [
-  'Partage défini par ami',
-  'Fil d’activité sécurisé 0.29',
-  'Aucun, Résumé ou Personnalisé',
-  'snapshots filtrés',
-  'activité métier brute',
-  'revérifié par le serveur',
+  'SocialActivityFriendSharingSettings',
+  'SocialActivityFeedPanel',
+  'shouldUseCloudActivityFeed',
+  "section === 'feed'",
+  'activeActivityFeedCloudGateway',
+  'defaultOpen',
 ]) {
   if (!friendsPrivacyPage.includes(expected)) {
     fail(`FriendsPrivacyPage ne contient pas le garde-fou attendu : ${expected}.`);

@@ -44,7 +44,7 @@ for (const value of [
 ]) {
   need(reconciliation, value, 'réconciliation d’identité incomplète');
 }
-for (const value of ['Mon identifiant SportPilot', 'Vérifier disponibilité', 'Enregistrer']) {
+for (const value of ['Mon profil', 'copyIdentity', 'Vérifier disponibilité', 'Enregistrer']) {
   need(page, value, 'interface identité cloud incomplète');
 }
 

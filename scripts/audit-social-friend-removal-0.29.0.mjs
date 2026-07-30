@@ -28,7 +28,7 @@ const checks = [
   ],
   [
     'page provides a confirmed remove action',
-    privacyPage.includes('onClick={() => setPendingFriendRemoval(friend)}')
+    privacyPage.includes('setPendingFriendRemoval(selectedFriend)')
       && privacyPage.includes('<ConfirmationDialog')
       && privacyPage.includes('Supprimer ${pendingFriendRemoval.displayName} ?')
       && privacyPage.includes('confirmLabel="Supprimer l’ami"')
