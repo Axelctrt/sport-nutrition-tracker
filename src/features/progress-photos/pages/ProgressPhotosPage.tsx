@@ -18,6 +18,7 @@ import {
   type ProgressPhotoView,
 } from '@/domain/models/progressPhoto';
 import { ProgressPhotoAddForm } from '@/features/progress-photos/components/ProgressPhotoAddForm';
+import { ProgressPhotoArchivePanel } from '@/features/progress-photos/components/ProgressPhotoArchivePanel';
 import { ProgressPhotoCard } from '@/features/progress-photos/components/ProgressPhotoCard';
 import { useProgressPhotos } from '@/features/progress-photos/hooks/useProgressPhotos';
 import { progressPhotoViewLabels } from '@/features/progress-photos/progressPhotoLabels';
@@ -194,6 +195,11 @@ export function ProgressPhotosPage() {
           </div>
         ) : null}
       </section>
+
+      <ProgressPhotoArchivePanel
+        photoCount={progressPhotos.items.length}
+        onImported={() => progressPhotos.refresh(true)}
+      />
     </section>
   );
 }
