@@ -32,7 +32,8 @@ describe('PrivacyPage', () => {
     expect(screen.getByRole('heading', {
       name: 'Caméra, scanner et photos',
     })).toBeInTheDocument();
-    expect(screen.getByText(/transmise à Google Gemini uniquement après consentement explicite/i)).toBeInTheDocument();
+    expect(screen.getByText(/L’analyse nutritionnelle reste locale par défaut/i)).toBeInTheDocument();
+    expect(screen.getByText(/Google Gemini après ton consentement explicite/i)).toBeInTheDocument();
     expect(screen.getByText(/jamais analysées par une IA/i)).toBeInTheDocument();
     expect(screen.getByText(/ne remplace pas un médecin/i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Retour à la création du profil' })).toHaveAttribute(
