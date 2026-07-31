@@ -7,8 +7,8 @@ import {
   getBrowserLocalDate,
 } from './helpers/app';
 
-const TEST_JPEG = Buffer.from(
-  '/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAUDBAQEAwUEBAQFBQUGBwwIBwcHBw8LCwkMEQ8SEhEPERETFhwXExQaFRERGCEYGh0dHx8fExciJCIeJBweHx7/2wBDAQUFBQcGBw4ICA4eFBEUHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh7/wAARCABAAEADAREAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwDq6+EPvjgq/cz8OO9r8MP3E4Kv3M/Djva/DD9xOCr9zPw472vww/cTgq/cz8OCgDva/DD9xOCr9zPw472vww/cTgq/cz8OO9r8MP3E4Kv3M/Djva/DD9xCgDgq/cz8OO9r8MP3E4Kv3M/Djva/DD9xOCr9zPw472vww/cTgq/cz8OCgDva/DD9xOCr9zPw472vww/cTgq/cz8OO9r8MP3E4Kv3M/Djva/DD9xCgDgq/cz8OO9r8MP3E4Kv3M/Djva/DD9xOCr9zPw472vww/cTgq/cz8OCgDva/DD9xOCr9zPw472vww/cTgq/cz8OO9r8MP3E4Kv3M/Djva/DD9xCgDgq/cz8OO9r8MP3E4Kv3M/Djva/DD9xOCr9zPw472vww/cTgq/cz8OCgDva/DD9xOCr9zPw472vww/cTgq/cz8OO9r8MP3E4Kv3M/Djva/DD9xP/9k=',
+const TEST_PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAAAY0lEQVR4nO3PQQ3AIADAQEAQD/zhfSJ4XJb0FLRz3zP+bOmAVw1oDWgNaA1oDWgNaA1oDWgNaA1oDWgNaA1oDWgNaA1oDWgNaA1oDWgNaA1oDWgNaA1oDWgNaA1oDWgNaA1oH+jdAV0p1pCYAAAAAElFTkSuQmCC',
   'base64',
 );
 
@@ -32,8 +32,8 @@ async function addPhoto(
 ): Promise<void> {
   await page.getByLabel('Choisir une photo de progression').setInputFiles({
     name: options.name,
-    mimeType: 'image/jpeg',
-    buffer: TEST_JPEG,
+    mimeType: 'image/png',
+    buffer: TEST_PNG,
   });
   await page.getByLabel('Date').fill(options.date);
   await page.getByLabel(/Note/).fill(options.note);
@@ -59,7 +59,7 @@ test('enregistre hors ligne et conserve les photos après rechargement', async (
   await context.setOffline(true);
   await addPhoto(page, {
     date: await getBrowserLocalDate(page),
-    name: 'progression-face.jpg',
+    name: 'progression-face.png',
     note: 'Photo enregistrée hors ligne.',
     expectedCount: 1,
   });
@@ -79,13 +79,13 @@ test('compare deux dates de la même vue au toucher et au clavier', async ({ pag
 
   await addPhoto(page, {
     date: await previousLocalDate(page),
-    name: 'avant.jpg',
+    name: 'avant.png',
     note: 'Avant.',
     expectedCount: 1,
   });
   await addPhoto(page, {
     date: await getBrowserLocalDate(page),
-    name: 'apres.jpg',
+    name: 'apres.png',
     note: 'Après.',
     expectedCount: 2,
   });
