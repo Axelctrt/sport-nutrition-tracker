@@ -23,16 +23,17 @@ function renderPage(hasProfile = false) {
 }
 
 describe('PrivacyPage', () => {
-  it('explique le stockage local, Open Food Facts, la caméra et la suppression', () => {
+  it('explique le stockage local, Open Food Facts, les usages photo et la suppression', () => {
     renderPage();
 
     expect(screen.getByRole('heading', { name: 'Confidentialité' })).toBeInTheDocument();
     expect(screen.getByText(/IndexedDB sur cet appareil/i)).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Open Food Facts' })).toBeInTheDocument();
     expect(screen.getByRole('heading', {
-      name: 'Caméra, scanner et analyse photo',
+      name: 'Caméra, scanner et photos',
     })).toBeInTheDocument();
-    expect(screen.getByText(/transmet cette photo à Google Gemini/i)).toBeInTheDocument();
+    expect(screen.getByText(/transmise à Google Gemini uniquement après consentement explicite/i)).toBeInTheDocument();
+    expect(screen.getByText(/jamais analysées par une IA/i)).toBeInTheDocument();
     expect(screen.getByText(/ne remplace pas un médecin/i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Retour à la création du profil' })).toHaveAttribute(
       'href',
@@ -40,12 +41,16 @@ describe('PrivacyPage', () => {
     );
   });
 
-  it('propose un retour aux paramètres lorsqu’un profil existe', () => {
+  it('propose un retour aux paramètres et la gestion des photos lorsqu’un profil existe', () => {
     renderPage(true);
 
     expect(screen.getByRole('link', { name: 'Retour aux paramètres' })).toHaveAttribute(
       'href',
       '/settings',
+    );
+    expect(screen.getByRole('link', { name: 'Gérer mes photos' })).toHaveAttribute(
+      'href',
+      '/progression/photos',
     );
   });
 });
