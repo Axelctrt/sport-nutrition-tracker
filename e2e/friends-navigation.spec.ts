@@ -26,6 +26,7 @@ test('navigue entre les quatre rubriques Amis sans empiler leur contenu', async 
   await expect(page).toHaveURL(/#\/friends\?section=profile$/);
   await expect(profilePanel).toBeVisible();
   await expect(requestsPanel).toBeHidden();
+  await expect(profilePanel.getByRole('heading', { name: 'Profil', level: 2 })).toBeVisible();
   const profileLabel = page.getByRole('button', { name: 'Mon profil social' })
     .getByText('Profil', { exact: true });
   await expect(profileLabel).toBeVisible();

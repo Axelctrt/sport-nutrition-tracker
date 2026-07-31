@@ -1214,7 +1214,7 @@ export function FriendsPrivacyPage({
           <Card className="p-5 sm:p-6">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <h2 className="text-xl font-bold text-slate-950 dark:text-white">Mon profil</h2>
+                <h2 className="text-xl font-bold text-slate-950 dark:text-white">Profil</h2>
                 <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{formatSocialHandle(identity.handle)}</p>
               </div>
               <Button type="button" size="sm" variant="secondary" onClick={copyIdentity}>Copier</Button>

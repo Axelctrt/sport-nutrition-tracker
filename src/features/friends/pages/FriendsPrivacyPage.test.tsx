@@ -109,6 +109,8 @@ describe('FriendsPrivacyPage', () => {
     expect(screen.queryByText(/snapshots filtrés/u)).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Mon profil social' }));
+    expect(screen.getByRole('heading', { name: 'Profil', level: 2 })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Mon profil', level: 2 })).not.toBeInTheDocument();
     expect(screen.getByText('@sp-alex123')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Visible par les amis' })).toHaveAttribute('aria-pressed', 'true');
 
