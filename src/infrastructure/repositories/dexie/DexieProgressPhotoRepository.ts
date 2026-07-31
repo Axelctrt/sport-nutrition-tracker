@@ -27,20 +27,27 @@ export class DexieProgressPhotoRepository implements ProgressPhotoRepository {
   constructor(private readonly database: AppDatabase) {}
 
   listAll(): Promise<ProgressPhoto[]> {
-    return runRepositoryOperation(
+    return runRepositoryOperation<ProgressPhoto[]>(
       'read',
       'Impossible de charger les photos de progression.',
-      async () => sortNewestFirst(await this.database.progressPhotos.toArray()),
+      async (): Promise<ProgressPhoto[]> => {
+        const photos = await this.database.progressPhotos.toArray();
+        return sortNewestFirst(photos);
+      },
     );
   }
 
   listByView(view: ProgressPhotoView): Promise<ProgressPhoto[]> {
-    return runRepositoryOperation(
+    return runRepositoryOperation<ProgressPhoto[]>(
       'read',
       'Impossible de charger les photos pour cette vue.',
-      async () => sortNewestFirst(
-        await this.database.progressPhotos.where('view').equals(view).toArray(),
-      ),
+      async (): Promise<ProgressPhoto[]> => {
+        const photos = await this.database.progressPhotos
+          .where('view')
+          .equals(view)
+          .toArray();
+        return sortNewestFirst(photos);
+      },
     );
   }
 
