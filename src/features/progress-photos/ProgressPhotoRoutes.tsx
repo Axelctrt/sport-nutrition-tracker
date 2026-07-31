@@ -2,6 +2,12 @@ import { lazy, Suspense } from 'react';
 
 import { PageSkeleton } from '@/shared/ui/PageSkeleton';
 
+const ProgressionWithPhotosPage = lazy(() =>
+  import('@/features/progress-photos/pages/ProgressionWithPhotosPage').then((module) => ({
+    default: module.ProgressionWithPhotosPage,
+  })),
+);
+
 const ProgressPhotosPage = lazy(() =>
   import('@/features/progress-photos/pages/ProgressPhotosPage').then((module) => ({
     default: module.ProgressPhotosPage,
@@ -13,6 +19,14 @@ const ProgressPhotoComparePage = lazy(() =>
     default: module.ProgressPhotoComparePage,
   })),
 );
+
+export function LazyProgressionWithPhotosPage() {
+  return (
+    <Suspense fallback={<PageSkeleton variant="dashboard" />}>
+      <ProgressionWithPhotosPage />
+    </Suspense>
+  );
+}
 
 export function LazyProgressPhotosPage() {
   return (
