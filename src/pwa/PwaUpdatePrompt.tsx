@@ -3,6 +3,7 @@ import { RefreshCw, Wifi } from 'lucide-react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 
 import { applyPwaUpdate, type UpdateServiceWorker } from '@/pwa/applyPwaUpdate';
+import { useGlobalBannerVisibility } from '@/shared/global-banner/GlobalBannerCoordinator';
 import { Button } from '@/shared/ui/Button';
 
 const UPDATE_ERROR_MESSAGE =
@@ -28,8 +29,14 @@ export function PwaUpdatePrompt({
     // Le rechargement est déclenché explicitement après controllerchange.
     onNeedReload: () => undefined,
   });
+  const active = offlineReady || needRefresh;
+  const visible = useGlobalBannerVisibility(
+    'pwa-update-prompt',
+    needRefresh ? 'pwa-update' : 'pwa-ready',
+    active,
+  );
 
-  if (!offlineReady && !needRefresh) {
+  if (!active || !visible) {
     return null;
   }
 
