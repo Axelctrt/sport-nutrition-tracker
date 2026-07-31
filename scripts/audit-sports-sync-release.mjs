@@ -136,11 +136,11 @@ for (const pipeline of ['check', 'ci']) {
 
 const databaseVersions = read('src/infrastructure/database/migrations/versions.ts');
 if (!/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_11/.test(databaseVersions)) {
-  fail('la base métier principale n’est plus en Dexie v8.');
+  fail('la base métier principale n’est plus en Dexie v11.');
 }
 const backupMigrations = read('src/infrastructure/backup/backupMigrations.ts');
 if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*10/.test(backupMigrations)) {
-  fail('la sauvegarde n’est plus en JSON v9.');
+  fail('la sauvegarde n’est plus en JSON v10.');
 }
 
 if (failures.length > 0) {

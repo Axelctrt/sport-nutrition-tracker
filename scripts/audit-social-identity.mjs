@@ -14,6 +14,7 @@ for (const file of [
   'src/infrastructure/sync-prototype/realSocialCloudIdentityService.ts',
   'functions/_shared/socialDirectory.js',
   'functions/_shared/socialIdentityReconciliation.js',
+  'src/app/friends/FriendsSectionNavigation.tsx',
   'src/features/friends/pages/FriendsPrivacyPage.tsx',
   'src/app/socialIdentityCanonicalReconciliationReadiness.test.ts',
 ]) expectFile(file);
@@ -24,6 +25,7 @@ const repository = read('src/infrastructure/repositories/dexie/DexieSocialIdenti
 const gateway = read('src/infrastructure/sync-prototype/socialDirectoryGateway.ts');
 const directory = read('functions/_shared/socialDirectory.js');
 const reconciliation = read('functions/_shared/socialIdentityReconciliation.js');
+const navigation = read('src/app/friends/FriendsSectionNavigation.tsx');
 const page = read('src/features/friends/pages/FriendsPrivacyPage.tsx');
 const backup = read('src/infrastructure/backup/backupSchemas.ts');
 
@@ -40,11 +42,16 @@ expectToken(repository, 'socialIdentity', 'persistance locale de l’identité a
 expectToken(backup, 'socialIdentitySchema', 'sauvegarde de l’identité absente');
 
 for (const token of [
-  'Mon profil',
+  '>Profil</h2>',
   'copyIdentity',
   'Vérifier disponibilité',
   'Enregistrer',
 ]) expectToken(page, token, 'interface identité incomplète');
+
+for (const token of [
+  "label: 'Mon profil social'",
+  "shortLabel: 'Profil'",
+]) expectToken(navigation, token, 'navigation identité incomplète');
 
 for (const token of [
   'socialCloudApiHeaders(credentials',

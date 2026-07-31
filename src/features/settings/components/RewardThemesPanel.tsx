@@ -12,7 +12,7 @@ import {
   Trophy,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   loadThemeAchievementSnapshot,
@@ -41,8 +41,10 @@ import { cn } from "@/shared/utils/cn";
 interface RewardThemesPanelProps {
   className?: string;
   loadSnapshot?: () => Promise<ThemeAchievementSnapshot>;
-  activateTheme?: (themeId: VisualThemeId) => boolean;
+  activateTheme?: (themeId: VisualThemeId) => boolean | Promise<boolean>;
 }
+
+type ThemeApplyState = "idle" | "loading" | "success" | "error";
 
 const rarityLabels: Record<SportPilotThemeRarity, string> = {
   standard: "Standard",
@@ -180,8 +182,18 @@ export function RewardThemesPanel({
   );
   const [previewThemeId, setPreviewThemeId] = useState<VisualThemeId>();
   const [trialThemeId, setTrialThemeId] = useState<VisualThemeId>();
-  const [buttonState, setButtonState] = useState<"idle" | "success" | "error">("idle");
+  const [themeApplyStates, setThemeApplyStates] = useState<
+    Partial<Record<VisualThemeId, ThemeApplyState>>
+  >({});
+  const applyResetTimersRef = useRef(new Map<VisualThemeId, number>());
   const [loadError, setLoadError] = useState<string>();
+
+  useEffect(() => () => {
+    for (const timer of applyResetTimersRef.current.values()) {
+      window.clearTimeout(timer);
+    }
+    applyResetTimersRef.current.clear();
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -224,15 +236,42 @@ export function RewardThemesPanel({
     [snapshot],
   );
 
-  const applyTheme = (themeId: VisualThemeId) => {
-    const applied = activateTheme(themeId);
-    setButtonState(applied ? "success" : "error");
+  const setThemeApplyState = (
+    themeId: VisualThemeId,
+    state: ThemeApplyState,
+  ) => {
+    setThemeApplyStates((current) => ({ ...current, [themeId]: state }));
+  };
+
+  const scheduleThemeApplyReset = (themeId: VisualThemeId) => {
+    const currentTimer = applyResetTimersRef.current.get(themeId);
+    if (currentTimer !== undefined) window.clearTimeout(currentTimer);
+    const timer = window.setTimeout(() => {
+      setThemeApplyStates((current) => {
+        const next = { ...current };
+        delete next[themeId];
+        return next;
+      });
+      applyResetTimersRef.current.delete(themeId);
+    }, 900);
+    applyResetTimersRef.current.set(themeId, timer);
+  };
+
+  const applyTheme = async (themeId: VisualThemeId) => {
+    setThemeApplyState(themeId, "loading");
+    let applied = false;
+    try {
+      applied = await activateTheme(themeId);
+    } catch {
+      applied = false;
+    }
+    setThemeApplyState(themeId, applied ? "success" : "error");
     if (applied) {
       setActiveThemeId(themeId);
       setTrialThemeId(undefined);
       setPreviewThemeId(undefined);
     }
-    window.setTimeout(() => setButtonState("idle"), 900);
+    scheduleThemeApplyReset(themeId);
   };
 
   const tryTheme = (themeId: VisualThemeId) => {
@@ -342,6 +381,7 @@ export function RewardThemesPanel({
           <div className="mt-3 grid gap-3 lg:grid-cols-2">
             {sortedThemes.map((progress) => {
               const active = activeThemeId === progress.theme.id;
+              const applyState = themeApplyStates[progress.theme.id] ?? "idle";
               return (
                 <SportPilotActiveBorder
                   key={progress.theme.id}
@@ -396,13 +436,14 @@ export function RewardThemesPanel({
                           <Eye aria-hidden="true" className="size-4" />
                           {progress.unlocked ? "Prévisualiser" : "Voir ma progression"}
                         </button>
-                        {progress.unlocked && !active ? (
+                        {progress.unlocked && (!active || applyState !== "idle") ? (
                           <SportPilotStatefulButton
-                            state={buttonState}
+                            state={applyState}
                             idleLabel="Appliquer"
+                            loadingLabel="Application…"
                             successLabel="Thème appliqué"
                             errorLabel="Indisponible"
-                            onClick={() => applyTheme(progress.theme.id)}
+                            onClick={() => void applyTheme(progress.theme.id)}
                           />
                         ) : null}
                       </div>
@@ -457,14 +498,15 @@ export function RewardThemesPanel({
                     idleLabel="Essayer maintenant"
                     onClick={() => tryTheme(previewTheme.theme.id)}
                   />
-                  <button
-                    type="button"
-                    className="sp-button sp-button--secondary inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-[var(--sp-radius-control)] px-4 text-sm font-semibold"
-                    onClick={() => applyTheme(previewTheme.theme.id)}
-                  >
-                    <Check aria-hidden="true" className="size-4" />
-                    Appliquer ce thème
-                  </button>
+                  <SportPilotStatefulButton
+                    fullWidth
+                    state={themeApplyStates[previewTheme.theme.id] ?? "idle"}
+                    idleLabel="Appliquer ce thème"
+                    loadingLabel="Application…"
+                    successLabel="Thème appliqué"
+                    errorLabel="Indisponible"
+                    onClick={() => void applyTheme(previewTheme.theme.id)}
+                  />
                 </>
               ) : (
                 <button
