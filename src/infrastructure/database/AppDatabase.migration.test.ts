@@ -317,16 +317,17 @@ describe('chaîne de migrations Dexie', () => {
       await seedDatabase(currentDatabase, version2Fixture);
       currentDatabase.close();
 
-      futureDatabase = new AppDatabase(databaseName);
-      futureDatabase.version(13).stores({
+      const future = new AppDatabase(databaseName);
+      futureDatabase = future;
+      future.version(13).stores({
         ...schemaVersion12,
         migrationProbe: 'id',
       });
-      await futureDatabase.open();
+      await future.open();
 
-      expect(futureDatabase.verno).toBe(13);
-      await expectFixture(futureDatabase, version2Fixture);
-      expect(await futureDatabase.table('migrationProbe').count()).toBe(0);
+      expect(future.verno).toBe(13);
+      await expectFixture(future, version2Fixture);
+      expect(await future.table('migrationProbe').count()).toBe(0);
     } finally {
       currentDatabase.close();
       futureDatabase?.close();
