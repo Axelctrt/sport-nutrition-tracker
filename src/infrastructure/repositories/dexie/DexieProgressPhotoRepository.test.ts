@@ -1,8 +1,10 @@
 import Dexie from 'dexie';
 
 import type { ProcessedProgressPhotoImage } from '@/domain/models/progressPhoto';
+import type { WeightEntry } from '@/domain/models/weight';
 import { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import { DexieProgressPhotoRepository } from '@/infrastructure/repositories/dexie/DexieProgressPhotoRepository';
+import { createEntity } from '@/shared/utils/entities';
 
 function databaseName(label: string): string {
   return `sportpilot-progress-photo-${label}-${crypto.randomUUID()}`;
@@ -130,13 +132,10 @@ describe('DexieProgressPhotoRepository', () => {
         original: image('original'),
         thumbnail: image('thumbnail', 360, 480),
       });
-      await database.weights.add({
-        id: 'weight-preserved',
+      await database.weights.add(createEntity<WeightEntry>({
         date: '2026-07-28',
         weightKg: 72,
-        createdAt: '2026-07-28T10:00:00.000Z',
-        updatedAt: '2026-07-28T10:00:00.000Z',
-      });
+      }, 'weight-preserved'));
 
       await repository.clearAll();
 
