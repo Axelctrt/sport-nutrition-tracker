@@ -20,6 +20,19 @@ function image(content: string, width = 1200, height = 1600): ProcessedProgressP
   };
 }
 
+function readBlobAsText(blob: Blob): Promise<string> {
+  if (typeof blob.text === 'function') {
+    return blob.text();
+  }
+
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(reader.error ?? new Error('Lecture impossible.'));
+    reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '');
+    reader.readAsText(blob);
+  });
+}
+
 describe('progressPhotoArchiveService', () => {
   it('exporte puis restaure les métadonnées et les deux images', async () => {
     const sourceName = `sportpilot-photo-archive-source-${crypto.randomUUID()}`;
@@ -56,8 +69,9 @@ describe('progressPhotoArchiveService', () => {
       const withAssets = restored
         ? await target.getWithAssets(restored.id)
         : undefined;
-      expect(await withAssets?.original.blob.text()).toBe('original-photo');
-      expect(await withAssets?.thumbnail.blob.text()).toBe('thumbnail-photo');
+      expect(withAssets).toBeDefined();
+      expect(await readBlobAsText(withAssets!.original.blob)).toBe('original-photo');
+      expect(await readBlobAsText(withAssets!.thumbnail.blob)).toBe('thumbnail-photo');
     } finally {
       sourceDatabase.close();
       targetDatabase.close();
