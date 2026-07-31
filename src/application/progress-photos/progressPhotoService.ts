@@ -92,12 +92,13 @@ export async function saveProgressPhoto(
   validateInput(input);
   const images = await processProgressPhotoFile(input.file);
   await assertStorageCapacity(images);
+  const originalFileName = input.file.name?.trim() ?? '';
   return repository.create({
     date: input.date,
     view: input.view,
     ...(input.weightKg === undefined ? {} : { weightKg: input.weightKg }),
     ...(input.note?.trim() ? { note: input.note.trim() } : {}),
-    ...(input.file.name.trim() ? { originalFileName: input.file.name.trim() } : {}),
+    ...(originalFileName ? { originalFileName } : {}),
     original: images.original,
     thumbnail: images.thumbnail,
   });
