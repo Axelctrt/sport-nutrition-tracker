@@ -49,11 +49,11 @@ if (failures.length === 0) {
 
   const databaseVersions = read('src/infrastructure/database/migrations/versions.ts');
   if (!/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_11\b/.test(databaseVersions)) {
-    fail('le schéma métier doit rester en Dexie v8.');
+    fail('le schéma métier doit rester en Dexie v11.');
   }
   const backupMigrations = read('src/infrastructure/backup/backupMigrations.ts');
   if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*10\b/.test(backupMigrations)) {
-    fail('la sauvegarde JSON doit rester en v7.');
+    fail('la sauvegarde JSON doit rester en v10.');
   }
   const dataSpace = read('src/domain/data-spaces/dataSpace.ts');
   if (!/DATA_SPACE_REGISTRY_VERSION\s*=\s*1\s+as\s+const/.test(dataSpace)) {
