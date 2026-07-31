@@ -22,7 +22,10 @@ describe('ProgressPhotoAddForm', () => {
     render(<ProgressPhotoAddForm onSave={onSave} />);
 
     const file = new File(['image'], 'progression.png', { type: 'image/png' });
-    await user.upload(screen.getByLabelText('Choisir une photo de progression'), file);
+    const fileInput = screen.getByLabelText(
+      'Choisir une photo de progression',
+    ) as HTMLInputElement;
+    await user.upload(fileInput, file);
     await user.selectOptions(screen.getByLabelText('Vue'), 'back');
     await user.type(screen.getByPlaceholderText('Ex. 72,5'), '72,5');
     await user.type(screen.getByPlaceholderText(/Contexte/), 'Même lumière.');
@@ -38,6 +41,6 @@ describe('ProgressPhotoAddForm', () => {
     expect(screen.getByRole('status')).toHaveTextContent(
       'La photo a été enregistrée uniquement dans cet espace local.',
     );
-    expect(screen.getByLabelText('Choisir une photo de progression')).toHaveValue('');
+    expect(fileInput.value).toBe('');
   });
 });
