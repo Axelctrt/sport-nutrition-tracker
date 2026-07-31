@@ -152,6 +152,22 @@ export class DexieProgressPhotoRepository implements ProgressPhotoRepository {
     );
   }
 
+  clearAll(): Promise<void> {
+    return runRepositoryOperation(
+      'delete',
+      'Impossible de supprimer les photos de progression.',
+      () => this.database.transaction(
+        'rw',
+        this.database.progressPhotos,
+        this.database.progressPhotoAssets,
+        async () => {
+          await this.database.progressPhotoAssets.clear();
+          await this.database.progressPhotos.clear();
+        },
+      ),
+    );
+  }
+
   cleanupOrphans(): Promise<ProgressPhotoCleanupResult> {
     return runRepositoryOperation(
       'update',
@@ -173,9 +189,10 @@ export class DexieProgressPhotoRepository implements ProgressPhotoRepository {
             await this.database.progressPhotoAssets.bulkDelete(orphanAssetIds);
           }
 
+          const orphanAssetSet = new Set(orphanAssetIds);
           const remainingAssetIds = new Set(
             assets
-              .filter(({ id }) => !orphanAssetIds.includes(id))
+              .filter(({ id }) => !orphanAssetSet.has(id))
               .map(({ id }) => id),
           );
           const invalidPhotos = photos.filter((photo) =>
