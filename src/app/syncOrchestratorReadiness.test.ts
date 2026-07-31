@@ -11,9 +11,9 @@ import {
 } from '@/application/sync/syncOrchestrator';
 
 describe('préparation F1 de l’orchestrateur de synchronisation 0.26.0', () => {
-  it('conserve les versions de publication 0.26.0 pendant la construction du socle', () => {
+  it('conserve les versions publiées pendant la construction du socle', () => {
     expect(__APP_VERSION__).toBe('0.36.0');
-    expect(databaseSchemaVersion).toBe(11);
+    expect(databaseSchemaVersion).toBe(12);
     expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(10);
     expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(16);
     expect(SYNC_PROTOTYPE_DATABASE_NAME).toBe(
