@@ -22,7 +22,7 @@ describe("DataManagementCenter", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("Stockage persistant actif")).toBeInTheDocument();
     expect(screen.getByText("Aucune sauvegarde enregistrée")).toBeInTheDocument();
-    expect(screen.getByText(/IndexedDB\s*·\s*schéma\s*v\s*11/u)).toBeInTheDocument();
+    expect(screen.getByText(/IndexedDB\s*·\s*schéma\s*v\s*12/u)).toBeInTheDocument();
     expect(screen.getByText(/JSON v\s*10/u)).toBeInTheDocument();
     expect(screen.getByText("Diagnostic d’intégrité intégré")).toBeInTheDocument();
     expect(
