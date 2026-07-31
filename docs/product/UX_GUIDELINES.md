@@ -19,6 +19,26 @@ Statut : **décisions validées** et pratiques actuelles.
 - Une liste longue utilise des résumés compacts et une ouverture progressive.
 - Les libellés visibles peuvent être courts ; le nom accessible reste complet.
 
+## États vides
+
+`EmptyState` distingue quatre contextes sémantiques :
+
+| Variante | Usage |
+| --- | --- |
+| `first-use` | Aucune donnée n’a encore été créée ; expliquer la valeur et proposer de commencer. |
+| `filtered` | Des données existent mais la recherche ou le filtre ne retourne rien ; rassurer et proposer une réinitialisation. |
+| `completed` | Le parcours est terminé et aucune action n’est requise ; usage ponctuel uniquement. |
+| `unavailable` | Une fonction est temporairement indisponible sans erreur technique détaillée. |
+
+- Un état filtré ne doit jamais laisser croire que les données ont disparu.
+- Sur mobile, l’action contextuelle de l’état vide peut remplacer un CTA
+  d’en-tête strictement identique ; le raccourci peut rester visible sur grand
+  écran.
+- Les erreurs techniques détaillées restent généralement des `InlineNotice`.
+- Les graphiques vides conservent leurs composants dédiés.
+- Ne pas remplacer artificiellement les cartes de progression, révélations ou
+  célébrations par une variante `completed`.
+
 ## Formulaires
 
 - Conserver les états de saisie intermédiaires (`''`, séparateur décimal,

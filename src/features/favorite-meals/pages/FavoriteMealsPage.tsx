@@ -44,15 +44,7 @@ export function FavoriteMealsPage() {
   const requestedSlot = searchParams.get('slot');
   const targetDate = requestedDate && isValidLocalDate(requestedDate) ? requestedDate : toLocalDate();
   const targetSlot = isMealSlot(requestedSlot) ? requestedSlot : 'lunch';
-  const {
-    favorites,
-    status,
-    errorMessage,
-    busyId,
-    refresh,
-    apply,
-    remove,
-  } = useFavoriteMeals();
+  const { favorites, status, errorMessage, busyId, refresh, apply, remove } = useFavoriteMeals();
   const [query, setQuery] = useState('');
   const [selectedFavorite, setSelectedFavorite] = useState<FavoriteMealSummary>();
   const [success, setSuccess] = useState<SuccessFeedback>();
@@ -78,19 +70,12 @@ export function FavoriteMealsPage() {
     const returnContext = navigationState?.foodJournalReturn;
     if (returnContext) {
       await navigate(returnContext.path, {
-        state: createFoodJournalFeedbackState(returnContext, {
-          title: 'Repas favori ajouté',
-          mealSlot: slot,
-        }),
+        state: createFoodJournalFeedbackState(returnContext, { title: 'Repas favori ajouté', mealSlot: slot }),
       });
       return;
     }
 
-    setSuccess({
-      title: 'Repas ajouté au journal',
-      message: description,
-      date,
-    });
+    setSuccess({ title: 'Repas ajouté au journal', message: description, date });
     actionToast.success({
       key: `favorite-meal-apply:${selectedFavorite.favoriteMeal.id}:${date}:${slot}`,
       title: 'Repas favori ajouté',
@@ -103,17 +88,10 @@ export function FavoriteMealsPage() {
     const removed = await remove(favoriteId);
     if (removed) {
       setSuccess(undefined);
-      actionToast.success({
-        key: `favorite-meal-delete:${favoriteId}`,
-        title: 'Repas favori supprimé',
-      });
+      actionToast.success({ key: `favorite-meal-delete:${favoriteId}`, title: 'Repas favori supprimé' });
       if (selectedFavorite?.favoriteMeal.id === favoriteId) setSelectedFavorite(undefined);
     } else {
-      actionToast.error({
-        key: `favorite-meal-delete:${favoriteId}`,
-        error: errorMessage,
-        fallback: 'Le repas favori n’a pas pu être supprimé.',
-      });
+      actionToast.error({ key: `favorite-meal-delete:${favoriteId}`, error: errorMessage, fallback: 'Le repas favori n’a pas pu être supprimé.' });
     }
     return removed;
   };
@@ -122,6 +100,7 @@ export function FavoriteMealsPage() {
   const averageCalories = favorites.length > 0
     ? favorites.reduce((sum, summary) => sum + summary.totals.caloriesKcal, 0) / favorites.length
     : 0;
+  const isFirstUse = status === 'ready' && favorites.length === 0;
 
   return (
     <section className="min-w-0" aria-labelledby="favorite-meals-title">
@@ -129,11 +108,12 @@ export function FavoriteMealsPage() {
         <div className="min-w-0">
           <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">Bibliothèque alimentaire</p>
           <h1 id="favorite-meals-title" className="mt-1 text-3xl font-bold tracking-tight text-slate-950 dark:text-white">Repas favoris</h1>
-          <p className="mt-2 hidden max-w-2xl text-slate-600 dark:text-slate-300 sm:block">
-            Réutilise en une seule opération les aliments et recettes d’un repas déjà enregistré.
-          </p>
+          <p className="mt-2 hidden max-w-2xl text-slate-600 dark:text-slate-300 sm:block">Réutilise en une seule opération les aliments et recettes d’un repas déjà enregistré.</p>
         </div>
-        <Link to={foodJournalPath(targetDate)} className="inline-flex min-h-12 w-full items-center justify-center rounded-xl border border-slate-300 px-4 font-semibold text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-800 sm:w-auto">
+        <Link
+          to={foodJournalPath(targetDate)}
+          className={`${isFirstUse ? 'hidden sm:inline-flex' : 'inline-flex'} min-h-12 w-full items-center justify-center rounded-xl border border-slate-300 px-4 font-semibold text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-800 sm:w-auto`}
+        >
           Ouvrir le journal
         </Link>
       </div>
@@ -147,8 +127,7 @@ export function FavoriteMealsPage() {
 
       {success ? (
         <InlineNotice className="mt-5" tone="success" title={success.title} role="status">
-          {success.message}{' '}
-          <Link className="font-semibold underline" to={foodJournalPath(success.date)}>Voir la journée</Link>
+          {success.message}{' '}<Link className="font-semibold underline" to={foodJournalPath(success.date)}>Voir la journée</Link>
         </InlineNotice>
       ) : null}
 
@@ -156,25 +135,14 @@ export function FavoriteMealsPage() {
 
       {status === 'ready' ? (
         <>
-          <FavoriteMealsSummary
-            favoriteCount={favorites.length}
-            itemCount={totalItems}
-            averageCalories={averageCalories}
-          />
+          <FavoriteMealsSummary favoriteCount={favorites.length} itemCount={totalItems} averageCalories={averageCalories} />
 
           {favorites.length > 0 ? (
             <Card className="mt-4 p-4 sm:p-5">
               <label htmlFor="favorite-meal-search" className="text-sm font-semibold text-slate-800 dark:text-slate-100">Rechercher un repas favori</label>
               <div className="relative mt-2">
                 <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
-                <input
-                  id="favorite-meal-search"
-                  type="search"
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  className={`${inputClassName} pl-10`}
-                  placeholder="Nom du favori"
-                />
+                <input id="favorite-meal-search" type="search" value={query} onChange={(event) => setQuery(event.target.value)} className={`${inputClassName} pl-10`} placeholder="Nom du favori" />
               </div>
             </Card>
           ) : null}
@@ -182,21 +150,21 @@ export function FavoriteMealsPage() {
           {favorites.length === 0 ? (
             <EmptyState
               className="mt-4"
+              variant="first-use"
               icon={Star}
               title="Aucun repas favori"
               description="Depuis le journal alimentaire, ouvre les options d’un repas puis enregistre-le comme favori."
               primaryAction={(
-                <Link to={foodJournalPath(targetDate)} className="inline-flex min-h-11 items-center justify-center rounded-xl bg-brand-700 px-4 text-sm font-semibold text-white hover:bg-brand-800">
-                  Ouvrir le journal
-                </Link>
+                <Link to={foodJournalPath(targetDate)} className="inline-flex min-h-11 items-center justify-center rounded-xl bg-brand-700 px-4 text-sm font-semibold text-white hover:bg-brand-800">Ouvrir le journal</Link>
               )}
             />
           ) : visibleFavorites.length === 0 ? (
             <EmptyState
               className="mt-4"
+              variant="filtered"
               icon={Search}
               title="Aucun favori trouvé"
-              description="Modifie la recherche pour retrouver un autre repas."
+              description="Tes favoris sont toujours disponibles. Efface la recherche pour les retrouver."
               primaryAction={<Button variant="secondary" onClick={() => setQuery('')}>Effacer la recherche</Button>}
             />
           ) : (

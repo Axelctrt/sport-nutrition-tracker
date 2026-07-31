@@ -54,6 +54,21 @@ Ne pas coder une nouvelle palette locale lorsqu’un token sémantique existe.
 - `SportPilotCharts` : conteneurs, légendes, tableaux de repli et couleurs.
 - composants `SportPilot*Reveal` : célébrations exceptionnelles.
 
+### EmptyState
+
+`EmptyState` conserve une API simple avec icône, titre, description et jusqu’à
+Deux actions. La propriété `variant` décrit le contexte plutôt que le style :
+
+- `first-use` : état initial engageant, densité normale et ton de marque ;
+- `filtered` : aucun résultat sans perte de données, présentation compacte ;
+- `completed` : parcours terminé, présentation compacte et ton de réussite ;
+- `unavailable` : indisponibilité temporaire non technique, présentation
+  compacte et neutre.
+
+`tone` et `compact` restent disponibles pour une adaptation explicite. Leur
+absence utilise les valeurs par défaut de la variante. Les anciens usages sans
+`variant` restent compatibles et se comportent comme `first-use`.
+
 ## Règles par famille
 
 - **Cartes** : une responsabilité, résumé visible, bordure et rayon partagés.
@@ -64,6 +79,8 @@ Ne pas coder une nouvelle palette locale lorsqu’un token sémantique existe.
 - **Modales** : confirmation courte, pas de formulaire long.
 - **Toasts** : message autonome, ton sémantique, déduplication et durée adaptée.
 - **Bannières** : état persistant nécessitant une action ou une explication.
+- **États vides** : distinguer premier usage, filtre vide, accomplissement et
+  indisponibilité ; ne pas remplacer une erreur détaillée ou un graphique vide.
 - **Graphiques** : ne jamais dépendre seulement de la couleur ; fournir résumé
   ou tableau accessible.
 

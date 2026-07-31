@@ -22,6 +22,24 @@ describe('WorkoutTemplatesPage', () => {
     await appDatabase.delete();
   });
 
+  it('présente un premier usage orienté vers la création', async () => {
+    render(
+      <MemoryRouter initialEntries={['/strength/templates']}>
+        <WorkoutTemplatesPage />
+      </MemoryRouter>,
+    );
+
+    const heading = await screen.findByRole('heading', { name: 'Aucune séance modèle' });
+    expect(heading.closest('[data-empty-state-variant]')).toHaveAttribute(
+      'data-empty-state-variant',
+      'first-use',
+    );
+    expect(screen.getByRole('link', { name: 'Créer une séance' })).toHaveAttribute(
+      'href',
+      '/strength/templates/new',
+    );
+  });
+
   it('efface uniquement la recherche lorsque celle-ci ne renvoie aucun modèle', async () => {
     const user = userEvent.setup();
     await appDatabase.workoutTemplates.add(createEntity(
@@ -39,7 +57,11 @@ describe('WorkoutTemplatesPage', () => {
     await user.type(screen.getByRole('searchbox', {
       name: 'Rechercher une séance modèle',
     }), 'introuvable');
-    expect(await screen.findByText('Aucun résultat')).toBeInTheDocument();
+    const emptyHeading = await screen.findByRole('heading', { name: 'Aucune séance trouvée' });
+    expect(emptyHeading.closest('[data-empty-state-variant]')).toHaveAttribute(
+      'data-empty-state-variant',
+      'filtered',
+    );
 
     await user.click(screen.getByRole('button', { name: 'Effacer la recherche' }));
 
