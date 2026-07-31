@@ -83,8 +83,9 @@ async function decodeWithImageElement(file: File): Promise<DecodedImage> {
   }
 
   const objectUrl = URL.createObjectURL(file);
+  let image: HTMLImageElement;
   try {
-    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+    image = await new Promise<HTMLImageElement>((resolve, reject) => {
       const element = new Image();
       element.onload = () => resolve(element);
       element.onerror = () => reject(new ProgressPhotoImageError(
@@ -92,15 +93,23 @@ async function decodeWithImageElement(file: File): Promise<DecodedImage> {
       ));
       element.src = objectUrl;
     });
-    return {
-      source: image,
-      width: image.naturalWidth,
-      height: image.naturalHeight,
-      close: () => undefined,
-    };
-  } finally {
+  } catch (error) {
     URL.revokeObjectURL(objectUrl);
+    throw error;
   }
+
+  let closed = false;
+  return {
+    source: image,
+    width: image.naturalWidth,
+    height: image.naturalHeight,
+    close: () => {
+      if (closed) return;
+      closed = true;
+      image.src = '';
+      URL.revokeObjectURL(objectUrl);
+    },
+  };
 }
 
 async function decodeImage(file: File): Promise<DecodedImage> {
