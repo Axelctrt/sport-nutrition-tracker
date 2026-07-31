@@ -52,11 +52,35 @@ Statut : **décisions validées** et pratiques actuelles.
 
 ## Retours d’action
 
-- Toast de succès pour une action terminée ayant un impact durable.
-- Toast ou notice d’erreur avec prochaine action compréhensible.
+Choisir un feedback principal selon la continuité du parcours :
+
+- **Action restant sur le même écran** : état du bouton ou notice locale. Le
+  résultat doit rester lisible près de l’action.
+- **Navigation après réussite** : bouton de chargement pendant l’opération,
+  puis toast sur la page de destination.
+- **Rechargement nécessaire** : conserver la confirmation avec
+  `successAfterReload`.
+- **Traitement réellement multi-étapes** : utiliser
+  `SportPilotMultiStepLoader` comme progression principale ; ne pas lui ajouter
+  un second indicateur de succès concurrent.
+- **Erreur corrigeable sur place** : afficher l’erreur localement avec la
+  prochaine action. Un toast supplémentaire n’est pas nécessaire si la notice
+  reste visible.
+
+Règles permanentes :
+
+- Ne pas cumuler bouton de succès, texte vert et toast pour une même action.
+- Toast de succès pour une action terminée ayant un impact durable lorsque le
+  contexte local disparaît ou change.
+- Toast ou notice d’erreur avec prochaine action compréhensible, jamais les
+  deux avec le même message.
 - Confirmation avant suppression, abandon ou opération difficile à annuler.
 - Les écritures fréquentes ne déclenchent pas une succession de toasts.
 - Les clés de déduplication doivent représenter l’action métier.
+
+La demande de persistance du stockage est le pilote de référence pour une
+opération locale restant sur la même carte : chargement dans le bouton, puis
+une unique `InlineNotice` de succès, d’information ou d’erreur.
 
 ## Navigation et overlays
 
