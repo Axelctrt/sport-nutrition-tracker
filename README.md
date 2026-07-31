@@ -8,7 +8,7 @@ L’application reste mobile-first, locale-first, utilisable hors ligne et insta
 
 ### Amis
 
-- quatre rubriques réelles : Fil, Amis, Demandes et Mon profil ;
+- quatre rubriques réelles : Fil, Amis, Demandes et Profil ;
 - rubrique conservée dans l’URL, compatible avec le rechargement et le bouton Retour ;
 - une seule rubrique visible, avec badge sur les demandes reçues ;
 - permissions détaillées ouvertes dans une feuille de gestion accessible ;
@@ -60,3 +60,9 @@ npm audit
 ```
 
 Aucun tag, aucune fusion et aucun déploiement ne sont réalisés par la préparation de cette branche.
+
+## Documentation
+
+Le référentiel canonique destiné aux contributeurs, à Codex et à ChatGPT
+commence dans [`docs/INDEX.md`](docs/INDEX.md). Les règles applicables aux
+agents sont dans [`AGENTS.md`](AGENTS.md).
