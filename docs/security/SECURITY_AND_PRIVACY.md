@@ -21,12 +21,32 @@ Statut : **décisions validées**.
 - Une restauration valide intégrité et version avant écriture et crée une
   sauvegarde de sécurité lorsque le parcours le prévoit.
 
+## Photos de progression
+
+- Les images sont privées, locales et rattachées à la base Dexie de l’espace
+  actuellement ouvert.
+- Elles sont redimensionnées et compressées dans le navigateur ; l’original
+  importé n’est pas téléversé vers un serveur.
+- Les métadonnées, l’original compressé et la miniature sont écrits et supprimés
+  transactionnellement.
+- Aucun adaptateur Dexie Cloud, domaine de synchronisation, endpoint D1 ou
+  fournisseur IA ne reçoit ces images.
+- L’import invité générique et la sauvegarde JSON générale les excluent. Un
+  transfert exige l’archive photo dédiée et une action explicite.
+- Les archives photo sont sensibles : l’utilisateur choisit leur destination,
+  leur conservation et leur suppression.
+- Une personne ayant accès à l’appareil et au profil du navigateur peut
+  potentiellement consulter les images ; IndexedDB n’est pas un coffre chiffré.
+- La suppression individuelle ou complète retire aussi les miniatures. Un
+  nettoyage local répare les assets orphelins.
+
 ## Social
 
 - L’identité sociale est réconciliée côté serveur ; un identifiant fourni par
   le navigateur n’est pas à lui seul une preuve d’identité.
 - Les permissions sont appliquées à la publication et à la lecture.
 - Les détails privés ne sont jamais déduits d’un résumé.
+- Les photos de progression ne sont jamais proposées comme contenu social.
 - Suppression d’amitié et révocation de permission doivent empêcher les
   lectures futures et converger côté local/cloud.
 
@@ -36,6 +56,8 @@ Statut : **décisions validées**.
 - Proxy same-origin et clé serveur uniquement.
 - Limites de taille, type, méthode, timeout et débit.
 - Résultat présenté comme estimation à confirmer.
+- Le parcours de photo nutritionnelle reste distinct des photos de progression
+  persistantes et locales.
 - Aucun élargissement de données, fournisseur ou finalité sans revue dédiée.
 
 ## Dépendances et en-têtes
