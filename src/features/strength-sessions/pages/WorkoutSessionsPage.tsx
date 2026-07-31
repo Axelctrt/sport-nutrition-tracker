@@ -127,7 +127,15 @@ export function WorkoutSessionsPage() {
       ) : null}
 
       {status === 'ready' && history.length === 0 ? (
-        <EmptyState className="mt-5" icon={Dumbbell} title="Aucune séance dans ce filtre" description="Les entraînements correspondants apparaîtront ici après leur enregistrement." />
+        <EmptyState
+          className="mt-5"
+          icon={Dumbbell}
+          title="Aucune séance dans ce filtre"
+          description="Les entraînements correspondants apparaîtront ici après leur enregistrement."
+          primaryAction={filter === 'all'
+            ? undefined
+            : <Button variant="secondary" onClick={() => setFilter('all')}>Afficher toutes les séances</Button>}
+        />
       ) : null}
 
       {status === 'ready' && history.length > 0 ? (

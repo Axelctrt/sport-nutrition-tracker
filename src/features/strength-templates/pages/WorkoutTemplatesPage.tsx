@@ -127,7 +127,9 @@ export function WorkoutTemplatesPage() {
           icon={Layers3}
           title={templates.length === 0 ? 'Aucune séance modèle' : 'Aucun résultat'}
           description={templates.length === 0 ? 'Crée ta première séance pour préparer ton prochain entraînement.' : 'Modifie la recherche pour retrouver une séance.'}
-          primaryAction={templates.length === 0 ? <Link to={routePaths.newWorkoutTemplate} className="inline-flex min-h-11 items-center justify-center rounded-xl bg-brand-700 px-4 text-sm font-semibold text-white">Créer une séance</Link> : undefined}
+          primaryAction={templates.length === 0
+            ? <Link to={routePaths.newWorkoutTemplate} className="inline-flex min-h-11 items-center justify-center rounded-xl bg-brand-700 px-4 text-sm font-semibold text-white">Créer une séance</Link>
+            : <Button variant="secondary" onClick={() => setQuery('')}>Effacer la recherche</Button>}
         />
       ) : null}
 

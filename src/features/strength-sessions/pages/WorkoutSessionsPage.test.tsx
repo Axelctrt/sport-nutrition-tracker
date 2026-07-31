@@ -97,6 +97,35 @@ describe('WorkoutSessionsPage', () => {
     );
   });
 
+  it('réinitialise uniquement le filtre lorsque l’historique filtré est vide', async () => {
+    const user = userEvent.setup();
+    await appDatabase.workoutSessions.add(createEntity(
+      createWorkoutSessionInput({
+        status: 'completed',
+        sourceTemplateNameSnapshot: 'Push conservée',
+      }),
+      'session-filter-reset',
+    ));
+
+    render(
+      <MemoryRouter initialEntries={['/strength/sessions']}>
+        <Routes>
+          <Route path="/strength/sessions" element={<WorkoutSessionsPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole('heading', { name: 'Push conservée' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Abandonnées' }));
+    expect(await screen.findByText('Aucune séance dans ce filtre')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Afficher toutes les séances' }));
+
+    expect(await screen.findByRole('heading', { name: 'Push conservée' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Toutes' })).toHaveAttribute('aria-pressed', 'true');
+    expect(await appDatabase.workoutSessions.count()).toBe(1);
+  });
+
   it('consomme le feedback transmis après la persistance d’une séance terminée', async () => {
     await appDatabase.workoutSessions.add(createEntity(
       createWorkoutSessionInput({ status: 'completed' }),
