@@ -22,7 +22,7 @@ interface ProgressPhotoAddFormProps {
 }
 
 export function ProgressPhotoAddForm({ onSave }: ProgressPhotoAddFormProps) {
-  const [file, setFile] = useState<File>();
+  const [file, setFile] = useState<File | undefined>(undefined);
   const [previewUrl, setPreviewUrl] = useState('');
   const [date, setDate] = useState(toLocalDate());
   const [view, setView] = useState<ProgressPhotoView>('front');
@@ -54,6 +54,7 @@ export function ProgressPhotoAddForm({ onSave }: ProgressPhotoAddFormProps) {
       setFeedback('Choisis une photo avant de l’enregistrer.');
       return;
     }
+    const selectedFile = file;
     const normalizedWeight = weight.trim().replace(',', '.');
     const weightKg = normalizedWeight ? Number(normalizedWeight) : undefined;
 
@@ -61,7 +62,7 @@ export function ProgressPhotoAddForm({ onSave }: ProgressPhotoAddFormProps) {
     setFeedback(undefined);
     try {
       await onSave({
-        file,
+        file: selectedFile,
         date,
         view,
         ...(weightKg === undefined ? {} : { weightKg }),
@@ -120,7 +121,8 @@ export function ProgressPhotoAddForm({ onSave }: ProgressPhotoAddFormProps) {
             className="absolute inset-0 cursor-pointer opacity-0"
             aria-label="Choisir une photo de progression"
             onChange={(event) => {
-              setFile(event.currentTarget.files?.[0]);
+              const selectedFile = event.currentTarget.files?.item(0) ?? undefined;
+              setFile(selectedFile);
               setState('idle');
               setFeedback(undefined);
             }}
@@ -203,12 +205,12 @@ export function ProgressPhotoAddForm({ onSave }: ProgressPhotoAddFormProps) {
         ) : null}
 
         <SportPilotStatefulButton
+          className="w-full"
           state={state}
           idleLabel="Enregistrer la photo"
           loadingLabel="Compression et enregistrement…"
           successLabel="Photo enregistrée"
           errorLabel="Réessayer"
-          fullWidth
           type="submit"
         />
       </form>
