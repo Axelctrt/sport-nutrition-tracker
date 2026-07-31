@@ -78,4 +78,97 @@ describe('progressPhotoImageService', () => {
       vi.unstubAllGlobals();
     }
   });
+
+  it('conserve l’URL de secours jusqu’à la fin des dessins canvas', async () => {
+    const createObjectURL = vi.fn(() => 'blob:progress-photo');
+    const revokeObjectURL = vi.fn();
+    const originalCreateObjectURL = URL.createObjectURL;
+    const originalRevokeObjectURL = URL.revokeObjectURL;
+
+    Object.defineProperty(URL, 'createObjectURL', {
+      configurable: true,
+      writable: true,
+      value: createObjectURL,
+    });
+    Object.defineProperty(URL, 'revokeObjectURL', {
+      configurable: true,
+      writable: true,
+      value: revokeObjectURL,
+    });
+
+    class FakeImage {
+      naturalWidth = 800;
+      naturalHeight = 600;
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      private value = '';
+
+      get src(): string {
+        return this.value;
+      }
+
+      set src(value: string) {
+        this.value = value;
+        if (value) queueMicrotask(() => this.onload?.());
+      }
+    }
+
+    vi.stubGlobal('createImageBitmap', undefined);
+    vi.stubGlobal('Image', FakeImage as unknown as typeof Image);
+
+    const drawImage = vi.fn(() => {
+      expect(revokeObjectURL).not.toHaveBeenCalled();
+    });
+    const createElement = vi.spyOn(document, 'createElement');
+    createElement.mockImplementation(((tagName: string) => {
+      if (tagName !== 'canvas') {
+        return document.createElementNS('http://www.w3.org/1999/xhtml', tagName);
+      }
+      const canvas = {
+        width: 0,
+        height: 0,
+        getContext: () => ({
+          fillStyle: '',
+          fillRect: vi.fn(),
+          drawImage,
+        }),
+        toBlob: (callback: BlobCallback) => {
+          callback(new Blob(['compressed'], { type: 'image/jpeg' }));
+        },
+      };
+      return canvas as unknown as HTMLCanvasElement;
+    }) as unknown as typeof document.createElement);
+
+    try {
+      await processProgressPhotoFile(
+        new File(['photo'], 'progression.png', { type: 'image/png' }),
+      );
+
+      expect(createObjectURL).toHaveBeenCalledOnce();
+      expect(drawImage).toHaveBeenCalledTimes(2);
+      expect(revokeObjectURL).toHaveBeenCalledOnce();
+      expect(revokeObjectURL).toHaveBeenCalledWith('blob:progress-photo');
+    } finally {
+      createElement.mockRestore();
+      vi.unstubAllGlobals();
+      if (originalCreateObjectURL) {
+        Object.defineProperty(URL, 'createObjectURL', {
+          configurable: true,
+          writable: true,
+          value: originalCreateObjectURL,
+        });
+      } else {
+        Reflect.deleteProperty(URL, 'createObjectURL');
+      }
+      if (originalRevokeObjectURL) {
+        Object.defineProperty(URL, 'revokeObjectURL', {
+          configurable: true,
+          writable: true,
+          value: originalRevokeObjectURL,
+        });
+      } else {
+        Reflect.deleteProperty(URL, 'revokeObjectURL');
+      }
+    }
+  });
 });
