@@ -58,6 +58,10 @@ import { AppLayout } from '@/app/layouts/AppLayout';
 import { routePaths } from '@/app/routePaths';
 import { getSyncPrototypeRoutes } from '@/app/syncPrototypeRoutes';
 import { NotFoundPage } from '@/features/foundation/pages/NotFoundPage';
+import {
+  LazyProgressPhotoComparePage,
+  LazyProgressPhotosPage,
+} from '@/features/progress-photos/ProgressPhotoRoutes';
 import { CalculationsInformationPage } from '@/features/information/pages/CalculationsInformationPage';
 import { OfflinePage } from '@/pwa/OfflinePage';
 
@@ -117,6 +121,8 @@ export const appShellRoutes: RouteObject[] = [
   { path: routePaths.addOtherActivity, element: <LazyOtherActivityPage /> },
   { path: routePaths.editActivity, element: <LazyEditActivityPage /> },
   { path: routePaths.progression, element: <LazyProgressionHubPage /> },
+  { path: routePaths.progressPhotos, element: <LazyProgressPhotosPage /> },
+  { path: routePaths.progressPhotoCompare, element: <LazyProgressPhotoComparePage /> },
   { path: routePaths.weight, element: <LazyWeightPage /> },
   { path: routePaths.history, element: <LazyHistoryPage /> },
   { path: routePaths.analytics, element: <LazyAnalyticsPage /> },
