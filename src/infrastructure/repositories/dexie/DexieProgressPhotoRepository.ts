@@ -24,7 +24,11 @@ function sortNewestFirst(photos: readonly ProgressPhoto[]): ProgressPhoto[] {
 }
 
 export class DexieProgressPhotoRepository implements ProgressPhotoRepository {
-  constructor(private readonly database: AppDatabase) {}
+  private readonly database: AppDatabase;
+
+  constructor(database: AppDatabase) {
+    this.database = database;
+  }
 
   listAll(): Promise<ProgressPhoto[]> {
     return runRepositoryOperation<ProgressPhoto[]>(
