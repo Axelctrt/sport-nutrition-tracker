@@ -58,7 +58,7 @@ Ne pas coder une nouvelle palette locale lorsqu’un token sémantique existe.
 ### EmptyState
 
 `EmptyState` conserve une API simple avec icône, titre, description et jusqu’à
-Deux actions. La propriété `variant` décrit le contexte plutôt que le style :
+deux actions. La propriété `variant` décrit le contexte plutôt que le style :
 
 - `first-use` : état initial engageant, densité normale et ton de marque ;
 - `filtered` : aucun résultat sans perte de données, présentation compacte ;
