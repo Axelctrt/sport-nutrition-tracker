@@ -118,6 +118,8 @@ test('valide les thèmes, graphiques et écrans de décision avec des données c
     appearance: 'dark',
   });
   await openReadyPage(page, '/progression?range=90', 'Progression');
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await expect(page.getByRole('heading', { level: 1, name: 'Progression' })).toBeVisible();
   await expect(page.locator('html')).toHaveClass(/dark/);
   await expect(page.locator('html')).toHaveAttribute('data-sport-theme', 'core');
   if (testInfo.project.name === 'chromium-desktop') {
