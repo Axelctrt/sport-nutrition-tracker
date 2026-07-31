@@ -1,5 +1,6 @@
 import { Wifi, WifiOff } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { useGlobalBannerVisibility } from '@/shared/global-banner/GlobalBannerCoordinator';
 import { cn } from '@/shared/utils/cn';
 
 type ConnectionState = 'online' | 'offline' | 'restored';
@@ -10,6 +11,11 @@ export function OfflineStatusBanner() {
   );
   const stateRef = useRef(connectionState);
   const restoreTimerRef = useRef<number | undefined>(undefined);
+  const visible = useGlobalBannerVisibility(
+    'connection-status',
+    connectionState === 'offline' ? 'offline' : 'connection-restored',
+    connectionState !== 'online',
+  );
 
   useEffect(() => {
     stateRef.current = connectionState;
@@ -55,7 +61,7 @@ export function OfflineStatusBanner() {
     };
   }, []);
 
-  if (connectionState === 'online') {
+  if (connectionState === 'online' || !visible) {
     return null;
   }
 
