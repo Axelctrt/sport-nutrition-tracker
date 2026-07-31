@@ -35,7 +35,7 @@ interface GlobalBannerRegistration {
 }
 
 interface GlobalBannerCoordinatorValue {
-  visibleId?: string;
+  visibleId: string | undefined;
   register: (registration: GlobalBannerRegistration) => void;
   unregister: (id: string) => void;
 }
