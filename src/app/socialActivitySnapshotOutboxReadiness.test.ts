@@ -12,7 +12,7 @@ import {
 
 describe('readiness file locale des snapshots sociaux 0.29.0 A4', () => {
   it('conserve les schémas publiés du stockage principal et du prototype cloud', () => {
-    expect(databaseSchemaVersion).toBe(11);
+    expect(databaseSchemaVersion).toBe(12);
     expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(16);
     expect(SYNC_PROTOTYPE_TABLE_NAMES).toContain('socialActivitySnapshots');
   });
