@@ -78,20 +78,7 @@ function readBlobAsArrayBuffer(blob: Blob): Promise<ArrayBuffer> {
     return blob.arrayBuffer();
   }
 
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => {
-      reject(reader.error ?? new Error('La lecture de l’image a échoué.'));
-    };
-    reader.onload = () => {
-      if (reader.result instanceof ArrayBuffer) {
-        resolve(reader.result);
-        return;
-      }
-      reject(new Error('Le navigateur n’a pas renvoyé les données binaires attendues.'));
-    };
-    reader.readAsArrayBuffer(blob);
-  });
+  return new Response(blob).arrayBuffer();
 }
 
 async function archiveAsset(asset: ProgressPhotoAsset): Promise<ArchivedAsset> {
