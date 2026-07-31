@@ -82,6 +82,36 @@ La demande de persistance du stockage est le pilote de référence pour une
 opération locale restant sur la même carte : chargement dans le bouton, puis
 une unique `InlineNotice` de succès, d’information ou d’erreur.
 
+## Bannières globales
+
+Une seule bannière ou carte globale persistante doit être visible à la fois.
+Les sources actives restent enregistrées afin que la priorité suivante
+réapparaisse automatiquement lorsque la première disparaît.
+
+Ordre de priorité :
+
+1. risque de perte ou conflit de données ;
+2. session expirée ou action obligatoire sur le compte ;
+3. synchronisation échouée ou suspendue ;
+4. application hors ligne ;
+5. mise à jour PWA disponible ;
+6. rappel de routine ;
+7. application prête hors connexion ;
+8. connexion rétablie, temporaire.
+
+`GlobalBannerCoordinatorProvider` arbitre actuellement le statut de connexion,
+les messages PWA et les rappels de routine. Les priorités liées aux données, au
+compte et à la synchronisation sont réservées pour leurs futures sources
+canoniques ; ne pas créer un second arbitre local.
+
+- Masquer une bannière de priorité inférieure ne doit pas effacer son état ni
+  déclencher son action.
+- Une bannière masquée redevient visible si elle est toujours pertinente après
+  la disparition de la priorité supérieure.
+- Les toasts courts ne participent pas à cet arbitrage ; ils ne doivent toutefois
+  pas répéter le message de la bannière visible.
+- Conserver les actions, délais et règles métier propres à chaque source.
+
 ## Navigation et overlays
 
 - Les routes restent rechargeables et compatibles avec Retour.
