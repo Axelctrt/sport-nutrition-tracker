@@ -3,6 +3,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from '@testing-library/react';
 
 import { StoragePersistenceCard } from '@/features/backup/components/StoragePersistenceCard';
@@ -59,9 +60,13 @@ describe('StoragePersistenceCard', () => {
 
     await waitFor(() => {
       expect(requestPersistence).toHaveBeenCalledTimes(1);
+      const status = screen.getByRole('status');
       expect(
-        screen.getByRole('status', { name: /Protection renforcée activée/i }),
+        within(status).getByText('Protection renforcée activée'),
       ).toBeInTheDocument();
+      expect(status).toHaveTextContent(
+        'Le navigateur a placé le stockage SportPilot en mode persistant.',
+      );
     });
   });
 
