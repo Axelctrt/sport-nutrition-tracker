@@ -15,9 +15,16 @@ const FORBIDDEN_PATTERNS = [
 function sourceFiles(directory: string): string[] {
   const root = join(process.cwd(), directory);
   if (!existsSync(root)) return [];
-  return readdirSync(root, { recursive: true, withFileTypes: true })
-    .filter((entry) => entry.isFile() && /\.(?:ts|tsx|mjs)$/.test(entry.name))
-    .map((entry) => join(entry.parentPath, entry.name));
+
+  function walk(path: string): string[] {
+    return readdirSync(path, { withFileTypes: true }).flatMap((entry) => {
+      const next = join(path, entry.name);
+      if (entry.isDirectory()) return walk(next);
+      return /\.(?:ts|tsx|mjs)$/.test(entry.name) ? [next] : [];
+    });
+  }
+
+  return walk(root);
 }
 
 describe('contrat local-only des photos de progression', () => {
@@ -39,8 +46,8 @@ describe('contrat local-only des photos de progression', () => {
       'functions/api',
       'src/infrastructure/backup',
     ];
-    const violations = sourceFiles(inspectedDirectories[0] ?? '')
-      .concat(...inspectedDirectories.slice(1).map(sourceFiles))
+    const violations = inspectedDirectories
+      .flatMap(sourceFiles)
       .flatMap((file) => {
         const content = readFileSync(file, 'utf8');
         return FORBIDDEN_PATTERNS
