@@ -14,6 +14,9 @@ const ACCEPTED_PROGRESS_PHOTO_TYPES = new Set([
   'image/heif',
 ]);
 
+const IMAGE_DECODE_ERROR_MESSAGE =
+  'Cette image ne peut pas être décodée. Essaie un fichier JPEG, PNG ou WebP.';
+
 interface DecodedImage {
   source: CanvasImageSource;
   width: number;
@@ -71,45 +74,91 @@ async function decodeWithImageBitmap(file: File): Promise<DecodedImage | undefin
   }
 }
 
+function loadImageElement(source: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const element = new Image();
+    element.onload = () => resolve(element);
+    element.onerror = () => reject(new ProgressPhotoImageError(
+      IMAGE_DECODE_ERROR_MESSAGE,
+    ));
+    element.src = source;
+  });
+}
+
+function readFileAsDataUrl(file: File): Promise<string> {
+  if (typeof FileReader === 'undefined') {
+    return Promise.reject(new ProgressPhotoImageError(
+      IMAGE_DECODE_ERROR_MESSAGE,
+    ));
+  }
+
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        resolve(reader.result);
+        return;
+      }
+      reject(new ProgressPhotoImageError(IMAGE_DECODE_ERROR_MESSAGE));
+    };
+    reader.onerror = () => reject(new ProgressPhotoImageError(
+      IMAGE_DECODE_ERROR_MESSAGE,
+      { cause: reader.error },
+    ));
+    reader.readAsDataURL(file);
+  });
+}
+
+function decodedImageFromElement(
+  image: HTMLImageElement,
+  close: () => void,
+): DecodedImage {
+  return {
+    source: image,
+    width: image.naturalWidth,
+    height: image.naturalHeight,
+    close,
+  };
+}
+
 async function decodeWithImageElement(file: File): Promise<DecodedImage> {
-  if (
-    typeof document === 'undefined'
-    || typeof Image === 'undefined'
-    || typeof URL.createObjectURL !== 'function'
-  ) {
+  if (typeof document === 'undefined' || typeof Image === 'undefined') {
     throw new ProgressPhotoImageError(
       'Le navigateur ne permet pas de préparer cette image.',
     );
   }
 
-  const objectUrl = URL.createObjectURL(file);
-  let image: HTMLImageElement;
-  try {
-    image = await new Promise<HTMLImageElement>((resolve, reject) => {
-      const element = new Image();
-      element.onload = () => resolve(element);
-      element.onerror = () => reject(new ProgressPhotoImageError(
-        'Cette image ne peut pas être décodée. Essaie un fichier JPEG, PNG ou WebP.',
-      ));
-      element.src = objectUrl;
-    });
-  } catch (error) {
-    URL.revokeObjectURL(objectUrl);
-    throw error;
+  if (typeof URL.createObjectURL === 'function') {
+    const objectUrl = URL.createObjectURL(file);
+    try {
+      const image = await loadImageElement(objectUrl);
+      let closed = false;
+      return decodedImageFromElement(image, () => {
+        if (closed) return;
+        closed = true;
+        image.src = '';
+        URL.revokeObjectURL(objectUrl);
+      });
+    } catch {
+      URL.revokeObjectURL(objectUrl);
+    }
   }
 
-  let closed = false;
-  return {
-    source: image,
-    width: image.naturalWidth,
-    height: image.naturalHeight,
-    close: () => {
+  try {
+    const dataUrl = await readFileAsDataUrl(file);
+    const image = await loadImageElement(dataUrl);
+    let closed = false;
+    return decodedImageFromElement(image, () => {
       if (closed) return;
       closed = true;
       image.src = '';
-      URL.revokeObjectURL(objectUrl);
-    },
-  };
+    });
+  } catch (error) {
+    if (error instanceof ProgressPhotoImageError) throw error;
+    throw new ProgressPhotoImageError(IMAGE_DECODE_ERROR_MESSAGE, {
+      cause: error,
+    });
+  }
 }
 
 async function decodeImage(file: File): Promise<DecodedImage> {
