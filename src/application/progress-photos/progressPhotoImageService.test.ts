@@ -171,4 +171,117 @@ describe('progressPhotoImageService', () => {
       }
     }
   });
+
+  it('retente via une data URL lorsque WebKit refuse l’URL blob', async () => {
+    const createObjectURL = vi.fn(() => 'blob:webkit-refused');
+    const revokeObjectURL = vi.fn();
+    const originalCreateObjectURL = URL.createObjectURL;
+    const originalRevokeObjectURL = URL.revokeObjectURL;
+
+    Object.defineProperty(URL, 'createObjectURL', {
+      configurable: true,
+      writable: true,
+      value: createObjectURL,
+    });
+    Object.defineProperty(URL, 'revokeObjectURL', {
+      configurable: true,
+      writable: true,
+      value: revokeObjectURL,
+    });
+
+    class FakeImage {
+      naturalWidth = 640;
+      naturalHeight = 480;
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      private value = '';
+
+      get src(): string {
+        return this.value;
+      }
+
+      set src(value: string) {
+        this.value = value;
+        if (!value) return;
+        queueMicrotask(() => {
+          if (value.startsWith('blob:')) {
+            this.onerror?.();
+            return;
+          }
+          this.onload?.();
+        });
+      }
+    }
+
+    class FakeFileReader {
+      result: string | ArrayBuffer | null = null;
+      error: DOMException | null = null;
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+
+      readAsDataURL(): void {
+        this.result = 'data:image/png;base64,ZmFrZS1waG90bw==';
+        queueMicrotask(() => this.onload?.());
+      }
+    }
+
+    vi.stubGlobal('createImageBitmap', undefined);
+    vi.stubGlobal('Image', FakeImage as unknown as typeof Image);
+    vi.stubGlobal('FileReader', FakeFileReader as unknown as typeof FileReader);
+
+    const drawImage = vi.fn();
+    const createElement = vi.spyOn(document, 'createElement');
+    createElement.mockImplementation(((tagName: string) => {
+      if (tagName !== 'canvas') {
+        return document.createElementNS('http://www.w3.org/1999/xhtml', tagName);
+      }
+      const canvas = {
+        width: 0,
+        height: 0,
+        getContext: () => ({
+          fillStyle: '',
+          fillRect: vi.fn(),
+          drawImage,
+        }),
+        toBlob: (callback: BlobCallback) => {
+          callback(new Blob(['compressed'], { type: 'image/jpeg' }));
+        },
+      };
+      return canvas as unknown as HTMLCanvasElement;
+    }) as unknown as typeof document.createElement);
+
+    try {
+      const result = await processProgressPhotoFile(
+        new File(['photo'], 'progression.png', { type: 'image/png' }),
+      );
+
+      expect(result.original).toMatchObject({ width: 640, height: 480 });
+      expect(result.thumbnail).toMatchObject({ width: 480, height: 360 });
+      expect(createObjectURL).toHaveBeenCalledOnce();
+      expect(revokeObjectURL).toHaveBeenCalledOnce();
+      expect(revokeObjectURL).toHaveBeenCalledWith('blob:webkit-refused');
+      expect(drawImage).toHaveBeenCalledTimes(2);
+    } finally {
+      createElement.mockRestore();
+      vi.unstubAllGlobals();
+      if (originalCreateObjectURL) {
+        Object.defineProperty(URL, 'createObjectURL', {
+          configurable: true,
+          writable: true,
+          value: originalCreateObjectURL,
+        });
+      } else {
+        Reflect.deleteProperty(URL, 'createObjectURL');
+      }
+      if (originalRevokeObjectURL) {
+        Object.defineProperty(URL, 'revokeObjectURL', {
+          configurable: true,
+          writable: true,
+          value: originalRevokeObjectURL,
+        });
+      } else {
+        Reflect.deleteProperty(URL, 'revokeObjectURL');
+      }
+    }
+  });
 });
