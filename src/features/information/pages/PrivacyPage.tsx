@@ -18,6 +18,7 @@ import { InlineNotice } from '@/shared/ui/InlineNotice';
 
 const localDataItems = [
   'Le profil, le poids, les pas, les activités, les repas et les séances sont enregistrés dans IndexedDB sur cet appareil.',
+  'Les photos de progression, leurs miniatures et leurs métadonnées restent dans la base locale de l’espace actuellement ouvert. Elles ne sont pas envoyées dans Dexie Cloud.',
   'Le mode local ne nécessite aucun compte. Un compte connecté utilise un espace de données séparé et les synchronisations explicitement activées.',
   'SportPilot n’intègre pas de publicité, de suivi publicitaire ni d’outil d’analyse d’audience.',
 ] as const;
@@ -25,7 +26,7 @@ const localDataItems = [
 const accountAndSocialItems = [
   'Le compte utilise une adresse email et un code à usage unique gérés par Dexie Cloud. Le code OTP n’est pas conservé dans le brouillon d’onboarding.',
   'Le pseudonyme social, le nom affiché et l’identifiant technique du compte sont envoyés à l’annuaire social afin de garantir l’unicité du pseudonyme.',
-  'Le prénom du profil sportif, le poids, les repas et les séances ne sont jamais utilisés automatiquement comme identité publique.',
+  'Le prénom du profil sportif, le poids, les repas, les séances et les photos de progression ne sont jamais utilisés automatiquement comme identité ou contenu public.',
   'Le mode local reste utilisable sans identité sociale ni publication dans l’annuaire.',
 ] as const;
 
@@ -38,8 +39,10 @@ const externalRequestItems = [
 
 const controlItems = [
   'Les sauvegardes JSON et les exports CSV sont téléchargés comme fichiers sur l’appareil choisi par l’utilisateur.',
-  'Une restauration affiche une prévisualisation et demande une confirmation avant de remplacer les données locales.',
-  'La page Sauvegarde efface les données locales. Pour un compte connecté, la page Compte et appareils propose séparément une suppression vérifiée des données cloud, sociales et locales.',
+  'La sauvegarde JSON générale n’inclut pas les images de progression. La page Photos de progression propose une archive locale séparée avec restauration additive.',
+  'Une restauration générale affiche une prévisualisation et demande une confirmation avant de remplacer les données locales. Une archive photo ignore les doublons et n’efface pas les photos déjà présentes.',
+  'Les photos peuvent être supprimées individuellement ou toutes ensemble depuis leur page dédiée. La page Sauvegarde gère séparément les autres données locales.',
+  'Pour un compte connecté, la page Compte et appareils propose séparément une suppression vérifiée des données cloud, sociales et locales synchronisées.',
   'Un diagnostic technique contient des versions, des capacités et des compteurs, sans détail des données personnelles.',
 ] as const;
 
@@ -145,10 +148,10 @@ export function PrivacyPage() {
               </span>
               <div className="min-w-0">
                 <h2 className="text-lg font-semibold text-slate-950 dark:text-white">
-                  Caméra, scanner et analyse photo
+                  Caméra, scanner et photos
                 </h2>
                 <p className="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                  La caméra démarre uniquement après une action explicite et avec l’autorisation du navigateur. Le scanner analyse l’image dans le navigateur ; seul le code-barres détecté peut être transmis à Open Food Facts. L’analyse nutritionnelle reste locale par défaut. Si tu actives l’IA distante pour une photo, une connexion SportPilot est requise et le proxy transmet cette photo à Google Gemini après ton consentement. La photo n’est pas ajoutée au journal alimentaire.
+                  La caméra démarre uniquement après une action explicite et avec l’autorisation du navigateur. Le scanner analyse l’image dans le navigateur ; seul le code-barres détecté peut être transmis à Open Food Facts. Pour une estimation nutritionnelle, une photo peut être transmise à Google Gemini uniquement après consentement explicite et connexion SportPilot. Les photos de progression suivent un autre parcours : elles sont redimensionnées dans le navigateur, conservées dans IndexedDB, jamais analysées par une IA et jamais publiées ou synchronisées vers le cloud.
                 </p>
               </div>
             </div>
@@ -176,7 +179,7 @@ export function PrivacyPage() {
               <div>
                 <h2 className="font-semibold text-slate-950 dark:text-white">Sécurité du navigateur</h2>
                 <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                  La version publiée utilise HTTPS et des en-têtes limitant les scripts, les intégrations et les permissions. Le stockage local n’est toutefois pas un coffre chiffré : une personne ayant accès au navigateur ou à l’appareil peut potentiellement consulter les données.
+                  La version publiée utilise HTTPS et des en-têtes limitant les scripts, les intégrations et les permissions. Le stockage local n’est toutefois pas un coffre chiffré : une personne ayant accès au navigateur ou à l’appareil peut potentiellement consulter les données et les photos.
                 </p>
               </div>
             </div>
@@ -185,7 +188,7 @@ export function PrivacyPage() {
               <div>
                 <h2 className="font-semibold text-slate-950 dark:text-white">Durée de conservation</h2>
                 <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                  Les données restent présentes jusqu’à leur suppression depuis SportPilot, depuis les réglages du navigateur ou lors de la suppression des données de l’application installée.
+                  Les données et photos restent présentes jusqu’à leur suppression depuis SportPilot, depuis les réglages du navigateur ou lors de la suppression des données de l’application installée.
                 </p>
               </div>
             </div>
@@ -197,13 +200,24 @@ export function PrivacyPage() {
         </InlineNotice>
 
         <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <Link
-            to={routePaths.backup}
-            className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-          >
-            <Trash2 aria-hidden="true" className="size-4" />
-            Sauvegarder ou supprimer mes données
-          </Link>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Link
+              to={routePaths.backup}
+              className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+            >
+              <Trash2 aria-hidden="true" className="size-4" />
+              Sauvegarder mes données
+            </Link>
+            {profile ? (
+              <Link
+                to={routePaths.progressPhotos}
+                className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+              >
+                <Camera aria-hidden="true" className="size-4" />
+                Gérer mes photos
+              </Link>
+            ) : null}
+          </div>
           <p className="inline-flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
             <ShieldCheck aria-hidden="true" className="size-4" />
             Politique intégrée à SportPilot {__APP_VERSION__}
