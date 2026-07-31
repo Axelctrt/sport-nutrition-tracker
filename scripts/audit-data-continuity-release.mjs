@@ -117,8 +117,8 @@ if (failures.length === 0) {
   for (const marker of [
     "'progressPhotos'",
     "'progressPhotoAssets'",
-    "'src/application/sync'",
-    "'src/infrastructure/backup'",
+    "'/src/application/sync/**/*.{ts,tsx}'",
+    "'/src/infrastructure/backup/**/*.{ts,tsx}'",
   ]) {
     if (!photoLocalOnly.includes(marker)) fail(`garde-fou photo local-only absent : ${marker}.`);
   }
