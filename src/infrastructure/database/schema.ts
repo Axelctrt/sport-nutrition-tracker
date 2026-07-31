@@ -4,8 +4,6 @@ export const databaseTableNames = [
   'userProfile',
   'userSettings',
   'weights',
-  'progressPhotos',
-  'progressPhotoAssets',
   'dailySteps',
   'dailyCheckIns',
   'dailyActivityDecisions',
@@ -46,7 +44,8 @@ export const databaseInternalTableNames = [
   'deviceSettings',
   'migrationJournal',
   'databaseDiagnostics',
-
+  'progressPhotos',
+  'progressPhotoAssets',
   'trashItems',
 ] as const;
 
