@@ -35,5 +35,6 @@ export interface ProgressPhotoRepository {
   getWithAssets(photoId: string): Promise<ProgressPhotoWithAssets | undefined>;
   create(input: CreateProgressPhotoInput): Promise<ProgressPhoto>;
   delete(photoId: string): Promise<void>;
+  clearAll(): Promise<void>;
   cleanupOrphans(): Promise<ProgressPhotoCleanupResult>;
 }
