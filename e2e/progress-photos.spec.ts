@@ -7,10 +7,7 @@ import {
   getBrowserLocalDate,
 } from './helpers/app';
 
-const TEST_PNG = Buffer.from(
-  'iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAAAY0lEQVR4nO3PQQ3AIADAQEAQD/zhfSJ4XJb0FLRz3zP+bOmAVw1oDWgNaA1oDWgNaA1oDWgNaA1oDWgNaA1oDWgNaA1oDWgNaA1oDWgNaA1oDWgNaA1oDWgNaA1oDWgNaA1oH+jdAV0p1pCYAAAAAElFTkSuQmCC',
-  'base64',
-);
+const TEST_IMAGE_PATH = 'public/icons/icon-192.png';
 
 async function previousLocalDate(page: Page): Promise<string> {
   return page.evaluate(() => {
@@ -25,16 +22,13 @@ async function addPhoto(
   page: Page,
   options: {
     date: string;
-    name: string;
     note: string;
     expectedCount: number;
   },
 ): Promise<void> {
-  await page.getByLabel('Choisir une photo de progression').setInputFiles({
-    name: options.name,
-    mimeType: 'image/png',
-    buffer: TEST_PNG,
-  });
+  await page
+    .getByLabel('Choisir une photo de progression')
+    .setInputFiles(TEST_IMAGE_PATH);
   await page.getByLabel('Date').fill(options.date);
   await page.getByLabel(/Note/).fill(options.note);
   await page.getByRole('button', { name: /Enregistrer la photo|Réessayer/ }).click();
@@ -59,7 +53,6 @@ test('enregistre hors ligne et conserve les photos après rechargement', async (
   await context.setOffline(true);
   await addPhoto(page, {
     date: await getBrowserLocalDate(page),
-    name: 'progression-face.png',
     note: 'Photo enregistrée hors ligne.',
     expectedCount: 1,
   });
@@ -79,13 +72,11 @@ test('compare deux dates de la même vue au toucher et au clavier', async ({ pag
 
   await addPhoto(page, {
     date: await previousLocalDate(page),
-    name: 'avant.png',
     note: 'Avant.',
     expectedCount: 1,
   });
   await addPhoto(page, {
     date: await getBrowserLocalDate(page),
-    name: 'apres.png',
     note: 'Après.',
     expectedCount: 2,
   });
