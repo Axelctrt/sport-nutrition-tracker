@@ -34,10 +34,17 @@ function photoLabel(photo: ProgressPhoto): string {
 function countByView(
   photos: readonly ProgressPhoto[],
 ): Record<ProgressPhotoView, number> {
-  return Object.fromEntries(PROGRESS_PHOTO_VIEWS.map((view) => [
-    view,
-    photos.filter((photo) => photo.view === view).length,
-  ])) as Record<ProgressPhotoView, number>;
+  const counts: Record<ProgressPhotoView, number> = {
+    front: 0,
+    left: 0,
+    right: 0,
+    back: 0,
+    free: 0,
+  };
+  for (const photo of photos) {
+    counts[photo.view] = (counts[photo.view] ?? 0) + 1;
+  }
+  return counts;
 }
 
 export function ProgressPhotoComparePage() {
@@ -47,7 +54,9 @@ export function ProgressPhotoComparePage() {
     [progressPhotos.items],
   );
   const counts = useMemo(() => countByView(photos), [photos]);
-  const firstComparableView = PROGRESS_PHOTO_VIEWS.find((view) => counts[view] >= 2) ?? 'front';
+  const firstComparableView: ProgressPhotoView = PROGRESS_PHOTO_VIEWS.find(
+    (candidate) => (counts[candidate] ?? 0) >= 2,
+  ) ?? 'front';
   const [view, setView] = useState<ProgressPhotoView>(firstComparableView);
   const [beforeId, setBeforeId] = useState('');
   const [afterId, setAfterId] = useState('');
@@ -59,13 +68,13 @@ export function ProgressPhotoComparePage() {
   );
 
   useEffect(() => {
-    if (counts[view] < 2 && counts[firstComparableView] >= 2) {
+    if ((counts[view] ?? 0) < 2 && (counts[firstComparableView] ?? 0) >= 2) {
       setView(firstComparableView);
     }
   }, [counts, firstComparableView, view]);
 
   useEffect(() => {
-    const newest = candidates[0];
+    const newest = candidates.at(0);
     const oldest = candidates.at(-1);
     if (!newest || !oldest) {
       setBeforeId('');
@@ -82,9 +91,14 @@ export function ProgressPhotoComparePage() {
 
   const before = candidates.find(({ id }) => id === beforeId);
   const after = candidates.find(({ id }) => id === afterId);
-  const beforeAsset = useProgressPhotoAssetUrl(before?.originalAssetId);
-  const afterAsset = useProgressPhotoAssetUrl(after?.originalAssetId);
-  const canCompare = before && after && before.id !== after.id;
+  const comparison = before && after && before.id !== after.id
+    ? { before, after }
+    : undefined;
+  const beforeAsset = useProgressPhotoAssetUrl(comparison?.before.originalAssetId);
+  const afterAsset = useProgressPhotoAssetUrl(comparison?.after.originalAssetId);
+  const hasComparableView = PROGRESS_PHOTO_VIEWS.some(
+    (candidate) => (counts[candidate] ?? 0) >= 2,
+  );
 
   return (
     <section aria-labelledby="progress-photo-compare-title" className="space-y-5 pb-8">
@@ -114,7 +128,7 @@ export function ProgressPhotoComparePage() {
         </InlineNotice>
       ) : null}
 
-      {progressPhotos.status === 'ready' && !PROGRESS_PHOTO_VIEWS.some((candidate) => counts[candidate] >= 2) ? (
+      {progressPhotos.status === 'ready' && !hasComparableView ? (
         <EmptyState
           icon={Images}
           title="Deux photos comparables sont nécessaires"
@@ -128,7 +142,7 @@ export function ProgressPhotoComparePage() {
         />
       ) : null}
 
-      {PROGRESS_PHOTO_VIEWS.some((candidate) => counts[candidate] >= 2) ? (
+      {hasComparableView ? (
         <>
           <Card className="grid gap-4 p-4 sm:p-5">
             <div className="grid gap-4 sm:grid-cols-3">
@@ -140,8 +154,12 @@ export function ProgressPhotoComparePage() {
                   className="min-h-11 rounded-xl border border-slate-300 bg-white px-3 text-base text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
                 >
                   {PROGRESS_PHOTO_VIEWS.map((candidate) => (
-                    <option key={candidate} value={candidate} disabled={counts[candidate] < 2}>
-                      {progressPhotoViewLabels[candidate]} ({counts[candidate]})
+                    <option
+                      key={candidate}
+                      value={candidate}
+                      disabled={(counts[candidate] ?? 0) < 2}
+                    >
+                      {progressPhotoViewLabels[candidate]} ({counts[candidate] ?? 0})
                     </option>
                   ))}
                 </select>
@@ -185,25 +203,27 @@ export function ProgressPhotoComparePage() {
             </Button>
           </Card>
 
-          {!canCompare ? (
+          {!comparison ? (
             <InlineNotice tone="info" title="Choisis deux photos différentes">
               Les sélections avant et après doivent correspondre à deux dates distinctes.
             </InlineNotice>
           ) : null}
 
-          {canCompare ? (
+          {comparison ? (
             <Card className="overflow-hidden p-3 sm:p-4" aria-labelledby="photo-comparison-heading">
               <div className="flex items-center justify-between gap-3 px-1 pb-3">
                 <div>
                   <p className="text-xs font-bold uppercase text-brand-700 dark:text-brand-300">Avant</p>
                   <h2 id="photo-comparison-heading" className="text-sm font-semibold text-slate-950 dark:text-white">
-                    {photoLabel(before)}
+                    {photoLabel(comparison.before)}
                   </h2>
                 </div>
                 <GitCompareArrows aria-hidden="true" className="size-5 text-slate-400" />
                 <div className="text-right">
                   <p className="text-xs font-bold uppercase text-brand-700 dark:text-brand-300">Après</p>
-                  <p className="text-sm font-semibold text-slate-950 dark:text-white">{photoLabel(after)}</p>
+                  <p className="text-sm font-semibold text-slate-950 dark:text-white">
+                    {photoLabel(comparison.after)}
+                  </p>
                 </div>
               </div>
 
@@ -217,7 +237,7 @@ export function ProgressPhotoComparePage() {
                 {beforeAsset.url ? (
                   <img
                     src={beforeAsset.url}
-                    alt={`Avant : ${photoLabel(before)}`}
+                    alt={`Avant : ${photoLabel(comparison.before)}`}
                     className="absolute inset-0 size-full object-contain"
                   />
                 ) : null}
@@ -228,7 +248,7 @@ export function ProgressPhotoComparePage() {
                   >
                     <img
                       src={afterAsset.url}
-                      alt={`Après : ${photoLabel(after)}`}
+                      alt={`Après : ${photoLabel(comparison.after)}`}
                       className="size-full object-contain"
                     />
                   </div>
