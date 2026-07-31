@@ -45,7 +45,7 @@ assert(privacyPage.includes('refreshPrivacyFromCloud'), 'la page ouverte ne rech
 assert(coordinator.includes('reconcileRuntimeSocialActivityPrivacy'), 'les snapshots existants ne sont pas réconciliés après téléchargement.');
 assert(backupSchemas.includes('profileVisibilityUpdatedAt: isoDateTimeSchema.optional()'), 'les sauvegardes ne valident pas le nouvel horodatage de visibilité.');
 assert(backupSchemas.includes('socialActivitySharingPolicyUpdatedAt: isoDateTimeSchema.optional()'), 'les sauvegardes ne valident pas le nouvel horodatage de politique.');
-assert(appVersions.includes('CURRENT_DATABASE_VERSION = DATABASE_VERSION_11'), 'la version Dexie principale a été modifiée sans migration.');
+assert(appVersions.includes('CURRENT_DATABASE_VERSION = DATABASE_VERSION_12'), 'la version Dexie principale attendue v12 est absente.');
 assert(syncDatabase.includes('SYNC_PROTOTYPE_DATABASE_VERSION = 16'), 'la version du prototype cloud attendue est absente.');
 
 console.log('Audit social activity privacy cloud sync 0.29.0 A10 OK');
