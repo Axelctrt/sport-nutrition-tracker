@@ -151,7 +151,7 @@ export function PrivacyPage() {
                   Caméra, scanner et photos
                 </h2>
                 <p className="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                  La caméra démarre uniquement après une action explicite et avec l’autorisation du navigateur. Le scanner analyse l’image dans le navigateur ; seul le code-barres détecté peut être transmis à Open Food Facts. Pour une estimation nutritionnelle, une photo peut être transmise à Google Gemini uniquement après consentement explicite et connexion SportPilot. Les photos de progression suivent un autre parcours : elles sont redimensionnées dans le navigateur, conservées dans IndexedDB, jamais analysées par une IA et jamais publiées ou synchronisées vers le cloud.
+                  La caméra démarre uniquement après une action explicite et avec l’autorisation du navigateur. Le scanner analyse l’image dans le navigateur ; seul le code-barres détecté peut être transmis à Open Food Facts. L’analyse nutritionnelle reste locale par défaut. Pour une estimation à partir d’une photo, SportPilot peut l’envoyer à Google Gemini après ton consentement explicite et uniquement lorsque ton compte est connecté. Les photos de progression suivent un autre parcours : elles sont redimensionnées dans le navigateur, conservées dans IndexedDB, jamais analysées par une IA et jamais publiées ou synchronisées vers le cloud.
                 </p>
               </div>
             </div>
