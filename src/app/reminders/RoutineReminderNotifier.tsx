@@ -10,6 +10,7 @@ import {
 } from '@/application/reminders/routineReminderService';
 import { normalizeRoutineReminderPreferences } from '@/domain/reminders/routineReminder';
 import { repositories } from '@/infrastructure/repositories/repositories';
+import { useGlobalBannerVisibility } from '@/shared/global-banner/GlobalBannerCoordinator';
 
 function navigateTo(path: string): void {
   window.location.hash = path.startsWith('/') ? `#${path}` : path;
@@ -18,6 +19,11 @@ function navigateTo(path: string): void {
 export function RoutineReminderNotifier() {
   const [candidate, setCandidate] = useState<RoutineReminderCandidate | null>(null);
   const [snoozeMinutes, setSnoozeMinutes] = useState(60);
+  const visible = useGlobalBannerVisibility(
+    'routine-reminder',
+    'routine-reminder',
+    candidate !== null,
+  );
 
   const refresh = useCallback(async () => {
     try {
@@ -53,7 +59,7 @@ export function RoutineReminderNotifier() {
     };
   }, [refresh]);
 
-  if (!candidate) return null;
+  if (!candidate || !visible) return null;
 
   const closeAndRefresh = () => {
     setCandidate(null);
