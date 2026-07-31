@@ -51,7 +51,7 @@ describe('progressPhotoImageService', () => {
         },
       };
       return canvas as unknown as HTMLCanvasElement;
-    }) as typeof document.createElement);
+    }) as unknown as typeof document.createElement);
 
     try {
       const result = await processProgressPhotoFile(
