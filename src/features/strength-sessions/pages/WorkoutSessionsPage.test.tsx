@@ -48,6 +48,23 @@ describe('WorkoutSessionsPage', () => {
     });
   });
 
+  it('présente un premier historique vide sans le confondre avec un filtre', async () => {
+    render(
+      <MemoryRouter initialEntries={['/strength/sessions']}>
+        <Routes>
+          <Route path="/strength/sessions" element={<WorkoutSessionsPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    const heading = await screen.findByRole('heading', { name: 'Aucun entraînement enregistré' });
+    expect(heading.closest('[data-empty-state-variant]')).toHaveAttribute(
+      'data-empty-state-variant',
+      'first-use',
+    );
+    expect(screen.getByRole('button', { name: 'Démarrer une séance libre' })).toBeInTheDocument();
+  });
+
   it('propose de reprendre une séance en cours après rechargement', async () => {
     await appDatabase.workoutSessions.add(createEntity({
       date: '2026-06-25',
@@ -117,7 +134,11 @@ describe('WorkoutSessionsPage', () => {
 
     expect(await screen.findByRole('heading', { name: 'Push conservée' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Abandonnées' }));
-    expect(await screen.findByText('Aucune séance dans ce filtre')).toBeInTheDocument();
+    const heading = await screen.findByRole('heading', { name: 'Aucune séance dans ce filtre' });
+    expect(heading.closest('[data-empty-state-variant]')).toHaveAttribute(
+      'data-empty-state-variant',
+      'filtered',
+    );
 
     await user.click(screen.getByRole('button', { name: 'Afficher toutes les séances' }));
 
@@ -159,5 +180,4 @@ describe('WorkoutSessionsPage', () => {
 
     expect(await screen.findByText('feedback-consommé')).toBeInTheDocument();
   });
-
 });
