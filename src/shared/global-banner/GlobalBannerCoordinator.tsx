@@ -101,12 +101,14 @@ export function useGlobalBannerVisibility(
   active: boolean,
 ): boolean {
   const coordinator = useContext(GlobalBannerCoordinatorContext);
+  const register = coordinator?.register;
+  const unregister = coordinator?.unregister;
 
   useLayoutEffect(() => {
-    if (!coordinator || !active) return undefined;
-    coordinator.register({ id, kind });
-    return () => coordinator.unregister(id);
-  }, [active, coordinator, id, kind]);
+    if (!register || !unregister || !active) return undefined;
+    register({ id, kind });
+    return () => unregister(id);
+  }, [active, id, kind, register, unregister]);
 
   if (!active) return false;
   if (!coordinator) return true;
