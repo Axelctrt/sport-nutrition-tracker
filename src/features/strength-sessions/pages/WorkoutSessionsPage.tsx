@@ -25,14 +25,17 @@ export function WorkoutSessionsPage() {
   const [filter, setFilter] = useState<SessionFilter>('all');
   const { sessions, status, errorMessage, isStarting, refresh, startEmpty } = useWorkoutSessions();
   const current = sessions.find(({ session }) => session.status === 'inProgress');
-  const history = useMemo(() => sessions.filter(({ session }) => {
-    if (session.status !== 'completed' && session.status !== 'abandoned') return false;
-    return filter === 'all' || session.status === filter;
-  }), [filter, sessions]);
+  const archivedSessions = useMemo(
+    () => sessions.filter(({ session }) => session.status === 'completed' || session.status === 'abandoned'),
+    [sessions],
+  );
+  const history = useMemo(
+    () => archivedSessions.filter(({ session }) => filter === 'all' || session.status === filter),
+    [archivedSessions, filter],
+  );
 
   useEffect(() => {
-    const feedback = (location.state as WorkoutSessionNavigationState | null)
-      ?.workoutSessionFeedback;
+    const feedback = (location.state as WorkoutSessionNavigationState | null)?.workoutSessionFeedback;
     if (!feedback || handledCompletionRef.current === feedback.sessionId) return;
     handledCompletionRef.current = feedback.sessionId;
     actionToast.success({
@@ -40,26 +43,16 @@ export function WorkoutSessionsPage() {
       title: feedback.title,
       description: feedback.description,
     });
-    void navigate(`${location.pathname}${location.search}`, {
-      replace: true,
-      state: null,
-    });
+    void navigate(`${location.pathname}${location.search}`, { replace: true, state: null });
   }, [actionToast, location.pathname, location.search, location.state, navigate]);
 
   const startFreeSession = async () => {
     const created = await startEmpty();
     if (created) {
-      actionToast.success({
-        key: `workout-session-start:${created.session.id}`,
-        title: 'Séance libre démarrée',
-      });
+      actionToast.success({ key: `workout-session-start:${created.session.id}`, title: 'Séance libre démarrée' });
       await navigate(workoutSessionPath(created.session.id));
     } else {
-      actionToast.error({
-        key: 'workout-session-start',
-        error: errorMessage,
-        fallback: 'La séance libre n’a pas pu être démarrée.',
-      });
+      actionToast.error({ key: 'workout-session-start', error: errorMessage, fallback: 'La séance libre n’a pas pu être démarrée.' });
     }
   };
 
@@ -72,21 +65,14 @@ export function WorkoutSessionsPage() {
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">Reprends la séance active ou consulte rapidement les entraînements déjà réalisés.</p>
         </div>
         <div className="grid grid-cols-2 gap-2 sm:flex">
-          <Link to={routePaths.weeklyPlanning} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800">
-            <CalendarDays aria-hidden="true" className="size-4" />Planning
-          </Link>
-          <Link to={routePaths.workoutTemplates} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800">
-            <Layers3 aria-hidden="true" className="size-4" />Modèles
-          </Link>
-          <Button size="lg" disabled={isStarting || Boolean(current)} onClick={() => void startFreeSession()}>
-            <Plus aria-hidden="true" className="size-4" />{isStarting ? 'Démarrage…' : 'Séance libre'}
-          </Button>
+          <Link to={routePaths.weeklyPlanning} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"><CalendarDays aria-hidden="true" className="size-4" />Planning</Link>
+          <Link to={routePaths.workoutTemplates} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"><Layers3 aria-hidden="true" className="size-4" />Modèles</Link>
+          <Button size="lg" disabled={isStarting || Boolean(current)} onClick={() => void startFreeSession()}><Plus aria-hidden="true" className="size-4" />{isStarting ? 'Démarrage…' : 'Séance libre'}</Button>
         </div>
       </div>
 
       {errorMessage ? <InlineNotice className="mt-5" tone="error" title="Action impossible"><p>{errorMessage}</p><Button className="mt-3" variant="secondary" onClick={() => void refresh()}>Réessayer</Button></InlineNotice> : null}
       {status === 'loading' ? <PageSkeleton className="mt-6" variant="list" /> : null}
-
       {status === 'ready' ? <WorkoutSessionsSummary sessions={sessions} /> : null}
 
       {status === 'ready' && current ? (
@@ -97,9 +83,7 @@ export function WorkoutSessionsPage() {
               <h2 className="mt-1 text-xl font-bold text-slate-950 dark:text-white">{getWorkoutSessionTitle(current.session)}</h2>
               <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{current.exerciseCount} exercice{current.exerciseCount > 1 ? 's' : ''} · {formatLocalDate(current.session.date)}</p>
             </div>
-            <Link to={workoutSessionPath(current.session.id)} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-brand-700 px-5 font-semibold text-white hover:bg-brand-800">
-              <Play aria-hidden="true" className="size-5" />Reprendre la séance
-            </Link>
+            <Link to={workoutSessionPath(current.session.id)} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-brand-700 px-5 font-semibold text-white hover:bg-brand-800"><Play aria-hidden="true" className="size-5" />Reprendre la séance</Link>
           </div>
         </Card>
       ) : null}
@@ -108,18 +92,12 @@ export function WorkoutSessionsPage() {
 
       {status === 'ready' ? (
         <div className="mt-7">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <h2 className="text-xl font-bold text-slate-950 dark:text-white">Historique récent</h2>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Séances terminées ou abandonnées.</p>
-            </div>
+          <div>
+            <h2 className="text-xl font-bold text-slate-950 dark:text-white">Historique récent</h2>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Séances terminées ou abandonnées.</p>
           </div>
           <div className="mt-3 grid grid-cols-3 gap-2" aria-label="Filtrer les entraînements">
-            {([
-              ['all', 'Toutes'],
-              ['completed', 'Terminées'],
-              ['abandoned', 'Abandonnées'],
-            ] as const).map(([value, label]) => (
+            {([['all', 'Toutes'], ['completed', 'Terminées'], ['abandoned', 'Abandonnées']] as const).map(([value, label]) => (
               <Button key={value} size="sm" variant={filter === value ? 'primary' : 'secondary'} aria-pressed={filter === value} onClick={() => setFilter(value)}>{label}</Button>
             ))}
           </div>
@@ -129,11 +107,14 @@ export function WorkoutSessionsPage() {
       {status === 'ready' && history.length === 0 ? (
         <EmptyState
           className="mt-5"
+          variant={archivedSessions.length === 0 ? 'first-use' : 'filtered'}
           icon={Dumbbell}
-          title="Aucune séance dans ce filtre"
-          description="Les entraînements correspondants apparaîtront ici après leur enregistrement."
-          primaryAction={filter === 'all'
-            ? undefined
+          title={archivedSessions.length === 0 ? 'Aucun entraînement enregistré' : 'Aucune séance dans ce filtre'}
+          description={archivedSessions.length === 0
+            ? 'Tes séances terminées ou abandonnées apparaîtront ici après leur enregistrement.'
+            : 'Ton historique est intact. Affiche toutes les séances pour le retrouver.'}
+          primaryAction={archivedSessions.length === 0
+            ? <Button onClick={() => void startFreeSession()} disabled={isStarting || Boolean(current)}>{isStarting ? 'Démarrage…' : 'Démarrer une séance libre'}</Button>
             : <Button variant="secondary" onClick={() => setFilter('all')}>Afficher toutes les séances</Button>}
         />
       ) : null}
