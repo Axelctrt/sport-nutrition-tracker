@@ -93,8 +93,6 @@ for (const path of files) {
   staleVersionPattern.lastIndex = 0;
 }
 
-
-
 const rootFiles = readdirSync(root);
 if (rootFiles.some((name) => correctionFilePattern.test(name))) {
   fail('un fichier temporaire README-CORRECTION-* est encore présent à la racine.');
@@ -117,17 +115,17 @@ const backupMigrations = read(
 );
 
 if (
-  !/DATABASE_VERSION_11\s*=\s*11\s+as\s+const\b/.test(
+  !/DATABASE_VERSION_12\s*=\s*12\s+as\s+const\b/.test(
     databaseVersions,
   ) ||
-  !/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_11\b/.test(
+  !/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_12\b/.test(
     databaseVersions,
   ) ||
   !/databaseSchemaVersion\s*=\s*CURRENT_DATABASE_VERSION\b/.test(
     databaseSchema,
   )
 ) {
-  fail('le schéma Dexie v11 attendu est absent ou mal relié.');
+  fail('le schéma Dexie v12 attendu est absent ou mal relié.');
 }
 
 if (
