@@ -99,16 +99,9 @@ export function RecipesPage() {
     const removed = await remove(recipeId);
     if (removed) {
       setFeedback('Recette supprimée');
-      actionToast.success({
-        key: `recipe-delete:${recipeId}`,
-        title: 'Recette supprimée',
-      });
+      actionToast.success({ key: `recipe-delete:${recipeId}`, title: 'Recette supprimée' });
     } else {
-      actionToast.error({
-        key: `recipe-delete:${recipeId}`,
-        error: errorMessage,
-        fallback: 'La recette n’a pas pu être supprimée.',
-      });
+      actionToast.error({ key: `recipe-delete:${recipeId}`, error: errorMessage, fallback: 'La recette n’a pas pu être supprimée.' });
     }
     return removed;
   };
@@ -117,6 +110,7 @@ export function RecipesPage() {
   const averageCalories = recipes.length > 0
     ? recipes.reduce((sum, summary) => sum + summary.nutritionPerServing.caloriesKcal, 0) / recipes.length
     : 0;
+  const isFirstUse = status === 'ready' && recipes.length === 0;
 
   return (
     <section className="min-w-0" aria-labelledby="recipes-title">
@@ -124,14 +118,12 @@ export function RecipesPage() {
         <div className="min-w-0">
           <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">Bibliothèque alimentaire</p>
           <h1 id="recipes-title" className="mt-1 text-3xl font-bold tracking-tight text-slate-950 dark:text-white">Recettes</h1>
-          <p className="mt-2 hidden max-w-2xl text-slate-600 dark:text-slate-300 sm:block">
-            Assemble des aliments locaux et ajoute rapidement une ou plusieurs portions au journal.
-          </p>
+          <p className="mt-2 hidden max-w-2xl text-slate-600 dark:text-slate-300 sm:block">Assemble des aliments locaux et ajoute rapidement une ou plusieurs portions au journal.</p>
         </div>
         <Link
           to={routePaths.newRecipe}
           state={navigationState}
-          className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand-700 px-4 font-semibold text-white hover:bg-brand-800 dark:bg-brand-600 dark:hover:bg-brand-500 sm:w-auto"
+          className={`${isFirstUse ? 'hidden sm:inline-flex' : 'inline-flex'} min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand-700 px-4 font-semibold text-white hover:bg-brand-800 dark:bg-brand-600 dark:hover:bg-brand-500 sm:w-auto`}
         >
           <Plus aria-hidden="true" className="size-5" />Nouvelle recette
         </Link>
@@ -144,35 +136,19 @@ export function RecipesPage() {
         </InlineNotice>
       ) : null}
 
-      {feedback ? (
-        <InlineNotice className="mt-5" tone="success" title={feedback} role="status">
-          La liste des recettes a été actualisée.
-        </InlineNotice>
-      ) : null}
-
+      {feedback ? <InlineNotice className="mt-5" tone="success" title={feedback} role="status">La liste des recettes a été actualisée.</InlineNotice> : null}
       {status === 'loading' ? <PageSkeleton className="mt-6" variant="list" /> : null}
 
       {status === 'ready' ? (
         <>
-          <RecipesSummary
-            recipeCount={recipes.length}
-            ingredientCount={totalIngredients}
-            averageCaloriesPerServing={averageCalories}
-          />
+          <RecipesSummary recipeCount={recipes.length} ingredientCount={totalIngredients} averageCaloriesPerServing={averageCalories} />
 
           {recipes.length > 0 ? (
             <Card className="mt-4 p-4 sm:p-5">
               <label htmlFor="recipe-search" className="text-sm font-semibold text-slate-800 dark:text-slate-100">Rechercher une recette</label>
               <div className="relative mt-2">
                 <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
-                <input
-                  id="recipe-search"
-                  type="search"
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  className={`${inputClassName} pl-10`}
-                  placeholder="Nom ou note"
-                />
+                <input id="recipe-search" type="search" value={query} onChange={(event) => setQuery(event.target.value)} className={`${inputClassName} pl-10`} placeholder="Nom ou note" />
               </div>
             </Card>
           ) : null}
@@ -180,26 +156,26 @@ export function RecipesPage() {
           {recipes.length === 0 ? (
             <EmptyState
               className="mt-4"
+              variant="first-use"
               icon={Utensils}
               title="Aucune recette"
-              description="Crée une recette à partir des aliments enregistrés sur cet appareil."
+              description="Crée une première recette à partir des aliments enregistrés sur cet appareil."
               primaryAction={(
                 <Link to={routePaths.newRecipe} state={navigationState} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-brand-700 px-4 text-sm font-semibold text-white hover:bg-brand-800">
                   <Plus aria-hidden="true" className="size-4" />Créer une recette
                 </Link>
               )}
               secondaryAction={(
-                <Link to={routePaths.foodProducts} className="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 px-4 text-sm font-semibold dark:border-slate-700">
-                  Ouvrir les aliments
-                </Link>
+                <Link to={routePaths.foodProducts} className="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 px-4 text-sm font-semibold dark:border-slate-700">Ouvrir les aliments</Link>
               )}
             />
           ) : visibleRecipes.length === 0 ? (
             <EmptyState
               className="mt-4"
+              variant="filtered"
               icon={Search}
               title="Aucune recette trouvée"
-              description="Modifie la recherche pour retrouver une autre recette."
+              description="Tes recettes sont toujours disponibles. Efface la recherche pour les retrouver."
               primaryAction={<Button variant="secondary" onClick={() => setQuery('')}>Effacer la recherche</Button>}
             />
           ) : (
