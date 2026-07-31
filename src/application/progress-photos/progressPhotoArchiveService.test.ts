@@ -25,12 +25,7 @@ function readBlobAsText(blob: Blob): Promise<string> {
     return blob.text();
   }
 
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(reader.error ?? new Error('Lecture impossible.'));
-    reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '');
-    reader.readAsText(blob);
-  });
+  return new Response(blob).text();
 }
 
 describe('progressPhotoArchiveService', () => {
