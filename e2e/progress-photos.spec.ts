@@ -7,8 +7,8 @@ import {
   getBrowserLocalDate,
 } from './helpers/app';
 
-const TINY_PNG = Buffer.from(
-  'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAFElEQVR42mNkYPj/n4GBgYGJAQoAHgQCAZzQ5SgAAAAASUVORK5CYII=',
+const TEST_PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAAGUlEQVR4nGOs2HKHgRTARJLqUQ2jGoaUBgBodgIo6n+D6AAAAABJRU5ErkJggg==',
   'base64',
 );
 
@@ -28,7 +28,7 @@ async function addPhoto(
   await page.getByLabel('Choisir une photo de progression').setInputFiles({
     name: options.name,
     mimeType: 'image/png',
-    buffer: TINY_PNG,
+    buffer: TEST_PNG,
   });
   await page.getByLabel('Date').fill(options.date);
   await page.getByLabel(/Note/).fill(options.note);
@@ -56,8 +56,8 @@ test('enregistre hors ligne et conserve les photos après rechargement', async (
     name: 'progression-face.png',
     note: 'Photo enregistrée hors ligne.',
   });
-  await expect(page.getByRole('heading', { name: /Photo enregistrée/ })).toBeVisible();
   await expect(page.getByText('1 photo · stockage restant estimé', { exact: false })).toBeVisible();
+  await expect(page.getByAltText(/Photo de progression face/)).toBeVisible();
   expect(apiRequests).toEqual([]);
 
   await context.setOffline(false);
@@ -90,9 +90,11 @@ test('compare deux dates de la même vue au toucher et au clavier', async ({ pag
     expectedHeading: 'Comparer deux photos',
     checkShellTouchTargets: true,
   });
+  const beforeSelect = page.getByRole('combobox', { name: 'Avant', exact: true });
+  const afterSelect = page.getByRole('combobox', { name: 'Après', exact: true });
   await expect(page.getByLabel('Vue commune')).toHaveValue('front');
-  await expect(page.getByLabel('Avant')).not.toHaveValue('');
-  await expect(page.getByLabel('Après')).not.toHaveValue('');
+  await expect(beforeSelect).not.toHaveValue('');
+  await expect(afterSelect).not.toHaveValue('');
 
   const separator = page.getByRole('slider', {
     name: 'Position du séparateur avant après',
@@ -102,10 +104,10 @@ test('compare deux dates de la même vue au toucher et au clavier', async ({ pag
   await page.keyboard.press('ArrowRight');
   await expect(separator).toHaveValue('51');
 
-  const beforeValue = await page.getByLabel('Avant').inputValue();
-  const afterValue = await page.getByLabel('Après').inputValue();
+  const beforeValue = await beforeSelect.inputValue();
+  const afterValue = await afterSelect.inputValue();
   await page.getByRole('button', { name: 'Inverser avant et après' }).click();
-  await expect(page.getByLabel('Avant')).toHaveValue(afterValue);
-  await expect(page.getByLabel('Après')).toHaveValue(beforeValue);
+  await expect(beforeSelect).toHaveValue(afterValue);
+  await expect(afterSelect).toHaveValue(beforeValue);
   await expectNoCriticalHorizontalOverflow(page);
 });
