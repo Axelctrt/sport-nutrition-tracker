@@ -42,7 +42,8 @@ Ne pas coder une nouvelle palette locale lorsqu’un token sémantique existe.
 
 ## Composants
 
-- `Card`, `ChoiceCard` : surfaces et choix.
+- `Card`, `ChoiceCard`, `ExpandableCard` : surfaces, choix et révélation
+  progressive de détails.
 - `Button`, `IconAction`, `SportPilotStatefulButton` : actions et états.
 - `BottomSheet`, `ConfirmationDialog` : tâches secondaires et confirmations.
 - `ToastProvider`, `useActionToast`, `InlineNotice` : retours.
@@ -57,7 +58,7 @@ Ne pas coder une nouvelle palette locale lorsqu’un token sémantique existe.
 ### EmptyState
 
 `EmptyState` conserve une API simple avec icône, titre, description et jusqu’à
-Deux actions. La propriété `variant` décrit le contexte plutôt que le style :
+deux actions. La propriété `variant` décrit le contexte plutôt que le style :
 
 - `first-use` : état initial engageant, densité normale et ton de marque ;
 - `filtered` : aucun résultat sans perte de données, présentation compacte ;
@@ -68,6 +69,27 @@ Deux actions. La propriété `variant` décrit le contexte plutôt que le style 
 `tone` et `compact` restent disponibles pour une adaptation explicite. Leur
 absence utilise les valeurs par défaut de la variante. Les anciens usages sans
 `variant` restent compatibles et se comportent comme `first-use`.
+
+### ExpandableCard
+
+`ExpandableCard` sépare trois zones : résumé permanent, actions indépendantes et
+détails facultatifs. Le composant est contrôlé par son parent afin que la page
+puisse, si nécessaire, limiter l’ouverture à une seule carte.
+
+- Le résumé et l’action primaire restent accessibles sans ouvrir la carte.
+- Le bouton de révélation possède son propre nom accessible, `aria-expanded` et
+  `aria-controls` ; la carte entière n’est pas transformée en bouton.
+- Les actions secondaires ne déclenchent jamais l’ouverture ou la fermeture.
+- La région détaillée est reliée au résumé et disparaît réellement du parcours
+  clavier lorsqu’elle est repliée.
+- La rotation du chevron est décorative et supprimable par mouvement réduit ;
+  le contenu ne dépend d’aucune animation.
+- Ne pas l’utiliser pour un formulaire long, un flux multi-étapes ou une
+  information indispensable à la décision immédiate.
+
+La bibliothèque de séances modèles constitue le premier pilote : nom, nombre
+d’exercices et démarrage restent visibles ; description et notes sont révélées
+à la demande.
 
 ## Règles par famille
 
