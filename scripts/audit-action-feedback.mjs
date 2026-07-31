@@ -93,7 +93,6 @@ if (failures.length === 0) {
     'src/features/backup/pages/BackupPage.tsx',
     'src/features/backup/components/SelectiveBackupRestorePanel.tsx',
     'src/features/backup/components/AdvancedCsvExportPanel.tsx',
-    'src/features/backup/components/StoragePersistenceCard.tsx',
     'src/features/account-devices/components/CloudAccountRestorePanel.tsx',
     'src/features/account-devices/components/GuestDataImportPanel.tsx',
     'src/features/account-devices/pages/AccountDevicesPage.tsx',
@@ -105,6 +104,21 @@ if (failures.length === 0) {
     if (!read(path).includes('useActionToast')) {
       fail(`retour d’action centralisé absent : ${path}.`);
     }
+  }
+
+  const storagePersistence = read('src/features/backup/components/StoragePersistenceCard.tsx');
+  for (const marker of [
+    "tone: 'success'",
+    "tone: 'error'",
+    '<InlineNotice',
+    "role={feedback.tone === 'error' ? 'alert' : 'status'}",
+  ]) {
+    if (!storagePersistence.includes(marker)) {
+      fail(`feedback local de persistance incomplet : ${marker}.`);
+    }
+  }
+  if (storagePersistence.includes('useActionToast')) {
+    fail('la persistance du stockage ne doit pas cumuler notice locale et toast.');
   }
 
   const workoutSession = read('src/features/strength-sessions/hooks/useWorkoutSession.ts');
@@ -153,5 +167,5 @@ if (failures.length > 0) {
 }
 
 console.log(
-  'Audit confirmations d’action réussi : confirmations centralisées, erreurs visibles, rechargements couverts, écritures fréquentes non intrusives et versions de données inchangées.',
+  'Audit confirmations d’action réussi : confirmations centralisées ou locales selon le contexte, erreurs visibles, rechargements couverts, écritures fréquentes non intrusives et versions de données inchangées.',
 );
