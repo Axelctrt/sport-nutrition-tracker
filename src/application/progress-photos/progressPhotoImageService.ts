@@ -86,7 +86,9 @@ function isStandaloneJpegMarker(marker: number): boolean {
 
 function containsJpegEndMarker(bytes: Uint8Array, startOffset: number): boolean {
   for (let offset = bytes.length - 2; offset >= startOffset; offset -= 1) {
-    if (bytes[offset] === 0xff && bytes[offset + 1] === 0xd9) return true;
+    const currentByte = bytes[offset];
+    const nextByte = bytes[offset + 1];
+    if (currentByte === 0xff && nextByte === 0xd9) return true;
   }
   return false;
 }
@@ -104,12 +106,18 @@ function readMetadataSafeJpegDimensions(bytes: Uint8Array): JpegDimensions | und
     if (offset >= bytes.length) return undefined;
 
     const marker = bytes[offset];
+    if (marker === undefined) return undefined;
     offset += 1;
     if (marker === 0xd9) return undefined;
     if (isStandaloneJpegMarker(marker)) continue;
     if (offset + 1 >= bytes.length) return undefined;
 
-    const segmentLength = (bytes[offset] << 8) | bytes[offset + 1];
+    const segmentLengthHigh = bytes[offset];
+    const segmentLengthLow = bytes[offset + 1];
+    if (segmentLengthHigh === undefined || segmentLengthLow === undefined) {
+      return undefined;
+    }
+    const segmentLength = (segmentLengthHigh << 8) | segmentLengthLow;
     if (segmentLength < 2 || offset + segmentLength > bytes.length) {
       return undefined;
     }
@@ -122,8 +130,20 @@ function readMetadataSafeJpegDimensions(bytes: Uint8Array): JpegDimensions | und
 
     if (JPEG_START_OF_FRAME_MARKERS.has(marker)) {
       if (segmentLength < 8) return undefined;
-      const height = (bytes[offset + 3] << 8) | bytes[offset + 4];
-      const width = (bytes[offset + 5] << 8) | bytes[offset + 6];
+      const heightHigh = bytes[offset + 3];
+      const heightLow = bytes[offset + 4];
+      const widthHigh = bytes[offset + 5];
+      const widthLow = bytes[offset + 6];
+      if (
+        heightHigh === undefined
+        || heightLow === undefined
+        || widthHigh === undefined
+        || widthLow === undefined
+      ) {
+        return undefined;
+      }
+      const height = (heightHigh << 8) | heightLow;
+      const width = (widthHigh << 8) | widthLow;
       if (!(width > 0) || !(height > 0)) return undefined;
       dimensions = { width, height };
     }
