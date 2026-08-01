@@ -19,9 +19,9 @@ Les Phases 3A à 3E ont livré sur `develop` :
 Les références externes restent des inspirations selon
 [`../product/UX_REFERENCES.md`](../product/UX_REFERENCES.md).
 
-## En PR brouillon — Phase 4 : photos de progression locales
+## Intégré sur `develop` — Phase 4 : photos de progression locales
 
-La PR #18 implémente et valide le périmètre strict suivant :
+La PR #18 a livré et validé sur `develop` le périmètre strict suivant :
 
 - photos privées, locales et associées à la base de l’espace ouvert ;
 - ajout avec date, vue, poids et note facultatifs ;
@@ -34,8 +34,13 @@ La PR #18 implémente et valide le périmètre strict suivant :
 - absence d’analyse corporelle ou d’extension IA.
 
 La migration Dexie v12, les quotas, l’isolation des espaces, la restauration,
-la continuité PWA, le clavier, WebKit et les largeurs mobiles doivent être verts
-avant que cette PR puisse être proposée à la fusion.
+la continuité PWA, le clavier, WebKit et les largeurs mobiles sont couverts par
+la CI complète et par la recette réelle iPhone/Safari. Cette intégration n’est
+pas encore déployée en production.
+
+Suivi UX non bloquant prévu dans la prochaine PR de recette : remplacer les
+deux actions caméra/galerie par un bouton générique `Choisir une photo`, sans
+attribut `capture`, afin de laisser Safari proposer ses choix natifs.
 
 ## Idée à étudier — Phase 5 : déploiement contrôlé
 

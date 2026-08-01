@@ -1,6 +1,7 @@
 # Catalogue fonctionnel
 
-Statut vérifié : base 0.36.0 + fondations UX des Phases 0 à 3E intégrées dans `develop`; Phase 4 en PR brouillon.
+Statut vérifié : production 0.36.0 ; fondations UX des Phases 0 à 3E et Phase 4
+intégrées dans `develop`. La Phase 4 n’est pas encore déployée en production.
 
 | Domaine | État actuel |
 | --- | --- |
@@ -11,7 +12,7 @@ Statut vérifié : base 0.36.0 + fondations UX des Phases 0 à 3E intégrées da
 | Poids et pas | saisie locale, historique, tendances et intégration au quotidien |
 | Planification | séances prévues, répétition de semaine et agenda |
 | Progression | objectifs, rapports, statistiques, badges, missions et thèmes |
-| Photos de progression | Phase 4 en PR brouillon : ajout local, vues, galerie, comparateur tactile, archive séparée et suppression |
+| Photos de progression | Phase 4 intégrée dans `develop` : ajout local, vues, galerie, comparateur tactile, archive séparée et suppression ; pas encore en production |
 | Sauvegarde | export, partage, import, restauration sélective et sauvegarde de sécurité |
 | Corbeille | archivage, restauration et purge contrôlée |
 | Comptes et espaces | invité, profil local, OTP cloud, appareils et restauration |
