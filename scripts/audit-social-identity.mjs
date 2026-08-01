@@ -44,9 +44,12 @@ expectToken(backup, 'socialIdentitySchema', 'sauvegarde de l’identité absente
 for (const token of [
   '>Profil</h2>',
   'copyIdentity',
-  'Vérifier disponibilité',
+  'SOCIAL_HANDLE_AVAILABILITY_DEBOUNCE_MS = 350',
+  'aria-describedby="social-handle-status"',
+  'canSaveIdentity',
   'Enregistrer',
 ]) expectToken(page, token, 'interface identité incomplète');
+rejectToken(page, 'Vérifier disponibilité', 'ancien contrôle manuel encore présent');
 
 for (const token of [
   "label: 'Mon profil social'",
@@ -81,4 +84,4 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`- ${failure}`));
   process.exit(1);
 }
-console.log('Audit identité sociale réussi : handle exact, persistance, annuaire authentifié et réconciliation canonique sont présents.');
+console.log('Audit identité sociale réussi : validation automatique temporisée, persistance, annuaire authentifié et réconciliation canonique sont présents.');
