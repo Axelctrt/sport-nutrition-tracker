@@ -284,4 +284,72 @@ describe('progressPhotoImageService', () => {
       }
     }
   });
+
+  it('conserve un petit JPEG sûr lorsque les décodeurs navigateur échouent', async () => {
+    const jpegBytes = Uint8Array.from(
+      atob('/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAAGAAgDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAX/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFAEBAAAAAAAAAAAAAAAAAAAABv/EABQRAQAAAAAAAAAAAAAAAAAAAAD/2gAMAwEAAhEDEQA/AJABeKv/2Q=='),
+      (character) => character.charCodeAt(0),
+    );
+    const originalCreateObjectURL = URL.createObjectURL;
+    const createElement = vi.spyOn(document, 'createElement');
+
+    Object.defineProperty(URL, 'createObjectURL', {
+      configurable: true,
+      writable: true,
+      value: undefined,
+    });
+    vi.stubGlobal('createImageBitmap', vi.fn().mockRejectedValue(
+      new Error('WebKit decoder unavailable'),
+    ));
+    vi.stubGlobal('FileReader', undefined);
+
+    try {
+      const result = await processProgressPhotoFile(
+        new File([jpegBytes], 'petite-photo.jpg', { type: 'image/jpeg' }),
+      );
+
+      expect(result.original).toMatchObject({
+        width: 8,
+        height: 6,
+        mimeType: 'image/jpeg',
+        byteSize: jpegBytes.byteLength,
+      });
+      expect(result.thumbnail).toMatchObject({
+        width: 8,
+        height: 6,
+        mimeType: 'image/jpeg',
+        byteSize: jpegBytes.byteLength,
+      });
+      expect(createElement).not.toHaveBeenCalledWith('canvas');
+
+      const exifSegment = Uint8Array.from([
+        0xff, 0xe1, 0x00, 0x08, 0x45, 0x78, 0x69, 0x66, 0x00, 0x00,
+      ]);
+      const jpegWithExif = new Uint8Array(jpegBytes.byteLength + exifSegment.byteLength);
+      jpegWithExif.set(jpegBytes.slice(0, 2), 0);
+      jpegWithExif.set(exifSegment, 2);
+      jpegWithExif.set(jpegBytes.slice(2), 2 + exifSegment.byteLength);
+
+      await expect(processProgressPhotoFile(
+        new File([jpegWithExif], 'photo-exif.jpg', { type: 'image/jpeg' }),
+      )).rejects.toThrow(ProgressPhotoImageError);
+      await expect(processProgressPhotoFile(
+        new File([Uint8Array.from([0xff, 0xd8, 0xff, 0xd9])], 'invalide.jpg', {
+          type: 'image/jpeg',
+        }),
+      )).rejects.toThrow(ProgressPhotoImageError);
+    } finally {
+      createElement.mockRestore();
+      vi.unstubAllGlobals();
+      if (originalCreateObjectURL) {
+        Object.defineProperty(URL, 'createObjectURL', {
+          configurable: true,
+          writable: true,
+          value: originalCreateObjectURL,
+        });
+      } else {
+        Reflect.deleteProperty(URL, 'createObjectURL');
+      }
+    }
+  });
 });
