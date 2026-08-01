@@ -38,10 +38,15 @@ la continuité PWA, le clavier, WebKit et les largeurs mobiles sont couverts par
 la CI complète et par la recette réelle iPhone/Safari. Cette intégration n’est
 pas encore déployée en production.
 
-Suivi UX non bloquant traité dans la PR de recette dédiée : l’ajout utilise un
+Suivi UX non bloquant intégré sur `develop` avec la PR #19 : l’ajout utilise un
 seul bouton générique `Choisir une photo`, sans attribut `capture`, afin de
 laisser Safari et les autres navigateurs proposer leurs choix natifs. Le
 pipeline local de validation, compression et stockage reste inchangé.
+
+Amélioration UX non bloquante à traiter lors d’une prochaine passe : dans la
+page Amis, déplacer le statut de disponibilité de l’identifiant public
+immédiatement sous le champ de saisie, avant les actions Copier et Enregistrer.
+Ce déplacement visuel n’a volontairement pas modifié la PR #19 validée.
 
 ## Idée à étudier — Phase 5 : déploiement contrôlé
 
