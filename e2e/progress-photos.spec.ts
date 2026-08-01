@@ -1,4 +1,9 @@
-import { expect, test, type Page } from '@playwright/test';
+import {
+  expect,
+  test,
+  type BrowserContext,
+  type Page,
+} from '@playwright/test';
 
 import {
   createLocalProfile,
@@ -18,6 +23,39 @@ async function previousLocalDate(page: Page): Promise<string> {
     date.setDate(date.getDate() - 30);
     const pad = (value: number) => String(value).padStart(2, '0');
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  });
+}
+
+async function setPhotoTestOffline(
+  page: Page,
+  context: BrowserContext,
+  browserName: string,
+  offline: boolean,
+): Promise<void> {
+  if (browserName !== 'webkit') {
+    await context.setOffline(offline);
+    return;
+  }
+
+  // Playwright WebKit rend tout Blob/File illisible quand setOffline(true) est actif,
+  // y compris un Blob mémoire sans réseau. Couper le transport et émettre l'état
+  // navigateur conserve le parcours réellement local sans corrompre la fixture.
+  if (offline) {
+    await context.route('**/*', (route) => route.abort('internetdisconnected'));
+    await page.evaluate(() => {
+      Object.defineProperty(navigator, 'onLine', {
+        configurable: true,
+        get: () => false,
+      });
+      window.dispatchEvent(new Event('offline'));
+    });
+    return;
+  }
+
+  await context.unroute('**/*');
+  await page.evaluate(() => {
+    Reflect.deleteProperty(navigator, 'onLine');
+    window.dispatchEvent(new Event('online'));
   });
 }
 
@@ -41,7 +79,11 @@ async function addPhoto(
   await expect(page.getByText(countLabel, { exact: false })).toBeVisible();
 }
 
-test('enregistre hors ligne et conserve les photos après rechargement', async ({ page, context }) => {
+test('enregistre hors ligne et conserve les photos après rechargement', async ({
+  page,
+  context,
+  browserName,
+}) => {
   await createLocalProfile(page, 'Photos locales');
   await page.goto('/#/progression/photos');
   await expectPageAccessibilityBaseline(page, {
@@ -55,7 +97,9 @@ test('enregistre hors ligne et conserve les photos après rechargement', async (
     if (/\/api\/|openfoodfacts|googleapis|gemini/i.test(url)) apiRequests.push(url);
   });
 
-  await context.setOffline(true);
+  await setPhotoTestOffline(page, context, browserName, true);
+  await expect(page.getByText(/^Hors ligne/)).toBeVisible();
+  expect(await page.evaluate(() => navigator.onLine)).toBe(false);
   await addPhoto(page, {
     date: await getBrowserLocalDate(page),
     note: 'Photo enregistrée hors ligne.',
@@ -64,7 +108,8 @@ test('enregistre hors ligne et conserve les photos après rechargement', async (
   await expect(page.getByAltText(/Photo de progression face/)).toBeVisible();
   expect(apiRequests).toEqual([]);
 
-  await context.setOffline(false);
+  await setPhotoTestOffline(page, context, browserName, false);
+  expect(await page.evaluate(() => navigator.onLine)).toBe(true);
   await page.reload();
   await expect(page.getByText('1 photo · stockage restant estimé', { exact: false })).toBeVisible();
   await expect(page.getByAltText(/Photo de progression face/)).toBeVisible();

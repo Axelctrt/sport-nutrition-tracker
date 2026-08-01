@@ -74,13 +74,17 @@ import { registerVersion12 } from '@/infrastructure/database/migrations/version1
 
 export { DEFAULT_DATABASE_NAME } from '@/infrastructure/database/databaseNames';
 
+export interface StoredProgressPhotoAsset extends Omit<ProgressPhotoAsset, 'blob'> {
+  blob: Blob | ArrayBuffer;
+}
+
 export class AppDatabase extends Dexie {
   declare userProfile: Table<UserProfile, EntityId>;
   declare userSettings: Table<UserSettings, EntityId>;
   declare deviceSettings: Table<DeviceSettings, EntityId>;
   declare weights: Table<WeightEntry, EntityId>;
   declare progressPhotos: Table<ProgressPhoto, EntityId>;
-  declare progressPhotoAssets: Table<ProgressPhotoAsset, EntityId>;
+  declare progressPhotoAssets: Table<StoredProgressPhotoAsset, EntityId>;
   declare dailySteps: Table<DailySteps, EntityId>;
   declare dailyCheckIns: Table<DailyCheckIn, EntityId>;
   declare dailyActivityDecisions: Table<DailyActivityDecision, EntityId>;

@@ -41,7 +41,18 @@ describe('DexieProgressPhotoRepository', () => {
 
       expect(await database.progressPhotos.count()).toBe(1);
       expect(await database.progressPhotoAssets.count()).toBe(2);
-      expect((await repository.getWithAssets(saved.id))?.photo).toEqual(saved);
+      const storedOriginal = await database.progressPhotoAssets.get(saved.originalAssetId);
+      if (!storedOriginal) throw new Error('Original progress photo asset was not stored.');
+      expect(storedOriginal.blob).not.toBeInstanceOf(Blob);
+      expect((storedOriginal.blob as ArrayBuffer).byteLength).toBe('original'.length);
+
+      const withAssets = await repository.getWithAssets(saved.id);
+      expect(withAssets?.photo).toEqual(saved);
+      expect(withAssets?.original.blob).toBeInstanceOf(Blob);
+      expect(withAssets?.original.blob).toMatchObject({
+        size: 'original'.length,
+        type: 'image/jpeg',
+      });
       expect((await repository.listByView('front')).map(({ id }) => id)).toEqual([saved.id]);
 
       await repository.delete(saved.id);

@@ -3,7 +3,10 @@ import type {
   ProgressPhotoAsset,
   ProgressPhotoView,
 } from '@/domain/models/progressPhoto';
-import type { AppDatabase } from '@/infrastructure/database/AppDatabase';
+import type {
+  AppDatabase,
+  StoredProgressPhotoAsset,
+} from '@/infrastructure/database/AppDatabase';
 import type {
   CreateProgressPhotoInput,
   ProgressPhotoCleanupResult,
@@ -21,6 +24,42 @@ function sortNewestFirst(photos: readonly ProgressPhoto[]): ProgressPhoto[] {
     right.date.localeCompare(left.date)
     || right.createdAt.localeCompare(left.createdAt),
   );
+}
+
+function isBlob(value: Blob | ArrayBuffer): value is Blob {
+  return Object.prototype.toString.call(value) === '[object Blob]';
+}
+
+function materializeAsset(asset: StoredProgressPhotoAsset): ProgressPhotoAsset {
+  if (isBlob(asset.blob)) return asset as ProgressPhotoAsset;
+  return {
+    ...asset,
+    blob: new Blob([asset.blob], { type: asset.mimeType }),
+  };
+}
+
+function readBlobAsArrayBuffer(blob: Blob): Promise<ArrayBuffer> {
+  if (typeof blob.arrayBuffer === 'function') {
+    return blob.arrayBuffer();
+  }
+  if (typeof FileReader === 'undefined') {
+    return Promise.reject(new Error('Blob binary data is unavailable.'));
+  }
+
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (reader.result instanceof ArrayBuffer) {
+        resolve(reader.result);
+        return;
+      }
+      reject(new Error('Blob binary data is unavailable.'));
+    };
+    reader.onerror = () => reject(
+      reader.error ?? new Error('Blob binary data could not be read.'),
+    );
+    reader.readAsArrayBuffer(blob);
+  });
 }
 
 export class DexieProgressPhotoRepository implements ProgressPhotoRepository {
@@ -67,7 +106,10 @@ export class DexieProgressPhotoRepository implements ProgressPhotoRepository {
     return runRepositoryOperation(
       'read',
       'Impossible de charger le fichier de cette photo.',
-      () => this.database.progressPhotoAssets.get(assetId),
+      async () => {
+        const asset = await this.database.progressPhotoAssets.get(assetId);
+        return asset ? materializeAsset(asset) : undefined;
+      },
     );
   }
 
@@ -87,7 +129,11 @@ export class DexieProgressPhotoRepository implements ProgressPhotoRepository {
             this.database.progressPhotoAssets.get(photo.thumbnailAssetId),
           ]);
           if (!original || !thumbnail) return undefined;
-          return { photo, original, thumbnail };
+          return {
+            photo,
+            original: materializeAsset(original),
+            thumbnail: materializeAsset(thumbnail),
+          };
         },
       ),
     );
@@ -97,53 +143,59 @@ export class DexieProgressPhotoRepository implements ProgressPhotoRepository {
     return runRepositoryOperation(
       'create',
       'Impossible d’enregistrer la photo de progression.',
-      () => this.database.transaction(
-        'rw',
-        this.database.progressPhotos,
-        this.database.progressPhotoAssets,
-        async () => {
-          const photoId = createEntityId();
-          const originalAssetId = `${photoId}:original`;
-          const thumbnailAssetId = `${photoId}:thumbnail`;
-          const photo = createEntity<ProgressPhoto>({
-            date: input.date,
-            view: input.view,
-            ...(input.weightKg === undefined ? {} : { weightKg: input.weightKg }),
-            ...(input.note?.trim() ? { note: input.note.trim() } : {}),
-            ...(input.originalFileName?.trim()
-              ? { originalFileName: input.originalFileName.trim() }
-              : {}),
-            originalAssetId,
-            thumbnailAssetId,
-            mimeType: input.original.mimeType,
-            width: input.original.width,
-            height: input.original.height,
-            byteSize: input.original.byteSize,
-          }, photoId);
-          const original = createEntity<ProgressPhotoAsset>({
-            photoId,
-            kind: 'original',
-            blob: input.original.blob,
-            mimeType: input.original.mimeType,
-            width: input.original.width,
-            height: input.original.height,
-            byteSize: input.original.byteSize,
-          }, originalAssetId, photo.createdAt);
-          const thumbnail = createEntity<ProgressPhotoAsset>({
-            photoId,
-            kind: 'thumbnail',
-            blob: input.thumbnail.blob,
-            mimeType: input.thumbnail.mimeType,
-            width: input.thumbnail.width,
-            height: input.thumbnail.height,
-            byteSize: input.thumbnail.byteSize,
-          }, thumbnailAssetId, photo.createdAt);
+      async () => {
+        const [originalBytes, thumbnailBytes] = await Promise.all([
+          readBlobAsArrayBuffer(input.original.blob),
+          readBlobAsArrayBuffer(input.thumbnail.blob),
+        ]);
+        return this.database.transaction(
+          'rw',
+          this.database.progressPhotos,
+          this.database.progressPhotoAssets,
+          async () => {
+            const photoId = createEntityId();
+            const originalAssetId = `${photoId}:original`;
+            const thumbnailAssetId = `${photoId}:thumbnail`;
+            const photo = createEntity<ProgressPhoto>({
+              date: input.date,
+              view: input.view,
+              ...(input.weightKg === undefined ? {} : { weightKg: input.weightKg }),
+              ...(input.note?.trim() ? { note: input.note.trim() } : {}),
+              ...(input.originalFileName?.trim()
+                ? { originalFileName: input.originalFileName.trim() }
+                : {}),
+              originalAssetId,
+              thumbnailAssetId,
+              mimeType: input.original.mimeType,
+              width: input.original.width,
+              height: input.original.height,
+              byteSize: input.original.byteSize,
+            }, photoId);
+            const original = createEntity<StoredProgressPhotoAsset>({
+              photoId,
+              kind: 'original',
+              blob: originalBytes,
+              mimeType: input.original.mimeType,
+              width: input.original.width,
+              height: input.original.height,
+              byteSize: input.original.byteSize,
+            }, originalAssetId, photo.createdAt);
+            const thumbnail = createEntity<StoredProgressPhotoAsset>({
+              photoId,
+              kind: 'thumbnail',
+              blob: thumbnailBytes,
+              mimeType: input.thumbnail.mimeType,
+              width: input.thumbnail.width,
+              height: input.thumbnail.height,
+              byteSize: input.thumbnail.byteSize,
+            }, thumbnailAssetId, photo.createdAt);
 
-          await this.database.progressPhotoAssets.bulkAdd([original, thumbnail]);
-          await this.database.progressPhotos.add(photo);
-          return photo;
-        },
-      ),
+            await this.database.progressPhotoAssets.bulkAdd([original, thumbnail]);
+            await this.database.progressPhotos.add(photo);
+            return photo;
+          },
+        );
+      },
     );
   }
 
