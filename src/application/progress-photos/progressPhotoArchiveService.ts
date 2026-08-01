@@ -5,7 +5,16 @@ import type {
   ProgressPhotoView,
 } from '@/domain/models/progressPhoto';
 import { PROGRESS_PHOTO_VIEWS } from '@/domain/models/progressPhoto';
+import {
+  MAX_PROGRESS_PHOTO_BYTES,
+  MAX_PROGRESS_PHOTO_EDGE,
+  MAX_PROGRESS_PHOTO_THUMBNAIL_BYTES,
+  MAX_PROGRESS_PHOTO_THUMBNAIL_EDGE,
+  readMetadataSafeJpegDimensions,
+  stripJpegIccProfileSegments,
+} from '@/application/progress-photos/progressPhotoImageService';
 import type { ProgressPhotoRepository } from '@/infrastructure/repositories/contracts/ProgressPhotoRepository';
+import { isValidLocalDate } from '@/shared/validation/localDate';
 
 export const PROGRESS_PHOTO_ARCHIVE_FORMAT = 'sportpilot-progress-photos';
 export const PROGRESS_PHOTO_ARCHIVE_VERSION = 1;
@@ -94,13 +103,42 @@ function readBlobAsArrayBuffer(blob: Blob): Promise<ArrayBuffer> {
   });
 }
 
-async function archiveAsset(asset: ProgressPhotoAsset): Promise<ArchivedAsset> {
-  const bytes = new Uint8Array(await readBlobAsArrayBuffer(asset.blob));
+async function archiveAsset(
+  asset: ProgressPhotoAsset,
+  kind: 'original' | 'thumbnail',
+): Promise<ArchivedAsset> {
+  const maximumEdge = kind === 'original'
+    ? MAX_PROGRESS_PHOTO_EDGE
+    : MAX_PROGRESS_PHOTO_THUMBNAIL_EDGE;
+  const maximumBytes = kind === 'original'
+    ? MAX_PROGRESS_PHOTO_BYTES
+    : MAX_PROGRESS_PHOTO_THUMBNAIL_BYTES;
+  if (
+    asset.mimeType !== 'image/jpeg'
+    || asset.width > maximumEdge
+    || asset.height > maximumEdge
+    || asset.byteSize > maximumBytes
+  ) {
+    throw new ProgressPhotoArchiveError('Le format ou les limites d’une image locale sont invalides.');
+  }
+  const archivedBytes = new Uint8Array(await readBlobAsArrayBuffer(asset.blob));
+  if (archivedBytes.byteLength !== asset.byteSize) {
+    throw new ProgressPhotoArchiveError('La taille d’une image locale ne correspond pas à son contenu.');
+  }
+  const bytes = stripJpegIccProfileSegments(archivedBytes);
+  const dimensions = readMetadataSafeJpegDimensions(bytes);
+  if (
+    !dimensions
+    || dimensions.width !== asset.width
+    || dimensions.height !== asset.height
+  ) {
+    throw new ProgressPhotoArchiveError('Le contenu d’une image locale est invalide.');
+  }
   return {
-    mimeType: asset.mimeType,
+    mimeType: 'image/jpeg',
     width: asset.width,
     height: asset.height,
-    byteSize: asset.byteSize,
+    byteSize: bytes.byteLength,
     base64: bytesToBase64(bytes),
   };
 }
@@ -109,9 +147,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function readNumber(record: Record<string, unknown>, key: string): number {
+function readPositiveInteger(record: Record<string, unknown>, key: string): number {
   const value = record[key];
-  if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) {
+  if (typeof value !== 'number' || !Number.isInteger(value) || value <= 0) {
     throw new ProgressPhotoArchiveError('La sauvegarde contient des dimensions ou tailles invalides.');
   }
   return value;
@@ -121,14 +159,18 @@ function readAsset(value: unknown): ArchivedAsset {
   if (!isRecord(value)) {
     throw new ProgressPhotoArchiveError('La sauvegarde ne contient pas toutes les images attendues.');
   }
-  if (typeof value.mimeType !== 'string' || typeof value.base64 !== 'string') {
+  if (
+    typeof value.mimeType !== 'string'
+    || typeof value.base64 !== 'string'
+    || !value.base64
+  ) {
     throw new ProgressPhotoArchiveError('Le format d’une image sauvegardée est invalide.');
   }
   return {
     mimeType: value.mimeType,
-    width: readNumber(value, 'width'),
-    height: readNumber(value, 'height'),
-    byteSize: readNumber(value, 'byteSize'),
+    width: readPositiveInteger(value, 'width'),
+    height: readPositiveInteger(value, 'height'),
+    byteSize: readPositiveInteger(value, 'byteSize'),
     base64: value.base64,
   };
 }
@@ -139,11 +181,37 @@ function readPhoto(value: unknown): ArchivedProgressPhoto {
   }
   if (
     typeof value.date !== 'string'
+    || !isValidLocalDate(value.date)
     || typeof value.view !== 'string'
     || !PROGRESS_PHOTO_VIEWS.includes(value.view as ProgressPhotoView)
   ) {
     throw new ProgressPhotoArchiveError('La date ou la vue d’une photo sauvegardée est invalide.');
   }
+
+  if (
+    value.weightKg !== undefined
+    && (
+      typeof value.weightKg !== 'number'
+      || !Number.isFinite(value.weightKg)
+      || value.weightKg <= 0
+      || value.weightKg > 500
+    )
+  ) {
+    throw new ProgressPhotoArchiveError('Le poids d’une photo sauvegardée est invalide.');
+  }
+  if (
+    value.note !== undefined
+    && (typeof value.note !== 'string' || value.note.length > 5_000)
+  ) {
+    throw new ProgressPhotoArchiveError('La note d’une photo sauvegardée est invalide.');
+  }
+  if (
+    value.originalFileName !== undefined
+    && typeof value.originalFileName !== 'string'
+  ) {
+    throw new ProgressPhotoArchiveError('Le nom de fichier d’une photo sauvegardée est invalide.');
+  }
+
   return {
     date: value.date,
     view: value.view as ProgressPhotoView,
@@ -187,17 +255,44 @@ function parseEnvelope(serialized: string): ProgressPhotoArchiveEnvelope {
   };
 }
 
-function restoredAsset(asset: ArchivedAsset): ProcessedProgressPhotoImage {
-  const bytes = base64ToBytes(asset.base64);
-  if (bytes.byteLength !== asset.byteSize) {
+function restoredAsset(
+  asset: ArchivedAsset,
+  kind: 'original' | 'thumbnail',
+): ProcessedProgressPhotoImage {
+  const maximumEdge = kind === 'original'
+    ? MAX_PROGRESS_PHOTO_EDGE
+    : MAX_PROGRESS_PHOTO_THUMBNAIL_EDGE;
+  const maximumBytes = kind === 'original'
+    ? MAX_PROGRESS_PHOTO_BYTES
+    : MAX_PROGRESS_PHOTO_THUMBNAIL_BYTES;
+  if (
+    asset.mimeType !== 'image/jpeg'
+    || asset.width > maximumEdge
+    || asset.height > maximumEdge
+    || asset.byteSize > maximumBytes
+  ) {
+    throw new ProgressPhotoArchiveError('Le format ou les limites d’une image sauvegardée sont invalides.');
+  }
+
+  const archivedBytes = base64ToBytes(asset.base64);
+  if (archivedBytes.byteLength !== asset.byteSize) {
     throw new ProgressPhotoArchiveError('La taille d’une image sauvegardée ne correspond pas à son contenu.');
   }
+  const bytes = stripJpegIccProfileSegments(archivedBytes);
+  const dimensions = readMetadataSafeJpegDimensions(bytes);
+  if (
+    !dimensions
+    || dimensions.width !== asset.width
+    || dimensions.height !== asset.height
+  ) {
+    throw new ProgressPhotoArchiveError('Le contenu d’une image sauvegardée est invalide.');
+  }
   return {
-    blob: new Blob([bytes], { type: asset.mimeType }),
-    mimeType: asset.mimeType,
+    blob: new Blob([bytes], { type: 'image/jpeg' }),
+    mimeType: 'image/jpeg',
     width: asset.width,
     height: asset.height,
-    byteSize: asset.byteSize,
+    byteSize: bytes.byteLength,
   };
 }
 
@@ -222,17 +317,21 @@ export async function createProgressPhotoArchive(
       ...(photo.weightKg === undefined ? {} : { weightKg: photo.weightKg }),
       ...(photo.note ? { note: photo.note } : {}),
       ...(photo.originalFileName ? { originalFileName: photo.originalFileName } : {}),
-      original: await archiveAsset(withAssets.original),
-      thumbnail: await archiveAsset(withAssets.thumbnail),
+      original: await archiveAsset(withAssets.original, 'original'),
+      thumbnail: await archiveAsset(withAssets.thumbnail, 'thumbnail'),
     } satisfies ArchivedProgressPhoto;
   }));
 
-  return JSON.stringify({
+  const serialized = JSON.stringify({
     format: PROGRESS_PHOTO_ARCHIVE_FORMAT,
     schemaVersion: PROGRESS_PHOTO_ARCHIVE_VERSION,
     exportedAt: new Date().toISOString(),
     photos: archived,
   } satisfies ProgressPhotoArchiveEnvelope);
+  if (new Blob([serialized]).size > MAX_PROGRESS_PHOTO_ARCHIVE_BYTES) {
+    throw new ProgressPhotoArchiveError('Cette archive dépasse la limite de 100 Mo.');
+  }
+  return serialized;
 }
 
 export async function importProgressPhotoArchive(
@@ -240,19 +339,28 @@ export async function importProgressPhotoArchive(
   serialized: string,
 ): Promise<ProgressPhotoArchiveImportResult> {
   const envelope = parseEnvelope(serialized);
+
+  // Toutes les entrées sont décodées et contrôlées avant la première écriture.
+  // Cela évite une restauration partielle provoquée par une archive altérée.
+  const validatedKeys = envelope.photos.map((photo) => {
+    const original = restoredAsset(photo.original, 'original');
+    restoredAsset(photo.thumbnail, 'thumbnail');
+    return duplicateKey({
+      date: photo.date,
+      view: photo.view,
+      byteSize: original.byteSize,
+      width: original.width,
+      height: original.height,
+    });
+  });
+
   const existing = await repository.listAll();
   const existingKeys = new Set(existing.map(duplicateKey));
   let imported = 0;
   let skipped = 0;
 
-  for (const photo of envelope.photos) {
-    const key = duplicateKey({
-      date: photo.date,
-      view: photo.view,
-      byteSize: photo.original.byteSize,
-      width: photo.original.width,
-      height: photo.original.height,
-    });
+  for (const [index, photo] of envelope.photos.entries()) {
+    const key = validatedKeys[index]!;
     if (existingKeys.has(key)) {
       skipped += 1;
       continue;
@@ -263,8 +371,8 @@ export async function importProgressPhotoArchive(
       ...(photo.weightKg === undefined ? {} : { weightKg: photo.weightKg }),
       ...(photo.note ? { note: photo.note } : {}),
       ...(photo.originalFileName ? { originalFileName: photo.originalFileName } : {}),
-      original: restoredAsset(photo.original),
-      thumbnail: restoredAsset(photo.thumbnail),
+      original: restoredAsset(photo.original, 'original'),
+      thumbnail: restoredAsset(photo.thumbnail, 'thumbnail'),
     });
     existingKeys.add(key);
     imported += 1;

@@ -113,6 +113,27 @@ test('enregistre hors ligne et conserve les photos après rechargement', async (
   await page.reload();
   await expect(page.getByText('1 photo · stockage restant estimé', { exact: false })).toBeVisible();
   await expect(page.getByAltText(/Photo de progression face/)).toBeVisible();
+
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Exporter les photos' }).click();
+  const download = await downloadPromise;
+  const archivePath = await download.path();
+  expect(archivePath).not.toBeNull();
+  await expect(page.getByText('Archive créée')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Supprimer toutes les photos' }).click();
+  const deleteDialog = page.getByRole('alertdialog', {
+    name: 'Supprimer toutes les photos ?',
+  });
+  await deleteDialog.getByRole('button', { name: 'Tout supprimer' }).click();
+  await expect(page.getByRole('heading', { name: 'Aucune photo de progression' })).toBeVisible();
+
+  await page.getByLabel('Choisir une archive de photos SportPilot').setInputFiles(
+    archivePath!,
+  );
+  await expect(page.getByText('Photos restaurées')).toBeVisible();
+  await expect(page.getByText('1 photo · stockage restant estimé', { exact: false })).toBeVisible();
+  await expect(page.getByAltText(/Photo de progression face/)).toBeVisible();
   await expectNoCriticalHorizontalOverflow(page);
 });
 

@@ -46,7 +46,7 @@ interface ResizeOptions {
   initialQuality: number;
 }
 
-interface JpegDimensions {
+export interface ProgressPhotoJpegDimensions {
   width: number;
   height: number;
 }
@@ -93,13 +93,111 @@ function containsJpegEndMarker(bytes: Uint8Array, startOffset: number): boolean 
   return false;
 }
 
-function readMetadataSafeJpegDimensions(bytes: Uint8Array): JpegDimensions | undefined {
+function isMetadataSafeJfifSegment(
+  bytes: Uint8Array,
+  offset: number,
+  segmentLength: number,
+): boolean {
+  return segmentLength === 16
+    && bytes[offset + 2] === 0x4a
+    && bytes[offset + 3] === 0x46
+    && bytes[offset + 4] === 0x49
+    && bytes[offset + 5] === 0x46
+    && bytes[offset + 6] === 0x00
+    && bytes[offset + 14] === 0x00
+    && bytes[offset + 15] === 0x00;
+}
+
+function isJpegIccProfileSegment(
+  bytes: Uint8Array,
+  offset: number,
+  segmentLength: number,
+): boolean {
+  return segmentLength >= 16
+    && bytes[offset + 2] === 0x49
+    && bytes[offset + 3] === 0x43
+    && bytes[offset + 4] === 0x43
+    && bytes[offset + 5] === 0x5f
+    && bytes[offset + 6] === 0x50
+    && bytes[offset + 7] === 0x52
+    && bytes[offset + 8] === 0x4f
+    && bytes[offset + 9] === 0x46
+    && bytes[offset + 10] === 0x49
+    && bytes[offset + 11] === 0x4c
+    && bytes[offset + 12] === 0x45
+    && bytes[offset + 13] === 0x00;
+}
+
+function copyJpegBytes(bytes: Uint8Array): Uint8Array<ArrayBuffer> {
+  const copy = new Uint8Array(bytes.byteLength);
+  copy.set(bytes);
+  return copy;
+}
+
+export function stripJpegIccProfileSegments(
+  bytes: Uint8Array,
+): Uint8Array<ArrayBuffer> {
+  if (bytes.length < 4 || bytes[0] !== 0xff || bytes[1] !== 0xd8) {
+    return copyJpegBytes(bytes);
+  }
+
+  const chunks: Uint8Array[] = [];
+  let copyStart = 0;
+  let offset = 2;
+  let removed = false;
+  while (offset + 1 < bytes.length) {
+    const markerStart = offset;
+    if (bytes[offset] !== 0xff) return copyJpegBytes(bytes);
+    while (offset < bytes.length && bytes[offset] === 0xff) offset += 1;
+    if (offset >= bytes.length) return copyJpegBytes(bytes);
+
+    const marker = bytes[offset];
+    if (marker === undefined) return copyJpegBytes(bytes);
+    offset += 1;
+    if (marker === 0xd9 || marker === 0xda) break;
+    if (isStandaloneJpegMarker(marker)) continue;
+    if (offset + 1 >= bytes.length) return copyJpegBytes(bytes);
+
+    const segmentLengthHigh = bytes[offset];
+    const segmentLengthLow = bytes[offset + 1];
+    if (segmentLengthHigh === undefined || segmentLengthLow === undefined) {
+      return copyJpegBytes(bytes);
+    }
+    const segmentLength = (segmentLengthHigh << 8) | segmentLengthLow;
+    const segmentEnd = offset + segmentLength;
+    if (segmentLength < 2 || segmentEnd > bytes.length) {
+      return copyJpegBytes(bytes);
+    }
+
+    if (marker === 0xe2 && isJpegIccProfileSegment(bytes, offset, segmentLength)) {
+      chunks.push(bytes.slice(copyStart, markerStart));
+      copyStart = segmentEnd;
+      removed = true;
+    }
+    offset = segmentEnd;
+  }
+
+  if (!removed) return copyJpegBytes(bytes);
+  chunks.push(bytes.slice(copyStart));
+  const length = chunks.reduce((total, chunk) => total + chunk.byteLength, 0);
+  const sanitized = new Uint8Array(length);
+  let targetOffset = 0;
+  for (const chunk of chunks) {
+    sanitized.set(chunk, targetOffset);
+    targetOffset += chunk.byteLength;
+  }
+  return sanitized;
+}
+
+export function readMetadataSafeJpegDimensions(
+  bytes: Uint8Array,
+): ProgressPhotoJpegDimensions | undefined {
   if (bytes.length < 4 || bytes[0] !== 0xff || bytes[1] !== 0xd8) {
     return undefined;
   }
 
   let offset = 2;
-  let dimensions: JpegDimensions | undefined;
+  let dimensions: ProgressPhotoJpegDimensions | undefined;
   while (offset + 1 < bytes.length) {
     while (offset < bytes.length && bytes[offset] !== 0xff) offset += 1;
     while (offset < bytes.length && bytes[offset] === 0xff) offset += 1;
@@ -122,9 +220,13 @@ function readMetadataSafeJpegDimensions(bytes: Uint8Array): JpegDimensions | und
       return undefined;
     }
 
-    // Un JPEG conservé sans passage canvas ne doit contenir ni EXIF, ni commentaire,
-    // ni autre segment applicatif susceptible d’embarquer des données personnelles.
-    if ((marker >= 0xe1 && marker <= 0xef) || marker === 0xfe) {
+    // Un JPEG conservé sans passage canvas ne doit contenir que l’en-tête JFIF
+    // standard sans miniature, et aucun autre segment applicatif ou commentaire.
+    if (
+      (marker === 0xe0 && !isMetadataSafeJfifSegment(bytes, offset, segmentLength))
+      || (marker >= 0xe1 && marker <= 0xef)
+      || marker === 0xfe
+    ) {
       return undefined;
     }
 

@@ -16,28 +16,39 @@ import type {
   ProgressPhotoWithAssets,
 } from '@/infrastructure/repositories/contracts/ProgressPhotoRepository';
 
-function image(content: string, width = 1200, height = 1600): ProcessedProgressPhotoImage {
-  const blob = new Blob([content], { type: 'image/jpeg' });
+const SAFE_JPEG_BYTES = Uint8Array.from(
+  atob('/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAAGAAgDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAX/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFAEBAAAAAAAAAAAAAAAAAAAABv/EABQRAQAAAAAAAAAAAAAAAAAAAAD/2gAMAwEAAhEDEQA/AJABeKv/2Q=='),
+  (character) => character.charCodeAt(0),
+);
+
+function jpegWithIccProfile(): Uint8Array {
+  const iccProfileSegment = Uint8Array.from([
+    0xff, 0xe2, 0x00, 0x10,
+    0x49, 0x43, 0x43, 0x5f, 0x50, 0x52, 0x4f,
+    0x46, 0x49, 0x4c, 0x45, 0x00, 0x01, 0x01,
+  ]);
+  const bytes = new Uint8Array(
+    SAFE_JPEG_BYTES.byteLength + iccProfileSegment.byteLength,
+  );
+  bytes.set(SAFE_JPEG_BYTES.slice(0, 2), 0);
+  bytes.set(iccProfileSegment, 2);
+  bytes.set(SAFE_JPEG_BYTES.slice(2), 2 + iccProfileSegment.byteLength);
+  return bytes;
+}
+
+function bytesToBase64(bytes: Uint8Array): string {
+  return btoa(String.fromCharCode(...bytes));
+}
+
+function image(): ProcessedProgressPhotoImage {
+  const blob = new Blob([SAFE_JPEG_BYTES], { type: 'image/jpeg' });
   return {
     blob,
     mimeType: blob.type,
-    width,
-    height,
+    width: 8,
+    height: 6,
     byteSize: blob.size,
   };
-}
-
-function readBlobAsText(blob: Blob): Promise<string> {
-  if (typeof blob.text === 'function') {
-    return blob.text();
-  }
-
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(reader.error ?? new Error('Lecture impossible.'));
-    reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '');
-    reader.readAsText(blob);
-  });
 }
 
 class InMemoryProgressPhotoRepository implements ProgressPhotoRepository {
@@ -145,8 +156,8 @@ describe('progressPhotoArchiveService', () => {
       weightKg: 72.5,
       note: 'Même lumière.',
       originalFileName: 'progression.jpg',
-      original: image('original-photo'),
-      thumbnail: image('thumbnail-photo', 360, 480),
+      original: image(),
+      thumbnail: image(),
     });
 
     const serialized = await createProgressPhotoArchive(source);
@@ -165,8 +176,18 @@ describe('progressPhotoArchiveService', () => {
       ? await target.getWithAssets(restored.id)
       : undefined;
     expect(withAssets).toBeDefined();
-    expect(await readBlobAsText(withAssets!.original.blob)).toBe('original-photo');
-    expect(await readBlobAsText(withAssets!.thumbnail.blob)).toBe('thumbnail-photo');
+    expect(withAssets!.original).toMatchObject({
+      mimeType: 'image/jpeg',
+      width: 8,
+      height: 6,
+      byteSize: SAFE_JPEG_BYTES.byteLength,
+    });
+    expect(withAssets!.thumbnail).toMatchObject({
+      mimeType: 'image/jpeg',
+      width: 8,
+      height: 6,
+      byteSize: SAFE_JPEG_BYTES.byteLength,
+    });
   });
 
   it('ignore les doublons lors d’une seconde restauration', async () => {
@@ -174,8 +195,8 @@ describe('progressPhotoArchiveService', () => {
     await repository.create({
       date: '2026-07-30',
       view: 'back',
-      original: image('same-original'),
-      thumbnail: image('same-thumbnail', 360, 480),
+      original: image(),
+      thumbnail: image(),
     });
     const serialized = await createProgressPhotoArchive(repository);
 
@@ -220,5 +241,103 @@ describe('progressPhotoArchiveService', () => {
         }],
       }),
     )).rejects.toThrow('taille');
+  });
+
+  it('valide toute l’archive avant la première écriture', async () => {
+    const source = new InMemoryProgressPhotoRepository();
+    const target = new InMemoryProgressPhotoRepository();
+    await source.create({
+      date: '2026-07-30',
+      view: 'front',
+      original: image(),
+      thumbnail: image(),
+    });
+    await source.create({
+      date: '2026-07-31',
+      view: 'back',
+      original: image(),
+      thumbnail: image(),
+    });
+
+    const archive = JSON.parse(await createProgressPhotoArchive(source)) as {
+      photos: Array<{ thumbnail: { byteSize: number } }>;
+    };
+    archive.photos[1]!.thumbnail.byteSize += 1;
+
+    await expect(importProgressPhotoArchive(
+      target,
+      JSON.stringify(archive),
+    )).rejects.toThrow('taille');
+    expect(await target.listAll()).toHaveLength(0);
+  });
+
+  it('refuse les formats, dimensions et métadonnées hors contrat', async () => {
+    const source = new InMemoryProgressPhotoRepository();
+    const target = new InMemoryProgressPhotoRepository();
+    await source.create({
+      date: '2026-07-31',
+      view: 'front',
+      original: image(),
+      thumbnail: image(),
+    });
+    const serialized = await createProgressPhotoArchive(source);
+
+    const invalidMime = JSON.parse(serialized) as {
+      photos: Array<{ original: { mimeType: string } }>;
+    };
+    invalidMime.photos[0]!.original.mimeType = 'image/png';
+    await expect(importProgressPhotoArchive(
+      target,
+      JSON.stringify(invalidMime),
+    )).rejects.toThrow('format');
+
+    const oversized = JSON.parse(serialized) as {
+      photos: Array<{ original: { width: number } }>;
+    };
+    oversized.photos[0]!.original.width = 2_049;
+    await expect(importProgressPhotoArchive(
+      target,
+      JSON.stringify(oversized),
+    )).rejects.toThrow('limites');
+
+    const invalidDate = JSON.parse(serialized) as {
+      photos: Array<{ date: string }>;
+    };
+    invalidDate.photos[0]!.date = '2026-02-31';
+    await expect(importProgressPhotoArchive(
+      target,
+      JSON.stringify(invalidDate),
+    )).rejects.toThrow('date');
+  });
+
+  it('retire le profil ICC ajouté par canvas sans affaiblir la déduplication', async () => {
+    const source = new InMemoryProgressPhotoRepository();
+    const target = new InMemoryProgressPhotoRepository();
+    await source.create({
+      date: '2026-07-31',
+      view: 'front',
+      original: image(),
+      thumbnail: image(),
+    });
+    const archive = JSON.parse(await createProgressPhotoArchive(source)) as {
+      photos: Array<{
+        original: { base64: string; byteSize: number };
+      }>;
+    };
+    const iccJpeg = jpegWithIccProfile();
+    archive.photos[0]!.original.base64 = bytesToBase64(iccJpeg);
+    archive.photos[0]!.original.byteSize = iccJpeg.byteLength;
+    const legacyArchive = JSON.stringify(archive);
+
+    expect(await importProgressPhotoArchive(target, legacyArchive)).toEqual({
+      imported: 1,
+      skipped: 0,
+    });
+    const restored = (await target.listAll())[0];
+    expect(restored?.byteSize).toBe(SAFE_JPEG_BYTES.byteLength);
+    expect(await importProgressPhotoArchive(target, legacyArchive)).toEqual({
+      imported: 0,
+      skipped: 1,
+    });
   });
 });

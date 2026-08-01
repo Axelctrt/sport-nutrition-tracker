@@ -2,6 +2,8 @@ import {
   MAX_PROGRESS_PHOTO_INPUT_BYTES,
   processProgressPhotoFile,
   ProgressPhotoImageError,
+  readMetadataSafeJpegDimensions,
+  stripJpegIccProfileSegments,
   validateProgressPhotoFile,
 } from '@/application/progress-photos/progressPhotoImageService';
 
@@ -322,6 +324,29 @@ describe('progressPhotoImageService', () => {
       });
       expect(createElement).not.toHaveBeenCalledWith('canvas');
 
+      const iccProfileSegment = Uint8Array.from([
+        0xff, 0xe2, 0x00, 0x10,
+        0x49, 0x43, 0x43, 0x5f, 0x50, 0x52, 0x4f,
+        0x46, 0x49, 0x4c, 0x45, 0x00, 0x01, 0x01,
+      ]);
+      const jpegWithIccProfile = new Uint8Array(
+        jpegBytes.byteLength + iccProfileSegment.byteLength,
+      );
+      jpegWithIccProfile.set(jpegBytes.slice(0, 2), 0);
+      jpegWithIccProfile.set(iccProfileSegment, 2);
+      jpegWithIccProfile.set(
+        jpegBytes.slice(2),
+        2 + iccProfileSegment.byteLength,
+      );
+
+      expect(readMetadataSafeJpegDimensions(jpegWithIccProfile)).toBeUndefined();
+      const sanitizedJpeg = stripJpegIccProfileSegments(jpegWithIccProfile);
+      expect(sanitizedJpeg).toEqual(jpegBytes);
+      expect(readMetadataSafeJpegDimensions(sanitizedJpeg)).toEqual({
+        width: 8,
+        height: 6,
+      });
+
       const exifSegment = Uint8Array.from([
         0xff, 0xe1, 0x00, 0x08, 0x45, 0x78, 0x69, 0x66, 0x00, 0x00,
       ]);
@@ -332,6 +357,23 @@ describe('progressPhotoImageService', () => {
 
       await expect(processProgressPhotoFile(
         new File([jpegWithExif], 'photo-exif.jpg', { type: 'image/jpeg' }),
+      )).rejects.toThrow(ProgressPhotoImageError);
+
+      const customApp0Segment = Uint8Array.from([
+        0xff, 0xe0, 0x00, 0x08, 0x4a, 0x46, 0x58, 0x58, 0x00, 0x01,
+      ]);
+      const jpegWithCustomApp0 = new Uint8Array(
+        jpegBytes.byteLength + customApp0Segment.byteLength,
+      );
+      jpegWithCustomApp0.set(jpegBytes.slice(0, 2), 0);
+      jpegWithCustomApp0.set(customApp0Segment, 2);
+      jpegWithCustomApp0.set(
+        jpegBytes.slice(2),
+        2 + customApp0Segment.byteLength,
+      );
+
+      await expect(processProgressPhotoFile(
+        new File([jpegWithCustomApp0], 'photo-app0.jpg', { type: 'image/jpeg' }),
       )).rejects.toThrow(ProgressPhotoImageError);
       await expect(processProgressPhotoFile(
         new File([Uint8Array.from([0xff, 0xd8, 0xff, 0xd9])], 'invalide.jpg', {
