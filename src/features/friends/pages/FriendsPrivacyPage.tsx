@@ -1,5 +1,6 @@
 import {
   Check,
+  Copy,
   LoaderCircle,
   Send,
   UserPlus,
@@ -137,6 +138,7 @@ interface FriendsPrivacyPageProps {
 }
 
 const visibilityOptions: readonly FriendVisibilityLevel[] = ['private', 'friends', 'public'];
+const SOCIAL_HANDLE_AVAILABILITY_DEBOUNCE_MS = 350;
 function subscribeRuntimeSocialActivityFeed(listener: () => void): () => void {
   try {
     return getSyncPrototypeClient().subscribe(listener);
@@ -286,6 +288,7 @@ export function FriendsPrivacyPage({
   const [isRemovingFriend, setIsRemovingFriend] = useState(false);
   const persistenceQueueRef = useRef<Promise<void>>(Promise.resolve());
   const persistenceSequenceRef = useRef(0);
+  const availabilitySequenceRef = useRef(0);
   const permissionMutationVersionsRef = useRef(new Map<string, number>());
 
   useEffect(() => {
@@ -497,6 +500,66 @@ export function FriendsPrivacyPage({
 
   const summary = useMemo(() => summarizeFriendsPrivacy(snapshot), [snapshot]);
   const handleValidation = useMemo(() => validateSocialHandle(identityHandle), [identityHandle]);
+  const identityHandleChanged = handleValidation.status === 'valid'
+    && handleValidation.handle !== identity.handle;
+  const canSaveIdentity = handleValidation.status === 'valid'
+    && (!identityHandleChanged || (!isCheckingAvailability && availability.status === 'available'));
+
+  useEffect(() => {
+    const sequence = availabilitySequenceRef.current + 1;
+    availabilitySequenceRef.current = sequence;
+
+    if (handleValidation.status !== 'valid' || !identityHandleChanged) {
+      setIsCheckingAvailability(false);
+      setAvailability(initialAvailability);
+      return undefined;
+    }
+
+    setIsCheckingAvailability(true);
+    setAvailability(initialAvailability);
+    const timeout = window.setTimeout(() => {
+      const accountUserId = currentAccountUserId();
+      const availabilityOperation = accountUserId && activeCloudIdentityPort
+        ? checkAccountSocialHandleAvailability(
+            activeCloudIdentityPort,
+            handleValidation.displayHandle,
+            accountUserId,
+          )
+        : checkSocialHandleAvailability(activeLookupGateway, handleValidation.displayHandle);
+
+      void availabilityOperation
+        .then((result) => {
+          if (availabilitySequenceRef.current !== sequence) return;
+          setAvailability(result);
+        })
+        .catch((error) => {
+          if (availabilitySequenceRef.current !== sequence) return;
+          setAvailability({
+            status: 'unavailable',
+            message: error instanceof Error
+              ? error.message
+              : 'Vérification indisponible. Réessaie lorsque la connexion est rétablie.',
+          });
+        })
+        .finally(() => {
+          if (availabilitySequenceRef.current === sequence) {
+            setIsCheckingAvailability(false);
+          }
+        });
+    }, SOCIAL_HANDLE_AVAILABILITY_DEBOUNCE_MS);
+
+    return () => {
+      window.clearTimeout(timeout);
+      if (availabilitySequenceRef.current === sequence) {
+        availabilitySequenceRef.current += 1;
+      }
+    };
+  }, [
+    activeCloudIdentityPort,
+    activeLookupGateway,
+    handleValidation,
+    identityHandleChanged,
+  ]);
   const socialActivityFeed = useMemo(
     () => prepareSocialActivityFeed({
       privacySnapshot: snapshot,
@@ -859,6 +922,7 @@ export function FriendsPrivacyPage({
 
   const submitIdentity = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!canSaveIdentity) return;
     setErrorMessage(undefined);
     setIdentityFeedback(undefined);
 
@@ -914,34 +978,6 @@ export function FriendsPrivacyPage({
             : 'L’identité sociale n’a pas pu être enregistrée.',
         );
       });
-  };
-
-  const verifyAvailability = () => {
-    setIsCheckingAvailability(true);
-    setIdentityFeedback(undefined);
-
-    const accountUserId = currentAccountUserId();
-    const availabilityOperation = accountUserId && activeCloudIdentityPort
-      ? checkAccountSocialHandleAvailability(
-          activeCloudIdentityPort,
-          identityHandle,
-          accountUserId,
-        )
-      : checkSocialHandleAvailability(activeLookupGateway, identityHandle);
-
-    void availabilityOperation
-      .then((result) => {
-        setAvailability(result);
-      })
-      .catch((error) => {
-        setAvailability({
-          status: 'unavailable',
-          message: error instanceof Error
-            ? error.message
-            : 'Compte cloud indisponible : disponibilité réelle impossible pour le moment.',
-        });
-      })
-      .finally(() => setIsCheckingAvailability(false));
   };
 
   const copyIdentity = () => {
@@ -1217,16 +1253,26 @@ export function FriendsPrivacyPage({
                 <h2 className="text-xl font-bold text-slate-950 dark:text-white">Profil</h2>
                 <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{formatSocialHandle(identity.handle)}</p>
               </div>
-              <Button type="button" size="sm" variant="secondary" onClick={copyIdentity}>Copier</Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                aria-label="Copier l’identifiant public"
+                title="Copier l’identifiant public"
+                onClick={copyIdentity}
+              >
+                <Copy aria-hidden="true" className="size-4" />
+              </Button>
             </div>
             <form className="mt-5 grid gap-4 md:grid-cols-2" onSubmit={submitIdentity}>
               <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">
                 Identifiant public
                 <input
                   value={identityHandle}
+                  aria-describedby="social-handle-status"
                   onChange={(event) => {
                     setIdentityHandle(event.target.value);
-                    setAvailability(initialAvailability);
+                    setIdentityFeedback(undefined);
                   }}
                   className="mt-2 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 font-normal text-slate-950 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
                 />
@@ -1239,22 +1285,40 @@ export function FriendsPrivacyPage({
                   className="mt-2 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 font-normal text-slate-950 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
                 />
               </label>
-              <div className="md:col-span-2">
-                <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Visibilité du profil</p>
+              <fieldset className="md:col-span-2">
+                <legend className="text-sm font-semibold text-slate-700 dark:text-slate-200">Visibilité du profil</legend>
                 <div className="mt-2 grid gap-2 sm:grid-cols-3">
-                  {visibilityOptions.map((option) => (
-                    <Button
-                      key={option}
-                      type="button"
-                      variant={snapshot.privacy.profileVisibility === option ? 'primary' : 'secondary'}
-                      onClick={() => updateProfileVisibility(option)}
-                      aria-pressed={snapshot.privacy.profileVisibility === option}
-                    >
-                      {FRIEND_PROFILE_VISIBILITY_LABELS[option]}
-                    </Button>
-                  ))}
+                  {visibilityOptions.map((option) => {
+                    const active = snapshot.privacy.profileVisibility === option;
+                    return (
+                      <label
+                        key={option}
+                        className={active
+                          ? 'flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-brand-700 bg-brand-50 px-3 text-sm font-semibold text-brand-900 dark:border-brand-400 dark:bg-brand-950/50 dark:text-brand-100'
+                          : 'flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200'}
+                      >
+                        <input
+                          type="radio"
+                          name="profile-visibility"
+                          value={option}
+                          checked={active}
+                          onChange={() => updateProfileVisibility(option)}
+                          className="sr-only"
+                        />
+                        <span
+                          aria-hidden="true"
+                          className={active
+                            ? 'grid size-5 place-items-center rounded-full bg-brand-700 text-white dark:bg-brand-400 dark:text-slate-950'
+                            : 'size-5 rounded-full border border-slate-400 dark:border-slate-500'}
+                        >
+                          {active ? <Check className="size-3.5" /> : null}
+                        </span>
+                        {FRIEND_PROFILE_VISIBILITY_LABELS[option]}
+                      </label>
+                    );
+                  })}
                 </div>
-              </div>
+              </fieldset>
               <label className="flex min-h-11 items-center gap-3 md:col-span-2">
                 <input
                   type="checkbox"
@@ -1264,17 +1328,29 @@ export function FriendsPrivacyPage({
                 />
                 <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Autoriser les demandes d’amis</span>
               </label>
-              <div className="flex flex-wrap gap-2 md:col-span-2">
-                <Button type="button" variant="secondary" onClick={verifyAvailability} disabled={isCheckingAvailability}>
-                  {isCheckingAvailability ? 'Vérification…' : 'Vérifier disponibilité'}
-                </Button>
-                <Button type="submit">Enregistrer</Button>
-              </div>
-              {handleValidation.status !== 'valid' ? (
-                <p className="text-sm text-red-700 md:col-span-2 dark:text-red-300">{handleValidation.message}</p>
-              ) : availability.status !== 'idle' ? (
-                <p className="text-sm text-slate-600 md:col-span-2 dark:text-slate-300">{availability.message}</p>
-              ) : null}
+              <Button className="w-full md:col-span-2" type="submit" disabled={!canSaveIdentity}>
+                Enregistrer
+              </Button>
+              <p
+                id="social-handle-status"
+                role={
+                  handleValidation.status !== 'valid' || availability.status === 'unavailable'
+                    ? 'alert'
+                    : 'status'
+                }
+                aria-live="polite"
+                className={handleValidation.status !== 'valid' || availability.status === 'unavailable'
+                  ? 'text-sm text-red-700 md:col-span-2 dark:text-red-300'
+                  : 'text-sm text-slate-600 md:col-span-2 dark:text-slate-300'}
+              >
+                {handleValidation.status !== 'valid'
+                  ? handleValidation.message
+                  : isCheckingAvailability
+                    ? 'Vérification…'
+                    : identityHandleChanged && availability.status !== 'idle'
+                      ? availability.message
+                      : 'Identifiant actuel.'}
+              </p>
             </form>
           </Card>
           <InlineNotice title="Partage des activités">

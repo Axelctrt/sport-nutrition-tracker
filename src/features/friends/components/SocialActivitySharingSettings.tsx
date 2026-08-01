@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { Check } from 'lucide-react';
+import { useEffect, useId, useMemo, useState } from 'react';
 
 import type { FriendActivityPermissionLevel } from '@/domain/friends/friendship';
 import {
@@ -264,6 +265,7 @@ export function SocialActivityFriendSharingSettings({
   disabled = false,
   defaultOpen = false,
 }: SocialActivityFriendSharingSettingsProps) {
+  const sharingGroupName = useId();
   const sourceSelection = useMemo(
     () => ensureMandatoryCommonFields(value),
     [value],
@@ -301,25 +303,32 @@ export function SocialActivityFriendSharingSettings({
       </summary>
 
       <div className="space-y-3 border-t border-slate-200 p-3 dark:border-slate-800">
-        <div className="grid grid-cols-3 gap-1.5" aria-label={`Partage avec ${friendDisplayName}`}>
+        <fieldset className="grid grid-cols-3 gap-1.5">
+          <legend className="sr-only">Partage avec {friendDisplayName}</legend>
           {sharingModes.map((mode) => {
             const active = sharingLevel === mode.value;
             return (
-              <button
+              <label
                 key={mode.value}
-                type="button"
-                aria-pressed={active}
-                onClick={() => onSharingLevelChange(mode.value)}
-                disabled={disabled}
                 className={active
-                  ? 'min-h-10 rounded-lg bg-brand-700 px-2 py-2 text-xs font-semibold text-white disabled:opacity-60'
-                  : 'min-h-10 rounded-lg border border-slate-300 bg-white px-2 py-2 text-xs font-semibold text-slate-700 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200'}
+                  ? 'flex min-h-10 cursor-pointer items-center justify-center gap-1.5 rounded-lg border-2 border-brand-700 bg-brand-50 px-2 py-2 text-xs font-semibold text-brand-900 dark:border-brand-400 dark:bg-brand-950/50 dark:text-brand-100'
+                  : 'flex min-h-10 cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2 py-2 text-xs font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200'}
               >
+                <input
+                  type="radio"
+                  name={`friend-sharing-${sharingGroupName}`}
+                  value={mode.value}
+                  checked={active}
+                  onChange={() => onSharingLevelChange(mode.value)}
+                  disabled={disabled}
+                  className="sr-only"
+                />
+                {active ? <Check aria-hidden="true" className="size-3.5" /> : null}
                 {mode.label}
-              </button>
+              </label>
             );
           })}
-        </div>
+        </fieldset>
 
         {sharingLevel === 'none' ? (
           <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">
