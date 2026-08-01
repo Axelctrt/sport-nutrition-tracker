@@ -161,6 +161,43 @@ function readMetadataSafeJpegDimensions(bytes: Uint8Array): JpegDimensions | und
   return undefined;
 }
 
+function readFileAsArrayBufferWithFileReader(file: File): Promise<ArrayBuffer> {
+  if (typeof FileReader === 'undefined') {
+    return Promise.reject(new ProgressPhotoImageError(
+      IMAGE_DECODE_ERROR_MESSAGE,
+    ));
+  }
+
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (reader.result instanceof ArrayBuffer) {
+        resolve(reader.result);
+        return;
+      }
+      reject(new ProgressPhotoImageError(IMAGE_DECODE_ERROR_MESSAGE));
+    };
+    reader.onerror = () => reject(new ProgressPhotoImageError(
+      IMAGE_DECODE_ERROR_MESSAGE,
+      { cause: reader.error },
+    ));
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+async function readFileAsArrayBuffer(file: File): Promise<ArrayBuffer> {
+  if (typeof file.arrayBuffer === 'function') {
+    try {
+      return await file.arrayBuffer();
+    } catch {
+      // Certains WebKit exposent Blob.arrayBuffer() mais échouent sur un File
+      // injecté. FileReader reste la voie locale compatible dans ce cas.
+    }
+  }
+
+  return readFileAsArrayBufferWithFileReader(file);
+}
+
 async function createSmallJpegPassThrough(
   file: File,
 ): Promise<ProcessedProgressPhotoPair | undefined> {
@@ -170,7 +207,7 @@ async function createSmallJpegPassThrough(
   }
 
   try {
-    const bytes = new Uint8Array(await file.arrayBuffer());
+    const bytes = new Uint8Array(await readFileAsArrayBuffer(file));
     const dimensions = readMetadataSafeJpegDimensions(bytes);
     if (!dimensions
       || Math.max(dimensions.width, dimensions.height) > MAX_PROGRESS_PHOTO_THUMBNAIL_EDGE) {
