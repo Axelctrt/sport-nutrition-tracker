@@ -65,9 +65,13 @@ async function addPhoto(
     date: string;
     note: string;
     expectedCount: number;
+    source?: 'camera' | 'gallery';
   },
 ): Promise<void> {
-  await page.getByLabel('Choisir une photo de progression').setInputFiles({
+  const inputTestId = options.source === 'camera'
+    ? 'progress-photo-camera-input'
+    : 'progress-photo-gallery-input';
+  await page.getByTestId(inputTestId).setInputFiles({
     name: 'progress-photo-test.jpg',
     mimeType: 'image/jpeg',
     buffer: TEST_JPEG,
@@ -90,6 +94,17 @@ test('enregistre hors ligne et conserve les photos après rechargement', async (
     expectedHeading: 'Photos de progression',
     checkShellTouchTargets: true,
   });
+  await expect(
+    page.getByText('Prendre une photo', { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText('Choisir dans la galerie', { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByTestId('progress-photo-camera-input')).toHaveAttribute(
+    'capture',
+    'environment',
+  );
+  expect(await page.getByTestId('progress-photo-gallery-input').getAttribute('capture')).toBeNull();
 
   const apiRequests: string[] = [];
   page.on('request', (request) => {
@@ -104,6 +119,7 @@ test('enregistre hors ligne et conserve les photos après rechargement', async (
     date: await getBrowserLocalDate(page),
     note: 'Photo enregistrée hors ligne.',
     expectedCount: 1,
+    source: 'gallery',
   });
   await expect(page.getByAltText(/Photo de progression face/)).toBeVisible();
   expect(apiRequests).toEqual([]);
@@ -145,11 +161,13 @@ test('compare deux dates de la même vue au toucher et au clavier', async ({ pag
     date: await previousLocalDate(page),
     note: 'Avant.',
     expectedCount: 1,
+    source: 'camera',
   });
   await addPhoto(page, {
     date: await getBrowserLocalDate(page),
     note: 'Après.',
     expectedCount: 2,
+    source: 'gallery',
   });
 
   const compareLink = page.getByRole('link', { name: 'Comparer' });

@@ -1,7 +1,7 @@
 import { Camera, ImagePlus, X } from 'lucide-react';
 import {
+  type ChangeEvent,
   useEffect,
-  useRef,
   useState,
   type FormEvent,
 } from 'react';
@@ -21,6 +21,9 @@ interface ProgressPhotoAddFormProps {
   onSave: (input: SaveProgressPhotoInput) => Promise<void>;
 }
 
+const acceptedImageTypes = 'image/jpeg,image/png,image/webp,image/heic,image/heif';
+const sourceClassName = 'sp-button relative flex min-h-12 cursor-pointer items-center justify-center gap-2 text-sm';
+
 export function ProgressPhotoAddForm({ onSave }: ProgressPhotoAddFormProps) {
   const [file, setFile] = useState<File | undefined>(undefined);
   const [previewUrl, setPreviewUrl] = useState('');
@@ -30,8 +33,6 @@ export function ProgressPhotoAddForm({ onSave }: ProgressPhotoAddFormProps) {
   const [note, setNote] = useState('');
   const [state, setState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [feedback, setFeedback] = useState<string>();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
   useEffect(() => {
     if (!file || typeof URL.createObjectURL !== 'function') {
       setPreviewUrl('');
@@ -44,7 +45,19 @@ export function ProgressPhotoAddForm({ onSave }: ProgressPhotoAddFormProps) {
 
   function clearFile(): void {
     setFile(undefined);
-    if (fileInputRef.current) fileInputRef.current.value = '';
+  }
+
+  function selectFile(event: ChangeEvent<HTMLInputElement>): void {
+    const selectedFile = event.currentTarget.files?.item(0) ?? undefined;
+
+    // Autorise une nouvelle sélection du même fichier, notamment après une
+    // erreur de traitement ou après avoir retiré la sélection courante.
+    event.currentTarget.value = '';
+    if (!selectedFile) return;
+
+    setFile(selectedFile);
+    setState('idle');
+    setFeedback(undefined);
   }
 
   async function submit(event: FormEvent<HTMLFormElement>): Promise<void> {
@@ -100,45 +113,56 @@ export function ProgressPhotoAddForm({ onSave }: ProgressPhotoAddFormProps) {
       </div>
 
       <form className="mt-5 grid gap-4" onSubmit={(event) => void submit(event)}>
-        <label className="relative flex min-h-24 cursor-pointer items-center gap-3 rounded-2xl border border-dashed border-brand-300 bg-brand-50/70 p-4 text-brand-950 hover:bg-brand-100 focus-within:ring-2 focus-within:ring-brand-500 dark:border-brand-800 dark:bg-brand-950/30 dark:text-brand-100 dark:hover:bg-brand-950/50">
-          {previewUrl ? (
-            <img src={previewUrl} alt="Aperçu de la photo sélectionnée" className="h-20 w-16 shrink-0 rounded-xl object-cover" />
-          ) : (
-            <span className="grid size-12 shrink-0 place-items-center rounded-xl bg-brand-700 text-white">
-              <ImagePlus aria-hidden="true" className="size-5" />
-            </span>
-          )}
-          <span className="min-w-0 flex-1">
-            <span className="block font-semibold">{file ? 'Changer la photo' : 'Choisir ou prendre une photo'}</span>
-            <span className="mt-1 block text-xs leading-5 opacity-80">JPEG, PNG, WebP ou HEIC · 25 Mo maximum</span>
-            {file ? <span className="mt-1 block truncate text-xs opacity-80">{file.name}</span> : null}
-          </span>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
-            capture="environment"
-            className="absolute inset-0 cursor-pointer opacity-0"
-            aria-label="Choisir une photo de progression"
-            onChange={(event) => {
-              const selectedFile = event.currentTarget.files?.item(0) ?? undefined;
-              setFile(selectedFile);
-              setState('idle');
-              setFeedback(undefined);
-            }}
-          />
-        </label>
+        <fieldset className="grid gap-3 sm:grid-cols-2">
+          <legend className="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-200">
+            Source de la photo
+          </legend>
+          <label className={sourceClassName}>
+            <Camera aria-hidden="true" className="size-5" />
+            Prendre une photo
+            <input
+              type="file"
+              accept={acceptedImageTypes}
+              capture="environment"
+              className="absolute inset-0 cursor-pointer opacity-0"
+              data-testid="progress-photo-camera-input"
+              disabled={state === 'loading'}
+              onChange={selectFile}
+            />
+          </label>
+          <label className={`${sourceClassName} sp-button--secondary`}>
+            <ImagePlus aria-hidden="true" className="size-5" />
+            Choisir dans la galerie
+            <input
+              type="file"
+              accept={acceptedImageTypes}
+              className="absolute inset-0 cursor-pointer opacity-0"
+              data-testid="progress-photo-gallery-input"
+              disabled={state === 'loading'}
+              onChange={selectFile}
+            />
+          </label>
+          <p className="text-xs text-slate-500 sm:col-span-2 dark:text-slate-400">
+            JPEG, PNG, WebP ou HEIC · 25 Mo maximum
+          </p>
+        </fieldset>
 
         {file ? (
-          <button
-            type="button"
-            className="inline-flex min-h-11 w-fit items-center gap-2 rounded-xl px-3 text-sm font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
-            onClick={clearFile}
-            disabled={state === 'loading'}
-          >
-            <X aria-hidden="true" className="size-4" />
-            Retirer la sélection
-          </button>
+          <div className="flex min-w-0 items-center gap-3 rounded-2xl bg-brand-50 p-3 dark:bg-brand-950/30">
+            {previewUrl ? (
+              <img src={previewUrl} alt="Aperçu de la photo sélectionnée" className="h-20 w-16 shrink-0 rounded-xl object-cover" />
+            ) : null}
+            <p className="min-w-0 flex-1 truncate text-sm font-semibold">{file.name}</p>
+            <button
+              type="button"
+              className="inline-flex min-h-11 items-center gap-2 px-2 text-sm font-semibold"
+              onClick={clearFile}
+              disabled={state === 'loading'}
+            >
+              <X aria-hidden="true" className="size-4" />
+              Retirer
+            </button>
+          </div>
         ) : null}
 
         <div className="grid gap-4 sm:grid-cols-2">
