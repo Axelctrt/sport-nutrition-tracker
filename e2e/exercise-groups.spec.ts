@@ -48,7 +48,7 @@ test('crée un superset et conserve ses exercices indépendants dans la séance'
   await addExerciseSection.getByRole('button', { name: 'Ajouter', exact: true }).click();
   await expect(addExerciseSection).not.toHaveAttribute('open', '');
   await expect(page.getByText('Curl barre', { exact: true })).toBeVisible();
-  expect(await page.evaluate(() => document.activeElement?.id)).toMatch(/^workout-exercise-/u);
+  await expect(page.locator('[id^="workout-exercise-"]:focus')).toHaveCount(1);
   await addExerciseSection.locator('summary').click();
   await expect(sessionExerciseSearch).toHaveValue('');
   await addExerciseSection.locator('summary').click();
