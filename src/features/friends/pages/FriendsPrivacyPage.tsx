@@ -102,6 +102,7 @@ import { Button } from '@/shared/ui/Button';
 import { BottomSheet } from '@/shared/ui/BottomSheet';
 import { Card } from '@/shared/ui/Card';
 import { ConfirmationDialog } from '@/shared/ui/ConfirmationDialog';
+import { ChoiceCard } from '@/shared/ui/ChoiceCard';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 
 
@@ -504,6 +505,8 @@ export function FriendsPrivacyPage({
     && handleValidation.handle !== identity.handle;
   const canSaveIdentity = handleValidation.status === 'valid'
     && (!identityHandleChanged || (!isCheckingAvailability && availability.status === 'available'));
+  const handleStatusIsError = handleValidation.status !== 'valid'
+    || availability.status === 'unavailable';
 
   useEffect(() => {
     const sequence = availabilitySequenceRef.current + 1;
@@ -1291,30 +1294,15 @@ export function FriendsPrivacyPage({
                   {visibilityOptions.map((option) => {
                     const active = snapshot.privacy.profileVisibility === option;
                     return (
-                      <label
+                      <ChoiceCard
                         key={option}
-                        className={active
-                          ? 'flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-brand-700 bg-brand-50 px-3 text-sm font-semibold text-brand-900 dark:border-brand-400 dark:bg-brand-950/50 dark:text-brand-100'
-                          : 'flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200'}
-                      >
-                        <input
-                          type="radio"
-                          name="profile-visibility"
-                          value={option}
-                          checked={active}
-                          onChange={() => updateProfileVisibility(option)}
-                          className="sr-only"
-                        />
-                        <span
-                          aria-hidden="true"
-                          className={active
-                            ? 'grid size-5 place-items-center rounded-full bg-brand-700 text-white dark:bg-brand-400 dark:text-slate-950'
-                            : 'size-5 rounded-full border border-slate-400 dark:border-slate-500'}
-                        >
-                          {active ? <Check className="size-3.5" /> : null}
-                        </span>
-                        {FRIEND_PROFILE_VISIBILITY_LABELS[option]}
-                      </label>
+                        name="profile-visibility"
+                        value={option}
+                        title={FRIEND_PROFILE_VISIBILITY_LABELS[option]}
+                        selected={active}
+                        onSelect={(value) => updateProfileVisibility(value as FriendVisibilityLevel)}
+                        tight
+                      />
                     );
                   })}
                 </div>
@@ -1334,12 +1322,10 @@ export function FriendsPrivacyPage({
               <p
                 id="social-handle-status"
                 role={
-                  handleValidation.status !== 'valid' || availability.status === 'unavailable'
-                    ? 'alert'
-                    : 'status'
+                  handleStatusIsError ? 'alert' : 'status'
                 }
                 aria-live="polite"
-                className={handleValidation.status !== 'valid' || availability.status === 'unavailable'
+                className={handleStatusIsError
                   ? 'text-sm text-red-700 md:col-span-2 dark:text-red-300'
                   : 'text-sm text-slate-600 md:col-span-2 dark:text-slate-300'}
               >

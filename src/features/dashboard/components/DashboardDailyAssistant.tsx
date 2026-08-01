@@ -90,7 +90,6 @@ interface StageCardProps {
   action?: ReactNode;
   children?: ReactNode;
   highlighted?: boolean;
-  summaryWrap?: boolean;
 }
 
 const mealLabels = {
@@ -116,7 +115,7 @@ function formatSleep(minutes: number | undefined): string | undefined {
 }
 
 function formatNutritionValue(value: number | undefined): string {
-  return Math.round(Number.isFinite(value) ? value ?? 0 : 0).toLocaleString('fr-FR');
+  return Math.round(value ?? 0).toLocaleString('fr-FR');
 }
 
 function StageCard({
@@ -128,7 +127,6 @@ function StageCard({
   action,
   children,
   highlighted = false,
-  summaryWrap = false,
 }: StageCardProps) {
   const isCurrent = state === 'current';
   const isComplete = state === 'complete';
@@ -193,7 +191,7 @@ function StageCard({
           <div className={cn(
             'text-sm leading-5 text-slate-600 dark:text-slate-300',
             compactComplete && 'min-w-0 flex-1',
-            compactComplete && !summaryWrap && 'truncate',
+            compactComplete && 'truncate',
             !compactComplete && 'mt-1',
           )}>
             {summary}
@@ -380,19 +378,7 @@ export function DashboardDailyAssistant({
     + activityPlanning.enduranceSessions
       .filter(({ completedActivity }) => !completedActivity)
       .length;
-  const linkedActivityIds = new Set([
-    ...activityPlanning.strengthSessions
-      .map(({ session }) => session.completedActivityId)
-      .filter((activityId): activityId is string => Boolean(activityId)),
-    ...activityPlanning.enduranceSessions
-      .map(({ completedActivity }) => completedActivity?.id)
-      .filter((activityId): activityId is string => Boolean(activityId)),
-  ]);
-  const standaloneActivities = snapshot.activities
-    .filter((activity) => !linkedActivityIds.has(activity.id));
-  const visibleCompletedActivityIds = new Set(
-    snapshot.activities.slice(0, 2).map((activity) => activity.id),
-  );
+  const visibleCompletedActivities = snapshot.activities.slice(0, 2);
   const additionalCompletedActivityCount = Math.max(0, snapshot.activities.length - 2);
   const unlistedActiveWorkout = activeWorkout
     && !activityPlanning.strengthSessions.some(({ session }) => session.id === activeWorkout.session.id)
@@ -415,6 +401,10 @@ export function DashboardDailyAssistant({
     'dashboard-sport',
   );
   const preferredMealSlot = recommendedMealSlot(currentHour, nutrition.entryCounts);
+  const consumedCalories = formatNutritionValue(nutrition.consumed.caloriesKcal);
+  const consumedCarbohydrates = formatNutritionValue(nutrition.consumed.carbohydratesGrams);
+  const consumedProtein = formatNutritionValue(nutrition.consumed.proteinGrams);
+  const consumedFat = formatNutritionValue(nutrition.consumed.fatGrams);
   const nutritionNavigationStates = new Map(
     (['breakfast', 'lunch', 'dinner', 'snacks'] as const).map((slot) => [
       slot,
@@ -651,16 +641,10 @@ export function DashboardDailyAssistant({
               </div>
             ) : null}
 
-            {activityPlanning.strengthSessions.map(({ session, exerciseCount }) => {
+            {activityPlanning.strengthSessions
+              .filter(({ session }) => session.status !== 'completed')
+              .map(({ session, exerciseCount }) => {
               const isInProgress = session.status === 'inProgress';
-              const isCompleted = session.status === 'completed';
-              if (
-                isCompleted
-                && session.completedActivityId
-                && !visibleCompletedActivityIds.has(session.completedActivityId)
-              ) {
-                return null;
-              }
               return (
                 <div
                   key={session.id}
@@ -670,7 +654,7 @@ export function DashboardDailyAssistant({
                     {getWorkoutSessionTitle(session)}
                   </p>
                   <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">
-                    Musculation · {isInProgress ? 'En cours' : isCompleted ? 'Terminée' : 'Prévue'}
+                    Musculation · {isInProgress ? 'En cours' : 'Prévue'}
                     {session.plannedDurationMinutes
                       ? ` · environ ${session.plannedDurationMinutes} min`
                       : ''}
@@ -688,11 +672,6 @@ export function DashboardDailyAssistant({
                         <Play aria-hidden="true" className="size-4" />
                         Reprendre
                       </Link>
-                    ) : isCompleted ? (
-                      <span className="inline-flex min-h-10 items-center gap-2 text-sm font-semibold text-emerald-700 dark:text-emerald-300">
-                        <Check aria-hidden="true" className="size-4" />
-                        Terminée
-                      </span>
                     ) : (
                       <div className="flex w-full items-center gap-2 sm:w-auto">
                         <button
@@ -731,10 +710,8 @@ export function DashboardDailyAssistant({
             })}
 
             {activityPlanning.enduranceSessions
-              .filter(({ completedActivity }) => (
-                !completedActivity || visibleCompletedActivityIds.has(completedActivity.id)
-              ))
-              .map(({ session, completedActivity }) => (
+              .filter(({ completedActivity }) => !completedActivity)
+              .map(({ session }) => (
               <div
                 key={session.id}
                 className="border-t border-slate-200 pt-3 dark:border-slate-800"
@@ -742,20 +719,12 @@ export function DashboardDailyAssistant({
                 <p className="font-semibold text-slate-950 dark:text-white">{session.title}</p>
                 <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">
                   {enduranceTypeLabels[session.activityType]}
-                  {completedActivity
-                    ? ` · Terminée · ${completedActivity.durationMinutes} min réalisés`
-                    : session.targetDurationMinutes
-                      ? ` · Prévue · ${session.targetDurationMinutes} min`
-                      : ' · Prévue'}
+                  {session.targetDurationMinutes
+                    ? ` · Prévue · ${session.targetDurationMinutes} min`
+                    : ' · Prévue'}
                 </p>
                 <div className="mt-2 flex flex-wrap gap-2">
-                  {completedActivity ? (
-                    <span className="inline-flex min-h-10 items-center gap-2 text-sm font-semibold text-emerald-700 dark:text-emerald-300">
-                      <Check aria-hidden="true" className="size-4" />
-                      Terminée
-                    </span>
-                  ) : (
-                    <div className="flex w-full items-center gap-2 sm:w-auto">
+                  <div className="flex w-full items-center gap-2 sm:w-auto">
                       <Link
                         to={enduranceActivityPath(session)}
                         state={createActivityJournalReturnState(
@@ -788,15 +757,12 @@ export function DashboardDailyAssistant({
                           Retirer
                         </Button>
                       </ActionMenu>
-                    </div>
-                  )}
+                  </div>
                 </div>
               </div>
             ))}
 
-            {standaloneActivities
-              .filter((activity) => visibleCompletedActivityIds.has(activity.id))
-              .map((activity) => (
+            {visibleCompletedActivities.map((activity) => (
               <div
                 key={activity.id}
                 className="border-t border-slate-200 pt-3 dark:border-slate-800"
@@ -891,17 +857,15 @@ export function DashboardDailyAssistant({
           title={nutritionComplete ? 'Journal complet' : 'Nutrition'}
           icon={Utensils}
           state={stageState('nutrition', nutritionComplete)}
-          summaryWrap
           summary={
             nutrition.consumed.entryCount > 0
               ? (
                   <span
-                    aria-label={`${formatNutritionValue(nutrition.consumed.caloriesKcal)} kilocalories, ${formatNutritionValue(nutrition.consumed.carbohydratesGrams)} grammes de glucides, ${formatNutritionValue(nutrition.consumed.proteinGrams)} grammes de protéines, ${formatNutritionValue(nutrition.consumed.fatGrams)} grammes de lipides`}
-                    title={`${formatNutritionValue(nutrition.consumed.caloriesKcal)} kcal · ${formatNutritionValue(nutrition.consumed.carbohydratesGrams)} g de glucides · ${formatNutritionValue(nutrition.consumed.proteinGrams)} g de protéines · ${formatNutritionValue(nutrition.consumed.fatGrams)} g de lipides`}
-                    className="block min-w-0 whitespace-normal break-words text-[0.8125rem] sm:text-sm"
+                    aria-label={`${consumedCalories} kilocalories, ${consumedCarbohydrates} grammes de glucides, ${consumedProtein} grammes de protéines, ${consumedFat} grammes de lipides`}
+                    className="whitespace-normal break-words text-[0.8125rem] sm:text-sm"
                   >
                     <span aria-hidden="true">
-                      {formatNutritionValue(nutrition.consumed.caloriesKcal)} kcal · {formatNutritionValue(nutrition.consumed.carbohydratesGrams)} g G · {formatNutritionValue(nutrition.consumed.proteinGrams)} g P · {formatNutritionValue(nutrition.consumed.fatGrams)} g L
+                      {consumedCalories} kcal · {consumedCarbohydrates} g G · {consumedProtein} g P · {consumedFat} g L
                     </span>
                   </span>
                 )

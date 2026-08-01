@@ -1,4 +1,3 @@
-import { Check } from 'lucide-react';
 import { useEffect, useId, useMemo, useState } from 'react';
 
 import type { FriendActivityPermissionLevel } from '@/domain/friends/friendship';
@@ -11,6 +10,7 @@ import {
   type SocialActivityFieldSelection,
   type SocialActivityStrengthField,
 } from '@/domain/friends/socialActivitySharingPolicy';
+import { ChoiceCard } from '@/shared/ui/ChoiceCard';
 
 interface SharingOption<TField extends string> {
   readonly id: string;
@@ -308,24 +308,16 @@ export function SocialActivityFriendSharingSettings({
           {sharingModes.map((mode) => {
             const active = sharingLevel === mode.value;
             return (
-              <label
+              <ChoiceCard
                 key={mode.value}
-                className={active
-                  ? 'flex min-h-10 cursor-pointer items-center justify-center gap-1.5 rounded-lg border-2 border-brand-700 bg-brand-50 px-2 py-2 text-xs font-semibold text-brand-900 dark:border-brand-400 dark:bg-brand-950/50 dark:text-brand-100'
-                  : 'flex min-h-10 cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2 py-2 text-xs font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200'}
-              >
-                <input
-                  type="radio"
-                  name={`friend-sharing-${sharingGroupName}`}
-                  value={mode.value}
-                  checked={active}
-                  onChange={() => onSharingLevelChange(mode.value)}
-                  disabled={disabled}
-                  className="sr-only"
-                />
-                {active ? <Check aria-hidden="true" className="size-3.5" /> : null}
-                {mode.label}
-              </label>
+                name={`friend-sharing-${sharingGroupName}`}
+                value={mode.value}
+                title={mode.label}
+                selected={active}
+                disabled={disabled}
+                onSelect={(value) => onSharingLevelChange(value as FriendActivityPermissionLevel)}
+                tight
+              />
             );
           })}
         </fieldset>
