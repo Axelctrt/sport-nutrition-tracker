@@ -93,8 +93,8 @@ if (failures.length === 0) {
   }
 
   const databaseVersions = read('src/infrastructure/database/migrations/versions.ts');
-  if (!/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_11\b/.test(databaseVersions)) {
-    fail('le schéma métier doit rester en Dexie v11.');
+  if (!/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_12\b/.test(databaseVersions)) {
+    fail('le schéma métier local doit utiliser Dexie v12.');
   }
   const backupMigrations = read('src/infrastructure/backup/backupMigrations.ts');
   if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*10\b/.test(backupMigrations)) {
@@ -103,6 +103,24 @@ if (failures.length === 0) {
   const dataSpace = read('src/domain/data-spaces/dataSpace.ts');
   if (!/DATA_SPACE_REGISTRY_VERSION\s*=\s*1\s+as\s+const/.test(dataSpace)) {
     fail('le registre local des espaces doit rester en v1.');
+  }
+
+  const photoSchema = read('src/infrastructure/database/schema.ts');
+  for (const marker of [
+    "'progressPhotos'",
+    "'progressPhotoAssets'",
+    'export const schemaVersion12',
+  ]) {
+    if (!photoSchema.includes(marker)) fail(`contrat photo v12 absent : ${marker}.`);
+  }
+  const photoLocalOnly = read('src/application/progress-photos/progressPhotoLocalOnly.test.ts');
+  for (const marker of [
+    "'progressPhotos'",
+    "'progressPhotoAssets'",
+    "'/src/application/sync/**/*.{ts,tsx}'",
+    "'/src/infrastructure/backup/**/*.{ts,tsx}'",
+  ]) {
+    if (!photoLocalOnly.includes(marker)) fail(`garde-fou photo local-only absent : ${marker}.`);
   }
 
   for (const audit of [
@@ -165,5 +183,5 @@ if (failures.length > 0) {
 }
 
 console.log(
-  `Audit D4 réussi : socle 0.21.x conservé, version publiée ${expectedVersion}, continuité des données, idempotence du journal nutritionnel, isolation et versions de données validées.`,
+  `Audit D4 réussi : socle 0.21.x conservé, version publiée ${expectedVersion}, continuité des données, photos locales v12, idempotence du journal nutritionnel et isolation validées.`,
 );

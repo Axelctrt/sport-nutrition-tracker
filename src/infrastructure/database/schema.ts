@@ -44,7 +44,8 @@ export const databaseInternalTableNames = [
   'deviceSettings',
   'migrationJournal',
   'databaseDiagnostics',
-
+  'progressPhotos',
+  'progressPhotoAssets',
   'trashItems',
 ] as const;
 
@@ -115,7 +116,6 @@ export const schemaVersion5: Record<string, string> = {
     'id, date, activityType, status, updatedAt',
 };
 
-
 export const schemaVersion6: Record<string, string> = {
   ...schemaVersion5,
   earnedAchievements: 'id, earnedAt, updatedAt',
@@ -133,13 +133,11 @@ export const schemaVersion7 = {
   deviceSettings: 'id, &deviceId, updatedAt',
 } as const;
 
-
 export const schemaVersion8 = {
   ...schemaVersion7,
   deletionRecords:
     'id, entityType, entityId, status, deletedAt, restoredAt, updatedAt, [entityType+entityId]',
 } as const;
-
 
 export const schemaVersion9 = {
   ...schemaVersion8,
@@ -160,4 +158,10 @@ export const schemaVersion11 = {
   dailyCheckIns: 'id, &date, completedAt, updatedAt',
   dailyActivityDecisions: 'id, &date, decision, confirmedAt, updatedAt',
   dailyCheckOuts: 'id, &date, completedAt, updatedAt',
+} as const;
+
+export const schemaVersion12 = {
+  ...schemaVersion11,
+  progressPhotos: 'id, date, view, [view+date], updatedAt',
+  progressPhotoAssets: 'id, photoId, &[photoId+kind], kind, updatedAt',
 } as const;

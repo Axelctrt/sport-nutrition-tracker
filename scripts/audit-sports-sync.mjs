@@ -81,8 +81,8 @@ if (!deployment.includes("VITE_ENABLE_REAL_ACTIVITY_SYNC: 'true'")) {
   fail('le build de production n’active pas explicitement le lot B1.');
 }
 
-if (!/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_11/.test(mainVersions)) {
-  fail('le lot B1 ne doit pas modifier la version de la base locale principale.');
+if (!/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_12/.test(mainVersions)) {
+  fail('le lot B1 doit conserver le schéma local principal courant Dexie v12.');
 }
 
 if (failures.length > 0) {

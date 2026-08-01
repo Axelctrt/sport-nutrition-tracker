@@ -18,7 +18,7 @@ describe('préparation de la version UX 0.36.0', () => {
   });
 
   it('conserve les versions de schéma attendues', () => {
-    expect(databaseSchemaVersion).toBe(11);
+    expect(databaseSchemaVersion).toBe(12);
     expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(10);
     expect(databaseTableNames).toEqual(
       expect.arrayContaining([

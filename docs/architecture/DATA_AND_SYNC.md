@@ -7,15 +7,25 @@ de `docs/architecture` conservent l’historique détaillé.
 
 | Stockage | Version actuelle | Rôle |
 | --- | ---: | --- |
-| `AppDatabase` Dexie | 11 | données utilisateur principales locales |
-| Sauvegarde JSON | 10 | export/import contrôlé et restauration |
+| `AppDatabase` Dexie | 12 | données utilisateur principales et photos privées locales |
+| Sauvegarde JSON | 10 | export/import contrôlé des données structurées, hors images |
+| Archive photos | 1 | export/restauration séparés des images de progression |
 | Runtime Dexie Cloud | 16 | agrégats synchronisables et baselines logiques |
-| D1 social | migrations `0000` à `0003` présentes | identité, relations, permissions, snapshots et limites photo |
+| D1 social | migrations `0000` à `0003` présentes | identité, relations, permissions, snapshots et limites photo nutritionnelle |
 
 La source de la version Dexie principale est
-`src/infrastructure/database/migrations/versions.ts`. Les versions 1 à 11 sont
+`src/infrastructure/database/migrations/versions.ts`. Les versions 1 à 12 sont
 enregistrées dans `AppDatabase.ts`. Une constante ou migration publiée est
 immuable.
+
+La version 12 ajoute deux tables internes :
+
+- `progressPhotos` pour les métadonnées, la date, la vue et les liens d’assets ;
+- `progressPhotoAssets` pour l’original compressé et la miniature.
+
+Les deux assets et leurs métadonnées sont créés ou supprimés dans une même
+transaction. Un nettoyage local supprime les assets orphelins et les photos
+incomplètes.
 
 ## Espaces de données
 
@@ -28,6 +38,10 @@ immuable.
 `src/infrastructure/data-spaces` porte l’import invité, la restauration cloud
 et la coordination des espaces. Un changement de compte doit masquer l’ancien
 espace avant tout chargement du nouveau.
+
+Les photos de progression vivent dans la base Dexie de l’espace actuellement
+ouvert. Elles ne sont pas copiées par l’import invité générique : un transfert
+vers un autre espace exige une archive photo explicite choisie par l’utilisateur.
 
 ## Synchronisation
 
@@ -49,6 +63,10 @@ Les suppressions synchronisées passent par des `DeletionRecord`. Les séances,
 modèles et exercices de musculation sont synchronisés comme agrégats afin
 d’éviter les états partiels.
 
+Les tables et modèles de photos de progression sont exclus des adaptateurs de
+synchronisation, des Pages Functions et de Dexie Cloud. Un test de contrat
+échoue si une référence à ces tables apparaît dans ces frontières.
+
 ## Sauvegarde et restauration
 
 - Sauvegarde globale et sélective :
@@ -57,6 +75,10 @@ d’éviter les états partiels.
 - Sauvegarde de sécurité avant restauration ou opération sensible.
 - Journal de migration et diagnostic d’intégrité dans la base principale.
 - Import invité explicite ; aucune fusion silencieuse entre espaces.
+- Les images de progression ne sont pas ajoutées au JSON général limité à
+  25 Mo.
+- Une archive photo séparée, limitée à 100 Mo, contient métadonnées, originaux
+  compressés et miniatures. La restauration est additive et ignore les doublons.
 
 Ne jamais contourner les schémas de sauvegarde pour « réparer » un fichier.
 Une incompatibilité doit être signalée avant toute écriture.
@@ -64,7 +86,8 @@ Une incompatibilité doit être signalée avant toute écriture.
 ## D1 et Pages Functions
 
 Le binding vérifié dans `wrangler.jsonc` est `SOCIAL_DIRECTORY_DB`. Les
-fonctions sociales et photo sont dans `functions/api`. Les migrations SQL
+fonctions sociales et de photo nutritionnelle sont dans `functions/api`.
+Aucune fonction distante ne reçoit une photo de progression. Les migrations SQL
 restent dans `migrations/` et leur application distante est une opération
 séparée exigeant une autorisation.
 

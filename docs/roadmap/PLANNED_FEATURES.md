@@ -1,36 +1,41 @@
 # Fonctionnalités et chantiers planifiés
 
-## Planifié — Phase 2 : audit ciblé
+## Terminé — Phase 2 : audit ciblé
 
-Produire un rapport vérifiable sur l’architecture, les données, la
-synchronisation, la PWA, les parcours mobiles, Performance Glass et les risques
-de régression. Cette phase ne modifie aucun fichier. Elle exige l’intégration
-préalable de la Phase 1 et une autorisation explicite.
+L’audit de l’architecture, des données, de la synchronisation, de la PWA, des
+parcours mobiles et de Performance Glass a été produit puis accepté comme base
+de décision. Cette phase n’a pas modifié le comportement produit.
 
-## Planifié sous condition — Phase 3 : fondations UX partagées
+## Intégré — Phase 3 : fondations UX partagées
 
-À cadrer d’après l’audit accepté :
+Les Phases 3A à 3E ont livré sur `develop` :
 
-- consolider les primitives et tokens partagés avant les adaptations locales ;
-- réduire les divergences entre parcours comparables ;
-- préserver mobile, clavier, safe areas, mouvement réduit et thèmes ;
-- mesurer l’impact bundle et rendu.
+- les correctifs obligatoires issus de l’audit ;
+- les variantes sémantiques de `EmptyState` ;
+- une politique cohérente de feedback asynchrone ;
+- un arbitre unique pour les bannières globales ;
+- une primitive `ExpandableCard` évaluée sur les séances modèles.
 
 Les références externes restent des inspirations selon
 [`../product/UX_REFERENCES.md`](../product/UX_REFERENCES.md).
 
-## Planifié sous condition — Phase 4 : photos de progression locales
+## En PR brouillon — Phase 4 : photos de progression locales
 
-Le périmètre prévu est strict :
+La PR #18 implémente et valide le périmètre strict suivant :
 
-- photos privées, locales et associées au bon espace de données ;
-- consentement, suppression et export compréhensibles ;
+- photos privées, locales et associées à la base de l’espace ouvert ;
+- ajout avec date, vue, poids et note facultatifs ;
+- redimensionnement, compression et miniatures dans le navigateur ;
+- galerie compacte, filtres et comparaison tactile avant/après ;
+- suppression individuelle ou complète ;
+- archive photo séparée et restauration additive ;
 - absence de publication sociale ;
 - absence de synchronisation d’image cloud ;
 - absence d’analyse corporelle ou d’extension IA.
 
-Le stockage, les quotas, la sauvegarde et la restauration devront être spécifiés
-et testés avant toute implémentation.
+La migration Dexie v12, les quotas, l’isolation des espaces, la restauration,
+la continuité PWA, le clavier, WebKit et les largeurs mobiles doivent être verts
+avant que cette PR puisse être proposée à la fusion.
 
 ## Idée à étudier — Phase 5 : déploiement contrôlé
 

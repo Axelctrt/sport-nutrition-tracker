@@ -1,6 +1,6 @@
 # Catalogue fonctionnel
 
-Statut vérifié : base 0.36.0 + Phase 0 intégrée dans `develop`.
+Statut vérifié : base 0.36.0 + fondations UX des Phases 0 à 3E intégrées dans `develop`; Phase 4 en PR brouillon.
 
 | Domaine | État actuel |
 | --- | --- |
@@ -11,6 +11,7 @@ Statut vérifié : base 0.36.0 + Phase 0 intégrée dans `develop`.
 | Poids et pas | saisie locale, historique, tendances et intégration au quotidien |
 | Planification | séances prévues, répétition de semaine et agenda |
 | Progression | objectifs, rapports, statistiques, badges, missions et thèmes |
+| Photos de progression | Phase 4 en PR brouillon : ajout local, vues, galerie, comparateur tactile, archive séparée et suppression |
 | Sauvegarde | export, partage, import, restauration sélective et sauvegarde de sécurité |
 | Corbeille | archivage, restauration et purge contrôlée |
 | Comptes et espaces | invité, profil local, OTP cloud, appareils et restauration |
@@ -24,8 +25,11 @@ Statut vérifié : base 0.36.0 + Phase 0 intégrée dans `develop`.
 - Les flags de synchronisation réels sont prudents et désactivés par défaut.
 - Les intégrations sociales distantes dépendent des bindings et variables
   d’environnement Cloudflare.
-- L’estimation photo exige une configuration serveur ; elle n’est pas un
-  journal automatique.
+- L’estimation photo nutritionnelle exige une configuration serveur ; elle
+  n’est pas un journal automatique.
+- Les photos de progression de la Phase 4 restent locales : aucune image cloud,
+  sociale ou analysée par IA. Leur archive est séparée de la sauvegarde JSON
+  générale.
 - Les documents versionnés décrivent parfois une étape historique révolue :
   l’état courant doit être vérifié dans le code et les documents canoniques.
 

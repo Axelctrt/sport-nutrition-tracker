@@ -105,8 +105,8 @@ if (failures.length === 0) {
   }
 
   const versions = read('src/infrastructure/database/migrations/versions.ts');
-  if (!/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_11\b/.test(versions)) {
-    fail('la base métier doit rester en Dexie v11.');
+  if (!/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_12\b/.test(versions)) {
+    fail('la base métier doit utiliser Dexie v12.');
   }
   const backup = read('src/infrastructure/backup/backupMigrations.ts');
   if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*10\b/.test(backup)) {
@@ -117,8 +117,8 @@ if (failures.length === 0) {
     fail('le runtime cloud doit utiliser la v16 pour les amitiés et permissions sociales.');
   }
   const productionAudit = read('scripts/audit-rc.mjs');
-  if (!productionAudit.includes('totalJavaScriptBytes: 3356 * 1024')) {
-    fail('le budget JavaScript global encadré de 3356 Kio est absent.');
+  if (!productionAudit.includes('totalJavaScriptBytes: 3408 * 1024')) {
+    fail('le budget JavaScript global encadré de 3408 Kio est absent.');
   }
 
   const releaseNotes = read('RELEASE-NOTES-0.23.0.md');

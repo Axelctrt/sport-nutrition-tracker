@@ -1,8 +1,8 @@
-import Dexie, { type Table } from "dexie";
+import Dexie, { type Table } from 'dexie';
 
 import { DEFAULT_DATABASE_NAME } from '@/infrastructure/database/databaseNames';
 
-import type { Activity } from "@/domain/models/activity";
+import type { Activity } from '@/domain/models/activity';
 import type {
   DailyActivityDecision,
   DailyCheckIn,
@@ -11,7 +11,7 @@ import type {
 import type { DeletionRecord } from '@/domain/models/deletion';
 import type { Goal } from '@/domain/goals/goalState';
 import type { PlannedEnduranceSession } from '@/domain/planning/endurancePlanningState';
-import type { EntityId } from "@/domain/models/common";
+import type { EntityId } from '@/domain/models/common';
 import type {
   StoredFriendActivityPermission,
   StoredFriendProfile,
@@ -24,10 +24,14 @@ import type {
   FoodEntry,
   FoodProduct,
   Meal,
-} from "@/domain/models/food";
-import type { UserProfile } from "@/domain/models/profile";
-import type { Recipe, RecipeIngredient } from "@/domain/models/recipe";
-import type { DeviceSettings, UserSettings } from "@/domain/models/settings";
+} from '@/domain/models/food';
+import type { UserProfile } from '@/domain/models/profile';
+import type {
+  ProgressPhoto,
+  ProgressPhotoAsset,
+} from '@/domain/models/progressPhoto';
+import type { Recipe, RecipeIngredient } from '@/domain/models/recipe';
+import type { DeviceSettings, UserSettings } from '@/domain/models/settings';
 import type {
   ExerciseDefinition,
   ProgressionSuggestion,
@@ -36,14 +40,14 @@ import type {
   WorkoutSessionExercise,
   WorkoutTemplate,
   WorkoutTemplateExercise,
-} from "@/domain/models/strength";
-import type { DailySteps } from "@/domain/models/steps";
-import type { DailyTarget } from "@/domain/models/targets";
+} from '@/domain/models/strength';
+import type { DailySteps } from '@/domain/models/steps';
+import type { DailyTarget } from '@/domain/models/targets';
 import type {
   AcceptedCalorieAdjustment,
   WeeklyReview,
-} from "@/domain/models/weeklyReview";
-import type { WeightEntry } from "@/domain/models/weight";
+} from '@/domain/models/weeklyReview';
+import type { WeightEntry } from '@/domain/models/weight';
 import type {
   CompletedWeeklyMissionRecord,
   EarnedAchievementRecord,
@@ -53,12 +57,11 @@ import type {
 } from '@/infrastructure/user-state/userStateModels';
 
 import type { TrashItem } from '@/domain/models/trash';
-import type { DatabaseIntegrityReport } from "@/infrastructure/database/databaseIntegrityModels";
-import type { MigrationJournalEntry } from "@/infrastructure/database/migrationJournal";
-import { registerVersion1 } from "@/infrastructure/database/migrations/version1";
-import { registerVersion2 } from "@/infrastructure/database/migrations/version2";
-import { registerVersion3 } from "@/infrastructure/database/migrations/version3";
-
+import type { DatabaseIntegrityReport } from '@/infrastructure/database/databaseIntegrityModels';
+import type { MigrationJournalEntry } from '@/infrastructure/database/migrationJournal';
+import { registerVersion1 } from '@/infrastructure/database/migrations/version1';
+import { registerVersion2 } from '@/infrastructure/database/migrations/version2';
+import { registerVersion3 } from '@/infrastructure/database/migrations/version3';
 import { registerVersion4 } from '@/infrastructure/database/migrations/version4';
 import { registerVersion5 } from '@/infrastructure/database/migrations/version5';
 import { registerVersion6 } from '@/infrastructure/database/migrations/version6';
@@ -67,14 +70,21 @@ import { registerVersion8 } from '@/infrastructure/database/migrations/version8'
 import { registerVersion9 } from '@/infrastructure/database/migrations/version9';
 import { registerVersion10 } from '@/infrastructure/database/migrations/version10';
 import { registerVersion11 } from '@/infrastructure/database/migrations/version11';
+import { registerVersion12 } from '@/infrastructure/database/migrations/version12';
 
 export { DEFAULT_DATABASE_NAME } from '@/infrastructure/database/databaseNames';
+
+export interface StoredProgressPhotoAsset extends Omit<ProgressPhotoAsset, 'blob'> {
+  blob: Blob | ArrayBuffer;
+}
 
 export class AppDatabase extends Dexie {
   declare userProfile: Table<UserProfile, EntityId>;
   declare userSettings: Table<UserSettings, EntityId>;
   declare deviceSettings: Table<DeviceSettings, EntityId>;
   declare weights: Table<WeightEntry, EntityId>;
+  declare progressPhotos: Table<ProgressPhoto, EntityId>;
+  declare progressPhotoAssets: Table<StoredProgressPhotoAsset, EntityId>;
   declare dailySteps: Table<DailySteps, EntityId>;
   declare dailyCheckIns: Table<DailyCheckIn, EntityId>;
   declare dailyActivityDecisions: Table<DailyActivityDecision, EntityId>;
@@ -132,7 +142,6 @@ export class AppDatabase extends Dexie {
     registerVersion1(this);
     registerVersion2(this);
     registerVersion3(this);
-
     registerVersion4(this);
     registerVersion5(this);
     registerVersion6(this);
@@ -141,5 +150,6 @@ export class AppDatabase extends Dexie {
     registerVersion9(this);
     registerVersion10(this);
     registerVersion11(this);
+    registerVersion12(this);
   }
 }

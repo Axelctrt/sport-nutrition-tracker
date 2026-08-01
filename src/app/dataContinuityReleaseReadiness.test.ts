@@ -13,8 +13,8 @@ describe('publication de la continuité complète du compte 0.26.0', () => {
     expect(__APP_VERSION__).toMatch(/^\d+\.\d+\.\d+$/);
   });
 
-  it('conserve les formats de données validés sans migration', () => {
-    expect(databaseSchemaVersion).toBe(11);
+  it('conserve les formats de données validés', () => {
+    expect(databaseSchemaVersion).toBe(12);
     expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(10);
     expect(DATA_SPACE_REGISTRY_VERSION).toBe(1);
     expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(16);
