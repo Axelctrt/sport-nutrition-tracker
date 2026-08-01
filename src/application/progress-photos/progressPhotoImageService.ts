@@ -14,6 +14,22 @@ const ACCEPTED_PROGRESS_PHOTO_TYPES = new Set([
   'image/heif',
 ]);
 
+const JPEG_START_OF_FRAME_MARKERS = new Set([
+  0xc0,
+  0xc1,
+  0xc2,
+  0xc3,
+  0xc5,
+  0xc6,
+  0xc7,
+  0xc9,
+  0xca,
+  0xcb,
+  0xcd,
+  0xce,
+  0xcf,
+]);
+
 const IMAGE_DECODE_ERROR_MESSAGE =
   'Cette image ne peut pas être décodée. Essaie un fichier JPEG, PNG ou WebP.';
 
@@ -28,6 +44,11 @@ interface ResizeOptions {
   maxEdge: number;
   maximumBytes: number;
   initialQuality: number;
+}
+
+interface JpegDimensions {
+  width: number;
+  height: number;
 }
 
 export interface ProcessedProgressPhotoPair {
@@ -55,6 +76,105 @@ function imageDimensions(
     width: Math.max(1, Math.round(width * scale)),
     height: Math.max(1, Math.round(height * scale)),
   };
+}
+
+function isStandaloneJpegMarker(marker: number): boolean {
+  return marker === 0x01
+    || marker === 0xd8
+    || (marker >= 0xd0 && marker <= 0xd7);
+}
+
+function containsJpegEndMarker(bytes: Uint8Array, startOffset: number): boolean {
+  for (let offset = bytes.length - 2; offset >= startOffset; offset -= 1) {
+    if (bytes[offset] === 0xff && bytes[offset + 1] === 0xd9) return true;
+  }
+  return false;
+}
+
+function readMetadataSafeJpegDimensions(bytes: Uint8Array): JpegDimensions | undefined {
+  if (bytes.length < 4 || bytes[0] !== 0xff || bytes[1] !== 0xd8) {
+    return undefined;
+  }
+
+  let offset = 2;
+  let dimensions: JpegDimensions | undefined;
+  while (offset + 1 < bytes.length) {
+    while (offset < bytes.length && bytes[offset] !== 0xff) offset += 1;
+    while (offset < bytes.length && bytes[offset] === 0xff) offset += 1;
+    if (offset >= bytes.length) return undefined;
+
+    const marker = bytes[offset];
+    offset += 1;
+    if (marker === 0xd9) return undefined;
+    if (isStandaloneJpegMarker(marker)) continue;
+    if (offset + 1 >= bytes.length) return undefined;
+
+    const segmentLength = (bytes[offset] << 8) | bytes[offset + 1];
+    if (segmentLength < 2 || offset + segmentLength > bytes.length) {
+      return undefined;
+    }
+
+    // Un JPEG conservé sans passage canvas ne doit contenir ni EXIF, ni commentaire,
+    // ni autre segment applicatif susceptible d’embarquer des données personnelles.
+    if ((marker >= 0xe1 && marker <= 0xef) || marker === 0xfe) {
+      return undefined;
+    }
+
+    if (JPEG_START_OF_FRAME_MARKERS.has(marker)) {
+      if (segmentLength < 8) return undefined;
+      const height = (bytes[offset + 3] << 8) | bytes[offset + 4];
+      const width = (bytes[offset + 5] << 8) | bytes[offset + 6];
+      if (!(width > 0) || !(height > 0)) return undefined;
+      dimensions = { width, height };
+    }
+
+    if (marker === 0xda) {
+      const scanStart = offset + segmentLength;
+      return dimensions && containsJpegEndMarker(bytes, scanStart)
+        ? dimensions
+        : undefined;
+    }
+
+    offset += segmentLength;
+  }
+
+  return undefined;
+}
+
+async function createSmallJpegPassThrough(
+  file: File,
+): Promise<ProcessedProgressPhotoPair | undefined> {
+  if (file.type.toLowerCase() !== 'image/jpeg'
+    || file.size > MAX_PROGRESS_PHOTO_THUMBNAIL_BYTES) {
+    return undefined;
+  }
+
+  try {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const dimensions = readMetadataSafeJpegDimensions(bytes);
+    if (!dimensions
+      || Math.max(dimensions.width, dimensions.height) > MAX_PROGRESS_PHOTO_THUMBNAIL_EDGE) {
+      return undefined;
+    }
+
+    const createProcessedImage = (): ProcessedProgressPhotoImage => {
+      const blob = file.slice(0, file.size, 'image/jpeg');
+      return {
+        blob,
+        mimeType: 'image/jpeg',
+        width: dimensions.width,
+        height: dimensions.height,
+        byteSize: blob.size,
+      };
+    };
+
+    return {
+      original: createProcessedImage(),
+      thumbnail: createProcessedImage(),
+    };
+  } catch {
+    return undefined;
+  }
 }
 
 async function decodeWithImageBitmap(file: File): Promise<DecodedImage | undefined> {
@@ -249,7 +369,16 @@ export async function processProgressPhotoFile(
   file: File,
 ): Promise<ProcessedProgressPhotoPair> {
   validateProgressPhotoFile(file);
-  const decoded = await decodeImage(file);
+
+  let decoded: DecodedImage;
+  try {
+    decoded = await decodeImage(file);
+  } catch (error) {
+    const passThrough = await createSmallJpegPassThrough(file);
+    if (passThrough) return passThrough;
+    throw error;
+  }
+
   try {
     const [original, thumbnail] = await Promise.all([
       resizeDecodedImage(decoded, {
