@@ -20,8 +20,9 @@ test('crée un modèle, démarre une séance, valide une série et termine', asy
   await firstSet.getByLabel('Charge en kg').fill('40');
   const repetitions = firstSet.getByLabel('Répétitions');
   await repetitions.fill('1');
-  await page.waitForTimeout(800);
-  await repetitions.pressSequentially('2');
+  await expect(firstSet.getByText('Enregistré', { exact: true })).toBeVisible();
+  await expect(repetitions).toBeFocused();
+  await page.keyboard.type('2');
   await expect(repetitions).toHaveValue('12');
   await repetitions.fill('10');
   await firstSet.getByText('Options discrètes').click();
