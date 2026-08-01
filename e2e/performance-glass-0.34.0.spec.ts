@@ -60,8 +60,9 @@ async function openReadyPage(
     } catch (error) {
       lastError = error;
       if (attempt < 3) {
-        await page.goto('about:blank', { waitUntil: 'load' });
-        await page.waitForTimeout(250);
+        // Rester sur le même contexte d’origine évite le changement de processus
+        // WebKit observé avec about:blank et préserve IndexedDB entre les retries.
+        await page.waitForTimeout(500);
       }
     }
   }
