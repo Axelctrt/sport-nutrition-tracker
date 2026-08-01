@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 
 import type { FriendActivityPermissionLevel } from '@/domain/friends/friendship';
 import {
@@ -10,6 +10,7 @@ import {
   type SocialActivityFieldSelection,
   type SocialActivityStrengthField,
 } from '@/domain/friends/socialActivitySharingPolicy';
+import { ChoiceCard } from '@/shared/ui/ChoiceCard';
 
 interface SharingOption<TField extends string> {
   readonly id: string;
@@ -264,6 +265,7 @@ export function SocialActivityFriendSharingSettings({
   disabled = false,
   defaultOpen = false,
 }: SocialActivityFriendSharingSettingsProps) {
+  const sharingGroupName = useId();
   const sourceSelection = useMemo(
     () => ensureMandatoryCommonFields(value),
     [value],
@@ -301,25 +303,24 @@ export function SocialActivityFriendSharingSettings({
       </summary>
 
       <div className="space-y-3 border-t border-slate-200 p-3 dark:border-slate-800">
-        <div className="grid grid-cols-3 gap-1.5" aria-label={`Partage avec ${friendDisplayName}`}>
+        <fieldset className="grid grid-cols-3 gap-1.5">
+          <legend className="sr-only">Partage avec {friendDisplayName}</legend>
           {sharingModes.map((mode) => {
             const active = sharingLevel === mode.value;
             return (
-              <button
+              <ChoiceCard
                 key={mode.value}
-                type="button"
-                aria-pressed={active}
-                onClick={() => onSharingLevelChange(mode.value)}
+                name={`friend-sharing-${sharingGroupName}`}
+                value={mode.value}
+                title={mode.label}
+                selected={active}
                 disabled={disabled}
-                className={active
-                  ? 'min-h-10 rounded-lg bg-brand-700 px-2 py-2 text-xs font-semibold text-white disabled:opacity-60'
-                  : 'min-h-10 rounded-lg border border-slate-300 bg-white px-2 py-2 text-xs font-semibold text-slate-700 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200'}
-              >
-                {mode.label}
-              </button>
+                onSelect={(value) => onSharingLevelChange(value as FriendActivityPermissionLevel)}
+                tight
+              />
             );
           })}
-        </div>
+        </fieldset>
 
         {sharingLevel === 'none' ? (
           <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">

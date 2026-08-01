@@ -113,36 +113,23 @@ export function ProgressPhotoAddForm({ onSave }: ProgressPhotoAddFormProps) {
       </div>
 
       <form className="mt-5 grid gap-4" onSubmit={(event) => void submit(event)}>
-        <fieldset className="grid gap-3 sm:grid-cols-2">
+        <fieldset className="grid gap-3">
           <legend className="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-200">
             Source de la photo
           </legend>
           <label className={sourceClassName}>
-            <Camera aria-hidden="true" className="size-5" />
-            Prendre une photo
-            <input
-              type="file"
-              accept={acceptedImageTypes}
-              capture="environment"
-              className="absolute inset-0 cursor-pointer opacity-0"
-              data-testid="progress-photo-camera-input"
-              disabled={state === 'loading'}
-              onChange={selectFile}
-            />
-          </label>
-          <label className={`${sourceClassName} sp-button--secondary`}>
             <ImagePlus aria-hidden="true" className="size-5" />
-            Choisir dans la galerie
+            Choisir une photo
             <input
               type="file"
               accept={acceptedImageTypes}
               className="absolute inset-0 cursor-pointer opacity-0"
-              data-testid="progress-photo-gallery-input"
+              data-testid="progress-photo-input"
               disabled={state === 'loading'}
               onChange={selectFile}
             />
           </label>
-          <p className="text-xs text-slate-500 sm:col-span-2 dark:text-slate-400">
+          <p className="text-xs text-slate-500 dark:text-slate-400">
             JPEG, PNG, WebP ou HEIC · 25 Mo maximum
           </p>
         </fieldset>

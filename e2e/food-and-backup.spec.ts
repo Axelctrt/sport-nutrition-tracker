@@ -1,5 +1,9 @@
 import { expect, test } from '@playwright/test';
-import { createLocalProfile, getBrowserLocalDate } from './helpers/app';
+import {
+  createLocalProfile,
+  expectNoCriticalHorizontalOverflow,
+  getBrowserLocalDate,
+} from './helpers/app';
 
 test('crée un aliment local puis l’ajoute au journal', async ({ page }) => {
   await createLocalProfile(page);
@@ -28,6 +32,16 @@ test('crée un aliment local puis l’ajoute au journal', async ({ page }) => {
 
   await expect(page.getByRole('heading', { name: 'Nutrition', exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Yaourt E2E' })).toBeVisible();
+
+  await page.goto('/#/');
+  const nutritionSummary = page.getByLabel(
+    '150 kilocalories, 10 grammes de glucides, 13 grammes de protéines, 5 grammes de lipides',
+  );
+  await expect(nutritionSummary).toContainText('150 kcal · 10 g G · 13 g P · 5 g L');
+  for (const width of [320, 360, 393, 412]) {
+    await page.setViewportSize({ width, height: 844 });
+    await expectNoCriticalHorizontalOverflow(page);
+  }
 });
 
 test('exporte puis restaure une sauvegarde JSON', async ({ page }) => {

@@ -37,9 +37,27 @@ test('crée un superset et conserve ses exercices indépendants dans la séance'
   await expect(page.getByText('A2', { exact: true })).toBeVisible();
   await expect(page.getByText('Poussée / tirage')).toHaveCount(2);
 
+  const addExerciseSection = page.locator('#workout-exercise-selector');
+  await addExerciseSection.locator('summary').click();
+  const sessionExerciseSearch = addExerciseSection.getByRole('searchbox', {
+    name: 'Rechercher un exercice à ajouter',
+  });
+  await sessionExerciseSearch.fill('Curl barre');
+  await addExerciseSection.getByLabel('Exercice à ajouter', { exact: true })
+    .selectOption({ label: 'Curl barre' });
+  await addExerciseSection.getByRole('button', { name: 'Ajouter', exact: true }).click();
+  await expect(addExerciseSection).not.toHaveAttribute('open', '');
+  await expect(page.getByText('Curl barre', { exact: true })).toBeVisible();
+  await expect(page.locator('[id^="workout-exercise-"]:focus')).toHaveCount(1);
+  await addExerciseSection.locator('summary').click();
+  await expect(sessionExerciseSearch).toHaveValue('');
+  await addExerciseSection.locator('summary').click();
+
   const firstCard = page.getByText('A1', { exact: true }).locator(
     'xpath=ancestor::div[starts-with(@id, "workout-exercise-")][1]',
   );
+  const expandFirstExercise = firstCard.getByRole('button', { name: /^Développer / });
+  if (await expandFirstExercise.isVisible()) await expandFirstExercise.click();
   const firstSet = firstCard.getByRole('article', { name: 'Série 1' });
   await firstSet.getByLabel('Répétitions').fill('10');
   await firstSet.getByRole('button', { name: 'Valider la série' }).click();

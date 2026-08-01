@@ -26,9 +26,9 @@ describe('SocialActivityFriendSharingSettings', () => {
 
     await user.click(screen.getByText('Partage : Résumé'));
 
-    expect(screen.getByRole('button', { name: 'Aucun' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Résumé' })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('button', { name: 'Personnalisé' })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'Aucun' })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'Résumé' })).toBeChecked();
+    expect(screen.getByRole('radio', { name: 'Personnalisé' })).toBeInTheDocument();
   });
 
   it('permet de désactiver tout partage pour un ami', async () => {
@@ -45,9 +45,30 @@ describe('SocialActivityFriendSharingSettings', () => {
     );
 
     await user.click(screen.getByText('Partage : Résumé'));
-    await user.click(screen.getByRole('button', { name: 'Aucun' }));
+    await user.click(screen.getByRole('radio', { name: 'Aucun' }));
 
     expect(onSharingLevelChange).toHaveBeenCalledWith('none');
+  });
+
+  it('expose le choix exclusif au clavier avec les flèches', async () => {
+    const user = userEvent.setup();
+    const onSharingLevelChange = vi.fn();
+    render(
+      <SocialActivityFriendSharingSettings
+        friendDisplayName="Lina"
+        sharingLevel="summary"
+        value={DEFAULT_DETAILED_SOCIAL_ACTIVITY_FIELD_SELECTION}
+        onSharingLevelChange={onSharingLevelChange}
+        onSaveFields={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByText('Partage : Résumé'));
+    const summary = screen.getByRole('radio', { name: 'Résumé' });
+    summary.focus();
+    await user.keyboard('{ArrowRight}');
+
+    expect(onSharingLevelChange).toHaveBeenCalledWith('detailed');
   });
 
   it('regroupe les champs personnalisés dans deux rubriques compactes', async () => {

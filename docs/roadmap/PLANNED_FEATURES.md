@@ -38,9 +38,10 @@ la continuité PWA, le clavier, WebKit et les largeurs mobiles sont couverts par
 la CI complète et par la recette réelle iPhone/Safari. Cette intégration n’est
 pas encore déployée en production.
 
-Suivi UX non bloquant prévu dans la prochaine PR de recette : remplacer les
-deux actions caméra/galerie par un bouton générique `Choisir une photo`, sans
-attribut `capture`, afin de laisser Safari proposer ses choix natifs.
+Suivi UX non bloquant traité dans la PR de recette dédiée : l’ajout utilise un
+seul bouton générique `Choisir une photo`, sans attribut `capture`, afin de
+laisser Safari et les autres navigateurs proposer leurs choix natifs. Le
+pipeline local de validation, compression et stockage reste inchangé.
 
 ## Idée à étudier — Phase 5 : déploiement contrôlé
 
