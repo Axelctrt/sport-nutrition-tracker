@@ -91,6 +91,7 @@ export function WorkoutExerciseCard({
   return (
     <Card
       id={`workout-exercise-${exercise.id}`}
+      tabIndex={-1}
       className={cn(
         'scroll-mt-24 overflow-hidden',
         temporarilySkipped && 'opacity-70',

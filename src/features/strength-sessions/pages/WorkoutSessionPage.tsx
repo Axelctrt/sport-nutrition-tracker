@@ -65,8 +65,12 @@ type ConfirmationRequest =
   | { type: 'finish'; allowLongDuration?: boolean }
   | { type: 'abandon' };
 
-function revealElement(id: string): void {
-  const reveal = () => document.getElementById(id)?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+function revealElement(id: string, focus = false): void {
+  const reveal = () => {
+    const element = document.getElementById(id);
+    element?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+    if (focus) element?.focus({ preventScroll: true });
+  };
   if (typeof window.requestAnimationFrame === 'function') {
     window.requestAnimationFrame(() => window.requestAnimationFrame(reveal));
   } else {
@@ -332,7 +336,10 @@ export function WorkoutSessionPage() {
     for (let index = 0; index < seriesToCreate; index += 1) {
       await addSet(created.id);
     }
-    revealElement(`workout-exercise-${created.id}`);
+    setExerciseQuery('');
+    const selector = document.getElementById('workout-exercise-selector');
+    if (selector instanceof HTMLDetailsElement) selector.open = false;
+    revealElement(`workout-exercise-${created.id}`, true);
     setExpandedExerciseId(created.id);
   };
 
@@ -580,6 +587,7 @@ export function WorkoutSessionPage() {
       {editable ? (
         <CollapsibleSection
           className="mt-6"
+          sectionId="workout-exercise-selector"
           title="Ajouter un exercice"
           description="Complète la séance avec un exercice du catalogue."
           summary={`${availableExercises.length} disponible${availableExercises.length > 1 ? 's' : ''}`}
