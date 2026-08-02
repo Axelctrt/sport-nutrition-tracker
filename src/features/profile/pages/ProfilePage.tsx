@@ -166,7 +166,8 @@ function ProfilePageContent({ profile, saveProfile }: ProfilePageContentProps) {
     actionToast.error({
       key: 'profile-update',
       title: 'Enregistrement impossible',
-      description: error instanceof Error ? error.message : fallback,
+      error,
+      fallback,
     });
   };
 
