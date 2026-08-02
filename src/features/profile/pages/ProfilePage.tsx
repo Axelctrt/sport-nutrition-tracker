@@ -42,21 +42,21 @@ const profileSections: readonly SettingsDirectoryItem[] = [
   {
     id: 'profile-personal',
     label: 'Informations personnelles',
-    description: 'Sexe, âge, taille et poids initial historique.',
+    description: 'Identité et mensurations.',
     keywords: ['age', 'taille', 'sexe', 'poids'],
     icon: UserRound,
   },
   {
     id: 'profile-goal',
     label: 'Objectif et activité',
-    description: 'Perte, maintien, prise et activité quotidienne.',
+    description: 'Objectif et activité quotidienne.',
     keywords: ['objectif', 'activité', 'pas'],
     icon: Activity,
   },
   {
     id: 'profile-macros',
     label: 'Macronutriments',
-    description: 'Protéines et lipides exprimés par kilo.',
+    description: 'Macros par kilo.',
     keywords: ['proteines', 'lipides', 'glucides'],
     icon: Utensils,
   },
@@ -96,7 +96,7 @@ function ProfilePageContent({ profile, saveProfile }: ProfilePageContentProps) {
     preview?: ProfileImpactPreviewModel,
   ) => {
     const entity = profileFormValuesToEntity(values);
-    const nextProfile = preview
+    const savedProfile = await saveProfile(preview
       ? {
           ...entity,
           profileImpactHistory: appendProfileImpactHistory(
@@ -104,35 +104,31 @@ function ProfilePageContent({ profile, saveProfile }: ProfilePageContentProps) {
             createProfileImpactHistoryEntry(preview),
           ),
         }
-      : entity;
+      : entity);
 
-    const savedProfile = await saveProfile(nextProfile);
-    if (!preview) return { savedProfile };
-
+    if (!preview) return false;
     try {
       await calculateAndPersistDailyTarget(preview.date, savedProfile);
-      return { savedProfile };
-    } catch (recalculationError) {
-      return { savedProfile, recalculationError };
+      return false;
+    } catch {
+      return true;
     }
   };
 
   const reportSuccess = (withImpact: boolean) => {
-    setRecalculationWarning(false);
     actionToast.success({
       key: 'profile-update',
       title: 'Profil mis à jour',
-      ...(withImpact ? { description: 'Objectifs du jour recalculés' } : {}),
+      description: withImpact ? 'Objectifs recalculés' : undefined,
     });
   };
 
   const reportError = (error: unknown) => {
-    setRecalculationWarning(false);
     actionToast.error({
       key: 'profile-update',
       title: 'Enregistrement impossible',
       error,
-      fallback: 'Le profil n’a pas pu être enregistré. Corrige les champs puis réessaie.',
+      fallback: 'Le profil n’a pas été enregistré. Corrige les champs et réessaie.',
     });
   };
 
@@ -140,10 +136,9 @@ function ProfilePageContent({ profile, saveProfile }: ProfilePageContentProps) {
     setRecalculationWarning(false);
     setPendingImpact(undefined);
     const entity = profileFormValuesToEntity(values);
-    const changedFields = detectProfileImpactFields(profile, entity);
 
     try {
-      if (changedFields.length === 0) {
+      if (detectProfileImpactFields(profile, entity).length === 0) {
         await persistProfile(values);
         reportSuccess(false);
         closeEditor();
@@ -173,12 +168,14 @@ function ProfilePageContent({ profile, saveProfile }: ProfilePageContentProps) {
   const confirmImpact = async () => {
     if (!pendingImpact) return;
     setIsConfirming(true);
-    setRecalculationWarning(false);
 
     try {
-      const result = await persistProfile(pendingImpact.values, pendingImpact.preview);
+      const recalculationFailed = await persistProfile(
+        pendingImpact.values,
+        pendingImpact.preview,
+      );
       setPendingImpact(undefined);
-      if (result.recalculationError) {
+      if (recalculationFailed) {
         setRecalculationWarning(true);
         closeEditor();
         return;
@@ -215,9 +212,7 @@ function ProfilePageContent({ profile, saveProfile }: ProfilePageContentProps) {
                 Profil et objectifs
               </h1>
               <p className="mt-3 max-w-3xl leading-7 text-slate-600 dark:text-slate-300">
-                {isEditing
-                  ? 'Modifie les champs utiles, puis enregistre ou annule.'
-                  : 'Consulte les données utilisées par SportPilot. Active l’édition pour les modifier.'}
+                Consulte ou modifie les données utilisées par SportPilot.
               </p>
             </div>
           </div>
@@ -249,7 +244,7 @@ function ProfilePageContent({ profile, saveProfile }: ProfilePageContentProps) {
           tone="warning"
           title="Profil enregistré, recalcul à relancer"
         >
-          Le profil et le journal ont été enregistrés localement, mais les objectifs du jour n’ont pas été recalculés. Recharge la page pour réessayer.
+          Le profil et le journal ont été enregistrés localement, mais le recalcul a échoué. Recharge la page.
         </InlineNotice>
       ) : null}
 
@@ -269,7 +264,7 @@ function ProfilePageContent({ profile, saveProfile }: ProfilePageContentProps) {
           <div className="mt-4">
             <SettingsSectionDirectory
               sections={profileSections}
-              title="Accéder à une rubrique du profil"
+              title="Rubriques du profil"
             />
           </div>
           <div className="mt-4">
@@ -295,7 +290,7 @@ function ProfilePageContent({ profile, saveProfile }: ProfilePageContentProps) {
       <ConfirmationDialog
         open={discardDialogOpen}
         title="Annuler les modifications ?"
-        description="Les changements non enregistrés seront perdus."
+        description="Les changements seront perdus."
         confirmLabel="Abandonner les modifications"
         cancelLabel="Continuer la modification"
         onCancel={() => setDiscardDialogOpen(false)}
