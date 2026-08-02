@@ -8,8 +8,10 @@ pas une description automatiquement actuelle.
 
 ## État de référence
 
-- Application : SportPilot `0.37.0` en release candidate ; production stable
-  `0.36.0`, PWA React 19 + TypeScript + Vite.
+- Application : SportPilot `0.37.0` publiée en production depuis `main` au
+  commit `84fea3d49e68c7d190c00d505502a5c4aa2e672a`.
+- Publication : tag annoté `v0.37.0` et release GitHub stable `0.37.0`.
+- Production : `https://sportpilot-pages.pages.dev`.
 - Architecture : `src/domain`, `src/application`, `src/infrastructure`,
   `src/features`, `src/app`, `src/shared` et `src/pwa`.
 - Stockage principal local : Dexie `AppDatabase`, version 12.
@@ -20,8 +22,8 @@ pas une description automatiquement actuelle.
   domaine social et ses limites photo.
 - UI : mobile-first, local-first, hors ligne, système Performance Glass.
 
-Toujours vérifier ces valeurs dans le code avant de les modifier ou de les
-citer dans un nouveau document.
+Toujours vérifier ces valeurs dans le code et les services distants avant de
+les modifier ou de les citer dans un nouveau document.
 
 ## Règles impératives
 
@@ -45,7 +47,10 @@ citer dans un nouveau document.
 
 - Actualiser les références distantes avant de choisir une base.
 - Partir de `develop` pour une évolution ; réserver `main` à la base publiée.
-- Utiliser une branche dédiée et une PR vers `develop`.
+- Pour une maintenance documentaire post-release décrivant l’état publié,
+  partir de `main`, ouvrir une PR dédiée vers `main`, puis resynchroniser
+  `develop` depuis `main` par merge, sans rebase ni réécriture d’historique.
+- Utiliser une branche dédiée et une PR vers la branche cible appropriée.
 - Lire le code, les tests, les audits et les documents canoniques concernés
   avant d’écrire.
 - Distinguer dans toute proposition :
