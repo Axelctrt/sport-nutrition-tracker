@@ -68,12 +68,13 @@ describe('UnsavedChangesGuard', () => {
   });
 
   it('protège aussi un rechargement lorsque des changements existent', () => {
-    const { rerender } = render(<UnsavedChangesGuard when />);
+    renderRouter(true);
     const blockedEvent = new Event('beforeunload', { cancelable: true });
     window.dispatchEvent(blockedEvent);
     expect(blockedEvent.defaultPrevented).toBe(true);
 
-    rerender(<UnsavedChangesGuard when={false} />);
+    cleanup();
+    renderRouter(false);
     const allowedEvent = new Event('beforeunload', { cancelable: true });
     window.dispatchEvent(allowedEvent);
     expect(allowedEvent.defaultPrevented).toBe(false);
