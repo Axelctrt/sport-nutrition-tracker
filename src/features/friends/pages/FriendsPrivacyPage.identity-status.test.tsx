@@ -1,4 +1,4 @@
-import { act, cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -40,32 +40,25 @@ async function openSocialProfile(user: ReturnType<typeof userEvent.setup>) {
   return screen.getByLabelText('Identifiant public');
 }
 
-async function enterHandle(
+async function replaceHandle(
   user: ReturnType<typeof userEvent.setup>,
   value: string,
 ) {
   const input = screen.getByLabelText('Identifiant public');
   await user.clear(input);
   await user.type(input, value);
-  await act(async () => {
-    await vi.advanceTimersByTimeAsync(350);
-  });
   return input;
 }
 
 beforeEach(() => {
   window.history.replaceState({}, '', '/#/friends');
-  vi.useFakeTimers();
 });
 
-afterEach(() => {
-  cleanup();
-  vi.useRealTimers();
-});
+afterEach(cleanup);
 
 describe('statut de l’identifiant public', () => {
   it('place le statut sous le champ et avant les actions', async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const user = userEvent.setup();
     renderProfile({ lookupByHandle: vi.fn() });
 
     const input = await openSocialProfile(user);
@@ -84,21 +77,21 @@ describe('statut de l’identifiant public', () => {
   });
 
   it('signale un format incorrect sans dépendre uniquement de la couleur', async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const user = userEvent.setup();
     renderProfile({ lookupByHandle: vi.fn() });
     await openSocialProfile(user);
 
-    const input = await enterHandle(user, '@A');
-    const status = screen.getByRole('status');
+    const input = await replaceHandle(user, '@A');
+    const alert = screen.getByRole('alert');
 
-    expect(status).toHaveAttribute('data-field-status', 'invalid');
-    expect(status).toHaveTextContent(/Identifiant invalide/u);
+    expect(alert).toHaveAttribute('data-field-status', 'invalid');
+    expect(alert).toHaveTextContent(/Identifiant invalide/u);
     expect(input).toHaveAttribute('aria-invalid', 'true');
     expect(screen.getByRole('button', { name: 'Enregistrer' })).toBeDisabled();
   });
 
   it('distingue un identifiant disponible d’un identifiant déjà pris', async () => {
-    const lookupByHandle = vi.fn<SocialUserLookupGateway['lookupByHandle']>(
+    const lookupByHandle: SocialUserLookupGateway['lookupByHandle'] = vi.fn(
       async (handle) => handle === 'alex.run'
         ? { status: 'notFound' }
         : {
@@ -112,27 +105,25 @@ describe('statut de l’identifiant public', () => {
             },
           },
     );
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const user = userEvent.setup();
     renderProfile({ lookupByHandle });
     await openSocialProfile(user);
 
-    const availableInput = await enterHandle(user, '@alex.run');
-    await act(async () => Promise.resolve());
+    const availableInput = await replaceHandle(user, '@alex.run');
+    expect(await screen.findByText('Identifiant disponible.')).toBeInTheDocument();
     expect(screen.getByRole('status')).toHaveAttribute('data-field-status', 'valid');
-    expect(screen.getByRole('status')).toHaveTextContent('Identifiant disponible.');
     expect(availableInput).not.toHaveAttribute('aria-invalid');
     expect(screen.getByRole('button', { name: 'Enregistrer' })).toBeEnabled();
 
-    const takenInput = await enterHandle(user, '@alex.taken');
-    await act(async () => Promise.resolve());
-    expect(screen.getByRole('status')).toHaveAttribute('data-field-status', 'unavailable');
-    expect(screen.getByRole('status')).toHaveTextContent(/déjà pris/u);
+    const takenInput = await replaceHandle(user, '@alex.taken');
+    const unavailable = await screen.findByText(/déjà pris/u);
+    expect(unavailable.closest('[data-field-status]')).toHaveAttribute('data-field-status', 'unavailable');
     expect(takenInput).toHaveAttribute('aria-invalid', 'true');
     expect(screen.getByRole('button', { name: 'Enregistrer' })).toBeDisabled();
   });
 
   it('présente une erreur de vérification distincte d’un identifiant pris', async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const user = userEvent.setup();
     renderProfile({
       lookupByHandle: vi.fn(async () => {
         throw new Error('Service de vérification indisponible.');
@@ -140,12 +131,10 @@ describe('statut de l’identifiant public', () => {
     });
     await openSocialProfile(user);
 
-    const input = await enterHandle(user, '@alex.error');
-    await act(async () => Promise.resolve());
-    const status = screen.getByRole('status');
+    const input = await replaceHandle(user, '@alex.error');
+    const error = await screen.findByText('Service de vérification indisponible.');
 
-    expect(status).toHaveAttribute('data-field-status', 'error');
-    expect(status).toHaveTextContent('Service de vérification indisponible.');
+    expect(error.closest('[data-field-status]')).toHaveAttribute('data-field-status', 'error');
     expect(input).not.toHaveAttribute('aria-invalid');
     expect(screen.getByRole('button', { name: 'Enregistrer' })).toBeDisabled();
   });
@@ -158,21 +147,21 @@ describe('statut de l’identifiant public', () => {
     const lookupByHandle: SocialUserLookupGateway['lookupByHandle'] = vi.fn(
       (handle) => new Promise((resolve) => pending.set(handle, resolve)),
     );
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const user = userEvent.setup();
     renderProfile({ lookupByHandle });
     await openSocialProfile(user);
 
-    await enterHandle(user, '@first.handle');
-    expect(pending.has('first.handle')).toBe(true);
+    await replaceHandle(user, '@first.handle');
+    await waitFor(() => expect(pending.has('first.handle')).toBe(true));
 
-    await enterHandle(user, '@second.handle');
-    expect(pending.has('second.handle')).toBe(true);
+    await replaceHandle(user, '@second.handle');
+    await waitFor(() => expect(pending.has('second.handle')).toBe(true));
 
     await act(async () => {
       pending.get('second.handle')?.({ status: 'notFound' });
       await Promise.resolve();
     });
-    expect(screen.getByRole('status')).toHaveTextContent('Identifiant disponible.');
+    expect(await screen.findByText('Identifiant disponible.')).toBeInTheDocument();
 
     await act(async () => {
       pending.get('first.handle')?.({
