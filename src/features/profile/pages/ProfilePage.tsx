@@ -1,11 +1,12 @@
 import {
   Activity,
+  Pencil,
   Scale,
   UserRound,
   Utensils,
 } from 'lucide-react';
 import { format } from 'date-fns';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { calculateAndPersistDailyTarget } from '@/application/daily/dailyTargetCoordinator';
 import {
@@ -76,19 +77,40 @@ function ProfilePageContent({ profile, saveProfile }: ProfilePageContentProps) {
   const actionToast = useActionToast();
   const { currentWeight } = useCurrentWeight(profile);
   const editButtonRef = useRef<HTMLButtonElement>(null);
+  const saveInFlightRef = useRef(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [discardDialogOpen, setDiscardDialogOpen] = useState(false);
   const [pendingImpact, setPendingImpact] = useState<PendingImpact | undefined>();
   const [isConfirming, setIsConfirming] = useState(false);
   const [recalculationWarning, setRecalculationWarning] = useState(false);
+  const [saveError, setSaveError] = useState<string>();
+
+  useEffect(() => {
+    if (!isEditing) return undefined;
+    const frame = window.requestAnimationFrame(() => {
+      document.getElementById('firstName')?.focus();
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [isEditing]);
+
+  const focusEditButton = () => {
+    window.setTimeout(() => editButtonRef.current?.focus(), 0);
+  };
 
   const closeEditor = () => {
     setIsEditing(false);
     setIsDirty(false);
     setPendingImpact(undefined);
     setDiscardDialogOpen(false);
-    window.setTimeout(() => editButtonRef.current?.focus(), 0);
+    setSaveError(undefined);
+    focusEditButton();
+  };
+
+  const openEditor = () => {
+    setRecalculationWarning(false);
+    setSaveError(undefined);
+    setIsEditing(true);
   };
 
   const persistProfile = async (
@@ -123,16 +145,18 @@ function ProfilePageContent({ profile, saveProfile }: ProfilePageContentProps) {
   };
 
   const reportError = (error: unknown) => {
-    actionToast.error({
-      key: 'profile-update',
-      title: 'Enregistrement impossible',
-      error,
-      fallback: 'Profil non enregistré. Réessaie.',
-    });
+    setSaveError(
+      error instanceof Error && error.message.trim() !== ''
+        ? error.message
+        : 'Profil non enregistré. Réessaie.',
+    );
   };
 
   const handleSubmit = async (values: ProfileFormValues) => {
+    if (saveInFlightRef.current) return;
+    saveInFlightRef.current = true;
     setRecalculationWarning(false);
+    setSaveError(undefined);
     setPendingImpact(undefined);
     const entity = profileFormValuesToEntity(values);
 
@@ -161,12 +185,16 @@ function ProfilePageContent({ profile, saveProfile }: ProfilePageContentProps) {
       });
     } catch (error) {
       reportError(error);
+    } finally {
+      saveInFlightRef.current = false;
     }
   };
 
   const confirmImpact = async () => {
-    if (!pendingImpact) return;
+    if (!pendingImpact || saveInFlightRef.current) return;
+    saveInFlightRef.current = true;
     setIsConfirming(true);
+    setSaveError(undefined);
 
     try {
       const recalculationFailed = await persistProfile(
@@ -184,6 +212,7 @@ function ProfilePageContent({ profile, saveProfile }: ProfilePageContentProps) {
     } catch (error) {
       reportError(error);
     } finally {
+      saveInFlightRef.current = false;
       setIsConfirming(false);
     }
   };
@@ -194,13 +223,13 @@ function ProfilePageContent({ profile, saveProfile }: ProfilePageContentProps) {
       className="min-w-0 overflow-x-clip"
     >
       <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6 dark:border-slate-800 dark:bg-slate-900">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex items-start gap-3">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex min-w-0 items-start gap-3">
             <Scale
               aria-hidden="true"
               className="mt-1 size-6 shrink-0 text-brand-700 dark:text-brand-300"
             />
-            <div>
+            <div className="min-w-0">
               <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
                 Profil local
               </p>
@@ -220,14 +249,14 @@ function ProfilePageContent({ profile, saveProfile }: ProfilePageContentProps) {
               ref={editButtonRef}
               type="button"
               variant="secondary"
-              className="w-full shrink-0 sm:w-auto"
+              className="size-11 shrink-0 p-0"
+              aria-label="Modifier le profil"
+              title="Modifier le profil"
               aria-controls="profile-form"
-              onClick={() => {
-                setRecalculationWarning(false);
-                setIsEditing(true);
-              }}
+              aria-expanded="false"
+              onClick={openEditor}
             >
-              Modifier le profil
+              <Pencil aria-hidden="true" className="size-4" />
             </Button>
           ) : null}
         </div>
@@ -266,6 +295,11 @@ function ProfilePageContent({ profile, saveProfile }: ProfilePageContentProps) {
               title="Rubriques"
             />
           </div>
+          {saveError ? (
+            <InlineNotice className="mt-4" tone="error" title="Enregistrement impossible">
+              {saveError}
+            </InlineNotice>
+          ) : null}
           <div className="mt-4">
             <ProfileForm
               initialValues={profileToFormValues(profile)}
@@ -273,6 +307,7 @@ function ProfilePageContent({ profile, saveProfile }: ProfilePageContentProps) {
               onSubmit={handleSubmit}
               onDirtyChange={setIsDirty}
               onValuesChange={() => {
+                setSaveError(undefined);
                 if (pendingImpact) setPendingImpact(undefined);
               }}
               secondaryAction={{
