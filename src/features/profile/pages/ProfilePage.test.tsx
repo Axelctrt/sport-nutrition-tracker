@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { RouterProvider, createMemoryRouter } from 'react-router-dom';
@@ -110,18 +110,29 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
 });
 
 describe('ProfilePage', () => {
-  it('affiche le profil en lecture seule puis revient en lecture seule après une sauvegarde réussie', async () => {
+  it('affiche une action crayon compacte puis revient en lecture seule après sauvegarde', async () => {
     const user = userEvent.setup();
     const { saveProfile } = renderProfile();
 
-    expect(screen.getByRole('button', { name: 'Modifier le profil' })).toBeInTheDocument();
+    const editButton = screen.getByRole('button', { name: 'Modifier le profil' });
+    expect(editButton).toHaveAttribute('title', 'Modifier le profil');
+    expect(editButton).toHaveClass('size-11', 'p-0');
+    expect(editButton).not.toHaveTextContent('Modifier le profil');
+    expect(editButton.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
     expect(screen.queryByLabelText('Prénom')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Enregistrer le profil' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Annuler' })).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Modifier le profil' }));
+    await user.click(editButton);
     const firstNameInput = screen.getByLabelText('Prénom');
+    await waitFor(() => expect(firstNameInput).toHaveFocus());
+    expect(screen.getByRole('button', { name: 'Enregistrer le profil' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Annuler' })).toBeInTheDocument();
+
     await user.clear(firstNameInput);
     await user.type(firstNameInput, 'Axel mobile');
     await user.click(screen.getByRole('button', { name: 'Enregistrer le profil' }));
@@ -131,9 +142,86 @@ describe('ProfilePage', () => {
     );
     expect(mocks.previewProfileImpact).not.toHaveBeenCalled();
     expect(await screen.findByText('Profil mis à jour')).toBeInTheDocument();
+    expect(screen.getAllByText('Profil mis à jour')).toHaveLength(1);
     expect(screen.queryByLabelText('Prénom')).not.toBeInTheDocument();
     expect(screen.queryByText('Le profil a été mis à jour dans la base locale.')).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Modifier le profil' })).toHaveFocus());
   });
+
+  it('active le mode édition au clavier et place le focus dans le formulaire', async () => {
+    const user = userEvent.setup();
+    renderProfile();
+
+    const editButton = screen.getByRole('button', { name: 'Modifier le profil' });
+    editButton.focus();
+    await user.keyboard('{Enter}');
+
+    await waitFor(() => expect(screen.getByLabelText('Prénom')).toHaveFocus());
+    expect(screen.getByRole('button', { name: 'Enregistrer le profil' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Annuler' })).toBeVisible();
+  });
+
+  it('bloque une double soumission et n’affiche qu’un toast de réussite', async () => {
+    let resolveSave: ((profile: typeof storedProfile) => void) | undefined;
+    const saveProfile = vi.fn(() => new Promise<typeof storedProfile>((resolve) => {
+      resolveSave = resolve;
+    }));
+    const user = userEvent.setup();
+    renderProfile(saveProfile);
+
+    await user.click(screen.getByRole('button', { name: 'Modifier le profil' }));
+    const firstNameInput = screen.getByLabelText('Prénom');
+    await user.clear(firstNameInput);
+    await user.type(firstNameInput, 'Axel unique');
+    const saveButton = screen.getByRole('button', { name: 'Enregistrer le profil' });
+    await user.click(saveButton);
+    await user.click(saveButton);
+
+    expect(saveProfile).toHaveBeenCalledOnce();
+    expect(saveButton).toBeDisabled();
+    await act(async () => {
+      resolveSave?.(storedProfile);
+      await Promise.resolve();
+    });
+
+    expect(await screen.findByText('Profil mis à jour')).toBeInTheDocument();
+    expect(screen.getAllByText('Profil mis à jour')).toHaveLength(1);
+  });
+
+  it('conserve une erreur locale actionnable et aucun succès lorsque la sauvegarde échoue', async () => {
+    const saveProfile = vi.fn().mockRejectedValue(new Error('Stockage local indisponible.'));
+    const user = userEvent.setup();
+    renderProfile(saveProfile);
+
+    await user.click(screen.getByRole('button', { name: 'Modifier le profil' }));
+    const firstNameInput = screen.getByLabelText('Prénom');
+    await user.clear(firstNameInput);
+    await user.type(firstNameInput, 'Axel erreur');
+    await user.click(screen.getByRole('button', { name: 'Enregistrer le profil' }));
+
+    expect(await screen.findByText('Stockage local indisponible.')).toBeInTheDocument();
+    expect(screen.getByText('Enregistrement impossible')).toBeInTheDocument();
+    expect(screen.queryByText('Profil mis à jour')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Prénom')).toBeInTheDocument();
+  });
+
+  it('retire automatiquement le toast de succès sans notice verte persistante', async () => {
+    const user = userEvent.setup();
+    renderProfile();
+
+    await user.click(screen.getByRole('button', { name: 'Modifier le profil' }));
+    const firstNameInput = screen.getByLabelText('Prénom');
+    await user.clear(firstNameInput);
+    await user.type(firstNameInput, 'Axel toast');
+    await user.click(screen.getByRole('button', { name: 'Enregistrer le profil' }));
+
+    expect(await screen.findByText('Profil mis à jour')).toBeInTheDocument();
+    expect(screen.queryByText('Action prise en compte')).not.toBeInTheDocument();
+    await waitFor(
+      () => expect(screen.queryByText('Profil mis à jour')).not.toBeInTheDocument(),
+      { timeout: 4500 },
+    );
+  }, 6000);
 
   it('affiche un avant/après puis exige une confirmation pour un objectif', async () => {
     const user = userEvent.setup();
@@ -188,7 +276,7 @@ describe('ProfilePage', () => {
     expect(screen.queryByLabelText('Objectif')).not.toBeInTheDocument();
   });
 
-  it('demande confirmation avant d’abandonner des changements', async () => {
+  it('demande confirmation avant d’abandonner des changements et restaure le focus', async () => {
     const user = userEvent.setup();
     renderProfile();
 
@@ -205,7 +293,19 @@ describe('ProfilePage', () => {
     await user.click(screen.getByRole('button', { name: 'Annuler' }));
     await user.click(screen.getByRole('button', { name: 'Abandonner les modifications' }));
     expect(screen.queryByLabelText('Prénom')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Modifier le profil' })).toHaveFocus();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Modifier le profil' })).toHaveFocus());
+  });
+
+  it('annule sans confirmation en l’absence de modification', async () => {
+    const user = userEvent.setup();
+    renderProfile();
+
+    await user.click(screen.getByRole('button', { name: 'Modifier le profil' }));
+    await user.click(screen.getByRole('button', { name: 'Annuler' }));
+
+    expect(screen.queryByLabelText('Prénom')).not.toBeInTheDocument();
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Modifier le profil' })).toHaveFocus());
   });
 
   it('limite le contenu et le formulaire pour éviter le débordement horizontal', async () => {
