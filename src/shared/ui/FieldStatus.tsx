@@ -1,7 +1,5 @@
 import type { HTMLAttributes } from 'react';
 
-import { cn } from '@/shared/utils/cn';
-
 export type FieldStatusState =
   | 'checking'
   | 'valid'
@@ -14,33 +12,26 @@ interface FieldStatusProps extends Omit<HTMLAttributes<HTMLParagraphElement>, 'c
   children: string;
 }
 
-const stateClasses: Record<FieldStatusState, string> = {
-  checking: 'text-slate-600 dark:text-slate-300',
-  valid: 'text-emerald-700 dark:text-emerald-300',
-  invalid: 'text-red-700 dark:text-red-300',
-  unavailable: 'text-red-700 dark:text-red-300',
-  error: 'text-red-700 dark:text-red-300',
-};
-
 export function FieldStatus({
   state,
   children,
   className,
   ...props
 }: FieldStatusProps) {
-  const isError = state === 'invalid' || state === 'unavailable' || state === 'error';
+  const invalid = state !== 'checking' && state !== 'valid';
+  const tone = invalid
+    ? 'text-red-700 dark:text-red-300'
+    : state === 'valid'
+      ? 'text-emerald-700 dark:text-emerald-300'
+      : 'text-slate-600 dark:text-slate-300';
 
   return (
     <p
-      role={isError ? 'alert' : 'status'}
+      role={invalid ? 'alert' : 'status'}
       aria-live="polite"
       aria-atomic="true"
       data-field-status={state}
-      className={cn(
-        'min-h-6 text-sm leading-5',
-        stateClasses[state],
-        className,
-      )}
+      className={`min-h-6 text-sm leading-5 ${tone}${className ? ` ${className}` : ''}`}
       {...props}
     >
       {state === 'checking' ? 'Vérification…' : children}
