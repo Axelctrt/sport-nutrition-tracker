@@ -42,21 +42,21 @@ const profileSections: readonly SettingsDirectoryItem[] = [
   {
     id: 'profile-personal',
     label: 'Informations personnelles',
-    description: 'Identité et mensurations.',
+    description: 'Identité et mesures.',
     keywords: ['age', 'taille', 'sexe', 'poids'],
     icon: UserRound,
   },
   {
     id: 'profile-goal',
     label: 'Objectif et activité',
-    description: 'Objectif et activité quotidienne.',
+    description: 'Objectif et activité.',
     keywords: ['objectif', 'activité', 'pas'],
     icon: Activity,
   },
   {
     id: 'profile-macros',
     label: 'Macronutriments',
-    description: 'Macros par kilo.',
+    description: 'Macros.',
     keywords: ['proteines', 'lipides', 'glucides'],
     icon: Utensils,
   },
@@ -115,11 +115,10 @@ function ProfilePageContent({ profile, saveProfile }: ProfilePageContentProps) {
     }
   };
 
-  const reportSuccess = (withImpact: boolean) => {
+  const reportSuccess = () => {
     actionToast.success({
       key: 'profile-update',
       title: 'Profil mis à jour',
-      ...(withImpact ? { description: 'Objectifs recalculés' } : {}),
     });
   };
 
@@ -128,7 +127,7 @@ function ProfilePageContent({ profile, saveProfile }: ProfilePageContentProps) {
       key: 'profile-update',
       title: 'Enregistrement impossible',
       error,
-      fallback: 'Le profil n’a pas été enregistré. Corrige les champs et réessaie.',
+      fallback: 'Profil non enregistré. Réessaie.',
     });
   };
 
@@ -140,7 +139,7 @@ function ProfilePageContent({ profile, saveProfile }: ProfilePageContentProps) {
     try {
       if (detectProfileImpactFields(profile, entity).length === 0) {
         await persistProfile(values);
-        reportSuccess(false);
+        reportSuccess();
         closeEditor();
         return;
       }
@@ -180,7 +179,7 @@ function ProfilePageContent({ profile, saveProfile }: ProfilePageContentProps) {
         closeEditor();
         return;
       }
-      reportSuccess(true);
+      reportSuccess();
       closeEditor();
     } catch (error) {
       reportError(error);
@@ -212,7 +211,7 @@ function ProfilePageContent({ profile, saveProfile }: ProfilePageContentProps) {
                 Profil et objectifs
               </h1>
               <p className="mt-3 max-w-3xl leading-7 text-slate-600 dark:text-slate-300">
-                Consulte ou modifie les données utilisées par SportPilot.
+                Consulte ou modifie tes données.
               </p>
             </div>
           </div>
@@ -244,7 +243,7 @@ function ProfilePageContent({ profile, saveProfile }: ProfilePageContentProps) {
           tone="warning"
           title="Profil enregistré, recalcul à relancer"
         >
-          Le profil et le journal ont été enregistrés localement, mais le recalcul a échoué. Recharge la page.
+          Le profil et le journal ont été enregistrés localement. Recharge la page.
         </InlineNotice>
       ) : null}
 
@@ -264,7 +263,7 @@ function ProfilePageContent({ profile, saveProfile }: ProfilePageContentProps) {
           <div className="mt-4">
             <SettingsSectionDirectory
               sections={profileSections}
-              title="Rubriques du profil"
+              title="Rubriques"
             />
           </div>
           <div className="mt-4">
