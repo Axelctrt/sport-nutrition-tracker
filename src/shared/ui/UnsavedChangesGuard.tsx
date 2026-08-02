@@ -24,7 +24,7 @@ export function UnsavedChangesGuard({ when }: UnsavedChangesGuardProps) {
     <ConfirmationDialog
       open={blocker.state === 'blocked'}
       title="Quitter sans enregistrer ?"
-      description="Les modifications non enregistrées seront perdues."
+      description="Les modifications seront perdues."
       confirmLabel="Quitter"
       cancelLabel="Continuer la modification"
       onCancel={() => {
