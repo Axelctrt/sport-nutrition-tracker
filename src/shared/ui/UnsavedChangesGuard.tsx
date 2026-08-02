@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useBlocker, useInRouterContext } from 'react-router-dom';
+import { useBlocker } from 'react-router-dom';
 
 import { ConfirmationDialog } from '@/shared/ui/ConfirmationDialog';
 
@@ -7,8 +7,18 @@ interface UnsavedChangesGuardProps {
   when: boolean;
 }
 
-function RouterGuard({ when }: UnsavedChangesGuardProps) {
+export function UnsavedChangesGuard({ when }: UnsavedChangesGuardProps) {
   const blocker = useBlocker(when);
+
+  useEffect(() => {
+    if (!when) return;
+    const block = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', block);
+    return () => window.removeEventListener('beforeunload', block);
+  }, [when]);
 
   return (
     <ConfirmationDialog
@@ -25,20 +35,4 @@ function RouterGuard({ when }: UnsavedChangesGuardProps) {
       }}
     />
   );
-}
-
-export function UnsavedChangesGuard({ when }: UnsavedChangesGuardProps) {
-  const inRouter = useInRouterContext();
-
-  useEffect(() => {
-    if (!when) return;
-    const block = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-      event.returnValue = '';
-    };
-    window.addEventListener('beforeunload', block);
-    return () => window.removeEventListener('beforeunload', block);
-  }, [when]);
-
-  return inRouter ? <RouterGuard when={when} /> : null;
 }
