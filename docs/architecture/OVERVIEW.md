@@ -1,6 +1,6 @@
 # Architecture générale
 
-Statut : **actuel**, vérifié sur SportPilot 0.36.0 après intégration de la Phase 0.
+Statut : **actuel**, vérifié sur la release candidate SportPilot 0.37.0 après intégration des Phases 0 à 4 et des ajustements UX de recette.
 
 ## Vue d’ensemble
 
@@ -49,7 +49,7 @@ Cloudflare Pages
 Nutrition, activité/endurance, musculation, poids et pas, objectifs,
 planification, bilans et assistant quotidien, sauvegarde/restauration,
 corbeille, comptes/espaces de données, synchronisation, amis/confidentialité,
-récompenses/thèmes et estimation nutritionnelle par photo.
+récompenses/thèmes, photos de progression locales et estimation nutritionnelle par photo.
 
 Le détail des statuts est dans
 [`../product/FEATURE_CATALOG.md`](../product/FEATURE_CATALOG.md).

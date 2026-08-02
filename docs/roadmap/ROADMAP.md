@@ -10,16 +10,16 @@ ni son déploiement.
 | 1 — Modèle opératoire agents | **Intégré** | Référentiel documentaire vérifié, ADR et règles durables | Livré sur `develop` |
 | 2 — Audit ciblé | **Terminé et accepté** | Rapport d’audit sans modification fonctionnelle | Conclusions utilisées pour la Phase 3 |
 | 3 — Fondations UX partagées | **Intégré** | Correctifs UX, variantes `EmptyState`, politique de feedback, arbitre global et carte extensible pilote | Phases 3A à 3E livrées sur `develop` |
-| 4 — Photos de progression locales | **Intégré sur `develop`** | Suivi photo privé, local, non social et comparateur tactile | PR #18 fusionnée après CI complète et recette iPhone/Safari validées ; pas encore déployé en production |
-| 5 — Déploiement contrôlé | **Idée à étudier** | Validation réelle et activation progressive | Critères d’acceptation des phases précédentes remplis |
+| 4 — Photos de progression locales | **Intégré dans la candidate 0.37.0** | Suivi photo privé, local, non social et comparateur tactile | PR #18 fusionnée après CI complète et recette iPhone/Safari validées ; pas encore déployé en production |
+| 5 — Déploiement contrôlé | **Candidate en préparation** | Validation finale sur une Preview isolée, sans activation de production | Publication vers `main`, tag, release et production soumis à des autorisations séparées |
 
 ## Garde-fous de séquencement
 
 - La Phase 4 reste locale : pas d’images cloud, sociales ou analysées par IA.
 - L’intégration de la Phase 4 sur `develop` ne vaut pas autorisation de
   production, de tag ou de release.
-- La Phase 5 dépend d’une décision ultérieure ; elle ne vaut pas autorisation
-  de Preview, production, tag ou release.
+- La préparation de la candidate et sa Preview isolée sont autorisées ; elles
+  ne valent pas autorisation de production, de tag ou de release GitHub.
 - Chaque phase utilise une branche et une PR distinctes vers `develop`.
 
 Les détails de portée figurent dans

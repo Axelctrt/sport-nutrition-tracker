@@ -48,11 +48,15 @@ page Amis, déplacer le statut de disponibilité de l’identifiant public
 immédiatement sous le champ de saisie, avant les actions Copier et Enregistrer.
 Ce déplacement visuel n’a volontairement pas modifié la PR #19 validée.
 
-## Idée à étudier — Phase 5 : déploiement contrôlé
+## En préparation — Phase 5 : release candidate 0.37.0
 
-Une activation progressive pourra être envisagée après validation réelle des
-critères fonctionnels, de données, de performance et d’accessibilité. Le
-mécanisme et les métriques ne sont pas encore décidés.
+La candidate 0.37.0 regroupe la Phase 4 et les ajustements UX déjà intégrés sur
+`develop`. Sa validation utilise une Preview Cloudflare Pages isolée. Aucune
+fusion vers `main`, création de tag, release GitHub ou activation de production
+n’est incluse dans cette étape.
+
+Le déplacement du statut de disponibilité de l’identifiant public sous le
+champ reste une amélioration UX non bloquante pour une prochaine passe.
 
 ## Hors périmètre et abandonné pour cette séquence
 

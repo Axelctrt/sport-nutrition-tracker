@@ -8,10 +8,11 @@ pas une description automatiquement actuelle.
 
 ## État de référence
 
-- Application : SportPilot `0.36.0`, PWA React 19 + TypeScript + Vite.
+- Application : SportPilot `0.37.0` en release candidate ; production stable
+  `0.36.0`, PWA React 19 + TypeScript + Vite.
 - Architecture : `src/domain`, `src/application`, `src/infrastructure`,
   `src/features`, `src/app`, `src/shared` et `src/pwa`.
-- Stockage principal local : Dexie `AppDatabase`, version 11.
+- Stockage principal local : Dexie `AppDatabase`, version 12.
 - Sauvegarde JSON : version 10.
 - Runtime de synchronisation Dexie Cloud : version 16, activé uniquement par
   configuration.

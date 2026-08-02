@@ -22,6 +22,7 @@ checklists versionnées sont conservés comme preuves de livraison.
 | Incidents et restaurations | [`operations/INCIDENT_AND_RECOVERY.md`](operations/INCIDENT_AND_RECOVERY.md) |
 | Stratégie de test | [`quality/TEST_STRATEGY.md`](quality/TEST_STRATEGY.md) |
 | Processus de release | [`quality/RELEASE_PROCESS.md`](quality/RELEASE_PROCESS.md) |
+| Changelog | [`../CHANGELOG.md`](../CHANGELOG.md) |
 | Roadmap | [`roadmap/ROADMAP.md`](roadmap/ROADMAP.md) |
 | Fonctionnalités planifiées | [`roadmap/PLANNED_FEATURES.md`](roadmap/PLANNED_FEATURES.md) |
 | Dette technique | [`roadmap/TECHNICAL_DEBT.md`](roadmap/TECHNICAL_DEBT.md) |
