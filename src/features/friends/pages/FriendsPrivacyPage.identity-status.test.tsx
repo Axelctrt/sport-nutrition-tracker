@@ -91,8 +91,8 @@ describe('statut de l’identifiant public', () => {
   });
 
   it('distingue un identifiant disponible d’un identifiant déjà pris', async () => {
-    const lookupByHandle: SocialUserLookupGateway['lookupByHandle'] = vi.fn(
-      async (handle) => handle === 'alex.run'
+    const lookupByHandle = vi.fn<SocialUserLookupGateway['lookupByHandle']>(
+      async (handle): Promise<SocialUserLookupResult> => handle === 'alex.run'
         ? { status: 'notFound' }
         : {
             status: 'found',
@@ -144,8 +144,10 @@ describe('statut de l’identifiant public', () => {
       string,
       (result: SocialUserLookupResult) => void
     >();
-    const lookupByHandle: SocialUserLookupGateway['lookupByHandle'] = vi.fn(
-      (handle) => new Promise((resolve) => pending.set(handle, resolve)),
+    const lookupByHandle = vi.fn<SocialUserLookupGateway['lookupByHandle']>(
+      (handle) => new Promise<SocialUserLookupResult>(
+        (resolve) => pending.set(handle, resolve),
+      ),
     );
     const user = userEvent.setup();
     renderProfile({ lookupByHandle });
