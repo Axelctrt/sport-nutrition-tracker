@@ -1416,6 +1416,8 @@ export function FriendsPrivacyPage({
               <Button
                 type="button"
                 variant="secondary"
+                aria-label="Copier l’identifiant public"
+                title="Copier l’identifiant public"
                 onClick={copyIdentity}
               >
                 <Copy aria-hidden="true" className="size-4" />
