@@ -7,7 +7,7 @@ import {
   UsersRound,
   X,
 } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { useContext, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 
 import type { EntityId } from '@/domain/models/common';
 import {
@@ -106,6 +106,9 @@ import { ConfirmationDialog } from '@/shared/ui/ConfirmationDialog';
 import { ChoiceCard } from '@/shared/ui/ChoiceCard';
 import { FieldStatus, type FieldStatusState } from '@/shared/ui/FieldStatus';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
+import { ToastContext } from '@/shared/toast/ToastContext';
+import { ToastProvider } from '@/shared/toast/ToastProvider';
+import { useActionToast } from '@/shared/toast/useActionToast';
 
 function currentAccountUserId(): string | undefined {
   if (activeDataSpace.kind !== 'account') return undefined;
@@ -171,6 +174,12 @@ interface SocialHandleFieldStatus {
   state: FieldStatusState;
   message: string;
   invalid: boolean;
+}
+
+interface IdentityNotice {
+  tone: 'warning' | 'error';
+  title: string;
+  message: string;
 }
 
 function resolveSocialHandleFieldStatus(
@@ -268,7 +277,7 @@ function requestStatusLabel(request: FriendRequest): string {
   return request.direction === 'incoming' ? 'À valider' : 'Envoyée';
 }
 
-export function FriendsPrivacyPage({
+function FriendsPrivacyPageContent({
   initialSnapshot,
   repository,
   initialIdentity,
@@ -287,6 +296,7 @@ export function FriendsPrivacyPage({
   privacyReconciliation,
   identityReconciliation,
 }: FriendsPrivacyPageProps = {}) {
+  const actionToast = useActionToast();
   const [defaultRepository] = useState(() =>
     initialSnapshot ? undefined : new DexieFriendsPrivacyRepository(appDatabase),
   );
@@ -362,10 +372,11 @@ export function FriendsPrivacyPage({
   const [displayName, setDisplayName] = useState(identity.displayName);
   const [availability, setAvailability] = useState<SocialIdentityAvailabilityResult>(initialAvailability);
   const [availabilityError, setAvailabilityError] = useState<string>();
-  const [identityFeedback, setIdentityFeedback] = useState<string>();
+  const [identityNotice, setIdentityNotice] = useState<IdentityNotice>();
   const [requestFeedback, setRequestFeedback] = useState<string>();
   const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
   const [isSendingRequest, setIsSendingRequest] = useState(false);
+  const [isSavingIdentity, setIsSavingIdentity] = useState(false);
   const [isLoading, setIsLoading] = useState(() => Boolean(
     (activeRepository && !initialSnapshot) || (activeIdentityRepository && !initialIdentity),
   ));
@@ -404,11 +415,13 @@ export function FriendsPrivacyPage({
         const effectiveIdentity = identityReconciliationResult?.identity ?? loadedIdentity;
         if (
           identityReconciliationResult
-          && ['reconciled', 'conflict', 'unavailable'].includes(
-            identityReconciliationResult.status,
-          )
+          && ['conflict', 'unavailable'].includes(identityReconciliationResult.status)
         ) {
-          setIdentityFeedback(identityReconciliationResult.message);
+          setIdentityNotice({
+            tone: 'warning',
+            title: 'Synchronisation à vérifier',
+            message: identityReconciliationResult.message,
+          });
         }
 
         let nextSnapshot = loadedSnapshot;
@@ -1016,11 +1029,21 @@ export function FriendsPrivacyPage({
       });
   };
 
+  const reportIdentitySuccess = (description: string) => {
+    setIdentityNotice(undefined);
+    actionToast.success({
+      key: 'social-profile-update',
+      title: 'Profil mis à jour',
+      description,
+    });
+  };
+
   const submitIdentity = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!canSaveIdentity) return;
+    if (!canSaveIdentity || isSavingIdentity) return;
     setErrorMessage(undefined);
-    setIdentityFeedback(undefined);
+    setIdentityNotice(undefined);
+    setIsSavingIdentity(true);
 
     const accountUserId = currentAccountUserId();
 
@@ -1041,7 +1064,11 @@ export function FriendsPrivacyPage({
     void saveOperation
       .then(async (result) => {
         if (result.status !== 'saved') {
-          setIdentityFeedback(result.message);
+          setIdentityNotice({
+            tone: 'error',
+            title: 'Enregistrement impossible',
+            message: result.message,
+          });
           return;
         }
 
@@ -1050,42 +1077,63 @@ export function FriendsPrivacyPage({
         setDisplayName(result.identity.displayName);
 
         if (accountUserId && activeCloudIdentityPort) {
-          setIdentityFeedback(result.message);
+          reportIdentitySuccess(result.message);
           return;
         }
 
         if (!activeCloudIdentityPort) {
-          setIdentityFeedback(result.message);
+          reportIdentitySuccess(result.message);
           return;
         }
 
         const cloudResult = await activeCloudIdentityPort.publishIdentity(result.identity);
         if (['created', 'updated', 'alreadyExists'].includes(cloudResult.status)) {
-          setIdentityFeedback(`${result.message} ${cloudResult.message}`);
+          reportIdentitySuccess(`${result.message} ${cloudResult.message}`);
           return;
         }
 
-        setIdentityFeedback(`${result.message} Publication cloud non effectuée : ${cloudResult.message}`);
+        setIdentityNotice({
+          tone: 'warning',
+          title: 'Profil enregistré, publication à reprendre',
+          message: `La sauvegarde locale a réussi, mais la publication cloud n’a pas abouti : ${cloudResult.message}`,
+        });
       })
       .catch((error) => {
-        setErrorMessage(
-          error instanceof Error
+        setIdentityNotice({
+          tone: 'error',
+          title: 'Enregistrement impossible',
+          message: error instanceof Error
             ? error.message
             : 'L’identité sociale n’a pas pu être enregistrée.',
-        );
-      });
+        });
+      })
+      .finally(() => setIsSavingIdentity(false));
   };
 
   const copyIdentity = () => {
     const publicHandle = formatSocialHandle(identity.handle);
     if (!navigator.clipboard?.writeText) {
-      setIdentityFeedback(`Identifiant à copier : ${publicHandle}`);
+      setIdentityNotice({
+        tone: 'warning',
+        title: 'Copie indisponible',
+        message: `Identifiant à copier : ${publicHandle}`,
+      });
       return;
     }
 
     void navigator.clipboard.writeText(publicHandle)
-      .then(() => setIdentityFeedback('Identifiant copié.'))
-      .catch(() => setIdentityFeedback(`Identifiant à copier : ${publicHandle}`));
+      .then(() => {
+        setIdentityNotice(undefined);
+        actionToast.success({
+          key: 'social-handle-copy',
+          title: 'Identifiant copié',
+        });
+      })
+      .catch(() => setIdentityNotice({
+        tone: 'warning',
+        title: 'Copie indisponible',
+        message: `Identifiant à copier : ${publicHandle}`,
+      }));
   };
 
   const selectedFriend = managedFriend
@@ -1135,9 +1183,6 @@ export function FriendsPrivacyPage({
       ) : null}
       {snapshot.lastFeedback ? (
         <InlineNotice tone="success" title="Action prise en compte">{snapshot.lastFeedback}</InlineNotice>
-      ) : null}
-      {identityFeedback && section === 'profile' ? (
-        <InlineNotice tone="success" title="Profil">{identityFeedback}</InlineNotice>
       ) : null}
       {requestFeedback && section === 'requests' ? (
         <InlineNotice title="Demande d’ami">{requestFeedback}</InlineNotice>
@@ -1348,6 +1393,15 @@ export function FriendsPrivacyPage({
             <h2 className="text-xl font-bold text-slate-950 dark:text-white">Profil</h2>
             <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{formatSocialHandle(identity.handle)}</p>
           </div>
+          {identityNotice ? (
+            <InlineNotice
+              className="mt-4"
+              tone={identityNotice.tone}
+              title={identityNotice.title}
+            >
+              {identityNotice.message}
+            </InlineNotice>
+          ) : null}
           <form className="mt-5 grid gap-4 md:grid-cols-2" onSubmit={submitIdentity}>
             <div>
               <label
@@ -1356,18 +1410,30 @@ export function FriendsPrivacyPage({
               >
                 Identifiant public
               </label>
-              <input
-                id="social-handle"
-                value={identityHandle}
-                aria-describedby="social-handle-status"
-                aria-invalid={handleFieldStatus.invalid || undefined}
-                aria-busy={isCheckingAvailability || undefined}
-                onChange={(event) => {
-                  setIdentityHandle(event.target.value);
-                  setIdentityFeedback(undefined);
-                }}
-                className="mt-2 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 font-normal text-slate-950 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 aria-[invalid=true]:border-red-600 aria-[invalid=true]:focus:border-red-600 aria-[invalid=true]:focus:ring-red-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
-              />
+              <div className="mt-2 flex min-w-0 items-stretch gap-2">
+                <input
+                  id="social-handle"
+                  value={identityHandle}
+                  aria-describedby="social-handle-status"
+                  aria-invalid={handleFieldStatus.invalid || undefined}
+                  aria-busy={isCheckingAvailability || undefined}
+                  onChange={(event) => {
+                    setIdentityHandle(event.target.value);
+                    setIdentityNotice(undefined);
+                  }}
+                  className="min-h-11 min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-3 font-normal text-slate-950 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 aria-[invalid=true]:border-red-600 aria-[invalid=true]:focus:border-red-600 aria-[invalid=true]:focus:ring-red-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="size-11 shrink-0 p-0"
+                  aria-label="Copier l’identifiant public"
+                  title="Copier l’identifiant public"
+                  onClick={copyIdentity}
+                >
+                  <Copy aria-hidden="true" className="size-4" />
+                </Button>
+              </div>
               <FieldStatus
                 id="social-handle-status"
                 state={handleFieldStatus.state}
@@ -1380,7 +1446,10 @@ export function FriendsPrivacyPage({
               Nom affiché
               <input
                 value={displayName}
-                onChange={(event) => setDisplayName(event.target.value)}
+                onChange={(event) => {
+                  setDisplayName(event.target.value);
+                  setIdentityNotice(undefined);
+                }}
                 className="mt-2 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 font-normal text-slate-950 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
               />
             </label>
@@ -1412,18 +1481,14 @@ export function FriendsPrivacyPage({
               />
               <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Autoriser les demandes d’amis</span>
             </label>
-            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end md:col-span-2">
+            <div className="md:col-span-2">
               <Button
-                type="button"
-                variant="secondary"
-                aria-label="Copier l’identifiant public"
-                title="Copier l’identifiant public"
-                onClick={copyIdentity}
+                type="submit"
+                fullWidth
+                loading={isSavingIdentity}
+                loadingLabel="Enregistrement…"
+                disabled={!canSaveIdentity || isSavingIdentity}
               >
-                <Copy aria-hidden="true" className="size-4" />
-                Copier
-              </Button>
-              <Button type="submit" disabled={!canSaveIdentity}>
                 Enregistrer
               </Button>
             </div>
@@ -1478,5 +1543,16 @@ export function FriendsPrivacyPage({
         }}
       />
     </section>
+  );
+}
+
+export function FriendsPrivacyPage(props: FriendsPrivacyPageProps = {}) {
+  const toast = useContext(ToastContext);
+  if (toast) return <FriendsPrivacyPageContent {...props} />;
+
+  return (
+    <ToastProvider>
+      <FriendsPrivacyPageContent {...props} />
+    </ToastProvider>
   );
 }
