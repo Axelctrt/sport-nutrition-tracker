@@ -30,7 +30,6 @@ describe('publication SportPilot 0.26.0 — confirmations d’action', () => {
   it('couvre les principaux domaines d’écriture utilisateur', () => {
     for (const source of [
       goalsPageSource,
-      profilePageSource,
       weightPageSource,
       backupPageSource,
       trashPageSource,
@@ -39,5 +38,10 @@ describe('publication SportPilot 0.26.0 — confirmations d’action', () => {
       expect(source).toContain('actionToast.success');
       expect(source).toContain('actionToast.error');
     }
+
+    expect(profilePageSource).toContain('useActionToast');
+    expect(profilePageSource).toContain('actionToast.success');
+    expect(profilePageSource).toContain('setSaveError');
+    expect(profilePageSource).toContain('Enregistrement impossible');
   });
 });
