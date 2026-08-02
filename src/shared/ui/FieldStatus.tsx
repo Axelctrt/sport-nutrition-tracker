@@ -43,10 +43,11 @@ export function FieldStatus({
   ...props
 }: FieldStatusProps) {
   const Icon = stateIcons[state];
+  const isError = state === 'invalid' || state === 'unavailable' || state === 'error';
 
   return (
     <p
-      role="status"
+      role={isError ? 'alert' : 'status'}
       aria-live="polite"
       aria-atomic="true"
       data-field-status={state}
