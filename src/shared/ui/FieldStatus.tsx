@@ -1,5 +1,3 @@
-import type { HTMLAttributes } from 'react';
-
 export type FieldStatusState =
   | 'checking'
   | 'valid'
@@ -7,17 +5,14 @@ export type FieldStatusState =
   | 'unavailable'
   | 'error';
 
-interface FieldStatusProps extends Omit<HTMLAttributes<HTMLParagraphElement>, 'children'> {
+interface FieldStatusProps {
   state: FieldStatusState;
   children: string;
+  id?: string;
+  className?: string;
 }
 
-export function FieldStatus({
-  state,
-  children,
-  className,
-  ...props
-}: FieldStatusProps) {
+export function FieldStatus({ state, children, id, className }: FieldStatusProps) {
   const invalid = state !== 'checking' && state !== 'valid';
   const tone = invalid
     ? 'text-red-700 dark:text-red-300'
@@ -27,12 +22,12 @@ export function FieldStatus({
 
   return (
     <p
+      id={id}
       role={invalid ? 'alert' : 'status'}
       aria-live="polite"
       aria-atomic="true"
       data-field-status={state}
       className={`min-h-6 text-sm leading-5 ${tone}${className ? ` ${className}` : ''}`}
-      {...props}
     >
       {state === 'checking' ? 'Vérification…' : children}
     </p>
