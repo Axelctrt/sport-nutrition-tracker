@@ -5,7 +5,7 @@ import {
   Utensils,
 } from 'lucide-react';
 import { format } from 'date-fns';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 
 import { calculateAndPersistDailyTarget } from '@/application/daily/dailyTargetCoordinator';
 import {
@@ -76,18 +76,12 @@ function ProfilePageContent({ profile, saveProfile }: ProfilePageContentProps) {
   const actionToast = useActionToast();
   const { currentWeight } = useCurrentWeight(profile);
   const editButtonRef = useRef<HTMLButtonElement>(null);
-  const editorTitleRef = useRef<HTMLHeadingElement>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [discardDialogOpen, setDiscardDialogOpen] = useState(false);
   const [pendingImpact, setPendingImpact] = useState<PendingImpact | undefined>();
   const [isConfirming, setIsConfirming] = useState(false);
   const [recalculationWarning, setRecalculationWarning] = useState(false);
-
-  useEffect(() => {
-    if (!isEditing) return;
-    window.requestAnimationFrame(() => editorTitleRef.current?.focus());
-  }, [isEditing]);
 
   const closeEditor = () => {
     setIsEditing(false);
@@ -233,7 +227,7 @@ function ProfilePageContent({ profile, saveProfile }: ProfilePageContentProps) {
               type="button"
               variant="secondary"
               className="w-full shrink-0 sm:w-auto"
-              aria-controls="profile-editor"
+              aria-controls="profile-form"
               onClick={() => {
                 setRecalculationWarning(false);
                 setIsEditing(true);
@@ -278,36 +272,20 @@ function ProfilePageContent({ profile, saveProfile }: ProfilePageContentProps) {
               title="Accéder à une rubrique du profil"
             />
           </div>
-
-          <div
-            id="profile-editor"
-            className="mt-4 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6 dark:border-slate-800 dark:bg-slate-900"
-          >
-            <h2
-              ref={editorTitleRef}
-              tabIndex={-1}
-              className="text-xl font-bold text-slate-950 outline-none dark:text-white"
-            >
-              Modifier le profil
-            </h2>
-            <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-              Les changements restent locaux avant l’enregistrement.
-            </p>
-            <div className="mt-5">
-              <ProfileForm
-                initialValues={profileToFormValues(profile)}
-                submitLabel="Enregistrer le profil"
-                onSubmit={handleSubmit}
-                onDirtyChange={setIsDirty}
-                onValuesChange={() => {
-                  if (pendingImpact) setPendingImpact(undefined);
-                }}
-                secondaryAction={{
-                  label: 'Annuler',
-                  onClick: () => isDirty ? setDiscardDialogOpen(true) : closeEditor(),
-                }}
-              />
-            </div>
+          <div className="mt-4">
+            <ProfileForm
+              initialValues={profileToFormValues(profile)}
+              submitLabel="Enregistrer le profil"
+              onSubmit={handleSubmit}
+              onDirtyChange={setIsDirty}
+              onValuesChange={() => {
+                if (pendingImpact) setPendingImpact(undefined);
+              }}
+              secondaryAction={{
+                label: 'Annuler',
+                onClick: () => isDirty ? setDiscardDialogOpen(true) : closeEditor(),
+              }}
+            />
           </div>
         </>
       ) : null}
