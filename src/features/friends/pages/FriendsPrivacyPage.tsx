@@ -71,6 +71,7 @@ import {
   createDefaultSocialIdentity,
   formatSocialHandle,
   validateSocialHandle,
+  type SocialHandleValidationResult,
   type SocialIdentity,
   type SocialIdentityAvailabilityResult,
 } from '@/domain/friends/socialIdentity';
@@ -103,8 +104,8 @@ import { BottomSheet } from '@/shared/ui/BottomSheet';
 import { Card } from '@/shared/ui/Card';
 import { ConfirmationDialog } from '@/shared/ui/ConfirmationDialog';
 import { ChoiceCard } from '@/shared/ui/ChoiceCard';
+import { FieldStatus, type FieldStatusState } from '@/shared/ui/FieldStatus';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
-
 
 function currentAccountUserId(): string | undefined {
   if (activeDataSpace.kind !== 'account') return undefined;
@@ -165,6 +166,90 @@ const initialAvailability: SocialIdentityAvailabilityResult = {
   status: 'idle',
   message: 'Vérification non lancée.',
 };
+
+interface SocialHandleFieldStatus {
+  state: FieldStatusState;
+  message: string;
+  invalid: boolean;
+}
+
+function resolveSocialHandleFieldStatus(
+  validation: SocialHandleValidationResult,
+  handleChanged: boolean,
+  checking: boolean,
+  availability: SocialIdentityAvailabilityResult,
+  availabilityError?: string,
+): SocialHandleFieldStatus {
+  if (validation.status !== 'valid') {
+    return {
+      state: 'invalid',
+      message: validation.message,
+      invalid: true,
+    };
+  }
+
+  if (checking) {
+    return {
+      state: 'checking',
+      message: 'Vérification en cours…',
+      invalid: false,
+    };
+  }
+
+  if (availabilityError) {
+    return {
+      state: 'error',
+      message: availabilityError,
+      invalid: false,
+    };
+  }
+
+  if (!handleChanged) {
+    return {
+      state: 'valid',
+      message: 'Identifiant actuel.',
+      invalid: false,
+    };
+  }
+
+  if (availability.status === 'available') {
+    return {
+      state: 'valid',
+      message: availability.message,
+      invalid: false,
+    };
+  }
+
+  if (availability.status === 'alreadyTaken') {
+    return {
+      state: 'unavailable',
+      message: availability.message,
+      invalid: true,
+    };
+  }
+
+  if (availability.status === 'invalidHandle') {
+    return {
+      state: 'invalid',
+      message: availability.message,
+      invalid: true,
+    };
+  }
+
+  if (availability.status === 'unavailable' || availability.status === 'notConnected') {
+    return {
+      state: 'error',
+      message: availability.message,
+      invalid: false,
+    };
+  }
+
+  return {
+    state: 'checking',
+    message: 'Vérification en cours…',
+    invalid: false,
+  };
+}
 
 function formatRequestDate(value: string): string {
   const date = new Date(value);
@@ -276,6 +361,7 @@ export function FriendsPrivacyPage({
   const [identityHandle, setIdentityHandle] = useState(() => formatSocialHandle(identity.handle));
   const [displayName, setDisplayName] = useState(identity.displayName);
   const [availability, setAvailability] = useState<SocialIdentityAvailabilityResult>(initialAvailability);
+  const [availabilityError, setAvailabilityError] = useState<string>();
   const [identityFeedback, setIdentityFeedback] = useState<string>();
   const [requestFeedback, setRequestFeedback] = useState<string>();
   const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
@@ -505,8 +591,13 @@ export function FriendsPrivacyPage({
     && handleValidation.handle !== identity.handle;
   const canSaveIdentity = handleValidation.status === 'valid'
     && (!identityHandleChanged || (!isCheckingAvailability && availability.status === 'available'));
-  const handleStatusIsError = handleValidation.status !== 'valid'
-    || availability.status === 'unavailable';
+  const handleFieldStatus = resolveSocialHandleFieldStatus(
+    handleValidation,
+    identityHandleChanged,
+    isCheckingAvailability,
+    availability,
+    availabilityError,
+  );
 
   useEffect(() => {
     const sequence = availabilitySequenceRef.current + 1;
@@ -515,11 +606,13 @@ export function FriendsPrivacyPage({
     if (handleValidation.status !== 'valid' || !identityHandleChanged) {
       setIsCheckingAvailability(false);
       setAvailability(initialAvailability);
+      setAvailabilityError(undefined);
       return undefined;
     }
 
     setIsCheckingAvailability(true);
     setAvailability(initialAvailability);
+    setAvailabilityError(undefined);
     const timeout = window.setTimeout(() => {
       const accountUserId = currentAccountUserId();
       const availabilityOperation = accountUserId && activeCloudIdentityPort
@@ -533,16 +626,17 @@ export function FriendsPrivacyPage({
       void availabilityOperation
         .then((result) => {
           if (availabilitySequenceRef.current !== sequence) return;
+          setAvailabilityError(undefined);
           setAvailability(result);
         })
         .catch((error) => {
           if (availabilitySequenceRef.current !== sequence) return;
-          setAvailability({
-            status: 'unavailable',
-            message: error instanceof Error
+          setAvailability(initialAvailability);
+          setAvailabilityError(
+            error instanceof Error
               ? error.message
-              : 'Vérification indisponible. Réessaie lorsque la connexion est rétablie.',
-          });
+              : 'Erreur de vérification. Réessaie lorsque la connexion est rétablie.',
+          );
         })
         .finally(() => {
           if (availabilitySequenceRef.current === sequence) {
@@ -640,7 +734,6 @@ export function FriendsPrivacyPage({
     }
     return persisted;
   });
-
 
   const updateProfileVisibility = (visibility: FriendVisibilityLevel) => {
     const service = createFriendsPrivacyService(snapshot);
@@ -1057,77 +1150,77 @@ export function FriendsPrivacyPage({
         className="space-y-4"
         hidden={section !== 'feed'}
       >
-          {snapshot.friends.length === 0 ? (
-            <Card className="p-6 text-center sm:p-8">
-              <UsersRound aria-hidden="true" className="mx-auto size-8 text-brand-700 dark:text-brand-300" />
-              <h2 className="mt-3 text-xl font-bold text-slate-950 dark:text-white">Ton fil est vide</h2>
-              <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-600 dark:text-slate-300">
-                Ajoute un ami pour découvrir ses prochaines activités ici.
+        {snapshot.friends.length === 0 ? (
+          <Card className="p-6 text-center sm:p-8">
+            <UsersRound aria-hidden="true" className="mx-auto size-8 text-brand-700 dark:text-brand-300" />
+            <h2 className="mt-3 text-xl font-bold text-slate-950 dark:text-white">Ton fil est vide</h2>
+            <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-600 dark:text-slate-300">
+              Ajoute un ami pour découvrir ses prochaines activités ici.
+            </p>
+            <Button className="mt-4" onClick={() => selectSection('requests')}>
+              <UserPlus aria-hidden="true" className="size-4" />
+              Ajouter un ami
+            </Button>
+          </Card>
+        ) : shouldUseCloudActivityFeed && activeActivityFeedCloudGateway && section === 'feed' ? (
+          <SocialActivityFeedPanel
+            gateway={activeActivityFeedCloudGateway}
+            getCredentials={activeActivityFeedCloudCredentials}
+            {...(activityFeedOnline ? { isOnline: activityFeedOnline } : {})}
+            subscribeCredentials={activityFeedCloudSubscription ?? subscribeRuntimeSocialActivityFeed}
+          />
+        ) : (
+          <Card className="p-5 sm:p-6">
+            <h2 className="text-xl font-bold text-slate-950 dark:text-white">Fil d’activité amis</h2>
+            {socialActivityFeed.items.length === 0 ? (
+              <p className="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                Aucune activité récente de tes amis.
               </p>
-              <Button className="mt-4" onClick={() => selectSection('requests')}>
-                <UserPlus aria-hidden="true" className="size-4" />
-                Ajouter un ami
-              </Button>
-            </Card>
-          ) : shouldUseCloudActivityFeed && activeActivityFeedCloudGateway && section === 'feed' ? (
-            <SocialActivityFeedPanel
-              gateway={activeActivityFeedCloudGateway}
-              getCredentials={activeActivityFeedCloudCredentials}
-              {...(activityFeedOnline ? { isOnline: activityFeedOnline } : {})}
-              subscribeCredentials={activityFeedCloudSubscription ?? subscribeRuntimeSocialActivityFeed}
-            />
-          ) : (
-            <Card className="p-5 sm:p-6">
-              <h2 className="text-xl font-bold text-slate-950 dark:text-white">Fil d’activité amis</h2>
-              {socialActivityFeed.items.length === 0 ? (
-                <p className="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                  Aucune activité récente de tes amis.
-                </p>
-              ) : (
-                <div className="mt-4 space-y-3">
-                  {socialActivityFeed.items.map((item) => (
-                    <article key={item.id} className="rounded-xl border border-slate-200 p-4 dark:border-slate-800">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex min-w-0 items-center gap-3">
-                          <span className="grid size-10 shrink-0 place-items-center rounded-full bg-brand-100 text-sm font-bold text-brand-700 dark:bg-brand-950 dark:text-brand-200">
-                            {item.friendInitials}
-                          </span>
-                          <div className="min-w-0">
-                            <p className="truncate font-semibold text-slate-950 dark:text-white">{item.friendDisplayName}</p>
-                            <p className="text-sm text-slate-500 dark:text-slate-400">{item.activityLabel}</p>
-                          </div>
-                        </div>
-                        <p className="shrink-0 text-xs font-semibold text-slate-500 dark:text-slate-400">{item.date}</p>
-                      </div>
-                      <p className="mt-3 text-sm font-semibold text-slate-700 dark:text-slate-200">
-                        {item.durationMinutes} min · {item.estimatedCaloriesKcal} kcal
-                      </p>
-                      <div className="mt-3 flex flex-wrap gap-2 text-sm">
-                        <span className="rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                          {item.scope === 'detailed' ? 'Détail autorisé' : 'Résumé'} · {item.activityLabel}
+            ) : (
+              <div className="mt-4 space-y-3">
+                {socialActivityFeed.items.map((item) => (
+                  <article key={item.id} className="rounded-xl border border-slate-200 p-4 dark:border-slate-800">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <span className="grid size-10 shrink-0 place-items-center rounded-full bg-brand-100 text-sm font-bold text-brand-700 dark:bg-brand-950 dark:text-brand-200">
+                          {item.friendInitials}
                         </span>
-                        {item.metricLabels.map((label) => (
-                          <span key={label} className="rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                            {label}
-                          </span>
-                        ))}
-                        {item.detailLabels.map((label) => (
-                          <span key={label} className="rounded-full bg-brand-100 px-3 py-1 font-semibold text-brand-800 dark:bg-brand-950 dark:text-brand-100">
-                            {label}
-                          </span>
-                        ))}
+                        <div className="min-w-0">
+                          <p className="truncate font-semibold text-slate-950 dark:text-white">{item.friendDisplayName}</p>
+                          <p className="text-sm text-slate-500 dark:text-slate-400">{item.activityLabel}</p>
+                        </div>
                       </div>
-                      {item.permissionLimited ? (
-                        <p className="mt-3 text-sm text-amber-800 dark:text-amber-200">
-                          Détail limité par permission actuelle.
-                        </p>
-                      ) : null}
-                    </article>
-                  ))}
-                </div>
-              )}
-            </Card>
-          )}
+                      <p className="shrink-0 text-xs font-semibold text-slate-500 dark:text-slate-400">{item.date}</p>
+                    </div>
+                    <p className="mt-3 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                      {item.durationMinutes} min · {item.estimatedCaloriesKcal} kcal
+                    </p>
+                    <div className="mt-3 flex flex-wrap gap-2 text-sm">
+                      <span className="rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                        {item.scope === 'detailed' ? 'Détail autorisé' : 'Résumé'} · {item.activityLabel}
+                      </span>
+                      {item.metricLabels.map((label) => (
+                        <span key={label} className="rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                          {label}
+                        </span>
+                      ))}
+                      {item.detailLabels.map((label) => (
+                        <span key={label} className="rounded-full bg-brand-100 px-3 py-1 font-semibold text-brand-800 dark:bg-brand-950 dark:text-brand-100">
+                          {label}
+                        </span>
+                      ))}
+                    </div>
+                    {item.permissionLimited ? (
+                      <p className="mt-3 text-sm text-amber-800 dark:text-amber-200">
+                        Détail limité par permission actuelle.
+                      </p>
+                    ) : null}
+                  </article>
+                ))}
+              </div>
+            )}
+          </Card>
+        )}
       </div>
 
       <div
@@ -1136,7 +1229,7 @@ export function FriendsPrivacyPage({
         aria-labelledby="friends-title"
         hidden={section !== 'friends'}
       >
-          <Card className="p-5 sm:p-6">
+        <Card className="p-5 sm:p-6">
           <h2 className="text-xl font-bold text-slate-950 dark:text-white">Mes amis</h2>
           <div className="mt-4 divide-y divide-slate-200 dark:divide-slate-800">
             {snapshot.friends.length === 0 ? (
@@ -1164,7 +1257,7 @@ export function FriendsPrivacyPage({
               );
             })}
           </div>
-          </Card>
+        </Card>
       </div>
 
       <div
@@ -1174,73 +1267,73 @@ export function FriendsPrivacyPage({
         className="space-y-4"
         hidden={section !== 'requests'}
       >
-          <Card className="p-5 sm:p-6">
-            <h2 className="text-xl font-bold text-slate-950 dark:text-white">
-              Demandes reçues
-              {pendingIncomingRequestCount > 0 ? ` (${pendingIncomingRequestCount})` : ''}
-            </h2>
-            <div className="mt-4 space-y-3">
-              {incomingRequests.length === 0 ? (
-                <p className="text-sm text-slate-600 dark:text-slate-300">Aucune demande reçue.</p>
-              ) : incomingRequests.map((request) => (
-                <div key={request.id} className="flex flex-col gap-3 rounded-xl border border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800">
-                  <div>
-                    <p className="font-semibold text-slate-950 dark:text-white">{request.displayName}</p>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">
-                      @{request.handle} · {formatRequestDate(request.requestedAt)}
-                    </p>
+        <Card className="p-5 sm:p-6">
+          <h2 className="text-xl font-bold text-slate-950 dark:text-white">
+            Demandes reçues
+            {pendingIncomingRequestCount > 0 ? ` (${pendingIncomingRequestCount})` : ''}
+          </h2>
+          <div className="mt-4 space-y-3">
+            {incomingRequests.length === 0 ? (
+              <p className="text-sm text-slate-600 dark:text-slate-300">Aucune demande reçue.</p>
+            ) : incomingRequests.map((request) => (
+              <div key={request.id} className="flex flex-col gap-3 rounded-xl border border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800">
+                <div>
+                  <p className="font-semibold text-slate-950 dark:text-white">{request.displayName}</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                    @{request.handle} · {formatRequestDate(request.requestedAt)}
+                  </p>
+                </div>
+                {request.status === 'pending' ? (
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={() => respondToIncomingRequest(request, 'accepted')}>
+                      <Check aria-hidden="true" className="size-4" />Accepter
+                    </Button>
+                    <Button size="sm" variant="secondary" onClick={() => respondToIncomingRequest(request, 'declined')}>
+                      <X aria-hidden="true" className="size-4" />Refuser
+                    </Button>
                   </div>
-                  {request.status === 'pending' ? (
-                    <div className="flex gap-2">
-                      <Button size="sm" onClick={() => respondToIncomingRequest(request, 'accepted')}>
-                        <Check aria-hidden="true" className="size-4" />Accepter
-                      </Button>
-                      <Button size="sm" variant="secondary" onClick={() => respondToIncomingRequest(request, 'declined')}>
-                        <X aria-hidden="true" className="size-4" />Refuser
-                      </Button>
-                    </div>
-                  ) : <span className="text-sm font-semibold text-slate-500">{requestStatusLabel(request)}</span>}
+                ) : <span className="text-sm font-semibold text-slate-500">{requestStatusLabel(request)}</span>}
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        <Card className="p-5 sm:p-6">
+          <div className="flex items-center gap-3">
+            <UserPlus aria-hidden="true" className="size-5 text-brand-700 dark:text-brand-300" />
+            <h2 className="text-xl font-bold text-slate-950 dark:text-white">Ajouter un ami</h2>
+          </div>
+          <form className="mt-4 flex flex-col gap-2 sm:flex-row" onSubmit={submitRequest}>
+            <label className="sr-only" htmlFor="friend-handle">Identifiant SportPilot</label>
+            <input
+              id="friend-handle"
+              value={handle}
+              onChange={(event) => setHandle(event.target.value)}
+              placeholder="@identifiant"
+              className="min-h-11 flex-1 rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-950 shadow-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+            />
+            <Button type="submit" disabled={isSendingRequest}>
+              <Send aria-hidden="true" className="size-4" />
+              {isSendingRequest ? 'Envoi…' : 'Envoyer'}
+            </Button>
+          </form>
+        </Card>
+
+        {outgoingRequests.length > 0 ? (
+          <details className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+            <summary className="min-h-11 cursor-pointer py-2 font-semibold text-slate-900 dark:text-white">
+              Demandes envoyées ({outgoingRequests.length})
+            </summary>
+            <div className="divide-y divide-slate-200 dark:divide-slate-800">
+              {outgoingRequests.map((request) => (
+                <div key={request.id} className="py-3 text-sm">
+                  <p className="font-semibold text-slate-900 dark:text-white">{request.displayName}</p>
+                  <p className="text-slate-500 dark:text-slate-400">@{request.handle} · {requestStatusLabel(request)}</p>
                 </div>
               ))}
             </div>
-          </Card>
-
-          <Card className="p-5 sm:p-6">
-            <div className="flex items-center gap-3">
-              <UserPlus aria-hidden="true" className="size-5 text-brand-700 dark:text-brand-300" />
-              <h2 className="text-xl font-bold text-slate-950 dark:text-white">Ajouter un ami</h2>
-            </div>
-            <form className="mt-4 flex flex-col gap-2 sm:flex-row" onSubmit={submitRequest}>
-              <label className="sr-only" htmlFor="friend-handle">Identifiant SportPilot</label>
-              <input
-                id="friend-handle"
-                value={handle}
-                onChange={(event) => setHandle(event.target.value)}
-                placeholder="@identifiant"
-                className="min-h-11 flex-1 rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-950 shadow-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
-              />
-              <Button type="submit" disabled={isSendingRequest}>
-                <Send aria-hidden="true" className="size-4" />
-                {isSendingRequest ? 'Envoi…' : 'Envoyer'}
-              </Button>
-            </form>
-          </Card>
-
-          {outgoingRequests.length > 0 ? (
-            <details className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-              <summary className="min-h-11 cursor-pointer py-2 font-semibold text-slate-900 dark:text-white">
-                Demandes envoyées ({outgoingRequests.length})
-              </summary>
-              <div className="divide-y divide-slate-200 dark:divide-slate-800">
-                {outgoingRequests.map((request) => (
-                  <div key={request.id} className="py-3 text-sm">
-                    <p className="font-semibold text-slate-900 dark:text-white">{request.displayName}</p>
-                    <p className="text-slate-500 dark:text-slate-400">@{request.handle} · {requestStatusLabel(request)}</p>
-                  </div>
-                ))}
-              </div>
-            </details>
-          ) : null}
+          </details>
+        ) : null}
       </div>
 
       <div
@@ -1250,98 +1343,93 @@ export function FriendsPrivacyPage({
         className="space-y-4"
         hidden={section !== 'profile'}
       >
-          <Card className="p-5 sm:p-6">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <h2 className="text-xl font-bold text-slate-950 dark:text-white">Profil</h2>
-                <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{formatSocialHandle(identity.handle)}</p>
+        <Card className="p-5 sm:p-6">
+          <div>
+            <h2 className="text-xl font-bold text-slate-950 dark:text-white">Profil</h2>
+            <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{formatSocialHandle(identity.handle)}</p>
+          </div>
+          <form className="mt-5 grid gap-4 md:grid-cols-2" onSubmit={submitIdentity}>
+            <div>
+              <label
+                htmlFor="social-handle"
+                className="text-sm font-semibold text-slate-700 dark:text-slate-200"
+              >
+                Identifiant public
+              </label>
+              <input
+                id="social-handle"
+                value={identityHandle}
+                aria-describedby="social-handle-status"
+                aria-invalid={handleFieldStatus.invalid || undefined}
+                aria-busy={isCheckingAvailability || undefined}
+                onChange={(event) => {
+                  setIdentityHandle(event.target.value);
+                  setIdentityFeedback(undefined);
+                }}
+                className="mt-2 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 font-normal text-slate-950 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 aria-[invalid=true]:border-red-600 aria-[invalid=true]:focus:border-red-600 aria-[invalid=true]:focus:ring-red-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+              />
+              <FieldStatus
+                id="social-handle-status"
+                state={handleFieldStatus.state}
+                className="mt-2"
+              >
+                {handleFieldStatus.message}
+              </FieldStatus>
+            </div>
+            <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+              Nom affiché
+              <input
+                value={displayName}
+                onChange={(event) => setDisplayName(event.target.value)}
+                className="mt-2 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 font-normal text-slate-950 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+              />
+            </label>
+            <fieldset className="md:col-span-2">
+              <legend className="text-sm font-semibold text-slate-700 dark:text-slate-200">Visibilité du profil</legend>
+              <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                {visibilityOptions.map((option) => {
+                  const active = snapshot.privacy.profileVisibility === option;
+                  return (
+                    <ChoiceCard
+                      key={option}
+                      name="profile-visibility"
+                      value={option}
+                      title={FRIEND_PROFILE_VISIBILITY_LABELS[option]}
+                      selected={active}
+                      onSelect={(value) => updateProfileVisibility(value as FriendVisibilityLevel)}
+                      tight
+                    />
+                  );
+                })}
               </div>
+            </fieldset>
+            <label className="flex min-h-11 items-center gap-3 md:col-span-2">
+              <input
+                type="checkbox"
+                checked={snapshot.privacy.allowFriendRequests}
+                onChange={() => update((actions) => actions.setRequestsOpen(!snapshot.privacy.allowFriendRequests))}
+                className="size-4 rounded border-slate-300 text-brand-700"
+              />
+              <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Autoriser les demandes d’amis</span>
+            </label>
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end md:col-span-2">
               <Button
                 type="button"
-                size="sm"
                 variant="secondary"
-                aria-label="Copier l’identifiant public"
-                title="Copier l’identifiant public"
                 onClick={copyIdentity}
               >
                 <Copy aria-hidden="true" className="size-4" />
+                Copier
               </Button>
-            </div>
-            <form className="mt-5 grid gap-4 md:grid-cols-2" onSubmit={submitIdentity}>
-              <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-                Identifiant public
-                <input
-                  value={identityHandle}
-                  aria-describedby="social-handle-status"
-                  onChange={(event) => {
-                    setIdentityHandle(event.target.value);
-                    setIdentityFeedback(undefined);
-                  }}
-                  className="mt-2 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 font-normal text-slate-950 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
-                />
-              </label>
-              <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-                Nom affiché
-                <input
-                  value={displayName}
-                  onChange={(event) => setDisplayName(event.target.value)}
-                  className="mt-2 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 font-normal text-slate-950 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
-                />
-              </label>
-              <fieldset className="md:col-span-2">
-                <legend className="text-sm font-semibold text-slate-700 dark:text-slate-200">Visibilité du profil</legend>
-                <div className="mt-2 grid gap-2 sm:grid-cols-3">
-                  {visibilityOptions.map((option) => {
-                    const active = snapshot.privacy.profileVisibility === option;
-                    return (
-                      <ChoiceCard
-                        key={option}
-                        name="profile-visibility"
-                        value={option}
-                        title={FRIEND_PROFILE_VISIBILITY_LABELS[option]}
-                        selected={active}
-                        onSelect={(value) => updateProfileVisibility(value as FriendVisibilityLevel)}
-                        tight
-                      />
-                    );
-                  })}
-                </div>
-              </fieldset>
-              <label className="flex min-h-11 items-center gap-3 md:col-span-2">
-                <input
-                  type="checkbox"
-                  checked={snapshot.privacy.allowFriendRequests}
-                  onChange={() => update((actions) => actions.setRequestsOpen(!snapshot.privacy.allowFriendRequests))}
-                  className="size-4 rounded border-slate-300 text-brand-700"
-                />
-                <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Autoriser les demandes d’amis</span>
-              </label>
-              <Button className="w-full md:col-span-2" type="submit" disabled={!canSaveIdentity}>
+              <Button type="submit" disabled={!canSaveIdentity}>
                 Enregistrer
               </Button>
-              <p
-                id="social-handle-status"
-                role={
-                  handleStatusIsError ? 'alert' : 'status'
-                }
-                aria-live="polite"
-                className={handleStatusIsError
-                  ? 'text-sm text-red-700 md:col-span-2 dark:text-red-300'
-                  : 'text-sm text-slate-600 md:col-span-2 dark:text-slate-300'}
-              >
-                {handleValidation.status !== 'valid'
-                  ? handleValidation.message
-                  : isCheckingAvailability
-                    ? 'Vérification…'
-                    : identityHandleChanged && availability.status !== 'idle'
-                      ? availability.message
-                      : 'Identifiant actuel.'}
-              </p>
-            </form>
-          </Card>
-          <InlineNotice title="Partage des activités">
-            Les nouvelles relations voient un résumé par défaut. Tu peux personnaliser ce réglage depuis l’onglet Amis.
-          </InlineNotice>
+            </div>
+          </form>
+        </Card>
+        <InlineNotice title="Partage des activités">
+          Les nouvelles relations voient un résumé par défaut. Tu peux personnaliser ce réglage depuis l’onglet Amis.
+        </InlineNotice>
       </div>
 
       <BottomSheet
