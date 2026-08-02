@@ -9,9 +9,9 @@ import {
 import { SocialActivityFriendSharingSettings } from '@/features/friends/components/SocialActivitySharingSettings';
 
 describe('SocialActivityFriendSharingSettings', () => {
-  it('présente un réglage compact centré sur l’ami', async () => {
+  it('présente un réglage compact centré sur l’ami et une colonne sur mobile', async () => {
     const user = userEvent.setup();
-    render(
+    const { container } = render(
       <SocialActivityFriendSharingSettings
         friendDisplayName="Lina"
         sharingLevel="summary"
@@ -26,6 +26,8 @@ describe('SocialActivityFriendSharingSettings', () => {
 
     await user.click(screen.getByText('Partage : Résumé'));
 
+    const modeGrid = container.querySelector('[data-sharing-mode-grid]');
+    expect(modeGrid).toHaveClass('grid', 'grid-cols-1', 'gap-2', 'sm:grid-cols-3');
     expect(screen.getByRole('radio', { name: 'Aucun' })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: 'Résumé' })).toBeChecked();
     expect(screen.getByRole('radio', { name: 'Personnalisé' })).toBeInTheDocument();
