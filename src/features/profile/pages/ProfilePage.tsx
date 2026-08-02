@@ -1,6 +1,5 @@
 import {
   Activity,
-  Pencil,
   Scale,
   UserRound,
   Utensils,
@@ -73,12 +72,6 @@ interface PendingImpact {
   preview: ProfileImpactPreviewModel;
 }
 
-interface ProfileFeedback {
-  tone: 'warning';
-  title: string;
-  message: string;
-}
-
 function ProfilePageContent({ profile, saveProfile }: ProfilePageContentProps) {
   const actionToast = useActionToast();
   const { currentWeight } = useCurrentWeight(profile);
@@ -89,38 +82,19 @@ function ProfilePageContent({ profile, saveProfile }: ProfilePageContentProps) {
   const [discardDialogOpen, setDiscardDialogOpen] = useState(false);
   const [pendingImpact, setPendingImpact] = useState<PendingImpact | undefined>();
   const [isConfirming, setIsConfirming] = useState(false);
-  const [feedback, setFeedback] = useState<ProfileFeedback | undefined>();
+  const [recalculationWarning, setRecalculationWarning] = useState(false);
 
   useEffect(() => {
     if (!isEditing) return;
     window.requestAnimationFrame(() => editorTitleRef.current?.focus());
   }, [isEditing]);
 
-  const restoreEditButtonFocus = () => {
-    window.setTimeout(() => editButtonRef.current?.focus(), 0);
-  };
-
   const closeEditor = () => {
     setIsEditing(false);
     setIsDirty(false);
     setPendingImpact(undefined);
     setDiscardDialogOpen(false);
-    restoreEditButtonFocus();
-  };
-
-  const startEditing = () => {
-    setFeedback(undefined);
-    setPendingImpact(undefined);
-    setIsDirty(false);
-    setIsEditing(true);
-  };
-
-  const requestCancelEditing = () => {
-    if (isDirty) {
-      setDiscardDialogOpen(true);
-      return;
-    }
-    closeEditor();
+    window.setTimeout(() => editButtonRef.current?.focus(), 0);
   };
 
   const persistProfile = async (
@@ -139,9 +113,7 @@ function ProfilePageContent({ profile, saveProfile }: ProfilePageContentProps) {
       : entity;
 
     const savedProfile = await saveProfile(nextProfile);
-    if (!preview) {
-      return { savedProfile };
-    }
+    if (!preview) return { savedProfile };
 
     try {
       await calculateAndPersistDailyTarget(preview.date, savedProfile);
@@ -152,7 +124,7 @@ function ProfilePageContent({ profile, saveProfile }: ProfilePageContentProps) {
   };
 
   const reportSuccess = (withImpact: boolean) => {
-    setFeedback(undefined);
+    setRecalculationWarning(false);
     actionToast.success({
       key: 'profile-update',
       title: 'Profil mis à jour',
@@ -161,18 +133,17 @@ function ProfilePageContent({ profile, saveProfile }: ProfilePageContentProps) {
   };
 
   const reportError = (error: unknown) => {
-    const fallback = 'Le profil n’a pas pu être mis à jour. Vérifie les champs puis réessaie.';
-    setFeedback(undefined);
+    setRecalculationWarning(false);
     actionToast.error({
       key: 'profile-update',
       title: 'Enregistrement impossible',
       error,
-      fallback,
+      fallback: 'Le profil n’a pas pu être enregistré. Corrige les champs puis réessaie.',
     });
   };
 
   const handleSubmit = async (values: ProfileFormValues) => {
-    setFeedback(undefined);
+    setRecalculationWarning(false);
     setPendingImpact(undefined);
     const entity = profileFormValuesToEntity(values);
     const changedFields = detectProfileImpactFields(profile, entity);
@@ -208,17 +179,13 @@ function ProfilePageContent({ profile, saveProfile }: ProfilePageContentProps) {
   const confirmImpact = async () => {
     if (!pendingImpact) return;
     setIsConfirming(true);
-    setFeedback(undefined);
+    setRecalculationWarning(false);
 
     try {
       const result = await persistProfile(pendingImpact.values, pendingImpact.preview);
       setPendingImpact(undefined);
       if (result.recalculationError) {
-        setFeedback({
-          tone: 'warning',
-          title: 'Profil enregistré, recalcul à relancer',
-          message: 'Le profil et le journal ont été enregistrés localement, mais les objectifs de la journée n’ont pas pu être recalculés. Recharge la page pour relancer le calcul.',
-        });
+        setRecalculationWarning(true);
         closeEditor();
         return;
       }
@@ -255,8 +222,8 @@ function ProfilePageContent({ profile, saveProfile }: ProfilePageContentProps) {
               </h1>
               <p className="mt-3 max-w-3xl leading-7 text-slate-600 dark:text-slate-300">
                 {isEditing
-                  ? 'Modifie les informations nécessaires, puis enregistre ou annule tes changements.'
-                  : 'Consulte les informations utilisées par SportPilot. Active le mode édition uniquement lorsque tu souhaites les modifier.'}
+                  ? 'Modifie les champs utiles, puis enregistre ou annule.'
+                  : 'Consulte les données utilisées par SportPilot. Active l’édition pour les modifier.'}
               </p>
             </div>
           </div>
@@ -267,10 +234,11 @@ function ProfilePageContent({ profile, saveProfile }: ProfilePageContentProps) {
               variant="secondary"
               className="w-full shrink-0 sm:w-auto"
               aria-controls="profile-editor"
-              aria-expanded="false"
-              onClick={startEditing}
+              onClick={() => {
+                setRecalculationWarning(false);
+                setIsEditing(true);
+              }}
             >
-              <Pencil aria-hidden="true" className="size-4" />
               Modifier le profil
             </Button>
           ) : null}
@@ -281,13 +249,13 @@ function ProfilePageContent({ profile, saveProfile }: ProfilePageContentProps) {
         <ProfileOverview profile={profile} currentWeight={currentWeight} />
       </div>
 
-      {feedback ? (
+      {recalculationWarning ? (
         <InlineNotice
           className="mt-4"
-          tone={feedback.tone}
-          title={feedback.title}
+          tone="warning"
+          title="Profil enregistré, recalcul à relancer"
         >
-          {feedback.message}
+          Le profil et le journal ont été enregistrés localement, mais les objectifs du jour n’ont pas été recalculés. Recharge la page pour réessayer.
         </InlineNotice>
       ) : null}
 
@@ -323,7 +291,7 @@ function ProfilePageContent({ profile, saveProfile }: ProfilePageContentProps) {
               Modifier le profil
             </h2>
             <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-              Les changements restent locaux tant que tu ne les enregistres pas.
+              Les changements restent locaux avant l’enregistrement.
             </p>
             <div className="mt-5">
               <ProfileForm
@@ -336,7 +304,7 @@ function ProfilePageContent({ profile, saveProfile }: ProfilePageContentProps) {
                 }}
                 secondaryAction={{
                   label: 'Annuler',
-                  onClick: requestCancelEditing,
+                  onClick: () => isDirty ? setDiscardDialogOpen(true) : closeEditor(),
                 }}
               />
             </div>
@@ -349,7 +317,7 @@ function ProfilePageContent({ profile, saveProfile }: ProfilePageContentProps) {
       <ConfirmationDialog
         open={discardDialogOpen}
         title="Annuler les modifications ?"
-        description="Les changements saisis depuis l’ouverture du mode édition seront perdus."
+        description="Les changements non enregistrés seront perdus."
         confirmLabel="Abandonner les modifications"
         cancelLabel="Continuer la modification"
         onCancel={() => setDiscardDialogOpen(false)}
