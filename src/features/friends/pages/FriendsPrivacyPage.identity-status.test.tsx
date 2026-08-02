@@ -194,7 +194,7 @@ describe('statut de l’identifiant public', () => {
 
       await user.click(screen.getByRole('button', { name: 'Copier l’identifiant public' }));
 
-      expect(writeText).toHaveBeenCalledWith('@alex123');
+      expect(writeText).toHaveBeenCalledWith('@sp-alex123');
       expect(await screen.findByText('Identifiant copié.')).toBeInTheDocument();
       expect(screen.getAllByText('Identifiant copié.')).toHaveLength(1);
       expect(screen.queryByText('Profil à vérifier')).not.toBeInTheDocument();
