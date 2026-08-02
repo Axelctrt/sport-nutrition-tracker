@@ -1,8 +1,9 @@
 # Référentiel SportPilot
 
 Cet index est l’entrée canonique pour comprendre l’état actuel du produit. Les
-documents historiques déjà présents dans `docs/`, les release notes et les
-checklists versionnées sont conservés comme preuves de livraison.
+documents historiques déjà présents dans `docs/`, les release notes, les
+checklists et les artefacts de préparation à la racine sont conservés comme
+preuves de livraison.
 
 ## Références canoniques
 
@@ -38,7 +39,10 @@ checklists versionnées sont conservés comme preuves de livraison.
 - **Abandonné** : piste explicitement écartée.
 
 Une release note décrit une version livrée. Elle ne remplace pas les documents
-canoniques et ne doit pas être réécrite pour refléter le présent.
+canoniques et ne doit pas être réécrite pour refléter le présent. Les fichiers
+de préparation tels que `README-PATCH.md`, `INSTALLATION.txt` et les sections
+historiques de `RELEASE-CHECKLIST.md` peuvent donc conserver le vocabulaire de
+candidate lorsqu’il décrit fidèlement l’étape où ils ont été produits.
 
 ## Réconciliation du bundle documentaire
 

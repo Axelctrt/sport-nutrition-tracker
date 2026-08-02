@@ -1,8 +1,10 @@
 # Changelog
 
-Ce fichier synthétise les versions préparées. Les notes détaillées versionnées restent les archives de référence. Une entrée de candidate ne signifie ni fusion dans `main`, ni tag, ni déploiement en production.
+Ce fichier synthétise les versions publiées. Les notes détaillées versionnées
+restent les archives de référence et conservent l’état de préparation de chaque
+livraison.
 
-## 0.37.0 - release candidate
+## 0.37.0 - publiée le 2 août 2026
 
 - Ajout local et privé des photos de progression.
 - Galerie, filtres et comparateur avant/après.
@@ -10,6 +12,16 @@ Ce fichier synthétise les versions préparées. Les notes détaillées versionn
 - Migration Dexie v12 additive, sans migration D1.
 - Ajustements UX validés sur l’Accueil, les Amis et les séances.
 - Compatibilité Chromium, WebKit, IndexedDB et PWA renforcée.
+
+Publication :
+
+- PR #21 : livraison de `develop` dans `main` ;
+- commit publié : `84fea3d49e68c7d190c00d505502a5c4aa2e672a` ;
+- tag annoté : `v0.37.0` ;
+- release GitHub stable :
+  `https://github.com/Axelctrt/sport-nutrition-tracker/releases/tag/v0.37.0` ;
+- production : `https://sportpilot-pages.pages.dev` ;
+- migration D1 ajoutée ou exécutée : aucune.
 
 Voir [`RELEASE-NOTES-0.37.0.md`](RELEASE-NOTES-0.37.0.md).
 

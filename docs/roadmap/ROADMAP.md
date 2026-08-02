@@ -6,21 +6,34 @@ ni son déploiement.
 
 | Phase | Statut | Résultat attendu | Condition d’entrée |
 | --- | --- | --- | --- |
-| 0 — Stabilisation UX | **Intégré** | Saisie numérique stable, confirmation de séance, constructeur simplifié, libellé « Profil » | Livré sur `develop` |
-| 1 — Modèle opératoire agents | **Intégré** | Référentiel documentaire vérifié, ADR et règles durables | Livré sur `develop` |
+| 0 — Stabilisation UX | **Publié en production** | Saisie numérique stable, confirmation de séance, constructeur simplifié, libellé « Profil » | Inclus dans la base publiée |
+| 1 — Modèle opératoire agents | **Publié en production** | Référentiel documentaire vérifié, ADR et règles durables | Inclus dans la base publiée |
 | 2 — Audit ciblé | **Terminé et accepté** | Rapport d’audit sans modification fonctionnelle | Conclusions utilisées pour la Phase 3 |
-| 3 — Fondations UX partagées | **Intégré** | Correctifs UX, variantes `EmptyState`, politique de feedback, arbitre global et carte extensible pilote | Phases 3A à 3E livrées sur `develop` |
-| 4 — Photos de progression locales | **Intégré dans la candidate 0.37.0** | Suivi photo privé, local, non social et comparateur tactile | PR #18 fusionnée après CI complète et recette iPhone/Safari validées ; pas encore déployé en production |
-| 5 — Déploiement contrôlé | **Candidate en préparation** | Validation finale sur une Preview isolée, sans activation de production | Publication vers `main`, tag, release et production soumis à des autorisations séparées |
+| 3 — Fondations UX partagées | **Publié en production 0.37.0** | Correctifs UX, variantes `EmptyState`, politique de feedback, arbitre global et carte extensible pilote | Phases 3A à 3E validées |
+| 4 — Photos de progression locales | **Publié en production 0.37.0** | Suivi photo privé, local, non social et comparateur tactile | PR #18, CI complète et recette iPhone/Safari validées |
+| 5 — Déploiement contrôlé | **Terminé** | Publication de `main`, tag annoté, release GitHub stable et production validée | PR #21, commit `84fea3d49e68c7d190c00d505502a5c4aa2e672a`, tag `v0.37.0` |
+
+## État publié
+
+- SportPilot 0.37.0 est en production depuis `main`.
+- Le tag annoté `v0.37.0` pointe vers
+  `84fea3d49e68c7d190c00d505502a5c4aa2e672a`.
+- La release GitHub 0.37.0 est stable, non draft et non prerelease.
+- Aucune migration D1 n’a été exécutée pour cette publication.
+- La version 0.36.0 reste une référence historique de repli uniquement.
 
 ## Garde-fous de séquencement
 
-- La Phase 4 reste locale : pas d’images cloud, sociales ou analysées par IA.
-- L’intégration de la Phase 4 sur `develop` ne vaut pas autorisation de
-  production, de tag ou de release.
-- La préparation de la candidate et sa Preview isolée sont autorisées ; elles
-  ne valent pas autorisation de production, de tag ou de release GitHub.
-- Chaque phase utilise une branche et une PR distinctes vers `develop`.
+- Les photos de progression restent locales : pas d’images cloud, sociales ou
+  analysées par IA.
+- Le déplacement du statut de disponibilité de l’identifiant public sous son
+  champ reste une amélioration UX non bloquante.
+- Toute nouvelle évolution utilise une branche et une PR distinctes vers
+  `develop`.
+- Toute maintenance documentaire post-release part de `main`, cible `main`,
+  puis `develop` est resynchronisée depuis `main` par merge.
+- Aucun nouveau chantier fonctionnel n’est autorisé par la clôture de la
+  release 0.37.0.
 
 Les détails de portée figurent dans
 [`PLANNED_FEATURES.md`](PLANNED_FEATURES.md). Les limites connues qui ne
