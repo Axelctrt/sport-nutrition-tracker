@@ -119,7 +119,7 @@ function ProfilePageContent({ profile, saveProfile }: ProfilePageContentProps) {
     actionToast.success({
       key: 'profile-update',
       title: 'Profil mis à jour',
-      description: withImpact ? 'Objectifs recalculés' : undefined,
+      ...(withImpact ? { description: 'Objectifs recalculés' } : {}),
     });
   };
 
