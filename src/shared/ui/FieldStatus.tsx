@@ -22,14 +22,6 @@ const stateClasses: Record<FieldStatusState, string> = {
   error: 'text-red-700 dark:text-red-300',
 };
 
-const stateMarkers: Record<FieldStatusState, string> = {
-  checking: '…',
-  valid: '✓',
-  invalid: '×',
-  unavailable: '×',
-  error: '!',
-};
-
 export function FieldStatus({
   state,
   children,
@@ -37,7 +29,6 @@ export function FieldStatus({
   ...props
 }: FieldStatusProps) {
   const isError = state === 'invalid' || state === 'unavailable' || state === 'error';
-  const message = state === 'checking' ? 'Vérification…' : children;
 
   return (
     <p
@@ -46,16 +37,13 @@ export function FieldStatus({
       aria-atomic="true"
       data-field-status={state}
       className={cn(
-        'flex min-h-6 items-start gap-2 text-sm leading-5',
+        'min-h-6 text-sm leading-5',
         stateClasses[state],
         className,
       )}
       {...props}
     >
-      <span aria-hidden="true" className="shrink-0 font-bold">
-        {stateMarkers[state]}
-      </span>
-      <span>{message}</span>
+      {state === 'checking' ? 'Vérification…' : children}
     </p>
   );
 }
