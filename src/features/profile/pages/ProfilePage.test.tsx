@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ProfileContext } from '@/app/providers/profile/ProfileContext';
 import { ProfilePage } from '@/features/profile/pages/ProfilePage';
 import { createProfileInput } from '@/test/factories/profileFactory';
+import { ToastProvider } from '@/shared/toast/ToastProvider';
 
 const mocks = vi.hoisted(() => ({
   previewProfileImpact: vi.fn(),
@@ -67,6 +68,28 @@ const impactPreview = {
   },
 };
 
+function renderProfile(saveProfile = vi.fn().mockResolvedValue(storedProfile)) {
+  return {
+    saveProfile,
+    ...render(
+      <ToastProvider>
+        <ProfileContext.Provider
+          value={{
+            status: 'ready',
+            profile: storedProfile,
+            errorMessage: undefined,
+            saveProfile,
+            clearProfile: vi.fn(),
+            refreshProfile: vi.fn(),
+          }}
+        >
+          <ProfilePage />
+        </ProfileContext.Provider>
+      </ToastProvider>,
+    ),
+  };
+}
+
 beforeEach(() => {
   window.localStorage.clear();
   mocks.previewProfileImpact.mockReset();
@@ -80,25 +103,14 @@ afterEach(() => {
 });
 
 describe('ProfilePage', () => {
-  it('permet de modifier et enregistrer un champ sans impact énergétique', async () => {
+  it('affiche le profil en lecture seule puis revient en lecture seule après une sauvegarde réussie', async () => {
     const user = userEvent.setup();
-    const saveProfile = vi.fn().mockResolvedValue(storedProfile);
+    const { saveProfile } = renderProfile();
 
-    render(
-      <ProfileContext.Provider
-        value={{
-          status: 'ready',
-          profile: storedProfile,
-          errorMessage: undefined,
-          saveProfile,
-          clearProfile: vi.fn(),
-          refreshProfile: vi.fn(),
-        }}
-      >
-        <ProfilePage />
-      </ProfileContext.Provider>,
-    );
+    expect(screen.getByRole('button', { name: 'Modifier le profil' })).toBeInTheDocument();
+    expect(screen.queryByLabelText('Prénom')).not.toBeInTheDocument();
 
+    await user.click(screen.getByRole('button', { name: 'Modifier le profil' }));
     const firstNameInput = screen.getByLabelText('Prénom');
     await user.clear(firstNameInput);
     await user.type(firstNameInput, 'Axel mobile');
@@ -108,29 +120,18 @@ describe('ProfilePage', () => {
       expect.objectContaining({ firstName: 'Axel mobile' }),
     );
     expect(mocks.previewProfileImpact).not.toHaveBeenCalled();
-    expect(await screen.findByText('Le profil a été mis à jour dans la base locale.')).toBeInTheDocument();
+    expect(await screen.findByText('Profil mis à jour')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Prénom')).not.toBeInTheDocument();
+    expect(screen.queryByText('Le profil a été mis à jour dans la base locale.')).not.toBeInTheDocument();
   });
 
   it('affiche un avant/après puis exige une confirmation pour un objectif', async () => {
     const user = userEvent.setup();
     const savedProfile = { ...storedProfile, goal: 'loss' as const, targetWeeklyWeightChangePercent: -0.5 };
     const saveProfile = vi.fn().mockResolvedValue(savedProfile);
+    renderProfile(saveProfile);
 
-    render(
-      <ProfileContext.Provider
-        value={{
-          status: 'ready',
-          profile: storedProfile,
-          errorMessage: undefined,
-          saveProfile,
-          clearProfile: vi.fn(),
-          refreshProfile: vi.fn(),
-        }}
-      >
-        <ProfilePage />
-      </ProfileContext.Provider>,
-    );
-
+    await user.click(screen.getByRole('button', { name: 'Modifier le profil' }));
     const goalSelect = document.querySelector('#goal');
     expect(goalSelect).toBeInstanceOf(HTMLSelectElement);
     fireEvent.change(goalSelect as HTMLSelectElement, { target: { value: 'loss' } });
@@ -152,7 +153,8 @@ describe('ProfilePage', () => {
       ]),
     }));
     expect(mocks.recalculateTarget).toHaveBeenCalledWith('2026-07-10', savedProfile);
-    expect(await screen.findByText(/Les objectifs de la journée ont été recalculés/)).toBeInTheDocument();
+    expect(await screen.findByText('Profil mis à jour')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Objectif')).not.toBeInTheDocument();
   });
 
   it('distingue un échec de recalcul après un profil déjà enregistré', async () => {
@@ -160,22 +162,9 @@ describe('ProfilePage', () => {
     const savedProfile = { ...storedProfile, goal: 'loss' as const, targetWeeklyWeightChangePercent: -0.5 };
     const saveProfile = vi.fn().mockResolvedValue(savedProfile);
     mocks.recalculateTarget.mockRejectedValueOnce(new Error('recalcul indisponible'));
+    renderProfile(saveProfile);
 
-    render(
-      <ProfileContext.Provider
-        value={{
-          status: 'ready',
-          profile: storedProfile,
-          errorMessage: undefined,
-          saveProfile,
-          clearProfile: vi.fn(),
-          refreshProfile: vi.fn(),
-        }}
-      >
-        <ProfilePage />
-      </ProfileContext.Provider>,
-    );
-
+    await user.click(screen.getByRole('button', { name: 'Modifier le profil' }));
     const goalSelect = document.querySelector('#goal');
     expect(goalSelect).toBeInstanceOf(HTMLSelectElement);
     fireEvent.change(goalSelect as HTMLSelectElement, { target: { value: 'loss' } });
@@ -183,28 +172,40 @@ describe('ProfilePage', () => {
     await user.click(await screen.findByRole('button', { name: 'Confirmer les changements' }));
 
     expect(saveProfile).toHaveBeenCalledOnce();
-    expect(await screen.findByText(/Le profil et le journal ont été enregistrés/)).toBeInTheDocument();
-    expect(screen.queryByText('Le profil n’a pas pu être mis à jour.')).not.toBeInTheDocument();
+    expect(await screen.findByText('Profil enregistré, recalcul à relancer')).toBeInTheDocument();
+    expect(screen.getByText(/Le profil et le journal ont été enregistrés localement/)).toBeInTheDocument();
+    expect(screen.queryByText('Profil mis à jour')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Objectif')).not.toBeInTheDocument();
   });
 
-  it('limite le contenu et la carte pour éviter le débordement horizontal', () => {
-    const { container } = render(
-      <ProfileContext.Provider
-        value={{
-          status: 'ready',
-          profile: storedProfile,
-          errorMessage: undefined,
-          saveProfile: vi.fn(),
-          clearProfile: vi.fn(),
-          refreshProfile: vi.fn(),
-        }}
-      >
-        <ProfilePage />
-      </ProfileContext.Provider>,
-    );
+  it('demande confirmation avant d’abandonner des changements', async () => {
+    const user = userEvent.setup();
+    renderProfile();
+
+    await user.click(screen.getByRole('button', { name: 'Modifier le profil' }));
+    const firstNameInput = screen.getByLabelText('Prénom');
+    await user.clear(firstNameInput);
+    await user.type(firstNameInput, 'Modification non enregistrée');
+    await user.click(screen.getByRole('button', { name: 'Annuler' }));
+
+    expect(screen.getByRole('alertdialog', { name: 'Annuler les modifications ?' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Continuer la modification' }));
+    expect(screen.getByLabelText('Prénom')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Annuler' }));
+    await user.click(screen.getByRole('button', { name: 'Abandonner les modifications' }));
+    expect(screen.queryByLabelText('Prénom')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Modifier le profil' })).toHaveFocus();
+  });
+
+  it('limite le contenu et le formulaire pour éviter le débordement horizontal', async () => {
+    const user = userEvent.setup();
+    const { container } = renderProfile();
 
     expect(container.querySelector('section')).toHaveClass('min-w-0', 'overflow-x-clip');
-    expect(screen.getByLabelText(/Taille en centimètres/)).toHaveClass('max-w-full');
     expect(screen.getByText(/59,8 kg/)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Modifier le profil' }));
+    expect(screen.getByLabelText(/Taille en centimètres/)).toHaveClass('max-w-full');
   });
 });
