@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { RouterProvider, createMemoryRouter } from 'react-router-dom';
 import { ProfileContext } from '@/app/providers/profile/ProfileContext';
 import { ProfilePage } from '@/features/profile/pages/ProfilePage';
 import { createProfileInput } from '@/test/factories/profileFactory';
@@ -69,23 +70,32 @@ const impactPreview = {
 };
 
 function renderProfile(saveProfile = vi.fn().mockResolvedValue(storedProfile)) {
+  const page = (
+    <ToastProvider>
+      <ProfileContext.Provider
+        value={{
+          status: 'ready',
+          profile: storedProfile,
+          errorMessage: undefined,
+          saveProfile,
+          clearProfile: vi.fn(),
+          refreshProfile: vi.fn(),
+        }}
+      >
+        <ProfilePage />
+      </ProfileContext.Provider>
+    </ToastProvider>
+  );
+
   return {
     saveProfile,
     ...render(
-      <ToastProvider>
-        <ProfileContext.Provider
-          value={{
-            status: 'ready',
-            profile: storedProfile,
-            errorMessage: undefined,
-            saveProfile,
-            clearProfile: vi.fn(),
-            refreshProfile: vi.fn(),
-          }}
-        >
-          <ProfilePage />
-        </ProfileContext.Provider>
-      </ToastProvider>,
+      <RouterProvider
+        router={createMemoryRouter(
+          [{ path: '/profile', element: page }],
+          { initialEntries: ['/profile'] },
+        )}
+      />,
     ),
   };
 }
