@@ -63,7 +63,7 @@ describe('statut de l’identifiant public', () => {
 
     const input = await openSocialProfile(user);
     const status = screen.getByRole('status');
-    const copyButton = screen.getByRole('button', { name: 'Copier' });
+    const copyButton = screen.getByRole('button', { name: 'Copier l’identifiant public' });
     const saveButton = screen.getByRole('button', { name: 'Enregistrer' });
 
     expect(status).toHaveAttribute('id', 'social-handle-status');
