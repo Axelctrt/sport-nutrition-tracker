@@ -17,8 +17,12 @@ function RouterGuard({ when }: UnsavedChangesGuardProps) {
       description="Les modifications non enregistrées seront perdues."
       confirmLabel="Quitter"
       cancelLabel="Continuer la modification"
-      onCancel={() => blocker.reset()}
-      onConfirm={() => blocker.proceed()}
+      onCancel={() => {
+        if (blocker.state === 'blocked') blocker.reset();
+      }}
+      onConfirm={() => {
+        if (blocker.state === 'blocked') blocker.proceed();
+      }}
     />
   );
 }
