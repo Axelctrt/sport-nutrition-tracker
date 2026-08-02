@@ -1,8 +1,17 @@
 # SportPilot 0.37.0
 
-SportPilot 0.37.0 est la release candidate issue de `develop`. Elle ajoute le suivi privé des photos de progression et consolide plusieurs parcours mobiles validés en recette réelle. La version de production reste 0.36.0 tant qu’une publication séparée n’a pas été autorisée.
+SportPilot 0.37.0 est la version stable publiée en production depuis `main`.
+La PR #21 a livré `develop` dans `main` au commit
+`84fea3d49e68c7d190c00d505502a5c4aa2e672a`.
 
-L’application reste mobile-first, local-first, utilisable hors ligne et installable en PWA.
+- Production : `https://sportpilot-pages.pages.dev`
+- Tag annoté : `v0.37.0`
+- Release GitHub stable :
+  `https://github.com/Axelctrt/sport-nutrition-tracker/releases/tag/v0.37.0`
+- Migration D1 ajoutée ou exécutée pour cette release : aucune
+
+L’application reste mobile-first, local-first, utilisable hors ligne et
+installable en PWA.
 
 ## Principales évolutions
 
@@ -25,7 +34,9 @@ L’application reste mobile-first, local-first, utilisable hors ligne et instal
 - carte Sport journalière compacte ;
 - calories et trois macronutriments visibles sur l’Accueil.
 
-Le rapprochement visuel du statut de disponibilité avec le champ d’identifiant public reste une amélioration non bloquante planifiée pour une passe UX ultérieure.
+Le rapprochement visuel du statut de disponibilité avec le champ d’identifiant
+public reste une amélioration non bloquante planifiée pour une passe UX
+ultérieure.
 
 ## Confidentialité
 
@@ -45,7 +56,7 @@ Le rapprochement visuel du statut de disponibilité avec le champ d’identifian
 - Migration D1 ajoutée par 0.37.0 : aucune.
 - Les photos et leurs actifs restent dans l’espace de données local ouvert.
 
-## Contrôles de release candidate
+## Contrôles de publication
 
 ```text
 npm run check
@@ -55,8 +66,13 @@ npm run test:e2e:pwa
 npm audit
 ```
 
-Aucun tag, aucune fusion vers `main` et aucun déploiement de production ne sont réalisés par cette préparation.
+La version, le commit publié, le tag annoté, la release GitHub stable et la
+production ont été validés sur le même état de code.
 
 ## Documentation
 
-Le référentiel canonique commence dans [`docs/INDEX.md`](docs/INDEX.md). Les règles applicables aux agents sont dans [`AGENTS.md`](AGENTS.md), le détail de la candidate dans [`RELEASE-NOTES-0.37.0.md`](RELEASE-NOTES-0.37.0.md) et l’historique synthétique dans [`CHANGELOG.md`](CHANGELOG.md).
+Le référentiel canonique commence dans [`docs/INDEX.md`](docs/INDEX.md). Les
+règles applicables aux agents sont dans [`AGENTS.md`](AGENTS.md), l’historique
+synthétique dans [`CHANGELOG.md`](CHANGELOG.md) et les preuves de préparation
+dans les documents d’archive, notamment
+[`RELEASE-NOTES-0.37.0.md`](RELEASE-NOTES-0.37.0.md).
