@@ -5,8 +5,8 @@ import type { WorkoutTemplateSummary } from '@/application/strength/workoutTempl
 import { editWorkoutTemplatePath } from '@/app/routePaths';
 import { ActionMenu } from '@/shared/ui/ActionMenu';
 import { Button } from '@/shared/ui/Button';
-import { Card } from '@/shared/ui/Card';
 import { ConfirmationDialog } from '@/shared/ui/ConfirmationDialog';
+import { ExpandableCard } from '@/shared/ui/ExpandableCard';
 import { cn } from '@/shared/utils/cn';
 
 interface WorkoutTemplateCardProps {
@@ -20,12 +20,35 @@ interface WorkoutTemplateCardProps {
 export function WorkoutTemplateCard({ summary, busy = false, onStart, onDuplicate, onArchiveChange }: WorkoutTemplateCardProps) {
   const { template, exerciseCount } = summary;
   const [confirmationOpen, setConfirmationOpen] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const details = template.description || template.notes ? (
+    <div className="grid gap-4">
+      {template.description ? (
+        <section aria-label="Description de la séance">
+          <p className="text-sm font-semibold text-slate-950 dark:text-white">Description</p>
+          <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">{template.description}</p>
+        </section>
+      ) : null}
+      {template.notes ? (
+        <section aria-label="Notes de la séance">
+          <p className="text-sm font-semibold text-slate-950 dark:text-white">Notes de la séance</p>
+          <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-slate-600 dark:text-slate-300">{template.notes}</p>
+        </section>
+      ) : null}
+    </div>
+  ) : null;
 
   return (
     <>
-      <Card className={cn('p-4 sm:p-5', template.isArchived && 'opacity-70')}>
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
+      <ExpandableCard
+        className={cn(template.isArchived && 'opacity-70')}
+        expanded={expanded}
+        onExpandedChange={setExpanded}
+        expandLabel={`Afficher les détails de ${template.name}`}
+        collapseLabel={`Masquer les détails de ${template.name}`}
+        details={details}
+        summary={(
+          <div>
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="break-words text-lg font-semibold text-slate-950 dark:text-white">{template.name}</h2>
               {template.isArchived ? <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-semibold dark:bg-slate-700">Archivée</span> : null}
@@ -33,8 +56,16 @@ export function WorkoutTemplateCard({ summary, busy = false, onStart, onDuplicat
             <p className="mt-1 text-sm font-medium text-brand-700 dark:text-brand-300">
               {exerciseCount} exercice{exerciseCount > 1 ? 's' : ''}
             </p>
-          </div>
 
+            {!template.isArchived ? (
+              <Button className="mt-4 w-full sm:w-auto" disabled={busy} onClick={() => void onStart(template.id)}>
+                <Play aria-hidden="true" className="size-4" />
+                {busy ? 'Démarrage…' : 'Démarrer la séance'}
+              </Button>
+            ) : null}
+          </div>
+        )}
+        actions={(
           <ActionMenu label={`Actions pour ${template.name}`} width="wide">
             <Link to={editWorkoutTemplatePath(template.id)} className="inline-flex min-h-10 w-full items-center gap-2 rounded-xl px-3 text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800">
               <Pencil aria-hidden="true" className="size-4" />
@@ -49,23 +80,8 @@ export function WorkoutTemplateCard({ summary, busy = false, onStart, onDuplicat
               {template.isArchived ? 'Réactiver' : 'Archiver'}
             </Button>
           </ActionMenu>
-        </div>
-
-        {template.description ? <p className="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-300">{template.description}</p> : null}
-        {template.notes ? (
-          <details className="mt-3 rounded-xl border border-slate-200 px-3 py-2 dark:border-slate-800">
-            <summary className="cursor-pointer text-sm font-semibold text-slate-700 dark:text-slate-200">Notes de la séance</summary>
-            <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-600 dark:text-slate-300">{template.notes}</p>
-          </details>
-        ) : null}
-
-        {!template.isArchived ? (
-          <Button className="mt-4 w-full sm:w-auto" disabled={busy} onClick={() => void onStart(template.id)}>
-            <Play aria-hidden="true" className="size-4" />
-            {busy ? 'Démarrage…' : 'Démarrer la séance'}
-          </Button>
-        ) : null}
-      </Card>
+        )}
+      />
 
       <ConfirmationDialog
         open={confirmationOpen}

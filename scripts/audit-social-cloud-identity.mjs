@@ -44,9 +44,17 @@ for (const value of [
 ]) {
   need(reconciliation, value, 'réconciliation d’identité incomplète');
 }
-for (const value of ['Mon profil', 'copyIdentity', 'Vérifier disponibilité', 'Enregistrer']) {
+for (const value of [
+  '>Profil</h2>',
+  'copyIdentity',
+  'SOCIAL_HANDLE_AVAILABILITY_DEBOUNCE_MS = 350',
+  'aria-describedby="social-handle-status"',
+  'canSaveIdentity',
+  'Enregistrer',
+]) {
   need(page, value, 'interface identité cloud incomplète');
 }
+reject(page, 'Vérifier disponibilité', 'ancien contrôle manuel de disponibilité encore présent');
 
 reject(
   reconciliation,

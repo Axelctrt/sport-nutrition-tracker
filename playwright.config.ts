@@ -64,6 +64,7 @@ export default defineConfig({
       testMatch: [
         'responsive-universal.spec.ts',
         'performance-glass-0.34.0.spec.ts',
+        'progress-photos.spec.ts',
       ],
       use: {
         ...devices['Desktop Chrome'],
@@ -80,6 +81,7 @@ export default defineConfig({
       testMatch: [
         'responsive-universal.spec.ts',
         'performance-glass-0.34.0.spec.ts',
+        'progress-photos.spec.ts',
       ],
       use: {
         ...devices['Desktop Chrome'],

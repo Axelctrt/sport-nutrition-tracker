@@ -12,21 +12,24 @@ import { WeightSyncCoordinator } from '@/app/sync/WeightSyncCoordinator';
 import { WeeklyMissionCompletionNotifier } from "@/app/rewards/WeeklyMissionCompletionNotifier";
 import '@/features/onboarding/styles/onboardingMotion.css';
 import { PwaUpdatePrompt } from "@/pwa/PwaUpdatePrompt";
+import { GlobalBannerCoordinatorProvider } from '@/shared/global-banner/GlobalBannerCoordinator';
 
 export function App() {
   return (
     <DataSpaceAccountGate>
       <AppProviders>
-        <SocialIdentityAccountGate>
-          <RouterProvider router={router} />
-          <OnboardingCompletionNotifier />
-          <RoutineReminderNotifier />
-          <RewardUnlockNotifier />
-          <WeeklyMissionCompletionNotifier />
-          <WeightSyncCoordinator />
-          <AutomaticSyncCoordinator />
-          <PwaUpdatePrompt />
-        </SocialIdentityAccountGate>
+        <GlobalBannerCoordinatorProvider>
+          <SocialIdentityAccountGate>
+            <RouterProvider router={router} />
+            <OnboardingCompletionNotifier />
+            <RoutineReminderNotifier />
+            <RewardUnlockNotifier />
+            <WeeklyMissionCompletionNotifier />
+            <WeightSyncCoordinator />
+            <AutomaticSyncCoordinator />
+            <PwaUpdatePrompt />
+          </SocialIdentityAccountGate>
+        </GlobalBannerCoordinatorProvider>
       </AppProviders>
     </DataSpaceAccountGate>
   );

@@ -59,6 +59,8 @@ const routeMetadata: RouteMetadata[] = [
   { pattern: routePaths.addActivity, title: 'Ajouter une activité' },
   { pattern: routePaths.activities, title: 'Sport' },
   { pattern: routePaths.progression, title: 'Progression' },
+  { pattern: routePaths.progressPhotoCompare, title: 'Comparer les photos de progression' },
+  { pattern: routePaths.progressPhotos, title: 'Photos de progression' },
   { pattern: routePaths.weight, title: 'Poids' },
   { pattern: routePaths.history, title: 'Historique général' },
   { pattern: routePaths.analytics, title: 'Analyses' },

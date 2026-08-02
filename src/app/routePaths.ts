@@ -54,6 +54,8 @@ export const routePaths = {
   weight: '/weight',
   history: '/history',
   progression: '/progression',
+  progressPhotos: '/progression/photos',
+  progressPhotoCompare: '/progression/photos/compare',
   analytics: '/analytics',
   reports: '/reports',
   goals: '/goals',
@@ -75,7 +77,6 @@ export function strengthExerciseHistoryPath(exerciseId: string): string {
   return routePaths.strengthExerciseHistory.replace(':exerciseId', encodeURIComponent(exerciseId));
 }
 
-
 export function workoutSessionPath(sessionId: string): string {
   return routePaths.workoutSession.replace(':sessionId', encodeURIComponent(sessionId));
 }
@@ -91,7 +92,6 @@ export function editActivityPath(activityId: string): string {
 export function editRecipePath(recipeId: string): string {
   return routePaths.editRecipe.replace(':recipeId', encodeURIComponent(recipeId));
 }
-
 
 export function foodJournalPath(date: string): string {
   return `${routePaths.food}?date=${encodeURIComponent(date)}`;
@@ -195,7 +195,6 @@ export function addRecipeToJournalPath(
   const path = routePaths.addRecipeToJournal.replace(':recipeId', encodeURIComponent(recipeId));
   return `${path}?${params.toString()}`;
 }
-
 
 export function favoriteMealsForMealPath(date: string, slot: string): string {
   const params = new URLSearchParams({ date, slot });

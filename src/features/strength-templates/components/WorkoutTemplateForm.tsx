@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowDown, ArrowUp, Copy, Layers3, Plus, Save, Trash2, Unlink } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronDown, Copy, Layers3, Plus, Save, Trash2, Unlink } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFieldArray, useForm, useWatch } from 'react-hook-form';
 import type { ExerciseDefinition, ExerciseGroupType, StrengthTrackingMode } from '@/domain/models/strength';
@@ -42,6 +42,35 @@ const optionalNumberRegistration = {
   setValueAs: (value: string) => value === '' ? undefined : Number(value),
 };
 
+function exerciseSummary(
+  exercise: WorkoutTemplateFormValues['exercises'][number] | undefined,
+  trackingMode: StrengthTrackingMode,
+): string {
+  if (!exercise) return 'Réglages à compléter';
+  const parts = [`${exercise.plannedSets} série${exercise.plannedSets > 1 ? 's' : ''}`];
+  if (trackingMode === 'duration') {
+    if (exercise.targetDurationSeconds) parts.push(`${exercise.targetDurationSeconds} s`);
+  } else if (trackingMode === 'distance') {
+    if (exercise.targetDistanceMeters) parts.push(`${exercise.targetDistanceMeters} m`);
+  } else {
+    parts.push(
+      exercise.minRepetitions === exercise.maxRepetitions
+        ? `${exercise.minRepetitions} répétitions`
+        : `${exercise.minRepetitions}–${exercise.maxRepetitions} répétitions`,
+    );
+  }
+  if (
+    (trackingMode === 'loadRepetitions'
+      || trackingMode === 'bodyweightRepetitions'
+      || trackingMode === 'assistedRepetitions')
+    && exercise.targetLoadKg !== undefined
+  ) {
+    parts.push(`${exercise.targetLoadKg} kg`);
+  }
+  if (exercise.restSeconds !== undefined) parts.push(`repos ${exercise.restSeconds} s`);
+  return parts.join(' · ');
+}
+
 export function WorkoutTemplateForm({
   initialValues,
   exerciseDefinitions,
@@ -68,6 +97,14 @@ export function WorkoutTemplateForm({
   const { fields, append, remove, move } = useFieldArray({ control, name: 'exercises' });
   const watchedExercises = useWatch({ control, name: 'exercises' });
   const [exerciseQuery, setExerciseQuery] = useState(initialExerciseQuery);
+  const [expandedExerciseIndex, setExpandedExerciseIndex] = useState<number | undefined>(
+    initialValues.exercises.length > 0 ? 0 : undefined,
+  );
+  const [selectedExerciseFieldIds, setSelectedExerciseFieldIds] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const [newGroupType, setNewGroupType] = useState<ExerciseGroupType>('superset');
+  const [groupSelectionError, setGroupSelectionError] = useState<string>();
   const filteredExerciseDefinitions = useMemo(
     () => filterExerciseDefinitions(exerciseDefinitions, {
       query: exerciseQuery,
@@ -99,6 +136,8 @@ export function WorkoutTemplateForm({
 
   useEffect(() => {
     reset(initialValues);
+    setExpandedExerciseIndex(initialValues.exercises.length > 0 ? 0 : undefined);
+    setSelectedExerciseFieldIds(new Set());
   }, [initialValues, reset]);
 
   useEffect(() => {
@@ -107,14 +146,26 @@ export function WorkoutTemplateForm({
 
   useEffect(() => {
     if (!highlightedExerciseId) return;
-    document
-      .getElementById(`workout-template-exercise-card-${highlightedExerciseId}`)
-      ?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
-  }, [highlightedExerciseId]);
+    const highlightedIndex = watchedExercises?.findIndex(
+      (exercise) => exercise?.exerciseDefinitionId === highlightedExerciseId,
+    ) ?? -1;
+    if (highlightedIndex >= 0) setExpandedExerciseIndex(highlightedIndex);
+    window.requestAnimationFrame(() => {
+      document
+        .getElementById(`workout-template-exercise-card-${highlightedExerciseId}`)
+        ?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+    });
+  }, [highlightedExerciseId, watchedExercises]);
 
   useEffect(() => {
     if (submitCount > 0 && Object.keys(errors).length > 0 && formRef.current) {
-      focusFirstInvalidField(formRef.current);
+      const firstExerciseError = Array.isArray(errors.exercises)
+        ? errors.exercises.findIndex(Boolean)
+        : -1;
+      if (firstExerciseError >= 0) setExpandedExerciseIndex(firstExerciseError);
+      window.requestAnimationFrame(() => {
+        if (formRef.current) focusFirstInvalidField(formRef.current);
+      });
     }
   }, [errors, submitCount]);
 
@@ -162,34 +213,33 @@ export function WorkoutTemplateForm({
     }
   };
 
-  const assignGroup = (index: number, groupId: string) => {
-    if (!groupId) {
-      clearGroupAt(index);
+  const createSelectedGroup = () => {
+    const selectedIndexes = fields.flatMap((field, index) => (
+      selectedExerciseFieldIds.has(field.id) ? [index] : []
+    ));
+    const expectedCount = newGroupType === 'superset' ? 2 : newGroupType === 'triSet' ? 3 : undefined;
+    if (
+      (expectedCount !== undefined && selectedIndexes.length !== expectedCount)
+      || (newGroupType === 'circuit' && selectedIndexes.length < 2)
+    ) {
+      setGroupSelectionError(
+        newGroupType === 'circuit'
+          ? 'Sélectionne au moins 2 exercices pour créer un circuit.'
+          : `Sélectionne exactement ${expectedCount} exercices pour créer ce groupe.`,
+      );
       return;
     }
-    const sourceIndex = getValues('exercises').findIndex((exercise) => exercise.exerciseGroupId === groupId);
-    const source = sourceIndex >= 0 ? getValues(`exercises.${sourceIndex}`) : undefined;
-    setValue(`exercises.${index}.exerciseGroupId`, groupId, { shouldDirty: true, shouldValidate: true });
-    setValue(`exercises.${index}.exerciseGroupType`, source?.exerciseGroupType ?? 'superset', { shouldDirty: true });
-    setValue(`exercises.${index}.exerciseGroupName`, source?.exerciseGroupName ?? '', { shouldDirty: true });
-    setValue(`exercises.${index}.exerciseGroupRounds`, source?.exerciseGroupRounds ?? 3, { shouldDirty: true });
-    setValue(`exercises.${index}.exerciseGroupRestBetweenExercisesSeconds`, source?.exerciseGroupRestBetweenExercisesSeconds ?? 0, { shouldDirty: true });
-    setValue(`exercises.${index}.exerciseGroupRestBetweenRoundsSeconds`, source?.exerciseGroupRestBetweenRoundsSeconds ?? 120, { shouldDirty: true });
-  };
-
-  const createGroup = (index: number) => {
-    const exercises = getValues('exercises');
-    const partnerIndex = exercises.findIndex((exercise, candidateIndex) => candidateIndex !== index && !exercise.exerciseGroupId);
-    if (partnerIndex < 0) return;
-    const groupId = `group-${Date.now()}-${index}`;
-    for (const memberIndex of [index, partnerIndex]) {
+    const groupId = `group-${Date.now()}-${selectedIndexes.join('-')}`;
+    for (const memberIndex of selectedIndexes) {
       setValue(`exercises.${memberIndex}.exerciseGroupId`, groupId, { shouldDirty: true, shouldValidate: true });
-      setValue(`exercises.${memberIndex}.exerciseGroupType`, 'superset', { shouldDirty: true });
+      setValue(`exercises.${memberIndex}.exerciseGroupType`, newGroupType, { shouldDirty: true });
       setValue(`exercises.${memberIndex}.exerciseGroupName`, '', { shouldDirty: true });
       setValue(`exercises.${memberIndex}.exerciseGroupRounds`, 3, { shouldDirty: true });
       setValue(`exercises.${memberIndex}.exerciseGroupRestBetweenExercisesSeconds`, 0, { shouldDirty: true });
       setValue(`exercises.${memberIndex}.exerciseGroupRestBetweenRoundsSeconds`, 120, { shouldDirty: true });
     }
+    setSelectedExerciseFieldIds(new Set());
+    setGroupSelectionError(undefined);
   };
 
   const dissolveGroup = (groupId: string) => {
@@ -211,13 +261,38 @@ export function WorkoutTemplateForm({
     }
   };
 
-  const addExercise = () => {
-    const firstAvailable = filteredExerciseDefinitions.find(
-      (exercise) => !exercise.isArchived,
-    );
+  const addExercise = (exerciseDefinitionId: string) => {
     append({
       ...defaultWorkoutTemplateExerciseValues,
-      exerciseDefinitionId: firstAvailable?.id ?? '',
+      exerciseDefinitionId,
+    });
+    setExpandedExerciseIndex(fields.length);
+    setExerciseQuery('');
+  };
+
+  const removeExercise = (index: number) => {
+    const removedFieldId = fields[index]?.id;
+    remove(index);
+    if (removedFieldId) {
+      setSelectedExerciseFieldIds((current) => {
+        const next = new Set(current);
+        next.delete(removedFieldId);
+        return next;
+      });
+    }
+    setExpandedExerciseIndex((current) => {
+      if (current === undefined) return undefined;
+      if (current === index) return undefined;
+      return current > index ? current - 1 : current;
+    });
+  };
+
+  const moveExercise = (index: number, destination: number) => {
+    move(index, destination);
+    setExpandedExerciseIndex((current) => {
+      if (current === index) return destination;
+      if (current === destination) return index;
+      return current;
     });
   };
 
@@ -249,15 +324,9 @@ export function WorkoutTemplateForm({
       </CollapsibleSection>
 
       <section aria-labelledby="workout-template-exercises-title">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 id="workout-template-exercises-title" className="text-xl font-semibold text-slate-950 dark:text-white">Exercices prévus</h2>
-            <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">L’ordre défini ici sera repris au démarrage d’une séance.</p>
-          </div>
-          <Button type="button" variant="secondary" onClick={addExercise} disabled={filteredExerciseDefinitions.length === 0}>
-            <Plus aria-hidden="true" className="size-4" />
-            Ajouter un exercice
-          </Button>
+        <div>
+          <h2 id="workout-template-exercises-title" className="text-xl font-semibold text-slate-950 dark:text-white">Exercices prévus</h2>
+          <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Recherche puis ajoute un exercice. Tu pourras ensuite ajuster ses réglages.</p>
         </div>
 
         <div className="mt-4">
@@ -273,6 +342,34 @@ export function WorkoutTemplateForm({
             placeholder="Rechercher un exercice à ajouter"
           />
         </div>
+
+        {normalizeExerciseName(exerciseQuery) && filteredExerciseDefinitions.length > 0 ? (
+          <ul
+            aria-label="Résultats de recherche d’exercices"
+            className="mt-2 divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-white dark:divide-slate-800 dark:border-slate-800 dark:bg-slate-900"
+          >
+            {filteredExerciseDefinitions
+              .filter((exercise) => !exercise.isArchived)
+              .slice(0, 8)
+              .map((exercise) => (
+                <li key={exercise.id} className="flex items-center justify-between gap-3 p-3">
+                  <span className="min-w-0 truncate text-sm font-semibold text-slate-900 dark:text-white">
+                    {exercise.name}
+                  </span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    aria-label={`Ajouter ${exercise.name}`}
+                    onClick={() => addExercise(exercise.id)}
+                  >
+                    <Plus aria-hidden="true" className="size-4" />
+                    Ajouter
+                  </Button>
+                </li>
+              ))}
+          </ul>
+        ) : null}
 
         {normalizeExerciseName(exerciseQuery)
           && filteredExerciseDefinitions.length === 0
@@ -310,10 +407,6 @@ export function WorkoutTemplateForm({
           </div>
         ) : null}
 
-        <InlineNotice className="mt-4" tone="info" title="Supersets, tri-sets et circuits">
-          Groupe les exercices, règle les tours et les temps de transition. Les séries et statistiques restent propres à chaque exercice.
-        </InlineNotice>
-
         {errors.exercises?.root?.message ? <p role="alert" className="mt-3 text-sm font-medium text-red-700 dark:text-red-300">{errors.exercises.root.message}</p> : null}
         {typeof errors.exercises?.message === 'string' ? <p role="alert" className="mt-3 text-sm font-medium text-red-700 dark:text-red-300">{errors.exercises.message}</p> : null}
 
@@ -334,8 +427,10 @@ export function WorkoutTemplateForm({
               || trackingMode === 'assistedRepetitions';
             const currentGroup = groups.find((group) => group.id === watchedExercises?.[index]?.exerciseGroupId);
             const groupPosition = currentGroup?.memberIndexes.indexOf(index) ?? -1;
-            const isGroupLeader = currentGroup?.memberIndexes[0] === index;
-            const hasStandalonePartner = (watchedExercises ?? []).some((exercise, candidateIndex) => candidateIndex !== index && !exercise?.exerciseGroupId);
+            const definition = exerciseDefinitions.find(
+              (exercise) => exercise.id === watchedExercises?.[index]?.exerciseDefinitionId,
+            );
+            const isExpanded = expandedExerciseIndex === index;
             return (
               <Card
                 key={field.id}
@@ -345,29 +440,66 @@ export function WorkoutTemplateForm({
                     : undefined
                 }
                 className={cn(
-                  'p-5 transition-colors sm:p-6 motion-reduce:transition-none',
+                  'p-3 transition-colors sm:p-4 motion-reduce:transition-none',
                   highlightedExerciseId
                     && watchedExercises?.[index]?.exerciseDefinitionId
                       === highlightedExerciseId
                     && 'ring-2 ring-brand-500 bg-brand-50 dark:bg-brand-950/30',
                 )}
               >
-                <div className="flex items-start justify-between gap-4">
-                  <div><h3 className="font-semibold text-slate-950 dark:text-white">{currentGroup ? `${currentGroup.name || exerciseGroupTypeLabel(currentGroup.type)} · ${currentGroup.memberIndexes.length > 1 ? `${String.fromCharCode(65 + groups.indexOf(currentGroup))}${groupPosition + 1}` : 'groupe incomplet'}` : `Exercice ${index + 1}`}</h3>{currentGroup ? <p className="mt-1 text-xs font-medium text-brand-700 dark:text-brand-300">{currentGroup.memberIndexes.length} exercice{currentGroup.memberIndexes.length > 1 ? 's' : ''} dans le groupe</p> : null}</div>
-                  <div className="flex gap-1">
-                    <Button type="button" size="sm" variant="ghost" aria-label={`Monter l’exercice ${index + 1}`} disabled={index === 0} onClick={() => move(index, index - 1)}>
+                <div className="flex items-start gap-2">
+                  <button
+                    type="button"
+                    className="flex min-h-11 min-w-0 flex-1 items-start justify-between gap-3 rounded-xl px-2 py-1.5 text-left hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                    aria-expanded={isExpanded}
+                    aria-controls={`workout-template-exercise-settings-${field.id}`}
+                    aria-label={`${isExpanded ? 'Réduire' : 'Développer'} ${definition?.name ?? `l’exercice ${index + 1}`}`}
+                    onClick={() => setExpandedExerciseIndex(isExpanded ? undefined : index)}
+                  >
+                    <span className="min-w-0">
+                      <span className="block truncate font-semibold text-slate-950 dark:text-white">
+                        {definition?.name ?? `Exercice ${index + 1}`}
+                      </span>
+                      <span className="mt-1 block text-xs leading-5 text-slate-600 dark:text-slate-300">
+                        {exerciseSummary(watchedExercises?.[index], trackingMode)}
+                      </span>
+                      {currentGroup ? (
+                        <span className="mt-1 block text-xs font-medium text-brand-700 dark:text-brand-300">
+                          {currentGroup.name || exerciseGroupTypeLabel(currentGroup.type)}
+                          {' · '}
+                          {currentGroup.memberIndexes.length > 1
+                            ? `${String.fromCharCode(65 + groups.indexOf(currentGroup))}${groupPosition + 1}`
+                            : 'groupe incomplet'}
+                        </span>
+                      ) : null}
+                    </span>
+                    <ChevronDown
+                      aria-hidden="true"
+                      className={cn(
+                        'mt-1 size-5 shrink-0 text-slate-500 transition-transform motion-reduce:transition-none',
+                        isExpanded && 'rotate-180',
+                      )}
+                    />
+                  </button>
+                  <div className="flex shrink-0 gap-1">
+                    <Button type="button" size="sm" variant="ghost" aria-label={`Monter l’exercice ${index + 1}`} disabled={index === 0} onClick={() => moveExercise(index, index - 1)}>
                       <ArrowUp aria-hidden="true" className="size-4" />
                     </Button>
-                    <Button type="button" size="sm" variant="ghost" aria-label={`Descendre l’exercice ${index + 1}`} disabled={index === fields.length - 1} onClick={() => move(index, index + 1)}>
+                    <Button type="button" size="sm" variant="ghost" aria-label={`Descendre l’exercice ${index + 1}`} disabled={index === fields.length - 1} onClick={() => moveExercise(index, index + 1)}>
                       <ArrowDown aria-hidden="true" className="size-4" />
                     </Button>
-                    <Button type="button" size="sm" variant="danger" aria-label={`Supprimer l’exercice ${index + 1}`} onClick={() => remove(index)}>
+                    <Button type="button" size="sm" variant="danger" aria-label={`Supprimer l’exercice ${index + 1}`} onClick={() => removeExercise(index)}>
                       <Trash2 aria-hidden="true" className="size-4" />
                     </Button>
                   </div>
                 </div>
 
-                <div className="mt-5 grid gap-5 lg:grid-cols-2">
+                {isExpanded ? (
+                <div
+                  id={`workout-template-exercise-settings-${field.id}`}
+                  className="mt-4 border-t border-slate-200 pt-4 dark:border-slate-800"
+                >
+                <div className="grid gap-5 lg:grid-cols-2">
                   <FormField id={`workout-template-exercise-${index}`} label="Exercice" error={exerciseErrors?.exerciseDefinitionId?.message} required>
                     <select id={`workout-template-exercise-${index}`} aria-invalid={Boolean(exerciseErrors?.exerciseDefinitionId)} className={inputClassName} {...register(`exercises.${index}.exerciseDefinitionId`)}>
                       <option value="">Choisir un exercice</option>
@@ -393,14 +525,9 @@ export function WorkoutTemplateForm({
                     </>
                   ) : null}
                   {usesLoad ? (
-                    <>
-                      <FormField id={`workout-template-target-load-${index}`} label={targetLoadLabel(trackingMode)} error={exerciseErrors?.targetLoadKg?.message}>
-                        <input id={`workout-template-target-load-${index}`} aria-invalid={Boolean(exerciseErrors?.targetLoadKg)} type="number" min="0" step="0.25" inputMode="decimal" className={inputClassName} {...register(`exercises.${index}.targetLoadKg`, optionalNumberRegistration)} />
-                      </FormField>
-                      <FormField id={`workout-template-increment-${index}`} label={incrementLabel(trackingMode)} error={exerciseErrors?.loadIncrementKg?.message} required>
-                        <input id={`workout-template-increment-${index}`} aria-invalid={Boolean(exerciseErrors?.loadIncrementKg)} type="number" min="0.25" step="0.25" inputMode="decimal" className={inputClassName} {...register(`exercises.${index}.loadIncrementKg`, { valueAsNumber: true })} />
-                      </FormField>
-                    </>
+                    <FormField id={`workout-template-target-load-${index}`} label={targetLoadLabel(trackingMode)} error={exerciseErrors?.targetLoadKg?.message}>
+                      <input id={`workout-template-target-load-${index}`} aria-invalid={Boolean(exerciseErrors?.targetLoadKg)} type="number" min="0" step="0.25" inputMode="decimal" className={inputClassName} {...register(`exercises.${index}.targetLoadKg`, optionalNumberRegistration)} />
+                    </FormField>
                   ) : null}
                   {trackingMode === 'duration' ? (
                     <FormField id={`workout-template-target-duration-${index}`} label="Durée cible (secondes)" error={exerciseErrors?.targetDurationSeconds?.message}>
@@ -412,85 +539,19 @@ export function WorkoutTemplateForm({
                       <input id={`workout-template-target-distance-${index}`} aria-invalid={Boolean(exerciseErrors?.targetDistanceMeters)} type="number" min="0.1" step="0.1" inputMode="decimal" className={inputClassName} {...register(`exercises.${index}.targetDistanceMeters`, optionalNumberRegistration)} />
                     </FormField>
                   ) : null}
+                  <FormField id={`workout-template-rest-${index}`} label="Repos principal (secondes)" error={exerciseErrors?.restSeconds?.message}>
+                    <input id={`workout-template-rest-${index}`} aria-invalid={Boolean(exerciseErrors?.restSeconds)} type="number" min="0" max="1800" inputMode="numeric" className={inputClassName} {...register(`exercises.${index}.restSeconds`, optionalNumberRegistration)} />
+                  </FormField>
                 </div>
 
-                <div className="mt-5 rounded-2xl border border-brand-100 bg-brand-50/60 p-4 dark:border-brand-900 dark:bg-brand-950/20">
-                  <div className="flex items-center gap-2">
-                    <Layers3 aria-hidden="true" className="size-4 text-brand-700 dark:text-brand-300" />
-                    <h4 className="font-semibold text-slate-950 dark:text-white">Organisation en groupe</h4>
-                  </div>
-                  <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
-                    <div>
-                      <label htmlFor={`workout-template-group-${index}`} className="text-sm font-semibold text-slate-700 dark:text-slate-200">Groupe de l’exercice</label>
-                      <select
-                        id={`workout-template-group-${index}`}
-                        className={`${inputClassName} mt-1`}
-                        value={watchedExercises?.[index]?.exerciseGroupId ?? ''}
-                        onChange={(event) => assignGroup(index, event.target.value)}
-                      >
-                        <option value="">Exercice indépendant</option>
-                        {groups.map((group, groupIndex) => (
-                          <option key={group.id} value={group.id}>{group.name || `${exerciseGroupTypeLabel(group.type)} ${String.fromCharCode(65 + groupIndex)}`}</option>
-                        ))}
-                      </select>
-                      {exerciseErrors?.exerciseGroupId?.message ? <p role="alert" className="mt-1 text-sm font-medium text-red-700 dark:text-red-300">{exerciseErrors.exerciseGroupId.message}</p> : null}
-                    </div>
-                    {!currentGroup ? (
-                      <Button type="button" variant="secondary" className="self-end" disabled={!hasStandalonePartner} onClick={() => createGroup(index)}>
-                        <Layers3 aria-hidden="true" className="size-4" />
-                        Créer un superset
-                      </Button>
-                    ) : (
-                      <Button type="button" variant="secondary" className="self-end" onClick={() => clearGroupAt(index)}>
-                        <Unlink aria-hidden="true" className="size-4" />
-                        Retirer du groupe
-                      </Button>
-                    )}
-                  </div>
-
-                  {currentGroup && isGroupLeader ? (
-                    <div className="mt-4 border-t border-brand-100 pt-4 dark:border-brand-900">
-                      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                        <FormField id={`workout-template-group-type-${index}`} label="Type de groupe">
-                          <select id={`workout-template-group-type-${index}`} className={inputClassName} value={watchedExercises?.[index]?.exerciseGroupType ?? 'superset'} onChange={(event) => updateGroup(currentGroup.id, 'exerciseGroupType', event.target.value)}>
-                            <option value="superset">Superset · 2 exercices</option>
-                            <option value="triSet">Tri-set · 3 exercices</option>
-                            <option value="circuit">Circuit · 2 exercices ou plus</option>
-                          </select>
-                        </FormField>
-                        <FormField id={`workout-template-group-name-${index}`} label="Nom facultatif">
-                          <input id={`workout-template-group-name-${index}`} className={inputClassName} value={watchedExercises?.[index]?.exerciseGroupName ?? ''} onChange={(event) => updateGroup(currentGroup.id, 'exerciseGroupName', event.target.value)} placeholder="Ex. Dos / pectoraux" />
-                        </FormField>
-                        <FormField id={`workout-template-group-rounds-${index}`} label="Nombre de tours">
-                          <input id={`workout-template-group-rounds-${index}`} type="number" min="1" max="20" inputMode="numeric" className={inputClassName} value={watchedExercises?.[index]?.exerciseGroupRounds ?? 3} onChange={(event) => updateGroup(currentGroup.id, 'exerciseGroupRounds', Number(event.target.value))} />
-                        </FormField>
-                        <FormField id={`workout-template-group-between-${index}`} label="Repos entre exercices (s)">
-                          <input id={`workout-template-group-between-${index}`} type="number" min="0" max="1800" inputMode="numeric" className={inputClassName} value={watchedExercises?.[index]?.exerciseGroupRestBetweenExercisesSeconds ?? 0} onChange={(event) => updateGroup(currentGroup.id, 'exerciseGroupRestBetweenExercisesSeconds', Number(event.target.value))} />
-                        </FormField>
-                        <FormField id={`workout-template-group-round-rest-${index}`} label="Repos entre tours (s)">
-                          <input id={`workout-template-group-round-rest-${index}`} type="number" min="0" max="1800" inputMode="numeric" className={inputClassName} value={watchedExercises?.[index]?.exerciseGroupRestBetweenRoundsSeconds ?? 120} onChange={(event) => updateGroup(currentGroup.id, 'exerciseGroupRestBetweenRoundsSeconds', Number(event.target.value))} />
-                        </FormField>
-                      </div>
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        <Button type="button" size="sm" variant="secondary" onClick={() => duplicateGroup(currentGroup.id)}>
-                          <Copy aria-hidden="true" className="size-4" />
-                          Dupliquer le groupe
-                        </Button>
-                        <Button type="button" size="sm" variant="dangerGhost" onClick={() => dissolveGroup(currentGroup.id)}>
-                          <Unlink aria-hidden="true" className="size-4" />
-                          Dissoudre le groupe
-                        </Button>
-                      </div>
-                    </div>
-                  ) : null}
-                </div>
-
-                <details className="mt-5 rounded-xl border border-slate-200 px-3 py-2 dark:border-slate-800" open={Boolean(exerciseErrors?.restSeconds || exerciseErrors?.maximumRecommendedRpe || exerciseErrors?.notes) || undefined}>
+                <details className="mt-5 rounded-xl border border-slate-200 px-3 py-2 dark:border-slate-800" open={Boolean(exerciseErrors?.loadIncrementKg || exerciseErrors?.maximumRecommendedRpe || exerciseErrors?.notes) || undefined}>
                   <summary className="cursor-pointer text-sm font-semibold text-slate-700 dark:text-slate-200">Réglages avancés</summary>
                   <div className="mt-4 grid gap-5 sm:grid-cols-2">
-                    <FormField id={`workout-template-rest-${index}`} label="Repos (secondes)" error={exerciseErrors?.restSeconds?.message}>
-                      <input id={`workout-template-rest-${index}`} aria-invalid={Boolean(exerciseErrors?.restSeconds)} type="number" min="0" max="1800" inputMode="numeric" className={inputClassName} {...register(`exercises.${index}.restSeconds`, optionalNumberRegistration)} />
-                    </FormField>
+                    {usesLoad ? (
+                      <FormField id={`workout-template-increment-${index}`} label={incrementLabel(trackingMode)} error={exerciseErrors?.loadIncrementKg?.message} required>
+                        <input id={`workout-template-increment-${index}`} aria-invalid={Boolean(exerciseErrors?.loadIncrementKg)} type="number" min="0.25" step="0.25" inputMode="decimal" className={inputClassName} {...register(`exercises.${index}.loadIncrementKg`, { valueAsNumber: true })} />
+                      </FormField>
+                    ) : null}
                     <FormField id={`workout-template-rpe-${index}`} label="RPE maximal recommandé" error={exerciseErrors?.maximumRecommendedRpe?.message}>
                       <input id={`workout-template-rpe-${index}`} aria-invalid={Boolean(exerciseErrors?.maximumRecommendedRpe)} type="number" min="1" max="10" step="0.5" inputMode="decimal" className={inputClassName} {...register(`exercises.${index}.maximumRecommendedRpe`, optionalNumberRegistration)} />
                     </FormField>
@@ -505,16 +566,222 @@ export function WorkoutTemplateForm({
                     <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">Exercice actif dans cette séance</span>
                   </label>
                 </details>
+                </div>
+                ) : null}
               </Card>
             );
           })}
         </div>
+
+        {fields.length >= 2 ? (
+          <CollapsibleSection
+            className="mt-5"
+            title="Organiser en superset ou circuit"
+            description="Sélectionne les exercices à regrouper, puis règle le groupe depuis une seule synthèse."
+            summary={groups.length > 0
+              ? `${groups.length} groupe${groups.length > 1 ? 's' : ''}`
+              : 'Facultatif'}
+            icon={Layers3}
+            defaultOpen={Boolean(
+              Array.isArray(errors.exercises)
+              && errors.exercises.some((error) => error?.exerciseGroupId),
+            )}
+          >
+            {groups.length > 0 ? (
+              <div className="space-y-4">
+                {groups.map((group, groupIndex) => {
+                  const leaderIndex = group.memberIndexes[0]!;
+                  const leader = watchedExercises?.[leaderIndex];
+                  const groupError = group.memberIndexes
+                    .map((memberIndex) => errors.exercises?.[memberIndex]?.exerciseGroupId?.message)
+                    .find(Boolean);
+                  return (
+                    <Card key={group.id} className="p-4">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <h3 className="font-semibold text-slate-950 dark:text-white">
+                            {group.name || `${exerciseGroupTypeLabel(group.type)} ${String.fromCharCode(65 + groupIndex)}`}
+                          </h3>
+                          <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                            {group.memberIndexes.length} exercice{group.memberIndexes.length > 1 ? 's' : ''}
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <Button type="button" size="sm" variant="secondary" onClick={() => duplicateGroup(group.id)}>
+                            <Copy aria-hidden="true" className="size-4" />
+                            Dupliquer
+                          </Button>
+                          <Button type="button" size="sm" variant="dangerGhost" onClick={() => dissolveGroup(group.id)}>
+                            <Unlink aria-hidden="true" className="size-4" />
+                            Dissoudre
+                          </Button>
+                        </div>
+                      </div>
+
+                      <ul className="mt-3 space-y-2">
+                        {group.memberIndexes.map((memberIndex) => {
+                          const member = watchedExercises?.[memberIndex];
+                          const memberDefinition = exerciseDefinitions.find(
+                            (exercise) => exercise.id === member?.exerciseDefinitionId,
+                          );
+                          return (
+                            <li key={fields[memberIndex]?.id} className="flex min-h-11 items-center justify-between gap-3 rounded-xl bg-slate-50 px-3 dark:bg-slate-800/60">
+                              <span className="text-sm font-medium text-slate-800 dark:text-slate-100">
+                                {memberDefinition?.name ?? `Exercice ${memberIndex + 1}`}
+                              </span>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                aria-label={`Retirer ${memberDefinition?.name ?? `l’exercice ${memberIndex + 1}`} du groupe`}
+                                onClick={() => clearGroupAt(memberIndex)}
+                              >
+                                <Unlink aria-hidden="true" className="size-4" />
+                                Retirer
+                              </Button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+
+                      {groupError ? <p role="alert" className="mt-3 text-sm font-medium text-red-700 dark:text-red-300">{groupError}</p> : null}
+
+                      <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        <FormField id={`workout-template-group-type-${groupIndex}`} label="Type de groupe">
+                          <select
+                            id={`workout-template-group-type-${groupIndex}`}
+                            className={inputClassName}
+                            value={leader?.exerciseGroupType ?? 'superset'}
+                            onChange={(event) => updateGroup(group.id, 'exerciseGroupType', event.target.value)}
+                          >
+                            <option value="superset">Superset · 2 exercices</option>
+                            <option value="triSet">Tri-set · 3 exercices</option>
+                            <option value="circuit">Circuit · 2 exercices ou plus</option>
+                          </select>
+                        </FormField>
+                        <FormField id={`workout-template-group-name-${groupIndex}`} label="Nom facultatif">
+                          <input
+                            id={`workout-template-group-name-${groupIndex}`}
+                            className={inputClassName}
+                            value={leader?.exerciseGroupName ?? ''}
+                            onChange={(event) => updateGroup(group.id, 'exerciseGroupName', event.target.value)}
+                            placeholder="Ex. Dos / pectoraux"
+                          />
+                        </FormField>
+                        <FormField id={`workout-template-group-rounds-${groupIndex}`} label="Nombre de tours">
+                          <input
+                            id={`workout-template-group-rounds-${groupIndex}`}
+                            type="number"
+                            min="1"
+                            max="20"
+                            inputMode="numeric"
+                            className={inputClassName}
+                            value={leader?.exerciseGroupRounds ?? 3}
+                            onChange={(event) => updateGroup(group.id, 'exerciseGroupRounds', Number(event.target.value))}
+                          />
+                        </FormField>
+                        <FormField id={`workout-template-group-between-${groupIndex}`} label="Repos entre exercices (s)">
+                          <input
+                            id={`workout-template-group-between-${groupIndex}`}
+                            type="number"
+                            min="0"
+                            max="1800"
+                            inputMode="numeric"
+                            className={inputClassName}
+                            value={leader?.exerciseGroupRestBetweenExercisesSeconds ?? 0}
+                            onChange={(event) => updateGroup(group.id, 'exerciseGroupRestBetweenExercisesSeconds', Number(event.target.value))}
+                          />
+                        </FormField>
+                        <FormField id={`workout-template-group-round-rest-${groupIndex}`} label="Repos entre tours (s)">
+                          <input
+                            id={`workout-template-group-round-rest-${groupIndex}`}
+                            type="number"
+                            min="0"
+                            max="1800"
+                            inputMode="numeric"
+                            className={inputClassName}
+                            value={leader?.exerciseGroupRestBetweenRoundsSeconds ?? 120}
+                            onChange={(event) => updateGroup(group.id, 'exerciseGroupRestBetweenRoundsSeconds', Number(event.target.value))}
+                          />
+                        </FormField>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+            ) : null}
+
+            <div className={cn(
+              'rounded-2xl border border-slate-200 p-4 dark:border-slate-800',
+              groups.length > 0 && 'mt-5',
+            )}>
+              <h3 className="font-semibold text-slate-950 dark:text-white">Créer un groupe</h3>
+              <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                Choisis des exercices indépendants déjà ajoutés à la séance.
+              </p>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                {fields.map((field, index) => {
+                  const exercise = watchedExercises?.[index];
+                  if (exercise?.exerciseGroupId) return null;
+                  const definition = exerciseDefinitions.find(
+                    (candidate) => candidate.id === exercise?.exerciseDefinitionId,
+                  );
+                  return (
+                    <label key={field.id} className="flex min-h-11 items-center gap-3 rounded-xl border border-slate-200 px-3 dark:border-slate-800">
+                      <input
+                        type="checkbox"
+                        className={checkboxClassName}
+                        checked={selectedExerciseFieldIds.has(field.id)}
+                        onChange={(event) => {
+                          setSelectedExerciseFieldIds((current) => {
+                            const next = new Set(current);
+                            if (event.target.checked) next.add(field.id);
+                            else next.delete(field.id);
+                            return next;
+                          });
+                          setGroupSelectionError(undefined);
+                        }}
+                      />
+                      <span className="text-sm font-medium text-slate-800 dark:text-slate-100">
+                        {definition?.name ?? `Exercice ${index + 1}`}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+              <div className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
+                <FormField id="workout-template-new-group-type" label="Type du nouveau groupe">
+                  <select
+                    id="workout-template-new-group-type"
+                    className={inputClassName}
+                    value={newGroupType}
+                    onChange={(event) => {
+                      setNewGroupType(event.target.value as ExerciseGroupType);
+                      setGroupSelectionError(undefined);
+                    }}
+                  >
+                    <option value="superset">Superset · 2 exercices</option>
+                    <option value="triSet">Tri-set · 3 exercices</option>
+                    <option value="circuit">Circuit · 2 exercices ou plus</option>
+                  </select>
+                </FormField>
+                <Button type="button" className="self-end" onClick={createSelectedGroup}>
+                  <Layers3 aria-hidden="true" className="size-4" />
+                  Créer le groupe
+                </Button>
+              </div>
+              {groupSelectionError ? <p role="alert" className="mt-3 text-sm font-medium text-red-700 dark:text-red-300">{groupSelectionError}</p> : null}
+            </div>
+          </CollapsibleSection>
+        ) : null}
       </section>
 
-      <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
-        <Save aria-hidden="true" className="size-4" />
-        {isSubmitting ? 'Enregistrement…' : submitLabel}
-      </Button>
+      <div className="sticky bottom-2 z-20 rounded-2xl border border-slate-200 bg-white/95 p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-lg backdrop-blur dark:border-slate-800 dark:bg-slate-900/95">
+        <Button type="submit" disabled={isSubmitting} className="w-full">
+          <Save aria-hidden="true" className="size-4" />
+          {isSubmitting ? 'Enregistrement…' : submitLabel}
+        </Button>
+      </div>
     </form>
   );
 }

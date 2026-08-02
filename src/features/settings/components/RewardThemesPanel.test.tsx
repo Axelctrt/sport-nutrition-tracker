@@ -29,6 +29,18 @@ const UNLOCKED_STATE: VisualThemeState = {
     },
   },
 };
+const MULTI_UNLOCKED_STATE: VisualThemeState = {
+  activeThemeId: "core",
+  unlockedThemeIds: ["core", "emerald-focus", "aurora"],
+  unlockMetadata: {
+    "emerald-focus": {
+      unlockedAt: "2026-07-20T08:00:00.000Z",
+    },
+    aurora: {
+      unlockedAt: "2026-07-21T08:00:00.000Z",
+    },
+  },
+};
 
 function snapshot(state: VisualThemeState = {
   activeThemeId: "core",
@@ -111,6 +123,83 @@ describe("RewardThemesPanel", () => {
       expect(within(emeraldTitle.closest("article")!).getByText("Actif"))
         .toBeInTheDocument();
     });
+  });
+
+  it("isole le chargement et le succès du thème en cours d’application", async () => {
+    const user = userEvent.setup();
+    let resolveActivation: ((applied: boolean) => void) | undefined;
+    const activateTheme = vi.fn(() => new Promise<boolean>((resolve) => {
+      resolveActivation = resolve;
+    }));
+    writeVisualThemeState(MULTI_UNLOCKED_STATE);
+
+    render(
+      <RewardThemesPanel
+        loadSnapshot={async () => snapshot(MULTI_UNLOCKED_STATE)}
+        activateTheme={activateTheme}
+      />,
+    );
+
+    const emeraldCard = (await screen.findByRole("heading", {
+      name: "Emerald Focus",
+    })).closest("article")!;
+    const auroraCard = screen.getByRole("heading", {
+      name: "Aurora",
+    }).closest("article")!;
+
+    await user.click(within(emeraldCard).getByRole("button", {
+      name: "Appliquer",
+    }));
+
+    expect(within(emeraldCard).getByRole("button", {
+      name: "Application…",
+    })).toHaveAttribute("data-state", "loading");
+    expect(within(auroraCard).getByRole("button", {
+      name: "Appliquer",
+    })).toHaveAttribute("data-state", "idle");
+
+    resolveActivation?.(true);
+
+    await waitFor(() => {
+      expect(within(emeraldCard).getByRole("button", {
+        name: "Thème appliqué",
+      })).toHaveAttribute("data-state", "success");
+    });
+    expect(within(auroraCard).getByRole("button", {
+      name: "Appliquer",
+    })).toHaveAttribute("data-state", "idle");
+  });
+
+  it("isole aussi l’erreur d’application d’un thème", async () => {
+    const user = userEvent.setup();
+    writeVisualThemeState(MULTI_UNLOCKED_STATE);
+
+    render(
+      <RewardThemesPanel
+        loadSnapshot={async () => snapshot(MULTI_UNLOCKED_STATE)}
+        activateTheme={() => false}
+      />,
+    );
+
+    const emeraldCard = (await screen.findByRole("heading", {
+      name: "Emerald Focus",
+    })).closest("article")!;
+    const auroraCard = screen.getByRole("heading", {
+      name: "Aurora",
+    }).closest("article")!;
+
+    await user.click(within(emeraldCard).getByRole("button", {
+      name: "Appliquer",
+    }));
+
+    await waitFor(() => {
+      expect(within(emeraldCard).getByRole("button", {
+        name: "Indisponible",
+      })).toHaveAttribute("data-state", "error");
+    });
+    expect(within(auroraCard).getByRole("button", {
+      name: "Appliquer",
+    })).toHaveAttribute("data-state", "idle");
   });
 
   it("essaie un thème sans persister puis restaure Core à l'annulation", async () => {

@@ -109,8 +109,10 @@ describe('FriendsPrivacyPage', () => {
     expect(screen.queryByText(/snapshots filtrés/u)).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Mon profil social' }));
+    expect(screen.getByRole('heading', { name: 'Profil', level: 2 })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Mon profil', level: 2 })).not.toBeInTheDocument();
     expect(screen.getByText('@sp-alex123')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Visible par les amis' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('radio', { name: 'Visible par les amis' })).toBeChecked();
 
     await user.click(screen.getByRole('button', { name: 'Mes amis' }));
     expect(screen.getByText('Léa Cardio')).toBeInTheDocument();
@@ -137,7 +139,7 @@ describe('FriendsPrivacyPage', () => {
     try {
       renderPage({ repository });
       await user.click(screen.getByRole('button', { name: 'Mon profil social' }));
-      await user.click(screen.getByRole('button', { name: 'Profil privé' }));
+      await user.click(screen.getByRole('radio', { name: 'Profil privé' }));
 
       await waitFor(() => {
         expect(repository.saveSnapshot).toHaveBeenCalled();
@@ -328,13 +330,14 @@ describe('FriendsPrivacyPage', () => {
 
   it('enregistre un handle public valide en sauvegarde locale sans cloud réel', async () => {
     const user = userEvent.setup();
-    renderPage();
+    renderPage({ lookupGateway: createFoundSocialUserLookupGateway([]) });
     await user.click(screen.getByRole('button', { name: 'Mon profil social' }));
 
     await user.clear(screen.getByLabelText('Identifiant public'));
     await user.type(screen.getByLabelText('Identifiant public'), '@alex.run');
     await user.clear(screen.getByLabelText('Nom affiché'));
     await user.type(screen.getByLabelText('Nom affiché'), 'Alex Run');
+    expect(await screen.findByText('Identifiant disponible.')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Enregistrer' }));
 
     expect(await screen.findByText(/Sauvegarde locale OK/u)).toBeInTheDocument();
@@ -368,13 +371,17 @@ describe('FriendsPrivacyPage', () => {
       },
     };
 
-    renderPage({ cloudIdentityPort });
+    renderPage({
+      cloudIdentityPort,
+      lookupGateway: createFoundSocialUserLookupGateway([]),
+    });
     await user.click(screen.getByRole('button', { name: 'Mon profil social' }));
 
     await user.clear(screen.getByLabelText('Identifiant public'));
     await user.type(screen.getByLabelText('Identifiant public'), '@alex.run');
     await user.clear(screen.getByLabelText('Nom affiché'));
     await user.type(screen.getByLabelText('Nom affiché'), 'Alex Run');
+    expect(await screen.findByText('Identifiant disponible.')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Enregistrer' }));
 
     expect(await screen.findByText(/Identité sociale cloud créée/u)).toBeInTheDocument();
@@ -387,17 +394,44 @@ describe('FriendsPrivacyPage', () => {
     ]);
   });
 
-  it('vérifie la disponibilité via une recherche exacte branchable', async () => {
+  it('vérifie automatiquement la disponibilité après un debounce', async () => {
     const user = userEvent.setup();
-    const lookupGateway = createFoundSocialUserLookupGateway([]);
+    const lookupByHandle = vi.fn(async () => ({ status: 'notFound' as const }));
+    const lookupGateway: SocialUserLookupGateway = { lookupByHandle };
     renderPage({ lookupGateway });
     await user.click(screen.getByRole('button', { name: 'Mon profil social' }));
 
     await user.clear(screen.getByLabelText('Identifiant public'));
     await user.type(screen.getByLabelText('Identifiant public'), '@lina.trail');
-    await user.click(screen.getByRole('button', { name: 'Vérifier disponibilité' }));
 
+    expect(screen.queryByRole('button', { name: /Vérifier disponibilité/u })).not.toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('Vérification…');
+    expect(lookupByHandle).not.toHaveBeenCalled();
     expect(await screen.findByText('Identifiant disponible.')).toBeInTheDocument();
+    expect(lookupByHandle).toHaveBeenCalledTimes(1);
+    expect(lookupByHandle).toHaveBeenCalledWith('lina.trail');
+  });
+
+  it('permet de changer la visibilité du profil au clavier', async () => {
+    const user = userEvent.setup();
+    const repository: FriendsPrivacySnapshotRepository = {
+      readSnapshot: vi.fn(async () => snapshot),
+      saveSnapshot: vi.fn(async () => undefined),
+    };
+    renderPage({ repository });
+    await user.click(screen.getByRole('button', { name: 'Mon profil social' }));
+
+    const friendsVisibility = screen.getByRole('radio', { name: 'Visible par les amis' });
+    friendsVisibility.focus();
+    await user.keyboard('{ArrowRight}');
+
+    await waitFor(() => {
+      expect(repository.saveSnapshot).toHaveBeenCalledWith(
+        expect.objectContaining({
+          privacy: expect.objectContaining({ profileVisibility: 'public' }),
+        }),
+      );
+    });
   });
 
   it('retourne un état cloud indisponible sans backend social', async () => {
@@ -405,9 +439,93 @@ describe('FriendsPrivacyPage', () => {
     renderPage();
     await user.click(screen.getByRole('button', { name: 'Mon profil social' }));
 
-    await user.click(screen.getByRole('button', { name: 'Vérifier disponibilité' }));
+    await user.clear(screen.getByLabelText('Identifiant public'));
+    await user.type(screen.getByLabelText('Identifiant public'), '@nouveau.handle');
 
     expect(await screen.findByText(/Compte cloud indisponible/u)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Enregistrer' })).toBeDisabled();
+  });
+
+  it('ignore une réponse de disponibilité obsolète', async () => {
+    const user = userEvent.setup();
+    const lookupByHandle: SocialUserLookupGateway['lookupByHandle'] = vi.fn(async (handle) => {
+      await new Promise((resolve) => window.setTimeout(resolve, handle === 'premier.handle' ? 700 : 10));
+      if (handle === 'premier.handle') {
+        return {
+          status: 'found' as const,
+          profile: {
+            userId: 'social-user:other' as EntityId,
+            handle,
+            displayName: 'Autre compte',
+            createdAt: '2026-07-01T10:00:00.000Z',
+            updatedAt: '2026-07-01T10:00:00.000Z',
+          },
+        };
+      }
+      return { status: 'notFound' as const };
+    });
+    renderPage({ lookupGateway: { lookupByHandle } });
+    await user.click(screen.getByRole('button', { name: 'Mon profil social' }));
+
+    const input = screen.getByLabelText('Identifiant public');
+    await user.clear(input);
+    await user.type(input, '@premier.handle');
+    await waitFor(() => expect(lookupByHandle).toHaveBeenCalledWith('premier.handle'));
+    await user.clear(input);
+    await user.type(input, '@second.handle');
+
+    expect(await screen.findByText('Identifiant disponible.')).toBeInTheDocument();
+    await new Promise((resolve) => window.setTimeout(resolve, 750));
+    expect(screen.getByText('Identifiant disponible.')).toBeInTheDocument();
+    expect(screen.queryByText(/déjà pris/u)).not.toBeInTheDocument();
+  }, 3_000);
+
+  it('bloque seulement un identifiant modifié non valide ou non confirmé', async () => {
+    const user = userEvent.setup();
+    renderPage({ lookupGateway: createFoundSocialUserLookupGateway([]) });
+    await user.click(screen.getByRole('button', { name: 'Mon profil social' }));
+
+    const input = screen.getByLabelText('Identifiant public');
+    const save = screen.getByRole('button', { name: 'Enregistrer' });
+    expect(save).toBeEnabled();
+
+    await user.clear(input);
+    await user.type(input, '@x');
+    expect(screen.getByRole('alert')).toHaveTextContent('Identifiant invalide');
+    expect(save).toBeDisabled();
+
+    await user.clear(input);
+    await user.type(input, '@valide.handle');
+    expect(screen.getByRole('status')).toHaveTextContent('Vérification…');
+    expect(save).toBeDisabled();
+    expect(await screen.findByText('Identifiant disponible.')).toBeInTheDocument();
+    expect(save).toBeEnabled();
+  });
+
+  it('copie l’identifiant avec une action icône accessible', async () => {
+    const user = userEvent.setup();
+    const clipboardDescriptor = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    });
+
+    try {
+      renderPage();
+      await user.click(screen.getByRole('button', { name: 'Mon profil social' }));
+      const copyButton = screen.getByRole('button', { name: 'Copier l’identifiant public' });
+      expect(copyButton).toHaveAttribute('title', 'Copier l’identifiant public');
+      await user.click(copyButton);
+      expect(writeText).toHaveBeenCalledWith('@sp-alex123');
+      expect(await screen.findByText('Identifiant copié.')).toBeInTheDocument();
+    } finally {
+      if (clipboardDescriptor) {
+        Object.defineProperty(navigator, 'clipboard', clipboardDescriptor);
+      } else {
+        Reflect.deleteProperty(navigator, 'clipboard');
+      }
+    }
   });
 
   it('accepte une demande reçue sans activer le partage détaillé', async () => {
@@ -544,7 +662,7 @@ describe('FriendsPrivacyPage', () => {
     await user.click(screen.getByRole('button', { name: 'Mes amis' }));
 
     await user.click(screen.getByText('Gérer'));
-    await user.click(screen.getByRole('button', { name: 'Personnalisé' }));
+    await user.click(screen.getByRole('radio', { name: 'Personnalisé' }));
 
     expect((await screen.findAllByText(/Partage personnalisé enregistré pour cet ami/u)).length).toBeGreaterThan(0);
     expect(screen.getAllByText('Partage : Personnalisé').length).toBeGreaterThan(0);
@@ -615,7 +733,7 @@ describe('FriendsPrivacyPage', () => {
     renderPage({ initialSnapshot: localOnlySnapshot, socialFriendsGateway });
 
     await user.click(screen.getByText('Gérer'));
-    await user.click(screen.getByRole('button', { name: 'Personnalisé' }));
+    await user.click(screen.getByRole('radio', { name: 'Personnalisé' }));
 
     expect((await screen.findAllByText(/Permission ami serveur créée/u)).length).toBeGreaterThan(0);
     expect(savedPermissions).toEqual([
@@ -663,7 +781,7 @@ describe('FriendsPrivacyPage', () => {
     );
 
     await user.click(screen.getByText('Gérer'));
-    await user.click(screen.getByRole('button', { name: 'Personnalisé' }));
+    await user.click(screen.getByRole('radio', { name: 'Personnalisé' }));
     await waitFor(() => expect(savePermission).toHaveBeenCalledOnce());
     expect(privacyReconciliation).not.toHaveBeenCalled();
 
@@ -910,7 +1028,7 @@ describe('FriendsPrivacyPage', () => {
     renderPage({ privacyReconciliation });
 
     await user.click(screen.getByText('Gérer'));
-    await user.click(screen.getByRole('button', { name: 'Aucun' }));
+    await user.click(screen.getByRole('radio', { name: 'Aucun' }));
 
     expect(await screen.findByText(/snapshots sociaux remis en cohérence/u)).toBeInTheDocument();
     expect(screen.getAllByText('Partage : Aucun').length).toBeGreaterThan(0);
@@ -930,7 +1048,7 @@ describe('FriendsPrivacyPage', () => {
 
     renderPage({ repository, privacyReconciliation });
     await user.click(screen.getByText('Gérer'));
-    await user.click(screen.getByRole('button', { name: 'Aucun' }));
+    await user.click(screen.getByRole('radio', { name: 'Aucun' }));
 
     expect(repository.saveSnapshot).toHaveBeenCalledOnce();
     expect(privacyReconciliation).not.toHaveBeenCalled();
@@ -954,7 +1072,7 @@ describe('FriendsPrivacyPage', () => {
     });
 
     await user.click(screen.getByRole('button', { name: 'Mon profil social' }));
-    expect(screen.getByRole('button', { name: 'Profil privé' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('radio', { name: 'Profil privé' })).toBeChecked();
     expect(screen.getByText('Partage : Résumé')).toBeInTheDocument();
     expect(screen.getByText(/nouvelles relations voient un résumé par défaut/u)).toBeInTheDocument();
   });
@@ -1206,8 +1324,8 @@ describe('résilience sociale A23', () => {
 
     renderPage({ socialFriendsGateway });
     await user.click(screen.getByText('Gérer'));
-    await user.click(screen.getByRole('button', { name: 'Personnalisé' }));
-    await user.click(screen.getByRole('button', { name: 'Résumé' }));
+    await user.click(screen.getByRole('radio', { name: 'Personnalisé' }));
+    await user.click(screen.getByRole('radio', { name: 'Résumé' }));
 
     await waitFor(() => expect(savePermission).toHaveBeenCalledTimes(2));
     expect((await screen.findAllByText('Partage : Résumé')).length).toBeGreaterThan(0);

@@ -1,6 +1,6 @@
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { WorkoutSessionsPage } from '@/features/strength-sessions/pages/WorkoutSessionsPage';
 import { appDatabase } from '@/infrastructure/database/database';
 import { initializeDatabase } from '@/infrastructure/database/databaseLifecycle';
@@ -9,6 +9,11 @@ import {
   createProgressionSuggestionInput,
   createWorkoutSessionInput,
 } from '@/test/factories/strengthFactory';
+
+function LocationStateProbe() {
+  const location = useLocation();
+  return <output>{location.state ? 'feedback-présent' : 'feedback-consommé'}</output>;
+}
 
 describe('WorkoutSessionsPage', () => {
   beforeEach(async () => {
@@ -41,6 +46,23 @@ describe('WorkoutSessionsPage', () => {
       expect(await appDatabase.workoutSessions.count()).toBe(1);
       expect(await appDatabase.workoutSessions.where('status').equals('inProgress').count()).toBe(1);
     });
+  });
+
+  it('présente un premier historique vide sans le confondre avec un filtre', async () => {
+    render(
+      <MemoryRouter initialEntries={['/strength/sessions']}>
+        <Routes>
+          <Route path="/strength/sessions" element={<WorkoutSessionsPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    const heading = await screen.findByRole('heading', { name: 'Aucun entraînement enregistré' });
+    expect(heading.closest('[data-empty-state-variant]')).toHaveAttribute(
+      'data-empty-state-variant',
+      'first-use',
+    );
+    expect(screen.getByRole('button', { name: 'Démarrer une séance libre' })).toBeInTheDocument();
   });
 
   it('propose de reprendre une séance en cours après rechargement', async () => {
@@ -92,4 +114,70 @@ describe('WorkoutSessionsPage', () => {
     );
   });
 
+  it('réinitialise uniquement le filtre lorsque l’historique filtré est vide', async () => {
+    const user = userEvent.setup();
+    await appDatabase.workoutSessions.add(createEntity(
+      createWorkoutSessionInput({
+        status: 'completed',
+        sourceTemplateNameSnapshot: 'Push conservée',
+      }),
+      'session-filter-reset',
+    ));
+
+    render(
+      <MemoryRouter initialEntries={['/strength/sessions']}>
+        <Routes>
+          <Route path="/strength/sessions" element={<WorkoutSessionsPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole('heading', { name: 'Push conservée' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Abandonnées' }));
+    const heading = await screen.findByRole('heading', { name: 'Aucune séance dans ce filtre' });
+    expect(heading.closest('[data-empty-state-variant]')).toHaveAttribute(
+      'data-empty-state-variant',
+      'filtered',
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Afficher toutes les séances' }));
+
+    expect(await screen.findByRole('heading', { name: 'Push conservée' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Toutes' })).toHaveAttribute('aria-pressed', 'true');
+    expect(await appDatabase.workoutSessions.count()).toBe(1);
+  });
+
+  it('consomme le feedback transmis après la persistance d’une séance terminée', async () => {
+    await appDatabase.workoutSessions.add(createEntity(
+      createWorkoutSessionInput({ status: 'completed' }),
+      'session-completed',
+    ));
+
+    render(
+      <MemoryRouter initialEntries={[{
+        pathname: '/strength/sessions',
+        state: {
+          workoutSessionFeedback: {
+            title: 'Séance enregistrée',
+            description: 'Ta séance a bien été ajoutée à l’historique.',
+            sessionId: 'session-completed',
+          },
+        },
+      }]}>
+        <Routes>
+          <Route
+            path="/strength/sessions"
+            element={(
+              <>
+                <WorkoutSessionsPage />
+                <LocationStateProbe />
+              </>
+            )}
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('feedback-consommé')).toBeInTheDocument();
+  });
 });

@@ -3,7 +3,9 @@ import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { WorkoutSessionPage } from '@/features/strength-sessions/pages/WorkoutSessionPage';
+import { WorkoutSessionsPage } from '@/features/strength-sessions/pages/WorkoutSessionsPage';
 import { appDatabase } from '@/infrastructure/database/database';
+import { repositories } from '@/infrastructure/repositories/repositories';
 import { ToastProvider } from '@/shared/toast/ToastProvider';
 import { deleteAppDatabaseAfterTest, resetAppDatabaseForTest } from '@/test/appDatabaseTestUtils';
 import { createEntity } from '@/shared/utils/entities';
@@ -55,6 +57,7 @@ describe('WorkoutSessionPage', () => {
   });
 
   afterEach(async () => {
+    vi.restoreAllMocks();
     cleanup();
     window.sessionStorage.clear();
     await deleteAppDatabaseAfterTest();
@@ -62,7 +65,7 @@ describe('WorkoutSessionPage', () => {
 
   it('ajoute un exercice, enregistre les notes et termine la séance', async () => {
     const user = userEvent.setup();
-    renderSessionPage(<Route path="/strength/sessions" element={<h1>Retour au carnet</h1>} />);
+    renderSessionPage(<Route path="/strength/sessions" element={<WorkoutSessionsPage />} />);
 
     await screen.findByRole('heading', { name: 'Séance libre' });
     const abandonButton = screen.getByRole('button', { name: 'Abandonner la séance' });
@@ -70,7 +73,13 @@ describe('WorkoutSessionPage', () => {
     await user.click(screen.getByText('Ajouter un exercice'));
     await user.selectOptions(screen.getByLabelText('Exercice à ajouter'), 'exercise-row');
     await user.click(screen.getByRole('button', { name: 'Ajouter' }));
-    expect(await screen.findByRole('heading', { name: 'Rowing barre' })).toBeInTheDocument();
+    const addedExerciseHeading = await screen.findByRole('heading', { name: 'Rowing barre' });
+    expect(addedExerciseHeading).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('Ajouter un exercice').closest('details')).not.toHaveAttribute('open');
+    });
+    expect(screen.getByPlaceholderText('Rechercher un exercice à ajouter')).toHaveValue('');
+    await waitFor(() => expect(addedExerciseHeading.closest('[tabindex="-1"]')).toHaveFocus());
     expect(screen.queryByText('Exercice ajouté')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Chargement de la page')).not.toBeInTheDocument();
 
@@ -94,12 +103,50 @@ describe('WorkoutSessionPage', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Terminer la séance' }));
     expect(await screen.findByRole(
       'heading',
-      { name: 'Retour au carnet' },
+      { name: 'Mes entraînements' },
       { timeout: 10_000 },
     )).toBeInTheDocument();
+    expect(await screen.findByText('Séance enregistrée')).toBeInTheDocument();
+    expect(screen.getByText('Ta séance a bien été ajoutée à l’historique.')).toBeInTheDocument();
+    expect(screen.getAllByText('Séance enregistrée')).toHaveLength(1);
     expect((await appDatabase.workoutSessions.get('session-current'))?.status).toBe('completed');
     expect(window.sessionStorage.getItem('sportpilot:rest-timer:session-current')).toBeNull();
   }, 25_000);
+
+  it('conserve le panneau ouvert lorsque l’ajout de l’exercice échoue', async () => {
+    const user = userEvent.setup();
+    vi.spyOn(repositories.workoutSessions, 'addExercise')
+      .mockRejectedValueOnce(new Error('Stockage indisponible'));
+    renderSessionPage();
+
+    await screen.findByRole('heading', { name: 'Séance libre' });
+    await user.click(screen.getByText('Ajouter un exercice'));
+    const selectorPanel = screen.getByText('Ajouter un exercice').closest('details');
+    await user.type(screen.getByPlaceholderText('Rechercher un exercice à ajouter'), 'Rowing');
+    await user.selectOptions(screen.getByLabelText('Exercice à ajouter'), 'exercise-row');
+    await user.click(screen.getByRole('button', { name: 'Ajouter' }));
+
+    expect(await screen.findByText('Action impossible')).toBeInTheDocument();
+    expect(selectorPanel).toHaveAttribute('open');
+    expect(screen.getByPlaceholderText('Rechercher un exercice à ajouter')).toHaveValue('Rowing');
+    expect(screen.queryByRole('heading', { name: 'Rowing barre' })).not.toBeInTheDocument();
+  });
+
+  it('reste sur la séance et n’affiche aucun toast de succès si la persistance échoue', async () => {
+    const user = userEvent.setup();
+    vi.spyOn(repositories.workoutSessions, 'update')
+      .mockRejectedValueOnce(new Error('Stockage indisponible'));
+    renderSessionPage(<Route path="/strength/sessions" element={<WorkoutSessionsPage />} />);
+
+    await screen.findByRole('heading', { name: 'Séance libre' });
+    await user.click(screen.getByRole('button', { name: 'Terminer' }));
+    const dialog = await screen.findByRole('alertdialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Terminer la séance' }));
+
+    expect(await screen.findByText('Action impossible')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Séance libre' })).toBeInTheDocument();
+    expect(screen.queryByText('Séance enregistrée')).not.toBeInTheDocument();
+  });
 
   it('ajoute automatiquement l’exercice créé dans le contexte de la séance', async () => {
     render(

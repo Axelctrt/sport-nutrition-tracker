@@ -14,7 +14,6 @@ import {
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
-import { useActionToast } from '@/shared/toast/useActionToast';
 
 interface StoragePersistenceCardProps {
   loadStatus?: () => Promise<StoragePersistenceStatus>;
@@ -31,7 +30,6 @@ export function StoragePersistenceCard({
   loadStatus = getStoragePersistenceStatus,
   requestPersistence = requestPersistentStorage,
 }: StoragePersistenceCardProps) {
-  const actionToast = useActionToast();
   const [status, setStatus] =
     useState<StoragePersistenceStatus>();
   const [isLoading, setIsLoading] = useState(true);
@@ -78,12 +76,10 @@ export function StoragePersistenceCard({
       setStatus(updated);
 
       if (updated.state === 'persistent') {
-        const message = 'Le navigateur a placé le stockage SportPilot en mode persistant.';
-        setFeedback({ tone: 'success', title: 'Protection renforcée activée', message });
-        actionToast.success({
-          key: 'storage-persistence',
+        setFeedback({
+          tone: 'success',
           title: 'Protection renforcée activée',
-          description: message,
+          message: 'Le navigateur a placé le stockage SportPilot en mode persistant.',
         });
       } else if (updated.state === 'best-effort') {
         setFeedback({
@@ -94,9 +90,11 @@ export function StoragePersistenceCard({
         });
       }
     } catch (error) {
-      const fallback = 'La protection renforcée n’a pas pu être demandée.';
-      setFeedback({ tone: 'error', title: 'Demande impossible', message: errorMessage(error) });
-      actionToast.error({ key: 'storage-persistence', title: 'Demande impossible', error, fallback });
+      setFeedback({
+        tone: 'error',
+        title: 'Demande impossible',
+        message: errorMessage(error),
+      });
     } finally {
       setIsRequesting(false);
     }

@@ -3,6 +3,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from '@testing-library/react';
 
 import { StoragePersistenceCard } from '@/features/backup/components/StoragePersistenceCard';
@@ -33,7 +34,7 @@ describe('StoragePersistenceCard', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('demande puis confirme la protection renforcée', async () => {
+  it('demande puis confirme localement la protection renforcée', async () => {
     const requestPersistence = vi.fn().mockResolvedValue({
       state: 'persistent',
       canRequest: false,
@@ -59,9 +60,13 @@ describe('StoragePersistenceCard', () => {
 
     await waitFor(() => {
       expect(requestPersistence).toHaveBeenCalledTimes(1);
+      const status = screen.getByRole('status');
       expect(
-        screen.getByText('Protection renforcée activée'),
+        within(status).getByText('Protection renforcée activée'),
       ).toBeInTheDocument();
+      expect(status).toHaveTextContent(
+        'Le navigateur a placé le stockage SportPilot en mode persistant.',
+      );
     });
   });
 
@@ -92,6 +97,31 @@ describe('StoragePersistenceCard', () => {
     expect(
       await screen.findByText('Protection non accordée'),
     ).toBeInTheDocument();
+  });
+
+  it('affiche une erreur locale unique lorsque la demande échoue', async () => {
+    render(
+      <StoragePersistenceCard
+        loadStatus={() =>
+          Promise.resolve({
+            state: 'best-effort',
+            canRequest: true,
+          })
+        }
+        requestPersistence={() => Promise.reject(new Error('Navigateur indisponible.'))}
+      />,
+    );
+
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: 'Renforcer la protection',
+      }),
+    );
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Demande impossible');
+    expect(alert).toHaveTextContent('Navigateur indisponible.');
+    expect(screen.getAllByText('Demande impossible')).toHaveLength(1);
   });
 
   it('reste explicite lorsque l’API est indisponible', async () => {

@@ -1,22 +1,22 @@
-import type Dexie from "dexie";
+import type Dexie from 'dexie';
 
-import { registerVersion1 } from "@/infrastructure/database/migrations/version1";
-import { registerVersion2 } from "@/infrastructure/database/migrations/version2";
-import { registerVersion3 } from "@/infrastructure/database/migrations/version3";
-import { registerVersion4 } from "@/infrastructure/database/migrations/version4";
+import { registerVersion1 } from '@/infrastructure/database/migrations/version1';
+import { registerVersion2 } from '@/infrastructure/database/migrations/version2';
+import { registerVersion3 } from '@/infrastructure/database/migrations/version3';
+import { registerVersion4 } from '@/infrastructure/database/migrations/version4';
 import { registerVersion5 } from '@/infrastructure/database/migrations/version5';
 import { registerVersion6 } from '@/infrastructure/database/migrations/version6';
 import { registerVersion7 } from '@/infrastructure/database/migrations/version7';
 import { registerVersion8 } from '@/infrastructure/database/migrations/version8';
 import { registerVersion9 } from '@/infrastructure/database/migrations/version9';
+import { registerVersion10 } from '@/infrastructure/database/migrations/version10';
+import { registerVersion11 } from '@/infrastructure/database/migrations/version11';
+import { registerVersion12 } from '@/infrastructure/database/migrations/version12';
 
-function createVersionRecorder(
-  registeredVersions: number[],
-): Dexie {
+function createVersionRecorder(registeredVersions: number[]): Dexie {
   return {
     version(versionNumber: number) {
       registeredVersions.push(versionNumber);
-
       return {
         stores() {
           return this;
@@ -29,8 +29,8 @@ function createVersionRecorder(
   } as unknown as Dexie;
 }
 
-describe("déclaration des versions Dexie", () => {
-  it("enregistre les versions historiques 1 à 9", () => {
+describe('déclaration des versions Dexie', () => {
+  it('enregistre les versions historiques 1 à 12', () => {
     const registeredVersions: number[] = [];
     const recorder = createVersionRecorder(registeredVersions);
 
@@ -43,7 +43,10 @@ describe("déclaration des versions Dexie", () => {
     registerVersion7(recorder);
     registerVersion8(recorder);
     registerVersion9(recorder);
+    registerVersion10(recorder);
+    registerVersion11(recorder);
+    registerVersion12(recorder);
 
-    expect(registeredVersions).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    expect(registeredVersions).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
   });
 });

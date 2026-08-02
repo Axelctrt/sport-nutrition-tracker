@@ -26,5 +26,34 @@ test('navigue entre les quatre rubriques Amis sans empiler leur contenu', async 
   await expect(page).toHaveURL(/#\/friends\?section=profile$/);
   await expect(profilePanel).toBeVisible();
   await expect(requestsPanel).toBeHidden();
-  await expectNoCriticalHorizontalOverflow(page);
+  await expect(profilePanel.getByRole('heading', { name: 'Profil', level: 2 })).toBeVisible();
+  await expect(profilePanel.getByRole('radio', { name: 'Visible par les amis' })).toBeChecked();
+  await expect(profilePanel.getByRole('button', { name: 'Copier l’identifiant public' })).toBeVisible();
+  await expect(profilePanel.getByRole('button', { name: /Vérifier disponibilité/u })).toHaveCount(0);
+
+  const publicHandle = profilePanel.getByRole('textbox', { name: 'Identifiant public' });
+  const saveIdentity = profilePanel.getByRole('button', { name: 'Enregistrer' });
+  await publicHandle.fill('@x');
+  await expect(profilePanel.getByRole('alert')).toContainText('Identifiant invalide');
+  await expect(saveIdentity).toBeDisabled();
+  await publicHandle.fill('@profil.disponible');
+  await expect(profilePanel.getByRole('status')).toContainText('Vérification…');
+  await expect(saveIdentity).toBeDisabled();
+
+  const profileLabel = page.getByRole('button', { name: 'Mon profil social' })
+    .getByText('Profil', { exact: true });
+  await expect(profileLabel).toBeVisible();
+
+  for (const width of [320, 360, 393, 412]) {
+    await page.setViewportSize({ width, height: 844 });
+    await expectNoCriticalHorizontalOverflow(page);
+    const metrics = await profileLabel.evaluate((element) => {
+      const style = window.getComputedStyle(element);
+      return {
+        height: element.getBoundingClientRect().height,
+        lineHeight: Number.parseFloat(style.lineHeight),
+      };
+    });
+    expect(metrics.height).toBeLessThan(metrics.lineHeight * 1.5);
+  }
 });

@@ -110,6 +110,26 @@ function endurancePlan(
   };
 }
 
+function completedActivity(
+  id: string,
+  durationMinutes: number,
+  type: OtherActivity['type'] = 'walking',
+): OtherActivity {
+  return createEntity<OtherActivity>({
+    date: '2026-07-29',
+    type,
+    durationMinutes,
+    intensity: 'moderate',
+    met: 4,
+    includedInDailySteps: true,
+    calculation: {
+      weightKg: 61.5,
+      estimatedCaloriesKcal: 180,
+      calculationVersion: 1,
+    },
+  }, id);
+}
+
 function pushTemplate(): WorkoutTemplateSummary {
   return {
     template: createEntity<WorkoutTemplate>({
@@ -464,6 +484,84 @@ describe('DashboardDailyAssistant', () => {
       .toHaveAttribute('data-stage-state', 'complete');
     expect(screen.getByText('42 min réalisés')).toBeInTheDocument();
     expect(screen.getByText('Terminée')).toBeInTheDocument();
+  });
+
+  it('ne résume aucun surplus lorsque la journée ne contient aucune activité réalisée', () => {
+    renderAssistant();
+
+    expect(screen.queryByText(/autre activité.*aujourd’hui/u)).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Voir les activités du jour' })).not.toBeInTheDocument();
+  });
+
+  it('affiche le détail de deux activités réalisées sans résumé supplémentaire', () => {
+    const currentSnapshot = snapshot();
+    currentSnapshot.activities = [
+      completedActivity('activity-one', 21),
+      completedActivity('activity-two', 34, 'otherCardio'),
+    ];
+
+    renderAssistant(emptyDay, { snapshot: currentSnapshot });
+
+    expect(screen.getByText('21 min réalisés')).toBeInTheDocument();
+    expect(screen.getByText('34 min réalisés')).toBeInTheDocument();
+    expect(screen.queryByText(/autre activité.*aujourd’hui/u)).not.toBeInTheDocument();
+  });
+
+  it('limite les détails à deux activités et résume le surplus', () => {
+    const currentSnapshot = snapshot();
+    currentSnapshot.activities = [
+      completedActivity('activity-one', 10),
+      completedActivity('activity-two', 20, 'otherCardio'),
+      completedActivity('activity-three', 30),
+      completedActivity('activity-four', 40, 'otherCardio'),
+    ];
+
+    renderAssistant(emptyDay, { snapshot: currentSnapshot });
+
+    expect(screen.getByText('10 min réalisés')).toBeInTheDocument();
+    expect(screen.getByText('20 min réalisés')).toBeInTheDocument();
+    expect(screen.queryByText('30 min réalisés')).not.toBeInTheDocument();
+    expect(screen.queryByText('40 min réalisés')).not.toBeInTheDocument();
+    expect(screen.getByText('+ 2 autres activités aujourd’hui')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Voir les activités du jour' })).toHaveAttribute(
+      'href',
+      '/activities?date=2026-07-29',
+    );
+  });
+
+  it('affiche les calories et les trois macronutriments avec un libellé explicite', () => {
+    renderAssistant(emptyDay, {
+      nutrition: {
+        ...nutrition,
+        consumed: {
+          caloriesKcal: 439.6,
+          carbohydratesGrams: 49.7,
+          proteinGrams: 40.2,
+          fatGrams: 19.8,
+          entryCount: 1,
+        },
+      },
+    });
+
+    const summary = screen.getByLabelText(
+      '440 kilocalories, 50 grammes de glucides, 40 grammes de protéines, 20 grammes de lipides',
+    );
+    expect(summary).toHaveTextContent('440 kcal · 50 g G · 40 g P · 20 g L');
+    expect(summary).toHaveClass('whitespace-normal', 'break-words');
+  });
+
+  it('affiche des valeurs nulles cohérentes lorsque le journal contient une entrée vide', () => {
+    renderAssistant(emptyDay, {
+      nutrition: {
+        ...nutrition,
+        consumed: {
+          ...nutrition.consumed,
+          entryCount: 1,
+        },
+      },
+    });
+
+    expect(screen.getByText('0 kcal · 0 g G · 0 g P · 0 g L')).toBeInTheDocument();
   });
 
   it('signale une séance ancienne interrompue sans en créer une nouvelle', () => {

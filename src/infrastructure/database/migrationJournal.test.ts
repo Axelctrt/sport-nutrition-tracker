@@ -5,7 +5,7 @@ import { initializeDatabase } from "@/infrastructure/database/databaseLifecycle"
 import {
   DATABASE_VERSION_2,
   DATABASE_VERSION_3,
-  DATABASE_VERSION_11,
+  DATABASE_VERSION_12,
 } from "@/infrastructure/database/migrations/versions";
 import { schemaVersion2 } from "@/infrastructure/database/schema";
 
@@ -23,11 +23,11 @@ describe("journal des migrations", () => {
 
       const entries = await database.migrationJournal.toArray();
 
-      expect(database.verno).toBe(DATABASE_VERSION_11);
+      expect(database.verno).toBe(DATABASE_VERSION_12);
       expect(entries).toHaveLength(1);
       expect(entries[0]).toMatchObject({
-        id: `schema-version-${DATABASE_VERSION_11}`,
-        version: DATABASE_VERSION_11,
+        id: `schema-version-${DATABASE_VERSION_12}`,
+        version: DATABASE_VERSION_12,
         previousVersion: null,
         status: "succeeded",
         source: "initialization",

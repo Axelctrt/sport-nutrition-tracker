@@ -1,0 +1,48 @@
+# Règles produit
+
+Statut : **décisions validées**, sauf mention contraire.
+
+## Principes
+
+1. SportPilot est mobile-first, local-first et utilisable hors ligne.
+2. Une action importante confirme sa réussite ou explique son échec.
+3. La saisie fréquente reste rapide : sauvegarde automatique non intrusive,
+   valeurs intermédiaires préservées et validation explicite au bon moment.
+4. Les données appartiennent à un espace identifié. Aucun mélange implicite
+   entre invité, profil local et compte cloud.
+5. Une mise à jour ne doit pas supprimer ni rendre illisibles les données
+   historiques.
+6. Les textes utilisateur décrivent une action ou un résultat, pas les noms de
+   tables, contrats, snapshots ou diagnostics internes.
+
+## Nutrition et calories
+
+- Les formules, coefficients, poids de référence, arrondis et versions de
+  calcul sont des contrats métier.
+- Toute modification exige un audit dédié, des cas de référence, une migration
+  ou compatibilité documentée et une validation explicite.
+- Un changement purement visuel ne doit pas recalculer l’historique.
+
+## IA photo
+
+- L’analyse exige un consentement explicite.
+- La photo est envoyée uniquement au proxy serveur configuré.
+- Aucune clé fournisseur n’est exposée au client.
+- Le résultat est une estimation à confirmer, jamais une vérité silencieuse.
+- Ajouter un fournisseur, un type de donnée ou une automatisation est
+  **hors périmètre sans validation explicite**.
+
+## Social et confidentialité
+
+- L’identité sociale est distincte de l’identité technique du compte.
+- Les permissions par ami déterminent ce qui est publié et relu.
+- Les notes privées ne sont pas partagées par défaut.
+- Une donnée distante absente ou refusée ne doit pas être reconstruite à partir
+  d’une autre source moins restrictive.
+
+## Statuts de produit
+
+- **Actuel** : implémenté et vérifié.
+- **Planifié** : décrit dans la roadmap, non autorisé implicitement.
+- **Idée à étudier** : nécessite cadrage et décision.
+- **Abandonné** : ne pas réintroduire sans nouvel ADR.

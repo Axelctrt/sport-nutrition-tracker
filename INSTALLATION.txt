@@ -1,21 +1,21 @@
-SPORTPILOT 0.36.0
+SPORTPILOT 0.37.0 - RELEASE CANDIDATE
 
-Checklist de validation de la branche UX :
+Checklist de validation :
 
-1. Verifier que la branche feat/friends-settings-strength-ux-0.36.0 part du commit d067cb2fd718e0cd71d597398e6e1d3f57f3e973.
-2. Verifier que package.json et package-lock.json indiquent 0.36.0.
-3. Verifier que Parametres affiche 0.36.0.
+1. Verifier que la branche release/0.37.0 part de origin/develop au commit 0d1d60592b6c150ca274e8fb5dca52416c02a90f.
+2. Verifier que package.json et package-lock.json indiquent 0.37.0.
+3. Verifier que Parametres affiche 0.37.0.
 4. Verifier qu'aucun ZIP, resultat Playwright, secret ou fichier genere n'est stage.
-5. Executer npm run lint.
-6. Executer npx tsc -b --pretty false.
-7. Executer npm run test.
-8. Executer npm run test:stability.
-9. Executer npm run build.
-10. Executer npm run check.
-11. Executer npm run test:e2e.
-12. Executer npm run test:e2e:pwa.
-13. Executer npm audit sans appliquer npm audit fix --force.
-14. Verifier Amis, Parametres et une seance de musculation sur iPhone et Android reels.
-15. Pousser uniquement la branche UX apres validation.
+5. Executer git diff --check.
+6. Executer npm run check.
+7. Executer npm run test:stability.
+8. Executer npm run test:e2e.
+9. Executer npm run test:e2e:pwa.
+10. Executer npm audit sans appliquer npm audit fix --force.
+11. Verifier la migration Dexie v12 et la restauration de l'archive photo.
+12. Verifier Chromium, WebKit iPhone 15 et le fonctionnement PWA hors ligne.
+13. Pousser uniquement la branche release apres validation.
+14. Creer une PR brouillon vers develop ; la publication develop vers main reste une etape separee.
+15. Deployer uniquement une Preview isolee apres CI verte et autorisation explicite.
 
-Ne pas fusionner, creer de tag ou deployer sans accord explicite.
+Ne pas fusionner, creer de tag, creer de release GitHub ou deployer en production sans accord explicite.

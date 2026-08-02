@@ -11,14 +11,14 @@ import {
   databaseTableNames,
 } from '@/infrastructure/database/schema';
 
-describe('préparation de la version UX 0.36.0', () => {
+describe('préparation de la release candidate 0.37.0', () => {
   it('expose la version stable dans le build', () => {
-    expect(__APP_VERSION__).toBe('0.36.0');
+    expect(__APP_VERSION__).toBe('0.37.0');
     expect(__APP_VERSION__).toMatch(/^\d+\.\d+\.\d+$/);
   });
 
   it('conserve les versions de schéma attendues', () => {
-    expect(databaseSchemaVersion).toBe(11);
+    expect(databaseSchemaVersion).toBe(12);
     expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(10);
     expect(databaseTableNames).toEqual(
       expect.arrayContaining([

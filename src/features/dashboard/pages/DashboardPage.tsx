@@ -24,7 +24,7 @@ import type { WorkoutSessionNavigationState } from '@/features/strength-sessions
 import { useCurrentWeight } from '@/features/weight/hooks/useCurrentWeight';
 import { useDashboardPreferences } from '@/features/dashboard-customization/hooks/useDashboardPreferences';
 import { useToast } from '@/shared/toast/useToast';
-import { suppressNextActionToast } from '@/shared/toast/useActionToast';
+import { suppressNextActionToast, useActionToast } from '@/shared/toast/useActionToast';
 import { Button } from '@/shared/ui/Button';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 import { PageSkeleton } from '@/shared/ui/PageSkeleton';
@@ -36,7 +36,9 @@ export function DashboardPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const toast = useToast();
+  const actionToast = useActionToast();
   const handledFoodFeedbackRef = useRef<string | undefined>(undefined);
+  const handledWorkoutFeedbackRef = useRef<string | undefined>(undefined);
   const locationState = location.state as (
     FoodJournalNavigationState & WorkoutSessionNavigationState
   ) | null;
@@ -89,7 +91,13 @@ export function DashboardPage() {
   useEffect(() => {
     const feedback = locationState?.workoutSessionFeedback;
     if (!feedback) return;
-    toast.success(feedback.title);
+    if (handledWorkoutFeedbackRef.current === feedback.sessionId) return;
+    handledWorkoutFeedbackRef.current = feedback.sessionId;
+    actionToast.success({
+      key: `workout-session-complete:${feedback.sessionId}`,
+      title: feedback.title,
+      description: feedback.description,
+    });
     setHighlightedStage('sport');
     void refresh();
     void navigate(`${location.pathname}${location.search}`, {
@@ -98,7 +106,7 @@ export function DashboardPage() {
     });
     const timer = window.setTimeout(() => setHighlightedStage(undefined), 2_500);
     return () => window.clearTimeout(timer);
-  }, [location.pathname, location.search, locationState, navigate, refresh, toast]);
+  }, [actionToast, location.pathname, location.search, locationState, navigate, refresh]);
 
   if (!profile) return null;
   const firstName = profile.firstName?.trim();

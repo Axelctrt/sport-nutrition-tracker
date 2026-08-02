@@ -4,6 +4,7 @@ import { Card } from '@/shared/ui/Card';
 import { cn } from '@/shared/utils/cn';
 
 export type EmptyStateTone = 'brand' | 'neutral' | 'success';
+export type EmptyStateVariant = 'first-use' | 'filtered' | 'completed' | 'unavailable';
 
 interface EmptyStateProps {
   icon: LucideIcon;
@@ -14,12 +15,20 @@ interface EmptyStateProps {
   className?: string;
   tone?: EmptyStateTone;
   compact?: boolean;
+  variant?: EmptyStateVariant;
 }
 
 const toneClasses: Record<EmptyStateTone, string> = {
   brand: 'bg-brand-50 text-brand-700 dark:bg-brand-950/60 dark:text-brand-300',
   neutral: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200',
   success: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300',
+};
+
+const variantDefaults: Record<EmptyStateVariant, { compact: boolean; tone: EmptyStateTone }> = {
+  'first-use': { compact: false, tone: 'brand' },
+  filtered: { compact: true, tone: 'neutral' },
+  completed: { compact: true, tone: 'success' },
+  unavailable: { compact: true, tone: 'neutral' },
 };
 
 export function EmptyState({
@@ -29,12 +38,24 @@ export function EmptyState({
   primaryAction,
   secondaryAction,
   className,
-  tone = 'brand',
-  compact = false,
+  tone,
+  compact,
+  variant = 'first-use',
 }: EmptyStateProps) {
+  const defaults = variantDefaults[variant];
+  const resolvedTone = tone ?? defaults.tone;
+  const resolvedCompact = compact ?? defaults.compact;
+
   return (
-    <Card className={cn(compact ? 'px-4 py-5' : 'px-5 py-8 sm:px-8', 'text-center', className)}>
-      <div className={cn('mx-auto grid size-12 place-items-center rounded-2xl', toneClasses[tone])}>
+    <Card
+      data-empty-state-variant={variant}
+      className={cn(
+        resolvedCompact ? 'px-4 py-5' : 'px-5 py-8 sm:px-8',
+        'text-center',
+        className,
+      )}
+    >
+      <div className={cn('mx-auto grid size-12 place-items-center rounded-2xl', toneClasses[resolvedTone])}>
         <Icon aria-hidden="true" className="size-6" />
       </div>
       <h2 className="mt-4 text-lg font-semibold text-slate-950 dark:text-white">{title}</h2>

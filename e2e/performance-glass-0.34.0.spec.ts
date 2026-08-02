@@ -60,8 +60,9 @@ async function openReadyPage(
     } catch (error) {
       lastError = error;
       if (attempt < 3) {
-        await page.goto('about:blank', { waitUntil: 'load' });
-        await page.waitForTimeout(250);
+        // Rester sur le même contexte d’origine évite le changement de processus
+        // WebKit observé avec about:blank et préserve IndexedDB entre les retries.
+        await page.waitForTimeout(500);
       }
     }
   }
@@ -118,6 +119,8 @@ test('valide les thèmes, graphiques et écrans de décision avec des données c
     appearance: 'dark',
   });
   await openReadyPage(page, '/progression?range=90', 'Progression');
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await expect(page.getByRole('heading', { level: 1, name: 'Progression' })).toBeVisible();
   await expect(page.locator('html')).toHaveClass(/dark/);
   await expect(page.locator('html')).toHaveAttribute('data-sport-theme', 'core');
   if (testInfo.project.name === 'chromium-desktop') {

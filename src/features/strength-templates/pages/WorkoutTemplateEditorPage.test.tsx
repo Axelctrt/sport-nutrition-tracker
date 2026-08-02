@@ -1,10 +1,15 @@
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { WorkoutTemplateEditorPage } from '@/features/strength-templates/pages/WorkoutTemplateEditorPage';
 import { appDatabase } from '@/infrastructure/database/database';
 import { initializeDatabase } from '@/infrastructure/database/databaseLifecycle';
 import { defaultWorkoutTemplateFormValues } from '@/features/strength-templates/utils/workoutTemplateForm';
+import { createEntity } from '@/shared/utils/entities';
+import {
+  createWorkoutTemplateExerciseInput,
+  createWorkoutTemplateInput,
+} from '@/test/factories/strengthFactory';
 
 describe('WorkoutTemplateEditorPage', () => {
   beforeEach(async () => {
@@ -24,6 +29,7 @@ describe('WorkoutTemplateEditorPage', () => {
 
   it('crée une séance modèle avec un exercice du catalogue', async () => {
     const user = userEvent.setup();
+    const definition = (await appDatabase.exerciseDefinitions.orderBy('name').toArray())[0]!;
     render(
       <MemoryRouter initialEntries={['/strength/templates/new']}>
         <Routes>
@@ -35,7 +41,8 @@ describe('WorkoutTemplateEditorPage', () => {
 
     const nameInput = await screen.findByLabelText(/Nom de la séance/);
     await user.type(nameInput, 'Push A');
-    await user.click(screen.getByRole('button', { name: 'Ajouter un exercice' }));
+    await user.type(screen.getByRole('searchbox', { name: 'Rechercher un exercice à ajouter au modèle' }), definition.name);
+    await user.click(screen.getByRole('button', { name: `Ajouter ${definition.name}` }));
     await user.click(screen.getByRole('button', { name: 'Créer la séance' }));
 
     expect(await screen.findByRole('heading', { name: 'Séances chargées' })).toBeInTheDocument();
@@ -47,6 +54,7 @@ describe('WorkoutTemplateEditorPage', () => {
 
   it('crée, configure et enregistre un superset', async () => {
     const user = userEvent.setup();
+    const definitions = (await appDatabase.exerciseDefinitions.orderBy('name').toArray()).slice(0, 2);
     render(
       <MemoryRouter initialEntries={['/strength/templates/new']}>
         <Routes>
@@ -57,16 +65,16 @@ describe('WorkoutTemplateEditorPage', () => {
     );
 
     await user.type(await screen.findByLabelText(/Nom de la séance/), 'Superset A');
-    await user.click(screen.getByRole('button', { name: 'Ajouter un exercice' }));
-    await user.click(screen.getByRole('button', { name: 'Ajouter un exercice' }));
-    const definitions = await appDatabase.exerciseDefinitions.orderBy('name').toArray();
-    const exerciseSelects = screen.getAllByRole('combobox').filter((element) =>
-      element.id.startsWith('workout-template-exercise-'),
-    );
-    expect(exerciseSelects).toHaveLength(2);
-    await user.selectOptions(exerciseSelects[0]!, definitions[0]!.id);
-    await user.selectOptions(exerciseSelects[1]!, definitions[1]!.id);
-    await user.click(screen.getAllByRole('button', { name: 'Créer un superset' })[0]!);
+    const search = screen.getByRole('searchbox', { name: 'Rechercher un exercice à ajouter au modèle' });
+    for (const definition of definitions) {
+      await user.type(search, definition!.name);
+      await user.click(screen.getByRole('button', { name: `Ajouter ${definition!.name}` }));
+    }
+    await user.click(screen.getByText('Organiser en superset ou circuit'));
+    const organization = screen.getByText('Organiser en superset ou circuit').closest('details')!;
+    await user.click(within(organization).getByRole('checkbox', { name: definitions[0]!.name }));
+    await user.click(within(organization).getByRole('checkbox', { name: definitions[1]!.name }));
+    await user.click(within(organization).getByRole('button', { name: 'Créer le groupe' }));
     await user.type(screen.getByLabelText('Nom facultatif'), 'Haut du corps');
     await user.clear(screen.getByLabelText('Repos entre exercices (s)'));
     await user.type(screen.getByLabelText('Repos entre exercices (s)'), '15');
@@ -130,6 +138,41 @@ describe('WorkoutTemplateEditorPage', () => {
     );
     expect(exerciseSelect).toHaveValue(definition.id);
     expect(window.sessionStorage.getItem(draftKey)).toBeNull();
+  });
+
+  it('modifie un modèle existant sans perdre ses exercices', async () => {
+    const user = userEvent.setup();
+    const definition = (await appDatabase.exerciseDefinitions.toArray())[0]!;
+    await appDatabase.workoutTemplates.add(createEntity(
+      createWorkoutTemplateInput({ name: 'Push initial' }),
+      'template-edit',
+    ));
+    await appDatabase.workoutTemplateExercises.add(createEntity(
+      createWorkoutTemplateExerciseInput({
+        templateId: 'template-edit',
+        exerciseDefinitionId: definition.id,
+      }),
+      'template-exercise-edit',
+    ));
+
+    render(
+      <MemoryRouter initialEntries={['/strength/templates/template-edit/edit']}>
+        <Routes>
+          <Route path="/strength/templates/:templateId/edit" element={<WorkoutTemplateEditorPage />} />
+          <Route path="/strength/templates" element={<h1>Séances chargées</h1>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    const nameInput = await screen.findByLabelText(/Nom de la séance/);
+    expect(nameInput).toHaveValue('Push initial');
+    await user.clear(nameInput);
+    await user.type(nameInput, 'Push modifié');
+    await user.click(screen.getByRole('button', { name: 'Enregistrer les modifications' }));
+
+    expect(await screen.findByRole('heading', { name: 'Séances chargées' })).toBeInTheDocument();
+    expect((await appDatabase.workoutTemplates.get('template-edit'))?.name).toBe('Push modifié');
+    expect(await appDatabase.workoutTemplateExercises.where('templateId').equals('template-edit').count()).toBe(1);
   });
 
 });
