@@ -44,6 +44,7 @@ export function FieldStatus({
 }: FieldStatusProps) {
   const Icon = stateIcons[state];
   const isError = state === 'invalid' || state === 'unavailable' || state === 'error';
+  const message = state === 'checking' ? 'Vérification…' : children;
 
   return (
     <p
@@ -65,7 +66,7 @@ export function FieldStatus({
           state === 'checking' && 'motion-safe:animate-spin motion-reduce:animate-none',
         )}
       />
-      <span>{children}</span>
+      <span>{message}</span>
     </p>
   );
 }
