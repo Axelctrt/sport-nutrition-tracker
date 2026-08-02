@@ -12,6 +12,8 @@ const requiredFiles = [
   'RELEASE-NOTES-0.35.0.md',
   'RELEASE-NOTES-0.35.1.md',
   'RELEASE-NOTES-0.36.0.md',
+  'RELEASE-NOTES-0.37.0.md',
+  'CHANGELOG.md',
   'RELEASE-CHECKLIST.md',
   'KNOWN-LIMITATIONS.md',
   'docs/onboarding-compact-0.32.0.md',
@@ -34,9 +36,9 @@ for (const path of requiredFiles) {
 if (failures.length === 0) {
   const packageJson = JSON.parse(read('package.json'));
   const packageLock = JSON.parse(read('package-lock.json'));
-  if (packageJson.version !== '0.36.0') fail(`package.json doit publier 0.36.0, reçu ${packageJson.version}.`);
-  if (packageLock.version !== '0.36.0' || packageLock.packages?.['']?.version !== '0.36.0') {
-    fail('package-lock.json doit être aligné sur 0.36.0.');
+  if (packageJson.version !== '0.37.0') fail(`package.json doit publier 0.37.0, reçu ${packageJson.version}.`);
+  if (packageLock.version !== '0.37.0' || packageLock.packages?.['']?.version !== '0.37.0') {
+    fail('package-lock.json doit être aligné sur 0.37.0.');
   }
   if (!isStableVersionAtLeast(packageJson.version, 20)) {
     fail('la version courante doit être reconnue comme stable par le garde-fou partagé.');
@@ -63,22 +65,29 @@ if (failures.length === 0) {
     if (!source.includes('3408 * 1024')) fail(`le budget JavaScript ${label} n’est pas aligné sur 3408 Kio.`);
   }
 
-  const releaseNotes = read('RELEASE-NOTES-0.36.0.md');
+  const releaseNotes = read('RELEASE-NOTES-0.37.0.md');
   for (const marker of [
-    'SportPilot 0.36.0',
-    'Branche : `feat/friends-settings-strength-ux-0.36.0`',
+    'SportPilot 0.37.0',
+    'Branche : `release/0.37.0`',
     'Aucun tag ni déploiement',
-    'quatre rubriques explicites',
-    'cinq catégories',
-    'autosauvegarde fiable',
-    'aucune migration Dexie ou D1',
+    'photos de progression privées et locales',
+    'galerie et comparateur',
+    'archive photo séparée',
+    'aucune synchronisation cloud des photos',
+    'aucune publication sociale des photos',
+    'aucune analyse corporelle par IA',
+    'aucune modification des formules caloriques',
+    'migration locale additive',
+    'compatibilité Chromium, WebKit et PWA',
+    'statut de disponibilité',
+    'aucune migration D1',
   ]) {
     if (!releaseNotes.includes(marker)) fail(`notes de release incomplètes : ${marker}.`);
   }
 
   const checklist = read('RELEASE-CHECKLIST.md');
   for (const marker of [
-    'Branche `feat/friends-settings-strength-ux-0.36.0` créée',
+    'Branche `release/0.37.0` créée',
     'Aucun tag créé',
     'Suite Vitest complète',
     'Build PWA',
@@ -88,7 +97,7 @@ if (failures.length === 0) {
   }
 
   const knownLimitations = read('KNOWN-LIMITATIONS.md');
-  for (const marker of ['SportPilot 0.36.0', 'Moteur calorique', 'Dépendances']) {
+  for (const marker of ['SportPilot 0.37.0', 'Photos de progression', 'Moteur calorique', 'Dépendances']) {
     if (!knownLimitations.includes(marker)) fail(`limitations connues incomplètes : ${marker}.`);
   }
 
@@ -136,9 +145,9 @@ if (failures.length === 0) {
 }
 
 if (failures.length > 0) {
-  console.error('Audit de consolidation 0.36.0 échoué :');
+  console.error('Audit de consolidation 0.37.0 échoué :');
   for (const failure of failures) console.error(`- ${failure}`);
   process.exit(1);
 }
 
-console.log('Audit de consolidation 0.36.0 réussi : version, documentation, budgets, parcours et contrats de stockage sont alignés.');
+console.log('Audit de consolidation 0.37.0 réussi : version, documentation, budgets, parcours et contrats de stockage sont alignés.');

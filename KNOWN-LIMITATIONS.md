@@ -1,4 +1,12 @@
-# Limitations connues - SportPilot 0.36.0
+# Limitations connues - SportPilot 0.37.0
+
+## Photos de progression
+
+Les photos restent privées et locales au navigateur et à l’espace de données ouvert. Elles ne sont ni synchronisées dans le cloud, ni publiées socialement, ni incluses dans la sauvegarde JSON générale. Leur transfert entre appareils exige l’archive photo séparée et une restauration volontaire.
+
+## Amis
+
+Le statut `Vérification…`, `Identifiant disponible` ou `Identifiant indisponible` est encore affiché sous les actions du profil public. Son déplacement immédiatement sous le champ d’identifiant est une amélioration UX non bloquante planifiée pour une prochaine passe.
 
 ## Données et analyses
 
@@ -6,19 +14,15 @@ Les graphiques restent absents lorsque les données disponibles ne permettent pa
 
 ## Moteur calorique
 
-La version 0.36.0 ne modifie pas les formules de calories, macros, métabolisme ou ajustement hebdomadaire.
+La version 0.37.0 ne modifie pas les formules de calories, macros, métabolisme ou ajustement hebdomadaire.
 
 ## Social
 
-Les contrats sociaux restent ceux de la version 0.29.0. La version 0.36.0 réorganise les parcours Amis, mais n’ajoute pas d’annuaire public, likes, commentaires, messagerie, groupes, défis partagés, classements ou export d’activité brute.
-
-## Musculation
-
-L’autosauvegarde protège les séries saisies dans l’application. Une fermeture forcée du navigateur ou du système avant l’événement de saisie ne peut pas être interceptée par une application web.
+Les contrats sociaux restent ceux de la version 0.29.0. La version 0.37.0 améliore les parcours Amis sans ajouter d’annuaire public, likes, commentaires, messagerie, groupes, défis partagés, classements ou export d’activité brute.
 
 ## Photo nutrition
 
-L’analyse photo reste soumise au consentement explicite par image, à un compte connecté et à la disponibilité du service. Une analyse indisponible ne produit aucune estimation.
+L’analyse photo nutritionnelle reste distincte des photos de progression. Elle exige un consentement explicite par image, un compte connecté et la disponibilité du service ; une analyse indisponible ne produit aucune estimation.
 
 ## Accessibilité
 
