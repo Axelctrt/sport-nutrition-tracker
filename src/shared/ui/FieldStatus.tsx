@@ -1,9 +1,3 @@
-import {
-  CircleAlert,
-  CircleCheck,
-  CircleX,
-  LoaderCircle,
-} from 'lucide-react';
 import type { HTMLAttributes } from 'react';
 
 import { cn } from '@/shared/utils/cn';
@@ -28,13 +22,13 @@ const stateClasses: Record<FieldStatusState, string> = {
   error: 'text-red-700 dark:text-red-300',
 };
 
-const stateIcons = {
-  checking: LoaderCircle,
-  valid: CircleCheck,
-  invalid: CircleX,
-  unavailable: CircleX,
-  error: CircleAlert,
-} as const;
+const stateMarkers: Record<FieldStatusState, string> = {
+  checking: '…',
+  valid: '✓',
+  invalid: '×',
+  unavailable: '×',
+  error: '!',
+};
 
 export function FieldStatus({
   state,
@@ -42,7 +36,6 @@ export function FieldStatus({
   className,
   ...props
 }: FieldStatusProps) {
-  const Icon = stateIcons[state];
   const isError = state === 'invalid' || state === 'unavailable' || state === 'error';
   const message = state === 'checking' ? 'Vérification…' : children;
 
@@ -59,13 +52,9 @@ export function FieldStatus({
       )}
       {...props}
     >
-      <Icon
-        aria-hidden="true"
-        className={cn(
-          'mt-0.5 size-4 shrink-0',
-          state === 'checking' && 'motion-safe:animate-spin motion-reduce:animate-none',
-        )}
-      />
+      <span aria-hidden="true" className="shrink-0 font-bold">
+        {stateMarkers[state]}
+      </span>
       <span>{message}</span>
     </p>
   );
