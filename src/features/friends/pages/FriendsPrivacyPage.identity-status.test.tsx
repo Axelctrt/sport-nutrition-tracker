@@ -180,6 +180,7 @@ describe('statut de l’identifiant public', () => {
   });
 
   it('copie l’identifiant depuis l’icône et utilise un toast temporaire unique', async () => {
+    const user = userEvent.setup();
     const clipboardDescriptor = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, 'clipboard', {
@@ -188,15 +189,14 @@ describe('statut de l’identifiant public', () => {
     });
 
     try {
-      const user = userEvent.setup();
       renderProfile({ lookupByHandle: vi.fn() });
       await openSocialProfile(user);
 
       await user.click(screen.getByRole('button', { name: 'Copier l’identifiant public' }));
 
       expect(writeText).toHaveBeenCalledWith('@alex123');
-      expect(await screen.findByText('Identifiant copié')).toBeInTheDocument();
-      expect(screen.getAllByText('Identifiant copié')).toHaveLength(1);
+      expect(await screen.findByText('Identifiant copié.')).toBeInTheDocument();
+      expect(screen.getAllByText('Identifiant copié.')).toHaveLength(1);
       expect(screen.queryByText('Profil à vérifier')).not.toBeInTheDocument();
     } finally {
       if (clipboardDescriptor) {
