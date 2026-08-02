@@ -5,69 +5,36 @@ import { ConfirmationDialog } from '@/shared/ui/ConfirmationDialog';
 
 interface UnsavedChangesGuardProps {
   when: boolean;
-  title?: string;
-  description?: string;
-  confirmLabel?: string;
-  cancelLabel?: string;
 }
 
-function RouterUnsavedChangesGuard({
-  when,
-  title,
-  description,
-  confirmLabel,
-  cancelLabel,
-}: Required<UnsavedChangesGuardProps>) {
+function RouterGuard({ when }: UnsavedChangesGuardProps) {
   const blocker = useBlocker(when);
-  const blocked = blocker.state === 'blocked';
 
   return (
     <ConfirmationDialog
-      open={blocked}
-      title={title}
-      description={description}
-      confirmLabel={confirmLabel}
-      cancelLabel={cancelLabel}
-      onCancel={() => {
-        if (blocker.state === 'blocked') blocker.reset();
-      }}
-      onConfirm={() => {
-        if (blocker.state === 'blocked') blocker.proceed();
-      }}
+      open={blocker.state === 'blocked'}
+      title="Quitter sans enregistrer ?"
+      description="Les modifications non enregistrées seront perdues."
+      confirmLabel="Quitter"
+      cancelLabel="Continuer la modification"
+      onCancel={() => blocker.reset()}
+      onConfirm={() => blocker.proceed()}
     />
   );
 }
 
-export function UnsavedChangesGuard({
-  when,
-  title = 'Quitter sans enregistrer ?',
-  description = 'Les modifications non enregistrées seront perdues.',
-  confirmLabel = 'Quitter',
-  cancelLabel = 'Continuer la modification',
-}: UnsavedChangesGuardProps) {
-  const inRouterContext = useInRouterContext();
+export function UnsavedChangesGuard({ when }: UnsavedChangesGuardProps) {
+  const inRouter = useInRouterContext();
 
   useEffect(() => {
-    if (!when) return undefined;
-
-    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+    if (!when) return;
+    const block = (event: BeforeUnloadEvent) => {
       event.preventDefault();
       event.returnValue = '';
     };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('beforeunload', block);
+    return () => window.removeEventListener('beforeunload', block);
   }, [when]);
 
-  if (!inRouterContext) return null;
-
-  return (
-    <RouterUnsavedChangesGuard
-      when={when}
-      title={title}
-      description={description}
-      confirmLabel={confirmLabel}
-      cancelLabel={cancelLabel}
-    />
-  );
+  return inRouter ? <RouterGuard when={when} /> : null;
 }
