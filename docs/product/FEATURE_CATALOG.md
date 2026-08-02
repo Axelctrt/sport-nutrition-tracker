@@ -1,8 +1,8 @@
 # Catalogue fonctionnel
 
-Statut vérifié : production 0.36.0 ; release candidate 0.37.0 préparée depuis
-`develop`, avec les fondations UX des Phases 0 à 3E, la Phase 4 et les
-ajustements UX de recette. La candidate n’est pas déployée en production.
+Statut vérifié : SportPilot 0.37.0 est publié en production depuis `main` au
+commit `84fea3d49e68c7d190c00d505502a5c4aa2e672a`. Le tag annoté `v0.37.0` et la
+release GitHub stable identifient le même état.
 
 | Domaine | État actuel |
 | --- | --- |
@@ -13,7 +13,7 @@ ajustements UX de recette. La candidate n’est pas déployée en production.
 | Poids et pas | saisie locale, historique, tendances et intégration au quotidien |
 | Planification | séances prévues, répétition de semaine et agenda |
 | Progression | objectifs, rapports, statistiques, badges, missions et thèmes |
-| Photos de progression | Candidate 0.37.0 : ajout local, vues, galerie, comparateur tactile, archive séparée et suppression ; pas encore en production |
+| Photos de progression | publié en 0.37.0 : ajout local, vues, galerie, comparateur tactile, archive séparée et suppression |
 | Sauvegarde | export, partage, import, restauration sélective et sauvegarde de sécurité |
 | Corbeille | archivage, restauration et purge contrôlée |
 | Comptes et espaces | invité, profil local, OTP cloud, appareils et restauration |
@@ -29,15 +29,19 @@ ajustements UX de recette. La candidate n’est pas déployée en production.
   d’environnement Cloudflare.
 - L’estimation photo nutritionnelle exige une configuration serveur ; elle
   n’est pas un journal automatique.
-- Les photos de progression de la Phase 4 restent locales : aucune image cloud,
-  sociale ou analysée par IA. Leur archive est séparée de la sauvegarde JSON
-  générale.
+- Les photos de progression restent locales : aucune image cloud, sociale ou
+  analysée par IA. Leur archive est séparée de la sauvegarde JSON générale.
 - Le statut de disponibilité de l’identifiant public reste sous les actions ;
   son rapprochement avec le champ est une amélioration UX non bloquante.
-- Les documents versionnés décrivent parfois une étape historique révolue :
-  l’état courant doit être vérifié dans le code et les documents canoniques.
+- La version 0.36.0 reste uniquement une référence historique de repli.
+- Les documents versionnés et artefacts de préparation décrivent parfois une
+  étape historique révolue : l’état courant doit être vérifié dans le code et
+  les documents canoniques.
 
 ## Planifié ou à étudier
+
+L’audit global en lecture seule doit évaluer `Planning hebdomadaire`,
+`Objectifs` et la normalisation transverse avant toute évolution fonctionnelle.
 
 Voir [`../roadmap/PLANNED_FEATURES.md`](../roadmap/PLANNED_FEATURES.md). La
 présence d’une idée dans ce catalogue n’autorise pas son implémentation.
