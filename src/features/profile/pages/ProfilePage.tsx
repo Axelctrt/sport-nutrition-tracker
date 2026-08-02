@@ -74,7 +74,7 @@ interface PendingImpact {
 }
 
 interface ProfileFeedback {
-  tone: 'warning' | 'error';
+  tone: 'warning';
   title: string;
   message: string;
 }
@@ -97,7 +97,7 @@ function ProfilePageContent({ profile, saveProfile }: ProfilePageContentProps) {
   }, [isEditing]);
 
   const restoreEditButtonFocus = () => {
-    window.requestAnimationFrame(() => editButtonRef.current?.focus());
+    window.setTimeout(() => editButtonRef.current?.focus(), 0);
   };
 
   const closeEditor = () => {
@@ -162,10 +162,11 @@ function ProfilePageContent({ profile, saveProfile }: ProfilePageContentProps) {
 
   const reportError = (error: unknown) => {
     const fallback = 'Le profil n’a pas pu être mis à jour. Vérifie les champs puis réessaie.';
-    setFeedback({
-      tone: 'error',
+    setFeedback(undefined);
+    actionToast.error({
+      key: 'profile-update',
       title: 'Enregistrement impossible',
-      message: error instanceof Error ? error.message : fallback,
+      description: error instanceof Error ? error.message : fallback,
     });
   };
 
