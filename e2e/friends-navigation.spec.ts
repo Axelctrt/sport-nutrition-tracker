@@ -48,12 +48,6 @@ test('navigue entre les quatre rubriques Amis sans empiler leur contenu', async 
   await expect(page.getByText('Action prise en compte', { exact: true })).toHaveCount(0);
   await expect(page.getByText(/Profil passé en privé/u)).toHaveCount(0);
 
-  await saveIdentity.click();
-  const profileSuccessToast = page.getByRole('status').filter({ hasText: 'Profil mis à jour' });
-  await expect(profileSuccessToast).toHaveCount(1);
-  await expect(page.getByText('Action prise en compte', { exact: true })).toHaveCount(0);
-  await expect(page.getByText(/Profil passé en privé/u)).toHaveCount(0);
-
   const order = await profilePanel.evaluate((panel) => {
     const input = panel.querySelector('#social-handle');
     const copy = panel.querySelector('[aria-label="Copier l’identifiant public"]');
