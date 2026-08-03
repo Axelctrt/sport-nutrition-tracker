@@ -38,6 +38,17 @@ test('navigue entre les quatre rubriques Amis sans empiler leur contenu', async 
   await expect(profilePanel.getByRole('button', { name: /Vérifier disponibilité/u })).toHaveCount(0);
   await expect(profilePanel.getByRole('button', { name: /^Copier$/u })).toHaveCount(0);
 
+  await profilePanel.getByRole('radio', { name: 'Profil privé' }).click();
+  await expect(profilePanel.getByRole('radio', { name: 'Profil privé' })).toBeChecked();
+  await expect(page.getByText('Action prise en compte', { exact: true })).toHaveCount(0);
+  await expect(page.getByText(/Profil passé en privé/u)).toHaveCount(0);
+
+  await saveIdentity.click();
+  const profileSuccessToast = page.getByRole('status').filter({ hasText: 'Profil mis à jour' });
+  await expect(profileSuccessToast).toHaveCount(1);
+  await expect(page.getByText('Action prise en compte', { exact: true })).toHaveCount(0);
+  await expect(page.getByText(/Profil passé en privé/u)).toHaveCount(0);
+
   const order = await profilePanel.evaluate((panel) => {
     const input = panel.querySelector('#social-handle');
     const copy = panel.querySelector('[aria-label="Copier l’identifiant public"]');
