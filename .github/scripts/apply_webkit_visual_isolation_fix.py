@@ -14,7 +14,7 @@ spec = spec_path.read_text()
 spec = replace_once(
     spec,
     "];\n\nasync function capture(",
-    "];\n\nconst ONBOARDING_COMPLETION_REVEAL_SEEN_STORAGE_KEY =\n  'sportpilot:onboarding:completion-reveal:v1';\n\nfunction isolatedVisualUrl(\n  bootstrapSearch: string,\n  parameter: string,\n  value: string,\n  hashPath: string,\n): string {\n  const query = new URLSearchParams(bootstrapSearch);\n  query.set(parameter, value);\n  return `/?${query.toString()}#${hashPath}`;\n}\n\nasync function capture(",
+    "];\n\nconst ONBOARDING_COMPLETION_REVEAL_SEEN_STORAGE_KEY =\n  'sportpilot:onboarding:completion-reveal:v1';\n\ninterface VisualApplicationPageOptions {\n  reducedMotion?: 'reduce' | 'no-preference';\n}\n\nfunction isolatedVisualUrl(\n  bootstrapSearch: string,\n  parameter: string,\n  value: string,\n  hashPath: string,\n): string {\n  const query = new URLSearchParams(bootstrapSearch);\n  query.set(parameter, value);\n  return `/?${query.toString()}#${hashPath}`;\n}\n\nasync function capture(",
     'visual URL helper',
 )
 spec = replace_once(
@@ -33,6 +33,7 @@ spec = replace_once(
   bootstrapSearch: string,
   setup: (setupPage: Page) => Promise<void>,
   targetUrl: string,
+  pageOptions: VisualApplicationPageOptions = {},
 ): Promise<Page> {
   const completionRevealSeenAt = await page.evaluate(
     (storageKey) => window.sessionStorage.getItem(storageKey),
@@ -53,6 +54,9 @@ spec = replace_once(
   }
 
   const applicationPage = await context.newPage();
+  if (pageOptions.reducedMotion) {
+    await applicationPage.emulateMedia({ reducedMotion: pageOptions.reducedMotion });
+  }
   if (completionRevealSeenAt) {
     await applicationPage.addInitScript(({ storageKey, seenAt }) => {
       window.sessionStorage.setItem(storageKey, seenAt);
@@ -77,12 +81,14 @@ async function prepareVisualTheme(
   bootstrapSearch: string,
   options: Parameters<typeof setVisualThemeState>[1],
   targetUrl = page.url(),
+  pageOptions: VisualApplicationPageOptions = {},
 ): Promise<Page> {
   return replaceVisualApplicationPage(
     page,
     bootstrapSearch,
     async (setupPage) => setVisualThemeState(setupPage, options),
     targetUrl,
+    pageOptions,
   );
 }
 
@@ -169,8 +175,14 @@ spec = replace_once(
 )
 spec = replace_once(
     spec,
+    "  await page.emulateMedia({ reducedMotion: 'reduce' });\n",
+    "",
+    'obsolete reduced motion page setup',
+)
+spec = replace_once(
+    spec,
     "    pendingRevealThemeId: 'aurora',\n  });\n  await page.goto('/?visualReveal=aurora-reduced#/');",
-    "    pendingRevealThemeId: 'aurora',\n  }, isolatedVisualUrl(bootstrapSearch, 'visualReveal', 'aurora-reduced', '/'));",
+    "    pendingRevealThemeId: 'aurora',\n  }, isolatedVisualUrl(bootstrapSearch, 'visualReveal', 'aurora-reduced', '/'), {\n    reducedMotion: 'reduce',\n  });",
     'reduced reveal page replacement',
 )
 spec_path.write_text(spec)
