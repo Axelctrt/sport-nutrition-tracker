@@ -1,3 +1,3 @@
 Validation ciblée de la stabilité WebKit du scénario visuel historique.
-Base validée : 032f7e965c0195fa30e0d8640d15adb3f6d2dda6
-Nouvel onglet applicatif après chaque écriture visuelle.
+Base validée : 8abb9eef32904949274506db9ab899fc27cec1bf
+État de reveal onboarding conservé lors du renouvellement de l’onglet.
