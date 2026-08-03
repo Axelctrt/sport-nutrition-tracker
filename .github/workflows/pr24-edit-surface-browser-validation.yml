@@ -59,25 +59,29 @@ jobs:
           printf '%s' 'H4sICAP5cGoAA3ByMjRfZm9sbG93dXAzLnB5AHVQwUoDMRS871c8vWQXuineROlBRfEkxauIpLsvbSDNW15e2or4QX6HP+ZLBQ+Kuc1kMjMZz7SFyckmhhWE7UQssFTYNJWExRG0JvMw9+ikMOa554BpzPPJrRXdfaMlh50bXpfK2TBikiCvfRZ9kq1gFiv5YLpG8CDqWs0toxtfKtFiGmgMab0wRXx/rjqKo8pOQQ8eJhykzW6H10WEUmeF7hXdRJdza/a9LzGa7vK0Sbj/95UdImUt0pqn0YnrV6Tsts8bROk9kSA/m66zibQrXeODmrbVNHioJe1AJUmrxTo4WcDZRVNj2IWM8Kg3YYu3zMStN1oLWQIluE2M65CFkcGJ6FAFoSQETyHPQJjK7vMD4e1XwrtOcNxoz0Hwe6SjhHGKbsAqmoF+t5vB3/EmDupjrn5qjAVWVOR3oRjWqabnwhBrpzoCjAjRVc5rkFW7L+0Rrb4kAgAA' | base64 --decode | gzip --decompress > /tmp/pr24-followup-3.py
           python /tmp/pr24-followup-3.py
           python - <<'PY'
+          import re
           from pathlib import Path
 
           path = Path('src/features/friends/pages/FriendsPrivacyPage.tsx')
           source = path.read_text(encoding='utf-8')
-          old = """    return persistSocialPrivacyForAccountSync(
-              { ...next, lastFeedback: undefined },
-              'social-profile-settings-update',
-            );
-          """
-          new = """    const nextWithoutFeedback = { ...next };
-              delete nextWithoutFeedback.lastFeedback;
-              return persistSocialPrivacyForAccountSync(
-                nextWithoutFeedback,
-                'social-profile-settings-update',
-              );
-          """
-          if old not in source:
-              raise SystemExit('Zone lastFeedback attendue introuvable.')
-          path.write_text(source.replace(old, new, 1), encoding='utf-8')
+          pattern = re.compile(
+              r"    return persistSocialPrivacyForAccountSync\(\n"
+              r"\s+\{ \.\.\.next, lastFeedback: undefined \},\n"
+              r"\s+'social-profile-settings-update',\n"
+              r"\s+\);\n"
+          )
+          replacement = (
+              "    const nextWithoutFeedback = { ...next };\n"
+              "    delete nextWithoutFeedback.lastFeedback;\n"
+              "    return persistSocialPrivacyForAccountSync(\n"
+              "      nextWithoutFeedback,\n"
+              "      'social-profile-settings-update',\n"
+              "    );\n"
+          )
+          source, count = pattern.subn(replacement, source, count=1)
+          if count != 1:
+              raise SystemExit(f'Appel lastFeedback attendu une fois, trouvé : {count}.')
+          path.write_text(source, encoding='utf-8')
           print('Propriété lastFeedback omise conformément à exactOptionalPropertyTypes.')
           PY
 
