@@ -1,1 +1,2 @@
 Validation ciblée de la stabilité WebKit du scénario visuel historique.
+Base validée : 7850bca495d55003f8a1e1f2e7dc7a9725cae517
