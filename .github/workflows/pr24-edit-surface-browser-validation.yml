@@ -85,12 +85,18 @@ jobs:
 
           e2e_path = Path('e2e/friends-profile-editing.spec.ts')
           e2e_source = e2e_path.read_text(encoding='utf-8')
-          old = "const socialCard = page.getByLabel('Profil social');"
-          new = "const socialCard = page.getByLabel('Profil social', { exact: true });"
-          if old not in e2e_source:
+          old_card = "const socialCard = page.getByLabel('Profil social');"
+          new_card = "const socialCard = page.getByLabel('Profil social', { exact: true });"
+          if old_card not in e2e_source:
               raise SystemExit('Sélecteur non exact de la carte Profil social introuvable.')
-          e2e_path.write_text(e2e_source.replace(old, new, 1), encoding='utf-8')
-          print('Correction TypeScript et sélecteur exact appliqués.')
+          e2e_source = e2e_source.replace(old_card, new_card, 1)
+          old_handle = "page.getByLabel('Identifiant public')"
+          new_handle = "page.getByRole('textbox', { name: 'Identifiant public' })"
+          if e2e_source.count(old_handle) != 2:
+              raise SystemExit('Deux sélecteurs de champ Identifiant public étaient attendus.')
+          e2e_source = e2e_source.replace(old_handle, new_handle)
+          e2e_path.write_text(e2e_source, encoding='utf-8')
+          print('Correction TypeScript et sélecteurs sémantiques appliqués.')
           PY
 
       - name: Install dependencies
