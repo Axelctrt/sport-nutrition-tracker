@@ -126,13 +126,18 @@ if (failures.length === 0) {
 
   const performanceGlass = read('e2e/performance-glass-0.34.0.spec.ts');
   for (const marker of [
-    'async function prepareVisualTheme(',
-    "page.goto('/visual-lab.html'",
-    "page.locator('#root')",
-    'await setVisualThemeState(page, options);',
+    'async function replaceVisualApplicationPage(',
+    'await setupPage.goto(`/visual-lab.html${bootstrapSearch}`',
+    "await expect(setupPage.locator('#root')).not.toBeEmpty();",
+    'setVisualThemeState(setupPage, options)',
+    'ONBOARDING_COMPLETION_REVEAL_SEEN_STORAGE_KEY',
+    'window.sessionStorage.setItem(storageKey, seenAt);',
+    "reducedMotion: 'reduce'",
+    "page.getByRole('dialog', { name: 'Tout est prêt' })",
+    'await page.goto(`/${bootstrapSearch}#${path}`',
   ]) {
     if (!performanceGlass.includes(marker)) {
-      fail(`le harnais Performance Glass doit isoler les écritures IndexedDB : ${marker}.`);
+      fail(`le harnais Performance Glass doit conserver son isolation WebKit : ${marker}.`);
     }
   }
 
