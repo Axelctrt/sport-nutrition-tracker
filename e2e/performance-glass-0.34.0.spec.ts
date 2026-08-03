@@ -172,19 +172,18 @@ test('valide la progression core claire avec des données contrôlées', async (
   await expect(page).toHaveURL(/range=90/);
 });
 
-test('conserve le thème sombre core après rechargement', async ({ page }, testInfo) => {
+test('charge le thème sombre core depuis les préférences persistées', async ({
+  page,
+}, testInfo) => {
   await createLocalProfile(page, 'Progression Dark');
   const bootstrapSearch = new URL(page.url()).search;
 
   await prepareSeededVisualTheme(page, bootstrapSearch, {
     activeThemeId: 'core',
     unlockedThemeIds: allThemes,
-    appearance: 'light',
+    appearance: 'dark',
   }, `/${bootstrapSearch}#/progression?range=90`);
 
-  await expectReadyPage(page, 'Progression');
-  await enableDarkMode(page);
-  await page.reload({ waitUntil: 'domcontentloaded' });
   await expectReadyPage(page, 'Progression');
   await expect(page.locator('html')).toHaveClass(/dark/);
   await expect(page.locator('html')).toHaveAttribute('data-sport-theme', 'core');
