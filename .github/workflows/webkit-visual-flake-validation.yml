@@ -1,0 +1,46 @@
+name: WebKit visual flake validation
+
+on:
+  pull_request:
+    branches:
+      - agent/profile-friends-privacy-webkit-flake
+
+permissions:
+  contents: read
+
+jobs:
+  targeted-webkit:
+    name: WebKit visual stability
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22.16.0
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install WebKit
+        run: npx playwright install --with-deps webkit
+
+      - name: Repeat failing scenario three times
+        run: >-
+          npx playwright test
+          e2e/performance-glass-0.34.0.spec.ts
+          --project=webkit-iphone-15
+          --grep "valide les thèmes, graphiques et écrans de décision avec des données contrôlées"
+          --repeat-each=3
+
+      - name: Run visual file on WebKit
+        run: >-
+          npx playwright test
+          e2e/performance-glass-0.34.0.spec.ts
+          --project=webkit-iphone-15
