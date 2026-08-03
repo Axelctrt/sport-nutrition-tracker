@@ -13,8 +13,8 @@ spec = spec_path.read_text()
 
 spec = replace_once(
     spec,
-    "] as const;\n\nasync function capture(",
-    "] as const;\n\nfunction isolatedVisualUrl(\n  bootstrapSearch: string,\n  parameter: string,\n  value: string,\n  hashPath: string,\n): string {\n  const query = new URLSearchParams(bootstrapSearch);\n  query.set(parameter, value);\n  return `/?${query.toString()}#${hashPath}`;\n}\n\nasync function capture(",
+    "];\n\nasync function capture(",
+    "];\n\nfunction isolatedVisualUrl(\n  bootstrapSearch: string,\n  parameter: string,\n  value: string,\n  hashPath: string,\n): string {\n  const query = new URLSearchParams(bootstrapSearch);\n  query.set(parameter, value);\n  return `/?${query.toString()}#${hashPath}`;\n}\n\nasync function capture(",
     'visual URL helper',
 )
 spec = replace_once(
