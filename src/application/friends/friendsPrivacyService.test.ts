@@ -1,5 +1,8 @@
 import type { EntityId } from '@/domain/models/common';
-import { createFriendsPrivacyService } from '@/application/friends/friendsPrivacyService';
+import {
+  createFriendsPrivacyService,
+  type FriendsPrivacyServiceState,
+} from '@/application/friends/friendsPrivacyService';
 import { DEFAULT_FRIENDS_PRIVACY_SETTINGS } from '@/domain/friends/friendship';
 
 describe('friendsPrivacyService', () => {
@@ -36,6 +39,23 @@ describe('friendsPrivacyService', () => {
     expect(state.requests).toHaveLength(1);
     expect(state.requests[0]).toMatchObject({ handle: 'ami.test', direction: 'outgoing' });
     expect(state.lastFeedback).toContain('Demande envoyée');
+  });
+
+  it('supprime tout succès local persistant lors du changement de visibilité', () => {
+    const initialState: FriendsPrivacyServiceState = {
+      friends: [],
+      requests: [],
+      privacy: DEFAULT_FRIENDS_PRIVACY_SETTINGS,
+      activityPermissions: [],
+      lastFeedback: 'Ancien succès à ne pas conserver.',
+    };
+    const service = createFriendsPrivacyService(initialState);
+
+    const state = service.actions.setProfileVisibility('private');
+
+    expect(state.privacy.profileVisibility).toBe('private');
+    expect(state).not.toHaveProperty('lastFeedback');
+    expect(state.activityPermissions).toEqual([]);
   });
 
   it('bloque les nouvelles demandes sans supprimer les amis existants', () => {
@@ -76,5 +96,4 @@ describe('friendsPrivacyService', () => {
       canShareDetailed: false,
     });
   });
-
 });
