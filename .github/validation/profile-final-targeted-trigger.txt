@@ -1,1 +1,2 @@
 Validation ciblée éphémère du patch final Profil et visibilité.
+Base validée : 1b24620244f9057b2a245bc386e4a162cd744014
