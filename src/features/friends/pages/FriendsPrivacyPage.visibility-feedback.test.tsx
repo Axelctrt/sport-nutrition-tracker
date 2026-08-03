@@ -1,6 +1,7 @@
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { RouterProvider, createMemoryRouter } from 'react-router-dom';
 
 import type { FriendsPrivacySnapshotRepository } from '@/application/friends/friendsPrivacyService';
 import { SocialProfileVisibilityNotifier } from '@/app/friends/SocialProfileVisibilityNotifier';
@@ -25,7 +26,7 @@ const identity = createDefaultSocialIdentity(
 );
 
 function renderVisibilityPage(repository: FriendsPrivacySnapshotRepository) {
-  return render(
+  const page = (
     <ToastProvider>
       <SocialProfileVisibilityNotifier />
       <FriendsPrivacyPage
@@ -33,7 +34,16 @@ function renderVisibilityPage(repository: FriendsPrivacySnapshotRepository) {
         initialIdentity={identity}
         repository={repository}
       />
-    </ToastProvider>,
+    </ToastProvider>
+  );
+
+  return render(
+    <RouterProvider
+      router={createMemoryRouter(
+        [{ path: '*', element: page }],
+        { initialEntries: ['/friends'] },
+      )}
+    />,
   );
 }
 
@@ -55,11 +65,13 @@ describe('feedback de visibilité du profil', () => {
     renderVisibilityPage(repository);
 
     await user.click(screen.getByRole('button', { name: 'Mon profil social' }));
+    await user.click(screen.getByRole('button', { name: 'Modifier le profil public' }));
     await user.click(screen.getByRole('radio', { name: 'Profil privé' }));
+    await user.click(screen.getByRole('button', { name: 'Enregistrer' }));
 
     await waitFor(() => expect(repository.saveSnapshot).toHaveBeenCalledOnce());
-    expect(await screen.findByText('Visibilité du profil mise à jour')).toBeInTheDocument();
-    expect(screen.getAllByText('Visibilité du profil mise à jour')).toHaveLength(1);
+    expect(await screen.findByText('Profil mis à jour')).toBeInTheDocument();
+    expect(screen.getAllByText('Profil mis à jour')).toHaveLength(1);
     expect(screen.queryByText('Action prise en compte')).not.toBeInTheDocument();
     expect(screen.queryByText(/Profil passé en privé/u)).not.toBeInTheDocument();
   });
@@ -75,10 +87,12 @@ describe('feedback de visibilité du profil', () => {
     renderVisibilityPage(repository);
 
     await user.click(screen.getByRole('button', { name: 'Mon profil social' }));
+    await user.click(screen.getByRole('button', { name: 'Modifier le profil public' }));
     await user.click(screen.getByRole('radio', { name: 'Visible via invitation' }));
+    await user.click(screen.getByRole('button', { name: 'Enregistrer' }));
 
     expect(await screen.findByText('Stockage local indisponible.')).toBeInTheDocument();
-    expect(screen.queryByText('Visibilité du profil mise à jour')).not.toBeInTheDocument();
+    expect(screen.queryByText('Profil mis à jour')).not.toBeInTheDocument();
     expect(screen.queryByText('Action prise en compte')).not.toBeInTheDocument();
   });
 });

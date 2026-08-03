@@ -120,14 +120,14 @@ describe('ProfilePage', () => {
 
     const editButton = screen.getByRole('button', { name: 'Modifier le profil' });
     expect(editButton).toHaveAttribute('title', 'Modifier le profil');
-    expect(editButton).toHaveClass('size-11', 'p-0');
-    expect(editButton).not.toHaveTextContent('Modifier le profil');
+    expect(editButton).toHaveTextContent('Modifier');
     expect(editButton.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
-    expect(screen.queryByLabelText('Prénom')).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByLabelText('Prénom')).not.toBeInTheDocument());
     expect(screen.queryByRole('button', { name: 'Enregistrer le profil' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Annuler' })).not.toBeInTheDocument();
 
     await user.click(editButton);
+    expect(screen.getByRole('dialog', { name: 'Modifier le profil' })).toBeInTheDocument();
     const firstNameInput = screen.getByLabelText('Prénom');
     await waitFor(() => expect(firstNameInput).toHaveFocus());
     expect(screen.getByRole('button', { name: 'Enregistrer le profil' })).toBeInTheDocument();
@@ -135,6 +135,7 @@ describe('ProfilePage', () => {
 
     await user.clear(firstNameInput);
     await user.type(firstNameInput, 'Axel mobile');
+    await waitFor(() => expect(firstNameInput).toHaveValue('Axel mobile'));
     await user.click(screen.getByRole('button', { name: 'Enregistrer le profil' }));
 
     expect(saveProfile).toHaveBeenCalledWith(
@@ -143,7 +144,7 @@ describe('ProfilePage', () => {
     expect(mocks.previewProfileImpact).not.toHaveBeenCalled();
     expect(await screen.findByText('Profil mis à jour')).toBeInTheDocument();
     expect(screen.getAllByText('Profil mis à jour')).toHaveLength(1);
-    expect(screen.queryByLabelText('Prénom')).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByLabelText('Prénom')).not.toBeInTheDocument());
     expect(screen.queryByText('Le profil a été mis à jour dans la base locale.')).not.toBeInTheDocument();
     await waitFor(() => expect(screen.getByRole('button', { name: 'Modifier le profil' })).toHaveFocus());
   });
@@ -252,7 +253,7 @@ describe('ProfilePage', () => {
     }));
     expect(mocks.recalculateTarget).toHaveBeenCalledWith('2026-07-10', savedProfile);
     expect(await screen.findByText('Profil mis à jour')).toBeInTheDocument();
-    expect(screen.queryByLabelText('Objectif')).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByLabelText('Objectif')).not.toBeInTheDocument());
   });
 
   it('distingue un échec de recalcul après un profil déjà enregistré', async () => {
@@ -273,7 +274,7 @@ describe('ProfilePage', () => {
     expect(await screen.findByText('Profil enregistré, recalcul à relancer')).toBeInTheDocument();
     expect(screen.getByText(/Le profil et le journal ont été enregistrés localement/)).toBeInTheDocument();
     expect(screen.queryByText('Profil mis à jour')).not.toBeInTheDocument();
-    expect(screen.queryByLabelText('Objectif')).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByLabelText('Objectif')).not.toBeInTheDocument());
   });
 
   it('demande confirmation avant d’abandonner des changements et restaure le focus', async () => {
@@ -292,7 +293,7 @@ describe('ProfilePage', () => {
 
     await user.click(screen.getByRole('button', { name: 'Annuler' }));
     await user.click(screen.getByRole('button', { name: 'Abandonner les modifications' }));
-    expect(screen.queryByLabelText('Prénom')).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByLabelText('Prénom')).not.toBeInTheDocument());
     await waitFor(() => expect(screen.getByRole('button', { name: 'Modifier le profil' })).toHaveFocus());
   });
 
@@ -303,7 +304,7 @@ describe('ProfilePage', () => {
     await user.click(screen.getByRole('button', { name: 'Modifier le profil' }));
     await user.click(screen.getByRole('button', { name: 'Annuler' }));
 
-    expect(screen.queryByLabelText('Prénom')).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByLabelText('Prénom')).not.toBeInTheDocument());
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
     await waitFor(() => expect(screen.getByRole('button', { name: 'Modifier le profil' })).toHaveFocus());
   });

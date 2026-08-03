@@ -2,6 +2,7 @@ import {
   Check,
   Copy,
   LoaderCircle,
+  Pencil,
   Send,
   UserPlus,
   UsersRound,
@@ -15,7 +16,6 @@ import {
   createFriendsPrivacyService,
   loadFriendsPrivacySnapshot,
   persistFriendsPrivacySnapshot,
-  type FriendsPrivacyServiceActions,
   type FriendsPrivacyServiceState,
   type FriendsPrivacySnapshotRepository,
 } from '@/application/friends/friendsPrivacyService';
@@ -106,6 +106,7 @@ import { ConfirmationDialog } from '@/shared/ui/ConfirmationDialog';
 import { ChoiceCard } from '@/shared/ui/ChoiceCard';
 import { FieldStatus, type FieldStatusState } from '@/shared/ui/FieldStatus';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
+import { UnsavedChangesGuard } from '@/shared/ui/UnsavedChangesGuard';
 import { ToastContext } from '@/shared/toast/ToastContext';
 import { ToastProvider } from '@/shared/toast/ToastProvider';
 import { useActionToast } from '@/shared/toast/useActionToast';
@@ -377,6 +378,14 @@ function FriendsPrivacyPageContent({
   const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
   const [isSendingRequest, setIsSendingRequest] = useState(false);
   const [isSavingIdentity, setIsSavingIdentity] = useState(false);
+  const [isEditingIdentity, setIsEditingIdentity] = useState(false);
+  const [identityVisibilityDraft, setIdentityVisibilityDraft] = useState(
+    snapshot.privacy.profileVisibility,
+  );
+  const [identityRequestsDraft, setIdentityRequestsDraft] = useState(
+    snapshot.privacy.allowFriendRequests,
+  );
+  const [identityDiscardDialogOpen, setIdentityDiscardDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(() => Boolean(
     (activeRepository && !initialSnapshot) || (activeIdentityRepository && !initialIdentity),
   ));
@@ -388,6 +397,7 @@ function FriendsPrivacyPageContent({
   const persistenceSequenceRef = useRef(0);
   const availabilitySequenceRef = useRef(0);
   const permissionMutationVersionsRef = useRef(new Map<string, number>());
+  const editIdentityButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const shouldLoadSnapshot = Boolean(activeRepository && !initialSnapshot);
@@ -611,6 +621,10 @@ function FriendsPrivacyPageContent({
     availability,
     availabilityError,
   );
+  const isIdentityDirty = identityHandle !== formatSocialHandle(identity.handle)
+    || displayName !== identity.displayName
+    || identityVisibilityDraft !== snapshot.privacy.profileVisibility
+    || identityRequestsDraft !== snapshot.privacy.allowFriendRequests;
 
   useEffect(() => {
     const sequence = availabilitySequenceRef.current + 1;
@@ -711,13 +725,6 @@ function FriendsPrivacyPageContent({
     }
   };
 
-  const update = (
-    action: (actions: FriendsPrivacyServiceActions) => FriendsPrivacyServiceState,
-  ) => {
-    const service = createFriendsPrivacyService(snapshot);
-    void persistSnapshot(action(service.actions));
-  };
-
   const reconcilePrivacy = (persistence: Promise<boolean> = Promise.resolve(true)) => {
     if (!activePrivacyReconciliation) return;
     void persistence.then((persisted) => {
@@ -748,11 +755,54 @@ function FriendsPrivacyPageContent({
     return persisted;
   });
 
-  const updateProfileVisibility = (visibility: FriendVisibilityLevel) => {
-    const service = createFriendsPrivacyService(snapshot);
-    void persistSocialPrivacyForAccountSync(
-      service.actions.setProfileVisibility(visibility),
-      'social-profile-visibility-update',
+  const resetIdentityDraft = () => {
+    setIdentityHandle(formatSocialHandle(identity.handle));
+    setDisplayName(identity.displayName);
+    setIdentityVisibilityDraft(snapshot.privacy.profileVisibility);
+    setIdentityRequestsDraft(snapshot.privacy.allowFriendRequests);
+    setAvailability(initialAvailability);
+    setAvailabilityError(undefined);
+  };
+
+  const closeIdentityEditor = () => {
+    resetIdentityDraft();
+    setIdentityDiscardDialogOpen(false);
+    setIsEditingIdentity(false);
+    window.setTimeout(() => editIdentityButtonRef.current?.focus(), 0);
+  };
+
+  const requestIdentityEditorClose = () => {
+    if (isIdentityDirty) {
+      setIdentityDiscardDialogOpen(true);
+      return;
+    }
+    closeIdentityEditor();
+  };
+
+  const openIdentityEditor = () => {
+    resetIdentityDraft();
+    setIdentityNotice(undefined);
+    setIsEditingIdentity(true);
+  };
+
+  const persistIdentityPrivacyDraft = async (): Promise<boolean> => {
+    const visibilityChanged = identityVisibilityDraft !== snapshot.privacy.profileVisibility;
+    const requestsChanged = identityRequestsDraft !== snapshot.privacy.allowFriendRequests;
+    if (!visibilityChanged && !requestsChanged) return true;
+
+    let next = snapshot;
+    if (visibilityChanged) {
+      next = createFriendsPrivacyService(next).actions.setProfileVisibility(identityVisibilityDraft);
+    }
+    if (requestsChanged) {
+      next = createFriendsPrivacyService(next).actions.setRequestsOpen(identityRequestsDraft);
+    }
+
+    const nextWithoutFeedback = { ...next };
+    delete nextWithoutFeedback.lastFeedback;
+    return persistSocialPrivacyForAccountSync(
+      nextWithoutFeedback,
+      'social-profile-settings-update',
     );
   };
 
@@ -1076,27 +1126,18 @@ function FriendsPrivacyPageContent({
         setIdentityHandle(formatSocialHandle(result.identity.handle));
         setDisplayName(result.identity.displayName);
 
-        if (accountUserId && activeCloudIdentityPort) {
-          reportIdentitySuccess(result.message);
+        const privacyPersisted = await persistIdentityPrivacyDraft();
+        if (!privacyPersisted) {
+          setIdentityNotice({
+            tone: 'error',
+            title: 'Enregistrement incomplet',
+            message: 'Le profil public a été enregistré, mais ses réglages de confidentialité doivent être réessayés.',
+          });
           return;
         }
 
-        if (!activeCloudIdentityPort) {
-          reportIdentitySuccess(result.message);
-          return;
-        }
-
-        const cloudResult = await activeCloudIdentityPort.publishIdentity(result.identity);
-        if (['created', 'updated', 'alreadyExists'].includes(cloudResult.status)) {
-          reportIdentitySuccess(`${result.message} ${cloudResult.message}`);
-          return;
-        }
-
-        setIdentityNotice({
-          tone: 'warning',
-          title: 'Profil enregistré, publication à reprendre',
-          message: `La sauvegarde locale a réussi, mais la publication cloud n’a pas abouti : ${cloudResult.message}`,
-        });
+        reportIdentitySuccess(result.message);
+        closeIdentityEditor();
       })
       .catch((error) => {
         setIdentityNotice({
@@ -1111,7 +1152,9 @@ function FriendsPrivacyPageContent({
   };
 
   const copyIdentity = () => {
-    const publicHandle = formatSocialHandle(identity.handle);
+    const publicHandle = isEditingIdentity
+      ? identityHandle.trim()
+      : formatSocialHandle(identity.handle);
     if (!navigator.clipboard?.writeText) {
       setIdentityNotice({
         tone: 'warning',
@@ -1388,12 +1431,27 @@ function FriendsPrivacyPageContent({
         className="space-y-4"
         hidden={section !== 'profile'}
       >
-        <Card className="p-5 sm:p-6">
-          <div>
-            <h2 className="text-xl font-bold text-slate-950 dark:text-white">Profil</h2>
-            <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{formatSocialHandle(identity.handle)}</p>
+        <Card aria-label="Profil social" className="p-5 sm:p-6">
+          <div className="flex min-w-0 items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="text-xl font-bold text-slate-950 dark:text-white">Profil social</h2>
+              <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Informations visibles selon tes réglages.</p>
+            </div>
+            <Button
+              ref={editIdentityButtonRef}
+              type="button"
+              variant="secondary"
+              className="shrink-0"
+              aria-label="Modifier le profil public"
+              title="Modifier le profil public"
+              aria-expanded={isEditingIdentity}
+              onClick={openIdentityEditor}
+            >
+              <span aria-hidden="true">Modifier</span>
+              <Pencil aria-hidden="true" className="size-4" />
+            </Button>
           </div>
-          {identityNotice ? (
+          {identityNotice && !isEditingIdentity ? (
             <InlineNotice
               className="mt-4"
               tone={identityNotice.tone}
@@ -1402,7 +1460,79 @@ function FriendsPrivacyPageContent({
               {identityNotice.message}
             </InlineNotice>
           ) : null}
-          <form className="mt-5 grid gap-4 md:grid-cols-2" onSubmit={submitIdentity}>
+          <dl className="mt-5 grid gap-4 sm:grid-cols-2">
+            <div className="min-w-0 rounded-xl border border-slate-200 p-3 dark:border-slate-800">
+              <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Identifiant public</dt>
+              <dd className="mt-2 flex min-w-0 items-center gap-2">
+                <span className="min-w-0 flex-1 truncate font-semibold text-slate-950 dark:text-white">
+                  {formatSocialHandle(identity.handle)}
+                </span>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="size-11 shrink-0 p-0"
+                  aria-label="Copier l’identifiant public"
+                  title="Copier l’identifiant public"
+                  onClick={copyIdentity}
+                >
+                  <Copy aria-hidden="true" className="size-4" />
+                </Button>
+              </dd>
+            </div>
+            <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-800">
+              <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Nom affiché</dt>
+              <dd className="mt-2 font-semibold text-slate-950 dark:text-white">{identity.displayName || 'Non renseigné'}</dd>
+            </div>
+            <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-800">
+              <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Visibilité du profil</dt>
+              <dd className="mt-2 font-semibold text-slate-950 dark:text-white">
+                {FRIEND_PROFILE_VISIBILITY_LABELS[snapshot.privacy.profileVisibility]}
+              </dd>
+            </div>
+            <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-800">
+              <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Demandes d’amis</dt>
+              <dd className="mt-2 font-semibold text-slate-950 dark:text-white">
+                {snapshot.privacy.allowFriendRequests ? 'Autorisées' : 'Désactivées'}
+              </dd>
+            </div>
+          </dl>
+        </Card>
+
+        <BottomSheet
+          open={isEditingIdentity}
+          title="Modifier le profil public"
+          description="Mets à jour les informations et réglages de ta carte sociale."
+          closeLabel="Fermer la modification du profil public"
+          initialFocusSelector="#social-handle"
+          className="sm:self-center sm:max-h-[calc(100%-3rem)] sm:rounded-3xl sm:border"
+          onClose={requestIdentityEditorClose}
+          footer={(
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button variant="secondary" onClick={requestIdentityEditorClose}>
+                Annuler
+              </Button>
+              <Button
+                type="submit"
+                form="social-profile-form"
+                loading={isSavingIdentity}
+                loadingLabel="Enregistrement…"
+                disabled={!canSaveIdentity || isSavingIdentity}
+              >
+                Enregistrer
+              </Button>
+            </div>
+          )}
+        >
+          {identityNotice ? (
+            <InlineNotice
+              className="mb-4"
+              tone={identityNotice.tone}
+              title={identityNotice.title}
+            >
+              {identityNotice.message}
+            </InlineNotice>
+          ) : null}
+          <form id="social-profile-form" className="grid gap-4 md:grid-cols-2" onSubmit={submitIdentity}>
             <div>
               <label
                 htmlFor="social-handle"
@@ -1456,44 +1586,42 @@ function FriendsPrivacyPageContent({
             <fieldset className="md:col-span-2">
               <legend className="text-sm font-semibold text-slate-700 dark:text-slate-200">Visibilité du profil</legend>
               <div className="mt-2 grid gap-2 sm:grid-cols-3">
-                {visibilityOptions.map((option) => {
-                  const active = snapshot.privacy.profileVisibility === option;
-                  return (
-                    <ChoiceCard
-                      key={option}
-                      name="profile-visibility"
-                      value={option}
-                      title={FRIEND_PROFILE_VISIBILITY_LABELS[option]}
-                      selected={active}
-                      onSelect={(value) => updateProfileVisibility(value as FriendVisibilityLevel)}
-                      tight
-                    />
-                  );
-                })}
+                {visibilityOptions.map((option) => (
+                  <ChoiceCard
+                    key={option}
+                    name="profile-visibility"
+                    value={option}
+                    title={FRIEND_PROFILE_VISIBILITY_LABELS[option]}
+                    selected={identityVisibilityDraft === option}
+                    onSelect={(value) => setIdentityVisibilityDraft(value as FriendVisibilityLevel)}
+                    tight
+                  />
+                ))}
               </div>
             </fieldset>
             <label className="flex min-h-11 items-center gap-3 md:col-span-2">
               <input
                 type="checkbox"
-                checked={snapshot.privacy.allowFriendRequests}
-                onChange={() => update((actions) => actions.setRequestsOpen(!snapshot.privacy.allowFriendRequests))}
+                checked={identityRequestsDraft}
+                onChange={() => setIdentityRequestsDraft((current) => !current)}
                 className="size-4 rounded border-slate-300 text-brand-700"
               />
               <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Autoriser les demandes d’amis</span>
             </label>
-            <div className="md:col-span-2">
-              <Button
-                type="submit"
-                fullWidth
-                loading={isSavingIdentity}
-                loadingLabel="Enregistrement…"
-                disabled={!canSaveIdentity || isSavingIdentity}
-              >
-                Enregistrer
-              </Button>
-            </div>
           </form>
-        </Card>
+        </BottomSheet>
+
+        <UnsavedChangesGuard when={isEditingIdentity && isIdentityDirty} />
+
+        <ConfirmationDialog
+          open={identityDiscardDialogOpen}
+          title="Annuler les modifications ?"
+          description="Les changements du profil public seront perdus."
+          confirmLabel="Abandonner les modifications"
+          cancelLabel="Continuer la modification"
+          onCancel={() => setIdentityDiscardDialogOpen(false)}
+          onConfirm={closeIdentityEditor}
+        />
         <InlineNotice title="Partage des activités">
           Les nouvelles relations voient un résumé par défaut. Tu peux personnaliser ce réglage depuis l’onglet Amis.
         </InlineNotice>
