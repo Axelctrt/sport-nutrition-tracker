@@ -41,6 +41,10 @@ test('navigue entre les quatre rubriques Amis sans empiler leur contenu', async 
   const privateVisibility = profilePanel.getByRole('radio', { name: 'Profil privé' });
   await privateVisibility.locator('..').click();
   await expect(privateVisibility).toBeChecked();
+  const visibilitySuccessToast = page.getByRole('status').filter({
+    hasText: 'Visibilité du profil mise à jour',
+  });
+  await expect(visibilitySuccessToast).toHaveCount(1);
   await expect(page.getByText('Action prise en compte', { exact: true })).toHaveCount(0);
   await expect(page.getByText(/Profil passé en privé/u)).toHaveCount(0);
 
