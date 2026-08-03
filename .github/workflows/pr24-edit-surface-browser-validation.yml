@@ -41,13 +41,13 @@ jobs:
           from pathlib import Path
 
           initial = Path('.github/workflows/pr24-edit-surface-validation.yml').read_text(encoding='utf-8')
-          main = re.search(r"printf '%s' '([^']+)'", initial)
+          main = re.search(r"printf '%s' '(H4sI[^']+)'", initial)
           if not main:
               raise SystemExit('Payload principal introuvable.')
           Path('/tmp/apply-pr24-edit-surface.py').write_bytes(gzip.decompress(base64.b64decode(main.group(1))))
 
           final = Path('.github/workflows/pr24-edit-surface-final-validation.yml').read_text(encoding='utf-8')
-          payloads = re.findall(r"printf '%s' '([^']+)'", final)
+          payloads = re.findall(r"printf '%s' '(H4sI[^']+)'", final)
           if len(payloads) != 2:
               raise SystemExit(f'Deux correctifs complémentaires attendus, trouvés : {len(payloads)}')
           for index, payload in enumerate(payloads, start=1):
