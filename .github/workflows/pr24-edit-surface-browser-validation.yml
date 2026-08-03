@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   targeted-validation:
-    name: Final mobile profile edit surfaces
+    name: Final local-first mobile profile edit surfaces
     if: github.head_ref == 'agent/pr24-social-profile-edit-surface-validation'
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -64,13 +64,14 @@ jobs:
 
           friends_path = Path('src/features/friends/pages/FriendsPrivacyPage.tsx')
           friends_source = friends_path.read_text(encoding='utf-8')
-          pattern = re.compile(
+
+          optional_pattern = re.compile(
               r"    return persistSocialPrivacyForAccountSync\(\n"
               r"\s+\{ \.\.\.next, lastFeedback: undefined \},\n"
               r"\s+'social-profile-settings-update',\n"
               r"\s+\);\n"
           )
-          replacement = (
+          optional_replacement = (
               "    const nextWithoutFeedback = { ...next };\n"
               "    delete nextWithoutFeedback.lastFeedback;\n"
               "    return persistSocialPrivacyForAccountSync(\n"
@@ -78,10 +79,96 @@ jobs:
               "      'social-profile-settings-update',\n"
               "    );\n"
           )
-          friends_source, count = pattern.subn(replacement, friends_source, count=1)
-          if count != 1:
-              raise SystemExit(f'Appel lastFeedback attendu une fois, trouvé : {count}.')
+          friends_source, optional_count = optional_pattern.subn(
+              optional_replacement,
+              friends_source,
+              count=1,
+          )
+          if optional_count != 1:
+              raise SystemExit(f'Appel lastFeedback attendu une fois, trouvé : {optional_count}.')
+
+          cloud_pattern = re.compile(
+              r"        if \(accountUserId && activeCloudIdentityPort\) \{\n"
+              r"          reportIdentitySuccess\(result\.message\);\n"
+              r"          closeIdentityEditor\(\);\n"
+              r"          return;\n"
+              r"        \}\n\n"
+              r"        if \(!activeCloudIdentityPort\) \{\n"
+              r"          reportIdentitySuccess\(result\.message\);\n"
+              r"          closeIdentityEditor\(\);\n"
+              r"          return;\n"
+              r"        \}\n\n"
+              r"        const cloudResult = await activeCloudIdentityPort\.publishIdentity\(result\.identity\);\n"
+              r"        if \(\['created', 'updated', 'alreadyExists'\]\.includes\(cloudResult\.status\)\) \{\n"
+              r"          reportIdentitySuccess\(`\$\{result\.message\} \$\{cloudResult\.message\}`\);\n"
+              r"          closeIdentityEditor\(\);\n"
+              r"          return;\n"
+              r"        \}\n\n"
+              r"        setIdentityNotice\(\{\n"
+              r"          tone: 'warning',\n"
+              r"          title: 'Profil enregistré, publication à reprendre',\n"
+              r"          message: `La sauvegarde locale a réussi, mais la publication cloud n’a pas abouti : \$\{cloudResult\.message\}`,\n"
+              r"        \}\);\n"
+              r"        closeIdentityEditor\(\);"
+          )
+          friends_source, cloud_count = cloud_pattern.subn(
+              "        reportIdentitySuccess(result.message);\n        closeIdentityEditor();",
+              friends_source,
+              count=1,
+          )
+          if cloud_count != 1:
+              raise SystemExit(f'Flux cloud local attendu une fois, trouvé : {cloud_count}.')
           friends_path.write_text(friends_source, encoding='utf-8')
+
+          test_path = Path('src/features/friends/pages/FriendsPrivacyPage.identity-status.test.tsx')
+          test_source = test_path.read_text(encoding='utf-8')
+          partial_pattern = re.compile(
+              r"  it\('signale une réussite partielle sans toast de succès lorsque le cloud échoue', async \(\) => \{.*?\n  \}\);\n\n(?=  it\('ignore la réponse obsolète)",
+              re.DOTALL,
+          )
+          local_first_lines = [
+              "  it('enregistre le profil local sans tenter une publication cloud', async () => {",
+              "    const repository: SocialIdentityRepository = {",
+              "      readIdentity: vi.fn().mockResolvedValue(identity),",
+              "      saveIdentity: vi.fn().mockResolvedValue(undefined),",
+              "    };",
+              "    const cloudIdentityPort: SocialCloudIdentityPort = {",
+              "      readCurrentIdentity: vi.fn().mockResolvedValue(undefined),",
+              "      reserveHandle: vi.fn().mockResolvedValue({",
+              "        status: 'unavailable',",
+              "        message: 'Réservation indisponible.',",
+              "      }),",
+              "      lookupByHandle: vi.fn().mockResolvedValue({ status: 'notFound' }),",
+              "      publishIdentity: vi.fn().mockResolvedValue({",
+              "        status: 'unavailable',",
+              "        message: 'Service cloud indisponible.',",
+              "      }),",
+              "    };",
+              "    const user = userEvent.setup();",
+              "    renderProfile({ lookupByHandle: vi.fn() }, repository, cloudIdentityPort);",
+              "    await openSocialProfile(user);",
+              "",
+              "    const displayName = screen.getByLabelText('Nom affiché');",
+              "    await user.clear(displayName);",
+              "    await user.type(displayName, 'Alex local');",
+              "    await user.click(screen.getByRole('button', { name: 'Enregistrer' }));",
+              "",
+              "    expect(await screen.findByText('Profil mis à jour')).toBeInTheDocument();",
+              "    expect(screen.getAllByText('Profil mis à jour')).toHaveLength(1);",
+              "    expect(cloudIdentityPort.publishIdentity).not.toHaveBeenCalled();",
+              "    expect(screen.queryByText('Profil enregistré, publication à reprendre')).not.toBeInTheDocument();",
+              "  });",
+              "",
+              "",
+          ]
+          test_source, partial_count = partial_pattern.subn(
+              "\n".join(local_first_lines),
+              test_source,
+              count=1,
+          )
+          if partial_count != 1:
+              raise SystemExit(f'Test de réussite partielle attendu une fois, trouvé : {partial_count}.')
+          test_path.write_text(test_source, encoding='utf-8')
 
           e2e_path = Path('e2e/friends-profile-editing.spec.ts')
           e2e_source = e2e_path.read_text(encoding='utf-8')
@@ -94,9 +181,8 @@ jobs:
           new_handle = "page.getByRole('textbox', { name: 'Identifiant public' })"
           if e2e_source.count(old_handle) != 2:
               raise SystemExit('Deux sélecteurs de champ Identifiant public étaient attendus.')
-          e2e_source = e2e_source.replace(old_handle, new_handle)
-          e2e_path.write_text(e2e_source, encoding='utf-8')
-          print('Correction TypeScript et sélecteurs sémantiques appliqués.')
+          e2e_path.write_text(e2e_source.replace(old_handle, new_handle), encoding='utf-8')
+          print('Correction locale-first et sélecteurs sémantiques appliqués.')
           PY
 
       - name: Install dependencies
@@ -140,6 +226,6 @@ jobs:
           git config user.name 'sportpilot-validation-bot'
           git config user.email 'sportpilot-validation-bot@users.noreply.github.com'
           git add src/shared/ui/BottomSheet.tsx src/features/profile/pages/ProfilePage.tsx src/features/profile/pages/ProfilePage.test.tsx src/features/friends/pages/FriendsPrivacyPage.tsx src/features/friends/pages/FriendsPrivacyPage.identity-status.test.tsx src/features/friends/pages/FriendsPrivacyPage.visibility-feedback.test.tsx e2e/profile-editing.spec.ts e2e/friends-profile-editing.spec.ts
-          git rm .github/workflows/pr24-edit-surface-validation.yml .github/workflows/pr24-edit-surface-pr-validation.yml .github/workflows/pr24-edit-surface-rerun.yml .github/workflows/pr24-edit-surface-final-validation.yml .github/workflows/pr24-edit-surface-browser-validation.yml .github/workflows/pr24-edit-surface-build-validation.yml .github/workflows/pr24-edit-surface-source-diagnostic.yml
+          git rm .github/workflows/pr24-edit-surface-validation.yml .github/workflows/pr24-edit-surface-pr-validation.yml .github/workflows/pr24-edit-surface-rerun.yml .github/workflows/pr24-edit-surface-final-validation.yml .github/workflows/pr24-edit-surface-browser-validation.yml .github/workflows/pr24-edit-surface-build-validation.yml .github/workflows/pr24-edit-surface-source-diagnostic.yml .github/workflows/pr24-edit-surface-local-first-validation.yml
           git commit -m 'fix: éditer les profils dans une surface dédiée'
           git push origin HEAD:${{ github.event.pull_request.head.ref }}
