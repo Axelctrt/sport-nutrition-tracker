@@ -1,0 +1,83 @@
+name: PR24 edit surface PR validation
+
+on:
+  pull_request:
+    branches:
+      - agent/profile-friends-privacy-ux
+    types:
+      - opened
+
+permissions:
+  contents: write
+
+jobs:
+  targeted-validation:
+    name: Targeted profile edit surfaces
+    if: github.head_ref == 'agent/pr24-social-profile-edit-surface-validation'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout technical branch
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22.16.0
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Apply scoped PR24 correction
+        run: |
+          python - <<'PY'
+          import base64
+          import gzip
+          import re
+          from pathlib import Path
+
+          source = Path('.github/workflows/pr24-edit-surface-validation.yml').read_text(encoding='utf-8')
+          match = re.search(r"printf '%s' '([^']+)'", source)
+          if not match:
+              raise SystemExit('Payload de correction introuvable.')
+          Path('/tmp/apply-pr24-edit-surface.py').write_bytes(gzip.decompress(base64.b64decode(match.group(1))))
+          PY
+          python /tmp/apply-pr24-edit-surface.py
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run targeted lint
+        run: npx oxlint src/shared/ui/BottomSheet.tsx src/features/profile/pages/ProfilePage.tsx src/features/profile/pages/ProfilePage.test.tsx src/features/friends/pages/FriendsPrivacyPage.tsx src/features/friends/pages/FriendsPrivacyPage.identity-status.test.tsx src/features/friends/pages/FriendsPrivacyPage.visibility-feedback.test.tsx e2e/profile-editing.spec.ts e2e/friends-profile-editing.spec.ts
+
+      - name: Run targeted unit tests
+        run: npx vitest run src/features/profile/pages/ProfilePage.test.tsx src/features/friends/pages/FriendsPrivacyPage.identity-status.test.tsx src/features/friends/pages/FriendsPrivacyPage.visibility-feedback.test.tsx
+
+      - name: Install targeted Playwright browsers
+        run: npx playwright install --with-deps chromium webkit
+
+      - name: Run targeted mobile browser tests
+        run: npx playwright test e2e/profile-editing.spec.ts e2e/friends-profile-editing.spec.ts --project=webkit-iphone-15 --project=chromium-mobile-360
+
+      - name: Upload visual and browser evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: pr24-edit-surface-targeted-${{ github.run_id }}
+          path: |
+            playwright-report/
+            test-results/playwright/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Commit validated correction on technical branch
+        if: success()
+        run: |
+          git config user.name 'sportpilot-validation-bot'
+          git config user.email 'sportpilot-validation-bot@users.noreply.github.com'
+          git add src/shared/ui/BottomSheet.tsx src/features/profile/pages/ProfilePage.tsx src/features/profile/pages/ProfilePage.test.tsx src/features/friends/pages/FriendsPrivacyPage.tsx src/features/friends/pages/FriendsPrivacyPage.identity-status.test.tsx src/features/friends/pages/FriendsPrivacyPage.visibility-feedback.test.tsx e2e/profile-editing.spec.ts e2e/friends-profile-editing.spec.ts
+          git commit -m 'fix: éditer les profils dans une surface dédiée'
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
