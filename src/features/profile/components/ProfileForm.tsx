@@ -117,7 +117,7 @@ export function ProfileForm({
 
       <CollapsibleSection
         sectionId="profile-personal"
-        storageKey="sportpilot:profile:personal"
+        defaultOpen
         title="Informations personnelles"
         description="Identité, âge, taille et poids de référence."
         summary="Essentiel"
