@@ -28,12 +28,16 @@ spec = replace_once(
   await setVisualThemeState(page, options);
 }
 """,
-    """async function withVisualSetupPage(
+    """async function replaceVisualApplicationPage(
   page: Page,
   bootstrapSearch: string,
   setup: (setupPage: Page) => Promise<void>,
-): Promise<void> {
-  const setupPage = await page.context().newPage();
+  targetUrl: string,
+): Promise<Page> {
+  const context = page.context();
+  await page.close();
+
+  const setupPage = await context.newPage();
   try {
     await setupPage.goto(`/visual-lab.html${bootstrapSearch}`, {
       waitUntil: 'domcontentloaded',
@@ -43,34 +47,40 @@ spec = replace_once(
   } finally {
     await setupPage.close();
   }
+
+  const applicationPage = await context.newPage();
+  await applicationPage.goto(targetUrl, { waitUntil: 'domcontentloaded' });
+  await expect(applicationPage.locator('#root')).not.toBeEmpty();
+  return applicationPage;
 }
 
 async function prepareVisualTheme(
   page: Page,
   bootstrapSearch: string,
   options: Parameters<typeof setVisualThemeState>[1],
-  reloadApplication = true,
-): Promise<void> {
-  await withVisualSetupPage(page, bootstrapSearch, async (setupPage) => {
-    await setVisualThemeState(setupPage, options);
-  });
-  if (!reloadApplication) return;
-  await page.reload({ waitUntil: 'domcontentloaded' });
-  await expect(page.locator('#root')).not.toBeEmpty();
+  targetUrl = page.url(),
+): Promise<Page> {
+  return replaceVisualApplicationPage(
+    page,
+    bootstrapSearch,
+    async (setupPage) => setVisualThemeState(setupPage, options),
+    targetUrl,
+  );
 }
 
 async function seedVisualData(
   page: Page,
   bootstrapSearch: string,
-): Promise<void> {
-  await withVisualSetupPage(page, bootstrapSearch, async (setupPage) => {
-    await seedPerformanceGlassData(setupPage);
-  });
-  await page.reload({ waitUntil: 'domcontentloaded' });
-  await expect(page.locator('#root')).not.toBeEmpty();
+): Promise<Page> {
+  return replaceVisualApplicationPage(
+    page,
+    bootstrapSearch,
+    seedPerformanceGlassData,
+    page.url(),
+  );
 }
 """,
-    'visual setup helpers',
+    'fresh application page helpers',
 )
 spec = replace_once(
     spec,
@@ -114,8 +124,8 @@ spec = replace_once(
     'reveal bootstrap search',
 )
 spec = spec.replace(
-    'prepareVisualTheme(page, {',
-    'prepareVisualTheme(page, bootstrapSearch, {',
+    'await prepareVisualTheme(page, {',
+    'page = await prepareVisualTheme(page, bootstrapSearch, {',
 )
 spec = spec.replace(
     'openReadyPage(page, ',
@@ -124,32 +134,20 @@ spec = spec.replace(
 spec = replace_once(
     spec,
     '  await seedPerformanceGlassData(page);',
-    '  await seedVisualData(page, bootstrapSearch);',
+    '  page = await seedVisualData(page, bootstrapSearch);',
     'visual data seed call',
 )
 spec = replace_once(
     spec,
-    "      pendingRevealThemeId: themeId,\n    });",
-    "      pendingRevealThemeId: themeId,\n    }, false);",
-    'theme reveal staging',
+    "      pendingRevealThemeId: themeId,\n    });\n    await page.goto(`/?visualReveal=${themeId}#/`);",
+    "      pendingRevealThemeId: themeId,\n    }, isolatedVisualUrl(bootstrapSearch, 'visualReveal', themeId, '/'));",
+    'theme reveal page replacement',
 )
 spec = replace_once(
     spec,
-    "    pendingRevealThemeId: 'aurora',\n  });",
-    "    pendingRevealThemeId: 'aurora',\n  }, false);",
-    'reduced reveal staging',
-)
-spec = replace_once(
-    spec,
-    "    await page.goto(`/?visualReveal=${themeId}#/`);",
-    "    await page.goto(isolatedVisualUrl(bootstrapSearch, 'visualReveal', themeId, '/'));",
-    'theme reveal navigation',
-)
-spec = replace_once(
-    spec,
-    "  await page.goto('/?visualReveal=aurora-reduced#/');",
-    "  await page.goto(isolatedVisualUrl(bootstrapSearch, 'visualReveal', 'aurora-reduced', '/'));",
-    'reduced reveal navigation',
+    "    pendingRevealThemeId: 'aurora',\n  });\n  await page.goto('/?visualReveal=aurora-reduced#/');",
+    "    pendingRevealThemeId: 'aurora',\n  }, isolatedVisualUrl(bootstrapSearch, 'visualReveal', 'aurora-reduced', '/'));",
+    'reduced reveal page replacement',
 )
 spec_path.write_text(spec)
 
