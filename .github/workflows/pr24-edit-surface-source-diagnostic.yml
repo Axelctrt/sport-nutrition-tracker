@@ -15,7 +15,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           ref: ${{ github.event.pull_request.head.ref }}
-      - name: Apply generated correction and print failing area
+      - name: Apply generated correction and print social save flow
         shell: bash
         run: |
           python - <<'PY'
@@ -35,4 +35,7 @@ jobs:
           python /tmp/followup-1.py
           python /tmp/followup-2.py
           python /tmp/followup-3.py
-          nl -ba src/features/friends/pages/FriendsPrivacyPage.tsx | sed -n '780,820p'
+          line=$(grep -n "const submitIdentity" src/features/friends/pages/FriendsPrivacyPage.tsx | cut -d: -f1)
+          start=$((line - 15))
+          end=$((line + 155))
+          nl -ba src/features/friends/pages/FriendsPrivacyPage.tsx | sed -n "${start},${end}p"
