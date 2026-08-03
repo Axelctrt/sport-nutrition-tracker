@@ -156,7 +156,8 @@ if (failures.length === 0) {
     'const earnedAchievements = seededAchievementIds.map((id) => ({',
     'earnedAchievements,',
     'const readPersistedAppearance = () => page.evaluate(async ({',
-    'if (persistedAppearance.deviceAppearance !== appearance)',
+    'persistedAppearance.localAppearance !== appearance',
+    'persistedAppearance.deviceAppearance !== appearance',
     'deviceAppearance: appearance,',
   ]) {
     if (!performanceGlassHelper.includes(marker)) {
