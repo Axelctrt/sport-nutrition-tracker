@@ -14,7 +14,7 @@ spec = spec_path.read_text()
 spec = replace_once(
     spec,
     "];\n\nasync function capture(",
-    "];\n\nfunction isolatedVisualUrl(\n  bootstrapSearch: string,\n  parameter: string,\n  value: string,\n  hashPath: string,\n): string {\n  const query = new URLSearchParams(bootstrapSearch);\n  query.set(parameter, value);\n  return `/?${query.toString()}#${hashPath}`;\n}\n\nasync function capture(",
+    "];\n\nconst ONBOARDING_COMPLETION_REVEAL_SEEN_STORAGE_KEY =\n  'sportpilot:onboarding:completion-reveal:v1';\n\nfunction isolatedVisualUrl(\n  bootstrapSearch: string,\n  parameter: string,\n  value: string,\n  hashPath: string,\n): string {\n  const query = new URLSearchParams(bootstrapSearch);\n  query.set(parameter, value);\n  return `/?${query.toString()}#${hashPath}`;\n}\n\nasync function capture(",
     'visual URL helper',
 )
 spec = replace_once(
@@ -34,6 +34,10 @@ spec = replace_once(
   setup: (setupPage: Page) => Promise<void>,
   targetUrl: string,
 ): Promise<Page> {
+  const completionRevealSeenAt = await page.evaluate(
+    (storageKey) => window.sessionStorage.getItem(storageKey),
+    ONBOARDING_COMPLETION_REVEAL_SEEN_STORAGE_KEY,
+  );
   const context = page.context();
   await page.close();
 
@@ -49,8 +53,22 @@ spec = replace_once(
   }
 
   const applicationPage = await context.newPage();
+  if (completionRevealSeenAt) {
+    await applicationPage.addInitScript(({ storageKey, seenAt }) => {
+      window.sessionStorage.setItem(storageKey, seenAt);
+    }, {
+      storageKey: ONBOARDING_COMPLETION_REVEAL_SEEN_STORAGE_KEY,
+      seenAt: completionRevealSeenAt,
+    });
+  }
   await applicationPage.goto(targetUrl, { waitUntil: 'domcontentloaded' });
   await expect(applicationPage.locator('#root')).not.toBeEmpty();
+  if (completionRevealSeenAt) {
+    await expect.poll(() => applicationPage.evaluate(
+      (storageKey) => window.sessionStorage.getItem(storageKey),
+      ONBOARDING_COMPLETION_REVEAL_SEEN_STORAGE_KEY,
+    )).toBe(completionRevealSeenAt);
+  }
   return applicationPage;
 }
 
@@ -136,6 +154,12 @@ spec = replace_once(
     '  await seedPerformanceGlassData(page);',
     '  page = await seedVisualData(page, bootstrapSearch);',
     'visual data seed call',
+)
+spec = replace_once(
+    spec,
+    "  await expectPageAccessibilityBaseline(page, { expectedHeading: 'Progression' });\n",
+    "  await expectPageAccessibilityBaseline(page, { expectedHeading: 'Progression' });\n  await expect(page.getByRole('dialog', { name: 'Tout est prêt' })).toHaveCount(0);\n",
+    'completion reveal regression assertion',
 )
 spec = replace_once(
     spec,
