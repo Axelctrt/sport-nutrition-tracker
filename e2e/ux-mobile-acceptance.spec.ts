@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 import {
   createLocalProfile,
@@ -12,11 +12,15 @@ const primaryRoutes = [
   { path: '/progression', heading: 'Progression' },
 ] as const;
 
+function isolatedRoute(page: Page, path: string): string {
+  return `/${new URL(page.url()).search}#${path}`;
+}
+
 test('valide le socle mobile des quatre rubriques principales', async ({ page }) => {
   await createLocalProfile(page, 'Recette U15');
 
   for (const route of primaryRoutes) {
-    await page.goto(`/#${route.path}`);
+    await page.goto(isolatedRoute(page, route.path));
     await expectPageAccessibilityBaseline(page, {
       expectedHeading: route.heading,
       checkShellTouchTargets: true,
@@ -33,7 +37,7 @@ test('valide le socle mobile des quatre rubriques principales', async ({ page })
 
 test('rend le lien d’évitement et le focus clavier opérationnels', async ({ page }, testInfo) => {
   await createLocalProfile(page);
-  await page.goto('/#/food');
+  await page.goto(isolatedRoute(page, '/food'));
 
   const skipLink = page.getByRole('link', { name: 'Aller au contenu' });
   if (testInfo.project.name === 'chromium-desktop') {
@@ -64,7 +68,7 @@ test('rend le lien d’évitement et le focus clavier opérationnels', async ({ 
 
 test('piège puis restitue le focus dans un panneau mobile', async ({ page }, testInfo) => {
   await createLocalProfile(page);
-  await page.goto('/#/activities');
+  await page.goto(isolatedRoute(page, '/activities'));
 
   const trigger = page.getByRole('button', {
     name: 'Ajouter une activité déjà réalisée',
@@ -92,7 +96,7 @@ test('piège puis restitue le focus dans un panneau mobile', async ({ page }, te
 test('respecte la réduction des animations système', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await createLocalProfile(page);
-  await page.goto('/#/activities');
+  await page.goto(isolatedRoute(page, '/activities'));
   await page.getByRole('button', {
     name: 'Ajouter une activité déjà réalisée',
   }).click();
