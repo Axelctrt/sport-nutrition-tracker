@@ -114,15 +114,27 @@ async function seedVisualData(
     'browser lifecycle helpers',
 )
 
-fixture_marker = "async ({\n  page,\n}, testInfo) => {"
-if source.count(fixture_marker) != 2:
-    raise SystemExit(
-        f'test fixture marker: expected two occurrences, found {source.count(fixture_marker)}'
-    )
-source = source.replace(
-    fixture_marker,
-    "async ({\n  browserName,\n  page,\n}, testInfo) => {",
-    2,
+source = replace_once(
+    source,
+    """test('valide les thèmes, graphiques et écrans de décision avec des données contrôlées', async ({
+  page,
+}, testInfo) => {""",
+    """test('valide les thèmes, graphiques et écrans de décision avec des données contrôlées', async ({
+  browserName,
+  page,
+}, testInfo) => {""",
+    'main visual fixture',
+)
+source = replace_once(
+    source,
+    """test('capture les reveals uniques et le mode mouvement réduit', async ({
+  page,
+}, testInfo) => {""",
+    """test('capture les reveals uniques et le mode mouvement réduit', async ({
+  browserName,
+  page,
+}, testInfo) => {""",
+    'reveal fixture',
 )
 
 source = source.replace(
