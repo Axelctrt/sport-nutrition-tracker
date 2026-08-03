@@ -15,7 +15,7 @@ jobs:
     name: Final mobile profile edit surfaces
     if: github.head_ref == 'agent/pr24-social-profile-edit-surface-validation'
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 30
 
     steps:
       - name: Checkout technical branch
@@ -62,8 +62,8 @@ jobs:
           import re
           from pathlib import Path
 
-          path = Path('src/features/friends/pages/FriendsPrivacyPage.tsx')
-          source = path.read_text(encoding='utf-8')
+          friends_path = Path('src/features/friends/pages/FriendsPrivacyPage.tsx')
+          friends_source = friends_path.read_text(encoding='utf-8')
           pattern = re.compile(
               r"    return persistSocialPrivacyForAccountSync\(\n"
               r"\s+\{ \.\.\.next, lastFeedback: undefined \},\n"
@@ -78,11 +78,19 @@ jobs:
               "      'social-profile-settings-update',\n"
               "    );\n"
           )
-          source, count = pattern.subn(replacement, source, count=1)
+          friends_source, count = pattern.subn(replacement, friends_source, count=1)
           if count != 1:
               raise SystemExit(f'Appel lastFeedback attendu une fois, trouvé : {count}.')
-          path.write_text(source, encoding='utf-8')
-          print('Propriété lastFeedback omise conformément à exactOptionalPropertyTypes.')
+          friends_path.write_text(friends_source, encoding='utf-8')
+
+          e2e_path = Path('e2e/friends-profile-editing.spec.ts')
+          e2e_source = e2e_path.read_text(encoding='utf-8')
+          old = "const socialCard = page.getByLabel('Profil social');"
+          new = "const socialCard = page.getByLabel('Profil social', { exact: true });"
+          if old not in e2e_source:
+              raise SystemExit('Sélecteur non exact de la carte Profil social introuvable.')
+          e2e_path.write_text(e2e_source.replace(old, new, 1), encoding='utf-8')
+          print('Correction TypeScript et sélecteur exact appliqués.')
           PY
 
       - name: Install dependencies
@@ -97,11 +105,16 @@ jobs:
       - name: Run production build
         run: npm run build
 
-      - name: Install targeted Playwright browsers
-        run: npx playwright install chromium webkit
-
-      - name: Run targeted mobile browser tests
-        run: npx playwright test e2e/profile-editing.spec.ts e2e/friends-profile-editing.spec.ts --project=webkit-iphone-15 --project=chromium-mobile-360
+      - name: Run targeted mobile browser tests in pinned Playwright image
+        shell: bash
+        run: |
+          docker run --rm --ipc=host \
+            -e CI=1 \
+            -e PLAYWRIGHT_BROWSERS_PATH=/ms-playwright \
+            -v "$GITHUB_WORKSPACE:/work" \
+            -w /work \
+            mcr.microsoft.com/playwright:v1.61.1-noble \
+            bash -lc "npx playwright test e2e/profile-editing.spec.ts e2e/friends-profile-editing.spec.ts --project=webkit-iphone-15 --project=chromium-mobile-360"
 
       - name: Upload visual and browser evidence
         if: always()
