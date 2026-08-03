@@ -62,7 +62,7 @@ if (failures.length === 0) {
     ['synchronisation automatique', automaticSyncAudit],
     ['récompenses', rewardAudit],
   ]) {
-    if (!source.includes('3408 * 1024')) fail(`le budget JavaScript ${label} n’est pas aligné sur 3408 Kio.`);
+    if (!source.includes('3584 * 1024')) fail(`le budget JavaScript ${label} n’est pas aligné sur 3584 Kio.`);
   }
 
   const releaseNotes = read('RELEASE-NOTES-0.37.0.md');

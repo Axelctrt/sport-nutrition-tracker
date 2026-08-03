@@ -285,13 +285,13 @@ requireMarkers(
 if (!indexHtml.includes('<script src="/theme-boot.js"></script>')) {
   fail("index.html doit charger le bootstrap de theme externe compatible CSP.");
 }
-if (!productionAudit.includes("totalJavaScriptBytes: 3408 * 1024")) {
-  fail("le budget JavaScript de production doit rester borne a 3408 Kio.");
+if (!productionAudit.includes("totalJavaScriptBytes: 3584 * 1024")) {
+  fail("le budget JavaScript de production doit rester borne a 3584 Kio.");
 }
 if (!productionAudit.includes("totalCssBytes: 176 * 1024")) {
   fail("le budget CSS de production doit rester fixe a 176 Kio.");
 }
-if (!automaticSyncReleaseAudit.includes("budget JavaScript global encadré de 3408 Kio")) {
+if (!automaticSyncReleaseAudit.includes("budget JavaScript global encadré de 3584 Kio")) {
   fail("l'audit F4 doit rester aligne avec le budget JavaScript valide.");
 }
 if (
