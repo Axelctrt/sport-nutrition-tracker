@@ -1,0 +1,52 @@
+name: E2E isolation targeted validation
+
+on:
+  pull_request:
+    branches:
+      - agent/profile-friends-privacy-e2e-isolation
+
+permissions:
+  contents: read
+
+jobs:
+  targeted-e2e:
+    name: Chromium mobile isolation
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22.16.0
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Repeat failing scenario three times
+        run: >-
+          npx playwright test
+          e2e/ux-mobile-acceptance.spec.ts
+          --project=chromium-mobile-360
+          --grep "valide le socle mobile des quatre rubriques principales"
+          --repeat-each=3
+
+      - name: Run acceptance file on failing browser
+        run: >-
+          npx playwright test
+          e2e/ux-mobile-acceptance.spec.ts
+          --project=chromium-mobile-360
+
+      - name: Lint affected test
+        run: npx oxlint e2e/ux-mobile-acceptance.spec.ts
+
+      - name: Build application
+        run: npm run build
