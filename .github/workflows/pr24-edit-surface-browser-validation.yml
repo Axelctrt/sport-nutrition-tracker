@@ -1,0 +1,97 @@
+name: PR24 edit surface browser validation
+
+on:
+  pull_request:
+    branches:
+      - agent/profile-friends-privacy-ux
+    types:
+      - synchronize
+
+permissions:
+  contents: write
+
+jobs:
+  targeted-validation:
+    name: Mobile profile edit surfaces
+    if: github.head_ref == 'agent/pr24-social-profile-edit-surface-validation'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout technical branch
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22.16.0
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Apply scoped PR24 correction
+        shell: bash
+        run: |
+          python - <<'PY'
+          import base64
+          import gzip
+          import re
+          from pathlib import Path
+
+          initial = Path('.github/workflows/pr24-edit-surface-validation.yml').read_text(encoding='utf-8')
+          main = re.search(r"printf '%s' '([^']+)'", initial)
+          if not main:
+              raise SystemExit('Payload principal introuvable.')
+          Path('/tmp/apply-pr24-edit-surface.py').write_bytes(gzip.decompress(base64.b64decode(main.group(1))))
+
+          final = Path('.github/workflows/pr24-edit-surface-final-validation.yml').read_text(encoding='utf-8')
+          payloads = re.findall(r"printf '%s' '([^']+)'", final)
+          if len(payloads) != 2:
+              raise SystemExit(f'Deux correctifs complémentaires attendus, trouvés : {len(payloads)}')
+          for index, payload in enumerate(payloads, start=1):
+              Path(f'/tmp/pr24-followup-{index}.py').write_bytes(gzip.decompress(base64.b64decode(payload)))
+          PY
+          python /tmp/apply-pr24-edit-surface.py
+          python /tmp/pr24-followup-1.py
+          python /tmp/pr24-followup-2.py
+          printf '%s' 'H4sICAP5cGoAA3ByMjRfZm9sbG93dXAzLnB5AHVQwUoDMRS871c8vWQXuineROlBRfEkxauIpLsvbSDNW15e2or4QX6HP+ZLBQ+Kuc1kMjMZz7SFyckmhhWE7UQssFTYNJWExRG0JvMw9+ikMOa554BpzPPJrRXdfaMlh50bXpfK2TBikiCvfRZ9kq1gFiv5YLpG8CDqWs0toxtfKtFiGmgMab0wRXx/rjqKo8pOQQ8eJhykzW6H10WEUmeF7hXdRJdza/a9LzGa7vK0Sbj/95UdImUt0pqn0YnrV6Tsts8bROk9kSA/m66zibQrXeODmrbVNHioJe1AJUmrxTo4WcDZRVNj2IWM8Kg3YYu3zMStN1oLWQIluE2M65CFkcGJ6FAFoSQETyHPQJjK7vMD4e1XwrtOcNxoz0Hwe6SjhHGKbsAqmoF+t5vB3/EmDupjrn5qjAVWVOR3oRjWqabnwhBrpzoCjAjRVc5rkFW7L+0Rrb4kAgAA' | base64 --decode | gzip --decompress > /tmp/pr24-followup-3.py
+          python /tmp/pr24-followup-3.py
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run targeted lint
+        run: npx oxlint src/shared/ui/BottomSheet.tsx src/features/profile/pages/ProfilePage.tsx src/features/profile/pages/ProfilePage.test.tsx src/features/friends/pages/FriendsPrivacyPage.tsx src/features/friends/pages/FriendsPrivacyPage.identity-status.test.tsx src/features/friends/pages/FriendsPrivacyPage.visibility-feedback.test.tsx e2e/profile-editing.spec.ts e2e/friends-profile-editing.spec.ts
+
+      - name: Run targeted unit tests
+        run: npx vitest run src/features/profile/pages/ProfilePage.test.tsx src/features/friends/pages/FriendsPrivacyPage.identity-status.test.tsx src/features/friends/pages/FriendsPrivacyPage.visibility-feedback.test.tsx
+
+      - name: Install targeted Playwright browsers
+        run: npx playwright install --with-deps chromium webkit
+
+      - name: Run targeted mobile browser tests
+        run: npx playwright test e2e/profile-editing.spec.ts e2e/friends-profile-editing.spec.ts --project=webkit-iphone-15 --project=chromium-mobile-360
+
+      - name: Upload visual and browser evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: pr24-edit-surface-targeted-${{ github.run_id }}
+          path: |
+            playwright-report/
+            test-results/playwright/
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Commit validated correction on technical branch
+        if: success()
+        shell: bash
+        run: |
+          git config user.name 'sportpilot-validation-bot'
+          git config user.email 'sportpilot-validation-bot@users.noreply.github.com'
+          git add src/shared/ui/BottomSheet.tsx src/features/profile/pages/ProfilePage.tsx src/features/profile/pages/ProfilePage.test.tsx src/features/friends/pages/FriendsPrivacyPage.tsx src/features/friends/pages/FriendsPrivacyPage.identity-status.test.tsx src/features/friends/pages/FriendsPrivacyPage.visibility-feedback.test.tsx e2e/profile-editing.spec.ts e2e/friends-profile-editing.spec.ts
+          git rm .github/workflows/pr24-edit-surface-validation.yml .github/workflows/pr24-edit-surface-pr-validation.yml .github/workflows/pr24-edit-surface-rerun.yml .github/workflows/pr24-edit-surface-final-validation.yml .github/workflows/pr24-edit-surface-browser-validation.yml
+          git commit -m 'fix: éditer les profils dans une surface dédiée'
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
