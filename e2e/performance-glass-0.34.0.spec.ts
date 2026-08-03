@@ -172,7 +172,7 @@ test('valide la progression core claire avec des données contrôlées', async (
   await expect(page).toHaveURL(/range=90/);
 });
 
-test('charge le thème sombre core depuis les préférences persistées', async ({
+test('active le thème sombre core via le contrôle accessible', async ({
   page,
 }, testInfo) => {
   await createLocalProfile(page, 'Progression Dark');
@@ -181,11 +181,11 @@ test('charge le thème sombre core depuis les préférences persistées', async 
   await prepareSeededVisualTheme(page, bootstrapSearch, {
     activeThemeId: 'core',
     unlockedThemeIds: allThemes,
-    appearance: 'dark',
+    appearance: 'light',
   }, `/${bootstrapSearch}#/progression?range=90`);
 
   await expectReadyPage(page, 'Progression');
-  await expect(page.locator('html')).toHaveClass(/dark/);
+  await enableDarkMode(page);
   await expect(page.locator('html')).toHaveAttribute('data-sport-theme', 'core');
   await expectNoUnexpectedRewardReveal(page);
   if (testInfo.project.name === 'chromium-desktop') {

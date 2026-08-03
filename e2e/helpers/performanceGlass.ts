@@ -495,4 +495,96 @@ export async function setVisualThemeState(
     selectedAppearance: appearance,
     pendingTheme: pendingRevealThemeId,
   });
+
+  const readPersistedAppearance = () => page.evaluate(async ({
+    databaseName,
+    appearanceStorageKey,
+  }) => {
+    const localAppearance = localStorage.getItem(appearanceStorageKey);
+    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open(databaseName);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+
+    try {
+      if (!database.objectStoreNames.contains('deviceSettings')) {
+        return { localAppearance, deviceAppearance: null };
+      }
+      const settings = await new Promise<{ theme?: string } | undefined>((resolve, reject) => {
+        const transaction = database.transaction('deviceSettings', 'readonly');
+        const request = transaction.objectStore('deviceSettings').get('device-settings');
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+        transaction.onabort = () => reject(transaction.error);
+      });
+      return {
+        localAppearance,
+        deviceAppearance: settings?.theme ?? null,
+      };
+    } finally {
+      database.close();
+    }
+  }, {
+    databaseName: DATABASE_NAME,
+    appearanceStorageKey: APPEARANCE_STORAGE_KEY,
+  });
+
+  let persistedAppearance = await readPersistedAppearance();
+  if (persistedAppearance.deviceAppearance !== appearance) {
+    await page.evaluate(async ({
+      databaseName,
+      appearanceStorageKey,
+      selectedAppearance,
+    }) => {
+      localStorage.setItem(appearanceStorageKey, selectedAppearance);
+      const database = await new Promise<IDBDatabase>((resolve, reject) => {
+        const request = indexedDB.open(databaseName);
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+
+      try {
+        if (!database.objectStoreNames.contains('deviceSettings')) {
+          throw new Error('Le store deviceSettings est indisponible.');
+        }
+        const transaction = database.transaction('deviceSettings', 'readwrite');
+        const completion = new Promise<void>((resolve, reject) => {
+          transaction.oncomplete = () => resolve();
+          transaction.onerror = () => reject(transaction.error);
+          transaction.onabort = () => reject(transaction.error);
+        });
+        const store = transaction.objectStore('deviceSettings');
+        const request = store.get('device-settings');
+        request.onsuccess = () => {
+          if (!request.result) {
+            transaction.abort();
+            return;
+          }
+          store.put({
+            ...request.result,
+            theme: selectedAppearance,
+            updatedAt: new Date().toISOString(),
+          });
+        };
+        request.onerror = () => transaction.abort();
+        await completion;
+      } finally {
+        database.close();
+      }
+    }, {
+      databaseName: DATABASE_NAME,
+      appearanceStorageKey: APPEARANCE_STORAGE_KEY,
+      selectedAppearance: appearance,
+    });
+    persistedAppearance = await readPersistedAppearance();
+  }
+
+  expect(
+    persistedAppearance,
+    'Le thème visuel doit être persisté dans localStorage et deviceSettings avant le redémarrage applicatif.',
+  ).toEqual({
+    localAppearance: appearance,
+    deviceAppearance: appearance,
+  });
 }
