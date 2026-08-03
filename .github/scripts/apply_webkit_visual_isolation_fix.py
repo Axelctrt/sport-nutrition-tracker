@@ -56,14 +56,13 @@ spec = replace_once(
     """      await page.goto(`/?visualQa=${Date.now()}-${attempt}#${path}`, {
         waitUntil: 'domcontentloaded',
       });""",
-    """      await page.goto(isolatedVisualUrl(
-        bootstrapSearch,
-        'visualQa',
-        `${Date.now()}-${attempt}`,
-        path,
-      ), {
-        waitUntil: 'domcontentloaded',
-      });""",
+    """      if (attempt === 1) {
+        await page.goto(`/${bootstrapSearch}#${path}`, {
+          waitUntil: 'domcontentloaded',
+        });
+      } else {
+        await page.reload({ waitUntil: 'domcontentloaded' });
+      }""",
     'openReadyPage navigation',
 )
 spec = replace_once(
