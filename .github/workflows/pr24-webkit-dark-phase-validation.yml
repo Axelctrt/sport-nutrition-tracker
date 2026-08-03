@@ -37,7 +37,7 @@ jobs:
       - name: Verify focused patch
         run: |
           git diff --check
-          npx oxlint e2e/performance-glass-0.34.0.spec.ts
+          npx oxlint e2e/performance-glass-0.34.0.spec.ts e2e/helpers/performanceGlass.ts
 
       - name: Install Chromium and WebKit
         run: npx playwright install --with-deps chromium webkit
@@ -48,6 +48,14 @@ jobs:
           e2e/performance-glass-0.34.0.spec.ts
           --project=webkit-iphone-15
           --grep "active le thème sombre core via le contrôle accessible"
+          --repeat-each=3
+
+      - name: Repeat zenith reveal on WebKit three times
+        run: >-
+          npx playwright test
+          e2e/performance-glass-0.34.0.spec.ts
+          --project=webkit-iphone-15
+          --grep "capture le reveal unique zenith-gold"
           --repeat-each=3
 
       - name: Repeat historical scenario on WebKit three times
@@ -73,7 +81,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
-          git commit -m "test(e2e): activer le sombre via le contrôle accessible"
+          git commit -m "test(e2e): fiabiliser le thème sombre du harnais visuel"
           git push origin HEAD:${{ github.head_ref }}
 
       - name: Upload failure artifacts
