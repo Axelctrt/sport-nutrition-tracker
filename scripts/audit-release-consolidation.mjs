@@ -19,6 +19,7 @@ const requiredFiles = [
   'docs/onboarding-compact-0.32.0.md',
   'e2e/onboarding-compact.spec.ts',
   'e2e/nutrition-add-flow.spec.ts',
+  'e2e/helpers/performanceGlass.ts',
   'e2e/performance-glass-0.34.0.spec.ts',
   'scripts/shared/stableVersion.mjs',
   'scripts/audit-unified-sync-center.mjs',
@@ -126,18 +127,36 @@ if (failures.length === 0) {
 
   const performanceGlass = read('e2e/performance-glass-0.34.0.spec.ts');
   for (const marker of [
-    'async function replaceVisualApplicationPage(',
-    'await setupPage.goto(`/visual-lab.html${bootstrapSearch}`',
-    "await expect(setupPage.locator('#root')).not.toBeEmpty();",
-    'setVisualThemeState(setupPage, options)',
-    'ONBOARDING_COMPLETION_REVEAL_SEEN_STORAGE_KEY',
-    'window.sessionStorage.setItem(storageKey, seenAt);',
+    'async function prepareVisualApplication(',
+    'await page.goto(`/visual-lab.html${bootstrapSearch}`',
+    "await expect(page.locator('#root')).not.toBeEmpty();",
+    'await setup(page);',
+    'await page.goto(targetUrl, { waitUntil: \'domcontentloaded\' });',
+    'async function prepareSeededVisualTheme(',
+    'await seedPerformanceGlassData(setupPage);',
+    'await setVisualThemeState(setupPage, options);',
+    'async function enableDarkMode(page: Page)',
+    "name: /Thème clair.*Thème sombre/",
+    "test('charge le thème sombre core depuis les préférences persistées'",
+    "appearance: 'dark'",
     "reducedMotion: 'reduce'",
     "page.getByRole('dialog', { name: 'Tout est prêt' })",
-    'await page.goto(`/${bootstrapSearch}#${path}`',
+    "page.locator('.sp-badge-reveal-backdrop')",
   ]) {
     if (!performanceGlass.includes(marker)) {
-      fail(`le harnais Performance Glass doit conserver son isolation WebKit : ${marker}.`);
+      fail(`le harnais Performance Glass doit conserver son cycle navigateur contrôlé : ${marker}.`);
+    }
+  }
+
+  const performanceGlassHelper = read('e2e/helpers/performanceGlass.ts');
+  for (const marker of [
+    "import { achievementCatalog } from '../../src/domain/rewards/achievements';",
+    'achievementCatalog.map(({ id }) => id)',
+    'const earnedAchievements = seededAchievementIds.map((id) => ({',
+    'earnedAchievements,',
+  ]) {
+    if (!performanceGlassHelper.includes(marker)) {
+      fail(`le seed Performance Glass doit neutraliser les reveals hors périmètre : ${marker}.`);
     }
   }
 
