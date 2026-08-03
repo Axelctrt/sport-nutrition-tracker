@@ -1,3 +1,3 @@
 Validation ciblée de la stabilité WebKit du scénario visuel historique.
-Base validée : 42ec8c7203fa6433d49b35172187715ca2380478
-Écritures IndexedDB isolées dans un onglet technique éphémère.
+Base validée : 032f7e965c0195fa30e0d8640d15adb3f6d2dda6
+Nouvel onglet applicatif après chaque écriture visuelle.
