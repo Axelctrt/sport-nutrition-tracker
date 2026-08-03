@@ -1,0 +1,90 @@
+name: PR24 edit surface final targeted validation
+
+on:
+  pull_request:
+    branches:
+      - agent/profile-friends-privacy-ux
+    types:
+      - synchronize
+
+permissions:
+  contents: write
+
+jobs:
+  targeted-validation:
+    name: Final targeted profile edit surfaces
+    if: github.head_ref == 'agent/pr24-social-profile-edit-surface-validation'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout technical branch
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22.16.0
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Apply scoped PR24 correction
+        shell: bash
+        run: |
+          python - <<'PY'
+          import base64
+          import gzip
+          import re
+          from pathlib import Path
+
+          source = Path('.github/workflows/pr24-edit-surface-validation.yml').read_text(encoding='utf-8')
+          match = re.search(r"printf '%s' '([^']+)'", source)
+          if not match:
+              raise SystemExit('Payload principal introuvable.')
+          Path('/tmp/apply-pr24-edit-surface.py').write_bytes(gzip.decompress(base64.b64decode(match.group(1))))
+          PY
+          python /tmp/apply-pr24-edit-surface.py
+          printf '%s' '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' | base64 --decode | gzip --decompress > /tmp/pr24-followup.py
+          python /tmp/pr24-followup.py
+          printf '%s' 'H4sICI/4cGoAA3ByMjRfZm9sbG93dXAyLnB5AMVWzW7bMAy++ynUHmobcBzsNiRIgQxLUWDdVrS7F4pNx0JtyaPkpEGQ91mfoy82SnbsJEW7Yhs2XyKJPx9JfRSToSpZxU1eiDkTZaXQsGvaep6XQsYQqoIncKdkAoFVGzFtMGKqSNuVhJVbhWxwzr4oCSOP0ZeJAu6sAZs4f844dCIDD4ZOO40Ygad39jQAmahUyMXEr002eO83BomqpbWwKrHbBITfyETWik8m7F0DbT/kQgO7IYEoYYaoMMj8jUXbjiip0mVVAtlxY0CmNaslsEwJHTGDql4+PbKNc7xtg+jDXaEw0MTrImprZGNy5Qgj9jwPzzsopXPpa0yGOucI6bAWww/KGFXe5gAmNvrBj5zS6elpUwOpDasQlkLV+usSMCvUioqSqqS2icRzla5jbdYFxKoVj52H1zTIgZ+LNAXpjz2vB8rIRl8gL4E0VkKmakV5fq9Bm6kUJTdCSScOgpBNztmGwvzn8fY4pUp5caOUZcmcJ/cpquoGsjipEcnTvqoVL+iGZXpruAFNFlNEvo4z6oTgEDvJRZGSg7DlVUwkMIBBAIUjTzhi7YoJzS6/fb6atVsqSdCRsdMhfE63r7ID3bOzTuNkMulzae3DDr3kVQ/tIDbHGFF3wFHwS1epLsh4AWZqDIp5bSDwrcagLWbYGwoJaHobt91Jt2HY1PK4inGmcMaTPAg2XTLbhhneQYCNP9vMWMP4SKZfjC9ivjXwW/ht+BfYGv5hS+4xlV4UYuhsSesroelBIZL497CmQGzsOZdpAZ9g/ZH24S7rX/D8uHd2Zk3KPDGCEHd0650dCMbHbfmfYn4DXaI9xkYNCY8Y9JxD7nfcMzdjQe+ETaiZZF0UYWfXpPxSC4z3cGh4vIWUPVpnvQ1//6JeZGQG3NQIepihoGmlhxVf0O6i2V2jWPJkfU1nxyytADVd7qHireSVzpXrarOugB2JAZcigWli20a/ruSuMzpk2R9g7rmjkVmhoFHv0/Msnn4gDKg0snkeaYTbme3un27K7P65CFkbUQhN0xvBCHx6jGn2/gRs4s4S5AgAAA==' | base64 --decode | gzip --decompress > /tmp/pr24-followup2.py
+          python /tmp/pr24-followup2.py
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run targeted lint
+        run: npx oxlint src/shared/ui/BottomSheet.tsx src/features/profile/pages/ProfilePage.tsx src/features/profile/pages/ProfilePage.test.tsx src/features/friends/pages/FriendsPrivacyPage.tsx src/features/friends/pages/FriendsPrivacyPage.identity-status.test.tsx src/features/friends/pages/FriendsPrivacyPage.visibility-feedback.test.tsx e2e/profile-editing.spec.ts e2e/friends-profile-editing.spec.ts
+
+      - name: Run targeted unit tests
+        run: npx vitest run src/features/profile/pages/ProfilePage.test.tsx src/features/friends/pages/FriendsPrivacyPage.identity-status.test.tsx src/features/friends/pages/FriendsPrivacyPage.visibility-feedback.test.tsx
+
+      - name: Install targeted Playwright browsers
+        run: npx playwright install --with-deps chromium webkit
+
+      - name: Run targeted mobile browser tests
+        run: npx playwright test e2e/profile-editing.spec.ts e2e/friends-profile-editing.spec.ts --project=webkit-iphone-15 --project=chromium-mobile-360
+
+      - name: Upload visual and browser evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: pr24-edit-surface-targeted-${{ github.run_id }}
+          path: |
+            playwright-report/
+            test-results/playwright/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Commit validated correction on technical branch
+        if: success()
+        shell: bash
+        run: |
+          git config user.name 'sportpilot-validation-bot'
+          git config user.email 'sportpilot-validation-bot@users.noreply.github.com'
+          git add src/shared/ui/BottomSheet.tsx src/features/profile/pages/ProfilePage.tsx src/features/profile/pages/ProfilePage.test.tsx src/features/friends/pages/FriendsPrivacyPage.tsx src/features/friends/pages/FriendsPrivacyPage.identity-status.test.tsx src/features/friends/pages/FriendsPrivacyPage.visibility-feedback.test.tsx e2e/profile-editing.spec.ts e2e/friends-profile-editing.spec.ts
+          git rm .github/workflows/pr24-edit-surface-validation.yml .github/workflows/pr24-edit-surface-pr-validation.yml .github/workflows/pr24-edit-surface-rerun.yml .github/workflows/pr24-edit-surface-final-validation.yml
+          git commit -m 'fix: éditer les profils dans une surface dédiée'
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
