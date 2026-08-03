@@ -58,8 +58,28 @@ jobs:
           python /tmp/pr24-followup-2.py
           printf '%s' 'H4sICAP5cGoAA3ByMjRfZm9sbG93dXAzLnB5AHVQwUoDMRS871c8vWQXuineROlBRfEkxauIpLsvbSDNW15e2or4QX6HP+ZLBQ+Kuc1kMjMZz7SFyckmhhWE7UQssFTYNJWExRG0JvMw9+ikMOa554BpzPPJrRXdfaMlh50bXpfK2TBikiCvfRZ9kq1gFiv5YLpG8CDqWs0toxtfKtFiGmgMab0wRXx/rjqKo8pOQQ8eJhykzW6H10WEUmeF7hXdRJdza/a9LzGa7vK0Sbj/95UdImUt0pqn0YnrV6Tsts8bROk9kSA/m66zibQrXeODmrbVNHioJe1AJUmrxTo4WcDZRVNj2IWM8Kg3YYu3zMStN1oLWQIluE2M65CFkcGJ6FAFoSQETyHPQJjK7vMD4e1XwrtOcNxoz0Hwe6SjhHGKbsAqmoF+t5vB3/EmDupjrn5qjAVWVOR3oRjWqabnwhBrpzoCjAjRVc5rkFW7L+0Rrb4kAgAA' | base64 --decode | gzip --decompress > /tmp/pr24-followup-3.py
           python /tmp/pr24-followup-3.py
-          printf '%s' 'H4sIAAr7cGoC/51Su27jMBDs9RULNZEBWcZ1QYIUV5zbM+AAAdtFBjZCmqehJB9BlCVBIoTpV7D8+44Tl8yqFz57eztDU4JqEdN6qDgoKNlxbG91QqNgviD8mBRYkxl4vMuI0KByjyjmO82A9+jyuOqkgX64mWGypsu1D4VGLezXIWp3n/5nLU8JCW2p4VC4hoTShqr4U6gg4O2XMOElw6k2hHIs4vdl/hwhj+NPT2MgD1gwIKoYHaFxjCMTL/m9B/IEcclEMqNWcG+0LWWRdWfb05dA93Hb/QXSwOJI0IZcRlTjHRf4/4f27ToEcbFj2ii0eGzgWG1LmDfgOFvVcR5Jmu94G4Z97U2MRKxh78i6irYcB+RY2+MJz+F8Prze0vwaj4F27YLMGbKlW8u3jk+7BAVVhws9F3i72W4xMdO5vrXxE/csH6qPQv3OK7VuMLBfO7mlv+M5EPYC/EAx9rPDezAqa8R99p0dQ9hVmlLfRJbj++7a/D8A7a3++49M+8OP4qeP6x+fAbowk8zR4DAAA=' | base64 --decode | gzip --decompress > /tmp/pr24-followup-4.py
-          python /tmp/pr24-followup-4.py
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('src/features/friends/pages/FriendsPrivacyPage.tsx')
+          source = path.read_text(encoding='utf-8')
+          old = """    return persistSocialPrivacyForAccountSync(
+              { ...next, lastFeedback: undefined },
+              'social-profile-settings-update',
+            );
+          """
+          new = """    const nextWithoutFeedback = { ...next };
+              delete nextWithoutFeedback.lastFeedback;
+              return persistSocialPrivacyForAccountSync(
+                nextWithoutFeedback,
+                'social-profile-settings-update',
+              );
+          """
+          if old not in source:
+              raise SystemExit('Zone lastFeedback attendue introuvable.')
+          path.write_text(source.replace(old, new, 1), encoding='utf-8')
+          print('Propriété lastFeedback omise conformément à exactOptionalPropertyTypes.')
+          PY
 
       - name: Install dependencies
         run: npm ci
