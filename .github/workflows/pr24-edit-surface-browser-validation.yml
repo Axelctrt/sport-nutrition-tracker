@@ -12,10 +12,10 @@ permissions:
 
 jobs:
   targeted-validation:
-    name: Mobile profile edit surfaces
+    name: Final mobile profile edit surfaces
     if: github.head_ref == 'agent/pr24-social-profile-edit-surface-validation'
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 40
 
     steps:
       - name: Checkout technical branch
@@ -58,6 +58,8 @@ jobs:
           python /tmp/pr24-followup-2.py
           printf '%s' 'H4sICAP5cGoAA3ByMjRfZm9sbG93dXAzLnB5AHVQwUoDMRS871c8vWQXuineROlBRfEkxauIpLsvbSDNW15e2or4QX6HP+ZLBQ+Kuc1kMjMZz7SFyckmhhWE7UQssFTYNJWExRG0JvMw9+ikMOa554BpzPPJrRXdfaMlh50bXpfK2TBikiCvfRZ9kq1gFiv5YLpG8CDqWs0toxtfKtFiGmgMab0wRXx/rjqKo8pOQQ8eJhykzW6H10WEUmeF7hXdRJdza/a9LzGa7vK0Sbj/95UdImUt0pqn0YnrV6Tsts8bROk9kSA/m66zibQrXeODmrbVNHioJe1AJUmrxTo4WcDZRVNj2IWM8Kg3YYu3zMStN1oLWQIluE2M65CFkcGJ6FAFoSQETyHPQJjK7vMD4e1XwrtOcNxoz0Hwe6SjhHGKbsAqmoF+t5vB3/EmDupjrn5qjAVWVOR3oRjWqabnwhBrpzoCjAjRVc5rkFW7L+0Rrb4kAgAA' | base64 --decode | gzip --decompress > /tmp/pr24-followup-3.py
           python /tmp/pr24-followup-3.py
+          printf '%s' 'H4sIAAr7cGoC/51Su27jMBDs9RULNZEBWcZ1QYIUV5zbM+AAAdtFBjZCmqehJB9BlCVBIoTpV7D8+44Tl8yqFz57eztDU4JqEdN6qDgoKNlxbG91QqNgviD8mBRYkxl4vMuI0KByjyjmO82A9+jyuOqkgX64mWGypsu1D4VGLezXIWp3n/5nLU8JCW2p4VC4hoTShqr4U6gg4O2XMOElw6k2hHIs4vdl/hwhj+NPT2MgD1gwIKoYHaFxjCMTL/m9B/IEcclEMqNWcG+0LWWRdWfb05dA93Hb/QXSwOJI0IZcRlTjHRf4/4f27ToEcbFj2ii0eGzgWG1LmDfgOFvVcR5Jmu94G4Z97U2MRKxh78i6irYcB+RY2+MJz+F8Prze0vwaj4F27YLMGbKlW8u3jk+7BAVVhws9F3i72W4xMdO5vrXxE/csH6qPQv3OK7VuMLBfO7mlv+M5EPYC/EAx9rPDezAqa8R99p0dQ9hVmlLfRJbj++7a/D8A7a3++49M+8OP4qeP6x+fAbowk8zR4DAAA=' | base64 --decode | gzip --decompress > /tmp/pr24-followup-4.py
+          python /tmp/pr24-followup-4.py
 
       - name: Install dependencies
         run: npm ci
@@ -67,6 +69,9 @@ jobs:
 
       - name: Run targeted unit tests
         run: npx vitest run src/features/profile/pages/ProfilePage.test.tsx src/features/friends/pages/FriendsPrivacyPage.identity-status.test.tsx src/features/friends/pages/FriendsPrivacyPage.visibility-feedback.test.tsx
+
+      - name: Run production build
+        run: npm run build
 
       - name: Install targeted Playwright browsers
         run: npx playwright install --with-deps chromium webkit
@@ -92,6 +97,6 @@ jobs:
           git config user.name 'sportpilot-validation-bot'
           git config user.email 'sportpilot-validation-bot@users.noreply.github.com'
           git add src/shared/ui/BottomSheet.tsx src/features/profile/pages/ProfilePage.tsx src/features/profile/pages/ProfilePage.test.tsx src/features/friends/pages/FriendsPrivacyPage.tsx src/features/friends/pages/FriendsPrivacyPage.identity-status.test.tsx src/features/friends/pages/FriendsPrivacyPage.visibility-feedback.test.tsx e2e/profile-editing.spec.ts e2e/friends-profile-editing.spec.ts
-          git rm .github/workflows/pr24-edit-surface-validation.yml .github/workflows/pr24-edit-surface-pr-validation.yml .github/workflows/pr24-edit-surface-rerun.yml .github/workflows/pr24-edit-surface-final-validation.yml .github/workflows/pr24-edit-surface-browser-validation.yml
+          git rm .github/workflows/pr24-edit-surface-validation.yml .github/workflows/pr24-edit-surface-pr-validation.yml .github/workflows/pr24-edit-surface-rerun.yml .github/workflows/pr24-edit-surface-final-validation.yml .github/workflows/pr24-edit-surface-browser-validation.yml .github/workflows/pr24-edit-surface-build-validation.yml .github/workflows/pr24-edit-surface-source-diagnostic.yml
           git commit -m 'fix: éditer les profils dans une surface dédiée'
           git push origin HEAD:${{ github.event.pull_request.head.ref }}
