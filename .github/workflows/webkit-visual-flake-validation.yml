@@ -54,7 +54,19 @@ jobs:
           e2e/performance-glass-0.34.0.spec.ts
           --project=webkit-iphone-15
 
+      - name: Upload WebKit failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: webkit-visual-failure
+          path: |
+            playwright-report/
+            test-results/playwright/
+          if-no-files-found: ignore
+          retention-days: 7
+
       - name: Export validated patch
+        if: success()
         uses: actions/upload-artifact@v7
         with:
           name: validated-webkit-visual-patch
