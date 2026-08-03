@@ -217,53 +217,56 @@ function ProfilePageContent({ profile, saveProfile }: ProfilePageContentProps) {
     }
   };
 
+  const editAction = !isEditing ? (
+    <Button
+      ref={editButtonRef}
+      type="button"
+      variant="secondary"
+      className="size-11 shrink-0 p-0"
+      aria-label="Modifier le profil"
+      title="Modifier le profil"
+      aria-controls="profile-form"
+      aria-expanded="false"
+      onClick={openEditor}
+    >
+      <Pencil aria-hidden="true" className="size-4" />
+    </Button>
+  ) : undefined;
+
   return (
     <section
       aria-labelledby="profile-title"
       className="min-w-0 overflow-x-clip"
     >
       <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6 dark:border-slate-800 dark:bg-slate-900">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex min-w-0 items-start gap-3">
-            <Scale
-              aria-hidden="true"
-              className="mt-1 size-6 shrink-0 text-brand-700 dark:text-brand-300"
-            />
-            <div className="min-w-0">
-              <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
-                Profil local
-              </p>
-              <h1
-                id="profile-title"
-                className="mt-1 text-3xl font-bold tracking-tight text-slate-950 dark:text-white"
-              >
-                Profil et objectifs
-              </h1>
-              <p className="mt-3 max-w-3xl leading-7 text-slate-600 dark:text-slate-300">
-                Consulte ou modifie tes données.
-              </p>
-            </div>
-          </div>
-          {!isEditing ? (
-            <Button
-              ref={editButtonRef}
-              type="button"
-              variant="secondary"
-              className="size-11 shrink-0 p-0"
-              aria-label="Modifier le profil"
-              title="Modifier le profil"
-              aria-controls="profile-form"
-              aria-expanded="false"
-              onClick={openEditor}
+        <div className="flex min-w-0 items-start gap-3">
+          <Scale
+            aria-hidden="true"
+            className="mt-1 size-6 shrink-0 text-brand-700 dark:text-brand-300"
+          />
+          <div className="min-w-0">
+            <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
+              Profil local
+            </p>
+            <h1
+              id="profile-title"
+              className="mt-1 text-3xl font-bold tracking-tight text-slate-950 dark:text-white"
             >
-              <Pencil aria-hidden="true" className="size-4" />
-            </Button>
-          ) : null}
+              Profil et objectifs
+            </h1>
+            <p className="mt-3 max-w-3xl leading-7 text-slate-600 dark:text-slate-300">
+              Consulte ou modifie tes données.
+            </p>
+          </div>
         </div>
       </div>
 
       <div className="mt-4">
-        <ProfileOverview profile={profile} currentWeight={currentWeight} />
+        <ProfileOverview
+          profile={profile}
+          currentWeight={currentWeight}
+          action={editAction}
+        />
       </div>
 
       {recalculationWarning ? (
