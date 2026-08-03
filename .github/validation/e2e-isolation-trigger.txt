@@ -1,0 +1,1 @@
+Validation ciblée de l’isolation Dexie pour le scénario mobile.
