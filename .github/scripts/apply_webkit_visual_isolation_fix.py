@@ -24,17 +24,53 @@ spec = replace_once(
   options: Parameters<typeof setVisualThemeState>[1],
 ): Promise<void> {
   await page.goto('/visual-lab.html', { waitUntil: 'domcontentloaded' });
+  await expect(page.locator('#root')).not.toBeEmpty();
+  await setVisualThemeState(page, options);
+}
 """,
-    """async function prepareVisualTheme(
+    """async function withVisualSetupPage(
+  page: Page,
+  bootstrapSearch: string,
+  setup: (setupPage: Page) => Promise<void>,
+): Promise<void> {
+  const setupPage = await page.context().newPage();
+  try {
+    await setupPage.goto(`/visual-lab.html${bootstrapSearch}`, {
+      waitUntil: 'domcontentloaded',
+    });
+    await expect(setupPage.locator('#root')).not.toBeEmpty();
+    await setup(setupPage);
+  } finally {
+    await setupPage.close();
+  }
+}
+
+async function prepareVisualTheme(
   page: Page,
   bootstrapSearch: string,
   options: Parameters<typeof setVisualThemeState>[1],
+  reloadApplication = true,
 ): Promise<void> {
-  await page.goto(`/visual-lab.html${bootstrapSearch}`, {
-    waitUntil: 'domcontentloaded',
+  await withVisualSetupPage(page, bootstrapSearch, async (setupPage) => {
+    await setVisualThemeState(setupPage, options);
   });
+  if (!reloadApplication) return;
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await expect(page.locator('#root')).not.toBeEmpty();
+}
+
+async function seedVisualData(
+  page: Page,
+  bootstrapSearch: string,
+): Promise<void> {
+  await withVisualSetupPage(page, bootstrapSearch, async (setupPage) => {
+    await seedPerformanceGlassData(setupPage);
+  });
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await expect(page.locator('#root')).not.toBeEmpty();
+}
 """,
-    'prepareVisualTheme',
+    'visual setup helpers',
 )
 spec = replace_once(
     spec,
@@ -84,6 +120,24 @@ spec = spec.replace(
 spec = spec.replace(
     'openReadyPage(page, ',
     'openReadyPage(page, bootstrapSearch, ',
+)
+spec = replace_once(
+    spec,
+    '  await seedPerformanceGlassData(page);',
+    '  await seedVisualData(page, bootstrapSearch);',
+    'visual data seed call',
+)
+spec = replace_once(
+    spec,
+    "      pendingRevealThemeId: themeId,\n    });",
+    "      pendingRevealThemeId: themeId,\n    }, false);",
+    'theme reveal staging',
+)
+spec = replace_once(
+    spec,
+    "    pendingRevealThemeId: 'aurora',\n  });",
+    "    pendingRevealThemeId: 'aurora',\n  }, false);",
+    'reduced reveal staging',
 )
 spec = replace_once(
     spec,
