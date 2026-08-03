@@ -72,3 +72,52 @@ interface VisualThemeStateOptions""",
 )
 
 path.write_text(source)
+
+spec_path = Path('e2e/performance-glass-0.34.0.spec.ts')
+spec_source = spec_path.read_text()
+spec_source = replace_once(
+    spec_source,
+    """test('conserve le thème sombre core après rechargement', async ({ page }, testInfo) => {
+  await createLocalProfile(page, 'Progression Dark');
+  const bootstrapSearch = new URL(page.url()).search;
+
+  await prepareSeededVisualTheme(page, bootstrapSearch, {
+    activeThemeId: 'core',
+    unlockedThemeIds: allThemes,
+    appearance: 'light',
+  }, `/${bootstrapSearch}#/progression?range=90`);
+
+  await expectReadyPage(page, 'Progression');
+  await enableDarkMode(page);
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await expectReadyPage(page, 'Progression');
+  await expect(page.locator('html')).toHaveClass(/dark/);
+  await expect(page.locator('html')).toHaveAttribute('data-sport-theme', 'core');
+  await expectNoUnexpectedRewardReveal(page);
+  if (testInfo.project.name === 'chromium-desktop') {
+    await capture(page, testInfo, 'progression-core-dark.png');
+  }
+});""",
+    """test('charge le thème sombre core depuis les préférences persistées', async ({
+  page,
+}, testInfo) => {
+  await createLocalProfile(page, 'Progression Dark');
+  const bootstrapSearch = new URL(page.url()).search;
+
+  await prepareSeededVisualTheme(page, bootstrapSearch, {
+    activeThemeId: 'core',
+    unlockedThemeIds: allThemes,
+    appearance: 'dark',
+  }, `/${bootstrapSearch}#/progression?range=90`);
+
+  await expectReadyPage(page, 'Progression');
+  await expect(page.locator('html')).toHaveClass(/dark/);
+  await expect(page.locator('html')).toHaveAttribute('data-sport-theme', 'core');
+  await expectNoUnexpectedRewardReveal(page);
+  if (testInfo.project.name === 'chromium-desktop') {
+    await capture(page, testInfo, 'progression-core-dark.png');
+  }
+});""",
+    'persisted dark theme phase',
+)
+spec_path.write_text(spec_source)
