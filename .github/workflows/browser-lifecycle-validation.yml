@@ -6,7 +6,7 @@ on:
       - agent/profile-friends-privacy-browser-lifecycle
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   targeted-browsers:
@@ -15,8 +15,11 @@ jobs:
     timeout-minutes: 60
 
     steps:
-      - name: Checkout repository
+      - name: Checkout pull request head
         uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
 
       - name: Set up Node.js
         uses: actions/setup-node@v5
@@ -27,6 +30,12 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Apply browser lifecycle patch
+        run: |
+          if [[ -f .github/scripts/apply_browser_lifecycle_fix.py ]]; then
+            python3 .github/scripts/apply_browser_lifecycle_fix.py
+          fi
 
       - name: Verify focused patch
         run: |
@@ -67,6 +76,19 @@ jobs:
           --project=webkit-iphone-15
           --project=chromium-mobile-360
           --project=chromium-large-412
+
+      - name: Commit validated patch to the technical branch
+        run: |
+          if [[ -f .github/scripts/apply_browser_lifecycle_fix.py ]]; then
+            rm .github/scripts/apply_browser_lifecycle_fix.py
+          fi
+          if [[ -n "$(git status --porcelain -- e2e/performance-glass-0.34.0.spec.ts .github/scripts/apply_browser_lifecycle_fix.py)" ]]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add e2e/performance-glass-0.34.0.spec.ts .github/scripts/apply_browser_lifecycle_fix.py
+            git commit -m "test(e2e): adapter le cycle de page au moteur navigateur"
+            git push origin HEAD:${{ github.head_ref }}
+          fi
 
       - name: Upload failure artifacts
         if: failure()
