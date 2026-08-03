@@ -1,0 +1,127 @@
+name: Apply WebKit visual isolation fix
+
+on:
+  push:
+    branches:
+      - agent/profile-friends-privacy-webkit-flake
+
+permissions:
+  contents: write
+
+jobs:
+  apply-fix:
+    if: github.event.head_commit.message != 'test(e2e): stabiliser le harnais visuel WebKit'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout technical branch
+        uses: actions/checkout@v6
+        with:
+          ref: agent/profile-friends-privacy-webkit-flake
+          fetch-depth: 0
+
+      - name: Preserve E2E isolation in visual tests
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          spec_path = Path('e2e/performance-glass-0.34.0.spec.ts')
+          spec = spec_path.read_text()
+
+          marker = "] as const;\n\nasync function capture("
+          helper = "] as const;\n\nfunction isolatedVisualUrl(\n  bootstrapSearch: string,\n  parameter: string,\n  value: string,\n  hashPath: string,\n): string {\n  const query = new URLSearchParams(bootstrapSearch);\n  query.set(parameter, value);\n  return `/?${query.toString()}#${hashPath}`;\n}\n\nasync function capture("
+          if marker not in spec:
+              raise SystemExit('Insertion marker not found')
+          spec = spec.replace(marker, helper, 1)
+
+          old_prepare = """async function prepareVisualTheme(
+            page: Page,
+            options: Parameters<typeof setVisualThemeState>[1],
+          ): Promise<void> {
+            await page.goto('/visual-lab.html', { waitUntil: 'domcontentloaded' });
+          """
+          old_prepare = '\n'.join(line.strip() if index == 0 else line[10:] for index, line in enumerate(old_prepare.splitlines()))
+          new_prepare = """async function prepareVisualTheme(
+  page: Page,
+  bootstrapSearch: string,
+  options: Parameters<typeof setVisualThemeState>[1],
+): Promise<void> {
+  await page.goto(`/visual-lab.html${bootstrapSearch}`, {
+    waitUntil: 'domcontentloaded',
+  });
+"""
+          if old_prepare not in spec:
+              raise SystemExit('prepareVisualTheme block not found')
+          spec = spec.replace(old_prepare, new_prepare, 1)
+
+          old_open = """async function openReadyPage(
+  page: Page,
+  path: string,
+  heading: string,
+): Promise<void> {"""
+          new_open = """async function openReadyPage(
+  page: Page,
+  bootstrapSearch: string,
+  path: string,
+  heading: string,
+): Promise<void> {"""
+          if old_open not in spec:
+              raise SystemExit('openReadyPage signature not found')
+          spec = spec.replace(old_open, new_open, 1)
+
+          old_goto = """      await page.goto(`/?visualQa=${Date.now()}-${attempt}#${path}`, {
+        waitUntil: 'domcontentloaded',
+      });"""
+          new_goto = """      await page.goto(isolatedVisualUrl(
+        bootstrapSearch,
+        'visualQa',
+        `${Date.now()}-${attempt}`,
+        path,
+      ), {
+        waitUntil: 'domcontentloaded',
+      });"""
+          if old_goto not in spec:
+              raise SystemExit('openReadyPage goto not found')
+          spec = spec.replace(old_goto, new_goto, 1)
+
+          spec = spec.replace(
+              "  await createLocalProfile(page, 'Performance Glass');\n",
+              "  await createLocalProfile(page, 'Performance Glass');\n  const bootstrapSearch = new URL(page.url()).search;\n",
+              1,
+          )
+          spec = spec.replace(
+              "  await createLocalProfile(page, 'Reveal');\n",
+              "  await createLocalProfile(page, 'Reveal');\n  const bootstrapSearch = new URL(page.url()).search;\n",
+              1,
+          )
+          spec = spec.replace('prepareVisualTheme(page, {', 'prepareVisualTheme(page, bootstrapSearch, {')
+          spec = spec.replace('openReadyPage(page, ', 'openReadyPage(page, bootstrapSearch, ')
+          spec = spec.replace(
+              "    await page.goto(`/?visualReveal=${themeId}#/`);",
+              "    await page.goto(isolatedVisualUrl(bootstrapSearch, 'visualReveal', themeId, '/'));",
+          )
+          spec = spec.replace(
+              "  await page.goto('/?visualReveal=aurora-reduced#/');",
+              "  await page.goto(isolatedVisualUrl(bootstrapSearch, 'visualReveal', 'aurora-reduced', '/'));",
+          )
+          spec_path.write_text(spec)
+
+          helper_path = Path('e2e/helpers/performanceGlass.ts')
+          helper_source = helper_path.read_text()
+          old_seed_navigation = "  await page.goto('/#/privacy');"
+          new_seed_navigation = "  await page.goto(`/${new URL(page.url()).search}#/privacy`);"
+          if old_seed_navigation not in helper_source:
+              raise SystemExit('seed navigation not found')
+          helper_path.write_text(helper_source.replace(old_seed_navigation, new_seed_navigation, 1))
+          PY
+
+      - name: Verify focused diff
+        run: git diff --check && git diff -- e2e/performance-glass-0.34.0.spec.ts e2e/helpers/performanceGlass.ts
+
+      - name: Commit technical fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add e2e/performance-glass-0.34.0.spec.ts e2e/helpers/performanceGlass.ts
+          git commit -m "test(e2e): stabiliser le harnais visuel WebKit"
+          git push origin HEAD:agent/profile-friends-privacy-webkit-flake
