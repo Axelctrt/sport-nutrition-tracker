@@ -38,8 +38,9 @@ test('navigue entre les quatre rubriques Amis sans empiler leur contenu', async 
   await expect(profilePanel.getByRole('button', { name: /Vérifier disponibilité/u })).toHaveCount(0);
   await expect(profilePanel.getByRole('button', { name: /^Copier$/u })).toHaveCount(0);
 
-  await profilePanel.getByRole('radio', { name: 'Profil privé' }).click();
-  await expect(profilePanel.getByRole('radio', { name: 'Profil privé' })).toBeChecked();
+  const privateVisibility = profilePanel.getByRole('radio', { name: 'Profil privé' });
+  await privateVisibility.locator('..').click();
+  await expect(privateVisibility).toBeChecked();
   await expect(page.getByText('Action prise en compte', { exact: true })).toHaveCount(0);
   await expect(page.getByText(/Profil passé en privé/u)).toHaveCount(0);
 
