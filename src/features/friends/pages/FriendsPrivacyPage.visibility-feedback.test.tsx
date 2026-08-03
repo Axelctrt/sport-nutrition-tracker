@@ -75,7 +75,7 @@ describe('feedback de visibilité du profil', () => {
     renderVisibilityPage(repository);
 
     await user.click(screen.getByRole('button', { name: 'Mon profil social' }));
-    await user.click(screen.getByRole('radio', { name: 'Profil public' }));
+    await user.click(screen.getByRole('radio', { name: 'Visible via invitation' }));
 
     expect(await screen.findByText('Stockage local indisponible.')).toBeInTheDocument();
     expect(screen.queryByText('Visibilité du profil mise à jour')).not.toBeInTheDocument();
