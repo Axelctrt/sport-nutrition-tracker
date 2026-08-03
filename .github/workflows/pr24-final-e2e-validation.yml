@@ -1,0 +1,58 @@
+name: PR24 final E2E validation
+
+on:
+  pull_request:
+    branches:
+      - agent/pr24-final-e2e-validation-base
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr24-final-e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  targeted-mobile:
+    name: Repeat local mobile acceptance
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22.16.0
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint Playwright configuration
+        run: npx oxlint playwright.config.ts
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Repeat exact failing scenario three times
+        run: >-
+          npx playwright test
+          e2e/ux-mobile-acceptance.spec.ts
+          --project=chromium-mobile-360
+          --grep="valide le socle mobile des quatre rubriques principales"
+          --repeat-each=3
+
+      - name: Upload Playwright failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: pr24-final-e2e-failure-${{ github.run_id }}
+          path: |
+            playwright-report/
+            test-results/playwright/
+          if-no-files-found: ignore
+          retention-days: 7
