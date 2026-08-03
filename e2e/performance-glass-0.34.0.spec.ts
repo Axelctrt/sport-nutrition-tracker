@@ -19,9 +19,6 @@ const allThemes: VisualQaTheme[] = [
   'zenith-gold',
 ];
 
-const ONBOARDING_COMPLETION_REVEAL_SEEN_STORAGE_KEY =
-  'sportpilot:onboarding:completion-reveal:v1';
-
 interface VisualApplicationPageOptions {
   reducedMotion?: 'reduce' | 'no-preference';
 }
@@ -49,62 +46,33 @@ async function capture(
   });
 }
 
-async function replaceVisualApplicationPage(
+async function prepareVisualApplication(
   page: Page,
   bootstrapSearch: string,
   setup: (setupPage: Page) => Promise<void>,
   targetUrl: string,
   pageOptions: VisualApplicationPageOptions = {},
-): Promise<Page> {
-  const completionRevealSeenAt = await page.evaluate(
-    (storageKey) => window.sessionStorage.getItem(storageKey),
-    ONBOARDING_COMPLETION_REVEAL_SEEN_STORAGE_KEY,
-  );
-  const context = page.context();
-  await page.close();
-
-  const setupPage = await context.newPage();
-  try {
-    await setupPage.goto(`/visual-lab.html${bootstrapSearch}`, {
-      waitUntil: 'domcontentloaded',
-    });
-    await expect(setupPage.locator('#root')).not.toBeEmpty();
-    await setup(setupPage);
-  } finally {
-    await setupPage.close();
-  }
-
-  const applicationPage = await context.newPage();
+): Promise<void> {
+  await page.goto(`/visual-lab.html${bootstrapSearch}`, {
+    waitUntil: 'domcontentloaded',
+  });
+  await expect(page.locator('#root')).not.toBeEmpty();
+  await setup(page);
   if (pageOptions.reducedMotion) {
-    await applicationPage.emulateMedia({ reducedMotion: pageOptions.reducedMotion });
+    await page.emulateMedia({ reducedMotion: pageOptions.reducedMotion });
   }
-  if (completionRevealSeenAt) {
-    await applicationPage.addInitScript(({ storageKey, seenAt }) => {
-      window.sessionStorage.setItem(storageKey, seenAt);
-    }, {
-      storageKey: ONBOARDING_COMPLETION_REVEAL_SEEN_STORAGE_KEY,
-      seenAt: completionRevealSeenAt,
-    });
-  }
-  await applicationPage.goto(targetUrl, { waitUntil: 'domcontentloaded' });
-  await expect(applicationPage.locator('#root')).not.toBeEmpty();
-  if (completionRevealSeenAt) {
-    await expect.poll(() => applicationPage.evaluate(
-      (storageKey) => window.sessionStorage.getItem(storageKey),
-      ONBOARDING_COMPLETION_REVEAL_SEEN_STORAGE_KEY,
-    )).toBe(completionRevealSeenAt);
-  }
-  return applicationPage;
+  await page.goto(targetUrl, { waitUntil: 'domcontentloaded' });
+  await expect(page.locator('#root')).not.toBeEmpty();
 }
 
 async function prepareVisualTheme(
   page: Page,
   bootstrapSearch: string,
   options: Parameters<typeof setVisualThemeState>[1],
-  targetUrl = page.url(),
+  targetUrl: string,
   pageOptions: VisualApplicationPageOptions = {},
-): Promise<Page> {
-  return replaceVisualApplicationPage(
+): Promise<void> {
+  await prepareVisualApplication(
     page,
     bootstrapSearch,
     async (setupPage) => setVisualThemeState(setupPage, options),
@@ -113,56 +81,117 @@ async function prepareVisualTheme(
   );
 }
 
-async function seedVisualData(
+async function prepareSeededVisualTheme(
   page: Page,
   bootstrapSearch: string,
-): Promise<Page> {
-  return replaceVisualApplicationPage(
+  options: Parameters<typeof setVisualThemeState>[1],
+  targetUrl: string,
+): Promise<void> {
+  await prepareVisualApplication(
     page,
     bootstrapSearch,
-    seedPerformanceGlassData,
-    page.url(),
+    async (setupPage) => {
+      await seedPerformanceGlassData(setupPage);
+      await setVisualThemeState(setupPage, options);
+    },
+    targetUrl,
   );
 }
 
-async function openReadyPage(
+async function expectReadyPage(
   page: Page,
-  bootstrapSearch: string,
-  path: string,
   heading: string,
 ): Promise<void> {
-  let lastError: unknown;
-
-  for (let attempt = 1; attempt <= 3; attempt += 1) {
-    try {
-      if (attempt === 1) {
-        await page.goto(`/${bootstrapSearch}#${path}`, {
-          waitUntil: 'domcontentloaded',
-        });
-      } else {
-        await page.reload({ waitUntil: 'domcontentloaded' });
-      }
-      await expect(
-        page.getByRole('heading', { level: 1, name: heading }),
-      ).toBeVisible({ timeout: 15_000 });
-      lastError = undefined;
-      break;
-    } catch (error) {
-      lastError = error;
-      if (attempt < 3) {
-        // Rester sur le même contexte d’origine évite le changement de processus
-        // WebKit observé avec about:blank et préserve IndexedDB entre les retries.
-        await page.waitForTimeout(500);
-      }
-    }
-  }
-
-  if (lastError) throw lastError;
-
+  await expect(
+    page.getByRole('heading', { level: 1, name: heading }),
+  ).toBeVisible();
   await expect(page.locator('[aria-label="Chargement des analyses"]')).toHaveCount(0);
   await expect(page.locator('[aria-label="Chargement de la progression"]')).toHaveCount(0);
   await expectNoCriticalHorizontalOverflow(page);
 }
+
+async function enableDarkMode(page: Page): Promise<void> {
+  const themeButton = page.getByRole('button', {
+    name: /Thème clair.*Thème sombre/,
+  });
+  await themeButton.click();
+  await expect(page.locator('html')).toHaveClass(/dark/);
+}
+
+async function expectNoUnexpectedRewardReveal(page: Page): Promise<void> {
+  await expect(page.getByRole('dialog', { name: 'Tout est prêt' })).toHaveCount(0);
+  await expect(page.locator('.sp-badge-reveal-backdrop')).toHaveCount(0);
+}
+
+test('valide la collection verrouillée avec le thème core clair', async ({
+  page,
+}, testInfo) => {
+  await createLocalProfile(page, 'Rewards Locked');
+  const bootstrapSearch = new URL(page.url()).search;
+
+  await prepareVisualTheme(page, bootstrapSearch, {
+    activeThemeId: 'core',
+    unlockedThemeIds: ['core'],
+    appearance: 'light',
+  }, `/${bootstrapSearch}#/rewards`);
+
+  await expectReadyPage(page, 'Récompenses');
+  await expect(page.getByText('1 / 5', { exact: true })).toBeVisible();
+  await expect(page.getByText('Verrouillé', { exact: true })).toHaveCount(4);
+  if (testInfo.project.name === 'chromium-desktop') {
+    await capture(page, testInfo, 'rewards-collection-locked-core-light.png');
+  }
+});
+
+test('valide la progression core claire avec des données contrôlées', async ({
+  page,
+}, testInfo) => {
+  await createLocalProfile(page, 'Progression Core');
+  const bootstrapSearch = new URL(page.url()).search;
+
+  await prepareSeededVisualTheme(page, bootstrapSearch, {
+    activeThemeId: 'core',
+    unlockedThemeIds: allThemes,
+    appearance: 'light',
+  }, `/${bootstrapSearch}#/progression?range=30`);
+
+  await expectReadyPage(page, 'Progression');
+  await expect(page.getByText('Signal principal', { exact: true })).toBeVisible();
+  await expect(page.getByText('Vue d’ensemble', { exact: true })).toBeVisible();
+  await expectPageAccessibilityBaseline(page, { expectedHeading: 'Progression' });
+  await expectNoUnexpectedRewardReveal(page);
+  if (
+    testInfo.project.name === 'chromium-desktop'
+    || testInfo.project.name === 'chromium-small-320'
+    || testInfo.project.name === 'webkit-iphone-15'
+  ) {
+    await capture(page, testInfo, 'progression-core-light.png');
+  }
+
+  await page.getByRole('tab', { name: '3 mois' }).click();
+  await expect(page).toHaveURL(/range=90/);
+});
+
+test('charge le thème sombre core depuis les préférences persistées', async ({
+  page,
+}, testInfo) => {
+  await createLocalProfile(page, 'Progression Dark');
+  const bootstrapSearch = new URL(page.url()).search;
+
+  await prepareSeededVisualTheme(page, bootstrapSearch, {
+    activeThemeId: 'core',
+    unlockedThemeIds: allThemes,
+    appearance: 'dark',
+  }, `/${bootstrapSearch}#/progression?range=90`);
+
+  await expectReadyPage(page, 'Progression');
+  await expect(page.locator('html')).toHaveClass(/dark/);
+  await expect(page.locator('html')).toHaveAttribute('data-sport-theme', 'core');
+  await expectNoUnexpectedRewardReveal(page);
+  if (testInfo.project.name === 'chromium-desktop') {
+    await capture(page, testInfo, 'progression-core-dark.png');
+  }
+});
 
 test('valide les thèmes, graphiques et écrans de décision avec des données contrôlées', async ({
   page,
@@ -171,61 +200,16 @@ test('valide les thèmes, graphiques et écrans de décision avec des données c
   await createLocalProfile(page, 'Performance Glass');
   const bootstrapSearch = new URL(page.url()).search;
 
-  page = await prepareVisualTheme(page, bootstrapSearch, {
-    activeThemeId: 'core',
-    unlockedThemeIds: ['core'],
-    appearance: 'light',
-  });
-  await openReadyPage(page, bootstrapSearch, '/rewards', 'Récompenses');
-  await expect(page.getByText('1 / 5', { exact: true })).toBeVisible();
-  await expect(page.getByText('Verrouillé', { exact: true })).toHaveCount(4);
-  if (testInfo.project.name === 'chromium-desktop') {
-    await capture(page, testInfo, 'rewards-collection-locked-core-light.png');
-  }
-
-  page = await seedVisualData(page, bootstrapSearch);
-  page = await prepareVisualTheme(page, bootstrapSearch, {
-    activeThemeId: 'core',
-    unlockedThemeIds: allThemes,
-    appearance: 'light',
-  });
-
-  await openReadyPage(page, bootstrapSearch, '/progression?range=30', 'Progression');
-  await expect(page.getByText('Signal principal', { exact: true })).toBeVisible();
-  await expect(page.getByText('Vue d’ensemble', { exact: true })).toBeVisible();
-  await expectPageAccessibilityBaseline(page, { expectedHeading: 'Progression' });
-  await expect(page.getByRole('dialog', { name: 'Tout est prêt' })).toHaveCount(0);
-  if (
-    testInfo.project.name === 'chromium-desktop'
-    || testInfo.project.name === 'chromium-small-320'
-    || testInfo.project.name === 'webkit-iphone-15'
-  ) {
-    await capture(page, testInfo, 'progression-core-light.png');
-  }
-  await page.getByRole('tab', { name: '3 mois' }).click();
-  await expect(page).toHaveURL(/range=90/);
-
-  page = await prepareVisualTheme(page, bootstrapSearch, {
-    activeThemeId: 'core',
-    unlockedThemeIds: allThemes,
-    appearance: 'dark',
-  });
-  await openReadyPage(page, bootstrapSearch, '/progression?range=90', 'Progression');
-  await page.reload({ waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('heading', { level: 1, name: 'Progression' })).toBeVisible();
-  await expect(page.locator('html')).toHaveClass(/dark/);
-  await expect(page.locator('html')).toHaveAttribute('data-sport-theme', 'core');
-  if (testInfo.project.name === 'chromium-desktop') {
-    await capture(page, testInfo, 'progression-core-dark.png');
-  }
-
-  page = await prepareVisualTheme(page, bootstrapSearch, {
+  await prepareSeededVisualTheme(page, bootstrapSearch, {
     activeThemeId: 'aurora',
     unlockedThemeIds: allThemes,
-    appearance: 'dark',
-  });
-  await openReadyPage(page, bootstrapSearch, '/progression?range=90', 'Progression');
+    appearance: 'light',
+  }, `/${bootstrapSearch}#/progression?range=90`);
+
+  await expectReadyPage(page, 'Progression');
+  await enableDarkMode(page);
   await expect(page.locator('html')).toHaveAttribute('data-sport-theme', 'aurora');
+  await expectNoUnexpectedRewardReveal(page);
   if (
     testInfo.project.name === 'chromium-desktop'
     || testInfo.project.name === 'webkit-iphone-15'
@@ -233,7 +217,10 @@ test('valide les thèmes, graphiques et écrans de décision avec des données c
     await capture(page, testInfo, 'progression-aurora-dark.png');
   }
 
-  await openReadyPage(page, bootstrapSearch, '/analytics?tab=overview&weeks=12', 'Analyses');
+  await page.goto(`/${bootstrapSearch}#/analytics?tab=overview&weeks=12`, {
+    waitUntil: 'domcontentloaded',
+  });
+  await expectReadyPage(page, 'Analyses');
   await expect(page.getByRole('heading', { name: 'Tendance du poids' })).toBeVisible();
   await expect(page.locator('.recharts-responsive-container')).not.toHaveCount(0);
   await expectPageAccessibilityBaseline(page, { expectedHeading: 'Analyses' });
@@ -277,10 +264,12 @@ test('valide les thèmes, graphiques et écrans de décision avec des données c
     await capture(page, testInfo, 'analytics-heatmap.png');
   }
 
-  await openReadyPage(page, bootstrapSearch, '/rewards', 'Récompenses');
+  await page.goto(`/${bootstrapSearch}#/rewards`, { waitUntil: 'domcontentloaded' });
+  await expectReadyPage(page, 'Récompenses');
   await expect(page.getByText('5 / 5', { exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Aurora' }).first()).toBeVisible();
   await expectPageAccessibilityBaseline(page, { expectedHeading: 'Récompenses' });
+  await expectNoUnexpectedRewardReveal(page);
   if (
     testInfo.project.name === 'chromium-desktop'
     || testInfo.project.name === 'webkit-iphone-15'
@@ -289,23 +278,22 @@ test('valide les thèmes, graphiques et écrans de décision avec des données c
   }
 });
 
-test('capture les reveals uniques et le mode mouvement réduit', async ({
-  page,
-}, testInfo) => {
-  test.skip(
-    !['chromium-desktop', 'webkit-iphone-15'].includes(testInfo.project.name),
-    'Captures représentatives limitées au bureau et à l’iPhone 15.',
-  );
-  await createLocalProfile(page, 'Reveal');
-  const bootstrapSearch = new URL(page.url()).search;
+for (const themeId of ['neon-pulse', 'aurora', 'zenith-gold'] as const) {
+  test(`capture le reveal unique ${themeId}`, async ({ page }, testInfo) => {
+    test.skip(
+      !['chromium-desktop', 'webkit-iphone-15'].includes(testInfo.project.name),
+      'Captures représentatives limitées au bureau et à l’iPhone 15.',
+    );
+    await createLocalProfile(page, `Reveal ${themeId}`);
+    const bootstrapSearch = new URL(page.url()).search;
 
-  for (const themeId of ['neon-pulse', 'aurora', 'zenith-gold'] as const) {
-    page = await prepareVisualTheme(page, bootstrapSearch, {
+    await prepareVisualTheme(page, bootstrapSearch, {
       activeThemeId: 'core',
       unlockedThemeIds: ['core', themeId],
       appearance: 'dark',
       pendingRevealThemeId: themeId,
     }, isolatedVisualUrl(bootstrapSearch, 'visualReveal', themeId, '/'));
+
     const reveal = page.locator(`[data-theme-reveal="${themeId}"]`);
     await expect(reveal).toBeVisible();
     await expect(page.locator('html')).toHaveClass(/dark/);
@@ -313,15 +301,21 @@ test('capture les reveals uniques et le mode mouvement réduit', async ({
     await expect(reveal.getByRole('button', { name: 'Essayer maintenant' })).toBeFocused();
     await expectNoCriticalHorizontalOverflow(page);
 
-    if (
-      testInfo.project.name === 'chromium-desktop'
-      || themeId === 'aurora'
-    ) {
+    if (testInfo.project.name === 'chromium-desktop' || themeId === 'aurora') {
       await capture(page, testInfo, `reveal-${themeId}.png`);
     }
-  }
+  });
+}
 
-  page = await prepareVisualTheme(page, bootstrapSearch, {
+test('capture le reveal aurora avec mouvement réduit', async ({ page }, testInfo) => {
+  test.skip(
+    !['chromium-desktop', 'webkit-iphone-15'].includes(testInfo.project.name),
+    'Captures représentatives limitées au bureau et à l’iPhone 15.',
+  );
+  await createLocalProfile(page, 'Reveal Reduced');
+  const bootstrapSearch = new URL(page.url()).search;
+
+  await prepareVisualTheme(page, bootstrapSearch, {
     activeThemeId: 'core',
     unlockedThemeIds: ['core', 'aurora'],
     appearance: 'dark',
@@ -329,6 +323,7 @@ test('capture les reveals uniques et le mode mouvement réduit', async ({
   }, isolatedVisualUrl(bootstrapSearch, 'visualReveal', 'aurora-reduced', '/'), {
     reducedMotion: 'reduce',
   });
+
   const reducedReveal = page.locator('[data-theme-reveal="aurora"]');
   await expect(reducedReveal).toHaveAttribute('data-reduced-motion', 'true');
   if (testInfo.project.name === 'chromium-desktop') {

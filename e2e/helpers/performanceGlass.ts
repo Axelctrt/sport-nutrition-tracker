@@ -1,5 +1,7 @@
 import { expect, type Page } from '@playwright/test';
 
+import { achievementCatalog } from '../../src/domain/rewards/achievements';
+
 const DATABASE_NAME = 'sportpilot-local-database';
 const VISUAL_THEME_STORAGE_KEY = 'sport-pilot.reward-themes';
 const VISUAL_THEME_BOOT_STORAGE_KEY = 'sport-pilot.active-theme';
@@ -27,10 +29,9 @@ export async function waitForSportPilotDatabase(page: Page): Promise<void> {
 
 export async function seedPerformanceGlassData(page: Page): Promise<void> {
   await waitForSportPilotDatabase(page);
-  await page.goto(`/${new URL(page.url()).search}#/privacy`);
-  await expect(page.locator('#root')).not.toBeEmpty();
+  const achievementIds = achievementCatalog.map(({ id }) => id);
 
-  await page.evaluate(async (databaseName) => {
+  await page.evaluate(async ({ databaseName, achievementIds: seededAchievementIds }) => {
     const database = await new Promise<IDBDatabase>((resolve, reject) => {
       const request = indexedDB.open(databaseName);
       request.onsuccess = () => resolve(request.result);
@@ -304,6 +305,11 @@ export async function seedPerformanceGlassData(page: Page): Promise<void> {
         completedAt: now,
       }))
     ));
+    const earnedAchievements = seededAchievementIds.map((id) => ({
+      id,
+      earnedAt: now,
+      updatedAt: now,
+    }));
     const endurancePlanningSessions = activities
       .filter(({ type }) => type === 'cycling')
       .slice(0, 5)
@@ -335,6 +341,7 @@ export async function seedPerformanceGlassData(page: Page): Promise<void> {
       workoutSessionExercises,
       strengthSets,
       endurancePlanningSessions,
+      earnedAchievements,
     };
     const storeNames = Object.keys(recordsByStore).filter((storeName) => (
       database.objectStoreNames.contains(storeName)
@@ -361,7 +368,10 @@ export async function seedPerformanceGlassData(page: Page): Promise<void> {
     } finally {
       database.close();
     }
-  }, DATABASE_NAME);
+  }, {
+    databaseName: DATABASE_NAME,
+    achievementIds,
+  });
 }
 
 interface VisualThemeStateOptions {
