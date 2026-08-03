@@ -27,7 +27,7 @@ export async function waitForSportPilotDatabase(page: Page): Promise<void> {
 
 export async function seedPerformanceGlassData(page: Page): Promise<void> {
   await waitForSportPilotDatabase(page);
-  await page.goto('/#/privacy');
+  await page.goto(`/${new URL(page.url()).search}#/privacy`);
   await expect(page.locator('#root')).not.toBeEmpty();
 
   await page.evaluate(async (databaseName) => {
