@@ -7,6 +7,8 @@ on:
     types:
       - synchronize
 
+# Trigger the local-first validation workflow now present on the branch.
+
 jobs:
   source-diagnostic:
     if: github.head_ref == 'agent/pr24-social-profile-edit-surface-validation'
