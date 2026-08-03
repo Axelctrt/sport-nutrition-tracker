@@ -137,8 +137,9 @@ if (failures.length === 0) {
     'await setVisualThemeState(setupPage, options);',
     'async function enableDarkMode(page: Page)',
     "name: /Thème clair.*Thème sombre/",
-    "test('charge le thème sombre core depuis les préférences persistées'",
-    "appearance: 'dark'",
+    "test('active le thème sombre core via le contrôle accessible'",
+    "appearance: 'light'",
+    'await enableDarkMode(page);',
     "reducedMotion: 'reduce'",
     "page.getByRole('dialog', { name: 'Tout est prêt' })",
     "page.locator('.sp-badge-reveal-backdrop')",
@@ -154,6 +155,9 @@ if (failures.length === 0) {
     'achievementCatalog.map(({ id }) => id)',
     'const earnedAchievements = seededAchievementIds.map((id) => ({',
     'earnedAchievements,',
+    'const readPersistedAppearance = () => page.evaluate(async ({',
+    'if (persistedAppearance.deviceAppearance !== appearance)',
+    'deviceAppearance: appearance,',
   ]) {
     if (!performanceGlassHelper.includes(marker)) {
       fail(`le seed Performance Glass doit neutraliser les reveals hors périmètre : ${marker}.`);
