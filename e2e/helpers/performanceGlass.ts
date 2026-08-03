@@ -531,7 +531,10 @@ export async function setVisualThemeState(
   });
 
   let persistedAppearance = await readPersistedAppearance();
-  if (persistedAppearance.deviceAppearance !== appearance) {
+  if (
+    persistedAppearance.localAppearance !== appearance
+    || persistedAppearance.deviceAppearance !== appearance
+  ) {
     await page.evaluate(async ({
       databaseName,
       appearanceStorageKey,
