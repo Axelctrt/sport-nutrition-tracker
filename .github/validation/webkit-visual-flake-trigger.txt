@@ -1,0 +1,1 @@
+Validation ciblée de la stabilité WebKit du scénario visuel historique.
