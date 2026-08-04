@@ -129,14 +129,41 @@ Validation attendue : tests unitaires de la règle anti-double comptage, test du
 verrouillage de métrique, tests des changements non enregistrés, responsive et
 WebKit ciblés. La CI complète n’est requise qu’une fois avant fusion.
 
-### PR C — Relier un objectif à une action
+### PR C — Relier un objectif à une action pertinente
 
-Option ultérieure, soumise à une nouvelle validation produit : liens contextuels
-vers Planning ou les écrans de saisie pertinents, sans création automatique et
-sans recommandation générative.
+Périmètre validé par le propriétaire le 4 août 2026 :
+
+- afficher une seule action contextuelle sur les objectifs actifs ;
+- ne proposer aucune action sur les objectifs en pause, atteints ou archivés ;
+- déterminer la destination uniquement depuis la métrique ;
+- ouvrir une saisie directe pour le poids, la régularité de pesée et les pas ;
+- ouvrir la surface `Planifier une activité` pour les minutes d’activité ;
+- ouvrir les formulaires spécialisés pour la course, la natation et le vélo ;
+- ouvrir le carnet de musculation pour l’objectif de séances terminées ;
+- conserver les routes et modèles de données existants ;
+- laisser l’utilisateur confirmer toute création ou saisie dans la surface de
+  destination.
+
+Correspondances validées :
+
+- `weightTarget` et `weighIns` → saisie rapide d’une pesée ;
+- `totalSteps` → saisie rapide des pas ;
+- `activityMinutes` → Planning sportif avec la surface de planification ouverte ;
+- `runningDistanceKm` → formulaire de course ;
+- `swimmingDistanceKm` → formulaire de natation ;
+- `cyclingDistanceKm` → formulaire autre activité préselectionné sur vélo ;
+- `strengthSessions` → carnet de séances de musculation.
+
+Hors périmètre : création automatique de séance, programme, activité, poids ou
+pas ; recommandation générative ; nouvelle métrique ; modification des formules
+caloriques ; migration ; thèmes ; IA ; release et production.
+
+Validation attendue : tests unitaires de la correspondance métrique-action,
+tests composant sur les statuts, tests des saisies directes poids/pas, E2E mobile
+ciblé, build et CI complète avant recette.
 
 ## Ordre retenu
 
-1. PR A — Planning sportif ;
-2. PR B — Objectifs de progression ;
-3. PR C — optionnelle après retour d’usage.
+1. PR A — Planning sportif, terminée ;
+2. PR B — Objectifs de progression, terminée ;
+3. PR C — liaison Objectif → action, autorisée et en cours.
