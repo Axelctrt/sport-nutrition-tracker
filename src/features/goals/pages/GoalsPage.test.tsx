@@ -2,6 +2,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { RouterProvider, createMemoryRouter } from 'react-router-dom';
@@ -106,19 +107,18 @@ describe('GoalsPage', () => {
       }),
     );
 
+    const editDialog = screen.getByRole('dialog', {
+      name: 'Modifier un objectif',
+    });
+    expect(editDialog).toBeInTheDocument();
     expect(
-      screen.getByRole('dialog', {
-        name: 'Modifier un objectif',
-      }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByLabelText('Nom personnalisé'),
+      within(editDialog).getByLabelText('Nom personnalisé'),
     ).toHaveValue('Objectif actif');
     expect(
-      screen.queryByLabelText(/Type d’objectif/),
+      within(editDialog).queryByLabelText(/Type d’objectif/),
     ).not.toBeInTheDocument();
     expect(
-      screen.getByText('Pour changer de métrique, crée un nouvel objectif.'),
+      within(editDialog).getByText(/Pour changer de métrique/),
     ).toBeInTheDocument();
   });
 
@@ -146,13 +146,12 @@ describe('GoalsPage', () => {
       }),
     );
 
+    const createDialog = screen.getByRole('dialog', {
+      name: 'Créer un objectif',
+    });
+    expect(createDialog).toBeInTheDocument();
     expect(
-      screen.getByRole('dialog', {
-        name: 'Créer un objectif',
-      }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByLabelText(/Type d’objectif/),
+      within(createDialog).getByLabelText(/Type d’objectif/),
     ).toHaveValue('totalSteps');
   });
 
@@ -210,14 +209,13 @@ describe('GoalsPage', () => {
       }),
     );
 
-    expect(
-      screen.getByRole('dialog', {
-        name: 'Annuler les modifications ?',
-      }),
-    ).toBeInTheDocument();
+    const discardDialog = screen.getByRole('alertdialog', {
+      name: 'Annuler les modifications ?',
+    });
+    expect(discardDialog).toBeInTheDocument();
 
     await user.click(
-      screen.getByRole('button', {
+      within(discardDialog).getByRole('button', {
         name: 'Continuer la modification',
       }),
     );
@@ -232,8 +230,11 @@ describe('GoalsPage', () => {
         name: 'Fermer l’éditeur d’objectif',
       }),
     );
+    const reopenedDiscardDialog = screen.getByRole('alertdialog', {
+      name: 'Annuler les modifications ?',
+    });
     await user.click(
-      screen.getByRole('button', {
+      within(reopenedDiscardDialog).getByRole('button', {
         name: 'Abandonner les modifications',
       }),
     );
