@@ -19,7 +19,7 @@ import { formatGoalValue } from '@/features/goals/utils/formatGoalValue';
 
 interface GoalCardProps {
   view: GoalProgressView;
-  onEdit: () => void;
+  onEdit: (trigger: HTMLButtonElement) => void;
   onStatusChange: (status: GoalStatus) => void;
   onDelete: () => void;
 }
@@ -179,7 +179,7 @@ export function GoalCard({
         <Button
           size="sm"
           variant="secondary"
-          onClick={onEdit}
+          onClick={(event) => onEdit(event.currentTarget)}
         >
           <Edit3 aria-hidden="true" className="size-4" />
           Modifier
