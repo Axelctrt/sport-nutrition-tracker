@@ -80,7 +80,7 @@ describe('SportHubOverview', () => {
     expect(screen.getByText('Haut du corps')).toBeInTheDocument();
     expect(screen.getByText('Footing facile')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Organiser' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Planification' })).toHaveAttribute('href', '/strength/planning');
+    expect(screen.getByRole('link', { name: 'Planning sportif' })).toHaveAttribute('href', '/strength/planning');
     expect(screen.getByRole('heading', { name: 'Dernières activités' })).toBeInTheDocument();
     expect(screen.getByText('Footing')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Tout voir/ })).toHaveAttribute(
@@ -105,7 +105,7 @@ describe('SportHubOverview', () => {
     expect(onRecord).toHaveBeenCalledOnce();
   });
 
-  it('propose la planification et les hubs d’organisation lorsque le hub est vide', () => {
+  it('propose une vraie création et les hubs d’organisation lorsque le hub est vide', () => {
     render(
       <MemoryRouter>
         <SportHubOverview
@@ -132,7 +132,7 @@ describe('SportHubOverview', () => {
     expect(screen.getByText('Aucune activité aujourd’hui')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Prévoir/ })).toHaveAttribute(
       'href',
-      '/strength/planning?date=2026-07-10&section=upcoming',
+      '/strength/planning?date=2026-07-10&action=plan',
     );
     expect(screen.getByText('Aucune activité enregistrée.')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Mes programmes' }));
