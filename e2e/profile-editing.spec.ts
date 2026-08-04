@@ -6,7 +6,7 @@ test('active explicitement la modification du profil depuis le crayon de la cart
   await createLocalProfile(page);
   await page.goto('/#/profile');
 
-  await expect(page.getByRole('heading', { name: 'Profil et objectifs', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Profil et objectif nutritionnel', level: 1 })).toBeVisible();
   const profileCard = page.getByLabel('Résumé du profil');
   const editProfile = profileCard.getByRole('button', { name: 'Modifier le profil' });
   await expect(profileCard).toBeVisible();
