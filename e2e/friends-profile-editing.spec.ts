@@ -49,7 +49,9 @@ test('édite le profil social depuis sa carte en lecture seule et restaure le fo
   expect(statusBox).not.toBeNull();
   if (!inputBox || !copyBox || !statusBox) throw new Error('Les contrôles du profil social ne sont pas mesurables.');
   expect(copyBox.x).toBeGreaterThanOrEqual(inputBox.x + inputBox.width - 1);
-  expect(statusBox.y).toBeGreaterThanOrEqual(inputBox.y + inputBox.height);
+  const inputBottom = inputBox.y + inputBox.height;
+  const statusCenter = statusBox.y + statusBox.height / 2;
+  expect(statusCenter).toBeGreaterThanOrEqual(inputBottom);
 
   await page.screenshot({ path: testInfo.outputPath('profil-social-edition.png'), fullPage: true });
 

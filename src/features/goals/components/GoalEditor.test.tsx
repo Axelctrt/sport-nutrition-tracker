@@ -1,11 +1,14 @@
 import {
+  cleanup,
+  fireEvent,
   render,
   screen,
   waitFor,
 } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+import { afterEach, vi } from 'vitest';
 
+import type { GoalInput } from '@/application/goals/goalProgressService';
 import { GoalEditor } from '@/features/goals/components/GoalEditor';
 import type { Goal } from '@/domain/goals/goalState';
 
@@ -25,6 +28,11 @@ function goal(overrides: Partial<Goal> = {}): Goal {
   };
 }
 
+afterEach(() => {
+  cleanup();
+  vi.clearAllMocks();
+});
+
 describe('GoalEditor', () => {
   it('réhydrate tous les champs quand l’objectif à modifier change', () => {
     const onSaved = vi.fn();
@@ -36,8 +44,9 @@ describe('GoalEditor', () => {
       screen.getByLabelText('Nom personnalisé'),
     ).toHaveValue('Objectif initial');
     expect(
-      screen.getByLabelText(/Type d’objectif/),
-    ).toHaveValue('totalSteps');
+      screen.queryByLabelText(/Type d’objectif/),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText('Cumuler des pas')).toBeInTheDocument();
     expect(
       screen.getByLabelText(/Cible/),
     ).toHaveValue(100_000);
@@ -68,8 +77,11 @@ describe('GoalEditor', () => {
       screen.getByLabelText('Nom personnalisé'),
     ).toHaveValue('Course rapide');
     expect(
-      screen.getByLabelText(/Type d’objectif/),
-    ).toHaveValue('runningDistanceKm');
+      screen.queryByLabelText(/Type d’objectif/),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText('Courir une distance cumulée'),
+    ).toBeInTheDocument();
     expect(
       screen.getByLabelText(/Cible/),
     ).toHaveValue(42);
@@ -79,6 +91,36 @@ describe('GoalEditor', () => {
     expect(
       screen.getByLabelText('Échéance facultative'),
     ).toHaveValue('');
+  });
+
+  it('laisse la métrique sélectionnable uniquement à la création', () => {
+    render(<GoalEditor onSaved={vi.fn()} />);
+
+    expect(
+      screen.getByLabelText(/Type d’objectif/),
+    ).toHaveValue('totalSteps');
+    expect(
+      screen.queryByText('Pour changer de métrique, crée un nouvel objectif.'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('signale les changements apportés au formulaire', async () => {
+    const user = userEvent.setup();
+    const onDirtyChange = vi.fn();
+
+    render(
+      <GoalEditor
+        onSaved={vi.fn()}
+        onDirtyChange={onDirtyChange}
+      />,
+    );
+
+    await user.type(
+      screen.getByLabelText('Nom personnalisé'),
+      'Objectif été',
+    );
+
+    expect(onDirtyChange).toHaveBeenLastCalledWith(true);
   });
 
   it('préremplit un nouvel objectif de poids avec la dernière pesée connue', async () => {
@@ -98,17 +140,18 @@ describe('GoalEditor', () => {
 
     await waitFor(() => {
       expect(
-        screen.getByLabelText('Poids de départ (kg)'),
+        screen.getByLabelText(/Poids de départ \(kg\)/),
       ).toHaveValue(72.4);
     });
   });
 
   it('ne remplace pas le poids de départ saisi quand la dernière pesée change', async () => {
     const user = userEvent.setup();
+    const onSaved = vi.fn();
     const { rerender } = render(
       <GoalEditor
         initialWeightBaseline={72.4}
-        onSaved={vi.fn()}
+        onSaved={onSaved}
       />,
     );
 
@@ -117,7 +160,7 @@ describe('GoalEditor', () => {
       'weightTarget',
     );
     const baselineInput = screen.getByLabelText(
-      'Poids de départ (kg)',
+      /Poids de départ \(kg\)/,
     );
 
     await user.clear(baselineInput);
@@ -126,21 +169,22 @@ describe('GoalEditor', () => {
     rerender(
       <GoalEditor
         initialWeightBaseline={73.1}
-        onSaved={vi.fn()}
+        onSaved={onSaved}
       />,
     );
 
     expect(
-      screen.getByLabelText('Poids de départ (kg)'),
+      screen.getByLabelText(/Poids de départ \(kg\)/),
     ).toHaveValue(71.3);
   });
 
-  it('conserve le poids de départ historique lors de la modification d’un objectif de poids', async () => {
-    const user = userEvent.setup();
-    const saveGoalAction = vi.fn((input, id) => ({
-      ...goal({ id }),
-      ...input,
-    }));
+  it('conserve le poids de départ historique lors de la modification d’un objectif de poids', () => {
+    const saveGoalAction = vi.fn(
+      (input: GoalInput, id?: string): Goal => ({
+        ...goal(id ? { id } : {}),
+        ...input,
+      }),
+    );
 
     render(
       <GoalEditor
@@ -159,14 +203,18 @@ describe('GoalEditor', () => {
     );
 
     expect(
-      screen.getByLabelText('Poids de départ (kg)'),
+      screen.getByLabelText(/Poids de départ \(kg\)/),
     ).toHaveValue(76.2);
+    expect(
+      screen.getByLabelText(/Poids de départ \(kg\)/),
+    ).toHaveAttribute('readonly');
 
-    await user.click(
-      screen.getByRole('button', {
-        name: 'Enregistrer les modifications',
-      }),
-    );
+    const submitButton = screen.getByRole('button', {
+      name: 'Enregistrer les modifications',
+    });
+    const form = submitButton.closest('form');
+    expect(form).not.toBeNull();
+    fireEvent.submit(form as HTMLFormElement);
 
     expect(saveGoalAction).toHaveBeenCalledWith(
       expect.objectContaining({

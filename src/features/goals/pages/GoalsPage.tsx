@@ -10,6 +10,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 
@@ -28,12 +29,13 @@ import { GoalCard } from '@/features/goals/components/GoalCard';
 import { GoalEditor } from '@/features/goals/components/GoalEditor';
 import { repositories } from '@/infrastructure/repositories/repositories';
 import { useActionToast } from '@/shared/toast/useActionToast';
+import { BottomSheet } from '@/shared/ui/BottomSheet';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
-import { CollapsibleSection } from '@/shared/ui/CollapsibleSection';
 import { ConfirmationDialog } from '@/shared/ui/ConfirmationDialog';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 import { PageSkeleton } from '@/shared/ui/PageSkeleton';
+import { UnsavedChangesGuard } from '@/shared/ui/UnsavedChangesGuard';
 
 type GoalFilter = 'current' | 'completed' | 'archived' | 'all';
 
@@ -54,14 +56,16 @@ export function GoalsPage({
   const [views, setViews] = useState<GoalProgressView[]>();
   const [filter, setFilter] = useState<GoalFilter>('current');
   const [editingGoal, setEditingGoal] = useState<Goal>();
-  const [deleteCandidate, setDeleteCandidate] =
-    useState<Goal>();
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [isEditorDirty, setIsEditorDirty] = useState(false);
+  const [discardDialogOpen, setDiscardDialogOpen] = useState(false);
+  const [deleteCandidate, setDeleteCandidate] = useState<Goal>();
   const [error, setError] = useState<string>();
-  const [latestWeightBaseline, setLatestWeightBaseline] =
-    useState<number>();
+  const [latestWeightBaseline, setLatestWeightBaseline] = useState<number>();
   const [isDeleting, setIsDeleting] = useState(false);
+  const createButtonRef = useRef<HTMLButtonElement>(null);
+  const editorTriggerRef = useRef<HTMLButtonElement | null>(null);
   const actionToast = useActionToast();
-
 
   const refreshLatestWeightBaseline = useCallback(async () => {
     try {
@@ -170,33 +174,45 @@ export function GoalsPage({
     }
   };
 
+  const closeEditor = () => {
+    const trigger = editorTriggerRef.current;
+    setIsEditorOpen(false);
+    setIsEditorDirty(false);
+    setDiscardDialogOpen(false);
+    window.setTimeout(() => trigger?.focus(), 0);
+  };
+
+  const requestEditorClose = () => {
+    if (isEditorDirty) {
+      setDiscardDialogOpen(true);
+      return;
+    }
+    closeEditor();
+  };
+
   const handleSaved = () => {
-    setEditingGoal(undefined);
+    closeEditor();
     void load();
     void refreshLatestWeightBaseline();
   };
 
-  const handleEdit = (goal: Goal) => {
+  const openCreate = () => {
+    editorTriggerRef.current = createButtonRef.current;
+    setEditingGoal(undefined);
+    setIsEditorDirty(false);
+    setDiscardDialogOpen(false);
+    setIsEditorOpen(true);
+  };
+
+  const handleEdit = (
+    goal: Goal,
+    trigger: HTMLButtonElement,
+  ) => {
+    editorTriggerRef.current = trigger;
     setEditingGoal(goal);
-
-    const editor = document.getElementById('goals-editor');
-    if (editor instanceof HTMLDetailsElement && !editor.open) {
-      editor.open = true;
-    }
-
-    window.requestAnimationFrame(() => {
-      window.requestAnimationFrame(() => {
-        editor?.scrollIntoView?.({
-          behavior: window.matchMedia?.(
-            '(prefers-reduced-motion: reduce)',
-          ).matches
-            ? 'auto'
-            : 'smooth',
-          block: 'center',
-          inline: 'nearest',
-        });
-      });
-    });
+    setIsEditorDirty(false);
+    setDiscardDialogOpen(false);
+    setIsEditorOpen(true);
   };
 
   if (!views && !error) {
@@ -222,10 +238,10 @@ export function GoalsPage({
               id="goals-title"
               className="mt-1 text-3xl font-bold tracking-tight text-slate-950 dark:text-white"
             >
-              Objectifs et jalons
+              Objectifs de progression
             </h1>
             <p className="mt-3 max-w-3xl leading-7 text-slate-600 dark:text-slate-300">
-              Fixe une cible mesurable. SportPilot recalcule
+              Fixe une cible sportive mesurable. SportPilot recalcule
               automatiquement la progression depuis tes pesées,
               pas, activités et séances terminées.
             </p>
@@ -286,32 +302,15 @@ export function GoalsPage({
         </Card>
       </div>
 
-      <div className="mt-4">
-        <CollapsibleSection
-          sectionId="goals-editor"
-          storageKey="sportpilot:goals:editor"
-          title={
-            editingGoal
-              ? 'Modifier un objectif'
-              : 'Créer un nouvel objectif'
-          }
-          description="Choisir une métrique, une cible et éventuellement une échéance."
-          icon={Plus}
-          className="scroll-mt-24"
-          defaultOpen={(views?.length ?? 0) === 0}
+      <div className="mt-4 flex justify-end">
+        <Button
+          ref={createButtonRef}
+          type="button"
+          onClick={openCreate}
         >
-          <GoalEditor
-            initialWeightBaseline={latestWeightBaseline}
-            onSaved={handleSaved}
-            {...(editingGoal
-              ? {
-                  goal: editingGoal,
-                  onCancelEdit: () =>
-                    setEditingGoal(undefined),
-                }
-              : {})}
-          />
-        </CollapsibleSection>
+          <Plus aria-hidden="true" className="size-4" />
+          Créer un objectif
+        </Button>
       </div>
 
       <div className="mt-4 flex flex-wrap gap-2">
@@ -341,7 +340,9 @@ export function GoalsPage({
           <GoalCard
             key={view.goal.id}
             view={view}
-            onEdit={() => handleEdit(view.goal)}
+            onEdit={(trigger) =>
+              handleEdit(view.goal, trigger)
+            }
             onStatusChange={(status) =>
               handleStatus(view.goal.id, status)
             }
@@ -366,6 +367,43 @@ export function GoalsPage({
           </Card>
         ) : null}
       </div>
+
+      <BottomSheet
+        open={isEditorOpen}
+        title={editingGoal ? 'Modifier un objectif' : 'Créer un objectif'}
+        description={
+          editingGoal
+            ? 'Mets à jour la cible, les dates ou le nom. La métrique reste inchangée.'
+            : 'Choisis une métrique, une cible et éventuellement une échéance.'
+        }
+        closeLabel="Fermer l’éditeur d’objectif"
+        initialFocusSelector={editingGoal ? '#goal-title' : '#goal-metric'}
+        className="sm:self-center sm:max-h-[calc(100%-3rem)] sm:rounded-3xl sm:border"
+        onClose={requestEditorClose}
+      >
+        <GoalEditor
+          key={editingGoal?.id ?? 'new-goal'}
+          initialWeightBaseline={latestWeightBaseline}
+          onSaved={handleSaved}
+          onCancelEdit={requestEditorClose}
+          onDirtyChange={setIsEditorDirty}
+          {...(editingGoal ? { goal: editingGoal } : {})}
+        />
+      </BottomSheet>
+
+      <UnsavedChangesGuard
+        when={isEditorOpen && isEditorDirty}
+      />
+
+      <ConfirmationDialog
+        open={discardDialogOpen}
+        title="Annuler les modifications ?"
+        description="Les changements seront perdus."
+        confirmLabel="Abandonner les modifications"
+        cancelLabel="Continuer la modification"
+        onCancel={() => setDiscardDialogOpen(false)}
+        onConfirm={closeEditor}
+      />
 
       <ConfirmationDialog
         open={deleteCandidate !== undefined}

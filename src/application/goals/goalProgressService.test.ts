@@ -1,9 +1,16 @@
+import { afterEach, beforeEach } from 'vitest';
+
 import type { BackupData } from '@/domain/models/backup';
-import type { Goal } from '@/domain/goals/goalState';
+import {
+  GOAL_STATE_STORAGE_KEY,
+  resetGoalStateRuntimeForTests,
+  type Goal,
+} from '@/domain/goals/goalState';
 import {
   computeGoalCurrentValue,
   computeGoalProgressPercent,
   createGoalProgressView,
+  saveGoal,
 } from '@/application/goals/goalProgressService';
 
 function emptyData(): BackupData {
@@ -49,6 +56,51 @@ function goal(
     ...overrides,
   };
 }
+
+function strengthActivity(
+  id: string,
+  durationMinutes: number,
+  date = '2026-06-02',
+): Extract<BackupData['activities'][number], { type: 'strengthTraining' }> {
+  return {
+    id,
+    type: 'strengthTraining',
+    date,
+    durationMinutes,
+    intensity: 'moderate',
+    met: 6,
+    calculation: {
+      weightKg: 70,
+      estimatedCaloriesKcal: 300,
+      calculationVersion: 1,
+    },
+    createdAt: `${date}T08:00:00.000Z`,
+    updatedAt: `${date}T08:00:00.000Z`,
+  };
+}
+
+function workoutSession(
+  id: string,
+  overrides: Partial<BackupData['workoutSessions'][number]> = {},
+): BackupData['workoutSessions'][number] {
+  return {
+    id,
+    date: '2026-06-02',
+    status: 'completed',
+    durationMinutes: 45,
+    createdAt: '2026-06-02T08:00:00.000Z',
+    updatedAt: '2026-06-02T09:00:00.000Z',
+    ...overrides,
+  };
+}
+
+function resetGoalTestState(): void {
+  resetGoalStateRuntimeForTests();
+  window.localStorage.clear();
+}
+
+beforeEach(resetGoalTestState);
+afterEach(resetGoalTestState);
 
 describe('goalProgressService', () => {
   it('cumule uniquement les données postérieures au départ', () => {
@@ -135,6 +187,121 @@ describe('goalProgressService', () => {
         data,
       ),
     ).toBe(1.5);
+  });
+
+  it('compte une activité générale seule dans les minutes d’activité', () => {
+    const data = emptyData();
+    data.activities = [strengthActivity('activity-1', 30)];
+
+    expect(
+      computeGoalCurrentValue(
+        goal({ metric: 'activityMinutes', targetValue: 120 }),
+        data,
+      ),
+    ).toBe(30);
+  });
+
+  it('compte une séance détaillée terminée sans activité liée', () => {
+    const data = emptyData();
+    data.workoutSessions = [workoutSession('session-1')];
+
+    expect(
+      computeGoalCurrentValue(
+        goal({ metric: 'activityMinutes', targetValue: 120 }),
+        data,
+      ),
+    ).toBe(45);
+  });
+
+  it('ne compte qu’une fois une séance liée à une activité générale', () => {
+    const data = emptyData();
+    data.activities = [strengthActivity('activity-1', 30)];
+    data.workoutSessions = [
+      workoutSession('session-1', {
+        completedActivityId: 'activity-1',
+        durationMinutes: 45,
+      }),
+    ];
+
+    expect(
+      computeGoalCurrentValue(
+        goal({ metric: 'activityMinutes', targetValue: 120 }),
+        data,
+      ),
+    ).toBe(30);
+  });
+
+  it('conserve une activité de musculation non liée et ajoute la séance distincte', () => {
+    const data = emptyData();
+    data.activities = [strengthActivity('activity-1', 30)];
+    data.workoutSessions = [workoutSession('session-1')];
+
+    expect(
+      computeGoalCurrentValue(
+        goal({ metric: 'activityMinutes', targetValue: 120 }),
+        data,
+      ),
+    ).toBe(75);
+  });
+
+  it('ignore les séances hors période, non terminées ou sans durée positive finie', () => {
+    const data = emptyData();
+    const missingDuration = workoutSession('missing');
+    delete missingDuration.durationMinutes;
+
+    data.workoutSessions = [
+      workoutSession('before', { date: '2026-05-31' }),
+      workoutSession('in-progress', { status: 'inProgress' }),
+      missingDuration,
+      workoutSession('zero', { durationMinutes: 0 }),
+      workoutSession('negative', { durationMinutes: -5 }),
+      workoutSession('infinite', { durationMinutes: Number.POSITIVE_INFINITY }),
+      workoutSession('valid', { durationMinutes: 20 }),
+    ];
+
+    expect(
+      computeGoalCurrentValue(
+        goal({ metric: 'activityMinutes', targetValue: 120 }),
+        data,
+      ),
+    ).toBe(20);
+  });
+
+  it('refuse de changer la métrique d’un objectif existant via le service', () => {
+    window.localStorage.setItem(
+      GOAL_STATE_STORAGE_KEY,
+      JSON.stringify({ version: 1, goals: [goal()] }),
+    );
+
+    expect(() => saveGoal({
+      title: 'Nouvelle métrique',
+      metric: 'activityMinutes',
+      targetValue: 600,
+      startDate: '2026-06-01',
+    }, 'goal-1')).toThrow(
+      'La métrique d’un objectif existant ne peut pas être modifiée.',
+    );
+  });
+
+  it('autorise une mise à jour lorsque la métrique reste inchangée', () => {
+    window.localStorage.setItem(
+      GOAL_STATE_STORAGE_KEY,
+      JSON.stringify({ version: 1, goals: [goal()] }),
+    );
+
+    const updated = saveGoal({
+      title: 'Objectif ajusté',
+      metric: 'totalSteps',
+      targetValue: 12_000,
+      startDate: '2026-06-01',
+    }, 'goal-1');
+
+    expect(updated).toEqual(expect.objectContaining({
+      id: 'goal-1',
+      title: 'Objectif ajusté',
+      metric: 'totalSteps',
+      targetValue: 12_000,
+    }));
   });
 
   it('calcule une progression de poids dans les deux directions', () => {

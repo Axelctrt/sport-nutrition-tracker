@@ -23,9 +23,9 @@ export const settingsCategories: readonly SettingsCategoryDefinition[] = [
   {
     id: 'profile-objectives',
     path: routePaths.settingsProfileObjectives,
-    title: 'Profil et objectifs',
-    description: 'Informations personnelles, poids, objectifs et macros.',
-    keywords: ['profil', 'poids', 'taille', 'objectif', 'macros', 'activité'],
+    title: 'Profil et objectif nutritionnel',
+    description: 'Informations personnelles, poids, calories, macros et objectif nutritionnel.',
+    keywords: ['profil', 'poids', 'taille', 'objectif', 'nutrition', 'macros', 'activité'],
   },
   {
     id: 'account-sync',
@@ -89,9 +89,9 @@ export const settingsHomeCategories: readonly SettingsCategoryDefinition[] = [
   {
     id: 'profile-objectives',
     path: routePaths.settingsProfileObjectives,
-    title: 'Profil et objectifs',
-    description: 'Informations personnelles, poids, objectifs et macros.',
-    keywords: ['profil', 'poids', 'taille', 'objectif', 'macros', 'activité'],
+    title: 'Profil et objectif nutritionnel',
+    description: 'Informations personnelles, poids, calories, macros et objectif nutritionnel.',
+    keywords: ['profil', 'poids', 'taille', 'objectif', 'nutrition', 'macros', 'activité'],
   },
   {
     id: 'account-sync',

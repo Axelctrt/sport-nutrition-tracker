@@ -23,6 +23,13 @@ describe('getRouteTitle', () => {
     expect(getRouteTitle('/privacy')).toBe('Confidentialité');
   });
 
+  it('distingue l’objectif nutritionnel des objectifs de progression', () => {
+    expect(getRouteTitle('/settings/profile-objectives')).toBe(
+      'Profil et objectif nutritionnel',
+    );
+    expect(getRouteTitle('/goals')).toBe('Objectifs de progression');
+  });
+
   it('conserve la route historique avec le libellé Planning sportif', () => {
     expect(getRouteTitle('/strength/planning')).toBe('Planning sportif');
   });

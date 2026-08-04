@@ -6,7 +6,7 @@ import {
 describe('settingsInformationArchitecture', () => {
   it('expose cinq catégories principales sans perdre les routes historiques', () => {
     expect(settingsHomeCategories.map((category) => category.title)).toEqual([
-      'Profil et objectifs',
+      'Profil et objectif nutritionnel',
       'Compte et synchronisation',
       'Apparence, notifications et routines',
       'Confidentialité et données',
