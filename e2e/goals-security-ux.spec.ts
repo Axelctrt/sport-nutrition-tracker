@@ -56,7 +56,7 @@ test('protège l’abandon des changements non enregistrés', async ({ page }) =
   await createDialog.getByLabel('Nom personnalisé').fill('Objectif temporaire');
   await page.getByRole('button', { name: 'Fermer l’éditeur d’objectif' }).click();
 
-  const discardDialog = page.getByRole('dialog', {
+  const discardDialog = page.getByRole('alertdialog', {
     name: 'Annuler les modifications ?',
   });
   await expect(discardDialog).toBeVisible();
