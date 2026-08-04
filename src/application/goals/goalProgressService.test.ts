@@ -241,10 +241,13 @@ describe('goalProgressService', () => {
 
   it('ignore les séances hors période, non terminées ou sans durée positive finie', () => {
     const data = emptyData();
+    const missingDuration = workoutSession('missing');
+    delete missingDuration.durationMinutes;
+
     data.workoutSessions = [
       workoutSession('before', { date: '2026-05-31' }),
       workoutSession('in-progress', { status: 'inProgress' }),
-      workoutSession('missing', { durationMinutes: undefined }),
+      missingDuration,
       workoutSession('zero', { durationMinutes: 0 }),
       workoutSession('negative', { durationMinutes: -5 }),
       workoutSession('infinite', { durationMinutes: Number.POSITIVE_INFINITY }),
