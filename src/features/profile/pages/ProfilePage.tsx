@@ -50,9 +50,9 @@ const profileSections: readonly SettingsDirectoryItem[] = [
   },
   {
     id: 'profile-goal',
-    label: 'Objectif et activité',
-    description: 'Objectif et activité.',
-    keywords: ['objectif', 'activité', 'pas'],
+    label: 'Objectif nutritionnel et activité',
+    description: 'Objectif calorique, rythme visé et niveau d’activité.',
+    keywords: ['objectif', 'nutrition', 'activité', 'pas'],
     icon: Activity,
   },
   {
@@ -245,10 +245,10 @@ function ProfilePageContent({ profile, saveProfile }: ProfilePageContentProps) {
               id="profile-title"
               className="mt-1 text-3xl font-bold tracking-tight text-slate-950 dark:text-white"
             >
-              Profil et objectifs
+              Profil et objectif nutritionnel
             </h1>
             <p className="mt-3 max-w-3xl leading-7 text-slate-600 dark:text-slate-300">
-              Consulte ou modifie tes données.
+              Consulte ou modifie tes données personnelles, ton objectif calorique et tes macronutriments.
             </p>
           </div>
         </div>
@@ -277,7 +277,7 @@ function ProfilePageContent({ profile, saveProfile }: ProfilePageContentProps) {
       <BottomSheet
         open={isEditing}
         title="Modifier le profil"
-        description="Mets à jour tes informations, objectifs et macronutriments."
+        description="Mets à jour tes informations, ton objectif nutritionnel et tes macronutriments."
         closeLabel="Fermer la modification du profil"
         initialFocusSelector="#firstName"
         className="sm:self-center sm:max-h-[calc(100%-3rem)] sm:rounded-3xl sm:border"
