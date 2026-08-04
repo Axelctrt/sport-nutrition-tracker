@@ -1,8 +1,9 @@
-import { afterEach } from 'vitest';
+import { afterEach, beforeEach } from 'vitest';
 
 import type { BackupData } from '@/domain/models/backup';
 import {
   GOAL_STATE_STORAGE_KEY,
+  resetGoalStateRuntimeForTests,
   type Goal,
 } from '@/domain/goals/goalState';
 import {
@@ -93,9 +94,13 @@ function workoutSession(
   };
 }
 
-afterEach(() => {
+function resetGoalTestState(): void {
+  resetGoalStateRuntimeForTests();
   window.localStorage.clear();
-});
+}
+
+beforeEach(resetGoalTestState);
+afterEach(resetGoalTestState);
 
 describe('goalProgressService', () => {
   it('cumule uniquement les données postérieures au départ', () => {
