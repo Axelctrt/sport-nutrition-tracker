@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - agent/planning-sport-ux
+  pull_request:
+    branches:
+      - validation/pr45-planning
 
 permissions:
   contents: read
