@@ -52,11 +52,15 @@ test('ouvre la planification depuis un objectif de minutes actif', async ({ page
   await page.getByRole('link', { name: 'Planifier une activité' }).click();
 
   await expect(page).toHaveURL(/#\/strength\/planning\?action=plan$/);
+  const planningDialog = page.getByRole('dialog', {
+    name: 'Planifier une activité',
+  });
+  await expect(planningDialog).toBeVisible();
   await expect(
-    page.getByRole('heading', { name: 'Planning sportif', level: 1 }),
+    planningDialog.getByRole('button', { name: /Musculation/ }),
   ).toBeVisible();
   await expect(
-    page.getByRole('dialog', { name: 'Planifier une activité' }),
+    planningDialog.getByRole('button', { name: /Endurance/ }),
   ).toBeVisible();
   await expectNoCriticalHorizontalOverflow(page);
 });
