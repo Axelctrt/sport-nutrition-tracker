@@ -1,10 +1,12 @@
 import {
+  cleanup,
+  fireEvent,
   render,
   screen,
   waitFor,
 } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+import { afterEach, vi } from 'vitest';
 
 import { GoalEditor } from '@/features/goals/components/GoalEditor';
 import type { Goal } from '@/domain/goals/goalState';
@@ -24,6 +26,11 @@ function goal(overrides: Partial<Goal> = {}): Goal {
     ...overrides,
   };
 }
+
+afterEach(() => {
+  cleanup();
+  vi.clearAllMocks();
+});
 
 describe('GoalEditor', () => {
   it('réhydrate tous les champs quand l’objectif à modifier change', () => {
@@ -139,10 +146,11 @@ describe('GoalEditor', () => {
 
   it('ne remplace pas le poids de départ saisi quand la dernière pesée change', async () => {
     const user = userEvent.setup();
+    const onSaved = vi.fn();
     const { rerender } = render(
       <GoalEditor
         initialWeightBaseline={72.4}
-        onSaved={vi.fn()}
+        onSaved={onSaved}
       />,
     );
 
@@ -160,7 +168,7 @@ describe('GoalEditor', () => {
     rerender(
       <GoalEditor
         initialWeightBaseline={73.1}
-        onSaved={vi.fn()}
+        onSaved={onSaved}
       />,
     );
 
@@ -169,8 +177,7 @@ describe('GoalEditor', () => {
     ).toHaveValue(71.3);
   });
 
-  it('conserve le poids de départ historique lors de la modification d’un objectif de poids', async () => {
-    const user = userEvent.setup();
+  it('conserve le poids de départ historique lors de la modification d’un objectif de poids', () => {
     const saveGoalAction = vi.fn((input, id) => ({
       ...goal({ id }),
       ...input,
@@ -199,11 +206,12 @@ describe('GoalEditor', () => {
       screen.getByLabelText('Poids de départ (kg)'),
     ).toHaveAttribute('readonly');
 
-    await user.click(
-      screen.getByRole('button', {
-        name: 'Enregistrer les modifications',
-      }),
-    );
+    const submitButton = screen.getByRole('button', {
+      name: 'Enregistrer les modifications',
+    });
+    const form = submitButton.closest('form');
+    expect(form).not.toBeNull();
+    fireEvent.submit(form as HTMLFormElement);
 
     expect(saveGoalAction).toHaveBeenCalledWith(
       expect.objectContaining({
