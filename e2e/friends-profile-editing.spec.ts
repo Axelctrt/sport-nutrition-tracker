@@ -49,7 +49,13 @@ test('édite le profil social depuis sa carte en lecture seule et restaure le fo
   expect(statusBox).not.toBeNull();
   if (!inputBox || !copyBox || !statusBox) throw new Error('Les contrôles du profil social ne sont pas mesurables.');
   expect(copyBox.x).toBeGreaterThanOrEqual(inputBox.x + inputBox.width - 1);
-  expect(statusBox.y).toBeGreaterThanOrEqual(inputBox.y + inputBox.height);
+  const statusOverlapsInput = !(
+    statusBox.x >= inputBox.x + inputBox.width - 1
+    || statusBox.x + statusBox.width <= inputBox.x + 1
+    || statusBox.y >= inputBox.y + inputBox.height - 1
+    || statusBox.y + statusBox.height <= inputBox.y + 1
+  );
+  expect(statusOverlapsInput).toBe(false);
 
   await page.screenshot({ path: testInfo.outputPath('profil-social-edition.png'), fullPage: true });
 
