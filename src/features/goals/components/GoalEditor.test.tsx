@@ -8,6 +8,7 @@ import {
 import userEvent from '@testing-library/user-event';
 import { afterEach, vi } from 'vitest';
 
+import type { GoalInput } from '@/application/goals/goalProgressService';
 import { GoalEditor } from '@/features/goals/components/GoalEditor';
 import type { Goal } from '@/domain/goals/goalState';
 
@@ -178,10 +179,12 @@ describe('GoalEditor', () => {
   });
 
   it('conserve le poids de départ historique lors de la modification d’un objectif de poids', () => {
-    const saveGoalAction = vi.fn((input, id) => ({
-      ...goal({ id }),
-      ...input,
-    }));
+    const saveGoalAction = vi.fn(
+      (input: GoalInput, id?: string): Goal => ({
+        ...goal(id ? { id } : {}),
+        ...input,
+      }),
+    );
 
     render(
       <GoalEditor
