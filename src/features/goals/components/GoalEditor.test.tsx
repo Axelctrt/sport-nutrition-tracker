@@ -140,7 +140,7 @@ describe('GoalEditor', () => {
 
     await waitFor(() => {
       expect(
-        screen.getByLabelText('Poids de départ (kg)'),
+        screen.getByLabelText(/Poids de départ \(kg\)/),
       ).toHaveValue(72.4);
     });
   });
@@ -160,7 +160,7 @@ describe('GoalEditor', () => {
       'weightTarget',
     );
     const baselineInput = screen.getByLabelText(
-      'Poids de départ (kg)',
+      /Poids de départ \(kg\)/,
     );
 
     await user.clear(baselineInput);
@@ -174,7 +174,7 @@ describe('GoalEditor', () => {
     );
 
     expect(
-      screen.getByLabelText('Poids de départ (kg)'),
+      screen.getByLabelText(/Poids de départ \(kg\)/),
     ).toHaveValue(71.3);
   });
 
@@ -203,10 +203,10 @@ describe('GoalEditor', () => {
     );
 
     expect(
-      screen.getByLabelText('Poids de départ (kg)'),
+      screen.getByLabelText(/Poids de départ \(kg\)/),
     ).toHaveValue(76.2);
     expect(
-      screen.getByLabelText('Poids de départ (kg)'),
+      screen.getByLabelText(/Poids de départ \(kg\)/),
     ).toHaveAttribute('readonly');
 
     const submitButton = screen.getByRole('button', {
