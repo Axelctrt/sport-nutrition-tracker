@@ -6,7 +6,7 @@ test('parcourt les catégories de paramètres sans perdre les routes existantes'
   await page.goto('/#/settings');
 
   await expect(page.getByRole('heading', { name: 'Paramètres', level: 1 })).toBeVisible();
-  await expect(page.getByRole('link', { name: /Profil et objectifs/ })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Profil et objectif nutritionnel/ })).toBeVisible();
   await expect(page.getByRole('link', { name: /Compte et synchronisation/ })).toBeVisible();
   await expect(page.getByRole('link', { name: /Apparence, notifications et routines/ })).toBeVisible();
   await expect(page.getByRole('link', { name: /Confidentialité et données/ })).toBeVisible();
