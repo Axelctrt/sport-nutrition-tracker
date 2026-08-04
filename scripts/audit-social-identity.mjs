@@ -42,7 +42,7 @@ expectToken(repository, 'socialIdentity', 'persistance locale de l’identité a
 expectToken(backup, 'socialIdentitySchema', 'sauvegarde de l’identité absente');
 
 for (const token of [
-  '>Profil</h2>',
+  'aria-label="Profil social"',
   'copyIdentity',
   'SOCIAL_HANDLE_AVAILABILITY_DEBOUNCE_MS = 350',
   'aria-describedby="social-handle-status"',
