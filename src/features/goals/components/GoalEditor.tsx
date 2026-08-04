@@ -26,6 +26,7 @@ interface GoalEditorProps {
   initialWeightBaseline?: number | undefined;
   onSaved: () => void;
   onCancelEdit?: () => void;
+  onDirtyChange?: (dirty: boolean) => void;
   saveGoalAction?: (
     input: GoalInput,
     goalId?: string,
@@ -61,6 +62,7 @@ export function GoalEditor({
   initialWeightBaseline,
   onSaved,
   onCancelEdit,
+  onDirtyChange,
   saveGoalAction = saveGoal,
 }: GoalEditorProps) {
   const [title, setTitle] = useState('');
@@ -79,8 +81,14 @@ export function GoalEditor({
     [metric],
   );
 
+  const markDirty = () => {
+    setError(undefined);
+    onDirtyChange?.(true);
+  };
+
   useEffect(() => {
     setError(undefined);
+    onDirtyChange?.(false);
 
     if (goal) {
       setTitle(goal.title);
@@ -100,7 +108,7 @@ export function GoalEditor({
     setStartDate(localToday());
     setDeadline('');
     setBaselineValue('');
-  }, [goal]);
+  }, [goal, onDirtyChange]);
 
   useEffect(() => {
     if (goal) return;
@@ -154,6 +162,7 @@ export function GoalEditor({
         title: goal ? 'Objectif modifié' : 'Objectif créé',
         description: 'La progression sera recalculée depuis les données enregistrées.',
       });
+      onDirtyChange?.(false);
       onSaved();
 
       if (!goal) {
@@ -214,38 +223,59 @@ export function GoalEditor({
       ) : null}
 
       <div className="grid gap-4 md:grid-cols-2">
-        <label className="text-sm font-semibold text-slate-900 dark:text-white">
-          Type d’objectif
-          <select
-            value={metric}
-            onChange={(event) =>
-              setMetric(event.target.value as GoalMetric)
-            }
-            className={`${inputClassName} mt-2`}
-          >
-            {GOAL_METRIC_DEFINITIONS.map((item) => (
-              <option
-                key={item.metric}
-                value={item.metric}
-              >
-                {item.label}
-              </option>
-            ))}
-          </select>
-          <span className="mt-1 block text-xs font-normal leading-5 text-slate-500 dark:text-slate-400">
-            {definition.description}
-          </span>
-        </label>
+        {goal ? (
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-950/50">
+            <p className="text-sm font-semibold text-slate-900 dark:text-white">
+              Type d’objectif
+            </p>
+            <p className="mt-2 font-semibold text-slate-950 dark:text-white">
+              {definition.label}
+            </p>
+            <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
+              {definition.description} Unité : {definition.unit}.
+            </p>
+            <p className="mt-2 text-xs font-medium text-slate-600 dark:text-slate-300">
+              Pour changer de métrique, crée un nouvel objectif.
+            </p>
+          </div>
+        ) : (
+          <label className="text-sm font-semibold text-slate-900 dark:text-white">
+            Type d’objectif
+            <select
+              id="goal-metric"
+              value={metric}
+              onChange={(event) => {
+                markDirty();
+                setMetric(event.target.value as GoalMetric);
+              }}
+              className={`${inputClassName} mt-2`}
+            >
+              {GOAL_METRIC_DEFINITIONS.map((item) => (
+                <option
+                  key={item.metric}
+                  value={item.metric}
+                >
+                  {item.label}
+                </option>
+              ))}
+            </select>
+            <span className="mt-1 block text-xs font-normal leading-5 text-slate-500 dark:text-slate-400">
+              {definition.description}
+            </span>
+          </label>
+        )}
 
         <label className="text-sm font-semibold text-slate-900 dark:text-white">
           Nom personnalisé
           <input
+            id="goal-title"
             value={title}
             maxLength={120}
             placeholder={definition.label}
-            onChange={(event) =>
-              setTitle(event.target.value)
-            }
+            onChange={(event) => {
+              markDirty();
+              setTitle(event.target.value);
+            }}
             className={`${inputClassName} mt-2`}
           />
         </label>
@@ -258,9 +288,10 @@ export function GoalEditor({
             step={definition.step}
             required
             value={targetValue}
-            onChange={(event) =>
-              setTargetValue(event.target.value)
-            }
+            onChange={(event) => {
+              markDirty();
+              setTargetValue(event.target.value);
+            }}
             className={`${inputClassName} mt-2`}
           />
         </label>
@@ -274,12 +305,19 @@ export function GoalEditor({
               max="400"
               step="0.1"
               required
+              readOnly={goal !== undefined}
               value={baselineValue}
-              onChange={(event) =>
-                setBaselineValue(event.target.value)
-              }
-              className={`${inputClassName} mt-2`}
+              onChange={(event) => {
+                markDirty();
+                setBaselineValue(event.target.value);
+              }}
+              className={`${inputClassName} mt-2 read-only:cursor-not-allowed read-only:bg-slate-100 dark:read-only:bg-slate-800`}
             />
+            {goal ? (
+              <span className="mt-1 block text-xs font-normal leading-5 text-slate-500 dark:text-slate-400">
+                Le poids de départ historique est conservé.
+              </span>
+            ) : null}
           </label>
         ) : null}
 
@@ -289,9 +327,10 @@ export function GoalEditor({
             type="date"
             required
             value={startDate}
-            onChange={(event) =>
-              setStartDate(event.target.value)
-            }
+            onChange={(event) => {
+              markDirty();
+              setStartDate(event.target.value);
+            }}
             className={`${inputClassName} mt-2`}
           />
         </label>
@@ -302,9 +341,10 @@ export function GoalEditor({
             type="date"
             min={startDate}
             value={deadline}
-            onChange={(event) =>
-              setDeadline(event.target.value)
-            }
+            onChange={(event) => {
+              markDirty();
+              setDeadline(event.target.value);
+            }}
             className={`${inputClassName} mt-2`}
           />
         </label>
@@ -316,8 +356,9 @@ export function GoalEditor({
           {goal ? 'Enregistrer les modifications' : 'Créer l’objectif'}
         </Button>
 
-        {goal && onCancelEdit ? (
+        {onCancelEdit ? (
           <Button
+            type="button"
             variant="secondary"
             onClick={onCancelEdit}
           >
