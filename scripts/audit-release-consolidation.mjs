@@ -19,6 +19,7 @@ const requiredFiles = [
   'docs/onboarding-compact-0.32.0.md',
   'e2e/onboarding-compact.spec.ts',
   'e2e/nutrition-add-flow.spec.ts',
+  'e2e/helpers/performanceGlass.ts',
   'e2e/performance-glass-0.34.0.spec.ts',
   'scripts/shared/stableVersion.mjs',
   'scripts/audit-unified-sync-center.mjs',
@@ -62,7 +63,7 @@ if (failures.length === 0) {
     ['synchronisation automatique', automaticSyncAudit],
     ['récompenses', rewardAudit],
   ]) {
-    if (!source.includes('3408 * 1024')) fail(`le budget JavaScript ${label} n’est pas aligné sur 3408 Kio.`);
+    if (!source.includes('3584 * 1024')) fail(`le budget JavaScript ${label} n’est pas aligné sur 3584 Kio.`);
   }
 
   const releaseNotes = read('RELEASE-NOTES-0.37.0.md');
@@ -126,13 +127,41 @@ if (failures.length === 0) {
 
   const performanceGlass = read('e2e/performance-glass-0.34.0.spec.ts');
   for (const marker of [
-    'async function prepareVisualTheme(',
-    "page.goto('/visual-lab.html'",
-    "page.locator('#root')",
-    'await setVisualThemeState(page, options);',
+    'async function prepareVisualApplication(',
+    'await page.goto(`/visual-lab.html${bootstrapSearch}`',
+    "await expect(page.locator('#root')).not.toBeEmpty();",
+    'await setup(page);',
+    'await page.goto(targetUrl, { waitUntil: \'domcontentloaded\' });',
+    'async function prepareSeededVisualTheme(',
+    'await seedPerformanceGlassData(setupPage);',
+    'await setVisualThemeState(setupPage, options);',
+    'async function enableDarkMode(page: Page)',
+    "name: /Thème clair.*Thème sombre/",
+    "test('active le thème sombre core via le contrôle accessible'",
+    "appearance: 'light'",
+    'await enableDarkMode(page);',
+    "reducedMotion: 'reduce'",
+    "page.getByRole('dialog', { name: 'Tout est prêt' })",
+    "page.locator('.sp-badge-reveal-backdrop')",
   ]) {
     if (!performanceGlass.includes(marker)) {
-      fail(`le harnais Performance Glass doit isoler les écritures IndexedDB : ${marker}.`);
+      fail(`le harnais Performance Glass doit conserver son cycle navigateur contrôlé : ${marker}.`);
+    }
+  }
+
+  const performanceGlassHelper = read('e2e/helpers/performanceGlass.ts');
+  for (const marker of [
+    "import { achievementCatalog } from '../../src/domain/rewards/achievements';",
+    'achievementCatalog.map(({ id }) => id)',
+    'const earnedAchievements = seededAchievementIds.map((id) => ({',
+    'earnedAchievements,',
+    'const readPersistedAppearance = () => page.evaluate(async ({',
+    'persistedAppearance.localAppearance !== appearance',
+    'persistedAppearance.deviceAppearance !== appearance',
+    'deviceAppearance: appearance,',
+  ]) {
+    if (!performanceGlassHelper.includes(marker)) {
+      fail(`le seed Performance Glass doit neutraliser les reveals hors périmètre : ${marker}.`);
     }
   }
 

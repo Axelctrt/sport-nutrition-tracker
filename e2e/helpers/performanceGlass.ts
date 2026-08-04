@@ -1,5 +1,7 @@
 import { expect, type Page } from '@playwright/test';
 
+import { achievementCatalog } from '../../src/domain/rewards/achievements';
+
 const DATABASE_NAME = 'sportpilot-local-database';
 const VISUAL_THEME_STORAGE_KEY = 'sport-pilot.reward-themes';
 const VISUAL_THEME_BOOT_STORAGE_KEY = 'sport-pilot.active-theme';
@@ -27,10 +29,9 @@ export async function waitForSportPilotDatabase(page: Page): Promise<void> {
 
 export async function seedPerformanceGlassData(page: Page): Promise<void> {
   await waitForSportPilotDatabase(page);
-  await page.goto('/#/privacy');
-  await expect(page.locator('#root')).not.toBeEmpty();
+  const achievementIds = achievementCatalog.map(({ id }) => id);
 
-  await page.evaluate(async (databaseName) => {
+  await page.evaluate(async ({ databaseName, achievementIds: seededAchievementIds }) => {
     const database = await new Promise<IDBDatabase>((resolve, reject) => {
       const request = indexedDB.open(databaseName);
       request.onsuccess = () => resolve(request.result);
@@ -304,6 +305,11 @@ export async function seedPerformanceGlassData(page: Page): Promise<void> {
         completedAt: now,
       }))
     ));
+    const earnedAchievements = seededAchievementIds.map((id) => ({
+      id,
+      earnedAt: now,
+      updatedAt: now,
+    }));
     const endurancePlanningSessions = activities
       .filter(({ type }) => type === 'cycling')
       .slice(0, 5)
@@ -335,6 +341,7 @@ export async function seedPerformanceGlassData(page: Page): Promise<void> {
       workoutSessionExercises,
       strengthSets,
       endurancePlanningSessions,
+      earnedAchievements,
     };
     const storeNames = Object.keys(recordsByStore).filter((storeName) => (
       database.objectStoreNames.contains(storeName)
@@ -361,7 +368,10 @@ export async function seedPerformanceGlassData(page: Page): Promise<void> {
     } finally {
       database.close();
     }
-  }, DATABASE_NAME);
+  }, {
+    databaseName: DATABASE_NAME,
+    achievementIds,
+  });
 }
 
 interface VisualThemeStateOptions {
@@ -484,5 +494,100 @@ export async function setVisualThemeState(
     unlockedThemes: unlockedThemeIds,
     selectedAppearance: appearance,
     pendingTheme: pendingRevealThemeId,
+  });
+
+  const readPersistedAppearance = () => page.evaluate(async ({
+    databaseName,
+    appearanceStorageKey,
+  }) => {
+    const localAppearance = localStorage.getItem(appearanceStorageKey);
+    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open(databaseName);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+
+    try {
+      if (!database.objectStoreNames.contains('deviceSettings')) {
+        return { localAppearance, deviceAppearance: null };
+      }
+      const settings = await new Promise<{ theme?: string } | undefined>((resolve, reject) => {
+        const transaction = database.transaction('deviceSettings', 'readonly');
+        const request = transaction.objectStore('deviceSettings').get('device-settings');
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+        transaction.onabort = () => reject(transaction.error);
+      });
+      return {
+        localAppearance,
+        deviceAppearance: settings?.theme ?? null,
+      };
+    } finally {
+      database.close();
+    }
+  }, {
+    databaseName: DATABASE_NAME,
+    appearanceStorageKey: APPEARANCE_STORAGE_KEY,
+  });
+
+  let persistedAppearance = await readPersistedAppearance();
+  if (
+    persistedAppearance.localAppearance !== appearance
+    || persistedAppearance.deviceAppearance !== appearance
+  ) {
+    await page.evaluate(async ({
+      databaseName,
+      appearanceStorageKey,
+      selectedAppearance,
+    }) => {
+      localStorage.setItem(appearanceStorageKey, selectedAppearance);
+      const database = await new Promise<IDBDatabase>((resolve, reject) => {
+        const request = indexedDB.open(databaseName);
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+
+      try {
+        if (!database.objectStoreNames.contains('deviceSettings')) {
+          throw new Error('Le store deviceSettings est indisponible.');
+        }
+        const transaction = database.transaction('deviceSettings', 'readwrite');
+        const completion = new Promise<void>((resolve, reject) => {
+          transaction.oncomplete = () => resolve();
+          transaction.onerror = () => reject(transaction.error);
+          transaction.onabort = () => reject(transaction.error);
+        });
+        const store = transaction.objectStore('deviceSettings');
+        const request = store.get('device-settings');
+        request.onsuccess = () => {
+          if (!request.result) {
+            transaction.abort();
+            return;
+          }
+          store.put({
+            ...request.result,
+            theme: selectedAppearance,
+            updatedAt: new Date().toISOString(),
+          });
+        };
+        request.onerror = () => transaction.abort();
+        await completion;
+      } finally {
+        database.close();
+      }
+    }, {
+      databaseName: DATABASE_NAME,
+      appearanceStorageKey: APPEARANCE_STORAGE_KEY,
+      selectedAppearance: appearance,
+    });
+    persistedAppearance = await readPersistedAppearance();
+  }
+
+  expect(
+    persistedAppearance,
+    'Le thème visuel doit être persisté dans localStorage et deviceSettings avant le redémarrage applicatif.',
+  ).toEqual({
+    localAppearance: appearance,
+    deviceAppearance: appearance,
   });
 }

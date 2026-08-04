@@ -26,6 +26,44 @@ const DISMISS_VELOCITY_PX_PER_MS = 0.65;
 const MINIMUM_VELOCITY_DISMISS_DISTANCE_PX = 24;
 const EXIT_DURATION_MS = 220;
 
+const BODY_SCROLL_LOCK_ATTRIBUTE = 'data-bottom-sheet-scroll-lock';
+const BODY_PREVIOUS_OVERFLOW_ATTRIBUTE = 'data-bottom-sheet-previous-overflow';
+
+function acquireBodyScrollLock(lockElement: HTMLElement | null): () => void {
+  const body = document.body;
+  const lockSelector = `[${BODY_SCROLL_LOCK_ATTRIBUTE}="true"]`;
+
+  if (
+    !document.querySelector(lockSelector)
+    && body.hasAttribute(BODY_PREVIOUS_OVERFLOW_ATTRIBUTE)
+  ) {
+    body.style.overflow = body.getAttribute(BODY_PREVIOUS_OVERFLOW_ATTRIBUTE) ?? '';
+    body.removeAttribute(BODY_PREVIOUS_OVERFLOW_ATTRIBUTE);
+  }
+
+  if (!document.querySelector(lockSelector)) {
+    body.setAttribute(BODY_PREVIOUS_OVERFLOW_ATTRIBUTE, body.style.overflow);
+  }
+  lockElement?.setAttribute(BODY_SCROLL_LOCK_ATTRIBUTE, 'true');
+  body.style.overflow = 'hidden';
+
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    lockElement?.removeAttribute(BODY_SCROLL_LOCK_ATTRIBUTE);
+
+    const restoreBodyOverflow = () => {
+      if (document.querySelector(lockSelector)) return;
+      body.style.overflow = body.getAttribute(BODY_PREVIOUS_OVERFLOW_ATTRIBUTE) ?? '';
+      body.removeAttribute(BODY_PREVIOUS_OVERFLOW_ATTRIBUTE);
+    };
+
+    restoreBodyOverflow();
+    queueMicrotask(restoreBodyOverflow);
+  };
+}
+
 interface BottomSheetProps {
   open: boolean;
   title: ReactNode;
@@ -35,6 +73,7 @@ interface BottomSheetProps {
   onClose: () => void;
   closeLabel?: string;
   dismissible?: boolean;
+  initialFocusSelector?: string;
   className?: string;
 }
 
@@ -47,6 +86,7 @@ export function BottomSheet({
   onClose,
   closeLabel = 'Fermer',
   dismissible = true,
+  initialFocusSelector,
   className,
 }: BottomSheetProps) {
   const titleId = useId();
@@ -54,6 +94,7 @@ export function BottomSheet({
   const backdropRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const onCloseRef = useRef(onClose);
   const dragRef = useRef<{
     pointerId: number;
     startY: number;
@@ -64,6 +105,10 @@ export function BottomSheet({
   const [keyboardOpen, setKeyboardOpen] = useState(false);
   const [rendered, setRendered] = useState(open);
   const [closing, setClosing] = useState(false);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     if (open) {
@@ -145,17 +190,37 @@ export function BottomSheet({
     const previouslyFocused = document.activeElement instanceof HTMLElement
       ? document.activeElement
       : null;
+    const panelElement = panelRef.current;
     const openingHref = window.location.href;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    const releaseBodyScrollLock = acquireBodyScrollLock(backdropRef.current);
+    const modalRoot = backdropRef.current;
+    const backgroundStates = Array.from(document.body.children)
+      .filter((element): element is HTMLElement => (
+        element instanceof HTMLElement && element !== modalRoot
+      ))
+      .map((element) => ({
+        element,
+        ariaHidden: element.getAttribute('aria-hidden'),
+        inert: element.inert,
+      }));
+    backgroundStates.forEach(({ element }) => {
+      element.inert = true;
+      element.setAttribute('aria-hidden', 'true');
+    });
 
-    if (dismissible) closeButtonRef.current?.focus();
-    else panelRef.current?.focus();
+    const focusFrame = window.requestAnimationFrame(() => {
+      const initialTarget = initialFocusSelector
+        ? panelElement?.querySelector<HTMLElement>(initialFocusSelector)
+        : undefined;
+      if (initialTarget) initialTarget.focus();
+      else if (dismissible) closeButtonRef.current?.focus();
+      else panelElement?.focus();
+    });
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && dismissible) {
         event.preventDefault();
-        onClose();
+        onCloseRef.current();
         return;
       }
       if (event.key !== 'Tab') return;
@@ -184,8 +249,14 @@ export function BottomSheet({
 
     document.addEventListener('keydown', handleKeyDown);
     return () => {
+      window.cancelAnimationFrame(focusFrame);
       document.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = previousOverflow;
+      releaseBodyScrollLock();
+      backgroundStates.forEach(({ element, ariaHidden, inert }) => {
+        element.inert = inert;
+        if (ariaHidden === null) element.removeAttribute('aria-hidden');
+        else element.setAttribute('aria-hidden', ariaHidden);
+      });
       const activeElement = document.activeElement;
       const navigationChanged = window.location.href !== openingHref;
       if (
@@ -193,11 +264,11 @@ export function BottomSheet({
         && previouslyFocused?.isConnected
         && (
           activeElement === document.body
-          || (activeElement instanceof Node && panelRef.current?.contains(activeElement))
+          || (activeElement instanceof Node && panelElement?.contains(activeElement))
         )
       ) previouslyFocused.focus();
     };
-  }, [dismissible, onClose, open]);
+  }, [dismissible, initialFocusSelector, open]);
 
   useEffect(() => {
     if (open) {

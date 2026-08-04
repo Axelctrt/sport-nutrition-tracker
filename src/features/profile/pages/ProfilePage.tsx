@@ -1,11 +1,12 @@
 import {
   Activity,
+  Pencil,
   Scale,
   UserRound,
   Utensils,
 } from 'lucide-react';
 import { format } from 'date-fns';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 import { calculateAndPersistDailyTarget } from '@/application/daily/dailyTargetCoordinator';
 import {
@@ -33,27 +34,31 @@ import {
 } from '@/features/settings/components/SettingsSectionDirectory';
 import { useCurrentWeight } from '@/features/weight/hooks/useCurrentWeight';
 import { useActionToast } from '@/shared/toast/useActionToast';
+import { BottomSheet } from '@/shared/ui/BottomSheet';
+import { Button } from '@/shared/ui/Button';
+import { ConfirmationDialog } from '@/shared/ui/ConfirmationDialog';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
+import { UnsavedChangesGuard } from '@/shared/ui/UnsavedChangesGuard';
 
 const profileSections: readonly SettingsDirectoryItem[] = [
   {
     id: 'profile-personal',
     label: 'Informations personnelles',
-    description: 'Sexe, âge, taille et poids initial historique.',
+    description: 'Identité et mesures.',
     keywords: ['age', 'taille', 'sexe', 'poids'],
     icon: UserRound,
   },
   {
     id: 'profile-goal',
     label: 'Objectif et activité',
-    description: 'Perte, maintien, prise et activité quotidienne.',
+    description: 'Objectif et activité.',
     keywords: ['objectif', 'activité', 'pas'],
     icon: Activity,
   },
   {
     id: 'profile-macros',
     label: 'Macronutriments',
-    description: 'Protéines et lipides exprimés par kilo.',
+    description: 'Macros.',
     keywords: ['proteines', 'lipides', 'glucides'],
     icon: Utensils,
   },
@@ -72,22 +77,41 @@ interface PendingImpact {
 function ProfilePageContent({ profile, saveProfile }: ProfilePageContentProps) {
   const actionToast = useActionToast();
   const { currentWeight } = useCurrentWeight(profile);
+  const editButtonRef = useRef<HTMLButtonElement>(null);
+  const saveInFlightRef = useRef(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
+  const [discardDialogOpen, setDiscardDialogOpen] = useState(false);
   const [pendingImpact, setPendingImpact] = useState<PendingImpact | undefined>();
   const [isConfirming, setIsConfirming] = useState(false);
-  const [feedback, setFeedback] = useState<
-    | {
-        tone: 'success' | 'error';
-        message: string;
-      }
-    | undefined
-  >();
+  const [recalculationWarning, setRecalculationWarning] = useState(false);
+  const [saveError, setSaveError] = useState<string>();
+
+  const focusEditButton = () => {
+    window.setTimeout(() => editButtonRef.current?.focus(), 0);
+  };
+
+  const closeEditor = () => {
+    setIsEditing(false);
+    setIsDirty(false);
+    setPendingImpact(undefined);
+    setDiscardDialogOpen(false);
+    setSaveError(undefined);
+    focusEditButton();
+  };
+
+  const openEditor = () => {
+    setRecalculationWarning(false);
+    setSaveError(undefined);
+    setIsEditing(true);
+  };
 
   const persistProfile = async (
     values: ProfileFormValues,
     preview?: ProfileImpactPreviewModel,
   ) => {
     const entity = profileFormValuesToEntity(values);
-    const nextProfile = preview
+    const savedProfile = await saveProfile(preview
       ? {
           ...entity,
           profileImpactHistory: appendProfileImpactHistory(
@@ -95,58 +119,45 @@ function ProfilePageContent({ profile, saveProfile }: ProfilePageContentProps) {
             createProfileImpactHistoryEntry(preview),
           ),
         }
-      : entity;
+      : entity);
 
-    const savedProfile = await saveProfile(nextProfile);
-    if (!preview) {
-      return { savedProfile };
-    }
-
+    if (!preview) return false;
     try {
       await calculateAndPersistDailyTarget(preview.date, savedProfile);
-      return { savedProfile };
-    } catch (recalculationError) {
-      return { savedProfile, recalculationError };
+      return false;
+    } catch {
+      return true;
     }
   };
 
-  const reportSuccess = (withImpact: boolean) => {
-    setFeedback({
-      tone: 'success',
-      message: withImpact
-        ? 'Le profil a été mis à jour. Les objectifs de la journée ont été recalculés et le changement a été ajouté au journal.'
-        : 'Le profil a été mis à jour dans la base locale.',
-    });
+  const reportSuccess = () => {
     actionToast.success({
       key: 'profile-update',
       title: 'Profil mis à jour',
-      ...(withImpact ? { description: 'Objectifs du jour recalculés' } : {}),
     });
   };
 
   const reportError = (error: unknown) => {
-    const fallback = 'Le profil n’a pas pu être mis à jour.';
-    setFeedback({
-      tone: 'error',
-      message: error instanceof Error ? error.message : fallback,
-    });
-    actionToast.error({
-      key: 'profile-update',
-      error,
-      fallback,
-    });
+    setSaveError(
+      error instanceof Error && error.message.trim() !== ''
+        ? error.message
+        : 'Profil non enregistré. Réessaie.',
+    );
   };
 
   const handleSubmit = async (values: ProfileFormValues) => {
-    setFeedback(undefined);
+    if (saveInFlightRef.current) return;
+    saveInFlightRef.current = true;
+    setRecalculationWarning(false);
+    setSaveError(undefined);
     setPendingImpact(undefined);
     const entity = profileFormValuesToEntity(values);
-    const changedFields = detectProfileImpactFields(profile, entity);
 
     try {
-      if (changedFields.length === 0) {
+      if (detectProfileImpactFields(profile, entity).length === 0) {
         await persistProfile(values);
-        reportSuccess(false);
+        reportSuccess();
+        closeEditor();
         return;
       }
 
@@ -167,34 +178,53 @@ function ProfilePageContent({ profile, saveProfile }: ProfilePageContentProps) {
       });
     } catch (error) {
       reportError(error);
+    } finally {
+      saveInFlightRef.current = false;
     }
   };
 
   const confirmImpact = async () => {
-    if (!pendingImpact) return;
+    if (!pendingImpact || saveInFlightRef.current) return;
+    saveInFlightRef.current = true;
     setIsConfirming(true);
-    setFeedback(undefined);
+    setSaveError(undefined);
 
     try {
-      const result = await persistProfile(pendingImpact.values, pendingImpact.preview);
+      const recalculationFailed = await persistProfile(
+        pendingImpact.values,
+        pendingImpact.preview,
+      );
       setPendingImpact(undefined);
-      if (result.recalculationError) {
-        const message = 'Le profil et le journal ont été enregistrés, mais les objectifs de la journée n’ont pas pu être recalculés. Recharge la page pour relancer le calcul.';
-        setFeedback({ tone: 'error', message });
-        actionToast.error({
-          key: 'profile-update-recalculation',
-          error: result.recalculationError,
-          fallback: message,
-        });
+      if (recalculationFailed) {
+        setRecalculationWarning(true);
+        closeEditor();
         return;
       }
-      reportSuccess(true);
+      reportSuccess();
+      closeEditor();
     } catch (error) {
       reportError(error);
     } finally {
+      saveInFlightRef.current = false;
       setIsConfirming(false);
     }
   };
+
+  const editAction = (
+    <Button
+      ref={editButtonRef}
+      type="button"
+      variant="secondary"
+      className="shrink-0"
+      aria-label="Modifier le profil"
+      title="Modifier le profil"
+      aria-expanded={isEditing}
+      onClick={openEditor}
+    >
+      <span aria-hidden="true">Modifier</span>
+      <Pencil aria-hidden="true" className="size-4" />
+    </Button>
+  );
 
   return (
     <section
@@ -202,12 +232,12 @@ function ProfilePageContent({ profile, saveProfile }: ProfilePageContentProps) {
       className="min-w-0 overflow-x-clip"
     >
       <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6 dark:border-slate-800 dark:bg-slate-900">
-        <div className="flex items-start gap-3">
+        <div className="flex min-w-0 items-start gap-3">
           <Scale
             aria-hidden="true"
-            className="mt-1 size-6 text-brand-700 dark:text-brand-300"
+            className="mt-1 size-6 shrink-0 text-brand-700 dark:text-brand-300"
           />
-          <div>
+          <div className="min-w-0">
             <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
               Profil local
             </p>
@@ -218,54 +248,87 @@ function ProfilePageContent({ profile, saveProfile }: ProfilePageContentProps) {
               Profil et objectifs
             </h1>
             <p className="mt-3 max-w-3xl leading-7 text-slate-600 dark:text-slate-300">
-              Ouvre uniquement la rubrique que tu souhaites modifier. Les sections restent mémorisées sur cet appareil.
+              Consulte ou modifie tes données.
             </p>
           </div>
         </div>
       </div>
 
       <div className="mt-4">
-        <ProfileOverview profile={profile} currentWeight={currentWeight} />
+        <ProfileOverview
+          profile={profile}
+          currentWeight={currentWeight}
+          action={editAction}
+        />
       </div>
 
-      {feedback ? (
+      {recalculationWarning ? (
         <InlineNotice
           className="mt-4"
-          tone={feedback.tone}
-          title={feedback.tone === 'success' ? 'Profil enregistré' : 'Enregistrement impossible'}
+          tone="warning"
+          title="Profil enregistré, recalcul à relancer"
         >
-          {feedback.message}
+          Le profil et le journal ont été enregistrés localement. Recharge la page.
         </InlineNotice>
-      ) : null}
-
-      {pendingImpact ? (
-        <ProfileImpactPreview
-          preview={pendingImpact.preview}
-          isSaving={isConfirming}
-          onConfirm={() => void confirmImpact()}
-          onCancel={() => setPendingImpact(undefined)}
-        />
       ) : null}
 
       <ProfileImpactHistory entries={profile.profileImpactHistory ?? []} />
 
-      <div className="mt-4">
+      <BottomSheet
+        open={isEditing}
+        title="Modifier le profil"
+        description="Mets à jour tes informations, objectifs et macronutriments."
+        closeLabel="Fermer la modification du profil"
+        initialFocusSelector="#firstName"
+        className="sm:self-center sm:max-h-[calc(100%-3rem)] sm:rounded-3xl sm:border"
+        onClose={() => isDirty ? setDiscardDialogOpen(true) : closeEditor()}
+      >
         <SettingsSectionDirectory
           sections={profileSections}
-          title="Accéder à une rubrique du profil"
+          title="Rubriques"
         />
-      </div>
+        {saveError ? (
+          <InlineNotice className="mt-4" tone="error" title="Enregistrement impossible">
+            {saveError}
+          </InlineNotice>
+        ) : null}
+        <div className="mt-4">
+          <ProfileForm
+            initialValues={profileToFormValues(profile)}
+            submitLabel="Enregistrer le profil"
+            onSubmit={handleSubmit}
+            onDirtyChange={setIsDirty}
+            onValuesChange={() => {
+              setSaveError(undefined);
+              if (pendingImpact) setPendingImpact(undefined);
+            }}
+            secondaryAction={{
+              label: 'Annuler',
+              onClick: () => isDirty ? setDiscardDialogOpen(true) : closeEditor(),
+            }}
+          />
+        </div>
+        {pendingImpact ? (
+          <ProfileImpactPreview
+            preview={pendingImpact.preview}
+            isSaving={isConfirming}
+            onConfirm={() => void confirmImpact()}
+            onCancel={() => setPendingImpact(undefined)}
+          />
+        ) : null}
+      </BottomSheet>
 
-      <div className="mt-4">
-        <ProfileForm
-          initialValues={profileToFormValues(profile)}
-          submitLabel="Enregistrer le profil"
-          onSubmit={handleSubmit}
-          onValuesChange={() => {
-            if (pendingImpact) setPendingImpact(undefined);
-          }}
-        />
-      </div>
+      <UnsavedChangesGuard when={isEditing && isDirty} />
+
+      <ConfirmationDialog
+        open={discardDialogOpen}
+        title="Annuler les modifications ?"
+        description="Les changements seront perdus."
+        confirmLabel="Abandonner les modifications"
+        cancelLabel="Continuer la modification"
+        onCancel={() => setDiscardDialogOpen(false)}
+        onConfirm={closeEditor}
+      />
     </section>
   );
 }

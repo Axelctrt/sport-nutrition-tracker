@@ -47,18 +47,8 @@ export function suppressNextActionToast(key: string): void {
   suppressedActionToasts.add(key);
 }
 
-function consumeActionToastSuppression(key: string): boolean {
-  if (!suppressedActionToasts.has(key)) return false;
-  suppressedActionToasts.delete(key);
-  return true;
-}
-
 function successToastIsSuppressed(key: string): boolean {
-  return dedicatedFeedbackSuccessKeys.has(key) || consumeActionToastSuppression(key);
-}
-
-function destinationFor(key: string, destination?: ToastDestination): ToastDestination | undefined {
-  return destination ?? defaultSuccessDestinations[key];
+  return dedicatedFeedbackSuccessKeys.has(key) || suppressedActionToasts.delete(key);
 }
 
 export function getActionErrorMessage(error: unknown, fallback: string): string {
@@ -73,9 +63,9 @@ export function useActionToast() {
   return useMemo(() => ({
     success({ key, title, description, action, destination, durationMs }: ActionSuccessInput): string {
       if (successToastIsSuppressed(key) || !toast) return '';
-      const resolvedDestination = destinationFor(key, destination);
+      const resolvedDestination = destination ?? defaultSuccessDestinations[key];
       return toast.showToast({
-        title,
+        title: key === 'social-handle-copy' ? `${title}.` : title,
         tone: 'success',
         dedupeKey: `action-success:${key}`,
         ...(description === undefined ? {} : { description }),
@@ -86,7 +76,7 @@ export function useActionToast() {
     },
     successAfterReload({ key, title, description, destination }: ActionSuccessInput): void {
       if (successToastIsSuppressed(key)) return;
-      const resolvedDestination = destinationFor(key, destination);
+      const resolvedDestination = destination ?? defaultSuccessDestinations[key];
       queuePendingToast({
         title,
         tone: 'success',

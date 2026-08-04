@@ -1,4 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
+import type { ReactElement } from 'react';
+import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
 import type { EntityId } from '@/domain/models/common';
 import { FriendsPrivacyPage } from '@/features/friends/pages/FriendsPrivacyPage';
@@ -6,6 +8,13 @@ import { DEFAULT_FRIENDS_PRIVACY_SETTINGS, type FriendsPrivacySnapshot } from '@
 import type { FriendsPrivacySnapshotRepository } from '@/application/friends/friendsPrivacyService';
 import { createFoundSocialUserLookupGateway } from '@/application/friends/socialIdentityService';
 import { createDefaultSocialIdentity } from '@/domain/friends/socialIdentity';
+
+function renderWithDataRouter(element: ReactElement) {
+  const router = createMemoryRouter([
+    { path: '*', element },
+  ], { initialEntries: ['/friends'] });
+  return render(<RouterProvider router={router} />);
+}
 
 function createMemoryRepository(initial: FriendsPrivacySnapshot): FriendsPrivacySnapshotRepository & {
   saved: FriendsPrivacySnapshot[];
@@ -33,7 +42,7 @@ describe('FriendsPrivacyPage persistance locale', () => {
     });
     const identity = createDefaultSocialIdentity('2026-07-05T10:00:00.000Z', 'alex123');
 
-    render(
+    renderWithDataRouter(
       <FriendsPrivacyPage
         repository={repository}
         initialIdentity={identity}

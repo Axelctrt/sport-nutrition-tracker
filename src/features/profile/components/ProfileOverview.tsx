@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Activity, Footprints, Scale, Target } from 'lucide-react';
 import type { CurrentWeightResolution } from '@/application/weight/currentWeightService';
 import type { UserProfile } from '@/domain/models/profile';
@@ -12,9 +13,10 @@ const goalLabels: Record<UserProfile['goal'], string> = {
 interface ProfileOverviewProps {
   profile: UserProfile;
   currentWeight: CurrentWeightResolution;
+  action?: ReactNode;
 }
 
-export function ProfileOverview({ profile, currentWeight }: ProfileOverviewProps) {
+export function ProfileOverview({ profile, currentWeight, action }: ProfileOverviewProps) {
   const metrics = [
     {
       label: 'Objectif',
@@ -46,7 +48,11 @@ export function ProfileOverview({ profile, currentWeight }: ProfileOverviewProps
 
   return (
     <Card className="mt-6 p-4 sm:p-5" aria-label="Résumé du profil">
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="flex min-h-11 items-start justify-between gap-3">
+        <h2 className="pt-1 text-xl font-bold text-slate-950 dark:text-white">Profil</h2>
+        {action ? <div className="shrink-0">{action}</div> : null}
+      </div>
+      <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
         {metrics.map(({ label, value, detail, icon: Icon }) => (
           <div key={label} className="min-w-0 rounded-xl border border-slate-200/80 p-3 dark:border-slate-800">
             <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">

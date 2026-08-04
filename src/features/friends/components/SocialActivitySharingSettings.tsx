@@ -303,23 +303,28 @@ export function SocialActivityFriendSharingSettings({
       </summary>
 
       <div className="space-y-3 border-t border-slate-200 p-3 dark:border-slate-800">
-        <fieldset className="grid grid-cols-3 gap-1.5">
+        <fieldset>
           <legend className="sr-only">Partage avec {friendDisplayName}</legend>
-          {sharingModes.map((mode) => {
-            const active = sharingLevel === mode.value;
-            return (
-              <ChoiceCard
-                key={mode.value}
-                name={`friend-sharing-${sharingGroupName}`}
-                value={mode.value}
-                title={mode.label}
-                selected={active}
-                disabled={disabled}
-                onSelect={(value) => onSharingLevelChange(value as FriendActivityPermissionLevel)}
-                tight
-              />
-            );
-          })}
+          <div
+            data-sharing-mode-grid
+            className="grid grid-cols-1 gap-2 sm:grid-cols-3"
+          >
+            {sharingModes.map((mode) => {
+              const active = sharingLevel === mode.value;
+              return (
+                <ChoiceCard
+                  key={mode.value}
+                  name={`friend-sharing-${sharingGroupName}`}
+                  value={mode.value}
+                  title={mode.label}
+                  selected={active}
+                  disabled={disabled}
+                  onSelect={(value) => onSharingLevelChange(value as FriendActivityPermissionLevel)}
+                  tight
+                />
+              );
+            })}
+          </div>
         </fieldset>
 
         {sharingLevel === 'none' ? (

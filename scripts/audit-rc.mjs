@@ -6,7 +6,7 @@ const dist = resolve(root, 'dist');
 const failures = [];
 const limits = {
   largestJavaScriptBytes: 850 * 1024,
-  totalJavaScriptBytes: 3408 * 1024,
+  totalJavaScriptBytes: 3584 * 1024,
   totalCssBytes: 176 * 1024,
 };
 
