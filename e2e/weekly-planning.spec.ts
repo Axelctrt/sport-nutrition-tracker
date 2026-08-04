@@ -1,7 +1,11 @@
 import { expect, test } from '@playwright/test';
-import { createLocalProfile, expectNoCriticalHorizontalOverflow, getBrowserLocalDate } from './helpers/app';
+import {
+  createLocalProfile,
+  expectNoCriticalHorizontalOverflow,
+  getBrowserLocalDate,
+} from './helpers/app';
 
-test('planifie une séance modèle puis démarre la même séance', async ({ page }) => {
+test('planifie une séance modèle depuis la surface dédiée puis la démarre', async ({ page }) => {
   await createLocalProfile(page);
 
   await page.goto('/#/strength/templates/new');
@@ -13,12 +17,21 @@ test('planifie une séance modèle puis démarre la même séance', async ({ pag
   await expect(page.getByRole('heading', { name: 'Séances modèles' })).toBeVisible();
 
   await page.goto('/#/strength/planning');
-  await expect(page.getByRole('heading', { name: 'Planning hebdomadaire' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Planning sportif' })).toBeVisible();
   const today = await getBrowserLocalDate(page);
-  await page.getByLabel('Séance modèle', { exact: true }).selectOption({ label: 'Planning E2E' });
-  await page.locator('#planning-date').fill(today);
   await page.getByRole('button', { name: 'Planifier', exact: true }).click();
+  const choiceDialog = page.getByRole('dialog', { name: 'Planifier une activité' });
+  await expect(choiceDialog).toBeVisible();
+  await choiceDialog.getByRole('button', { name: /^Musculation/ }).click();
 
+  const strengthDialog = page.getByRole('dialog', {
+    name: 'Planifier une séance de musculation',
+  });
+  await strengthDialog.getByLabel('Séance modèle', { exact: true }).selectOption({ label: 'Planning E2E' });
+  await strengthDialog.getByLabel('Date prévue').fill(today);
+  await strengthDialog.getByRole('button', { name: 'Planifier la séance' }).click();
+
+  await expect(strengthDialog).toBeHidden();
   await expect(page.getByRole('heading', { name: 'Planning E2E' })).toBeVisible();
   await expect(page.getByText('Prévue', { exact: true })).toBeVisible();
   await expectNoCriticalHorizontalOverflow(page);
@@ -26,4 +39,28 @@ test('planifie une séance modèle puis démarre la même séance', async ({ pag
   await page.getByRole('button', { name: 'Démarrer' }).click();
   await expect(page.getByRole('heading', { name: 'Planning E2E' })).toBeVisible();
   await expect(page.getByText('En cours', { exact: true })).toBeVisible();
+});
+
+test('ouvre Prévoir en création et planifie une activité d’endurance', async ({ page }) => {
+  await createLocalProfile(page);
+  const today = await getBrowserLocalDate(page);
+
+  await page.goto(`/#/strength/planning?date=${today}&action=plan`);
+  const choiceDialog = page.getByRole('dialog', { name: 'Planifier une activité' });
+  await expect(choiceDialog).toBeVisible();
+  await choiceDialog.getByRole('button', { name: /^Endurance/ }).click();
+
+  const enduranceDialog = page.getByRole('dialog', {
+    name: 'Planifier une activité d’endurance',
+  });
+  await expect(enduranceDialog.getByLabel('Date prévue')).toHaveValue(today);
+  await enduranceDialog.getByLabel('Nom facultatif').fill('Footing Preview');
+  await enduranceDialog.getByRole('button', { name: 'Planifier l’activité' }).click();
+
+  await expect(enduranceDialog).toBeHidden();
+  await expect(page.getByText('Activité planifiée', { exact: true })).toBeVisible();
+  await page.getByText('Course, natation, vélo et cardio', { exact: true }).click();
+  await page.getByText('1 activité', { exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Footing Preview' })).toBeVisible();
+  await expectNoCriticalHorizontalOverflow(page);
 });
