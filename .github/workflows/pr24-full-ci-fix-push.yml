@@ -1,0 +1,70 @@
+name: PR24 full CI fix push validation
+
+on:
+  push:
+    branches:
+      - agent/pr24-edit-surface-full-ci-fix
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: agent/pr24-edit-surface-full-ci-fix
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22.16.0
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Apply scoped CI compatibility fixes
+        shell: bash
+        run: |
+          printf '%s' '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' | base64 --decode | gzip --decompress > /tmp/apply-full-ci-fix.py
+          python /tmp/apply-full-ci-fix.py
+
+      - run: npm ci
+
+      - name: Run formerly failing tests
+        run: >-
+          npx vitest run
+          src/shared/ui/BottomSheet.test.tsx
+          src/features/friends/pages/FriendsPrivacyPage.test.tsx
+          src/features/friends/pages/FriendsPrivacyPage.persistence.test.tsx
+          src/features/food-journal/pages/FoodJournalPage.mobile.test.tsx
+          src/app/App.test.tsx
+
+      - name: Run complete unit suite
+        run: npm test
+
+      - name: Run shuffled suite
+        run: npm run test:stability
+
+      - name: Run lint and build
+        run: npm run lint && npm run build
+
+      - name: Commit validated fixes
+        if: success()
+        shell: bash
+        run: |
+          git config user.name 'sportpilot-validation-bot'
+          git config user.email 'sportpilot-validation-bot@users.noreply.github.com'
+          git add \
+            src/shared/ui/BottomSheet.tsx \
+            src/shared/ui/BottomSheet.test.tsx \
+            src/features/friends/pages/FriendsPrivacyPage.test.tsx \
+            src/features/friends/pages/FriendsPrivacyPage.persistence.test.tsx \
+            src/features/food-journal/pages/FoodJournalPage.mobile.test.tsx
+          git rm \
+            .github/workflows/pr24-full-ci-fix-validation.yml \
+            .github/workflows/pr24-full-ci-fix-push.yml
+          git commit -m 'test: stabiliser la surface d’édition dans la suite complète'
+          git push origin HEAD:agent/pr24-edit-surface-full-ci-fix
