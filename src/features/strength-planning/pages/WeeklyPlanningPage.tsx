@@ -467,7 +467,9 @@ export function WeeklyPlanningPage() {
         title={sheetTitle}
         description={sheetDescription}
         onClose={closePlanning}
-        initialFocusSelector={planningMode === 'choice' ? '[data-planning-choice]' : undefined}
+        {...(planningMode === 'choice'
+          ? { initialFocusSelector: '[data-planning-choice]' }
+          : {})}
         className="planning-create-sheet sm:max-w-3xl"
       >
         {planningMode === 'choice' ? (

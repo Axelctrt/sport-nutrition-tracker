@@ -68,7 +68,7 @@ describe('WeeklyPlanningPage', () => {
       await screen.findByRole('heading', { name: 'Planning sportif' }),
     ).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Planifier', exact: true }));
+    await user.click(screen.getByRole('button', { name: 'Planifier' }));
     const choiceDialog = await screen.findByRole('dialog', { name: 'Planifier une activité' });
     await user.click(within(choiceDialog).getByRole('button', { name: /^Musculation/ }));
 
