@@ -1,0 +1,218 @@
+name: PR24 full CI fix validation
+
+on:
+  pull_request:
+    branches:
+      - agent/profile-friends-privacy-ux
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    if: github.head_ref == 'agent/pr24-edit-surface-full-ci-fix'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22.16.0
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Apply scoped CI compatibility fixes
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path: str, old: str, new: str) -> None:
+              file = Path(path)
+              source = file.read_text(encoding='utf-8')
+              count = source.count(old)
+              if count != 1:
+                  raise SystemExit(f'{path}: motif attendu une fois, trouvé {count}')
+              file.write_text(source.replace(old, new, 1), encoding='utf-8')
+
+          bottom_sheet = 'src/shared/ui/BottomSheet.tsx'
+          replace_once(
+              bottom_sheet,
+              "const EXIT_DURATION_MS = 220;\n",
+              """const EXIT_DURATION_MS = 220;
+
+let bodyScrollLockCount = 0;
+let bodyOverflowBeforeFirstLock: string | undefined;
+
+function acquireBodyScrollLock(): () => void {
+  if (bodyScrollLockCount === 0) {
+    bodyOverflowBeforeFirstLock = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+  }
+  bodyScrollLockCount += 1;
+
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    bodyScrollLockCount = Math.max(0, bodyScrollLockCount - 1);
+    if (bodyScrollLockCount !== 0) return;
+    document.body.style.overflow = bodyOverflowBeforeFirstLock ?? '';
+    bodyOverflowBeforeFirstLock = undefined;
+  };
+}
+""",
+          )
+          replace_once(
+              bottom_sheet,
+              """    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+""",
+              """    const releaseBodyScrollLock = acquireBodyScrollLock();
+""",
+          )
+          replace_once(
+              bottom_sheet,
+              "      document.body.style.overflow = previousOverflow;\n",
+              "      releaseBodyScrollLock();\n",
+          )
+
+          bottom_test = 'src/shared/ui/BottomSheet.test.tsx'
+          replace_once(
+              bottom_test,
+              "import { fireEvent, render, screen } from '@testing-library/react';",
+              "import { fireEvent, render, screen, waitFor } from '@testing-library/react';",
+          )
+          replace_once(
+              bottom_test,
+              "  it('piège le focus, ferme avec Échap et restaure le déclencheur', () => {",
+              "  it('piège le focus, ferme avec Échap et restaure le déclencheur', async () => {",
+          )
+          replace_once(
+              bottom_test,
+              "    expect(screen.getByRole('button', { name: 'Fermer' })).toHaveFocus();",
+              "    await waitFor(() => expect(screen.getByRole('button', { name: 'Fermer' })).toHaveFocus());",
+          )
+
+          food_test = 'src/features/food-journal/pages/FoodJournalPage.mobile.test.tsx'
+          replace_once(
+              food_test,
+              "expect(await screen.findByRole('button', { name: /^Dîner/ })).toHaveAttribute(",
+              "expect(await screen.findByRole('button', { name: /^Dîner/, hidden: true })).toHaveAttribute(",
+          )
+
+          friends_test = Path('src/features/friends/pages/FriendsPrivacyPage.test.tsx')
+          friends_source = friends_test.read_text(encoding='utf-8')
+          friends_source = friends_source.replace(
+              "import { render, screen, waitFor, within } from '@testing-library/react';\n",
+              "import { render, screen, waitFor, within } from '@testing-library/react';\nimport type { ReactElement } from 'react';\nimport { createMemoryRouter, RouterProvider } from 'react-router-dom';\n",
+              1,
+          )
+          marker = "const identity = createDefaultSocialIdentity('2026-07-05T10:00:00.000Z', 'alex123');\n"
+          if friends_source.count(marker) != 1:
+              raise SystemExit('FriendsPrivacyPage.test.tsx: marqueur identité introuvable')
+          friends_source = friends_source.replace(
+              marker,
+              marker + """
+
+function renderWithDataRouter(element: ReactElement) {
+  const router = createMemoryRouter([
+    { path: '*', element },
+  ], { initialEntries: ['/friends'] });
+  return render(<RouterProvider router={router} />);
+}
+""",
+              1,
+          )
+          old_return = '  return render(<FriendsPrivacyPage {...pageProps} />);'
+          if friends_source.count(old_return) != 1:
+              raise SystemExit('FriendsPrivacyPage.test.tsx: rendu principal inattendu')
+          friends_source = friends_source.replace(
+              old_return,
+              '  return renderWithDataRouter(<FriendsPrivacyPage {...pageProps} />);',
+              1,
+          )
+          direct_render = "    render(\n      <FriendsPrivacyPage"
+          direct_count = friends_source.count(direct_render)
+          if direct_count != 6:
+              raise SystemExit(f'FriendsPrivacyPage.test.tsx: 6 rendus directs attendus, trouvés {direct_count}')
+          friends_source = friends_source.replace(
+              direct_render,
+              "    renderWithDataRouter(\n      <FriendsPrivacyPage",
+          )
+          friends_test.write_text(friends_source, encoding='utf-8')
+
+          persistence_test = Path('src/features/friends/pages/FriendsPrivacyPage.persistence.test.tsx')
+          persistence_source = persistence_test.read_text(encoding='utf-8')
+          persistence_source = persistence_source.replace(
+              "import { render, screen, waitFor } from '@testing-library/react';\n",
+              "import { render, screen, waitFor } from '@testing-library/react';\nimport type { ReactElement } from 'react';\nimport { createMemoryRouter, RouterProvider } from 'react-router-dom';\n",
+              1,
+          )
+          marker = "function createMemoryRepository(initial: FriendsPrivacySnapshot): FriendsPrivacySnapshotRepository & {\n"
+          if persistence_source.count(marker) != 1:
+              raise SystemExit('Persistence: marqueur dépôt introuvable')
+          helper = """function renderWithDataRouter(element: ReactElement) {
+  const router = createMemoryRouter([
+    { path: '*', element },
+  ], { initialEntries: ['/friends'] });
+  return render(<RouterProvider router={router} />);
+}
+
+"""
+          persistence_source = persistence_source.replace(marker, helper + marker, 1)
+          direct = "    render(\n      <FriendsPrivacyPage"
+          if persistence_source.count(direct) != 1:
+              raise SystemExit('Persistence: rendu direct attendu une fois')
+          persistence_source = persistence_source.replace(
+              direct,
+              "    renderWithDataRouter(\n      <FriendsPrivacyPage",
+              1,
+          )
+          persistence_test.write_text(persistence_source, encoding='utf-8')
+          PY
+
+      - run: npm ci
+
+      - name: Run formerly failing tests
+        run: >-
+          npx vitest run
+          src/shared/ui/BottomSheet.test.tsx
+          src/features/friends/pages/FriendsPrivacyPage.test.tsx
+          src/features/friends/pages/FriendsPrivacyPage.persistence.test.tsx
+          src/features/food-journal/pages/FoodJournalPage.mobile.test.tsx
+          src/app/App.test.tsx
+
+      - name: Run complete unit suite
+        run: npm test
+
+      - name: Run shuffled suite
+        run: npm run test:stability
+
+      - name: Run lint and build
+        run: npm run lint && npm run build
+
+      - name: Commit validated fixes
+        if: success()
+        shell: bash
+        run: |
+          git config user.name 'sportpilot-validation-bot'
+          git config user.email 'sportpilot-validation-bot@users.noreply.github.com'
+          git add \
+            src/shared/ui/BottomSheet.tsx \
+            src/shared/ui/BottomSheet.test.tsx \
+            src/features/friends/pages/FriendsPrivacyPage.test.tsx \
+            src/features/friends/pages/FriendsPrivacyPage.persistence.test.tsx \
+            src/features/food-journal/pages/FoodJournalPage.mobile.test.tsx
+          git rm .github/workflows/pr24-full-ci-fix-validation.yml
+          git commit -m 'test: stabiliser la surface d’édition dans la suite complète'
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
