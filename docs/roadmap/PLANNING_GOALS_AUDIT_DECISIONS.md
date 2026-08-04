@@ -162,8 +162,28 @@ Validation attendue : tests unitaires de la correspondance métrique-action,
 tests composant sur les statuts, tests des saisies directes poids/pas, E2E mobile
 ciblé, build et CI complète avant recette.
 
+## Autorisation de Preview — PR C
+
+Le propriétaire a autorisé explicitement une Preview contrôlée le 4 août 2026.
+
+- environnement autorisé : **Preview uniquement** ;
+- PR : `#49` ;
+- branche : `agent/goal-context-actions` ;
+- HEAD fonctionnel validé avant déclenchement :
+  `0a8320e6c0976286fa3564560293fd34e96a12d9` ;
+- projet Cloudflare Pages : `sportpilot-pages` ;
+- alias de branche attendu :
+  `https://agent-goal-context-actions.sportpilot-pages.pages.dev` ;
+- aucune autorisation de fusion, release, production ou migration D1 ;
+- le SHA réellement publié doit être relu après le déclenchement avant la
+  recette visuelle.
+
+La mise à jour de ce document sert de déclencheur Git traçable pour la
+reconstruction Cloudflare Pages sans modification fonctionnelle de
+l’application.
+
 ## Ordre retenu
 
 1. PR A — Planning sportif, terminée ;
 2. PR B — Objectifs de progression, terminée ;
-3. PR C — liaison Objectif → action, autorisée et en cours.
+3. PR C — liaison Objectif → action, autorisée et en cours de recette Preview.
