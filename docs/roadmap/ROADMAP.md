@@ -13,6 +13,10 @@ ni son déploiement.
 | 4 — Photos de progression locales | **Publié en production 0.37.0** | Suivi photo privé, local, non social et comparateur tactile | PR #18, CI complète et recette iPhone/Safari validées |
 | 5 — Déploiement contrôlé | **Terminé** | Publication de `main`, tag annoté, release GitHub stable et production validée | PR #21, commit `84fea3d49e68c7d190c00d505502a5c4aa2e672a`, tag `v0.37.0` |
 | Suivi UX post-0.37.0 — Profil, Amis et Confidentialité | **Intégré à `develop`, non publié** | Consultation en lecture seule, édition dans une surface dédiée, protection des modifications et feedback temporaire | PR #24, HEAD validé `6eed04863ff2c11611aac281fc04a91011f8a175`, merge `f66efc2798117e861c7b59b66b50ab1cd88ba6bc` |
+| Audit transverse — Planning, Objectifs et Progression | **Terminé et décisions acceptées** | Responsabilités séparées, pont Progression/Bilan, métrique d’objectif immuable et règle anti-double comptage | Décisions propriétaire du 4 août 2026 |
+| PR A — Planning sportif | **Cadrée, développement à autoriser** | Semaine prioritaire, création dans une surface dédiée et navigation normalisée | Audit transverse accepté |
+| PR B — Objectifs de progression | **Planifiée après PR A** | Édition sécurisée, métrique verrouillée et minutes de musculation comptées une seule fois | PR A stabilisée ou décision explicite de parallélisation |
+| PR C — Liaison Objectif → Action | **Optionnelle** | Liens contextuels sans création automatique | Retour d’usage et validation produit explicite |
 
 ## État publié
 
@@ -29,19 +33,32 @@ La PR #24 est fusionnée dans `develop`, mais n’est pas présente dans `main` 
 n’est pas publiée en production. Elle apporte notamment :
 
 - un état initial en lecture seule pour le profil général et le profil social ;
-- une action explicite `Modifier` ouvrant une surface d’édition dédiée ;
+- une action `Modifier` ouvrant une surface d’édition dédiée ;
 - la confirmation d’abandon des changements non enregistrés ;
 - le statut de l’identifiant public placé directement sous son champ ;
 - un feedback de succès temporaire unique ;
 - la conservation du comportement cloud atomique pour l’identité sociale d’un
   espace compte.
 
-## Prochain jalon à arbitrer
+## Architecture validée pour la suite
 
-La suite fonctionnelle n’est pas encore ordonnée dans une source canonique. Le
-prochain cadrage doit choisir le premier domaine à traiter entre
-`Planning hebdomadaire` et `Objectifs`, ou valider un audit transverse préalable.
-Aucune branche fonctionnelle ne doit être créée avant cette décision produit.
+- Planning et Objectifs restent des domaines séparés.
+- Progression et Bilan hebdomadaire constituent le pont entre intention,
+  réalisation et résultat.
+- La métrique d’un objectif devient non modifiable après sa création.
+- L’objectif de minutes d’activité inclut les séances détaillées de musculation
+  terminées sans compter deux fois leur activité générale liée.
+- Aucun écran ne crée automatiquement de séance, programme ou objectif.
+
+Les décisions détaillées et la règle anti-double comptage figurent dans
+[`PLANNING_GOALS_AUDIT_DECISIONS.md`](PLANNING_GOALS_AUDIT_DECISIONS.md).
+
+## Prochain jalon
+
+La prochaine évolution fonctionnelle ordonnée est la **PR A — Planning
+sportif**. Son développement reste soumis à une autorisation explicite. Elle
+doit conserver la route historique, les données, les calculs et le
+rapprochement prévu/réalisé existants.
 
 ## Garde-fous de séquencement
 
@@ -55,7 +72,7 @@ Aucune branche fonctionnelle ne doit être créée avant cette décision produit
 - Les évolutions intégrées uniquement à `develop` doivent rester explicitement
   distinguées de la production.
 - Aucun nouveau chantier fonctionnel n’est autorisé par la clôture de la
-  release 0.37.0 ni par la fusion de la PR #24.
+  release 0.37.0, la fusion de la PR #24 ou le présent cadrage documentaire.
 
 Les détails de portée figurent dans
 [`PLANNED_FEATURES.md`](PLANNED_FEATURES.md). Les limites connues qui ne
