@@ -1,6 +1,7 @@
 import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { RouterProvider, createMemoryRouter } from 'react-router-dom';
 
 import type {
   SocialIdentityRepository,
@@ -35,7 +36,7 @@ function renderProfile(
   identityRepository?: SocialIdentityRepository,
   cloudIdentityPort?: SocialCloudIdentityPort,
 ) {
-  return render(
+  const page = (
     <ToastProvider>
       <FriendsPrivacyPage
         initialSnapshot={snapshot}
@@ -44,12 +45,27 @@ function renderProfile(
         {...(identityRepository ? { identityRepository } : {})}
         {...(cloudIdentityPort ? { cloudIdentityPort } : {})}
       />
-    </ToastProvider>,
+    </ToastProvider>
+  );
+
+  return render(
+    <RouterProvider
+      router={createMemoryRouter(
+        [{ path: '*', element: page }],
+        { initialEntries: ['/friends'] },
+      )}
+    />,
   );
 }
 
-async function openSocialProfile(user: ReturnType<typeof userEvent.setup>) {
+async function openSocialProfileSection(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByRole('button', { name: 'Mon profil social' }));
+  return screen.getByLabelText('Profil social');
+}
+
+async function openSocialProfile(user: ReturnType<typeof userEvent.setup>) {
+  await openSocialProfileSection(user);
+  await user.click(screen.getByRole('button', { name: 'Modifier le profil public' }));
   return screen.getByLabelText('Identifiant public');
 }
 
@@ -70,6 +86,22 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('statut de l’identifiant public', () => {
+  it('affiche la carte sociale en lecture seule avec Modifier et sans Enregistrer', async () => {
+    const user = userEvent.setup();
+    renderProfile({ lookupByHandle: vi.fn() });
+
+    const card = await openSocialProfileSection(user);
+    const editButton = screen.getByRole('button', { name: 'Modifier le profil public' });
+
+    expect(card).toContainElement(editButton);
+    expect(editButton).toHaveTextContent('Modifier');
+    expect(editButton.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    expect(screen.getByText('@sp-alex123')).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByLabelText('Identifiant public')).not.toBeInTheDocument());
+    expect(screen.queryByRole('button', { name: 'Enregistrer' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Annuler' })).not.toBeInTheDocument();
+  });
+
   it('place l’icône Copier avec le champ, puis le statut et l’action principale', async () => {
     const user = userEvent.setup();
     renderProfile({ lookupByHandle: vi.fn() });
@@ -92,7 +124,7 @@ describe('statut de l’identifiant public', () => {
     expect(input).not.toHaveAttribute('aria-invalid');
     expect((controlRow?.compareDocumentPosition(status) ?? 0) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(status.compareDocumentPosition(saveButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(saveButton).toHaveClass('w-full');
+    expect(saveButton.closest('[data-bottom-sheet-footer]')).not.toBeNull();
   });
 
   it('signale un format incorrect avec texte, croix ronde et aria-invalid', async () => {
@@ -237,6 +269,33 @@ describe('statut de l’identifiant public', () => {
     expect(await screen.findByText('Profil mis à jour')).toBeInTheDocument();
     expect(screen.getAllByText('Profil mis à jour')).toHaveLength(1);
     expect(screen.queryByText('Profil à vérifier')).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByLabelText('Identifiant public')).not.toBeInTheDocument());
+    expect(screen.queryByRole('button', { name: 'Enregistrer' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Action prise en compte')).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Modifier le profil public' })).toHaveFocus());
+  });
+
+  it('annule les changements, ferme la surface et restaure le focus', async () => {
+    const user = userEvent.setup();
+    renderProfile({ lookupByHandle: vi.fn() });
+    await openSocialProfile(user);
+
+    const displayName = screen.getByLabelText('Nom affiché');
+    await user.clear(displayName);
+    await user.type(displayName, 'Modification abandonnée');
+    await user.click(screen.getByRole('button', { name: 'Annuler' }));
+
+    const dialog = screen.getByRole('alertdialog', { name: 'Annuler les modifications ?' });
+    expect(dialog).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Continuer la modification' }));
+    expect(screen.getByLabelText('Nom affiché')).toHaveValue('Modification abandonnée');
+
+    await user.click(screen.getByRole('button', { name: 'Annuler' }));
+    await user.click(screen.getByRole('button', { name: 'Abandonner les modifications' }));
+
+    await waitFor(() => expect(screen.queryByLabelText('Identifiant public')).not.toBeInTheDocument());
+    expect(screen.getByText(identity.displayName || 'Non renseigné')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Modifier le profil public' })).toHaveFocus());
   });
 
   it('conserve une erreur locale et n’affiche aucun succès lorsque la sauvegarde échoue', async () => {
@@ -255,7 +314,7 @@ describe('statut de l’identifiant public', () => {
     expect(screen.queryByText('Profil mis à jour')).not.toBeInTheDocument();
   });
 
-  it('signale une réussite partielle sans toast de succès lorsque le cloud échoue', async () => {
+  it('enregistre le profil local sans tenter une publication cloud', async () => {
     const repository: SocialIdentityRepository = {
       readIdentity: vi.fn().mockResolvedValue(identity),
       saveIdentity: vi.fn().mockResolvedValue(undefined),
@@ -281,10 +340,10 @@ describe('statut de l’identifiant public', () => {
     await user.type(displayName, 'Alex local');
     await user.click(screen.getByRole('button', { name: 'Enregistrer' }));
 
-    expect(await screen.findByText('Profil enregistré, publication à reprendre')).toBeInTheDocument();
-    expect(screen.getByText(/La sauvegarde locale a réussi/u)).toBeInTheDocument();
-    expect(screen.getByText(/Service cloud indisponible/u)).toBeInTheDocument();
-    expect(screen.queryByText('Profil mis à jour')).not.toBeInTheDocument();
+    expect(await screen.findByText('Profil mis à jour')).toBeInTheDocument();
+    expect(screen.getAllByText('Profil mis à jour')).toHaveLength(1);
+    expect(cloudIdentityPort.publishIdentity).not.toHaveBeenCalled();
+    expect(screen.queryByText('Profil enregistré, publication à reprendre')).not.toBeInTheDocument();
   });
 
   it('ignore la réponse obsolète d’une ancienne valeur', async () => {

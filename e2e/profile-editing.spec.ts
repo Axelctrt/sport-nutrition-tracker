@@ -11,7 +11,7 @@ test('active explicitement la modification du profil depuis le crayon de la cart
   const editProfile = profileCard.getByRole('button', { name: 'Modifier le profil' });
   await expect(profileCard).toBeVisible();
   await expect(editProfile).toBeVisible();
-  await expect(editProfile).toHaveText('');
+  await expect(editProfile).toHaveText(/Modifier/);
   await expect(page.getByRole('button', { name: 'Modifier le profil' })).toHaveCount(1);
   await expect(page.getByLabel('Prénom')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Enregistrer le profil' })).toHaveCount(0);
@@ -22,12 +22,14 @@ test('active explicitement la modification du profil depuis le crayon de la cart
   expect(cardBox).not.toBeNull();
   expect(editBox).not.toBeNull();
   if (!cardBox || !editBox) throw new Error('La carte Profil ou son crayon n’est pas mesurable.');
-  expect(editBox.width).toBeGreaterThanOrEqual(44);
+  expect(editBox.width).toBeGreaterThanOrEqual(96);
   expect(editBox.height).toBeGreaterThanOrEqual(44);
   expect((cardBox.x + cardBox.width) - (editBox.x + editBox.width)).toBeLessThanOrEqual(32);
   expect(editBox.y - cardBox.y).toBeLessThanOrEqual(32);
 
   await editProfile.click();
+  await expect(page.getByRole('dialog', { name: 'Modifier le profil' })).toBeVisible();
+  await expect(page.locator('.sp-bottom-sheet-backdrop')).toHaveClass(/backdrop-blur/);
   const firstName = page.getByLabel('Prénom');
   await expect(firstName).toBeVisible();
   await expect(firstName).toBeFocused();

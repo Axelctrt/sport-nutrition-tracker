@@ -6,7 +6,7 @@ import {
   Utensils,
 } from 'lucide-react';
 import { format } from 'date-fns';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 
 import { calculateAndPersistDailyTarget } from '@/application/daily/dailyTargetCoordinator';
 import {
@@ -34,6 +34,7 @@ import {
 } from '@/features/settings/components/SettingsSectionDirectory';
 import { useCurrentWeight } from '@/features/weight/hooks/useCurrentWeight';
 import { useActionToast } from '@/shared/toast/useActionToast';
+import { BottomSheet } from '@/shared/ui/BottomSheet';
 import { Button } from '@/shared/ui/Button';
 import { ConfirmationDialog } from '@/shared/ui/ConfirmationDialog';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
@@ -85,14 +86,6 @@ function ProfilePageContent({ profile, saveProfile }: ProfilePageContentProps) {
   const [isConfirming, setIsConfirming] = useState(false);
   const [recalculationWarning, setRecalculationWarning] = useState(false);
   const [saveError, setSaveError] = useState<string>();
-
-  useEffect(() => {
-    if (!isEditing) return undefined;
-    const frame = window.requestAnimationFrame(() => {
-      document.getElementById('firstName')?.focus();
-    });
-    return () => window.cancelAnimationFrame(frame);
-  }, [isEditing]);
 
   const focusEditButton = () => {
     window.setTimeout(() => editButtonRef.current?.focus(), 0);
@@ -217,21 +210,21 @@ function ProfilePageContent({ profile, saveProfile }: ProfilePageContentProps) {
     }
   };
 
-  const editAction = !isEditing ? (
+  const editAction = (
     <Button
       ref={editButtonRef}
       type="button"
       variant="secondary"
-      className="size-11 shrink-0 p-0"
+      className="shrink-0"
       aria-label="Modifier le profil"
       title="Modifier le profil"
-      aria-controls="profile-form"
-      aria-expanded="false"
+      aria-expanded={isEditing}
       onClick={openEditor}
     >
+      <span aria-hidden="true">Modifier</span>
       <Pencil aria-hidden="true" className="size-4" />
     </Button>
-  ) : undefined;
+  );
 
   return (
     <section
@@ -279,48 +272,51 @@ function ProfilePageContent({ profile, saveProfile }: ProfilePageContentProps) {
         </InlineNotice>
       ) : null}
 
-      {pendingImpact ? (
-        <ProfileImpactPreview
-          preview={pendingImpact.preview}
-          isSaving={isConfirming}
-          onConfirm={() => void confirmImpact()}
-          onCancel={() => setPendingImpact(undefined)}
-        />
-      ) : null}
-
       <ProfileImpactHistory entries={profile.profileImpactHistory ?? []} />
 
-      {isEditing ? (
-        <>
-          <div className="mt-4">
-            <SettingsSectionDirectory
-              sections={profileSections}
-              title="Rubriques"
-            />
-          </div>
-          {saveError ? (
-            <InlineNotice className="mt-4" tone="error" title="Enregistrement impossible">
-              {saveError}
-            </InlineNotice>
-          ) : null}
-          <div className="mt-4">
-            <ProfileForm
-              initialValues={profileToFormValues(profile)}
-              submitLabel="Enregistrer le profil"
-              onSubmit={handleSubmit}
-              onDirtyChange={setIsDirty}
-              onValuesChange={() => {
-                setSaveError(undefined);
-                if (pendingImpact) setPendingImpact(undefined);
-              }}
-              secondaryAction={{
-                label: 'Annuler',
-                onClick: () => isDirty ? setDiscardDialogOpen(true) : closeEditor(),
-              }}
-            />
-          </div>
-        </>
-      ) : null}
+      <BottomSheet
+        open={isEditing}
+        title="Modifier le profil"
+        description="Mets à jour tes informations, objectifs et macronutriments."
+        closeLabel="Fermer la modification du profil"
+        initialFocusSelector="#firstName"
+        className="sm:self-center sm:max-h-[calc(100%-3rem)] sm:rounded-3xl sm:border"
+        onClose={() => isDirty ? setDiscardDialogOpen(true) : closeEditor()}
+      >
+        <SettingsSectionDirectory
+          sections={profileSections}
+          title="Rubriques"
+        />
+        {saveError ? (
+          <InlineNotice className="mt-4" tone="error" title="Enregistrement impossible">
+            {saveError}
+          </InlineNotice>
+        ) : null}
+        <div className="mt-4">
+          <ProfileForm
+            initialValues={profileToFormValues(profile)}
+            submitLabel="Enregistrer le profil"
+            onSubmit={handleSubmit}
+            onDirtyChange={setIsDirty}
+            onValuesChange={() => {
+              setSaveError(undefined);
+              if (pendingImpact) setPendingImpact(undefined);
+            }}
+            secondaryAction={{
+              label: 'Annuler',
+              onClick: () => isDirty ? setDiscardDialogOpen(true) : closeEditor(),
+            }}
+          />
+        </div>
+        {pendingImpact ? (
+          <ProfileImpactPreview
+            preview={pendingImpact.preview}
+            isSaving={isConfirming}
+            onConfirm={() => void confirmImpact()}
+            onCancel={() => setPendingImpact(undefined)}
+          />
+        ) : null}
+      </BottomSheet>
 
       <UnsavedChangesGuard when={isEditing && isDirty} />
 
