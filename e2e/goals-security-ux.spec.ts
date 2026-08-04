@@ -67,6 +67,6 @@ test('protège l’abandon des changements non enregistrés', async ({ page }) =
   await page.getByRole('button', { name: 'Fermer l’éditeur d’objectif' }).click();
   await discardDialog.getByRole('button', { name: 'Abandonner les modifications' }).click();
   await expect(createDialog).toBeHidden();
-  await expect(page.getByRole('button', { name: 'Créer un objectif' })).toHaveFocus();
+  await expect(page.getByRole('button', { name: 'Créer un objectif' })).toBeFocused();
   await expectNoCriticalHorizontalOverflow(page);
 });
