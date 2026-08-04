@@ -36,8 +36,9 @@ describe('GoalEditor', () => {
       screen.getByLabelText('Nom personnalisé'),
     ).toHaveValue('Objectif initial');
     expect(
-      screen.getByLabelText(/Type d’objectif/),
-    ).toHaveValue('totalSteps');
+      screen.queryByLabelText(/Type d’objectif/),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText('Cumuler des pas')).toBeInTheDocument();
     expect(
       screen.getByLabelText(/Cible/),
     ).toHaveValue(100_000);
@@ -68,8 +69,11 @@ describe('GoalEditor', () => {
       screen.getByLabelText('Nom personnalisé'),
     ).toHaveValue('Course rapide');
     expect(
-      screen.getByLabelText(/Type d’objectif/),
-    ).toHaveValue('runningDistanceKm');
+      screen.queryByLabelText(/Type d’objectif/),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText('Courir une distance cumulée'),
+    ).toBeInTheDocument();
     expect(
       screen.getByLabelText(/Cible/),
     ).toHaveValue(42);
@@ -79,6 +83,36 @@ describe('GoalEditor', () => {
     expect(
       screen.getByLabelText('Échéance facultative'),
     ).toHaveValue('');
+  });
+
+  it('laisse la métrique sélectionnable uniquement à la création', () => {
+    render(<GoalEditor onSaved={vi.fn()} />);
+
+    expect(
+      screen.getByLabelText(/Type d’objectif/),
+    ).toHaveValue('totalSteps');
+    expect(
+      screen.queryByText('Pour changer de métrique, crée un nouvel objectif.'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('signale les changements apportés au formulaire', async () => {
+    const user = userEvent.setup();
+    const onDirtyChange = vi.fn();
+
+    render(
+      <GoalEditor
+        onSaved={vi.fn()}
+        onDirtyChange={onDirtyChange}
+      />,
+    );
+
+    await user.type(
+      screen.getByLabelText('Nom personnalisé'),
+      'Objectif été',
+    );
+
+    expect(onDirtyChange).toHaveBeenLastCalledWith(true);
   });
 
   it('préremplit un nouvel objectif de poids avec la dernière pesée connue', async () => {
@@ -161,6 +195,9 @@ describe('GoalEditor', () => {
     expect(
       screen.getByLabelText('Poids de départ (kg)'),
     ).toHaveValue(76.2);
+    expect(
+      screen.getByLabelText('Poids de départ (kg)'),
+    ).toHaveAttribute('readonly');
 
     await user.click(
       screen.getByRole('button', {
