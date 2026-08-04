@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { useState } from 'react';
 import { vi } from 'vitest';
 import { BottomSheet } from '@/shared/ui/BottomSheet';
@@ -38,7 +38,7 @@ function BottomSheetHarness({
 }
 
 describe('BottomSheet', () => {
-  it('piège le focus, ferme avec Échap et restaure le déclencheur', () => {
+  it('piège le focus, ferme avec Échap et restaure le déclencheur', async () => {
     const onClose = vi.fn();
     render(<BottomSheetHarness onClose={onClose} />);
 
@@ -47,7 +47,7 @@ describe('BottomSheet', () => {
     fireEvent.click(trigger);
 
     expect(screen.getByRole('dialog', { name: 'Ajouter un aliment' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Fermer' })).toHaveFocus();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Fermer' })).toHaveFocus());
     expect(document.body.style.overflow).toBe('hidden');
 
     fireEvent.keyDown(document, { key: 'Escape' });
@@ -55,7 +55,7 @@ describe('BottomSheet', () => {
     expect(onClose).toHaveBeenCalledOnce();
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(trigger).toHaveFocus();
-    expect(document.body.style.overflow).toBe('');
+    await waitFor(() => expect(document.body.style.overflow).toBe(''));
   });
 
   it('ferme depuis le fond sans absorber les actions du contenu', () => {

@@ -26,6 +26,44 @@ const DISMISS_VELOCITY_PX_PER_MS = 0.65;
 const MINIMUM_VELOCITY_DISMISS_DISTANCE_PX = 24;
 const EXIT_DURATION_MS = 220;
 
+const BODY_SCROLL_LOCK_ATTRIBUTE = 'data-bottom-sheet-scroll-lock';
+const BODY_PREVIOUS_OVERFLOW_ATTRIBUTE = 'data-bottom-sheet-previous-overflow';
+
+function acquireBodyScrollLock(lockElement: HTMLElement | null): () => void {
+  const body = document.body;
+  const lockSelector = `[${BODY_SCROLL_LOCK_ATTRIBUTE}="true"]`;
+
+  if (
+    !document.querySelector(lockSelector)
+    && body.hasAttribute(BODY_PREVIOUS_OVERFLOW_ATTRIBUTE)
+  ) {
+    body.style.overflow = body.getAttribute(BODY_PREVIOUS_OVERFLOW_ATTRIBUTE) ?? '';
+    body.removeAttribute(BODY_PREVIOUS_OVERFLOW_ATTRIBUTE);
+  }
+
+  if (!document.querySelector(lockSelector)) {
+    body.setAttribute(BODY_PREVIOUS_OVERFLOW_ATTRIBUTE, body.style.overflow);
+  }
+  lockElement?.setAttribute(BODY_SCROLL_LOCK_ATTRIBUTE, 'true');
+  body.style.overflow = 'hidden';
+
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    lockElement?.removeAttribute(BODY_SCROLL_LOCK_ATTRIBUTE);
+
+    const restoreBodyOverflow = () => {
+      if (document.querySelector(lockSelector)) return;
+      body.style.overflow = body.getAttribute(BODY_PREVIOUS_OVERFLOW_ATTRIBUTE) ?? '';
+      body.removeAttribute(BODY_PREVIOUS_OVERFLOW_ATTRIBUTE);
+    };
+
+    restoreBodyOverflow();
+    queueMicrotask(restoreBodyOverflow);
+  };
+}
+
 interface BottomSheetProps {
   open: boolean;
   title: ReactNode;
@@ -154,8 +192,7 @@ export function BottomSheet({
       : null;
     const panelElement = panelRef.current;
     const openingHref = window.location.href;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    const releaseBodyScrollLock = acquireBodyScrollLock(backdropRef.current);
     const modalRoot = backdropRef.current;
     const backgroundStates = Array.from(document.body.children)
       .filter((element): element is HTMLElement => (
@@ -214,7 +251,7 @@ export function BottomSheet({
     return () => {
       window.cancelAnimationFrame(focusFrame);
       document.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = previousOverflow;
+      releaseBodyScrollLock();
       backgroundStates.forEach(({ element, ariaHidden, inert }) => {
         element.inert = inert;
         if (ariaHidden === null) element.removeAttribute('aria-hidden');

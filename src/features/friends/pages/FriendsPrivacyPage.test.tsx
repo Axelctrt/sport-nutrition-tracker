@@ -1,4 +1,6 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
+import type { ReactElement } from 'react';
+import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
 import type { EntityId } from '@/domain/models/common';
 import {
@@ -57,6 +59,14 @@ const snapshot: FriendsPrivacySnapshot = {
 
 const identity = createDefaultSocialIdentity('2026-07-05T10:00:00.000Z', 'alex123');
 
+
+function renderWithDataRouter(element: ReactElement) {
+  const router = createMemoryRouter([
+    { path: '*', element },
+  ], { initialEntries: ['/friends'] });
+  return render(<RouterProvider router={router} />);
+}
+
 function renderPage(override: {
   readonly lookupGateway?: SocialUserLookupGateway;
   readonly cloudIdentityPort?: SocialCloudIdentityPort;
@@ -90,7 +100,7 @@ function renderPage(override: {
     ...(override.identityReconciliation ? { identityReconciliation: override.identityReconciliation } : {}),
   };
 
-  return render(<FriendsPrivacyPage {...pageProps} />);
+  return renderWithDataRouter(<FriendsPrivacyPage {...pageProps} />);
 }
 
 beforeEach(() => {
@@ -109,10 +119,11 @@ describe('FriendsPrivacyPage', () => {
     expect(screen.queryByText(/snapshots filtrés/u)).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Mon profil social' }));
-    expect(screen.getByRole('heading', { name: 'Profil', level: 2 })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Profil social', level: 2 })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Mon profil', level: 2 })).not.toBeInTheDocument();
     expect(screen.getByText('@sp-alex123')).toBeInTheDocument();
-    expect(screen.getByRole('radio', { name: 'Visible par les amis' })).toBeChecked();
+    expect(screen.getByText('Visible par les amis')).toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: 'Identifiant public' })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Mes amis' }));
     expect(screen.getByText('Léa Cardio')).toBeInTheDocument();
@@ -139,13 +150,15 @@ describe('FriendsPrivacyPage', () => {
     try {
       renderPage({ repository });
       await user.click(screen.getByRole('button', { name: 'Mon profil social' }));
+    await user.click(screen.getByRole('button', { name: 'Modifier le profil public' }));
       await user.click(screen.getByRole('radio', { name: 'Profil privé' }));
+      await user.click(screen.getByRole('button', { name: 'Enregistrer' }));
 
       await waitFor(() => {
         expect(repository.saveSnapshot).toHaveBeenCalled();
         expect(details).toContainEqual({
           domainIds: ['account-preferences'],
-          reason: 'social-profile-visibility-update',
+          reason: 'social-profile-settings-update',
         });
       });
       expect(screen.getByText('Partage : Résumé')).toBeInTheDocument();
@@ -211,7 +224,7 @@ describe('FriendsPrivacyPage', () => {
       })),
     };
 
-    render(
+    renderWithDataRouter(
       <FriendsPrivacyPage
         repository={repository}
         identityRepository={identityRepository}
@@ -285,7 +298,7 @@ describe('FriendsPrivacyPage', () => {
       saveIdentity: vi.fn(async () => undefined),
     };
 
-    render(
+    renderWithDataRouter(
       <FriendsPrivacyPage
         repository={repository}
         identityRepository={identityRepository}
@@ -332,6 +345,7 @@ describe('FriendsPrivacyPage', () => {
     const user = userEvent.setup();
     renderPage({ lookupGateway: createFoundSocialUserLookupGateway([]) });
     await user.click(screen.getByRole('button', { name: 'Mon profil social' }));
+    await user.click(screen.getByRole('button', { name: 'Modifier le profil public' }));
 
     await user.clear(screen.getByLabelText('Identifiant public'));
     await user.type(screen.getByLabelText('Identifiant public'), '@alex.run');
@@ -344,7 +358,7 @@ describe('FriendsPrivacyPage', () => {
     expect(screen.getByText('@alex.run')).toBeInTheDocument();
   });
 
-  it('publie le handle dans le cloud social quand un port réel est fourni', async () => {
+  it('n’appelle pas le cloud social en mode local même si un port est fourni', async () => {
     const user = userEvent.setup();
     const publishedIdentities: unknown[] = [];
     const cloudIdentityPort: SocialCloudIdentityPort = {
@@ -376,6 +390,7 @@ describe('FriendsPrivacyPage', () => {
       lookupGateway: createFoundSocialUserLookupGateway([]),
     });
     await user.click(screen.getByRole('button', { name: 'Mon profil social' }));
+    await user.click(screen.getByRole('button', { name: 'Modifier le profil public' }));
 
     await user.clear(screen.getByLabelText('Identifiant public'));
     await user.type(screen.getByLabelText('Identifiant public'), '@alex.run');
@@ -384,14 +399,8 @@ describe('FriendsPrivacyPage', () => {
     expect(await screen.findByText('Identifiant disponible.')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Enregistrer' }));
 
-    expect(await screen.findByText(/Identité sociale cloud créée/u)).toBeInTheDocument();
-    expect(publishedIdentities).toEqual([
-      expect.objectContaining({
-        userId: identity.userId,
-        handle: 'alex.run',
-        displayName: 'Alex Run',
-      }),
-    ]);
+    expect(await screen.findByText(/Sauvegarde locale OK/u)).toBeInTheDocument();
+    expect(publishedIdentities).toEqual([]);
   });
 
   it('vérifie automatiquement la disponibilité après un debounce', async () => {
@@ -400,6 +409,7 @@ describe('FriendsPrivacyPage', () => {
     const lookupGateway: SocialUserLookupGateway = { lookupByHandle };
     renderPage({ lookupGateway });
     await user.click(screen.getByRole('button', { name: 'Mon profil social' }));
+    await user.click(screen.getByRole('button', { name: 'Modifier le profil public' }));
 
     await user.clear(screen.getByLabelText('Identifiant public'));
     await user.type(screen.getByLabelText('Identifiant public'), '@lina.trail');
@@ -420,10 +430,17 @@ describe('FriendsPrivacyPage', () => {
     };
     renderPage({ repository });
     await user.click(screen.getByRole('button', { name: 'Mon profil social' }));
+    await user.click(screen.getByRole('button', { name: 'Modifier le profil public' }));
 
     const friendsVisibility = screen.getByRole('radio', { name: 'Visible par les amis' });
+    await waitFor(() => expect(screen.getByLabelText('Identifiant public')).toHaveFocus());
     friendsVisibility.focus();
+    expect(friendsVisibility).toHaveFocus();
     await user.keyboard('{ArrowRight}');
+    await waitFor(() => {
+      expect(screen.getByRole('radio', { name: 'Visible via invitation' })).toBeChecked();
+    });
+    await user.click(screen.getByRole('button', { name: 'Enregistrer' }));
 
     await waitFor(() => {
       expect(repository.saveSnapshot).toHaveBeenCalledWith(
@@ -438,6 +455,7 @@ describe('FriendsPrivacyPage', () => {
     const user = userEvent.setup();
     renderPage();
     await user.click(screen.getByRole('button', { name: 'Mon profil social' }));
+    await user.click(screen.getByRole('button', { name: 'Modifier le profil public' }));
 
     await user.clear(screen.getByLabelText('Identifiant public'));
     await user.type(screen.getByLabelText('Identifiant public'), '@nouveau.handle');
@@ -466,6 +484,7 @@ describe('FriendsPrivacyPage', () => {
     });
     renderPage({ lookupGateway: { lookupByHandle } });
     await user.click(screen.getByRole('button', { name: 'Mon profil social' }));
+    await user.click(screen.getByRole('button', { name: 'Modifier le profil public' }));
 
     const input = screen.getByLabelText('Identifiant public');
     await user.clear(input);
@@ -484,6 +503,7 @@ describe('FriendsPrivacyPage', () => {
     const user = userEvent.setup();
     renderPage({ lookupGateway: createFoundSocialUserLookupGateway([]) });
     await user.click(screen.getByRole('button', { name: 'Mon profil social' }));
+    await user.click(screen.getByRole('button', { name: 'Modifier le profil public' }));
 
     const input = screen.getByLabelText('Identifiant public');
     const save = screen.getByRole('button', { name: 'Enregistrer' });
@@ -771,7 +791,7 @@ describe('FriendsPrivacyPage', () => {
       },
     };
 
-    render(
+    renderWithDataRouter(
       <FriendsPrivacyPage
         initialSnapshot={detailedSnapshot}
         initialIdentity={identity}
@@ -821,7 +841,7 @@ describe('FriendsPrivacyPage', () => {
       },
     }, 'social-user:lea' as EntityId, 'detailed', '2026-07-08T12:00:00.000Z');
 
-    render(
+    renderWithDataRouter(
       <FriendsPrivacyPage
         initialSnapshot={detailedSnapshot}
         initialIdentity={identity}
@@ -1072,6 +1092,7 @@ describe('FriendsPrivacyPage', () => {
     });
 
     await user.click(screen.getByRole('button', { name: 'Mon profil social' }));
+    await user.click(screen.getByRole('button', { name: 'Modifier le profil public' }));
     expect(screen.getByRole('radio', { name: 'Profil privé' })).toBeChecked();
     expect(screen.getByText('Partage : Résumé')).toBeInTheDocument();
     expect(screen.getByText(/nouvelles relations voient un résumé par défaut/u)).toBeInTheDocument();
@@ -1194,7 +1215,7 @@ describe('résilience sociale A23', () => {
       })),
     };
 
-    render(
+    renderWithDataRouter(
       <FriendsPrivacyPage
         repository={repository}
         identityRepository={identityRepository}
@@ -1268,7 +1289,7 @@ describe('résilience sociale A23', () => {
       })),
     };
 
-    render(
+    renderWithDataRouter(
       <FriendsPrivacyPage
         repository={repository}
         identityRepository={identityRepository}
