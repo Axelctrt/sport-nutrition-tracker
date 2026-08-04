@@ -28,6 +28,7 @@ import { getWorkoutSessionTitle } from '@/application/strength/workoutSessionSer
 import { routePaths, workoutSessionPath } from '@/app/routePaths';
 import type { LocalDate } from '@/domain/models/common';
 import type { StrengthSessionStyle } from '@/domain/models/strength';
+import { EndurancePlanningCreateForm } from '@/features/strength-planning/components/EndurancePlanningCreateForm';
 import { EndurancePlanningPanel } from '@/features/strength-planning/components/EndurancePlanningPanel';
 import { RepeatTrainingWeekPanel } from '@/features/strength-planning/components/RepeatTrainingWeekPanel';
 import { WeeklyPlanningSessionCard } from '@/features/strength-planning/components/WeeklyPlanningSessionCard';
@@ -36,7 +37,6 @@ import { inputClassName } from '@/shared/forms/formStyles';
 import { useToast } from '@/shared/toast/useToast';
 import { BottomSheet } from '@/shared/ui/BottomSheet';
 import { Button } from '@/shared/ui/Button';
-import { Card } from '@/shared/ui/Card';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 import { PageSkeleton } from '@/shared/ui/PageSkeleton';
@@ -613,11 +613,18 @@ export function WeeklyPlanningPage() {
 
         {planningMode === 'endurance' ? (
           <div>
-            <Button className="mb-2" size="sm" variant="ghost" onClick={() => setPlanningMode('choice')}>
+            <Button className="mb-4" size="sm" variant="ghost" onClick={() => setPlanningMode('choice')}>
               <ArrowLeft aria-hidden="true" className="size-4" />
               Choisir un autre type
             </Button>
-            <EndurancePlanningPanel weekStart={weekStart} />
+            <EndurancePlanningCreateForm
+              initialDate={scheduledDate}
+              onSaved={(session) => {
+                setScheduledDate(session.date);
+                goToDate(session.date);
+                closePlanning();
+              }}
+            />
           </div>
         ) : null}
       </BottomSheet>
