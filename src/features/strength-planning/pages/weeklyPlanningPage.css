@@ -1,0 +1,7 @@
+.planning-overview-only [aria-label="Planifier une activité d’endurance"] {
+  display: none;
+}
+
+.planning-create-sheet [data-bottom-sheet-content] {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
