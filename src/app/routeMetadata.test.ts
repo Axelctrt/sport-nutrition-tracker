@@ -8,7 +8,7 @@ describe('getRouteTitle', () => {
     expect(getRouteTitle('/progression')).toBe('Progression');
     expect(getRouteTitle('/analytics')).toBe('Analyses');
     expect(getRouteTitle('/history')).toBe('Historique général');
-    expect(getRouteTitle('/strength/planning')).toBe('Planning de musculation');
+    expect(getRouteTitle('/strength/planning')).toBe('Planning sportif');
     expect(getRouteTitle('/activities/templates')).toBe('Modèles d’endurance');
     expect(getRouteTitle('/settings/dashboard')).toBe('Affichage de l’Accueil');
     expect(getRouteTitle('/settings/sync-prototype')).toBe('Compte de synchronisation');
