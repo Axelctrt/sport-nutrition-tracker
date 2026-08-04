@@ -9,16 +9,18 @@ import { RouterProvider, createMemoryRouter } from 'react-router-dom';
 
 import { GoalsPage } from '@/features/goals/pages/GoalsPage';
 import type { GoalProgressView } from '@/application/goals/goalProgressService';
+import type { GoalMetric } from '@/domain/goals/goalState';
 
 function view(
   status: GoalProgressView['goal']['status'],
   id: string,
+  metric: GoalMetric = 'totalSteps',
 ): GoalProgressView {
   return {
     goal: {
       id,
       title: `Objectif ${id}`,
-      metric: 'totalSteps',
+      metric,
       targetValue: 10_000,
       startDate: '2026-06-01',
       status,
@@ -80,6 +82,29 @@ describe('GoalsPage', () => {
     ).toBeInTheDocument();
     expect(
       screen.queryByText('Objectif actif'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('propose une action contextuelle uniquement pour les objectifs actifs', async () => {
+    renderGoals(
+      <GoalsPage
+        loadProgress={() =>
+          Promise.resolve([
+            view('active', 'poids', 'weightTarget'),
+            view('paused', 'pas-en-pause', 'totalSteps'),
+          ])
+        }
+      />,
+    );
+
+    expect(
+      await screen.findByText('Objectif poids'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: 'Ajouter une pesée' }),
+    ).toHaveAttribute('href', '/?action=weight');
+    expect(
+      screen.queryByRole('link', { name: 'Saisir les pas' }),
     ).not.toBeInTheDocument();
   });
 
