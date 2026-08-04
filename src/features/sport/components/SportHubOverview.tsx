@@ -59,7 +59,7 @@ export function SportHubOverview({
             Aujourd’hui
           </h2>
           <Link
-            to={`${routePaths.weeklyPlanning}?date=${encodeURIComponent(snapshot.today)}&section=upcoming`}
+            to={`${routePaths.weeklyPlanning}?date=${encodeURIComponent(snapshot.today)}&action=plan`}
             className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl bg-brand-700 px-3 text-sm font-semibold text-white hover:bg-brand-800 dark:bg-brand-600 dark:hover:bg-brand-500"
           >
             <Plus aria-hidden="true" className="size-4" />
@@ -186,7 +186,7 @@ export function SportHubOverview({
             className="flex min-h-20 items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 hover:border-brand-300 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-brand-700"
           >
             <CalendarDays aria-hidden="true" className="size-5 shrink-0 text-brand-700 dark:text-brand-300" />
-            <span className="font-semibold text-slate-950 dark:text-white">Planification</span>
+            <span className="font-semibold text-slate-950 dark:text-white">Planning sportif</span>
           </Link>
           <button
             type="button"
