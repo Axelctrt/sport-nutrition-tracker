@@ -22,6 +22,24 @@ release GitHub stable identifient le même état.
 | PWA | installation, hors ligne, mise à jour explicite et conservation des données |
 | Photo nutrition | estimation manuelle et proxy IA optionnel avec consentement |
 
+## Intégré à `develop`, non publié
+
+La PR #24 est fusionnée dans `develop` au commit
+`f66efc2798117e861c7b59b66b50ab1cd88ba6bc`. Elle n’est pas encore présente
+dans `main` ni en production.
+
+Elle ajoute :
+
+- un profil général consultable en lecture seule avant modification ;
+- une surface d’édition dédiée avec confirmation d’abandon ;
+- une carte `Profil social` initialement en lecture seule ;
+- une action explicite `Modifier` pour le profil social ;
+- le statut de disponibilité de l’identifiant public directement sous le
+  champ ;
+- un feedback de succès temporaire unique ;
+- la conservation de l’isolation locale et du comportement cloud atomique des
+  espaces compte.
+
 ## Limites actuelles
 
 - Les flags de synchronisation réels sont prudents et désactivés par défaut.
@@ -31,8 +49,9 @@ release GitHub stable identifient le même état.
   n’est pas un journal automatique.
 - Les photos de progression restent locales : aucune image cloud, sociale ou
   analysée par IA. Leur archive est séparée de la sauvegarde JSON générale.
-- Le statut de disponibilité de l’identifiant public reste sous les actions ;
-  son rapprochement avec le champ est une amélioration UX non bloquante.
+- Dans la production 0.37.0, le statut de disponibilité de l’identifiant public
+  reste dans son ancien emplacement. La PR #24 corrige ce point dans `develop`,
+  sans publication en production à ce stade.
 - La version 0.36.0 reste uniquement une référence historique de repli.
 - Les documents versionnés et artefacts de préparation décrivent parfois une
   étape historique révolue : l’état courant doit être vérifié dans le code et
@@ -40,8 +59,9 @@ release GitHub stable identifient le même état.
 
 ## Planifié ou à étudier
 
-L’audit global en lecture seule doit évaluer `Planning hebdomadaire`,
-`Objectifs` et la normalisation transverse avant toute évolution fonctionnelle.
+Le prochain cadrage doit arbitrer entre `Planning hebdomadaire`, `Objectifs` ou
+un audit transverse préalable de leur articulation et de la normalisation
+globale de SportPilot.
 
 Voir [`../roadmap/PLANNED_FEATURES.md`](../roadmap/PLANNED_FEATURES.md). La
 présence d’une idée dans ce catalogue n’autorise pas son implémentation.

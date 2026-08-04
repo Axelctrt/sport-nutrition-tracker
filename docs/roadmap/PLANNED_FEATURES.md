@@ -50,16 +50,41 @@ La PR #21 a livré `develop` dans `main`. Le commit publié
 `v0.37.0`, la release GitHub stable et la production Cloudflare Pages. Aucune
 migration D1 n’a été exécutée.
 
-## Planifié — audit global UX et structure fonctionnelle
+## Intégré à `develop`, non publié — Profil, Amis et Confidentialité
 
-Un audit en lecture seule doit évaluer la structure de `Planning hebdomadaire`
-et `Objectifs`, ainsi que la normalisation globale de SportPilot. Il doit
-produire un rapport de décision et une roadmap de PR limitées, sans branche,
-commit ou PR fonctionnelle avant validation explicite.
+La PR #24 a été fusionnée dans `develop` au commit
+`f66efc2798117e861c7b59b66b50ab1cd88ba6bc`. Son HEAD fonctionnel validé est
+`6eed04863ff2c11611aac281fc04a91011f8a175`.
 
-Amélioration UX non bloquante à conserver dans le périmètre d’analyse : dans la
-page Amis, déplacer le statut de disponibilité de l’identifiant public
-immédiatement sous le champ de saisie, avant les actions Copier et Enregistrer.
+Le périmètre intégré est limité à :
+
+- un profil général initialement consultable en lecture seule ;
+- une action `Modifier` ouvrant une surface d’édition dédiée ;
+- le même contrat lecture seule / édition pour le profil social ;
+- la protection des modifications non enregistrées ;
+- le statut de disponibilité de l’identifiant public directement sous son
+  champ ;
+- un toast temporaire unique après succès ;
+- l’absence de publication cloud en espace local ;
+- le maintien d’un enregistrement cloud atomique en espace compte.
+
+Cette évolution n’est pas encore présente dans `main` et n’est pas publiée en
+production. La Preview validée était
+`https://b2381e88.sportpilot-pages.pages.dev`.
+
+## Planifié — suite UX et structure fonctionnelle
+
+La prochaine évolution fonctionnelle n’est pas encore ordonnée dans une source
+canonique. Le prochain cadrage doit choisir entre :
+
+- un audit ciblé et une première PR sur `Planning hebdomadaire` ;
+- un audit ciblé et une première PR sur `Objectifs` ;
+- un audit transverse préalable de leur articulation et de la normalisation
+  globale de SportPilot.
+
+Le cadrage doit produire un rapport de décision et une roadmap de PR limitées.
+Aucune branche, aucun commit et aucune PR fonctionnelle ne sont autorisés avant
+validation explicite du choix et du périmètre.
 
 ## Hors périmètre et abandonné pour cette séquence
 
