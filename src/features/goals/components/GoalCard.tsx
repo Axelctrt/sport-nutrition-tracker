@@ -1,5 +1,6 @@
 import {
   Archive,
+  ArrowUpRight,
   CalendarClock,
   CheckCircle2,
   Edit3,
@@ -7,6 +8,7 @@ import {
   Play,
   Trash2,
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 import {
   getGoalMetricDefinition,
@@ -16,6 +18,7 @@ import type { GoalProgressView } from '@/application/goals/goalProgressService';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { formatGoalValue } from '@/features/goals/utils/formatGoalValue';
+import { getGoalContextAction } from '@/features/goals/utils/goalAction';
 
 interface GoalCardProps {
   view: GoalProgressView;
@@ -45,6 +48,7 @@ export function GoalCard({
 }: GoalCardProps) {
   const { goal } = view;
   const definition = getGoalMetricDefinition(goal.metric);
+  const contextAction = getGoalContextAction(goal.metric);
 
   return (
     <Card className="p-4 sm:p-5">
@@ -176,6 +180,16 @@ export function GoalCard({
       </div>
 
       <div className="mt-4 flex flex-wrap gap-2">
+        {goal.status === 'active' ? (
+          <Link
+            to={contextAction.path}
+            className="sp-button inline-flex min-h-[var(--sp-control-height-sm)] items-center justify-center gap-2 rounded-[var(--sp-radius-control)] px-3 text-sm font-semibold"
+          >
+            <ArrowUpRight aria-hidden="true" className="size-4" />
+            {contextAction.label}
+          </Link>
+        ) : null}
+
         <Button
           size="sm"
           variant="secondary"
