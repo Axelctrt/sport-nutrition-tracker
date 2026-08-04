@@ -1,0 +1,48 @@
+name: PR45 targeted validation
+
+on:
+  push:
+    branches:
+      - agent/planning-sport-ux
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr45-targeted-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  targeted:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22.16.0
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run targeted unit tests
+        run: >-
+          npm run test --
+          src/features/strength-planning/pages/WeeklyPlanningPage.test.tsx
+          src/features/sport/components/SportHubOverview.test.tsx
+          src/app/routeMetadata.test.ts
+
+      - name: Build application
+        run: npm run build
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run targeted mobile E2E
+        run: npx playwright test e2e/weekly-planning.spec.ts --project=chromium-mobile-360
