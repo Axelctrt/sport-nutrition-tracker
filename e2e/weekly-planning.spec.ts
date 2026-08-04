@@ -60,6 +60,7 @@ test('ouvre Prévoir en création et planifie une activité d’endurance', asyn
   await expect(enduranceDialog).toBeHidden();
   await expect(page.getByText('Activité planifiée', { exact: true })).toBeVisible();
   await page.getByText('Course, natation, vélo et cardio', { exact: true }).click();
+  await page.getByText('1 activité', { exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Footing Preview' })).toBeVisible();
   await expectNoCriticalHorizontalOverflow(page);
 });
