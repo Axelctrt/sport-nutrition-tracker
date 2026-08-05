@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, vi } from 'vitest';
 import type { WeightEntry } from '@/domain/models/weight';
@@ -49,6 +49,41 @@ describe('WeightHistoryEntryCard', () => {
     expect(onEdit).toHaveBeenCalledWith(entry);
   });
 
+  it('rend les actions canoniques dans l’ordre avec un séparateur avant la suppression', async () => {
+    const user = userEvent.setup();
+    const onEdit = vi.fn();
+    const onDelete = vi.fn();
+
+    render(
+      <WeightHistoryEntryCard
+        entry={entry}
+        previousWeightKg={undefined}
+        onEdit={onEdit}
+        onDelete={onDelete}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: /Actions pour la pesée/i }));
+
+    const menu = screen.getByRole('menu', { name: /Actions pour la pesée/i });
+    const actions = within(menu).getAllByRole('menuitem');
+    const editAction = within(menu).getByRole('menuitem', { name: 'Modifier' });
+    const deleteAction = within(menu).getByRole('menuitem', { name: 'Supprimer' });
+    expect(actions.map((action) => action.textContent)).toEqual(['Modifier', 'Supprimer']);
+
+    const separator = within(menu).getByRole('separator');
+    expect(separator.previousElementSibling).toBe(editAction);
+    expect(separator.nextElementSibling).toBe(deleteAction);
+
+    await user.click(editAction);
+    expect(onEdit).toHaveBeenCalledWith(entry);
+    expect(screen.queryByRole('menu', { name: /Actions pour la pesée/i })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /Actions pour la pesée/i }));
+    await user.click(screen.getByRole('menuitem', { name: 'Supprimer' }));
+    expect(onDelete).toHaveBeenCalledWith(entry);
+  });
+
   it('rend les actions dans une couche au-dessus des pesées suivantes', async () => {
     const user = userEvent.setup();
 
@@ -67,26 +102,34 @@ describe('WeightHistoryEntryCard', () => {
     const popover = menu.parentElement;
     expect(popover?.parentElement).toBe(document.body);
     expect(popover).toHaveClass('fixed', 'z-[120]');
-
-    await user.click(screen.getByRole('button', { name: 'Modifier' }));
-    expect(screen.queryByRole('menu', { name: /Actions pour la pesée/i })).not.toBeInTheDocument();
   });
 
-  it('regroupe la suppression dans les actions secondaires', async () => {
+  it('désactive les actions et affiche le libellé occupé pendant la suppression', async () => {
     const user = userEvent.setup();
+    const onEdit = vi.fn();
     const onDelete = vi.fn();
 
     render(
       <WeightHistoryEntryCard
         entry={entry}
         previousWeightKg={undefined}
-        onEdit={vi.fn()}
+        deleting
+        onEdit={onEdit}
         onDelete={onDelete}
       />,
     );
 
     await user.click(screen.getByRole('button', { name: /Actions pour la pesée/i }));
-    await user.click(screen.getByRole('button', { name: 'Supprimer' }));
-    expect(onDelete).toHaveBeenCalledWith(entry);
+
+    const editAction = screen.getByRole('menuitem', { name: 'Modifier' });
+    const deleteAction = screen.getByRole('menuitem', { name: 'Suppression…' });
+    expect(editAction).toBeDisabled();
+    expect(deleteAction).toBeDisabled();
+    expect(deleteAction).toHaveAttribute('aria-busy', 'true');
+
+    await user.click(editAction);
+    await user.click(deleteAction);
+    expect(onEdit).not.toHaveBeenCalled();
+    expect(onDelete).not.toHaveBeenCalled();
   });
 });
