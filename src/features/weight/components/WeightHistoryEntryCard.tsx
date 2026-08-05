@@ -1,7 +1,10 @@
 import { Pencil, Trash2 } from 'lucide-react';
 import type { WeightEntry } from '@/domain/models/weight';
-import { ActionMenu } from '@/shared/ui/ActionMenu';
-import { Button } from '@/shared/ui/Button';
+import {
+  ActionMenu,
+  ActionMenuItem,
+  ActionMenuSeparator,
+} from '@/shared/ui/ActionMenu';
 import { Card } from '@/shared/ui/Card';
 import { cn } from '@/shared/utils/cn';
 import { formatLocalDate } from '@/shared/utils/dates';
@@ -64,26 +67,23 @@ export function WeightHistoryEntryCard({
         </button>
 
         <ActionMenu label={`Actions pour la pesée du ${formatLocalDate(entry.date)}`}>
-          <Button
-            className="w-full justify-start"
-            size="sm"
-            variant="ghost"
+          <ActionMenuItem
+            icon={Pencil}
             disabled={deleting}
             onClick={() => onEdit(entry)}
           >
-            <Pencil aria-hidden="true" className="size-4" />
             Modifier
-          </Button>
-          <Button
-            className="w-full justify-start"
-            size="sm"
-            variant="dangerGhost"
-            disabled={deleting}
+          </ActionMenuItem>
+          <ActionMenuSeparator />
+          <ActionMenuItem
+            icon={Trash2}
+            tone="danger"
+            loading={deleting}
+            loadingLabel="Suppression…"
             onClick={() => onDelete(entry)}
           >
-            <Trash2 aria-hidden="true" className="size-4" />
-            {deleting ? 'Suppression…' : 'Supprimer'}
-          </Button>
+            Supprimer
+          </ActionMenuItem>
         </ActionMenu>
       </div>
 
