@@ -28,12 +28,19 @@ describe('StrengthExerciseLibraryCard', () => {
     expect(screen.queryByRole('menu', { name: 'Actions pour Développé couché' })).not.toBeInTheDocument();
   });
 
-  it('demande confirmation avant archivage', async () => {
+  it('sépare l’archivage et demande confirmation', async () => {
     const user = userEvent.setup();
     const { onArchiveChange } = renderCard();
 
     await user.click(screen.getByRole('button', { name: 'Actions pour Développé couché' }));
-    await user.click(screen.getByRole('button', { name: 'Archiver' }));
+    expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
+      'Modifier',
+      'Dupliquer',
+      'Archiver',
+    ]);
+    expect(screen.getByRole('separator')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('menuitem', { name: 'Archiver' }));
     const dialog = screen.getByRole('alertdialog', { name: 'Archiver cet exercice ?' });
     await user.click(within(dialog).getByRole('button', { name: 'Archiver' }));
 
