@@ -1,6 +1,6 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, vi } from 'vitest';
+import { afterEach, beforeEach, vi } from 'vitest';
 import type { WeightEntry } from '@/domain/models/weight';
 import { WeightHistoryEntryCard } from '@/features/weight/components/WeightHistoryEntryCard';
 
@@ -13,7 +13,22 @@ const entry: WeightEntry = {
   updatedAt: '2026-06-25T08:00:00.000Z',
 };
 
-afterEach(cleanup);
+const originalInnerWidth = window.innerWidth;
+
+beforeEach(() => {
+  Object.defineProperty(window, 'innerWidth', {
+    configurable: true,
+    value: 1024,
+  });
+});
+
+afterEach(() => {
+  cleanup();
+  Object.defineProperty(window, 'innerWidth', {
+    configurable: true,
+    value: originalInnerWidth,
+  });
+});
 
 describe('WeightHistoryEntryCard', () => {
   it('ouvre la modification depuis la carte et affiche la variation', async () => {
@@ -34,7 +49,6 @@ describe('WeightHistoryEntryCard', () => {
     expect(onEdit).toHaveBeenCalledWith(entry);
   });
 
-
   it('rend les actions dans une couche au-dessus des pesées suivantes', async () => {
     const user = userEvent.setup();
 
@@ -50,8 +64,9 @@ describe('WeightHistoryEntryCard', () => {
     await user.click(screen.getByRole('button', { name: /Actions pour la pesée/i }));
 
     const menu = screen.getByRole('menu', { name: /Actions pour la pesée/i });
-    expect(menu.parentElement).toBe(document.body);
-    expect(menu).toHaveClass('fixed', 'z-[120]');
+    const popover = menu.parentElement;
+    expect(popover?.parentElement).toBe(document.body);
+    expect(popover).toHaveClass('fixed', 'z-[120]');
 
     await user.click(screen.getByRole('button', { name: 'Modifier' }));
     expect(screen.queryByRole('menu', { name: /Actions pour la pesée/i })).not.toBeInTheDocument();
