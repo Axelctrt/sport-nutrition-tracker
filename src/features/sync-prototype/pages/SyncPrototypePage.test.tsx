@@ -364,7 +364,7 @@ describe('écran du prototype Dexie Cloud', () => {
     expect(screen.getByText('Détails techniques et historique')).toBeInTheDocument();
   });
 
-  it('intègre l’email et le code OTP directement dans la page', async () => {
+  it('intègre l’email et vérifie automatiquement les huit caractères OTP', async () => {
     const user = userEvent.setup();
     const { client, initialize, login, submitInteraction } =
       createFakeClient();
@@ -396,13 +396,15 @@ describe('écran du prototype Dexie Cloud', () => {
     expect(
       await screen.findByText(/te\*\*\*@example\.com/i),
     ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Valider le code' })).not.toBeInTheDocument();
 
-    await user.type(otpInput, 'A1B2C3');
-    await user.click(
-      screen.getByRole('button', { name: 'Valider le code' }),
-    );
+    await user.type(otpInput, 'A1B2C3D');
+    expect(submitInteraction).not.toHaveBeenCalled();
+    await user.type(otpInput, '4');
 
-    expect(submitInteraction).toHaveBeenCalledWith({ otp: 'A1B2C3' });
+    await waitFor(() => {
+      expect(submitInteraction).toHaveBeenCalledWith({ otp: 'A1B2C3D4' });
+    });
     expect(await screen.findByText('Connecté et opérationnel')).toBeInTheDocument();
     expect(screen.getByText('test@example.com')).toBeInTheDocument();
   });
@@ -424,10 +426,7 @@ describe('écran du prototype Dexie Cloud', () => {
       await screen.findByRole('textbox', {
         name: /code de connexion/i,
       }),
-      '123456',
-    );
-    await user.click(
-      screen.getByRole('button', { name: 'Valider le code' }),
+      '12345678',
     );
 
     await user.click(
@@ -474,13 +473,10 @@ describe('écran du prototype Dexie Cloud', () => {
       await screen.findByRole('textbox', {
         name: /code de connexion/i,
       }),
-      '123456',
+      '12345678',
     );
     await user.click(
-      screen.getByRole('button', { name: 'Valider le code' }),
-    );
-    await user.click(
-      screen.getByRole('button', {
+      await screen.findByRole('button', {
         name: 'Déconnecter le prototype',
       }),
     );
@@ -511,13 +507,10 @@ describe('écran du prototype Dexie Cloud', () => {
       await screen.findByRole('textbox', {
         name: /code de connexion/i,
       }),
-      '123456',
-    );
-    await user.click(
-      screen.getByRole('button', { name: 'Valider le code' }),
+      '12345678',
     );
 
-    const diagnosticsToggle = screen.getByRole('button', {
+    const diagnosticsToggle = await screen.findByRole('button', {
       name: /Diagnostic C3/i,
     });
     expect(diagnosticsToggle).toHaveAttribute('aria-expanded', 'false');
@@ -557,13 +550,10 @@ describe('écran du prototype Dexie Cloud', () => {
     );
     await user.type(
       await screen.findByRole('textbox', { name: /code de connexion/i }),
-      '123456',
-    );
-    await user.click(
-      screen.getByRole('button', { name: 'Valider le code' }),
+      '12345678',
     );
 
-    const toggle = screen.getByRole('button', {
+    const toggle = await screen.findByRole('button', {
       name: /C4 — vraies pesées SportPilot/i,
     });
     expect(toggle).toHaveAttribute('aria-expanded', 'false');
@@ -608,13 +598,10 @@ describe('écran du prototype Dexie Cloud', () => {
       await screen.findByRole('textbox', {
         name: /code de connexion/i,
       }),
-      '123456',
-    );
-    await user.click(
-      screen.getByRole('button', { name: 'Valider le code' }),
+      '12345678',
     );
 
-    const weightSectionToggle = screen.getByRole('button', {
+    const weightSectionToggle = await screen.findByRole('button', {
       name: /Pesées fictives synchronisées/i,
     });
     expect(weightSectionToggle).toHaveAttribute('aria-expanded', 'false');

@@ -65,7 +65,7 @@ describe('OnboardingAccountChoice', () => {
     expect(onChooseAccount).toHaveBeenCalledTimes(1);
   });
 
-  it('connecte le compte puis reprend automatiquement l’onboarding', async () => {
+  it('connecte le compte automatiquement après les huit caractères OTP', async () => {
     const user = userEvent.setup();
     const client = createClient();
     const onContinueWithAccount = vi.fn(async () => undefined);
@@ -78,10 +78,17 @@ describe('OnboardingAccountChoice', () => {
     expect(otpInput).toHaveAttribute('inputmode', 'text');
     expect(otpInput).toHaveAttribute('autocapitalize', 'none');
     expect(otpInput).toHaveAttribute('autocomplete', 'one-time-code');
-    await user.type(otpInput, 'A1B2C3');
-    await user.click(screen.getByRole('button', { name: 'Valider le code' }));
+    expect(screen.queryByRole('button', { name: 'Valider le code' })).not.toBeInTheDocument();
 
-    await waitFor(() => expect(onContinueWithAccount).toHaveBeenCalledTimes(1));
+    await user.type(otpInput, 'A1B2C3D');
+    expect(client.submitInteraction).not.toHaveBeenCalled();
+
+    await user.type(otpInput, '4');
+
+    await waitFor(() => {
+      expect(client.submitInteraction).toHaveBeenCalledWith({ otp: 'A1B2C3D4' });
+      expect(onContinueWithAccount).toHaveBeenCalledTimes(1);
+    });
     expect(await screen.findByText(/maya@example.com/)).toBeInTheDocument();
   });
 

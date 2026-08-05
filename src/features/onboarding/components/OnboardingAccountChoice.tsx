@@ -1,4 +1,4 @@
-import { ArrowLeft, Cloud, CloudOff, KeyRound, LogOut, Mail, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Cloud, CloudOff, LogOut, Mail, ShieldCheck } from 'lucide-react';
 import { type FormEvent, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { routePaths } from '@/app/routePaths';
 import { prepareConnectedOnboardingAccount } from '@/features/onboarding/account/prepareConnectedOnboardingAccount';
@@ -12,6 +12,7 @@ import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { FormField } from '@/shared/ui/FormField';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
+import { OTP_CODE_LENGTH, OtpCodeInput } from '@/shared/ui/OtpCodeInput';
 
 interface OnboardingAccountChoiceProps {
   screen: 'choice' | 'connection';
@@ -92,6 +93,7 @@ export function OnboardingAccountChoice({
   >();
   const cancelledLoginRef = useRef(false);
   const handledConnectedRef = useRef(false);
+  const lastSubmittedOtpRef = useRef<string>();
 
   const snapshot = useSyncExternalStore(
     client?.subscribe ?? (() => () => undefined),
@@ -130,6 +132,22 @@ export function OnboardingAccountChoice({
   useEffect(() => {
     if (fieldError && actionStatus === 'otp') setActionStatus('idle');
   }, [actionStatus, fieldError]);
+
+  useEffect(() => {
+    if (
+      !client
+      || interaction?.type !== 'otp'
+      || otp.length !== OTP_CODE_LENGTH
+      || actionStatus === 'otp'
+      || actionStatus === 'preparing'
+      || lastSubmittedOtpRef.current === otp
+    ) return;
+
+    lastSubmittedOtpRef.current = otp;
+    setFeedback(undefined);
+    setActionStatus('otp');
+    client.submitInteraction({ otp });
+  }, [actionStatus, client, interaction?.type, otp]);
 
   useEffect(() => {
     if (
@@ -186,6 +204,8 @@ export function OnboardingAccountChoice({
       return;
     }
 
+    setOtp('');
+    lastSubmittedOtpRef.current = undefined;
     setFeedback(undefined);
     setActionStatus('email');
 
@@ -213,21 +233,18 @@ export function OnboardingAccountChoice({
       });
   };
 
-  const handleOtpSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!client) return;
-    const normalizedOtp = otp.trim();
-    if (!normalizedOtp || actionStatus === 'otp' || actionStatus === 'preparing') return;
-
-    setFeedback(undefined);
-    setActionStatus('otp');
-    client.submitInteraction({ otp: normalizedOtp });
+  const handleOtpChange = (nextOtp: string) => {
+    if (nextOtp.length < OTP_CODE_LENGTH) {
+      lastSubmittedOtpRef.current = undefined;
+    }
+    setOtp(nextOtp);
   };
 
   const handleCancelInteraction = () => {
     if (!client) return;
     cancelledLoginRef.current = true;
     client.cancelInteraction();
+    lastSubmittedOtpRef.current = undefined;
     setOtp('');
     setActionStatus('idle');
     setFeedback(undefined);
@@ -240,6 +257,7 @@ export function OnboardingAccountChoice({
     try {
       await client.logout();
       handledConnectedRef.current = false;
+      lastSubmittedOtpRef.current = undefined;
       setEmail('');
       setOtp('');
       if (showFeedback) {
@@ -371,34 +389,33 @@ export function OnboardingAccountChoice({
           </Button>
         </div>
       ) : interaction?.type === 'otp' ? (
-        <form className="space-y-3" onSubmit={handleOtpSubmit}>
+        <div className="space-y-3">
           <p className="text-sm text-slate-600 dark:text-slate-300">
             Code envoyé à <span className="font-semibold">{email.trim()}</span>
           </p>
           <FormField error={fieldError} id="onboarding-account-otp" label="Code reçu" required>
-            <input
-              autoFocus
-              autoCapitalize="none"
-              autoComplete="one-time-code"
-              autoCorrect="off"
-              className={inputClasses}
-              disabled={actionStatus === 'otp'}
-              id="onboarding-account-otp"
-              inputMode="text"
-              onChange={(event) => setOtp(event.target.value)}
-              placeholder="A1B2C3"
-              spellCheck={false}
-              value={otp}
-            />
+            {(controlProps) => (
+              <OtpCodeInput
+                {...controlProps}
+                autoFocus
+                disabled={actionStatus === 'otp'}
+                onValueChange={handleOtpChange}
+                value={otp}
+              />
+            )}
           </FormField>
-          <Button className="w-full" disabled={!otp.trim() || actionStatus === 'otp'} type="submit">
-            <KeyRound aria-hidden="true" className="size-4" />
-            {actionStatus === 'otp' ? 'Validation…' : 'Valider le code'}
-          </Button>
+          <p
+            aria-live="polite"
+            className="text-center text-xs font-medium text-slate-500 dark:text-slate-400"
+          >
+            {actionStatus === 'otp'
+              ? 'Vérification automatique du code…'
+              : `Le code sera vérifié automatiquement après ${OTP_CODE_LENGTH} caractères.`}
+          </p>
           <Button className="w-full" disabled={actionStatus === 'otp'} onClick={handleCancelInteraction} variant="secondary">
             Modifier l’adresse
           </Button>
-        </form>
+        </div>
       ) : (
         <form className="space-y-3" onSubmit={handleEmailSubmit}>
           <FormField error={fieldError} id="onboarding-account-email" label="Adresse e-mail" required>
