@@ -1,9 +1,13 @@
 import { Archive, Copy, Pencil, Play, RotateCcw } from 'lucide-react';
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
 import type { WorkoutTemplateSummary } from '@/application/strength/workoutTemplateService';
 import { editWorkoutTemplatePath } from '@/app/routePaths';
-import { ActionMenu } from '@/shared/ui/ActionMenu';
+import {
+  ActionMenu,
+  ActionMenuItem,
+  ActionMenuLink,
+  ActionMenuSeparator,
+} from '@/shared/ui/ActionMenu';
 import { Button } from '@/shared/ui/Button';
 import { ConfirmationDialog } from '@/shared/ui/ConfirmationDialog';
 import { ExpandableCard } from '@/shared/ui/ExpandableCard';
@@ -67,18 +71,25 @@ export function WorkoutTemplateCard({ summary, busy = false, onStart, onDuplicat
         )}
         actions={(
           <ActionMenu label={`Actions pour ${template.name}`} width="wide">
-            <Link to={editWorkoutTemplatePath(template.id)} className="inline-flex min-h-10 w-full items-center gap-2 rounded-xl px-3 text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800">
-              <Pencil aria-hidden="true" className="size-4" />
+            <ActionMenuLink to={editWorkoutTemplatePath(template.id)} icon={Pencil}>
               Modifier
-            </Link>
-            <Button className="w-full justify-start" size="sm" variant="ghost" disabled={busy} onClick={() => void onDuplicate(template.id)}>
-              <Copy aria-hidden="true" className="size-4" />
+            </ActionMenuLink>
+            <ActionMenuItem
+              icon={Copy}
+              disabled={busy}
+              onClick={() => void onDuplicate(template.id)}
+            >
               Dupliquer
-            </Button>
-            <Button className="w-full justify-start" size="sm" variant={template.isArchived ? 'ghost' : 'dangerGhost'} disabled={busy} onClick={() => setConfirmationOpen(true)}>
-              {template.isArchived ? <RotateCcw aria-hidden="true" className="size-4" /> : <Archive aria-hidden="true" className="size-4" />}
+            </ActionMenuItem>
+            <ActionMenuSeparator />
+            <ActionMenuItem
+              icon={template.isArchived ? RotateCcw : Archive}
+              tone={template.isArchived ? 'default' : 'danger'}
+              disabled={busy}
+              onClick={() => setConfirmationOpen(true)}
+            >
               {template.isArchived ? 'Réactiver' : 'Archiver'}
-            </Button>
+            </ActionMenuItem>
           </ActionMenu>
         )}
       />
