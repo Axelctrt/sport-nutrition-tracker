@@ -48,18 +48,23 @@ describe('ActivityJournalCard', () => {
     expect(screen.queryByRole('menu', { name: 'Actions pour Footing' })).not.toBeInTheDocument();
   });
 
-  it('regroupe modifier et dupliquer dans le menu secondaire', async () => {
+  it('regroupe les actions neutres et sépare la suppression', async () => {
     const user = userEvent.setup();
     const onDuplicate = vi.fn().mockResolvedValue(undefined);
     renderCard({ onDuplicate });
 
     await user.click(screen.getByRole('button', { name: 'Actions pour Footing' }));
 
-    expect(screen.getByRole('link', { name: 'Modifier' })).toHaveAttribute(
-      'href',
-      '/activities/activity-running/edit',
-    );
-    await user.click(screen.getByRole('button', { name: 'Dupliquer' }));
+    const editItem = screen.getByRole('menuitem', { name: 'Modifier' });
+    expect(editItem).toHaveAttribute('href', '/activities/activity-running/edit');
+    expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
+      'Modifier',
+      'Dupliquer',
+      'Supprimer',
+    ]);
+    expect(screen.getByRole('separator')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('menuitem', { name: 'Dupliquer' }));
     expect(onDuplicate).toHaveBeenCalledWith('activity-running');
   });
 
@@ -69,7 +74,7 @@ describe('ActivityJournalCard', () => {
     renderCard({ onRemove });
 
     await user.click(screen.getByRole('button', { name: 'Actions pour Footing' }));
-    await user.click(screen.getByRole('button', { name: 'Supprimer' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Supprimer' }));
 
     const dialog = screen.getByRole('alertdialog', { name: 'Supprimer cette activité ?' });
     expect(dialog).toBeInTheDocument();
