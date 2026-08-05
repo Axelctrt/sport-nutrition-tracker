@@ -4,8 +4,12 @@ import { Link } from 'react-router-dom';
 import type { RecipeSummary } from '@/application/recipes/recipeService';
 import { addRecipeToJournalPath, editRecipePath } from '@/app/routePaths';
 import type { FoodLibraryNavigationState } from '@/features/food-library/navigation/foodLibraryNavigation';
-import { ActionMenu } from '@/shared/ui/ActionMenu';
-import { Button } from '@/shared/ui/Button';
+import {
+  ActionMenu,
+  ActionMenuItem,
+  ActionMenuLink,
+  ActionMenuSeparator,
+} from '@/shared/ui/ActionMenu';
 import { Card } from '@/shared/ui/Card';
 import { ConfirmationDialog } from '@/shared/ui/ConfirmationDialog';
 import { cn } from '@/shared/utils/cn';
@@ -56,24 +60,22 @@ export function RecipeLibraryCard({
           </div>
 
           <ActionMenu label={`Actions pour ${recipe.name}`}>
-            <Link
+            <ActionMenuLink
               to={editRecipePath(recipe.id)}
               state={navigationState}
-              className="inline-flex min-h-10 w-full items-center gap-2 rounded-xl px-3 text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
+              icon={Pencil}
             >
-              <Pencil aria-hidden="true" className="size-4" />
               Modifier
-            </Link>
-            <Button
-              className="w-full justify-start"
-              size="sm"
-              variant="dangerGhost"
+            </ActionMenuLink>
+            <ActionMenuSeparator />
+            <ActionMenuItem
+              icon={Trash2}
+              tone="danger"
               disabled={deleting}
               onClick={() => setDeleteOpen(true)}
             >
-              <Trash2 aria-hidden="true" className="size-4" />
               Supprimer
-            </Button>
+            </ActionMenuItem>
           </ActionMenu>
         </div>
 

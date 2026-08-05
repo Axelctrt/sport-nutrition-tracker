@@ -36,12 +36,21 @@ describe('RecipeLibraryCard', () => {
     );
   });
 
-  it('confirme la suppression depuis le menu secondaire', async () => {
+  it('normalise les actions et confirme la suppression depuis le menu secondaire', async () => {
     const user = userEvent.setup();
     const onDelete = renderCard();
 
     await user.click(screen.getByRole('button', { name: 'Actions pour Bowl protéiné' }));
-    await user.click(screen.getByRole('button', { name: 'Supprimer' }));
+    const menu = screen.getByRole('menu', { name: 'Actions pour Bowl protéiné' });
+    expect(within(menu).getAllByRole('menuitem').map((item) => item.textContent))
+      .toEqual(['Modifier', 'Supprimer']);
+    expect(within(menu).getByRole('separator')).toBeInTheDocument();
+    expect(within(menu).getByRole('menuitem', { name: 'Modifier' })).toHaveAttribute(
+      'href',
+      '/recipes/recipe-1/edit',
+    );
+
+    await user.click(within(menu).getByRole('menuitem', { name: 'Supprimer' }));
     const dialog = screen.getByRole('alertdialog', { name: 'Supprimer cette recette ?' });
     await user.click(within(dialog).getByRole('button', { name: 'Supprimer' }));
 
