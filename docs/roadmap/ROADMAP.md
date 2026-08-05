@@ -9,7 +9,7 @@ release ou de déploiement.
 - dépôt : `Axelctrt/sport-nutrition-tracker` ;
 - branche de développement inspectée : `develop` ;
 - état consolidé de référence :
-  `develop@e4ff9e1079dda8d48b1289c0905ddbcd6033ac0c` ;
+  `develop@c2948d87401d125f310bfeb275bc800733a4eff7` ;
 - code publié en production 0.37.0 :
   `84fea3d49e68c7d190c00d505502a5c4aa2e672a` ;
 - chantier transverse en cours : issue #50.
@@ -28,8 +28,8 @@ release ou de déploiement.
 | Primitive canonique `ActionMenu` | **Intégrée à `develop`, non publiée** | PR #51 | Utilisation par les domaines métier |
 | Migration des menus Sport | **Intégrée à `develop`, non publiée** | PR #53 et #54, issue #52 clôturée | Aucun reliquat Sport identifié |
 | Migration des menus Nutrition | **Intégrée à `develop`, non publiée** | PR #56 et #57, issue #55 clôturée | Aucun reliquat Nutrition identifié |
-| Migration Progression et inventaire final | **En validation, non intégrée** | issue #58, PR #59 | CI complète, recette Preview et validation propriétaire |
-| Saisie OTP fluide | **Autorisée après Progression** | PR 5 de l’issue #50 | Cadrage et branche distincte après intégration du lot Progression |
+| Migration Progression et inventaire final | **Intégrée à `develop`, non publiée** | PR #59, issue #58 clôturée, merge `c2948d87401d125f310bfeb275bc800733a4eff7` | Maintenir les primitives canoniques |
+| Saisie OTP fluide | **Prochain lot autorisé** | PR 5 de l’issue #50 | Cadrage vérifiable et branche distincte depuis le HEAD réel de `develop` |
 | Renvoi OTP | **Optionnel, non autorisé techniquement à ce stade** | PR 6 de l’issue #50 | Validation préalable du contrat Dexie Cloud |
 
 ## État publié
@@ -61,15 +61,19 @@ Les décisions détaillées figurent dans
 
 ## Prochain jalon
 
-Le jalon fonctionnel actif est la **migration Progression et l’inventaire final
-des menus d’actions** via l’issue #58 et la PR #59.
+Le prochain lot fonctionnel autorisé est la **saisie OTP fluide** définie dans
+l’issue #50.
 
-La PR OTP ne peut démarrer qu’après :
+Le lot Progression a satisfait ses conditions de sortie :
 
-1. une CI complète verte sur le HEAD final de la PR #59 ;
-2. une recette Preview consignée ;
-3. la validation explicite du propriétaire ;
-4. l’intégration autorisée du lot Progression dans `develop`.
+1. CI #642 verte sur le HEAD final de la PR #59 ;
+2. recette Preview mobile et desktop validée par le propriétaire ;
+3. fusion autorisée et effectuée dans `develop` ;
+4. issue #58 clôturée.
+
+Le lot OTP doit partir de
+`develop@c2948d87401d125f310bfeb275bc800733a4eff7` ou d’un HEAD ultérieur
+explicitement vérifié avant création de branche. Le renvoi OTP reste exclu.
 
 ## Garde-fous permanents
 
