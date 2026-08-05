@@ -104,7 +104,6 @@ describe('FoodJournalPage — expérience mobile', () => {
     expect(screen.queryByText('Copier toute la journée vers')).not.toBeInTheDocument();
   });
 
-
   it('ouvre une seule carte de repas à la fois et propose l’ajout principal', async () => {
     const user = userEvent.setup();
     renderJournal();
@@ -176,7 +175,6 @@ describe('FoodJournalPage — expérience mobile', () => {
     });
   });
 
-
   it('répète en un geste le dernier repas équivalent lorsqu’un repas est vide', async () => {
     const user = userEvent.setup();
     await seedLunchEntry('2026-06-23');
@@ -217,7 +215,21 @@ describe('FoodJournalPage — expérience mobile', () => {
     await user.click(await screen.findByRole('button', { name: /^Déjeuner/ }));
     await screen.findByText('Yaourt grec');
     await user.click(screen.getByRole('button', { name: 'Actions pour Yaourt grec' }));
-    await user.click(screen.getByRole('button', { name: 'Modifier la quantité' }));
+
+    const menu = screen.getByRole('menu', { name: 'Actions pour Yaourt grec' });
+    expect(within(menu).getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
+      'Modifier la quantité',
+      'Modifier les détails',
+      'Dupliquer',
+      'Supprimer',
+    ]);
+    expect(within(menu).getAllByRole('separator')).toHaveLength(1);
+    expect(within(menu).getByRole('menuitem', { name: 'Modifier les détails' })).toHaveAttribute(
+      'href',
+      `/food/entries/${entry.id}/edit`,
+    );
+
+    await user.click(within(menu).getByRole('menuitem', { name: 'Modifier la quantité' }));
 
     const quantityInput = screen.getByLabelText('Quantité en g');
     await user.clear(quantityInput);
@@ -241,7 +253,8 @@ describe('FoodJournalPage — expérience mobile', () => {
     await user.click(await screen.findByRole('button', { name: /^Déjeuner/ }));
     await screen.findByText('Yaourt grec');
     await user.click(screen.getByRole('button', { name: 'Actions pour Yaourt grec' }));
-    await user.click(screen.getByRole('button', { name: 'Supprimer' }));
+    const menu = screen.getByRole('menu', { name: 'Actions pour Yaourt grec' });
+    await user.click(within(menu).getByRole('menuitem', { name: 'Supprimer' }));
 
     await waitFor(async () => expect(await repositories.food.getEntryById(entry.id)).toBeUndefined());
     expect(await screen.findByText('Élément déplacé dans la corbeille')).toBeInTheDocument();

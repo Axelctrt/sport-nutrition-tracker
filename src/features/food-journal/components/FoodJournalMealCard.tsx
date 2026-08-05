@@ -9,7 +9,6 @@ import {
   Utensils,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import type { FoodEntryWithProduct, MealJournalSnapshot } from '@/application/food/foodJournalService';
 import {
   addRecipeToJournalPath,
@@ -20,7 +19,12 @@ import { SaveFavoriteMealForm } from '@/features/food-journal/components/SaveFav
 import type { FoodJournalNavigationState } from '@/features/food-journal/navigation/foodJournalNavigation';
 import { mealSlotLabels } from '@/features/food-journal/utils/foodLabels';
 import { inputClassName } from '@/shared/forms/formStyles';
-import { ActionMenu } from '@/shared/ui/ActionMenu';
+import {
+  ActionMenu,
+  ActionMenuItem,
+  ActionMenuLink,
+  ActionMenuSeparator,
+} from '@/shared/ui/ActionMenu';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { cn } from '@/shared/utils/cn';
@@ -149,7 +153,6 @@ export function FoodJournalMealCard({
             )}
           />
         </button>
-
       </div>
 
       {expanded ? (
@@ -219,39 +222,35 @@ export function FoodJournalMealCard({
                       </div>
 
                       <ActionMenu label={`Actions pour ${entryName(item)}`}>
-                        <Button
-                          className="w-full justify-start"
-                          size="sm"
-                          variant="ghost"
+                        <ActionMenuItem
+                          icon={Pencil}
                           onClick={() => beginEdit(item)}
                         >
-                          <Pencil aria-hidden="true" className="size-4" />Modifier la quantité
-                        </Button>
-                        <Link
+                          Modifier la quantité
+                        </ActionMenuItem>
+                        <ActionMenuLink
                           to={editPath}
                           state={navigationState}
-                          className="inline-flex min-h-9 w-full items-center gap-2 rounded-xl px-3 text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
+                          icon={Pencil}
                         >
-                          <Pencil aria-hidden="true" className="size-4" />Modifier les détails
-                        </Link>
-                        <Button
-                          className="w-full justify-start"
-                          size="sm"
-                          variant="ghost"
+                          Modifier les détails
+                        </ActionMenuLink>
+                        <ActionMenuItem
+                          icon={CopyPlus}
                           disabled={busyId === `duplicate-${entry.id}`}
                           onClick={() => void onDuplicate(entry.id)}
                         >
-                          <CopyPlus aria-hidden="true" className="size-4" />Dupliquer
-                        </Button>
-                        <Button
-                          className="w-full justify-start"
-                          size="sm"
-                          variant="dangerGhost"
+                          Dupliquer
+                        </ActionMenuItem>
+                        <ActionMenuSeparator />
+                        <ActionMenuItem
+                          icon={Trash2}
+                          tone="danger"
                           disabled={busyId === `delete-${entry.id}`}
                           onClick={() => void onRemove(item.entry.id)}
                         >
-                          <Trash2 aria-hidden="true" className="size-4" />Supprimer
-                        </Button>
+                          Supprimer
+                        </ActionMenuItem>
                       </ActionMenu>
                     </div>
 
@@ -343,7 +342,6 @@ export function FoodJournalMealCard({
           ) : null}
         </div>
       ) : null}
-
     </Card>
   );
 }
