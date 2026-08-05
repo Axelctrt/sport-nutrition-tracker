@@ -39,6 +39,7 @@ import { Card } from '@/shared/ui/Card';
 import { ConfirmationDialog } from '@/shared/ui/ConfirmationDialog';
 import { FormField } from '@/shared/ui/FormField';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
+import { OTP_CODE_LENGTH, OtpCodeInput } from '@/shared/ui/OtpCodeInput';
 import { formatLocalDate } from '@/shared/utils/dates';
 import { SyncPrototypeDiagnosticsCard } from './SyncPrototypeDiagnosticsCard';
 import { SyncPrototypeSafeguardsCard } from './SyncPrototypeSafeguardsCard';
@@ -253,7 +254,10 @@ function SyncPrototypeRuntime({
   const handleOtpSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const normalizedOtp = otp.trim();
-    if (!normalizedOtp) return;
+    if (
+      normalizedOtp.length !== OTP_CODE_LENGTH
+      || actionStatus === 'otp'
+    ) return;
 
     setActionStatus('otp');
     client.submitInteraction({ otp: normalizedOtp });
@@ -648,25 +652,23 @@ function SyncPrototypeRuntime({
                 label="Code de connexion"
                 required
               >
-                <input
-                  autoCapitalize="none"
-                  autoComplete="one-time-code"
-                  autoCorrect="off"
-                  autoFocus
-                  className={inputClasses}
-                  disabled={actionStatus === 'otp'}
-                  id="sync-prototype-otp"
-                  inputMode="text"
-                  onChange={(event) => setOtp(event.target.value)}
-                  spellCheck={false}
-                  placeholder="Saisir le code reçu"
-                  value={otp}
-                />
+                {(controlProps) => (
+                  <OtpCodeInput
+                    {...controlProps}
+                    autoFocus
+                    disabled={actionStatus === 'otp'}
+                    onValueChange={setOtp}
+                    value={otp}
+                  />
+                )}
               </FormField>
               <div className="flex flex-col gap-2 sm:flex-row">
                 <Button
                   className="w-full sm:w-auto"
-                  disabled={!otp.trim() || actionStatus === 'otp'}
+                  disabled={
+                    otp.length !== OTP_CODE_LENGTH
+                    || actionStatus === 'otp'
+                  }
                   type="submit"
                 >
                   <KeyRound aria-hidden="true" className="size-4" />

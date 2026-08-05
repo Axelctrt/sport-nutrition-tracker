@@ -12,6 +12,7 @@ import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { FormField } from '@/shared/ui/FormField';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
+import { OTP_CODE_LENGTH, OtpCodeInput } from '@/shared/ui/OtpCodeInput';
 
 interface OnboardingAccountChoiceProps {
   screen: 'choice' | 'connection';
@@ -217,7 +218,11 @@ export function OnboardingAccountChoice({
     event.preventDefault();
     if (!client) return;
     const normalizedOtp = otp.trim();
-    if (!normalizedOtp || actionStatus === 'otp' || actionStatus === 'preparing') return;
+    if (
+      normalizedOtp.length !== OTP_CODE_LENGTH
+      || actionStatus === 'otp'
+      || actionStatus === 'preparing'
+    ) return;
 
     setFeedback(undefined);
     setActionStatus('otp');
@@ -376,22 +381,21 @@ export function OnboardingAccountChoice({
             Code envoyé à <span className="font-semibold">{email.trim()}</span>
           </p>
           <FormField error={fieldError} id="onboarding-account-otp" label="Code reçu" required>
-            <input
-              autoFocus
-              autoCapitalize="none"
-              autoComplete="one-time-code"
-              autoCorrect="off"
-              className={inputClasses}
-              disabled={actionStatus === 'otp'}
-              id="onboarding-account-otp"
-              inputMode="text"
-              onChange={(event) => setOtp(event.target.value)}
-              placeholder="A1B2C3"
-              spellCheck={false}
-              value={otp}
-            />
+            {(controlProps) => (
+              <OtpCodeInput
+                {...controlProps}
+                autoFocus
+                disabled={actionStatus === 'otp'}
+                onValueChange={setOtp}
+                value={otp}
+              />
+            )}
           </FormField>
-          <Button className="w-full" disabled={!otp.trim() || actionStatus === 'otp'} type="submit">
+          <Button
+            className="w-full"
+            disabled={otp.length !== OTP_CODE_LENGTH || actionStatus === 'otp'}
+            type="submit"
+          >
             <KeyRound aria-hidden="true" className="size-4" />
             {actionStatus === 'otp' ? 'Validation…' : 'Valider le code'}
           </Button>
