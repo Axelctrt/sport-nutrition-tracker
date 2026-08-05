@@ -8,7 +8,7 @@ autorisés pour la suite.
 
 - dépôt : `Axelctrt/sport-nutrition-tracker` ;
 - état consolidé inspecté :
-  `develop@e4ff9e1079dda8d48b1289c0905ddbcd6033ac0c` ;
+  `develop@c2948d87401d125f310bfeb275bc800733a4eff7` ;
 - version publiée : SportPilot 0.37.0 au commit
   `84fea3d49e68c7d190c00d505502a5c4aa2e672a` ;
 - séquence active : issue #50.
@@ -80,37 +80,34 @@ L’issue #52 est clôturée.
 Les cartes Aliment, Recette, Repas favori et Journal alimentaire utilisent les
 primitives canoniques. L’issue #55 est clôturée.
 
-### En validation, non intégré — Progression, issue #58 et PR #59
+### Terminé et intégré — Progression, issue #58 et PR #59
 
-Le périmètre autorisé est strictement limité à :
+Le menu de `WeightHistoryEntryCard` utilise désormais les primitives
+canoniques :
 
-- migrer le menu de `WeightHistoryEntryCard` vers `ActionMenuItem` ;
-- conserver l’ordre `Modifier`, puis `Supprimer` ;
-- insérer `ActionMenuSeparator` avant l’action destructive ;
-- conserver le ton destructif, le libellé `Suppression…`, les callbacks et les
-  états disabled/loading ;
-- réinventorier les usages métier de `ActionMenu` afin de confirmer l’absence
-  de boutons locaux `ghost` ou `dangerGhost` directement dans les menus.
+- `ActionMenuItem` pour `Modifier` ;
+- `ActionMenuSeparator` avant l’action destructive ;
+- `ActionMenuItem` avec ton destructif pour `Supprimer` ;
+- ordre, callbacks, fermeture et état `Suppression…` conservés ;
+- actions désactivées pendant la suppression.
 
-Critères de sortie :
+Conditions de sortie validées :
 
-- sémantique `menuitem` ;
-- séparateur immédiatement avant l’action destructive ;
-- fermeture du menu après activation ;
-- suppression non réentrante ;
-- aucun débordement à 320, 360, 393 et 412 px ;
-- tests ciblés, build, audits, PWA et Playwright verts ;
-- recette Preview consignée ;
-- validation explicite du propriétaire avant toute fusion.
+- sémantique `menuitem` et séparateur canonique ;
+- tests ciblés, build, audits, PWA et Playwright verts dans la CI #642 ;
+- recette Preview mobile et desktop validée par le propriétaire ;
+- issue #58 clôturée ;
+- fusion squash dans `develop` au commit
+  `c2948d87401d125f310bfeb275bc800733a4eff7`.
 
-Hors périmètre : calculs et données de poids, photos de progression, formules
-caloriques, thèmes, IA, Dexie, Dexie Cloud, D1, migrations, `main`, release et
-production.
+Aucun calcul ou donnée de poids, aucune photo de progression, formule
+calorique, thème, capacité IA, donnée Dexie, Dexie Cloud ou D1 n’a été modifié.
 
-## Autorisé après Progression — saisie OTP fluide
+## Prochain lot autorisé — saisie OTP fluide
 
-Ce lot constitue la PR 5 de l’issue #50. Il devra partir du `develop` réellement
-intégré après validation du lot Progression et rester dans une branche dédiée.
+Ce lot constitue la PR 5 de l’issue #50. Il doit partir de
+`develop@c2948d87401d125f310bfeb275bc800733a4eff7` ou d’un HEAD ultérieur
+explicitement vérifié, dans une branche dédiée.
 
 ### Résultat attendu
 
@@ -130,7 +127,8 @@ intégré après validation du lot Progression et rester dans une branche dédi�
 - autofill compatible lorsque le navigateur le fournit ;
 - aucun débordement aux largeurs mobiles de référence ;
 - fonctionnement local-first et hors ligne inchangé ;
-- tests unitaires ciblés, build et E2E pertinents verts.
+- tests unitaires ciblés, build et E2E pertinents verts ;
+- recette Preview détaillée fournie au propriétaire avant validation.
 
 ### Hors périmètre
 
