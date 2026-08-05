@@ -34,9 +34,11 @@ describe('onboarding compte compact et cohérent', () => {
   it('utilise la saisie alphanumérique partagée pour tous les codes Dexie Cloud', () => {
     for (const source of [accountChoiceSource, syncPrototypeSource]) {
       expect(source).toContain('<OtpCodeInput');
+      expect(source).toContain('Vérification automatique du code');
       expect(source).not.toContain('inputMode="numeric"');
     }
 
+    expect(otpCodeInputSource).toContain('OTP_CODE_LENGTH = 8');
     expect(otpCodeInputSource).toContain("autoComplete ?? 'one-time-code'");
     expect(otpCodeInputSource).toContain("inputMode ?? 'text'");
     expect(otpCodeInputSource).toContain("autoCapitalize ?? 'none'");
