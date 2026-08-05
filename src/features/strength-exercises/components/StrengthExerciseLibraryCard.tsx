@@ -11,8 +11,12 @@ import {
   muscleGroupLabel,
   movementTypeLabel,
 } from '@/features/strength-exercises/utils/exerciseLabels';
-import { ActionMenu } from '@/shared/ui/ActionMenu';
-import { Button } from '@/shared/ui/Button';
+import {
+  ActionMenu,
+  ActionMenuItem,
+  ActionMenuLink,
+  ActionMenuSeparator,
+} from '@/shared/ui/ActionMenu';
 import { Card } from '@/shared/ui/Card';
 import { ConfirmationDialog } from '@/shared/ui/ConfirmationDialog';
 import { cn } from '@/shared/utils/cn';
@@ -64,35 +68,29 @@ export function StrengthExerciseLibraryCard({
 
               <ActionMenu label={`Actions pour ${exercise.name}`} width="wide">
                 {exercise.source === 'user' ? (
-                  <Link
-                    to={editStrengthExercisePath(exercise.id)}
-                    className="inline-flex min-h-10 w-full items-center gap-2 rounded-xl px-3 text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
-                  >
-                    <Pencil aria-hidden="true" className="size-4" />
+                  <ActionMenuLink to={editStrengthExercisePath(exercise.id)} icon={Pencil}>
                     Modifier
-                  </Link>
+                  </ActionMenuLink>
                 ) : null}
-                <Button
-                  className="w-full justify-start"
-                  size="sm"
-                  variant="ghost"
+                <ActionMenuItem
+                  icon={Copy}
                   disabled={busy}
                   onClick={() => void onDuplicate(exercise.id)}
                 >
-                  <Copy aria-hidden="true" className="size-4" />
                   Dupliquer
-                </Button>
+                </ActionMenuItem>
                 {exercise.source === 'user' ? (
-                  <Button
-                    className="w-full justify-start"
-                    size="sm"
-                    variant={exercise.isArchived ? 'ghost' : 'dangerGhost'}
-                    disabled={busy}
-                    onClick={() => setConfirmationOpen(true)}
-                  >
-                    {exercise.isArchived ? <RotateCcw aria-hidden="true" className="size-4" /> : <Archive aria-hidden="true" className="size-4" />}
-                    {exercise.isArchived ? 'Réactiver' : 'Archiver'}
-                  </Button>
+                  <>
+                    <ActionMenuSeparator />
+                    <ActionMenuItem
+                      icon={exercise.isArchived ? RotateCcw : Archive}
+                      tone={exercise.isArchived ? 'default' : 'danger'}
+                      disabled={busy}
+                      onClick={() => setConfirmationOpen(true)}
+                    >
+                      {exercise.isArchived ? 'Réactiver' : 'Archiver'}
+                    </ActionMenuItem>
+                  </>
                 ) : null}
               </ActionMenu>
             </div>
