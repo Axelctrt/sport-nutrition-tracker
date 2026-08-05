@@ -32,10 +32,10 @@ export type ActionMenuItemTone = 'default' | 'danger';
 
 interface CanonicalActionProps {
   readonly children: ReactNode;
-  readonly icon?: LucideIcon;
+  readonly icon?: LucideIcon | undefined;
   readonly tone?: ActionMenuItemTone;
   readonly loading?: boolean;
-  readonly loadingLabel?: string;
+  readonly loadingLabel?: string | undefined;
 }
 
 export interface ActionMenuItemProps
