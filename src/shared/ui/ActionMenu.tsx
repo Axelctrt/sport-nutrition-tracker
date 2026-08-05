@@ -243,6 +243,7 @@ export function ActionMenu({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
+  const desktopInitialFocusAppliedRef = useRef(false);
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState<MenuPosition>();
   const menuId = useId();
@@ -322,9 +323,18 @@ export function ActionMenu({
   }, [open, tabletViewport]);
 
   useEffect(() => {
-    if (!open || !tabletViewport || !position) return;
-    const firstAction = menuRef.current?.querySelector<HTMLElement>(MENU_ITEM_SELECTOR);
-    firstAction?.focus();
+    desktopInitialFocusAppliedRef.current = false;
+  }, [open, tabletViewport]);
+
+  useEffect(() => {
+    if (
+      !open
+      || !tabletViewport
+      || !position
+      || desktopInitialFocusAppliedRef.current
+    ) return;
+    desktopInitialFocusAppliedRef.current = true;
+    menuRef.current?.querySelector<HTMLElement>(MENU_ITEM_SELECTOR)?.focus();
   }, [open, position, tabletViewport]);
 
   useEffect(() => {
