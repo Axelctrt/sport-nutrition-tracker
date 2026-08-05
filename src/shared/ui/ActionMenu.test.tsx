@@ -28,34 +28,23 @@ function rect(values: Partial<DOMRect>): DOMRect {
 
 const originalInnerHeight = window.innerHeight;
 const originalInnerWidth = window.innerWidth;
-const originalMatchMedia = window.matchMedia;
 
-function mockViewport(tablet: boolean) {
-  Object.defineProperty(window, 'matchMedia', {
+function setViewportWidth(width: number) {
+  Object.defineProperty(window, 'innerWidth', {
     configurable: true,
-    value: vi.fn((query: string) => ({
-      matches: query === '(min-width: 640px)' ? tablet : false,
-      media: query,
-      onchange: null,
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-      dispatchEvent: vi.fn(() => false),
-    })),
+    value: width,
   });
 }
 
 afterEach(() => {
   Object.defineProperty(window, 'innerHeight', { configurable: true, value: originalInnerHeight });
   Object.defineProperty(window, 'innerWidth', { configurable: true, value: originalInnerWidth });
-  Object.defineProperty(window, 'matchMedia', { configurable: true, value: originalMatchMedia });
   vi.restoreAllMocks();
 });
 
 describe('ActionMenu', () => {
   it('rend le popover tablette dans un portail puis le ferme après une action', async () => {
-    mockViewport(true);
+    setViewportWidth(1024);
     const user = userEvent.setup();
     render(
       <div data-testid="card" className="overflow-hidden">
@@ -76,10 +65,9 @@ describe('ActionMenu', () => {
   });
 
   it('place le popover au-dessus du déclencheur lorsqu’il manque de la place en bas', async () => {
-    mockViewport(true);
+    setViewportWidth(700);
     const user = userEvent.setup();
     Object.defineProperty(window, 'innerHeight', { configurable: true, value: 700 });
-    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 390 });
 
     render(
       <ActionMenu label="Actions">
@@ -92,8 +80,8 @@ describe('ActionMenu', () => {
     vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue(rect({
       top: 640,
       bottom: 684,
-      left: 330,
-      right: 374,
+      left: 630,
+      right: 674,
     }));
     await user.click(trigger);
 
@@ -107,7 +95,7 @@ describe('ActionMenu', () => {
   });
 
   it('se ferme avec Échap et rend le focus au bouton', async () => {
-    mockViewport(true);
+    setViewportWidth(1024);
     const user = userEvent.setup();
     render(
       <ActionMenu label="Actions">
@@ -124,7 +112,7 @@ describe('ActionMenu', () => {
   });
 
   it('ouvre un Bottom Sheet sur mobile et place le focus sur la première action', async () => {
-    mockViewport(false);
+    setViewportWidth(390);
     const user = userEvent.setup();
     render(
       <ActionMenu label="Actions pour Push 1">
@@ -148,7 +136,7 @@ describe('ActionMenu', () => {
   });
 
   it('normalise les lignes, groupes, liens et actions destructives', async () => {
-    mockViewport(true);
+    setViewportWidth(1024);
     const user = userEvent.setup();
     render(
       <MemoryRouter>
@@ -175,7 +163,7 @@ describe('ActionMenu', () => {
   });
 
   it('permet la navigation par flèches, Début et Fin', async () => {
-    mockViewport(true);
+    setViewportWidth(1024);
     const user = userEvent.setup();
     render(
       <ActionMenu label="Actions">
