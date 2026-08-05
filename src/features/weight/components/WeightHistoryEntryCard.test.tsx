@@ -67,13 +67,15 @@ describe('WeightHistoryEntryCard', () => {
 
     const menu = screen.getByRole('menu', { name: /Actions pour la pesée/i });
     const actions = within(menu).getAllByRole('menuitem');
+    const editAction = within(menu).getByRole('menuitem', { name: 'Modifier' });
+    const deleteAction = within(menu).getByRole('menuitem', { name: 'Supprimer' });
     expect(actions.map((action) => action.textContent)).toEqual(['Modifier', 'Supprimer']);
 
     const separator = within(menu).getByRole('separator');
-    expect(separator.previousElementSibling).toBe(actions[0]);
-    expect(separator.nextElementSibling).toBe(actions[1]);
+    expect(separator.previousElementSibling).toBe(editAction);
+    expect(separator.nextElementSibling).toBe(deleteAction);
 
-    await user.click(actions[0]);
+    await user.click(editAction);
     expect(onEdit).toHaveBeenCalledWith(entry);
     expect(screen.queryByRole('menu', { name: /Actions pour la pesée/i })).not.toBeInTheDocument();
 
