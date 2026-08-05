@@ -49,8 +49,11 @@ import { createFoodJournalReturnState } from '@/features/food-journal/navigation
 import { recommendedMealSlot } from '@/features/food-journal/utils/recommendedMealSlot';
 import type { PlannedEnduranceSession } from '@/domain/planning/endurancePlanningState';
 import { useActionToast } from '@/shared/toast/useActionToast';
-import { ActionMenu } from '@/shared/ui/ActionMenu';
-import { Button } from '@/shared/ui/Button';
+import {
+  ActionMenu,
+  ActionMenuItem,
+  ActionMenuSeparator,
+} from '@/shared/ui/ActionMenu';
 import { Card } from '@/shared/ui/Card';
 import { ProgressBar } from '@/shared/ui/ProgressBar';
 import { cn } from '@/shared/utils/cn';
@@ -683,24 +686,20 @@ export function DashboardDailyAssistant({
                           Démarrer
                         </button>
                         <ActionMenu label={`Actions pour ${getWorkoutSessionTitle(session)}`}>
-                          <Button
-                            className="w-full justify-start"
-                            size="sm"
-                            variant="ghost"
+                          <ActionMenuItem
+                            icon={Pencil}
                             onClick={() => openPlanner({ kind: 'strength', session })}
                           >
-                            <Pencil aria-hidden="true" className="size-4" />
                             Modifier
-                          </Button>
-                          <Button
-                            className="w-full justify-start"
-                            size="sm"
-                            variant="dangerGhost"
+                          </ActionMenuItem>
+                          <ActionMenuSeparator />
+                          <ActionMenuItem
+                            icon={Trash2}
+                            tone="danger"
                             onClick={() => void skipStrength(session.id)}
                           >
-                            <Trash2 aria-hidden="true" className="size-4" />
                             Retirer
-                          </Button>
+                          </ActionMenuItem>
                         </ActionMenu>
                       </div>
                     )}
@@ -738,24 +737,20 @@ export function DashboardDailyAssistant({
                         Démarrer
                       </Link>
                       <ActionMenu label={`Actions pour ${session.title}`}>
-                        <Button
-                          className="w-full justify-start"
-                          size="sm"
-                          variant="ghost"
+                        <ActionMenuItem
+                          icon={Pencil}
                           onClick={() => openPlanner({ kind: 'endurance', session })}
                         >
-                          <Pencil aria-hidden="true" className="size-4" />
                           Modifier
-                        </Button>
-                        <Button
-                          className="w-full justify-start"
-                          size="sm"
-                          variant="dangerGhost"
+                        </ActionMenuItem>
+                        <ActionMenuSeparator />
+                        <ActionMenuItem
+                          icon={Trash2}
+                          tone="danger"
                           onClick={() => void skipEndurance(session.id)}
                         >
-                          <Trash2 aria-hidden="true" className="size-4" />
                           Retirer
-                        </Button>
+                        </ActionMenuItem>
                       </ActionMenu>
                   </div>
                 </div>
