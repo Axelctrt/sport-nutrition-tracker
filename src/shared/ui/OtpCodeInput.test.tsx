@@ -39,6 +39,7 @@ describe('OtpCodeInput', () => {
     expect(input).toHaveAttribute('inputmode', 'text');
     expect(input).toHaveAttribute('autocapitalize', 'none');
     expect(input).toHaveAttribute('aria-describedby', 'otp-help');
+    expect(input).toHaveStyle({ outline: 'none', outlineOffset: '0' });
     expect(screen.getAllByTestId(/otp-cell-/)).toHaveLength(8);
   });
 
@@ -74,12 +75,14 @@ describe('OtpCodeInput', () => {
     expect(input).toHaveValue('A1ZC3D4');
   });
 
-  it('conserve le focus natif et positionne le curseur depuis la zone touchée', async () => {
+  it('conserve le focus natif et met nettement en avant la cellule visée', async () => {
+    const user = userEvent.setup();
     render(<OtpHarness />);
 
     const input = screen.getByRole('textbox', {
       name: 'Code de connexion',
     }) as HTMLInputElement;
+    await user.type(input, 'A1B2C3D4');
     input.blur();
     vi.spyOn(input, 'getBoundingClientRect').mockReturnValue({
       bottom: 48,
@@ -96,8 +99,13 @@ describe('OtpCodeInput', () => {
     fireEvent.click(input, { clientX: 140 });
 
     expect(input).toHaveFocus();
-    expect(input.selectionStart).toBe(0);
-    expect(input.selectionEnd).toBe(0);
+    expect(input.selectionStart).toBe(3);
+    expect(input.selectionEnd).toBe(3);
+    expect(screen.getByTestId('otp-cell-3')).toHaveAttribute(
+      'data-active',
+      'true',
+    );
+    expect(screen.getByTestId('otp-cell-2')).not.toHaveAttribute('data-active');
   });
 
   it('laisse le champ réel sélectionnable pour le copier-coller natif', async () => {
