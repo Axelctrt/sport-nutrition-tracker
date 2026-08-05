@@ -3,14 +3,14 @@ import {
   type FocusEvent,
   type InputHTMLAttributes,
   type KeyboardEvent,
-  type PointerEvent,
+  type MouseEvent,
   type SyntheticEvent,
   useRef,
   useState,
 } from 'react';
 import { cn } from '@/shared/utils/cn';
 
-export const OTP_CODE_LENGTH = 6;
+export const OTP_CODE_LENGTH = 8;
 
 const nonAlphanumericPattern = /[^a-zA-Z0-9]/g;
 
@@ -34,6 +34,7 @@ export function OtpCodeInput({
   className,
   disabled,
   onBlur,
+  onClick,
   onFocus,
   onKeyUp,
   onSelect,
@@ -54,16 +55,29 @@ export function OtpCodeInput({
     setSelectionStart(nextPosition);
   };
 
-  const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
-    if (disabled) return;
+  const handleClick = (event: MouseEvent<HTMLInputElement>) => {
+    onClick?.(event);
+    if (disabled || event.defaultPrevented) return;
 
-    event.preventDefault();
-    const cell = (event.target as HTMLElement).closest<HTMLElement>('[data-otp-cell-index]');
-    const requestedPosition = cell
-      ? Number(cell.dataset.otpCellIndex)
-      : value.length;
+    const input = event.currentTarget;
+    if (input.selectionStart !== input.selectionEnd) return;
 
-    moveCaret(Number.isFinite(requestedPosition) ? requestedPosition : value.length);
+    const bounds = input.getBoundingClientRect();
+    if (bounds.width <= 0) {
+      moveCaret(value.length);
+      return;
+    }
+
+    const relativeX = Math.min(
+      Math.max(event.clientX - bounds.left, 0),
+      bounds.width,
+    );
+    const requestedPosition = Math.min(
+      Math.floor((relativeX / bounds.width) * OTP_CODE_LENGTH),
+      OTP_CODE_LENGTH - 1,
+    );
+
+    moveCaret(Math.min(requestedPosition, value.length));
   };
 
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -113,23 +127,23 @@ export function OtpCodeInput({
   return (
     <div
       className={cn(
-        'relative grid w-full max-w-sm grid-cols-6 gap-1.5 sm:gap-2',
+        'relative grid w-full max-w-md grid-cols-8 gap-1 sm:gap-1.5',
         disabled && 'cursor-not-allowed opacity-70',
         className,
       )}
       data-otp-code-input
-      onPointerDown={handlePointerDown}
     >
       <input
         {...inputProps}
         autoCapitalize={inputProps.autoCapitalize ?? 'none'}
         autoComplete={inputProps.autoComplete ?? 'one-time-code'}
         autoCorrect={inputProps.autoCorrect ?? 'off'}
-        className="absolute inset-0 z-0 h-full w-full cursor-text opacity-0"
+        className="absolute inset-0 z-20 h-full w-full cursor-text bg-transparent text-transparent caret-transparent outline-none selection:bg-brand-200/70 [-webkit-text-fill-color:transparent] dark:selection:bg-brand-800/70"
         disabled={disabled}
         inputMode={inputProps.inputMode ?? 'text'}
         onBlur={handleBlur}
         onChange={handleChange}
+        onClick={handleClick}
         onFocus={handleFocus}
         onKeyUp={handleKeyUp}
         onPaste={onPaste}
@@ -147,7 +161,7 @@ export function OtpCodeInput({
           <span
             aria-hidden="true"
             className={cn(
-              'relative z-10 grid min-h-12 min-w-0 cursor-text place-items-center rounded-xl border bg-white font-mono text-lg font-semibold text-slate-950 shadow-sm transition',
+              'pointer-events-none relative z-10 grid min-h-12 min-w-0 place-items-center rounded-lg border bg-white font-mono text-base font-semibold text-slate-950 shadow-sm transition sm:rounded-xl sm:text-lg',
               'dark:bg-slate-950 dark:text-white',
               invalid
                 ? 'border-red-500 dark:border-red-400'
@@ -155,7 +169,6 @@ export function OtpCodeInput({
               active && !invalid
                 ? 'border-brand-600 ring-2 ring-brand-600/20'
                 : '',
-              disabled ? 'cursor-not-allowed' : '',
             )}
             data-otp-cell-index={index}
             data-testid={`otp-cell-${index}`}
