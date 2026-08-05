@@ -57,7 +57,9 @@ describe('OtpCodeInput', () => {
     const user = userEvent.setup();
     render(<OtpHarness />);
 
-    const input = screen.getByRole('textbox', { name: 'Code de connexion' });
+    const input = screen.getByRole('textbox', {
+      name: 'Code de connexion',
+    }) as HTMLInputElement;
     await user.click(input);
     await user.paste('A1B2C3');
 
