@@ -99,6 +99,7 @@ function SyncPrototypeRuntime({
   >();
   const cancelledLoginRef = useRef(false);
   const lastOtpNoticeRef = useRef<string | undefined>(undefined);
+  const lastSubmittedOtpRef = useRef<string>();
   const wasLoggedInRef = useRef(false);
   const weightEditorRef = useRef<HTMLFormElement>(null);
   const weightInputRef = useRef<HTMLInputElement>(null);
@@ -144,12 +145,27 @@ function SyncPrototypeRuntime({
     if (!targetEmail || lastOtpNoticeRef.current === targetEmail) return;
 
     lastOtpNoticeRef.current = targetEmail;
+    lastSubmittedOtpRef.current = undefined;
     setOtp('');
     toast.info(
       'Code envoyé',
       `Un code de connexion a été envoyé à ${maskEmail(targetEmail)}.`,
     );
   }, [email, interaction, toast]);
+
+  useEffect(() => {
+    if (
+      interaction?.type !== 'otp'
+      || otp.length !== OTP_CODE_LENGTH
+      || actionStatus === 'otp'
+      || lastSubmittedOtpRef.current === otp
+    ) return;
+
+    lastSubmittedOtpRef.current = otp;
+    setFeedback(undefined);
+    setActionStatus('otp');
+    client.submitInteraction({ otp });
+  }, [actionStatus, client, interaction?.type, otp]);
 
   const isLoggedIn = snapshot.account.isLoggedIn;
   const cloudAccess = client.getCloudAccessState?.() ?? resolveCloudAccountAccess(
@@ -176,6 +192,7 @@ function SyncPrototypeRuntime({
       setIsRealWeightSectionOpen(false);
       setIsRealWeightConfirmationOpen(false);
       lastOtpNoticeRef.current = undefined;
+      lastSubmittedOtpRef.current = undefined;
     }
     wasLoggedInRef.current = isLoggedIn;
   }, [isLoggedIn]);
@@ -210,6 +227,8 @@ function SyncPrototypeRuntime({
       return;
     }
 
+    setOtp('');
+    lastSubmittedOtpRef.current = undefined;
     setFeedback(undefined);
     setActionStatus('email');
 
@@ -251,21 +270,17 @@ function SyncPrototypeRuntime({
       });
   };
 
-  const handleOtpSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const normalizedOtp = otp.trim();
-    if (
-      normalizedOtp.length !== OTP_CODE_LENGTH
-      || actionStatus === 'otp'
-    ) return;
-
-    setActionStatus('otp');
-    client.submitInteraction({ otp: normalizedOtp });
+  const handleOtpChange = (nextOtp: string) => {
+    if (nextOtp.length < OTP_CODE_LENGTH) {
+      lastSubmittedOtpRef.current = undefined;
+    }
+    setOtp(nextOtp);
   };
 
   const handleCancelInteraction = () => {
     cancelledLoginRef.current = true;
     client.cancelInteraction();
+    lastSubmittedOtpRef.current = undefined;
     setOtp('');
     setActionStatus('idle');
     setFeedback(undefined);
@@ -638,7 +653,7 @@ function SyncPrototypeRuntime({
               </Button>
             </div>
           ) : interaction?.type === 'otp' ? (
-            <form className="mt-5 space-y-4" onSubmit={handleOtpSubmit}>
+            <div className="mt-5 space-y-4">
               <div className="flex items-start gap-3 rounded-xl bg-brand-50 p-3 text-brand-950 dark:bg-brand-950/40 dark:text-brand-100">
                 <KeyRound aria-hidden="true" className="mt-0.5 size-5 shrink-0" />
                 <p className="text-sm leading-6">
@@ -657,35 +672,28 @@ function SyncPrototypeRuntime({
                     {...controlProps}
                     autoFocus
                     disabled={actionStatus === 'otp'}
-                    onValueChange={setOtp}
+                    onValueChange={handleOtpChange}
                     value={otp}
                   />
                 )}
               </FormField>
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <Button
-                  className="w-full sm:w-auto"
-                  disabled={
-                    otp.length !== OTP_CODE_LENGTH
-                    || actionStatus === 'otp'
-                  }
-                  type="submit"
-                >
-                  <KeyRound aria-hidden="true" className="size-4" />
-                  {actionStatus === 'otp'
-                    ? 'Vérification…'
-                    : interaction.submitLabel || 'Valider le code'}
-                </Button>
-                <Button
-                  className="w-full sm:w-auto"
-                  disabled={actionStatus === 'otp'}
-                  onClick={handleCancelInteraction}
-                  variant="secondary"
-                >
-                  {interaction.cancelLabel || 'Annuler'}
-                </Button>
-              </div>
-            </form>
+              <p
+                aria-live="polite"
+                className="text-xs font-medium text-slate-500 dark:text-slate-400"
+              >
+                {actionStatus === 'otp'
+                  ? 'Vérification automatique du code…'
+                  : `Le code sera vérifié automatiquement après ${OTP_CODE_LENGTH} caractères.`}
+              </p>
+              <Button
+                className="w-full sm:w-auto"
+                disabled={actionStatus === 'otp'}
+                onClick={handleCancelInteraction}
+                variant="secondary"
+              >
+                {interaction.cancelLabel || 'Annuler'}
+              </Button>
+            </div>
           ) : (
             <form className="mt-5 space-y-4" onSubmit={handleEmailSubmit}>
               <FormField
