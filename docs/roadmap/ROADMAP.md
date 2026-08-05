@@ -1,80 +1,89 @@
 # Roadmap SportPilot
 
-Cette roadmap décrit une séquence et des conditions d’entrée, pas des dates de
-livraison. Une phase planifiée n’autorise ni son implémentation, ni sa fusion,
-ni son déploiement.
+Cette roadmap décrit l’état validé du produit et la séquence autorisée des
+chantiers. Elle ne constitue jamais une autorisation implicite de fusion, de
+release ou de déploiement.
 
-| Phase | Statut | Résultat attendu | Condition d’entrée |
+## Sources de vérité
+
+- dépôt : `Axelctrt/sport-nutrition-tracker` ;
+- branche de développement inspectée : `develop` ;
+- état consolidé de référence :
+  `develop@e4ff9e1079dda8d48b1289c0905ddbcd6033ac0c` ;
+- code publié en production 0.37.0 :
+  `84fea3d49e68c7d190c00d505502a5c4aa2e672a` ;
+- chantier transverse en cours : issue #50.
+
+## État des chantiers
+
+| Chantier | Statut | Référence | Condition suivante |
 | --- | --- | --- | --- |
-| 0 — Stabilisation UX | **Publié en production** | Saisie numérique stable, confirmation de séance, constructeur simplifié, libellé « Profil » | Inclus dans la base publiée |
-| 1 — Modèle opératoire agents | **Publié en production** | Référentiel documentaire vérifié, ADR et règles durables | Inclus dans la base publiée |
-| 2 — Audit ciblé | **Terminé et accepté** | Rapport d’audit sans modification fonctionnelle | Conclusions utilisées pour la Phase 3 |
-| 3 — Fondations UX partagées | **Publié en production 0.37.0** | Correctifs UX, variantes `EmptyState`, politique de feedback, arbitre global et carte extensible pilote | Phases 3A à 3E validées |
-| 4 — Photos de progression locales | **Publié en production 0.37.0** | Suivi photo privé, local, non social et comparateur tactile | PR #18, CI complète et recette iPhone/Safari validées |
-| 5 — Déploiement contrôlé | **Terminé** | Publication de `main`, tag annoté, release GitHub stable et production validée | PR #21, commit `84fea3d49e68c7d190c00d505502a5c4aa2e672a`, tag `v0.37.0` |
-| Suivi UX post-0.37.0 — Profil, Amis et Confidentialité | **Intégré à `develop`, non publié** | Consultation en lecture seule, édition dans une surface dédiée, protection des modifications et feedback temporaire | PR #24, HEAD validé `6eed04863ff2c11611aac281fc04a91011f8a175`, merge `f66efc2798117e861c7b59b66b50ab1cd88ba6bc` |
-| Audit transverse — Planning, Objectifs et Progression | **Terminé et décisions acceptées** | Responsabilités séparées, pont Progression/Bilan, métrique d’objectif immuable et règle anti-double comptage | Décisions propriétaire du 4 août 2026 |
-| PR A — Planning sportif | **Cadrée, développement à autoriser** | Semaine prioritaire, création dans une surface dédiée et navigation normalisée | Audit transverse accepté |
-| PR B — Objectifs de progression | **Planifiée après PR A** | Édition sécurisée, métrique verrouillée et minutes de musculation comptées une seule fois | PR A stabilisée ou décision explicite de parallélisation |
-| PR C — Liaison Objectif → Action | **Optionnelle** | Liens contextuels sans création automatique | Retour d’usage et validation produit explicite |
+| Stabilisation UX, modèle opératoire et fondations partagées | **Publié en production 0.37.0** | Phases 0 à 3 | Maintenance contrôlée |
+| Photos de progression locales | **Publié en production 0.37.0** | PR #18 | Images locales, privées et non analysées par IA |
+| Publication stable 0.37.0 | **Terminée** | PR #21, tag `v0.37.0` | Aucune migration D1 exécutée |
+| Profil, Amis et Confidentialité | **Intégré à `develop`, non publié** | PR #24 | Future release explicitement autorisée |
+| Planning sportif | **Intégré à `develop`, non publié** | PR #45 | Maintenir la séparation Planning/Objectifs |
+| Objectifs de progression | **Intégré à `develop`, non publié** | PR #47 | Métrique immuable et anti-double comptage conservés |
+| Liaison Objectif → Action | **Intégré à `develop`, non publié** | PR #49 | Aucun contenu créé automatiquement |
+| Primitive canonique `ActionMenu` | **Intégrée à `develop`, non publiée** | PR #51 | Utilisation par les domaines métier |
+| Migration des menus Sport | **Intégrée à `develop`, non publiée** | PR #53 et #54, issue #52 clôturée | Aucun reliquat Sport identifié |
+| Migration des menus Nutrition | **Intégrée à `develop`, non publiée** | PR #56 et #57, issue #55 clôturée | Aucun reliquat Nutrition identifié |
+| Migration Progression et inventaire final | **En validation, non intégrée** | issue #58, PR #59 | CI complète, recette Preview et validation propriétaire |
+| Saisie OTP fluide | **Autorisée après Progression** | PR 5 de l’issue #50 | Cadrage et branche distincte après intégration du lot Progression |
+| Renvoi OTP | **Optionnel, non autorisé techniquement à ce stade** | PR 6 de l’issue #50 | Validation préalable du contrat Dexie Cloud |
 
 ## État publié
 
-- SportPilot 0.37.0 est en production depuis `main`.
-- Le tag annoté `v0.37.0` pointe vers
-  `84fea3d49e68c7d190c00d505502a5c4aa2e672a`.
-- La release GitHub 0.37.0 est stable, non draft et non prerelease.
-- Aucune migration D1 n’a été exécutée pour cette publication.
-- La version 0.36.0 reste une référence historique de repli uniquement.
+SportPilot 0.37.0 reste la version publiée de référence :
 
-## État de développement après 0.37.0
+- code de production : `84fea3d49e68c7d190c00d505502a5c4aa2e672a` ;
+- tag annoté : `v0.37.0` ;
+- release GitHub stable ;
+- aucune migration D1 exécutée pour cette publication.
 
-La PR #24 est fusionnée dans `develop`, mais n’est pas présente dans `main` et
-n’est pas publiée en production. Elle apporte notamment :
+Les évolutions listées comme intégrées à `develop` ne sont pas présentes dans
+la version 0.37.0 et ne doivent pas être présentées comme publiées.
 
-- un état initial en lecture seule pour le profil général et le profil social ;
-- une action `Modifier` ouvrant une surface d’édition dédiée ;
-- la confirmation d’abandon des changements non enregistrés ;
-- le statut de l’identifiant public placé directement sous son champ ;
-- un feedback de succès temporaire unique ;
-- la conservation du comportement cloud atomique pour l’identité sociale d’un
-  espace compte.
-
-## Architecture validée pour la suite
+## Architecture et décisions produit conservées
 
 - Planning et Objectifs restent des domaines séparés.
-- Progression et Bilan hebdomadaire constituent le pont entre intention,
+- Progression et Bilan hebdomadaire servent de pont entre intention,
   réalisation et résultat.
-- La métrique d’un objectif devient non modifiable après sa création.
-- L’objectif de minutes d’activité inclut les séances détaillées de musculation
-  terminées sans compter deux fois leur activité générale liée.
-- Aucun écran ne crée automatiquement de séance, programme ou objectif.
+- La métrique d’un objectif ne peut plus être modifiée après sa création.
+- Les minutes de musculation détaillées ne doivent pas être comptées deux fois
+  lorsqu’une activité générale liée existe.
+- Aucun écran ne crée automatiquement une séance, un programme ou un objectif.
+- Les menus d’actions utilisent une Bottom Sheet sous 640 px et un popover à
+  partir de 640 px.
 
-Les décisions détaillées et la règle anti-double comptage figurent dans
+Les décisions détaillées figurent dans
 [`PLANNING_GOALS_AUDIT_DECISIONS.md`](PLANNING_GOALS_AUDIT_DECISIONS.md).
 
 ## Prochain jalon
 
-La prochaine évolution fonctionnelle ordonnée est la **PR A — Planning
-sportif**. Son développement reste soumis à une autorisation explicite. Elle
-doit conserver la route historique, les données, les calculs et le
-rapprochement prévu/réalisé existants.
+Le jalon fonctionnel actif est la **migration Progression et l’inventaire final
+des menus d’actions** via l’issue #58 et la PR #59.
 
-## Garde-fous de séquencement
+La PR OTP ne peut démarrer qu’après :
 
-- Les photos de progression restent locales : pas d’images cloud, sociales ou
-  analysées par IA.
-- Toute nouvelle évolution utilise une branche et une PR distinctes vers
-  `develop`.
-- Toute maintenance documentaire portant exclusivement sur l’état publié part
-  de `main`, cible `main`, puis `develop` est resynchronisée depuis `main` par
-  merge.
-- Les évolutions intégrées uniquement à `develop` doivent rester explicitement
-  distinguées de la production.
-- Aucun nouveau chantier fonctionnel n’est autorisé par la clôture de la
-  release 0.37.0, la fusion de la PR #24 ou le présent cadrage documentaire.
+1. une CI complète verte sur le HEAD final de la PR #59 ;
+2. une recette Preview consignée ;
+3. la validation explicite du propriétaire ;
+4. l’intégration autorisée du lot Progression dans `develop`.
 
-Les détails de portée figurent dans
-[`PLANNED_FEATURES.md`](PLANNED_FEATURES.md). Les limites connues qui ne
+## Garde-fous permanents
+
+- mobile-first ;
+- local-first et fonctionnement hors ligne conservés ;
+- continuité et isolation des données ;
+- aucune modification des formules caloriques sans validation ;
+- aucune modification des thèmes validés sans validation ;
+- aucune extension de l’IA sans validation ;
+- aucune migration D1 dans les chantiers décrits ici ;
+- une branche et une PR distinctes par lot ;
+- aucune fusion, release ou production sans autorisation explicite.
+
+Les détails fonctionnels figurent dans
+[`PLANNED_FEATURES.md`](PLANNED_FEATURES.md). Les limites techniques qui ne
 constituent pas une phase produit figurent dans
 [`TECHNICAL_DEBT.md`](TECHNICAL_DEBT.md).
