@@ -54,7 +54,7 @@ const VIEWPORT_MARGIN = 8;
 const MENU_GAP = 4;
 const DEFAULT_MENU_WIDTH = 208;
 const WIDE_MENU_WIDTH = 224;
-const TABLET_QUERY = '(min-width: 640px)';
+const TABLET_BREAKPOINT_PX = 640;
 const MENU_ITEM_SELECTOR = [
   '[role="menuitem"]:not([aria-disabled="true"])',
   'button:not(:disabled)',
@@ -69,21 +69,19 @@ function viewportSize(): { width: number; height: number } {
 }
 
 function isTabletViewport(): boolean {
-  return typeof window === 'undefined'
-    || typeof window.matchMedia !== 'function'
-    || window.matchMedia(TABLET_QUERY).matches;
+  if (typeof window === 'undefined') return true;
+  return Math.max(document.documentElement.clientWidth, window.innerWidth || 0)
+    >= TABLET_BREAKPOINT_PX;
 }
 
 function useTabletViewport(): boolean {
   const [tablet, setTablet] = useState(isTabletViewport);
 
   useEffect(() => {
-    if (typeof window.matchMedia !== 'function') return;
-    const query = window.matchMedia(TABLET_QUERY);
-    const update = (event: MediaQueryListEvent) => setTablet(event.matches);
-    setTablet(query.matches);
-    query.addEventListener('change', update);
-    return () => query.removeEventListener('change', update);
+    const update = () => setTablet(isTabletViewport());
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
   }, []);
 
   return tablet;
@@ -244,6 +242,7 @@ export function ActionMenu({
 }: ActionMenuProps) {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState<MenuPosition>();
   const menuId = useId();
@@ -328,6 +327,14 @@ export function ActionMenu({
     firstAction?.focus();
   }, [open, position, tabletViewport]);
 
+  useEffect(() => {
+    if (!open || tabletViewport) return;
+    const frame = window.requestAnimationFrame(() => {
+      mobileMenuRef.current?.querySelector<HTMLElement>(MENU_ITEM_SELECTOR)?.focus();
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [open, tabletViewport]);
+
   const handleMenuClick = (event: ReactMouseEvent<HTMLElement>) => {
     const target = event.target as Element;
     if (target.closest('a[href], button, [role="menuitem"]')) close();
@@ -335,6 +342,7 @@ export function ActionMenu({
 
   const actionSurface = (
     <div
+      ref={tabletViewport ? undefined : mobileMenuRef}
       role="menu"
       aria-label={label}
       className="grid gap-1"
