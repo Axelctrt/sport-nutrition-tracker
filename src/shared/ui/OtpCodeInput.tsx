@@ -128,7 +128,6 @@ export function OtpCodeInput({
         className="absolute inset-0 z-0 h-full w-full cursor-text opacity-0"
         disabled={disabled}
         inputMode={inputProps.inputMode ?? 'text'}
-        maxLength={OTP_CODE_LENGTH}
         onBlur={handleBlur}
         onChange={handleChange}
         onFocus={handleFocus}

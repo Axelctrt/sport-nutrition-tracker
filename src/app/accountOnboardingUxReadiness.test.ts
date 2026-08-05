@@ -3,6 +3,7 @@ import socialIdentityGateSource from '@/app/social-identity/SocialIdentityAccoun
 import accountChoiceSource from '@/features/onboarding/components/OnboardingAccountChoice.tsx?raw';
 import socialIdentitySource from '@/features/onboarding/components/OnboardingSocialIdentity.tsx?raw';
 import syncPrototypeSource from '@/features/sync-prototype/pages/SyncPrototypePage.tsx?raw';
+import otpCodeInputSource from '@/shared/ui/OtpCodeInput.tsx?raw';
 
 describe('onboarding compte compact et cohérent', () => {
   it('garde la décision de reprise dans une page mobile sans scroll', () => {
@@ -30,13 +31,16 @@ describe('onboarding compte compact et cohérent', () => {
     expect(socialIdentityGateSource).toContain("#${routePaths.onboarding}");
   });
 
-  it('utilise un clavier alphanumérique pour tous les codes Dexie Cloud', () => {
+  it('utilise la saisie alphanumérique partagée pour tous les codes Dexie Cloud', () => {
     for (const source of [accountChoiceSource, syncPrototypeSource]) {
-      expect(source).toContain('autoComplete="one-time-code"');
-      expect(source).toContain('inputMode="text"');
-      expect(source).toContain('autoCapitalize="none"');
-      expect(source).toContain('autoCorrect="off"');
+      expect(source).toContain('<OtpCodeInput');
       expect(source).not.toContain('inputMode="numeric"');
     }
+
+    expect(otpCodeInputSource).toContain("autoComplete ?? 'one-time-code'");
+    expect(otpCodeInputSource).toContain("inputMode ?? 'text'");
+    expect(otpCodeInputSource).toContain("autoCapitalize ?? 'none'");
+    expect(otpCodeInputSource).toContain("autoCorrect ?? 'off'");
+    expect(otpCodeInputSource).not.toContain("inputMode ?? 'numeric'");
   });
 });
