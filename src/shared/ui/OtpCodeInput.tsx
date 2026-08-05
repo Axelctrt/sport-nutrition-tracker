@@ -39,6 +39,7 @@ export function OtpCodeInput({
   onKeyUp,
   onSelect,
   onPaste,
+  style,
   ...inputProps
 }: OtpCodeInputProps) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -138,7 +139,7 @@ export function OtpCodeInput({
         autoCapitalize={inputProps.autoCapitalize ?? 'none'}
         autoComplete={inputProps.autoComplete ?? 'one-time-code'}
         autoCorrect={inputProps.autoCorrect ?? 'off'}
-        className="absolute inset-0 z-20 h-full w-full cursor-text bg-transparent text-transparent caret-transparent outline-none selection:bg-brand-200/70 [-webkit-text-fill-color:transparent] dark:selection:bg-brand-800/70"
+        className="absolute inset-0 z-20 h-full w-full cursor-text border-0 bg-transparent text-transparent caret-transparent outline-none focus:outline-none focus-visible:!outline-none selection:bg-brand-200/70 [-webkit-text-fill-color:transparent] dark:selection:bg-brand-800/70"
         disabled={disabled}
         inputMode={inputProps.inputMode ?? 'text'}
         onBlur={handleBlur}
@@ -150,6 +151,11 @@ export function OtpCodeInput({
         onSelect={handleSelect}
         ref={inputRef}
         spellCheck={inputProps.spellCheck ?? false}
+        style={{
+          ...style,
+          outline: 'none',
+          outlineOffset: 0,
+        }}
         type="text"
         value={value}
       />
@@ -167,9 +173,10 @@ export function OtpCodeInput({
                 ? 'border-red-500 dark:border-red-400'
                 : 'border-slate-300 dark:border-slate-700',
               active && !invalid
-                ? 'border-brand-600 ring-2 ring-brand-600/20'
+                ? 'z-20 scale-[1.06] border-2 border-brand-600 bg-brand-50 text-brand-950 shadow-md ring-2 ring-brand-600/60 ring-offset-1 ring-offset-white dark:border-brand-400 dark:bg-brand-950/70 dark:text-brand-50 dark:ring-brand-400/70 dark:ring-offset-slate-950'
                 : '',
             )}
+            data-active={active ? 'true' : undefined}
             data-otp-cell-index={index}
             data-testid={`otp-cell-${index}`}
             key={index}
