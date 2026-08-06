@@ -1,5 +1,6 @@
 import { ArrowLeft, LoaderCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   loadRecipeDetails,
@@ -90,7 +91,7 @@ export function RecipeEntryEditorPage() {
         recipeId,
         ...values,
       });
-      setIsDirty(false);
+      flushSync(() => setIsDirty(false));
       const returnContext = navigationState?.foodJournalReturn;
       await navigate(returnContext?.path ?? foodJournalPath(values.date), {
         state: createFoodJournalFeedbackState(returnContext, {
