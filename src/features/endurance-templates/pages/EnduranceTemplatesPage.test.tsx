@@ -1,12 +1,29 @@
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
+import * as enduranceTemplateService from '@/application/activities/enduranceTemplateService';
 import { EnduranceTemplatesPage } from '@/features/endurance-templates/pages/EnduranceTemplatesPage';
 import { appDatabase } from '@/infrastructure/database/database';
 import { initializeDatabase } from '@/infrastructure/database/databaseLifecycle';
 
+function renderPage() {
+  return render(
+    <MemoryRouter>
+      <EnduranceTemplatesPage />
+    </MemoryRouter>,
+  );
+}
+
+function dispatchBeforeUnload() {
+  const event = new Event('beforeunload', { cancelable: true });
+  window.dispatchEvent(event);
+  return event;
+}
+
 beforeEach(async () => {
   cleanup();
+  vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
   appDatabase.close();
   await appDatabase.delete();
   await initializeDatabase();
@@ -14,6 +31,7 @@ beforeEach(async () => {
 
 afterEach(async () => {
   cleanup();
+  vi.restoreAllMocks();
   appDatabase.close();
   await appDatabase.delete();
 });
@@ -21,11 +39,7 @@ afterEach(async () => {
 describe('EnduranceTemplatesPage', () => {
   it('affiche les modèles par défaut et enregistre un modèle vélo', async () => {
     const user = userEvent.setup();
-    render(
-      <MemoryRouter>
-        <EnduranceTemplatesPage />
-      </MemoryRouter>,
-    );
+    renderPage();
 
     expect(await screen.findByRole('heading', { name: 'Course facile 45 min' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Natation endurance 1 500 m' })).toBeInTheDocument();
@@ -39,11 +53,54 @@ describe('EnduranceTemplatesPage', () => {
     await user.click(screen.getByRole('button', { name: 'Créer le modèle' }));
 
     expect(await screen.findByRole('heading', { name: 'Vélo souple' })).toBeInTheDocument();
+    expect(dispatchBeforeUnload().defaultPrevented).toBe(false);
     await waitFor(async () => {
       const settings = await appDatabase.userSettings.toCollection().first();
       expect(settings?.enduranceTemplates).toEqual(
         expect.arrayContaining([expect.objectContaining({ name: 'Vélo souple', activityType: 'cycling', distanceKm: 32 })]),
       );
     });
+  });
+
+  it('protège le brouillon avant de charger un autre modèle', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await screen.findByRole('heading', { name: 'Course facile 45 min' });
+    const nameInput = screen.getByLabelText(/Nom/);
+    expect(dispatchBeforeUnload().defaultPrevented).toBe(false);
+
+    await user.type(nameInput, 'Brouillon endurance');
+    expect(dispatchBeforeUnload().defaultPrevented).toBe(true);
+
+    await user.click(screen.getAllByRole('button', { name: 'Modifier' })[1]);
+    expect(screen.getByRole('alertdialog', { name: 'Remplacer le brouillon ?' })).toBeInTheDocument();
+    expect(nameInput).toHaveValue('Brouillon endurance');
+
+    await user.click(screen.getByRole('button', { name: 'Conserver le brouillon' }));
+    expect(screen.queryByRole('alertdialog', { name: 'Remplacer le brouillon ?' })).not.toBeInTheDocument();
+    expect(nameInput).toHaveValue('Brouillon endurance');
+
+    await user.click(screen.getAllByRole('button', { name: 'Modifier' })[1]);
+    await user.click(screen.getByRole('button', { name: 'Modifier ce modèle' }));
+
+    expect(await screen.findByRole('heading', { name: 'Modifier : Natation endurance 1 500 m' })).toBeInTheDocument();
+    expect(nameInput).toHaveValue('Natation endurance 1 500 m');
+    expect(dispatchBeforeUnload().defaultPrevented).toBe(false);
+  });
+
+  it('conserve la protection après une erreur d’enregistrement', async () => {
+    const user = userEvent.setup();
+    vi.spyOn(enduranceTemplateService, 'saveEnduranceTemplate')
+      .mockRejectedValueOnce(new Error('Échec contrôlé'));
+    renderPage();
+
+    await screen.findByRole('heading', { name: 'Course facile 45 min' });
+    await user.type(screen.getByLabelText(/Nom/), 'Modèle en erreur');
+    await user.click(screen.getByRole('button', { name: 'Créer le modèle' }));
+
+    expect(await screen.findByText('Échec contrôlé')).toBeInTheDocument();
+    expect(screen.getByLabelText(/Nom/)).toHaveValue('Modèle en erreur');
+    expect(dispatchBeforeUnload().defaultPrevented).toBe(true);
   });
 });
