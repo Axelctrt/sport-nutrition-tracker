@@ -25,9 +25,29 @@ preuves de livraison.
 | Processus de release | [`quality/RELEASE_PROCESS.md`](quality/RELEASE_PROCESS.md) |
 | Changelog | [`../CHANGELOG.md`](../CHANGELOG.md) |
 | Roadmap | [`roadmap/ROADMAP.md`](roadmap/ROADMAP.md) |
+| Trajectoire et readiness V1 | [`roadmap/V1_READINESS_PLAN.md`](roadmap/V1_READINESS_PLAN.md) |
 | Fonctionnalités planifiées | [`roadmap/PLANNED_FEATURES.md`](roadmap/PLANNED_FEATURES.md) |
 | Dette technique | [`roadmap/TECHNICAL_DEBT.md`](roadmap/TECHNICAL_DEBT.md) |
 | Décisions ADR | [`decisions/README.md`](decisions/README.md) |
+
+## Reprise du travail courant
+
+La cible stratégique est SportPilot `1.0.0`. La séquence en vigueur est :
+
+1. Phase 0 : réconcilier la documentation avec `develop` ;
+2. Phase 1 : auditer toute l’application en lecture seule via l’issue #63 ;
+3. faire valider le rapport et le découpage par le propriétaire ;
+4. seulement ensuite, créer les lots de normalisation nécessaires ;
+5. terminer par une readiness V1, une candidate puis une publication autorisée.
+
+Pour reprendre le travail, vérifier d’abord les HEAD réels de `main` et
+`develop`, l’état de la PR documentaire de Phase 0 et l’issue #63. Une ancienne
+conversation ou un SHA inscrit ici ne remplace jamais cette vérification.
+
+Aucun nouveau développement fonctionnel n’est autorisé par cette orientation.
+Les nouvelles fonctions, la synchronisation étendue, les nouvelles métriques,
+les optimisations avancées et le renvoi OTP sont reportés au cycle post-V1 sauf
+décision explicite contraire.
 
 ## Convention de statut
 
