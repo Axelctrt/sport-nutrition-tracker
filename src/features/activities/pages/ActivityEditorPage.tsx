@@ -33,6 +33,7 @@ import { activityTypeLabels } from '@/features/activities/utils/activityLabels';
 import { repositories } from '@/infrastructure/repositories/repositories';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 import { PageSkeleton } from '@/shared/ui/PageSkeleton';
+import { UnsavedChangesGuard } from '@/shared/ui/UnsavedChangesGuard';
 import { isValidLocalDate } from '@/shared/validation/localDate';
 
 interface AddActivityEditorPageProps {
@@ -102,6 +103,8 @@ function ActivityEditor({
   const [calculationWeightSource, setCalculationWeightSource] = useState('poids initial du profil');
   const [errorMessage, setErrorMessage] = useState<string>();
   const [loading, setLoading] = useState(true);
+  const [isDirty, setIsDirty] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -258,6 +261,7 @@ function ActivityEditor({
       return;
     }
 
+    setIsSaving(true);
     setErrorMessage(undefined);
     try {
       const draft = toActivityDraft(values);
@@ -279,6 +283,7 @@ function ActivityEditor({
         values.date,
       );
 
+      setIsDirty(false);
       navigate(destination, { state: destinationState });
     } catch (error) {
       setErrorMessage(
@@ -286,6 +291,8 @@ function ActivityEditor({
           ? error.message
           : 'L’activité ne peut pas être enregistrée.',
       );
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -338,11 +345,14 @@ function ActivityEditor({
             calculationWeightSource={calculationWeightSource}
             submitLabel={state.existingActivity ? 'Enregistrer les modifications' : 'Ajouter l’activité'}
             onDateChange={handleDateChange}
+            onDirtyChange={setIsDirty}
             plannedActivityOptions={state.plannedActivityOptions}
             onSubmit={handleSubmit}
           />
         </div>
       ) : null}
+
+      <UnsavedChangesGuard when={isDirty && !isSaving} />
     </section>
   );
 }

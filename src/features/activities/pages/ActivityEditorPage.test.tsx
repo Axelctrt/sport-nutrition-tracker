@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
+import { RouterProvider, createMemoryRouter } from 'react-router-dom';
 import { vi } from 'vitest';
 import { createDefaultAppSettings } from '@/domain/defaults/appSettings';
 import type { RunningActivity } from '@/domain/models/activity';
@@ -53,17 +53,28 @@ function renderEditor(
   navigationState?: ActivityJournalNavigationState,
   search = '',
 ) {
-  render(
-    <MemoryRouter
-      initialEntries={[{
+  const router = createMemoryRouter(
+    [
+      {
+        path: '/activities/add/running',
+        element: <RunningActivityPage />,
+      },
+      {
+        path: '/activities',
+        element: <h1>Journal des activités</h1>,
+      },
+    ],
+    {
+      initialEntries: [{
         pathname: '/activities/add/running',
         search,
         state: navigationState,
-      }]}
-    >
-      <RunningActivityPage />
-    </MemoryRouter>,
+      }],
+    },
   );
+
+  render(<RouterProvider router={router} />);
+  return router;
 }
 
 afterEach(cleanup);
@@ -78,6 +89,43 @@ describe('ActivityEditorPage', () => {
     vi.spyOn(repositories.activities, 'listAll').mockResolvedValue([]);
     vi.spyOn(repositories.workoutSessions, 'listAll').mockResolvedValue([]);
     mocks.createActivityFromDraft.mockResolvedValue(savedActivity);
+  });
+
+  it('laisse revenir au journal lorsque le formulaire est intact', async () => {
+    const user = userEvent.setup();
+    renderEditor();
+
+    await screen.findByLabelText(/Date/);
+    await user.click(screen.getByRole('link', { name: 'Retour aux activités' }));
+
+    expect(await screen.findByRole('heading', { name: 'Journal des activités' }))
+      .toBeInTheDocument();
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  });
+
+  it('protège la navigation et conserve la saisie tant que l’abandon n’est pas confirmé', async () => {
+    const user = userEvent.setup();
+    renderEditor();
+
+    const dateInput = await screen.findByLabelText(/Date/);
+    fireEvent.change(dateInput, { target: { value: '2026-06-25' } });
+
+    const beforeUnload = new Event('beforeunload', { cancelable: true });
+    window.dispatchEvent(beforeUnload);
+    expect(beforeUnload.defaultPrevented).toBe(true);
+
+    await user.click(screen.getByRole('link', { name: 'Retour aux activités' }));
+    expect(screen.getByRole('alertdialog', { name: 'Quitter sans enregistrer ?' }))
+      .toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Continuer la modification' }));
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(dateInput).toHaveValue('2026-06-25');
+
+    await user.click(screen.getByRole('link', { name: 'Retour aux activités' }));
+    await user.click(screen.getByRole('button', { name: 'Quitter' }));
+    expect(await screen.findByRole('heading', { name: 'Journal des activités' }))
+      .toBeInTheDocument();
   });
 
   it('revient au journal d’origine avec restauration et confirmation après ajout', async () => {
@@ -108,6 +156,24 @@ describe('ActivityEditorPage', () => {
         },
       });
     });
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  });
+
+  it('conserve la protection et les valeurs après un échec d’enregistrement', async () => {
+    const user = userEvent.setup();
+    mocks.createActivityFromDraft.mockRejectedValueOnce(new Error('Stockage local indisponible'));
+    renderEditor();
+
+    const dateInput = await screen.findByLabelText(/Date/);
+    fireEvent.change(dateInput, { target: { value: '2026-06-25' } });
+    await user.click(screen.getByRole('button', { name: 'Ajouter l’activité' }));
+
+    expect(await screen.findByText('Stockage local indisponible')).toBeInTheDocument();
+    expect(dateInput).toHaveValue('2026-06-25');
+
+    const beforeUnload = new Event('beforeunload', { cancelable: true });
+    window.dispatchEvent(beforeUnload);
+    expect(beforeUnload.defaultPrevented).toBe(true);
   });
 
   it('préassocie une activité ouverte depuis une séance d’endurance planifiée même si la liste générale échoue', async () => {
@@ -138,5 +204,4 @@ describe('ActivityEditorPage', () => {
       'endurancePlanning:planned-run',
     );
   });
-
 });

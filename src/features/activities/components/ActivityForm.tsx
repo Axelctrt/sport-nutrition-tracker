@@ -40,6 +40,7 @@ interface ActivityFormProps {
   calculationWeightSource: string;
   submitLabel: string;
   onDateChange: (date: string) => void;
+  onDirtyChange?: (isDirty: boolean) => void;
   plannedActivityOptions?: readonly PlannedActivityLinkOption[];
   onSubmit: (values: ActivityFormValues) => Promise<void>;
 }
@@ -64,6 +65,7 @@ export function ActivityForm({
   calculationWeightSource,
   submitLabel,
   onDateChange,
+  onDirtyChange,
   plannedActivityOptions = [],
   onSubmit,
 }: ActivityFormProps) {
@@ -74,7 +76,7 @@ export function ActivityForm({
     reset,
     setValue,
     watch,
-    formState: { errors, isSubmitting, submitCount },
+    formState: { errors, isDirty, isSubmitting, submitCount },
   } = useForm<ActivityFormValues>({
     resolver: zodResolver(activityFormSchema),
     defaultValues: initialValues,
@@ -84,6 +86,10 @@ export function ActivityForm({
   useEffect(() => {
     reset(initialValues);
   }, [initialValues, reset]);
+
+  useEffect(() => {
+    onDirtyChange?.(isDirty);
+  }, [isDirty, onDirtyChange]);
 
   const values = watch();
   const activityType = values.activityType;
