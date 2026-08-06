@@ -25,9 +25,14 @@ function useBeforeUnloadGuard(when: boolean) {
 function DataRouterUnsavedChangesGuard({ when }: UnsavedChangesGuardProps) {
   const blocker = useBlocker(when);
 
+  useEffect(() => {
+    if (when || blocker.state !== 'blocked') return;
+    blocker.proceed();
+  }, [blocker, when]);
+
   return (
     <ConfirmationDialog
-      open={blocker.state === 'blocked'}
+      open={blocker.state === 'blocked' && when}
       title="Quitter sans enregistrer ?"
       description="Les changements seront perdus."
       confirmLabel="Quitter"
