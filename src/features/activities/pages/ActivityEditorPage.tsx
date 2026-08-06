@@ -33,6 +33,8 @@ import { activityTypeLabels } from '@/features/activities/utils/activityLabels';
 import { repositories } from '@/infrastructure/repositories/repositories';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 import { PageSkeleton } from '@/shared/ui/PageSkeleton';
+import { UnsavedChangesGuard } from '@/shared/ui/UnsavedChangesGuard';
+import { UnsavedFormBoundary } from '@/shared/ui/UnsavedFormBoundary';
 import { isValidLocalDate } from '@/shared/validation/localDate';
 
 interface AddActivityEditorPageProps {
@@ -102,6 +104,7 @@ function ActivityEditor({
   const [calculationWeightSource, setCalculationWeightSource] = useState('poids initial du profil');
   const [errorMessage, setErrorMessage] = useState<string>();
   const [loading, setLoading] = useState(true);
+  const [isDirty, setIsDirty] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -279,6 +282,7 @@ function ActivityEditor({
         values.date,
       );
 
+      setIsDirty(false);
       navigate(destination, { state: destinationState });
     } catch (error) {
       setErrorMessage(
@@ -300,6 +304,10 @@ function ActivityEditor({
     ?? (state?.initialValues.date
       ? `${routePaths.activities}?date=${encodeURIComponent(state.initialValues.date)}`
       : routePaths.activities);
+  const resetKey = useMemo(
+    () => JSON.stringify(state?.initialValues ?? null),
+    [state?.initialValues],
+  );
 
   return (
     <section aria-labelledby="activity-editor-title">
@@ -329,7 +337,11 @@ function ActivityEditor({
       ) : null}
 
       {!loading && state && profile ? (
-        <div className="mt-6">
+        <UnsavedFormBoundary
+          className="mt-6"
+          resetKey={resetKey}
+          onDirtyChange={setIsDirty}
+        >
           <ActivityForm
             initialValues={state.initialValues}
             allowedTypes={state.existingActivity ? [state.existingActivity.type] : allowedTypes}
@@ -341,8 +353,10 @@ function ActivityEditor({
             plannedActivityOptions={state.plannedActivityOptions}
             onSubmit={handleSubmit}
           />
-        </div>
+        </UnsavedFormBoundary>
       ) : null}
+
+      <UnsavedChangesGuard when={isDirty} />
     </section>
   );
 }

@@ -32,6 +32,8 @@ import { useActionToast } from '@/shared/toast/useActionToast';
 import { Card } from '@/shared/ui/Card';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 import { PageSkeleton } from '@/shared/ui/PageSkeleton';
+import { UnsavedChangesGuard } from '@/shared/ui/UnsavedChangesGuard';
+import { UnsavedFormBoundary } from '@/shared/ui/UnsavedFormBoundary';
 
 export function WorkoutTemplateEditorPage() {
   const actionToast = useActionToast();
@@ -47,6 +49,7 @@ export function WorkoutTemplateEditorPage() {
   const [exerciseDefinitions, setExerciseDefinitions] = useState<ExerciseDefinition[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string>();
+  const [isDirty, setIsDirty] = useState(false);
   const initialValues = useMemo(
     () => restoredDraft
       ?? (view
@@ -54,6 +57,7 @@ export function WorkoutTemplateEditorPage() {
         : defaultWorkoutTemplateFormValues),
     [restoredDraft, view],
   );
+  const resetKey = useMemo(() => JSON.stringify(initialValues), [initialValues]);
 
   useEffect(() => {
     let active = true;
@@ -130,6 +134,7 @@ export function WorkoutTemplateEditorPage() {
       });
       return;
     }
+    setIsDirty(false);
     void navigate(newStrengthExercisePath({
       returnTo: 'template',
       query,
@@ -144,6 +149,7 @@ export function WorkoutTemplateEditorPage() {
       const input = workoutTemplateFormValuesToInput(values);
       if (templateId) await updateWorkoutTemplate(repositories.workoutTemplates, templateId, input);
       else await createWorkoutTemplate(repositories.workoutTemplates, input);
+      setIsDirty(false);
       actionToast.success({
         key: templateId ? `workout-template-update:${templateId}` : 'workout-template-create',
         title: templateId ? 'Séance modèle modifiée' : 'Séance modèle créée',
@@ -171,20 +177,24 @@ export function WorkoutTemplateEditorPage() {
       {loading ? <PageSkeleton className="mt-6" variant="form" /> : null}
       {errorMessage ? <InlineNotice className="mt-8" tone="error" title="Séance indisponible">{errorMessage}</InlineNotice> : null}
       {!loading && !errorMessage ? (
-        <Card className="mt-8 p-5 sm:p-7">
-          <WorkoutTemplateForm
-            initialValues={initialValues}
-            exerciseDefinitions={exerciseDefinitions}
-            submitLabel={templateId ? 'Enregistrer les modifications' : 'Créer la séance'}
-            onSubmit={handleSubmit}
-            onCreateExercise={createExerciseFromSearch}
-            initialExerciseQuery={initialExerciseQuery}
-            {...(highlightedExerciseId
-              ? { highlightedExerciseId }
-              : {})}
-          />
-        </Card>
+        <UnsavedFormBoundary resetKey={resetKey} onDirtyChange={setIsDirty}>
+          <Card className="mt-8 p-5 sm:p-7">
+            <WorkoutTemplateForm
+              initialValues={initialValues}
+              exerciseDefinitions={exerciseDefinitions}
+              submitLabel={templateId ? 'Enregistrer les modifications' : 'Créer la séance'}
+              onSubmit={handleSubmit}
+              onCreateExercise={createExerciseFromSearch}
+              initialExerciseQuery={initialExerciseQuery}
+              {...(highlightedExerciseId
+                ? { highlightedExerciseId }
+                : {})}
+            />
+          </Card>
+        </UnsavedFormBoundary>
       ) : null}
+
+      <UnsavedChangesGuard when={isDirty} />
     </section>
   );
 }
