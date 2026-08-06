@@ -57,6 +57,7 @@ vi.mock('@/features/recipes/components/RecipeEntryForm', () => ({
         id="test-recipe-entry-servings"
         name="servingsConsumed"
         type="number"
+        step="0.01"
         defaultValue={initialValues.servingsConsumed}
       />
       <button type="submit">{submitLabel}</button>
