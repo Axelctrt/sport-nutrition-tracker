@@ -35,6 +35,7 @@ import { EmptyState } from '@/shared/ui/EmptyState';
 import { FormField } from '@/shared/ui/FormField';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 import { PageSkeleton } from '@/shared/ui/PageSkeleton';
+import { UnsavedChangesGuard } from '@/shared/ui/UnsavedChangesGuard';
 
 const optionalNumberRegistration = {
   setValueAs: (value: string) => (value === '' ? undefined : Number(value)),
@@ -148,6 +149,7 @@ export function EnduranceTemplatesPage() {
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [errorMessage, setErrorMessage] = useState<string>();
   const [editingId, setEditingId] = useState<string>();
+  const [pendingEditTarget, setPendingEditTarget] = useState<EnduranceTemplate>();
   const [deleteTarget, setDeleteTarget] = useState<EnduranceTemplate>();
   const form = useForm<EnduranceTemplateFormValues>({
     resolver: zodResolver(enduranceTemplateSchema),
@@ -175,6 +177,20 @@ export function EnduranceTemplatesPage() {
   const resetEditor = () => {
     setEditingId(undefined);
     form.reset(initialValues());
+  };
+
+  const openEditor = (template: EnduranceTemplate) => {
+    setEditingId(template.id);
+    form.reset(templateToValues(template));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const requestEditor = (template: EnduranceTemplate) => {
+    if (form.formState.isDirty) {
+      setPendingEditTarget(template);
+      return;
+    }
+    openEditor(template);
   };
 
   const submit = async (values: EnduranceTemplateFormValues) => {
@@ -258,7 +274,7 @@ export function EnduranceTemplatesPage() {
                 </div>
                 <div className="mt-4 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
                   <Link to={startPath(template)} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-brand-700 px-3 text-sm font-semibold text-white hover:bg-brand-800"><Play className="size-4" />Utiliser</Link>
-                  <Button size="sm" variant="secondary" onClick={() => { setEditingId(template.id); form.reset(templateToValues(template)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}><Pencil className="size-4" />Modifier</Button>
+                  <Button size="sm" variant="secondary" onClick={() => requestEditor(template)}><Pencil className="size-4" />Modifier</Button>
                   <Button size="sm" variant="secondary" onClick={() => void duplicateEnduranceTemplate(template.id).then(async () => {
                     actionToast.success({ key: `endurance-template-duplicate:${template.id}`, title: 'Modèle d’endurance dupliqué' });
                     await load();
@@ -274,6 +290,21 @@ export function EnduranceTemplatesPage() {
           </div>
         )}
       </div>
+
+      <ConfirmationDialog
+        open={Boolean(pendingEditTarget)}
+        title="Remplacer le brouillon ?"
+        description={pendingEditTarget ? `Les changements non enregistrés seront perdus avant de modifier « ${pendingEditTarget.name} ».` : ''}
+        confirmLabel="Modifier ce modèle"
+        cancelLabel="Conserver le brouillon"
+        onCancel={() => setPendingEditTarget(undefined)}
+        onConfirm={() => {
+          if (!pendingEditTarget) return;
+          const template = pendingEditTarget;
+          setPendingEditTarget(undefined);
+          openEditor(template);
+        }}
+      />
 
       <ConfirmationDialog
         open={Boolean(deleteTarget)}
@@ -303,6 +334,8 @@ export function EnduranceTemplatesPage() {
           });
         }}
       />
+
+      <UnsavedChangesGuard when={form.formState.isDirty} />
     </section>
   );
 }
