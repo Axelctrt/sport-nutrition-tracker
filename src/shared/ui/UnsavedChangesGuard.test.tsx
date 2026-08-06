@@ -1,5 +1,6 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useState } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   RouterProvider,
@@ -23,12 +24,47 @@ function EditablePage({ dirty }: { dirty: boolean }) {
   );
 }
 
+function SavingEditablePage() {
+  const navigate = useNavigate();
+  const [dirty, setDirty] = useState(true);
+
+  return (
+    <>
+      <h1>Profil</h1>
+      <button
+        type="button"
+        onClick={() => {
+          setDirty(false);
+          navigate('/other');
+        }}
+      >
+        Enregistrer et changer de page
+      </button>
+      <UnsavedChangesGuard when={dirty} />
+    </>
+  );
+}
+
 function renderRouter(dirty: boolean) {
   return render(
     <RouterProvider
       router={createMemoryRouter(
         [
           { path: '/profile', element: <EditablePage dirty={dirty} /> },
+          { path: '/other', element: <h1>Autre page</h1> },
+        ],
+        { initialEntries: ['/profile'] },
+      )}
+    />,
+  );
+}
+
+function renderSavingRouter() {
+  return render(
+    <RouterProvider
+      router={createMemoryRouter(
+        [
+          { path: '/profile', element: <SavingEditablePage /> },
           { path: '/other', element: <h1>Autre page</h1> },
         ],
         { initialEntries: ['/profile'] },
@@ -63,6 +99,16 @@ describe('UnsavedChangesGuard', () => {
     renderRouter(false);
 
     await user.click(screen.getByRole('button', { name: 'Changer de page' }));
+    expect(await screen.findByRole('heading', { name: 'Autre page' })).toBeInTheDocument();
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  });
+
+  it('reprend une navigation bloquée lorsque la sauvegarde rend le formulaire propre', async () => {
+    const user = userEvent.setup();
+    renderSavingRouter();
+
+    await user.click(screen.getByRole('button', { name: 'Enregistrer et changer de page' }));
+
     expect(await screen.findByRole('heading', { name: 'Autre page' })).toBeInTheDocument();
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
   });
