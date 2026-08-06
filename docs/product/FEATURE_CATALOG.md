@@ -1,10 +1,19 @@
 # Catalogue fonctionnel
 
-Statut vérifié : SportPilot 0.37.0 est publié en production depuis `main` au
-commit `84fea3d49e68c7d190c00d505502a5c4aa2e672a`. Le tag annoté `v0.37.0` et la
-release GitHub stable identifient le même état.
+## Sources de vérité
 
-| Domaine | État actuel |
+- production fonctionnelle 0.37.0 :
+  `84fea3d49e68c7d190c00d505502a5c4aa2e672a` ;
+- tag annoté `v0.37.0` et release GitHub stable ;
+- intégration constatée avant la Phase 0 V1 :
+  `develop@eec97bf9ac776b519d051329551836853894fd82`.
+
+Toujours revérifier les HEAD et le SHA réellement déployé avant de citer cet
+état.
+
+## Périmètre fonctionnel publié
+
+| Domaine | État publié en 0.37.0 |
 | --- | --- |
 | Tableau de bord | suivi quotidien, agenda, raccourcis, widgets et assistant |
 | Nutrition | journal, produits, recettes, favoris, objectifs et bilans |
@@ -13,7 +22,7 @@ release GitHub stable identifient le même état.
 | Poids et pas | saisie locale, historique, tendances et intégration au quotidien |
 | Planification | séances prévues, répétition de semaine et agenda |
 | Progression | objectifs, rapports, statistiques, badges, missions et thèmes |
-| Photos de progression | publié en 0.37.0 : ajout local, vues, galerie, comparateur tactile, archive séparée et suppression |
+| Photos de progression | ajout local, vues, galerie, comparateur tactile, archive séparée et suppression |
 | Sauvegarde | export, partage, import, restauration sélective et sauvegarde de sécurité |
 | Corbeille | archivage, restauration et purge contrôlée |
 | Comptes et espaces | invité, profil local, OTP cloud, appareils et restauration |
@@ -22,23 +31,31 @@ release GitHub stable identifient le même état.
 | PWA | installation, hors ligne, mise à jour explicite et conservation des données |
 | Photo nutrition | estimation manuelle et proxy IA optionnel avec consentement |
 
-## Intégré à `develop`, non publié
+## Évolutions intégrées à `develop`, non publiées
 
-La PR #24 est fusionnée dans `develop` au commit
-`f66efc2798117e861c7b59b66b50ab1cd88ba6bc`. Elle n’est pas encore présente
-dans `main` ni en production.
+### Profil, compte et social
 
-Elle ajoute :
+La PR #24 ajoute lecture seule prioritaire, édition dédiée, protection des
+modifications, statut de l’identifiant public sous son champ et feedback
+temporaire. L’isolation des espaces et le comportement cloud atomique restent
+inchangés.
 
-- un profil général consultable en lecture seule avant modification ;
-- une surface d’édition dédiée avec confirmation d’abandon ;
-- une carte `Profil social` initialement en lecture seule ;
-- une action explicite `Modifier` pour le profil social ;
-- le statut de disponibilité de l’identifiant public directement sous le
-  champ ;
-- un feedback de succès temporaire unique ;
-- la conservation de l’isolation locale et du comportement cloud atomique des
-  espaces compte.
+### Planning, Objectifs et liaison vers l’action
+
+- PR #45 : Planning sportif centré sur la semaine et création dédiée ;
+- PR #47 : Objectifs protégés, métrique immuable et anti-double comptage ;
+- PR #49 : actions contextuelles déterministes sans création automatique.
+
+### Menus d’actions
+
+Les PR #51, #53, #54, #56, #57 et #59 ajoutent une primitive adaptative puis
+migrent les usages Sport, Nutrition, assistant quotidien et Progression.
+
+### OTP
+
+La PR #62 fournit une saisie native partagée à huit cellules avec collage,
+autofill, correction et vérification automatique. Le protocole Dexie Cloud et
+les données restent inchangés.
 
 ## Limites actuelles
 
@@ -49,19 +66,26 @@ Elle ajoute :
   n’est pas un journal automatique.
 - Les photos de progression restent locales : aucune image cloud, sociale ou
   analysée par IA. Leur archive est séparée de la sauvegarde JSON générale.
-- Dans la production 0.37.0, le statut de disponibilité de l’identifiant public
-  reste dans son ancien emplacement. La PR #24 corrige ce point dans `develop`,
-  sans publication en production à ce stade.
 - La version 0.36.0 reste uniquement une référence historique de repli.
-- Les documents versionnés et artefacts de préparation décrivent parfois une
-  étape historique révolue : l’état courant doit être vérifié dans le code et
-  les documents canoniques.
+- Les documents versionnés et artefacts de préparation peuvent décrire une
+  étape historique révolue.
 
-## Planifié ou à étudier
+## Orientation actuelle
 
-Le prochain cadrage doit arbitrer entre `Planning hebdomadaire`, `Objectifs` ou
-un audit transverse préalable de leur articulation et de la normalisation
-globale de SportPilot.
+Le prochain programme est la cohérence globale puis la readiness V1, pas
+l’ajout de nouvelles fonctions.
 
-Voir [`../roadmap/PLANNED_FEATURES.md`](../roadmap/PLANNED_FEATURES.md). La
-présence d’une idée dans ce catalogue n’autorise pas son implémentation.
+L’issue #63 doit d’abord auditer en lecture seule :
+
+- l’UX et les comportements ;
+- les primitives et exceptions locales ;
+- l’accessibilité et le responsive ;
+- le hors ligne, la continuité et l’isolation des données.
+
+Les lots de correction seront décidés uniquement après validation du rapport.
+La séquence complète figure dans
+[`../roadmap/V1_READINESS_PLAN.md`](../roadmap/V1_READINESS_PLAN.md).
+
+Les nouvelles fonctions, le renvoi OTP, la synchronisation étendue, les
+nouvelles métriques et les optimisations avancées sont post-V1 sauf nouvelle
+décision explicite.

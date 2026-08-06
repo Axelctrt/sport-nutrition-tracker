@@ -1,178 +1,186 @@
 # Fonctionnalités et chantiers planifiés
 
-## Terminé — Phase 2 : audit ciblé
+Ce document distingue l’état publié, l’état intégré à `develop`, la trajectoire
+V1 autorisée et les options post-V1. Une mention ici ne vaut jamais autorisation
+de développement, fusion ou déploiement.
 
-L’audit de l’architecture, des données, de la synchronisation, de la PWA, des
-parcours mobiles et de Performance Glass a été produit puis accepté comme base
-de décision. Cette phase n’a pas modifié le comportement produit.
+## Publié — SportPilot 0.37.0
 
-## Publié — Phase 3 : fondations UX partagées
+La production fonctionnelle repose sur
+`84fea3d49e68c7d190c00d505502a5c4aa2e672a`.
 
-Les Phases 3A à 3E sont publiées en production dans SportPilot 0.37.0 :
+Le périmètre publié comprend notamment :
 
-- les correctifs obligatoires issus de l’audit ;
-- les variantes sémantiques de `EmptyState` ;
-- une politique cohérente de feedback asynchrone ;
-- un arbitre unique pour les bannières globales ;
-- une primitive `ExpandableCard` évaluée sur les séances modèles.
+- les fondations UX partagées des Phases 3A à 3E ;
+- les photos de progression privées et locales ;
+- la galerie, le comparateur et l’archive photo séparée ;
+- Dexie v12 additive et sauvegarde JSON v10 ;
+- la PWA, le fonctionnement hors ligne et la continuité des données ;
+- aucune migration D1.
 
-Les références externes restent des inspirations selon
-[`../product/UX_REFERENCES.md`](../product/UX_REFERENCES.md).
+## Intégré à `develop`, non publié
 
-## Publié — Phase 4 : photos de progression locales
+### Profil, Amis et Confidentialité — PR #24
 
-La PR #18 a livré le périmètre strict suivant, désormais publié dans SportPilot
-0.37.0 :
+- lecture seule prioritaire ;
+- édition dans une surface dédiée ;
+- confirmation d’abandon ;
+- statut de l’identifiant public sous son champ ;
+- succès temporaire unique ;
+- isolation locale et comportement cloud atomique conservés.
 
-- photos privées, locales et associées à la base de l’espace ouvert ;
-- ajout avec date, vue, poids et note facultatifs ;
-- redimensionnement, compression et miniatures dans le navigateur ;
-- galerie compacte, filtres et comparaison tactile avant/après ;
-- suppression individuelle ou complète ;
-- archive photo séparée et restauration additive ;
-- absence de publication sociale ;
-- absence de synchronisation d’image cloud ;
-- absence d’analyse corporelle ou d’extension IA.
+### Planning sportif — PR #45
 
-La migration Dexie v12, les quotas, l’isolation des espaces, la restauration,
-la continuité PWA, le clavier, WebKit et les largeurs mobiles sont couverts par
-la CI complète et par la recette réelle iPhone/Safari.
+- semaine prioritaire ;
+- action principale `Planifier` ;
+- création musculation ou endurance dans une surface dédiée ;
+- route historique conservée ;
+- rapprochement prévu/réalisé inchangé.
 
-Le suivi UX de la PR #19 utilise un seul bouton générique
-`Choisir une photo`, sans attribut `capture`, afin de laisser Safari et les
-autres navigateurs proposer leurs choix natifs. Le pipeline local de
-validation, compression et stockage reste inchangé.
+### Objectifs de progression — PR #47
 
-## Terminé — Phase 5 : publication stable 0.37.0
+- création et édition protégées ;
+- métrique verrouillée après création ;
+- minutes de musculation agrégées sans double comptage ;
+- autres métriques, jalons et statuts conservés.
 
-La PR #21 a livré `develop` dans `main`. Le commit publié
-`84fea3d49e68c7d190c00d505502a5c4aa2e672a` est référencé par le tag annoté
-`v0.37.0`, la release GitHub stable et la production Cloudflare Pages. Aucune
-migration D1 n’a été exécutée.
+### Objectif vers action — PR #49
 
-## Intégré à `develop`, non publié — Profil, Amis et Confidentialité
+- destination déterministe par métrique ;
+- aucune création automatique ;
+- aucune recommandation générative ;
+- routes et persistance existantes conservées.
 
-La PR #24 a été fusionnée dans `develop` au commit
-`f66efc2798117e861c7b59b66b50ab1cd88ba6bc`. Son HEAD fonctionnel validé est
-`6eed04863ff2c11611aac281fc04a91011f8a175`.
+### Menus d’actions — PR #51, #53, #54, #56, #57 et #59
 
-Le périmètre intégré est limité à :
+- Bottom Sheet mobile et popover tablette/desktop ;
+- lignes, liens, groupes et séparateurs canoniques ;
+- navigation clavier et focus ;
+- migrations Sport, Nutrition, assistant quotidien et historique du poids ;
+- actions destructives séparées ;
+- comportements métier conservés.
 
-- un profil général initialement consultable en lecture seule ;
-- une action `Modifier` ouvrant une surface d’édition dédiée ;
-- le même contrat lecture seule / édition pour le profil social ;
-- la protection des modifications non enregistrées ;
-- le statut de disponibilité de l’identifiant public directement sous son
-  champ ;
-- un toast temporaire unique après succès ;
-- l’absence de publication cloud en espace local ;
-- le maintien d’un enregistrement cloud atomique en espace compte.
+### OTP fluide — PR #62
 
-Cette évolution n’est pas encore présente dans `main` et n’est pas publiée en
-production. La Preview validée était
-`https://b2381e88.sportpilot-pages.pages.dev`.
+- une seule entrée native partagée ;
+- huit cellules visuelles adaptatives ;
+- saisie, sélection, copie, collage et correction natifs ;
+- `autocomplete="one-time-code"` ;
+- vérification automatique au huitième caractère ;
+- prévention de la resoumission en boucle ;
+- protocole Dexie Cloud inchangé.
 
-## Terminé — audit transverse Planning, Objectifs et Progression
+## Trajectoire autorisée vers la V1
 
-L’audit en lecture seule de `develop@417d1fc8e18239adbf511ba9d0571b91e1a8b606`
-a été accepté le 4 août 2026.
+### Phase 0 — Réconciliation documentaire
 
-Décisions produit :
+- remplacer la PR #60 devenue obsolète ;
+- aligner les documents canoniques sur le HEAD réel de `develop` ;
+- consigner la fin du chantier #50 ;
+- créer la référence détaillée de readiness V1 ;
+- ne modifier aucun code produit.
 
-- Planning et Objectifs restent séparés ;
-- Progression et Bilan hebdomadaire servent de pont ;
-- la métrique d’un objectif devient immuable après sa création ;
-- changer de métrique impose de créer un nouvel objectif ;
-- l’objectif de minutes d’activité couvre aussi les séances détaillées de
-  musculation terminées ;
-- une séance liée à une activité générale par `completedActivityId` ne doit être
-  comptée qu’une seule fois ;
-- aucun rapprochement approximatif par date, titre ou durée n’est autorisé.
+### Phase 1 — Audit transverse en lecture seule
 
-Le rapport de décision détaillé est
-[`PLANNING_GOALS_AUDIT_DECISIONS.md`](PLANNING_GOALS_AUDIT_DECISIONS.md).
+Issue parent : #63.
 
-## Cadrée — PR A : restructurer le Planning sportif
+L’audit couvre :
 
-### Résultat attendu
+- structure et hiérarchie des pages ;
+- navigation et conservation du contexte ;
+- formulaires et protection des modifications ;
+- feedback, chargements, erreurs et confirmations ;
+- états vides et indisponibilités ;
+- cartes, listes, menus et overlays ;
+- accessibilité, clavier et mouvement réduit ;
+- largeurs mobiles, WebKit et thèmes existants ;
+- fonctionnement hors ligne ;
+- continuité et isolation des données.
 
-- la semaine et son résumé deviennent le contenu prioritaire ;
-- une action principale `Planifier` ouvre une surface dédiée ;
-- l’utilisateur choisit ensuite `Musculation` ou `Endurance` ;
-- `Répéter cette semaine` devient une action secondaire ;
-- `Planifier` et `Voir les activités à venir` ont des destinations distinctes ;
-- le titre visible et les métadonnées deviennent `Planning sportif` ;
-- la route historique `/strength/planning` reste inchangée pour compatibilité.
+Chaque constat doit être classé comme défaut, risque, dette, recommandation UX,
+option ou conforme.
 
-### Contraintes
+### Phase 2 — Fondations partagées manquantes
 
-- aucun changement de schéma ou de persistance ;
-- aucun changement de formule calorique ;
-- aucun changement du rapprochement prévu/réalisé ;
-- aucune modification des thèmes validés ;
-- aucune extension IA ;
-- fonctionnement local-first, hors ligne et mobile-first conservé.
+Uniquement si l’audit démontre leur nécessité. Exemples à évaluer, pas à
+implémenter implicitement :
 
-### Tests attendus
+- structure canonique de page ;
+- surface d’édition protégée ;
+- contrats de feedback et de chargement ;
+- présentations canoniques de listes et cartes.
 
-- tests unitaires ciblés des destinations et états de la surface ;
-- E2E de création musculation et endurance ;
-- E2E de consultation de la semaine ;
-- Chromium mobile et WebKit iPhone 15 ;
-- absence de débordement horizontal ;
-- une seule CI complète une fois le périmètre stabilisé avant fusion.
+### Phase 3 — Normalisation par domaines
 
-Le développement de cette PR reste soumis à une autorisation explicite.
+Découpage indicatif à confirmer après l’audit :
 
-## Planifiée après PR A — PR B : sécuriser les Objectifs de progression
+1. shell global et navigation ;
+2. compte, onboarding et synchronisation ;
+3. Sport et Planning ;
+4. Nutrition ;
+5. Objectifs et Progression ;
+6. photos, profil, paramètres et surfaces secondaires.
 
-### Résultat attendu
+Chaque vague utilise des PR indépendantes, avec critères d’acceptation, hors
+périmètre, tests et recette propriétaire.
 
-- création et édition dans une surface dédiée ;
-- protection des modifications non enregistrées ;
-- métrique non modifiable après création ;
-- titre, cible, date de départ et échéance toujours modifiables ;
-- agrégation des minutes d’activité corrigée sans double comptage ;
-- distinction plus claire entre objectif nutritionnel et objectif de
-  progression ;
-- autres calculs, jalons et statuts inchangés.
+### Phase 4 — Convergence transverse
 
-### Règle anti-double comptage
+- réinventaire de toute l’application ;
+- exceptions locales justifiées ou supprimées ;
+- contrôle des styles, feedbacks, formulaires, overlays et actions ;
+- validation mobile, WebKit, hors ligne, thèmes et données.
 
-- les activités générales sont comptées normalement ;
-- une séance détaillée terminée est ajoutée seulement lorsque son
-  `completedActivityId` ne référence aucune activité déjà comptée ;
-- en l’absence d’activité liée, seule sa `durationMinutes` positive est ajoutée ;
-- une activité générale de musculation non liée reste comptée ;
-- aucune correspondance approximative n’est créée.
+### Phase 5 — Audit de readiness V1
 
-### Tests attendus
+Décider :
 
-- unité : activité générale seule ;
-- unité : séance détaillée seule ;
-- unité : séance et activité liées, comptées une seule fois ;
-- unité : activité de musculation non liée ;
-- composant : métrique verrouillée en modification ;
-- composant : abandon des changements ;
-- responsive et WebKit ciblés ;
-- une seule CI complète une fois avant fusion.
+- V1 prête ;
+- V1 prête sous corrections ciblées ;
+- V1 non prête avec liste fermée des blocages.
 
-## Optionnelle — PR C : relier un objectif à une action
+### Phase 6 — Corrections bloquantes V1
 
-Cette PR pourra proposer des liens contextuels vers Planning ou un écran de
-saisie pertinent. Elle ne doit créer automatiquement aucune séance, aucun
-programme, aucune cible et aucune recommandation générative. Elle nécessite une
-nouvelle validation produit après retour d’usage des PR A et B.
+Phase conditionnelle limitée aux blocages démontrés. Aucun élargissement
+fonctionnel.
 
-## Hors périmètre et abandonné pour cette séquence
+### Phase 7 — Release Candidate V1
 
-- **Abandonné pour cette séquence** : photos de progression sociales.
-- **Abandonné pour cette séquence** : stockage cloud des photos de progression.
-- **Abandonné pour cette séquence** : estimation IA ou automatique de la
-  composition corporelle.
-- **Hors périmètre** : modification des formules caloriques.
-- **Hors périmètre** : changement de fournisseur de synchronisation ou
-  d’identité.
+- gel fonctionnel ;
+- version candidate ;
+- Preview immuable ;
+- migration et mise à jour depuis la version publiée ;
+- recette propriétaire complète.
 
-Une idée abandonnée ici ne peut revenir que par une décision explicite et une
-mise à jour de la roadmap.
+### Phase 8 — Publication SportPilot V1
+
+- PR `develop` vers `main` ;
+- version `1.0.0` ;
+- tag et release GitHub ;
+- production ;
+- contrôles post-déploiement et stratégie de repli.
+
+Toutes ces opérations exigent des autorisations séparées.
+
+## Post-V1 uniquement
+
+À recadrer après publication de la V1 :
+
+- nouvelles fonctionnalités ;
+- simplification de parcours qui change le produit ;
+- synchronisation étendue ;
+- nouvelles métriques ;
+- performance avancée ;
+- accessibilité approfondie ;
+- dette technique prioritaire ;
+- renvoi OTP, après audit du contrat Dexie Cloud ;
+- toute extension IA ou sociale.
+
+## Hors périmètre permanent sans nouvelle décision
+
+- modification des formules caloriques ;
+- stockage cloud ou publication sociale des photos de progression ;
+- analyse corporelle automatique ou IA des photos de progression ;
+- changement de fournisseur d’identité ou de synchronisation ;
+- migration D1 implicite ;
+- changement global des thèmes validés.

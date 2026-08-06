@@ -8,10 +8,16 @@ pas une description automatiquement actuelle.
 
 ## État de référence
 
-- Application : SportPilot `0.37.0` publiée en production depuis `main` au
-  commit `84fea3d49e68c7d190c00d505502a5c4aa2e672a`.
+- Application publiée : SportPilot `0.37.0`.
+- Commit fonctionnel déployé en production :
+  `84fea3d49e68c7d190c00d505502a5c4aa2e672a`.
+- Branche `main` : elle peut contenir de la maintenance documentaire ultérieure
+  au commit fonctionnel déployé ; toujours distinguer HEAD Git et SHA réellement
+  servi en production.
 - Publication : tag annoté `v0.37.0` et release GitHub stable `0.37.0`.
 - Production : `https://sportpilot-pages.pages.dev`.
+- Intégration constatée avant la Phase 0 V1 :
+  `develop@eec97bf9ac776b519d051329551836853894fd82`.
 - Architecture : `src/domain`, `src/application`, `src/infrastructure`,
   `src/features`, `src/app`, `src/shared` et `src/pwa`.
 - Stockage principal local : Dexie `AppDatabase`, version 12.
@@ -22,8 +28,30 @@ pas une description automatiquement actuelle.
   domaine social et ses limites photo.
 - UI : mobile-first, local-first, hors ligne, système Performance Glass.
 
-Toujours vérifier ces valeurs dans le code et les services distants avant de
-les modifier ou de les citer dans un nouveau document.
+Toujours vérifier ces valeurs dans le code, GitHub et les services distants
+avant de les modifier ou de les citer dans un nouveau document.
+
+## Pilotage courant vers la V1
+
+L’objectif stratégique validé est de stabiliser le périmètre existant puis de
+publier SportPilot `1.0.0`. Aucun nouveau cycle fonctionnel ne doit être inséré
+entre le programme de cohérence globale et la décision de readiness V1.
+
+Ordre canonique :
+
+1. terminer la Phase 0 documentaire ;
+2. mettre à jour la base exacte de l’issue #63 après fusion ;
+3. réaliser la Phase 1 comme audit transverse en lecture seule ;
+4. soumettre le rapport, les priorités et le découpage au propriétaire ;
+5. ne commencer aucun lot de normalisation avant cette validation.
+
+Lire en priorité
+[`docs/roadmap/V1_READINESS_PLAN.md`](docs/roadmap/V1_READINESS_PLAN.md),
+[`docs/roadmap/ROADMAP.md`](docs/roadmap/ROADMAP.md) et l’issue #63.
+
+L’audit doit distinguer défaut, risque, dette, recommandation UX, option et
+surface conforme. Les recommandations qui changent réellement le produit
+restent séparées des corrections de conformité.
 
 ## Règles impératives
 
@@ -59,6 +87,8 @@ les modifier ou de les citer dans un nouveau document.
 - Réutiliser les composants et contrats existants avant d’en créer de nouveaux.
 - Mettre à jour la documentation canonique lorsque le comportement, un contrat,
   une commande, une version de données ou une procédure change.
+- Pour le programme V1, auditer avant de modifier et conserver des PR petites,
+  indépendantes et vérifiables.
 
 ## Validation
 

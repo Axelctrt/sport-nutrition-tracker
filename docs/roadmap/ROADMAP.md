@@ -4,77 +4,101 @@ Cette roadmap décrit une séquence et des conditions d’entrée, pas des dates
 livraison. Une phase planifiée n’autorise ni son implémentation, ni sa fusion,
 ni son déploiement.
 
-| Phase | Statut | Résultat attendu | Condition d’entrée |
-| --- | --- | --- | --- |
-| 0 — Stabilisation UX | **Publié en production** | Saisie numérique stable, confirmation de séance, constructeur simplifié, libellé « Profil » | Inclus dans la base publiée |
-| 1 — Modèle opératoire agents | **Publié en production** | Référentiel documentaire vérifié, ADR et règles durables | Inclus dans la base publiée |
-| 2 — Audit ciblé | **Terminé et accepté** | Rapport d’audit sans modification fonctionnelle | Conclusions utilisées pour la Phase 3 |
-| 3 — Fondations UX partagées | **Publié en production 0.37.0** | Correctifs UX, variantes `EmptyState`, politique de feedback, arbitre global et carte extensible pilote | Phases 3A à 3E validées |
-| 4 — Photos de progression locales | **Publié en production 0.37.0** | Suivi photo privé, local, non social et comparateur tactile | PR #18, CI complète et recette iPhone/Safari validées |
-| 5 — Déploiement contrôlé | **Terminé** | Publication de `main`, tag annoté, release GitHub stable et production validée | PR #21, commit `84fea3d49e68c7d190c00d505502a5c4aa2e672a`, tag `v0.37.0` |
-| Suivi UX post-0.37.0 — Profil, Amis et Confidentialité | **Intégré à `develop`, non publié** | Consultation en lecture seule, édition dans une surface dédiée, protection des modifications et feedback temporaire | PR #24, HEAD validé `6eed04863ff2c11611aac281fc04a91011f8a175`, merge `f66efc2798117e861c7b59b66b50ab1cd88ba6bc` |
-| Audit transverse — Planning, Objectifs et Progression | **Terminé et décisions acceptées** | Responsabilités séparées, pont Progression/Bilan, métrique d’objectif immuable et règle anti-double comptage | Décisions propriétaire du 4 août 2026 |
-| PR A — Planning sportif | **Cadrée, développement à autoriser** | Semaine prioritaire, création dans une surface dédiée et navigation normalisée | Audit transverse accepté |
-| PR B — Objectifs de progression | **Planifiée après PR A** | Édition sécurisée, métrique verrouillée et minutes de musculation comptées une seule fois | PR A stabilisée ou décision explicite de parallélisation |
-| PR C — Liaison Objectif → Action | **Optionnelle** | Liens contextuels sans création automatique | Retour d’usage et validation produit explicite |
+## Sources de vérité
+
+- dépôt : `Axelctrt/sport-nutrition-tracker` ;
+- production fonctionnelle 0.37.0 :
+  `84fea3d49e68c7d190c00d505502a5c4aa2e672a` ;
+- `develop` constaté avant la Phase 0 V1 :
+  `eec97bf9ac776b519d051329551836853894fd82` ;
+- documents de détail :
+  [`V1_READINESS_PLAN.md`](V1_READINESS_PLAN.md) et
+  [`PLANNED_FEATURES.md`](PLANNED_FEATURES.md).
+
+Les HEAD doivent être revérifiés sur GitHub à chaque reprise.
 
 ## État publié
 
-- SportPilot 0.37.0 est en production depuis `main`.
-- Le tag annoté `v0.37.0` pointe vers
-  `84fea3d49e68c7d190c00d505502a5c4aa2e672a`.
-- La release GitHub 0.37.0 est stable, non draft et non prerelease.
-- Aucune migration D1 n’a été exécutée pour cette publication.
-- La version 0.36.0 reste une référence historique de repli uniquement.
+SportPilot 0.37.0 est publié avec :
 
-## État de développement après 0.37.0
+- fondations UX partagées ;
+- photos de progression privées et locales ;
+- Dexie v12 additive ;
+- sauvegarde JSON v10 ;
+- fonctionnement PWA, hors ligne et isolation des espaces validés ;
+- tag annoté `v0.37.0` et release GitHub stable ;
+- aucune migration D1 pour cette publication.
 
-La PR #24 est fusionnée dans `develop`, mais n’est pas présente dans `main` et
-n’est pas publiée en production. Elle apporte notamment :
+Le HEAD de `main` peut contenir une maintenance documentaire postérieure au SHA
+fonctionnel déployé. Les deux références ne doivent pas être confondues.
 
-- un état initial en lecture seule pour le profil général et le profil social ;
-- une action `Modifier` ouvrant une surface d’édition dédiée ;
-- la confirmation d’abandon des changements non enregistrés ;
-- le statut de l’identifiant public placé directement sous son champ ;
-- un feedback de succès temporaire unique ;
-- la conservation du comportement cloud atomique pour l’identité sociale d’un
-  espace compte.
+## Intégré à `develop`, non publié
 
-## Architecture validée pour la suite
+Les évolutions suivantes sont intégrées dans `develop` mais ne sont pas
+présentes dans la production 0.37.0 :
 
-- Planning et Objectifs restent des domaines séparés.
-- Progression et Bilan hebdomadaire constituent le pont entre intention,
-  réalisation et résultat.
-- La métrique d’un objectif devient non modifiable après sa création.
-- L’objectif de minutes d’activité inclut les séances détaillées de musculation
-  terminées sans compter deux fois leur activité générale liée.
-- Aucun écran ne crée automatiquement de séance, programme ou objectif.
+| Lot | Références | Résultat |
+| --- | --- | --- |
+| Profil, Amis et Confidentialité | PR #24 | lecture seule prioritaire, surfaces d’édition protégées et feedback temporaire |
+| Planning sportif | PR #45 | semaine prioritaire, action `Planifier` et création dédiée |
+| Objectifs de progression | PR #47 | édition protégée, métrique verrouillée et anti-double comptage |
+| Objectif vers action | PR #49 | destinations contextuelles explicites sans création automatique |
+| Menus d’actions | PR #51, #53, #54, #56, #57 et #59 | primitive adaptative et migrations Sport, Nutrition et Progression |
+| OTP fluide | PR #62 | champ natif partagé, huit cellules et vérification automatique |
 
-Les décisions détaillées et la règle anti-double comptage figurent dans
-[`PLANNING_GOALS_AUDIT_DECISIONS.md`](PLANNING_GOALS_AUDIT_DECISIONS.md).
+Le chantier parent #50 est fonctionnellement terminé. Le renvoi OTP était une
+option conditionnelle, pas un reliquat obligatoire.
 
-## Prochain jalon
+## Décision stratégique
 
-La prochaine évolution fonctionnelle ordonnée est la **PR A — Planning
-sportif**. Son développement reste soumis à une autorisation explicite. Elle
-doit conserver la route historique, les données, les calculs et le
-rapprochement prévu/réalisé existants.
+Le prochain objectif n’est pas un nouveau cycle de fonctionnalités. Le
+périmètre existant doit être rendu cohérent, stabilisé puis évalué pour une
+publication SportPilot `1.0.0`.
 
-## Garde-fous de séquencement
+SportPilot sera considéré **V1-ready** lorsque l’audit de readiness aura
+démontré que le périmètre existant est cohérent, stable, sûr pour les données,
+mobile-first, hors ligne, testable et publiable. La V1 officielle exige ensuite
+une candidate validée et une publication explicitement autorisée.
 
-- Les photos de progression restent locales : pas d’images cloud, sociales ou
-  analysées par IA.
-- Toute nouvelle évolution utilise une branche et une PR distinctes vers
-  `develop`.
-- Toute maintenance documentaire portant exclusivement sur l’état publié part
-  de `main`, cible `main`, puis `develop` est resynchronisée depuis `main` par
-  merge.
-- Les évolutions intégrées uniquement à `develop` doivent rester explicitement
-  distinguées de la production.
-- Aucun nouveau chantier fonctionnel n’est autorisé par la clôture de la
-  release 0.37.0, la fusion de la PR #24 ou le présent cadrage documentaire.
+## Trajectoire V1
 
-Les détails de portée figurent dans
-[`PLANNED_FEATURES.md`](PLANNED_FEATURES.md). Les limites connues qui ne
-constituent pas une phase produit figurent dans
-[`TECHNICAL_DEBT.md`](TECHNICAL_DEBT.md).
+| Phase | Statut | Résultat attendu | Condition de sortie |
+| --- | --- | --- | --- |
+| 0 — Réconciliation documentaire | **En cours** | sources canoniques alignées, PR #60 remplacée, #50 clôturé administrativement | diff documentaire validé puis fusion autorisée |
+| 1 — Audit transverse | **Prochaine étape** | matrice complète UX, comportements, accessibilité, hors ligne et données | rapport #63 validé par le propriétaire |
+| 2 — Fondations partagées manquantes | **Conditionnelle** | primitives démontrées nécessaires par l’audit | pilotes et contrats validés |
+| 3 — Normalisation par domaines | **Conditionnelle** | migrations en lots indépendants, sans changement métier implicite | recettes de chaque lot validées |
+| 4 — Convergence transverse | **Planifiée** | inventaire final, exceptions justifiées et cohérence globale démontrée | rapport de convergence accepté |
+| 5 — Audit de readiness V1 | **Planifiée** | décision V1 prête, prête sous corrections ou non prête | liste fermée des blocages |
+| 6 — Corrections bloquantes V1 | **Conditionnelle** | seuls les blocages de readiness sont corrigés | nouvelle readiness concluante |
+| 7 — Release Candidate V1 | **Planifiée** | gel fonctionnel, Preview immuable et recette complète | validation propriétaire |
+| 8 — Publication SportPilot V1 | **Planifiée** | `1.0.0`, tag, release et production | contrôles post-déploiement validés |
+| 9 — Cycle produit post-V1 | **Après V1 uniquement** | nouvelles fonctions et optimisations | nouveau cadrage explicite |
+
+## Prochaine action immédiate
+
+Après fusion de la Phase 0 :
+
+1. remplacer dans l’issue #63 la base provisoire par le nouveau HEAD exact de
+   `develop` ;
+2. auditer sans modifier ;
+3. classer chaque constat comme défaut, risque, dette, recommandation UX,
+   option ou conforme ;
+4. présenter les impacts, priorités, fondations manquantes et lots proposés ;
+5. attendre la validation du propriétaire avant tout développement.
+
+## Garde-fous permanents
+
+- mobile-first, 320 à 412 px avant enrichissement desktop ;
+- local-first et hors ligne ;
+- continuité et isolation des données ;
+- aucune formule calorique modifiée sans audit et validation ;
+- aucun thème validé modifié sans validation ;
+- aucune extension IA sans validation ;
+- recommandations UX hors périmètre séparées ;
+- aucune migration Dexie ou D1 implicite ;
+- aucune fusion, release ou production sans autorisation explicite.
+
+Les détails de portée et de méthode figurent dans
+[`V1_READINESS_PLAN.md`](V1_READINESS_PLAN.md). Les limites connues figurent
+dans [`TECHNICAL_DEBT.md`](TECHNICAL_DEBT.md).
