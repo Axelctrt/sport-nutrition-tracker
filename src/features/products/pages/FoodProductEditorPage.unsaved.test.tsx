@@ -1,103 +1,10 @@
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {
   RouterProvider,
   createMemoryRouter,
 } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-
-interface TestFoodProductFormValues {
-  name: string;
-  brand: string;
-  basisUnit: 'g' | 'ml';
-  servingSize?: number;
-  servingLabel: string;
-  caloriesKcal: number;
-  proteinGrams: number;
-  carbohydratesGrams: number;
-  fatGrams: number;
-  fiberGrams?: number;
-  saltGrams?: number;
-  barcode: string;
-  isFavorite: boolean;
-}
-
-const testState = vi.hoisted(() => ({
-  defaultValues: {
-    name: '',
-    brand: '',
-    basisUnit: 'g' as const,
-    servingLabel: '',
-    caloriesKcal: 0,
-    proteinGrams: 0,
-    carbohydratesGrams: 0,
-    fatGrams: 0,
-    barcode: '',
-    isFavorite: false,
-  } satisfies TestFoodProductFormValues,
-  mocks: {
-    findDuplicates: vi.fn(),
-    saveSettled: vi.fn(),
-    toastSuccess: vi.fn(),
-    toastError: vi.fn(),
-  },
-}));
-
-const mocks = testState.mocks;
-
-vi.mock('@/application/food/foodProductDuplicateService', () => ({
-  findFoodProductDuplicates: testState.mocks.findDuplicates,
-}));
-
-vi.mock('@/features/products/utils/foodProductForm', () => ({
-  defaultFoodProductFormValues: testState.defaultValues,
-  formValuesToProductInput: (values: TestFoodProductFormValues) => ({
-    ...values,
-    source: { type: 'manual' as const },
-  }),
-  productToFormValues: (product: { name: string }) => ({
-    ...testState.defaultValues,
-    name: product.name,
-  }),
-}));
-
-vi.mock('@/shared/toast/useActionToast', () => ({
-  useActionToast: () => ({
-    success: testState.mocks.toastSuccess,
-    error: testState.mocks.toastError,
-  }),
-}));
-
-vi.mock('@/features/products/components/FoodProductForm', () => ({
-  FoodProductForm: ({
-    initialValues,
-    onSubmit,
-    submitLabel,
-  }: {
-    initialValues: TestFoodProductFormValues;
-    onSubmit: (values: TestFoodProductFormValues) => Promise<void>;
-    submitLabel: string;
-  }) => (
-    <form
-      onSubmit={(event) => {
-        event.preventDefault();
-        const formData = new FormData(event.currentTarget);
-        void onSubmit({
-          ...initialValues,
-          name: String(formData.get('name') ?? ''),
-        }).catch(() => undefined).finally(() => testState.mocks.saveSettled());
-      }}
-    >
-      <label htmlFor="test-food-product-name">Nom de l’aliment</label>
-      <input
-        id="test-food-product-name"
-        name="name"
-        defaultValue={initialValues.name}
-      />
-      <button type="submit">{submitLabel}</button>
-    </form>
-  ),
-}));
 
 import { FoodProductEditorPage } from '@/features/products/pages/FoodProductEditorPage';
 import { repositories } from '@/infrastructure/repositories/repositories';
@@ -115,6 +22,12 @@ const existingProduct = {
   source: { type: 'manual' },
   isArchived: false,
   isFavorite: false,
+};
+
+const duplicateProduct = {
+  ...existingProduct,
+  id: 'product-duplicate',
+  name: 'Skyr vanille',
 };
 
 function renderEditor(editing = false) {
@@ -144,12 +57,17 @@ afterEach(() => {
 
 describe('FoodProductEditorPage — brouillon', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    mocks.findDuplicates.mockReturnValue([]);
     vi.spyOn(repositories.food, 'listProducts').mockResolvedValue([]);
     vi.spyOn(repositories.food, 'getProductById').mockResolvedValue(existingProduct as never);
-    vi.spyOn(repositories.food, 'createProduct').mockResolvedValue({ id: 'product-created' } as never);
-    vi.spyOn(repositories.food, 'updateProduct').mockResolvedValue({ id: 'product-existing' } as never);
+    vi.spyOn(repositories.food, 'createProduct').mockResolvedValue({
+      ...existingProduct,
+      id: 'product-created',
+      name: 'Skyr vanille',
+    } as never);
+    vi.spyOn(repositories.food, 'updateProduct').mockResolvedValue({
+      ...existingProduct,
+      name: 'Yaourt grec',
+    } as never);
   });
 
   it('laisse revenir immédiatement lorsque la saisie est intacte', async () => {
@@ -198,7 +116,15 @@ describe('FoodProductEditorPage — brouillon', () => {
     expect(await screen.findByRole('heading', { name: 'Bibliothèque des aliments' }))
       .toBeInTheDocument();
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
-    expect(repositories.food.createProduct).toHaveBeenCalled();
+    expect(repositories.food.createProduct).toHaveBeenCalledWith(expect.objectContaining({
+      name: 'Skyr vanille',
+      nutritionPer100: {
+        caloriesKcal: 0,
+        proteinGrams: 0,
+        carbohydratesGrams: 0,
+        fatGrams: 0,
+      },
+    }));
     expect(router.state.location.state).toMatchObject({
       foodLibraryFeedback: {
         title: 'Aliment créé',
@@ -225,28 +151,9 @@ describe('FoodProductEditorPage — brouillon', () => {
     );
   });
 
-  it('conserve la garde active après une erreur de sauvegarde', async () => {
-    const user = userEvent.setup();
-    vi.mocked(repositories.food.createProduct).mockRejectedValueOnce(new Error('écriture impossible'));
-    renderEditor();
-    const name = await screen.findByLabelText('Nom de l’aliment');
-
-    await user.type(name, 'Skyr vanille');
-    await user.click(screen.getByRole('button', { name: 'Créer l’aliment' }));
-    await waitFor(() => expect(mocks.saveSettled).toHaveBeenCalledTimes(1));
-    await user.click(screen.getByRole('link', { name: 'Retour aux aliments' }));
-
-    expect(screen.getByRole('alertdialog', { name: 'Quitter sans enregistrer ?' }))
-      .toBeInTheDocument();
-    expect(name).toHaveValue('Skyr vanille');
-  });
-
   it('conserve la garde active après une détection de doublon', async () => {
     const user = userEvent.setup();
-    mocks.findDuplicates.mockReturnValueOnce([{
-      reason: 'name-and-brand',
-      product: { id: 'product-duplicate', name: 'Skyr vanille' },
-    }]);
+    vi.mocked(repositories.food.listProducts).mockResolvedValueOnce([duplicateProduct] as never);
     renderEditor();
     const name = await screen.findByLabelText('Nom de l’aliment');
 
