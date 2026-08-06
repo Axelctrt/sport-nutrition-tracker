@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
@@ -21,10 +21,11 @@ function dispatchBeforeUnload() {
   return event;
 }
 
-function editButton(index: number) {
-  const button = screen.getAllByRole('button', { name: 'Modifier' })[index];
-  if (!button) throw new Error(`Bouton Modifier ${index} introuvable.`);
-  return button;
+function editButtonForTemplate(templateName: string) {
+  const heading = screen.getByRole('heading', { name: templateName });
+  const card = heading.closest('.sp-card');
+  if (!card) throw new Error(`Carte du modèle « ${templateName} » introuvable.`);
+  return within(card).getByRole('button', { name: 'Modifier' });
 }
 
 beforeEach(async () => {
@@ -70,6 +71,7 @@ describe('EnduranceTemplatesPage', () => {
 
   it('protège le brouillon avant de charger un autre modèle', async () => {
     const user = userEvent.setup();
+    const targetName = 'Natation endurance 1 500 m';
     renderPage();
 
     await screen.findByRole('heading', { name: 'Course facile 45 min' });
@@ -79,7 +81,7 @@ describe('EnduranceTemplatesPage', () => {
     await user.type(nameInput, 'Brouillon endurance');
     expect(dispatchBeforeUnload().defaultPrevented).toBe(true);
 
-    await user.click(editButton(1));
+    await user.click(editButtonForTemplate(targetName));
     expect(screen.getByRole('alertdialog', { name: 'Remplacer le brouillon ?' })).toBeInTheDocument();
     expect(nameInput).toHaveValue('Brouillon endurance');
 
@@ -87,11 +89,11 @@ describe('EnduranceTemplatesPage', () => {
     expect(screen.queryByRole('alertdialog', { name: 'Remplacer le brouillon ?' })).not.toBeInTheDocument();
     expect(nameInput).toHaveValue('Brouillon endurance');
 
-    await user.click(editButton(1));
+    await user.click(editButtonForTemplate(targetName));
     await user.click(screen.getByRole('button', { name: 'Modifier ce modèle' }));
 
-    expect(await screen.findByRole('heading', { name: 'Modifier : Natation endurance 1 500 m' })).toBeInTheDocument();
-    expect(nameInput).toHaveValue('Natation endurance 1 500 m');
+    expect(await screen.findByRole('heading', { name: `Modifier : ${targetName}` })).toBeInTheDocument();
+    expect(nameInput).toHaveValue(targetName);
     expect(dispatchBeforeUnload().defaultPrevented).toBe(false);
   });
 
