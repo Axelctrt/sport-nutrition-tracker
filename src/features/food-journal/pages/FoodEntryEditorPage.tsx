@@ -1,5 +1,6 @@
 import { ArrowLeft, LoaderCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { foodJournalPath, routePaths } from '@/app/routePaths';
 import { saveProductEntry } from '@/application/food/foodJournalService';
@@ -76,7 +77,7 @@ export function FoodEntryEditorPage() {
 
   const handleSubmit = async (values: FoodEntryFormValues) => {
     const savedEntry = await saveProductEntry({ ...(entryId ? { entryId } : {}), ...values });
-    setIsDirty(false);
+    flushSync(() => setIsDirty(false));
     const returnContext = navigationState?.foodJournalReturn;
     await navigate(returnContext?.path ?? foodJournalPath(values.date), {
       state: createFoodJournalFeedbackState(returnContext, {
