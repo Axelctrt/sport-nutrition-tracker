@@ -74,7 +74,7 @@ describe('FoodProductEditorPage — brouillon', () => {
     const user = userEvent.setup();
     const router = renderEditor();
 
-    await screen.findByLabelText('Nom de l’aliment');
+    await screen.findByRole('textbox', { name: /^Nom de l’aliment/ });
     await user.click(screen.getByRole('link', { name: 'Retour aux aliments' }));
 
     expect(await screen.findByRole('heading', { name: 'Bibliothèque des aliments' }))
@@ -86,7 +86,7 @@ describe('FoodProductEditorPage — brouillon', () => {
   it('conserve la saisie après annulation puis respecte le retour après confirmation', async () => {
     const user = userEvent.setup();
     const router = renderEditor();
-    const name = await screen.findByLabelText('Nom de l’aliment');
+    const name = await screen.findByRole('textbox', { name: /^Nom de l’aliment/ });
 
     await user.type(name, 'Skyr vanille');
     await user.click(screen.getByRole('link', { name: 'Retour aux aliments' }));
@@ -108,7 +108,7 @@ describe('FoodProductEditorPage — brouillon', () => {
   it('désactive la garde après la création réussie', async () => {
     const user = userEvent.setup();
     const router = renderEditor();
-    const name = await screen.findByLabelText('Nom de l’aliment');
+    const name = await screen.findByRole('textbox', { name: /^Nom de l’aliment/ });
 
     await user.type(name, 'Skyr vanille');
     await user.click(screen.getByRole('button', { name: 'Créer l’aliment' }));
@@ -136,7 +136,7 @@ describe('FoodProductEditorPage — brouillon', () => {
   it('désactive la garde après la modification réussie', async () => {
     const user = userEvent.setup();
     renderEditor(true);
-    const name = await screen.findByLabelText('Nom de l’aliment');
+    const name = await screen.findByRole('textbox', { name: /^Nom de l’aliment/ });
 
     await user.clear(name);
     await user.type(name, 'Yaourt grec');
@@ -155,7 +155,7 @@ describe('FoodProductEditorPage — brouillon', () => {
     const user = userEvent.setup();
     vi.mocked(repositories.food.listProducts).mockResolvedValueOnce([duplicateProduct] as never);
     renderEditor();
-    const name = await screen.findByLabelText('Nom de l’aliment');
+    const name = await screen.findByRole('textbox', { name: /^Nom de l’aliment/ });
 
     await user.type(name, 'Skyr vanille');
     await user.click(screen.getByRole('button', { name: 'Créer l’aliment' }));
