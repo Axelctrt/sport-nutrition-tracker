@@ -1,8 +1,6 @@
 import { useEffect } from 'react';
 
-function prefersReducedMotion() {
-  return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
-}
+import { revealElement } from '@/shared/motion/revealElement';
 
 function elementToCenter(trigger: HTMLElement): HTMLElement {
   const controlledId = trigger.getAttribute('aria-controls');
@@ -26,10 +24,9 @@ export function useCenterExpandedContent() {
         frameIds.delete(firstFrame);
         const secondFrame = window.requestAnimationFrame(() => {
           frameIds.delete(secondFrame);
-          element.scrollIntoView({
+          revealElement(element, {
             block: 'center',
             inline: 'nearest',
-            behavior: prefersReducedMotion() ? 'auto' : 'smooth',
           });
         });
         frameIds.add(secondFrame);
