@@ -70,7 +70,7 @@ const returnPath = '/food-journal?date=2026-08-06';
 const returnState = {
   foodJournalReturn: {
     path: returnPath,
-    date: '2026-08-06',
+    mealSlot: 'dinner' as const,
     scrollKey: 'nutrition-journal-location',
   },
 };
