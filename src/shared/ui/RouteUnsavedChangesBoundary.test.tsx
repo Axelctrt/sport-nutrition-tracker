@@ -8,6 +8,7 @@ import {
   RouterProvider,
 } from 'react-router-dom';
 
+import { ConfirmationDialog } from '@/shared/ui/ConfirmationDialog';
 import { RouteUnsavedChangesBoundary } from '@/shared/ui/RouteUnsavedChangesBoundary';
 
 function BoundaryLayout() {
@@ -90,6 +91,45 @@ function SettingsFixture() {
         </label>
         <button type="submit">Enregistrer les paramètres</button>
       </form>
+      <Link to="/destination">Quitter la page</Link>
+    </>
+  );
+}
+
+function ResettableSettingsFixture() {
+  const [theme, setTheme] = useState('dark');
+  const [resetOpen, setResetOpen] = useState(false);
+
+  return (
+    <>
+      <form>
+        <label>
+          Thème
+          <select
+            value={theme}
+            onChange={(event) => setTheme(event.target.value)}
+          >
+            <option value="system">Système</option>
+            <option value="light">Clair</option>
+            <option value="dark">Sombre</option>
+          </select>
+        </label>
+        <button type="submit">Enregistrer les paramètres</button>
+        <button type="button" onClick={() => setResetOpen(true)}>
+          Rétablir les valeurs par défaut
+        </button>
+      </form>
+      <ConfirmationDialog
+        open={resetOpen}
+        title="Rétablir les paramètres par défaut ?"
+        description="Les valeurs recommandées seront restaurées."
+        confirmLabel="Rétablir"
+        onCancel={() => setResetOpen(false)}
+        onConfirm={() => {
+          setTheme('light');
+          setResetOpen(false);
+        }}
+      />
       <Link to="/destination">Quitter la page</Link>
     </>
   );
@@ -185,5 +225,24 @@ describe('RouteUnsavedChangesBoundary', () => {
     await user.click(screen.getByRole('link', { name: 'Quitter la page' }));
 
     expect(screen.getByRole('alertdialog')).toBeInTheDocument();
+  });
+
+  it('désactive la garde après une réinitialisation persistée depuis le portail', async () => {
+    const user = userEvent.setup();
+    renderRoute('/settings/advanced', <ResettableSettingsFixture />);
+
+    await user.selectOptions(screen.getByLabelText('Thème'), 'system');
+    await user.click(screen.getByRole('button', { name: 'Rétablir les valeurs par défaut' }));
+    await user.click(screen.getByRole('button', { name: 'Rétablir' }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+      expect(screen.getByLabelText('Thème')).toHaveValue('light');
+    });
+
+    await user.click(screen.getByRole('link', { name: 'Quitter la page' }));
+
+    expect(await screen.findByText('Destination')).toBeInTheDocument();
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
   });
 });
