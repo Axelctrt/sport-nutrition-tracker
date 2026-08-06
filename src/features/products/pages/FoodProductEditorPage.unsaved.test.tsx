@@ -22,46 +22,49 @@ interface TestFoodProductFormValues {
   isFavorite: boolean;
 }
 
-const defaultValues: TestFoodProductFormValues = {
-  name: '',
-  brand: '',
-  basisUnit: 'g',
-  servingLabel: '',
-  caloriesKcal: 0,
-  proteinGrams: 0,
-  carbohydratesGrams: 0,
-  fatGrams: 0,
-  barcode: '',
-  isFavorite: false,
-};
-
-const mocks = vi.hoisted(() => ({
-  findDuplicates: vi.fn(),
-  saveSettled: vi.fn(),
-  toastSuccess: vi.fn(),
-  toastError: vi.fn(),
+const testState = vi.hoisted(() => ({
+  defaultValues: {
+    name: '',
+    brand: '',
+    basisUnit: 'g' as const,
+    servingLabel: '',
+    caloriesKcal: 0,
+    proteinGrams: 0,
+    carbohydratesGrams: 0,
+    fatGrams: 0,
+    barcode: '',
+    isFavorite: false,
+  } satisfies TestFoodProductFormValues,
+  mocks: {
+    findDuplicates: vi.fn(),
+    saveSettled: vi.fn(),
+    toastSuccess: vi.fn(),
+    toastError: vi.fn(),
+  },
 }));
 
+const mocks = testState.mocks;
+
 vi.mock('@/application/food/foodProductDuplicateService', () => ({
-  findFoodProductDuplicates: mocks.findDuplicates,
+  findFoodProductDuplicates: testState.mocks.findDuplicates,
 }));
 
 vi.mock('@/features/products/utils/foodProductForm', () => ({
-  defaultFoodProductFormValues: defaultValues,
+  defaultFoodProductFormValues: testState.defaultValues,
   formValuesToProductInput: (values: TestFoodProductFormValues) => ({
     ...values,
     source: { type: 'manual' as const },
   }),
   productToFormValues: (product: { name: string }) => ({
-    ...defaultValues,
+    ...testState.defaultValues,
     name: product.name,
   }),
 }));
 
 vi.mock('@/shared/toast/useActionToast', () => ({
   useActionToast: () => ({
-    success: mocks.toastSuccess,
-    error: mocks.toastError,
+    success: testState.mocks.toastSuccess,
+    error: testState.mocks.toastError,
   }),
 }));
 
@@ -82,7 +85,7 @@ vi.mock('@/features/products/components/FoodProductForm', () => ({
         void onSubmit({
           ...initialValues,
           name: String(formData.get('name') ?? ''),
-        }).catch(() => undefined).finally(() => mocks.saveSettled());
+        }).catch(() => undefined).finally(() => testState.mocks.saveSettled());
       }}
     >
       <label htmlFor="test-food-product-name">Nom de l’aliment</label>
