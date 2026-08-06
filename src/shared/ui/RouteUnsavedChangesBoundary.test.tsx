@@ -63,6 +63,38 @@ function DashboardFixture() {
   );
 }
 
+function SettingsFixture() {
+  const [automaticSync, setAutomaticSync] = useState(false);
+  const [theme, setTheme] = useState('system');
+
+  return (
+    <>
+      <label>
+        <input
+          type="checkbox"
+          checked={automaticSync}
+          onChange={(event) => setAutomaticSync(event.target.checked)}
+        />
+        Synchronisation automatique
+      </label>
+      <form>
+        <label>
+          Thème
+          <select
+            value={theme}
+            onChange={(event) => setTheme(event.target.value)}
+          >
+            <option value="system">Système</option>
+            <option value="dark">Sombre</option>
+          </select>
+        </label>
+        <button type="submit">Enregistrer les paramètres</button>
+      </form>
+      <Link to="/destination">Quitter la page</Link>
+    </>
+  );
+}
+
 function renderRoute(path: string, element: ReactNode) {
   const router = createMemoryRouter([
     {
@@ -129,6 +161,27 @@ describe('RouteUnsavedChangesBoundary', () => {
     renderRoute('/settings/dashboard', <DashboardFixture />);
 
     await user.click(screen.getByRole('checkbox', { name: 'Affichage compact' }));
+    await user.click(screen.getByRole('link', { name: 'Quitter la page' }));
+
+    expect(screen.getByRole('alertdialog')).toBeInTheDocument();
+  });
+
+  it('ignore les contrôles à écriture immédiate hors du formulaire ciblé', async () => {
+    const user = userEvent.setup();
+    renderRoute('/settings/advanced', <SettingsFixture />);
+
+    await user.click(screen.getByRole('checkbox', { name: 'Synchronisation automatique' }));
+    await user.click(screen.getByRole('link', { name: 'Quitter la page' }));
+
+    expect(await screen.findByText('Destination')).toBeInTheDocument();
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  });
+
+  it('protège le formulaire avancé ciblé', async () => {
+    const user = userEvent.setup();
+    renderRoute('/settings/advanced', <SettingsFixture />);
+
+    await user.selectOptions(screen.getByLabelText('Thème'), 'dark');
     await user.click(screen.getByRole('link', { name: 'Quitter la page' }));
 
     expect(screen.getByRole('alertdialog')).toBeInTheDocument();
