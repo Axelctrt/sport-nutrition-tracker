@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {
   RouterProvider,
@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   loadRecipeDetails: vi.fn(),
   saveRecipeEntry: vi.fn(),
+  saveSettled: vi.fn(),
   toastError: vi.fn(),
 }));
 
@@ -48,7 +49,7 @@ vi.mock('@/features/recipes/components/RecipeEntryForm', () => ({
         void onSubmit({
           ...initialValues,
           servingsConsumed: Number(formData.get('servingsConsumed')),
-        }).catch(() => undefined);
+        }).catch(() => undefined).finally(() => mocks.saveSettled());
       }}
     >
       <label htmlFor="test-recipe-entry-servings">Portions consommées</label>
@@ -192,6 +193,7 @@ describe('RecipeEntryEditorPage', () => {
     await user.clear(servings);
     await user.type(servings, '2.25');
     await user.click(screen.getByRole('button', { name: 'Ajouter au journal' }));
+    await waitFor(() => expect(mocks.saveSettled).toHaveBeenCalledTimes(1));
     await user.click(screen.getByRole('link', { name: 'Retour au journal' }));
 
     expect(mocks.toastError).toHaveBeenCalled();
