@@ -1,5 +1,5 @@
 import { ArrowLeft, LoaderCircle } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
@@ -70,17 +70,19 @@ export function RecipeEntryEditorPage() {
 
   const requestedDate = searchParams.get('date') ?? '';
   const requestedSlot = searchParams.get('slot') as MealSlot | null;
-  const initialValues: RecipeEntryFormValues = entry?.reference.sourceType === 'recipe'
-    ? {
-        date: entry.date,
-        mealSlot: entry.mealSlot,
-        servingsConsumed: entry.reference.servingsConsumed,
-      }
-    : {
-        date: isValidLocalDate(requestedDate) ? requestedDate : toLocalDate(),
-        mealSlot: requestedSlot && slots.includes(requestedSlot) ? requestedSlot : 'lunch',
-        servingsConsumed: 1,
-      };
+  const initialValues = useMemo<RecipeEntryFormValues>(() =>
+    entry?.reference.sourceType === 'recipe'
+      ? {
+          date: entry.date,
+          mealSlot: entry.mealSlot,
+          servingsConsumed: entry.reference.servingsConsumed,
+        }
+      : {
+          date: isValidLocalDate(requestedDate) ? requestedDate : toLocalDate(),
+          mealSlot: requestedSlot && slots.includes(requestedSlot) ? requestedSlot : 'lunch',
+          servingsConsumed: 1,
+        },
+  [entry, requestedDate, requestedSlot]);
   const resetKey = JSON.stringify(initialValues);
 
   const handleSubmit = async (values: RecipeEntryFormValues) => {
