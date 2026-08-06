@@ -1,4 +1,4 @@
-import { type ReactNode, useCallback, useEffect, useRef } from 'react';
+import { type ReactNode, useCallback, useLayoutEffect, useRef } from 'react';
 
 interface UnsavedFormBoundaryProps {
   children: ReactNode;
@@ -24,39 +24,28 @@ export function UnsavedFormBoundary({
 }: UnsavedFormBoundaryProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const baselineRef = useRef<string>();
-  const frameRef = useRef<number>();
+  const checkVersionRef = useRef(0);
 
   const readForm = useCallback(() =>
     containerRef.current?.querySelector<HTMLFormElement>('form') ?? null,
   []);
 
-  const cancelScheduledCheck = useCallback(() => {
-    if (frameRef.current === undefined) return;
-    window.cancelAnimationFrame(frameRef.current);
-    frameRef.current = undefined;
-  }, []);
-
   const scheduleCheck = useCallback(() => {
-    cancelScheduledCheck();
-    frameRef.current = window.requestAnimationFrame(() => {
-      frameRef.current = undefined;
+    const version = ++checkVersionRef.current;
+    queueMicrotask(() => {
+      if (version !== checkVersionRef.current) return;
       const form = readForm();
       if (!form || baselineRef.current === undefined) return;
       onDirtyChange(serializeForm(form) !== baselineRef.current);
     });
-  }, [cancelScheduledCheck, onDirtyChange, readForm]);
+  }, [onDirtyChange, readForm]);
 
-  useEffect(() => {
-    cancelScheduledCheck();
-    const frameId = window.requestAnimationFrame(() => {
-      const form = readForm();
-      baselineRef.current = form ? serializeForm(form) : undefined;
-      onDirtyChange(false);
-    });
-    frameRef.current = frameId;
-
-    return cancelScheduledCheck;
-  }, [cancelScheduledCheck, onDirtyChange, readForm, resetKey]);
+  useLayoutEffect(() => {
+    checkVersionRef.current += 1;
+    const form = readForm();
+    baselineRef.current = form ? serializeForm(form) : undefined;
+    onDirtyChange(false);
+  }, [onDirtyChange, readForm, resetKey]);
 
   return (
     <div
@@ -64,7 +53,7 @@ export function UnsavedFormBoundary({
       className={className}
       onInputCapture={scheduleCheck}
       onChangeCapture={scheduleCheck}
-      onClickCapture={scheduleCheck}
+      onClick={scheduleCheck}
     >
       {children}
     </div>
