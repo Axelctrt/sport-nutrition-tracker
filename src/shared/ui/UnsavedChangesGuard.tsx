@@ -1,5 +1,8 @@
-import { useEffect } from 'react';
-import { useBlocker } from 'react-router-dom';
+import { useContext, useEffect } from 'react';
+import {
+  UNSAFE_DataRouterContext,
+  useBlocker,
+} from 'react-router-dom';
 
 import { ConfirmationDialog } from '@/shared/ui/ConfirmationDialog';
 
@@ -7,9 +10,7 @@ interface UnsavedChangesGuardProps {
   when: boolean;
 }
 
-export function UnsavedChangesGuard({ when }: UnsavedChangesGuardProps) {
-  const blocker = useBlocker(when);
-
+function useBeforeUnloadGuard(when: boolean) {
   useEffect(() => {
     if (!when) return;
     const block = (event: BeforeUnloadEvent) => {
@@ -19,6 +20,10 @@ export function UnsavedChangesGuard({ when }: UnsavedChangesGuardProps) {
     window.addEventListener('beforeunload', block);
     return () => window.removeEventListener('beforeunload', block);
   }, [when]);
+}
+
+function DataRouterUnsavedChangesGuard({ when }: UnsavedChangesGuardProps) {
+  const blocker = useBlocker(when);
 
   return (
     <ConfirmationDialog
@@ -35,4 +40,12 @@ export function UnsavedChangesGuard({ when }: UnsavedChangesGuardProps) {
       }}
     />
   );
+}
+
+export function UnsavedChangesGuard({ when }: UnsavedChangesGuardProps) {
+  const dataRouterContext = useContext(UNSAFE_DataRouterContext);
+  useBeforeUnloadGuard(when);
+
+  if (!dataRouterContext) return null;
+  return <DataRouterUnsavedChangesGuard when={when} />;
 }
