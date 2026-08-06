@@ -25,6 +25,8 @@ import { useActionToast } from '@/shared/toast/useActionToast';
 import { Card } from '@/shared/ui/Card';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 import { PageSkeleton } from '@/shared/ui/PageSkeleton';
+import { UnsavedChangesGuard } from '@/shared/ui/UnsavedChangesGuard';
+import { UnsavedFormBoundary } from '@/shared/ui/UnsavedFormBoundary';
 
 export function StrengthExerciseEditorPage() {
   const actionToast = useActionToast();
@@ -34,6 +36,7 @@ export function StrengthExerciseEditorPage() {
   const [exercise, setExercise] = useState<ExerciseDefinition>();
   const [loading, setLoading] = useState(Boolean(exerciseId));
   const [errorMessage, setErrorMessage] = useState<string>();
+  const [isDirty, setIsDirty] = useState(false);
   const creationContext = useMemo(
     () => exerciseId
       ? undefined
@@ -53,6 +56,7 @@ export function StrengthExerciseEditorPage() {
       trackingMode: 'repetitions' as const,
     };
   }, [creationContext, exercise]);
+  const resetKey = useMemo(() => JSON.stringify(initialValues), [initialValues]);
   const returnPath = creationContext
     ? strengthExerciseCreationReturnPath(creationContext)
     : routePaths.strengthExercises;
@@ -81,6 +85,7 @@ export function StrengthExerciseEditorPage() {
       const input = formValuesToExerciseInput(values);
       if (exerciseId) {
         await updateCustomExercise(repositories.strengthExercises, exerciseId, input);
+        setIsDirty(false);
         actionToast.success({
           key: `strength-exercise-update:${exerciseId}`,
           title: 'Exercice modifié',
@@ -92,6 +97,7 @@ export function StrengthExerciseEditorPage() {
         repositories.strengthExercises,
         input,
       );
+      setIsDirty(false);
       if (creationContext) {
         await navigate(returnPath, {
           state: strengthExerciseCreatedState(created.id, creationContext),
@@ -137,7 +143,19 @@ export function StrengthExerciseEditorPage() {
 
       {loading ? <PageSkeleton className="mt-6" variant="form" /> : null}
       {errorMessage ? <InlineNotice className="mt-8" tone="error" title="Exercice indisponible">{errorMessage}</InlineNotice> : null}
-      {!loading && !errorMessage ? <Card className="mt-8 p-5 sm:p-7"><StrengthExerciseForm initialValues={initialValues} submitLabel={exercise ? 'Enregistrer les modifications' : 'Créer l’exercice'} onSubmit={handleSubmit} /></Card> : null}
+      {!loading && !errorMessage ? (
+        <UnsavedFormBoundary resetKey={resetKey} onDirtyChange={setIsDirty}>
+          <Card className="mt-8 p-5 sm:p-7">
+            <StrengthExerciseForm
+              initialValues={initialValues}
+              submitLabel={exercise ? 'Enregistrer les modifications' : 'Créer l’exercice'}
+              onSubmit={handleSubmit}
+            />
+          </Card>
+        </UnsavedFormBoundary>
+      ) : null}
+
+      <UnsavedChangesGuard when={isDirty} />
     </section>
   );
 }
