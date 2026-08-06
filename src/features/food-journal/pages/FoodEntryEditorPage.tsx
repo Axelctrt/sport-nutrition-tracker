@@ -1,5 +1,6 @@
 import { ArrowLeft, LoaderCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { foodJournalPath, routePaths } from '@/app/routePaths';
 import { saveProductEntry } from '@/application/food/foodJournalService';
@@ -16,6 +17,8 @@ import { mealSlotLabels } from '@/features/food-journal/utils/foodLabels';
 import { repositories } from '@/infrastructure/repositories/repositories';
 import { Card } from '@/shared/ui/Card';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
+import { UnsavedChangesGuard } from '@/shared/ui/UnsavedChangesGuard';
+import { UnsavedFormBoundary } from '@/shared/ui/UnsavedFormBoundary';
 import { toLocalDate } from '@/shared/utils/dates';
 import { isValidLocalDate } from '@/shared/validation/localDate';
 
@@ -31,6 +34,7 @@ export function FoodEntryEditorPage() {
   const [entry, setEntry] = useState<FoodEntry>();
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string>();
+  const [isDirty, setIsDirty] = useState(false);
   const requestedDate = searchParams.get('date') ?? '';
   const requestedSlot = searchParams.get('slot') as MealSlot | null;
   const defaultDate = isValidLocalDate(requestedDate) ? requestedDate : toLocalDate();
@@ -69,9 +73,11 @@ export function FoodEntryEditorPage() {
         inputMode: 'amount',
         inputQuantity: 100,
       };
+  const resetKey = JSON.stringify(initialValues);
 
   const handleSubmit = async (values: FoodEntryFormValues) => {
     const savedEntry = await saveProductEntry({ ...(entryId ? { entryId } : {}), ...values });
+    flushSync(() => setIsDirty(false));
     const returnContext = navigationState?.foodJournalReturn;
     await navigate(returnContext?.path ?? foodJournalPath(values.date), {
       state: createFoodJournalFeedbackState(returnContext, {
@@ -106,8 +112,20 @@ export function FoodEntryEditorPage() {
       </div>
       {loading ? <Card className="mt-8 p-8 text-center" role="status"><LoaderCircle aria-hidden="true" className="mx-auto size-8 animate-spin text-brand-700" /><p className="mt-3 font-semibold">Chargement…</p></Card> : null}
       {errorMessage ? <InlineNotice className="mt-8" tone="error" title="Formulaire indisponible">{errorMessage}</InlineNotice> : null}
-      {!loading && !errorMessage ? <Card className="mt-8 p-5 sm:p-7"><FoodEntryForm initialValues={initialValues} products={products} submitLabel={entryId ? 'Enregistrer les modifications' : 'Ajouter au journal'} onSubmit={handleSubmit} /></Card> : null}
+      {!loading && !errorMessage ? (
+        <UnsavedFormBoundary resetKey={resetKey} onDirtyChange={setIsDirty}>
+          <Card className="mt-8 p-5 sm:p-7">
+            <FoodEntryForm
+              initialValues={initialValues}
+              products={products}
+              submitLabel={entryId ? 'Enregistrer les modifications' : 'Ajouter au journal'}
+              onSubmit={handleSubmit}
+            />
+          </Card>
+        </UnsavedFormBoundary>
+      ) : null}
       {!loading && products.length === 0 ? <p className="mt-4 text-sm"><Link to={routePaths.newFoodProduct} className="font-semibold text-brand-700 hover:underline">Créer un aliment manuel</Link></p> : null}
+      <UnsavedChangesGuard when={isDirty} />
     </section>
   );
 }
