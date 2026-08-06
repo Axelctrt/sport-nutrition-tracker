@@ -24,7 +24,9 @@ function dispatchBeforeUnload() {
 function editButtonForTemplate(templateName: string) {
   const heading = screen.getByRole('heading', { name: templateName });
   const card = heading.closest('.sp-card');
-  if (!card) throw new Error(`Carte du modèle « ${templateName} » introuvable.`);
+  if (!(card instanceof HTMLElement)) {
+    throw new Error(`Carte du modèle « ${templateName} » introuvable.`);
+  }
   return within(card).getByRole('button', { name: 'Modifier' });
 }
 
