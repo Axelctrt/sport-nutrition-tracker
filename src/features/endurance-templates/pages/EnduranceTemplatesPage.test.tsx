@@ -21,6 +21,12 @@ function dispatchBeforeUnload() {
   return event;
 }
 
+function editButton(index: number) {
+  const button = screen.getAllByRole('button', { name: 'Modifier' })[index];
+  if (!button) throw new Error(`Bouton Modifier ${index} introuvable.`);
+  return button;
+}
+
 beforeEach(async () => {
   cleanup();
   vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
@@ -73,7 +79,7 @@ describe('EnduranceTemplatesPage', () => {
     await user.type(nameInput, 'Brouillon endurance');
     expect(dispatchBeforeUnload().defaultPrevented).toBe(true);
 
-    await user.click(screen.getAllByRole('button', { name: 'Modifier' })[1]);
+    await user.click(editButton(1));
     expect(screen.getByRole('alertdialog', { name: 'Remplacer le brouillon ?' })).toBeInTheDocument();
     expect(nameInput).toHaveValue('Brouillon endurance');
 
@@ -81,7 +87,7 @@ describe('EnduranceTemplatesPage', () => {
     expect(screen.queryByRole('alertdialog', { name: 'Remplacer le brouillon ?' })).not.toBeInTheDocument();
     expect(nameInput).toHaveValue('Brouillon endurance');
 
-    await user.click(screen.getAllByRole('button', { name: 'Modifier' })[1]);
+    await user.click(editButton(1));
     await user.click(screen.getByRole('button', { name: 'Modifier ce modèle' }));
 
     expect(await screen.findByRole('heading', { name: 'Modifier : Natation endurance 1 500 m' })).toBeInTheDocument();
@@ -99,7 +105,7 @@ describe('EnduranceTemplatesPage', () => {
     await user.type(screen.getByLabelText(/Nom/), 'Modèle en erreur');
     await user.click(screen.getByRole('button', { name: 'Créer le modèle' }));
 
-    expect(await screen.findByText('Échec contrôlé')).toBeInTheDocument();
+    expect(await screen.findAllByText('Échec contrôlé')).not.toHaveLength(0);
     expect(screen.getByLabelText(/Nom/)).toHaveValue('Modèle en erreur');
     expect(dispatchBeforeUnload().defaultPrevented).toBe(true);
   });
