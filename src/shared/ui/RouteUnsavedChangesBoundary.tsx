@@ -30,6 +30,9 @@ const saveSuccessMessages = [
   'Personnalisation enregistrée',
 ] as const;
 
+const settingsResetDialogTitle = 'Rétablir les paramètres par défaut ?';
+const settingsResetConfirmLabel = 'Rétablir';
+
 function elementKey(element: HTMLElement, index: number): string {
   return (
     element.getAttribute('name')
@@ -109,6 +112,17 @@ function hasSaveSuccess(container: HTMLElement): boolean {
   return saveSuccessMessages.some((message) => text.includes(message));
 }
 
+function isConfirmedSettingsReset(target: EventTarget | null): boolean {
+  if (!(target instanceof Element)) return false;
+  const button = target.closest('button');
+  if (button?.textContent?.trim() !== settingsResetConfirmLabel) return false;
+
+  const dialog = button.closest<HTMLElement>('[role="alertdialog"]');
+  if (!dialog) return false;
+
+  return dialog.querySelector('h2')?.textContent?.trim() === settingsResetDialogTitle;
+}
+
 export function RouteUnsavedChangesBoundary({
   children,
 }: RouteUnsavedChangesBoundaryProps) {
@@ -163,6 +177,19 @@ export function RouteUnsavedChangesBoundary({
   useEffect(() => {
     if (!shouldProtect) return;
 
+    const handleDocumentClick = (event: MouseEvent) => {
+      if (isConfirmedSettingsReset(event.target)) {
+        resetPendingRef.current = true;
+      }
+    };
+
+    document.addEventListener('click', handleDocumentClick, true);
+    return () => document.removeEventListener('click', handleDocumentClick, true);
+  }, [shouldProtect]);
+
+  useEffect(() => {
+    if (!shouldProtect) return;
+
     const observer = new MutationObserver(() => {
       const container = containerRef.current;
       if (!container) return;
@@ -199,15 +226,7 @@ export function RouteUnsavedChangesBoundary({
       ref={containerRef}
       onInputCapture={scheduleCheck}
       onChangeCapture={scheduleCheck}
-      onClick={(event) => {
-        const button = event.target instanceof Element
-          ? event.target.closest('button')
-          : null;
-        if (button?.textContent?.trim() === 'Rétablir') {
-          resetPendingRef.current = true;
-        }
-        scheduleCheck();
-      }}
+      onClick={scheduleCheck}
     >
       <UnsavedChangesGuard when={shouldProtect && isDirty} />
       {children}
