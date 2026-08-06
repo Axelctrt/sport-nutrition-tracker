@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {
   RouterProvider,
@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   saveProductEntry: vi.fn(),
+  saveSettled: vi.fn(),
 }));
 
 vi.mock('@/application/food/foodJournalService', () => ({
@@ -43,7 +44,7 @@ vi.mock('@/features/food-journal/components/FoodEntryForm', () => ({
         void onSubmit({
           ...initialValues,
           inputQuantity: Number(formData.get('inputQuantity')),
-        }).catch(() => undefined);
+        }).catch(() => undefined).finally(() => mocks.saveSettled());
       }}
     >
       <label htmlFor="test-food-entry-quantity">Quantité consommée</label>
@@ -174,6 +175,7 @@ describe('FoodEntryEditorPage', () => {
     await user.clear(quantity);
     await user.type(quantity, '160');
     await user.click(screen.getByRole('button', { name: 'Ajouter au journal' }));
+    await waitFor(() => expect(mocks.saveSettled).toHaveBeenCalledTimes(1));
     await user.click(screen.getByRole('link', { name: 'Retour au journal' }));
 
     expect(screen.getByRole('alertdialog', { name: 'Quitter sans enregistrer ?' }))
