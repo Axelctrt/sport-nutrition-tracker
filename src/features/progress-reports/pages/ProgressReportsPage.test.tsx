@@ -35,7 +35,7 @@ const report: ProgressReport = {
 };
 
 describe('ProgressReportsPage', () => {
-  it('crée un rapport de 30 jours et affiche l’aperçu', async () => {
+  it('crée un rapport de 30 jours et affiche le résultat localement', async () => {
     const user = userEvent.setup();
     const createReport = vi
       .fn<
@@ -69,6 +69,9 @@ describe('ProgressReportsPage', () => {
     expect(
       await screen.findByText('Rapport SportPilot'),
     ).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Rapport créé pour 30 jour(s).',
+    );
     expect(screen.getByText('-1,5 kg')).toBeInTheDocument();
     expect(screen.getByText('42 km')).toBeInTheDocument();
   });
@@ -114,7 +117,7 @@ describe('ProgressReportsPage', () => {
     );
   });
 
-  it('copie, télécharge, partage et imprime le rapport', async () => {
+  it('copie, télécharge, partage et imprime avec un feedback local', async () => {
     const user = userEvent.setup();
     const downloadReport = vi.fn();
     const copyReport = vi.fn().mockResolvedValue('done');
@@ -142,20 +145,35 @@ describe('ProgressReportsPage', () => {
         name: 'Copier',
       }),
     );
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Le rapport a été copié.',
+    );
+
     await user.click(
       screen.getByRole('button', {
         name: 'Télécharger',
       }),
     );
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Le fichier texte a été téléchargé.',
+    );
+
     await user.click(
       screen.getByRole('button', {
         name: 'Partager',
       }),
     );
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'La feuille de partage a été ouverte.',
+    );
+
     await user.click(
       screen.getByRole('button', {
         name: 'Imprimer',
       }),
+    );
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'La fenêtre d’impression a été ouverte.',
     );
 
     expect(copyReport).toHaveBeenCalledWith(report);
