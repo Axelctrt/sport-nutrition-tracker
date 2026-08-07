@@ -1,8 +1,13 @@
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from '@/app/providers/ThemeProvider';
 import { createDefaultAppSettings } from '@/domain/defaults/appSettings';
 import { SettingsCategoryPage } from '@/features/settings/pages/SettingsCategoryPage';
+
+vi.mock('@/application/daily/settingsTargetRecalculationService', () => ({
+  recalculateExistingTargetsAfterSettingsChange: vi.fn().mockResolvedValue(undefined),
+}));
 
 const settingsRepository = {
   get: async () => createDefaultAppSettings(),
@@ -43,6 +48,21 @@ describe('SettingsCategoryPage', () => {
       .toHaveAttribute('href', '/settings/account-devices');
     expect(screen.getByText(/files, conflits, diagnostics et états par rubrique/i))
       .toBeInTheDocument();
+  });
+
+  it('affiche localement le résultat de la sauvegarde des réglages', async () => {
+    const user = userEvent.setup();
+    renderPage('/settings/notifications-routines');
+
+    await user.click(
+      await screen.findByRole('button', { name: 'Enregistrer les paramètres' }),
+    );
+
+    expect(
+      await screen.findByText(
+        'Les réglages de cette catégorie ont été enregistrés.',
+      ),
+    ).toBeInTheDocument();
   });
 
   it('signale une route de catégorie inconnue sans rendre un écran vide', async () => {
