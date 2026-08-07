@@ -12,7 +12,6 @@ import { useWeightHistory } from '@/features/weight/hooks/useWeightHistory';
 import type { WeightEntryFormValues } from '@/features/weight/schemas/weightEntrySchema';
 import { weightFormValuesToEntity } from '@/features/weight/utils';
 import { inputClassName } from '@/shared/forms/formStyles';
-import { useActionToast } from '@/shared/toast/useActionToast';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { EmptyState } from '@/shared/ui/EmptyState';
@@ -27,7 +26,6 @@ function isLocalDate(value: string | null): value is string {
 
 export function WeightPage() {
   const { profile } = useProfile();
-  const actionToast = useActionToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedDate = searchParams.get('date');
   const {
@@ -124,18 +122,7 @@ export function WeightPage() {
           ? `La pesée du ${formatLocalDate(values.date)} a été mise à jour sans recharger la page.`
           : `La pesée du ${formatLocalDate(values.date)} a été enregistrée sans recharger la page.`,
       });
-      actionToast.success({
-        key: 'weight-save',
-        title: isUpdate ? 'Pesée mise à jour' : 'Pesée enregistrée',
-        description: `${saved.weightKg.toLocaleString('fr-FR')} kg le ${formatLocalDate(saved.date)}.`,
-      });
     } catch (error) {
-      actionToast.error({
-        key: 'weight-save',
-        title: 'Pesée non enregistrée',
-        error,
-        fallback: 'La pesée n’a pas pu être enregistrée.',
-      });
       setFeedback({
         tone: 'error',
         message: error instanceof Error
@@ -157,12 +144,6 @@ export function WeightPage() {
         message: `La pesée du ${formatLocalDate(entry.date)} a été retirée. Tu peux annuler depuis le message affiché.`,
       });
     } catch (error) {
-      actionToast.error({
-        key: 'weight-delete',
-        title: 'Suppression impossible',
-        error,
-        fallback: 'La pesée n’a pas pu être supprimée.',
-      });
       setFeedback({
         tone: 'error',
         message: error instanceof Error

@@ -70,7 +70,6 @@ export function RecipesPage() {
     const key = `${returnFeedback.title}:${returnFeedback.itemId ?? ''}`;
     if (handledFeedbackRef.current === key) return;
     handledFeedbackRef.current = key;
-    setFeedback(returnFeedback.title);
     actionToast.success({
       key: `recipe-return:${returnFeedback.itemId ?? returnFeedback.title}`,
       title: returnFeedback.title,
@@ -99,9 +98,6 @@ export function RecipesPage() {
     const removed = await remove(recipeId);
     if (removed) {
       setFeedback('Recette supprimée');
-      actionToast.success({ key: `recipe-delete:${recipeId}`, title: 'Recette supprimée' });
-    } else {
-      actionToast.error({ key: `recipe-delete:${recipeId}`, error: errorMessage, fallback: 'La recette n’a pas pu être supprimée.' });
     }
     return removed;
   };
@@ -130,7 +126,12 @@ export function RecipesPage() {
       </div>
 
       {errorMessage ? (
-        <InlineNotice className="mt-5" tone="error" title="Recettes indisponibles" role="alert">
+        <InlineNotice
+          className="mt-5"
+          tone="error"
+          title={status === 'error' ? 'Recettes indisponibles' : 'Suppression impossible'}
+          role="alert"
+        >
           <p>{errorMessage}</p>
           {status === 'error' ? <Button className="mt-3" variant="secondary" onClick={() => void refresh()}>Réessayer</Button> : null}
         </InlineNotice>

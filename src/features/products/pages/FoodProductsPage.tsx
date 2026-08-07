@@ -110,12 +110,6 @@ export function FoodProductsPage() {
         key: `food-product-archive:${productId}`,
         title: 'Aliment archivé',
       });
-    } else {
-      actionToast.error({
-        key: `food-product-archive:${productId}`,
-        error: errorMessage,
-        fallback: 'L’aliment n’a pas pu être archivé.',
-      });
     }
     return archived;
   };
@@ -155,7 +149,12 @@ export function FoodProductsPage() {
       </div>
 
       {errorMessage ? (
-        <InlineNotice className="mt-5" tone="error" title="Catalogue indisponible" role="alert">
+        <InlineNotice
+          className="mt-5"
+          tone="error"
+          title={status === 'error' ? 'Catalogue indisponible' : 'Archivage impossible'}
+          role="alert"
+        >
           <p>{errorMessage}</p>
           {status === 'error' ? <Button className="mt-3" variant="secondary" onClick={() => void refresh()}>Réessayer</Button> : null}
         </InlineNotice>

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import backupPageSource from '@/features/backup/pages/BackupPage.tsx?raw';
+import goalEditorSource from '@/features/goals/components/GoalEditor.tsx?raw';
 import goalsPageSource from '@/features/goals/pages/GoalsPage.tsx?raw';
 import profilePageSource from '@/features/profile/pages/ProfilePage.tsx?raw';
 import trashPageSource from '@/features/trash/pages/TrashPage.tsx?raw';
@@ -28,11 +29,17 @@ describe('publication SportPilot 0.26.0 — confirmations d’action', () => {
   });
 
   it('couvre les principaux domaines d’écriture utilisateur', () => {
-    for (const source of [goalsPageSource, weightPageSource]) {
+    for (const source of [goalEditorSource, goalsPageSource]) {
       expect(source).toContain('useActionToast');
       expect(source).toContain('actionToast.success');
-      expect(source).toContain('actionToast.error');
+      expect(source).not.toContain('actionToast.error');
+      expect(source).toContain('InlineNotice');
     }
+
+    expect(weightPageSource).not.toContain('useActionToast');
+    expect(weightPageSource).not.toContain('actionToast.');
+    expect(weightPageSource).toContain('setFeedback');
+    expect(weightPageSource).toContain('InlineNotice');
 
     expect(backupPageSource).toContain('useActionToast');
     expect(backupPageSource).toContain('actionToast.success');
