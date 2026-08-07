@@ -76,7 +76,6 @@ if (failures.length === 0) {
     'src/features/settings/components/AutomaticSyncSettingsPanel.tsx',
     'src/features/settings/components/SelectiveDataResetPanel.tsx',
     'src/features/reminders/pages/RoutineRemindersPage.tsx',
-    'src/features/weight/pages/WeightPage.tsx',
     'src/features/products/pages/FoodProductEditorPage.tsx',
     'src/features/products/pages/FoodProductsPage.tsx',
     'src/features/recipes/pages/RecipeEditorPage.tsx',
@@ -101,6 +100,53 @@ if (failures.length === 0) {
     if (!read(path).includes('useActionToast')) {
       fail(`retour d’action centralisé absent : ${path}.`);
     }
+  }
+
+  const sportNutritionMixedSurfaces = [
+    ['src/features/goals/components/GoalEditor.tsx', 'setError'],
+    ['src/features/goals/pages/GoalsPage.tsx', 'setError'],
+    ['src/features/products/pages/FoodProductEditorPage.tsx', 'setActionErrorMessage'],
+    ['src/features/products/pages/FoodProductsPage.tsx', 'errorMessage'],
+    ['src/features/recipes/pages/RecipesPage.tsx', 'errorMessage'],
+    ['src/features/favorite-meals/pages/FavoriteMealsPage.tsx', 'errorMessage'],
+    ['src/features/endurance-templates/pages/EnduranceTemplatesPage.tsx', 'setErrorMessage'],
+  ];
+
+  for (const [path, localMarker] of sportNutritionMixedSurfaces) {
+    const source = read(path);
+    for (const marker of ['useActionToast', 'actionToast.success', localMarker, 'InlineNotice']) {
+      if (!source.includes(marker)) {
+        fail(`feedback mixte Sport/Nutrition incomplet (${marker}) : ${path}.`);
+      }
+    }
+    if (source.includes('actionToast.error')) {
+      fail(`une erreur Sport/Nutrition déjà locale ne doit pas aussi déclencher un toast : ${path}.`);
+    }
+  }
+
+  const weightPage = read('src/features/weight/pages/WeightPage.tsx');
+  for (const marker of ['setFeedback', 'InlineNotice']) {
+    if (!weightPage.includes(marker)) {
+      fail(`feedback local Poids incomplet : ${marker}.`);
+    }
+  }
+  if (weightPage.includes('useActionToast') || weightPage.includes('actionToast.')) {
+    fail('Poids doit conserver un feedback local unique sans toast concurrent.');
+  }
+
+  const foodProductEditor = read('src/features/products/pages/FoodProductEditorPage.tsx');
+  if (foodProductEditor.includes('food-product-refresh:')) {
+    fail('l’actualisation Open Food Facts doit rester locale sans toast concurrent.');
+  }
+
+  const recipesPage = read('src/features/recipes/pages/RecipesPage.tsx');
+  if (!recipesPage.includes('recipe-return:') || recipesPage.includes('recipe-delete:')) {
+    fail('Recettes doit réserver le toast au retour d’éditeur et garder la suppression locale.');
+  }
+
+  const favoriteMealsPage = read('src/features/favorite-meals/pages/FavoriteMealsPage.tsx');
+  if (favoriteMealsPage.includes('favorite-meal-apply:') || !favoriteMealsPage.includes('favorite-meal-delete:')) {
+    fail('Repas favoris doit garder l’ajout local et réserver le toast à la suppression transitoire.');
   }
 
   const backupPage = read('src/features/backup/pages/BackupPage.tsx');
