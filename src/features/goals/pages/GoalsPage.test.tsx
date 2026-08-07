@@ -147,7 +147,7 @@ describe('GoalsPage', () => {
     ).toBeInTheDocument();
   });
 
-  it('propose une action explicite de création quand aucun objectif n’existe', async () => {
+  it('distingue le premier usage quand aucun objectif n’existe', async () => {
     const user = userEvent.setup();
 
     renderGoals(
@@ -156,11 +156,10 @@ describe('GoalsPage', () => {
       />,
     );
 
+    const emptyTitle = await screen.findByText('Aucun objectif');
     expect(
-      await screen.findByText(
-        'Aucun objectif dans cette vue',
-      ),
-    ).toBeInTheDocument();
+      emptyTitle.closest('[data-empty-state-variant]'),
+    ).toHaveAttribute('data-empty-state-variant', 'first-use');
     expect(
       screen.queryByLabelText(/Type d’objectif/),
     ).not.toBeInTheDocument();
@@ -178,6 +177,33 @@ describe('GoalsPage', () => {
     expect(
       within(createDialog).getByLabelText(/Type d’objectif/),
     ).toHaveValue('totalSteps');
+  });
+
+  it('distingue un filtre vide des objectifs existants et permet de tous les réafficher', async () => {
+    const user = userEvent.setup();
+
+    renderGoals(
+      <GoalsPage
+        loadProgress={() => Promise.resolve([view('completed', 'atteint')])}
+      />,
+    );
+
+    const emptyTitle = await screen.findByText('Aucun objectif dans ce filtre');
+    expect(
+      emptyTitle.closest('[data-empty-state-variant]'),
+    ).toHaveAttribute('data-empty-state-variant', 'filtered');
+    expect(screen.queryByText('Objectif atteint')).not.toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole('button', {
+        name: 'Afficher tous les objectifs',
+      }),
+    );
+
+    expect(screen.getByText('Objectif atteint')).toBeInTheDocument();
+    expect(
+      screen.queryByText('Aucun objectif dans ce filtre'),
+    ).not.toBeInTheDocument();
   });
 
   it('préremplit la création d’un objectif de poids avec la dernière pesée', async () => {

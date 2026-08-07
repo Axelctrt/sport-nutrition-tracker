@@ -119,6 +119,22 @@ export function StrengthExercisesPage() {
     return success;
   };
 
+  const isFirstUse = status === 'ready' && allExercises.length === 0;
+  const canCreateFromQuery =
+    normalizedQuery.length > 0
+    && muscleGroup === 'all'
+    && equipment === 'all'
+    && source === 'all'
+    && similarExercises.length === 0;
+
+  const showAllExercises = () => {
+    setQuery('');
+    setMuscleGroup('all');
+    setEquipment('all');
+    setSource('all');
+    setIncludeArchived(true);
+  };
+
   return (
     <section aria-labelledby="strength-exercises-title">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -208,19 +224,31 @@ export function StrengthExercisesPage() {
       {status === 'ready' && exercises.length === 0 ? (
         <EmptyState
           className="mt-5"
+          variant={isFirstUse ? 'first-use' : 'filtered'}
           icon={Dumbbell}
           title={
-            normalizedQuery
-              ? `Aucun exercice trouvé pour « ${query.trim()} »`
-              : 'Aucun exercice trouvé'
+            isFirstUse
+              ? 'Aucun exercice dans le catalogue'
+              : normalizedQuery
+                ? `Aucun exercice trouvé pour « ${query.trim()} »`
+                : 'Aucun exercice avec ces filtres'
           }
           description={
-            similarExercises.length > 0
-              ? 'Vérifie les exercices similaires avant de créer un doublon.'
-              : 'Modifie la recherche ou les filtres, ou crée un exercice personnel.'
+            isFirstUse
+              ? 'Crée un premier exercice personnel pour commencer ton catalogue.'
+              : similarExercises.length > 0
+                ? 'Des exercices existent toujours dans le catalogue. Vérifie les exercices similaires ou affiche-les tous.'
+                : 'Des exercices existent toujours dans le catalogue. Réinitialise la recherche et les filtres pour les retrouver.'
           }
           primaryAction={
-            normalizedQuery ? (
+            isFirstUse ? (
+              <Link
+                to={routePaths.newStrengthExercise}
+                className="inline-flex min-h-11 items-center justify-center rounded-xl bg-brand-700 px-4 text-sm font-semibold text-white"
+              >
+                Créer un exercice
+              </Link>
+            ) : (
               <div className="space-y-3">
                 {similarExercises.length > 0 ? (
                   <div className="text-left">
@@ -234,25 +262,21 @@ export function StrengthExercisesPage() {
                     </ul>
                   </div>
                 ) : null}
-                <Link
-                  to={newStrengthExercisePath({
-                    returnTo: 'library',
-                    query: query.trim(),
-                  })}
-                  className="inline-flex min-h-11 items-center justify-center rounded-xl bg-brand-700 px-4 text-sm font-semibold text-white"
-                >
-                  {similarExercises.length > 0
-                    ? 'Aucun ne correspond — créer l’exercice'
-                    : 'Créer cet exercice'}
-                </Link>
+                <Button variant="secondary" onClick={showAllExercises}>
+                  Afficher tous les exercices
+                </Button>
+                {canCreateFromQuery ? (
+                  <Link
+                    to={newStrengthExercisePath({
+                      returnTo: 'library',
+                      query: query.trim(),
+                    })}
+                    className="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 px-4 text-sm font-semibold text-slate-800 dark:border-slate-700 dark:text-slate-100"
+                  >
+                    Créer cet exercice
+                  </Link>
+                ) : null}
               </div>
-            ) : (
-              <Link
-                to={routePaths.newStrengthExercise}
-                className="inline-flex min-h-11 items-center justify-center rounded-xl bg-brand-700 px-4 text-sm font-semibold text-white"
-              >
-                Créer un exercice
-              </Link>
             )
           }
         />
