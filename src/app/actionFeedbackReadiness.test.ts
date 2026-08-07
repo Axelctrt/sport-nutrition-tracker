@@ -43,7 +43,7 @@ describe('publication SportPilot 0.26.0 — confirmations d’action', () => {
     expect(trashPageSource).not.toContain('useActionToast');
     expect(trashPageSource).not.toContain('actionToast.');
     expect(trashPageSource).toContain('setFeedback');
-    expect(trashPageSource).toContain('InlineNotice');
+    expect(trashPageSource).toContain('aria-live="polite"');
 
     expect(profilePageSource).toContain('useActionToast');
     expect(profilePageSource).toContain('actionToast.success');
