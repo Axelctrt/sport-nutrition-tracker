@@ -70,7 +70,6 @@ export function RecipesPage() {
     const key = `${returnFeedback.title}:${returnFeedback.itemId ?? ''}`;
     if (handledFeedbackRef.current === key) return;
     handledFeedbackRef.current = key;
-    setFeedback(returnFeedback.title);
     actionToast.success({
       key: `recipe-return:${returnFeedback.itemId ?? returnFeedback.title}`,
       title: returnFeedback.title,
@@ -99,9 +98,6 @@ export function RecipesPage() {
     const removed = await remove(recipeId);
     if (removed) {
       setFeedback('Recette supprimée');
-      actionToast.success({ key: `recipe-delete:${recipeId}`, title: 'Recette supprimée' });
-    } else {
-      actionToast.error({ key: `recipe-delete:${recipeId}`, error: errorMessage, fallback: 'La recette n’a pas pu être supprimée.' });
     }
     return removed;
   };
