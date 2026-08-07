@@ -208,19 +208,9 @@ export function FoodProductEditorPage() {
         ? `${result.preservedLocalOverrides.length} correction(s) locale(s) conservée(s).`
         : 'Données Open Food Facts actualisées.';
       setFeedback(refreshMessage);
-      actionToast.success({
-        key: `food-product-refresh:${product.id}`,
-        title: 'Aliment actualisé',
-        description: refreshMessage,
-      });
     } catch (error) {
       const fallback = 'Impossible d’actualiser ce produit.';
       setActionErrorMessage(error instanceof Error ? error.message : fallback);
-      actionToast.error({
-        key: `food-product-refresh:${product.id}`,
-        error,
-        fallback,
-      });
     } finally {
       setRefreshing(false);
       setReplaceConfirmationOpen(false);
