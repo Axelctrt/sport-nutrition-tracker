@@ -130,7 +130,7 @@ describe('TrashPage', () => {
     expect(screen.getByText(/1 sélectionné/)).toBeInTheDocument();
   });
 
-  it('restaure toute la sélection', async () => {
+  it('restaure toute la sélection et garde le résultat localement', async () => {
     const user = userEvent.setup();
     vi.mocked(restoreTrashItems).mockResolvedValue({
       restoredIds: [firstItem.id, secondItem.id],
@@ -156,6 +156,9 @@ describe('TrashPage', () => {
         [firstItem.id, secondItem.id],
       );
     });
+    expect(
+      await screen.findByText('2 élément(s) ont été restaurés.'),
+    ).toBeInTheDocument();
   });
 
   it('archive avant une suppression définitive individuelle', async () => {
@@ -250,7 +253,7 @@ describe('TrashPage', () => {
     });
   });
 
-  it('importe une archive dans la corbeille', async () => {
+  it('importe une archive et affiche le résultat sur la page', async () => {
     const user = userEvent.setup();
     render(<TrashPage />);
 
@@ -269,5 +272,10 @@ describe('TrashPage', () => {
         '{}',
       );
     });
+    expect(
+      await screen.findByText(
+        '2 élément(s) ont été replacés dans la corbeille pour 30 jours.',
+      ),
+    ).toBeInTheDocument();
   });
 });
