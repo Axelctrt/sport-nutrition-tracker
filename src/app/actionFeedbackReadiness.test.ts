@@ -28,16 +28,22 @@ describe('publication SportPilot 0.26.0 — confirmations d’action', () => {
   });
 
   it('couvre les principaux domaines d’écriture utilisateur', () => {
-    for (const source of [
-      goalsPageSource,
-      weightPageSource,
-      backupPageSource,
-      trashPageSource,
-    ]) {
+    for (const source of [goalsPageSource, weightPageSource]) {
       expect(source).toContain('useActionToast');
       expect(source).toContain('actionToast.success');
       expect(source).toContain('actionToast.error');
     }
+
+    expect(backupPageSource).toContain('useActionToast');
+    expect(backupPageSource).toContain('actionToast.success');
+    expect(backupPageSource).not.toContain('actionToast.error');
+    expect(backupPageSource).toContain('setFeedback');
+    expect(backupPageSource).toContain('InlineNotice');
+
+    expect(trashPageSource).not.toContain('useActionToast');
+    expect(trashPageSource).not.toContain('actionToast.');
+    expect(trashPageSource).toContain('setFeedback');
+    expect(trashPageSource).toContain('aria-live="polite"');
 
     expect(profilePageSource).toContain('useActionToast');
     expect(profilePageSource).toContain('actionToast.success');

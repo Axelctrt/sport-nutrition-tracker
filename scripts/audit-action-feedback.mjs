@@ -66,14 +66,13 @@ if (failures.length === 0) {
     fail('ToastProvider ne restitue pas la confirmation conservée avant rechargement.');
   }
 
-  const coveredSurfaces = [
+  const toastSurfaces = [
     'src/features/goals/components/GoalEditor.tsx',
     'src/features/goals/pages/GoalsPage.tsx',
     'src/features/profile/pages/ProfilePage.tsx',
     'src/features/dashboard-customization/pages/DashboardCustomizationPage.tsx',
     'src/features/dashboard/components/DashboardQuickActions.tsx',
     'src/features/dashboard/components/DailyInputsPanel.tsx',
-    'src/features/settings/pages/AdvancedSettingsPage.tsx',
     'src/features/settings/components/AutomaticSyncSettingsPanel.tsx',
     'src/features/settings/components/SelectiveDataResetPanel.tsx',
     'src/features/reminders/pages/RoutineRemindersPage.tsx',
@@ -96,13 +95,50 @@ if (failures.length === 0) {
     'src/features/account-devices/components/CloudAccountRestorePanel.tsx',
     'src/features/account-devices/components/GuestDataImportPanel.tsx',
     'src/features/account-devices/pages/AccountDevicesPage.tsx',
-    'src/features/progress-reports/pages/ProgressReportsPage.tsx',
-    'src/features/trash/pages/TrashPage.tsx',
   ];
 
-  for (const path of coveredSurfaces) {
+  for (const path of toastSurfaces) {
     if (!read(path).includes('useActionToast')) {
       fail(`retour d’action centralisé absent : ${path}.`);
+    }
+  }
+
+  const backupPage = read('src/features/backup/pages/BackupPage.tsx');
+  for (const marker of ['useActionToast', 'actionToast.success', 'setFeedback', 'InlineNotice']) {
+    if (!backupPage.includes(marker)) {
+      fail(`feedback mixte Sauvegarde incomplet : ${marker}.`);
+    }
+  }
+  if (backupPage.includes('actionToast.error')) {
+    fail('Sauvegarde doit conserver les erreurs sur place sans toast concurrent.');
+  }
+
+  const accountDevicesPage = read('src/features/account-devices/pages/AccountDevicesPage.tsx');
+  for (const marker of ['useActionToast', 'actionToast.successAfterReload', 'setFeedback', 'InlineNotice']) {
+    if (!accountDevicesPage.includes(marker)) {
+      fail(`feedback mixte Compte et appareils incomplet : ${marker}.`);
+    }
+  }
+  if (accountDevicesPage.includes('actionToast.error')) {
+    fail('Compte et appareils doit conserver les erreurs sur place sans toast concurrent.');
+  }
+
+  const localFeedbackSurfaces = [
+    ['src/features/settings/pages/AdvancedSettingsPage.tsx', 'InlineNotice'],
+    ['src/features/settings/pages/SettingsCategoryPage.tsx', 'InlineNotice'],
+    ['src/features/progress-reports/pages/ProgressReportsPage.tsx', 'role="status"'],
+    ['src/features/trash/pages/TrashPage.tsx', 'aria-live="polite"'],
+  ];
+
+  for (const [path, localMarker] of localFeedbackSurfaces) {
+    const source = read(path);
+    for (const marker of ['setFeedback', localMarker]) {
+      if (!source.includes(marker)) {
+        fail(`feedback local incomplet (${marker}) : ${path}.`);
+      }
+    }
+    if (source.includes('useActionToast') || source.includes('actionToast.')) {
+      fail(`la surface locale ne doit pas cumuler notice et toast : ${path}.`);
     }
   }
 

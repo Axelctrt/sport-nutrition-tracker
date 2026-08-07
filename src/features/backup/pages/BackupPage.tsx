@@ -197,7 +197,6 @@ export function BackupPage() {
         title: 'Sauvegarde créée',
         message,
       });
-      actionToast.success({ key: 'backup-export', title: 'Sauvegarde créée', description: message });
     } catch (error) {
       const fallback = 'La sauvegarde n’a pas pu être créée.';
       setFeedback({
@@ -205,7 +204,6 @@ export function BackupPage() {
         title: 'Export impossible',
         message: error instanceof Error ? error.message : fallback,
       });
-      actionToast.error({ key: 'backup-export', title: 'Export impossible', error, fallback });
     } finally {
       setIsExporting(false);
     }
@@ -251,7 +249,6 @@ export function BackupPage() {
         ? `${prepared.summary.totalRecords} enregistrement(s) ont été placés dans la feuille de partage de l’appareil.`
         : `Le partage natif n’est pas disponible ici. ${prepared.fileName} a été téléchargé à la place.`;
       setFeedback({ tone: 'success', title, message });
-      actionToast.success({ key: 'backup-share', title, description: message });
     } catch (error) {
       const fallback = 'La sauvegarde n’a pas pu être partagée.';
       setFeedback({
@@ -259,7 +256,6 @@ export function BackupPage() {
         title: 'Partage impossible',
         message: error instanceof Error ? error.message : fallback,
       });
-      actionToast.error({ key: 'backup-share', title: 'Partage impossible', error, fallback });
     } finally {
       setIsSharing(false);
     }
@@ -275,7 +271,6 @@ export function BackupPage() {
         ? 'Le rappel de sauvegarde est désactivé.'
         : `Un rappel discret apparaîtra après ${intervalDays} jours sans sauvegarde.`;
       setFeedback({ tone: 'success', title: 'Rappel mis à jour', message });
-      actionToast.success({ key: 'backup-reminder', title: 'Rappel mis à jour', description: message });
     } catch (error) {
       const fallback = 'Le rappel n’a pas pu être modifié.';
       setFeedback({
@@ -283,7 +278,6 @@ export function BackupPage() {
         title: 'Réglage impossible',
         message: error instanceof Error ? error.message : fallback,
       });
-      actionToast.error({ key: 'backup-reminder', title: 'Réglage impossible', error, fallback });
     } finally {
       setIsUpdatingReminder(false);
     }
@@ -301,7 +295,6 @@ export function BackupPage() {
       );
       const message = 'Le fichier contient uniquement des informations techniques et des compteurs.';
       setFeedback({ tone: 'success', title: 'Diagnostic exporté', message });
-      actionToast.success({ key: 'diagnostic-export', title: 'Diagnostic exporté', description: message });
     } catch (error) {
       const fallback = 'Le diagnostic n’a pas pu être généré.';
       setFeedback({
@@ -309,7 +302,6 @@ export function BackupPage() {
         title: 'Diagnostic impossible',
         message: error instanceof Error ? error.message : fallback,
       });
-      actionToast.error({ key: 'diagnostic-export', title: 'Diagnostic impossible', error, fallback });
     } finally {
       setIsExportingDiagnostic(false);
     }
@@ -358,7 +350,6 @@ export function BackupPage() {
       await applyPreparedBackupImport(pendingImport);
       await refreshProfile();
       const message = `${pendingImport.summary.totalRecords} enregistrement(s) ont été restaurés.`;
-      setFeedback({ tone: 'success', title: 'Restauration terminée', message });
       actionToast.success({ key: 'backup-import', title: 'Restauration terminée', description: message });
       const hasProfile = pendingImport.summary.hasProfile;
       clearPendingImport();
@@ -370,7 +361,6 @@ export function BackupPage() {
         title: 'Restauration impossible',
         message: error instanceof Error ? error.message : fallback,
       });
-      actionToast.error({ key: 'backup-import', title: 'Restauration impossible', error, fallback });
       setImportDialogOpen(false);
     } finally {
       setIsImporting(false);
@@ -398,7 +388,6 @@ export function BackupPage() {
         title: 'Suppression impossible',
         message: error instanceof Error ? error.message : fallback,
       });
-      actionToast.error({ key: 'full-data-reset', title: 'Suppression impossible', error, fallback });
     } finally {
       setIsDeleting(false);
     }

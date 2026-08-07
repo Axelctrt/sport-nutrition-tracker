@@ -42,7 +42,6 @@ import {
   requestPersistentStorage,
   type PersistentStorageStatus,
 } from '@/infrastructure/storage/persistentStorage';
-import { useActionToast } from '@/shared/toast/useActionToast';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
@@ -409,7 +408,6 @@ export function SettingsCategoryPage({
   const { pathname } = useLocation();
   const category = settingsCategoryForPath(pathname);
   const { setTheme } = useTheme();
-  const actionToast = useActionToast();
   const [settings, setSettings] = useState<AppSettings>();
   const [storageStatus, setStorageStatus] = useState<PersistentStorageStatus>('unsupported');
   const [feedback, setFeedback] = useState<{ tone: 'success' | 'error'; message: string }>();
@@ -442,11 +440,9 @@ export function SettingsCategoryPage({
       setTheme(updated.theme);
       setStorageStatus(updated.requestPersistentStorage ? await persistStorage() : await readStorageStatus());
       setFeedback({ tone: 'success', message: 'Les réglages de cette catégorie ont été enregistrés.' });
-      actionToast.success({ key: 'settings-category-save', title: 'Paramètres enregistrés' });
     } catch (error) {
       const fallback = 'Les paramètres n’ont pas pu être enregistrés.';
       setFeedback({ tone: 'error', message: error instanceof Error ? error.message : fallback });
-      actionToast.error({ key: 'settings-category-save', error, fallback });
     }
   };
 

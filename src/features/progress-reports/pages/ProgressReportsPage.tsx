@@ -33,7 +33,6 @@ import {
   shareProgressReport,
   type ReportDeliveryResult,
 } from '@/features/progress-reports/progressReportDelivery';
-import { useActionToast } from '@/shared/toast/useActionToast';
 
 type PeriodPreset = '7' | '30' | '90' | 'custom';
 
@@ -169,7 +168,6 @@ export function ProgressReportsPage({
   shareReport = shareProgressReport,
   printReport = printProgressReport,
 }: ProgressReportsPageProps) {
-  const actionToast = useActionToast();
   const today = localDate(now);
   const [preset, setPreset] = useState<PeriodPreset>('30');
   const [from, setFrom] = useState(presetFrom('30', now));
@@ -243,12 +241,10 @@ export function ProgressReportsPage({
       setReport(generated);
       const message = `Rapport créé pour ${generated.period.dayCount} jour(s).`;
       setFeedback({ tone: 'success', message });
-      actionToast.success({ key: 'progress-report-generate', title: 'Rapport créé', description: message });
     } catch (error) {
       setReport(undefined);
       const fallback = 'Le rapport n’a pas pu être créé.';
       setFeedback({ tone: 'error', message: error instanceof Error ? error.message : fallback });
-      actionToast.error({ key: 'progress-report-generate', title: 'Création impossible', error, fallback });
     } finally {
       setIsLoading(false);
     }
@@ -272,13 +268,9 @@ export function ProgressReportsPage({
           ? 'L’action a été annulée.'
           : 'Cette fonction n’est pas disponible sur cet appareil.';
       setFeedback({ tone: result === 'done' ? 'success' : 'info', message });
-      if (result === 'done') {
-        actionToast.success({ key: 'progress-report-delivery', title: 'Action terminée', description: message });
-      }
     } catch (error) {
       const fallback = 'L’action a échoué.';
       setFeedback({ tone: 'error', message: error instanceof Error ? error.message : fallback });
-      actionToast.error({ key: 'progress-report-delivery', title: 'Action impossible', error, fallback });
     } finally {
       setIsDelivering(false);
     }
