@@ -96,7 +96,7 @@ export function SettingsCategoryDirectory({ categories }: SettingsCategoryDirect
             description={category.description}
             icon={categoryIcons[category.id]}
             value={category.summary}
-            actionRequired={category.actionRequired}
+            actionRequired={category.actionRequired ?? false}
             showArrow={false}
           />
         ))}
