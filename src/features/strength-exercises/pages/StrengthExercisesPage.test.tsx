@@ -112,6 +112,14 @@ describe('StrengthExercisesPage', () => {
 
   it('conserve les suggestions de similarité dans un état filtré', async () => {
     const user = userEvent.setup();
+    vi.mocked(repositories.strengthExercises.listAll).mockResolvedValue([
+      createStrengthExercise({
+        id: 'tirage',
+        name: 'Tirage poulie unilatéral',
+      }),
+      createStrengthExercise({ id: 'bench', name: 'Développé couché' }),
+    ]);
+
     render(
       <MemoryRouter>
         <StrengthExercisesPage />
@@ -121,16 +129,16 @@ describe('StrengthExercisesPage', () => {
     const search = await screen.findByRole('searchbox', {
       name: 'Rechercher un exercice',
     });
-    await user.type(search, 'squatt');
+    await user.type(search, 'tirage unilateral poulie');
 
     const emptyTitle = await screen.findByText(
-      'Aucun exercice trouvé pour « squatt »',
+      'Aucun exercice trouvé pour « tirage unilateral poulie »',
     );
     expect(
       emptyTitle.closest('[data-empty-state-variant]'),
     ).toHaveAttribute('data-empty-state-variant', 'filtered');
     expect(screen.getByText('Exercices similaires')).toBeInTheDocument();
-    expect(screen.getByText('Squat arrière')).toBeInTheDocument();
+    expect(screen.getByText('Tirage poulie unilatéral')).toBeInTheDocument();
     expect(
       screen.queryByRole('link', { name: 'Créer cet exercice' }),
     ).not.toBeInTheDocument();
