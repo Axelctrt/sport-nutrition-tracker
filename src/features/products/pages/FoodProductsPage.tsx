@@ -110,12 +110,6 @@ export function FoodProductsPage() {
         key: `food-product-archive:${productId}`,
         title: 'Aliment archivé',
       });
-    } else {
-      actionToast.error({
-        key: `food-product-archive:${productId}`,
-        error: errorMessage,
-        fallback: 'L’aliment n’a pas pu être archivé.',
-      });
     }
     return archived;
   };
