@@ -248,7 +248,7 @@ export function GoalsPage({
         <InlineNotice
           className="mt-4"
           tone="error"
-          title="Chargement impossible"
+          title="Opération impossible"
         >
           {error}
         </InlineNotice>
