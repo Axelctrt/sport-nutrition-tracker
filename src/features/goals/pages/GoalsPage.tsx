@@ -166,11 +166,6 @@ export function GoalsPage({
     } catch (caughtError) {
       const fallback = 'Le statut de l’objectif n’a pas pu être modifié.';
       setError(caughtError instanceof Error ? caughtError.message : fallback);
-      actionToast.error({
-        key: `goal-status:${goalId}`,
-        error: caughtError,
-        fallback,
-      });
     }
   };
 
@@ -438,11 +433,6 @@ export function GoalsPage({
                   ? caughtError.message
                   : fallback,
               );
-              actionToast.error({
-                key: `goal-delete:${goalId}`,
-                error: caughtError,
-                fallback,
-              });
             })
             .finally(() => setIsDeleting(false));
         }}
