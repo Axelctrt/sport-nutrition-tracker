@@ -6,6 +6,7 @@ import {
   SettingsCategoryDirectory,
   type SettingsCategoryDirectoryItem,
 } from '@/features/settings/components/SettingsCategoryDirectory';
+import { SettingsPageIntro } from '@/features/settings/components/SettingsPageIntro';
 import { settingsHomeCategories } from '@/features/settings/settingsInformationArchitecture';
 import { activeDataSpace } from '@/infrastructure/database/database';
 import { repositories } from '@/infrastructure/repositories/repositories';
@@ -113,19 +114,14 @@ export function SettingsHomePage({
 
   return (
     <section aria-labelledby="settings-home-title" className="min-w-0">
-      <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6 dark:border-slate-800 dark:bg-slate-900">
-        <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
-          Configuration de SportPilot
-        </p>
-        <h1 id="settings-home-title" className="mt-1 text-3xl font-bold tracking-tight text-slate-950 dark:text-white">
-          Paramètres
-        </h1>
-        <p className="mt-3 max-w-3xl leading-7 text-slate-600 dark:text-slate-300">
-          Retrouve les réglages selon leur usage. Les valeurs utiles sont visibles avant d’ouvrir une catégorie, tandis que les diagnostics restent dans la section avancée.
-        </p>
-      </div>
+      <SettingsPageIntro
+        titleId="settings-home-title"
+        eyebrow="Configuration de SportPilot"
+        title="Paramètres"
+        description="Retrouve les réglages selon leur usage. Les valeurs utiles sont visibles avant d’ouvrir une catégorie, tandis que les diagnostics restent dans la section avancée."
+      />
 
-      <p className="mt-4 px-1 text-sm font-medium text-slate-600 dark:text-slate-300">
+      <p className="mt-4 px-1 text-sm font-medium text-[var(--sp-text-secondary)]">
         {dataSpace.kind === 'account'
           ? `${dataSpace.label} · ${settings.automaticAccountSyncEnabled ? 'synchronisation active' : 'synchronisation manuelle'}`
           : 'Données conservées sur cet appareil'}
@@ -134,7 +130,6 @@ export function SettingsHomePage({
       <div className="mt-6">
         <SettingsCategoryDirectory categories={categories} />
       </div>
-
     </section>
   );
 }
