@@ -127,7 +127,7 @@ describe('GlobalSearchPage', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('affiche un état vide explicite', async () => {
+  it('affiche un état filtré et permet de réinitialiser une recherche sans résultat', async () => {
     const user = userEvent.setup();
 
     render(
@@ -138,15 +138,65 @@ describe('GlobalSearchPage', () => {
       </MemoryRouter>,
     );
 
-    await user.type(
-      await screen.findByRole('searchbox', {
-        name: 'Rechercher dans SportPilot',
+    const input = await screen.findByRole('searchbox', {
+      name: 'Rechercher dans SportPilot',
+    });
+    await user.type(input, 'introuvable');
+
+    const emptyTitle = screen.getByText('Aucun résultat');
+    expect(
+      emptyTitle.closest('[data-empty-state-variant]'),
+    ).toHaveAttribute('data-empty-state-variant', 'filtered');
+
+    await user.click(
+      screen.getByRole('button', {
+        name: 'Réinitialiser la recherche',
       }),
-      'introuvable',
     );
 
+    expect(input).toHaveValue('');
+    expect(screen.getByText('Recherches récentes')).toBeInTheDocument();
+    expect(screen.queryByText('Aucun résultat')).not.toBeInTheDocument();
+  });
+
+  it('retire seulement le filtre de catégorie quand des résultats existent ailleurs', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter initialEntries={['/search']}>
+        <GlobalSearchPage
+          loadIndex={() => Promise.resolve(results)}
+        />
+      </MemoryRouter>,
+    );
+
+    const input = await screen.findByRole('searchbox', {
+      name: 'Rechercher dans SportPilot',
+    });
+    await user.type(input, 'banane');
+    await user.click(
+      screen.getByRole('button', {
+        name: 'Recettes (1)',
+      }),
+    );
+
+    await user.clear(input);
+    await user.type(input, 'Marché');
+
+    const emptyTitle = screen.getByText('Aucun résultat');
     expect(
-      screen.getByText('Aucun résultat'),
-    ).toBeInTheDocument();
+      emptyTitle.closest('[data-empty-state-variant]'),
+    ).toHaveAttribute('data-empty-state-variant', 'filtered');
+    expect(screen.queryByText('Banane')).not.toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole('button', {
+        name: 'Afficher tous les résultats',
+      }),
+    );
+
+    expect(input).toHaveValue('Marché');
+    expect(screen.getByText('Banane')).toBeInTheDocument();
+    expect(screen.queryByText('Aucun résultat')).not.toBeInTheDocument();
   });
 });

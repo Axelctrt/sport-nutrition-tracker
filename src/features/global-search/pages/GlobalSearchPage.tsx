@@ -1,7 +1,6 @@
 import {
   Activity,
   Apple,
-  Clock3,
   Dumbbell,
   History,
   LoaderCircle,
@@ -38,7 +37,9 @@ import {
 } from '@/application/search/recentSearches';
 import { GLOBAL_SEARCH_FOCUS_EVENT } from '@/app/search/GlobalSearchShortcut';
 import { appDatabase } from '@/infrastructure/database/database';
+import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
+import { EmptyState } from '@/shared/ui/EmptyState';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 
 interface GlobalSearchPageProps {
@@ -460,19 +461,34 @@ export function GlobalSearchPage({
               })}
             </ul>
           ) : (
-            <Card className="mt-3 p-8 text-center">
-              <Clock3
-                aria-hidden="true"
-                className="mx-auto size-8 text-slate-400"
-              />
-              <h2 className="mt-3 text-lg font-bold text-slate-950 dark:text-white">
-                Aucun résultat
-              </h2>
-              <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                Essaie un autre mot, une date, un poids, un type
-                de séance ou retire le filtre actuel.
-              </p>
-            </Card>
+            <EmptyState
+              className="mt-3"
+              variant="filtered"
+              icon={Search}
+              title="Aucun résultat"
+              description={
+                category !== 'all' && allResults.length > 0
+                  ? 'Des résultats existent dans d’autres catégories. Affiche-les tous sans modifier ta recherche.'
+                  : 'Tes données locales restent disponibles. Réinitialise la recherche pour revenir à tes contenus.'
+              }
+              primaryAction={
+                category !== 'all' && allResults.length > 0 ? (
+                  <Button
+                    variant="secondary"
+                    onClick={() => setCategory('all')}
+                  >
+                    Afficher tous les résultats
+                  </Button>
+                ) : (
+                  <Button
+                    variant="secondary"
+                    onClick={resetSearch}
+                  >
+                    Réinitialiser la recherche
+                  </Button>
+                )
+              }
+            />
           )}
         </>
       ) : null}

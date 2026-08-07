@@ -33,6 +33,7 @@ import { BottomSheet } from '@/shared/ui/BottomSheet';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { ConfirmationDialog } from '@/shared/ui/ConfirmationDialog';
+import { EmptyState } from '@/shared/ui/EmptyState';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 import { PageSkeleton } from '@/shared/ui/PageSkeleton';
 import { UnsavedChangesGuard } from '@/shared/ui/UnsavedChangesGuard';
@@ -214,6 +215,8 @@ export function GoalsPage({
     return <PageSkeleton variant="list" />;
   }
 
+  const isFirstUse = views?.length === 0;
+
   return (
     <section
       aria-labelledby="goals-title"
@@ -347,19 +350,27 @@ export function GoalsPage({
           />
         ))}
 
-        {filtered.length === 0 ? (
-          <Card className="p-6 text-center">
-            <Target
-              aria-hidden="true"
-              className="mx-auto size-8 text-slate-400"
-            />
-            <h2 className="mt-3 font-bold text-slate-950 dark:text-white">
-              Aucun objectif dans cette vue
-            </h2>
-            <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-              Crée une première cible ou choisis un autre filtre.
-            </p>
-          </Card>
+        {views && filtered.length === 0 ? (
+          <EmptyState
+            variant={isFirstUse ? 'first-use' : 'filtered'}
+            icon={Target}
+            title={isFirstUse ? 'Aucun objectif' : 'Aucun objectif dans ce filtre'}
+            description={
+              isFirstUse
+                ? 'Crée une première cible mesurable pour commencer à suivre ta progression.'
+                : 'Tes autres objectifs restent disponibles. Affiche-les tous pour retrouver tes cibles existantes.'
+            }
+            primaryAction={
+              !isFirstUse ? (
+                <Button
+                  variant="secondary"
+                  onClick={() => setFilter('all')}
+                >
+                  Afficher tous les objectifs
+                </Button>
+              ) : undefined
+            }
+          />
         ) : null}
       </div>
 
