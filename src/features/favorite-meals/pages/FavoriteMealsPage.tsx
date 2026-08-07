@@ -59,11 +59,6 @@ export function FavoriteMealsPage() {
     if (!selectedFavorite) return;
     const count = await apply(selectedFavorite.favoriteMeal.id, date, slot);
     if (count === undefined) {
-      actionToast.error({
-        key: `favorite-meal-apply:${selectedFavorite.favoriteMeal.id}:${date}:${slot}`,
-        error: errorMessage,
-        fallback: 'Le repas favori n’a pas pu être ajouté.',
-      });
       return;
     }
     const description = `${count} entrée${count > 1 ? 's' : ''} ajoutée${count > 1 ? 's' : ''}.`;
@@ -76,11 +71,6 @@ export function FavoriteMealsPage() {
     }
 
     setSuccess({ title: 'Repas ajouté au journal', message: description, date });
-    actionToast.success({
-      key: `favorite-meal-apply:${selectedFavorite.favoriteMeal.id}:${date}:${slot}`,
-      title: 'Repas favori ajouté',
-      description,
-    });
     setSelectedFavorite(undefined);
   };
 
@@ -90,8 +80,6 @@ export function FavoriteMealsPage() {
       setSuccess(undefined);
       actionToast.success({ key: `favorite-meal-delete:${favoriteId}`, title: 'Repas favori supprimé' });
       if (selectedFavorite?.favoriteMeal.id === favoriteId) setSelectedFavorite(undefined);
-    } else {
-      actionToast.error({ key: `favorite-meal-delete:${favoriteId}`, error: errorMessage, fallback: 'Le repas favori n’a pas pu être supprimé.' });
     }
     return removed;
   };
