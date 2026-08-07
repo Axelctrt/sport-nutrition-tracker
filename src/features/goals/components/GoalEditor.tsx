@@ -185,11 +185,6 @@ export function GoalEditor({
           ? caughtError.message
           : fallback,
       );
-      actionToast.error({
-        key: goal ? `goal-update:${goal.id}` : 'goal-create',
-        error: caughtError,
-        fallback,
-      });
     }
   };
 
