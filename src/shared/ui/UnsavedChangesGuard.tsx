@@ -1,4 +1,4 @@
-import { useContext, useEffect } from 'react';
+import { useContext, useEffect, useRef } from 'react';
 import {
   UNSAFE_DataRouterContext,
   useBlocker,
@@ -24,9 +24,16 @@ function useBeforeUnloadGuard(when: boolean) {
 
 function DataRouterUnsavedChangesGuard({ when }: UnsavedChangesGuardProps) {
   const blocker = useBlocker(when);
+  const proceedingRef = useRef(false);
 
   useEffect(() => {
-    if (when || blocker.state !== 'blocked') return;
+    if (blocker.state === 'unblocked') {
+      proceedingRef.current = false;
+      return;
+    }
+    if (when || blocker.state !== 'blocked' || proceedingRef.current) return;
+
+    proceedingRef.current = true;
     blocker.proceed();
   }, [blocker, when]);
 
@@ -41,7 +48,10 @@ function DataRouterUnsavedChangesGuard({ when }: UnsavedChangesGuardProps) {
         if (blocker.state === 'blocked') blocker.reset();
       }}
       onConfirm={() => {
-        if (blocker.state === 'blocked') blocker.proceed();
+        if (blocker.state === 'blocked') {
+          proceedingRef.current = true;
+          blocker.proceed();
+        }
       }}
     />
   );
