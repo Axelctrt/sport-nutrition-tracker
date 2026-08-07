@@ -45,6 +45,24 @@ function SavingEditablePage() {
   );
 }
 
+function SavingWhileBlockedPage() {
+  const navigate = useNavigate();
+  const [dirty, setDirty] = useState(true);
+
+  return (
+    <>
+      <h1>Profil</h1>
+      <button type="button" onClick={() => navigate('/other')}>
+        Changer de page
+      </button>
+      <button type="button" onClick={() => setDirty(false)}>
+        Terminer la sauvegarde
+      </button>
+      <UnsavedChangesGuard when={dirty} />
+    </>
+  );
+}
+
 function renderRouter(dirty: boolean) {
   return render(
     <RouterProvider
@@ -65,6 +83,20 @@ function renderSavingRouter() {
       router={createMemoryRouter(
         [
           { path: '/profile', element: <SavingEditablePage /> },
+          { path: '/other', element: <h1>Autre page</h1> },
+        ],
+        { initialEntries: ['/profile'] },
+      )}
+    />,
+  );
+}
+
+function renderSavingWhileBlockedRouter() {
+  return render(
+    <RouterProvider
+      router={createMemoryRouter(
+        [
+          { path: '/profile', element: <SavingWhileBlockedPage /> },
           { path: '/other', element: <h1>Autre page</h1> },
         ],
         { initialEntries: ['/profile'] },
@@ -103,11 +135,25 @@ describe('UnsavedChangesGuard', () => {
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
   });
 
-  it('reprend une navigation bloquée lorsque la sauvegarde rend le formulaire propre', async () => {
+  it('reprend une navigation lorsque la sauvegarde rend le formulaire propre avant le blocage', async () => {
     const user = userEvent.setup();
     renderSavingRouter();
 
     await user.click(screen.getByRole('button', { name: 'Enregistrer et changer de page' }));
+
+    expect(await screen.findByRole('heading', { name: 'Autre page' })).toBeInTheDocument();
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  });
+
+  it('reprend une navigation déjà bloquée lorsque la sauvegarde se termine', async () => {
+    const user = userEvent.setup();
+    renderSavingWhileBlockedRouter();
+
+    await user.click(screen.getByRole('button', { name: 'Changer de page' }));
+    expect(screen.getByRole('alertdialog', { name: 'Quitter sans enregistrer ?' }))
+      .toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Terminer la sauvegarde' }));
 
     expect(await screen.findByRole('heading', { name: 'Autre page' })).toBeInTheDocument();
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
