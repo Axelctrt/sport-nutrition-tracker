@@ -206,11 +206,6 @@ export function EnduranceTemplatesPage() {
     } catch (error) {
       const fallback = 'Le modèle ne peut pas être enregistré.';
       setErrorMessage(error instanceof Error ? error.message : fallback);
-      actionToast.error({
-        key: editingId ? `endurance-template-update:${editingId}` : 'endurance-template-create',
-        error,
-        fallback,
-      });
     }
   };
 
@@ -281,7 +276,6 @@ export function EnduranceTemplatesPage() {
                   }).catch((error: unknown) => {
                     const fallback = 'Duplication impossible.';
                     setErrorMessage(error instanceof Error ? error.message : fallback);
-                    actionToast.error({ key: `endurance-template-duplicate:${template.id}`, error, fallback });
                   })}><CopyPlus className="size-4" />Dupliquer</Button>
                   <Button size="sm" variant="dangerGhost" onClick={() => setDeleteTarget(template)}><Trash2 className="size-4" />Supprimer</Button>
                 </div>
@@ -326,11 +320,6 @@ export function EnduranceTemplatesPage() {
           }).catch((error: unknown) => {
             const fallback = 'Suppression impossible.';
             setErrorMessage(error instanceof Error ? error.message : fallback);
-            actionToast.error({
-              key: `endurance-template-delete:${templateId}`,
-              error,
-              fallback,
-            });
           });
         }}
       />
