@@ -170,7 +170,9 @@ export function RouteUnsavedChangesBoundary({
     if (!shouldProtect) return;
 
     resetBaseline();
-    const frame = window.requestAnimationFrame(resetBaseline);
+    const frame = window.requestAnimationFrame(() => {
+      if (baselineRef.current === undefined) resetBaseline();
+    });
     return () => window.cancelAnimationFrame(frame);
   }, [pathname, resetBaseline, shouldProtect]);
 
