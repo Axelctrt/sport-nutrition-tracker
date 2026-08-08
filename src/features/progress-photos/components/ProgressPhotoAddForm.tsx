@@ -12,6 +12,8 @@ import {
   type ProgressPhotoView,
 } from '@/domain/models/progressPhoto';
 import { progressPhotoViewLabels } from '@/features/progress-photos/progressPhotoLabels';
+import { inputClassName } from '@/shared/forms/formStyles';
+import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 import { SportPilotStatefulButton } from '@/shared/ui/SportPilotStatefulButton';
@@ -22,7 +24,7 @@ interface ProgressPhotoAddFormProps {
 }
 
 const acceptedImageTypes = 'image/jpeg,image/png,image/webp,image/heic,image/heif';
-const sourceClassName = 'sp-button relative flex min-h-12 cursor-pointer items-center justify-center gap-2 text-sm';
+const sourceClassName = 'sp-button relative flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-[var(--sp-radius-control)] text-sm';
 
 export function ProgressPhotoAddForm({ onSave }: ProgressPhotoAddFormProps) {
   const [file, setFile] = useState<File | undefined>(undefined);
@@ -99,14 +101,14 @@ export function ProgressPhotoAddForm({ onSave }: ProgressPhotoAddFormProps) {
   return (
     <Card className="p-4 sm:p-5" aria-labelledby="progress-photo-add-title">
       <div className="flex items-start gap-3">
-        <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-brand-100 text-brand-800 dark:bg-brand-900 dark:text-brand-100">
+        <span className="grid size-11 shrink-0 place-items-center rounded-[var(--sp-radius-control)] bg-[var(--sp-surface-muted)] text-[var(--sp-accent-primary)]">
           <Camera aria-hidden="true" className="size-5" />
         </span>
         <div>
-          <h2 id="progress-photo-add-title" className="text-lg font-semibold text-slate-950 dark:text-white">
+          <h2 id="progress-photo-add-title" className="text-lg font-semibold text-[var(--sp-text-primary)]">
             Ajouter une photo
           </h2>
-          <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
+          <p className="mt-1 text-sm leading-6 text-[var(--sp-text-secondary)]">
             La photo est redimensionnée et stockée dans IndexedDB sur cet appareil.
           </p>
         </div>
@@ -114,7 +116,7 @@ export function ProgressPhotoAddForm({ onSave }: ProgressPhotoAddFormProps) {
 
       <form className="mt-5 grid gap-4" onSubmit={(event) => void submit(event)}>
         <fieldset className="grid gap-3">
-          <legend className="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-200">
+          <legend className="mb-3 text-sm font-semibold text-[var(--sp-text-secondary)]">
             Source de la photo
           </legend>
           <label className={sourceClassName}>
@@ -129,31 +131,31 @@ export function ProgressPhotoAddForm({ onSave }: ProgressPhotoAddFormProps) {
               onChange={selectFile}
             />
           </label>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
+          <p className="text-xs text-[var(--sp-text-muted)]">
             JPEG, PNG, WebP ou HEIC · 25 Mo maximum
           </p>
         </fieldset>
 
         {file ? (
-          <div className="flex min-w-0 items-center gap-3 rounded-2xl bg-brand-50 p-3 dark:bg-brand-950/30">
+          <div className="flex min-w-0 items-center gap-3 rounded-[var(--sp-radius-control)] border border-[var(--sp-border-subtle)] bg-[var(--sp-surface-muted)] p-3">
             {previewUrl ? (
-              <img src={previewUrl} alt="Aperçu de la photo sélectionnée" className="h-20 w-16 shrink-0 rounded-xl object-cover" />
+              <img src={previewUrl} alt="Aperçu de la photo sélectionnée" className="h-20 w-16 shrink-0 rounded-[var(--sp-radius-control)] object-cover" />
             ) : null}
-            <p className="min-w-0 flex-1 truncate text-sm font-semibold">{file.name}</p>
-            <button
+            <p className="min-w-0 flex-1 truncate text-sm font-semibold text-[var(--sp-text-primary)]">{file.name}</p>
+            <Button
               type="button"
-              className="inline-flex min-h-11 items-center gap-2 px-2 text-sm font-semibold"
+              variant="secondary"
               onClick={clearFile}
               disabled={state === 'loading'}
             >
               <X aria-hidden="true" className="size-4" />
               Retirer
-            </button>
+            </Button>
           </div>
         ) : null}
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <label className="grid gap-1.5 text-sm font-semibold text-slate-700 dark:text-slate-200">
+          <label className="grid gap-1.5 text-sm font-semibold text-[var(--sp-text-secondary)]">
             Date
             <input
               type="date"
@@ -161,15 +163,15 @@ export function ProgressPhotoAddForm({ onSave }: ProgressPhotoAddFormProps) {
               required
               max={toLocalDate()}
               onChange={(event) => setDate(event.currentTarget.value)}
-              className="min-h-11 rounded-xl border border-slate-300 bg-white px-3 text-base text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+              className={inputClassName}
             />
           </label>
-          <label className="grid gap-1.5 text-sm font-semibold text-slate-700 dark:text-slate-200">
+          <label className="grid gap-1.5 text-sm font-semibold text-[var(--sp-text-secondary)]">
             Vue
             <select
               value={view}
               onChange={(event) => setView(event.currentTarget.value as ProgressPhotoView)}
-              className="min-h-11 rounded-xl border border-slate-300 bg-white px-3 text-base text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+              className={inputClassName}
             >
               {PROGRESS_PHOTO_VIEWS.map((value) => (
                 <option key={value} value={value}>{progressPhotoViewLabels[value]}</option>
@@ -178,8 +180,8 @@ export function ProgressPhotoAddForm({ onSave }: ProgressPhotoAddFormProps) {
           </label>
         </div>
 
-        <label className="grid gap-1.5 text-sm font-semibold text-slate-700 dark:text-slate-200">
-          Poids associé <span className="font-normal text-slate-500 dark:text-slate-400">(facultatif)</span>
+        <label className="grid gap-1.5 text-sm font-semibold text-[var(--sp-text-secondary)]">
+          Poids associé <span className="font-normal text-[var(--sp-text-muted)]">(facultatif)</span>
           <div className="flex items-center gap-2">
             <input
               type="text"
@@ -187,21 +189,21 @@ export function ProgressPhotoAddForm({ onSave }: ProgressPhotoAddFormProps) {
               value={weight}
               placeholder="Ex. 72,5"
               onChange={(event) => setWeight(event.currentTarget.value)}
-              className="min-h-11 min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-3 text-base text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+              className={inputClassName}
             />
-            <span className="text-sm text-slate-500 dark:text-slate-400">kg</span>
+            <span className="text-sm text-[var(--sp-text-muted)]">kg</span>
           </div>
         </label>
 
-        <label className="grid gap-1.5 text-sm font-semibold text-slate-700 dark:text-slate-200">
-          Note <span className="font-normal text-slate-500 dark:text-slate-400">(facultative)</span>
+        <label className="grid gap-1.5 text-sm font-semibold text-[var(--sp-text-secondary)]">
+          Note <span className="font-normal text-[var(--sp-text-muted)]">(facultative)</span>
           <textarea
             value={note}
             maxLength={5_000}
             rows={3}
             placeholder="Contexte, ressenti ou conditions de prise de vue…"
             onChange={(event) => setNote(event.currentTarget.value)}
-            className="rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-base text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+            className={`${inputClassName} min-h-24 resize-y`}
           />
         </label>
 

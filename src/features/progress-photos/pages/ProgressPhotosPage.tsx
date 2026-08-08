@@ -22,6 +22,7 @@ import { ProgressPhotoArchivePanel } from '@/features/progress-photos/components
 import { ProgressPhotoCard } from '@/features/progress-photos/components/ProgressPhotoCard';
 import { useProgressPhotos } from '@/features/progress-photos/hooks/useProgressPhotos';
 import { progressPhotoViewLabels } from '@/features/progress-photos/progressPhotoLabels';
+import { inputClassName } from '@/shared/forms/formStyles';
 import { Button } from '@/shared/ui/Button';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
@@ -55,7 +56,7 @@ export function ProgressPhotosPage() {
     <section aria-labelledby="progress-photos-title" className="space-y-5 pb-8">
       <Link
         to={routePaths.progression}
-        className="hidden min-h-11 items-center gap-2 text-sm font-semibold text-brand-700 hover:underline lg:inline-flex dark:text-brand-300"
+        className="hidden min-h-11 items-center gap-2 text-sm font-semibold text-[var(--sp-accent-primary)] hover:underline lg:inline-flex"
       >
         <ArrowLeft aria-hidden="true" className="size-4" />
         Retour à la progression
@@ -63,13 +64,13 @@ export function ProgressPhotosPage() {
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
+          <p className="text-sm font-semibold uppercase tracking-wide text-[var(--sp-accent-primary)]">
             Progression privée
           </p>
-          <h1 id="progress-photos-title" className="mt-1 text-3xl font-bold text-slate-950 dark:text-white">
+          <h1 id="progress-photos-title" className="mt-1 text-3xl font-bold text-[var(--sp-text-primary)]">
             Photos de progression
           </h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300">
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--sp-text-secondary)]">
             Suis visuellement ton évolution avec des photos conservées uniquement dans l’espace local actuellement ouvert.
           </p>
         </div>
@@ -77,7 +78,7 @@ export function ProgressPhotosPage() {
           to={routePaths.progressPhotoCompare}
           aria-disabled={!canCompare}
           tabIndex={canCompare ? undefined : -1}
-          className={`sp-button sp-button--secondary inline-flex min-h-11 items-center justify-center gap-2 px-4 text-sm font-bold ${canCompare ? '' : 'pointer-events-none opacity-50'}`}
+          className={`sp-button sp-button--secondary inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--sp-radius-control)] px-4 text-sm font-bold ${canCompare ? '' : 'pointer-events-none opacity-50'}`}
         >
           <GitCompareArrows aria-hidden="true" className="size-4" />
           Comparer
@@ -103,20 +104,20 @@ export function ProgressPhotosPage() {
       <section aria-labelledby="progress-photo-gallery-title">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h2 id="progress-photo-gallery-title" className="text-xl font-semibold text-slate-950 dark:text-white">
+            <h2 id="progress-photo-gallery-title" className="text-xl font-semibold text-[var(--sp-text-primary)]">
               Galerie
             </h2>
-            <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+            <p className="mt-1 text-sm text-[var(--sp-text-secondary)]">
               {progressPhotos.items.length} photo{progressPhotos.items.length > 1 ? 's' : ''} · stockage restant estimé : {formatStorage(storage.remaining)}
             </p>
           </div>
           {progressPhotos.items.length ? (
-            <label className="grid gap-1 text-sm font-semibold text-slate-700 dark:text-slate-200">
+            <label className="grid gap-1 text-sm font-semibold text-[var(--sp-text-secondary)]">
               Filtrer par vue
               <select
                 value={viewFilter}
                 onChange={(event) => setViewFilter(event.currentTarget.value as 'all' | ProgressPhotoView)}
-                className="min-h-11 rounded-xl border border-slate-300 bg-white px-3 text-base text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                className={inputClassName}
               >
                 <option value="all">Toutes les vues</option>
                 {PROGRESS_PHOTO_VIEWS.map((view) => (
@@ -140,7 +141,7 @@ export function ProgressPhotosPage() {
         {progressPhotos.status === 'loading' ? (
           <div className="mt-4 grid gap-3 sm:grid-cols-2" aria-label="Chargement des photos de progression">
             {Array.from({ length: 2 }, (_, index) => (
-              <div key={index} className="h-40 animate-pulse rounded-2xl bg-slate-100 motion-reduce:animate-none dark:bg-slate-800" />
+              <div key={index} className="h-40 animate-pulse rounded-[var(--sp-radius-card)] bg-[var(--sp-surface-muted)] motion-reduce:animate-none" />
             ))}
           </div>
         ) : null}
