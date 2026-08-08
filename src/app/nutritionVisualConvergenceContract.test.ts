@@ -4,6 +4,7 @@ import favoriteMealsSource from '@/features/favorite-meals/pages/FavoriteMealsPa
 import methodGridSource from '@/features/food-journal/components/FoodAddMethodGrid.tsx?raw';
 import journalSource from '@/features/food-journal/pages/FoodJournalPage.tsx?raw';
 import selectorSource from '@/features/food-journal/pages/MealFoodSelectorPage.tsx?raw';
+import photoNutritionSource from '@/features/photo-nutrition/pages/PhotoNutritionEstimatePage.tsx?raw';
 import productsSource from '@/features/products/pages/FoodProductsPage.tsx?raw';
 import recipeCardSource from '@/features/recipes/components/RecipeLibraryCard.tsx?raw';
 import recipesSource from '@/features/recipes/pages/RecipesPage.tsx?raw';
@@ -86,5 +87,41 @@ describe('convergence visuelle des bibliothèques Nutrition', () => {
     expect(recipeCardSource).toContain('to={addRecipeToJournalPath(recipe.id, targetDate, targetSlot)}');
     expect(recipeCardSource).toContain('state={journalNavigationState}');
     expect(recipeCardSource).not.toContain('rounded-xl bg-brand-700 px-4 text-sm font-semibold text-white');
+  });
+});
+
+describe('convergence visuelle de Photo Nutrition', () => {
+  it('réutilise les primitives et tokens partagés pour la photo et le formulaire', () => {
+    expect(photoNutritionSource).toContain("import { inputClassName } from '@/shared/forms/formStyles'");
+    expect(photoNutritionSource).toContain("import { IconAction } from '@/shared/ui/IconAction'");
+    expect(photoNutritionSource).toContain('var(--sp-surface-muted)');
+    expect(photoNutritionSource).toContain('var(--sp-border-subtle)');
+    expect(photoNutritionSource).toContain('var(--sp-text-primary)');
+    expect(photoNutritionSource).toContain('var(--sp-text-secondary)');
+    expect(photoNutritionSource).toContain('var(--sp-accent-primary)');
+    expect(photoNutritionSource).toContain('label="Supprimer la photo sélectionnée"');
+    expect(photoNutritionSource).not.toContain('border-brand-200 bg-brand-50');
+    expect(photoNutritionSource).not.toContain('border-emerald-200 bg-emerald-50');
+    expect(photoNutritionSource).not.toContain('className="min-h-11 rounded-xl border border-slate-300 bg-white px-3');
+  });
+
+  it('préserve l’activation explicite et les paramètres de l’analyse IA', () => {
+    expect(photoNutritionSource).toContain('role="switch"');
+    expect(photoNutritionSource).toContain('aria-checked={useRemoteAi}');
+    expect(photoNutritionSource).toContain('disabled={!aiConfig.enabled || isAnalyzing || isSaving}');
+    expect(photoNutritionSource).toContain('onClick={() => setUseRemoteAi((current) => !current)}');
+    expect(photoNutritionSource).toContain('setUseRemoteAi(false)');
+    expect(photoNutritionSource).toContain('endpointUrl: aiConfig.endpointUrl');
+    expect(photoNutritionSource).toContain('timeoutMs: aiConfig.timeoutMs');
+    expect(photoNutritionSource).toContain('setAnalysis(await analyzePhoto(selectedFile, remotePort))');
+  });
+
+  it('conserve les routes compte/journal et la sauvegarde métier', () => {
+    expect(photoNutritionSource).toContain('to={routePaths.syncPrototype}');
+    expect(photoNutritionSource).toContain('sp-button sp-button--secondary');
+    expect(photoNutritionSource).toContain('foodJournalCancelPath(');
+    expect(photoNutritionSource).toContain('createFoodJournalRestoreState(navigationState?.foodJournalReturn)');
+    expect(photoNutritionSource).toContain('saveEstimate({ date, mealSlot, estimate: nextEstimate })');
+    expect(photoNutritionSource).toContain('createFoodJournalFeedbackState(returnContext, {');
   });
 });
