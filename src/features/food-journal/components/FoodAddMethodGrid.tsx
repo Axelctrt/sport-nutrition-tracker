@@ -24,6 +24,7 @@ import {
 import type { MealSlot } from '@/domain/models/food';
 import type { FoodJournalNavigationState } from '@/features/food-journal/navigation/foodJournalNavigation';
 import type { FoodAddMethod } from '@/features/food-journal/preferences/foodAddMethodPreference';
+import { Card } from '@/shared/ui/Card';
 import { cn } from '@/shared/utils/cn';
 
 interface FoodAddMethodGridProps {
@@ -58,8 +59,8 @@ interface MethodLinkProps {
   onClick: () => void;
 }
 
-const methodClassName =
-  'flex min-h-24 min-w-0 items-start gap-3 rounded-2xl border p-4 text-left shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600';
+const methodContentClassName =
+  'flex min-h-24 w-full min-w-0 items-start gap-3 p-4 text-left';
 
 const primaryMethods: readonly FoodAddMethod[] = ['search', 'recent', 'scanner'];
 const advancedMethods: readonly FoodAddMethod[] = [
@@ -83,22 +84,22 @@ function MethodContent({
     <>
       <span
         className={cn(
-          'grid size-11 shrink-0 place-items-center rounded-2xl',
+          'grid size-11 shrink-0 place-items-center rounded-[var(--sp-radius-control)] transition-colors motion-reduce:transition-none',
           active
-            ? 'bg-brand-700 text-white dark:bg-brand-500'
-            : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200',
+            ? 'bg-[var(--sp-accent-primary)] text-white'
+            : 'bg-[var(--sp-surface-muted)] text-[var(--sp-text-secondary)]',
         )}
       >
         <Icon aria-hidden="true" className="size-5" />
       </span>
       <span className="min-w-0 flex-1">
         {eyebrow ? (
-          <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
+          <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[var(--sp-accent-primary)]">
             {eyebrow}
           </span>
         ) : null}
-        <span className="block font-semibold text-slate-950 dark:text-white">{title}</span>
-        <span className="mt-1 block text-sm leading-5 text-slate-600 dark:text-slate-300">
+        <span className="block font-semibold text-[var(--sp-text-primary)]">{title}</span>
+        <span className="mt-1 block text-sm leading-5 text-[var(--sp-text-secondary)]">
           {description}
         </span>
       </span>
@@ -108,41 +109,43 @@ function MethodContent({
 
 function MethodButton({ icon, title, description, eyebrow, active = false, onClick }: MethodButtonProps) {
   return (
-    <button
-      type="button"
-      aria-pressed={active}
-      onClick={onClick}
+    <Card
+      variant="interactive"
       className={cn(
-        methodClassName,
-        active
-          ? 'border-brand-500 bg-brand-50 dark:border-brand-500 dark:bg-brand-950/35'
-          : 'border-slate-200 bg-white hover:border-brand-300 hover:bg-brand-50/50 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-brand-700 dark:hover:bg-brand-950/20',
+        'overflow-hidden',
+        active && 'border-[var(--sp-accent-primary)] bg-[var(--sp-surface-muted)]',
       )}
     >
-      <MethodContent
-        icon={icon}
-        title={title}
-        description={description}
-        eyebrow={eyebrow}
-        active={active}
-      />
-    </button>
+      <button
+        type="button"
+        aria-pressed={active}
+        onClick={onClick}
+        className={methodContentClassName}
+      >
+        <MethodContent
+          icon={icon}
+          title={title}
+          description={description}
+          eyebrow={eyebrow}
+          active={active}
+        />
+      </button>
+    </Card>
   );
 }
 
 function MethodLink({ icon, title, description, eyebrow, to, state, onClick }: MethodLinkProps) {
   return (
-    <Link
-      to={to}
-      state={state ?? undefined}
-      onClick={onClick}
-      className={cn(
-        methodClassName,
-        'border-slate-200 bg-white hover:border-brand-300 hover:bg-brand-50/50 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-brand-700 dark:hover:bg-brand-950/20',
-      )}
-    >
-      <MethodContent icon={icon} title={title} description={description} eyebrow={eyebrow} />
-    </Link>
+    <Card variant="interactive" className="overflow-hidden">
+      <Link
+        to={to}
+        state={state ?? undefined}
+        onClick={onClick}
+        className={methodContentClassName}
+      >
+        <MethodContent icon={icon} title={title} description={description} eyebrow={eyebrow} />
+      </Link>
+    </Card>
   );
 }
 

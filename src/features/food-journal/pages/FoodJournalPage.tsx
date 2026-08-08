@@ -287,19 +287,22 @@ export function FoodJournalPage() {
             ))}
           </div>
 
-          <Card className="mt-4 overflow-hidden">
+          <Card
+            variant="interactive"
+            className="mt-4 overflow-hidden hover:border-[var(--sp-accent-primary)]"
+          >
             <button
               type="button"
               aria-label="Bibliothèque"
-              className="flex min-h-16 w-full items-center gap-3 px-4 text-left hover:bg-slate-50 dark:hover:bg-slate-800/60 sm:px-5"
+              className="flex min-h-16 w-full items-center gap-3 px-4 text-left sm:px-5"
               onClick={() => setLibraryOpen(true)}
             >
-              <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-700 dark:bg-brand-950 dark:text-brand-300">
+              <span className="grid size-10 shrink-0 place-items-center rounded-[var(--sp-radius-control)] bg-[var(--sp-surface-muted)] text-[var(--sp-accent-primary)]">
                 <LibraryBig aria-hidden="true" className="size-5" />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block font-semibold text-slate-950 dark:text-white">Bibliothèque</span>
-                <span className="mt-0.5 block text-sm text-slate-500 dark:text-slate-400">
+                <span className="block font-semibold text-[var(--sp-text-primary)]">Bibliothèque</span>
+                <span className="mt-0.5 block text-sm text-[var(--sp-text-secondary)]">
                   Aliments, recettes et favoris
                 </span>
               </span>

@@ -1,0 +1,46 @@
+import { describe, expect, it } from 'vitest';
+
+import methodGridSource from '@/features/food-journal/components/FoodAddMethodGrid.tsx?raw';
+import journalSource from '@/features/food-journal/pages/FoodJournalPage.tsx?raw';
+import selectorSource from '@/features/food-journal/pages/MealFoodSelectorPage.tsx?raw';
+
+describe('convergence visuelle du journal Nutrition', () => {
+  it('centralise les méthodes d’ajout sur Card interactive et les tokens sémantiques', () => {
+    expect(methodGridSource).toContain("import { Card } from '@/shared/ui/Card'");
+    expect(methodGridSource).toContain('variant="interactive"');
+    expect(methodGridSource).toContain('var(--sp-surface-muted)');
+    expect(methodGridSource).toContain('var(--sp-text-primary)');
+    expect(methodGridSource).toContain('var(--sp-text-secondary)');
+    expect(methodGridSource).toContain('var(--sp-accent-primary)');
+    expect(methodGridSource).not.toContain('border-brand-500 bg-brand-50');
+    expect(methodGridSource).not.toContain('bg-brand-700 text-white');
+  });
+
+  it('préserve les destinations des méthodes d’ajout', () => {
+    expect(methodGridSource).toContain('to={barcodeScannerPath(date, mealSlot)}');
+    expect(methodGridSource).toContain('to={favoriteMealsForMealPath(date, mealSlot)}');
+    expect(methodGridSource).toContain('to={photoNutritionEstimatePath(date, mealSlot)}');
+    expect(methodGridSource).toContain('to={recipesForMealPath(date, mealSlot)}');
+    expect(methodGridSource).toContain('to={newFoodProductForMealPath(date, mealSlot)}');
+    expect(methodGridSource).toContain("onSelectSource('openFoodFacts')");
+  });
+
+  it('converge la carte Bibliothèque sans changer son ouverture ni ses destinations', () => {
+    expect(journalSource).toContain('variant="interactive"');
+    expect(journalSource).toContain('onClick={() => setLibraryOpen(true)}');
+    expect(journalSource).toContain('var(--sp-surface-muted)');
+    expect(journalSource).toContain('var(--sp-text-primary)');
+    expect(journalSource).toContain('var(--sp-text-secondary)');
+    expect(journalSource).toContain('routePaths.foodProducts');
+    expect(journalSource).toContain('routePaths.recipes');
+    expect(journalSource).toContain('routePaths.favoriteMeals');
+  });
+
+  it('aligne le CTA de création du sélecteur sur le contrat bouton', () => {
+    expect(selectorSource).toContain('className="sp-button inline-flex min-h-[var(--sp-control-height-md)]');
+    expect(selectorSource).toContain('rounded-[var(--sp-radius-control)]');
+    expect(selectorSource).toContain('to={newFoodProductForMealPath(date, mealSlot, {');
+    expect(selectorSource).toContain('state={location.state}');
+    expect(selectorSource).not.toContain('className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-brand-700');
+  });
+});
