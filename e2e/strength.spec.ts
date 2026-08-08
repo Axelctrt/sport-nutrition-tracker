@@ -21,6 +21,7 @@ test('crée un modèle, démarre une séance, valide une série et termine', asy
   const repetitions = firstSet.getByLabel('Répétitions');
   await repetitions.fill('1');
   await expect(firstSet.getByText('Enregistré', { exact: true })).toBeVisible();
+  await repetitions.focus();
   await expect(repetitions).toBeFocused();
   await page.keyboard.type('2');
   await expect(repetitions).toHaveValue('12');
