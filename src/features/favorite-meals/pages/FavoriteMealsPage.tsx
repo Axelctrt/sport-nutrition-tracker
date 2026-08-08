@@ -100,7 +100,7 @@ export function FavoriteMealsPage() {
         </div>
         <Link
           to={foodJournalPath(targetDate)}
-          className={`${isFirstUse ? 'hidden sm:inline-flex' : 'inline-flex'} min-h-12 w-full items-center justify-center rounded-xl border border-slate-300 px-4 font-semibold text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-800 sm:w-auto`}
+          className={`${isFirstUse ? 'hidden sm:inline-flex' : 'inline-flex'} sp-button sp-button--secondary min-h-[var(--sp-control-height-lg)] w-full items-center justify-center rounded-[var(--sp-radius-control)] px-4 font-semibold sm:w-auto`}
         >
           Ouvrir le journal
         </Link>
@@ -143,7 +143,12 @@ export function FavoriteMealsPage() {
               title="Aucun repas favori"
               description="Depuis le journal alimentaire, ouvre les options d’un repas puis enregistre-le comme favori."
               primaryAction={(
-                <Link to={foodJournalPath(targetDate)} className="inline-flex min-h-11 items-center justify-center rounded-xl bg-brand-700 px-4 text-sm font-semibold text-white hover:bg-brand-800">Ouvrir le journal</Link>
+                <Link
+                  to={foodJournalPath(targetDate)}
+                  className="sp-button inline-flex min-h-[var(--sp-control-height-md)] items-center justify-center rounded-[var(--sp-radius-control)] px-4 text-sm font-semibold"
+                >
+                  Ouvrir le journal
+                </Link>
               )}
             />
           ) : visibleFavorites.length === 0 ? (
