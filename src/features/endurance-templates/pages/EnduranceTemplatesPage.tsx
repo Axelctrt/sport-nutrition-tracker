@@ -268,7 +268,7 @@ export function EnduranceTemplatesPage() {
                   <div><h3 className="font-semibold text-slate-950 dark:text-white">{template.name}</h3><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{activityTypeLabels[template.activityType]} · {template.durationMinutes} min · {intensityLabels[template.intensity]}</p></div>
                 </div>
                 <div className="mt-4 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-                  <Link to={startPath(template)} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-brand-700 px-3 text-sm font-semibold text-white hover:bg-brand-800"><Play className="size-4" />Utiliser</Link>
+                  <Link to={startPath(template)} className="sp-button inline-flex min-h-[var(--sp-control-height-sm)] items-center justify-center gap-2 rounded-[var(--sp-radius-control)] px-3 text-sm font-semibold"><Play className="size-4" />Utiliser</Link>
                   <Button size="sm" variant="secondary" onClick={() => requestEditor(template)}><Pencil className="size-4" />Modifier</Button>
                   <Button size="sm" variant="secondary" onClick={() => void duplicateEnduranceTemplate(template.id).then(async () => {
                     actionToast.success({ key: `endurance-template-duplicate:${template.id}`, title: 'Modèle d’endurance dupliqué' });

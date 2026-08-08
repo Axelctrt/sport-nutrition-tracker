@@ -143,7 +143,7 @@ export function StrengthExercisesPage() {
           <h1 id="strength-exercises-title" className="mt-1 text-3xl font-bold tracking-tight text-slate-950 dark:text-white">Catalogue d’exercices</h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">Retrouve les mouvements système, tes exercices personnels et leur historique de progression.</p>
         </div>
-        <Link to={routePaths.newStrengthExercise} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-brand-700 px-5 font-semibold text-white shadow-sm hover:bg-brand-800">
+        <Link to={routePaths.newStrengthExercise} className="sp-button inline-flex min-h-[var(--sp-control-height-lg)] items-center justify-center gap-2 rounded-[var(--sp-radius-control)] px-5 font-semibold">
           <Plus aria-hidden="true" className="size-5" />
           Créer un exercice
         </Link>
@@ -244,7 +244,7 @@ export function StrengthExercisesPage() {
             isFirstUse ? (
               <Link
                 to={routePaths.newStrengthExercise}
-                className="inline-flex min-h-11 items-center justify-center rounded-xl bg-brand-700 px-4 text-sm font-semibold text-white"
+                className="sp-button inline-flex min-h-[var(--sp-control-height-md)] items-center justify-center rounded-[var(--sp-radius-control)] px-4 text-sm font-semibold"
               >
                 Créer un exercice
               </Link>
@@ -271,7 +271,7 @@ export function StrengthExercisesPage() {
                       returnTo: 'library',
                       query: query.trim(),
                     })}
-                    className="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 px-4 text-sm font-semibold text-slate-800 dark:border-slate-700 dark:text-slate-100"
+                    className="sp-button sp-button--secondary inline-flex min-h-[var(--sp-control-height-md)] items-center justify-center rounded-[var(--sp-radius-control)] px-4 text-sm font-semibold"
                   >
                     Créer cet exercice
                   </Link>
