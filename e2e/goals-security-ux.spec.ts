@@ -37,7 +37,21 @@ test('crée puis modifie un objectif sans permettre le changement de métrique',
   await expect(
     editDialog.getByText('Pour changer de métrique, crée un nouvel objectif.'),
   ).toBeVisible();
-  await editDialog.getByLabel(/Cible/).fill('150000');
+  const targetInput = editDialog.getByLabel(/Cible/);
+  await expect(targetInput).toHaveValue('120000');
+  let targetAccepted = false;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    await targetInput.fill('150000');
+    try {
+      await expect(targetInput).toHaveValue('150000', { timeout: 1_000 });
+      targetAccepted = true;
+      break;
+    } catch (error) {
+      if (attempt === 3) throw error;
+      await page.waitForTimeout(100);
+    }
+  }
+  expect(targetAccepted).toBe(true);
   await editDialog.getByRole('button', { name: 'Enregistrer les modifications' }).click();
 
   await expect(editDialog).toBeHidden();
