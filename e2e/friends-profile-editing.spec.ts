@@ -51,7 +51,8 @@ test('édite le profil social depuis sa carte en lecture seule et restaure le fo
   expect(copyBox.x).toBeGreaterThanOrEqual(inputBox.x + inputBox.width - 1);
   const inputBottom = inputBox.y + inputBox.height;
   const statusCenter = statusBox.y + statusBox.height / 2;
-  expect(statusCenter).toBeGreaterThanOrEqual(inputBottom);
+  const subpixelTolerance = 0.5;
+  expect(statusCenter).toBeGreaterThanOrEqual(inputBottom - subpixelTolerance);
 
   await page.screenshot({ path: testInfo.outputPath('profil-social-edition.png'), fullPage: true });
 
