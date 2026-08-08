@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
+import favoriteMealsSource from '@/features/favorite-meals/pages/FavoriteMealsPage.tsx?raw';
 import methodGridSource from '@/features/food-journal/components/FoodAddMethodGrid.tsx?raw';
 import journalSource from '@/features/food-journal/pages/FoodJournalPage.tsx?raw';
 import selectorSource from '@/features/food-journal/pages/MealFoodSelectorPage.tsx?raw';
+import productsSource from '@/features/products/pages/FoodProductsPage.tsx?raw';
+import recipeCardSource from '@/features/recipes/components/RecipeLibraryCard.tsx?raw';
+import recipesSource from '@/features/recipes/pages/RecipesPage.tsx?raw';
 
 describe('convergence visuelle du journal Nutrition', () => {
   it('centralise les méthodes d’ajout sur Card interactive et les tokens sémantiques', () => {
@@ -42,5 +46,45 @@ describe('convergence visuelle du journal Nutrition', () => {
     expect(selectorSource).toContain('to={newFoodProductForMealPath(date, mealSlot, {');
     expect(selectorSource).toContain('state={location.state}');
     expect(selectorSource).not.toContain('className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-brand-700');
+  });
+});
+
+describe('convergence visuelle des bibliothèques Nutrition', () => {
+  it('utilise le contrat bouton et SegmentedControl dans les aliments locaux sans changer les routes', () => {
+    expect(productsSource).toContain("import { SegmentedControl } from '@/shared/ui/SegmentedControl'");
+    expect(productsSource).toContain('label="Filtrer les aliments"');
+    expect(productsSource).toContain('items={filterItems}');
+    expect(productsSource).toContain('value={filter}');
+    expect(productsSource).toContain('onChange={(value) => setFilter(value as ProductFilter)}');
+    expect(productsSource).toContain('sp-button sp-button--secondary');
+    expect(productsSource).toContain('sp-button inline-flex min-h-[var(--sp-control-height-lg)]');
+    expect(productsSource).toContain('to={routePaths.foodSearch}');
+    expect(productsSource).toContain('to={routePaths.newFoodProduct}');
+    expect(productsSource).toContain('state={navigationState}');
+    expect(productsSource).not.toContain('border-brand-700 bg-brand-700 text-white');
+  });
+
+  it('aligne les CTA de la bibliothèque de recettes sans modifier les destinations', () => {
+    expect(recipesSource).toContain('sp-button min-h-[var(--sp-control-height-lg)]');
+    expect(recipesSource).toContain('sp-button inline-flex min-h-[var(--sp-control-height-md)]');
+    expect(recipesSource).toContain('sp-button sp-button--secondary');
+    expect(recipesSource).toContain('to={routePaths.newRecipe}');
+    expect(recipesSource).toContain('to={routePaths.foodProducts}');
+    expect(recipesSource).toContain('state={navigationState}');
+    expect(recipesSource).not.toContain('rounded-xl bg-brand-700 px-4 font-semibold text-white');
+  });
+
+  it('aligne les CTA des repas favoris en conservant la date cible', () => {
+    expect(favoriteMealsSource).toContain('sp-button sp-button--secondary');
+    expect(favoriteMealsSource).toContain('sp-button inline-flex min-h-[var(--sp-control-height-md)]');
+    expect(favoriteMealsSource).toContain('to={foodJournalPath(targetDate)}');
+    expect(favoriteMealsSource).not.toContain('rounded-xl bg-brand-700 px-4 text-sm font-semibold text-white');
+  });
+
+  it('aligne le CTA Ajouter au journal des recettes sans modifier route ni state', () => {
+    expect(recipeCardSource).toContain('className="sp-button mt-4 inline-flex min-h-[var(--sp-control-height-md)]');
+    expect(recipeCardSource).toContain('to={addRecipeToJournalPath(recipe.id, targetDate, targetSlot)}');
+    expect(recipeCardSource).toContain('state={journalNavigationState}');
+    expect(recipeCardSource).not.toContain('rounded-xl bg-brand-700 px-4 text-sm font-semibold text-white');
   });
 });

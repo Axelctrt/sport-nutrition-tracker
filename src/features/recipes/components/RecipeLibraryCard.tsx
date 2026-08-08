@@ -106,7 +106,7 @@ export function RecipeLibraryCard({
         <Link
           to={addRecipeToJournalPath(recipe.id, targetDate, targetSlot)}
           state={journalNavigationState}
-          className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-brand-700 px-4 text-sm font-semibold text-white hover:bg-brand-800 dark:bg-brand-600 dark:hover:bg-brand-500 sm:w-auto"
+          className="sp-button mt-4 inline-flex min-h-[var(--sp-control-height-md)] w-full items-center justify-center gap-2 rounded-[var(--sp-radius-control)] px-4 text-sm font-semibold sm:w-auto"
         >
           <Plus aria-hidden="true" className="size-4" />
           Ajouter au journal
