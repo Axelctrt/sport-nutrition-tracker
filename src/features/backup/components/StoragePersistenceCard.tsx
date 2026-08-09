@@ -112,30 +112,30 @@ export function StoragePersistenceCard({
         {isPersistent ? (
           <ShieldCheck
             aria-hidden="true"
-            className="mt-0.5 size-6 shrink-0 text-emerald-700 dark:text-emerald-300"
+            className="mt-0.5 size-6 shrink-0 text-[var(--sp-success)]"
           />
         ) : status?.state === 'best-effort' ? (
           <ShieldAlert
             aria-hidden="true"
-            className="mt-0.5 size-6 shrink-0 text-amber-700 dark:text-amber-300"
+            className="mt-0.5 size-6 shrink-0 text-[var(--sp-warning)]"
           />
         ) : (
           <HardDrive
             aria-hidden="true"
-            className="mt-0.5 size-6 shrink-0 text-brand-700 dark:text-brand-300"
+            className="mt-0.5 size-6 shrink-0 text-[var(--sp-accent-primary)]"
           />
         )}
 
         <div className="min-w-0 flex-1">
           <h2
             id="storage-persistence-title"
-            className="text-lg font-bold text-slate-950 dark:text-white"
+            className="text-lg font-bold text-[var(--sp-text-primary)]"
           >
             Protection du stockage local
           </h2>
 
           {isLoading ? (
-            <p className="mt-2 flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+            <p className="mt-2 flex items-center gap-2 text-sm text-[var(--sp-text-secondary)]">
               <LoaderCircle
                 aria-hidden="true"
                 className="size-4 animate-spin"
@@ -143,17 +143,17 @@ export function StoragePersistenceCard({
               Vérification en cours…
             </p>
           ) : isPersistent ? (
-            <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+            <p className="mt-2 text-sm leading-6 text-[var(--sp-text-secondary)]">
               Le navigateur protège davantage IndexedDB contre une
               suppression automatique liée au manque d’espace.
             </p>
           ) : isUnsupported ? (
-            <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+            <p className="mt-2 text-sm leading-6 text-[var(--sp-text-secondary)]">
               Ce navigateur ne permet pas de vérifier ou de demander
               la persistance du stockage.
             </p>
           ) : (
-            <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+            <p className="mt-2 text-sm leading-6 text-[var(--sp-text-secondary)]">
               Les données utilisent actuellement le mode standard du
               navigateur et peuvent être évincées en cas de forte
               pression sur le stockage.
@@ -194,7 +194,7 @@ export function StoragePersistenceCard({
         </InlineNotice>
       ) : null}
 
-      <p className="mt-4 text-xs leading-5 text-slate-500 dark:text-slate-400">
+      <p className="mt-4 text-xs leading-5 text-[var(--sp-text-muted)]">
         Cette protection réduit le risque d’effacement automatique,
         mais elle ne remplace pas une sauvegarde JSON et ne protège
         pas contre une suppression manuelle des données du navigateur.

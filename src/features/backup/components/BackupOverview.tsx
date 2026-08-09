@@ -18,12 +18,15 @@ export function BackupOverview({ storageUsageLabel, lastBackupLabel }: BackupOve
     <Card className="mt-6 p-4 sm:p-5" aria-label="Résumé des données locales">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {metrics.map(({ label, value, icon: Icon }) => (
-          <div key={label} className="min-w-0 rounded-xl border border-slate-200/80 p-3 dark:border-slate-800">
-            <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
-              <Icon aria-hidden="true" className="size-4 shrink-0" />
+          <div
+            key={label}
+            className="min-w-0 rounded-[var(--sp-radius-control)] border border-[var(--sp-border-subtle)] bg-[var(--sp-surface-muted)] p-3"
+          >
+            <div className="flex items-center gap-2 text-[var(--sp-text-muted)]">
+              <Icon aria-hidden="true" className="size-4 shrink-0 text-[var(--sp-accent-primary)]" />
               <p className="truncate text-xs font-semibold uppercase tracking-wide">{label}</p>
             </div>
-            <p className="mt-2 break-words text-sm font-bold text-slate-950 dark:text-white">{value}</p>
+            <p className="mt-2 break-words text-sm font-bold text-[var(--sp-text-primary)]">{value}</p>
           </div>
         ))}
       </div>
