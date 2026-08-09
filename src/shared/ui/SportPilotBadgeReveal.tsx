@@ -3,6 +3,7 @@ import type { CSSProperties } from "react";
 import { createPortal } from "react-dom";
 
 import "@/shared/ui/uxMotionPolish.css";
+import { useModalReveal } from "@/shared/ui/useModalReveal";
 
 interface SportPilotBadgeRevealProps {
   name: string;
@@ -36,13 +37,17 @@ export function SportPilotBadgeReveal({
   onContinue,
   onViewRewards,
 }: SportPilotBadgeRevealProps) {
+  const { backdropRef, dialogRef, initialFocusRef } = useModalReveal(onContinue);
+
   return createPortal(
-    <div className="sp-badge-reveal-backdrop" role="presentation">
+    <div ref={backdropRef} className="sp-badge-reveal-backdrop" role="presentation">
       <section
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="sportpilot-badge-reveal-title"
         aria-describedby="sportpilot-badge-reveal-description"
+        tabIndex={-1}
         className="sp-badge-reveal"
       >
         <div className="sp-badge-reveal__halo" aria-hidden="true" />
@@ -82,10 +87,10 @@ export function SportPilotBadgeReveal({
               Voir mes récompenses
             </button>
             <button
+              ref={initialFocusRef}
               type="button"
               className="sp-button sp-button--secondary inline-flex min-h-12 items-center justify-center rounded-[var(--sp-radius-control)] px-4 text-sm font-bold"
               onClick={onContinue}
-              autoFocus
             >
               Continuer
             </button>

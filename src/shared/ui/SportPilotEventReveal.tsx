@@ -1,5 +1,7 @@
 import { ArrowRight, CheckCircle2, Sparkles } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import { Button } from '@/shared/ui/Button';
+import { useModalReveal } from '@/shared/ui/useModalReveal';
 
 interface SportPilotEventRevealProps {
   eyebrow: string;
@@ -20,13 +22,22 @@ export function SportPilotEventReveal({
   onPrimary,
   onContinue,
 }: SportPilotEventRevealProps) {
-  return (
-    <div className="fixed inset-0 z-[92] grid place-items-center overflow-y-auto bg-slate-950/50 px-4 py-6 backdrop-blur-sm">
+  const { backdropRef, dialogRef, initialFocusRef } = useModalReveal(onContinue);
+
+  return createPortal(
+    <div
+      ref={backdropRef}
+      className="fixed inset-0 z-[92] grid place-items-center overflow-y-auto bg-slate-950/50 px-4 py-6 backdrop-blur-sm"
+      role="presentation"
+    >
       <section
+        ref={dialogRef}
         aria-labelledby="event-reveal-title"
+        aria-describedby="event-reveal-description"
         aria-modal="true"
         className="relative w-full max-w-lg overflow-hidden rounded-[2rem] border border-white/70 bg-white/95 p-5 shadow-[0_28px_90px_-34px_rgba(15,23,42,0.78)] backdrop-blur-xl motion-safe:animate-[sp-onboarding-step-enter_280ms_var(--sp-ease-enter)_both] dark:border-slate-700 dark:bg-slate-900/95 sm:p-7"
         role="dialog"
+        tabIndex={-1}
       >
         <div aria-hidden="true" className="absolute -right-12 -top-12 size-40 rounded-full bg-brand-400/20 blur-3xl" />
         <div className="relative flex items-start gap-4">
@@ -36,7 +47,7 @@ export function SportPilotEventReveal({
           <div className="min-w-0 flex-1">
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-brand-700 dark:text-brand-300">{eyebrow}</p>
             <h2 id="event-reveal-title" className="mt-1 text-2xl font-black tracking-tight text-slate-950 dark:text-white">{title}</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">{description}</p>
+            <p id="event-reveal-description" className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">{description}</p>
           </div>
         </div>
 
@@ -55,7 +66,7 @@ export function SportPilotEventReveal({
         ) : null}
 
         <div className="relative mt-6 grid gap-2 sm:grid-cols-2">
-          <Button variant="secondary" onClick={onContinue}>Continuer</Button>
+          <Button ref={initialFocusRef} variant="secondary" onClick={onContinue}>Continuer</Button>
           {primaryLabel && onPrimary ? (
             <Button onClick={onPrimary}>
               {primaryLabel}
@@ -64,6 +75,7 @@ export function SportPilotEventReveal({
           ) : null}
         </div>
       </section>
-    </div>
+    </div>,
+    document.body,
   );
 }

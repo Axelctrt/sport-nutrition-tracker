@@ -1,5 +1,7 @@
 import { Check, Compass, Sparkles } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import { Button } from '@/shared/ui/Button';
+import { useModalReveal } from '@/shared/ui/useModalReveal';
 
 interface SportPilotOnboardingCompleteRevealProps {
   onContinue: () => void;
@@ -8,16 +10,22 @@ interface SportPilotOnboardingCompleteRevealProps {
 export function SportPilotOnboardingCompleteReveal({
   onContinue,
 }: SportPilotOnboardingCompleteRevealProps) {
-  return (
+  const { backdropRef, dialogRef, initialFocusRef } = useModalReveal(onContinue);
+
+  return createPortal(
     <div
+      ref={backdropRef}
       className="fixed inset-0 z-[95] grid place-items-center overflow-y-auto bg-slate-950/55 px-4 py-6 backdrop-blur-sm"
       role="presentation"
     >
       <section
+        ref={dialogRef}
         aria-labelledby="onboarding-complete-title"
+        aria-describedby="onboarding-complete-description"
         aria-modal="true"
         className="relative w-full max-w-md overflow-hidden rounded-[2rem] border border-white/70 bg-white/95 p-5 shadow-[0_28px_90px_-30px_rgba(15,23,42,0.75)] backdrop-blur-xl motion-safe:animate-[sp-onboarding-step-enter_300ms_var(--sp-ease-enter)_both] dark:border-slate-700 dark:bg-slate-900/95 sm:p-7"
         role="dialog"
+        tabIndex={-1}
       >
         <div aria-hidden="true" className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-brand-400/20 to-transparent" />
         <div className="relative text-center">
@@ -30,7 +38,7 @@ export function SportPilotOnboardingCompleteReveal({
           <h2 id="onboarding-complete-title" className="mt-2 text-3xl font-black tracking-tight text-slate-950 dark:text-white">
             Tout est prêt
           </h2>
-          <p className="mx-auto mt-3 max-w-sm text-sm leading-6 text-slate-600 dark:text-slate-300">
+          <p id="onboarding-complete-description" className="mx-auto mt-3 max-w-sm text-sm leading-6 text-slate-600 dark:text-slate-300">
             Ton profil, tes premières cibles et ton espace de données sont prêts. Tu peux maintenant découvrir ton tableau de bord.
           </p>
         </div>
@@ -41,10 +49,11 @@ export function SportPilotOnboardingCompleteReveal({
           <li className="flex items-center gap-2.5"><Sparkles className="size-4 text-brand-600" /> Accueil personnalisé disponible</li>
         </ul>
 
-        <Button className="relative mt-5 w-full" size="lg" onClick={onContinue}>
+        <Button ref={initialFocusRef} className="relative mt-5 w-full" size="lg" onClick={onContinue}>
           Découvrir mon accueil
         </Button>
       </section>
-    </div>
+    </div>,
+    document.body,
   );
 }
