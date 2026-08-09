@@ -308,7 +308,7 @@ export function ProgressionHubPage() {
           <p className="mt-1 text-sm text-[var(--sp-text-secondary)]">Comprendre l’évolution de tes données et décider de la suite.</p>
         </div>
         {summary.data?.weight.state !== 'empty' ? (
-          <Link to={routePaths.weight} className="sp-button sp-button--secondary inline-flex min-h-11 items-center justify-center gap-2 px-4 text-sm font-bold">
+          <Link to={routePaths.weight} className="sp-button sp-button--secondary inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--sp-radius-control)] px-4 text-sm font-bold">
             <Plus aria-hidden="true" className="size-4" />
             Ajouter une pesée
           </Link>

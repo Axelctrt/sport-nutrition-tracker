@@ -25,6 +25,10 @@ interface DailyCheckInSheetProps {
 
 type WeightMode = 'record' | 'skip';
 
+function formatFallbackWeightKg(weightKg: number): string {
+  return weightKg.toFixed(1);
+}
+
 export function DailyCheckInSheet({
   open,
   date,
@@ -57,7 +61,11 @@ export function DailyCheckInSheet({
     if (!open) return;
     const duration = checkIn?.sleepDurationMinutes;
     setWeightMode(checkIn && !checkIn.weightEntryId ? 'skip' : 'record');
-    setWeightKg(String(weightEntry?.weightKg ?? fallbackWeightKg));
+    setWeightKg(
+      weightEntry
+        ? String(weightEntry.weightKg)
+        : formatFallbackWeightKg(fallbackWeightKg),
+    );
     setSleepHours(duration === undefined ? '' : String(Math.floor(duration / 60)));
     setSleepMinutes(duration === undefined ? '' : String(duration % 60));
     setSleepQuality(checkIn?.sleepQuality ?? 'average');
