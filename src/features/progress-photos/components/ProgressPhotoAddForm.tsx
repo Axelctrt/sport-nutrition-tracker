@@ -21,20 +21,47 @@ import { toLocalDate } from '@/shared/utils/dates';
 
 interface ProgressPhotoAddFormProps {
   onSave: (input: SaveProgressPhotoInput) => Promise<void>;
+  onDirtyChange?: (isDirty: boolean) => void;
+}
+
+interface ProgressPhotoFormSnapshot {
+  date: string;
+  view: ProgressPhotoView;
+  weight: string;
+  note: string;
 }
 
 const acceptedImageTypes = 'image/jpeg,image/png,image/webp,image/heic,image/heif';
 const sourceClassName = 'sp-button relative flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-[var(--sp-radius-control)] text-sm';
 
-export function ProgressPhotoAddForm({ onSave }: ProgressPhotoAddFormProps) {
+export function ProgressPhotoAddForm({
+  onSave,
+  onDirtyChange,
+}: ProgressPhotoAddFormProps) {
+  const [cleanSnapshot, setCleanSnapshot] = useState<ProgressPhotoFormSnapshot>(() => ({
+    date: toLocalDate(),
+    view: 'front',
+    weight: '',
+    note: '',
+  }));
   const [file, setFile] = useState<File | undefined>(undefined);
   const [previewUrl, setPreviewUrl] = useState('');
-  const [date, setDate] = useState(toLocalDate());
+  const [date, setDate] = useState(cleanSnapshot.date);
   const [view, setView] = useState<ProgressPhotoView>('front');
   const [weight, setWeight] = useState('');
   const [note, setNote] = useState('');
   const [state, setState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [feedback, setFeedback] = useState<string>();
+  const isDirty = file !== undefined
+    || date !== cleanSnapshot.date
+    || view !== cleanSnapshot.view
+    || weight !== cleanSnapshot.weight
+    || note !== cleanSnapshot.note;
+
+  useEffect(() => {
+    onDirtyChange?.(isDirty);
+  }, [isDirty, onDirtyChange]);
+
   useEffect(() => {
     if (!file || typeof URL.createObjectURL !== 'function') {
       setPreviewUrl('');
@@ -86,6 +113,12 @@ export function ProgressPhotoAddForm({ onSave }: ProgressPhotoAddFormProps) {
       clearFile();
       setWeight('');
       setNote('');
+      setCleanSnapshot({
+        date,
+        view,
+        weight: '',
+        note: '',
+      });
       setState('success');
       setFeedback('La photo a été enregistrée uniquement dans cet espace local.');
     } catch (error) {

@@ -26,6 +26,7 @@ import { inputClassName } from '@/shared/forms/formStyles';
 import { Button } from '@/shared/ui/Button';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
+import { UnsavedChangesGuard } from '@/shared/ui/UnsavedChangesGuard';
 
 function formatStorage(bytes: number | undefined): string {
   if (bytes === undefined) return 'indisponible';
@@ -39,6 +40,7 @@ export function ProgressPhotosPage() {
   const [viewFilter, setViewFilter] = useState<'all' | ProgressPhotoView>('all');
   const [storage, setStorage] = useState<ProgressPhotoStorageEstimate>({});
   const [localError, setLocalError] = useState<string>();
+  const [isAddFormDirty, setIsAddFormDirty] = useState(false);
 
   useEffect(() => {
     void readProgressPhotoStorageEstimate().then(setStorage).catch(() => setStorage({}));
@@ -95,6 +97,7 @@ export function ProgressPhotosPage() {
       </InlineNotice>
 
       <ProgressPhotoAddForm
+        onDirtyChange={setIsAddFormDirty}
         onSave={async (input) => {
           setLocalError(undefined);
           await progressPhotos.save(input);
@@ -201,6 +204,8 @@ export function ProgressPhotosPage() {
         photoCount={progressPhotos.items.length}
         onImported={() => progressPhotos.refresh(true)}
       />
+
+      <UnsavedChangesGuard when={isAddFormDirty} />
     </section>
   );
 }
