@@ -33,6 +33,7 @@ import { IconAction } from '@/shared/ui/IconAction';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 import { SportPilotMultiStepLoader } from '@/shared/ui/SportPilotMultiStepLoader';
 import { SportPilotStatefulButton } from '@/shared/ui/SportPilotStatefulButton';
+import { UnsavedChangesGuard } from '@/shared/ui/UnsavedChangesGuard';
 
 const fields = [
   ['caloriesKcal', 'Calories approximatives'],
@@ -164,6 +165,7 @@ export function PhotoNutritionEstimatePage({
   const [selectedFile, setSelectedFile] = useState<File>();
   const [previewUrl, setPreviewUrl] = useState('');
   const [useRemoteAi, setUseRemoteAi] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const estimate = analysis?.estimate ?? manualEstimate;
   const isManual = Boolean(manualEstimate);
@@ -196,12 +198,14 @@ export function PhotoNutritionEstimatePage({
     if (!file) return;
     setSelectedFile(file);
     setUseRemoteAi(false);
+    setHasUnsavedChanges(true);
     resetResult();
   }
 
   function clearPhoto() {
     setSelectedFile(undefined);
     setUseRemoteAi(false);
+    setHasUnsavedChanges(false);
     resetResult();
     if (photoInputRef.current) photoInputRef.current.value = '';
   }
@@ -252,6 +256,7 @@ export function PhotoNutritionEstimatePage({
     setFormError('');
     try {
       const result = await saveEstimate({ date, mealSlot, estimate: nextEstimate });
+      setHasUnsavedChanges(false);
       const returnContext = navigationState?.foodJournalReturn;
       await navigate(returnContext?.path ?? foodJournalPath(date), {
         state: createFoodJournalFeedbackState(returnContext, {
@@ -453,7 +458,11 @@ export function PhotoNutritionEstimatePage({
               L’analyse peut se tromper sur les aliments et les quantités.
             </InlineNotice>
           ) : null}
-          <form key={formKey(estimate, isManual)} onSubmit={(event) => void save(event)}>
+          <form
+            key={formKey(estimate, isManual)}
+            onChangeCapture={() => setHasUnsavedChanges(true)}
+            onSubmit={(event) => void save(event)}
+          >
             <Card className="overflow-hidden">
               <div className="border-b border-[var(--sp-border-subtle)] px-4 py-3 sm:px-5">
                 <h2 className="font-semibold text-[var(--sp-text-primary)]">
@@ -512,6 +521,8 @@ export function PhotoNutritionEstimatePage({
           </form>
         </>
       ) : null}
+
+      <UnsavedChangesGuard when={hasUnsavedChanges} />
     </section>
   );
 }
