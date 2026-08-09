@@ -11,6 +11,7 @@ import { RecipeLibraryCard } from '@/features/recipes/components/RecipeLibraryCa
 import { RecipesSummary } from '@/features/recipes/components/RecipesSummary';
 import { useRecipes } from '@/features/recipes/hooks/useRecipes';
 import { inputClassName } from '@/shared/forms/formStyles';
+import { revealElement } from '@/shared/motion/revealElement';
 import { useActionToast } from '@/shared/toast/useActionToast';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
@@ -87,8 +88,7 @@ export function RecipesPage() {
   useEffect(() => {
     if (!highlightedRecipeId || status !== 'ready') return;
     window.requestAnimationFrame(() => {
-      document.getElementById(`recipe-${highlightedRecipeId}`)?.scrollIntoView({
-        behavior: 'smooth',
+      revealElement(document.getElementById(`recipe-${highlightedRecipeId}`), {
         block: 'nearest',
       });
     });

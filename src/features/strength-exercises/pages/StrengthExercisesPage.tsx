@@ -16,6 +16,7 @@ import {
 } from '@/features/strength-exercises/navigation/strengthExerciseCreationNavigation';
 import { equipmentOptions, muscleGroupOptions } from '@/features/strength-exercises/utils/exerciseLabels';
 import { checkboxClassName, inputClassName } from '@/shared/forms/formStyles';
+import { revealElement } from '@/shared/motion/revealElement';
 import { useActionToast } from '@/shared/toast/useActionToast';
 import { Button } from '@/shared/ui/Button';
 import { CollapsibleSection } from '@/shared/ui/CollapsibleSection';
@@ -77,7 +78,7 @@ export function StrengthExercisesPage() {
     const element = document.getElementById(
       `strength-exercise-${highlightedExerciseId}`,
     );
-    element?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+    revealElement(element, { block: 'center' });
     const timeout = window.setTimeout(
       () => setHighlightedExerciseId(undefined),
       2_500,

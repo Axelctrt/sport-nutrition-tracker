@@ -27,6 +27,7 @@ import {
   type EnduranceTemplateFormValues,
 } from '@/features/endurance-templates/schemas/enduranceTemplateSchema';
 import { inputClassName } from '@/shared/forms/formStyles';
+import { getMotionSafeScrollBehavior } from '@/shared/motion/revealElement';
 import { useActionToast } from '@/shared/toast/useActionToast';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
@@ -182,7 +183,7 @@ export function EnduranceTemplatesPage() {
   const openEditor = (template: EnduranceTemplate) => {
     setEditingId(template.id);
     form.reset(templateToValues(template));
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: getMotionSafeScrollBehavior() });
   };
 
   const requestEditor = (template: EnduranceTemplate) => {

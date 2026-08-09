@@ -641,6 +641,7 @@ describe('écran du prototype Dexie Cloud', () => {
       expect(scrollIntoViewMock).toHaveBeenCalledWith({
         behavior: 'smooth',
         block: 'start',
+        inline: 'nearest',
       });
       expect(
         screen.getByLabelText(/^Poids en kilogrammes/),

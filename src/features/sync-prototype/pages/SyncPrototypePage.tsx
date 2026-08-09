@@ -32,6 +32,7 @@ import {
   type SyncPrototypeWeightDraft,
 } from '@/infrastructure/sync-prototype/syncPrototypeClient';
 import { readSyncPrototypeConfigSafely } from '@/infrastructure/sync-prototype/syncPrototypeConfig';
+import { revealElement } from '@/shared/motion/revealElement';
 import { createSyncPrototypeDiagnosticReport } from '@/infrastructure/sync-prototype/syncPrototypeDiagnostics';
 import { useToast } from '@/shared/toast/useToast';
 import { Button } from '@/shared/ui/Button';
@@ -200,8 +201,7 @@ function SyncPrototypeRuntime({
   useEffect(() => {
     if (!editingWeightId || !isWeightSectionOpen) return;
 
-    weightEditorRef.current?.scrollIntoView?.({
-      behavior: 'smooth',
+    revealElement(weightEditorRef.current, {
       block: 'start',
     });
     weightInputRef.current?.focus({ preventScroll: true });

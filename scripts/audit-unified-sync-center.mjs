@@ -29,10 +29,13 @@ for (const path of requiredFiles) {
 }
 
 if (failures.length === 0) {
+  const syncCenterModel = read(
+    'src/features/settings/components/unifiedSyncCenterModel.ts',
+  );
   const panel = [
     read('src/features/settings/components/UnifiedSyncCenterPanel.tsx'),
     read('src/features/settings/components/UnifiedSyncCenterAdvancedDetails.tsx'),
-    read('src/features/settings/components/unifiedSyncCenterModel.ts'),
+    syncCenterModel,
     read('src/features/settings/components/unifiedSyncDomainRegistry.ts'),
   ].join('\n');
   for (const marker of [
@@ -46,13 +49,18 @@ if (failures.length === 0) {
     "target: 'failures'",
     'createSyncPrototypeAccountFingerprint',
     'sportpilot:sync-center:history:',
-    "scrollIntoView({",
+    "import { revealElement } from '@/shared/motion/revealElement';",
+    'revealElement(document.getElementById(detailId), {',
     'Une pesée ou un réglage de calcul peut modifier l’objectif quotidien',
     'onOpenDetail',
     'activeDetailId',
     "activeDetailId === domain.detailId ? 'Masquer' : 'Détail'",
   ]) {
     if (!panel.includes(marker)) fail(`Garde-fou du centre E3 manquant : ${marker}.`);
+  }
+
+  if (/behavior\s*:\s*['"]smooth['"]/.test(syncCenterModel)) {
+    fail('Le centre E3 ne doit pas forcer un scroll fluide en mouvement réduit.');
   }
 
   if (panel.includes('href={`#${domain.detailId}`}')) {

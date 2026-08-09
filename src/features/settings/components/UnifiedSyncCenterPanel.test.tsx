@@ -201,6 +201,7 @@ describe('UnifiedSyncCenterPanel', () => {
       expect(scrollIntoView).toHaveBeenCalledWith({
         behavior: 'smooth',
         block: 'start',
+        inline: 'nearest',
       });
       expect(screen.getByText('Détail du profil')).toBeInTheDocument();
     } finally {

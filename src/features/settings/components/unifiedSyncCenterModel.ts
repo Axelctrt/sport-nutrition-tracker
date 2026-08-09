@@ -9,6 +9,7 @@ import {
   type SyncPrototypeSnapshot,
 } from '@/infrastructure/sync-prototype/syncPrototypeClient';
 import { readSyncPrototypeConfigSafely } from '@/infrastructure/sync-prototype/syncPrototypeConfig';
+import { revealElement } from '@/shared/motion/revealElement';
 import {
   createEmptySyncPrototypeDiagnostics,
   createSyncPrototypeAccountFingerprint,
@@ -166,8 +167,7 @@ export function writeHistory(storageKey: string | undefined, history: SyncHistor
 }
 
 export function scrollToDetail(detailId: UnifiedSyncDetailId): void {
-  document.getElementById(detailId)?.scrollIntoView({
-    behavior: 'smooth',
+  revealElement(document.getElementById(detailId), {
     block: 'start',
   });
 }

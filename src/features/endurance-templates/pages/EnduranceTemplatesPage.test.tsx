@@ -46,6 +46,35 @@ afterEach(async () => {
 });
 
 describe('EnduranceTemplatesPage', () => {
+  it.each([
+    { reducedMotion: false, expectedBehavior: 'smooth' as const },
+    { reducedMotion: true, expectedBehavior: 'auto' as const },
+  ])(
+    'conserve la destination haute avec le comportement $expectedBehavior',
+    async ({ reducedMotion, expectedBehavior }) => {
+      const user = userEvent.setup();
+      vi.spyOn(window, 'matchMedia').mockImplementation((query) => ({
+        matches: reducedMotion,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(() => false),
+      }) as MediaQueryList);
+      renderPage();
+
+      await screen.findByRole('heading', { name: 'Course facile 45 min' });
+      await user.click(editButtonForTemplate('Natation endurance 1 500 m'));
+
+      expect(window.scrollTo).toHaveBeenCalledWith({
+        top: 0,
+        behavior: expectedBehavior,
+      });
+    },
+  );
+
   it('affiche les modèles par défaut et enregistre un modèle vélo', async () => {
     const user = userEvent.setup();
     renderPage();

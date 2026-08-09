@@ -1,4 +1,7 @@
-import { revealElement } from '@/shared/motion/revealElement';
+import {
+  getMotionSafeScrollBehavior,
+  revealElement,
+} from '@/shared/motion/revealElement';
 
 function mockMatchMedia(matches: boolean) {
   vi.spyOn(window, 'matchMedia').mockImplementation((query) => ({
@@ -35,6 +38,7 @@ describe('revealElement', () => {
       inline: 'center',
     });
 
+    expect(getMotionSafeScrollBehavior()).toBe('smooth');
     expect(focus).toHaveBeenCalledWith({ preventScroll: true });
     expect(scrollIntoView).toHaveBeenCalledWith({
       behavior: 'smooth',
@@ -55,6 +59,7 @@ describe('revealElement', () => {
 
     revealElement(target);
 
+    expect(getMotionSafeScrollBehavior()).toBe('auto');
     expect(scrollIntoView).toHaveBeenCalledWith({
       behavior: 'auto',
       block: 'center',
