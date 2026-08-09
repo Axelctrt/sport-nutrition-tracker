@@ -1,4 +1,4 @@
-import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import userEvent from '@testing-library/user-event';
 import { App } from '@/app/App';
@@ -104,6 +104,12 @@ describe('App', () => {
       () => expect(router.state.location.pathname).toBe('/'),
       { timeout: 10_000 },
     );
+    const completionReveal = await screen.findByRole('dialog', {
+      name: 'Tout est prêt',
+    });
+    await user.click(within(completionReveal).getByRole('button', {
+      name: 'Découvrir mon accueil',
+    }));
     const homeLinks = await screen.findAllByRole(
       'link',
       { name: 'Accueil' },

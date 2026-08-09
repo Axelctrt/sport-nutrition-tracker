@@ -2,6 +2,7 @@ import { Activity, Check, Moon, Utensils } from 'lucide-react';
 import { createPortal } from 'react-dom';
 
 import '@/shared/ui/uxMotionPolish.css';
+import { useModalReveal } from '@/shared/ui/useModalReveal';
 
 interface SportPilotDailyCompletionRevealProps {
   onContinue: () => void;
@@ -17,13 +18,17 @@ const completedStages = [
 export function SportPilotDailyCompletionReveal({
   onContinue,
 }: SportPilotDailyCompletionRevealProps) {
+  const { backdropRef, dialogRef, initialFocusRef } = useModalReveal(onContinue);
+
   return createPortal(
-    <div className="sp-daily-completion-backdrop" role="presentation">
+    <div ref={backdropRef} className="sp-daily-completion-backdrop" role="presentation">
       <section
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="sportpilot-daily-completion-title"
         aria-describedby="sportpilot-daily-completion-description"
+        tabIndex={-1}
         className="sp-daily-completion"
       >
         <div className="sp-daily-completion__halo" aria-hidden="true" />
@@ -57,10 +62,10 @@ export function SportPilotDailyCompletionReveal({
           </ul>
 
           <button
+            ref={initialFocusRef}
             type="button"
             className="sp-button mt-6 inline-flex min-h-12 w-full items-center justify-center rounded-[var(--sp-radius-control)] px-4 text-sm font-bold"
             onClick={onContinue}
-            autoFocus
           >
             Continuer
           </button>

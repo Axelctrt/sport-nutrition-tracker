@@ -68,12 +68,12 @@ export async function createLocalProfile(page: Page, firstName = 'E2E'): Promise
   ).toBeVisible();
   await expect(page.getByRole('button', { name: 'Commencer' })).toBeVisible();
   await page.getByRole('button', { name: 'Commencer' }).click();
-  await expect(page.getByRole('heading', { name: `Bonjour ${firstName}` })).toBeVisible();
 
   const completionDialog = page.getByRole('dialog', { name: 'Tout est prêt' });
   await expect(completionDialog).toBeVisible();
   await completionDialog.getByRole('button', { name: 'Découvrir mon accueil' }).click();
   await expect(completionDialog).toBeHidden();
+  await expect(page.getByRole('heading', { name: `Bonjour ${firstName}` })).toBeVisible();
 }
 
 export async function expectNoCriticalHorizontalOverflow(page: Page): Promise<void> {
