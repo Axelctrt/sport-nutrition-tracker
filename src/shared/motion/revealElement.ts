@@ -11,6 +11,10 @@ function prefersReducedMotion(): boolean {
     && window.matchMedia?.(REDUCED_MOTION_QUERY).matches === true;
 }
 
+export function getMotionSafeScrollBehavior(): ScrollBehavior {
+  return prefersReducedMotion() ? 'auto' : 'smooth';
+}
+
 export function revealElement(
   target: HTMLElement | null | undefined,
   {
@@ -28,7 +32,7 @@ export function revealElement(
   if (typeof target.scrollIntoView !== 'function') return;
 
   target.scrollIntoView({
-    behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+    behavior: getMotionSafeScrollBehavior(),
     block,
     inline,
   });

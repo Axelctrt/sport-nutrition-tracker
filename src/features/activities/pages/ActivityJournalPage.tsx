@@ -15,6 +15,7 @@ import { SportHubOverview } from '@/features/sport/components/SportHubOverview';
 import { SportStartSheet } from '@/features/sport/components/SportStartSheet';
 import { useSportHub } from '@/features/sport/hooks/useSportHub';
 import { inputClassName } from '@/shared/forms/formStyles';
+import { revealElement } from '@/shared/motion/revealElement';
 import { useToast } from '@/shared/toast/useToast';
 import { Button } from '@/shared/ui/Button';
 import { EmptyState } from '@/shared/ui/EmptyState';
@@ -88,8 +89,7 @@ function ActivityHistoryView({
   useEffect(() => {
     if (!highlightedActivityId || status !== 'ready') return;
     window.requestAnimationFrame(() => {
-      document.getElementById(`activity-entry-${highlightedActivityId}`)?.scrollIntoView?.({
-        behavior: 'smooth',
+      revealElement(document.getElementById(`activity-entry-${highlightedActivityId}`), {
         block: 'nearest',
       });
     });

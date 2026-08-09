@@ -10,6 +10,7 @@ import { FoodProductCard } from '@/features/products/components/FoodProductCard'
 import { FoodProductsSummary } from '@/features/products/components/FoodProductsSummary';
 import { useFoodProducts } from '@/features/products/hooks/useFoodProducts';
 import { inputClassName } from '@/shared/forms/formStyles';
+import { revealElement } from '@/shared/motion/revealElement';
 import { useActionToast } from '@/shared/toast/useActionToast';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
@@ -101,8 +102,7 @@ export function FoodProductsPage() {
   useEffect(() => {
     if (!highlightedProductId || status !== 'ready') return;
     window.requestAnimationFrame(() => {
-      document.getElementById(`food-product-${highlightedProductId}`)?.scrollIntoView({
-        behavior: 'smooth',
+      revealElement(document.getElementById(`food-product-${highlightedProductId}`), {
         block: 'nearest',
       });
     });

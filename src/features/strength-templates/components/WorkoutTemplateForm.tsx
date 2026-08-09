@@ -22,6 +22,7 @@ import { FormField } from '@/shared/ui/FormField';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 import { CollapsibleSection } from '@/shared/ui/CollapsibleSection';
 import { focusFirstInvalidField } from '@/shared/hooks/focusFirstInvalidField';
+import { revealElement } from '@/shared/motion/revealElement';
 import { cn } from '@/shared/utils/cn';
 
 interface WorkoutTemplateFormProps {
@@ -151,9 +152,10 @@ export function WorkoutTemplateForm({
     ) ?? -1;
     if (highlightedIndex >= 0) setExpandedExerciseIndex(highlightedIndex);
     window.requestAnimationFrame(() => {
-      document
-        .getElementById(`workout-template-exercise-card-${highlightedExerciseId}`)
-        ?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+      revealElement(
+        document.getElementById(`workout-template-exercise-card-${highlightedExerciseId}`),
+        { block: 'center' },
+      );
     });
   }, [highlightedExerciseId, watchedExercises]);
 

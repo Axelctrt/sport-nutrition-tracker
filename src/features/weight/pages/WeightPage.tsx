@@ -12,6 +12,7 @@ import { useWeightHistory } from '@/features/weight/hooks/useWeightHistory';
 import type { WeightEntryFormValues } from '@/features/weight/schemas/weightEntrySchema';
 import { weightFormValuesToEntity } from '@/features/weight/utils';
 import { inputClassName } from '@/shared/forms/formStyles';
+import { revealElement } from '@/shared/motion/revealElement';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { EmptyState } from '@/shared/ui/EmptyState';
@@ -85,8 +86,7 @@ export function WeightPage() {
     setSearchParams({ date }, { replace: true });
     if (scrollToForm) {
       window.requestAnimationFrame(() => {
-        document.getElementById('weight-entry-panel')?.scrollIntoView({
-          behavior: 'smooth',
+        revealElement(document.getElementById('weight-entry-panel'), {
           block: 'start',
         });
       });

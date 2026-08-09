@@ -34,6 +34,7 @@ import { RepeatTrainingWeekPanel } from '@/features/strength-planning/components
 import { WeeklyPlanningSessionCard } from '@/features/strength-planning/components/WeeklyPlanningSessionCard';
 import { useWeeklyPlanning } from '@/features/strength-planning/hooks/useWeeklyPlanning';
 import { inputClassName } from '@/shared/forms/formStyles';
+import { revealElement } from '@/shared/motion/revealElement';
 import { useToast } from '@/shared/toast/useToast';
 import { BottomSheet } from '@/shared/ui/BottomSheet';
 import { Button } from '@/shared/ui/Button';
@@ -160,7 +161,7 @@ export function WeeklyPlanningPage() {
     if (!target) return;
 
     focusHandledRef.current = true;
-    target.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+    revealElement(target, { block: 'center' });
     const focusTimeout = window.setTimeout(() => {
       target.focus({ preventScroll: true });
     }, 0);
@@ -185,7 +186,7 @@ export function WeeklyPlanningPage() {
     if (!target) return;
 
     sectionHandledRef.current = true;
-    target.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+    revealElement(target, { block: 'start' });
     target.focus({ preventScroll: true });
   }, [requestedSection, status, weekStart]);
 
