@@ -30,7 +30,6 @@ import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { CollapsibleSection } from '@/shared/ui/CollapsibleSection';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
-import { useActionToast } from '@/shared/toast/useActionToast';
 import { toLocalDate } from '@/shared/utils/dates';
 
 type CsvPeriodPreset =
@@ -99,7 +98,6 @@ export function AdvancedCsvExportPanel({
   downloadMany = downloadCsvExportFiles,
   shareMany = shareCsvExportFiles,
 }: AdvancedCsvExportPanelProps) {
-  const actionToast = useActionToast();
   const today = toLocalDate(now);
   const defaultFrom = toLocalDate(addLocalDays(now, -29));
   const [preset, setPreset] =
@@ -199,11 +197,9 @@ export function AdvancedCsvExportPanel({
       setPreparedPeriod(currentOptions);
       const message = `${files.length} fichier(s) prêt(s) pour ${periodLabel(currentOptions).toLowerCase()}.`;
       setFeedback({ tone: 'success', message });
-      actionToast.success({ key: 'csv-prepare', title: 'Exports CSV préparés', description: message });
     } catch (error) {
       const fallback = 'Les exports CSV n’ont pas pu être préparés.';
       setFeedback({ tone: 'error', message: error instanceof Error ? error.message : fallback });
-      actionToast.error({ key: 'csv-prepare', title: 'Préparation impossible', error, fallback });
     } finally {
       setIsPreparing(false);
     }
@@ -214,7 +210,6 @@ export function AdvancedCsvExportPanel({
 
     const message = `${count} téléchargement(s) ont été déclenchés.`;
     setFeedback({ tone: 'success', message });
-    actionToast.success({ key: 'csv-download', title: 'Téléchargement lancé', description: message });
   };
 
   const handleShare = async () => {
@@ -227,7 +222,6 @@ export function AdvancedCsvExportPanel({
       if (result === 'shared') {
         const message = 'Les fichiers ont été transmis à la feuille de partage.';
         setFeedback({ tone: 'success', message });
-        actionToast.success({ key: 'csv-share', title: 'Exports prêts à partager', description: message });
       } else if (result === 'cancelled') {
         setFeedback({
           tone: 'info',
@@ -243,7 +237,6 @@ export function AdvancedCsvExportPanel({
     } catch (error) {
       const fallback = 'Le partage des fichiers a échoué.';
       setFeedback({ tone: 'error', message: error instanceof Error ? error.message : fallback });
-      actionToast.error({ key: 'csv-share', title: 'Partage impossible', error, fallback });
     } finally {
       setIsSharing(false);
     }
@@ -392,7 +385,7 @@ export function AdvancedCsvExportPanel({
           <InlineNotice
             title="Export CSV"
             tone={feedback.tone}
-            role="status"
+            role={feedback.tone === 'error' ? 'alert' : 'status'}
           >
             {feedback.message}
           </InlineNotice>

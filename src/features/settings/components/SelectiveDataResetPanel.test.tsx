@@ -73,6 +73,9 @@ describe("SelectiveDataResetPanel", () => {
     expect(
       await screen.findByText("Données sélectionnées effacées"),
     ).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "3 éléments ont été supprimés",
+    );
     expect(screen.getByText(/3 éléments ont été supprimés/)).toBeInTheDocument();
     expect(createSafetyBackup).toHaveBeenCalledWith(
       "before-selective-reset",
@@ -103,5 +106,28 @@ describe("SelectiveDataResetPanel", () => {
         screen.getByText(/Journal nutritionnel sera ajouté automatiquement/),
       ).toBeInTheDocument();
     });
+  });
+
+  it("conserve une erreur de suppression sur la surface", async () => {
+    const resetData = vi.fn().mockRejectedValue(
+      new Error("Suppression ciblée refusée."),
+    );
+
+    render(
+      <SelectiveDataResetPanel
+        loadPreview={vi.fn().mockResolvedValue(activityPreview)}
+        resetData={resetData}
+        createSafetyBackup={vi.fn().mockResolvedValue(undefined)}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("checkbox", { name: /Activités et pas/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Préparer la réinitialisation" }));
+    await screen.findByRole("heading", { name: "Confirmer la réinitialisation" });
+    fireEvent.click(screen.getByRole("button", { name: "Effacer ces données" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Suppression ciblée refusée.",
+    );
   });
 });

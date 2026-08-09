@@ -225,6 +225,9 @@ describe('SelectiveBackupRestorePanel', () => {
         'Restauration sélective terminée',
       ),
     ).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent(
+      '12 enregistrement(s) ont été restaurés',
+    );
 
     expect(createSafetyBackup).toHaveBeenCalledTimes(1);
     expect(applyRestore).toHaveBeenCalledWith(

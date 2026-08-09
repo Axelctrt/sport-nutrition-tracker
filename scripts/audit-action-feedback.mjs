@@ -74,7 +74,6 @@ if (failures.length === 0) {
     'src/features/dashboard/components/DashboardQuickActions.tsx',
     'src/features/dashboard/components/DailyInputsPanel.tsx',
     'src/features/settings/components/AutomaticSyncSettingsPanel.tsx',
-    'src/features/settings/components/SelectiveDataResetPanel.tsx',
     'src/features/reminders/pages/RoutineRemindersPage.tsx',
     'src/features/products/pages/FoodProductEditorPage.tsx',
     'src/features/products/pages/FoodProductsPage.tsx',
@@ -89,8 +88,6 @@ if (failures.length === 0) {
     'src/features/strength-templates/pages/WorkoutTemplatesPage.tsx',
     'src/features/strength-sessions/pages/WorkoutSessionsPage.tsx',
     'src/features/backup/pages/BackupPage.tsx',
-    'src/features/backup/components/SelectiveBackupRestorePanel.tsx',
-    'src/features/backup/components/AdvancedCsvExportPanel.tsx',
     'src/features/account-devices/components/CloudAccountRestorePanel.tsx',
     'src/features/account-devices/components/GuestDataImportPanel.tsx',
     'src/features/account-devices/pages/AccountDevicesPage.tsx',
@@ -167,6 +164,54 @@ if (failures.length === 0) {
   }
   if (accountDevicesPage.includes('actionToast.error')) {
     fail('Compte et appareils doit conserver les erreurs sur place sans toast concurrent.');
+  }
+
+  const dataAccountLocalFeedbackSurfaces = [
+    ['src/features/backup/components/AdvancedCsvExportPanel.tsx', 'setFeedback'],
+    ['src/features/backup/components/SelectiveBackupRestorePanel.tsx', 'setFeedback'],
+    ['src/features/settings/components/SelectiveDataResetPanel.tsx', 'setResult'],
+  ];
+
+  for (const [path, localMarker] of dataAccountLocalFeedbackSurfaces) {
+    const source = read(path);
+    for (const marker of [localMarker, 'InlineNotice']) {
+      if (!source.includes(marker)) {
+        fail(`feedback local Data/Compte incomplet (${marker}) : ${path}.`);
+      }
+    }
+    if (source.includes('useActionToast') || source.includes('actionToast.')) {
+      fail(`la surface Data/Compte locale ne doit pas cumuler notice et toast : ${path}.`);
+    }
+  }
+
+  for (const path of [
+    'src/features/account-devices/components/CloudAccountRestorePanel.tsx',
+    'src/features/account-devices/components/GuestDataImportPanel.tsx',
+  ]) {
+    const source = read(path);
+    for (const marker of ['useActionToast', 'actionToast.successAfterReload', 'InlineNotice']) {
+      if (!source.includes(marker)) {
+        fail(`feedback après rechargement incomplet (${marker}) : ${path}.`);
+      }
+    }
+    if (source.includes('actionToast.error') || (source.match(/actionToast\./g) ?? []).length !== 1) {
+      fail(`la surface après rechargement doit réserver son unique toast au succès : ${path}.`);
+    }
+  }
+
+  const automaticSyncSettings = read(
+    'src/features/settings/components/AutomaticSyncSettingsPanel.tsx',
+  );
+  for (const marker of ['useActionToast', 'actionToast.success', 'setErrorMessage', 'InlineNotice']) {
+    if (!automaticSyncSettings.includes(marker)) {
+      fail(`feedback de synchronisation automatique incomplet : ${marker}.`);
+    }
+  }
+  if (
+    automaticSyncSettings.includes('actionToast.error')
+    || (automaticSyncSettings.match(/actionToast\./g) ?? []).length !== 1
+  ) {
+    fail('la synchronisation automatique doit garder le toast de succès et l’erreur locale.');
   }
 
   const localFeedbackSurfaces = [
