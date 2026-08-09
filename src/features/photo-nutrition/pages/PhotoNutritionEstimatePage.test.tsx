@@ -1,6 +1,9 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import {
+  RouterProvider,
+  createMemoryRouter,
+} from 'react-router-dom';
 
 import {
   PhotoNutritionAiError,
@@ -88,27 +91,31 @@ function renderPage(
     config: { endpointUrl: string; timeoutMs?: number },
   ) => PhotoNutritionAnalysisPort = vi.fn(() => ({ analyze: vi.fn() } satisfies PhotoNutritionAnalysisPort)),
 ) {
+  const router = createMemoryRouter(
+    [
+      {
+        path: '/food/photo-estimate',
+        element: (
+          <PhotoNutritionEstimatePage
+            analyzePhoto={analyzePhoto}
+            saveEstimate={saveEstimate}
+            aiConfig={enabledAiConfig}
+            createRemoteAiPort={createRemoteAiPort}
+          />
+        ),
+      },
+      { path: '/food', element: <p>Retour au journal réussi</p> },
+    ],
+    { initialEntries: ['/food/photo-estimate?date=2026-07-04&slot=lunch'] },
+  );
+
   return {
     analyzePhoto,
     saveEstimate,
     createRemoteAiPort,
+    router,
     ...render(
-      <MemoryRouter initialEntries={['/food/photo-estimate?date=2026-07-04&slot=lunch']}>
-        <Routes>
-          <Route
-            path="/food/photo-estimate"
-            element={(
-              <PhotoNutritionEstimatePage
-                analyzePhoto={analyzePhoto}
-                saveEstimate={saveEstimate}
-                aiConfig={enabledAiConfig}
-                createRemoteAiPort={createRemoteAiPort}
-              />
-            )}
-          />
-          <Route path="/food" element={<p>Retour au journal réussi</p>} />
-        </Routes>
-      </MemoryRouter>,
+      <RouterProvider router={router} />,
     ),
   };
 }
@@ -119,7 +126,77 @@ async function selectPhoto(user: ReturnType<typeof userEvent.setup>) {
   return file;
 }
 
+async function openAndCompleteManualEntry(
+  user: ReturnType<typeof userEvent.setup>,
+) {
+  await selectPhoto(user);
+  await user.click(screen.getByRole('button', { name: 'Saisir manuellement' }));
+  await user.type(screen.getByLabelText('Nom du repas'), 'Assiette maison');
+  await user.type(screen.getByLabelText('Quantité en g/ml'), '350');
+  await user.type(screen.getByLabelText('Calories approximatives'), '640');
+}
+
 describe('PhotoNutritionEstimatePage', () => {
+  it('laisse quitter immédiatement une surface propre', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(screen.getByRole('link', { name: 'Retour au journal' }));
+
+    expect(await screen.findByText('Retour au journal réussi')).toBeInTheDocument();
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  });
+
+  it('protège la photo et les saisies tout en les conservant lorsque l’utilisateur reste', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await openAndCompleteManualEntry(user);
+
+    await user.click(screen.getByRole('link', { name: 'Retour au journal' }));
+    expect(screen.getByRole('alertdialog', { name: 'Quitter sans enregistrer ?' }))
+      .toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Continuer la modification' }));
+
+    expect(screen.getByText('repas.jpg')).toBeInTheDocument();
+    expect(screen.getByLabelText('Nom du repas')).toHaveValue('Assiette maison');
+    expect(screen.getByLabelText('Quantité en g/ml')).toHaveValue(350);
+
+    await user.click(screen.getByRole('link', { name: 'Retour au journal' }));
+    await user.click(screen.getByRole('button', { name: 'Quitter' }));
+    expect(await screen.findByText('Retour au journal réussi')).toBeInTheDocument();
+  });
+
+  it('redevient propre lorsque la photo et les résultats préparés sont retirés', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await openAndCompleteManualEntry(user);
+
+    await user.click(screen.getByRole('button', { name: 'Supprimer la photo sélectionnée' }));
+    await user.click(screen.getByRole('link', { name: 'Retour au journal' }));
+
+    expect(await screen.findByText('Retour au journal réussi')).toBeInTheDocument();
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  });
+
+  it('active et retire la protection beforeunload avec la photo', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    const cleanEvent = new Event('beforeunload', { cancelable: true });
+    window.dispatchEvent(cleanEvent);
+    expect(cleanEvent.defaultPrevented).toBe(false);
+
+    await selectPhoto(user);
+    const dirtyEvent = new Event('beforeunload', { cancelable: true });
+    window.dispatchEvent(dirtyEvent);
+    expect(dirtyEvent.defaultPrevented).toBe(true);
+
+    await user.click(screen.getByRole('button', { name: 'Supprimer la photo sélectionnée' }));
+    const resetEvent = new Event('beforeunload', { cancelable: true });
+    window.dispatchEvent(resetEvent);
+    expect(resetEvent.defaultPrevented).toBe(false);
+  });
+
   it('ne fabrique aucune estimation lorsque l’IA est désactivée', async () => {
     const user = userEvent.setup();
     const { analyzePhoto } = renderPage();
@@ -158,6 +235,10 @@ describe('PhotoNutritionEstimatePage', () => {
     expect(await screen.findByRole('heading', { name: 'Corriger l’estimation' })).toBeInTheDocument();
     expect(screen.getByDisplayValue('Bol de pâtes IA')).toBeInTheDocument();
     expect(screen.getByDisplayValue('720')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('link', { name: 'Retour au journal' }));
+    expect(screen.getByRole('alertdialog', { name: 'Quitter sans enregistrer ?' }))
+      .toBeInTheDocument();
   });
 
   it('affiche une progression honnête et stable pendant l’analyse', async () => {
@@ -210,6 +291,10 @@ describe('PhotoNutritionEstimatePage', () => {
     await user.click(screen.getByRole('button', { name: 'Saisir manuellement' }));
     expect(screen.getByLabelText('Nom du repas')).toHaveValue('');
     expect(analyzePhoto).toHaveBeenCalledOnce();
+
+    await user.click(screen.getByRole('link', { name: 'Retour au journal' }));
+    expect(screen.getByRole('alertdialog', { name: 'Quitter sans enregistrer ?' }))
+      .toBeInTheDocument();
   });
 
   it('permet de corriger puis enregistrer le résultat réel', async () => {
@@ -235,6 +320,25 @@ describe('PhotoNutritionEstimatePage', () => {
       }));
     });
     expect(await screen.findByText('Retour au journal réussi')).toBeInTheDocument();
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  });
+
+  it('conserve la protection après un échec d’enregistrement', async () => {
+    const user = userEvent.setup();
+    renderPage(
+      undefined,
+      vi.fn(async () => {
+        throw new Error('Ajout ciblé impossible.');
+      }),
+    );
+    await openAndCompleteManualEntry(user);
+
+    await user.click(screen.getByRole('button', { name: 'Ajouter au journal' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Ajout ciblé impossible.');
+
+    await user.click(screen.getByRole('link', { name: 'Retour au journal' }));
+    expect(screen.getByRole('alertdialog', { name: 'Quitter sans enregistrer ?' }))
+      .toBeInTheDocument();
   });
 
   it('peut relancer une analyse après une erreur sans double résultat', async () => {

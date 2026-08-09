@@ -1,5 +1,18 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { createLocalProfile, expectNoCriticalHorizontalOverflow, getBrowserLocalDate } from './helpers/app';
+
+const TEST_PHOTO = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9WlP8AAAAASUVORK5CYII=',
+  'base64',
+);
+
+async function selectNutritionPhoto(page: Page) {
+  await page.getByLabel('Choisir une photo').setInputFiles({
+    name: 'repas-a-conserver.png',
+    mimeType: 'image/png',
+    buffer: TEST_PHOTO,
+  });
+}
 
 test('propose les méthodes d’ajout Nutrition et conserve le repas', async ({ page, isMobile }) => {
   await createLocalProfile(page);
@@ -45,6 +58,48 @@ test('propose les méthodes d’ajout Nutrition et conserve le repas', async ({ 
   }
 
   await expectNoCriticalHorizontalOverflow(page);
+});
+
+test('protège puis enregistre une saisie Photo Nutrition', async ({ page }) => {
+  await createLocalProfile(page);
+  const date = await getBrowserLocalDate(page);
+
+  await page.goto(`/#/food/photo-estimate?date=${date}&slot=lunch`);
+  await page.getByRole('link', { name: 'Nutrition', exact: true }).first().click();
+  await expect(page).toHaveURL(/#\/food$/);
+  await expect(page.getByRole('alertdialog')).toHaveCount(0);
+
+  await page.goto(`/#/food/photo-estimate?date=${date}&slot=lunch`);
+  await selectNutritionPhoto(page);
+  await page.getByRole('button', { name: 'Saisir manuellement' }).click();
+  await page.getByLabel('Nom du repas').fill('Repas photo protégé');
+  await page.getByLabel('Quantité en g/ml').fill('350');
+  await page.getByLabel('Calories approximatives').fill('640');
+
+  await page.getByRole('link', { name: 'Nutrition', exact: true }).first().click();
+  const guardDialog = page.getByRole('alertdialog', {
+    name: 'Quitter sans enregistrer ?',
+  });
+  await expect(guardDialog).toBeVisible();
+  await guardDialog.getByRole('button', { name: 'Continuer la modification' }).click();
+  await expect(page.getByText('repas-a-conserver.png')).toBeVisible();
+  await expect(page.getByLabel('Nom du repas')).toHaveValue('Repas photo protégé');
+
+  await page.getByRole('link', { name: 'Nutrition', exact: true }).first().click();
+  await guardDialog.getByRole('button', { name: 'Quitter' }).click();
+  await expect(page).toHaveURL(/#\/food$/);
+
+  await page.goto(`/#/food/photo-estimate?date=${date}&slot=lunch`);
+  await selectNutritionPhoto(page);
+  await page.getByRole('button', { name: 'Saisir manuellement' }).click();
+  await page.getByLabel('Nom du repas').fill('Repas photo enregistré');
+  await page.getByLabel('Quantité en g/ml').fill('350');
+  await page.getByLabel('Calories approximatives').fill('640');
+  await page.getByRole('button', { name: 'Ajouter au journal' }).click();
+
+  await expect(page).toHaveURL(new RegExp(`#\\/food\\?date=${date}$`));
+  await expect(page.getByRole('alertdialog')).toHaveCount(0);
+  await expect(page.getByText('Repas photo enregistré')).toBeVisible();
 });
 
 test('ouvre directement la source choisie et active la recherche', async ({ page, browserName }) => {
