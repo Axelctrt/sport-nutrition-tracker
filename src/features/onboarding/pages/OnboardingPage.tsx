@@ -337,11 +337,6 @@ export function OnboardingPage() {
         const fallback =
           "Le profil n’a pas pu être enregistré sur cet appareil.";
         setSaveError(error instanceof Error ? error.message : fallback);
-        actionToast.error({
-          key: "onboarding-profile-create",
-          error,
-          fallback,
-        });
       }
     });
   };
