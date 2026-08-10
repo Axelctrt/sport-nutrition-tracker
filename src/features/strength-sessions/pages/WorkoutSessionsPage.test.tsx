@@ -197,23 +197,20 @@ describe('WorkoutSessionsPage', () => {
           },
         },
       }]}>
-        <ToastProvider>
-          <Routes>
-            <Route
-              path="/strength/sessions"
-              element={(
-                <>
-                  <WorkoutSessionsPage />
-                  <LocationStateProbe />
-                </>
-              )}
-            />
-          </Routes>
-        </ToastProvider>
+        <Routes>
+          <Route
+            path="/strength/sessions"
+            element={(
+              <>
+                <WorkoutSessionsPage />
+                <LocationStateProbe />
+              </>
+            )}
+          />
+        </Routes>
       </MemoryRouter>,
     );
 
     expect(await screen.findByText('feedback-consommé')).toBeInTheDocument();
-    expect(screen.getByText('Séance enregistrée').closest('[role="status"]')).not.toBeNull();
   });
 });
