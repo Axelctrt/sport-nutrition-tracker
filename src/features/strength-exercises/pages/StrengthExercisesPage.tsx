@@ -94,12 +94,6 @@ export function StrengthExercisesPage() {
         title: 'Exercice dupliqué',
       });
       await navigate(editStrengthExercisePath(created.id));
-    } else {
-      actionToast.error({
-        key: `strength-exercise-duplicate:${id}`,
-        error: actionErrorMessage,
-        fallback: 'L’exercice n’a pas pu être dupliqué.',
-      });
     }
   };
 
@@ -109,12 +103,6 @@ export function StrengthExercisesPage() {
       actionToast.success({
         key: `strength-exercise-archive:${id}`,
         title: archived ? 'Exercice archivé' : 'Exercice réactivé',
-      });
-    } else {
-      actionToast.error({
-        key: `strength-exercise-archive:${id}`,
-        error: actionErrorMessage,
-        fallback: 'L’exercice n’a pas pu être modifié.',
       });
     }
     return success;

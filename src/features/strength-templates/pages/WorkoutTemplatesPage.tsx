@@ -32,8 +32,6 @@ export function WorkoutTemplatesPage() {
     if (created) {
       actionToast.success({ key: `workout-template-duplicate:${id}`, title: 'Séance modèle dupliquée' });
       await navigate(editWorkoutTemplatePath(created.id));
-    } else {
-      actionToast.error({ key: `workout-template-duplicate:${id}`, error: actionErrorMessage, fallback: 'La séance modèle n’a pas pu être dupliquée.' });
     }
   };
 
@@ -42,8 +40,6 @@ export function WorkoutTemplatesPage() {
     if (session) {
       actionToast.success({ key: `workout-template-start:${id}`, title: 'Séance démarrée' });
       await navigate(workoutSessionPath(session.id));
-    } else {
-      actionToast.error({ key: `workout-template-start:${id}`, error: actionErrorMessage, fallback: 'La séance n’a pas pu être démarrée.' });
     }
   };
 
@@ -51,8 +47,6 @@ export function WorkoutTemplatesPage() {
     const success = await setArchived(id, archived);
     if (success) {
       actionToast.success({ key: `workout-template-archive:${id}`, title: archived ? 'Séance modèle archivée' : 'Séance modèle réactivée' });
-    } else {
-      actionToast.error({ key: `workout-template-archive:${id}`, error: actionErrorMessage, fallback: 'La séance modèle n’a pas pu être modifiée.' });
     }
     return success;
   };

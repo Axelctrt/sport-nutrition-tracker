@@ -7,6 +7,9 @@ import goalsPageSource from '@/features/goals/pages/GoalsPage.tsx?raw';
 import foodProductEditorSource from '@/features/products/pages/FoodProductEditorPage.tsx?raw';
 import foodProductsSource from '@/features/products/pages/FoodProductsPage.tsx?raw';
 import recipesSource from '@/features/recipes/pages/RecipesPage.tsx?raw';
+import strengthExercisesSource from '@/features/strength-exercises/pages/StrengthExercisesPage.tsx?raw';
+import workoutSessionsSource from '@/features/strength-sessions/pages/WorkoutSessionsPage.tsx?raw';
+import workoutTemplatesSource from '@/features/strength-templates/pages/WorkoutTemplatesPage.tsx?raw';
 import weightSource from '@/features/weight/pages/WeightPage.tsx?raw';
 
 describe('feedback Sport et Nutrition', () => {
@@ -59,5 +62,16 @@ describe('feedback Sport et Nutrition', () => {
     expect(enduranceTemplatesSource).not.toContain('actionToast.error');
     expect(enduranceTemplatesSource).toContain('setErrorMessage');
     expect(enduranceTemplatesSource).toContain('InlineNotice');
+  });
+
+  it.each([
+    ['exercices de musculation', strengthExercisesSource, 3],
+    ['séances modèles', workoutTemplatesSource, 3],
+    ['entraînements', workoutSessionsSource, 2],
+  ])('garde les erreurs %s locales et les succès de transition', (_label, source, successCount) => {
+    expect(source).toContain('useActionToast');
+    expect(source.match(/actionToast\.success/g)).toHaveLength(successCount);
+    expect(source).not.toContain('actionToast.error');
+    expect(source).toContain('InlineNotice');
   });
 });
