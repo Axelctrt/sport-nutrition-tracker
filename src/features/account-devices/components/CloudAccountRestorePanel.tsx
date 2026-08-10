@@ -122,12 +122,6 @@ export function CloudAccountRestorePanel({
     if (!apply) {
       const fallback = 'La restauration cloud n’est pas disponible dans cette version.';
       setState({ status: 'error', message: fallback });
-      actionToast.error({
-        key: 'cloud-account-restore',
-        title: 'Restauration indisponible',
-        error: undefined,
-        fallback,
-      });
       return;
     }
 
@@ -143,14 +137,7 @@ export function CloudAccountRestorePanel({
       });
       reload();
     } catch (error) {
-      const fallback = 'La restauration cloud n’a pas pu être terminée.';
       setState({ status: 'error', message: errorMessage(error) });
-      actionToast.error({
-        key: 'cloud-account-restore',
-        title: 'Restauration impossible',
-        error,
-        fallback,
-      });
     }
   };
 

@@ -135,6 +135,39 @@ describe("GuestDataImportPanel", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("conserve une erreur d’import sur la surface sans recharger", async () => {
+    const prepared = preparedImport();
+    const reload = vi.fn();
+
+    render(
+      <GuestDataImportPanel
+        accountFingerprint="acct-d2f00baa"
+        prepareImport={vi.fn(async () => prepared)}
+        applyImport={vi.fn(async () => {
+          throw new Error("Import invité refusé.");
+        })}
+        reload={reload}
+      />,
+    );
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Analyser les données invitées" }),
+    );
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Importer dans mon compte" }),
+    );
+    await userEvent.click(
+      within(screen.getByRole("alertdialog")).getByRole("button", {
+        name: "Importer dans mon compte",
+      }),
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Import invité refusé.",
+    );
+    expect(reload).not.toHaveBeenCalled();
+  });
+
   it("résume l’import sans détails longs dans le parcours compte mobile", async () => {
     render(
       <GuestDataImportPanel

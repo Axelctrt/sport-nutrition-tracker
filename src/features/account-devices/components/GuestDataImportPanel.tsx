@@ -128,12 +128,6 @@ export function GuestDataImportPanel({
         title: "Import interrompu",
         message: error instanceof Error ? error.message : fallback,
       });
-      actionToast.error({
-        key: "guest-data-import",
-        title: "Import interrompu",
-        error,
-        fallback,
-      });
       setIsImporting(false);
     }
   };

@@ -151,6 +151,38 @@ describe('CloudAccountRestorePanel', () => {
     expect(reload).toHaveBeenCalledTimes(1);
   });
 
+  it('conserve une erreur de restauration sur la surface sans recharger', async () => {
+    const value = prepared();
+    const client = createClient(value);
+    vi.mocked(client.applyCloudRestore!).mockRejectedValueOnce(
+      new Error('Restauration cloud refusée.'),
+    );
+    const reload = vi.fn();
+
+    render(
+      <CloudAccountRestorePanel
+        accountFingerprint={ACCOUNT_FINGERPRINT}
+        client={client}
+        preparedRestore={value}
+        reload={reload}
+      />,
+    );
+
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Restaurer depuis le cloud' }),
+    );
+    await userEvent.click(
+      within(screen.getByRole('alertdialog')).getByRole('button', {
+        name: 'Restaurer depuis le cloud',
+      }),
+    );
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Restauration cloud refusée.',
+    );
+    expect(reload).not.toHaveBeenCalled();
+  });
+
   it('indique clairement lorsqu’aucune donnée cloud n’existe', async () => {
     const client = createClient(
       prepared({
