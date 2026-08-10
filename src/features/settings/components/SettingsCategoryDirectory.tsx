@@ -17,7 +17,8 @@ import type { SettingsCategoryDefinition, SettingsCategoryId } from '@/features/
 import { SettingsNavigationCard } from '@/features/settings/components/SettingsNavigationCard';
 import { normalizeSettingsSearch } from '@/features/settings/settingsSectionNavigation';
 import { inputClassName } from '@/shared/forms/formStyles';
-import { Card } from '@/shared/ui/Card';
+import { Button } from '@/shared/ui/Button';
+import { EmptyState } from '@/shared/ui/EmptyState';
 
 const categoryIcons: Record<SettingsCategoryId, LucideIcon> = {
   'profile-objectives': UserRound,
@@ -42,6 +43,7 @@ interface SettingsCategoryDirectoryProps {
 
 export function SettingsCategoryDirectory({ categories }: SettingsCategoryDirectoryProps) {
   const [query, setQuery] = useState('');
+  const isDirectoryUnavailable = categories.length === 0;
   const filtered = useMemo(() => {
     const normalizedQuery = normalizeSettingsSearch(query);
     if (!normalizedQuery) return [...categories];
@@ -103,13 +105,26 @@ export function SettingsCategoryDirectory({ categories }: SettingsCategoryDirect
       </div>
 
       {filtered.length === 0 ? (
-        <Card
-          variant="muted"
-          padding="md"
-          className="mt-4 border-dashed text-center text-sm text-[var(--sp-text-secondary)]"
-        >
-          Aucun réglage ne correspond à cette recherche.
-        </Card>
+        <EmptyState
+          className="mt-4"
+          icon={Search}
+          variant={isDirectoryUnavailable ? 'unavailable' : 'filtered'}
+          title={
+            isDirectoryUnavailable
+              ? 'Aucune catégorie disponible'
+              : 'Aucun réglage trouvé'
+          }
+          description={
+            isDirectoryUnavailable
+              ? 'Les catégories de réglages ne sont pas disponibles actuellement.'
+              : 'Efface la recherche pour afficher de nouveau toutes les catégories.'
+          }
+          primaryAction={
+            isDirectoryUnavailable ? undefined : (
+              <Button onClick={() => setQuery('')}>Effacer la recherche</Button>
+            )
+          }
+        />
       ) : null}
     </section>
   );
