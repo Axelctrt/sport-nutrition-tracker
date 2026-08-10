@@ -152,6 +152,9 @@ if (failures.length === 0) {
     ['src/features/recipes/pages/RecipesPage.tsx', 'errorMessage'],
     ['src/features/favorite-meals/pages/FavoriteMealsPage.tsx', 'errorMessage'],
     ['src/features/endurance-templates/pages/EnduranceTemplatesPage.tsx', 'setErrorMessage'],
+    ['src/features/strength-exercises/pages/StrengthExercisesPage.tsx', 'actionErrorMessage'],
+    ['src/features/strength-templates/pages/WorkoutTemplatesPage.tsx', 'actionErrorMessage'],
+    ['src/features/strength-sessions/pages/WorkoutSessionsPage.tsx', 'errorMessage'],
   ];
 
   for (const [path, localMarker] of sportNutritionMixedSurfaces) {

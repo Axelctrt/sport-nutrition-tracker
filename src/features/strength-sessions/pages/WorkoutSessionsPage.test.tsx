@@ -1,9 +1,12 @@
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
+import { vi } from 'vitest';
 import { WorkoutSessionsPage } from '@/features/strength-sessions/pages/WorkoutSessionsPage';
 import { appDatabase } from '@/infrastructure/database/database';
 import { initializeDatabase } from '@/infrastructure/database/databaseLifecycle';
+import { repositories } from '@/infrastructure/repositories/repositories';
+import { ToastProvider } from '@/shared/toast/ToastProvider';
 import { createEntity } from '@/shared/utils/entities';
 import {
   createProgressionSuggestionInput,
@@ -25,6 +28,7 @@ describe('WorkoutSessionsPage', () => {
 
   afterEach(async () => {
     cleanup();
+    vi.restoreAllMocks();
     appDatabase.close();
     await appDatabase.delete();
   });
@@ -33,19 +37,48 @@ describe('WorkoutSessionsPage', () => {
     const user = userEvent.setup();
     render(
       <MemoryRouter initialEntries={['/strength/sessions']}>
-        <Routes>
-          <Route path="/strength/sessions" element={<WorkoutSessionsPage />} />
-          <Route path="/strength/sessions/:sessionId" element={<h1>Séance ouverte</h1>} />
-        </Routes>
+        <ToastProvider>
+          <Routes>
+            <Route path="/strength/sessions" element={<WorkoutSessionsPage />} />
+            <Route path="/strength/sessions/:sessionId" element={<h1>Séance ouverte</h1>} />
+          </Routes>
+        </ToastProvider>
       </MemoryRouter>,
     );
 
     await user.click(await screen.findByRole('button', { name: 'Séance libre' }));
     expect(await screen.findByRole('heading', { name: 'Séance ouverte' })).toBeInTheDocument();
+    expect(screen.getAllByRole('status')).toHaveLength(1);
+    expect(screen.getByRole('status')).toHaveTextContent('Séance libre démarrée');
     await waitFor(async () => {
       expect(await appDatabase.workoutSessions.count()).toBe(1);
       expect(await appDatabase.workoutSessions.where('status').equals('inProgress').count()).toBe(1);
     });
+  });
+
+  it('garde une erreur locale unique lorsque le démarrage libre échoue', async () => {
+    const user = userEvent.setup();
+    vi.spyOn(repositories.workoutSessions, 'getInProgress').mockRejectedValue(
+      new Error('Démarrage indisponible'),
+    );
+    render(
+      <MemoryRouter initialEntries={['/strength/sessions']}>
+        <ToastProvider>
+          <Routes>
+            <Route path="/strength/sessions" element={<WorkoutSessionsPage />} />
+          </Routes>
+        </ToastProvider>
+      </MemoryRouter>,
+    );
+
+    await user.click(await screen.findByRole('button', { name: 'Séance libre' }));
+
+    await waitFor(() => {
+      expect(repositories.workoutSessions.getInProgress).toHaveBeenCalledTimes(1);
+      expect(screen.getByText('Démarrage indisponible')).toBeInTheDocument();
+      expect(screen.getAllByRole('alert')).toHaveLength(1);
+    });
+    expect(await appDatabase.workoutSessions.count()).toBe(0);
   });
 
   it('présente un premier historique vide sans le confondre avec un filtre', async () => {
