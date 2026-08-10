@@ -103,6 +103,62 @@ describe('TrashPage', () => {
     vi.mocked(importTrashArchive).mockResolvedValue(2);
   });
 
+  it('affiche une première utilisation sans faux reset quand la corbeille est vide', async () => {
+    vi.mocked(listTrashItems).mockResolvedValue([]);
+
+    render(<TrashPage />);
+
+    expect(
+      (await screen.findByRole('heading', { name: 'La corbeille est vide' }))
+        .closest('[data-empty-state-variant]'),
+    ).toHaveAttribute('data-empty-state-variant', 'first-use');
+    expect(
+      screen.queryByRole('button', { name: 'Réinitialiser les filtres' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('réinitialise uniquement la recherche et le type sans perdre la sélection', async () => {
+    const user = userEvent.setup();
+    render(<TrashPage />);
+
+    await user.click(
+      await screen.findByRole('button', {
+        name: 'Sélectionner les résultats',
+      }),
+    );
+
+    const search = screen.getByRole('searchbox', {
+      name: 'Rechercher dans la corbeille',
+    });
+    const type = screen.getByRole('combobox', {
+      name: 'Filtrer par type',
+    });
+    await user.type(search, 'introuvable');
+    await user.selectOptions(type, 'activity');
+
+    expect(
+      screen
+        .getByRole('heading', { name: 'Aucun résultat' })
+        .closest('[data-empty-state-variant]'),
+    ).toHaveAttribute('data-empty-state-variant', 'filtered');
+
+    await user.click(
+      screen.getByRole('button', { name: 'Réinitialiser les filtres' }),
+    );
+
+    expect(search).toHaveValue('');
+    expect(type).toHaveValue('all');
+    expect(screen.getByText(firstItem.label)).toBeInTheDocument();
+    expect(screen.getByText(secondItem.label)).toBeInTheDocument();
+    expect(screen.getByText(/2 sélectionné\(s\)/)).toBeInTheDocument();
+    expect(listTrashItems).toHaveBeenCalledTimes(1);
+    expect(restoreTrashItem).not.toHaveBeenCalled();
+    expect(deleteTrashItemPermanently).not.toHaveBeenCalled();
+    expect(restoreTrashItems).not.toHaveBeenCalled();
+    expect(deleteTrashItemsPermanently).not.toHaveBeenCalled();
+    expect(emptyTrash).not.toHaveBeenCalled();
+  });
+
   it('recherche et sélectionne plusieurs éléments', async () => {
     const user = userEvent.setup();
     render(<TrashPage />);

@@ -40,6 +40,8 @@ import {
   purgeExpiredTrashItems,
   restoreTrashItem,
 } from '@/infrastructure/repositories/dexie/trashService';
+import { Button } from '@/shared/ui/Button';
+import { EmptyState } from '@/shared/ui/EmptyState';
 
 interface Feedback {
   tone: 'success' | 'error' | 'info';
@@ -182,6 +184,11 @@ export function TrashPage() {
   const allVisibleSelected =
     visibleItems.length > 0 &&
     visibleItems.every((item) => selectedIds.includes(item.id));
+
+  const resetFilters = () => {
+    setQuery('');
+    setTypeFilter('all');
+  };
 
   const toggleSelection = (id: string) => {
     setSelectedIds((current) =>
@@ -652,32 +659,24 @@ export function TrashPage() {
             Chargement de la corbeille…
           </div>
         ) : items.length === 0 ? (
-          <div className="py-10 text-center">
-            <Trash2
-              aria-hidden="true"
-              className="mx-auto size-8 text-slate-400"
-            />
-            <h2 className="mt-3 text-lg font-semibold text-slate-950 dark:text-white">
-              La corbeille est vide
-            </h2>
-            <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-              Les prochaines données supprimées apparaîtront ici.
-            </p>
-          </div>
+          <EmptyState
+            className="mt-4"
+            icon={Trash2}
+            variant="first-use"
+            title="La corbeille est vide"
+            description="Les prochaines données supprimées apparaîtront ici."
+          />
         ) : visibleItems.length === 0 ? (
-          <div className="py-10 text-center">
-            <Search
-              aria-hidden="true"
-              className="mx-auto size-8 text-slate-400"
-            />
-            <h2 className="mt-3 text-lg font-semibold text-slate-950 dark:text-white">
-              Aucun résultat
-            </h2>
-            <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-              Modifie la recherche ou le filtre pour retrouver
-              d’autres éléments.
-            </p>
-          </div>
+          <EmptyState
+            className="mt-4"
+            icon={Search}
+            variant="filtered"
+            title="Aucun résultat"
+            description="Réinitialise la recherche et le type pour retrouver tous les éléments."
+            primaryAction={
+              <Button onClick={resetFilters}>Réinitialiser les filtres</Button>
+            }
+          />
         ) : (
           <ul className="mt-4 space-y-3">
             {visibleItems.map((item) => {
