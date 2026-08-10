@@ -6,6 +6,7 @@ import { DashboardQuickActions } from '@/features/dashboard/components/Dashboard
 import type { DailySteps } from '@/domain/models/steps';
 import type { WeightEntry } from '@/domain/models/weight';
 import type { ActiveWorkoutSummary } from '@/features/dashboard/hooks/useDailyDashboard';
+import { ToastProvider } from '@/shared/toast/ToastProvider';
 import { createEntity } from '@/shared/utils/entities';
 
 afterEach(cleanup);
@@ -47,7 +48,9 @@ function renderActions(overrides?: Partial<React.ComponentProps<typeof Dashboard
 
   render(
     <MemoryRouter>
-      <DashboardQuickActions {...props} />
+      <ToastProvider>
+        <DashboardQuickActions {...props} />
+      </ToastProvider>
     </MemoryRouter>,
   );
 
@@ -112,7 +115,22 @@ describe('DashboardQuickActions', () => {
       });
     });
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('status')).toHaveLength(1);
     expect(screen.getByRole('status')).toHaveTextContent('Pas enregistrés');
+  });
+
+  it('conserve une erreur unique dans la boîte de dialogue', async () => {
+    const user = userEvent.setup();
+    const onSaveSteps = vi.fn().mockRejectedValue(new Error('Connexion indisponible'));
+    renderActions({ onSaveSteps });
+
+    await user.click(screen.getByRole('button', { name: 'Saisir les pas' }));
+    await user.click(screen.getByRole('button', { name: 'Enregistrer' }));
+
+    await waitFor(() => expect(onSaveSteps).toHaveBeenCalledTimes(1));
+    expect(screen.getByRole('dialog', { name: 'Saisir les pas' })).toBeInTheDocument();
+    expect(screen.getAllByRole('alert')).toHaveLength(1);
+    expect(screen.getByRole('alert')).toHaveTextContent('Connexion indisponible');
   });
 
   it('ouvre la saisie du poids dans une boîte de dialogue et conserve le poids du jour', async () => {

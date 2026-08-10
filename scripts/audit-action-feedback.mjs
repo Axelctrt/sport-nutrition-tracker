@@ -13,6 +13,7 @@ const requiredFiles = [
   'src/shared/toast/pendingToast.ts',
   'src/shared/toast/pendingToast.test.ts',
   'src/shared/toast/ToastProvider.test.tsx',
+  'src/shared/toast/dashboardOnboardingFeedbackContract.test.ts',
   'src/app/actionFeedbackReadiness.test.ts',
   'docs/architecture/action-feedback-0.23.1.md',
   'RELEASE-NOTES-0.23.1.md',
@@ -70,9 +71,6 @@ if (failures.length === 0) {
     'src/features/goals/components/GoalEditor.tsx',
     'src/features/goals/pages/GoalsPage.tsx',
     'src/features/profile/pages/ProfilePage.tsx',
-    'src/features/dashboard-customization/pages/DashboardCustomizationPage.tsx',
-    'src/features/dashboard/components/DashboardQuickActions.tsx',
-    'src/features/dashboard/components/DailyInputsPanel.tsx',
     'src/features/settings/components/AutomaticSyncSettingsPanel.tsx',
     'src/features/reminders/pages/RoutineRemindersPage.tsx',
     'src/features/products/pages/FoodProductEditorPage.tsx',
@@ -97,6 +95,53 @@ if (failures.length === 0) {
     if (!read(path).includes('useActionToast')) {
       fail(`retour d’action centralisé absent : ${path}.`);
     }
+  }
+
+  const dashboardLocalFeedbackSurfaces = [
+    ['src/features/dashboard-customization/pages/DashboardCustomizationPage.tsx', 'setFeedback'],
+    ['src/features/dashboard/components/DailyInputsPanel.tsx', 'setWeightFeedback'],
+    ['src/features/dashboard/components/DashboardQuickActions.tsx', 'setFeedback'],
+  ];
+
+  for (const [path, localMarker] of dashboardLocalFeedbackSurfaces) {
+    const source = read(path);
+    for (const marker of [localMarker, 'InlineNotice']) {
+      if (!source.includes(marker)) {
+        fail(`feedback local Dashboard incomplet (${marker}) : ${path}.`);
+      }
+    }
+    if (source.includes('useActionToast') || source.includes('actionToast.')) {
+      fail(`la surface Dashboard locale ne doit pas cumuler notice et toast : ${path}.`);
+    }
+  }
+
+  const goalQuickEntry = read('src/features/dashboard/components/GoalQuickEntryOverlay.tsx');
+  for (const marker of ['useActionToast', 'actionToast.success', 'setErrorMessage', 'InlineNotice', 'close();']) {
+    if (!goalQuickEntry.includes(marker)) {
+      fail(`feedback rapide Objectifs incomplet (${marker}).`);
+    }
+  }
+  if (goalQuickEntry.includes('actionToast.error') || (goalQuickEntry.match(/actionToast\.success/g) ?? []).length !== 2) {
+    fail('Objectifs doit réserver ses deux toasts aux succès qui ferment la surface et garder les erreurs locales.');
+  }
+
+  const onboarding = read('src/features/onboarding/pages/OnboardingPage.tsx');
+  for (const marker of [
+    'actionToast.success',
+    'setSaveError',
+    'InlineNotice',
+    'saveProfileOnboardingCompletion',
+    'navigate(routePaths.dashboard',
+  ]) {
+    if (!onboarding.includes(marker)) {
+      fail(`feedback onboarding incomplet (${marker}).`);
+    }
+  }
+  if (onboarding.includes('actionToast.error') || (onboarding.match(/actionToast\./g) ?? []).length !== 1) {
+    fail('Onboarding doit garder une erreur finale locale unique et son unique signal de succès dédié.');
+  }
+  if (!actionToast.includes("'onboarding-profile-create'")) {
+    fail('la réussite onboarding doit rester reliée au feedback dédié révélé après navigation.');
   }
 
   const sportNutritionMixedSurfaces = [

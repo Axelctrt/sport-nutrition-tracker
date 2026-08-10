@@ -10,7 +10,6 @@ import type { WeightEntryFormValues } from '@/features/weight/schemas/weightEntr
 import { weightFormValuesToEntity } from '@/features/weight/utils';
 import { Card } from '@/shared/ui/Card';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
-import { useActionToast } from '@/shared/toast/useActionToast';
 
 interface DailyInputsPanelProps {
   snapshot: DailyTargetSnapshot;
@@ -28,7 +27,6 @@ export function DailyInputsPanel({
   onSaveWeight,
   onSaveSteps,
 }: DailyInputsPanelProps) {
-  const actionToast = useActionToast();
   const [weightFeedback, setWeightFeedback] = useState<Feedback>();
   const [stepsFeedback, setStepsFeedback] = useState<Feedback>();
   const weightEntry = snapshot.dateWeightEntry;
@@ -40,14 +38,12 @@ export function DailyInputsPanel({
       await onSaveWeight(weightFormValuesToEntity(values));
       const message = 'La pesée est enregistrée. Elle contribuera au poids de référence de la semaine suivante.';
       setWeightFeedback({ tone: 'success', message });
-      actionToast.success({ key: 'dashboard-weight-save', title: 'Poids enregistré', description: message });
     } catch (error) {
       const fallback = 'La pesée n’a pas pu être enregistrée.';
       setWeightFeedback({
         tone: 'error',
         message: error instanceof Error ? error.message : fallback,
       });
-      actionToast.error({ key: 'dashboard-weight-save', title: 'Enregistrement impossible', error, fallback });
     }
   };
 
@@ -62,14 +58,12 @@ export function DailyInputsPanel({
       });
       const message = 'Les pas et la dépense estimée ont été recalculés.';
       setStepsFeedback({ tone: 'success', message });
-      actionToast.success({ key: 'dashboard-steps-save', title: 'Pas enregistrés', description: message });
     } catch (error) {
       const fallback = 'Les pas n’ont pas pu être enregistrés.';
       setStepsFeedback({
         tone: 'error',
         message: error instanceof Error ? error.message : fallback,
       });
-      actionToast.error({ key: 'dashboard-steps-save', title: 'Enregistrement impossible', error, fallback });
     }
   };
 

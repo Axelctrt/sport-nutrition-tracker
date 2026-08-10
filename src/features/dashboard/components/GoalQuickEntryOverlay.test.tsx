@@ -7,6 +7,7 @@ import type { DailyTargetSnapshot } from '@/application/daily/dailyTargetCoordin
 import type { DailySteps } from '@/domain/models/steps';
 import type { WeightEntry } from '@/domain/models/weight';
 import { GoalQuickEntryOverlay } from '@/features/dashboard/components/GoalQuickEntryOverlay';
+import { ToastProvider } from '@/shared/toast/ToastProvider';
 import { createEntity } from '@/shared/utils/entities';
 
 afterEach(cleanup);
@@ -45,7 +46,9 @@ function renderOverlay(
 
   render(
     <MemoryRouter initialEntries={[`/?action=${action}`]}>
-      <GoalQuickEntryOverlay {...props} />
+      <ToastProvider>
+        <GoalQuickEntryOverlay {...props} />
+      </ToastProvider>
     </MemoryRouter>,
   );
 
@@ -77,6 +80,7 @@ describe('GoalQuickEntryOverlay', () => {
       });
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
+    expect(screen.getByRole('status')).toHaveTextContent('Pas enregistrés');
   });
 
   it('ouvre la saisie du poids et conserve la valeur existante', async () => {
@@ -103,5 +107,19 @@ describe('GoalQuickEntryOverlay', () => {
       });
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
+    expect(screen.getByRole('status')).toHaveTextContent('Poids enregistré');
+  });
+
+  it('garde une erreur unique sur place sans fermer la saisie', async () => {
+    const user = userEvent.setup();
+    const onSaveSteps = vi.fn().mockRejectedValue(new Error('Écriture impossible'));
+    renderOverlay('steps', { onSaveSteps });
+
+    await user.click(screen.getByRole('button', { name: 'Enregistrer' }));
+
+    await waitFor(() => expect(onSaveSteps).toHaveBeenCalledTimes(1));
+    expect(screen.getByRole('dialog', { name: 'Saisir les pas' })).toBeInTheDocument();
+    expect(screen.getAllByRole('alert')).toHaveLength(1);
+    expect(screen.getByRole('alert')).toHaveTextContent('Écriture impossible');
   });
 });

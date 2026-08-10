@@ -22,7 +22,6 @@ import { StepsForm } from '@/features/steps/components/StepsForm';
 import type { StepsFormValues } from '@/features/steps/schemas/stepsSchema';
 import { WeightEntryForm } from '@/features/weight/components/WeightEntryForm';
 import type { WeightEntryFormValues } from '@/features/weight/schemas/weightEntrySchema';
-import { useActionToast } from '@/shared/toast/useActionToast';
 import { Card } from '@/shared/ui/Card';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 
@@ -80,7 +79,6 @@ export function DashboardQuickActions({
   onSaveWeight,
   onSaveSteps,
 }: DashboardQuickActionsProps) {
-  const actionToast = useActionToast();
   const [quickEntry, setQuickEntry] = useState<QuickEntry>();
   const [feedback, setFeedback] = useState<Feedback>();
   const [dialogError, setDialogError] = useState<string>();
@@ -109,16 +107,10 @@ export function DashboardQuickActions({
       await onSaveSteps({ date, totalSteps: values.totalSteps, source: 'manual' });
       const message = 'Les pas du jour et la dépense estimée ont été actualisés.';
       setFeedback({ tone: 'success', title: 'Pas enregistrés', message });
-      actionToast.success({
-        key: `dashboard-steps:${date}`,
-        title: 'Pas enregistrés',
-        description: message,
-      });
       setQuickEntry(undefined);
     } catch (error) {
       const fallback = 'Les pas n’ont pas pu être enregistrés.';
       setDialogError(error instanceof Error ? error.message : fallback);
-      actionToast.error({ key: `dashboard-steps:${date}`, error, fallback });
     }
   };
 
@@ -132,16 +124,10 @@ export function DashboardQuickActions({
       });
       const message = 'Le poids du jour et les objectifs associés ont été actualisés.';
       setFeedback({ tone: 'success', title: 'Poids enregistré', message });
-      actionToast.success({
-        key: `dashboard-weight:${date}`,
-        title: 'Poids enregistré',
-        description: message,
-      });
       setQuickEntry(undefined);
     } catch (error) {
       const fallback = 'La pesée n’a pas pu être enregistrée.';
       setDialogError(error instanceof Error ? error.message : fallback);
-      actionToast.error({ key: `dashboard-weight:${date}`, error, fallback });
     }
   };
 

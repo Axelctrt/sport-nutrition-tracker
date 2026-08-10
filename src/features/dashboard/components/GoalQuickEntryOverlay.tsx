@@ -64,11 +64,6 @@ export function GoalQuickEntryOverlay({
     } catch (error) {
       const fallback = 'Les pas n’ont pas pu être enregistrés.';
       setErrorMessage(error instanceof Error ? error.message : fallback);
-      actionToast.error({
-        key: `goal-action-steps:${date}`,
-        error,
-        fallback,
-      });
     }
   };
 
@@ -90,11 +85,6 @@ export function GoalQuickEntryOverlay({
     } catch (error) {
       const fallback = 'La pesée n’a pas pu être enregistrée.';
       setErrorMessage(error instanceof Error ? error.message : fallback);
-      actionToast.error({
-        key: `goal-action-weight:${date}`,
-        error,
-        fallback,
-      });
     }
   };
 

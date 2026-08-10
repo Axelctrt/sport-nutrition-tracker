@@ -9,12 +9,10 @@ import {
 } from '@/domain/dashboard/dashboardPreferences';
 import { DashboardCustomizationForm } from '@/features/dashboard-customization/components/DashboardCustomizationForm';
 import { repositories } from '@/infrastructure/repositories/repositories';
-import { useActionToast } from '@/shared/toast/useActionToast';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 import { PageSkeleton } from '@/shared/ui/PageSkeleton';
 
 export function DashboardCustomizationPage() {
-  const actionToast = useActionToast();
   const [preferences, setPreferences] = useState<DashboardPreferences>();
   const [density, setDensity] = useState<DashboardDensity>('comfortable');
   const [isSaving, setIsSaving] = useState(false);
@@ -53,20 +51,11 @@ export function DashboardCustomizationPage() {
         tone: 'success',
         message: 'L’affichage est enregistré. Les informations et le bloc complémentaire suivent le compte ; la densité reste propre à cet appareil.',
       });
-      actionToast.success({
-        key: 'dashboard-customization',
-        title: 'Accueil personnalisé',
-      });
     } catch (error) {
       const fallback = 'La personnalisation n’a pas pu être enregistrée.';
       setFeedback({
         tone: 'error',
         message: error instanceof Error ? error.message : fallback,
-      });
-      actionToast.error({
-        key: 'dashboard-customization',
-        error,
-        fallback,
       });
     } finally {
       setIsSaving(false);
