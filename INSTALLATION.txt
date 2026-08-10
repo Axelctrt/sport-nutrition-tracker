@@ -1,10 +1,10 @@
-SPORTPILOT 0.37.0 - RELEASE CANDIDATE
+SPORTPILOT 1.0.0-rc.1 - RELEASE CANDIDATE
 
 Checklist de validation :
 
-1. Verifier que la branche release/0.37.0 part de origin/develop au commit 0d1d60592b6c150ca274e8fb5dca52416c02a90f.
-2. Verifier que package.json et package-lock.json indiquent 0.37.0.
-3. Verifier que Parametres affiche 0.37.0.
+1. Verifier que la branche codex/rc-1-0-0-rc1 part de origin/develop au commit 3eff34a73cc40d98d3de2ab947ac8b45bfae5f01.
+2. Verifier que package.json et package-lock.json indiquent 1.0.0-rc.1.
+3. Verifier que Parametres affiche 1.0.0-rc.1.
 4. Verifier qu'aucun ZIP, resultat Playwright, secret ou fichier genere n'est stage.
 5. Executer git diff --check.
 6. Executer npm run check.
@@ -12,10 +12,10 @@ Checklist de validation :
 8. Executer npm run test:e2e.
 9. Executer npm run test:e2e:pwa.
 10. Executer npm audit sans appliquer npm audit fix --force.
-11. Verifier la migration Dexie v12 et la restauration de l'archive photo.
+11. Verifier que Dexie reste en v12, la sauvegarde JSON en v10 et que les restaurations restent compatibles.
 12. Verifier Chromium, WebKit iPhone 15 et le fonctionnement PWA hors ligne.
 13. Pousser uniquement la branche release apres validation.
 14. Creer une PR brouillon vers develop ; la publication develop vers main reste une etape separee.
-15. Deployer uniquement une Preview isolee apres CI verte et autorisation explicite.
+15. Ne lancer une Preview isolee qu'apres une autorisation explicite separee.
 
-Ne pas fusionner, creer de tag, creer de release GitHub ou deployer en production sans accord explicite.
+Ne pas lancer de Preview Cloudflare, fusionner, creer de tag, creer de release GitHub ou deployer en production sans accord explicite.

@@ -27,8 +27,8 @@ if (failures.length === 0) {
   const packageJson = JSON.parse(read('package.json'));
   const packageLock = JSON.parse(read('package-lock.json'));
 
-  if (!/^\d+\.\d+\.\d+$/.test(String(packageJson.version))) {
-    fail(`package.json doit publier une version stable, version trouvée : ${String(packageJson.version)}.`);
+  if (!/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(String(packageJson.version))) {
+    fail(`package.json doit publier une version sémantique, version trouvée : ${String(packageJson.version)}.`);
   }
   if (
     packageLock.version !== packageJson.version

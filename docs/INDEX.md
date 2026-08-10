@@ -32,19 +32,18 @@ preuves de livraison.
 
 ## Reprise du travail courant
 
-La cible stratégique est SportPilot `1.0.0`. La séquence en vigueur est :
-
-1. Phase 0 : réconcilier la documentation avec `develop` ;
-2. Phase 1 : auditer toute l’application en lecture seule via l’issue #63 ;
-3. faire valider le rapport et le découpage par le propriétaire ;
-4. seulement ensuite, créer les lots de normalisation nécessaires ;
-5. terminer par une readiness V1, une candidate puis une publication autorisée.
+La cible stratégique est SportPilot `1.0.0`. Les Phases 0 à 5 et les lots de
+convergence sont terminés ; #63 est clôturée. La Phase 7 prépare actuellement
+la candidate `1.0.0-rc.1` depuis
+`develop@3eff34a73cc40d98d3de2ab947ac8b45bfae5f01` via l'issue #139.
 
 Pour reprendre le travail, vérifier d’abord les HEAD réels de `main` et
-`develop`, l’état de la PR documentaire de Phase 0 et l’issue #63. Une ancienne
+`develop`, l’état de l'issue #139, de la PR draft RC et de la CI. Une ancienne
 conversation ou un SHA inscrit ici ne remplace jamais cette vérification.
 
-Aucun nouveau développement fonctionnel n’est autorisé par cette orientation.
+La préparation RC n'autorise aucun nouveau développement fonctionnel, aucune
+Preview Cloudflare, fusion, action sur `main`, création de tag, release ou
+production.
 Les nouvelles fonctions, la synchronisation étendue, les nouvelles métriques,
 les optimisations avancées et le renvoi OTP sont reportés au cycle post-V1 sauf
 décision explicite contraire.

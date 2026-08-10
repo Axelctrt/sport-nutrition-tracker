@@ -1,16 +1,18 @@
-const STABLE_ZERO_MAJOR_VERSION = /^0\.(\d+)\.(\d+)$/;
+const SEMANTIC_VERSION = /^(\d+)\.(\d+)\.(\d+)(?:-[0-9A-Za-z.-]+)?$/;
 
 export function isStableVersionAtLeast(version, minimumMinor) {
-  const match = STABLE_ZERO_MAJOR_VERSION.exec(String(version));
+  const match = SEMANTIC_VERSION.exec(String(version));
   if (!match) return false;
 
-  const minor = Number(match[1]);
-  const patch = Number(match[2]);
-  return Number.isInteger(minor)
+  const major = Number(match[1]);
+  const minor = Number(match[2]);
+  const patch = Number(match[3]);
+  return Number.isInteger(major)
+    && Number.isInteger(minor)
     && Number.isInteger(patch)
-    && minor >= minimumMinor;
+    && (major >= 1 || minor >= minimumMinor);
 }
 
 export function stableVersionExpectation(minimumMinor) {
-  return `une version stable 0.x.y à partir de 0.${minimumMinor}.0`;
+  return `une version SemVer compatible à partir de 0.${minimumMinor}.0`;
 }

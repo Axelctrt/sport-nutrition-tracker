@@ -18,6 +18,10 @@ pas une description automatiquement actuelle.
 - Production : `https://sportpilot-pages.pages.dev`.
 - Intégration constatée avant la Phase 0 V1 :
   `develop@eec97bf9ac776b519d051329551836853894fd82`.
+- Source de vérité après clôture du Lot 8 et de l'issue #63 :
+  `develop@3eff34a73cc40d98d3de2ab947ac8b45bfae5f01`.
+- Candidate en préparation : SportPilot `1.0.0-rc.1`, sans Preview, fusion,
+  tag, release ni déploiement autorisé par cette préparation.
 - Architecture : `src/domain`, `src/application`, `src/infrastructure`,
   `src/features`, `src/app`, `src/shared` et `src/pwa`.
 - Stockage principal local : Dexie `AppDatabase`, version 12.
@@ -37,17 +41,19 @@ L’objectif stratégique validé est de stabiliser le périmètre existant puis
 publier SportPilot `1.0.0`. Aucun nouveau cycle fonctionnel ne doit être inséré
 entre le programme de cohérence globale et la décision de readiness V1.
 
-Ordre canonique :
+Les Phases 0 à 5 et les lots de convergence validés sont terminés. La Phase 6
+conditionnelle n'a pas été requise : aucun défaut V1 critique ou significatif
+reproductible ne restait dans le périmètre #63. La Phase 7 prépare maintenant
+`1.0.0-rc.1` depuis le HEAD final de `develop`, avec gel fonctionnel.
 
-1. terminer la Phase 0 documentaire ;
-2. mettre à jour la base exacte de l’issue #63 après fusion ;
-3. réaliser la Phase 1 comme audit transverse en lecture seule ;
-4. soumettre le rapport, les priorités et le découpage au propriétaire ;
-5. ne commencer aucun lot de normalisation avant cette validation.
+Toute Preview Cloudflare, fusion, modification de `main`, création de tag,
+release GitHub ou mise en production demeure une gate séparée nécessitant une
+autorisation explicite.
 
 Lire en priorité
 [`docs/roadmap/V1_READINESS_PLAN.md`](docs/roadmap/V1_READINESS_PLAN.md),
-[`docs/roadmap/ROADMAP.md`](docs/roadmap/ROADMAP.md) et l’issue #63.
+[`docs/roadmap/ROADMAP.md`](docs/roadmap/ROADMAP.md), l’issue #63 clôturée et
+l'issue RC #139.
 
 L’audit doit distinguer défaut, risque, dette, recommandation UX, option et
 surface conforme. Les recommandations qui changent réellement le produit

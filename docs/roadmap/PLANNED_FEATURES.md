@@ -4,6 +4,11 @@ Ce document distingue l’état publié, l’état intégré à `develop`, la tr
 V1 autorisée et les options post-V1. Une mention ici ne vaut jamais autorisation
 de développement, fusion ou déploiement.
 
+Statut courant : les Phases 0 à 5 et les lots de convergence sont terminés,
+la Phase 6 conditionnelle n'a pas été requise et la Phase 7 prépare
+`1.0.0-rc.1` depuis
+`develop@3eff34a73cc40d98d3de2ab947ac8b45bfae5f01`.
+
 ## Publié — SportPilot 0.37.0
 
 La production fonctionnelle repose sur
@@ -148,7 +153,7 @@ fonctionnel.
 
 - gel fonctionnel ;
 - version candidate ;
-- Preview immuable ;
+- Preview immuable uniquement après autorisation explicite séparée ;
 - migration et mise à jour depuis la version publiée ;
 - recette propriétaire complète.
 

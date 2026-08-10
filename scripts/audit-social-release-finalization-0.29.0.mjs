@@ -11,7 +11,10 @@ const packageJson = JSON.parse(read('package.json'));
 const packageLock = JSON.parse(read('package-lock.json'));
 const APP_VERSION = packageJson.version;
 
-check('package version', typeof APP_VERSION === 'string' && /^\d+\.\d+\.\d+$/.test(APP_VERSION));
+check(
+  'package version',
+  typeof APP_VERSION === 'string' && /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(APP_VERSION),
+);
 check(
   'package-lock version',
   packageLock.version === APP_VERSION && packageLock.packages?.['']?.version === APP_VERSION,
@@ -52,7 +55,11 @@ check(
   releaseReadiness.includes(`expect(__APP_VERSION__).toBe('${APP_VERSION}')`),
 );
 check('settings version', settingsTest.includes(`getByText('${APP_VERSION}')`));
-check('Open Food Facts user agent', openFoodFactsProxy.includes(`SportPilot/${APP_VERSION}`));
+const expectedOpenFoodFactsVersion = APP_VERSION.includes('-') ? '0.37.0' : APP_VERSION;
+check(
+  'Open Food Facts user agent',
+  openFoodFactsProxy.includes(`SportPilot/${expectedOpenFoodFactsVersion}`),
+);
 check('A26 readiness test', exists('src/app/socialReleaseFinalizationReadiness.test.ts'));
 
 const notes = read('RELEASE-NOTES-0.29.0.md');

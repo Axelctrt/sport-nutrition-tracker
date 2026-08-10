@@ -6,10 +6,17 @@
   `84fea3d49e68c7d190c00d505502a5c4aa2e672a` ;
 - tag annoté `v0.37.0` et release GitHub stable ;
 - intégration constatée avant la Phase 0 V1 :
-  `develop@eec97bf9ac776b519d051329551836853894fd82`.
+  `develop@eec97bf9ac776b519d051329551836853894fd82` ;
+- intégration finale validée après le Lot 8 et #63 :
+  `develop@3eff34a73cc40d98d3de2ab947ac8b45bfae5f01` ;
+- candidate en préparation : `1.0.0-rc.1` via #139.
 
 Toujours revérifier les HEAD et le SHA réellement déployé avant de citer cet
 état.
+
+Le tableau publié ci-dessous reste volontairement celui de `0.37.0`. Le delta
+intégré de la candidate est synthétisé dans
+[`../../RELEASE-NOTES-1.0.0-rc.1.md`](../../RELEASE-NOTES-1.0.0-rc.1.md).
 
 ## Périmètre fonctionnel publié
 
