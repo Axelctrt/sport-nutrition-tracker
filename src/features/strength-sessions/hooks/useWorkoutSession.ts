@@ -112,11 +112,20 @@ export function useWorkoutSession(sessionId: string) {
     void refresh();
   }, [refresh]);
 
-  const runAction = useCallback(async <T,>(name: string, operation: () => Promise<T>): Promise<T | undefined> => {
+  const runAction = useCallback(async <T,>(
+    name: string,
+    operation: () => Promise<T>,
+    reconcile?: (result: T) => void,
+  ): Promise<T | undefined> => {
     setAction(name);
     setSaveStatus('saving');
     try {
       const result = await operation();
+      if (reconcile) {
+        reconcile(result);
+        markSaved();
+        return result;
+      }
       const refreshed = await refresh({ showLoading: false });
       if (!refreshed) {
         setSaveStatus('error');
@@ -241,6 +250,9 @@ export function useWorkoutSession(sessionId: string) {
       setId,
       values,
     ),
+    (updatedSet) => setStrengthSets((current) => current.map((set) => (
+      set.id === updatedSet.id ? updatedSet : set
+    ))),
   ), [runAction, sessionId]);
 
   const completeSet = useCallback((
