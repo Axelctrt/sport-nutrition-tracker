@@ -229,6 +229,7 @@ test('compare deux dates de la même vue au toucher et au clavier', async ({ pag
   });
   await expect(separator).toHaveValue('50');
   await separator.focus();
+  await expect(separator).toBeFocused();
   await page.keyboard.press('ArrowRight');
   await expect(separator).toHaveValue('51');
 
