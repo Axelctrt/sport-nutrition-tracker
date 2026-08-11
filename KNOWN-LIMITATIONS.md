@@ -55,8 +55,10 @@ La recette automatisée couvre clavier, focus, réduction des animations, zones 
 
 Les alertes `npm audit` compatibles sont traitées sans mise à niveau forcée. Les signalements amont restants doivent être réévalués dès la publication de correctifs compatibles avec React Router, Quagga 2 et la chaîne PWA.
 
-L'audit du 10 août 2026 sur le verrou courant signale 9 vulnérabilités hautes :
-React Router 7.18.1, Sharp via Quagga 2, puis Brace Expansion, Fast URI, Nanoid
-et Undici dans les chaînes de build/test/PWA. Aucun `npm audit fix` n'est
-appliqué dans cette branche. Une mise à jour de dépendances et sa non-régression
-doivent être validées séparément avant la publication stable V1.
+La qualification du 11 août 2026 consignée dans #141 sur le verrou courant
+signale 9 vulnérabilités hautes et 0 critique : React Router 7.18.1, Sharp via
+Quagga 2, puis Brace Expansion, Fast URI, Nanoid et Undici dans les chaînes de
+build/test/PWA. Elle autorise la recette de la candidate RC, sans constituer une
+acceptation pour la stable. Aucune mise à jour forcée et aucun `npm audit fix`
+ne sont appliqués. La publication stable `1.0.0` reste bloquée jusqu'au
+traitement ou à l'acceptation explicite de #141.

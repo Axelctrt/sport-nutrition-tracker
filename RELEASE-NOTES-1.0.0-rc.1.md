@@ -1,14 +1,19 @@
 # SportPilot 1.0.0-rc.1 — notes de candidate
 
-Statut : candidate V1 en préparation, non publiée.
+Statut : préparation fusionnée dans `develop`, candidate non déployée et non
+publiée ; la Preview de recette reste requise.
 
-- Branche : `codex/rc-1-0-0-rc1`
-- Base `develop` : `3eff34a73cc40d98d3de2ab947ac8b45bfae5f01`
+- Source candidate courante : `develop`.
+- Préparation fusionnée via #140 ; squash :
+  `06a64b76f3b632db5e841a486b813983ce811de0`.
+- Référence de préparation historique, non courante — Branche : `codex/rc-1-0-0-rc1`.
 - Stable de référence : `0.37.0` au commit `84fea3d49e68c7d190c00d505502a5c4aa2e672a`
-- Issue de préparation : #139
+- Issue de préparation #139 fermée ; issue de gel et de recette : #142.
 
 Aucun tag, aucune release GitHub et aucun déploiement ne sont créés par cette
-préparation. La production reste sur `0.37.0`.
+préparation. La candidate n'a pas encore de Preview ; son futur SHA de Preview
+n'est pas anticipé, car le micro-lot de gel modifiera encore `develop`. La
+production reste sur `0.37.0`.
 
 ## Évolutions principales depuis 0.37.0
 
@@ -70,15 +75,18 @@ préparation. La production reste sur `0.37.0`.
 - #103 — diagnostic Photo Nutrition IA en Preview ;
 - #136 — portabilité CRLF du contrat source Data ;
 - #137 — preuve responsive/E2E de la Corbeille ;
-- #138 — diagnostic des Workers Builds Cloudflare rouges.
+- #138 — diagnostic des Workers Builds Cloudflare rouges ;
+- #141 — traitement ou acceptation explicite des dépendances npm HIGH avant la
+  stable `1.0.0`.
 
 Ces dettes ne sont pas absorbées dans la candidate. Elles nécessitent leurs
 propres validations et n'autorisent aucune Preview ou action Cloudflare.
 
 L'audit npm du verrou courant signale également 9 vulnérabilités hautes amont,
 dont React Router et Sharp via Quagga 2. Aucun correctif automatique ou forcé
-n'est appliqué dans cette préparation ; ce risque de dépendances devra être
-explicitement réévalué avant une publication stable.
+n'est appliqué dans cette préparation. La qualification consignée dans #141
+autorise la recette RC, mais #141 reste un gate explicite avant une publication
+stable.
 
 ## Point historique
 
