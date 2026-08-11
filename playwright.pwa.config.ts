@@ -1,5 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const pwaUpdateTestPort = Number(process.env.PWA_UPDATE_TEST_PORT ?? 4174);
+const pwaUpdateTestBaseUrl = `http://127.0.0.1:${pwaUpdateTestPort}`;
+
 export default defineConfig({
   testDir: './e2e',
   testMatch: 'pwa-update-retention.spec.ts',
@@ -20,7 +23,7 @@ export default defineConfig({
     : [['list']],
   use: {
     ...devices['Desktop Chrome'],
-    baseURL: 'http://127.0.0.1:4174',
+    baseURL: pwaUpdateTestBaseUrl,
     locale: 'fr-FR',
     timezoneId: 'Africa/Tunis',
     serviceWorkers: 'allow',
@@ -30,7 +33,7 @@ export default defineConfig({
   },
   webServer: {
     command: 'node scripts/pwa-update-test-server.mjs',
-    url: 'http://127.0.0.1:4174/__pwa-test/health',
+    url: `${pwaUpdateTestBaseUrl}/__pwa-test/health`,
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,
   },
