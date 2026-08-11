@@ -4,6 +4,21 @@ Ce fichier synthétise les versions publiées. Les notes détaillées versionné
 restent les archives de référence et conservent l’état de préparation de chaque
 livraison.
 
+## 1.0.0-rc.1 — candidate en préparation le 10 août 2026
+
+- Convergence mobile/desktop des hubs Sport, Nutrition et Progression.
+- Continuité des saisies non enregistrées sur les surfaces critiques.
+- Feedbacks, états filtrés, clavier/focus et reduced-motion consolidés.
+- Preuves Chromium, WebKit/iPhone, PWA, isolation et continuité renforcées.
+- Versions de données inchangées : Dexie v12, sauvegarde JSON v10, runtime
+  Dexie Cloud v16 et snapshot social `0.29.0-a3`.
+
+Cette entrée n'est pas une publication. Aucun tag, aucune release GitHub,
+aucune Preview Cloudflare et aucun déploiement ne sont autorisés. La production
+reste en `0.37.0`.
+
+Voir [`RELEASE-NOTES-1.0.0-rc.1.md`](RELEASE-NOTES-1.0.0-rc.1.md).
+
 ## 0.37.0 - publiée le 2 août 2026
 
 - Ajout local et privé des photos de progression.

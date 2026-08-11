@@ -11,6 +11,9 @@ ni son déploiement.
   `84fea3d49e68c7d190c00d505502a5c4aa2e672a` ;
 - `develop` constaté avant la Phase 0 V1 :
   `eec97bf9ac776b519d051329551836853894fd82` ;
+- `develop` final après le Lot 8 et la clôture de #63 :
+  `3eff34a73cc40d98d3de2ab947ac8b45bfae5f01` ;
+- candidate en préparation : `1.0.0-rc.1`, issue #139 ;
 - documents de détail :
   [`V1_READINESS_PLAN.md`](V1_READINESS_PLAN.md) et
   [`PLANNED_FEATURES.md`](PLANNED_FEATURES.md).
@@ -64,28 +67,25 @@ une candidate validée et une publication explicitement autorisée.
 
 | Phase | Statut | Résultat attendu | Condition de sortie |
 | --- | --- | --- | --- |
-| 0 — Réconciliation documentaire | **En cours** | sources canoniques alignées, PR #60 remplacée, #50 clôturé administrativement | diff documentaire validé puis fusion autorisée |
-| 1 — Audit transverse | **Prochaine étape** | matrice complète UX, comportements, accessibilité, hors ligne et données | rapport #63 validé par le propriétaire |
-| 2 — Fondations partagées manquantes | **Conditionnelle** | primitives démontrées nécessaires par l’audit | pilotes et contrats validés |
-| 3 — Normalisation par domaines | **Conditionnelle** | migrations en lots indépendants, sans changement métier implicite | recettes de chaque lot validées |
-| 4 — Convergence transverse | **Planifiée** | inventaire final, exceptions justifiées et cohérence globale démontrée | rapport de convergence accepté |
-| 5 — Audit de readiness V1 | **Planifiée** | décision V1 prête, prête sous corrections ou non prête | liste fermée des blocages |
-| 6 — Corrections bloquantes V1 | **Conditionnelle** | seuls les blocages de readiness sont corrigés | nouvelle readiness concluante |
-| 7 — Release Candidate V1 | **Planifiée** | gel fonctionnel, Preview immuable et recette complète | validation propriétaire |
+| 0 — Réconciliation documentaire | **Terminée** | sources canoniques alignées, PR #60 remplacée, #50 clôturé administrativement | validation et intégration terminées |
+| 1 — Audit transverse | **Terminée** | matrice complète UX, comportements, accessibilité, hors ligne et données | rapport #63 validé par le propriétaire |
+| 2 — Fondations partagées manquantes | **Terminée** | primitives démontrées nécessaires par l’audit | contrats et pilotes validés |
+| 3 — Normalisation par domaines | **Terminée** | migrations en lots indépendants, sans changement métier implicite | recettes de chaque lot validées |
+| 4 — Convergence transverse | **Terminée** | inventaire final, exceptions justifiées et cohérence globale démontrée | rapport de convergence accepté |
+| 5 — Audit de readiness V1 | **Terminée** | décision V1 prête et dettes séparées | preuve transverse finale validée, #63 clôturée |
+| 6 — Corrections bloquantes V1 | **Non requise** | aucun blocage V1 critique ou significatif reproductible restant dans #63 | décision de readiness validée |
+| 7 — Release Candidate V1 | **En cours** | gel fonctionnel, version candidate, documentation et recette complète | validation propriétaire ; Preview séparément autorisée |
 | 8 — Publication SportPilot V1 | **Planifiée** | `1.0.0`, tag, release et production | contrôles post-déploiement validés |
 | 9 — Cycle produit post-V1 | **Après V1 uniquement** | nouvelles fonctions et optimisations | nouveau cadrage explicite |
 
 ## Prochaine action immédiate
 
-Après fusion de la Phase 0 :
-
-1. remplacer dans l’issue #63 la base provisoire par le nouveau HEAD exact de
-   `develop` ;
-2. auditer sans modifier ;
-3. classer chaque constat comme défaut, risque, dette, recommandation UX,
-   option ou conforme ;
-4. présenter les impacts, priorités, fondations manquantes et lots proposés ;
-5. attendre la validation du propriétaire avant tout développement.
+1. préparer `1.0.0-rc.1` depuis le SHA final de `develop` ;
+2. valider le diff documentaire et de plomberie de release ;
+3. exécuter les tests, audits et la CI GitHub Actions complète ;
+4. conserver #103, #136, #137 et #138 comme dettes séparées ;
+5. arrêter avant toute Preview Cloudflare, fusion, action sur `main`, tag,
+   release ou production.
 
 ## Garde-fous permanents
 

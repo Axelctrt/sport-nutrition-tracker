@@ -135,8 +135,8 @@ if (failures.length === 0) {
   if (!cloud.includes('SYNC_PROTOTYPE_DATABASE_VERSION = 16')) {
     fail('Le runtime cloud doit utiliser la v16 pour les amitiés et permissions sociales.');
   }
-  if (!/^\d+\.\d+\.\d+$/.test(String(JSON.parse(read('package.json')).version))) {
-    fail('La publication F4 doit exposer une version stable.');
+  if (!/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(String(JSON.parse(read('package.json')).version))) {
+    fail('La publication F4 doit exposer une version sémantique.');
   }
 }
 

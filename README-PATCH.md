@@ -1,11 +1,16 @@
-# SportPilot 0.37.0 - release candidate
+# SportPilot 1.0.0-rc.1 — release candidate
 
-Branche : `release/0.37.0`
+Branche : `codex/rc-1-0-0-rc1`
 
-Base : `origin/develop` au commit `0d1d60592b6c150ca274e8fb5dca52416c02a90f`.
+Base : `origin/develop` au commit `3eff34a73cc40d98d3de2ab947ac8b45bfae5f01`.
 
-Cette branche contient uniquement l’alignement de version, les contrôles et la documentation nécessaires à la candidate 0.37.0. Les fonctionnalités ont déjà été intégrées et validées dans `develop`.
+Cette branche contient uniquement l’alignement de version, les contrôles et la
+documentation nécessaires à la candidate V1. Les évolutions produit ont déjà
+été intégrées et validées dans `develop`.
 
-La candidate inclut les photos de progression locales, leur galerie, le comparateur, l’archive séparée et les ajustements UX de recette. Elle n’ajoute aucune migration D1, aucune synchronisation de photos, aucune analyse corporelle par IA et aucune modification des formules caloriques.
+Dexie reste en v12, la sauvegarde JSON en v10, le runtime Dexie Cloud en v16 et
+le contrat de snapshot social en `0.29.0-a3`. Aucun fichier Functions,
+Cloudflare, IA, schéma ou migration n'est modifié.
 
-Aucune fusion vers `main`, création de tag, release GitHub ou publication Cloudflare de production n’est incluse.
+Aucune Preview Cloudflare, fusion, création de tag, release GitHub, publication
+stable ou production n'est incluse.

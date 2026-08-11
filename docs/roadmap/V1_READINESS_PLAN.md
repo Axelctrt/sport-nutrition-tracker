@@ -1,8 +1,9 @@
 # Trajectoire de cohérence globale et readiness V1
 
-Statut : **décision produit validée pour le séquencement**. Ce document
-n’autorise pas automatiquement les développements, fusions, releases ou
-déploiements qu’il décrit.
+Statut : **Phase 7 — candidate `1.0.0-rc.1` en préparation**. Les Phases 0 à 5
+et les lots de convergence sont terminés ; la Phase 6 conditionnelle n'a pas
+été requise. Ce document n’autorise pas automatiquement les développements,
+Previews, fusions, releases ou déploiements qu’il décrit.
 
 ## Objectif
 
@@ -37,7 +38,10 @@ fonctions non essentielles ou non cadrées sont reportées au cycle post-V1.
   `84fea3d49e68c7d190c00d505502a5c4aa2e672a` ;
 - `develop` avant la Phase 0 :
   `eec97bf9ac776b519d051329551836853894fd82` ;
-- audit parent : issue #63 ;
+- `develop` après le Lot 8 et la preuve transverse finale :
+  `3eff34a73cc40d98d3de2ab947ac8b45bfae5f01` ;
+- audit parent : issue #63, clôturée en `completed` ;
+- préparation RC : issue #139 ;
 - contrats :
   - [`../product/UX_GUIDELINES.md`](../product/UX_GUIDELINES.md) ;
   - [`../product/DESIGN_SYSTEM.md`](../product/DESIGN_SYSTEM.md) ;
@@ -46,8 +50,8 @@ fonctions non essentielles ou non cadrées sont reportées au cycle post-V1.
   - [`../quality/TEST_STRATEGY.md`](../quality/TEST_STRATEGY.md) ;
   - [`../quality/RELEASE_PROCESS.md`](../quality/RELEASE_PROCESS.md).
 
-La base exacte de chaque phase doit être revérifiée. Après fusion de la Phase 0,
-l’issue #63 doit être mise à jour avec le nouveau HEAD de `develop`.
+La base exacte de chaque phase doit être revérifiée. La préparation RC utilise
+le SHA final ci-dessus comme source de vérité, après revérification GitHub.
 
 ## Phase 0 — Réconciliation documentaire
 
@@ -287,10 +291,12 @@ readiness. Aucun nouveau besoin, redesign ou élargissement fonctionnel.
 
 ## Phase 7 — Release Candidate V1
 
+Statut courant : **en préparation sur `codex/rc-1-0-0-rc1`**.
+
 - gel fonctionnel ;
 - version candidate ;
 - notes et changelog ;
-- Preview immuable ;
+- Preview immuable uniquement après une autorisation explicite séparée ;
 - tests de mise à jour et données ;
 - recette mobile, desktop, WebKit et hors ligne ;
 - vérification finale du diff.
@@ -324,13 +330,13 @@ Seulement après publication et bilan de la V1 :
 
 ## Reprise par une prochaine conversation ou un agent
 
-1. vérifier l’état réel de `develop`, de la PR documentaire et de l’issue #63 ;
+1. vérifier l’état réel de `develop`, de l’issue RC #139 et de la PR draft ;
 2. lire ce document, `ROADMAP.md`, `AGENTS.md`, les guides UX et design system ;
 3. ne pas utiliser une ancienne conversation comme seule source ;
-4. après fusion de la Phase 0, mettre à jour l’issue #63 avec le HEAD exact ;
-5. produire l’audit sans modifier ;
-6. présenter défauts, risques, recommandations, impacts et options ;
-7. attendre la validation propriétaire avant toute exécution technique.
+4. conserver la production `0.37.0` distincte de la candidate ;
+5. vérifier tests, audits, versions de données et CI sur le HEAD exact ;
+6. conserver #103, #136, #137 et #138 hors de la candidate ;
+7. attendre une validation explicite avant Preview, fusion ou publication.
 
 ## Garde-fous
 

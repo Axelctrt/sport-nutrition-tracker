@@ -1,7 +1,7 @@
 import openFoodFactsProxySource from '@/../functions/_shared/openFoodFactsProxy.js?raw';
 import packageSource from '@/../package.json?raw';
 import releaseChecklistSource from '@/../RELEASE-CHECKLIST.md?raw';
-import releaseNotesSource from '@/../RELEASE-NOTES-0.37.0.md?raw';
+import releaseNotesSource from '@/../RELEASE-NOTES-1.0.0-rc.1.md?raw';
 import {
   SOCIAL_ACTIVITY_SNAPSHOT_CONTRACT_VERSION,
 } from '@/domain/friends/socialActivitySnapshotContract';
@@ -9,10 +9,11 @@ import { CURRENT_BACKUP_SCHEMA_VERSION } from '@/infrastructure/backup/backupMig
 import { databaseSchemaVersion } from '@/infrastructure/database/schema';
 import { SYNC_PROTOTYPE_DATABASE_VERSION } from '@/infrastructure/sync-prototype/SyncPrototypeDatabase';
 
-describe('release finalization readiness 0.37.0', () => {
-  it('expose la version stable dans le build et les métadonnées', () => {
-    expect(__APP_VERSION__).toBe('0.37.0');
-    expect(packageSource).toContain('"version": "0.37.0"');
+describe('release candidate readiness 1.0.0-rc.1', () => {
+  it('expose la version candidate dans le build et les métadonnées', () => {
+    expect(__APP_VERSION__).toBe('1.0.0-rc.1');
+    expect(packageSource).toContain('"version": "1.0.0-rc.1"');
+    // Le proxy publié reste sur la version stable tant que la RC n'est pas déployée.
     expect(openFoodFactsProxySource).toContain('SportPilot/0.37.0');
   });
 
@@ -24,10 +25,10 @@ describe('release finalization readiness 0.37.0', () => {
   });
 
   it('documente la branche de release sans annoncer de publication', () => {
-    expect(releaseNotesSource).toContain('SportPilot 0.37.0');
-    expect(releaseNotesSource).toContain('Branche : `release/0.37.0`');
-    expect(releaseNotesSource).toContain('Aucun tag ni déploiement');
-    expect(releaseChecklistSource).toContain('Branche `release/0.37.0` créée');
+    expect(releaseNotesSource).toContain('SportPilot 1.0.0-rc.1');
+    expect(releaseNotesSource).toContain('Branche : `codex/rc-1-0-0-rc1`');
+    expect(releaseNotesSource).toContain('Aucun tag, aucune release GitHub et aucun déploiement');
+    expect(releaseChecklistSource).toContain('Branche `codex/rc-1-0-0-rc1` créée');
     expect(releaseChecklistSource).toContain('Aucun tag créé');
   });
 

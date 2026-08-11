@@ -13,6 +13,7 @@ const requiredFiles = [
   'RELEASE-NOTES-0.35.1.md',
   'RELEASE-NOTES-0.36.0.md',
   'RELEASE-NOTES-0.37.0.md',
+  'RELEASE-NOTES-1.0.0-rc.1.md',
   'CHANGELOG.md',
   'RELEASE-CHECKLIST.md',
   'KNOWN-LIMITATIONS.md',
@@ -37,12 +38,14 @@ for (const path of requiredFiles) {
 if (failures.length === 0) {
   const packageJson = JSON.parse(read('package.json'));
   const packageLock = JSON.parse(read('package-lock.json'));
-  if (packageJson.version !== '0.37.0') fail(`package.json doit publier 0.37.0, reçu ${packageJson.version}.`);
-  if (packageLock.version !== '0.37.0' || packageLock.packages?.['']?.version !== '0.37.0') {
-    fail('package-lock.json doit être aligné sur 0.37.0.');
+  if (packageJson.version !== '1.0.0-rc.1') {
+    fail(`package.json doit préparer 1.0.0-rc.1, reçu ${packageJson.version}.`);
+  }
+  if (packageLock.version !== packageJson.version || packageLock.packages?.['']?.version !== packageJson.version) {
+    fail(`package-lock.json doit être aligné sur ${packageJson.version}.`);
   }
   if (!isStableVersionAtLeast(packageJson.version, 20)) {
-    fail('la version courante doit être reconnue comme stable par le garde-fou partagé.');
+    fail('la version courante doit être reconnue comme compatible par le garde-fou partagé.');
   }
 
   const scripts = packageJson.scripts ?? {};
@@ -66,29 +69,31 @@ if (failures.length === 0) {
     if (!source.includes('3584 * 1024')) fail(`le budget JavaScript ${label} n’est pas aligné sur 3584 Kio.`);
   }
 
-  const releaseNotes = read('RELEASE-NOTES-0.37.0.md');
+  const releaseNotes = read('RELEASE-NOTES-1.0.0-rc.1.md');
   for (const marker of [
-    'SportPilot 0.37.0',
-    'Branche : `release/0.37.0`',
-    'Aucun tag ni déploiement',
-    'photos de progression privées et locales',
-    'galerie et comparateur',
-    'archive photo séparée',
-    'aucune synchronisation cloud des photos',
-    'aucune publication sociale des photos',
-    'aucune analyse corporelle par IA',
-    'aucune modification des formules caloriques',
-    'migration locale additive',
-    'compatibilité Chromium, WebKit et PWA',
-    'statut de disponibilité',
-    'aucune migration D1',
+    'SportPilot 1.0.0-rc.1',
+    'Branche : `codex/rc-1-0-0-rc1`',
+    'Aucun tag, aucune release GitHub et aucun déploiement',
+    'continuité des saisies',
+    'Chromium, WebKit/iPhone',
+    'Dexie v12',
+    'sauvegarde JSON v10',
+    '#103',
+    '#136',
+    '#137',
+    '#138',
   ]) {
     if (!releaseNotes.includes(marker)) fail(`notes de release incomplètes : ${marker}.`);
   }
 
+  const stableReleaseNotes = read('RELEASE-NOTES-0.37.0.md');
+  for (const marker of ['SportPilot 0.37.0', 'Branche : `release/0.37.0`', 'Aucun tag ni déploiement']) {
+    if (!stableReleaseNotes.includes(marker)) fail(`archive 0.37.0 incomplète : ${marker}.`);
+  }
+
   const checklist = read('RELEASE-CHECKLIST.md');
   for (const marker of [
-    'Branche `release/0.37.0` créée',
+    'Branche `codex/rc-1-0-0-rc1` créée',
     'Aucun tag créé',
     'Suite Vitest complète',
     'Build PWA',
@@ -98,7 +103,7 @@ if (failures.length === 0) {
   }
 
   const knownLimitations = read('KNOWN-LIMITATIONS.md');
-  for (const marker of ['SportPilot 0.37.0', 'Photos de progression', 'Moteur calorique', 'Dépendances']) {
+  for (const marker of ['SportPilot 1.0.0-rc.1', '#103', '#136', '#137', '#138', 'Dépendances']) {
     if (!knownLimitations.includes(marker)) fail(`limitations connues incomplètes : ${marker}.`);
   }
 
@@ -174,9 +179,9 @@ if (failures.length === 0) {
 }
 
 if (failures.length > 0) {
-  console.error('Audit de consolidation 0.37.0 échoué :');
+  console.error('Audit de consolidation 1.0.0-rc.1 échoué :');
   for (const failure of failures) console.error(`- ${failure}`);
   process.exit(1);
 }
 
-console.log('Audit de consolidation 0.37.0 réussi : version, documentation, budgets, parcours et contrats de stockage sont alignés.');
+console.log('Audit de consolidation 1.0.0-rc.1 réussi : version candidate, archives, documentation, budgets, parcours et contrats de stockage sont alignés.');
