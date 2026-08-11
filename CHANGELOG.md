@@ -4,7 +4,23 @@ Ce fichier synthétise les versions publiées. Les notes détaillées versionné
 restent les archives de référence et conservent l’état de préparation de chaque
 livraison.
 
-## 1.0.0-rc.1 — candidate en préparation le 10 août 2026
+## 1.0.0-rc.2 — candidate en préparation le 11 août 2026
+
+- Correction du cold launch PWA hors ligne observé sur RC1.
+- Ajout d'une preuve E2E réelle : online, fermeture, nouvelle page offline,
+  lecture et écriture locales.
+- Préparation d'une nouvelle candidate après le rejet historique de RC1.
+- Aucun changement de schéma ou de données : Dexie v12, sauvegarde JSON v10,
+  runtime Dexie Cloud v16, registre d'espaces v1 et snapshot social
+  `0.29.0-a3`.
+
+Cette entrée n'est pas une publication. Aucune Preview, fusion, modification
+CORS/Dexie Cloud, action sur `main`, tag, release ou production n'est incluse.
+La production reste en `0.37.0`.
+
+Voir [`RELEASE-NOTES-1.0.0-rc.2.md`](RELEASE-NOTES-1.0.0-rc.2.md).
+
+## 1.0.0-rc.1 — déployée puis rejetée le 11 août 2026
 
 - Convergence mobile/desktop des hubs Sport, Nutrition et Progression.
 - Continuité des saisies non enregistrées sur les surfaces critiques.
@@ -13,9 +29,10 @@ livraison.
 - Versions de données inchangées : Dexie v12, sauvegarde JSON v10, runtime
   Dexie Cloud v16 et snapshot social `0.29.0-a3`.
 
-Cette entrée n'est pas une publication. Aucun tag, aucune release GitHub,
-aucune Preview Cloudflare et aucun déploiement ne sont autorisés. La production
-reste en `0.37.0`.
+RC1 a été déployée une seule fois depuis
+`2fd781087a65e125b0e77edcd53d41fdf82922ed`, puis rejetée après la reproduction
+du cold launch PWA #144. Aucun tag, aucune release GitHub et aucune production
+n'ont été créés ; la production reste en `0.37.0`.
 
 Voir [`RELEASE-NOTES-1.0.0-rc.1.md`](RELEASE-NOTES-1.0.0-rc.1.md).
 

@@ -9,14 +9,16 @@
   `develop@eec97bf9ac776b519d051329551836853894fd82` ;
 - intégration finale validée après le Lot 8 et #63 :
   `develop@3eff34a73cc40d98d3de2ab947ac8b45bfae5f01` ;
-- candidate en préparation : `1.0.0-rc.1` via #139.
+- RC1 rejetée : `1.0.0-rc.1`, journal #142 ;
+- candidate en préparation : `1.0.0-rc.2` depuis
+  `develop@465f927c6ed17dd7537bfa83d6fe11e9329825ea`, journal #147.
 
 Toujours revérifier les HEAD et le SHA réellement déployé avant de citer cet
 état.
 
 Le tableau publié ci-dessous reste volontairement celui de `0.37.0`. Le delta
 intégré de la candidate est synthétisé dans
-[`../../RELEASE-NOTES-1.0.0-rc.1.md`](../../RELEASE-NOTES-1.0.0-rc.1.md).
+[`../../RELEASE-NOTES-1.0.0-rc.2.md`](../../RELEASE-NOTES-1.0.0-rc.2.md).
 
 ## Périmètre fonctionnel publié
 
@@ -79,18 +81,11 @@ les données restent inchangés.
 
 ## Orientation actuelle
 
-Le prochain programme est la cohérence globale puis la readiness V1, pas
-l’ajout de nouvelles fonctions.
-
-L’issue #63 doit d’abord auditer en lecture seule :
-
-- l’UX et les comportements ;
-- les primitives et exceptions locales ;
-- l’accessibilité et le responsive ;
-- le hors ligne, la continuité et l’isolation des données.
-
-Les lots de correction seront décidés uniquement après validation du rapport.
-La séquence complète figure dans
+La readiness V1 et les lots de convergence sont terminés. La Phase 7 prépare
+RC2 après le rejet de RC1 et l'intégration du correctif PWA #145. Aucun nouveau
+développement fonctionnel n'est autorisé par cette préparation. #146 reste le
+gate CORS de la future recette compte/synchronisation et #141 le gate avant la
+stable. La séquence complète figure dans
 [`../roadmap/V1_READINESS_PLAN.md`](../roadmap/V1_READINESS_PLAN.md).
 
 Les nouvelles fonctions, le renvoi OTP, la synchronisation étendue, les

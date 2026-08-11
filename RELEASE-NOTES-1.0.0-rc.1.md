@@ -1,19 +1,23 @@
 # SportPilot 1.0.0-rc.1 — notes de candidate
 
-Statut : préparation fusionnée dans `develop`, candidate non déployée et non
-publiée ; la Preview de recette reste requise.
+Statut historique final : **RC1 REJETÉE**. Ce document reste l'archive de
+`1.0.0-rc.1` et ne décrit pas la candidate courante.
 
-- Source candidate courante : `develop`.
-- Préparation fusionnée via #140 ; squash :
-  `06a64b76f3b632db5e841a486b813983ce811de0`.
-- Référence de préparation historique, non courante — Branche : `codex/rc-1-0-0-rc1`.
-- Stable de référence : `0.37.0` au commit `84fea3d49e68c7d190c00d505502a5c4aa2e672a`
-- Issue de préparation #139 fermée ; issue de gel et de recette : #142.
+- SHA RC1 gelé et déployé :
+  `2fd781087a65e125b0e77edcd53d41fdf82922ed`.
+- Deployment unique : `64efefef-d4c5-4f6a-a98e-c04ca65bc0da`.
+- URL immuable : `https://64efefef.sportpilot-pages.pages.dev`.
+- Verdict de recette : **REJETÉE / BLOQUÉE**.
+- Cause : cold launch PWA hors ligne, suivi par #144.
+- Correctif intégré ensuite dans `develop` par la PR #145, squash
+  `465f927c6ed17dd7537bfa83d6fe11e9329825ea`.
+- Aucune seconde Preview RC1 et aucun redéploiement de RC1.
+- Une candidate distincte `1.0.0-rc.2` est requise.
+- Journal historique : #142, fermé en `completed` parce que la recette RC1 est
+  terminée, et non parce que RC1 aurait été approuvée.
 
-Aucun tag, aucune release GitHub et aucun déploiement ne sont créés par cette
-préparation. La candidate n'a pas encore de Preview ; son futur SHA de Preview
-n'est pas anticipé, car le micro-lot de gel modifiera encore `develop`. La
-production reste sur `0.37.0`.
+RC1 n'a créé aucun tag ni aucune release GitHub et n'a jamais remplacé la
+production `0.37.0`.
 
 ## Évolutions principales depuis 0.37.0
 

@@ -13,7 +13,11 @@ ni son déploiement.
   `eec97bf9ac776b519d051329551836853894fd82` ;
 - `develop` final après le Lot 8 et la clôture de #63 :
   `3eff34a73cc40d98d3de2ab947ac8b45bfae5f01` ;
-- candidate en préparation : `1.0.0-rc.1`, issue #139 ;
+- RC1 : `1.0.0-rc.1`, déployée une fois puis rejetée dans #142 ;
+- correctif PWA RC1 : PR #145, intégré dans
+  `develop@465f927c6ed17dd7537bfa83d6fe11e9329825ea` ;
+- candidate en préparation : `1.0.0-rc.2`, journal #147 ;
+- gate de recette CORS Dexie Cloud : #146 ;
 - documents de détail :
   [`V1_READINESS_PLAN.md`](V1_READINESS_PLAN.md) et
   [`PLANNED_FEATURES.md`](PLANNED_FEATURES.md).
@@ -80,11 +84,13 @@ une candidate validée et une publication explicitement autorisée.
 
 ## Prochaine action immédiate
 
-1. préparer `1.0.0-rc.1` depuis le SHA final de `develop` ;
+1. préparer `1.0.0-rc.2` depuis
+   `develop@465f927c6ed17dd7537bfa83d6fe11e9329825ea` ;
 2. valider le diff documentaire et de plomberie de release ;
 3. exécuter les tests, audits et la CI GitHub Actions complète ;
-4. conserver #103, #136, #137 et #138 comme dettes séparées ;
-5. arrêter avant toute Preview Cloudflare, fusion, action sur `main`, tag,
+4. conserver #103, #136, #137, #138 et #141 comme dettes/gates séparés ;
+5. conserver #146 ouvert jusqu'à la future recette compte/synchronisation ;
+6. arrêter avant toute Preview Cloudflare, fusion, action sur `main`, tag,
    release ou production.
 
 ## Garde-fous permanents

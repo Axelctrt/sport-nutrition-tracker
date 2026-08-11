@@ -1,4 +1,4 @@
-# Limitations connues — SportPilot 1.0.0-rc.1
+# Limitations connues — SportPilot 1.0.0-rc.2
 
 Ces limitations sont des dettes séparées. Elles ne sont pas corrigées par la
 préparation RC et nécessitent leur propre validation avant toute modification.
@@ -21,7 +21,7 @@ Les graphiques restent absents lorsque les données disponibles ne permettent pa
 
 ## Moteur calorique
 
-La candidate `1.0.0-rc.1` ne modifie pas les formules de calories, macros, métabolisme ou ajustement hebdomadaire.
+La candidate `1.0.0-rc.2` ne modifie pas les formules de calories, macros, métabolisme ou ajustement hebdomadaire.
 
 ## Social
 
@@ -46,6 +46,16 @@ notamment aux largeurs 320, 360 et 412 px. Aucune refonte n'est incluse.
 #138 suit le diagnostic des deux Workers Builds rouges. Les GitHub Actions
 applicatives sont vertes et aucune causalité avec #103 n'est démontrée. Cette
 candidate n'autorise aucune action Cloudflare.
+
+## CORS Dexie Cloud des Previews RC
+
+#146 suit le gate de recette compte/synchronisation. Le diagnostic RC1 a
+confirmé que son origine immuable exacte était absente de la whitelist Dexie
+Cloud : il s'agit d'un risque de configuration Preview, pas d'un défaut d'URL
+produit ni d'un défaut des données locales. L'origine RC2 n'existe pas encore
+et ne sera ajoutée qu'après création autorisée du deployment et autorisation
+propriétaire distincte. Aucun wildcard ni aucune mutation CORS ne sont inclus
+dans cette préparation.
 
 ## Accessibilité
 

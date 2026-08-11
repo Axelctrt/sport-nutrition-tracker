@@ -1,74 +1,84 @@
-# Checklist de publication — SportPilot 1.0.0-rc.1
+# Checklist de publication — SportPilot 1.0.0-rc.2
 
-Cette section suit le gel documentaire de la candidate V1 avant sa recette
-sur une Preview immuable. L'URL et le SHA de cette future Preview seront
-consignés principalement dans l'issue #142 afin de ne pas modifier le dépôt
-après gel uniquement pour cocher des cases.
+Cette section suit la préparation de RC2. Le futur SHA gelé, l'URL immuable et
+les preuves de recette seront consignés principalement dans l'issue #147 afin
+de ne pas modifier le dépôt après gel uniquement pour cocher des cases.
 
-## Preuves acquises avant le gel
+## Acquis avant RC2
 
-- [x] Préparation #140 fusionnée dans `develop`.
-- [x] Squash #140 et `origin/develop` vérifiés au commit
-  `06a64b76f3b632db5e841a486b813983ce811de0`.
-- [x] Version `1.0.0-rc.1` intégrée dans `develop`, avec `package.json` et
-  `package-lock.json` alignés.
-- [x] Issue de préparation #139 fermée en `completed`.
-- [x] Issue de gel et de recette #142 créée et conservée ouverte.
-- [x] Branche `codex/rc-1-0-0-rc1` créée pour la préparation historique #140 ;
-  elle n'est plus la source candidate courante.
-- [x] Branche de gel `codex/rc1-freeze-metadata` créée depuis le squash #140.
+- [x] Readiness V1, lots de convergence et preuve transverse terminés ; #63
+  fermée en `completed`.
+- [x] RC1 déployée une seule fois depuis
+  `2fd781087a65e125b0e77edcd53d41fdf82922ed`, puis rejetée dans #142.
+- [x] Blocker cold launch PWA suivi par #144 et corrigé par la PR #145.
+- [x] Correctif PWA intégré dans `develop` au squash
+  `465f927c6ed17dd7537bfa83d6fe11e9329825ea`.
+- [x] CI du correctif PWA, run `31503922947` : 4/4 jobs applicatifs verts.
+- [x] Cold launch réel désormais couvert par un E2E online → fermeture →
+  nouvelle page offline ; le test historique update/rétention reste couvert.
+- [x] Dexie v12, sauvegarde JSON v10, runtime Dexie Cloud v16, registre
+  d'espaces v1 et snapshot social `0.29.0-a3` inchangés.
+- [x] #141 reste le gate de sécurité avant toute stable `1.0.0`.
+- [x] #103, #136, #137 et #138 restent des dettes séparées.
+- [x] #146 qualifie une configuration Preview manquante et reste un gate de
+  recette RC2, sans défaut d'URL produit démontré.
+
+## Préparation documentaire et technique RC2
+
+- [x] Journal RC2 #147 créé.
+- [x] Branche `codex/rc-1-0-0-rc2` créée depuis le SHA `develop` vérifié.
+- [x] Version active `1.0.0-rc.2` alignée dans `package.json`, le lockfile, les
+  contrats de readiness et la documentation courante.
+- [x] Notes RC2 créées sans réécrire l'archive RC1.
+- [x] Aucun code métier, dépendance, schéma, migration, Function ou contrat de
+  données modifié.
 - [x] Aucun travail utilisateur local écrasé ou placé dans un stash.
-- [x] Écart réel depuis le commit stable `84fea3d49e68c7d190c00d505502a5c4aa2e672a` audité.
-- [x] PR historique #68 identifiée comme non fusionnée et remplacée dans `develop` par #70.
-
-## Données, confidentialité et sécurité préservées
-
-- [x] Dexie v12, sauvegarde JSON v10 et runtime Dexie Cloud v16 conservés.
-- [x] Contrat de snapshot social `0.29.0-a3` conservé.
-- [x] Aucun fichier Functions, Cloudflare, IA, schéma ou migration modifié.
-- [x] Aucune modification des formules caloriques ou des contrats de données.
-- [x] #103, #136, #137 et #138 documentées comme dettes séparées.
-- [x] #141 créée après qualification de 9 vulnérabilités hautes et 0 critique,
-  sans mise à jour de dépendance ni `npm audit fix`.
-- [x] La qualification #141 autorise la recette RC ; #141 reste un gate avant
-  toute publication stable `1.0.0`.
-
-## Contrôles automatiques déjà acquis
-
-- [x] `git diff --check`.
-- [x] CI GitHub Actions finale de #140, run `31472639144` : 4/4 jobs verts.
-- [x] Suite Vitest complète et ordre mélangé validés sous Linux en CI.
-- [x] Lint et TypeScript ; avertissement Fast Refresh préexistant conservé.
-- [x] Build PWA.
-- [x] `npm run audit:rc` et tous les audits de release/données/sécurité.
-- [x] `npm audit` analysé sans correctif : 9 vulnérabilités hautes documentées,
-  dont React Router et Sharp via Quagga 2 ; aucun `npm audit fix --force`.
-- [x] Playwright Chromium desktop, 320/360/412 et paysage.
-- [x] Playwright Linux Chromium et WebKit/iPhone 15 vert en CI.
-- [x] Mise à jour PWA et rétention des données vertes.
-- [x] Correction SemVer intégrée : les prereleases sont comparées correctement
-  relativement aux floors historiques.
+- [x] Suite Vitest complète et ordre mélangé.
+- [x] Lint, TypeScript et Build PWA.
+- [x] `npm run audit:rc`, audits release, consolidation, repository et
+  readiness pertinents.
+- [x] Playwright Chromium et suite PWA complète.
+- [x] Playwright WebKit/iPhone 15 attendu dans la CI GitHub complète.
 - [x] Le faux négatif Windows/CRLF reste suivi par #136 ; il n'est pas présenté
   comme corrigé par cette candidate.
 
-## Recette Preview restant à réaliser
+## À prouver sur RC2
 
-- [x] Aucun déploiement Preview Cloudflare effectué.
-- [ ] Autorisation distincte avant toute création de Preview immuable.
-- [ ] SHA final de `develop` après fusion du gel et URL immuable consignés dans
-  l'issue #142.
-- [ ] Recette navigateur, responsive, PWA/rétention et continuité des données
-  exécutée sur cette Preview.
+- [ ] SHA gelé exact après fusion explicitement autorisée.
+- [ ] Preview immuable créée après autorisation distincte.
+- [ ] Intégrité entre build validé, SHA et deployment.
+- [ ] Responsive 320/360/412 et desktop.
+- [ ] Chromium.
+- [ ] WebKit/iPhone.
+- [ ] Cold launch offline.
+- [ ] Mise à jour PWA et rétention.
+- [ ] Continuité locale en lecture et écriture.
+- [ ] Compte et synchronisation.
+- [ ] Isolation multi-compte.
+- [ ] Origine immuable ajoutée explicitement puis preflight CORS validé selon
+  #146.
+- [ ] Photo Nutrition et fallback manuel selon #103.
 
-## Publication stable encore interdite
+## Stable interdite
 
 - [x] Aucun tag créé.
 - [x] Aucune release GitHub créée.
 - [x] Aucun déploiement de production effectué.
 - [x] `main` et la production restent inchangés sur SportPilot `0.37.0`.
 - [ ] #141 traitée ou explicitement acceptée avant toute stable `1.0.0`.
-- [ ] Autorisations distinctes avant fusion du gel, `main`, tag, release ou
-  production.
+- [ ] Autorisations distinctes avant fusion RC2, Preview, `main`, tag, release
+  ou production.
+
+## Archive RC1 — rejetée
+
+- RC1 : `1.0.0-rc.1`.
+- SHA : `2fd781087a65e125b0e77edcd53d41fdf82922ed`.
+- Deployment unique : `64efefef-d4c5-4f6a-a98e-c04ca65bc0da`.
+- Verdict : **REJETÉE / BLOQUÉE** dans #142.
+- Cause : cold launch PWA hors ligne, #144.
+- Correctif ultérieur : PR #145.
+- Aucune seconde Preview RC1 ; l'archive complète reste dans #142 et
+  `RELEASE-NOTES-1.0.0-rc.1.md`.
 
 ---
 
