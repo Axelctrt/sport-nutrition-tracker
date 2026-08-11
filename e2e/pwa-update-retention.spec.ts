@@ -37,6 +37,28 @@ interface DatabaseSnapshot {
   criticalRecords: Record<string, unknown[]>;
 }
 
+type CacheStorageSnapshot = Record<string, string[]>;
+
+async function snapshotCacheStorage(page: Page): Promise<CacheStorageSnapshot> {
+  return page.evaluate(async () => {
+    const snapshot: CacheStorageSnapshot = {};
+
+    for (const cacheName of await caches.keys()) {
+      const cache = await caches.open(cacheName);
+      const requests = await cache.keys();
+      snapshot[cacheName] = requests
+        .map((request) => new URL(request.url).pathname)
+        .sort((left, right) => left.localeCompare(right));
+    }
+
+    return Object.fromEntries(
+      Object.entries(snapshot).sort(([left], [right]) =>
+        left.localeCompare(right),
+      ),
+    );
+  });
+}
+
 async function waitForDatabaseCreation(page: Page): Promise<void> {
   await expect
     .poll(
@@ -159,8 +181,15 @@ async function seedRepresentativeData(page: Page): Promise<void> {
             name: 'Footing migration',
             date: currentDate,
             durationMinutes: 50,
+            intensity: 'moderate',
+            sessionType: 'easy',
             distanceKm: 8,
             averageCadenceSpm: 172,
+            calculation: {
+              weightKg: 69.4,
+              estimatedCaloriesKcal: 480,
+              calculationVersion: 1,
+            },
             createdAt: currentDateTime,
             updatedAt: currentDateTime,
           },
@@ -200,9 +229,20 @@ async function seedRepresentativeData(page: Page): Promise<void> {
             mealId: 'pwa-meal-1',
             mealSlot: 'lunch',
             sourceType: 'product',
-            productId: 'pwa-product-1',
-            quantity: 150,
-            unit: 'g',
+            reference: {
+              sourceType: 'product',
+              productId: 'pwa-product-1',
+              inputMode: 'amount',
+              inputQuantity: 150,
+              normalizedAmount: 150,
+              normalizedUnit: 'g',
+              nutritionPer100Snapshot: {
+                caloriesKcal: 120,
+                proteinGrams: 10,
+                carbohydratesGrams: 8,
+                fatGrams: 4,
+              },
+            },
             createdAt: currentDateTime,
             updatedAt: currentDateTime,
           },
@@ -247,8 +287,27 @@ async function seedRepresentativeData(page: Page): Promise<void> {
           {
             id: 'pwa-daily-target-1',
             date: currentDate,
-            caloriesKcal: 2_400,
-            proteinGrams: 120,
+            calculationWeightKg: 69.4,
+            energy: {
+              bmrKcal: 1_600,
+              occupationalBaseKcal: 1_900,
+              walkingKcal: 0,
+              runningKcal: 480,
+              swimmingKcal: 0,
+              strengthTrainingKcal: 0,
+              otherActivitiesKcal: 0,
+              totalEstimatedExpenditureKcal: 2_380,
+            },
+            goalAdjustmentKcal: 0,
+            acceptedCalibrationAdjustmentKcal: 0,
+            calorieFloorKcal: 1_600,
+            targetCaloriesKcal: 2_400,
+            macros: {
+              proteinGrams: 120,
+              carbohydratesGrams: 300,
+              fatGrams: 80,
+            },
+            calculationVersion: 1,
             createdAt: currentDateTime,
             updatedAt: currentDateTime,
           },
@@ -525,6 +584,154 @@ async function snapshotDatabase(page: Page): Promise<DatabaseSnapshot> {
     },
   );
 }
+
+test('démarre sur l’accueil hors ligne après une première installation online', async ({
+  context,
+  page,
+  request,
+}, testInfo) => {
+  const resetResponse = await request.post('/__pwa-test/reset-to-old');
+  expect(resetResponse.ok()).toBe(true);
+
+  await createLocalProfile(page, 'Cold launch');
+  await waitForDatabaseCreation(page);
+  await waitForServiceWorkerControl(page);
+
+  // Ne pas visiter Analytics : les dépendances nécessaires au démarrage de
+  // l'accueil doivent être disponibles dès l'installation initiale de la PWA.
+  await page.goto('/#/privacy');
+  await expect(page.locator('#root')).not.toBeEmpty();
+  await seedRepresentativeData(page);
+
+  const beforeColdLaunch = await snapshotDatabase(page);
+  const onlineCaches = await snapshotCacheStorage(page);
+
+  for (const storeName of CRITICAL_STORES) {
+    expect(
+      beforeColdLaunch.counts[storeName],
+      `${storeName} doit être couvert avant le cold launch`,
+    ).toBeGreaterThan(0);
+  }
+
+  await page.close();
+  await context.setOffline(true);
+
+  const offlinePage = await context.newPage();
+  const failedScripts: string[] = [];
+  const pageErrors: string[] = [];
+  offlinePage.on('requestfailed', (request) => {
+    const url = new URL(request.url());
+    if (
+      request.resourceType() === 'script'
+      && url.origin === new URL(testInfo.project.use.baseURL as string).origin
+    ) {
+      failedScripts.push(`${url.pathname} — ${request.failure()?.errorText ?? 'échec inconnu'}`);
+    }
+  });
+  offlinePage.on('pageerror', (error) => pageErrors.push(error.message));
+
+  let navigationError: string | undefined;
+  try {
+    await offlinePage.goto('/', {
+      waitUntil: 'domcontentloaded',
+      timeout: 30_000,
+    });
+  } catch (error) {
+    navigationError = error instanceof Error ? error.message : String(error);
+  }
+
+  await offlinePage.getByRole('button', {
+    name: 'Découvrir mon accueil',
+  }).click({ timeout: 5_000 }).catch(() => undefined);
+
+  const dashboardHeading = offlinePage.getByRole('heading', {
+    name: 'Bonjour Cold launch',
+  });
+  const routeErrorHeading = offlinePage.getByRole('heading', {
+    name: /SportPilot n.a pas pu ouvrir cette page/,
+  });
+  await Promise.race([
+    dashboardHeading.waitFor({ state: 'visible', timeout: 20_000 }).catch(() => undefined),
+    routeErrorHeading.waitFor({ state: 'visible', timeout: 20_000 }).catch(() => undefined),
+  ]);
+
+  const offlineCaches = await snapshotCacheStorage(offlinePage);
+  const coldLaunchState = {
+    navigationError,
+    dashboardVisible: await dashboardHeading.isVisible(),
+    routeErrorVisible: await routeErrorHeading.isVisible(),
+    body: (await offlinePage.locator('body').innerText()).slice(0, 2_000),
+    failedScripts,
+    pageErrors,
+    onlineCaches,
+    offlineCaches,
+  };
+  await testInfo.attach('cold-launch-state.json', {
+    body: Buffer.from(JSON.stringify(coldLaunchState, null, 2)),
+    contentType: 'application/json',
+  });
+
+  expect(navigationError, JSON.stringify(coldLaunchState, null, 2)).toBeUndefined();
+  expect(coldLaunchState.dashboardVisible, JSON.stringify(coldLaunchState, null, 2)).toBe(true);
+  expect(failedScripts, JSON.stringify(coldLaunchState, null, 2)).toEqual([]);
+  expect(pageErrors, JSON.stringify(coldLaunchState, null, 2)).toEqual([]);
+
+  const precacheScripts = Object.entries(onlineCaches)
+    .filter(([cacheName]) => cacheName.startsWith('workbox-precache'))
+    .flatMap(([, urls]) => urls);
+  expect(precacheScripts).toEqual(expect.arrayContaining([
+    expect.stringMatching(/\/assets\/analytics-[^/]+\.js$/),
+    expect.stringMatching(/\/assets\/analyticsService-[^/]+\.js$/),
+  ]));
+  expect(precacheScripts).not.toEqual(expect.arrayContaining([
+    expect.stringMatching(/\/assets\/AnalyticsPage-[^/]+\.js$/),
+  ]));
+
+  const afterColdLaunch = await snapshotDatabase(offlinePage);
+  for (const storeName of CRITICAL_STORES) {
+    if (storeName === 'dailyTargets') {
+      const retainedTargetIds = new Set(
+        (afterColdLaunch.criticalRecords[storeName] ?? []).map((record) => record.id),
+      );
+      expect(
+        (beforeColdLaunch.criticalRecords[storeName] ?? []).every(
+          (record) => retainedTargetIds.has(record.id),
+        ),
+        'les cibles dérivées peuvent être recalculées, mais pas perdues',
+      ).toBe(true);
+      continue;
+    }
+
+    expect(afterColdLaunch.criticalRecords[storeName]).toEqual(
+      expect.arrayContaining(beforeColdLaunch.criticalRecords[storeName] ?? []),
+    );
+  }
+
+  await offlinePage.goto('/#/?action=weight', { waitUntil: 'domcontentloaded' });
+  await offlinePage.getByRole('button', {
+    name: 'Découvrir mon accueil',
+  }).click({ timeout: 5_000 }).catch(() => undefined);
+  const weightDialog = offlinePage.getByRole('dialog', { name: 'Ajouter une pesée' });
+  await expect(weightDialog).toBeVisible();
+  await weightDialog.getByLabel('Poids en kilogrammes').fill('70.1');
+  await weightDialog.getByRole('button', { name: 'Enregistrer' }).click();
+  await expect(weightDialog).toBeHidden();
+
+  await offlinePage.reload({ waitUntil: 'domcontentloaded' });
+  await offlinePage.getByRole('button', {
+    name: 'Découvrir mon accueil',
+  }).click({ timeout: 5_000 }).catch(() => undefined);
+  await expect(dashboardHeading).toBeVisible();
+
+  const afterOfflineWrite = await snapshotDatabase(offlinePage);
+  expect(afterOfflineWrite.counts.weights).toBe(afterColdLaunch.counts.weights);
+  expect(afterOfflineWrite.criticalRecords.weights).toEqual(expect.arrayContaining([
+    expect.objectContaining({
+      id: 'pwa-weight-1',
+      weightKg: 70.1,
+    }),
+  ]));
+});
 
 test('conserve les données pendant le remplacement de la PWA sous la même origine', async ({
   page,

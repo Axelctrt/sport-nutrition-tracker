@@ -167,7 +167,8 @@ export default defineConfig({
         globIgnores: [
           '**/AccountDevicesPage-*.js',
           '**/AdvancedSettingsPage-*.js',
-          '**/analytics*.js',
+          // Les services Analytics sont requis par le Dashboard au démarrage.
+          // La surface Analytics elle-même reste volontairement lazy.
           '**/AnalyticsPage-*.js',
           '**/BackupPage-*.js',
           '**/BarcodeScannerPage-*.js',
