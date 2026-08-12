@@ -9,6 +9,12 @@ livraison.
 - Correction du cold launch PWA hors ligne observé sur RC1.
 - Ajout d'une preuve E2E réelle : online, fermeture, nouvelle page offline,
   lecture et écriture locales.
+- Préservation du nouveau focus acquis après navigation (#151/#152), tout en
+  conservant le transfert vers le contenu principal en l'absence de nouveau
+  focus.
+- Stabilisation de la preuve WebKit Progress Photos (#149/#150) : le scénario
+  conserve l'action clavier réelle `50` → `ArrowRight` → `51` et vérifie le
+  focus du slider.
 - Préparation d'une nouvelle candidate après le rejet historique de RC1.
 - Aucun changement de schéma ou de données : Dexie v12, sauvegarde JSON v10,
   runtime Dexie Cloud v16, registre d'espaces v1 et snapshot social

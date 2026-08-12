@@ -44,6 +44,11 @@ fonctions non essentielles ou non cadrées sont reportées au cycle post-V1.
 - RC1 rejetée : issue #142 ;
 - base RC2 après correctif PWA #145 :
   `develop@465f927c6ed17dd7537bfa83d6fe11e9329825ea` ;
+- correctif navigation/focus #151/#152 :
+  `develop@2d87ef9ddbf1d667c54229093b0895e948e6c73d` ;
+- stabilisation de preuve WebKit Progress Photos #149/#150 et base technique
+  avant gel RC2 :
+  `develop@e1921f5807292f8236e70c1688d8d9f02c22bdf0` ;
 - préparation et recette RC2 : issue #147 ;
 - gate CORS de la future Preview : issue #146 ;
 - contrats :
@@ -55,8 +60,8 @@ fonctions non essentielles ou non cadrées sont reportées au cycle post-V1.
   - [`../quality/RELEASE_PROCESS.md`](../quality/RELEASE_PROCESS.md).
 
 La base exacte de chaque phase doit être revérifiée. RC1 reste historiquement
-rejetée ; la préparation RC2 utilise le SHA `465f927…` ci-dessus après
-revérification GitHub.
+rejetée ; la préparation RC2 utilise désormais le SHA `e1921f58…` ci-dessus
+après revérification GitHub.
 
 ## Phase 0 — Réconciliation documentaire
 
@@ -299,8 +304,10 @@ readiness. Aucun nouveau besoin, redesign ou élargissement fonctionnel.
 Statut courant : **RC2 en préparation sur `codex/rc-1-0-0-rc2`**.
 
 RC1 a été déployée une seule fois puis rejetée pour le cold launch PWA #144.
-Le correctif #145 et son E2E dédié sont intégrés dans la base RC2. #146 reste
-un gate de la future recette Preview ; #141 reste un gate avant la stable.
+Le correctif PWA #145 et son E2E dédié, le correctif produit de préservation du
+focus #151/#152 et la stabilisation de preuve WebKit Progress Photos #149/#150
+sont intégrés dans la base RC2. #146 reste un gate de la future recette
+Preview ; #141 reste un gate avant la stable.
 
 - gel fonctionnel ;
 - version candidate ;

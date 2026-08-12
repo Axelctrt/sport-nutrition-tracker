@@ -4,7 +4,7 @@ Cette section suit la préparation de RC2. Le futur SHA gelé, l'URL immuable et
 les preuves de recette seront consignés principalement dans l'issue #147 afin
 de ne pas modifier le dépôt après gel uniquement pour cocher des cases.
 
-## Acquis avant RC2
+## Acquis avant gel RC2
 
 - [x] Readiness V1, lots de convergence et preuve transverse terminés ; #63
   fermée en `completed`.
@@ -16,6 +16,15 @@ de ne pas modifier le dépôt après gel uniquement pour cocher des cases.
 - [x] CI du correctif PWA, run `31503922947` : 4/4 jobs applicatifs verts.
 - [x] Cold launch réel désormais couvert par un E2E online → fermeture →
   nouvelle page offline ; le test historique update/rétention reste couvert.
+- [x] Blocker produit de navigation/focus #151 corrigé par #152 et intégré au
+  squash `2d87ef9ddbf1d667c54229093b0895e948e6c73d` ; CI `31587850131`, 4/4
+  jobs applicatifs verts.
+- [x] Stabilisation test-only WebKit/Progress Photos #149/#150 intégrée au
+  squash `e1921f5807292f8236e70c1688d8d9f02c22bdf0` ; le contrat utilisateur
+  reste `50` → `ArrowRight` → `51` avec vérification explicite du focus ; CI
+  `31593091148`, 4/4 jobs applicatifs verts.
+- [x] Base technique finale avant gel RC2 :
+  `develop@e1921f5807292f8236e70c1688d8d9f02c22bdf0`.
 - [x] Dexie v12, sauvegarde JSON v10, runtime Dexie Cloud v16, registre
   d'espaces v1 et snapshot social `0.29.0-a3` inchangés.
 - [x] #141 reste le gate de sécurité avant toute stable `1.0.0`.

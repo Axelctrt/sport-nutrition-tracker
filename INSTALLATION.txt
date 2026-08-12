@@ -2,7 +2,7 @@ SPORTPILOT 1.0.0-rc.2 - RELEASE CANDIDATE
 
 Checklist de validation :
 
-1. Verifier que la branche codex/rc-1-0-0-rc2 part de origin/develop au commit 465f927c6ed17dd7537bfa83d6fe11e9329825ea.
+1. Verifier que la branche codex/rc-1-0-0-rc2 est realignee sur la base technique avant gel origin/develop au commit e1921f5807292f8236e70c1688d8d9f02c22bdf0.
 2. Verifier que package.json et package-lock.json indiquent 1.0.0-rc.2.
 3. Verifier que Parametres affiche 1.0.0-rc.2.
 4. Verifier qu'aucun ZIP, resultat Playwright, secret ou fichier genere n'est stage.

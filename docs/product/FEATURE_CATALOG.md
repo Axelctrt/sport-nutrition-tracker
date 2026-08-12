@@ -10,8 +10,8 @@
 - intégration finale validée après le Lot 8 et #63 :
   `develop@3eff34a73cc40d98d3de2ab947ac8b45bfae5f01` ;
 - RC1 rejetée : `1.0.0-rc.1`, journal #142 ;
-- candidate en préparation : `1.0.0-rc.2` depuis
-  `develop@465f927c6ed17dd7537bfa83d6fe11e9329825ea`, journal #147.
+- candidate en préparation : `1.0.0-rc.2` sur la base technique avant gel
+  `develop@e1921f5807292f8236e70c1688d8d9f02c22bdf0`, journal #147.
 
 Toujours revérifier les HEAD et le SHA réellement déployé avant de citer cet
 état.

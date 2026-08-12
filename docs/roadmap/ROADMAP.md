@@ -16,6 +16,11 @@ ni son déploiement.
 - RC1 : `1.0.0-rc.1`, déployée une fois puis rejetée dans #142 ;
 - correctif PWA RC1 : PR #145, intégré dans
   `develop@465f927c6ed17dd7537bfa83d6fe11e9329825ea` ;
+- correctif navigation/focus : #151/#152, intégré dans
+  `develop@2d87ef9ddbf1d667c54229093b0895e948e6c73d` ;
+- stabilisation de preuve WebKit Progress Photos : #149/#150, intégrée dans la
+  base technique avant gel
+  `develop@e1921f5807292f8236e70c1688d8d9f02c22bdf0` ;
 - candidate en préparation : `1.0.0-rc.2`, journal #147 ;
 - gate de recette CORS Dexie Cloud : #146 ;
 - documents de détail :
@@ -84,8 +89,8 @@ une candidate validée et une publication explicitement autorisée.
 
 ## Prochaine action immédiate
 
-1. préparer `1.0.0-rc.2` depuis
-   `develop@465f927c6ed17dd7537bfa83d6fe11e9329825ea` ;
+1. réaligner la préparation `1.0.0-rc.2` sur la base technique avant gel
+   `develop@e1921f5807292f8236e70c1688d8d9f02c22bdf0` ;
 2. valider le diff documentaire et de plomberie de release ;
 3. exécuter les tests, audits et la CI GitHub Actions complète ;
 4. conserver #103, #136, #137, #138 et #141 comme dettes/gates séparés ;

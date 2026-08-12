@@ -1,7 +1,7 @@
 # SportPilot 1.0.0-rc.2
 
-SportPilot `1.0.0-rc.2` est la candidate V1 préparée depuis
-`develop@465f927c6ed17dd7537bfa83d6fe11e9329825ea`. Cette préparation n'est ni
+SportPilot `1.0.0-rc.2` est la candidate V1 préparée sur la base technique avant
+gel `develop@e1921f5807292f8236e70c1688d8d9f02c22bdf0`. Cette préparation n'est ni
 fusionnée, ni déployée, ni taguée, ni publiée. La production reste SportPilot
 `0.37.0`, issue de la PR #21 au commit
 `84fea3d49e68c7d190c00d505502a5c4aa2e672a`.

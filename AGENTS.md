@@ -23,8 +23,9 @@ pas une description automatiquement actuelle.
 - RC1 historique : `1.0.0-rc.1` au SHA
   `2fd781087a65e125b0e77edcd53d41fdf82922ed`, déployée une fois puis rejetée
   pour le blocker PWA #144.
-- Candidate en préparation : SportPilot `1.0.0-rc.2`, depuis
-  `develop@465f927c6ed17dd7537bfa83d6fe11e9329825ea`, sans Preview, fusion, tag,
+- Candidate en préparation : SportPilot `1.0.0-rc.2`, réalignée sur la base
+  technique avant gel
+  `develop@e1921f5807292f8236e70c1688d8d9f02c22bdf0`, sans Preview, fusion, tag,
   release ni déploiement autorisé par cette préparation.
 - Architecture : `src/domain`, `src/application`, `src/infrastructure`,
   `src/features`, `src/app`, `src/shared` et `src/pwa`.

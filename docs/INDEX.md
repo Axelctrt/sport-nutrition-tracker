@@ -34,9 +34,10 @@ preuves de livraison.
 
 La cible stratégique est SportPilot `1.0.0`. Les Phases 0 à 5 et les lots de
 convergence sont terminés ; #63 est clôturée. RC1 a été déployée une fois puis
-rejetée dans #142 à cause du cold launch PWA #144. Le correctif #145 est
-intégré ; la Phase 7 prépare actuellement `1.0.0-rc.2` depuis
-`develop@465f927c6ed17dd7537bfa83d6fe11e9329825ea` via le journal #147.
+rejetée dans #142 à cause du cold launch PWA #144. Le correctif #145, le
+correctif navigation/focus #151/#152 et la stabilisation de preuve WebKit
+#149/#150 sont intégrés ; la Phase 7 prépare actuellement `1.0.0-rc.2` sur
+`develop@e1921f5807292f8236e70c1688d8d9f02c22bdf0` via le journal #147.
 
 Pour reprendre le travail, vérifier d’abord les HEAD réels de `main` et
 `develop`, l’état de #147, de la PR draft RC2 et de la CI. #146 reste le gate

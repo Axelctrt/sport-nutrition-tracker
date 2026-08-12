@@ -2,8 +2,8 @@
 
 ## Situation de la candidate 1.0.0-rc.2
 
-`1.0.0-rc.2` est préparée depuis
-`develop@465f927c6ed17dd7537bfa83d6fe11e9329825ea`. Elle n'est ni fusionnée, ni
+`1.0.0-rc.2` est préparée sur la base technique avant gel
+`develop@e1921f5807292f8236e70c1688d8d9f02c22bdf0`. Elle n'est ni fusionnée, ni
 déployée, ni taguée, ni publiée. Aucun retour arrière de production n'est donc
 déclenché par cette candidate ; la référence opérationnelle reste `0.37.0`.
 

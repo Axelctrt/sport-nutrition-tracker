@@ -4,7 +4,8 @@ Statut : candidate RC2 en préparation sur `develop`, non fusionnée, non
 déployée et non publiée.
 
 - Branche : `codex/rc-1-0-0-rc2`.
-- Base vérifiée : `develop@465f927c6ed17dd7537bfa83d6fe11e9329825ea`.
+- Base technique avant gel :
+  `develop@e1921f5807292f8236e70c1688d8d9f02c22bdf0`.
 - Journal de préparation et de recette : #147.
 - Stable de référence : `0.37.0` au commit
   `84fea3d49e68c7d190c00d505502a5c4aa2e672a`.
@@ -25,9 +26,13 @@ Preview RC1 n'a été créée.
 Le correctif a ensuite été intégré par la PR #145 dans
 `develop@465f927c6ed17dd7537bfa83d6fe11e9329825ea`. RC2 reprend le périmètre
 fonctionnel V1 déjà audité et y ajoute ce correctif ainsi qu'une preuve
-automatisée obligatoire du cold launch hors ligne.
+automatisée obligatoire du cold launch hors ligne. Sa base technique a ensuite
+intégré le correctif de navigation/focus #151/#152 et la stabilisation de preuve
+WebKit Progress Photos #149/#150, sans réécrire l'historique RC1.
 
-## Fix principal depuis RC1
+## Correctifs et preuves ajoutés depuis RC1
+
+### Cold launch PWA — #144/#145
 
 - Le Dashboard dépendait de chunks de services Analytics exclus du précache.
 - L'exclusion générique `**/analytics*.js` a été retirée de `globIgnores`.
@@ -42,6 +47,23 @@ automatisée obligatoire du cold launch hors ligne.
 
 Cette préparation RC2 ne réécrit pas le correctif PWA et ne modifie ni le
 Dashboard, ni Analytics, ni Workbox.
+
+### Navigation et focus — #151/#152
+
+- Le correctif produit préserve le focus réellement acquis par l'utilisateur
+  après une navigation au lieu de le remplacer tardivement par `main-content`.
+- Les callbacks double-frame devenus obsolètes sont annulés ; le transfert vers
+  `main-content` reste conservé lorsqu'aucun nouveau focus n'a été acquis.
+- Le correctif est intégré dans `develop` au squash
+  `2d87ef9ddbf1d667c54229093b0895e948e6c73d`.
+
+### Preuve WebKit Progress Photos — #149/#150
+
+- La preuve E2E conserve le geste réel `50` → `ArrowRight` → `51` et vérifie
+  explicitement le focus du slider avant l'action clavier.
+- Cette stabilisation test-only est intégrée dans `develop` au squash
+  `e1921f5807292f8236e70c1688d8d9f02c22bdf0` ; elle ne modifie aucun
+  comportement Progress Photos.
 
 ## Périmètre fonctionnel conservé
 

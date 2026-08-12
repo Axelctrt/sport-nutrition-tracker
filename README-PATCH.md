@@ -2,7 +2,8 @@
 
 Branche : `codex/rc-1-0-0-rc2`
 
-Base : `origin/develop` au commit `465f927c6ed17dd7537bfa83d6fe11e9329825ea`.
+Base technique avant gel : `origin/develop` au commit
+`e1921f5807292f8236e70c1688d8d9f02c22bdf0`.
 
 Cette branche contient uniquement l’alignement de version, les contrôles et la
 documentation nécessaires à RC2. Le correctif PWA #145 est déjà intégré dans
