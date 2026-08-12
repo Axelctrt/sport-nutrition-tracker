@@ -10,12 +10,32 @@ interface ScrollLocationState {
 }
 
 
-function runAfterPaint(callback: () => void): void {
+function runAfterPaint(callback: () => void): () => void {
   if (typeof window.requestAnimationFrame === 'function') {
-    window.requestAnimationFrame(() => window.requestAnimationFrame(callback));
-    return;
+    let secondFrame: number | undefined;
+    let cancelled = false;
+    const firstFrame = window.requestAnimationFrame(() => {
+      if (cancelled) return;
+      secondFrame = window.requestAnimationFrame(() => {
+        if (!cancelled) callback();
+      });
+    });
+    return () => {
+      cancelled = true;
+      window.cancelAnimationFrame(firstFrame);
+      if (secondFrame !== undefined) window.cancelAnimationFrame(secondFrame);
+    };
   }
-  window.setTimeout(callback, 0);
+  const timeout = window.setTimeout(callback, 0);
+  return () => window.clearTimeout(timeout);
+}
+
+function hasNewIntentionalFocus(previouslyFocused: Element | null): boolean {
+  const currentlyFocused = document.activeElement;
+  return currentlyFocused !== previouslyFocused
+    && currentlyFocused !== null
+    && currentlyFocused !== document.body
+    && currentlyFocused !== document.documentElement;
 }
 
 export function NavigationScrollManager() {
@@ -47,15 +67,17 @@ export function NavigationScrollManager() {
         ? getScrollPosition(location.key) ?? 0
         : 0;
 
-    runAfterPaint(() => {
+    const focusedAtNavigation = document.activeElement;
+    const cancelAfterPaint = runAfterPaint(() => {
       window.scrollTo({ top: target, behavior: 'instant' });
-      if (navigationType === 'PUSH') {
+      if (navigationType === 'PUSH' && !hasNewIntentionalFocus(focusedAtNavigation)) {
         document.getElementById('main-content')?.focus({
           preventScroll: true,
         });
       }
     });
     previousLocationRef.current = location;
+    return cancelAfterPaint;
   }, [location, navigationType]);
 
   useEffect(() => () => {
