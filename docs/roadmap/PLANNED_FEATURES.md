@@ -6,8 +6,11 @@ de développement, fusion ou déploiement.
 
 Statut courant : les Phases 0 à 5 et les lots de convergence sont terminés,
 la Phase 6 conditionnelle n'a pas été requise et la Phase 7 prépare
-`1.0.0-rc.1` depuis
-`develop@3eff34a73cc40d98d3de2ab947ac8b45bfae5f01`.
+`1.0.0-rc.2` sur la base technique avant gel
+`develop@e1921f5807292f8236e70c1688d8d9f02c22bdf0`. RC1 a été rejetée dans
+#142 ; le correctif PWA #145, le correctif navigation/focus #151/#152 et la
+stabilisation de preuve WebKit #149/#150 sont intégrés. #146 reste le gate CORS
+de la future recette Preview.
 
 ## Publié — SportPilot 0.37.0
 

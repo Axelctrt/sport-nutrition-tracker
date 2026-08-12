@@ -33,13 +33,16 @@ preuves de livraison.
 ## Reprise du travail courant
 
 La cible stratégique est SportPilot `1.0.0`. Les Phases 0 à 5 et les lots de
-convergence sont terminés ; #63 est clôturée. La Phase 7 prépare actuellement
-la candidate `1.0.0-rc.1` depuis
-`develop@3eff34a73cc40d98d3de2ab947ac8b45bfae5f01` via l'issue #139.
+convergence sont terminés ; #63 est clôturée. RC1 a été déployée une fois puis
+rejetée dans #142 à cause du cold launch PWA #144. Le correctif #145, le
+correctif navigation/focus #151/#152 et la stabilisation de preuve WebKit
+#149/#150 sont intégrés ; la Phase 7 prépare actuellement `1.0.0-rc.2` sur
+`develop@e1921f5807292f8236e70c1688d8d9f02c22bdf0` via le journal #147.
 
 Pour reprendre le travail, vérifier d’abord les HEAD réels de `main` et
-`develop`, l’état de l'issue #139, de la PR draft RC et de la CI. Une ancienne
-conversation ou un SHA inscrit ici ne remplace jamais cette vérification.
+`develop`, l’état de #147, de la PR draft RC2 et de la CI. #146 reste le gate
+CORS de la future recette compte/synchronisation. Une ancienne conversation ou
+un SHA inscrit ici ne remplace jamais cette vérification.
 
 La préparation RC n'autorise aucun nouveau développement fonctionnel, aucune
 Preview Cloudflare, fusion, action sur `main`, création de tag, release ou

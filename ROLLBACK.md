@@ -1,11 +1,16 @@
 # Retour arrière - SportPilot 0.37.0
 
-## Situation de la candidate 1.0.0-rc.1
+## Situation de la candidate 1.0.0-rc.2
 
-`1.0.0-rc.1` est seulement préparée depuis `develop` au commit
-`3eff34a73cc40d98d3de2ab947ac8b45bfae5f01`. Elle n'est ni fusionnée dans
-`develop`, ni taguée, ni publiée. Aucun retour arrière de production n'est donc
+`1.0.0-rc.2` est préparée sur la base technique avant gel
+`develop@e1921f5807292f8236e70c1688d8d9f02c22bdf0`. Elle n'est ni fusionnée, ni
+déployée, ni taguée, ni publiée. Aucun retour arrière de production n'est donc
 déclenché par cette candidate ; la référence opérationnelle reste `0.37.0`.
+
+RC1 (`1.0.0-rc.1`) a été déployée une seule fois depuis
+`2fd781087a65e125b0e77edcd53d41fdf82922ed`, puis rejetée pour le blocker PWA
+#144. Son correctif #145 est intégré dans la base RC2. RC1 n'a jamais remplacé
+la production et ne doit pas être redéployée.
 
 SportPilot 0.37.0 est la version actuellement publiée en production depuis
 `main` au commit :

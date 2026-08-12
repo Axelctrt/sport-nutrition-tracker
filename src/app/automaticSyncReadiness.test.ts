@@ -41,7 +41,7 @@ function snapshot(): SyncPrototypeSnapshot {
 
 describe('préparation F2 de la synchronisation automatique', () => {
   it('conserve les versions de stockage publiées', () => {
-    expect(__APP_VERSION__).toBe('1.0.0-rc.1');
+    expect(__APP_VERSION__).toBe('1.0.0-rc.2');
     expect(databaseSchemaVersion).toBe(12);
     expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(10);
     expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(16);

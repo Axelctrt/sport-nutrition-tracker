@@ -1,9 +1,10 @@
-# SportPilot 1.0.0-rc.1
+# SportPilot 1.0.0-rc.2
 
-SportPilot `1.0.0-rc.1` est la candidate V1 préparée depuis `develop` au
-commit `3eff34a73cc40d98d3de2ab947ac8b45bfae5f01`. Elle n'est ni fusionnée,
-ni taguée, ni publiée. La production reste SportPilot `0.37.0`, issue de la
-PR #21 au commit `84fea3d49e68c7d190c00d505502a5c4aa2e672a`.
+SportPilot `1.0.0-rc.2` est la candidate V1 préparée sur la base technique avant
+gel `develop@e1921f5807292f8236e70c1688d8d9f02c22bdf0`. Cette préparation n'est ni
+fusionnée, ni déployée, ni taguée, ni publiée. La production reste SportPilot
+`0.37.0`, issue de la PR #21 au commit
+`84fea3d49e68c7d190c00d505502a5c4aa2e672a`.
 
 - Production : `https://sportpilot-pages.pages.dev`
 - Tag annoté : `v0.37.0`
@@ -14,14 +15,20 @@ PR #21 au commit `84fea3d49e68c7d190c00d505502a5c4aa2e672a`.
 L’application reste mobile-first, local-first, utilisable hors ligne et
 installable en PWA.
 
-## Candidate V1 depuis 0.37.0
+## Candidate RC2 depuis 0.37.0
 
 - convergence mobile et desktop des hubs Sport, Nutrition et Progression ;
 - continuité des saisies non enregistrées sur les surfaces critiques ;
 - feedbacks d'action, états filtrés et parcours clavier/focus harmonisés ;
 - comportement réduit des animations et stabilisation Chromium/WebKit/iPhone ;
 - contrôles de continuité, d'isolation, d'export/restauration et de rétention PWA renforcés ;
+- correctif du cold launch PWA hors ligne et preuve automatisée réelle ;
 - version candidate et documentation de release alignées sans évolution de schéma.
+
+RC1 a été déployée une seule fois puis rejetée à cause du cold launch PWA
+suivi par #144. Le correctif #145 est inclus dans la base de RC2. Le CORS Dexie
+Cloud #146 reste un gate de la future recette Preview, sans mutation incluse
+dans cette préparation.
 
 ## Socle stable 0.37.0 conservé
 
@@ -58,7 +65,7 @@ ultérieure.
 
 ## Stockage et versions techniques
 
-- Application candidate : `1.0.0-rc.1`.
+- Application candidate : `1.0.0-rc.2`.
 - Application actuellement en production : `0.37.0`.
 - AppDatabase locale : Dexie v12, migration additive.
 - Sauvegarde JSON générale : v10.
@@ -89,4 +96,6 @@ synthétique dans [`CHANGELOG.md`](CHANGELOG.md) et les preuves de préparation
 dans les documents d’archive, notamment
 [`RELEASE-NOTES-0.37.0.md`](RELEASE-NOTES-0.37.0.md). Les changements de la
 candidate sont synthétisés dans
+[`RELEASE-NOTES-1.0.0-rc.2.md`](RELEASE-NOTES-1.0.0-rc.2.md). Le verdict
+historique rejeté de RC1 reste archivé dans
 [`RELEASE-NOTES-1.0.0-rc.1.md`](RELEASE-NOTES-1.0.0-rc.1.md).

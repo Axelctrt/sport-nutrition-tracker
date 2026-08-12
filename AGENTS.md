@@ -20,8 +20,13 @@ pas une description automatiquement actuelle.
   `develop@eec97bf9ac776b519d051329551836853894fd82`.
 - Source de vérité après clôture du Lot 8 et de l'issue #63 :
   `develop@3eff34a73cc40d98d3de2ab947ac8b45bfae5f01`.
-- Candidate en préparation : SportPilot `1.0.0-rc.1`, sans Preview, fusion,
-  tag, release ni déploiement autorisé par cette préparation.
+- RC1 historique : `1.0.0-rc.1` au SHA
+  `2fd781087a65e125b0e77edcd53d41fdf82922ed`, déployée une fois puis rejetée
+  pour le blocker PWA #144.
+- Candidate en préparation : SportPilot `1.0.0-rc.2`, réalignée sur la base
+  technique avant gel
+  `develop@e1921f5807292f8236e70c1688d8d9f02c22bdf0`, sans Preview, fusion, tag,
+  release ni déploiement autorisé par cette préparation.
 - Architecture : `src/domain`, `src/application`, `src/infrastructure`,
   `src/features`, `src/app`, `src/shared` et `src/pwa`.
 - Stockage principal local : Dexie `AppDatabase`, version 12.
@@ -44,7 +49,9 @@ entre le programme de cohérence globale et la décision de readiness V1.
 Les Phases 0 à 5 et les lots de convergence validés sont terminés. La Phase 6
 conditionnelle n'a pas été requise : aucun défaut V1 critique ou significatif
 reproductible ne restait dans le périmètre #63. La Phase 7 prépare maintenant
-`1.0.0-rc.1` depuis le HEAD final de `develop`, avec gel fonctionnel.
+`1.0.0-rc.2` depuis le HEAD de `develop` qui intègre le correctif PWA #145.
+RC1 reste rejetée. #146 est le gate CORS de la future recette Preview et #141
+reste le gate avant la stable.
 
 Toute Preview Cloudflare, fusion, modification de `main`, création de tag,
 release GitHub ou mise en production demeure une gate séparée nécessitant une
@@ -52,8 +59,8 @@ autorisation explicite.
 
 Lire en priorité
 [`docs/roadmap/V1_READINESS_PLAN.md`](docs/roadmap/V1_READINESS_PLAN.md),
-[`docs/roadmap/ROADMAP.md`](docs/roadmap/ROADMAP.md), l’issue #63 clôturée et
-l'issue RC #139.
+[`docs/roadmap/ROADMAP.md`](docs/roadmap/ROADMAP.md), l’issue #63 clôturée,
+l'archive RC1 #142 et le journal RC2 #147.
 
 L’audit doit distinguer défaut, risque, dette, recommandation UX, option et
 surface conforme. Les recommandations qui changent réellement le produit

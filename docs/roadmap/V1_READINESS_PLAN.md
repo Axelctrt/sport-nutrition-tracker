@@ -1,6 +1,6 @@
 # Trajectoire de cohérence globale et readiness V1
 
-Statut : **Phase 7 — candidate `1.0.0-rc.1` en préparation**. Les Phases 0 à 5
+Statut : **Phase 7 — candidate `1.0.0-rc.2` en préparation**. Les Phases 0 à 5
 et les lots de convergence sont terminés ; la Phase 6 conditionnelle n'a pas
 été requise. Ce document n’autorise pas automatiquement les développements,
 Previews, fusions, releases ou déploiements qu’il décrit.
@@ -41,7 +41,16 @@ fonctions non essentielles ou non cadrées sont reportées au cycle post-V1.
 - `develop` après le Lot 8 et la preuve transverse finale :
   `3eff34a73cc40d98d3de2ab947ac8b45bfae5f01` ;
 - audit parent : issue #63, clôturée en `completed` ;
-- préparation RC : issue #139 ;
+- RC1 rejetée : issue #142 ;
+- base RC2 après correctif PWA #145 :
+  `develop@465f927c6ed17dd7537bfa83d6fe11e9329825ea` ;
+- correctif navigation/focus #151/#152 :
+  `develop@2d87ef9ddbf1d667c54229093b0895e948e6c73d` ;
+- stabilisation de preuve WebKit Progress Photos #149/#150 et base technique
+  avant gel RC2 :
+  `develop@e1921f5807292f8236e70c1688d8d9f02c22bdf0` ;
+- préparation et recette RC2 : issue #147 ;
+- gate CORS de la future Preview : issue #146 ;
 - contrats :
   - [`../product/UX_GUIDELINES.md`](../product/UX_GUIDELINES.md) ;
   - [`../product/DESIGN_SYSTEM.md`](../product/DESIGN_SYSTEM.md) ;
@@ -50,8 +59,9 @@ fonctions non essentielles ou non cadrées sont reportées au cycle post-V1.
   - [`../quality/TEST_STRATEGY.md`](../quality/TEST_STRATEGY.md) ;
   - [`../quality/RELEASE_PROCESS.md`](../quality/RELEASE_PROCESS.md).
 
-La base exacte de chaque phase doit être revérifiée. La préparation RC utilise
-le SHA final ci-dessus comme source de vérité, après revérification GitHub.
+La base exacte de chaque phase doit être revérifiée. RC1 reste historiquement
+rejetée ; la préparation RC2 utilise désormais le SHA `e1921f58…` ci-dessus
+après revérification GitHub.
 
 ## Phase 0 — Réconciliation documentaire
 
@@ -291,7 +301,13 @@ readiness. Aucun nouveau besoin, redesign ou élargissement fonctionnel.
 
 ## Phase 7 — Release Candidate V1
 
-Statut courant : **en préparation sur `codex/rc-1-0-0-rc1`**.
+Statut courant : **RC2 en préparation sur `codex/rc-1-0-0-rc2`**.
+
+RC1 a été déployée une seule fois puis rejetée pour le cold launch PWA #144.
+Le correctif PWA #145 et son E2E dédié, le correctif produit de préservation du
+focus #151/#152 et la stabilisation de preuve WebKit Progress Photos #149/#150
+sont intégrés dans la base RC2. #146 reste un gate de la future recette
+Preview ; #141 reste un gate avant la stable.
 
 - gel fonctionnel ;
 - version candidate ;
@@ -330,12 +346,12 @@ Seulement après publication et bilan de la V1 :
 
 ## Reprise par une prochaine conversation ou un agent
 
-1. vérifier l’état réel de `develop`, de l’issue RC #139 et de la PR draft ;
+1. vérifier l’état réel de `develop`, du journal RC2 #147 et de la PR draft ;
 2. lire ce document, `ROADMAP.md`, `AGENTS.md`, les guides UX et design system ;
 3. ne pas utiliser une ancienne conversation comme seule source ;
 4. conserver la production `0.37.0` distincte de la candidate ;
 5. vérifier tests, audits, versions de données et CI sur le HEAD exact ;
-6. conserver #103, #136, #137 et #138 hors de la candidate ;
+6. conserver #103, #136, #137, #138, #141 et #146 hors du diff fonctionnel ;
 7. attendre une validation explicite avant Preview, fusion ou publication.
 
 ## Garde-fous
