@@ -72,6 +72,7 @@ afterEach(() => {
   resetWeeklyMissionHistoryRuntimeForTests();
   resetRoutineReminderCompletionRuntimeForTests();
   window.localStorage.clear();
+  window.sessionStorage.clear();
   cleanup();
   vi.clearAllTimers();
   vi.useRealTimers();
