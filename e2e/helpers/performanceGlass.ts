@@ -498,7 +498,7 @@ export async function setVisualThemeState(
 
   await persistVisualThemeState();
 
-  const readPersistedVisualThemeState = () => page.evaluate(async ({
+  const readPersistedAppearance = () => page.evaluate(async ({
     databaseName,
     visualThemeStorageKey,
     visualThemeBootStorageKey,
@@ -573,21 +573,31 @@ export async function setVisualThemeState(
 
   let consecutiveMatches = 0;
   await expect.poll(async () => {
-    const persistedState = await readPersistedVisualThemeState();
-    if (JSON.stringify(persistedState) === JSON.stringify(expectedPersistedState)) {
+    const persistedAppearance = await readPersistedAppearance();
+    const appearanceDiverged =
+      persistedAppearance.localAppearance !== appearance
+      || persistedAppearance.deviceAppearance !== appearance;
+    const visualThemeDiverged =
+      persistedAppearance.bootTheme !== activeThemeId
+      || persistedAppearance.hasLegacyTheme !== (pendingRevealThemeId !== undefined)
+      || persistedAppearance.preferenceActiveTheme !== activeThemeId
+      || JSON.stringify(persistedAppearance.unlockedThemeIds)
+        !== JSON.stringify(expectedPersistedState.unlockedThemeIds);
+
+    if (!appearanceDiverged && !visualThemeDiverged) {
       consecutiveMatches += 1;
     } else {
       consecutiveMatches = 0;
       await persistVisualThemeState();
     }
 
-    return { persistedState, consecutiveMatches };
+    return { persistedAppearance, consecutiveMatches };
   }, {
     timeout: 30_000,
     intervals: [100, 250, 500],
     message: 'Le thème visuel doit être durablement persisté dans localStorage, IndexedDB et deviceSettings avant le redémarrage applicatif.',
   }).toEqual({
-    persistedState: expectedPersistedState,
+    persistedAppearance: expectedPersistedState,
     consecutiveMatches: 3,
   });
 }
