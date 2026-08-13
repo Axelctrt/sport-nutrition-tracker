@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
@@ -465,38 +465,66 @@ describe('FriendsPrivacyPage', () => {
   });
 
   it('ignore une réponse de disponibilité obsolète', async () => {
-    const user = userEvent.setup();
-    const lookupByHandle: SocialUserLookupGateway['lookupByHandle'] = vi.fn(async (handle) => {
-      await new Promise((resolve) => window.setTimeout(resolve, handle === 'premier.handle' ? 700 : 10));
-      if (handle === 'premier.handle') {
-        return {
-          status: 'found' as const,
+    vi.useFakeTimers();
+    type LookupResult = Awaited<ReturnType<SocialUserLookupGateway['lookupByHandle']>>;
+    const pendingLookups = new Map<string, {
+      readonly promise: Promise<LookupResult>;
+      readonly resolve: (result: LookupResult) => void;
+    }>();
+    const lookupByHandle: SocialUserLookupGateway['lookupByHandle'] = vi.fn((handle) => {
+      let resolveLookup!: (result: LookupResult) => void;
+      const promise = new Promise<LookupResult>((resolve) => {
+        resolveLookup = resolve;
+      });
+      pendingLookups.set(handle, { promise, resolve: resolveLookup });
+      return promise;
+    });
+    try {
+      renderPage({ lookupGateway: { lookupByHandle } });
+      fireEvent.click(screen.getByRole('button', { name: 'Mon profil social' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Modifier le profil public' }));
+
+      const input = screen.getByLabelText('Identifiant public');
+      fireEvent.change(input, { target: { value: '@premier.handle' } });
+      await act(async () => {
+        vi.advanceTimersByTime(350);
+      });
+      expect(lookupByHandle).toHaveBeenCalledWith('premier.handle');
+
+      fireEvent.change(input, { target: { value: '@second.handle' } });
+      await act(async () => {
+        vi.advanceTimersByTime(350);
+      });
+      expect(lookupByHandle).toHaveBeenCalledWith('second.handle');
+
+      const secondLookup = pendingLookups.get('second.handle');
+      expect(secondLookup).toBeDefined();
+      await act(async () => {
+        secondLookup?.resolve({ status: 'notFound' });
+        await secondLookup?.promise;
+      });
+      expect(screen.getByText('Identifiant disponible.')).toBeInTheDocument();
+
+      const firstLookup = pendingLookups.get('premier.handle');
+      expect(firstLookup).toBeDefined();
+      await act(async () => {
+        firstLookup?.resolve({
+          status: 'found',
           profile: {
             userId: 'social-user:other' as EntityId,
-            handle,
+            handle: 'premier.handle',
             displayName: 'Autre compte',
             createdAt: '2026-07-01T10:00:00.000Z',
             updatedAt: '2026-07-01T10:00:00.000Z',
           },
-        };
-      }
-      return { status: 'notFound' as const };
-    });
-    renderPage({ lookupGateway: { lookupByHandle } });
-    await user.click(screen.getByRole('button', { name: 'Mon profil social' }));
-    await user.click(screen.getByRole('button', { name: 'Modifier le profil public' }));
-
-    const input = screen.getByLabelText('Identifiant public');
-    await user.clear(input);
-    await user.type(input, '@premier.handle');
-    await waitFor(() => expect(lookupByHandle).toHaveBeenCalledWith('premier.handle'));
-    await user.clear(input);
-    await user.type(input, '@second.handle');
-
-    expect(await screen.findByText('Identifiant disponible.')).toBeInTheDocument();
-    await new Promise((resolve) => window.setTimeout(resolve, 750));
-    expect(screen.getByText('Identifiant disponible.')).toBeInTheDocument();
-    expect(screen.queryByText(/déjà pris/u)).not.toBeInTheDocument();
+        });
+        await firstLookup?.promise;
+      });
+      expect(screen.getByText('Identifiant disponible.')).toBeInTheDocument();
+      expect(screen.queryByText(/déjà pris/u)).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   }, 3_000);
 
   it('bloque seulement un identifiant modifié non valide ou non confirmé', async () => {
