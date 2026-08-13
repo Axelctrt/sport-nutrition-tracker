@@ -30,29 +30,39 @@ test('édite le profil social depuis sa carte en lecture seule et restaure le fo
   await editProfile.click();
   const editor = page.getByRole('dialog', { name: 'Modifier le profil public' });
   const handle = page.getByRole('textbox', { name: 'Identifiant public' });
-  const copyButton = page.getByRole('button', { name: 'Copier l’identifiant public' });
+  const copyButton = handle.locator('xpath=..').getByRole('button', { name: 'Copier l’identifiant public' });
   const status = page.locator('#social-handle-status');
   await expect(editor).toBeVisible();
   await expect(page.locator('.sp-bottom-sheet-backdrop')).toHaveClass(/backdrop-blur/);
   await expect(handle).toBeFocused();
   await expect(page.getByRole('button', { name: 'Enregistrer' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Annuler' })).toBeVisible();
-  await expect(handle.locator('xpath=..').getByRole('button', { name: 'Copier l’identifiant public' })).toBeVisible();
+  await expect(copyButton).toBeVisible();
   await expect(status).toBeVisible();
   await expect(status).toHaveText(/Identifiant actuel/);
 
-  const inputBox = await handle.boundingBox();
-  const copyBox = await copyButton.boundingBox();
-  const statusBox = await status.boundingBox();
-  expect(inputBox).not.toBeNull();
-  expect(copyBox).not.toBeNull();
-  expect(statusBox).not.toBeNull();
-  if (!inputBox || !copyBox || !statusBox) throw new Error('Les contrôles du profil social ne sont pas mesurables.');
-  expect(copyBox.x).toBeGreaterThanOrEqual(inputBox.x + inputBox.width - 1);
-  const inputBottom = inputBox.y + inputBox.height;
-  const statusCenter = statusBox.y + statusBox.height / 2;
+  const fieldGeometry = await handle.evaluate((input) => {
+    const fieldRow = input.parentElement;
+    const copy = fieldRow?.querySelector<HTMLElement>('[aria-label="Copier l’identifiant public"]');
+    const fieldStatus = document.querySelector<HTMLElement>('#social-handle-status');
+    if (!fieldRow || !copy || !fieldStatus) {
+      throw new Error('Les contrôles du profil social ne sont pas mesurables.');
+    }
+
+    const inputBox = input.getBoundingClientRect();
+    const fieldRowBox = fieldRow.getBoundingClientRect();
+    const copyBox = copy.getBoundingClientRect();
+    const statusBox = fieldStatus.getBoundingClientRect();
+    return {
+      inputRight: inputBox.right,
+      copyLeft: copyBox.left,
+      fieldRowBottom: fieldRowBox.bottom,
+      statusTop: statusBox.top,
+    };
+  });
   const subpixelTolerance = 0.5;
-  expect(statusCenter).toBeGreaterThanOrEqual(inputBottom - subpixelTolerance);
+  expect(fieldGeometry.copyLeft).toBeGreaterThanOrEqual(fieldGeometry.inputRight - subpixelTolerance);
+  expect(fieldGeometry.statusTop).toBeGreaterThanOrEqual(fieldGeometry.fieldRowBottom - subpixelTolerance);
 
   await page.screenshot({ path: testInfo.outputPath('profil-social-edition.png'), fullPage: true });
 
@@ -61,6 +71,7 @@ test('édite le profil social depuis sa carte en lecture seule et restaure le fo
   await expect(editProfile).toBeFocused();
 
   await editProfile.click();
+  await expect(handle).toBeFocused();
   const displayName = page.getByLabel('Nom affiché');
   await displayName.fill('Profil social mobile');
   await page.getByRole('button', { name: 'Annuler' }).click();
@@ -74,6 +85,7 @@ test('édite le profil social depuis sa carte en lecture seule et restaure le fo
   await expect(editProfile).toBeFocused();
 
   await editProfile.click();
+  await expect(handle).toBeFocused();
   await page.getByLabel('Nom affiché').fill('Profil social enregistré');
   await page.getByRole('button', { name: 'Enregistrer' }).click();
   await expect(editor).toHaveCount(0);
