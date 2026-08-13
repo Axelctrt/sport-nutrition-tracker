@@ -53,6 +53,7 @@ async function prepareVisualApplication(
   targetUrl: string,
   pageOptions: VisualApplicationPageOptions = {},
 ): Promise<void> {
+  await page.goto('about:blank', { waitUntil: 'load' });
   await page.goto(`/visual-lab.html${bootstrapSearch}`, {
     waitUntil: 'domcontentloaded',
   });
