@@ -1,22 +1,23 @@
-SPORTPILOT 1.0.0-rc.2 - RELEASE CANDIDATE
+SPORTPILOT 1.0.0 - STABLE EN PREPARATION
 
 Checklist de validation :
 
-1. Verifier que la branche codex/rc-1-0-0-rc2 est realignee sur la base technique avant gel origin/develop au commit e1921f5807292f8236e70c1688d8d9f02c22bdf0.
-2. Verifier que package.json et package-lock.json indiquent 1.0.0-rc.2.
-3. Verifier que Parametres affiche 1.0.0-rc.2.
+1. Verifier que la branche codex/163-release-1-0-0 part de origin/develop au commit 13cef273d09d78eeb4d177ab23e86c7770748419.
+2. Verifier que package.json et package-lock.json indiquent 1.0.0.
+3. Verifier que Parametres affiche 1.0.0.
 4. Verifier qu'aucun ZIP, resultat Playwright, secret ou fichier genere n'est stage.
 5. Executer git diff --check.
 6. Executer npm run check.
 7. Executer npm run test:stability.
-8. Executer npm run test:e2e.
-9. Executer npm run test:e2e:pwa.
-10. Executer npm audit sans appliquer npm audit fix --force.
-11. Verifier que Dexie reste en v12, la sauvegarde JSON en v10 et que les restaurations restent compatibles.
-12. Verifier Chromium, WebKit iPhone 15 et le fonctionnement PWA hors ligne.
-13. Pousser uniquement la branche release apres validation.
-14. Creer une PR brouillon vers develop ; la publication develop vers main reste une etape separee.
-15. Ne lancer une Preview isolee qu'apres une autorisation explicite separee.
-16. Apres creation autorisee de la Preview, obtenir une autorisation distincte avant d'ajouter son origine exacte a la whitelist Dexie Cloud selon #146.
+8. Executer npm run audit:stable puis npm run audit:production.
+9. Executer npm run release:verify.
+10. Executer npm run test:e2e.
+11. Executer npm run test:e2e:pwa.
+12. Executer npm audit --json sans appliquer npm audit fix ou --force.
+13. Verifier que Dexie reste en v12, la sauvegarde JSON en v10, le runtime cloud en v16, le registre espaces en v1 et le snapshot social en 0.29.0-a3.
+14. Verifier Chromium, WebKit iPhone 15 et le fonctionnement PWA hors ligne.
+15. Pousser uniquement la branche release apres validation.
+16. Creer une PR brouillon vers develop ; la publication develop vers main reste une etape separee.
+17. Ne lancer une Preview finale qu'apres une autorisation explicite separee.
 
-Ne pas lancer de Preview Cloudflare, modifier le CORS ou Dexie Cloud, fusionner, creer de tag, creer de release GitHub ou deployer en production sans accord explicite.
+Ne pas lancer de Preview Cloudflare, modifier le CORS ou Dexie Cloud, fusionner, modifier main, creer de tag, creer de release GitHub ou deployer en production sans accord explicite.

@@ -21,8 +21,12 @@ ni son déploiement.
 - stabilisation de preuve WebKit Progress Photos : #149/#150, intégrée dans la
   base technique avant gel
   `develop@e1921f5807292f8236e70c1688d8d9f02c22bdf0` ;
-- candidate en préparation : `1.0.0-rc.2`, journal #147 ;
-- gate de recette CORS Dexie Cloud : #146 ;
+- RC2 acceptée : `1.0.0-rc.2` au SHA gelé
+  `2554638a782f3be338b7323b95abc1078f65ef0b`, journal #147 ;
+- gate CORS Dexie Cloud #146 terminé en `completed` ;
+- gate sécurité #141 terminé au squash
+  `develop@13cef273d09d78eeb4d177ab23e86c7770748419`, résiduel suivi dans #162 ;
+- stable `1.0.0` en préparation via #163 ;
 - documents de détail :
   [`V1_READINESS_PLAN.md`](V1_READINESS_PLAN.md) et
   [`PLANNED_FEATURES.md`](PLANNED_FEATURES.md).
@@ -83,18 +87,19 @@ une candidate validée et une publication explicitement autorisée.
 | 4 — Convergence transverse | **Terminée** | inventaire final, exceptions justifiées et cohérence globale démontrée | rapport de convergence accepté |
 | 5 — Audit de readiness V1 | **Terminée** | décision V1 prête et dettes séparées | preuve transverse finale validée, #63 clôturée |
 | 6 — Corrections bloquantes V1 | **Non requise** | aucun blocage V1 critique ou significatif reproductible restant dans #63 | décision de readiness validée |
-| 7 — Release Candidate V1 | **En cours** | gel fonctionnel, version candidate, documentation et recette complète | validation propriétaire ; Preview séparément autorisée |
-| 8 — Publication SportPilot V1 | **Planifiée** | `1.0.0`, tag, release et production | contrôles post-déploiement validés |
+| 7 — Release Candidate V1 | **Terminée** | gel fonctionnel, RC2 déployée une seule fois et recette complète | RC2 acceptée dans #147 |
+| 8 — Publication SportPilot V1 | **En cours** | candidat stable `1.0.0`, Preview finale, `main`, tag, release et production | contrôles post-déploiement validés |
 | 9 — Cycle produit post-V1 | **Après V1 uniquement** | nouvelles fonctions et optimisations | nouveau cadrage explicite |
 
 ## Prochaine action immédiate
 
-1. réaligner la préparation `1.0.0-rc.2` sur la base technique avant gel
-   `develop@e1921f5807292f8236e70c1688d8d9f02c22bdf0` ;
-2. valider le diff documentaire et de plomberie de release ;
-3. exécuter les tests, audits et la CI GitHub Actions complète ;
-4. conserver #103, #136, #137, #138 et #141 comme dettes/gates séparés ;
-5. conserver #146 ouvert jusqu'à la future recette compte/synchronisation ;
+1. préparer `1.0.0` depuis
+   `develop@13cef273d09d78eeb4d177ab23e86c7770748419` via #163 ;
+2. valider le diff de version, de documentation et de contrats de release ;
+3. exécuter les tests, audits stables et la CI GitHub Actions complète ;
+4. conserver #103, #136, #137, #138 et #162 comme dettes séparées ;
+5. préserver #141 et #146 comme gates terminés, sans les rouvrir ni les
+   présenter comme des blockers ;
 6. arrêter avant toute Preview Cloudflare, fusion, action sur `main`, tag,
    release ou production.
 

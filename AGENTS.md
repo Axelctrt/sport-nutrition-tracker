@@ -23,10 +23,12 @@ pas une description automatiquement actuelle.
 - RC1 historique : `1.0.0-rc.1` au SHA
   `2fd781087a65e125b0e77edcd53d41fdf82922ed`, déployée une fois puis rejetée
   pour le blocker PWA #144.
-- Candidate en préparation : SportPilot `1.0.0-rc.2`, réalignée sur la base
-  technique avant gel
-  `develop@e1921f5807292f8236e70c1688d8d9f02c22bdf0`, sans Preview, fusion, tag,
-  release ni déploiement autorisé par cette préparation.
+- RC2 validée : SportPilot `1.0.0-rc.2` au SHA gelé
+  `2554638a782f3be338b7323b95abc1078f65ef0b`, déployée une seule fois puis
+  acceptée dans #147 ; #146 est terminée.
+- Candidate stable en préparation : SportPilot `1.0.0` depuis
+  `develop@13cef273d09d78eeb4d177ab23e86c7770748419`, après levée du gate
+  sécurité #141 ; #162 suit le résiduel Quagga/Sharp sans bloquer V1.
 - Architecture : `src/domain`, `src/application`, `src/infrastructure`,
   `src/features`, `src/app`, `src/shared` et `src/pwa`.
 - Stockage principal local : Dexie `AppDatabase`, version 12.
@@ -48,10 +50,11 @@ entre le programme de cohérence globale et la décision de readiness V1.
 
 Les Phases 0 à 5 et les lots de convergence validés sont terminés. La Phase 6
 conditionnelle n'a pas été requise : aucun défaut V1 critique ou significatif
-reproductible ne restait dans le périmètre #63. La Phase 7 prépare maintenant
-`1.0.0-rc.2` depuis le HEAD de `develop` qui intègre le correctif PWA #145.
-RC1 reste rejetée. #146 est le gate CORS de la future recette Preview et #141
-reste le gate avant la stable.
+reproductible ne restait dans le périmètre #63. La Phase 7 est terminée : RC1
+reste rejetée et RC2 a été acceptée. La Phase 8 prépare maintenant `1.0.0`
+depuis le HEAD de `develop` qui intègre les stabilisations post-RC2 et le gate
+sécurité #141. #146 et #141 sont fermées en `completed` ; #162 reste le suivi
+post-V1 non bloquant du résiduel Quagga/Sharp accepté.
 
 Toute Preview Cloudflare, fusion, modification de `main`, création de tag,
 release GitHub ou mise en production demeure une gate séparée nécessitant une

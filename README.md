@@ -1,8 +1,9 @@
-# SportPilot 1.0.0-rc.2
+# SportPilot 1.0.0
 
-SportPilot `1.0.0-rc.2` est la candidate V1 préparée sur la base technique avant
-gel `develop@e1921f5807292f8236e70c1688d8d9f02c22bdf0`. Cette préparation n'est ni
-fusionnée, ni déployée, ni taguée, ni publiée. La production reste SportPilot
+SportPilot `1.0.0` est la stable en préparation depuis
+`develop@13cef273d09d78eeb4d177ab23e86c7770748419`. Cette préparation n'est ni
+fusionnée, ni déployée, ni taguée, ni publiée ; `main` reste au SHA vérifié
+`9c5ed296dde93ca21b12228bb7f5945b5b9322d9`. La production reste SportPilot
 `0.37.0`, issue de la PR #21 au commit
 `84fea3d49e68c7d190c00d505502a5c4aa2e672a`.
 
@@ -15,7 +16,7 @@ fusionnée, ni déployée, ni taguée, ni publiée. La production reste SportPil
 L’application reste mobile-first, local-first, utilisable hors ligne et
 installable en PWA.
 
-## Candidate RC2 depuis 0.37.0
+## Stable V1 préparée depuis 0.37.0
 
 - convergence mobile et desktop des hubs Sport, Nutrition et Progression ;
 - continuité des saisies non enregistrées sur les surfaces critiques ;
@@ -23,12 +24,13 @@ installable en PWA.
 - comportement réduit des animations et stabilisation Chromium/WebKit/iPhone ;
 - contrôles de continuité, d'isolation, d'export/restauration et de rétention PWA renforcés ;
 - correctif du cold launch PWA hors ligne et preuve automatisée réelle ;
-- version candidate et documentation de release alignées sans évolution de schéma.
+- version stable et documentation de release alignées sans évolution de schéma.
 
 RC1 a été déployée une seule fois puis rejetée à cause du cold launch PWA
-suivi par #144. Le correctif #145 est inclus dans la base de RC2. Le CORS Dexie
-Cloud #146 reste un gate de la future recette Preview, sans mutation incluse
-dans cette préparation.
+suivi par #144. Le correctif #145 est inclus dans RC2, gelée au SHA
+`2554638a782f3be338b7323b95abc1078f65ef0b`, déployée une seule fois puis
+acceptée dans #147. #146 et le gate sécurité #141 sont terminés ; #162 suit le
+résiduel Quagga/Sharp accepté pour V1.
 
 ## Socle stable 0.37.0 conservé
 
@@ -65,7 +67,7 @@ ultérieure.
 
 ## Stockage et versions techniques
 
-- Application candidate : `1.0.0-rc.2`.
+- Application stable en préparation : `1.0.0`.
 - Application actuellement en production : `0.37.0`.
 - AppDatabase locale : Dexie v12, migration additive.
 - Sauvegarde JSON générale : v10.
@@ -74,17 +76,19 @@ ultérieure.
 - Migration D1 ajoutée par 0.37.0 : aucune.
 - Les photos et leurs actifs restent dans l’espace de données local ouvert.
 
-## Contrôles de la candidate
+## Contrôles de la stable
 
 ```text
 npm run check
 npm run test:stability
+npm run audit:stable
+npm run release:verify
 npm run test:e2e
 npm run test:e2e:pwa
 npm audit
 ```
 
-La préparation RC n'autorise aucune Preview Cloudflare, fusion, création de
+La préparation stable n'autorise aucune Preview Cloudflare, fusion, création de
 tag, release GitHub ou publication. Chacune de ces opérations reste soumise à
 une validation explicite ultérieure.
 
@@ -95,7 +99,9 @@ règles applicables aux agents sont dans [`AGENTS.md`](AGENTS.md), l’historiqu
 synthétique dans [`CHANGELOG.md`](CHANGELOG.md) et les preuves de préparation
 dans les documents d’archive, notamment
 [`RELEASE-NOTES-0.37.0.md`](RELEASE-NOTES-0.37.0.md). Les changements de la
-candidate sont synthétisés dans
+stable en préparation sont synthétisés dans
+[`RELEASE-NOTES-1.0.0.md`](RELEASE-NOTES-1.0.0.md). Les notes RC2 restent une
+archive de la candidate acceptée dans
 [`RELEASE-NOTES-1.0.0-rc.2.md`](RELEASE-NOTES-1.0.0-rc.2.md). Le verdict
 historique rejeté de RC1 reste archivé dans
 [`RELEASE-NOTES-1.0.0-rc.1.md`](RELEASE-NOTES-1.0.0-rc.1.md).

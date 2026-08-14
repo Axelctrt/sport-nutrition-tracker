@@ -1,8 +1,9 @@
 # Trajectoire de cohérence globale et readiness V1
 
-Statut : **Phase 7 — candidate `1.0.0-rc.2` en préparation**. Les Phases 0 à 5
-et les lots de convergence sont terminés ; la Phase 6 conditionnelle n'a pas
-été requise. Ce document n’autorise pas automatiquement les développements,
+Statut : **Phase 8 — stable `1.0.0` en préparation**. Les Phases 0 à 5 et les
+lots de convergence sont terminés ; la Phase 6 conditionnelle n'a pas été
+requise et la Phase 7 s'est achevée par l'acceptation de RC2. Ce document
+n’autorise pas automatiquement les développements,
 Previews, fusions, releases ou déploiements qu’il décrit.
 
 ## Objectif
@@ -49,8 +50,16 @@ fonctions non essentielles ou non cadrées sont reportées au cycle post-V1.
 - stabilisation de preuve WebKit Progress Photos #149/#150 et base technique
   avant gel RC2 :
   `develop@e1921f5807292f8236e70c1688d8d9f02c22bdf0` ;
-- préparation et recette RC2 : issue #147 ;
-- gate CORS de la future Preview : issue #146 ;
+- RC2 gelée et acceptée :
+  `2554638a782f3be338b7323b95abc1078f65ef0b`, issue #147 ;
+- gate CORS de la Preview RC2 : issue #146, fermée en `completed` ;
+- gate sécurité stable : issue #141, fermée en `completed` après #161 ;
+- suivi Quagga/Sharp post-V1 non bloquant : issue #162 ;
+- `develop` au début de la préparation stable :
+  `13cef273d09d78eeb4d177ab23e86c7770748419` ;
+- stabilisations post-RC2 intégrées : Friends #153/#154, isolation Vitest
+  #155/#156, thème WebKit #157/#158 et géométrie sociale #159/#160 ;
+- préparation stable : issue #163 ;
 - contrats :
   - [`../product/UX_GUIDELINES.md`](../product/UX_GUIDELINES.md) ;
   - [`../product/DESIGN_SYSTEM.md`](../product/DESIGN_SYSTEM.md) ;
@@ -60,8 +69,8 @@ fonctions non essentielles ou non cadrées sont reportées au cycle post-V1.
   - [`../quality/RELEASE_PROCESS.md`](../quality/RELEASE_PROCESS.md).
 
 La base exacte de chaque phase doit être revérifiée. RC1 reste historiquement
-rejetée ; la préparation RC2 utilise désormais le SHA `e1921f58…` ci-dessus
-après revérification GitHub.
+rejetée. RC2 reste l'archive acceptée au SHA `2554638a…`; la préparation stable
+utilise le SHA `13cef273…` ci-dessus après revérification GitHub.
 
 ## Phase 0 — Réconciliation documentaire
 
@@ -301,13 +310,14 @@ readiness. Aucun nouveau besoin, redesign ou élargissement fonctionnel.
 
 ## Phase 7 — Release Candidate V1
 
-Statut courant : **RC2 en préparation sur `codex/rc-1-0-0-rc2`**.
+Statut : **terminée — RC2 acceptée dans #147**.
 
 RC1 a été déployée une seule fois puis rejetée pour le cold launch PWA #144.
 Le correctif PWA #145 et son E2E dédié, le correctif produit de préservation du
 focus #151/#152 et la stabilisation de preuve WebKit Progress Photos #149/#150
-sont intégrés dans la base RC2. #146 reste un gate de la future recette
-Preview ; #141 reste un gate avant la stable.
+sont intégrés dans la base RC2. RC2 a été gelée au SHA
+`2554638a782f3be338b7323b95abc1078f65ef0b`, déployée une seule fois et
+acceptée après recette propriétaire. #146 est terminée.
 
 - gel fonctionnel ;
 - version candidate ;
@@ -319,11 +329,17 @@ Preview ; #141 reste un gate avant la stable.
 
 ## Phase 8 — Publication SportPilot V1
 
+Statut courant : **candidat stable `1.0.0` en préparation sur
+`codex/163-release-1-0-0` depuis
+`develop@13cef273d09d78eeb4d177ab23e86c7770748419`**. #141 est terminée ; le
+résiduel Quagga/Sharp accepté est suivi séparément dans #162.
+
 Actions séparément autorisées :
 
+- candidat stable et documentation ;
+- Preview finale ;
 - PR `develop` vers `main` ;
 - fusion ;
-- version `1.0.0` ;
 - tag `v1.0.0` ;
 - release GitHub ;
 - déploiement de production ;
@@ -346,13 +362,15 @@ Seulement après publication et bilan de la V1 :
 
 ## Reprise par une prochaine conversation ou un agent
 
-1. vérifier l’état réel de `develop`, du journal RC2 #147 et de la PR draft ;
+1. vérifier l’état réel de `develop`, de l'issue stable #163 et de la PR draft ;
 2. lire ce document, `ROADMAP.md`, `AGENTS.md`, les guides UX et design system ;
 3. ne pas utiliser une ancienne conversation comme seule source ;
 4. conserver la production `0.37.0` distincte de la candidate ;
 5. vérifier tests, audits, versions de données et CI sur le HEAD exact ;
-6. conserver #103, #136, #137, #138, #141 et #146 hors du diff fonctionnel ;
-7. attendre une validation explicite avant Preview, fusion ou publication.
+6. conserver #103, #136, #137, #138 et #162 hors du diff fonctionnel ;
+7. conserver #141 et #146 comme gates terminés, sans les présenter comme
+   blockers ouverts ;
+8. attendre une validation explicite avant Preview, fusion ou publication.
 
 ## Garde-fous
 

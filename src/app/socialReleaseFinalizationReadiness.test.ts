@@ -1,7 +1,7 @@
 import openFoodFactsProxySource from '@/../functions/_shared/openFoodFactsProxy.js?raw';
 import packageSource from '@/../package.json?raw';
 import releaseChecklistSource from '@/../RELEASE-CHECKLIST.md?raw';
-import releaseNotesSource from '@/../RELEASE-NOTES-1.0.0-rc.2.md?raw';
+import releaseNotesSource from '@/../RELEASE-NOTES-1.0.0.md?raw';
 import {
   SOCIAL_ACTIVITY_SNAPSHOT_CONTRACT_VERSION,
 } from '@/domain/friends/socialActivitySnapshotContract';
@@ -9,11 +9,11 @@ import { CURRENT_BACKUP_SCHEMA_VERSION } from '@/infrastructure/backup/backupMig
 import { databaseSchemaVersion } from '@/infrastructure/database/schema';
 import { SYNC_PROTOTYPE_DATABASE_VERSION } from '@/infrastructure/sync-prototype/SyncPrototypeDatabase';
 
-describe('release candidate readiness 1.0.0-rc.2', () => {
-  it('expose la version candidate dans le build et les métadonnées', () => {
-    expect(__APP_VERSION__).toBe('1.0.0-rc.2');
-    expect(packageSource).toContain('"version": "1.0.0-rc.2"');
-    // Le proxy publié reste sur la version stable tant que la RC n'est pas déployée.
+describe('stable readiness 1.0.0', () => {
+  it('expose la version stable dans le build et les métadonnées', () => {
+    expect(__APP_VERSION__).toBe('1.0.0');
+    expect(packageSource).toContain('"version": "1.0.0"');
+    // Le proxy publié reste sur la version courante tant que 1.0.0 n'est pas déployée.
     expect(openFoodFactsProxySource).toContain('SportPilot/0.37.0');
   });
 
@@ -24,11 +24,11 @@ describe('release candidate readiness 1.0.0-rc.2', () => {
     expect(SOCIAL_ACTIVITY_SNAPSHOT_CONTRACT_VERSION).toBe('0.29.0-a3');
   });
 
-  it('documente la branche de release sans annoncer de publication', () => {
-    expect(releaseNotesSource).toContain('SportPilot 1.0.0-rc.2');
-    expect(releaseNotesSource).toContain('Branche : `codex/rc-1-0-0-rc2`');
-    expect(releaseNotesSource).toContain('Aucun tag, aucune release GitHub, aucune Preview Cloudflare');
-    expect(releaseChecklistSource).toContain('SportPilot 1.0.0-rc.2');
+  it('documente la branche stable sans annoncer de publication', () => {
+    expect(releaseNotesSource).toContain('SportPilot 1.0.0 — stable en préparation');
+    expect(releaseNotesSource).toContain('Branche : `codex/163-release-1-0-0`');
+    expect(releaseNotesSource).toContain('non publiée, non taguée et non déployée');
+    expect(releaseChecklistSource).toContain('SportPilot 1.0.0');
     expect(releaseChecklistSource).toContain('Aucun tag créé');
   });
 
