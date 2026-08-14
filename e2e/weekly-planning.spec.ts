@@ -54,7 +54,10 @@ test('ouvre Prévoir en création et planifie une activité d’endurance', asyn
     name: 'Planifier une activité d’endurance',
   });
   await expect(enduranceDialog.getByLabel('Date prévue')).toHaveValue(today);
-  await enduranceDialog.getByLabel('Nom facultatif').fill('Footing Preview');
+  const titleInput = enduranceDialog.getByLabel('Nom facultatif');
+  await titleInput.click();
+  await titleInput.pressSequentially('Footing Preview');
+  await expect(titleInput).toHaveValue('Footing Preview');
   await enduranceDialog.getByRole('button', { name: 'Planifier l’activité' }).click();
 
   await expect(enduranceDialog).toBeHidden();
