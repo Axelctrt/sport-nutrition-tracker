@@ -13,8 +13,8 @@ describe('stable readiness 1.0.0', () => {
   it('expose la version stable dans le build et les métadonnées', () => {
     expect(__APP_VERSION__).toBe('1.0.0');
     expect(packageSource).toContain('"version": "1.0.0"');
-    // Le proxy publié reste sur la version courante tant que 1.0.0 n'est pas déployée.
-    expect(openFoodFactsProxySource).toContain('SportPilot/0.37.0');
+    // La Function candidate s'identifie avec la version stable préparée.
+    expect(openFoodFactsProxySource).toContain('SportPilot/1.0.0');
   });
 
   it('conserve les versions de stockage validées', () => {
