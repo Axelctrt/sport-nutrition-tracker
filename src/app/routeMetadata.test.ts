@@ -8,7 +8,6 @@ describe('getRouteTitle', () => {
     expect(getRouteTitle('/progression')).toBe('Progression');
     expect(getRouteTitle('/analytics')).toBe('Analyses');
     expect(getRouteTitle('/history')).toBe('Historique général');
-    expect(getRouteTitle('/strength/planning')).toBe('Planning de musculation');
     expect(getRouteTitle('/activities/templates')).toBe('Modèles d’endurance');
     expect(getRouteTitle('/settings/dashboard')).toBe('Affichage de l’Accueil');
     expect(getRouteTitle('/settings/sync-prototype')).toBe('Compte de synchronisation');
@@ -22,6 +21,17 @@ describe('getRouteTitle', () => {
     expect(getRouteTitle('/friends')).toBe('Amis et confidentialité');
     expect(getRouteTitle('/backup/trash')).toBe('Corbeille');
     expect(getRouteTitle('/privacy')).toBe('Confidentialité');
+  });
+
+  it('distingue l’objectif nutritionnel des objectifs de progression', () => {
+    expect(getRouteTitle('/settings/profile-objectives')).toBe(
+      'Profil et objectif nutritionnel',
+    );
+    expect(getRouteTitle('/goals')).toBe('Objectifs de progression');
+  });
+
+  it('conserve la route historique avec le libellé Planning sportif', () => {
+    expect(getRouteTitle('/strength/planning')).toBe('Planning sportif');
   });
 
   it('utilise le nom de l’application comme repli', () => {

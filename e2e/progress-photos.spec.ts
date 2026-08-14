@@ -79,6 +79,60 @@ async function addPhoto(
   await expect(page.getByText(countLabel, { exact: false })).toBeVisible();
 }
 
+async function navigateToProgression(page: Page): Promise<void> {
+  const desktopBackLink = page.getByRole('link', {
+    name: 'Retour à la progression',
+  });
+  if (await desktopBackLink.isVisible()) {
+    await desktopBackLink.click();
+    return;
+  }
+  await page.getByRole('link', { name: 'Progression', exact: true }).first().click();
+}
+
+test('protège une saisie non enregistrée puis désarme la protection après sauvegarde', async ({
+  page,
+}) => {
+  await createLocalProfile(page, 'Guard photo');
+  await page.goto('/#/progression/photos');
+
+  await navigateToProgression(page);
+  await expect(page).toHaveURL(/#\/progression$/);
+  await expect(page.getByRole('alertdialog')).toHaveCount(0);
+
+  await page.goto('/#/progression/photos');
+  await page.getByTestId('progress-photo-input').setInputFiles({
+    name: 'progress-photo-guard.jpg',
+    mimeType: 'image/jpeg',
+    buffer: TEST_JPEG,
+  });
+  await page.getByLabel(/Note/).fill('Saisie à conserver.');
+
+  await navigateToProgression(page);
+  const guardDialog = page.getByRole('alertdialog', {
+    name: 'Quitter sans enregistrer ?',
+  });
+  await expect(guardDialog).toBeVisible();
+  await guardDialog.getByRole('button', { name: 'Continuer la modification' }).click();
+  await expect(page).toHaveURL(/#\/progression\/photos$/);
+  await expect(page.getByText('progress-photo-guard.jpg')).toBeVisible();
+  await expect(page.getByLabel(/Note/)).toHaveValue('Saisie à conserver.');
+
+  await navigateToProgression(page);
+  await guardDialog.getByRole('button', { name: 'Quitter' }).click();
+  await expect(page).toHaveURL(/#\/progression$/);
+
+  await page.goto('/#/progression/photos');
+  await addPhoto(page, {
+    date: await getBrowserLocalDate(page),
+    note: 'Saisie enregistrée.',
+    expectedCount: 1,
+  });
+  await navigateToProgression(page);
+  await expect(page).toHaveURL(/#\/progression$/);
+  await expect(page.getByRole('alertdialog')).toHaveCount(0);
+});
+
 test('enregistre hors ligne et conserve les photos après rechargement', async ({
   page,
   context,
@@ -175,6 +229,7 @@ test('compare deux dates de la même vue au toucher et au clavier', async ({ pag
   });
   await expect(separator).toHaveValue('50');
   await separator.focus();
+  await expect(separator).toBeFocused();
   await page.keyboard.press('ArrowRight');
   await expect(separator).toHaveValue('51');
 

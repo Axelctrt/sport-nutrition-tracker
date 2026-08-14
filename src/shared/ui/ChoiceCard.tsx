@@ -27,16 +27,35 @@ export function ChoiceCard({
   icon: Icon,
   selected,
   badge,
-  disabled = false,
+  disabled,
   className,
   onSelect,
-  compact = false,
-  comfortable = false,
-  dense = false,
-  tight = false,
+  compact,
+  comfortable,
+  dense,
+  tight,
 }: ChoiceCardProps) {
   const titleId = useId();
-  const descriptionId = useId();
+  const descriptionId = `${titleId}-description`;
+  const small = tight || dense || comfortable || compact;
+  const spacing = tight
+    ? 'min-h-11 gap-2 px-3 py-1.5'
+    : dense
+      ? 'min-h-14 gap-2 px-3 py-2'
+      : comfortable
+        ? 'min-h-20 gap-3 p-3'
+        : compact
+          ? 'min-h-16 gap-2 p-2.5'
+          : 'min-h-24 gap-4 p-4';
+  const iconBox = tight
+    ? 'size-8'
+    : dense
+      ? 'size-9'
+      : comfortable
+        ? 'size-10'
+        : compact
+          ? 'size-9'
+          : 'size-11';
 
   return (
     <label className={cn('block', disabled ? 'cursor-not-allowed' : 'cursor-pointer', className)}>
@@ -56,16 +75,11 @@ export function ChoiceCard({
       />
       <span
         className={cn(
-          'relative flex w-full items-start rounded-[var(--sp-radius-card)] border text-left transition-[border-color,background-color,box-shadow,transform]',
-          tight
-            ? 'min-h-11 gap-2 px-3 py-1.5'
-            : dense
-              ? 'min-h-14 gap-2 px-3 py-2'
-              : comfortable
-                ? 'min-h-20 gap-3 p-3'
-              : compact
-                ? 'min-h-16 gap-2 p-2.5'
-                : 'min-h-24 gap-4 p-4',
+          'relative grid w-full items-start rounded-[var(--sp-radius-card)] border text-left transition-[border-color,background-color,box-shadow,transform]',
+          Icon
+            ? 'grid-cols-[auto_minmax(0,1fr)_1.25rem]'
+            : 'grid-cols-[minmax(0,1fr)_1.25rem]',
+          spacing,
           'peer-focus-visible:outline peer-focus-visible:outline-[3px] peer-focus-visible:outline-offset-2 peer-focus-visible:outline-brand-500/60',
           'peer-disabled:opacity-60',
           selected
@@ -77,18 +91,24 @@ export function ChoiceCard({
           <span
             className={cn(
               'grid shrink-0 place-items-center rounded-xl',
-              tight ? 'size-8' : dense ? 'size-9' : comfortable ? 'size-10' : compact ? 'size-9' : 'size-11',
+              iconBox,
               selected
                 ? 'bg-brand-700 text-white dark:bg-brand-500'
                 : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200',
             )}
           >
-            <Icon aria-hidden="true" className={tight || dense || comfortable || compact ? 'size-4' : 'size-5'} />
+            <Icon aria-hidden="true" className={small ? 'size-4' : 'size-5'} />
           </span>
         ) : null}
         <span className="min-w-0 flex-1">
           <span className="flex flex-wrap items-center gap-2">
-            <span id={titleId} className={cn('font-semibold text-slate-950 dark:text-white', (tight || dense || comfortable || compact) && 'text-sm leading-5')}>
+            <span
+              id={titleId}
+              className={cn(
+                'min-w-0 font-semibold text-slate-950 dark:text-white',
+                small && 'text-sm leading-5',
+              )}
+            >
               {title}
             </span>
             {badge ? (
@@ -98,7 +118,13 @@ export function ChoiceCard({
             ) : null}
           </span>
           {description ? (
-            <span id={descriptionId} className={cn('mt-1 block text-sm leading-5 text-slate-600 dark:text-slate-300', (tight || dense || comfortable || compact) && 'text-xs leading-4')}>
+            <span
+              id={descriptionId}
+              className={cn(
+                'mt-1 block text-sm leading-5 text-slate-600 dark:text-slate-300',
+                small && 'text-xs leading-4',
+              )}
+            >
               {description}
             </span>
           ) : null}

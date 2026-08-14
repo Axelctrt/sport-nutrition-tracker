@@ -1,4 +1,4 @@
-import { ArrowLeft, ImagePlus, Pencil } from 'lucide-react';
+import { ArrowLeft, ImagePlus, Pencil, X } from 'lucide-react';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
@@ -25,12 +25,15 @@ import {
   type FoodJournalNavigationState,
 } from '@/features/food-journal/navigation/foodJournalNavigation';
 import { mealSlotLabels } from '@/features/food-journal/utils/foodLabels';
+import { inputClassName } from '@/shared/forms/formStyles';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { ContextHelp } from '@/shared/ui/ContextHelp';
+import { IconAction } from '@/shared/ui/IconAction';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 import { SportPilotMultiStepLoader } from '@/shared/ui/SportPilotMultiStepLoader';
 import { SportPilotStatefulButton } from '@/shared/ui/SportPilotStatefulButton';
+import { UnsavedChangesGuard } from '@/shared/ui/UnsavedChangesGuard';
 
 const fields = [
   ['caloriesKcal', 'Calories approximatives'],
@@ -162,6 +165,7 @@ export function PhotoNutritionEstimatePage({
   const [selectedFile, setSelectedFile] = useState<File>();
   const [previewUrl, setPreviewUrl] = useState('');
   const [useRemoteAi, setUseRemoteAi] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const estimate = analysis?.estimate ?? manualEstimate;
   const isManual = Boolean(manualEstimate);
@@ -194,12 +198,14 @@ export function PhotoNutritionEstimatePage({
     if (!file) return;
     setSelectedFile(file);
     setUseRemoteAi(false);
+    setHasUnsavedChanges(true);
     resetResult();
   }
 
   function clearPhoto() {
     setSelectedFile(undefined);
     setUseRemoteAi(false);
+    setHasUnsavedChanges(false);
     resetResult();
     if (photoInputRef.current) photoInputRef.current.value = '';
   }
@@ -250,6 +256,7 @@ export function PhotoNutritionEstimatePage({
     setFormError('');
     try {
       const result = await saveEstimate({ date, mealSlot, estimate: nextEstimate });
+      setHasUnsavedChanges(false);
       const returnContext = navigationState?.foodJournalReturn;
       await navigate(returnContext?.path ?? foodJournalPath(date), {
         state: createFoodJournalFeedbackState(returnContext, {
@@ -273,7 +280,7 @@ export function PhotoNutritionEstimatePage({
           foodJournalPath(date),
         )}
         state={createFoodJournalRestoreState(navigationState?.foodJournalReturn)}
-        className="hidden items-center gap-2 text-sm font-semibold text-brand-700 hover:underline lg:inline-flex dark:text-brand-300"
+        className="hidden items-center gap-2 text-sm font-semibold text-[var(--sp-accent-primary)] hover:underline lg:inline-flex"
       >
         <ArrowLeft aria-hidden="true" className="size-4" />
         {navigationState?.foodJournalReturn?.addMethodsPath
@@ -282,24 +289,24 @@ export function PhotoNutritionEstimatePage({
       </Link>
 
       <div>
-        <p className="text-sm font-semibold uppercase text-brand-700 dark:text-brand-300">Journal alimentaire</p>
-        <h1 id="photo-estimate-title" className="mt-1 text-3xl font-bold text-slate-950 dark:text-white">
+        <p className="text-sm font-semibold uppercase text-[var(--sp-accent-primary)]">Journal alimentaire</p>
+        <h1 id="photo-estimate-title" className="mt-1 text-3xl font-bold text-[var(--sp-text-primary)]">
           Estimation photo
         </h1>
-        <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+        <p className="mt-2 text-sm text-[var(--sp-text-secondary)]">
           Choisis une photo du repas.
         </p>
       </div>
 
       <Card className="overflow-hidden">
         <div className="grid gap-4 p-4 sm:p-5">
-          <label className="flex min-h-20 cursor-pointer items-center gap-3 rounded-xl border border-brand-200 bg-brand-50 p-4 text-brand-950 transition hover:bg-brand-100 dark:border-brand-900 dark:bg-brand-950/40 dark:text-brand-100">
-            <span className="grid size-11 shrink-0 place-items-center rounded-lg bg-brand-700 text-white dark:bg-brand-600">
+          <label className="flex min-h-20 cursor-pointer items-center gap-3 rounded-[var(--sp-radius-control)] border border-[var(--sp-border-subtle)] bg-[var(--sp-surface-muted)] p-4 text-[var(--sp-text-primary)] transition-colors hover:border-[var(--sp-border-strong)] motion-reduce:transition-none">
+            <span className="grid size-11 shrink-0 place-items-center rounded-[var(--sp-radius-control)] bg-[var(--sp-accent-primary)] text-white">
               <ImagePlus aria-hidden="true" className="size-5" />
             </span>
-            <span>
+            <span className="min-w-0">
               <span className="block font-semibold">Choisir une photo</span>
-              <span className="mt-1 block text-xs leading-5 opacity-80">JPEG, PNG, WebP ou HEIC</span>
+              <span className="mt-1 block text-xs leading-5 text-[var(--sp-text-secondary)]">JPEG, PNG, WebP ou HEIC</span>
             </span>
             <input
               ref={photoInputRef}
@@ -312,45 +319,43 @@ export function PhotoNutritionEstimatePage({
           </label>
 
           {selectedFile ? (
-            <div className="flex gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-900 dark:bg-emerald-950/30">
+            <div className="flex gap-3 rounded-[var(--sp-radius-control)] border border-[var(--sp-border-subtle)] bg-[var(--sp-surface-muted)] p-3">
               {previewUrl ? (
                 <img
                   src={previewUrl}
                   alt="Aperçu de la photo sélectionnée"
-                  className="h-20 w-20 shrink-0 rounded-lg object-cover"
+                  className="h-20 w-20 shrink-0 rounded-[var(--sp-radius-control)] object-cover"
                 />
               ) : (
-                <span className="grid h-20 w-20 shrink-0 place-items-center rounded-lg bg-emerald-100 text-xs font-semibold text-emerald-900 dark:bg-emerald-900 dark:text-emerald-100">
+                <span className="grid h-20 w-20 shrink-0 place-items-center rounded-[var(--sp-radius-control)] bg-[var(--sp-surface-elevated)] text-xs font-semibold text-[var(--sp-text-secondary)]">
                   Photo
                 </span>
               )}
               <div className="min-w-0 flex-1">
                 <div className="flex items-start justify-between gap-2">
-                  <p className="font-semibold text-emerald-950 dark:text-emerald-100">Photo sélectionnée</p>
-                  <button
-                    type="button"
-                    aria-label="Supprimer la photo sélectionnée"
-                    className="grid size-8 shrink-0 place-items-center rounded-full border border-emerald-300 bg-white text-lg text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-100"
+                  <p className="font-semibold text-[var(--sp-success)]">Photo sélectionnée</p>
+                  <IconAction
+                    icon={X}
+                    label="Supprimer la photo sélectionnée"
+                    variant="ghost"
                     onClick={clearPhoto}
                     disabled={isAnalyzing || isSaving}
-                  >
-                    ×
-                  </button>
+                  />
                 </div>
-                <p className="mt-1 truncate text-sm text-emerald-800 dark:text-emerald-200">{selectedFile.name}</p>
-                <p className="mt-1 text-xs text-emerald-700 dark:text-emerald-300">
+                <p className="mt-1 truncate text-sm text-[var(--sp-text-secondary)]">{selectedFile.name}</p>
+                <p className="mt-1 text-xs text-[var(--sp-text-muted)]">
                   {formatFileSize(selectedFile.size)}
                 </p>
               </div>
             </div>
           ) : null}
 
-          <div className="rounded-xl border border-slate-200 px-3 py-2 dark:border-slate-800">
-            <div className="flex min-h-11 w-full min-w-0 items-center justify-between gap-3">
-              <span className="min-w-0 font-semibold text-slate-950 dark:text-white">Analyse IA</span>
+          <div className="rounded-[var(--sp-radius-control)] border border-[var(--sp-border-subtle)] px-3 py-2">
+            <div className="flex min-h-[var(--sp-touch-target)] w-full min-w-0 items-center justify-between gap-3">
+              <span className="min-w-0 font-semibold text-[var(--sp-text-primary)]">Analyse IA</span>
               <span className="flex shrink-0 items-center gap-2 text-sm">
-                <span className="whitespace-nowrap text-slate-600 dark:text-slate-300">
-                {useRemoteAi ? 'Activée' : 'Désactivée'}
+                <span className="whitespace-nowrap text-[var(--sp-text-secondary)]">
+                  {useRemoteAi ? 'Activée' : 'Désactivée'}
                 </span>
                 <button
                   type="button"
@@ -359,13 +364,13 @@ export function PhotoNutritionEstimatePage({
                   aria-label="Activer l’analyse IA pour cette photo"
                   disabled={!aiConfig.enabled || isAnalyzing || isSaving}
                   onClick={() => setUseRemoteAi((current) => !current)}
-                  className="flex h-11 w-14 shrink-0 items-center justify-center rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 disabled:opacity-50"
+                  className="flex h-[var(--sp-touch-target)] w-14 shrink-0 items-center justify-center rounded-[var(--sp-radius-control)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 disabled:opacity-50"
                 >
                   <span
                     aria-hidden="true"
                     data-testid="photo-ai-switch-track"
                     className={`relative h-7 w-12 shrink-0 rounded-full transition-colors motion-reduce:transition-none ${
-                      useRemoteAi ? 'bg-brand-700 dark:bg-brand-500' : 'bg-slate-300 dark:bg-slate-700'
+                      useRemoteAi ? 'bg-[var(--sp-accent-primary)]' : 'bg-[var(--sp-border-strong)]'
                     }`}
                   >
                     <span
@@ -378,7 +383,7 @@ export function PhotoNutritionEstimatePage({
                 </button>
               </span>
             </div>
-            <p className="pb-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
+            <p className="pb-1 text-xs leading-5 text-[var(--sp-text-muted)]">
               {aiConfig.enabled
                 ? 'Une connexion SportPilot valide sera vérifiée avant tout envoi pour cette analyse.'
                 : 'L’analyse en ligne est temporairement indisponible.'}
@@ -431,7 +436,7 @@ export function PhotoNutritionEstimatePage({
             {failure.accountAction ? (
               <Link
                 to={routePaths.syncPrototype}
-                className="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                className="sp-button sp-button--secondary inline-flex min-h-[var(--sp-control-height-md)] items-center justify-center rounded-[var(--sp-radius-control)] px-4 text-sm font-semibold"
               >
                 {failure.accountAction === 'reauthenticate'
                   ? 'Se reconnecter'
@@ -453,63 +458,71 @@ export function PhotoNutritionEstimatePage({
               L’analyse peut se tromper sur les aliments et les quantités.
             </InlineNotice>
           ) : null}
-          <form key={formKey(estimate, isManual)} onSubmit={(event) => void save(event)}>
-          <Card className="overflow-hidden">
-            <div className="border-b border-slate-200 px-4 py-3 dark:border-slate-800 sm:px-5">
-              <h2 className="font-semibold text-slate-950 dark:text-white">
-                {isManual ? 'Saisir le repas' : 'Corriger l’estimation'}
-              </h2>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                {isManual
-                  ? 'Renseigne les valeurs du repas.'
-                  : 'Ajuste les valeurs proposées avant validation.'}
-              </p>
-            </div>
-            <div className="grid gap-4 p-4 sm:grid-cols-2 sm:p-5">
-              <label className="grid gap-1.5 text-sm font-semibold text-slate-700 dark:text-slate-200 sm:col-span-2">
-                Nom du repas
-                <input
-                  name="name"
-                  defaultValue={estimate.name}
-                  autoFocus={isManual}
-                  className="min-h-11 rounded-xl border border-slate-300 bg-white px-3 text-base font-normal text-slate-950 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
-                />
-              </label>
-              <label className="grid gap-1.5 text-sm font-semibold text-slate-700 dark:text-slate-200">
-                Quantité en g/ml
-                <input
-                  name="amount"
-                  type="number"
-                  min="0"
-                  step="any"
-                  defaultValue={isManual ? '' : estimate.amount}
-                  className="min-h-11 rounded-xl border border-slate-300 bg-white px-3 text-base font-normal text-slate-950 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
-                />
-              </label>
-              {fields.map(([key, label]) => (
-                <label key={key} className="grid gap-1.5 text-sm font-semibold text-slate-700 dark:text-slate-200">
-                  {label}
+          <form
+            key={formKey(estimate, isManual)}
+            onChangeCapture={() => setHasUnsavedChanges(true)}
+            onSubmit={(event) => void save(event)}
+          >
+            <Card className="overflow-hidden">
+              <div className="border-b border-[var(--sp-border-subtle)] px-4 py-3 sm:px-5">
+                <h2 className="font-semibold text-[var(--sp-text-primary)]">
+                  {isManual ? 'Saisir le repas' : 'Corriger l’estimation'}
+                </h2>
+                <p className="mt-1 text-sm text-[var(--sp-text-muted)]">
+                  {isManual
+                    ? 'Renseigne les valeurs du repas.'
+                    : 'Ajuste les valeurs proposées avant validation.'}
+                </p>
+              </div>
+              <div className="grid gap-4 p-4 sm:grid-cols-2 sm:p-5">
+                <label className="grid gap-1.5 text-sm font-semibold text-[var(--sp-text-secondary)] sm:col-span-2">
+                  Nom du repas
                   <input
-                    name={key}
+                    name="name"
+                    defaultValue={estimate.name}
+                    autoFocus={isManual}
+                    className={`${inputClassName} text-base font-normal`}
+                  />
+                </label>
+                <label className="grid gap-1.5 text-sm font-semibold text-[var(--sp-text-secondary)]">
+                  Quantité en g/ml
+                  <input
+                    name="amount"
                     type="number"
                     min="0"
                     step="any"
-                    defaultValue={isManual ? '' : estimate.nutrition[key]}
-                    className="min-h-11 rounded-xl border border-slate-300 bg-white px-3 text-base font-normal text-slate-950 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                    defaultValue={isManual ? '' : estimate.amount}
+                    className={`${inputClassName} text-base font-normal`}
                   />
                 </label>
-              ))}
-            </div>
-            <div className="border-t border-slate-200 p-4 dark:border-slate-800 sm:px-5">
-              {formError ? <p role="alert" className="mb-3 text-sm font-medium text-rose-700 dark:text-rose-300">{formError}</p> : null}
-              <Button type="submit" size="lg" className="w-full" disabled={isSaving}>
-                {isSaving ? 'Ajout en cours…' : 'Ajouter au journal'}
-              </Button>
-            </div>
-          </Card>
+                {fields.map(([key, label]) => (
+                  <label key={key} className="grid gap-1.5 text-sm font-semibold text-[var(--sp-text-secondary)]">
+                    {label}
+                    <input
+                      name={key}
+                      type="number"
+                      min="0"
+                      step="any"
+                      defaultValue={isManual ? '' : estimate.nutrition[key]}
+                      className={`${inputClassName} text-base font-normal`}
+                    />
+                  </label>
+                ))}
+              </div>
+              <div className="border-t border-[var(--sp-border-subtle)] p-4 sm:px-5">
+                {formError ? (
+                  <p role="alert" className="mb-3 text-sm font-medium text-[var(--sp-error)]">{formError}</p>
+                ) : null}
+                <Button type="submit" size="lg" className="w-full" disabled={isSaving}>
+                  {isSaving ? 'Ajout en cours…' : 'Ajouter au journal'}
+                </Button>
+              </div>
+            </Card>
           </form>
         </>
       ) : null}
+
+      <UnsavedChangesGuard when={hasUnsavedChanges} />
     </section>
   );
 }

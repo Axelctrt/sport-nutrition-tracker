@@ -1,5 +1,6 @@
 import { ArrowLeft } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   loadRecipeDetails,
@@ -19,6 +20,8 @@ import { useActionToast } from '@/shared/toast/useActionToast';
 import { Card } from '@/shared/ui/Card';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 import { PageSkeleton } from '@/shared/ui/PageSkeleton';
+import { UnsavedChangesGuard } from '@/shared/ui/UnsavedChangesGuard';
+import { UnsavedFormBoundary } from '@/shared/ui/UnsavedFormBoundary';
 
 export function RecipeEditorPage() {
   const actionToast = useActionToast();
@@ -38,6 +41,8 @@ export function RecipeEditorPage() {
   });
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string>();
+  const [isDirty, setIsDirty] = useState(false);
+  const resetKey = JSON.stringify(initialValues);
 
   useEffect(() => {
     let active = true;
@@ -75,6 +80,7 @@ export function RecipeEditorPage() {
         ingredients: values.ingredients,
         ...(values.notes === undefined ? {} : { notes: values.notes }),
       });
+      flushSync(() => setIsDirty(false));
       const feedbackState = createFoodLibraryFeedbackState(libraryReturn, {
         title: recipeId ? 'Recette mise à jour' : 'Recette créée',
         itemId: saved.recipe.id,
@@ -122,15 +128,18 @@ export function RecipeEditorPage() {
         </InlineNotice>
       ) : null}
       {!loading && !errorMessage && products.length > 0 ? (
-        <Card className="mt-6 p-4 sm:p-6">
-          <RecipeForm
-            initialValues={initialValues}
-            products={products}
-            submitLabel={recipeId ? 'Enregistrer la recette' : 'Créer la recette'}
-            onSubmit={handleSubmit}
-          />
-        </Card>
+        <UnsavedFormBoundary resetKey={resetKey} onDirtyChange={setIsDirty}>
+          <Card className="mt-6 p-4 sm:p-6">
+            <RecipeForm
+              initialValues={initialValues}
+              products={products}
+              submitLabel={recipeId ? 'Enregistrer la recette' : 'Créer la recette'}
+              onSubmit={handleSubmit}
+            />
+          </Card>
+        </UnsavedFormBoundary>
       ) : null}
+      <UnsavedChangesGuard when={isDirty} />
     </section>
   );
 }

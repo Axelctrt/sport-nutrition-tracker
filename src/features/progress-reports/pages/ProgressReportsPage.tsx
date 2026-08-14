@@ -7,7 +7,6 @@ import {
   Dumbbell,
   FileText,
   Footprints,
-  LoaderCircle,
   Printer,
   Scale,
   Share2,
@@ -33,7 +32,13 @@ import {
   shareProgressReport,
   type ReportDeliveryResult,
 } from '@/features/progress-reports/progressReportDelivery';
-import { useActionToast } from '@/shared/toast/useActionToast';
+import {
+  checkboxClassName,
+  inputClassName,
+} from '@/shared/forms/formStyles';
+import { Button } from '@/shared/ui/Button';
+import { Card } from '@/shared/ui/Card';
+import { InlineNotice } from '@/shared/ui/InlineNotice';
 
 type PeriodPreset = '7' | '30' | '90' | 'custom';
 
@@ -141,22 +146,24 @@ function SummaryCard({
   values: Array<{ label: string; value: string }>;
 }) {
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-      <h2 className="font-bold text-slate-950 dark:text-white">
-        {title}
-      </h2>
-      <dl className="mt-3 grid gap-3 sm:grid-cols-2">
-        {values.map(({ label, value }) => (
-          <div key={label}>
-            <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-              {label}
-            </dt>
-            <dd className="mt-1 text-lg font-semibold text-slate-950 dark:text-white">
-              {value}
-            </dd>
-          </div>
-        ))}
-      </dl>
+    <section>
+      <Card padding="md" className="print:border-0 print:shadow-none">
+        <h2 className="font-bold text-[var(--sp-text-primary)]">
+          {title}
+        </h2>
+        <dl className="mt-3 grid gap-3 sm:grid-cols-2">
+          {values.map(({ label, value }) => (
+            <div key={label}>
+              <dt className="text-xs font-semibold uppercase tracking-wide text-[var(--sp-text-muted)]">
+                {label}
+              </dt>
+              <dd className="mt-1 text-lg font-semibold text-[var(--sp-text-primary)]">
+                {value}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      </Card>
     </section>
   );
 }
@@ -169,7 +176,6 @@ export function ProgressReportsPage({
   shareReport = shareProgressReport,
   printReport = printProgressReport,
 }: ProgressReportsPageProps) {
-  const actionToast = useActionToast();
   const today = localDate(now);
   const [preset, setPreset] = useState<PeriodPreset>('30');
   const [from, setFrom] = useState(presetFrom('30', now));
@@ -243,12 +249,10 @@ export function ProgressReportsPage({
       setReport(generated);
       const message = `Rapport créé pour ${generated.period.dayCount} jour(s).`;
       setFeedback({ tone: 'success', message });
-      actionToast.success({ key: 'progress-report-generate', title: 'Rapport créé', description: message });
     } catch (error) {
       setReport(undefined);
       const fallback = 'Le rapport n’a pas pu être créé.';
       setFeedback({ tone: 'error', message: error instanceof Error ? error.message : fallback });
-      actionToast.error({ key: 'progress-report-generate', title: 'Création impossible', error, fallback });
     } finally {
       setIsLoading(false);
     }
@@ -272,13 +276,9 @@ export function ProgressReportsPage({
           ? 'L’action a été annulée.'
           : 'Cette fonction n’est pas disponible sur cet appareil.';
       setFeedback({ tone: result === 'done' ? 'success' : 'info', message });
-      if (result === 'done') {
-        actionToast.success({ key: 'progress-report-delivery', title: 'Action terminée', description: message });
-      }
     } catch (error) {
       const fallback = 'L’action a échoué.';
       setFeedback({ tone: 'error', message: error instanceof Error ? error.message : fallback });
-      actionToast.error({ key: 'progress-report-delivery', title: 'Action impossible', error, fallback });
     } finally {
       setIsDelivering(false);
     }
@@ -289,40 +289,40 @@ export function ProgressReportsPage({
       aria-labelledby="progress-report-title"
       className="min-w-0"
     >
-      <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6 dark:border-slate-800 dark:bg-slate-900 print:border-0 print:shadow-none">
-        <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
+      <Card padding="lg" className="print:border-0 print:shadow-none">
+        <p className="text-sm font-semibold uppercase tracking-wide text-[var(--sp-accent-primary)]">
           Synthèse partageable
         </p>
         <h1
           id="progress-report-title"
-          className="mt-1 text-3xl font-bold tracking-tight text-slate-950 dark:text-white"
+          className="mt-1 text-3xl font-bold tracking-tight text-[var(--sp-text-primary)]"
         >
           Rapport de progression
         </h1>
-        <p className="mt-3 max-w-3xl leading-7 text-slate-600 dark:text-slate-300">
+        <p className="mt-3 max-w-3xl leading-7 text-[var(--sp-text-secondary)]">
           Regroupe les indicateurs utiles d’une période sans
           partager le journal détaillé ni la base complète.
         </p>
-      </div>
+      </Card>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] print:hidden">
-        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <Card padding="md">
           <div className="flex items-center gap-3">
             <CalendarRange
               aria-hidden="true"
-              className="size-5 text-brand-700 dark:text-brand-300"
+              className="size-5 text-[var(--sp-accent-primary)]"
             />
-            <h2 className="text-lg font-bold text-slate-950 dark:text-white">
+            <h2 className="text-lg font-bold text-[var(--sp-text-primary)]">
               Période et confidentialité
             </h2>
           </div>
 
-          <label className="mt-4 block text-sm font-semibold text-slate-900 dark:text-white">
+          <label className="mt-4 block text-sm font-semibold text-[var(--sp-text-primary)]">
             Période
             <select
               value={preset}
               onChange={handlePresetChange}
-              className="mt-2 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+              className={`${inputClassName} mt-2`}
             >
               <option value="7">7 derniers jours</option>
               <option value="30">30 derniers jours</option>
@@ -332,7 +332,7 @@ export function ProgressReportsPage({
           </label>
 
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            <label className="text-sm font-semibold text-slate-900 dark:text-white">
+            <label className="text-sm font-semibold text-[var(--sp-text-primary)]">
               Date de début
               <input
                 type="date"
@@ -343,11 +343,11 @@ export function ProgressReportsPage({
                   setFrom(event.target.value);
                   invalidateReport();
                 }}
-                className="mt-2 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950"
+                className={`${inputClassName} mt-2`}
               />
             </label>
 
-            <label className="text-sm font-semibold text-slate-900 dark:text-white">
+            <label className="text-sm font-semibold text-[var(--sp-text-primary)]">
               Date de fin
               <input
                 type="date"
@@ -359,12 +359,12 @@ export function ProgressReportsPage({
                   setTo(event.target.value);
                   invalidateReport();
                 }}
-                className="mt-2 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950"
+                className={`${inputClassName} mt-2`}
               />
             </label>
           </div>
 
-          <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
+          <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-[var(--sp-radius-control)] border border-[var(--sp-border-subtle)] bg-[var(--sp-surface-muted)] p-4">
             <input
               type="checkbox"
               checked={includeIdentity}
@@ -372,52 +372,43 @@ export function ProgressReportsPage({
                 setIncludeIdentity(event.target.checked);
                 invalidateReport();
               }}
-              className="mt-1 size-5 rounded border-slate-300"
+              className={`${checkboxClassName} mt-1`}
             />
             <span>
-              <span className="block font-semibold text-slate-950 dark:text-white">
+              <span className="block font-semibold text-[var(--sp-text-primary)]">
                 Inclure mon prénom et mes objectifs
               </span>
-              <span className="mt-1 block text-sm leading-5 text-slate-600 dark:text-slate-300">
+              <span className="mt-1 block text-sm leading-5 text-[var(--sp-text-secondary)]">
                 Désactivé par défaut pour limiter les informations
                 personnelles partagées.
               </span>
             </span>
           </label>
-        </section>
+        </Card>
 
-        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <Card padding="md">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-3">
               <FileText
                 aria-hidden="true"
-                className="size-5 text-brand-700 dark:text-brand-300"
+                className="size-5 text-[var(--sp-accent-primary)]"
               />
-              <h2 className="text-lg font-bold text-slate-950 dark:text-white">
+              <h2 className="text-lg font-bold text-[var(--sp-text-primary)]">
                 Rubriques
               </h2>
             </div>
 
-            <button
-              type="button"
+            <Button
+              variant="secondary"
               onClick={toggleAll}
-              className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold dark:border-slate-700"
             >
               {allSelected ? (
-                <CheckSquare2
-                  aria-hidden="true"
-                  className="size-4"
-                />
+                <CheckSquare2 aria-hidden="true" className="size-4" />
               ) : (
-                <Square
-                  aria-hidden="true"
-                  className="size-4"
-                />
+                <Square aria-hidden="true" className="size-4" />
               )}
-              {allSelected
-                ? 'Tout désélectionner'
-                : 'Tout sélectionner'}
-            </button>
+              {allSelected ? 'Tout désélectionner' : 'Tout sélectionner'}
+            </Button>
           </div>
 
           <div className="mt-4 grid gap-2 sm:grid-cols-2">
@@ -425,23 +416,23 @@ export function ProgressReportsPage({
               ({ id, label, description, icon: Icon }) => (
                 <label
                   key={id}
-                  className="flex min-h-24 cursor-pointer items-start gap-3 rounded-2xl border border-slate-200 p-3 dark:border-slate-700"
+                  className="flex min-h-24 cursor-pointer items-start gap-3 rounded-[var(--sp-radius-control)] border border-[var(--sp-border-subtle)] bg-[var(--sp-surface-muted)] p-3"
                 >
                   <input
                     type="checkbox"
                     checked={sections.includes(id)}
                     onChange={() => toggleSection(id)}
-                    className="mt-1 size-5 rounded border-slate-300"
+                    className={`${checkboxClassName} mt-1`}
                   />
                   <Icon
                     aria-hidden="true"
-                    className="mt-0.5 size-5 shrink-0 text-slate-500"
+                    className="mt-0.5 size-5 shrink-0 text-[var(--sp-text-muted)]"
                   />
                   <span>
-                    <span className="block font-semibold text-slate-950 dark:text-white">
+                    <span className="block font-semibold text-[var(--sp-text-primary)]">
                       {label}
                     </span>
-                    <span className="mt-1 block text-sm leading-5 text-slate-600 dark:text-slate-300">
+                    <span className="mt-1 block text-sm leading-5 text-[var(--sp-text-secondary)]">
                       {description}
                     </span>
                   </span>
@@ -450,60 +441,52 @@ export function ProgressReportsPage({
             )}
           </div>
 
-          <button
-            type="button"
-            disabled={isLoading}
+          <Button
+            className="mt-4"
+            fullWidth
+            size="lg"
+            loading={isLoading}
+            loadingLabel="Création…"
             onClick={() => void handleGenerate()}
-            className="mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand-600 px-5 py-3 font-semibold text-white disabled:opacity-60"
           >
-            {isLoading ? (
-              <LoaderCircle
-                aria-hidden="true"
-                className="size-5 animate-spin"
-              />
-            ) : (
-              <FileText
-                aria-hidden="true"
-                className="size-5"
-              />
-            )}
-            {isLoading ? 'Création…' : 'Créer le rapport'}
-          </button>
-        </section>
+            <FileText aria-hidden="true" className="size-5" />
+            Créer le rapport
+          </Button>
+        </Card>
       </div>
 
       {feedback ? (
-        <div
+        <InlineNotice
+          className="mt-4 print:hidden"
+          tone={feedback.tone}
+          title={feedback.tone === 'error' ? 'Action impossible' : feedback.tone === 'success' ? 'Action terminée' : 'Information'}
           role="status"
-          className={[
-            'mt-4 rounded-2xl border px-4 py-3 text-sm print:hidden',
-            feedback.tone === 'error'
-              ? 'border-red-300 bg-red-50 text-red-900 dark:border-red-900 dark:bg-red-950/40 dark:text-red-100'
-              : feedback.tone === 'success'
-                ? 'border-emerald-300 bg-emerald-50 text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100'
-                : 'border-slate-300 bg-slate-50 text-slate-800 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200',
-          ].join(' ')}
+          aria-live="polite"
         >
           {feedback.message}
-        </div>
+        </InlineNotice>
       ) : null}
 
       {report ? (
         <div className="mt-4">
-          <div className="flex flex-col gap-3 rounded-2xl border border-brand-300 bg-brand-50 p-4 sm:flex-row sm:items-center sm:justify-between dark:border-brand-800 dark:bg-brand-950/30 print:hidden">
+          <Card
+            variant="muted"
+            padding="md"
+            className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between print:hidden"
+          >
             <div>
-              <p className="font-semibold text-brand-950 dark:text-brand-100">
+              <p className="font-semibold text-[var(--sp-text-primary)]">
                 Rapport prêt
               </p>
-              <p className="mt-1 text-sm text-brand-800 dark:text-brand-200">
+              <p className="mt-1 text-sm text-[var(--sp-text-secondary)]">
                 {reportPeriodLabel} · {report.period.dayCount}{' '}
                 jour(s)
               </p>
             </div>
 
             <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-              <button
-                type="button"
+              <Button
+                variant="secondary"
                 disabled={isDelivering}
                 onClick={() =>
                   void handleDelivery(
@@ -511,17 +494,13 @@ export function ProgressReportsPage({
                     'Le rapport a été copié.',
                   )
                 }
-                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-brand-700 px-3 py-2 text-sm font-semibold text-brand-900 disabled:opacity-60 dark:text-brand-100"
               >
-                <Clipboard
-                  aria-hidden="true"
-                  className="size-4"
-                />
+                <Clipboard aria-hidden="true" className="size-4" />
                 Copier
-              </button>
+              </Button>
 
-              <button
-                type="button"
+              <Button
+                variant="secondary"
                 disabled={isDelivering}
                 onClick={() => {
                   downloadReport(report);
@@ -530,17 +509,13 @@ export function ProgressReportsPage({
                     message: 'Le fichier texte a été téléchargé.',
                   });
                 }}
-                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-brand-700 px-3 py-2 text-sm font-semibold text-brand-900 disabled:opacity-60 dark:text-brand-100"
               >
-                <Download
-                  aria-hidden="true"
-                  className="size-4"
-                />
+                <Download aria-hidden="true" className="size-4" />
                 Télécharger
-              </button>
+              </Button>
 
-              <button
-                type="button"
+              <Button
+                variant="secondary"
                 disabled={isDelivering}
                 onClick={() =>
                   void handleDelivery(
@@ -548,17 +523,13 @@ export function ProgressReportsPage({
                     'La feuille de partage a été ouverte.',
                   )
                 }
-                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-brand-700 px-3 py-2 text-sm font-semibold text-brand-900 disabled:opacity-60 dark:text-brand-100"
               >
-                <Share2
-                  aria-hidden="true"
-                  className="size-4"
-                />
+                <Share2 aria-hidden="true" className="size-4" />
                 Partager
-              </button>
+              </Button>
 
-              <button
-                type="button"
+              <Button
+                variant="secondary"
                 disabled={isDelivering}
                 onClick={() =>
                   void handleDelivery(
@@ -566,37 +537,32 @@ export function ProgressReportsPage({
                     'La fenêtre d’impression a été ouverte.',
                   )
                 }
-                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-brand-700 px-3 py-2 text-sm font-semibold text-brand-900 disabled:opacity-60 dark:text-brand-100"
               >
-                <Printer
-                  aria-hidden="true"
-                  className="size-4"
-                />
+                <Printer aria-hidden="true" className="size-4" />
                 Imprimer
-              </button>
+              </Button>
             </div>
-          </div>
+          </Card>
 
           <article className="mt-4 space-y-3 print:mt-0">
-            <header className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900 print:border-0">
-              <h2 className="text-2xl font-bold text-slate-950 dark:text-white">
-                Rapport SportPilot
-              </h2>
-              <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-                Du {report.period.from} au {report.period.to}
-              </p>
-              {report.profile ? (
-                <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-                  {report.profile.firstName
-                    ? `Profil : ${report.profile.firstName}`
-                    : 'Profil personnel'}
-                  {' · '}objectif de pas :{' '}
-                  {formatNumber(
-                    report.profile.dailyStepGoal,
-                    0,
-                  )}
+            <header>
+              <Card padding="md" className="print:border-0 print:shadow-none">
+                <h2 className="text-2xl font-bold text-[var(--sp-text-primary)]">
+                  Rapport SportPilot
+                </h2>
+                <p className="mt-2 text-sm text-[var(--sp-text-secondary)]">
+                  Du {report.period.from} au {report.period.to}
                 </p>
-              ) : null}
+                {report.profile ? (
+                  <p className="mt-2 text-sm text-[var(--sp-text-secondary)]">
+                    {report.profile.firstName
+                      ? `Profil : ${report.profile.firstName}`
+                      : 'Profil personnel'}
+                    {' · '}objectif de pas :{' '}
+                    {formatNumber(report.profile.dailyStepGoal, 0)}
+                  </p>
+                ) : null}
+              </Card>
             </header>
 
             {report.weight ? (
@@ -609,25 +575,15 @@ export function ProgressReportsPage({
                   },
                   {
                     label: 'Poids moyen',
-                    value:
-                      report.weight.averageWeightKg === undefined
-                        ? 'Aucune donnée'
-                        : `${formatNumber(
-                            report.weight.averageWeightKg,
-                            2,
-                          )} kg`,
+                    value: report.weight.averageWeightKg === undefined
+                      ? 'Aucune donnée'
+                      : `${formatNumber(report.weight.averageWeightKg, 2)} kg`,
                   },
                   {
                     label: 'Évolution',
-                    value:
-                      report.weight.changeKg === undefined
-                        ? 'Aucune donnée'
-                        : `${
-                            report.weight.changeKg >= 0 ? '+' : ''
-                          }${formatNumber(
-                            report.weight.changeKg,
-                            2,
-                          )} kg`,
+                    value: report.weight.changeKg === undefined
+                      ? 'Aucune donnée'
+                      : `${report.weight.changeKg >= 0 ? '+' : ''}${formatNumber(report.weight.changeKg, 2)} kg`,
                   },
                 ]}
               />
@@ -643,24 +599,17 @@ export function ProgressReportsPage({
                   },
                   {
                     label: 'Moyenne',
-                    value: `${formatNumber(
-                      report.steps.averageSteps,
-                      0,
-                    )} pas`,
+                    value: `${formatNumber(report.steps.averageSteps, 0)} pas`,
                   },
                   {
                     label: 'Total',
-                    value: `${formatNumber(
-                      report.steps.totalSteps,
-                      0,
-                    )} pas`,
+                    value: `${formatNumber(report.steps.totalSteps, 0)} pas`,
                   },
                   {
                     label: 'Objectif atteint',
-                    value:
-                      report.steps.targetSteps === undefined
-                        ? 'Non disponible'
-                        : `${report.steps.targetReachedDays} jour(s)`,
+                    value: report.steps.targetSteps === undefined
+                      ? 'Non disponible'
+                      : `${report.steps.targetReachedDays} jour(s)`,
                   },
                 ]}
               />
@@ -672,30 +621,19 @@ export function ProgressReportsPage({
                 values={[
                   {
                     label: 'Séances',
-                    value: String(
-                      report.activities.sessionCount,
-                    ),
+                    value: String(report.activities.sessionCount),
                   },
                   {
                     label: 'Durée',
-                    value: formatDuration(
-                      report.activities.durationMinutes,
-                    ),
+                    value: formatDuration(report.activities.durationMinutes),
                   },
                   {
                     label: 'Course',
-                    value: `${formatNumber(
-                      report.activities.runningDistanceKm,
-                      2,
-                    )} km`,
+                    value: `${formatNumber(report.activities.runningDistanceKm, 2)} km`,
                   },
                   {
                     label: 'Natation',
-                    value: `${formatNumber(
-                      report.activities
-                        .swimmingDistanceMeters,
-                      0,
-                    )} m`,
+                    value: `${formatNumber(report.activities.swimmingDistanceMeters, 0)} m`,
                   },
                 ]}
               />
@@ -707,34 +645,21 @@ export function ProgressReportsPage({
                 values={[
                   {
                     label: 'Jours suivis',
-                    value: String(
-                      report.nutrition.trackedDays,
-                    ),
+                    value: String(report.nutrition.trackedDays),
                   },
                   {
                     label: 'Calories moyennes',
-                    value: `${formatNumber(
-                      report.nutrition.averageCaloriesKcal,
-                      0,
-                    )} kcal`,
+                    value: `${formatNumber(report.nutrition.averageCaloriesKcal, 0)} kcal`,
                   },
                   {
                     label: 'Protéines moyennes',
-                    value: `${formatNumber(
-                      report.nutrition.averageProteinGrams,
-                    )} g`,
+                    value: `${formatNumber(report.nutrition.averageProteinGrams)} g`,
                   },
                   {
                     label: 'Adhérence calorique',
-                    value:
-                      report.nutrition
-                        .averageCalorieAdherencePercent ===
-                      undefined
-                        ? 'Non disponible'
-                        : `${formatNumber(
-                            report.nutrition
-                              .averageCalorieAdherencePercent,
-                          )} %`,
+                    value: report.nutrition.averageCalorieAdherencePercent === undefined
+                      ? 'Non disponible'
+                      : `${formatNumber(report.nutrition.averageCalorieAdherencePercent)} %`,
                   },
                 ]}
               />
@@ -746,43 +671,39 @@ export function ProgressReportsPage({
                 values={[
                   {
                     label: 'Séances terminées',
-                    value: String(
-                      report.strength.completedSessionCount,
-                    ),
+                    value: String(report.strength.completedSessionCount),
                   },
                   {
                     label: 'Durée',
-                    value: formatDuration(
-                      report.strength.durationMinutes,
-                    ),
+                    value: formatDuration(report.strength.durationMinutes),
                   },
                   {
                     label: 'Séries de travail',
-                    value: String(
-                      report.strength.workingSetCount,
-                    ),
+                    value: String(report.strength.workingSetCount),
                   },
                   {
                     label: 'Volume brut',
-                    value: `${formatNumber(
-                      report.strength.totalVolumeKg,
-                    )} kg`,
+                    value: `${formatNumber(report.strength.totalVolumeKg)} kg`,
                   },
                 ]}
               />
             ) : null}
 
-            <p className="px-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
+            <p className="px-1 text-xs leading-5 text-[var(--sp-text-muted)]">
               Synthèse de suivi personnel, non destinée au
               diagnostic médical.
             </p>
           </article>
         </div>
       ) : (
-        <div className="mt-4 rounded-2xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-600 dark:border-slate-700 dark:text-slate-300 print:hidden">
+        <Card
+          variant="muted"
+          padding="lg"
+          className="mt-4 border-dashed text-center text-sm text-[var(--sp-text-secondary)] print:hidden"
+        >
           Choisis la période et les rubriques, puis crée le
           rapport.
-        </div>
+        </Card>
       )}
     </section>
   );

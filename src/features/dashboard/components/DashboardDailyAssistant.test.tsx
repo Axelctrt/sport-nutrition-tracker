@@ -434,7 +434,11 @@ describe('DashboardDailyAssistant', () => {
     expect(onStartStrength).toHaveBeenCalledWith('strength-push');
 
     await user.click(screen.getByRole('button', { name: 'Actions pour Push' }));
-    await user.click(screen.getByRole('button', { name: 'Modifier' }));
+    const strengthActions = screen.getByRole('menu', { name: 'Actions pour Push' });
+    expect(within(strengthActions).getAllByRole('menuitem').map((item) => item.textContent))
+      .toEqual(['Modifier', 'Retirer']);
+    expect(within(strengthActions).getByRole('separator')).toBeInTheDocument();
+    await user.click(within(strengthActions).getByRole('menuitem', { name: 'Modifier' }));
     const dialog = screen.getByRole('dialog', { name: 'Modifier l’activité prévue' });
     await user.clear(within(dialog).getByLabelText('Durée prévue'));
     await user.type(within(dialog).getByLabelText('Durée prévue'), '50');
@@ -447,7 +451,11 @@ describe('DashboardDailyAssistant', () => {
     }));
 
     await user.click(screen.getByRole('button', { name: 'Actions pour Footing facile' }));
-    await user.click(screen.getByRole('button', { name: 'Retirer' }));
+    const enduranceActions = screen.getByRole('menu', { name: 'Actions pour Footing facile' });
+    expect(within(enduranceActions).getAllByRole('menuitem').map((item) => item.textContent))
+      .toEqual(['Modifier', 'Retirer']);
+    expect(within(enduranceActions).getByRole('separator')).toBeInTheDocument();
+    await user.click(within(enduranceActions).getByRole('menuitem', { name: 'Retirer' }));
     expect(onSkipEndurance).toHaveBeenCalledWith('endurance-run');
   });
 
@@ -600,7 +608,11 @@ describe('DashboardDailyAssistant', () => {
     });
 
     await user.click(screen.getByRole('button', { name: 'Actions pour Footing facile' }));
-    await user.click(screen.getByRole('button', { name: 'Retirer' }));
+    const enduranceActions = screen.getByRole('menu', { name: 'Actions pour Footing facile' });
+    expect(within(enduranceActions).getAllByRole('menuitem').map((item) => item.textContent))
+      .toEqual(['Modifier', 'Retirer']);
+    expect(within(enduranceActions).getByRole('separator')).toBeInTheDocument();
+    await user.click(within(enduranceActions).getByRole('menuitem', { name: 'Retirer' }));
     expect(onSkipEndurance).toHaveBeenCalledWith('endurance-run');
 
     await user.click(await screen.findByRole('button', { name: 'Annuler le retrait de l’activité' }));

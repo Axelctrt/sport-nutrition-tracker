@@ -346,7 +346,7 @@ export function MealFoodSelectorPage() {
                         returnSource: source,
                       })}
                       state={location.state}
-                      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-brand-700 px-4 text-sm font-semibold text-white hover:bg-brand-800"
+                      className="sp-button inline-flex min-h-[var(--sp-control-height-md)] items-center justify-center gap-2 rounded-[var(--sp-radius-control)] px-4 text-sm font-semibold"
                     >
                       <Plus aria-hidden="true" className="size-4" />
                       {query.trim() ? 'Créer cet aliment' : 'Créer un aliment'}

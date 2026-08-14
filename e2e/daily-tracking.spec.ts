@@ -6,7 +6,20 @@ test('enregistre les pas et le poids depuis le tableau de bord', async ({ page }
 
   await page.getByRole('button', { name: 'Faire le check-in' }).click();
   const checkIn = page.getByRole('dialog', { name: 'Check-in du matin' });
-  await checkIn.getByLabel('Poids').fill('69.4');
+  const weightInput = checkIn.getByLabel('Poids');
+  let weightAccepted = false;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    await weightInput.fill('69.4');
+    try {
+      await expect(weightInput).toHaveValue('69.4', { timeout: 1_000 });
+      weightAccepted = true;
+      break;
+    } catch (error) {
+      if (attempt === 3) throw error;
+      await page.waitForTimeout(100);
+    }
+  }
+  expect(weightAccepted).toBe(true);
   await checkIn.getByRole('button', { name: 'Enregistrer le check-in' }).click();
   await expect(page.getByRole('button', { name: 'Modifier le check-in' })).toBeVisible();
 

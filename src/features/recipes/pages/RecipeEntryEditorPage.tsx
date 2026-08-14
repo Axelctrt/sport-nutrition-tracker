@@ -1,5 +1,6 @@
 import { ArrowLeft, LoaderCircle } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   loadRecipeDetails,
@@ -21,6 +22,8 @@ import { repositories } from '@/infrastructure/repositories/repositories';
 import { useActionToast } from '@/shared/toast/useActionToast';
 import { Card } from '@/shared/ui/Card';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
+import { UnsavedChangesGuard } from '@/shared/ui/UnsavedChangesGuard';
+import { UnsavedFormBoundary } from '@/shared/ui/UnsavedFormBoundary';
 import { toLocalDate } from '@/shared/utils/dates';
 import { isValidLocalDate } from '@/shared/validation/localDate';
 
@@ -38,6 +41,7 @@ export function RecipeEntryEditorPage() {
   const [entry, setEntry] = useState<FoodEntry>();
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string>();
+  const [isDirty, setIsDirty] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -66,17 +70,20 @@ export function RecipeEntryEditorPage() {
 
   const requestedDate = searchParams.get('date') ?? '';
   const requestedSlot = searchParams.get('slot') as MealSlot | null;
-  const initialValues: RecipeEntryFormValues = entry?.reference.sourceType === 'recipe'
-    ? {
-        date: entry.date,
-        mealSlot: entry.mealSlot,
-        servingsConsumed: entry.reference.servingsConsumed,
-      }
-    : {
-        date: isValidLocalDate(requestedDate) ? requestedDate : toLocalDate(),
-        mealSlot: requestedSlot && slots.includes(requestedSlot) ? requestedSlot : 'lunch',
-        servingsConsumed: 1,
-      };
+  const initialValues = useMemo<RecipeEntryFormValues>(() =>
+    entry?.reference.sourceType === 'recipe'
+      ? {
+          date: entry.date,
+          mealSlot: entry.mealSlot,
+          servingsConsumed: entry.reference.servingsConsumed,
+        }
+      : {
+          date: isValidLocalDate(requestedDate) ? requestedDate : toLocalDate(),
+          mealSlot: requestedSlot && slots.includes(requestedSlot) ? requestedSlot : 'lunch',
+          servingsConsumed: 1,
+        },
+  [entry, requestedDate, requestedSlot]);
+  const resetKey = JSON.stringify(initialValues);
 
   const handleSubmit = async (values: RecipeEntryFormValues) => {
     if (!recipeId) return;
@@ -86,6 +93,7 @@ export function RecipeEntryEditorPage() {
         recipeId,
         ...values,
       });
+      flushSync(() => setIsDirty(false));
       const returnContext = navigationState?.foodJournalReturn;
       await navigate(returnContext?.path ?? foodJournalPath(values.date), {
         state: createFoodJournalFeedbackState(returnContext, {
@@ -128,8 +136,21 @@ export function RecipeEntryEditorPage() {
       </div>
       {loading ? <Card className="mt-8 p-8 text-center" role="status"><LoaderCircle aria-hidden="true" className="mx-auto size-8 animate-spin text-brand-700" /><p className="mt-3 font-semibold">Chargement…</p></Card> : null}
       {errorMessage ? <InlineNotice className="mt-8" tone="error" title="Ajout indisponible">{errorMessage}</InlineNotice> : null}
-      {!loading && !errorMessage && details ? <Card className="mt-8 p-5 sm:p-7"><h2 className="mb-5 text-xl font-semibold text-slate-950 dark:text-white">{details.recipe.name}</h2><RecipeEntryForm details={details} initialValues={initialValues} submitLabel={entryId ? 'Enregistrer les modifications' : 'Ajouter au journal'} onSubmit={handleSubmit} /></Card> : null}
+      {!loading && !errorMessage && details ? (
+        <UnsavedFormBoundary resetKey={resetKey} onDirtyChange={setIsDirty}>
+          <Card className="mt-8 p-5 sm:p-7">
+            <h2 className="mb-5 text-xl font-semibold text-slate-950 dark:text-white">{details.recipe.name}</h2>
+            <RecipeEntryForm
+              details={details}
+              initialValues={initialValues}
+              submitLabel={entryId ? 'Enregistrer les modifications' : 'Ajouter au journal'}
+              onSubmit={handleSubmit}
+            />
+          </Card>
+        </UnsavedFormBoundary>
+      ) : null}
       {!loading && !errorMessage && !details ? <Link to={routePaths.recipes}>Retour aux recettes</Link> : null}
+      <UnsavedChangesGuard when={isDirty} />
     </section>
   );
 }

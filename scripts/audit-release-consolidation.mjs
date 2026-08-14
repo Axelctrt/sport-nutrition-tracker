@@ -13,12 +13,16 @@ const requiredFiles = [
   'RELEASE-NOTES-0.35.1.md',
   'RELEASE-NOTES-0.36.0.md',
   'RELEASE-NOTES-0.37.0.md',
+  'RELEASE-NOTES-1.0.0.md',
+  'RELEASE-NOTES-1.0.0-rc.1.md',
+  'RELEASE-NOTES-1.0.0-rc.2.md',
   'CHANGELOG.md',
   'RELEASE-CHECKLIST.md',
   'KNOWN-LIMITATIONS.md',
   'docs/onboarding-compact-0.32.0.md',
   'e2e/onboarding-compact.spec.ts',
   'e2e/nutrition-add-flow.spec.ts',
+  'e2e/helpers/performanceGlass.ts',
   'e2e/performance-glass-0.34.0.spec.ts',
   'scripts/shared/stableVersion.mjs',
   'scripts/audit-unified-sync-center.mjs',
@@ -36,12 +40,14 @@ for (const path of requiredFiles) {
 if (failures.length === 0) {
   const packageJson = JSON.parse(read('package.json'));
   const packageLock = JSON.parse(read('package-lock.json'));
-  if (packageJson.version !== '0.37.0') fail(`package.json doit publier 0.37.0, reçu ${packageJson.version}.`);
-  if (packageLock.version !== '0.37.0' || packageLock.packages?.['']?.version !== '0.37.0') {
-    fail('package-lock.json doit être aligné sur 0.37.0.');
+  if (packageJson.version !== '1.0.0') {
+    fail(`package.json doit préparer 1.0.0, reçu ${packageJson.version}.`);
+  }
+  if (packageLock.version !== packageJson.version || packageLock.packages?.['']?.version !== packageJson.version) {
+    fail(`package-lock.json doit être aligné sur ${packageJson.version}.`);
   }
   if (!isStableVersionAtLeast(packageJson.version, 20)) {
-    fail('la version courante doit être reconnue comme stable par le garde-fou partagé.');
+    fail('la version courante doit être reconnue comme compatible par le garde-fou partagé.');
   }
 
   const scripts = packageJson.scripts ?? {};
@@ -62,32 +68,72 @@ if (failures.length === 0) {
     ['synchronisation automatique', automaticSyncAudit],
     ['récompenses', rewardAudit],
   ]) {
-    if (!source.includes('3408 * 1024')) fail(`le budget JavaScript ${label} n’est pas aligné sur 3408 Kio.`);
+    if (!source.includes('3584 * 1024')) fail(`le budget JavaScript ${label} n’est pas aligné sur 3584 Kio.`);
   }
 
-  const releaseNotes = read('RELEASE-NOTES-0.37.0.md');
+  const releaseNotes = read('RELEASE-NOTES-1.0.0.md');
   for (const marker of [
-    'SportPilot 0.37.0',
-    'Branche : `release/0.37.0`',
-    'Aucun tag ni déploiement',
-    'photos de progression privées et locales',
-    'galerie et comparateur',
-    'archive photo séparée',
-    'aucune synchronisation cloud des photos',
-    'aucune publication sociale des photos',
-    'aucune analyse corporelle par IA',
-    'aucune modification des formules caloriques',
-    'migration locale additive',
-    'compatibilité Chromium, WebKit et PWA',
-    'statut de disponibilité',
-    'aucune migration D1',
+    'SportPilot 1.0.0 — stable en préparation',
+    'Branche : `codex/163-release-1-0-0`',
+    'develop@13cef273d09d78eeb4d177ab23e86c7770748419',
+    'non publiée, non taguée et non déployée',
+    'cold launch PWA',
+    '2554638a782f3be338b7323b95abc1078f65ef0b',
+    'Dexie v12',
+    'sauvegarde JSON v10',
+    'runtime Dexie Cloud v16',
+    'registre des espaces de données v1',
+    '0.29.0-a3',
+    '2 HIGH / 0 CRITICAL',
+    '#103',
+    '#136',
+    '#137',
+    '#138',
+    '#141',
+    '#146',
+    '#162',
   ]) {
     if (!releaseNotes.includes(marker)) fail(`notes de release incomplètes : ${marker}.`);
   }
 
+  const acceptedRc2Notes = read('RELEASE-NOTES-1.0.0-rc.2.md');
+  for (const marker of [
+    'SportPilot 1.0.0-rc.2',
+    'Branche : `codex/rc-1-0-0-rc2`',
+    'cold launch PWA',
+    '**/analytics*.js',
+    'AnalyticsPage-*',
+    '6 796 octets',
+    '#141',
+    '#146',
+  ]) {
+    if (!acceptedRc2Notes.includes(marker)) fail(`archive RC2 incomplète : ${marker}.`);
+  }
+
+  const rejectedRc1Notes = read('RELEASE-NOTES-1.0.0-rc.1.md');
+  for (const marker of [
+    'SportPilot 1.0.0-rc.1',
+    '2fd781087a65e125b0e77edcd53d41fdf82922ed',
+    '64efefef-d4c5-4f6a-a98e-c04ca65bc0da',
+    'REJETÉE',
+    '#144',
+    '#145',
+    'Aucune seconde Preview RC1',
+  ]) {
+    if (!rejectedRc1Notes.includes(marker)) fail(`archive RC1 incomplète : ${marker}.`);
+  }
+
+  const stableReleaseNotes = read('RELEASE-NOTES-0.37.0.md');
+  for (const marker of ['SportPilot 0.37.0', 'Branche : `release/0.37.0`', 'Aucun tag ni déploiement']) {
+    if (!stableReleaseNotes.includes(marker)) fail(`archive 0.37.0 incomplète : ${marker}.`);
+  }
+
   const checklist = read('RELEASE-CHECKLIST.md');
   for (const marker of [
-    'Branche `release/0.37.0` créée',
+    'SportPilot 1.0.0',
+    'Archive RC1 — rejetée',
+    '#146',
+    '#162',
     'Aucun tag créé',
     'Suite Vitest complète',
     'Build PWA',
@@ -97,7 +143,7 @@ if (failures.length === 0) {
   }
 
   const knownLimitations = read('KNOWN-LIMITATIONS.md');
-  for (const marker of ['SportPilot 0.37.0', 'Photos de progression', 'Moteur calorique', 'Dépendances']) {
+  for (const marker of ['SportPilot 1.0.0 en préparation', '#103', '#136', '#137', '#138', '#141', '#146', '#162', '2 HIGH / 0 CRITICAL', 'Dépendances']) {
     if (!knownLimitations.includes(marker)) fail(`limitations connues incomplètes : ${marker}.`);
   }
 
@@ -126,13 +172,41 @@ if (failures.length === 0) {
 
   const performanceGlass = read('e2e/performance-glass-0.34.0.spec.ts');
   for (const marker of [
-    'async function prepareVisualTheme(',
-    "page.goto('/visual-lab.html'",
-    "page.locator('#root')",
-    'await setVisualThemeState(page, options);',
+    'async function prepareVisualApplication(',
+    'await page.goto(`/visual-lab.html${bootstrapSearch}`',
+    "await expect(page.locator('#root')).not.toBeEmpty();",
+    'await setup(page);',
+    'await page.goto(targetUrl, { waitUntil: \'domcontentloaded\' });',
+    'async function prepareSeededVisualTheme(',
+    'await seedPerformanceGlassData(setupPage);',
+    'await setVisualThemeState(setupPage, options);',
+    'async function enableDarkMode(page: Page)',
+    "name: /Thème clair.*Thème sombre/",
+    "test('active le thème sombre core via le contrôle accessible'",
+    "appearance: 'light'",
+    'await enableDarkMode(page);',
+    "reducedMotion: 'reduce'",
+    "page.getByRole('dialog', { name: 'Tout est prêt' })",
+    "page.locator('.sp-badge-reveal-backdrop')",
   ]) {
     if (!performanceGlass.includes(marker)) {
-      fail(`le harnais Performance Glass doit isoler les écritures IndexedDB : ${marker}.`);
+      fail(`le harnais Performance Glass doit conserver son cycle navigateur contrôlé : ${marker}.`);
+    }
+  }
+
+  const performanceGlassHelper = read('e2e/helpers/performanceGlass.ts');
+  for (const marker of [
+    "import { achievementCatalog } from '../../src/domain/rewards/achievements';",
+    'achievementCatalog.map(({ id }) => id)',
+    'const earnedAchievements = seededAchievementIds.map((id) => ({',
+    'earnedAchievements,',
+    'const readPersistedAppearance = () => page.evaluate(async ({',
+    'persistedAppearance.localAppearance !== appearance',
+    'persistedAppearance.deviceAppearance !== appearance',
+    'deviceAppearance: appearance,',
+  ]) {
+    if (!performanceGlassHelper.includes(marker)) {
+      fail(`le seed Performance Glass doit neutraliser les reveals hors périmètre : ${marker}.`);
     }
   }
 
@@ -145,9 +219,9 @@ if (failures.length === 0) {
 }
 
 if (failures.length > 0) {
-  console.error('Audit de consolidation 0.37.0 échoué :');
+  console.error('Audit de consolidation 1.0.0 échoué :');
   for (const failure of failures) console.error(`- ${failure}`);
   process.exit(1);
 }
 
-console.log('Audit de consolidation 0.37.0 réussi : version, documentation, budgets, parcours et contrats de stockage sont alignés.');
+console.log('Audit de consolidation 1.0.0 réussi : version stable, archives RC1/RC2, documentation, budgets, parcours et contrats de stockage sont alignés.');

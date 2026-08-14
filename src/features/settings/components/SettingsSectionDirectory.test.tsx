@@ -130,4 +130,60 @@ describe('SettingsSectionDirectory', () => {
     parent.remove();
   });
 
+  it('distingue un annuaire indisponible sans proposer de faux reset', () => {
+    render(<SettingsSectionDirectory sections={[]} />);
+
+    expect(
+      screen
+        .getByRole('heading', { name: 'Aucune rubrique disponible' })
+        .closest('[data-empty-state-variant]'),
+    ).toHaveAttribute('data-empty-state-variant', 'unavailable');
+    expect(
+      screen.queryByRole('button', { name: 'Effacer la recherche' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('rend une recherche vide réinitialisable sans ouvrir de rubrique', async () => {
+    const user = userEvent.setup();
+    const onOpenSection = vi.fn();
+    const sections = [
+      {
+        id: 'theme',
+        label: 'Thèmes visuels',
+        description: 'Palettes débloquées.',
+        icon: Palette,
+      },
+      {
+        id: 'energy',
+        label: 'Dépense énergétique',
+        description: 'Calories et coefficients.',
+        icon: Calculator,
+      },
+    ];
+    render(
+      <SettingsSectionDirectory
+        sections={sections}
+        onOpenSection={onOpenSection}
+      />,
+    );
+    const search = screen.getByRole('searchbox', {
+      name: 'Rechercher dans les paramètres',
+    });
+
+    await user.type(search, 'introuvable');
+
+    expect(
+      screen
+        .getByRole('heading', { name: 'Aucune rubrique trouvée' })
+        .closest('[data-empty-state-variant]'),
+    ).toHaveAttribute('data-empty-state-variant', 'filtered');
+
+    await user.click(
+      screen.getByRole('button', { name: 'Effacer la recherche' }),
+    );
+
+    expect(search).toHaveValue('');
+    expect(screen.getAllByRole('button')).toHaveLength(sections.length);
+    expect(onOpenSection).not.toHaveBeenCalled();
+  });
 });

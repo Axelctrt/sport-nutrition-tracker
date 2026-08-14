@@ -25,7 +25,7 @@ describe('SettingsHomePage', () => {
     );
 
     expect(await screen.findByRole('heading', { name: 'Paramètres', level: 1 })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Profil et objectifs/ })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /Profil et objectif nutritionnel/ })).toHaveAttribute(
       'href',
       '/settings/profile-objectives',
     );

@@ -1,6 +1,7 @@
 import { createPortal } from 'react-dom';
 import { useEffect, useRef, useState } from 'react';
 import { Trash2 } from 'lucide-react';
+import { inputClassName } from '@/shared/forms/formStyles';
 import { Button } from '@/shared/ui/Button';
 
 interface BackupDeleteDialogProps {
@@ -89,17 +90,17 @@ export function BackupDeleteDialog({
         aria-modal="true"
         aria-labelledby="backup-delete-title"
         aria-describedby="backup-delete-description"
-        className="safe-area-bottom w-full max-w-lg rounded-3xl border border-red-200 bg-white p-5 shadow-2xl dark:border-red-900 dark:bg-slate-900 sm:p-6"
+        className="safe-area-bottom w-full max-w-lg rounded-[var(--sp-radius-card)] border border-red-200 bg-[var(--sp-surface-elevated)] p-5 shadow-2xl dark:border-red-900 sm:p-6"
       >
         <div className="flex items-start gap-3">
-          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300">
+          <span className="grid size-10 shrink-0 place-items-center rounded-[var(--sp-radius-control)] bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300">
             <Trash2 aria-hidden="true" className="size-5" />
           </span>
           <div>
-            <h2 id="backup-delete-title" className="text-xl font-semibold text-slate-950 dark:text-white">
+            <h2 id="backup-delete-title" className="text-xl font-semibold text-[var(--sp-text-primary)]">
               Effacer toutes les données ?
             </h2>
-            <p id="backup-delete-description" className="mt-2 leading-6 text-slate-600 dark:text-slate-300">
+            <p id="backup-delete-description" className="mt-2 leading-6 text-[var(--sp-text-secondary)]">
               Le profil, l’historique et les réglages locaux seront supprimés. Cette opération ne peut être annulée sans sauvegarde JSON.
             </p>
           </div>
@@ -115,7 +116,7 @@ export function BackupDeleteDialog({
             onChange={(event) => setConfirmation(event.target.value)}
             autoComplete="off"
             spellCheck={false}
-            className="mt-2 min-h-11 w-full rounded-xl border border-red-300 bg-white px-3 text-slate-950 outline-none focus:border-red-600 focus:ring-2 focus:ring-red-600/25 dark:border-red-800 dark:bg-slate-950 dark:text-white"
+            className={`${inputClassName} mt-2`}
           />
         </label>
 

@@ -20,6 +20,7 @@ interface ProfileFormProps {
   submitLabel: string;
   onSubmit: (values: ProfileFormValues) => Promise<void>;
   onValuesChange?: (values: ProfileFormValues) => void;
+  onDirtyChange?: (isDirty: boolean) => void;
   formId?: string;
   secondaryAction?: {
     label: string;
@@ -44,6 +45,7 @@ export function ProfileForm({
   submitLabel,
   onSubmit,
   onValuesChange,
+  onDirtyChange,
   formId = 'profile-form',
   secondaryAction,
 }: ProfileFormProps) {
@@ -54,12 +56,16 @@ export function ProfileForm({
     watch,
     getValues,
     setValue,
-    formState: { errors, isSubmitting, submitCount },
+    formState: { errors, isDirty, isSubmitting, submitCount },
   } = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
     defaultValues: initialValues,
     mode: 'onBlur',
   });
+
+  useEffect(() => {
+    onDirtyChange?.(isDirty);
+  }, [isDirty, onDirtyChange]);
 
   useEffect(() => {
     if (!onValuesChange) return undefined;
@@ -111,7 +117,7 @@ export function ProfileForm({
 
       <CollapsibleSection
         sectionId="profile-personal"
-        storageKey="sportpilot:profile:personal"
+        defaultOpen
         title="Informations personnelles"
         description="Identité, âge, taille et poids de référence."
         summary="Essentiel"

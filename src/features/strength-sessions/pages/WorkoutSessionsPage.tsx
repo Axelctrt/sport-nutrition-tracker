@@ -51,8 +51,6 @@ export function WorkoutSessionsPage() {
     if (created) {
       actionToast.success({ key: `workout-session-start:${created.session.id}`, title: 'Séance libre démarrée' });
       await navigate(workoutSessionPath(created.session.id));
-    } else {
-      actionToast.error({ key: 'workout-session-start', error: errorMessage, fallback: 'La séance libre n’a pas pu être démarrée.' });
     }
   };
 

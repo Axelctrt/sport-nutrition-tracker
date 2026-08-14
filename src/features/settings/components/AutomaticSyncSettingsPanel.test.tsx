@@ -111,4 +111,30 @@ describe('AutomaticSyncSettingsPanel', () => {
       }),
     );
   });
+
+  it('conserve une erreur d’enregistrement sur la surface', async () => {
+    const initial = settings();
+    const saveSettings = vi
+      .fn()
+      .mockRejectedValue(new Error('Synchronisation non enregistrée.'));
+    const user = userEvent.setup();
+
+    render(
+      <AutomaticSyncSettingsPanel
+        client={client()}
+        loadSettings={vi.fn().mockResolvedValue(initial)}
+        saveSettings={saveSettings}
+      />,
+    );
+
+    await user.click(
+      await screen.findByRole('button', {
+        name: 'Activer pour ce compte',
+      }),
+    );
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Synchronisation non enregistrée.',
+    );
+  });
 });

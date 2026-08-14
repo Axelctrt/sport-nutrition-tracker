@@ -11,6 +11,7 @@ import { RecipeLibraryCard } from '@/features/recipes/components/RecipeLibraryCa
 import { RecipesSummary } from '@/features/recipes/components/RecipesSummary';
 import { useRecipes } from '@/features/recipes/hooks/useRecipes';
 import { inputClassName } from '@/shared/forms/formStyles';
+import { revealElement } from '@/shared/motion/revealElement';
 import { useActionToast } from '@/shared/toast/useActionToast';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
@@ -70,7 +71,6 @@ export function RecipesPage() {
     const key = `${returnFeedback.title}:${returnFeedback.itemId ?? ''}`;
     if (handledFeedbackRef.current === key) return;
     handledFeedbackRef.current = key;
-    setFeedback(returnFeedback.title);
     actionToast.success({
       key: `recipe-return:${returnFeedback.itemId ?? returnFeedback.title}`,
       title: returnFeedback.title,
@@ -88,8 +88,7 @@ export function RecipesPage() {
   useEffect(() => {
     if (!highlightedRecipeId || status !== 'ready') return;
     window.requestAnimationFrame(() => {
-      document.getElementById(`recipe-${highlightedRecipeId}`)?.scrollIntoView({
-        behavior: 'smooth',
+      revealElement(document.getElementById(`recipe-${highlightedRecipeId}`), {
         block: 'nearest',
       });
     });
@@ -99,9 +98,6 @@ export function RecipesPage() {
     const removed = await remove(recipeId);
     if (removed) {
       setFeedback('Recette supprimée');
-      actionToast.success({ key: `recipe-delete:${recipeId}`, title: 'Recette supprimée' });
-    } else {
-      actionToast.error({ key: `recipe-delete:${recipeId}`, error: errorMessage, fallback: 'La recette n’a pas pu être supprimée.' });
     }
     return removed;
   };
@@ -123,14 +119,19 @@ export function RecipesPage() {
         <Link
           to={routePaths.newRecipe}
           state={navigationState}
-          className={`${isFirstUse ? 'hidden sm:inline-flex' : 'inline-flex'} min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand-700 px-4 font-semibold text-white hover:bg-brand-800 dark:bg-brand-600 dark:hover:bg-brand-500 sm:w-auto`}
+          className={`${isFirstUse ? 'hidden sm:inline-flex' : 'inline-flex'} sp-button min-h-[var(--sp-control-height-lg)] w-full items-center justify-center gap-2 rounded-[var(--sp-radius-control)] px-4 font-semibold sm:w-auto`}
         >
           <Plus aria-hidden="true" className="size-5" />Nouvelle recette
         </Link>
       </div>
 
       {errorMessage ? (
-        <InlineNotice className="mt-5" tone="error" title="Recettes indisponibles" role="alert">
+        <InlineNotice
+          className="mt-5"
+          tone="error"
+          title={status === 'error' ? 'Recettes indisponibles' : 'Suppression impossible'}
+          role="alert"
+        >
           <p>{errorMessage}</p>
           {status === 'error' ? <Button className="mt-3" variant="secondary" onClick={() => void refresh()}>Réessayer</Button> : null}
         </InlineNotice>
@@ -161,12 +162,21 @@ export function RecipesPage() {
               title="Aucune recette"
               description="Crée une première recette à partir des aliments enregistrés sur cet appareil."
               primaryAction={(
-                <Link to={routePaths.newRecipe} state={navigationState} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-brand-700 px-4 text-sm font-semibold text-white hover:bg-brand-800">
+                <Link
+                  to={routePaths.newRecipe}
+                  state={navigationState}
+                  className="sp-button inline-flex min-h-[var(--sp-control-height-md)] items-center justify-center gap-2 rounded-[var(--sp-radius-control)] px-4 text-sm font-semibold"
+                >
                   <Plus aria-hidden="true" className="size-4" />Créer une recette
                 </Link>
               )}
               secondaryAction={(
-                <Link to={routePaths.foodProducts} className="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 px-4 text-sm font-semibold dark:border-slate-700">Ouvrir les aliments</Link>
+                <Link
+                  to={routePaths.foodProducts}
+                  className="sp-button sp-button--secondary inline-flex min-h-[var(--sp-control-height-md)] items-center justify-center rounded-[var(--sp-radius-control)] px-4 text-sm font-semibold"
+                >
+                  Ouvrir les aliments
+                </Link>
               )}
             />
           ) : visibleRecipes.length === 0 ? (

@@ -4,6 +4,67 @@ Ce fichier synthétise les versions publiées. Les notes détaillées versionné
 restent les archives de référence et conservent l’état de préparation de chaque
 livraison.
 
+## 1.0.0 — stable en préparation
+
+- Passage de la version applicative de `1.0.0-rc.2` à `1.0.0`, sans migration
+  ni changement fonctionnel.
+- Périmètre V1 consolidé depuis `0.37.0`, incluant le correctif cold launch PWA
+  #144/#145 et les garanties de continuité, d'isolation, de focus et de
+  rétention validées pendant les candidates.
+- RC2 gelée au SHA `2554638a782f3be338b7323b95abc1078f65ef0b`,
+  déployée une seule fois et acceptée dans #147.
+- Stabilisations post-RC2 Friends, WebKit et thème conservées comme preuves de
+  test, sans les présenter comme des fonctionnalités.
+- Gate sécurité #141 levé après #161 : audit ramené de 9 HIGH / 0 CRITICAL à
+  2 HIGH / 0 CRITICAL ; résiduel Quagga/Sharp accepté pour V1 et suivi dans
+  #162.
+- Versions de données inchangées : Dexie v12, sauvegarde JSON v10, runtime
+  Dexie Cloud v16, registre d'espaces v1 et snapshot social `0.29.0-a3`.
+
+Cette entrée est **NON PUBLIÉE**. Aucun tag `v1.0.0`, aucune GitHub Release,
+aucune modification de `main` et aucun déploiement de production ne sont
+effectués par cette préparation. La production reste en `0.37.0`.
+
+Voir [`RELEASE-NOTES-1.0.0.md`](RELEASE-NOTES-1.0.0.md).
+
+## 1.0.0-rc.2 — candidate en préparation le 11 août 2026
+
+- Correction du cold launch PWA hors ligne observé sur RC1.
+- Ajout d'une preuve E2E réelle : online, fermeture, nouvelle page offline,
+  lecture et écriture locales.
+- Préservation du nouveau focus acquis après navigation (#151/#152), tout en
+  conservant le transfert vers le contenu principal en l'absence de nouveau
+  focus.
+- Stabilisation de la preuve WebKit Progress Photos (#149/#150) : le scénario
+  conserve l'action clavier réelle `50` → `ArrowRight` → `51` et vérifie le
+  focus du slider.
+- Préparation d'une nouvelle candidate après le rejet historique de RC1.
+- Aucun changement de schéma ou de données : Dexie v12, sauvegarde JSON v10,
+  runtime Dexie Cloud v16, registre d'espaces v1 et snapshot social
+  `0.29.0-a3`.
+
+Cette entrée n'est pas une publication. Aucune Preview, fusion, modification
+CORS/Dexie Cloud, action sur `main`, tag, release ou production n'est incluse.
+La production reste en `0.37.0`.
+
+Voir [`RELEASE-NOTES-1.0.0-rc.2.md`](RELEASE-NOTES-1.0.0-rc.2.md).
+
+## 1.0.0-rc.1 — déployée puis rejetée le 11 août 2026
+
+- Convergence mobile/desktop des hubs Sport, Nutrition et Progression.
+- Continuité des saisies non enregistrées sur les surfaces critiques.
+- Feedbacks, états filtrés, clavier/focus et reduced-motion consolidés.
+- Preuves Chromium, WebKit/iPhone, PWA, isolation et continuité renforcées.
+- Versions de données inchangées : Dexie v12, sauvegarde JSON v10, runtime
+  Dexie Cloud v16 et snapshot social `0.29.0-a3`.
+
+RC1 a été déployée une seule fois depuis
+`2fd781087a65e125b0e77edcd53d41fdf82922ed`, puis rejetée après la reproduction
+du cold launch PWA #144. Aucun tag, aucune release GitHub et aucune production
+n'ont été créés ; la production reste en `0.37.0`.
+
+Voir [`RELEASE-NOTES-1.0.0-rc.1.md`](RELEASE-NOTES-1.0.0-rc.1.md).
+
 ## 0.37.0 - publiée le 2 août 2026
 
 - Ajout local et privé des photos de progression.

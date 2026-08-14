@@ -1,3 +1,5 @@
+import { revealElement } from '@/shared/motion/revealElement';
+
 const INVALID_FIELD_SELECTOR = '[aria-invalid="true"], [data-invalid="true"]';
 
 export function focusFirstInvalidField(container: ParentNode): HTMLElement | null {
@@ -10,11 +12,8 @@ export function focusFirstInvalidField(container: ParentNode): HTMLElement | nul
     parent = parent.parentElement;
   }
 
-  field.focus({ preventScroll: true });
-  field.scrollIntoView({
-    behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
-      ? 'auto'
-      : 'smooth',
+  revealElement(field, {
+    focus: true,
     block: 'center',
     inline: 'nearest',
   });

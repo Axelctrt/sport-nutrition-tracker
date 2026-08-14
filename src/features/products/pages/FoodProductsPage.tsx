@@ -10,13 +10,14 @@ import { FoodProductCard } from '@/features/products/components/FoodProductCard'
 import { FoodProductsSummary } from '@/features/products/components/FoodProductsSummary';
 import { useFoodProducts } from '@/features/products/hooks/useFoodProducts';
 import { inputClassName } from '@/shared/forms/formStyles';
+import { revealElement } from '@/shared/motion/revealElement';
 import { useActionToast } from '@/shared/toast/useActionToast';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 import { PageSkeleton } from '@/shared/ui/PageSkeleton';
-import { cn } from '@/shared/utils/cn';
+import { SegmentedControl } from '@/shared/ui/SegmentedControl';
 
 type ProductFilter = 'all' | 'favorites' | 'verification';
 
@@ -25,6 +26,11 @@ const filterLabels: Record<ProductFilter, string> = {
   favorites: 'Favoris',
   verification: 'À vérifier',
 };
+
+const filterItems = (Object.keys(filterLabels) as ProductFilter[]).map((value) => ({
+  value,
+  label: filterLabels[value],
+}));
 
 export function FoodProductsPage() {
   const actionToast = useActionToast();
@@ -96,8 +102,7 @@ export function FoodProductsPage() {
   useEffect(() => {
     if (!highlightedProductId || status !== 'ready') return;
     window.requestAnimationFrame(() => {
-      document.getElementById(`food-product-${highlightedProductId}`)?.scrollIntoView({
-        behavior: 'smooth',
+      revealElement(document.getElementById(`food-product-${highlightedProductId}`), {
         block: 'nearest',
       });
     });
@@ -109,12 +114,6 @@ export function FoodProductsPage() {
       actionToast.success({
         key: `food-product-archive:${productId}`,
         title: 'Aliment archivé',
-      });
-    } else {
-      actionToast.error({
-        key: `food-product-archive:${productId}`,
-        error: errorMessage,
-        fallback: 'L’aliment n’a pas pu être archivé.',
       });
     }
     return archived;
@@ -138,7 +137,7 @@ export function FoodProductsPage() {
         <div className="grid w-full grid-cols-2 gap-2 sm:w-auto">
           <Link
             to={routePaths.foodSearch}
-            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-800 hover:bg-slate-50 active:scale-[0.98] dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800 sm:px-4"
+            className="sp-button sp-button--secondary inline-flex min-h-[var(--sp-control-height-lg)] items-center justify-center gap-2 rounded-[var(--sp-radius-control)] px-3 text-sm font-semibold sm:px-4"
           >
             <DatabaseZap aria-hidden="true" className="size-5" />
             Rechercher
@@ -146,7 +145,7 @@ export function FoodProductsPage() {
           <Link
             to={routePaths.newFoodProduct}
             state={navigationState}
-            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-brand-700 px-3 text-sm font-semibold text-white hover:bg-brand-800 active:scale-[0.98] dark:bg-brand-600 dark:hover:bg-brand-500 sm:px-4"
+            className="sp-button inline-flex min-h-[var(--sp-control-height-lg)] items-center justify-center gap-2 rounded-[var(--sp-radius-control)] px-3 text-sm font-semibold sm:px-4"
           >
             <Plus aria-hidden="true" className="size-5" />
             Créer
@@ -155,7 +154,12 @@ export function FoodProductsPage() {
       </div>
 
       {errorMessage ? (
-        <InlineNotice className="mt-5" tone="error" title="Catalogue indisponible" role="alert">
+        <InlineNotice
+          className="mt-5"
+          tone="error"
+          title={status === 'error' ? 'Catalogue indisponible' : 'Archivage impossible'}
+          role="alert"
+        >
           <p>{errorMessage}</p>
           {status === 'error' ? <Button className="mt-3" variant="secondary" onClick={() => void refresh()}>Réessayer</Button> : null}
         </InlineNotice>
@@ -187,24 +191,13 @@ export function FoodProductsPage() {
                 placeholder="Nom, marque ou code-barres"
               />
             </div>
-            <div className="mt-3 grid grid-cols-3 gap-2" aria-label="Filtrer les aliments">
-              {(Object.keys(filterLabels) as ProductFilter[]).map((value) => (
-                <button
-                  key={value}
-                  type="button"
-                  aria-pressed={filter === value}
-                  onClick={() => setFilter(value)}
-                  className={cn(
-                    'min-h-11 rounded-xl border px-2 text-sm font-semibold transition-colors motion-reduce:transition-none',
-                    filter === value
-                      ? 'border-brand-700 bg-brand-700 text-white dark:border-brand-500 dark:bg-brand-600'
-                      : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800',
-                  )}
-                >
-                  {filterLabels[value]}
-                </button>
-              ))}
-            </div>
+            <SegmentedControl
+              className="mt-3"
+              label="Filtrer les aliments"
+              items={filterItems}
+              value={filter}
+              onChange={(value) => setFilter(value as ProductFilter)}
+            />
           </Card>
 
           {allProducts.length === 0 ? (
@@ -214,12 +207,19 @@ export function FoodProductsPage() {
               title="Aucun aliment local"
               description="Crée un aliment manuel ou enregistre un produit depuis Open Food Facts pour commencer ta bibliothèque hors connexion."
               primaryAction={(
-                <Link to={routePaths.newFoodProduct} state={navigationState} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-brand-700 px-4 text-sm font-semibold text-white hover:bg-brand-800">
+                <Link
+                  to={routePaths.newFoodProduct}
+                  state={navigationState}
+                  className="sp-button inline-flex min-h-[var(--sp-control-height-md)] items-center justify-center gap-2 rounded-[var(--sp-radius-control)] px-4 text-sm font-semibold"
+                >
                   <Plus aria-hidden="true" className="size-4" />Créer un aliment
                 </Link>
               )}
               secondaryAction={(
-                <Link to={routePaths.foodSearch} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-300 px-4 text-sm font-semibold dark:border-slate-700">
+                <Link
+                  to={routePaths.foodSearch}
+                  className="sp-button sp-button--secondary inline-flex min-h-[var(--sp-control-height-md)] items-center justify-center gap-2 rounded-[var(--sp-radius-control)] px-4 text-sm font-semibold"
+                >
                   <DatabaseZap aria-hidden="true" className="size-4" />Open Food Facts
                 </Link>
               )}

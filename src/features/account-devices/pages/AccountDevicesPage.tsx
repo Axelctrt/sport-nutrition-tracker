@@ -256,12 +256,6 @@ export function AccountDevicesPage({
         title: "Action interrompue",
         message: error instanceof Error ? error.message : fallback,
       });
-      actionToast.error({
-        key: `account-device-${action}`,
-        title: 'Action interrompue',
-        error,
-        fallback,
-      });
       setPendingAction(undefined);
     }
   };

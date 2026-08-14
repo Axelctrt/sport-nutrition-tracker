@@ -67,6 +67,9 @@ describe('AdvancedCsvExportPanel', () => {
         exact: false,
       }),
     ).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent(
+      '2 fichier(s) prêt(s)',
+    );
   });
 
   it('exige au moins un jeu de données', async () => {
@@ -95,6 +98,9 @@ describe('AdvancedCsvExportPanel', () => {
         'Sélectionne au moins un jeu de données à exporter.',
       ),
     ).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Sélectionne au moins un jeu de données à exporter.',
+    );
     expect(prepareExports).not.toHaveBeenCalled();
   });
 

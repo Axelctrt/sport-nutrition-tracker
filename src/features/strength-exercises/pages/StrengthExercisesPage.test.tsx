@@ -1,11 +1,25 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { vi } from 'vitest';
 import { createStrengthExercise } from '@/test/factories/strengthUxFactory';
 
 import { StrengthExercisesPage } from '@/features/strength-exercises/pages/StrengthExercisesPage';
 import { repositories } from '@/infrastructure/repositories/repositories';
+import { ToastProvider } from '@/shared/toast/ToastProvider';
+
+function renderFeedbackPage() {
+  render(
+    <MemoryRouter initialEntries={['/strength/exercises']}>
+      <ToastProvider>
+        <Routes>
+          <Route path="/strength/exercises" element={<StrengthExercisesPage />} />
+          <Route path="/strength/exercises/:exerciseId/edit" element={<h1>Éditeur ouvert</h1>} />
+        </Routes>
+      </ToastProvider>
+    </MemoryRouter>,
+  );
+}
 
 describe('StrengthExercisesPage', () => {
   beforeEach(() => {
@@ -14,6 +28,10 @@ describe('StrengthExercisesPage', () => {
       createStrengthExercise({ id: 'squat', name: 'Squat arrière' }),
       createStrengthExercise({ id: 'bench', name: 'Développé couché' }),
     ]);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('conserve le focus pendant la saisie complète de la recherche', async () => {
@@ -34,7 +52,7 @@ describe('StrengthExercisesPage', () => {
     expect(repositories.strengthExercises.listAll).toHaveBeenCalledTimes(1);
   });
 
-  it('propose de créer immédiatement la recherche sans résultat', async () => {
+  it('traite une recherche sans résultat comme un état filtré et permet de tout réafficher', async () => {
     const user = userEvent.setup();
     render(
       <MemoryRouter>
@@ -47,17 +65,191 @@ describe('StrengthExercisesPage', () => {
     });
     await user.type(search, 'tirage unilatéral poulie');
 
-    const createLink = await screen.findByRole('link', {
-      name: 'Créer cet exercice',
-    });
-    expect(createLink).toHaveAttribute(
+    const emptyTitle = await screen.findByText(
+      'Aucun exercice trouvé pour « tirage unilatéral poulie »',
+    );
+    expect(
+      emptyTitle.closest('[data-empty-state-variant]'),
+    ).toHaveAttribute('data-empty-state-variant', 'filtered');
+    expect(
+      screen.getByRole('link', { name: 'Créer cet exercice' }),
+    ).toHaveAttribute(
       'href',
       expect.stringContaining(
         'query=tirage+unilat%C3%A9ral+poulie',
       ),
     );
-    expect(screen.getByText(
-      'Aucun exercice trouvé pour « tirage unilatéral poulie »',
-    )).toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole('button', {
+        name: 'Afficher tous les exercices',
+      }),
+    );
+
+    expect(search).toHaveValue('');
+    expect(screen.getByText('Squat arrière')).toBeInTheDocument();
+    expect(screen.getByText('Développé couché')).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Aucun exercice trouvé/),
+    ).not.toBeInTheDocument();
+  });
+
+  it('réinitialise un filtre qui masque des exercices existants sans pousser vers la création', async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <StrengthExercisesPage />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText('Squat arrière');
+    await user.click(
+      screen.getByRole('button', {
+        name: 'Catalogue',
+      }),
+    );
+
+    const emptyTitle = await screen.findByText('Aucun exercice avec ces filtres');
+    const emptyState = emptyTitle.closest('[data-empty-state-variant]');
+    expect(emptyState).toHaveAttribute('data-empty-state-variant', 'filtered');
+    expect(
+      within(emptyState as HTMLElement).queryByRole('link', {
+        name: 'Créer cet exercice',
+      }),
+    ).not.toBeInTheDocument();
+
+    await user.click(
+      within(emptyState as HTMLElement).getByRole('button', {
+        name: 'Afficher tous les exercices',
+      }),
+    );
+
+    expect(screen.getByText('Squat arrière')).toBeInTheDocument();
+    expect(screen.getByText('Développé couché')).toBeInTheDocument();
+  });
+
+  it('conserve les suggestions de similarité dans un état filtré', async () => {
+    const user = userEvent.setup();
+    vi.mocked(repositories.strengthExercises.listAll).mockResolvedValue([
+      createStrengthExercise({
+        id: 'tirage',
+        name: 'Tirage poulie unilatéral',
+      }),
+      createStrengthExercise({ id: 'bench', name: 'Développé couché' }),
+    ]);
+
+    render(
+      <MemoryRouter>
+        <StrengthExercisesPage />
+      </MemoryRouter>,
+    );
+
+    const search = await screen.findByRole('searchbox', {
+      name: 'Rechercher un exercice',
+    });
+    await user.type(search, 'tirage unilateral poulie');
+
+    const emptyTitle = await screen.findByText(
+      'Aucun exercice trouvé pour « tirage unilateral poulie »',
+    );
+    expect(
+      emptyTitle.closest('[data-empty-state-variant]'),
+    ).toHaveAttribute('data-empty-state-variant', 'filtered');
+    expect(screen.getByText('Exercices similaires')).toBeInTheDocument();
+    expect(screen.getByText('Tirage poulie unilatéral')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: 'Créer cet exercice' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('réserve le premier usage à un catalogue réellement vide', async () => {
+    vi.mocked(repositories.strengthExercises.listAll).mockResolvedValue([]);
+
+    render(
+      <MemoryRouter>
+        <StrengthExercisesPage />
+      </MemoryRouter>,
+    );
+
+    const emptyTitle = await screen.findByText('Aucun exercice dans le catalogue');
+    const emptyState = emptyTitle.closest('[data-empty-state-variant]');
+    expect(emptyState).toHaveAttribute('data-empty-state-variant', 'first-use');
+    expect(
+      within(emptyState as HTMLElement).getByRole('link', {
+        name: 'Créer un exercice',
+      }),
+    ).toBeInTheDocument();
+    expect(
+      within(emptyState as HTMLElement).queryByRole('button', {
+        name: 'Afficher tous les exercices',
+      }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('garde une erreur locale unique lorsque la duplication échoue', async () => {
+    const user = userEvent.setup();
+    vi.spyOn(repositories.strengthExercises, 'getById').mockRejectedValue(
+      new Error('Duplication indisponible'),
+    );
+    renderFeedbackPage();
+
+    await user.click(await screen.findByRole('button', { name: 'Actions pour Squat arrière' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Dupliquer' }));
+
+    await waitFor(() => {
+      expect(repositories.strengthExercises.getById).toHaveBeenCalledWith('squat');
+      expect(screen.getByText('Duplication indisponible')).toBeInTheDocument();
+      expect(screen.getAllByRole('alert')).toHaveLength(1);
+    });
+  });
+
+  it('garde une erreur locale unique et le payload lorsque l’archivage échoue', async () => {
+    const user = userEvent.setup();
+    vi.spyOn(repositories.strengthExercises, 'getById').mockResolvedValue(
+      createStrengthExercise({ id: 'squat', name: 'Squat arrière' }),
+    );
+    vi.spyOn(repositories.strengthExercises, 'update').mockRejectedValue(
+      new Error('Archivage indisponible'),
+    );
+    renderFeedbackPage();
+
+    await user.click(await screen.findByRole('button', { name: 'Actions pour Squat arrière' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Archiver' }));
+    const dialog = screen.getByRole('alertdialog', { name: 'Archiver cet exercice ?' });
+    await user.click(within(dialog).getByRole('button', { name: 'Archiver' }));
+
+    await waitFor(() => {
+      expect(repositories.strengthExercises.update).toHaveBeenCalledWith('squat', {
+        isArchived: true,
+      });
+      expect(screen.getByText('Archivage indisponible')).toBeInTheDocument();
+      expect(screen.getAllByRole('alert')).toHaveLength(1);
+    });
+  });
+
+  it('conserve le toast et la navigation après une duplication réussie', async () => {
+    const user = userEvent.setup();
+    const source = createStrengthExercise({ id: 'squat', name: 'Squat arrière' });
+    const duplicate = createStrengthExercise({
+      id: 'squat-copy',
+      name: 'Squat arrière — copie',
+    });
+    vi.spyOn(repositories.strengthExercises, 'getById').mockResolvedValue(source);
+    vi.spyOn(repositories.strengthExercises, 'create').mockResolvedValue(duplicate);
+    renderFeedbackPage();
+
+    await user.click(await screen.findByRole('button', { name: 'Actions pour Squat arrière' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Dupliquer' }));
+
+    expect(await screen.findByRole('heading', { name: 'Éditeur ouvert' })).toBeInTheDocument();
+    expect(screen.getAllByRole('status')).toHaveLength(1);
+    expect(screen.getByRole('status')).toHaveTextContent('Exercice dupliqué');
+    expect(repositories.strengthExercises.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'Squat arrière — copie',
+        source: 'user',
+        isArchived: false,
+      }),
+    );
   });
 });

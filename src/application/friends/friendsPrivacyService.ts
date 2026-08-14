@@ -137,6 +137,17 @@ export function createFriendsPrivacyService(
     privacy: updateFriendsPrivacySettings(state.privacy, changes),
   }, feedback);
 
+  const updatePrivacyWithoutFeedback = (
+    changes: Partial<FriendsPrivacySettings>,
+  ) => setState({
+    friends: state.friends,
+    requests: state.requests,
+    privacy: updateFriendsPrivacySettings(state.privacy, changes),
+    ...(state.activityPermissions === undefined
+      ? {}
+      : { activityPermissions: state.activityPermissions }),
+  });
+
   return {
     getState: () => state,
     getSummary: () => summarizeFriendsPrivacy(state),
@@ -163,12 +174,9 @@ export function createFriendsPrivacyService(
             : 'Demande envoyée. Elle devra être acceptée avant tout accès ami.',
         );
       },
-      setProfileVisibility: (visibility) => updatePrivacy(
-        { profileVisibility: visibility },
-        visibility === 'private'
-          ? 'Profil passé en privé. Les permissions de partage par ami restent inchangées.'
-          : 'Visibilité du profil mise à jour.',
-      ),
+      setProfileVisibility: (visibility) => updatePrivacyWithoutFeedback({
+        profileVisibility: visibility,
+      }),
       setActivitySharing: (sharing) => updatePrivacy(
         { activitySharing: sharing },
         sharing === 'disabled'

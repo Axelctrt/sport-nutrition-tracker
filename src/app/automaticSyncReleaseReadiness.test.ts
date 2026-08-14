@@ -10,8 +10,8 @@ import {
 } from '@/infrastructure/sync-prototype/SyncPrototypeDatabase';
 
 describe('publication SportPilot 0.26.0 — synchronisation automatique résiliente', () => {
-  it('publie la version stable avec le schéma courant', () => {
-    expect(__APP_VERSION__).toBe('0.37.0');
+  it('prépare la version candidate avec le schéma courant', () => {
+    expect(__APP_VERSION__).toBe('1.0.0');
     expect(databaseSchemaVersion).toBe(12);
     expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(10);
     expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(16);

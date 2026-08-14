@@ -129,12 +129,6 @@ export function AutomaticSyncSettingsPanel({
     } catch (error) {
       const fallback = 'Le réglage n’a pas pu être enregistré.';
       setErrorMessage(error instanceof Error ? error.message : fallback);
-      actionToast.error({
-        key: `automatic-sync-${action}`,
-        title: 'Réglage impossible',
-        error,
-        fallback,
-      });
     } finally {
       setBusy(undefined);
     }

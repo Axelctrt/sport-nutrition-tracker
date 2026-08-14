@@ -32,8 +32,6 @@ export function WorkoutTemplatesPage() {
     if (created) {
       actionToast.success({ key: `workout-template-duplicate:${id}`, title: 'Séance modèle dupliquée' });
       await navigate(editWorkoutTemplatePath(created.id));
-    } else {
-      actionToast.error({ key: `workout-template-duplicate:${id}`, error: actionErrorMessage, fallback: 'La séance modèle n’a pas pu être dupliquée.' });
     }
   };
 
@@ -42,8 +40,6 @@ export function WorkoutTemplatesPage() {
     if (session) {
       actionToast.success({ key: `workout-template-start:${id}`, title: 'Séance démarrée' });
       await navigate(workoutSessionPath(session.id));
-    } else {
-      actionToast.error({ key: `workout-template-start:${id}`, error: actionErrorMessage, fallback: 'La séance n’a pas pu être démarrée.' });
     }
   };
 
@@ -51,8 +47,6 @@ export function WorkoutTemplatesPage() {
     const success = await setArchived(id, archived);
     if (success) {
       actionToast.success({ key: `workout-template-archive:${id}`, title: archived ? 'Séance modèle archivée' : 'Séance modèle réactivée' });
-    } else {
-      actionToast.error({ key: `workout-template-archive:${id}`, error: actionErrorMessage, fallback: 'La séance modèle n’a pas pu être modifiée.' });
     }
     return success;
   };
@@ -68,9 +62,9 @@ export function WorkoutTemplatesPage() {
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">Prépare tes entraînements réutilisables et démarre la bonne séance en quelques secondes.</p>
         </div>
         <div className="grid grid-cols-2 gap-2 sm:flex">
-          <Link to={routePaths.weeklyPlanning} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"><CalendarDays aria-hidden="true" className="size-4" />Planning</Link>
-          <Link to={routePaths.workoutSessions} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"><Dumbbell aria-hidden="true" className="size-4" />Entraînements</Link>
-          <Link to={routePaths.newWorkoutTemplate} className={`${isFirstUse ? 'hidden sm:inline-flex' : 'inline-flex'} min-h-12 items-center justify-center gap-2 rounded-xl bg-brand-700 px-4 text-sm font-semibold text-white shadow-sm hover:bg-brand-800`}><Plus aria-hidden="true" className="size-4" />Créer</Link>
+          <Link to={routePaths.weeklyPlanning} className="sp-button sp-button--secondary inline-flex min-h-[var(--sp-control-height-lg)] items-center justify-center gap-2 rounded-[var(--sp-radius-control)] px-4 text-sm font-semibold"><CalendarDays aria-hidden="true" className="size-4" />Planning</Link>
+          <Link to={routePaths.workoutSessions} className="sp-button sp-button--secondary inline-flex min-h-[var(--sp-control-height-lg)] items-center justify-center gap-2 rounded-[var(--sp-radius-control)] px-4 text-sm font-semibold"><Dumbbell aria-hidden="true" className="size-4" />Entraînements</Link>
+          <Link to={routePaths.newWorkoutTemplate} className={`${isFirstUse ? 'hidden sm:inline-flex' : 'inline-flex'} sp-button min-h-[var(--sp-control-height-lg)] items-center justify-center gap-2 rounded-[var(--sp-radius-control)] px-4 text-sm font-semibold`}><Plus aria-hidden="true" className="size-4" />Créer</Link>
         </div>
       </div>
 
@@ -104,7 +98,7 @@ export function WorkoutTemplatesPage() {
           title={templates.length === 0 ? 'Aucune séance modèle' : 'Aucune séance trouvée'}
           description={templates.length === 0 ? 'Crée ta première séance pour préparer ton prochain entraînement.' : 'Tes séances sont toujours disponibles. Efface la recherche pour les retrouver.'}
           primaryAction={templates.length === 0
-            ? <Link to={routePaths.newWorkoutTemplate} className="inline-flex min-h-11 items-center justify-center rounded-xl bg-brand-700 px-4 text-sm font-semibold text-white">Créer une séance</Link>
+            ? <Link to={routePaths.newWorkoutTemplate} className="sp-button inline-flex min-h-[var(--sp-control-height-md)] items-center justify-center rounded-[var(--sp-radius-control)] px-4 text-sm font-semibold">Créer une séance</Link>
             : <Button variant="secondary" onClick={() => setQuery('')}>Effacer la recherche</Button>}
         />
       ) : null}

@@ -4,38 +4,117 @@ Cette roadmap décrit une séquence et des conditions d’entrée, pas des dates
 livraison. Une phase planifiée n’autorise ni son implémentation, ni sa fusion,
 ni son déploiement.
 
-| Phase | Statut | Résultat attendu | Condition d’entrée |
-| --- | --- | --- | --- |
-| 0 — Stabilisation UX | **Publié en production** | Saisie numérique stable, confirmation de séance, constructeur simplifié, libellé « Profil » | Inclus dans la base publiée |
-| 1 — Modèle opératoire agents | **Publié en production** | Référentiel documentaire vérifié, ADR et règles durables | Inclus dans la base publiée |
-| 2 — Audit ciblé | **Terminé et accepté** | Rapport d’audit sans modification fonctionnelle | Conclusions utilisées pour la Phase 3 |
-| 3 — Fondations UX partagées | **Publié en production 0.37.0** | Correctifs UX, variantes `EmptyState`, politique de feedback, arbitre global et carte extensible pilote | Phases 3A à 3E validées |
-| 4 — Photos de progression locales | **Publié en production 0.37.0** | Suivi photo privé, local, non social et comparateur tactile | PR #18, CI complète et recette iPhone/Safari validées |
-| 5 — Déploiement contrôlé | **Terminé** | Publication de `main`, tag annoté, release GitHub stable et production validée | PR #21, commit `84fea3d49e68c7d190c00d505502a5c4aa2e672a`, tag `v0.37.0` |
+## Sources de vérité
+
+- dépôt : `Axelctrt/sport-nutrition-tracker` ;
+- production fonctionnelle 0.37.0 :
+  `84fea3d49e68c7d190c00d505502a5c4aa2e672a` ;
+- `develop` constaté avant la Phase 0 V1 :
+  `eec97bf9ac776b519d051329551836853894fd82` ;
+- `develop` final après le Lot 8 et la clôture de #63 :
+  `3eff34a73cc40d98d3de2ab947ac8b45bfae5f01` ;
+- RC1 : `1.0.0-rc.1`, déployée une fois puis rejetée dans #142 ;
+- correctif PWA RC1 : PR #145, intégré dans
+  `develop@465f927c6ed17dd7537bfa83d6fe11e9329825ea` ;
+- correctif navigation/focus : #151/#152, intégré dans
+  `develop@2d87ef9ddbf1d667c54229093b0895e948e6c73d` ;
+- stabilisation de preuve WebKit Progress Photos : #149/#150, intégrée dans la
+  base technique avant gel
+  `develop@e1921f5807292f8236e70c1688d8d9f02c22bdf0` ;
+- RC2 acceptée : `1.0.0-rc.2` au SHA gelé
+  `2554638a782f3be338b7323b95abc1078f65ef0b`, journal #147 ;
+- gate CORS Dexie Cloud #146 terminé en `completed` ;
+- gate sécurité #141 terminé au squash
+  `develop@13cef273d09d78eeb4d177ab23e86c7770748419`, résiduel suivi dans #162 ;
+- stable `1.0.0` en préparation via #163 ;
+- documents de détail :
+  [`V1_READINESS_PLAN.md`](V1_READINESS_PLAN.md) et
+  [`PLANNED_FEATURES.md`](PLANNED_FEATURES.md).
+
+Les HEAD doivent être revérifiés sur GitHub à chaque reprise.
 
 ## État publié
 
-- SportPilot 0.37.0 est en production depuis `main`.
-- Le tag annoté `v0.37.0` pointe vers
-  `84fea3d49e68c7d190c00d505502a5c4aa2e672a`.
-- La release GitHub 0.37.0 est stable, non draft et non prerelease.
-- Aucune migration D1 n’a été exécutée pour cette publication.
-- La version 0.36.0 reste une référence historique de repli uniquement.
+SportPilot 0.37.0 est publié avec :
 
-## Garde-fous de séquencement
+- fondations UX partagées ;
+- photos de progression privées et locales ;
+- Dexie v12 additive ;
+- sauvegarde JSON v10 ;
+- fonctionnement PWA, hors ligne et isolation des espaces validés ;
+- tag annoté `v0.37.0` et release GitHub stable ;
+- aucune migration D1 pour cette publication.
 
-- Les photos de progression restent locales : pas d’images cloud, sociales ou
-  analysées par IA.
-- Le déplacement du statut de disponibilité de l’identifiant public sous son
-  champ reste une amélioration UX non bloquante.
-- Toute nouvelle évolution utilise une branche et une PR distinctes vers
-  `develop`.
-- Toute maintenance documentaire post-release part de `main`, cible `main`,
-  puis `develop` est resynchronisée depuis `main` par merge.
-- Aucun nouveau chantier fonctionnel n’est autorisé par la clôture de la
-  release 0.37.0.
+Le HEAD de `main` peut contenir une maintenance documentaire postérieure au SHA
+fonctionnel déployé. Les deux références ne doivent pas être confondues.
 
-Les détails de portée figurent dans
-[`PLANNED_FEATURES.md`](PLANNED_FEATURES.md). Les limites connues qui ne
-constituent pas une phase produit figurent dans
-[`TECHNICAL_DEBT.md`](TECHNICAL_DEBT.md).
+## Intégré à `develop`, non publié
+
+Les évolutions suivantes sont intégrées dans `develop` mais ne sont pas
+présentes dans la production 0.37.0 :
+
+| Lot | Références | Résultat |
+| --- | --- | --- |
+| Profil, Amis et Confidentialité | PR #24 | lecture seule prioritaire, surfaces d’édition protégées et feedback temporaire |
+| Planning sportif | PR #45 | semaine prioritaire, action `Planifier` et création dédiée |
+| Objectifs de progression | PR #47 | édition protégée, métrique verrouillée et anti-double comptage |
+| Objectif vers action | PR #49 | destinations contextuelles explicites sans création automatique |
+| Menus d’actions | PR #51, #53, #54, #56, #57 et #59 | primitive adaptative et migrations Sport, Nutrition et Progression |
+| OTP fluide | PR #62 | champ natif partagé, huit cellules et vérification automatique |
+
+Le chantier parent #50 est fonctionnellement terminé. Le renvoi OTP était une
+option conditionnelle, pas un reliquat obligatoire.
+
+## Décision stratégique
+
+Le prochain objectif n’est pas un nouveau cycle de fonctionnalités. Le
+périmètre existant doit être rendu cohérent, stabilisé puis évalué pour une
+publication SportPilot `1.0.0`.
+
+SportPilot sera considéré **V1-ready** lorsque l’audit de readiness aura
+démontré que le périmètre existant est cohérent, stable, sûr pour les données,
+mobile-first, hors ligne, testable et publiable. La V1 officielle exige ensuite
+une candidate validée et une publication explicitement autorisée.
+
+## Trajectoire V1
+
+| Phase | Statut | Résultat attendu | Condition de sortie |
+| --- | --- | --- | --- |
+| 0 — Réconciliation documentaire | **Terminée** | sources canoniques alignées, PR #60 remplacée, #50 clôturé administrativement | validation et intégration terminées |
+| 1 — Audit transverse | **Terminée** | matrice complète UX, comportements, accessibilité, hors ligne et données | rapport #63 validé par le propriétaire |
+| 2 — Fondations partagées manquantes | **Terminée** | primitives démontrées nécessaires par l’audit | contrats et pilotes validés |
+| 3 — Normalisation par domaines | **Terminée** | migrations en lots indépendants, sans changement métier implicite | recettes de chaque lot validées |
+| 4 — Convergence transverse | **Terminée** | inventaire final, exceptions justifiées et cohérence globale démontrée | rapport de convergence accepté |
+| 5 — Audit de readiness V1 | **Terminée** | décision V1 prête et dettes séparées | preuve transverse finale validée, #63 clôturée |
+| 6 — Corrections bloquantes V1 | **Non requise** | aucun blocage V1 critique ou significatif reproductible restant dans #63 | décision de readiness validée |
+| 7 — Release Candidate V1 | **Terminée** | gel fonctionnel, RC2 déployée une seule fois et recette complète | RC2 acceptée dans #147 |
+| 8 — Publication SportPilot V1 | **En cours** | candidat stable `1.0.0`, Preview finale, `main`, tag, release et production | contrôles post-déploiement validés |
+| 9 — Cycle produit post-V1 | **Après V1 uniquement** | nouvelles fonctions et optimisations | nouveau cadrage explicite |
+
+## Prochaine action immédiate
+
+1. préparer `1.0.0` depuis
+   `develop@13cef273d09d78eeb4d177ab23e86c7770748419` via #163 ;
+2. valider le diff de version, de documentation et de contrats de release ;
+3. exécuter les tests, audits stables et la CI GitHub Actions complète ;
+4. conserver #103, #136, #137, #138 et #162 comme dettes séparées ;
+5. préserver #141 et #146 comme gates terminés, sans les rouvrir ni les
+   présenter comme des blockers ;
+6. arrêter avant toute Preview Cloudflare, fusion, action sur `main`, tag,
+   release ou production.
+
+## Garde-fous permanents
+
+- mobile-first, 320 à 412 px avant enrichissement desktop ;
+- local-first et hors ligne ;
+- continuité et isolation des données ;
+- aucune formule calorique modifiée sans audit et validation ;
+- aucun thème validé modifié sans validation ;
+- aucune extension IA sans validation ;
+- recommandations UX hors périmètre séparées ;
+- aucune migration Dexie ou D1 implicite ;
+- aucune fusion, release ou production sans autorisation explicite.
+
+Les détails de portée et de méthode figurent dans
+[`V1_READINESS_PLAN.md`](V1_READINESS_PLAN.md). Les limites connues figurent
+dans [`TECHNICAL_DEBT.md`](TECHNICAL_DEBT.md).

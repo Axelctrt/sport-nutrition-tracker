@@ -25,9 +25,34 @@ preuves de livraison.
 | Processus de release | [`quality/RELEASE_PROCESS.md`](quality/RELEASE_PROCESS.md) |
 | Changelog | [`../CHANGELOG.md`](../CHANGELOG.md) |
 | Roadmap | [`roadmap/ROADMAP.md`](roadmap/ROADMAP.md) |
+| Trajectoire et readiness V1 | [`roadmap/V1_READINESS_PLAN.md`](roadmap/V1_READINESS_PLAN.md) |
 | Fonctionnalités planifiées | [`roadmap/PLANNED_FEATURES.md`](roadmap/PLANNED_FEATURES.md) |
 | Dette technique | [`roadmap/TECHNICAL_DEBT.md`](roadmap/TECHNICAL_DEBT.md) |
 | Décisions ADR | [`decisions/README.md`](decisions/README.md) |
+
+## Reprise du travail courant
+
+La cible stratégique est SportPilot `1.0.0`. Les Phases 0 à 5 et les lots de
+convergence sont terminés ; #63 est clôturée. RC1 a été déployée une fois puis
+rejetée dans #142 à cause du cold launch PWA #144. Le correctif #145, le
+correctif navigation/focus #151/#152 et la stabilisation de preuve WebKit
+#149/#150 ont été intégrés. RC2 a été gelée au SHA
+`2554638a782f3be338b7323b95abc1078f65ef0b`, déployée une seule fois puis
+acceptée dans #147. #146 et le gate sécurité #141 sont terminés. La Phase 8
+prépare maintenant `1.0.0` depuis
+`develop@13cef273d09d78eeb4d177ab23e86c7770748419` via #163 ; #162 reste un
+suivi post-V1 non bloquant.
+
+Pour reprendre le travail, vérifier d’abord les HEAD réels de `main` et
+`develop`, l’état de #163, de la PR draft stable et de la CI. Une ancienne
+conversation ou un SHA inscrit ici ne remplace jamais cette vérification.
+
+La préparation stable n'autorise aucun nouveau développement fonctionnel, aucune
+Preview Cloudflare, fusion, action sur `main`, création de tag, release ou
+production.
+Les nouvelles fonctions, la synchronisation étendue, les nouvelles métriques,
+les optimisations avancées et le renvoi OTP sont reportés au cycle post-V1 sauf
+décision explicite contraire.
 
 ## Convention de statut
 

@@ -129,14 +129,14 @@ export function ProgressPhotoArchivePanel({
     <>
       <Card className="p-4 sm:p-5" aria-labelledby="progress-photo-archive-title">
         <div className="flex items-start gap-3">
-          <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+          <span className="grid size-11 shrink-0 place-items-center rounded-[var(--sp-radius-control)] bg-[var(--sp-surface-muted)] text-[var(--sp-text-secondary)]">
             <FileArchive aria-hidden="true" className="size-5" />
           </span>
           <div>
-            <h2 id="progress-photo-archive-title" className="text-lg font-semibold text-slate-950 dark:text-white">
+            <h2 id="progress-photo-archive-title" className="text-lg font-semibold text-[var(--sp-text-primary)]">
               Sauvegarder ou supprimer les photos
             </h2>
-            <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
+            <p className="mt-1 text-sm leading-6 text-[var(--sp-text-secondary)]">
               La sauvegarde JSON générale de SportPilot n’inclut pas les images. Utilise cette archive séparée pour les conserver ou les restaurer dans l’espace local actuellement ouvert.
             </p>
           </div>

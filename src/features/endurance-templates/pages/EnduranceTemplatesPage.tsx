@@ -27,6 +27,7 @@ import {
   type EnduranceTemplateFormValues,
 } from '@/features/endurance-templates/schemas/enduranceTemplateSchema';
 import { inputClassName } from '@/shared/forms/formStyles';
+import { getMotionSafeScrollBehavior } from '@/shared/motion/revealElement';
 import { useActionToast } from '@/shared/toast/useActionToast';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
@@ -35,6 +36,7 @@ import { EmptyState } from '@/shared/ui/EmptyState';
 import { FormField } from '@/shared/ui/FormField';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 import { PageSkeleton } from '@/shared/ui/PageSkeleton';
+import { UnsavedChangesGuard } from '@/shared/ui/UnsavedChangesGuard';
 
 const optionalNumberRegistration = {
   setValueAs: (value: string) => (value === '' ? undefined : Number(value)),
@@ -148,6 +150,7 @@ export function EnduranceTemplatesPage() {
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [errorMessage, setErrorMessage] = useState<string>();
   const [editingId, setEditingId] = useState<string>();
+  const [pendingEditTarget, setPendingEditTarget] = useState<EnduranceTemplate>();
   const [deleteTarget, setDeleteTarget] = useState<EnduranceTemplate>();
   const form = useForm<EnduranceTemplateFormValues>({
     resolver: zodResolver(enduranceTemplateSchema),
@@ -177,6 +180,20 @@ export function EnduranceTemplatesPage() {
     form.reset(initialValues());
   };
 
+  const openEditor = (template: EnduranceTemplate) => {
+    setEditingId(template.id);
+    form.reset(templateToValues(template));
+    window.scrollTo({ top: 0, behavior: getMotionSafeScrollBehavior() });
+  };
+
+  const requestEditor = (template: EnduranceTemplate) => {
+    if (form.formState.isDirty) {
+      setPendingEditTarget(template);
+      return;
+    }
+    openEditor(template);
+  };
+
   const submit = async (values: EnduranceTemplateFormValues) => {
     setErrorMessage(undefined);
     try {
@@ -190,11 +207,6 @@ export function EnduranceTemplatesPage() {
     } catch (error) {
       const fallback = 'Le modèle ne peut pas être enregistré.';
       setErrorMessage(error instanceof Error ? error.message : fallback);
-      actionToast.error({
-        key: editingId ? `endurance-template-update:${editingId}` : 'endurance-template-create',
-        error,
-        fallback,
-      });
     }
   };
 
@@ -257,15 +269,14 @@ export function EnduranceTemplatesPage() {
                   <div><h3 className="font-semibold text-slate-950 dark:text-white">{template.name}</h3><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{activityTypeLabels[template.activityType]} · {template.durationMinutes} min · {intensityLabels[template.intensity]}</p></div>
                 </div>
                 <div className="mt-4 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-                  <Link to={startPath(template)} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-brand-700 px-3 text-sm font-semibold text-white hover:bg-brand-800"><Play className="size-4" />Utiliser</Link>
-                  <Button size="sm" variant="secondary" onClick={() => { setEditingId(template.id); form.reset(templateToValues(template)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}><Pencil className="size-4" />Modifier</Button>
+                  <Link to={startPath(template)} className="sp-button inline-flex min-h-[var(--sp-control-height-sm)] items-center justify-center gap-2 rounded-[var(--sp-radius-control)] px-3 text-sm font-semibold"><Play className="size-4" />Utiliser</Link>
+                  <Button size="sm" variant="secondary" onClick={() => requestEditor(template)}><Pencil className="size-4" />Modifier</Button>
                   <Button size="sm" variant="secondary" onClick={() => void duplicateEnduranceTemplate(template.id).then(async () => {
                     actionToast.success({ key: `endurance-template-duplicate:${template.id}`, title: 'Modèle d’endurance dupliqué' });
                     await load();
                   }).catch((error: unknown) => {
                     const fallback = 'Duplication impossible.';
                     setErrorMessage(error instanceof Error ? error.message : fallback);
-                    actionToast.error({ key: `endurance-template-duplicate:${template.id}`, error, fallback });
                   })}><CopyPlus className="size-4" />Dupliquer</Button>
                   <Button size="sm" variant="dangerGhost" onClick={() => setDeleteTarget(template)}><Trash2 className="size-4" />Supprimer</Button>
                 </div>
@@ -274,6 +285,21 @@ export function EnduranceTemplatesPage() {
           </div>
         )}
       </div>
+
+      <ConfirmationDialog
+        open={Boolean(pendingEditTarget)}
+        title="Remplacer le brouillon ?"
+        description={pendingEditTarget ? `Les changements non enregistrés seront perdus avant de modifier « ${pendingEditTarget.name} ».` : ''}
+        confirmLabel="Modifier ce modèle"
+        cancelLabel="Conserver le brouillon"
+        onCancel={() => setPendingEditTarget(undefined)}
+        onConfirm={() => {
+          if (!pendingEditTarget) return;
+          const template = pendingEditTarget;
+          setPendingEditTarget(undefined);
+          openEditor(template);
+        }}
+      />
 
       <ConfirmationDialog
         open={Boolean(deleteTarget)}
@@ -295,14 +321,11 @@ export function EnduranceTemplatesPage() {
           }).catch((error: unknown) => {
             const fallback = 'Suppression impossible.';
             setErrorMessage(error instanceof Error ? error.message : fallback);
-            actionToast.error({
-              key: `endurance-template-delete:${templateId}`,
-              error,
-              fallback,
-            });
           });
         }}
       />
+
+      <UnsavedChangesGuard when={form.formState.isDirty} />
     </section>
   );
 }

@@ -9,6 +9,7 @@ import { PageHeader } from '@/app/layouts/PageHeader';
 import { SecondaryPageContext } from '@/app/layouts/SecondaryPageContext';
 import { OfflineStatusBanner } from '@/pwa/OfflineStatusBanner';
 import { useClearInputValueOnFocus } from '@/shared/forms/useClearInputValueOnFocus';
+import { RouteUnsavedChangesBoundary } from '@/shared/ui/RouteUnsavedChangesBoundary';
 
 export function AppLayout() {
   useClearInputValueOnFocus();
@@ -41,7 +42,9 @@ export function AppLayout() {
           className="safe-page-bottom mx-auto min-w-0 max-w-7xl overflow-x-clip px-4 py-6 sm:px-6 lg:px-8"
         >
           <SecondaryPageContext />
-          <Outlet />
+          <RouteUnsavedChangesBoundary>
+            <Outlet />
+          </RouteUnsavedChangesBoundary>
         </main>
       </div>
 

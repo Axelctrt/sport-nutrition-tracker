@@ -45,7 +45,7 @@ for (const value of [
   need(reconciliation, value, 'réconciliation d’identité incomplète');
 }
 for (const value of [
-  '>Profil</h2>',
+  'aria-label="Profil social"',
   'copyIdentity',
   'SOCIAL_HANDLE_AVAILABILITY_DEBOUNCE_MS = 350',
   'aria-describedby="social-handle-status"',

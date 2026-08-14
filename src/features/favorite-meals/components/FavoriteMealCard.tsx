@@ -2,7 +2,7 @@ import { CalendarPlus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import type { FavoriteMealSummary } from '@/application/food/favoriteMealService';
 import { mealSlotLabels } from '@/features/food-journal/utils/foodLabels';
-import { ActionMenu } from '@/shared/ui/ActionMenu';
+import { ActionMenu, ActionMenuItem } from '@/shared/ui/ActionMenu';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { ConfirmationDialog } from '@/shared/ui/ConfirmationDialog';
@@ -35,15 +35,14 @@ export function FavoriteMealCard({ summary, deleting = false, onApply, onDelete 
           </div>
 
           <ActionMenu label={`Actions pour ${favoriteMeal.name}`}>
-            <Button
-              className="w-full justify-start"
-              size="sm"
-              variant="dangerGhost"
+            <ActionMenuItem
+              icon={Trash2}
+              tone="danger"
               disabled={deleting}
               onClick={() => setDeleteOpen(true)}
             >
-              <Trash2 aria-hidden="true" className="size-4" />Supprimer
-            </Button>
+              Supprimer
+            </ActionMenuItem>
           </ActionMenu>
         </div>
 

@@ -71,6 +71,52 @@ function daysBetween(
   );
 }
 
+function isPositiveFiniteDuration(value: number | undefined): value is number {
+  return value !== undefined && Number.isFinite(value) && value > 0;
+}
+
+function computeActivityMinutes(
+  goal: Goal,
+  data: BackupData,
+): number {
+  const countedActivityIds = new Set<string>();
+  let total = 0;
+
+  for (const activity of data.activities) {
+    if (
+      !dateIsIncluded(activity.date, goal.startDate) ||
+      !isPositiveFiniteDuration(activity.durationMinutes)
+    ) {
+      continue;
+    }
+
+    countedActivityIds.add(activity.id);
+    total += activity.durationMinutes;
+  }
+
+  for (const session of data.workoutSessions) {
+    if (
+      session.status !== 'completed' ||
+      !dateIsIncluded(session.date, goal.startDate)
+    ) {
+      continue;
+    }
+
+    if (
+      session.completedActivityId &&
+      countedActivityIds.has(session.completedActivityId)
+    ) {
+      continue;
+    }
+
+    if (isPositiveFiniteDuration(session.durationMinutes)) {
+      total += session.durationMinutes;
+    }
+  }
+
+  return total;
+}
+
 export function computeGoalCurrentValue(
   goal: Goal,
   data: BackupData,
@@ -99,15 +145,7 @@ export function computeGoalCurrentValue(
         );
 
     case 'activityMinutes':
-      return data.activities
-        .filter(({ date }) =>
-          dateIsIncluded(date, goal.startDate),
-        )
-        .reduce(
-          (total, activity) =>
-            total + activity.durationMinutes,
-          0,
-        );
+      return computeActivityMinutes(goal, data);
 
     case 'runningDistanceKm':
       return round(
@@ -355,6 +393,16 @@ export function saveGoal(
 ): Goal {
   const state = readGoalState();
   const now = new Date().toISOString();
+  const existing = goalId
+    ? state.goals.find(({ id }) => id === goalId)
+    : undefined;
+
+  if (existing && existing.metric !== input.metric) {
+    throw new Error(
+      'La métrique d’un objectif existant ne peut pas être modifiée. Crée un nouvel objectif pour changer de métrique.',
+    );
+  }
+
   const metricDefinition = getGoalMetricDefinition(
     input.metric,
   );
@@ -386,10 +434,6 @@ export function saveGoal(
       'Indique le poids de départ pour calculer la progression.',
     );
   }
-
-  const existing = goalId
-    ? state.goals.find(({ id }) => id === goalId)
-    : undefined;
 
   const title =
     input.title.trim() || metricDefinition.label;

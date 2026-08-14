@@ -7,7 +7,6 @@ import {
   HardDrive,
   LoaderCircle,
   Share2,
-
   ShieldCheck,
   Trash2,
   Wrench,
@@ -47,6 +46,7 @@ import {
   createTechnicalDiagnostic,
   serializeTechnicalDiagnostic,
 } from '@/infrastructure/diagnostics/diagnosticService';
+import { inputClassName } from '@/shared/forms/formStyles';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { CollapsibleSection } from '@/shared/ui/CollapsibleSection';
@@ -123,11 +123,11 @@ function ImportSummary({ summary }: { summary: BackupSummary }) {
   return (
     <div className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
       {summaryRows.map(({ key, label }) => (
-        <div key={key} className="min-w-0 border-b border-slate-200 pb-3 dark:border-slate-800">
-          <p className="truncate text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+        <div key={key} className="min-w-0 border-b border-[var(--sp-border-subtle)] pb-3">
+          <p className="truncate text-xs font-semibold uppercase tracking-wide text-[var(--sp-text-muted)]">
             {label}
           </p>
-          <p className="mt-1 text-lg font-bold text-slate-950 dark:text-white">
+          <p className="mt-1 text-lg font-bold text-[var(--sp-text-primary)]">
             {String(summary[key])}
           </p>
         </div>
@@ -197,7 +197,6 @@ export function BackupPage() {
         title: 'Sauvegarde créée',
         message,
       });
-      actionToast.success({ key: 'backup-export', title: 'Sauvegarde créée', description: message });
     } catch (error) {
       const fallback = 'La sauvegarde n’a pas pu être créée.';
       setFeedback({
@@ -205,12 +204,10 @@ export function BackupPage() {
         title: 'Export impossible',
         message: error instanceof Error ? error.message : fallback,
       });
-      actionToast.error({ key: 'backup-export', title: 'Export impossible', error, fallback });
     } finally {
       setIsExporting(false);
     }
   };
-
 
   const handleShare = async () => {
     setFeedback(undefined);
@@ -251,7 +248,6 @@ export function BackupPage() {
         ? `${prepared.summary.totalRecords} enregistrement(s) ont été placés dans la feuille de partage de l’appareil.`
         : `Le partage natif n’est pas disponible ici. ${prepared.fileName} a été téléchargé à la place.`;
       setFeedback({ tone: 'success', title, message });
-      actionToast.success({ key: 'backup-share', title, description: message });
     } catch (error) {
       const fallback = 'La sauvegarde n’a pas pu être partagée.';
       setFeedback({
@@ -259,11 +255,11 @@ export function BackupPage() {
         title: 'Partage impossible',
         message: error instanceof Error ? error.message : fallback,
       });
-      actionToast.error({ key: 'backup-share', title: 'Partage impossible', error, fallback });
     } finally {
       setIsSharing(false);
     }
   };
+
   const handleReminderChange = async (event: ChangeEvent<HTMLSelectElement>) => {
     const intervalDays = Number(event.target.value) as BackupReminderIntervalDays;
     setIsUpdatingReminder(true);
@@ -275,7 +271,6 @@ export function BackupPage() {
         ? 'Le rappel de sauvegarde est désactivé.'
         : `Un rappel discret apparaîtra après ${intervalDays} jours sans sauvegarde.`;
       setFeedback({ tone: 'success', title: 'Rappel mis à jour', message });
-      actionToast.success({ key: 'backup-reminder', title: 'Rappel mis à jour', description: message });
     } catch (error) {
       const fallback = 'Le rappel n’a pas pu être modifié.';
       setFeedback({
@@ -283,7 +278,6 @@ export function BackupPage() {
         title: 'Réglage impossible',
         message: error instanceof Error ? error.message : fallback,
       });
-      actionToast.error({ key: 'backup-reminder', title: 'Réglage impossible', error, fallback });
     } finally {
       setIsUpdatingReminder(false);
     }
@@ -301,7 +295,6 @@ export function BackupPage() {
       );
       const message = 'Le fichier contient uniquement des informations techniques et des compteurs.';
       setFeedback({ tone: 'success', title: 'Diagnostic exporté', message });
-      actionToast.success({ key: 'diagnostic-export', title: 'Diagnostic exporté', description: message });
     } catch (error) {
       const fallback = 'Le diagnostic n’a pas pu être généré.';
       setFeedback({
@@ -309,7 +302,6 @@ export function BackupPage() {
         title: 'Diagnostic impossible',
         message: error instanceof Error ? error.message : fallback,
       });
-      actionToast.error({ key: 'diagnostic-export', title: 'Diagnostic impossible', error, fallback });
     } finally {
       setIsExportingDiagnostic(false);
     }
@@ -358,7 +350,6 @@ export function BackupPage() {
       await applyPreparedBackupImport(pendingImport);
       await refreshProfile();
       const message = `${pendingImport.summary.totalRecords} enregistrement(s) ont été restaurés.`;
-      setFeedback({ tone: 'success', title: 'Restauration terminée', message });
       actionToast.success({ key: 'backup-import', title: 'Restauration terminée', description: message });
       const hasProfile = pendingImport.summary.hasProfile;
       clearPendingImport();
@@ -370,7 +361,6 @@ export function BackupPage() {
         title: 'Restauration impossible',
         message: error instanceof Error ? error.message : fallback,
       });
-      actionToast.error({ key: 'backup-import', title: 'Restauration impossible', error, fallback });
       setImportDialogOpen(false);
     } finally {
       setIsImporting(false);
@@ -398,7 +388,6 @@ export function BackupPage() {
         title: 'Suppression impossible',
         message: error instanceof Error ? error.message : fallback,
       });
-      actionToast.error({ key: 'full-data-reset', title: 'Suppression impossible', error, fallback });
     } finally {
       setIsDeleting(false);
     }
@@ -414,13 +403,13 @@ export function BackupPage() {
   return (
     <section aria-labelledby="backup-title" className="min-w-0 overflow-x-clip">
       <div>
-        <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
+        <p className="text-sm font-semibold uppercase tracking-wide text-[var(--sp-accent-primary)]">
           Données locales
         </p>
-        <h1 id="backup-title" className="mt-1 text-2xl font-bold tracking-tight text-slate-950 dark:text-white sm:text-3xl">
+        <h1 id="backup-title" className="mt-1 text-2xl font-bold tracking-tight text-[var(--sp-text-primary)] sm:text-3xl">
           Sauvegarde et restauration
         </h1>
-        <p className="mt-3 max-w-3xl text-slate-600 dark:text-slate-300">
+        <p className="mt-3 max-w-3xl text-[var(--sp-text-secondary)]">
           Exporte une copie complète, restaure-la sur cet appareil ou efface définitivement les données locales.
         </p>
       </div>
@@ -430,7 +419,6 @@ export function BackupPage() {
         lastBackupLabel={lastBackupLabel}
       />
 
-
       <CollapsibleSection
         sectionId="backup-reminders"
         storageKey="sportpilot:backup:reminders"
@@ -438,17 +426,17 @@ export function BackupPage() {
         description="Dernière sauvegarde, fréquence des rappels et état de protection."
         className="scroll-mt-24"
       >
-              <div className="flex items-start gap-3">
-          <Bell aria-hidden="true" className="mt-0.5 size-6 shrink-0 text-brand-700 dark:text-brand-300" />
+        <div className="flex items-start gap-3">
+          <Bell aria-hidden="true" className="mt-0.5 size-6 shrink-0 text-[var(--sp-accent-primary)]" />
           <div className="min-w-0 flex-1">
-            <h2 id="backup-reminder-title" className="text-lg font-bold text-slate-950 dark:text-white">
+            <h2 id="backup-reminder-title" className="text-lg font-bold text-[var(--sp-text-primary)]">
               Suivi des sauvegardes
             </h2>
-            <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-              Dernière sauvegarde : <span className="font-semibold text-slate-900 dark:text-white">{lastBackupLabel.toLowerCase()}</span>.
+            <p className="mt-2 text-sm leading-6 text-[var(--sp-text-secondary)]">
+              Dernière sauvegarde : <span className="font-semibold text-[var(--sp-text-primary)]">{lastBackupLabel.toLowerCase()}</span>.
             </p>
             {settings?.lastBackupExportedAt ? (
-              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              <p className="mt-1 text-xs text-[var(--sp-text-muted)]">
                 SportPilot {settings.lastBackupAppVersion ?? 'version inconnue'} · format JSON v{settings.lastBackupSchemaVersion ?? 2}
               </p>
             ) : null}
@@ -462,13 +450,13 @@ export function BackupPage() {
         ) : null}
 
         <label className="mt-4 block" htmlFor="backup-reminder-interval">
-          <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">Rappel de sauvegarde</span>
+          <span className="text-sm font-semibold text-[var(--sp-text-primary)]">Rappel de sauvegarde</span>
           <select
             id="backup-reminder-interval"
             value={settings?.backupReminderIntervalDays ?? 0}
             onChange={(event) => void handleReminderChange(event)}
             disabled={!settings || isUpdatingReminder}
-            className="mt-2 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white sm:max-w-xs"
+            className={`${inputClassName} mt-2 sm:max-w-xs`}
           >
             <option value="0">Désactivé</option>
             <option value="7">Tous les 7 jours</option>
@@ -476,7 +464,7 @@ export function BackupPage() {
             <option value="30">Tous les 30 jours</option>
           </select>
         </label>
-            </CollapsibleSection>
+      </CollapsibleSection>
 
       <CollapsibleSection
         sectionId="backup-storage"
@@ -485,8 +473,8 @@ export function BackupPage() {
         description="Vérifier l’espace utilisé et la protection du stockage navigateur."
         className="scroll-mt-24"
       >
-              <StoragePersistenceCard />
-            </CollapsibleSection>
+        <StoragePersistenceCard />
+      </CollapsibleSection>
 
       {feedback ? (
         <InlineNotice
@@ -508,46 +496,46 @@ export function BackupPage() {
           description="Télécharger ou partager une copie JSON complète des données."
           className="scroll-mt-24"
         >
-                  <div className="flex items-start gap-3">
-            <Download aria-hidden="true" className="mt-0.5 size-6 shrink-0 text-brand-700 dark:text-brand-300" />
+          <div className="flex items-start gap-3">
+            <Download aria-hidden="true" className="mt-0.5 size-6 shrink-0 text-[var(--sp-accent-primary)]" />
             <div className="min-w-0">
-              <h2 className="text-lg font-bold text-slate-950 dark:text-white">Exporter les données</h2>
-              <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+              <h2 className="text-lg font-bold text-[var(--sp-text-primary)]">Exporter les données</h2>
+              <p className="mt-2 text-sm leading-6 text-[var(--sp-text-secondary)]">
                 Crée un fichier JSON complet sur cet appareil. Aucune donnée n’est envoyée à un serveur.
               </p>
             </div>
           </div>
-                <div className="mt-5 grid gap-2 sm:grid-cols-2">
-          <Button
-            variant="secondary"
-            onClick={handleExport}
-            disabled={isExporting || isSharing}
-          >
-            {isExporting ? (
-              <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
-            ) : (
-              <DatabaseBackup aria-hidden="true" className="size-4" />
-            )}
-            {isExporting ? 'Création…' : 'Télécharger le JSON'}
-          </Button>
-          <Button
-            onClick={() => void handleShare()}
-            disabled={isExporting || isSharing}
-          >
-            {isSharing ? (
-              <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
-            ) : (
-              <Share2 aria-hidden="true" className="size-4" />
-            )}
-            {isSharing ? 'Préparation…' : 'Partager la sauvegarde'}
-          </Button>
-        </div>
-        <p className="mt-3 text-xs leading-5 text-slate-500 dark:text-slate-400">
-          Sur un appareil compatible, ouvre Fichiers, iCloud Drive,
-          AirDrop ou une autre application. Sinon, le fichier est
-          téléchargé automatiquement.
-        </p>
-                </CollapsibleSection>
+          <div className="mt-5 grid gap-2 sm:grid-cols-2">
+            <Button
+              variant="secondary"
+              onClick={handleExport}
+              disabled={isExporting || isSharing}
+            >
+              {isExporting ? (
+                <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
+              ) : (
+                <DatabaseBackup aria-hidden="true" className="size-4" />
+              )}
+              {isExporting ? 'Création…' : 'Télécharger le JSON'}
+            </Button>
+            <Button
+              onClick={() => void handleShare()}
+              disabled={isExporting || isSharing}
+            >
+              {isSharing ? (
+                <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
+              ) : (
+                <Share2 aria-hidden="true" className="size-4" />
+              )}
+              {isSharing ? 'Préparation…' : 'Partager la sauvegarde'}
+            </Button>
+          </div>
+          <p className="mt-3 text-xs leading-5 text-[var(--sp-text-muted)]">
+            Sur un appareil compatible, ouvre Fichiers, iCloud Drive,
+            AirDrop ou une autre application. Sinon, le fichier est
+            téléchargé automatiquement.
+          </p>
+        </CollapsibleSection>
 
         <CollapsibleSection
           sectionId="backup-import"
@@ -556,51 +544,50 @@ export function BackupPage() {
           description="Contrôler puis remplacer toutes les données de cet appareil."
           className="scroll-mt-24"
         >
-                  <div className="flex items-start gap-3">
-            <Upload aria-hidden="true" className="mt-0.5 size-6 shrink-0 text-brand-700 dark:text-brand-300" />
+          <div className="flex items-start gap-3">
+            <Upload aria-hidden="true" className="mt-0.5 size-6 shrink-0 text-[var(--sp-accent-primary)]" />
             <div className="min-w-0">
-              <h2 className="text-lg font-bold text-slate-950 dark:text-white">Restaurer une sauvegarde</h2>
-              <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+              <h2 className="text-lg font-bold text-[var(--sp-text-primary)]">Restaurer une sauvegarde</h2>
+              <p className="mt-2 text-sm leading-6 text-[var(--sp-text-secondary)]">
                 Le fichier est contrôlé avant toute modification des données présentes.
               </p>
             </div>
           </div>
           <label className="mt-5 block">
-            <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">Fichier JSON SportPilot</span>
+            <span className="text-sm font-semibold text-[var(--sp-text-primary)]">Fichier JSON SportPilot</span>
             <input
               ref={fileInputRef}
               type="file"
               accept="application/json,.json"
               onChange={handleFileSelection}
-              className="mt-2 block w-full rounded-xl border border-slate-300 bg-white p-3 text-sm text-slate-800 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-100 file:px-3 file:py-2 file:font-semibold file:text-brand-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:file:bg-brand-900/50 dark:file:text-brand-100"
+              className={`${inputClassName} mt-2 p-3 file:mr-3 file:rounded-[var(--sp-radius-control)] file:border-0 file:bg-[var(--sp-surface-muted)] file:px-3 file:py-2 file:font-semibold file:text-[var(--sp-text-primary)]`}
             />
           </label>
-          <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+          <p className="mt-2 text-xs text-[var(--sp-text-muted)]">
             Taille maximale : {formatFileSize(MAX_BACKUP_FILE_SIZE_BYTES)}.
           </p>
-                </CollapsibleSection>
+        </CollapsibleSection>
       </div>
 
-
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
-                <CollapsibleSection
-                  sectionId="backup-csv"
-                  storageKey="sportpilot:backup:csv"
-                  title="Exports CSV avancés"
-                  description="Choisir une période et les jeux de données à exporter."
-                  className="scroll-mt-24"
-                >
-                                  <AdvancedCsvExportPanel />
-                                </CollapsibleSection>
-                <CollapsibleSection
-                  sectionId="backup-selective-restore"
-                  storageKey="sportpilot:backup:selective-restore"
-                  title="Restauration sélective"
-                  description="Comparer une sauvegarde et restaurer seulement certains domaines."
-                  className="scroll-mt-24"
-                >
-                                  <SelectiveBackupRestorePanel />
-                                </CollapsibleSection>
+        <CollapsibleSection
+          sectionId="backup-csv"
+          storageKey="sportpilot:backup:csv"
+          title="Exports CSV avancés"
+          description="Choisir une période et les jeux de données à exporter."
+          className="scroll-mt-24"
+        >
+          <AdvancedCsvExportPanel />
+        </CollapsibleSection>
+        <CollapsibleSection
+          sectionId="backup-selective-restore"
+          storageKey="sportpilot:backup:selective-restore"
+          title="Restauration sélective"
+          description="Comparer une sauvegarde et restaurer seulement certains domaines."
+          className="scroll-mt-24"
+        >
+          <SelectiveBackupRestorePanel />
+        </CollapsibleSection>
 
         <CollapsibleSection
           sectionId="backup-diagnostic"
@@ -609,11 +596,11 @@ export function BackupPage() {
           description="Exporter uniquement l’état technique et les compteurs locaux."
           className="scroll-mt-24"
         >
-                  <div className="flex items-start gap-3">
-            <Wrench aria-hidden="true" className="mt-0.5 size-6 shrink-0 text-brand-700 dark:text-brand-300" />
+          <div className="flex items-start gap-3">
+            <Wrench aria-hidden="true" className="mt-0.5 size-6 shrink-0 text-[var(--sp-accent-primary)]" />
             <div className="min-w-0">
-              <h2 className="text-lg font-bold text-slate-950 dark:text-white">Diagnostic technique</h2>
-              <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+              <h2 className="text-lg font-bold text-[var(--sp-text-primary)]">Diagnostic technique</h2>
+              <p className="mt-2 text-sm leading-6 text-[var(--sp-text-secondary)]">
                 Exporte la version, l’état PWA et le nombre d’enregistrements par table, sans poids, repas, nom ni détail de séance.
               </p>
             </div>
@@ -622,33 +609,33 @@ export function BackupPage() {
             {isExportingDiagnostic ? <LoaderCircle aria-hidden="true" className="size-4 animate-spin" /> : <FileJson aria-hidden="true" className="size-4" />}
             {isExportingDiagnostic ? 'Création…' : 'Télécharger le diagnostic'}
           </Button>
-                </CollapsibleSection>
+        </CollapsibleSection>
       </div>
 
       {pendingImport ? (
-        <Card className="mt-4 border-emerald-200 p-5 dark:border-emerald-900 sm:p-6" aria-labelledby="import-preview-title">
+        <Card className="mt-4 p-5 sm:p-6" aria-labelledby="import-preview-title">
           <div className="flex items-start gap-3">
-            <FileCheck2 aria-hidden="true" className="mt-0.5 size-6 shrink-0 text-emerald-700 dark:text-emerald-300" />
+            <FileCheck2 aria-hidden="true" className="mt-0.5 size-6 shrink-0 text-[var(--sp-accent-primary)]" />
             <div className="min-w-0">
-              <h2 id="import-preview-title" className="text-lg font-bold text-slate-950 dark:text-white">
+              <h2 id="import-preview-title" className="text-lg font-bold text-[var(--sp-text-primary)]">
                 Sauvegarde prête à être restaurée
               </h2>
-              <p className="mt-1 break-words text-sm text-slate-600 dark:text-slate-300">
+              <p className="mt-1 break-words text-sm text-[var(--sp-text-secondary)]">
                 {selectedFileName} · {formatExportedAt(pendingImport.summary.exportedAt)} · format source v{pendingImport.summary.sourceSchemaVersion}
               </p>
-              <p className="mt-1 text-sm font-semibold text-slate-800 dark:text-slate-100">
+              <p className="mt-1 text-sm font-semibold text-[var(--sp-text-primary)]">
                 {pendingImport.summary.totalRecords} enregistrement(s) · {pendingImport.summary.profileCount} profil(s) · {pendingImport.summary.appVersion ? `SportPilot ${pendingImport.summary.appVersion}` : 'version d’application inconnue'}
               </p>
             </div>
           </div>
           <div className="mt-4 grid gap-2 sm:grid-cols-2">
-            <div className="rounded-xl border border-emerald-200 p-3 dark:border-emerald-900">
-              <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Compatibilité</p>
-              <p className="mt-1 font-semibold text-slate-950 dark:text-white">Compatible avec cette version</p>
+            <div className="rounded-[var(--sp-radius-control)] border border-[var(--sp-border-subtle)] bg-[var(--sp-surface-muted)] p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--sp-accent-primary)]">Compatibilité</p>
+              <p className="mt-1 font-semibold text-[var(--sp-text-primary)]">Compatible avec cette version</p>
             </div>
-            <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-800">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Migration</p>
-              <p className="mt-1 font-semibold text-slate-950 dark:text-white">{pendingImport.summary.requiresMigration ? `Conversion vers le format v${pendingImport.summary.schemaVersion}` : 'Aucune migration nécessaire'}</p>
+            <div className="rounded-[var(--sp-radius-control)] border border-[var(--sp-border-subtle)] bg-[var(--sp-surface-muted)] p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--sp-text-muted)]">Migration</p>
+              <p className="mt-1 font-semibold text-[var(--sp-text-primary)]">{pendingImport.summary.requiresMigration ? `Conversion vers le format v${pendingImport.summary.schemaVersion}` : 'Aucune migration nécessaire'}</p>
             </div>
           </div>
           <div className="mt-5">
@@ -673,8 +660,8 @@ export function BackupPage() {
           summary="Local"
         >
           <div className="flex items-start gap-3">
-            <ShieldCheck aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-brand-700 dark:text-brand-300" />
-            <ul className="space-y-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+            <ShieldCheck aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-[var(--sp-accent-primary)]" />
+            <ul className="space-y-2 text-sm leading-6 text-[var(--sp-text-secondary)]">
               <li>Les données SportPilot restent dans IndexedDB sur cet appareil.</li>
               <li>Le fichier exporté est créé localement par le navigateur.</li>
               <li>Aucune sauvegarde n’est envoyée à un serveur.</li>
@@ -682,10 +669,10 @@ export function BackupPage() {
             </ul>
           </div>
           {storageEstimate ? (
-            <div className="mt-4 flex items-start gap-3 rounded-xl border border-slate-200 p-4 dark:border-slate-700">
-              <HardDrive aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-slate-500" />
-              <p className="text-sm text-slate-600 dark:text-slate-300">
-                <span className="font-semibold text-slate-900 dark:text-white">Stockage estimé : </span>
+            <div className="mt-4 flex items-start gap-3 rounded-[var(--sp-radius-control)] border border-[var(--sp-border-subtle)] bg-[var(--sp-surface-muted)] p-4">
+              <HardDrive aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-[var(--sp-text-muted)]" />
+              <p className="text-sm text-[var(--sp-text-secondary)]">
+                <span className="font-semibold text-[var(--sp-text-primary)]">Stockage estimé : </span>
                 {formatFileSize(storageEstimate.usage ?? 0)} utilisés
                 {storageEstimate.quota ? ` sur ${formatFileSize(storageEstimate.quota)}` : ''}.
               </p>
@@ -705,9 +692,9 @@ export function BackupPage() {
               ['Confidentiel', 'Aucun compte requis'],
               ['Installable', 'PWA mobile et ordinateur'],
             ].map(([title, description]) => (
-              <div key={title} className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
-                <p className="font-semibold text-slate-950 dark:text-white">{title}</p>
-                <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">{description}</p>
+              <div key={title} className="rounded-[var(--sp-radius-control)] border border-[var(--sp-border-subtle)] bg-[var(--sp-surface-muted)] p-3">
+                <p className="font-semibold text-[var(--sp-text-primary)]">{title}</p>
+                <p className="mt-1 text-xs leading-5 text-[var(--sp-text-muted)]">{description}</p>
               </div>
             ))}
           </div>
@@ -719,7 +706,7 @@ export function BackupPage() {
           summary="Irréversible"
           className="border-red-200 dark:border-red-900"
         >
-          <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">
+          <p className="text-sm leading-6 text-[var(--sp-text-secondary)]">
             {isAccountSpace
               ? 'Pour éviter que les données reviennent depuis le cloud, retire-les depuis « Compte et appareils ».'
               : 'Une sauvegarde JSON de sécurité sera téléchargée automatiquement avant l’effacement.'}
@@ -756,5 +743,3 @@ export function BackupPage() {
     </section>
   );
 }
-
-

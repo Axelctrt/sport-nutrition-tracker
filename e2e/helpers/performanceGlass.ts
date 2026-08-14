@@ -1,5 +1,7 @@
 import { expect, type Page } from '@playwright/test';
 
+import { achievementCatalog } from '../../src/domain/rewards/achievements';
+
 const DATABASE_NAME = 'sportpilot-local-database';
 const VISUAL_THEME_STORAGE_KEY = 'sport-pilot.reward-themes';
 const VISUAL_THEME_BOOT_STORAGE_KEY = 'sport-pilot.active-theme';
@@ -27,10 +29,9 @@ export async function waitForSportPilotDatabase(page: Page): Promise<void> {
 
 export async function seedPerformanceGlassData(page: Page): Promise<void> {
   await waitForSportPilotDatabase(page);
-  await page.goto('/#/privacy');
-  await expect(page.locator('#root')).not.toBeEmpty();
+  const achievementIds = achievementCatalog.map(({ id }) => id);
 
-  await page.evaluate(async (databaseName) => {
+  await page.evaluate(async ({ databaseName, achievementIds: seededAchievementIds }) => {
     const database = await new Promise<IDBDatabase>((resolve, reject) => {
       const request = indexedDB.open(databaseName);
       request.onsuccess = () => resolve(request.result);
@@ -304,6 +305,11 @@ export async function seedPerformanceGlassData(page: Page): Promise<void> {
         completedAt: now,
       }))
     ));
+    const earnedAchievements = seededAchievementIds.map((id) => ({
+      id,
+      earnedAt: now,
+      updatedAt: now,
+    }));
     const endurancePlanningSessions = activities
       .filter(({ type }) => type === 'cycling')
       .slice(0, 5)
@@ -335,6 +341,7 @@ export async function seedPerformanceGlassData(page: Page): Promise<void> {
       workoutSessionExercises,
       strengthSets,
       endurancePlanningSessions,
+      earnedAchievements,
     };
     const storeNames = Object.keys(recordsByStore).filter((storeName) => (
       database.objectStoreNames.contains(storeName)
@@ -361,7 +368,10 @@ export async function seedPerformanceGlassData(page: Page): Promise<void> {
     } finally {
       database.close();
     }
-  }, DATABASE_NAME);
+  }, {
+    databaseName: DATABASE_NAME,
+    achievementIds,
+  });
 }
 
 interface VisualThemeStateOptions {
@@ -381,7 +391,7 @@ export async function setVisualThemeState(
   }: VisualThemeStateOptions,
 ): Promise<void> {
   await waitForSportPilotDatabase(page);
-  await page.evaluate(async ({
+  const persistVisualThemeState = () => page.evaluate(async ({
     databaseName,
     visualThemeStorageKey,
     visualThemeBootStorageKey,
@@ -484,5 +494,110 @@ export async function setVisualThemeState(
     unlockedThemes: unlockedThemeIds,
     selectedAppearance: appearance,
     pendingTheme: pendingRevealThemeId,
+  });
+
+  await persistVisualThemeState();
+
+  const readPersistedAppearance = () => page.evaluate(async ({
+    databaseName,
+    visualThemeStorageKey,
+    visualThemeBootStorageKey,
+    appearanceStorageKey,
+  }) => {
+    const localAppearance = localStorage.getItem(appearanceStorageKey);
+    const hasLegacyTheme = localStorage.getItem(visualThemeStorageKey) !== null;
+    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open(databaseName);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+
+    try {
+      const transaction = database.transaction([
+        'unlockedVisualThemes',
+        'visualThemePreferences',
+        'deviceSettings',
+      ], 'readonly');
+      const completion = new Promise<void>((resolve, reject) => {
+        transaction.oncomplete = () => resolve();
+        transaction.onerror = () => reject(transaction.error);
+        transaction.onabort = () => reject(transaction.error);
+      });
+      const read = <T>(request: IDBRequest<T>) => new Promise<T>((resolve, reject) => {
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+      const [unlockedThemes, preference, settings] = await Promise.all([
+        read<Array<{ id?: string }>>(
+          transaction.objectStore('unlockedVisualThemes').getAll(),
+        ),
+        read<{ activeThemeId?: string } | undefined>(
+          transaction.objectStore('visualThemePreferences')
+            .get('visual-theme-preference'),
+        ),
+        read<{ theme?: string } | undefined>(
+          transaction.objectStore('deviceSettings').get('device-settings'),
+        ),
+      ]);
+      await completion;
+
+      return {
+        localAppearance,
+        deviceAppearance: settings?.theme ?? null,
+        bootTheme: localStorage.getItem(visualThemeBootStorageKey),
+        hasLegacyTheme,
+        preferenceActiveTheme: preference?.activeThemeId ?? null,
+        unlockedThemeIds: unlockedThemes
+          .map(({ id }) => id)
+          .filter((id): id is string => typeof id === 'string')
+          .sort(),
+      };
+    } finally {
+      database.close();
+    }
+  }, {
+    databaseName: DATABASE_NAME,
+    visualThemeStorageKey: VISUAL_THEME_STORAGE_KEY,
+    visualThemeBootStorageKey: VISUAL_THEME_BOOT_STORAGE_KEY,
+    appearanceStorageKey: APPEARANCE_STORAGE_KEY,
+  });
+
+  const expectedPersistedState = {
+    localAppearance: appearance,
+    deviceAppearance: appearance,
+    bootTheme: activeThemeId,
+    hasLegacyTheme: pendingRevealThemeId !== undefined,
+    preferenceActiveTheme: activeThemeId,
+    unlockedThemeIds: [...unlockedThemeIds].sort(),
+  };
+
+  let consecutiveMatches = 0;
+  await expect.poll(async () => {
+    const persistedAppearance = await readPersistedAppearance();
+    const appearanceDiverged =
+      persistedAppearance.localAppearance !== appearance
+      || persistedAppearance.deviceAppearance !== appearance;
+    const visualThemeDiverged =
+      persistedAppearance.bootTheme !== activeThemeId
+      || persistedAppearance.hasLegacyTheme !== (pendingRevealThemeId !== undefined)
+      || persistedAppearance.preferenceActiveTheme !== activeThemeId
+      || JSON.stringify(persistedAppearance.unlockedThemeIds)
+        !== JSON.stringify(expectedPersistedState.unlockedThemeIds);
+
+    if (!appearanceDiverged && !visualThemeDiverged) {
+      consecutiveMatches += 1;
+    } else {
+      consecutiveMatches = 0;
+      await persistVisualThemeState();
+    }
+
+    return { persistedAppearance, consecutiveMatches };
+  }, {
+    timeout: 30_000,
+    intervals: [100, 250, 500],
+    message: 'Le thème visuel doit être durablement persisté dans localStorage, IndexedDB et deviceSettings avant le redémarrage applicatif.',
+  }).toEqual({
+    persistedAppearance: expectedPersistedState,
+    consecutiveMatches: 3,
   });
 }

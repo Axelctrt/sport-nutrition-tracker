@@ -1,5 +1,6 @@
 import { ArrowLeft, RefreshCw, ShieldCheck } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   editFoodProductPath,
@@ -32,6 +33,8 @@ import { Card } from '@/shared/ui/Card';
 import { ConfirmationDialog } from '@/shared/ui/ConfirmationDialog';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 import { PageSkeleton } from '@/shared/ui/PageSkeleton';
+import { UnsavedChangesGuard } from '@/shared/ui/UnsavedChangesGuard';
+import { UnsavedFormBoundary } from '@/shared/ui/UnsavedFormBoundary';
 import { isValidLocalDate } from '@/shared/validation/localDate';
 
 const mealSlots: readonly MealSlot[] = ['breakfast', 'lunch', 'dinner', 'snacks'];
@@ -83,6 +86,7 @@ export function FoodProductEditorPage() {
         : {}),
     };
   }, [product, requestedBarcode, requestedName]);
+  const resetKey = JSON.stringify(initialValues);
   const [loading, setLoading] = useState(Boolean(productId));
   const [errorMessage, setErrorMessage] = useState<string>();
   const [actionErrorMessage, setActionErrorMessage] = useState<string>();
@@ -91,6 +95,7 @@ export function FoodProductEditorPage() {
   const [pendingDuplicateValues, setPendingDuplicateValues] = useState<FoodProductFormValues>();
   const [refreshing, setRefreshing] = useState(false);
   const [replaceConfirmationOpen, setReplaceConfirmationOpen] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
 
   useEffect(() => {
     if (!productId) return;
@@ -144,6 +149,7 @@ export function FoodProductEditorPage() {
         source,
         ...(localOverrides && localOverrides.length > 0 ? { localOverrides } : {}),
       });
+      flushSync(() => setIsDirty(false));
       await navigate(libraryReturn?.path ?? routePaths.foodProducts, {
         state: createFoodLibraryFeedbackState(libraryReturn, {
           title: 'Aliment mis à jour',
@@ -154,6 +160,7 @@ export function FoodProductEditorPage() {
     }
 
     const createdProduct = await repositories.food.createProduct(input);
+    flushSync(() => setIsDirty(false));
     if (mealReturnContext) {
       actionToast.success({
         key: `food-product-create:${createdProduct.id}`,
@@ -201,19 +208,9 @@ export function FoodProductEditorPage() {
         ? `${result.preservedLocalOverrides.length} correction(s) locale(s) conservée(s).`
         : 'Données Open Food Facts actualisées.';
       setFeedback(refreshMessage);
-      actionToast.success({
-        key: `food-product-refresh:${product.id}`,
-        title: 'Aliment actualisé',
-        description: refreshMessage,
-      });
     } catch (error) {
       const fallback = 'Impossible d’actualiser ce produit.';
       setActionErrorMessage(error instanceof Error ? error.message : fallback);
-      actionToast.error({
-        key: `food-product-refresh:${product.id}`,
-        error,
-        fallback,
-      });
     } finally {
       setRefreshing(false);
       setReplaceConfirmationOpen(false);
@@ -314,15 +311,18 @@ export function FoodProductEditorPage() {
       ) : null}
 
       {!loading && !errorMessage ? (
-        <Card className="mt-6 p-4 sm:p-6">
-          <FoodProductForm
-            initialValues={initialValues}
-            submitLabel={product ? 'Enregistrer les modifications' : 'Créer l’aliment'}
-            onSubmit={(values) => saveValues(values, false)}
-          />
-        </Card>
+        <UnsavedFormBoundary resetKey={resetKey} onDirtyChange={setIsDirty}>
+          <Card className="mt-6 p-4 sm:p-6">
+            <FoodProductForm
+              initialValues={initialValues}
+              submitLabel={product ? 'Enregistrer les modifications' : 'Créer l’aliment'}
+              onSubmit={(values) => saveValues(values, false)}
+            />
+          </Card>
+        </UnsavedFormBoundary>
       ) : null}
 
+      <UnsavedChangesGuard when={isDirty} />
       <ConfirmationDialog
         open={replaceConfirmationOpen}
         title="Remplacer les corrections locales ?"

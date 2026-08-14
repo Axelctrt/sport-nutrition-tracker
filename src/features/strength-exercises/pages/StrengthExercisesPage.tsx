@@ -16,6 +16,7 @@ import {
 } from '@/features/strength-exercises/navigation/strengthExerciseCreationNavigation';
 import { equipmentOptions, muscleGroupOptions } from '@/features/strength-exercises/utils/exerciseLabels';
 import { checkboxClassName, inputClassName } from '@/shared/forms/formStyles';
+import { revealElement } from '@/shared/motion/revealElement';
 import { useActionToast } from '@/shared/toast/useActionToast';
 import { Button } from '@/shared/ui/Button';
 import { CollapsibleSection } from '@/shared/ui/CollapsibleSection';
@@ -77,7 +78,7 @@ export function StrengthExercisesPage() {
     const element = document.getElementById(
       `strength-exercise-${highlightedExerciseId}`,
     );
-    element?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+    revealElement(element, { block: 'center' });
     const timeout = window.setTimeout(
       () => setHighlightedExerciseId(undefined),
       2_500,
@@ -93,12 +94,6 @@ export function StrengthExercisesPage() {
         title: 'Exercice dupliqué',
       });
       await navigate(editStrengthExercisePath(created.id));
-    } else {
-      actionToast.error({
-        key: `strength-exercise-duplicate:${id}`,
-        error: actionErrorMessage,
-        fallback: 'L’exercice n’a pas pu être dupliqué.',
-      });
     }
   };
 
@@ -109,14 +104,24 @@ export function StrengthExercisesPage() {
         key: `strength-exercise-archive:${id}`,
         title: archived ? 'Exercice archivé' : 'Exercice réactivé',
       });
-    } else {
-      actionToast.error({
-        key: `strength-exercise-archive:${id}`,
-        error: actionErrorMessage,
-        fallback: 'L’exercice n’a pas pu être modifié.',
-      });
     }
     return success;
+  };
+
+  const isFirstUse = status === 'ready' && allExercises.length === 0;
+  const canCreateFromQuery =
+    normalizedQuery.length > 0
+    && muscleGroup === 'all'
+    && equipment === 'all'
+    && source === 'all'
+    && similarExercises.length === 0;
+
+  const showAllExercises = () => {
+    setQuery('');
+    setMuscleGroup('all');
+    setEquipment('all');
+    setSource('all');
+    setIncludeArchived(true);
   };
 
   return (
@@ -127,7 +132,7 @@ export function StrengthExercisesPage() {
           <h1 id="strength-exercises-title" className="mt-1 text-3xl font-bold tracking-tight text-slate-950 dark:text-white">Catalogue d’exercices</h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">Retrouve les mouvements système, tes exercices personnels et leur historique de progression.</p>
         </div>
-        <Link to={routePaths.newStrengthExercise} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-brand-700 px-5 font-semibold text-white shadow-sm hover:bg-brand-800">
+        <Link to={routePaths.newStrengthExercise} className="sp-button inline-flex min-h-[var(--sp-control-height-lg)] items-center justify-center gap-2 rounded-[var(--sp-radius-control)] px-5 font-semibold">
           <Plus aria-hidden="true" className="size-5" />
           Créer un exercice
         </Link>
@@ -208,19 +213,31 @@ export function StrengthExercisesPage() {
       {status === 'ready' && exercises.length === 0 ? (
         <EmptyState
           className="mt-5"
+          variant={isFirstUse ? 'first-use' : 'filtered'}
           icon={Dumbbell}
           title={
-            normalizedQuery
-              ? `Aucun exercice trouvé pour « ${query.trim()} »`
-              : 'Aucun exercice trouvé'
+            isFirstUse
+              ? 'Aucun exercice dans le catalogue'
+              : normalizedQuery
+                ? `Aucun exercice trouvé pour « ${query.trim()} »`
+                : 'Aucun exercice avec ces filtres'
           }
           description={
-            similarExercises.length > 0
-              ? 'Vérifie les exercices similaires avant de créer un doublon.'
-              : 'Modifie la recherche ou les filtres, ou crée un exercice personnel.'
+            isFirstUse
+              ? 'Crée un premier exercice personnel pour commencer ton catalogue.'
+              : similarExercises.length > 0
+                ? 'Des exercices existent toujours dans le catalogue. Vérifie les exercices similaires ou affiche-les tous.'
+                : 'Des exercices existent toujours dans le catalogue. Réinitialise la recherche et les filtres pour les retrouver.'
           }
           primaryAction={
-            normalizedQuery ? (
+            isFirstUse ? (
+              <Link
+                to={routePaths.newStrengthExercise}
+                className="sp-button inline-flex min-h-[var(--sp-control-height-md)] items-center justify-center rounded-[var(--sp-radius-control)] px-4 text-sm font-semibold"
+              >
+                Créer un exercice
+              </Link>
+            ) : (
               <div className="space-y-3">
                 {similarExercises.length > 0 ? (
                   <div className="text-left">
@@ -234,25 +251,21 @@ export function StrengthExercisesPage() {
                     </ul>
                   </div>
                 ) : null}
-                <Link
-                  to={newStrengthExercisePath({
-                    returnTo: 'library',
-                    query: query.trim(),
-                  })}
-                  className="inline-flex min-h-11 items-center justify-center rounded-xl bg-brand-700 px-4 text-sm font-semibold text-white"
-                >
-                  {similarExercises.length > 0
-                    ? 'Aucun ne correspond — créer l’exercice'
-                    : 'Créer cet exercice'}
-                </Link>
+                <Button variant="secondary" onClick={showAllExercises}>
+                  Afficher tous les exercices
+                </Button>
+                {canCreateFromQuery ? (
+                  <Link
+                    to={newStrengthExercisePath({
+                      returnTo: 'library',
+                      query: query.trim(),
+                    })}
+                    className="sp-button sp-button--secondary inline-flex min-h-[var(--sp-control-height-md)] items-center justify-center rounded-[var(--sp-radius-control)] px-4 text-sm font-semibold"
+                  >
+                    Créer cet exercice
+                  </Link>
+                ) : null}
               </div>
-            ) : (
-              <Link
-                to={routePaths.newStrengthExercise}
-                className="inline-flex min-h-11 items-center justify-center rounded-xl bg-brand-700 px-4 text-sm font-semibold text-white"
-              >
-                Créer un exercice
-              </Link>
             )
           }
         />

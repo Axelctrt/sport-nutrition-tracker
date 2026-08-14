@@ -12,6 +12,7 @@ import { DashboardFixedCore } from '@/features/dashboard/components/DashboardFix
 import { DashboardRewardsOverview } from '@/features/dashboard/components/DashboardRewardsOverview';
 import { DashboardTodaySummary } from '@/features/dashboard/components/DashboardTodaySummary';
 import { DashboardWeeklyProgress } from '@/features/dashboard/components/DashboardWeeklyProgress';
+import { GoalQuickEntryOverlay } from '@/features/dashboard/components/GoalQuickEntryOverlay';
 import {
   dailyCompletionRevealWasSeen,
   markDailyCompletionRevealSeen,
@@ -54,6 +55,8 @@ export function DashboardPage() {
     dailyCoaching,
     errorMessage,
     refresh,
+    saveWeight,
+    saveSteps,
     saveCheckIn,
     saveActivityDecision,
     saveCheckOut,
@@ -284,6 +287,15 @@ export function DashboardPage() {
           </InlineNotice>
         ) : null}
       </section>
+
+      {snapshot ? (
+        <GoalQuickEntryOverlay
+          date={date}
+          snapshot={snapshot}
+          onSaveWeight={saveWeight}
+          onSaveSteps={saveSteps}
+        />
+      ) : null}
 
       {dailyCompletionVisible ? (
         <SportPilotDailyCompletionReveal

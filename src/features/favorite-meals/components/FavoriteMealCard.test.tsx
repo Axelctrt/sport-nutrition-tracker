@@ -22,12 +22,15 @@ describe('FavoriteMealCard', () => {
     expect(onApply).toHaveBeenCalledWith(summary);
   });
 
-  it('confirme la suppression dans le menu secondaire', async () => {
+  it('confirme la suppression depuis l’action canonique du menu secondaire', async () => {
     const user = userEvent.setup();
     const { onDelete } = renderCard();
 
     await user.click(screen.getByRole('button', { name: 'Actions pour Petit-déjeuner habituel' }));
-    await user.click(screen.getByRole('button', { name: 'Supprimer' }));
+    const menu = screen.getByRole('menu', { name: 'Actions pour Petit-déjeuner habituel' });
+    expect(within(menu).getAllByRole('menuitem').map((item) => item.textContent)).toEqual(['Supprimer']);
+
+    await user.click(within(menu).getByRole('menuitem', { name: 'Supprimer' }));
     const dialog = screen.getByRole('alertdialog', { name: 'Supprimer ce repas favori ?' });
     await user.click(within(dialog).getByRole('button', { name: 'Supprimer' }));
 

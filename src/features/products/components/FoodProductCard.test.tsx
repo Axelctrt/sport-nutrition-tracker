@@ -55,12 +55,21 @@ describe('FoodProductCard', () => {
     expect(screen.getByText('Sel 0,12 g')).toBeInTheDocument();
   });
 
-  it('demande une confirmation avant archivage', async () => {
+  it('normalise les actions et demande une confirmation avant archivage', async () => {
     const user = userEvent.setup();
     const onArchive = renderCard();
 
     await user.click(screen.getByRole('button', { name: 'Actions pour Yaourt grec' }));
-    await user.click(screen.getByRole('button', { name: 'Archiver' }));
+    const menu = screen.getByRole('menu', { name: 'Actions pour Yaourt grec' });
+    expect(within(menu).getAllByRole('menuitem').map((item) => item.textContent))
+      .toEqual(['Modifier', 'Archiver']);
+    expect(within(menu).getByRole('separator')).toBeInTheDocument();
+    expect(within(menu).getByRole('menuitem', { name: 'Modifier' })).toHaveAttribute(
+      'href',
+      '/food/products/product-1/edit',
+    );
+
+    await user.click(within(menu).getByRole('menuitem', { name: 'Archiver' }));
     const dialog = screen.getByRole('alertdialog', { name: 'Archiver cet aliment ?' });
     await user.click(within(dialog).getByRole('button', { name: 'Archiver' }));
 

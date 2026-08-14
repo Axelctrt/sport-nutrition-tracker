@@ -1,5 +1,4 @@
 import {
-  ArrowRight,
   Bot,
   Calculator,
   ChartNoAxesCombined,
@@ -14,10 +13,9 @@ import {
   ShieldCheck,
   Sparkles,
   UserRound,
-  type LucideIcon,
 } from 'lucide-react';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 
 import { useTheme } from '@/app/providers/useTheme';
 import { routePaths } from '@/app/routePaths';
@@ -30,6 +28,8 @@ import {
 } from '@/features/settings/components/AdvancedSettingsForm';
 import { AutomaticSyncSettingsPanel } from '@/features/settings/components/AutomaticSyncSettingsPanel';
 import { DataManagementCenter } from '@/features/settings/components/DataManagementCenter';
+import { SettingsNavigationCard as SettingsLinkCard } from '@/features/settings/components/SettingsNavigationCard';
+import { SettingsPageIntro } from '@/features/settings/components/SettingsPageIntro';
 import type { SettingsFormValues } from '@/features/settings/schemas/settingsSchema';
 import { settingsCategoryForPath, type SettingsCategoryId } from '@/features/settings/settingsInformationArchitecture';
 import {
@@ -42,49 +42,25 @@ import {
   requestPersistentStorage,
   type PersistentStorageStatus,
 } from '@/infrastructure/storage/persistentStorage';
-import { useActionToast } from '@/shared/toast/useActionToast';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 import { PageSkeleton } from '@/shared/ui/PageSkeleton';
 
-interface SettingsLinkCardProps {
-  to: string;
-  title: string;
-  description: string;
-  icon: LucideIcon;
-  value?: string;
-}
-
-function SettingsLinkCard({ to, title, description, icon: Icon, value }: SettingsLinkCardProps) {
-  return (
-    <Link to={to} className="group block min-w-0">
-      <Card className="h-full p-4 transition group-hover:border-brand-400 group-hover:bg-brand-50/50 group-focus-visible:ring-2 group-focus-visible:ring-brand-500 dark:group-hover:border-brand-700 dark:group-hover:bg-brand-950/20 motion-reduce:transition-none">
-        <div className="flex items-start gap-3">
-          <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-brand-100 text-brand-700 dark:bg-brand-950 dark:text-brand-300">
-            <Icon aria-hidden="true" className="size-5" />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="flex items-center justify-between gap-3">
-              <span className="font-bold text-slate-950 dark:text-white">{title}</span>
-              <ArrowRight aria-hidden="true" className="size-4 shrink-0 text-slate-400 transition-transform group-hover:translate-x-0.5 motion-reduce:transition-none" />
-            </span>
-            <span className="mt-1 block text-sm leading-6 text-slate-600 dark:text-slate-300">{description}</span>
-            {value ? <span className="mt-3 block text-sm font-semibold text-brand-700 dark:text-brand-300">{value}</span> : null}
-          </span>
-        </div>
-      </Card>
-    </Link>
-  );
-}
-
 function CategorySection({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
   return (
     <section className="mt-6" aria-labelledby={`category-${title.replace(/\s+/g, '-').toLowerCase()}`}>
-      <h2 id={`category-${title.replace(/\s+/g, '-').toLowerCase()}`} className="text-xl font-bold text-slate-950 dark:text-white">
+      <h2
+        id={`category-${title.replace(/\s+/g, '-').toLowerCase()}`}
+        className="text-xl font-bold text-[var(--sp-text-primary)]"
+      >
         {title}
       </h2>
-      {description ? <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">{description}</p> : null}
+      {description ? (
+        <p className="mt-1 text-sm leading-6 text-[var(--sp-text-secondary)]">
+          {description}
+        </p>
+      ) : null}
       <div className="mt-4">{children}</div>
     </section>
   );
@@ -357,14 +333,16 @@ function CategoryContent({
     case 'about':
       return (
         <>
-          <Card className="p-5">
+          <Card padding="md">
             <div className="flex items-start gap-3">
-              <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-brand-100 text-brand-700 dark:bg-brand-950 dark:text-brand-300">
+              <span className="grid size-11 shrink-0 place-items-center rounded-[var(--sp-radius-control)] bg-[var(--sp-surface-muted)] text-[var(--sp-accent-primary)]">
                 <Dumbbell aria-hidden="true" className="size-5" />
               </span>
               <div>
-                <h2 className="text-xl font-bold text-slate-950 dark:text-white">SportPilot {__APP_VERSION__}</h2>
-                <p className="mt-2 leading-7 text-slate-600 dark:text-slate-300">
+                <h2 className="text-xl font-bold text-[var(--sp-text-primary)]">
+                  SportPilot {__APP_VERSION__}
+                </h2>
+                <p className="mt-2 leading-7 text-[var(--sp-text-secondary)]">
                   Application mobile-first de suivi sportif, nutritionnel et de progression personnelle. Les données restent locales en mode invité et peuvent être synchronisées avec un compte.
                 </p>
               </div>
@@ -409,7 +387,6 @@ export function SettingsCategoryPage({
   const { pathname } = useLocation();
   const category = settingsCategoryForPath(pathname);
   const { setTheme } = useTheme();
-  const actionToast = useActionToast();
   const [settings, setSettings] = useState<AppSettings>();
   const [storageStatus, setStorageStatus] = useState<PersistentStorageStatus>('unsupported');
   const [feedback, setFeedback] = useState<{ tone: 'success' | 'error'; message: string }>();
@@ -442,11 +419,9 @@ export function SettingsCategoryPage({
       setTheme(updated.theme);
       setStorageStatus(updated.requestPersistentStorage ? await persistStorage() : await readStorageStatus());
       setFeedback({ tone: 'success', message: 'Les réglages de cette catégorie ont été enregistrés.' });
-      actionToast.success({ key: 'settings-category-save', title: 'Paramètres enregistrés' });
     } catch (error) {
       const fallback = 'Les paramètres n’ont pas pu être enregistrés.';
       setFeedback({ tone: 'error', message: error instanceof Error ? error.message : fallback });
-      actionToast.error({ key: 'settings-category-save', error, fallback });
     }
   };
 
@@ -481,13 +456,12 @@ export function SettingsCategoryPage({
 
   return (
     <section aria-labelledby="settings-category-title" className="min-w-0">
-      <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6 dark:border-slate-800 dark:bg-slate-900">
-        <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">Paramètres</p>
-        <h1 id="settings-category-title" className="mt-1 text-3xl font-bold tracking-tight text-slate-950 dark:text-white">
-          {category.title}
-        </h1>
-        <p className="mt-3 max-w-3xl leading-7 text-slate-600 dark:text-slate-300">{category.description}</p>
-      </div>
+      <SettingsPageIntro
+        titleId="settings-category-title"
+        eyebrow="Paramètres"
+        title={category.title}
+        description={category.description}
+      />
 
       {feedback ? (
         <InlineNotice

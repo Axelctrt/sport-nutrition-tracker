@@ -10,51 +10,52 @@ import {
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
+import { useTheme } from '@/app/providers/useTheme';
 import { routePaths } from '@/app/routePaths';
 import { recalculateExistingTargetsAfterSettingsChange } from '@/application/daily/settingsTargetRecalculationService';
-import { useTheme } from '@/app/providers/useTheme';
 import type { AppSettings } from '@/domain/models/settings';
-import { AdvancedSettingsForm } from '@/features/settings/components/AdvancedSettingsForm';
-import { DataManagementCenter } from '@/features/settings/components/DataManagementCenter';
 import { SocialActivityCloudReadinessPanel } from '@/features/friends/components/SocialActivityCloudReadinessPanel';
+import { AccountPreferencesSyncSettingsPanel } from '@/features/settings/components/AccountPreferencesSyncSettingsPanel';
 import { ActivitySyncSettingsPanel } from '@/features/settings/components/ActivitySyncSettingsPanel';
+import { AdvancedSettingsForm } from '@/features/settings/components/AdvancedSettingsForm';
+import { AutomaticSyncSettingsPanel } from '@/features/settings/components/AutomaticSyncSettingsPanel';
+import { DataManagementCenter } from '@/features/settings/components/DataManagementCenter';
 import { GoalSyncSettingsPanel } from '@/features/settings/components/GoalSyncSettingsPanel';
-import { StrengthSyncSettingsPanel } from '@/features/settings/components/StrengthSyncSettingsPanel';
 import { NutritionJournalSyncSettingsPanel } from '@/features/settings/components/NutritionJournalSyncSettingsPanel';
 import { NutritionLibrarySyncSettingsPanel } from '@/features/settings/components/NutritionLibrarySyncSettingsPanel';
 import { NutritionTrackingSyncSettingsPanel } from '@/features/settings/components/NutritionTrackingSyncSettingsPanel';
-import { WeightSyncSettingsPanel } from '@/features/settings/components/WeightSyncSettingsPanel';
-import { AccountPreferencesSyncSettingsPanel } from '@/features/settings/components/AccountPreferencesSyncSettingsPanel';
-import { AutomaticSyncSettingsPanel } from '@/features/settings/components/AutomaticSyncSettingsPanel';
 import { RewardsRoutinesSyncSettingsPanel } from '@/features/settings/components/RewardsRoutinesSyncSettingsPanel';
-import {
-  UnifiedSyncCenterPanel,
-  type UnifiedSyncDetailId,
-} from '@/features/settings/components/UnifiedSyncCenterPanel';
+import { SettingsPageIntro } from '@/features/settings/components/SettingsPageIntro';
 import {
   SettingsSectionDirectory,
   type SettingsDirectoryItem,
 } from '@/features/settings/components/SettingsSectionDirectory';
+import { StrengthSyncSettingsPanel } from '@/features/settings/components/StrengthSyncSettingsPanel';
+import {
+  UnifiedSyncCenterPanel,
+  type UnifiedSyncDetailId,
+} from '@/features/settings/components/UnifiedSyncCenterPanel';
+import { WeightSyncSettingsPanel } from '@/features/settings/components/WeightSyncSettingsPanel';
 import type { SettingsFormValues } from '@/features/settings/schemas/settingsSchema';
+import { openSettingsSection } from '@/features/settings/settingsSectionNavigation';
 import {
   settingsFormValuesToChanges,
   settingsToFormValues,
 } from '@/features/settings/utils/settingsForm';
 import { activeDataSpace } from '@/infrastructure/database/database';
 import { repositories } from '@/infrastructure/repositories/repositories';
+import { createSocialActivityFeedCloudGateway } from '@/infrastructure/social-activity-snapshots/socialActivityFeedCloudGateway';
 import { ACCOUNT_PREFERENCES_CHANGED_EVENT } from '@/infrastructure/sync-prototype/accountPreferencesSyncEvents';
 import { getSyncPrototypeClient } from '@/infrastructure/sync-prototype/syncPrototypeClient';
-import { createSocialActivityFeedCloudGateway } from '@/infrastructure/social-activity-snapshots/socialActivityFeedCloudGateway';
 import {
   getPersistentStorageStatus,
   requestPersistentStorage,
   type PersistentStorageStatus,
 } from '@/infrastructure/storage/persistentStorage';
-import { openSettingsSection } from '@/features/settings/settingsSectionNavigation';
-import { useActionToast } from '@/shared/toast/useActionToast';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { CollapsibleSection } from '@/shared/ui/CollapsibleSection';
+import { IconAction } from '@/shared/ui/IconAction';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 import { PageSkeleton } from '@/shared/ui/PageSkeleton';
 
@@ -115,6 +116,24 @@ const syncDetailLabels: Record<UnifiedSyncDetailId, string> = {
   'sync-detail-nutrition-tracking': 'Suivi nutritionnel',
 };
 
+function SettingsActionLink({
+  to,
+  children,
+}: {
+  to: string;
+  children: string;
+}) {
+  return (
+    <Link
+      to={to}
+      className="sp-button inline-flex min-h-[var(--sp-control-height-md)] items-center gap-2 rounded-[var(--sp-radius-control)] px-4 text-sm font-semibold"
+    >
+      {children}
+      <ArrowRight aria-hidden="true" className="size-4" />
+    </Link>
+  );
+}
+
 function SyncDetailPanel({
   detailId,
   onClose,
@@ -148,34 +167,34 @@ function SyncDetailPanel({
   const label = syncDetailLabels[detailId];
 
   return (
-    <section
+    <Card
       id={detailId}
       aria-labelledby={`${detailId}-title`}
-      className="scroll-mt-24 rounded-2xl border border-brand-200 bg-brand-50/40 p-4 dark:border-brand-900 dark:bg-brand-950/10 sm:p-5"
+      variant="muted"
+      padding="md"
+      className="scroll-mt-24"
     >
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
+          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--sp-accent-primary)]">
             Détail de synchronisation
           </p>
           <h3
             id={`${detailId}-title`}
-            className="mt-1 text-lg font-semibold text-slate-950 dark:text-white"
+            className="mt-1 text-lg font-semibold text-[var(--sp-text-primary)]"
           >
             {label}
           </h3>
         </div>
-        <button
-          type="button"
+        <IconAction
+          icon={X}
+          label={`Fermer le détail ${label}`}
+          variant="ghost"
           onClick={onClose}
-          aria-label={`Fermer le détail ${label}`}
-          className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl text-slate-600 hover:bg-white hover:text-slate-950 dark:text-slate-300 dark:hover:bg-slate-900 dark:hover:text-white"
-        >
-          <X aria-hidden="true" className="size-5" />
-        </button>
+        />
       </div>
       <div className="mt-4">{content}</div>
-    </section>
+    </Card>
   );
 }
 
@@ -198,7 +217,6 @@ function subscribeSocialDiagnostic(listener: () => void) {
 
 export function AdvancedSettingsPage() {
   const { setTheme } = useTheme();
-  const actionToast = useActionToast();
   const [settings, setSettings] = useState<AppSettings>();
   const [storageStatus, setStorageStatus] =
     useState<PersistentStorageStatus>('unsupported');
@@ -303,10 +321,6 @@ export function AdvancedSettingsPage() {
         message:
           'Les paramètres avancés ont été enregistrés localement.',
       });
-      actionToast.success({
-        key: 'advanced-settings-save',
-        title: 'Paramètres enregistrés',
-      });
     } catch (error) {
       const fallback = 'Les paramètres n’ont pas pu être enregistrés.';
       setFeedback({
@@ -315,11 +329,6 @@ export function AdvancedSettingsPage() {
           error instanceof Error
             ? error.message
             : fallback,
-      });
-      actionToast.error({
-        key: 'advanced-settings-save',
-        error,
-        fallback,
       });
     }
   };
@@ -344,11 +353,6 @@ export function AdvancedSettingsPage() {
           message:
             'Les valeurs par défaut ont été restaurées.',
         });
-        actionToast.success({
-          key: 'advanced-settings-reset',
-          title: 'Paramètres réinitialisés',
-          description: 'Les valeurs par défaut ont été restaurées.',
-        });
         return settingsToFormValues(defaults);
       } catch (error) {
         const message =
@@ -358,11 +362,6 @@ export function AdvancedSettingsPage() {
         setFeedback({
           tone: 'error',
           message,
-        });
-        actionToast.error({
-          key: 'advanced-settings-reset',
-          error,
-          fallback: message,
         });
         throw error;
       }
@@ -392,20 +391,12 @@ export function AdvancedSettingsPage() {
       aria-labelledby="advanced-settings-title"
       className="min-w-0"
     >
-      <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6 dark:border-slate-800 dark:bg-slate-900">
-        <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
-          Configuration avancée
-        </p>
-        <h1
-          id="advanced-settings-title"
-          className="mt-1 text-3xl font-bold tracking-tight text-slate-950 dark:text-white"
-        >
-          Paramètres avancés
-        </h1>
-        <p className="mt-3 max-w-3xl leading-7 text-slate-600 dark:text-slate-300">
-          Cette page regroupe les coefficients experts, les diagnostics et les outils techniques. Les réglages courants restent accessibles depuis l’accueil des Paramètres.
-        </p>
-      </div>
+      <SettingsPageIntro
+        titleId="advanced-settings-title"
+        eyebrow="Configuration avancée"
+        title="Paramètres avancés"
+        description="Cette page regroupe les coefficients experts, les diagnostics et les outils techniques. Les réglages courants restent accessibles depuis l’accueil des Paramètres."
+      />
 
       {feedback ? (
         <InlineNotice
@@ -448,17 +439,15 @@ export function AdvancedSettingsPage() {
           icon={MonitorSmartphone}
           className="scroll-mt-24"
         >
-          <Card className="p-4 sm:p-5">
-            <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">
+          <Card padding="md">
+            <p className="text-sm leading-6 text-[var(--sp-text-secondary)]">
               Les actions de déconnexion, de désassociation et de suppression locale sont séparées pour éviter toute suppression ambiguë.
             </p>
-            <Link
-              to={routePaths.accountDevices}
-              className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-xl bg-brand-600 px-4 py-2 font-semibold text-white"
-            >
-              Ouvrir Compte et appareils
-              <ArrowRight aria-hidden="true" className="size-4" />
-            </Link>
+            <div className="mt-4">
+              <SettingsActionLink to={routePaths.accountDevices}>
+                Ouvrir Compte et appareils
+              </SettingsActionLink>
+            </div>
           </Card>
         </CollapsibleSection>
 
@@ -525,16 +514,9 @@ export function AdvancedSettingsPage() {
               }
             />
 
-            <Link
-              to={routePaths.backup}
-              className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-brand-600 px-4 py-2 font-semibold text-white"
-            >
+            <SettingsActionLink to={routePaths.backup}>
               Ouvrir les sauvegardes et restaurations
-              <ArrowRight
-                aria-hidden="true"
-                className="size-4"
-              />
-            </Link>
+            </SettingsActionLink>
           </div>
         </CollapsibleSection>
       </div>

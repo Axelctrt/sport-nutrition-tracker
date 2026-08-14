@@ -6,6 +6,7 @@ import { WorkoutSessionPage } from '@/features/strength-sessions/pages/WorkoutSe
 import { WorkoutSessionsPage } from '@/features/strength-sessions/pages/WorkoutSessionsPage';
 import { appDatabase } from '@/infrastructure/database/database';
 import { repositories } from '@/infrastructure/repositories/repositories';
+import { useClearInputValueOnFocus } from '@/shared/forms/useClearInputValueOnFocus';
 import { ToastProvider } from '@/shared/toast/ToastProvider';
 import { deleteAppDatabaseAfterTest, resetAppDatabaseForTest } from '@/test/appDatabaseTestUtils';
 import { createEntity } from '@/shared/utils/entities';
@@ -19,9 +20,15 @@ import {
   createWorkoutTemplateInput,
 } from '@/test/factories/strengthFactory';
 
-function renderSessionPage(extraRoutes?: ReactNode) {
+function ClearInputOnFocusContract() {
+  useClearInputValueOnFocus();
+  return null;
+}
+
+function renderSessionPage(extraRoutes?: ReactNode, installClearOnFocus = false) {
   return render(
     <ToastProvider>
+      {installClearOnFocus ? <ClearInputOnFocusContract /> : null}
       <MemoryRouter initialEntries={['/strength/sessions/session-current']}>
         <Routes>
           <Route path="/strength/sessions/:sessionId" element={<WorkoutSessionPage />} />
@@ -253,6 +260,42 @@ describe('WorkoutSessionPage', () => {
       expect(remaining).toHaveLength(1);
       expect(remaining[0]?.setNumber).toBe(1);
     });
+  });
+
+  it('conserve le focus et la saisie après la réconciliation locale d’un autosave', async () => {
+    await appDatabase.workoutSessionExercises.update('session-exercise-bench', { plannedSets: 1 });
+    await appDatabase.strengthSets.add(createEntity(createStrengthSetInput({
+      sessionId: 'session-current',
+      sessionExerciseId: 'session-exercise-bench',
+      repetitions: 8,
+      weightKg: 60,
+      isCompleted: false,
+    }), 'set-focus'));
+    const listSetsSpy = vi.spyOn(repositories.strengthSets, 'listBySession');
+    const user = userEvent.setup();
+    renderSessionPage(undefined, true);
+
+    const repetitionsInput = await screen.findByLabelText('Répétitions');
+    listSetsSpy.mockClear();
+    await user.click(repetitionsInput);
+    expect(repetitionsInput).toHaveValue(null);
+    await user.type(repetitionsInput, '1');
+    expect(repetitionsInput).toHaveFocus();
+
+    await waitFor(async () => {
+      expect((await appDatabase.strengthSets.get('set-focus'))?.repetitions).toBe(1);
+    });
+    expect(screen.getByLabelText('Répétitions')).toBe(repetitionsInput);
+    expect(repetitionsInput).toHaveFocus();
+    expect(repetitionsInput).toHaveValue(1);
+    expect(listSetsSpy).not.toHaveBeenCalled();
+
+    await user.type(repetitionsInput, '2');
+    expect(repetitionsInput).toHaveValue(12);
+
+    await user.click(screen.getByLabelText('Charge en kg'));
+    await user.click(repetitionsInput);
+    expect(repetitionsInput).toHaveValue(null);
   });
 
   it('respecte la désactivation du lancement automatique tout en gardant le démarrage manuel', async () => {

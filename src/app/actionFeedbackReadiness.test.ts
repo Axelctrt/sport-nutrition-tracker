@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import backupPageSource from '@/features/backup/pages/BackupPage.tsx?raw';
+import goalEditorSource from '@/features/goals/components/GoalEditor.tsx?raw';
 import goalsPageSource from '@/features/goals/pages/GoalsPage.tsx?raw';
 import profilePageSource from '@/features/profile/pages/ProfilePage.tsx?raw';
 import trashPageSource from '@/features/trash/pages/TrashPage.tsx?raw';
@@ -13,7 +14,7 @@ import actionToastSource from '@/shared/toast/useActionToast.ts?raw';
 
 describe('publication SportPilot 0.26.0 — confirmations d’action', () => {
   it('publie le correctif avec le schéma courant', () => {
-    expect(__APP_VERSION__).toBe('0.37.0');
+    expect(__APP_VERSION__).toBe('1.0.0');
     expect(databaseSchemaVersion).toBe(12);
     expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(10);
   });
@@ -28,16 +29,32 @@ describe('publication SportPilot 0.26.0 — confirmations d’action', () => {
   });
 
   it('couvre les principaux domaines d’écriture utilisateur', () => {
-    for (const source of [
-      goalsPageSource,
-      profilePageSource,
-      weightPageSource,
-      backupPageSource,
-      trashPageSource,
-    ]) {
+    for (const source of [goalEditorSource, goalsPageSource]) {
       expect(source).toContain('useActionToast');
       expect(source).toContain('actionToast.success');
-      expect(source).toContain('actionToast.error');
+      expect(source).not.toContain('actionToast.error');
+      expect(source).toContain('InlineNotice');
     }
+
+    expect(weightPageSource).not.toContain('useActionToast');
+    expect(weightPageSource).not.toContain('actionToast.');
+    expect(weightPageSource).toContain('setFeedback');
+    expect(weightPageSource).toContain('InlineNotice');
+
+    expect(backupPageSource).toContain('useActionToast');
+    expect(backupPageSource).toContain('actionToast.success');
+    expect(backupPageSource).not.toContain('actionToast.error');
+    expect(backupPageSource).toContain('setFeedback');
+    expect(backupPageSource).toContain('InlineNotice');
+
+    expect(trashPageSource).not.toContain('useActionToast');
+    expect(trashPageSource).not.toContain('actionToast.');
+    expect(trashPageSource).toContain('setFeedback');
+    expect(trashPageSource).toContain('aria-live="polite"');
+
+    expect(profilePageSource).toContain('useActionToast');
+    expect(profilePageSource).toContain('actionToast.success');
+    expect(profilePageSource).toContain('setSaveError');
+    expect(profilePageSource).toContain('Enregistrement impossible');
   });
 });

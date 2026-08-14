@@ -8,9 +8,9 @@ import {
 import { syncPublicDeploymentConfig } from '@/infrastructure/sync-prototype/syncPublicDeploymentConfig';
 
 describe('publication de la continuité complète du compte 0.26.0', () => {
-  it('publie la version stable attendue', () => {
-    expect(__APP_VERSION__).toBe('0.37.0');
-    expect(__APP_VERSION__).toMatch(/^\d+\.\d+\.\d+$/);
+  it('prépare la version candidate attendue', () => {
+    expect(__APP_VERSION__).toBe('1.0.0');
+    expect(__APP_VERSION__).toMatch(/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/);
   });
 
   it('conserve les formats de données validés', () => {

@@ -8,10 +8,27 @@ pas une description automatiquement actuelle.
 
 ## État de référence
 
-- Application : SportPilot `0.37.0` publiée en production depuis `main` au
-  commit `84fea3d49e68c7d190c00d505502a5c4aa2e672a`.
+- Application publiée : SportPilot `0.37.0`.
+- Commit fonctionnel déployé en production :
+  `84fea3d49e68c7d190c00d505502a5c4aa2e672a`.
+- Branche `main` : elle peut contenir de la maintenance documentaire ultérieure
+  au commit fonctionnel déployé ; toujours distinguer HEAD Git et SHA réellement
+  servi en production.
 - Publication : tag annoté `v0.37.0` et release GitHub stable `0.37.0`.
 - Production : `https://sportpilot-pages.pages.dev`.
+- Intégration constatée avant la Phase 0 V1 :
+  `develop@eec97bf9ac776b519d051329551836853894fd82`.
+- Source de vérité après clôture du Lot 8 et de l'issue #63 :
+  `develop@3eff34a73cc40d98d3de2ab947ac8b45bfae5f01`.
+- RC1 historique : `1.0.0-rc.1` au SHA
+  `2fd781087a65e125b0e77edcd53d41fdf82922ed`, déployée une fois puis rejetée
+  pour le blocker PWA #144.
+- RC2 validée : SportPilot `1.0.0-rc.2` au SHA gelé
+  `2554638a782f3be338b7323b95abc1078f65ef0b`, déployée une seule fois puis
+  acceptée dans #147 ; #146 est terminée.
+- Candidate stable en préparation : SportPilot `1.0.0` depuis
+  `develop@13cef273d09d78eeb4d177ab23e86c7770748419`, après levée du gate
+  sécurité #141 ; #162 suit le résiduel Quagga/Sharp sans bloquer V1.
 - Architecture : `src/domain`, `src/application`, `src/infrastructure`,
   `src/features`, `src/app`, `src/shared` et `src/pwa`.
 - Stockage principal local : Dexie `AppDatabase`, version 12.
@@ -22,8 +39,35 @@ pas une description automatiquement actuelle.
   domaine social et ses limites photo.
 - UI : mobile-first, local-first, hors ligne, système Performance Glass.
 
-Toujours vérifier ces valeurs dans le code et les services distants avant de
-les modifier ou de les citer dans un nouveau document.
+Toujours vérifier ces valeurs dans le code, GitHub et les services distants
+avant de les modifier ou de les citer dans un nouveau document.
+
+## Pilotage courant vers la V1
+
+L’objectif stratégique validé est de stabiliser le périmètre existant puis de
+publier SportPilot `1.0.0`. Aucun nouveau cycle fonctionnel ne doit être inséré
+entre le programme de cohérence globale et la décision de readiness V1.
+
+Les Phases 0 à 5 et les lots de convergence validés sont terminés. La Phase 6
+conditionnelle n'a pas été requise : aucun défaut V1 critique ou significatif
+reproductible ne restait dans le périmètre #63. La Phase 7 est terminée : RC1
+reste rejetée et RC2 a été acceptée. La Phase 8 prépare maintenant `1.0.0`
+depuis le HEAD de `develop` qui intègre les stabilisations post-RC2 et le gate
+sécurité #141. #146 et #141 sont fermées en `completed` ; #162 reste le suivi
+post-V1 non bloquant du résiduel Quagga/Sharp accepté.
+
+Toute Preview Cloudflare, fusion, modification de `main`, création de tag,
+release GitHub ou mise en production demeure une gate séparée nécessitant une
+autorisation explicite.
+
+Lire en priorité
+[`docs/roadmap/V1_READINESS_PLAN.md`](docs/roadmap/V1_READINESS_PLAN.md),
+[`docs/roadmap/ROADMAP.md`](docs/roadmap/ROADMAP.md), l’issue #63 clôturée,
+l'archive RC1 #142 et le journal RC2 #147.
+
+L’audit doit distinguer défaut, risque, dette, recommandation UX, option et
+surface conforme. Les recommandations qui changent réellement le produit
+restent séparées des corrections de conformité.
 
 ## Règles impératives
 
@@ -59,6 +103,8 @@ les modifier ou de les citer dans un nouveau document.
 - Réutiliser les composants et contrats existants avant d’en créer de nouveaux.
 - Mettre à jour la documentation canonique lorsque le comportement, un contrat,
   une commande, une version de données ou une procédure change.
+- Pour le programme V1, auditer avant de modifier et conserver des PR petites,
+  indépendantes et vérifiables.
 
 ## Validation
 

@@ -131,6 +131,27 @@ describe('AccountDevicesPage', () => {
     expect(reload).toHaveBeenCalledTimes(1);
   });
 
+  it('garde une erreur de déconnexion sur la page sans recharger', async () => {
+    const disconnect = vi.fn(async () => {
+      throw new Error('Connexion cloud indisponible.');
+    });
+    const reload = vi.fn();
+    renderPage({ disconnect, reload });
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Déconnecter' }));
+    await userEvent.click(
+      within(screen.getByRole('alertdialog')).getByRole('button', {
+        name: 'Déconnecter',
+      }),
+    );
+
+    expect(
+      await screen.findByText('Connexion cloud indisponible.'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Action interrompue')).toBeInTheDocument();
+    expect(reload).not.toHaveBeenCalled();
+  });
+
   it('passe explicitement en mode invité avec une confirmation distincte', async () => {
     const detachDevice = vi.fn(async () => accountSpace);
     const reload = vi.fn();

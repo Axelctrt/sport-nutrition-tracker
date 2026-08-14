@@ -3,7 +3,6 @@ import {
   FileArchive,
   LoaderCircle,
   RotateCcw,
-  ShieldCheck,
   Square,
 } from 'lucide-react';
 import {
@@ -24,11 +23,11 @@ import {
   type SelectiveBackupRestoreResult,
   type SelectiveRestoreCategory,
 } from '@/infrastructure/backup/selectiveBackupRestoreService';
+import { checkboxClassName, inputClassName } from '@/shared/forms/formStyles';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { ConfirmationDialog } from '@/shared/ui/ConfirmationDialog';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
-import { useActionToast } from '@/shared/toast/useActionToast';
 
 interface SelectiveBackupRestorePanelProps {
   className?: string;
@@ -75,7 +74,6 @@ export function SelectiveBackupRestorePanel({
     ),
 }: SelectiveBackupRestorePanelProps) {
   const { refreshProfile } = useProfile();
-  const actionToast = useActionToast();
   const inputRef = useRef<HTMLInputElement>(null);
   const [prepared, setPrepared] =
     useState<PreparedSelectiveBackupRestore>();
@@ -201,11 +199,6 @@ export function SelectiveBackupRestorePanel({
 
       const message = `${result.restoredRecordCount} enregistrement(s) ont été restaurés dans ${result.selectedCategories.length} domaine(s).`;
       setFeedback({ tone: 'success', title: 'Restauration sélective terminée', message });
-      actionToast.success({
-        key: 'selective-backup-restore',
-        title: 'Restauration sélective terminée',
-        description: message,
-      });
       clearPrepared();
     } catch (error) {
       const fallback = 'La restauration sélective a échoué.';
@@ -213,12 +206,6 @@ export function SelectiveBackupRestorePanel({
         tone: 'error',
         title: 'Restauration impossible',
         message: error instanceof Error ? error.message : fallback,
-      });
-      actionToast.error({
-        key: 'selective-backup-restore',
-        title: 'Restauration impossible',
-        error,
-        fallback,
       });
       setConfirmationOpen(false);
     } finally {
@@ -239,13 +226,13 @@ export function SelectiveBackupRestorePanel({
         <div className="flex items-start gap-3">
           <FileArchive
             aria-hidden="true"
-            className="mt-0.5 size-5 shrink-0 text-brand-700 dark:text-brand-300"
+            className="mt-0.5 size-5 shrink-0 text-[var(--sp-accent-primary)]"
           />
           <div>
-            <h2 className="text-lg font-bold text-slate-950 dark:text-white">
+            <h2 className="text-lg font-bold text-[var(--sp-text-primary)]">
               Restauration sélective
             </h2>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--sp-text-secondary)]">
               Compare une sauvegarde avec cet appareil, puis
               remplace uniquement les domaines choisis. La
               restauration complète reste disponible plus haut.
@@ -253,7 +240,7 @@ export function SelectiveBackupRestorePanel({
           </div>
         </div>
 
-        <label className="mt-4 block text-sm font-semibold text-slate-900 dark:text-white">
+        <label className="mt-4 block text-sm font-semibold text-[var(--sp-text-primary)]">
           Sauvegarde JSON à comparer
           <input
             ref={inputRef}
@@ -263,17 +250,17 @@ export function SelectiveBackupRestorePanel({
             onChange={(event) =>
               void handleFileSelection(event)
             }
-            className="mt-2 block min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:font-semibold dark:border-slate-700 dark:bg-slate-950 dark:file:bg-slate-800"
+            className={`${inputClassName} mt-2 file:mr-3 file:rounded-[var(--sp-radius-control)] file:border-0 file:bg-[var(--sp-surface-muted)] file:px-3 file:py-2 file:font-semibold file:text-[var(--sp-text-primary)]`}
           />
         </label>
 
-        <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+        <p className="mt-2 text-xs text-[var(--sp-text-muted)]">
           Taille maximale :{' '}
           {formatFileSize(MAX_BACKUP_FILE_SIZE_BYTES)}.
         </p>
 
         {isPreparing ? (
-          <p className="mt-4 inline-flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+          <p className="mt-4 inline-flex items-center gap-2 text-sm text-[var(--sp-text-secondary)]">
             <LoaderCircle
               aria-hidden="true"
               className="size-4 animate-spin"
@@ -287,6 +274,7 @@ export function SelectiveBackupRestorePanel({
             className="mt-4"
             tone={feedback.tone}
             title={feedback.title}
+            role={feedback.tone === 'error' ? 'alert' : 'status'}
           >
             {feedback.message}
           </InlineNotice>
@@ -296,10 +284,10 @@ export function SelectiveBackupRestorePanel({
           <div className="mt-5 space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <p className="font-semibold text-slate-950 dark:text-white">
+                <p className="font-semibold text-[var(--sp-text-primary)]">
                   {selectedFileName}
                 </p>
-                <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                <p className="mt-1 text-sm text-[var(--sp-text-secondary)]">
                   Format source v
                   {prepared.summary.sourceSchemaVersion} ·{' '}
                   {prepared.summary.totalRecords}{' '}
@@ -334,10 +322,10 @@ export function SelectiveBackupRestorePanel({
                 <label
                   key={category.key}
                   className={[
-                    'flex items-start gap-3 rounded-2xl border p-4',
+                    'flex items-start gap-3 rounded-[var(--sp-radius-control)] border border-[var(--sp-border-subtle)] bg-[var(--sp-surface-muted)] p-4',
                     category.available
-                      ? 'cursor-pointer border-slate-200 dark:border-slate-700'
-                      : 'cursor-not-allowed border-slate-200 opacity-60 dark:border-slate-800',
+                      ? 'cursor-pointer'
+                      : 'cursor-not-allowed opacity-60',
                   ].join(' ')}
                 >
                   <input
@@ -347,37 +335,37 @@ export function SelectiveBackupRestorePanel({
                     onChange={() =>
                       toggleCategory(category.key)
                     }
-                    className="mt-1 size-5 rounded border-slate-300"
+                    className={`${checkboxClassName} mt-1`}
                   />
                   <span className="min-w-0 flex-1">
-                    <span className="block font-semibold text-slate-950 dark:text-white">
+                    <span className="block font-semibold text-[var(--sp-text-primary)]">
                       {category.label}
                     </span>
-                    <span className="mt-1 block text-sm leading-5 text-slate-600 dark:text-slate-300">
+                    <span className="mt-1 block text-sm leading-5 text-[var(--sp-text-secondary)]">
                       {category.description}
                     </span>
                     <span className="mt-3 grid grid-cols-3 gap-2 text-xs">
                       <span>
-                        <span className="block text-slate-500">
+                        <span className="block text-[var(--sp-text-muted)]">
                           Appareil
                         </span>
-                        <strong className="text-slate-900 dark:text-white">
+                        <strong className="text-[var(--sp-text-primary)]">
                           {category.currentRecords}
                         </strong>
                       </span>
                       <span>
-                        <span className="block text-slate-500">
+                        <span className="block text-[var(--sp-text-muted)]">
                           Sauvegarde
                         </span>
-                        <strong className="text-slate-900 dark:text-white">
+                        <strong className="text-[var(--sp-text-primary)]">
                           {category.incomingRecords}
                         </strong>
                       </span>
                       <span>
-                        <span className="block text-slate-500">
+                        <span className="block text-[var(--sp-text-muted)]">
                           Écart
                         </span>
-                        <strong className="text-slate-900 dark:text-white">
+                        <strong className="text-[var(--sp-text-primary)]">
                           {formatDelta(
                             category.currentRecords,
                             category.incomingRecords,
@@ -386,7 +374,7 @@ export function SelectiveBackupRestorePanel({
                       </span>
                     </span>
                     {!category.available ? (
-                      <span className="mt-2 block text-xs font-semibold text-amber-700 dark:text-amber-300">
+                      <span className="mt-2 block text-xs font-semibold text-[var(--sp-text-secondary)]">
                         Non présent dans cette ancienne sauvegarde
                       </span>
                     ) : null}
@@ -395,24 +383,11 @@ export function SelectiveBackupRestorePanel({
               ))}
             </div>
 
-            <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950/30">
-              <div className="flex items-start gap-3">
-                <ShieldCheck
-                  aria-hidden="true"
-                  className="mt-0.5 size-5 shrink-0 text-amber-800 dark:text-amber-300"
-                />
-                <div>
-                  <p className="font-semibold text-amber-950 dark:text-amber-100">
-                    Remplacement protégé
-                  </p>
-                  <p className="mt-1 text-sm leading-5 text-amber-900 dark:text-amber-200">
-                    Chaque domaine choisi sera remplacé, pas
-                    fusionné. Une sauvegarde complète sera
-                    téléchargée avant toute écriture.
-                  </p>
-                </div>
-              </div>
-            </div>
+            <InlineNotice tone="info" title="Remplacement protégé">
+              Chaque domaine choisi sera remplacé, pas
+              fusionné. Une sauvegarde complète sera
+              téléchargée avant toute écriture.
+            </InlineNotice>
 
             <div className="flex flex-wrap gap-2">
               <Button

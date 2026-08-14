@@ -38,7 +38,7 @@ describe('WorkoutTemplateCard', () => {
     expect(screen.queryByRole('menu', { name: 'Actions pour Push A' })).not.toBeInTheDocument();
   });
 
-  it('confirme l’archivage sans ouvrir les détails', async () => {
+  it('sépare l’archivage des actions neutres et demande confirmation', async () => {
     const user = userEvent.setup();
     const onArchiveChange = vi.fn().mockResolvedValue(true);
     render(
@@ -53,7 +53,14 @@ describe('WorkoutTemplateCard', () => {
     );
 
     await user.click(screen.getByRole('button', { name: 'Actions pour Push A' }));
-    await user.click(screen.getByRole('button', { name: 'Archiver' }));
+    expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
+      'Modifier',
+      'Dupliquer',
+      'Archiver',
+    ]);
+    expect(screen.getByRole('separator')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('menuitem', { name: 'Archiver' }));
     const dialog = screen.getByRole('alertdialog', { name: 'Archiver cette séance modèle ?' });
     await user.click(within(dialog).getByRole('button', { name: 'Archiver' }));
 

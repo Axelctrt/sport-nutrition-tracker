@@ -3,7 +3,6 @@ import {
   CheckSquare2,
   Download,
   FileSpreadsheet,
-  LoaderCircle,
   Share2,
   Square,
 } from 'lucide-react';
@@ -26,9 +25,11 @@ import {
   downloadCsvExportFiles,
   shareCsvExportFiles,
 } from '@/features/backup/csvExportDelivery';
+import { checkboxClassName, inputClassName } from '@/shared/forms/formStyles';
+import { Button } from '@/shared/ui/Button';
+import { Card } from '@/shared/ui/Card';
 import { CollapsibleSection } from '@/shared/ui/CollapsibleSection';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
-import { useActionToast } from '@/shared/toast/useActionToast';
 import { toLocalDate } from '@/shared/utils/dates';
 
 type CsvPeriodPreset =
@@ -97,7 +98,6 @@ export function AdvancedCsvExportPanel({
   downloadMany = downloadCsvExportFiles,
   shareMany = shareCsvExportFiles,
 }: AdvancedCsvExportPanelProps) {
-  const actionToast = useActionToast();
   const today = toLocalDate(now);
   const defaultFrom = toLocalDate(addLocalDays(now, -29));
   const [preset, setPreset] =
@@ -197,11 +197,9 @@ export function AdvancedCsvExportPanel({
       setPreparedPeriod(currentOptions);
       const message = `${files.length} fichier(s) prêt(s) pour ${periodLabel(currentOptions).toLowerCase()}.`;
       setFeedback({ tone: 'success', message });
-      actionToast.success({ key: 'csv-prepare', title: 'Exports CSV préparés', description: message });
     } catch (error) {
       const fallback = 'Les exports CSV n’ont pas pu être préparés.';
       setFeedback({ tone: 'error', message: error instanceof Error ? error.message : fallback });
-      actionToast.error({ key: 'csv-prepare', title: 'Préparation impossible', error, fallback });
     } finally {
       setIsPreparing(false);
     }
@@ -212,7 +210,6 @@ export function AdvancedCsvExportPanel({
 
     const message = `${count} téléchargement(s) ont été déclenchés.`;
     setFeedback({ tone: 'success', message });
-    actionToast.success({ key: 'csv-download', title: 'Téléchargement lancé', description: message });
   };
 
   const handleShare = async () => {
@@ -225,7 +222,6 @@ export function AdvancedCsvExportPanel({
       if (result === 'shared') {
         const message = 'Les fichiers ont été transmis à la feuille de partage.';
         setFeedback({ tone: 'success', message });
-        actionToast.success({ key: 'csv-share', title: 'Exports prêts à partager', description: message });
       } else if (result === 'cancelled') {
         setFeedback({
           tone: 'info',
@@ -241,7 +237,6 @@ export function AdvancedCsvExportPanel({
     } catch (error) {
       const fallback = 'Le partage des fichiers a échoué.';
       setFeedback({ tone: 'error', message: error instanceof Error ? error.message : fallback });
-      actionToast.error({ key: 'csv-share', title: 'Partage impossible', error, fallback });
     } finally {
       setIsSharing(false);
     }
@@ -252,7 +247,7 @@ export function AdvancedCsvExportPanel({
       title="Exports CSV avancés"
       description="Choisis la période et les données à utiliser dans Excel, LibreOffice, Python ou un outil d’analyse."
       summary={
-        <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+        <span className="text-xs font-semibold text-[var(--sp-text-muted)]">
           {selectedKeys.length}/{CSV_EXPORT_DEFINITIONS.length}{' '}
           jeux sélectionnés
         </span>
@@ -262,20 +257,20 @@ export function AdvancedCsvExportPanel({
         <div>
           <label
             htmlFor="csv-period-preset"
-            className="text-sm font-semibold text-slate-900 dark:text-white"
+            className="text-sm font-semibold text-[var(--sp-text-primary)]"
           >
             Période
           </label>
           <div className="mt-2 flex items-center gap-2">
             <CalendarRange
               aria-hidden="true"
-              className="size-5 text-slate-500"
+              className="size-5 text-[var(--sp-text-muted)]"
             />
             <select
               id="csv-period-preset"
               value={preset}
               onChange={handlePresetChange}
-              className="min-h-11 min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+              className={`${inputClassName} flex-1`}
             >
               <option value="all">Toutes les dates</option>
               <option value="7">7 derniers jours</option>
@@ -288,7 +283,7 @@ export function AdvancedCsvExportPanel({
 
         {preset === 'custom' ? (
           <div className="grid gap-3 sm:grid-cols-2">
-            <label className="text-sm font-semibold text-slate-900 dark:text-white">
+            <label className="text-sm font-semibold text-[var(--sp-text-primary)]">
               Date de début
               <input
                 type="date"
@@ -298,11 +293,11 @@ export function AdvancedCsvExportPanel({
                   setCustomFrom(event.target.value);
                   invalidatePreview();
                 }}
-                className="mt-2 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+                className={`${inputClassName} mt-2`}
               />
             </label>
 
-            <label className="text-sm font-semibold text-slate-900 dark:text-white">
+            <label className="text-sm font-semibold text-[var(--sp-text-primary)]">
               Date de fin
               <input
                 type="date"
@@ -313,7 +308,7 @@ export function AdvancedCsvExportPanel({
                   setCustomTo(event.target.value);
                   invalidatePreview();
                 }}
-                className="mt-2 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+                className={`${inputClassName} mt-2`}
               />
             </label>
           </div>
@@ -321,13 +316,13 @@ export function AdvancedCsvExportPanel({
 
         <div>
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 className="font-semibold text-slate-950 dark:text-white">
+            <h3 className="font-semibold text-[var(--sp-text-primary)]">
               Jeux de données
             </h3>
-            <button
-              type="button"
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={toggleAll}
-              className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold dark:border-slate-700"
             >
               {allSelected ? (
                 <CheckSquare2
@@ -343,7 +338,7 @@ export function AdvancedCsvExportPanel({
               {allSelected
                 ? 'Tout désélectionner'
                 : 'Tout sélectionner'}
-            </button>
+            </Button>
           </div>
 
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
@@ -351,19 +346,19 @@ export function AdvancedCsvExportPanel({
               ({ key, label, description }) => (
                 <label
                   key={key}
-                  className="flex min-h-20 cursor-pointer items-start gap-3 rounded-2xl border border-slate-200 p-3 dark:border-slate-700"
+                  className="flex min-h-20 cursor-pointer items-start gap-3 rounded-[var(--sp-radius-control)] border border-[var(--sp-border-subtle)] bg-[var(--sp-surface-muted)] p-3"
                 >
                   <input
                     type="checkbox"
                     checked={selectedKeys.includes(key)}
                     onChange={() => toggleKey(key)}
-                    className="mt-1 size-5 shrink-0 rounded border-slate-300"
+                    className={`${checkboxClassName} mt-1 shrink-0`}
                   />
                   <span>
-                    <span className="block font-semibold text-slate-950 dark:text-white">
+                    <span className="block font-semibold text-[var(--sp-text-primary)]">
                       {label}
                     </span>
-                    <span className="mt-1 block text-sm leading-5 text-slate-600 dark:text-slate-300">
+                    <span className="mt-1 block text-sm leading-5 text-[var(--sp-text-secondary)]">
                       {description}
                     </span>
                   </span>
@@ -373,33 +368,24 @@ export function AdvancedCsvExportPanel({
           </div>
         </div>
 
-        <button
-          type="button"
-          disabled={isPreparing}
+        <Button
+          loading={isPreparing}
+          loadingLabel="Préparation…"
           onClick={() => void handlePrepare()}
-          className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-brand-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60 sm:w-auto"
+          className="w-full sm:w-auto"
         >
-          {isPreparing ? (
-            <LoaderCircle
-              aria-hidden="true"
-              className="size-4 animate-spin"
-            />
-          ) : (
-            <FileSpreadsheet
-              aria-hidden="true"
-              className="size-4"
-            />
-          )}
-          {isPreparing
-            ? 'Préparation…'
-            : 'Préparer les fichiers CSV'}
-        </button>
+          <FileSpreadsheet
+            aria-hidden="true"
+            className="size-4"
+          />
+          Préparer les fichiers CSV
+        </Button>
 
         {feedback ? (
           <InlineNotice
             title="Export CSV"
             tone={feedback.tone}
-            role="status"
+            role={feedback.tone === 'error' ? 'alert' : 'status'}
           >
             {feedback.message}
           </InlineNotice>
@@ -407,84 +393,74 @@ export function AdvancedCsvExportPanel({
 
         {preparedFiles.length > 0 ? (
           <div>
-            <div className="flex flex-col gap-3 rounded-2xl border border-emerald-300 bg-emerald-50 p-4 sm:flex-row sm:items-center sm:justify-between dark:border-emerald-900 dark:bg-emerald-950/30">
-              <div>
-                <h3 className="font-semibold text-emerald-950 dark:text-emerald-100">
-                  Aperçu prêt
-                </h3>
-                <p className="mt-1 text-sm text-emerald-800 dark:text-emerald-200">
-                  {periodLabel(preparedPeriod ?? {})}
-                </p>
-              </div>
+            <Card className="p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h3 className="font-semibold text-[var(--sp-text-primary)]">
+                    Aperçu prêt
+                  </h3>
+                  <p className="mt-1 text-sm text-[var(--sp-text-secondary)]">
+                    {periodLabel(preparedPeriod ?? {})}
+                  </p>
+                </div>
 
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <button
-                  type="button"
-                  onClick={handleDownloadAll}
-                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-emerald-700 px-4 py-2 text-sm font-semibold text-white"
-                >
-                  <Download
-                    aria-hidden="true"
-                    className="size-4"
-                  />
-                  Télécharger la sélection
-                </button>
-
-                <button
-                  type="button"
-                  disabled={isSharing}
-                  onClick={() => void handleShare()}
-                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-emerald-700 px-4 py-2 text-sm font-semibold text-emerald-900 disabled:opacity-60 dark:text-emerald-100"
-                >
-                  {isSharing ? (
-                    <LoaderCircle
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Button onClick={handleDownloadAll}>
+                    <Download
                       aria-hidden="true"
-                      className="size-4 animate-spin"
+                      className="size-4"
                     />
-                  ) : (
+                    Télécharger la sélection
+                  </Button>
+
+                  <Button
+                    variant="secondary"
+                    loading={isSharing}
+                    loadingLabel="Partage…"
+                    onClick={() => void handleShare()}
+                  >
                     <Share2
                       aria-hidden="true"
                       className="size-4"
                     />
-                  )}
-                  Partager la sélection
-                </button>
+                    Partager la sélection
+                  </Button>
+                </div>
               </div>
-            </div>
+            </Card>
 
             <ul className="mt-3 space-y-2">
               {preparedFiles.map((file) => (
                 <li
                   key={file.key}
-                  className="flex flex-col gap-3 rounded-2xl border border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between dark:border-slate-700"
+                  className="flex flex-col gap-3 rounded-[var(--sp-radius-control)] border border-[var(--sp-border-subtle)] p-4 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div>
-                    <p className="font-semibold text-slate-950 dark:text-white">
+                    <p className="font-semibold text-[var(--sp-text-primary)]">
                       {file.label}
                     </p>
-                    <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                    <p className="mt-1 text-sm text-[var(--sp-text-secondary)]">
                       {file.rowCount} ligne(s) · {file.fileName}
                     </p>
                   </div>
 
-                  <button
-                    type="button"
+                  <Button
+                    variant="secondary"
                     onClick={() => downloadOne(file)}
-                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold dark:border-slate-700"
                   >
                     <Download
                       aria-hidden="true"
                       className="size-4"
                     />
                     Télécharger {file.label}
-                  </button>
+                  </Button>
                 </li>
               ))}
             </ul>
           </div>
         ) : null}
 
-        <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">
+        <p className="text-xs leading-5 text-[var(--sp-text-muted)]">
           Les CSV servent à l’analyse et ne permettent pas de
           restaurer SportPilot. Conserve également une sauvegarde
           JSON complète.
