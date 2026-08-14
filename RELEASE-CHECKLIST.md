@@ -1,10 +1,11 @@
-# Checklist de publication — SportPilot 1.0.0-rc.2
+# Checklist de publication — SportPilot 1.0.0
 
-Cette section suit la préparation de RC2. Le futur SHA gelé, l'URL immuable et
-les preuves de recette seront consignés principalement dans l'issue #147 afin
-de ne pas modifier le dépôt après gel uniquement pour cocher des cases.
+Cette section suit la préparation de la stable `1.0.0`. Elle n'annonce aucune
+publication : les SHA, URL et preuves des futures étapes seront consignés dans
+l'issue #163 et les gates GitHub correspondants afin de ne pas modifier le
+dépôt après gel uniquement pour cocher des cases.
 
-## Acquis avant gel RC2
+## Acquis de la trajectoire candidate
 
 - [x] Readiness V1, lots de convergence et preuve transverse terminés ; #63
   fermée en `completed`.
@@ -23,60 +24,72 @@ de ne pas modifier le dépôt après gel uniquement pour cocher des cases.
   squash `e1921f5807292f8236e70c1688d8d9f02c22bdf0` ; le contrat utilisateur
   reste `50` → `ArrowRight` → `51` avec vérification explicite du focus ; CI
   `31593091148`, 4/4 jobs applicatifs verts.
-- [x] Base technique finale avant gel RC2 :
-  `develop@e1921f5807292f8236e70c1688d8d9f02c22bdf0`.
+- [x] RC2 gelée au SHA
+  `2554638a782f3be338b7323b95abc1078f65ef0b`, déployée une seule fois et
+  acceptée dans #147.
+- [x] Gate CORS et recette compte/synchronisation #146 terminés en
+  `completed` sur l'origine immuable RC2 autorisée.
+- [x] Stabilisations post-RC2 Friends, isolation Vitest, thème WebKit et
+  géométrie sociale intégrées par #154, #156, #158 et #160, sans nouvelle
+  fonctionnalité.
+- [x] Gate sécurité #141 terminé par #161 au squash
+  `13cef273d09d78eeb4d177ab23e86c7770748419` ; résiduel Quagga/Sharp accepté
+  pour V1 et suivi dans #162.
+- [x] Base de préparation stable :
+  `develop@13cef273d09d78eeb4d177ab23e86c7770748419`.
 - [x] Dexie v12, sauvegarde JSON v10, runtime Dexie Cloud v16, registre
   d'espaces v1 et snapshot social `0.29.0-a3` inchangés.
-- [x] #141 reste le gate de sécurité avant toute stable `1.0.0`.
-- [x] #103, #136, #137 et #138 restent des dettes séparées.
-- [x] #146 qualifie une configuration Preview manquante et reste un gate de
-  recette RC2, sans défaut d'URL produit démontré.
+- [x] #103, #136, #137, #138 et #162 restent des dettes séparées ; elles ne
+  sont pas absorbées dans la préparation stable.
 
-## Préparation documentaire et technique RC2
+## Préparation documentaire et technique stable
 
-- [x] Journal RC2 #147 créé.
-- [x] Branche `codex/rc-1-0-0-rc2` créée depuis le SHA `develop` vérifié.
-- [x] Version active `1.0.0-rc.2` alignée dans `package.json`, le lockfile, les
+- [x] Issue de préparation stable #163 créée.
+- [x] Branche `codex/163-release-1-0-0` créée depuis le SHA `develop` vérifié.
+- [x] Version active `1.0.0` alignée dans `package.json`, le lockfile, les
   contrats de readiness et la documentation courante.
-- [x] Notes RC2 créées sans réécrire l'archive RC1.
+- [x] Notes stables créées sans réécrire les archives RC1 et RC2.
 - [x] Aucun code métier, dépendance, schéma, migration, Function ou contrat de
   données modifié.
 - [x] Aucun travail utilisateur local écrasé ou placé dans un stash.
-- [x] Suite Vitest complète et ordre mélangé.
-- [x] Lint, TypeScript et Build PWA.
-- [x] `npm run audit:rc`, audits release, consolidation, repository et
-  readiness pertinents.
-- [x] Playwright Chromium et suite PWA complète.
-- [x] Playwright WebKit/iPhone 15 attendu dans la CI GitHub complète.
+- [x] `git diff --check`, lint, TypeScript et Build PWA.
+- [x] Suite Vitest complète et ordre mélangé exécutés : seul le faux négatif
+  Windows/CRLF #136 reste rouge ; les contrats de version stables ciblés sont
+  verts.
+- [x] `npm run audit:stable`, `npm run audit:production`, audits release,
+  consolidation et repository.
+- [ ] `release:verify` local s'arrête sur #136 après lint et 2 410/2 411 tests
+  verts ; la CI Linux reste la preuve complète attendue.
+- [ ] Playwright Chromium et Playwright WebKit iPhone 15 : parcours
+  routing/focus ciblés à 14 passés, 1 ignoré et seul le focus Friends WebKit
+  local Windows déjà qualifié rouge ; matrice complète attendue en CI Linux.
+- [x] PWA cold launch hors ligne, update et rétention : 2/2 verts sur serveur
+  local isolé.
+- [ ] CI GitHub Actions complète 4/4 sur le HEAD exact.
 - [x] Le faux négatif Windows/CRLF reste suivi par #136 ; il n'est pas présenté
-  comme corrigé par cette candidate.
+  comme corrigé par cette préparation.
 
-## À prouver sur RC2
+## Étapes Phase 8 restant à autoriser
 
-- [ ] SHA gelé exact après fusion explicitement autorisée.
-- [ ] Preview immuable créée après autorisation distincte.
-- [ ] Intégrité entre build validé, SHA et deployment.
-- [ ] Responsive 320/360/412 et desktop.
-- [ ] Chromium.
-- [ ] WebKit/iPhone.
-- [ ] Cold launch offline.
-- [ ] Mise à jour PWA et rétention.
-- [ ] Continuité locale en lecture et écriture.
-- [ ] Compte et synchronisation.
-- [ ] Isolation multi-compte.
-- [ ] Origine immuable ajoutée explicitement puis preflight CORS validé selon
-  #146.
-- [ ] Photo Nutrition et fallback manuel selon #103.
+- [ ] Fusion de la préparation stable vers `develop`, après autorisation
+  explicite.
+- [ ] Gel du SHA stable exact.
+- [ ] Preview finale et preuve d'intégrité, après autorisation distincte.
+- [ ] Recette finale responsive, Chromium, WebKit/iPhone, PWA, continuité et
+  isolation.
+- [ ] PR `develop` vers `main`, puis fusion autorisée séparément.
+- [ ] Tag annoté `v1.0.0` et GitHub Release.
+- [ ] Déploiement production et contrôles post-déploiement.
 
-## Stable interdite
+## Publication stable encore interdite
 
 - [x] Aucun tag créé.
 - [x] Aucune release GitHub créée.
 - [x] Aucun déploiement de production effectué.
 - [x] `main` et la production restent inchangés sur SportPilot `0.37.0`.
-- [ ] #141 traitée ou explicitement acceptée avant toute stable `1.0.0`.
-- [ ] Autorisations distinctes avant fusion RC2, Preview, `main`, tag, release
-  ou production.
+- [x] #141 traitée et risque résiduel explicitement accepté ; suivi #162 ouvert.
+- [ ] Autorisations distinctes avant fusion de cette PR, Preview, `main`, tag,
+  GitHub Release ou production.
 
 ## Archive RC1 — rejetée
 

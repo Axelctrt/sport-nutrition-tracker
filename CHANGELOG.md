@@ -4,6 +4,29 @@ Ce fichier synthétise les versions publiées. Les notes détaillées versionné
 restent les archives de référence et conservent l’état de préparation de chaque
 livraison.
 
+## 1.0.0 — stable en préparation
+
+- Passage de la version applicative de `1.0.0-rc.2` à `1.0.0`, sans migration
+  ni changement fonctionnel.
+- Périmètre V1 consolidé depuis `0.37.0`, incluant le correctif cold launch PWA
+  #144/#145 et les garanties de continuité, d'isolation, de focus et de
+  rétention validées pendant les candidates.
+- RC2 gelée au SHA `2554638a782f3be338b7323b95abc1078f65ef0b`,
+  déployée une seule fois et acceptée dans #147.
+- Stabilisations post-RC2 Friends, WebKit et thème conservées comme preuves de
+  test, sans les présenter comme des fonctionnalités.
+- Gate sécurité #141 levé après #161 : audit ramené de 9 HIGH / 0 CRITICAL à
+  2 HIGH / 0 CRITICAL ; résiduel Quagga/Sharp accepté pour V1 et suivi dans
+  #162.
+- Versions de données inchangées : Dexie v12, sauvegarde JSON v10, runtime
+  Dexie Cloud v16, registre d'espaces v1 et snapshot social `0.29.0-a3`.
+
+Cette entrée est **NON PUBLIÉE**. Aucun tag `v1.0.0`, aucune GitHub Release,
+aucune modification de `main` et aucun déploiement de production ne sont
+effectués par cette préparation. La production reste en `0.37.0`.
+
+Voir [`RELEASE-NOTES-1.0.0.md`](RELEASE-NOTES-1.0.0.md).
+
 ## 1.0.0-rc.2 — candidate en préparation le 11 août 2026
 
 - Correction du cold launch PWA hors ligne observé sur RC1.

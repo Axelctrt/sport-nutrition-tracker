@@ -1,5 +1,5 @@
 const USER_AGENT =
-  'SportPilot/0.37.0 (Cloudflare Pages; Open Food Facts integration)';
+  'SportPilot/1.0.0 (Cloudflare Pages; Open Food Facts integration)';
 
 function createCorsHeaders(contentType = 'application/json; charset=utf-8') {
   return new Headers({

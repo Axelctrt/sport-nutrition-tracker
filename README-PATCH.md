@@ -1,17 +1,18 @@
-# SportPilot 1.0.0-rc.2 — release candidate
+# SportPilot 1.0.0 — stable en préparation
 
-Branche : `codex/rc-1-0-0-rc2`
+Branche : `codex/163-release-1-0-0`
 
-Base technique avant gel : `origin/develop` au commit
-`e1921f5807292f8236e70c1688d8d9f02c22bdf0`.
+Base vérifiée : `origin/develop` au commit
+`13cef273d09d78eeb4d177ab23e86c7770748419`.
 
-Cette branche contient uniquement l’alignement de version, les contrôles et la
-documentation nécessaires à RC2. Le correctif PWA #145 est déjà intégré dans
-la base ; aucun comportement produit n'est réécrit par cette branche.
+Cette branche contient uniquement le passage à la version stable `1.0.0`, les
+contrats de readiness et la documentation nécessaires à la stable. RC2 est
+historiquement acceptée ; #141 est levée et #162 suit le résiduel Quagga/Sharp.
+Aucun comportement produit n'est modifié par cette branche.
 
 Dexie reste en v12, la sauvegarde JSON en v10, le runtime Dexie Cloud en v16 et
 le contrat de snapshot social en `0.29.0-a3`. Aucun fichier Functions,
 Cloudflare, IA, schéma ou migration n'est modifié.
 
-Aucune Preview Cloudflare, écriture CORS/Dexie Cloud, fusion, création de tag,
-release GitHub, publication stable ou production n'est incluse.
+Aucune Preview Cloudflare, écriture CORS/Dexie Cloud, fusion, modification de
+`main`, création de tag, GitHub Release ou production n'est incluse.

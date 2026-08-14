@@ -10,15 +10,17 @@
 - intégration finale validée après le Lot 8 et #63 :
   `develop@3eff34a73cc40d98d3de2ab947ac8b45bfae5f01` ;
 - RC1 rejetée : `1.0.0-rc.1`, journal #142 ;
-- candidate en préparation : `1.0.0-rc.2` sur la base technique avant gel
-  `develop@e1921f5807292f8236e70c1688d8d9f02c22bdf0`, journal #147.
+- RC2 acceptée : `1.0.0-rc.2` au SHA gelé
+  `2554638a782f3be338b7323b95abc1078f65ef0b`, journal #147 ;
+- stable en préparation : `1.0.0` depuis
+  `develop@13cef273d09d78eeb4d177ab23e86c7770748419`, issue #163.
 
 Toujours revérifier les HEAD et le SHA réellement déployé avant de citer cet
 état.
 
 Le tableau publié ci-dessous reste volontairement celui de `0.37.0`. Le delta
-intégré de la candidate est synthétisé dans
-[`../../RELEASE-NOTES-1.0.0-rc.2.md`](../../RELEASE-NOTES-1.0.0-rc.2.md).
+intégré de la stable en préparation est synthétisé dans
+[`../../RELEASE-NOTES-1.0.0.md`](../../RELEASE-NOTES-1.0.0.md).
 
 ## Périmètre fonctionnel publié
 
@@ -81,11 +83,11 @@ les données restent inchangés.
 
 ## Orientation actuelle
 
-La readiness V1 et les lots de convergence sont terminés. La Phase 7 prépare
-RC2 après le rejet de RC1 et l'intégration du correctif PWA #145. Aucun nouveau
-développement fonctionnel n'est autorisé par cette préparation. #146 reste le
-gate CORS de la future recette compte/synchronisation et #141 le gate avant la
-stable. La séquence complète figure dans
+La readiness V1, les lots de convergence et la Phase 7 sont terminés. RC1 reste
+rejetée ; RC2 est acceptée. #146 et le gate sécurité #141 sont terminés, avec
+le résiduel Quagga/Sharp suivi dans #162. La Phase 8 prépare maintenant la
+stable `1.0.0` sans nouveau développement fonctionnel. La séquence complète
+figure dans
 [`../roadmap/V1_READINESS_PLAN.md`](../roadmap/V1_READINESS_PLAN.md).
 
 Les nouvelles fonctions, le renvoi OTP, la synchronisation étendue, les

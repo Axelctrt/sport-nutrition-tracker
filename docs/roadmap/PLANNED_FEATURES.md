@@ -5,12 +5,12 @@ V1 autorisée et les options post-V1. Une mention ici ne vaut jamais autorisatio
 de développement, fusion ou déploiement.
 
 Statut courant : les Phases 0 à 5 et les lots de convergence sont terminés,
-la Phase 6 conditionnelle n'a pas été requise et la Phase 7 prépare
-`1.0.0-rc.2` sur la base technique avant gel
-`develop@e1921f5807292f8236e70c1688d8d9f02c22bdf0`. RC1 a été rejetée dans
-#142 ; le correctif PWA #145, le correctif navigation/focus #151/#152 et la
-stabilisation de preuve WebKit #149/#150 sont intégrés. #146 reste le gate CORS
-de la future recette Preview.
+la Phase 6 conditionnelle n'a pas été requise et la Phase 7 est terminée. RC1
+a été rejetée dans #142 ; RC2 a été gelée au SHA
+`2554638a782f3be338b7323b95abc1078f65ef0b`, déployée une seule fois et
+acceptée dans #147. #146 et #141 sont terminées ; #162 suit le résiduel
+Quagga/Sharp accepté. La Phase 8 prépare `1.0.0` depuis
+`develop@13cef273d09d78eeb4d177ab23e86c7770748419` via #163.
 
 ## Publié — SportPilot 0.37.0
 
@@ -154,6 +154,8 @@ fonctionnel.
 
 ### Phase 7 — Release Candidate V1
 
+Statut : **terminée**, RC2 acceptée dans #147.
+
 - gel fonctionnel ;
 - version candidate ;
 - Preview immuable uniquement après autorisation explicite séparée ;
@@ -161,6 +163,9 @@ fonctionnel.
 - recette propriétaire complète.
 
 ### Phase 8 — Publication SportPilot V1
+
+Statut : **en cours**, limitée à la préparation du candidat stable tant que les
+autorisations suivantes ne sont pas accordées.
 
 - PR `develop` vers `main` ;
 - version `1.0.0` ;

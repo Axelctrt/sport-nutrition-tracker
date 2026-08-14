@@ -1,7 +1,8 @@
-# Limitations connues — SportPilot 1.0.0-rc.2
+# Limitations connues — SportPilot 1.0.0 en préparation
 
 Ces limitations sont des dettes séparées. Elles ne sont pas corrigées par la
-préparation RC et nécessitent leur propre validation avant toute modification.
+préparation stable et nécessitent leur propre validation avant toute
+modification.
 
 ## Photos de progression
 
@@ -21,7 +22,8 @@ Les graphiques restent absents lorsque les données disponibles ne permettent pa
 
 ## Moteur calorique
 
-La candidate `1.0.0-rc.2` ne modifie pas les formules de calories, macros, métabolisme ou ajustement hebdomadaire.
+La préparation `1.0.0` ne modifie pas les formules de calories, macros,
+métabolisme ou ajustement hebdomadaire.
 
 ## Social
 
@@ -49,13 +51,11 @@ candidate n'autorise aucune action Cloudflare.
 
 ## CORS Dexie Cloud des Previews RC
 
-#146 suit le gate de recette compte/synchronisation. Le diagnostic RC1 a
-confirmé que son origine immuable exacte était absente de la whitelist Dexie
-Cloud : il s'agit d'un risque de configuration Preview, pas d'un défaut d'URL
-produit ni d'un défaut des données locales. L'origine RC2 n'existe pas encore
-et ne sera ajoutée qu'après création autorisée du deployment et autorisation
-propriétaire distincte. Aucun wildcard ni aucune mutation CORS ne sont inclus
-dans cette préparation.
+#146 est terminée en `completed`. Pour l'unique Preview RC2, seule l'origine
+immuable autorisée a été ajoutée à la whitelist, sans alias ni wildcard ; le
+preflight, l'authentification, la synchronisation, la continuité et l'isolation
+multi-compte ont ensuite été validés. Cette qualification historique
+n'autorise aucune nouvelle origine ni mutation CORS pour la stable.
 
 ## Accessibilité
 
@@ -63,12 +63,14 @@ La recette automatisée couvre clavier, focus, réduction des animations, zones 
 
 ## Dépendances
 
-Les alertes `npm audit` compatibles sont traitées sans mise à niveau forcée. Les signalements amont restants doivent être réévalués dès la publication de correctifs compatibles avec React Router, Quagga 2 et la chaîne PWA.
+Les alertes `npm audit` compatibles ont été traitées sans mise à niveau forcée
+ni `npm audit fix`. #141 est fermée en `completed` après l'intégration de #161 :
+l'audit est passé de 9 HIGH / 0 CRITICAL à 2 HIGH / 0 CRITICAL.
 
-La qualification du 11 août 2026 consignée dans #141 sur le verrou courant
-signale 9 vulnérabilités hautes et 0 critique : React Router 7.18.1, Sharp via
-Quagga 2, puis Brace Expansion, Fast URI, Nanoid et Undici dans les chaînes de
-build/test/PWA. Elle autorise la recette de la candidate RC, sans constituer une
-acceptation pour la stable. Aucune mise à jour forcée et aucun `npm audit fix`
-ne sont appliqués. La publication stable `1.0.0` reste bloquée jusqu'au
-traitement ou à l'acceptation explicite de #141.
+Les deux HIGH restants correspondent au chemin optionnel Node
+`@ericblade/quagga2@1.12.1 → sharp@0.34.5`. L'advisory n'est ni faux ni
+corrigé, mais le risque résiduel est accepté par le propriétaire pour V1 dans
+l'architecture validée : Sharp est absent du bundle navigateur final, des
+Pages Functions et des artefacts runtime SportPilot, sans chemin d'exploitation
+démontré. #162 suit une future correction Quagga/Sharp compatible après V1 et
+n'est pas bloquante pour cette préparation.

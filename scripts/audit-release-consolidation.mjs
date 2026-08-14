@@ -13,6 +13,7 @@ const requiredFiles = [
   'RELEASE-NOTES-0.35.1.md',
   'RELEASE-NOTES-0.36.0.md',
   'RELEASE-NOTES-0.37.0.md',
+  'RELEASE-NOTES-1.0.0.md',
   'RELEASE-NOTES-1.0.0-rc.1.md',
   'RELEASE-NOTES-1.0.0-rc.2.md',
   'CHANGELOG.md',
@@ -39,8 +40,8 @@ for (const path of requiredFiles) {
 if (failures.length === 0) {
   const packageJson = JSON.parse(read('package.json'));
   const packageLock = JSON.parse(read('package-lock.json'));
-  if (packageJson.version !== '1.0.0-rc.2') {
-    fail(`package.json doit préparer 1.0.0-rc.2, reçu ${packageJson.version}.`);
+  if (packageJson.version !== '1.0.0') {
+    fail(`package.json doit préparer 1.0.0, reçu ${packageJson.version}.`);
   }
   if (packageLock.version !== packageJson.version || packageLock.packages?.['']?.version !== packageJson.version) {
     fail(`package-lock.json doit être aligné sur ${packageJson.version}.`);
@@ -70,25 +71,43 @@ if (failures.length === 0) {
     if (!source.includes('3584 * 1024')) fail(`le budget JavaScript ${label} n’est pas aligné sur 3584 Kio.`);
   }
 
-  const releaseNotes = read('RELEASE-NOTES-1.0.0-rc.2.md');
+  const releaseNotes = read('RELEASE-NOTES-1.0.0.md');
   for (const marker of [
-    'SportPilot 1.0.0-rc.2',
-    'Branche : `codex/rc-1-0-0-rc2`',
-    'Aucun tag, aucune release GitHub, aucune Preview Cloudflare',
+    'SportPilot 1.0.0 — stable en préparation',
+    'Branche : `codex/163-release-1-0-0`',
+    'develop@13cef273d09d78eeb4d177ab23e86c7770748419',
+    'non publiée, non taguée et non déployée',
     'cold launch PWA',
-    '**/analytics*.js',
-    'AnalyticsPage-*',
-    '6 796 octets',
+    '2554638a782f3be338b7323b95abc1078f65ef0b',
     'Dexie v12',
     'sauvegarde JSON v10',
+    'runtime Dexie Cloud v16',
+    'registre des espaces de données v1',
+    '0.29.0-a3',
+    '2 HIGH / 0 CRITICAL',
     '#103',
     '#136',
     '#137',
     '#138',
     '#141',
     '#146',
+    '#162',
   ]) {
     if (!releaseNotes.includes(marker)) fail(`notes de release incomplètes : ${marker}.`);
+  }
+
+  const acceptedRc2Notes = read('RELEASE-NOTES-1.0.0-rc.2.md');
+  for (const marker of [
+    'SportPilot 1.0.0-rc.2',
+    'Branche : `codex/rc-1-0-0-rc2`',
+    'cold launch PWA',
+    '**/analytics*.js',
+    'AnalyticsPage-*',
+    '6 796 octets',
+    '#141',
+    '#146',
+  ]) {
+    if (!acceptedRc2Notes.includes(marker)) fail(`archive RC2 incomplète : ${marker}.`);
   }
 
   const rejectedRc1Notes = read('RELEASE-NOTES-1.0.0-rc.1.md');
@@ -111,9 +130,10 @@ if (failures.length === 0) {
 
   const checklist = read('RELEASE-CHECKLIST.md');
   for (const marker of [
-    'SportPilot 1.0.0-rc.2',
+    'SportPilot 1.0.0',
     'Archive RC1 — rejetée',
     '#146',
+    '#162',
     'Aucun tag créé',
     'Suite Vitest complète',
     'Build PWA',
@@ -123,7 +143,7 @@ if (failures.length === 0) {
   }
 
   const knownLimitations = read('KNOWN-LIMITATIONS.md');
-  for (const marker of ['SportPilot 1.0.0-rc.2', '#103', '#136', '#137', '#138', '#141', '#146', 'Dépendances']) {
+  for (const marker of ['SportPilot 1.0.0 en préparation', '#103', '#136', '#137', '#138', '#141', '#146', '#162', '2 HIGH / 0 CRITICAL', 'Dépendances']) {
     if (!knownLimitations.includes(marker)) fail(`limitations connues incomplètes : ${marker}.`);
   }
 
@@ -199,9 +219,9 @@ if (failures.length === 0) {
 }
 
 if (failures.length > 0) {
-  console.error('Audit de consolidation 1.0.0-rc.2 échoué :');
+  console.error('Audit de consolidation 1.0.0 échoué :');
   for (const failure of failures) console.error(`- ${failure}`);
   process.exit(1);
 }
 
-console.log('Audit de consolidation 1.0.0-rc.2 réussi : version candidate, archive RC1, documentation, budgets, parcours et contrats de stockage sont alignés.');
+console.log('Audit de consolidation 1.0.0 réussi : version stable, archives RC1/RC2, documentation, budgets, parcours et contrats de stockage sont alignés.');
