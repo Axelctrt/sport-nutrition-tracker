@@ -2,109 +2,101 @@
 
 Ce fichier s’applique à tout le dépôt. Le dépôt GitHub
 `Axelctrt/sport-nutrition-tracker` est la source de vérité. Les documents
-canoniques sont indexés dans [`docs/INDEX.md`](docs/INDEX.md) ; les notes de
-version et les documents suffixés par une version restent des archives utiles,
-pas une description automatiquement actuelle.
+canoniques sont indexés dans [`docs/INDEX.md`](docs/INDEX.md). Les notes de
+version et documents suffixés par une version restent des archives utiles, pas
+une description automatiquement actuelle.
 
 ## État de référence
 
-- Application publiée : SportPilot `0.37.0`.
-- Commit fonctionnel déployé en production :
-  `84fea3d49e68c7d190c00d505502a5c4aa2e672a`.
-- Branche `main` : elle peut contenir de la maintenance documentaire ultérieure
-  au commit fonctionnel déployé ; toujours distinguer HEAD Git et SHA réellement
-  servi en production.
-- Publication : tag annoté `v0.37.0` et release GitHub stable `0.37.0`.
-- Production : `https://sportpilot-pages.pages.dev`.
-- Intégration constatée avant la Phase 0 V1 :
-  `develop@eec97bf9ac776b519d051329551836853894fd82`.
-- Source de vérité après clôture du Lot 8 et de l'issue #63 :
-  `develop@3eff34a73cc40d98d3de2ab947ac8b45bfae5f01`.
-- RC1 historique : `1.0.0-rc.1` au SHA
-  `2fd781087a65e125b0e77edcd53d41fdf82922ed`, déployée une fois puis rejetée
-  pour le blocker PWA #144.
-- RC2 validée : SportPilot `1.0.0-rc.2` au SHA gelé
-  `2554638a782f3be338b7323b95abc1078f65ef0b`, déployée une seule fois puis
-  acceptée dans #147 ; #146 est terminée.
-- Candidate stable en préparation : SportPilot `1.0.0` depuis
-  `develop@13cef273d09d78eeb4d177ab23e86c7770748419`, après levée du gate
-  sécurité #141 ; #162 suit le résiduel Quagga/Sharp sans bloquer V1.
+- Version stable actuelle : SportPilot `1.0.0`.
+- Branche de développement : `develop`.
+- Base `develop` au moment de cette mise à jour :
+  `d63f37374da9b02ffc44fbe9b019068fe768f318`.
+- `main` contient la publication stable et peut recevoir uniquement les
+  opérations explicitement autorisées de release/maintenance.
 - Architecture : `src/domain`, `src/application`, `src/infrastructure`,
   `src/features`, `src/app`, `src/shared` et `src/pwa`.
-- Stockage principal local : Dexie `AppDatabase`, version 12.
-- Sauvegarde JSON : version 10.
-- Runtime de synchronisation Dexie Cloud : version 16, activé uniquement par
-  configuration.
-- Backend : Cloudflare Pages Functions sous `functions/api`, avec D1 pour le
-  domaine social et ses limites photo.
+- Stockage principal local : Dexie `AppDatabase`, version 12 au moment de cette
+  mise à jour.
+- Sauvegarde JSON : version 10 au moment de cette mise à jour.
+- Runtime de synchronisation Dexie Cloud : version 16 au moment de cette mise à
+  jour, activé uniquement par configuration.
+- Backend : Cloudflare Pages Functions sous `functions/api`, avec D1 pour les
+  domaines concernés.
 - UI : mobile-first, local-first, hors ligne, système Performance Glass.
 
-Toujours vérifier ces valeurs dans le code, GitHub et les services distants
-avant de les modifier ou de les citer dans un nouveau document.
+Toujours revérifier les HEAD, versions de schéma, configurations et services
+réels avant de les citer ou de les modifier. Une ancienne conversation ou un
+SHA inscrit ici ne remplace jamais cette vérification.
 
-## Pilotage courant vers la V1
+## Pilotage courant post-V1
 
-L’objectif stratégique validé est de stabiliser le périmètre existant puis de
-publier SportPilot `1.0.0`. Aucun nouveau cycle fonctionnel ne doit être inséré
-entre le programme de cohérence globale et la décision de readiness V1.
+Le référentiel principal du cycle post-V1 est
+[`docs/roadmap/POST_V1_MASTER_PLAN.md`](docs/roadmap/POST_V1_MASTER_PLAN.md).
 
-Les Phases 0 à 5 et les lots de convergence validés sont terminés. La Phase 6
-conditionnelle n'a pas été requise : aucun défaut V1 critique ou significatif
-reproductible ne restait dans le périmètre #63. La Phase 7 est terminée : RC1
-reste rejetée et RC2 a été acceptée. La Phase 8 prépare maintenant `1.0.0`
-depuis le HEAD de `develop` qui intègre les stabilisations post-RC2 et le gate
-sécurité #141. #146 et #141 sont fermées en `completed` ; #162 reste le suivi
-post-V1 non bloquant du résiduel Quagga/Sharp accepté.
+Le premier grand programme produit est **SportPilot Coach**. Il est découpé en
+lots C0 à C11 et doit être exécuté lot par lot. Le MASTER PLAN décrit la
+destination mais n'autorise jamais l'implémentation automatique du lot suivant.
 
-Toute Preview Cloudflare, fusion, modification de `main`, création de tag,
-release GitHub ou mise en production demeure une gate séparée nécessitant une
-autorisation explicite.
+Les lots de suppression, confidentialité, badges, Photo Nutrition, gouvernance,
+maintenance et backlog post-V1 restent séparés et suivent les dépendances et
+autorisations du MASTER PLAN.
 
-Lire en priorité
-[`docs/roadmap/V1_READINESS_PLAN.md`](docs/roadmap/V1_READINESS_PLAN.md),
-[`docs/roadmap/ROADMAP.md`](docs/roadmap/ROADMAP.md), l’issue #63 clôturée,
-l'archive RC1 #142 et le journal RC2 #147.
-
-L’audit doit distinguer défaut, risque, dette, recommandation UX, option et
-surface conforme. Les recommandations qui changent réellement le produit
-restent séparées des corrections de conformité.
+Les anciennes références V1/RC restent des preuves historiques. Ne pas les
+utiliser comme état courant.
 
 ## Règles impératives
 
 1. Préserver la continuité des données. Ne jamais réutiliser une version Dexie
    publiée ni modifier une migration historique. Toute évolution ajoute une
-   version, une migration, des tests et une stratégie de retour arrière.
+   version, une migration, des tests et une stratégie de reprise adaptée.
 2. Maintenir l’isolation entre espace invité, profil local et compte cloud.
    Aucun changement de compte ne doit exposer les données d’un autre espace.
-3. Ne pas modifier les formules caloriques, leurs versions ou leurs règles
-   d’arrondi sans audit métier dédié et validation explicite.
-4. Ne pas élargir le périmètre IA, les données envoyées ou les fournisseurs
+3. Ne pas modifier les formules caloriques, macros, leurs versions, règles
+   d'arrondi ou objectifs métier sans audit dédié et validation propriétaire
+   explicite.
+4. Ne pas modifier les thèmes validés, palettes globales ou contrats visuels
+   structurants sans validation explicite.
+5. Ne pas élargir le périmètre IA, les données envoyées ou les fournisseurs
    sans validation explicite, consentement adapté et revue de confidentialité.
-5. Ne jamais placer de secret dans `VITE_*`, le dépôt, les logs ou la PWA.
-6. Une fusion, un déploiement Preview ou production, un tag et une release
+6. Le Coach Engine doit rester déterministe, explicable, testable, local-first
+   et fonctionnel hors ligne. Une IA conversationnelle éventuelle ne peut être
+   qu'une couche d'explication.
+7. L'IA Coach n'est autorisée que si son coût peut être garanti strictement à
+   `0 EUR`, sans risque de dépassement, bascule payante ou débit automatique.
+   À défaut, le lot IA est abandonné sans alternative payante.
+8. Ne jamais placer de secret dans `VITE_*`, le dépôt, les logs ou la PWA.
+9. Une fusion, un déploiement Preview ou production, un tag et une release
    exigent chacun une autorisation explicite. Une demande de code ou de PR ne
    les autorise pas implicitement.
-7. Ne pas effacer, réinitialiser ou stasher les changements de l’utilisateur.
-   Travailler autour d’un worktree sale et signaler tout chevauchement réel.
+10. Ne pas effacer, réinitialiser ou stasher les changements de l’utilisateur.
+    Travailler autour d’un worktree sale et signaler tout chevauchement réel.
+11. Ne jamais élargir silencieusement le périmètre d'un lot. Toute idée UX,
+    refactor ou optimisation hors périmètre doit être reportée séparément.
+12. Toute modification durable du plan Coach (calories/macros/programme) reste
+    explicitement acceptée par l'utilisateur tant qu'une décision produit
+    contraire n'a pas été validée.
 
 ## Façon de travailler
 
 - Actualiser les références distantes avant de choisir une base.
-- Partir de `develop` pour une évolution ; réserver `main` à la base publiée.
-- Pour une maintenance documentaire post-release décrivant l’état publié,
-  partir de `main`, ouvrir une PR dédiée vers `main`, puis resynchroniser
-  `develop` depuis `main` par merge, sans rebase ni réécriture d’historique.
-- Utiliser une branche dédiée et une PR vers la branche cible appropriée.
-- Lire le code, les tests, les audits et les documents canoniques concernés
-  avant d’écrire.
-- Distinguer dans toute proposition :
-  **actuel**, **décision validée**, **planifié**, **idée à étudier**,
-  **dette technique** et **abandonné**.
+- Partir de `develop` pour une évolution post-V1 ; réserver `main` aux
+  opérations explicitement autorisées.
+- Lire `AGENTS.md`, `docs/INDEX.md`, le MASTER PLAN, puis le code, les tests et
+  les documents canoniques concernés avant d’écrire.
+- Utiliser une branche dédiée et une PR vers `develop` sauf instruction
+  explicite contraire.
+- Un lot autorisé n'autorise pas le lot suivant.
+- Distinguer dans toute proposition : **actuel**, **décision validée**,
+  **planifié**, **idée à étudier**, **dette technique** et **abandonné**.
 - Réutiliser les composants et contrats existants avant d’en créer de nouveaux.
 - Mettre à jour la documentation canonique lorsque le comportement, un contrat,
   une commande, une version de données ou une procédure change.
-- Pour le programme V1, auditer avant de modifier et conserver des PR petites,
-  indépendantes et vérifiables.
+- Auditer avant de modifier lorsque le périmètre touche données, sécurité,
+  synchronisation, calculs, IA, navigation structurante ou comportement Coach.
+- Conserver des PR petites, indépendantes et vérifiables.
+- Une issue GitHub ouverte ne prouve pas qu'un défaut existe encore : revérifier
+  code, commits, PR et comportement avant toute correction.
 
 ## Validation
 
@@ -116,7 +108,9 @@ Choisir les contrôles proportionnellement au risque :
 - interaction mobile : Chromium, WebKit iPhone 15, largeurs pertinentes,
   clavier, safe areas et mouvement réduit ;
 - données/synchronisation/release : `npm run check`,
-  `npm run test:stability`, tests PWA et audits métier associés.
+  `npm run test:stability`, tests PWA et audits métier associés ;
+- Coach : tests métier déterministes, scénarios de confiance/données
+  insuffisantes, non-régression des calculs, puis tests UI/E2E selon la surface.
 
 Commandes de référence :
 
@@ -145,3 +139,13 @@ Documenter les avertissements préexistants séparément des régressions.
   [`docs/operations/INCIDENT_AND_RECOVERY.md`](docs/operations/INCIDENT_AND_RECOVERY.md)
   pour une restauration ou un incident de données.
 - Préférer un correctif en avant à un rollback qui ferait régresser un schéma.
+
+## Autorité du MASTER PLAN
+
+Le MASTER PLAN est un référentiel de roadmap, pas une permission d'exécution.
+Pour chaque lot :
+
+- le MASTER PLAN fournit le contexte ;
+- le prompt courant définit l'autorisation et le périmètre ;
+- la PR constitue le résultat auditable ;
+- le propriétaire décide de la fusion, de la recette et du déploiement.
