@@ -4,26 +4,34 @@ Ce fichier synthétise les versions publiées. Les notes détaillées versionné
 restent les archives de référence et conservent l’état de préparation de chaque
 livraison.
 
-## 1.0.0 — stable en préparation
+## 1.0.1 — maintenance P0 en préparation
 
-- Passage de la version applicative de `1.0.0-rc.2` à `1.0.0`, sans migration
-  ni changement fonctionnel.
-- Périmètre V1 consolidé depuis `0.37.0`, incluant le correctif cold launch PWA
-  #144/#145 et les garanties de continuité, d'isolation, de focus et de
-  rétention validées pendant les candidates.
-- RC2 gelée au SHA `2554638a782f3be338b7323b95abc1078f65ef0b`,
-  déployée une seule fois et acceptée dans #147.
-- Stabilisations post-RC2 Friends, WebKit et thème conservées comme preuves de
-  test, sans les présenter comme des fonctionnalités.
-- Gate sécurité #141 levé après #161 : audit ramené de 9 HIGH / 0 CRITICAL à
-  2 HIGH / 0 CRITICAL ; résiduel Quagga/Sharp accepté pour V1 et suivi dans
-  #162.
-- Versions de données inchangées : Dexie v12, sauvegarde JSON v10, runtime
-  Dexie Cloud v16, registre d'espaces v1 et snapshot social `0.29.0-a3`.
+- Fiabilisation de la continuité du compte entre appareils.
+- Synchronisation automatique sûre des séances de musculation avec primitives
+  directionnelles `cloud-only` et `local-only`.
+- Refus fail-closed des provenances ambiguës (`both`, `unknown`) avant toute
+  écriture directionnelle.
+- Récupération plus sûre sur nouvel appareil et meilleure transparence de
+  l'état de synchronisation.
+- Suppressions/tombstones, idempotence et isolation invité/A/B couvertes.
+- Versions de données inchangées : Dexie v12, sauvegarde JSON v10 et runtime
+  Dexie Cloud v16.
+- Aucune modification de formule calorique, thème ou périmètre IA.
 
-Cette entrée est **NON PUBLIÉE**. Aucun tag `v1.0.0`, aucune GitHub Release,
-aucune modification de `main` et aucun déploiement de production ne sont
-effectués par cette préparation. La production reste en `0.37.0`.
+Cette entrée prépare `1.0.1` ; le tag, la GitHub Release et la production
+restent des gates distincts.
+
+Voir [`RELEASE-NOTES-1.0.1.md`](RELEASE-NOTES-1.0.1.md).
+
+## 1.0.0 — publiée le 14 août 2026
+
+- Publication stable issue de la PR #167.
+- Commit publié : `d3ff60017027295f75b665d7efe2a037db69d69e`.
+- Tag annoté : `v1.0.0`.
+- Release GitHub : SportPilot 1.0.0.
+- Production : `https://sportpilot-pages.pages.dev`.
+- Versions de données : Dexie v12, sauvegarde JSON v10 et runtime Dexie Cloud
+  v16, sans migration supplémentaire.
 
 Voir [`RELEASE-NOTES-1.0.0.md`](RELEASE-NOTES-1.0.0.md).
 
