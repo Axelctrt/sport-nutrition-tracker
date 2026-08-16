@@ -114,7 +114,7 @@ describe('UnifiedSyncCenterPanel', () => {
       .toHaveAttribute('href', '/settings/account-devices');
   });
 
-  it('présente d’abord le compte, l’état global et l’action principale', async () => {
+  it('présente d’abord le compte, l’état réel à vérifier et une action de lecture', async () => {
     const { client } = createClient();
 
     render(
@@ -127,7 +127,10 @@ describe('UnifiedSyncCenterPanel', () => {
     expect(screen.getByText('Compte actif')).toBeInTheDocument();
     expect(screen.getByText('user@example.com')).toBeInTheDocument();
     expect(screen.getByText('Dernière synchronisation réussie')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Synchroniser maintenant' })).toBeInTheDocument();
+    expect(screen.getByText('État des données à vérifier')).toBeInTheDocument();
+    expect(screen.queryByText('Tout est à jour')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Vérifier maintenant' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Synchroniser maintenant' })).not.toBeInTheDocument();
 
     const advanced = screen.getByText('Détails techniques et historique').closest('details');
     expect(advanced).not.toBeNull();
@@ -141,6 +144,9 @@ describe('UnifiedSyncCenterPanel', () => {
       analyzeRealAccountPreferences,
       analyzeRealWeights,
       analyzeRealActivities,
+      syncRealAccountPreferences,
+      syncRealWeights,
+      syncRealActivities,
     } = createClient();
 
     render(
@@ -150,14 +156,17 @@ describe('UnifiedSyncCenterPanel', () => {
     );
 
     await waitFor(() => expect(client.initialize).toHaveBeenCalledTimes(1));
-    await user.click(screen.getByText('Détails techniques et historique'));
-    await user.click(screen.getByRole('button', { name: 'Analyser tout' }));
+    await user.click(screen.getByRole('button', { name: 'Vérifier maintenant' }));
 
     await waitFor(() => {
       expect(analyzeRealAccountPreferences).toHaveBeenCalledTimes(1);
       expect(analyzeRealWeights).toHaveBeenCalledTimes(1);
       expect(analyzeRealActivities).toHaveBeenCalledTimes(1);
     });
+    expect(syncRealAccountPreferences).not.toHaveBeenCalled();
+    expect(syncRealWeights).not.toHaveBeenCalled();
+    expect(syncRealActivities).not.toHaveBeenCalled();
+    await user.click(screen.getByText('Détails techniques et historique'));
     expect(screen.getByText('2 différences')).toBeInTheDocument();
     expect(screen.getByText('Réseau indisponible pour les activités.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Relancer uniquement les rubriques en échec' }))
@@ -303,7 +312,12 @@ describe('UnifiedSyncCenterPanel', () => {
     );
 
     await waitFor(() => expect(client.initialize).toHaveBeenCalledTimes(1));
-    await user.click(screen.getByRole('button', { name: 'Synchroniser maintenant' }));
+    await user.click(screen.getByRole('button', { name: 'Vérifier maintenant' }));
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Fusionner lorsque c’est possible' }))
+        .toBeEnabled(),
+    );
+    await user.click(screen.getByRole('button', { name: 'Fusionner lorsque c’est possible' }));
 
     let dialog = screen.getByRole('alertdialog');
     expect(within(dialog).getByText('Synchroniser toutes les rubriques ?')).toBeInTheDocument();

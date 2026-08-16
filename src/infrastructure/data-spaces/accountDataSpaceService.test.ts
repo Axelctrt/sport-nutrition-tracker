@@ -1,5 +1,6 @@
 import Dexie from 'dexie';
 
+import { DEVICE_SETTINGS_ID } from '@/domain/defaults/identifiers';
 import {
   DATA_SPACE_REGISTRY_STORAGE_KEY,
   getActiveDataSpace,
@@ -11,6 +12,7 @@ import {
 } from '@/infrastructure/data-spaces/accountDataSpaceService';
 import { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import { accountDatabaseNameForFingerprint } from '@/infrastructure/database/databaseNames';
+import { databaseTableNames } from '@/infrastructure/database/schema';
 
 class MemoryStorage implements DataSpaceStorage {
   private readonly values = new Map<string, string>();
@@ -121,16 +123,58 @@ describe('accountDataSpaceService', () => {
     const target = new AppDatabase(targetName);
     await target.open();
     const userRecordCount = await Promise.all(
-      target.tables
-        .filter(
-          (table) =>
-            table.name !== 'migrationJournal' &&
-            table.name !== 'databaseDiagnostics',
-        )
-        .map((table) => table.count()),
+      databaseTableNames.map((tableName) => target.table(tableName).count()),
     );
     expect(userRecordCount.reduce((sum, count) => sum + count, 0)).toBe(0);
+    expect(await target.userSettings.count()).toBe(0);
+    expect(await target.deviceSettings.get(DEVICE_SETTINGS_ID)).toMatchObject({
+      automaticAccountSyncEnabled: true,
+      automaticAccountSyncAccountFingerprint: EMPTY_FINGERPRINT,
+      automaticAccountSyncConnectionMode: 'any-connection',
+    });
     target.close();
+  });
+
+  it('isole l’opt-out d’un compte existant de l’initialisation d’un nouveau compte', async () => {
+    const accountA = 'acct-70707070';
+    const accountB = 'acct-80808080';
+    const databaseAName = accountDatabaseNameForFingerprint(accountA);
+    const databaseBName = accountDatabaseNameForFingerprint(accountB);
+    databasesToDelete.add(databaseAName);
+    databasesToDelete.add(databaseBName);
+    await deleteDatabase(databaseAName);
+    await deleteDatabase(databaseBName);
+    const storage = new MemoryStorage();
+
+    await createEmptyAccountDataSpace(accountA, { storage });
+    const databaseA = new AppDatabase(databaseAName);
+    await databaseA.open();
+    const accountASettings = await databaseA.deviceSettings.get(DEVICE_SETTINGS_ID);
+    expect(accountASettings).toBeDefined();
+    if (!accountASettings) throw new Error('Réglages appareil du compte A absents.');
+    accountASettings.automaticAccountSyncEnabled = false;
+    delete accountASettings.automaticAccountSyncAccountFingerprint;
+    await databaseA.deviceSettings.put(accountASettings);
+    databaseA.close();
+
+    await createEmptyAccountDataSpace(accountB, { storage });
+
+    const reopenedA = new AppDatabase(databaseAName);
+    const databaseB = new AppDatabase(databaseBName);
+    await Promise.all([reopenedA.open(), databaseB.open()]);
+    expect(await reopenedA.deviceSettings.get(DEVICE_SETTINGS_ID)).toMatchObject({
+      automaticAccountSyncEnabled: false,
+    });
+    expect(
+      (await reopenedA.deviceSettings.get(DEVICE_SETTINGS_ID))
+        ?.automaticAccountSyncAccountFingerprint,
+    ).toBeUndefined();
+    expect(await databaseB.deviceSettings.get(DEVICE_SETTINGS_ID)).toMatchObject({
+      automaticAccountSyncEnabled: true,
+      automaticAccountSyncAccountFingerprint: accountB,
+    });
+    reopenedA.close();
+    databaseB.close();
   });
 
   it('refuse de remplacer une base de compte déjà occupée', async () => {

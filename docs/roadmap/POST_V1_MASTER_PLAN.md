@@ -38,10 +38,76 @@ release ou de production.
 
 ## Priorité globale
 
-Le programme **SportPilot Coach** est le premier grand développement post-V1.
-Les lots de suppression, confidentialité, badges, Photo Nutrition, gouvernance
-et backlog restent validés/cadrés mais viennent ensuite selon les dépendances et
-les arbitrages du propriétaire.
+Décision propriétaire du 16 août 2026 : le chantier **P0 — Continuité de
+compte et synchronisation multi-appareils fiable** devient le premier chantier
+post-V1 et précède SportPilot Coach.
+
+Ordre de priorité :
+
+1. **P0 — Continuité compte / multi-device** ;
+2. **SportPilot Coach C0 -> C1 -> ... -> C11** ;
+3. les autres lots déjà validés/cadrés selon leurs dépendances et les arbitrages
+   du propriétaire.
+
+Cette décision remplace toute formulation antérieure plaçant Coach avant la
+continuité de compte. Elle ne modifie pas les garde-fous de données ni les
+autorisations de fusion, release ou production.
+
+---
+
+# Programme P0 — Continuité de compte et multi-device
+
+Base de cadrage initiale : `3bb1866dcef76e800653c15a08b787c29f7f9011`.
+Le HEAD réel de `develop` reste à revérifier avant chaque patch.
+
+Contrat produit :
+
+> Lorsqu'un utilisateur utilise le même compte SportPilot sur plusieurs
+> appareils, les données synchronisables de ce compte doivent converger
+> automatiquement dans le fonctionnement nominal, sans que l'utilisateur ait
+> à comprendre la différence entre authentification, analyse, restauration et
+> synchronisation.
+
+Scénario nominal minimal :
+
+`A crée une séance -> la donnée atteint le cloud -> B récupère cette séance à
+l'ouverture, au retour au premier plan ou au retour réseau`.
+
+Doctrine :
+
+- préserver le local-first et le fonctionnement hors ligne ;
+- préserver l'isolation invité / compte A / compte B et la propriété cloud ;
+- préserver les tombstones, l'idempotence et les agrégats Strength complets ;
+- automatiser uniquement une convergence démontrée sûre ;
+- ne jamais transformer un conflit ambigu, une provenance inconnue ou une
+  identité incertaine en écriture destructive automatique ;
+- conserver les mécanismes manuels de diagnostic, récupération et arbitrage ;
+- ne jamais remplacer silencieusement un espace local non vide ;
+- ne jamais vider le cloud pour restaurer un appareil.
+
+Séquence d'exécution :
+
+- **S0 — Reproduction et contrats** : confirmer le chemin A -> cloud -> B,
+  caractériser les limites d'`analyze`, des baselines logiques et du parcours
+  nouvel appareil, puis verrouiller le défaut par des tests sans modifier le
+  comportement ;
+- **S1 — Convergence distante sûre** : récupérer automatiquement les
+  changements cloud non ambigus au démarrage, au foreground et au retour
+  réseau, sans synchroniser un conflit ambigu ;
+- **S2 — Upload local sûr** : compléter le chemin modification locale ->
+  debounce -> upload lorsque la baseline permet de démontrer l'absence de
+  conflit ;
+- **S3 — Nouvel appareil / reprise de compte** : favoriser la restauration des
+  données cloud d'un compte existant, sans écraser un espace local non vide et
+  en conservant l'import invité explicite ;
+- **S4 — UX de synchronisation** : distinguer compte connecté, données à jour
+  et action requise avec un vocabulaire utilisateur ;
+- **S5 — Preuves de continuité** : couvrir A -> B, agrégats Strength complets,
+  offline/online, foreground, suppressions, changements de compte,
+  invité/A/B, expiration de session, restauration et idempotence.
+
+Les lots Coach restent gelés pendant l'exécution de ce P0 sauf décision
+propriétaire explicite contraire.
 
 ---
 

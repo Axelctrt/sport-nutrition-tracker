@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  classifyLogicalSyncChangeOrigin,
   compareLogicalSyncStamps,
   logicalSyncStamp,
   resolveLogicalSyncState,
@@ -89,6 +90,49 @@ describe('logical sync state', () => {
 
     expect(result.value).toEqual(cloud);
     expect(result.source).toBe('cloud');
+  });
+
+  it('classe la provenance sans baseline comme inconnue', () => {
+    expect(classifyLogicalSyncChangeOrigin({
+      localValue: { value: 'local' },
+      cloudValue: { value: 'cloud' },
+      cloudStamp: { revision: 4, actorId: 'device-b' },
+    })).toBe('unknown');
+  });
+
+  it('distingue cloud-only, local-only et concurrence depuis la baseline', () => {
+    const initial = { value: 'initial' };
+    const first = resolveLogicalSyncState({
+      accountUserId: 'account-1',
+      domainId: 'strength',
+      entityId: 'strength',
+      actorId: 'device-a',
+      localValue: initial,
+      cloudValue: initial,
+      cloudStamp: { revision: 2, actorId: 'device-a' },
+      legacyResolve: (local) => local,
+    });
+
+    expect(classifyLogicalSyncChangeOrigin({
+      localValue: initial,
+      cloudValue: { value: 'cloud' },
+      cloudStamp: { revision: 3, actorId: 'device-b' },
+      baseline: first.baseline,
+    })).toBe('cloud');
+
+    expect(classifyLogicalSyncChangeOrigin({
+      localValue: { value: 'local' },
+      cloudValue: initial,
+      cloudStamp: first.stamp,
+      baseline: first.baseline,
+    })).toBe('local');
+
+    expect(classifyLogicalSyncChangeOrigin({
+      localValue: { value: 'local' },
+      cloudValue: { value: 'cloud' },
+      cloudStamp: { revision: 3, actorId: 'device-b' },
+      baseline: first.baseline,
+    })).toBe('both');
   });
 
   it('départage deux révisions identiques par identifiant d’appareil', () => {

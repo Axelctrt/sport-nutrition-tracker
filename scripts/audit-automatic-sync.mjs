@@ -32,8 +32,10 @@ if (failures.length === 0) {
     "triggerLifecycle('account-connected')",
     "triggerLocalChange",
     "source: 'local-change'",
-    'differingEntityCount === 0',
-    "hasCleanBaseline ? 'sync' : 'analyze'",
+    'safeRemoteConvergenceDomainIds',
+    'safeLocalUploadDomainIds',
+    "syncMode: 'cloud-only'",
+    "syncMode: 'local-only'",
     'foregroundMinimumIntervalMs',
     'automaticAccountSyncAccountFingerprint',
     "return this.connectionType() === 'wifi'",
@@ -41,6 +43,10 @@ if (failures.length === 0) {
     if (!controller.includes(marker)) {
       fail(`Garde-fou F2 manquant dans le contrôleur : ${marker}.`);
     }
+  }
+
+  if (controller.includes("hasCleanBaseline ? 'sync' : 'analyze'")) {
+    fail('F2 ne doit plus déclencher une écriture depuis une preview locale potentiellement périmée.');
   }
 
   const coordinator = read('src/app/sync/AutomaticSyncCoordinator.tsx');
@@ -63,11 +69,13 @@ if (failures.length === 0) {
 
   const panel = read('src/features/settings/components/AutomaticSyncSettingsPanel.tsx');
   for (const marker of [
-    'Synchronisation automatique',
+    'Continuité automatique',
     'Toute connexion',
     'Wi-Fi uniquement',
     'automaticWeightSyncEnabled: false',
-    'Activer pour ce compte',
+    'Autoriser la continuité',
+    'transferts automatiques sûrs concernent actuellement la musculation',
+    'Les autres rubriques ne sont jamais écrites automatiquement',
   ]) {
     if (!panel.includes(marker)) fail(`Réglage F2 incomplet : ${marker}.`);
   }
@@ -147,5 +155,5 @@ if (failures.length > 0) {
 }
 
 console.log(
-  'Audit F2 réussi : déclencheurs maîtrisés, autorisation par compte, analyse préalable, anti-rebond local, modes réseau et runtime cloud v16 social prêt.',
+  'Audit F2 réussi : déclencheurs maîtrisés, autorisation par compte, analyse fraîche avant écriture, convergence directionnelle sûre, modes réseau et runtime cloud v16 social prêt.',
 );

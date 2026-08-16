@@ -18,6 +18,7 @@ const requiredFiles = [
   'src/infrastructure/sync-prototype/syncPrototypeClient.test.ts',
   'src/infrastructure/sync-prototype/cloudSyncValue.ts',
   'docs/architecture/cloud-account-restore-0.21.0-d3.md',
+  'src/app/data-spaces/DataSpaceAccountGate.test.tsx',
 ];
 
 for (const path of requiredFiles) {
@@ -29,6 +30,7 @@ if (failures.length === 0) {
   for (const marker of [
     'prepareCloudAccountRestore',
     'applyPreparedCloudAccountRestore',
+    'inspectCloudAccountRestoreTarget',
     'createCloudAccountRestoreRuntime',
     'writeCloud: false',
     '--cloud-restore-stage',
@@ -70,12 +72,31 @@ if (failures.length === 0) {
 
   const gate = read(requiredFiles[4]);
   for (const marker of [
-    '<CloudAccountRestorePanel',
-    'autoAnalyze',
-    'cloudAnalysisStatus === "loading"',
-    'Créer un nouveau profil',
+    'recoveryByFingerprintRef',
+    'inspectRestoreTarget',
+    'prepareCloudRestore',
+    'applyCloudRestore',
+    'canCreateEmpty',
   ]) {
     if (!gate.includes(marker)) fail(`Barrière D3 incomplète : ${marker}.`);
+  }
+
+  const gateTest = read(requiredFiles[10]);
+  for (const marker of [
+    'restaure automatiquement un compte cloud quand la cible locale est absente',
+    'restaure automatiquement un espace de compte existant mais vide',
+    'restaure automatiquement currentSpace quand le même compte est encore vide',
+    'préserve un espace local non vide sans restauration initiale',
+    'ouvre immédiatement un espace local non vide quand le cloud est hors ligne',
+    'ne crée rien si le cloud est inconnu pour une cible',
+    'autorise un profil vierge seulement après confirmation que le cloud est vide',
+    'ouvre currentSpace vide quand le cloud est confirmé vide',
+    'reprend un espace vide existant quand le cloud est confirmé vide',
+    'verrouille la récupération par fingerprint pendant les notifications client',
+    'conserve un currentSpace non vide si l’initialisation cloud échoue',
+    'bloque un currentSpace vide si l’initialisation cloud échoue',
+  ]) {
+    if (!gateTest.includes(marker)) fail(`Test S3 manquant : ${marker}.`);
   }
 
   const accountPage = read(requiredFiles[5]);
@@ -165,5 +186,5 @@ if (failures.length > 0) {
 }
 
 console.log(
-  'Audit D3 réussi : détection guidée, lecture cloud sans écriture, empreintes source/cible, restauration temporaire et atomique, restauration différée et isolation stricte des comptes validées.',
+  'Audit D3 réussi : accès local-first, récupération initiale automatique sûre, lecture cloud sans écriture, empreintes source/cible, restauration temporaire et atomique, restauration différée et isolation stricte des comptes validées.',
 );

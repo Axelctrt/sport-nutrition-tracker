@@ -11,7 +11,11 @@ import {
   registerAccountDataSpace,
   type DataSpaceStorage,
 } from "@/infrastructure/data-spaces/dataSpaceRegistry";
-import type { PreparedCloudAccountRestore } from "@/infrastructure/data-spaces/cloudAccountRestoreService";
+import type {
+  CloudAccountRestoreResult,
+  CloudAccountRestoreTargetInspection,
+  PreparedCloudAccountRestore,
+} from "@/infrastructure/data-spaces/cloudAccountRestoreService";
 import type {
   SyncPrototypeClient,
   SyncPrototypeSnapshot,
@@ -57,11 +61,15 @@ function createSnapshot(
   };
 }
 
-function createClient(initialSnapshot: SyncPrototypeSnapshot) {
+interface TestSyncPrototypeClient extends SyncPrototypeClient {
+  notify(): void;
+}
+
+function createClient(initialSnapshot: SyncPrototypeSnapshot): TestSyncPrototypeClient {
   let snapshot = initialSnapshot;
   const listeners = new Set<() => void>();
 
-  const client: SyncPrototypeClient = {
+  const client: TestSyncPrototypeClient = {
     getSnapshot: () => snapshot,
     subscribe: (listener) => {
       listeners.add(listener);
@@ -101,6 +109,9 @@ function createClient(initialSnapshot: SyncPrototypeSnapshot) {
       throw new Error("not used");
     }),
     deleteWeight: vi.fn(async () => undefined),
+    notify: () => {
+      for (const listener of listeners) listener();
+    },
   };
 
   return client;
@@ -126,32 +137,92 @@ const accountSpace: DataSpaceDescriptor = {
   lastActivatedAt: "2026-07-01T08:00:00.000Z",
 };
 
-
-function preparedCloudRestore(): PreparedCloudAccountRestore {
+function inspectedTarget(
+  accountFingerprint: string,
+  localState: CloudAccountRestoreTargetInspection["localState"],
+): CloudAccountRestoreTargetInspection {
+  const missing = localState === "missing";
   return {
-    accountFingerprint: NEW_ACCOUNT_FINGERPRINT,
-    targetDatabaseName: `sportpilot-local-database--${NEW_ACCOUNT_FINGERPRINT}`,
+    accountFingerprint,
+    targetDatabaseName: `sportpilot-local-database--${accountFingerprint}`,
+    targetFingerprint: missing ? "missing" : `target-${localState}`,
+    targetDatabaseExisted: !missing,
+    localMeaningfulRecordCount: localState === "non-empty" ? 1 : 0,
+    localState,
+  };
+}
+
+function inspectTarget(
+  localState: CloudAccountRestoreTargetInspection["localState"],
+) {
+  return vi.fn(async (accountFingerprint: string) =>
+    inspectedTarget(accountFingerprint, localState),
+  );
+}
+
+function preparedCloudRestore({
+  accountFingerprint = NEW_ACCOUNT_FINGERPRINT,
+  localState = "missing",
+  hasCloudData = true,
+}: {
+  accountFingerprint?: string;
+  localState?: "missing" | "empty" | "non-empty";
+  hasCloudData?: boolean;
+} = {}): PreparedCloudAccountRestore {
+  const missing = localState === "missing";
+  return {
+    accountFingerprint,
+    targetDatabaseName: `sportpilot-local-database--${accountFingerprint}`,
     sourceFingerprint: "cloud-source",
-    targetFingerprint: "missing",
-    targetDatabaseExisted: false,
+    targetFingerprint: missing ? "missing" : `target-${localState}`,
+    targetDatabaseExisted: !missing,
     analyzedAt: "2026-07-01T08:00:00.000Z",
     preview: {
-      hasCloudData: true,
-      cloudRecordCount: 2,
+      hasCloudData,
+      cloudRecordCount: hasCloudData ? 2 : 0,
       cloudDeletionMarkerCount: 0,
-      localMeaningfulRecordCount: 0,
-      localState: "missing",
-      canRestore: true,
-      categories: [
+      localMeaningfulRecordCount: localState === "non-empty" ? 1 : 0,
+      localState,
+      canRestore: hasCloudData && localState !== "non-empty",
+      categories: hasCloudData ? [
         {
           key: "weights",
           label: "Pesées",
           description: "Historique des pesées synchronisées.",
           recordCount: 2,
         },
-      ],
+      ] : [],
     },
   };
+}
+
+function restoreResult(accountFingerprint: string): CloudAccountRestoreResult {
+  return {
+    restoredRecords: 2,
+    restoredDeletionMarkers: 0,
+    sourcePreserved: true,
+    space: {
+      id: `account:${accountFingerprint}`,
+      kind: "account",
+      databaseName: `sportpilot-local-database--${accountFingerprint}`,
+      label: "Espace de compte",
+      accountFingerprint,
+      createdAt: "2026-07-01T08:00:00.000Z",
+      lastActivatedAt: "2026-07-01T08:00:00.000Z",
+    },
+    completedAt: "2026-07-01T08:01:00.000Z",
+  };
+}
+
+function configureRestore(
+  client: TestSyncPrototypeClient,
+  prepared: PreparedCloudAccountRestore,
+) {
+  client.prepareCloudRestore = vi.fn(async () => prepared);
+  client.applyCloudRestore = vi.fn(async () =>
+    restoreResult(prepared.accountFingerprint),
+  );
+  return client;
 }
 
 describe("DataSpaceAccountGate", () => {
@@ -170,16 +241,16 @@ describe("DataSpaceAccountGate", () => {
   });
 
   it("masque les données et demande un choix pour un nouveau compte", async () => {
+    const client = configureRestore(
+      createClient(createSnapshot({ isLoggedIn: true, userId: NEW_ACCOUNT_ID })),
+      preparedCloudRestore({ hasCloudData: false }),
+    );
     render(
       <DataSpaceAccountGate
-        client={createClient(
-          createSnapshot({
-            isLoggedIn: true,
-            userId: NEW_ACCOUNT_ID,
-          }),
-        )}
+        client={client}
         currentSpace={guestSpace}
         reload={vi.fn()}
+        inspectRestoreTarget={inspectTarget("missing")}
       >
         <p>Données privées</p>
       </DataSpaceAccountGate>,
@@ -213,52 +284,276 @@ describe("DataSpaceAccountGate", () => {
     ).toBeInTheDocument();
   });
 
-  it("vérifie le cloud avant d’autoriser le choix d’un espace vide", async () => {
-    let resolveAnalysis: ((value: PreparedCloudAccountRestore) => void) | undefined;
+  it("restaure automatiquement un compte cloud quand la cible locale est absente", async () => {
+    const client = configureRestore(
+      createClient(createSnapshot({ isLoggedIn: true, userId: NEW_ACCOUNT_ID })),
+      preparedCloudRestore(),
+    );
+    const reload = vi.fn();
+    const prepareGuestImport = vi.fn();
+    const applyGuestImport = vi.fn();
+
+    render(
+      <DataSpaceAccountGate
+        client={client}
+        currentSpace={guestSpace}
+        reload={reload}
+        inspectRestoreTarget={inspectTarget("missing")}
+        prepareGuestImport={prepareGuestImport}
+        applyGuestImport={applyGuestImport}
+      >
+        <p>Données privées</p>
+      </DataSpaceAccountGate>,
+    );
+
+    await waitFor(() => expect(client.prepareCloudRestore).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(client.applyCloudRestore).toHaveBeenCalledTimes(1));
+    expect(reload).toHaveBeenCalledTimes(1);
+    expect(prepareGuestImport).not.toHaveBeenCalled();
+    expect(applyGuestImport).not.toHaveBeenCalled();
+  });
+
+  it("restaure automatiquement un espace de compte existant mais vide", async () => {
+    const storage = new MemoryStorage();
+    registerAccountDataSpace(NEW_ACCOUNT_FINGERPRINT, storage);
+    const client = configureRestore(
+      createClient(createSnapshot({ isLoggedIn: true, userId: NEW_ACCOUNT_ID })),
+      preparedCloudRestore({ localState: "empty" }),
+    );
+
+    render(
+      <DataSpaceAccountGate
+        client={client}
+        currentSpace={guestSpace}
+        storage={storage}
+        reload={vi.fn()}
+        inspectRestoreTarget={inspectTarget("empty")}
+      >
+        <p>Données privées</p>
+      </DataSpaceAccountGate>,
+    );
+
+    await waitFor(() => expect(client.applyCloudRestore).toHaveBeenCalledTimes(1));
+  });
+
+  it("restaure automatiquement currentSpace quand le même compte est encore vide", async () => {
+    const client = configureRestore(
+      createClient(createSnapshot({ isLoggedIn: true, userId: ACCOUNT_A_ID })),
+      preparedCloudRestore({
+        accountFingerprint: ACCOUNT_A_FINGERPRINT,
+        localState: "empty",
+      }),
+    );
+
+    render(
+      <DataSpaceAccountGate
+        client={client}
+        currentSpace={accountSpace}
+        reload={vi.fn()}
+        inspectRestoreTarget={inspectTarget("empty")}
+      >
+        <p>Données du compte A</p>
+      </DataSpaceAccountGate>,
+    );
+
+    await waitFor(() => expect(client.applyCloudRestore).toHaveBeenCalledTimes(1));
+    expect(screen.queryByText("Données du compte A")).not.toBeInTheDocument();
+  });
+
+  it("préserve un espace local non vide sans restauration initiale", async () => {
+    const client = configureRestore(
+      createClient(createSnapshot({ isLoggedIn: true, userId: ACCOUNT_A_ID })),
+      preparedCloudRestore({
+        accountFingerprint: ACCOUNT_A_FINGERPRINT,
+        localState: "non-empty",
+      }),
+    );
+
+    render(
+      <DataSpaceAccountGate
+        client={client}
+        currentSpace={accountSpace}
+        reload={vi.fn()}
+        inspectRestoreTarget={inspectTarget("non-empty")}
+      >
+        <p>Données du compte A</p>
+      </DataSpaceAccountGate>,
+    );
+
+    expect(await screen.findByText("Données du compte A")).toBeInTheDocument();
+    expect(client.prepareCloudRestore).not.toHaveBeenCalled();
+    expect(client.applyCloudRestore).not.toHaveBeenCalled();
+  });
+
+  it("ouvre immédiatement un espace local non vide quand le cloud est hors ligne", async () => {
     const client = createClient(
-      createSnapshot({
-        isLoggedIn: true,
-        userId: NEW_ACCOUNT_ID,
-      }),
+      createSnapshot({ isLoggedIn: true, userId: ACCOUNT_A_ID }),
     );
-    client.prepareCloudRestore = vi.fn(
-      () => new Promise<PreparedCloudAccountRestore>((resolve) => {
-        resolveAnalysis = resolve;
-      }),
-    );
-    client.applyCloudRestore = vi.fn(async () => {
-      throw new Error("not used");
+    client.prepareCloudRestore = vi.fn(async () => {
+      throw new Error("offline");
     });
+
+    render(
+      <DataSpaceAccountGate
+        client={client}
+        currentSpace={accountSpace}
+        reload={vi.fn()}
+        inspectRestoreTarget={inspectTarget("non-empty")}
+      >
+        <p>Données du compte A</p>
+      </DataSpaceAccountGate>,
+    );
+
+    expect(await screen.findByText("Données du compte A")).toBeInTheDocument();
+    expect(client.prepareCloudRestore).not.toHaveBeenCalled();
+    expect(client.applyCloudRestore).toBeUndefined();
+  });
+
+  it.each(["missing", "empty"] as const)(
+    "ne crée rien si le cloud est inconnu pour une cible %s",
+    async (localState) => {
+      const storage = new MemoryStorage();
+      if (localState === "empty") {
+        registerAccountDataSpace(NEW_ACCOUNT_FINGERPRINT, storage);
+      }
+      const client = createClient(
+        createSnapshot({ isLoggedIn: true, userId: NEW_ACCOUNT_ID }),
+      );
+      client.prepareCloudRestore = vi.fn(async () => {
+        throw new Error("Cloud indisponible");
+      });
+      client.applyCloudRestore = vi.fn(async () => restoreResult(NEW_ACCOUNT_FINGERPRINT));
+
+      render(
+        <DataSpaceAccountGate
+          client={client}
+          currentSpace={guestSpace}
+          storage={storage}
+          reload={vi.fn()}
+          inspectRestoreTarget={inspectTarget(localState)}
+        >
+          <p>Données privées</p>
+        </DataSpaceAccountGate>,
+      );
+
+      expect(await screen.findByText("Cloud indisponible")).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Créer un nouveau profil" }),
+      ).not.toBeInTheDocument();
+      expect(client.applyCloudRestore).not.toHaveBeenCalled();
+    },
+  );
+
+  it("autorise un profil vierge seulement après confirmation que le cloud est vide", async () => {
+    const client = configureRestore(
+      createClient(createSnapshot({ isLoggedIn: true, userId: NEW_ACCOUNT_ID })),
+      preparedCloudRestore({ hasCloudData: false }),
+    );
 
     render(
       <DataSpaceAccountGate
         client={client}
         currentSpace={guestSpace}
         reload={vi.fn()}
+        inspectRestoreTarget={inspectTarget("missing")}
       >
         <p>Données privées</p>
       </DataSpaceAccountGate>,
     );
 
     expect(
-      await screen.findByRole("button", { name: "Vérification du compte…" }),
-    ).toBeDisabled();
+      await screen.findByRole("button", { name: "Créer un nouveau profil" }),
+    ).toBeEnabled();
+    expect(client.applyCloudRestore).not.toHaveBeenCalled();
+  });
 
-    await waitFor(() =>
-      expect(client.prepareCloudRestore).toHaveBeenCalledTimes(1),
+  it("ouvre currentSpace vide quand le cloud est confirmé vide", async () => {
+    const client = configureRestore(
+      createClient(createSnapshot({ isLoggedIn: true, userId: ACCOUNT_A_ID })),
+      preparedCloudRestore({
+        accountFingerprint: ACCOUNT_A_FINGERPRINT,
+        localState: "empty",
+        hasCloudData: false,
+      }),
     );
-    expect(resolveAnalysis).toBeDefined();
+
+    render(
+      <DataSpaceAccountGate
+        client={client}
+        currentSpace={accountSpace}
+        reload={vi.fn()}
+        inspectRestoreTarget={inspectTarget("empty")}
+      >
+        <p>Données du compte A</p>
+      </DataSpaceAccountGate>,
+    );
+
+    expect(await screen.findByText("Données du compte A")).toBeInTheDocument();
+    expect(client.applyCloudRestore).not.toHaveBeenCalled();
+  });
+
+  it("reprend un espace vide existant quand le cloud est confirmé vide", async () => {
+    const storage = new MemoryStorage();
+    registerAccountDataSpace(NEW_ACCOUNT_FINGERPRINT, storage);
+    const client = configureRestore(
+      createClient(createSnapshot({ isLoggedIn: true, userId: NEW_ACCOUNT_ID })),
+      preparedCloudRestore({ localState: "empty", hasCloudData: false }),
+    );
+
+    render(
+      <DataSpaceAccountGate
+        client={client}
+        currentSpace={guestSpace}
+        storage={storage}
+        reload={vi.fn()}
+        inspectRestoreTarget={inspectTarget("empty")}
+      >
+        <p>Données privées</p>
+      </DataSpaceAccountGate>,
+    );
+
+    expect(await screen.findByText("Reprendre mes données")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Créer un nouveau profil" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("verrouille la récupération par fingerprint pendant les notifications client", async () => {
+    let resolveApply: ((value: CloudAccountRestoreResult) => void) | undefined;
+    const client = createClient(
+      createSnapshot({ isLoggedIn: true, userId: NEW_ACCOUNT_ID }),
+    );
+    client.prepareCloudRestore = vi.fn(async () => preparedCloudRestore());
+    client.applyCloudRestore = vi.fn(
+      () => new Promise<CloudAccountRestoreResult>((resolve) => {
+        resolveApply = resolve;
+      }),
+    );
+    const reload = vi.fn();
+
+    render(
+      <DataSpaceAccountGate
+        client={client}
+        currentSpace={guestSpace}
+        reload={reload}
+        inspectRestoreTarget={inspectTarget("missing")}
+      >
+        <p>Données privées</p>
+      </DataSpaceAccountGate>,
+    );
+
+    await waitFor(() => expect(client.applyCloudRestore).toHaveBeenCalledTimes(1));
+    act(() => {
+      client.notify();
+      client.notify();
+    });
+    expect(client.prepareCloudRestore).toHaveBeenCalledTimes(1);
+    expect(client.applyCloudRestore).toHaveBeenCalledTimes(1);
 
     await act(async () => {
-      resolveAnalysis!(preparedCloudRestore());
+      resolveApply!(restoreResult(NEW_ACCOUNT_FINGERPRINT));
     });
-
-    expect(
-      await screen.findByText("Des données ont été trouvées pour ce compte"),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Créer un nouveau profil" }),
-    ).toBeEnabled();
+    expect(reload).toHaveBeenCalledTimes(1);
   });
 
   it("crée un espace vide puis prépare directement l’étape du nom", async () => {
@@ -268,18 +563,18 @@ describe("DataSpaceAccountGate", () => {
       copiedTables: 0,
     }));
     const reload = vi.fn();
+    const client = configureRestore(
+      createClient(createSnapshot({ isLoggedIn: true, userId: NEW_ACCOUNT_ID })),
+      preparedCloudRestore({ hasCloudData: false }),
+    );
 
     render(
       <DataSpaceAccountGate
-        client={createClient(
-          createSnapshot({
-            isLoggedIn: true,
-            userId: NEW_ACCOUNT_ID,
-          }),
-        )}
+        client={client}
         currentSpace={guestSpace}
         reload={reload}
         createEmptySpace={createEmptySpace}
+        inspectRestoreTarget={inspectTarget("missing")}
       >
         <p>Données privées</p>
       </DataSpaceAccountGate>,
@@ -320,6 +615,7 @@ describe("DataSpaceAccountGate", () => {
         storage={storage}
         reload={reload}
         activateExistingSpace={activateExistingSpace}
+        inspectRestoreTarget={inspectTarget("non-empty")}
       >
         <p>Données privées</p>
       </DataSpaceAccountGate>,
@@ -362,6 +658,7 @@ describe("DataSpaceAccountGate", () => {
         storage={storage}
         reload={vi.fn()}
         activateExistingSpace={activateExistingSpace}
+        inspectRestoreTarget={inspectTarget("non-empty")}
       >
         <p>Données privées</p>
       </DataSpaceAccountGate>,
@@ -389,6 +686,7 @@ describe("DataSpaceAccountGate", () => {
         )}
         currentSpace={accountSpace}
         reload={vi.fn()}
+        inspectRestoreTarget={inspectTarget("non-empty")}
       >
         <p>Données du compte A</p>
       </DataSpaceAccountGate>,
@@ -398,16 +696,16 @@ describe("DataSpaceAccountGate", () => {
   });
 
   it("masque immédiatement les données du compte A lorsque le compte B est connecté", async () => {
+    const client = configureRestore(
+      createClient(createSnapshot({ isLoggedIn: true, userId: NEW_ACCOUNT_ID })),
+      preparedCloudRestore({ hasCloudData: false }),
+    );
     render(
       <DataSpaceAccountGate
-        client={createClient(
-          createSnapshot({
-            isLoggedIn: true,
-            userId: NEW_ACCOUNT_ID,
-          }),
-        )}
+        client={client}
         currentSpace={accountSpace}
         reload={vi.fn()}
+        inspectRestoreTarget={inspectTarget("missing")}
       >
         <p>Données du compte A</p>
       </DataSpaceAccountGate>,
@@ -464,6 +762,7 @@ describe("DataSpaceAccountGate", () => {
         client={client}
         currentSpace={accountSpace}
         reload={vi.fn()}
+        inspectRestoreTarget={inspectTarget("non-empty")}
       >
         <p>Données du compte</p>
       </DataSpaceAccountGate>,
@@ -472,6 +771,55 @@ describe("DataSpaceAccountGate", () => {
     expect(await screen.findByText("Données du compte")).toBeInTheDocument();
     expect(ensureValidCloudCredentials).not.toHaveBeenCalled();
     expect(client.logout).not.toHaveBeenCalled();
+  });
+
+  it("conserve un currentSpace non vide si l’initialisation cloud échoue", async () => {
+    const client = createClient(
+      createSnapshot({ isLoggedIn: true, userId: ACCOUNT_A_ID }),
+    );
+    client.initialize = vi.fn(async () => {
+      throw new Error("Cloud indisponible");
+    });
+
+    render(
+      <DataSpaceAccountGate
+        client={client}
+        currentSpace={accountSpace}
+        reload={vi.fn()}
+        inspectRestoreTarget={inspectTarget("non-empty")}
+      >
+        <p>Données du compte A</p>
+      </DataSpaceAccountGate>,
+    );
+
+    expect(await screen.findByText("Données du compte A")).toBeInTheDocument();
+    expect(client.prepareCloudRestore).toBeUndefined();
+  });
+
+  it("bloque un currentSpace vide si l’initialisation cloud échoue", async () => {
+    const client = createClient(
+      createSnapshot({ isLoggedIn: true, userId: ACCOUNT_A_ID }),
+    );
+    client.initialize = vi.fn(async () => {
+      throw new Error("Cloud indisponible");
+    });
+
+    render(
+      <DataSpaceAccountGate
+        client={client}
+        currentSpace={accountSpace}
+        reload={vi.fn()}
+        inspectRestoreTarget={inspectTarget("empty")}
+      >
+        <p>Données du compte A</p>
+      </DataSpaceAccountGate>,
+    );
+
+    expect(await screen.findByText("Cloud indisponible")).toBeInTheDocument();
+    expect(screen.queryByText("Données du compte A")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Créer un nouveau profil" }),
+    ).not.toBeInTheDocument();
   });
 
   it("reste dans la base locale du compte pendant les événements réseau et de visibilité", async () => {
@@ -490,6 +838,7 @@ describe("DataSpaceAccountGate", () => {
         client={client}
         currentSpace={accountSpace}
         reload={reload}
+        inspectRestoreTarget={inspectTarget("non-empty")}
       >
         <p>{accountSpace.databaseName}</p>
       </DataSpaceAccountGate>,

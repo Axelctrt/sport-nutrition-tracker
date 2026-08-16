@@ -57,12 +57,32 @@ export function createSyncOrchestratorDomains(
     id: SyncOrchestratorDomainId,
     analyze: (() => Promise<{ readonly differingEntityCount: number }>) | undefined,
     synchronize: (() => Promise<unknown>) | undefined,
+    synchronizeFromCloud?: (() => Promise<unknown>) | undefined,
+    synchronizeToCloud?: (() => Promise<unknown>) | undefined,
   ) => {
     if (!analyze || !synchronize) return;
     adapters.push({
       id,
       analyze,
-      synchronize,
+      synchronize: (syncMode) => {
+        if (syncMode === 'cloud-only') {
+          if (!synchronizeFromCloud) {
+            return Promise.reject(new Error(
+              `La convergence cloud-only n’est pas disponible pour ${id}.`,
+            ));
+          }
+          return synchronizeFromCloud();
+        }
+        if (syncMode === 'local-only') {
+          if (!synchronizeToCloud) {
+            return Promise.reject(new Error(
+              `L’envoi local-only n’est pas disponible pour ${id}.`,
+            ));
+          }
+          return synchronizeToCloud();
+        }
+        return synchronize();
+      },
       readPreview: () => readSyncOrchestratorPreview(client.getSnapshot(), id),
     });
   };
@@ -102,6 +122,12 @@ export function createSyncOrchestratorDomains(
     'strength',
     client.analyzeRealStrength ? () => client.analyzeRealStrength!() : undefined,
     client.syncRealStrength ? () => client.syncRealStrength!() : undefined,
+    client.syncRealStrengthFromCloud
+      ? () => client.syncRealStrengthFromCloud!()
+      : undefined,
+    client.syncRealStrengthToCloud
+      ? () => client.syncRealStrengthToCloud!()
+      : undefined,
   );
   add(
     'nutrition-journal',

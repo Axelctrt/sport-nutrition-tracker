@@ -4,14 +4,15 @@ import {
 } from '@/application/sync/automaticSyncEvents';
 import {
   createSyncOrchestratorDomains,
-  readSyncOrchestratorPreview,
   SYNC_ORCHESTRATOR_DOMAIN_IDS,
 } from '@/application/sync/syncOrchestratorAdapters';
 import {
   createSyncOrchestrator,
   type SyncOrchestrator,
   type SyncOrchestratorDomainId,
+  type SyncOrchestratorRunResult,
   type SyncOrchestratorSource,
+  type SyncOrchestratorSyncMode,
 } from '@/application/sync/syncOrchestrator';
 import {
   SYNC_LOCAL_DATA_CHANGED_EVENT,
@@ -33,6 +34,11 @@ import { REAL_WEIGHT_DATA_CHANGED_EVENT } from '@/infrastructure/sync-prototype/
 const FOREGROUND_MINIMUM_INTERVAL_MS = 30_000;
 const LIFECYCLE_DEBOUNCE_MS = 250;
 const LOCAL_CHANGE_DEBOUNCE_MS = 1_500;
+
+const SAFE_REMOTE_CONVERGENCE_DOMAIN_IDS =
+  new Set<SyncOrchestratorDomainId>(['strength']);
+const SAFE_LOCAL_UPLOAD_DOMAIN_IDS =
+  new Set<SyncOrchestratorDomainId>(['strength']);
 
 export type AutomaticSyncConnectionType = 'wifi' | 'cellular' | 'ethernet' | 'unknown';
 
@@ -84,6 +90,32 @@ function normalizeDomains(
 ): SyncOrchestratorDomainId[] {
   const allowedSet = new Set(allowed);
   return [...new Set(requested)].filter((domainId) => allowedSet.has(domainId));
+}
+
+function safeRemoteConvergenceDomainIds(
+  result: SyncOrchestratorRunResult,
+): SyncOrchestratorDomainId[] {
+  return result.domainResults
+    .filter((domainResult) =>
+      SAFE_REMOTE_CONVERGENCE_DOMAIN_IDS.has(domainResult.domainId)
+      && domainResult.status === 'cloud-changes-available'
+      && domainResult.changeOrigin === 'cloud'
+      && (domainResult.differingEntityCount ?? 0) > 0,
+    )
+    .map((domainResult) => domainResult.domainId);
+}
+
+function safeLocalUploadDomainIds(
+  result: SyncOrchestratorRunResult,
+): SyncOrchestratorDomainId[] {
+  return result.domainResults
+    .filter((domainResult) =>
+      SAFE_LOCAL_UPLOAD_DOMAIN_IDS.has(domainResult.domainId)
+      && domainResult.status === 'local-changes-pending'
+      && domainResult.changeOrigin === 'local'
+      && (domainResult.differingEntityCount ?? 0) > 0,
+    )
+    .map((domainResult) => domainResult.domainId);
 }
 
 export class AutomaticSyncController {
@@ -467,6 +499,49 @@ export class AutomaticSyncController {
     await this.triggerLifecycle('foreground');
   }
 
+  private async applySafeAutomaticSyncs(
+    orchestrator: SyncOrchestrator,
+    generation: number,
+    source: SyncOrchestratorSource,
+    analysisResult: SyncOrchestratorRunResult,
+  ): Promise<{
+    readonly completedAt: string;
+    readonly failedDomainCount: number;
+  } | undefined> {
+    let completedAt = analysisResult.completedAt;
+    let failedDomainCount = analysisResult.failedDomainIds.length;
+    const requests: readonly {
+      readonly domainIds: readonly SyncOrchestratorDomainId[];
+      readonly syncMode: SyncOrchestratorSyncMode;
+    }[] = [
+      {
+        domainIds: safeRemoteConvergenceDomainIds(analysisResult),
+        syncMode: 'cloud-only',
+      },
+      {
+        domainIds: safeLocalUploadDomainIds(analysisResult),
+        syncMode: 'local-only',
+      },
+    ];
+
+    for (const request of requests) {
+      if (request.domainIds.length === 0) continue;
+      this.updateSnapshot({ lastOperation: 'sync' });
+      const syncResult = await orchestrator.schedule({
+        operation: 'sync',
+        syncMode: request.syncMode,
+        source,
+        domainIds: request.domainIds,
+        delayMs: 0,
+      });
+      if (!this.isCurrentOperation(generation, orchestrator)) return undefined;
+      completedAt = syncResult.completedAt;
+      failedDomainCount += syncResult.failedDomainIds.length;
+    }
+
+    return { completedAt, failedDomainCount };
+  }
+
   private async triggerLifecycle(source: SyncOrchestratorSource): Promise<void> {
     const domainIds = this.eligibleDomainIds();
     const orchestrator = this.orchestrator;
@@ -480,18 +555,27 @@ export class AutomaticSyncController {
     });
 
     try {
-      const result = await orchestrator.schedule({
+      const analysisResult = await orchestrator.schedule({
         operation: 'analyze',
         source,
         domainIds,
         delayMs: this.lifecycleDebounceMs,
       });
       if (!this.isCurrentOperation(generation, orchestrator)) return;
+
+      const safeSyncs = await this.applySafeAutomaticSyncs(
+        orchestrator,
+        generation,
+        source,
+        analysisResult,
+      );
+      if (!safeSyncs) return;
+
       this.updateSnapshot({
-        lastCompletedAt: result.completedAt,
-        ...(result.failedDomainIds.length > 0
+        lastCompletedAt: safeSyncs.completedAt,
+        ...(safeSyncs.failedDomainCount > 0
           ? {
-              errorMessage: `${result.failedDomainIds.length} rubrique(s) n’ont pas pu être analysées automatiquement.`,
+              errorMessage: `${safeSyncs.failedDomainCount} rubrique(s) n’ont pas pu être traitées automatiquement.`,
             }
           : { errorMessage: undefined }),
       });
@@ -501,7 +585,7 @@ export class AutomaticSyncController {
         errorMessage:
           error instanceof Error
             ? error.message
-            : 'L’analyse automatique a échoué.',
+            : 'La convergence automatique a échoué.',
       });
     }
   }
@@ -517,33 +601,34 @@ export class AutomaticSyncController {
     if (domainIds.length === 0) return;
     const generation = this.identityGeneration;
 
-    const clientSnapshot = this.client.getSnapshot();
-    const hasCleanBaseline = domainIds.every(
-      (domainId) =>
-        readSyncOrchestratorPreview(clientSnapshot, domainId)
-          ?.differingEntityCount === 0,
-    );
-    const operation = hasCleanBaseline ? 'sync' : 'analyze';
-
     this.updateSnapshot({
       lastTriggerSource: 'local-change',
-      lastOperation: operation,
+      lastOperation: 'analyze',
       errorMessage: undefined,
     });
 
     try {
-      const result = await orchestrator.schedule({
-        operation,
+      const analysisResult = await orchestrator.schedule({
+        operation: 'analyze',
         source: 'local-change',
         domainIds,
         delayMs: this.localChangeDebounceMs,
       });
       if (!this.isCurrentOperation(generation, orchestrator)) return;
+
+      const safeSyncs = await this.applySafeAutomaticSyncs(
+        orchestrator,
+        generation,
+        'local-change',
+        analysisResult,
+      );
+      if (!safeSyncs) return;
+
       this.updateSnapshot({
-        lastCompletedAt: result.completedAt,
-        ...(result.failedDomainIds.length > 0
+        lastCompletedAt: safeSyncs.completedAt,
+        ...(safeSyncs.failedDomainCount > 0
           ? {
-              errorMessage: `${result.failedDomainIds.length} rubrique(s) n’ont pas pu être traitées automatiquement.`,
+              errorMessage: `${safeSyncs.failedDomainCount} rubrique(s) n’ont pas pu être traitées automatiquement.`,
             }
           : { errorMessage: undefined }),
       });
