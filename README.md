@@ -1,22 +1,20 @@
-# SportPilot 1.0.0
+# SportPilot 1.0.1
 
-SportPilot `1.0.0` est la stable en préparation depuis
-`develop@13cef273d09d78eeb4d177ab23e86c7770748419`. Cette préparation n'est ni
-fusionnée, ni déployée, ni taguée, ni publiée ; `main` reste au SHA vérifié
-`9c5ed296dde93ca21b12228bb7f5945b5b9322d9`. La production reste SportPilot
-`0.37.0`, issue de la PR #21 au commit
-`84fea3d49e68c7d190c00d505502a5c4aa2e672a`.
+SportPilot `1.0.1` est la maintenance P0 de continuité multi-appareils,
+préparée depuis `develop@bec369ff7960dc897f7f34db42a6d8253a48ed36`.
 
-- Production : `https://sportpilot-pages.pages.dev`
-- Tag annoté : `v0.37.0`
-- Release GitHub stable :
-  `https://github.com/Axelctrt/sport-nutrition-tracker/releases/tag/v0.37.0`
-- Migration D1 ajoutée ou exécutée pour cette release : aucune
+Stable publiée avant cette maintenance :
+
+- version : `1.0.0` ;
+- `main@d3ff60017027295f75b665d7efe2a037db69d69e` ;
+- tag annoté : `v1.0.0` ;
+- production : `https://sportpilot-pages.pages.dev` ;
+- aucune migration D1 ajoutée ou requise par 1.0.1.
 
 L’application reste mobile-first, local-first, utilisable hors ligne et
 installable en PWA.
 
-## Stable V1 préparée depuis 0.37.0
+## Stable V1 publiée et maintenance P0
 
 - convergence mobile et desktop des hubs Sport, Nutrition et Progression ;
 - continuité des saisies non enregistrées sur les surfaces critiques ;
@@ -67,8 +65,8 @@ ultérieure.
 
 ## Stockage et versions techniques
 
-- Application stable en préparation : `1.0.0`.
-- Application actuellement en production : `0.37.0`.
+- Candidate de maintenance : `1.0.1`.
+- Application actuellement en production avant 1.0.1 : `1.0.0`.
 - AppDatabase locale : Dexie v12, migration additive.
 - Sauvegarde JSON générale : v10.
 - Runtime Dexie Cloud prototype : v16.
