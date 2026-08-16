@@ -3,19 +3,27 @@ import Dexie from 'dexie';
 import type { Activity } from '@/domain/models/activity';
 import type { WeightEntry } from '@/domain/models/weight';
 import type { DailyTarget } from '@/domain/models/targets';
-import { createDefaultUserSettings } from '@/domain/defaults/appSettings';
-import { USER_SETTINGS_ID } from '@/domain/defaults/identifiers';
+import {
+  createDefaultDeviceSettings,
+  createDefaultUserSettings,
+} from '@/domain/defaults/appSettings';
+import {
+  DEVICE_SETTINGS_ID,
+  USER_SETTINGS_ID,
+} from '@/domain/defaults/identifiers';
 import type { AccountPreferencesAggregate } from '@/infrastructure/sync-prototype/realAccountPreferencesSyncService';
 import { createSyncedUserSettingsSnapshot } from '@/infrastructure/sync-prototype/realAccountPreferencesSyncService';
 import type { RewardsRoutinesAggregate } from '@/infrastructure/sync-prototype/realRewardsRoutinesSyncService';
 import { VISUAL_THEME_PREFERENCE_ID, routineReminderCompletionId, weeklyMissionCompletionId } from '@/infrastructure/user-state/userStateModels';
 import {
   applyPreparedCloudAccountRestore,
+  inspectCloudAccountRestoreTarget,
   prepareCloudAccountRestore,
   type CloudAccountRestoreRuntime,
   type CloudAccountRestoreSourceSnapshot,
 } from '@/infrastructure/data-spaces/cloudAccountRestoreService';
 import {
+  activateAccountDataSpace,
   readDataSpaceRegistry,
   type DataSpaceStorage,
 } from '@/infrastructure/data-spaces/dataSpaceRegistry';
@@ -197,6 +205,44 @@ describe('cloudAccountRestoreService', () => {
     await Dexie.delete(STAGE_NAME);
   });
 
+  it('inspecte localement une cible absente sans créer sa base', async () => {
+    const inspection = await inspectCloudAccountRestoreTarget(
+      ACCOUNT_FINGERPRINT,
+    );
+
+    expect(inspection.localState).toBe('missing');
+    expect(inspection.localMeaningfulRecordCount).toBe(0);
+    expect(await Dexie.exists(TARGET_NAME)).toBe(false);
+  });
+
+  it('inspecte localement une cible vide sans dépendre du cloud', async () => {
+    const target = new AppDatabase(TARGET_NAME);
+    await target.open();
+    target.close();
+
+    const inspection = await inspectCloudAccountRestoreTarget(
+      ACCOUNT_FINGERPRINT,
+    );
+
+    expect(inspection.localState).toBe('empty');
+    expect(inspection.targetDatabaseExisted).toBe(true);
+    expect(inspection.localMeaningfulRecordCount).toBe(0);
+  });
+
+  it('inspecte localement une cible non vide avant tout accès cloud', async () => {
+    const target = new AppDatabase(TARGET_NAME);
+    await target.open();
+    await target.weights.put(weight('weight-local-inspection'));
+    target.close();
+
+    const inspection = await inspectCloudAccountRestoreTarget(
+      ACCOUNT_FINGERPRINT,
+    );
+
+    expect(inspection.localState).toBe('non-empty');
+    expect(inspection.localMeaningfulRecordCount).toBe(1);
+  });
+
   it('détecte les données cloud sans créer prématurément la base du compte', async () => {
     const source = {
       ...emptySource(),
@@ -248,11 +294,116 @@ describe('cloudAccountRestoreService', () => {
     await target.open();
     expect(await target.weights.count()).toBe(1);
     expect(await target.activities.count()).toBe(1);
+    expect(await target.deviceSettings.get(DEVICE_SETTINGS_ID)).toMatchObject({
+      automaticAccountSyncEnabled: true,
+      automaticAccountSyncAccountFingerprint: ACCOUNT_FINGERPRINT,
+      automaticAccountSyncConnectionMode: 'any-connection',
+    });
     target.close();
 
     const registry = readDataSpaceRegistry(storage);
     expect(registry.activeSpaceId).toBe(`account:${ACCOUNT_FINGERPRINT}`);
     expect(result.space.accountFingerprint).toBe(ACCOUNT_FINGERPRINT);
+  });
+
+  it('ne migre pas implicitement un espace compte déjà associé et désactivé', async () => {
+    const target = new AppDatabase(TARGET_NAME);
+    await target.open();
+    const disabled = createDefaultDeviceSettings('device-existing-opt-out');
+    await target.deviceSettings.put({
+      ...disabled,
+      automaticAccountSyncEnabled: false,
+    });
+    const storage = new MemoryStorage();
+    activateAccountDataSpace(ACCOUNT_FINGERPRINT, storage);
+    const source = { ...emptySource(), weights: [weight()] };
+    const runtime = createRuntime(() => source, async (database) => {
+      await database.weights.put(weight());
+    });
+    const prepared = await prepareCloudAccountRestore(
+      ACCOUNT_FINGERPRINT,
+      runtime,
+      { targetDatabase: target },
+    );
+
+    await applyPreparedCloudAccountRestore(prepared, runtime, {
+      targetDatabase: target,
+      storage,
+      stageDatabaseName: STAGE_NAME,
+    });
+
+    expect(await target.weights.count()).toBe(1);
+    expect(await target.deviceSettings.get(DEVICE_SETTINGS_ID)).toMatchObject({
+      automaticAccountSyncEnabled: false,
+    });
+    expect(
+      (await target.deviceSettings.get(DEVICE_SETTINGS_ID))
+        ?.automaticAccountSyncAccountFingerprint,
+    ).toBeUndefined();
+    target.close();
+  });
+
+  it('préserve un mode Wi-Fi existant lors d’une première association logique', async () => {
+    const target = new AppDatabase(TARGET_NAME);
+    await target.open();
+    const localDevice = createDefaultDeviceSettings('device-orphan-target');
+    await target.deviceSettings.put({
+      ...localDevice,
+      automaticAccountSyncEnabled: false,
+      automaticAccountSyncConnectionMode: 'wifi-only',
+    });
+    const storage = new MemoryStorage();
+    const source = { ...emptySource(), weights: [weight()] };
+    const runtime = createRuntime(() => source, async (database) => {
+      await database.weights.put(weight());
+    });
+    const prepared = await prepareCloudAccountRestore(
+      ACCOUNT_FINGERPRINT,
+      runtime,
+      { targetDatabase: target },
+    );
+
+    await applyPreparedCloudAccountRestore(prepared, runtime, {
+      targetDatabase: target,
+      storage,
+      stageDatabaseName: STAGE_NAME,
+    });
+
+    expect(await target.deviceSettings.get(DEVICE_SETTINGS_ID)).toMatchObject({
+      automaticAccountSyncEnabled: true,
+      automaticAccountSyncAccountFingerprint: ACCOUNT_FINGERPRINT,
+      automaticAccountSyncConnectionMode: 'wifi-only',
+    });
+    target.close();
+  });
+
+  it('ne rollback pas les données si l’initialisation de continuité échoue', async () => {
+    const source = { ...emptySource(), weights: [weight()] };
+    const runtime = createRuntime(() => source, async (database) => {
+      await database.weights.put(weight());
+    });
+    const storage = new MemoryStorage();
+    const prepared = await prepareCloudAccountRestore(
+      ACCOUNT_FINGERPRINT,
+      runtime,
+    );
+
+    const result = await applyPreparedCloudAccountRestore(prepared, runtime, {
+      storage,
+      stageDatabaseName: STAGE_NAME,
+      continuityInitializer: vi.fn(async () => {
+        throw new Error('device settings unavailable');
+      }),
+    });
+
+    expect(result.continuityInitializationWarning).toMatch(/activée manuellement/i);
+    const target = new AppDatabase(TARGET_NAME);
+    await target.open();
+    expect(await target.weights.count()).toBe(1);
+    target.close();
+    expect(readDataSpaceRegistry(storage).activeSpaceId).toBe(
+      `account:${ACCOUNT_FINGERPRINT}`,
+    );
   });
 
   it('refuse une restauration basée sur une analyse cloud devenue obsolète', async () => {

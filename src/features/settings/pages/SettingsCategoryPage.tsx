@@ -133,9 +133,9 @@ function CategoryContent({
             <SettingsLinkCard
               to={routePaths.syncPrototype}
               title="Compte et synchronisation"
-              description="Compte actif, état global, dernière synchronisation et action principale."
+              description="Compte actif, état réel des données, dernière synchronisation et vérification manuelle."
               icon={Cloud}
-              value={settings.automaticAccountSyncEnabled ? 'Synchronisation automatique active' : 'Synchronisation automatique désactivée'}
+              value="Gérer la continuité du compte"
             />
             <SettingsLinkCard
               to={routePaths.accountDevices}
@@ -144,7 +144,7 @@ function CategoryContent({
               icon={MonitorSmartphone}
             />
           </div>
-          <CategorySection title="Synchronisation automatique" description="Les files, conflits, diagnostics et états par rubrique restent accessibles dans les détails avancés.">
+          <CategorySection title="Continuité automatique" description="Les différences, actions manuelles et diagnostics restent accessibles dans le centre de synchronisation.">
             <AutomaticSyncSettingsPanel />
           </CategorySection>
         </>

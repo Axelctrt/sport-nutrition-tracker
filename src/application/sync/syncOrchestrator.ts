@@ -13,6 +13,8 @@ export type SyncOrchestratorDomainId =
 
 export type SyncOrchestratorOperation = 'analyze' | 'sync';
 
+export type SyncOrchestratorSyncMode = 'bidirectional' | 'cloud-only' | 'local-only';
+
 export type SyncOrchestratorSource =
   | 'manual'
   | 'application-start'
@@ -45,7 +47,9 @@ export interface SyncOrchestratorPreview {
 export interface SyncOrchestratorDomainAdapter {
   readonly id: SyncOrchestratorDomainId;
   analyze(): Promise<SyncOrchestratorPreview>;
-  synchronize(): Promise<unknown>;
+  synchronize(
+    syncMode?: SyncOrchestratorSyncMode,
+  ): Promise<unknown>;
   readPreview?(): SyncOrchestratorPreview | undefined;
 }
 
@@ -77,6 +81,7 @@ export interface SyncOrchestratorRequest {
   readonly operation: SyncOrchestratorOperation;
   readonly domainIds?: readonly SyncOrchestratorDomainId[];
   readonly source?: SyncOrchestratorSource;
+  readonly syncMode?: SyncOrchestratorSyncMode;
 }
 
 export interface SyncOrchestratorScheduleRequest
@@ -129,6 +134,7 @@ interface QueuedRequest {
   readonly operation: SyncOrchestratorOperation;
   readonly source: SyncOrchestratorSource;
   readonly domainIds: readonly SyncOrchestratorDomainId[];
+  readonly syncMode?: SyncOrchestratorSyncMode;
   readonly resolve: (result: SyncOrchestratorRunResult) => void;
   readonly reject: (error: unknown) => void;
 }
@@ -137,6 +143,7 @@ interface ScheduledRequest {
   operation: SyncOrchestratorOperation;
   source: SyncOrchestratorSource;
   domainIds: Set<SyncOrchestratorDomainId>;
+  syncMode?: SyncOrchestratorSyncMode;
   timer: ReturnType<typeof setTimeout>;
   waiters: Array<{
     readonly resolve: (result: SyncOrchestratorRunResult) => void;
@@ -256,6 +263,7 @@ export function createSyncOrchestrator(
         readonly operation: SyncOrchestratorOperation;
         readonly source: SyncOrchestratorSource;
         readonly domainIds: readonly SyncOrchestratorDomainId[];
+        readonly syncMode?: SyncOrchestratorSyncMode;
       }
     | undefined;
   let snapshot: SyncOrchestratorSnapshot = {
@@ -337,6 +345,7 @@ export function createSyncOrchestrator(
           operation: request.operation,
           source: request.source,
           domainIds: [...request.domainIds],
+          ...(request.syncMode ? { syncMode: request.syncMode } : {}),
         };
         appendSyncOperationHistory(accountKey, result);
         return result;
@@ -375,6 +384,7 @@ export function createSyncOrchestrator(
             operation: request.operation,
             source: request.source,
             domainIds: [...request.domainIds],
+            ...(request.syncMode ? { syncMode: request.syncMode } : {}),
           };
           appendSyncOperationHistory(accountKey, result);
           return result;
@@ -439,7 +449,12 @@ export function createSyncOrchestrator(
         try {
           const preview = request.operation === 'analyze'
             ? await adapter.analyze()
-            : (await adapter.synchronize(), adapter.readPreview?.());
+            : (
+                request.syncMode
+                  ? await adapter.synchronize(request.syncMode)
+                  : await adapter.synchronize(),
+                adapter.readPreview?.()
+              );
           const effectivePreview = preview ?? adapter.readPreview?.() ?? {
             differingEntityCount: 0,
             changeOrigin: 'unknown' as const,
@@ -501,6 +516,7 @@ export function createSyncOrchestrator(
             operation: request.operation,
             source: request.source,
             domainIds: [...failedDomainIds],
+            ...(request.syncMode ? { syncMode: request.syncMode } : {}),
           }
         : undefined;
 
@@ -578,6 +594,7 @@ export function createSyncOrchestrator(
         operation: request.operation,
         source,
         domainIds,
+        ...(request.syncMode ? { syncMode: request.syncMode } : {}),
         resolve,
         reject,
       });
@@ -597,7 +614,8 @@ export function createSyncOrchestrator(
       return Promise.reject(new Error('L’orchestrateur de synchronisation est arrêté.'));
     }
     const source = request.source ?? 'local-change';
-    const key = `${request.operation}:${source}`;
+    const syncMode = request.syncMode ?? 'bidirectional';
+    const key = `${request.operation}:${source}:${syncMode}`;
     const domainIds = requestDomainIds(request.domainIds);
     const delayMs = request.delayMs ?? defaultDebounceMs;
 
@@ -613,6 +631,7 @@ export function createSyncOrchestrator(
             operation: existing.operation,
             source: existing.source,
             domainIds: [...existing.domainIds],
+            ...(existing.syncMode ? { syncMode: existing.syncMode } : {}),
           }).then(
             (result) => existing.waiters.forEach((waiter) => waiter.resolve(result)),
             (error) => existing.waiters.forEach((waiter) => waiter.reject(error)),
@@ -625,6 +644,7 @@ export function createSyncOrchestrator(
         operation: request.operation,
         source,
         domainIds: new Set(domainIds),
+        ...(request.syncMode ? { syncMode: request.syncMode } : {}),
         timer: undefined as unknown as ReturnType<typeof setTimeout>,
         waiters: [{ resolve, reject }],
       };
@@ -634,6 +654,7 @@ export function createSyncOrchestrator(
           operation: scheduledRequest.operation,
           source: scheduledRequest.source,
           domainIds: [...scheduledRequest.domainIds],
+          ...(scheduledRequest.syncMode ? { syncMode: scheduledRequest.syncMode } : {}),
         }).then(
           (result) => scheduledRequest.waiters.forEach((waiter) => waiter.resolve(result)),
           (error) => scheduledRequest.waiters.forEach((waiter) => waiter.reject(error)),

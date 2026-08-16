@@ -46,8 +46,11 @@ describe('SettingsCategoryPage', () => {
       .toHaveAttribute('href', '/settings/sync-prototype');
     expect(screen.getByRole('link', { name: /Appareils et données locales/ }))
       .toHaveAttribute('href', '/settings/account-devices');
-    expect(screen.getByText(/files, conflits, diagnostics et états par rubrique/i))
+    expect(screen.getByText('Gérer la continuité du compte')).toBeInTheDocument();
+    expect(screen.getByText(/différences, actions manuelles et diagnostics/i))
       .toBeInTheDocument();
+    expect(screen.queryByText(/Synchronisation automatique (?:active|désactivée)/i))
+      .not.toBeInTheDocument();
   });
 
   it('affiche localement le résultat de la sauvegarde des réglages', async () => {

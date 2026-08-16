@@ -26,6 +26,7 @@ import {
 } from '@/infrastructure/sync-prototype/cloudSyncValue';
 import {
   maximumLogicalSyncStamp,
+  readDatabaseLogicalSyncChangeOrigin,
   persistLogicalSyncBaseline,
   resolveDatabaseLogicalSyncState,
   resolveSyncActorId,
@@ -65,6 +66,7 @@ export interface RealStrengthSyncPreview {
   readonly localDeletionCount: number;
   readonly cloudDeletionCount: number;
   readonly differingEntityCount: number;
+  readonly changeOrigin?: 'local' | 'cloud' | 'both' | 'unknown';
 }
 
 export interface RealStrengthSyncResult extends RealStrengthSyncPreview {
@@ -99,6 +101,12 @@ interface StrengthLogicalState {
   readonly templates: readonly WorkoutTemplateAggregate[];
   readonly sessions: readonly WorkoutSessionAggregate[];
   readonly markers: readonly DeletionRecord[];
+}
+
+interface RealStrengthSyncExecutionOptions extends CloudSyncExecutionOptions {
+  readonly requireChangeOrigin?: 'cloud' | 'local';
+  readonly persistBaseline?: boolean;
+  readonly requireCloudStateMatch?: boolean;
 }
 
 const STRENGTH_DELETION_TYPES = new Set([
@@ -494,42 +502,86 @@ function resolveStrengthLogicalState(
   };
 }
 
-export async function previewRealStrengthSync(
-  localDatabase: AppDatabase,
-  cloudDatabase: SyncPrototypeDatabase,
-  currentUserId: string,
-): Promise<RealStrengthSyncPreview> {
-  return buildPreview(await readState(localDatabase, cloudDatabase, currentUserId));
-}
-
-export async function synchronizeRealStrength(
-  localDatabase: AppDatabase,
-  cloudDatabase: SyncPrototypeDatabase,
-  currentUserId: string,
-  options: CloudSyncExecutionOptions = {},
-): Promise<RealStrengthSyncResult> {
-  const writeCloud = options.writeCloud !== false;
-  const state = await readState(localDatabase, cloudDatabase, currentUserId);
-  const preview = buildPreview(state);
+function buildStrengthLogicalStates(state: StrengthState) {
   const empty: StrengthLogicalState = {
     exercises: [],
     templates: [],
     sessions: [],
     markers: [],
   };
-  const localLogical = resolveStrengthLogicalState({
+  const local = resolveStrengthLogicalState({
     exercises: state.localExercises,
     templates: state.localTemplates,
     sessions: state.localSessions,
     markers: state.localMarkers,
   }, empty);
-  const cloudLogical = resolveStrengthLogicalState(empty, {
+  const cloud = resolveStrengthLogicalState(empty, {
     exercises: state.cloudExercises,
     templates: state.cloudTemplates,
     sessions: state.cloudSessions,
     markers: state.cloudMarkers,
   });
-  const mergedLogical = resolveStrengthLogicalState(localLogical, cloudLogical);
+  return {
+    local,
+    cloud,
+    merged: resolveStrengthLogicalState(local, cloud),
+  };
+}
+
+function maximumStrengthCloudStamp(state: StrengthState) {
+  return maximumLogicalSyncStamp([
+    ...state.cloudExerciseRows,
+    ...state.cloudTemplateRows,
+    ...state.cloudSessionRows,
+    ...state.cloudMarkerRows,
+  ]);
+}
+
+function sameCloudOwnedCollection<T extends { id: string }>(
+  current: readonly CloudOwned<T>[],
+  expected: readonly CloudOwned<T>[],
+): boolean {
+  const normalize = (values: readonly CloudOwned<T>[]) => values
+    .map((value) => stripCloudFields(value))
+    .sort((left, right) => left.id.localeCompare(right.id));
+  return sameEntity(normalize(current), normalize(expected));
+}
+
+export async function previewRealStrengthSync(
+  localDatabase: AppDatabase,
+  cloudDatabase: SyncPrototypeDatabase,
+  currentUserId: string,
+): Promise<RealStrengthSyncPreview> {
+  const state = await readState(localDatabase, cloudDatabase, currentUserId);
+  const preview = buildPreview(state);
+  if (preview.differingEntityCount <= 0) return preview;
+
+  const logical = buildStrengthLogicalStates(state);
+  const changeOrigin = await readDatabaseLogicalSyncChangeOrigin({
+    cloudDatabase,
+    accountUserId: currentUserId,
+    domainId: 'strength',
+    entityId: 'strength',
+    localValue: logical.local,
+    cloudValue: logical.cloud,
+    cloudStamp: maximumStrengthCloudStamp(state),
+  });
+  return {
+    ...preview,
+    changeOrigin: changeOrigin === 'equal' ? 'unknown' : changeOrigin,
+  };
+}
+
+export async function synchronizeRealStrength(
+  localDatabase: AppDatabase,
+  cloudDatabase: SyncPrototypeDatabase,
+  currentUserId: string,
+  options: RealStrengthSyncExecutionOptions = {},
+): Promise<RealStrengthSyncResult> {
+  const writeCloud = options.writeCloud !== false;
+  const state = await readState(localDatabase, cloudDatabase, currentUserId);
+  const preview = buildPreview(state);
+  const logical = buildStrengthLogicalStates(state);
   const actorId = await resolveSyncActorId(localDatabase);
   const resolution = await resolveDatabaseLogicalSyncState({
     cloudDatabase,
@@ -537,17 +589,31 @@ export async function synchronizeRealStrength(
     domainId: 'strength',
     entityId: 'strength',
     actorId,
-    localValue: localLogical,
-    cloudValue: cloudLogical,
-    cloudStamp: maximumLogicalSyncStamp([
-      ...state.cloudExerciseRows,
-      ...state.cloudTemplateRows,
-      ...state.cloudSessionRows,
-      ...state.cloudMarkerRows,
-    ]),
-    legacyResolve: () => mergedLogical,
-    concurrentResolve: () => mergedLogical,
+    localValue: logical.local,
+    cloudValue: logical.cloud,
+    cloudStamp: maximumStrengthCloudStamp(state),
+    legacyResolve: () => logical.merged,
+    concurrentResolve: () => logical.merged,
   });
+
+  if (
+    options.requireChangeOrigin
+    && resolution.source !== options.requireChangeOrigin
+  ) {
+    return {
+      ...preview,
+      uploadedExercises: 0,
+      downloadedExercises: 0,
+      uploadedTemplates: 0,
+      downloadedTemplates: 0,
+      uploadedSessions: 0,
+      downloadedSessions: 0,
+      uploadedDeletionRecords: 0,
+      downloadedDeletionRecords: 0,
+      completedAt: new Date().toISOString(),
+    };
+  }
+
   const final = resolution.value;
   const localExercises = mapById(state.localExercises);
   const cloudExercises = mapById(state.cloudExercises);
@@ -686,6 +752,7 @@ export async function synchronizeRealStrength(
     },
   );
 
+  let cloudStateApplied = false;
   if (writeCloud && localStateApplied) {
     const cloudExerciseRowById = new Map(
       state.cloudExerciseRows.flatMap((row) => {
@@ -721,6 +788,41 @@ export async function synchronizeRealStrength(
         cloudDatabase.realStrengthDeletionRecords,
       ],
       async () => {
+        if (options.requireCloudStateMatch === true) {
+          const [
+            currentCloudExerciseRows,
+            currentCloudTemplateRows,
+            currentCloudSessionRows,
+            currentCloudMarkerRows,
+          ] = await Promise.all([
+            cloudDatabase.realStrengthExercises.toArray(),
+            cloudDatabase.realWorkoutTemplates.toArray(),
+            cloudDatabase.realWorkoutSessions.toArray(),
+            cloudDatabase.realStrengthDeletionRecords.toArray(),
+          ]);
+          const currentOwnedExerciseRows = currentCloudExerciseRows
+            .filter((row) => belongsToCurrentUser(row, currentUserId));
+          const currentOwnedTemplateRows = currentCloudTemplateRows
+            .filter((row) => belongsToCurrentUser(row, currentUserId));
+          const currentOwnedSessionRows = currentCloudSessionRows
+            .filter((row) => belongsToCurrentUser(row, currentUserId));
+          const currentOwnedMarkerRows = currentCloudMarkerRows
+            .filter((row) =>
+              belongsToCurrentUser(row, currentUserId)
+              && STRENGTH_DELETION_TYPES.has(row.entityType),
+            );
+
+          if (
+            !sameCloudOwnedCollection(currentOwnedExerciseRows, state.cloudExerciseRows)
+            || !sameCloudOwnedCollection(currentOwnedTemplateRows, state.cloudTemplateRows)
+            || !sameCloudOwnedCollection(currentOwnedSessionRows, state.cloudSessionRows)
+            || !sameCloudOwnedCollection(currentOwnedMarkerRows, state.cloudMarkerRows)
+          ) {
+            return;
+          }
+        }
+
+        cloudStateApplied = true;
         const deleteMissing = async <T extends { id: string }>(
           current: readonly T[],
           target: readonly T[],
@@ -794,19 +896,63 @@ export async function synchronizeRealStrength(
         }
       },
     );
+  }
+
+  if (
+    localStateApplied
+    && (
+      (writeCloud && cloudStateApplied)
+      || (!writeCloud && options.persistBaseline === true)
+    )
+  ) {
     await persistLogicalSyncBaseline(cloudDatabase, resolution.baseline);
   }
 
   return {
     ...preview,
-    uploadedExercises: localStateApplied ? uploadedExercises : 0,
+    uploadedExercises: cloudStateApplied ? uploadedExercises : 0,
     downloadedExercises: localStateApplied ? downloadedExercises : 0,
-    uploadedTemplates: localStateApplied ? uploadedTemplates : 0,
+    uploadedTemplates: cloudStateApplied ? uploadedTemplates : 0,
     downloadedTemplates: localStateApplied ? downloadedTemplates : 0,
-    uploadedSessions: localStateApplied ? uploadedSessions : 0,
+    uploadedSessions: cloudStateApplied ? uploadedSessions : 0,
     downloadedSessions: localStateApplied ? downloadedSessions : 0,
-    uploadedDeletionRecords: localStateApplied ? uploadedDeletionRecords : 0,
+    uploadedDeletionRecords: cloudStateApplied ? uploadedDeletionRecords : 0,
     downloadedDeletionRecords: localStateApplied ? downloadedDeletionRecords : 0,
     completedAt: new Date().toISOString(),
   };
+}
+
+export async function synchronizeRealStrengthFromCloud(
+  localDatabase: AppDatabase,
+  cloudDatabase: SyncPrototypeDatabase,
+  currentUserId: string,
+): Promise<RealStrengthSyncResult> {
+  return synchronizeRealStrength(
+    localDatabase,
+    cloudDatabase,
+    currentUserId,
+    {
+      writeCloud: false,
+      requireChangeOrigin: 'cloud',
+      persistBaseline: true,
+    },
+  );
+}
+
+
+export async function synchronizeRealStrengthToCloud(
+  localDatabase: AppDatabase,
+  cloudDatabase: SyncPrototypeDatabase,
+  currentUserId: string,
+): Promise<RealStrengthSyncResult> {
+  return synchronizeRealStrength(
+    localDatabase,
+    cloudDatabase,
+    currentUserId,
+    {
+      writeCloud: true,
+      requireChangeOrigin: 'local',
+      requireCloudStateMatch: true,
+    },
+  );
 }

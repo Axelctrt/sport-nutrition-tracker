@@ -18,6 +18,11 @@ import {
   readDataSpaceRegistry,
   type DataSpaceStorage,
 } from "@/infrastructure/data-spaces/dataSpaceRegistry";
+import {
+  initializeAutomaticAccountContinuityBestEffort,
+  isFirstLogicalAccountAssociation,
+  type AccountContinuityInitializer,
+} from "@/infrastructure/data-spaces/accountContinuityInitializationService";
 import { AppDatabase } from "@/infrastructure/database/AppDatabase";
 import {
   appDatabase,
@@ -84,6 +89,7 @@ export interface GuestDataImportResult {
   readonly removedDuplicates: number;
   readonly sourcePreserved: true;
   readonly space: DataSpaceDescriptor;
+  readonly continuityInitializationWarning?: string;
 }
 
 export interface GuestDataImportServiceOptions {
@@ -91,6 +97,7 @@ export interface GuestDataImportServiceOptions {
   readonly sourceDatabase?: AppDatabase;
   readonly targetDatabase?: AppDatabase;
   readonly now?: Date | string;
+  readonly continuityInitializer?: AccountContinuityInitializer;
 }
 
 interface TaggedRow {
@@ -858,17 +865,31 @@ export async function applyPreparedGuestDataImport(
       }
     });
 
+    const firstLogicalAssociation = isFirstLogicalAccountAssociation(
+      normalized,
+      options.storage,
+    );
     const space = activateAccountDataSpace(
       normalized,
       options.storage,
       options.now,
     );
+    const continuity = firstLogicalAssociation
+      ? await initializeAutomaticAccountContinuityBestEffort(
+          targetHandle.database,
+          normalized,
+          options.continuityInitializer,
+        )
+      : undefined;
     return {
       importedRecords: prepared.preview.recordsToAdd,
       updatedRecords: prepared.preview.recordsToUpdate,
       removedDuplicates: prepared.preview.recordsToRemove,
       sourcePreserved: true,
       space,
+      ...(continuity?.warningMessage
+        ? { continuityInitializationWarning: continuity.warningMessage }
+        : {}),
     };
   } finally {
     if (sourceHandle.owned) sourceHandle.database.close();

@@ -64,8 +64,12 @@ describe('AutomaticSyncSettingsPanel', () => {
       />,
     );
 
-    const button = await screen.findByRole('button', {
-      name: 'Activer pour ce compte',
+    expect(await screen.findByRole('heading', { name: 'Continuité automatique' }))
+      .toBeInTheDocument();
+    expect(screen.getByText(/transferts automatiques sûrs concernent actuellement la musculation/i))
+      .toBeInTheDocument();
+    const button = screen.getByRole('button', {
+      name: 'Autoriser la continuité',
     });
     await user.click(button);
 
@@ -129,7 +133,7 @@ describe('AutomaticSyncSettingsPanel', () => {
 
     await user.click(
       await screen.findByRole('button', {
-        name: 'Activer pour ce compte',
+        name: 'Autoriser la continuité',
       }),
     );
 

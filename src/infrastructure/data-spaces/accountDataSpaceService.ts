@@ -7,6 +7,11 @@ import {
   readDataSpaceRegistry,
   type DataSpaceStorage,
 } from '@/infrastructure/data-spaces/dataSpaceRegistry';
+import {
+  initializeAutomaticAccountContinuityBestEffort,
+  isFirstLogicalAccountAssociation,
+  type AccountContinuityInitializer,
+} from '@/infrastructure/data-spaces/accountContinuityInitializationService';
 import { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import { appDatabase, activeDataSpace } from '@/infrastructure/database/database';
 import { accountDatabaseNameForFingerprint } from '@/infrastructure/database/databaseNames';
@@ -22,6 +27,7 @@ export interface AccountDataSpacePreparationResult {
   readonly space: DataSpaceDescriptor;
   readonly copiedRecords: number;
   readonly copiedTables: number;
+  readonly continuityInitializationWarning?: string;
 }
 
 export interface AccountDataSpaceServiceOptions {
@@ -29,6 +35,7 @@ export interface AccountDataSpaceServiceOptions {
   readonly sourceDatabase?: AppDatabase;
   readonly sourceSpace?: DataSpaceDescriptor;
   readonly now?: Date | string;
+  readonly continuityInitializer?: AccountContinuityInitializer;
 }
 
 function normalizeFingerprint(accountFingerprint: string): string {
@@ -104,7 +111,10 @@ export function activateExistingAccountDataSpace(
 
 export async function createEmptyAccountDataSpace(
   accountFingerprint: string,
-  options: Pick<AccountDataSpaceServiceOptions, 'storage' | 'now'> = {},
+  options: Pick<
+    AccountDataSpaceServiceOptions,
+    'storage' | 'now' | 'continuityInitializer'
+  > = {},
 ): Promise<AccountDataSpacePreparationResult> {
   const normalized = normalizeFingerprint(accountFingerprint);
   const existing = findAccountDataSpace(normalized, options.storage);
@@ -119,15 +129,30 @@ export async function createEmptyAccountDataSpace(
 
   try {
     await assertTargetEmpty(database);
+    const firstLogicalAssociation = isFirstLogicalAccountAssociation(
+      normalized,
+      options.storage,
+    );
+    const space = activateAccountDataSpace(
+      normalized,
+      options.storage,
+      options.now,
+    );
+    const continuity = firstLogicalAssociation
+      ? await initializeAutomaticAccountContinuityBestEffort(
+          database,
+          normalized,
+          options.continuityInitializer,
+        )
+      : undefined;
     database.close();
     return {
-      space: activateAccountDataSpace(
-        normalized,
-        options.storage,
-        options.now,
-      ),
+      space,
       copiedRecords: 0,
       copiedTables: 0,
+      ...(continuity?.warningMessage
+        ? { continuityInitializationWarning: continuity.warningMessage }
+        : {}),
     };
   } catch (error) {
     await removeUnregisteredTarget(database, existed);

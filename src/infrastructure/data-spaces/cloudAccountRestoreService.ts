@@ -13,6 +13,11 @@ import {
   activateAccountDataSpace,
   type DataSpaceStorage,
 } from '@/infrastructure/data-spaces/dataSpaceRegistry';
+import {
+  initializeAutomaticAccountContinuityBestEffort,
+  isFirstLogicalAccountAssociation,
+  type AccountContinuityInitializer,
+} from '@/infrastructure/data-spaces/accountContinuityInitializationService';
 import { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import { accountDatabaseNameForFingerprint } from '@/infrastructure/database/databaseNames';
 import type { DatabaseUserTableName } from '@/infrastructure/database/schema';
@@ -121,6 +126,7 @@ export interface CloudAccountRestoreResult {
   readonly sourcePreserved: true;
   readonly space: DataSpaceDescriptor;
   readonly completedAt: string;
+  readonly continuityInitializationWarning?: string;
 }
 
 export interface CloudAccountRestoreSourceSnapshot {
@@ -158,6 +164,16 @@ export interface CloudAccountRestoreServiceOptions {
   readonly targetDatabase?: AppDatabase;
   readonly now?: Date | string;
   readonly stageDatabaseName?: string;
+  readonly continuityInitializer?: AccountContinuityInitializer;
+}
+
+export interface CloudAccountRestoreTargetInspection {
+  readonly accountFingerprint: string;
+  readonly targetDatabaseName: string;
+  readonly targetFingerprint: string;
+  readonly targetDatabaseExisted: boolean;
+  readonly localMeaningfulRecordCount: number;
+  readonly localState: 'missing' | 'empty' | 'non-empty';
 }
 
 type RestoreTableName = Extract<
@@ -429,6 +445,28 @@ async function resolveTargetState(
   } finally {
     if (closeAfterRead) database.close();
   }
+}
+
+export async function inspectCloudAccountRestoreTarget(
+  accountFingerprint: string,
+  options: CloudAccountRestoreServiceOptions = {},
+): Promise<CloudAccountRestoreTargetInspection> {
+  const normalized = normalizeFingerprint(accountFingerprint);
+  const target = await resolveTargetState(normalized, options);
+  const localState = !target.existed
+    ? 'missing'
+    : target.meaningfulRecords === 0
+      ? 'empty'
+      : 'non-empty';
+
+  return {
+    accountFingerprint: normalized,
+    targetDatabaseName: target.databaseName,
+    targetFingerprint: target.fingerprint,
+    targetDatabaseExisted: target.existed,
+    localMeaningfulRecordCount: target.meaningfulRecords,
+    localState,
+  };
 }
 
 function buildPreview(
@@ -930,17 +968,31 @@ export async function applyPreparedCloudAccountRestore(
     await writeExactRestoreSnapshot(targetDatabase, finalSnapshot);
     targetWasWritten = true;
 
+    const firstLogicalAssociation = isFirstLogicalAccountAssociation(
+      normalized,
+      options.storage,
+    );
     const space = activateAccountDataSpace(
       normalized,
       options.storage,
       options.now,
     );
+    const continuity = firstLogicalAssociation
+      ? await initializeAutomaticAccountContinuityBestEffort(
+          targetDatabase,
+          normalized,
+          options.continuityInitializer,
+        )
+      : undefined;
     return {
       restoredRecords: restoredRecordCount(stageSnapshot),
       restoredDeletionMarkers: stageSnapshot.deletionRecords.length,
       sourcePreserved: true,
       space,
       completedAt: isoNow(options.now),
+      ...(continuity?.warningMessage
+        ? { continuityInitializationWarning: continuity.warningMessage }
+        : {}),
     };
   } catch (error) {
     if (targetWasWritten && beforeSnapshot) {

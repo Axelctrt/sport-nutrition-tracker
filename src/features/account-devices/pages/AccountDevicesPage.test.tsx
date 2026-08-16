@@ -96,14 +96,22 @@ function renderPage(overrides: Partial<ComponentProps<typeof AccountDevicesPage>
 }
 
 describe('AccountDevicesPage', () => {
-  it('affiche le compte, la synchronisation et l’appareil actuel', async () => {
+  it('affiche le compte, le transport cloud et l’appareil actuel sans prétendre connaître la convergence', async () => {
     renderPage();
 
     expect(
       await screen.findByRole('heading', { name: 'Compte et appareils' }),
     ).toBeInTheDocument();
     expect(screen.getByText('test@example.com')).toBeInTheDocument();
-    expect(screen.getByText('À jour')).toBeInTheDocument();
+    expect(
+      screen.getByText('Accès cloud', { selector: 'dt' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Connecté')).toBeInTheDocument();
+    expect(screen.getByText('Transport cloud')).toBeInTheDocument();
+    expect(screen.getByText('Au repos')).toBeInTheDocument();
+    expect(screen.getByText('Dernier échange cloud')).toBeInTheDocument();
+    expect(screen.queryByText('À jour')).not.toBeInTheDocument();
+    expect(screen.queryByText('Modifications en attente')).not.toBeInTheDocument();
     expect(screen.getByText('Service cloud')).toBeInTheDocument();
     expect(screen.getByText('Chrome sur Windows')).toBeInTheDocument();
     expect(screen.getByText('…23456789')).toBeInTheDocument();

@@ -13,15 +13,21 @@ import type {
 } from '@/domain/models/strength';
 import { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import type { SyncPrototypeDatabase } from '@/infrastructure/sync-prototype/SyncPrototypeDatabase';
+import type {
+  LogicalSyncBaseline,
+  LogicalSyncFields,
+} from '@/infrastructure/sync-prototype/logicalSyncState';
 import {
   previewRealStrengthSync,
   synchronizeRealStrength,
+  synchronizeRealStrengthFromCloud,
+  synchronizeRealStrengthToCloud,
   type StrengthExerciseAggregate,
   type WorkoutSessionAggregate,
   type WorkoutTemplateAggregate,
 } from '@/infrastructure/sync-prototype/realStrengthSyncService';
 
-type CloudMetadata = {
+type CloudMetadata = LogicalSyncFields & {
   owner?: string;
   realmId?: string;
   $ts?: number;
@@ -38,6 +44,7 @@ class TestCloudDatabase extends Dexie {
   declare realWorkoutTemplates: Table<CloudTemplate, string>;
   declare realWorkoutSessions: Table<CloudSession, string>;
   declare realStrengthDeletionRecords: Table<CloudMarker, string>;
+  declare realSyncBaselines: Table<LogicalSyncBaseline, string>;
 
   constructor() {
     super(`sportpilot-b3-cloud-${crypto.randomUUID()}`);
@@ -47,6 +54,7 @@ class TestCloudDatabase extends Dexie {
       realWorkoutSessions: 'id, updatedAt',
       realStrengthDeletionRecords:
         'id, entityType, entityId, status, updatedAt',
+      realSyncBaselines: 'id, accountUserId, domainId, entityId',
     });
   }
 }
@@ -309,6 +317,328 @@ describe('synchronisation B3 de la musculation', () => {
     );
 
     expect(preview.differingEntityCount).toBe(0);
+  });
+
+  it('reproduit P0 : l’analyse détecte une séance cloud complète sans l’appliquer localement', async () => {
+    const exercise = customExercise(
+      'exercise-remote-analysis',
+      '2026-07-01T10:00:00.000Z',
+    );
+    const workout = session(
+      'session-remote-analysis',
+      '2026-07-01T10:00:00.000Z',
+    );
+    const workoutExercise = sessionExercise(
+      'session-exercise-remote-analysis',
+      workout.id,
+      exercise.id,
+      '2026-07-01T10:00:00.000Z',
+    );
+    const set = strengthSet(
+      'set-remote-analysis',
+      workout.id,
+      workoutExercise.id,
+      '2026-07-01T10:00:00.000Z',
+    );
+    await cloud.realStrengthExercises.add({
+      ...exerciseAggregate(exercise),
+      id: `#${exercise.id}`,
+      owner: 'user-1',
+    });
+    await cloud.realWorkoutSessions.add({
+      ...sessionAggregate(workout, [workoutExercise], [set]),
+      id: `#${workout.id}`,
+      owner: 'user-1',
+    });
+
+    const preview = await previewRealStrengthSync(
+      local,
+      cloud as unknown as SyncPrototypeDatabase,
+      'user-1',
+    );
+
+    expect(preview).toMatchObject({
+      localCustomExerciseCount: 0,
+      cloudCustomExerciseCount: 1,
+      localSessionCount: 0,
+      cloudSessionCount: 1,
+      differingEntityCount: 2,
+    });
+    expect(preview.changeOrigin).toBe('unknown');
+    expect(await local.exerciseDefinitions.get(exercise.id)).toBeUndefined();
+    expect(await local.workoutSessions.get(workout.id)).toBeUndefined();
+    expect(await local.workoutSessionExercises.get(workoutExercise.id)).toBeUndefined();
+    expect(await local.strengthSets.get(set.id)).toBeUndefined();
+  });
+
+  it('converge un changement Strength cloud-only sans réécrire les lignes cloud', async () => {
+    await synchronizeRealStrength(
+      local,
+      cloud as unknown as SyncPrototypeDatabase,
+      'user-1',
+    );
+
+    const exercise = customExercise(
+      'exercise-cloud-only',
+      '2026-07-01T10:00:00.000Z',
+    );
+    const workout = session(
+      'session-cloud-only',
+      '2026-07-01T10:00:00.000Z',
+    );
+    const workoutExercise = sessionExercise(
+      'session-exercise-cloud-only',
+      workout.id,
+      exercise.id,
+      '2026-07-01T10:00:00.000Z',
+    );
+    const set = strengthSet(
+      'set-cloud-only',
+      workout.id,
+      workoutExercise.id,
+      '2026-07-01T10:00:00.000Z',
+    );
+    await cloud.realStrengthExercises.add({
+      ...exerciseAggregate(exercise),
+      id: `#${exercise.id}`,
+      owner: 'user-1',
+      syncRevision: 2,
+      syncActorId: 'device-b',
+    });
+    await cloud.realWorkoutSessions.add({
+      ...sessionAggregate(workout, [workoutExercise], [set]),
+      id: `#${workout.id}`,
+      owner: 'user-1',
+      syncRevision: 2,
+      syncActorId: 'device-b',
+    });
+
+    const preview = await previewRealStrengthSync(
+      local,
+      cloud as unknown as SyncPrototypeDatabase,
+      'user-1',
+    );
+    expect(preview).toMatchObject({
+      differingEntityCount: 2,
+      changeOrigin: 'cloud',
+    });
+    const cloudExercisesBefore = await cloud.realStrengthExercises.toArray();
+    const cloudSessionsBefore = await cloud.realWorkoutSessions.toArray();
+
+    const result = await synchronizeRealStrengthFromCloud(
+      local,
+      cloud as unknown as SyncPrototypeDatabase,
+      'user-1',
+    );
+
+    expect(result).toMatchObject({
+      uploadedExercises: 0,
+      uploadedSessions: 0,
+      downloadedExercises: 1,
+      downloadedSessions: 1,
+    });
+    expect(await local.exerciseDefinitions.get(exercise.id)).toEqual(exercise);
+    expect(await local.workoutSessions.get(workout.id)).toEqual(workout);
+    expect(await local.workoutSessionExercises.get(workoutExercise.id)).toEqual(workoutExercise);
+    expect(await local.strengthSets.get(set.id)).toEqual(set);
+    expect(await cloud.realStrengthExercises.toArray()).toEqual(cloudExercisesBefore);
+    expect(await cloud.realWorkoutSessions.toArray()).toEqual(cloudSessionsBefore);
+    expect((await previewRealStrengthSync(
+      local,
+      cloud as unknown as SyncPrototypeDatabase,
+      'user-1',
+    )).differingEntityCount).toBe(0);
+  });
+
+  it('refuse le mode cloud-only quand le local et le cloud ont divergé', async () => {
+    await synchronizeRealStrength(
+      local,
+      cloud as unknown as SyncPrototypeDatabase,
+      'user-1',
+    );
+
+    const localExercise = customExercise('exercise-local-race');
+    const cloudExercise = customExercise('exercise-cloud-race');
+    await local.exerciseDefinitions.add(localExercise);
+    await cloud.realStrengthExercises.add({
+      ...exerciseAggregate(cloudExercise),
+      id: `#${cloudExercise.id}`,
+      owner: 'user-1',
+      syncRevision: 2,
+      syncActorId: 'device-b',
+    });
+
+    expect(await previewRealStrengthSync(
+      local,
+      cloud as unknown as SyncPrototypeDatabase,
+      'user-1',
+    )).toMatchObject({ changeOrigin: 'both' });
+    const localBefore = await local.exerciseDefinitions.toArray();
+    const cloudBefore = await cloud.realStrengthExercises.toArray();
+
+    const result = await synchronizeRealStrengthFromCloud(
+      local,
+      cloud as unknown as SyncPrototypeDatabase,
+      'user-1',
+    );
+
+    expect(result).toMatchObject({
+      uploadedExercises: 0,
+      downloadedExercises: 0,
+      uploadedSessions: 0,
+      downloadedSessions: 0,
+    });
+    expect(await local.exerciseDefinitions.toArray()).toEqual(localBefore);
+    expect(await cloud.realStrengthExercises.toArray()).toEqual(cloudBefore);
+  });
+
+  it('envoie un changement Strength local-only sans modifier le local', async () => {
+    await synchronizeRealStrength(
+      local,
+      cloud as unknown as SyncPrototypeDatabase,
+      'user-1',
+    );
+
+    const exercise = customExercise(
+      'exercise-local-only',
+      '2026-07-01T10:00:00.000Z',
+    );
+    const workout = session(
+      'session-local-only',
+      '2026-07-01T10:00:00.000Z',
+    );
+    const workoutExercise = sessionExercise(
+      'session-exercise-local-only',
+      workout.id,
+      exercise.id,
+      '2026-07-01T10:00:00.000Z',
+    );
+    const set = strengthSet(
+      'set-local-only',
+      workout.id,
+      workoutExercise.id,
+      '2026-07-01T10:00:00.000Z',
+    );
+    await local.exerciseDefinitions.add(exercise);
+    await local.workoutSessions.add(workout);
+    await local.workoutSessionExercises.add(workoutExercise);
+    await local.strengthSets.add(set);
+
+    const localBefore = {
+      exercises: await local.exerciseDefinitions.toArray(),
+      sessions: await local.workoutSessions.toArray(),
+      sessionExercises: await local.workoutSessionExercises.toArray(),
+      sets: await local.strengthSets.toArray(),
+    };
+    expect(await previewRealStrengthSync(
+      local,
+      cloud as unknown as SyncPrototypeDatabase,
+      'user-1',
+    )).toMatchObject({
+      differingEntityCount: 2,
+      changeOrigin: 'local',
+    });
+
+    const result = await synchronizeRealStrengthToCloud(
+      local,
+      cloud as unknown as SyncPrototypeDatabase,
+      'user-1',
+    );
+
+    expect(result).toMatchObject({
+      uploadedExercises: 1,
+      uploadedSessions: 1,
+      downloadedExercises: 0,
+      downloadedSessions: 0,
+    });
+    expect(await local.exerciseDefinitions.toArray()).toEqual(localBefore.exercises);
+    expect(await local.workoutSessions.toArray()).toEqual(localBefore.sessions);
+    expect(await local.workoutSessionExercises.toArray()).toEqual(localBefore.sessionExercises);
+    expect(await local.strengthSets.toArray()).toEqual(localBefore.sets);
+    expect(await cloud.realStrengthExercises.get(`#${exercise.id}`)).toBeDefined();
+    expect(await cloud.realWorkoutSessions.get(`#${workout.id}`)).toMatchObject({
+      session: workout,
+      exercises: [workoutExercise],
+      sets: [set],
+    });
+    expect((await previewRealStrengthSync(
+      local,
+      cloud as unknown as SyncPrototypeDatabase,
+      'user-1',
+    )).differingEntityCount).toBe(0);
+  });
+
+  it('refuse un upload local-only sans baseline établie', async () => {
+    const exercise = customExercise('exercise-local-without-baseline');
+    await local.exerciseDefinitions.add(exercise);
+
+    expect(await previewRealStrengthSync(
+      local,
+      cloud as unknown as SyncPrototypeDatabase,
+      'user-1',
+    )).toMatchObject({
+      differingEntityCount: 1,
+      changeOrigin: 'unknown',
+    });
+
+    const result = await synchronizeRealStrengthToCloud(
+      local,
+      cloud as unknown as SyncPrototypeDatabase,
+      'user-1',
+    );
+
+    expect(result.uploadedExercises).toBe(0);
+    expect(await cloud.realStrengthExercises.count()).toBe(0);
+    expect(await local.exerciseDefinitions.get(exercise.id)).toEqual(exercise);
+  });
+
+  it('annule l’upload local-only si le cloud change avant l’écriture', async () => {
+    await synchronizeRealStrength(
+      local,
+      cloud as unknown as SyncPrototypeDatabase,
+      'user-1',
+    );
+
+    const localExercise = customExercise('exercise-local-cas');
+    const remoteExercise = customExercise(
+      'exercise-remote-cas',
+      '2026-07-01T11:00:00.000Z',
+    );
+    await local.exerciseDefinitions.add(localExercise);
+
+    const originalCloudTransaction = cloud.transaction.bind(cloud);
+    let injected = false;
+    vi.spyOn(cloud, 'transaction').mockImplementation((async (...args: unknown[]) => {
+      if (!injected) {
+        injected = true;
+        await cloud.realStrengthExercises.add({
+          ...exerciseAggregate(remoteExercise),
+          id: `#${remoteExercise.id}`,
+          owner: 'user-1',
+          syncRevision: 2,
+          syncActorId: 'device-b',
+        });
+      }
+      return (originalCloudTransaction as unknown as (
+        ...values: unknown[]
+      ) => Promise<unknown>)(...args);
+    }) as never);
+
+    const result = await synchronizeRealStrengthToCloud(
+      local,
+      cloud as unknown as SyncPrototypeDatabase,
+      'user-1',
+    );
+
+    expect(result.uploadedExercises).toBe(0);
+    expect(await cloud.realStrengthExercises.get(`#${localExercise.id}`)).toBeUndefined();
+    expect(await cloud.realStrengthExercises.get(`#${remoteExercise.id}`)).toBeDefined();
+    expect(await local.exerciseDefinitions.get(localExercise.id)).toEqual(localExercise);
+    expect(await previewRealStrengthSync(
+      local,
+      cloud as unknown as SyncPrototypeDatabase,
+      'user-1',
+    )).toMatchObject({ changeOrigin: 'both' });
   });
 
   it('télécharge une séance complète sans laisser de série orpheline', async () => {

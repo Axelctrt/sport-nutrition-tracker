@@ -34,6 +34,8 @@ if (failures.length === 0) {
     "case 'local':",
     "case 'cloud':",
     "case 'both':",
+    "'cloud-only'",
+    "'local-only'",
   ]) {
     if (!orchestrator.includes(marker)) {
       fail(`Garde-fou de l’orchestrateur F1 manquant : ${marker}.`);

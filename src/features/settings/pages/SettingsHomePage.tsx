@@ -46,7 +46,7 @@ function categorySummary(
       return 'Profil, poids actuel, objectifs et cibles nutritionnelles';
     case 'account-sync':
       return dataSpace.kind === 'account'
-        ? `${dataSpace.label} · ${settings.automaticAccountSyncEnabled ? 'synchronisation automatique active' : 'synchronisation manuelle'}`
+        ? `${dataSpace.label} · Gérer la continuité du compte`
         : 'Mode local · connexion possible à tout moment';
     case 'privacy-friends':
       return 'Pseudonyme social et permissions définies par ami';
@@ -123,7 +123,7 @@ export function SettingsHomePage({
 
       <p className="mt-4 px-1 text-sm font-medium text-[var(--sp-text-secondary)]">
         {dataSpace.kind === 'account'
-          ? `${dataSpace.label} · ${settings.automaticAccountSyncEnabled ? 'synchronisation active' : 'synchronisation manuelle'}`
+          ? `${dataSpace.label} · Gérer la continuité du compte`
           : 'Données conservées sur cet appareil'}
       </p>
 

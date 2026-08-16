@@ -370,9 +370,7 @@ export function UnifiedSyncCenterPanel({
             ? `${totalDifferences} ${totalDifferences > 1 ? 'différences' : 'différence'}`
             : analyzedDomains.length === enabledDomains.length && enabledDomains.length > 0
               ? 'Tout est à jour'
-              : snapshot.sync.phase === 'in-sync'
-                ? 'Synchronisation active'
-                : 'Prêt à synchroniser';
+              : 'État des données à vérifier';
 
   const accountDisplayLabel =
     snapshot.account.email ?? snapshot.account.displayName ?? 'Compte connecté';
@@ -394,7 +392,7 @@ export function UnifiedSyncCenterPanel({
               </h3>
             </div>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
-              Vérifie l’état général puis synchronise les données de ce compte. Les diagnostics et les rubriques détaillées restent disponibles dans les options avancées.
+              Vérifie l’état réel des données de ce compte. Les actions de synchronisation apparaissent lorsqu’une différence demande un traitement ; les détails avancés restent disponibles.
             </p>
           </div>
           <span className={cn(
@@ -451,11 +449,12 @@ export function UnifiedSyncCenterPanel({
 
         <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
           <Button
-            onClick={() => setConfirmation({ target: 'all' })}
+            onClick={() => void runDomains('analyze')}
             disabled={actionDisabled}
+            variant="secondary"
           >
-            <RefreshCw aria-hidden="true" className={cn('size-4', busy?.operation === 'sync' && 'animate-spin motion-reduce:animate-none')} />
-            {busy?.operation === 'sync' ? 'Synchronisation en cours…' : 'Synchroniser maintenant'}
+            <RefreshCw aria-hidden="true" className={cn('size-4', busy?.operation === 'analyze' && 'animate-spin motion-reduce:animate-none')} />
+            {busy?.operation === 'analyze' ? 'Vérification en cours…' : 'Vérifier maintenant'}
           </Button>
           <Link
             to={routePaths.accountDevices}
