@@ -492,6 +492,89 @@ describe('synchronisation B3 de la musculation', () => {
     expect(await cloud.realStrengthExercises.toArray()).toEqual(cloudBefore);
   });
 
+  it('refuse le mode local-only quand le local et le cloud ont divergé', async () => {
+    await synchronizeRealStrength(
+      local,
+      cloud as unknown as SyncPrototypeDatabase,
+      'user-1',
+    );
+
+    const localExercise = customExercise('exercise-local-both');
+    const cloudExercise = customExercise(
+      'exercise-cloud-both',
+      '2026-07-01T10:30:00.000Z',
+    );
+    await local.exerciseDefinitions.add(localExercise);
+    await cloud.realStrengthExercises.add({
+      ...exerciseAggregate(cloudExercise),
+      id: `#${cloudExercise.id}`,
+      owner: 'user-1',
+      syncRevision: 2,
+      syncActorId: 'device-b',
+    });
+
+    expect(await previewRealStrengthSync(
+      local,
+      cloud as unknown as SyncPrototypeDatabase,
+      'user-1',
+    )).toMatchObject({ changeOrigin: 'both' });
+
+    const localBefore = {
+      exercises: await local.exerciseDefinitions.toArray(),
+      templates: await local.workoutTemplates.toArray(),
+      templateExercises: await local.workoutTemplateExercises.toArray(),
+      sessions: await local.workoutSessions.toArray(),
+      sessionExercises: await local.workoutSessionExercises.toArray(),
+      sets: await local.strengthSets.toArray(),
+      deletionRecords: await local.deletionRecords.toArray(),
+    };
+    const cloudBefore = {
+      exercises: await cloud.realStrengthExercises.toArray(),
+      templates: await cloud.realWorkoutTemplates.toArray(),
+      sessions: await cloud.realWorkoutSessions.toArray(),
+      deletionRecords: await cloud.realStrengthDeletionRecords.toArray(),
+      baselines: await cloud.realSyncBaselines.toArray(),
+    };
+
+    const result = await synchronizeRealStrengthToCloud(
+      local,
+      cloud as unknown as SyncPrototypeDatabase,
+      'user-1',
+    );
+
+    expect(result).toMatchObject({
+      uploadedExercises: 0,
+      downloadedExercises: 0,
+      uploadedTemplates: 0,
+      downloadedTemplates: 0,
+      uploadedSessions: 0,
+      downloadedSessions: 0,
+      uploadedDeletionRecords: 0,
+      downloadedDeletionRecords: 0,
+    });
+    expect({
+      exercises: await local.exerciseDefinitions.toArray(),
+      templates: await local.workoutTemplates.toArray(),
+      templateExercises: await local.workoutTemplateExercises.toArray(),
+      sessions: await local.workoutSessions.toArray(),
+      sessionExercises: await local.workoutSessionExercises.toArray(),
+      sets: await local.strengthSets.toArray(),
+      deletionRecords: await local.deletionRecords.toArray(),
+    }).toEqual(localBefore);
+    expect({
+      exercises: await cloud.realStrengthExercises.toArray(),
+      templates: await cloud.realWorkoutTemplates.toArray(),
+      sessions: await cloud.realWorkoutSessions.toArray(),
+      deletionRecords: await cloud.realStrengthDeletionRecords.toArray(),
+      baselines: await cloud.realSyncBaselines.toArray(),
+    }).toEqual(cloudBefore);
+    expect(await previewRealStrengthSync(
+      local,
+      cloud as unknown as SyncPrototypeDatabase,
+      'user-1',
+    )).toMatchObject({ changeOrigin: 'both' });
+  });
+
   it('envoie un changement Strength local-only sans modifier le local', async () => {
     await synchronizeRealStrength(
       local,

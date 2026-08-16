@@ -582,6 +582,33 @@ export async function synchronizeRealStrength(
   const state = await readState(localDatabase, cloudDatabase, currentUserId);
   const preview = buildPreview(state);
   const logical = buildStrengthLogicalStates(state);
+
+  if (options.requireChangeOrigin) {
+    const changeOrigin = await readDatabaseLogicalSyncChangeOrigin({
+      cloudDatabase,
+      accountUserId: currentUserId,
+      domainId: 'strength',
+      entityId: 'strength',
+      localValue: logical.local,
+      cloudValue: logical.cloud,
+      cloudStamp: maximumStrengthCloudStamp(state),
+    });
+    if (changeOrigin !== options.requireChangeOrigin) {
+      return {
+        ...preview,
+        uploadedExercises: 0,
+        downloadedExercises: 0,
+        uploadedTemplates: 0,
+        downloadedTemplates: 0,
+        uploadedSessions: 0,
+        downloadedSessions: 0,
+        uploadedDeletionRecords: 0,
+        downloadedDeletionRecords: 0,
+        completedAt: new Date().toISOString(),
+      };
+    }
+  }
+
   const actorId = await resolveSyncActorId(localDatabase);
   const resolution = await resolveDatabaseLogicalSyncState({
     cloudDatabase,
@@ -595,24 +622,6 @@ export async function synchronizeRealStrength(
     legacyResolve: () => logical.merged,
     concurrentResolve: () => logical.merged,
   });
-
-  if (
-    options.requireChangeOrigin
-    && resolution.source !== options.requireChangeOrigin
-  ) {
-    return {
-      ...preview,
-      uploadedExercises: 0,
-      downloadedExercises: 0,
-      uploadedTemplates: 0,
-      downloadedTemplates: 0,
-      uploadedSessions: 0,
-      downloadedSessions: 0,
-      uploadedDeletionRecords: 0,
-      downloadedDeletionRecords: 0,
-      completedAt: new Date().toISOString(),
-    };
-  }
 
   const final = resolution.value;
   const localExercises = mapById(state.localExercises);
