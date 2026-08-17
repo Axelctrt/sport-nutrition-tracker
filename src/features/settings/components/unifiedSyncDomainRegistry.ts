@@ -36,6 +36,16 @@ function snapshotPreview(
   }
 }
 
+function goalsHaveDirectionalOrigin(client: SyncPrototypeClient): boolean {
+  const origin = client.getSnapshot().realGoals?.preview?.changeOrigin;
+  return origin === 'local' || origin === 'cloud';
+}
+
+async function synchronizeGoalsSafely(client: SyncPrototypeClient): Promise<unknown> {
+  if (!client.syncRealGoals || !goalsHaveDirectionalOrigin(client)) return undefined;
+  return client.syncRealGoals();
+}
+
 export function createOrchestratorDomains(
   client: SyncPrototypeClient,
 ): readonly SyncOrchestratorDomainAdapter[] {
@@ -81,7 +91,7 @@ export function createOrchestratorDomains(
   add(
     'goals',
     client.analyzeRealGoals ? () => client.analyzeRealGoals!() : undefined,
-    client.syncRealGoals ? () => client.syncRealGoals!() : undefined,
+    client.syncRealGoals ? () => synchronizeGoalsSafely(client) : undefined,
   );
   add(
     'strength',
@@ -273,7 +283,7 @@ export function createDomains(
             ? { analyze: () => client.analyzeRealGoals!() }
             : {}),
           ...(client?.syncRealGoals
-            ? { synchronize: () => client.syncRealGoals!() }
+            ? { synchronize: () => synchronizeGoalsSafely(client) }
             : {}),
         };
       }
