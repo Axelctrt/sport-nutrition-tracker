@@ -136,6 +136,63 @@ describe('syncOrchestrator', () => {
     expect(domains.goals.status).toBe('action-required');
   });
 
+  it('transmet explicitement le mode cloud-only à l’adaptateur', async () => {
+    const strength = adapter('strength');
+    const orchestrator = createSyncOrchestrator({
+      accountKey: 'cloud-only-account',
+      domains: [strength],
+    });
+
+    await orchestrator.run({
+      operation: 'sync',
+      source: 'application-start',
+      domainIds: ['strength'],
+      syncMode: 'cloud-only',
+    });
+
+    expect(strength.synchronize).toHaveBeenCalledWith('cloud-only');
+  });
+
+  it('transmet explicitement le mode local-only à l’adaptateur', async () => {
+    const strength = adapter('strength');
+    const orchestrator = createSyncOrchestrator({
+      accountKey: 'local-only-account',
+      domains: [strength],
+    });
+
+    await orchestrator.run({
+      operation: 'sync',
+      source: 'local-change',
+      domainIds: ['strength'],
+      syncMode: 'local-only',
+    });
+
+    expect(strength.synchronize).toHaveBeenCalledWith('local-only');
+  });
+
+  it('conserve le mode cloud-only lors d’une reprise ciblée après échec', async () => {
+    const strengthSync = vi.fn()
+      .mockRejectedValueOnce(new Error('Réseau temporaire.'))
+      .mockResolvedValue(undefined);
+    const strength = adapter('strength', { synchronize: strengthSync });
+    const orchestrator = createSyncOrchestrator({
+      accountKey: 'cloud-only-retry',
+      domains: [strength],
+    });
+
+    const first = await orchestrator.run({
+      operation: 'sync',
+      domainIds: ['strength'],
+      syncMode: 'cloud-only',
+    });
+    expect(first.failedDomainIds).toEqual(['strength']);
+
+    await orchestrator.retryFailures();
+
+    expect(strengthSync).toHaveBeenNthCalledWith(1, 'cloud-only');
+    expect(strengthSync).toHaveBeenNthCalledWith(2, 'cloud-only');
+  });
+
   it('poursuit les autres domaines après un échec et relance uniquement l’échec', async () => {
     const weightsAnalyze = vi.fn()
       .mockRejectedValueOnce(new Error('Réseau temporairement indisponible.'))

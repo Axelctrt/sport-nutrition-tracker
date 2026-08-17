@@ -127,10 +127,15 @@ function completedRun(
   };
 }
 
-function createOrchestrator() {
-  const schedule = vi.fn(async (request: SyncOrchestratorScheduleRequest) =>
-    completedRun(request),
-  );
+function createOrchestrator(
+  analysisDomainResults: SyncOrchestratorRunResult['domainResults'] = [],
+) {
+  const schedule = vi.fn(async (request: SyncOrchestratorScheduleRequest) => {
+    const result = completedRun(request);
+    return request.operation === 'analyze'
+      ? { ...result, domainResults: analysisDomainResults }
+      : result;
+  });
   const orchestrator = {
     schedule,
     dispose: vi.fn(),
@@ -149,8 +154,100 @@ async function flush(): Promise<void> {
 }
 
 describe('AutomaticSyncController', () => {
-  it('analyse les domaines autorisés au démarrage sans les synchroniser', async () => {
-    const { client } = createClient();
+  it('converge automatiquement Strength quand l’analyse prouve un changement cloud-only', async () => {
+    const { client } = createClient(createSnapshot({
+      realStrength: {
+        enabled: true,
+        status: 'ready',
+        preview: {
+          differingEntityCount: 2,
+          changeOrigin: 'cloud',
+        } as never,
+      },
+    }));
+    const { repository } = createSettingsRepository();
+    const { orchestrator, schedule } = createOrchestrator([{
+      domainId: 'strength',
+      status: 'cloud-changes-available',
+      differingEntityCount: 2,
+      changeOrigin: 'cloud',
+    }]);
+    const controller = new AutomaticSyncController({
+      client,
+      settingsRepository: repository,
+      createOrchestrator: () => orchestrator,
+      lifecycleDebounceMs: 0,
+    });
+
+    await controller.initialize();
+
+    expect(schedule).toHaveBeenCalledTimes(2);
+    expect(schedule).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      operation: 'analyze',
+      source: 'application-start',
+      domainIds: expect.arrayContaining(['strength']),
+    }));
+    expect(schedule).toHaveBeenNthCalledWith(2, {
+      operation: 'sync',
+      syncMode: 'cloud-only',
+      source: 'application-start',
+      domainIds: ['strength'],
+      delayMs: 0,
+    });
+    controller.dispose();
+  });
+
+  it('envoie automatiquement Strength quand l’analyse prouve un changement local-only', async () => {
+    const { client } = createClient(createSnapshot({
+      realStrength: {
+        enabled: true,
+        status: 'ready',
+        preview: {
+          differingEntityCount: 1,
+          changeOrigin: 'local',
+        } as never,
+      },
+    }));
+    const { repository } = createSettingsRepository();
+    const { orchestrator, schedule } = createOrchestrator([{
+      domainId: 'strength',
+      status: 'local-changes-pending',
+      differingEntityCount: 1,
+      changeOrigin: 'local',
+    }]);
+    const controller = new AutomaticSyncController({
+      client,
+      settingsRepository: repository,
+      createOrchestrator: () => orchestrator,
+      lifecycleDebounceMs: 0,
+    });
+
+    await controller.initialize();
+
+    expect(schedule).toHaveBeenCalledTimes(2);
+    expect(schedule).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      operation: 'analyze',
+      source: 'application-start',
+      domainIds: expect.arrayContaining(['strength']),
+    }));
+    expect(schedule).toHaveBeenNthCalledWith(2, {
+      operation: 'sync',
+      syncMode: 'local-only',
+      source: 'application-start',
+      domainIds: ['strength'],
+      delayMs: 0,
+    });
+    controller.dispose();
+  });
+
+  it('reproduit P0 : une différence Strength distante reste au stade analyse au démarrage', async () => {
+    const { client } = createClient(createSnapshot({
+      realStrength: {
+        enabled: true,
+        status: 'ready',
+        preview: { differingEntityCount: 2 } as never,
+      },
+    }));
     const { repository } = createSettingsRepository();
     const { orchestrator, schedule } = createOrchestrator();
     const controller = new AutomaticSyncController({
@@ -167,7 +264,11 @@ describe('AutomaticSyncController', () => {
       expect.objectContaining({
         operation: 'analyze',
         source: 'application-start',
+        domainIds: expect.arrayContaining(['strength']),
       }),
+    );
+    expect(schedule).not.toHaveBeenCalledWith(
+      expect.objectContaining({ operation: 'sync' }),
     );
     controller.dispose();
   });
@@ -190,7 +291,46 @@ describe('AutomaticSyncController', () => {
     controller.dispose();
   });
 
-  it('synchronise une modification locale seulement après une analyse propre', async () => {
+  it('ne réactive pas une préférence désactivée après reconnexion ou reload', async () => {
+    const disconnected = createSnapshot({
+      account: { isLoggedIn: false, isLoading: false },
+    });
+    const { client, updateSnapshot } = createClient(disconnected);
+    const disabledSettings = createSettings({
+      automaticAccountSyncEnabled: false,
+    });
+    delete disabledSettings.automaticAccountSyncAccountFingerprint;
+    const { repository } = createSettingsRepository(disabledSettings);
+    const firstRun = createOrchestrator();
+    const controller = new AutomaticSyncController({
+      client,
+      settingsRepository: repository,
+      createOrchestrator: () => firstRun.orchestrator,
+      lifecycleDebounceMs: 0,
+    });
+
+    await controller.initialize();
+    updateSnapshot(createSnapshot());
+    await flush();
+    expect(firstRun.schedule).not.toHaveBeenCalled();
+    expect(repository.update).not.toHaveBeenCalled();
+    controller.dispose();
+
+    const afterReload = createOrchestrator();
+    const reloadedController = new AutomaticSyncController({
+      client,
+      settingsRepository: repository,
+      createOrchestrator: () => afterReload.orchestrator,
+      lifecycleDebounceMs: 0,
+    });
+    await reloadedController.initialize();
+
+    expect(afterReload.schedule).not.toHaveBeenCalled();
+    expect(repository.update).not.toHaveBeenCalled();
+    reloadedController.dispose();
+  });
+
+  it('réanalyse une modification locale puis envoie seulement Strength prouvé local-only', async () => {
     const eventTarget = new EventTarget();
     const { client } = createClient();
     const { repository } = createSettingsRepository();
@@ -205,20 +345,41 @@ describe('AutomaticSyncController', () => {
     });
     await controller.initialize();
     schedule.mockClear();
+    schedule.mockImplementation(async (request: SyncOrchestratorScheduleRequest) => {
+      const result = completedRun(request);
+      return request.operation === 'analyze'
+        ? {
+            ...result,
+            domainResults: [{
+              domainId: 'strength',
+              status: 'local-changes-pending',
+              differingEntityCount: 1,
+              changeOrigin: 'local',
+            }],
+          }
+        : result;
+    });
 
     eventTarget.dispatchEvent(
       new CustomEvent<SyncLocalDataChangedDetail>(
         SYNC_LOCAL_DATA_CHANGED_EVENT,
-        { detail: { domainIds: ['activities'], reason: 'test' } },
+        { detail: { domainIds: ['strength'], reason: 'test' } },
       ),
     );
-    await flush();
+    await vi.waitFor(() => expect(schedule).toHaveBeenCalledTimes(2));
 
-    expect(schedule).toHaveBeenCalledWith({
-      operation: 'sync',
+    expect(schedule).toHaveBeenNthCalledWith(1, {
+      operation: 'analyze',
       source: 'local-change',
-      domainIds: ['activities'],
+      domainIds: ['strength'],
       delayMs: 25,
+    });
+    expect(schedule).toHaveBeenNthCalledWith(2, {
+      operation: 'sync',
+      syncMode: 'local-only',
+      source: 'local-change',
+      domainIds: ['strength'],
+      delayMs: 0,
     });
     controller.dispose();
   });
@@ -448,7 +609,7 @@ describe('AutomaticSyncController', () => {
     expect(schedule).toHaveBeenCalledWith(
       expect.objectContaining({
         source: 'local-change',
-        operation: 'sync',
+        operation: 'analyze',
         domainIds: ['activities'],
       }),
     );
@@ -486,7 +647,7 @@ describe('AutomaticSyncController', () => {
     await flush();
 
     expect(schedule).toHaveBeenCalledWith({
-      operation: 'sync',
+      operation: 'analyze',
       source: 'local-change',
       domainIds: ['activities'],
       delayMs: 0,

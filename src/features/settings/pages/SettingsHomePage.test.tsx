@@ -39,4 +39,37 @@ describe('SettingsHomePage', () => {
     expect(screen.queryByText(/IndexedDB|file d’attente|conflit|runtime|snapshot/i))
       .not.toBeInTheDocument();
   });
+
+  it('décrit un espace de compte sans déduire son état du booléen d’automatisation', async () => {
+    const accountSpace = {
+      id: 'account:settings-home' as const,
+      kind: 'account' as const,
+      databaseName: 'test-settings-home-account',
+      label: 'Espace du compte',
+      accountFingerprint: 'settings-home',
+      linkedToCurrentDevice: true,
+      createdAt: '2026-07-10T10:00:00.000Z',
+      lastActivatedAt: '2026-07-10T10:00:00.000Z',
+    };
+
+    render(
+      <MemoryRouter>
+        <SettingsHomePage
+          settingsRepository={{
+            get: async () => ({
+              ...createDefaultAppSettings(),
+              automaticAccountSyncEnabled: false,
+            }),
+          }}
+          readStorageStatus={async () => 'persisted'}
+          dataSpace={accountSpace}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findAllByText(/Gérer la continuité du compte/i))
+      .toHaveLength(2);
+    expect(screen.queryByText(/synchronisation (?:automatique )?(?:active|manuelle|désactivée)/i))
+      .not.toBeInTheDocument();
+  });
 });

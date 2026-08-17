@@ -1,11 +1,16 @@
 import { Cloud, LogOut, ShieldCheck } from "lucide-react";
-import { lazy, Suspense, type ReactNode, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 
 import type { DataSpaceDescriptor } from "@/domain/data-spaces/dataSpace";
 import { PROFILE_ONBOARDING_STEP_IDS } from "@/features/onboarding/profile/profileOnboardingSteps";
 import { saveProfileOnboardingDraft } from "@/features/onboarding/storage/profileOnboardingDraft";
 import { DEFAULT_PROFILE_FORM_VALUES } from "@/features/profile/utils/defaultProfileFormValues";
 import { type DataSpaceStorage } from "@/infrastructure/data-spaces/dataSpaceRegistry";
+import {
+  inspectCloudAccountRestoreTarget,
+  type CloudAccountRestoreServiceOptions,
+  type CloudAccountRestoreTargetInspection,
+} from "@/infrastructure/data-spaces/cloudAccountRestoreService";
 import {
   activateExistingAccountDataSpace,
   createEmptyAccountDataSpace,
@@ -36,13 +41,6 @@ const GuestDataImportPanel = lazy(async () => {
   return { default: module.GuestDataImportPanel };
 });
 
-const CloudAccountRestorePanel = lazy(async () => {
-  const module = await import(
-    "@/features/account-devices/components/CloudAccountRestorePanel"
-  );
-  return { default: module.CloudAccountRestorePanel };
-});
-
 interface DataSpaceAccountGateProps {
   children: ReactNode;
   client?: SyncPrototypeClient | null;
@@ -59,6 +57,10 @@ interface DataSpaceAccountGateProps {
   ) => Promise<GuestDataImportResult>;
   createEmptySpace?: typeof createEmptyAccountDataSpace;
   activateExistingSpace?: typeof activateExistingAccountDataSpace;
+  inspectRestoreTarget?: (
+    accountFingerprint: string,
+    options?: CloudAccountRestoreServiceOptions,
+  ) => Promise<CloudAccountRestoreTargetInspection>;
 }
 
 type GateState =
@@ -70,9 +72,15 @@ type GateState =
       readonly hasExistingSpace: boolean;
       readonly existingSpaceLinkedToDevice: boolean;
       readonly canAttachCurrentData: boolean;
+      readonly canCreateEmpty: boolean;
     }
   | { readonly status: "working"; readonly message: string }
   | { readonly status: "error"; readonly message: string };
+
+type AccountRecoveryState =
+  | { readonly status: "running"; readonly promise: Promise<void> }
+  | { readonly status: "resolved" }
+  | { readonly status: "error" };
 
 function accountFingerprintFromSnapshot(
   snapshot: SyncPrototypeSnapshot,
@@ -107,6 +115,7 @@ export function DataSpaceAccountGate({
   applyGuestImport,
   createEmptySpace = createEmptyAccountDataSpace,
   activateExistingSpace = activateExistingAccountDataSpace,
+  inspectRestoreTarget = inspectCloudAccountRestoreTarget,
 }: DataSpaceAccountGateProps) {
   const runtimeClient = useMemo<SyncPrototypeClient | null>(() => {
     if (clientOverride !== undefined) return clientOverride;
@@ -126,9 +135,10 @@ export function DataSpaceAccountGate({
       ? { status: "ready" }
       : { status: "loading", message: "Vérification du compte connecté" },
   );
-  const [cloudAnalysisStatus, setCloudAnalysisStatus] = useState<
-    "idle" | "loading" | "ready" | "error"
-  >("idle");
+  const recoveryByFingerprintRef = useRef(
+    new Map<string, AccountRecoveryState>(),
+  );
+  const activeAccountFingerprintRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
     const syncRoute = () => setOnboardingRouteActive(isOnboardingRoute());
@@ -149,7 +159,151 @@ export function DataSpaceAccountGate({
 
     let disposed = false;
     let initialized = false;
-    let cloudCheckFingerprint: string | undefined;
+
+    const serviceOptions = storage ? { storage } : {};
+
+    const showLocalAccess = (
+      accountFingerprint: string,
+      inspection: CloudAccountRestoreTargetInspection,
+      cloudConfirmedEmpty: boolean,
+    ) => {
+      if (disposed) return;
+
+      if (
+        currentSpace.kind === "account" &&
+        currentSpace.accountFingerprint === accountFingerprint
+      ) {
+        setState({ status: "ready" });
+        return;
+      }
+
+      const existingSpace = findAccountDataSpace(accountFingerprint, storage);
+      setState({
+        status: "choice",
+        accountFingerprint,
+        hasExistingSpace: Boolean(existingSpace),
+        existingSpaceLinkedToDevice:
+          existingSpace?.linkedToCurrentDevice !== false,
+        canAttachCurrentData: currentSpace.kind === "guest",
+        canCreateEmpty:
+          cloudConfirmedEmpty && inspection.localState === "missing",
+      });
+    };
+
+    const startRecovery = (accountFingerprint: string) => {
+      if (recoveryByFingerprintRef.current.has(accountFingerprint)) return;
+
+      const isStale = () =>
+        disposed || activeAccountFingerprintRef.current !== accountFingerprint;
+
+      const recoveryPromise = (async () => {
+        setState({
+          status: "loading",
+          message: "Vérification de l’espace local du compte",
+        });
+
+        const initialTarget = await inspectRestoreTarget(
+          accountFingerprint,
+          serviceOptions,
+        );
+        if (isStale()) return;
+
+        if (initialTarget.localState === "non-empty") {
+          showLocalAccess(accountFingerprint, initialTarget, false);
+          recoveryByFingerprintRef.current.set(accountFingerprint, {
+            status: "resolved",
+          });
+          return;
+        }
+
+        if (!runtimeClient.prepareCloudRestore || !runtimeClient.applyCloudRestore) {
+          throw new Error(
+            "La récupération automatique du compte n’est pas disponible dans cette version.",
+          );
+        }
+
+        setState({
+          status: "loading",
+          message: "Recherche des données du compte",
+        });
+        const prepared = await runtimeClient.prepareCloudRestore(accountFingerprint);
+        if (isStale()) return;
+
+        if (prepared.preview.hasCloudData && prepared.preview.canRestore) {
+          setState({
+            status: "working",
+            message: "Récupération des données du compte",
+          });
+          await runtimeClient.applyCloudRestore(prepared);
+          if (isStale()) return;
+          recoveryByFingerprintRef.current.set(accountFingerprint, {
+            status: "resolved",
+          });
+          reload();
+          return;
+        }
+
+        if (!prepared.preview.hasCloudData) {
+          showLocalAccess(accountFingerprint, initialTarget, true);
+          recoveryByFingerprintRef.current.set(accountFingerprint, {
+            status: "resolved",
+          });
+          return;
+        }
+
+        const latestTarget = await inspectRestoreTarget(
+          accountFingerprint,
+          serviceOptions,
+        );
+        if (isStale()) return;
+        if (latestTarget.localState === "non-empty") {
+          showLocalAccess(accountFingerprint, latestTarget, false);
+          recoveryByFingerprintRef.current.set(accountFingerprint, {
+            status: "resolved",
+          });
+          return;
+        }
+
+        throw new Error(
+          "Les données du compte existent mais la restauration initiale n’est plus sûre. Relance l’application pour réessayer.",
+        );
+      })().catch(async (error: unknown) => {
+        if (isStale()) return;
+
+        try {
+          const latestTarget = await inspectRestoreTarget(
+            accountFingerprint,
+            serviceOptions,
+          );
+          if (disposed) return;
+          if (latestTarget.localState === "non-empty") {
+            showLocalAccess(accountFingerprint, latestTarget, false);
+            recoveryByFingerprintRef.current.set(accountFingerprint, {
+              status: "resolved",
+            });
+            return;
+          }
+        } catch {
+          // L’erreur de récupération initiale reste prioritaire.
+        }
+
+        recoveryByFingerprintRef.current.set(accountFingerprint, {
+          status: "error",
+        });
+        setState({ status: "error", message: errorMessage(error) });
+      });
+
+      recoveryByFingerprintRef.current.set(accountFingerprint, {
+        status: "running",
+        promise: recoveryPromise,
+      });
+      void recoveryPromise.finally(() => {
+        const current = recoveryByFingerprintRef.current.get(accountFingerprint);
+        if (current?.status === "running" && current.promise === recoveryPromise) {
+          recoveryByFingerprintRef.current.delete(accountFingerprint);
+        }
+      });
+    };
 
     const reconcile = () => {
       if (disposed || !initialized) return;
@@ -157,7 +311,44 @@ export function DataSpaceAccountGate({
       const snapshot = runtimeClient.getSnapshot();
       if (snapshot.account.isLoading) {
         if (currentSpace.kind === "account") {
-          setState({ status: "ready" });
+          const currentFingerprint = currentSpace.accountFingerprint;
+          if (!currentFingerprint) {
+            setState({ status: "ready" });
+            return;
+          }
+          if (!recoveryByFingerprintRef.current.has(currentFingerprint)) {
+            const localInspectionPromise = inspectRestoreTarget(
+              currentFingerprint,
+              serviceOptions,
+            )
+              .then((inspection) => {
+                if (disposed) return;
+                if (inspection.localState === "non-empty") {
+                  showLocalAccess(currentFingerprint, inspection, false);
+                  recoveryByFingerprintRef.current.set(currentFingerprint, {
+                    status: "resolved",
+                  });
+                  return;
+                }
+                recoveryByFingerprintRef.current.delete(currentFingerprint);
+                setState({
+                  status: "loading",
+                  message: "Vérification du compte connecté",
+                });
+              })
+              .catch(() => {
+                if (disposed) return;
+                recoveryByFingerprintRef.current.delete(currentFingerprint);
+                setState({
+                  status: "loading",
+                  message: "Vérification du compte connecté",
+                });
+              });
+            recoveryByFingerprintRef.current.set(currentFingerprint, {
+              status: "running",
+              promise: localInspectionPromise,
+            });
+          }
         } else {
           setState({
             status: "loading",
@@ -168,8 +359,8 @@ export function DataSpaceAccountGate({
       }
 
       if (!snapshot.account.isLoggedIn) {
-        cloudCheckFingerprint = undefined;
-        setCloudAnalysisStatus("idle");
+        activeAccountFingerprintRef.current = undefined;
+        recoveryByFingerprintRef.current.clear();
         if (currentSpace.kind === "account") {
           setState({ status: "ready" });
           return;
@@ -181,6 +372,7 @@ export function DataSpaceAccountGate({
 
       const accountFingerprint = accountFingerprintFromSnapshot(snapshot);
       if (!accountFingerprint) {
+        activeAccountFingerprintRef.current = undefined;
         if (currentSpace.kind === "account") {
           setState({ status: "ready" });
         } else {
@@ -193,30 +385,9 @@ export function DataSpaceAccountGate({
         return;
       }
 
-      if (
-        currentSpace.kind === "account" &&
-        currentSpace.accountFingerprint === accountFingerprint
-      ) {
-        setState({ status: "ready" });
-        return;
-      }
+      activeAccountFingerprintRef.current = accountFingerprint;
 
-      const existingSpace = findAccountDataSpace(accountFingerprint, storage);
-      if (existingSpace) {
-        setCloudAnalysisStatus("ready");
-      } else if (cloudCheckFingerprint !== accountFingerprint) {
-        cloudCheckFingerprint = accountFingerprint;
-        setCloudAnalysisStatus("loading");
-      }
-
-      setState({
-        status: "choice",
-        accountFingerprint,
-        hasExistingSpace: Boolean(existingSpace),
-        existingSpaceLinkedToDevice:
-          existingSpace?.linkedToCurrentDevice !== false,
-        canAttachCurrentData: currentSpace.kind === "guest",
-      });
+      startRecovery(accountFingerprint);
     };
 
     const unsubscribe = runtimeClient.subscribe(reconcile);
@@ -228,23 +399,48 @@ export function DataSpaceAccountGate({
         initialized = true;
         reconcile();
       })
-      .catch((error: unknown) => {
+      .catch(async (error: unknown) => {
         if (disposed) return;
         if (currentSpace.kind === "account") {
-          setState({ status: "ready" });
-        } else {
-          setState({
-            status: "error",
-            message: errorMessage(error),
-          });
+          const currentFingerprint = currentSpace.accountFingerprint;
+          if (!currentFingerprint) {
+            setState({ status: "ready" });
+            return;
+          }
+
+          try {
+            const inspection = await inspectRestoreTarget(
+              currentFingerprint,
+              serviceOptions,
+            );
+            if (disposed) return;
+            if (inspection.localState === "non-empty") {
+              setState({ status: "ready" });
+              return;
+            }
+          } catch {
+            // L’erreur d’initialisation cloud reste la cause visible.
+          }
         }
+
+        setState({
+          status: "error",
+          message: errorMessage(error),
+        });
       });
 
     return () => {
       disposed = true;
       unsubscribe();
     };
-  }, [currentSpace, onboardingRouteActive, reload, runtimeClient, storage]);
+  }, [
+    currentSpace,
+    inspectRestoreTarget,
+    onboardingRouteActive,
+    reload,
+    runtimeClient,
+    storage,
+  ]);
 
   const runAction = async (
     message: string,
@@ -394,23 +590,6 @@ export function DataSpaceAccountGate({
             </>
           ) : (
             <>
-              <Suspense
-                fallback={
-                  <InlineNotice tone="info" title="Recherche des données">
-                    Vérification du compte en cours.
-                  </InlineNotice>
-                }
-              >
-                <CloudAccountRestorePanel
-                  accountFingerprint={state.accountFingerprint}
-                  client={runtimeClient!}
-                  autoAnalyze
-                  compact
-                  reload={reload}
-                  onAnalysisChange={(status) => setCloudAnalysisStatus(status)}
-                />
-              </Suspense>
-
               {state.canAttachCurrentData ? (
                 <Suspense
                   fallback={
@@ -439,25 +618,24 @@ export function DataSpaceAccountGate({
                 </Suspense>
               ) : null}
 
-              <section className="rounded-2xl border border-slate-200 p-2.5 dark:border-slate-800">
-                <h2 className="font-semibold text-slate-950 dark:text-white">
-                  Créer un nouveau profil
-                </h2>
-                <p className="mt-0.5 text-xs leading-4 text-slate-600 dark:text-slate-300">
-                  Commence avec un espace vierge. Les autres données ne sont pas supprimées.
-                </p>
-                <Button
-                  className="mt-2 w-full"
-                  variant="secondary"
-                  size="sm"
-                  disabled={cloudAnalysisStatus === "loading"}
-                  onClick={() => void createEmpty()}
-                >
-                  {cloudAnalysisStatus === "loading"
-                    ? "Vérification du compte…"
-                    : "Créer un nouveau profil"}
-                </Button>
-              </section>
+              {state.canCreateEmpty ? (
+                <section className="rounded-2xl border border-slate-200 p-2.5 dark:border-slate-800">
+                  <h2 className="font-semibold text-slate-950 dark:text-white">
+                    Créer un nouveau profil
+                  </h2>
+                  <p className="mt-0.5 text-xs leading-4 text-slate-600 dark:text-slate-300">
+                    Commence avec un espace vierge. Les autres données ne sont pas supprimées.
+                  </p>
+                  <Button
+                    className="mt-2 w-full"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => void createEmpty()}
+                  >
+                    Créer un nouveau profil
+                  </Button>
+                </section>
+              ) : null}
             </>
           )}
         </div>

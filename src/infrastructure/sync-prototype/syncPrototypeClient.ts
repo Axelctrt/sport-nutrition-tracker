@@ -60,6 +60,8 @@ import {
 import {
   previewRealStrengthSync,
   synchronizeRealStrength,
+  synchronizeRealStrengthFromCloud,
+  synchronizeRealStrengthToCloud,
   type RealStrengthSyncPreview,
   type RealStrengthSyncResult,
 } from '@/infrastructure/sync-prototype/realStrengthSyncService';
@@ -371,6 +373,8 @@ export interface SyncPrototypeClient {
   syncRealGoals?(): Promise<RealGoalSyncResult>;
   analyzeRealStrength?(): Promise<RealStrengthSyncPreview>;
   syncRealStrength?(): Promise<RealStrengthSyncResult>;
+  syncRealStrengthFromCloud?(): Promise<RealStrengthSyncResult>;
+  syncRealStrengthToCloud?(): Promise<RealStrengthSyncResult>;
   analyzeRealNutritionJournal?(): Promise<RealNutritionJournalSyncPreview>;
   syncRealNutritionJournal?(): Promise<RealNutritionJournalSyncResult>;
   analyzeRealNutritionLibrary?(): Promise<RealNutritionLibrarySyncPreview>;
@@ -1345,6 +1349,107 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
         error instanceof Error
           ? error.message
           : 'La synchronisation de la musculation a échoué.';
+      this.snapshot = {
+        ...this.snapshot,
+        realStrength: { enabled: true, status: 'error', errorMessage },
+      };
+      this.notify();
+      throw error;
+    }
+  }
+
+  async syncRealStrengthFromCloud(): Promise<RealStrengthSyncResult> {
+    await this.initialize();
+    this.assertRealStrengthSyncAvailable();
+    this.snapshot = {
+      ...this.snapshot,
+      realStrength: {
+        ...(this.snapshot.realStrength ?? {}),
+        enabled: true,
+        status: 'syncing',
+      },
+    };
+    this.notify();
+
+    try {
+      const currentUserId = await this.syncCloudForCurrentAccount();
+      const result = await synchronizeRealStrengthFromCloud(
+        this.localDatabase,
+        this.database,
+        currentUserId,
+      );
+      const preview = await previewRealStrengthSync(
+        this.localDatabase,
+        this.database,
+        currentUserId,
+      );
+      this.snapshot = {
+        ...this.snapshot,
+        realStrength: {
+          enabled: true,
+          status: 'ready',
+          preview,
+          lastResult: result,
+        },
+      };
+      this.notify();
+      return result;
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'La convergence distante de la musculation a échoué.';
+      this.snapshot = {
+        ...this.snapshot,
+        realStrength: { enabled: true, status: 'error', errorMessage },
+      };
+      this.notify();
+      throw error;
+    }
+  }
+
+  async syncRealStrengthToCloud(): Promise<RealStrengthSyncResult> {
+    await this.initialize();
+    this.assertRealStrengthSyncAvailable();
+    this.snapshot = {
+      ...this.snapshot,
+      realStrength: {
+        ...(this.snapshot.realStrength ?? {}),
+        enabled: true,
+        status: 'syncing',
+      },
+    };
+    this.notify();
+
+    try {
+      const currentUserId = await this.syncCloudForCurrentAccount();
+      const result = await synchronizeRealStrengthToCloud(
+        this.localDatabase,
+        this.database,
+        currentUserId,
+      );
+      await this.syncCloudForAccount(currentUserId);
+      const preview = await previewRealStrengthSync(
+        this.localDatabase,
+        this.database,
+        currentUserId,
+      );
+      this.snapshot = {
+        ...this.snapshot,
+        realStrength: {
+          enabled: true,
+          status: 'ready',
+          preview,
+          lastResult: result,
+        },
+      };
+      this.notify();
+      return result;
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'L’envoi sûr de la musculation vers le cloud a échoué.';
       this.snapshot = {
         ...this.snapshot,
         realStrength: { enabled: true, status: 'error', errorMessage },

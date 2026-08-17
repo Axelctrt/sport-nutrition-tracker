@@ -52,10 +52,18 @@ if (failures.length === 0) {
   }
 
   const gate = read('src/app/data-spaces/DataSpaceAccountGate.tsx');
-  for (const marker of ['<GuestDataImportPanel', '<CloudAccountRestorePanel']) {
+  for (const marker of [
+    '<GuestDataImportPanel',
+    'inspectCloudAccountRestoreTarget',
+    'prepareCloudRestore',
+    'applyCloudRestore',
+  ]) {
     if (!gate.includes(marker)) {
       fail(`La barrière de compte ne contient pas ${marker}.`);
     }
+  }
+  if (gate.includes('<CloudAccountRestorePanel')) {
+    fail('La récupération initiale automatique ne doit pas dépendre du panneau manuel de restauration.');
   }
 
   const guestImport = read('src/infrastructure/data-spaces/guestDataImportService.ts');

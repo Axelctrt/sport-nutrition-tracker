@@ -1,5 +1,6 @@
 import Dexie from 'dexie';
 
+import { DEVICE_SETTINGS_ID } from '@/domain/defaults/identifiers';
 import type { DataSpaceStorage } from '@/infrastructure/data-spaces/dataSpaceRegistry';
 import {
   applyPreparedGuestDataImport,
@@ -193,10 +194,11 @@ describe('guestDataImportService', () => {
       Promise.resolve(0),
     );
 
+    const storage = new MemoryStorage();
     const result = await applyPreparedGuestDataImport(prepared, {
       sourceDatabase: guest,
       targetDatabase: account,
-      storage: new MemoryStorage(),
+      storage,
       now: '2026-07-02T09:00:00.000Z',
     });
 
@@ -205,6 +207,10 @@ describe('guestDataImportService', () => {
       async (promise, table) => (await promise) + (await table.count()),
       Promise.resolve(0),
     )).toBe(sourceCountBefore);
+    expect(await account.deviceSettings.get(DEVICE_SETTINGS_ID)).toMatchObject({
+      automaticAccountSyncEnabled: true,
+      automaticAccountSyncAccountFingerprint: ACCOUNT,
+    });
 
     expect(await account.weights.toArray()).toEqual([
       expect.objectContaining({

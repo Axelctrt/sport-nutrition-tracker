@@ -93,7 +93,7 @@ export function AutomaticSyncSettingsPanel({
         setErrorMessage(
           error instanceof Error
             ? error.message
-            : 'Le réglage de synchronisation automatique est indisponible.',
+            : 'Le réglage de continuité automatique est indisponible.',
         );
       });
     return () => {
@@ -124,7 +124,7 @@ export function AutomaticSyncSettingsPanel({
       setSettings(updated);
       actionToast.success({
         key: `automatic-sync-${action}`,
-        title: action === 'toggle' ? 'Synchronisation automatique mise à jour' : 'Mode réseau mis à jour',
+        title: action === 'toggle' ? 'Continuité automatique mise à jour' : 'Mode réseau mis à jour',
       });
     } catch (error) {
       const fallback = 'Le réglage n’a pas pu être enregistré.';
@@ -139,7 +139,7 @@ export function AutomaticSyncSettingsPanel({
     const enable = !settings.automaticAccountSyncEnabled || !accountAuthorized;
     if (enable && !fingerprint) {
       setErrorMessage(
-        'Connecte d’abord le compte à autoriser pour la synchronisation automatique.',
+        'Connecte d’abord le compte à utiliser pour la continuité automatique.',
       );
       return;
     }
@@ -171,8 +171,8 @@ export function AutomaticSyncSettingsPanel({
 
   if (!client) {
     return (
-      <InlineNotice tone="info" title="Automatisation indisponible">
-        Active d’abord la configuration cloud de SportPilot. Les actions manuelles restent disponibles.
+      <InlineNotice tone="info" title="Continuité automatique indisponible">
+        Active d’abord la configuration cloud de SportPilot. Le centre manuel reste disponible.
       </InlineNotice>
     );
   }
@@ -184,11 +184,11 @@ export function AutomaticSyncSettingsPanel({
           <div className="flex items-center gap-2">
             <CloudCog aria-hidden="true" className="size-5 text-brand-700 dark:text-brand-300" />
             <h3 className="font-semibold text-slate-950 dark:text-white">
-              Synchronisation automatique
+              Continuité automatique
             </h3>
           </div>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
-            Analyse le compte au démarrage, au retour dans l’application et après le retour du réseau. Une modification locale déjà basée sur un état à jour est synchronisée après un court délai.
+            SportPilot vérifie le compte au démarrage, au retour dans l’application et après le retour du réseau. Les transferts automatiques sûrs concernent actuellement la musculation. Les autres rubriques sont vérifiées sans écriture automatique lorsqu’un choix pourrait écraser des données.
           </p>
         </div>
         <span className={`inline-flex min-h-9 shrink-0 items-center rounded-full px-3 text-sm font-semibold ${
@@ -196,13 +196,13 @@ export function AutomaticSyncSettingsPanel({
             ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200'
             : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200'
         }`}>
-          {accountAuthorized ? 'Active sur cet appareil' : 'Mode manuel'}
+          {accountAuthorized ? 'Autorisée sur cet appareil' : 'À autoriser pour ce compte'}
         </span>
       </div>
 
       {settings?.automaticAccountSyncEnabled && !accountAuthorized ? (
         <InlineNotice className="mt-4" tone="info" title="Autorisation du compte requise">
-          Le compte connecté n’est pas celui précédemment autorisé sur cet appareil. Confirme ce compte avant toute opération automatique.
+          Le compte connecté n’est pas celui précédemment autorisé sur cet appareil. Confirme ce compte avant tout transfert automatique.
         </InlineNotice>
       ) : null}
 
@@ -272,11 +272,11 @@ export function AutomaticSyncSettingsPanel({
           {busy === 'toggle'
             ? 'Enregistrement…'
             : accountAuthorized
-              ? 'Désactiver sur cet appareil'
-              : 'Activer pour ce compte'}
+              ? 'Désactiver la continuité'
+              : 'Autoriser la continuité'}
         </Button>
         <p className="text-sm leading-5 text-slate-600 dark:text-slate-300">
-          Le centre manuel reste disponible à tout moment. L’ancien automatisme limité aux pesées est désactivé lors de l’activation globale.
+          Le centre manuel reste disponible à tout moment. Les autres rubriques ne sont jamais écrites automatiquement tant que SportPilot ne peut pas garantir une convergence sans perte.
         </p>
       </div>
     </section>

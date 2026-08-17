@@ -98,21 +98,27 @@ function syncStatusLabel(
 ): string {
   if (!access.isOperational) return cloudAccountStatusLabel(access);
   if (snapshot.sync.status === "error" || snapshot.sync.phase === "error") {
-    return "Erreur";
+    return "Erreur de transport";
   }
-  if (snapshot.sync.phase === "in-sync") return "À jour";
   if (snapshot.sync.phase === "pushing") return "Envoi en cours";
   if (snapshot.sync.phase === "pulling") return "Réception en cours";
+  if (snapshot.sync.status === "connected" || snapshot.sync.phase === "in-sync") {
+    return "Connecté";
+  }
   return "Connexion en cours";
 }
 
-function pendingChangesLabel(snapshot: SyncPrototypeSnapshot): string {
-  if (!snapshot.account.isLoggedIn) return "Synchronisation arrêtée";
-  if (snapshot.sync.phase === "in-sync") return "0";
-  if (snapshot.sync.phase === "pushing" || snapshot.sync.phase === "pulling") {
-    return "En cours";
+function cloudTransportLabel(snapshot: SyncPrototypeSnapshot): string {
+  if (!snapshot.account.isLoggedIn) return "Arrêté";
+  if (snapshot.sync.status === "error" || snapshot.sync.phase === "error") {
+    return "Erreur";
   }
-  return "À vérifier";
+  if (snapshot.sync.phase === "pushing") return "Envoi en cours";
+  if (snapshot.sync.phase === "pulling") return "Réception en cours";
+  if (snapshot.sync.status === "connected" || snapshot.sync.phase === "in-sync") {
+    return "Au repos";
+  }
+  return "Connexion en cours";
 }
 
 function accountLabel(snapshot: SyncPrototypeSnapshot): string {
@@ -370,7 +376,7 @@ export function AccountDevicesPage({
           <dl className="mt-5 grid grid-cols-2 gap-3">
             <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-800">
               <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                État
+                Accès cloud
               </dt>
               <dd className="mt-1 font-bold text-slate-950 dark:text-white">
                 {syncStatusLabel(snapshot, cloudAccess)}
@@ -378,10 +384,10 @@ export function AccountDevicesPage({
             </div>
             <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-800">
               <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                Modifications en attente
+                Transport cloud
               </dt>
               <dd className="mt-1 font-bold text-slate-950 dark:text-white">
-                {pendingChangesLabel(snapshot)}
+                {cloudTransportLabel(snapshot)}
               </dd>
             </div>
             <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-800">
@@ -402,7 +408,7 @@ export function AccountDevicesPage({
             </div>
             <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-800">
               <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                Dernier échange réussi
+                Dernier échange cloud
               </dt>
               <dd className="mt-1 font-bold text-slate-950 dark:text-white">
                 {formatDateTime(lastSuccessfulSyncAt)}

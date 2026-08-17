@@ -41,6 +41,13 @@ export interface DatabaseLogicalSyncResolution<T>
   readonly baseline?: LogicalSyncBaseline;
 }
 
+export type LogicalSyncChangeOrigin =
+  | 'equal'
+  | 'local'
+  | 'cloud'
+  | 'both'
+  | 'unknown';
+
 const ZERO_STAMP: LogicalSyncStamp = {
   revision: 0,
   actorId: '',
@@ -174,6 +181,60 @@ function createBaseline(
     actorId: stamp.actorId,
     updatedAt: now.toISOString(),
   };
+}
+
+export function classifyLogicalSyncChangeOrigin<T>(input: {
+  readonly localValue: T;
+  readonly cloudValue: T;
+  readonly cloudStamp: LogicalSyncStamp;
+  readonly baseline?: LogicalSyncBaseline;
+}): LogicalSyncChangeOrigin {
+  const localDigest = stableValue(input.localValue);
+  const cloudDigest = stableValue(input.cloudValue);
+
+  if (localDigest === cloudDigest) return 'equal';
+  if (!input.baseline) return 'unknown';
+
+  const baselineStamp = stampFromBaseline(input.baseline);
+  const localChanged = localDigest !== input.baseline.localDigest;
+  const cloudChanged = cloudDigest !== input.baseline.cloudDigest
+    || compareLogicalSyncStamps(input.cloudStamp, baselineStamp) > 0;
+
+  if (localChanged && cloudChanged) return 'both';
+  if (localChanged) return 'local';
+  if (cloudChanged) return 'cloud';
+  return 'unknown';
+}
+
+export async function readDatabaseLogicalSyncChangeOrigin<T>(input: {
+  readonly cloudDatabase: SyncPrototypeDatabase;
+  readonly accountUserId: string;
+  readonly domainId: string;
+  readonly entityId: string;
+  readonly localValue: T;
+  readonly cloudValue: T;
+  readonly cloudStamp: LogicalSyncStamp;
+}): Promise<LogicalSyncChangeOrigin> {
+  const table = logicalSyncBaselineTable(input.cloudDatabase);
+  if (!table) {
+    return classifyLogicalSyncChangeOrigin({
+      localValue: input.localValue,
+      cloudValue: input.cloudValue,
+      cloudStamp: input.cloudStamp,
+    });
+  }
+
+  const baseline = await table.get(logicalSyncBaselineId(
+    input.accountUserId,
+    input.domainId,
+    input.entityId,
+  ));
+  return classifyLogicalSyncChangeOrigin({
+    localValue: input.localValue,
+    cloudValue: input.cloudValue,
+    cloudStamp: input.cloudStamp,
+    ...(baseline ? { baseline } : {}),
+  });
 }
 
 export function resolveLogicalSyncState<T>(input: {
