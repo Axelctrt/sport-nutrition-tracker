@@ -36,9 +36,9 @@ const LIFECYCLE_DEBOUNCE_MS = 250;
 const LOCAL_CHANGE_DEBOUNCE_MS = 1_500;
 
 const SAFE_REMOTE_CONVERGENCE_DOMAIN_IDS =
-  new Set<SyncOrchestratorDomainId>(['strength']);
+  new Set<SyncOrchestratorDomainId>(['strength', 'goals', 'weights']);
 const SAFE_LOCAL_UPLOAD_DOMAIN_IDS =
-  new Set<SyncOrchestratorDomainId>(['strength']);
+  new Set<SyncOrchestratorDomainId>(['strength', 'goals', 'weights']);
 
 export type AutomaticSyncConnectionType = 'wifi' | 'cellular' | 'ethernet' | 'unknown';
 
