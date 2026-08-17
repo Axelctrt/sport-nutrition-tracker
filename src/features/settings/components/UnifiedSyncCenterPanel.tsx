@@ -32,9 +32,11 @@ import { createSyncOrchestrator } from '@/application/sync/syncOrchestrator';
 import type { SyncPrototypeClient } from '@/infrastructure/sync-prototype/syncPrototypeClient';
 import { createSyncPrototypeAccountFingerprint } from '@/infrastructure/sync-prototype/syncPrototypeDiagnostics';
 import { Button } from '@/shared/ui/Button';
+import { Card } from '@/shared/ui/Card';
 import { ConfirmationDialog } from '@/shared/ui/ConfirmationDialog';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 import { cn } from '@/shared/utils/cn';
+import { GoalSyncSettingsPanel } from './GoalSyncSettingsPanel';
 import { UnifiedSyncCenterAdvancedDetails } from './UnifiedSyncCenterAdvancedDetails';
 import { createDomains, createOrchestratorDomains } from './unifiedSyncDomainRegistry';
 import {
@@ -131,6 +133,7 @@ export function UnifiedSyncCenterPanel({
     cloudAccess.isOperational || cloudAccess.canAttemptRenewal;
   const wasAccountReadyRef = useRef(accountReady);
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(Boolean(activeDetailId));
+  const [internalDetailId, setInternalDetailId] = useState<UnifiedSyncDetailId>();
   const [failures, setFailures] = useState<Partial<Record<UnifiedDomainId, DomainFailure>>>({});
   const [lastOperation, setLastOperation] = useState<UnifiedOperation>('analyze');
   const [confirmation, setConfirmation] = useState<ConfirmationState>();
@@ -147,6 +150,20 @@ export function UnifiedSyncCenterPanel({
     () => summarizeSyncOperationHistory(operationHistory),
     [operationHistory],
   );
+  const resolvedActiveDetailId = activeDetailId ?? internalDetailId;
+
+  const openDetail = useCallback((detailId: UnifiedSyncDetailId) => {
+    setIsAdvancedOpen(true);
+    if (onOpenDetail) {
+      onOpenDetail(detailId);
+      return;
+    }
+    if (detailId === 'sync-detail-goals') {
+      setInternalDetailId((current) => current === detailId ? undefined : detailId);
+      return;
+    }
+    window.setTimeout(() => scrollToDetail(detailId), 0);
+  }, [onOpenDetail]);
 
   useEffect(() => () => orchestrator?.dispose(), [orchestrator]);
 
@@ -512,9 +529,7 @@ export function UnifiedSyncCenterPanel({
                 <Button variant="secondary" onClick={() => {
                   const first = differingDomains[0];
                   if (!first) return;
-                  setIsAdvancedOpen(true);
-                  if (onOpenDetail) onOpenDetail(first.detailId);
-                  else window.setTimeout(() => scrollToDetail(first.detailId), 0);
+                  openDetail(first.detailId);
                 }}>
                   Examiner les différences
                 </Button>
@@ -523,7 +538,7 @@ export function UnifiedSyncCenterPanel({
                 </Button>
               </div>
               <p className="mt-3 text-xs text-slate-600 dark:text-slate-400">
-                « Conserver cet appareil » et « Utiliser le cloud » ne sont proposés que dans les détails capables de garantir une résolution directionnelle. Le centre global privilégie la fusion non destructive.
+                « Conserver cet appareil » et « Utiliser le cloud » ne sont proposés que dans les détails capables de garantir une résolution directionnelle. Le centre global ignore Goals tant que leur provenance est unknown ou both.
               </p>
             </div>
           </div>
@@ -547,15 +562,39 @@ export function UnifiedSyncCenterPanel({
         domains={domains}
         failures={failures}
         orchestratorDomains={orchestratorSnapshot.domains}
-        activeDetailId={activeDetailId}
-        onOpenDetail={onOpenDetail}
+        activeDetailId={resolvedActiveDetailId}
+        onOpenDetail={openDetail}
       />
+
+      {!onOpenDetail && internalDetailId === 'sync-detail-goals' ? (
+        <Card
+          id="sync-detail-goals"
+          aria-labelledby="sync-detail-goals-title"
+          variant="muted"
+          padding="md"
+          className="scroll-mt-24"
+        >
+          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--sp-accent-primary)]">
+            Détail de synchronisation
+          </p>
+          <h3
+            id="sync-detail-goals-title"
+            className="mt-1 text-lg font-semibold text-[var(--sp-text-primary)]"
+          >
+            Objectifs
+          </h3>
+          <div className="mt-4">
+            <GoalSyncSettingsPanel client={client} />
+          </div>
+        </Card>
+      ) : null}
+
       <ConfirmationDialog
         open={Boolean(confirmation)}
         title={confirmation?.target === 'failures' ? 'Relancer les synchronisations en échec ?' : 'Synchroniser toutes les rubriques ?'}
         description={confirmation?.target === 'failures'
           ? 'Seules les rubriques dont la dernière synchronisation a échoué seront relancées. Les autres ne seront pas modifiées.'
-          : 'Chaque rubrique active sera traitée séparément. Une erreur n’empêchera pas les autres rubriques de continuer, et le détail restera visible.'}
+          : 'Chaque rubrique active sera traitée séparément. Une erreur n’empêchera pas les autres rubriques de continuer. Goals reste sans écriture si sa provenance est unknown ou both.'}
         confirmLabel={confirmation?.target === 'failures' ? 'Relancer les échecs' : 'Synchroniser tout'}
         isPending={busy?.operation === 'sync'}
         onCancel={() => setConfirmation(undefined)}

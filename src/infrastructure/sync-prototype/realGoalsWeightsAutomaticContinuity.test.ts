@@ -1,7 +1,12 @@
 import Dexie, { type Table } from 'dexie';
 import { AutomaticSyncController } from '@/application/sync/automaticSyncController';
 import { createDefaultAppSettings } from '@/domain/defaults/appSettings';
-import { GOAL_STATE_CHANGED_EVENT, type Goal } from '@/domain/goals/goalState';
+import {
+  flushGoalStatePersistence,
+  resetGoalStateRuntimeForTests,
+  writeGoalState,
+  type Goal,
+} from '@/domain/goals/goalState';
 import {
   createDeletedDeletionRecord,
   type DeletionRecord,
@@ -16,6 +21,8 @@ import type {
   LogicalSyncFields,
 } from '@/infrastructure/sync-prototype/logicalSyncState';
 import {
+  applyInitialRealGoalReconciliation,
+  prepareInitialRealGoalReconciliation,
   previewRealGoalSync,
   synchronizeRealGoals,
   synchronizeRealGoalsFromCloud,
@@ -36,6 +43,7 @@ import {
   createSyncPrototypeAccountFingerprint,
 } from '@/infrastructure/sync-prototype/syncPrototypeDiagnostics';
 import { REAL_WEIGHT_DATA_CHANGED_EVENT } from '@/infrastructure/sync-prototype/weightSyncEvents';
+import { initializeUserStateRuntime } from '@/infrastructure/user-state/userStateRuntime';
 
 const ACCOUNT_USER_ID = 'user-goals-weights-auto';
 const CREATED_AT = '2026-08-17T08:00:00.000Z';
@@ -278,12 +286,14 @@ describe('P0-V2.1 — continuité automatique Goals + Weights', () => {
   let cloud: TestCloudDatabase;
 
   beforeEach(async () => {
+    resetGoalStateRuntimeForTests();
     local = new AppDatabase(`sportpilot-goals-weights-local-${crypto.randomUUID()}`);
     cloud = new TestCloudDatabase();
     await Promise.all([local.open(), cloud.open()]);
   });
 
   afterEach(async () => {
+    resetGoalStateRuntimeForTests();
     const names = [local.name, cloud.name];
     local.close();
     cloud.close();
@@ -531,7 +541,7 @@ describe('P0-V2.1 — continuité automatique Goals + Weights', () => {
     expect(await local.goals.get('goal-race-local')).toBeDefined();
   });
 
-  it('propage les tombstones dans les deux directions sans résurrection', async () => {
+  it('propage les suppressions dans les deux directions sans résurrection', async () => {
     const initialGoal = goal('goal-delete-cloud');
     const initialWeight = weight('weight:delete-local');
     await local.goals.add(initialGoal);
@@ -630,21 +640,20 @@ describe('P0-V2.1 — continuité automatique Goals + Weights', () => {
     expect(await cloud.realWeights.get('#foreign-weight')).toBeDefined();
   });
 
-  it('gate applicatif A→B : controller upload Goals/Weights puis controller B les récupère sans sync manuelle', async () => {
-    const localA = new AppDatabase(`sportpilot-goals-weights-gate-a-${crypto.randomUUID()}`);
-    const localB = new AppDatabase(`sportpilot-goals-weights-gate-b-${crypto.randomUUID()}`);
-    const cloudA = new TestCloudDatabase('a');
-    const cloudB = new TestCloudDatabase('b');
+  it('compte propre : baseline égale puis writeGoalState réel déclenche automatiquement Goals A→B', async () => {
+    const localA = new AppDatabase(`sportpilot-goals-gate-clean-a-${crypto.randomUUID()}`);
+    const localB = new AppDatabase(`sportpilot-goals-gate-clean-b-${crypto.randomUUID()}`);
+    const cloudA = new TestCloudDatabase('clean-a');
+    const cloudB = new TestCloudDatabase('clean-b');
     await Promise.all([localA.open(), localB.open(), cloudA.open(), cloudB.open()]);
 
     const clientA = createDeviceClient(localA, cloudA);
     const clientB = createDeviceClient(localB, cloudB);
-    const eventTargetA = new EventTarget();
     const eventTargetB = new EventTarget();
     const controllerA = new AutomaticSyncController({
       client: clientA,
       settingsRepository: createSettingsRepository(),
-      eventTarget: eventTargetA,
+      eventTarget: window,
       isVisible: () => true,
       isOnline: () => true,
       lifecycleDebounceMs: 0,
@@ -667,17 +676,19 @@ describe('P0-V2.1 — continuité automatique Goals + Weights', () => {
       await controllerB.initialize();
       expect(await cloudA.realSyncBaselines.count()).toBe(2);
       expect(await cloudB.realSyncBaselines.count()).toBe(2);
+      await initializeUserStateRuntime(localA);
 
       const createdGoal = goal('goal-controller-a-b', 135_000);
-      await localA.goals.add(createdGoal);
-      eventTargetA.dispatchEvent(new Event(GOAL_STATE_CHANGED_EVENT));
+      writeGoalState({ version: 1, goals: [createdGoal] });
+      await flushGoalStatePersistence();
+      expect(await localA.goals.get(createdGoal.id)).toEqual(createdGoal);
       await vi.waitFor(async () => {
         expect(await cloudA.realGoals.get(`#${createdGoal.id}`)).toBeDefined();
       });
 
       const createdWeight = weight('weight:controller-a-b', 68.4);
       await localA.weights.add(createdWeight);
-      eventTargetA.dispatchEvent(new Event(REAL_WEIGHT_DATA_CHANGED_EVENT));
+      window.dispatchEvent(new Event(REAL_WEIGHT_DATA_CHANGED_EVENT));
       await vi.waitFor(async () => {
         expect(await cloudA.realWeights.get(`#${createdWeight.id}`)).toBeDefined();
       });
@@ -706,9 +717,100 @@ describe('P0-V2.1 — continuité automatique Goals + Weights', () => {
     } finally {
       controllerA.dispose();
       controllerB.dispose();
+      resetGoalStateRuntimeForTests();
       const databases = [localA, localB, cloudA, cloudB];
       const names = databases.map((database) => database.name);
       databases.forEach((database) => database.close());
+      await Promise.all(names.map((name) => Dexie.delete(name)));
+    }
+  });
+
+  it('compte legacy divergent : unknown → choix explicite → baseline → writeGoalState suivant automatique', async () => {
+    const legacyLocal = new AppDatabase(`sportpilot-goals-gate-legacy-${crypto.randomUUID()}`);
+    const legacyCloud = new TestCloudDatabase('legacy');
+    await Promise.all([legacyLocal.open(), legacyCloud.open()]);
+    const localLegacyGoal = goal('goal-legacy', 110_000, '2026-08-17T09:00:00.000Z');
+    const cloudLegacyGoal = goal('goal-legacy', 125_000, '2026-08-17T10:00:00.000Z');
+    await legacyLocal.goals.add(localLegacyGoal);
+    await legacyCloud.realGoals.add({
+      ...cloudLegacyGoal,
+      id: '#goal-legacy',
+      owner: ACCOUNT_USER_ID,
+      syncRevision: 2,
+      syncActorId: 'legacy-cloud',
+    });
+
+    const client = createDeviceClient(legacyLocal, legacyCloud);
+    const controller = new AutomaticSyncController({
+      client,
+      settingsRepository: createSettingsRepository(),
+      eventTarget: window,
+      isVisible: () => true,
+      isOnline: () => true,
+      lifecycleDebounceMs: 0,
+      localChangeDebounceMs: 0,
+      foregroundMinimumIntervalMs: 0,
+    });
+
+    try {
+      await controller.initialize();
+      expect(await previewRealGoalSync(
+        legacyLocal,
+        legacyCloud as unknown as SyncPrototypeDatabase,
+        ACCOUNT_USER_ID,
+      )).toMatchObject({ changeOrigin: 'unknown', differingEntityCount: 1 });
+      expect(await legacyCloud.realSyncBaselines.get(
+        `${ACCOUNT_USER_ID}:goals:goals`,
+      )).toBeUndefined();
+      expect(await legacyCloud.realGoals.get('#goal-legacy')).toMatchObject({
+        targetValue: 125_000,
+      });
+
+      const prepared = await prepareInitialRealGoalReconciliation(
+        legacyLocal,
+        legacyCloud as unknown as SyncPrototypeDatabase,
+        ACCOUNT_USER_ID,
+      );
+      expect(prepared.items).toEqual([
+        expect.objectContaining({
+          title: 'Objectif continuité',
+          localStatus: 'modified',
+          cloudStatus: 'modified',
+        }),
+      ]);
+      await applyInitialRealGoalReconciliation(
+        legacyLocal,
+        legacyCloud as unknown as SyncPrototypeDatabase,
+        ACCOUNT_USER_ID,
+        prepared,
+        'keep-local',
+      );
+      expect(await legacyCloud.realSyncBaselines.get(
+        `${ACCOUNT_USER_ID}:goals:goals`,
+      )).toBeDefined();
+      expect(await previewRealGoalSync(
+        legacyLocal,
+        legacyCloud as unknown as SyncPrototypeDatabase,
+        ACCOUNT_USER_ID,
+      )).toMatchObject({ differingEntityCount: 0 });
+
+      await initializeUserStateRuntime(legacyLocal);
+      const nextGoal = goal('goal-legacy', 140_000, '2026-08-17T11:00:00.000Z');
+      writeGoalState({ version: 1, goals: [nextGoal] });
+      await flushGoalStatePersistence();
+
+      await vi.waitFor(async () => {
+        expect(await legacyCloud.realGoals.get('#goal-legacy')).toMatchObject({
+          targetValue: 140_000,
+        });
+      });
+      expect(client.syncRealGoals).not.toHaveBeenCalled();
+    } finally {
+      controller.dispose();
+      resetGoalStateRuntimeForTests();
+      const names = [legacyLocal.name, legacyCloud.name];
+      legacyLocal.close();
+      legacyCloud.close();
       await Promise.all(names.map((name) => Dexie.delete(name)));
     }
   });

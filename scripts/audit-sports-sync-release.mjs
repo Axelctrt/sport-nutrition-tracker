@@ -75,12 +75,12 @@ for (const expected of [
 }
 
 const services = [
-  ['pesées', 'src/infrastructure/sync-prototype/realWeightSyncService.ts'],
-  ['activités', 'src/infrastructure/sync-prototype/realActivitySyncService.ts'],
-  ['objectifs', 'src/infrastructure/sync-prototype/realGoalSyncService.ts'],
-  ['musculation', 'src/infrastructure/sync-prototype/realStrengthSyncService.ts'],
+  ['pesées', 'src/infrastructure/sync-prototype/realWeightSyncService.ts', ['belongsToCurrentUser', 'chooseLatest', 'sameEntity']],
+  ['activités', 'src/infrastructure/sync-prototype/realActivitySyncService.ts', ['belongsToCurrentUser', 'chooseLatest', 'sameEntity']],
+  ['objectifs', 'src/infrastructure/sync-prototype/realGoalSyncService.ts', ['belongsToCurrentUser', 'sameEntity']],
+  ['musculation', 'src/infrastructure/sync-prototype/realStrengthSyncService.ts', ['belongsToCurrentUser', 'chooseLatest', 'sameEntity']],
 ];
-for (const [label, path] of services) {
+for (const [label, path, expectedHelpers] of services) {
   const service = read(path);
   if (!service.includes("from '@/infrastructure/sync-prototype/cloudSyncValue'")) {
     fail(`le service ${label} n’utilise pas les règles communes de convergence.`);
@@ -88,10 +88,27 @@ for (const [label, path] of services) {
   if (service.includes('function stableValue(') || service.includes('type CloudOwned<T>')) {
     fail(`le service ${label} conserve une implémentation locale divergente.`);
   }
-  for (const expected of ['belongsToCurrentUser', 'chooseLatest', 'sameEntity']) {
+  for (const expected of expectedHelpers) {
     if (!service.includes(expected)) {
       fail(`le service ${label} ne contient pas ${expected}.`);
     }
+  }
+}
+
+const goals = read('src/infrastructure/sync-prototype/realGoalSyncService.ts');
+if (/\bchooseLatest\b/.test(goals)) {
+  fail('le service objectifs réintroduit chooseLatest alors que les états unknown/both doivent rester fail-closed.');
+}
+for (const expected of [
+  'prepareInitialRealGoalReconciliation',
+  'applyInitialRealGoalReconciliation',
+  "origin === 'local'",
+  "origin === 'cloud'",
+  'return emptyResult({',
+  'ensureDomainBaselineMissing',
+]) {
+  if (!goals.includes(expected)) {
+    fail(`la synchronisation des objectifs ne verrouille pas ${expected}.`);
   }
 }
 
@@ -149,6 +166,6 @@ if (failures.length > 0) {
   process.exitCode = 1;
 } else {
   console.log(
-    'Audit du socle sportif réussi : quatre domaines synchronisés, convergence commune, suppressions durables, agrégats de musculation atomiques et runtime cloud v16 validés.',
+    'Audit du socle sportif réussi : quatre domaines synchronisés, Goals fail-closed sur unknown/both, suppressions durables, agrégats de musculation atomiques et runtime cloud v16 validés.',
   );
 }

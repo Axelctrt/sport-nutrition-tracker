@@ -1,5 +1,6 @@
 import {
   flushGoalStatePersistence,
+  GOAL_STATE_PERSISTED_EVENT,
   GOAL_STATE_STORAGE_KEY,
   hydrateGoalStateRuntime,
   readGoalState,
@@ -36,6 +37,7 @@ import {
 } from '@/domain/rewards/weeklyMissionHistory';
 import { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import { initializeDatabase } from '@/infrastructure/database/databaseLifecycle';
+import { reloadUserStateRuntime } from '@/infrastructure/user-state/userStateRuntime';
 
 const goalState: GoalState = {
   version: 1,
@@ -114,6 +116,19 @@ describe('runtime des états utilisateur Dexie', () => {
     ).toBeNull();
   });
 
+  it('ne transforme jamais un reload après download cloud en mutation Goals locale persistée', async () => {
+    await initializeDatabase(database);
+    const persisted = vi.fn();
+    window.addEventListener(GOAL_STATE_PERSISTED_EVENT, persisted);
+
+    await database.goals.put(goalState.goals[0]!);
+    await reloadUserStateRuntime(database);
+
+    expect(readGoalState()).toEqual(goalState);
+    expect(persisted).not.toHaveBeenCalled();
+
+    window.removeEventListener(GOAL_STATE_PERSISTED_EVENT, persisted);
+  });
 
   it('persiste les récompenses, missions et complétions de rappels dans Dexie', async () => {
     await initializeDatabase(database);

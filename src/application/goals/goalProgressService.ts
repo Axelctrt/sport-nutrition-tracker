@@ -10,6 +10,7 @@ import {
   type GoalState,
   type GoalStatus,
   flushGoalStatePersistence,
+  notifyGoalStatePersisted,
 } from '@/domain/goals/goalState';
 import { readBackupData } from '@/infrastructure/backup/backupService';
 import type { AppDatabase } from '@/infrastructure/database/AppDatabase';
@@ -525,5 +526,6 @@ export async function deleteGoal(
     },
   );
 
+  notifyGoalStatePersisted();
   await reloadUserStateRuntime(database);
 }
