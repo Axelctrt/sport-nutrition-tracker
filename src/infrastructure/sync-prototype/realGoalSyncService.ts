@@ -409,7 +409,6 @@ async function persistEqualGoalBaseline(
     localValue: logical.local,
     cloudValue: logical.cloud,
     cloudStamp: maximumGoalCloudStamp(state),
-    // Ce fallback n'est appelé que lorsque les deux états sont déjà identiques.
     legacyResolve: () => logical.local,
   });
   await persistLogicalSyncBaseline(cloudDatabase, resolution.baseline);
@@ -603,8 +602,6 @@ async function synchronizeRealGoalsDirectional(
     localValue: logical.local,
     cloudValue: logical.cloud,
     cloudStamp: maximumGoalCloudStamp(state),
-    // Une provenance local/cloud prouvée implique une baseline existante :
-    // ce fallback ne décide jamais d'un état unknown/both.
     legacyResolve: () => target,
   });
   if (!sameEntity(resolution.value, target)) {
@@ -695,7 +692,7 @@ function keepLocalConsequence(local: GoalState, cloud: GoalState): string {
   return 'La version de cet appareil sera conservée.';
 }
 
-function useCloudConsequence(local: GoalState, cloud: GoalState): string {
+function cloudChoiceConsequence(local: GoalState, cloud: GoalState): string {
   if (!cloud.goal) {
     return local.goal
       ? 'L’objectif sera retiré de cet appareil.'
@@ -738,7 +735,7 @@ function buildReconciliationItems(state: GoalDomainState): GoalReconciliationIte
       localStatus: sideStatus(local, cloud),
       cloudStatus: sideStatus(cloud, local),
       keepLocalConsequence: keepLocalConsequence(local, cloud),
-      useCloudConsequence: useCloudConsequence(local, cloud),
+      useCloudConsequence: cloudChoiceConsequence(local, cloud),
     });
   }
   return items;
