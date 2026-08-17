@@ -52,6 +52,9 @@ export const GOAL_STATE_STORAGE_KEY =
 export const GOAL_STATE_CHANGED_EVENT =
   'sportpilot:goals-changed';
 
+export const GOAL_STATE_PERSISTED_EVENT =
+  'sportpilot:goals-persisted';
+
 export const GOAL_MILESTONES: readonly GoalMilestone[] = [
   25,
   50,
@@ -339,6 +342,12 @@ function dispatchGoalStateChanged(): void {
   window.dispatchEvent(new Event(GOAL_STATE_CHANGED_EVENT));
 }
 
+export function notifyGoalStatePersisted(): void {
+  if (typeof window === 'undefined') return;
+
+  window.dispatchEvent(new Event(GOAL_STATE_PERSISTED_EVENT));
+}
+
 export function hydrateGoalStateRuntime(
   state: GoalState,
   persist: GoalStatePersistence,
@@ -388,7 +397,10 @@ export function writeGoalState(state: GoalState): void {
   goalPersistenceQueue = goalPersistenceQueue
     .catch(() => undefined)
     .then(() => persist(snapshot))
-    .then(() => removeGoalFallback(serialized))
+    .then(() => {
+      removeGoalFallback(serialized);
+      notifyGoalStatePersisted();
+    })
     .catch((error: unknown) => {
       console.error(
         'La persistance Dexie des objectifs a échoué.',
