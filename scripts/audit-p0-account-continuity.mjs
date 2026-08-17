@@ -109,7 +109,8 @@ if (failures.length === 0) {
     'synchronizeRealGoalsFromCloud',
     'synchronizeRealWeightsToCloud',
     'synchronizeRealWeightsFromCloud',
-    'GOAL_STATE_CHANGED_EVENT',
+    'writeGoalState',
+    'flushGoalStatePersistence',
     'REAL_WEIGHT_DATA_CHANGED_EVENT',
   ]) {
     if (!goalsWeightsIntegrationTest.includes(structuralMarker)) {
@@ -156,7 +157,11 @@ if (failures.length === 0) {
     'synchronizeRealGoalsToCloud',
     "requireChangeOrigin: 'cloud'",
     "requireChangeOrigin: 'local'",
-    'requireCloudStateMatch: true',
+    'applyCloudTargetIfUnchanged',
+    'applyLocalTargetIfUnchanged',
+    'sameCloudOwnedCollection',
+    'restoreRealGoalsFromCloudIntoEmptyLocal',
+    'options.writeCloud !== false',
     "domainId: 'goals'",
     "entityId: 'goals'",
   ]) {
