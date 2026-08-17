@@ -79,6 +79,11 @@ interface WeightLogicalState {
   readonly markers: readonly DeletionRecord[];
 }
 
+const lastAnalyzedWeightOrigin = new Map<
+  string,
+  'local' | 'cloud' | 'both' | 'unknown'
+>();
+
 interface RealWeightSyncExecutionOptions extends CloudSyncExecutionOptions {
   readonly requireChangeOrigin?: 'cloud' | 'local';
   readonly persistDomainBaseline?: boolean;
@@ -666,6 +671,7 @@ export async function previewRealWeightSync(
   );
   const logical = buildWeightLogicalStates(state);
   if (preview.differingEntityCount <= 0) {
+    lastAnalyzedWeightOrigin.delete(currentUserId);
     await bootstrapEqualWeightBaseline(
       localDatabase,
       cloudDatabase,
@@ -684,9 +690,11 @@ export async function previewRealWeightSync(
     cloudValue: logical.cloud,
     cloudStamp: maximumWeightCloudStamp(state),
   });
+  const normalizedOrigin = changeOrigin === 'equal' ? 'unknown' : changeOrigin;
+  lastAnalyzedWeightOrigin.set(currentUserId, normalizedOrigin);
   return {
     ...preview,
-    changeOrigin: changeOrigin === 'equal' ? 'unknown' : changeOrigin,
+    changeOrigin: normalizedOrigin,
   };
 }
 
@@ -696,6 +704,35 @@ export async function synchronizeRealWeights(
   currentUserId: string,
   options: RealWeightSyncExecutionOptions = {},
 ): Promise<RealWeightSyncResult> {
+  const analyzedOrigin = lastAnalyzedWeightOrigin.get(currentUserId);
+  if (
+    !options.requireChangeOrigin &&
+    (analyzedOrigin === 'cloud' || analyzedOrigin === 'local')
+  ) {
+    try {
+      return await synchronizeRealWeights(
+        localDatabase,
+        cloudDatabase,
+        currentUserId,
+        analyzedOrigin === 'cloud'
+          ? {
+              writeCloud: false,
+              requireChangeOrigin: 'cloud',
+              persistDomainBaseline: true,
+            }
+          : {
+              writeCloud: true,
+              requireChangeOrigin: 'local',
+              requireCloudStateMatch: true,
+            },
+      );
+    } finally {
+      if (lastAnalyzedWeightOrigin.get(currentUserId) === analyzedOrigin) {
+        lastAnalyzedWeightOrigin.delete(currentUserId);
+      }
+    }
+  }
+
   const writeCloud = options.writeCloud !== false;
   const state = await readState(
     localDatabase,
