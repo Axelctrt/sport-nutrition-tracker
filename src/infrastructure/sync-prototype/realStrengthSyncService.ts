@@ -537,6 +537,32 @@ function maximumStrengthCloudStamp(state: StrengthState) {
   ]);
 }
 
+async function bootstrapEqualStrengthBaseline(
+  localDatabase: AppDatabase,
+  cloudDatabase: SyncPrototypeDatabase,
+  currentUserId: string,
+  state: StrengthState,
+  logical: ReturnType<typeof buildStrengthLogicalStates>,
+): Promise<void> {
+  if (!sameEntity(logical.local, logical.cloud)) return;
+
+  const actorId = await resolveSyncActorId(localDatabase);
+  const resolution = await resolveDatabaseLogicalSyncState({
+    cloudDatabase,
+    accountUserId: currentUserId,
+    domainId: 'strength',
+    entityId: 'strength',
+    actorId,
+    localValue: logical.local,
+    cloudValue: logical.cloud,
+    cloudStamp: maximumStrengthCloudStamp(state),
+    legacyResolve: () => logical.local,
+  });
+
+  if (resolution.source !== 'legacy') return;
+  await persistLogicalSyncBaseline(cloudDatabase, resolution.baseline);
+}
+
 function sameCloudOwnedCollection<T extends { id: string }>(
   current: readonly CloudOwned<T>[],
   expected: readonly CloudOwned<T>[],
@@ -554,9 +580,18 @@ export async function previewRealStrengthSync(
 ): Promise<RealStrengthSyncPreview> {
   const state = await readState(localDatabase, cloudDatabase, currentUserId);
   const preview = buildPreview(state);
-  if (preview.differingEntityCount <= 0) return preview;
-
   const logical = buildStrengthLogicalStates(state);
+  if (preview.differingEntityCount <= 0) {
+    await bootstrapEqualStrengthBaseline(
+      localDatabase,
+      cloudDatabase,
+      currentUserId,
+      state,
+      logical,
+    );
+    return preview;
+  }
+
   const changeOrigin = await readDatabaseLogicalSyncChangeOrigin({
     cloudDatabase,
     accountUserId: currentUserId,
