@@ -1,4 +1,4 @@
-import { Target, Cloud, RefreshCw } from 'lucide-react';
+import { Target, Cloud, RefreshCw, ShieldAlert } from 'lucide-react';
 import {
   useEffect,
   useMemo,
@@ -14,15 +14,31 @@ import {
 } from '@/infrastructure/sync-prototype/syncPrototypeClient';
 import { readSyncPrototypeConfigSafely } from '@/infrastructure/sync-prototype/syncPrototypeConfig';
 import { createEmptySyncPrototypeDiagnostics } from '@/infrastructure/sync-prototype/syncPrototypeDiagnostics';
+import {
+  applyRegisteredRealGoalInitialReconciliation,
+  prepareRegisteredRealGoalInitialReconciliation,
+  type GoalInitialReconciliationChoice,
+  type GoalReconciliationSideStatus,
+  type PreparedRealGoalReconciliation,
+  type RealGoalSyncResult,
+} from '@/infrastructure/sync-prototype/realGoalSyncService';
 import { Button } from '@/shared/ui/Button';
 import { ConfirmationDialog } from '@/shared/ui/ConfirmationDialog';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 
 interface GoalSyncSettingsPanelProps {
   readonly client?: SyncPrototypeClient | null;
+  readonly prepareInitialReconciliation?: (
+    currentUserId: string,
+  ) => Promise<PreparedRealGoalReconciliation>;
+  readonly applyInitialReconciliation?: (
+    currentUserId: string,
+    prepared: PreparedRealGoalReconciliation,
+    choice: GoalInitialReconciliationChoice,
+  ) => Promise<RealGoalSyncResult>;
 }
 
-type BusyAction = 'analyze' | 'sync';
+type BusyAction = 'analyze' | 'sync' | 'reconcile-prepare' | 'reconcile-apply';
 
 const EMPTY_SYNC_SNAPSHOT: SyncPrototypeSnapshot = {
   account: { isLoggedIn: false, isLoading: false },
@@ -61,8 +77,38 @@ function plural(value: number, singular: string, pluralForm: string): string {
   return value > 1 ? pluralForm : singular;
 }
 
+function provenanceLabel(origin: 'local' | 'cloud' | 'both' | 'unknown' | undefined): string {
+  switch (origin) {
+    case 'local':
+      return 'local — cet appareil';
+    case 'cloud':
+      return 'cloud — cloud';
+    case 'both':
+      return 'both — modifications des deux côtés';
+    case 'unknown':
+      return 'unknown — origine indéterminée';
+    default:
+      return 'non déterminée';
+  }
+}
+
+function reconciliationStatusLabel(status: GoalReconciliationSideStatus): string {
+  switch (status) {
+    case 'present':
+      return 'Présent';
+    case 'modified':
+      return 'Modifié';
+    case 'deleted':
+      return 'Supprimé';
+    case 'absent':
+      return 'Absent';
+  }
+}
+
 export function GoalSyncSettingsPanel({
   client: clientOverride,
+  prepareInitialReconciliation = prepareRegisteredRealGoalInitialReconciliation,
+  applyInitialReconciliation = applyRegisteredRealGoalInitialReconciliation,
 }: GoalSyncSettingsPanelProps) {
   const runtime = useMemo(
     () =>
@@ -84,7 +130,11 @@ export function GoalSyncSettingsPanel({
     | { readonly tone: 'success' | 'error'; readonly message: string }
     | undefined
   >();
-  const [confirmationOpen, setConfirmationOpen] = useState(false);
+  const [syncConfirmationOpen, setSyncConfirmationOpen] = useState(false);
+  const [preparedReconciliation, setPreparedReconciliation] =
+    useState<PreparedRealGoalReconciliation>();
+  const [reconciliationChoice, setReconciliationChoice] =
+    useState<GoalInitialReconciliationChoice>();
 
   useEffect(() => {
     if (!client) {
@@ -117,6 +167,7 @@ export function GoalSyncSettingsPanel({
   const analyze = async () => {
     if (!client?.analyzeRealGoals) return;
     setFeedback(undefined);
+    setPreparedReconciliation(undefined);
     setBusyAction('analyze');
     try {
       const preview = await client.analyzeRealGoals();
@@ -146,15 +197,13 @@ export function GoalSyncSettingsPanel({
 
   const synchronize = async () => {
     if (!client?.syncRealGoals) return;
-    setConfirmationOpen(false);
+    setSyncConfirmationOpen(false);
     setFeedback(undefined);
     setBusyAction('sync');
     try {
       const result = await client.syncRealGoals();
-      const writes =
-        result.uploadedGoals + result.downloadedGoals;
-      const removals =
-        result.removedLocalGoals + result.removedCloudGoals;
+      const writes = result.uploadedGoals + result.downloadedGoals;
+      const removals = result.removedLocalGoals + result.removedCloudGoals;
       setFeedback({
         tone: 'success',
         message: `${writes} ${plural(
@@ -174,6 +223,65 @@ export function GoalSyncSettingsPanel({
           error instanceof Error
             ? error.message
             : 'La synchronisation des objectifs a échoué.',
+      });
+    } finally {
+      setBusyAction(undefined);
+    }
+  };
+
+  const prepareReconciliation = async () => {
+    const currentUserId = snapshot.account.userId;
+    if (!currentUserId) {
+      setFeedback({
+        tone: 'error',
+        message: 'Le compte actif doit être identifié avant la première réconciliation Goals.',
+      });
+      return;
+    }
+    setFeedback(undefined);
+    setBusyAction('reconcile-prepare');
+    try {
+      const prepared = await prepareInitialReconciliation(currentUserId);
+      setPreparedReconciliation(prepared);
+    } catch (error) {
+      setFeedback({
+        tone: 'error',
+        message:
+          error instanceof Error
+            ? error.message
+            : 'L’aperçu de réconciliation n’a pas pu être préparé.',
+      });
+    } finally {
+      setBusyAction(undefined);
+    }
+  };
+
+  const applyReconciliation = async () => {
+    const currentUserId = snapshot.account.userId;
+    const prepared = preparedReconciliation;
+    const choice = reconciliationChoice;
+    setReconciliationChoice(undefined);
+    if (!currentUserId || !prepared || !choice) return;
+
+    setFeedback(undefined);
+    setBusyAction('reconcile-apply');
+    try {
+      await applyInitialReconciliation(currentUserId, prepared, choice);
+      setPreparedReconciliation(undefined);
+      await client?.syncNow();
+      await client?.analyzeRealGoals?.();
+      setFeedback({
+        tone: 'success',
+        message:
+          'Les objectifs sont réconciliés. Cet appareil et le cloud utilisent maintenant la même référence.',
+      });
+    } catch (error) {
+      setFeedback({
+        tone: 'error',
+        message:
+          error instanceof Error
+            ? error.message
+            : 'La première réconciliation des objectifs a échoué.',
       });
     } finally {
       setBusyAction(undefined);
@@ -204,8 +312,10 @@ export function GoalSyncSettingsPanel({
     );
   }
 
-  const unavailable =
-    !client.analyzeRealGoals || !client.syncRealGoals;
+  const preview = goalSnapshot.preview;
+  const origin = preview?.changeOrigin;
+  const directional = origin === 'local' || origin === 'cloud';
+  const unavailable = !client.analyzeRealGoals;
   const disabled =
     isInitializing ||
     unavailable ||
@@ -227,7 +337,7 @@ export function GoalSyncSettingsPanel({
               </h3>
             </div>
             <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-              Converge manuellement les objectifs, leurs jalons et leur statut entre les appareils du même compte.
+              Vérifie les objectifs du compte et applique uniquement une direction dont l’origine est démontrée.
             </p>
           </div>
           <span className="inline-flex min-h-9 shrink-0 items-center rounded-full bg-slate-100 px-3 text-sm font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
@@ -245,8 +355,7 @@ export function GoalSyncSettingsPanel({
 
         {!snapshot.account.isLoggedIn ? (
           <InlineNotice className="mt-4" tone="info" title="Connexion requise">
-            Connecte le compte associé à cet espace avant de synchroniser les
-            objectifs.
+            Connecte le compte associé à cet espace avant de synchroniser les objectifs.
           </InlineNotice>
         ) : null}
 
@@ -256,29 +365,47 @@ export function GoalSyncSettingsPanel({
           </InlineNotice>
         ) : null}
 
-        {goalSnapshot.preview ? (
-          <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2 xl:grid-cols-5">
-            <div>
-              <dt className="text-slate-500 dark:text-slate-400">Objectifs locaux</dt>
-              <dd className="mt-1 font-semibold">{goalSnapshot.preview.localGoalCount}</dd>
-            </div>
-            <div>
-              <dt className="text-slate-500 dark:text-slate-400">Objectifs cloud</dt>
-              <dd className="mt-1 font-semibold">{goalSnapshot.preview.cloudGoalCount}</dd>
-            </div>
-            <div>
-              <dt className="text-slate-500 dark:text-slate-400">Suppressions locales</dt>
-              <dd className="mt-1 font-semibold">{goalSnapshot.preview.localDeletionCount}</dd>
-            </div>
-            <div>
-              <dt className="text-slate-500 dark:text-slate-400">Suppressions cloud</dt>
-              <dd className="mt-1 font-semibold">{goalSnapshot.preview.cloudDeletionCount}</dd>
-            </div>
-            <div>
-              <dt className="text-slate-500 dark:text-slate-400">Éléments différents</dt>
-              <dd className="mt-1 font-semibold">{goalSnapshot.preview.differingEntityCount}</dd>
-            </div>
-          </dl>
+        {preview ? (
+          <>
+            <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2 xl:grid-cols-6">
+              <div>
+                <dt className="text-slate-500 dark:text-slate-400">Objectifs locaux</dt>
+                <dd className="mt-1 font-semibold">{preview.localGoalCount}</dd>
+              </div>
+              <div>
+                <dt className="text-slate-500 dark:text-slate-400">Objectifs cloud</dt>
+                <dd className="mt-1 font-semibold">{preview.cloudGoalCount}</dd>
+              </div>
+              <div>
+                <dt className="text-slate-500 dark:text-slate-400">Suppressions locales</dt>
+                <dd className="mt-1 font-semibold">{preview.localDeletionCount}</dd>
+              </div>
+              <div>
+                <dt className="text-slate-500 dark:text-slate-400">Suppressions cloud</dt>
+                <dd className="mt-1 font-semibold">{preview.cloudDeletionCount}</dd>
+              </div>
+              <div>
+                <dt className="text-slate-500 dark:text-slate-400">Éléments différents</dt>
+                <dd className="mt-1 font-semibold">{preview.differingEntityCount}</dd>
+              </div>
+              <div>
+                <dt className="text-slate-500 dark:text-slate-400">Provenance</dt>
+                <dd className="mt-1 font-semibold">{provenanceLabel(origin)}</dd>
+              </div>
+            </dl>
+
+            {origin === 'unknown' ? (
+              <InlineNotice className="mt-4" tone="info" title="Première réconciliation requise">
+                SportPilot détecte des objectifs différents sur cet appareil et dans le cloud, mais aucune référence antérieure ne permet de choisir automatiquement. Aucune donnée ne sera remplacée sans ton choix explicite.
+              </InlineNotice>
+            ) : null}
+
+            {origin === 'both' ? (
+              <InlineNotice className="mt-4" tone="info" title="Modifications des deux côtés">
+                Des modifications ont été détectées sur cet appareil et dans le cloud depuis la dernière référence. Ce hotfix ne choisit aucune version et n’écrit rien pour Goals dans cet état.
+              </InlineNotice>
+            ) : null}
+          </>
         ) : null}
 
         {feedback ? (
@@ -307,13 +434,29 @@ export function GoalSyncSettingsPanel({
             />
             {busyAction === 'analyze' ? 'Analyse…' : 'Analyser sans modifier'}
           </Button>
-          <Button
-            disabled={disabled}
-            onClick={() => setConfirmationOpen(true)}
-          >
-            <Cloud aria-hidden="true" className="size-4" />
-            Synchroniser les objectifs
-          </Button>
+
+          {directional && client.syncRealGoals ? (
+            <Button
+              disabled={disabled}
+              onClick={() => setSyncConfirmationOpen(true)}
+            >
+              <Cloud aria-hidden="true" className="size-4" />
+              Synchroniser les objectifs
+            </Button>
+          ) : null}
+
+          {origin === 'unknown' ? (
+            <Button
+              disabled={disabled}
+              onClick={() => void prepareReconciliation()}
+            >
+              <ShieldAlert aria-hidden="true" className="size-4" />
+              {busyAction === 'reconcile-prepare'
+                ? 'Préparation…'
+                : 'Réconcilier les objectifs'}
+            </Button>
+          ) : null}
+
           <Link
             to={routePaths.accountDevices}
             className="inline-flex min-h-11 items-center justify-center rounded-xl px-4 text-sm font-semibold text-brand-700 hover:bg-brand-50 dark:text-brand-300 dark:hover:bg-brand-950/30"
@@ -323,18 +466,98 @@ export function GoalSyncSettingsPanel({
         </div>
       </div>
 
-      <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">
-        Ce lot reste manuel. Les séances de musculation détaillées seront ajoutées dans le lot B3 de la version 0.19.0.
-      </p>
+      {preparedReconciliation ? (
+        <section
+          aria-labelledby="goal-reconciliation-preview-title"
+          className="rounded-2xl border border-amber-300 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950/20"
+        >
+          <h4
+            id="goal-reconciliation-preview-title"
+            className="font-semibold text-slate-950 dark:text-white"
+          >
+            Aperçu avant réconciliation
+          </h4>
+          <p className="mt-1 text-sm leading-6 text-slate-700 dark:text-slate-300">
+            Le choix reste global pour les Objectifs. Vérifie chaque différence avant de décider quelle source devient la référence.
+          </p>
+
+          <ul className="mt-4 space-y-3">
+            {preparedReconciliation.items.map((item) => (
+              <li
+                key={item.id}
+                className="rounded-xl border border-amber-200 bg-white p-3 dark:border-amber-900/70 dark:bg-slate-950"
+              >
+                <p className="font-semibold text-slate-950 dark:text-white">{item.title}</p>
+                <dl className="mt-2 grid gap-2 text-sm sm:grid-cols-2">
+                  <div>
+                    <dt className="text-slate-500 dark:text-slate-400">Cet appareil</dt>
+                    <dd className="font-semibold">{reconciliationStatusLabel(item.localStatus)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-slate-500 dark:text-slate-400">Cloud</dt>
+                    <dd className="font-semibold">{reconciliationStatusLabel(item.cloudStatus)}</dd>
+                  </div>
+                </dl>
+                <div className="mt-3 space-y-1 text-sm leading-6 text-slate-700 dark:text-slate-300">
+                  <p><strong>Si tu conserves cet appareil :</strong> {item.keepLocalConsequence}</p>
+                  <p><strong>Si tu utilises le cloud :</strong> {item.useCloudConsequence}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+            <Button
+              disabled={busyAction !== undefined}
+              onClick={() => setReconciliationChoice('keep-local')}
+            >
+              Conserver cet appareil
+            </Button>
+            <Button
+              variant="secondary"
+              disabled={busyAction !== undefined}
+              onClick={() => setReconciliationChoice('use-cloud')}
+            >
+              Utiliser le cloud
+            </Button>
+          </div>
+        </section>
+      ) : null}
 
       <ConfirmationDialog
-        open={confirmationOpen}
+        open={syncConfirmationOpen}
         title="Synchroniser les objectifs ?"
-        description="Les versions les plus récentes seront conservées. Les suppressions plus récentes resteront prioritaires et l’opération ne touchera ni aux activités ni aux séances de musculation détaillées."
+        description={
+          origin === 'local'
+            ? 'La modification a été identifiée comme locale. Seule la direction cet appareil vers le cloud est autorisée.'
+            : 'La modification a été identifiée comme distante. Seule la direction cloud vers cet appareil est autorisée.'
+        }
         confirmLabel="Synchroniser"
         isPending={busyAction === 'sync'}
-        onCancel={() => setConfirmationOpen(false)}
+        onCancel={() => setSyncConfirmationOpen(false)}
         onConfirm={() => void synchronize()}
+      />
+
+      <ConfirmationDialog
+        open={Boolean(reconciliationChoice)}
+        title={
+          reconciliationChoice === 'keep-local'
+            ? 'Conserver les objectifs de cet appareil ?'
+            : 'Utiliser les objectifs du cloud ?'
+        }
+        description={
+          reconciliationChoice === 'keep-local'
+            ? 'Les objectifs et suppressions visibles dans l’aperçu de cet appareil deviendront la référence Goals du compte. Si les données ont changé depuis l’aperçu, SportPilot annulera avant toute validation.'
+            : 'Les objectifs et suppressions visibles dans l’aperçu cloud deviendront la référence Goals sur cet appareil. Si les données ont changé depuis l’aperçu, SportPilot annulera avant toute validation.'
+        }
+        confirmLabel={
+          reconciliationChoice === 'keep-local'
+            ? 'Conserver cet appareil'
+            : 'Utiliser le cloud'
+        }
+        isPending={busyAction === 'reconcile-apply'}
+        onCancel={() => setReconciliationChoice(undefined)}
+        onConfirm={() => void applyReconciliation()}
       />
     </div>
   );
