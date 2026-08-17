@@ -3,6 +3,14 @@ import type {
   SyncOrchestratorDomainId,
   SyncOrchestratorPreview,
 } from '@/application/sync/syncOrchestrator';
+import {
+  synchronizeRegisteredRealGoalsFromCloud,
+  synchronizeRegisteredRealGoalsToCloud,
+} from '@/infrastructure/sync-prototype/realGoalSyncService';
+import {
+  synchronizeRegisteredRealWeightsFromCloud,
+  synchronizeRegisteredRealWeightsToCloud,
+} from '@/infrastructure/sync-prototype/realWeightSyncService';
 import type {
   SyncPrototypeClient,
   SyncPrototypeSnapshot,
@@ -47,6 +55,37 @@ export function readSyncOrchestratorPreview(
     case 'daily-coaching':
       return snapshot.realDailyCoaching?.preview;
   }
+}
+
+async function synchronizeRegisteredDirection(
+  client: SyncPrototypeClient,
+  domainId: 'goals' | 'weights',
+  expectedOrigin: 'cloud' | 'local',
+  synchronizeRegistered: (currentUserId: string) => Promise<unknown>,
+  analyze: () => Promise<{ readonly differingEntityCount: number }>,
+): Promise<unknown> {
+  const before = client.getSnapshot();
+  const preview = readSyncOrchestratorPreview(before, domainId);
+  const currentUserId = before.account.userId;
+  if (
+    !currentUserId ||
+    !preview ||
+    preview.differingEntityCount <= 0 ||
+    preview.changeOrigin !== expectedOrigin
+  ) {
+    return undefined;
+  }
+
+  await client.syncNow();
+  if (client.getSnapshot().account.userId !== currentUserId) return undefined;
+
+  const result = await synchronizeRegistered(currentUserId);
+  if (expectedOrigin === 'local') {
+    await client.syncNow();
+    if (client.getSnapshot().account.userId !== currentUserId) return result;
+  }
+  await analyze();
+  return result;
 }
 
 export function createSyncOrchestratorDomains(
@@ -105,7 +144,25 @@ export function createSyncOrchestratorDomains(
       ? () => client.syncRealRewardsRoutines!()
       : undefined,
   );
-  add('weights', () => client.analyzeRealWeights(), () => client.syncRealWeights());
+  add(
+    'weights',
+    () => client.analyzeRealWeights(),
+    () => client.syncRealWeights(),
+    () => synchronizeRegisteredDirection(
+      client,
+      'weights',
+      'cloud',
+      synchronizeRegisteredRealWeightsFromCloud,
+      () => client.analyzeRealWeights(),
+    ),
+    () => synchronizeRegisteredDirection(
+      client,
+      'weights',
+      'local',
+      synchronizeRegisteredRealWeightsToCloud,
+      () => client.analyzeRealWeights(),
+    ),
+  );
   add(
     'activities',
     client.analyzeRealActivities
@@ -117,6 +174,24 @@ export function createSyncOrchestratorDomains(
     'goals',
     client.analyzeRealGoals ? () => client.analyzeRealGoals!() : undefined,
     client.syncRealGoals ? () => client.syncRealGoals!() : undefined,
+    client.analyzeRealGoals
+      ? () => synchronizeRegisteredDirection(
+          client,
+          'goals',
+          'cloud',
+          synchronizeRegisteredRealGoalsFromCloud,
+          () => client.analyzeRealGoals!(),
+        )
+      : undefined,
+    client.analyzeRealGoals
+      ? () => synchronizeRegisteredDirection(
+          client,
+          'goals',
+          'local',
+          synchronizeRegisteredRealGoalsToCloud,
+          () => client.analyzeRealGoals!(),
+        )
+      : undefined,
   );
   add(
     'strength',
