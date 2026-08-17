@@ -577,6 +577,59 @@ async function applyCloudTargetIfUnchanged(
   return applied;
 }
 
+async function restoreRealGoalsFromCloudIntoEmptyLocal(
+  localDatabase: AppDatabase,
+  cloudDatabase: SyncPrototypeDatabase,
+  currentUserId: string,
+  state: GoalDomainState,
+  preview: RealGoalSyncPreview,
+): Promise<RealGoalSyncResult> {
+  if (state.localGoals.length > 0 || state.localMarkers.length > 0) {
+    const origin = await readOrigin(cloudDatabase, currentUserId, state);
+    return emptyResult({
+      ...preview,
+      changeOrigin: origin === 'equal' ? 'unknown' : origin,
+    });
+  }
+
+  const logical = buildGoalLogicalStates(state);
+  if (logical.cloud.goals.length === 0 && logical.cloud.markers.length === 0) {
+    return emptyResult(preview);
+  }
+
+  const [goalRows, markerRows] = await Promise.all([
+    cloudDatabase.realGoals.toArray(),
+    cloudDatabase.realGoalDeletionRecords.toArray(),
+  ]);
+  const currentOwnedGoals = goalRows
+    .filter((goal) => belongsToCurrentUser(goal, currentUserId));
+  const currentOwnedMarkers = markerRows
+    .filter(
+      (marker) =>
+        marker.entityType === 'goal' &&
+        belongsToCurrentUser(marker, currentUserId),
+    );
+  if (
+    !sameCloudOwnedCollection(currentOwnedGoals, state.cloudGoalRows) ||
+    !sameCloudOwnedCollection(currentOwnedMarkers, state.cloudMarkerRows)
+  ) {
+    return emptyResult(preview);
+  }
+
+  const result = resultForTarget(
+    preview,
+    state,
+    logical.cloud,
+    'cloud-to-local',
+  );
+  const applied = await applyLocalTargetIfUnchanged(
+    localDatabase,
+    state,
+    logical.cloud,
+  );
+  return applied ? result : emptyResult(preview);
+}
+
 async function synchronizeRealGoalsDirectional(
   localDatabase: AppDatabase,
   cloudDatabase: SyncPrototypeDatabase,
@@ -774,6 +827,18 @@ export async function synchronizeRealGoals(
 ): Promise<RealGoalSyncResult> {
   const state = await readState(localDatabase, cloudDatabase, currentUserId);
   const preview = buildPreview(state);
+  const writeCloud = options.writeCloud !== false;
+
+  if (!writeCloud && !options.requireChangeOrigin) {
+    return restoreRealGoalsFromCloudIntoEmptyLocal(
+      localDatabase,
+      cloudDatabase,
+      currentUserId,
+      state,
+      preview,
+    );
+  }
+
   if (preview.differingEntityCount <= 0) {
     await persistEqualGoalBaseline(
       localDatabase,
