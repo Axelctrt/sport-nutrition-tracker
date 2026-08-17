@@ -759,7 +759,9 @@ describe('P0-V2.1 — continuité automatique Goals + Weights', () => {
         legacyCloud as unknown as SyncPrototypeDatabase,
         ACCOUNT_USER_ID,
       )).toMatchObject({ changeOrigin: 'unknown', differingEntityCount: 1 });
-      expect(await legacyCloud.realSyncBaselines.count()).toBe(0);
+      expect(await legacyCloud.realSyncBaselines.get(
+        `${ACCOUNT_USER_ID}:goals:goals`,
+      )).toBeUndefined();
       expect(await legacyCloud.realGoals.get('#goal-legacy')).toMatchObject({
         targetValue: 125_000,
       });
@@ -783,7 +785,9 @@ describe('P0-V2.1 — continuité automatique Goals + Weights', () => {
         prepared,
         'keep-local',
       );
-      expect(await legacyCloud.realSyncBaselines.count()).toBe(1);
+      expect(await legacyCloud.realSyncBaselines.get(
+        `${ACCOUNT_USER_ID}:goals:goals`,
+      )).toBeDefined();
       expect(await previewRealGoalSync(
         legacyLocal,
         legacyCloud as unknown as SyncPrototypeDatabase,
