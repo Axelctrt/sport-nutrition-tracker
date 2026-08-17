@@ -1,4 +1,4 @@
-# Limitations connues — SportPilot 1.0.1
+# Limitations connues — SportPilot 1.0.2
 
 Ces limitations sont des dettes séparées. Elles ne sont pas corrigées par la
 préparation stable et nécessitent leur propre validation avant toute
@@ -22,7 +22,7 @@ Les graphiques restent absents lorsque les données disponibles ne permettent pa
 
 ## Moteur calorique
 
-La maintenance `1.0.1` ne modifie pas les formules de calories, macros,
+La maintenance `1.0.2` ne modifie pas les formules de calories, macros,
 métabolisme ou ajustement hebdomadaire.
 
 ## Social
@@ -47,7 +47,7 @@ notamment aux largeurs 320, 360 et 412 px. Aucune refonte n'est incluse.
 
 #138 suit le diagnostic des deux Workers Builds rouges. Les GitHub Actions
 applicatives sont vertes et aucune causalité avec #103 n'est démontrée. Cette
-candidate n'autorise aucune action Cloudflare.
+candidate n'autorise aucune action Cloudflare implicite.
 
 ## CORS Dexie Cloud des Previews RC
 
@@ -55,7 +55,7 @@ candidate n'autorise aucune action Cloudflare.
 immuable autorisée a été ajoutée à la whitelist, sans alias ni wildcard ; le
 preflight, l'authentification, la synchronisation, la continuité et l'isolation
 multi-compte ont ensuite été validés. Cette qualification historique
-n'autorise aucune nouvelle origine ni mutation CORS pour la stable.
+n'autorise aucune nouvelle origine sans gate explicite de qualification.
 
 ## Accessibilité
 
@@ -73,4 +73,4 @@ corrigé, mais le risque résiduel est accepté par le propriétaire pour V1 dan
 l'architecture validée : Sharp est absent du bundle navigateur final, des
 Pages Functions et des artefacts runtime SportPilot, sans chemin d'exploitation
 démontré. #162 suit une future correction Quagga/Sharp compatible après V1 et
-n'est pas bloquante pour la maintenance 1.0.1.
+n'est pas bloquante pour la maintenance 1.0.2.
