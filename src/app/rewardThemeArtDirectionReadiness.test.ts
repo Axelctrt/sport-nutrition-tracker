@@ -6,9 +6,9 @@ import desktopSidebarSource from "@/app/layouts/DesktopSidebar.tsx?raw";
 import appLayoutSource from "@/app/layouts/AppLayout.tsx?raw";
 import themeCssSource from "@/styles/unlockableThemes.css?raw";
 
-describe("SportPilot 1.0.1 - thèmes Performance Glass", () => {
+describe("SportPilot 1.0.2 - thèmes Performance Glass", () => {
   it("préserve les versions de données pendant la phase visuelle", () => {
-    expect(__APP_VERSION__).toBe("1.0.1");
+    expect(__APP_VERSION__).toBe("1.0.2");
     expect(databaseSchemaVersion).toBe(12);
     expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(10);
   });

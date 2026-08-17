@@ -1,47 +1,85 @@
-# Checklist de publication — SportPilot 1.0.1
+# Checklist de publication — SportPilot 1.0.2
 
-Base P0 : `develop@bec369ff7960dc897f7f34db42a6d8253a48ed36`.
-Branche de préparation : `release/1.0.1`.
+Base fonctionnelle qualifiée :
+`develop@37cae57dc779d6410f35a177403706be0a3eb382`.
+
+Tree qualifié :
+`7cd38a8364da5eb31eac91253ebdc789d37b0c0a`.
+
+Branche de préparation : `release/1.0.2`.
 
 ## Périmètre
 
-- [x] P0 S0→S5 fusionné via #169.
-- [x] Correction fail-closed Strength intégrée.
+- [x] PR #173 fusionnée dans `develop`.
+- [x] Continuité automatique sûre étendue à Goals et Weights.
+- [x] Whitelist automatique limitée à Strength + Goals + Weights.
+- [x] Provenances `both` et `unknown` fail-closed.
 - [x] Dexie v12, sauvegarde JSON v10 et runtime Dexie Cloud v16 inchangés.
-- [x] Aucune formule calorique, aucun thème et aucun élargissement IA.
-- [x] Synchronisation automatique directionnelle limitée à Strength.
+- [x] Aucune migration D1.
+- [x] Aucune modification des formules calories/macros.
+- [x] Aucun thème modifié.
+- [x] Aucun élargissement IA.
 
-## Gates de préparation
+## Qualification fonctionnelle acquise
+
+- [x] Preview immuable : `https://3288522c.sportpilot-pages.pages.dev`.
+- [x] Deployment : `3288522c-6c7f-45ce-b1c3-5294736c2af1`.
+- [x] Whitelist Dexie de l'origine immuable.
+- [x] Preflight CORS positif.
+- [x] Alias de branche non autorisé.
+- [x] Goals A → B sans synchronisation manuelle.
+- [x] Goals suppression A → B.
+- [x] Weights création A → B visible dans l'UI.
+- [x] Weights mise à jour A → B sans doublon.
+- [x] Weights suppression A → B.
+- [x] Strength A → B non-régression.
+- [x] Isolation inter-compte.
+
+## Gates de préparation 1.0.2
 
 - [ ] `npm ci`.
 - [ ] `git diff --check`.
-- [ ] Lint + tests readiness/P0 + build.
-- [ ] Audits release/production/repository et P0.
+- [ ] Suite Vitest complète.
+- [ ] Lint.
+- [ ] Build PWA.
+- [ ] Audit de consolidation 1.0.2.
+- [ ] Audit P0 de continuité.
 - [ ] npm audit requalifié sans `--force`.
 - [ ] CI GitHub Actions complète.
 - [ ] Stabilité d'ordre en CI Linux.
 - [ ] Playwright WebKit iPhone 15 et Chromium en CI Linux.
 - [ ] PWA update et conservation des données en CI Linux.
 
-Le faux négatif Windows/CRLF #136 reste hors périmètre de cette maintenance :
-le script local ne revendique donc pas `release:verify` ou
-`test:stability` complets comme verts sous Windows. La CI Linux officielle
-est le gate complet.
+Le faux négatif Windows/CRLF #136 reste hors périmètre : la CI Linux officielle
+reste le gate complet pour les contrôles sensibles aux fins de ligne.
 
 ## Publication
 
-- [ ] Preview Cloudflare Pages Direct Upload du SHA exact.
-- [ ] Smoke A → B sans action manuelle « Synchroniser ».
+- [ ] Fusion de la préparation `release/1.0.2 → develop`.
+- [ ] Contrôle du diff de préparation comme strictement non fonctionnel.
+- [ ] Preview Cloudflare Pages Direct Upload du SHA préparé exact.
+- [ ] CORS Dexie Cloud vérifié pour l'origine immuable finale.
 - [ ] PR `develop → main`.
 - [ ] CI de `main`.
-- [ ] Tag annoté `v1.0.1`.
-- [ ] GitHub Release SportPilot 1.0.1.
-- [ ] Production Pages et contrôles post-déploiement.
+- [ ] Tag `v1.0.2`.
+- [ ] GitHub Release SportPilot 1.0.2.
+- [ ] Production Pages du SHA publié.
+- [ ] Contrôles post-déploiement.
 - [x] Aucun tag créé par la préparation.
 - [x] Aucune migration D1 prévue.
 
 #141 et #146 restent terminées. #162 suit le résiduel Quagga/Sharp accepté
 pour V1. #138 reste la dette distincte des Workers Builds Cloudflare.
+
+## Archive 1.0.1 — publiée le 17 août 2026
+
+- PR de publication : #172.
+- Commit publié : `df28f61396160a68d24d110dd0924f491383faae`.
+- Tag : `v1.0.1`.
+- GitHub Release : SportPilot 1.0.1.
+- Production : `https://sportpilot-pages.pages.dev`.
+- Dexie v12, sauvegarde JSON v10 et runtime Dexie Cloud v16.
+- Aucune migration D1.
 
 ## Archive RC1 — rejetée
 

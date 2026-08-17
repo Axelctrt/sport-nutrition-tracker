@@ -14,7 +14,7 @@ import actionToastSource from '@/shared/toast/useActionToast.ts?raw';
 
 describe('publication SportPilot 0.26.0 — confirmations d’action', () => {
   it('publie le correctif avec le schéma courant', () => {
-    expect(__APP_VERSION__).toBe('1.0.1');
+    expect(__APP_VERSION__).toBe('1.0.2');
     expect(databaseSchemaVersion).toBe(12);
     expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(10);
   });
