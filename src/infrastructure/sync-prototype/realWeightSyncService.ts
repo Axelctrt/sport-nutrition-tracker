@@ -79,10 +79,12 @@ interface WeightLogicalState {
   readonly markers: readonly DeletionRecord[];
 }
 
-const lastAnalyzedWeightOrigin = new Map<
-  string,
-  'local' | 'cloud' | 'both' | 'unknown'
->();
+interface RegisteredWeightSyncContext {
+  readonly localDatabase: AppDatabase;
+  readonly cloudDatabase: SyncPrototypeDatabase;
+}
+
+const registeredWeightSyncContexts = new Map<string, RegisteredWeightSyncContext>();
 
 interface RealWeightSyncExecutionOptions extends CloudSyncExecutionOptions {
   readonly requireChangeOrigin?: 'cloud' | 'local';
@@ -658,6 +660,7 @@ export async function previewRealWeightSync(
   cloudDatabase: SyncPrototypeDatabase,
   currentUserId: string,
 ): Promise<RealWeightSyncPreview> {
+  registeredWeightSyncContexts.set(currentUserId, { localDatabase, cloudDatabase });
   const state = await readState(
     localDatabase,
     cloudDatabase,
@@ -671,7 +674,6 @@ export async function previewRealWeightSync(
   );
   const logical = buildWeightLogicalStates(state);
   if (preview.differingEntityCount <= 0) {
-    lastAnalyzedWeightOrigin.delete(currentUserId);
     await bootstrapEqualWeightBaseline(
       localDatabase,
       cloudDatabase,
@@ -690,11 +692,9 @@ export async function previewRealWeightSync(
     cloudValue: logical.cloud,
     cloudStamp: maximumWeightCloudStamp(state),
   });
-  const normalizedOrigin = changeOrigin === 'equal' ? 'unknown' : changeOrigin;
-  lastAnalyzedWeightOrigin.set(currentUserId, normalizedOrigin);
   return {
     ...preview,
-    changeOrigin: normalizedOrigin,
+    changeOrigin: changeOrigin === 'equal' ? 'unknown' : changeOrigin,
   };
 }
 
@@ -704,35 +704,6 @@ export async function synchronizeRealWeights(
   currentUserId: string,
   options: RealWeightSyncExecutionOptions = {},
 ): Promise<RealWeightSyncResult> {
-  const analyzedOrigin = lastAnalyzedWeightOrigin.get(currentUserId);
-  if (
-    !options.requireChangeOrigin &&
-    (analyzedOrigin === 'cloud' || analyzedOrigin === 'local')
-  ) {
-    try {
-      return await synchronizeRealWeights(
-        localDatabase,
-        cloudDatabase,
-        currentUserId,
-        analyzedOrigin === 'cloud'
-          ? {
-              writeCloud: false,
-              requireChangeOrigin: 'cloud',
-              persistDomainBaseline: true,
-            }
-          : {
-              writeCloud: true,
-              requireChangeOrigin: 'local',
-              requireCloudStateMatch: true,
-            },
-      );
-    } finally {
-      if (lastAnalyzedWeightOrigin.get(currentUserId) === analyzedOrigin) {
-        lastAnalyzedWeightOrigin.delete(currentUserId);
-      }
-    }
-  }
-
   const writeCloud = options.writeCloud !== false;
   const state = await readState(
     localDatabase,
@@ -930,4 +901,38 @@ export async function synchronizeRealWeightsToCloud(
     requireChangeOrigin: 'local',
     requireCloudStateMatch: true,
   });
+}
+
+function registeredWeightSyncContext(
+  currentUserId: string,
+): RegisteredWeightSyncContext {
+  const context = registeredWeightSyncContexts.get(currentUserId);
+  if (!context) {
+    throw new Error(
+      'Le contexte des pesées doit être analysé avant une convergence automatique.',
+    );
+  }
+  return context;
+}
+
+export async function synchronizeRegisteredRealWeightsFromCloud(
+  currentUserId: string,
+): Promise<RealWeightSyncResult> {
+  const context = registeredWeightSyncContext(currentUserId);
+  return synchronizeRealWeightsFromCloud(
+    context.localDatabase,
+    context.cloudDatabase,
+    currentUserId,
+  );
+}
+
+export async function synchronizeRegisteredRealWeightsToCloud(
+  currentUserId: string,
+): Promise<RealWeightSyncResult> {
+  const context = registeredWeightSyncContext(currentUserId);
+  return synchronizeRealWeightsToCloud(
+    context.localDatabase,
+    context.cloudDatabase,
+    currentUserId,
+  );
 }
