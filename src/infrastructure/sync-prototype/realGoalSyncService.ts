@@ -79,6 +79,11 @@ interface GoalLogicalState {
   readonly markers: readonly DeletionRecord[];
 }
 
+const lastAnalyzedGoalOrigin = new Map<
+  string,
+  'local' | 'cloud' | 'both' | 'unknown'
+>();
+
 interface RealGoalSyncExecutionOptions extends CloudSyncExecutionOptions {
   readonly requireChangeOrigin?: 'cloud' | 'local';
   readonly persistDomainBaseline?: boolean;
@@ -664,6 +669,7 @@ export async function previewRealGoalSync(
   );
   const logical = buildGoalLogicalStates(state);
   if (preview.differingEntityCount <= 0) {
+    lastAnalyzedGoalOrigin.delete(currentUserId);
     await bootstrapEqualGoalBaseline(
       localDatabase,
       cloudDatabase,
@@ -682,9 +688,11 @@ export async function previewRealGoalSync(
     cloudValue: logical.cloud,
     cloudStamp: maximumGoalCloudStamp(state),
   });
+  const normalizedOrigin = changeOrigin === 'equal' ? 'unknown' : changeOrigin;
+  lastAnalyzedGoalOrigin.set(currentUserId, normalizedOrigin);
   return {
     ...preview,
-    changeOrigin: changeOrigin === 'equal' ? 'unknown' : changeOrigin,
+    changeOrigin: normalizedOrigin,
   };
 }
 
@@ -694,6 +702,35 @@ export async function synchronizeRealGoals(
   currentUserId: string,
   options: RealGoalSyncExecutionOptions = {},
 ): Promise<RealGoalSyncResult> {
+  const analyzedOrigin = lastAnalyzedGoalOrigin.get(currentUserId);
+  if (
+    !options.requireChangeOrigin &&
+    (analyzedOrigin === 'cloud' || analyzedOrigin === 'local')
+  ) {
+    try {
+      return await synchronizeRealGoals(
+        localDatabase,
+        cloudDatabase,
+        currentUserId,
+        analyzedOrigin === 'cloud'
+          ? {
+              writeCloud: false,
+              requireChangeOrigin: 'cloud',
+              persistDomainBaseline: true,
+            }
+          : {
+              writeCloud: true,
+              requireChangeOrigin: 'local',
+              requireCloudStateMatch: true,
+            },
+      );
+    } finally {
+      if (lastAnalyzedGoalOrigin.get(currentUserId) === analyzedOrigin) {
+        lastAnalyzedGoalOrigin.delete(currentUserId);
+      }
+    }
+  }
+
   const writeCloud = options.writeCloud !== false;
   const state = await readState(
     localDatabase,
