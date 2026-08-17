@@ -33,6 +33,7 @@ import {
   type LogicalSyncBaseline,
   type LogicalSyncFields,
 } from '@/infrastructure/sync-prototype/logicalSyncState';
+import { reloadUserStateRuntime } from '@/infrastructure/user-state/userStateRuntime';
 
 type CloudGoal = Omit<Goal, 'id'> & {
   readonly id: string;
@@ -79,10 +80,12 @@ interface GoalLogicalState {
   readonly markers: readonly DeletionRecord[];
 }
 
-const lastAnalyzedGoalOrigin = new Map<
-  string,
-  'local' | 'cloud' | 'both' | 'unknown'
->();
+interface RegisteredGoalSyncContext {
+  readonly localDatabase: AppDatabase;
+  readonly cloudDatabase: SyncPrototypeDatabase;
+}
+
+const registeredGoalSyncContexts = new Map<string, RegisteredGoalSyncContext>();
 
 interface RealGoalSyncExecutionOptions extends CloudSyncExecutionOptions {
   readonly requireChangeOrigin?: 'cloud' | 'local';
@@ -656,6 +659,7 @@ export async function previewRealGoalSync(
   cloudDatabase: SyncPrototypeDatabase,
   currentUserId: string,
 ): Promise<RealGoalSyncPreview> {
+  registeredGoalSyncContexts.set(currentUserId, { localDatabase, cloudDatabase });
   const state = await readState(
     localDatabase,
     cloudDatabase,
@@ -669,7 +673,6 @@ export async function previewRealGoalSync(
   );
   const logical = buildGoalLogicalStates(state);
   if (preview.differingEntityCount <= 0) {
-    lastAnalyzedGoalOrigin.delete(currentUserId);
     await bootstrapEqualGoalBaseline(
       localDatabase,
       cloudDatabase,
@@ -688,11 +691,9 @@ export async function previewRealGoalSync(
     cloudValue: logical.cloud,
     cloudStamp: maximumGoalCloudStamp(state),
   });
-  const normalizedOrigin = changeOrigin === 'equal' ? 'unknown' : changeOrigin;
-  lastAnalyzedGoalOrigin.set(currentUserId, normalizedOrigin);
   return {
     ...preview,
-    changeOrigin: normalizedOrigin,
+    changeOrigin: changeOrigin === 'equal' ? 'unknown' : changeOrigin,
   };
 }
 
@@ -702,35 +703,6 @@ export async function synchronizeRealGoals(
   currentUserId: string,
   options: RealGoalSyncExecutionOptions = {},
 ): Promise<RealGoalSyncResult> {
-  const analyzedOrigin = lastAnalyzedGoalOrigin.get(currentUserId);
-  if (
-    !options.requireChangeOrigin &&
-    (analyzedOrigin === 'cloud' || analyzedOrigin === 'local')
-  ) {
-    try {
-      return await synchronizeRealGoals(
-        localDatabase,
-        cloudDatabase,
-        currentUserId,
-        analyzedOrigin === 'cloud'
-          ? {
-              writeCloud: false,
-              requireChangeOrigin: 'cloud',
-              persistDomainBaseline: true,
-            }
-          : {
-              writeCloud: true,
-              requireChangeOrigin: 'local',
-              requireCloudStateMatch: true,
-            },
-      );
-    } finally {
-      if (lastAnalyzedGoalOrigin.get(currentUserId) === analyzedOrigin) {
-        lastAnalyzedGoalOrigin.delete(currentUserId);
-      }
-    }
-  }
-
   const writeCloud = options.writeCloud !== false;
   const state = await readState(
     localDatabase,
@@ -928,4 +900,44 @@ export async function synchronizeRealGoalsToCloud(
     requireChangeOrigin: 'local',
     requireCloudStateMatch: true,
   });
+}
+
+function registeredGoalSyncContext(currentUserId: string): RegisteredGoalSyncContext {
+  const context = registeredGoalSyncContexts.get(currentUserId);
+  if (!context) {
+    throw new Error(
+      'Le contexte des objectifs doit être analysé avant une convergence automatique.',
+    );
+  }
+  return context;
+}
+
+export async function synchronizeRegisteredRealGoalsFromCloud(
+  currentUserId: string,
+): Promise<RealGoalSyncResult> {
+  const context = registeredGoalSyncContext(currentUserId);
+  const result = await synchronizeRealGoalsFromCloud(
+    context.localDatabase,
+    context.cloudDatabase,
+    currentUserId,
+  );
+  if (
+    result.downloadedGoals > 0 ||
+    result.removedLocalGoals > 0 ||
+    result.downloadedDeletionRecords > 0
+  ) {
+    await reloadUserStateRuntime(context.localDatabase);
+  }
+  return result;
+}
+
+export async function synchronizeRegisteredRealGoalsToCloud(
+  currentUserId: string,
+): Promise<RealGoalSyncResult> {
+  const context = registeredGoalSyncContext(currentUserId);
+  return synchronizeRealGoalsToCloud(
+    context.localDatabase,
+    context.cloudDatabase,
+    currentUserId,
+  );
 }
