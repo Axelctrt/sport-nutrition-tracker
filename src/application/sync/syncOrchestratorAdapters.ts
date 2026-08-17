@@ -79,6 +79,21 @@ async function synchronizeRegisteredDirection(
   await client.syncNow();
   if (client.getSnapshot().account.userId !== currentUserId) return undefined;
 
+  // Re-analyze after the transport refresh. Besides revalidating provenance,
+  // this rebinds the registered service context to this exact client/device
+  // immediately before the directional write.
+  await analyze();
+  const refreshed = client.getSnapshot();
+  const refreshedPreview = readSyncOrchestratorPreview(refreshed, domainId);
+  if (
+    refreshed.account.userId !== currentUserId ||
+    !refreshedPreview ||
+    refreshedPreview.differingEntityCount <= 0 ||
+    refreshedPreview.changeOrigin !== expectedOrigin
+  ) {
+    return undefined;
+  }
+
   const result = await synchronizeRegistered(currentUserId);
   if (expectedOrigin === 'local') {
     await client.syncNow();
