@@ -146,7 +146,7 @@ describe('AutomaticSyncController — whitelist Goals + Weights', () => {
     const { value, schedule } = orchestrator([
       {
         domainId: 'goals',
-        status: 'conflict',
+        status: 'action-required',
         differingEntityCount: 2,
         changeOrigin: 'both',
       },
