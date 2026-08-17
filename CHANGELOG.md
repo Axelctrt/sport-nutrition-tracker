@@ -4,22 +4,35 @@ Ce fichier synthétise les versions publiées. Les notes détaillées versionné
 restent les archives de référence et conservent l’état de préparation de chaque
 livraison.
 
-## 1.0.1 — maintenance P0 en préparation
+## 1.0.2 — continuité Goals + Weights en préparation
 
-- Fiabilisation de la continuité du compte entre appareils.
-- Synchronisation automatique sûre des séances de musculation avec primitives
-  directionnelles `cloud-only` et `local-only`.
-- Refus fail-closed des provenances ambiguës (`both`, `unknown`) avant toute
-  écriture directionnelle.
-- Récupération plus sûre sur nouvel appareil et meilleure transparence de
-  l'état de synchronisation.
-- Suppressions/tombstones, idempotence et isolation invité/A/B couvertes.
-- Versions de données inchangées : Dexie v12, sauvegarde JSON v10 et runtime
-  Dexie Cloud v16.
-- Aucune modification de formule calorique, thème ou périmètre IA.
+- Extension de la continuité automatique sûre de Strength vers Goals et Weights.
+- Upload automatique uniquement en provenance `local-only`.
+- Download automatique uniquement en provenance `cloud-only`.
+- Refus de toute écriture automatique en provenance `both` ou `unknown`.
+- Préservation des tombstones/suppressions, de l'idempotence et de l'isolation du compte.
+- Validation physique A → B de Goals, Weights et non-régression Strength.
+- Absence de doublon Weight validée sur deux appareils/profils.
+- Versions de données inchangées : Dexie v12, sauvegarde JSON v10 et runtime Dexie Cloud v16.
+- Aucune migration D1, formule calorique, thème ou extension IA.
 
-Cette entrée prépare `1.0.1` ; le tag, la GitHub Release et la production
+Cette entrée prépare `1.0.2` ; le tag, la GitHub Release et la production
 restent des gates distincts.
+
+Voir [`RELEASE-NOTES-1.0.2.md`](RELEASE-NOTES-1.0.2.md).
+
+## 1.0.1 — publiée le 17 août 2026
+
+- Continuité du compte entre appareils renforcée.
+- Synchronisation automatique sûre de Strength publiée.
+- Primitives `local-only` / `cloud-only` et refus fail-closed de `both` / `unknown`.
+- Tombstones, idempotence et isolation du compte préservés.
+- Commit publié : `df28f61396160a68d24d110dd0924f491383faae`.
+- Tag : `v1.0.1`.
+- GitHub Release : SportPilot 1.0.1.
+- Production : `https://sportpilot-pages.pages.dev`.
+- Dexie v12, sauvegarde JSON v10 et runtime Dexie Cloud v16.
+- Aucune migration D1.
 
 Voir [`RELEASE-NOTES-1.0.1.md`](RELEASE-NOTES-1.0.1.md).
 
