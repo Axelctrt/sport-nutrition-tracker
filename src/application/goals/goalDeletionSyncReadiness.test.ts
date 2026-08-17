@@ -1,5 +1,8 @@
 import { deleteGoal } from '@/application/goals/goalProgressService';
-import type { Goal } from '@/domain/goals/goalState';
+import {
+  GOAL_STATE_PERSISTED_EVENT,
+  type Goal,
+} from '@/domain/goals/goalState';
 import { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import { initializeUserStateRuntime } from '@/infrastructure/user-state/userStateRuntime';
 
@@ -32,7 +35,10 @@ describe('préparation des suppressions d’objectifs à la synchronisation', ()
     await database.delete();
   });
 
-  it('supprime l’objectif et crée un marqueur durable', async () => {
+  it('supprime l’objectif, crée son état de suppression durable puis émet persisted', async () => {
+    const persisted = vi.fn();
+    window.addEventListener(GOAL_STATE_PERSISTED_EVENT, persisted);
+
     await deleteGoal('goal-delete-sync', database);
 
     expect(await database.goals.get('goal-delete-sync')).toBeUndefined();
@@ -43,5 +49,8 @@ describe('préparation des suppressions d’objectifs à la synchronisation', ()
       entityId: 'goal-delete-sync',
       status: 'deleted',
     });
+    expect(persisted).toHaveBeenCalledTimes(1);
+
+    window.removeEventListener(GOAL_STATE_PERSISTED_EVENT, persisted);
   });
 });
