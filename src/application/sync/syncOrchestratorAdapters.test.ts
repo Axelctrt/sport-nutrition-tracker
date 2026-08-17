@@ -41,21 +41,24 @@ describe('syncOrchestratorAdapters', () => {
     expect(syncRealStrength).toHaveBeenCalledTimes(1);
   });
 
-  it('refuse les modes directionnels pour un domaine sans primitive sûre', async () => {
+  it('refuse les modes directionnels pour un domaine encore sans primitive sûre', async () => {
     const client = {
-      analyzeRealWeights: vi.fn(async () => ({ differingEntityCount: 1 })),
+      analyzeRealWeights: vi.fn(async () => ({ differingEntityCount: 0 })),
       syncRealWeights: vi.fn(async () => undefined),
+      analyzeRealActivities: vi.fn(async () => ({ differingEntityCount: 1 })),
+      syncRealActivities: vi.fn(async () => undefined),
       getSnapshot: vi.fn(() => ({})),
     } as unknown as SyncPrototypeClient;
 
-    const weights = createSyncOrchestratorDomains(client)
-      .find((domain) => domain.id === 'weights');
+    const activities = createSyncOrchestratorDomains(client)
+      .find((domain) => domain.id === 'activities');
 
-    await expect(weights!.synchronize('cloud-only')).rejects.toThrow(
-      'La convergence cloud-only n’est pas disponible pour weights.',
+    expect(activities).toBeDefined();
+    await expect(activities!.synchronize('cloud-only')).rejects.toThrow(
+      'La convergence cloud-only n’est pas disponible pour activities.',
     );
-    await expect(weights!.synchronize('local-only')).rejects.toThrow(
-      'L’envoi local-only n’est pas disponible pour weights.',
+    await expect(activities!.synchronize('local-only')).rejects.toThrow(
+      'L’envoi local-only n’est pas disponible pour activities.',
     );
   });
 });

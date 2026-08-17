@@ -1,36 +1,44 @@
-# SportPilot 1.0.1
+# SportPilot 1.0.2
 
-SportPilot `1.0.1` est la maintenance P0 de continuité multi-appareils,
-préparée depuis `develop@bec369ff7960dc897f7f34db42a6d8253a48ed36`.
+SportPilot `1.0.2` prépare l'extension de la continuité automatique sûre à
+Goals et Weights depuis le candidat fonctionnel qualifié
+`develop@37cae57dc779d6410f35a177403706be0a3eb382`.
 
 Stable publiée avant cette maintenance :
 
-- version : `1.0.0` ;
-- `main@d3ff60017027295f75b665d7efe2a037db69d69e` ;
-- tag annoté : `v1.0.0` ;
+- version : `1.0.1` ;
+- `main@df28f61396160a68d24d110dd0924f491383faae` ;
+- tag : `v1.0.1` ;
 - production : `https://sportpilot-pages.pages.dev` ;
-- aucune migration D1 ajoutée ou requise par 1.0.1.
+- aucune migration D1 ajoutée ou requise par 1.0.2.
 
 L’application reste mobile-first, local-first, utilisable hors ligne et
 installable en PWA.
 
-## Stable V1 publiée et maintenance P0
+## Continuité multi-appareils 1.0.2
 
-- convergence mobile et desktop des hubs Sport, Nutrition et Progression ;
-- continuité des saisies non enregistrées sur les surfaces critiques ;
-- feedbacks d'action, états filtrés et parcours clavier/focus harmonisés ;
-- comportement réduit des animations et stabilisation Chromium/WebKit/iPhone ;
-- contrôles de continuité, d'isolation, d'export/restauration et de rétention PWA renforcés ;
-- correctif du cold launch PWA hors ligne et preuve automatisée réelle ;
-- version stable et documentation de release alignées sans évolution de schéma.
+- synchronisation automatique sûre limitée à Strength + Goals + Weights ;
+- `local-only` → upload directionnel ;
+- `cloud-only` → download directionnel ;
+- `both` / `unknown` → aucune écriture automatique ;
+- revalidation de la provenance avant écriture ;
+- tombstones, suppressions, idempotence et isolation du compte préservés ;
+- smoke physique Goals et Weights A → B validé ;
+- non-régression Strength A → B validée ;
+- absence de doublon Weight validée.
 
-RC1 a été déployée une seule fois puis rejetée à cause du cold launch PWA
-suivi par #144. Le correctif #145 est inclus dans RC2, gelée au SHA
-`2554638a782f3be338b7323b95abc1078f65ef0b`, déployée une seule fois puis
-acceptée dans #147. #146 et le gate sécurité #141 sont terminés ; #162 suit le
-résiduel Quagga/Sharp accepté pour V1.
+## Invariants de données et produit
 
-## Socle stable 0.37.0 conservé
+- AppDatabase locale : Dexie v12 ;
+- sauvegarde JSON générale : v10 ;
+- runtime Dexie Cloud : v16 ;
+- contrat de snapshot social : `0.29.0-a3` ;
+- aucune migration D1 ;
+- aucune modification des formules calories/macros ;
+- aucun thème validé modifié ;
+- aucun élargissement IA.
+
+## Socle stable V1 conservé
 
 ### Photos de progression
 
@@ -63,18 +71,7 @@ ultérieure.
 - aucune inclusion des photos dans la sauvegarde JSON générale ;
 - aucune modification des formules caloriques.
 
-## Stockage et versions techniques
-
-- Candidate de maintenance : `1.0.1`.
-- Application actuellement en production avant 1.0.1 : `1.0.0`.
-- AppDatabase locale : Dexie v12, migration additive.
-- Sauvegarde JSON générale : v10.
-- Runtime Dexie Cloud prototype : v16.
-- Contrat de snapshot social : `0.29.0-a3`.
-- Migration D1 ajoutée par 0.37.0 : aucune.
-- Les photos et leurs actifs restent dans l’espace de données local ouvert.
-
-## Contrôles de la stable
+## Contrôles de release
 
 ```text
 npm run check
@@ -86,20 +83,17 @@ npm run test:e2e:pwa
 npm audit
 ```
 
-La préparation stable n'autorise aucune Preview Cloudflare, fusion, création de
-tag, release GitHub ou publication. Chacune de ces opérations reste soumise à
-une validation explicite ultérieure.
+Les opérations de publication restent séquencées par leurs gates techniques :
+CI, Preview immuable, `develop → main`, tag, GitHub Release puis production.
 
 ## Documentation
 
 Le référentiel canonique commence dans [`docs/INDEX.md`](docs/INDEX.md). Les
-règles applicables aux agents sont dans [`AGENTS.md`](AGENTS.md), l’historique
-synthétique dans [`CHANGELOG.md`](CHANGELOG.md) et les preuves de préparation
-dans les documents d’archive, notamment
-[`RELEASE-NOTES-0.37.0.md`](RELEASE-NOTES-0.37.0.md). Les changements de la
-stable en préparation sont synthétisés dans
-[`RELEASE-NOTES-1.0.0.md`](RELEASE-NOTES-1.0.0.md). Les notes RC2 restent une
-archive de la candidate acceptée dans
-[`RELEASE-NOTES-1.0.0-rc.2.md`](RELEASE-NOTES-1.0.0-rc.2.md). Le verdict
-historique rejeté de RC1 reste archivé dans
-[`RELEASE-NOTES-1.0.0-rc.1.md`](RELEASE-NOTES-1.0.0-rc.1.md).
+règles applicables aux agents sont dans [`AGENTS.md`](AGENTS.md) et l’historique
+synthétique dans [`CHANGELOG.md`](CHANGELOG.md).
+
+La maintenance courante est documentée dans
+[`RELEASE-NOTES-1.0.2.md`](RELEASE-NOTES-1.0.2.md). La maintenance 1.0.1 publiée
+reste archivée dans [`RELEASE-NOTES-1.0.1.md`](RELEASE-NOTES-1.0.1.md). Les
+archives 1.0.0, RC1, RC2 et 0.37.0 restent conservées dans leurs fichiers de
+release respectifs.

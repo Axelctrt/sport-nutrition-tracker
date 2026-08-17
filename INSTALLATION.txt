@@ -1,17 +1,20 @@
-SPORTPILOT 1.0.1 - MAINTENANCE P0 EN PREPARATION
+SPORTPILOT 1.0.2 - MAINTENANCE CONTINUITE GOALS + WEIGHTS
 
 Checklist de qualification :
-1. Verifier la base origin/develop bec369ff7960dc897f7f34db42a6d8253a48ed36.
-2. Verifier package.json et package-lock.json en 1.0.1.
+1. Verifier develop@37cae57dc779d6410f35a177403706be0a3eb382.
+2. Verifier package.json et package-lock.json en 1.0.2.
 3. Executer npm ci.
 4. Executer git diff --check.
-5. Executer lint, tests de readiness/P0, build et audits release.
-6. Laisser la CI Linux fournir la preuve complete du check/stability/E2E/PWA.
-7. Verifier npm audit sans --force.
-8. Verifier Dexie v12, sauvegarde JSON v10 et runtime cloud v16.
-9. Publier une Preview Pages Direct Upload du SHA exact avant main.
-10. Verifier le smoke A -> B sans synchronisation manuelle.
-11. Passer develop vers main uniquement apres gates verts.
+5. Executer lint, tests, build, audit release-consolidation et audit P0.
+6. Laisser GitHub Actions fournir le gate Linux complet.
+7. Verifier npm audit sans --force et sans regression du residuel accepte.
+8. Verifier Dexie v12, sauvegarde JSON v10 et runtime Dexie Cloud v16.
+9. Verifier que la whitelist automatique reste Strength + Goals + Weights.
+10. Publier une Preview Pages Direct Upload du SHA final exact.
+11. Verifier le CORS Dexie de l'origine immuable.
+12. Promouvoir develop vers main uniquement apres les gates verts.
+13. Taguer v1.0.2 et publier la GitHub Release uniquement sur le SHA publie.
+14. Deployer la production Pages depuis ce meme SHA.
+15. Ne lancer aucune migration D1.
 
-Aucune migration D1, aucune formule calorique, aucun theme et aucun
-elargissement IA ne sont inclus dans 1.0.1.
+Aucune formule calorique, aucun theme et aucun elargissement IA ne sont inclus.
