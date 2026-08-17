@@ -167,7 +167,7 @@ describe('runtime des états utilisateur Dexie', () => {
       await database.visualThemePreferences.get(
         'visual-theme-preference',
       ),
-    ).toMatchObject({ activeThemeId: 'aurora' });
+    ).toMatchObject({ activeThemeId: 'emerald-focus' });
     expect(await database.weeklyMissionCompletions.count()).toBe(1);
     expect(await database.routineReminderCompletions.count()).toBe(1);
 
