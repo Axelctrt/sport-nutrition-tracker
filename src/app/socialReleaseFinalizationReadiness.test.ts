@@ -24,9 +24,9 @@ describe('stable readiness 1.0.4', () => {
     expect(SOCIAL_ACTIVITY_SNAPSHOT_CONTRACT_VERSION).toBe('0.29.0-a3');
   });
 
-  it('documente la branche hotfix sans annoncer de publication fonctionnelle', () => {
+  it('documente la candidate sans annoncer de publication fonctionnelle', () => {
     expect(releaseNotesSource).toContain('SportPilot 1.0.4');
-    expect(releaseNotesSource).toContain('hotfix continuité Goals');
+    expect(releaseNotesSource).toContain('continuité Activities + Goals both');
     expect(releaseNotesSource).toContain('Branche : `release/1.0.4`');
     expect(releaseNotesSource).toContain('Toute différence fonctionnelle');
     expect(releaseChecklistSource).toContain('SportPilot 1.0.4');
