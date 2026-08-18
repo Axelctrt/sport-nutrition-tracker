@@ -150,7 +150,9 @@ function preparedConcurrent(): PreparedRealGoalConcurrentReconciliation {
   };
 }
 
-function resultFor(preview: RealGoalSyncResult['changeOrigin']): RealGoalSyncResult {
+function resultFor(
+  preview: NonNullable<RealGoalSyncResult['changeOrigin']>,
+): RealGoalSyncResult {
   return {
     localGoalCount: 1,
     cloudGoalCount: 1,
