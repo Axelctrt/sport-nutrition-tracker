@@ -31,10 +31,15 @@ const deployment = read(
 const mainVersions = read(
   'src/infrastructure/database/migrations/versions.ts',
 );
+const backupVersions = read(
+  'src/infrastructure/backup/backupMigrations.ts',
+);
 
 for (const tableName of [
   'realActivities',
+  'realEndurancePlanningSessions',
   'realActivityDeletionRecords',
+  'realSyncBaselines',
 ]) {
   if (!cloudDatabase.includes(tableName)) {
     fail(`la table cloud ${tableName} n’est pas déclarée.`);
@@ -53,14 +58,25 @@ for (const expected of ['owner', 'realmId', '$ts', '_hasBlobRefs']) {
 for (const expected of [
   'previewRealActivitySync',
   'synchronizeRealActivities',
-  "equals('activity')",
-  "entityType: 'activity'",
+  'synchronizeRealActivitiesFromCloud',
+  'synchronizeRealActivitiesToCloud',
+  "entityType === 'activity'",
+  "entityType === 'endurancePlanningSession'",
+  "domainId: 'activities'",
+  "entityId: 'activities'",
+  'changeOrigin',
+  'flushEndurancePlanningPersistence',
+  'applyCloudTargetIfUnchanged',
+  'applyLocalTargetIfUnchanged',
   'cloudPrivateId',
   'belongsToCurrentUser',
 ]) {
   if (!service.includes(expected)) {
     fail(`le service d’activités ne contient pas le garde-fou ${expected}.`);
   }
+}
+if (/\bchooseLatest\b/.test(service)) {
+  fail('Activities ne doit plus résoudre unknown/both par chooseLatest.');
 }
 
 for (const expected of [
@@ -82,7 +98,10 @@ if (!deployment.includes("VITE_ENABLE_REAL_ACTIVITY_SYNC: 'true'")) {
 }
 
 if (!/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_12/.test(mainVersions)) {
-  fail('le lot B1 doit conserver le schéma local principal courant Dexie v12.');
+  fail('Activities doit conserver le schéma local principal Dexie v12.');
+}
+if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*10/.test(backupVersions)) {
+  fail('Activities doit conserver le schéma backup JSON v10.');
 }
 
 if (failures.length > 0) {
@@ -91,6 +110,6 @@ if (failures.length > 0) {
   process.exitCode = 1;
 } else {
   console.log(
-    'Audit de synchronisation sportive B1 réussi : activités, suppressions, isolation de compte et interface manuelle validées.',
+    'Audit de synchronisation sportive B1 réussi : activités réalisées, planning endurance, suppressions/restaurations, provenance directionnelle, isolation de compte et versions de données validés.',
   );
 }
