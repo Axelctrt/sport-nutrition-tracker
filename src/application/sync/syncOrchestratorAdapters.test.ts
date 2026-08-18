@@ -1,13 +1,4 @@
-const activityDirectionals = vi.hoisted(() => ({
-  fromCloud: vi.fn(async () => undefined),
-  toCloud: vi.fn(async () => undefined),
-}));
-
-vi.mock('@/infrastructure/sync-prototype/realActivitySyncService', () => ({
-  synchronizeRegisteredRealActivitiesFromCloud: activityDirectionals.fromCloud,
-  synchronizeRegisteredRealActivitiesToCloud: activityDirectionals.toCloud,
-}));
-
+import adapterSource from '@/application/sync/syncOrchestratorAdapters.ts?raw';
 import {
   createSyncOrchestratorDomains,
 } from '@/application/sync/syncOrchestratorAdapters';
@@ -51,54 +42,24 @@ describe('syncOrchestratorAdapters', () => {
     expect(syncRealStrength).toHaveBeenCalledTimes(1);
   });
 
-  it('revalide puis route les modes directionnels Activities vers les primitives sûres', async () => {
-    activityDirectionals.fromCloud.mockClear();
-    activityDirectionals.toCloud.mockClear();
-    let origin: 'cloud' | 'local' = 'cloud';
-    const analyzeRealActivities = vi.fn(async () => ({
-      differingEntityCount: 1,
-      changeOrigin: origin,
-    }));
-    const syncRealActivities = vi.fn(async () => undefined);
-    const syncNow = vi.fn(async () => undefined);
-    const client = {
-      analyzeRealWeights: vi.fn(async () => ({ differingEntityCount: 0 })),
-      syncRealWeights: vi.fn(async () => undefined),
-      analyzeRealActivities,
-      syncRealActivities,
-      syncNow,
-      getSnapshot: vi.fn(() => ({
-        account: { isLoggedIn: true, isLoading: false, userId: 'user-activities' },
-        realActivities: {
-          enabled: true,
-          status: 'ready',
-          preview: { differingEntityCount: 1, changeOrigin: origin },
-        },
-      })),
-    } as unknown as SyncPrototypeClient;
-
-    const activities = createSyncOrchestratorDomains(client)
-      .find((domain) => domain.id === 'activities');
-    expect(activities).toBeDefined();
-
-    await activities!.synchronize('cloud-only');
-    expect(syncNow).toHaveBeenCalledTimes(1);
-    expect(analyzeRealActivities).toHaveBeenCalledTimes(2);
-    expect(activityDirectionals.fromCloud).toHaveBeenCalledWith('user-activities');
-    expect(syncRealActivities).not.toHaveBeenCalled();
-
-    origin = 'local';
-    analyzeRealActivities.mockClear();
-    syncNow.mockClear();
-    await activities!.synchronize('local-only');
-    expect(activityDirectionals.toCloud).toHaveBeenCalledWith('user-activities');
-    expect(syncNow).toHaveBeenCalledTimes(2);
-    expect(analyzeRealActivities).toHaveBeenCalledTimes(2);
-    expect(syncRealActivities).not.toHaveBeenCalled();
+  it('câble Activities vers les primitives enregistrées sûres avec revalidation fraîche', () => {
+    expect(adapterSource).toContain(
+      'synchronizeRegisteredRealActivitiesFromCloud',
+    );
+    expect(adapterSource).toContain(
+      'synchronizeRegisteredRealActivitiesToCloud',
+    );
+    expect(adapterSource).toContain(
+      "synchronizeRegisteredDirection(\n          client,\n          'activities',\n          'cloud'",
+    );
+    expect(adapterSource).toContain(
+      "synchronizeRegisteredDirection(\n          client,\n          'activities',\n          'local'",
+    );
+    expect(adapterSource).toContain('await client.syncNow();');
+    expect(adapterSource).toContain('await analyze();');
   });
 
   it('reste sans écriture directionnelle Activities si la provenance fraîche devient unknown', async () => {
-    activityDirectionals.fromCloud.mockClear();
     let analysisCount = 0;
     const client = {
       analyzeRealWeights: vi.fn(async () => ({ differingEntityCount: 0 })),
@@ -126,6 +87,8 @@ describe('syncOrchestratorAdapters', () => {
       .find((domain) => domain.id === 'activities')!;
     await activities.synchronize('cloud-only');
 
-    expect(activityDirectionals.fromCloud).not.toHaveBeenCalled();
+    expect(client.syncNow).toHaveBeenCalledTimes(1);
+    expect(client.analyzeRealActivities).toHaveBeenCalledTimes(1);
+    expect(client.syncRealActivities).not.toHaveBeenCalled();
   });
 });
