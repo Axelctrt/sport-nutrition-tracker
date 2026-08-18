@@ -18,7 +18,7 @@ import {
   SYNC_LOCAL_DATA_CHANGED_EVENT,
   syncLocalDataChangedDetail,
 } from '@/application/sync/syncLocalChangeEvents';
-import { GOAL_STATE_CHANGED_EVENT } from '@/domain/goals/goalState';
+import { GOAL_STATE_PERSISTED_EVENT } from '@/domain/goals/goalState';
 import { ENDURANCE_PLANNING_CHANGED_EVENT } from '@/domain/planning/endurancePlanningState';
 import { WEEKLY_MISSION_HISTORY_CHANGED_EVENT } from '@/domain/rewards/weeklyMissionHistory';
 import type { AppSettings } from '@/domain/models/settings';
@@ -189,7 +189,7 @@ export class AutomaticSyncController {
     void this.triggerLocalChange(['weights']);
   };
 
-  private readonly handleGoalChange = () => {
+  private readonly handleGoalPersisted = () => {
     void this.triggerLocalChange(['goals']);
   };
 
@@ -297,8 +297,8 @@ export class AutomaticSyncController {
       this.handleWeightChange,
     );
     this.eventTarget?.addEventListener(
-      GOAL_STATE_CHANGED_EVENT,
-      this.handleGoalChange,
+      GOAL_STATE_PERSISTED_EVENT,
+      this.handleGoalPersisted,
     );
     this.eventTarget?.addEventListener(
       ENDURANCE_PLANNING_CHANGED_EVENT,
@@ -338,8 +338,8 @@ export class AutomaticSyncController {
       this.handleWeightChange,
     );
     this.eventTarget?.removeEventListener(
-      GOAL_STATE_CHANGED_EVENT,
-      this.handleGoalChange,
+      GOAL_STATE_PERSISTED_EVENT,
+      this.handleGoalPersisted,
     );
     this.eventTarget?.removeEventListener(
       ENDURANCE_PLANNING_CHANGED_EVENT,

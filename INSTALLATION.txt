@@ -1,8 +1,8 @@
-SPORTPILOT 1.0.2 - MAINTENANCE CONTINUITE GOALS + WEIGHTS
+SPORTPILOT 1.0.3 - HOTFIX CONTINUITE GOALS
 
 Checklist de qualification :
-1. Verifier develop@37cae57dc779d6410f35a177403706be0a3eb382.
-2. Verifier package.json et package-lock.json en 1.0.2.
+1. Verifier develop@e4b0992ad3b524a529e6962f54407235263f6fa5.
+2. Verifier package.json et package-lock.json en 1.0.3.
 3. Executer npm ci.
 4. Executer git diff --check.
 5. Executer lint, tests, build, audit release-consolidation et audit P0.
@@ -13,8 +13,9 @@ Checklist de qualification :
 10. Publier une Preview Pages Direct Upload du SHA final exact.
 11. Verifier le CORS Dexie de l'origine immuable.
 12. Promouvoir develop vers main uniquement apres les gates verts.
-13. Taguer v1.0.2 et publier la GitHub Release uniquement sur le SHA publie.
+13. Taguer v1.0.3 et publier la GitHub Release uniquement sur le SHA publie.
 14. Deployer la production Pages depuis ce meme SHA.
-15. Ne lancer aucune migration D1.
+15. Qualifier le compte legacy Goals reel avant nettoyage CORS Preview.
+16. Ne lancer aucune migration D1.
 
 Aucune formule calorique, aucun theme et aucun elargissement IA ne sont inclus.

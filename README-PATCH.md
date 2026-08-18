@@ -1,25 +1,23 @@
-# SportPilot 1.0.2 — maintenance continuité
+# SportPilot 1.0.3 — hotfix continuité Goals
 
-Branche : `release/1.0.2`.
+Branche : `release/1.0.3`.
 
 Base fonctionnelle qualifiée :
-`develop@37cae57dc779d6410f35a177403706be0a3eb382`.
+`develop@e4b0992ad3b524a529e6962f54407235263f6fa5`.
 
-Cette branche prépare uniquement la publication de l'extension de continuité
-sûre Goals + Weights déjà fusionnée via #173 et validée sur Preview immuable.
-Elle ne réimplémente aucun comportement métier.
+Ce lot prépare uniquement la publication du hotfix Goals déjà fusionné via #176 et qualifié sur Preview fonctionnelle. Il ne réimplémente aucun comportement métier.
 
 Garanties conservées :
 
+- réconciliation initiale Goals legacy explicite ;
+- `unknown` et `both` fail-closed hors parcours initial autorisé ;
+- automatisme Strength + Goals + Weights uniquement ;
 - Dexie v12 ;
 - sauvegarde JSON v10 ;
 - runtime Dexie Cloud v16 ;
-- whitelist automatique Strength + Goals + Weights uniquement ;
-- fail-closed pour `both` et `unknown` ;
 - aucune migration D1 ;
 - aucune modification de formule calorique ;
 - aucun thème modifié ;
 - aucun élargissement IA.
 
-La Preview finale, `develop → main`, le tag `v1.0.2`, la GitHub Release et la
-production restent des gates techniques séquentiels.
+La Preview finale versionnée, `develop → main`, le tag `v1.0.3`, la GitHub Release et la production restent des gates techniques séquentiels.

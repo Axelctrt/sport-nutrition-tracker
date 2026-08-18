@@ -5,6 +5,10 @@ import type {
   SyncOrchestratorScheduleRequest,
 } from '@/application/sync/syncOrchestrator';
 import { createDefaultAppSettings } from '@/domain/defaults/appSettings';
+import {
+  GOAL_STATE_CHANGED_EVENT,
+  GOAL_STATE_PERSISTED_EVENT,
+} from '@/domain/goals/goalState';
 import type { AppSettings } from '@/domain/models/settings';
 import type { SettingsRepository } from '@/infrastructure/repositories/contracts/SettingsRepository';
 import type {
@@ -170,6 +174,49 @@ describe('AutomaticSyncController — whitelist Goals + Weights', () => {
     expect(schedule).toHaveBeenCalledWith(expect.objectContaining({
       operation: 'analyze',
     }));
+    controller.dispose();
+  });
+
+  it('ignore goals-changed et déclenche Goals seulement après goals-persisted', async () => {
+    const eventTarget = new EventTarget();
+    const { value, schedule } = orchestrator([
+      {
+        domainId: 'goals',
+        status: 'local-changes-pending',
+        differingEntityCount: 1,
+        changeOrigin: 'local',
+      },
+    ]);
+    const controller = new AutomaticSyncController({
+      client: client(),
+      settingsRepository: settingsRepository(),
+      createOrchestrator: () => value,
+      eventTarget,
+      lifecycleDebounceMs: 0,
+      localChangeDebounceMs: 0,
+    });
+    await controller.initialize();
+    schedule.mockClear();
+
+    eventTarget.dispatchEvent(new Event(GOAL_STATE_CHANGED_EVENT));
+    await Promise.resolve();
+    expect(schedule).not.toHaveBeenCalled();
+
+    eventTarget.dispatchEvent(new Event(GOAL_STATE_PERSISTED_EVENT));
+    await vi.waitFor(() => expect(schedule).toHaveBeenCalled());
+    expect(schedule).toHaveBeenNthCalledWith(1, {
+      operation: 'analyze',
+      source: 'local-change',
+      domainIds: ['goals'],
+      delayMs: 0,
+    });
+    expect(schedule).toHaveBeenNthCalledWith(2, {
+      operation: 'sync',
+      syncMode: 'local-only',
+      source: 'local-change',
+      domainIds: ['goals'],
+      delayMs: 0,
+    });
     controller.dispose();
   });
 
