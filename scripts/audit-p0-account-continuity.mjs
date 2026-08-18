@@ -11,8 +11,12 @@ const requiredBehaviorSuites = [
   'src/infrastructure/sync-prototype/accountMultiDeviceContinuity.integration.test.ts',
   'src/infrastructure/sync-prototype/realStrengthSyncService.test.ts',
   'src/infrastructure/sync-prototype/realGoalsWeightsAutomaticContinuity.test.ts',
+  'src/infrastructure/sync-prototype/realActivitySyncService.test.ts',
+  'src/infrastructure/sync-prototype/realActivitiesAutomaticContinuity.test.ts',
+  'src/infrastructure/sync-prototype/realGoalConcurrentResolutionService.test.ts',
   'src/application/sync/automaticSyncController.test.ts',
   'src/application/sync/automaticSyncControllerGoalsWeights.test.ts',
+  'src/application/sync/automaticSyncControllerActivities.test.ts',
   'src/application/sync/syncOrchestrator.test.ts',
   'src/application/sync/syncOrchestratorAdapters.test.ts',
   'src/infrastructure/data-spaces/cloudAccountRestoreService.test.ts',
@@ -34,7 +38,9 @@ const requiredStructuralFiles = [
   'src/application/sync/syncOrchestratorAdapters.ts',
   'src/infrastructure/sync-prototype/realStrengthSyncService.ts',
   'src/infrastructure/sync-prototype/realGoalSyncService.ts',
+  'src/infrastructure/sync-prototype/realGoalConcurrentResolutionService.ts',
   'src/infrastructure/sync-prototype/realWeightSyncService.ts',
+  'src/infrastructure/sync-prototype/realActivitySyncService.ts',
   'src/infrastructure/sync-prototype/logicalSyncState.ts',
   'src/infrastructure/sync-prototype/SyncPrototypeDatabase.ts',
   'src/infrastructure/data-spaces/cloudAccountRestoreService.ts',
@@ -118,6 +124,22 @@ if (failures.length === 0) {
     }
   }
 
+  const activitiesIntegrationTest = read(
+    'src/infrastructure/sync-prototype/realActivitiesAutomaticContinuity.test.ts',
+  );
+  for (const structuralMarker of [
+    'AutomaticSyncController',
+    'synchronizeRealActivitiesToCloud',
+    'synchronizeRealActivitiesFromCloud',
+    'DexieActivityRepository',
+    'ENDURANCE_PLANNING_PERSISTED_EVENT',
+    'replicateActivitiesCloud',
+  ]) {
+    if (!activitiesIntegrationTest.includes(structuralMarker)) {
+      fail(`contrat structurel du test A→B Activities absent : ${structuralMarker}.`);
+    }
+  }
+
   const adapters = read('src/application/sync/syncOrchestratorAdapters.ts');
   for (const marker of [
     "syncMode === 'cloud-only'",
@@ -128,6 +150,8 @@ if (failures.length === 0) {
     'synchronizeRegisteredRealGoalsToCloud',
     'synchronizeRegisteredRealWeightsFromCloud',
     'synchronizeRegisteredRealWeightsToCloud',
+    'synchronizeRegisteredRealActivitiesFromCloud',
+    'synchronizeRegisteredRealActivitiesToCloud',
   ]) {
     if (!adapters.includes(marker)) {
       fail(`routage directionnel sûr absent : ${marker}.`);
@@ -170,6 +194,20 @@ if (failures.length === 0) {
     }
   }
 
+  const goalsBoth = read(
+    'src/infrastructure/sync-prototype/realGoalConcurrentResolutionService.ts',
+  );
+  for (const marker of [
+    "origin !== 'both'",
+    'baselineDigest',
+    'prepareRealGoalConcurrentReconciliation',
+    'applyRealGoalConcurrentReconciliation',
+  ]) {
+    if (!goalsBoth.includes(marker)) {
+      fail(`résolution manuelle Goals both absente : ${marker}.`);
+    }
+  }
+
   const weights = read(
     'src/infrastructure/sync-prototype/realWeightSyncService.ts',
   );
@@ -187,6 +225,29 @@ if (failures.length === 0) {
     }
   }
 
+  const activities = read(
+    'src/infrastructure/sync-prototype/realActivitySyncService.ts',
+  );
+  for (const marker of [
+    'synchronizeRealActivitiesFromCloud',
+    'synchronizeRealActivitiesToCloud',
+    "requireChangeOrigin: 'cloud'",
+    "requireChangeOrigin: 'local'",
+    'applyCloudTargetIfUnchanged',
+    'applyLocalTargetIfUnchanged',
+    'cloudStateMatchesExpected',
+    'flushEndurancePlanningPersistence',
+    "domainId: 'activities'",
+    "entityId: 'activities'",
+  ]) {
+    if (!activities.includes(marker)) {
+      fail(`primitive directionnelle Activities absente : ${marker}.`);
+    }
+  }
+  if (/\bchooseLatest\b/.test(activities)) {
+    fail('Activities ne doit pas choisir silencieusement une version sur unknown/both.');
+  }
+
   const controller = read('src/application/sync/automaticSyncController.ts');
   const whitelist = (constantName) => {
     const match = controller.match(
@@ -199,6 +260,7 @@ if (failures.length === 0) {
     'strength',
     'goals',
     'weights',
+    'activities',
   ]);
   for (const constantName of [
     'SAFE_REMOTE_CONVERGENCE_DOMAIN_IDS',
@@ -210,7 +272,7 @@ if (failures.length === 0) {
       || values.length !== expectedAutomaticDirectionalDomains.size
       || values.some((value) => !expectedAutomaticDirectionalDomains.has(value))
     ) {
-      fail(`${constantName} doit rester strictement limité à Strength, Goals et Weights.`);
+      fail(`${constantName} doit rester strictement limité à Strength, Goals, Weights et Activities.`);
     }
   }
 
@@ -242,5 +304,5 @@ if (failures.length > 0) {
 }
 
 console.log(
-  'Audit P0 continuité multi-appareils réussi : contrats structurels S0–S5 présents, suites comportementales intégrées à Vitest, primitives directionnelles automatiques strictement limitées à Strength/Goals/Weights, baselines par replica et versions Dexie/backup préservées. Les comportements A→B restent prouvés par Vitest, pas par cet audit structurel.',
+  'Audit P0 continuité multi-appareils réussi : contrats structurels S0–S5 présents, suites comportementales intégrées à Vitest, primitives directionnelles automatiques strictement limitées à Strength/Goals/Weights/Activities, Goals both résolu uniquement par choix manuel explicite, baselines par replica et versions Dexie/backup préservées. Les comportements A→B restent prouvés par Vitest, pas par cet audit structurel.',
 );

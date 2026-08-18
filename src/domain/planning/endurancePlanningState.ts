@@ -42,6 +42,9 @@ export const ENDURANCE_PLANNING_STORAGE_KEY =
 export const ENDURANCE_PLANNING_CHANGED_EVENT =
   'sportpilot:endurance-planning-changed';
 
+export const ENDURANCE_PLANNING_PERSISTED_EVENT =
+  'sportpilot:endurance-planning-persisted';
+
 export function emptyEndurancePlanningState():
   EndurancePlanningState {
   return {
@@ -270,6 +273,14 @@ function dispatchEndurancePlanningChanged(): void {
   );
 }
 
+function dispatchEndurancePlanningPersisted(): void {
+  if (typeof window === 'undefined') return;
+
+  window.dispatchEvent(
+    new Event(ENDURANCE_PLANNING_PERSISTED_EVENT),
+  );
+}
+
 export function hydrateEndurancePlanningRuntime(
   state: EndurancePlanningState,
   persist: EndurancePlanningPersistence,
@@ -328,7 +339,10 @@ export function writeEndurancePlanningState(
   endurancePersistenceQueue = endurancePersistenceQueue
     .catch(() => undefined)
     .then(() => persist(snapshot))
-    .then(() => removeEnduranceFallback(serialized))
+    .then(() => {
+      removeEnduranceFallback(serialized);
+      dispatchEndurancePlanningPersisted();
+    })
     .catch((error: unknown) => {
       console.error(
         'La persistance Dexie du planning d’endurance a échoué.',

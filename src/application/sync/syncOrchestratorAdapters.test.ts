@@ -1,3 +1,4 @@
+import adapterSource from '@/application/sync/syncOrchestratorAdapters.ts?raw';
 import {
   createSyncOrchestratorDomains,
 } from '@/application/sync/syncOrchestratorAdapters';
@@ -41,24 +42,53 @@ describe('syncOrchestratorAdapters', () => {
     expect(syncRealStrength).toHaveBeenCalledTimes(1);
   });
 
-  it('refuse les modes directionnels pour un domaine encore sans primitive sûre', async () => {
+  it('câble Activities vers les primitives enregistrées sûres avec revalidation fraîche', () => {
+    expect(adapterSource).toContain(
+      'synchronizeRegisteredRealActivitiesFromCloud',
+    );
+    expect(adapterSource).toContain(
+      'synchronizeRegisteredRealActivitiesToCloud',
+    );
+    expect(adapterSource).toContain(
+      "synchronizeRegisteredDirection(\n          client,\n          'activities',\n          'cloud'",
+    );
+    expect(adapterSource).toContain(
+      "synchronizeRegisteredDirection(\n          client,\n          'activities',\n          'local'",
+    );
+    expect(adapterSource).toContain('await client.syncNow();');
+    expect(adapterSource).toContain('await analyze();');
+  });
+
+  it('reste sans écriture directionnelle Activities si la provenance fraîche devient unknown', async () => {
+    let analysisCount = 0;
     const client = {
       analyzeRealWeights: vi.fn(async () => ({ differingEntityCount: 0 })),
       syncRealWeights: vi.fn(async () => undefined),
-      analyzeRealActivities: vi.fn(async () => ({ differingEntityCount: 1 })),
+      analyzeRealActivities: vi.fn(async () => {
+        analysisCount += 1;
+        return { differingEntityCount: 1, changeOrigin: 'unknown' };
+      }),
       syncRealActivities: vi.fn(async () => undefined),
-      getSnapshot: vi.fn(() => ({})),
+      syncNow: vi.fn(async () => undefined),
+      getSnapshot: vi.fn(() => ({
+        account: { isLoggedIn: true, isLoading: false, userId: 'user-activities' },
+        realActivities: {
+          enabled: true,
+          status: 'ready',
+          preview: {
+            differingEntityCount: 1,
+            changeOrigin: analysisCount === 0 ? 'cloud' : 'unknown',
+          },
+        },
+      })),
     } as unknown as SyncPrototypeClient;
 
     const activities = createSyncOrchestratorDomains(client)
-      .find((domain) => domain.id === 'activities');
+      .find((domain) => domain.id === 'activities')!;
+    await activities.synchronize('cloud-only');
 
-    expect(activities).toBeDefined();
-    await expect(activities!.synchronize('cloud-only')).rejects.toThrow(
-      'La convergence cloud-only n’est pas disponible pour activities.',
-    );
-    await expect(activities!.synchronize('local-only')).rejects.toThrow(
-      'L’envoi local-only n’est pas disponible pour activities.',
-    );
+    expect(client.syncNow).toHaveBeenCalledTimes(1);
+    expect(client.analyzeRealActivities).toHaveBeenCalledTimes(1);
+    expect(client.syncRealActivities).not.toHaveBeenCalled();
   });
 });

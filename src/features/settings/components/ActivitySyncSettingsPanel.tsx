@@ -61,6 +61,23 @@ function plural(value: number, singular: string, pluralForm: string): string {
   return value > 1 ? pluralForm : singular;
 }
 
+function provenanceLabel(
+  origin: 'local' | 'cloud' | 'both' | 'unknown' | undefined,
+): string {
+  switch (origin) {
+    case 'local':
+      return 'local — cet appareil';
+    case 'cloud':
+      return 'cloud — cloud';
+    case 'both':
+      return 'both — modifications des deux côtés';
+    case 'unknown':
+      return 'unknown — origine indéterminée';
+    default:
+      return 'non déterminée';
+  }
+}
+
 export function ActivitySyncSettingsPanel({
   client: clientOverride,
 }: ActivitySyncSettingsPanelProps) {
@@ -124,11 +141,11 @@ export function ActivitySyncSettingsPanel({
         tone: 'success',
         message:
           preview.differingEntityCount === 0
-            ? 'Les activités locales et cloud sont déjà cohérentes.'
+            ? 'Les activités et le planning endurance sont déjà cohérents avec le cloud.'
             : `${preview.differingEntityCount} ${plural(
                 preview.differingEntityCount,
-                'activité diffère',
-                'activités diffèrent',
+                'élément diffère',
+                'éléments diffèrent',
               )} entre cet appareil et le cloud.`,
       });
     } catch (error) {
@@ -151,16 +168,26 @@ export function ActivitySyncSettingsPanel({
     setBusyAction('sync');
     try {
       const result = await client.syncRealActivities();
-      const writes =
+      const activityWrites =
         result.uploadedActivities + result.downloadedActivities;
+      const planningWrites =
+        (result.uploadedEndurancePlanningSessions ?? 0)
+        + (result.downloadedEndurancePlanningSessions ?? 0);
       const removals =
-        result.removedLocalActivities + result.removedCloudActivities;
+        result.removedLocalActivities
+        + result.removedCloudActivities
+        + (result.removedLocalEndurancePlanningSessions ?? 0)
+        + (result.removedCloudEndurancePlanningSessions ?? 0);
       setFeedback({
         tone: 'success',
-        message: `${writes} ${plural(
-          writes,
+        message: `${activityWrites} ${plural(
+          activityWrites,
           'activité mise à jour',
           'activités mises à jour',
+        )}, ${planningWrites} ${plural(
+          planningWrites,
+          'séance planifiée mise à jour',
+          'séances planifiées mises à jour',
         )} et ${removals} ${plural(
           removals,
           'suppression appliquée',
@@ -204,6 +231,9 @@ export function ActivitySyncSettingsPanel({
     );
   }
 
+  const preview = activitySnapshot.preview;
+  const origin = preview?.changeOrigin;
+  const directional = origin === 'local' || origin === 'cloud';
   const unavailable =
     !client.analyzeRealActivities || !client.syncRealActivities;
   const disabled =
@@ -227,9 +257,7 @@ export function ActivitySyncSettingsPanel({
               </h3>
             </div>
             <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-              Converge manuellement les activités de course, natation, vélo,
-              marche, cardio et musculation déclarative entre les appareils du
-              même compte.
+              Vérifie ensemble les activités réalisées, leur lien éventuel avec le planning et les séances d’endurance planifiées. Une écriture n’est autorisée que si sa provenance est démontrée.
             </p>
           </div>
           <span className="inline-flex min-h-9 shrink-0 items-center rounded-full bg-slate-100 px-3 text-sm font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
@@ -247,8 +275,7 @@ export function ActivitySyncSettingsPanel({
 
         {!snapshot.account.isLoggedIn ? (
           <InlineNotice className="mt-4" tone="info" title="Connexion requise">
-            Connecte le compte associé à cet espace avant de synchroniser les
-            activités.
+            Connecte le compte associé à cet espace avant de synchroniser les activités.
           </InlineNotice>
         ) : null}
 
@@ -258,29 +285,51 @@ export function ActivitySyncSettingsPanel({
           </InlineNotice>
         ) : null}
 
-        {activitySnapshot.preview ? (
-          <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2 xl:grid-cols-5">
-            <div>
-              <dt className="text-slate-500 dark:text-slate-400">Activités locales</dt>
-              <dd className="mt-1 font-semibold">{activitySnapshot.preview.localActivityCount}</dd>
-            </div>
-            <div>
-              <dt className="text-slate-500 dark:text-slate-400">Activités cloud</dt>
-              <dd className="mt-1 font-semibold">{activitySnapshot.preview.cloudActivityCount}</dd>
-            </div>
-            <div>
-              <dt className="text-slate-500 dark:text-slate-400">Suppressions locales</dt>
-              <dd className="mt-1 font-semibold">{activitySnapshot.preview.localDeletionCount}</dd>
-            </div>
-            <div>
-              <dt className="text-slate-500 dark:text-slate-400">Suppressions cloud</dt>
-              <dd className="mt-1 font-semibold">{activitySnapshot.preview.cloudDeletionCount}</dd>
-            </div>
-            <div>
-              <dt className="text-slate-500 dark:text-slate-400">Éléments différents</dt>
-              <dd className="mt-1 font-semibold">{activitySnapshot.preview.differingEntityCount}</dd>
-            </div>
-          </dl>
+        {preview ? (
+          <>
+            <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2 xl:grid-cols-7">
+              <div>
+                <dt className="text-slate-500 dark:text-slate-400">Activités locales</dt>
+                <dd className="mt-1 font-semibold">{preview.localActivityCount}</dd>
+              </div>
+              <div>
+                <dt className="text-slate-500 dark:text-slate-400">Activités cloud</dt>
+                <dd className="mt-1 font-semibold">{preview.cloudActivityCount}</dd>
+              </div>
+              <div>
+                <dt className="text-slate-500 dark:text-slate-400">Planning local</dt>
+                <dd className="mt-1 font-semibold">{preview.localEndurancePlanningCount ?? 0}</dd>
+              </div>
+              <div>
+                <dt className="text-slate-500 dark:text-slate-400">Planning cloud</dt>
+                <dd className="mt-1 font-semibold">{preview.cloudEndurancePlanningCount ?? 0}</dd>
+              </div>
+              <div>
+                <dt className="text-slate-500 dark:text-slate-400">Suppressions locales</dt>
+                <dd className="mt-1 font-semibold">{preview.localDeletionCount}</dd>
+              </div>
+              <div>
+                <dt className="text-slate-500 dark:text-slate-400">Éléments différents</dt>
+                <dd className="mt-1 font-semibold">{preview.differingEntityCount}</dd>
+              </div>
+              <div>
+                <dt className="text-slate-500 dark:text-slate-400">Provenance</dt>
+                <dd className="mt-1 font-semibold">{provenanceLabel(origin)}</dd>
+              </div>
+            </dl>
+
+            {origin === 'unknown' ? (
+              <InlineNotice className="mt-4" tone="info" title="Origine indéterminée">
+                Les deux côtés diffèrent sans référence antérieure fiable. SportPilot analyse la situation mais n’écrit rien automatiquement ni manuellement dans cet état.
+              </InlineNotice>
+            ) : null}
+
+            {origin === 'both' ? (
+              <InlineNotice className="mt-4" tone="info" title="Modifications des deux côtés">
+                Le planning ou les activités ont changé sur cet appareil et dans le cloud depuis la dernière référence. Aucune direction n’est choisie et aucune écriture n’est autorisée.
+              </InlineNotice>
+            ) : null}
+          </>
         ) : null}
 
         {feedback ? (
@@ -309,13 +358,15 @@ export function ActivitySyncSettingsPanel({
             />
             {busyAction === 'analyze' ? 'Analyse…' : 'Analyser sans modifier'}
           </Button>
-          <Button
-            disabled={disabled}
-            onClick={() => setConfirmationOpen(true)}
-          >
-            <Cloud aria-hidden="true" className="size-4" />
-            Synchroniser les activités
-          </Button>
+          {directional ? (
+            <Button
+              disabled={disabled}
+              onClick={() => setConfirmationOpen(true)}
+            >
+              <Cloud aria-hidden="true" className="size-4" />
+              Synchroniser les activités
+            </Button>
+          ) : null}
           <Link
             to={routePaths.accountDevices}
             className="inline-flex min-h-11 items-center justify-center rounded-xl px-4 text-sm font-semibold text-brand-700 hover:bg-brand-50 dark:text-brand-300 dark:hover:bg-brand-950/30"
@@ -325,15 +376,14 @@ export function ActivitySyncSettingsPanel({
         </div>
       </div>
 
-      <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">
-        Ce premier lot est manuel. Les objectifs et les séances de musculation
-        détaillées seront ajoutés dans les lots suivants de la version 0.19.0.
-      </p>
-
       <ConfirmationDialog
         open={confirmationOpen}
         title="Synchroniser les activités ?"
-        description="Les versions les plus récentes seront conservées. Les suppressions plus récentes resteront prioritaires et l’opération ne touchera ni aux objectifs ni aux séances de musculation détaillées."
+        description={
+          origin === 'local'
+            ? 'La modification a été identifiée comme locale. Seule la direction cet appareil vers le cloud est autorisée pour les activités et le planning endurance.'
+            : 'La modification a été identifiée comme distante. Seule la direction cloud vers cet appareil est autorisée pour les activités et le planning endurance.'
+        }
         confirmLabel="Synchroniser"
         isPending={busyAction === 'sync'}
         onCancel={() => setConfirmationOpen(false)}

@@ -10,6 +10,7 @@ const fail = (message) => failures.push(message);
 const requiredFiles = [
   'src/application/sync/automaticSyncController.ts',
   'src/application/sync/automaticSyncController.test.ts',
+  'src/application/sync/automaticSyncControllerActivities.test.ts',
   'src/application/sync/automaticSyncEvents.ts',
   'src/application/sync/syncLocalChangeEvents.ts',
   'src/application/sync/syncOrchestratorAdapters.ts',
@@ -39,9 +40,19 @@ if (failures.length === 0) {
     'foregroundMinimumIntervalMs',
     'automaticAccountSyncAccountFingerprint',
     "return this.connectionType() === 'wifi'",
+    'ENDURANCE_PLANNING_PERSISTED_EVENT',
+    "this.triggerLocalChange(['activities'])",
   ]) {
     if (!controller.includes(marker)) {
       fail(`Garde-fou F2 manquant dans le contrôleur : ${marker}.`);
+    }
+  }
+  if (controller.includes('ENDURANCE_PLANNING_CHANGED_EVENT')) {
+    fail('Le contrôleur automatique ne doit pas utiliser le signal UI du planning avant persistance.');
+  }
+  for (const domain of ['strength', 'goals', 'weights', 'activities']) {
+    if (!controller.includes(`'${domain}'`)) {
+      fail(`Le domaine directionnel sûr ${domain} est absent du contrôleur.`);
     }
   }
 
@@ -74,8 +85,8 @@ if (failures.length === 0) {
     'Wi-Fi uniquement',
     'automaticWeightSyncEnabled: false',
     'Autoriser la continuité',
-    'transferts automatiques sûrs concernent actuellement la musculation',
-    'Les autres rubriques ne sont jamais écrites automatiquement',
+    'la musculation, les objectifs, les pesées et les activités avec leur planning endurance',
+    'provenance indéterminée ou modifiée des deux côtés reste sans écriture automatique',
   ]) {
     if (!panel.includes(marker)) fail(`Réglage F2 incomplet : ${marker}.`);
   }
@@ -106,6 +117,18 @@ if (failures.length === 0) {
     const content = read(`src/infrastructure/repositories/dexie/${filename}`);
     if (!content.includes(marker)) {
       fail(`Le dépôt ${filename} ne signale pas correctement son domaine ${marker}.`);
+    }
+  }
+
+  const planning = read('src/domain/planning/endurancePlanningState.ts');
+  for (const marker of [
+    'ENDURANCE_PLANNING_CHANGED_EVENT',
+    'ENDURANCE_PLANNING_PERSISTED_EVENT',
+    'dispatchEndurancePlanningPersisted',
+    '.then(() => persist(snapshot))',
+  ]) {
+    if (!planning.includes(marker)) {
+      fail(`Le planning endurance ne verrouille pas la persistance durable : ${marker}.`);
     }
   }
 
@@ -155,5 +178,5 @@ if (failures.length > 0) {
 }
 
 console.log(
-  'Audit F2 réussi : déclencheurs maîtrisés, autorisation par compte, analyse fraîche avant écriture, convergence directionnelle sûre, modes réseau et runtime cloud v16 social prêt.',
+  'Audit F2 réussi : déclencheurs maîtrisés, quatre domaines directionnels sûrs dont Activities après persistance durable, autorisation par compte, analyse fraîche avant écriture, modes réseau et runtime cloud v16 social prêt.',
 );

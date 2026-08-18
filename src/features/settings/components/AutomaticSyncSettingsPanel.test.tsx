@@ -66,7 +66,9 @@ describe('AutomaticSyncSettingsPanel', () => {
 
     expect(await screen.findByRole('heading', { name: 'Continuité automatique' }))
       .toBeInTheDocument();
-    expect(screen.getByText(/transferts automatiques sûrs concernent actuellement la musculation/i))
+    expect(screen.getByText(/musculation, les objectifs, les pesées et les activités avec leur planning endurance/i))
+      .toBeInTheDocument();
+    expect(screen.getByText(/provenance indéterminée ou modifiée des deux côtés reste sans écriture automatique/i))
       .toBeInTheDocument();
     const button = screen.getByRole('button', {
       name: 'Autoriser la continuité',

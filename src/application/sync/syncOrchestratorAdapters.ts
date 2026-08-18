@@ -4,6 +4,10 @@ import type {
   SyncOrchestratorPreview,
 } from '@/application/sync/syncOrchestrator';
 import {
+  synchronizeRegisteredRealActivitiesFromCloud,
+  synchronizeRegisteredRealActivitiesToCloud,
+} from '@/infrastructure/sync-prototype/realActivitySyncService';
+import {
   synchronizeRegisteredRealGoalsFromCloud,
   synchronizeRegisteredRealGoalsToCloud,
 } from '@/infrastructure/sync-prototype/realGoalSyncService';
@@ -59,7 +63,7 @@ export function readSyncOrchestratorPreview(
 
 async function synchronizeRegisteredDirection(
   client: SyncPrototypeClient,
-  domainId: 'goals' | 'weights',
+  domainId: 'activities' | 'goals' | 'weights',
   expectedOrigin: 'cloud' | 'local',
   synchronizeRegistered: (currentUserId: string) => Promise<unknown>,
   analyze: () => Promise<{ readonly differingEntityCount: number }>,
@@ -184,6 +188,24 @@ export function createSyncOrchestratorDomains(
       ? () => client.analyzeRealActivities!()
       : undefined,
     client.syncRealActivities ? () => client.syncRealActivities!() : undefined,
+    client.analyzeRealActivities
+      ? () => synchronizeRegisteredDirection(
+          client,
+          'activities',
+          'cloud',
+          synchronizeRegisteredRealActivitiesFromCloud,
+          () => client.analyzeRealActivities!(),
+        )
+      : undefined,
+    client.analyzeRealActivities
+      ? () => synchronizeRegisteredDirection(
+          client,
+          'activities',
+          'local',
+          synchronizeRegisteredRealActivitiesToCloud,
+          () => client.analyzeRealActivities!(),
+        )
+      : undefined,
   );
   add(
     'goals',

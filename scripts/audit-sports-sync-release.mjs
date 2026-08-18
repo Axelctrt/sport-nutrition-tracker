@@ -28,6 +28,8 @@ for (const path of [
   'docs/architecture/sports-sync-0.19.0-b4.md',
   'src/infrastructure/sync-prototype/cloudSyncValue.ts',
   'src/infrastructure/sync-prototype/cloudSyncValue.test.ts',
+  'src/infrastructure/sync-prototype/realGoalConcurrentResolutionService.ts',
+  'src/infrastructure/sync-prototype/realGoalConcurrentResolutionService.test.ts',
 ]) {
   read(path);
 }
@@ -40,6 +42,7 @@ for (const expected of [
   'realWeights',
   'realWeightDeletionRecords',
   'realActivities',
+  'realEndurancePlanningSessions',
   'realActivityDeletionRecords',
   'realGoals',
   'realGoalDeletionRecords',
@@ -76,7 +79,7 @@ for (const expected of [
 
 const services = [
   ['pesées', 'src/infrastructure/sync-prototype/realWeightSyncService.ts', ['belongsToCurrentUser', 'chooseLatest', 'sameEntity']],
-  ['activités', 'src/infrastructure/sync-prototype/realActivitySyncService.ts', ['belongsToCurrentUser', 'chooseLatest', 'sameEntity']],
+  ['activités', 'src/infrastructure/sync-prototype/realActivitySyncService.ts', ['belongsToCurrentUser', 'sameEntity']],
   ['objectifs', 'src/infrastructure/sync-prototype/realGoalSyncService.ts', ['belongsToCurrentUser', 'sameEntity']],
   ['musculation', 'src/infrastructure/sync-prototype/realStrengthSyncService.ts', ['belongsToCurrentUser', 'chooseLatest', 'sameEntity']],
 ];
@@ -95,6 +98,31 @@ for (const [label, path, expectedHelpers] of services) {
   }
 }
 
+const activities = read('src/infrastructure/sync-prototype/realActivitySyncService.ts');
+if (/\bchooseLatest\b/.test(activities)) {
+  fail('Activities ne doit plus utiliser chooseLatest : unknown/both doivent rester fail-closed.');
+}
+for (const expected of [
+  'changeOrigin',
+  'flushEndurancePlanningPersistence',
+  "domainId: 'activities'",
+  "entityId: 'activities'",
+  'synchronizeRealActivitiesFromCloud',
+  'synchronizeRealActivitiesToCloud',
+  "requireChangeOrigin: 'cloud'",
+  "requireChangeOrigin: 'local'",
+  'applyCloudTargetIfUnchanged',
+  'applyLocalTargetIfUnchanged',
+  'cloudStateMatchesExpected',
+  'persistEqualActivityBaseline',
+  'restoreRealActivitiesFromCloudIntoEmptyLocal',
+  'options.writeCloud !== false',
+]) {
+  if (!activities.includes(expected)) {
+    fail(`la continuité sûre Activities ne verrouille pas ${expected}.`);
+  }
+}
+
 const goals = read('src/infrastructure/sync-prototype/realGoalSyncService.ts');
 if (/\bchooseLatest\b/.test(goals)) {
   fail('le service objectifs réintroduit chooseLatest alors que les états unknown/both doivent rester fail-closed.');
@@ -109,6 +137,25 @@ for (const expected of [
 ]) {
   if (!goals.includes(expected)) {
     fail(`la synchronisation des objectifs ne verrouille pas ${expected}.`);
+  }
+}
+
+const goalsBoth = read(
+  'src/infrastructure/sync-prototype/realGoalConcurrentResolutionService.ts',
+);
+for (const expected of [
+  'prepareRealGoalConcurrentReconciliation',
+  'applyRealGoalConcurrentReconciliation',
+  "origin !== 'both'",
+  'baselineDigest',
+  'readRequiredBaseline',
+  'cloudStateMatchesExpected',
+  'applyCloudTargetIfUnchanged',
+  'applyLocalTargetIfUnchanged',
+  'persistEqualBaseline',
+]) {
+  if (!goalsBoth.includes(expected)) {
+    fail(`la résolution manuelle Goals both ne verrouille pas ${expected}.`);
   }
 }
 
@@ -166,6 +213,6 @@ if (failures.length > 0) {
   process.exitCode = 1;
 } else {
   console.log(
-    'Audit du socle sportif réussi : quatre domaines synchronisés, Goals fail-closed sur unknown/both, suppressions durables, agrégats de musculation atomiques et runtime cloud v16 validés.',
+    'Audit du socle sportif réussi : Activities et Goals suivent des contrats directionnels explicites, Goals unknown/both restent fail-closed hors résolution manuelle, suppressions durables, agrégats de musculation atomiques et runtime cloud v16 validés.',
   );
 }
