@@ -1,31 +1,28 @@
-# SportPilot 1.0.2
+# SportPilot 1.0.3
 
-SportPilot `1.0.2` prépare l'extension de la continuité automatique sûre à
-Goals et Weights depuis le candidat fonctionnel qualifié
-`develop@37cae57dc779d6410f35a177403706be0a3eb382`.
+SportPilot `1.0.3` prépare le hotfix de continuité Goals qualifié depuis
+`develop@e4b0992ad3b524a529e6962f54407235263f6fa5`.
 
 Stable publiée avant cette maintenance :
 
-- version : `1.0.1` ;
-- `main@df28f61396160a68d24d110dd0924f491383faae` ;
-- tag : `v1.0.1` ;
+- version : `1.0.2` ;
+- `main@6e479170731d689683822374ba7c74fff425730d` ;
+- tag : `v1.0.2` ;
 - production : `https://sportpilot-pages.pages.dev` ;
-- aucune migration D1 ajoutée ou requise par 1.0.2.
+- aucune migration D1 ajoutée ou requise par 1.0.3.
 
 L’application reste mobile-first, local-first, utilisable hors ligne et
 installable en PWA.
 
-## Continuité multi-appareils 1.0.2
+## Hotfix continuité Goals 1.0.3
 
-- synchronisation automatique sûre limitée à Strength + Goals + Weights ;
-- `local-only` → upload directionnel ;
-- `cloud-only` → download directionnel ;
-- `both` / `unknown` → aucune écriture automatique ;
-- revalidation de la provenance avant écriture ;
-- tombstones, suppressions, idempotence et isolation du compte préservés ;
-- smoke physique Goals et Weights A → B validé ;
-- non-régression Strength A → B validée ;
-- absence de doublon Weight validée.
+- première réconciliation explicite des comptes historiques Goals divergents ;
+- aperçu réel des objectifs concernés avant le choix global local/cloud ;
+- `unknown` et `both` restent fail-closed dans l’automatisme et les merges génériques ;
+- signal Goals post-persistance durable pour déclencher l’automatisme ;
+- détail Objectifs accessible sur `/settings/sync-prototype` ;
+- synchronisation automatique sûre toujours limitée à Strength + Goals + Weights ;
+- Preview fonctionnelle A → B validée sans synchronisation manuelle.
 
 ## Invariants de données et produit
 
@@ -93,7 +90,8 @@ règles applicables aux agents sont dans [`AGENTS.md`](AGENTS.md) et l’histori
 synthétique dans [`CHANGELOG.md`](CHANGELOG.md).
 
 La maintenance courante est documentée dans
-[`RELEASE-NOTES-1.0.2.md`](RELEASE-NOTES-1.0.2.md). La maintenance 1.0.1 publiée
-reste archivée dans [`RELEASE-NOTES-1.0.1.md`](RELEASE-NOTES-1.0.1.md). Les
-archives 1.0.0, RC1, RC2 et 0.37.0 restent conservées dans leurs fichiers de
+[`RELEASE-NOTES-1.0.3.md`](RELEASE-NOTES-1.0.3.md). La maintenance 1.0.2 publiée
+reste archivée dans [`RELEASE-NOTES-1.0.2.md`](RELEASE-NOTES-1.0.2.md), comme
+la maintenance 1.0.1 dans [`RELEASE-NOTES-1.0.1.md`](RELEASE-NOTES-1.0.1.md).
+Les archives 1.0.0, RC1, RC2 et 0.37.0 restent conservées dans leurs fichiers de
 release respectifs.
