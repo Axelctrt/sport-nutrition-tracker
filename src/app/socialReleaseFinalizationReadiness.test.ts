@@ -2,7 +2,7 @@ import openFoodFactsProxySource from '@/../functions/_shared/openFoodFactsProxy.
 import packageSource from '@/../package.json?raw';
 import releaseChecklistSource from '@/../RELEASE-CHECKLIST.md?raw';
 import previousReleaseNotesSource from '@/../RELEASE-NOTES-1.0.1.md?raw';
-import releaseNotesSource from '@/../RELEASE-NOTES-1.0.2.md?raw';
+import releaseNotesSource from '@/../RELEASE-NOTES-1.0.3.md?raw';
 import {
   SOCIAL_ACTIVITY_SNAPSHOT_CONTRACT_VERSION,
 } from '@/domain/friends/socialActivitySnapshotContract';
@@ -10,11 +10,11 @@ import { CURRENT_BACKUP_SCHEMA_VERSION } from '@/infrastructure/backup/backupMig
 import { databaseSchemaVersion } from '@/infrastructure/database/schema';
 import { SYNC_PROTOTYPE_DATABASE_VERSION } from '@/infrastructure/sync-prototype/SyncPrototypeDatabase';
 
-describe('stable readiness 1.0.2', () => {
+describe('stable readiness 1.0.3', () => {
   it('expose la version stable dans le build et les métadonnées', () => {
-    expect(__APP_VERSION__).toBe('1.0.2');
-    expect(packageSource).toContain('"version": "1.0.2"');
-    expect(openFoodFactsProxySource).toContain('SportPilot/1.0.2');
+    expect(__APP_VERSION__).toBe('1.0.3');
+    expect(packageSource).toContain('"version": "1.0.3"');
+    expect(openFoodFactsProxySource).toContain('SportPilot/1.0.3');
   });
 
   it('conserve les versions de stockage validées', () => {
@@ -24,12 +24,12 @@ describe('stable readiness 1.0.2', () => {
     expect(SOCIAL_ACTIVITY_SNAPSHOT_CONTRACT_VERSION).toBe('0.29.0-a3');
   });
 
-  it('documente la branche stable sans annoncer de publication fonctionnelle', () => {
-    expect(releaseNotesSource).toContain('SportPilot 1.0.2');
-    expect(releaseNotesSource).toContain('Goals + Weights');
-    expect(releaseNotesSource).toContain('Branche : `release/1.0.2`');
+  it('documente la branche hotfix sans annoncer de publication fonctionnelle', () => {
+    expect(releaseNotesSource).toContain('SportPilot 1.0.3');
+    expect(releaseNotesSource).toContain('hotfix continuité Goals');
+    expect(releaseNotesSource).toContain('Branche : `release/1.0.3`');
     expect(releaseNotesSource).toContain('Toute différence fonctionnelle');
-    expect(releaseChecklistSource).toContain('SportPilot 1.0.2');
+    expect(releaseChecklistSource).toContain('SportPilot 1.0.3');
     expect(releaseChecklistSource).toContain('Aucun tag créé');
   });
 
