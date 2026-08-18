@@ -1,0 +1,62 @@
+name: Release 1.0.3 lock bump
+
+on:
+  push:
+    branches:
+      - release/1.0.3
+    paths:
+      - .github/workflows/release-1.0.3-lock.yml
+
+permissions:
+  contents: write
+
+jobs:
+  bump-lock:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout exact release branch
+        uses: actions/checkout@v6
+        with:
+          ref: release/1.0.3
+          fetch-depth: 0
+
+      - name: Bump only root package-lock versions
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = 'package-lock.json';
+          const lock = JSON.parse(fs.readFileSync(path, 'utf8'));
+          if (lock.version !== '1.0.2') throw new Error(`Unexpected lock version: ${lock.version}`);
+          if (lock.packages?.['']?.version !== '1.0.2') throw new Error(`Unexpected root package version: ${lock.packages?.['']?.version}`);
+          lock.version = '1.0.3';
+          lock.packages[''].version = '1.0.3';
+          fs.writeFileSync(path, JSON.stringify(lock, null, 2) + '\n');
+          NODE
+          git diff --check
+          changed="$(git diff --name-only)"
+          if [ "$changed" != "package-lock.json" ]; then
+            echo "Unexpected changed files:"
+            printf '%s\n' "$changed"
+            exit 1
+          fi
+          changes="$(git diff --numstat -- package-lock.json)"
+          if [ "$changes" != $'2\t2\tpackage-lock.json' ]; then
+            echo "Unexpected package-lock diff stats: $changes"
+            git diff -- package-lock.json
+            exit 1
+          fi
+          git diff -- package-lock.json
+
+      - name: Commit lock and remove temporary workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm .github/workflows/release-1.0.3-lock.yml
+          git add package-lock.json .github/workflows/release-1.0.3-lock.yml
+          git commit -m "chore(release): aligner package-lock sur 1.0.3"
+          git push origin HEAD:release/1.0.3
