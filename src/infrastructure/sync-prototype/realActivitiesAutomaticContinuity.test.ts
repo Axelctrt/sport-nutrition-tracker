@@ -244,7 +244,6 @@ describe('gate A→B Activities', () => {
       client: clientA,
       settingsRepository: settingsRepository(),
       eventTarget: window,
-      createOrchestrator: undefined,
       lifecycleDebounceMs: 0,
       localChangeDebounceMs: 0,
     });
