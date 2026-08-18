@@ -4,17 +4,33 @@ Ce fichier synthétise les versions publiées. Les notes détaillées versionné
 restent les archives de référence et conservent l’état de préparation de chaque
 livraison.
 
-## 1.0.3 — hotfix continuité Goals en préparation
+## 1.0.4 — continuité Activities + Goals both en préparation
 
-- Première réconciliation explicite des comptes Goals historiques divergents, sans conversion automatique de `unknown`.
-- Aperçu réel objectif par objectif avant le choix global local/cloud.
-- Signal post-persistance Goals strict pour l’automatisme A → B.
-- Refus des résolutions Goals `unknown` / `both` dans tous les chemins produit, y compris le merge global.
-- Détail Objectifs réparé sur la vraie route `/settings/sync-prototype`.
-- Preview fonctionnelle `e00b2869` et smoke A → B validés.
+- Extension de la continuité automatique sûre au domaine logique Activities.
+- Planning endurance, tombstones et restaurations Activity inclus dans le même domaine.
+- Écritures automatiques strictement directionnelles : `local-only` upload, `cloud-only` download.
+- `both` et `unknown` restent sans écriture automatique.
+- Résolution Goals `both` exclusivement manuelle, explicite et revalidée avant écriture.
+- Whitelist automatique limitée à Strength + Goals + Weights + Activities.
+- CI PR #179 complète 4/4 et CI post-merge develop 4/4.
 - Dexie v12, sauvegarde JSON v10 et runtime Dexie Cloud v16 inchangés ; aucune migration D1.
 
-Cette entrée prépare `1.0.3` ; la Preview finale versionnée, `main`, le tag, la GitHub Release et la production restent des gates distincts.
+Cette entrée prépare `1.0.4` ; Preview immuable, smoke physique, `main`, tag, GitHub Release et production restent des gates distincts.
+
+Voir [`RELEASE-NOTES-1.0.4.md`](RELEASE-NOTES-1.0.4.md).
+
+## 1.0.3 — publiée le 18 août 2026
+
+- Première réconciliation explicite des comptes Goals historiques divergents.
+- Signal Goals post-persistance durable pour l’automatisme A → B.
+- `unknown` et `both` fail-closed hors parcours explicitement autorisé.
+- Détail Objectifs réparé sur `/settings/sync-prototype`.
+- Dexie v12, sauvegarde JSON v10 et runtime Dexie Cloud v16 inchangés.
+- Aucune migration D1, formule calorique, thème ou extension IA.
+- Commit publié : `9c6ea1df7ea3f686020b7b86f49def0ecc85a9cd`.
+- Tag : `v1.0.3`.
+- GitHub Release : SportPilot 1.0.3.
+- Production : `https://sportpilot-pages.pages.dev`.
 
 Voir [`RELEASE-NOTES-1.0.3.md`](RELEASE-NOTES-1.0.3.md).
 
