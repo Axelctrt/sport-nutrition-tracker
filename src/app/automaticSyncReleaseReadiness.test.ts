@@ -11,7 +11,7 @@ import {
 
 describe('publication SportPilot 0.26.0 — synchronisation automatique résiliente', () => {
   it('prépare la version candidate avec le schéma courant', () => {
-    expect(__APP_VERSION__).toBe('1.0.2');
+    expect(__APP_VERSION__).toBe('1.0.3');
     expect(databaseSchemaVersion).toBe(12);
     expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(10);
     expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(16);
@@ -33,11 +33,7 @@ describe('publication SportPilot 0.26.0 — synchronisation automatique résilie
     expect(orchestratorSource).toContain(
       'appendSyncOperationHistory(accountKey, result);',
     );
-    expect(orchestratorSource).toContain(
-      'L’opération a été interrompue avant la fin.',
-    );
-    expect(orchestratorSource).toContain(
-      'for (const [index, domainId] of request.domainIds.entries())',
-    );
+    expect(orchestratorSource).toContain("stopReason = 'offline';");
+    expect(orchestratorSource).toContain("stopReason = 'closing';");
   });
 });
