@@ -38,8 +38,8 @@ import {
   deleteTrashItemPermanently,
   listTrashItems,
   purgeExpiredTrashItems,
-  restoreTrashItem,
 } from '@/infrastructure/repositories/dexie/trashService';
+import { restoreTrashItemWithSyncNotification } from '@/infrastructure/repositories/dexie/trashRestoreSyncNotification';
 import { Button } from '@/shared/ui/Button';
 import { EmptyState } from '@/shared/ui/EmptyState';
 
@@ -215,7 +215,7 @@ export function TrashPage() {
     setFeedback(undefined);
 
     try {
-      await restoreTrashItem(appDatabase, item.id);
+      await restoreTrashItemWithSyncNotification(appDatabase, item.id);
       const message = `${item.label} a été restauré.`;
       setFeedback({ tone: 'success', message });
       await loadItems();
@@ -421,7 +421,7 @@ export function TrashPage() {
             feedback.tone === 'error'
               ? 'border-red-300 bg-red-50 text-red-900 dark:border-red-900 dark:bg-red-950/40 dark:text-red-100'
               : feedback.tone === 'success'
-                ? 'border-emerald-300 bg-emerald-50 text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100'
+                ? 'border-emerald-300 bg-emerald-50 text-emerald-900 dark:border-emerald-950/40 dark:text-emerald-100'
                 : 'border-slate-300 bg-slate-50 text-slate-800 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200',
           ].join(' ')}
         >
