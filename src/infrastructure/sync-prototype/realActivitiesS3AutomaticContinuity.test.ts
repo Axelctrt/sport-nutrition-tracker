@@ -431,6 +431,10 @@ describe('gate Activities — S3 nouvel appareil puis continuité automatique', 
       const baselineBeforeTransport = await cloudB.realSyncBaselines.get(
         ACTIVITY_BASELINE_ID,
       );
+      expect(surviving.type).toBe('running');
+      if (surviving.type !== 'running') {
+        throw new Error('Le scénario attend une activité running.');
+      }
       const updated = await repositoryA.save({
         ...surviving,
         distanceKm: 12,
