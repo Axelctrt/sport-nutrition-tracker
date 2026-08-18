@@ -339,7 +339,7 @@ function keepLocalConsequence(local: GoalEntityState, cloud: GoalEntityState): s
   return 'La version de cet appareil sera conservée.';
 }
 
-function useCloudConsequence(local: GoalEntityState, cloud: GoalEntityState): string {
+function cloudChoiceConsequence(local: GoalEntityState, cloud: GoalEntityState): string {
   if (!cloud.goal) {
     return local.goal
       ? 'L’objectif sera retiré de cet appareil.'
@@ -382,7 +382,7 @@ function buildItems(state: GoalDomainState): GoalReconciliationItem[] {
       localStatus: sideStatus(local, cloud),
       cloudStatus: sideStatus(cloud, local),
       keepLocalConsequence: keepLocalConsequence(local, cloud),
-      useCloudConsequence: useCloudConsequence(local, cloud),
+      useCloudConsequence: cloudChoiceConsequence(local, cloud),
     });
   }
   return items;
