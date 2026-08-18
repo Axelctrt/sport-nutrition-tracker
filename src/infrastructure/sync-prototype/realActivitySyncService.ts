@@ -103,6 +103,14 @@ interface RealActivitySyncExecutionOptions extends CloudSyncExecutionOptions {
   readonly requireChangeOrigin?: 'cloud' | 'local';
 }
 
+interface RegisteredActivitySyncContext {
+  readonly localDatabase: AppDatabase;
+  readonly cloudDatabase: SyncPrototypeDatabase;
+}
+
+const registeredActivitySyncContexts =
+  new Map<string, RegisteredActivitySyncContext>();
+
 function toCloudActivity(activity: Activity): CloudActivity {
   return { ...activity, id: cloudPrivateId(activity.id) };
 }
@@ -927,6 +935,10 @@ export async function previewRealActivitySync(
   cloudDatabase: SyncPrototypeDatabase,
   currentUserId: string,
 ): Promise<RealActivitySyncPreview> {
+  registeredActivitySyncContexts.set(currentUserId, {
+    localDatabase,
+    cloudDatabase,
+  });
   const state = await readState(localDatabase, cloudDatabase, currentUserId);
   const preview = buildPreview(state);
   if (preview.differingEntityCount <= 0) {
@@ -1035,4 +1047,38 @@ export async function synchronizeRealActivitiesToCloud(
     writeCloud: true,
     requireChangeOrigin: 'local',
   });
+}
+
+function registeredActivitySyncContext(
+  currentUserId: string,
+): RegisteredActivitySyncContext {
+  const context = registeredActivitySyncContexts.get(currentUserId);
+  if (!context) {
+    throw new Error(
+      'Le contexte Activities doit être analysé avant une opération de continuité.',
+    );
+  }
+  return context;
+}
+
+export async function synchronizeRegisteredRealActivitiesFromCloud(
+  currentUserId: string,
+): Promise<RealActivitySyncResult> {
+  const context = registeredActivitySyncContext(currentUserId);
+  return synchronizeRealActivitiesFromCloud(
+    context.localDatabase,
+    context.cloudDatabase,
+    currentUserId,
+  );
+}
+
+export async function synchronizeRegisteredRealActivitiesToCloud(
+  currentUserId: string,
+): Promise<RealActivitySyncResult> {
+  const context = registeredActivitySyncContext(currentUserId);
+  return synchronizeRealActivitiesToCloud(
+    context.localDatabase,
+    context.cloudDatabase,
+    currentUserId,
+  );
 }
