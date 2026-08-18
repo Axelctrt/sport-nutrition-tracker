@@ -1,0 +1,445 @@
+name: Release 1.0.3 preparation
+
+on:
+  push:
+    branches:
+      - release/1.0.3
+    paths:
+      - .github/workflows/release-1.0.3-prep.yml
+
+permissions:
+  contents: write
+
+jobs:
+  prepare-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout exact release branch
+        uses: actions/checkout@v6
+        with:
+          ref: release/1.0.3
+          fetch-depth: 0
+
+      - name: Prepare SportPilot 1.0.3 metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+
+          const read = (p) => fs.readFileSync(p, 'utf8');
+          const write = (p, value) => fs.writeFileSync(p, value.endsWith('\n') ? value : value + '\n');
+          const replaceOnce = (source, from, to, label) => {
+            const index = source.indexOf(from);
+            if (index < 0) throw new Error(`Missing marker for ${label}: ${from}`);
+            if (source.indexOf(from, index + from.length) >= 0) throw new Error(`Ambiguous marker for ${label}: ${from}`);
+            return source.slice(0, index) + to + source.slice(index + from.length);
+          };
+          const replaceAllRequired = (source, from, to, label) => {
+            if (!source.includes(from)) throw new Error(`Missing marker for ${label}: ${from}`);
+            return source.split(from).join(to);
+          };
+
+          const pkgPath = 'package.json';
+          const pkg = JSON.parse(read(pkgPath));
+          if (pkg.version !== '1.0.2') throw new Error(`Unexpected package version: ${pkg.version}`);
+          pkg.version = '1.0.3';
+          write(pkgPath, JSON.stringify(pkg, null, 2));
+
+          const lock = JSON.parse(read('package-lock.json'));
+          if (lock.version !== '1.0.3' || lock.packages?.['']?.version !== '1.0.3') {
+            throw new Error('package-lock.json is not already aligned on 1.0.3');
+          }
+
+          const proxyPath = 'functions/_shared/openFoodFactsProxy.js';
+          let proxy = read(proxyPath);
+          proxy = replaceOnce(
+            proxy,
+            'SportPilot/1.0.2 (Cloudflare Pages; Open Food Facts integration)',
+            'SportPilot/1.0.3 (Cloudflare Pages; Open Food Facts integration)',
+            'Open Food Facts User-Agent',
+          );
+          write(proxyPath, proxy);
+
+          const versionAssertion = "expect(__APP_VERSION__).toBe('1.0.2');";
+          const nextVersionAssertion = "expect(__APP_VERSION__).toBe('1.0.3');";
+          let assertionUpdates = 0;
+          const walk = (dir) => {
+            for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+              const full = path.join(dir, entry.name);
+              if (entry.isDirectory()) walk(full);
+              else if (/\.(?:ts|tsx)$/.test(entry.name)) {
+                const before = read(full);
+                if (!before.includes(versionAssertion)) continue;
+                const count = before.split(versionAssertion).length - 1;
+                write(full, before.split(versionAssertion).join(nextVersionAssertion));
+                assertionUpdates += count;
+              }
+            }
+          };
+          walk('src');
+          if (assertionUpdates === 0) throw new Error('No active __APP_VERSION__ assertion was updated.');
+
+          const overviewPath = 'src/features/settings/components/SettingsOverview.test.tsx';
+          let overview = read(overviewPath);
+          overview = replaceOnce(overview, "screen.getByText('1.0.2')", "screen.getByText('1.0.3')", 'SettingsOverview version');
+          write(overviewPath, overview);
+
+          const notes = `# SportPilot 1.0.3 — hotfix continuité Goals
+
+Branche : \`release/1.0.3\`.
+
+Base fonctionnelle qualifiée :
+\`develop@e4b0992ad3b524a529e6962f54407235263f6fa5\`.
+
+Tree fonctionnel qualifié :
+\`d4b8fd24466f04d4fee4e5966ec2b9edf1a69ba2\`.
+
+Stable publiée avant ce hotfix : SportPilot 1.0.2,
+\`main@6e479170731d689683822374ba7c74fff425730d\`, tag \`v1.0.2\`.
+
+## Correctifs Goals
+
+- Les comptes historiques sans baseline et avec des Goals divergents restent en provenance \`unknown\` et strictement fail-closed.
+- Un parcours dédié **Réconcilier les objectifs** permet une première réconciliation explicite : **conserver cet appareil** ou **utiliser le cloud**.
+- L’aperçu montre les Goals concernés avec leur titre, leur état compréhensible sur cet appareil et dans le cloud, ainsi que la conséquence du choix global ; aucun jargon tombstone n’est exposé.
+- La résolution revalide compte, état local, état cloud et stamp avant toute écriture ; une concurrence annule l’opération.
+- La baseline n’est établie qu’après convergence vérifiée, afin que les changements suivants redeviennent \`local-only\` ou \`cloud-only\`.
+- \`both\` reste sans résolution dans ce hotfix.
+- Le merge générique et le CTA global ne peuvent plus contourner le fail-closed de Goals en \`unknown\` ou \`both\`.
+
+## Persistance et automatisme
+
+- \`GOAL_STATE_CHANGED_EVENT\` conserve sa sémantique de réactivité UI immédiate.
+- \`GOAL_STATE_PERSISTED_EVENT\` signifie exclusivement qu’une mutation Goals locale est durablement persistée dans AppDatabase.
+- Création/modification : signal après succès de persistance.
+- Suppression : signal après transaction Goal + suppression durable réussie.
+- Échec de persistance ou reload après download cloud : aucun signal persisted.
+- Le gate nominal A → B utilise le vrai \`writeGoalState()\`, sans émission artificielle.
+
+## Diagnostic
+
+- Le détail Objectifs est réellement monté sur \`/settings/sync-prototype\`.
+- La provenance réelle \`local\`, \`cloud\`, \`both\` ou \`unknown\` est visible.
+- Aucune action directionnelle n’est proposée pour \`unknown\` ou \`both\` hors du parcours initial explicite autorisé pour \`unknown\` sans baseline.
+
+## Qualification acquise avant bump
+
+- CI post-merge develop #871 : 4/4 jobs verts.
+- Preview fonctionnelle immuable : \`https://e00b2869.sportpilot-pages.pages.dev\`.
+- Manifest SHA-256 : \`79fdf99c183a519760e22fbfe03c406d5deb8f97b93782a340e8a90420deca53\`.
+- CORS de l’origine immuable : PASS ; alias : NOT_ALLOWED.
+- Smoke physique Preview Goals A → B sans synchronisation manuelle : PASS.
+- Le smoke physique du compte legacy divergent réel reste un gate post-déploiement sur l’origine production, où l’état IndexedDB historique existe encore.
+
+## Invariants
+
+- Synchronisation automatique sûre : Strength + Goals + Weights uniquement.
+- \`local-only\` → upload directionnel ; \`cloud-only\` → download directionnel.
+- \`both\` / \`unknown\` → aucune écriture automatique.
+- Strength et Weights inchangés hors tests de non-régression.
+- Dexie v12.
+- sauvegarde JSON v10.
+- runtime Dexie Cloud v16.
+- aucune migration D1.
+- aucune modification des formules calories/macros.
+- aucun changement de thème validé.
+- aucun élargissement IA.
+
+Toute différence fonctionnelle hors de ce périmètre bloque la publication.
+`;
+          write('RELEASE-NOTES-1.0.3.md', notes);
+
+          const changelogPath = 'CHANGELOG.md';
+          let changelog = read(changelogPath);
+          const changelogAnchor = '## 1.0.2 — continuité Goals + Weights en préparation';
+          if (!changelog.includes(changelogAnchor)) throw new Error('CHANGELOG 1.0.2 anchor missing');
+          const changelog103 = `## 1.0.3 — hotfix continuité Goals en préparation
+
+- Première réconciliation explicite des comptes Goals historiques divergents, sans conversion automatique de \`unknown\`.
+- Aperçu réel objectif par objectif avant le choix global local/cloud.
+- Signal post-persistance Goals strict pour l’automatisme A → B.
+- Refus des résolutions Goals \`unknown\` / \`both\` dans tous les chemins produit, y compris le merge global.
+- Détail Objectifs réparé sur la vraie route \`/settings/sync-prototype\`.
+- Preview fonctionnelle \`e00b2869\` et smoke A → B validés.
+- Dexie v12, sauvegarde JSON v10 et runtime Dexie Cloud v16 inchangés ; aucune migration D1.
+
+Cette entrée prépare \`1.0.3\` ; la Preview finale versionnée, \`main\`, le tag, la GitHub Release et la production restent des gates distincts.
+
+Voir [\`RELEASE-NOTES-1.0.3.md\`](RELEASE-NOTES-1.0.3.md).
+
+`;
+          changelog = changelog.replace(changelogAnchor, changelog103 + '## 1.0.2 — publiée le 17 août 2026');
+          changelog = replaceOnce(
+            changelog,
+            "Cette entrée prépare `1.0.2` ; le tag, la GitHub Release et la production\nrestent des gates distincts.",
+            "Publication : `main@6e479170731d689683822374ba7c74fff425730d`, tag `v1.0.2`, GitHub Release SportPilot 1.0.2 et production `https://sportpilot-pages.pages.dev`.",
+            'CHANGELOG 1.0.2 publication status',
+          );
+          write(changelogPath, changelog);
+
+          const checklistPath = 'RELEASE-CHECKLIST.md';
+          const oldChecklist = read(checklistPath);
+          const archiveAnchor = '## Archive 1.0.1 — publiée le 17 août 2026';
+          const archiveIndex = oldChecklist.indexOf(archiveAnchor);
+          if (archiveIndex < 0) throw new Error('Release checklist archive anchor missing');
+          const archivedTail = oldChecklist.slice(archiveIndex);
+          const checklist = `# Checklist de publication — SportPilot 1.0.3
+
+Base fonctionnelle qualifiée :
+\`develop@e4b0992ad3b524a529e6962f54407235263f6fa5\`.
+
+Tree fonctionnel qualifié :
+\`d4b8fd24466f04d4fee4e5966ec2b9edf1a69ba2\`.
+
+Branche de préparation : \`release/1.0.3\`.
+
+## Périmètre
+
+- [x] PR #176 fusionnée dans \`develop\`.
+- [x] Réconciliation initiale Goals legacy explicite, \`unknown\` toujours fail-closed.
+- [x] \`GOAL_STATE_PERSISTED_EVENT\` strictement post-persistance locale durable.
+- [x] Merge global Goals \`unknown\` / \`both\` neutralisé.
+- [x] Détail Goals réel de \`/settings/sync-prototype\` réparé.
+- [x] Strength/Weights inchangés hors tests de non-régression.
+- [x] Dexie v12, sauvegarde JSON v10 et runtime Dexie Cloud v16 inchangés.
+- [x] Aucune migration D1.
+- [x] Aucune modification des formules calories/macros.
+- [x] Aucun thème modifié.
+- [x] Aucun élargissement IA.
+
+## Qualification fonctionnelle acquise
+
+- [x] CI post-merge develop #871 : 4/4 jobs verts.
+- [x] Preview fonctionnelle immuable : \`https://e00b2869.sportpilot-pages.pages.dev\`.
+- [x] Manifest fonctionnel : \`79fdf99c183a519760e22fbfe03c406d5deb8f97b93782a340e8a90420deca53\`.
+- [x] CORS origine immuable PASS.
+- [x] Alias Preview NOT_ALLOWED.
+- [x] Goals A → B physique sans synchronisation manuelle : PASS.
+- [ ] Smoke legacy divergent réel sur l’origine production après déploiement 1.0.3.
+
+## Gates de préparation 1.0.3
+
+- [ ] \`npm ci\`.
+- [ ] \`git diff --check\`.
+- [ ] Suite Vitest complète.
+- [ ] Lint.
+- [ ] Build PWA.
+- [ ] Audit de consolidation 1.0.3.
+- [ ] Audit P0 de continuité.
+- [ ] npm audit requalifié sans \`--force\`.
+- [ ] CI GitHub Actions complète.
+- [ ] Stabilité d'ordre en CI Linux.
+- [ ] Playwright WebKit iPhone 15 et Chromium en CI Linux.
+- [ ] PWA update et conservation des données en CI Linux.
+
+Le faux négatif Windows/CRLF #136 reste hors périmètre : la CI Linux officielle reste le gate complet pour les contrôles sensibles aux fins de ligne.
+
+## Publication
+
+- [ ] Fusion de la préparation \`release/1.0.3 → develop\`.
+- [ ] Contrôle du diff de préparation comme strictement non fonctionnel.
+- [ ] Preview Cloudflare Pages Direct Upload du SHA final versionné exact.
+- [ ] CORS Dexie Cloud vérifié pour l'origine immuable finale.
+- [ ] PR \`develop → main\`.
+- [ ] CI de \`main\`.
+- [ ] Tag \`v1.0.3\`.
+- [ ] GitHub Release SportPilot 1.0.3.
+- [ ] Production Pages du SHA publié, sans migration D1.
+- [ ] Smoke legacy Goals réel puis non-régression rapide Strength/Weights.
+- [ ] Nettoyage CORS des Previews uniquement après smoke production vert.
+- [x] Aucun tag créé par la préparation.
+- [x] Aucune migration D1 prévue.
+
+#141 et #146 restent terminées. #162 suit le résiduel Quagga/Sharp accepté pour V1. #138 reste la dette distincte des Workers Builds Cloudflare.
+
+## Archive 1.0.2 — publiée le 17 août 2026
+
+- PR de publication : #175.
+- Commit publié : \`6e479170731d689683822374ba7c74fff425730d\`.
+- Tag : \`v1.0.2\`.
+- GitHub Release : SportPilot 1.0.2.
+- Production : \`https://sportpilot-pages.pages.dev\`.
+- Dexie v12, sauvegarde JSON v10 et runtime Dexie Cloud v16.
+- Aucune migration D1.
+
+${archivedTail}`;
+          write(checklistPath, checklist);
+
+          const limitationsPath = 'KNOWN-LIMITATIONS.md';
+          let limitations = read(limitationsPath);
+          limitations = replaceOnce(limitations, '# Limitations connues — SportPilot 1.0.2', '# Limitations connues — SportPilot 1.0.3', 'known limitations title');
+          limitations = replaceAllRequired(limitations, 'La maintenance `1.0.2`', 'La maintenance `1.0.3`', 'known limitations maintenance');
+          limitations = replaceAllRequired(limitations, 'maintenance 1.0.2', 'maintenance 1.0.3', 'known limitations trailing maintenance');
+          write(limitationsPath, limitations);
+
+          write('README-PATCH.md', `# SportPilot 1.0.3 — hotfix continuité Goals
+
+Branche : \`release/1.0.3\`.
+
+Base fonctionnelle qualifiée :
+\`develop@e4b0992ad3b524a529e6962f54407235263f6fa5\`.
+
+Ce lot prépare uniquement la publication du hotfix Goals déjà fusionné via #176 et qualifié sur Preview fonctionnelle. Il ne réimplémente aucun comportement métier.
+
+Garanties conservées :
+
+- réconciliation initiale Goals legacy explicite ;
+- \`unknown\` et \`both\` fail-closed hors parcours initial autorisé ;
+- automatisme Strength + Goals + Weights uniquement ;
+- Dexie v12 ;
+- sauvegarde JSON v10 ;
+- runtime Dexie Cloud v16 ;
+- aucune migration D1 ;
+- aucune modification de formule calorique ;
+- aucun thème modifié ;
+- aucun élargissement IA.
+
+La Preview finale versionnée, \`develop → main\`, le tag \`v1.0.3\`, la GitHub Release et la production restent des gates techniques séquentiels.
+`);
+
+          write('INSTALLATION.txt', `SPORTPILOT 1.0.3 - HOTFIX CONTINUITE GOALS
+
+Checklist de qualification :
+1. Verifier develop@e4b0992ad3b524a529e6962f54407235263f6fa5.
+2. Verifier package.json et package-lock.json en 1.0.3.
+3. Executer npm ci.
+4. Executer git diff --check.
+5. Executer lint, tests, build, audit release-consolidation et audit P0.
+6. Laisser GitHub Actions fournir le gate Linux complet.
+7. Verifier npm audit sans --force et sans regression du residuel accepte.
+8. Verifier Dexie v12, sauvegarde JSON v10 et runtime Dexie Cloud v16.
+9. Verifier que la whitelist automatique reste Strength + Goals + Weights.
+10. Publier une Preview Pages Direct Upload du SHA final exact.
+11. Verifier le CORS Dexie de l'origine immuable.
+12. Promouvoir develop vers main uniquement apres les gates verts.
+13. Taguer v1.0.3 et publier la GitHub Release uniquement sur le SHA publie.
+14. Deployer la production Pages depuis ce meme SHA.
+15. Qualifier le compte legacy Goals reel avant nettoyage CORS Preview.
+16. Ne lancer aucune migration D1.
+
+Aucune formule calorique, aucun theme et aucun elargissement IA ne sont inclus.
+`);
+
+          write('ROLLBACK.md', `# Retour arrière — SportPilot 1.0.3
+
+## Référence stable précédente
+
+- version : \`1.0.2\` ;
+- \`main\` : \`6e479170731d689683822374ba7c74fff425730d\` ;
+- tag : \`v1.0.2\` ;
+- production : \`https://sportpilot-pages.pages.dev\`.
+
+Candidate 1.0.3 préparée depuis :
+
+- \`develop@e4b0992ad3b524a529e6962f54407235263f6fa5\` ;
+- branche \`release/1.0.3\`.
+
+## Compatibilité des données
+
+La maintenance 1.0.3 ne change aucun schéma :
+
+- Dexie v12 ;
+- sauvegarde JSON v10 ;
+- runtime Dexie Cloud v16 ;
+- aucune migration D1.
+
+## Stratégie en cas d'incident
+
+1. STOP si perte de données, écrasement, contamination inter-compte, doublon persistant ou crash bloquant est observé.
+2. Préserver IndexedDB et les données cloud ; ne jamais nettoyer les bases pour masquer le symptôme.
+3. Identifier le SHA et le deployment Pages exacts concernés.
+4. Préférer un correctif en avant compatible avec Dexie v12.
+5. Un redéploiement d'un deployment immuable antérieur n'est envisagé qu'après vérification explicite de la compatibilité des données.
+6. Ne lancer aucune migration D1 lors d'un rollback de cette maintenance.
+
+Les formules calories/macros, les thèmes et le périmètre IA ne sont pas modifiés par cette maintenance.
+`);
+
+          const readmePath = 'README.md';
+          const oldReadme = read(readmePath);
+          const readmeAnchor = '## Socle stable V1 conservé';
+          const readmeIndex = oldReadme.indexOf(readmeAnchor);
+          if (readmeIndex < 0) throw new Error('README stable anchor missing');
+          const readmeTail = oldReadme.slice(readmeIndex);
+          const readmeHead = `# SportPilot 1.0.3
+
+SportPilot \`1.0.3\` prépare le hotfix de continuité Goals qualifié depuis \`develop@e4b0992ad3b524a529e6962f54407235263f6fa5\`.
+
+Stable publiée avant cette maintenance :
+
+- version : \`1.0.2\` ;
+- \`main@6e479170731d689683822374ba7c74fff425730d\` ;
+- tag : \`v1.0.2\` ;
+- production : \`https://sportpilot-pages.pages.dev\` ;
+- aucune migration D1 ajoutée ou requise par 1.0.3.
+
+L’application reste mobile-first, local-first, utilisable hors ligne et installable en PWA.
+
+## Hotfix continuité Goals 1.0.3
+
+- première réconciliation explicite des comptes historiques divergents ;
+- aperçu réel des Goals avant choix global local/cloud ;
+- \`unknown\` et \`both\` restent fail-closed dans l’automatisme et les merges génériques ;
+- signal Goals post-persistance durable pour déclencher l’automatisme ;
+- détail Objectifs accessible sur \`/settings/sync-prototype\` ;
+- synchronisation automatique sûre toujours limitée à Strength + Goals + Weights ;
+- Preview fonctionnelle A → B validée sans synchronisation manuelle.
+
+## Invariants de données et produit
+
+- AppDatabase locale : Dexie v12 ;
+- sauvegarde JSON générale : v10 ;
+- runtime Dexie Cloud : v16 ;
+- contrat de snapshot social : \`0.29.0-a3\` ;
+- aucune migration D1 ;
+- aucune modification des formules calories/macros ;
+- aucun thème validé modifié ;
+- aucun élargissement IA.
+
+`;
+          write(readmePath, readmeHead + readmeTail);
+
+          const auditPath = 'scripts/audit-release-consolidation.mjs';
+          let audit = read(auditPath);
+          audit = replaceOnce(audit, "  'RELEASE-NOTES-1.0.2.md',\n  'CHANGELOG.md',", "  'RELEASE-NOTES-1.0.2.md',\n  'RELEASE-NOTES-1.0.3.md',\n  'CHANGELOG.md',", 'audit required release notes');
+          audit = replaceOnce(audit, "if (packageJson.version !== '1.0.2') {\n    fail(`package.json doit préparer 1.0.2, reçu ${packageJson.version}.`);\n  }", "if (packageJson.version !== '1.0.3') {\n    fail(`package.json doit préparer 1.0.3, reçu ${packageJson.version}.`);\n  }", 'audit package version');
+          audit = replaceOnce(audit, "const releaseNotes = read('RELEASE-NOTES-1.0.2.md');", "const releaseNotes = read('RELEASE-NOTES-1.0.3.md');", 'audit current release notes');
+          audit = replaceOnce(audit, "'SportPilot 1.0.2 — continuité sûre Goals + Weights'", "'SportPilot 1.0.3 — hotfix continuité Goals'", 'audit notes title');
+          audit = replaceOnce(audit, "'Branche : `release/1.0.2`'", "'Branche : `release/1.0.3`'", 'audit release branch');
+          audit = replaceOnce(audit, "'develop@37cae57dc779d6410f35a177403706be0a3eb382'", "'develop@e4b0992ad3b524a529e6962f54407235263f6fa5'", 'audit release base');
+          audit = replaceOnce(audit, "if (!releaseNotes.includes(marker)) fail(`notes de release 1.0.2 incomplètes : ${marker}.`);", "if (!releaseNotes.includes(marker)) fail(`notes de release 1.0.3 incomplètes : ${marker}.`);", 'audit release note error');
+          audit = replaceOnce(audit, "const checklist = read('RELEASE-CHECKLIST.md');\n  for (const marker of [\n    'SportPilot 1.0.2',", "const checklist = read('RELEASE-CHECKLIST.md');\n  for (const marker of [\n    'SportPilot 1.0.3',", 'audit checklist version');
+          audit = replaceOnce(audit, "const knownLimitations = read('KNOWN-LIMITATIONS.md');\n  for (const marker of ['SportPilot 1.0.2',", "const knownLimitations = read('KNOWN-LIMITATIONS.md');\n  for (const marker of ['SportPilot 1.0.3',", 'audit limitations version');
+          audit = replaceOnce(audit, 'Audit de consolidation 1.0.2 échoué :', 'Audit de consolidation 1.0.3 échoué :', 'audit failure label');
+          audit = replaceOnce(audit, 'Audit du socle sportif réussi', 'Audit du socle sportif réussi', 'noop guard');
+          audit = replaceOnce(audit, "'Audit de consolidation 1.0.2 réussi : continuité Goals + Weights, archives stables/RC, documentation, budgets, parcours et contrats de stockage sont alignés.'", "'Audit de consolidation 1.0.3 réussi : hotfix Goals, archives stables/RC, documentation, budgets, parcours et contrats de stockage sont alignés.'", 'audit success label');
+          write(auditPath, audit);
+
+          const staleAssertionFiles = [];
+          const scan = (dir) => {
+            for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+              const full = path.join(dir, entry.name);
+              if (entry.isDirectory()) scan(full);
+              else if (/\.(?:ts|tsx)$/.test(entry.name) && read(full).includes(versionAssertion)) staleAssertionFiles.push(full);
+            }
+          };
+          scan('src');
+          if (staleAssertionFiles.length) throw new Error(`Stale 1.0.2 app assertions: ${staleAssertionFiles.join(', ')}`);
+          NODE
+
+          git diff --check
+          git status --short
+
+      - name: Commit release preparation and remove temporary workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm .github/workflows/release-1.0.3-prep.yml
+          git add -A
+          git commit -m "chore(release): préparer SportPilot 1.0.3"
+          git push origin HEAD:release/1.0.3
