@@ -93,8 +93,8 @@ function orchestrator(
   };
 }
 
-describe('AutomaticSyncController — whitelist Goals + Weights', () => {
-  it('automatise Goals cloud-only et Weights local-only sans élargir Activities', async () => {
+describe('AutomaticSyncController — whitelist Goals + Weights + Activities', () => {
+  it('automatise Goals cloud-only puis Weights et Activities local-only', async () => {
     const { value, schedule } = orchestrator([
       {
         domainId: 'goals',
@@ -136,13 +136,25 @@ describe('AutomaticSyncController — whitelist Goals + Weights', () => {
       operation: 'sync',
       syncMode: 'local-only',
       source: 'application-start',
-      domainIds: ['weights'],
+      domainIds: ['weights', 'activities'],
       delayMs: 0,
     });
-    expect(schedule.mock.calls.flatMap(([request]) => request.domainIds ?? []))
-      .toContain('activities');
-    expect(schedule.mock.calls.slice(1).flatMap(([request]) => request.domainIds ?? []))
-      .not.toContain('activities');
+    const writtenDomainIds = schedule.mock.calls
+      .slice(1)
+      .flatMap(([request]) => request.domainIds ?? []);
+    expect(writtenDomainIds).toEqual(
+      expect.arrayContaining(['goals', 'weights', 'activities']),
+    );
+    expect(writtenDomainIds).not.toEqual(
+      expect.arrayContaining([
+        'account-preferences',
+        'rewards-routines',
+        'nutrition-journal',
+        'nutrition-library',
+        'nutrition-tracking',
+        'daily-coaching',
+      ]),
+    );
     controller.dispose();
   });
 
