@@ -19,7 +19,7 @@ import {
   syncLocalDataChangedDetail,
 } from '@/application/sync/syncLocalChangeEvents';
 import { GOAL_STATE_PERSISTED_EVENT } from '@/domain/goals/goalState';
-import { ENDURANCE_PLANNING_CHANGED_EVENT } from '@/domain/planning/endurancePlanningState';
+import { ENDURANCE_PLANNING_PERSISTED_EVENT } from '@/domain/planning/endurancePlanningState';
 import { WEEKLY_MISSION_HISTORY_CHANGED_EVENT } from '@/domain/rewards/weeklyMissionHistory';
 import type { AppSettings } from '@/domain/models/settings';
 import { ROUTINE_REMINDER_CHANGED_EVENT } from '@/application/reminders/routineReminderService';
@@ -36,9 +36,9 @@ const LIFECYCLE_DEBOUNCE_MS = 250;
 const LOCAL_CHANGE_DEBOUNCE_MS = 1_500;
 
 const SAFE_REMOTE_CONVERGENCE_DOMAIN_IDS =
-  new Set<SyncOrchestratorDomainId>(['strength', 'goals', 'weights']);
+  new Set<SyncOrchestratorDomainId>(['strength', 'goals', 'weights', 'activities']);
 const SAFE_LOCAL_UPLOAD_DOMAIN_IDS =
-  new Set<SyncOrchestratorDomainId>(['strength', 'goals', 'weights']);
+  new Set<SyncOrchestratorDomainId>(['strength', 'goals', 'weights', 'activities']);
 
 export type AutomaticSyncConnectionType = 'wifi' | 'cellular' | 'ethernet' | 'unknown';
 
@@ -197,7 +197,7 @@ export class AutomaticSyncController {
     void this.triggerLocalChange(['rewards-routines']);
   };
 
-  private readonly handleEndurancePlanningChange = () => {
+  private readonly handleEndurancePlanningPersisted = () => {
     void this.triggerLocalChange(['activities']);
   };
 
@@ -301,8 +301,8 @@ export class AutomaticSyncController {
       this.handleGoalPersisted,
     );
     this.eventTarget?.addEventListener(
-      ENDURANCE_PLANNING_CHANGED_EVENT,
-      this.handleEndurancePlanningChange,
+      ENDURANCE_PLANNING_PERSISTED_EVENT,
+      this.handleEndurancePlanningPersisted,
     );
     this.eventTarget?.addEventListener(
       WEEKLY_MISSION_HISTORY_CHANGED_EVENT,
@@ -342,8 +342,8 @@ export class AutomaticSyncController {
       this.handleGoalPersisted,
     );
     this.eventTarget?.removeEventListener(
-      ENDURANCE_PLANNING_CHANGED_EVENT,
-      this.handleEndurancePlanningChange,
+      ENDURANCE_PLANNING_PERSISTED_EVENT,
+      this.handleEndurancePlanningPersisted,
     );
     this.eventTarget?.removeEventListener(
       WEEKLY_MISSION_HISTORY_CHANGED_EVENT,
