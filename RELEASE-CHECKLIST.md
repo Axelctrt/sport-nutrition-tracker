@@ -1,19 +1,21 @@
-# Checklist de publication — SportPilot 1.0.2
+# Checklist de publication — SportPilot 1.0.3
 
 Base fonctionnelle qualifiée :
-`develop@37cae57dc779d6410f35a177403706be0a3eb382`.
+`develop@e4b0992ad3b524a529e6962f54407235263f6fa5`.
 
-Tree qualifié :
-`7cd38a8364da5eb31eac91253ebdc789d37b0c0a`.
+Tree fonctionnel qualifié :
+`d4b8fd24466f04d4fee4e5966ec2b9edf1a69ba2`.
 
-Branche de préparation : `release/1.0.2`.
+Branche de préparation : `release/1.0.3`.
 
 ## Périmètre
 
-- [x] PR #173 fusionnée dans `develop`.
-- [x] Continuité automatique sûre étendue à Goals et Weights.
-- [x] Whitelist automatique limitée à Strength + Goals + Weights.
-- [x] Provenances `both` et `unknown` fail-closed.
+- [x] PR #176 fusionnée dans `develop`.
+- [x] Réconciliation initiale Goals legacy explicite, `unknown` toujours fail-closed.
+- [x] `GOAL_STATE_PERSISTED_EVENT` strictement post-persistance locale durable.
+- [x] Merge global Goals `unknown` / `both` neutralisé.
+- [x] Détail Goals réel de `/settings/sync-prototype` réparé.
+- [x] Strength/Weights inchangés hors tests de non-régression.
 - [x] Dexie v12, sauvegarde JSON v10 et runtime Dexie Cloud v16 inchangés.
 - [x] Aucune migration D1.
 - [x] Aucune modification des formules calories/macros.
@@ -22,27 +24,22 @@ Branche de préparation : `release/1.0.2`.
 
 ## Qualification fonctionnelle acquise
 
-- [x] Preview immuable : `https://3288522c.sportpilot-pages.pages.dev`.
-- [x] Deployment : `3288522c-6c7f-45ce-b1c3-5294736c2af1`.
-- [x] Whitelist Dexie de l'origine immuable.
-- [x] Preflight CORS positif.
-- [x] Alias de branche non autorisé.
-- [x] Goals A → B sans synchronisation manuelle.
-- [x] Goals suppression A → B.
-- [x] Weights création A → B visible dans l'UI.
-- [x] Weights mise à jour A → B sans doublon.
-- [x] Weights suppression A → B.
-- [x] Strength A → B non-régression.
-- [x] Isolation inter-compte.
+- [x] CI post-merge develop #871 : 4/4 jobs verts.
+- [x] Preview fonctionnelle immuable : `https://e00b2869.sportpilot-pages.pages.dev`.
+- [x] Manifest fonctionnel : `79fdf99c183a519760e22fbfe03c406d5deb8f97b93782a340e8a90420deca53`.
+- [x] CORS origine immuable PASS.
+- [x] Alias Preview NOT_ALLOWED.
+- [x] Goals A → B physique sans synchronisation manuelle : PASS.
+- [ ] Smoke legacy divergent réel sur l’origine production après déploiement 1.0.3.
 
-## Gates de préparation 1.0.2
+## Gates de préparation 1.0.3
 
 - [ ] `npm ci`.
 - [ ] `git diff --check`.
 - [ ] Suite Vitest complète.
 - [ ] Lint.
 - [ ] Build PWA.
-- [ ] Audit de consolidation 1.0.2.
+- [ ] Audit de consolidation 1.0.3.
 - [ ] Audit P0 de continuité.
 - [ ] npm audit requalifié sans `--force`.
 - [ ] CI GitHub Actions complète.
@@ -55,21 +52,32 @@ reste le gate complet pour les contrôles sensibles aux fins de ligne.
 
 ## Publication
 
-- [ ] Fusion de la préparation `release/1.0.2 → develop`.
+- [ ] Fusion de la préparation `release/1.0.3 → develop`.
 - [ ] Contrôle du diff de préparation comme strictement non fonctionnel.
-- [ ] Preview Cloudflare Pages Direct Upload du SHA préparé exact.
+- [ ] Preview Cloudflare Pages Direct Upload du SHA final versionné exact.
 - [ ] CORS Dexie Cloud vérifié pour l'origine immuable finale.
 - [ ] PR `develop → main`.
 - [ ] CI de `main`.
-- [ ] Tag `v1.0.2`.
-- [ ] GitHub Release SportPilot 1.0.2.
-- [ ] Production Pages du SHA publié.
-- [ ] Contrôles post-déploiement.
+- [ ] Tag `v1.0.3`.
+- [ ] GitHub Release SportPilot 1.0.3.
+- [ ] Production Pages du SHA publié, sans migration D1.
+- [ ] Smoke legacy Goals réel puis non-régression rapide Strength/Weights.
+- [ ] Nettoyage CORS des Previews uniquement après smoke production vert.
 - [x] Aucun tag créé par la préparation.
 - [x] Aucune migration D1 prévue.
 
 #141 et #146 restent terminées. #162 suit le résiduel Quagga/Sharp accepté
 pour V1. #138 reste la dette distincte des Workers Builds Cloudflare.
+
+## Archive 1.0.2 — publiée le 17 août 2026
+
+- PR de publication : #175.
+- Commit publié : `6e479170731d689683822374ba7c74fff425730d`.
+- Tag : `v1.0.2`.
+- GitHub Release : SportPilot 1.0.2.
+- Production : `https://sportpilot-pages.pages.dev`.
+- Dexie v12, sauvegarde JSON v10 et runtime Dexie Cloud v16.
+- Aucune migration D1.
 
 ## Archive 1.0.1 — publiée le 17 août 2026
 

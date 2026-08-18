@@ -18,6 +18,7 @@ const requiredFiles = [
   'RELEASE-NOTES-1.0.0-rc.2.md',
   'RELEASE-NOTES-1.0.1.md',
   'RELEASE-NOTES-1.0.2.md',
+  'RELEASE-NOTES-1.0.3.md',
   'CHANGELOG.md',
   'RELEASE-CHECKLIST.md',
   'KNOWN-LIMITATIONS.md',
@@ -42,8 +43,8 @@ for (const path of requiredFiles) {
 if (failures.length === 0) {
   const packageJson = JSON.parse(read('package.json'));
   const packageLock = JSON.parse(read('package-lock.json'));
-  if (packageJson.version !== '1.0.2') {
-    fail(`package.json doit préparer 1.0.2, reçu ${packageJson.version}.`);
+  if (packageJson.version !== '1.0.3') {
+    fail(`package.json doit préparer 1.0.3, reçu ${packageJson.version}.`);
   }
   if (packageLock.version !== packageJson.version || packageLock.packages?.['']?.version !== packageJson.version) {
     fail(`package-lock.json doit être aligné sur ${packageJson.version}.`);
@@ -73,11 +74,11 @@ if (failures.length === 0) {
     if (!source.includes('3584 * 1024')) fail(`le budget JavaScript ${label} n’est pas aligné sur 3584 Kio.`);
   }
 
-  const releaseNotes = read('RELEASE-NOTES-1.0.2.md');
+  const releaseNotes = read('RELEASE-NOTES-1.0.3.md');
   for (const marker of [
-    'SportPilot 1.0.2 — continuité sûre Goals + Weights',
-    'Branche : `release/1.0.2`',
-    'develop@37cae57dc779d6410f35a177403706be0a3eb382',
+    'SportPilot 1.0.3 — hotfix continuité Goals',
+    'Branche : `release/1.0.3`',
+    'develop@e4b0992ad3b524a529e6962f54407235263f6fa5',
     'Strength',
     'Goals',
     'Weights',
@@ -94,7 +95,7 @@ if (failures.length === 0) {
     'aucun élargissement IA',
     'Toute différence fonctionnelle',
   ]) {
-    if (!releaseNotes.includes(marker)) fail(`notes de release 1.0.2 incomplètes : ${marker}.`);
+    if (!releaseNotes.includes(marker)) fail(`notes de release 1.0.3 incomplètes : ${marker}.`);
   }
 
   const acceptedRc2Notes = read('RELEASE-NOTES-1.0.0-rc.2.md');
@@ -131,7 +132,7 @@ if (failures.length === 0) {
 
   const checklist = read('RELEASE-CHECKLIST.md');
   for (const marker of [
-    'SportPilot 1.0.2',
+    'SportPilot 1.0.3',
     'Archive RC1 — rejetée',
     '#146',
     '#162',
@@ -144,7 +145,7 @@ if (failures.length === 0) {
   }
 
   const knownLimitations = read('KNOWN-LIMITATIONS.md');
-  for (const marker of ['SportPilot 1.0.2', '#103', '#136', '#137', '#138', '#141', '#146', '#162', '2 HIGH / 0 CRITICAL', 'Dépendances']) {
+  for (const marker of ['SportPilot 1.0.3', '#103', '#136', '#137', '#138', '#141', '#146', '#162', '2 HIGH / 0 CRITICAL', 'Dépendances']) {
     if (!knownLimitations.includes(marker)) fail(`limitations connues incomplètes : ${marker}.`);
   }
 
@@ -220,9 +221,9 @@ if (failures.length === 0) {
 }
 
 if (failures.length > 0) {
-  console.error('Audit de consolidation 1.0.2 échoué :');
+  console.error('Audit de consolidation 1.0.3 échoué :');
   for (const failure of failures) console.error(`- ${failure}`);
   process.exit(1);
 }
 
-console.log('Audit de consolidation 1.0.2 réussi : continuité Goals + Weights, archives stables/RC, documentation, budgets, parcours et contrats de stockage sont alignés.');
+console.log('Audit de consolidation 1.0.3 réussi : hotfix Goals, archives stables/RC, documentation, budgets, parcours et contrats de stockage sont alignés.');

@@ -4,7 +4,21 @@ Ce fichier synthétise les versions publiées. Les notes détaillées versionné
 restent les archives de référence et conservent l’état de préparation de chaque
 livraison.
 
-## 1.0.2 — continuité Goals + Weights en préparation
+## 1.0.3 — hotfix continuité Goals en préparation
+
+- Première réconciliation explicite des comptes Goals historiques divergents, sans conversion automatique de `unknown`.
+- Aperçu réel objectif par objectif avant le choix global local/cloud.
+- Signal post-persistance Goals strict pour l’automatisme A → B.
+- Refus des résolutions Goals `unknown` / `both` dans tous les chemins produit, y compris le merge global.
+- Détail Objectifs réparé sur la vraie route `/settings/sync-prototype`.
+- Preview fonctionnelle `e00b2869` et smoke A → B validés.
+- Dexie v12, sauvegarde JSON v10 et runtime Dexie Cloud v16 inchangés ; aucune migration D1.
+
+Cette entrée prépare `1.0.3` ; la Preview finale versionnée, `main`, le tag, la GitHub Release et la production restent des gates distincts.
+
+Voir [`RELEASE-NOTES-1.0.3.md`](RELEASE-NOTES-1.0.3.md).
+
+## 1.0.2 — publiée le 17 août 2026
 
 - Extension de la continuité automatique sûre de Strength vers Goals et Weights.
 - Upload automatique uniquement en provenance `local-only`.
@@ -15,9 +29,10 @@ livraison.
 - Absence de doublon Weight validée sur deux appareils/profils.
 - Versions de données inchangées : Dexie v12, sauvegarde JSON v10 et runtime Dexie Cloud v16.
 - Aucune migration D1, formule calorique, thème ou extension IA.
-
-Cette entrée prépare `1.0.2` ; le tag, la GitHub Release et la production
-restent des gates distincts.
+- Commit publié : `6e479170731d689683822374ba7c74fff425730d`.
+- Tag : `v1.0.2`.
+- GitHub Release : SportPilot 1.0.2.
+- Production : `https://sportpilot-pages.pages.dev`.
 
 Voir [`RELEASE-NOTES-1.0.2.md`](RELEASE-NOTES-1.0.2.md).
 
