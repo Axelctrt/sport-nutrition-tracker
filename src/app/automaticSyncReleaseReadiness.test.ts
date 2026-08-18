@@ -33,7 +33,11 @@ describe('publication SportPilot 0.26.0 — synchronisation automatique résilie
     expect(orchestratorSource).toContain(
       'appendSyncOperationHistory(accountKey, result);',
     );
-    expect(orchestratorSource).toContain("stopReason = 'offline';");
-    expect(orchestratorSource).toContain("stopReason = 'closing';");
+    expect(orchestratorSource).toContain(
+      'L’opération a été interrompue avant la fin.',
+    );
+    expect(orchestratorSource).toContain(
+      'for (const [index, domainId] of request.domainIds.entries())',
+    );
   });
 });
