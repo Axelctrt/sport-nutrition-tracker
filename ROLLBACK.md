@@ -1,20 +1,20 @@
-# Retour arrière — SportPilot 1.0.2
+# Retour arrière — SportPilot 1.0.3
 
 ## Référence stable précédente
 
-- version : `1.0.1` ;
-- `main` : `df28f61396160a68d24d110dd0924f491383faae` ;
-- tag : `v1.0.1` ;
+- version : `1.0.2` ;
+- `main` : `6e479170731d689683822374ba7c74fff425730d` ;
+- tag : `v1.0.2` ;
 - production : `https://sportpilot-pages.pages.dev`.
 
-Candidate 1.0.2 préparée depuis :
+Candidate 1.0.3 préparée depuis :
 
-- `develop@37cae57dc779d6410f35a177403706be0a3eb382` ;
-- branche `release/1.0.2`.
+- `develop@e4b0992ad3b524a529e6962f54407235263f6fa5` ;
+- branche `release/1.0.3`.
 
 ## Compatibilité des données
 
-La maintenance 1.0.2 ne change aucun schéma :
+La maintenance 1.0.3 ne change aucun schéma :
 
 - Dexie v12 ;
 - sauvegarde JSON v10 ;
