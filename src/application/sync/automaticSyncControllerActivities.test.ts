@@ -31,7 +31,13 @@ function snapshot(): SyncPrototypeSnapshot {
     realActivities: {
       enabled: true,
       status: 'ready',
-      preview: { differingEntityCount: 0 },
+      preview: {
+        localActivityCount: 0,
+        cloudActivityCount: 0,
+        localDeletionCount: 0,
+        cloudDeletionCount: 0,
+        differingEntityCount: 0,
+      },
     },
     diagnostics: createEmptySyncPrototypeDiagnostics(USER_ID),
   };
