@@ -621,17 +621,18 @@ describe('continuité sûre Activities', () => {
 
     const originalToArray = cloud.realActivities.toArray.bind(cloud.realActivities);
     let calls = 0;
-    const spy = vi.spyOn(cloud.realActivities, 'toArray').mockImplementation(async () => {
-      calls += 1;
-      if (calls === 2) {
-        await putCloudActivity(
-          cloud,
-          runningActivity('activity-cloud-race', '2026-08-18T11:00:00.000Z', 99),
-          9,
-        );
-      }
-      return originalToArray();
-    });
+    const spy = vi.spyOn(cloud.realActivities, 'toArray').mockImplementation(() =>
+      Dexie.waitFor(async () => {
+        calls += 1;
+        if (calls === 2) {
+          await putCloudActivity(
+            cloud,
+            runningActivity('activity-cloud-race', '2026-08-18T11:00:00.000Z', 99),
+            9,
+          );
+        }
+        return originalToArray();
+      }));
 
     const result = await synchronizeRealActivitiesToCloud(
       local,
@@ -658,15 +659,16 @@ describe('continuité sûre Activities', () => {
 
     const originalToArray = local.activities.toArray.bind(local.activities);
     let calls = 0;
-    const spy = vi.spyOn(local.activities, 'toArray').mockImplementation(async () => {
-      calls += 1;
-      if (calls === 2) {
-        await local.activities.put(
-          runningActivity('activity-local-race', '2026-08-18T12:00:00.000Z', 88),
-        );
-      }
-      return originalToArray();
-    });
+    const spy = vi.spyOn(local.activities, 'toArray').mockImplementation(() =>
+      Dexie.waitFor(async () => {
+        calls += 1;
+        if (calls === 2) {
+          await local.activities.put(
+            runningActivity('activity-local-race', '2026-08-18T12:00:00.000Z', 88),
+          );
+        }
+        return originalToArray();
+      }));
 
     const result = await synchronizeRealActivitiesFromCloud(
       local,
