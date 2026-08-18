@@ -104,7 +104,7 @@ interface GoalLogicalState {
   readonly markers: readonly DeletionRecord[];
 }
 
-interface RegisteredGoalSyncContext {
+export interface RegisteredGoalSyncContext {
   readonly localDatabase: AppDatabase;
   readonly cloudDatabase: SyncPrototypeDatabase;
 }
@@ -1049,7 +1049,9 @@ export async function applyInitialRealGoalReconciliation(
   return result;
 }
 
-function registeredGoalSyncContext(currentUserId: string): RegisteredGoalSyncContext {
+export function registeredGoalSyncContext(
+  currentUserId: string,
+): RegisteredGoalSyncContext {
   const context = registeredGoalSyncContexts.get(currentUserId);
   if (!context) {
     throw new Error(
