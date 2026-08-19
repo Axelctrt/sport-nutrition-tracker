@@ -19,9 +19,7 @@ import {
 } from '@/application/sync/syncLocalChangeEvents';
 import { GOAL_STATE_PERSISTED_EVENT } from '@/domain/goals/goalState';
 import { ENDURANCE_PLANNING_PERSISTED_EVENT } from '@/domain/planning/endurancePlanningState';
-import { WEEKLY_MISSION_HISTORY_CHANGED_EVENT } from '@/domain/rewards/weeklyMissionHistory';
 import type { AppSettings } from '@/domain/models/settings';
-import { ROUTINE_REMINDER_CHANGED_EVENT } from '@/application/reminders/routineReminderService';
 import type { SettingsRepository } from '@/infrastructure/repositories/contracts/SettingsRepository';
 import type {
   SyncPrototypeClient,
@@ -38,6 +36,12 @@ const SAFE_REMOTE_CONVERGENCE_DOMAIN_IDS =
   new Set<SyncOrchestratorDomainId>(['strength', 'goals', 'weights', 'activities']);
 const SAFE_LOCAL_UPLOAD_DOMAIN_IDS =
   new Set<SyncOrchestratorDomainId>(['strength', 'goals', 'weights', 'activities']);
+const SAFE_MERGE_DOMAIN_IDS = new Set<SyncOrchestratorDomainId>([
+  'account-preferences',
+  'rewards-routines',
+  'goals',
+  'daily-coaching',
+]);
 
 export type AutomaticSyncConnectionType = 'wifi' | 'cellular' | 'ethernet' | 'unknown';
 
@@ -83,12 +87,19 @@ function automaticDomainIds(
 ): SyncOrchestratorDomainId[] {
   const domainIds: SyncOrchestratorDomainId[] = [];
 
+  if (snapshot.realAccountPreferences?.enabled) {
+    domainIds.push('account-preferences');
+  }
+  if (snapshot.realRewardsRoutines?.enabled) {
+    domainIds.push('rewards-routines');
+  }
   if (snapshot.realWeights?.enabled && !settings.automaticWeightSyncEnabled) {
     domainIds.push('weights');
   }
   if (snapshot.realActivities?.enabled) domainIds.push('activities');
   if (snapshot.realGoals?.enabled) domainIds.push('goals');
   if (snapshot.realStrength?.enabled) domainIds.push('strength');
+  if (snapshot.realDailyCoaching?.enabled) domainIds.push('daily-coaching');
 
   return domainIds;
 }
@@ -122,6 +133,18 @@ function safeLocalUploadDomainIds(
       SAFE_LOCAL_UPLOAD_DOMAIN_IDS.has(domainResult.domainId)
       && domainResult.status === 'local-changes-pending'
       && domainResult.changeOrigin === 'local'
+      && (domainResult.differingEntityCount ?? 0) > 0,
+    )
+    .map((domainResult) => domainResult.domainId);
+}
+
+function safeMergeDomainIds(
+  result: SyncOrchestratorRunResult,
+): SyncOrchestratorDomainId[] {
+  return result.domainResults
+    .filter((domainResult) =>
+      SAFE_MERGE_DOMAIN_IDS.has(domainResult.domainId)
+      && domainResult.status === 'action-required'
       && (domainResult.differingEntityCount ?? 0) > 0,
     )
     .map((domainResult) => domainResult.domainId);
@@ -200,10 +223,6 @@ export class AutomaticSyncController {
 
   private readonly handleGoalPersisted = () => {
     void this.triggerLocalChange(['goals']);
-  };
-
-  private readonly handleRewardsChange = () => {
-    void this.triggerLocalChange(['rewards-routines']);
   };
 
   private readonly handleEndurancePlanningPersisted = () => {
@@ -313,14 +332,6 @@ export class AutomaticSyncController {
       ENDURANCE_PLANNING_PERSISTED_EVENT,
       this.handleEndurancePlanningPersisted,
     );
-    this.eventTarget?.addEventListener(
-      WEEKLY_MISSION_HISTORY_CHANGED_EVENT,
-      this.handleRewardsChange,
-    );
-    this.eventTarget?.addEventListener(
-      ROUTINE_REMINDER_CHANGED_EVENT,
-      this.handleRewardsChange,
-    );
     this.visibilityTarget?.addEventListener(
       'visibilitychange',
       this.handleVisibility,
@@ -353,14 +364,6 @@ export class AutomaticSyncController {
     this.eventTarget?.removeEventListener(
       ENDURANCE_PLANNING_PERSISTED_EVENT,
       this.handleEndurancePlanningPersisted,
-    );
-    this.eventTarget?.removeEventListener(
-      WEEKLY_MISSION_HISTORY_CHANGED_EVENT,
-      this.handleRewardsChange,
-    );
-    this.eventTarget?.removeEventListener(
-      ROUTINE_REMINDER_CHANGED_EVENT,
-      this.handleRewardsChange,
     );
     this.visibilityTarget?.removeEventListener(
       'visibilitychange',
@@ -432,6 +435,17 @@ export class AutomaticSyncController {
       !this.disposed
       && generation === this.identityGeneration
       && orchestrator === this.orchestrator
+    );
+  }
+
+  private isCurrentAccountOperation(
+    generation: number,
+    orchestrator: SyncOrchestrator,
+    expectedFingerprint: string,
+  ): boolean {
+    return (
+      this.isCurrentOperation(generation, orchestrator)
+      && accountFingerprint(this.client.getSnapshot()) === expectedFingerprint
     );
   }
 
@@ -508,6 +522,215 @@ export class AutomaticSyncController {
     await this.triggerLifecycle('foreground');
   }
 
+  private async applyMergeSafeAutomaticSyncs(
+    orchestrator: SyncOrchestrator,
+    generation: number,
+    source: SyncOrchestratorSource,
+    analysisResult: SyncOrchestratorRunResult,
+  ): Promise<{
+    readonly completedAt: string;
+    readonly failedDomainCount: number;
+  } | undefined> {
+    const requestedDomainIds = safeMergeDomainIds(analysisResult);
+    if (requestedDomainIds.length === 0) {
+      return {
+        completedAt: analysisResult.completedAt,
+        failedDomainCount: 0,
+      };
+    }
+
+    const expectedFingerprint = accountFingerprint(this.client.getSnapshot());
+    if (!expectedFingerprint) return undefined;
+
+    /*
+     * Un état "action-required" n'est jamais écrit directement.
+     * On rafraîchit d'abord le transport, puis on revalide le domaine
+     * et l'identité avant toute convergence bidirectionnelle.
+     */
+    await this.client.syncNow();
+
+    if (
+      !this.isCurrentAccountOperation(
+        generation,
+        orchestrator,
+        expectedFingerprint,
+      )
+    ) {
+      return undefined;
+    }
+
+    this.updateSnapshot({ lastOperation: 'analyze' });
+
+    const refreshedAnalysis = await orchestrator.schedule({
+      operation: 'analyze',
+      source,
+      domainIds: requestedDomainIds,
+      delayMs: 0,
+    });
+
+    if (
+      !this.isCurrentAccountOperation(
+        generation,
+        orchestrator,
+        expectedFingerprint,
+      )
+    ) {
+      return undefined;
+    }
+
+    let completedAt = refreshedAnalysis.completedAt;
+    const failedDomainIds = new Set<SyncOrchestratorDomainId>(
+      refreshedAnalysis.failedDomainIds,
+    );
+    let wrote = false;
+
+    /*
+     * Goals peut redevenir strictement directionnel après le refresh
+     * transport. Dans ce cas on conserve le chemin directionnel existant.
+     */
+    const directionalRequests: readonly {
+      readonly domainIds: readonly SyncOrchestratorDomainId[];
+      readonly syncMode: SyncOrchestratorSyncMode;
+    }[] = [
+      {
+        domainIds: normalizeDomains(
+          safeRemoteConvergenceDomainIds(refreshedAnalysis),
+          requestedDomainIds,
+        ),
+        syncMode: 'cloud-only',
+      },
+      {
+        domainIds: normalizeDomains(
+          safeLocalUploadDomainIds(refreshedAnalysis),
+          requestedDomainIds,
+        ),
+        syncMode: 'local-only',
+      },
+    ];
+
+    for (const request of directionalRequests) {
+      if (request.domainIds.length === 0) continue;
+
+      this.updateSnapshot({ lastOperation: 'sync' });
+
+      const result = await orchestrator.schedule({
+        operation: 'sync',
+        syncMode: request.syncMode,
+        source,
+        domainIds: request.domainIds,
+        delayMs: 0,
+      });
+
+      if (
+        !this.isCurrentAccountOperation(
+          generation,
+          orchestrator,
+          expectedFingerprint,
+        )
+      ) {
+        return undefined;
+      }
+
+      wrote = true;
+      completedAt = result.completedAt;
+      result.failedDomainIds.forEach((domainId) => {
+        failedDomainIds.add(domainId);
+      });
+    }
+
+    const mergeDomainIds = safeMergeDomainIds(refreshedAnalysis);
+
+    if (mergeDomainIds.length > 0) {
+      this.updateSnapshot({ lastOperation: 'sync' });
+
+      const mergeResult = await orchestrator.schedule({
+        operation: 'sync',
+        syncMode: 'bidirectional',
+        source,
+        domainIds: mergeDomainIds,
+        delayMs: 0,
+      });
+
+      if (
+        !this.isCurrentAccountOperation(
+          generation,
+          orchestrator,
+          expectedFingerprint,
+        )
+      ) {
+        return undefined;
+      }
+
+      wrote = true;
+      completedAt = mergeResult.completedAt;
+      mergeResult.failedDomainIds.forEach((domainId) => {
+        failedDomainIds.add(domainId);
+      });
+    }
+
+    if (!wrote) {
+      return {
+        completedAt,
+        failedDomainCount: failedDomainIds.size,
+      };
+    }
+
+    /*
+     * Une convergence merge-safe n'est considérée terminée qu'après
+     * publication transport + relecture finale.
+     */
+    await this.client.syncNow();
+
+    if (
+      !this.isCurrentAccountOperation(
+        generation,
+        orchestrator,
+        expectedFingerprint,
+      )
+    ) {
+      return undefined;
+    }
+
+    this.updateSnapshot({ lastOperation: 'analyze' });
+
+    const finalAnalysis = await orchestrator.schedule({
+      operation: 'analyze',
+      source,
+      domainIds: requestedDomainIds,
+      delayMs: 0,
+    });
+
+    if (
+      !this.isCurrentAccountOperation(
+        generation,
+        orchestrator,
+        expectedFingerprint,
+      )
+    ) {
+      return undefined;
+    }
+
+    completedAt = finalAnalysis.completedAt;
+
+    finalAnalysis.failedDomainIds.forEach((domainId) => {
+      failedDomainIds.add(domainId);
+    });
+
+    for (const domainResult of finalAnalysis.domainResults) {
+      if (
+        requestedDomainIds.includes(domainResult.domainId)
+        && (domainResult.differingEntityCount ?? 0) > 0
+      ) {
+        failedDomainIds.add(domainResult.domainId);
+      }
+    }
+
+    return {
+      completedAt,
+      failedDomainCount: failedDomainIds.size,
+    };
+  }
+
   private async applySafeAutomaticSyncs(
     orchestrator: SyncOrchestrator,
     generation: number,
@@ -547,6 +770,17 @@ export class AutomaticSyncController {
       completedAt = syncResult.completedAt;
       failedDomainCount += syncResult.failedDomainIds.length;
     }
+
+    const mergeSafe = await this.applyMergeSafeAutomaticSyncs(
+      orchestrator,
+      generation,
+      source,
+      analysisResult,
+    );
+    if (!mergeSafe) return undefined;
+
+    completedAt = mergeSafe.completedAt;
+    failedDomainCount += mergeSafe.failedDomainCount;
 
     return { completedAt, failedDomainCount };
   }

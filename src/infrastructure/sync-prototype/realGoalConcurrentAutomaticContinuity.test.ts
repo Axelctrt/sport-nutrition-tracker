@@ -295,7 +295,7 @@ describe('gate Goals both — reprise automatique après résolution', () => {
       controller.dispose();
     }
   });
-  it('A hors ligne et B cloud divergent puis la reconnexion conserve both sans choisir automatiquement', async () => {
+  it('A hors ligne et B cloud divergent puis la mutation cloud plus récente gagne automatiquement', async () => {
     const initial = goal(10_000, '2026-08-19T06:00:00.000Z');
     await local.goals.put(initial);
     await putCloudGoal(cloud, initial);
@@ -328,12 +328,10 @@ describe('gate Goals both — reprise automatique après résolution', () => {
     try {
       await controller.initialize();
 
-      // Appareil A modifié hors ligne.
       await local.goals.put(
         goal(8_000, '2026-08-19T06:10:00.000Z'),
       );
 
-      // Appareil B / cloud modifié indépendamment pendant que A est hors ligne.
       await putCloudGoal(
         cloud,
         goal(55_000, '2026-08-19T06:20:00.000Z'),
@@ -343,25 +341,93 @@ describe('gate Goals both — reprise automatique après résolution', () => {
       online = true;
       eventTarget.dispatchEvent(new Event('online'));
 
-      await vi.waitFor(() => {
-        expect(observedOrigins).toContain('both');
+      await vi.waitFor(async () => {
+        expect(await local.goals.get('goal-both-auto')).toMatchObject({
+          targetValue: 55_000,
+        });
+        expect(await cloud.realGoals.get('#goal-both-auto')).toMatchObject({
+          targetValue: 55_000,
+        });
       });
 
-      // Aucun côté ne gagne automatiquement.
-      expect(await local.goals.get('goal-both-auto')).toMatchObject({
-        targetValue: 8_000,
-      });
-      expect(await cloud.realGoals.get('#goal-both-auto')).toMatchObject({
-        targetValue: 55_000,
-      });
+      expect(observedOrigins).toContain('both');
+      expect(testClient.syncRealGoals).toHaveBeenCalled();
 
       expect(await previewRealGoalSync(
         local,
         cloud as unknown as SyncPrototypeDatabase,
         USER_ID,
       )).toMatchObject({
-        differingEntityCount: 1,
-        changeOrigin: 'both',
+        differingEntityCount: 0,
+      });
+    } finally {
+      controller.dispose();
+    }
+  });
+
+  it('A hors ligne plus récent que B cloud gagne automatiquement dans le scénario miroir', async () => {
+    const initial = goal(10_000, '2026-08-19T07:00:00.000Z');
+    await local.goals.put(initial);
+    await putCloudGoal(cloud, initial);
+
+    expect(await previewRealGoalSync(
+      local,
+      cloud as unknown as SyncPrototypeDatabase,
+      USER_ID,
+    )).toMatchObject({ differingEntityCount: 0 });
+
+    let online = false;
+    const observedOrigins: Array<string | undefined> = [];
+    const testClient = createGoalClient(
+      local,
+      cloud,
+      (origin) => observedOrigins.push(origin),
+    );
+    const eventTarget = new EventTarget();
+    const controller = new AutomaticSyncController({
+      client: testClient,
+      settingsRepository: settingsRepository(),
+      eventTarget,
+      isOnline: () => online,
+      lifecycleDebounceMs: 0,
+      localChangeDebounceMs: 0,
+      foregroundMinimumIntervalMs: 0,
+    });
+
+    try {
+      await controller.initialize();
+
+      await putCloudGoal(
+        cloud,
+        goal(55_000, '2026-08-19T07:20:00.000Z'),
+        4,
+      );
+
+      await local.goals.put(
+        goal(8_000, '2026-08-19T07:30:00.000Z'),
+      );
+
+      online = true;
+      eventTarget.dispatchEvent(new Event('online'));
+
+      await vi.waitFor(async () => {
+        expect(await local.goals.get('goal-both-auto')).toMatchObject({
+          targetValue: 8_000,
+        });
+        expect(await cloud.realGoals.get('#goal-both-auto')).toMatchObject({
+          targetValue: 8_000,
+        });
+      });
+
+      expect(observedOrigins).toContain('both');
+      expect(testClient.syncRealGoals).toHaveBeenCalled();
+
+      expect(await previewRealGoalSync(
+        local,
+        cloud as unknown as SyncPrototypeDatabase,
+        USER_ID,
+      )).toMatchObject({
+        differingEntityCount: 0,
       });
     } finally {
       controller.dispose();
