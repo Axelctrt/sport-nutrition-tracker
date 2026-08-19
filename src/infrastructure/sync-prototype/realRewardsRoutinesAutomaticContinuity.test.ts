@@ -200,12 +200,12 @@ describe('gate A→B Rewards/Routines', () => {
     await settingsA.update({
       routineReminderPreferences: {
         ...currentSettings.routineReminderPreferences!,
-        snoozeMinutes: 45,
+        snoozeMinutes: 120,
       },
     });
     await vi.waitFor(async () => {
       expect((await cloudA.realRewardsRoutines.get('#rewards-routines'))
-        ?.routineReminderPreferences.value.snoozeMinutes).toBe(45);
+        ?.routineReminderPreferences.value.snoozeMinutes).toBe(120);
     });
 
     controllerA.dispose();
@@ -229,7 +229,7 @@ describe('gate A→B Rewards/Routines', () => {
     expect(await localB.routineReminderCompletions.count()).toBe(1);
     expect(await settingsB.get()).toMatchObject({
       theme: 'dark',
-      routineReminderPreferences: { snoozeMinutes: 45 },
+      routineReminderPreferences: { snoozeMinutes: 120 },
     });
     expect(await cloudB.realRewardsRoutines.toArray()).toEqual(cloudBeforeRestore);
   });
