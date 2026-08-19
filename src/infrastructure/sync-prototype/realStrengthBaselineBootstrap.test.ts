@@ -137,6 +137,7 @@ function createControllerClient(userId = ACCOUNT_USER_ID): SyncPrototypeClient {
     account: { isLoggedIn: true, isLoading: false, userId },
     sync: { status: 'connected', phase: 'in-sync' },
     weights: { weights: [], deletedCount: 0, isLoading: false },
+    realStrength: { enabled: true, status: 'idle' },
     diagnostics: createEmptySyncPrototypeDiagnostics(),
   };
   return {

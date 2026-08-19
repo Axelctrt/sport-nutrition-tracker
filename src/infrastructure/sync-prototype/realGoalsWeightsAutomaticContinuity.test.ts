@@ -179,6 +179,8 @@ function createDeviceClient(
     account: { isLoggedIn: true, isLoading: false, userId },
     sync: { status: 'connected', phase: 'in-sync' },
     weights: { weights: [], deletedCount: 0, isLoading: false },
+    realWeights: { enabled: true, status: 'idle' },
+    realGoals: { enabled: true, status: 'idle' },
     diagnostics: createEmptySyncPrototypeDiagnostics(),
   } as SyncPrototypeSnapshot;
   const listeners = new Set<() => void>();

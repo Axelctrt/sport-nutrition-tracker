@@ -28,6 +28,9 @@ function client(): SyncPrototypeClient {
     account: { isLoggedIn: true, isLoading: false, userId: USER_ID },
     sync: { status: 'connected', phase: 'in-sync' },
     weights: { weights: [], deletedCount: 0, isLoading: false },
+    realWeights: { enabled: true, status: 'idle' },
+    realActivities: { enabled: true, status: 'idle' },
+    realGoals: { enabled: true, status: 'idle' },
     diagnostics: createEmptySyncPrototypeDiagnostics(),
   };
   return {
@@ -124,6 +127,12 @@ describe('AutomaticSyncController — whitelist Goals + Weights + Activities', (
 
     await controller.initialize();
 
+    expect(schedule).toHaveBeenNthCalledWith(1, {
+      operation: 'analyze',
+      source: 'application-start',
+      domainIds: ['weights', 'activities', 'goals'],
+      delayMs: 0,
+    });
     expect(schedule).toHaveBeenCalledTimes(3);
     expect(schedule).toHaveBeenNthCalledWith(2, {
       operation: 'sync',

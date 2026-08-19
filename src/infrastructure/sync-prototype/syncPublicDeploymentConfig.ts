@@ -4,9 +4,10 @@
  * Ces valeurs sont nécessairement visibles dans le bundle navigateur.
  * Aucune clé privée, aucun jeton et aucun secret Dexie Cloud ne doit être ajouté ici.
  *
- * Elles servent de garde-fou de production. Les variables VITE_* définies par
- * l’hébergeur gardent la priorité pour permettre une activation contrôlée par
- * environnement Cloudflare Preview/Production.
+ * Elles servent de garde-fou de production. Le socle de continuité publié
+ * (base Dexie + Weights + Activities + Goals + Strength) est verrouillé par
+ * mergeSyncPrototypeProductionEnvironment(). Les autres flags publics restent
+ * surchargeables pour les activations qui ne font pas partie de cette whitelist.
  */
 export const syncPublicDeploymentConfig = Object.freeze({
   VITE_ENABLE_SYNC_PROTOTYPE: 'true',

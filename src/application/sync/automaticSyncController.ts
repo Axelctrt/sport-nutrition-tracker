@@ -4,7 +4,6 @@ import {
 } from '@/application/sync/automaticSyncEvents';
 import {
   createSyncOrchestratorDomains,
-  SYNC_ORCHESTRATOR_DOMAIN_IDS,
 } from '@/application/sync/syncOrchestratorAdapters';
 import {
   createSyncOrchestrator,
@@ -78,10 +77,20 @@ function accountFingerprint(snapshot: SyncPrototypeSnapshot): string | undefined
   )?.toLowerCase();
 }
 
-function automaticDomainIds(settings: AppSettings): SyncOrchestratorDomainId[] {
-  return SYNC_ORCHESTRATOR_DOMAIN_IDS.filter(
-    (domainId) => !(domainId === 'weights' && settings.automaticWeightSyncEnabled),
-  );
+function automaticDomainIds(
+  settings: AppSettings,
+  snapshot: SyncPrototypeSnapshot,
+): SyncOrchestratorDomainId[] {
+  const domainIds: SyncOrchestratorDomainId[] = [];
+
+  if (snapshot.realWeights?.enabled && !settings.automaticWeightSyncEnabled) {
+    domainIds.push('weights');
+  }
+  if (snapshot.realActivities?.enabled) domainIds.push('activities');
+  if (snapshot.realGoals?.enabled) domainIds.push('goals');
+  if (snapshot.realStrength?.enabled) domainIds.push('strength');
+
+  return domainIds;
 }
 
 function normalizeDomains(
@@ -484,7 +493,7 @@ export class AutomaticSyncController {
       return [];
     }
 
-    return automaticDomainIds(settings);
+    return automaticDomainIds(settings, clientSnapshot);
   }
 
   private async triggerForeground(): Promise<void> {
