@@ -117,6 +117,7 @@ function createGoalClient(
     account: { isLoggedIn: true, isLoading: false, userId: USER_ID },
     sync: { status: 'connected', phase: 'in-sync' },
     weights: { weights: [], deletedCount: 0, isLoading: false },
+    realGoals: { enabled: true, status: 'idle' },
     diagnostics: createEmptySyncPrototypeDiagnostics(USER_ID),
   };
   const listeners = new Set<() => void>();
@@ -294,4 +295,77 @@ describe('gate Goals both — reprise automatique après résolution', () => {
       controller.dispose();
     }
   });
+  it('A hors ligne et B cloud divergent puis la reconnexion conserve both sans choisir automatiquement', async () => {
+    const initial = goal(10_000, '2026-08-19T06:00:00.000Z');
+    await local.goals.put(initial);
+    await putCloudGoal(cloud, initial);
+
+    expect(await previewRealGoalSync(
+      local,
+      cloud as unknown as SyncPrototypeDatabase,
+      USER_ID,
+    )).toMatchObject({ differingEntityCount: 0 });
+    expect(await cloud.realSyncBaselines.get(GOAL_BASELINE_ID)).toBeDefined();
+
+    let online = false;
+    const observedOrigins: Array<string | undefined> = [];
+    const testClient = createGoalClient(
+      local,
+      cloud,
+      (origin) => observedOrigins.push(origin),
+    );
+    const eventTarget = new EventTarget();
+    const controller = new AutomaticSyncController({
+      client: testClient,
+      settingsRepository: settingsRepository(),
+      eventTarget,
+      isOnline: () => online,
+      lifecycleDebounceMs: 0,
+      localChangeDebounceMs: 0,
+      foregroundMinimumIntervalMs: 0,
+    });
+
+    try {
+      await controller.initialize();
+
+      // Appareil A modifié hors ligne.
+      await local.goals.put(
+        goal(8_000, '2026-08-19T06:10:00.000Z'),
+      );
+
+      // Appareil B / cloud modifié indépendamment pendant que A est hors ligne.
+      await putCloudGoal(
+        cloud,
+        goal(55_000, '2026-08-19T06:20:00.000Z'),
+        3,
+      );
+
+      online = true;
+      eventTarget.dispatchEvent(new Event('online'));
+
+      await vi.waitFor(() => {
+        expect(observedOrigins).toContain('both');
+      });
+
+      // Aucun côté ne gagne automatiquement.
+      expect(await local.goals.get('goal-both-auto')).toMatchObject({
+        targetValue: 8_000,
+      });
+      expect(await cloud.realGoals.get('#goal-both-auto')).toMatchObject({
+        targetValue: 55_000,
+      });
+
+      expect(await previewRealGoalSync(
+        local,
+        cloud as unknown as SyncPrototypeDatabase,
+        USER_ID,
+      )).toMatchObject({
+        differingEntityCount: 1,
+        changeOrigin: 'both',
+      });
+    } finally {
+      controller.dispose();
+    }
+  });
+
 });
