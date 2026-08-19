@@ -130,6 +130,56 @@ describe('runtime des états utilisateur Dexie', () => {
     window.removeEventListener(GOAL_STATE_PERSISTED_EVENT, persisted);
   });
 
+  it('attend une écriture Goals en attente avant de réhydrater le runtime', async () => {
+    await initializeDatabase(database);
+
+    const storedGoal = {
+      ...goalState.goals[0]!,
+      targetValue: 12_000,
+      updatedAt: '2026-08-19T18:00:00.000Z',
+    };
+    const editedGoal = {
+      ...storedGoal,
+      targetValue: 55_000,
+      updatedAt: '2026-08-19T18:01:00.000Z',
+    };
+    await database.goals.clear();
+    await database.goals.put(storedGoal);
+
+    let releasePersistence = () => undefined;
+    const persistenceGate = new Promise<void>((resolve) => {
+      releasePersistence = resolve;
+    });
+    let markPersistenceStarted = () => undefined;
+    const persistenceStarted = new Promise<void>((resolve) => {
+      markPersistenceStarted = resolve;
+    });
+
+    hydrateGoalStateRuntime(
+      { version: 1, goals: [storedGoal] },
+      async (state) => {
+        markPersistenceStarted();
+        await persistenceGate;
+        await database.goals.clear();
+        await database.goals.bulkPut(state.goals);
+      },
+    );
+
+    writeGoalState({ version: 1, goals: [editedGoal] });
+    await persistenceStarted;
+
+    const reloadPromise = reloadUserStateRuntime(database);
+    await Promise.resolve();
+    releasePersistence();
+    await reloadPromise;
+
+    expect(await database.goals.get(editedGoal.id)).toEqual(editedGoal);
+    expect(readGoalState()).toEqual({
+      version: 1,
+      goals: [editedGoal],
+    });
+  });
+
   it('persiste les récompenses, missions et complétions de rappels dans Dexie', async () => {
     await initializeDatabase(database);
 
