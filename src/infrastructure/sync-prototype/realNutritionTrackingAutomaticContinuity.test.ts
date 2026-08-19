@@ -8,10 +8,7 @@ import type {
   DailyTarget,
   DailyTargetEnergyInputSnapshot,
 } from '@/domain/models/targets';
-import type {
-  AcceptedCalorieAdjustment,
-  WeeklyReview,
-} from '@/domain/models/weeklyReview';
+import type { WeeklyReview } from '@/domain/models/weeklyReview';
 import { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import { DexieSettingsRepository } from '@/infrastructure/repositories/dexie/DexieSettingsRepository';
 import { DexieWeeklyReviewRepository } from '@/infrastructure/repositories/dexie/DexieWeeklyReviewRepository';
