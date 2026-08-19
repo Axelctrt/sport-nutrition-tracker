@@ -146,13 +146,13 @@ describe('runtime des états utilisateur Dexie', () => {
     await database.goals.clear();
     await database.goals.put(storedGoal);
 
-    let releasePersistence = () => undefined;
+    let releasePersistence: () => void = () => undefined;
     const persistenceGate = new Promise<void>((resolve) => {
-      releasePersistence = resolve;
+      releasePersistence = () => resolve();
     });
-    let markPersistenceStarted = () => undefined;
+    let markPersistenceStarted: () => void = () => undefined;
     const persistenceStarted = new Promise<void>((resolve) => {
-      markPersistenceStarted = resolve;
+      markPersistenceStarted = () => resolve();
     });
 
     hydrateGoalStateRuntime(
