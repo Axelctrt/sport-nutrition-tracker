@@ -13,7 +13,13 @@ describe('configuration du prototype Dexie Cloud', () => {
       enabled: true,
       databaseUrl: 'https://zhnyk8met.dexie.cloud',
       realWeightSyncEnabled: true,
+      realActivitySyncEnabled: true,
+      realGoalSyncEnabled: true,
+      realStrengthSyncEnabled: true,
       realNutritionJournalSyncEnabled: true,
+      realNutritionLibrarySyncEnabled: true,
+      realNutritionTrackingSyncEnabled: true,
+      realDailyCoachingSyncEnabled: true,
       realAccountPreferencesSyncEnabled: true,
       realRewardsRoutinesSyncEnabled: true,
       realSocialCloudEnabled: false,
@@ -21,7 +27,7 @@ describe('configuration du prototype Dexie Cloud', () => {
     });
   });
 
-  it('verrouille la base et les quatre domaines sûrs contre une surcharge résiduelle du build', () => {
+  it('verrouille la base et les dix domaines de continuité contre une surcharge résiduelle du build', () => {
     const environment = mergeSyncPrototypeProductionEnvironment({
       VITE_ENABLE_SYNC_PROTOTYPE: 'false',
       VITE_DEXIE_CLOUD_DATABASE_URL: 'https://obsolete.dexie.cloud',
@@ -30,6 +36,11 @@ describe('configuration du prototype Dexie Cloud', () => {
       VITE_ENABLE_REAL_GOAL_SYNC: 'false',
       VITE_ENABLE_REAL_STRENGTH_SYNC: 'false',
       VITE_ENABLE_REAL_NUTRITION_JOURNAL_SYNC: 'false',
+      VITE_ENABLE_REAL_NUTRITION_LIBRARY_SYNC: 'false',
+      VITE_ENABLE_REAL_NUTRITION_TRACKING_SYNC: 'false',
+      VITE_ENABLE_REAL_DAILY_COACHING_SYNC: 'false',
+      VITE_ENABLE_REAL_ACCOUNT_PREFERENCES_SYNC: 'false',
+      VITE_ENABLE_REAL_REWARDS_ROUTINES_SYNC: 'false',
       VITE_ENABLE_REAL_SOCIAL_CLOUD: 'true',
     });
 
@@ -40,12 +51,17 @@ describe('configuration du prototype Dexie Cloud', () => {
       realActivitySyncEnabled: true,
       realGoalSyncEnabled: true,
       realStrengthSyncEnabled: true,
-      realNutritionJournalSyncEnabled: false,
+      realNutritionJournalSyncEnabled: true,
+      realNutritionLibrarySyncEnabled: true,
+      realNutritionTrackingSyncEnabled: true,
+      realDailyCoachingSyncEnabled: true,
+      realAccountPreferencesSyncEnabled: true,
+      realRewardsRoutinesSyncEnabled: true,
       realSocialCloudEnabled: true,
     });
   });
 
-  it('laisse les variables Cloudflare explicites piloter la production', () => {
+  it('laisse les variables Cloudflare hors contrat piloter la production', () => {
     const environment = mergeSyncPrototypeProductionEnvironment({
       VITE_ENABLE_REAL_SOCIAL_CLOUD: 'true',
       VITE_ENABLE_SYNC_DIAGNOSTICS: 'false',
