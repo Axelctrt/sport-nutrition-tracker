@@ -41,6 +41,9 @@ const SAFE_MERGE_DOMAIN_IDS = new Set<SyncOrchestratorDomainId>([
   'rewards-routines',
   'goals',
   'daily-coaching',
+  'nutrition-journal',
+  'nutrition-library',
+  'nutrition-tracking',
 ]);
 
 export type AutomaticSyncConnectionType = 'wifi' | 'cellular' | 'ethernet' | 'unknown';
@@ -99,6 +102,15 @@ function automaticDomainIds(
   if (snapshot.realActivities?.enabled) domainIds.push('activities');
   if (snapshot.realGoals?.enabled) domainIds.push('goals');
   if (snapshot.realStrength?.enabled) domainIds.push('strength');
+  if (snapshot.realNutritionJournal?.enabled) {
+    domainIds.push('nutrition-journal');
+  }
+  if (snapshot.realNutritionLibrary?.enabled) {
+    domainIds.push('nutrition-library');
+  }
+  if (snapshot.realNutritionTracking?.enabled) {
+    domainIds.push('nutrition-tracking');
+  }
   if (snapshot.realDailyCoaching?.enabled) domainIds.push('daily-coaching');
 
   return domainIds;
