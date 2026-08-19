@@ -891,7 +891,7 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
     const credentials = await this.ensureValidCloudCredentials();
     this.assertCloudUserId(credentials.userId);
     try {
-      await this.database.cloud.sync();
+      await this.database.cloud.sync({ purpose: 'pull' });
     } catch (error) {
       throw mapCloudOperationError(error, this.getCloudAccessState());
     }
