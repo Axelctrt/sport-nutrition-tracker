@@ -1,4 +1,3 @@
-import type { BackupData } from '@/domain/models/backup';
 import {
   readGoalState,
   resetGoalStateRuntimeForTests,
@@ -6,13 +5,6 @@ import {
   type Goal,
 } from '@/domain/goals/goalState';
 import type { AppDatabase } from '@/infrastructure/database/AppDatabase';
-
-const readBackupData = vi.hoisted(() => vi.fn());
-
-vi.mock('@/infrastructure/backup/backupService', () => ({
-  readBackupData,
-}));
-
 import { refreshGoalProgress } from '@/application/goals/goalProgressService';
 
 function goal(targetValue: number, updatedAt: string): Goal {
@@ -29,12 +21,15 @@ function goal(targetValue: number, updatedAt: string): Goal {
   };
 }
 
-function progressData(): BackupData {
-  return {
-    userProfile: [],
-    appSettings: [],
-    weights: [],
-    dailySteps: [
+function createDelayedBackupDatabase(
+  onReadStarted: () => void,
+  waitForRelease: Promise<void>,
+): AppDatabase {
+  const emptyTable = {
+    toArray: vi.fn(async () => []),
+  };
+  const dailyStepsTable = {
+    toArray: vi.fn(async () => [
       {
         id: 'steps-concurrent-refresh',
         date: '2026-08-19',
@@ -43,33 +38,36 @@ function progressData(): BackupData {
         createdAt: '2026-08-19T08:00:00.000Z',
         updatedAt: '2026-08-19T08:00:00.000Z',
       },
-    ],
-    activities: [],
-    foodProducts: [],
-    meals: [],
-    foodEntries: [],
-    favoriteMeals: [],
-    recipes: [],
-    recipeIngredients: [],
-    dailyTargets: [],
-    dailyJournalStatuses: [],
-    weeklyReviews: [],
-    acceptedCalorieAdjustments: [],
-    exerciseDefinitions: [],
-    workoutTemplates: [],
-    workoutTemplateExercises: [],
-    workoutSessions: [],
-    workoutSessionExercises: [],
-    strengthSets: [],
-    progressionSuggestions: [],
+    ]),
   };
+  const transaction = vi.fn(
+    async (
+      _mode: unknown,
+      _tables: unknown,
+      scope: () => Promise<unknown>,
+    ) => {
+      onReadStarted();
+      await waitForRelease;
+      return scope();
+    },
+  );
+
+  return new Proxy(
+    { transaction },
+    {
+      get(target, property) {
+        if (property === 'transaction') return target.transaction;
+        if (property === 'dailySteps') return dailyStepsTable;
+        return emptyTable;
+      },
+    },
+  ) as unknown as AppDatabase;
 }
 
 describe('goalProgressService — refresh concurrent', () => {
   beforeEach(() => {
     resetGoalStateRuntimeForTests();
     window.localStorage.clear();
-    readBackupData.mockReset();
   });
 
   afterEach(() => {
@@ -91,14 +89,12 @@ describe('goalProgressService — refresh concurrent', () => {
     const readStarted = new Promise<void>((resolve) => {
       markReadStarted = () => resolve();
     });
+    const database = createDelayedBackupDatabase(
+      markReadStarted,
+      dataGate,
+    );
 
-    readBackupData.mockImplementationOnce(async () => {
-      markReadStarted();
-      await dataGate;
-      return progressData();
-    });
-
-    const refreshPromise = refreshGoalProgress({} as AppDatabase);
+    const refreshPromise = refreshGoalProgress(database);
     await readStarted;
 
     writeGoalState({
