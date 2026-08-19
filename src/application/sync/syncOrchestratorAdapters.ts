@@ -108,6 +108,26 @@ async function synchronizeRegisteredDirection(
   return result;
 }
 
+async function analyzeGoalsWithFreshCloudBarrier(
+  client: SyncPrototypeClient,
+): Promise<{ readonly differingEntityCount: number }> {
+  // Dexie Cloud 4.4.13 can satisfy a pull+wait call with the completion
+  // timestamp of a sync that was already in flight when the pull was queued.
+  // syncNow() followed by analyzeRealGoals() gives Goals a second sequential
+  // pull barrier before provenance/LWW is evaluated.
+  await client.syncNow();
+  return client.analyzeRealGoals!();
+}
+
+async function synchronizeGoalsWithFreshCloudBarrier(
+  client: SyncPrototypeClient,
+): Promise<unknown> {
+  // The first barrier drains an in-flight transport cycle; syncRealGoals()
+  // performs its own forced pull before applying the bidirectional resolver.
+  await client.syncNow();
+  return client.syncRealGoals!();
+}
+
 async function synchronizeNutritionLibrary(
   client: SyncPrototypeClient,
 ): Promise<unknown> {
@@ -236,8 +256,12 @@ export function createSyncOrchestratorDomains(
   );
   add(
     'goals',
-    client.analyzeRealGoals ? () => client.analyzeRealGoals!() : undefined,
-    client.syncRealGoals ? () => client.syncRealGoals!() : undefined,
+    client.analyzeRealGoals
+      ? () => analyzeGoalsWithFreshCloudBarrier(client)
+      : undefined,
+    client.syncRealGoals
+      ? () => synchronizeGoalsWithFreshCloudBarrier(client)
+      : undefined,
     client.analyzeRealGoals
       ? () => synchronizeRegisteredDirection(
           client,
