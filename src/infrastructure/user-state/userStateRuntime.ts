@@ -1,4 +1,7 @@
 import {
+  notifySyncLocalDataChanged,
+} from '@/application/sync/syncLocalChangeEvents';
+import {
   flushGoalStatePersistence,
   GOAL_STATE_CHANGED_EVENT,
   hydrateGoalStateRuntime,
@@ -59,6 +62,20 @@ interface UserStateRuntimeSnapshot {
   routineReminderCompletions: RoutineReminderCompletionState;
 }
 
+type RewardsPersistenceReason =
+  | 'achievement-state-write'
+  | 'visual-theme-state-write'
+  | 'weekly-mission-state-write'
+  | 'routine-reminder-completion-write';
+
+async function persistRewardsState(
+  reason: RewardsPersistenceReason,
+  persist: () => Promise<void>,
+): Promise<void> {
+  await persist();
+  notifySyncLocalDataChanged(['rewards-routines'], reason);
+}
+
 function configureRuntime(
   database: AppDatabase,
   state: UserStateRuntimeSnapshot,
@@ -74,21 +91,31 @@ function configureRuntime(
   );
   hydrateAchievementStateRuntime(
     state.achievements,
-    (value) => replaceAchievementStateInDatabase(database, value),
+    (value) => persistRewardsState(
+      'achievement-state-write',
+      () => replaceAchievementStateInDatabase(database, value),
+    ),
   );
   hydrateVisualThemeStateRuntime(
     state.visualThemes,
-    (value) => replaceVisualThemeStateInDatabase(database, value),
+    (value) => persistRewardsState(
+      'visual-theme-state-write',
+      () => replaceVisualThemeStateInDatabase(database, value),
+    ),
   );
   hydrateWeeklyMissionHistoryRuntime(
     state.weeklyMissions,
-    (value) =>
-      replaceWeeklyMissionHistoryStateInDatabase(database, value),
+    (value) => persistRewardsState(
+      'weekly-mission-state-write',
+      () => replaceWeeklyMissionHistoryStateInDatabase(database, value),
+    ),
   );
   hydrateRoutineReminderCompletionRuntime(
     state.routineReminderCompletions,
-    (value) =>
-      replaceRoutineReminderCompletionStateInDatabase(database, value),
+    (value) => persistRewardsState(
+      'routine-reminder-completion-write',
+      () => replaceRoutineReminderCompletionStateInDatabase(database, value),
+    ),
   );
 }
 
