@@ -30,6 +30,7 @@ for (const path of [
   'src/infrastructure/sync-prototype/cloudSyncValue.test.ts',
   'src/infrastructure/sync-prototype/realGoalConcurrentResolutionService.ts',
   'src/infrastructure/sync-prototype/realGoalConcurrentResolutionService.test.ts',
+  'src/infrastructure/sync-prototype/realGoalLwwConflictResolution.test.ts',
 ]) {
   read(path);
 }
@@ -80,7 +81,7 @@ for (const expected of [
 const services = [
   ['pesées', 'src/infrastructure/sync-prototype/realWeightSyncService.ts', ['belongsToCurrentUser', 'chooseLatest', 'sameEntity']],
   ['activités', 'src/infrastructure/sync-prototype/realActivitySyncService.ts', ['belongsToCurrentUser', 'sameEntity']],
-  ['objectifs', 'src/infrastructure/sync-prototype/realGoalSyncService.ts', ['belongsToCurrentUser', 'sameEntity']],
+  ['objectifs', 'src/infrastructure/sync-prototype/realGoalSyncService.ts', ['belongsToCurrentUser', 'sameEntity', 'stableValue']],
   ['musculation', 'src/infrastructure/sync-prototype/realStrengthSyncService.ts', ['belongsToCurrentUser', 'chooseLatest', 'sameEntity']],
 ];
 for (const [label, path, expectedHelpers] of services) {
@@ -100,7 +101,7 @@ for (const [label, path, expectedHelpers] of services) {
 
 const activities = read('src/infrastructure/sync-prototype/realActivitySyncService.ts');
 if (/\bchooseLatest\b/.test(activities)) {
-  fail('Activities ne doit plus utiliser chooseLatest : unknown/both doivent rester fail-closed.');
+  fail('Activities ne doit pas utiliser chooseLatest : unknown/both doivent rester fail-closed.');
 }
 for (const expected of [
   'changeOrigin',
@@ -125,7 +126,7 @@ for (const expected of [
 
 const goals = read('src/infrastructure/sync-prototype/realGoalSyncService.ts');
 if (/\bchooseLatest\b/.test(goals)) {
-  fail('le service objectifs réintroduit chooseLatest alors que les états unknown/both doivent rester fail-closed.');
+  fail('Goals ne doit pas déléguer sa règle métier concurrente à chooseLatest : le LWW logique par mutation doit rester explicite.');
 }
 for (const expected of [
   'prepareInitialRealGoalReconciliation',
@@ -134,13 +135,18 @@ for (const expected of [
   "origin === 'cloud'",
   'return emptyResult({',
   'ensureDomainBaselineMissing',
+  'goalStateMutationTimestamp',
+  'latestGoalState',
+  'stableValue',
+  'resolveMergedGoalLogicalState',
+  'preserveRestorationMarker',
 ]) {
   if (!goals.includes(expected)) {
-    fail(`la synchronisation des objectifs ne verrouille pas ${expected}.`);
+    fail(`la synchronisation Goals directionnelle/LWW ne verrouille pas ${expected}.`);
   }
 }
 
-const goalsBoth = read(
+const goalsFallback = read(
   'src/infrastructure/sync-prototype/realGoalConcurrentResolutionService.ts',
 );
 for (const expected of [
@@ -154,8 +160,22 @@ for (const expected of [
   'applyLocalTargetIfUnchanged',
   'persistEqualBaseline',
 ]) {
-  if (!goalsBoth.includes(expected)) {
-    fail(`la résolution manuelle Goals both ne verrouille pas ${expected}.`);
+  if (!goalsFallback.includes(expected)) {
+    fail(`le fallback manuel Goals both ne verrouille pas ${expected}.`);
+  }
+}
+
+const lwwGate = read(
+  'src/infrastructure/sync-prototype/realGoalLwwConflictResolution.test.ts',
+);
+for (const expected of [
+  'stableValue',
+  'updatedAt',
+  'deleted',
+  'restored',
+]) {
+  if (!lwwGate.includes(expected)) {
+    fail(`le gate LWW Goals ne couvre pas ${expected}.`);
   }
 }
 
@@ -213,6 +233,6 @@ if (failures.length > 0) {
   process.exitCode = 1;
 } else {
   console.log(
-    'Audit du socle sportif réussi : Activities et Goals suivent des contrats directionnels explicites, Goals unknown/both restent fail-closed hors résolution manuelle, suppressions durables, agrégats de musculation atomiques et runtime cloud v16 validés.',
+    'Audit du socle sportif réussi : Activities conserve ses contrats directionnels fail-closed, Goals conserve les primitives directionnelles et résout les divergences concurrentes par LWW logique déterministe, le fallback manuel reste disponible, les suppressions durables et agrégats Strength atomiques sont préservés, runtime cloud v16 validé.',
   );
 }
