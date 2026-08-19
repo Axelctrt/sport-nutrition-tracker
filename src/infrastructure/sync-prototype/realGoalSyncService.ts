@@ -214,6 +214,131 @@ function buildGoalLogicalStates(state: GoalDomainState) {
   };
 }
 
+function goalStateMutationTimestamp(state: GoalState): string {
+  return [
+    state.goal?.updatedAt,
+    state.marker?.updatedAt,
+  ]
+    .filter((value): value is string => Boolean(value))
+    .sort()
+    .at(-1) ?? '';
+}
+
+function isEmptyGoalState(state: GoalState): boolean {
+  return !state.goal && !state.marker;
+}
+
+function latestGoalState(
+  local: GoalState,
+  cloud: GoalState,
+): {
+  readonly winner: GoalState;
+  readonly loser: GoalState;
+} {
+  if (isEmptyGoalState(local)) {
+    return { winner: cloud, loser: local };
+  }
+  if (isEmptyGoalState(cloud)) {
+    return { winner: local, loser: cloud };
+  }
+
+  const localTimestamp = goalStateMutationTimestamp(local);
+  const cloudTimestamp = goalStateMutationTimestamp(cloud);
+
+  if (localTimestamp > cloudTimestamp) {
+    return { winner: local, loser: cloud };
+  }
+  if (cloudTimestamp > localTimestamp) {
+    return { winner: cloud, loser: local };
+  }
+
+  /*
+   * L'égalité d'horodatage doit être indépendante de l'ordre réseau.
+   */
+  return stableValue(local) >= stableValue(cloud)
+    ? { winner: local, loser: cloud }
+    : { winner: cloud, loser: local };
+}
+
+function preserveRestorationMarker(
+  winner: GoalState,
+  loser: GoalState,
+): GoalState {
+  if (!winner.goal || loser.marker?.status !== 'deleted') {
+    return winner;
+  }
+
+  const restoredAt =
+    goalStateMutationTimestamp(winner) || winner.goal.updatedAt;
+
+  if (restoredAt < loser.marker.updatedAt) {
+    return winner;
+  }
+
+  if (
+    winner.marker?.status === 'restored'
+    && winner.marker.updatedAt >= restoredAt
+  ) {
+    return winner;
+  }
+
+  return {
+    goal: winner.goal,
+    marker: createRestoredDeletionRecord(
+      {
+        entityType: 'goal',
+        entityId: winner.goal.id,
+      },
+      restoredAt,
+      loser.marker.deletedAt,
+      winner.marker ?? loser.marker,
+    ),
+  };
+}
+
+function resolveMergedGoalLogicalState(
+  state: GoalDomainState,
+): GoalLogicalState {
+  const localGoalById = mapById(state.localGoals);
+  const cloudGoalById = mapById(state.cloudGoals);
+  const localMarkerById = mapById(state.localMarkers);
+  const cloudMarkerById = mapById(state.cloudMarkers);
+
+  const ids = new Set([
+    ...localGoalById.keys(),
+    ...cloudGoalById.keys(),
+    ...state.localMarkers.map((marker) => marker.entityId),
+    ...state.cloudMarkers.map((marker) => marker.entityId),
+  ]);
+
+  const goals: Goal[] = [];
+  const markers: DeletionRecord[] = [];
+
+  for (const id of [...ids].sort((left, right) => left.localeCompare(right))) {
+    const markerId = deletionRecordId('goal', id);
+
+    const local = effectiveGoalState(
+      localGoalById.get(id),
+      localMarkerById.get(markerId),
+    );
+    const cloud = effectiveGoalState(
+      cloudGoalById.get(id),
+      cloudMarkerById.get(markerId),
+    );
+
+    const { winner, loser } = latestGoalState(local, cloud);
+    const resolved = preserveRestorationMarker(winner, loser);
+
+    if (resolved.goal) goals.push(resolved.goal);
+    if (resolved.marker) markers.push(resolved.marker);
+  }
+
+  return {
+    goals: sortById(goals),
+    markers: sortById(markers),
+  };
+}
+
 async function readLocalState(localDatabase: AppDatabase) {
   const [localGoals, localMarkers] = await Promise.all([
     localDatabase.goals.toArray(),
@@ -386,6 +511,29 @@ function resultForTarget(
       direction === 'cloud-to-local'
         ? countChanged(state.localMarkers, target.markers)
         : 0,
+    completedAt: new Date().toISOString(),
+  };
+}
+
+function resultForMergedTarget(
+  preview: RealGoalSyncPreview,
+  state: GoalDomainState,
+  target: GoalLogicalState,
+): RealGoalSyncResult {
+  return {
+    ...preview,
+    uploadedGoals: countChanged(state.cloudGoals, target.goals),
+    downloadedGoals: countChanged(state.localGoals, target.goals),
+    removedLocalGoals: countRemoved(state.localGoals, target.goals),
+    removedCloudGoals: countRemoved(state.cloudGoals, target.goals),
+    uploadedDeletionRecords: countChanged(
+      state.cloudMarkers,
+      target.markers,
+    ),
+    downloadedDeletionRecords: countChanged(
+      state.localMarkers,
+      target.markers,
+    ),
     completedAt: new Date().toISOString(),
   };
 }
@@ -722,6 +870,130 @@ async function synchronizeRealGoalsDirectional(
   return result;
 }
 
+async function synchronizeRealGoalsMerged(
+  localDatabase: AppDatabase,
+  cloudDatabase: SyncPrototypeDatabase,
+  currentUserId: string,
+  state: GoalDomainState,
+  preview: RealGoalSyncPreview,
+  origin: 'both' | 'unknown',
+): Promise<RealGoalSyncResult> {
+  const logical = buildGoalLogicalStates(state);
+  const target = resolveMergedGoalLogicalState(state);
+  const actorId = await resolveSyncActorId(localDatabase);
+
+  const resolution = await resolveDatabaseLogicalSyncState({
+    cloudDatabase,
+    accountUserId: currentUserId,
+    domainId: 'goals',
+    entityId: 'goals',
+    actorId,
+    localValue: logical.local,
+    cloudValue: logical.cloud,
+    cloudStamp: maximumGoalCloudStamp(state),
+    legacyResolve: () => target,
+    concurrentResolve: () => target,
+  });
+
+  const contextualPreview = {
+    ...preview,
+    changeOrigin: origin,
+  } as const;
+
+  if (!sameEntity(resolution.value, target)) {
+    return emptyResult(contextualPreview);
+  }
+
+  /*
+   * Revalidation locale juste avant l'écriture cloud.
+   * Si l'utilisateur vient de refaire une mutation, on n'écrase rien.
+   */
+  const currentLocal = await readLocalState(localDatabase);
+  if (
+    !sameEntity(
+      sortById(currentLocal.localGoals),
+      sortById(state.localGoals),
+    )
+    || !sameEntity(
+      sortById(currentLocal.localMarkers),
+      sortById(state.localMarkers),
+    )
+  ) {
+    return emptyResult({
+      ...contextualPreview,
+      changeOrigin: 'both',
+    });
+  }
+
+  const result = resultForMergedTarget(
+    contextualPreview,
+    state,
+    target,
+  );
+
+  /*
+   * Cloud d'abord : si le cloud a changé depuis l'analyse, le CAS échoue
+   * et le local reste intact.
+   */
+  const cloudApplied = await applyCloudTargetIfUnchanged(
+    cloudDatabase,
+    currentUserId,
+    state,
+    target,
+    resolution.stamp,
+  );
+
+  if (!cloudApplied) {
+    return emptyResult({
+      ...contextualPreview,
+      changeOrigin: 'both',
+    });
+  }
+
+  /*
+   * Puis local avec CAS. Si une nouvelle mutation locale est intervenue
+   * entre-temps, elle reste intacte et la prochaine analyse la verra.
+   */
+  const localApplied = await applyLocalTargetIfUnchanged(
+    localDatabase,
+    state,
+    target,
+  );
+
+  if (!localApplied) {
+    return {
+      ...result,
+      changeOrigin: 'both',
+    };
+  }
+
+  await reloadUserStateRuntime(localDatabase);
+
+  const converged = await readState(
+    localDatabase,
+    cloudDatabase,
+    currentUserId,
+  );
+  const convergedLogical = buildGoalLogicalStates(converged);
+
+  if (!sameEntity(convergedLogical.local, convergedLogical.cloud)) {
+    return {
+      ...result,
+      changeOrigin: 'both',
+    };
+  }
+
+  /*
+   * La baseline n'est persistée qu'après convergence observée.
+   */
+  await persistLogicalSyncBaseline(
+    cloudDatabase,
+    resolution.baseline,
+  );
+
+  return result;
+}
+
 function sideStatus(
   own: GoalState,
   other: GoalState,
@@ -882,10 +1154,14 @@ export async function synchronizeRealGoals(
     );
   }
 
-  return emptyResult({
-    ...preview,
-    changeOrigin: origin === 'equal' ? 'unknown' : origin,
-  });
+  return synchronizeRealGoalsMerged(
+    localDatabase,
+    cloudDatabase,
+    currentUserId,
+    state,
+    preview,
+    origin === 'equal' ? 'unknown' : origin,
+  );
 }
 
 export async function synchronizeRealGoalsFromCloud(

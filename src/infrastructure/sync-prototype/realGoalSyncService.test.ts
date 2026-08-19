@@ -130,10 +130,12 @@ describe('synchronisation sûre des objectifs réels', () => {
     expect(await cloud.realSyncBaselines.count()).toBe(1);
   });
 
-  it('reste fail-closed pour unknown sans baseline même via synchronizeRealGoals générique', async () => {
-    await local.goals.add(goal('goal-unknown', '2026-07-01T09:00:00.000Z'));
-    const beforeLocal = await local.goals.toArray();
-    const beforeCloud = await cloud.realGoals.toArray();
+  it('résout automatiquement unknown sans baseline par LWW puis établit la baseline', async () => {
+    const localGoal = goal(
+      'goal-unknown',
+      '2026-07-01T09:00:00.000Z',
+    );
+    await local.goals.add(localGoal);
 
     const result = await synchronizeRealGoals(
       local,
@@ -143,30 +145,57 @@ describe('synchronisation sûre des objectifs réels', () => {
 
     expect(result).toMatchObject({
       changeOrigin: 'unknown',
-      uploadedGoals: 0,
+      uploadedGoals: 1,
       downloadedGoals: 0,
       removedLocalGoals: 0,
       removedCloudGoals: 0,
       uploadedDeletionRecords: 0,
       downloadedDeletionRecords: 0,
     });
-    expect(await local.goals.toArray()).toEqual(beforeLocal);
-    expect(await cloud.realGoals.toArray()).toEqual(beforeCloud);
-    expect(await cloud.realSyncBaselines.count()).toBe(0);
+
+    expect(await local.goals.get('goal-unknown')).toEqual(localGoal);
+    expect(await cloud.realGoals.get('#goal-unknown')).toMatchObject({
+      targetValue: 100_000,
+      updatedAt: '2026-07-01T09:00:00.000Z',
+    });
+    expect(await cloud.realSyncBaselines.get(
+      USER_ID + ':goals:goals',
+    )).toBeDefined();
+
+    expect(await previewRealGoalSync(
+      local,
+      cloud as unknown as SyncPrototypeDatabase,
+      USER_ID,
+    )).toMatchObject({
+      differingEntityCount: 0,
+    });
   });
 
-  it('reste fail-closed pour both même via synchronizeRealGoals générique', async () => {
-    const initial = goal('goal-both', '2026-07-01T09:00:00.000Z', 100_000);
+  it('résout automatiquement both en conservant la mutation métier la plus récente', async () => {
+    const initial = goal(
+      'goal-both',
+      '2026-07-01T09:00:00.000Z',
+      100_000,
+    );
     await bootstrapEqual(local, cloud, initial);
-    await local.goals.put(goal('goal-both', '2026-07-01T10:00:00.000Z', 110_000));
+
+    await local.goals.put(
+      goal(
+        'goal-both',
+        '2026-07-01T10:00:00.000Z',
+        110_000,
+      ),
+    );
     await putCloudGoal(
       cloud,
-      goal('goal-both', '2026-07-01T11:00:00.000Z', 120_000),
+      goal(
+        'goal-both',
+        '2026-07-01T11:00:00.000Z',
+        120_000,
+      ),
       USER_ID,
       3,
     );
-    const beforeLocal = await local.goals.toArray();
-    const beforeCloud = await cloud.realGoals.toArray();
 
     const result = await synchronizeRealGoals(
       local,
@@ -174,11 +203,32 @@ describe('synchronisation sûre des objectifs réels', () => {
       USER_ID,
     );
 
-    expect(result.changeOrigin).toBe('both');
-    expect(result.uploadedGoals).toBe(0);
-    expect(result.downloadedGoals).toBe(0);
-    expect(await local.goals.toArray()).toEqual(beforeLocal);
-    expect(await cloud.realGoals.toArray()).toEqual(beforeCloud);
+    expect(result).toMatchObject({
+      changeOrigin: 'both',
+      uploadedGoals: 0,
+      downloadedGoals: 1,
+      removedLocalGoals: 0,
+      removedCloudGoals: 0,
+      uploadedDeletionRecords: 0,
+      downloadedDeletionRecords: 0,
+    });
+
+    expect(await local.goals.get('goal-both')).toMatchObject({
+      targetValue: 120_000,
+      updatedAt: '2026-07-01T11:00:00.000Z',
+    });
+    expect(await cloud.realGoals.get('#goal-both')).toMatchObject({
+      targetValue: 120_000,
+      updatedAt: '2026-07-01T11:00:00.000Z',
+    });
+
+    expect(await previewRealGoalSync(
+      local,
+      cloud as unknown as SyncPrototypeDatabase,
+      USER_ID,
+    )).toMatchObject({
+      differingEntityCount: 0,
+    });
   });
 
   it('applique local vers cloud uniquement après une baseline qui démontre la provenance locale', async () => {
