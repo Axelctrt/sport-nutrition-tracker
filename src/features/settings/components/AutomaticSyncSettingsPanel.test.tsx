@@ -47,7 +47,7 @@ afterEach(() => {
 });
 
 describe('AutomaticSyncSettingsPanel', () => {
-  it('autorise le compte connecté, désactive l’ancien automatisme des pesées et décrit les sept domaines du Lot 1', async () => {
+  it('autorise le compte connecté, désactive l’ancien automatisme des pesées et décrit les dix domaines', async () => {
     const initial = settings();
     const loadSettings = vi.fn().mockResolvedValue(initial);
     const saveSettings = vi.fn().mockImplementation(async (changes) => ({
@@ -66,7 +66,7 @@ describe('AutomaticSyncSettingsPanel', () => {
 
     expect(await screen.findByRole('heading', { name: 'Continuité automatique' }))
       .toBeInTheDocument();
-    expect(screen.getByText(/les préférences de compte, les récompenses et routines, et l’accompagnement quotidien/i))
+    expect(screen.getByText(/le journal nutritionnel, la bibliothèque nutritionnelle et le suivi nutritionnel/i))
       .toBeInTheDocument();
     expect(screen.getByText(/seuls les domaines explicitement compatibles avec une fusion sûre peuvent résoudre automatiquement une divergence des deux côtés/i))
       .toBeInTheDocument();

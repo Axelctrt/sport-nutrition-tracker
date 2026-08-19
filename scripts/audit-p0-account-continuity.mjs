@@ -18,14 +18,21 @@ const requiredBehaviorSuites = [
   'src/infrastructure/sync-prototype/realAccountPreferencesAutomaticContinuity.test.ts',
   'src/infrastructure/sync-prototype/realRewardsRoutinesAutomaticContinuity.test.ts',
   'src/infrastructure/sync-prototype/realDailyCoachingAutomaticReadiness.test.ts',
+  'src/infrastructure/sync-prototype/realNutritionJournalAutomaticContinuity.test.ts',
+  'src/infrastructure/sync-prototype/realNutritionLibraryAutomaticContinuity.test.ts',
+  'src/infrastructure/sync-prototype/realNutritionTrackingAutomaticContinuity.test.ts',
   'src/application/sync/automaticSyncController.test.ts',
   'src/application/sync/automaticSyncControllerGoalsWeights.test.ts',
   'src/application/sync/automaticSyncControllerActivities.test.ts',
   'src/application/sync/automaticSyncControllerMergeSafeDomains.test.ts',
   'src/application/sync/automaticSyncControllerMergeSafeGuards.test.ts',
+  'src/application/sync/automaticSyncControllerNutritionDomains.test.ts',
   'src/application/sync/automaticSyncControllerRewardsEventIsolation.test.ts',
   'src/application/sync/syncOrchestrator.test.ts',
   'src/application/sync/syncOrchestratorAdapters.test.ts',
+  'src/application/sync/syncOrchestratorAdaptersNutrition.test.ts',
+  'src/infrastructure/repositories/dexie/trashRestoreSyncNotification.test.ts',
+  'src/infrastructure/repositories/dexie/DexieRecipeRepository.c2.test.ts',
   'src/infrastructure/user-state/userStateAutomaticSyncNotification.test.ts',
   'src/infrastructure/data-spaces/cloudAccountRestoreService.test.ts',
   'src/app/data-spaces/DataSpaceAccountGate.test.tsx',
@@ -52,6 +59,10 @@ const requiredStructuralFiles = [
   'src/infrastructure/sync-prototype/realAccountPreferencesSyncService.ts',
   'src/infrastructure/sync-prototype/realRewardsRoutinesSyncService.ts',
   'src/infrastructure/sync-prototype/realDailyCoachingSyncService.ts',
+  'src/infrastructure/sync-prototype/realNutritionJournalSyncService.ts',
+  'src/infrastructure/sync-prototype/realNutritionLibrarySyncService.ts',
+  'src/infrastructure/sync-prototype/realNutritionTrackingSyncService.ts',
+  'src/infrastructure/sync-prototype/syncPrototypeConfig.ts',
   'src/infrastructure/sync-prototype/logicalSyncState.ts',
   'src/infrastructure/sync-prototype/SyncPrototypeDatabase.ts',
   'src/infrastructure/data-spaces/cloudAccountRestoreService.ts',
@@ -103,6 +114,7 @@ if (failures.length === 0) {
     'audit:sync-orchestrator',
     'audit:automatic-sync',
     'audit:automatic-sync-release',
+    'audit:nutrition-sync-release',
     'audit:strength-sync',
     'audit:guest-data-import',
     'audit:cloud-account-restore',
@@ -208,6 +220,32 @@ if (failures.length === 0) {
     fail('le gate automatique Daily Coaching ne verrouille pas son domaine.');
   }
 
+  const nutritionGates = [
+    [
+      'Journal',
+      'src/infrastructure/sync-prototype/realNutritionJournalAutomaticContinuity.test.ts',
+      ['AutomaticSyncController', 'DexieFoodRepository', '{ writeCloud: false }'],
+    ],
+    [
+      'Library',
+      'src/infrastructure/sync-prototype/realNutritionLibraryAutomaticContinuity.test.ts',
+      ['AutomaticSyncController', 'saveRecipe', 'restoreTrashItemWithSyncNotification', '{ writeCloud: false }'],
+    ],
+    [
+      'Tracking',
+      'src/infrastructure/sync-prototype/realNutritionTrackingAutomaticContinuity.test.ts',
+      ['AutomaticSyncController', 'DexieWeeklyReviewRepository', 'syncRealNutritionJournal', '{ writeCloud: false }'],
+    ],
+  ];
+  for (const [label, path, markers] of nutritionGates) {
+    const source = read(path);
+    for (const marker of markers) {
+      if (!source.includes(marker)) {
+        fail(`contrat structurel du test A→B Nutrition ${label} absent : ${marker}.`);
+      }
+    }
+  }
+
   const adapters = read('src/application/sync/syncOrchestratorAdapters.ts');
   for (const marker of [
     "syncMode === 'cloud-only'",
@@ -220,9 +258,11 @@ if (failures.length === 0) {
     'synchronizeRegisteredRealWeightsToCloud',
     'synchronizeRegisteredRealActivitiesFromCloud',
     'synchronizeRegisteredRealActivitiesToCloud',
+    'nutrition-library-product-remap',
+    'nutrition-tracking-daily-target-recalculation',
   ]) {
     if (!adapters.includes(marker)) {
-      fail(`routage directionnel sûr absent : ${marker}.`);
+      fail(`routage sûr absent : ${marker}.`);
     }
   }
 
@@ -339,6 +379,9 @@ if (failures.length === 0) {
     'rewards-routines',
     'goals',
     'daily-coaching',
+    'nutrition-journal',
+    'nutrition-library',
+    'nutrition-tracking',
   ]);
 
   const automaticStart = controller.indexOf('function automaticDomainIds');
@@ -353,19 +396,13 @@ if (failures.length === 0) {
     'activities',
     'goals',
     'strength',
-    'daily-coaching',
-  ]) {
-    if (!automaticDomainFunction.includes(`'${domain}'`)) {
-      fail(`automaticDomainIds() ne contient pas le domaine Lot 1 ${domain}.`);
-    }
-  }
-  for (const excludedDomain of [
     'nutrition-journal',
     'nutrition-library',
     'nutrition-tracking',
+    'daily-coaching',
   ]) {
-    if (automaticDomainFunction.includes(`'${excludedDomain}'`)) {
-      fail(`${excludedDomain} doit rester exclu du Lot 1 automatique.`);
+    if (!automaticDomainFunction.includes(`'${domain}'`)) {
+      fail(`automaticDomainIds() ne contient pas le domaine final ${domain}.`);
     }
   }
 
@@ -377,6 +414,24 @@ if (failures.length === 0) {
   ]) {
     if (!controller.includes(marker)) {
       fail(`garde-fou merge-safe automatique absent : ${marker}.`);
+    }
+  }
+
+  const config = read('src/infrastructure/sync-prototype/syncPrototypeConfig.ts');
+  for (const variable of [
+    'VITE_ENABLE_REAL_WEIGHT_SYNC',
+    'VITE_ENABLE_REAL_ACTIVITY_SYNC',
+    'VITE_ENABLE_REAL_GOAL_SYNC',
+    'VITE_ENABLE_REAL_STRENGTH_SYNC',
+    'VITE_ENABLE_REAL_ACCOUNT_PREFERENCES_SYNC',
+    'VITE_ENABLE_REAL_REWARDS_ROUTINES_SYNC',
+    'VITE_ENABLE_REAL_DAILY_COACHING_SYNC',
+    'VITE_ENABLE_REAL_NUTRITION_JOURNAL_SYNC',
+    'VITE_ENABLE_REAL_NUTRITION_LIBRARY_SYNC',
+    'VITE_ENABLE_REAL_NUTRITION_TRACKING_SYNC',
+  ]) {
+    if (!config.includes(`syncPublicDeploymentConfig.${variable}`)) {
+      fail(`le hardening de production ne verrouille pas ${variable}.`);
     }
   }
 
@@ -408,5 +463,5 @@ if (failures.length > 0) {
 }
 
 console.log(
-  'Audit P0 continuité multi-appareils réussi : chemins directionnels Strength/Goals/Weights/Activities préservés, Lot 1 automatique étendu à Account/Rewards/Daily Coaching, Goals concurrent résolu par LWW logique déterministe avec fallback manuel conservé, Nutrition exclu, baselines par replica et versions Dexie/backup préservées.',
+  'Audit P0 continuité multi-appareils réussi : quatre chemins directionnels préservés, sept domaines merge-safe et dix domaines automatiques non sociaux, Goals LWW avec fallback manuel, Nutrition A→B et chaînages Journal qualifiés, baselines par replica et versions Dexie/backup préservées.',
 );

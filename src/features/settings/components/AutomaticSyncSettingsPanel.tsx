@@ -188,7 +188,7 @@ export function AutomaticSyncSettingsPanel({
             </h3>
           </div>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
-            SportPilot vérifie le compte au démarrage, au retour dans l’application et après le retour du réseau. La continuité automatique couvre actuellement la musculation, les objectifs, les pesées, les activités avec leur planning endurance, les préférences de compte, les récompenses et routines, et l’accompagnement quotidien. Les transferts directionnels restent stricts ; seuls les domaines explicitement compatibles avec une fusion sûre peuvent résoudre automatiquement une divergence des deux côtés.
+            SportPilot vérifie le compte au démarrage, au retour dans l’application et après le retour du réseau. La continuité automatique couvre actuellement la musculation, les objectifs, les pesées, les activités avec leur planning endurance, les préférences de compte, les récompenses et routines, l’accompagnement quotidien, le journal nutritionnel, la bibliothèque nutritionnelle et le suivi nutritionnel. Les transferts directionnels restent stricts ; seuls les domaines explicitement compatibles avec une fusion sûre peuvent résoudre automatiquement une divergence des deux côtés.
           </p>
         </div>
         <span className={`inline-flex min-h-9 shrink-0 items-center rounded-full px-3 text-sm font-semibold ${

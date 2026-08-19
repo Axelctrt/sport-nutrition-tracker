@@ -13,10 +13,12 @@ const requiredFiles = [
   'src/application/sync/automaticSyncControllerActivities.test.ts',
   'src/application/sync/automaticSyncControllerMergeSafeDomains.test.ts',
   'src/application/sync/automaticSyncControllerMergeSafeGuards.test.ts',
+  'src/application/sync/automaticSyncControllerNutritionDomains.test.ts',
   'src/application/sync/automaticSyncControllerRewardsEventIsolation.test.ts',
   'src/application/sync/automaticSyncEvents.ts',
   'src/application/sync/syncLocalChangeEvents.ts',
   'src/application/sync/syncOrchestratorAdapters.ts',
+  'src/application/sync/syncOrchestratorAdaptersNutrition.test.ts',
   'src/app/sync/AutomaticSyncCoordinator.tsx',
   'src/app/automaticSyncReadiness.test.ts',
   'src/features/settings/components/AutomaticSyncSettingsPanel.tsx',
@@ -24,6 +26,12 @@ const requiredFiles = [
   'src/infrastructure/sync-prototype/realAccountPreferencesAutomaticContinuity.test.ts',
   'src/infrastructure/sync-prototype/realRewardsRoutinesAutomaticContinuity.test.ts',
   'src/infrastructure/sync-prototype/realDailyCoachingAutomaticReadiness.test.ts',
+  'src/infrastructure/sync-prototype/realNutritionJournalAutomaticContinuity.test.ts',
+  'src/infrastructure/sync-prototype/realNutritionLibraryAutomaticContinuity.test.ts',
+  'src/infrastructure/sync-prototype/realNutritionTrackingAutomaticContinuity.test.ts',
+  'src/infrastructure/repositories/dexie/trashRestoreSyncNotification.test.ts',
+  'src/infrastructure/repositories/dexie/DexieRecipeRepository.c2.test.ts',
+  'src/infrastructure/sync-prototype/syncPrototypeConfig.test.ts',
   'src/infrastructure/user-state/userStateAutomaticSyncNotification.test.ts',
   'docs/architecture/automatic-sync-0.23.0-f2.md',
 ];
@@ -102,6 +110,9 @@ if (failures.length === 0) {
     'rewards-routines',
     'goals',
     'daily-coaching',
+    'nutrition-journal',
+    'nutrition-library',
+    'nutrition-tracking',
   ]);
 
   const automaticStart = controller.indexOf('function automaticDomainIds');
@@ -116,19 +127,13 @@ if (failures.length === 0) {
     'activities',
     'goals',
     'strength',
-    'daily-coaching',
-  ]) {
-    if (!automaticDomainFunction.includes(`'${domain}'`)) {
-      fail(`Le domaine automatique Lot 1 ${domain} est absent de automaticDomainIds().`);
-    }
-  }
-  for (const excludedDomain of [
     'nutrition-journal',
     'nutrition-library',
     'nutrition-tracking',
+    'daily-coaching',
   ]) {
-    if (automaticDomainFunction.includes(`'${excludedDomain}'`)) {
-      fail(`Le domaine ${excludedDomain} doit rester hors automatisation jusqu’au Lot 2.`);
+    if (!automaticDomainFunction.includes(`'${domain}'`)) {
+      fail(`Le domaine automatique final ${domain} est absent de automaticDomainIds().`);
     }
   }
 
@@ -161,7 +166,7 @@ if (failures.length === 0) {
     'Wi-Fi uniquement',
     'automaticWeightSyncEnabled: false',
     'Autoriser la continuité',
-    'les préférences de compte, les récompenses et routines, et l’accompagnement quotidien',
+    'le journal nutritionnel, la bibliothèque nutritionnelle et le suivi nutritionnel',
     'seuls les domaines explicitement compatibles avec une fusion sûre peuvent résoudre automatiquement une divergence des deux côtés',
     'Un domaine désactivé, non autorisé ou hors périmètre automatique reste sans écriture automatique',
   ]) {
@@ -194,6 +199,52 @@ if (failures.length === 0) {
     const content = read(`src/infrastructure/repositories/dexie/${filename}`);
     if (!content.includes(marker)) {
       fail(`Le dépôt ${filename} ne signale pas correctement son domaine ${marker}.`);
+    }
+  }
+
+  const recipeRepository = read(
+    'src/infrastructure/repositories/dexie/DexieRecipeRepository.ts',
+  );
+  if (!recipeRepository.includes('saveWithIngredients')) {
+    fail('Le dépôt Recipe ne conserve pas la sauvegarde atomique recette + ingrédients.');
+  }
+  const recipeNotificationTest = read(
+    'src/infrastructure/repositories/dexie/DexieRecipeRepository.c2.test.ts',
+  );
+  for (const marker of [
+    'publie nutrition-library après la sauvegarde atomique durable',
+    'ne publie rien si la sauvegarde atomique échoue',
+  ]) {
+    if (!recipeNotificationTest.includes(marker)) {
+      fail(`Gate de notification Recipe absent : ${marker}.`);
+    }
+  }
+
+  const adapters = read('src/application/sync/syncOrchestratorAdapters.ts');
+  for (const marker of [
+    'nutrition-library-product-remap',
+    'nutrition-tracking-daily-target-recalculation',
+    'remappedProductReferences > 0',
+    'recalculatedDailyTargets > 0',
+  ]) {
+    if (!adapters.includes(marker)) {
+      fail(`Chaînage automatique Nutrition incomplet : ${marker}.`);
+    }
+  }
+
+  const trashRestore = read(
+    'src/infrastructure/repositories/dexie/trashRestoreSyncNotification.ts',
+  );
+  for (const marker of [
+    "restored.entityType === 'foodEntry'",
+    "restored.entityType === 'meal'",
+    "['nutrition-journal']",
+    "restored.entityType === 'favoriteMeal'",
+    "restored.entityType === 'recipe'",
+    "['nutrition-library']",
+  ]) {
+    if (!trashRestore.includes(marker)) {
+      fail(`Notification Corbeille Nutrition absente : ${marker}.`);
     }
   }
 
@@ -255,5 +306,5 @@ if (failures.length > 0) {
 }
 
 console.log(
-  'Audit continuité automatique réussi : sept domaines Lot 1 actifs, quatre domaines directionnels stricts, whitelist merge-safe explicite pour Account/Rewards/Goals/Daily Coaching, identité revalidée avant écriture et Nutrition réservé au Lot 2.',
+  'Audit continuité automatique réussi : dix domaines non sociaux actifs, quatre domaines directionnels stricts, sept domaines merge-safe explicitement whitelistés, chaînages Nutrition et identité revalidée avant écriture.',
 );

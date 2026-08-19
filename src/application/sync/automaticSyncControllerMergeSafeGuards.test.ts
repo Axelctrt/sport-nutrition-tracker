@@ -156,7 +156,7 @@ describe('AutomaticSyncController — gardes merge-safe', () => {
     controller.dispose();
   });
 
-  it('exclut les domaines désactivés et Nutrition même si leurs flags sont actifs', async () => {
+  it('exclut les domaines désactivés mais analyse Nutrition lorsqu’elle est active', async () => {
     const snapshot = snapshotFor(USER_A, {
       realAccountPreferences: { enabled: false, status: 'disabled' },
       realRewardsRoutines: { enabled: false, status: 'disabled' },
@@ -182,7 +182,17 @@ describe('AutomaticSyncController — gardes merge-safe', () => {
 
     await controller.initialize();
 
-    expect(schedule).not.toHaveBeenCalled();
+    expect(schedule).toHaveBeenCalledTimes(1);
+    expect(schedule).toHaveBeenCalledWith({
+      operation: 'analyze',
+      source: 'application-start',
+      domainIds: [
+        'nutrition-journal',
+        'nutrition-library',
+        'nutrition-tracking',
+      ],
+      delayMs: 0,
+    });
     expect(client.syncNow).not.toHaveBeenCalled();
 
     controller.dispose();

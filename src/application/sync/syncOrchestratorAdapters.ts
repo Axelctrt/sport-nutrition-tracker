@@ -3,6 +3,7 @@ import type {
   SyncOrchestratorDomainId,
   SyncOrchestratorPreview,
 } from '@/application/sync/syncOrchestrator';
+import { notifySyncLocalDataChanged } from '@/application/sync/syncLocalChangeEvents';
 import {
   synchronizeRegisteredRealActivitiesFromCloud,
   synchronizeRegisteredRealActivitiesToCloud,
@@ -104,6 +105,32 @@ async function synchronizeRegisteredDirection(
     if (client.getSnapshot().account.userId !== currentUserId) return result;
   }
   await analyze();
+  return result;
+}
+
+async function synchronizeNutritionLibrary(
+  client: SyncPrototypeClient,
+): Promise<unknown> {
+  const result = await client.syncRealNutritionLibrary!();
+  if (result.remappedProductReferences > 0) {
+    notifySyncLocalDataChanged(
+      ['nutrition-journal'],
+      'nutrition-library-product-remap',
+    );
+  }
+  return result;
+}
+
+async function synchronizeNutritionTracking(
+  client: SyncPrototypeClient,
+): Promise<unknown> {
+  const result = await client.syncRealNutritionTracking!();
+  if (result.recalculatedDailyTargets > 0) {
+    notifySyncLocalDataChanged(
+      ['nutrition-journal'],
+      'nutrition-tracking-daily-target-recalculation',
+    );
+  }
   return result;
 }
 
@@ -256,7 +283,7 @@ export function createSyncOrchestratorDomains(
       ? () => client.analyzeRealNutritionLibrary!()
       : undefined,
     client.syncRealNutritionLibrary
-      ? () => client.syncRealNutritionLibrary!()
+      ? () => synchronizeNutritionLibrary(client)
       : undefined,
   );
   add(
@@ -265,7 +292,7 @@ export function createSyncOrchestratorDomains(
       ? () => client.analyzeRealNutritionTracking!()
       : undefined,
     client.syncRealNutritionTracking
-      ? () => client.syncRealNutritionTracking!()
+      ? () => synchronizeNutritionTracking(client)
       : undefined,
   );
   add(
