@@ -8,8 +8,11 @@ import { createSyncPrototypeClient } from '@/infrastructure/sync-prototype/syncP
 
 class FakeObservable<T> {
   private readonly listeners = new Set<(value: T) => void>();
+  value: T;
 
-  constructor(public value: T) {}
+  constructor(value: T) {
+    this.value = value;
+  }
 
   subscribe(listener: (value: T) => void) {
     this.listeners.add(listener);
@@ -65,6 +68,6 @@ describe('SyncPrototypeClient — fraîcheur du transport cloud', () => {
     await client.syncNow();
 
     expect(sync).toHaveBeenCalledTimes(1);
-    expect(sync).toHaveBeenCalledWith({ purpose: 'pull' });
+    expect(sync).toHaveBeenCalledWith({ purpose: 'pull', wait: true });
   });
 });
