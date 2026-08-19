@@ -1,4 +1,4 @@
-# Limitations connues — SportPilot 1.0.3
+# Limitations connues — SportPilot 1.0.4
 
 Ces limitations sont des dettes séparées. Elles ne sont pas corrigées par la
 préparation stable et nécessitent leur propre validation avant toute
@@ -22,7 +22,7 @@ Les graphiques restent absents lorsque les données disponibles ne permettent pa
 
 ## Moteur calorique
 
-La maintenance `1.0.3` ne modifie pas les formules de calories, macros,
+La maintenance `1.0.4` ne modifie pas les formules de calories, macros,
 métabolisme ou ajustement hebdomadaire.
 
 ## Social
@@ -73,4 +73,4 @@ corrigé, mais le risque résiduel est accepté par le propriétaire pour V1 dan
 l'architecture validée : Sharp est absent du bundle navigateur final, des
 Pages Functions et des artefacts runtime SportPilot, sans chemin d'exploitation
 démontré. #162 suit une future correction Quagga/Sharp compatible après V1 et
-n'est pas bloquante pour la maintenance 1.0.3.
+n'est pas bloquante pour la maintenance 1.0.4.
