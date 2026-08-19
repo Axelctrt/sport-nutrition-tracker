@@ -4,10 +4,10 @@
  * Ces valeurs sont nécessairement visibles dans le bundle navigateur.
  * Aucune clé privée, aucun jeton et aucun secret Dexie Cloud ne doit être ajouté ici.
  *
- * Elles servent de garde-fou de production. Le socle de continuité publié
- * (base Dexie + Weights + Activities + Goals + Strength) est verrouillé par
- * mergeSyncPrototypeProductionEnvironment(). Les autres flags publics restent
- * surchargeables pour les activations qui ne font pas partie de cette whitelist.
+ * Elles servent de garde-fou de production. Le contrat de continuité publié
+ * (base Dexie + les dix domaines non sociaux) est verrouillé par
+ * mergeSyncPrototypeProductionEnvironment(). Social cloud et les diagnostics
+ * restent hors de ce contrat et demeurent pilotables séparément.
  */
 export const syncPublicDeploymentConfig = Object.freeze({
   VITE_ENABLE_SYNC_PROTOTYPE: 'true',
