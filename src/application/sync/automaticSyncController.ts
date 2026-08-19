@@ -19,9 +19,7 @@ import {
 } from '@/application/sync/syncLocalChangeEvents';
 import { GOAL_STATE_PERSISTED_EVENT } from '@/domain/goals/goalState';
 import { ENDURANCE_PLANNING_PERSISTED_EVENT } from '@/domain/planning/endurancePlanningState';
-import { WEEKLY_MISSION_HISTORY_CHANGED_EVENT } from '@/domain/rewards/weeklyMissionHistory';
 import type { AppSettings } from '@/domain/models/settings';
-import { ROUTINE_REMINDER_CHANGED_EVENT } from '@/application/reminders/routineReminderService';
 import type { SettingsRepository } from '@/infrastructure/repositories/contracts/SettingsRepository';
 import type {
   SyncPrototypeClient,
@@ -227,10 +225,6 @@ export class AutomaticSyncController {
     void this.triggerLocalChange(['goals']);
   };
 
-  private readonly handleRewardsChange = () => {
-    void this.triggerLocalChange(['rewards-routines']);
-  };
-
   private readonly handleEndurancePlanningPersisted = () => {
     void this.triggerLocalChange(['activities']);
   };
@@ -338,14 +332,6 @@ export class AutomaticSyncController {
       ENDURANCE_PLANNING_PERSISTED_EVENT,
       this.handleEndurancePlanningPersisted,
     );
-    this.eventTarget?.addEventListener(
-      WEEKLY_MISSION_HISTORY_CHANGED_EVENT,
-      this.handleRewardsChange,
-    );
-    this.eventTarget?.addEventListener(
-      ROUTINE_REMINDER_CHANGED_EVENT,
-      this.handleRewardsChange,
-    );
     this.visibilityTarget?.addEventListener(
       'visibilitychange',
       this.handleVisibility,
@@ -378,14 +364,6 @@ export class AutomaticSyncController {
     this.eventTarget?.removeEventListener(
       ENDURANCE_PLANNING_PERSISTED_EVENT,
       this.handleEndurancePlanningPersisted,
-    );
-    this.eventTarget?.removeEventListener(
-      WEEKLY_MISSION_HISTORY_CHANGED_EVENT,
-      this.handleRewardsChange,
-    );
-    this.eventTarget?.removeEventListener(
-      ROUTINE_REMINDER_CHANGED_EVENT,
-      this.handleRewardsChange,
     );
     this.visibilityTarget?.removeEventListener(
       'visibilitychange',
