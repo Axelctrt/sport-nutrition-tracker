@@ -85,11 +85,11 @@ describe('goalProgressService — refresh concurrent', () => {
 
     let releaseData: () => void = () => undefined;
     const dataGate = new Promise<void>((resolve) => {
-      releaseData = resolve;
+      releaseData = () => resolve();
     });
     let markReadStarted: () => void = () => undefined;
     const readStarted = new Promise<void>((resolve) => {
-      markReadStarted = resolve;
+      markReadStarted = () => resolve();
     });
 
     readBackupData.mockImplementationOnce(async () => {
