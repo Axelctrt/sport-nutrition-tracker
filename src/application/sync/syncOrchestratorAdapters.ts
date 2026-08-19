@@ -4,6 +4,7 @@ import type {
   SyncOrchestratorPreview,
 } from '@/application/sync/syncOrchestrator';
 import { notifySyncLocalDataChanged } from '@/application/sync/syncLocalChangeEvents';
+import { flushGoalStatePersistence } from '@/domain/goals/goalState';
 import {
   synchronizeRegisteredRealActivitiesFromCloud,
   synchronizeRegisteredRealActivitiesToCloud,
@@ -81,6 +82,9 @@ async function synchronizeRegisteredDirection(
     return undefined;
   }
 
+  if (domainId === 'goals') {
+    await flushGoalStatePersistence();
+  }
   await client.syncNow();
   if (client.getSnapshot().account.userId !== currentUserId) return undefined;
 
@@ -111,6 +115,10 @@ async function synchronizeRegisteredDirection(
 async function analyzeGoalsWithFreshCloudBarrier(
   client: SyncPrototypeClient,
 ): Promise<{ readonly differingEntityCount: number }> {
+  // Local Goals live in an in-memory runtime with queued Dexie persistence.
+  // Make the local database authoritative before any provenance/LWW decision.
+  await flushGoalStatePersistence();
+
   // Dexie Cloud 4.4.13 can satisfy a pull+wait call with the completion
   // timestamp of a sync that was already in flight when the pull was queued.
   // syncNow() followed by analyzeRealGoals() gives Goals a second sequential
@@ -122,6 +130,8 @@ async function analyzeGoalsWithFreshCloudBarrier(
 async function synchronizeGoalsWithFreshCloudBarrier(
   client: SyncPrototypeClient,
 ): Promise<unknown> {
+  await flushGoalStatePersistence();
+
   // The first barrier drains an in-flight transport cycle; syncRealGoals()
   // performs its own forced pull before applying the bidirectional resolver.
   await client.syncNow();
