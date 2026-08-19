@@ -14,11 +14,19 @@ const requiredBehaviorSuites = [
   'src/infrastructure/sync-prototype/realActivitySyncService.test.ts',
   'src/infrastructure/sync-prototype/realActivitiesAutomaticContinuity.test.ts',
   'src/infrastructure/sync-prototype/realGoalConcurrentResolutionService.test.ts',
+  'src/infrastructure/sync-prototype/realGoalLwwConflictResolution.test.ts',
+  'src/infrastructure/sync-prototype/realAccountPreferencesAutomaticContinuity.test.ts',
+  'src/infrastructure/sync-prototype/realRewardsRoutinesAutomaticContinuity.test.ts',
+  'src/infrastructure/sync-prototype/realDailyCoachingAutomaticReadiness.test.ts',
   'src/application/sync/automaticSyncController.test.ts',
   'src/application/sync/automaticSyncControllerGoalsWeights.test.ts',
   'src/application/sync/automaticSyncControllerActivities.test.ts',
+  'src/application/sync/automaticSyncControllerMergeSafeDomains.test.ts',
+  'src/application/sync/automaticSyncControllerMergeSafeGuards.test.ts',
+  'src/application/sync/automaticSyncControllerRewardsEventIsolation.test.ts',
   'src/application/sync/syncOrchestrator.test.ts',
   'src/application/sync/syncOrchestratorAdapters.test.ts',
+  'src/infrastructure/user-state/userStateAutomaticSyncNotification.test.ts',
   'src/infrastructure/data-spaces/cloudAccountRestoreService.test.ts',
   'src/app/data-spaces/DataSpaceAccountGate.test.tsx',
   'src/infrastructure/data-spaces/accountDataIsolation.integration.test.ts',
@@ -41,6 +49,9 @@ const requiredStructuralFiles = [
   'src/infrastructure/sync-prototype/realGoalConcurrentResolutionService.ts',
   'src/infrastructure/sync-prototype/realWeightSyncService.ts',
   'src/infrastructure/sync-prototype/realActivitySyncService.ts',
+  'src/infrastructure/sync-prototype/realAccountPreferencesSyncService.ts',
+  'src/infrastructure/sync-prototype/realRewardsRoutinesSyncService.ts',
+  'src/infrastructure/sync-prototype/realDailyCoachingSyncService.ts',
   'src/infrastructure/sync-prototype/logicalSyncState.ts',
   'src/infrastructure/sync-prototype/SyncPrototypeDatabase.ts',
   'src/infrastructure/data-spaces/cloudAccountRestoreService.ts',
@@ -51,6 +62,26 @@ const requiredStructuralFiles = [
 for (const path of requiredStructuralFiles) {
   if (!existsSync(join(root, path))) {
     fail(`garde-fou structurel P0 absent : ${path}.`);
+  }
+}
+
+function whitelist(controller, constantName) {
+  const match = controller.match(
+    new RegExp(`${constantName}\\s*=\\s*\\n?\\s*new Set<[^>]+>\\(\\[([^\\]]*)\\]\\)`, 'm'),
+  );
+  if (!match) return undefined;
+  return [...match[1].matchAll(/['"]([^'"]+)['"]/g)].map((value) => value[1]);
+}
+
+function expectExactWhitelist(controller, constantName, expectedValues) {
+  const values = whitelist(controller, constantName);
+  const expected = new Set(expectedValues);
+  if (
+    !values
+    || values.length !== expected.size
+    || values.some((value) => !expected.has(value))
+  ) {
+    fail(`${constantName} doit rester exactement limité à ${expectedValues.join(', ')}.`);
   }
 }
 
@@ -140,6 +171,43 @@ if (failures.length === 0) {
     }
   }
 
+  const accountIntegrationTest = read(
+    'src/infrastructure/sync-prototype/realAccountPreferencesAutomaticContinuity.test.ts',
+  );
+  for (const structuralMarker of [
+    'AutomaticSyncController',
+    'DexieProfileRepository',
+    'DexieSettingsRepository',
+    'synchronizeRealAccountPreferences',
+  ]) {
+    if (!accountIntegrationTest.includes(structuralMarker)) {
+      fail(`contrat structurel du test A→B Account Preferences absent : ${structuralMarker}.`);
+    }
+  }
+
+  const rewardsIntegrationTest = read(
+    'src/infrastructure/sync-prototype/realRewardsRoutinesAutomaticContinuity.test.ts',
+  );
+  for (const structuralMarker of [
+    'AutomaticSyncController',
+    'flushAchievementStatePersistence',
+    'flushVisualThemeStatePersistence',
+    'flushWeeklyMissionHistoryPersistence',
+    'flushRoutineReminderCompletionPersistence',
+    'synchronizeRealRewardsRoutines',
+  ]) {
+    if (!rewardsIntegrationTest.includes(structuralMarker)) {
+      fail(`contrat structurel du test A→B Rewards/Routines absent : ${structuralMarker}.`);
+    }
+  }
+
+  const dailyReadinessTest = read(
+    'src/infrastructure/sync-prototype/realDailyCoachingAutomaticReadiness.test.ts',
+  );
+  if (!dailyReadinessTest.includes('daily-coaching')) {
+    fail('le gate automatique Daily Coaching ne verrouille pas son domaine.');
+  }
+
   const adapters = read('src/application/sync/syncOrchestratorAdapters.ts');
   for (const marker of [
     "syncMode === 'cloud-only'",
@@ -188,13 +256,18 @@ if (failures.length === 0) {
     'options.writeCloud !== false',
     "domainId: 'goals'",
     "entityId: 'goals'",
+    'goalStateMutationTimestamp',
+    'latestGoalState',
+    'stableValue',
+    'resolveMergedGoalLogicalState',
+    'preserveRestorationMarker',
   ]) {
     if (!goals.includes(marker)) {
-      fail(`primitive directionnelle Goals absente : ${marker}.`);
+      fail(`contrat Goals directionnel/LWW absent : ${marker}.`);
     }
   }
 
-  const goalsBoth = read(
+  const goalsFallback = read(
     'src/infrastructure/sync-prototype/realGoalConcurrentResolutionService.ts',
   );
   for (const marker of [
@@ -203,8 +276,8 @@ if (failures.length === 0) {
     'prepareRealGoalConcurrentReconciliation',
     'applyRealGoalConcurrentReconciliation',
   ]) {
-    if (!goalsBoth.includes(marker)) {
-      fail(`résolution manuelle Goals both absente : ${marker}.`);
+    if (!goalsFallback.includes(marker)) {
+      fail(`fallback manuel Goals both absent : ${marker}.`);
     }
   }
 
@@ -249,30 +322,61 @@ if (failures.length === 0) {
   }
 
   const controller = read('src/application/sync/automaticSyncController.ts');
-  const whitelist = (constantName) => {
-    const match = controller.match(
-      new RegExp(`${constantName}\\s*=\\s*\\n?\\s*new Set<[^>]+>\\(\\[([^\\]]*)\\]\\)`, 'm'),
-    );
-    if (!match) return undefined;
-    return [...match[1].matchAll(/['"]([^'"]+)['"]/g)].map((value) => value[1]);
-  };
-  const expectedAutomaticDirectionalDomains = new Set([
+  expectExactWhitelist(controller, 'SAFE_REMOTE_CONVERGENCE_DOMAIN_IDS', [
     'strength',
     'goals',
     'weights',
     'activities',
   ]);
-  for (const constantName of [
-    'SAFE_REMOTE_CONVERGENCE_DOMAIN_IDS',
-    'SAFE_LOCAL_UPLOAD_DOMAIN_IDS',
+  expectExactWhitelist(controller, 'SAFE_LOCAL_UPLOAD_DOMAIN_IDS', [
+    'strength',
+    'goals',
+    'weights',
+    'activities',
+  ]);
+  expectExactWhitelist(controller, 'SAFE_MERGE_DOMAIN_IDS', [
+    'account-preferences',
+    'rewards-routines',
+    'goals',
+    'daily-coaching',
+  ]);
+
+  const automaticStart = controller.indexOf('function automaticDomainIds');
+  const automaticEnd = controller.indexOf('function normalizeDomains');
+  const automaticDomainFunction = automaticStart >= 0 && automaticEnd > automaticStart
+    ? controller.slice(automaticStart, automaticEnd)
+    : '';
+  for (const domain of [
+    'account-preferences',
+    'rewards-routines',
+    'weights',
+    'activities',
+    'goals',
+    'strength',
+    'daily-coaching',
   ]) {
-    const values = whitelist(constantName);
-    if (
-      !values
-      || values.length !== expectedAutomaticDirectionalDomains.size
-      || values.some((value) => !expectedAutomaticDirectionalDomains.has(value))
-    ) {
-      fail(`${constantName} doit rester strictement limité à Strength, Goals, Weights et Activities.`);
+    if (!automaticDomainFunction.includes(`'${domain}'`)) {
+      fail(`automaticDomainIds() ne contient pas le domaine Lot 1 ${domain}.`);
+    }
+  }
+  for (const excludedDomain of [
+    'nutrition-journal',
+    'nutrition-library',
+    'nutrition-tracking',
+  ]) {
+    if (automaticDomainFunction.includes(`'${excludedDomain}'`)) {
+      fail(`${excludedDomain} doit rester exclu du Lot 1 automatique.`);
+    }
+  }
+
+  for (const marker of [
+    'safeMergeDomainIds',
+    "syncMode: 'bidirectional'",
+    'isCurrentAccountOperation',
+    'await this.client.syncNow()',
+  ]) {
+    if (!controller.includes(marker)) {
+      fail(`garde-fou merge-safe automatique absent : ${marker}.`);
     }
   }
 
@@ -287,13 +391,13 @@ if (failures.length === 0) {
     'src/infrastructure/database/migrations/versions.ts',
   );
   if (!/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_12\b/.test(databaseVersions)) {
-    fail('S5 ne doit pas modifier Dexie métier : version 12 attendue.');
+    fail('P0 ne doit pas modifier Dexie métier : version 12 attendue.');
   }
   const backupMigrations = read(
     'src/infrastructure/backup/backupMigrations.ts',
   );
   if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*10\b/.test(backupMigrations)) {
-    fail('S5 ne doit pas modifier le schéma backup : version 10 attendue.');
+    fail('P0 ne doit pas modifier le schéma backup : version 10 attendue.');
   }
 }
 
@@ -304,5 +408,5 @@ if (failures.length > 0) {
 }
 
 console.log(
-  'Audit P0 continuité multi-appareils réussi : contrats structurels S0–S5 présents, suites comportementales intégrées à Vitest, primitives directionnelles automatiques strictement limitées à Strength/Goals/Weights/Activities, Goals both résolu uniquement par choix manuel explicite, baselines par replica et versions Dexie/backup préservées. Les comportements A→B restent prouvés par Vitest, pas par cet audit structurel.',
+  'Audit P0 continuité multi-appareils réussi : chemins directionnels Strength/Goals/Weights/Activities préservés, Lot 1 automatique étendu à Account/Rewards/Daily Coaching, Goals concurrent résolu par LWW logique déterministe avec fallback manuel conservé, Nutrition exclu, baselines par replica et versions Dexie/backup préservées.',
 );
