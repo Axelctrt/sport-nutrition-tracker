@@ -10,12 +10,8 @@ import {
   synchronizeRegisteredRealActivitiesToCloud,
 } from '@/infrastructure/sync-prototype/realActivitySyncService';
 import {
-  registeredGoalSyncContext,
-} from '@/infrastructure/sync-prototype/realGoalSyncService';
-import {
-  logicalSyncBaselineId,
-  logicalSyncBaselineTable,
-} from '@/infrastructure/sync-prototype/logicalSyncState';
+  synchronizeRegisteredRealGoalsByBusinessLww,
+} from '@/infrastructure/sync-prototype/realGoalAutomaticSyncService';
 import {
   synchronizeRegisteredRealWeightsFromCloud,
   synchronizeRegisteredRealWeightsToCloud,
@@ -127,70 +123,72 @@ async function analyzeGoalsWithFreshCloudBarrier(
   return client.analyzeRealGoals!();
 }
 
-async function clearGoalsAutomaticBaseline(
-  client: SyncPrototypeClient,
-): Promise<void> {
-  if (typeof client.getSnapshot !== 'function') return;
-  const currentUserId = client.getSnapshot().account.userId;
-  if (!currentUserId) return;
-
-  const context = (() => {
-    try {
-      return registeredGoalSyncContext(currentUserId);
-    } catch {
-      return undefined;
-    }
-  })();
-  if (!context) return;
-
-  await logicalSyncBaselineTable(context.cloudDatabase)?.delete(
-    logicalSyncBaselineId(currentUserId, 'goals', 'goals'),
-  );
-}
-
-function currentGoalsPreview(
-  client: SyncPrototypeClient,
-): SyncOrchestratorPreview | undefined {
-  if (typeof client.getSnapshot !== 'function') return undefined;
-  return client.getSnapshot().realGoals?.preview;
-}
-
 async function synchronizeGoalsWithFreshCloudBarrier(
   client: SyncPrototypeClient,
 ): Promise<unknown> {
   await flushGoalStatePersistence();
 
-  // Transport metadata can move independently from Goal.updatedAt. In
-  // particular, a late server mutation can carry a higher syncRevision while
-  // containing an older business value. Automatic Goals convergence must
-  // therefore never let local/cloud provenance select the winner. We drain
-  // transport, drop the device-local provenance baseline, then force every
-  // automatic mode back through the bidirectional business LWW resolver.
-  await client.syncNow();
-  await clearGoalsAutomaticBaseline(client);
-  const firstResult = await client.syncRealGoals!();
-
-  const firstPreview = currentGoalsPreview(client);
-  if (!firstPreview || firstPreview.differingEntityCount <= 0) {
-    return firstResult;
+  // A few adapter unit tests intentionally use a minimal client without a
+  // snapshot. Keep their transport-barrier contract without changing runtime
+  // behavior; production SyncPrototypeClient always exposes getSnapshot().
+  if (typeof client.getSnapshot !== 'function') {
+    await client.syncNow();
+    return client.syncRealGoals!();
   }
 
-  // One bounded retry handles a server response that arrives only after the
-  // first optimistic replica write. Never loop indefinitely: remaining
-  // divergence is surfaced as an explicit temporary failure instead of
-  // allowing a later directional cycle to overwrite the business winner.
+  const initial = client.getSnapshot();
+  const currentUserId = initial.account.userId;
+  if (!currentUserId) return undefined;
+
+  // Drain any in-flight transport, then analyze again. analyzeRealGoals()
+  // performs its own forced pull and registers the exact local/cloud context
+  // used immediately below.
+  await client.syncNow();
+  if (client.getSnapshot().account.userId !== currentUserId) return undefined;
+
+  const refreshedPreview = await client.analyzeRealGoals!();
+  if (client.getSnapshot().account.userId !== currentUserId) return undefined;
+  if (refreshedPreview.differingEntityCount <= 0) return undefined;
+
+  // Transport provenance (syncRevision/syncActorId) can move independently
+  // from Goal.updatedAt. Automatic convergence therefore drops only the
+  // device-local Goals provenance baseline and routes through the existing
+  // bidirectional business LWW resolver.
+  let result = await synchronizeRegisteredRealGoalsByBusinessLww(currentUserId);
+
+  // Publish the selected business winner and pull server confirmation before
+  // declaring convergence.
+  await client.syncNow();
+  if (client.getSnapshot().account.userId !== currentUserId) return result;
+
+  let confirmedPreview = await client.analyzeRealGoals!();
+  if (client.getSnapshot().account.userId !== currentUserId) return result;
+  if (confirmedPreview.differingEntityCount <= 0) return result;
+
+  // A late server row may appear only after the optimistic replica write. One
+  // bounded retry re-runs the same LWW arbitration; remaining divergence is
+  // surfaced instead of allowing a later directional cycle to overwrite it.
   await flushGoalStatePersistence();
   await client.syncNow();
-  await clearGoalsAutomaticBaseline(client);
-  const secondResult = await client.syncRealGoals!();
-  const secondPreview = currentGoalsPreview(client);
-  if (secondPreview && secondPreview.differingEntityCount > 0) {
+  if (client.getSnapshot().account.userId !== currentUserId) return result;
+
+  const retryPreview = await client.analyzeRealGoals!();
+  if (client.getSnapshot().account.userId !== currentUserId) return result;
+  if (retryPreview.differingEntityCount <= 0) return result;
+
+  result = await synchronizeRegisteredRealGoalsByBusinessLww(currentUserId);
+
+  await client.syncNow();
+  if (client.getSnapshot().account.userId !== currentUserId) return result;
+
+  confirmedPreview = await client.analyzeRealGoals!();
+  if (confirmedPreview.differingEntityCount > 0) {
     throw new Error(
       'La convergence Goals reste divergente après confirmation transport.',
     );
   }
 
-  return secondResult;
+  return result;
 }
 
 async function synchronizeNutritionLibrary(
