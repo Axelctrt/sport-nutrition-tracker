@@ -15,6 +15,7 @@ const requiredBehaviorSuites = [
   'src/infrastructure/sync-prototype/realActivitiesAutomaticContinuity.test.ts',
   'src/infrastructure/sync-prototype/realGoalConcurrentResolutionService.test.ts',
   'src/infrastructure/sync-prototype/realGoalLwwConflictResolution.test.ts',
+  'src/infrastructure/sync-prototype/realGoalSyncTransportRevisionRegression.test.ts',
   'src/infrastructure/sync-prototype/realAccountPreferencesAutomaticContinuity.test.ts',
   'src/infrastructure/sync-prototype/realRewardsRoutinesAutomaticContinuity.test.ts',
   'src/infrastructure/sync-prototype/realDailyCoachingAutomaticReadiness.test.ts',
@@ -53,6 +54,7 @@ const requiredStructuralFiles = [
   'src/application/sync/syncOrchestratorAdapters.ts',
   'src/infrastructure/sync-prototype/realStrengthSyncService.ts',
   'src/infrastructure/sync-prototype/realGoalSyncService.ts',
+  'src/infrastructure/sync-prototype/realGoalAutomaticSyncService.ts',
   'src/infrastructure/sync-prototype/realGoalConcurrentResolutionService.ts',
   'src/infrastructure/sync-prototype/realWeightSyncService.ts',
   'src/infrastructure/sync-prototype/realActivitySyncService.ts',
@@ -252,8 +254,8 @@ if (failures.length === 0) {
     "syncMode === 'local-only'",
     'client.syncRealStrengthFromCloud',
     'client.syncRealStrengthToCloud',
-    'synchronizeRegisteredRealGoalsFromCloud',
-    'synchronizeRegisteredRealGoalsToCloud',
+    'synchronizeRegisteredRealGoalsByBusinessLww',
+    'synchronizeGoalsDirectionalByBusinessLwwWithFreshCloudBarrier',
     'synchronizeRegisteredRealWeightsFromCloud',
     'synchronizeRegisteredRealWeightsToCloud',
     'synchronizeRegisteredRealActivitiesFromCloud',
@@ -304,6 +306,35 @@ if (failures.length === 0) {
   ]) {
     if (!goals.includes(marker)) {
       fail(`contrat Goals directionnel/LWW absent : ${marker}.`);
+    }
+  }
+
+  const goalsAutomatic = read(
+    'src/infrastructure/sync-prototype/realGoalAutomaticSyncService.ts',
+  );
+  for (const marker of [
+    'synchronizeRegisteredRealGoalsByBusinessLww',
+    'logicalSyncBaselineTable',
+    "logicalSyncBaselineId(currentUserId, 'goals', 'goals')",
+    'synchronizeRealGoals(',
+  ]) {
+    if (!goalsAutomatic.includes(marker)) {
+      fail(`garde-fou Goals automatique business-LWW absent : ${marker}.`);
+    }
+  }
+
+  const goalsTransportRevisionRegression = read(
+    'src/infrastructure/sync-prototype/realGoalSyncTransportRevisionRegression.test.ts',
+  );
+  for (const marker of [
+    "synchronize('cloud-only')",
+    "changeOrigin: 'cloud'",
+    'downloadedGoals: 0',
+    'targetValue: 10_000',
+    'syncRevision: 27',
+  ]) {
+    if (!goalsTransportRevisionRegression.includes(marker)) {
+      fail(`régression Goals transport/LWW non verrouillée : ${marker}.`);
     }
   }
 
@@ -463,5 +494,5 @@ if (failures.length > 0) {
 }
 
 console.log(
-  'Audit P0 continuité multi-appareils réussi : quatre chemins directionnels préservés, sept domaines merge-safe et dix domaines automatiques non sociaux, Goals LWW avec fallback manuel, Nutrition A→B et chaînages Journal qualifiés, baselines par replica et versions Dexie/backup préservées.',
+  'Audit P0 continuité multi-appareils réussi : routage directionnel Goals arbitré par LWW métier malgré les révisions transport, autres chemins directionnels préservés, sept domaines merge-safe et dix domaines automatiques non sociaux, Nutrition A→B et chaînages Journal qualifiés, baselines par replica et versions Dexie/backup préservées.',
 );
