@@ -13,6 +13,7 @@ import type {
 import {
   previewRealGoalSync,
   synchronizeRealGoals,
+  synchronizeRealGoalsToCloud,
 } from '@/infrastructure/sync-prototype/realGoalSyncService';
 import type {
   SyncPrototypeClient,
@@ -145,7 +146,7 @@ function goalsAdapter(client: SyncPrototypeClient) {
   return adapter;
 }
 
-describe('Goals — transport revision must not override business LWW', () => {
+describe('Goals — Dexie native clock-skew reconciliation drives the bridge', () => {
   let local: AppDatabase;
   let cloud: TestCloudDatabase;
 
@@ -164,10 +165,10 @@ describe('Goals — transport revision must not override business LWW', () => {
     await Promise.all(names.map((name) => Dexie.delete(name)));
   });
 
-  it('repasse par le client transport-aware même si le contrôleur demande cloud-only sur une révision transport plus haute', async () => {
-    const baseline = goal(10_000, '2026-08-20T08:40:00.000Z');
+  it('télécharge le gagnant Dexie cloud-only même si son updatedAt brut est plus ancien', async () => {
+    const baseline = goal(10_000, '2026-08-20T10:40:00.000Z');
     await local.goals.put(baseline);
-    await putCloudGoal(cloud, baseline, 24, 'device-b');
+    await putCloudGoal(cloud, baseline, 32, 'device-b');
 
     expect(await previewRealGoalSync(
       local,
@@ -176,52 +177,69 @@ describe('Goals — transport revision must not override business LWW', () => {
     )).toMatchObject({ differingEntityCount: 0 });
 
     /*
-     * B produit ensuite une vraie mutation plus récente. On simule le replica
-     * optimiste devenu égal avant confirmation serveur : la baseline locale
-     * est donc avancée sur 10000@08:50 avec la révision 25.
+     * A (téléphone à l'heure) produit 8000 hors ligne. Le staging local doit
+     * écrire cette mutation dans le replica Dexie dès T1, avant reconnexion.
      */
-    const newerB = goal(10_000, '2026-08-20T08:50:00.000Z');
-    await local.goals.put(newerB);
-    await putCloudGoal(cloud, newerB, 25, 'device-b');
-
-    expect(await previewRealGoalSync(
-      local,
-      cloud as unknown as SyncPrototypeDatabase,
-      USER_ID,
-    )).toMatchObject({ differingEntityCount: 0 });
-
-    /*
-     * Le round-trip transport confirme ensuite une mutation A plus ancienne
-     * mais munie d’une révision transport supérieure. C’est la forme exacte
-     * observée sur la Preview physique : updatedAt métier ancien, révision
-     * Dexie récente.
-     */
-    const olderA = goal(8_000, '2026-08-20T08:47:18.269Z');
-    await putCloudGoal(cloud, olderA, 26, 'device-a');
-
-    const misleadingPreview = await previewRealGoalSync(
+    const olderRealWorldA = goal(
+      8_000,
+      '2026-08-20T11:48:53.250Z',
+    );
+    await local.goals.put(olderRealWorldA);
+    await synchronizeRealGoalsToCloud(
       local,
       cloud as unknown as SyncPrototypeDatabase,
       USER_ID,
     );
-    expect(misleadingPreview).toMatchObject({
+
+    expect(await previewRealGoalSync(
+      local,
+      cloud as unknown as SyncPrototypeDatabase,
+      USER_ID,
+    )).toMatchObject({ differingEntityCount: 0 });
+    expect(await cloud.realGoals.get(`#${GOAL_ID}`)).toMatchObject({
+      targetValue: 8_000,
+    });
+
+    /*
+     * B modifie réellement plus tard, mais son PC a une horloge murale en
+     * retard. Après transport, Dexie Cloud a déjà compensé le skew et choisi
+     * l'opération B. On simule ici ce résultat natif dans le replica : 55000
+     * est le gagnant transport malgré un Goal.updatedAt brut inférieur à A.
+     */
+    const newerRealWorldBWithStaleClock = goal(
+      55_000,
+      '2026-08-20T10:49:49.636Z',
+    );
+    await putCloudGoal(
+      cloud,
+      newerRealWorldBWithStaleClock,
+      34,
+      'device-b',
+    );
+
+    const nativeDexieWinnerPreview = await previewRealGoalSync(
+      local,
+      cloud as unknown as SyncPrototypeDatabase,
+      USER_ID,
+    );
+    expect(nativeDexieWinnerPreview).toMatchObject({
       differingEntityCount: 1,
       changeOrigin: 'cloud',
     });
 
-    const client = clientFor(local, cloud, misleadingPreview);
+    const client = clientFor(local, cloud, nativeDexieWinnerPreview);
     const result = await goalsAdapter(client).synchronize('cloud-only');
 
-    expect(result).toMatchObject({ downloadedGoals: 0 });
-    expect(client.syncRealGoals).toHaveBeenCalledTimes(1);
+    expect(result).toMatchObject({ downloadedGoals: 1 });
+    expect(client.syncRealGoals).not.toHaveBeenCalled();
     expect(await local.goals.get(GOAL_ID)).toMatchObject({
-      targetValue: 10_000,
-      updatedAt: '2026-08-20T08:50:00.000Z',
+      targetValue: 55_000,
+      updatedAt: '2026-08-20T10:49:49.636Z',
     });
     expect(await cloud.realGoals.get(`#${GOAL_ID}`)).toMatchObject({
-      targetValue: 10_000,
-      updatedAt: '2026-08-20T08:50:00.000Z',
-      syncRevision: 27,
+      targetValue: 55_000,
+      updatedAt: '2026-08-20T10:49:49.636Z',
+      syncRevision: 34,
     });
     expect(client.getSnapshot().realGoals?.preview).toMatchObject({
       differingEntityCount: 0,
