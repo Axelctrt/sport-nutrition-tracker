@@ -254,7 +254,10 @@ if (failures.length === 0) {
     "syncMode === 'local-only'",
     'client.syncRealStrengthFromCloud',
     'client.syncRealStrengthToCloud',
-    'synchronizeRegisteredRealGoalsByBusinessLww',
+    'clearGoalsAutomaticBaseline',
+    'logicalSyncBaselineTable',
+    'logicalSyncBaselineId',
+    'client.syncRealGoals',
     'synchronizeGoalsDirectionalByBusinessLwwWithFreshCloudBarrier',
     'synchronizeRegisteredRealWeightsFromCloud',
     'synchronizeRegisteredRealWeightsToCloud',
@@ -332,6 +335,8 @@ if (failures.length === 0) {
     'downloadedGoals: 0',
     'targetValue: 10_000',
     'syncRevision: 27',
+    'client.syncRealGoals',
+    'toHaveBeenCalledTimes(1)',
   ]) {
     if (!goalsTransportRevisionRegression.includes(marker)) {
       fail(`régression Goals transport/LWW non verrouillée : ${marker}.`);
@@ -494,5 +499,5 @@ if (failures.length > 0) {
 }
 
 console.log(
-  'Audit P0 continuité multi-appareils réussi : routage directionnel Goals arbitré par LWW métier malgré les révisions transport, autres chemins directionnels préservés, sept domaines merge-safe et dix domaines automatiques non sociaux, Nutrition A→B et chaînages Journal qualifiés, baselines par replica et versions Dexie/backup préservées.',
+  'Audit P0 continuité multi-appareils réussi : routage directionnel Goals arbitré par LWW métier avec confirmation transport via le client, autres chemins directionnels préservés, sept domaines merge-safe et dix domaines automatiques non sociaux, Nutrition A→B et chaînages Journal qualifiés, baselines par replica et versions Dexie/backup préservées.',
 );
