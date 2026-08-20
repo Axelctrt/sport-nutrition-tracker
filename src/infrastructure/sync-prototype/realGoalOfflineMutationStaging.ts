@@ -82,8 +82,15 @@ export function attachRealGoalOfflineMutationStaging({
 }: AttachRealGoalOfflineMutationStagingOptions): () => void {
   let disposed = false;
   let queue: Promise<unknown> = Promise.resolve();
+  let latestGeneration = 0;
+  const replayedEvents = new WeakSet<Event>();
 
-  const handlePersisted = () => {
+  const handlePersisted = (event: Event) => {
+    if (replayedEvents.has(event)) {
+      replayedEvents.delete(event);
+      return;
+    }
+
     const snapshot = client.getSnapshot();
     const currentUserId = snapshot.account.userId;
     if (
@@ -94,16 +101,30 @@ export function attachRealGoalOfflineMutationStaging({
       return;
     }
 
+    /*
+     * The automatic controller listens to the same persisted event. Listener
+     * registration order alone is not a causal barrier: staging is async, so
+     * the controller could otherwise start transport before this mutation has
+     * reached the local Dexie Cloud replica. Hold the original event here and
+     * replay it only after staging has completed.
+     */
+    event.stopImmediatePropagation();
+    const generation = ++latestGeneration;
+
     queue = queue
       .catch(() => undefined)
-      .then(() => (
-        disposed
-          ? undefined
-          : stage(currentUserId)
-      ))
+      .then(async () => {
+        if (disposed) return;
+        await stage(currentUserId);
+        if (disposed || generation !== latestGeneration) return;
+
+        const replayedEvent = new Event(GOAL_STATE_PERSISTED_EVENT);
+        replayedEvents.add(replayedEvent);
+        eventTarget.dispatchEvent(replayedEvent);
+      })
       .catch((error: unknown) => {
-        // Staging is best-effort. AppDB remains the local-first source and the
-        // normal automatic controller will retry convergence when possible.
+        // Fail closed for this automatic cycle: AppDB remains authoritative and
+        // no replay reaches the controller until a later mutation stages safely.
         console.error(
           'Le staging local Dexie Cloud des objectifs a échoué.',
           error,
