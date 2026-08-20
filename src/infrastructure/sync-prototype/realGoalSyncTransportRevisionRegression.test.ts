@@ -1,4 +1,7 @@
 import Dexie, { type Table } from 'dexie';
+import {
+  createSyncOrchestratorDomains,
+} from '@/application/sync/syncOrchestratorAdapters';
 import type { Goal } from '@/domain/goals/goalState';
 import type { DeletionRecord } from '@/domain/models/deletion';
 import { AppDatabase } from '@/infrastructure/database/AppDatabase';
@@ -11,6 +14,13 @@ import {
   previewRealGoalSync,
   synchronizeRealGoals,
 } from '@/infrastructure/sync-prototype/realGoalSyncService';
+import type {
+  SyncPrototypeClient,
+  SyncPrototypeSnapshot,
+} from '@/infrastructure/sync-prototype/syncPrototypeClient';
+import {
+  createEmptySyncPrototypeDiagnostics,
+} from '@/infrastructure/sync-prototype/syncPrototypeDiagnostics';
 
 const USER_ID = 'user-goals-transport-revision';
 const GOAL_ID = 'goal-transport-revision';
@@ -67,6 +77,74 @@ async function putCloudGoal(
   });
 }
 
+function clientFor(
+  local: AppDatabase,
+  cloud: TestCloudDatabase,
+  initialPreview: Awaited<ReturnType<typeof previewRealGoalSync>>,
+): SyncPrototypeClient {
+  let snapshot: SyncPrototypeSnapshot = {
+    account: { isLoggedIn: true, isLoading: false, userId: USER_ID },
+    sync: { status: 'connected', phase: 'in-sync' },
+    weights: { weights: [], deletedCount: 0, isLoading: false },
+    realGoals: { enabled: true, status: 'ready', preview: initialPreview },
+    diagnostics: createEmptySyncPrototypeDiagnostics(),
+  };
+
+  const analyzeRealGoals = vi.fn(async () => {
+    const preview = await previewRealGoalSync(
+      local,
+      cloud as unknown as SyncPrototypeDatabase,
+      USER_ID,
+    );
+    snapshot = {
+      ...snapshot,
+      realGoals: { enabled: true, status: 'ready', preview },
+    };
+    return preview;
+  });
+
+  const syncRealGoals = vi.fn(async () => {
+    const result = await synchronizeRealGoals(
+      local,
+      cloud as unknown as SyncPrototypeDatabase,
+      USER_ID,
+    );
+    const preview = await previewRealGoalSync(
+      local,
+      cloud as unknown as SyncPrototypeDatabase,
+      USER_ID,
+    );
+    snapshot = {
+      ...snapshot,
+      realGoals: {
+        enabled: true,
+        status: 'ready',
+        preview,
+        lastResult: result,
+      },
+    };
+    return result;
+  });
+
+  return {
+    getSnapshot: () => snapshot,
+    subscribe: () => () => undefined,
+    initialize: async () => undefined,
+    syncNow: vi.fn(async () => undefined),
+    analyzeRealWeights: vi.fn(async () => ({ differingEntityCount: 0 })),
+    syncRealWeights: vi.fn(async () => ({})),
+    analyzeRealGoals,
+    syncRealGoals,
+  } as unknown as SyncPrototypeClient;
+}
+
+function goalsAdapter(client: SyncPrototypeClient) {
+  const adapter = createSyncOrchestratorDomains(client)
+    .find((candidate) => candidate.id === 'goals');
+  if (!adapter) throw new Error('Adapter Goals introuvable dans le test.');
+  return adapter;
+}
+
 describe('Goals — transport revision must not override business LWW', () => {
   let local: AppDatabase;
   let cloud: TestCloudDatabase;
@@ -86,7 +164,7 @@ describe('Goals — transport revision must not override business LWW', () => {
     await Promise.all(names.map((name) => Dexie.delete(name)));
   });
 
-  it('refuse qu’un ancien 8000 avec une révision transport plus haute écrase un 10000 métier plus récent', async () => {
+  it('repasse par le LWW même si le contrôleur demande cloud-only sur une révision transport plus haute', async () => {
     const baseline = goal(10_000, '2026-08-20T08:40:00.000Z');
     await local.goals.put(baseline);
     await putCloudGoal(cloud, baseline, 24, 'device-b');
@@ -121,22 +199,21 @@ describe('Goals — transport revision must not override business LWW', () => {
     const olderA = goal(8_000, '2026-08-20T08:47:18.269Z');
     await putCloudGoal(cloud, olderA, 26, 'device-a');
 
-    expect(await previewRealGoalSync(
-      local,
-      cloud as unknown as SyncPrototypeDatabase,
-      USER_ID,
-    )).toMatchObject({
-      differingEntityCount: 1,
-      changeOrigin: 'cloud',
-    });
-
-    const result = await synchronizeRealGoals(
+    const misleadingPreview = await previewRealGoalSync(
       local,
       cloud as unknown as SyncPrototypeDatabase,
       USER_ID,
     );
+    expect(misleadingPreview).toMatchObject({
+      differingEntityCount: 1,
+      changeOrigin: 'cloud',
+    });
 
-    expect(result.downloadedGoals).toBe(0);
+    const client = clientFor(local, cloud, misleadingPreview);
+    const result = await goalsAdapter(client).synchronize('cloud-only');
+
+    expect(result).toMatchObject({ downloadedGoals: 0 });
+    expect(client.syncRealGoals).toHaveBeenCalled();
     expect(await local.goals.get(GOAL_ID)).toMatchObject({
       targetValue: 10_000,
       updatedAt: '2026-08-20T08:50:00.000Z',
@@ -145,6 +222,9 @@ describe('Goals — transport revision must not override business LWW', () => {
       targetValue: 10_000,
       updatedAt: '2026-08-20T08:50:00.000Z',
       syncRevision: 27,
+    });
+    expect(client.getSnapshot().realGoals?.preview).toMatchObject({
+      differingEntityCount: 0,
     });
   });
 });
