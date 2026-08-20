@@ -10,9 +10,12 @@ import {
   synchronizeRegisteredRealActivitiesToCloud,
 } from '@/infrastructure/sync-prototype/realActivitySyncService';
 import {
-  synchronizeRegisteredRealGoalsFromCloud,
-  synchronizeRegisteredRealGoalsToCloud,
+  registeredGoalSyncContext,
 } from '@/infrastructure/sync-prototype/realGoalSyncService';
+import {
+  logicalSyncBaselineId,
+  logicalSyncBaselineTable,
+} from '@/infrastructure/sync-prototype/logicalSyncState';
 import {
   synchronizeRegisteredRealWeightsFromCloud,
   synchronizeRegisteredRealWeightsToCloud,
@@ -65,7 +68,7 @@ export function readSyncOrchestratorPreview(
 
 async function synchronizeRegisteredDirection(
   client: SyncPrototypeClient,
-  domainId: 'activities' | 'goals' | 'weights',
+  domainId: 'activities' | 'weights',
   expectedOrigin: 'cloud' | 'local',
   synchronizeRegistered: (currentUserId: string) => Promise<unknown>,
   analyze: () => Promise<{ readonly differingEntityCount: number }>,
@@ -82,9 +85,6 @@ async function synchronizeRegisteredDirection(
     return undefined;
   }
 
-  if (domainId === 'goals') {
-    await flushGoalStatePersistence();
-  }
   await client.syncNow();
   if (client.getSnapshot().account.userId !== currentUserId) return undefined;
 
@@ -127,15 +127,70 @@ async function analyzeGoalsWithFreshCloudBarrier(
   return client.analyzeRealGoals!();
 }
 
+async function clearGoalsAutomaticBaseline(
+  client: SyncPrototypeClient,
+): Promise<void> {
+  if (typeof client.getSnapshot !== 'function') return;
+  const currentUserId = client.getSnapshot().account.userId;
+  if (!currentUserId) return;
+
+  const context = (() => {
+    try {
+      return registeredGoalSyncContext(currentUserId);
+    } catch {
+      return undefined;
+    }
+  })();
+  if (!context) return;
+
+  await logicalSyncBaselineTable(context.cloudDatabase)?.delete(
+    logicalSyncBaselineId(currentUserId, 'goals', 'goals'),
+  );
+}
+
+function currentGoalsPreview(
+  client: SyncPrototypeClient,
+): SyncOrchestratorPreview | undefined {
+  if (typeof client.getSnapshot !== 'function') return undefined;
+  return client.getSnapshot().realGoals?.preview;
+}
+
 async function synchronizeGoalsWithFreshCloudBarrier(
   client: SyncPrototypeClient,
 ): Promise<unknown> {
   await flushGoalStatePersistence();
 
-  // The first barrier drains an in-flight transport cycle; syncRealGoals()
-  // performs its own forced pull before applying the bidirectional resolver.
+  // Transport metadata can move independently from Goal.updatedAt. In
+  // particular, a late server mutation can carry a higher syncRevision while
+  // containing an older business value. Automatic Goals convergence must
+  // therefore never let local/cloud provenance select the winner. We drain
+  // transport, drop the device-local provenance baseline, then force every
+  // automatic mode back through the bidirectional business LWW resolver.
   await client.syncNow();
-  return client.syncRealGoals!();
+  await clearGoalsAutomaticBaseline(client);
+  const firstResult = await client.syncRealGoals!();
+
+  const firstPreview = currentGoalsPreview(client);
+  if (!firstPreview || firstPreview.differingEntityCount <= 0) {
+    return firstResult;
+  }
+
+  // One bounded retry handles a server response that arrives only after the
+  // first optimistic replica write. Never loop indefinitely: remaining
+  // divergence is surfaced as an explicit temporary failure instead of
+  // allowing a later directional cycle to overwrite the business winner.
+  await flushGoalStatePersistence();
+  await client.syncNow();
+  await clearGoalsAutomaticBaseline(client);
+  const secondResult = await client.syncRealGoals!();
+  const secondPreview = currentGoalsPreview(client);
+  if (secondPreview && secondPreview.differingEntityCount > 0) {
+    throw new Error(
+      'La convergence Goals reste divergente après confirmation transport.',
+    );
+  }
+
+  return secondResult;
 }
 
 async function synchronizeNutritionLibrary(
@@ -272,23 +327,11 @@ export function createSyncOrchestratorDomains(
     client.syncRealGoals
       ? () => synchronizeGoalsWithFreshCloudBarrier(client)
       : undefined,
-    client.analyzeRealGoals
-      ? () => synchronizeRegisteredDirection(
-          client,
-          'goals',
-          'cloud',
-          synchronizeRegisteredRealGoalsFromCloud,
-          () => client.analyzeRealGoals!(),
-        )
+    client.syncRealGoals
+      ? () => synchronizeGoalsWithFreshCloudBarrier(client)
       : undefined,
-    client.analyzeRealGoals
-      ? () => synchronizeRegisteredDirection(
-          client,
-          'goals',
-          'local',
-          synchronizeRegisteredRealGoalsToCloud,
-          () => client.analyzeRealGoals!(),
-        )
+    client.syncRealGoals
+      ? () => synchronizeGoalsWithFreshCloudBarrier(client)
       : undefined,
   );
   add(
