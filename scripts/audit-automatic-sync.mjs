@@ -291,8 +291,8 @@ if (failures.length === 0) {
     fail('La sauvegarde JSON doit rester en v10.');
   }
   const cloud = read('src/infrastructure/sync-prototype/SyncPrototypeDatabase.ts');
-  if (!cloud.includes('SYNC_PROTOTYPE_DATABASE_VERSION = 16')) {
-    fail('Le runtime cloud doit utiliser la v16 pour les amitiés et permissions sociales.');
+  if (!cloud.includes('SYNC_PROTOTYPE_DATABASE_VERSION = 17')) {
+    fail('Le runtime cloud doit utiliser la v17 pour les amitiés, permissions sociales et le journal Goals.');
   }
   if (!/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(String(packageJson.version))) {
     fail('La publication doit exposer une version sémantique.');

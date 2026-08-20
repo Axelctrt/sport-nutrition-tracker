@@ -183,6 +183,10 @@ export async function initializeUserStateRuntime(
 export async function reloadUserStateRuntime(
   database: AppDatabase = appDatabase,
 ): Promise<void> {
+  // A reload replaces the in-memory runtimes with a fresh Dexie snapshot.
+  // Flush queued writes first so a concurrent cloud/domain refresh cannot
+  // rehydrate an older snapshot over a user mutation that is still pending.
+  await flushUserStatePersistence();
   configureRuntime(database, await readRuntimeSnapshot(database));
   notifyReloadedUserState();
 }

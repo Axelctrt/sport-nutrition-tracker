@@ -48,7 +48,7 @@ if (failures.length === 0) {
 
   const database = read('src/infrastructure/sync-prototype/SyncPrototypeDatabase.ts');
   for (const marker of [
-    'SYNC_PROTOTYPE_DATABASE_VERSION = 16',
+    'SYNC_PROTOTYPE_DATABASE_VERSION = 17',
     "'realAccountPreferences'",
     "realAccountPreferences: 'id, updatedAt'",
   ]) {
@@ -126,5 +126,5 @@ if (failures.length > 0) {
 }
 
 console.log(
-  'Audit E1 réussi : profil, réglages partageables, exclusions appareil/domaine E2, restauration initiale, isolation et runtime cloud v16 validés.',
+  'Audit E1 réussi : profil, réglages partageables, exclusions appareil/domaine E2, restauration initiale, isolation et runtime cloud v17 validés.',
 );

@@ -15,6 +15,13 @@ const requiredBehaviorSuites = [
   'src/infrastructure/sync-prototype/realActivitiesAutomaticContinuity.test.ts',
   'src/infrastructure/sync-prototype/realGoalConcurrentResolutionService.test.ts',
   'src/infrastructure/sync-prototype/realGoalLwwConflictResolution.test.ts',
+  'src/infrastructure/sync-prototype/realGoalSyncTransportRevisionRegression.test.ts',
+  'src/infrastructure/sync-prototype/realGoalOfflineMutationStaging.test.ts',
+  'src/infrastructure/sync-prototype/realGoalMutationStagingService.test.ts',
+  'src/infrastructure/sync-prototype/realGoalTransportConformanceModel.test.ts',
+  'src/infrastructure/sync-prototype/realGoalMutationJournal.test.ts',
+  'src/infrastructure/sync-prototype/realGoalImmutableMutationStaging.test.ts',
+  'tests/integration-cloud/goals-dexie-cloud-client.ts',
   'src/infrastructure/sync-prototype/realAccountPreferencesAutomaticContinuity.test.ts',
   'src/infrastructure/sync-prototype/realRewardsRoutinesAutomaticContinuity.test.ts',
   'src/infrastructure/sync-prototype/realDailyCoachingAutomaticReadiness.test.ts',
@@ -51,8 +58,10 @@ const requiredStructuralFiles = [
   'src/application/sync/automaticSyncController.ts',
   'src/application/sync/syncOrchestrator.ts',
   'src/application/sync/syncOrchestratorAdapters.ts',
+  'src/app/sync/AutomaticSyncCoordinator.tsx',
   'src/infrastructure/sync-prototype/realStrengthSyncService.ts',
   'src/infrastructure/sync-prototype/realGoalSyncService.ts',
+  'src/infrastructure/sync-prototype/realGoalOfflineMutationStaging.ts',
   'src/infrastructure/sync-prototype/realGoalConcurrentResolutionService.ts',
   'src/infrastructure/sync-prototype/realWeightSyncService.ts',
   'src/infrastructure/sync-prototype/realActivitySyncService.ts',
@@ -252,8 +261,12 @@ if (failures.length === 0) {
     "syncMode === 'local-only'",
     'client.syncRealStrengthFromCloud',
     'client.syncRealStrengthToCloud',
+    'synchronizeRegisteredDirection',
     'synchronizeRegisteredRealGoalsFromCloud',
     'synchronizeRegisteredRealGoalsToCloud',
+    'analyzeGoalsWithFreshCloudBarrier',
+    'synchronizeGoalsWithFreshCloudBarrier',
+    'client.syncRealGoals',
     'synchronizeRegisteredRealWeightsFromCloud',
     'synchronizeRegisteredRealWeightsToCloud',
     'synchronizeRegisteredRealActivitiesFromCloud',
@@ -264,6 +277,12 @@ if (failures.length === 0) {
     if (!adapters.includes(marker)) {
       fail(`routage sûr absent : ${marker}.`);
     }
+  }
+  if (
+    adapters.includes('clearGoalsAutomaticBaseline')
+    || adapters.includes('synchronizeRegisteredRealGoalsByBusinessLww')
+  ) {
+    fail('Goals automatique ne doit plus effacer sa baseline ni réarbitrer un cloud-only par updatedAt brut.');
   }
 
   const strength = read(
@@ -301,9 +320,170 @@ if (failures.length === 0) {
     'stableValue',
     'resolveMergedGoalLogicalState',
     'preserveRestorationMarker',
+    'stageRealGoalsMutationInLocalCloudReplica',
+    'withLogicalSyncStamp',
+    'stageCloudReplicaValue',
+    'await table.upsert(target.id, changes)',
+    'goalMutationState',
+    'disableEagerSync therefore keeps transport',
   ]) {
     if (!goals.includes(marker)) {
-      fail(`contrat Goals directionnel/LWW absent : ${marker}.`);
+      fail(`contrat Goals directionnel/LWW legacy absent : ${marker}.`);
+    }
+  }
+  if (
+    /cloudDatabase\.realGoals\.put\s*\(/.test(goals)
+    || /cloudDatabase\.realGoalDeletionRecords\.put\s*\(/.test(goals)
+  ) {
+    fail('le staging Goals ne doit pas revenir a un put de remplacement complet.');
+  }
+
+  const goalsConformanceModel = read(
+    'src/infrastructure/sync-prototype/realGoalTransportConformanceModel.test.ts',
+  );
+  for (const marker of [
+    'new SyncPrototypeDatabase',
+    "'$realGoals_mutations'",
+    "'$realGoalDeletionRecords_mutations'",
+    'cloudA',
+    'cloudB',
+    '8_000',
+    '55_000',
+    'adjustedOperationOrder: 2',
+    'adjustedOperationOrder: 1',
+    'expect(fetchSpy).not.toHaveBeenCalled()',
+    'stageGoalDeletion',
+    'stageGoalRestore',
+    'Local conformance model only',
+    'must never be cited as evidence',
+  ]) {
+    if (!goalsConformanceModel.includes(marker)) {
+      fail(`modèle local de conformance Goals absent : ${marker}.`);
+    }
+  }
+  const goalsCloudGate = read(
+    'scripts/test-goals-dexie-cloud-integration.mjs',
+  );
+  const goalsCloudClient = read(
+    'tests/integration-cloud/goals-dexie-cloud-client.ts',
+  );
+  for (const marker of [
+    'SPORTPILOT_DEXIE_TEST_DB_URL',
+    'SPORTPILOT_DEXIE_TEST_CREDENTIAL_DIR',
+    "grant_type: 'demo'",
+    "cloudDatabase.cloud.sync",
+    'realGoalMutations',
+    'contextA.setOffline(true)',
+    'serverAfterReconnectA',
+    '--legacy-migration',
+    "canonicalSource: 'legacy-realGoals'",
+    'reconcileInitialCloudBaseline',
+    'FORBIDDEN_PRODUCTION_HOST',
+  ]) {
+    if (!`${goalsCloudGate}\n${goalsCloudClient}`.includes(marker)) {
+      fail(`gate Dexie Cloud Goals réel incomplet : ${marker}.`);
+    }
+  }
+  for (const forbidden of [
+    'adjustedOperationOrder',
+    'cloud.sync = vi.fn',
+    'cloud.sync: vi.fn',
+  ]) {
+    if (`${goalsCloudGate}\n${goalsCloudClient}`.includes(forbidden)) {
+      fail(`le gate integration-cloud Goals utilise un faux transport : ${forbidden}.`);
+    }
+  }
+
+  const goalsStaging = read(
+    'src/infrastructure/sync-prototype/realGoalOfflineMutationStaging.ts',
+  );
+  for (const marker of [
+    'GOAL_STATE_PERSISTED_EVENT',
+    'client.stageRealGoalsMutation',
+    'event.stopImmediatePropagation()',
+    'attachRealGoalOfflineMutationStaging',
+  ]) {
+    if (!goalsStaging.includes(marker)) {
+      fail(`staging Goals offline absent : ${marker}.`);
+    }
+  }
+
+  const goalsTrueStagingRegression = read(
+    'src/infrastructure/sync-prototype/realGoalMutationStagingService.test.ts',
+  );
+  for (const marker of [
+    'stageRealGoalsMutationInLocalCloudReplica',
+    'provenance logique précédente est ambiguë',
+    'syncRevision: 37',
+    'goal-staging-unchanged',
+    'cloud.cloud.sync',
+    'appartenant à un autre compte',
+  ]) {
+    if (!goalsTrueStagingRegression.includes(marker)) {
+      fail(`régression vrai staging Goals non verrouillée : ${marker}.`);
+    }
+  }
+  if (/\.cloud\.sync\s*\(|\.syncNow\s*\(/.test(goalsStaging)) {
+    fail('le staging Goals offline ne doit lancer aucun transport réseau.');
+  }
+
+  const goalsStagingRegression = read(
+    'src/infrastructure/sync-prototype/realGoalOfflineMutationStaging.test.ts',
+  );
+  for (const marker of [
+    "status: 'offline'",
+    "phase: 'offline'",
+    'GOAL_STATE_PERSISTED_EVENT',
+    'goal-mutated-on-device',
+    'not.toHaveBeenCalled()',
+  ]) {
+    if (!goalsStagingRegression.includes(marker)) {
+      fail(`régression staging Goals offline non verrouillée : ${marker}.`);
+    }
+  }
+
+  const automaticCoordinator = read(
+    'src/app/sync/AutomaticSyncCoordinator.tsx',
+  );
+  for (const marker of [
+    'attachRealGoalOfflineMutationStaging',
+    'detachRealGoalOfflineMutationStaging',
+    'const controller = new AutomaticSyncController',
+  ]) {
+    if (!automaticCoordinator.includes(marker)) {
+      fail(`coordination du staging Goals absente : ${marker}.`);
+    }
+  }
+  const stagingRegistrationIndex = automaticCoordinator.indexOf(
+    'const detachRealGoalOfflineMutationStaging',
+  );
+  const controllerRegistrationIndex = automaticCoordinator.indexOf(
+    'const controller = new AutomaticSyncController',
+  );
+  if (
+    stagingRegistrationIndex < 0
+    || controllerRegistrationIndex < 0
+    || stagingRegistrationIndex >= controllerRegistrationIndex
+  ) {
+    fail('le listener de staging Goals doit être enregistré avant AutomaticSyncController.');
+  }
+
+  const goalsTransportRevisionRegression = read(
+    'src/infrastructure/sync-prototype/realGoalSyncTransportRevisionRegression.test.ts',
+  );
+  for (const marker of [
+    "synchronize('cloud-only')",
+    "changeOrigin: 'cloud'",
+    'downloadedGoals: 1',
+    'targetValue: 55_000',
+    "updatedAt: '2026-08-20T10:49:49.636Z'",
+    "'2026-08-20T11:48:53.250Z'",
+    'syncRevision: 34',
+    'client.syncRealGoals',
+    'not.toHaveBeenCalled()',
+  ]) {
+    if (!goalsTransportRevisionRegression.includes(marker)) {
+      fail(`régression Goals clock-skew/Dexie non verrouillée : ${marker}.`);
     }
   }
 
@@ -438,8 +618,13 @@ if (failures.length === 0) {
   const cloudDatabase = read(
     'src/infrastructure/sync-prototype/SyncPrototypeDatabase.ts',
   );
-  if (!cloudDatabase.includes("unsyncedTables: ['realSyncBaselines']")) {
-    fail('realSyncBaselines doit rester local à chaque replica cloud/appareil.');
+  if (!cloudDatabase.includes(
+    "unsyncedTables: ['realSyncBaselines', 'realGoalMutationClocks']",
+  )) {
+    fail('realSyncBaselines et realGoalMutationClocks doivent rester locaux à chaque replica cloud/appareil.');
+  }
+  if (!cloudDatabase.includes('disableEagerSync: true')) {
+    fail('le replica Dexie Cloud doit conserver disableEagerSync pour le staging local-first.');
   }
 
   const databaseVersions = read(
@@ -463,5 +648,5 @@ if (failures.length > 0) {
 }
 
 console.log(
-  'Audit P0 continuité multi-appareils réussi : quatre chemins directionnels préservés, sept domaines merge-safe et dix domaines automatiques non sociaux, Goals LWW avec fallback manuel, Nutrition A→B et chaînages Journal qualifiés, baselines par replica et versions Dexie/backup préservées.',
+  'Audit P0 continuité multi-appareils réussi : mutations Goals immuables stagées dès la persistance, y compris offline, transport explicite conservé, résolution HLC calibrée et déterministe, fallback legacy both/unknown préservé, autres chemins directionnels et merge-safe inchangés, baselines par replica et versions Dexie/backup préservées.',
 );

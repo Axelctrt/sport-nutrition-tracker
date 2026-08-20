@@ -1,0 +1,8 @@
+{
+  "schema": {
+    "realGoals": "id",
+    "realGoalDeletionRecords": "id",
+    "realGoalMutations": "id, accountUserId, entityId, orderedAtMs, [accountUserId+entityId]"
+  },
+  "sealed": false
+}
