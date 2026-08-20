@@ -4,6 +4,9 @@ import { AutomaticSyncController } from '@/application/sync/automaticSyncControl
 import { reconcilePersistedActivityLinksBestEffort } from '@/application/planning/activityLinkIntegrityService';
 import { repositories } from '@/infrastructure/repositories/repositories';
 import {
+  attachRealGoalOfflineMutationStaging,
+} from '@/infrastructure/sync-prototype/realGoalOfflineMutationStaging';
+import {
   getSyncPrototypeClient,
   type SyncPrototypeClient,
 } from '@/infrastructure/sync-prototype/syncPrototypeClient';
@@ -79,6 +82,19 @@ export function AutomaticSyncCoordinator({
       reconcileAfterRelevantSync,
     );
 
+    /*
+     * Register this listener before AutomaticSyncController. A persisted Goal
+     * must enter the local Dexie Cloud replica immediately, including while
+     * offline, so Dexie can retain the operation timing used by its native
+     * client/server clock-skew reconciliation. The controller still owns the
+     * later explicit network synchronization.
+     */
+    const detachRealGoalOfflineMutationStaging =
+      attachRealGoalOfflineMutationStaging({
+        client,
+        eventTarget: window,
+      });
+
     const controller = new AutomaticSyncController({
       client,
       settingsRepository: repositories.settings,
@@ -110,6 +126,7 @@ export function AutomaticSyncCoordinator({
         reconcileSocialActivityPrivacy,
       );
       detachSocialActivitySnapshotDelivery();
+      detachRealGoalOfflineMutationStaging();
       unsubscribeActivityLinkReconciliation();
       controller.dispose();
     };
