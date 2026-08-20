@@ -53,6 +53,7 @@ import {
 } from '@/infrastructure/sync-prototype/realActivitySyncService';
 import {
   previewRealGoalSync,
+  stageRealGoalsMutationInLocalCloudReplica,
   synchronizeRealGoals,
   type RealGoalSyncPreview,
   type RealGoalSyncResult,
@@ -370,6 +371,10 @@ export interface SyncPrototypeClient {
   analyzeRealActivities?(): Promise<RealActivitySyncPreview>;
   syncRealActivities?(): Promise<RealActivitySyncResult>;
   analyzeRealGoals?(): Promise<RealGoalSyncPreview>;
+  stageRealGoalsMutation?(
+    expectedUserId: string,
+    goalIds?: readonly string[],
+  ): Promise<void>;
   syncRealGoals?(): Promise<RealGoalSyncResult>;
   analyzeRealStrength?(): Promise<RealStrengthSyncPreview>;
   syncRealStrength?(): Promise<RealStrengthSyncResult>;
@@ -1217,6 +1222,27 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
       this.notify();
       throw error;
     }
+  }
+
+  async stageRealGoalsMutation(
+    expectedUserId: string,
+    goalIds?: readonly string[],
+  ): Promise<void> {
+    await this.initialize();
+    this.assertRealGoalSyncAvailable();
+    if (this.snapshot.account.userId !== expectedUserId) {
+      throw new Error(
+        'Le compte cloud a changé avant le staging Goals. Aucune mutation n’a été copiée.',
+      );
+    }
+    this.assertCloudUserId(expectedUserId);
+    await stageRealGoalsMutationInLocalCloudReplica(
+      this.localDatabase,
+      this.database,
+      expectedUserId,
+      goalIds,
+    );
+    this.assertCloudUserId(expectedUserId);
   }
 
   async syncRealGoals(): Promise<RealGoalSyncResult> {

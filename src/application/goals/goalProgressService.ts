@@ -529,6 +529,6 @@ export async function deleteGoal(
     },
   );
 
-  notifyGoalStatePersisted();
+  notifyGoalStatePersisted([goalId]);
   await reloadUserStateRuntime(database);
 }

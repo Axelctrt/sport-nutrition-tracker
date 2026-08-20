@@ -1,73 +1,15 @@
-import { GOAL_STATE_PERSISTED_EVENT } from '@/domain/goals/goalState';
-import { appDatabase } from '@/infrastructure/database/database';
 import {
-  createSyncPrototypeDatabase,
-} from '@/infrastructure/sync-prototype/SyncPrototypeDatabase';
-import {
-  registeredGoalSyncContext,
-  synchronizeRealGoalsToCloud,
-} from '@/infrastructure/sync-prototype/realGoalSyncService';
-import {
-  readSyncPrototypeConfig,
-} from '@/infrastructure/sync-prototype/syncPrototypeConfig';
+  GOAL_STATE_PERSISTED_EVENT,
+  type GoalStatePersistedEventDetail,
+} from '@/domain/goals/goalState';
 import type {
   SyncPrototypeClient,
 } from '@/infrastructure/sync-prototype/syncPrototypeClient';
 
 type StageRealGoalsMutation = (
   currentUserId: string,
+  goalIds?: readonly string[],
 ) => Promise<unknown>;
-
-export async function stageRealGoalsMutationIntoLocalCloudReplica(
-  currentUserId: string,
-): Promise<unknown> {
-  const registered = (() => {
-    try {
-      return registeredGoalSyncContext(currentUserId);
-    } catch {
-      return undefined;
-    }
-  })();
-
-  if (registered) {
-    return synchronizeRealGoalsToCloud(
-      registered.localDatabase,
-      registered.cloudDatabase,
-      currentUserId,
-    );
-  }
-
-  /*
-   * A Goals mutation may happen after an offline reload, before the automatic
-   * controller has had any chance to analyze/register this account. Open a
-   * second connection to the deterministic Dexie Cloud replica so the mutation
-   * is still recorded locally at mutation time. disableEagerSync keeps this as
-   * an IndexedDB operation until the explicit transport cycle runs later.
-   *
-   * synchronizeRealGoalsToCloud remains provenance-safe: without an existing
-   * local baseline it refuses an ambiguous first reconciliation instead of
-   * overwriting an unknown cloud state.
-   */
-  const config = readSyncPrototypeConfig();
-  if (!config.enabled || !config.realGoalSyncEnabled) {
-    return undefined;
-  }
-
-  const cloudDatabase = createSyncPrototypeDatabase(config);
-  try {
-    await Promise.all([
-      appDatabase.open(),
-      cloudDatabase.open(),
-    ]);
-    return await synchronizeRealGoalsToCloud(
-      appDatabase,
-      cloudDatabase,
-      currentUserId,
-    );
-  } finally {
-    cloudDatabase.close();
-  }
-}
 
 interface AttachRealGoalOfflineMutationStagingOptions {
   readonly client: SyncPrototypeClient;
@@ -78,7 +20,14 @@ interface AttachRealGoalOfflineMutationStagingOptions {
 export function attachRealGoalOfflineMutationStaging({
   client,
   eventTarget = window,
-  stage = stageRealGoalsMutationIntoLocalCloudReplica,
+  stage = (currentUserId, goalIds) => {
+    if (!client.stageRealGoalsMutation) {
+      return Promise.reject(new Error(
+        'Le client Dexie Cloud actif ne peut pas stager les objectifs.',
+      ));
+    }
+    return client.stageRealGoalsMutation(currentUserId, goalIds);
+  },
 }: AttachRealGoalOfflineMutationStagingOptions): () => void {
   let disposed = false;
   let queue: Promise<unknown> = Promise.resolve();
@@ -110,12 +59,19 @@ export function attachRealGoalOfflineMutationStaging({
      */
     event.stopImmediatePropagation();
     const generation = ++latestGeneration;
+    const goalIds = event instanceof CustomEvent
+      ? (event as CustomEvent<GoalStatePersistedEventDetail>).detail?.goalIds
+      : undefined;
 
     queue = queue
       .catch(() => undefined)
       .then(async () => {
         if (disposed) return;
-        await stage(currentUserId);
+        if (goalIds === undefined) {
+          await stage(currentUserId);
+        } else {
+          await stage(currentUserId, goalIds);
+        }
         if (disposed || generation !== latestGeneration) return;
 
         const replayedEvent = new Event(GOAL_STATE_PERSISTED_EVENT);

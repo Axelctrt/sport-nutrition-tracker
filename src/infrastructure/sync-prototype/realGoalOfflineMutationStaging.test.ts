@@ -45,24 +45,30 @@ function snapshot(): SyncPrototypeSnapshot {
 describe('staging local Goals avant reconnexion', () => {
   it('capture la mutation dans le replica même lorsque le transport est offline', async () => {
     const current = snapshot();
+    const stageRealGoalsMutation = vi.fn(async () => undefined);
     const client = {
       getSnapshot: () => current,
+      stageRealGoalsMutation,
     } as unknown as SyncPrototypeClient;
     const eventTarget = new EventTarget();
-    const stage = vi.fn(async () => undefined);
 
     const detach = attachRealGoalOfflineMutationStaging({
       client,
       eventTarget,
-      stage,
     });
 
-    eventTarget.dispatchEvent(new Event(GOAL_STATE_PERSISTED_EVENT));
+    eventTarget.dispatchEvent(new CustomEvent(
+      GOAL_STATE_PERSISTED_EVENT,
+      { detail: { goalIds: ['goal-mutated-on-device'] } },
+    ));
 
     await vi.waitFor(() => {
-      expect(stage).toHaveBeenCalledTimes(1);
+      expect(stageRealGoalsMutation).toHaveBeenCalledTimes(1);
     });
-    expect(stage).toHaveBeenCalledWith(USER_ID);
+    expect(stageRealGoalsMutation).toHaveBeenCalledWith(
+      USER_ID,
+      ['goal-mutated-on-device'],
+    );
 
     detach();
   });

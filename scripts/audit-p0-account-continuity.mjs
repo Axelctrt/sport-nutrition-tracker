@@ -17,6 +17,7 @@ const requiredBehaviorSuites = [
   'src/infrastructure/sync-prototype/realGoalLwwConflictResolution.test.ts',
   'src/infrastructure/sync-prototype/realGoalSyncTransportRevisionRegression.test.ts',
   'src/infrastructure/sync-prototype/realGoalOfflineMutationStaging.test.ts',
+  'src/infrastructure/sync-prototype/realGoalMutationStagingService.test.ts',
   'src/infrastructure/sync-prototype/realAccountPreferencesAutomaticContinuity.test.ts',
   'src/infrastructure/sync-prototype/realRewardsRoutinesAutomaticContinuity.test.ts',
   'src/infrastructure/sync-prototype/realDailyCoachingAutomaticReadiness.test.ts',
@@ -315,6 +316,9 @@ if (failures.length === 0) {
     'stableValue',
     'resolveMergedGoalLogicalState',
     'preserveRestorationMarker',
+    'stageRealGoalsMutationInLocalCloudReplica',
+    'withLogicalSyncStamp',
+    'disableEagerSync therefore keeps transport',
   ]) {
     if (!goals.includes(marker)) {
       fail(`contrat Goals directionnel/LWW legacy absent : ${marker}.`);
@@ -326,16 +330,28 @@ if (failures.length === 0) {
   );
   for (const marker of [
     'GOAL_STATE_PERSISTED_EVENT',
-    'stageRealGoalsMutationIntoLocalCloudReplica',
-    'registeredGoalSyncContext(currentUserId)',
-    'synchronizeRealGoalsToCloud(',
-    'readSyncPrototypeConfig()',
-    'createSyncPrototypeDatabase(config)',
-    'appDatabase.open()',
+    'client.stageRealGoalsMutation',
+    'event.stopImmediatePropagation()',
     'attachRealGoalOfflineMutationStaging',
   ]) {
     if (!goalsStaging.includes(marker)) {
       fail(`staging Goals offline absent : ${marker}.`);
+    }
+  }
+
+  const goalsTrueStagingRegression = read(
+    'src/infrastructure/sync-prototype/realGoalMutationStagingService.test.ts',
+  );
+  for (const marker of [
+    'stageRealGoalsMutationInLocalCloudReplica',
+    'provenance logique précédente est ambiguë',
+    'syncRevision: 37',
+    'goal-staging-unchanged',
+    'cloud.cloud.sync',
+    'appartenant à un autre compte',
+  ]) {
+    if (!goalsTrueStagingRegression.includes(marker)) {
+      fail(`régression vrai staging Goals non verrouillée : ${marker}.`);
     }
   }
   if (/\.cloud\.sync\s*\(|\.syncNow\s*\(/.test(goalsStaging)) {
@@ -349,7 +365,7 @@ if (failures.length === 0) {
     "status: 'offline'",
     "phase: 'offline'",
     'GOAL_STATE_PERSISTED_EVENT',
-    'toHaveBeenCalledWith(USER_ID)',
+    'goal-mutated-on-device',
     'not.toHaveBeenCalled()',
   ]) {
     if (!goalsStagingRegression.includes(marker)) {

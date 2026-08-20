@@ -63,6 +63,13 @@ Les suppressions synchronisées passent par des `DeletionRecord`. Les séances,
 modèles et exercices de musculation sont synchronisés comme agrégats afin
 d’éviter les états partiels.
 
+Pour Goals, chaque mutation AppDB persistée est aussi inscrite immédiatement
+comme opération dans le replica Dexie Cloud local du compte actif, y compris
+hors ligne. Cette étape cible uniquement les objectifs réellement mutés et ne
+déclenche aucun transport ; `disableEagerSync: true` reste le garde-fou. Le
+cycle automatique explicite transporte ensuite ces opérations et réhydrate
+AppDB depuis le gagnant du replica après l’arbitrage natif Dexie Cloud.
+
 Les tables et modèles de photos de progression sont exclus des adaptateurs de
 synchronisation, des Pages Functions et de Dexie Cloud. Un test de contrat
 échoue si une référence à ces tables apparaît dans ces frontières.

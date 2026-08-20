@@ -28,6 +28,7 @@ import {
   resolveSyncActorId,
   stripLogicalSyncFields,
   upsertLogicalCloudValue,
+  withLogicalSyncStamp,
   type LogicalSyncFields,
   type LogicalSyncStamp,
 } from '@/infrastructure/sync-prototype/logicalSyncState';
@@ -1184,6 +1185,161 @@ export async function synchronizeRealGoalsToCloud(
     writeCloud: true,
     requireChangeOrigin: 'local',
   });
+}
+
+/**
+ * Records the current AppDB Goals mutation in the local Dexie Cloud replica.
+ *
+ * This deliberately bypasses provenance classification and business conflict
+ * resolution: the call represents a mutation that has already been committed
+ * to AppDB and must become a real Dexie operation immediately. The transaction
+ * never calls cloud.sync(); disableEagerSync therefore keeps transport under
+ * the automatic controller's control.
+ */
+export async function stageRealGoalsMutationInLocalCloudReplica(
+  localDatabase: AppDatabase,
+  cloudDatabase: SyncPrototypeDatabase,
+  currentUserId: string,
+  goalIds?: readonly string[],
+): Promise<void> {
+  const local = await readLocalState(localDatabase);
+  const localLogical = resolveSingleSideLogicalState(
+    local.localGoals,
+    local.localMarkers,
+  );
+  const requestedGoalIds = goalIds
+    ? new Set(goalIds.filter((id) => id.trim().length > 0))
+    : undefined;
+  if (requestedGoalIds?.size === 0) return;
+  const actorId = await resolveSyncActorId(localDatabase);
+  const baselineTable = logicalSyncBaselineTable(cloudDatabase);
+  if (!baselineTable) {
+    throw new Error(
+      'La référence locale Goals est indisponible. La mutation n’a pas été stagée.',
+    );
+  }
+
+  await cloudDatabase.transaction(
+    'rw',
+    [
+      cloudDatabase.realGoals,
+      cloudDatabase.realGoalDeletionRecords,
+      baselineTable,
+    ],
+    async () => {
+      const [goalRows, markerRows, baseline] = await Promise.all([
+        cloudDatabase.realGoals.toArray(),
+        cloudDatabase.realGoalDeletionRecords.toArray(),
+        baselineTable.get(
+          logicalSyncBaselineId(currentUserId, 'goals', 'goals'),
+        ),
+      ]);
+      const ownedGoalRows = goalRows.filter((goal) =>
+        belongsToCurrentUser(goal, currentUserId));
+      const ownedMarkerRows = markerRows.filter(
+        (marker) =>
+          marker.entityType === 'goal'
+          && belongsToCurrentUser(marker, currentUserId),
+      );
+      const stagedGoalIds = requestedGoalIds ?? new Set([
+        ...local.localGoals.map((goal) => goal.id),
+        ...local.localMarkers.map((marker) => marker.entityId),
+        ...ownedGoalRows.flatMap((row) => {
+          const id = localIdFromCloud(row.id);
+          return id ? [id] : [];
+        }),
+        ...ownedMarkerRows.flatMap((row) => {
+          const marker = fromCloudMarker(row);
+          return marker ? [marker.entityId] : [];
+        }),
+      ]);
+      const cloudStamp = maximumLogicalSyncStamp([
+        ...ownedGoalRows,
+        ...ownedMarkerRows,
+      ]);
+      const baselineStamp: LogicalSyncStamp = baseline
+        ? { revision: baseline.revision, actorId: baseline.actorId }
+        : { revision: 0, actorId: '' };
+      const stamp = nextLogicalSyncStamp(
+        actorId,
+        cloudStamp,
+        baselineStamp,
+      );
+      const localGoalById = mapById(local.localGoals);
+      const localMarkerById = mapById(local.localMarkers);
+
+      for (const goalId of stagedGoalIds) {
+        const cloudGoalId = cloudPrivateId(goalId);
+        const markerId = deletionRecordId('goal', goalId);
+        const cloudMarkerId = cloudPrivateId(markerId);
+        const existingGoalRow = goalRows.find((row) =>
+          row.id === cloudGoalId);
+        const existingMarkerRow = markerRows.find((row) =>
+          row.id === cloudMarkerId);
+        if (
+          (existingGoalRow
+            && !belongsToCurrentUser(existingGoalRow, currentUserId))
+          || (existingMarkerRow
+            && !belongsToCurrentUser(existingMarkerRow, currentUserId))
+        ) {
+          throw new Error(
+            'Une ligne Goals appartient à un autre compte. Le staging a été annulé.',
+          );
+        }
+
+        const target = effectiveGoalState(
+          localGoalById.get(goalId),
+          localMarkerById.get(markerId),
+        );
+        if (target.goal) {
+          await cloudDatabase.realGoals.put(
+            withLogicalSyncStamp(toCloudGoal(target.goal), stamp),
+          );
+        } else if (existingGoalRow) {
+          await cloudDatabase.realGoals.delete(cloudGoalId);
+        }
+        if (target.marker) {
+          await cloudDatabase.realGoalDeletionRecords.put(
+            withLogicalSyncStamp(toCloudMarker(target.marker), stamp),
+          );
+        } else if (existingMarkerRow) {
+          await cloudDatabase.realGoalDeletionRecords.delete(cloudMarkerId);
+        }
+      }
+
+      const [stagedGoalRows, stagedMarkerRows] = await Promise.all([
+        cloudDatabase.realGoals.toArray(),
+        cloudDatabase.realGoalDeletionRecords.toArray(),
+      ]);
+      const stagedCloudLogical = resolveSingleSideLogicalState(
+        stagedGoalRows
+          .filter((goal) => belongsToCurrentUser(goal, currentUserId))
+          .map(fromCloudGoal)
+          .filter((goal): goal is Goal => goal !== undefined),
+        stagedMarkerRows
+          .filter(
+            (marker) =>
+              marker.entityType === 'goal'
+              && belongsToCurrentUser(marker, currentUserId),
+          )
+          .map(fromCloudMarker)
+          .filter(
+            (marker): marker is DeletionRecord => marker !== undefined,
+          ),
+      );
+      await baselineTable.put({
+        id: logicalSyncBaselineId(currentUserId, 'goals', 'goals'),
+        accountUserId: currentUserId,
+        domainId: 'goals',
+        entityId: 'goals',
+        localDigest: stableValue(localLogical),
+        cloudDigest: stableValue(stagedCloudLogical),
+        revision: stamp.revision,
+        actorId: stamp.actorId,
+        updatedAt: new Date().toISOString(),
+      });
+    },
+  );
 }
 
 export async function prepareInitialRealGoalReconciliation(
