@@ -29,7 +29,14 @@ function snapshot(): SyncPrototypeSnapshot {
     realGoals: {
       enabled: true,
       status: 'ready',
-      preview: { differingEntityCount: 1, changeOrigin: 'local' },
+      preview: {
+        localGoalCount: 1,
+        cloudGoalCount: 0,
+        localDeletionCount: 0,
+        cloudDeletionCount: 0,
+        differingEntityCount: 1,
+        changeOrigin: 'local',
+      },
     },
     diagnostics: createEmptySyncPrototypeDiagnostics(USER_ID),
   };
