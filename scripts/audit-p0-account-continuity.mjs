@@ -18,6 +18,7 @@ const requiredBehaviorSuites = [
   'src/infrastructure/sync-prototype/realGoalSyncTransportRevisionRegression.test.ts',
   'src/infrastructure/sync-prototype/realGoalOfflineMutationStaging.test.ts',
   'src/infrastructure/sync-prototype/realGoalMutationStagingService.test.ts',
+  'src/infrastructure/sync-prototype/realGoalDexieTransportRegression.test.ts',
   'src/infrastructure/sync-prototype/realAccountPreferencesAutomaticContinuity.test.ts',
   'src/infrastructure/sync-prototype/realRewardsRoutinesAutomaticContinuity.test.ts',
   'src/infrastructure/sync-prototype/realDailyCoachingAutomaticReadiness.test.ts',
@@ -318,11 +319,45 @@ if (failures.length === 0) {
     'preserveRestorationMarker',
     'stageRealGoalsMutationInLocalCloudReplica',
     'withLogicalSyncStamp',
+    'stageCloudReplicaValue',
+    'await table.upsert(target.id, changes)',
+    'goalMutationState',
     'disableEagerSync therefore keeps transport',
   ]) {
     if (!goals.includes(marker)) {
       fail(`contrat Goals directionnel/LWW legacy absent : ${marker}.`);
     }
+  }
+  if (
+    /cloudDatabase\.realGoals\.put\s*\(/.test(goals)
+    || /cloudDatabase\.realGoalDeletionRecords\.put\s*\(/.test(goals)
+  ) {
+    fail('le staging Goals ne doit pas revenir a un put de remplacement complet.');
+  }
+
+  const goalsTwoReplicaRegression = read(
+    'src/infrastructure/sync-prototype/realGoalDexieTransportRegression.test.ts',
+  );
+  for (const marker of [
+    'new SyncPrototypeDatabase',
+    "'$realGoals_mutations'",
+    "'$realGoalDeletionRecords_mutations'",
+    'cloudA',
+    'cloudB',
+    '8_000',
+    '55_000',
+    'adjustedOperationOrder: 2',
+    'adjustedOperationOrder: 1',
+    'expect(fetchSpy).not.toHaveBeenCalled()',
+    'stageGoalDeletion',
+    'stageGoalRestore',
+  ]) {
+    if (!goalsTwoReplicaRegression.includes(marker)) {
+      fail(`regression Goals deux replicas/transport absente : ${marker}.`);
+    }
+  }
+  if (/cloud\.sync\s*=\s*vi\.fn/.test(goalsTwoReplicaRegression)) {
+    fail('le test clock-skew Goals ne doit pas remplacer le transport par un cloud.sync no-op.');
   }
 
   const goalsStaging = read(

@@ -1,4 +1,4 @@
-import type { Table } from 'dexie';
+import type { Table, UpdateSpec } from 'dexie';
 import type { Goal } from '@/domain/goals/goalState';
 import type { DeletionRecord } from '@/domain/models/deletion';
 import {
@@ -18,8 +18,10 @@ import {
   type CloudSyncExecutionOptions,
 } from '@/infrastructure/sync-prototype/cloudSyncValue';
 import {
+  compareLogicalSyncStamps,
   logicalSyncBaselineId,
   logicalSyncBaselineTable,
+  logicalSyncStamp,
   maximumLogicalSyncStamp,
   nextLogicalSyncStamp,
   persistLogicalSyncBaseline,
@@ -27,7 +29,6 @@ import {
   resolveDatabaseLogicalSyncState,
   resolveSyncActorId,
   stripLogicalSyncFields,
-  upsertLogicalCloudValue,
   withLogicalSyncStamp,
   type LogicalSyncFields,
   type LogicalSyncStamp,
@@ -39,6 +40,7 @@ type CloudGoal = Omit<Goal, 'id'> & {
 } & LogicalSyncFields;
 type CloudDeletionRecord = Omit<DeletionRecord, 'id'> & {
   readonly id: string;
+  readonly goalMutationState?: 1;
 } & LogicalSyncFields;
 
 export interface RealGoalSyncPreview {
@@ -98,6 +100,7 @@ interface GoalDomainState {
   readonly cloudMarkers: readonly DeletionRecord[];
   readonly cloudGoalRows: readonly CloudOwned<CloudGoal>[];
   readonly cloudMarkerRows: readonly CloudOwned<CloudDeletionRecord>[];
+  readonly cloudAuthoritativeMarkerIds: ReadonlySet<string>;
 }
 
 interface GoalLogicalState {
@@ -130,7 +133,95 @@ function fromCloudGoal(goal: CloudOwned<CloudGoal>): Goal | undefined {
 }
 
 function toCloudMarker(marker: DeletionRecord): CloudDeletionRecord {
-  return { ...marker, id: cloudPrivateId(marker.id) };
+  return {
+    ...marker,
+    id: cloudPrivateId(marker.id),
+    goalMutationState: 1,
+  };
+}
+
+function cloudPropertyChangeSpec<T extends { id: string }>(
+  current: CloudOwned<T>,
+  target: T,
+  forcedProperties: readonly (keyof T & string)[] = [],
+): UpdateSpec<T> {
+  const currentValue = stripCloudFields(current) as Record<string, unknown>;
+  const targetValue = target as Record<string, unknown>;
+  const changes: Record<string, unknown> = {};
+  const keys = new Set([
+    ...Object.keys(currentValue),
+    ...Object.keys(targetValue),
+  ]);
+
+  for (const key of keys) {
+    if (key === 'id') continue;
+    if (!sameEntity(currentValue[key], targetValue[key])) {
+      changes[key] = targetValue[key];
+    }
+  }
+  for (const key of forcedProperties) {
+    if (key !== 'id') changes[key] = targetValue[key];
+  }
+
+  return changes as UpdateSpec<T>;
+}
+
+async function stageCloudReplicaValue<T extends { id: string }>(
+  table: Table<T, string>,
+  current: CloudOwned<T> | undefined,
+  target: T,
+  forcedProperties: readonly (keyof T & string)[] = [],
+): Promise<void> {
+  const changes = current
+    ? cloudPropertyChangeSpec(current, target, forcedProperties)
+    : cloudPropertyChangeSpec(
+      { id: target.id } as CloudOwned<T>,
+      target,
+      forcedProperties,
+    );
+  if (Object.keys(changes).length > 0) {
+    /*
+     * Goals use private `#` IDs. dexie-cloud-addon intentionally degrades a
+     * plain update() on such IDs to a replacement upsert in case the server
+     * row is absent. Table.upsert(key, changes) preserves both pieces needed
+     * here: declarative property changes for conflict ordering and the full
+     * local value as a safe creation fallback. For a new row, `changes`
+     * contains every property so no partial object can be created.
+     */
+    await table.upsert(target.id, changes);
+  }
+}
+
+async function upsertLogicalGoalCloudValue<
+  TLocal extends { id: string },
+  TCloud extends { id: string },
+>(
+  table: Table<TCloud, string>,
+  current: TLocal | undefined,
+  currentCloudValue: CloudOwned<TCloud> | undefined,
+  target: TLocal,
+  stamp: LogicalSyncStamp,
+  toCloudValue: (value: TLocal) => TCloud,
+  forcedProperties: readonly (keyof TCloud & string)[] = [],
+): Promise<boolean> {
+  const entityChanged = !current || !sameEntity(current, target);
+  if (
+    !entityChanged
+    && compareLogicalSyncStamps(
+      logicalSyncStamp(currentCloudValue),
+      stamp,
+    ) === 0
+  ) {
+    return false;
+  }
+
+  await stageCloudReplicaValue(
+    table,
+    currentCloudValue,
+    withLogicalSyncStamp(toCloudValue(target), stamp),
+    forcedProperties,
+  );
+  return entityChanged;
 }
 
 function fromCloudMarker(
@@ -138,8 +229,12 @@ function fromCloudMarker(
 ): DeletionRecord | undefined {
   const localId = localIdFromCloud(marker.id);
   if (!localId) return undefined;
+  const {
+    goalMutationState: _goalMutationState,
+    ...cloudMarker
+  } = stripCloudFields(marker);
   return {
-    ...stripLogicalSyncFields(stripCloudFields(marker)),
+    ...stripLogicalSyncFields(cloudMarker),
     id: localId,
   };
 }
@@ -155,7 +250,15 @@ function sortById<T extends { id: string }>(values: readonly T[]): T[] {
 function effectiveGoalState(
   goal: Goal | undefined,
   marker: DeletionRecord | undefined,
+  authoritativeMarker = false,
 ): GoalState {
+  if (authoritativeMarker && marker) {
+    return {
+      ...(marker.status === 'restored' && goal ? { goal } : {}),
+      marker,
+    };
+  }
+
   let effectiveMarker = marker;
   if (
     goal &&
@@ -183,6 +286,7 @@ function effectiveGoalState(
 function resolveSingleSideLogicalState(
   goals: readonly Goal[],
   markers: readonly DeletionRecord[],
+  authoritativeMarkerIds: ReadonlySet<string> = new Set(),
 ): GoalLogicalState {
   const goalById = mapById(goals);
   const markerById = mapById(markers);
@@ -197,9 +301,12 @@ function resolveSingleSideLogicalState(
     const resolved = effectiveGoalState(
       goalById.get(id),
       markerById.get(deletionRecordId('goal', id)),
+      authoritativeMarkerIds.has(deletionRecordId('goal', id)),
     );
     if (resolved.goal) effectiveGoals.push(resolved.goal);
-    if (resolved.marker) effectiveMarkers.push(resolved.marker);
+    if (resolved.marker?.status === 'deleted') {
+      effectiveMarkers.push(resolved.marker);
+    }
   }
 
   return {
@@ -211,7 +318,11 @@ function resolveSingleSideLogicalState(
 function buildGoalLogicalStates(state: GoalDomainState) {
   return {
     local: resolveSingleSideLogicalState(state.localGoals, state.localMarkers),
-    cloud: resolveSingleSideLogicalState(state.cloudGoals, state.cloudMarkers),
+    cloud: resolveSingleSideLogicalState(
+      state.cloudGoals,
+      state.cloudMarkers,
+      state.cloudAuthoritativeMarkerIds,
+    ),
   };
 }
 
@@ -325,6 +436,7 @@ function resolveMergedGoalLogicalState(
     const cloud = effectiveGoalState(
       cloudGoalById.get(id),
       cloudMarkerById.get(markerId),
+      state.cloudAuthoritativeMarkerIds.has(markerId),
     );
 
     const { winner, loser } = latestGoalState(local, cloud);
@@ -370,6 +482,13 @@ async function readState(
         marker.entityType === 'goal' &&
         belongsToCurrentUser(marker, currentUserId),
     );
+  const cloudAuthoritativeMarkerIds = new Set(
+    ownedCloudMarkerRows.flatMap((marker) => {
+      if ((marker as CloudDeletionRecord).goalMutationState !== 1) return [];
+      const localId = localIdFromCloud(marker.id);
+      return localId ? [localId] : [];
+    }),
+  );
 
   return {
     ...local,
@@ -381,19 +500,21 @@ async function readState(
       .filter((marker): marker is DeletionRecord => marker !== undefined),
     cloudGoalRows: ownedCloudGoalRows,
     cloudMarkerRows: ownedCloudMarkerRows,
+    cloudAuthoritativeMarkerIds,
   };
 }
 
 function buildPreview(state: GoalDomainState): RealGoalSyncPreview {
-  const localGoalById = mapById(state.localGoals);
-  const cloudGoalById = mapById(state.cloudGoals);
-  const localMarkerById = mapById(state.localMarkers);
-  const cloudMarkerById = mapById(state.cloudMarkers);
+  const logical = buildGoalLogicalStates(state);
+  const localGoalById = mapById(logical.local.goals);
+  const cloudGoalById = mapById(logical.cloud.goals);
+  const localMarkerById = mapById(logical.local.markers);
+  const cloudMarkerById = mapById(logical.cloud.markers);
   const ids = new Set([
     ...localGoalById.keys(),
     ...cloudGoalById.keys(),
-    ...state.localMarkers.map((marker) => marker.entityId),
-    ...state.cloudMarkers.map((marker) => marker.entityId),
+    ...logical.local.markers.map((marker) => marker.entityId),
+    ...logical.cloud.markers.map((marker) => marker.entityId),
   ]);
 
   let differingEntityCount = 0;
@@ -428,17 +549,11 @@ function maximumGoalCloudStamp(state: GoalDomainState): LogicalSyncStamp {
 }
 
 function localDigest(state: GoalDomainState): string {
-  return stableValue({
-    goals: sortById(state.localGoals),
-    markers: sortById(state.localMarkers),
-  });
+  return stableValue(buildGoalLogicalStates(state).local);
 }
 
 function cloudDigest(state: GoalDomainState): string {
-  return stableValue({
-    goals: sortById(state.cloudGoals),
-    markers: sortById(state.cloudMarkers),
-  });
+  return stableValue(buildGoalLogicalStates(state).cloud);
 }
 
 function emptyResult(preview: RealGoalSyncPreview): RealGoalSyncResult {
@@ -689,7 +804,19 @@ async function applyCloudTargetIfUnchanged(
       }
 
       const targetGoalIds = new Set(target.goals.map((goal) => goal.id));
-      const targetMarkerIds = new Set(target.markers.map((marker) => marker.id));
+      const targetMarkerById = mapById(target.markers);
+      for (const goal of target.goals) {
+        const markerId = deletionRecordId('goal', goal.id);
+        if (!targetMarkerById.has(markerId)) {
+          targetMarkerById.set(markerId, createRestoredDeletionRecord(
+            { entityType: 'goal', entityId: goal.id },
+            goal.updatedAt,
+            goal.createdAt,
+          ));
+        }
+      }
+      const targetMarkers = [...targetMarkerById.values()];
+      const targetMarkerIds = new Set(targetMarkers.map((marker) => marker.id));
       for (const value of expected.cloudGoals) {
         if (!targetGoalIds.has(value.id)) {
           await cloudDatabase.realGoals.delete(cloudPrivateId(value.id));
@@ -701,23 +828,26 @@ async function applyCloudTargetIfUnchanged(
         }
       }
       for (const value of target.goals) {
-        await upsertLogicalCloudValue(
-          cloudDatabase.realGoals as Table<Goal, string>,
+        await upsertLogicalGoalCloudValue(
+          cloudDatabase.realGoals as unknown as Table<CloudGoal, string>,
           currentGoalById.get(value.id),
-          cloudGoalRowById.get(value.id),
+          cloudGoalRowById.get(value.id) as CloudOwned<CloudGoal> | undefined,
           value,
           stamp,
-          (candidate) => toCloudGoal(candidate) as Goal,
+          toCloudGoal,
         );
       }
-      for (const value of target.markers) {
-        await upsertLogicalCloudValue(
-          cloudDatabase.realGoalDeletionRecords as Table<DeletionRecord, string>,
+      for (const value of targetMarkers) {
+        await upsertLogicalGoalCloudValue(
+          cloudDatabase.realGoalDeletionRecords as unknown as Table<CloudDeletionRecord, string>,
           currentMarkerById.get(value.id),
-          cloudMarkerRowByEntityId.get(value.entityId),
+          cloudMarkerRowByEntityId.get(value.entityId) as
+            | CloudOwned<CloudDeletionRecord>
+            | undefined,
           value,
           stamp,
-          (candidate) => toCloudMarker(candidate) as DeletionRecord,
+          toCloudMarker,
+          ['status', 'goalMutationState'],
         );
       }
       applied = true;
@@ -1053,6 +1183,7 @@ function buildReconciliationItems(state: GoalDomainState): GoalReconciliationIte
     const cloud = effectiveGoalState(
       cloudGoalById.get(id),
       cloudMarkerById.get(markerId),
+      state.cloudAuthoritativeMarkerIds.has(markerId),
     );
     if (sameEntity(local, cloud)) continue;
     items.push({
@@ -1291,16 +1422,28 @@ export async function stageRealGoalsMutationInLocalCloudReplica(
           localGoalById.get(goalId),
           localMarkerById.get(markerId),
         );
+        const targetMarker = target.goal && !target.marker
+          ? createRestoredDeletionRecord(
+            { entityType: 'goal', entityId: goalId },
+            target.goal.updatedAt,
+            target.goal.createdAt,
+          )
+          : target.marker;
         if (target.goal) {
-          await cloudDatabase.realGoals.put(
+          await stageCloudReplicaValue(
+            cloudDatabase.realGoals as unknown as Table<CloudGoal, string>,
+            existingGoalRow as CloudOwned<CloudGoal> | undefined,
             withLogicalSyncStamp(toCloudGoal(target.goal), stamp),
           );
         } else if (existingGoalRow) {
           await cloudDatabase.realGoals.delete(cloudGoalId);
         }
-        if (target.marker) {
-          await cloudDatabase.realGoalDeletionRecords.put(
-            withLogicalSyncStamp(toCloudMarker(target.marker), stamp),
+        if (targetMarker) {
+          await stageCloudReplicaValue(
+            cloudDatabase.realGoalDeletionRecords as unknown as Table<CloudDeletionRecord, string>,
+            existingMarkerRow as CloudOwned<CloudDeletionRecord> | undefined,
+            withLogicalSyncStamp(toCloudMarker(targetMarker), stamp),
+            ['status', 'goalMutationState'],
           );
         } else if (existingMarkerRow) {
           await cloudDatabase.realGoalDeletionRecords.delete(cloudMarkerId);
@@ -1326,6 +1469,11 @@ export async function stageRealGoalsMutationInLocalCloudReplica(
           .filter(
             (marker): marker is DeletionRecord => marker !== undefined,
           ),
+        new Set(stagedMarkerRows.flatMap((marker) => {
+          if ((marker as CloudDeletionRecord).goalMutationState !== 1) return [];
+          const localId = localIdFromCloud(marker.id);
+          return localId ? [localId] : [];
+        })),
       );
       await baselineTable.put({
         id: logicalSyncBaselineId(currentUserId, 'goals', 'goals'),

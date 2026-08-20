@@ -74,6 +74,16 @@ Les tables et modèles de photos de progression sont exclus des adaptateurs de
 synchronisation, des Pages Functions et de Dexie Cloud. Un test de contrat
 échoue si une référence à ces tables apparaît dans ces frontières.
 
+### Arbitrage des mutations Goals
+
+Les lignes Goals sont maintenant écrites par `Table.upsert(id, changes)` : le
+journal conserve un `changeSpecs` déclaratif pour l'arbitrage par propriété et
+une valeur complète de repli si l'ID privé `#` n'existe pas encore au serveur.
+Un marqueur d'état `restored`/`deleted`, écrit dans la même transaction cloud
+locale, arbitre aussi update, suppression et restauration sans comparer les
+horloges murales `updatedAt` des appareils. Les champs `owner`, `realmId` et
+`$ts` gérés par Dexie Cloud ne sont jamais inclus dans les changements métier.
+
 ## Sauvegarde et restauration
 
 - Sauvegarde globale et sélective :
