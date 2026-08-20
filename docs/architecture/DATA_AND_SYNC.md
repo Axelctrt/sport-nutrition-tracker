@@ -10,7 +10,7 @@ de `docs/architecture` conservent l’historique détaillé.
 | `AppDatabase` Dexie | 12 | données utilisateur principales et photos privées locales |
 | Sauvegarde JSON | 10 | export/import contrôlé des données structurées, hors images |
 | Archive photos | 1 | export/restauration séparés des images de progression |
-| Runtime Dexie Cloud | 16 | agrégats synchronisables et baselines logiques |
+| Runtime Dexie Cloud | 17 | agrégats synchronisables, journal Goals et baselines logiques |
 | D1 social | migrations `0000` à `0003` présentes | identité, relations, permissions, snapshots et limites photo nutritionnelle |
 
 La source de la version Dexie principale est
@@ -76,13 +76,61 @@ synchronisation, des Pages Functions et de Dexie Cloud. Un test de contrat
 
 ### Arbitrage des mutations Goals
 
-Les lignes Goals sont maintenant écrites par `Table.upsert(id, changes)` : le
-journal conserve un `changeSpecs` déclaratif pour l'arbitrage par propriété et
-une valeur complète de repli si l'ID privé `#` n'existe pas encore au serveur.
-Un marqueur d'état `restored`/`deleted`, écrit dans la même transaction cloud
-locale, arbitre aussi update, suppression et restauration sans comparer les
-horloges murales `updatedAt` des appareils. Les champs `owner`, `realmId` et
-`$ts` gérés par Dexie Cloud ne sont jamais inclus dans les changements métier.
+Le runtime v17 ajoute `realGoalMutations`, un journal synchronisé append-only :
+chaque création, mise à jour, suppression ou restauration d’un Goal reçoit un
+identifiant privé unique. Deux appareils n’écrivent donc plus la même ligne au
+moment du conflit et aucune mutation ne peut être détruite avant le resolver.
+Les anciennes tables `realGoals` et `realGoalDeletionRecords` restent lisibles
+pour amorcer et migrer les comptes existants ; dès qu’un objectif possède une
+entrée de journal valide, le journal devient sa source cloud autoritative.
+
+L’ordre est un HLC persistant par compte et appareil. Sa partie physique est
+`Date.now()` corrigée avec la référence temporelle de la session authentifiée
+Dexie (`accessTokenExpiration - lastLogin`), jamais l’horloge murale brute seule.
+Sa partie logique progresse si la partie physique ne peut pas avancer. Les
+égalités sont départagées de façon déterministe par acteur, séquence et ID de
+mutation. `updatedAt`, l’ordre d’arrivée serveur, une préférence local/cloud et
+`syncRevision + 1` ne déterminent pas le gagnant.
+
+`realGoalMutationClocks` conserve localement la calibration/HLC et figure dans
+`unsyncedTables`, comme `realSyncBaselines`. Le nom IndexedDB publié reste
+`sportpilot-sync-runtime-0.20.0-v16` : la version de schéma 17 l’ouvre et
+l’augmente en place afin de préserver les lignes et opérations v16 en attente.
+La migration est additive et ne réécrit aucune version historique.
+
+La calibration ne lit aucune table `$` ni propriété interne de l’addon. Elle
+consomme `cloud.currentUser.value`, typé par le `UserLogin` exporté depuis
+l’entrée publique de `dexie-cloud-addon@4.4.13`, et seulement ses champs publics
+`lastLogin` et `accessTokenExpiration`. La version de l’addon reste épinglée :
+toute mise à niveau doit réauditer ces types, leur comportement réel et le gate
+de skew avant d’être acceptée. Après reload ou réouverture du navigateur, la
+calibration et le HLC persistés permettent les mutations offline. Une session
+renouvelée remplace les valeurs de calibration, sans pouvoir faire reculer le
+HLC ni `actorSequence`. Sans session valide ni calibration persistée, le
+staging échoue avant toute écriture du journal : la mutation reste dans AppDB
+et sera restagée après authentification.
+
+Limites connues : l’ordre physique est précis à la granularité/à l’incertitude
+documentée dans chaque mutation (actuellement 1 s) ; une modification de
+l’horloge système après calibration exige une nouvelle authentification pour
+recalibrer exactement le temps physique. Un recul est absorbé par la partie
+logique ; une forte avance peut avancer le HLC et reste donc un risque résiduel
+jusqu’à la nouvelle calibration. Le resolver ne prétend pas reconstituer un
+ordre physique global parfait.
+
+Le journal croît d’une ligne par mutation métier réellement distincte ; les
+replays techniques d’un état déjà stagé restent idempotents. Aucune compaction
+n’est effectuée en 1.0.4 : supprimer une entrée sans watermark connu de tous
+les appareils pourrait ressusciter un état ancien ou perdre le gagnant. Le coût
+est donc un stockage cloud/local croissant avec le nombre de mutations Goals.
+Une future compaction devra être un lot séparé, mesuré, rétrocompatible et
+prouvé sur les appareils restés offline ; aucune GC opportuniste n’est permise.
+
+Le journal et son horloge sont des métadonnées de transport cloud, pas une
+nouvelle donnée métier du format de sauvegarde AppDB v10. Une restauration
+AppDB produit ensuite une mutation normale. La suppression de compte/purge
+distante efface les mutations et l’horloge du compte ciblé ; logout/reset local
+reste couvert par l’effacement des tables du runtime Dexie Cloud.
 
 ## Sauvegarde et restauration
 

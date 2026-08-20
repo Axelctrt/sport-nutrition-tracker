@@ -43,7 +43,7 @@ for (const value of [
   'readEnabledFlag',
 ]) need(config, value, 'configuration cloud incomplète');
 need(publicConfig, "VITE_ENABLE_REAL_SOCIAL_CLOUD: 'false'", 'défaut public prudent absent');
-need(runtime, 'SYNC_PROTOTYPE_DATABASE_VERSION = 16', 'runtime cloud v16 absent');
+need(runtime, 'SYNC_PROTOTYPE_DATABASE_VERSION = 17', 'runtime cloud v17 absent');
 for (const collection of [
   'socialIdentities',
   'socialHandleReservations',

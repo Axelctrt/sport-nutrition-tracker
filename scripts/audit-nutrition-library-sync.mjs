@@ -17,8 +17,8 @@ const read = (path) => {
 
 const database = read('src/infrastructure/sync-prototype/SyncPrototypeDatabase.ts');
 for (const expected of [
-  'SYNC_PROTOTYPE_DATABASE_VERSION = 16',
-  'sportpilot-sync-runtime-0.20.0-v${SYNC_PROTOTYPE_DATABASE_VERSION}',
+  'SYNC_PROTOTYPE_DATABASE_VERSION = 17',
+  "'sportpilot-sync-runtime-0.20.0-v16'",
   'realNutritionProducts',
   'realNutritionRecipes',
   'realFavoriteMeals',
@@ -104,6 +104,6 @@ if (failures.length > 0) {
   process.exitCode = 1;
 } else {
   console.log(
-    'Audit C2 réussi : produits utiles, recettes atomiques, favoris, déduplication Open Food Facts, suppressions durables et runtime cloud v16 validés.',
+    'Audit C2 réussi : produits utiles, recettes atomiques, favoris, déduplication Open Food Facts, suppressions durables et runtime cloud v17 validés.',
   );
 }
