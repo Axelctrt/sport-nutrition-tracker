@@ -164,7 +164,7 @@ describe('Goals — transport revision must not override business LWW', () => {
     await Promise.all(names.map((name) => Dexie.delete(name)));
   });
 
-  it('repasse par le LWW même si le contrôleur demande cloud-only sur une révision transport plus haute', async () => {
+  it('repasse par le client transport-aware même si le contrôleur demande cloud-only sur une révision transport plus haute', async () => {
     const baseline = goal(10_000, '2026-08-20T08:40:00.000Z');
     await local.goals.put(baseline);
     await putCloudGoal(cloud, baseline, 24, 'device-b');
@@ -213,7 +213,7 @@ describe('Goals — transport revision must not override business LWW', () => {
     const result = await goalsAdapter(client).synchronize('cloud-only');
 
     expect(result).toMatchObject({ downloadedGoals: 0 });
-    expect(client.syncRealGoals).not.toHaveBeenCalled();
+    expect(client.syncRealGoals).toHaveBeenCalledTimes(1);
     expect(await local.goals.get(GOAL_ID)).toMatchObject({
       targetValue: 10_000,
       updatedAt: '2026-08-20T08:50:00.000Z',
