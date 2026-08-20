@@ -128,9 +128,19 @@ async function synchronizeGoalsWithFreshCloudBarrier(
 ): Promise<unknown> {
   await flushGoalStatePersistence();
 
-  // A few adapter unit tests intentionally use a minimal client without a
-  // snapshot. Keep their transport-barrier contract without changing runtime
-  // behavior; production SyncPrototypeClient always exposes getSnapshot().
+  // Bidirectional Goals already enters the business LWW path for both/unknown.
+  // Preserve that established path and only add the transport barrier.
+  await client.syncNow();
+  return client.syncRealGoals!();
+}
+
+async function synchronizeGoalsDirectionalByBusinessLwwWithFreshCloudBarrier(
+  client: SyncPrototypeClient,
+): Promise<unknown> {
+  await flushGoalStatePersistence();
+
+  // Production SyncPrototypeClient always exposes a snapshot. Keep a defensive
+  // fallback for minimal adapter test doubles without changing their contract.
   if (typeof client.getSnapshot !== 'function') {
     await client.syncNow();
     return client.syncRealGoals!();
@@ -150,10 +160,11 @@ async function synchronizeGoalsWithFreshCloudBarrier(
   if (client.getSnapshot().account.userId !== currentUserId) return undefined;
   if (refreshedPreview.differingEntityCount <= 0) return undefined;
 
-  // Transport provenance (syncRevision/syncActorId) can move independently
-  // from Goal.updatedAt. Automatic convergence therefore drops only the
-  // device-local Goals provenance baseline and routes through the existing
-  // bidirectional business LWW resolver.
+  // syncRevision/syncActorId are transport metadata and can advance while the
+  // transported Goal.updatedAt remains older. A directional classification is
+  // therefore only a trigger to converge, never authority to choose the Goal
+  // winner. Drop only the device-local Goals provenance baseline and re-enter
+  // the existing business LWW resolver.
   let result = await synchronizeRegisteredRealGoalsByBusinessLww(currentUserId);
 
   // Publish the selected business winner and pull server confirmation before
@@ -326,10 +337,10 @@ export function createSyncOrchestratorDomains(
       ? () => synchronizeGoalsWithFreshCloudBarrier(client)
       : undefined,
     client.syncRealGoals
-      ? () => synchronizeGoalsWithFreshCloudBarrier(client)
+      ? () => synchronizeGoalsDirectionalByBusinessLwwWithFreshCloudBarrier(client)
       : undefined,
     client.syncRealGoals
-      ? () => synchronizeGoalsWithFreshCloudBarrier(client)
+      ? () => synchronizeGoalsDirectionalByBusinessLwwWithFreshCloudBarrier(client)
       : undefined,
   );
   add(
