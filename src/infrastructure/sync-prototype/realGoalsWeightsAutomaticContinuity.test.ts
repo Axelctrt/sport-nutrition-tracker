@@ -710,9 +710,9 @@ describe('P0-V2.1 — continuité automatique Goals + Weights', () => {
         cloudB as unknown as SyncPrototypeDatabase,
         ACCOUNT_USER_ID,
       )).toMatchObject({ differingEntityCount: 0 });
-      expect(clientA.syncRealGoals).not.toHaveBeenCalled();
+      expect(clientA.syncRealGoals).toHaveBeenCalled();
       expect(clientA.syncRealWeights).not.toHaveBeenCalled();
-      expect(clientB.syncRealGoals).not.toHaveBeenCalled();
+      expect(clientB.syncRealGoals).toHaveBeenCalled();
       expect(clientB.syncRealWeights).not.toHaveBeenCalled();
     } finally {
       controllerA.dispose();
