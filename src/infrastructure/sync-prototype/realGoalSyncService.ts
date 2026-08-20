@@ -34,6 +34,13 @@ import {
   type LogicalSyncStamp,
 } from '@/infrastructure/sync-prototype/logicalSyncState';
 import { reloadUserStateRuntime } from '@/infrastructure/user-state/userStateRuntime';
+import {
+  appendRealGoalMutation,
+  realGoalMutationClockTable,
+  realGoalMutationTable,
+  resolveRealGoalMutationJournal,
+  type RealGoalMutationRecord,
+} from '@/infrastructure/sync-prototype/realGoalMutationJournal';
 
 type CloudGoal = Omit<Goal, 'id'> & {
   readonly id: string;
@@ -101,6 +108,8 @@ interface GoalDomainState {
   readonly cloudGoalRows: readonly CloudOwned<CloudGoal>[];
   readonly cloudMarkerRows: readonly CloudOwned<CloudDeletionRecord>[];
   readonly cloudAuthoritativeMarkerIds: ReadonlySet<string>;
+  readonly cloudGoalMutationRows: readonly CloudOwned<RealGoalMutationRecord>[];
+  readonly cloudJournalAuthoritativeEntityIds: ReadonlySet<string>;
 }
 
 interface GoalLogicalState {
@@ -439,6 +448,12 @@ function resolveMergedGoalLogicalState(
       state.cloudAuthoritativeMarkerIds.has(markerId),
     );
 
+    if (state.cloudJournalAuthoritativeEntityIds.has(id)) {
+      if (cloud.goal) goals.push(cloud.goal);
+      if (cloud.marker) markers.push(cloud.marker);
+      continue;
+    }
+
     const { winner, loser } = latestGoalState(local, cloud);
     const resolved = preserveRestorationMarker(winner, loser);
 
@@ -468,10 +483,12 @@ async function readState(
   cloudDatabase: SyncPrototypeDatabase,
   currentUserId: string,
 ): Promise<GoalDomainState> {
-  const [local, cloudGoalRows, cloudMarkerRows] = await Promise.all([
+  const mutationTable = realGoalMutationTable(cloudDatabase);
+  const [local, cloudGoalRows, cloudMarkerRows, cloudGoalMutationRows] = await Promise.all([
     readLocalState(localDatabase),
     cloudDatabase.realGoals.toArray(),
     cloudDatabase.realGoalDeletionRecords.toArray(),
+    mutationTable?.toArray() ?? Promise.resolve([]),
   ]);
 
   const ownedCloudGoalRows = cloudGoalRows
@@ -489,18 +506,39 @@ async function readState(
       return localId ? [localId] : [];
     }),
   );
+  const journal = resolveRealGoalMutationJournal(
+    cloudGoalMutationRows,
+    currentUserId,
+  );
+  const cloudGoalById = new Map(
+    ownedCloudGoalRows
+      .map(fromCloudGoal)
+      .filter((goal): goal is Goal => goal !== undefined)
+      .map((goal) => [goal.id, goal] as const),
+  );
+  const cloudMarkerById = new Map(
+    ownedCloudMarkerRows
+      .map(fromCloudMarker)
+      .filter((marker): marker is DeletionRecord => marker !== undefined)
+      .map((marker) => [marker.id, marker] as const),
+  );
+  for (const entityId of journal.authoritativeEntityIds) {
+    cloudGoalById.delete(entityId);
+    cloudMarkerById.delete(deletionRecordId('goal', entityId));
+    cloudAuthoritativeMarkerIds.add(deletionRecordId('goal', entityId));
+  }
+  for (const goal of journal.goals) cloudGoalById.set(goal.id, goal);
+  for (const marker of journal.markers) cloudMarkerById.set(marker.id, marker);
 
   return {
     ...local,
-    cloudGoals: ownedCloudGoalRows
-      .map(fromCloudGoal)
-      .filter((goal): goal is Goal => goal !== undefined),
-    cloudMarkers: ownedCloudMarkerRows
-      .map(fromCloudMarker)
-      .filter((marker): marker is DeletionRecord => marker !== undefined),
+    cloudGoals: sortById([...cloudGoalById.values()]),
+    cloudMarkers: sortById([...cloudMarkerById.values()]),
     cloudGoalRows: ownedCloudGoalRows,
     cloudMarkerRows: ownedCloudMarkerRows,
     cloudAuthoritativeMarkerIds,
+    cloudGoalMutationRows,
+    cloudJournalAuthoritativeEntityIds: journal.authoritativeEntityIds,
   };
 }
 
@@ -1332,6 +1370,7 @@ export async function stageRealGoalsMutationInLocalCloudReplica(
   cloudDatabase: SyncPrototypeDatabase,
   currentUserId: string,
   goalIds?: readonly string[],
+  options: { readonly immutableJournal?: boolean } = {},
 ): Promise<void> {
   const local = await readLocalState(localDatabase);
   const localLogical = resolveSingleSideLogicalState(
@@ -1348,6 +1387,135 @@ export async function stageRealGoalsMutationInLocalCloudReplica(
     throw new Error(
       'La référence locale Goals est indisponible. La mutation n’a pas été stagée.',
     );
+  }
+
+  const mutationTable = realGoalMutationTable(cloudDatabase);
+  const clockTable = realGoalMutationClockTable(cloudDatabase);
+  if (options.immutableJournal !== false && mutationTable && clockTable) {
+    const session = cloudDatabase.cloud.currentUser.value;
+    if (!session.isLoggedIn || session.userId !== currentUserId) {
+      throw new Error(
+        'Le compte Dexie a changé avant le staging du journal Goals.',
+      );
+    }
+    await cloudDatabase.transaction(
+      'rw',
+      [
+        cloudDatabase.realGoals,
+        cloudDatabase.realGoalDeletionRecords,
+        mutationTable,
+        clockTable,
+      ],
+      async () => {
+        const [goalRows, markerRows, mutationRows] = await Promise.all([
+          cloudDatabase.realGoals.toArray(),
+          cloudDatabase.realGoalDeletionRecords.toArray(),
+          mutationTable.toArray(),
+        ]);
+        const ownedGoalRows = goalRows.filter((goal) =>
+          belongsToCurrentUser(goal, currentUserId));
+        const ownedMarkerRows = markerRows.filter(
+          (marker) =>
+            marker.entityType === 'goal'
+            && belongsToCurrentUser(marker, currentUserId),
+        );
+        const journal = resolveRealGoalMutationJournal(
+          mutationRows,
+          currentUserId,
+        );
+        const stagedGoalIds = requestedGoalIds ?? new Set([
+          ...local.localGoals.map((goal) => goal.id),
+          ...local.localMarkers.map((marker) => marker.entityId),
+          ...ownedGoalRows.flatMap((row) => {
+            const id = localIdFromCloud(row.id);
+            return id ? [id] : [];
+          }),
+          ...ownedMarkerRows.flatMap((row) => {
+            const marker = fromCloudMarker(row);
+            return marker ? [marker.entityId] : [];
+          }),
+          ...journal.authoritativeEntityIds,
+        ]);
+        const localGoalById = mapById(local.localGoals);
+        const localMarkerById = mapById(local.localMarkers);
+
+        for (const goalId of stagedGoalIds) {
+          const cloudGoalId = cloudPrivateId(goalId);
+          const markerId = deletionRecordId('goal', goalId);
+          const cloudMarkerId = cloudPrivateId(markerId);
+          const existingGoalRow = goalRows.find((row) =>
+            row.id === cloudGoalId);
+          const existingMarkerRow = markerRows.find((row) =>
+            row.id === cloudMarkerId);
+          if (
+            (existingGoalRow
+              && !belongsToCurrentUser(existingGoalRow, currentUserId))
+            || (existingMarkerRow
+              && !belongsToCurrentUser(existingMarkerRow, currentUserId))
+          ) {
+            throw new Error(
+              'Une ligne Goals appartient à un autre compte. Le staging a été annulé.',
+            );
+          }
+
+          const target = effectiveGoalState(
+            localGoalById.get(goalId),
+            localMarkerById.get(markerId),
+          );
+          const targetMarker = target.goal && !target.marker
+            ? createRestoredDeletionRecord(
+              { entityType: 'goal', entityId: goalId },
+              target.goal.updatedAt,
+              target.goal.createdAt,
+            )
+            : target.marker;
+          if (!target.goal && targetMarker?.status !== 'deleted') continue;
+
+          const previousMutation = journal.winners.get(goalId);
+          const previousGoal = previousMutation?.goal
+            ?? (existingGoalRow ? fromCloudGoal(existingGoalRow) : undefined);
+          const previousMarker = previousMutation?.marker
+            ?? (existingMarkerRow ? fromCloudMarker(existingMarkerRow) : undefined);
+          if (sameEntity(
+            { goal: target.goal, marker: targetMarker },
+            { goal: previousGoal, marker: previousMarker },
+          )) {
+            continue;
+          }
+
+          const operation = !target.goal
+            ? 'delete'
+            : previousMarker?.status === 'deleted'
+              ? 'restore'
+              : previousGoal
+                ? 'update'
+                : 'create';
+          await appendRealGoalMutation({
+            mutationTable,
+            clockTable,
+            accountUserId: currentUserId,
+            actorId,
+            session,
+            operation,
+            entityId: goalId,
+            ...(target.goal ? { goal: target.goal } : {}),
+            ...(targetMarker ? { marker: targetMarker } : {}),
+          });
+        }
+      },
+    );
+    const stagedState = await readState(
+      localDatabase,
+      cloudDatabase,
+      currentUserId,
+    );
+    await persistEqualGoalBaseline(
+      localDatabase,
+      cloudDatabase,
+      currentUserId,
+      stagedState,
+    );
+    return;
   }
 
   await cloudDatabase.transaction(

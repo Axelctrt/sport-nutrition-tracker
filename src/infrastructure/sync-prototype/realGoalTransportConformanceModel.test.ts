@@ -42,6 +42,11 @@ interface MutationJournalEntry<TValue = CloudGoal> {
   readonly userId: string;
 }
 
+/**
+ * Local conformance model only. `adjustedOperationOrder` is injected by the
+ * test and must never be cited as evidence of Dexie Cloud server behaviour.
+ * The real P0 gate lives under tests/integration-cloud.
+ */
 interface TransportTraceEntry {
   readonly source: 'A' | 'B';
   readonly operationType: MutationJournalEntry['type'];
@@ -352,6 +357,7 @@ async function stageGoalUpdate(
     cloud,
     USER_ID,
     [GOAL_ID],
+    { immutableJournal: false },
   );
 }
 
@@ -379,6 +385,7 @@ async function stageGoalDeletion(
     cloud,
     USER_ID,
     [GOAL_ID],
+    { immutableJournal: false },
   );
 }
 
@@ -409,6 +416,7 @@ async function stageGoalRestore(
     cloud,
     USER_ID,
     [GOAL_ID],
+    { immutableJournal: false },
   );
 }
 
@@ -449,7 +457,7 @@ async function seedDeletedReplica(
   return cloudDeleted;
 }
 
-describe('transport Dexie Cloud Goals avec deux replicas reels', () => {
+describe('modèle local de conformance Goals (sans serveur Dexie Cloud)', () => {
   let localA: AppDatabase;
   let localB: AppDatabase;
   let cloudA: SyncPrototypeDatabase;
@@ -495,7 +503,7 @@ describe('transport Dexie Cloud Goals avec deux replicas reels', () => {
     await Promise.all(names.map((name) => Dexie.delete(name)));
   });
 
-  it('reproduit exactement 10000 -> A 8000 -> serveur B 55000 -> A tardif ne doit pas ecraser B', async () => {
+  it('modélise 10000 -> A 8000 -> B 55000 avec un ordre ajusté injecté', async () => {
     const dateNow = vi.spyOn(Date, 'now');
 
     // A mutates first in real time with a correct wall clock, while offline.
@@ -506,6 +514,7 @@ describe('transport Dexie Cloud Goals avec deux replicas reels', () => {
       cloudA,
       USER_ID,
       [GOAL_ID],
+      { immutableJournal: false },
     );
 
     // B mutates later in real time, but its skewed wall clock is one hour behind.
@@ -516,6 +525,7 @@ describe('transport Dexie Cloud Goals avec deux replicas reels', () => {
       cloudB,
       USER_ID,
       [GOAL_ID],
+      { immutableJournal: false },
     );
 
     const [journalA, journalB, markerOperationsA, markerOperationsB] = await Promise.all([

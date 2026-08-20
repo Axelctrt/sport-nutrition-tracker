@@ -36,11 +36,15 @@ import type { CloudFriendRequest, CloudFriendship } from '@/domain/friends/socia
 import type { CloudFriendActivityPermissionRecord } from '@/domain/friends/socialCloudFriendship';
 import type { CloudSocialActivitySnapshotRecord } from '@/domain/friends/socialCloudActivitySnapshot';
 import type { LogicalSyncBaseline } from '@/infrastructure/sync-prototype/logicalSyncState';
+import type {
+  RealGoalMutationClockState,
+  RealGoalMutationRecord,
+} from '@/infrastructure/sync-prototype/realGoalMutationJournal';
 
 export const LEGACY_SYNC_PROTOTYPE_DATABASE_NAME = 'sportpilot-sync-prototype';
-export const SYNC_PROTOTYPE_DATABASE_VERSION = 16;
+export const SYNC_PROTOTYPE_DATABASE_VERSION = 17;
 export const SYNC_PROTOTYPE_DATABASE_NAME =
-  `sportpilot-sync-runtime-0.20.0-v${SYNC_PROTOTYPE_DATABASE_VERSION}`;
+  'sportpilot-sync-runtime-0.20.0-v16';
 export const SYNC_PROTOTYPE_TABLE_NAMES = [
   'weights',
   'deletionRecords',
@@ -51,6 +55,8 @@ export const SYNC_PROTOTYPE_TABLE_NAMES = [
   'realActivityDeletionRecords',
   'realGoals',
   'realGoalDeletionRecords',
+  'realGoalMutations',
+  'realGoalMutationClocks',
   'realStrengthExercises',
   'realWorkoutTemplates',
   'realWorkoutSessions',
@@ -84,6 +90,8 @@ export class SyncPrototypeDatabase extends Dexie {
   declare realActivityDeletionRecords: Table<DeletionRecord, EntityId>;
   declare realGoals: Table<Goal, EntityId>;
   declare realGoalDeletionRecords: Table<DeletionRecord, EntityId>;
+  declare realGoalMutations: Table<RealGoalMutationRecord, string>;
+  declare realGoalMutationClocks: Table<RealGoalMutationClockState, string>;
   declare realStrengthExercises: Table<StrengthExerciseAggregate, EntityId>;
   declare realWorkoutTemplates: Table<WorkoutTemplateAggregate, EntityId>;
   declare realWorkoutSessions: Table<WorkoutSessionAggregate, EntityId>;
@@ -154,7 +162,7 @@ export class SyncPrototypeDatabase extends Dexie {
         'id, entityType, entityId, status, deletedAt, restoredAt, updatedAt, [entityType+entityId]',
     });
 
-    this.version(SYNC_PROTOTYPE_DATABASE_VERSION).stores({
+    this.version(16).stores({
       weights: 'id, &date, updatedAt',
       deletionRecords:
         'id, entityType, entityId, status, deletedAt, restoredAt, updatedAt, [entityType+entityId]',
@@ -195,6 +203,12 @@ export class SyncPrototypeDatabase extends Dexie {
       realSyncBaselines: 'id, accountUserId, domainId, entityId, updatedAt, [accountUserId+domainId]',
     });
 
+    this.version(SYNC_PROTOTYPE_DATABASE_VERSION).stores({
+      realGoalMutations:
+        'id, accountUserId, entityId, orderedAtMs, [accountUserId+entityId]',
+      realGoalMutationClocks: 'id, accountUserId, actorId',
+    });
+
     this.cloud.configure({
       databaseUrl,
       requireAuth: false,
@@ -203,7 +217,7 @@ export class SyncPrototypeDatabase extends Dexie {
       nameSuffix: true,
       socialAuth: false,
       disableEagerSync: true,
-      unsyncedTables: ['realSyncBaselines'],
+      unsyncedTables: ['realSyncBaselines', 'realGoalMutationClocks'],
     });
   }
 }

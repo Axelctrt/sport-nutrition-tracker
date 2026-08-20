@@ -44,6 +44,42 @@ describe('remote account cloud purge', () => {
       updatedAt: '2026-07-01T08:00:00.000Z',
       owner: 'account-user',
     } as never);
+    await database.table('realGoalMutations').bulkPut([
+      {
+        id: '#goal-mutation-current',
+        accountUserId: 'account-user',
+        entityId: 'goal-1',
+        owner: 'account-user',
+      },
+      {
+        id: '#goal-mutation-other',
+        accountUserId: 'other-user',
+        entityId: 'goal-2',
+        owner: 'other-user',
+      },
+    ] as never);
+    await database.table('realGoalMutationClocks').bulkPut([
+      {
+        id: 'account-user:goals:device-a',
+        accountUserId: 'account-user',
+        actorId: 'device-a',
+      },
+      {
+        id: 'other-user:goals:device-b',
+        accountUserId: 'other-user',
+        actorId: 'device-b',
+      },
+    ] as never);
+    await database.table('realSyncBaselines').bulkPut([
+      {
+        id: 'account-user:goals:goals',
+        accountUserId: 'account-user',
+      },
+      {
+        id: 'other-user:goals:goals',
+        accountUserId: 'other-user',
+      },
+    ] as never);
     await database.table('socialFriendships').bulkPut([
       {
         id: 'friendship-current',
@@ -68,10 +104,19 @@ describe('remote account cloud purge', () => {
       'account-user',
     );
 
-    expect(result.deletedCloudRecords).toBe(2);
+    expect(result.deletedCloudRecords).toBe(3);
     expect(await database.table('realWeights').count()).toBe(0);
     expect(await database.table('socialFriendships').toArray()).toEqual([
       expect.objectContaining({ id: 'friendship-other' }),
+    ]);
+    expect(await database.table('realGoalMutations').toArray()).toEqual([
+      expect.objectContaining({ id: '#goal-mutation-other' }),
+    ]);
+    expect(await database.table('realGoalMutationClocks').toArray()).toEqual([
+      expect.objectContaining({ id: 'other-user:goals:device-b' }),
+    ]);
+    expect(await database.table('realSyncBaselines').toArray()).toEqual([
+      expect.objectContaining({ id: 'other-user:goals:goals' }),
     ]);
     expect(database.syncCloud).toHaveBeenCalledOnce();
   });
