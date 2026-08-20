@@ -18,7 +18,10 @@ const requiredBehaviorSuites = [
   'src/infrastructure/sync-prototype/realGoalSyncTransportRevisionRegression.test.ts',
   'src/infrastructure/sync-prototype/realGoalOfflineMutationStaging.test.ts',
   'src/infrastructure/sync-prototype/realGoalMutationStagingService.test.ts',
-  'src/infrastructure/sync-prototype/realGoalDexieTransportRegression.test.ts',
+  'src/infrastructure/sync-prototype/realGoalTransportConformanceModel.test.ts',
+  'src/infrastructure/sync-prototype/realGoalMutationJournal.test.ts',
+  'src/infrastructure/sync-prototype/realGoalImmutableMutationStaging.test.ts',
+  'tests/integration-cloud/goals-dexie-cloud-client.ts',
   'src/infrastructure/sync-prototype/realAccountPreferencesAutomaticContinuity.test.ts',
   'src/infrastructure/sync-prototype/realRewardsRoutinesAutomaticContinuity.test.ts',
   'src/infrastructure/sync-prototype/realDailyCoachingAutomaticReadiness.test.ts',
@@ -335,8 +338,8 @@ if (failures.length === 0) {
     fail('le staging Goals ne doit pas revenir a un put de remplacement complet.');
   }
 
-  const goalsTwoReplicaRegression = read(
-    'src/infrastructure/sync-prototype/realGoalDexieTransportRegression.test.ts',
+  const goalsConformanceModel = read(
+    'src/infrastructure/sync-prototype/realGoalTransportConformanceModel.test.ts',
   );
   for (const marker of [
     'new SyncPrototypeDatabase',
@@ -351,13 +354,44 @@ if (failures.length === 0) {
     'expect(fetchSpy).not.toHaveBeenCalled()',
     'stageGoalDeletion',
     'stageGoalRestore',
+    'Local conformance model only',
+    'must never be cited as evidence',
   ]) {
-    if (!goalsTwoReplicaRegression.includes(marker)) {
-      fail(`regression Goals deux replicas/transport absente : ${marker}.`);
+    if (!goalsConformanceModel.includes(marker)) {
+      fail(`modèle local de conformance Goals absent : ${marker}.`);
     }
   }
-  if (/cloud\.sync\s*=\s*vi\.fn/.test(goalsTwoReplicaRegression)) {
-    fail('le test clock-skew Goals ne doit pas remplacer le transport par un cloud.sync no-op.');
+  const goalsCloudGate = read(
+    'scripts/test-goals-dexie-cloud-integration.mjs',
+  );
+  const goalsCloudClient = read(
+    'tests/integration-cloud/goals-dexie-cloud-client.ts',
+  );
+  for (const marker of [
+    'SPORTPILOT_DEXIE_TEST_DB_URL',
+    'SPORTPILOT_DEXIE_TEST_CREDENTIAL_DIR',
+    "grant_type: 'demo'",
+    "cloudDatabase.cloud.sync",
+    'realGoalMutations',
+    'contextA.setOffline(true)',
+    'serverAfterReconnectA',
+    '--legacy-migration',
+    "canonicalSource: 'legacy-realGoals'",
+    'reconcileInitialCloudBaseline',
+    'FORBIDDEN_PRODUCTION_HOST',
+  ]) {
+    if (!`${goalsCloudGate}\n${goalsCloudClient}`.includes(marker)) {
+      fail(`gate Dexie Cloud Goals réel incomplet : ${marker}.`);
+    }
+  }
+  for (const forbidden of [
+    'adjustedOperationOrder',
+    'cloud.sync = vi.fn',
+    'cloud.sync: vi.fn',
+  ]) {
+    if (`${goalsCloudGate}\n${goalsCloudClient}`.includes(forbidden)) {
+      fail(`le gate integration-cloud Goals utilise un faux transport : ${forbidden}.`);
+    }
   }
 
   const goalsStaging = read(
@@ -584,8 +618,10 @@ if (failures.length === 0) {
   const cloudDatabase = read(
     'src/infrastructure/sync-prototype/SyncPrototypeDatabase.ts',
   );
-  if (!cloudDatabase.includes("unsyncedTables: ['realSyncBaselines']")) {
-    fail('realSyncBaselines doit rester local à chaque replica cloud/appareil.');
+  if (!cloudDatabase.includes(
+    "unsyncedTables: ['realSyncBaselines', 'realGoalMutationClocks']",
+  )) {
+    fail('realSyncBaselines et realGoalMutationClocks doivent rester locaux à chaque replica cloud/appareil.');
   }
   if (!cloudDatabase.includes('disableEagerSync: true')) {
     fail('le replica Dexie Cloud doit conserver disableEagerSync pour le staging local-first.');
@@ -612,5 +648,5 @@ if (failures.length > 0) {
 }
 
 console.log(
-  'Audit P0 continuité multi-appareils réussi : mutations Goals stagées dans le replica Dexie dès la persistance, y compris offline, transport explicite conservé, cloud-only piloté par le gagnant Dexie après compensation du clock skew, fallback legacy both/unknown préservé, autres chemins directionnels et merge-safe inchangés, baselines par replica et versions Dexie/backup préservées.',
+  'Audit P0 continuité multi-appareils réussi : mutations Goals immuables stagées dès la persistance, y compris offline, transport explicite conservé, résolution HLC calibrée et déterministe, fallback legacy both/unknown préservé, autres chemins directionnels et merge-safe inchangés, baselines par replica et versions Dexie/backup préservées.',
 );
