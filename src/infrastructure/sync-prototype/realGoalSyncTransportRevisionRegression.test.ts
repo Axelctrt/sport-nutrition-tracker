@@ -213,7 +213,7 @@ describe('Goals — transport revision must not override business LWW', () => {
     const result = await goalsAdapter(client).synchronize('cloud-only');
 
     expect(result).toMatchObject({ downloadedGoals: 0 });
-    expect(client.syncRealGoals).toHaveBeenCalled();
+    expect(client.syncRealGoals).not.toHaveBeenCalled();
     expect(await local.goals.get(GOAL_ID)).toMatchObject({
       targetValue: 10_000,
       updatedAt: '2026-08-20T08:50:00.000Z',
