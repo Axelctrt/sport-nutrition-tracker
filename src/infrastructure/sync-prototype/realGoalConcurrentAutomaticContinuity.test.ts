@@ -283,7 +283,7 @@ describe('gate Goals both — reprise automatique après résolution', () => {
       });
 
       expect(observedOrigins.slice(analysisOffset)).toContain('local');
-      expect(client.syncRealGoals).not.toHaveBeenCalled();
+      expect(client.syncRealGoals).toHaveBeenCalledTimes(1);
       expect(await previewRealGoalSync(
         local,
         cloud as unknown as SyncPrototypeDatabase,
