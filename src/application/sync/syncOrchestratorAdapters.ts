@@ -10,12 +10,9 @@ import {
   synchronizeRegisteredRealActivitiesToCloud,
 } from '@/infrastructure/sync-prototype/realActivitySyncService';
 import {
-  registeredGoalSyncContext,
+  synchronizeRegisteredRealGoalsFromCloud,
+  synchronizeRegisteredRealGoalsToCloud,
 } from '@/infrastructure/sync-prototype/realGoalSyncService';
-import {
-  logicalSyncBaselineId,
-  logicalSyncBaselineTable,
-} from '@/infrastructure/sync-prototype/logicalSyncState';
 import {
   synchronizeRegisteredRealWeightsFromCloud,
   synchronizeRegisteredRealWeightsToCloud,
@@ -68,7 +65,7 @@ export function readSyncOrchestratorPreview(
 
 async function synchronizeRegisteredDirection(
   client: SyncPrototypeClient,
-  domainId: 'activities' | 'weights',
+  domainId: 'activities' | 'weights' | 'goals',
   expectedOrigin: 'cloud' | 'local',
   synchronizeRegistered: (currentUserId: string) => Promise<unknown>,
   analyze: () => Promise<{ readonly differingEntityCount: number }>,
@@ -116,13 +113,13 @@ async function analyzeGoalsWithFreshCloudBarrier(
   client: SyncPrototypeClient,
 ): Promise<{ readonly differingEntityCount: number }> {
   // Local Goals live in an in-memory runtime with queued Dexie persistence.
-  // Make the local database authoritative before any provenance/LWW decision.
+  // Make the local database authoritative before any provenance decision.
   await flushGoalStatePersistence();
 
-  // Dexie Cloud 4.4.13 can satisfy a pull+wait call with the completion
-  // timestamp of a sync that was already in flight when the pull was queued.
-  // syncNow() followed by analyzeRealGoals() gives Goals a second sequential
-  // pull barrier before provenance/LWW is evaluated.
+  // The local mutation has already been staged into the Dexie Cloud replica by
+  // AutomaticSyncCoordinator. The transport cycle can therefore let Dexie
+  // reconcile its queued operation using native client/server clock skew before
+  // SportPilot decides which side changed relative to the device-local baseline.
   await client.syncNow();
   return client.analyzeRealGoals!();
 }
@@ -132,87 +129,10 @@ async function synchronizeGoalsWithFreshCloudBarrier(
 ): Promise<unknown> {
   await flushGoalStatePersistence();
 
-  // Bidirectional Goals already enters the business LWW path for both/unknown.
-  // Preserve that established path and only add the transport barrier.
+  // both/unknown remains the explicit business reconciliation fallback for
+  // legacy/initial cases that have no trustworthy staged directional baseline.
   await client.syncNow();
   return client.syncRealGoals!();
-}
-
-async function clearGoalsAutomaticBaseline(
-  currentUserId: string,
-): Promise<void> {
-  const context = (() => {
-    try {
-      return registeredGoalSyncContext(currentUserId);
-    } catch {
-      return undefined;
-    }
-  })();
-  if (!context) return;
-
-  await logicalSyncBaselineTable(context.cloudDatabase)?.delete(
-    logicalSyncBaselineId(currentUserId, 'goals', 'goals'),
-  );
-}
-
-async function synchronizeGoalsDirectionalByBusinessLwwWithFreshCloudBarrier(
-  client: SyncPrototypeClient,
-): Promise<unknown> {
-  await flushGoalStatePersistence();
-
-  const initial = client.getSnapshot();
-  const currentUserId = initial.account.userId;
-  if (!currentUserId) return undefined;
-
-  // Re-read server state before deciding whether the directional signal still
-  // represents a real divergence. analyzeRealGoals() also re-registers the
-  // exact AppDB + Dexie replica context used for the baseline reset below.
-  await client.syncNow();
-  if (client.getSnapshot().account.userId !== currentUserId) return undefined;
-
-  let preview = await client.analyzeRealGoals!();
-  if (client.getSnapshot().account.userId !== currentUserId) return undefined;
-  if (preview.differingEntityCount <= 0) return undefined;
-
-  // changeOrigin is only a trigger for automatic convergence. Transport
-  // metadata can be newer while Goal.updatedAt is older, so remove the
-  // device-local provenance baseline and force the existing business LWW
-  // resolver. Crucially, execute it through SyncPrototypeClient so the
-  // selected winner is followed by its post-write db.cloud.sync() round-trip;
-  // direct registered-service calls can converge AppDB + replica without
-  // proving that the server accepted the mutation.
-  await clearGoalsAutomaticBaseline(currentUserId);
-  let result = await client.syncRealGoals!();
-  if (client.getSnapshot().account.userId !== currentUserId) return result;
-
-  // Pull after the client's post-write transport and re-analyze. This is the
-  // server-confirmation gate: local replica equality alone is insufficient.
-  await client.syncNow();
-  if (client.getSnapshot().account.userId !== currentUserId) return result;
-
-  preview = await client.analyzeRealGoals!();
-  if (client.getSnapshot().account.userId !== currentUserId) return result;
-  if (preview.differingEntityCount <= 0) return result;
-
-  // One bounded retry handles a late server row / in-flight Dexie cycle. The
-  // second pass uses the same transport-aware client path; never fall back to
-  // a replica-only write and never loop indefinitely.
-  await flushGoalStatePersistence();
-  await clearGoalsAutomaticBaseline(currentUserId);
-  result = await client.syncRealGoals!();
-  if (client.getSnapshot().account.userId !== currentUserId) return result;
-
-  await client.syncNow();
-  if (client.getSnapshot().account.userId !== currentUserId) return result;
-
-  preview = await client.analyzeRealGoals!();
-  if (preview.differingEntityCount > 0) {
-    throw new Error(
-      'La convergence Goals reste divergente après confirmation transport.',
-    );
-  }
-
-  return result;
 }
 
 async function synchronizeNutritionLibrary(
@@ -349,11 +269,23 @@ export function createSyncOrchestratorDomains(
     client.syncRealGoals
       ? () => synchronizeGoalsWithFreshCloudBarrier(client)
       : undefined,
-    client.syncRealGoals
-      ? () => synchronizeGoalsDirectionalByBusinessLwwWithFreshCloudBarrier(client)
+    client.analyzeRealGoals
+      ? () => synchronizeRegisteredDirection(
+          client,
+          'goals',
+          'cloud',
+          synchronizeRegisteredRealGoalsFromCloud,
+          () => client.analyzeRealGoals!(),
+        )
       : undefined,
-    client.syncRealGoals
-      ? () => synchronizeGoalsDirectionalByBusinessLwwWithFreshCloudBarrier(client)
+    client.analyzeRealGoals
+      ? () => synchronizeRegisteredDirection(
+          client,
+          'goals',
+          'local',
+          synchronizeRegisteredRealGoalsToCloud,
+          () => client.analyzeRealGoals!(),
+        )
       : undefined,
   );
   add(
