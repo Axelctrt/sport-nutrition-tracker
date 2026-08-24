@@ -36,9 +36,13 @@ import {
 import { reloadUserStateRuntime } from '@/infrastructure/user-state/userStateRuntime';
 import {
   appendRealGoalMutation,
-  realGoalMutationClockTable,
+  bootstrapRealGoalMutationHead,
+  realGoalMutationHeadId,
+  realGoalMutationHeadTable,
   realGoalMutationTable,
   resolveRealGoalMutationJournal,
+  uniqueLegacyMutationState,
+  type RealGoalMutationHead,
   type RealGoalMutationRecord,
 } from '@/infrastructure/sync-prototype/realGoalMutationJournal';
 
@@ -109,7 +113,9 @@ interface GoalDomainState {
   readonly cloudMarkerRows: readonly CloudOwned<CloudDeletionRecord>[];
   readonly cloudAuthoritativeMarkerIds: ReadonlySet<string>;
   readonly cloudGoalMutationRows: readonly CloudOwned<RealGoalMutationRecord>[];
+  readonly cloudGoalMutationHeadRows: readonly CloudOwned<RealGoalMutationHead>[];
   readonly cloudJournalAuthoritativeEntityIds: ReadonlySet<string>;
+  readonly cloudJournalIncompleteEntityIds: ReadonlySet<string>;
 }
 
 interface GoalLogicalState {
@@ -259,37 +265,15 @@ function sortById<T extends { id: string }>(values: readonly T[]): T[] {
 function effectiveGoalState(
   goal: Goal | undefined,
   marker: DeletionRecord | undefined,
-  authoritativeMarker = false,
+  _authoritativeMarker = false,
 ): GoalState {
-  if (authoritativeMarker && marker) {
+  if (marker) {
     return {
       ...(marker.status === 'restored' && goal ? { goal } : {}),
       marker,
     };
   }
-
-  let effectiveMarker = marker;
-  if (
-    goal &&
-    effectiveMarker?.status === 'deleted' &&
-    goal.updatedAt > effectiveMarker.updatedAt
-  ) {
-    effectiveMarker = createRestoredDeletionRecord(
-      { entityType: 'goal', entityId: goal.id },
-      goal.updatedAt,
-      effectiveMarker.deletedAt,
-      effectiveMarker,
-    );
-  }
-
-  const deletionWins =
-    effectiveMarker?.status === 'deleted' &&
-    (!goal || effectiveMarker.updatedAt >= goal.updatedAt);
-
-  return {
-    ...(deletionWins ? {} : goal ? { goal } : {}),
-    ...(effectiveMarker ? { marker: effectiveMarker } : {}),
-  };
+  return goal ? { goal } : {};
 }
 
 function resolveSingleSideLogicalState(
@@ -335,88 +319,6 @@ function buildGoalLogicalStates(state: GoalDomainState) {
   };
 }
 
-function goalStateMutationTimestamp(state: GoalState): string {
-  return [
-    state.goal?.updatedAt,
-    state.marker?.updatedAt,
-  ]
-    .filter((value): value is string => Boolean(value))
-    .sort()
-    .at(-1) ?? '';
-}
-
-function isEmptyGoalState(state: GoalState): boolean {
-  return !state.goal && !state.marker;
-}
-
-function latestGoalState(
-  local: GoalState,
-  cloud: GoalState,
-): {
-  readonly winner: GoalState;
-  readonly loser: GoalState;
-} {
-  if (isEmptyGoalState(local)) {
-    return { winner: cloud, loser: local };
-  }
-  if (isEmptyGoalState(cloud)) {
-    return { winner: local, loser: cloud };
-  }
-
-  const localTimestamp = goalStateMutationTimestamp(local);
-  const cloudTimestamp = goalStateMutationTimestamp(cloud);
-
-  if (localTimestamp > cloudTimestamp) {
-    return { winner: local, loser: cloud };
-  }
-  if (cloudTimestamp > localTimestamp) {
-    return { winner: cloud, loser: local };
-  }
-
-  /*
-   * L'égalité d'horodatage doit être indépendante de l'ordre réseau.
-   */
-  return stableValue(local) >= stableValue(cloud)
-    ? { winner: local, loser: cloud }
-    : { winner: cloud, loser: local };
-}
-
-function preserveRestorationMarker(
-  winner: GoalState,
-  loser: GoalState,
-): GoalState {
-  if (!winner.goal || loser.marker?.status !== 'deleted') {
-    return winner;
-  }
-
-  const restoredAt =
-    goalStateMutationTimestamp(winner) || winner.goal.updatedAt;
-
-  if (restoredAt < loser.marker.updatedAt) {
-    return winner;
-  }
-
-  if (
-    winner.marker?.status === 'restored'
-    && winner.marker.updatedAt >= restoredAt
-  ) {
-    return winner;
-  }
-
-  return {
-    goal: winner.goal,
-    marker: createRestoredDeletionRecord(
-      {
-        entityType: 'goal',
-        entityId: winner.goal.id,
-      },
-      restoredAt,
-      loser.marker.deletedAt,
-      winner.marker ?? loser.marker,
-    ),
-  };
-}
-
 function resolveMergedGoalLogicalState(
   state: GoalDomainState,
 ): GoalLogicalState {
@@ -454,11 +356,13 @@ function resolveMergedGoalLogicalState(
       continue;
     }
 
-    const { winner, loser } = latestGoalState(local, cloud);
-    const resolved = preserveRestorationMarker(winner, loser);
-
-    if (resolved.goal) goals.push(resolved.goal);
-    if (resolved.marker) markers.push(resolved.marker);
+    if (!sameEntity(local, cloud)) {
+      throw new Error(
+        'Les branches Goals sans head causal divergent. Une réconciliation explicite est requise ; aucun LWW temporel n’a été appliqué.',
+      );
+    }
+    if (local.goal) goals.push(local.goal);
+    if (local.marker) markers.push(local.marker);
   }
 
   return {
@@ -484,11 +388,19 @@ async function readState(
   currentUserId: string,
 ): Promise<GoalDomainState> {
   const mutationTable = realGoalMutationTable(cloudDatabase);
-  const [local, cloudGoalRows, cloudMarkerRows, cloudGoalMutationRows] = await Promise.all([
+  const headTable = realGoalMutationHeadTable(cloudDatabase);
+  const [
+    local,
+    cloudGoalRows,
+    cloudMarkerRows,
+    cloudGoalMutationRows,
+    cloudGoalMutationHeadRows,
+  ] = await Promise.all([
     readLocalState(localDatabase),
     cloudDatabase.realGoals.toArray(),
     cloudDatabase.realGoalDeletionRecords.toArray(),
     mutationTable?.toArray() ?? Promise.resolve([]),
+    headTable?.toArray() ?? Promise.resolve([]),
   ]);
 
   const ownedCloudGoalRows = cloudGoalRows
@@ -508,8 +420,14 @@ async function readState(
   );
   const journal = resolveRealGoalMutationJournal(
     cloudGoalMutationRows,
+    cloudGoalMutationHeadRows,
     currentUserId,
   );
+  if (journal.incompleteEntityIds.size > 0) {
+    throw new Error(
+      'La convergence Goals est incomplète : un head causal référence une mutation absente. Aucun fallback temporel n’a été appliqué.',
+    );
+  }
   const cloudGoalById = new Map(
     ownedCloudGoalRows
       .map(fromCloudGoal)
@@ -538,7 +456,9 @@ async function readState(
     cloudMarkerRows: ownedCloudMarkerRows,
     cloudAuthoritativeMarkerIds,
     cloudGoalMutationRows,
+    cloudGoalMutationHeadRows,
     cloudJournalAuthoritativeEntityIds: journal.authoritativeEntityIds,
+    cloudJournalIncompleteEntityIds: journal.incompleteEntityIds,
   };
 }
 
@@ -1390,27 +1310,33 @@ export async function stageRealGoalsMutationInLocalCloudReplica(
   }
 
   const mutationTable = realGoalMutationTable(cloudDatabase);
-  const clockTable = realGoalMutationClockTable(cloudDatabase);
-  if (options.immutableJournal !== false && mutationTable && clockTable) {
+  const headTable = realGoalMutationHeadTable(cloudDatabase);
+  if (options.immutableJournal !== false && mutationTable && headTable) {
     const session = cloudDatabase.cloud.currentUser.value;
-    if (!session.isLoggedIn || session.userId !== currentUserId) {
+    if (session.userId !== currentUserId) {
       throw new Error(
         'Le compte Dexie a changé avant le staging du journal Goals.',
       );
     }
+    let localCasRejected = false;
     await cloudDatabase.transaction(
       'rw',
       [
         cloudDatabase.realGoals,
         cloudDatabase.realGoalDeletionRecords,
         mutationTable,
-        clockTable,
+        headTable,
+        baselineTable,
       ],
       async () => {
-        const [goalRows, markerRows, mutationRows] = await Promise.all([
+        const [goalRows, markerRows, mutationRows, headRows, baseline] = await Promise.all([
           cloudDatabase.realGoals.toArray(),
           cloudDatabase.realGoalDeletionRecords.toArray(),
           mutationTable.toArray(),
+          headTable.toArray(),
+          baselineTable.get(
+            logicalSyncBaselineId(currentUserId, 'goals', 'goals'),
+          ),
         ]);
         const ownedGoalRows = goalRows.filter((goal) =>
           belongsToCurrentUser(goal, currentUserId));
@@ -1421,8 +1347,14 @@ export async function stageRealGoalsMutationInLocalCloudReplica(
         );
         const journal = resolveRealGoalMutationJournal(
           mutationRows,
+          headRows,
           currentUserId,
         );
+        if (journal.incompleteEntityIds.size > 0) {
+          throw new Error(
+            'La convergence Goals est incomplète : le staging attend la mutation référencée par le head causal.',
+          );
+        }
         const stagedGoalIds = requestedGoalIds ?? new Set([
           ...local.localGoals.map((goal) => goal.id),
           ...local.localMarkers.map((marker) => marker.entityId),
@@ -1438,6 +1370,28 @@ export async function stageRealGoalsMutationInLocalCloudReplica(
         ]);
         const localGoalById = mapById(local.localGoals);
         const localMarkerById = mapById(local.localMarkers);
+        const legacyCloudLogical = resolveSingleSideLogicalState(
+          ownedGoalRows
+            .map(fromCloudGoal)
+            .filter((goal): goal is Goal => goal !== undefined),
+          ownedMarkerRows
+            .map(fromCloudMarker)
+            .filter((marker): marker is DeletionRecord => marker !== undefined),
+          new Set(ownedMarkerRows.flatMap((marker) => {
+            if ((marker as CloudDeletionRecord).goalMutationState !== 1) return [];
+            const id = localIdFromCloud(marker.id);
+            return id ? [id] : [];
+          })),
+        );
+        const baselineProvesCanonicalCloud = Boolean(
+          baseline
+          && baseline.localDigest === baseline.cloudDigest
+          && baseline.cloudDigest === stableValue(legacyCloudLogical),
+        );
+        const identicalUnchangedBootstrap = sameEntity(
+          localLogical,
+          legacyCloudLogical,
+        );
 
         for (const goalId of stagedGoalIds) {
           const cloudGoalId = cloudPrivateId(goalId);
@@ -1471,15 +1425,74 @@ export async function stageRealGoalsMutationInLocalCloudReplica(
             : target.marker;
           if (!target.goal && targetMarker?.status !== 'deleted') continue;
 
-          const previousMutation = journal.winners.get(goalId);
-          const previousGoal = previousMutation?.goal
-            ?? (existingGoalRow ? fromCloudGoal(existingGoalRow) : undefined);
-          const previousMarker = previousMutation?.marker
-            ?? (existingMarkerRow ? fromCloudMarker(existingMarkerRow) : undefined);
+          let head = await headTable.get(
+            realGoalMutationHeadId(currentUserId, goalId),
+          );
+          if (!head) {
+            if (journal.legacyJournalEntityIds.has(goalId)) {
+              uniqueLegacyMutationState(mutationRows, currentUserId, goalId);
+              throw new Error(
+                'Le journal Goals v17 ne possède pas de head causal. Une réconciliation explicite est requise avant toute nouvelle mutation.',
+              );
+            }
+            const canonicalEntityAbsent = !existingGoalRow
+              && !existingMarkerRow
+              && !mutationRows.some((mutation) =>
+                mutation.accountUserId === currentUserId
+                && mutation.entityId === goalId)
+              && !headRows.some((candidate) =>
+                candidate.accountUserId === currentUserId
+                && candidate.entityId === goalId);
+            if (
+              !baselineProvesCanonicalCloud
+              && !identicalUnchangedBootstrap
+              && !canonicalEntityAbsent
+            ) {
+              throw new Error(
+                'Le bootstrap causal Goals ne peut pas prouver une baseline canonique commune. Réconciliation requise.',
+              );
+            }
+            const canonical = effectiveGoalState(
+              existingGoalRow ? fromCloudGoal(existingGoalRow) : undefined,
+              existingMarkerRow ? fromCloudMarker(existingMarkerRow) : undefined,
+              Boolean(existingMarkerRow),
+            );
+            head = await bootstrapRealGoalMutationHead({
+              database: cloudDatabase,
+              mutationTable,
+              headTable,
+              accountUserId: currentUserId,
+              entityId: goalId,
+              ...(canonical.goal ? { goal: canonical.goal } : {}),
+              ...(canonical.marker ? { marker: canonical.marker } : {}),
+            });
+          }
+
+          const previousMutation = await mutationTable.get(head.mutationId);
+          if (!previousMutation || previousMutation.entityId !== goalId) {
+            throw new Error(
+              'Le head causal Goals référence une mutation absente. Aucun fallback n’a été appliqué.',
+            );
+          }
+          const previousGoal = previousMutation.goal;
+          const previousMarker = previousMutation.marker;
           if (sameEntity(
             { goal: target.goal, marker: targetMarker },
             { goal: previousGoal, marker: previousMarker },
           )) {
+            continue;
+          }
+          if (
+            !requestedGoalIds
+            && mutationRows.some((mutation) =>
+              mutation.accountUserId === currentUserId
+              && mutation.entityId === goalId
+              && mutation.operation !== 'anchor'
+              && sameEntity(
+                { goal: mutation.goal, marker: mutation.marker },
+                { goal: target.goal, marker: targetMarker },
+              ))
+          ) {
             continue;
           }
 
@@ -1490,20 +1503,26 @@ export async function stageRealGoalsMutationInLocalCloudReplica(
               : previousGoal
                 ? 'update'
                 : 'create';
-          await appendRealGoalMutation({
+          const appended = await appendRealGoalMutation({
+            database: cloudDatabase,
             mutationTable,
-            clockTable,
+            headTable,
             accountUserId: currentUserId,
-            actorId,
-            session,
             operation,
             entityId: goalId,
+            parentMutationId: head.mutationId,
             ...(target.goal ? { goal: target.goal } : {}),
             ...(targetMarker ? { marker: targetMarker } : {}),
           });
+          if (!appended.headAdvanced) localCasRejected = true;
         }
       },
     );
+    if (localCasRejected) {
+      throw new Error(
+        'Le head causal Goals a changé pendant le staging. La mutation est conservée, mais aucun transport automatique n’est lancé.',
+      );
+    }
     const stagedState = await readState(
       localDatabase,
       cloudDatabase,

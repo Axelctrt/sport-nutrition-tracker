@@ -38,11 +38,12 @@ import type { CloudSocialActivitySnapshotRecord } from '@/domain/friends/socialC
 import type { LogicalSyncBaseline } from '@/infrastructure/sync-prototype/logicalSyncState';
 import type {
   RealGoalMutationClockState,
+  RealGoalMutationHead,
   RealGoalMutationRecord,
 } from '@/infrastructure/sync-prototype/realGoalMutationJournal';
 
 export const LEGACY_SYNC_PROTOTYPE_DATABASE_NAME = 'sportpilot-sync-prototype';
-export const SYNC_PROTOTYPE_DATABASE_VERSION = 17;
+export const SYNC_PROTOTYPE_DATABASE_VERSION = 18;
 export const SYNC_PROTOTYPE_DATABASE_NAME =
   'sportpilot-sync-runtime-0.20.0-v16';
 export const SYNC_PROTOTYPE_TABLE_NAMES = [
@@ -56,6 +57,7 @@ export const SYNC_PROTOTYPE_TABLE_NAMES = [
   'realGoals',
   'realGoalDeletionRecords',
   'realGoalMutations',
+  'realGoalMutationHeads',
   'realGoalMutationClocks',
   'realStrengthExercises',
   'realWorkoutTemplates',
@@ -91,6 +93,7 @@ export class SyncPrototypeDatabase extends Dexie {
   declare realGoals: Table<Goal, EntityId>;
   declare realGoalDeletionRecords: Table<DeletionRecord, EntityId>;
   declare realGoalMutations: Table<RealGoalMutationRecord, string>;
+  declare realGoalMutationHeads: Table<RealGoalMutationHead, string>;
   declare realGoalMutationClocks: Table<RealGoalMutationClockState, string>;
   declare realStrengthExercises: Table<StrengthExerciseAggregate, EntityId>;
   declare realWorkoutTemplates: Table<WorkoutTemplateAggregate, EntityId>;
@@ -203,10 +206,17 @@ export class SyncPrototypeDatabase extends Dexie {
       realSyncBaselines: 'id, accountUserId, domainId, entityId, updatedAt, [accountUserId+domainId]',
     });
 
-    this.version(SYNC_PROTOTYPE_DATABASE_VERSION).stores({
+    this.version(17).stores({
       realGoalMutations:
         'id, accountUserId, entityId, orderedAtMs, [accountUserId+entityId]',
       realGoalMutationClocks: 'id, accountUserId, actorId',
+    });
+
+    this.version(SYNC_PROTOTYPE_DATABASE_VERSION).stores({
+      realGoalMutations:
+        'id, accountUserId, entityId, parentMutationId, [accountUserId+entityId]',
+      realGoalMutationHeads:
+        'id, accountUserId, entityId, mutationId, [entityId+mutationId], [accountUserId+entityId]',
     });
 
     this.cloud.configure({

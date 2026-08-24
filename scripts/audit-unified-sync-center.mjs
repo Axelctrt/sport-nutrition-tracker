@@ -194,7 +194,7 @@ if (failures.length === 0) {
     fail('La sauvegarde JSON doit rester en v10.');
   }
   const cloud = read('src/infrastructure/sync-prototype/SyncPrototypeDatabase.ts');
-  if (!cloud.includes('SYNC_PROTOTYPE_DATABASE_VERSION = 17')) {
+  if (!cloud.includes('SYNC_PROTOTYPE_DATABASE_VERSION = 18')) {
     fail('Le runtime cloud doit utiliser la v17 pour les amitiés, permissions sociales et le journal Goals.');
   }
 }
@@ -206,5 +206,5 @@ if (failures.length > 0) {
 }
 
 console.log(
-  'Audit E3 réussi : pilotage global, retour UX vers la rubrique, sélection de navigation unique, détail à la demande, reprise ciblée des échecs, historique isolé par compte et runtime cloud v17 social prêt.',
+  'Audit E3 réussi : pilotage global, retour UX vers la rubrique, sélection de navigation unique, détail à la demande, reprise ciblée des échecs, historique isolé par compte et runtime cloud v18 social prêt.',
 );

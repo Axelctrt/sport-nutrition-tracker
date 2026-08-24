@@ -1,31 +1,37 @@
 import Dexie, { type Table } from 'dexie';
 import type { Goal } from '@/domain/goals/goalState';
-import { createRestoredDeletionRecord } from '@/domain/models/deletion';
+import {
+  createDeletedDeletionRecord,
+  createRestoredDeletionRecord,
+} from '@/domain/models/deletion';
 import {
   appendRealGoalMutation,
-  compareRealGoalMutationOrder,
+  bootstrapRealGoalMutationHead,
+  realGoalMutationHeadId,
   resolveRealGoalMutationJournal,
-  type RealGoalMutationClockState,
+  uniqueLegacyMutationState,
+  type RealGoalMutationHead,
   type RealGoalMutationRecord,
 } from '@/infrastructure/sync-prototype/realGoalMutationJournal';
 
 class JournalTestDatabase extends Dexie {
   declare realGoalMutations: Table<RealGoalMutationRecord, string>;
-  declare realGoalMutationClocks: Table<RealGoalMutationClockState, string>;
+  declare realGoalMutationHeads: Table<RealGoalMutationHead, string>;
 
-  constructor(databaseName = `sportpilot-goal-journal-${crypto.randomUUID()}`) {
-    super(databaseName);
+  constructor() {
+    super(`sportpilot-goal-causal-journal-${crypto.randomUUID()}`);
     this.version(1).stores({
       realGoalMutations:
-        'id, accountUserId, entityId, orderedAtMs, [accountUserId+entityId]',
-      realGoalMutationClocks: 'id, accountUserId, actorId',
+        'id, accountUserId, entityId, parentMutationId, [accountUserId+entityId]',
+      realGoalMutationHeads:
+        'id, accountUserId, entityId, mutationId, [entityId+mutationId], [accountUserId+entityId]',
     });
   }
 }
 
 const ACCOUNT = 'account-user';
 
-function goal(targetValue: number, updatedAt: string): Goal {
+function goal(targetValue: number, updatedAt = '2026-08-20T12:00:00.000Z'): Goal {
   return {
     id: 'goal-1',
     title: 'Pas',
@@ -39,351 +45,298 @@ function goal(targetValue: number, updatedAt: string): Goal {
   };
 }
 
-function mutation(input: {
-  id: string;
-  actorId: string;
-  targetValue: number;
-  orderedAtMs: number;
-  rawOccurredAt: string;
-}): RealGoalMutationRecord {
-  const value = goal(input.targetValue, input.rawOccurredAt);
-  return {
-    id: input.id,
-    accountUserId: ACCOUNT,
-    entityId: value.id,
-    operation: 'update',
-    goal: value,
-    marker: createRestoredDeletionRecord(
-      { entityType: 'goal', entityId: value.id },
-      value.updatedAt,
-      value.createdAt,
-    ),
-    orderedAtMs: input.orderedAtMs,
-    orderCounter: 0,
-    actorId: input.actorId,
-    actorSequence: 1,
-    rawOccurredAt: input.rawOccurredAt,
-    clockSource: 'dexie-auth-session-v1',
-    clockUncertaintyMs: 1_000,
-  };
+function restored(value: Goal) {
+  return createRestoredDeletionRecord(
+    { entityType: 'goal', entityId: value.id },
+    value.updatedAt,
+    value.createdAt,
+  );
 }
 
-describe('journal immuable des mutations Goals', () => {
-  it('choisit le temps calibré plus récent malgré un Date.now brut inversé', () => {
-    const olderA = mutation({
-      id: '#a',
-      actorId: 'A',
-      targetValue: 8_000,
-      orderedAtMs: 20_000,
-      rawOccurredAt: '2026-08-20T12:30:00.000Z',
-    });
-    const laterB = mutation({
-      id: '#b',
-      actorId: 'B',
-      targetValue: 55_000,
-      orderedAtMs: 21_000,
-      rawOccurredAt: '2026-08-20T12:00:01.000Z',
-    });
-
-    expect(olderA.rawOccurredAt > laterB.rawOccurredAt).toBe(true);
-    expect(compareRealGoalMutationOrder(laterB, olderA)).toBe(1);
-    expect(
-      resolveRealGoalMutationJournal([laterB, olderA], ACCOUNT)
-        .winners.get('goal-1')?.goal?.targetValue,
-    ).toBe(55_000);
+async function bootstrap(database: JournalTestDatabase, value = goal(10_000)) {
+  return bootstrapRealGoalMutationHead({
+    database,
+    mutationTable: database.realGoalMutations,
+    headTable: database.realGoalMutationHeads,
+    accountUserId: ACCOUNT,
+    entityId: value.id,
+    goal: value,
+    marker: restored(value),
   });
+}
 
-  it('calibre deux appareils sur la session Dexie et conserve chaque entité', async () => {
+async function update(
+  database: JournalTestDatabase,
+  parentMutationId: string,
+  targetValue: number,
+) {
+  const value = goal(targetValue);
+  return appendRealGoalMutation({
+    database,
+    mutationTable: database.realGoalMutations,
+    headTable: database.realGoalMutationHeads,
+    accountUserId: ACCOUNT,
+    operation: 'update',
+    entityId: value.id,
+    parentMutationId,
+    goal: value,
+    marker: restored(value),
+  });
+}
+
+describe('journal causal append-only des mutations Goals', () => {
+  it('crée un anchor déterministe et un head explicitement non privé', async () => {
     const database = new JournalTestDatabase();
     await database.open();
     try {
-      const olderA = await appendRealGoalMutation({
-        mutationTable: database.realGoalMutations,
-        clockTable: database.realGoalMutationClocks,
-        accountUserId: ACCOUNT,
-        actorId: 'A',
-        session: {
-          lastLogin: new Date('2026-08-20T12:30:00.000Z'),
-          accessTokenExpiration: new Date('2026-08-20T14:00:00.000Z'),
-        },
-        operation: 'update',
-        entityId: 'goal-1',
-        goal: goal(8_000, '2026-08-20T12:30:00.000Z'),
-        marker: createRestoredDeletionRecord(
-          { entityType: 'goal', entityId: 'goal-1' },
-          '2026-08-20T12:30:00.000Z',
-          '2026-08-20T08:00:00.000Z',
-        ),
-        now: () => new Date('2026-08-20T12:30:00.000Z').getTime(),
-      });
+      const first = await bootstrap(database);
+      const second = await bootstrap(database);
 
-      const laterB = await appendRealGoalMutation({
-        mutationTable: database.realGoalMutations,
-        clockTable: database.realGoalMutationClocks,
-        accountUserId: ACCOUNT,
-        actorId: 'B',
-        session: {
-          lastLogin: new Date('2026-08-20T12:00:00.000Z'),
-          accessTokenExpiration: new Date('2026-08-20T14:00:00.000Z'),
-        },
-        operation: 'update',
-        entityId: 'goal-1',
-        goal: goal(55_000, '2026-08-20T12:00:01.000Z'),
-        marker: createRestoredDeletionRecord(
-          { entityType: 'goal', entityId: 'goal-1' },
-          '2026-08-20T12:00:01.000Z',
-          '2026-08-20T08:00:00.000Z',
-        ),
-        now: () => new Date('2026-08-20T12:00:01.000Z').getTime(),
-      });
-
-      expect(olderA.rawOccurredAt > laterB.rawOccurredAt).toBe(true);
-      expect(laterB.orderedAtMs).toBeGreaterThan(olderA.orderedAtMs);
-      expect(await database.realGoalMutations.count()).toBe(2);
-      expect(
-        resolveRealGoalMutationJournal(
-          await database.realGoalMutations.toArray(),
-          ACCOUNT,
-        ).winners.get('goal-1')?.goal?.targetValue,
-      ).toBe(55_000);
+      expect(first).toEqual(second);
+      expect(first.id).toBe(realGoalMutationHeadId(ACCOUNT, 'goal-1'));
+      expect(first.id.startsWith('#')).toBe(false);
+      expect(first.mutationId.startsWith('#goal-anchor-')).toBe(true);
+      expect(await database.realGoalMutations.count()).toBe(1);
+      expect(await database.realGoalMutationHeads.count()).toBe(1);
     } finally {
       await database.delete();
     }
   });
 
-  it('ignore strictement les mutations d’un autre compte', () => {
-    const foreign = {
-      ...mutation({
-        id: '#foreign',
-        actorId: 'foreign-device',
-        targetValue: 99_000,
-        orderedAtMs: 99_000,
-        rawOccurredAt: '2026-08-20T12:00:00.000Z',
-      }),
-      accountUserId: 'foreign-account',
-      owner: 'foreign-account',
-    };
-    expect(
-      resolveRealGoalMutationJournal([foreign], ACCOUNT)
-        .authoritativeEntityIds.size,
-    ).toBe(0);
+  it('persiste la chaîne causale séquentielle X -> A1 -> A2', async () => {
+    const database = new JournalTestDatabase();
+    await database.open();
+    try {
+      const anchor = await bootstrap(database);
+      const a1 = await update(database, anchor.mutationId, 20_000);
+      const a2 = await update(database, a1.mutation.id, 30_000);
+
+      expect(a1.headAdvanced).toBe(true);
+      expect(a2.headAdvanced).toBe(true);
+      expect(a1.mutation.parentMutationId).toBe(anchor.mutationId);
+      expect(a2.mutation.parentMutationId).toBe(a1.mutation.id);
+      expect(await database.realGoalMutationHeads.get(anchor.id))
+        .toMatchObject({ mutationId: a2.mutation.id });
+    } finally {
+      await database.delete();
+    }
   });
 
-  it('conserve HLC et séquence après reload, fermeture et reprise offline', async () => {
-    const databaseName = `sportpilot-goal-journal-reload-${crypto.randomUUID()}`;
-    const firstDatabase = new JournalTestDatabase(databaseName);
-    await firstDatabase.open();
-    const onlineSession = {
-      lastLogin: new Date('2026-08-20T12:30:00.000Z'),
-      accessTokenExpiration: new Date('2026-08-20T14:00:00.000Z'),
-    };
-    const first = await appendRealGoalMutation({
-      mutationTable: firstDatabase.realGoalMutations,
-      clockTable: firstDatabase.realGoalMutationClocks,
+  it('conserve parent, mutation et head après fermeture puis réouverture', async () => {
+    const database = new JournalTestDatabase();
+    await database.open();
+    try {
+      const anchor = await bootstrap(database);
+      const a1 = await update(database, anchor.mutationId, 20_000);
+      database.close();
+      await database.open();
+
+      expect(await database.realGoalMutations.get(a1.mutation.id))
+        .toMatchObject({ parentMutationId: anchor.mutationId });
+      expect(await database.realGoalMutationHeads.get(anchor.id))
+        .toMatchObject({ mutationId: a1.mutation.id });
+    } finally {
+      await database.delete();
+    }
+  });
+
+  it('conserve une mutation stale lorsque le CAS refuse le head', async () => {
+    const database = new JournalTestDatabase();
+    await database.open();
+    try {
+      const anchor = await bootstrap(database);
+      const accepted = await update(database, anchor.mutationId, 55_000);
+      const stale = await update(database, anchor.mutationId, 8_000);
+
+      expect(accepted.headAdvanced).toBe(true);
+      expect(stale.headAdvanced).toBe(false);
+      expect(await database.realGoalMutations.get(stale.mutation.id))
+        .toEqual(stale.mutation);
+      expect(await database.realGoalMutationHeads.get(anchor.id))
+        .toMatchObject({ mutationId: accepted.mutation.id });
+    } finally {
+      await database.delete();
+    }
+  });
+
+  it('bloque A1/A2/A3 si une branche B1 a avancé depuis X', async () => {
+    const database = new JournalTestDatabase();
+    await database.open();
+    try {
+      const anchor = await bootstrap(database);
+      const b1 = await update(database, anchor.mutationId, 55_000);
+      const a1 = await update(database, anchor.mutationId, 8_000);
+      const a2 = await update(database, a1.mutation.id, 8_001);
+      const a3 = await update(database, a2.mutation.id, 8_002);
+
+      expect([a1, a2, a3].map((entry) => entry.headAdvanced))
+        .toEqual([false, false, false]);
+      expect(await database.realGoalMutations.count()).toBe(5);
+      expect(await database.realGoalMutationHeads.get(anchor.id))
+        .toMatchObject({ mutationId: b1.mutation.id });
+    } finally {
+      await database.delete();
+    }
+  });
+
+  it('ignore totalement les timestamps contradictoires pour le winner', async () => {
+    const database = new JournalTestDatabase();
+    await database.open();
+    try {
+      const anchor = await bootstrap(database);
+      const accepted = await update(database, anchor.mutationId, 55_000);
+      await database.realGoalMutations.update(accepted.mutation.id, {
+        orderedAtMs: 1,
+        rawOccurredAt: '1990-01-01T00:00:00.000Z',
+      });
+      await database.realGoalMutations.update(anchor.mutationId, {
+        orderedAtMs: Number.MAX_SAFE_INTEGER,
+        rawOccurredAt: '2099-01-01T00:00:00.000Z',
+      });
+
+      const resolved = resolveRealGoalMutationJournal(
+        await database.realGoalMutations.toArray(),
+        await database.realGoalMutationHeads.toArray(),
+        ACCOUNT,
+      );
+      expect(resolved.winners.get('goal-1')?.goal?.targetValue).toBe(55_000);
+    } finally {
+      await database.delete();
+    }
+  });
+
+  it('applique delete puis restore seulement avec le vrai parent causal', async () => {
+    const database = new JournalTestDatabase();
+    await database.open();
+    try {
+      const anchor = await bootstrap(database);
+      const deletion = await appendRealGoalMutation({
+        database,
+        mutationTable: database.realGoalMutations,
+        headTable: database.realGoalMutationHeads,
+        accountUserId: ACCOUNT,
+        operation: 'delete',
+        entityId: 'goal-1',
+        parentMutationId: anchor.mutationId,
+        marker: createDeletedDeletionRecord(
+          { entityType: 'goal', entityId: 'goal-1' },
+          '2026-08-20T13:00:00.000Z',
+        ),
+      });
+      const value = goal(12_000);
+      const restoration = await appendRealGoalMutation({
+        database,
+        mutationTable: database.realGoalMutations,
+        headTable: database.realGoalMutationHeads,
+        accountUserId: ACCOUNT,
+        operation: 'restore',
+        entityId: value.id,
+        parentMutationId: deletion.mutation.id,
+        goal: value,
+        marker: restored(value),
+      });
+
+      expect(deletion.headAdvanced).toBe(true);
+      expect(restoration.headAdvanced).toBe(true);
+      expect(await database.realGoalMutationHeads.get(anchor.id))
+        .toMatchObject({ mutationId: restoration.mutation.id });
+    } finally {
+      await database.delete();
+    }
+  });
+
+  it('refuse un delete et un restore basés sur un parent stale', async () => {
+    const database = new JournalTestDatabase();
+    await database.open();
+    try {
+      const anchor = await bootstrap(database);
+      const accepted = await update(database, anchor.mutationId, 55_000);
+      const staleDelete = await appendRealGoalMutation({
+        database,
+        mutationTable: database.realGoalMutations,
+        headTable: database.realGoalMutationHeads,
+        accountUserId: ACCOUNT,
+        operation: 'delete',
+        entityId: 'goal-1',
+        parentMutationId: anchor.mutationId,
+        marker: createDeletedDeletionRecord(
+          { entityType: 'goal', entityId: 'goal-1' },
+          '2099-01-01T00:00:00.000Z',
+        ),
+      });
+      const staleValue = goal(12_000, '2100-01-01T00:00:00.000Z');
+      const staleRestore = await appendRealGoalMutation({
+        database,
+        mutationTable: database.realGoalMutations,
+        headTable: database.realGoalMutationHeads,
+        accountUserId: ACCOUNT,
+        operation: 'restore',
+        entityId: staleValue.id,
+        parentMutationId: staleDelete.mutation.id,
+        goal: staleValue,
+        marker: restored(staleValue),
+      });
+
+      expect(staleDelete.headAdvanced).toBe(false);
+      expect(staleRestore.headAdvanced).toBe(false);
+      expect(await database.realGoalMutationHeads.get(anchor.id))
+        .toMatchObject({ mutationId: accepted.mutation.id });
+      expect(await database.realGoalMutations.get(staleDelete.mutation.id))
+        .toBeDefined();
+      expect(await database.realGoalMutations.get(staleRestore.mutation.id))
+        .toBeDefined();
+    } finally {
+      await database.delete();
+    }
+  });
+
+  it('refuse de rendre autoritaire un head privé ou appartenant à un autre compte', () => {
+    const value = goal(10_000);
+    const mutation: RealGoalMutationRecord = {
+      id: '#mutation',
       accountUserId: ACCOUNT,
-      actorId: 'persistent-device',
-      session: onlineSession,
+      entityId: value.id,
       operation: 'update',
-      entityId: 'goal-1',
-      goal: goal(11_000, '2026-08-20T12:30:01.000Z'),
-      marker: createRestoredDeletionRecord(
-        { entityType: 'goal', entityId: 'goal-1' },
-        '2026-08-20T12:30:01.000Z',
-        '2026-08-20T08:00:00.000Z',
-      ),
-      now: () => new Date('2026-08-20T12:30:01.000Z').getTime(),
-    });
-    firstDatabase.close();
-
-    const reopenedDatabase = new JournalTestDatabase(databaseName);
-    await reopenedDatabase.open();
-    try {
-      const offlinePersistedSession = {
-        lastLogin: new Date(Number.NaN),
-      };
-      const second = await appendRealGoalMutation({
-        mutationTable: reopenedDatabase.realGoalMutations,
-        clockTable: reopenedDatabase.realGoalMutationClocks,
+      goal: value,
+      marker: restored(value),
+      parentMutationId: '#parent',
+      causalVersion: 1,
+    };
+    const resolved = resolveRealGoalMutationJournal(
+      [mutation],
+      [{
+        id: '#private-head',
         accountUserId: ACCOUNT,
-        actorId: 'persistent-device',
-        session: offlinePersistedSession,
-        operation: 'update',
-        entityId: 'goal-1',
-        goal: goal(12_000, '2026-08-20T12:30:01.000Z'),
-        marker: createRestoredDeletionRecord(
-          { entityType: 'goal', entityId: 'goal-1' },
-          '2026-08-20T12:30:01.000Z',
-          '2026-08-20T08:00:00.000Z',
-        ),
-        now: () => new Date('2026-08-20T12:30:01.000Z').getTime(),
-      });
-      const third = await appendRealGoalMutation({
-        mutationTable: reopenedDatabase.realGoalMutations,
-        clockTable: reopenedDatabase.realGoalMutationClocks,
-        accountUserId: ACCOUNT,
-        actorId: 'persistent-device',
-        session: offlinePersistedSession,
-        operation: 'update',
-        entityId: 'goal-1',
-        goal: goal(13_000, '2026-08-20T12:30:01.000Z'),
-        marker: createRestoredDeletionRecord(
-          { entityType: 'goal', entityId: 'goal-1' },
-          '2026-08-20T12:30:01.000Z',
-          '2026-08-20T08:00:00.000Z',
-        ),
-        now: () => new Date('2026-08-20T12:30:01.000Z').getTime(),
-      });
+        entityId: value.id,
+        mutationId: mutation.id,
+      }],
+      ACCOUNT,
+    );
 
-      expect(second.orderedAtMs).toBe(first.orderedAtMs);
-      expect(second.orderCounter).toBe(first.orderCounter + 1);
-      expect(third.orderCounter).toBe(second.orderCounter + 1);
-      expect([first.actorSequence, second.actorSequence, third.actorSequence])
-        .toEqual([1, 2, 3]);
-    } finally {
-      await reopenedDatabase.delete();
-    }
+    expect(resolved.authoritativeEntityIds.size).toBe(0);
+    expect(resolved.winners.size).toBe(0);
   });
 
-  it('renouvelle la calibration publique sans retour HLC lors d’un refresh token', async () => {
-    const database = new JournalTestDatabase();
-    await database.open();
-    try {
-      const first = await appendRealGoalMutation({
-        mutationTable: database.realGoalMutations,
-        clockTable: database.realGoalMutationClocks,
-        accountUserId: ACCOUNT,
-        actorId: 'refresh-device',
-        session: {
-          lastLogin: new Date('2026-08-20T12:30:00.000Z'),
-          accessTokenExpiration: new Date('2026-08-20T14:00:00.000Z'),
-        },
-        operation: 'update',
-        entityId: 'goal-1',
-        goal: goal(10_000, '2026-08-20T12:30:10.000Z'),
-        marker: createRestoredDeletionRecord(
-          { entityType: 'goal', entityId: 'goal-1' },
-          '2026-08-20T12:30:10.000Z',
-          '2026-08-20T08:00:00.000Z',
-        ),
-        now: () => new Date('2026-08-20T12:30:10.000Z').getTime(),
-      });
-      const refreshed = await appendRealGoalMutation({
-        mutationTable: database.realGoalMutations,
-        clockTable: database.realGoalMutationClocks,
-        accountUserId: ACCOUNT,
-        actorId: 'refresh-device',
-        session: {
-          lastLogin: new Date('2026-08-20T12:00:20.000Z'),
-          accessTokenExpiration: new Date('2026-08-20T14:00:20.000Z'),
-        },
-        operation: 'update',
-        entityId: 'goal-1',
-        goal: goal(20_000, '2026-08-20T12:00:20.000Z'),
-        marker: createRestoredDeletionRecord(
-          { entityType: 'goal', entityId: 'goal-1' },
-          '2026-08-20T12:00:20.000Z',
-          '2026-08-20T08:00:00.000Z',
-        ),
-        now: () => new Date('2026-08-20T12:00:20.000Z').getTime(),
-      });
-      const clock = await database.realGoalMutationClocks.toCollection().first();
+  it('échoue fermé devant deux états v17 divergents sans head', () => {
+    const first = goal(8_000);
+    const second = goal(55_000);
+    const legacy = [first, second].map((value, index): RealGoalMutationRecord => ({
+      id: `#legacy-${index}`,
+      accountUserId: ACCOUNT,
+      entityId: value.id,
+      operation: 'update',
+      goal: value,
+      marker: restored(value),
+      orderedAtMs: index,
+      orderCounter: 0,
+      actorId: String(index),
+      actorSequence: 1,
+      rawOccurredAt: value.updatedAt,
+      clockSource: 'dexie-auth-session-v1',
+      clockUncertaintyMs: 1_000,
+    }));
 
-      expect(compareRealGoalMutationOrder(refreshed, first)).toBe(1);
-      expect(refreshed.orderedAtMs).toBeGreaterThanOrEqual(first.orderedAtMs);
-      expect(clock?.calibratedFromLoginAt).toBe('2026-08-20T12:00:20.000Z');
-      expect(clock?.actorSequence).toBe(2);
-    } finally {
-      await database.delete();
-    }
-  });
-
-  it('reste monotone si l’horloge système avance puis recule fortement', async () => {
-    const database = new JournalTestDatabase();
-    await database.open();
-    try {
-      const common = {
-        mutationTable: database.realGoalMutations,
-        clockTable: database.realGoalMutationClocks,
-        accountUserId: ACCOUNT,
-        actorId: 'clock-change-device',
-        session: {
-          lastLogin: new Date('2026-08-20T12:00:00.000Z'),
-          accessTokenExpiration: new Date('2026-08-20T14:00:00.000Z'),
-        },
-        operation: 'update' as const,
-        entityId: 'goal-1',
-      };
-      const forward = await appendRealGoalMutation({
-        ...common,
-        goal: goal(10_000, '2027-08-20T12:00:00.000Z'),
-        marker: createRestoredDeletionRecord(
-          { entityType: 'goal', entityId: 'goal-1' },
-          '2027-08-20T12:00:00.000Z',
-          '2026-08-20T08:00:00.000Z',
-        ),
-        now: () => new Date('2027-08-20T12:00:00.000Z').getTime(),
-      });
-      const backward = await appendRealGoalMutation({
-        ...common,
-        goal: goal(20_000, '2025-08-20T12:00:00.000Z'),
-        marker: createRestoredDeletionRecord(
-          { entityType: 'goal', entityId: 'goal-1' },
-          '2025-08-20T12:00:00.000Z',
-          '2026-08-20T08:00:00.000Z',
-        ),
-        now: () => new Date('2025-08-20T12:00:00.000Z').getTime(),
-      });
-
-      expect(backward.orderedAtMs).toBe(forward.orderedAtMs);
-      expect(backward.orderCounter).toBe(forward.orderCounter + 1);
-      expect(compareRealGoalMutationOrder(backward, forward)).toBe(1);
-    } finally {
-      await database.delete();
-    }
-  });
-
-  it('départage une égalité entre acteurs et refuse sûrement toute première mutation non calibrée', async () => {
-    const left = mutation({
-      id: '#left',
-      actorId: 'actor-a',
-      targetValue: 10_000,
-      orderedAtMs: 42,
-      rawOccurredAt: '2026-08-20T12:00:00.000Z',
-    });
-    const right = mutation({
-      id: '#right',
-      actorId: 'actor-b',
-      targetValue: 20_000,
-      orderedAtMs: 42,
-      rawOccurredAt: '2026-08-20T12:00:00.000Z',
-    });
-    expect(compareRealGoalMutationOrder(right, left)).toBe(1);
-    expect(compareRealGoalMutationOrder(left, right)).toBe(-1);
-
-    const database = new JournalTestDatabase();
-    await database.open();
-    try {
-      await expect(appendRealGoalMutation({
-        mutationTable: database.realGoalMutations,
-        clockTable: database.realGoalMutationClocks,
-        accountUserId: ACCOUNT,
-        actorId: 'uncalibrated-device',
-        session: {
-          lastLogin: new Date(Number.NaN),
-        },
-        operation: 'update',
-        entityId: 'goal-1',
-        goal: goal(10_000, '2026-08-20T12:00:00.000Z'),
-        marker: createRestoredDeletionRecord(
-          { entityType: 'goal', entityId: 'goal-1' },
-          '2026-08-20T12:00:00.000Z',
-          '2026-08-20T08:00:00.000Z',
-        ),
-      })).rejects.toThrow('calibration temporelle Dexie Goals');
-      expect(await database.realGoalMutations.count()).toBe(0);
-      expect(await database.realGoalMutationClocks.count()).toBe(0);
-    } finally {
-      await database.delete();
-    }
+    expect(() => uniqueLegacyMutationState(legacy, ACCOUNT, 'goal-1'))
+      .toThrow('réconciliation explicite');
   });
 });

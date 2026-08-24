@@ -37,7 +37,7 @@ for (const path of [
 
 const cloudDatabase = read('src/infrastructure/sync-prototype/SyncPrototypeDatabase.ts');
 for (const expected of [
-  'SYNC_PROTOTYPE_DATABASE_VERSION = 17',
+  'SYNC_PROTOTYPE_DATABASE_VERSION = 18',
   "'sportpilot-sync-runtime-0.20.0-v16'",
   'disableEagerSync: true',
   'realWeights',
@@ -233,6 +233,6 @@ if (failures.length > 0) {
   process.exitCode = 1;
 } else {
   console.log(
-    'Audit du socle sportif réussi : Activities conserve ses contrats directionnels fail-closed, Goals journalise ses mutations concurrentes avant résolution, le fallback manuel reste disponible, les suppressions durables et agrégats Strength atomiques sont préservés, runtime cloud v17 validé.',
+    'Audit du socle sportif réussi : Activities conserve ses contrats directionnels fail-closed, Goals journalise ses mutations concurrentes avant résolution, le fallback manuel reste disponible, les suppressions durables et agrégats Strength atomiques sont préservés, runtime cloud v18 validé.',
   );
 }

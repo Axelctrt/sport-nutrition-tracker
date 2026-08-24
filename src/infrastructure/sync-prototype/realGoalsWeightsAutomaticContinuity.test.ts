@@ -725,7 +725,7 @@ describe('P0-V2.1 — continuité automatique Goals + Weights', () => {
     }
   });
 
-  it('compte legacy divergent : unknown → LWW automatique → baseline → writeGoalState suivant automatique', async () => {
+  it('compte legacy divergent : reste fail-closed sans bootstrap causal prouvable', async () => {
     const legacyLocal = new AppDatabase(
       `sportpilot-goals-gate-legacy-${crypto.randomUUID()}`,
     );
@@ -775,65 +775,8 @@ describe('P0-V2.1 — continuité automatique Goals + Weights', () => {
     try {
       await controller.initialize();
 
-      /*
-       * Aucun écran de choix : le cloud à 10:00 est plus récent
-       * que le local à 09:00 et doit gagner automatiquement.
-       */
-      await vi.waitFor(async () => {
-        expect(await previewRealGoalSync(
-          legacyLocal,
-          legacyCloud as unknown as SyncPrototypeDatabase,
-          ACCOUNT_USER_ID,
-        )).toMatchObject({
-          differingEntityCount: 0,
-        });
-
-        expect(await legacyLocal.goals.get('goal-legacy')).toMatchObject({
-          targetValue: 125_000,
-          updatedAt: '2026-08-17T10:00:00.000Z',
-        });
-
-        expect(await legacyCloud.realGoals.get('#goal-legacy')).toMatchObject({
-          targetValue: 125_000,
-          updatedAt: '2026-08-17T10:00:00.000Z',
-        });
-
-        expect(await legacyCloud.realSyncBaselines.get(
-          `${ACCOUNT_USER_ID}:goals:goals`,
-        )).toBeDefined();
-      });
-
-      /*
-       * La convergence unknown passe bien par le chemin merge-safe
-       * bidirectionnel.
-       */
-      expect(client.syncRealGoals).toHaveBeenCalled();
-
-      /*
-       * Une vraie mutation suivante doit reprendre le chemin
-       * automatique directionnel normal.
-       */
-      await initializeUserStateRuntime(legacyLocal);
-
-      const nextGoal = goal(
-        'goal-legacy',
-        140_000,
-        '2026-08-17T11:00:00.000Z',
-      );
-
-      writeGoalState({
-        version: 1,
-        goals: [nextGoal],
-      });
-      await flushGoalStatePersistence();
-
-      await vi.waitFor(async () => {
-        expect(
-          await legacyCloud.realGoals.get('#goal-legacy'),
-        ).toMatchObject({
-          targetValue: 140_000,
-          updatedAt: '2026-08-17T11:00:00.000Z',
-        });
+      await vi.waitFor(() => {
+        expect(client.syncRealGoals).toHaveBeenCalled();
       });
 
       expect(await previewRealGoalSync(
@@ -841,8 +784,21 @@ describe('P0-V2.1 — continuité automatique Goals + Weights', () => {
         legacyCloud as unknown as SyncPrototypeDatabase,
         ACCOUNT_USER_ID,
       )).toMatchObject({
-        differingEntityCount: 0,
+        differingEntityCount: 1,
+        changeOrigin: 'unknown',
       });
+
+      expect(await legacyLocal.goals.get('goal-legacy')).toMatchObject({
+        targetValue: 110_000,
+        updatedAt: '2026-08-17T09:00:00.000Z',
+      });
+      expect(await legacyCloud.realGoals.get('#goal-legacy')).toMatchObject({
+        targetValue: 125_000,
+        updatedAt: '2026-08-17T10:00:00.000Z',
+      });
+      expect(await legacyCloud.realSyncBaselines.get(
+        `${ACCOUNT_USER_ID}:goals:goals`,
+      )).toBeUndefined();
     } finally {
       controller.dispose();
       resetGoalStateRuntimeForTests();

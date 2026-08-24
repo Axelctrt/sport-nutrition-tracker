@@ -24,6 +24,7 @@ const CLOUD_TABLE_NAMES = [
   'realGoals',
   'realGoalDeletionRecords',
   'realGoalMutations',
+  'realGoalMutationHeads',
   'realStrengthExercises',
   'realWorkoutTemplates',
   'realWorkoutSessions',

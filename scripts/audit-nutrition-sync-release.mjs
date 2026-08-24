@@ -45,7 +45,7 @@ for (const path of [
 
 const cloudDatabase = read('src/infrastructure/sync-prototype/SyncPrototypeDatabase.ts');
 for (const expected of [
-  'SYNC_PROTOTYPE_DATABASE_VERSION = 17',
+  'SYNC_PROTOTYPE_DATABASE_VERSION = 18',
   "'sportpilot-sync-runtime-0.20.0-v16'",
   'disableEagerSync: true',
   'realNutritionJournalDays',
@@ -383,6 +383,6 @@ if (failures.length > 0) {
   process.exitCode = 1;
 } else {
   console.log(
-    'Audit final de synchronisation nutritionnelle réussi : Journal/Library/Tracking automatiques A→B, chaînages Journal, restaurations Corbeille, hardening des dix domaines, intégrité Nutrition et runtime cloud v17 validés sans modification des formules.',
+    'Audit final de synchronisation nutritionnelle réussi : Journal/Library/Tracking automatiques A→B, chaînages Journal, restaurations Corbeille, hardening des dix domaines, intégrité Nutrition et runtime cloud v18 validés sans modification des formules.',
   );
 }

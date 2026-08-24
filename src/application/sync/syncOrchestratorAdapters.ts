@@ -116,10 +116,9 @@ async function analyzeGoalsWithFreshCloudBarrier(
   // Make the local database authoritative before any provenance decision.
   await flushGoalStatePersistence();
 
-  // The local mutation has already been staged into the Dexie Cloud replica by
-  // AutomaticSyncCoordinator. The transport cycle can therefore let Dexie
-  // reconcile its queued operation using native client/server clock skew before
-  // SportPilot decides which side changed relative to the device-local baseline.
+  // The local mutation and its causal parent have already been staged into the
+  // Dexie Cloud replica by AutomaticSyncCoordinator. Transport lets the server
+  // execute the declarative head CAS before SportPilot reads the accepted head.
   await client.syncNow();
   return client.analyzeRealGoals!();
 }

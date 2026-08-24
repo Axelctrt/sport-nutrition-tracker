@@ -146,7 +146,7 @@ function goalsAdapter(client: SyncPrototypeClient) {
   return adapter;
 }
 
-describe('Goals — Dexie native clock-skew reconciliation drives the bridge', () => {
+describe('Goals — le gagnant déjà matérialisé par le transport pilote le bridge', () => {
   let local: AppDatabase;
   let cloud: TestCloudDatabase;
 
@@ -201,10 +201,9 @@ describe('Goals — Dexie native clock-skew reconciliation drives the bridge', (
     });
 
     /*
-     * B modifie réellement plus tard, mais son PC a une horloge murale en
-     * retard. Après transport, Dexie Cloud a déjà compensé le skew et choisi
-     * l'opération B. On simule ici ce résultat natif dans le replica : 55000
-     * est le gagnant transport malgré un Goal.updatedAt brut inférieur à A.
+     * Le transport a déjà matérialisé 55000 comme état cloud accepté. On
+     * vérifie ici que le bridge suit cet état sans réordonner les deux valeurs
+     * avec leur Goal.updatedAt brut contradictoire.
      */
     const newerRealWorldBWithStaleClock = goal(
       55_000,

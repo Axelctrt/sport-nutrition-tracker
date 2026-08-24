@@ -219,7 +219,7 @@ if (failures.length === 0) {
   const cloud = read('src/infrastructure/sync-prototype/SyncPrototypeDatabase.ts');
   if (!/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_12\b/.test(versions)) fail('Dexie doit utiliser la v12.');
   if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*10\b/.test(backup)) fail('la sauvegarde JSON doit rester en v10.');
-  if (!cloud.includes('SYNC_PROTOTYPE_DATABASE_VERSION = 17')) fail('le runtime cloud doit utiliser la v17.');
+  if (!cloud.includes('SYNC_PROTOTYPE_DATABASE_VERSION = 18')) fail('le runtime cloud doit utiliser la v18.');
 }
 
 if (failures.length > 0) {

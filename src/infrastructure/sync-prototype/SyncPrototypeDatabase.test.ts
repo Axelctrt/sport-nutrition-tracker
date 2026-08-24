@@ -32,7 +32,7 @@ describe('base isolée du prototype Dexie Cloud', () => {
     expect(SYNC_PROTOTYPE_DATABASE_NAME).not.toBe(
       LEGACY_SYNC_PROTOTYPE_DATABASE_NAME,
     );
-    expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(17);
+    expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(18);
     expect(SYNC_PROTOTYPE_DATABASE_NAME).toBe(
       'sportpilot-sync-runtime-0.20.0-v16',
     );
@@ -50,6 +50,7 @@ describe('base isolée du prototype Dexie Cloud', () => {
       'realGoals',
       'realGoalDeletionRecords',
       'realGoalMutations',
+      'realGoalMutationHeads',
       'realGoalMutationClocks',
       'realStrengthExercises',
       'realWorkoutTemplates',
@@ -100,6 +101,8 @@ describe('base isolée du prototype Dexie Cloud', () => {
     expect(database.table('realGoals').schema.primKey.keyPath).toBe('id');
     expect(database.table('realGoalDeletionRecords').schema.primKey.keyPath).toBe('id');
     expect(database.table('realGoalMutations').schema.primKey.keyPath).toBe('id');
+    expect(database.table('realGoalMutationHeads').schema.primKey.keyPath).toBe('id');
+    expect(database.table('realGoalMutationHeads').schema.idxByName['[entityId+mutationId]']).toBeDefined();
     expect(database.table('realGoalMutationClocks').schema.primKey.keyPath).toBe('id');
     expect(database.table('realStrengthExercises').schema.primKey.keyPath).toBe('id');
     expect(database.table('realWorkoutTemplates').schema.primKey.keyPath).toBe('id');
@@ -138,8 +141,8 @@ describe('base isolée du prototype Dexie Cloud', () => {
     database.close();
   });
 
-  it('migre le runtime v16 en v17 sans changer son nom ni perdre ses lignes', async () => {
-    const databaseName = `sportpilot-sync-v16-v17-${crypto.randomUUID()}`;
+  it('migre le runtime v16 en v18 sans changer son nom ni perdre ses lignes', async () => {
+    const databaseName = `sportpilot-sync-v16-v18-${crypto.randomUUID()}`;
     const persistedDatabaseName = `${databaseName}-sportpilot-prototype`;
     const legacy = new Dexie(persistedDatabaseName);
     legacy.version(16).stores({
@@ -212,7 +215,7 @@ describe('base isolée du prototype Dexie Cloud', () => {
     const migrated = new SyncPrototypeDatabase(enabledConfig, databaseName);
     try {
       await migrated.open();
-      expect(migrated.verno).toBe(17);
+      expect(migrated.verno).toBe(18);
       expect(await migrated.realGoals.get('#goal-before-v17')).toMatchObject({
         targetValue: 10_000,
       });
@@ -227,9 +230,61 @@ describe('base isolée du prototype Dexie Cloud', () => {
       expect(await migrated.realSyncBaselines.get('account:goals:goals'))
         .toMatchObject({ revision: 4, actorId: 'legacy-device' });
       expect(await migrated.realGoalMutations.count()).toBe(0);
+      expect(await migrated.realGoalMutationHeads.count()).toBe(0);
       expect(await migrated.realGoalMutationClocks.count()).toBe(0);
       expect(migrated.realGoalMutations.schema.primKey.keyPath).toBe('id');
+      expect(migrated.realGoalMutationHeads.schema.primKey.keyPath).toBe('id');
       expect(migrated.realGoalMutationClocks.schema.primKey.keyPath).toBe('id');
+    } finally {
+      fetcher.mockRestore();
+      online.mockRestore();
+      await migrated.delete();
+    }
+  });
+
+  it('migre v17 vers v18 additivement sans réécrire journal ni clock legacy', async () => {
+    const databaseName = `sportpilot-sync-v17-v18-${crypto.randomUUID()}`;
+    const persistedDatabaseName = `${databaseName}-sportpilot-prototype`;
+    const legacy = new Dexie(persistedDatabaseName);
+    legacy.version(17).stores({
+      realGoalMutations:
+        'id, accountUserId, entityId, orderedAtMs, [accountUserId+entityId]',
+      realGoalMutationClocks: 'id, accountUserId, actorId',
+    });
+    await legacy.open();
+    await legacy.table('realGoalMutations').put({
+      id: '#legacy-v17-mutation',
+      accountUserId: 'account',
+      entityId: 'goal-1',
+      operation: 'update',
+      orderedAtMs: 42,
+    });
+    await legacy.table('realGoalMutationClocks').put({
+      id: 'account:goals:device-a',
+      accountUserId: 'account',
+      actorId: 'device-a',
+      lastOrderedAtMs: 42,
+    });
+    legacy.close();
+
+    const online = vi.spyOn(window.navigator, 'onLine', 'get')
+      .mockReturnValue(false);
+    const fetcher = vi.spyOn(globalThis, 'fetch')
+      .mockRejectedValue(new TypeError('offline migration test'));
+    const migrated = new SyncPrototypeDatabase(enabledConfig, databaseName);
+    try {
+      await migrated.open();
+      expect(migrated.verno).toBe(18);
+      expect(await migrated.realGoalMutations.get('#legacy-v17-mutation'))
+        .toMatchObject({ orderedAtMs: 42 });
+      expect(await migrated.realGoalMutationClocks
+        .get('account:goals:device-a'))
+        .toMatchObject({ lastOrderedAtMs: 42 });
+      expect(await migrated.realGoalMutationHeads.count()).toBe(0);
+      expect(migrated.realGoalMutations.schema.idxByName.parentMutationId)
+        .toBeDefined();
+      expect(migrated.realGoalMutationHeads.schema.idxByName['[entityId+mutationId]'])
+        .toBeDefined();
     } finally {
       fetcher.mockRestore();
       online.mockRestore();

@@ -30,7 +30,7 @@ describe('préparation de la release sociale cloud 0.28.0', () => {
       ]),
     );
     expect(SOCIAL_CLOUD_REQUIRED_COLLECTIONS).not.toContain('socialRawActivities');
-    expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(17);
+    expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(18);
   });
 
   it('garde les interactions sociales hors périmètre', () => {

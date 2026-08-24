@@ -915,8 +915,21 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
     this.assertCloudUserId(currentUserId);
   }
 
+  private async stageRealGoalsBeforeTransport(): Promise<void> {
+    if (!this.realGoalSyncEnabled) return;
+    const currentUserId = this.database.cloud.currentUserId;
+    if (!currentUserId || this.snapshot.account.userId !== currentUserId) return;
+    await stageRealGoalsMutationInLocalCloudReplica(
+      this.localDatabase,
+      this.database,
+      currentUserId,
+    );
+    this.assertCloudUserId(currentUserId);
+  }
+
   async syncNow(): Promise<void> {
     await this.initialize();
+    await this.stageRealGoalsBeforeTransport();
     await this.syncCloudForCurrentAccount();
     await this.refreshWeights();
   }
@@ -1259,6 +1272,7 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
     this.notify();
 
     try {
+      await this.stageRealGoalsBeforeTransport();
       const currentUserId = await this.syncCloudForCurrentAccount();
       const result = await synchronizeRealGoals(
         this.localDatabase,

@@ -1,26 +1,25 @@
-import type { Table } from 'dexie';
-import type { UserLogin } from 'dexie-cloud-addon';
+import Dexie, { type Table } from 'dexie';
 import type { Goal } from '@/domain/goals/goalState';
 import type { DeletionRecord } from '@/domain/models/deletion';
 import type { SyncPrototypeDatabase } from '@/infrastructure/sync-prototype/SyncPrototypeDatabase';
 import {
   belongsToCurrentUser,
+  sameEntity,
+  stableValue,
   type CloudOwned,
 } from '@/infrastructure/sync-prototype/cloudSyncValue';
 import { createEntityId } from '@/shared/utils/entities';
 
 export type RealGoalMutationOperation =
+  | 'anchor'
   | 'create'
   | 'update'
   | 'delete'
   | 'restore';
 
 /**
- * Immutable, independently replicated description of one Goals mutation.
- *
- * `orderedAtMs` is not the raw device clock. It is calibrated from the Dexie
- * authentication session. `orderCounter` is the logical part of the HLC and
- * only advances when the calibrated physical part cannot advance.
+ * Immutable Goals intent. The v17 clock fields remain readable solely for
+ * migration diagnostics. They never participate in v18 winner selection.
  */
 export interface RealGoalMutationRecord {
   readonly id: string;
@@ -29,15 +28,18 @@ export interface RealGoalMutationRecord {
   readonly operation: RealGoalMutationOperation;
   readonly goal?: Goal;
   readonly marker?: DeletionRecord;
-  readonly orderedAtMs: number;
-  readonly orderCounter: number;
-  readonly actorId: string;
-  readonly actorSequence: number;
-  readonly rawOccurredAt: string;
-  readonly clockSource: 'dexie-auth-session-v1';
-  readonly clockUncertaintyMs: number;
+  readonly parentMutationId?: string;
+  readonly causalVersion?: 1;
+  readonly orderedAtMs?: number;
+  readonly orderCounter?: number;
+  readonly actorId?: string;
+  readonly actorSequence?: number;
+  readonly rawOccurredAt?: string;
+  readonly clockSource?: 'dexie-auth-session-v1';
+  readonly clockUncertaintyMs?: number;
 }
 
+/** Legacy local-only v17 state retained for additive migration only. */
 export interface RealGoalMutationClockState {
   readonly id: string;
   readonly accountUserId: string;
@@ -51,19 +53,60 @@ export interface RealGoalMutationClockState {
   readonly actorSequence: number;
 }
 
+export interface RealGoalMutationHead {
+  readonly id: string;
+  readonly accountUserId: string;
+  readonly entityId: string;
+  readonly mutationId: string;
+}
+
 export interface ResolvedRealGoalMutationState {
   readonly goals: readonly Goal[];
   readonly markers: readonly DeletionRecord[];
   readonly authoritativeEntityIds: ReadonlySet<string>;
+  readonly incompleteEntityIds: ReadonlySet<string>;
+  readonly legacyJournalEntityIds: ReadonlySet<string>;
   readonly winners: ReadonlyMap<string, RealGoalMutationRecord>;
 }
 
-type DexieCloudSessionClock = Pick<
-  UserLogin,
-  'lastLogin' | 'accessTokenExpiration'
->;
+const FNV_OFFSET_A = 0xcbf29ce484222325n;
+const FNV_OFFSET_B = 0x84222325cbf29ce4n;
+const FNV_PRIME = 0x100000001b3n;
+const UINT64_MASK = 0xffffffffffffffffn;
 
-const CLOCK_UNCERTAINTY_MS = 1_000;
+function fnv1a64(value: string, offset: bigint): string {
+  let hash = offset;
+  for (const byte of new TextEncoder().encode(value)) {
+    hash ^= BigInt(byte);
+    hash = (hash * FNV_PRIME) & UINT64_MASK;
+  }
+  return hash.toString(16).padStart(16, '0');
+}
+
+function deterministicKey(value: string): string {
+  return `${fnv1a64(value, FNV_OFFSET_A)}${fnv1a64(value, FNV_OFFSET_B)}`;
+}
+
+export function realGoalMutationHeadId(
+  accountUserId: string,
+  entityId: string,
+): string {
+  return `goal-head-${deterministicKey(`${accountUserId}\u0000${entityId}`)}`;
+}
+
+export function realGoalMutationAnchorId(input: {
+  readonly accountUserId: string;
+  readonly entityId: string;
+  readonly goal?: Goal;
+  readonly marker?: DeletionRecord;
+}): string {
+  return `#goal-anchor-${deterministicKey(stableValue({
+    accountUserId: input.accountUserId,
+    entityId: input.entityId,
+    goal: input.goal,
+    marker: input.marker,
+  }))}`;
+}
 
 export function realGoalMutationTable(
   cloudDatabase: SyncPrototypeDatabase,
@@ -71,6 +114,18 @@ export function realGoalMutationTable(
   try {
     return cloudDatabase.table<RealGoalMutationRecord, string>(
       'realGoalMutations',
+    );
+  } catch {
+    return undefined;
+  }
+}
+
+export function realGoalMutationHeadTable(
+  cloudDatabase: SyncPrototypeDatabase,
+): Table<RealGoalMutationHead, string> | undefined {
+  try {
+    return cloudDatabase.table<RealGoalMutationHead, string>(
+      'realGoalMutationHeads',
     );
   } catch {
     return undefined;
@@ -89,24 +144,6 @@ export function realGoalMutationClockTable(
   }
 }
 
-export function compareRealGoalMutationOrder(
-  left: RealGoalMutationRecord,
-  right: RealGoalMutationRecord,
-): number {
-  if (left.orderedAtMs !== right.orderedAtMs) {
-    return left.orderedAtMs > right.orderedAtMs ? 1 : -1;
-  }
-  if (left.orderCounter !== right.orderCounter) {
-    return left.orderCounter > right.orderCounter ? 1 : -1;
-  }
-  const actorOrder = left.actorId.localeCompare(right.actorId);
-  if (actorOrder !== 0) return actorOrder;
-  if (left.actorSequence !== right.actorSequence) {
-    return left.actorSequence > right.actorSequence ? 1 : -1;
-  }
-  return left.id.localeCompare(right.id);
-}
-
 function isValidMutation(
   mutation: CloudOwned<RealGoalMutationRecord>,
   currentUserId: string,
@@ -114,14 +151,8 @@ function isValidMutation(
   if (
     !belongsToCurrentUser(mutation, currentUserId)
     || mutation.accountUserId !== currentUserId
+    || !mutation.id?.startsWith('#')
     || !mutation.entityId
-    || !Number.isSafeInteger(mutation.orderedAtMs)
-    || mutation.orderedAtMs < 0
-    || !Number.isSafeInteger(mutation.orderCounter)
-    || mutation.orderCounter < 0
-    || !Number.isSafeInteger(mutation.actorSequence)
-    || mutation.actorSequence < 1
-    || !mutation.actorId
   ) {
     return false;
   }
@@ -131,25 +162,63 @@ function isValidMutation(
       && mutation.marker.entityId === mutation.entityId
       && mutation.marker.status === 'deleted';
   }
+  if (mutation.operation === 'anchor') {
+    return mutation.causalVersion === 1
+      && (!mutation.goal || mutation.goal.id === mutation.entityId)
+      && (!mutation.marker || (
+        mutation.marker.entityType === 'goal'
+        && mutation.marker.entityId === mutation.entityId
+      ));
+  }
   return mutation.goal?.id === mutation.entityId
     && mutation.marker?.entityType === 'goal'
     && mutation.marker.entityId === mutation.entityId
     && mutation.marker.status === 'restored';
 }
 
+function isValidHead(
+  head: CloudOwned<RealGoalMutationHead>,
+  currentUserId: string,
+): head is CloudOwned<RealGoalMutationHead> {
+  return belongsToCurrentUser(head, currentUserId)
+    && head.accountUserId === currentUserId
+    && Boolean(head.entityId)
+    && Boolean(head.mutationId)
+    && !head.id.startsWith('#')
+    && head.id === realGoalMutationHeadId(currentUserId, head.entityId);
+}
+
 export function resolveRealGoalMutationJournal(
   mutations: readonly CloudOwned<RealGoalMutationRecord>[],
+  heads: readonly CloudOwned<RealGoalMutationHead>[],
   currentUserId: string,
 ): ResolvedRealGoalMutationState {
+  const validMutations = mutations.filter((mutation) =>
+    isValidMutation(mutation, currentUserId));
+  const mutationById = new Map(validMutations.map((mutation) => [
+    mutation.id,
+    mutation,
+  ]));
   const winners = new Map<string, RealGoalMutationRecord>();
-  for (const mutation of mutations) {
-    if (!isValidMutation(mutation, currentUserId)) continue;
-    const current = winners.get(mutation.entityId);
-    if (!current || compareRealGoalMutationOrder(mutation, current) > 0) {
-      winners.set(mutation.entityId, mutation);
+  const authoritativeEntityIds = new Set<string>();
+  const incompleteEntityIds = new Set<string>();
+
+  for (const head of heads) {
+    if (!isValidHead(head, currentUserId)) continue;
+    authoritativeEntityIds.add(head.entityId);
+    const mutation = mutationById.get(head.mutationId);
+    if (!mutation || mutation.entityId !== head.entityId) {
+      incompleteEntityIds.add(head.entityId);
+      continue;
     }
+    winners.set(head.entityId, mutation);
   }
 
+  const legacyJournalEntityIds = new Set(
+    validMutations
+      .map((mutation) => mutation.entityId)
+      .filter((entityId) => !authoritativeEntityIds.has(entityId)),
+  );
   const goals: Goal[] = [];
   const markers: DeletionRecord[] = [];
   for (const winner of winners.values()) {
@@ -162,142 +231,123 @@ export function resolveRealGoalMutationJournal(
   return {
     goals,
     markers,
-    authoritativeEntityIds: new Set(winners.keys()),
+    authoritativeEntityIds,
+    incompleteEntityIds,
+    legacyJournalEntityIds,
     winners,
   };
 }
 
-function clockStateId(accountUserId: string, actorId: string): string {
-  return `${accountUserId}:goals:${actorId}`;
-}
-
-function sessionCalibration(
-  session: DexieCloudSessionClock,
-): Pick<
-  RealGoalMutationClockState,
-  | 'clockOffsetMs'
-  | 'calibratedFromLoginAt'
-  | 'calibratedFromTokenExpiration'
-  | 'clockUncertaintyMs'
-> | undefined {
-  const lastLoginMs = session.lastLogin?.getTime();
-  const tokenExpirationMs = session.accessTokenExpiration?.getTime();
-  if (
-    !Number.isFinite(lastLoginMs)
-    || !Number.isFinite(tokenExpirationMs)
-  ) {
-    return undefined;
-  }
-  return {
-    clockOffsetMs: Number(tokenExpirationMs) - Number(lastLoginMs),
-    calibratedFromLoginAt: new Date(Number(lastLoginMs)).toISOString(),
-    calibratedFromTokenExpiration:
-      new Date(Number(tokenExpirationMs)).toISOString(),
-    clockUncertaintyMs: CLOCK_UNCERTAINTY_MS,
-  };
-}
-
-function resolveClockState(
-  accountUserId: string,
-  actorId: string,
-  session: DexieCloudSessionClock,
-  previous?: RealGoalMutationClockState,
-): RealGoalMutationClockState {
-  if (
-    previous
-    && (
-      previous.accountUserId !== accountUserId
-      || previous.actorId !== actorId
-    )
-  ) {
+export function uniqueLegacyMutationState(
+  mutations: readonly CloudOwned<RealGoalMutationRecord>[],
+  currentUserId: string,
+  entityId: string,
+): Pick<RealGoalMutationRecord, 'goal' | 'marker' | 'operation'> | undefined {
+  const candidates = mutations.filter((mutation) =>
+    mutation.entityId === entityId && isValidMutation(mutation, currentUserId));
+  if (candidates.length === 0) return undefined;
+  const first = candidates[0]!;
+  if (!candidates.every((candidate) => sameEntity(
+    { goal: candidate.goal, marker: candidate.marker },
+    { goal: first.goal, marker: first.marker },
+  ))) {
     throw new Error(
-      'La calibration Goals appartient à un autre compte ou appareil.',
-    );
-  }
-  const calibration = sessionCalibration(session);
-  if (!calibration && !previous) {
-    throw new Error(
-      'La calibration temporelle Dexie Goals est indisponible. La mutation locale reste dans AppDB et devra être restagée après authentification.',
+      'Le journal Goals v17 contient plusieurs états sans head causal. Une réconciliation explicite est requise.',
     );
   }
   return {
-    id: clockStateId(accountUserId, actorId),
-    accountUserId,
-    actorId,
-    ...(previous ?? {
-      lastOrderedAtMs: 0,
-      lastOrderCounter: 0,
-      actorSequence: 0,
-    }),
-    ...(calibration ?? {}),
-  } as RealGoalMutationClockState;
-}
-
-function createClockState(
-  accountUserId: string,
-  actorId: string,
-  session: DexieCloudSessionClock,
-): RealGoalMutationClockState {
-  return {
-    ...resolveClockState(accountUserId, actorId, session),
-    lastOrderedAtMs: 0,
-    lastOrderCounter: 0,
-    actorSequence: 0,
+    operation: first.operation,
+    ...(first.goal ? { goal: first.goal } : {}),
+    ...(first.marker ? { marker: first.marker } : {}),
   };
 }
 
-export async function appendRealGoalMutation(input: {
+export async function bootstrapRealGoalMutationHead(input: {
+  readonly database: Dexie;
   readonly mutationTable: Table<RealGoalMutationRecord, string>;
-  readonly clockTable: Table<RealGoalMutationClockState, string>;
+  readonly headTable: Table<RealGoalMutationHead, string>;
   readonly accountUserId: string;
-  readonly actorId: string;
-  readonly session: DexieCloudSessionClock;
-  readonly operation: RealGoalMutationOperation;
   readonly entityId: string;
   readonly goal?: Goal;
   readonly marker?: DeletionRecord;
-  readonly now?: () => number;
-}): Promise<RealGoalMutationRecord> {
-  const id = clockStateId(input.accountUserId, input.actorId);
-  const stored = await input.clockTable.get(id);
-  const previous = stored
-    ? resolveClockState(
-      input.accountUserId,
-      input.actorId,
-      input.session,
-      stored,
-    )
-    : createClockState(input.accountUserId, input.actorId, input.session);
+}): Promise<RealGoalMutationHead> {
+  const headId = realGoalMutationHeadId(input.accountUserId, input.entityId);
+  const anchorId = realGoalMutationAnchorId(input);
+  const anchor: RealGoalMutationRecord = {
+    id: anchorId,
+    accountUserId: input.accountUserId,
+    entityId: input.entityId,
+    operation: 'anchor',
+    ...(input.goal ? { goal: structuredClone(input.goal) } : {}),
+    ...(input.marker ? { marker: structuredClone(input.marker) } : {}),
+    causalVersion: 1,
+  };
+  const head: RealGoalMutationHead = {
+    id: headId,
+    accountUserId: input.accountUserId,
+    entityId: input.entityId,
+    mutationId: anchorId,
+  };
 
-  const rawNowMs = input.now?.() ?? Date.now();
-  const calibratedNowMs = Math.round(rawNowMs + previous.clockOffsetMs);
-  const orderedAtMs = Math.max(calibratedNowMs, previous.lastOrderedAtMs);
-  const orderCounter = calibratedNowMs > previous.lastOrderedAtMs
-    ? 0
-    : previous.lastOrderCounter + 1;
-  const actorSequence = previous.actorSequence + 1;
+  await input.database.transaction(
+    'rw',
+    [input.mutationTable, input.headTable],
+    async () => {
+      const existing = await input.headTable.get(headId);
+      if (existing) {
+        if (!sameEntity(existing, head)) {
+          throw new Error(
+            'Le head causal Goals existe avec une baseline différente. Réconciliation requise.',
+          );
+        }
+        return;
+      }
+      await input.mutationTable.put(anchor);
+      await input.headTable.put(head);
+    },
+  );
+  return head;
+}
+
+export async function appendRealGoalMutation(input: {
+  readonly database: Dexie;
+  readonly mutationTable: Table<RealGoalMutationRecord, string>;
+  readonly headTable: Table<RealGoalMutationHead, string>;
+  readonly accountUserId: string;
+  readonly operation: RealGoalMutationOperation;
+  readonly entityId: string;
+  readonly parentMutationId: string;
+  readonly goal?: Goal;
+  readonly marker?: DeletionRecord;
+}): Promise<{
+  readonly mutation: RealGoalMutationRecord;
+  readonly headAdvanced: boolean;
+}> {
+  if (!input.parentMutationId) {
+    throw new Error('Le parent causal Goals est requis.');
+  }
   const mutation: RealGoalMutationRecord = {
-    id: `#goal-mutation-${input.actorId}-${actorSequence}-${createEntityId()}`,
+    id: `#goal-mutation-${createEntityId()}`,
     accountUserId: input.accountUserId,
     entityId: input.entityId,
     operation: input.operation,
     ...(input.goal ? { goal: structuredClone(input.goal) } : {}),
     ...(input.marker ? { marker: structuredClone(input.marker) } : {}),
-    orderedAtMs,
-    orderCounter,
-    actorId: input.actorId,
-    actorSequence,
-    rawOccurredAt: new Date(rawNowMs).toISOString(),
-    clockSource: 'dexie-auth-session-v1',
-    clockUncertaintyMs: previous.clockUncertaintyMs,
+    parentMutationId: input.parentMutationId,
+    causalVersion: 1,
   };
+  let modified = 0;
 
-  await input.mutationTable.add(mutation);
-  await input.clockTable.put({
-    ...previous,
-    lastOrderedAtMs: orderedAtMs,
-    lastOrderCounter: orderCounter,
-    actorSequence,
-  });
-  return mutation;
+  await input.database.transaction(
+    'rw',
+    [input.mutationTable, input.headTable],
+    async () => {
+      await input.mutationTable.add(mutation);
+      modified = await input.headTable
+        .where('[entityId+mutationId]')
+        .equals([input.entityId, input.parentMutationId])
+        .modify({ mutationId: mutation.id });
+    },
+  );
+  return { mutation, headAdvanced: modified === 1 };
 }

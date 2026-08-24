@@ -70,6 +70,20 @@ describe('remote account cloud purge', () => {
         actorId: 'device-b',
       },
     ] as never);
+    await database.table('realGoalMutationHeads').bulkPut([
+      {
+        id: 'goal-head-current',
+        accountUserId: 'account-user',
+        entityId: 'goal-1',
+        owner: 'account-user',
+      },
+      {
+        id: 'goal-head-other',
+        accountUserId: 'other-user',
+        entityId: 'goal-2',
+        owner: 'other-user',
+      },
+    ] as never);
     await database.table('realSyncBaselines').bulkPut([
       {
         id: 'account-user:goals:goals',
@@ -104,13 +118,16 @@ describe('remote account cloud purge', () => {
       'account-user',
     );
 
-    expect(result.deletedCloudRecords).toBe(3);
+    expect(result.deletedCloudRecords).toBe(4);
     expect(await database.table('realWeights').count()).toBe(0);
     expect(await database.table('socialFriendships').toArray()).toEqual([
       expect.objectContaining({ id: 'friendship-other' }),
     ]);
     expect(await database.table('realGoalMutations').toArray()).toEqual([
       expect.objectContaining({ id: '#goal-mutation-other' }),
+    ]);
+    expect(await database.table('realGoalMutationHeads').toArray()).toEqual([
+      expect.objectContaining({ id: 'goal-head-other' }),
     ]);
     expect(await database.table('realGoalMutationClocks').toArray()).toEqual([
       expect.objectContaining({ id: 'other-user:goals:device-b' }),

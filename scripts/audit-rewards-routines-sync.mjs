@@ -53,7 +53,7 @@ if (failures.length === 0) {
 
   const database = read('src/infrastructure/sync-prototype/SyncPrototypeDatabase.ts');
   for (const marker of [
-    'SYNC_PROTOTYPE_DATABASE_VERSION = 17',
+    'SYNC_PROTOTYPE_DATABASE_VERSION = 18',
     "'realRewardsRoutines'",
     "realRewardsRoutines: 'id, updatedAt'",
   ]) {
@@ -133,5 +133,5 @@ if (failures.length > 0) {
 }
 
 console.log(
-  'Audit E2 réussi : badges, thèmes, missions et rappels fusionnés sans perte, préférences horodatées séparément, restauration initiale, isolation et runtime cloud v17 validés.',
+  'Audit E2 réussi : badges, thèmes, missions et rappels fusionnés sans perte, préférences horodatées séparément, restauration initiale, isolation et runtime cloud v18 validés.',
 );

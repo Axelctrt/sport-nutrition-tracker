@@ -130,48 +130,27 @@ describe('synchronisation sûre des objectifs réels', () => {
     expect(await cloud.realSyncBaselines.count()).toBe(1);
   });
 
-  it('résout automatiquement unknown sans baseline par LWW puis établit la baseline', async () => {
+  it('refuse unknown sans baseline ni head causal', async () => {
     const localGoal = goal(
       'goal-unknown',
       '2026-07-01T09:00:00.000Z',
     );
     await local.goals.add(localGoal);
 
-    const result = await synchronizeRealGoals(
+    await expect(synchronizeRealGoals(
       local,
       cloud as unknown as SyncPrototypeDatabase,
       USER_ID,
-    );
-
-    expect(result).toMatchObject({
-      changeOrigin: 'unknown',
-      uploadedGoals: 1,
-      downloadedGoals: 0,
-      removedLocalGoals: 0,
-      removedCloudGoals: 0,
-      uploadedDeletionRecords: 0,
-      downloadedDeletionRecords: 0,
-    });
+    )).rejects.toThrow('réconciliation explicite');
 
     expect(await local.goals.get('goal-unknown')).toEqual(localGoal);
-    expect(await cloud.realGoals.get('#goal-unknown')).toMatchObject({
-      targetValue: 100_000,
-      updatedAt: '2026-07-01T09:00:00.000Z',
-    });
+    expect(await cloud.realGoals.get('#goal-unknown')).toBeUndefined();
     expect(await cloud.realSyncBaselines.get(
       USER_ID + ':goals:goals',
-    )).toBeDefined();
-
-    expect(await previewRealGoalSync(
-      local,
-      cloud as unknown as SyncPrototypeDatabase,
-      USER_ID,
-    )).toMatchObject({
-      differingEntityCount: 0,
-    });
+    )).toBeUndefined();
   });
 
-  it('résout automatiquement both en conservant la mutation métier la plus récente', async () => {
+  it('refuse both sans head causal au lieu de comparer updatedAt', async () => {
     const initial = goal(
       'goal-both',
       '2026-07-01T09:00:00.000Z',
@@ -197,37 +176,19 @@ describe('synchronisation sûre des objectifs réels', () => {
       3,
     );
 
-    const result = await synchronizeRealGoals(
+    await expect(synchronizeRealGoals(
       local,
       cloud as unknown as SyncPrototypeDatabase,
       USER_ID,
-    );
-
-    expect(result).toMatchObject({
-      changeOrigin: 'both',
-      uploadedGoals: 0,
-      downloadedGoals: 1,
-      removedLocalGoals: 0,
-      removedCloudGoals: 0,
-      uploadedDeletionRecords: 0,
-      downloadedDeletionRecords: 0,
-    });
+    )).rejects.toThrow('réconciliation explicite');
 
     expect(await local.goals.get('goal-both')).toMatchObject({
-      targetValue: 120_000,
-      updatedAt: '2026-07-01T11:00:00.000Z',
+      targetValue: 110_000,
+      updatedAt: '2026-07-01T10:00:00.000Z',
     });
     expect(await cloud.realGoals.get('#goal-both')).toMatchObject({
       targetValue: 120_000,
       updatedAt: '2026-07-01T11:00:00.000Z',
-    });
-
-    expect(await previewRealGoalSync(
-      local,
-      cloud as unknown as SyncPrototypeDatabase,
-      USER_ID,
-    )).toMatchObject({
-      differingEntityCount: 0,
     });
   });
 

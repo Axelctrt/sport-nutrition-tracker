@@ -39,7 +39,7 @@ for (const path of requiredFiles) {
 if (failures.length === 0) {
   const database = read('src/infrastructure/sync-prototype/SyncPrototypeDatabase.ts');
   for (const marker of [
-    'SYNC_PROTOTYPE_DATABASE_VERSION = 17',
+    'SYNC_PROTOTYPE_DATABASE_VERSION = 18',
     "'sportpilot-sync-runtime-0.20.0-v16'",
     "'realAccountPreferences'",
     "'realRewardsRoutines'",
