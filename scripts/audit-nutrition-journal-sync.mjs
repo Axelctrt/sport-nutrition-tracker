@@ -17,8 +17,8 @@ const read = (path) => {
 
 const database = read('src/infrastructure/sync-prototype/SyncPrototypeDatabase.ts');
 for (const expected of [
-  'SYNC_PROTOTYPE_DATABASE_VERSION = 16',
-  'sportpilot-sync-runtime-0.20.0-v${SYNC_PROTOTYPE_DATABASE_VERSION}',
+  'SYNC_PROTOTYPE_DATABASE_VERSION = 18',
+  "'sportpilot-sync-runtime-0.20.0-v16'",
   'realNutritionJournalDays',
   'realNutritionJournalDeletionRecords',
   'disableEagerSync: true',
@@ -122,6 +122,6 @@ if (failures.length > 0) {
   process.exitCode = 1;
 } else {
   console.log(
-    'Audit C1 réussi : journées nutritionnelles atomiques, suppressions repas/entrées, runtime cloud v16 et invariants métier validés.',
+    'Audit C1 réussi : journées nutritionnelles atomiques, suppressions repas/entrées, runtime cloud v18 et invariants métier validés.',
   );
 }

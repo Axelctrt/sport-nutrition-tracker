@@ -20,6 +20,15 @@ Statut : **décisions validées**.
   destination et conservation doivent être explicites.
 - Une restauration valide intégrité et version avant écriture et crée une
   sauvegarde de sécurité lorsque le parcours le prévoit.
+- Le journal immuable Goals porte l’identifiant du compte dans chaque mutation.
+  Le resolver exige à la fois la propriété Dexie Cloud et cet identifiant exact
+  avant de rendre une mutation autoritative. Le head causal est déterministe,
+  non privé et isolé dans le realm ; aucun timestamp ni champ d’authentification
+  ne participe au choix du gagnant.
+- La purge distante filtre `realGoalMutations`, `realGoalMutationHeads`, le
+  clock v17 legacy et les baselines par compte ; elle vérifie ensuite qu’aucune
+  ligne du compte supprimé ne subsiste sans effacer les lignes ou baselines
+  d’un autre compte.
 
 ## Photos de progression
 

@@ -30,6 +30,14 @@ for (const path of [
   'src/infrastructure/sync-prototype/realNutritionJournalSyncService.ts',
   'src/infrastructure/sync-prototype/realNutritionLibrarySyncService.ts',
   'src/infrastructure/sync-prototype/realNutritionTrackingSyncService.ts',
+  'src/infrastructure/sync-prototype/realNutritionJournalAutomaticContinuity.test.ts',
+  'src/infrastructure/sync-prototype/realNutritionLibraryAutomaticContinuity.test.ts',
+  'src/infrastructure/sync-prototype/realNutritionTrackingAutomaticContinuity.test.ts',
+  'src/application/sync/automaticSyncControllerNutritionDomains.test.ts',
+  'src/application/sync/syncOrchestratorAdaptersNutrition.test.ts',
+  'src/infrastructure/repositories/dexie/trashRestoreSyncNotification.test.ts',
+  'src/infrastructure/repositories/dexie/DexieRecipeRepository.c2.test.ts',
+  'src/infrastructure/sync-prototype/syncPrototypeConfig.test.ts',
   'src/app/nutritionSyncReleaseReadiness.test.ts',
 ]) {
   read(path);
@@ -37,8 +45,8 @@ for (const path of [
 
 const cloudDatabase = read('src/infrastructure/sync-prototype/SyncPrototypeDatabase.ts');
 for (const expected of [
-  'SYNC_PROTOTYPE_DATABASE_VERSION = 16',
-  'sportpilot-sync-runtime-0.20.0-v${SYNC_PROTOTYPE_DATABASE_VERSION}',
+  'SYNC_PROTOTYPE_DATABASE_VERSION = 18',
+  "'sportpilot-sync-runtime-0.20.0-v16'",
   'disableEagerSync: true',
   'realNutritionJournalDays',
   'realNutritionJournalDeletionRecords',
@@ -148,6 +156,142 @@ for (const expected of [
   }
 }
 
+const controller = read('src/application/sync/automaticSyncController.ts');
+for (const domain of [
+  'account-preferences',
+  'rewards-routines',
+  'weights',
+  'activities',
+  'goals',
+  'strength',
+  'nutrition-journal',
+  'nutrition-library',
+  'nutrition-tracking',
+  'daily-coaching',
+]) {
+  if (!controller.includes(`'${domain}'`)) {
+    fail(`le contrôleur automatique final ne contient pas ${domain}.`);
+  }
+}
+for (const mergeSafeDomain of [
+  'account-preferences',
+  'rewards-routines',
+  'goals',
+  'daily-coaching',
+  'nutrition-journal',
+  'nutrition-library',
+  'nutrition-tracking',
+]) {
+  const mergeSetStart = controller.indexOf('const SAFE_MERGE_DOMAIN_IDS');
+  const automaticStart = controller.indexOf('function automaticDomainIds');
+  const mergeSection = mergeSetStart >= 0 && automaticStart > mergeSetStart
+    ? controller.slice(mergeSetStart, automaticStart)
+    : '';
+  if (!mergeSection.includes(`'${mergeSafeDomain}'`)) {
+    fail(`la whitelist merge-safe finale ne contient pas ${mergeSafeDomain}.`);
+  }
+}
+
+const adapters = read('src/application/sync/syncOrchestratorAdapters.ts');
+for (const expected of [
+  'nutrition-library-product-remap',
+  'remappedProductReferences > 0',
+  'nutrition-tracking-daily-target-recalculation',
+  'recalculatedDailyTargets > 0',
+  "['nutrition-journal']",
+]) {
+  if (!adapters.includes(expected)) {
+    fail(`le chaînage automatique Nutrition ne contient pas ${expected}.`);
+  }
+}
+
+const adapterTests = read('src/application/sync/syncOrchestratorAdaptersNutrition.test.ts');
+for (const expected of [
+  'publie Journal après un remapping durable de références Library',
+  'publie Journal après un recalcul durable de dailyTargets par Tracking',
+  'ne publie aucun signal croisé lorsque les compteurs sont à zéro',
+  'refuse les chemins directionnels artificiels',
+]) {
+  if (!adapterTests.includes(expected)) {
+    fail(`le gate de chaînage Nutrition ne contient pas ${expected}.`);
+  }
+}
+
+const journalAutomatic = read(
+  'src/infrastructure/sync-prototype/realNutritionJournalAutomaticContinuity.test.ts',
+);
+for (const expected of [
+  'AutomaticSyncController',
+  'DexieFoodRepository',
+  'restoreTrashItemWithSyncNotification',
+  '{ writeCloud: false }',
+  'reference: originalSnapshot',
+]) {
+  if (!journalAutomatic.includes(expected)) {
+    fail(`le gate automatique Journal ne contient pas ${expected}.`);
+  }
+}
+
+const libraryAutomatic = read(
+  'src/infrastructure/sync-prototype/realNutritionLibraryAutomaticContinuity.test.ts',
+);
+for (const expected of [
+  'AutomaticSyncController',
+  'saveRecipe',
+  'DexieRecipeRepository',
+  'restoreTrashItemWithSyncNotification',
+  '{ writeCloud: false }',
+]) {
+  if (!libraryAutomatic.includes(expected)) {
+    fail(`le gate automatique Library ne contient pas ${expected}.`);
+  }
+}
+
+const trackingAutomatic = read(
+  'src/infrastructure/sync-prototype/realNutritionTrackingAutomaticContinuity.test.ts',
+);
+for (const expected of [
+  'AutomaticSyncController',
+  'DexieWeeklyReviewRepository',
+  'acceptedCalibrationAdjustmentKcal',
+  'syncRealNutritionTracking',
+  'syncRealNutritionJournal',
+  '{ writeCloud: false }',
+]) {
+  if (!trackingAutomatic.includes(expected)) {
+    fail(`le gate automatique Tracking ne contient pas ${expected}.`);
+  }
+}
+
+const trashRestore = read(
+  'src/infrastructure/repositories/dexie/trashRestoreSyncNotification.ts',
+);
+for (const expected of [
+  "restored.entityType === 'foodEntry'",
+  "restored.entityType === 'meal'",
+  "['nutrition-journal']",
+  "restored.entityType === 'favoriteMeal'",
+  "restored.entityType === 'recipe'",
+  "['nutrition-library']",
+]) {
+  if (!trashRestore.includes(expected)) {
+    fail(`la restauration Corbeille Nutrition ne contient pas ${expected}.`);
+  }
+}
+
+const recipeRepository = read(
+  'src/infrastructure/repositories/dexie/DexieRecipeRepository.ts',
+);
+if (!recipeRepository.includes('saveWithIngredients')) {
+  fail('la sauvegarde atomique Recipe n’est plus disponible.');
+}
+const recipeTriggerTest = read(
+  'src/infrastructure/repositories/dexie/DexieRecipeRepository.c2.test.ts',
+);
+if (!recipeTriggerTest.includes('publie nutrition-library après la sauvegarde atomique durable')) {
+  fail('le déclencheur automatique de saveWithIngredients n’est pas verrouillé par un test.');
+}
+
 const settingsPage = read('src/features/settings/pages/AdvancedSettingsPage.tsx');
 for (const expected of [
   '<NutritionJournalSyncSettingsPanel />',
@@ -160,22 +304,39 @@ for (const expected of [
 }
 
 const deployment = read('src/infrastructure/sync-prototype/syncPublicDeploymentConfig.ts');
-for (const variable of [
-  'VITE_ENABLE_SYNC_PROTOTYPE',
+const continuityVariables = [
   'VITE_ENABLE_REAL_WEIGHT_SYNC',
   'VITE_ENABLE_REAL_ACTIVITY_SYNC',
   'VITE_ENABLE_REAL_GOAL_SYNC',
   'VITE_ENABLE_REAL_STRENGTH_SYNC',
+  'VITE_ENABLE_REAL_ACCOUNT_PREFERENCES_SYNC',
+  'VITE_ENABLE_REAL_REWARDS_ROUTINES_SYNC',
+  'VITE_ENABLE_REAL_DAILY_COACHING_SYNC',
   'VITE_ENABLE_REAL_NUTRITION_JOURNAL_SYNC',
   'VITE_ENABLE_REAL_NUTRITION_LIBRARY_SYNC',
   'VITE_ENABLE_REAL_NUTRITION_TRACKING_SYNC',
+];
+for (const variable of [
+  'VITE_ENABLE_SYNC_PROTOTYPE',
+  ...continuityVariables,
 ]) {
   if (!deployment.includes(`${variable}: 'true'`)) {
     fail(`la configuration publique n’active pas ${variable}.`);
   }
 }
+if (!deployment.includes("VITE_ENABLE_REAL_SOCIAL_CLOUD: 'false'")) {
+  fail('le cloud Social ne reste pas désactivé par défaut.');
+}
 if (!deployment.includes("VITE_ENABLE_SYNC_DIAGNOSTICS: 'false'")) {
   fail('les diagnostics de laboratoire ne sont pas désactivés en production.');
+}
+
+const config = read('src/infrastructure/sync-prototype/syncPrototypeConfig.ts');
+for (const variable of continuityVariables) {
+  const marker = `${variable}:\n      syncPublicDeploymentConfig.${variable}`;
+  if (!config.includes(marker)) {
+    fail(`le hardening de production ne verrouille pas ${variable}.`);
+  }
 }
 
 const scripts = packageJson.scripts ?? {};
@@ -222,6 +383,6 @@ if (failures.length > 0) {
   process.exitCode = 1;
 } else {
   console.log(
-    'Audit final de synchronisation nutritionnelle réussi : journal atomique, bibliothèque cohérente, bilans et ajustements synchronisés, recalcul C1, isolation des comptes et runtime cloud v16 validés.',
+    'Audit final de synchronisation nutritionnelle réussi : Journal/Library/Tracking automatiques A→B, chaînages Journal, restaurations Corbeille, hardening des dix domaines, intégrité Nutrition et runtime cloud v18 validés sans modification des formules.',
   );
 }

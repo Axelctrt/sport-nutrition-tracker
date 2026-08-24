@@ -22,6 +22,14 @@ import {
   type PreparedRealGoalReconciliation,
   type RealGoalSyncResult,
 } from '@/infrastructure/sync-prototype/realGoalSyncService';
+import {
+  applyRegisteredRealGoalConcurrentReconciliation,
+  prepareRegisteredRealGoalConcurrentReconciliation,
+} from '@/infrastructure/sync-prototype/registeredGoalConcurrentResolutionService';
+import type {
+  GoalConcurrentReconciliationChoice,
+  PreparedRealGoalConcurrentReconciliation,
+} from '@/infrastructure/sync-prototype/realGoalConcurrentResolutionService';
 import { Button } from '@/shared/ui/Button';
 import { ConfirmationDialog } from '@/shared/ui/ConfirmationDialog';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
@@ -36,9 +44,27 @@ interface GoalSyncSettingsPanelProps {
     prepared: PreparedRealGoalReconciliation,
     choice: GoalInitialReconciliationChoice,
   ) => Promise<RealGoalSyncResult>;
+  readonly prepareConcurrentReconciliation?: (
+    currentUserId: string,
+  ) => Promise<PreparedRealGoalConcurrentReconciliation>;
+  readonly applyConcurrentReconciliation?: (
+    currentUserId: string,
+    prepared: PreparedRealGoalConcurrentReconciliation,
+    choice: GoalConcurrentReconciliationChoice,
+  ) => Promise<RealGoalSyncResult>;
 }
 
 type BusyAction = 'analyze' | 'sync' | 'reconcile-prepare' | 'reconcile-apply';
+type GoalResolutionChoice = GoalInitialReconciliationChoice;
+type PreparedReconciliation =
+  | {
+      readonly kind: 'initial';
+      readonly value: PreparedRealGoalReconciliation;
+    }
+  | {
+      readonly kind: 'concurrent';
+      readonly value: PreparedRealGoalConcurrentReconciliation;
+    };
 
 const EMPTY_SYNC_SNAPSHOT: SyncPrototypeSnapshot = {
   account: { isLoggedIn: false, isLoading: false },
@@ -109,6 +135,8 @@ export function GoalSyncSettingsPanel({
   client: clientOverride,
   prepareInitialReconciliation = prepareRegisteredRealGoalInitialReconciliation,
   applyInitialReconciliation = applyRegisteredRealGoalInitialReconciliation,
+  prepareConcurrentReconciliation = prepareRegisteredRealGoalConcurrentReconciliation,
+  applyConcurrentReconciliation = applyRegisteredRealGoalConcurrentReconciliation,
 }: GoalSyncSettingsPanelProps) {
   const runtime = useMemo(
     () =>
@@ -132,9 +160,9 @@ export function GoalSyncSettingsPanel({
   >();
   const [syncConfirmationOpen, setSyncConfirmationOpen] = useState(false);
   const [preparedReconciliation, setPreparedReconciliation] =
-    useState<PreparedRealGoalReconciliation>();
+    useState<PreparedReconciliation>();
   const [reconciliationChoice, setReconciliationChoice] =
-    useState<GoalInitialReconciliationChoice>();
+    useState<GoalResolutionChoice>();
 
   useEffect(() => {
     if (!client) {
@@ -229,27 +257,54 @@ export function GoalSyncSettingsPanel({
     }
   };
 
-  const prepareReconciliation = async () => {
+  const currentUserIdOrFeedback = (): string | undefined => {
     const currentUserId = snapshot.account.userId;
     if (!currentUserId) {
       setFeedback({
         tone: 'error',
-        message: 'Le compte actif doit être identifié avant la première réconciliation Goals.',
+        message: 'Le compte actif doit être identifié avant de résoudre les objectifs.',
       });
-      return;
+      return undefined;
     }
+    return currentUserId;
+  };
+
+  const prepareInitial = async () => {
+    const currentUserId = currentUserIdOrFeedback();
+    if (!currentUserId) return;
     setFeedback(undefined);
     setBusyAction('reconcile-prepare');
     try {
       const prepared = await prepareInitialReconciliation(currentUserId);
-      setPreparedReconciliation(prepared);
+      setPreparedReconciliation({ kind: 'initial', value: prepared });
     } catch (error) {
       setFeedback({
         tone: 'error',
         message:
           error instanceof Error
             ? error.message
-            : 'L’aperçu de réconciliation n’a pas pu être préparé.',
+            : 'L’aperçu de première réconciliation n’a pas pu être préparé.',
+      });
+    } finally {
+      setBusyAction(undefined);
+    }
+  };
+
+  const prepareConcurrent = async () => {
+    const currentUserId = currentUserIdOrFeedback();
+    if (!currentUserId) return;
+    setFeedback(undefined);
+    setBusyAction('reconcile-prepare');
+    try {
+      const prepared = await prepareConcurrentReconciliation(currentUserId);
+      setPreparedReconciliation({ kind: 'concurrent', value: prepared });
+    } catch (error) {
+      setFeedback({
+        tone: 'error',
+        message:
+          error instanceof Error
+            ? error.message
+            : 'L’aperçu du conflit Goals n’a pas pu être préparé.',
       });
     } finally {
       setBusyAction(undefined);
@@ -266,14 +321,20 @@ export function GoalSyncSettingsPanel({
     setFeedback(undefined);
     setBusyAction('reconcile-apply');
     try {
-      await applyInitialReconciliation(currentUserId, prepared, choice);
+      if (prepared.kind === 'initial') {
+        await applyInitialReconciliation(currentUserId, prepared.value, choice);
+      } else {
+        await applyConcurrentReconciliation(currentUserId, prepared.value, choice);
+      }
       setPreparedReconciliation(undefined);
       await client?.syncNow();
       await client?.analyzeRealGoals?.();
       setFeedback({
         tone: 'success',
         message:
-          'Les objectifs sont réconciliés. Cet appareil et le cloud utilisent maintenant la même référence.',
+          prepared.kind === 'initial'
+            ? 'Les objectifs sont réconciliés. Cet appareil et le cloud utilisent maintenant la même référence.'
+            : 'Le conflit des objectifs est résolu. Cet appareil et le cloud convergent de nouveau sur une même référence.',
       });
     } catch (error) {
       setFeedback({
@@ -281,7 +342,7 @@ export function GoalSyncSettingsPanel({
         message:
           error instanceof Error
             ? error.message
-            : 'La première réconciliation des objectifs a échoué.',
+            : 'La résolution des objectifs a échoué.',
       });
     } finally {
       setBusyAction(undefined);
@@ -321,6 +382,7 @@ export function GoalSyncSettingsPanel({
     unavailable ||
     !snapshot.account.isLoggedIn ||
     busyAction !== undefined;
+  const prepared = preparedReconciliation?.value;
 
   return (
     <div className="space-y-4">
@@ -337,7 +399,7 @@ export function GoalSyncSettingsPanel({
               </h3>
             </div>
             <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-              Vérifie les objectifs du compte et applique uniquement une direction dont l’origine est démontrée.
+              Vérifie les objectifs du compte et applique uniquement une direction dont l’origine est démontrée. Les conflits des deux côtés exigent toujours un choix manuel explicite.
             </p>
           </div>
           <span className="inline-flex min-h-9 shrink-0 items-center rounded-full bg-slate-100 px-3 text-sm font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
@@ -402,7 +464,7 @@ export function GoalSyncSettingsPanel({
 
             {origin === 'both' ? (
               <InlineNotice className="mt-4" tone="info" title="Modifications des deux côtés">
-                Des modifications ont été détectées sur cet appareil et dans le cloud depuis la dernière référence. Ce hotfix ne choisit aucune version et n’écrit rien pour Goals dans cet état.
+                Des modifications ont été détectées sur cet appareil et dans le cloud depuis la dernière référence. La synchronisation automatique et l’action globale restent bloquées ; seule la résolution manuelle ci-dessous peut choisir une source.
               </InlineNotice>
             ) : null}
           </>
@@ -448,12 +510,24 @@ export function GoalSyncSettingsPanel({
           {origin === 'unknown' ? (
             <Button
               disabled={disabled}
-              onClick={() => void prepareReconciliation()}
+              onClick={() => void prepareInitial()}
             >
               <ShieldAlert aria-hidden="true" className="size-4" />
               {busyAction === 'reconcile-prepare'
                 ? 'Préparation…'
                 : 'Réconcilier les objectifs'}
+            </Button>
+          ) : null}
+
+          {origin === 'both' ? (
+            <Button
+              disabled={disabled}
+              onClick={() => void prepareConcurrent()}
+            >
+              <ShieldAlert aria-hidden="true" className="size-4" />
+              {busyAction === 'reconcile-prepare'
+                ? 'Préparation…'
+                : 'Résoudre le conflit des objectifs'}
             </Button>
           ) : null}
 
@@ -466,7 +540,7 @@ export function GoalSyncSettingsPanel({
         </div>
       </div>
 
-      {preparedReconciliation ? (
+      {prepared ? (
         <section
           aria-labelledby="goal-reconciliation-preview-title"
           className="rounded-2xl border border-amber-300 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950/20"
@@ -475,14 +549,16 @@ export function GoalSyncSettingsPanel({
             id="goal-reconciliation-preview-title"
             className="font-semibold text-slate-950 dark:text-white"
           >
-            Aperçu avant réconciliation
+            {preparedReconciliation?.kind === 'initial'
+              ? 'Aperçu avant première réconciliation'
+              : 'Aperçu avant résolution du conflit'}
           </h4>
           <p className="mt-1 text-sm leading-6 text-slate-700 dark:text-slate-300">
             Le choix reste global pour les Objectifs. Vérifie chaque différence avant de décider quelle source devient la référence.
           </p>
 
           <ul className="mt-4 space-y-3">
-            {preparedReconciliation.items.map((item) => (
+            {prepared.items.map((item) => (
               <li
                 key={item.id}
                 className="rounded-xl border border-amber-200 bg-white p-3 dark:border-amber-900/70 dark:bg-slate-950"
@@ -546,9 +622,13 @@ export function GoalSyncSettingsPanel({
             : 'Utiliser les objectifs du cloud ?'
         }
         description={
-          reconciliationChoice === 'keep-local'
-            ? 'Les objectifs et suppressions visibles dans l’aperçu de cet appareil deviendront la référence Goals du compte. Si les données ont changé depuis l’aperçu, SportPilot annulera avant toute validation.'
-            : 'Les objectifs et suppressions visibles dans l’aperçu cloud deviendront la référence Goals sur cet appareil. Si les données ont changé depuis l’aperçu, SportPilot annulera avant toute validation.'
+          preparedReconciliation?.kind === 'concurrent'
+            ? reconciliationChoice === 'keep-local'
+              ? 'Les objectifs visibles dans l’aperçu de cet appareil remplaceront la version cloud du conflit. SportPilot revalidera le compte, la référence et les deux états juste avant l’écriture.'
+              : 'Les objectifs visibles dans l’aperçu cloud remplaceront la version de cet appareil. SportPilot revalidera le compte, la référence et les deux états juste avant l’écriture.'
+            : reconciliationChoice === 'keep-local'
+              ? 'Les objectifs et suppressions visibles dans l’aperçu de cet appareil deviendront la première référence Goals du compte. Si les données ont changé depuis l’aperçu, SportPilot annulera avant toute validation.'
+              : 'Les objectifs et suppressions visibles dans l’aperçu cloud deviendront la première référence Goals sur cet appareil. Si les données ont changé depuis l’aperçu, SportPilot annulera avant toute validation.'
         }
         confirmLabel={
           reconciliationChoice === 'keep-local'

@@ -47,7 +47,7 @@ afterEach(() => {
 });
 
 describe('AutomaticSyncSettingsPanel', () => {
-  it('autorise le compte connecté et désactive l’ancien automatisme des pesées', async () => {
+  it('autorise le compte connecté, désactive l’ancien automatisme des pesées et décrit les dix domaines', async () => {
     const initial = settings();
     const loadSettings = vi.fn().mockResolvedValue(initial);
     const saveSettings = vi.fn().mockImplementation(async (changes) => ({
@@ -66,7 +66,9 @@ describe('AutomaticSyncSettingsPanel', () => {
 
     expect(await screen.findByRole('heading', { name: 'Continuité automatique' }))
       .toBeInTheDocument();
-    expect(screen.getByText(/transferts automatiques sûrs concernent actuellement la musculation/i))
+    expect(screen.getByText(/le journal nutritionnel, la bibliothèque nutritionnelle et le suivi nutritionnel/i))
+      .toBeInTheDocument();
+    expect(screen.getByText(/seuls les domaines explicitement compatibles avec une fusion sûre peuvent résoudre automatiquement une divergence des deux côtés/i))
       .toBeInTheDocument();
     const button = screen.getByRole('button', {
       name: 'Autoriser la continuité',

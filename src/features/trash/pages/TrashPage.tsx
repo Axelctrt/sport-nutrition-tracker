@@ -38,8 +38,8 @@ import {
   deleteTrashItemPermanently,
   listTrashItems,
   purgeExpiredTrashItems,
-  restoreTrashItem,
 } from '@/infrastructure/repositories/dexie/trashService';
+import { restoreTrashItemWithSyncNotification } from '@/infrastructure/repositories/dexie/trashRestoreSyncNotification';
 import { Button } from '@/shared/ui/Button';
 import { EmptyState } from '@/shared/ui/EmptyState';
 
@@ -215,7 +215,7 @@ export function TrashPage() {
     setFeedback(undefined);
 
     try {
-      await restoreTrashItem(appDatabase, item.id);
+      await restoreTrashItemWithSyncNotification(appDatabase, item.id);
       const message = `${item.label} a été restauré.`;
       setFeedback({ tone: 'success', message });
       await loadItems();

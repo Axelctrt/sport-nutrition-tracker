@@ -8,6 +8,7 @@ import {
   readGoalState,
   resetGoalStateRuntimeForTests,
   writeGoalState,
+  type GoalStatePersistedEventDetail,
   type GoalState,
 } from '@/domain/goals/goalState';
 
@@ -93,6 +94,11 @@ describe('goalState', () => {
     await flushGoalStatePersistence();
 
     expect(persisted).toHaveBeenCalledTimes(1);
+    const persistedEvent = persisted.mock.calls[0]?.[0] as
+      CustomEvent<GoalStatePersistedEventDetail>;
+    expect(persistedEvent.detail).toEqual({
+      goalIds: ['goal-1'],
+    });
     window.removeEventListener(GOAL_STATE_CHANGED_EVENT, changed);
     window.removeEventListener(GOAL_STATE_PERSISTED_EVENT, persisted);
   });

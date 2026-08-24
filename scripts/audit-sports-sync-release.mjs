@@ -28,21 +28,28 @@ for (const path of [
   'docs/architecture/sports-sync-0.19.0-b4.md',
   'src/infrastructure/sync-prototype/cloudSyncValue.ts',
   'src/infrastructure/sync-prototype/cloudSyncValue.test.ts',
+  'src/infrastructure/sync-prototype/realGoalConcurrentResolutionService.ts',
+  'src/infrastructure/sync-prototype/realGoalConcurrentResolutionService.test.ts',
+  'src/infrastructure/sync-prototype/realGoalLwwConflictResolution.test.ts',
 ]) {
   read(path);
 }
 
 const cloudDatabase = read('src/infrastructure/sync-prototype/SyncPrototypeDatabase.ts');
 for (const expected of [
-  'SYNC_PROTOTYPE_DATABASE_VERSION = 16',
-  'sportpilot-sync-runtime-0.20.0-v${SYNC_PROTOTYPE_DATABASE_VERSION}',
+  'SYNC_PROTOTYPE_DATABASE_VERSION = 18',
+  "'sportpilot-sync-runtime-0.20.0-v16'",
   'disableEagerSync: true',
   'realWeights',
   'realWeightDeletionRecords',
   'realActivities',
+  'realEndurancePlanningSessions',
   'realActivityDeletionRecords',
   'realGoals',
   'realGoalDeletionRecords',
+  'realGoalMutations',
+  'realGoalMutationHeads',
+  '[entityId+mutationId]',
   'realStrengthExercises',
   'realWorkoutTemplates',
   'realWorkoutSessions',
@@ -76,8 +83,8 @@ for (const expected of [
 
 const services = [
   ['pesées', 'src/infrastructure/sync-prototype/realWeightSyncService.ts', ['belongsToCurrentUser', 'chooseLatest', 'sameEntity']],
-  ['activités', 'src/infrastructure/sync-prototype/realActivitySyncService.ts', ['belongsToCurrentUser', 'chooseLatest', 'sameEntity']],
-  ['objectifs', 'src/infrastructure/sync-prototype/realGoalSyncService.ts', ['belongsToCurrentUser', 'sameEntity']],
+  ['activités', 'src/infrastructure/sync-prototype/realActivitySyncService.ts', ['belongsToCurrentUser', 'sameEntity']],
+  ['objectifs', 'src/infrastructure/sync-prototype/realGoalSyncService.ts', ['belongsToCurrentUser', 'sameEntity', 'stableValue']],
   ['musculation', 'src/infrastructure/sync-prototype/realStrengthSyncService.ts', ['belongsToCurrentUser', 'chooseLatest', 'sameEntity']],
 ];
 for (const [label, path, expectedHelpers] of services) {
@@ -95,9 +102,34 @@ for (const [label, path, expectedHelpers] of services) {
   }
 }
 
+const activities = read('src/infrastructure/sync-prototype/realActivitySyncService.ts');
+if (/\bchooseLatest\b/.test(activities)) {
+  fail('Activities ne doit pas utiliser chooseLatest : unknown/both doivent rester fail-closed.');
+}
+for (const expected of [
+  'changeOrigin',
+  'flushEndurancePlanningPersistence',
+  "domainId: 'activities'",
+  "entityId: 'activities'",
+  'synchronizeRealActivitiesFromCloud',
+  'synchronizeRealActivitiesToCloud',
+  "requireChangeOrigin: 'cloud'",
+  "requireChangeOrigin: 'local'",
+  'applyCloudTargetIfUnchanged',
+  'applyLocalTargetIfUnchanged',
+  'cloudStateMatchesExpected',
+  'persistEqualActivityBaseline',
+  'restoreRealActivitiesFromCloudIntoEmptyLocal',
+  'options.writeCloud !== false',
+]) {
+  if (!activities.includes(expected)) {
+    fail(`la continuité sûre Activities ne verrouille pas ${expected}.`);
+  }
+}
+
 const goals = read('src/infrastructure/sync-prototype/realGoalSyncService.ts');
 if (/\bchooseLatest\b/.test(goals)) {
-  fail('le service objectifs réintroduit chooseLatest alors que les états unknown/both doivent rester fail-closed.');
+  fail('Goals ne doit pas déléguer sa règle métier concurrente à chooseLatest : seul le head causal peut désigner le gagnant.');
 }
 for (const expected of [
   'prepareInitialRealGoalReconciliation',
@@ -106,9 +138,76 @@ for (const expected of [
   "origin === 'cloud'",
   'return emptyResult({',
   'ensureDomainBaselineMissing',
+  'stageRealGoalsMutationInLocalCloudReplica',
+  'resolveRealGoalMutationJournal',
+  'bootstrapRealGoalMutationHead',
+  'appendRealGoalMutation',
+  'parentMutationId: head.mutationId',
+  'localCasRejected',
+  'resolveMergedGoalLogicalState',
 ]) {
   if (!goals.includes(expected)) {
-    fail(`la synchronisation des objectifs ne verrouille pas ${expected}.`);
+    fail(`la synchronisation Goals causale ne verrouille pas ${expected}.`);
+  }
+}
+
+const goalJournal = read(
+  'src/infrastructure/sync-prototype/realGoalMutationJournal.ts',
+);
+for (const expected of [
+  'return `goal-head-',
+  "where('[entityId+mutationId]')",
+  '.equals([input.entityId, input.parentMutationId])',
+  '.modify({ mutationId: mutation.id })',
+  'headAdvanced: modified === 1',
+]) {
+  if (!goalJournal.includes(expected)) {
+    fail(`le journal causal Goals ne verrouille pas ${expected}.`);
+  }
+}
+for (const forbidden of [
+  'compareRealGoalMutationOrder',
+  'calibrateRealGoalMutationClock',
+]) {
+  if (goalJournal.includes(forbidden)) {
+    fail(`le journal causal Goals conserve une autorité temporelle interdite : ${forbidden}.`);
+  }
+}
+if (goalJournal.includes('return `#goal-head-')) {
+  fail('le head causal Goals ne doit jamais redevenir privé.');
+}
+
+const goalsFallback = read(
+  'src/infrastructure/sync-prototype/realGoalConcurrentResolutionService.ts',
+);
+for (const expected of [
+  'prepareRealGoalConcurrentReconciliation',
+  'applyRealGoalConcurrentReconciliation',
+  "origin !== 'both'",
+  'baselineDigest',
+  'readRequiredBaseline',
+  'cloudStateMatchesExpected',
+  'applyCloudTargetIfUnchanged',
+  'applyLocalTargetIfUnchanged',
+  'persistEqualBaseline',
+]) {
+  if (!goalsFallback.includes(expected)) {
+    fail(`le fallback manuel Goals both ne verrouille pas ${expected}.`);
+  }
+}
+
+const lwwGate = read(
+  'src/infrastructure/sync-prototype/realGoalLwwConflictResolution.test.ts',
+);
+for (const expected of [
+  'aucun LWW temporel',
+  'updatedAt',
+  'deleted',
+  'restored',
+  'differingEntityCount: 1',
+]) {
+  if (!lwwGate.includes(expected)) {
+    fail(`le gate anti-LWW Goals ne couvre pas ${expected}.`);
   }
 }
 
@@ -166,6 +265,6 @@ if (failures.length > 0) {
   process.exitCode = 1;
 } else {
   console.log(
-    'Audit du socle sportif réussi : quatre domaines synchronisés, Goals fail-closed sur unknown/both, suppressions durables, agrégats de musculation atomiques et runtime cloud v16 validés.',
+    'Audit du socle sportif réussi : Activities conserve ses contrats directionnels fail-closed, Goals journalise ses mutations concurrentes avant résolution, le fallback manuel reste disponible, les suppressions durables et agrégats Strength atomiques sont préservés, runtime cloud v18 validé.',
   );
 }

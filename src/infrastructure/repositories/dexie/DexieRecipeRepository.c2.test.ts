@@ -1,3 +1,7 @@
+import {
+  SYNC_LOCAL_DATA_CHANGED_EVENT,
+  syncLocalDataChangedDetail,
+} from '@/application/sync/syncLocalChangeEvents';
 import { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import { DexieRecipeRepository } from '@/infrastructure/repositories/dexie/DexieRecipeRepository';
 
@@ -7,6 +11,21 @@ const nutrition = {
   carbohydratesGrams: 10,
   fatGrams: 2,
 };
+
+function recordSyncEvents() {
+  const details: unknown[] = [];
+  const listener = (event: Event) => {
+    details.push(syncLocalDataChangedDetail(event));
+  };
+  window.addEventListener(SYNC_LOCAL_DATA_CHANGED_EVENT, listener);
+  return {
+    details,
+    dispose: () => window.removeEventListener(
+      SYNC_LOCAL_DATA_CHANGED_EVENT,
+      listener,
+    ),
+  };
+}
 
 describe('DexieRecipeRepository C2', () => {
   let database: AppDatabase;
@@ -56,5 +75,48 @@ describe('DexieRecipeRepository C2', () => {
       entityId: first.ingredients[0]!.id,
       status: 'deleted',
     });
+  });
+
+  it('publie nutrition-library après la sauvegarde atomique durable', async () => {
+    const recorded = recordSyncEvents();
+
+    try {
+      const saved = await repository.saveWithIngredients(
+        { name: 'Recette synchronisée', numberOfServings: 2 },
+        [{
+          productId: 'product-sync',
+          quantity: 120,
+          unit: 'g',
+          sortOrder: 0,
+          nutritionPer100Snapshot: nutrition,
+        }],
+      );
+
+      expect(await database.recipes.get(saved.recipe.id)).toBeDefined();
+      expect(await database.recipeIngredients.get(saved.ingredients[0]!.id))
+        .toBeDefined();
+      expect(recorded.details).toEqual([{
+        domainIds: ['nutrition-library'],
+        reason: 'recipe-write',
+      }]);
+    } finally {
+      recorded.dispose();
+    }
+  });
+
+  it('ne publie rien si la sauvegarde atomique échoue', async () => {
+    const recorded = recordSyncEvents();
+
+    try {
+      await expect(repository.saveWithIngredients(
+        { name: 'Recette absente', numberOfServings: 2 },
+        [],
+        'recipe-missing',
+      )).rejects.toThrow('Recette introuvable');
+
+      expect(recorded.details).toEqual([]);
+    } finally {
+      recorded.dispose();
+    }
   });
 });

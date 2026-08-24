@@ -56,6 +56,7 @@ function createSnapshot(
     },
     sync: { status: 'connected', phase: 'in-sync' },
     weights: { weights: [], deletedCount: 0, isLoading: false },
+    realStrength: { enabled: true, status: 'idle' },
     diagnostics: createEmptySyncPrototypeDiagnostics(),
     realActivities: {
       enabled: true,

@@ -13,6 +13,7 @@ livraison ; ils ne remplacent pas les références canoniques ci-dessous.
 | Master Plan post-V1 | [`roadmap/POST_V1_MASTER_PLAN.md`](roadmap/POST_V1_MASTER_PLAN.md) |
 | Architecture générale | [`architecture/OVERVIEW.md`](architecture/OVERVIEW.md) |
 | Données et synchronisation | [`architecture/DATA_AND_SYNC.md`](architecture/DATA_AND_SYNC.md) |
+| Gate Dexie Cloud Goals | [`operations/ENVIRONMENTS_AND_DEPLOYMENT.md#gate-manuel-dexie-cloud-pour-goals`](operations/ENVIRONMENTS_AND_DEPLOYMENT.md#gate-manuel-dexie-cloud-pour-goals) |
 | Règles produit | [`product/PRODUCT_RULES.md`](product/PRODUCT_RULES.md) |
 | Catalogue fonctionnel | [`product/FEATURE_CATALOG.md`](product/FEATURE_CATALOG.md) |
 | Guide UX | [`product/UX_GUIDELINES.md`](product/UX_GUIDELINES.md) |

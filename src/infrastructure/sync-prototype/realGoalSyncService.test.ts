@@ -130,55 +130,66 @@ describe('synchronisation sûre des objectifs réels', () => {
     expect(await cloud.realSyncBaselines.count()).toBe(1);
   });
 
-  it('reste fail-closed pour unknown sans baseline même via synchronizeRealGoals générique', async () => {
-    await local.goals.add(goal('goal-unknown', '2026-07-01T09:00:00.000Z'));
-    const beforeLocal = await local.goals.toArray();
-    const beforeCloud = await cloud.realGoals.toArray();
+  it('refuse unknown sans baseline ni head causal', async () => {
+    const localGoal = goal(
+      'goal-unknown',
+      '2026-07-01T09:00:00.000Z',
+    );
+    await local.goals.add(localGoal);
 
-    const result = await synchronizeRealGoals(
+    await expect(synchronizeRealGoals(
       local,
       cloud as unknown as SyncPrototypeDatabase,
       USER_ID,
-    );
+    )).rejects.toThrow('réconciliation explicite');
 
-    expect(result).toMatchObject({
-      changeOrigin: 'unknown',
-      uploadedGoals: 0,
-      downloadedGoals: 0,
-      removedLocalGoals: 0,
-      removedCloudGoals: 0,
-      uploadedDeletionRecords: 0,
-      downloadedDeletionRecords: 0,
-    });
-    expect(await local.goals.toArray()).toEqual(beforeLocal);
-    expect(await cloud.realGoals.toArray()).toEqual(beforeCloud);
-    expect(await cloud.realSyncBaselines.count()).toBe(0);
+    expect(await local.goals.get('goal-unknown')).toEqual(localGoal);
+    expect(await cloud.realGoals.get('#goal-unknown')).toBeUndefined();
+    expect(await cloud.realSyncBaselines.get(
+      USER_ID + ':goals:goals',
+    )).toBeUndefined();
   });
 
-  it('reste fail-closed pour both même via synchronizeRealGoals générique', async () => {
-    const initial = goal('goal-both', '2026-07-01T09:00:00.000Z', 100_000);
+  it('refuse both sans head causal au lieu de comparer updatedAt', async () => {
+    const initial = goal(
+      'goal-both',
+      '2026-07-01T09:00:00.000Z',
+      100_000,
+    );
     await bootstrapEqual(local, cloud, initial);
-    await local.goals.put(goal('goal-both', '2026-07-01T10:00:00.000Z', 110_000));
+
+    await local.goals.put(
+      goal(
+        'goal-both',
+        '2026-07-01T10:00:00.000Z',
+        110_000,
+      ),
+    );
     await putCloudGoal(
       cloud,
-      goal('goal-both', '2026-07-01T11:00:00.000Z', 120_000),
+      goal(
+        'goal-both',
+        '2026-07-01T11:00:00.000Z',
+        120_000,
+      ),
       USER_ID,
       3,
     );
-    const beforeLocal = await local.goals.toArray();
-    const beforeCloud = await cloud.realGoals.toArray();
 
-    const result = await synchronizeRealGoals(
+    await expect(synchronizeRealGoals(
       local,
       cloud as unknown as SyncPrototypeDatabase,
       USER_ID,
-    );
+    )).rejects.toThrow('réconciliation explicite');
 
-    expect(result.changeOrigin).toBe('both');
-    expect(result.uploadedGoals).toBe(0);
-    expect(result.downloadedGoals).toBe(0);
-    expect(await local.goals.toArray()).toEqual(beforeLocal);
-    expect(await cloud.realGoals.toArray()).toEqual(beforeCloud);
+    expect(await local.goals.get('goal-both')).toMatchObject({
+      targetValue: 110_000,
+      updatedAt: '2026-07-01T10:00:00.000Z',
+    });
+    expect(await cloud.realGoals.get('#goal-both')).toMatchObject({
+      targetValue: 120_000,
+      updatedAt: '2026-07-01T11:00:00.000Z',
+    });
   });
 
   it('applique local vers cloud uniquement après une baseline qui démontre la provenance locale', async () => {

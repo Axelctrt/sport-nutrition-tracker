@@ -19,7 +19,7 @@ une description automatiquement actuelle.
 - Stockage principal local : Dexie `AppDatabase`, version 12 au moment de cette
   mise à jour.
 - Sauvegarde JSON : version 10 au moment de cette mise à jour.
-- Runtime de synchronisation Dexie Cloud : version 16 au moment de cette mise à
+- Runtime de synchronisation Dexie Cloud : version 18 au moment de cette mise à
   jour, activé uniquement par configuration.
 - Backend : Cloudflare Pages Functions sous `functions/api`, avec D1 pour les
   domaines concernés.

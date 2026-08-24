@@ -161,6 +161,7 @@ export class DexieRecipeRepository implements RecipeRepository {
           return { recipe, ingredients: entities };
         },
       ),
+      { syncDomainIds: ['nutrition-library'], syncReason: 'recipe-write' },
     );
   }
 

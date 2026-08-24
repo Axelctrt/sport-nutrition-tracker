@@ -28,12 +28,20 @@ function client(): SyncPrototypeClient {
     account: { isLoggedIn: true, isLoading: false, userId: USER_ID },
     sync: { status: 'connected', phase: 'in-sync' },
     weights: { weights: [], deletedCount: 0, isLoading: false },
+    realAccountPreferences: { enabled: true, status: 'idle' },
+    realRewardsRoutines: { enabled: true, status: 'idle' },
+    realWeights: { enabled: true, status: 'idle' },
+    realActivities: { enabled: true, status: 'idle' },
+    realGoals: { enabled: true, status: 'idle' },
+    realStrength: { enabled: true, status: 'idle' },
+    realDailyCoaching: { enabled: true, status: 'idle' },
     diagnostics: createEmptySyncPrototypeDiagnostics(),
   };
   return {
     getSnapshot: () => snapshot,
     subscribe: () => () => undefined,
     initialize: async () => undefined,
+    syncNow: vi.fn(async () => undefined),
   } as unknown as SyncPrototypeClient;
 }
 
@@ -93,8 +101,8 @@ function orchestrator(
   };
 }
 
-describe('AutomaticSyncController — whitelist Goals + Weights', () => {
-  it('automatise Goals cloud-only et Weights local-only sans élargir Activities', async () => {
+describe('AutomaticSyncController — whitelist automatique Lot 1', () => {
+  it('automatise Goals cloud-only puis Weights et Activities local-only', async () => {
     const { value, schedule } = orchestrator([
       {
         domainId: 'goals',
@@ -124,6 +132,20 @@ describe('AutomaticSyncController — whitelist Goals + Weights', () => {
 
     await controller.initialize();
 
+    expect(schedule).toHaveBeenNthCalledWith(1, {
+      operation: 'analyze',
+      source: 'application-start',
+      domainIds: [
+        'account-preferences',
+        'rewards-routines',
+        'weights',
+        'activities',
+        'goals',
+        'strength',
+        'daily-coaching',
+      ],
+      delayMs: 0,
+    });
     expect(schedule).toHaveBeenCalledTimes(3);
     expect(schedule).toHaveBeenNthCalledWith(2, {
       operation: 'sync',
@@ -136,17 +158,29 @@ describe('AutomaticSyncController — whitelist Goals + Weights', () => {
       operation: 'sync',
       syncMode: 'local-only',
       source: 'application-start',
-      domainIds: ['weights'],
+      domainIds: ['weights', 'activities'],
       delayMs: 0,
     });
-    expect(schedule.mock.calls.flatMap(([request]) => request.domainIds ?? []))
-      .toContain('activities');
-    expect(schedule.mock.calls.slice(1).flatMap(([request]) => request.domainIds ?? []))
-      .not.toContain('activities');
+    const writtenDomainIds = schedule.mock.calls
+      .slice(1)
+      .flatMap(([request]) => request.domainIds ?? []);
+    expect(writtenDomainIds).toEqual(
+      expect.arrayContaining(['goals', 'weights', 'activities']),
+    );
+    expect(writtenDomainIds).not.toEqual(
+      expect.arrayContaining([
+        'account-preferences',
+        'rewards-routines',
+        'nutrition-journal',
+        'nutrition-library',
+        'nutrition-tracking',
+        'daily-coaching',
+      ]),
+    );
     controller.dispose();
   });
 
-  it('laisse both et unknown au stade analyse sans écriture automatique', async () => {
+  it('résout Goals both via merge-safe mais laisse unknown Weights intact', async () => {
     const { value, schedule } = orchestrator([
       {
         domainId: 'goals',
@@ -156,13 +190,14 @@ describe('AutomaticSyncController — whitelist Goals + Weights', () => {
       },
       {
         domainId: 'weights',
-        status: 'local-changes-pending',
+        status: 'action-required',
         differingEntityCount: 1,
         changeOrigin: 'unknown',
       },
     ]);
+    const testClient = client();
     const controller = new AutomaticSyncController({
-      client: client(),
+      client: testClient,
       settingsRepository: settingsRepository(),
       createOrchestrator: () => value,
       lifecycleDebounceMs: 0,
@@ -170,10 +205,36 @@ describe('AutomaticSyncController — whitelist Goals + Weights', () => {
 
     await controller.initialize();
 
-    expect(schedule).toHaveBeenCalledTimes(1);
-    expect(schedule).toHaveBeenCalledWith(expect.objectContaining({
+    expect(testClient.syncNow).toHaveBeenCalledTimes(2);
+    expect(schedule).toHaveBeenCalledTimes(4);
+
+    expect(schedule).toHaveBeenNthCalledWith(2, {
       operation: 'analyze',
-    }));
+      source: 'application-start',
+      domainIds: ['goals'],
+      delayMs: 0,
+    });
+    expect(schedule).toHaveBeenNthCalledWith(3, {
+      operation: 'sync',
+      syncMode: 'bidirectional',
+      source: 'application-start',
+      domainIds: ['goals'],
+      delayMs: 0,
+    });
+    expect(schedule).toHaveBeenNthCalledWith(4, {
+      operation: 'analyze',
+      source: 'application-start',
+      domainIds: ['goals'],
+      delayMs: 0,
+    });
+
+    const synchronizedDomains = schedule.mock.calls
+      .filter(([request]) => request.operation === 'sync')
+      .flatMap(([request]) => request.domainIds ?? []);
+
+    expect(synchronizedDomains).toEqual(['goals']);
+    expect(synchronizedDomains).not.toContain('weights');
+
     controller.dispose();
   });
 

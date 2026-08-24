@@ -1,5 +1,5 @@
 import type { AppDatabase } from '@/infrastructure/database/AppDatabase';
-import { restoreTrashItem } from '@/infrastructure/repositories/dexie/trashService';
+import { restoreTrashItemWithSyncNotification } from '@/infrastructure/repositories/dexie/trashRestoreSyncNotification';
 
 export interface TrashRestoreFailure {
   id: string;
@@ -23,7 +23,7 @@ function uniqueIds(ids: readonly string[]): string[] {
 export async function restoreTrashItems(
   database: AppDatabase,
   ids: readonly string[],
-  restore: TrashItemRestorer = restoreTrashItem,
+  restore: TrashItemRestorer = restoreTrashItemWithSyncNotification,
 ): Promise<TrashBulkRestoreResult> {
   const restoredIds: string[] = [];
   const failures: TrashRestoreFailure[] = [];

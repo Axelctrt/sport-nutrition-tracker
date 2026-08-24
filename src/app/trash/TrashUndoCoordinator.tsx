@@ -8,6 +8,7 @@ import {
 import type { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import { appDatabase } from '@/infrastructure/database/database';
 import { restoreTrashItem } from '@/infrastructure/repositories/dexie/trashService';
+import { restoreTrashItemWithSyncNotification } from '@/infrastructure/repositories/dexie/trashRestoreSyncNotification';
 import { useToast } from '@/shared/toast/useToast';
 import { subscribeTrashUndoAvailable } from '@/shared/trash/trashUndoEvents';
 
@@ -25,7 +26,7 @@ interface TrashUndoCoordinatorProps extends PropsWithChildren {
 export function TrashUndoCoordinator({
   children,
   database = appDatabase,
-  restoreItem = restoreTrashItem,
+  restoreItem = restoreTrashItemWithSyncNotification,
 }: TrashUndoCoordinatorProps) {
   const toast = useToast();
   const [revision, setRevision] = useState(0);

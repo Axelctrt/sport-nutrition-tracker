@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   deleteTrashItemsPermanently,
@@ -333,5 +333,14 @@ describe('TrashPage', () => {
         '2 élément(s) ont été replacés dans la corbeille pour 30 jours.',
       ),
     ).toBeInTheDocument();
+  });
+  afterAll(() => {
+    vi.doUnmock('@/infrastructure/database/database');
+    vi.doUnmock(
+      '@/infrastructure/repositories/dexie/trashService',
+    );
+    vi.doUnmock('@/application/trash/trashBulkService');
+    vi.doUnmock('@/application/trash/trashArchiveService');
+    vi.resetModules();
   });
 });

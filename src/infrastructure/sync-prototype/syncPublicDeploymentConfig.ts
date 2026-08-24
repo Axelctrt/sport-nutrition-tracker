@@ -4,9 +4,10 @@
  * Ces valeurs sont nécessairement visibles dans le bundle navigateur.
  * Aucune clé privée, aucun jeton et aucun secret Dexie Cloud ne doit être ajouté ici.
  *
- * Elles servent de garde-fou de production. Les variables VITE_* définies par
- * l’hébergeur gardent la priorité pour permettre une activation contrôlée par
- * environnement Cloudflare Preview/Production.
+ * Elles servent de garde-fou de production. Le contrat de continuité publié
+ * (base Dexie + les dix domaines non sociaux) est verrouillé par
+ * mergeSyncPrototypeProductionEnvironment(). Social cloud et les diagnostics
+ * restent hors de ce contrat et demeurent pilotables séparément.
  */
 export const syncPublicDeploymentConfig = Object.freeze({
   VITE_ENABLE_SYNC_PROTOTYPE: 'true',

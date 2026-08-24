@@ -3,6 +3,12 @@ import type {
   SyncOrchestratorDomainId,
   SyncOrchestratorPreview,
 } from '@/application/sync/syncOrchestrator';
+import { notifySyncLocalDataChanged } from '@/application/sync/syncLocalChangeEvents';
+import { flushGoalStatePersistence } from '@/domain/goals/goalState';
+import {
+  synchronizeRegisteredRealActivitiesFromCloud,
+  synchronizeRegisteredRealActivitiesToCloud,
+} from '@/infrastructure/sync-prototype/realActivitySyncService';
 import {
   synchronizeRegisteredRealGoalsFromCloud,
   synchronizeRegisteredRealGoalsToCloud,
@@ -59,7 +65,7 @@ export function readSyncOrchestratorPreview(
 
 async function synchronizeRegisteredDirection(
   client: SyncPrototypeClient,
-  domainId: 'goals' | 'weights',
+  domainId: 'activities' | 'weights' | 'goals',
   expectedOrigin: 'cloud' | 'local',
   synchronizeRegistered: (currentUserId: string) => Promise<unknown>,
   analyze: () => Promise<{ readonly differingEntityCount: number }>,
@@ -100,6 +106,57 @@ async function synchronizeRegisteredDirection(
     if (client.getSnapshot().account.userId !== currentUserId) return result;
   }
   await analyze();
+  return result;
+}
+
+async function analyzeGoalsWithFreshCloudBarrier(
+  client: SyncPrototypeClient,
+): Promise<{ readonly differingEntityCount: number }> {
+  // Local Goals live in an in-memory runtime with queued Dexie persistence.
+  // Make the local database authoritative before any provenance decision.
+  await flushGoalStatePersistence();
+
+  // The local mutation and its causal parent have already been staged into the
+  // Dexie Cloud replica by AutomaticSyncCoordinator. Transport lets the server
+  // execute the declarative head CAS before SportPilot reads the accepted head.
+  await client.syncNow();
+  return client.analyzeRealGoals!();
+}
+
+async function synchronizeGoalsWithFreshCloudBarrier(
+  client: SyncPrototypeClient,
+): Promise<unknown> {
+  await flushGoalStatePersistence();
+
+  // both/unknown remains the explicit business reconciliation fallback for
+  // legacy/initial cases that have no trustworthy staged directional baseline.
+  await client.syncNow();
+  return client.syncRealGoals!();
+}
+
+async function synchronizeNutritionLibrary(
+  client: SyncPrototypeClient,
+): Promise<unknown> {
+  const result = await client.syncRealNutritionLibrary!();
+  if (result.remappedProductReferences > 0) {
+    notifySyncLocalDataChanged(
+      ['nutrition-journal'],
+      'nutrition-library-product-remap',
+    );
+  }
+  return result;
+}
+
+async function synchronizeNutritionTracking(
+  client: SyncPrototypeClient,
+): Promise<unknown> {
+  const result = await client.syncRealNutritionTracking!();
+  if (result.recalculatedDailyTargets > 0) {
+    notifySyncLocalDataChanged(
+      ['nutrition-journal'],
+      'nutrition-tracking-daily-target-recalculation',
+    );
+  }
   return result;
 }
 
@@ -184,11 +241,33 @@ export function createSyncOrchestratorDomains(
       ? () => client.analyzeRealActivities!()
       : undefined,
     client.syncRealActivities ? () => client.syncRealActivities!() : undefined,
+    client.analyzeRealActivities
+      ? () => synchronizeRegisteredDirection(
+          client,
+          'activities',
+          'cloud',
+          synchronizeRegisteredRealActivitiesFromCloud,
+          () => client.analyzeRealActivities!(),
+        )
+      : undefined,
+    client.analyzeRealActivities
+      ? () => synchronizeRegisteredDirection(
+          client,
+          'activities',
+          'local',
+          synchronizeRegisteredRealActivitiesToCloud,
+          () => client.analyzeRealActivities!(),
+        )
+      : undefined,
   );
   add(
     'goals',
-    client.analyzeRealGoals ? () => client.analyzeRealGoals!() : undefined,
-    client.syncRealGoals ? () => client.syncRealGoals!() : undefined,
+    client.analyzeRealGoals
+      ? () => analyzeGoalsWithFreshCloudBarrier(client)
+      : undefined,
+    client.syncRealGoals
+      ? () => synchronizeGoalsWithFreshCloudBarrier(client)
+      : undefined,
     client.analyzeRealGoals
       ? () => synchronizeRegisteredDirection(
           client,
@@ -234,7 +313,7 @@ export function createSyncOrchestratorDomains(
       ? () => client.analyzeRealNutritionLibrary!()
       : undefined,
     client.syncRealNutritionLibrary
-      ? () => client.syncRealNutritionLibrary!()
+      ? () => synchronizeNutritionLibrary(client)
       : undefined,
   );
   add(
@@ -243,7 +322,7 @@ export function createSyncOrchestratorDomains(
       ? () => client.analyzeRealNutritionTracking!()
       : undefined,
     client.syncRealNutritionTracking
-      ? () => client.syncRealNutritionTracking!()
+      ? () => synchronizeNutritionTracking(client)
       : undefined,
   );
   add(

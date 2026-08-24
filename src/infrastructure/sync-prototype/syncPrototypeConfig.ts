@@ -112,6 +112,34 @@ export function mergeSyncPrototypeProductionEnvironment(
   return {
     ...syncPublicDeploymentConfig,
     ...environment,
+
+    // Ces valeurs constituent le contrat de continuité publié.
+    // Une variable VITE_* résiduelle du poste de build ne doit jamais
+    // pouvoir changer silencieusement la base ou désactiver un domaine sûr.
+    VITE_ENABLE_SYNC_PROTOTYPE:
+      syncPublicDeploymentConfig.VITE_ENABLE_SYNC_PROTOTYPE,
+    VITE_DEXIE_CLOUD_DATABASE_URL:
+      syncPublicDeploymentConfig.VITE_DEXIE_CLOUD_DATABASE_URL,
+    VITE_ENABLE_REAL_WEIGHT_SYNC:
+      syncPublicDeploymentConfig.VITE_ENABLE_REAL_WEIGHT_SYNC,
+    VITE_ENABLE_REAL_ACTIVITY_SYNC:
+      syncPublicDeploymentConfig.VITE_ENABLE_REAL_ACTIVITY_SYNC,
+    VITE_ENABLE_REAL_GOAL_SYNC:
+      syncPublicDeploymentConfig.VITE_ENABLE_REAL_GOAL_SYNC,
+    VITE_ENABLE_REAL_STRENGTH_SYNC:
+      syncPublicDeploymentConfig.VITE_ENABLE_REAL_STRENGTH_SYNC,
+    VITE_ENABLE_REAL_ACCOUNT_PREFERENCES_SYNC:
+      syncPublicDeploymentConfig.VITE_ENABLE_REAL_ACCOUNT_PREFERENCES_SYNC,
+    VITE_ENABLE_REAL_REWARDS_ROUTINES_SYNC:
+      syncPublicDeploymentConfig.VITE_ENABLE_REAL_REWARDS_ROUTINES_SYNC,
+    VITE_ENABLE_REAL_DAILY_COACHING_SYNC:
+      syncPublicDeploymentConfig.VITE_ENABLE_REAL_DAILY_COACHING_SYNC,
+    VITE_ENABLE_REAL_NUTRITION_JOURNAL_SYNC:
+      syncPublicDeploymentConfig.VITE_ENABLE_REAL_NUTRITION_JOURNAL_SYNC,
+    VITE_ENABLE_REAL_NUTRITION_LIBRARY_SYNC:
+      syncPublicDeploymentConfig.VITE_ENABLE_REAL_NUTRITION_LIBRARY_SYNC,
+    VITE_ENABLE_REAL_NUTRITION_TRACKING_SYNC:
+      syncPublicDeploymentConfig.VITE_ENABLE_REAL_NUTRITION_TRACKING_SYNC,
   };
 }
 
