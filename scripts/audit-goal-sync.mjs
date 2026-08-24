@@ -16,6 +16,9 @@ const cloudDatabase = read(
 const service = read(
   'src/infrastructure/sync-prototype/realGoalSyncService.ts',
 );
+const mutationJournal = read(
+  'src/infrastructure/sync-prototype/realGoalMutationJournal.ts',
+);
 const client = read(
   'src/infrastructure/sync-prototype/syncPrototypeClient.ts',
 );
@@ -34,6 +37,7 @@ const deployment = read(
 const mainVersions = read(
   'src/infrastructure/database/migrations/versions.ts',
 );
+const packageMetadata = JSON.parse(read('package.json') || '{}');
 
 
 for (const expected of [
@@ -45,10 +49,50 @@ for (const expected of [
   }
 }
 
-for (const tableName of ['realGoals', 'realGoalDeletionRecords']) {
+for (const tableName of [
+  'realGoals',
+  'realGoalDeletionRecords',
+  'realGoalMutations',
+  'realGoalMutationHeads',
+  'realGoalMutationClocks',
+]) {
   if (!cloudDatabase.includes(tableName)) {
     fail(`la table cloud ${tableName} n’est pas déclarée.`);
   }
+}
+
+for (const expected of [
+  'parentMutationId',
+  'realGoalMutationHeadId',
+  "where('[entityId+mutationId]')",
+  '.equals([input.entityId, input.parentMutationId])',
+  '.modify({ mutationId: mutation.id })',
+  'mutationTable.add',
+  'resolveRealGoalMutationJournal',
+]) {
+  if (!mutationJournal.includes(expected)) {
+    fail(`le journal immuable Goals ne contient pas le garde-fou ${expected}.`);
+  }
+}
+
+for (const forbidden of [
+  'compareRealGoalMutationOrder',
+  'calibrateRealGoalMutationClock',
+  'lastLogin',
+  'accessTokenExpiration',
+]) {
+  if (mutationJournal.includes(forbidden)) {
+    fail(`le journal causal Goals contient encore une autorité temporelle interdite: ${forbidden}.`);
+  }
+}
+
+if (!mutationJournal.includes("return `goal-head-")
+  || mutationJournal.includes("return `#goal-head-")) {
+  fail('le head causal Goals doit avoir un identifiant déterministe non privé.');
+}
+
+if (packageMetadata.dependencies?.['dexie-cloud-addon'] !== '4.4.13') {
+  fail('le contrat CAS Goals exige dexie-cloud-addon@4.4.13 épinglé exactement.');
 }
 
 if (!service.includes("from '@/infrastructure/sync-prototype/cloudSyncValue'")) {
@@ -112,6 +156,6 @@ if (failures.length > 0) {
   process.exitCode = 1;
 } else {
   console.log(
-    'Audit de synchronisation des objectifs B2 réussi : objectifs, suppressions, isolation de compte, runtime local isolé, métadonnées cloud et interface manuelle validés.',
+    'Audit de synchronisation des objectifs B2 réussi : journal append-only, head causal non privé, CAS déclaratif, suppressions/restaurations, isolation de compte et runtime local isolé validés.',
   );
 }

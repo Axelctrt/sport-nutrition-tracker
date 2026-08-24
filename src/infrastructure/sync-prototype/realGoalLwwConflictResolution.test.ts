@@ -7,7 +7,6 @@ import {
   type DeletionRecord,
 } from '@/domain/models/deletion';
 import { AppDatabase } from '@/infrastructure/database/AppDatabase';
-import { stableValue } from '@/infrastructure/sync-prototype/cloudSyncValue';
 import type { SyncPrototypeDatabase } from '@/infrastructure/sync-prototype/SyncPrototypeDatabase';
 import type {
   LogicalSyncBaseline,
@@ -105,7 +104,7 @@ async function bootstrapEqual(
   )).toMatchObject({ differingEntityCount: 0 });
 }
 
-describe('Goals LWW — suppressions, restaurations et égalités', () => {
+describe('Goals causal — aucun repli LWW temporel sans head', () => {
   let local: AppDatabase;
   let cloud: TestCloudDatabase;
 
@@ -123,7 +122,7 @@ describe('Goals LWW — suppressions, restaurations et égalités', () => {
     await Promise.all(names.map((name) => Dexie.delete(name)));
   });
 
-  it('fait gagner une suppression plus récente contre une mise à jour cloud', async () => {
+  it('refuse de faire gagner une suppression seulement parce qu’elle est plus récente', async () => {
     const deleted = createDeletedDeletionRecord(
       { entityType: 'goal', entityId: 'goal-lww-edge' },
       '2026-08-19T12:00:00.000Z',
@@ -142,23 +141,26 @@ describe('Goals LWW — suppressions, restaurations et égalités', () => {
       USER_ID,
     )).toMatchObject({ changeOrigin: 'both', differingEntityCount: 1 });
 
-    await synchronizeRealGoals(
+    await expect(synchronizeRealGoals(
       local,
       cloud as unknown as SyncPrototypeDatabase,
       USER_ID,
-    );
+    )).rejects.toThrow('aucun LWW temporel');
 
     expect(await local.goals.get('goal-lww-edge')).toBeUndefined();
-    expect(await cloud.realGoals.get('#goal-lww-edge')).toBeUndefined();
+    expect(await cloud.realGoals.get('#goal-lww-edge')).toMatchObject({
+      targetValue: 55_000,
+      updatedAt: '2026-08-19T11:00:00.000Z',
+    });
     expect(await local.deletionRecords.get(
       deletionRecordId('goal', 'goal-lww-edge'),
     )).toMatchObject({ status: 'deleted', updatedAt: '2026-08-19T12:00:00.000Z' });
     expect(await cloud.realGoalDeletionRecords.get(
       '#deletion:goal:goal-lww-edge',
-    )).toMatchObject({ status: 'deleted', updatedAt: '2026-08-19T12:00:00.000Z' });
+    )).toBeUndefined();
   });
 
-  it('fait gagner une restauration plus récente contre une suppression cloud', async () => {
+  it('refuse de faire gagner une restauration seulement parce qu’elle est plus récente', async () => {
     const cloudDeleted = createDeletedDeletionRecord(
       { entityType: 'goal', entityId: 'goal-lww-edge' },
       '2026-08-19T11:00:00.000Z',
@@ -182,54 +184,47 @@ describe('Goals LWW — suppressions, restaurations et égalités', () => {
       USER_ID,
     )).toMatchObject({ changeOrigin: 'both', differingEntityCount: 1 });
 
-    await synchronizeRealGoals(
+    await expect(synchronizeRealGoals(
       local,
       cloud as unknown as SyncPrototypeDatabase,
       USER_ID,
-    );
+    )).rejects.toThrow('aucun LWW temporel');
 
     expect(await local.goals.get('goal-lww-edge')).toMatchObject({
       targetValue: 60_000,
       updatedAt: '2026-08-19T12:00:00.000Z',
     });
-    expect(await cloud.realGoals.get('#goal-lww-edge')).toMatchObject({
-      targetValue: 60_000,
-      updatedAt: '2026-08-19T12:00:00.000Z',
-    });
+    expect(await cloud.realGoals.get('#goal-lww-edge')).toBeUndefined();
     expect(await cloud.realGoalDeletionRecords.get(
       '#deletion:goal:goal-lww-edge',
-    )).toMatchObject({ status: 'restored', updatedAt: '2026-08-19T12:00:00.000Z' });
+    )).toMatchObject({ status: 'deleted', updatedAt: '2026-08-19T11:00:00.000Z' });
   });
 
-  it('utilise un tie-break stable lorsque updatedAt est strictement identique', async () => {
+  it('refuse tout tie-break de contenu lorsque updatedAt est strictement identique', async () => {
     const timestamp = '2026-08-19T13:00:00.000Z';
     const localValue = goal(70_000, timestamp);
     const cloudValue = goal(80_000, timestamp);
     await local.goals.put(localValue);
     await putCloudGoal(cloud, cloudValue, 5);
 
-    const expected = stableValue({ goal: localValue }) >= stableValue({ goal: cloudValue })
-      ? localValue
-      : cloudValue;
-
-    await synchronizeRealGoals(
+    await expect(synchronizeRealGoals(
       local,
       cloud as unknown as SyncPrototypeDatabase,
       USER_ID,
-    );
+    )).rejects.toThrow('aucun LWW temporel');
 
     expect(await local.goals.get('goal-lww-edge')).toMatchObject({
-      targetValue: expected.targetValue,
+      targetValue: 70_000,
       updatedAt: timestamp,
     });
     expect(await cloud.realGoals.get('#goal-lww-edge')).toMatchObject({
-      targetValue: expected.targetValue,
+      targetValue: 80_000,
       updatedAt: timestamp,
     });
     expect(await previewRealGoalSync(
       local,
       cloud as unknown as SyncPrototypeDatabase,
       USER_ID,
-    )).toMatchObject({ differingEntityCount: 0 });
+    )).toMatchObject({ differingEntityCount: 1, changeOrigin: 'both' });
   });
 });

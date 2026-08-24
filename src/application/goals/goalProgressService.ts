@@ -321,8 +321,11 @@ function persistGoals(goals: Goal[]): GoalState {
 export async function refreshGoalProgress(
   database: AppDatabase = appDatabase,
 ): Promise<GoalProgressView[]> {
-  const state = readGoalState();
+  // Read all asynchronous progression inputs first. The Goals runtime must be
+  // sampled only after the final await so an in-flight refresh cannot capture
+  // an old target and publish it over a newer user edit when the read resumes.
   const data = await readBackupData(database);
+  const state = readGoalState();
   const now = new Date().toISOString();
   let changed = false;
 
@@ -526,6 +529,6 @@ export async function deleteGoal(
     },
   );
 
-  notifyGoalStatePersisted();
+  notifyGoalStatePersisted([goalId]);
   await reloadUserStateRuntime(database);
 }

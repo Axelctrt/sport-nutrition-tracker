@@ -134,40 +134,22 @@ describe('résolution manuelle Goals both', () => {
     await Promise.all(names.map((name) => Dexie.delete(name)));
   });
 
-  it('le merge générique résout both automatiquement par dernière mutation métier', async () => {
+  it('le merge générique refuse both sans head causal', async () => {
     await createBoth(local, cloud);
 
-    const result = await synchronizeRealGoals(
+    await expect(synchronizeRealGoals(
       local,
       cloud as unknown as SyncPrototypeDatabase,
       USER_ID,
-    );
-
-    expect(result).toMatchObject({
-      changeOrigin: 'both',
-      uploadedGoals: 0,
-      downloadedGoals: 1,
-      removedLocalGoals: 0,
-      removedCloudGoals: 0,
-      uploadedDeletionRecords: 0,
-      downloadedDeletionRecords: 0,
-    });
+    )).rejects.toThrow('réconciliation explicite');
 
     expect(await local.goals.get('goal-both')).toMatchObject({
-      targetValue: 120_000,
-      updatedAt: '2026-08-18T11:00:00.000Z',
+      targetValue: 110_000,
+      updatedAt: '2026-08-18T10:00:00.000Z',
     });
     expect(await cloud.realGoals.get('#goal-both')).toMatchObject({
       targetValue: 120_000,
       updatedAt: '2026-08-18T11:00:00.000Z',
-    });
-
-    expect(await previewRealGoalSync(
-      local,
-      cloud as unknown as SyncPrototypeDatabase,
-      USER_ID,
-    )).toMatchObject({
-      differingEntityCount: 0,
     });
   });
 

@@ -17,7 +17,7 @@ describe('readiness snapshots sociaux cloud 0.28.0 F6', () => {
   });
 
   it('confirme le runtime Dexie Cloud v15 avec table snapshots sociaux', () => {
-    expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(16);
+    expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(18);
     expect(SYNC_PROTOTYPE_TABLE_NAMES).toContain('socialActivitySnapshots');
   });
 });

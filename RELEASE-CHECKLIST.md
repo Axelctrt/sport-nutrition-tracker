@@ -14,7 +14,11 @@ Branche de préparation : `release/1.0.4`.
 - [x] Activities `local-only` / `cloud-only` : direction stricte.
 - [x] Whitelist automatique limitée à Strength + Goals + Weights + Activities.
 - [x] Aucun cinquième domaine.
-- [x] Dexie v12, sauvegarde JSON v10 et runtime Dexie Cloud v16 inchangés.
+- [x] Dexie v12 et sauvegarde JSON v10 inchangées ; runtime Dexie Cloud v18
+  additif, stockage v16 migré en place.
+- [ ] Gate réel Dexie Cloud TEST Goals causal : +1 h, +24 h, -24 h, miroir,
+  branches offline, descendants stale, delete/restore, session, reload,
+  conservation des intentions, isolation et absence de transport offline.
 - [x] Aucune migration D1.
 - [x] Aucune modification des formules calories/macros.
 - [x] Aucun thème modifié.

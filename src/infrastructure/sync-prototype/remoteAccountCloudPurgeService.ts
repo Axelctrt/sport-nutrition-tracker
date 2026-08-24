@@ -23,6 +23,8 @@ const CLOUD_TABLE_NAMES = [
   'realActivityDeletionRecords',
   'realGoals',
   'realGoalDeletionRecords',
+  'realGoalMutations',
+  'realGoalMutationHeads',
   'realStrengthExercises',
   'realWorkoutTemplates',
   'realWorkoutSessions',
@@ -84,19 +86,35 @@ export async function purgeCurrentAccountCloudData(
   const tables = CLOUD_TABLE_NAMES.map((name) =>
     database.table<CloudRecord, string>(name));
   const baselineTable = database.table('realSyncBaselines');
+  const goalClockTable = database.table('realGoalMutationClocks');
   const deletedByTable: Record<string, number> = {};
 
-  await database.transaction('rw', [...tables, baselineTable], async () => {
-    for (const [index, tableName] of CLOUD_TABLE_NAMES.entries()) {
-      const table = tables[index] as Table<CloudRecord, string>;
-      const rows = accountRows(tableName, await table.toArray(), userId);
-      if (rows.length > 0) {
-        await table.bulkDelete(rows.map((row) => row.id));
+  await database.transaction(
+    'rw',
+    [...tables, baselineTable, goalClockTable],
+    async () => {
+      for (const [index, tableName] of CLOUD_TABLE_NAMES.entries()) {
+        const table = tables[index] as Table<CloudRecord, string>;
+        const rows = accountRows(tableName, await table.toArray(), userId);
+        if (rows.length > 0) {
+          await table.bulkDelete(rows.map((row) => row.id));
+        }
+        deletedByTable[tableName] = rows.length;
       }
-      deletedByTable[tableName] = rows.length;
-    }
-    await baselineTable.clear();
-  });
+      const baselineRows = await baselineTable.toArray() as CloudRecord[];
+      await baselineTable.bulkDelete(
+        baselineRows
+          .filter((row) => row.accountUserId === userId)
+          .map((row) => row.id),
+      );
+      const goalClockRows = await goalClockTable.toArray() as CloudRecord[];
+      await goalClockTable.bulkDelete(
+        goalClockRows
+          .filter((row) => row.accountUserId === userId)
+          .map((row) => row.id),
+      );
+    },
+  );
 
   await database.cloud.sync();
 

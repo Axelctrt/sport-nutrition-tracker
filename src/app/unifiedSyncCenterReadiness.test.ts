@@ -11,7 +11,7 @@ describe('publication 0.26.0 du centre de synchronisation unifié', () => {
     expect(__APP_VERSION__).toBe('1.0.4');
     expect(databaseSchemaVersion).toBe(12);
     expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(10);
-    expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(16);
+    expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(18);
     expect(SYNC_PROTOTYPE_DATABASE_NAME).toBe(
       'sportpilot-sync-runtime-0.20.0-v16',
     );

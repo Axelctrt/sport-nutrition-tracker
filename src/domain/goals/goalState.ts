@@ -55,6 +55,10 @@ export const GOAL_STATE_CHANGED_EVENT =
 export const GOAL_STATE_PERSISTED_EVENT =
   'sportpilot:goals-persisted';
 
+export interface GoalStatePersistedEventDetail {
+  readonly goalIds: readonly string[];
+}
+
 export const GOAL_MILESTONES: readonly GoalMilestone[] = [
   25,
   50,
@@ -342,10 +346,35 @@ function dispatchGoalStateChanged(): void {
   window.dispatchEvent(new Event(GOAL_STATE_CHANGED_EVENT));
 }
 
-export function notifyGoalStatePersisted(): void {
+export function notifyGoalStatePersisted(
+  goalIds?: readonly string[],
+): void {
   if (typeof window === 'undefined') return;
 
-  window.dispatchEvent(new Event(GOAL_STATE_PERSISTED_EVENT));
+  window.dispatchEvent(new CustomEvent<GoalStatePersistedEventDetail>(
+    GOAL_STATE_PERSISTED_EVENT,
+    {
+      detail: {
+        goalIds: goalIds ? [...new Set(goalIds)] : [],
+      },
+    },
+  ));
+}
+
+function changedGoalIds(
+  previous: GoalState,
+  next: GoalState,
+): string[] {
+  const previousById = new Map(
+    previous.goals.map((goal) => [goal.id, goal]),
+  );
+  const nextById = new Map(
+    next.goals.map((goal) => [goal.id, goal]),
+  );
+  const ids = new Set([...previousById.keys(), ...nextById.keys()]);
+  return [...ids].filter((id) =>
+    JSON.stringify(previousById.get(id))
+      !== JSON.stringify(nextById.get(id)));
 }
 
 export function hydrateGoalStateRuntime(
@@ -389,6 +418,10 @@ export function writeGoalState(state: GoalState): void {
   }
 
   const persist = goalStateRuntime.persist;
+  const persistedGoalIds = changedGoalIds(
+    goalStateRuntime.state,
+    snapshot,
+  );
   goalStateRuntime.state = snapshot;
   latestGoalFallback = serialized;
   writeGoalFallback(serialized);
@@ -399,7 +432,7 @@ export function writeGoalState(state: GoalState): void {
     .then(() => persist(snapshot))
     .then(() => {
       removeGoalFallback(serialized);
-      notifyGoalStatePersisted();
+      notifyGoalStatePersisted(persistedGoalIds);
     })
     .catch((error: unknown) => {
       console.error(

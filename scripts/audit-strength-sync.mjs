@@ -36,8 +36,8 @@ const mainVersions = read(
 );
 
 for (const expected of [
-  'SYNC_PROTOTYPE_DATABASE_VERSION = 16',
-  'sportpilot-sync-runtime-0.20.0-v${SYNC_PROTOTYPE_DATABASE_VERSION}',
+  'SYNC_PROTOTYPE_DATABASE_VERSION = 18',
+  "'sportpilot-sync-runtime-0.20.0-v16'",
 ]) {
   if (!cloudDatabase.includes(expected)) {
     fail(`le runtime cloud B3 ne contient pas le garde-fou ${expected}.`);

@@ -20,7 +20,7 @@ describe('stable readiness 1.0.4', () => {
   it('conserve les versions de stockage validées', () => {
     expect(databaseSchemaVersion).toBe(12);
     expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(10);
-    expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(16);
+    expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(18);
     expect(SOCIAL_ACTIVITY_SNAPSHOT_CONTRACT_VERSION).toBe('0.29.0-a3');
   });
 

@@ -295,7 +295,7 @@ describe('gate Goals both — reprise automatique après résolution', () => {
       controller.dispose();
     }
   });
-  it('A hors ligne et B cloud divergent puis la mutation cloud plus récente gagne automatiquement', async () => {
+  it('A hors ligne et B cloud divergent restent fail-closed sans head causal', async () => {
     const initial = goal(10_000, '2026-08-19T06:00:00.000Z');
     await local.goals.put(initial);
     await putCloudGoal(cloud, initial);
@@ -341,13 +341,15 @@ describe('gate Goals both — reprise automatique après résolution', () => {
       online = true;
       eventTarget.dispatchEvent(new Event('online'));
 
-      await vi.waitFor(async () => {
-        expect(await local.goals.get('goal-both-auto')).toMatchObject({
-          targetValue: 55_000,
-        });
-        expect(await cloud.realGoals.get('#goal-both-auto')).toMatchObject({
-          targetValue: 55_000,
-        });
+      await vi.waitFor(() => {
+        expect(testClient.syncRealGoals).toHaveBeenCalled();
+      });
+
+      expect(await local.goals.get('goal-both-auto')).toMatchObject({
+        targetValue: 8_000,
+      });
+      expect(await cloud.realGoals.get('#goal-both-auto')).toMatchObject({
+        targetValue: 55_000,
       });
 
       expect(observedOrigins).toContain('both');
@@ -358,14 +360,15 @@ describe('gate Goals both — reprise automatique après résolution', () => {
         cloud as unknown as SyncPrototypeDatabase,
         USER_ID,
       )).toMatchObject({
-        differingEntityCount: 0,
+        differingEntityCount: 1,
+        changeOrigin: 'both',
       });
     } finally {
       controller.dispose();
     }
   });
 
-  it('A hors ligne plus récent que B cloud gagne automatiquement dans le scénario miroir', async () => {
+  it('le scénario miroir reste fail-closed sans arbitrage par updatedAt', async () => {
     const initial = goal(10_000, '2026-08-19T07:00:00.000Z');
     await local.goals.put(initial);
     await putCloudGoal(cloud, initial);
@@ -410,13 +413,15 @@ describe('gate Goals both — reprise automatique après résolution', () => {
       online = true;
       eventTarget.dispatchEvent(new Event('online'));
 
-      await vi.waitFor(async () => {
-        expect(await local.goals.get('goal-both-auto')).toMatchObject({
-          targetValue: 8_000,
-        });
-        expect(await cloud.realGoals.get('#goal-both-auto')).toMatchObject({
-          targetValue: 8_000,
-        });
+      await vi.waitFor(() => {
+        expect(testClient.syncRealGoals).toHaveBeenCalled();
+      });
+
+      expect(await local.goals.get('goal-both-auto')).toMatchObject({
+        targetValue: 8_000,
+      });
+      expect(await cloud.realGoals.get('#goal-both-auto')).toMatchObject({
+        targetValue: 55_000,
       });
 
       expect(observedOrigins).toContain('both');
@@ -427,7 +432,8 @@ describe('gate Goals both — reprise automatique après résolution', () => {
         cloud as unknown as SyncPrototypeDatabase,
         USER_ID,
       )).toMatchObject({
-        differingEntityCount: 0,
+        differingEntityCount: 1,
+        changeOrigin: 'both',
       });
     } finally {
       controller.dispose();

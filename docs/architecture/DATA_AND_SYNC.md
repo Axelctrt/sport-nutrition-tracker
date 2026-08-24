@@ -10,7 +10,7 @@ de `docs/architecture` conservent l’historique détaillé.
 | `AppDatabase` Dexie | 12 | données utilisateur principales et photos privées locales |
 | Sauvegarde JSON | 10 | export/import contrôlé des données structurées, hors images |
 | Archive photos | 1 | export/restauration séparés des images de progression |
-| Runtime Dexie Cloud | 16 | agrégats synchronisables et baselines logiques |
+| Runtime Dexie Cloud | 18 | agrégats synchronisables, journal causal Goals et baselines logiques |
 | D1 social | migrations `0000` à `0003` présentes | identité, relations, permissions, snapshots et limites photo nutritionnelle |
 
 La source de la version Dexie principale est
@@ -63,9 +63,66 @@ Les suppressions synchronisées passent par des `DeletionRecord`. Les séances,
 modèles et exercices de musculation sont synchronisés comme agrégats afin
 d’éviter les états partiels.
 
+Pour Goals, chaque mutation AppDB persistée est aussi inscrite immédiatement
+comme opération dans le replica Dexie Cloud local du compte actif, y compris
+hors ligne. Cette étape cible uniquement les objectifs réellement mutés et ne
+déclenche aucun transport ; `disableEagerSync: true` reste le garde-fou. Le
+cycle automatique explicite transporte ensuite ces opérations et réhydrate
+AppDB depuis le gagnant du replica après l’arbitrage natif Dexie Cloud.
+
 Les tables et modèles de photos de progression sont exclus des adaptateurs de
 synchronisation, des Pages Functions et de Dexie Cloud. Un test de contrat
 échoue si une référence à ces tables apparaît dans ces frontières.
+
+### Arbitrage des mutations Goals
+
+Le runtime v18 conserve `realGoalMutations`, un journal synchronisé append-only :
+chaque création, mise à jour, suppression ou restauration d’un Goal reçoit un
+identifiant privé unique et le `parentMutationId` du head causal observé. Deux
+appareils n’écrivent donc plus la même ligne au moment du conflit et aucune
+intention ne peut être détruite avant le resolver.
+Les anciennes tables `realGoals` et `realGoalDeletionRecords` restent lisibles
+pour amorcer et migrer les comptes existants ; dès qu’un objectif possède une
+head valide, le journal et `realGoalMutationHeads` deviennent sa source cloud
+autoritative.
+
+Le head est un singleton déterministe **non privé**, isolé par realm et compte.
+Son avancement utilise uniquement le CAS déclaratif Dexie validé sur la table
+normale : recherche composée `[entityId+mutationId]` avec le parent attendu,
+puis `modify({ mutationId: newMutationId })`. Si le parent est stale, la
+mutation reste dans le journal mais le head ne bouge pas. Les descendants de
+cette branche restent eux aussi bloqués. Deux branches issues du même parent
+et créées totalement offline suivent donc le contrat
+`FIRST_SERVER_ACCEPTED_CAS_WINS`.
+
+Aucune horloge ne choisit le gagnant : `updatedAt`, `orderedAtMs`,
+`rawOccurredAt`, les dates de session, `$$ts`, l’ordre d’arrivée observé et
+`syncRevision` n’ont aucune autorité. `realGoalMutationClocks` reste présent,
+local et inert uniquement pour la migration additive v17 → v18. Le nom
+IndexedDB publié reste `sportpilot-sync-runtime-0.20.0-v16` ; la version 18
+l’augmente en place avec `realGoalMutationHeads`, sans réécrire les migrations
+historiques ni les mutations v17.
+
+Le bootstrap crée un anchor immuable déterministe depuis un état legacy
+canonique prouvé identique, puis le head normal correspondant. Un Goal neuf
+peut partir d’un anchor « absent » lorsque l’absence de toute ligne, mutation
+et head pour cet entityId est prouvée. Toute divergence ou tout journal v17
+ambigu sans head échoue fermé et exige une réconciliation explicite.
+
+Le journal croît d’une ligne par mutation métier réellement distincte ; les
+replays techniques d’un état déjà stagé restent idempotents. Aucune compaction
+n’est effectuée en 1.0.4 : supprimer une entrée sans watermark connu de tous
+les appareils pourrait ressusciter un état ancien ou perdre le gagnant. Le coût
+est donc un stockage cloud/local croissant avec le nombre de mutations Goals.
+Une future compaction devra être un lot séparé, mesuré, rétrocompatible et
+prouvé sur les appareils restés offline ; aucune GC opportuniste n’est permise.
+
+Le journal et son head sont des métadonnées de transport cloud, pas une
+nouvelle donnée métier du format de sauvegarde AppDB v10. Une restauration
+AppDB produit ensuite une mutation normale. La suppression de compte/purge
+distante efface mutations, heads, clock legacy et baseline du compte ciblé ;
+logout/reset local reste couvert par l’effacement des tables du runtime Dexie
+Cloud.
 
 ## Sauvegarde et restauration
 
