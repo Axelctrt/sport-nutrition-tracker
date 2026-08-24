@@ -12,10 +12,12 @@ livraison.
 - `both` et `unknown` restent sans écriture automatique.
 - Résolution Goals `both` exclusivement manuelle, explicite et revalidée avant écriture.
 - Journal immuable create/update/delete/restore pour préserver les mutations
-  Goals concurrentes, avec ordre HLC calibré sur la session authentifiée.
+  Goals concurrentes ; chaque intention conserve son parent causal.
+- Head singleton non privé avancé par CAS déclaratif : une branche stale ne
+  peut plus écraser un head déjà avancé, indépendamment des horloges appareil.
 - Whitelist automatique limitée à Strength + Goals + Weights + Activities.
 - CI PR #179 complète 4/4 et CI post-merge develop 4/4.
-- Dexie v12 et sauvegarde JSON v10 inchangées ; runtime Dexie Cloud v17 migré
+- Dexie v12 et sauvegarde JSON v10 inchangées ; runtime Dexie Cloud v18 migré
   additivement dans le stockage v16 existant ; aucune migration D1.
 
 Cette entrée prépare `1.0.4` ; Preview immuable, smoke physique, `main`, tag, GitHub Release et production restent des gates distincts.

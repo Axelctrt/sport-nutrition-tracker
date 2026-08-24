@@ -55,12 +55,13 @@ npm run test:integration-cloud:goals -- --suite
 npm run test:integration-cloud:goals -- --legacy-migration
 ```
 
-Le premier run doit réussir cinq fois le conflit ancien-offline contre
-récent-online. La suite couvre le miroir, le skew inversé, delete/restore, la
-mutation suivante, les mutations rapides, reload, l’isolation de comptes et
-l’absence de transport hors ligne. Le troisième gate crée une baseline v16
-dans `realGoals` sans journal, la réconcilie avec le runtime v17 puis rejoue le
-conflit. Le harness utilise deux vrais replicas et
+Le premier run répète le conflit stale-offline contre branche déjà acceptée.
+La suite couvre +1 h, +24 h, -24 h, miroir, les deux ordres de reconnexion de
+branches offline, descendants stale, séquences normales, delete/restore,
+reload, reprise après session, conservation des intentions, isolation et
+absence de transport hors ligne. Le troisième gate crée une baseline legacy
+dans `realGoals` sans head, la réconcilie explicitement avec le runtime v18 puis
+rejoue le conflit. Le harness utilise deux vrais replicas et
 un observateur REST indépendant. Les credentials restent locaux ; ils ne sont
 ni committés, ni journalisés, ni transmis au navigateur.
 
@@ -79,7 +80,8 @@ Le changement attendu est additif :
 
 ```json
 {
-  "realGoalMutations": "id, accountUserId, entityId, orderedAtMs, [accountUserId+entityId]"
+  "realGoalMutations": "id, accountUserId, entityId, parentMutationId, [accountUserId+entityId]",
+  "realGoalMutationHeads": "id, accountUserId, entityId, mutationId, [entityId+mutationId], [accountUserId+entityId]"
 }
 ```
 
@@ -90,16 +92,16 @@ de deux nouveaux clients. Les tables `realGoals` et
 `realGoalDeletionRecords` restent présentes pour le bootstrap historique ;
 aucun backfill ne transforme les anciennes lignes en mutations utilisateur.
 
-Un client v16 ignore la nouvelle table et continue d’écrire les lignes
-same-row. Dès qu’un client v17 a journalisé un Goal, ces anciennes écritures ne
-deviennent pas des mutations et ne sont donc pas garanties comme gagnantes par
-le resolver v17. La fenêtre mixte v16/v17 est explicitement non supportée pour
-des écritures concurrentes. Le gate ancien/nouveau est limité à : état legacy
-immobile, connexion v17, réconciliation, puis mutations par des clients v17.
+Un client v16 ignore les nouvelles tables et continue d’écrire les lignes
+same-row. Un client v17 peut produire des mutations sans parent/head causal ;
+v18 refuse d’en déduire un gagnant temporel. Les fenêtres mixtes v16/v18 et
+v17/v18 sont explicitement non supportées pour des écritures concurrentes. Le
+gate ancien/nouveau est limité à : état legacy immobile, connexion v18,
+réconciliation explicite, puis mutations par des clients v18.
 
-Le rollback du seul schéma est inutile et risqué : la table additive peut
-rester vide ou présente. Un rollback applicatif vers v16 n’est sûr que si
-aucune mutation v17 n’a été créée. Après des mutations v17, il faut un correctif
+Le rollback du seul schéma est inutile et risqué : les tables additives peuvent
+rester vides ou présentes. Un rollback applicatif vers v16 n’est sûr que si
+aucune mutation causale n’a été créée. Après des mutations v18, il faut un correctif
 en avant ou une matérialisation contrôlée du journal vers les tables legacy,
 avec sauvegarde et vérification, avant tout retour d’ancien client.
 

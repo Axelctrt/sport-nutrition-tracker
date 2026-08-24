@@ -20,10 +20,14 @@ Stable publiée avant cette maintenance : SportPilot 1.0.3,
 - Les mutations create/update/delete/restore sont inscrites dans un journal
   Dexie Cloud append-only avant tout cycle réseau ; chaque entrée possède un ID
   privé unique afin de préserver les deux côtés d’un conflit multi-appareils.
-- Le gagnant est résolu par un HLC persistant calibré depuis la session Dexie,
-  puis par des tie-breakers déterministes ; `Goal.updatedAt`, l’arrivée serveur
-  et une préférence local/cloud ne servent pas d’ordre global.
-- La migration cloud v16 → v17 est additive et conserve le nom IndexedDB v16
+- Chaque mutation conserve son parent causal. Un head singleton non privé
+  avance uniquement par CAS déclaratif si ce parent correspond encore.
+- Une branche stale reste dans le journal sans pouvoir avancer le head ni faire
+  accepter ses descendants. Deux branches offline suivent
+  `FIRST_SERVER_ACCEPTED_CAS_WINS`.
+- Aucun HLC, timestamp d’authentification, `Goal.updatedAt`, `$$ts` ou ordre
+  d’arrivée observé ne choisit le gagnant.
+- La migration locale v17 → v18 est additive et conserve le nom IndexedDB v16
   publié afin de préserver les files natives en attente.
 
 ## Activities
@@ -63,7 +67,7 @@ Aucun cinquième domaine n’est ajouté.
 - `both` / `unknown` → aucune écriture automatique.
 - Dexie v12.
 - sauvegarde JSON v10.
-- runtime Dexie Cloud v17, stockage existant migré en place.
+- runtime Dexie Cloud v18, stockage existant migré en place.
 - aucune migration D1.
 - aucune modification des formules calories/macros.
 - aucun changement de thème validé.

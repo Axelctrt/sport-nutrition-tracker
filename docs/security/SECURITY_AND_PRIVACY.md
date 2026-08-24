@@ -22,11 +22,13 @@ Statut : **décisions validées**.
   sauvegarde de sécurité lorsque le parcours le prévoit.
 - Le journal immuable Goals porte l’identifiant du compte dans chaque mutation.
   Le resolver exige à la fois la propriété Dexie Cloud et cet identifiant exact
-  avant de rendre une mutation autoritative ; les horloges HLC restent locales,
-  séparées par compte et appareil, et sont purgées avec les données du compte.
-- La purge distante filtre `realGoalMutations`, `realGoalMutationClocks` et les
-  baselines par compte ; elle vérifie ensuite qu’aucune ligne du compte supprimé
-  ne subsiste sans effacer les lignes, horloges ou baselines d’un autre compte.
+  avant de rendre une mutation autoritative. Le head causal est déterministe,
+  non privé et isolé dans le realm ; aucun timestamp ni champ d’authentification
+  ne participe au choix du gagnant.
+- La purge distante filtre `realGoalMutations`, `realGoalMutationHeads`, le
+  clock v17 legacy et les baselines par compte ; elle vérifie ensuite qu’aucune
+  ligne du compte supprimé ne subsiste sans effacer les lignes ou baselines
+  d’un autre compte.
 
 ## Photos de progression
 
