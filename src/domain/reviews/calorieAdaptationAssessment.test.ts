@@ -64,6 +64,22 @@ function assess(
 }
 
 describe('calorie adaptation assessment', () => {
+  it('ne compte pas une journée sans réponse comme signal de récupération', () => {
+    const rows = observations().map(({
+      hunger: _hunger,
+      energy: _energy,
+      readiness: _readiness,
+      sleepQuality: _sleepQuality,
+      ...observation
+    }) => observation);
+
+    const result = assess(rows);
+
+    expect(result.recoverySignalDays).toBe(0);
+    expect(result.recoveryConcernDays).toBe(0);
+    expect(result.confidence.recovery).toBe(0);
+  });
+
   it('conserve la cible lorsque la tendance suit le rythme prévu', () => {
     const result = assess(observations());
 

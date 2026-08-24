@@ -10,7 +10,7 @@ export interface SegmentedControlItem {
 interface SegmentedControlProps {
   label: string;
   items: readonly SegmentedControlItem[];
-  value: string;
+  value?: string | undefined;
   onChange: (value: string) => void;
   className?: string;
   disabled?: boolean;
@@ -53,6 +53,8 @@ export function SegmentedControl({
     refs.current[nextIndex]?.focus();
   };
 
+  const firstEnabledIndex = items.findIndex((item) => !disabled && !item.disabled);
+
   return (
     <div
       role="radiogroup"
@@ -74,7 +76,7 @@ export function SegmentedControl({
             role="radio"
             aria-checked={selected}
             disabled={itemDisabled}
-            tabIndex={selected ? 0 : -1}
+            tabIndex={selected || (value === undefined && index === firstEnabledIndex) ? 0 : -1}
             onClick={() => onChange(item.value)}
             onKeyDown={(event) => moveSelection(event, index)}
             className={cn(

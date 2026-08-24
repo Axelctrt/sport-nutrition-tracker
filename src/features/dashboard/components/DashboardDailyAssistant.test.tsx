@@ -216,13 +216,14 @@ describe('DashboardDailyAssistant', () => {
     await user.click(within(dialog).getByRole('radio', { name: 'Pas aujourd’hui' }));
     await user.click(within(dialog).getByRole('button', { name: 'Enregistrer le check-in' }));
 
-    expect(onSaveCheckIn).toHaveBeenCalledWith(expect.objectContaining({
+    const checkInPayload = onSaveCheckIn.mock.calls[0]?.[0];
+    expect(checkInPayload).toEqual(expect.objectContaining({
       date: '2026-07-29',
       weightKg: null,
-      sleepQuality: 'average',
-      readiness: 'normal',
       contextFlags: [],
     }));
+    expect(checkInPayload).not.toHaveProperty('sleepQuality');
+    expect(checkInPayload).not.toHaveProperty('readiness');
   });
 
   it('donne la priorité au check-out le soir sans masquer la nutrition', () => {
@@ -643,14 +644,15 @@ describe('DashboardDailyAssistant', () => {
     await user.click(within(dialog).getByRole('checkbox', { name: /Journal alimentaire complet/ }));
     await user.click(within(dialog).getByRole('button', { name: 'Clôturer la journée' }));
 
-    expect(onSaveCheckOut).toHaveBeenCalledWith(expect.objectContaining({
+    const checkOutPayload = onSaveCheckOut.mock.calls[0]?.[0];
+    expect(checkOutPayload).toEqual(expect.objectContaining({
       date: '2026-07-29',
       actualSteps: null,
       hunger: 'high',
-      energy: 'normal',
       foodJournalComplete: true,
       contextFlags: [],
     }));
+    expect(checkOutPayload).not.toHaveProperty('energy');
   });
 
   it('compacte les étapes terminées et affiche les données du check-out', () => {

@@ -74,6 +74,18 @@ describe('dailyCoachingService', () => {
     expect(await database.weights.count()).toBe(1);
   });
 
+  it('n’invente ni pesée ni signal subjectif pour un check-in sans réponse', async () => {
+    const checkIn = await completeDailyCheckIn({
+      date: '2026-07-29',
+      weightKg: null,
+    }, dependencies);
+
+    expect(checkIn.weightEntryId).toBeUndefined();
+    expect(checkIn.sleepQuality).toBeUndefined();
+    expect(checkIn.readiness).toBeUndefined();
+    expect(await database.weights.count()).toBe(0);
+  });
+
   it('réouvre une décision sportive sans conserver une confirmation obsolète', async () => {
     await setDailyActivityDecision({
       date: '2026-07-29',
@@ -122,6 +134,8 @@ describe('dailyCoachingService', () => {
     const day = await readDailyCoachingDay('2026-07-29', dependencies);
 
     expect(checkOut.stepsEntryId).toBeUndefined();
+    expect(checkOut.hunger).toBeUndefined();
+    expect(checkOut.energy).toBeUndefined();
     expect(await database.dailySteps.count()).toBe(0);
     expect(day.checkOut?.id).toBe(checkOut.id);
   });
