@@ -90,7 +90,7 @@ if (failures.length === 0) {
     '`unknown`',
     'Dexie v12',
     'sauvegarde JSON v10',
-    'runtime Dexie Cloud v17',
+    'runtime Dexie Cloud v18',
     'aucune migration D1',
     'aucune modification des formules calories/macros',
     'aucun changement de thème validé',

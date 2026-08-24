@@ -47,6 +47,9 @@ for (const expected of [
   'realActivityDeletionRecords',
   'realGoals',
   'realGoalDeletionRecords',
+  'realGoalMutations',
+  'realGoalMutationHeads',
+  '[entityId+mutationId]',
   'realStrengthExercises',
   'realWorkoutTemplates',
   'realWorkoutSessions',
@@ -126,7 +129,7 @@ for (const expected of [
 
 const goals = read('src/infrastructure/sync-prototype/realGoalSyncService.ts');
 if (/\bchooseLatest\b/.test(goals)) {
-  fail('Goals ne doit pas déléguer sa règle métier concurrente à chooseLatest : le LWW logique par mutation doit rester explicite.');
+  fail('Goals ne doit pas déléguer sa règle métier concurrente à chooseLatest : seul le head causal peut désigner le gagnant.');
 }
 for (const expected of [
   'prepareInitialRealGoalReconciliation',
@@ -135,15 +138,43 @@ for (const expected of [
   "origin === 'cloud'",
   'return emptyResult({',
   'ensureDomainBaselineMissing',
-  'goalStateMutationTimestamp',
-  'latestGoalState',
-  'stableValue',
+  'stageRealGoalsMutationInLocalCloudReplica',
+  'resolveRealGoalMutationJournal',
+  'bootstrapRealGoalMutationHead',
+  'appendRealGoalMutation',
+  'parentMutationId: head.mutationId',
+  'localCasRejected',
   'resolveMergedGoalLogicalState',
-  'preserveRestorationMarker',
 ]) {
   if (!goals.includes(expected)) {
-    fail(`la synchronisation Goals directionnelle/LWW ne verrouille pas ${expected}.`);
+    fail(`la synchronisation Goals causale ne verrouille pas ${expected}.`);
   }
+}
+
+const goalJournal = read(
+  'src/infrastructure/sync-prototype/realGoalMutationJournal.ts',
+);
+for (const expected of [
+  'return `goal-head-',
+  "where('[entityId+mutationId]')",
+  '.equals([input.entityId, input.parentMutationId])',
+  '.modify({ mutationId: mutation.id })',
+  'headAdvanced: modified === 1',
+]) {
+  if (!goalJournal.includes(expected)) {
+    fail(`le journal causal Goals ne verrouille pas ${expected}.`);
+  }
+}
+for (const forbidden of [
+  'compareRealGoalMutationOrder',
+  'calibrateRealGoalMutationClock',
+]) {
+  if (goalJournal.includes(forbidden)) {
+    fail(`le journal causal Goals conserve une autorité temporelle interdite : ${forbidden}.`);
+  }
+}
+if (goalJournal.includes('return `#goal-head-')) {
+  fail('le head causal Goals ne doit jamais redevenir privé.');
 }
 
 const goalsFallback = read(
@@ -169,13 +200,14 @@ const lwwGate = read(
   'src/infrastructure/sync-prototype/realGoalLwwConflictResolution.test.ts',
 );
 for (const expected of [
-  'stableValue',
+  'aucun LWW temporel',
   'updatedAt',
   'deleted',
   'restored',
+  'differingEntityCount: 1',
 ]) {
   if (!lwwGate.includes(expected)) {
-    fail(`le gate LWW Goals ne couvre pas ${expected}.`);
+    fail(`le gate anti-LWW Goals ne couvre pas ${expected}.`);
   }
 }
 

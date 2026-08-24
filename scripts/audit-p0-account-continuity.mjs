@@ -61,6 +61,7 @@ const requiredStructuralFiles = [
   'src/app/sync/AutomaticSyncCoordinator.tsx',
   'src/infrastructure/sync-prototype/realStrengthSyncService.ts',
   'src/infrastructure/sync-prototype/realGoalSyncService.ts',
+  'src/infrastructure/sync-prototype/realGoalMutationJournal.ts',
   'src/infrastructure/sync-prototype/realGoalOfflineMutationStaging.ts',
   'src/infrastructure/sync-prototype/realGoalConcurrentResolutionService.ts',
   'src/infrastructure/sync-prototype/realWeightSyncService.ts',
@@ -315,11 +316,13 @@ if (failures.length === 0) {
     'options.writeCloud !== false',
     "domainId: 'goals'",
     "entityId: 'goals'",
-    'goalStateMutationTimestamp',
-    'latestGoalState',
-    'stableValue',
+    'resolveRealGoalMutationJournal',
+    'realGoalMutationHeadTable',
+    'bootstrapRealGoalMutationHead',
+    'appendRealGoalMutation',
+    'parentMutationId: head.mutationId',
+    'localCasRejected',
     'resolveMergedGoalLogicalState',
-    'preserveRestorationMarker',
     'stageRealGoalsMutationInLocalCloudReplica',
     'withLogicalSyncStamp',
     'stageCloudReplicaValue',
@@ -328,7 +331,7 @@ if (failures.length === 0) {
     'disableEagerSync therefore keeps transport',
   ]) {
     if (!goals.includes(marker)) {
-      fail(`contrat Goals directionnel/LWW legacy absent : ${marker}.`);
+      fail(`contrat Goals directionnel/causal absent : ${marker}.`);
     }
   }
   if (
@@ -338,27 +341,20 @@ if (failures.length === 0) {
     fail('le staging Goals ne doit pas revenir a un put de remplacement complet.');
   }
 
-  const goalsConformanceModel = read(
-    'src/infrastructure/sync-prototype/realGoalTransportConformanceModel.test.ts',
+  const goalsCausalGate = read(
+    'src/infrastructure/sync-prototype/realGoalMutationJournal.test.ts',
   );
   for (const marker of [
-    'new SyncPrototypeDatabase',
-    "'$realGoals_mutations'",
-    "'$realGoalDeletionRecords_mutations'",
-    'cloudA',
-    'cloudB',
-    '8_000',
-    '55_000',
-    'adjustedOperationOrder: 2',
-    'adjustedOperationOrder: 1',
-    'expect(fetchSpy).not.toHaveBeenCalled()',
-    'stageGoalDeletion',
-    'stageGoalRestore',
-    'Local conformance model only',
-    'must never be cited as evidence',
+    'parentMutationId',
+    'headAdvanced).toBe(false)',
+    'orderedAtMs: Number.MAX_SAFE_INTEGER',
+    'ignore totalement les timestamps',
+    'bloque A1/A2/A3',
+    'applique delete puis restore seulement',
+    'anchor déterministe et un head explicitement non privé',
   ]) {
-    if (!goalsConformanceModel.includes(marker)) {
-      fail(`modèle local de conformance Goals absent : ${marker}.`);
+    if (!goalsCausalGate.includes(marker)) {
+      fail(`gate causal local Goals absent : ${marker}.`);
     }
   }
   const goalsCloudGate = read(
@@ -373,9 +369,14 @@ if (failures.length === 0) {
     "grant_type: 'demo'",
     "cloudDatabase.cloud.sync",
     'realGoalMutations',
+    'realGoalMutationHeads',
     'contextA.setOffline(true)',
     'serverAfterReconnectA',
     '--legacy-migration',
+    'runTwoOfflineBranchVariant',
+    "for (const firstDevice of ['A', 'B'])",
+    'stale-branch-descendants-blocked',
+    'session-expiry-reauth',
     "canonicalSource: 'legacy-realGoals'",
     'reconcileInitialCloudBaseline',
     'FORBIDDEN_PRODUCTION_HOST',
@@ -483,7 +484,7 @@ if (failures.length === 0) {
     'not.toHaveBeenCalled()',
   ]) {
     if (!goalsTransportRevisionRegression.includes(marker)) {
-      fail(`régression Goals clock-skew/Dexie non verrouillée : ${marker}.`);
+      fail(`régression bridge Goals après transport non verrouillée : ${marker}.`);
     }
   }
 
@@ -626,6 +627,15 @@ if (failures.length === 0) {
   if (!cloudDatabase.includes('disableEagerSync: true')) {
     fail('le replica Dexie Cloud doit conserver disableEagerSync pour le staging local-first.');
   }
+  for (const marker of [
+    'SYNC_PROTOTYPE_DATABASE_VERSION = 18',
+    'realGoalMutationHeads',
+    '[entityId+mutationId]',
+  ]) {
+    if (!cloudDatabase.includes(marker)) {
+      fail(`le schéma causal Goals v18 ne verrouille pas ${marker}.`);
+    }
+  }
 
   const databaseVersions = read(
     'src/infrastructure/database/migrations/versions.ts',
@@ -648,5 +658,5 @@ if (failures.length > 0) {
 }
 
 console.log(
-  'Audit P0 continuité multi-appareils réussi : mutations Goals immuables stagées dès la persistance, y compris offline, transport explicite conservé, résolution HLC calibrée et déterministe, fallback legacy both/unknown préservé, autres chemins directionnels et merge-safe inchangés, baselines par replica et versions Dexie/backup préservées.',
+  'Audit P0 continuité multi-appareils réussi : mutations Goals append-only stagées dès la persistance, parent causal durable, head non privé avancé par CAS déclaratif, branches stale conservées mais bloquées, fallback legacy both/unknown préservé, autres chemins directionnels et merge-safe inchangés, baselines par replica et versions Dexie/backup préservées.',
 );
