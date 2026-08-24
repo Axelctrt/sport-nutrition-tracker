@@ -23,6 +23,7 @@ import {
 } from '@/infrastructure/sync-prototype/syncPrototypeClient';
 import {
   resolveRealGoalMutationJournal,
+  type RealGoalMutationHead,
   type RealGoalMutationRecord,
 } from '@/infrastructure/sync-prototype/realGoalMutationJournal';
 
@@ -56,6 +57,7 @@ interface ClockProbe {
 interface TestClockWindow extends Window {
   __SPORTPILOT_REAL_NOW__?: () => number;
   __SPORTPILOT_CLOCK_OFFSET_MS__?: number;
+  __SPORTPILOT_SET_CLOCK_OFFSET__?: (offsetMs: number) => void;
 }
 
 function assertSafeTestDatabaseUrl(rawUrl: string): string {
@@ -160,6 +162,7 @@ function pickImmutableMutation(value: RealGoalMutationRecord) {
     accountUserId: value.accountUserId,
     entityId: value.entityId,
     operation: value.operation,
+    parentMutationId: value.parentMutationId,
     orderedAtMs: value.orderedAtMs,
     orderCounter: value.orderCounter,
     actorId: value.actorId,
@@ -182,6 +185,7 @@ class GoalsDexieCloudTestClient {
   private client: SyncPrototypeClient | undefined;
   private currentUserId: string | undefined;
   private device: 'A' | 'B' | undefined;
+  private demoUser: string | undefined;
 
   async initialize(input: ClientInitialization) {
     if (this.cloudDatabase || this.appDatabase) {
@@ -194,6 +198,7 @@ class GoalsDexieCloudTestClient {
     }
 
     this.device = input.device;
+    this.demoUser = demoUser;
     const suffix = safeDatabaseSegment(`${input.runId}-${input.device}`);
     this.appDatabase = new AppDatabase(`sportpilot-goals-cloud-app-${suffix}`);
     this.cloudDatabase = new SyncPrototypeDatabase(
@@ -247,6 +252,15 @@ class GoalsDexieCloudTestClient {
       rawDateNow: Date.now(),
       offsetMs: testWindow.__SPORTPILOT_CLOCK_OFFSET_MS__ ?? 0,
     };
+  }
+
+  setClockOffset(offsetMs: number): ClockProbe {
+    const testWindow = window as TestClockWindow;
+    if (!Number.isSafeInteger(offsetMs)) {
+      throw new Error('Offset de test invalide.');
+    }
+    testWindow.__SPORTPILOT_SET_CLOCK_OFFSET__?.(offsetMs);
+    return this.clock();
   }
 
   sessionClockProbe() {
@@ -389,6 +403,19 @@ class GoalsDexieCloudTestClient {
     }
   }
 
+  async reauthenticateForSessionTest(): Promise<void> {
+    const { cloudDatabase, currentUserId } = this.databases();
+    if (!this.demoUser) throw new Error('Demo user de test absent.');
+    await cloudDatabase.cloud.login({
+      grant_type: 'demo',
+      email: this.demoUser,
+    });
+    const user = cloudDatabase.cloud.currentUser.value;
+    if (!user.isLoggedIn || user.userId !== currentUserId) {
+      throw new Error('La réauthentification a changé de compte synthétique.');
+    }
+  }
+
   async establishEqualBaseline() {
     const { appDatabase, cloudDatabase, currentUserId } = this.databases();
     return previewRealGoalSync(appDatabase, cloudDatabase, currentUserId);
@@ -453,6 +480,8 @@ class GoalsDexieCloudTestClient {
       markerJournal,
       immutableMutations,
       immutableTransportJournal,
+      mutationHeads,
+      headTransportJournal,
       mutationClocks,
       baselines,
     ] = await Promise.all([
@@ -470,11 +499,16 @@ class GoalsDexieCloudTestClient {
       cloudDatabase.table<MutationJournalEntry, number>(
         '$realGoalMutations_mutations',
       ).toArray(),
+      cloudDatabase.realGoalMutationHeads.toArray(),
+      cloudDatabase.table<MutationJournalEntry, number>(
+        '$realGoalMutationHeads_mutations',
+      ).toArray(),
       cloudDatabase.realGoalMutationClocks.toArray(),
       cloudDatabase.realSyncBaselines.toArray(),
     ]);
     const resolvedJournal = resolveRealGoalMutationJournal(
       immutableMutations,
+      mutationHeads,
       currentUserId,
     );
     const journalWinner = resolvedJournal.winners.get(goalId);
@@ -507,6 +541,26 @@ class GoalsDexieCloudTestClient {
       goalJournal: summarizeJournal(goalJournal, 'goal'),
       markerJournal: summarizeJournal(markerJournal, 'marker'),
       immutableMutations: immutableMutations.map(pickImmutableMutation),
+      mutationHeads: mutationHeads.map((head: RealGoalMutationHead) => ({
+        id: head.id,
+        accountUserId: head.accountUserId,
+        entityId: head.entityId,
+        mutationId: head.mutationId,
+        nonPrivate: !head.id.startsWith('#'),
+      })),
+      headTransportJournal: headTransportJournal.map((entry) => ({
+        type: entry.type,
+        ts: entry.ts,
+        opNo: entry.opNo,
+        keys: entry.keys,
+        txid: entry.txid,
+        userId: entry.userId,
+        values: entry.values?.map((value) => ({
+          entityId: value.entityId,
+          mutationId: value.mutationId,
+        })),
+        changeSpecs: entry.changeSpecs,
+      })),
       immutableTransportJournal: immutableTransportJournal.map((entry) => ({
         type: entry.type,
         ts: entry.ts,
@@ -517,9 +571,7 @@ class GoalsDexieCloudTestClient {
         values: entry.values?.map((value) => ({
           entityId: value.entityId,
           operation: value.operation,
-          orderedAtMs: value.orderedAtMs,
-          actorId: value.actorId,
-          actorSequence: value.actorSequence,
+          parentMutationId: value.parentMutationId,
         })),
         changeSpecs: entry.changeSpecs,
       })),

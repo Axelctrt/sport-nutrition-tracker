@@ -193,8 +193,8 @@ async function createObserver(databaseUrl, credentials) {
   }
   const authorization = `Bearer ${tokens.accessToken}`;
 
-  async function rows(tableName) {
-    const query = new URLSearchParams({ realmId: DEMO_USER });
+  async function rows(tableName, realmId = DEMO_USER) {
+    const query = new URLSearchParams({ realmId });
     const result = await fetch(
       `${databaseUrl}/all/${tableName}?${query.toString()}`,
       { headers: { Authorization: authorization } },
@@ -211,40 +211,68 @@ async function createObserver(databaseUrl, credentials) {
     return values;
   }
 
-  function compareMutationOrder(left, right) {
-    return left.orderedAtMs - right.orderedAtMs
-      || left.orderCounter - right.orderCounter
-      || String(left.actorId).localeCompare(String(right.actorId))
-      || left.actorSequence - right.actorSequence
-      || String(left.id ?? '').localeCompare(String(right.id ?? ''));
-  }
-
   async function goalMutations(goalId, realmId = DEMO_USER) {
-    const query = new URLSearchParams({ realmId });
-    const result = await fetch(
-      `${databaseUrl}/all/realGoalMutations?${query.toString()}`,
-      { headers: { Authorization: authorization } },
-    );
-    if (!result.ok) {
-      throw new Error(`Lecture serveur indépendante du journal refusée (${result.status}).`);
-    }
-    const mutationRows = await result.json();
-    if (!Array.isArray(mutationRows)) {
-      throw new Error('Réponse serveur realGoalMutations inattendue.');
-    }
+    const mutationRows = await rows('realGoalMutations', realmId);
+    const privateRealmSuffix = `:${realmId}`;
     return mutationRows
       .filter((row) =>
         row?.accountUserId === realmId
         && row?.entityId === goalId)
-      .sort(compareMutationOrder);
+      .map((row) => ({
+        ...row,
+        id:
+          typeof row.id === 'string'
+          && row.id.startsWith('#')
+          && row.id.endsWith(privateRealmSuffix)
+            ? row.id.slice(0, -privateRealmSuffix.length)
+            : row.id,
+      }));
+  }
+
+  async function goalHead(goalId, realmId = DEMO_USER) {
+    const headRows = await rows('realGoalMutationHeads', realmId);
+    const candidates = headRows.filter((row) =>
+      row?.accountUserId === realmId
+      && row?.entityId === goalId
+      && typeof row?.id === 'string'
+      && !row.id.startsWith('#'));
+    if (candidates.length > 1) {
+      throw new Error('Lecture serveur ambiguë: plusieurs heads causaux Goals.');
+    }
+    return candidates[0];
   }
 
   return {
     goalMutations,
+    goalHead,
+    async diagnostic(goalId, realmId = DEMO_USER) {
+      const [mutations, head] = await Promise.all([
+        goalMutations(goalId, realmId),
+        goalHead(goalId, realmId),
+      ]);
+      return {
+        mutationIds: mutations.map((mutation) => mutation.id),
+        headId: head?.id,
+        headMutationId: head?.mutationId,
+      };
+    },
     async goal(goalId, realmId = DEMO_USER) {
-      const mutations = await goalMutations(goalId, realmId);
-      const winner = mutations.at(-1);
-      if (winner) {
+      const [mutations, head] = await Promise.all([
+        goalMutations(goalId, realmId),
+        goalHead(goalId, realmId),
+      ]);
+      if (head) {
+        const winner = mutations.find((mutation) =>
+          mutation.id === head.mutationId);
+        if (!winner) {
+          return {
+            id: goalId,
+            headId: head.id,
+            headMutationId: head.mutationId,
+            canonicalSource: 'incomplete-realGoalMutationHead',
+            mutationCount: mutations.length,
+          };
+        }
         return {
           id: winner.goal?.id ?? goalId,
           owner: winner.owner,
@@ -253,17 +281,20 @@ async function createObserver(databaseUrl, credentials) {
           updatedAt: winner.goal?.updatedAt ?? winner.marker?.updatedAt,
           status: winner.operation === 'delete' ? 'deleted' : winner.goal?.status,
           mutationId: winner.id,
+          parentMutationId: winner.parentMutationId,
+          headId: head.id,
+          headMutationId: head.mutationId,
           mutationOperation: winner.operation,
-          orderedAtMs: winner.orderedAtMs,
-          orderCounter: winner.orderCounter,
-          actorSequence: winner.actorSequence,
-          syncActorId: winner.actorId,
-          $$ts: winner.$$ts,
-          canonicalSource: 'realGoalMutations',
+          canonicalSource: 'realGoalMutationHeads',
           mutationCount: mutations.length,
         };
       }
-      const goalRows = await rows('realGoals');
+      if (mutations.length > 0) {
+        throw new Error(
+          'Le journal Goals serveur existe sans head causal; aucun winner temporel n’est choisi.',
+        );
+      }
+      const goalRows = await rows('realGoals', realmId);
       const row = goalRows.find((candidate) => candidate?.id === `#${goalId}`)
         ?? (goalRows.length === 1 ? goalRows[0] : undefined);
       if (!row && goalRows.length > 1) {
@@ -341,12 +372,13 @@ async function createContext(browser, clockOffsetMs) {
   await context.addInitScript((offsetMs) => {
     const NativeDate = Date;
     const nativeNow = NativeDate.now.bind(NativeDate);
+    let activeOffsetMs = offsetMs;
     function SkewedDate(...args) {
       if (!new.target) {
-        return new NativeDate(nativeNow() + offsetMs).toString();
+        return new NativeDate(nativeNow() + activeOffsetMs).toString();
       }
       return args.length === 0
-        ? new NativeDate(nativeNow() + offsetMs)
+        ? new NativeDate(nativeNow() + activeOffsetMs)
         : new NativeDate(...args);
     }
     Object.setPrototypeOf(SkewedDate, NativeDate);
@@ -360,7 +392,7 @@ async function createContext(browser, clockOffsetMs) {
     Object.defineProperty(SkewedDate, 'now', {
       configurable: true,
       writable: true,
-      value: () => nativeNow() + offsetMs,
+      value: () => nativeNow() + activeOffsetMs,
     });
     Object.defineProperty(globalThis, 'Date', {
       configurable: true,
@@ -368,7 +400,11 @@ async function createContext(browser, clockOffsetMs) {
       value: SkewedDate,
     });
     globalThis.__SPORTPILOT_REAL_NOW__ = () => nativeNow();
-    globalThis.__SPORTPILOT_CLOCK_OFFSET_MS__ = offsetMs;
+    globalThis.__SPORTPILOT_CLOCK_OFFSET_MS__ = activeOffsetMs;
+    globalThis.__SPORTPILOT_SET_CLOCK_OFFSET__ = (nextOffsetMs) => {
+      activeOffsetMs = nextOffsetMs;
+      globalThis.__SPORTPILOT_CLOCK_OFFSET_MS__ = activeOffsetMs;
+    };
   }, clockOffsetMs);
   return context;
 }
@@ -577,7 +613,7 @@ async function runRedScenario({
     const finalB = await evaluateClient(pageB, 'snapshot', GOAL_ID);
     return {
       name: legacyBaseline
-        ? 'goals-real-dexie-cloud-v16-baseline-to-v17-journal'
+        ? 'goals-real-dexie-cloud-legacy-baseline-to-v18-causal-journal'
         : 'goals-real-dexie-cloud-skewed-offline-reconnect',
       runId,
       replicas: 2,
@@ -595,12 +631,12 @@ async function runRedScenario({
       legacyBaseline,
       passed:
         serverFinal?.targetValue === EXPECTED_WINNER
-        && (!legacyBaseline || serverFinal?.mutationCount === 2),
+        && (!legacyBaseline || serverFinal?.mutationCount === 3),
     };
   } catch (error) {
     await writeReport({
       name: legacyBaseline
-        ? 'goals-real-dexie-cloud-v16-baseline-to-v17-journal'
+        ? 'goals-real-dexie-cloud-legacy-baseline-to-v18-causal-journal'
         : 'goals-real-dexie-cloud-skewed-offline-reconnect',
       runId,
       failedBeforeResult: true,
@@ -745,8 +781,8 @@ async function runConflictVariant({
   laterDevice,
   laterClockOffsetMs,
 }) {
-  const olderContext = await createContext(browser, olderClockOffsetMs);
-  const laterContext = await createContext(browser, laterClockOffsetMs);
+  const olderContext = await createContext(browser, 0);
+  const laterContext = await createContext(browser, 0);
   const olderPage = await olderContext.newPage();
   const laterPage = await laterContext.newPage();
   try {
@@ -772,17 +808,36 @@ async function runConflictVariant({
         demoUser: DEMO_USER,
       }),
     ]);
-
     const baseline = goal(10_000, '2026-08-18T12:00:00.000Z');
     await evaluateClient(laterPage, 'putLocalGoal', baseline);
     await evaluateClient(laterPage, 'stage', GOAL_ID);
+    const localBaseline = await evaluateClient(laterPage, 'snapshot', GOAL_ID);
+    if (
+      localBaseline.mutationHeads.length !== 1
+      || !localBaseline.mutationHeads[0]?.nonPrivate
+      || localBaseline.immutableMutations.length !== 2
+    ) {
+      throw new Error(
+        `Bootstrap causal local incomplet: ${JSON.stringify({
+          mutationCount: localBaseline.immutableMutations.length,
+          heads: localBaseline.mutationHeads,
+        })}`,
+      );
+    }
     await evaluateClient(laterPage, 'syncTransport');
+    progress(`bootstrap serveur observé: ${JSON.stringify(
+      await observer.diagnostic(GOAL_ID),
+    )}`);
     await waitForServerGoal(observer, GOAL_ID, 10_000);
     await evaluateClient(olderPage, 'syncTransport', 'pull');
     await evaluateClient(olderPage, 'putLocalGoal', baseline);
     await Promise.all([
       evaluateClient(olderPage, 'establishEqualBaseline'),
       evaluateClient(laterPage, 'establishEqualBaseline'),
+    ]);
+    await Promise.all([
+      evaluateClient(olderPage, 'setClockOffset', olderClockOffsetMs),
+      evaluateClient(laterPage, 'setClockOffset', laterClockOffsetMs),
     ]);
 
     await olderContext.setOffline(true);
@@ -811,6 +866,9 @@ async function runConflictVariant({
       EXPECTED_WINNER,
     );
 
+    if (Math.abs(olderClockOffsetMs) >= 24 * 60 * 60 * 1000) {
+      await evaluateClient(olderPage, 'setClockOffset', 0);
+    }
     await olderContext.setOffline(false);
     await evaluateClient(olderPage, 'runtimeFirstSync');
     const preview = await evaluateClient(olderPage, 'runtimeAnalyze');
@@ -855,6 +913,253 @@ async function runConflictVariant({
     ]);
     await olderContext.close();
     await laterContext.close();
+  }
+}
+
+async function runTwoOfflineBranchVariant({
+  databaseUrl,
+  observer,
+  browser,
+  runId,
+  firstDevice,
+}) {
+  const contextA = await createContext(browser, 0);
+  const contextB = await createContext(browser, 0);
+  const pageA = await contextA.newPage();
+  const pageB = await contextB.newPage();
+  const firstPage = firstDevice === 'A' ? pageA : pageB;
+  const secondPage = firstDevice === 'A' ? pageB : pageA;
+  const firstContext = firstDevice === 'A' ? contextA : contextB;
+  const secondContext = firstDevice === 'A' ? contextB : contextA;
+  const expected = firstDevice === 'A' ? 8_000 : 55_000;
+
+  async function reconcile(page) {
+    const preview = await evaluateClient(page, 'runtimeAnalyze');
+    if (preview.differingEntityCount > 0) {
+      await evaluateClient(
+        page,
+        'runtimeSynchronize',
+        preview.changeOrigin ?? 'unknown',
+      );
+    }
+  }
+
+  try {
+    await Promise.all([
+      pageA.goto(`${HARNESS_ORIGIN}/tests/integration-cloud/goals-dexie-cloud-client.html`),
+      pageB.goto(`${HARNESS_ORIGIN}/tests/integration-cloud/goals-dexie-cloud-client.html`),
+    ]);
+    await Promise.all([
+      pageA.waitForFunction(() => Boolean(window.__SPORTPILOT_GOALS_DEXIE_CLOUD_TEST__)),
+      pageB.waitForFunction(() => Boolean(window.__SPORTPILOT_GOALS_DEXIE_CLOUD_TEST__)),
+    ]);
+    await Promise.all([
+      evaluateClient(pageA, 'initialize', {
+        databaseUrl,
+        device: 'A',
+        runId,
+        demoUser: DEMO_USER,
+      }),
+      evaluateClient(pageB, 'initialize', {
+        databaseUrl,
+        device: 'B',
+        runId,
+        demoUser: DEMO_USER,
+      }),
+    ]);
+    const baseline = goal(10_000, '2026-08-18T12:00:00.000Z');
+    await evaluateClient(pageB, 'putLocalGoal', baseline);
+    await evaluateClient(pageB, 'stage', GOAL_ID);
+    await evaluateClient(pageB, 'syncTransport');
+    await waitForServerGoal(observer, GOAL_ID, 10_000);
+    await evaluateClient(pageA, 'syncTransport', 'pull');
+    await evaluateClient(pageA, 'putLocalGoal', baseline);
+    await Promise.all([
+      evaluateClient(pageA, 'establishEqualBaseline'),
+      evaluateClient(pageB, 'establishEqualBaseline'),
+    ]);
+    await Promise.all([
+      evaluateClient(pageA, 'setClockOffset', 24 * 60 * 60 * 1000),
+      evaluateClient(pageB, 'setClockOffset', -24 * 60 * 60 * 1000),
+    ]);
+
+    await Promise.all([
+      contextA.setOffline(true),
+      contextB.setOffline(true),
+    ]);
+    await evaluateClient(
+      pageA,
+      'putLocalGoal',
+      goal(8_000, '2040-01-01T00:00:00.000Z'),
+    );
+    await evaluateClient(pageA, 'stage', GOAL_ID);
+    await evaluateClient(
+      pageB,
+      'putLocalGoal',
+      goal(55_000, '2000-01-01T00:00:00.000Z'),
+    );
+    await evaluateClient(pageB, 'stage', GOAL_ID);
+
+    await evaluateClient(firstPage, 'setClockOffset', 0);
+    await firstContext.setOffline(false);
+    await evaluateClient(firstPage, 'runtimeFirstSync');
+    const afterFirst = await waitForServerGoal(observer, GOAL_ID, expected);
+
+    await evaluateClient(secondPage, 'setClockOffset', 0);
+    await secondContext.setOffline(false);
+    await evaluateClient(secondPage, 'runtimeFirstSync');
+    await reconcile(secondPage);
+    await evaluateClient(secondPage, 'runtimeFirstSync');
+    await evaluateClient(firstPage, 'runtimeFirstSync');
+    await reconcile(firstPage);
+
+    const [serverFinal, mutations, finalA, finalB] = await Promise.all([
+      observer.goal(GOAL_ID),
+      observer.goalMutations(GOAL_ID),
+      evaluateClient(pageA, 'snapshot', GOAL_ID),
+      evaluateClient(pageB, 'snapshot', GOAL_ID),
+    ]);
+    const targets = mutations.map((mutation) => mutation.goal?.targetValue);
+    return {
+      name: `two-offline-first-${firstDevice.toLowerCase()}`,
+      firstDevice,
+      afterFirst,
+      serverFinal,
+      mutationCount: mutations.length,
+      expectedTargetValue: expected,
+      passed:
+        afterFirst.targetValue === expected
+        && serverFinal?.targetValue === expected
+        && targets.includes(8_000)
+        && targets.includes(55_000)
+        && finalA.appGoal?.targetValue === expected
+        && finalB.appGoal?.targetValue === expected,
+    };
+  } finally {
+    await Promise.allSettled([
+      evaluateClient(pageA, 'close'),
+      evaluateClient(pageB, 'close'),
+    ]);
+    await contextA.close();
+    await contextB.close();
+  }
+}
+
+async function runStaleDescendantVariant({
+  databaseUrl,
+  observer,
+  browser,
+  runId,
+}) {
+  const contextA = await createContext(browser, 0);
+  const contextB = await createContext(browser, 0);
+  const pageA = await contextA.newPage();
+  const pageB = await contextB.newPage();
+  try {
+    await Promise.all([
+      pageA.goto(`${HARNESS_ORIGIN}/tests/integration-cloud/goals-dexie-cloud-client.html`),
+      pageB.goto(`${HARNESS_ORIGIN}/tests/integration-cloud/goals-dexie-cloud-client.html`),
+    ]);
+    await Promise.all([
+      pageA.waitForFunction(() => Boolean(window.__SPORTPILOT_GOALS_DEXIE_CLOUD_TEST__)),
+      pageB.waitForFunction(() => Boolean(window.__SPORTPILOT_GOALS_DEXIE_CLOUD_TEST__)),
+    ]);
+    await Promise.all([
+      evaluateClient(pageA, 'initialize', {
+        databaseUrl,
+        device: 'A',
+        runId,
+        demoUser: DEMO_USER,
+      }),
+      evaluateClient(pageB, 'initialize', {
+        databaseUrl,
+        device: 'B',
+        runId,
+        demoUser: DEMO_USER,
+      }),
+    ]);
+
+    const baseline = goal(10_000, '2026-08-18T12:00:00.000Z');
+    await evaluateClient(pageB, 'putLocalGoal', baseline);
+    await evaluateClient(pageB, 'stage', GOAL_ID);
+    await evaluateClient(pageB, 'syncTransport');
+    await waitForServerGoal(observer, GOAL_ID, 10_000);
+    await evaluateClient(pageA, 'syncTransport', 'pull');
+    await evaluateClient(pageA, 'putLocalGoal', baseline);
+    await Promise.all([
+      evaluateClient(pageA, 'establishEqualBaseline'),
+      evaluateClient(pageB, 'establishEqualBaseline'),
+    ]);
+    await evaluateClient(pageA, 'setClockOffset', 24 * 60 * 60 * 1000);
+
+    await contextA.setOffline(true);
+    for (const targetValue of [8_000, 7_000, 6_000]) {
+      await evaluateClient(
+        pageA,
+        'putLocalGoal',
+        goal(targetValue, `2040-01-0${targetValue / 1_000}T00:00:00.000Z`),
+      );
+      await evaluateClient(pageA, 'stage', GOAL_ID);
+    }
+    await evaluateClient(
+      pageB,
+      'putLocalGoal',
+      goal(55_000, '2000-01-01T00:00:00.000Z'),
+    );
+    await evaluateClient(pageB, 'stage', GOAL_ID);
+    await evaluateClient(pageB, 'syncTransport');
+    await waitForServerGoal(observer, GOAL_ID, 55_000);
+
+    await evaluateClient(pageA, 'setClockOffset', 0);
+    await contextA.setOffline(false);
+    await evaluateClient(pageA, 'runtimeFirstSync');
+    const preview = await evaluateClient(pageA, 'runtimeAnalyze');
+    if (preview.differingEntityCount > 0) {
+      await evaluateClient(
+        pageA,
+        'runtimeSynchronize',
+        preview.changeOrigin ?? 'unknown',
+      );
+    }
+    await evaluateClient(pageA, 'runtimeFirstSync');
+    await evaluateClient(pageB, 'syncTransport', 'pull');
+
+    const [serverFinal, mutations, finalA, finalB] = await Promise.all([
+      observer.goal(GOAL_ID),
+      observer.goalMutations(GOAL_ID),
+      evaluateClient(pageA, 'snapshot', GOAL_ID),
+      evaluateClient(pageB, 'snapshot', GOAL_ID),
+    ]);
+    const byTarget = new Map(mutations.flatMap((mutation) =>
+      typeof mutation.goal?.targetValue === 'number'
+        ? [[mutation.goal.targetValue, mutation]]
+        : []));
+    const a1 = byTarget.get(8_000);
+    const a2 = byTarget.get(7_000);
+    const a3 = byTarget.get(6_000);
+    return {
+      name: 'stale-branch-descendants-blocked',
+      serverFinal,
+      mutationCount: mutations.length,
+      expectedTargetValue: 55_000,
+      passed:
+        serverFinal?.targetValue === 55_000
+        && Boolean(a1 && a2 && a3)
+        && a2?.parentMutationId === a1?.id
+        && a3?.parentMutationId === a2?.id
+        && serverFinal?.headMutationId !== a1?.id
+        && serverFinal?.headMutationId !== a2?.id
+        && serverFinal?.headMutationId !== a3?.id
+        && finalA.appGoal?.targetValue === 55_000
+        && finalB.appGoal?.targetValue === 55_000,
+    };
+  } finally {
+    await Promise.allSettled([
+      evaluateClient(pageA, 'close'),
+      evaluateClient(pageB, 'close'),
+    ]);
+    await contextA.close();
+    await contextB.close();
   }
 }
 
@@ -1174,6 +1479,71 @@ async function runRequiredBehaviorSuite({
         && afterReload.replicaGoal?.targetValue === 62_000,
     });
 
+    const sessionId = 'goal-session-reauth';
+    await establishActiveBaseline(sessionId);
+    await contextA.setOffline(true);
+    await evaluateClient(
+      pageA,
+      'putLocalGoal',
+      goal(8_000, await occurredAt(pageA), sessionId),
+    );
+    await evaluateClient(pageA, 'stage', sessionId);
+    const beforeSessionExpiry = await evaluateClient(pageA, 'snapshot', sessionId);
+    await evaluateClient(
+      pageB,
+      'putLocalGoal',
+      goal(55_000, await occurredAt(pageB), sessionId),
+    );
+    await evaluateClient(pageB, 'stage', sessionId);
+    await evaluateClient(pageB, 'syncTransport');
+    await waitForServerGoal(observer, sessionId, 55_000);
+
+    await evaluateClient(pageA, 'close');
+    await contextA.setOffline(false);
+    await pageA.reload();
+    await pageA.waitForFunction(() => Boolean(window.__SPORTPILOT_GOALS_DEXIE_CLOUD_TEST__));
+    await evaluateClient(pageA, 'initialize', {
+      databaseUrl,
+      device: 'A',
+      runId,
+      demoUser: DEMO_USER,
+    });
+    await evaluateClient(pageA, 'reauthenticateForSessionTest');
+    await evaluateClient(pageA, 'runtimeFirstSync');
+    const sessionPreview = await evaluateClient(pageA, 'runtimeAnalyze');
+    if (sessionPreview.differingEntityCount > 0) {
+      await evaluateClient(
+        pageA,
+        'runtimeSynchronize',
+        sessionPreview.changeOrigin ?? 'unknown',
+      );
+    }
+    await evaluateClient(pageA, 'runtimeFirstSync');
+    const [sessionServer, sessionMutations, sessionAfter] = await Promise.all([
+      observer.goal(sessionId),
+      observer.goalMutations(sessionId),
+      evaluateClient(pageA, 'snapshot', sessionId),
+    ]);
+    const offlineSessionMutation = sessionMutations.find((mutation) =>
+      mutation.goal?.targetValue === 8_000);
+    const stagedOfflineSessionMutation = beforeSessionExpiry.immutableMutations
+      .find((mutation) =>
+        mutation.entityId === sessionId
+        && mutation.goal?.targetValue === 8_000);
+    results.push({
+      name: 'session-expiry-reauth',
+      server: sessionServer,
+      offlineMutation: offlineSessionMutation,
+      stagedParentMutationId: stagedOfflineSessionMutation?.parentMutationId,
+      finalAppTarget: sessionAfter.appGoal?.targetValue,
+      passed:
+        sessionServer?.targetValue === 55_000
+        && Boolean(offlineSessionMutation)
+        && offlineSessionMutation?.parentMutationId
+          === stagedOfflineSessionMutation?.parentMutationId
+        && sessionAfter.appGoal?.targetValue === 55_000,
+    });
+
     const offlineId = 'goal-offline-pure';
     await establishActiveBaseline(offlineId);
     await contextA.setOffline(true);
@@ -1333,25 +1703,47 @@ async function main() {
     const runProbe = process.argv.includes('--normal-row-probe');
     const runLegacyMigration = process.argv.includes('--legacy-migration');
     const runSuite = process.argv.includes('--suite');
-    if ([runProbe, runLegacyMigration, runSuite].filter(Boolean).length > 1) {
+    const runBehavior = process.argv.includes('--behavior');
+    if ([runProbe, runLegacyMigration, runSuite, runBehavior].filter(Boolean).length > 1) {
       throw new Error(
-        '--normal-row-probe, --legacy-migration et --suite sont mutuellement exclusifs.',
+        '--normal-row-probe, --legacy-migration, --suite et --behavior sont mutuellement exclusifs.',
       );
     }
-    if (runSuite) {
+    if (runBehavior) {
+      result = await runRequiredBehaviorSuite({
+        databaseUrl,
+        observer,
+        browser,
+        runId: `goals-behavior-${Date.now()}`,
+      });
+    } else if (runSuite) {
       const variants = [
         {
-          name: 'goals-mirror-b-offline-older-a-online-later',
+          name: 'stale-offline-plus-1h',
           olderDevice: 'B',
-          olderClockOffsetMs: 30 * 60 * 1000,
+          olderClockOffsetMs: 60 * 60 * 1000,
           laterDevice: 'A',
           laterClockOffsetMs: 0,
         },
         {
-          name: 'goals-inverted-skew-b-offline-older-a-online-later',
+          name: 'stale-offline-plus-24h',
           olderDevice: 'B',
-          olderClockOffsetMs: -30 * 60 * 1000,
+          olderClockOffsetMs: 24 * 60 * 60 * 1000,
           laterDevice: 'A',
+          laterClockOffsetMs: 0,
+        },
+        {
+          name: 'stale-offline-minus-24h',
+          olderDevice: 'B',
+          olderClockOffsetMs: -24 * 60 * 60 * 1000,
+          laterDevice: 'A',
+          laterClockOffsetMs: 0,
+        },
+        {
+          name: 'mirror-a-offline-b-online',
+          olderDevice: 'A',
+          olderClockOffsetMs: 60 * 60 * 1000,
+          laterDevice: 'B',
           laterClockOffsetMs: 0,
         },
       ];
@@ -1369,6 +1761,25 @@ async function main() {
           ...variant,
         }));
       }
+      for (const firstDevice of ['A', 'B']) {
+        await clearSyntheticRealm(databaseUrl, credentialDirectory);
+        progress(`suite cloud réelle: two-offline-first-${firstDevice.toLowerCase()}`);
+        runs.push(await runTwoOfflineBranchVariant({
+          databaseUrl,
+          observer,
+          browser,
+          runId: `goals-two-offline-${Date.now()}-${firstDevice.toLowerCase()}`,
+          firstDevice,
+        }));
+      }
+      await clearSyntheticRealm(databaseUrl, credentialDirectory);
+      progress('suite cloud réelle: stale descendants A1 -> A2 -> A3');
+      runs.push(await runStaleDescendantVariant({
+        databaseUrl,
+        observer,
+        browser,
+        runId: `goals-stale-descendants-${Date.now()}`,
+      }));
       await clearSyntheticRealm(databaseUrl, credentialDirectory);
       await clearSyntheticRealm(
         databaseUrl,
