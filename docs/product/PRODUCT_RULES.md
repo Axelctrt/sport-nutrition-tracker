@@ -59,6 +59,18 @@ Statut : **décisions validées**, sauf mention contraire.
   durable relève des lots ultérieurs et reste soumise à l’acceptation de
   l’utilisateur.
 
+## Coach du jour
+
+- La carte « Coach du jour » apparaît sur l’Accueil uniquement après le
+  check-in du jour. Elle projette le Coach State longitudinal sans le remplacer.
+- Une observation quotidienne qualifiée peut produire « Récupération à
+  surveiller », mais ne change jamais à elle seule l’état longitudinal ni le
+  plan durable.
+- Le Coach du jour ne modifie automatiquement ni calories ni macros. Le toast
+  existant confirme l’enregistrement ; la carte porte l’information Coach utile.
+- C2 n’ouvre aucun modal automatiquement. Les alertes et comportements de
+  safety plus forts relèvent de lots ultérieurs dédiés.
+
 ## IA photo
 
 - L’analyse exige un consentement explicite.
