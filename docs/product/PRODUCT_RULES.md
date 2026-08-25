@@ -46,6 +46,19 @@ Statut : **décisions validées**, sauf mention contraire.
   n’est transformée en observation. Cette confiance qualifie une preuve
   individuelle ; elle ne constitue pas la confiance globale du futur Coach C1.
 
+## Coach State
+
+- Le Coach State n’utilise comme signaux fiables que les preuves qualifiées ;
+  les valeurs `legacyUnknown` et les initialisations de profil ne sont pas
+  promues en mesures confirmées.
+- Sa sortie structurée contient `state`, `confidence`, `reasons`,
+  `blockingFactors`, `priority`, `recommendedAction` et `nextReview`.
+- `maintainPlan` est une décision explicite « aucun changement ».
+- Une `recommendedAction` reste une recommandation : elle n’applique jamais
+  automatiquement une modification de calories ou de macros. Toute décision
+  durable relève des lots ultérieurs et reste soumise à l’acceptation de
+  l’utilisateur.
+
 ## IA photo
 
 - L’analyse exige un consentement explicite.
