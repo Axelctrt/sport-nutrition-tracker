@@ -117,7 +117,7 @@ describe('backupService', () => {
     const parsed = parseBackupText(serializeBackupEnvelope(envelope));
     const summary = summarizeBackup(parsed);
 
-    expect(parsed.schemaVersion).toBe(10);
+    expect(parsed.schemaVersion).toBe(11);
     expect(parsed.appVersion).toBe(__APP_VERSION__);
     expect(parsed.data.userProfile).toHaveLength(1);
     expect(parsed.data.weights).toHaveLength(1);
@@ -141,6 +141,99 @@ describe('backupService', () => {
     expect(summary.hasProfile).toBe(true);
     expect(summary.appVersion).toBe(__APP_VERSION__);
     expect(summary.requiresMigration).toBe(false);
+  });
+
+  it('conserve toutes les provenances lors du roundtrip backup v11', async () => {
+    await database.weights.add(createEntity({
+      date: '2026-08-25',
+      weightKg: 71.2,
+      provenance: 'userMeasurement' as const,
+    }, 'weight:2026-08-25'));
+    await database.dailyCheckIns.add(createEntity({
+      date: '2026-08-25',
+      sleepQuality: 'good' as const,
+      readiness: 'normal' as const,
+      signalProvenance: {
+        sleepQuality: 'userReported' as const,
+        readiness: 'userReported' as const,
+      },
+      contextFlags: [],
+      contextSyncPreference: 'localOnly' as const,
+      completedAt: '2026-08-25T06:00:00.000Z',
+    }, 'daily-check-in:2026-08-25'));
+    await database.dailyCheckOuts.add(createEntity({
+      date: '2026-08-25',
+      hunger: 'normal' as const,
+      energy: 'high' as const,
+      signalProvenance: {
+        hunger: 'userReported' as const,
+        energy: 'userReported' as const,
+      },
+      foodJournalComplete: true,
+      contextFlags: [],
+      contextSyncPreference: 'localOnly' as const,
+      completedAt: '2026-08-25T20:00:00.000Z',
+    }, 'daily-check-out:2026-08-25'));
+
+    const exported = await createBackupEnvelope(database, '2026-08-25T21:00:00.000Z');
+    const parsed = parseBackupText(serializeBackupEnvelope(exported));
+    await clearAllUserData(database);
+    await replaceDatabaseFromBackup(parsed, database);
+
+    expect(parsed.schemaVersion).toBe(11);
+    expect((await database.weights.get('weight:2026-08-25'))?.provenance)
+      .toBe('userMeasurement');
+    expect((await database.dailyCheckIns.get('daily-check-in:2026-08-25'))
+      ?.signalProvenance).toEqual({
+        sleepQuality: 'userReported',
+        readiness: 'userReported',
+      });
+    expect((await database.dailyCheckOuts.get('daily-check-out:2026-08-25'))
+      ?.signalProvenance).toEqual({
+        hunger: 'userReported',
+        energy: 'userReported',
+      });
+  });
+
+  it('restaure un backup v10 legacy sans inventer de provenance', async () => {
+    await database.weights.add(createEntity({
+      date: '2026-08-24',
+      weightKg: 71.4,
+    }, 'weight:legacy'));
+    await database.dailyCheckIns.add(createEntity({
+      date: '2026-08-24',
+      sleepQuality: 'average' as const,
+      readiness: 'normal' as const,
+      contextFlags: [],
+      contextSyncPreference: 'localOnly' as const,
+      completedAt: '2026-08-24T06:00:00.000Z',
+    }, 'daily-check-in:legacy'));
+    await database.dailyCheckOuts.add(createEntity({
+      date: '2026-08-24',
+      hunger: 'normal' as const,
+      energy: 'normal' as const,
+      foodJournalComplete: true,
+      contextFlags: [],
+      contextSyncPreference: 'localOnly' as const,
+      completedAt: '2026-08-24T20:00:00.000Z',
+    }, 'daily-check-out:legacy'));
+
+    const version10 = await createBackupEnvelope(
+      database,
+      '2026-08-24T21:00:00.000Z',
+    );
+    version10.schemaVersion = 10;
+    const migrated = parseBackupText(serializeBackupEnvelope(version10));
+    await clearAllUserData(database);
+    await replaceDatabaseFromBackup(migrated, database);
+
+    expect(migrated.schemaVersion).toBe(11);
+    expect((await database.weights.get('weight:legacy'))?.provenance)
+      .toBeUndefined();
+    expect((await database.dailyCheckIns.get('daily-check-in:legacy'))
+      ?.signalProvenance).toBeUndefined();
+    expect((await database.dailyCheckOuts.get('daily-check-out:legacy'))
+      ?.signalProvenance).toBeUndefined();
   });
 
   it('exporte puis restaure toutes les nouvelles données de musculation', async () => {

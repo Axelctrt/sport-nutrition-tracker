@@ -646,8 +646,8 @@ if (failures.length === 0) {
   const backupMigrations = read(
     'src/infrastructure/backup/backupMigrations.ts',
   );
-  if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*10\b/.test(backupMigrations)) {
-    fail('P0 ne doit pas modifier le schéma backup : version 10 attendue.');
+  if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*11\b/.test(backupMigrations)) {
+    fail('Le schéma backup courant doit rester en version 11.');
   }
 }
 

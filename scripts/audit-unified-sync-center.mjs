@@ -190,8 +190,8 @@ if (failures.length === 0) {
     fail('La base métier doit utiliser Dexie v12.');
   }
   const backup = read('src/infrastructure/backup/backupMigrations.ts');
-  if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*10\b/.test(backup)) {
-    fail('La sauvegarde JSON doit rester en v10.');
+  if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*11\b/.test(backup)) {
+    fail('La sauvegarde JSON doit rester en v11.');
   }
   const cloud = read('src/infrastructure/sync-prototype/SyncPrototypeDatabase.ts');
   if (!cloud.includes('SYNC_PROTOTYPE_DATABASE_VERSION = 18')) {

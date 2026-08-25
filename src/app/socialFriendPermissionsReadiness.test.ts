@@ -33,9 +33,9 @@ const snapshot: FriendsPrivacySnapshot = {
 };
 
 describe('readiness permissions amis 0.27.0 F3', () => {
-  it('conserve la sauvegarde JSON v10 et les permissions par ami', () => {
+  it('conserve la sauvegarde JSON v11 et les permissions par ami', () => {
     expect(databaseSchemaVersion).toBe(12);
-    expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(10);
+    expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(11);
     expect(databaseTableNames).toContain('friendActivityPermissions');
   });
 

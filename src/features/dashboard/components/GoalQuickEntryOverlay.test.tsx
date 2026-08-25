@@ -104,6 +104,7 @@ describe('GoalQuickEntryOverlay', () => {
       expect(onSaveWeight).toHaveBeenCalledWith({
         date: '2026-08-04',
         weightKg: 71.9,
+        provenance: 'userMeasurement',
       });
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });

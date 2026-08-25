@@ -10,7 +10,7 @@ import {
 describe('préparation locale à la synchronisation multiappareil', () => {
   it('fige les versions validées à la clôture de la phase', () => {
     expect(databaseSchemaVersion).toBe(12);
-    expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(10);
+    expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(11);
   });
 
   it('sépare les trente-sept tables utilisateur des six tables locales', () => {
@@ -52,7 +52,7 @@ describe('préparation locale à la synchronisation multiappareil', () => {
     }
   });
 
-  it('inclut les états utilisateur synchronisables dans le backup v10', () => {
+  it('inclut les états utilisateur synchronisables dans le backup v11', () => {
     expect(BACKUP_USER_STATE_TABLE_NAMES).toEqual([
       'goals',
       'endurancePlanningSessions',

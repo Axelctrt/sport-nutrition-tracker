@@ -10,6 +10,7 @@ import { StepsForm } from '@/features/steps/components/StepsForm';
 import type { StepsFormValues } from '@/features/steps/schemas/stepsSchema';
 import { WeightEntryForm } from '@/features/weight/components/WeightEntryForm';
 import type { WeightEntryFormValues } from '@/features/weight/schemas/weightEntrySchema';
+import { weightFormValuesToEntity } from '@/features/weight/utils';
 import { useActionToast } from '@/shared/toast/useActionToast';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 
@@ -71,11 +72,7 @@ export function GoalQuickEntryOverlay({
     setErrorMessage(undefined);
 
     try {
-      await onSaveWeight({
-        date,
-        weightKg: values.weightKg,
-        ...(values.note.trim() ? { note: values.note.trim() } : {}),
-      });
+      await onSaveWeight(weightFormValuesToEntity({ ...values, date }));
       actionToast.success({
         key: `goal-action-weight:${date}`,
         title: 'Poids enregistré',

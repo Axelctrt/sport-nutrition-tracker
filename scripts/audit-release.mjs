@@ -129,11 +129,11 @@ if (
 }
 
 if (
-  !/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*10\b/.test(
+  !/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*11\b/.test(
     backupMigrations,
   )
 ) {
-  fail('le format de sauvegarde JSON v10 attendu est absent.');
+  fail('le format de sauvegarde JSON v11 attendu est absent.');
 }
 
 console.log(`Audit version réussi : SportPilot ${version}, documentation, schémas et métadonnées cohérents.`);

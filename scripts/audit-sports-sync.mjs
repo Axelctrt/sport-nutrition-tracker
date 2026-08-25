@@ -100,8 +100,8 @@ if (!deployment.includes("VITE_ENABLE_REAL_ACTIVITY_SYNC: 'true'")) {
 if (!/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_12/.test(mainVersions)) {
   fail('Activities doit conserver le schéma local principal Dexie v12.');
 }
-if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*10/.test(backupVersions)) {
-  fail('Activities doit conserver le schéma backup JSON v10.');
+if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*11/.test(backupVersions)) {
+  fail('Activities doit conserver le schéma backup JSON v11.');
 }
 
 if (failures.length > 0) {

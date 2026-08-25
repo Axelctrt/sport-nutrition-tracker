@@ -144,6 +144,24 @@ describe('DashboardQuickActions', () => {
     expect(screen.getByText('60,2 kg sont déjà enregistrés aujourd’hui.')).toBeInTheDocument();
   });
 
+  it('qualifie une pesée explicitement enregistrée comme mesure utilisateur', async () => {
+    const user = userEvent.setup();
+    const onSaveWeight = vi.fn().mockResolvedValue(undefined);
+    renderActions({ onSaveWeight });
+
+    await user.click(screen.getByRole('button', { name: 'Saisir le poids' }));
+    const input = screen.getByRole('spinbutton', { name: /Poids en kilogrammes/ });
+    await user.clear(input);
+    await user.type(input, '60.4');
+    await user.click(screen.getByRole('button', { name: 'Enregistrer' }));
+
+    await waitFor(() => expect(onSaveWeight).toHaveBeenCalledWith({
+      date: '2026-06-25',
+      weightKg: 60.4,
+      provenance: 'userMeasurement',
+    }));
+  });
+
   it('remplace le démarrage par la reprise directe lorsqu’une séance existe', () => {
     renderActions({ activeWorkout });
 

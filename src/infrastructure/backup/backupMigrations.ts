@@ -11,7 +11,7 @@ import {
 } from '@/infrastructure/user-state/userStateModels';
 import { validateBackupEnvelope } from '@/infrastructure/backup/backupSchemas';
 
-export const CURRENT_BACKUP_SCHEMA_VERSION = 10;
+export const CURRENT_BACKUP_SCHEMA_VERSION = 11;
 
 export class BackupMigrationError extends Error {
   constructor(message: string, options?: ErrorOptions) {
@@ -292,6 +292,10 @@ function migrateVersion9ToVersion10(input: BackupHeader): unknown {
   };
 }
 
+function migrateVersion10ToVersion11(input: BackupHeader): unknown {
+  return { ...input, schemaVersion: 11 };
+}
+
 export function migrateBackupEnvelope(input: unknown): BackupEnvelope {
   const header = readHeader(input);
 
@@ -348,6 +352,9 @@ export function migrateBackupEnvelope(input: unknown): BackupEnvelope {
   }
   if (version <= 9) {
     migrated = migrateVersion9ToVersion10(readHeader(migrated));
+  }
+  if (version <= 10) {
+    migrated = migrateVersion10ToVersion11(readHeader(migrated));
   }
 
   const validated = validateBackupEnvelope(migrated);

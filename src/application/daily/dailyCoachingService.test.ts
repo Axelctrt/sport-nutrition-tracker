@@ -46,6 +46,7 @@ describe('dailyCoachingService', () => {
       sleepDurationMinutes: 450,
       sleepQuality: 'good',
       readiness: 'high',
+      signalConfirmations: { sleepQuality: true, readiness: true },
       contextFlags: ['travel', 'travel'],
     }, dependencies);
 
@@ -54,9 +55,13 @@ describe('dailyCoachingService', () => {
       weightEntryId: weightEntryIdForDate('2026-07-29'),
       contextFlags: ['travel'],
       contextSyncPreference: 'localOnly',
+      signalProvenance: {
+        sleepQuality: 'userReported',
+        readiness: 'userReported',
+      },
     });
     expect(await database.weights.get(weightEntryIdForDate('2026-07-29')))
-      .toMatchObject({ weightKg: 61.5 });
+      .toMatchObject({ weightKg: 61.5, provenance: 'userMeasurement' });
   });
 
   it('autorise un check-in sans pesée et efface seulement sa référence', async () => {
@@ -83,6 +88,7 @@ describe('dailyCoachingService', () => {
     expect(checkIn.weightEntryId).toBeUndefined();
     expect(checkIn.sleepQuality).toBeUndefined();
     expect(checkIn.readiness).toBeUndefined();
+    expect(checkIn.signalProvenance).toBeUndefined();
     expect(await database.weights.count()).toBe(0);
   });
 
@@ -106,6 +112,7 @@ describe('dailyCoachingService', () => {
       actualSteps: 8_750,
       hunger: 'normal',
       energy: 'high',
+      signalConfirmations: { hunger: true, energy: true },
       foodJournalComplete: true,
     }, dependencies);
 
@@ -136,8 +143,114 @@ describe('dailyCoachingService', () => {
     expect(checkOut.stepsEntryId).toBeUndefined();
     expect(checkOut.hunger).toBeUndefined();
     expect(checkOut.energy).toBeUndefined();
+    expect(checkOut.signalProvenance).toBeUndefined();
     expect(await database.dailySteps.count()).toBe(0);
     expect(day.checkOut?.id).toBe(checkOut.id);
+  });
+
+  it('ne blanchit aucun signal legacy lors d’une édition sans confirmation', async () => {
+    await database.dailyCheckIns.add({
+      id: dailyCheckInIdForDate('2026-07-29'),
+      date: '2026-07-29',
+      sleepQuality: 'average',
+      readiness: 'normal',
+      contextFlags: [],
+      contextSyncPreference: 'localOnly',
+      completedAt: '2026-07-29T06:00:00.000Z',
+      createdAt: '2026-07-29T06:00:00.000Z',
+      updatedAt: '2026-07-29T06:00:00.000Z',
+    });
+    await database.dailyCheckOuts.add({
+      id: dailyCheckOutIdForDate('2026-07-29'),
+      date: '2026-07-29',
+      hunger: 'normal',
+      energy: 'normal',
+      foodJournalComplete: false,
+      contextFlags: [],
+      contextSyncPreference: 'localOnly',
+      completedAt: '2026-07-29T20:00:00.000Z',
+      createdAt: '2026-07-29T20:00:00.000Z',
+      updatedAt: '2026-07-29T20:00:00.000Z',
+    });
+
+    const checkIn = await completeDailyCheckIn({
+      date: '2026-07-29',
+      sleepQuality: 'average',
+      readiness: 'normal',
+      waistCm: 80,
+    }, dependencies);
+    const checkOut = await completeDailyCheckOut({
+      date: '2026-07-29',
+      hunger: 'normal',
+      energy: 'normal',
+      foodJournalComplete: true,
+    }, dependencies);
+
+    expect(checkIn.signalProvenance).toBeUndefined();
+    expect(checkOut.signalProvenance).toBeUndefined();
+  });
+
+  it('requalifie uniquement les quatre signaux explicitement confirmés', async () => {
+    const checkIn = await completeDailyCheckIn({
+      date: '2026-07-29',
+      sleepQuality: 'average',
+      readiness: 'normal',
+      signalConfirmations: { sleepQuality: true, readiness: true },
+    }, dependencies);
+    const checkOut = await completeDailyCheckOut({
+      date: '2026-07-29',
+      hunger: 'normal',
+      energy: 'normal',
+      signalConfirmations: { hunger: true, energy: true },
+      foodJournalComplete: true,
+    }, dependencies);
+
+    expect(checkIn.signalProvenance).toEqual({
+      sleepQuality: 'userReported',
+      readiness: 'userReported',
+    });
+    expect(checkOut.signalProvenance).toEqual({
+      hunger: 'userReported',
+      energy: 'userReported',
+    });
+  });
+
+  it('préserve une provenance connue quand un autre champ est édité', async () => {
+    await completeDailyCheckIn({
+      date: '2026-07-29',
+      sleepQuality: 'good',
+      readiness: 'high',
+      signalConfirmations: { sleepQuality: true, readiness: true },
+    }, dependencies);
+    await completeDailyCheckOut({
+      date: '2026-07-29',
+      hunger: 'high',
+      energy: 'low',
+      signalConfirmations: { hunger: true, energy: true },
+      foodJournalComplete: false,
+    }, dependencies);
+
+    const checkIn = await completeDailyCheckIn({
+      date: '2026-07-29',
+      sleepQuality: 'good',
+      readiness: 'high',
+      waistCm: 81,
+    }, dependencies);
+    const checkOut = await completeDailyCheckOut({
+      date: '2026-07-29',
+      hunger: 'high',
+      energy: 'low',
+      foodJournalComplete: true,
+    }, dependencies);
+
+    expect(checkIn.signalProvenance).toEqual({
+      sleepQuality: 'userReported',
+      readiness: 'userReported',
+    });
+    expect(checkOut.signalProvenance).toEqual({
+      hunger: 'userReported',
+      energy: 'userReported',
+    });
   });
 
   it('relit les check-ins et check-outs sur une période bornée', async () => {

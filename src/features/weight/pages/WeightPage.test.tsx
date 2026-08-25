@@ -99,6 +99,7 @@ describe('WeightPage', () => {
         date: '2026-06-25',
         weightKg: 61.4,
         note: 'Pesée au réveil',
+        provenance: 'userMeasurement',
       });
     });
     expect(mocks.recalculateTargets).toHaveBeenCalledWith(

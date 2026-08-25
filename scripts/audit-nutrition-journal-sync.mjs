@@ -98,8 +98,8 @@ if (!/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_12/.test(appDatabase)) {
   fail('la base métier principale n’est plus en Dexie v12.');
 }
 const backup = read('src/infrastructure/backup/backupMigrations.ts');
-if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*10/.test(backup)) {
-  fail('la sauvegarde n’est plus en JSON v10.');
+if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*11/.test(backup)) {
+  fail('la sauvegarde n’est plus en JSON v11.');
 }
 
 const packageJson = JSON.parse(read('package.json'));

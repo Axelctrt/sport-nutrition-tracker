@@ -26,6 +26,10 @@ export interface CompleteDailyCheckInInput {
   sleepDurationMinutes?: number;
   sleepQuality?: DailyCheckIn['sleepQuality'];
   readiness?: DailySignalLevel;
+  signalConfirmations?: {
+    sleepQuality?: true;
+    readiness?: true;
+  };
   waistCm?: number;
   contextFlags?: readonly DailyContextFlag[];
   contextSyncPreference?: DailyContextSyncPreference;
@@ -43,6 +47,10 @@ export interface CompleteDailyCheckOutInput {
   actualSteps?: number | null;
   hunger?: DailySignalLevel;
   energy?: DailySignalLevel;
+  signalConfirmations?: {
+    hunger?: true;
+    energy?: true;
+  };
   foodJournalComplete: boolean;
   contextFlags?: readonly DailyContextFlag[];
   contextSyncPreference?: DailyContextSyncPreference;
@@ -106,11 +114,64 @@ async function resolveWeightEntryId(
     const entry = await dependencies.weight.upsert({
       date: input.date,
       weightKg: input.weightKg,
+      provenance: 'userMeasurement',
     });
     return entry.id;
   }
 
   return (await dependencies.weight.getByDate(input.date))?.id;
+}
+
+function resolveCheckInSignalProvenance(
+  input: CompleteDailyCheckInInput,
+  current: DailyCheckIn | undefined,
+): DailyCheckIn['signalProvenance'] {
+  const sleepQualityConfirmed = input.sleepQuality !== undefined && (
+    input.signalConfirmations?.sleepQuality === true
+    || (
+      input.sleepQuality === current?.sleepQuality
+      && current.signalProvenance?.sleepQuality === 'userReported'
+    )
+  );
+  const readinessConfirmed = input.readiness !== undefined && (
+    input.signalConfirmations?.readiness === true
+    || (
+      input.readiness === current?.readiness
+      && current.signalProvenance?.readiness === 'userReported'
+    )
+  );
+
+  if (!sleepQualityConfirmed && !readinessConfirmed) return undefined;
+  return {
+    ...(sleepQualityConfirmed ? { sleepQuality: 'userReported' as const } : {}),
+    ...(readinessConfirmed ? { readiness: 'userReported' as const } : {}),
+  };
+}
+
+function resolveCheckOutSignalProvenance(
+  input: CompleteDailyCheckOutInput,
+  current: DailyCheckOut | undefined,
+): DailyCheckOut['signalProvenance'] {
+  const hungerConfirmed = input.hunger !== undefined && (
+    input.signalConfirmations?.hunger === true
+    || (
+      input.hunger === current?.hunger
+      && current.signalProvenance?.hunger === 'userReported'
+    )
+  );
+  const energyConfirmed = input.energy !== undefined && (
+    input.signalConfirmations?.energy === true
+    || (
+      input.energy === current?.energy
+      && current.signalProvenance?.energy === 'userReported'
+    )
+  );
+
+  if (!hungerConfirmed && !energyConfirmed) return undefined;
+  return {
+    ...(hungerConfirmed ? { hunger: 'userReported' as const } : {}),
+    ...(energyConfirmed ? { energy: 'userReported' as const } : {}),
+  };
 }
 
 async function resolveStepsEntryId(
@@ -160,7 +221,11 @@ export async function completeDailyCheckIn(
   );
   validateOptionalRange(input.waistCm, 'Le tour de taille', 30, 300);
 
-  const weightEntryId = await resolveWeightEntryId(input, dependencies);
+  const [weightEntryId, current] = await Promise.all([
+    resolveWeightEntryId(input, dependencies),
+    dependencies.dailyCoaching.getCheckIn(input.date),
+  ]);
+  const signalProvenance = resolveCheckInSignalProvenance(input, current);
   return dependencies.dailyCoaching.upsertCheckIn({
     date: input.date,
     ...(weightEntryId ? { weightEntryId } : {}),
@@ -169,6 +234,7 @@ export async function completeDailyCheckIn(
       : { sleepDurationMinutes: input.sleepDurationMinutes }),
     ...(input.sleepQuality ? { sleepQuality: input.sleepQuality } : {}),
     ...(input.readiness ? { readiness: input.readiness } : {}),
+    ...(signalProvenance ? { signalProvenance } : {}),
     ...(input.waistCm === undefined ? {} : { waistCm: input.waistCm }),
     contextFlags: uniqueFlags(input.contextFlags),
     contextSyncPreference: input.contextSyncPreference ?? 'localOnly',
@@ -199,8 +265,9 @@ export async function completeDailyCheckOut(
   validateDate(input.date);
   validateOptionalRange(input.actualSteps ?? undefined, 'Le nombre de pas', 0, 100_000);
 
-  const [stepsEntryId] = await Promise.all([
+  const [stepsEntryId, current] = await Promise.all([
     resolveStepsEntryId(input, dependencies),
+    dependencies.dailyCoaching.getCheckOut(input.date),
     dependencies.food.upsertJournalStatus({
       date: input.date,
       isComplete: input.foodJournalComplete,
@@ -209,12 +276,14 @@ export async function completeDailyCheckOut(
         : {}),
     }),
   ]);
+  const signalProvenance = resolveCheckOutSignalProvenance(input, current);
 
   return dependencies.dailyCoaching.upsertCheckOut({
     date: input.date,
     ...(stepsEntryId ? { stepsEntryId } : {}),
     ...(input.hunger ? { hunger: input.hunger } : {}),
     ...(input.energy ? { energy: input.energy } : {}),
+    ...(signalProvenance ? { signalProvenance } : {}),
     foodJournalComplete: input.foodJournalComplete,
     contextFlags: uniqueFlags(input.contextFlags),
     contextSyncPreference: input.contextSyncPreference ?? 'localOnly',

@@ -63,10 +63,10 @@ if (!repository.includes('friendActivityPermissions')) failures.push('repository
 if (!schema.includes('friendActivityPermissions')) failures.push('table friendActivityPermissions absente du schéma Dexie');
 if (!/DATABASE_VERSION_12\s*=\s*12\s+as\s+const/u.test(versions)) failures.push('DATABASE_VERSION_12 absent');
 if (!/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_12/u.test(versions)) failures.push('CURRENT_DATABASE_VERSION ne pointe pas vers DATABASE_VERSION_12');
-if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*10/u.test(backupMigrations)) failures.push('CURRENT_BACKUP_SCHEMA_VERSION ne pointe pas vers 10');
+if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*11/u.test(backupMigrations)) failures.push('CURRENT_BACKUP_SCHEMA_VERSION ne pointe pas vers 11');
 
 for (const source of [backupSchemas, backupModels, backupService]) {
-  if (!source.includes('friendActivityPermissions')) failures.push('sauvegarde JSON v10 ne couvre pas friendActivityPermissions');
+  if (!source.includes('friendActivityPermissions')) failures.push('sauvegarde JSON v11 ne couvre pas friendActivityPermissions');
 }
 
 if (!packageJson.includes('audit:social-friend-permissions')) failures.push('script audit:social-friend-permissions absent');
@@ -84,4 +84,4 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-console.log('Audit permissions de partage par ami réussi : aucun partage, résumé et personnalisation par ami sont couverts avec Dexie v12 et sauvegarde JSON v10.');
+console.log('Audit permissions de partage par ami réussi : aucun partage, résumé et personnalisation par ami sont couverts avec Dexie v12 et sauvegarde JSON v11.');
