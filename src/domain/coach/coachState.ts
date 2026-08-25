@@ -67,3 +67,8 @@ export interface CoachStateResult {
   recommendedAction: CoachRecommendedAction;
   nextReview: CoachNextReview;
 }
+
+export type CoachStateAnalysis = Pick<
+  CoachStateResult,
+  'state' | 'confidence' | 'reasons' | 'blockingFactors'
+>;
