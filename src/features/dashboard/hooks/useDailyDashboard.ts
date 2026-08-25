@@ -15,6 +15,11 @@ import {
 } from '@/application/daily/dailyCoachingService';
 import { recalculateTargetsAfterWeightChange } from '@/application/daily/referenceWeightRecalculationService';
 import {
+  calculateDailyCoach,
+  type CalculateDailyCoachInput,
+} from '@/application/coach/dailyCoachService';
+import type { DailyCoachResult } from '@/domain/coach/dailyCoach';
+import {
   loadDailyActivityPlanning,
   planDailyStrengthActivity,
   restoreDailyEnduranceActivity,
@@ -68,6 +73,11 @@ export interface DailyDashboardDependencies {
     setActivityDecision: typeof setDailyActivityDecision;
     completeCheckOut: typeof completeDailyCheckOut;
   };
+  dailyCoach: {
+    calculate: (
+      input: CalculateDailyCoachInput,
+    ) => Promise<DailyCoachResult>;
+  };
   repositories: {
     weight: Pick<typeof repositories.weight, 'upsert'>;
     food: Pick<
@@ -107,6 +117,9 @@ const defaultDependencies: DailyDashboardDependencies = {
     setActivityDecision: setDailyActivityDecision,
     completeCheckOut: completeDailyCheckOut,
   },
+  dailyCoach: {
+    calculate: calculateDailyCoach,
+  },
   repositories,
   planning: {
     load: loadDailyActivityPlanning,
@@ -135,6 +148,8 @@ export function useDailyDashboard(options: UseDailyDashboardOptions = {}) {
     templates: [],
   });
   const [dailyCoaching, setDailyCoaching] = useState<DailyCoachingDay>();
+  const [dailyCoach, setDailyCoach] = useState<DailyCoachResult>();
+  const [dailyCoachError, setDailyCoachError] = useState<string>();
   const [errorMessage, setErrorMessage] = useState<string>();
   const date = toLocalDate();
 
@@ -145,6 +160,7 @@ export function useDailyDashboard(options: UseDailyDashboardOptions = {}) {
 
     setStatus('loading');
     setErrorMessage(undefined);
+    setDailyCoachError(undefined);
 
     try {
       const [
@@ -169,6 +185,21 @@ export function useDailyDashboard(options: UseDailyDashboardOptions = {}) {
       const inProgressExercises = inProgressSession
         ? await dependencies.repositories.workoutSessions.listExercises(inProgressSession.id)
         : [];
+      let nextDailyCoach: DailyCoachResult | undefined;
+      let nextDailyCoachError: string | undefined;
+      if (nextDailyCoaching.checkIn) {
+        try {
+          nextDailyCoach = await dependencies.dailyCoach.calculate({
+            date,
+            profile,
+            referenceWeightKg: nextSnapshot.weight.weightKg,
+          });
+        } catch (error) {
+          nextDailyCoachError = error instanceof Error
+            ? error.message
+            : 'Coach du jour indisponible.';
+        }
+      }
       const consumed = calculateDailyNutrition(entries);
       const entryCounts = entries.reduce<Record<MealSlot, number>>(
         (counts, entry) => ({
@@ -197,6 +228,8 @@ export function useDailyDashboard(options: UseDailyDashboardOptions = {}) {
         ? { session: inProgressSession, exerciseCount: inProgressExercises.length }
         : undefined);
       setDailyCoaching(nextDailyCoaching);
+      setDailyCoach(nextDailyCoach);
+      setDailyCoachError(nextDailyCoachError);
       setActivityPlanning(nextActivityPlanning);
       setStatus('ready');
     } catch (error) {
@@ -321,6 +354,8 @@ export function useDailyDashboard(options: UseDailyDashboardOptions = {}) {
     activeWorkout,
     activityPlanning,
     dailyCoaching,
+    dailyCoach,
+    dailyCoachError,
     errorMessage,
     refresh,
     saveWeight,

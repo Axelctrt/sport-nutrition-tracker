@@ -56,6 +56,7 @@ test('guide le check-in quotidien sans débordement mobile', async ({ page }) =>
   await createLocalProfile(page, 'Assistant E2E');
 
   await expect(page.getByRole('heading', { name: 'Assistant du jour' })).toBeVisible();
+  await expect(page.getByText('Coach du jour', { exact: true })).toHaveCount(0);
   await expect(page.getByText('Cible alimentaire guidée')).toBeVisible();
   await expect(page.getByText('Pas attendus')).toBeVisible();
   await expect(page.getByRole('progressbar', { name: 'Progression de la journée' }))
@@ -110,9 +111,22 @@ test('guide le check-in quotidien sans débordement mobile', async ({ page }) =>
   await expectSheetActionInsideVisualViewport(dialog, 'Enregistrer le check-in');
 
   await dialog.getByRole('radio', { name: 'Pas aujourd’hui' }).click();
+  await dialog.getByRole('radio', { name: 'Fatigué' }).click();
   await saveButton.click();
 
   await expect(dialog).toBeHidden();
+  await expect(page.getByText('Check-in enregistré', { exact: true })).toHaveCount(1);
+  await expect(page.getByRole('heading', { name: 'Récupération à surveiller' })).toBeVisible();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  const fixedWidgetsAfterCheckIn = await page.locator('[data-dashboard-fixed-widget]')
+    .evaluateAll((elements) => (
+      elements.map((element) => element.getAttribute('data-dashboard-fixed-widget'))
+    ));
+  expect(fixedWidgetsAfterCheckIn).toEqual([
+    'todaySummary',
+    'dailyCoach',
+    'dailyAssistant',
+  ]);
   await expect(page.getByText('1 étape sur 4')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Modifier le check-in' })).toBeVisible();
 

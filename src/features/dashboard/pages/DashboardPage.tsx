@@ -8,6 +8,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useProfile } from '@/app/providers/profile/useProfile';
 import { routePaths } from '@/app/routePaths';
 import { DashboardDailyAssistant } from '@/features/dashboard/components/DashboardDailyAssistant';
+import { DashboardDailyCoachCard } from '@/features/dashboard/components/DashboardDailyCoachCard';
 import { DashboardFixedCore } from '@/features/dashboard/components/DashboardFixedCore';
 import { DashboardRewardsOverview } from '@/features/dashboard/components/DashboardRewardsOverview';
 import { DashboardTodaySummary } from '@/features/dashboard/components/DashboardTodaySummary';
@@ -53,6 +54,8 @@ export function DashboardPage() {
     activeWorkout,
     activityPlanning,
     dailyCoaching,
+    dailyCoach,
+    dailyCoachError,
     errorMessage,
     refresh,
     saveWeight,
@@ -239,6 +242,12 @@ export function DashboardPage() {
                   isRefreshing={status === 'loading'}
                 />
               )}
+              coach={dailyCoaching?.checkIn && (dailyCoach || dailyCoachError) ? (
+                <DashboardDailyCoachCard
+                  {...(dailyCoach ? { result: dailyCoach } : {})}
+                  unavailable={Boolean(dailyCoachError)}
+                />
+              ) : null}
               assistant={dailyCoaching ? (
                   <DashboardDailyAssistant
                     date={date}

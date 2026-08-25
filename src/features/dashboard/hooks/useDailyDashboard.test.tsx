@@ -20,6 +20,7 @@ const mocks = vi.hoisted(() => ({
   completeCheckIn: vi.fn(),
   setActivityDecision: vi.fn(),
   completeCheckOut: vi.fn(),
+  calculateDailyCoach: vi.fn(),
 }));
 
 const profile = {
@@ -67,6 +68,9 @@ const dependencies: DailyDashboardDependencies = {
     setActivityDecision: mocks.setActivityDecision,
     completeCheckOut: mocks.completeCheckOut,
   },
+  dailyCoach: {
+    calculate: mocks.calculateDailyCoach,
+  },
   repositories: {
     weight: { upsert: mocks.upsertWeight },
     food: {
@@ -89,6 +93,7 @@ function snapshot() {
       macros: { proteinGrams: 110, carbohydratesGrams: 245, fatGrams: 55 },
     },
     calculation: { steps: { totalSteps: 0 } },
+    weight: { weightKg: 61.5, source: 'previousWeekAverage' },
   };
 }
 
@@ -110,6 +115,21 @@ describe('useDailyDashboard', () => {
     mocks.completeCheckIn.mockResolvedValue(undefined);
     mocks.setActivityDecision.mockResolvedValue(undefined);
     mocks.completeCheckOut.mockResolvedValue(undefined);
+    mocks.calculateDailyCoach.mockResolvedValue({
+      verdict: 'planMaintained',
+      title: 'Plan maintenu',
+      message: 'Aucun changement.',
+      priority: 'low',
+      coachState: 'onTrack',
+      confidence: {
+        weight: 80,
+        food: 80,
+        activity: 80,
+        recovery: 80,
+        overall: 80,
+        level: 'reliable',
+      },
+    });
   });
 
   it('recalcule les cibles affectées après une pesée enregistrée depuis l’accueil', async () => {
@@ -162,5 +182,96 @@ describe('useDailyDashboard', () => {
       readiness: 'normal',
     });
     expect(mocks.calculateTarget).toHaveBeenCalledTimes(2);
+  });
+
+  it('ne charge pas le Coach avant check-in', async () => {
+    const { result } = renderHook(
+      () => useDailyDashboard({ profileOverride: profile, dependencies }),
+      { wrapper: ProfileWrapper },
+    );
+
+    await waitFor(() => expect(result.current.status).toBe('ready'));
+    expect(mocks.calculateDailyCoach).not.toHaveBeenCalled();
+    expect(result.current.dailyCoach).toBeUndefined();
+    expect(result.current.dailyCoachError).toBeUndefined();
+  });
+
+  it('calcule le Coach après check-in avec le poids du snapshot et le recalcule après check-out', async () => {
+    mocks.readDailyCoaching.mockResolvedValue({
+      checkIn: { date: '2026-07-09' },
+      activityDecision: undefined,
+      checkOut: undefined,
+    });
+    const { result } = renderHook(
+      () => useDailyDashboard({ profileOverride: profile, dependencies }),
+      { wrapper: ProfileWrapper },
+    );
+
+    await waitFor(() => expect(result.current.status).toBe('ready'));
+    expect(mocks.calculateDailyCoach).toHaveBeenCalledWith({
+      date: expect.any(String),
+      profile,
+      referenceWeightKg: 61.5,
+    });
+
+    await act(async () => {
+      await result.current.saveCheckOut({
+        date: '2026-07-09',
+        foodJournalComplete: true,
+        hunger: 'normal',
+      });
+    });
+    expect(mocks.calculateDailyCoach).toHaveBeenCalledTimes(2);
+  });
+
+  it('recalcule le Coach après sauvegarde du check-in lorsque celui-ci apparaît', async () => {
+    mocks.readDailyCoaching
+      .mockResolvedValueOnce({
+        checkIn: undefined,
+        activityDecision: undefined,
+        checkOut: undefined,
+      })
+      .mockResolvedValue({
+        checkIn: { date: '2026-07-09' },
+        activityDecision: undefined,
+        checkOut: undefined,
+      });
+    const { result } = renderHook(
+      () => useDailyDashboard({ profileOverride: profile, dependencies }),
+      { wrapper: ProfileWrapper },
+    );
+    await waitFor(() => expect(result.current.status).toBe('ready'));
+
+    await act(async () => {
+      await result.current.saveCheckIn({
+        date: '2026-07-09',
+        readiness: 'low',
+        signalConfirmations: { readiness: true },
+      });
+    });
+
+    expect(mocks.calculateDailyCoach).toHaveBeenCalledOnce();
+    expect(result.current.dailyCoach?.title).toBe('Plan maintenu');
+  });
+
+  it('isole une panne du Coach et conserve le Dashboard prêt', async () => {
+    mocks.readDailyCoaching.mockResolvedValue({
+      checkIn: { date: '2026-07-09' },
+      activityDecision: undefined,
+      checkOut: undefined,
+    });
+    mocks.calculateDailyCoach.mockRejectedValue(new Error('Analyse indisponible'));
+    const { result } = renderHook(
+      () => useDailyDashboard({ profileOverride: profile, dependencies }),
+      { wrapper: ProfileWrapper },
+    );
+
+    await waitFor(() => expect(result.current.status).toBe('ready'));
+    expect(result.current.snapshot).toBeDefined();
+    expect(result.current.nutrition).toBeDefined();
+    expect(result.current.dailyCoaching?.checkIn).toBeDefined();
+    expect(result.current.dailyCoach).toBeUndefined();
+    expect(result.current.dailyCoachError).toBe('Analyse indisponible');
+    expect(result.current.errorMessage).toBeUndefined();
   });
 });
