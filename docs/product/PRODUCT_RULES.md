@@ -31,7 +31,20 @@ Statut : **décisions validées**, sauf mention contraire.
   activation explicite de la saisie de pesée par l’utilisateur.
 - Les valeurs réellement enregistrées restent restaurées lors de l’édition.
 - Les données historiques ambiguës ne sont ni réécrites ni nettoyées
-  automatiquement ; leur provenance relève d’un lot dédié.
+  automatiquement ; l’absence de provenance reste `legacyUnknown` pour le
+  contrat Coach.
+- Une nouvelle pesée saisie dans Progression ou confirmée au check-in porte la
+  provenance `userMeasurement`. La pesée créée par l’initialisation du profil
+  porte `profileInitialization` et ne vaut pas mesure utilisateur.
+- Les signaux subjectifs sommeil, état de forme, faim et énergie portent
+  `userReported` uniquement après interaction ou confirmation explicite. Une
+  simple ouverture, restauration ou sauvegarde d’un formulaire historique ne
+  les requalifie pas.
+- Le contrat de preuve Coach expose une valeur, une date, une provenance et un
+  niveau de confiance. Les moyennes dérivées sont `derived`, les valeurs de
+  profil utilisées en repli sont `profileFallback`, et aucune absence de signal
+  n’est transformée en observation. Cette confiance qualifie une preuve
+  individuelle ; elle ne constitue pas la confiance globale du futur Coach C1.
 
 ## IA photo
 

@@ -124,6 +124,73 @@ describe('synchronisation du suivi quotidien', () => {
       });
   });
 
+  it('conserve la provenance par signal et n’en invente pas pour le legacy', async () => {
+    const secondDevice = new AppDatabase(
+      `sportpilot-daily-coaching-second-${crypto.randomUUID()}`,
+    );
+    await secondDevice.open();
+    try {
+      await local.dailyCheckIns.bulkAdd([
+        {
+          ...checkIn('2026-07-26T07:00:00.000Z'),
+          sleepQuality: 'good',
+          signalProvenance: {
+            sleepQuality: 'userReported',
+            readiness: 'userReported',
+          },
+        },
+        {
+          ...checkIn('2026-07-27T07:00:00.000Z'),
+          id: 'daily-check-in:2026-07-27',
+          date: '2026-07-27',
+          sleepQuality: 'average',
+          readiness: 'normal',
+          completedAt: '2026-07-27T07:00:00.000Z',
+          createdAt: '2026-07-27T06:00:00.000Z',
+          updatedAt: '2026-07-27T07:00:00.000Z',
+        },
+      ]);
+      await local.dailyCheckOuts.add({
+        ...checkOut(),
+        signalProvenance: {
+          hunger: 'userReported',
+          energy: 'userReported',
+        },
+      });
+
+      await synchronizeRealDailyCoaching(
+        local,
+        cloud as unknown as SyncPrototypeDatabase,
+        'user-1',
+      );
+      await synchronizeRealDailyCoaching(
+        secondDevice,
+        cloud as unknown as SyncPrototypeDatabase,
+        'user-1',
+      );
+
+      expect(await secondDevice.dailyCheckIns.get(`daily-check-in:${DATE}`))
+        .toMatchObject({
+          signalProvenance: {
+            sleepQuality: 'userReported',
+            readiness: 'userReported',
+          },
+        });
+      expect(await secondDevice.dailyCheckOuts.get(`daily-check-out:${DATE}`))
+        .toMatchObject({
+          signalProvenance: {
+            hunger: 'userReported',
+            energy: 'userReported',
+          },
+        });
+      expect((await secondDevice.dailyCheckIns.get('daily-check-in:2026-07-27'))
+        ?.signalProvenance).toBeUndefined();
+    } finally {
+      secondDevice.close();
+      await secondDevice.delete();
+    }
+  });
+
   it('fusionne independamment le check-in local et le check-out cloud', async () => {
     await local.dailyCheckIns.add(checkIn());
     const remoteCheckOut = checkOut();

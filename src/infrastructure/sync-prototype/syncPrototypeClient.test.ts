@@ -571,6 +571,7 @@ describe('client sécurisé du prototype Dexie Cloud', () => {
         date: '2026-06-30',
         weightKg: 75.4,
         note: 'Ordinateur',
+        provenance: 'userMeasurement',
       }),
     ]);
 
@@ -581,6 +582,7 @@ describe('client sécurisé du prototype Dexie Cloud', () => {
     expect(weightRows.get('weight:2026-06-30')).toEqual(
       expect.objectContaining({
         weightKg: 75.1,
+        provenance: 'userMeasurement',
         note: '',
       }),
     );

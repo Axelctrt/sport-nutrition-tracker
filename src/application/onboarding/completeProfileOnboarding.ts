@@ -26,6 +26,7 @@ export async function completeProfileOnboarding(
     const initialWeight: NewEntity<WeightEntry> = {
       date: (dependencies.today ?? toLocalDate)(),
       weightKg: profileInput.initialWeightKg,
+      provenance: 'profileInitialization',
     };
     await dependencies.weightRepository.upsert(initialWeight);
     initialWeightCreated = true;

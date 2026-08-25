@@ -89,6 +89,74 @@ describe('synchronisation C4 des vraies pesées', () => {
     expect(await cloud.realWeights.get('weight:2026-06-30')).toBeUndefined();
   });
 
+  it('conserve les provenances mesurée, profil et legacy entre deux appareils', async () => {
+    const secondDevice = createLocalDatabase();
+    const transportedCloud = createCloudDatabase();
+    await secondDevice.open();
+    await transportedCloud.open();
+    try {
+      await local.weights.bulkAdd([
+        {
+          id: 'weight:user-measured',
+          date: '2026-08-23',
+          weightKg: 70.1,
+          provenance: 'userMeasurement',
+          createdAt: '2026-08-23T07:00:00.000Z',
+          updatedAt: '2026-08-23T07:00:00.000Z',
+        },
+        {
+          id: 'weight:profile-initialization',
+          date: '2026-08-24',
+          weightKg: 70.2,
+          provenance: 'profileInitialization',
+          createdAt: '2026-08-24T07:00:00.000Z',
+          updatedAt: '2026-08-24T07:00:00.000Z',
+        },
+        {
+          id: 'weight:legacy',
+          date: '2026-08-25',
+          weightKg: 70.3,
+          createdAt: '2026-08-25T07:00:00.000Z',
+          updatedAt: '2026-08-25T07:00:00.000Z',
+        },
+      ]);
+
+      await synchronizeRealWeights(
+        local,
+        cloud as unknown as SyncPrototypeDatabase,
+        'user-1',
+      );
+
+      const transportedRows = await cloud.realWeights.toArray();
+      expect(transportedRows.find(({ id }) => id === '#weight:user-measured'))
+        .toMatchObject({ provenance: 'userMeasurement' });
+      expect(transportedRows.find(({ id }) => id === '#weight:profile-initialization'))
+        .toMatchObject({ provenance: 'profileInitialization' });
+      expect(transportedRows.find(({ id }) => id === '#weight:legacy')?.provenance)
+        .toBeUndefined();
+      await transportedCloud.realWeights.bulkPut(transportedRows);
+
+      await synchronizeRealWeights(
+        secondDevice,
+        transportedCloud as unknown as SyncPrototypeDatabase,
+        'user-1',
+        { writeCloud: false },
+      );
+
+      expect(await secondDevice.weights.get('weight:user-measured'))
+        .toMatchObject({ provenance: 'userMeasurement' });
+      expect(await secondDevice.weights.get('weight:profile-initialization'))
+        .toMatchObject({ provenance: 'profileInitialization' });
+      expect((await secondDevice.weights.get('weight:legacy'))?.provenance)
+        .toBeUndefined();
+    } finally {
+      secondDevice.close();
+      transportedCloud.close();
+      await secondDevice.delete();
+      await transportedCloud.delete();
+    }
+  });
+
   it('ignore les métadonnées techniques Dexie Cloud dans la comparaison', async () => {
     const weight: WeightEntry = {
       id: 'weight:cloud-metadata',

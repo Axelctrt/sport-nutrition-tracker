@@ -39,11 +39,14 @@ export function DailyCheckInSheet({
   onSubmit,
 }: DailyCheckInSheetProps) {
   const [weightMode, setWeightMode] = useState<WeightMode>('skip');
+  const [weightConfirmed, setWeightConfirmed] = useState(false);
   const [weightKg, setWeightKg] = useState('');
   const [sleepHours, setSleepHours] = useState('');
   const [sleepMinutes, setSleepMinutes] = useState('');
   const [sleepQuality, setSleepQuality] = useState<'poor' | 'average' | 'good'>();
   const [readiness, setReadiness] = useState<'low' | 'normal' | 'high'>();
+  const [sleepQualityConfirmed, setSleepQualityConfirmed] = useState(false);
+  const [readinessConfirmed, setReadinessConfirmed] = useState(false);
   const [waistCm, setWaistCm] = useState('');
   const [contextFlags, setContextFlags] = useState<DailyContextFlag[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -61,6 +64,7 @@ export function DailyCheckInSheet({
     if (!open) return;
     const duration = checkIn?.sleepDurationMinutes;
     setWeightMode(weightEntry ? 'record' : 'skip');
+    setWeightConfirmed(false);
     setWeightKg(
       weightEntry
         ? String(weightEntry.weightKg)
@@ -70,6 +74,8 @@ export function DailyCheckInSheet({
     setSleepMinutes(duration === undefined ? '' : String(duration % 60));
     setSleepQuality(checkIn?.sleepQuality);
     setReadiness(checkIn?.readiness);
+    setSleepQualityConfirmed(false);
+    setReadinessConfirmed(false);
     setWaistCm(checkIn?.waistCm === undefined ? '' : String(checkIn.waistCm));
     setContextFlags([...(checkIn?.contextFlags ?? [])]);
     setErrorMessage(undefined);
@@ -135,10 +141,22 @@ export function DailyCheckInSheet({
       const hasSleep = sleepHours.trim().length > 0 || sleepMinutes.trim().length > 0;
       await onSubmit({
         date,
-        weightKg: weightMode === 'record' ? parsedWeight : null,
+        ...(weightMode === 'skip'
+          ? { weightKg: null }
+          : weightConfirmed
+            ? { weightKg: parsedWeight }
+            : {}),
         ...(hasSleep ? { sleepDurationMinutes: parsedHours * 60 + parsedMinutes } : {}),
         ...(sleepQuality === undefined ? {} : { sleepQuality }),
         ...(readiness === undefined ? {} : { readiness }),
+        ...(sleepQualityConfirmed || readinessConfirmed
+          ? {
+              signalConfirmations: {
+                ...(sleepQualityConfirmed ? { sleepQuality: true as const } : {}),
+                ...(readinessConfirmed ? { readiness: true as const } : {}),
+              },
+            }
+          : {}),
         ...(parsedWaist === undefined ? {} : { waistCm: parsedWaist }),
         contextFlags,
       });
@@ -189,7 +207,11 @@ export function DailyCheckInSheet({
               { value: 'record', label: 'Me peser' },
               { value: 'skip', label: 'Pas aujourd’hui' },
             ]}
-            onChange={(value) => setWeightMode(value as WeightMode)}
+            onChange={(value) => {
+              const nextMode = value as WeightMode;
+              setWeightMode(nextMode);
+              setWeightConfirmed(nextMode === 'record');
+            }}
           />
           {weightMode === 'record' ? (
             <FormField
@@ -209,6 +231,7 @@ export function DailyCheckInSheet({
                   value={weightKg}
                   onChange={(event) => {
                     setWeightKg(event.target.value);
+                    setWeightConfirmed(true);
                     if (validationError?.field === 'weight') setValidationError(undefined);
                   }}
                   className={`${inputClassName} pr-12`}
@@ -280,7 +303,10 @@ export function DailyCheckInSheet({
               { value: 'average', label: 'Moyenne' },
               { value: 'good', label: 'Bonne' },
             ]}
-            onChange={(value) => setSleepQuality(value as NonNullable<typeof sleepQuality>)}
+            onChange={(value) => {
+              setSleepQuality(value as NonNullable<typeof sleepQuality>);
+              setSleepQualityConfirmed(true);
+            }}
           />
         </div>
 
@@ -297,7 +323,10 @@ export function DailyCheckInSheet({
               { value: 'normal', label: 'Normal' },
               { value: 'high', label: 'En forme' },
             ]}
-            onChange={(value) => setReadiness(value as NonNullable<typeof readiness>)}
+            onChange={(value) => {
+              setReadiness(value as NonNullable<typeof readiness>);
+              setReadinessConfirmed(true);
+            }}
           />
         </div>
 

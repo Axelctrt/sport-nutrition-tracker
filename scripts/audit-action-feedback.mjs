@@ -318,8 +318,8 @@ if (failures.length === 0) {
   if (!/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_12\b/.test(versions)) {
     fail('la base métier doit utiliser Dexie v12.');
   }
-  if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*10\b/.test(backup)) {
-    fail('la sauvegarde JSON doit rester en v10.');
+  if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*11\b/.test(backup)) {
+    fail('la sauvegarde JSON doit rester en v11.');
   }
 
   const releaseNotes = read('RELEASE-NOTES-0.23.1.md');

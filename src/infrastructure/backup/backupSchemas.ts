@@ -229,6 +229,7 @@ const userSettingsSchema = appSettingsSchema.omit({
 const weightEntrySchema = datedEntitySchema.extend({
   weightKg: positiveNumber,
   note: z.string().max(5_000).optional(),
+  provenance: z.enum(['userMeasurement', 'profileInitialization']).optional(),
 });
 
 const dailyStepsSchema = datedEntitySchema.extend({
@@ -247,6 +248,7 @@ const dailyContextFlagSchema = z.enum([
   'other',
 ]);
 const dailySignalLevelSchema = z.enum(['low', 'normal', 'high']);
+const dailySignalProvenanceSchema = z.literal('userReported');
 const dailyContextSyncPreferenceSchema = z.enum(['localOnly', 'account']);
 
 const dailyCheckInSchema = datedEntitySchema.extend({
@@ -254,10 +256,24 @@ const dailyCheckInSchema = datedEntitySchema.extend({
   sleepDurationMinutes: z.number().int().min(0).max(1_440).optional(),
   sleepQuality: z.enum(['poor', 'average', 'good']).optional(),
   readiness: dailySignalLevelSchema.optional(),
+  signalProvenance: z.object({
+    sleepQuality: dailySignalProvenanceSchema.optional(),
+    readiness: dailySignalProvenanceSchema.optional(),
+  }).optional(),
   waistCm: positiveNumber.optional(),
   contextFlags: z.array(dailyContextFlagSchema),
   contextSyncPreference: dailyContextSyncPreferenceSchema,
   completedAt: isoDateTimeSchema,
+}).superRefine((checkIn, context) => {
+  for (const signal of ['sleepQuality', 'readiness'] as const) {
+    if (checkIn.signalProvenance?.[signal] && checkIn[signal] === undefined) {
+      context.addIssue({
+        code: 'custom',
+        path: ['signalProvenance', signal],
+        message: `La provenance ${signal} exige une valeur correspondante.`,
+      });
+    }
+  }
 });
 
 const dailyActivityDecisionSchema = datedEntitySchema.extend({
@@ -269,10 +285,24 @@ const dailyCheckOutSchema = datedEntitySchema.extend({
   stepsEntryId: z.string().min(1).optional(),
   hunger: dailySignalLevelSchema.optional(),
   energy: dailySignalLevelSchema.optional(),
+  signalProvenance: z.object({
+    hunger: dailySignalProvenanceSchema.optional(),
+    energy: dailySignalProvenanceSchema.optional(),
+  }).optional(),
   foodJournalComplete: z.boolean(),
   contextFlags: z.array(dailyContextFlagSchema),
   contextSyncPreference: dailyContextSyncPreferenceSchema,
   completedAt: isoDateTimeSchema,
+}).superRefine((checkOut, context) => {
+  for (const signal of ['hunger', 'energy'] as const) {
+    if (checkOut.signalProvenance?.[signal] && checkOut[signal] === undefined) {
+      context.addIssue({
+        code: 'custom',
+        path: ['signalProvenance', signal],
+        message: `La provenance ${signal} exige une valeur correspondante.`,
+      });
+    }
+  }
 });
 
 

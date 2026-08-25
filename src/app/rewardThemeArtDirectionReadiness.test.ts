@@ -10,7 +10,7 @@ describe("SportPilot 1.0.4 - thèmes Performance Glass", () => {
   it("préserve les versions de données pendant la phase visuelle", () => {
     expect(__APP_VERSION__).toBe("1.0.4");
     expect(databaseSchemaVersion).toBe(12);
-    expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(10);
+    expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(11);
   });
 
   it("sépare l'apparence claire/sombre des cinq identités", () => {

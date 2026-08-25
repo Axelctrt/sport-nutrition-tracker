@@ -22,6 +22,7 @@ import { StepsForm } from '@/features/steps/components/StepsForm';
 import type { StepsFormValues } from '@/features/steps/schemas/stepsSchema';
 import { WeightEntryForm } from '@/features/weight/components/WeightEntryForm';
 import type { WeightEntryFormValues } from '@/features/weight/schemas/weightEntrySchema';
+import { weightFormValuesToEntity } from '@/features/weight/utils';
 import { Card } from '@/shared/ui/Card';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
 
@@ -117,11 +118,7 @@ export function DashboardQuickActions({
   const handleWeightSubmit = async (values: WeightEntryFormValues) => {
     setDialogError(undefined);
     try {
-      await onSaveWeight({
-        date,
-        weightKg: values.weightKg,
-        ...(values.note.trim() ? { note: values.note.trim() } : {}),
-      });
+      await onSaveWeight(weightFormValuesToEntity({ ...values, date }));
       const message = 'Le poids du jour et les objectifs associés ont été actualisés.';
       setFeedback({ tone: 'success', title: 'Poids enregistré', message });
       setQuickEntry(undefined);

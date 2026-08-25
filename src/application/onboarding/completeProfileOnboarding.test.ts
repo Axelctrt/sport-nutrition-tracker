@@ -21,7 +21,11 @@ describe('completeProfileOnboarding', () => {
       today: () => '2026-07-10',
     });
 
-    expect(upsert).toHaveBeenCalledWith({ date: '2026-07-10', weightKg: 68.4 });
+    expect(upsert).toHaveBeenCalledWith({
+      date: '2026-07-10',
+      weightKg: 68.4,
+      provenance: 'profileInitialization',
+    });
     expect(saveProfile).toHaveBeenCalledWith(profileInput);
     expect(upsert.mock.invocationCallOrder[0]!).toBeLessThan(saveProfile.mock.invocationCallOrder[0]!);
     expect(result).toEqual({ profile: savedProfile, initialWeightCreated: true });

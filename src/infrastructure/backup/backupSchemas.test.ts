@@ -561,7 +561,7 @@ describe("migrateBackupEnvelope", () => {
   it("migre une sauvegarde version 1 vers la version 9 sans altérer ses données", () => {
     const migrated = migrateBackupEnvelope(createVersion1Envelope());
 
-    expect(migrated.schemaVersion).toBe(10);
+    expect(migrated.schemaVersion).toBe(11);
     expect(migrated.data.dailyCheckIns).toEqual([]);
     expect(migrated.data.dailyActivityDecisions).toEqual([]);
     expect(migrated.data.dailyCheckOuts).toEqual([]);
@@ -576,7 +576,7 @@ describe("migrateBackupEnvelope", () => {
   });
 
   it("migre directement la version 2 vers la version 9", () => {
-    expect(migrateBackupEnvelope(createValidEnvelope()).schemaVersion).toBe(10);
+    expect(migrateBackupEnvelope(createValidEnvelope()).schemaVersion).toBe(11);
   });
 
   it("convertit le rewardState v4 en tables utilisateur couvertes explicitement", () => {
@@ -610,7 +610,7 @@ describe("migrateBackupEnvelope", () => {
 
     const migrated = migrateBackupEnvelope(legacy);
 
-    expect(migrated.schemaVersion).toBe(10);
+    expect(migrated.schemaVersion).toBe(11);
     expect(migrated.rewardState).toBeUndefined();
     expect(migrated.includedUserStateTables).toEqual([
       "earnedAchievements",
@@ -645,6 +645,75 @@ describe("migrateBackupEnvelope", () => {
     envelope.schemaVersion = 99;
 
     expect(() => migrateBackupEnvelope(envelope)).toThrow(/plus récente/);
+  });
+
+  it('migre v10 vers v11 sans inventer de provenance', () => {
+    const version10 = migrateBackupEnvelope(createValidEnvelope());
+    version10.schemaVersion = 10;
+    version10.data.weights = [{
+      id: 'weight:legacy',
+      date: '2026-08-24',
+      weightKg: 71.4,
+      createdAt: '2026-08-24T07:00:00.000Z',
+      updatedAt: '2026-08-24T07:00:00.000Z',
+    }];
+    version10.data.dailyCheckIns = [{
+      id: 'daily-check-in:2026-08-24',
+      date: '2026-08-24',
+      sleepQuality: 'average',
+      readiness: 'normal',
+      contextFlags: [],
+      contextSyncPreference: 'localOnly',
+      completedAt: '2026-08-24T07:00:00.000Z',
+      createdAt: '2026-08-24T07:00:00.000Z',
+      updatedAt: '2026-08-24T07:00:00.000Z',
+    }];
+    version10.data.dailyCheckOuts = [{
+      id: 'daily-check-out:2026-08-24',
+      date: '2026-08-24',
+      hunger: 'normal',
+      energy: 'normal',
+      foodJournalComplete: true,
+      contextFlags: [],
+      contextSyncPreference: 'localOnly',
+      completedAt: '2026-08-24T20:00:00.000Z',
+      createdAt: '2026-08-24T20:00:00.000Z',
+      updatedAt: '2026-08-24T20:00:00.000Z',
+    }];
+
+    const migrated = migrateBackupEnvelope(version10);
+
+    expect(migrated.schemaVersion).toBe(11);
+    expect(migrated.data.weights[0]?.provenance).toBeUndefined();
+    expect(migrated.data.dailyCheckIns?.[0]?.signalProvenance).toBeUndefined();
+    expect(migrated.data.dailyCheckOuts?.[0]?.signalProvenance).toBeUndefined();
+  });
+
+  it('refuse les provenances v11 invalides ou orphelines', () => {
+    const invalidWeight = migrateBackupEnvelope(createValidEnvelope());
+    invalidWeight.data.weights = [{
+      id: 'weight:invalid',
+      date: '2026-08-25',
+      weightKg: 71,
+      provenance: 'userMeasurement',
+      createdAt: '2026-08-25T07:00:00.000Z',
+      updatedAt: '2026-08-25T07:00:00.000Z',
+    }];
+    (invalidWeight.data.weights[0] as { provenance: string }).provenance = 'guessed';
+    expect(() => migrateBackupEnvelope(invalidWeight)).toThrow();
+
+    const orphanSignal = migrateBackupEnvelope(createValidEnvelope());
+    orphanSignal.data.dailyCheckIns = [{
+      id: 'daily-check-in:2026-08-25',
+      date: '2026-08-25',
+      signalProvenance: { sleepQuality: 'userReported' },
+      contextFlags: [],
+      contextSyncPreference: 'localOnly',
+      completedAt: '2026-08-25T07:00:00.000Z',
+      createdAt: '2026-08-25T07:00:00.000Z',
+      updatedAt: '2026-08-25T07:00:00.000Z',
+    }];
+    expect(() => migrateBackupEnvelope(orphanSignal)).toThrow();
   });
 
   it("refuse un fichier qui ne provient pas de SportPilot", () => {

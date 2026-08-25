@@ -47,6 +47,7 @@ describe('DailyInputsPanel', () => {
       expect(onSaveWeight).toHaveBeenCalledWith({
         date: '2026-08-10',
         weightKg: 72.4,
+        provenance: 'userMeasurement',
       });
     });
     expect(screen.getAllByRole('status')).toHaveLength(1);

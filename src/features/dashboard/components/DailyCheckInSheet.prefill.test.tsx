@@ -61,6 +61,73 @@ describe('DailyCheckInSheet weight prefill', () => {
     }));
   });
 
+  it('ne requalifie pas une pesée legacy affichée si elle n’est pas confirmée', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    const weightEntry: WeightEntry = {
+      id: 'weight-legacy',
+      date: '2026-08-09',
+      weightKg: 72.45,
+      createdAt: '2026-08-09T06:00:00.000Z',
+      updatedAt: '2026-08-09T06:00:00.000Z',
+    };
+
+    render(
+      <DailyCheckInSheet
+        open
+        date="2026-08-09"
+        checkIn={{
+          id: 'check-in-legacy',
+          date: '2026-08-09',
+          weightEntryId: weightEntry.id,
+          contextFlags: [],
+          contextSyncPreference: 'localOnly',
+          completedAt: '2026-08-09T06:05:00.000Z',
+          createdAt: '2026-08-09T06:05:00.000Z',
+          updatedAt: '2026-08-09T06:05:00.000Z',
+        }}
+        weightEntry={weightEntry}
+        fallbackWeightKg={71.3}
+        onClose={vi.fn()}
+        onSubmit={onSubmit}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Enregistrer le check-in' }));
+
+    expect(onSubmit.mock.calls[0]?.[0]).not.toHaveProperty('weightKg');
+  });
+
+  it('requalifie une pesée legacy seulement après confirmation explicite', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    const weightEntry: WeightEntry = {
+      id: 'weight-legacy-confirmed',
+      date: '2026-08-09',
+      weightKg: 72.45,
+      createdAt: '2026-08-09T06:00:00.000Z',
+      updatedAt: '2026-08-09T06:00:00.000Z',
+    };
+
+    render(
+      <DailyCheckInSheet
+        open
+        date="2026-08-09"
+        weightEntry={weightEntry}
+        fallbackWeightKg={71.3}
+        onClose={vi.fn()}
+        onSubmit={onSubmit}
+      />,
+    );
+
+    await user.click(screen.getByRole('radio', { name: 'Me peser' }));
+    await user.click(screen.getByRole('button', { name: 'Enregistrer le check-in' }));
+
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({
+      weightKg: 72.45,
+    }));
+  });
+
   it('conserve la pesée réelle du jour lorsqu’elle existe déjà', () => {
     const weightEntry: WeightEntry = {
       id: 'weight-1',

@@ -105,8 +105,8 @@ if (failures.length === 0) {
     fail('le schéma métier local doit utiliser Dexie v12.');
   }
   const backupMigrations = read('src/infrastructure/backup/backupMigrations.ts');
-  if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*10\b/.test(backupMigrations)) {
-    fail('la sauvegarde JSON doit rester en v10.');
+  if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*11\b/.test(backupMigrations)) {
+    fail('la sauvegarde JSON doit rester en v11.');
   }
   const dataSpace = read('src/domain/data-spaces/dataSpace.ts');
   if (!/DATA_SPACE_REGISTRY_VERSION\s*=\s*1\s+as\s+const/.test(dataSpace)) {

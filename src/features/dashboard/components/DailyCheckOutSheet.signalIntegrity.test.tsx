@@ -49,10 +49,16 @@ describe('DailyCheckOutSheet signal integrity', () => {
     expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({
       hunger: 'normal',
       energy: 'normal',
+      signalConfirmations: {
+        hunger: true,
+        energy: true,
+      },
     }));
   });
 
-  it('restaure les réponses réellement enregistrées lors de l’édition', () => {
+  it('restaure des réponses legacy sans les confirmer lors d’une sauvegarde globale', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
     const checkOut: DailyCheckOut = {
       id: 'check-out-1',
       date: '2026-08-09',
@@ -66,7 +72,7 @@ describe('DailyCheckOutSheet signal integrity', () => {
       updatedAt: '2026-08-09T20:00:00.000Z',
     };
 
-    render(<DailyCheckOutSheet {...baseProps} checkOut={checkOut} onSubmit={vi.fn()} />);
+    render(<DailyCheckOutSheet {...baseProps} checkOut={checkOut} onSubmit={onSubmit} />);
 
     expect(within(
       screen.getByRole('radiogroup', { name: 'Faim dans la journée' }),
@@ -74,5 +80,38 @@ describe('DailyCheckOutSheet signal integrity', () => {
     expect(within(
       screen.getByRole('radiogroup', { name: 'Énergie générale' }),
     ).getByRole('radio', { name: 'Faible' })).toHaveAttribute('aria-checked', 'true');
+    await user.click(screen.getByRole('button', { name: 'Clôturer la journée' }));
+    expect(onSubmit.mock.calls[0]?.[0]).not.toHaveProperty('signalConfirmations');
+  });
+
+  it('confirme indépendamment les valeurs legacy recliquées', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    const checkOut: DailyCheckOut = {
+      id: 'check-out-legacy',
+      date: '2026-08-09',
+      hunger: 'normal',
+      energy: 'normal',
+      foodJournalComplete: true,
+      contextFlags: [],
+      contextSyncPreference: 'localOnly',
+      completedAt: '2026-08-09T20:00:00.000Z',
+      createdAt: '2026-08-09T20:00:00.000Z',
+      updatedAt: '2026-08-09T20:00:00.000Z',
+    };
+
+    render(<DailyCheckOutSheet {...baseProps} checkOut={checkOut} onSubmit={onSubmit} />);
+
+    await user.click(within(
+      screen.getByRole('radiogroup', { name: 'Faim dans la journée' }),
+    ).getByRole('radio', { name: 'Normale' }));
+    await user.click(within(
+      screen.getByRole('radiogroup', { name: 'Énergie générale' }),
+    ).getByRole('radio', { name: 'Normale' }));
+    await user.click(screen.getByRole('button', { name: 'Clôturer la journée' }));
+
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({
+      signalConfirmations: { hunger: true, energy: true },
+    }));
   });
 });

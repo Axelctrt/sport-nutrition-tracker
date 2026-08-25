@@ -16,7 +16,7 @@ describe('publication SportPilot 0.26.0 — confirmations d’action', () => {
   it('publie le correctif avec le schéma courant', () => {
     expect(__APP_VERSION__).toBe('1.0.4');
     expect(databaseSchemaVersion).toBe(12);
-    expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(10);
+    expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(11);
   });
 
   it('centralise les succès, les erreurs et les confirmations après rechargement', () => {

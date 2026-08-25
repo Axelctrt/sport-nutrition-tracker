@@ -8,7 +8,7 @@ de `docs/architecture` conservent l’historique détaillé.
 | Stockage | Version actuelle | Rôle |
 | --- | ---: | --- |
 | `AppDatabase` Dexie | 12 | données utilisateur principales et photos privées locales |
-| Sauvegarde JSON | 10 | export/import contrôlé des données structurées, hors images |
+| Sauvegarde JSON | 11 | export/import contrôlé des données structurées, hors images |
 | Archive photos | 1 | export/restauration séparés des images de progression |
 | Runtime Dexie Cloud | 18 | agrégats synchronisables, journal causal Goals et baselines logiques |
 | D1 social | migrations `0000` à `0003` présentes | identité, relations, permissions, snapshots et limites photo nutritionnelle |
@@ -118,13 +118,19 @@ Une future compaction devra être un lot séparé, mesuré, rétrocompatible et
 prouvé sur les appareils restés offline ; aucune GC opportuniste n’est permise.
 
 Le journal et son head sont des métadonnées de transport cloud, pas une
-nouvelle donnée métier du format de sauvegarde AppDB v10. Une restauration
+nouvelle donnée métier du format de sauvegarde AppDB v11. Une restauration
 AppDB produit ensuite une mutation normale. La suppression de compte/purge
 distante efface mutations, heads, clock legacy et baseline du compte ciblé ;
 logout/reset local reste couvert par l’effacement des tables du runtime Dexie
 Cloud.
 
 ## Sauvegarde et restauration
+
+La version JSON 11 ajoute uniquement les provenances optionnelles des pesées
+et des signaux subjectifs Coach. La migration 10 → 11 est conservative : elle
+ne requalifie aucune valeur historique et laisse toute provenance absente en
+état legacy inconnu. Cette évolution ne change ni `AppDatabase` v12 ni le
+runtime Dexie Cloud v18.
 
 - Sauvegarde globale et sélective :
   `src/infrastructure/backup` et `src/application/backup`.

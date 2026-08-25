@@ -2046,6 +2046,7 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
           const currentNote = current.note ?? '';
           const changes: Partial<WeightEntry> = {
             updatedAt: occurredAt,
+            provenance: 'userMeasurement',
           };
 
           if (current.weightKg !== draft.weightKg) {
@@ -2059,6 +2060,7 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
             ...current,
             weightKg: draft.weightKg,
             note: normalizedNote,
+            provenance: 'userMeasurement',
             updatedAt: occurredAt,
           };
           await this.database.weights.update(id, changes);
@@ -2067,6 +2069,7 @@ class DefaultSyncPrototypeClient implements SyncPrototypeClient {
             id,
             date: draft.date,
             weightKg: draft.weightKg,
+            provenance: 'userMeasurement',
             ...(draft.note ? { note: draft.note } : {}),
             createdAt: occurredAt,
             updatedAt: occurredAt,

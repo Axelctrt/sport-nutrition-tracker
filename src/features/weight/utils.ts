@@ -10,6 +10,7 @@ export function weightFormValuesToEntity(
   return {
     date: values.date,
     weightKg: values.weightKg,
+    provenance: 'userMeasurement',
     ...(note ? { note } : {}),
   };
 }

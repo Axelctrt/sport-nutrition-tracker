@@ -44,6 +44,8 @@ export function DailyCheckOutSheet({
   const [steps, setSteps] = useState('');
   const [hunger, setHunger] = useState<'low' | 'normal' | 'high'>();
   const [energy, setEnergy] = useState<'low' | 'normal' | 'high'>();
+  const [hungerConfirmed, setHungerConfirmed] = useState(false);
+  const [energyConfirmed, setEnergyConfirmed] = useState(false);
   const [journalComplete, setJournalComplete] = useState(false);
   const [contextFlags, setContextFlags] = useState<DailyContextFlag[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -57,6 +59,8 @@ export function DailyCheckOutSheet({
     setSteps(actualSteps === undefined ? '' : String(actualSteps));
     setHunger(checkOut?.hunger);
     setEnergy(checkOut?.energy);
+    setHungerConfirmed(false);
+    setEnergyConfirmed(false);
     setJournalComplete(checkOut?.foodJournalComplete ?? foodJournalComplete);
     setContextFlags([...(checkOut?.contextFlags ?? [])]);
     setErrorMessage(undefined);
@@ -87,6 +91,14 @@ export function DailyCheckOutSheet({
         actualSteps: stepsMode === 'record' ? parsedSteps : null,
         ...(hunger === undefined ? {} : { hunger }),
         ...(energy === undefined ? {} : { energy }),
+        ...(hungerConfirmed || energyConfirmed
+          ? {
+              signalConfirmations: {
+                ...(hungerConfirmed ? { hunger: true as const } : {}),
+                ...(energyConfirmed ? { energy: true as const } : {}),
+              },
+            }
+          : {}),
         foodJournalComplete: journalComplete,
         contextFlags,
       });
@@ -209,7 +221,10 @@ export function DailyCheckOutSheet({
               { value: 'normal', label: 'Normale' },
               { value: 'high', label: 'Forte' },
             ]}
-            onChange={(value) => setHunger(value as NonNullable<typeof hunger>)}
+            onChange={(value) => {
+              setHunger(value as NonNullable<typeof hunger>);
+              setHungerConfirmed(true);
+            }}
           />
         </div>
 
@@ -225,7 +240,10 @@ export function DailyCheckOutSheet({
               { value: 'normal', label: 'Normale' },
               { value: 'high', label: 'Bonne' },
             ]}
-            onChange={(value) => setEnergy(value as NonNullable<typeof energy>)}
+            onChange={(value) => {
+              setEnergy(value as NonNullable<typeof energy>);
+              setEnergyConfirmed(true);
+            }}
           />
         </div>
 
