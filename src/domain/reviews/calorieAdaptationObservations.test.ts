@@ -103,4 +103,40 @@ describe('calorie adaptation observations', () => {
       }),
     ]);
   });
+
+  it('ne fabrique aucun poids ni signal de récupération depuis des réponses absentes', () => {
+    const date = '2026-07-20';
+    const [observation] = buildCalorieAdaptationObservations({
+      analysisStart: date,
+      analysisEnd: date,
+      fallbackExpectedSteps: 8_000,
+      weights: [],
+      foodEntries: [],
+      dailyTargets: [target(date)],
+      journalStatuses: [],
+      dailySteps: [],
+      checkIns: [createEntity({
+        date,
+        contextFlags: [],
+        contextSyncPreference: 'localOnly' as const,
+        completedAt: '2026-07-20T07:00:00.000Z',
+      }, 'check-in-without-signals')],
+      checkOuts: [createEntity({
+        date,
+        foodJournalComplete: false,
+        contextFlags: [],
+        contextSyncPreference: 'localOnly' as const,
+        completedAt: '2026-07-20T20:00:00.000Z',
+      }, 'check-out-without-signals')],
+      activities: [],
+      workoutSessions: [],
+    });
+
+    expect(observation).toBeDefined();
+    expect(observation).not.toHaveProperty('weightKg');
+    expect(observation).not.toHaveProperty('hunger');
+    expect(observation).not.toHaveProperty('energy');
+    expect(observation).not.toHaveProperty('readiness');
+    expect(observation).not.toHaveProperty('sleepQuality');
+  });
 });

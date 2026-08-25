@@ -42,8 +42,8 @@ export function DailyCheckOutSheet({
 }: DailyCheckOutSheetProps) {
   const [stepsMode, setStepsMode] = useState<StepsMode>('skip');
   const [steps, setSteps] = useState('');
-  const [hunger, setHunger] = useState<'low' | 'normal' | 'high'>('normal');
-  const [energy, setEnergy] = useState<'low' | 'normal' | 'high'>('normal');
+  const [hunger, setHunger] = useState<'low' | 'normal' | 'high'>();
+  const [energy, setEnergy] = useState<'low' | 'normal' | 'high'>();
   const [journalComplete, setJournalComplete] = useState(false);
   const [contextFlags, setContextFlags] = useState<DailyContextFlag[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -55,8 +55,8 @@ export function DailyCheckOutSheet({
     if (!open) return;
     setStepsMode(actualSteps === undefined && !checkOut?.stepsEntryId ? 'skip' : 'record');
     setSteps(actualSteps === undefined ? '' : String(actualSteps));
-    setHunger(checkOut?.hunger ?? 'normal');
-    setEnergy(checkOut?.energy ?? 'normal');
+    setHunger(checkOut?.hunger);
+    setEnergy(checkOut?.energy);
     setJournalComplete(checkOut?.foodJournalComplete ?? foodJournalComplete);
     setContextFlags([...(checkOut?.contextFlags ?? [])]);
     setErrorMessage(undefined);
@@ -85,8 +85,8 @@ export function DailyCheckOutSheet({
       await onSubmit({
         date,
         actualSteps: stepsMode === 'record' ? parsedSteps : null,
-        hunger,
-        energy,
+        ...(hunger === undefined ? {} : { hunger }),
+        ...(energy === undefined ? {} : { energy }),
         foodJournalComplete: journalComplete,
         contextFlags,
       });
@@ -209,7 +209,7 @@ export function DailyCheckOutSheet({
               { value: 'normal', label: 'Normale' },
               { value: 'high', label: 'Forte' },
             ]}
-            onChange={(value) => setHunger(value as typeof hunger)}
+            onChange={(value) => setHunger(value as NonNullable<typeof hunger>)}
           />
         </div>
 
@@ -225,7 +225,7 @@ export function DailyCheckOutSheet({
               { value: 'normal', label: 'Normale' },
               { value: 'high', label: 'Bonne' },
             ]}
-            onChange={(value) => setEnergy(value as typeof energy)}
+            onChange={(value) => setEnergy(value as NonNullable<typeof energy>)}
           />
         </div>
 

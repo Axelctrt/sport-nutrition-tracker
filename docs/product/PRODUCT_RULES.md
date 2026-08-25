@@ -23,6 +23,16 @@ Statut : **décisions validées**, sauf mention contraire.
   ou compatibilité documentée et une validation explicite.
 - Un changement purement visuel ne doit pas recalculer l’historique.
 
+## Signaux quotidiens Coach
+
+- Une absence de réponse au check-in ou au check-out reste une absence de
+  signal ; aucune valeur neutre n’est persistée par défaut.
+- Un poids de référence ou fallback ne devient une pesée canonique qu’après
+  activation explicite de la saisie de pesée par l’utilisateur.
+- Les valeurs réellement enregistrées restent restaurées lors de l’édition.
+- Les données historiques ambiguës ne sont ni réécrites ni nettoyées
+  automatiquement ; leur provenance relève d’un lot dédié.
+
 ## IA photo
 
 - L’analyse exige un consentement explicite.

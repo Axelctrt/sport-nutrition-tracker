@@ -38,12 +38,12 @@ export function DailyCheckInSheet({
   onClose,
   onSubmit,
 }: DailyCheckInSheetProps) {
-  const [weightMode, setWeightMode] = useState<WeightMode>('record');
+  const [weightMode, setWeightMode] = useState<WeightMode>('skip');
   const [weightKg, setWeightKg] = useState('');
   const [sleepHours, setSleepHours] = useState('');
   const [sleepMinutes, setSleepMinutes] = useState('');
-  const [sleepQuality, setSleepQuality] = useState<'poor' | 'average' | 'good'>('average');
-  const [readiness, setReadiness] = useState<'low' | 'normal' | 'high'>('normal');
+  const [sleepQuality, setSleepQuality] = useState<'poor' | 'average' | 'good'>();
+  const [readiness, setReadiness] = useState<'low' | 'normal' | 'high'>();
   const [waistCm, setWaistCm] = useState('');
   const [contextFlags, setContextFlags] = useState<DailyContextFlag[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -60,7 +60,7 @@ export function DailyCheckInSheet({
   useEffect(() => {
     if (!open) return;
     const duration = checkIn?.sleepDurationMinutes;
-    setWeightMode(checkIn && !checkIn.weightEntryId ? 'skip' : 'record');
+    setWeightMode(weightEntry ? 'record' : 'skip');
     setWeightKg(
       weightEntry
         ? String(weightEntry.weightKg)
@@ -68,8 +68,8 @@ export function DailyCheckInSheet({
     );
     setSleepHours(duration === undefined ? '' : String(Math.floor(duration / 60)));
     setSleepMinutes(duration === undefined ? '' : String(duration % 60));
-    setSleepQuality(checkIn?.sleepQuality ?? 'average');
-    setReadiness(checkIn?.readiness ?? 'normal');
+    setSleepQuality(checkIn?.sleepQuality);
+    setReadiness(checkIn?.readiness);
     setWaistCm(checkIn?.waistCm === undefined ? '' : String(checkIn.waistCm));
     setContextFlags([...(checkIn?.contextFlags ?? [])]);
     setErrorMessage(undefined);
@@ -137,8 +137,8 @@ export function DailyCheckInSheet({
         date,
         weightKg: weightMode === 'record' ? parsedWeight : null,
         ...(hasSleep ? { sleepDurationMinutes: parsedHours * 60 + parsedMinutes } : {}),
-        sleepQuality,
-        readiness,
+        ...(sleepQuality === undefined ? {} : { sleepQuality }),
+        ...(readiness === undefined ? {} : { readiness }),
         ...(parsedWaist === undefined ? {} : { waistCm: parsedWaist }),
         contextFlags,
       });
@@ -280,7 +280,7 @@ export function DailyCheckInSheet({
               { value: 'average', label: 'Moyenne' },
               { value: 'good', label: 'Bonne' },
             ]}
-            onChange={(value) => setSleepQuality(value as typeof sleepQuality)}
+            onChange={(value) => setSleepQuality(value as NonNullable<typeof sleepQuality>)}
           />
         </div>
 
@@ -297,7 +297,7 @@ export function DailyCheckInSheet({
               { value: 'normal', label: 'Normal' },
               { value: 'high', label: 'En forme' },
             ]}
-            onChange={(value) => setReadiness(value as typeof readiness)}
+            onChange={(value) => setReadiness(value as NonNullable<typeof readiness>)}
           />
         </div>
 
