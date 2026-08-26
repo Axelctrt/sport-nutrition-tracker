@@ -231,6 +231,57 @@ function projectBestSet(
   };
 }
 
+function compareDeterministicSetOrder(
+  left: StrengthPerformanceBestSet,
+  right: StrengthPerformanceBestSet,
+): number {
+  const setNumberOrder = left.setNumber - right.setNumber;
+  return setNumberOrder === 0 ? left.setId.localeCompare(right.setId) : setNumberOrder;
+}
+
+function compareKnownRpe(
+  left: StrengthPerformanceBestSet,
+  right: StrengthPerformanceBestSet,
+): number {
+  return left.rpe === undefined || right.rpe === undefined ? 0 : left.rpe - right.rpe;
+}
+
+function compareSameLoadCandidates(
+  left: StrengthPerformanceBestSet,
+  right: StrengthPerformanceBestSet,
+): number {
+  const repetitionOrder = right.repetitions - left.repetitions;
+  if (repetitionOrder !== 0) return repetitionOrder;
+  const rpeOrder = compareKnownRpe(left, right);
+  return rpeOrder === 0 ? compareDeterministicSetOrder(left, right) : rpeOrder;
+}
+
+function selectBestLoadRepetitionsSet(
+  candidates: readonly StrengthPerformanceBestSet[],
+): StrengthPerformanceBestSet {
+  const bestByLoad = new Map<number, StrengthPerformanceBestSet>();
+  candidates.forEach((candidate) => {
+    const current = bestByLoad.get(candidate.weightKg);
+    if (!current || compareSameLoadCandidates(candidate, current) < 0) {
+      bestByLoad.set(candidate.weightKg, candidate);
+    }
+  });
+
+  const loadWinners = [...bestByLoad.values()];
+  if (loadWinners.every(({ estimatedOneRepMaxKg }) => estimatedOneRepMaxKg !== undefined)) {
+    return loadWinners.sort((left, right) => {
+      const estimateOrder = right.estimatedOneRepMaxKg! - left.estimatedOneRepMaxKg!;
+      if (estimateOrder !== 0) return estimateOrder;
+      const rpeOrder = compareKnownRpe(left, right);
+      return rpeOrder === 0 ? compareDeterministicSetOrder(left, right) : rpeOrder;
+    })[0]!;
+  }
+
+  // Different loads without a valid estimate are not performance-comparable.
+  // Keep the selection deterministic without ranking the missing estimate.
+  return loadWinners.sort(compareDeterministicSetOrder)[0]!;
+}
+
 function compareBestSetCandidates(
   left: StrengthPerformanceBestSet,
   right: StrengthPerformanceBestSet,
@@ -241,16 +292,6 @@ function compareBestSetCandidates(
   );
   let comparison = 0;
   switch (mode) {
-    case 'loadRepetitions':
-      comparison = compareDescending(
-        left.estimatedOneRepMaxKg === undefined ? -1 : left.estimatedOneRepMaxKg,
-        right.estimatedOneRepMaxKg === undefined ? -1 : right.estimatedOneRepMaxKg,
-      );
-      if (comparison === 0) comparison = compareDescending(left.weightKg, right.weightKg);
-      if (comparison === 0) {
-        comparison = compareDescending(left.repetitions, right.repetitions);
-      }
-      break;
     case 'bodyweightRepetitions':
     case 'assistedRepetitions':
       comparison = compareDescending(
@@ -269,12 +310,20 @@ function compareBestSetCandidates(
         primarySetValue(right, mode),
       );
       break;
+    case 'loadRepetitions':
+      break;
   }
-  if (comparison === 0 && left.rpe !== undefined && right.rpe !== undefined) {
-    comparison = left.rpe - right.rpe;
-  }
-  if (comparison === 0) comparison = left.setNumber - right.setNumber;
-  return comparison === 0 ? left.setId.localeCompare(right.setId) : comparison;
+  if (comparison === 0) comparison = compareKnownRpe(left, right);
+  return comparison === 0 ? compareDeterministicSetOrder(left, right) : comparison;
+}
+
+function selectBestSet(
+  candidates: readonly StrengthPerformanceBestSet[],
+  mode: StrengthTrackingMode,
+): StrengthPerformanceBestSet {
+  return mode === 'loadRepetitions'
+    ? selectBestLoadRepetitionsSet(candidates)
+    : [...candidates].sort((left, right) => compareBestSetCandidates(left, right, mode))[0]!;
 }
 
 function exposureOrder(left: StrengthExerciseExposure, right: StrengthExerciseExposure): number {
@@ -300,9 +349,10 @@ function buildExposure(
   if (completedTrainingSets.length === 0) return undefined;
 
   const bodyWeightKg = bodyWeightEvidence?.value;
-  const bestSet = completedTrainingSets
-    .map((set) => projectBestSet(set, mode, bodyWeightKg))
-    .sort((left, right) => compareBestSetCandidates(left, right, mode))[0]!;
+  const bestSet = selectBestSet(
+    completedTrainingSets.map((set) => projectBestSet(set, mode, bodyWeightKg)),
+    mode,
+  );
   const plannedWorkingSets = exerciseSets
     .filter((set) => set.type === 'working')
     .sort((left, right) => left.setNumber - right.setNumber)
@@ -424,20 +474,36 @@ function isPlannedSession(session: WorkoutSession): boolean {
     || session.plannedAt !== undefined;
 }
 
+function statusOccurredByReferenceDate(
+  session: WorkoutSession,
+  referenceDate: LocalDate,
+): boolean {
+  const occurredAt = session.status === 'skipped'
+    ? session.skippedAt
+    : session.completedAt ?? (session.status === 'completed' ? session.date : undefined);
+  return occurredAt === undefined || occurredAt.slice(0, 10).localeCompare(referenceDate) <= 0;
+}
+
 export function buildStrengthSchedulePerformance(
   sessions: readonly WorkoutSession[],
   referenceDate: LocalDate,
 ): StrengthSchedulePerformance {
   return {
     completedPlannedCount: sessions.filter((session) => (
-      session.status === 'completed' && isPlannedSession(session)
+      session.status === 'completed'
+      && isPlannedSession(session)
+      && statusOccurredByReferenceDate(session, referenceDate)
     )).length,
-    skippedCount: sessions.filter(({ status }) => status === 'skipped').length,
+    skippedCount: sessions.filter((session) => (
+      session.status === 'skipped' && statusOccurredByReferenceDate(session, referenceDate)
+    )).length,
     overdueCount: sessions.filter((session) => (
       session.status === 'planned'
       && planningDateForSession(session).localeCompare(referenceDate) < 0
     )).length,
-    abandonedCount: sessions.filter(({ status }) => status === 'abandoned').length,
+    abandonedCount: sessions.filter((session) => (
+      session.status === 'abandoned' && statusOccurredByReferenceDate(session, referenceDate)
+    )).length,
   };
 }
 
@@ -452,7 +518,11 @@ export function buildStrengthPerformanceSnapshot(
 
   input.sessionExercises.forEach((exercise) => {
     const session = sessionsById.get(exercise.sessionId);
-    if (!session || session.status !== 'completed') return;
+    if (
+      !session
+      || session.status !== 'completed'
+      || session.date.localeCompare(input.referenceDate) > 0
+    ) return;
     const exposure = buildExposure(
       session,
       exercise,

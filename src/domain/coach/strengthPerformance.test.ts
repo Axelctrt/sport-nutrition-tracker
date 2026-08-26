@@ -144,6 +144,7 @@ describe('compareStrengthPerformance', () => {
 });
 
 interface ExposureValue {
+  date?: LocalDate;
   repetitions?: number;
   weightKg?: number;
   rpe?: number;
@@ -157,6 +158,7 @@ function performanceSnapshot(
   options: {
     extraSets?: StrengthSet[];
     bodyWeightEvidenceBySessionId?: Record<string, CoachSignalEvidence<number>>;
+    referenceDate?: LocalDate;
   } = {},
 ) {
   const sessions: WorkoutSession[] = [];
@@ -166,7 +168,7 @@ function performanceSnapshot(
     const number = index + 1;
     const sessionId = `session-${number}`;
     const sessionExerciseId = `session-exercise-${number}`;
-    const date = `2026-08-${String(number).padStart(2, '0')}`;
+    const date = value.date ?? `2026-08-${String(number).padStart(2, '0')}`;
     const mode = value.mode ?? 'loadRepetitions';
     sessions.push(createEntity(createWorkoutSessionInput({
       date,
@@ -198,7 +200,7 @@ function performanceSnapshot(
     sets.push(createEntity(input, `set-${number}`));
   });
   return buildStrengthPerformanceSnapshot({
-    referenceDate: REFERENCE_DATE,
+    referenceDate: options.referenceDate ?? REFERENCE_DATE,
     sessions,
     sessionExercises,
     sets: [...sets, ...(options.extraSets ?? [])],
@@ -279,6 +281,23 @@ describe('buildStrengthPerformanceSnapshot — tendances Option A', () => {
     ]);
     expect(performance.comparableExposureCount).toBe(2);
     expect(performance.trend).toBe('stable');
+  });
+
+  it('exclut les expositions postérieures à referenceDate d’une tendance historique', () => {
+    const snapshot = performanceSnapshot([
+      { date: '2026-08-24', repetitions: 10 },
+      { date: REFERENCE_DATE, repetitions: 10 },
+      { date: '2026-08-26', repetitions: 14 },
+    ]);
+
+    expect(snapshot.exercises[0]!.exposures.map(({ date }) => date)).toEqual([
+      '2026-08-24',
+      REFERENCE_DATE,
+    ]);
+    expect(snapshot.exercises[0]).toMatchObject({
+      exposureCount: 2,
+      trend: 'stable',
+    });
   });
 });
 
@@ -414,6 +433,70 @@ describe('buildStrengthPerformanceSnapshot — provenance et séries', () => {
     expect(snapshot.exercises[0]!.exposures[0]!.bestSet.setId).toBe('set-1');
   });
 
+  it('préfère les répétitions à charge identique même sans e1RM au-delà de 12 reps', () => {
+    const currentFourteenInput = createStrengthSetInput({
+      sessionId: 'session-2',
+      sessionExerciseId: 'session-exercise-2',
+      setNumber: 2,
+      repetitions: 14,
+      weightKg: 60,
+      isCompleted: true,
+    });
+    delete currentFourteenInput.rpe;
+    const currentFourteen = createEntity(currentFourteenInput, 'current-60x14');
+    const snapshot = performanceSnapshot([
+      { weightKg: 60, repetitions: 13 },
+      { weightKg: 60, repetitions: 12 },
+    ], { extraSets: [currentFourteen] });
+    const current = snapshot.exercises[0]!.exposures[1]!;
+
+    expect(current.bestSet).toMatchObject({
+      setId: 'current-60x14',
+      weightKg: 60,
+      repetitions: 14,
+    });
+    expect(current.bestSet.estimatedOneRepMaxKg).toBeUndefined();
+    expect(current.relationToPrevious).toBe('improved');
+  });
+
+  it('départage même charge et mêmes répétitions par le RPE inférieur', () => {
+    const lowerRpe = createEntity(createStrengthSetInput({
+      sessionId: 'session-1',
+      sessionExerciseId: 'session-exercise-1',
+      setNumber: 2,
+      repetitions: 10,
+      weightKg: 60,
+      rpe: 8,
+      isCompleted: true,
+    }), 'lower-rpe');
+    const snapshot = performanceSnapshot([
+      { weightKg: 60, repetitions: 10, rpe: 9 },
+    ], { extraSets: [lowerRpe] });
+
+    expect(snapshot.exercises[0]!.exposures[0]!.bestSet.setId).toBe('lower-rpe');
+  });
+
+  it('conserve la sélection par e1RM existant lorsque les charges diffèrent', () => {
+    const higherEstimateInput = createStrengthSetInput({
+      sessionId: 'session-1',
+      sessionExerciseId: 'session-exercise-1',
+      setNumber: 2,
+      repetitions: 8,
+      weightKg: 65,
+      isCompleted: true,
+    });
+    delete higherEstimateInput.rpe;
+    const higherEstimate = createEntity(higherEstimateInput, 'higher-estimate');
+    const snapshot = performanceSnapshot([
+      { weightKg: 60, repetitions: 10 },
+    ], { extraSets: [higherEstimate] });
+
+    expect(snapshot.exercises[0]!.exposures[0]!.bestSet).toMatchObject({
+      setId: 'higher-estimate',
+      estimatedOneRepMaxKg: 82.3,
+    });
+  });
+
   it('ignore une warm-up ou une série non terminée comme seule preuve d’exposition', () => {
     const session = createEntity(createWorkoutSessionInput(), 'session-only');
     const exercise = createEntity(createWorkoutSessionExerciseInput({
@@ -470,6 +553,15 @@ describe('buildStrengthSchedulePerformance', () => {
         originalPlannedDate: '2026-08-20',
       }),
       scheduledSession('abandoned', 'abandoned', '2026-08-22'),
+      scheduledSession('completed-future-event', 'completed', '2026-08-24', {
+        completedAt: '2026-08-26T10:00:00.000Z',
+      }),
+      scheduledSession('skipped-future-event', 'skipped', '2026-08-24', {
+        skippedAt: '2026-08-26T10:00:00.000Z',
+      }),
+      scheduledSession('abandoned-future-event', 'abandoned', '2026-08-24', {
+        completedAt: '2026-08-26T10:00:00.000Z',
+      }),
     ];
 
     expect(buildStrengthSchedulePerformance(sessions, REFERENCE_DATE)).toEqual({

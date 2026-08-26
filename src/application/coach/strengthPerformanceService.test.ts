@@ -117,10 +117,27 @@ function fixture(
 
 describe('calculateStrengthPerformance', () => {
   it('lit les repositories nécessaires et reste déterministe malgré leur ordre', async () => {
-    const deps = dependencies(fixture());
+    const source = fixture();
+    const future = completedSession(26, 20);
+    source.sessions.push(future.session);
+    source.exercisesBySession[future.session.id] = [future.exercise];
+    source.setsBySession[future.session.id] = [future.set];
+    const reversed: Fixture = {
+      ...source,
+      sessions: [...source.sessions].reverse(),
+      exercisesBySession: Object.fromEntries(Object.entries(source.exercisesBySession)
+        .reverse()
+        .map(([sessionId, exercises]) => [sessionId, [...exercises].reverse()])),
+      setsBySession: Object.fromEntries(Object.entries(source.setsBySession)
+        .reverse()
+        .map(([sessionId, sets]) => [sessionId, [...sets].reverse()])),
+      definitions: [...source.definitions].reverse(),
+    };
+    const deps = dependencies(source);
+    const reversedDeps = dependencies(reversed);
 
     const first = await calculateStrengthPerformance('2026-08-25', deps);
-    const second = await calculateStrengthPerformance('2026-08-25', deps);
+    const second = await calculateStrengthPerformance('2026-08-25', reversedDeps);
 
     expect(first).toStrictEqual(second);
     expect(first.exercises[0]).toMatchObject({
@@ -132,12 +149,14 @@ describe('calculateStrengthPerformance', () => {
       'session-1',
       'session-2',
     ]);
-    expect(deps.workoutSessions.listAll).toHaveBeenCalledTimes(2);
+    expect(deps.workoutSessions.listAll).toHaveBeenCalledOnce();
     expect(deps.workoutSessions.listExercises).toHaveBeenCalledWith('session-1');
     expect(deps.workoutSessions.listExercises).toHaveBeenCalledWith('session-2');
+    expect(deps.workoutSessions.listExercises).toHaveBeenCalledWith('session-26');
     expect(deps.strengthSets.listBySession).toHaveBeenCalledWith('session-1');
     expect(deps.strengthSets.listBySession).toHaveBeenCalledWith('session-2');
-    expect(deps.strengthExercises.listAll).toHaveBeenCalledTimes(2);
+    expect(deps.strengthSets.listBySession).toHaveBeenCalledWith('session-26');
+    expect(deps.strengthExercises.listAll).toHaveBeenCalledOnce();
     expect(deps.weight.listAll).not.toHaveBeenCalled();
   });
 
