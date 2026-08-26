@@ -6,6 +6,10 @@ import type {
   StrengthSet,
   WorkoutSessionExercise,
 } from '@/domain/models/strength';
+import {
+  evaluateStrengthProgressionEligibility,
+  roundStrengthLoad,
+} from '@/domain/strength/strengthProgressionEligibility';
 import type { ProgressionSuggestionRepository } from '@/infrastructure/repositories/contracts/ProgressionSuggestionRepository';
 import type { StrengthSetRepository } from '@/infrastructure/repositories/contracts/StrengthSetRepository';
 import type { WorkoutSessionRepository } from '@/infrastructure/repositories/contracts/WorkoutSessionRepository';
@@ -17,61 +21,14 @@ export type ProgressionDecision = Extract<
   'accepted' | 'rejected' | 'deferred'
 >;
 
-function roundLoad(value: number): number {
-  return Math.round((value + Number.EPSILON) * 100) / 100;
-}
-
-function eligibleWorkingSets(
-  exercise: WorkoutSessionExercise,
-  sets: StrengthSet[],
-): StrengthSet[] | undefined {
-  if (
-    exercise.loadUnitSnapshot !== 'kg' ||
-    exercise.plannedSets === undefined ||
-    exercise.maxRepetitions === undefined ||
-    exercise.loadIncrementKg === undefined ||
-    exercise.loadIncrementKg <= 0 ||
-    !exercise.sourceTemplateExerciseId
-  ) {
-    return undefined;
-  }
-
-  const workingSets = sets
-    .filter((set) => set.type === 'working')
-    .sort((left, right) => left.setNumber - right.setNumber);
-
-  if (workingSets.length < exercise.plannedSets) return undefined;
-
-  const plannedSets = workingSets.slice(0, exercise.plannedSets);
-  if (plannedSets.some((set) => !set.isCompleted)) return undefined;
-  if (plannedSets.some((set) => set.repetitions < exercise.maxRepetitions!)) return undefined;
-
-  if (
-    exercise.maximumRecommendedRpe !== undefined &&
-    plannedSets.some(
-      (set) => set.rpe === undefined || set.rpe > exercise.maximumRecommendedRpe!,
-    )
-  ) {
-    return undefined;
-  }
-
-  return plannedSets;
-}
-
 function createSuggestionInput(
   sessionId: EntityId,
   templateId: EntityId,
   exercise: WorkoutSessionExercise,
   sets: StrengthSet[],
 ): NewEntity<ProgressionSuggestion> | undefined {
-  const plannedSets = eligibleWorkingSets(exercise, sets);
-  if (!plannedSets || !exercise.sourceTemplateExerciseId || exercise.loadIncrementKg === undefined) {
-    return undefined;
-  }
-
-  const minimumPerformedLoad = Math.min(...plannedSets.map((set) => set.weightKg));
-  const currentLoadKg = roundLoad(Math.max(exercise.targetLoadKg ?? 0, minimumPerformedLoad));
-  if (currentLoadKg <= 0 || plannedSets.some((set) => set.weightKg < currentLoadKg)) {
+  const evaluation = evaluateStrengthProgressionEligibility(exercise, sets);
+  if (!evaluation.eligible || !exercise.sourceTemplateExerciseId) {
     return undefined;
   }
 
@@ -81,9 +38,9 @@ function createSuggestionInput(
     exerciseDefinitionId: exercise.exerciseDefinitionId,
     templateId,
     templateExerciseId: exercise.sourceTemplateExerciseId,
-    currentLoadKg,
-    suggestedLoadKg: roundLoad(currentLoadKg + exercise.loadIncrementKg),
-    incrementKg: exercise.loadIncrementKg,
+    currentLoadKg: evaluation.currentLoadKg,
+    suggestedLoadKg: evaluation.suggestedLoadKg,
+    incrementKg: evaluation.incrementKg,
     status: 'pending',
     reason: 'repetitionRangeCompleted',
   };
@@ -153,7 +110,7 @@ export async function decideProgressionSuggestion(
     });
   }
 
-  const selectedLoadKg = roundLoad(acceptedLoadKg ?? suggestion.suggestedLoadKg);
+  const selectedLoadKg = roundStrengthLoad(acceptedLoadKg ?? suggestion.suggestedLoadKg);
   if (!Number.isFinite(selectedLoadKg) || selectedLoadKg <= suggestion.currentLoadKg) {
     throw new RepositoryError(
       'La charge retenue doit être supérieure à la charge actuelle.',

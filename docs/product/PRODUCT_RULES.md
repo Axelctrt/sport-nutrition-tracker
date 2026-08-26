@@ -71,6 +71,26 @@ Statut : **décisions validées**, sauf mention contraire.
 - C2 n’ouvre aucun modal automatiquement. Les alertes et comportements de
   safety plus forts relèvent de lots ultérieurs dédiés.
 
+## Performance Strength Coach
+
+- Le moteur C3 est déterministe, explicable et strictement read-only. Il
+  analyse les séances, séries et snapshots existants sans modifier le programme
+  ni les charges.
+- L’éligibilité de progression réutilise la règle pure du générateur Strength
+  existant ; C3 ne duplique ni ses seuils ni ses formules.
+- Une seule mauvaise séance ne produit jamais `degrading`. `stagnating` exige
+  trois expositions consécutives et comparables sans progression ; `degrading`
+  exige deux régressions comparables consécutives.
+- Une relation `notComparable` casse la chaîne : une tendance n’est jamais
+  fabriquée en traversant une exposition non comparable.
+- Les tendances au poids du corps ou assistées exigent une pesée
+  `userMeasurement`, qualifiée `userMeasured / confirmed` par le contrat C0.
+  Une initialisation de profil, une provenance legacy ou un fallback profil ne
+  constitue pas une preuve confirmée de performance.
+- C3 expose uniquement le volume par exercice via les helpers Strength
+  canoniques. Toute formule de volume musculaire direct/indirect reste hors
+  périmètre et nécessite une validation produit dédiée.
+
 ## IA photo
 
 - L’analyse exige un consentement explicite.
