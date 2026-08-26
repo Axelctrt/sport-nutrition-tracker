@@ -3,6 +3,7 @@ import { fr } from 'date-fns/locale';
 import { RepositoryError } from '@/domain/errors/RepositoryError';
 import type { EntityId, LocalDate } from '@/domain/models/common';
 import type { StrengthSessionStyle, WorkoutSession } from '@/domain/models/strength';
+import { planningDateForSession } from '@/domain/strength/strengthPlanning';
 import type { StrengthExerciseRepository } from '@/infrastructure/repositories/contracts/StrengthExerciseRepository';
 import type { StrengthSetRepository } from '@/infrastructure/repositories/contracts/StrengthSetRepository';
 import type { WorkoutSessionRepository } from '@/infrastructure/repositories/contracts/WorkoutSessionRepository';
@@ -51,9 +52,7 @@ function requireValidDate(date: LocalDate): void {
   }
 }
 
-export function planningDateForSession(session: WorkoutSession): LocalDate {
-  return session.plannedDate ?? session.date;
-}
+export { planningDateForSession };
 
 export function getWeekStart(date: LocalDate = toLocalDate()): LocalDate {
   requireValidDate(date);

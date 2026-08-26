@@ -2,6 +2,7 @@ import {
   decideProgressionSuggestion,
   generateProgressionSuggestions,
 } from '@/application/strength/strengthProgressionService';
+import { evaluateStrengthProgressionEligibility } from '@/domain/strength/strengthProgressionEligibility';
 import { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import { DexieProgressionSuggestionRepository } from '@/infrastructure/repositories/dexie/DexieProgressionSuggestionRepository';
 import { DexieStrengthSetRepository } from '@/infrastructure/repositories/dexie/DexieStrengthSetRepository';
@@ -96,6 +97,16 @@ describe('strengthProgressionService', () => {
 
   it('propose une augmentation lorsque toutes les séries prévues atteignent la borne haute', async () => {
     await addWorkingSets();
+
+    const exercise = (await database.workoutSessionExercises.get('session-exercise-1'))!;
+    const sets = await database.strengthSets.where('sessionExerciseId')
+      .equals('session-exercise-1')
+      .toArray();
+    expect(evaluateStrengthProgressionEligibility(exercise, sets)).toMatchObject({
+      eligible: true,
+      currentLoadKg: 60,
+      suggestedLoadKg: 62.5,
+    });
 
     const suggestions = await generateProgressionSuggestions(
       sessionRepository,
