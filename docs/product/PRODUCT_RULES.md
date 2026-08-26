@@ -91,6 +91,28 @@ Statut : **décisions validées**, sauf mention contraire.
   canoniques. Toute formule de volume musculaire direct/indirect reste hors
   périmètre et nécessite une validation produit dédiée.
 
+## Décision Coach intégrée
+
+- C4 croise les sorties C1 et C3 avec le candidat du moteur calorique existant
+  selon cet ordre strict : qualité des données, récupération, adhérence
+  nutritionnelle, activité réelle, performance, tendance poids/tour de taille,
+  nécessité de changer, puis plus petit changement raisonnable.
+- Une décision C4 contient une seule action primaire. Les autres signaux restent
+  des raisons ou facteurs bloquants et ne créent pas un second levier.
+- La performance Strength est un garde-fou : `degrading` ou `mixed` bloque une
+  nouvelle réduction calorique, tandis que `stagnating` seul ne la bloque pas.
+  `progressing` associé à `truePlateau` peut conduire à maintenir le plan.
+- Une mauvaise performance seule ne déclenche jamais une hausse calorique. Une
+  proposition protectrice de hausse déjà produite pour `excessiveLoss` reste
+  possible même lorsque la performance Strength est mauvaise.
+- Le candidat calorique C4 provient exclusivement de la formule existante et
+  reçoit une projection provenance-aware des observations C1 : pesées
+  `userMeasured / confirmed`, subjectifs `userReported / confirmed` et aucune
+  baseline de pas `profileFallback / fallback` présentée comme exploitable.
+- C4 est read-only : il ne modifie ni plan Nutrition, ni macros, ni programme
+  Strength. Toute modification durable proposée exige l’acceptation explicite
+  de l’utilisateur par la mécanique dédiée existante.
+
 ## IA photo
 
 - L’analyse exige un consentement explicite.
