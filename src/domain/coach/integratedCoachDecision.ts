@@ -214,15 +214,17 @@ export function resolveIntegratedCoachDecision({
     ...(direction ? { blockedAdjustment: { direction, reason } } : {}),
   });
 
-  if (
-    coachStateResult.state === 'insufficientData'
-    || coachStateResult.confidence.level === 'insufficient'
-    || coachStateResult.confidence.level === 'uncertain'
-  ) {
+  if (coachStateResult.state === 'insufficientData') {
     return blocked('collectMoreData', 'dataQuality');
   }
   if (coachStateResult.state === 'insufficientFoodTracking') {
     return blocked('improveFoodTracking', 'foodAdherence');
+  }
+  if (
+    coachStateResult.confidence.level === 'insufficient'
+    || coachStateResult.confidence.level === 'uncertain'
+  ) {
+    return blocked('collectMoreData', 'dataQuality');
   }
   if (coachStateResult.state === 'degradedRecovery') {
     return candidate > 0

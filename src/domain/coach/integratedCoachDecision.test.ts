@@ -123,6 +123,7 @@ describe('resolveIntegratedCoachDecision', () => {
     { name: '1 insufficientData', state: 'insufficientData', strength: [], candidate: -50, action: 'collectMoreData', blockedReason: 'dataQuality' },
     { name: '2 confiance insuffisante', state: 'truePlateau', confidence: 'uncertain', strength: [], candidate: -50, action: 'collectMoreData', blockedReason: 'dataQuality' },
     { name: '3 insufficientFoodTracking', state: 'insufficientFoodTracking', strength: [], candidate: -50, action: 'improveFoodTracking', blockedReason: 'foodAdherence' },
+    { name: '3b insufficientFoodTracking devance une confiance incertaine', state: 'insufficientFoodTracking', confidence: 'uncertain', strength: [], candidate: -50, action: 'improveFoodTracking', blockedReason: 'foodAdherence' },
     { name: '4 suivi alimentaire bloqué par le moteur existant', state: 'truePlateau', strength: [], candidate: -50, action: 'maintainPlan', blockedReason: 'foodAdherence', assessmentOverrides: { blockingFactors: ['Apports hors seuil existant.'] } },
     { name: '5 recovery bloque -50', state: 'degradedRecovery', strength: [], candidate: -50, action: 'prioritizeRecovery', blockedReason: 'recovery' },
     { name: '6 recovery conserve +50 protecteur', state: 'degradedRecovery', strength: [], candidate: 50, action: 'prioritizeRecovery', proposed: 50 },
