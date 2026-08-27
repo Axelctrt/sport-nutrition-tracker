@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
-  acceptWeeklyReview,
+  acceptCoachWeeklyReview,
   loadWeeklyReview,
   rejectWeeklyReview,
   type WeeklyReviewSnapshot,
@@ -36,18 +36,18 @@ export function useWeeklyReview(referenceDate: LocalDate, profile: UserProfile |
   }, [load]);
 
   const accept = useCallback(async () => {
-    if (!data) return;
+    if (!data || !profile) return;
     setActionStatus('accepting');
     setErrorMessage(undefined);
     try {
-      await acceptWeeklyReview(data.review.weekStart);
+      await acceptCoachWeeklyReview(data.review.weekStart, profile);
       await load(true);
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Impossible d’accepter la proposition.');
     } finally {
       setActionStatus('idle');
     }
-  }, [data, load]);
+  }, [data, load, profile]);
 
   const reject = useCallback(async () => {
     if (!data) return;

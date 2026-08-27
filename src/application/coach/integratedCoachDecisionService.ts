@@ -23,8 +23,11 @@ import {
   resolveCoachStateResult,
   type ResolveCoachStateResultInput,
 } from '@/domain/coach/coachStateDecision';
+import type { CoachStateResult } from '@/domain/coach/coachState';
+import type { StrengthPerformanceSnapshot } from '@/domain/coach/strengthPerformance';
 import type { LocalDate } from '@/domain/models/common';
 import type { UserProfile } from '@/domain/models/profile';
+import type { CalorieAdaptationAssessment } from '@/domain/models/weeklyReview';
 import {
   calculateCalorieAdaptationAssessment,
   type CalculateCalorieAdaptationAssessmentInput,
@@ -45,6 +48,13 @@ export interface CalculateIntegratedCoachDecisionInput {
   referenceDate: LocalDate;
   profile: UserProfile;
   referenceWeightKg: number;
+}
+
+export interface IntegratedCoachAnalysis {
+  coachStateResult: CoachStateResult;
+  strengthPerformance: StrengthPerformanceSnapshot;
+  calorieAssessment: CalorieAdaptationAssessment;
+  decision: IntegratedCoachDecision;
 }
 
 export interface IntegratedCoachDecisionServiceDependencies {
@@ -89,10 +99,10 @@ const defaultDependencies: IntegratedCoachDecisionServiceDependencies = {
   weeklyReviews: repositories.weeklyReviews,
 };
 
-export async function calculateIntegratedCoachDecision(
+export async function calculateIntegratedCoachAnalysis(
   input: CalculateIntegratedCoachDecisionInput,
   dependencies: IntegratedCoachDecisionServiceDependencies = defaultDependencies,
-): Promise<IntegratedCoachDecision> {
+): Promise<IntegratedCoachAnalysis> {
   if (!isValidLocalDate(input.referenceDate)) {
     throw new Error('La date de référence de la décision Coach intégrée est invalide.');
   }
@@ -184,10 +194,18 @@ export async function calculateIntegratedCoachDecision(
     ...(latestAcceptedAdjustmentDate ? { latestAcceptedAdjustmentDate } : {}),
   });
 
-  return (dependencies.resolveDecision ?? resolveIntegratedCoachDecision)({
+  const decision = (dependencies.resolveDecision ?? resolveIntegratedCoachDecision)({
     referenceDate: input.referenceDate,
     coachStateResult,
     strengthPerformance,
     calorieAssessment,
   });
+  return { coachStateResult, strengthPerformance, calorieAssessment, decision };
+}
+
+export async function calculateIntegratedCoachDecision(
+  input: CalculateIntegratedCoachDecisionInput,
+  dependencies: IntegratedCoachDecisionServiceDependencies = defaultDependencies,
+): Promise<IntegratedCoachDecision> {
+  return (await calculateIntegratedCoachAnalysis(input, dependencies)).decision;
 }

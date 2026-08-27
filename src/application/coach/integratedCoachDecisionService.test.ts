@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
+  calculateIntegratedCoachAnalysis,
   calculateIntegratedCoachDecision,
   type IntegratedCoachDecisionServiceDependencies,
 } from '@/application/coach/integratedCoachDecisionService';
@@ -126,6 +127,18 @@ function dependencies(): IntegratedCoachDecisionServiceDependencies & Record<
 }
 
 describe('calculateIntegratedCoachDecision', () => {
+  it('reste le wrapper strict de la décision exposée par l’analyse intégrée', async () => {
+    const input = {
+      referenceDate: '2026-08-25' as const,
+      profile,
+      referenceWeightKg: 80,
+    };
+    const analysis = await calculateIntegratedCoachAnalysis(input, dependencies());
+    const decision = await calculateIntegratedCoachDecision(input, dependencies());
+
+    expect(decision).toStrictEqual(analysis.decision);
+  });
+
   it('compose C1, C3 et le moteur calorique avec une referenceDate unique', async () => {
     const deps = dependencies();
     const result = await calculateIntegratedCoachDecision({

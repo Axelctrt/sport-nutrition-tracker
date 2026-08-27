@@ -3,6 +3,7 @@ import type { LocalDate } from '@/domain/models/common';
 import type { Activity } from '@/domain/models/activity';
 import type { UserProfile } from '@/domain/models/profile';
 import type { WorkoutSession } from '@/domain/models/strength';
+import type { DailyTarget } from '@/domain/models/targets';
 
 import type { AcceptedCalorieAdjustment, WeeklyReview } from '@/domain/models/weeklyReview';
 import {
@@ -11,6 +12,16 @@ import {
   resolveWeeklyReviewPeriod,
 } from '@/domain/reviews/weeklyReview';
 import { resolveAcceptedCalibrationAdjustment } from '@/application/daily/dailyTargetCoordinator';
+import {
+  calculateIntegratedCoachAnalysis,
+  type CalculateIntegratedCoachDecisionInput,
+  type IntegratedCoachAnalysis,
+} from '@/application/coach/integratedCoachDecisionService';
+import {
+  buildCoachReviewSnapshot,
+  canAcceptCoachWeeklyReview,
+  type CoachReviewSnapshot,
+} from '@/domain/coach/coachReview';
 import { buildEndurancePlanningWeek } from '@/application/planning/endurancePlanningService';
 import { buildWeeklyReviewInsights, type WeeklyReviewInsights } from '@/domain/reviews/weeklyReviewInsights';
 import { emptyEndurancePlanningState, readEndurancePlanningState, type EndurancePlanningState } from '@/domain/planning/endurancePlanningState';
@@ -57,6 +68,9 @@ export interface WeeklyReviewServiceDependencies {
     analysisEnd: LocalDate,
     profile: UserProfile,
   ) => Promise<EnergyArchitectureRetrospectiveReport>;
+  calculateIntegratedAnalysis: (
+    input: CalculateIntegratedCoachDecisionInput,
+  ) => Promise<IntegratedCoachAnalysis>;
 
   weeklyReviews: Pick<
     WeeklyReviewRepository,
@@ -75,6 +89,7 @@ const defaultDependencies: WeeklyReviewServiceDependencies = {
   workoutSessions: repositories.workoutSessions,
   readEndurancePlanningState,
   loadEnergyRetrospective: loadEnergyArchitectureRetrospective,
+  calculateIntegratedAnalysis: calculateIntegratedCoachAnalysis,
 
   weeklyReviews: repositories.weeklyReviews,
 };
@@ -85,6 +100,8 @@ export interface WeeklyReviewSnapshot {
   adjustments: AcceptedCalorieAdjustment[];
   insights?: WeeklyReviewInsights;
   energyRetrospective?: EnergyArchitectureRetrospectiveReport;
+  coachReview?: CoachReviewSnapshot;
+  coachError?: string;
 }
 
 function median(values: readonly number[]): number | undefined {
@@ -94,6 +111,21 @@ function median(values: readonly number[]): number | undefined {
   return sorted.length % 2 === 0
     ? (sorted[middle - 1]! + sorted[middle]!) / 2
     : sorted[middle];
+}
+
+export function resolveCoachReferenceWeight(
+  dailyTargets: readonly Pick<DailyTarget, 'date' | 'calculationWeightKg'>[],
+  weekEnd: LocalDate,
+  fallbackWeightKg: number,
+): number {
+  return [...dailyTargets]
+    .filter(({ date, calculationWeightKg }) => (
+      date <= weekEnd
+      && Number.isFinite(calculationWeightKg)
+      && calculationWeightKg > 0
+    ))
+    .sort((left, right) => left.date.localeCompare(right.date))
+    .at(-1)?.calculationWeightKg ?? fallbackWeightKg;
 }
 
 export async function loadWeeklyReview(
@@ -175,6 +207,28 @@ export async function loadWeeklyReview(
     workoutSessions,
     endurancePlanning,
   });
+  const coachReferenceWeightKg = resolveCoachReferenceWeight(
+    dailyTargets,
+    period.weekEnd,
+    profile.initialWeightKg,
+  );
+  let integratedAnalysis: IntegratedCoachAnalysis | undefined;
+  let coachError: string | undefined;
+  try {
+    integratedAnalysis = await dependencies.calculateIntegratedAnalysis({
+      referenceDate: period.weekEnd,
+      profile,
+      referenceWeightKg: coachReferenceWeightKg,
+    });
+  } catch {
+    coachError = 'Bilan Coach indisponible. Recharge le bilan avant toute décision.';
+  }
+  const coachReview = integratedAnalysis
+    ? buildCoachReviewSnapshot({
+        weekStart: period.weekStart,
+        weekEnd: period.weekEnd,
+      }, integratedAnalysis)
+    : undefined;
   if (existing?.decisionStatus === 'accepted' || existing?.decisionStatus === 'rejected') {
     const reviews = await dependencies.weeklyReviews.listAll();
     return {
@@ -183,6 +237,8 @@ export async function loadWeeklyReview(
       adjustments,
       insights: insightsFor(existing),
       ...(energyRetrospective ? { energyRetrospective } : {}),
+      ...(coachReview ? { coachReview } : {}),
+      ...(coachError ? { coachError } : {}),
     };
   }
 
@@ -198,31 +254,32 @@ export async function loadWeeklyReview(
     .filter(({ effectiveFrom: date }) => date <= period.weekEnd)
     .sort((left, right) => left.effectiveFrom.localeCompare(right.effectiveFrom))
     .at(-1)?.effectiveFrom;
-  const adaptation = calculateCalorieAdaptationAssessment({
-    analysisStart,
-    analysisEnd: period.weekEnd,
-    observations: buildCalorieAdaptationObservations({
+  const adaptation = integratedAnalysis?.calorieAssessment
+    ?? calculateCalorieAdaptationAssessment({
       analysisStart,
       analysisEnd: period.weekEnd,
-      fallbackExpectedSteps: profile.dailyStepGoal,
-      weights: analysisWeights,
-      foodEntries,
-      dailyTargets,
-      journalStatuses: statuses,
-      dailySteps: steps,
-      checkIns,
-      checkOuts,
-      activities,
-      workoutSessions,
-    }),
-    goal: profile.goal,
-    targetWeeklyWeightChangeKg:
-      referenceWeightKg * (profile.targetWeeklyWeightChangePercent / 100),
-    currentCumulativeAdjustmentKcal,
-    maximumWeeklyAdjustmentKcal: settings.maximumWeeklyAdjustmentKcal,
-    maximumCumulativeAdjustmentKcal: settings.maximumCumulativeAdjustmentKcal,
-    ...(latestAcceptedAdjustmentDate ? { latestAcceptedAdjustmentDate } : {}),
-  });
+      observations: buildCalorieAdaptationObservations({
+        analysisStart,
+        analysisEnd: period.weekEnd,
+        fallbackExpectedSteps: profile.dailyStepGoal,
+        weights: analysisWeights,
+        foodEntries,
+        dailyTargets,
+        journalStatuses: statuses,
+        dailySteps: steps,
+        checkIns,
+        checkOuts,
+        activities,
+        workoutSessions,
+      }),
+      goal: profile.goal,
+      targetWeeklyWeightChangeKg:
+        referenceWeightKg * (profile.targetWeeklyWeightChangePercent / 100),
+      currentCumulativeAdjustmentKcal,
+      maximumWeeklyAdjustmentKcal: settings.maximumWeeklyAdjustmentKcal,
+      maximumCumulativeAdjustmentKcal: settings.maximumCumulativeAdjustmentKcal,
+      ...(latestAcceptedAdjustmentDate ? { latestAcceptedAdjustmentDate } : {}),
+    });
   const calculated = calculateWeeklyReview({
     ...period,
     profile,
@@ -244,6 +301,8 @@ export async function loadWeeklyReview(
     adjustments,
     insights: insightsFor(review),
     ...(energyRetrospective ? { energyRetrospective } : {}),
+    ...(coachReview ? { coachReview } : {}),
+    ...(coachError ? { coachError } : {}),
   };
 }
 
@@ -271,6 +330,49 @@ export async function acceptWeeklyReview(
       };
   const result = await dependencies.weeklyReviews.accept(weekStart, adjustment);
   return result.review;
+}
+
+export async function acceptCoachWeeklyReview(
+  weekStart: LocalDate,
+  profile: UserProfile,
+  dependencies: WeeklyReviewServiceDependencies = defaultDependencies,
+): Promise<WeeklyReview> {
+  const review = await dependencies.weeklyReviews.getByWeekStart(weekStart);
+  if (!review) throw new Error('Bilan hebdomadaire introuvable.');
+  if (review.decisionStatus !== 'pending') {
+    throw new Error('Le bilan a changé. Recharge-le avant de prendre une décision.');
+  }
+  const analysisStart = toLocalDate(subDays(
+    parseISO(review.weekEnd),
+    CALORIE_ADAPTATION_WINDOW_DAYS - 1,
+  ));
+  const dailyTargets = await dependencies.targets.listTargetsBetween(
+    analysisStart,
+    review.weekEnd,
+  );
+  const referenceWeightKg = resolveCoachReferenceWeight(
+    dailyTargets,
+    review.weekEnd,
+    profile.initialWeightKg,
+  );
+  let analysis: IntegratedCoachAnalysis;
+  try {
+    analysis = await dependencies.calculateIntegratedAnalysis({
+      referenceDate: review.weekEnd,
+      profile,
+      referenceWeightKg,
+    });
+  } catch {
+    throw new Error('Le Bilan Coach ne peut pas être revalidé. Recharge-le avant de réessayer.');
+  }
+  const snapshot = buildCoachReviewSnapshot({
+    weekStart: review.weekStart,
+    weekEnd: review.weekEnd,
+  }, analysis);
+  if (!canAcceptCoachWeeklyReview(snapshot, review)) {
+    throw new Error('La décision Coach a changé. Recharge le bilan avant de réessayer.');
+  }
+  return acceptWeeklyReview(weekStart, dependencies);
 }
 
 export async function rejectWeeklyReview(

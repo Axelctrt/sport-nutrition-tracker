@@ -10,12 +10,12 @@ import {
 } from '@/test/factories/energyArchitectureRetrospectiveFactory';
 
 const loadWeeklyReview = vi.fn();
-const acceptWeeklyReview = vi.fn();
+const acceptCoachWeeklyReview = vi.fn();
 const rejectWeeklyReview = vi.fn();
 
 vi.mock('@/application/weekly-review/weeklyReviewService', () => ({
   loadWeeklyReview: (...args: unknown[]) => loadWeeklyReview(...args),
-  acceptWeeklyReview: (...args: unknown[]) => acceptWeeklyReview(...args),
+  acceptCoachWeeklyReview: (...args: unknown[]) => acceptCoachWeeklyReview(...args),
   rejectWeeklyReview: (...args: unknown[]) => rejectWeeklyReview(...args),
 }));
 
@@ -33,7 +33,7 @@ describe('useWeeklyReview', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     loadWeeklyReview.mockResolvedValue(snapshot());
-    acceptWeeklyReview.mockResolvedValue(createWeeklyReview({ decisionStatus: 'accepted' }));
+    acceptCoachWeeklyReview.mockResolvedValue(createWeeklyReview({ decisionStatus: 'accepted' }));
     rejectWeeklyReview.mockResolvedValue(createWeeklyReview({ decisionStatus: 'rejected' }));
   });
 
@@ -48,7 +48,7 @@ describe('useWeeklyReview', () => {
       await result.current.accept();
     });
 
-    expect(acceptWeeklyReview).toHaveBeenCalledWith('2026-06-08');
+    expect(acceptCoachWeeklyReview).toHaveBeenCalledWith('2026-06-08', profile);
     expect(result.current.status).toBe('ready');
     expect(result.current.data?.review.decisionStatus).toBe('accepted');
   });
