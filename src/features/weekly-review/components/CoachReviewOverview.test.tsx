@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { buildCoachReviewSnapshot } from '@/domain/coach/coachReview';
 import type { IntegratedCoachAction } from '@/domain/coach/integratedCoachDecision';
 import type { CoachNextReview } from '@/domain/coach/coachState';
+import type { CalorieAdaptationAssessment } from '@/domain/models/weeklyReview';
 import { CoachReviewOverview } from '@/features/weekly-review/components/CoachReviewOverview';
 import { createCalorieAdaptationAssessment, createWeeklyReview } from '@/test/factories/weeklyReviewFactory';
 
@@ -10,12 +11,14 @@ function snapshot(
   action: IntegratedCoachAction,
   candidate?: number,
   nextReview: CoachNextReview = { type: 'condition', condition: 'moreData' },
+  assessmentOverrides: Partial<CalorieAdaptationAssessment> = {},
 ) {
   const calorieAssessment = createCalorieAdaptationAssessment({
     analysisStart: '2026-08-03',
     analysisEnd: '2026-08-23',
     proposedAdjustmentKcal: candidate ?? 0,
     reasons: ['Tendance longitudinale exploitable.', 'coachState:truePlateau'],
+    ...assessmentOverrides,
   });
   return buildCoachReviewSnapshot({
     weekStart: '2026-08-17',
@@ -117,6 +120,43 @@ describe('CoachReviewOverview', () => {
     expect(screen.getByText('Ajuster la cible de -50 kcal/j')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Accepter' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Refuser' })).toBeInTheDocument();
+  });
+
+  it('distingue les tendances signées, les pourcentages absolus et les journées alimentaires', () => {
+    const review = createWeeklyReview({ decisionStatus: 'pending', proposedAdjustmentKcal: 0 });
+    render(
+      <CoachReviewOverview
+        snapshot={snapshot(
+          'maintainPlan',
+          undefined,
+          { type: 'condition', condition: 'moreData' },
+          {
+            weightTrendKgPerWeek: 0.2,
+            waistTrendCmPerWeek: -0.3,
+            averageCalorieDeviationPercent: 5,
+            proteinAdherencePercent: 90,
+            actualToExpectedStepsPercent: 100,
+            completedFoodDays: 12,
+            comparableFoodDays: 10,
+          },
+        )}
+        review={review}
+        actionStatus="idle"
+        onAccept={vi.fn()}
+        onReject={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('Poids : +0,2 kg/semaine')).toBeInTheDocument();
+    expect(screen.getByText('Tour de taille : -0,3 cm/semaine')).toBeInTheDocument();
+    expect(screen.getByText('Écart calorique : +5 %')).toBeInTheDocument();
+    expect(screen.getByText('Adhérence protéines : 90 %')).toBeInTheDocument();
+    expect(screen.getByText('Niveau réel/attendu : 100 %')).toBeInTheDocument();
+    expect(screen.queryByText('Adhérence protéines : +90 %')).not.toBeInTheDocument();
+    expect(screen.queryByText('Niveau réel/attendu : +100 %')).not.toBeInTheDocument();
+    expect(screen.getByText('12 journée(s) complète(s)')).toBeInTheDocument();
+    expect(screen.getByText('10 journée(s) comparable(s)')).toBeInTheDocument();
+    expect(screen.queryByText('12/10 journée(s) complète(s)')).not.toBeInTheDocument();
   });
 
   it.each([

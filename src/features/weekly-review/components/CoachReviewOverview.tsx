@@ -30,10 +30,15 @@ const nextReviewConditionLabels: Record<
   recoveryReassessed: 'Après réévaluation de la récupération',
 };
 
-function formatValue(value: number | undefined, unit: string): string {
+function formatSignedValue(value: number | undefined, unit: string): string {
   if (value === undefined) return 'Non disponible';
   const sign = value > 0 ? '+' : '';
   return `${sign}${value.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} ${unit}`;
+}
+
+function formatUnsignedValue(value: number | undefined, unit: string): string {
+  if (value === undefined) return 'Non disponible';
+  return `${value.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} ${unit}`;
 }
 
 function formatAdjustment(value: number): string {
@@ -116,17 +121,18 @@ export function CoachReviewOverview({
         <h2 id="coach-signals-title" className="text-lg font-bold text-slate-950 dark:text-white">Signaux</h2>
         <div className="mt-3 grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           <SignalCard title="Corps">
-            <p>Poids : {formatValue(snapshot.signals.body.weightTrendKgPerWeek, 'kg/semaine')}</p>
-            <p>Tour de taille : {formatValue(snapshot.signals.body.waistTrendCmPerWeek, 'cm/semaine')}</p>
+            <p>Poids : {formatSignedValue(snapshot.signals.body.weightTrendKgPerWeek, 'kg/semaine')}</p>
+            <p>Tour de taille : {formatSignedValue(snapshot.signals.body.waistTrendCmPerWeek, 'cm/semaine')}</p>
             <p>{snapshot.signals.body.weighInCount} pesée(s) qualifiée(s)</p>
           </SignalCard>
           <SignalCard title="Nutrition">
-            <p>Écart calorique : {formatValue(snapshot.signals.nutrition.averageCalorieDeviationPercent, '%')}</p>
-            <p>Adhérence protéines : {formatValue(snapshot.signals.nutrition.proteinAdherencePercent, '%')}</p>
-            <p>{snapshot.signals.nutrition.completedFoodDays}/{snapshot.signals.nutrition.comparableFoodDays} journée(s) complète(s)</p>
+            <p>Écart calorique : {formatSignedValue(snapshot.signals.nutrition.averageCalorieDeviationPercent, '%')}</p>
+            <p>Adhérence protéines : {formatUnsignedValue(snapshot.signals.nutrition.proteinAdherencePercent, '%')}</p>
+            <p>{snapshot.signals.nutrition.completedFoodDays} journée(s) complète(s)</p>
+            <p>{snapshot.signals.nutrition.comparableFoodDays} journée(s) comparable(s)</p>
           </SignalCard>
           <SignalCard title="Activité">
-            <p>Niveau réel/attendu : {formatValue(snapshot.signals.activity.actualToExpectedStepsPercent, '%')}</p>
+            <p>Niveau réel/attendu : {formatUnsignedValue(snapshot.signals.activity.actualToExpectedStepsPercent, '%')}</p>
             <p>{snapshot.signals.activity.recordedStepDays} journée(s) enregistrée(s)</p>
           </SignalCard>
           <SignalCard title="Récupération">
