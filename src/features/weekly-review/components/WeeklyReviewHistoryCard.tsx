@@ -2,8 +2,7 @@ import { CalendarDays } from 'lucide-react';
 import type { WeeklyReview, WeeklyReviewDecisionStatus } from '@/domain/models/weeklyReview';
 import { formatLocalDate } from '@/shared/utils/dates';
 
-const statusLabels: Record<WeeklyReviewDecisionStatus, string> = {
-  pending: 'Décision à prendre',
+const statusLabels: Record<Exclude<WeeklyReviewDecisionStatus, 'pending'>, string> = {
   accepted: 'Acceptée',
   rejected: 'Refusée',
   notEligible: 'Non proposée',
@@ -16,6 +15,9 @@ function formatSigned(value: number | undefined, unit: string): string {
 }
 
 export function WeeklyReviewHistoryCard({ review }: { review: WeeklyReview }) {
+  const statusLabel = review.decisionStatus === 'pending'
+    ? review.proposedAdjustmentKcal === 0 ? 'Aucun ajustement' : 'À examiner'
+    : statusLabels[review.decisionStatus];
   return (
     <article className="rounded-xl border border-slate-200 bg-slate-50/70 p-3.5 dark:border-slate-800 dark:bg-slate-950/60">
       <div className="flex items-start justify-between gap-3">
@@ -26,7 +28,7 @@ export function WeeklyReviewHistoryCard({ review }: { review: WeeklyReview }) {
           </h3>
         </div>
         <span className="shrink-0 rounded-full bg-slate-200 px-2 py-1 text-[11px] font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-          {statusLabels[review.decisionStatus]}
+          {statusLabel}
         </span>
       </div>
       <dl className="mt-3 grid grid-cols-3 gap-2">

@@ -113,6 +113,24 @@ Statut : **décisions validées**, sauf mention contraire.
   Strength. Toute modification durable proposée exige l’acceptation explicite
   de l’utilisateur par la mécanique dédiée existante.
 
+## Bilan du Coach
+
+- La page hebdomadaire présente le récit Coach dans l’ordre diagnostic,
+  confiance, raisons, signaux, décision, plan et réévaluation. La semaine
+  observée reste distincte de la fenêtre longitudinale du Coach.
+- C4 est l’unique autorité de décision du bilan. Les métriques corps,
+  nutrition, activité et récupération proviennent de son assessment
+  provenance-aware ; la performance provient du snapshot C3.
+- Le plan contient une seule priorité, celle de `primaryAction`. Les repères
+  historiques du suivi hebdomadaire restent secondaires et ne constituent pas
+  plusieurs décisions Coach.
+- Une proposition calorique n’est actionnable que pour `reviewNutritionTarget`,
+  avec un candidat non nul identique à celui du bilan encore `pending`. Le clic
+  relit les données et revalide C4 avant de réutiliser l’acceptation existante.
+- Si C4 est indisponible, les détails historiques restent consultables mais
+  aucune calibration legacy n’est présentée ou applicable comme décision
+  Coach. Le snapshot du bilan n’est pas persisté.
+
 ## IA photo
 
 - L’analyse exige un consentement explicite.

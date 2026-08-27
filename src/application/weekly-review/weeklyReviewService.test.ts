@@ -4,16 +4,79 @@ import type { WeeklyReview } from '@/domain/models/weeklyReview';
 import { createEntity } from '@/shared/utils/entities';
 import { createProfileInput } from '@/test/factories/profileFactory';
 import {
+  acceptCoachWeeklyReview,
   acceptWeeklyReview,
   loadWeeklyReview,
   rejectWeeklyReview,
+  resolveCoachReferenceWeight,
   type WeeklyReviewServiceDependencies,
 } from '@/application/weekly-review/weeklyReviewService';
+import type { IntegratedCoachAnalysis } from '@/application/coach/integratedCoachDecisionService';
 import {
   createEnergyArchitectureRetrospectiveReport,
 } from '@/test/factories/energyArchitectureRetrospectiveFactory';
+import {
+  createCalorieAdaptationAssessment,
+} from '@/test/factories/weeklyReviewFactory';
 
-function createDependencies(existing?: WeeklyReview): WeeklyReviewServiceDependencies {
+function integratedAnalysis(
+  action: IntegratedCoachAnalysis['decision']['primaryAction'] = 'collectMoreData',
+  candidate = 0,
+): IntegratedCoachAnalysis {
+  const calorieAssessment = createCalorieAdaptationAssessment({
+    detectedState: candidate === 0 ? 'insufficientData' : 'truePlateau',
+    blockingFactors: candidate === 0 ? ['Données insuffisantes.'] : [],
+    proposedAdjustmentKcal: candidate,
+  });
+  return {
+    coachStateResult: {
+      state: candidate === 0 ? 'insufficientData' : 'truePlateau',
+      confidence: {
+        weight: 80,
+        food: 80,
+        activity: 80,
+        recovery: 80,
+        overall: 80,
+        level: candidate === 0 ? 'insufficient' : 'reliable',
+      },
+      reasons: ['Analyse Coach.'],
+      blockingFactors: calorieAssessment.blockingFactors,
+      priority: 'medium',
+      recommendedAction: candidate === 0
+        ? { type: 'collectMoreData' }
+        : { type: 'reviewNutritionTarget', direction: candidate < 0 ? 'decrease' : 'increase' },
+      nextReview: { type: 'date', date: '2026-06-21' },
+    },
+    strengthPerformance: {
+      referenceDate: '2026-06-14',
+      exercises: [],
+      schedule: {
+        completedPlannedCount: 0,
+        skippedCount: 0,
+        overdueCount: 0,
+        abandonedCount: 0,
+      },
+    },
+    calorieAssessment,
+    decision: {
+      referenceDate: '2026-06-14',
+      primaryAction: action,
+      priority: 'medium',
+      coachState: candidate === 0 ? 'insufficientData' : 'truePlateau',
+      strengthContext: 'insufficient',
+      reasons: [],
+      blockingFactors: calorieAssessment.blockingFactors,
+      ...(candidate === 0 ? {} : { proposedNutritionAdjustmentKcal: candidate }),
+      requiresUserAcceptance: action === 'reviewNutritionTarget' && candidate !== 0,
+      nextReview: { type: 'date', date: '2026-06-21' },
+    },
+  };
+}
+
+function createDependencies(
+  existing?: WeeklyReview,
+  analysis: IntegratedCoachAnalysis = integratedAnalysis(),
+): WeeklyReviewServiceDependencies {
   let stored = existing;
   return {
     settings: { get: vi.fn().mockResolvedValue(createDefaultAppSettings()) },
@@ -32,6 +95,7 @@ function createDependencies(existing?: WeeklyReview): WeeklyReviewServiceDepende
     loadEnergyRetrospective: vi.fn().mockResolvedValue(
       createEnergyArchitectureRetrospectiveReport(),
     ),
+    calculateIntegratedAnalysis: vi.fn().mockResolvedValue(analysis),
     weeklyReviews: {
       getByWeekStart: vi.fn().mockImplementation(() => Promise.resolve(stored)),
       upsert: vi.fn().mockImplementation((data) => { stored = createEntity(data, stored?.id ?? 'review'); return Promise.resolve(stored); }),
@@ -80,6 +144,7 @@ describe('weekly review service', () => {
       .toHaveBeenCalledWith('2026-05-25', '2026-06-14');
     expect(result.insights?.training.hasPlanning).toBe(false);
     expect(result.energyRetrospective?.status).toBe('insufficientData');
+    expect(result.coachReview?.decision.primaryAction).toBe('collectMoreData');
     expect(dependencies.loadEnergyRetrospective).toHaveBeenCalledWith(
       '2026-06-14',
       profile,
@@ -87,12 +152,38 @@ describe('weekly review service', () => {
     expect(dependencies.weeklyReviews.upsert).toHaveBeenCalledOnce();
   });
 
-  it('ne recalcule pas un bilan déjà accepté', async () => {
-    const dependencies = createDependencies({ ...eligibleReview(), decisionStatus: 'accepted' });
+  it('utilise l’assessment C4 qualifié et persiste exactement son candidat actif', async () => {
+    const expectedAnalysis = integratedAnalysis('reviewNutritionTarget', -50);
+    const dependencies = createDependencies(
+      undefined,
+      expectedAnalysis,
+    );
     const result = await loadWeeklyReview('2026-06-10', profile, dependencies);
-    expect(result.review.decisionStatus).toBe('accepted');
+
+    expect(result.review.adaptation).toBe(expectedAnalysis.calorieAssessment);
+    expect(result.review.proposedAdjustmentKcal).toBe(-50);
+    expect(result.review.decisionStatus).toBe('pending');
+    expect(dependencies.weeklyReviews.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ proposedAdjustmentKcal: -50 }),
+    );
+  });
+
+  it('ne recalcule pas un bilan déjà accepté', async () => {
+    const historical = { ...eligibleReview(), decisionStatus: 'accepted' as const };
+    const dependencies = createDependencies(historical, integratedAnalysis('reviewNutritionTarget', -50));
+    const result = await loadWeeklyReview('2026-06-10', profile, dependencies);
+    expect(result.review).toStrictEqual(historical);
     expect(result.insights).toBeDefined();
     expect(result.energyRetrospective).toBeDefined();
+    expect(dependencies.weeklyReviews.upsert).not.toHaveBeenCalled();
+  });
+
+  it('ne recalcule pas un bilan déjà refusé', async () => {
+    const historical = { ...eligibleReview(), decisionStatus: 'rejected' as const };
+    const dependencies = createDependencies(historical, integratedAnalysis('reviewNutritionTarget', -50));
+    const result = await loadWeeklyReview('2026-06-10', profile, dependencies);
+
+    expect(result.review).toStrictEqual(historical);
     expect(dependencies.weeklyReviews.upsert).not.toHaveBeenCalled();
   });
 
@@ -109,6 +200,20 @@ describe('weekly review service', () => {
     expect(dependencies.weeklyReviews.upsert).toHaveBeenCalledOnce();
   });
 
+  it('conserve les détails legacy mais désactive le Coach si C4 échoue', async () => {
+    const dependencies = createDependencies();
+    vi.mocked(dependencies.calculateIntegratedAnalysis).mockRejectedValue(
+      new Error('coach unavailable'),
+    );
+
+    const result = await loadWeeklyReview('2026-06-10', profile, dependencies);
+
+    expect(result.review.weekStart).toBe('2026-06-08');
+    expect(result.review.adaptation).toBeDefined();
+    expect(result.coachReview).toBeUndefined();
+    expect(result.coachError).toMatch(/Bilan Coach indisponible/);
+  });
+
   it('accepte une proposition et crée un ajustement effectif la semaine suivante', async () => {
     const dependencies = createDependencies(eligibleReview());
     await acceptWeeklyReview('2026-06-08', dependencies);
@@ -119,5 +224,78 @@ describe('weekly review service', () => {
     const dependencies = createDependencies(eligibleReview());
     const review = await rejectWeeklyReview('2026-06-08', dependencies);
     expect(review.decisionStatus).toBe('rejected');
+  });
+
+  it('préfère le dernier poids de calcul disponible sans en faire une mesure', () => {
+    expect(resolveCoachReferenceWeight([
+      { date: '2026-06-10', calculationWeightKg: 70 },
+      { date: '2026-06-14', calculationWeightKg: 69.5 },
+      { date: '2026-06-15', calculationWeightKg: 68 },
+    ], '2026-06-14', 80)).toBe(69.5);
+    expect(resolveCoachReferenceWeight([], '2026-06-14', 80)).toBe(80);
+  });
+
+  it('revalide puis réutilise acceptWeeklyReview pour un candidat matching', async () => {
+    const dependencies = createDependencies(
+      { ...eligibleReview(), proposedAdjustmentKcal: 100 },
+      integratedAnalysis('reviewNutritionTarget', 100),
+    );
+
+    await acceptCoachWeeklyReview('2026-06-08', profile, dependencies);
+
+    expect(dependencies.calculateIntegratedAnalysis).toHaveBeenCalledWith(
+      expect.objectContaining({ referenceDate: '2026-06-14', profile }),
+    );
+    expect(dependencies.weeklyReviews.accept).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    'maintainPlan',
+    'reviewTraining',
+    'reviewActivity',
+    'prioritizeRecovery',
+  ] as const)('refuse fail-closed l’action %s', async (action) => {
+    const dependencies = createDependencies(
+      eligibleReview(),
+      integratedAnalysis(action, 100),
+    );
+
+    await expect(acceptCoachWeeklyReview('2026-06-08', profile, dependencies))
+      .rejects.toThrow(/décision Coach a changé/);
+    expect(dependencies.weeklyReviews.accept).not.toHaveBeenCalled();
+  });
+
+  it('refuse un recalcul stale qui change le candidat C4 par rapport au persisté', async () => {
+    const dependencies = createDependencies(
+      eligibleReview(),
+      integratedAnalysis('reviewNutritionTarget', -50),
+    );
+
+    await expect(acceptCoachWeeklyReview('2026-06-08', profile, dependencies))
+      .rejects.toThrow(/décision Coach a changé/);
+    expect(dependencies.weeklyReviews.accept).not.toHaveBeenCalled();
+  });
+
+  it('refuse un bilan qui n’est plus pending avant tout recalcul', async () => {
+    const dependencies = createDependencies({
+      ...eligibleReview(),
+      decisionStatus: 'accepted',
+    });
+
+    await expect(acceptCoachWeeklyReview('2026-06-08', profile, dependencies))
+      .rejects.toThrow(/bilan a changé/);
+    expect(dependencies.calculateIntegratedAnalysis).not.toHaveBeenCalled();
+    expect(dependencies.weeklyReviews.accept).not.toHaveBeenCalled();
+  });
+
+  it('refuse sans mutation lorsque C4 échoue à la revalidation', async () => {
+    const dependencies = createDependencies(eligibleReview());
+    vi.mocked(dependencies.calculateIntegratedAnalysis).mockRejectedValue(
+      new Error('coach unavailable'),
+    );
+
+    await expect(acceptCoachWeeklyReview('2026-06-08', profile, dependencies))
+      .rejects.toThrow(/ne peut pas être revalidé/);
+    expect(dependencies.weeklyReviews.accept).not.toHaveBeenCalled();
   });
 });

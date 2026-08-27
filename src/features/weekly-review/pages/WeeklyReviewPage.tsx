@@ -1,24 +1,19 @@
 import {
   Apple,
   BarChart3,
-  CalendarCheck,
   Check,
   Footprints,
   Scale,
-  X,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useProfile } from '@/app/providers/profile/useProfile';
 import { routePaths } from '@/app/routePaths';
-import type {
-  AdherenceLevel,
-  WeeklyCalibrationDecision,
-  WeeklyReviewDecisionStatus,
-} from '@/domain/models/weeklyReview';
+import type { AdherenceLevel } from '@/domain/models/weeklyReview';
 import { getDefaultWeeklyReviewReferenceDate } from '@/domain/reviews/weeklyReview';
 import { AdaptiveAssessmentCard } from '@/features/weekly-review/components/AdaptiveAssessmentCard';
 import { CalibrationAdjustmentCard } from '@/features/weekly-review/components/CalibrationAdjustmentCard';
+import { CoachReviewOverview } from '@/features/weekly-review/components/CoachReviewOverview';
 import { EnergyArchitectureDiagnostic } from '@/features/weekly-review/components/EnergyArchitectureDiagnostic';
 import { WeeklyReviewHistoryCard } from '@/features/weekly-review/components/WeeklyReviewHistoryCard';
 import { WeeklyReviewGuidance } from '@/features/weekly-review/components/WeeklyReviewGuidance';
@@ -39,19 +34,6 @@ const adherenceLabels: Record<AdherenceLevel, string> = {
   good: 'Bon',
   needsStrengthening: 'À renforcer',
   insufficient: 'Insuffisant',
-};
-
-const decisionLabels: Record<WeeklyCalibrationDecision, string> = {
-  keep: 'Conserver la cible',
-  increase: 'Augmenter la cible',
-  decrease: 'Diminuer la cible',
-};
-
-const statusLabels: Record<WeeklyReviewDecisionStatus, string> = {
-  pending: 'Décision à prendre',
-  accepted: 'Proposition acceptée',
-  rejected: 'Proposition refusée',
-  notEligible: 'Calibration non proposée',
 };
 
 function formatSigned(value: number | undefined, unit: string): string {
@@ -81,13 +63,13 @@ export function WeeklyReviewPage() {
     <section className="min-w-0" aria-labelledby="weekly-review-title">
       <div>
         <p className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
-          Pilotage hebdomadaire
+          Synthèse hebdomadaire
         </p>
         <h1 id="weekly-review-title" className="mt-1 text-3xl font-bold tracking-tight text-slate-950 dark:text-white">
-          Bilan hebdomadaire
+          Bilan du Coach
         </h1>
         <p className="mt-2 hidden max-w-3xl text-slate-600 dark:text-slate-300 sm:block">
-          Vérifie la proposition, puis consulte les détails uniquement lorsqu’ils sont utiles.
+          Comprends le diagnostic, la décision et la priorité de la prochaine période.
         </p>
       </div>
 
@@ -132,123 +114,56 @@ export function WeeklyReviewPage() {
 
       {status === 'ready' && data ? (
         <>
-          <InlineNotice
-            className="mt-5"
-            tone={data.review.isCalibrationEligible ? 'success' : 'info'}
-            title={`Du ${formatLocalDate(data.review.weekStart)} au ${formatLocalDate(data.review.weekEnd)}`}
-          >
-            {data.review.isCalibrationEligible
-              ? 'La tendance est exploitable. Toute modification reste soumise à ta validation.'
-              : 'La cible reste inchangée tant que les signaux ne permettent pas une conclusion suffisamment fiable.'}
-          </InlineNotice>
-
-          {data.review.adaptation ? (
-            <div className="mt-4">
-              <AdaptiveAssessmentCard assessment={data.review.adaptation} />
-            </div>
-          ) : null}
-
-          <Card className="mt-4 p-4 sm:p-5" aria-labelledby="weekly-decision-title">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-brand-700 dark:text-brand-300">Décision prioritaire</p>
-                <h2 id="weekly-decision-title" className="mt-1 text-xl font-bold text-slate-950 dark:text-white">
-                  Proposition calorique
-                </h2>
-                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                  {statusLabels[data.review.decisionStatus]}
-                </p>
-              </div>
-              <CalendarCheck aria-hidden="true" className="size-6 shrink-0 text-brand-700 dark:text-brand-300" />
-            </div>
-
-            {data.review.isCalibrationEligible ? (
-              <div className="mt-4 rounded-2xl bg-slate-50 p-4 dark:bg-slate-950/60 sm:p-5">
-                <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">
-                  {decisionLabels[data.review.proposedDecision]}
-                </p>
-                <p className="mt-1 text-3xl font-bold tabular-nums text-slate-950 dark:text-white sm:text-4xl">
-                  {data.review.proposedAdjustmentKcal === 0
-                    ? '0 kcal/j'
-                    : formatSigned(data.review.proposedAdjustmentKcal, 'kcal/j')}
-                </p>
-                <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">Cumul actuel</p>
-                    <p className="mt-1 font-semibold tabular-nums text-slate-800 dark:text-slate-100">
-                      {formatSigned(data.review.currentCumulativeAdjustmentKcal, 'kcal/j')}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">Après acceptation</p>
-                    <p className="mt-1 font-semibold tabular-nums text-slate-800 dark:text-slate-100">
-                      {formatSigned(data.review.resultingCumulativeAdjustmentKcal, 'kcal/j')}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ) : data.review.adaptation ? (
-              <p className="mt-4 border-l-2 border-slate-300 pl-3 text-sm leading-6 text-slate-600 dark:border-slate-700 dark:text-slate-300">
-                Aucun changement calorique n’est proposé. Les conditions à renforcer sont détaillées dans l’analyse ci-dessus.
-              </p>
-            ) : (
-              <ul className="mt-4 space-y-2 rounded-xl bg-slate-50 p-4 text-sm text-slate-700 dark:bg-slate-950/60 dark:text-slate-200">
-                {data.review.ineligibilityReasons.map((reason) => (
-                  <li key={reason} className="flex gap-2">
-                    <span aria-hidden="true">•</span><span>{reason}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-
-            {data.review.decisionStatus === 'pending' && data.review.isCalibrationEligible ? (
-              <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                <Button className="w-full" onClick={() => void accept()} disabled={actionStatus !== 'idle'}>
-                  <Check aria-hidden="true" className="size-4" />
-                  {actionStatus === 'accepting'
-                    ? 'Application…'
-                    : data.review.proposedAdjustmentKcal === 0
-                      ? 'Confirmer le maintien'
-                      : 'Accepter la proposition'}
-                </Button>
-                <Button className="w-full" variant="secondary" onClick={() => void reject()} disabled={actionStatus !== 'idle'}>
-                  <X aria-hidden="true" className="size-4" />
-                  {actionStatus === 'rejecting' ? 'Enregistrement…' : 'Refuser'}
-                </Button>
-              </div>
-            ) : null}
-
-            {data.review.decisionStatus === 'accepted' ? (
-              <InlineNotice className="mt-4" tone="success" title="Décision enregistrée">
-                {matchingAdjustment
-                  ? `L’ajustement de ${formatSigned(matchingAdjustment.adjustmentKcalPerDay, 'kcal/j')} est applicable à partir du ${formatLocalDate(matchingAdjustment.effectiveFrom)}.`
-                  : 'La cible est conservée sans ajustement supplémentaire.'}
-              </InlineNotice>
-            ) : null}
-
-            {data.review.decisionStatus === 'rejected' ? (
-              <InlineNotice className="mt-4" title="Proposition refusée">
-                Aucun ajustement n’a été appliqué pour cette semaine.
-              </InlineNotice>
-            ) : null}
-          </Card>
-
-                    <div className="mt-4">
-            <WeeklyReviewSummary review={data.review} />
-          </div>
-
-          {data.insights ? (
-            <>
-              <div className="mt-4">
-                <WeeklyTrainingSummary insights={data.insights} />
-              </div>
-              <div className="mt-4">
-                <WeeklyReviewGuidance insights={data.insights} />
-              </div>
-            </>
-          ) : null}
+          {data.coachReview ? (
+            <CoachReviewOverview
+              snapshot={data.coachReview}
+              review={data.review}
+              actionStatus={actionStatus}
+              onAccept={() => void accept()}
+              onReject={() => void reject()}
+            />
+          ) : (
+            <InlineNotice className="mt-5" tone="error" title="Bilan Coach indisponible">
+              {data.coachError ?? 'Le diagnostic Coach ne peut pas être calculé pour le moment.'}
+              {' '}Les détails du suivi hebdomadaire restent disponibles ci-dessous. Aucun ajustement ne peut être appliqué.
+            </InlineNotice>
+          )}
 
           <div className="mt-4 space-y-3">
+            <CollapsibleSection
+              title="Détails du suivi hebdomadaire"
+              description="Mesures, calibration et entraînement de la semaine"
+              defaultOpen={!data.coachReview}
+            >
+              <div className="space-y-4">
+                {data.review.adaptation ? (
+                  <AdaptiveAssessmentCard assessment={data.review.adaptation} />
+                ) : null}
+                <WeeklyReviewSummary review={data.review} />
+                {data.insights ? <WeeklyTrainingSummary insights={data.insights} /> : null}
+                {data.review.decisionStatus === 'accepted' ? (
+                  <InlineNotice tone="success" title="Calibration enregistrée">
+                    {matchingAdjustment
+                      ? `L’ajustement de ${formatSigned(matchingAdjustment.adjustmentKcalPerDay, 'kcal/j')} est applicable à partir du ${formatLocalDate(matchingAdjustment.effectiveFrom)}.`
+                      : 'La cible a été conservée sans ajustement supplémentaire.'}
+                  </InlineNotice>
+                ) : null}
+                {data.review.decisionStatus === 'rejected' ? (
+                  <InlineNotice title="Calibration refusée">
+                    Aucun ajustement n’a été appliqué pour cette semaine.
+                  </InlineNotice>
+                ) : null}
+              </div>
+            </CollapsibleSection>
+
+            {data.insights ? (
+              <CollapsibleSection
+                title="Détails et repères de suivi"
+                description="Réussites, points d’attention et raccourcis secondaires"
+              >
+                <WeeklyReviewGuidance insights={data.insights} />
+              </CollapsibleSection>
+            ) : null}
             {data.energyRetrospective ? (
               <EnergyArchitectureDiagnostic
                 report={data.energyRetrospective}
@@ -297,8 +212,8 @@ export function WeeklyReviewPage() {
             ) : null}
 
             <CollapsibleSection
-              title="Historique des bilans"
-              description="Semaines déjà calculées"
+              title="Historique des calibrations"
+              description="Propositions caloriques déjà calculées"
               summary={data.reviews.length}
             >
               <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">

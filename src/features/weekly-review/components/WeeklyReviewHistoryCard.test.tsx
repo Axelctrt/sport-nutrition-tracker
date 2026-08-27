@@ -15,4 +15,14 @@ describe('WeeklyReviewHistoryCard', () => {
     expect(screen.getByText('+100 kcal/j')).toBeInTheDocument();
     expect(container.querySelector('table')).not.toBeInTheDocument();
   });
+
+  it('nomme sans ambiguïté un pending sans ajustement', () => {
+    render(<WeeklyReviewHistoryCard review={createWeeklyReview({
+      decisionStatus: 'pending',
+      proposedAdjustmentKcal: 0,
+    })} />);
+
+    expect(screen.getByText('Aucun ajustement')).toBeInTheDocument();
+    expect(screen.queryByText('Décision à prendre')).not.toBeInTheDocument();
+  });
 });
