@@ -66,6 +66,7 @@ const routeMetadata: RouteMetadata[] = [
   { pattern: routePaths.analytics, title: 'Analyses' },
   { pattern: routePaths.reports, title: 'Rapport de progression' },
   { pattern: routePaths.goals, title: 'Objectifs de progression' },
+  { pattern: routePaths.coach, title: 'Coach' },
   { pattern: routePaths.weeklyReview, title: 'Bilan hebdomadaire' },
   { pattern: routePaths.rewards, title: 'Centre de récompenses' },
   { pattern: routePaths.friends, title: 'Amis et confidentialité' },

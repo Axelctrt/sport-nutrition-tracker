@@ -131,6 +131,25 @@ Statut : **décisions validées**, sauf mention contraire.
   aucune calibration legacy n’est présentée ou applicable comme décision
   Coach. Le snapshot du bilan n’est pas persisté.
 
+## Hub Coach
+
+- La page `/coach` agrège en lecture seule le verdict C2, la décision C4/C5,
+  les plans déjà enregistrés et les bilans réellement existants. Son snapshot
+  est reconstruit en mémoire et n’est ni persisté ni synchronisé.
+- Sans check-in du jour, le Hub demande explicitement le check-in et ne calcule
+  aucun verdict anticipé. Une indisponibilité technique reste un état distinct.
+- L’orientation affiche uniquement l’objectif existant `loss`, `maintenance`
+  ou `gain`. La phase Coach reste « Bientôt disponible » jusqu’au lot C7.
+- La nutrition affiche la cible et les macros déjà calculées pour la date ;
+  l’activité et l’entraînement relisent les objectifs et plannings existants.
+  L’ouverture du Hub ne recalcule et ne crée aucune cible ni aucun bilan.
+- La priorité, son explication, ses facteurs bloquants et la prochaine
+  réévaluation proviennent exclusivement de la projection C5 de la décision
+  C4. Aucun résumé ou levier supplémentaire n’est généré par C6.
+- Le dernier bilan n’est affiché que si une ligne de bilan existe déjà. Le Hub
+  est accessible depuis l’Accueil, Progression et la navigation secondaire ;
+  les quatre destinations de navigation mobile principales restent inchangées.
+
 ## IA photo
 
 - L’analyse exige un consentement explicite.

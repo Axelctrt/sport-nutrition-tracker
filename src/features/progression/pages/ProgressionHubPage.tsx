@@ -10,6 +10,7 @@ import {
   History,
   Plus,
   Scale,
+  Sparkles,
   Target,
   Utensils,
 } from 'lucide-react';
@@ -484,8 +485,9 @@ export function ProgressionHubPage() {
 
           <nav aria-label="Ressources de progression" className="border-t border-[var(--sp-border-subtle)] pt-5">
             <h2 className="text-base font-bold text-[var(--sp-text-primary)]">Explorer</h2>
-            <div className="mt-3 grid gap-2 sm:grid-cols-3">
+            <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
               {[
+                { path: routePaths.coach, label: 'Coach', icon: Sparkles },
                 { path: routePaths.reports, label: 'Rapports', icon: FileText },
                 { path: routePaths.weeklyReview, label: 'Bilan hebdomadaire', icon: CalendarCheck2 },
                 { path: routePaths.history, label: 'Historique détaillé', icon: History },

@@ -9,6 +9,7 @@ import {
   LockKeyhole,
   Search,
   Settings,
+  Sparkles,
   SlidersHorizontal,
   Trash2,
   TrendingUp,
@@ -63,6 +64,7 @@ export const primaryNavigation: NavigationItem[] = [
 ];
 
 export const secondaryNavigation: NavigationItem[] = [
+  { label: 'Coach', path: routePaths.coach, icon: Sparkles },
   { label: 'Recherche', path: routePaths.search, icon: Search },
   { label: 'Profil', path: routePaths.profile, icon: UserRound },
   { label: 'Paramètres', path: routePaths.settings, icon: Settings },
@@ -97,6 +99,12 @@ export const mobileMoreNavigation: NavigationSection[] = [
   {
     title: 'Application',
     items: [
+      {
+        label: 'Coach',
+        path: routePaths.coach,
+        icon: Sparkles,
+        description: 'Verdict, plan actuel, priorité et bilans.',
+      },
       {
         label: 'Recherche globale',
         path: routePaths.search,

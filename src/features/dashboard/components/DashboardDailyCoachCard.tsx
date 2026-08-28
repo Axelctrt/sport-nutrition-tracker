@@ -1,3 +1,6 @@
+import { ArrowRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { routePaths } from '@/app/routePaths';
 import type { DailyCoachResult } from '@/domain/coach/dailyCoach';
 
 interface DashboardDailyCoachCardProps {
@@ -41,6 +44,13 @@ export function DashboardDailyCoachCard({
         {result?.message
           ?? 'Le reste de tes données reste accessible. Tu peux réessayer en actualisant l’Accueil.'}
       </p>
+      <Link
+        to={routePaths.coach}
+        className="mt-3 inline-flex min-h-11 items-center gap-2 text-sm font-bold text-[var(--sp-accent-primary)]"
+      >
+        Voir le Coach
+        <ArrowRight aria-hidden="true" className="size-4" />
+      </Link>
     </article>
   );
 }
