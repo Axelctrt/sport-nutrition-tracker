@@ -40,7 +40,7 @@ describe('DesktopSidebar', () => {
     const secondaryNavigation = screen.getByRole('navigation', {
       name: 'Navigation secondaire',
     });
-    expect(secondaryNavigation.querySelectorAll('a')).toHaveLength(3);
+    expect(secondaryNavigation.querySelectorAll('a')).toHaveLength(4);
     expect(screen.getByRole('link', { name: 'Paramètres' })).toHaveClass(
       'is-active',
     );

@@ -59,6 +59,7 @@ export const routePaths = {
   analytics: '/analytics',
   reports: '/reports',
   goals: '/goals',
+  coach: '/coach',
   weeklyReview: '/weekly-review',
   rewards: '/rewards',
   friends: '/friends',

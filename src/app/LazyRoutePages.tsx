@@ -298,6 +298,12 @@ const WeeklyReviewPage = lazy(() =>
   })),
 );
 
+const CoachPage = lazy(() =>
+  import('@/features/coach/pages/CoachPage').then((module) => ({
+    default: module.CoachPage,
+  })),
+);
+
 const RewardsCenterPage = lazy(() =>
   import('@/features/rewards/pages/RewardsCenterPage').then((module) => ({
     default: module.RewardsCenterPage,
@@ -671,6 +677,10 @@ export function LazyFriendsPrivacyPage() {
 
 export function LazyWeeklyReviewPage() {
   return <RouteSuspense variant="dashboard"><WeeklyReviewPage /></RouteSuspense>;
+}
+
+export function LazyCoachPage() {
+  return <RouteSuspense variant="dashboard"><CoachPage /></RouteSuspense>;
 }
 
 export function LazyRewardsCenterPage() {

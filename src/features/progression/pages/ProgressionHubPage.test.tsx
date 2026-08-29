@@ -81,6 +81,10 @@ it('hiérarchise le signal, la synthèse puis les destinations secondaires', () 
     'href',
     '/reports',
   );
+  expect(screen.getByRole('link', { name: 'Coach' })).toHaveAttribute(
+    'href',
+    '/coach',
+  );
   expect(screen.getByRole('link', { name: 'Bilan hebdomadaire' })).toHaveAttribute(
     'href',
     '/weekly-review',
