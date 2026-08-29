@@ -7,9 +7,9 @@ import { Card } from '@/shared/ui/Card';
 import { formatLocalDate } from '@/shared/utils/dates';
 
 const orientationLabels: Record<WeightGoal, string> = {
-  loss: 'Perte',
+  loss: 'Perte de poids',
   maintenance: 'Maintien',
-  gain: 'Prise',
+  gain: 'Prise de poids',
 };
 
 function PlanLink({ to, label }: { to: string; label: string }) {
@@ -125,7 +125,20 @@ export function CoachObjectiveCard({ snapshot }: { snapshot: CoachHubSnapshot })
         </div>
         <div className="border-t border-[var(--sp-border-subtle)] pt-4 sm:border-l sm:border-t-0 sm:pl-4 sm:pt-0">
           <p className="text-sm font-semibold text-[var(--sp-text-secondary)]">Phase Coach</p>
-          <p className="mt-1 text-xl font-bold text-[var(--sp-text-primary)]">Bientôt disponible</p>
+          {snapshot.coachPhase.status === 'available' ? (
+            <>
+              <p className="mt-1 text-xl font-bold text-[var(--sp-text-primary)]">
+                {snapshot.coachPhase.phase.label}
+              </p>
+              <p className="mt-2 text-sm leading-6 text-[var(--sp-text-secondary)]">
+                {snapshot.coachPhase.phase.description}
+              </p>
+            </>
+          ) : (
+            <p className="mt-1 text-sm font-semibold text-[var(--sp-text-secondary)]">
+              Phase Coach indisponible
+            </p>
+          )}
         </div>
       </div>
     </Card>

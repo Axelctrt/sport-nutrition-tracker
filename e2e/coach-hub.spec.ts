@@ -4,7 +4,7 @@ import {
   expectNoCriticalHorizontalOverflow,
 } from './helpers/app';
 
-test('agrège le plan Coach et ouvre le Bilan sans perte d’état', async ({ page }, testInfo) => {
+test('agrège le plan Coach, sa phase et ouvre le Bilan sans perte d’état', async ({ page }, testInfo) => {
   test.skip(
     testInfo.project.name !== 'webkit-iphone-15',
     'Ce parcours cible le Hub Coach mobile sur iPhone 15.',
@@ -15,6 +15,8 @@ test('agrège le plan Coach et ouvre le Bilan sans perte d’état', async ({ pa
 
   await expect(page.getByRole('heading', { level: 1, name: 'Coach' })).toBeVisible();
   await expect(page.getByText('Maintien', { exact: true })).toBeVisible();
+  await expect(page.getByText('Phase Coach', { exact: true })).toBeVisible();
+  await expect(page.getByText('Stabilisation', { exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Plan actuel' })).toBeVisible();
   const stepGoal = page
     .getByRole('heading', { name: 'Activité', exact: true })
@@ -33,6 +35,7 @@ test('agrège le plan Coach et ouvre le Bilan sans perte d’état', async ({ pa
   await page.goBack();
   await expect(page.getByRole('heading', { level: 1, name: 'Coach' })).toBeVisible();
   await expect(page.getByText('Maintien', { exact: true })).toBeVisible();
+  await expect(page.getByText('Stabilisation', { exact: true })).toBeVisible();
   await expect(page.getByText(stepGoalText!, { exact: true })).toBeVisible();
   await expectNoCriticalHorizontalOverflow(page);
 });

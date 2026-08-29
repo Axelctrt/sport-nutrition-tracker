@@ -1,4 +1,5 @@
 import type { CoachReviewSnapshot } from '@/domain/coach/coachReview';
+import type { CoachPhase } from '@/domain/coach/coachPhase';
 import type { CoachNextReview } from '@/domain/coach/coachState';
 import type { DailyCoachResult } from '@/domain/coach/dailyCoach';
 import type { LocalDate } from '@/domain/models/common';
@@ -10,6 +11,10 @@ import type { WeeklyReview, WeeklyReviewDecisionStatus } from '@/domain/models/w
 export type CoachHubDailyVerdict =
   | { status: 'available'; result: DailyCoachResult }
   | { status: 'checkInRequired' }
+  | { status: 'unavailable' };
+
+export type CoachHubPhase =
+  | { status: 'available'; phase: CoachPhase }
   | { status: 'unavailable' };
 
 export type CoachHubNutritionPlan =
@@ -58,7 +63,7 @@ export interface CoachHubSnapshot {
   referenceDate: LocalDate;
   dailyVerdict: CoachHubDailyVerdict;
   orientation: WeightGoal;
-  coachPhase: 'notDefined';
+  coachPhase: CoachHubPhase;
   nutritionPlan: CoachHubNutritionPlan;
   activityPlan: CoachHubActivityPlan;
   trainingPlan: CoachHubTrainingPlan;
@@ -73,6 +78,7 @@ export interface BuildCoachHubSnapshotInput {
   profile: UserProfile;
   hasCheckIn: boolean;
   dailyCoachResult?: DailyCoachResult;
+  coachPhase?: CoachPhase;
   target?: DailyTarget;
   plannedSessions: CoachHubTrainingSession[];
   coachReview?: CoachReviewSnapshot;
@@ -111,7 +117,9 @@ export function buildCoachHubSnapshot(
     referenceDate: input.referenceDate,
     dailyVerdict: resolveDailyVerdict(input),
     orientation: input.profile.goal,
-    coachPhase: 'notDefined',
+    coachPhase: input.coachPhase
+      ? { status: 'available', phase: { ...input.coachPhase } }
+      : { status: 'unavailable' },
     nutritionPlan: input.target
       ? {
           status: 'available',
