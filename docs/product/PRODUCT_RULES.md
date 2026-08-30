@@ -138,8 +138,12 @@ Statut : **décisions validées**, sauf mention contraire.
   est reconstruit en mémoire et n’est ni persisté ni synchronisé.
 - Sans check-in du jour, le Hub demande explicitement le check-in et ne calcule
   aucun verdict anticipé. Une indisponibilité technique reste un état distinct.
-- L’orientation affiche uniquement l’objectif existant `loss`, `maintenance`
-  ou `gain`. La phase Coach reste « Bientôt disponible » jusqu’au lot C7.
+- L’Objectif actuel et la Phase Coach sont deux notions distinctes. L’objectif
+  reste celui du profil utilisateur ; la phase MVP en est une projection
+  exclusive : `loss` → « Déficit actif », `maintenance` → « Stabilisation » et
+  `gain` → « Construction ».
+- Les signaux C1 à C5 ne changent pas cette phase MVP. Elle est en lecture seule
+  et ne déclenche aucune transition automatique ni modification durable.
 - La nutrition affiche la cible et les macros déjà calculées pour la date ;
   l’activité et l’entraînement relisent les objectifs et plannings existants.
   L’ouverture du Hub ne recalcule et ne crée aucune cible ni aucun bilan.

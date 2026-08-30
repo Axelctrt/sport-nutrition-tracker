@@ -262,16 +262,25 @@ validation UX dédiée.
 
 ## C7 — Phases de coaching
 
-Introduire une couche stratégique supérieure à `loss / maintenance / gain` :
+Le C7 initial livre un MVP à trois phases, résolues exclusivement depuis
+l'objectif utilisateur existant :
 
-- perte de graisse ;
-- prise de muscle contrôlée ;
-- mini-cut ;
-- maintien ;
-- recomposition ;
-- récupération / consolidation.
+- `loss` → « Déficit actif » ;
+- `maintenance` → « Stabilisation » ;
+- `gain` → « Construction ».
 
-### Mini-cut
+Cette projection est en lecture seule. Le MVP ne gère ni transitions
+automatiques, ni historique des phases, ni critères d'entrée ou de sortie
+dynamiques, ni cycles, ni périodisation.
+
+### Phases avancées différées
+
+Le mini-cut, la recomposition, la récupération / consolidation et des phases
+stratégiques plus fines restent des conceptions futures, **non implémentées et
+hors du C7 MVP actuel**. Elles ne constituent pas de nouveaux lots numérotés et
+nécessiteront chacune un cadrage ainsi qu'une validation produit spécifiques.
+
+#### Doctrine future — mini-cut (non implémentée)
 
 Phase courte et planifiée de perte de graisse, généralement insérée dans une
 prise de muscle, avec sortie prévue dès le départ et retour attendu vers la
@@ -568,7 +577,7 @@ séparée si nécessaire.
 6. C5 — Bilan du Coach.
 7. C6 — page et Plan Coach.
 8. Checkpoint propriétaire Coach.
-9. C7 — phases, dont Mini-cut.
+9. C7 — phases MVP fondées sur l'objectif utilisateur.
 10. C8 — Safety Layer.
 11. C9 — Coach Memory.
 12. C10 — IA uniquement si coût garanti 0 EUR ; sinon skip.
