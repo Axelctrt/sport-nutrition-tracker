@@ -1,4 +1,5 @@
 import { calculateDailyCoach } from '@/application/coach/dailyCoachService';
+import { resolveCurrentCoachPhase } from '@/application/coach/coachPhaseService';
 import {
   calculateIntegratedCoachAnalysis,
   type CalculateIntegratedCoachDecisionInput,
@@ -63,6 +64,7 @@ export async function loadCoachHub(
   profile: UserProfile,
   dependencies: CoachHubServiceDependencies = defaultDependencies,
 ): Promise<CoachHubSnapshot> {
+  const coachPhase = resolveCurrentCoachPhase(profile);
   const [target, checkIn, reviews, workoutSessions, activities, enduranceState] =
     await Promise.all([
       dependencies.targets.getTargetByDate(referenceDate),
@@ -130,6 +132,7 @@ export async function loadCoachHub(
     referenceDate,
     profile,
     hasCheckIn: checkIn !== undefined,
+    ...(coachPhase ? { coachPhase } : {}),
     ...(dailyCoachResult ? { dailyCoachResult } : {}),
     ...(target ? { target } : {}),
     plannedSessions,

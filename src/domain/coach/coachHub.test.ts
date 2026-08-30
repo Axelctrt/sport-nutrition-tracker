@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildCoachHubSnapshot } from '@/domain/coach/coachHub';
+import { resolveCoachPhase } from '@/domain/coach/coachPhase';
 import type { CoachReviewSnapshot } from '@/domain/coach/coachReview';
 import type { DailyCoachResult } from '@/domain/coach/dailyCoach';
 import { createEntity } from '@/shared/utils/entities';
@@ -96,6 +97,7 @@ describe('buildCoachHubSnapshot', () => {
       referenceDate: '2026-08-28',
       profile,
       hasCheckIn: true,
+      coachPhase: resolveCoachPhase(profile.goal)!,
       dailyCoachResult: dailyResult,
       target: createEntity({
         date: '2026-08-28',
@@ -132,7 +134,10 @@ describe('buildCoachHubSnapshot', () => {
       referenceDate: '2026-08-28',
       dailyVerdict: { status: 'available', result: dailyResult },
       orientation: 'loss',
-      coachPhase: 'notDefined',
+      coachPhase: {
+        status: 'available',
+        phase: { id: 'deficit', label: 'Déficit actif', objective: 'loss' },
+      },
       nutritionPlan: { status: 'available', targetCaloriesKcal: 1_800 },
       activityPlan: { dailyStepGoal: 8_500 },
       trainingPlan: { nextSession: { id: 'session-1' } },
@@ -159,6 +164,6 @@ describe('buildCoachHubSnapshot', () => {
 
     expect(snapshot.dailyVerdict).toEqual({ status: 'checkInRequired' });
     expect(snapshot.lastReview).toBeUndefined();
-    expect(snapshot.coachPhase).toBe('notDefined');
+    expect(snapshot.coachPhase).toEqual({ status: 'unavailable' });
   });
 });

@@ -84,6 +84,10 @@ describe('loadCoachHub', () => {
     const snapshot = await loadCoachHub('2026-08-28', profile, deps);
 
     expect(snapshot.dailyVerdict).toEqual({ status: 'checkInRequired' });
+    expect(snapshot.coachPhase).toMatchObject({
+      status: 'available',
+      phase: { id: 'construction', objective: 'gain' },
+    });
     expect(deps.calculateDaily).not.toHaveBeenCalled();
     expect(deps.targets.getTargetByDate).toHaveBeenCalledWith('2026-08-28');
     expect(deps.weeklyReviews.listAll).toHaveBeenCalledOnce();
@@ -108,6 +112,10 @@ describe('loadCoachHub', () => {
     });
     expect(snapshot.nextReview).toEqual({ type: 'condition', condition: 'moreData' });
     expect(snapshot.lastReview?.id).toBe('weekly-review');
+    expect(snapshot.coachPhase).toMatchObject({
+      status: 'available',
+      phase: { id: 'stabilization', objective: 'maintenance' },
+    });
   });
 
   it('agrège les prochaines séances de musculation et d’endurance existantes', async () => {

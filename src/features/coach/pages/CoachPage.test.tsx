@@ -34,7 +34,15 @@ function snapshot(
     referenceDate: '2026-08-28',
     dailyVerdict,
     orientation: 'loss',
-    coachPhase: 'notDefined',
+    coachPhase: {
+      status: 'available',
+      phase: {
+        id: 'deficit',
+        label: 'Déficit actif',
+        description: 'L’objectif actuel place le plan dans une période de perte de poids.',
+        objective: 'loss',
+      },
+    },
     nutritionPlan: {
       status: 'available',
       targetCaloriesKcal: 1_900,
@@ -69,14 +77,25 @@ describe('CoachPage', () => {
     mocks.refresh.mockClear();
   });
 
-  it('demande le check-in sans anticiper de verdict et n’invente aucune phase', () => {
+  it('demande le check-in sans anticiper de verdict et affiche la phase de l’objectif', () => {
     mocks.snapshot = snapshot({ status: 'checkInRequired' });
     render(<MemoryRouter><CoachPage /></MemoryRouter>);
 
     expect(screen.getByText('Effectue ton check-in pour obtenir ton verdict du jour.')).toBeInTheDocument();
-    expect(screen.getByText('Perte')).toBeInTheDocument();
-    expect(screen.getByText('Bientôt disponible')).toBeInTheDocument();
+    expect(screen.getByText('Perte de poids')).toBeInTheDocument();
+    expect(screen.getByText('Déficit actif')).toBeInTheDocument();
     expect(screen.queryByText('Plan maintenu')).not.toBeInTheDocument();
+  });
+
+  it('n’invente aucune phase quand la résolution est indisponible', () => {
+    mocks.snapshot = {
+      ...snapshot({ status: 'checkInRequired' }),
+      coachPhase: { status: 'unavailable' },
+    };
+    render(<MemoryRouter><CoachPage /></MemoryRouter>);
+
+    expect(screen.getByText('Phase Coach indisponible')).toBeInTheDocument();
+    expect(screen.queryByText('Déficit actif')).not.toBeInTheDocument();
   });
 
   it('affiche le verdict C2, le plan existant et les navigations autorisées', () => {
