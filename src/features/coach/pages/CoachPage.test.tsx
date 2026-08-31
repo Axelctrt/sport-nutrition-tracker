@@ -4,6 +4,7 @@ import { CoachPage } from '@/features/coach/pages/CoachPage';
 import type { CoachHubSnapshot } from '@/domain/coach/coachHub';
 import { createEntity } from '@/shared/utils/entities';
 import { createProfileInput } from '@/test/factories/profileFactory';
+import { createCoachSafetyAssessment } from '@/test/factories/coachSafetyFactory';
 
 const mocks = vi.hoisted(() => ({
   snapshot: undefined as CoachHubSnapshot | undefined,
@@ -140,6 +141,44 @@ describe('CoachPage', () => {
     render(<MemoryRouter><CoachPage /></MemoryRouter>);
     expect(screen.getByRole('heading', { name: 'Verdict indisponible' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Plan actuel' })).toBeInTheDocument();
+  });
+
+  it('masque Safety quand tout est clair et affiche les états caution puis bloqué', () => {
+    mocks.snapshot = {
+      ...snapshot({ status: 'checkInRequired' }),
+      safetyAssessment: createCoachSafetyAssessment({
+        status: 'caution',
+        concerns: [{ domain: 'bodyTrend', reasons: ['Perte rapide à surveiller.'], immediateVeto: false }],
+        reasons: ['Perte rapide à surveiller.'],
+      }),
+    };
+    const { rerender } = render(<MemoryRouter><CoachPage /></MemoryRouter>);
+    expect(screen.getByText('Point à surveiller')).toBeInTheDocument();
+    expect(screen.getByText(/Perte rapide à surveiller/)).toBeInTheDocument();
+
+    mocks.snapshot = {
+      ...snapshot({ status: 'checkInRequired' }),
+      safetyAssessment: createCoachSafetyAssessment({
+        status: 'doNotIntensify',
+        concerns: [{ domain: 'acuteContext', reasons: ['Maladie signalée.'], immediateVeto: true }],
+        reasons: ['Maladie signalée.'],
+        blockingFactors: ['Maladie signalée.'],
+      }),
+    };
+    rerender(<MemoryRouter><CoachPage /></MemoryRouter>);
+    expect(screen.getByText('Sécurité Coach')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Pas d’intensification pour le moment.' }))
+      .toBeInTheDocument();
+  });
+
+  it('ne rend aucune carte Safety permanente quand le statut est clear', () => {
+    mocks.snapshot = {
+      ...snapshot({ status: 'checkInRequired' }),
+      safetyAssessment: createCoachSafetyAssessment(),
+    };
+    render(<MemoryRouter><CoachPage /></MemoryRouter>);
+    expect(screen.queryByText('Sécurité Coach')).not.toBeInTheDocument();
+    expect(screen.queryByText('Point à surveiller')).not.toBeInTheDocument();
   });
 
   it('rend une erreur de chargement avec une action de reprise', () => {

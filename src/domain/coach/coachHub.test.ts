@@ -6,6 +6,7 @@ import type { DailyCoachResult } from '@/domain/coach/dailyCoach';
 import { createEntity } from '@/shared/utils/entities';
 import { createProfileInput } from '@/test/factories/profileFactory';
 import { createWeeklyReview } from '@/test/factories/weeklyReviewFactory';
+import { createCoachSafetyAssessment } from '@/test/factories/coachSafetyFactory';
 
 const dailyResult: DailyCoachResult = {
   verdict: 'planMaintained',
@@ -54,11 +55,13 @@ function coachReview(): CoachReviewSnapshot {
       priority: 'low',
       coachState: 'onTrack',
       strengthContext: 'insufficient',
+      safetyAssessment: createCoachSafetyAssessment({ referenceDate: '2026-08-28' }),
       reasons: [],
       blockingFactors: [],
       requiresUserAcceptance: false,
       nextReview: { type: 'date', date: '2026-09-04' },
     },
+    safetyAssessment: createCoachSafetyAssessment({ referenceDate: '2026-08-28' }),
     plan: {
       action: 'maintainPlan',
       label: 'Maintenir le plan',

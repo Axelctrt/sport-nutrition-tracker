@@ -300,22 +300,31 @@ validée ici.
 
 ## C8 — Safety Layer
 
-Créer des garde-fous permettant au Coach de refuser d'intensifier une stratégie
-lorsque plusieurs signaux convergent :
+C8 livre une évaluation déterministe, explicable, read-only et non persistée.
+Elle agrège des préoccupations indépendantes déjà qualifiées : perte excessive
+C1, récupération durablement dégradée C1 (dont faim, énergie, sommeil et
+readiness), performance `degrading` C3, contextes aigus du jour et âge
+structuré du profil.
 
-- perte excessive ;
-- récupération durablement dégradée ;
-- faim élevée persistante ;
-- énergie basse ;
-- performance en baisse ;
-- maladie ;
-- douleur/blessure ;
-- cluster compatible avec faible disponibilité énergétique problématique.
+Contrat livré :
 
-Le Coach ne pose pas de diagnostic médical.
+- zéro préoccupation confirmée → `clear` ;
+- un seul domaine longitudinal → `caution` ;
+- au moins deux domaines indépendants → `doNotIntensify` ;
+- maladie, « Douleur ou blessure » déclarée ou âge inférieur à 18 ans → veto
+  immédiat `doNotIntensify`.
 
-Périmètre initial recommandé pour le coaching autonome de composition
-corporelle complet : 18+.
+L'intensification C8 désigne exclusivement une nouvelle baisse de la cible
+calorique. C4 reste l'autorité de décision ; C8 empêche cette baisse dans C5 et
+la revalide au clic d'acceptation, sans bloquer une hausse protectrice, un
+maintien, la collecte de données ou la revue récupération/activité/entraînement.
+Le Hub C6 affiche seulement les états `caution` et `doNotIntensify`.
+Une perte excessive seule reste `caution` mais interdit défensivement une
+nouvelle baisse incohérente avec le comportement protecteur existant.
+
+Le Coach ne pose pas de diagnostic médical. Les données absentes ne sont ni
+rassurantes ni alarmantes. Aucun cluster médical, score clinique, mémoire,
+historique ou automatisation de stratégie n'est créé par C8.
 
 ## C9 — Coach Memory
 

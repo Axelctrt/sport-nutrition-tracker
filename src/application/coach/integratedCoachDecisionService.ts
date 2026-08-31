@@ -1,4 +1,5 @@
 import { resolveAcceptedCalibrationAdjustment } from '@/application/daily/dailyTargetCoordinator';
+import { calculateCoachSafety } from '@/application/coach/coachSafetyService';
 import { getDailyCoachAnalysisPeriod } from '@/application/coach/dailyCoachService';
 import {
   calculateStrengthPerformance,
@@ -24,6 +25,7 @@ import {
   type ResolveCoachStateResultInput,
 } from '@/domain/coach/coachStateDecision';
 import type { CoachStateResult } from '@/domain/coach/coachState';
+import type { CoachSafetyAssessment } from '@/domain/coach/coachSafety';
 import type { StrengthPerformanceSnapshot } from '@/domain/coach/strengthPerformance';
 import type { LocalDate } from '@/domain/models/common';
 import type { UserProfile } from '@/domain/models/profile';
@@ -46,6 +48,7 @@ import { isValidLocalDate } from '@/shared/validation/localDate';
 
 export interface CalculateIntegratedCoachDecisionInput {
   referenceDate: LocalDate;
+  safetyReferenceDate?: LocalDate;
   profile: UserProfile;
   referenceWeightKg: number;
 }
@@ -54,6 +57,7 @@ export interface IntegratedCoachAnalysis {
   coachStateResult: CoachStateResult;
   strengthPerformance: StrengthPerformanceSnapshot;
   calorieAssessment: CalorieAdaptationAssessment;
+  safetyAssessment: CoachSafetyAssessment;
   decision: IntegratedCoachDecision;
 }
 
@@ -85,6 +89,7 @@ export interface IntegratedCoachDecisionServiceDependencies {
   resolveDecision?: (
     input: ResolveIntegratedCoachDecisionInput,
   ) => IntegratedCoachDecision;
+  calculateSafety?: typeof calculateCoachSafety;
 }
 
 const defaultDependencies: IntegratedCoachDecisionServiceDependencies = {
@@ -105,6 +110,9 @@ export async function calculateIntegratedCoachAnalysis(
 ): Promise<IntegratedCoachAnalysis> {
   if (!isValidLocalDate(input.referenceDate)) {
     throw new Error('La date de référence de la décision Coach intégrée est invalide.');
+  }
+  if (input.safetyReferenceDate && !isValidLocalDate(input.safetyReferenceDate)) {
+    throw new Error('La date de référence Safety est invalide.');
   }
   if (!Number.isFinite(input.referenceWeightKg) || input.referenceWeightKg <= 0) {
     throw new Error('Le poids de référence de la décision Coach intégrée est invalide.');
@@ -194,13 +202,46 @@ export async function calculateIntegratedCoachAnalysis(
     ...(latestAcceptedAdjustmentDate ? { latestAcceptedAdjustmentDate } : {}),
   });
 
+  const safetyReferenceDate = input.safetyReferenceDate ?? input.referenceDate;
+  const safetyUsesAnalysisPeriod = safetyReferenceDate >= analysisStart
+    && safetyReferenceDate <= analysisEnd;
+  const [safetyCheckIns, safetyCheckOuts] = safetyUsesAnalysisPeriod
+    ? [checkIns, checkOuts]
+    : await Promise.all([
+        dependencies.dailyCoaching.listCheckInsBetween(
+          safetyReferenceDate,
+          safetyReferenceDate,
+        ),
+        dependencies.dailyCoaching.listCheckOutsBetween(
+          safetyReferenceDate,
+          safetyReferenceDate,
+        ),
+      ]);
+
+  const safetyAssessment = (dependencies.calculateSafety ?? calculateCoachSafety)({
+    referenceDate: safetyReferenceDate,
+    profile: input.profile,
+    coachStateResult,
+    calorieAssessment,
+    strengthPerformance,
+    checkIns: safetyCheckIns,
+    checkOuts: safetyCheckOuts,
+  });
+
   const decision = (dependencies.resolveDecision ?? resolveIntegratedCoachDecision)({
     referenceDate: input.referenceDate,
     coachStateResult,
     strengthPerformance,
     calorieAssessment,
+    safetyAssessment,
   });
-  return { coachStateResult, strengthPerformance, calorieAssessment, decision };
+  return {
+    coachStateResult,
+    strengthPerformance,
+    calorieAssessment,
+    safetyAssessment,
+    decision,
+  };
 }
 
 export async function calculateIntegratedCoachDecision(

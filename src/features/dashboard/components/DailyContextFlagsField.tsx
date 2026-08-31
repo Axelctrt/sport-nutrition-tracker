@@ -9,6 +9,7 @@ import { checkboxClassName } from '@/shared/forms/formStyles';
 const contextLabels: Record<DailyContextFlag, string> = {
   menstrualCycle: 'Règles ou rétention d’eau',
   illness: 'Maladie',
+  painOrInjury: 'Douleur ou blessure',
   travel: 'Voyage',
   exceptionalPoorSleep: 'Mauvaise nuit exceptionnelle',
   highSodiumMeal: 'Repas très salé ou riche',

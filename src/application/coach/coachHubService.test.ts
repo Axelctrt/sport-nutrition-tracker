@@ -5,6 +5,7 @@ import { createEntity } from '@/shared/utils/entities';
 import { createProfileInput } from '@/test/factories/profileFactory';
 import { createWorkoutSessionInput } from '@/test/factories/strengthFactory';
 import { createCalorieAdaptationAssessment, createWeeklyReview } from '@/test/factories/weeklyReviewFactory';
+import { createCoachSafetyAssessment } from '@/test/factories/coachSafetyFactory';
 
 function integratedAnalysis(): IntegratedCoachAnalysis {
   const nextReview = { type: 'condition' as const, condition: 'moreData' as const };
@@ -41,12 +42,14 @@ function integratedAnalysis(): IntegratedCoachAnalysis {
       blockingFactors: [],
       proposedAdjustmentKcal: 0,
     }),
+    safetyAssessment: createCoachSafetyAssessment({ referenceDate: '2026-08-28' }),
     decision: {
       referenceDate: '2026-08-28',
       primaryAction: 'collectMoreData',
       priority: 'low',
       coachState: 'insufficientData',
       strengthContext: 'insufficient',
+      safetyAssessment: createCoachSafetyAssessment({ referenceDate: '2026-08-28' }),
       reasons: [],
       blockingFactors: [],
       requiresUserAcceptance: false,

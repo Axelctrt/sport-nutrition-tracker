@@ -112,6 +112,10 @@ test('guide le check-in quotidien sans débordement mobile', async ({ page }) =>
 
   await dialog.getByRole('radio', { name: 'Pas aujourd’hui' }).click();
   await dialog.getByRole('radio', { name: 'Fatigué' }).click();
+  await dialog.getByText('Contexte inhabituel').click();
+  await dialog.getByRole('checkbox', { name: 'Douleur ou blessure' }).click();
+  await expect(dialog.getByRole('checkbox', { name: 'Fortes douleurs musculaires' }))
+    .not.toBeChecked();
   await saveButton.click();
 
   await expect(dialog).toBeHidden();
@@ -129,6 +133,13 @@ test('guide le check-in quotidien sans débordement mobile', async ({ page }) =>
   ]);
   await expect(page.getByText('1 étape sur 4')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Modifier le check-in' })).toBeVisible();
+
+  await page.goto('/#/coach');
+  await expect(page.getByText('Sécurité Coach', { exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Pas d’intensification pour le moment.' }))
+    .toBeVisible();
+  await expect(page.getByText(/douleur ou blessure est signalée/i)).toBeVisible();
+  await page.goto('/#/');
 
   await page.getByRole('button', { name: 'Clôturer la journée' }).click();
   const checkOutDialog = page.getByRole('dialog', { name: 'Check-out du soir' });

@@ -7,6 +7,7 @@ import type {
 export const DAILY_CONTEXT_FLAGS = [
   'menstrualCycle',
   'illness',
+  'painOrInjury',
   'travel',
   'exceptionalPoorSleep',
   'highSodiumMeal',

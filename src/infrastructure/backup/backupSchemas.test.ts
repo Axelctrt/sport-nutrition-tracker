@@ -111,6 +111,25 @@ function createDailyTarget(
 }
 
 describe("backupEnvelopeSchema", () => {
+  it("accepte Douleur ou blessure et reste compatible avec l'absence legacy", () => {
+    const envelope = migrateBackupEnvelope(createValidEnvelope());
+    envelope.data.dailyCheckIns = [{
+      id: 'daily-check-in:2026-08-30',
+      date: '2026-08-30',
+      contextFlags: ['painOrInjury'],
+      contextSyncPreference: 'localOnly',
+      completedAt: '2026-08-30T07:00:00.000Z',
+      createdAt: '2026-08-30T07:00:00.000Z',
+      updatedAt: '2026-08-30T07:00:00.000Z',
+    }];
+    expect(backupEnvelopeSchema.parse(envelope).data.dailyCheckIns?.[0]?.contextFlags)
+      .toEqual(['painOrInjury']);
+
+    envelope.data.dailyCheckIns[0]!.contextFlags = [];
+    expect(backupEnvelopeSchema.parse(envelope).data.dailyCheckIns?.[0]?.contextFlags)
+      .toEqual([]);
+  });
+
   it("valide une sauvegarde complète au format courant", () => {
     expect(backupEnvelopeSchema.parse(createValidEnvelope())).toMatchObject({
       format: "sportpilot-backup",

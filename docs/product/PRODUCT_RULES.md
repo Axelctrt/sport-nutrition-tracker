@@ -131,6 +131,31 @@ Statut : **décisions validées**, sauf mention contraire.
   aucune calibration legacy n’est présentée ou applicable comme décision
   Coach. Le snapshot du bilan n’est pas persisté.
 
+## Safety Layer Coach
+
+- C8 évalue en mémoire des préoccupations indépendantes sur la tendance
+  corporelle, la récupération, la performance, le contexte aigu et
+  l’éligibilité. Il réutilise les états C1, la tendance C3, le contexte du jour
+  et l’âge structuré du profil, sans nouveau seuil ni diagnostic médical.
+- Aucun signal confirmé produit `clear`, un seul domaine longitudinal produit
+  `caution`, et au moins deux domaines indépendants produisent
+  `doNotIntensify`. Une maladie, une « Douleur ou blessure » explicitement
+  déclarée ou un âge inférieur à 18 ans applique immédiatement
+  `doNotIntensify`.
+- Dans C8, intensifier signifie uniquement proposer une nouvelle baisse de la
+  cible calorique. Le garde-fou ne bloque ni hausse protectrice, ni maintien,
+  ni collecte de données, ni revue récupération, activité ou entraînement.
+- Une perte excessive qualifiée reste `caution` si elle est le seul domaine,
+  mais interdit défensivement toute nouvelle baisse incohérente ; le moteur
+  calorique existant conserve son comportement protecteur.
+- C4 reste l’autorité de décision. Avant une acceptation C5, les données
+  courantes et Safety sont relues ; une baisse devenue interdite échoue fermé
+  et n’est jamais acceptée. Les raisons restent explicites et non alarmistes.
+- L’évaluation Safety n’est ni persistée ni synchronisée. Le nouveau contexte
+  « Douleur ou blessure » suit les préférences de contexte local/compte déjà
+  existantes ; son absence dans les données historiques reste une absence de
+  signal, jamais une preuve rassurante.
+
 ## Hub Coach
 
 - La page `/coach` agrège en lecture seule le verdict C2, la décision C4/C5,
@@ -150,6 +175,9 @@ Statut : **décisions validées**, sauf mention contraire.
 - La priorité, son explication, ses facteurs bloquants et la prochaine
   réévaluation proviennent exclusivement de la projection C5 de la décision
   C4. Aucun résumé ou levier supplémentaire n’est généré par C6.
+- Le Hub ne conserve aucune carte Safety lorsque l’état est `clear`. Il montre
+  un point discret en `caution` et « Pas d’intensification pour le moment » en
+  `doNotIntensify`, avec les seules raisons confirmées.
 - Le dernier bilan n’est affiché que si une ligne de bilan existe déjà. Le Hub
   est accessible depuis l’Accueil, Progression et la navigation secondaire ;
   les quatre destinations de navigation mobile principales restent inchangées.

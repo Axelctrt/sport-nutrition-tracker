@@ -191,6 +191,25 @@ describe('synchronisation du suivi quotidien', () => {
     }
   });
 
+  it('transporte Douleur ou blessure uniquement avec le contexte account', async () => {
+    const value: DailyCheckIn = {
+      ...checkIn(),
+      contextFlags: ['painOrInjury'],
+    };
+    await local.dailyCheckIns.add(value);
+
+    await synchronizeRealDailyCoaching(
+      local,
+      cloud as unknown as SyncPrototypeDatabase,
+      'user-1',
+    );
+
+    expect(
+      (await cloud.realDailyCoachingDays.get(`#daily-coaching:${DATE}`))
+        ?.checkIn?.contextFlags,
+    ).toEqual(['painOrInjury']);
+  });
+
   it('fusionne independamment le check-in local et le check-out cloud', async () => {
     await local.dailyCheckIns.add(checkIn());
     const remoteCheckOut = checkOut();

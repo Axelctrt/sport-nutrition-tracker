@@ -11,6 +11,7 @@ import {
 import type { CoachNextReview } from '@/domain/coach/coachState';
 import type { StrengthPerformanceSnapshot } from '@/domain/coach/strengthPerformance';
 import { createCalorieAdaptationAssessment, createWeeklyReview } from '@/test/factories/weeklyReviewFactory';
+import { createCoachSafetyAssessment } from '@/test/factories/coachSafetyFactory';
 
 const PERIOD = { weekStart: '2026-08-17' as const, weekEnd: '2026-08-23' as const };
 
@@ -60,12 +61,14 @@ function analysis(
     },
     strengthPerformance,
     calorieAssessment,
+    safetyAssessment: createCoachSafetyAssessment({ referenceDate: PERIOD.weekEnd }),
     decision: {
       referenceDate: PERIOD.weekEnd,
       primaryAction: action,
       priority: 'medium' as const,
       coachState: 'truePlateau' as const,
       strengthContext: 'insufficient' as const,
+      safetyAssessment: createCoachSafetyAssessment({ referenceDate: PERIOD.weekEnd }),
       reasons: ['coachState:truePlateau', 'strengthContext:insufficient'],
       blockingFactors: [],
       ...(candidate === undefined ? {} : { proposedNutritionAdjustmentKcal: candidate }),
@@ -158,6 +161,22 @@ describe('canAcceptCoachWeeklyReview', () => {
     }))).toBe(false);
     expect(canAcceptCoachWeeklyReview(snapshot, createWeeklyReview({
       decisionStatus: 'accepted',
+      proposedAdjustmentKcal: -50,
+    }))).toBe(false);
+  });
+
+  it('refuse défensivement une baisse avec une perte excessive Safety', () => {
+    const snapshot = buildCoachReviewSnapshot(
+      PERIOD,
+      analysis('reviewNutritionTarget', { type: 'date', date: '2026-08-30' }, -50),
+    );
+    snapshot.safetyAssessment = createCoachSafetyAssessment({
+      status: 'caution',
+      concerns: [{ domain: 'bodyTrend', reasons: ['Perte excessive.'], immediateVeto: false }],
+      reasons: ['Perte excessive.'],
+    });
+    expect(canAcceptCoachWeeklyReview(snapshot, createWeeklyReview({
+      decisionStatus: 'pending',
       proposedAdjustmentKcal: -50,
     }))).toBe(false);
   });

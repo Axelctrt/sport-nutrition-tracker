@@ -18,6 +18,7 @@ import {
 import {
   createCalorieAdaptationAssessment,
 } from '@/test/factories/weeklyReviewFactory';
+import { createCoachSafetyAssessment } from '@/test/factories/coachSafetyFactory';
 
 function integratedAnalysis(
   action: IntegratedCoachAnalysis['decision']['primaryAction'] = 'collectMoreData',
@@ -58,12 +59,14 @@ function integratedAnalysis(
       },
     },
     calorieAssessment,
+    safetyAssessment: createCoachSafetyAssessment({ referenceDate: '2026-06-14' }),
     decision: {
       referenceDate: '2026-06-14',
       primaryAction: action,
       priority: 'medium',
       coachState: candidate === 0 ? 'insufficientData' : 'truePlateau',
       strengthContext: 'insufficient',
+      safetyAssessment: createCoachSafetyAssessment({ referenceDate: '2026-06-14' }),
       reasons: [],
       blockingFactors: calorieAssessment.blockingFactors,
       ...(candidate === 0 ? {} : { proposedNutritionAdjustmentKcal: candidate }),
@@ -244,7 +247,11 @@ describe('weekly review service', () => {
     await acceptCoachWeeklyReview('2026-06-08', profile, dependencies);
 
     expect(dependencies.calculateIntegratedAnalysis).toHaveBeenCalledWith(
-      expect.objectContaining({ referenceDate: '2026-06-14', profile }),
+      expect.objectContaining({
+        referenceDate: '2026-06-14',
+        safetyReferenceDate: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+        profile,
+      }),
     );
     expect(dependencies.weeklyReviews.accept).toHaveBeenCalledOnce();
   });
@@ -273,6 +280,38 @@ describe('weekly review service', () => {
 
     await expect(acceptCoachWeeklyReview('2026-06-08', profile, dependencies))
       .rejects.toThrow(/décision Coach a changé/);
+    expect(dependencies.weeklyReviews.accept).not.toHaveBeenCalled();
+  });
+
+  it('recalcule Safety au clic et bloque fail-closed une baisse devenue interdite', async () => {
+    const blocked = integratedAnalysis('maintainPlan', -50);
+    const safetyAssessment = createCoachSafetyAssessment({
+      referenceDate: '2026-06-14',
+      status: 'doNotIntensify',
+      concerns: [{
+        domain: 'acuteContext',
+        reasons: ['Une douleur ou blessure est signalée dans le check-in du jour.'],
+        immediateVeto: true,
+      }],
+      reasons: ['Une douleur ou blessure est signalée dans le check-in du jour.'],
+      blockingFactors: ['Une douleur ou blessure est signalée dans le check-in du jour.'],
+    });
+    blocked.safetyAssessment = safetyAssessment;
+    blocked.decision = {
+      ...blocked.decision,
+      safetyAssessment,
+      blockedAdjustment: { direction: 'decrease', reason: 'safety' },
+      requiresUserAcceptance: false,
+    };
+    delete blocked.decision.proposedNutritionAdjustmentKcal;
+    const dependencies = createDependencies(
+      { ...eligibleReview(), proposedAdjustmentKcal: -50 },
+      blocked,
+    );
+
+    await expect(acceptCoachWeeklyReview('2026-06-08', profile, dependencies))
+      .rejects.toThrow(/décision Coach a changé/);
+    expect(dependencies.calculateIntegratedAnalysis).toHaveBeenCalledOnce();
     expect(dependencies.weeklyReviews.accept).not.toHaveBeenCalled();
   });
 

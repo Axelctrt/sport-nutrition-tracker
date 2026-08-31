@@ -240,6 +240,7 @@ const dailyStepsSchema = datedEntitySchema.extend({
 const dailyContextFlagSchema = z.enum([
   'menstrualCycle',
   'illness',
+  'painOrInjury',
   'travel',
   'exceptionalPoorSleep',
   'highSodiumMeal',

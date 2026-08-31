@@ -1,4 +1,5 @@
 import type { CoachReviewSnapshot } from '@/domain/coach/coachReview';
+import type { CoachSafetyAssessment } from '@/domain/coach/coachSafety';
 import type { CoachPhase } from '@/domain/coach/coachPhase';
 import type { CoachNextReview } from '@/domain/coach/coachState';
 import type { DailyCoachResult } from '@/domain/coach/dailyCoach';
@@ -69,6 +70,7 @@ export interface CoachHubSnapshot {
   trainingPlan: CoachHubTrainingPlan;
   priority?: CoachHubPriority;
   monitoredPoints: string[];
+  safetyAssessment?: CoachSafetyAssessment;
   lastReview?: CoachHubReviewSummary;
   nextReview?: CoachNextReview;
 }
@@ -82,6 +84,7 @@ export interface BuildCoachHubSnapshotInput {
   target?: DailyTarget;
   plannedSessions: CoachHubTrainingSession[];
   coachReview?: CoachReviewSnapshot;
+  safetyAssessment?: CoachSafetyAssessment;
   reviews: WeeklyReview[];
 }
 
@@ -153,6 +156,9 @@ export function buildCoachHubSnapshot(
         }
       : {}),
     monitoredPoints,
+    ...(input.safetyAssessment
+      ? { safetyAssessment: { ...input.safetyAssessment } }
+      : {}),
     ...(lastReview
       ? {
           lastReview: {

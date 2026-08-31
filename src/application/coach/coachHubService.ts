@@ -137,6 +137,9 @@ export async function loadCoachHub(
     ...(target ? { target } : {}),
     plannedSessions,
     ...(coachReview ? { coachReview } : {}),
+    ...(integratedAnalysis
+      ? { safetyAssessment: integratedAnalysis.safetyAssessment }
+      : {}),
     reviews,
   });
 }
