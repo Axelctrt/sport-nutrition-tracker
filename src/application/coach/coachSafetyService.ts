@@ -20,14 +20,41 @@ export interface CalculateCoachSafetyInput {
   checkOuts: readonly DailyCheckOut[];
 }
 
-export function calculateCoachSafety(input: CalculateCoachSafetyInput): CoachSafetyAssessment {
-  const currentCheckIn = input.checkIns.find(({ date }) => date === input.referenceDate);
-  const currentCheckOut = input.checkOuts.find(({ date }) => date === input.referenceDate);
-  const contextFlags = [...new Set([
+export interface CalculateImmediateCoachSafetyInput {
+  referenceDate: LocalDate;
+  profile: Pick<UserProfile, 'ageInformation'>;
+  checkIns: readonly DailyCheckIn[];
+  checkOuts: readonly DailyCheckOut[];
+}
+
+function currentContextFlags(
+  referenceDate: LocalDate,
+  checkIns: readonly DailyCheckIn[],
+  checkOuts: readonly DailyCheckOut[],
+) {
+  const currentCheckIn = checkIns.find(({ date }) => date === referenceDate);
+  const currentCheckOut = checkOuts.find(({ date }) => date === referenceDate);
+  return [...new Set([
     ...(currentCheckIn?.contextFlags ?? []),
     ...(currentCheckOut?.contextFlags ?? []),
   ])];
+}
 
+export function calculateImmediateCoachSafety(
+  input: CalculateImmediateCoachSafetyInput,
+): CoachSafetyAssessment {
+  return resolveCoachSafety({
+    referenceDate: input.referenceDate,
+    contextFlags: currentContextFlags(
+      input.referenceDate,
+      input.checkIns,
+      input.checkOuts,
+    ),
+    ageYears: calculateAgeYears(input.profile.ageInformation, input.referenceDate),
+  });
+}
+
+export function calculateCoachSafety(input: CalculateCoachSafetyInput): CoachSafetyAssessment {
   return resolveCoachSafety({
     referenceDate: input.referenceDate,
     coachState: input.coachStateResult.state,
@@ -39,7 +66,11 @@ export function calculateCoachSafety(input: CalculateCoachSafetyInput): CoachSaf
         && input.calorieAssessment.detectedState === 'degradedRecovery'
       ),
     strengthPerformance: input.strengthPerformance,
-    contextFlags,
+    contextFlags: currentContextFlags(
+      input.referenceDate,
+      input.checkIns,
+      input.checkOuts,
+    ),
     ageYears: calculateAgeYears(input.profile.ageInformation, input.referenceDate),
   });
 }

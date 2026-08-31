@@ -37,9 +37,9 @@ export interface CoachSafetyAssessment {
 
 export interface ResolveCoachSafetyInput {
   referenceDate: LocalDate;
-  coachState: CoachState;
+  coachState?: CoachState;
   bodyTrendIsExcessive?: boolean;
-  strengthPerformance: Pick<StrengthPerformanceSnapshot, 'exercises'>;
+  strengthPerformance?: Pick<StrengthPerformanceSnapshot, 'exercises'>;
   contextFlags: readonly DailyContextFlag[];
   ageYears?: number;
 }
@@ -68,7 +68,7 @@ export function resolveCoachSafety(input: ResolveCoachSafetyInput): CoachSafetyA
   if (input.coachState === 'degradedRecovery') {
     concerns.push(concern('recovery', [RECOVERY_REASON]));
   }
-  if (input.strengthPerformance.exercises.some(({ trend }) => trend === 'degrading')) {
+  if (input.strengthPerformance?.exercises.some(({ trend }) => trend === 'degrading')) {
     concerns.push(concern('performance', [PERFORMANCE_REASON]));
   }
 

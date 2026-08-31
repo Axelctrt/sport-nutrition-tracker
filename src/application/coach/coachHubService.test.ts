@@ -1,13 +1,18 @@
 import { describe, expect, it, vi } from 'vitest';
 import { loadCoachHub, type CoachHubServiceDependencies } from '@/application/coach/coachHubService';
+import { calculateImmediateCoachSafety } from '@/application/coach/coachSafetyService';
 import type { IntegratedCoachAnalysis } from '@/application/coach/integratedCoachDecisionService';
+import type { CoachSafetyAssessment } from '@/domain/coach/coachSafety';
+import type { DailyContextFlag } from '@/domain/models/dailyCoaching';
 import { createEntity } from '@/shared/utils/entities';
 import { createProfileInput } from '@/test/factories/profileFactory';
 import { createWorkoutSessionInput } from '@/test/factories/strengthFactory';
 import { createCalorieAdaptationAssessment, createWeeklyReview } from '@/test/factories/weeklyReviewFactory';
 import { createCoachSafetyAssessment } from '@/test/factories/coachSafetyFactory';
 
-function integratedAnalysis(): IntegratedCoachAnalysis {
+function integratedAnalysis(
+  safetyAssessment = createCoachSafetyAssessment({ referenceDate: '2026-08-28' }),
+): IntegratedCoachAnalysis {
   const nextReview = { type: 'condition' as const, condition: 'moreData' as const };
   return {
     coachStateResult: {
@@ -42,14 +47,14 @@ function integratedAnalysis(): IntegratedCoachAnalysis {
       blockingFactors: [],
       proposedAdjustmentKcal: 0,
     }),
-    safetyAssessment: createCoachSafetyAssessment({ referenceDate: '2026-08-28' }),
+    safetyAssessment,
     decision: {
       referenceDate: '2026-08-28',
       primaryAction: 'collectMoreData',
       priority: 'low',
       coachState: 'insufficientData',
       strengthContext: 'insufficient',
-      safetyAssessment: createCoachSafetyAssessment({ referenceDate: '2026-08-28' }),
+      safetyAssessment,
       reasons: [],
       blockingFactors: [],
       requiresUserAcceptance: false,
@@ -58,11 +63,37 @@ function integratedAnalysis(): IntegratedCoachAnalysis {
   };
 }
 
+function checkIn(contextFlags: DailyContextFlag[]) {
+  return {
+    id: 'daily-check-in:2026-08-28',
+    date: '2026-08-28' as const,
+    contextFlags,
+    contextSyncPreference: 'localOnly' as const,
+    completedAt: '2026-08-28T08:00:00.000Z',
+    createdAt: '2026-08-28T08:00:00.000Z',
+    updatedAt: '2026-08-28T08:00:00.000Z',
+  };
+}
+
+function checkOut(contextFlags: DailyContextFlag[]) {
+  return {
+    id: 'daily-check-out:2026-08-28',
+    date: '2026-08-28' as const,
+    foodJournalComplete: false,
+    contextFlags,
+    contextSyncPreference: 'localOnly' as const,
+    completedAt: '2026-08-28T20:00:00.000Z',
+    createdAt: '2026-08-28T20:00:00.000Z',
+    updatedAt: '2026-08-28T20:00:00.000Z',
+  };
+}
+
 function dependencies(hasCheckIn = false): CoachHubServiceDependencies {
   return {
     targets: { getTargetByDate: vi.fn().mockResolvedValue(undefined) },
     dailyCoaching: {
-      getCheckIn: vi.fn().mockResolvedValue(hasCheckIn ? { id: 'check-in' } : undefined),
+      getCheckIn: vi.fn().mockResolvedValue(hasCheckIn ? checkIn([]) : undefined),
+      getCheckOut: vi.fn().mockResolvedValue(undefined),
     },
     weeklyReviews: { listAll: vi.fn().mockResolvedValue([createWeeklyReview()]) },
     workoutSessions: { listAll: vi.fn().mockResolvedValue([]) },
@@ -77,6 +108,7 @@ function dependencies(hasCheckIn = false): CoachHubServiceDependencies {
       confidence: integratedAnalysis().coachStateResult.confidence,
     }),
     calculateIntegratedAnalysis: vi.fn().mockResolvedValue(integratedAnalysis()),
+    calculateImmediateSafety: calculateImmediateCoachSafety,
   };
 }
 
@@ -158,5 +190,106 @@ describe('loadCoachHub', () => {
     });
     expect(snapshot.trainingPlan.plannedSessions.map(({ source }) => source))
       .toEqual(['endurance', 'strength']);
+  });
+
+  it.each([
+    ['painOrInjury', 'checkIn', /douleur ou blessure/i],
+    ['illness', 'checkOut', /maladie/i],
+  ] satisfies Array<[DailyContextFlag, 'checkIn' | 'checkOut', RegExp]>)(
+    'conserve le veto immédiat %s lorsque l’analyse intégrée échoue',
+    async (contextFlag, source, reason) => {
+      const deps = dependencies(true);
+      deps.dailyCoaching.getCheckIn = vi.fn().mockResolvedValue(
+        source === 'checkIn' ? checkIn([contextFlag]) : checkIn([]),
+      );
+      deps.dailyCoaching.getCheckOut = vi.fn().mockResolvedValue(
+        source === 'checkOut' ? checkOut([contextFlag]) : undefined,
+      );
+      deps.calculateIntegratedAnalysis = vi.fn().mockRejectedValue(
+        new Error('Analyse longitudinale indisponible.'),
+      );
+
+      const snapshot = await loadCoachHub(
+        '2026-08-28',
+        createEntity(createProfileInput()),
+        deps,
+      );
+
+      expect(snapshot.safetyAssessment).toMatchObject({
+        status: 'doNotIntensify',
+        concerns: [expect.objectContaining({
+          domain: 'acuteContext',
+          immediateVeto: true,
+        })],
+      });
+      expect(snapshot.safetyAssessment?.reasons.join(' ')).toMatch(reason);
+    },
+  );
+
+  it('conserve le garde-fou mineur lorsque l’analyse intégrée échoue', async () => {
+    const deps = dependencies(false);
+    deps.calculateIntegratedAnalysis = vi.fn().mockRejectedValue(
+      new Error('Analyse longitudinale indisponible.'),
+    );
+
+    const snapshot = await loadCoachHub(
+      '2026-08-28',
+      createEntity(createProfileInput({
+        ageInformation: { mode: 'birthDate', birthDate: '2010-08-28' },
+      })),
+      deps,
+    );
+
+    expect(snapshot.safetyAssessment).toMatchObject({
+      status: 'doNotIntensify',
+      concerns: [expect.objectContaining({
+        domain: 'eligibility',
+        immediateVeto: true,
+      })],
+    });
+  });
+
+  it('ne fabrique pas de Safety clear lorsque l’analyse intégrée échoue sans veto autonome', async () => {
+    const deps = dependencies(false);
+    deps.calculateIntegratedAnalysis = vi.fn().mockRejectedValue(
+      new Error('Analyse longitudinale indisponible.'),
+    );
+
+    const snapshot = await loadCoachHub(
+      '2026-08-28',
+      createEntity(createProfileInput()),
+      deps,
+    );
+
+    expect(snapshot.safetyAssessment).toBeUndefined();
+  });
+
+  it('conserve la Safety longitudinale complète lorsque l’analyse intégrée réussit', async () => {
+    const fullSafety = createCoachSafetyAssessment({
+      referenceDate: '2026-08-28',
+      status: 'doNotIntensify',
+      concerns: [
+        { domain: 'recovery', immediateVeto: false, reasons: ['Récupération dégradée.'] },
+        { domain: 'performance', immediateVeto: false, reasons: ['Performance en baisse.'] },
+      ],
+      reasons: ['Récupération dégradée.', 'Performance en baisse.'],
+      blockingFactors: ['Récupération dégradée.', 'Performance en baisse.'],
+    }) satisfies CoachSafetyAssessment;
+    const deps = dependencies(false);
+    deps.calculateIntegratedAnalysis = vi.fn().mockResolvedValue(
+      integratedAnalysis(fullSafety),
+    );
+    deps.calculateImmediateSafety = vi.fn(() => {
+      throw new Error('Le repli autonome ne doit pas être calculé.');
+    });
+
+    const snapshot = await loadCoachHub(
+      '2026-08-28',
+      createEntity(createProfileInput()),
+      deps,
+    );
+
+    expect(snapshot.safetyAssessment).toStrictEqual(fullSafety);
+    expect(deps.dailyCoaching.getCheckOut).not.toHaveBeenCalled();
   });
 });
