@@ -18,6 +18,8 @@ test('agrège le plan Coach, sa phase et ouvre le Bilan sans perte d’état', a
   await expect(page.getByText('Phase Coach', { exact: true })).toBeVisible();
   await expect(page.getByText('Stabilisation', { exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Plan actuel' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Historique des décisions' })).toBeVisible();
+  await expect(page.getByText('Aucune décision Coach mémorisée pour le moment.')).toBeVisible();
   const stepGoal = page
     .getByRole('heading', { name: 'Activité', exact: true })
     .locator('..')
@@ -36,6 +38,7 @@ test('agrège le plan Coach, sa phase et ouvre le Bilan sans perte d’état', a
   await expect(page.getByRole('heading', { level: 1, name: 'Coach' })).toBeVisible();
   await expect(page.getByText('Maintien', { exact: true })).toBeVisible();
   await expect(page.getByText('Stabilisation', { exact: true })).toBeVisible();
+  await expect(page.getByText('Aucune décision Coach mémorisée pour le moment.')).toBeVisible();
   await expect(page.getByText(stepGoalText!, { exact: true })).toBeVisible();
   await expectNoCriticalHorizontalOverflow(page);
 });

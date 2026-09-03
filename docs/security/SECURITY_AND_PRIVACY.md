@@ -20,6 +20,10 @@ Statut : **décisions validées**.
   destination et conservation doivent être explicites.
 - Une restauration valide intégrité et version avant écriture et crée une
   sauvegarde de sécurité lorsque le parcours le prévoit.
+- Les contextes inhabituels des check-in/check-out restent locaux par défaut.
+  Leur synchronisation avec le même compte exige le choix explicite « Sur mes
+  appareils » ; l’évaluation Safety dérivée est recalculée localement et n’est
+  jamais transportée comme donnée persistée.
 - Le journal immuable Goals porte l’identifiant du compte dans chaque mutation.
   Le resolver exige à la fois la propriété Dexie Cloud et cet identifiant exact
   avant de rendre une mutation autoritative. Le head causal est déterministe,

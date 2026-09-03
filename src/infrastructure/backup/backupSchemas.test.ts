@@ -577,10 +577,10 @@ describe("backupEnvelopeSchema", () => {
 });
 
 describe("migrateBackupEnvelope", () => {
-  it("migre une sauvegarde version 1 vers la version 9 sans altérer ses données", () => {
+  it("migre une sauvegarde version 1 vers la version 12 sans altérer ses données", () => {
     const migrated = migrateBackupEnvelope(createVersion1Envelope());
 
-    expect(migrated.schemaVersion).toBe(11);
+    expect(migrated.schemaVersion).toBe(12);
     expect(migrated.data.dailyCheckIns).toEqual([]);
     expect(migrated.data.dailyActivityDecisions).toEqual([]);
     expect(migrated.data.dailyCheckOuts).toEqual([]);
@@ -592,10 +592,37 @@ describe("migrateBackupEnvelope", () => {
     expect(migrated.data.workoutSessions).toEqual([]);
     expect(migrated.data.strengthSets).toEqual([]);
     expect(migrated.data.friendActivityPermissions).toEqual([]);
+    expect(migrated.data.coachDecisionMemories).toEqual([]);
   });
 
-  it("migre directement la version 2 vers la version 9", () => {
-    expect(migrateBackupEnvelope(createValidEnvelope()).schemaVersion).toBe(11);
+  it('migre une sauvegarde v11 sans inventer de mémoire Coach', () => {
+    const legacy = migrateBackupEnvelope(createValidEnvelope());
+    legacy.schemaVersion = 11;
+    delete legacy.data.coachDecisionMemories;
+
+    const migrated = migrateBackupEnvelope(legacy);
+
+    expect(migrated.schemaVersion).toBe(12);
+    expect(migrated.data.coachDecisionMemories).toEqual([]);
+    expect(migrated.data.userProfile).toEqual(legacy.data.userProfile);
+  });
+
+  it('rejette une mémoire Coach sans bilan source', () => {
+    const migrated = migrateBackupEnvelope(createValidEnvelope());
+    migrated.data.coachDecisionMemories = [{
+      id: 'coach-decision:missing', weeklyReviewId: 'missing',
+      period: { weekStart: '2026-08-24', weekEnd: '2026-08-30' }, decisionDate: '2026-08-30',
+      phase: { id: 'deficit', label: 'Déficit actif', objective: 'loss' }, coachState: 'onTrack',
+      confidence: { weight: 80, food: 80, activity: 80, recovery: 80, overall: 80, level: 'reliable' },
+      primaryAction: 'maintainPlan', reasons: [], blockingFactors: [], safety: { status: 'clear', reasons: [] },
+      status: 'maintained', decidedAt: '2026-08-30T12:00:00.000Z', nextReview: { type: 'date', date: '2026-09-06' },
+      createdAt: '2026-08-30T12:00:00.000Z', updatedAt: '2026-08-30T12:00:00.000Z',
+    }];
+    expect(backupEnvelopeSchema.safeParse(migrated).success).toBe(false);
+  });
+
+  it("migre directement la version 2 vers la version 12", () => {
+    expect(migrateBackupEnvelope(createValidEnvelope()).schemaVersion).toBe(12);
   });
 
   it("convertit le rewardState v4 en tables utilisateur couvertes explicitement", () => {
@@ -629,7 +656,7 @@ describe("migrateBackupEnvelope", () => {
 
     const migrated = migrateBackupEnvelope(legacy);
 
-    expect(migrated.schemaVersion).toBe(11);
+    expect(migrated.schemaVersion).toBe(12);
     expect(migrated.rewardState).toBeUndefined();
     expect(migrated.includedUserStateTables).toEqual([
       "earnedAchievements",
@@ -702,7 +729,7 @@ describe("migrateBackupEnvelope", () => {
 
     const migrated = migrateBackupEnvelope(version10);
 
-    expect(migrated.schemaVersion).toBe(11);
+    expect(migrated.schemaVersion).toBe(12);
     expect(migrated.data.weights[0]?.provenance).toBeUndefined();
     expect(migrated.data.dailyCheckIns?.[0]?.signalProvenance).toBeUndefined();
     expect(migrated.data.dailyCheckOuts?.[0]?.signalProvenance).toBeUndefined();

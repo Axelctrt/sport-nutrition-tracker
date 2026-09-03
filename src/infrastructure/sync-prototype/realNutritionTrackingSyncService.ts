@@ -4,6 +4,8 @@ import type {
   AcceptedCalorieAdjustment,
   WeeklyReview,
 } from '@/domain/models/weeklyReview';
+import type { CoachDecisionMemoryRecord } from '@/domain/coach/coachMemory';
+import { coachDecisionMemoryIdForReview } from '@/domain/coach/coachMemory';
 import { calculateDailyTarget } from '@/domain/calculations/dailyTarget';
 import {
   buildDailyTargetEnergyInputSnapshot,
@@ -44,6 +46,7 @@ export interface NutritionTrackingAggregate {
   readonly id: string;
   readonly review: WeeklyReview;
   readonly adjustments: readonly AcceptedCalorieAdjustment[];
+  readonly memory?: CoachDecisionMemoryRecord;
   readonly updatedAt: string;
 }
 
@@ -120,10 +123,19 @@ function validateAggregate(aggregate: NutritionTrackingAggregate): void {
   ) {
     throw new Error(`Le bilan ${aggregate.review.weekStart} est accepté mais son ajustement est absent.`);
   }
+  if (aggregate.memory) {
+    if (aggregate.memory.weeklyReviewId !== aggregate.review.id) {
+      throw new Error(`La mémoire ${aggregate.memory.id} référence un bilan absent.`);
+    }
+    if (aggregate.memory.id !== coachDecisionMemoryIdForReview(aggregate.review.id)) {
+      throw new Error(`La mémoire ${aggregate.memory.id} possède un identifiant incohérent.`);
+    }
+  }
 
   const expectedUpdatedAt = maxUpdatedAt([
     aggregate.review,
     ...aggregate.adjustments,
+    ...(aggregate.memory ? [aggregate.memory] : []),
   ]);
   if (aggregate.updatedAt !== expectedUpdatedAt) {
     throw new Error(`Le bilan ${aggregate.review.weekStart} possède un horodatage agrégé incohérent.`);
@@ -133,6 +145,7 @@ function validateAggregate(aggregate: NutritionTrackingAggregate): void {
 function buildAggregates(
   reviews: readonly WeeklyReview[],
   adjustments: readonly AcceptedCalorieAdjustment[],
+  memories: readonly CoachDecisionMemoryRecord[],
 ): NutritionTrackingAggregate[] {
   const reviewById = new Map(reviews.map((review) => [review.id, review]));
   for (const adjustment of adjustments) {
@@ -140,16 +153,34 @@ function buildAggregates(
       throw new Error(`L’ajustement ${adjustment.id} référence un bilan absent.`);
     }
   }
+  const memoryByReviewId = new Map<string, CoachDecisionMemoryRecord>();
+  for (const memory of memories) {
+    if (!reviewById.has(memory.weeklyReviewId)) {
+      throw new Error(`La mémoire ${memory.id} référence un bilan absent.`);
+    }
+    if (memoryByReviewId.has(memory.weeklyReviewId)) {
+      throw new Error(`Le bilan ${memory.weeklyReviewId} possède plusieurs mémoires concurrentes.`);
+    }
+    memoryByReviewId.set(memory.weeklyReviewId, memory);
+  }
 
   return sortById(reviews.map((review) => {
     const reviewAdjustments = sortById(
       adjustments.filter((adjustment) => adjustment.weeklyReviewId === review.id),
     );
+    const memory = memoryByReviewId.get(review.id);
     const aggregate: NutritionTrackingAggregate = {
       id: review.id,
       review,
       adjustments: reviewAdjustments,
-      updatedAt: maxUpdatedAt([review, ...reviewAdjustments]),
+      ...(memory
+        ? { memory }
+        : {}),
+      updatedAt: maxUpdatedAt([
+        review,
+        ...reviewAdjustments,
+        ...(memory ? [memory] : []),
+      ]),
     };
     validateAggregate(aggregate);
     return aggregate;
@@ -190,6 +221,27 @@ function resolveFinalState(state: TrackingState): NutritionTrackingAggregate[] {
   );
 }
 
+function resolveLegacyAggregate(
+  local: NutritionTrackingAggregate | undefined,
+  cloud: NutritionTrackingAggregate | undefined,
+): NutritionTrackingAggregate | undefined {
+  if (!local || !cloud) return local ?? cloud;
+
+  if (local.memory && !cloud.memory) return local;
+  if (cloud.memory && !local.memory) return cloud;
+  if (
+    local.memory
+    && cloud.memory
+    && !sameEntity(local.memory, cloud.memory)
+  ) {
+    // Before a local logical baseline exists, keep the immutable decision
+    // already transported by Dexie Cloud. This avoids making a C9 winner
+    // depend on either device's wall clock.
+    return cloud;
+  }
+  return chooseLatest(local, cloud);
+}
+
 function differenceCount<T extends { id: string }>(
   left: readonly T[],
   right: readonly T[],
@@ -224,14 +276,15 @@ async function readState(
   cloudDatabase: SyncPrototypeDatabase,
   currentUserId: string,
 ): Promise<TrackingState> {
-  const [reviews, adjustments, cloudRows] = await Promise.all([
+  const [reviews, adjustments, memories, cloudRows] = await Promise.all([
     localDatabase.weeklyReviews.toArray(),
     localDatabase.acceptedCalorieAdjustments.toArray(),
+    localDatabase.coachDecisionMemories.toArray(),
     cloudDatabase.realNutritionTracking.toArray(),
   ]);
 
   return {
-    local: buildAggregates(reviews, adjustments),
+    local: buildAggregates(reviews, adjustments, memories),
     cloud: cloudRows
       .filter((row) => belongsToCurrentUser(row, currentUserId))
       .map(fromCloudAggregate)
@@ -399,7 +452,7 @@ export async function synchronizeRealNutritionTracking(
       localValue: localById.get(id),
       cloudValue: cloudById.get(id),
       cloudStamp: logicalSyncStamp(cloudRowById.get(id)),
-      legacyResolve: (local, cloud) => chooseLatest(local, cloud),
+      legacyResolve: resolveLegacyAggregate,
     }));
   }
   const final = sortById(
@@ -422,14 +475,16 @@ export async function synchronizeRealNutritionTracking(
     'rw',
     localDatabase.weeklyReviews,
     localDatabase.acceptedCalorieAdjustments,
+    localDatabase.coachDecisionMemories,
     async () => {
-      const [currentReviews, currentAdjustments] = await Promise.all([
+      const [currentReviews, currentAdjustments, currentMemories] = await Promise.all([
         localDatabase.weeklyReviews.toArray(),
         localDatabase.acceptedCalorieAdjustments.toArray(),
+        localDatabase.coachDecisionMemories.toArray(),
       ]);
       if (
         !sameLocalCollection(
-          buildAggregates(currentReviews, currentAdjustments),
+          buildAggregates(currentReviews, currentAdjustments, currentMemories),
           state.local,
         )
       ) {
@@ -446,6 +501,13 @@ export async function synchronizeRealNutritionTracking(
           await localDatabase.acceptedCalorieAdjustments.bulkPut(
             [...aggregate.adjustments],
           );
+        }
+        await localDatabase.coachDecisionMemories
+          .where('weeklyReviewId')
+          .equals(aggregate.review.id)
+          .delete();
+        if (aggregate.memory) {
+          await localDatabase.coachDecisionMemories.put(aggregate.memory);
         }
       }
       localStateApplied = true;

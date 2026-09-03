@@ -7,14 +7,14 @@ de `docs/architecture` conservent l’historique détaillé.
 
 | Stockage | Version actuelle | Rôle |
 | --- | ---: | --- |
-| `AppDatabase` Dexie | 12 | données utilisateur principales et photos privées locales |
-| Sauvegarde JSON | 11 | export/import contrôlé des données structurées, hors images |
+| `AppDatabase` Dexie | 13 | données utilisateur principales, mémoire Coach et photos privées locales |
+| Sauvegarde JSON | 12 | export/import contrôlé des données structurées, hors images |
 | Archive photos | 1 | export/restauration séparés des images de progression |
 | Runtime Dexie Cloud | 18 | agrégats synchronisables, journal causal Goals et baselines logiques |
 | D1 social | migrations `0000` à `0003` présentes | identité, relations, permissions, snapshots et limites photo nutritionnelle |
 
 La source de la version Dexie principale est
-`src/infrastructure/database/migrations/versions.ts`. Les versions 1 à 12 sont
+`src/infrastructure/database/migrations/versions.ts`. Les versions 1 à 13 sont
 enregistrées dans `AppDatabase.ts`. Une constante ou migration publiée est
 immuable.
 
@@ -26,6 +26,15 @@ La version 12 ajoute deux tables internes :
 Les deux assets et leurs métadonnées sont créés ou supprimés dans une même
 transaction. Un nettoyage local supprime les assets orphelins et les photos
 incomplètes.
+
+La version 13 ajoute uniquement `coachDecisionMemories`, une mémoire compacte
+et déterministe des décisions hebdomadaires stabilisées. La table est vide lors
+de la migration v12 → v13 ; aucune décision historique n’est reconstruite.
+La mémoire voyage dans l’agrégat `realNutritionTracking` de son bilan. Les
+baselines et révisions logiques existantes restent l’autorité de convergence ;
+au premier contact legacy sans baseline, un agrégat portant une mémoire prévaut
+sur sa variante sans mémoire et une décision déjà transportée prévaut sur une
+variante divergente, sans arbitrage par horloge murale.
 
 ## Espaces de données
 
@@ -118,7 +127,7 @@ Une future compaction devra être un lot séparé, mesuré, rétrocompatible et
 prouvé sur les appareils restés offline ; aucune GC opportuniste n’est permise.
 
 Le journal et son head sont des métadonnées de transport cloud, pas une
-nouvelle donnée métier du format de sauvegarde AppDB v11. Une restauration
+nouvelle donnée métier du format de sauvegarde AppDB v12. Une restauration
 AppDB produit ensuite une mutation normale. La suppression de compte/purge
 distante efface mutations, heads, clock legacy et baseline du compte ciblé ;
 logout/reset local reste couvert par l’effacement des tables du runtime Dexie
@@ -129,8 +138,11 @@ Cloud.
 La version JSON 11 ajoute uniquement les provenances optionnelles des pesées
 et des signaux subjectifs Coach. La migration 10 → 11 est conservative : elle
 ne requalifie aucune valeur historique et laisse toute provenance absente en
-état legacy inconnu. Cette évolution ne change ni `AppDatabase` v12 ni le
-runtime Dexie Cloud v18.
+état legacy inconnu. La version JSON 12 ajoute la mémoire Coach ; la migration
+11 → 12 initialise une collection vide sans inventer d’historique. La mémoire
+est sauvegardée et restaurée avec son bilan source. Ces évolutions ne changent
+pas le runtime Dexie Cloud v18 ; la provenance v11 n’avait pas modifié
+`AppDatabase` v12.
 
 - Sauvegarde globale et sélective :
   `src/infrastructure/backup` et `src/application/backup`.

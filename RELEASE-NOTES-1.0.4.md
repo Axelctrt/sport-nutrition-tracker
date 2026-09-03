@@ -65,8 +65,8 @@ Aucun cinquième domaine n’est ajouté.
 - `local-only` → upload directionnel.
 - `cloud-only` → download directionnel.
 - `both` / `unknown` → aucune écriture automatique.
-- Dexie v12.
-- sauvegarde JSON v10.
+- Dexie v13.
+- sauvegarde JSON v12.
 - runtime Dexie Cloud v18, stockage existant migré en place.
 - aucune migration D1.
 - aucune modification des formules calories/macros.

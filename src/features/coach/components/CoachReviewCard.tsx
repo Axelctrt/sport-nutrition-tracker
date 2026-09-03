@@ -58,9 +58,6 @@ export function CoachReviewCard({ snapshot }: { snapshot: CoachHubSnapshot }) {
           <p className="mt-3 text-sm font-semibold leading-6 text-[var(--sp-text-primary)]">
             {nextReviewLabel(snapshot.nextReview)}
           </p>
-          <p className="mt-2 text-xs leading-5 text-[var(--sp-text-muted)]">
-            Historique Coach disponible dans une prochaine version.
-          </p>
         </Card>
       </div>
     </section>

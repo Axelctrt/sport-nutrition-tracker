@@ -115,25 +115,25 @@ const backupMigrations = read(
 );
 
 if (
-  !/DATABASE_VERSION_12\s*=\s*12\s+as\s+const\b/.test(
+  !/DATABASE_VERSION_13\s*=\s*13\s+as\s+const\b/.test(
     databaseVersions,
   ) ||
-  !/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_12\b/.test(
+  !/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_13\b/.test(
     databaseVersions,
   ) ||
   !/databaseSchemaVersion\s*=\s*CURRENT_DATABASE_VERSION\b/.test(
     databaseSchema,
   )
 ) {
-  fail('le schéma Dexie v12 attendu est absent ou mal relié.');
+  fail('le schéma Dexie v13 attendu est absent ou mal relié.');
 }
 
 if (
-  !/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*11\b/.test(
+  !/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*12\b/.test(
     backupMigrations,
   )
 ) {
-  fail('le format de sauvegarde JSON v11 attendu est absent.');
+  fail('le format de sauvegarde JSON v12 attendu est absent.');
 }
 
 console.log(`Audit version réussi : SportPilot ${version}, documentation, schémas et métadonnées cohérents.`);

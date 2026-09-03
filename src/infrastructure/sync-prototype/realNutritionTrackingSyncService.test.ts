@@ -11,6 +11,7 @@ import type {
   AcceptedCalorieAdjustment,
   WeeklyReview,
 } from '@/domain/models/weeklyReview';
+import type { CoachDecisionMemoryRecord } from '@/domain/coach/coachMemory';
 import { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import type { SyncPrototypeDatabase } from '@/infrastructure/sync-prototype/SyncPrototypeDatabase';
 import {
@@ -94,15 +95,37 @@ function adjustment(
   };
 }
 
+function memory(updatedAt = '2026-07-01T08:02:00.000Z'): CoachDecisionMemoryRecord {
+  return {
+    id: 'coach-decision:weekly-review:2026-06-22',
+    weeklyReviewId: 'weekly-review:2026-06-22',
+    period: { weekStart: '2026-06-22', weekEnd: '2026-06-28' },
+    decisionDate: '2026-06-28',
+    phase: { id: 'stabilization', label: 'Stabilisation', objective: 'maintenance' },
+    coachState: 'onTrack',
+    confidence: { weight: 80, food: 80, activity: 80, recovery: 80, overall: 80, level: 'reliable' },
+    primaryAction: 'reviewNutritionTarget', reasons: ['Ajustement confirmé.'], blockingFactors: [],
+    safety: { status: 'clear', reasons: [] },
+    proposedChange: { type: 'nutritionCalories', adjustmentKcalPerDay: 100 },
+    status: 'accepted', decidedAt: updatedAt, effectiveFrom: '2026-06-29',
+    nextReview: { type: 'date', date: '2026-07-05' },
+    createdAt: updatedAt, updatedAt,
+  };
+}
+
 function aggregate(
   reviewValue = review(),
   adjustmentValue = adjustment(),
+  memoryValue?: CoachDecisionMemoryRecord,
 ): NutritionTrackingAggregate {
   return {
     id: reviewValue.id,
     review: reviewValue,
     adjustments: [adjustmentValue],
-    updatedAt: adjustmentValue.updatedAt,
+    ...(memoryValue ? { memory: memoryValue } : {}),
+    updatedAt: [reviewValue.updatedAt, adjustmentValue.updatedAt, memoryValue?.updatedAt ?? '']
+      .sort()
+      .at(-1)!,
   };
 }
 
@@ -191,6 +214,90 @@ describe('synchronisation C3 du suivi nutritionnel', () => {
     expect(second.differingEntityCount).toBe(0);
     expect(await cloud.realNutritionTracking.get('#weekly-review:2026-06-22'))
       .toMatchObject({ adjustments: [expect.objectContaining({ id: 'adjustment-1' })] });
+  });
+
+  it('synchronise la mémoire avec le bilan, isole les comptes et reste idempotent', async () => {
+    await local.weeklyReviews.add(review());
+    await local.acceptedCalorieAdjustments.add(adjustment());
+    await local.coachDecisionMemories.add(memory());
+
+    const first = await synchronizeRealNutritionTracking(local, cloud as unknown as SyncPrototypeDatabase, 'user-1');
+    const retry = await synchronizeRealNutritionTracking(local, cloud as unknown as SyncPrototypeDatabase, 'user-1');
+    expect(first.uploadedReviews).toBe(1);
+    expect(retry.differingEntityCount).toBe(0);
+    expect((await cloud.realNutritionTracking.get('#weekly-review:2026-06-22'))?.memory?.id)
+      .toBe(memory().id);
+    await cloud.realNutritionTracking.update('#weekly-review:2026-06-22', { owner: 'user-1' });
+
+    const otherDevice = new AppDatabase(`sportpilot-c9-device-${crypto.randomUUID()}`);
+    await otherDevice.open();
+    try {
+      const otherAccount = await synchronizeRealNutritionTracking(otherDevice, cloud as unknown as SyncPrototypeDatabase, 'user-2');
+      expect(otherAccount.downloadedReviews).toBe(0);
+      expect(await otherDevice.coachDecisionMemories.count()).toBe(0);
+      const sameAccount = await synchronizeRealNutritionTracking(otherDevice, cloud as unknown as SyncPrototypeDatabase, 'user-1');
+      expect(sameAccount.downloadedReviews).toBe(1);
+      expect(await otherDevice.coachDecisionMemories.get(memory().id)).toEqual(memory());
+    } finally {
+      otherDevice.close();
+      await otherDevice.delete();
+    }
+  });
+
+  it('préserve au bootstrap une mémoire locale malgré une horloge cloud plus avancée', async () => {
+    await local.weeklyReviews.add(review());
+    await local.acceptedCalorieAdjustments.add(adjustment());
+    await local.coachDecisionMemories.add(memory());
+    const futureReview = review('2030-07-01T08:00:00.000Z');
+    const futureAdjustment = {
+      ...adjustment('2030-07-01T08:01:00.000Z'),
+      adjustmentKcalPerDay: 150,
+      resultingCumulativeAdjustmentKcal: 150,
+    };
+    await cloud.realNutritionTracking.add({
+      ...aggregate(futureReview, futureAdjustment),
+      id: '#weekly-review:2026-06-22',
+      owner: 'user-1',
+    });
+
+    await synchronizeRealNutritionTracking(
+      local,
+      cloud as unknown as SyncPrototypeDatabase,
+      'user-1',
+    );
+
+    expect((await cloud.realNutritionTracking.get('#weekly-review:2026-06-22'))?.memory)
+      .toEqual(memory());
+    expect(await local.acceptedCalorieAdjustments.get('adjustment-1'))
+      .toMatchObject({ adjustmentKcalPerDay: 100 });
+  });
+
+  it('conserve au bootstrap la décision déjà transportée en cas de mémoire divergente', async () => {
+    const localMemory = {
+      ...memory('2030-07-01T08:02:00.000Z'),
+      reasons: ['Décision locale concurrente.'],
+    };
+    const transportedMemory = {
+      ...memory('2026-07-01T08:02:00.000Z'),
+      reasons: ['Décision déjà transportée.'],
+    };
+    await local.weeklyReviews.add(review('2030-07-01T08:00:00.000Z'));
+    await local.acceptedCalorieAdjustments.add(adjustment('2030-07-01T08:01:00.000Z'));
+    await local.coachDecisionMemories.add(localMemory);
+    await cloud.realNutritionTracking.add({
+      ...aggregate(review(), adjustment(), transportedMemory),
+      id: '#weekly-review:2026-06-22',
+      owner: 'user-1',
+    });
+
+    await synchronizeRealNutritionTracking(
+      local,
+      cloud as unknown as SyncPrototypeDatabase,
+      'user-1',
+    );
+
+    expect(await local.coachDecisionMemories.get(memory().id))
+      .toEqual(transportedMemory);
   });
 
   it('télécharge le bilan et l’ajustement atomiquement', async () => {

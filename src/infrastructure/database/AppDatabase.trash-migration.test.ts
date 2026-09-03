@@ -41,7 +41,7 @@ describe('migration de la corbeille locale', () => {
       await upgradedDatabase.open();
 
       expect(upgradedDatabase.verno).toBe(CURRENT_DATABASE_VERSION);
-      expect(CURRENT_DATABASE_VERSION).toBe(12);
+      expect(CURRENT_DATABASE_VERSION).toBe(13);
       expect(
         await upgradedDatabase.activities.get('activity-before-trash'),
       ).toBeDefined();

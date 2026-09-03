@@ -76,12 +76,12 @@ if (!deployment.includes("VITE_ENABLE_REAL_NUTRITION_LIBRARY_SYNC: 'true'")) {
 }
 
 const versions = read('src/infrastructure/database/migrations/versions.ts');
-if (!/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_12/.test(versions)) {
-  fail('la base métier principale n’est plus en Dexie v12.');
+if (!/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_13/.test(versions)) {
+  fail('la base métier principale n’est plus en Dexie v13.');
 }
 const backup = read('src/infrastructure/backup/backupMigrations.ts');
-if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*11/.test(backup)) {
-  fail('la sauvegarde n’est plus en JSON v11.');
+if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*12/.test(backup)) {
+  fail('la sauvegarde n’est plus en JSON v12.');
 }
 
 const packageJson = JSON.parse(read('package.json'));

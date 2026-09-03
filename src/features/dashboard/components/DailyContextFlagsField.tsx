@@ -3,8 +3,10 @@ import { useRef } from 'react';
 import {
   DAILY_CONTEXT_FLAGS,
   type DailyContextFlag,
+  type DailyContextSyncPreference,
 } from '@/domain/models/dailyCoaching';
 import { checkboxClassName } from '@/shared/forms/formStyles';
+import { SegmentedControl } from '@/shared/ui/SegmentedControl';
 
 const contextLabels: Record<DailyContextFlag, string> = {
   menstrualCycle: 'Règles ou rétention d’eau',
@@ -21,11 +23,15 @@ const contextLabels: Record<DailyContextFlag, string> = {
 interface DailyContextFlagsFieldProps {
   value: readonly DailyContextFlag[];
   onChange: (value: DailyContextFlag[]) => void;
+  syncPreference: DailyContextSyncPreference;
+  onSyncPreferenceChange: (value: DailyContextSyncPreference) => void;
 }
 
 export function DailyContextFlagsField({
   value,
   onChange,
+  syncPreference,
+  onSyncPreferenceChange,
 }: DailyContextFlagsFieldProps) {
   const firstCheckboxRef = useRef<HTMLInputElement>(null);
   const toggle = (flag: DailyContextFlag) => {
@@ -84,6 +90,23 @@ export function DailyContextFlagsField({
             <span>{contextLabels[flag]}</span>
           </label>
         ))}
+        <div className="mt-2 border-t border-slate-200 px-1 pt-3 dark:border-slate-700 sm:col-span-2">
+          <SegmentedControl
+            label="Conservation du contexte inhabituel"
+            value={syncPreference}
+            items={[
+              { value: 'localOnly', label: 'Uniquement ici' },
+              { value: 'account', label: 'Sur mes appareils' },
+            ]}
+            onChange={(nextValue) => {
+              onSyncPreferenceChange(nextValue as DailyContextSyncPreference);
+            }}
+          />
+          <p className="mt-2 px-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
+            Par défaut, ces informations restent uniquement sur cet appareil.
+            Choisis « Sur mes appareils » pour les retrouver avec ton compte.
+          </p>
+        </div>
       </div>
     </details>
   );

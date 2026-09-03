@@ -53,6 +53,7 @@ import type {
   UnlockedVisualThemeRecord,
   VisualThemePreferenceRecord,
 } from '@/infrastructure/user-state/userStateModels';
+import type { CoachDecisionMemoryRecord } from '@/domain/coach/coachMemory';
 
 export const BACKUP_USER_STATE_TABLE_NAMES = [
   'goals',
@@ -87,6 +88,7 @@ export interface BackupData {
   dailyTargets: DailyTarget[];
   dailyJournalStatuses: DailyJournalStatus[];
   weeklyReviews: WeeklyReview[];
+  coachDecisionMemories?: CoachDecisionMemoryRecord[];
   acceptedCalorieAdjustments: AcceptedCalorieAdjustment[];
   exerciseDefinitions: ExerciseDefinition[];
   workoutTemplates: WorkoutTemplate[];

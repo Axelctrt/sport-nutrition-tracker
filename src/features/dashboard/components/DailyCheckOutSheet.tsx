@@ -3,7 +3,11 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import type {
   CompleteDailyCheckOutInput,
 } from '@/application/daily/dailyCoachingService';
-import type { DailyCheckOut, DailyContextFlag } from '@/domain/models/dailyCoaching';
+import type {
+  DailyCheckOut,
+  DailyContextFlag,
+  DailyContextSyncPreference,
+} from '@/domain/models/dailyCoaching';
 import { DailyContextFlagsField } from '@/features/dashboard/components/DailyContextFlagsField';
 import { checkboxClassName, inputClassName } from '@/shared/forms/formStyles';
 import { BottomSheet } from '@/shared/ui/BottomSheet';
@@ -48,6 +52,8 @@ export function DailyCheckOutSheet({
   const [energyConfirmed, setEnergyConfirmed] = useState(false);
   const [journalComplete, setJournalComplete] = useState(false);
   const [contextFlags, setContextFlags] = useState<DailyContextFlag[]>([]);
+  const [contextSyncPreference, setContextSyncPreference] =
+    useState<DailyContextSyncPreference>('localOnly');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>();
   const [stepsError, setStepsError] = useState<string>();
@@ -63,6 +69,7 @@ export function DailyCheckOutSheet({
     setEnergyConfirmed(false);
     setJournalComplete(checkOut?.foodJournalComplete ?? foodJournalComplete);
     setContextFlags([...(checkOut?.contextFlags ?? [])]);
+    setContextSyncPreference(checkOut?.contextSyncPreference ?? 'localOnly');
     setErrorMessage(undefined);
     setStepsError(undefined);
   }, [actualSteps, checkOut, foodJournalComplete, open]);
@@ -101,6 +108,7 @@ export function DailyCheckOutSheet({
           : {}),
         foodJournalComplete: journalComplete,
         contextFlags,
+        contextSyncPreference,
       });
       onClose();
     } catch (error) {
@@ -264,7 +272,12 @@ export function DailyCheckOutSheet({
           </span>
         </label>
 
-        <DailyContextFlagsField value={contextFlags} onChange={setContextFlags} />
+        <DailyContextFlagsField
+          value={contextFlags}
+          onChange={setContextFlags}
+          syncPreference={contextSyncPreference}
+          onSyncPreferenceChange={setContextSyncPreference}
+        />
       </form>
     </BottomSheet>
   );
