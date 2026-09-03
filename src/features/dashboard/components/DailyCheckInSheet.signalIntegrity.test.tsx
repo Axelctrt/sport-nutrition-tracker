@@ -4,6 +4,54 @@ import { DailyCheckInSheet } from '@/features/dashboard/components/DailyCheckInS
 import type { DailyCheckIn } from '@/domain/models/dailyCoaching';
 
 describe('DailyCheckInSheet signal integrity', () => {
+  it('enregistre explicitement Douleur ou blessure sans la confondre avec les courbatures', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    render(
+      <DailyCheckInSheet
+        open
+        date="2026-08-09"
+        fallbackWeightKg={71.3}
+        onClose={vi.fn()}
+        onSubmit={onSubmit}
+      />,
+    );
+
+    await user.click(screen.getByText('Contexte inhabituel'));
+    await user.click(screen.getByRole('checkbox', { name: 'Douleur ou blessure' }));
+    expect(screen.getByRole('checkbox', { name: 'Fortes douleurs musculaires' }))
+      .not.toBeChecked();
+    await user.click(screen.getByRole('button', { name: 'Enregistrer le check-in' }));
+
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({
+      contextFlags: ['painOrInjury'],
+    }));
+  });
+
+  it('restaure Douleur ou blessure à la réouverture du check-in', async () => {
+    const user = userEvent.setup();
+    render(
+      <DailyCheckInSheet
+        open
+        date="2026-08-09"
+        checkIn={{
+          id: 'daily-check-in:2026-08-09',
+          date: '2026-08-09',
+          contextFlags: ['painOrInjury'],
+          contextSyncPreference: 'localOnly',
+          completedAt: '2026-08-09T07:00:00.000Z',
+          createdAt: '2026-08-09T07:00:00.000Z',
+          updatedAt: '2026-08-09T07:00:00.000Z',
+        }}
+        fallbackWeightKg={71.3}
+        onClose={vi.fn()}
+        onSubmit={vi.fn().mockResolvedValue(undefined)}
+      />,
+    );
+    await user.click(screen.getByText('Contexte inhabituel'));
+    expect(screen.getByRole('checkbox', { name: 'Douleur ou blessure' })).toBeChecked();
+  });
+
   it('omet les signaux subjectifs sans réponse utilisateur', async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn().mockResolvedValue(undefined);

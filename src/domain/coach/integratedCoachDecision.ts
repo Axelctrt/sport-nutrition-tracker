@@ -5,6 +5,10 @@ import type {
 } from '@/domain/coach/coachState';
 import type { CoachStateObservation } from '@/domain/coach/coachStateObservations';
 import type { CoachSignalEvidence } from '@/domain/coach/coachSignalEvidence';
+import {
+  doesCoachSafetyBlockCalorieDecrease,
+  type CoachSafetyAssessment,
+} from '@/domain/coach/coachSafety';
 import type { StrengthPerformanceSnapshot } from '@/domain/coach/strengthPerformance';
 import type { LocalDate } from '@/domain/models/common';
 import type { CalorieAdaptationAssessment } from '@/domain/models/weeklyReview';
@@ -40,6 +44,7 @@ export type IntegratedAdjustmentBlockReason =
   | 'foodAdherence'
   | 'activity'
   | 'strengthPerformance'
+  | 'safety'
   | 'temporaryContext'
   | 'conflictingSignals';
 
@@ -49,6 +54,7 @@ export interface IntegratedCoachDecision {
   priority: CoachPriority;
   coachState: CoachStateResult['state'];
   strengthContext: IntegratedStrengthContext;
+  safetyAssessment: CoachSafetyAssessment;
   reasons: string[];
   blockingFactors: string[];
   proposedNutritionAdjustmentKcal?: number;
@@ -65,6 +71,7 @@ export interface ResolveIntegratedCoachDecisionInput {
   coachStateResult: CoachStateResult;
   strengthPerformance: StrengthPerformanceSnapshot;
   calorieAssessment: CalorieAdaptationAssessment;
+  safetyAssessment: CoachSafetyAssessment;
 }
 
 function isConfirmedUserReported(
@@ -181,6 +188,7 @@ export function resolveIntegratedCoachDecision({
   coachStateResult,
   strengthPerformance,
   calorieAssessment,
+  safetyAssessment,
 }: ResolveIntegratedCoachDecisionInput): IntegratedCoachDecision {
   const strengthContext = summarizeIntegratedStrengthContext(strengthPerformance);
   const candidate = calorieAssessment.proposedAdjustmentKcal;
@@ -190,16 +198,19 @@ export function resolveIntegratedCoachDecision({
     ...coachStateResult.reasons,
     ...strengthReasons(strengthPerformance, strengthContext),
     ...calorieAssessment.reasons,
+    ...safetyAssessment.reasons,
   ];
   const blockingFactors = [
     ...coachStateResult.blockingFactors,
     ...calorieAssessment.blockingFactors,
+    ...safetyAssessment.blockingFactors,
   ];
   const base = {
     referenceDate,
     priority: coachStateResult.priority,
     coachState: coachStateResult.state,
     strengthContext,
+    safetyAssessment,
     reasons,
     blockingFactors,
     requiresUserAcceptance: false,
@@ -225,6 +236,20 @@ export function resolveIntegratedCoachDecision({
     || coachStateResult.confidence.level === 'uncertain'
   ) {
     return blocked('collectMoreData', 'dataQuality');
+  }
+  const safetyDomains = safetyAssessment.concerns.map(({ domain }) => domain);
+  if (
+    candidate < 0
+    && doesCoachSafetyBlockCalorieDecrease(safetyAssessment)
+  ) {
+    return blocked(
+      safetyDomains.includes('recovery')
+        ? 'prioritizeRecovery'
+        : safetyDomains.includes('performance')
+          ? 'reviewTraining'
+          : 'maintainPlan',
+      'safety',
+    );
   }
   if (coachStateResult.state === 'degradedRecovery') {
     return candidate > 0

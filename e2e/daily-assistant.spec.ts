@@ -1,9 +1,80 @@
-import { expect, test, type Locator } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 
 import {
   createLocalProfile,
   expectNoCriticalHorizontalOverflow,
+  getBrowserLocalDate,
 } from './helpers/app';
+
+const DATABASE_NAME = 'sportpilot-local-database';
+const FAILING_FOOD_ENTRY_ID = 'c8-fail-open-invalid-food-entry';
+
+async function seedIntegratedCoachAnalysisFailure(page: Page): Promise<void> {
+  const date = await getBrowserLocalDate(page);
+  await page.evaluate(async ({ databaseName, entryId, entryDate }) => {
+    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open(databaseName);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const transaction = database.transaction('foodEntries', 'readwrite');
+        transaction.oncomplete = () => resolve();
+        transaction.onerror = () => reject(transaction.error);
+        transaction.objectStore('foodEntries').put({
+          id: entryId,
+          date: entryDate,
+          mealId: 'c8-fail-open-meal',
+          mealSlot: 'snacks',
+          sourceType: 'product',
+          reference: {
+            sourceType: 'product',
+            productId: 'c8-fail-open-product',
+            inputMode: 'amount',
+            inputQuantity: -1,
+            normalizedAmount: -1,
+            normalizedUnit: 'g',
+            nutritionPer100Snapshot: {
+              caloriesKcal: 100,
+              proteinGrams: 10,
+              carbohydratesGrams: 10,
+              fatGrams: 2,
+            },
+          },
+          createdAt: `${entryDate}T08:00:00.000Z`,
+          updatedAt: `${entryDate}T08:00:00.000Z`,
+        });
+      });
+    } finally {
+      database.close();
+    }
+  }, {
+    databaseName: DATABASE_NAME,
+    entryId: FAILING_FOOD_ENTRY_ID,
+    entryDate: date,
+  });
+}
+
+async function removeIntegratedCoachAnalysisFailure(page: Page): Promise<void> {
+  await page.evaluate(async ({ databaseName, entryId }) => {
+    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open(databaseName);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const transaction = database.transaction('foodEntries', 'readwrite');
+        transaction.oncomplete = () => resolve();
+        transaction.onerror = () => reject(transaction.error);
+        transaction.objectStore('foodEntries').delete(entryId);
+      });
+    } finally {
+      database.close();
+    }
+  }, { databaseName: DATABASE_NAME, entryId: FAILING_FOOD_ENTRY_ID });
+}
 
 async function expectSheetActionInsideVisualViewport(
   dialog: Locator,
@@ -112,6 +183,10 @@ test('guide le check-in quotidien sans débordement mobile', async ({ page }) =>
 
   await dialog.getByRole('radio', { name: 'Pas aujourd’hui' }).click();
   await dialog.getByRole('radio', { name: 'Fatigué' }).click();
+  await dialog.getByText('Contexte inhabituel').click();
+  await dialog.getByRole('checkbox', { name: 'Douleur ou blessure' }).click();
+  await expect(dialog.getByRole('checkbox', { name: 'Fortes douleurs musculaires' }))
+    .not.toBeChecked();
   await saveButton.click();
 
   await expect(dialog).toBeHidden();
@@ -129,6 +204,15 @@ test('guide le check-in quotidien sans débordement mobile', async ({ page }) =>
   ]);
   await expect(page.getByText('1 étape sur 4')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Modifier le check-in' })).toBeVisible();
+
+  await seedIntegratedCoachAnalysisFailure(page);
+  await page.goto('/#/coach');
+  await expect(page.getByText('Sécurité Coach', { exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Pas d’intensification pour le moment.' }))
+    .toBeVisible();
+  await expect(page.getByText(/douleur ou blessure est signalée/i)).toBeVisible();
+  await removeIntegratedCoachAnalysisFailure(page);
+  await page.goto('/#/');
 
   await page.getByRole('button', { name: 'Clôturer la journée' }).click();
   const checkOutDialog = page.getByRole('dialog', { name: 'Check-out du soir' });

@@ -1,6 +1,10 @@
 import { calculateDailyCoach } from '@/application/coach/dailyCoachService';
 import { resolveCurrentCoachPhase } from '@/application/coach/coachPhaseService';
 import {
+  calculateImmediateCoachSafety,
+  type CalculateImmediateCoachSafetyInput,
+} from '@/application/coach/coachSafetyService';
+import {
   calculateIntegratedCoachAnalysis,
   type CalculateIntegratedCoachDecisionInput,
   type IntegratedCoachAnalysis,
@@ -35,7 +39,7 @@ import { repositories } from '@/infrastructure/repositories/repositories';
 
 export interface CoachHubServiceDependencies {
   targets: Pick<TargetRepository, 'getTargetByDate'>;
-  dailyCoaching: Pick<DailyCoachingRepository, 'getCheckIn'>;
+  dailyCoaching: Pick<DailyCoachingRepository, 'getCheckIn' | 'getCheckOut'>;
   weeklyReviews: Pick<WeeklyReviewRepository, 'listAll'>;
   workoutSessions: Pick<WorkoutSessionRepository, 'listAll'>;
   activities: Pick<ActivityRepository, 'listAll'>;
@@ -46,6 +50,9 @@ export interface CoachHubServiceDependencies {
   calculateIntegratedAnalysis: (
     input: CalculateIntegratedCoachDecisionInput,
   ) => Promise<IntegratedCoachAnalysis>;
+  calculateImmediateSafety: (
+    input: CalculateImmediateCoachSafetyInput,
+  ) => ReturnType<typeof calculateImmediateCoachSafety>;
 }
 
 const defaultDependencies: CoachHubServiceDependencies = {
@@ -57,6 +64,7 @@ const defaultDependencies: CoachHubServiceDependencies = {
   readEndurancePlanningState,
   calculateDaily: calculateDailyCoach,
   calculateIntegratedAnalysis: calculateIntegratedCoachAnalysis,
+  calculateImmediateSafety: calculateImmediateCoachSafety,
 };
 
 export async function loadCoachHub(
@@ -65,8 +73,14 @@ export async function loadCoachHub(
   dependencies: CoachHubServiceDependencies = defaultDependencies,
 ): Promise<CoachHubSnapshot> {
   const coachPhase = resolveCurrentCoachPhase(profile);
-  const [target, checkIn, reviews, workoutSessions, activities, enduranceState] =
-    await Promise.all([
+  const [
+    target,
+    checkIn,
+    reviews,
+    workoutSessions,
+    activities,
+    enduranceState,
+  ] = await Promise.all([
       dependencies.targets.getTargetByDate(referenceDate),
       dependencies.dailyCoaching.getCheckIn(referenceDate),
       dependencies.weeklyReviews.listAll(),
@@ -95,6 +109,21 @@ export async function loadCoachHub(
     profile,
     referenceWeightKg,
   }).catch(() => undefined);
+  let safetyAssessment = integratedAnalysis?.safetyAssessment;
+  if (!safetyAssessment) {
+    const checkOut = await dependencies.dailyCoaching
+      .getCheckOut(referenceDate)
+      .catch(() => undefined);
+    const immediateSafetyAssessment = dependencies.calculateImmediateSafety({
+      referenceDate,
+      profile,
+      checkIns: checkIn ? [checkIn] : [],
+      checkOuts: checkOut ? [checkOut] : [],
+    });
+    if (immediateSafetyAssessment.status !== 'clear') {
+      safetyAssessment = immediateSafetyAssessment;
+    }
+  }
   const coachReview = integratedAnalysis
     ? buildCoachReviewSnapshot({
         weekStart: period.weekStart,
@@ -137,6 +166,7 @@ export async function loadCoachHub(
     ...(target ? { target } : {}),
     plannedSessions,
     ...(coachReview ? { coachReview } : {}),
+    ...(safetyAssessment ? { safetyAssessment } : {}),
     reviews,
   });
 }

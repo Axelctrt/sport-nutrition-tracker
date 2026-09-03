@@ -14,6 +14,10 @@ import type {
   StrengthPerformanceSnapshot,
   StrengthSchedulePerformance,
 } from '@/domain/coach/strengthPerformance';
+import {
+  doesCoachSafetyBlockCalorieDecrease,
+  type CoachSafetyAssessment,
+} from '@/domain/coach/coachSafety';
 import type { LocalDate } from '@/domain/models/common';
 import type { CalorieAdaptationAssessment, WeeklyReview } from '@/domain/models/weeklyReview';
 
@@ -101,6 +105,7 @@ export interface CoachReviewSnapshot {
     };
   };
   decision: IntegratedCoachDecision;
+  safetyAssessment: CoachSafetyAssessment;
   plan: {
     action: IntegratedCoachAction;
     label: string;
@@ -116,6 +121,7 @@ export interface CoachReviewAnalysis {
   strengthPerformance: StrengthPerformanceSnapshot;
   calorieAssessment: CalorieAdaptationAssessment;
   decision: IntegratedCoachDecision;
+  safetyAssessment: CoachSafetyAssessment;
 }
 
 const TECHNICAL_REASON_PREFIXES = [
@@ -154,7 +160,13 @@ export function buildCoachReviewSnapshot(
   period: CoachReviewSnapshot['period'],
   analysis: CoachReviewAnalysis,
 ): CoachReviewSnapshot {
-  const { coachStateResult, strengthPerformance, calorieAssessment, decision } = analysis;
+  const {
+    coachStateResult,
+    strengthPerformance,
+    calorieAssessment,
+    safetyAssessment,
+    decision,
+  } = analysis;
   const strengthContext = summarizeIntegratedStrengthContext(strengthPerformance);
   const reasons = uniqueUserReasons([
     ...coachStateResult.reasons,
@@ -215,6 +227,7 @@ export function buildCoachReviewSnapshot(
       },
     },
     decision,
+    safetyAssessment,
     plan: {
       action: decision.primaryAction,
       label: COACH_REVIEW_ACTION_LABELS[decision.primaryAction],
@@ -237,6 +250,10 @@ export function canAcceptCoachWeeklyReview(
     && snapshot.decision.requiresUserAcceptance
     && candidate !== undefined
     && candidate !== 0
+    && !(
+      candidate < 0
+      && doesCoachSafetyBlockCalorieDecrease(snapshot.safetyAssessment)
+    )
     && review.decisionStatus === 'pending'
     && review.proposedAdjustmentKcal === candidate;
 }

@@ -15,6 +15,7 @@ import {
 import {
   createEnergyArchitectureRetrospectiveReport,
 } from '@/test/factories/energyArchitectureRetrospectiveFactory';
+import { createCoachSafetyAssessment } from '@/test/factories/coachSafetyFactory';
 
 const mocks = vi.hoisted(() => ({
   accept: vi.fn(),
@@ -78,12 +79,14 @@ function coachReview(action: IntegratedCoachAction, candidate?: number) {
       },
     },
     calorieAssessment,
+    safetyAssessment: createCoachSafetyAssessment({ referenceDate: '2026-06-14' }),
     decision: {
       referenceDate: '2026-06-14',
       primaryAction: action,
       priority: 'medium',
       coachState: action === 'maintainPlan' ? 'onTrack' : 'truePlateau',
       strengthContext: 'insufficient',
+      safetyAssessment: createCoachSafetyAssessment({ referenceDate: '2026-06-14' }),
       reasons: [],
       blockingFactors: [],
       ...(candidate === undefined ? {} : { proposedNutritionAdjustmentKcal: candidate }),

@@ -153,6 +153,24 @@ export function CoachReviewOverview({
         <p className="mt-2 text-xl font-bold text-slate-950 dark:text-white">{snapshot.plan.label}</p>
       </Card>
 
+      {snapshot.safetyAssessment.status !== 'clear' ? (
+        <Card className="p-4 sm:p-5" aria-labelledby="coach-safety-title">
+          <p className="text-xs font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
+            {snapshot.safetyAssessment.status === 'doNotIntensify'
+              ? 'Sécurité Coach'
+              : 'Point à surveiller'}
+          </p>
+          <h2 id="coach-safety-title" className="mt-1 text-lg font-bold text-slate-950 dark:text-white">
+            {snapshot.safetyAssessment.status === 'doNotIntensify'
+              ? 'Pas d’intensification pour le moment.'
+              : 'Un signal mérite d’être surveillé.'}
+          </h2>
+          <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-700 dark:text-slate-200">
+            {snapshot.safetyAssessment.reasons.map((reason) => <li key={reason}>• {reason}</li>)}
+          </ul>
+        </Card>
+      ) : null}
+
       <Card className="p-4 sm:p-5" aria-labelledby="coach-plan-title">
         <h2 id="coach-plan-title" className="text-lg font-bold text-slate-950 dark:text-white">Plan de la prochaine période</h2>
         <p className="mt-2 font-semibold text-slate-800 dark:text-slate-100">{snapshot.plan.label}</p>

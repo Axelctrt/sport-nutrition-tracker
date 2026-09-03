@@ -8,6 +8,7 @@ import type { CoachStateObservation } from '@/domain/coach/coachStateObservation
 import type { StrengthPerformanceSnapshot } from '@/domain/coach/strengthPerformance';
 import type { UserProfile } from '@/domain/models/profile';
 import { createCalorieAdaptationAssessment } from '@/test/factories/weeklyReviewFactory';
+import { createCoachSafetyAssessment } from '@/test/factories/coachSafetyFactory';
 
 const profile = {
   id: 'profile-1',
@@ -112,12 +113,14 @@ function dependencies(): IntegratedCoachDecisionServiceDependencies & Record<
       detectedState: 'insufficientData',
       proposedAdjustmentKcal: 0,
     })),
+    calculateSafety: vi.fn(() => createCoachSafetyAssessment()),
     resolveDecision: vi.fn((input) => ({
       referenceDate: input.referenceDate,
       primaryAction: 'collectMoreData' as const,
       priority: input.coachStateResult.priority,
       coachState: input.coachStateResult.state,
       strengthContext: 'insufficient' as const,
+      safetyAssessment: input.safetyAssessment,
       reasons: [],
       blockingFactors: [],
       requiresUserAcceptance: false,
@@ -166,6 +169,14 @@ describe('calculateIntegratedCoachDecision', () => {
     expect(deps.resolveDecision).toHaveBeenCalledWith(expect.objectContaining({
       referenceDate: '2026-08-25',
       strengthPerformance: strengthSnapshot,
+      safetyAssessment: expect.objectContaining({ status: 'clear' }),
+    }));
+    expect(deps.calculateSafety).toHaveBeenCalledWith(expect.objectContaining({
+      referenceDate: '2026-08-25',
+      profile,
+      strengthPerformance: strengthSnapshot,
+      checkIns: [],
+      checkOuts: [],
     }));
   });
 
@@ -185,6 +196,27 @@ describe('calculateIntegratedCoachDecision', () => {
     expect(calorieInput?.observations[0]).not.toHaveProperty('weightKg');
     expect(calorieInput?.observations[0]).not.toHaveProperty('readiness');
     expect(calorieInput?.observations[0]).not.toHaveProperty('expectedSteps');
+  });
+
+  it('relit fail-closed le contexte Safety à sa date courante sans déplacer la période C4', async () => {
+    const deps = dependencies();
+    await calculateIntegratedCoachDecision({
+      referenceDate: '2026-08-25',
+      safetyReferenceDate: '2026-08-30',
+      profile,
+      referenceWeightKg: 80,
+    }, deps);
+
+    expect(deps.dailyCoaching.listCheckInsBetween)
+      .toHaveBeenLastCalledWith('2026-08-30', '2026-08-30');
+    expect(deps.dailyCoaching.listCheckOutsBetween)
+      .toHaveBeenLastCalledWith('2026-08-30', '2026-08-30');
+    expect(deps.calculateSafety).toHaveBeenCalledWith(expect.objectContaining({
+      referenceDate: '2026-08-30',
+    }));
+    expect(deps.resolveDecision).toHaveBeenCalledWith(expect.objectContaining({
+      referenceDate: '2026-08-25',
+    }));
   });
 
   it('n’expose et n’appelle que des lectures repository', async () => {
@@ -215,5 +247,12 @@ describe('calculateIntegratedCoachDecision', () => {
     }, deps)).rejects.toThrow(/invalide/);
     expect(deps.settings.get).not.toHaveBeenCalled();
     expect(deps.calculateStrength).not.toHaveBeenCalled();
+
+    await expect(calculateIntegratedCoachDecision({
+      referenceDate: '2026-08-25',
+      safetyReferenceDate: '2026-08-40',
+      profile,
+      referenceWeightKg: 80,
+    }, deps)).rejects.toThrow(/Safety est invalide/);
   });
 });

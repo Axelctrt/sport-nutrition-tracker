@@ -2,6 +2,7 @@ import { useProfile } from '@/app/providers/profile/useProfile';
 import { CoachObjectiveCard, CoachPlanCard } from '@/features/coach/components/CoachPlanCard';
 import { CoachPriorityCard } from '@/features/coach/components/CoachPriorityCard';
 import { CoachReviewCard } from '@/features/coach/components/CoachReviewCard';
+import { CoachSafetyCard } from '@/features/coach/components/CoachSafetyCard';
 import { CoachVerdictCard } from '@/features/coach/components/CoachVerdictCard';
 import { useCoachHub } from '@/features/coach/hooks/useCoachHub';
 import { Button } from '@/shared/ui/Button';
@@ -47,6 +48,7 @@ export function CoachPage() {
           <CoachVerdictCard verdict={hub.data.dailyVerdict} />
           <CoachObjectiveCard snapshot={hub.data} />
           <CoachPlanCard snapshot={hub.data} />
+          <CoachSafetyCard snapshot={hub.data} />
           <div className="grid gap-3 lg:grid-cols-2">
             <CoachPriorityCard snapshot={hub.data} />
             <CoachReviewCard snapshot={hub.data} />

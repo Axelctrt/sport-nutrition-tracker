@@ -23,6 +23,7 @@ import {
 } from '@/domain/reviews/calorieAdaptationAssessment';
 import { toLocalDate } from '@/shared/utils/dates';
 import { createCalorieAdaptationAssessment } from '@/test/factories/weeklyReviewFactory';
+import { createCoachSafetyAssessment } from '@/test/factories/coachSafetyFactory';
 
 const REFERENCE_DATE: LocalDate = '2026-08-25';
 
@@ -160,6 +161,7 @@ describe('resolveIntegratedCoachDecision', () => {
       coachStateResult: coachState(state, confidence),
       strengthPerformance: strength(...trends),
       calorieAssessment: assessment(candidate, assessmentOverrides),
+      safetyAssessment: createCoachSafetyAssessment({ referenceDate: REFERENCE_DATE }),
     });
 
     expect(result.primaryAction).toBe(action);
@@ -182,6 +184,7 @@ describe('resolveIntegratedCoachDecision', () => {
       coachStateResult: coachState('onTrack'),
       strengthPerformance: snapshot,
       calorieAssessment: assessment(0),
+      safetyAssessment: createCoachSafetyAssessment({ referenceDate: REFERENCE_DATE }),
     });
 
     expect(result.primaryAction).toBe('maintainPlan');
@@ -198,10 +201,95 @@ describe('resolveIntegratedCoachDecision', () => {
       coachStateResult: coachState('activityBelowExpected'),
       strengthPerformance: strength('degrading'),
       calorieAssessment: assessment(50),
+      safetyAssessment: createCoachSafetyAssessment({ referenceDate: REFERENCE_DATE }),
     });
     expect(result.primaryAction).toBe('reviewActivity');
     expect(result).not.toHaveProperty('proposedNutritionAdjustmentKcal');
     expect(result.requiresUserAcceptance).toBe(false);
+  });
+
+  it('bloque avec une raison Safety typée uniquement une baisse sous doNotIntensify', () => {
+    const safetyAssessment = createCoachSafetyAssessment({
+      status: 'doNotIntensify',
+      concerns: [
+        { domain: 'recovery', reasons: ['Récupération à protéger.'], immediateVeto: false },
+        { domain: 'performance', reasons: ['Performance en baisse.'], immediateVeto: false },
+      ],
+      reasons: ['Récupération à protéger.', 'Performance en baisse.'],
+      blockingFactors: ['Récupération à protéger.', 'Performance en baisse.'],
+    });
+    const blocked = resolveIntegratedCoachDecision({
+      referenceDate: REFERENCE_DATE,
+      coachStateResult: coachState('truePlateau'),
+      strengthPerformance: strength('stable'),
+      calorieAssessment: assessment(-50),
+      safetyAssessment,
+    });
+    const protective = resolveIntegratedCoachDecision({
+      referenceDate: REFERENCE_DATE,
+      coachStateResult: coachState('excessiveLoss'),
+      strengthPerformance: strength('stable'),
+      calorieAssessment: assessment(50),
+      safetyAssessment,
+    });
+
+    expect(blocked.blockedAdjustment).toEqual({ direction: 'decrease', reason: 'safety' });
+    expect(blocked).not.toHaveProperty('proposedNutritionAdjustmentKcal');
+    expect(blocked.requiresUserAcceptance).toBe(false);
+    expect(protective.proposedNutritionAdjustmentKcal).toBe(50);
+    expect(protective.requiresUserAcceptance).toBe(true);
+  });
+
+  it('ne bloque ni une baisse en caution, ni un candidat nul', () => {
+    const caution = createCoachSafetyAssessment({
+      status: 'caution',
+      concerns: [{ domain: 'performance', reasons: ['À surveiller.'], immediateVeto: false }],
+      reasons: ['À surveiller.'],
+    });
+    const decrease = resolveIntegratedCoachDecision({
+      referenceDate: REFERENCE_DATE,
+      coachStateResult: coachState('targetTooHigh'),
+      strengthPerformance: strength('stable'),
+      calorieAssessment: assessment(-50),
+      safetyAssessment: caution,
+    });
+    const unchanged = resolveIntegratedCoachDecision({
+      referenceDate: REFERENCE_DATE,
+      coachStateResult: coachState('truePlateau'),
+      strengthPerformance: strength('stable'),
+      calorieAssessment: assessment(0),
+      safetyAssessment: createCoachSafetyAssessment({
+        status: 'doNotIntensify',
+        concerns: [{ domain: 'acuteContext', reasons: ['Maladie.'], immediateVeto: true }],
+        reasons: ['Maladie.'],
+        blockingFactors: ['Maladie.'],
+      }),
+    });
+
+    expect(decrease.proposedNutritionAdjustmentKcal).toBe(-50);
+    expect(decrease.requiresUserAcceptance).toBe(true);
+    expect(unchanged.primaryAction).toBe('monitorTrend');
+    expect(unchanged.requiresUserAcceptance).toBe(false);
+  });
+
+  it('refuse défensivement toute baisse incohérente avec excessiveLoss', () => {
+    const result = resolveIntegratedCoachDecision({
+      referenceDate: REFERENCE_DATE,
+      coachStateResult: coachState('excessiveLoss'),
+      strengthPerformance: strength('stable'),
+      calorieAssessment: assessment(-50),
+      safetyAssessment: createCoachSafetyAssessment({
+        status: 'caution',
+        concerns: [{
+          domain: 'bodyTrend',
+          reasons: ['La perte observée est plus rapide que prévu.'],
+          immediateVeto: false,
+        }],
+        reasons: ['La perte observée est plus rapide que prévu.'],
+      }),
+    });
+    expect(result.blockedAdjustment).toEqual({ direction: 'decrease', reason: 'safety' });
+    expect(result).not.toHaveProperty('proposedNutritionAdjustmentKcal');
   });
 });
 

@@ -47,13 +47,13 @@ describe('dailyCoachingService', () => {
       sleepQuality: 'good',
       readiness: 'high',
       signalConfirmations: { sleepQuality: true, readiness: true },
-      contextFlags: ['travel', 'travel'],
+      contextFlags: ['travel', 'painOrInjury', 'painOrInjury'],
     }, dependencies);
 
     expect(checkIn).toMatchObject({
       id: dailyCheckInIdForDate('2026-07-29'),
       weightEntryId: weightEntryIdForDate('2026-07-29'),
-      contextFlags: ['travel'],
+      contextFlags: ['travel', 'painOrInjury'],
       contextSyncPreference: 'localOnly',
       signalProvenance: {
         sleepQuality: 'userReported',
@@ -62,6 +62,8 @@ describe('dailyCoachingService', () => {
     });
     expect(await database.weights.get(weightEntryIdForDate('2026-07-29')))
       .toMatchObject({ weightKg: 61.5, provenance: 'userMeasurement' });
+    expect((await readDailyCoachingDay('2026-07-29', dependencies)).checkIn?.contextFlags)
+      .toEqual(['travel', 'painOrInjury']);
   });
 
   it('autorise un check-in sans pesée et efface seulement sa référence', async () => {

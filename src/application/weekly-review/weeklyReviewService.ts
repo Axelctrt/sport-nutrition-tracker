@@ -359,6 +359,7 @@ export async function acceptCoachWeeklyReview(
   try {
     analysis = await dependencies.calculateIntegratedAnalysis({
       referenceDate: review.weekEnd,
+      safetyReferenceDate: toLocalDate(),
       profile,
       referenceWeightKg,
     });
