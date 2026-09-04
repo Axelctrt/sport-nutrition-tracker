@@ -39,7 +39,7 @@ test('agrège le plan Coach, sa phase et ouvre le Bilan sans perte d’état', a
   await expect(page.getByRole('heading', { level: 1, name: 'Coach' })).toBeVisible();
   await expect(objectiveCard.getByText('Maintien', { exact: true })).toBeVisible();
   await expect(objectiveCard.getByText('Stabilisation', { exact: true })).toBeVisible();
-  await expect(page.getByText('Aucune décision Coach mémorisée pour le moment.')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Historique des décisions' })).toBeVisible();
   await expect(page.getByText(stepGoalText!, { exact: true })).toBeVisible();
   await expectNoCriticalHorizontalOverflow(page);
 });
