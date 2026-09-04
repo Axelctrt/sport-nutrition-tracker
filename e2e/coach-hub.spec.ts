@@ -14,9 +14,10 @@ test('agrège le plan Coach, sa phase et ouvre le Bilan sans perte d’état', a
   await page.goto('/#/coach');
 
   await expect(page.getByRole('heading', { level: 1, name: 'Coach' })).toBeVisible();
-  await expect(page.getByText('Maintien', { exact: true })).toBeVisible();
-  await expect(page.getByText('Phase Coach', { exact: true })).toBeVisible();
-  await expect(page.getByText('Stabilisation', { exact: true })).toBeVisible();
+  const objectiveCard = page.getByLabel('Maintien', { exact: true });
+  await expect(objectiveCard.getByText('Maintien', { exact: true })).toBeVisible();
+  await expect(objectiveCard.getByText('Phase Coach', { exact: true })).toBeVisible();
+  await expect(objectiveCard.getByText('Stabilisation', { exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Plan actuel' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Historique des décisions' })).toBeVisible();
   await expect(page.getByText('Aucune décision Coach mémorisée pour le moment.')).toBeVisible();
@@ -36,8 +37,8 @@ test('agrège le plan Coach, sa phase et ouvre le Bilan sans perte d’état', a
 
   await page.goBack();
   await expect(page.getByRole('heading', { level: 1, name: 'Coach' })).toBeVisible();
-  await expect(page.getByText('Maintien', { exact: true })).toBeVisible();
-  await expect(page.getByText('Stabilisation', { exact: true })).toBeVisible();
+  await expect(objectiveCard.getByText('Maintien', { exact: true })).toBeVisible();
+  await expect(objectiveCard.getByText('Stabilisation', { exact: true })).toBeVisible();
   await expect(page.getByText('Aucune décision Coach mémorisée pour le moment.')).toBeVisible();
   await expect(page.getByText(stepGoalText!, { exact: true })).toBeVisible();
   await expectNoCriticalHorizontalOverflow(page);
