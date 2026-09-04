@@ -32,6 +32,8 @@ import {
   type CloudSyncExecutionOptions,
 } from '@/infrastructure/sync-prototype/cloudSyncValue';
 import {
+  logicalSyncBaselineId,
+  logicalSyncBaselineTable,
   logicalSyncStamp,
   persistLogicalSyncBaseline,
   resolveDatabaseLogicalSyncState,
@@ -234,12 +236,30 @@ function resolveLegacyAggregate(
     && cloud.memory
     && !sameEntity(local.memory, cloud.memory)
   ) {
-    // Before a local logical baseline exists, keep the immutable decision
-    // already transported by Dexie Cloud. This avoids making a C9 winner
-    // depend on either device's wall clock.
-    return cloud;
+    throw new Error(
+      `Le bilan ${local.id} possède deux décisions Coach concurrentes sans baseline.`,
+    );
   }
   return chooseLatest(local, cloud);
+}
+
+function hasUnsafeBootstrapDecisionConflict(
+  local: NutritionTrackingAggregate | undefined,
+  cloud: NutritionTrackingAggregate | undefined,
+): boolean {
+  if (!local || !cloud) return false;
+  if (!local.memory && !cloud.memory) return false;
+  if (
+    local.memory
+    && cloud.memory
+    && sameEntity(local.memory, cloud.memory)
+  ) {
+    return false;
+  }
+  return !sameEntity(
+    { review: local.review, adjustments: local.adjustments },
+    { review: cloud.review, adjustments: cloud.adjustments },
+  ) || Boolean(local.memory && cloud.memory);
 }
 
 function differenceCount<T extends { id: string }>(
@@ -439,10 +459,23 @@ export async function synchronizeRealNutritionTracking(
   );
   const actorId = await resolveSyncActorId(localDatabase);
   const ids = new Set([...localById.keys(), ...cloudById.keys()]);
+  const baselineTable = logicalSyncBaselineTable(cloudDatabase);
+  const deferredBootstrapConflictIds = new Set<string>();
   const resolutions: DatabaseLogicalSyncResolution<
     NutritionTrackingAggregate | undefined
   >[] = [];
   for (const id of ids) {
+    if (hasUnsafeBootstrapDecisionConflict(localById.get(id), cloudById.get(id))) {
+      const baseline = await baselineTable?.get(logicalSyncBaselineId(
+        currentUserId,
+        'nutrition-tracking',
+        id,
+      ));
+      if (!baseline) {
+        deferredBootstrapConflictIds.add(id);
+        continue;
+      }
+    }
     resolutions.push(await resolveDatabaseLogicalSyncState({
       cloudDatabase,
       accountUserId: currentUserId,
@@ -456,17 +489,31 @@ export async function synchronizeRealNutritionTracking(
     }));
   }
   const final = sortById(
-    resolutions
-      .map((resolution) => resolution.value)
-      .filter(
-        (value): value is NutritionTrackingAggregate => value !== undefined,
-      ),
+    [
+      ...resolutions
+        .map((resolution) => resolution.value)
+        .filter(
+          (value): value is NutritionTrackingAggregate => value !== undefined,
+        ),
+      ...[...deferredBootstrapConflictIds]
+        .map((id) => localById.get(id))
+        .filter(
+          (value): value is NutritionTrackingAggregate => value !== undefined,
+        ),
+    ],
   );
   const preview = buildPreview(state, final);
   const completedAt = new Date().toISOString();
 
   const uploaded = writeCloud
-    ? final.filter((value) => !sameEntity(cloudById.get(value.id), value))
+    ? resolutions
+        .map((resolution) => resolution.value)
+        .filter(
+          (value): value is NutritionTrackingAggregate => (
+            value !== undefined
+            && !sameEntity(cloudById.get(value.id), value)
+          ),
+        )
     : [];
   const downloaded = final.filter((value) => !sameEntity(localById.get(value.id), value));
 
@@ -492,6 +539,7 @@ export async function synchronizeRealNutritionTracking(
       }
 
       for (const aggregate of final) {
+        if (deferredBootstrapConflictIds.has(aggregate.id)) continue;
         validateAggregate(aggregate);
         await localDatabase.weeklyReviews.put(aggregate.review);
         await localDatabase.acceptedCalorieAdjustments
@@ -532,6 +580,7 @@ export async function synchronizeRealNutritionTracking(
 
   const allAdjustments = final.flatMap((value) => [...value.adjustments]);
   const recalculatedDailyTargets = localStateApplied
+    && deferredBootstrapConflictIds.size === 0
     ? await reconcileDailyTargets(localDatabase, allAdjustments, completedAt)
     : 0;
 
