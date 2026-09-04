@@ -185,6 +185,7 @@ test('guide le check-in quotidien sans débordement mobile', async ({ page }) =>
   await dialog.getByRole('radio', { name: 'Fatigué' }).click();
   await dialog.getByText('Contexte inhabituel').click();
   await dialog.getByRole('checkbox', { name: 'Douleur ou blessure' }).click();
+  await dialog.getByRole('radio', { name: 'Sur mes appareils' }).click();
   await expect(dialog.getByRole('checkbox', { name: 'Fortes douleurs musculaires' }))
     .not.toBeChecked();
   await saveButton.click();

@@ -11,12 +11,12 @@ import {
 
 const loadWeeklyReview = vi.fn();
 const acceptCoachWeeklyReview = vi.fn();
-const rejectWeeklyReview = vi.fn();
+const rejectCoachWeeklyReview = vi.fn();
 
 vi.mock('@/application/weekly-review/weeklyReviewService', () => ({
   loadWeeklyReview: (...args: unknown[]) => loadWeeklyReview(...args),
   acceptCoachWeeklyReview: (...args: unknown[]) => acceptCoachWeeklyReview(...args),
-  rejectWeeklyReview: (...args: unknown[]) => rejectWeeklyReview(...args),
+  rejectCoachWeeklyReview: (...args: unknown[]) => rejectCoachWeeklyReview(...args),
 }));
 
 function snapshot(status: 'pending' | 'accepted' = 'pending'): WeeklyReviewSnapshot {
@@ -34,7 +34,7 @@ describe('useWeeklyReview', () => {
     vi.clearAllMocks();
     loadWeeklyReview.mockResolvedValue(snapshot());
     acceptCoachWeeklyReview.mockResolvedValue(createWeeklyReview({ decisionStatus: 'accepted' }));
-    rejectWeeklyReview.mockResolvedValue(createWeeklyReview({ decisionStatus: 'rejected' }));
+    rejectCoachWeeklyReview.mockResolvedValue(createWeeklyReview({ decisionStatus: 'rejected' }));
   });
 
   it('conserve les données affichées pendant l’acceptation puis recharge silencieusement', async () => {

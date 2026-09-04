@@ -14,6 +14,21 @@ const baseProps = {
 };
 
 describe('DailyCheckOutSheet signal integrity', () => {
+  it('conserve le partage compte explicite du contexte à la réédition', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    const checkOut: DailyCheckOut = {
+      id: 'check-out-context', date: '2026-08-09', foodJournalComplete: true,
+      contextFlags: ['painOrInjury'], contextSyncPreference: 'account',
+      completedAt: '2026-08-09T20:00:00.000Z', createdAt: '2026-08-09T20:00:00.000Z', updatedAt: '2026-08-09T20:00:00.000Z',
+    };
+    render(<DailyCheckOutSheet {...baseProps} checkOut={checkOut} onSubmit={onSubmit} />);
+    await user.click(screen.getByText('Contexte inhabituel'));
+    expect(screen.getByRole('radio', { name: 'Sur mes appareils' })).toHaveAttribute('aria-checked', 'true');
+    await user.click(screen.getByRole('button', { name: 'Clôturer la journée' }));
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ contextSyncPreference: 'account' }));
+  });
+
   it('omet faim et énergie sans réponse utilisateur', async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn().mockResolvedValue(undefined);

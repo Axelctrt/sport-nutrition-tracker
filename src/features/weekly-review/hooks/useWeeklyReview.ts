@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   acceptCoachWeeklyReview,
   loadWeeklyReview,
-  rejectWeeklyReview,
+  rejectCoachWeeklyReview,
   type WeeklyReviewSnapshot,
 } from '@/application/weekly-review/weeklyReviewService';
 import type { LocalDate } from '@/domain/models/common';
@@ -50,18 +50,18 @@ export function useWeeklyReview(referenceDate: LocalDate, profile: UserProfile |
   }, [data, load, profile]);
 
   const reject = useCallback(async () => {
-    if (!data) return;
+    if (!data || !profile) return;
     setActionStatus('rejecting');
     setErrorMessage(undefined);
     try {
-      await rejectWeeklyReview(data.review.weekStart);
+      await rejectCoachWeeklyReview(data.review.weekStart, profile);
       await load(true);
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Impossible de refuser la proposition.');
     } finally {
       setActionStatus('idle');
     }
-  }, [data, load]);
+  }, [data, load, profile]);
 
   return { data, status, actionStatus, errorMessage, refresh, accept, reject };
 }

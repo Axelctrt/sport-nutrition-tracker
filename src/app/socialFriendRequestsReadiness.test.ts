@@ -22,8 +22,8 @@ const snapshot: FriendsPrivacySnapshot = {
 
 describe('readiness demandes amis réelles 0.27.0 F2', () => {
   it('conserve les versions de stockage publiées sans backend inventé', () => {
-    expect(databaseSchemaVersion).toBe(12);
-    expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(11);
+    expect(databaseSchemaVersion).toBe(13);
+    expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(12);
   });
 
   it('envoie une demande compatible userId uniquement après recherche exacte trouvée', async () => {

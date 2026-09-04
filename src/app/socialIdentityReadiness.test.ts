@@ -13,8 +13,8 @@ import { databaseSchemaVersion } from '@/infrastructure/database/schema';
 
 describe('readiness identité sociale 0.27.0 F1', () => {
   it('conserve les versions de stockage publiées sans nouvelle table sociale', () => {
-    expect(databaseSchemaVersion).toBe(12);
-    expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(11);
+    expect(databaseSchemaVersion).toBe(13);
+    expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(12);
   });
 
   it('valide le handle public exact sans arobase en stockage', () => {

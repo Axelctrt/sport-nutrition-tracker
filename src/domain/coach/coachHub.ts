@@ -8,6 +8,7 @@ import type { PlannedActivityCalorieSnapshot } from '@/domain/models/plannedActi
 import type { UserProfile, WeightGoal } from '@/domain/models/profile';
 import type { DailyTarget } from '@/domain/models/targets';
 import type { WeeklyReview, WeeklyReviewDecisionStatus } from '@/domain/models/weeklyReview';
+import type { CoachDecisionMemoryRecord } from '@/domain/coach/coachMemory';
 
 export type CoachHubDailyVerdict =
   | { status: 'available'; result: DailyCoachResult }
@@ -73,6 +74,7 @@ export interface CoachHubSnapshot {
   safetyAssessment?: CoachSafetyAssessment;
   lastReview?: CoachHubReviewSummary;
   nextReview?: CoachNextReview;
+  decisionHistory: CoachDecisionMemoryRecord[];
 }
 
 export interface BuildCoachHubSnapshotInput {
@@ -86,6 +88,7 @@ export interface BuildCoachHubSnapshotInput {
   coachReview?: CoachReviewSnapshot;
   safetyAssessment?: CoachSafetyAssessment;
   reviews: WeeklyReview[];
+  memories?: CoachDecisionMemoryRecord[];
 }
 
 function resolveDailyVerdict(
@@ -169,5 +172,20 @@ export function buildCoachHubSnapshot(
           },
         }
       : {}),
+    decisionHistory: [...(input.memories ?? [])]
+      .sort((left, right) => (
+        right.decisionDate.localeCompare(left.decisionDate)
+        || right.decidedAt.localeCompare(left.decidedAt)
+      ))
+      .map((memory) => ({
+        ...memory,
+        period: { ...memory.period },
+        phase: { ...memory.phase },
+        confidence: { ...memory.confidence },
+        reasons: [...memory.reasons],
+        blockingFactors: [...memory.blockingFactors],
+        safety: { ...memory.safety, reasons: [...memory.safety.reasons] },
+        nextReview: { ...memory.nextReview },
+      })),
   };
 }

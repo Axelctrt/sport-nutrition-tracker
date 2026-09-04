@@ -9,8 +9,8 @@ import { syncPublicDeploymentConfig } from '@/infrastructure/sync-prototype/sync
 describe('publication 0.26.0 du centre de synchronisation unifié', () => {
   it('conserve les versions de stockage pendant l’unification de l’interface', () => {
     expect(__APP_VERSION__).toBe('1.0.4');
-    expect(databaseSchemaVersion).toBe(12);
-    expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(11);
+    expect(databaseSchemaVersion).toBe(13);
+    expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(12);
     expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(18);
     expect(SYNC_PROTOTYPE_DATABASE_NAME).toBe(
       'sportpilot-sync-runtime-0.20.0-v16',

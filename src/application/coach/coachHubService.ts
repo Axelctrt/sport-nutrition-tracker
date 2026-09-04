@@ -35,12 +35,14 @@ import type { DailyCoachingRepository } from '@/infrastructure/repositories/cont
 import type { TargetRepository } from '@/infrastructure/repositories/contracts/TargetRepository';
 import type { WeeklyReviewRepository } from '@/infrastructure/repositories/contracts/WeeklyReviewRepository';
 import type { WorkoutSessionRepository } from '@/infrastructure/repositories/contracts/WorkoutSessionRepository';
+import type { CoachMemoryRepository } from '@/infrastructure/repositories/contracts/CoachMemoryRepository';
 import { repositories } from '@/infrastructure/repositories/repositories';
 
 export interface CoachHubServiceDependencies {
   targets: Pick<TargetRepository, 'getTargetByDate'>;
   dailyCoaching: Pick<DailyCoachingRepository, 'getCheckIn' | 'getCheckOut'>;
   weeklyReviews: Pick<WeeklyReviewRepository, 'listAll'>;
+  coachMemory: Pick<CoachMemoryRepository, 'listAll'>;
   workoutSessions: Pick<WorkoutSessionRepository, 'listAll'>;
   activities: Pick<ActivityRepository, 'listAll'>;
   readEndurancePlanningState: () => EndurancePlanningState;
@@ -59,6 +61,7 @@ const defaultDependencies: CoachHubServiceDependencies = {
   targets: repositories.targets,
   dailyCoaching: repositories.dailyCoaching,
   weeklyReviews: repositories.weeklyReviews,
+  coachMemory: repositories.coachMemory,
   workoutSessions: repositories.workoutSessions,
   activities: repositories.activities,
   readEndurancePlanningState,
@@ -77,6 +80,7 @@ export async function loadCoachHub(
     target,
     checkIn,
     reviews,
+    memories,
     workoutSessions,
     activities,
     enduranceState,
@@ -84,6 +88,7 @@ export async function loadCoachHub(
       dependencies.targets.getTargetByDate(referenceDate),
       dependencies.dailyCoaching.getCheckIn(referenceDate),
       dependencies.weeklyReviews.listAll(),
+      dependencies.coachMemory.listAll(),
       dependencies.workoutSessions.listAll(),
       dependencies.activities.listAll(),
       Promise.resolve()
@@ -168,5 +173,6 @@ export async function loadCoachHub(
     ...(coachReview ? { coachReview } : {}),
     ...(safetyAssessment ? { safetyAssessment } : {}),
     reviews,
+    memories,
   });
 }

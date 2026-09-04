@@ -88,8 +88,8 @@ if (failures.length === 0) {
     '`cloud-only`',
     '`both`',
     '`unknown`',
-    'Dexie v12',
-    'sauvegarde JSON v10',
+    'Dexie v13',
+    'sauvegarde JSON v12',
     'runtime Dexie Cloud v18',
     'aucune migration D1',
     'aucune modification des formules calories/macros',
@@ -217,8 +217,8 @@ if (failures.length === 0) {
   const versions = read('src/infrastructure/database/migrations/versions.ts');
   const backup = read('src/infrastructure/backup/backupMigrations.ts');
   const cloud = read('src/infrastructure/sync-prototype/SyncPrototypeDatabase.ts');
-  if (!/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_12\b/.test(versions)) fail('Dexie doit utiliser la v12.');
-  if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*11\b/.test(backup)) fail('la sauvegarde JSON doit rester en v11.');
+  if (!/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_13\b/.test(versions)) fail('Dexie doit utiliser la v13.');
+  if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*12\b/.test(backup)) fail('la sauvegarde JSON doit utiliser la v12.');
   if (!cloud.includes('SYNC_PROTOTYPE_DATABASE_VERSION = 18')) fail('le runtime cloud doit utiliser la v18.');
 }
 

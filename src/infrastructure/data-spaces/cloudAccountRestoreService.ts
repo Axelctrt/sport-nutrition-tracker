@@ -208,6 +208,7 @@ type RestoreTableName = Extract<
   | 'dailyTargets'
   | 'dailyJournalStatuses'
   | 'weeklyReviews'
+  | 'coachDecisionMemories'
   | 'acceptedCalorieAdjustments'
   | 'deletionRecords'
 >;
@@ -245,6 +246,7 @@ const RESTORE_TABLE_NAMES: readonly RestoreTableName[] = [
   'dailyTargets',
   'dailyJournalStatuses',
   'weeklyReviews',
+  'coachDecisionMemories',
   'acceptedCalorieAdjustments',
   'deletionRecords',
 ];
@@ -380,6 +382,7 @@ function meaningfulTargetSnapshot(snapshot: RestoreSnapshot): Record<string, unk
     recipeIngredients: snapshot.recipeIngredients,
     dailyJournalStatuses: snapshot.dailyJournalStatuses,
     weeklyReviews: snapshot.weeklyReviews,
+    coachDecisionMemories: snapshot.coachDecisionMemories,
     acceptedCalorieAdjustments: snapshot.acceptedCalorieAdjustments,
     deletionRecords: syncedMarkers,
   };

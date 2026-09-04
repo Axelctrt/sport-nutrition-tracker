@@ -181,6 +181,16 @@ Statut : **décisions validées**, sauf mention contraire.
 - Le dernier bilan n’est affiché que si une ligne de bilan existe déjà. Le Hub
   est accessible depuis l’Accueil, Progression et la navigation secondaire ;
   les quatre destinations de navigation mobile principales restent inchangées.
+- C9 mémorise au plus une décision stabilisée par bilan hebdomadaire, jamais un
+  recalcul ou une simple ouverture du Hub. L’historique compact conserve la
+  phase, l’état, la confiance, l’action, les raisons, le statut et la prochaine
+  revue ; il est local-first et suit la continuité du compte.
+- Un résultat observé reste séparé de la décision initiale et absent tant
+  qu’aucune règle déterministe déjà validée ne permet de l’évaluer.
+- Les contextes quotidiens restent locaux par défaut. « Sur mes appareils » est
+  un choix explicite qui synchronise les seuls contextes du check-in/check-out
+  avec le même compte ; Safety est toujours recalculée localement et n’est
+  jamais persistée ni synchronisée.
 
 ## IA photo
 

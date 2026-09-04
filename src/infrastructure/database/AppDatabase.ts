@@ -3,6 +3,7 @@ import Dexie, { type Table } from 'dexie';
 import { DEFAULT_DATABASE_NAME } from '@/infrastructure/database/databaseNames';
 
 import type { Activity } from '@/domain/models/activity';
+import type { CoachDecisionMemoryRecord } from '@/domain/coach/coachMemory';
 import type {
   DailyActivityDecision,
   DailyCheckIn,
@@ -71,6 +72,7 @@ import { registerVersion9 } from '@/infrastructure/database/migrations/version9'
 import { registerVersion10 } from '@/infrastructure/database/migrations/version10';
 import { registerVersion11 } from '@/infrastructure/database/migrations/version11';
 import { registerVersion12 } from '@/infrastructure/database/migrations/version12';
+import { registerVersion13 } from '@/infrastructure/database/migrations/version13';
 
 export { DEFAULT_DATABASE_NAME } from '@/infrastructure/database/databaseNames';
 
@@ -103,6 +105,7 @@ export class AppDatabase extends Dexie {
     AcceptedCalorieAdjustment,
     EntityId
   >;
+  declare coachDecisionMemories: Table<CoachDecisionMemoryRecord, EntityId>;
 
   declare exerciseDefinitions: Table<ExerciseDefinition, EntityId>;
   declare workoutTemplates: Table<WorkoutTemplate, EntityId>;
@@ -151,5 +154,6 @@ export class AppDatabase extends Dexie {
     registerVersion10(this);
     registerVersion11(this);
     registerVersion12(this);
+    registerVersion13(this);
   }
 }
