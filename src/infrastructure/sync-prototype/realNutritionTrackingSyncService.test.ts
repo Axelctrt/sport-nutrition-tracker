@@ -387,8 +387,8 @@ describe('synchronisation C3 du suivi nutritionnel', () => {
     expect(await local.coachDecisionMemories.get(localMemory.id)).toEqual(localMemory);
     expect(await cloud.realNutritionTracking.get(cloudBundle.id)).toEqual(cloudBundle);
     expect((await local.dailyTargets.get('daily-target:2026-07-01'))
-      ?.acceptedCalibrationAdjustmentKcal).toBe(0);
-    expect(result.recalculatedDailyTargets).toBe(0);
+      ?.acceptedCalibrationAdjustmentKcal).toBe(150);
+    expect(result.recalculatedDailyTargets).toBe(1);
     expect(retry.recalculatedDailyTargets).toBe(0);
     expect(result).toMatchObject({
       differingEntityCount: 1,
@@ -403,6 +403,124 @@ describe('synchronisation C3 du suivi nutritionnel', () => {
       'nutrition-tracking',
       localReview.id,
     ))).toBeUndefined();
+  });
+
+  it('réconcilie une entité sûre sans toucher au conflit bootstrap d’un autre bilan', async () => {
+    const conflictedLocalReview = {
+      ...review('2035-07-01T08:00:00.000Z'),
+      averageConsumedCaloriesKcal: 2_150,
+      rawProposedAdjustmentKcal: 150,
+      proposedAdjustmentKcal: 150,
+      resultingCumulativeAdjustmentKcal: 150,
+    };
+    const conflictedLocalAdjustment = {
+      ...adjustment('2035-07-01T08:01:00.000Z'),
+      adjustmentKcalPerDay: 150,
+      resultingCumulativeAdjustmentKcal: 150,
+    };
+    const conflictedLocalMemory = {
+      ...memory('2035-07-01T08:02:00.000Z'),
+      reasons: ['Décision locale concurrente.'],
+      proposedChange: {
+        type: 'nutritionCalories' as const,
+        adjustmentKcalPerDay: 150,
+      },
+    };
+    const conflictedCloudBundle = {
+      ...aggregate(
+        review('2020-07-01T08:00:00.000Z'),
+        adjustment('2020-07-01T08:01:00.000Z'),
+        {
+          ...memory('2020-07-01T08:02:00.000Z'),
+          reasons: ['Décision cloud concurrente.'],
+        },
+      ),
+      id: '#weekly-review:2026-06-22',
+      owner: 'user-1',
+    };
+    const safeCloudReview = {
+      ...review('2040-07-08T08:00:00.000Z'),
+      id: 'weekly-review:2026-06-29',
+      weekStart: '2026-06-29',
+      weekEnd: '2026-07-05',
+      previousWeekStart: '2026-06-22',
+      previousWeekEnd: '2026-06-28',
+      rawProposedAdjustmentKcal: 50,
+      proposedAdjustmentKcal: 50,
+      currentCumulativeAdjustmentKcal: 150,
+      resultingCumulativeAdjustmentKcal: 200,
+    };
+    const safeCloudAdjustment = {
+      ...adjustment('2040-07-08T08:01:00.000Z'),
+      id: 'adjustment-2',
+      weeklyReviewId: safeCloudReview.id,
+      effectiveFrom: '2026-07-06',
+      adjustmentKcalPerDay: 50,
+      resultingCumulativeAdjustmentKcal: 200,
+    };
+    const safeCloudBundle = {
+      ...aggregate(safeCloudReview, safeCloudAdjustment),
+      id: '#weekly-review:2026-06-29',
+      owner: 'user-1',
+    };
+
+    await local.userProfile.add(profile());
+    await local.weeklyReviews.add(conflictedLocalReview);
+    await local.acceptedCalorieAdjustments.add(conflictedLocalAdjustment);
+    await local.coachDecisionMemories.add(conflictedLocalMemory);
+    await local.dailyTargets.add({
+      ...dailyTarget(),
+      id: 'daily-target:2026-07-08',
+      date: '2026-07-08',
+      acceptedCalibrationAdjustmentKcal: 150,
+      targetCaloriesKcal: 2_150,
+    });
+    await cloud.realNutritionTracking.bulkAdd([
+      conflictedCloudBundle,
+      safeCloudBundle,
+    ]);
+
+    const result = await synchronizeRealNutritionTracking(
+      local,
+      cloud as unknown as SyncPrototypeDatabase,
+      'user-1',
+    );
+    const retry = await synchronizeRealNutritionTracking(
+      local,
+      cloud as unknown as SyncPrototypeDatabase,
+      'user-1',
+    );
+
+    expect(await local.weeklyReviews.get(conflictedLocalReview.id))
+      .toEqual(conflictedLocalReview);
+    expect(await local.acceptedCalorieAdjustments.get(conflictedLocalAdjustment.id))
+      .toEqual(conflictedLocalAdjustment);
+    expect(await local.coachDecisionMemories.get(conflictedLocalMemory.id))
+      .toEqual(conflictedLocalMemory);
+    expect(await cloud.realNutritionTracking.get(conflictedCloudBundle.id))
+      .toEqual(conflictedCloudBundle);
+    expect(await cloud.realSyncBaselines.get(logicalSyncBaselineId(
+      'user-1',
+      'nutrition-tracking',
+      conflictedLocalReview.id,
+    ))).toBeUndefined();
+
+    expect(await local.weeklyReviews.get(safeCloudReview.id))
+      .toEqual(safeCloudReview);
+    expect(await local.acceptedCalorieAdjustments.get(safeCloudAdjustment.id))
+      .toEqual(safeCloudAdjustment);
+    expect((await local.dailyTargets.get('daily-target:2026-07-08'))
+      ?.acceptedCalibrationAdjustmentKcal).toBe(200);
+    expect(result).toMatchObject({
+      downloadedReviews: 1,
+      downloadedAdjustments: 1,
+      recalculatedDailyTargets: 1,
+    });
+    expect(retry).toMatchObject({
+      downloadedReviews: 0,
+      downloadedAdjustments: 0,
+      recalculatedDailyTargets: 0,
+    });
   });
 
   it('télécharge le bilan et l’ajustement atomiquement', async () => {

@@ -580,7 +580,6 @@ export async function synchronizeRealNutritionTracking(
 
   const allAdjustments = final.flatMap((value) => [...value.adjustments]);
   const recalculatedDailyTargets = localStateApplied
-    && deferredBootstrapConflictIds.size === 0
     ? await reconcileDailyTargets(localDatabase, allAdjustments, completedAt)
     : 0;
 
