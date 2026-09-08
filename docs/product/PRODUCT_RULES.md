@@ -187,6 +187,13 @@ Statut : **décisions validées**, sauf mention contraire.
   revue ; il est local-first et suit la continuité du compte.
 - Un résultat observé reste séparé de la décision initiale et absent tant
   qu’aucune règle déterministe déjà validée ne permet de l’évaluer.
+- C10.1 transforme la décision C4/C5, sa confiance, Safety et la mémoire C9 en
+  une explication déterministe : raisons existantes, changements structurés,
+  points surveillés et prochaine revue. Une comparaison n’est affichée que si
+  une décision mémorisée fiable existe ; sinon le Hub l’indique explicitement.
+- L’ouverture de l’explication reste strictement en lecture seule : elle ne
+  crée aucune décision ou mémoire, n’écrit pas dans Dexie, ne synchronise rien
+  et n’appelle aucune IA ni service externe.
 - Les contextes quotidiens restent locaux par défaut. « Sur mes appareils » est
   un choix explicite qui synchronise les seuls contextes du check-in/check-out
   avec le même compte ; Safety est toujours recalculée localement et n’est

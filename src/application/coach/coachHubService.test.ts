@@ -154,6 +154,11 @@ describe('loadCoachHub', () => {
       status: 'available',
       phase: { id: 'stabilization', objective: 'maintenance' },
     });
+    expect(snapshot.explanation).toMatchObject({
+      availability: 'insufficientData',
+      title: 'Compléter les données',
+      comparison: { status: 'firstDecision' },
+    });
   });
 
   it('agrège les prochaines séances de musculation et d’endurance existantes', async () => {

@@ -9,6 +9,10 @@ import type { UserProfile, WeightGoal } from '@/domain/models/profile';
 import type { DailyTarget } from '@/domain/models/targets';
 import type { WeeklyReview, WeeklyReviewDecisionStatus } from '@/domain/models/weeklyReview';
 import type { CoachDecisionMemoryRecord } from '@/domain/coach/coachMemory';
+import {
+  buildCoachExplanation,
+  type CoachExplanation,
+} from '@/domain/coach/coachExplanation';
 
 export type CoachHubDailyVerdict =
   | { status: 'available'; result: DailyCoachResult }
@@ -75,6 +79,7 @@ export interface CoachHubSnapshot {
   lastReview?: CoachHubReviewSummary;
   nextReview?: CoachNextReview;
   decisionHistory: CoachDecisionMemoryRecord[];
+  explanation: CoachExplanation;
 }
 
 export interface BuildCoachHubSnapshotInput {
@@ -187,5 +192,12 @@ export function buildCoachHubSnapshot(
         safety: { ...memory.safety, reasons: [...memory.safety.reasons] },
         nextReview: { ...memory.nextReview },
       })),
+    explanation: buildCoachExplanation({
+      ...(input.coachReview ? { currentReview: input.coachReview } : {}),
+      ...(input.safetyAssessment
+        ? { safetyAssessment: input.safetyAssessment }
+        : {}),
+      memories: input.memories ?? [],
+    }),
   };
 }

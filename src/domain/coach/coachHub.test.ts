@@ -151,6 +151,11 @@ describe('buildCoachHubSnapshot', () => {
       },
       nextReview: { type: 'date', date: '2026-09-04' },
       lastReview: { weekEnd: '2026-08-16' },
+      explanation: {
+        availability: 'available',
+        title: 'Maintenir le plan',
+        comparison: { status: 'firstDecision' },
+      },
     });
     expect(snapshot.monitoredPoints).toEqual(['La récupération reste stable.']);
   });
@@ -168,5 +173,9 @@ describe('buildCoachHubSnapshot', () => {
     expect(snapshot.dailyVerdict).toEqual({ status: 'checkInRequired' });
     expect(snapshot.lastReview).toBeUndefined();
     expect(snapshot.coachPhase).toEqual({ status: 'unavailable' });
+    expect(snapshot.explanation).toMatchObject({
+      availability: 'unavailable',
+      comparison: { status: 'unavailable' },
+    });
   });
 });

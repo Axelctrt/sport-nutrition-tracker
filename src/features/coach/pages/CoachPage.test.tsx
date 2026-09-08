@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { CoachPage } from '@/features/coach/pages/CoachPage';
 import type { CoachHubSnapshot } from '@/domain/coach/coachHub';
@@ -68,6 +69,20 @@ function snapshot(
     },
     monitoredPoints: ['La récupération reste stable.'],
     decisionHistory: [],
+    explanation: {
+      availability: 'available',
+      title: 'Maintenir le plan',
+      summary: 'Maintenir le plan · Progression conforme',
+      reasons: ['Les signaux existants restent cohérents.'],
+      blockingFactors: [],
+      watchPoints: ['La récupération reste stable.'],
+      comparison: {
+        status: 'firstDecision',
+        summary: 'C’est la première décision enregistrée : aucune comparaison historique n’est disponible.',
+        changes: [],
+      },
+      nextReview: { type: 'date', date: '2026-09-04' },
+    },
     nextReview: { type: 'date', date: '2026-09-04' },
   };
 }
@@ -129,6 +144,20 @@ describe('CoachPage', () => {
     expect(screen.getByRole('link', { name: 'Ouvrir Nutrition' })).toHaveAttribute('href', '/food');
     expect(screen.getByRole('link', { name: 'Ouvrir Sport' })).toHaveAttribute('href', '/activities');
     expect(screen.getByRole('link', { name: 'Ouvrir le Bilan' })).toHaveAttribute('href', '/weekly-review');
+  });
+
+  it('ouvre l’explication sans déclencher de rechargement ni d’écriture', async () => {
+    const user = userEvent.setup();
+    mocks.snapshot = snapshot({ status: 'checkInRequired' });
+    render(<MemoryRouter><CoachPage /></MemoryRouter>);
+
+    await user.click(screen.getByRole('button', { name: 'Comprendre cette décision' }));
+
+    const dialog = screen.getByRole('dialog', { name: 'Comprendre la décision' });
+    expect(dialog).toHaveTextContent('Pourquoi cette décision ?');
+    expect(dialog).toHaveTextContent('Qu’est-ce qui a changé ?');
+    expect(dialog).toHaveTextContent('Que dois-je surveiller ?');
+    expect(mocks.refresh).not.toHaveBeenCalled();
   });
 
   it('n’invente pas de dernier bilan', () => {
