@@ -81,6 +81,16 @@ describe('dailyCoachingService', () => {
     expect(await database.weights.count()).toBe(1);
   });
 
+  it('conserve la préférence de contexte existante quand elle est omise à la réédition', async () => {
+    await completeDailyCheckIn({
+      date: '2026-07-29', contextFlags: ['painOrInjury'], contextSyncPreference: 'account',
+    }, dependencies);
+    const updated = await completeDailyCheckIn({
+      date: '2026-07-29', contextFlags: ['painOrInjury'],
+    }, dependencies);
+    expect(updated.contextSyncPreference).toBe('account');
+  });
+
   it('n’invente ni pesée ni signal subjectif pour un check-in sans réponse', async () => {
     const checkIn = await completeDailyCheckIn({
       date: '2026-07-29',

@@ -3,7 +3,11 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import type {
   CompleteDailyCheckInInput,
 } from '@/application/daily/dailyCoachingService';
-import type { DailyCheckIn, DailyContextFlag } from '@/domain/models/dailyCoaching';
+import type {
+  DailyCheckIn,
+  DailyContextFlag,
+  DailyContextSyncPreference,
+} from '@/domain/models/dailyCoaching';
 import type { WeightEntry } from '@/domain/models/weight';
 import { inputClassName } from '@/shared/forms/formStyles';
 import { BottomSheet } from '@/shared/ui/BottomSheet';
@@ -49,6 +53,8 @@ export function DailyCheckInSheet({
   const [readinessConfirmed, setReadinessConfirmed] = useState(false);
   const [waistCm, setWaistCm] = useState('');
   const [contextFlags, setContextFlags] = useState<DailyContextFlag[]>([]);
+  const [contextSyncPreference, setContextSyncPreference] =
+    useState<DailyContextSyncPreference>('localOnly');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>();
   const [validationError, setValidationError] = useState<{
@@ -78,6 +84,7 @@ export function DailyCheckInSheet({
     setReadinessConfirmed(false);
     setWaistCm(checkIn?.waistCm === undefined ? '' : String(checkIn.waistCm));
     setContextFlags([...(checkIn?.contextFlags ?? [])]);
+    setContextSyncPreference(checkIn?.contextSyncPreference ?? 'localOnly');
     setErrorMessage(undefined);
     setValidationError(undefined);
   }, [checkIn, fallbackWeightKg, open, weightEntry]);
@@ -159,6 +166,7 @@ export function DailyCheckInSheet({
           : {}),
         ...(parsedWaist === undefined ? {} : { waistCm: parsedWaist }),
         contextFlags,
+        contextSyncPreference,
       });
       onClose();
     } catch (error) {
@@ -379,7 +387,12 @@ export function DailyCheckInSheet({
           </div>
         </details>
 
-        <DailyContextFlagsField value={contextFlags} onChange={setContextFlags} />
+        <DailyContextFlagsField
+          value={contextFlags}
+          onChange={setContextFlags}
+          syncPreference={contextSyncPreference}
+          onSyncPreferenceChange={setContextSyncPreference}
+        />
       </form>
     </BottomSheet>
   );

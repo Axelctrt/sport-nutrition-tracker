@@ -328,7 +328,12 @@ historique ou automatisation de stratégie n'est créé par C8.
 
 ## C9 — Coach Memory
 
-Mémoriser les décisions structurées :
+Le MVP livre une mémoire compacte des décisions stabilisées dans le parcours
+du bilan hebdomadaire C5. Un calcul du Hub ou une navigation n’écrit rien ; une
+décision sans changement est créée au plus une fois par bilan, tandis qu’une
+acceptation ou un refus mémorise la version revalidée par C4/C8 au clic.
+
+Chaque entrée conserve :
 
 - date ;
 - phase ;
@@ -340,7 +345,20 @@ Mémoriser les décisions structurées :
 - prochaine revue ;
 - résultat observé.
 
-La mémoire doit suivre les règles locales/cloud d'isolation et de continuité.
+La mémoire est locale-first, identifiée déterministement par bilan et voyage
+avec l’agrégat de suivi nutritionnel du compte. Elle respecte l’isolation
+invité/comptes et la convergence logique existante, sans arbitrage par horloge
+murale seule.
+
+Le résultat observé est un champ séparé, absent à la création. Sa qualification
+automatique reste différée : C1-C8 ne définissent pas de règle suffisante pour
+choisir entre « conforme », « améliorée » ou « inchangée » sans introduire un
+nouveau seuil métier.
+
+Les contextes inhabituels quotidiens restent locaux par défaut. Leur partage
+entre appareils exige le choix explicite « Sur mes appareils » ; les flags sont
+alors restaurés sur le même compte et Safety y est recalculée, jamais transportée
+comme état calculé.
 
 ## C10 — IA conversationnelle conditionnelle
 

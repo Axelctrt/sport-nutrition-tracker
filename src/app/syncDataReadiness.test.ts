@@ -9,12 +9,12 @@ import {
 
 describe('préparation locale à la synchronisation multiappareil', () => {
   it('fige les versions validées à la clôture de la phase', () => {
-    expect(databaseSchemaVersion).toBe(12);
-    expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(11);
+    expect(databaseSchemaVersion).toBe(13);
+    expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(12);
   });
 
-  it('sépare les trente-sept tables utilisateur des six tables locales', () => {
-    expect(databaseTableNames).toHaveLength(37);
+  it('sépare les trente-huit tables utilisateur des six tables locales', () => {
+    expect(databaseTableNames).toHaveLength(38);
     expect(databaseInternalTableNames).toEqual([
       'deviceSettings',
       'migrationJournal',
@@ -23,7 +23,7 @@ describe('préparation locale à la synchronisation multiappareil', () => {
       'progressPhotoAssets',
       'trashItems',
     ]);
-    expect(allDatabaseTableNames).toHaveLength(43);
+    expect(allDatabaseTableNames).toHaveLength(44);
 
     expect(databaseTableNames).toEqual(
       expect.arrayContaining([
@@ -32,6 +32,7 @@ describe('préparation locale à la synchronisation multiappareil', () => {
         'dailyCheckIns',
         'dailyActivityDecisions',
         'dailyCheckOuts',
+        'coachDecisionMemories',
         'goals',
         'endurancePlanningSessions',
         'routineReminderCompletions',
@@ -52,7 +53,7 @@ describe('préparation locale à la synchronisation multiappareil', () => {
     }
   });
 
-  it('inclut les états utilisateur synchronisables dans le backup v11', () => {
+  it('inclut les états utilisateur synchronisables dans le backup v12', () => {
     expect(BACKUP_USER_STATE_TABLE_NAMES).toEqual([
       'goals',
       'endurancePlanningSessions',

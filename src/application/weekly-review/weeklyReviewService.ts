@@ -1,5 +1,5 @@
 import { parseISO, subDays } from 'date-fns';
-import type { LocalDate } from '@/domain/models/common';
+import type { IsoDateTime, LocalDate } from '@/domain/models/common';
 import type { Activity } from '@/domain/models/activity';
 import type { UserProfile } from '@/domain/models/profile';
 import type { WorkoutSession } from '@/domain/models/strength';
@@ -45,11 +45,15 @@ import type { SettingsRepository } from '@/infrastructure/repositories/contracts
 import type { StepsRepository } from '@/infrastructure/repositories/contracts/StepsRepository';
 import type { TargetRepository } from '@/infrastructure/repositories/contracts/TargetRepository';
 import type { WeeklyReviewRepository } from '@/infrastructure/repositories/contracts/WeeklyReviewRepository';
+import type { CoachMemoryRepository } from '@/infrastructure/repositories/contracts/CoachMemoryRepository';
 import type { WeightRepository } from '@/infrastructure/repositories/contracts/WeightRepository';
 import type { WorkoutSessionRepository } from '@/infrastructure/repositories/contracts/WorkoutSessionRepository';
 
 import { repositories } from '@/infrastructure/repositories/repositories';
 import { toLocalDate } from '@/shared/utils/dates';
+import { currentIsoDateTime } from '@/shared/utils/entities';
+import { resolveCoachPhase } from '@/domain/coach/coachPhase';
+import { buildCoachDecisionMemory } from '@/domain/coach/coachMemory';
 
 export interface WeeklyReviewServiceDependencies {
   settings: Pick<SettingsRepository, 'get'>;
@@ -76,6 +80,8 @@ export interface WeeklyReviewServiceDependencies {
     WeeklyReviewRepository,
     'getByWeekStart' | 'upsert' | 'listAll' | 'listAdjustments' | 'accept' | 'reject'
   >;
+  coachMemory: Pick<CoachMemoryRepository, 'putIfAbsent'>;
+  now?: () => IsoDateTime;
 }
 
 const defaultDependencies: WeeklyReviewServiceDependencies = {
@@ -92,7 +98,30 @@ const defaultDependencies: WeeklyReviewServiceDependencies = {
   calculateIntegratedAnalysis: calculateIntegratedCoachAnalysis,
 
   weeklyReviews: repositories.weeklyReviews,
+  coachMemory: repositories.coachMemory,
+  now: currentIsoDateTime,
 };
+
+function createMemoryData(
+  review: WeeklyReview,
+  profile: UserProfile,
+  snapshot: CoachReviewSnapshot,
+  status: 'maintained' | 'accepted' | 'rejected' | 'blocked',
+  decidedAt: IsoDateTime,
+) {
+  const phase = resolveCoachPhase(profile.goal);
+  if (!phase) throw new Error('La phase Coach ne peut pas être résolue.');
+  return buildCoachDecisionMemory({
+    weeklyReviewId: review.id,
+    phase,
+    snapshot,
+    status,
+    decidedAt,
+    ...(status === 'accepted' && review.proposedAdjustmentKcal !== 0
+      ? { effectiveFrom: getAdjustmentEffectiveDate(review) }
+      : {}),
+  });
+}
 
 export interface WeeklyReviewSnapshot {
   review: WeeklyReview;
@@ -294,6 +323,17 @@ export async function loadWeeklyReview(
     adaptation,
   });
   const review = await dependencies.weeklyReviews.upsert(calculated);
+  if (coachReview && !coachReview.decision.requiresUserAcceptance) {
+    await dependencies.coachMemory.putIfAbsent(
+      createMemoryData(
+        review,
+        profile,
+        coachReview,
+        coachReview.decision.blockedAdjustment ? 'blocked' : 'maintained',
+        dependencies.now?.() ?? currentIsoDateTime(),
+      ),
+    );
+  }
   const reviews = await dependencies.weeklyReviews.listAll();
   return {
     review,
@@ -373,7 +413,64 @@ export async function acceptCoachWeeklyReview(
   if (!canAcceptCoachWeeklyReview(snapshot, review)) {
     throw new Error('La décision Coach a changé. Recharge le bilan avant de réessayer.');
   }
-  return acceptWeeklyReview(weekStart, dependencies);
+  const decidedAt = dependencies.now?.() ?? currentIsoDateTime();
+  const adjustment = review.proposedAdjustmentKcal === 0
+    ? undefined
+    : {
+        weeklyReviewId: review.id,
+        effectiveFrom: getAdjustmentEffectiveDate(review),
+        adjustmentKcalPerDay: review.proposedAdjustmentKcal,
+        resultingCumulativeAdjustmentKcal: review.resultingCumulativeAdjustmentKcal,
+        status: 'active' as const,
+      };
+  const memory = createMemoryData(review, profile, snapshot, 'accepted', decidedAt);
+  const result = await dependencies.weeklyReviews.accept(weekStart, adjustment, memory);
+  return result.review;
+}
+
+export async function rejectCoachWeeklyReview(
+  weekStart: LocalDate,
+  profile: UserProfile,
+  dependencies: WeeklyReviewServiceDependencies = defaultDependencies,
+): Promise<WeeklyReview> {
+  const review = await dependencies.weeklyReviews.getByWeekStart(weekStart);
+  if (!review) throw new Error('Bilan hebdomadaire introuvable.');
+  if (review.decisionStatus !== 'pending') {
+    throw new Error('Le bilan a changé. Recharge-le avant de prendre une décision.');
+  }
+  const analysisStart = toLocalDate(subDays(
+    parseISO(review.weekEnd),
+    CALORIE_ADAPTATION_WINDOW_DAYS - 1,
+  ));
+  const dailyTargets = await dependencies.targets.listTargetsBetween(analysisStart, review.weekEnd);
+  const referenceWeightKg = resolveCoachReferenceWeight(
+    dailyTargets,
+    review.weekEnd,
+    profile.initialWeightKg,
+  );
+  let analysis: IntegratedCoachAnalysis;
+  try {
+    analysis = await dependencies.calculateIntegratedAnalysis({
+      referenceDate: review.weekEnd,
+      safetyReferenceDate: toLocalDate(),
+      profile,
+      referenceWeightKg,
+    });
+  } catch {
+    throw new Error('Le Bilan Coach ne peut pas être revalidé. Recharge-le avant de réessayer.');
+  }
+  const snapshot = buildCoachReviewSnapshot({
+    weekStart: review.weekStart,
+    weekEnd: review.weekEnd,
+  }, analysis);
+  if (!canAcceptCoachWeeklyReview(snapshot, review)) {
+    throw new Error('La décision Coach a changé. Recharge le bilan avant de réessayer.');
+  }
+  const decidedAt = dependencies.now?.() ?? currentIsoDateTime();
+  return dependencies.weeklyReviews.reject(
+    weekStart,
+    createMemoryData(review, profile, snapshot, 'rejected', decidedAt),
+  );
 }
 
 export async function rejectWeeklyReview(

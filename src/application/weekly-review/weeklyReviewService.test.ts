@@ -8,6 +8,7 @@ import {
   acceptWeeklyReview,
   loadWeeklyReview,
   rejectWeeklyReview,
+  rejectCoachWeeklyReview,
   resolveCoachReferenceWeight,
   type WeeklyReviewServiceDependencies,
 } from '@/application/weekly-review/weeklyReviewService';
@@ -115,6 +116,8 @@ function createDependencies(
         return Promise.resolve(stored);
       }),
     },
+    coachMemory: { putIfAbsent: vi.fn().mockImplementation((data) => Promise.resolve(createEntity(data, `coach-decision:${data.weeklyReviewId}`))) },
+    now: () => '2026-06-14T12:00:00.000Z',
   };
 }
 
@@ -153,6 +156,39 @@ describe('weekly review service', () => {
       profile,
     );
     expect(dependencies.weeklyReviews.upsert).toHaveBeenCalledOnce();
+    expect(dependencies.coachMemory.putIfAbsent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        weeklyReviewId: 'review', status: 'maintained',
+      }),
+    );
+  });
+
+  it('mémorise comme bloquée une décision stabilisée par Safety', async () => {
+    const analysis = integratedAnalysis('maintainPlan');
+    const safetyAssessment = createCoachSafetyAssessment({
+      referenceDate: '2026-06-14',
+      status: 'doNotIntensify',
+      reasons: ['Une douleur ou blessure est signalée.'],
+      blockingFactors: ['Une douleur ou blessure est signalée.'],
+    });
+    analysis.safetyAssessment = safetyAssessment;
+    analysis.decision = {
+      ...analysis.decision,
+      safetyAssessment,
+      blockedAdjustment: { direction: 'decrease', reason: 'safety' },
+      requiresUserAcceptance: false,
+    };
+    const dependencies = createDependencies(undefined, analysis);
+
+    await loadWeeklyReview('2026-06-10', profile, dependencies);
+
+    expect(dependencies.coachMemory.putIfAbsent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        weeklyReviewId: 'review',
+        status: 'blocked',
+        safety: expect.objectContaining({ status: 'doNotIntensify' }),
+      }),
+    );
   });
 
   it('utilise l’assessment C4 qualifié et persiste exactement son candidat actif', async () => {
@@ -238,7 +274,7 @@ describe('weekly review service', () => {
     expect(resolveCoachReferenceWeight([], '2026-06-14', 80)).toBe(80);
   });
 
-  it('revalide puis réutilise acceptWeeklyReview pour un candidat matching', async () => {
+  it('revalide puis mémorise exactement le candidat accepté', async () => {
     const dependencies = createDependencies(
       { ...eligibleReview(), proposedAdjustmentKcal: 100 },
       integratedAnalysis('reviewNutritionTarget', 100),
@@ -254,6 +290,30 @@ describe('weekly review service', () => {
       }),
     );
     expect(dependencies.weeklyReviews.accept).toHaveBeenCalledOnce();
+    expect(dependencies.weeklyReviews.accept).toHaveBeenCalledWith(
+      '2026-06-08',
+      expect.objectContaining({ adjustmentKcalPerDay: 100 }),
+      expect.objectContaining({
+        weeklyReviewId: 'review', status: 'accepted',
+        proposedChange: { type: 'nutritionCalories', adjustmentKcalPerDay: 100 },
+      }),
+    );
+  });
+
+  it('revalide puis mémorise un refus sans appliquer le changement', async () => {
+    const dependencies = createDependencies(
+      eligibleReview(),
+      integratedAnalysis('reviewNutritionTarget', 100),
+    );
+    const result = await rejectCoachWeeklyReview('2026-06-08', profile, dependencies);
+    expect(result.decisionStatus).toBe('rejected');
+    expect(dependencies.weeklyReviews.reject).toHaveBeenCalledWith(
+      '2026-06-08',
+      expect.objectContaining({
+        status: 'rejected',
+        proposedChange: expect.objectContaining({ adjustmentKcalPerDay: 100 }),
+      }),
+    );
   });
 
   it.each([
@@ -270,6 +330,7 @@ describe('weekly review service', () => {
     await expect(acceptCoachWeeklyReview('2026-06-08', profile, dependencies))
       .rejects.toThrow(/décision Coach a changé/);
     expect(dependencies.weeklyReviews.accept).not.toHaveBeenCalled();
+    expect(dependencies.coachMemory.putIfAbsent).not.toHaveBeenCalled();
   });
 
   it('refuse un recalcul stale qui change le candidat C4 par rapport au persisté', async () => {

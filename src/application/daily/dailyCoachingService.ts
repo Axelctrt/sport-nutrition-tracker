@@ -237,7 +237,10 @@ export async function completeDailyCheckIn(
     ...(signalProvenance ? { signalProvenance } : {}),
     ...(input.waistCm === undefined ? {} : { waistCm: input.waistCm }),
     contextFlags: uniqueFlags(input.contextFlags),
-    contextSyncPreference: input.contextSyncPreference ?? 'localOnly',
+    contextSyncPreference:
+      input.contextSyncPreference
+      ?? current?.contextSyncPreference
+      ?? 'localOnly',
     completedAt: resolveCompletedAt(input.completedAt, dependencies),
   });
 }
@@ -286,7 +289,10 @@ export async function completeDailyCheckOut(
     ...(signalProvenance ? { signalProvenance } : {}),
     foodJournalComplete: input.foodJournalComplete,
     contextFlags: uniqueFlags(input.contextFlags),
-    contextSyncPreference: input.contextSyncPreference ?? 'localOnly',
+    contextSyncPreference:
+      input.contextSyncPreference
+      ?? current?.contextSyncPreference
+      ?? 'localOnly',
     completedAt: resolveCompletedAt(input.completedAt, dependencies),
   });
 }

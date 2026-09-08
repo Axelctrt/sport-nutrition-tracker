@@ -118,6 +118,7 @@ const reviewSourceCategories = new Set<SelectiveDataResetCategory>([
 const reviewTableNames = [
   "weeklyReviews",
   "acceptedCalorieAdjustments",
+  "coachDecisionMemories",
 ] as const satisfies readonly ResettableDatabaseTableName[];
 
 export interface SelectiveDataResetPlan {

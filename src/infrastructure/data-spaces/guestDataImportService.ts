@@ -153,6 +153,7 @@ const CATEGORY_DEFINITIONS: readonly {
       "dailyTargets",
       "dailyJournalStatuses",
       "weeklyReviews",
+      "coachDecisionMemories",
       "acceptedCalorieAdjustments",
     ],
   },
@@ -396,6 +397,17 @@ function remapWeeklyReviewReferences(
       };
     },
   );
+  snapshot.coachDecisionMemories = snapshot.coachDecisionMemories.map(
+    (value) => {
+      const row = asRecord(value);
+      const weeklyReviewId = applyAlias(String(row.weeklyReviewId), aliases) as string;
+      return {
+        ...row,
+        id: `coach-decision:${weeklyReviewId}`,
+        weeklyReviewId,
+      };
+    },
+  );
 }
 
 function remapDeletionReferences(
@@ -492,6 +504,7 @@ function mergeSnapshots(
     ["weeklyMissionCompletions", fieldKey("weekStart")],
     ["routineReminderCompletions", fieldKey("date", "type")],
     ["acceptedCalorieAdjustments", fieldKey("weeklyReviewId")],
+    ["coachDecisionMemories", fieldKey("weeklyReviewId")],
   ];
 
   for (const [tableName, identity] of identityTables) {
@@ -591,6 +604,9 @@ function pruneOrphans(snapshot: DatabaseSnapshot): void {
     snapshot.acceptedCalorieAdjustments.filter((value) =>
       reviewIds.has((value as AcceptedCalorieAdjustment).weeklyReviewId),
     );
+  snapshot.coachDecisionMemories = snapshot.coachDecisionMemories.filter((value) =>
+    reviewIds.has(String(asRecord(value).weeklyReviewId)),
+  );
 
   snapshot.workoutTemplateExercises = snapshot.workoutTemplateExercises.filter(
     (value) => {

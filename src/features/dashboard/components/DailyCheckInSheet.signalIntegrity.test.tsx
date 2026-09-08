@@ -25,6 +25,20 @@ describe('DailyCheckInSheet signal integrity', () => {
 
     expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({
       contextFlags: ['painOrInjury'],
+      contextSyncPreference: 'localOnly',
+    }));
+  });
+
+  it('permet un partage compte explicite du contexte inhabituel', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    render(<DailyCheckInSheet open date="2026-08-09" fallbackWeightKg={71.3} onClose={vi.fn()} onSubmit={onSubmit} />);
+    await user.click(screen.getByText('Contexte inhabituel'));
+    await user.click(screen.getByRole('checkbox', { name: 'Douleur ou blessure' }));
+    await user.click(screen.getByRole('radio', { name: 'Sur mes appareils' }));
+    await user.click(screen.getByRole('button', { name: 'Enregistrer le check-in' }));
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({
+      contextFlags: ['painOrInjury'], contextSyncPreference: 'account',
     }));
   });
 
@@ -50,6 +64,25 @@ describe('DailyCheckInSheet signal integrity', () => {
     );
     await user.click(screen.getByText('Contexte inhabituel'));
     expect(screen.getByRole('checkbox', { name: 'Douleur ou blessure' })).toBeChecked();
+  });
+
+  it('restaure et conserve la préférence compte sans interaction', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    render(
+      <DailyCheckInSheet
+        open date="2026-08-09" fallbackWeightKg={71.3} onClose={vi.fn()} onSubmit={onSubmit}
+        checkIn={{
+          id: 'daily-check-in:2026-08-09', date: '2026-08-09', contextFlags: ['painOrInjury'],
+          contextSyncPreference: 'account', completedAt: '2026-08-09T07:00:00.000Z',
+          createdAt: '2026-08-09T07:00:00.000Z', updatedAt: '2026-08-09T07:00:00.000Z',
+        }}
+      />,
+    );
+    await user.click(screen.getByText('Contexte inhabituel'));
+    expect(screen.getByRole('radio', { name: 'Sur mes appareils' })).toHaveAttribute('aria-checked', 'true');
+    await user.click(screen.getByRole('button', { name: 'Enregistrer le check-in' }));
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ contextSyncPreference: 'account' }));
   });
 
   it('omet les signaux subjectifs sans réponse utilisateur', async () => {

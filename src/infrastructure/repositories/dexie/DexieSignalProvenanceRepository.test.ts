@@ -44,7 +44,7 @@ describe('persistance Dexie des provenances Coach C0.2', () => {
     });
 
     expect(database.verno).toBe(CURRENT_DATABASE_VERSION);
-    expect(CURRENT_DATABASE_VERSION).toBe(12);
+    expect(CURRENT_DATABASE_VERSION).toBe(13);
     expect((await database.weights.toArray())[0]?.provenance).toBe('userMeasurement');
     expect((await database.dailyCheckIns.toArray())[0]?.signalProvenance)
       .toEqual({ sleepQuality: 'userReported' });

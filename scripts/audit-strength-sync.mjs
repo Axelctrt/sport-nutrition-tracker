@@ -113,8 +113,8 @@ if (!deployment.includes("VITE_ENABLE_REAL_STRENGTH_SYNC: 'true'")) {
   fail('le build de production n’active pas explicitement le lot B3.');
 }
 
-if (!/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_12/.test(mainVersions)) {
-  fail('le lot B3 doit conserver le schéma local principal courant Dexie v12.');
+if (!/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_13/.test(mainVersions)) {
+  fail('le lot B3 doit conserver le schéma local principal courant Dexie v13.');
 }
 
 if (failures.length > 0) {

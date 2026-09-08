@@ -67,6 +67,7 @@ function snapshot(
       blockingFactors: [],
     },
     monitoredPoints: ['La récupération reste stable.'],
+    decisionHistory: [],
     nextReview: { type: 'date', date: '2026-09-04' },
   };
 }
@@ -134,6 +135,26 @@ describe('CoachPage', () => {
     mocks.snapshot = snapshot({ status: 'checkInRequired' });
     render(<MemoryRouter><CoachPage /></MemoryRouter>);
     expect(screen.getByText('Aucun bilan Coach disponible.')).toBeInTheDocument();
+  });
+
+  it('affiche les décisions mémorisées de la plus récente à la plus ancienne', () => {
+    const base = snapshot({ status: 'checkInRequired' });
+    mocks.snapshot = {
+      ...base,
+      decisionHistory: [{
+        id: 'coach-decision:review-1', weeklyReviewId: 'review-1',
+        period: { weekStart: '2026-08-17', weekEnd: '2026-08-23' }, decisionDate: '2026-08-23',
+        phase: { id: 'deficit', label: 'Déficit actif', objective: 'loss' }, coachState: 'onTrack',
+        confidence: { weight: 80, food: 80, activity: 80, recovery: 80, overall: 80, level: 'reliable' },
+        primaryAction: 'maintainPlan', reasons: ['La progression reste conforme.'], blockingFactors: [],
+        safety: { status: 'clear', reasons: [] }, status: 'maintained', decidedAt: '2026-08-23T12:00:00.000Z',
+        nextReview: { type: 'date', date: '2026-08-30' }, createdAt: '2026-08-23T12:00:00.000Z', updatedAt: '2026-08-23T12:00:00.000Z',
+      }],
+    };
+    render(<MemoryRouter><CoachPage /></MemoryRouter>);
+    expect(screen.getByRole('heading', { name: 'Historique des décisions' })).toBeInTheDocument();
+    expect(screen.getByText('Plan maintenu')).toBeInTheDocument();
+    expect(screen.getByText('La progression reste conforme.')).toBeInTheDocument();
   });
 
   it('isole un verdict indisponible sans masquer le reste du Hub', () => {

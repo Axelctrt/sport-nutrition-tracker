@@ -640,14 +640,14 @@ if (failures.length === 0) {
   const databaseVersions = read(
     'src/infrastructure/database/migrations/versions.ts',
   );
-  if (!/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_12\b/.test(databaseVersions)) {
-    fail('P0 ne doit pas modifier Dexie métier : version 12 attendue.');
+  if (!/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_13\b/.test(databaseVersions)) {
+    fail('Version Dexie métier 13 attendue.');
   }
   const backupMigrations = read(
     'src/infrastructure/backup/backupMigrations.ts',
   );
-  if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*11\b/.test(backupMigrations)) {
-    fail('Le schéma backup courant doit rester en version 11.');
+  if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*12\b/.test(backupMigrations)) {
+    fail('Le schéma backup courant doit utiliser la version 12.');
   }
 }
 

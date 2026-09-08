@@ -4,6 +4,7 @@ import { CoachPriorityCard } from '@/features/coach/components/CoachPriorityCard
 import { CoachReviewCard } from '@/features/coach/components/CoachReviewCard';
 import { CoachSafetyCard } from '@/features/coach/components/CoachSafetyCard';
 import { CoachVerdictCard } from '@/features/coach/components/CoachVerdictCard';
+import { CoachMemoryHistory } from '@/features/coach/components/CoachMemoryHistory';
 import { useCoachHub } from '@/features/coach/hooks/useCoachHub';
 import { Button } from '@/shared/ui/Button';
 import { InlineNotice } from '@/shared/ui/InlineNotice';
@@ -53,6 +54,7 @@ export function CoachPage() {
             <CoachPriorityCard snapshot={hub.data} />
             <CoachReviewCard snapshot={hub.data} />
           </div>
+          <CoachMemoryHistory memories={hub.data.decisionHistory} />
         </div>
       ) : null}
     </section>

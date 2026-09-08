@@ -12,6 +12,7 @@ import {
   synchronizeRealDailyCoaching,
   type DailyCoachingDayAggregate,
 } from '@/infrastructure/sync-prototype/realDailyCoachingSyncService';
+import { calculateImmediateCoachSafety } from '@/application/coach/coachSafetyService';
 
 type CloudDay = DailyCoachingDayAggregate & {
   owner?: string;
@@ -208,6 +209,27 @@ describe('synchronisation du suivi quotidien', () => {
       (await cloud.realDailyCoachingDays.get(`#daily-coaching:${DATE}`))
         ?.checkIn?.contextFlags,
     ).toEqual(['painOrInjury']);
+
+    const secondDevice = new AppDatabase(`sportpilot-context-device-${crypto.randomUUID()}`);
+    await secondDevice.open();
+    try {
+      await synchronizeRealDailyCoaching(
+        secondDevice,
+        cloud as unknown as SyncPrototypeDatabase,
+        'user-1',
+      );
+      const restored = await secondDevice.dailyCheckIns.get(`daily-check-in:${DATE}`);
+      expect(restored?.contextFlags).toEqual(['painOrInjury']);
+      expect(calculateImmediateCoachSafety({
+        referenceDate: DATE,
+        profile: { ageInformation: { mode: 'age', ageYears: 30, recordedOn: DATE } },
+        checkIns: restored ? [restored] : [],
+        checkOuts: [],
+      }).status).toBe('doNotIntensify');
+    } finally {
+      secondDevice.close();
+      await secondDevice.delete();
+    }
   });
 
   it('fusionne independamment le check-in local et le check-out cloud', async () => {
@@ -256,6 +278,21 @@ describe('synchronisation du suivi quotidien', () => {
     expect(
       (await local.dailyCheckIns.get(`daily-check-in:${DATE}`))?.contextFlags,
     ).toEqual(['travel']);
+
+    const secondDevice = new AppDatabase(`sportpilot-local-context-device-${crypto.randomUUID()}`);
+    await secondDevice.open();
+    try {
+      await synchronizeRealDailyCoaching(
+        secondDevice,
+        cloud as unknown as SyncPrototypeDatabase,
+        'user-1',
+      );
+      expect((await secondDevice.dailyCheckIns.get(`daily-check-in:${DATE}`))?.contextFlags)
+        .toEqual([]);
+    } finally {
+      secondDevice.close();
+      await secondDevice.delete();
+    }
   });
 
   it('devient stable apres une synchronisation complete', async () => {

@@ -1,5 +1,9 @@
 import type { EntityId, LocalDate, NewEntity } from '@/domain/models/common';
 import type { AcceptedCalorieAdjustment, WeeklyReview } from '@/domain/models/weeklyReview';
+import {
+  coachDecisionMemoryIdForReview,
+  type CoachDecisionMemoryRecord,
+} from '@/domain/coach/coachMemory';
 import { weeklyReviewIdForWeekStart } from '@/domain/sync/deterministicEntityIds';
 import type { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import type {
@@ -48,12 +52,14 @@ export class DexieWeeklyReviewRepository implements WeeklyReviewRepository {
   accept(
     weekStart: LocalDate,
     adjustmentData?: NewEntity<AcceptedCalorieAdjustment>,
+    memoryData?: NewEntity<CoachDecisionMemoryRecord>,
   ): Promise<WeeklyReviewDecisionResult> {
     return runRepositoryOperation('update', 'Impossible d’accepter ce bilan hebdomadaire.', () => (
       this.database.transaction(
         'rw',
         this.database.weeklyReviews,
         this.database.acceptedCalorieAdjustments,
+        this.database.coachDecisionMemories,
         async () => {
           const current = await this.database.weeklyReviews.where('weekStart').equals(weekStart).first();
           if (!current) throw new Error('Bilan hebdomadaire introuvable.');
@@ -63,13 +69,22 @@ export class DexieWeeklyReviewRepository implements WeeklyReviewRepository {
               .first();
             return { review: current, ...(existing ? { adjustment: existing } : {}) };
           }
-          const decidedAt = currentIsoDateTime();
+          const decidedAt = memoryData?.decidedAt ?? currentIsoDateTime();
           const review = await updateStoredEntity(
             this.database.weeklyReviews,
             current,
             { decisionStatus: 'accepted', decidedAt },
             decidedAt,
           );
+          if (memoryData) {
+            const memoryId = coachDecisionMemoryIdForReview(current.id);
+            const existingMemory = await this.database.coachDecisionMemories.get(memoryId);
+            if (!existingMemory) {
+              await this.database.coachDecisionMemories.add(
+                createEntity<CoachDecisionMemoryRecord>(memoryData, memoryId, memoryData.decidedAt),
+              );
+            }
+          }
           if (!adjustmentData) return { review };
           const adjustment = createEntity<AcceptedCalorieAdjustment>(adjustmentData, undefined, decidedAt);
           await this.database.acceptedCalorieAdjustments.add(adjustment);
@@ -79,18 +94,39 @@ export class DexieWeeklyReviewRepository implements WeeklyReviewRepository {
     ), { syncDomainIds: ['nutrition-tracking'], syncReason: 'weekly-review-write' });
   }
 
-  reject(weekStart: LocalDate): Promise<WeeklyReview> {
-    return runRepositoryOperation('update', 'Impossible de refuser ce bilan hebdomadaire.', async () => {
-      const current = await this.database.weeklyReviews.where('weekStart').equals(weekStart).first();
-      if (!current) throw new Error('Bilan hebdomadaire introuvable.');
-      const decidedAt = currentIsoDateTime();
-      return updateStoredEntity(
+  reject(
+    weekStart: LocalDate,
+    memoryData?: NewEntity<CoachDecisionMemoryRecord>,
+  ): Promise<WeeklyReview> {
+    return runRepositoryOperation('update', 'Impossible de refuser ce bilan hebdomadaire.', () => (
+      this.database.transaction(
+        'rw',
         this.database.weeklyReviews,
-        current,
-        { decisionStatus: 'rejected', decidedAt },
-        decidedAt,
-      );
-    }, { syncDomainIds: ['nutrition-tracking'], syncReason: 'weekly-review-write' });
+        this.database.coachDecisionMemories,
+        async () => {
+          const current = await this.database.weeklyReviews.where('weekStart').equals(weekStart).first();
+          if (!current) throw new Error('Bilan hebdomadaire introuvable.');
+          if (current.decisionStatus === 'rejected') return current;
+          const decidedAt = memoryData?.decidedAt ?? currentIsoDateTime();
+          const review = await updateStoredEntity(
+            this.database.weeklyReviews,
+            current,
+            { decisionStatus: 'rejected', decidedAt },
+            decidedAt,
+          );
+          if (memoryData) {
+            const memoryId = coachDecisionMemoryIdForReview(current.id);
+            const existingMemory = await this.database.coachDecisionMemories.get(memoryId);
+            if (!existingMemory) {
+              await this.database.coachDecisionMemories.add(
+                createEntity<CoachDecisionMemoryRecord>(memoryData, memoryId, memoryData.decidedAt),
+              );
+            }
+          }
+          return review;
+        },
+      )
+    ), { syncDomainIds: ['nutrition-tracking'], syncReason: 'weekly-review-write' });
   }
 
   createAdjustment(data: NewEntity<AcceptedCalorieAdjustment>): Promise<AcceptedCalorieAdjustment> {

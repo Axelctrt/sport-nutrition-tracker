@@ -183,6 +183,7 @@ function countCategoryRecords(
         data.dailyTargets.length +
         data.dailyJournalStatuses.length +
         data.weeklyReviews.length +
+        (data.coachDecisionMemories?.length ?? 0) +
         data.acceptedCalorieAdjustments.length +
         countDeletionRecords(
           data,
@@ -353,6 +354,7 @@ async function replaceNutrition(
     database.dailyJournalStatuses.clear(),
     database.acceptedCalorieAdjustments.clear(),
     database.weeklyReviews.clear(),
+    database.coachDecisionMemories.clear(),
   ]);
 
   if (data.foodProducts.length > 0) {
@@ -385,6 +387,9 @@ async function replaceNutrition(
   }
   if (data.weeklyReviews.length > 0) {
     await database.weeklyReviews.bulkAdd(data.weeklyReviews);
+  }
+  if ((data.coachDecisionMemories?.length ?? 0) > 0) {
+    await database.coachDecisionMemories.bulkAdd(data.coachDecisionMemories ?? []);
   }
   if (data.acceptedCalorieAdjustments.length > 0) {
     await database.acceptedCalorieAdjustments.bulkAdd(

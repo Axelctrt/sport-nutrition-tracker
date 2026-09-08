@@ -31,6 +31,15 @@ import {
 
 import { achievementCatalog } from '@/domain/rewards/achievements';
 import { visualThemeCatalog } from '@/domain/rewards/visualThemes';
+import { COACH_PHASE_IDS } from '@/domain/coach/coachPhase';
+import { COACH_STATES } from '@/domain/coach/coachState';
+import { COACH_SAFETY_STATUSES } from '@/domain/coach/coachSafety';
+import { INTEGRATED_COACH_ACTIONS } from '@/domain/coach/integratedCoachDecision';
+import {
+  COACH_DECISION_MEMORY_STATUSES,
+  COACH_OBSERVED_OUTCOMES,
+  coachDecisionMemoryIdForReview,
+} from '@/domain/coach/coachMemory';
 const finiteNumber = z.number().finite();
 const nonNegativeNumber = finiteNumber.min(0);
 const positiveNumber = finiteNumber.positive();
@@ -230,6 +239,58 @@ const weightEntrySchema = datedEntitySchema.extend({
   weightKg: positiveNumber,
   note: z.string().max(5_000).optional(),
   provenance: z.enum(['userMeasurement', 'profileInitialization']).optional(),
+});
+
+const coachDecisionMemorySchema = entityMetadataSchema.extend({
+  weeklyReviewId: z.string().min(1),
+  period: z.object({ weekStart: localDateSchema, weekEnd: localDateSchema }),
+  decisionDate: localDateSchema,
+  phase: z.object({
+    id: z.enum(COACH_PHASE_IDS),
+    label: z.string().min(1),
+    objective: z.enum(['loss', 'maintenance', 'gain']),
+  }),
+  coachState: z.enum(COACH_STATES),
+  confidence: z.object({
+    weight: finiteNumber,
+    food: finiteNumber,
+    activity: finiteNumber,
+    recovery: finiteNumber,
+    overall: finiteNumber,
+    level: z.enum(['insufficient', 'uncertain', 'usable', 'reliable']),
+  }),
+  primaryAction: z.enum(INTEGRATED_COACH_ACTIONS),
+  reasons: z.array(z.string()),
+  blockingFactors: z.array(z.string()),
+  safety: z.object({
+    status: z.enum(COACH_SAFETY_STATUSES),
+    reasons: z.array(z.string()),
+  }),
+  proposedChange: z.object({
+    type: z.literal('nutritionCalories'),
+    adjustmentKcalPerDay: finiteNumber,
+  }).optional(),
+  status: z.enum(COACH_DECISION_MEMORY_STATUSES),
+  decidedAt: isoDateTimeSchema,
+  effectiveFrom: localDateSchema.optional(),
+  nextReview: z.union([
+    z.object({ type: z.literal('date'), date: localDateSchema }),
+    z.object({
+      type: z.literal('condition'),
+      condition: z.enum([
+        'moreData',
+        'foodTrackingImproved',
+        'temporaryContextResolved',
+        'recoveryReassessed',
+      ]),
+    }),
+  ]),
+  observedOutcome: z.object({
+    type: z.enum(COACH_OBSERVED_OUTCOMES),
+    evaluatedAt: isoDateTimeSchema,
+    reviewId: z.string().min(1),
+    summary: z.string().min(1),
+  }).optional(),
 });
 
 const dailyStepsSchema = datedEntitySchema.extend({
@@ -1170,6 +1231,7 @@ const backupDataSchema = z.object({
   dailyTargets: z.array(dailyTargetSchema),
   dailyJournalStatuses: z.array(dailyJournalStatusSchema),
   weeklyReviews: z.array(weeklyReviewSchema),
+  coachDecisionMemories: z.array(coachDecisionMemorySchema).optional(),
   acceptedCalorieAdjustments: z.array(acceptedCalorieAdjustmentSchema),
   exerciseDefinitions: z.array(exerciseDefinitionSchema),
   workoutTemplates: z.array(workoutTemplateSchema),
@@ -1373,6 +1435,7 @@ export const backupEnvelopeSchema = z.object({
     ['dailyTargets', data.dailyTargets],
     ['dailyJournalStatuses', data.dailyJournalStatuses],
     ['weeklyReviews', data.weeklyReviews],
+    ['coachDecisionMemories', data.coachDecisionMemories ?? []],
     ['acceptedCalorieAdjustments', data.acceptedCalorieAdjustments],
     ['exerciseDefinitions', data.exerciseDefinitions],
     ['workoutTemplates', data.workoutTemplates],
@@ -1425,6 +1488,13 @@ export const backupEnvelopeSchema = z.object({
     context,
   );
   addDuplicateIssues(data.weeklyReviews, (value) => value.weekStart, ['data', 'weeklyReviews'], 'Les bilans', context);
+  addDuplicateIssues(
+    data.coachDecisionMemories ?? [],
+    (value) => value.weeklyReviewId,
+    ['data', 'coachDecisionMemories'],
+    'Les mémoires Coach',
+    context,
+  );
   addDuplicateIssues(data.meals, (value) => `${value.date}|${value.slot}`, ['data', 'meals'], 'Les repas', context);
   addDuplicateIssues(
     data.weeklyMissionCompletions ?? [],
@@ -1629,6 +1699,22 @@ export const backupEnvelopeSchema = z.object({
   });
 
   const reviewIds = new Set(data.weeklyReviews.map((review) => review.id));
+  (data.coachDecisionMemories ?? []).forEach((memory, index) => {
+    if (!reviewIds.has(memory.weeklyReviewId)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['data', 'coachDecisionMemories', index, 'weeklyReviewId'],
+        message: 'Le bilan associé à cette mémoire Coach est absent.',
+      });
+    }
+    if (memory.id !== coachDecisionMemoryIdForReview(memory.weeklyReviewId)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['data', 'coachDecisionMemories', index, 'id'],
+        message: 'L’identifiant de cette mémoire Coach est incohérent.',
+      });
+    }
+  });
   data.acceptedCalorieAdjustments.forEach((adjustment, index) => {
     if (!reviewIds.has(adjustment.weeklyReviewId)) {
       context.addIssue({

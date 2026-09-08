@@ -96,6 +96,7 @@ function dependencies(hasCheckIn = false): CoachHubServiceDependencies {
       getCheckOut: vi.fn().mockResolvedValue(undefined),
     },
     weeklyReviews: { listAll: vi.fn().mockResolvedValue([createWeeklyReview()]) },
+    coachMemory: { listAll: vi.fn().mockResolvedValue([]) },
     workoutSessions: { listAll: vi.fn().mockResolvedValue([]) },
     activities: { listAll: vi.fn().mockResolvedValue([]) },
     readEndurancePlanningState: vi.fn(() => ({ version: 1 as const, sessions: [] })),
@@ -126,8 +127,10 @@ describe('loadCoachHub', () => {
     expect(deps.calculateDaily).not.toHaveBeenCalled();
     expect(deps.targets.getTargetByDate).toHaveBeenCalledWith('2026-08-28');
     expect(deps.weeklyReviews.listAll).toHaveBeenCalledOnce();
+    expect(deps.coachMemory.listAll).toHaveBeenCalledOnce();
     expect(Object.keys(deps.weeklyReviews)).toEqual(['listAll']);
     expect(Object.keys(deps.targets)).toEqual(['getTargetByDate']);
+    expect(Object.keys(deps.coachMemory)).toEqual(['listAll']);
   });
 
   it('réutilise la décision C4 et la projection C5 sans créer de bilan', async () => {

@@ -3,6 +3,7 @@ import { exerciseCatalog } from '@/domain/defaults/exerciseCatalog';
 import { DEVICE_SETTINGS_ID, LOCAL_USER_PROFILE_ID, USER_SETTINGS_ID } from '@/domain/defaults/identifiers';
 import type { BackupEnvelope } from '@/domain/models/backup';
 import type { UserProfile } from '@/domain/models/profile';
+import type { CoachDecisionMemoryRecord } from '@/domain/coach/coachMemory';
 import { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import { initializeDatabase } from '@/infrastructure/database/databaseLifecycle';
 import {
@@ -25,6 +26,7 @@ import {
   createWorkoutTemplateExerciseInput,
   createWorkoutTemplateInput,
 } from '@/test/factories/strengthFactory';
+import { createWeeklyReview } from '@/test/factories/weeklyReviewFactory';
 
 function createTestDatabase(): AppDatabase {
   return new AppDatabase(`sportpilot-backup-test-${crypto.randomUUID()}`);
@@ -117,7 +119,7 @@ describe('backupService', () => {
     const parsed = parseBackupText(serializeBackupEnvelope(envelope));
     const summary = summarizeBackup(parsed);
 
-    expect(parsed.schemaVersion).toBe(11);
+    expect(parsed.schemaVersion).toBe(12);
     expect(parsed.appVersion).toBe(__APP_VERSION__);
     expect(parsed.data.userProfile).toHaveLength(1);
     expect(parsed.data.weights).toHaveLength(1);
@@ -143,7 +145,7 @@ describe('backupService', () => {
     expect(summary.requiresMigration).toBe(false);
   });
 
-  it('conserve toutes les provenances lors du roundtrip backup v11', async () => {
+  it('conserve toutes les provenances lors du roundtrip backup v12', async () => {
     await database.weights.add(createEntity({
       date: '2026-08-25',
       weightKg: 71.2,
@@ -180,7 +182,7 @@ describe('backupService', () => {
     await clearAllUserData(database);
     await replaceDatabaseFromBackup(parsed, database);
 
-    expect(parsed.schemaVersion).toBe(11);
+    expect(parsed.schemaVersion).toBe(12);
     expect((await database.weights.get('weight:2026-08-25'))?.provenance)
       .toBe('userMeasurement');
     expect((await database.dailyCheckIns.get('daily-check-in:2026-08-25'))
@@ -193,6 +195,30 @@ describe('backupService', () => {
         hunger: 'userReported',
         energy: 'userReported',
       });
+  });
+
+  it('exporte et restaure une mémoire Coach avec son bilan source', async () => {
+    const review = {
+      ...createWeeklyReview({ weekStart: '2026-08-24', weekEnd: '2026-08-30' }),
+      id: 'review-memory',
+    };
+    const memory = createEntity<CoachDecisionMemoryRecord>({
+      weeklyReviewId: review.id, period: { weekStart: review.weekStart, weekEnd: review.weekEnd },
+      decisionDate: review.weekEnd, phase: { id: 'deficit', label: 'Déficit actif', objective: 'loss' },
+      coachState: 'onTrack', confidence: { weight: 80, food: 80, activity: 80, recovery: 80, overall: 80, level: 'reliable' },
+      primaryAction: 'maintainPlan', reasons: ['Progression conforme.'], blockingFactors: [],
+      safety: { status: 'clear', reasons: [] }, status: 'maintained', decidedAt: '2026-08-30T12:00:00.000Z',
+      nextReview: { type: 'date', date: '2026-09-06' },
+    }, `coach-decision:${review.id}`, '2026-08-30T12:00:00.000Z');
+    await database.weeklyReviews.add(review);
+    await database.coachDecisionMemories.add(memory);
+    const parsed = parseBackupText(serializeBackupEnvelope(
+      await createBackupEnvelope(database, '2026-08-30T13:00:00.000Z'),
+    ));
+    await clearAllUserData(database);
+    await replaceDatabaseFromBackup(parsed, database);
+    expect(parsed.schemaVersion).toBe(12);
+    expect(await database.coachDecisionMemories.get(memory.id)).toEqual(memory);
   });
 
   it('restaure un backup v10 legacy sans inventer de provenance', async () => {
@@ -227,7 +253,7 @@ describe('backupService', () => {
     await clearAllUserData(database);
     await replaceDatabaseFromBackup(migrated, database);
 
-    expect(migrated.schemaVersion).toBe(11);
+    expect(migrated.schemaVersion).toBe(12);
     expect((await database.weights.get('weight:legacy'))?.provenance)
       .toBeUndefined();
     expect((await database.dailyCheckIns.get('daily-check-in:legacy'))
