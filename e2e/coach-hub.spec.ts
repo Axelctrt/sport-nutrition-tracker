@@ -32,6 +32,23 @@ test('agrège le plan Coach, sa phase et ouvre le Bilan sans perte d’état', a
     .toBeVisible();
   await expectNoCriticalHorizontalOverflow(page);
 
+  await page.getByRole('button', { name: 'Comprendre cette décision' }).click();
+  const explanationDialog = page.getByRole('dialog', { name: 'Comprendre la décision' });
+  await expect(explanationDialog).toBeVisible();
+  await expect(explanationDialog.getByRole('heading', { name: 'Pourquoi cette décision ?' }))
+    .toBeVisible();
+  await expect(explanationDialog.getByRole('heading', { name: 'Qu’est-ce qui a changé ?' }))
+    .toBeVisible();
+  await expect(explanationDialog.getByRole('heading', { name: 'Que dois-je surveiller ?' }))
+    .toBeVisible();
+  const explanationBounds = await explanationDialog.boundingBox();
+  const viewportWidth = await page.evaluate(() => document.documentElement.clientWidth);
+  expect(explanationBounds).not.toBeNull();
+  expect(explanationBounds!.x).toBeGreaterThanOrEqual(0);
+  expect(explanationBounds!.x + explanationBounds!.width).toBeLessThanOrEqual(viewportWidth + 1);
+  await explanationDialog.getByRole('button', { name: 'Fermer' }).click();
+  await expect(explanationDialog).toBeHidden();
+
   await page.getByRole('link', { name: 'Ouvrir le Bilan' }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Bilan du Coach' })).toBeVisible();
 

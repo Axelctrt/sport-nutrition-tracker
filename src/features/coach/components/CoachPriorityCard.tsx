@@ -1,5 +1,6 @@
 import { AlertCircle, Compass } from 'lucide-react';
 import type { CoachHubSnapshot } from '@/domain/coach/coachHub';
+import { CoachExplanationPanel } from '@/features/coach/components/CoachExplanationPanel';
 import { Card } from '@/shared/ui/Card';
 
 export function CoachPriorityCard({ snapshot }: { snapshot: CoachHubSnapshot }) {
@@ -39,6 +40,7 @@ export function CoachPriorityCard({ snapshot }: { snapshot: CoachHubSnapshot }) 
               </ul>
             </div>
           ) : null}
+          <CoachExplanationPanel explanation={snapshot.explanation} />
         </div>
       </div>
     </Card>

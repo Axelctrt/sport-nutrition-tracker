@@ -360,7 +360,22 @@ entre appareils exige le choix explicite « Sur mes appareils » ; les flags son
 alors restaurés sur le même compte et Safety y est recalculée, jamais transportée
 comme état calculé.
 
-## C10 — IA conversationnelle conditionnelle
+## C10 — Explication Coach et IA conversationnelle conditionnelle
+
+### C10.1 — Coach Explanation Layer
+
+C10.1 livre une explication déterministe et locale des décisions déjà prises.
+La vue « Comprendre cette décision » projette uniquement la décision C4/C5, ses
+raisons et sa confiance, Safety C8, la dernière mémoire fiable C9 et la prochaine
+revue. Elle distingue le résumé, les raisons, les changements structurés et les
+points à surveiller sans créer de nouvelle décision ou de nouveau score.
+
+Sans historique fiable, aucune évolution n’est inventée. Avec des données
+insuffisantes, le manque d’éléments est explicite. Une Safety active reste
+visible avec ses raisons existantes. Ouvrir cette vue ne persiste rien, ne
+déclenche aucune synchronisation et n’appelle ni API externe ni IA.
+
+### C10.2 — IA conversationnelle conditionnelle
 
 L'IA n'est développée que si son coût peut être garanti **strictement à 0 EUR**,
 sans risque de dépassement, bascule payante ou débit automatique.
