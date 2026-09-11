@@ -9,6 +9,9 @@ import { createProfileInput } from '@/test/factories/profileFactory';
 import { createWorkoutSessionInput } from '@/test/factories/strengthFactory';
 import { createCalorieAdaptationAssessment, createWeeklyReview } from '@/test/factories/weeklyReviewFactory';
 import { createCoachSafetyAssessment } from '@/test/factories/coachSafetyFactory';
+import { projectCoachStrategySnapshot } from '@/application/coach/coachStrategyProjectionService';
+import { buildCoachReviewSnapshot } from '@/domain/coach/coachReview';
+import { resolveWeeklyReviewPeriod } from '@/domain/reviews/weeklyReview';
 
 function integratedAnalysis(
   safetyAssessment = createCoachSafetyAssessment({ referenceDate: '2026-08-28' }),
@@ -114,6 +117,43 @@ function dependencies(hasCheckIn = false): CoachHubServiceDependencies {
 }
 
 describe('loadCoachHub', () => {
+  it('permet une projection Strategy répétée sans écriture ni changement du Hub', async () => {
+    const base = dependencies(false);
+    const write = vi.fn(() => { throw new Error('Écriture interdite pendant la lecture'); });
+    const deps = {
+      ...base,
+      weeklyReviews: { ...base.weeklyReviews, upsert: write, accept: write },
+      coachMemory: { ...base.coachMemory, putIfAbsent: write },
+      targets: { ...base.targets, saveTarget: write },
+    };
+    const profile = createEntity(createProfileInput({ goal: 'loss' }));
+    const analysis = integratedAnalysis();
+    deps.calculateIntegratedAnalysis = vi.fn().mockResolvedValue(analysis);
+    const referenceDate = '2026-08-28';
+    const currentReview = buildCoachReviewSnapshot(resolveWeeklyReviewPeriod(referenceDate), analysis);
+    const firstHub = await loadCoachHub(referenceDate, profile, deps);
+    const before = structuredClone(firstHub);
+    const projection = projectCoachStrategySnapshot({
+      referenceDate, profile, currentReview, plans: firstHub, memories: firstHub.decisionHistory,
+    });
+    const secondHub = await loadCoachHub(referenceDate, profile, deps);
+    expect(secondHub).toStrictEqual(before);
+    expect(firstHub).toStrictEqual(before);
+    expect(projection.explanation).toStrictEqual(firstHub.explanation);
+    expect(projection.phase.status).toBe('unavailable');
+    expect(Object.keys(projection.plans ?? {}).sort()).toEqual([
+      'activityPlan', 'nutritionPlan', 'trainingPlan',
+    ]);
+    expect(firstHub.coachPhase.status).toBe('available');
+    expect(projection).toStrictEqual(projectCoachStrategySnapshot({
+      referenceDate, profile, currentReview, plans: secondHub, memories: secondHub.decisionHistory,
+    }));
+    expect(write).not.toHaveBeenCalled();
+    expect(deps.calculateDaily).not.toHaveBeenCalled();
+    expect(deps.calculateIntegratedAnalysis).toHaveBeenCalledTimes(2);
+    expect(deps.coachMemory.listAll).toHaveBeenCalledTimes(2);
+  });
+
   it('reste en lecture seule et ne calcule aucun verdict avant le check-in', async () => {
     const deps = dependencies(false);
     const profile = createEntity(createProfileInput({ goal: 'gain' }));
