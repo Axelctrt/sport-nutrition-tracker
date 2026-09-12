@@ -17,6 +17,7 @@ livraison ; ils ne remplacent pas les références canoniques ci-dessous.
 | Règles produit | [`product/PRODUCT_RULES.md`](product/PRODUCT_RULES.md) |
 | Coach Strategy — spécification produit V1.1 | [`product/COACH_STRATEGY_FRAMEWORK_V1.md`](product/COACH_STRATEGY_FRAMEWORK_V1.md) |
 | Coach Strategy — fiches de projection lecture seule | [`product/COACH_STRATEGY_RULES_V1.md`](product/COACH_STRATEGY_RULES_V1.md) |
+| Coach Strategy — état local et acceptation | [`product/COACH_STRATEGY_STATE_V1.md`](product/COACH_STRATEGY_STATE_V1.md) |
 | Catalogue fonctionnel | [`product/FEATURE_CATALOG.md`](product/FEATURE_CATALOG.md) |
 | Guide UX | [`product/UX_GUIDELINES.md`](product/UX_GUIDELINES.md) |
 | Design system | [`product/DESIGN_SYSTEM.md`](product/DESIGN_SYSTEM.md) |

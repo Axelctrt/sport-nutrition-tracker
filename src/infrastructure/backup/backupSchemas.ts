@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { coachStrategyStateSchema } from '@/shared/validation/coachStrategyStateSchema';
 import { FRIENDS_PRIVACY_SETTINGS_ID } from '@/domain/friends/friendship';
 import {
   DELETION_ENTITY_TYPES,
@@ -1232,6 +1233,7 @@ const backupDataSchema = z.object({
   dailyJournalStatuses: z.array(dailyJournalStatusSchema),
   weeklyReviews: z.array(weeklyReviewSchema),
   coachDecisionMemories: z.array(coachDecisionMemorySchema).optional(),
+  coachStrategyStates: z.array(coachStrategyStateSchema).max(1).optional(),
   acceptedCalorieAdjustments: z.array(acceptedCalorieAdjustmentSchema),
   exerciseDefinitions: z.array(exerciseDefinitionSchema),
   workoutTemplates: z.array(workoutTemplateSchema),

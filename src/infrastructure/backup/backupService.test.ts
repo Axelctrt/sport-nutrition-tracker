@@ -119,7 +119,7 @@ describe('backupService', () => {
     const parsed = parseBackupText(serializeBackupEnvelope(envelope));
     const summary = summarizeBackup(parsed);
 
-    expect(parsed.schemaVersion).toBe(12);
+    expect(parsed.schemaVersion).toBe(13);
     expect(parsed.appVersion).toBe(__APP_VERSION__);
     expect(parsed.data.userProfile).toHaveLength(1);
     expect(parsed.data.weights).toHaveLength(1);
@@ -145,7 +145,7 @@ describe('backupService', () => {
     expect(summary.requiresMigration).toBe(false);
   });
 
-  it('conserve toutes les provenances lors du roundtrip backup v12', async () => {
+  it('conserve toutes les provenances lors du roundtrip backup v13', async () => {
     await database.weights.add(createEntity({
       date: '2026-08-25',
       weightKg: 71.2,
@@ -182,7 +182,7 @@ describe('backupService', () => {
     await clearAllUserData(database);
     await replaceDatabaseFromBackup(parsed, database);
 
-    expect(parsed.schemaVersion).toBe(12);
+    expect(parsed.schemaVersion).toBe(13);
     expect((await database.weights.get('weight:2026-08-25'))?.provenance)
       .toBe('userMeasurement');
     expect((await database.dailyCheckIns.get('daily-check-in:2026-08-25'))
@@ -217,7 +217,7 @@ describe('backupService', () => {
     ));
     await clearAllUserData(database);
     await replaceDatabaseFromBackup(parsed, database);
-    expect(parsed.schemaVersion).toBe(12);
+    expect(parsed.schemaVersion).toBe(13);
     expect(await database.coachDecisionMemories.get(memory.id)).toEqual(memory);
   });
 
@@ -253,7 +253,7 @@ describe('backupService', () => {
     await clearAllUserData(database);
     await replaceDatabaseFromBackup(migrated, database);
 
-    expect(migrated.schemaVersion).toBe(12);
+    expect(migrated.schemaVersion).toBe(13);
     expect((await database.weights.get('weight:legacy'))?.provenance)
       .toBeUndefined();
     expect((await database.dailyCheckIns.get('daily-check-in:legacy'))

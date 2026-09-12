@@ -97,11 +97,11 @@ if (!deployment.includes("VITE_ENABLE_REAL_ACTIVITY_SYNC: 'true'")) {
   fail('le build de production n’active pas explicitement le lot B1.');
 }
 
-if (!/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_13/.test(mainVersions)) {
-  fail('Activities doit conserver le schéma local principal Dexie v13.');
+if (!/CURRENT_DATABASE_VERSION\s*=\s*DATABASE_VERSION_14/.test(mainVersions)) {
+  fail('Activities doit conserver le schéma local principal Dexie v14.');
 }
-if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*12/.test(backupVersions)) {
-  fail('Activities doit conserver le schéma backup JSON v12.');
+if (!/CURRENT_BACKUP_SCHEMA_VERSION\s*=\s*13/.test(backupVersions)) {
+  fail('Activities doit conserver le schéma backup JSON v13.');
 }
 
 if (failures.length > 0) {

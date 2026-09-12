@@ -7,14 +7,14 @@ de `docs/architecture` conservent l’historique détaillé.
 
 | Stockage | Version actuelle | Rôle |
 | --- | ---: | --- |
-| `AppDatabase` Dexie | 13 | données utilisateur principales, mémoire Coach et photos privées locales |
-| Sauvegarde JSON | 12 | export/import contrôlé des données structurées, hors images |
+| `AppDatabase` Dexie | 14 | données utilisateur principales, état Strategy local, mémoire Coach et photos privées locales |
+| Sauvegarde JSON | 13 | export/import contrôlé des données structurées, hors images |
 | Archive photos | 1 | export/restauration séparés des images de progression |
 | Runtime Dexie Cloud | 18 | agrégats synchronisables, journal causal Goals et baselines logiques |
 | D1 social | migrations `0000` à `0003` présentes | identité, relations, permissions, snapshots et limites photo nutritionnelle |
 
 La source de la version Dexie principale est
-`src/infrastructure/database/migrations/versions.ts`. Les versions 1 à 13 sont
+`src/infrastructure/database/migrations/versions.ts`. Les versions 1 à 14 sont
 enregistrées dans `AppDatabase.ts`. Une constante ou migration publiée est
 immuable.
 
@@ -37,6 +37,15 @@ sur sa variante sans mémoire et une décision déjà transportée prévaut sur 
 variante divergente, sans arbitrage par horloge murale.
 
 ## Espaces de données
+
+La version 14 ajoute `coachStrategyStates`, singleton par espace local. La
+migration 13 → 14 conserve l'objectif reconnu comme continuité legacy, sans
+proposition, acceptation ou date d'activation reconstruite. Le backup 12 → 13
+fait la même adoption ; les sauvegardes courantes conservent les réponses
+explicites. La restauration sélective associe cet état au profil/paramètres.
+L'import invité ne transfère pas cet état vers le compte et préserve celui du
+compte. Aucun transport cloud, baseline ou arbitrage par date n'est ajouté.
+Voir le [contrat Strategy State](../product/COACH_STRATEGY_STATE_V1.md).
 
 - **Invité** : espace local isolé, sans compte cloud.
 - **Profil local** : données de l’appareil dans la base principale.

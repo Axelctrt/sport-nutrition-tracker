@@ -577,10 +577,10 @@ describe("backupEnvelopeSchema", () => {
 });
 
 describe("migrateBackupEnvelope", () => {
-  it("migre une sauvegarde version 1 vers la version 12 sans altérer ses données", () => {
+  it("migre une sauvegarde version 1 vers la version 13 sans altérer ses données", () => {
     const migrated = migrateBackupEnvelope(createVersion1Envelope());
 
-    expect(migrated.schemaVersion).toBe(12);
+    expect(migrated.schemaVersion).toBe(13);
     expect(migrated.data.dailyCheckIns).toEqual([]);
     expect(migrated.data.dailyActivityDecisions).toEqual([]);
     expect(migrated.data.dailyCheckOuts).toEqual([]);
@@ -602,7 +602,7 @@ describe("migrateBackupEnvelope", () => {
 
     const migrated = migrateBackupEnvelope(legacy);
 
-    expect(migrated.schemaVersion).toBe(12);
+    expect(migrated.schemaVersion).toBe(13);
     expect(migrated.data.coachDecisionMemories).toEqual([]);
     expect(migrated.data.userProfile).toEqual(legacy.data.userProfile);
   });
@@ -621,8 +621,8 @@ describe("migrateBackupEnvelope", () => {
     expect(backupEnvelopeSchema.safeParse(migrated).success).toBe(false);
   });
 
-  it("migre directement la version 2 vers la version 12", () => {
-    expect(migrateBackupEnvelope(createValidEnvelope()).schemaVersion).toBe(12);
+  it("migre directement la version 2 vers la version 13", () => {
+    expect(migrateBackupEnvelope(createValidEnvelope()).schemaVersion).toBe(13);
   });
 
   it("convertit le rewardState v4 en tables utilisateur couvertes explicitement", () => {
@@ -656,7 +656,7 @@ describe("migrateBackupEnvelope", () => {
 
     const migrated = migrateBackupEnvelope(legacy);
 
-    expect(migrated.schemaVersion).toBe(12);
+    expect(migrated.schemaVersion).toBe(13);
     expect(migrated.rewardState).toBeUndefined();
     expect(migrated.includedUserStateTables).toEqual([
       "earnedAchievements",
@@ -729,7 +729,7 @@ describe("migrateBackupEnvelope", () => {
 
     const migrated = migrateBackupEnvelope(version10);
 
-    expect(migrated.schemaVersion).toBe(12);
+    expect(migrated.schemaVersion).toBe(13);
     expect(migrated.data.weights[0]?.provenance).toBeUndefined();
     expect(migrated.data.dailyCheckIns?.[0]?.signalProvenance).toBeUndefined();
     expect(migrated.data.dailyCheckOuts?.[0]?.signalProvenance).toBeUndefined();

@@ -151,7 +151,7 @@ function countCategoryRecords(
 ): number {
   switch (category) {
     case 'profileSettings':
-      return data.userProfile.length + (data.userSettings?.length ?? 0);
+      return data.userProfile.length + (data.userSettings?.length ?? 0) + (data.coachStrategyStates?.length ?? 0);
     case 'bodyTracking':
       return (
         data.weights.length +
@@ -288,6 +288,8 @@ async function replaceProfileSettings(
 ): Promise<void> {
   await database.userProfile.clear();
   await database.userSettings.clear();
+  await database.coachStrategyStates.clear();
+  await database.coachStrategyStates.bulkAdd(data.coachStrategyStates ?? []);
 
   if (data.userProfile.length > 0) {
     await database.userProfile.bulkAdd(data.userProfile);
