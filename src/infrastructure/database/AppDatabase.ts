@@ -4,6 +4,7 @@ import { DEFAULT_DATABASE_NAME } from '@/infrastructure/database/databaseNames';
 
 import type { Activity } from '@/domain/models/activity';
 import type { CoachDecisionMemoryRecord } from '@/domain/coach/coachMemory';
+import type { CoachStrategyState } from '@/domain/coach/coachStrategyState';
 import type {
   DailyActivityDecision,
   DailyCheckIn,
@@ -73,6 +74,7 @@ import { registerVersion10 } from '@/infrastructure/database/migrations/version1
 import { registerVersion11 } from '@/infrastructure/database/migrations/version11';
 import { registerVersion12 } from '@/infrastructure/database/migrations/version12';
 import { registerVersion13 } from '@/infrastructure/database/migrations/version13';
+import { registerVersion14 } from '@/infrastructure/database/migrations/version14';
 
 export { DEFAULT_DATABASE_NAME } from '@/infrastructure/database/databaseNames';
 
@@ -106,6 +108,7 @@ export class AppDatabase extends Dexie {
     EntityId
   >;
   declare coachDecisionMemories: Table<CoachDecisionMemoryRecord, EntityId>;
+  declare coachStrategyStates: Table<CoachStrategyState, EntityId>;
 
   declare exerciseDefinitions: Table<ExerciseDefinition, EntityId>;
   declare workoutTemplates: Table<WorkoutTemplate, EntityId>;
@@ -155,5 +158,6 @@ export class AppDatabase extends Dexie {
     registerVersion11(this);
     registerVersion12(this);
     registerVersion13(this);
+    registerVersion14(this);
   }
 }

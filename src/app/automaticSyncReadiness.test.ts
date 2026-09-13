@@ -42,8 +42,8 @@ function snapshot(): SyncPrototypeSnapshot {
 describe('préparation F2 de la synchronisation automatique', () => {
   it('conserve les versions de stockage publiées', () => {
     expect(__APP_VERSION__).toBe('1.0.4');
-    expect(databaseSchemaVersion).toBe(13);
-    expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(12);
+    expect(databaseSchemaVersion).toBe(14);
+    expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(13);
     expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(18);
     expect(SYNC_PROTOTYPE_DATABASE_NAME).toBe(
       'sportpilot-sync-runtime-0.20.0-v16',

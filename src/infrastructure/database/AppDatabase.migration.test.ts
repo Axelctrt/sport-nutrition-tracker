@@ -4,13 +4,13 @@ import { AppDatabase } from '@/infrastructure/database/AppDatabase';
 import {
   DATABASE_VERSION_1,
   DATABASE_VERSION_12,
-  DATABASE_VERSION_13,
+  DATABASE_VERSION_14,
 } from '@/infrastructure/database/migrations/versions';
 import {
   allDatabaseTableNames,
   schemaVersion1,
   schemaVersion12,
-  schemaVersion13,
+  schemaVersion14,
 } from '@/infrastructure/database/schema';
 
 type PersistedRecord = Record<string, unknown> & { id: string };
@@ -248,7 +248,7 @@ async function expectFixture(database: Dexie, fixture: FixtureByTable): Promise<
 }
 
 describe('chaîne de migrations Dexie', () => {
-  it('conserve le contenu complet du schéma v1 pendant la montée vers la v13', async () => {
+  it('conserve le contenu complet du schéma v1 pendant la montée vers la v14', async () => {
     const databaseName = createDatabaseName();
     const oldDatabase = new Dexie(databaseName);
     let upgradedDatabase: AppDatabase | undefined;
@@ -262,7 +262,7 @@ describe('chaîne de migrations Dexie', () => {
       upgradedDatabase = new AppDatabase(databaseName);
       await upgradedDatabase.open();
 
-      expect(upgradedDatabase.verno).toBe(DATABASE_VERSION_13);
+      expect(upgradedDatabase.verno).toBe(DATABASE_VERSION_14);
       await expectFixture(upgradedDatabase, version1Fixture);
       expect(await upgradedDatabase.userSettings.count()).toBe(1);
       expect(await upgradedDatabase.deviceSettings.count()).toBe(1);
@@ -270,11 +270,11 @@ describe('chaîne de migrations Dexie', () => {
       expect(await upgradedDatabase.progressPhotos.count()).toBe(0);
       expect(await upgradedDatabase.progressPhotoAssets.count()).toBe(0);
 
-      for (const tableName of Object.keys(schemaVersion13).filter(
+      for (const tableName of Object.keys(schemaVersion14).filter(
         (name) => !(name in schemaVersion1),
       )) {
         const expectedCount = tableName === 'migrationJournal'
-          ? 11
+          ? 12
           : (tableName === 'userSettings' || tableName === 'deviceSettings' ? 1 : 0);
         expect(await upgradedDatabase.table(tableName).count()).toBe(expectedCount);
       }
@@ -309,7 +309,7 @@ describe('chaîne de migrations Dexie', () => {
     }
   });
 
-  it('migre additivement une base v12 vers v13 sans perdre ses données', async () => {
+  it('migre additivement une base v12 vers v14 sans perdre ses données', async () => {
     const databaseName = createDatabaseName();
     const oldDatabase = new Dexie(databaseName);
     let upgradedDatabase: AppDatabase | undefined;
@@ -320,7 +320,7 @@ describe('chaîne de migrations Dexie', () => {
       oldDatabase.close();
       upgradedDatabase = new AppDatabase(databaseName);
       await upgradedDatabase.open();
-      expect(upgradedDatabase.verno).toBe(DATABASE_VERSION_13);
+      expect(upgradedDatabase.verno).toBe(DATABASE_VERSION_14);
       await expectFixture(upgradedDatabase, version2Fixture);
       expect(await upgradedDatabase.coachDecisionMemories.count()).toBe(0);
     } finally {
@@ -330,7 +330,7 @@ describe('chaîne de migrations Dexie', () => {
     }
   });
 
-  it('préserve le schéma v13 lors de l’ajout simulé d’une future version 14', async () => {
+  it('préserve le schéma v14 lors de l’ajout simulé d’une future version 15', async () => {
     const databaseName = createDatabaseName();
     const currentDatabase = new AppDatabase(databaseName);
     let futureDatabase: Dexie | undefined;
@@ -342,13 +342,13 @@ describe('chaîne de migrations Dexie', () => {
 
       const future = new AppDatabase(databaseName);
       futureDatabase = future;
-      future.version(14).stores({
-        ...schemaVersion13,
+      future.version(15).stores({
+        ...schemaVersion14,
         migrationProbe: 'id',
       });
       await future.open();
 
-      expect(future.verno).toBe(14);
+      expect(future.verno).toBe(15);
       await expectFixture(future, version2Fixture);
       expect(await future.table('migrationProbe').count()).toBe(0);
     } finally {

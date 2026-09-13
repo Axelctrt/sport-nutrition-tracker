@@ -20,6 +20,7 @@ export const databaseTableNames = [
   'weeklyReviews',
   'acceptedCalorieAdjustments',
   'coachDecisionMemories',
+  'coachStrategyStates',
   'exerciseDefinitions',
   'workoutTemplates',
   'workoutTemplateExercises',
@@ -171,4 +172,9 @@ export const schemaVersion13 = {
   ...schemaVersion12,
   coachDecisionMemories:
     'id, &weeklyReviewId, decisionDate, status, updatedAt',
+} as const;
+
+export const schemaVersion14 = {
+  ...schemaVersion13,
+  coachStrategyStates: 'id',
 } as const;

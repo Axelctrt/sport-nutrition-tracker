@@ -4,14 +4,15 @@ import {
   type BackupUserStateTableName,
 } from '@/domain/models/backup';
 import { createDefaultUserSettings } from '@/domain/defaults/appSettings';
-import { USER_SETTINGS_ID } from '@/domain/defaults/identifiers';
+import { USER_SETTINGS_ID, LOCAL_USER_PROFILE_ID } from '@/domain/defaults/identifiers';
+import { createLegacyCoachStrategyState } from '@/domain/coach/coachStrategyState';
 import {
   VISUAL_THEME_PREFERENCE_ID,
   weeklyMissionCompletionId,
 } from '@/infrastructure/user-state/userStateModels';
 import { validateBackupEnvelope } from '@/infrastructure/backup/backupSchemas';
 
-export const CURRENT_BACKUP_SCHEMA_VERSION = 12;
+export const CURRENT_BACKUP_SCHEMA_VERSION = 13;
 
 export class BackupMigrationError extends Error {
   constructor(message: string, options?: ErrorOptions) {
@@ -367,6 +368,15 @@ export function migrateBackupEnvelope(input: unknown): BackupEnvelope {
   }
   if (version <= 11) {
     migrated = migrateVersion11ToVersion12(readHeader(migrated));
+  }
+  if (version <= 12) {
+    const previous = readHeader(migrated);
+    const data = asRecord(previous.data) ?? {};
+    const profiles = Array.isArray(data.userProfile) ? data.userProfile : [];
+    const profile = profiles.map(asRecord).find((value) => value?.id === LOCAL_USER_PROFILE_ID);
+    const state = createLegacyCoachStrategyState(profile?.goal, 'migration');
+    migrated = { ...previous, schemaVersion: 13,
+      data: { ...data, coachStrategyStates: state ? [state] : [] } };
   }
 
   const validated = validateBackupEnvelope(migrated);

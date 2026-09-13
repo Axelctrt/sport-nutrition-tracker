@@ -83,6 +83,7 @@ export function tableList(database: AppDatabase) {
     database.dailyJournalStatuses,
     database.weeklyReviews,
     database.coachDecisionMemories,
+    database.coachStrategyStates,
     database.acceptedCalorieAdjustments,
     database.exerciseDefinitions,
     database.workoutTemplates,
@@ -151,6 +152,7 @@ export async function readBackupData(
     dailyJournalStatuses,
     weeklyReviews,
     coachDecisionMemories,
+    coachStrategyStates,
     acceptedCalorieAdjustments,
     exerciseDefinitions,
     workoutTemplates,
@@ -190,6 +192,7 @@ export async function readBackupData(
     database.dailyJournalStatuses.toArray(),
     database.weeklyReviews.toArray(),
     database.coachDecisionMemories.toArray(),
+    database.coachStrategyStates.toArray(),
     database.acceptedCalorieAdjustments.toArray(),
     database.exerciseDefinitions.toArray(),
     database.workoutTemplates.toArray(),
@@ -231,6 +234,7 @@ export async function readBackupData(
     dailyJournalStatuses,
     weeklyReviews,
     coachDecisionMemories,
+    coachStrategyStates,
     acceptedCalorieAdjustments,
     exerciseDefinitions,
     workoutTemplates,
@@ -485,6 +489,9 @@ async function populateTables(
   }
   if ((data.coachDecisionMemories?.length ?? 0) > 0) {
     await database.coachDecisionMemories.bulkAdd(data.coachDecisionMemories ?? []);
+  }
+  if ((data.coachStrategyStates?.length ?? 0) > 0) {
+    await database.coachStrategyStates.bulkAdd(data.coachStrategyStates ?? []);
   }
   if (data.acceptedCalorieAdjustments.length > 0) {
     await database.acceptedCalorieAdjustments.bulkAdd(

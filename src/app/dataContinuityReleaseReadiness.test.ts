@@ -14,8 +14,8 @@ describe('publication de la continuité complète du compte 0.26.0', () => {
   });
 
   it('conserve les formats de données validés', () => {
-    expect(databaseSchemaVersion).toBe(13);
-    expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(12);
+    expect(databaseSchemaVersion).toBe(14);
+    expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(13);
     expect(DATA_SPACE_REGISTRY_VERSION).toBe(1);
     expect(SYNC_PROTOTYPE_DATABASE_VERSION).toBe(18);
     expect(SYNC_PROTOTYPE_DATABASE_NAME).toBe(

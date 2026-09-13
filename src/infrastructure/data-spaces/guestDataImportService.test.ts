@@ -1,4 +1,5 @@
 import Dexie from 'dexie';
+import { appendStrategyProposal, createLegacyCoachStrategyState, respondToStrategyProposal } from '@/domain/coach/coachStrategyState';
 
 import { DEVICE_SETTINGS_ID } from '@/domain/defaults/identifiers';
 import type { DataSpaceStorage } from '@/infrastructure/data-spaces/dataSpaceRegistry';
@@ -45,6 +46,31 @@ async function resetDatabases(): Promise<void> {
 describe('guestDataImportService', () => {
   beforeEach(resetDatabases);
   afterEach(resetDatabases);
+
+  it('ne fusionne ni ne transfère Strategy entre espaces, même sans état compte', async () => {
+    const guest = new AppDatabase(GUEST_DATABASE);
+    const account = new AppDatabase(TARGET_DATABASE);
+    try {
+      const guestState = respondToStrategyProposal(appendStrategyProposal(
+        createLegacyCoachStrategyState('loss', 'migration')!, {
+          id: 'guest-proposal', version: 1, objective: 'loss', strategy: 'activeDeficit', status: 'pending', reasons: [],
+          context: { origin: 'c4c5', referenceDate: '2026-09-12', referenceWeightKg: 80,
+            sourceFingerprint: 'a'.repeat(64), primaryAction: 'collectMoreData', safetyStatus: 'clear' },
+        }), { id: 'guest-response', proposalId: 'guest-proposal', proposalVersion: 1,
+          response: 'accepted', decidedAt: '2026-09-12T12:00:00.000Z' });
+      const accountState = createLegacyCoachStrategyState('gain', 'migration')!;
+      await guest.coachStrategyStates.put(guestState);
+      for (const target of [accountState, undefined]) {
+        await account.coachStrategyStates.clear();
+        if (target) await account.coachStrategyStates.put(target);
+        const options = { sourceDatabase: guest, targetDatabase: account, storage: new MemoryStorage() };
+        const prepared = await prepareGuestDataImport(ACCOUNT, options);
+        await applyPreparedGuestDataImport(prepared, options);
+        expect(await guest.coachStrategyStates.toArray()).toEqual([guestState]);
+        expect(await account.coachStrategyStates.toArray()).toEqual(target ? [target] : []);
+      }
+    } finally { guest.close(); account.close(); }
+  });
 
   it('analyse puis fusionne les données invitées sans modifier la source', async () => {
     const guest = new AppDatabase(GUEST_DATABASE);

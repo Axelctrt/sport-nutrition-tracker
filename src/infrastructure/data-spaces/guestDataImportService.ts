@@ -453,6 +453,11 @@ function mergeSnapshots(
   const merged = {} as DatabaseSnapshot;
   const completed = new Set<DatabaseUserTableName>();
 
+  // An explicit Strategy acceptance belongs to its data space. Never timestamp-merge
+  // or transfer guest consent into the account during generic record import.
+  merged.coachStrategyStates = account.coachStrategyStates;
+  completed.add('coachStrategyStates');
+
   const products = mergeByIdentity(
     guest.foodProducts,
     account.foodProducts,

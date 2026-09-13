@@ -49,8 +49,8 @@ const socialSnapshot: SocialActivitySnapshot = {
 
 describe('readiness sociale amis 0.27.0 F5', () => {
   it('conserve la sauvegarde JSON v12 et expose les permissions par ami', () => {
-    expect(databaseSchemaVersion).toBe(13);
-    expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(12);
+    expect(databaseSchemaVersion).toBe(14);
+    expect(CURRENT_BACKUP_SCHEMA_VERSION).toBe(13);
     expect(databaseTableNames).toEqual(
       expect.arrayContaining([
         'friendProfiles',
