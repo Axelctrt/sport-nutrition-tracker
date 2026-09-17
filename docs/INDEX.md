@@ -20,6 +20,7 @@ livraison ; ils ne remplacent pas les références canoniques ci-dessous.
 | Coach Strategy — état local et acceptation | [`product/COACH_STRATEGY_STATE_V1.md`](product/COACH_STRATEGY_STATE_V1.md) |
 | Coach Strategy — cohérence observée, informative et non persistée | [`product/COACH_STRATEGY_OBSERVED_COHERENCE_V1.md`](product/COACH_STRATEGY_OBSERVED_COHERENCE_V1.md) |
 | Coach Strategy — qualification des signaux par usage | [`product/COACH_STRATEGY_SIGNAL_QUALITY_V1.md`](product/COACH_STRATEGY_SIGNAL_QUALITY_V1.md) |
+| Coach Strategy — contrats de candidat de transition, non applicables | [`product/COACH_STRATEGY_TRANSITION_CONTRACTS.md`](product/COACH_STRATEGY_TRANSITION_CONTRACTS.md) |
 | Catalogue fonctionnel | [`product/FEATURE_CATALOG.md`](product/FEATURE_CATALOG.md) |
 | Guide UX | [`product/UX_GUIDELINES.md`](product/UX_GUIDELINES.md) |
 | Design system | [`product/DESIGN_SYSTEM.md`](product/DESIGN_SYSTEM.md) |
